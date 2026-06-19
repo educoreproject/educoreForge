@@ -1,0 +1,11 @@
+{
+  "name": "manifest-editor",
+  "version": "1.0.0",
+  "description": "manifestEditor — the SQL-persistence app; sole canonicalizing writer of manifests (save/combine/validate/show/diff over the forge-store)",
+  "main": "manifestEditor.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "TQ White II",
+  "license": "ISC"
+}
