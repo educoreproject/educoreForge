@@ -33,7 +33,7 @@
 <template>
 	<!-- Top banner (not an app bar) -->
 	<div class="banner justify-center align-center">
-		<h1 class="banner-title">superSecretCrypto</h1>
+		<h1 class="banner-title">educoreForge</h1>
 	</div>
 
 	<!-- Navigation bar -->
@@ -42,7 +42,7 @@
 	>
 		<v-app-bar-title class="titleOrange">
 			<template v-if="isAdminPage">Admin Tools</template>
-			<template v-else>superSecretCrypto Tools</template>
+			<template v-else>educoreForge Tools</template>
 		</v-app-bar-title>
 
 		<v-btn

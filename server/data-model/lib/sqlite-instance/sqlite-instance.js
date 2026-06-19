@@ -1,12 +1,11 @@
 #!/usr/bin/env node
 'use strict';
 
-const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, ''); // this just seems to come in handy a lot
-// const projectRoot=fs.realpathSync(path.join(__dirname, '..', '..')); // adjust the number of '..' to fit reality
+const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
-const qt = require('qtools-functional-library'); // qt.help({printOutput:true, queryString:'.*', sendJson:false});
+const qt = require('qtools-functional-library');
 
-const sqlite3 = require('sqlite3').verbose();
+const Database = require('better-sqlite3');
 
 const { pipeRunner, taskListPlus, mergeArgs, forwardArgs } = new require(
 	'qtools-asynchronous-pipe-plus',
@@ -14,7 +13,7 @@ const { pipeRunner, taskListPlus, mergeArgs, forwardArgs } = new require(
 
 const sqlString = require('sqlstring-sqlite');
 
-const newRefId = require('../new-refId')({
+const newRefId = require('../new-refid')({
 	excludedChars: ['0', 'O', '1', 'l'],
 	digits: 20,
 });
@@ -25,8 +24,9 @@ const moduleFunction = function ({ unused }) {
 	const { xLog, getConfig, rawConfig, commandLineParameters } = process.global;
 	const localConfig = getConfig(`${moduleName}`);
 
-	// --------------------------------------------------------------------------------
-	// INITIALIZE INDEXING AGENTS
+	// =====================================================================
+	// HELPERS
+	// =====================================================================
 
 	const jsonToTsv = (jsonData) => {
 		const allKeys = Array.from(
@@ -34,22 +34,23 @@ const moduleFunction = function ({ unused }) {
 				Object.keys(obj).forEach((key) => keys.add(key));
 				return keys;
 			}, new Set()),
-		); // Get the superset of all keys
+		);
 
-		const headers = allKeys.join('\t'); // Get headers (property names) as a tab-separated string
+		const headers = allKeys.join('\t');
 		const rows = jsonData.map((obj) =>
 			allKeys.map((key) => obj[key] ?? '').join('\t'),
 		);
-		const tsvData = `${headers}\n${rows.join('\n')}`; // Combine headers and rows into a single TSV string
+		const tsvData = `${headers}\n${rows.join('\n')}`;
 
 		return tsvData;
 	};
 
-	// ================================================================================
-	// DB ACCCESS FUNCTIONS
+	// =====================================================================
+	// DB ACCESS FUNCTIONS
+	// =====================================================================
 
-	// --------------------------------------------------------------------------------
-	// EXEC STATTEMENT
+	// -----
+	// runStatementActual — execute a SQL statement (CREATE, INSERT, UPDATE, ALTER, etc.)
 
 	const runStatementActual =
 		(db, tableName, defaultOptions) =>
@@ -80,25 +81,26 @@ const moduleFunction = function ({ unused }) {
 			suppressStatementLog || xLog.status(finalStatement);
 
 			if (typeof callback == 'function') {
-				const localCallback = (err, directoryObjectsForDatabaseList) => {
-					if (err) {
-						xLog.error(
-							`${''.padEnd(50, '-')}\nSQL Error; ${err.toString()}\nBad Statement:\n\t${finalStatement}\n${''.padEnd(50, '-')}\n`,
-						);
-					}
-					callback(err, directoryObjectsForDatabaseList);
-				};
-				db.exec(finalStatement, localCallback);
+				try {
+					db.exec(finalStatement);
+					callback(null);
+				} catch (err) {
+					xLog.error(
+						`${''.padEnd(50, '-')}\nSQL Error; ${err.toString()}\nBad Statement:\n\t${finalStatement}\n${''.padEnd(50, '-')}\n`,
+					);
+					callback(err.toString());
+				}
 			} else {
-				return db.exec(finalStatement);
+				db.exec(finalStatement);
 			}
 		};
 
-	// ================================================================================
+	// =====================================================================
 	// WORKING FUNCTIONS
+	// =====================================================================
 
-	// --------------------------------------------------------------------------------
-	// GET DATA
+	// -----
+	// getDataActual — execute a SELECT query and return rows
 
 	const getDataActual =
 		(db, tableName, defaultOptions) =>
@@ -128,16 +130,21 @@ const moduleFunction = function ({ unused }) {
 			suppressStatementLog || xLog.status(finalStatement);
 
 			if (typeof callback == 'function') {
-				db.all(finalStatement, (err, result) => {
-					callback(err, result);
-				});
+				try {
+					const stmt = db.prepare(finalStatement);
+					const result = stmt.all();
+					callback(null, result);
+				} catch (err) {
+					callback(err.toString(), []);
+				}
 			} else {
-				return db.exec(finalStatement);
+				const stmt = db.prepare(finalStatement);
+				return stmt.all();
 			}
 		};
 
-	// --------------------------------------------------------------------------------
-	// SAVE OBJECT
+	// -----
+	// getFieldNames — extract column names from CREATE TABLE statement
 
 	const getFieldNames = (createStatement, showCreateTableDebug) => {
 		const tmp = createStatement.qtGetSurePath('[0].sql', '');
@@ -148,18 +155,6 @@ const moduleFunction = function ({ unused }) {
 				{ showHidden: false, depth: 4, colors: true },
 			);
 		}
-
-		const fieldNamesx = createStatement
-			.qtGetSurePath('[0].sql', '')
-			.replace(/\t+/g, '')
-			.replace(/(\[)/g, '')
-			.replace(/\n+/g, '<!tmp!>')
-			.replace(/ *(,|\)|\(|\<\!tmp\!\>) */g, '\n')
-			.split(/\n+/)
-			.map((item) => item.trim())
-			.splice(1)
-			.filter((item) => item)
-			.map((line) => line.split(/]/)[0]);
 
 		if (!createStatement) {
 			return [];
@@ -172,23 +167,19 @@ const moduleFunction = function ({ unused }) {
 			.split(/,/)
 			.map((item) => item.match(/\[(?<fieldName>.*)\]/))
 			.filter((item) => item)
-			.map((item) => item.qtGetSurePath('groups.fieldName')); //groups come from the RegExp results
+			.map((item) => item.qtGetSurePath('groups.fieldName'));
 
 		return fieldNames;
 	};
 
-	// -------------------------
-
-	// 'op_note', 'ds_uri', 'ds_requesttoken', 'ds_refid', 'ds_operation', 'ds_rsakeyserverstaticpublic', 'ds_authuserrequesttoken', 'ds_authusername', 'ds_username', 'ds_mac', 'ds_rsakeyclientstaticpublic', 'ds_requestingipaddress', 'isValid', 'reportingModuleName'
+	// -----
+	// saveListActual — save an array of records sequentially
 
 	const saveListActual =
 		(saveObject) =>
 		(inArray, options = {}, callback) => {
 			const taskList = new taskListPlus();
 			const resultList = [];
-
-			// --------------------------------------------------------------------------------
-			// TASKLIST ITEM TEMPLATE
 
 			inArray.forEach((record) => {
 				taskList.push((args, next) => {
@@ -201,14 +192,14 @@ const moduleFunction = function ({ unused }) {
 				});
 			});
 
-			// --------------------------------------------------------------------------------
-			// INIT AND EXECUTE THE PIPELINE
-
 			const initialData = typeof inData != 'undefined' ? inData : {};
 			pipeRunner(taskList.getList(), initialData, (err, args) => {
 				callback(err, resultList);
 			});
 		};
+
+	// -----
+	// saveObjectActual — upsert a single record (INSERT or UPDATE based on refId)
 
 	const saveObjectActual = ({
 		runStatement,
@@ -218,7 +209,7 @@ const moduleFunction = function ({ unused }) {
 		helpers,
 	}) => {
 		let counter = 0;
-		
+
 		return (inObj, options = {}, callback) => {
 			const { saveList } = helpers;
 
@@ -234,8 +225,6 @@ const moduleFunction = function ({ unused }) {
 			Object.assign(defaultOptions, options);
 			const { showProgress, showCreateTableDebug } = defaultOptions;
 			let logIncrement = showProgress;
-			
-			
 
 			const taskList = new taskListPlus();
 
@@ -262,12 +251,11 @@ const moduleFunction = function ({ unused }) {
 					);
 					const incomingFieldNames = Object.keys(cleanObj);
 
-					// prettier-ignore
-					if (showCreateTableDebug){
+					if (showCreateTableDebug) {
 						console.log(`\n=-=============   existingFieldNames ${tableName} ========================= [sqlite-instance.js.moduleFunction]\n`);
-						console.dir({['existingFieldNames']:existingFieldNames}, { showHidden: false, depth: 4, colors: true });
+						console.dir({ ['existingFieldNames']: existingFieldNames }, { showHidden: false, depth: 4, colors: true });
 						console.log(`\n=-=============   incomingFieldNames  ${tableName} ========================= [sqlite-instance.js.moduleFunction]\n`);
-						console.dir({['incomingFieldNames']:incomingFieldNames}, { showHidden: false, depth: 4, colors: true });
+						console.dir({ ['incomingFieldNames']: incomingFieldNames }, { showHidden: false, depth: 4, colors: true });
 					}
 
 					const addColumnStatements = incomingFieldNames
@@ -344,10 +332,6 @@ const moduleFunction = function ({ unused }) {
 				};
 
 				if (existingRecords.length > 0) {
-					const fieldNames = Object.keys(cleanObj)
-						.reduce((result, item) => `${result}[${item}], `, '')
-						.replace(/, $/, '');
-
 					const assignmentPairs = Object.keys(cleanObj)
 						.map((name) => `[${name}]=${sqlString.escape(cleanObj[name])}`)
 						.join(', ');
@@ -399,8 +383,12 @@ const moduleFunction = function ({ unused }) {
 		};
 	};
 
-	// ================================================================================
+	// =====================================================================
 	// TABLE OBJECT
+	// =====================================================================
+
+	// -----
+	// initTable — create the table with standard columns (refId, createdAt, updatedAt)
 
 	const initTable = (runStatement, options, callback) => {
 		if (typeof options == 'function') {
@@ -409,11 +397,10 @@ const moduleFunction = function ({ unused }) {
 		}
 		Object.assign(defaultOptions, options);
 
-		// SELECT name, tbl_name, sql FROM sqlite_master WHERE type = 'trigger';
 		const statement = `
 			CREATE TABLE IF NOT EXISTS <!tableName!> (
-				[refId] TEXT PRIMARY KEY, 
-				[createdAt] TIMESTAMP DEFAULT CURRENT_TIMESTAMP, 
+				[refId] TEXT PRIMARY KEY,
+				[createdAt] TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 				[updatedAt] TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 			);
 			CREATE TRIGGER IF NOT EXISTS <!tableName!>UpdateTimestamp
@@ -423,9 +410,11 @@ const moduleFunction = function ({ unused }) {
 				  UPDATE <!tableName!> SET [updatedAt] = CURRENT_TIMESTAMP;
 				END;
 			/* CREATE UNIQUE INDEX IF NOT EXISTS idx_<!tableName!>_refId ON <!tableName!>(refId)*/ /* instance */;`;
-xLog.error(`HACKED: SQL statement in [${moduleName}]`);
-		runStatement(statement, options, callback); //all databases have these, period. tqii
+		runStatement(statement, options, callback);
 	};
+
+	// -----
+	// getTableActual — create or access a table and return its API
 
 	const getTableActual = (db, defaultOptions) => (owner, options, callback) => {
 		if (typeof options == 'function') {
@@ -436,62 +425,56 @@ xLog.error(`HACKED: SQL statement in [${moduleName}]`);
 
 		const tableName = owner.replace(/\W/g, '_');
 
-		// initialize methods
 		const runStatement = runStatementActual(db, tableName, defaultOptions);
 		const getData = getDataActual(db, tableName, defaultOptions);
 
-		const helpers = {}; //saveObject() needs saveList() and vice versa
+		const helpers = {};
 		const saveObject = saveObjectActual({
 			runStatement,
 			getData,
 			tableName,
 			defaultOptions,
 			helpers,
-		}); //saveObject() needs getData() because it checks the table schema and adjusts it before saving
-		helpers.saveList = saveListActual(saveObject); //kack to get save by reference like behavior
+		});
+		helpers.saveList = saveListActual(saveObject);
 
 		const localCallback = (err) => {
 			const dbTable = { getData, saveObject, runStatement };
 			callback(err, dbTable);
 		};
 
-		initTable(runStatement, options, localCallback); // NOTE: restart system if database is dropped.
+		initTable(runStatement, options, localCallback);
 	};
 
-	// ================================================================================
+	// =====================================================================
 	// CHECK TABLE EXISTS
+	// =====================================================================
 
 	const checkTableExistsActual = (db) => (tableName, callback) => {
-		// Use asynchronous query to check if table exists
 		const query = "SELECT COUNT(*) as count FROM sqlite_master WHERE type='table' AND name=?";
-		
-		if (callback) {
-			// Asynchronous version
-			db.get(query, [tableName], (err, result) => {
-				if (err) {
-					xLog.error(`Error checking table existence for ${tableName}: ${err.toString()}`);
-					callback(err, false);
-					return;
-				}
-				const exists = result && result.count > 0;
+
+		try {
+			const result = db.prepare(query).get(tableName);
+			const exists = result && result.count > 0;
+
+			if (callback) {
 				callback(null, exists);
-			});
-		} else {
-			// Synchronous version for compatibility
-			try {
-				const stmt = db.prepare(query);
-				const result = stmt.get(tableName);
-				stmt.finalize();
-				return result && result.count > 0;
-			} catch (err) {
-				xLog.error(`Error checking table existence for ${tableName}: ${err.toString()}`);
+			} else {
+				return exists;
+			}
+		} catch (err) {
+			xLog.error(`Error checking table existence for ${tableName}: ${err.toString()}`);
+			if (callback) {
+				callback(err.toString(), false);
+			} else {
 				return false;
 			}
 		}
 	};
 
-	// ================================================================================
-	// INITIALIZE INDEXING AGENTS
+	// =====================================================================
+	// INITIALIZE
+	// =====================================================================
 
 	const defaultOptions = {
 		suppressStatementLog: true,
@@ -500,7 +483,8 @@ xLog.error(`HACKED: SQL statement in [${moduleName}]`);
 	};
 
 	const initDatabaseInstance = (dbFilePath, callback) => {
-		const db = new sqlite3.Database(dbFilePath);
+		const db = new Database(dbFilePath);
+		db.pragma('journal_mode = WAL');
 		const getTable = getTableActual(db, defaultOptions);
 		const checkTableExists = checkTableExistsActual(db);
 
@@ -513,6 +497,3 @@ xLog.error(`HACKED: SQL statement in [${moduleName}]`);
 // END OF moduleFunction() ============================================================
 
 module.exports = moduleFunction;
-// module.exports = new moduleFunction();
-// moduleFunction().workingFunction().qtDump();
-

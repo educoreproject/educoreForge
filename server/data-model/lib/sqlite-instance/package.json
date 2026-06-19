@@ -8,8 +8,5 @@
   },
   "author": "TQ White II",
   "license": "ISC",
-  "dependencies": {
-    "sqlite3": "^5.1.7",
-    "sqlstring-sqlite": "^0.1.1"
-  }
+  "dependencies": {}
 }

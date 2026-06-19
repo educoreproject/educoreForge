@@ -13,7 +13,7 @@ However, this particular one is pretty close to universal.
 //START OF moduleFunction() ============================================================
 const moduleFunction = function ({ xxx } = {}) {
 	const { xLog } = process.global;
-	
+
 
 	const findProjectRoot = ({
 		rootFolderName = 'system',
@@ -38,12 +38,13 @@ const moduleFunction = function ({ xxx } = {}) {
 		// project.
 		// First it looks for a config file in .../configs/${username}
 		// Then it checks for TQ's development config in .../configs/qbook
-		// Then it looks for a file in .../configs
+		// Then it looks for a file in .../configs/instanceSpecific
+		// Then it looks for a file in .../configs (no instanceSpecific)
 		//
 		// Unless a value is set in process.global.configPath
 
 		if (!process.global.configPath) {
-		
+
 			const homeUserNameFilePath = path.join(
 				projectRoot,
 				'configs',
@@ -60,10 +61,16 @@ const moduleFunction = function ({ xxx } = {}) {
 				`${configName}.ini`,
 			); //deployment copies target config to 'configs'; if qbook exists, it's dev system
 
-			const topOfDirFilePath = path.join(
+			const hasInstanceFilePath = path.join(
 				projectRoot,
 				'configs',
 				'instanceSpecific',
+				`${configName}.ini`,
+			); //deployment copies target config to 'configs'; if qbook exists, it's dev system
+
+			const topOfDirFilePath = path.join(
+				projectRoot,
+				'configs',
 				`${configName}.ini`,
 			); //deployment copies target config to 'configs'; if qbook exists, it's dev system
 
@@ -75,10 +82,14 @@ const moduleFunction = function ({ xxx } = {}) {
 				return qbookFilePath; // this one is special for TQ
 			}
 
+			if (fs.existsSync(hasInstanceFilePath)) {
+				return hasInstanceFilePath; // this one is any other developers
+			}
+
 			if (fs.existsSync(topOfDirFilePath)) {
 				return topOfDirFilePath; // this one is any other developers
 			}
-			const message=`NO CONFIG FILE FOUND at\n    ${qbookFilePath} or\n    ${qbookFilePath}}or\n    ${topOfDirFilePath}\n    (projectRoot was found to be: ${projectRoot} is that right?)`;
+			const message=`NO CONFIG FILE FOUND at\n    ${homeUserNameFilePath} or\n    ${qbookFilePath} or\n    ${hasInstanceFilePath} or\n    ${topOfDirFilePath}\n    (projectRoot was found to be: ${projectRoot} is that right?)`;
 			xLog.error(message);
 			throw `NO CONFIG FILE FOUND`;
 		}

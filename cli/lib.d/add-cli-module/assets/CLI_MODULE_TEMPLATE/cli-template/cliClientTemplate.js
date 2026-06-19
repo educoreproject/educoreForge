@@ -89,7 +89,7 @@ const fs = require('fs');
 // - closest=false finds top-level match (for parent projects)
 // 
 // USAGE PATTERNS:
-// - File operations: path.join(applicationBasePath, 'relative/path/to/file')
+// - File operations: path.join(projectRoot, 'relative/path/to/file')
 // - Configuration: Access config files in configs/ directory
 // - Data access: Access dataStores/ directory for database files
 // - Code generation: Write files to appropriate project directories
@@ -101,7 +101,7 @@ const findProjectRoot = ({ rootFolderName = 'system', closest = true } = {}) =>
 		new RegExp(`^(.*${closest ? '' : '?'}\/${rootFolderName}).*$`),
 		'$1',
 	);
-const applicationBasePath = findProjectRoot(); // Project root directory
+const projectRoot = findProjectRoot(); // Project root directory
 
 // ================================================================================
 // COMMAND-LINE PARAMETER PARSING
@@ -126,8 +126,56 @@ const applicationBasePath = findProjectRoot(); // Project root directory
 // 
 // TO MODIFY: Add parameter validation logic in moduleFunction
 
+// ================================================================================
+// qtools UTILITY MODULES
+// 
+// npm i qtools-functional-library
+// npm i qtools-config-file-processor
+// npm i qtools-asynchronous-pipe-plus
+
+// const findProjectRoot=({rootFolderName='system', closest=true}={})=>__dirname.replace(new RegExp(`^(.*${closest?'':'?'}\/${rootFolderName}).*$`), "$1");
+// const projectRoot=findProjectRoot(); // call with {closest:false} if there are nested rootFolderName directories and you want the top level one
+//
+
+// CONFIGURATION ACCESS
+// const configName= os.hostname() == 'qMini.local' ? 'instanceSpecific/qbook' : '' ; //when deployed, usually the config is in the configs/ dir
+// const configDirPath = `${projectRoot}/configs/${configName}/`;
+// const config = configFileProcessor.getConfig(`${moduleName}.ini, configDirPath, {resolve:false})
+// console.dir({['config']:config}, { showHidden: false, depth: 4, colors: true });
+//
+// const getConfig = (name) => {
+// 	if (name == 'allConfigs') {
+// 		return config;
+// 	}
+// 	return config[name];
+// };
+
 const commandLineParser = require('qtools-parse-command-line');
 const commandLineParameters = commandLineParser.getParameters();
+
+//
+//--------------------------------------------------------------
+// FIGURE OUT CONFIG
+//
+// const findProjectRoot=({rootFolderName='system', closest=true}={})=>__dirname.replace(new RegExp(`^(.*${closest?'':'?'}\/${rootFolderName}).*$`), "$1");
+// const projectRoot=findProjectRoot(); // call with {closest:false} if there are nested rootFolderName directories and you want the top level one
+//
+// const configName= os.hostname() == 'qMini.local' ? 'instanceSpecific/qbook' : '' ; //when deployed, usually the config is in the configs/ dir
+// const configDirPath = `${projectRoot}/configs/${configName}/`;
+// const config = configFileProcessor.getConfig(`${moduleName}.ini, configDirPath, {resolve:false})
+// console.dir({['config']:config}, { showHidden: false, depth: 4, colors: true });
+//
+// const getConfig = (name) => {
+// 	if (name == 'allConfigs') {
+// 		return config;
+// 	}
+// 	return config[name];
+// };
+//
+//
+// const commandLineParameters = commandLineParser.getParameters({noFunctions: true});
+// console.dir({['commandLineParameters']:commandLineParameters}, { showHidden: false, depth: 4, colors: true });
+//
 
 // ================================================================================
 // ADDITIONAL MODULE IMPORTS
@@ -249,7 +297,7 @@ Configuration:
 		// COMMON CLI PATTERNS:
 		// 
 		// FILE PROCESSING:
-		// - Use path.join(applicationBasePath, relativePath) for project files
+		// - Use path.join(projectRoot, relativePath) for project files
 		// - Validate file existence before processing
 		// - Handle file errors gracefully with user-friendly messages
 		// 
@@ -281,7 +329,7 @@ CLI Tool Template Executed
 
 Module: ${moduleName}
 File: ${__filename}
-Project Root: ${applicationBasePath}
+Project Root: ${projectRoot}
 
 Command Line Parameters:
 - Files: ${JSON.stringify(commandLineParameters.fileList)}
@@ -314,8 +362,8 @@ See system documentation for detailed implementation patterns.
 		// EXAMPLE 1: File Processing CLI
 		// const processFiles = () => {
 		// 	const [inputFile, outputFile] = commandLineParameters.fileList;
-		// 	const inputPath = path.join(applicationBasePath, inputFile);
-		// 	const outputPath = path.join(applicationBasePath, outputFile);
+		// 	const inputPath = path.join(projectRoot, inputFile);
+		// 	const outputPath = path.join(projectRoot, outputFile);
 		// 	
 		// 	try {
 		// 		const data = fs.readFileSync(inputPath, 'utf8');
@@ -330,7 +378,7 @@ See system documentation for detailed implementation patterns.
 		// EXAMPLE 2: Database Query CLI
 		// const queryDatabase = async () => {
 		// 	const sqliteInstance = require('../../server/data-model/lib/sqlite-instance/sqlite-instance');
-		// 	const dbPath = path.join(applicationBasePath, 'dataStores/database.sqlite3');
+		// 	const dbPath = path.join(projectRoot, 'dataStores/database.sqlite3');
 		// 	
 		// 	sqliteInstance.getDb(dbPath, (err, db) => {
 		// 		if (err) {
@@ -369,7 +417,7 @@ See system documentation for detailed implementation patterns.
 		// EXAMPLE 4: Code Generation CLI
 		// const generateCode = () => {
 		// 	const templatePath = path.join(__dirname, 'templates/component.js.hbs');
-		// 	const outputPath = path.join(applicationBasePath, 'generated/Component.js');
+		// 	const outputPath = path.join(projectRoot, 'generated/Component.js');
 		// 	
 		// 	try {
 		// 		const template = fs.readFileSync(templatePath, 'utf8');
@@ -439,7 +487,7 @@ See system documentation for detailed implementation patterns.
 	process.global.getConfig = typeof(getConfig) != 'undefined' 
 		? getConfig 
 		: (moduleName => ({
-			[moduleName]: `No configuration data available for ${moduleName}`
+			[moduleName]: `No configuration data available for ${moduleName}` // see CONFIGURATION ACCESS above
 		}[moduleName]));
 	
 	// Command-line parameters integration
