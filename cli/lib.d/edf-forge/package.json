@@ -1,0 +1,9 @@
+{
+  "name": "edf-forge",
+  "version": "1.0.0",
+  "private": true,
+  "description": "edf-forge — the forger CLI. Runs a per-standard forge bundle (resolved from --standardName via a registry) over a standard's source and materializes a single-standard validation graph carrying the universal forge property contract.",
+  "main": "edfForge.js",
+  "author": "tqii",
+  "license": "ISC"
+}
