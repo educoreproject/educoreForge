@@ -26,7 +26,10 @@ const neo4j = require('neo4j-driver');
 const { pipeRunner, taskListPlus } = new (require('qtools-asynchronous-pipe-plus'))();
 
 const CONTAINER_PREFIX = 'gf_';
-const NEO4J_IMAGE = 'neo4j:5.5';
+// neo4j 5.26 (5.x LTS): vector indexes are GA in Community Edition (>=5.13), which the
+// replay engine's phase-3 CREATE VECTOR INDEX (1024-dim cosine) requires. 5.5 had no
+// vector-index support, which would have skipped that index on every graph we build.
+const NEO4J_IMAGE = 'neo4j:5.26';
 const NEO4J_USER = 'neo4j';
 const PORT_SEARCH_START = 7700;
 const PORT_SEARCH_SPAN = 400;
