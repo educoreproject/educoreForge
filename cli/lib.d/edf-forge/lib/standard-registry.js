@@ -30,6 +30,18 @@ const registry = {
 			'CEDS-Ontology.rdf',
 		),
 	},
+	lif: {
+		standardName: 'LIF',
+		bundleFactoryPath: path.join(FORGE_BUNDLE_DIR, 'forge-lif', 'forgeLif'),
+		defaultSource: path.join(
+			FORGE_BUNDLE_DIR,
+			'forge-lif',
+			'assets',
+			'standardSourceData',
+			'01',
+			'data_model_1_bare_openapi_schema.1.json',
+		),
+	},
 	// --- Phase-6 forgeManager TEST-GATE bundles (synthetic; not real standards) -----------------
 	// These two rows let the forgeManager golden flow run fast and key-free. The hub bundle's
 	// nodes carry _source 'ceds' (matching specified-bridge's hardcoded hub side); the second
