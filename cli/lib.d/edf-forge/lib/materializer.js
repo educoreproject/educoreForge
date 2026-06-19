@@ -75,7 +75,7 @@ const moduleFunction =
 				});
 
 				const serialized = {
-					ref: { source: 'CEDS', id: oneNode.stableId },
+					ref: { source: oneNode.properties._source, id: oneNode.stableId },
 					labels: oneNode.labels,
 					stableId: oneNode.stableId,
 					properties,
