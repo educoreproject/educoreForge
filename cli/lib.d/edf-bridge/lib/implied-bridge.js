@@ -44,6 +44,14 @@ const EDGE_TYPE = 'IMPLIED_MAPPING';
 const PROVENANCE_TIER = 'embedding-inferred';
 const CANDIDATE_TOP_K = 5;
 
+// [PINNED-DEFERRED] guard. -implied Stage-2 (rerank/calibrate/emit) is not built, so this mode
+// emits 0 edges. While that holds, SKIP the Stage-1 retrieve entirely: its candidates feed ONLY the
+// stubbed Stage-2 (pure waste), and the retrieve is an in-memory cosine over sources x targets —
+// O(N*M), which blows up at real scale (~23k x 23k at CEDS = ~100% CPU for 11+ min, an effective
+// hang). Flip to true ONLY when Stage-2 is built, and at that point back the retrieve with the
+// Neo4j vector index rather than this in-memory cross-product.
+const STAGE_TWO_BUILT = false;
+
 // ---- PORTED FROM trackA embeddingMatcher.js (Stage-1 retrieve): cosine over stored vectors. ----
 // Negative similarities are forced to 0 (vectors pointing away — never a real match in this domain).
 const cosine = (a, b) => {
@@ -103,7 +111,14 @@ const moduleFunction =
 			// candidate target embeddings (the impliedTargets standards, default ['CEDS'] -> _source
 			// 'ceds'). One bulk fetch each — same batched-load discipline as trackA candidatePool.
 			taskList.push((args, next) => {
-				if (!args.instruction.includeInImplied) {
+				if (!STAGE_TWO_BUILT) {
+						xLog.status(
+							`[implied-bridge] [PINNED-DEFERRED] Stage-1 retrieve SKIPPED for scope '${scope}' — Stage-2 not built (no consumer); avoids the O(sources x targets) in-memory cosine blowup at scale.`,
+						);
+						next('', { ...args, sources: [] });
+						return;
+					}
+					if (!args.instruction.includeInImplied) {
 					xLog.status(
 						`[implied-bridge] scope '${scope}' opts out of implied (includeInImplied=false); skipping`,
 					);

@@ -394,9 +394,10 @@ const main = () => {
 				console.log(`  implied result: ${JSON.stringify(result)}`);
 				check('IMPLIED Stage-2 stubbed', result.stageTwoStubbed === true);
 				check('IMPLIED emits 0 edges (deferred, not faked)', result.edgesMerged === 0);
-				// F2 is the only scope node NOT covered by SPECIFIED (F1,V1 are covered) -> Stage-1
-				// should retrieve at least one candidate for it against the CEDS targets.
-				check('IMPLIED Stage-1 retrieved >= 1 candidate (real wiring)', result.candidatesRetrieved >= 1);
+				// Stage-1 retrieve is SKIPPED while Stage-2 is [PINNED-DEFERRED] (STAGE_TWO_BUILT=false):
+				// its candidates feed only the stubbed Stage-2 (emits 0) and the in-memory cosine is
+				// O(sources x targets) — an effective hang at real scale (~23k x 23k at CEDS). So 0 candidates.
+				check('IMPLIED Stage-1 retrieve skipped while Stage-2 deferred (0 candidates)', result.candidatesRetrieved === 0);
 				next('', { ...args, impliedResult: result });
 			},
 		);
