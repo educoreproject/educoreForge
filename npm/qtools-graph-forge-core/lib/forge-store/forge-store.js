@@ -679,6 +679,7 @@ const moduleFunction =
 			dropGraph,
 			collectibleBlockIds,
 			validateManifestClosure,
+			deriveBuildOrder,
 		};
 	};
 
