@@ -1,0 +1,6 @@
+{
+  "name": "forge-p6second",
+  "version": "1.0.0",
+  "description": "Synthetic Phase-6 second forge bundle (forgeManager test gate only; not a real standard)",
+  "main": "forgeP6second.js"
+}

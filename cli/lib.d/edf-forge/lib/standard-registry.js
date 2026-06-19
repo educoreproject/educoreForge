@@ -30,6 +30,22 @@ const registry = {
 			'CEDS-Ontology.rdf',
 		),
 	},
+	// --- Phase-6 forgeManager TEST-GATE bundles (synthetic; not real standards) -----------------
+	// These two rows let the forgeManager golden flow run fast and key-free. The hub bundle's
+	// nodes carry _source 'ceds' (matching specified-bridge's hardcoded hub side); the second
+	// carries _source 'synthstd' with cedsId crossRefs into the hub, so -specified makes real
+	// SPECIFIED_MAPPING edges. standardName === the bundle's emitted _source (the forgeManager
+	// invariant: --subject/--scope === the registry standardName === _source, no case transform).
+	p6hub: {
+		standardName: 'ceds',
+		bundleFactoryPath: path.join(FORGE_BUNDLE_DIR, 'forge-p6hub', 'forgeP6hub'),
+		defaultSource: path.join(FORGE_BUNDLE_DIR, 'forge-p6hub', 'assets', 'source.json'),
+	},
+	p6second: {
+		standardName: 'synthstd',
+		bundleFactoryPath: path.join(FORGE_BUNDLE_DIR, 'forge-p6second', 'forgeP6second'),
+		defaultSource: path.join(FORGE_BUNDLE_DIR, 'forge-p6second', 'assets', 'source.json'),
+	},
 };
 
 // resolveBundle — { standardName } -> { standardName, bundleFactory, defaultSource } or { error }.

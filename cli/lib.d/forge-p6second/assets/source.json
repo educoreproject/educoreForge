@@ -1,0 +1,7 @@
+{
+  "elements": [
+    { "localId": "S200001", "name": "Learner", "description": "Maps to hub Person", "cedsRef": "C100001" },
+    { "localId": "S200002", "name": "School", "description": "Maps to hub Organization", "cedsRef": "C100002" },
+    { "localId": "S200003", "name": "Unit", "description": "No hub match (orphan)", "cedsRef": "C999999" }
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "classes": [
+    { "cedsId": "C100001", "name": "Person", "description": "A human being in the education ecosystem" },
+    { "cedsId": "C100002", "name": "Organization", "description": "An education organization" },
+    { "cedsId": "C100003", "name": "Course", "description": "A course of study" }
+  ]
+}
