@@ -36,6 +36,12 @@ const { pipeRunner, taskListPlus } = new require('qtools-asynchronous-pipe-plus'
 
 const mappingInstructionFactory = require('./mapping-instruction');
 
+// The CEDS hub's canonical _source casing comes ONLY from the standard-registry — the single source
+// of truth (FROZEN_LATTICE casing RULING: STANDARDIZE the casing, do NOT match case-insensitively).
+// There is NO hardcoded hub-name string literal in this module; the hub identity is matched EXACTLY
+// against cedsHubStandardName.
+const { cedsHubStandardName } = require('../../edf-forge/lib/standard-registry');
+
 const PROVENANCE_TIER = 'spec-authoritative';
 const EDGE_TYPE = 'SPECIFIED_MAPPING';
 
@@ -70,8 +76,10 @@ const moduleFunction =
 			// 1. collect the scope anchors and CLASSIFY each: resolvable (a CEDS node matches) or
 			//    orphan (no CEDS node matches). We do this in ONE cypher so resolution is atomic and
 			//    we never emit a partial edge. The scope node is identified by _source = scope and a
-			//    non-null anchor property; the CEDS node is any node with _source 'ceds' whose
-			//    cedsAnchorProperty (or, failing that, stableId) equals the anchor value.
+			//    non-null anchor property; the CEDS node is any node whose _source is the CEDS hub
+			//    (matched EXACTLY against cedsHubStandardName from the registry — both real CEDS and the
+			//    synthetic test/p6 hub emit that exact casing) whose cedsAnchorProperty (or, failing
+			//    that, stableId) equals anchorValue.
 			taskList.push((args, next) => {
 				lifecycle.runCypher(
 					{
@@ -81,14 +89,14 @@ const moduleFunction =
 							WHERE src._source = $scope AND src.\`${anchorProperty}\` IS NOT NULL
 							WITH src, src.\`${anchorProperty}\` AS anchorValue
 							OPTIONAL MATCH (ceds)
-								WHERE ceds._source = 'ceds'
+								WHERE ceds._source = $cedsHub
 								  AND ( ceds.\`${cedsAnchorProperty}\` = anchorValue OR ceds.stableId = anchorValue )
 							RETURN
 								src.stableId    AS srcStableId,
 								anchorValue     AS anchorValue,
 								ceds.stableId   AS cedsStableId
 						`,
-						params: { scope },
+						params: { scope, cedsHub: cedsHubStandardName },
 					},
 					(err, result) => {
 						if (err) {
@@ -191,6 +199,24 @@ const moduleFunction =
 		// Reads the scope's mappingInstruction (generic), then runs the element-level anchor pass
 		// (cedsId -> CEDS) AND the value-level anchor pass (cedsOptionId -> CEDS DmeOptionValue).
 		const bridge = ({ graphName, scope, owner }, callback) => {
+			// Hub-scope no-op: -specified is CROSS-standard only. When the scope IS the CEDS hub
+			// itself, there is nothing to bridge TO (the hub bridges to nothing — a same-source
+			// self-reference is not a cross-standard mapping), so short-circuit to a clean no-op.
+			// This also prevents the hub's own cedsIds from each resolving to themselves and being
+			// dumped as a giant self-orphan/self-edge array for -addStandard CEDS.
+			if (`${scope}` === cedsHubStandardName) {
+				xLog.status(
+					`[specified-bridge] scope '${scope}' is the CEDS hub — nothing to specified-bridge`,
+				);
+				callback('', {
+					edgesMerged: 0,
+					pairsAlreadyBridged: 0,
+					anchorsConsidered: 0,
+					orphans: [],
+				});
+				return;
+			}
+
 			const taskList = new taskListPlus();
 
 			// read the mappingInstruction for the scope (generic; informs provenance/origin only —

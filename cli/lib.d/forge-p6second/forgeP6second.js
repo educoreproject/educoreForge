@@ -5,10 +5,10 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // forgeP6second.js — SYNTHETIC second forge bundle for the Phase-6 forgeManager test gate ONLY.
 //
 // NOT a real standard. Emits the forge() contract (forgeCeds.js return shape). Its _source is its
-// OWN standardName ('synthstd') — distinct from the hub's 'ceds' — which is exactly what the now-
+// OWN standardName ('synthstd') — distinct from the hub's 'CEDS' — which is exactly what the now-
 // FIXED materializer preserves (ref.source = oneNode.properties._source). Each node carries a
 // `cedsId` crossRef pointing at a forge-p6hub node's cedsId, so edf-bridge -specified --scope=synthstd
-// resolves real SPECIFIED_MAPPING edges (src._source='synthstd' with cedsId -> hub _source='ceds').
+// resolves real SPECIFIED_MAPPING edges (src._source='synthstd' with cedsId -> hub _source='CEDS').
 //
 // PURE/deterministic; tiny deterministic 1024-dim embeddings (no Voyage). Injected embedder ignored.
 //
@@ -17,7 +17,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 const fs = require('fs');
 const path = require('path');
 
-const STANDARD_KEY = 'synthstd'; // its own _source — distinct from the hub's 'ceds'
+const STANDARD_KEY = 'synthstd'; // its own _source — distinct from the hub's 'CEDS'
 const STABLE_URI_PROPERTY_NAME = 'uri';
 const EMBEDDING_DIMS = 1024;
 

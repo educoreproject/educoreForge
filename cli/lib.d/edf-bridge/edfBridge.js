@@ -229,6 +229,27 @@ const handleSpecified = ({ lifecycle }, callback) => {
 				callback(err);
 				return;
 			}
+			// The orphan report can be ENORMOUS (e.g. tens of thousands of entries for a real
+			// standard against the CEDS hub). The stdout summary MUST stay a small, single
+			// parseable JSON object — the orchestrator (forgeManager) parses it and a multi-MB
+			// dump would be truncated by its execFile capture, breaking the parse. So stdout
+			// carries orphan COUNTS only (total + per-level); the FULL orphans array goes to
+			// --out=<path> when given, else it is not emitted (it is reconstructable by re-running).
+			const orphans = result.orphans || [];
+			const orphanCountByLevel = orphans.reduce((acc, oneOrphan) => {
+				const level = oneOrphan.level || 'unknown';
+				acc[level] = (acc[level] || 0) + 1;
+				return acc;
+			}, {});
+
+			const out = (commandLineParameters.values.out || [])[0];
+			if (out) {
+				fs.writeFileSync(out, JSON.stringify(orphans, null, 2));
+				xLog.status(
+					`[edf-bridge] wrote ${orphans.length} orphan(s) to ${out}`,
+				);
+			}
+
 			emitResult(xLog, {
 				action: 'specified',
 				graph: options.graphName,
@@ -237,8 +258,9 @@ const handleSpecified = ({ lifecycle }, callback) => {
 				edgesMerged: result.edgesMerged,
 				pairsAlreadyBridged: result.pairsAlreadyBridged,
 				anchorsConsidered: result.anchorsConsidered,
-				orphanCount: result.orphans.length,
-				orphans: result.orphans,
+				orphanCount: orphans.length,
+				orphanCountByLevel,
+				orphansWrittenTo: out || null,
 			});
 			callback('');
 		},
@@ -350,7 +372,15 @@ const run = () => {
 				process.exit(1);
 				return;
 			}
-			process.exit(0);
+			// Ensure the stdout summary FULLY DRAINS before the process exits. When stdout is a
+			// pipe (the orchestrator captures it via execFile), a synchronous process.exit() can
+			// truncate a not-yet-flushed write. Exit from the drain callback: if the buffered
+			// write already flushed, exit now; otherwise wait for the 'drain' event.
+			if (process.stdout.write('')) {
+				process.exit(0);
+				return;
+			}
+			process.stdout.once('drain', () => process.exit(0));
 		});
 	});
 };

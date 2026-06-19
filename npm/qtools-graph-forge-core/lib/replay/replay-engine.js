@@ -103,6 +103,9 @@ const buildNodeRow = (node) => {
 	props._id = node.ref.id;
 	props.stableId = node.stableId; // the durable resolution key, stored on the node.
 	if (node.embedding) props.embedding = node.embedding; // number[] -> Neo4j LIST<FLOAT>
+	// Persist the embedding provenance stamp the materializer set at the node's top level
+	// (DECISIONS §3): every replayed node carries its embeddingModelVersion (e.g. 'voyage-4-large').
+	if (node.embeddingModelVersion) props.embeddingModelVersion = node.embeddingModelVersion;
 	return { stableId: node.stableId, props };
 };
 

@@ -9,10 +9,11 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // CLI consumes (forgeCeds.js return shape): { nodes, edges, metadata, embedCallCount, standardKey,
 // stableUriPropertyName }.
 //
-// The HUB role: its nodes are the CEDS-equivalent targets. specified-bridge HARDCODES the hub-side
-// match to `_source = 'ceds'` (lowercase) and resolves on the `cedsId` property, so this bundle
-// sets every node's _source to 'ceds' and stamps a canonical `cedsId`. The second synthetic
-// standard (forge-p6second) carries `cedsId` crossRefs that resolve against these.
+// The HUB role: its nodes are the CEDS-equivalent targets. specified-bridge matches the hub-side
+// EXACTLY against the canonical cedsHubStandardName ('CEDS', from the registry) and resolves on the
+// `cedsId` property, so this bundle sets every node's _source to the canonical 'CEDS' and stamps a
+// canonical `cedsId`. The second synthetic standard (forge-p6second) carries `cedsId` crossRefs that
+// resolve against these.
 //
 // PURE/deterministic for (source). Embeddings are tiny deterministic 1024-dim vectors generated
 // here (NO Voyage call) so replay's vector-index phase has a real, cheap dimension to build on and
@@ -24,7 +25,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 const fs = require('fs');
 const path = require('path');
 
-const STANDARD_KEY = 'ceds'; // hub IS the ceds-equivalent; matches specified-bridge's hardcoded hub
+const STANDARD_KEY = 'CEDS'; // hub IS the CEDS-equivalent; matches the registry's cedsHubStandardName
 const STABLE_URI_PROPERTY_NAME = 'uri';
 const EMBEDDING_DIMS = 1024;
 
@@ -75,7 +76,7 @@ const moduleFunction =
 				role: 'DmeStandardRoot',
 				properties: {
 					_id: `${STANDARD_KEY}:root`,
-					_source: STANDARD_KEY, // 'ceds' — the hub identity
+					_source: STANDARD_KEY, // 'CEDS' — the canonical hub identity
 					name: 'P6 Hub',
 					description: 'Synthetic Phase-6 hub standard (test only)',
 					role: 'DmeStandardRoot',
@@ -97,7 +98,7 @@ const moduleFunction =
 					role: 'DmeClass',
 					properties: {
 						_id: `${STANDARD_KEY}:${oneClass.cedsId}`,
-						_source: STANDARD_KEY, // 'ceds'
+						_source: STANDARD_KEY, // 'CEDS'
 						name: oneClass.name,
 						description: oneClass.description || '',
 						role: 'DmeClass',

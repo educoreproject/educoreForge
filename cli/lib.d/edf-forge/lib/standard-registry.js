@@ -44,12 +44,13 @@ const registry = {
 	},
 	// --- Phase-6 forgeManager TEST-GATE bundles (synthetic; not real standards) -----------------
 	// These two rows let the forgeManager golden flow run fast and key-free. The hub bundle's
-	// nodes carry _source 'ceds' (matching specified-bridge's hardcoded hub side); the second
-	// carries _source 'synthstd' with cedsId crossRefs into the hub, so -specified makes real
-	// SPECIFIED_MAPPING edges. standardName === the bundle's emitted _source (the forgeManager
-	// invariant: --subject/--scope === the registry standardName === _source, no case transform).
+	// nodes carry _source 'CEDS' (canonical hub casing — mirrors the real forge-ceds hub so the
+	// bridge's EXACT match resolves); the second carries _source 'synthstd' with cedsId crossRefs
+	// into the hub, so -specified makes real SPECIFIED_MAPPING edges. standardName === the bundle's
+	// emitted _source (the forgeManager invariant: --subject/--scope === the registry standardName
+	// === _source, no case transform).
 	p6hub: {
-		standardName: 'ceds',
+		standardName: 'CEDS',
 		bundleFactoryPath: path.join(FORGE_BUNDLE_DIR, 'forge-p6hub', 'forgeP6hub'),
 		defaultSource: path.join(FORGE_BUNDLE_DIR, 'forge-p6hub', 'assets', 'source.json'),
 	},
@@ -83,4 +84,10 @@ const resolveBundle = ({ standardName } = {}) => {
 
 const knownStandardNames = () => Object.values(registry).map((row) => row.standardName);
 
-module.exports = { resolveBundle, knownStandardNames, registry };
+// cedsHubStandardName — the SINGLE source of truth for the CEDS hub's canonical _source casing
+// ('CEDS'), sourced from the registry. specified-bridge matches the hub EXACTLY against this value
+// (no toLower, no hardcoded literal). Both the real forge-ceds hub and the synthetic p6hub/test
+// fixtures emit this exact casing, so the exact match resolves uniformly.
+const cedsHubStandardName = registry.ceds.standardName;
+
+module.exports = { resolveBundle, knownStandardNames, registry, cedsHubStandardName };

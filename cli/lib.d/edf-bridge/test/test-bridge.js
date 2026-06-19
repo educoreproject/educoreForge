@@ -5,7 +5,7 @@
 //
 // SYNTHETIC standard (NOT a real one; real LIF is Phase 6/7 — per plan + FROZEN_LATTICE approval).
 // Provisions a real working graph via the 1B instance-lifecycle, populates it via cypher with:
-//   - a few real-shaped CEDS nodes (label DmeProperty/DmeOptionValue + ForgedNode, _source='ceds',
+//   - a few real-shaped CEDS nodes (label DmeProperty/DmeOptionValue + ForgedNode, _source='CEDS',
 //     each with a stableId and a canonical cedsId / cedsOptionId)
 //   - a SYNTHETIC second standard 'synthstd': a DmeStandardRoot carrying a mappingInstruction, plus
 //     nodes whose cedsId/cedsOptionId crossRefs point at those CEDS nodes — INCLUDING one whose
@@ -110,9 +110,9 @@ const SYNTH_MAPPING_INSTRUCTION = JSON.stringify({
 const populateGraph = (lifecycle, callback) => {
 	const cypher = `
 		// CEDS hub nodes (the bridge targets)
-		CREATE (:ForgedNode:DmeProperty {stableId:'ceds:P000113', _source:'ceds', name:'First Name', searchText:'CEDS|Person|First Name', cedsId:'P000113', embedding:$embCedsA})
-		CREATE (:ForgedNode:DmeProperty {stableId:'ceds:P000115', _source:'ceds', name:'Last Name',  searchText:'CEDS|Person|Last Name',  cedsId:'P000115', embedding:$embCedsB})
-		CREATE (:ForgedNode:DmeOptionValue {stableId:'ceds:O000900', _source:'ceds', name:'Male', searchText:'CEDS|Sex|Male', cedsOptionId:'O000900', embedding:$embCedsOpt})
+		CREATE (:ForgedNode:DmeProperty {stableId:'ceds:P000113', _source:'CEDS', name:'First Name', searchText:'CEDS|Person|First Name', cedsId:'P000113', embedding:$embCedsA})
+		CREATE (:ForgedNode:DmeProperty {stableId:'ceds:P000115', _source:'CEDS', name:'Last Name',  searchText:'CEDS|Person|Last Name',  cedsId:'P000115', embedding:$embCedsB})
+		CREATE (:ForgedNode:DmeOptionValue {stableId:'ceds:O000900', _source:'CEDS', name:'Male', searchText:'CEDS|Sex|Male', cedsOptionId:'O000900', embedding:$embCedsOpt})
 
 		// synthetic standard root carrying the declarative mappingInstruction
 		CREATE (:ForgedNode:DmeStandardRoot {stableId:'synthstd:root', _source:'synthstd', name:'synthstd', standardKey:'synthstd', mappingInstruction:$mappingInstruction})

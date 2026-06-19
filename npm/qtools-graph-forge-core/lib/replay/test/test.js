@@ -315,7 +315,7 @@ require('../../instance-lifecycle/instance-lifecycle')({
 	taskList.push((args, next) => {
 		// spot-ref + property equality: the FirstName property node resolves on its stableId.
 		lifecycle.runCypher(
-			{ graphName: freshGraphName, cypher: "MATCH (n {stableId:'ceds://prop/firstName'}) RETURN n.name AS name, n.depth AS depth, labels(n) AS labels, n.stableId AS sid" },
+			{ graphName: freshGraphName, cypher: "MATCH (n {stableId:'ceds://prop/firstName'}) RETURN n.name AS name, n.depth AS depth, labels(n) AS labels, n.stableId AS sid, n.embeddingModelVersion AS emv" },
 			(err, result) => {
 				if (err) { next(err); return; }
 				const rec = result.records[0];
@@ -323,10 +323,12 @@ require('../../instance-lifecycle/instance-lifecycle')({
 				const depth = toNum(recGet(rec, 'depth'));
 				const labels = recGet(rec, 'labels');
 				const sid = recGet(rec, 'sid');
+				const emv = recGet(rec, 'emv');
 				check('GATE1 fidelity: spot-ref name equality (FirstName)', name === 'FirstName');
 				check('GATE1 fidelity: spot-ref depth equality (2)', depth === 2);
 				check('GATE1 fidelity: spot-ref stableId preserved', sid === 'ceds://prop/firstName');
 				check('GATE1 fidelity: spot-ref labels include DmeProperty + ForgedNode', labels.indexOf('DmeProperty') !== -1 && labels.indexOf('ForgedNode') !== -1);
+				check('GATE1 fidelity: spot-ref carries embeddingModelVersion=voyage-4-large', emv === 'voyage-4-large');
 				next('', args);
 			},
 		);

@@ -3,7 +3,7 @@
 
 // test-forge-manager.js — FAST SYNTHETIC end-to-end gate for edf-forge-manager (Phase 6).
 //
-// Uses the two synthetic forge bundles (forge-p6hub _source 'ceds', forge-p6second _source
+// Uses the two synthetic forge bundles (forge-p6hub _source 'CEDS', forge-p6second _source
 // 'synthstd' with cedsId crossRefs into the hub) so the golden flow runs without the full CEDS
 // parse or Voyage embeddings. Asserts:
 //   GATE 1  -addStandard p6hub  then  -addStandard p6second  -> published golden with BOTH
@@ -269,8 +269,8 @@ const main = () => {
 			}
 			hubGoldenSnapshot = hubSnap;
 			assert(
-				hubSnap.nodes.some((n) => n.startsWith('ceds::')),
-				'hub-only golden contains ceds nodes',
+				hubSnap.nodes.some((n) => n.startsWith('CEDS::')),
+				'hub-only golden contains CEDS nodes',
 			);
 			assert(
 				!hubSnap.nodes.some((n) => n.startsWith('synthstd::')),
@@ -301,7 +301,7 @@ const main = () => {
 					}
 					bothGoldenSnapshot = bothSnap;
 					assert(
-						bothSnap.nodes.some((n) => n.startsWith('ceds::')) &&
+						bothSnap.nodes.some((n) => n.startsWith('CEDS::')) &&
 							bothSnap.nodes.some((n) => n.startsWith('synthstd::')),
 						'GATE1: published golden contains BOTH standards\' nodes',
 					);

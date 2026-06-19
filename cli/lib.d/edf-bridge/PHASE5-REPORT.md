@@ -224,3 +224,170 @@ fires before exit).
 docker ps -a | grep TEST   -> (none)
 docker volume ls | grep TEST -> (none)
 ```
+
+---
+
+# Phase-7 blocker fixes
+
+Three surgical fixes applied to committed modules to unblock Phase-7 acceptance. Root cause: a real
+`forgeManager -addStandard CEDS` then `LIF` aborted because forge-ceds emits `_source='CEDS'`
+(uppercase) while specified-bridge hardcoded the hub target as lowercase `'ceds'`, so the hub never
+matched real data, all scope cedsIds orphaned, and for scope=CEDS (the hub itself) a multi-MB orphan
+array was dumped to stdout and truncated at 65,536 bytes by the orchestrator's execFile capture →
+JSON parse failed → exit 1. Plus embeddingModelVersion was not persisted on replay.
+
+## FIX 1 — `lib/specified-bridge.js`
+
+**(a) Case-insensitive hub match** in the anchor-scan cypher (used by BOTH the element and value
+passes — same parameterized template):
+```diff
+   OPTIONAL MATCH (ceds)
+-      WHERE ceds._source = 'ceds'
++      WHERE toLower(ceds._source) = 'ceds'
+        AND ( ceds.`${cedsAnchorProperty}` = anchorValue OR ceds.stableId = anchorValue )
+```
+Now matches real CEDS (`'CEDS'`) AND the synthetic test/p6 hub (`'ceds'`). (Adjacent comment block
+updated to describe the case-insensitive hub match; no logic change.)
+
+**(b) Hub-scope no-op** — short-circuit at the top of `bridge({graphName, scope, owner})`:
+```diff
+   const bridge = ({ graphName, scope, owner }, callback) => {
++      // -specified is CROSS-standard only; the CEDS hub bridges to nothing (a same-source
++      // self-reference is not a cross-standard mapping). Short-circuit to a clean no-op; this
++      // also prevents the 23k self-orphan dump for -addStandard CEDS.
++      if (`${scope}`.toLowerCase() === 'ceds') {
++          xLog.status(`[specified-bridge] scope '${scope}' is the CEDS hub — nothing to specified-bridge`);
++          callback('', { edgesMerged: 0, pairsAlreadyBridged: 0, anchorsConsidered: 0, orphans: [] });
++          return;
++      }
+       const taskList = new taskListPlus();
+```
+The normal path is unchanged for any non-hub scope (LIF, synthstd, p6second).
+
+## FIX 2 — `edfBridge.js` (CLI output, `handleSpecified` + `run`)
+
+The handler used to `emitResult` the FULL `orphans` array on stdout; for scope=CEDS that is multi-MB
+and is truncated by the orchestrator's execFile capture, breaking the parse. Changed so STDOUT is a
+single clean parseable JSON object carrying orphan COUNTS only — `orphanCount` plus a per-level
+`orphanCountByLevel` breakdown — and NOT the full array. The full orphans array is written to
+`--out=<path>` when given (`fs.writeFileSync`), else not emitted (`orphansWrittenTo: null`). The keys
+the orchestrator threads (`edgesMerged`, `pairsAlreadyBridged`, `anchorsConsidered`, `orphanCount`)
+are all preserved at top level — confirmed against `tools.d/add-standard.js`, which reads only
+`bridgeResult.edgesMerged` and `bridgeResult.orphanCount`.
+
+Also made stdout FULLY DRAIN before exit on the success path in `run()`: replaced the synchronous
+`process.exit(0)` with a drain-aware exit (`if (process.stdout.write('')) exit; else once('drain')
+exit`), matching the edf-replay clean-stdout convention (counts, not full payload). No `2>/dev/null`,
+stderr untouched; qtools-async callbacks preserved; no Promises surfaced.
+
+## FIX 3 — `npm/qtools-graph-forge-core/lib/replay/replay-engine.js` `buildNodeRow`
+
+```diff
+   if (node.embedding) props.embedding = node.embedding;
++  // Persist the embedding provenance stamp (DECISIONS §3): every replayed node carries its
++  // embeddingModelVersion (e.g. 'voyage-4-large'). The materializer set it at node top level.
++  if (node.embeddingModelVersion) props.embeddingModelVersion = node.embeddingModelVersion;
+   return { stableId: node.stableId, props };
+```
+embeddingModelVersion now persists on every replayed node that carries one.
+
+## Re-test results (Docker; all force-torn-down at end; verified no stray containers/volumes)
+
+| Gate | Module | Result |
+|------|--------|--------|
+| Phase-2 engine | `npm/qtools-graph-forge-core/lib/replay/test/test.js` | **GREEN** — 33 passed, 0 failed |
+| Phase-5 bridge | `cli/lib.d/edf-bridge/test/test-bridge.js` | **GREEN** — 21 passed, 0 failed |
+| Phase-6 forgeManager | `cli/lib.d/edf-forge-manager/test/test-forge-manager.js` | **GREEN** — 19 passed, 0 failed |
+
+**Engine test addition (FIX 3 coverage):** added one assertion to the GATE1 spot-ref query —
+`GATE1 fidelity: spot-ref carries embeddingModelVersion=voyage-4-large` (the fixtures stamp
+`embeddingModelVersion: 'voyage-4-large'` on each synthNode). PASSES.
+
+**Phase-5 bridge:** GREEN with NO test change. Its synthetic standard `synthstd` is non-hub, so the
+hub no-op doesn't fire; the case-insensitive match still resolves against the synthetic `'ceds'` hub
+nodes (element F1→P000113, value V1→O000900, F2 orphan). Idempotency and -derived/-implied stubs
+unaffected.
+
+**Phase-6 forgeManager — corrected SPECIFIED_MAPPING bridge count = 2.** GREEN with NO test change.
+The hub no-op DID change behavior: `-addStandard p6hub` (standardName 'ceds') now specified-no-ops,
+so the 2 SPECIFIED_MAPPING bridges in published golden come ONLY from `-addStandard p6second` (scope
+'synthstd' → ceds hub via case-insensitive match), got 2. The GATE1 assertion is `specifiedCount >= 1`
+(not an inflated exact count), so no count adjustment was required — the corrected behavior satisfies
+it (got 2). GATE2 golden ≡ replay(goldenManifest) held (node set AND edge set identical). GATE3
+rolled-back golden has 0 SPECIFIED_MAPPING. GATE4 -list reflects reality + --stale drift flagged.
+
+**No stray docker:**
+```
+docker ps -a    | grep -iE 'TEST|gf_golden|gf_p6|gf_bronze|gf_rollback|gf_goldenCheck'  -> (none)
+docker volume ls| grep -iE 'TEST|gf_golden|gf_p6|gf_bronze|gf_rollback|gf_goldenCheck'  -> (none)
+```
+
+**embeddingModelVersion persists:** confirmed by the new Phase-2 engine assertion (replayed FirstName
+node carries `embeddingModelVersion='voyage-4-large'`).
+
+Not committed (orchestrator commits).
+
+---
+
+## FROZEN_LATTICE Casing RULING — STANDARDIZE (remove toLower band-aid) — 2026-06-19
+
+Replaced the case-insensitive hub match with an EXACT match sourced from the registry (single source
+of truth), and re-cased every synthetic lowercase-`ceds` hub fixture to canonical `CEDS`. KEPT the
+three prior builder fixes (hub-scope no-op, edfBridge stdout compact-summary+drain, engine
+embeddingModelVersion persistence). Surgical changes only. No git commit.
+
+### Diffs
+
+**1. `cli/lib.d/edf-forge/lib/standard-registry.js`** — single source of truth for hub casing.
+- `p6hub` row: `standardName: 'ceds'` → `'CEDS'` (comment updated: hub mirrors real forge-ceds casing).
+- New export sourced from the registry:
+  ```js
+  const cedsHubStandardName = registry.ceds.standardName; // = 'CEDS'
+  module.exports = { resolveBundle, knownStandardNames, registry, cedsHubStandardName };
+  ```
+  Verified at runtime: `cedsHubStandardName === 'CEDS'`, `registry.p6hub.standardName === 'CEDS'`.
+
+**2. `cli/lib.d/edf-bridge/lib/specified-bridge.js`** — exact match, registry-sourced, NO literal.
+- Added `const { cedsHubStandardName } = require('../../edf-forge/lib/standard-registry');`
+- Anchor-scan cypher: `WHERE toLower(ceds._source) = 'ceds'` → `WHERE ceds._source = $cedsHub`
+- Params: `{ scope }` → `{ scope, cedsHub: cedsHubStandardName }`
+- Hub-scope no-op: `if (\`${scope}\`.toLowerCase() === 'ceds')` → `if (\`${scope}\` === cedsHubStandardName)`
+  (no-op behavior + status line preserved — approved.)
+- Stale comments reworded; NO hardcoded hub-name literal remains.
+
+**3. `cli/lib.d/forge-p6hub/forgeP6hub.js`** — synthetic hub re-cased.
+- `const STANDARD_KEY = 'ceds';` → `'CEDS';` (every emitted node `_source`/`_id`/`standardKey`/edge
+  `source` flows from STANDARD_KEY → all now `'CEDS'`). Comments updated.
+
+**4. `cli/lib.d/edf-bridge/test/test-bridge.js`** — synthetic CEDS hub nodes re-cased.
+- 3 hub nodes: `_source:'ceds'` → `_source:'CEDS'` (DmeProperty P000113, P000115; DmeOptionValue
+  O000900). `synthstd` nodes untouched; their `cedsId`/`cedsOptionId` crossRefs still target the
+  now-`CEDS` hub by value; stableId identifiers (`ceds:Pxxxxx`) unchanged. Header comment updated.
+
+**5. `cli/lib.d/edf-forge-manager/test/test-forge-manager.js`** — snapshot assertions re-cased.
+- `n.startsWith('ceds::')` → `n.startsWith('CEDS::')` (lines for hub-only and both-standards snapshots),
+  assertion label and header comment updated. `synthstd::` assertions unchanged.
+
+**6. `cli/lib.d/forge-p6second/forgeP6second.js`** — comment-only: stale `hub _source='ceds'` →
+  `'CEDS'` (code `STANDARD_KEY='synthstd'` is the second standard, correctly untouched).
+
+NOT touched: real `forge-ceds/forgeCeds.js` (already emits `_source:'CEDS'`; `STANDARD_KEY='ceds'` is
+its registry lookup key, not a node `_source`). `edf-replay` test `key:'ceds'` is a local block-map
+key with `subject:'CEDS'` — not a hub `_source` — left as-is.
+
+### Re-test (all 3 gates GREEN; Docker; teardown clean)
+
+| Gate | Test | Result |
+|------|------|--------|
+| Engine | `npm/qtools-graph-forge-core/lib/replay/test/test.js` | **GREEN 33/33** (embeddingModelVersion assertion passes) |
+| Bridge | `cli/lib.d/edf-bridge/test/test-bridge.js` | **GREEN 21/21** (EXACT match, no toLower; SPECIFIED_MAPPING edges form for the CEDS hub: F1→ceds:P000113, V1→ceds:O000900; F2 orphaned) |
+| ForgeManager | `cli/lib.d/edf-forge-manager/test/test-forge-manager.js` | **GREEN 19/19**; p6hub(CEDS)→hub no-op, p6second(synthstd)→bridges to CEDS hub; golden≡replay node+edge sets identical; **SPECIFIED_MAPPING count = 2** |
+
+### Grep confirmations (specified-bridge.js)
+- `grep -c "toLower("` → **0**
+- `grep "'ceds'\|'CEDS'\|\"ceds\"\|\"CEDS\""` → **NONE** (hub identity comes only from `cedsHubStandardName`)
+
+### Docker
+No stray containers/volumes after the run. Only the three pre-existing unrelated containers
+(`gf_MDOEConnect`, `gf_EdMatrix`, `gf_graphdoc_educore`) remain — untouched baseline; all test graphs
+(`__TEST_bridge`, `gf_golden`, `gf_goldenCheck`, volumes) force-torn-down by the tests.
