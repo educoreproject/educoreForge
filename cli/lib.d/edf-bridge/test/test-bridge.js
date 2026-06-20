@@ -370,9 +370,13 @@ const main = () => {
 		});
 	});
 
-	// ---- BONUS: -implied wiring (Stage-1 retrieve runs, Stage-2 stubbed, emits nothing) ----
+	// ---- BONUS: -implied Phase-I wiring (Stage-1 scoped retrieve runs, emits NO edges) ----
+	// This minimal fixture's CEDS nodes carry no legacy scoping label (just ForgedNode + role), so the
+	// (CEDS,role) group is correctly SKIPPED (no scoped index) and candidatesRetrieved===0 — it
+	// exercises the graceful skip path and the summary shape. The happy retrieve path (with scoping
+	// labels) + the real golden 6-known-pairs check live in test/test-implied-retrieve.js.
 	taskList.push((args, next) => {
-		console.log('\n=== BONUS: -implied (Stage-1 retrieve adapted, Stage-2 [PINNED-DEFERRED]) ===');
+		console.log('\n=== BONUS: -implied Phase-I (Stage-1 scoped retrieve; NO edges) ===');
 		countEdges(lifecycle, (err, before) => {
 			if (err) {
 				next(err);
@@ -392,12 +396,10 @@ const main = () => {
 					return;
 				}
 				console.log(`  implied result: ${JSON.stringify(result)}`);
-				check('IMPLIED Stage-2 stubbed', result.stageTwoStubbed === true);
-				check('IMPLIED emits 0 edges (deferred, not faked)', result.edgesMerged === 0);
-				// Stage-1 retrieve is SKIPPED while Stage-2 is [PINNED-DEFERRED] (STAGE_TWO_BUILT=false):
-				// its candidates feed only the stubbed Stage-2 (emits 0) and the in-memory cosine is
-				// O(sources x targets) — an effective hang at real scale (~23k x 23k at CEDS). So 0 candidates.
-				check('IMPLIED Stage-1 retrieve skipped while Stage-2 deferred (0 candidates)', result.candidatesRetrieved === 0);
+				check('IMPLIED emits 0 edges (Phase I retrieve-only)', result.edgesMerged === 0);
+				check('IMPLIED summary carries sourcesConsidered (number)', typeof result.sourcesConsidered === 'number');
+				check('IMPLIED summary carries sourcesWithCandidates/sourcesZero/perSourceAvg/perSourceMax', ['sourcesWithCandidates', 'sourcesZero', 'perSourceAvg', 'perSourceMax'].every((k) => typeof result[k] === 'number'));
+				check('IMPLIED no scoping label in minimal fixture -> group skipped (0 candidates)', result.candidatesRetrieved === 0);
 				next('', { ...args, impliedResult: result });
 			},
 		);

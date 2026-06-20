@@ -16,6 +16,8 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //   crosswalkResolveProperty              string   default 'stableUriPropertyName'
 //   includeInImplied                      bool     default true
 //   impliedTargets                        [array]  default ['CEDS']
+//   probeK                                int      default 200   (-implied Stage-1 index oversample)
+//   candidatePoolK                        int      default 100   (-implied shortlist size; SPEC §2/§3)
 //
 // The forge stores mappingInstruction as a JSON string property on DmeStandardRoot (crossRefs is a
 // JSON property too, §9). We parse it; absence yields documented defaults. The maker resolves on the
@@ -49,6 +51,10 @@ const withDefaults = (raw) => {
 		impliedTargets: Array.isArray(instruction.impliedTargets)
 			? instruction.impliedTargets
 			: ['CEDS'],
+		probeK: Number.isInteger(instruction.probeK) ? instruction.probeK : 200,
+		candidatePoolK: Number.isInteger(instruction.candidatePoolK)
+			? instruction.candidatePoolK
+			: 100,
 	};
 };
 

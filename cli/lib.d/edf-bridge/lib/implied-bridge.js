@@ -2,39 +2,36 @@
 
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
-// implied-bridge.js — the -implied mode of bridgeMaker (helpSpec, DESIGN §F).
+// implied-bridge.js — the -implied mode of bridgeMaker (helpSpec, DESIGN §F; SPEC-findMappedItem).
 //
-// findMappedItem search: hybrid retrieve -> rerank -> calibrated emit. Runs LAST, only on scope
-// items NOT already covered by a SPECIFIED_MAPPING or DERIVED_MAPPING edge (it calibrates on, and
-// skips, what the deterministic tiers already covered).
+// findMappedItem: hybrid retrieve -> rerank -> calibrated emit. Runs LAST, only on scope items NOT
+// already covered by a SPECIFIED_MAPPING or DERIVED_MAPPING edge (it calibrates on, and skips, what
+// the deterministic tiers already covered).
 //
-// ADAPTED vs STUBBED (honest, per the build mandate):
-//   Stage 1 (retrieve) — ADAPTED from trackA crosswalk-engine: the `cosine` similarity over the
-//     stored voyage embeddings (embeddingMatcher.js) and the candidate-ranking idea
-//     (candidatePool.selectCandidatesForSource). trackA's Stage-1 issued ONE
-//     `db.index.vector.queryNodes` per source against a named vector index; we port the SAME
-//     retrieval SEMANTICS but compute cosine IN MEMORY here. Reason it does not port verbatim: the
-//     trackA query is bound to a jobSpec.targetVectorIndex name and per-standard source/target
-//     LABELS (CedsProperty, MedBiqElement, …). Our graph is generic (role labels + _source), so a
-//     hardcoded index name / label list would BE per-standard code — which the bridge layer forbids
-//     (DESIGN §F, DECISIONS §12). The in-memory cosine over the same stored vectors is the clean,
-//     generic port. It reads `embedding` + `searchText`, exactly the node shape the design promises.
-//   Stage 2 (rerank + calibrate) — STUBBED, marked [PINNED-DEFERRED] (helpSpec: "[PINNED-DEFERRED]
-//     Stage 2 (rerank+calibrate)"). trackA's Stage-2 is the nine-signal weighted scorer
-//     (scorer.js) + neighborhood/path matchers + calibration into a SKOS matchPredicate. That is NOT
-//     cleanly portable: it depends on per-standard neighborhood cypher (candidatePool
-//     NEIGHBORHOOD_QUERIES keyed by CedsProperty/CtdlClass/… labels) and a crosswalkConfig weight
-//     table — both per-standard. Porting it generically is a real design task, not an adaptation.
-//     So we DO NOT fake calibrated results: Stage-2 is a logged no-op and -implied emits NO edges in
-//     this phase. The retrieve stage runs and is reported (candidatesRetrieved) so the wiring is
-//     real and testable, but the calibrated emit is deferred.
+// PHASE I (this file): Stage-1 RETRIEVE rebuilt onto the Neo4j vector index. It emits NO edges — it
+// proves bounded, target-scoped candidate retrieval and reports a compact distribution. Stages 2-4
+// (rerank / classifyPredicate / calibrate / emit) are built in later phases.
 //
-// When -implied DOES emit (a later phase), the edge is IMPLIED_MAPPING with provenanceTier
-// 'embedding-inferred', a calibrated confidence, and a matchPredicate (the SKOS precision predicate).
+// WHY TARGET-STANDARD-SCOPED INDEXES (the load-bearing design, OBSIDIAN_FLAME ruling 2026-06-19):
+//   The golden's `golden_vector` index is GLOBAL (every ForgedNode across every standard). voyage-4
+//   embeddings CLUSTER BY AUTHORING-STANDARD, so a source standard's nearest neighbors are
+//   overwhelmingly its OWN siblings — a global index STARVES cross-standard retrieval (a probe of 40
+//   gave a candidate pool to only 25% of LIF sources; classes got zero). The faithful fix (what
+//   trackA actually relied on) is a TARGET-STANDARD-SCOPED vector index, so the index's top-K are the
+//   target standard by CONSTRUCTION. We build one vector index per (targetStandard, role) on the
+//   target's existing scoping label (e.g. CedsProperty for (CEDS, DmeProperty)) — INDEX-ONLY (no node
+//   writes), so golden content == replay is preserved and nothing re-embeds. Coverage -> 100%.
 //
-// Async style: qtools taskListPlus/pipeRunner; neo4j resolves at the leaf. No async/await, no
-// try/catch-for-control-flow, no Promises surfaced. camelCase only.
+// GENERIC (no per-standard code; DECISIONS §12): the scoping label is DISCOVERED from the graph (the
+// node's non-Dme*, non-ForgedNode, non-graphName label), the index NAME is derived by convention
+// `forgeVec_<targetStandard>_<role>`, and per-standard knobs (impliedTargets, includeInImplied,
+// probeK, candidatePoolK) arrive as DATA on the scope standard's mappingInstruction. There is no CEDS
+// literal anywhere here, and `_source` is matched EXACTLY (no toLower).
+//
+// Async style: qtools taskListPlus/pipeRunner; neo4j resolves at the leaf via lifecycle.runCypher. No
+// async/await, no try/catch-for-control-flow, no Promises surfaced. camelCase only.
 
+const fs = require('fs');
 const path = require('path');
 const { pipeRunner, taskListPlus } = new require('qtools-asynchronous-pipe-plus')();
 
@@ -42,45 +39,35 @@ const mappingInstructionFactory = require('./mapping-instruction');
 
 const EDGE_TYPE = 'IMPLIED_MAPPING';
 const PROVENANCE_TIER = 'embedding-inferred';
-const CANDIDATE_TOP_K = 5;
 
-// [PINNED-DEFERRED] guard. -implied Stage-2 (rerank/calibrate/emit) is not built, so this mode
-// emits 0 edges. While that holds, SKIP the Stage-1 retrieve entirely: its candidates feed ONLY the
-// stubbed Stage-2 (pure waste), and the retrieve is an in-memory cosine over sources x targets —
-// O(N*M), which blows up at real scale (~23k x 23k at CEDS = ~100% CPU for 11+ min, an effective
-// hang). Flip to true ONLY when Stage-2 is built, and at that point back the retrieve with the
-// Neo4j vector index rather than this in-memory cross-product.
-const STAGE_TWO_BUILT = false;
+// The canonical role labels are the universal contract (DECISIONS §6). The implied pass maps
+// STRUCTURAL roles only — never DmeStandardRoot (a standard root is not a mappable element) and never
+// DmeSupport. Compatible-role matching is role EQUALITY (src.role == target.role), which subsumes the
+// per-role examples in the brief without any hardcoded per-role branch.
+const MAPPABLE_ROLES = ['DmeClass', 'DmeProperty', 'DmeOptionSet', 'DmeOptionValue'];
 
-// ---- PORTED FROM trackA embeddingMatcher.js (Stage-1 retrieve): cosine over stored vectors. ----
-// Negative similarities are forced to 0 (vectors pointing away — never a real match in this domain).
-const cosine = (a, b) => {
-	if (!Array.isArray(a) || !Array.isArray(b)) {
-		return 0;
+// Scoped vector index naming convention — generic over (targetStandard, role); NEVER a CEDS literal.
+const INDEX_NAME_PREFIX = 'forgeVec';
+const scopedIndexName = (targetStandard, role) => `${INDEX_NAME_PREFIX}_${targetStandard}_${role}`;
+
+// Mirror golden_vector's COSINE similarity. The dimensionality is DISCOVERED from a sample target
+// node's embedding at provision time (not a magic number) — it equals golden's 1024 for voyage-4
+// (DECISIONS §5) but stays correct if a standard's embedding width ever differs.
+const SIMILARITY_FUNCTION = 'cosine';
+
+// Index-online wait (a freshly created index on a fresh bronze graph populates asynchronously; on
+// golden the index already exists ONLINE and IF NOT EXISTS makes creation a no-op).
+const INDEX_ONLINE_TIMEOUT_MS = 180000;
+const INDEX_POLL_MS = 1000;
+
+const toNumber = (value) => {
+	if (value && typeof value === 'object' && typeof value.toNumber === 'function') {
+		return value.toNumber();
 	}
-	if (a.length === 0 || a.length !== b.length) {
-		return 0;
-	}
-	let dot = 0;
-	let na = 0;
-	let nb = 0;
-	for (let i = 0; i < a.length; i++) {
-		dot += a[i] * b[i];
-		na += a[i] * a[i];
-		nb += b[i] * b[i];
-	}
-	if (na === 0 || nb === 0) {
-		return 0;
-	}
-	const sim = dot / (Math.sqrt(na) * Math.sqrt(nb));
-	if (sim < 0) {
-		return 0;
-	}
-	if (sim > 1) {
-		return 1;
-	}
-	return sim;
+	return Number(value) || 0;
 };
+
+const round2 = (value) => Math.round(value * 100) / 100;
 
 // START OF moduleFunction() ============================================================
 
@@ -90,13 +77,191 @@ const moduleFunction =
 		const { xLog } = process.global;
 		const mappingInstruction = mappingInstructionFactory({ lifecycle });
 
-		// bridge — { graphName, scope, owner } ->
-		//   { stageTwoStubbed: true, candidatesRetrieved, edgesMerged: 0, note }.
-		const bridge = ({ graphName, scope, owner }, callback) => {
+		// discoverScopingLabel — the single label that scopes (targetStandard, role): a sample node's
+		// label that is NOT a role label (Dme*), NOT ForgedNode, NOT an OWNER-stamp label (golden/user
+		// — the universal :golden/:user ownership stamp, present on every replayed node and distinct
+		// from the graph NAME, e.g. a bronze graph's nodes still carry the 'golden' owner label), and
+		// NOT the graph-name label. For (CEDS, DmeProperty) that is 'CedsProperty'. Returns
+		// { scopingLabels } so the caller decides:
+		// exactly one -> use it; zero -> the target has no node of that role (skip the group); more
+		// than one -> an IRREGULAR target (e.g. LIF's LifComposite/LifEntity for DmeClass) which this
+		// phase does NOT silently guess on — the caller surfaces it as an error.
+		const discoverScopingLabel = ({ graphName, targetStandard, role }, callback) => {
+			lifecycle.runCypher(
+				{
+					graphName,
+					cypher: `
+						MATCH (n:ForgedNode)
+						WHERE n._source = $targetStandard AND n.role = $role
+						WITH labels(n) AS ls
+						LIMIT 1
+						RETURN [l IN ls WHERE NOT l STARTS WITH 'Dme' AND l <> 'ForgedNode' AND NOT l IN ['golden','user'] AND l <> $graphName] AS scopingLabels
+					`,
+					params: { targetStandard, role, graphName },
+				},
+				(err, result) => {
+					if (err) {
+						callback(`discoverScopingLabel(${targetStandard},${role}): ${err}`);
+						return;
+					}
+					if (!result.records || result.records.length === 0) {
+						callback('', { scopingLabels: [] });
+						return;
+					}
+					callback('', { scopingLabels: result.records[0].scopingLabels || [] });
+				},
+			);
+		};
+
+		// waitIndexOnline — poll SHOW VECTOR INDEXES until the named index is ONLINE (or FAILED/timeout).
+		// setTimeout is callback-style polling (not async/await); mirrors instance-lifecycle's readiness wait.
+		const waitIndexOnline = ({ graphName, indexName, deadline }, callback) => {
+			const probe = () => {
+				lifecycle.runCypher(
+					{ graphName, cypher: 'SHOW VECTOR INDEXES YIELD name, state RETURN name, state' },
+					(err, result) => {
+						if (err) {
+							callback(`waitIndexOnline(${indexName}): ${err}`);
+							return;
+						}
+						const row = (result.records || []).find((record) => record.name === indexName);
+						const state = row ? row.state : null;
+						if (state === 'ONLINE') {
+							callback('');
+							return;
+						}
+						if (state === 'FAILED') {
+							callback(`waitIndexOnline(${indexName}): index state FAILED`);
+							return;
+						}
+						if (Date.now() >= deadline) {
+							callback(`waitIndexOnline(${indexName}): timed out (state=${state})`);
+							return;
+						}
+						setTimeout(probe, INDEX_POLL_MS);
+					},
+				);
+			};
+			probe();
+		};
+
+		// ensureScopedIndex — idempotent CREATE VECTOR INDEX ... IF NOT EXISTS on the scoping label,
+		// then wait until ONLINE. Self-provisioning so -implied works on bronze/dev/golden alike.
+		const ensureScopedIndex = ({ graphName, indexName, scopingLabel }, callback) => {
 			const taskList = new taskListPlus();
 
-			// read the scope's mappingInstruction (generic). includeInImplied===false means this
-			// standard opts out of the implied pass entirely.
+			// discover the embedding dimensionality from a sample node (dimension-agnostic, no magic
+			// number). A scoping-label node with no embedding is a real data fault — surface it.
+			taskList.push((args, next) => {
+				lifecycle.runCypher(
+					{
+						graphName,
+						cypher: `MATCH (n:\`${scopingLabel}\`) WHERE n.embedding IS NOT NULL RETURN size(n.embedding) AS dims LIMIT 1`,
+						params: {},
+					},
+					(err, result) => {
+						if (err) {
+							next(`ensureScopedIndex dims(${scopingLabel}): ${err}`);
+							return;
+						}
+						if (!result.records || result.records.length === 0) {
+							next(
+								`ensureScopedIndex: no '${scopingLabel}' node carries an embedding — cannot size the scoped index`,
+							);
+							return;
+						}
+						next('', { ...args, dims: toNumber(result.records[0].dims) });
+					},
+				);
+			});
+
+			taskList.push((args, next) => {
+				lifecycle.runCypher(
+					{
+						graphName,
+						cypher: `
+							CREATE VECTOR INDEX \`${indexName}\` IF NOT EXISTS
+							FOR (n:\`${scopingLabel}\`) ON (n.embedding)
+							OPTIONS {indexConfig: {\`vector.dimensions\`: ${args.dims}, \`vector.similarity_function\`: '${SIMILARITY_FUNCTION}'}}
+						`,
+						params: {},
+					},
+					(err) => next(err, args),
+				);
+			});
+
+			taskList.push((args, next) => {
+				waitIndexOnline(
+					{ graphName, indexName, deadline: Date.now() + INDEX_ONLINE_TIMEOUT_MS },
+					(err) => next(err, args),
+				);
+			});
+
+			pipeRunner(taskList.getList(), {}, (err) => callback(err));
+		};
+
+		// retrieveForGroup — for ALL uncovered scope sources of one role, query the SCOPED target index
+		// and keep the top candidatePoolK by cosine. ONE round-trip (correlated subquery), bounded —
+		// no in-memory cross-product, one index probe per source. EXACT _source + role filter
+		// (redundant-but-safe atop a scoped index; no toLower, no literals). Drops self.
+		//   -> { perSource: [ { srcStableId, candCount, cands? } ] }   (cands present only when collectPools)
+		const retrieveForGroup = (
+			{ graphName, scope, targetStandard, role, indexName, probeK, candidatePoolK, collectPools },
+			callback,
+		) => {
+			const candsReturn = collectPools
+				? 'collect({stableId: node.stableId, score: score}) AS cands'
+				: '[] AS cands';
+			lifecycle.runCypher(
+				{
+					graphName,
+					cypher: `
+						MATCH (src:ForgedNode)
+						WHERE src._source = $scope AND src.role = $role AND src.embedding IS NOT NULL
+						  AND NOT (src)-[:SPECIFIED_MAPPING|DERIVED_MAPPING]->()
+						CALL {
+							WITH src
+							CALL db.index.vector.queryNodes($indexName, toInteger($probeK), src.embedding)
+								YIELD node, score
+							WHERE node._source = $targetStandard AND node.role = $role
+							  AND node.stableId <> src.stableId
+							WITH node, score
+							ORDER BY score DESC
+							LIMIT toInteger($candidatePoolK)
+							RETURN count(node) AS candCount, ${candsReturn}
+						}
+						RETURN src.stableId AS srcStableId, candCount, cands
+					`,
+					params: { scope, role, targetStandard, indexName, probeK, candidatePoolK },
+				},
+				(err, result) => {
+					if (err) {
+						callback(`retrieveForGroup(${targetStandard},${role}): ${err}`);
+						return;
+					}
+					const perSource = (result.records || []).map((record) => ({
+						srcStableId: record.srcStableId,
+						candCount: toNumber(record.candCount),
+						cands: collectPools
+							? (record.cands || []).map((candidate) => ({
+									stableId: candidate.stableId,
+									score: toNumber(candidate.score),
+								}))
+							: undefined,
+					}));
+					callback('', { perSource });
+				},
+			);
+		};
+
+		// bridge — { graphName, scope, owner, outPath } ->
+		//   { scope, sourcesConsidered, candidatesRetrieved, sourcesWithCandidates, sourcesZero,
+		//     perSourceAvg, perSourceMax, edgesMerged:0, note }
+		const bridge = ({ graphName, scope, owner, outPath } = {}, callback) => {
+			const taskList = new taskListPlus();
+
+			// 1. read the scope's mappingInstruction (generic data: impliedTargets, includeInImplied,
+			//    probeK, candidatePoolK — all with documented defaults).
 			taskList.push((args, next) => {
 				mappingInstruction.readForScope({ graphName, scope }, (err, resolved) => {
 					if (err) {
@@ -107,115 +272,177 @@ const moduleFunction =
 				});
 			});
 
-			// Stage 1 (ADAPTED): load scope nodes NOT already covered by SPECIFIED/DERIVED, plus the
-			// candidate target embeddings (the impliedTargets standards, default ['CEDS'] -> _source
-			// 'ceds'). One bulk fetch each — same batched-load discipline as trackA candidatePool.
+			// 2. per-role census of the UNCOVERED, mappable scope sources (defines sourcesConsidered and
+			//    the set of (target,role) groups to retrieve). includeInImplied=false opts the standard out.
 			taskList.push((args, next) => {
-				if (!STAGE_TWO_BUILT) {
-						xLog.status(
-							`[implied-bridge] [PINNED-DEFERRED] Stage-1 retrieve SKIPPED for scope '${scope}' — Stage-2 not built (no consumer); avoids the O(sources x targets) in-memory cosine blowup at scale.`,
-						);
-						next('', { ...args, sources: [] });
-						return;
-					}
-					if (!args.instruction.includeInImplied) {
+				if (!args.instruction.includeInImplied) {
 					xLog.status(
 						`[implied-bridge] scope '${scope}' opts out of implied (includeInImplied=false); skipping`,
 					);
-					next('', { ...args, sources: [], targets: [] });
+					next('', { ...args, roleCensus: [], optedOut: true });
 					return;
 				}
 				lifecycle.runCypher(
 					{
 						graphName,
 						cypher: `
-							MATCH (src)
-							WHERE src._source = $scope
+							MATCH (src:ForgedNode)
+							WHERE src._source = $scope AND src.role IN $mappableRoles
 							  AND src.embedding IS NOT NULL
 							  AND NOT (src)-[:SPECIFIED_MAPPING|DERIVED_MAPPING]->()
-							RETURN src.stableId AS stableId, src.searchText AS searchText, src.embedding AS embedding
+							RETURN src.role AS role, count(*) AS cnt
 						`,
-						params: { scope },
+						params: { scope, mappableRoles: MAPPABLE_ROLES },
 					},
 					(err, result) => {
 						if (err) {
-							next(`implied source scan: ${err}`);
+							next(`implied source census: ${err}`);
 							return;
 						}
-						const sources = result.records.map((record) => ({
-							stableId: record.stableId,
-							searchText: record.searchText,
-							embedding: record.embedding,
+						const roleCensus = (result.records || []).map((record) => ({
+							role: record.role,
+							cnt: toNumber(record.cnt),
 						}));
-						next('', { ...args, sources });
+						next('', { ...args, roleCensus, optedOut: false });
 					},
 				);
 			});
 
-			// load the candidate targets (impliedTargets; default CEDS).
+			// 3. for each (target, role) group: discover the scoping label, self-provision the scoped
+			//    index, run the bounded retrieve. Accumulate per-source candidate counts. Sequential
+			//    over groups (a handful: |impliedTargets| x |roles present|), each group ONE round-trip.
 			taskList.push((args, next) => {
-				if (args.sources.length === 0) {
-					next('', { ...args, targets: [] });
+				if (args.optedOut) {
+					next('', { ...args, perSourceCounts: {}, perSourcePools: [] });
 					return;
 				}
-				const targetSources = (args.instruction.impliedTargets || ['CEDS']).map((oneTarget) =>
-					`${oneTarget}`.toLowerCase(),
-				);
-				lifecycle.runCypher(
-					{
-						graphName,
-						cypher: `
-							MATCH (tgt)
-							WHERE toLower(tgt._source) IN $targetSources
-							  AND tgt.embedding IS NOT NULL
-							RETURN tgt.stableId AS stableId, tgt.searchText AS searchText, tgt.embedding AS embedding
-						`,
-						params: { targetSources },
-					},
-					(err, result) => {
-						if (err) {
-							next(`implied target scan: ${err}`);
-							return;
-						}
-						const targets = result.records.map((record) => ({
-							stableId: record.stableId,
-							searchText: record.searchText,
-							embedding: record.embedding,
-						}));
-						next('', { ...args, targets });
-					},
-				);
-			});
+				const targets = args.instruction.impliedTargets;
+				const probeK = args.instruction.probeK;
+				const candidatePoolK = args.instruction.candidatePoolK;
+				const collectPools = !!outPath;
 
-			// Stage 1 (ADAPTED): for each uncovered source, rank targets by cosine and keep top-K.
-			// This is the retrieve stage — it produces CANDIDATES, not edges.
-			taskList.push((args, next) => {
-				let candidatesRetrieved = 0;
-				args.sources.forEach((oneSource) => {
-					const ranked = args.targets
-						.map((oneTarget) => ({
-							targetStableId: oneTarget.stableId,
-							similarity: cosine(oneSource.embedding, oneTarget.embedding),
-						}))
-						.filter((candidate) => candidate.similarity > 0)
-						.sort((left, right) => right.similarity - left.similarity)
-						.slice(0, CANDIDATE_TOP_K);
-					candidatesRetrieved += ranked.length;
+				const groups = [];
+				targets.forEach((targetStandard) => {
+					args.roleCensus.forEach((censusRow) => {
+						groups.push({ targetStandard, role: censusRow.role });
+					});
 				});
-				xLog.status(
-					`[implied-bridge] Stage-1 retrieve (ADAPTED from trackA): ${args.sources.length} uncovered source(s) x ${args.targets.length} target(s) -> ${candidatesRetrieved} candidate(s) (top-${CANDIDATE_TOP_K} each)`,
-				);
-				next('', { ...args, candidatesRetrieved });
+
+				const perSourceCounts = {};
+				const perSourcePools = [];
+
+				const groupTaskList = new taskListPlus();
+				groups.forEach((group) => {
+					groupTaskList.push((gArgs, gNext) => {
+						const { targetStandard, role } = group;
+						const indexName = scopedIndexName(targetStandard, role);
+						const innerTaskList = new taskListPlus();
+
+						// discover the scoping label for this (target, role).
+						innerTaskList.push((iArgs, iNext) => {
+							discoverScopingLabel({ graphName, targetStandard, role }, (err, found) => {
+								if (err) {
+									iNext(err);
+									return;
+								}
+								iNext('', { ...iArgs, scopingLabels: found.scopingLabels });
+							});
+						});
+
+						// provision + retrieve (or skip when the target has no node of this role).
+						innerTaskList.push((iArgs, iNext) => {
+							const labels = iArgs.scopingLabels;
+							if (labels.length === 0) {
+								xLog.status(
+									`[implied-bridge] target '${targetStandard}' has no '${role}' node — no scoped index, group skipped (its sources retrieve 0)`,
+								);
+								iNext('', iArgs);
+								return;
+							}
+							if (labels.length > 1) {
+								iNext(
+									`[implied-bridge] target '${targetStandard}' role '${role}' is IRREGULAR — ${labels.length} scoping labels (${labels.join(', ')}); a single (standard,role) scoping label is required for a scoped index. This phase does not guess; see the deferred regular-scoping-label work.`,
+								);
+								return;
+							}
+							const scopingLabel = labels[0];
+
+							const provideAndRetrieve = new taskListPlus();
+							provideAndRetrieve.push((pArgs, pNext) => {
+								ensureScopedIndex({ graphName, indexName, scopingLabel }, (err) =>
+									pNext(err, pArgs),
+								);
+							});
+							provideAndRetrieve.push((pArgs, pNext) => {
+								retrieveForGroup(
+									{
+										graphName,
+										scope,
+										targetStandard,
+										role,
+										indexName,
+										probeK,
+										candidatePoolK,
+										collectPools,
+									},
+									(err, retrieved) => {
+										if (err) {
+											pNext(err);
+											return;
+										}
+										retrieved.perSource.forEach((entry) => {
+											perSourceCounts[entry.srcStableId] =
+												(perSourceCounts[entry.srcStableId] || 0) + entry.candCount;
+											if (collectPools) {
+												perSourcePools.push({
+													srcStableId: entry.srcStableId,
+													targetStandard,
+													role,
+													cands: entry.cands,
+												});
+											}
+										});
+										pNext('', pArgs);
+									},
+								);
+							});
+							pipeRunner(provideAndRetrieve.getList(), {}, (err) => iNext(err, iArgs));
+						});
+
+						pipeRunner(innerTaskList.getList(), {}, (err) => gNext(err, gArgs));
+					});
+				});
+
+				pipeRunner(groupTaskList.getList(), {}, (err) => {
+					if (err) {
+						next(err);
+						return;
+					}
+					next('', { ...args, perSourceCounts, perSourcePools });
+				});
 			});
 
-			// Stage 2 (STUBBED, [PINNED-DEFERRED]): rerank + calibrate + emit. NOT done — we emit NO
-			// edges and fake NO calibrated results. The note is surfaced so the operator (and the
-			// Phase-5 report) sees the honest deferral.
+			// 4. optional --out dump of the (large) per-source candidate pools; stdout stays compact.
 			taskList.push((args, next) => {
+				if (!outPath || args.perSourcePools.length === 0) {
+					next('', args);
+					return;
+				}
+				// fs.writeFileSync can throw on a bad path — a genuine operator fault, surface it.
+				let writeError = null;
+				try {
+					fs.writeFileSync(outPath, JSON.stringify(args.perSourcePools, null, 2));
+				} catch (fsErr) {
+					writeError = fsErr;
+				}
+				if (writeError) {
+					next(`implied --out write to '${outPath}': ${writeError.message}`);
+					return;
+				}
 				xLog.status(
-					`[implied-bridge] [PINNED-DEFERRED] Stage-2 (rerank+calibrate+emit) NOT ported — depends on per-standard neighborhood/path signals + a crosswalkConfig weight table (trackA scorer.js / candidatePool NEIGHBORHOOD_QUERIES). No ${EDGE_TYPE} edges emitted; no results faked.`,
+					`[implied-bridge] wrote ${args.perSourcePools.length} per-source candidate pool(s) to ${outPath}`,
 				);
-				next('', { ...args, edgesMerged: 0 });
+				next('', args);
 			});
 
 			pipeRunner(taskList.getList(), {}, (err, args) => {
@@ -223,16 +450,45 @@ const moduleFunction =
 					callback(err);
 					return;
 				}
+				const sourcesConsidered = args.optedOut
+					? 0
+					: args.roleCensus.reduce((sum, row) => sum + row.cnt, 0);
+				const counts = Object.keys(args.perSourceCounts).map((key) => args.perSourceCounts[key]);
+				const candidatesRetrieved = counts.reduce((sum, value) => sum + value, 0);
+				const sourcesWithCandidates = counts.filter((value) => value > 0).length;
+				const sourcesZero = sourcesConsidered - sourcesWithCandidates;
+				const perSourceMax = counts.length > 0 ? Math.max(...counts) : 0;
+				const perSourceAvg =
+					sourcesConsidered > 0 ? round2(candidatesRetrieved / sourcesConsidered) : 0;
+
+				xLog.status(
+					`[implied-bridge] Stage-1 retrieve (scoped vector index): scope '${scope}' ${sourcesConsidered} uncovered source(s) -> ${candidatesRetrieved} candidate(s); ${sourcesWithCandidates} with pool, ${sourcesZero} zero. NO edges emitted (Phase I).`,
+				);
+
 				callback('', {
-					stageTwoStubbed: true,
-					candidatesRetrieved: args.candidatesRetrieved || 0,
+					scope,
+					sourcesConsidered,
+					candidatesRetrieved,
+					sourcesWithCandidates,
+					sourcesZero,
+					perSourceAvg,
+					perSourceMax,
 					edgesMerged: 0,
-					note: '[PINNED-DEFERRED] Stage-1 retrieve adapted from trackA (in-memory cosine); Stage-2 rerank/calibrate/emit deferred — no edges emitted, no results faked',
+					note: args.optedOut
+						? 'includeInImplied=false — scope opts out of the implied pass; no retrieve, no edges'
+						: 'Phase I: Stage-1 retrieve on target-standard-scoped vector indexes; no edges emitted (Stage-2 rerank/calibrate/emit not built)',
 				});
 			});
 		};
 
-		return { bridge, cosine };
+		return {
+			bridge,
+			discoverScopingLabel,
+			ensureScopedIndex,
+			retrieveForGroup,
+			scopedIndexName,
+			MAPPABLE_ROLES,
+		};
 	};
 
 // END OF moduleFunction() ============================================================

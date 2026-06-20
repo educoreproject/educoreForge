@@ -55,6 +55,7 @@ const CONFIGS_DIR = path.join(projectRoot, 'configs');
 const specifiedBridgeFactory = require('./lib/specified-bridge');
 const derivedBridgeFactory = require('./lib/derived-bridge');
 const impliedBridgeFactory = require('./lib/implied-bridge');
+const impliedPipelineFactory = require('./lib/implied-pipeline');
 
 // =====================================================================
 // HELP TEXT — matches specification/bridgeMaker/helpSpec.md (control surface IS the contract)
@@ -306,24 +307,44 @@ const handleImplied = ({ lifecycle }, callback) => {
 		return;
 	}
 
-	const impliedBridge = impliedBridgeFactory({ lifecycle });
-	impliedBridge.bridge(
-		{ graphName: options.graphName, scope: options.scope, owner: options.owner },
+	const outPath = (commandLineParameters.values.out || [])[0];
+
+	// Phase-IV DRY RUN (read-only): full pipeline (retrieve -> rerank -> calibrate -> classify ->
+	// brake projection) reporting the calibrated-confidence distribution. Emits NO edges.
+	// accept either a single-hyphen switch (-dryRun) or a double-hyphen flag (--dryRun) — qtools puts
+	// the latter in values, the former in switches.
+	const dryRunRequested =
+		!!commandLineParameters.switches.dryRun ||
+		(commandLineParameters.values.dryRun !== undefined);
+	if (dryRunRequested) {
+		const impliedPipeline = impliedPipelineFactory({ lifecycle });
+		impliedPipeline.runDryRun(
+			{ graphName: options.graphName, scope: options.scope, outPath },
+			(err, result) => {
+				if (err) {
+					callback(err);
+					return;
+				}
+				emitResult(xLog, { action: 'implied-dryRun', graph: options.graphName, ...result });
+				callback('');
+			},
+		);
+		return;
+	}
+
+	// DEFAULT -implied EMITS (Phase IV): full pipeline retrieve -> rerank -> calibrate -> classify ->
+	// brake -> MERGE IMPLIED_MAPPING. This is the tier add-standard.js invokes as the 3rd bridge mode
+	// into the bronze graph. (Retrieve-only remains available via implied-bridge.bridge for
+	// diagnostics/tests; the dry-run path above projects without writing.)
+	const impliedPipeline = impliedPipelineFactory({ lifecycle });
+	impliedPipeline.runEmit(
+		{ graphName: options.graphName, scope: options.scope, owner: options.owner, outPath },
 		(err, result) => {
 			if (err) {
 				callback(err);
 				return;
 			}
-			emitResult(xLog, {
-				action: 'implied',
-				graph: options.graphName,
-				scope: options.scope,
-				owner: options.owner,
-				stageTwoStubbed: result.stageTwoStubbed,
-				candidatesRetrieved: result.candidatesRetrieved,
-				edgesMerged: result.edgesMerged,
-				note: result.note,
-			});
+			emitResult(xLog, { action: 'implied', graph: options.graphName, ...result });
 			callback('');
 		},
 	);
