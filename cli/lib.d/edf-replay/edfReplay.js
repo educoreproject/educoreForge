@@ -68,13 +68,18 @@ DESCRIPTION
      replayManager computes graphs from manifests and extracts schemaBlocks from graphs. It holds
      no SQL (the manifest->blocks read path is forge-store) and no credential knowledge (graph
      access is resolved from the registry BY NAME). Replay is idempotent and deterministic:
-     golden == replay(goldenManifest).
+     graph CONTENT (every :ForgedNode node + its edges) == replay(goldenManifest). Content equality
+     EXCLUDES the single :GraphProvenance passport node that -buildGraph stamps into every graph
+     (its builtAt is non-deterministic) — equality/diff queries scope to (:ForgedNode), never bare
+     (n). (Option A, SPEC-graphProvenanceNode-062026.md.)
 
      Action flags take a single hyphen; parameters take a double hyphen.
 
 COMMANDS
      -buildGraph     CREATE + register the destination instance, resolve the manifest's ordered
-                     blocks (CEDS-first topo), replay them in, and stamp every node/edge --owner.
+                     blocks (CEDS-first topo), replay them in, stamp every node/edge --owner, and
+                     finally stamp ONE :GraphProvenance passport node (graph-level provenance,
+                     history + status) — excluded from content equality (Option A).
      -extractSchema  Serialize part of a live graph back out as exactly one PG-JSONL schemaBlock.
 
 OPTIONS
@@ -95,7 +100,7 @@ OPTIONS
      --force                         override the teardown guard.
 
 OUTPUT
-     -buildGraph     The materialized graph + a danglingRefs report.
+     -buildGraph     The materialized graph + a danglingRefs report + the :GraphProvenance passport.
      -extractSchema  One schemaBlock as PG-JSONL (stdout by default, or --out).
 `;
 
@@ -218,6 +223,7 @@ const handleBuildGraph = ({ forgeStore, lifecycle }, callback) => {
 						danglingRefs: (result.replayResult.danglingRefs || []).length,
 						indexesBuilt: result.replayResult.indexesBuilt,
 						ownerStamped: result.ownerStampResult,
+						graphProvenance: result.provenanceResult,
 					},
 					null,
 					2,

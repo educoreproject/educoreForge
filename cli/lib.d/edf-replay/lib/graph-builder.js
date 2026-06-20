@@ -23,6 +23,12 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //        replay engine writes data only and explicitly defers the ownerStamp to replayManager; we
 //        apply it as a post-replay cypher pass — the owner token becomes a node LABEL and an edge
 //        `owner` PROPERTY (Neo4j relationships cannot carry labels). Idempotent (SET label/prop).
+//   5. stampProvenance: write the SINGLE :GraphProvenance passport node as the FINAL step
+//        (SPEC-graphProvenanceNode-062026.md). It records what/where/when/how the graph was built
+//        from inside the graph itself. Created AFTER ownerStamp so it is never owner-stamped, and
+//        deliberately carries neither the :ForgedNode label nor an _source (Option A): every
+//        content-equality/diff query scopes to (:ForgedNode), so the passport — whose builtAt is
+//        non-deterministic — is excluded from byte-identical content equality.
 //
 //   NEVER tears down on error (DECISIONS §14): a failed build leaves the instance in place.
 //
@@ -43,6 +49,12 @@ const CORE_LIB = path.join(
 	'lib',
 );
 const replayEngine = require(path.join(CORE_LIB, 'replay', 'replay-engine'));
+// replay-block is a PURE constants/codec module (no Neo4j); we read SERIALIZER_VERSION from it
+// for the :GraphProvenance passport rather than hardcoding the serializer version.
+const replayBlock = require(path.join(CORE_LIB, 'replay', 'replay-block'));
+// the engine/format version stamped on the passport is the version of the package that SHIPS the
+// replay engine (qtools-graph-forge-core); read it rather than hardcoding or inventing a constant.
+const FORGE_CORE_VERSION = require(path.join(CORE_LIB, '..', 'package.json')).version;
 
 // role -> instance type (registry `type`, which the teardown guard reads). bronze is ephemeral
 // (freely tearable); golden/user are protected. The ROLE is the canonical destination token
@@ -240,6 +252,156 @@ const moduleFunction =
 		//   is the canonical destination token (bronze|golden|user) that drives instance type + the
 		//   default owner; it DEFAULTS to `destination` (first-app: golden IS named 'golden'). owner
 		//   derives from role unless overridden. NEVER destroys on error (DECISIONS §14).
+		// -----
+		// statusForType — the INITIAL status the passport carries, by graphType. PRINCIPLE:
+		//   replayManager BUILDS, the promote path PUBLISHES — so 'live' means
+		//   pointer-advanced/published, which buildGraph does NOT do. bronze is a working scratch
+		//   graph; a user/tenant graph is live as soon as it is built (no promote step); golden (and
+		//   dev/validation) come up 'built' = replayed-but-not-yet-promoted. The promote path (IV-b)
+		//   later flips golden 'built' -> 'live', sets publishedAt + previousManifestId, and advances
+		//   the pointer.
+		const statusForType = (graphType) =>
+			graphType === 'bronze'
+				? 'working'
+				: graphType === 'user'
+					? 'live'
+					: 'built';
+
+		// -----
+		// stampProvenance — the FINAL build step: write the single :GraphProvenance passport node
+		//   (SPEC-graphProvenanceNode-062026.md). Runs AFTER content load + ownerStamp so counts and
+		//   provenanceTierComplete reflect the finished graph. Content facts (counts, standardsIncluded,
+		//   embeddingModelVersion, tier-completeness) are computed IN-CYPHER over (:ForgedNode) — so the
+		//   passport excludes ITSELF — while the externally-known scalars are passed as params. ONE
+		//   parameterized CREATE (SPEC §6). The passport is NOT a :ForgedNode and carries no _source
+		//   (Option A), so content-equality scoping to (:ForgedNode) excludes it. Neo4j drops
+		//   null-valued map properties on CREATE, so fields with no source today (schemaVersion,
+		//   buildSequence, triggeredBy, description, publishedAt, previousManifestId-when-null) read
+		//   back as null.
+		const stampProvenance = (
+			{ destination, manifestKey, owner, graphType, isEphemeral, builtAt },
+			callback,
+		) => {
+			const taskList = new taskListPlus();
+
+			// previousManifestId — the manifest pointer this build advances FROM
+			// (graphs.currentManifest). buildGraph does NOT itself move the pointer, so for a graph
+			// only ever built here this is null (the registry column exists but is unset).
+			taskList.push((args, next) => {
+				forgeStore.getGraphByName({ name: destination }, (err, graphRow) => {
+					if (err) {
+						next(err);
+						return;
+					}
+					next('', {
+						...args,
+						previousManifestId: graphRow
+							? graphRow.currentManifest || null
+							: null,
+					});
+				});
+			});
+
+			// the single parameterized CREATE. Content facts aggregate in-cypher (native ints,
+			// passport-excluding); scalars arrive as params.
+			taskList.push((args, next) => {
+				const params = {
+					graphName: destination,
+					graphType,
+					owner,
+					isEphemeral,
+					// no forge schema-version constant exists in the codebase today (null + flagged)
+					schemaVersion: null,
+					// the codebase's content-addressed manifest identifier is named manifestKey
+					manifestKey,
+					builtBy: 'replayManager',
+					// version of the package that ships the replay engine (qtools-graph-forge-core)
+					replayEngineVersion: FORGE_CORE_VERSION,
+					serializerVersion: replayBlock.SERIALIZER_VERSION, // "1"
+					builtAt,
+					// not passed to replayManager today (null + flagged)
+					triggeredBy: null,
+					// the manifest pointer this build advances FROM; buildGraph does not move the
+					// pointer (that is a promote action), so null for replayManager-built graphs
+					previousManifestId: args.previousManifestId,
+					// the registry tracks no monotonic build counter today; promote populates later
+					buildSequence: null,
+					status: statusForType(graphType),
+					// publishedAt is a PROMOTE-time field (golden 'built'->'live'); never set at build
+					publishedAt: null,
+					// no --description control-surface input today (null + flagged)
+					description: null,
+				};
+				const cypher = `
+					CALL { MATCH (n:ForgedNode)
+						RETURN count(n) AS nodeCountAtBuild,
+							collect(DISTINCT n._source) AS standardsRaw }
+					CALL { MATCH (:ForgedNode)-[r]->(:ForgedNode)
+						RETURN count(r) AS edgeCountAtBuild,
+							count(CASE WHEN r.provenanceTier IS NULL THEN 1 END) AS missingTier }
+					CALL { MATCH (e:ForgedNode) WHERE e.embeddingModelVersion IS NOT NULL
+						RETURN collect(DISTINCT e.embeddingModelVersion) AS emvList }
+					WITH nodeCountAtBuild, edgeCountAtBuild, missingTier,
+						[s IN standardsRaw WHERE s IS NOT NULL] AS standardsIncluded,
+						head(emvList) AS embeddingModelVersion
+					CREATE (p:GraphProvenance {
+						graphName: $graphName,
+						graphType: $graphType,
+						owner: $owner,
+						isEphemeral: $isEphemeral,
+						schemaVersion: $schemaVersion,
+						manifestKey: $manifestKey,
+						builtBy: $builtBy,
+						replayEngineVersion: $replayEngineVersion,
+						serializerVersion: $serializerVersion,
+						builtAt: $builtAt,
+						triggeredBy: $triggeredBy,
+						previousManifestId: $previousManifestId,
+						buildSequence: $buildSequence,
+						status: $status,
+						publishedAt: $publishedAt,
+						description: $description,
+						nodeCountAtBuild: nodeCountAtBuild,
+						edgeCountAtBuild: edgeCountAtBuild,
+						standardsIncluded: standardsIncluded,
+						embeddingModelVersion: embeddingModelVersion,
+						provenanceTierComplete: (missingTier = 0)
+					})
+					RETURN elementId(p) AS elementId, properties(p) AS provenance
+				`;
+				lifecycle.runCypher(
+					{ graphName: destination, cypher, params },
+					(err, result) => {
+						if (err) {
+							next(err);
+							return;
+						}
+						const row = result.records[0];
+						const provenance = row.provenance;
+						next('', {
+							...args,
+							provenanceResult: {
+								elementId: row.elementId,
+								status: provenance.status,
+								standardsIncluded: provenance.standardsIncluded,
+								nodeCountAtBuild: Number(provenance.nodeCountAtBuild),
+								edgeCountAtBuild: Number(provenance.edgeCountAtBuild),
+								provenanceTierComplete: provenance.provenanceTierComplete,
+							},
+						});
+					},
+				);
+			});
+
+			pipeRunner(taskList.getList(), {}, (err, args) => {
+				if (err) {
+					callback(err);
+					return;
+				}
+				callback('', args.provenanceResult);
+			});
+		};
+
 		const buildGraph = ({ manifestKey, destination, owner, role }, callback) => {
 			const effectiveRole = role || destination;
 			const effectiveOwner = owner || ownerForRole(effectiveRole);
@@ -339,6 +501,33 @@ const moduleFunction =
 				);
 			});
 
+			// 5. stamp the single :GraphProvenance passport (FINAL step; SPEC-graphProvenanceNode).
+			taskList.push((args, next) => {
+				stampProvenance(
+					{
+						destination,
+						manifestKey,
+						owner: effectiveOwner,
+						graphType: instanceType,
+						isEphemeral: instanceType === 'bronze',
+						builtAt: new Date().toISOString(),
+					},
+					(err, provenanceResult) => {
+						if (err) {
+							next(err);
+							return;
+						}
+						xLog.status(
+							`[graph-builder] graphProvenance: status=${provenanceResult.status}, ` +
+								`${provenanceResult.nodeCountAtBuild} node(s)/${provenanceResult.edgeCountAtBuild} edge(s), ` +
+								`standards [${(provenanceResult.standardsIncluded || []).join(', ')}], ` +
+								`provenanceTierComplete=${provenanceResult.provenanceTierComplete}`,
+						);
+						next('', { ...args, provenanceResult });
+					},
+				);
+			});
+
 			pipeRunner(taskList.getList(), {}, (err, args) => {
 				if (err) {
 					// NEVER tear down on error — leave the instance in place (DECISIONS §14).
@@ -352,6 +541,7 @@ const moduleFunction =
 					blockCount: args.blockTexts.length,
 					replayResult: args.replayResult,
 					ownerStampResult: args.ownerStampResult,
+					provenanceResult: args.provenanceResult,
 				});
 			});
 		};

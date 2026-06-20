@@ -299,14 +299,14 @@ require(path.join(CORE_LIB, 'instance-lifecycle', 'instance-lifecycle'))({
 
 	// read-back bronze counts
 	taskList.push((args, next) => {
-		countWhere(BRONZE_GRAPH, 'MATCH (n) RETURN count(n) AS c', (err, nodeCount) => {
+		countWhere(BRONZE_GRAPH, 'MATCH (n:ForgedNode) RETURN count(n) AS c', (err, nodeCount) => {
 			if (err) { next(err); return; }
 			check(`bronze read-back node count == ${EXPECTED_NODES}`, nodeCount === EXPECTED_NODES);
 			next('', { ...args, bronzeNodeCount: nodeCount });
 		});
 	});
 	taskList.push((args, next) => {
-		countWhere(BRONZE_GRAPH, 'MATCH ()-[r]->() RETURN count(r) AS c', (err, edgeCount) => {
+		countWhere(BRONZE_GRAPH, 'MATCH (:ForgedNode)-[r]->(:ForgedNode) RETURN count(r) AS c', (err, edgeCount) => {
 			if (err) { next(err); return; }
 			check(`bronze read-back edge count == ${EXPECTED_EDGES}`, edgeCount === EXPECTED_EDGES);
 			next('', { ...args, bronzeEdgeCount: edgeCount });
@@ -396,9 +396,9 @@ require(path.join(CORE_LIB, 'instance-lifecycle', 'instance-lifecycle'))({
 	});
 	taskList.push((args, next) => {
 		// compare counts golden vs golden2
-		countWhere(GOLDEN_GRAPH, 'MATCH (n) RETURN count(n) AS c', (err, gNodes) => {
+		countWhere(GOLDEN_GRAPH, 'MATCH (n:ForgedNode) RETURN count(n) AS c', (err, gNodes) => {
 			if (err) { next(err); return; }
-			countWhere(GOLDEN2_GRAPH, 'MATCH (n) RETURN count(n) AS c', (err2, g2Nodes) => {
+			countWhere(GOLDEN2_GRAPH, 'MATCH (n:ForgedNode) RETURN count(n) AS c', (err2, g2Nodes) => {
 				if (err2) { next(err2); return; }
 				check(`invariant: golden node count == golden2 node count (${gNodes} == ${g2Nodes})`, gNodes === g2Nodes && gNodes === EXPECTED_NODES);
 				next('', args);
@@ -406,9 +406,9 @@ require(path.join(CORE_LIB, 'instance-lifecycle', 'instance-lifecycle'))({
 		});
 	});
 	taskList.push((args, next) => {
-		countWhere(GOLDEN_GRAPH, 'MATCH ()-[r]->() RETURN count(r) AS c', (err, gEdges) => {
+		countWhere(GOLDEN_GRAPH, 'MATCH (:ForgedNode)-[r]->(:ForgedNode) RETURN count(r) AS c', (err, gEdges) => {
 			if (err) { next(err); return; }
-			countWhere(GOLDEN2_GRAPH, 'MATCH ()-[r]->() RETURN count(r) AS c', (err2, g2Edges) => {
+			countWhere(GOLDEN2_GRAPH, 'MATCH (:ForgedNode)-[r]->(:ForgedNode) RETURN count(r) AS c', (err2, g2Edges) => {
 				if (err2) { next(err2); return; }
 				check(`invariant: golden edge count == golden2 edge count (${gEdges} == ${g2Edges})`, gEdges === g2Edges && gEdges === EXPECTED_EDGES);
 				next('', args);
@@ -433,6 +433,108 @@ require(path.join(CORE_LIB, 'instance-lifecycle', 'instance-lifecycle'))({
 				next('', args);
 			});
 		});
+	});
+
+	// =====================================================================
+	// GATE 6: :GraphProvenance passport (SPEC-graphProvenanceNode-062026.md §7) + Option A.
+	//   golden + golden2 already built (GATE 3). Assert: exactly one passport; required fields
+	//   populated; standardsIncluded == distinct _source; passport is NOT a :ForgedNode / no _source;
+	//   and the content-equality exclusion (Option A) — bare (n) counts the passport, scoped
+	//   (:ForgedNode) does not, and the two graphs' passports are distinct yet content equality held.
+	// =====================================================================
+	taskList.push((args, next) => {
+		console.error('  ....  GATE 6: :GraphProvenance passport + Option A exclusion');
+		lifecycle.runCypher(
+			{
+				graphName: GOLDEN_GRAPH,
+				cypher: 'MATCH (g:GraphProvenance) RETURN count(g) AS cnt, collect(properties(g)) AS propsList',
+			},
+			(err, result) => {
+				if (err) { next(err); return; }
+				const cnt = toNum(result.records[0].cnt);
+				const props = (result.records[0].propsList || [])[0] || {};
+				check('GATE6: golden has exactly ONE :GraphProvenance passport', cnt === 1);
+				check('GATE6: passport graphName == golden', props.graphName === GOLDEN_GRAPH);
+				check('GATE6: passport graphType == golden', props.graphType === 'golden');
+				check('GATE6: passport owner == :golden', props.owner === ':golden');
+				check('GATE6: passport isEphemeral === false', props.isEphemeral === false);
+				check('GATE6: passport status == built (golden awaits promote)', props.status === 'built');
+				check('GATE6: passport manifestKey == goldenManifestKey', props.manifestKey === args.goldenManifestKey);
+				check('GATE6: passport builtBy == replayManager', props.builtBy === 'replayManager');
+				check('GATE6: passport serializerVersion == "1"', props.serializerVersion === '1');
+				check('GATE6: passport replayEngineVersion == core package version', typeof props.replayEngineVersion === 'string' && props.replayEngineVersion === require(path.join(CORE_LIB, '..', 'package.json')).version);
+				check('GATE6: passport builtAt is a non-empty string', typeof props.builtAt === 'string' && props.builtAt.length > 0);
+				check('GATE6: passport publishedAt is null at build (promote sets it)', props.publishedAt === null || props.publishedAt === undefined);
+				check('GATE6: passport provenanceTierComplete === true', props.provenanceTierComplete === true);
+				check(`GATE6: passport nodeCountAtBuild == ${EXPECTED_NODES}`, toNum(props.nodeCountAtBuild) === EXPECTED_NODES);
+				check(`GATE6: passport edgeCountAtBuild == ${EXPECTED_EDGES}`, toNum(props.edgeCountAtBuild) === EXPECTED_EDGES);
+				const standards = (props.standardsIncluded || []).slice().sort().join(',');
+				check('GATE6: passport standardsIncluded == [CEDS,CIP]', standards === 'CEDS,CIP');
+				next('', { ...args, goldenPassport: props });
+			},
+		);
+	});
+
+	// passport is NOT a :ForgedNode and carries no _source (the Option-A exclusion property)
+	taskList.push((args, next) => {
+		lifecycle.runCypher(
+			{ graphName: GOLDEN_GRAPH, cypher: 'MATCH (g:GraphProvenance) RETURN labels(g) AS labels, g._source AS src' },
+			(err, result) => {
+				if (err) { next(err); return; }
+				const labels = result.records[0].labels || [];
+				const src = result.records[0].src;
+				check('GATE6: passport carries the :GraphProvenance label', labels.indexOf('GraphProvenance') !== -1);
+				check('GATE6: passport is NOT a :ForgedNode', labels.indexOf('ForgedNode') === -1);
+				check('GATE6: passport has no _source', src === null || src === undefined);
+				next('', args);
+			},
+		);
+	});
+
+	// standardsIncluded matches the distinct _source set over (:ForgedNode)
+	taskList.push((args, next) => {
+		lifecycle.runCypher(
+			{ graphName: GOLDEN_GRAPH, cypher: 'MATCH (n:ForgedNode) WHERE n._source IS NOT NULL RETURN collect(DISTINCT n._source) AS sources' },
+			(err, result) => {
+				if (err) { next(err); return; }
+				const distinct = (result.records[0].sources || []).slice().sort().join(',');
+				const passportStandards = (args.goldenPassport.standardsIncluded || []).slice().sort().join(',');
+				check('GATE6: standardsIncluded == distinct _source set', distinct === passportStandards && distinct === 'CEDS,CIP');
+				next('', args);
+			},
+		);
+	});
+
+	// Option A: a BARE (n) count INCLUDES the passport (content count + 1); the (:ForgedNode)-scoped
+	// count (asserted == EXPECTED_NODES in GATE 3) does NOT — proving the passport is a real node
+	// that content-equality scoping deliberately excludes.
+	taskList.push((args, next) => {
+		lifecycle.runCypher(
+			{ graphName: GOLDEN_GRAPH, cypher: 'MATCH (everything) RETURN count(everything) AS total' },
+			(err, result) => {
+				if (err) { next(err); return; }
+				const total = toNum(result.records[0].total);
+				check(`GATE6 (Option A): bare (n) count INCLUDES passport (== ${EXPECTED_NODES} + 1)`, total === EXPECTED_NODES + 1);
+				next('', args);
+			},
+		);
+	});
+
+	// golden2 also stamps exactly one passport; the two passports are DISTINCT per-graph nodes, yet
+	// the (:ForgedNode) content-equality check in GATE 3 PASSED — that is Option A wired end-to-end.
+	taskList.push((args, next) => {
+		lifecycle.runCypher(
+			{ graphName: GOLDEN2_GRAPH, cypher: 'MATCH (g:GraphProvenance) RETURN count(g) AS cnt, collect(properties(g)) AS propsList' },
+			(err, result) => {
+				if (err) { next(err); return; }
+				const cnt = toNum(result.records[0].cnt);
+				const props2 = (result.records[0].propsList || [])[0] || {};
+				check('GATE6: golden2 also has exactly ONE :GraphProvenance passport', cnt === 1);
+				const differ = props2.graphName !== args.goldenPassport.graphName || props2.builtAt !== args.goldenPassport.builtAt;
+				check('GATE6 (Option A): golden vs golden2 passports are DISTINCT, yet GATE 3 content equality held', differ);
+				next('', args);
+			},
+		);
 	});
 
 	// =====================================================================
@@ -515,7 +617,7 @@ require(path.join(CORE_LIB, 'instance-lifecycle', 'instance-lifecycle'))({
 
 	// confirm golden still present after the refused teardown
 	taskList.push((args, next) => {
-		countWhere(GOLDEN_GRAPH, 'MATCH (n) RETURN count(n) AS c', (err, c) => {
+		countWhere(GOLDEN_GRAPH, 'MATCH (n:ForgedNode) RETURN count(n) AS c', (err, c) => {
 			check('golden still queryable after refused teardown', !err && c === EXPECTED_NODES);
 			next('', args);
 		});
@@ -571,7 +673,7 @@ require(path.join(CORE_LIB, 'instance-lifecycle', 'instance-lifecycle'))({
 			(err) => {
 				check('a malformed-block build FAILS at replay (provenanceTier enforcement)', !!err);
 				// the instance must STILL EXIST (NEVER torn down on the error path, DECISIONS §14)
-				countWhere(FAIL_GRAPH, 'MATCH (n) RETURN count(n) AS c', (queryErr, c) => {
+				countWhere(FAIL_GRAPH, 'MATCH (n:ForgedNode) RETURN count(n) AS c', (queryErr, c) => {
 					check('failed-build instance is LEFT IN PLACE (queryable, not torn down)', !queryErr && typeof c === 'number');
 					next('', args);
 				});
