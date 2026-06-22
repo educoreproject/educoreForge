@@ -1,0 +1,39 @@
+refIdProperty	inferredTarget	resolvedTable	resolutionMethod	notes
+ApplicationRefId	Applications	IdMApplications	sif_knowledge	SIF Identity Management module
+AssociatedRoleRefId	AssociatedRoles	PersonRoleAssociations	sif_knowledge	Role references resolve to PersonRoleAssociations
+ContactForRequestsRefId	ContactForRequestss	StudentContactPersonals	sif_knowledge	Contact request person
+ContactForRequestsRefId	ContactForRequestss	StudentContactPersonals	sif_knowledge	Contact request person
+DoNotShareWithRefId	DoNotShareWiths	Authentications	sif_knowledge	Privacy/auth entity reference
+FinancialAccountAccountingPeriodLocationInfoRefId	FinancialAccountAccountingPeriodLocationInfos	FinancialAccountAccountingPerio	sif_knowledge	Truncated table name in TSV
+IncidentLocationRefId	IncidentLocations	LocationInfos	sif_knowledge	Location of discipline incident
+LearningStandardRefId	LearningStandards	LearningStandardItems	sif_knowledge	Generic standard ref -> specific items table
+LocationRefId	Locations	LocationInfos	infos_suffix	Case-insensitive + InfoS suffix
+ManagingSchoolRefId	ManagingSchools	SchoolInfos	sif_knowledge	Managing school is a SchoolInfo
+MarkValueInfoDataRefId	MarkValueInfoDatas	MarkValueInfos	sif_knowledge	Data subtype of MarkValueInfo
+NeverShareWithRefId	NeverShareWiths	Authentications	sif_knowledge	Privacy/auth entity reference
+OrganizationRefId	Organizations	LEAInfos	sif_knowledge	LEAs are the primary org type in SIF K-12
+ParentRefId	Parents	StudentContactPersonals	sif_knowledge	SIF3 merged parents into StudentContactPersonals
+PermissionGranteeRefId	PermissionGrantees	Authentications	sif_knowledge	Auth/permission entity
+PersonRefId	Persons	StudentPersonals	sif_knowledge	Generic person ref - most common target is StudentPersonals. Could also be StaffPersonals or StudentContactPersonals.
+ProfessionalDevelopmentActivitiesRefId	ProfessionalDevelopmentActivitiess	ProfessionalDevelopmentActiviti	sif_knowledge	Truncated table name in TSV
+ProfessionalDevelopmentActivityRefId	ProfessionalDevelopmentActivitys	ProfessionalDevelopmentActiviti	sif_knowledge	Alternate spelling -> same truncated table
+ProgramRefId	Programs	StudentProgramAssociations	sif_knowledge	Program enrollment associations
+SIF_RefId	SIF_s	UNRESOLVABLE_GENERIC_REF	generic	Polymorphic reference to any SIF object. Used with @SIF_RefObject to specify target type. Cannot resolve statically.
+SchoolAttendedRefId	SchoolAttendeds	SchoolInfos	sif_knowledge	School attended is a SchoolInfo
+SettingLocationRefId	SettingLocations	LocationInfos	sif_knowledge	Setting location -> LocationInfos
+ShareWithRefId	ShareWiths	Authentications	sif_knowledge	Privacy/auth entity reference
+StudentInfoRefId	StudentInfos	StudentPersonals	sif_knowledge	StudentInfo is legacy name for StudentPersonals
+StudentRefId	Students	StudentPersonals	personals_suffix	Student + Personals suffix
+contactInfoRefId	contactInfos	StudentContacts	sif_knowledge	Lowercase variant -> StudentContacts
+contactPersonRefId	contactPersons	StudentContactPersonals	sif_knowledge	Lowercase variant -> StudentContactPersonals
+contactRefId	contacts	xContacts	x_prefix	Lowercase variant -> xContacts (xPress)
+courseRefId	courses	xCourses	x_prefix	Lowercase variant -> xCourses (xPress)
+leaRefId	leas	LEAInfos	infos_suffix	Lowercase + Infos suffix
+organizationRefId	organizations	LEAInfos	sif_knowledge	Lowercase variant -> LEAs as primary org
+parentGuardianRefId	parentGuardians	StudentContactPersonals	sif_knowledge	Parent/guardian -> StudentContactPersonals
+schoolCalendarRefId	schoolCalendars	CalendarSummarys	sif_knowledge	School calendar -> CalendarSummarys
+schoolRefId	schools	SchoolInfos	infos_suffix	Lowercase + Infos suffix
+sectionRefId	sections	SectionInfos	infos_suffix	Lowercase + Infos suffix
+staffRefId	staffs	StaffPersonals	personals_suffix	Lowercase + Personals suffix
+studentRefId	students	StudentPersonals	personals_suffix	Lowercase + Personals suffix
+studentSchoolAssociationRefId	studentSchoolAssociations	StudentSchoolEnrollments	sif_knowledge	Association -> Enrollment table

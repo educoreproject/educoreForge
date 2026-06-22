@@ -42,6 +42,19 @@ const registry = {
 			'data_model_1_bare_openapi_schema.1.json',
 		),
 	},
+	sif: {
+		standardName: 'SIF',
+		bundleFactoryPath: path.join(FORGE_BUNDLE_DIR, 'forge-sif', 'forgeSif'),
+		// the parser accepts the version DIRECTORY (it resolves the ImplementationSpecification*.tsv
+		// + the sibling refIdResolutionMap.tsv from inside it).
+		defaultSource: path.join(
+			FORGE_BUNDLE_DIR,
+			'forge-sif',
+			'assets',
+			'standardSourceData',
+			'01',
+		),
+	},
 	// --- Phase-6 forgeManager TEST-GATE bundles (synthetic; not real standards) -----------------
 	// These two rows let the forgeManager golden flow run fast and key-free. The hub bundle's
 	// nodes carry _source 'CEDS' (canonical hub casing — mirrors the real forge-ceds hub so the

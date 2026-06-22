@@ -1,0 +1,7 @@
+{
+	"name": "forge-sif",
+	"version": "1.0.0",
+	"main": "forgeSif.js",
+	"description": "SIF Implementation Specification forge bundle — parses the SIF TSV and emits the universal forge property contract (six Dme* roles, synthetic sif:<kind>/<key> stableIds, P###### CEDS cross-refs, voyage-4-large embeddings)",
+	"private": true
+}
