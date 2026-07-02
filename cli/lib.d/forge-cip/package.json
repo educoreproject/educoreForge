@@ -1,0 +1,7 @@
+{
+	"name": "forge-cip",
+	"version": "1.0.0",
+	"main": "forgeCip.js",
+	"description": "CIP 2020 (Classification of Instructional Programs) forge bundle — parses the NCES CIP 2020 taxonomy CSV and emits the universal forge property contract (pure taxonomy: DmeStandardRoot + DmeClass for every code, synthetic cip:<kind>/<cipCode> stableIds, SUBCLASS_OF class hierarchy, REFERENCES intra-CIP cross-references, voyage-4-large embeddings)",
+	"private": true
+}

@@ -155,9 +155,17 @@ const parseCeds = ({ sourcePath, xLog }, callback) => {
 
 	let filePath = sourcePath;
 	if (fs.statSync(sourcePath).isDirectory()) {
-		const candidates = fs.readdirSync(sourcePath).filter((n) => n.endsWith('.rdf'));
+		// L15: sorted for cross-machine determinism; EXACTLY ONE candidate required — a stray
+		// second source file would silently forge a different standard on another machine.
+		const candidates = fs.readdirSync(sourcePath).filter((n) => n.endsWith('.rdf')).sort();
 		if (!candidates.length) {
 			callback(`No .rdf source file in ${sourcePath}`);
+			return;
+		}
+		if (candidates.length > 1) {
+			callback(
+				`${candidates.length} candidate .rdf source files in ${sourcePath} (${candidates.join(', ')}) — expected exactly one; remove the extras.`,
+			);
 			return;
 		}
 		filePath = path.join(sourcePath, candidates[0]);

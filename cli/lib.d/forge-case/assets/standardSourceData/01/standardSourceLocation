@@ -1,0 +1,6 @@
+standard: forge-case
+sourceFile: imscasev1p1_openapi3_v1p0.yaml.txt
+copiedFrom: /Users/tqwhite/Documents/webdev/educoreForgeOLD/system/code/cli/lib.d/forge-case/assets/standardSourceData/01/imscasev1p1_openapi3_v1p0.yaml.txt
+copiedDate: 2026-06-23
+upstreamUrl: https://www.1edtech.org/case
+note: IMS Global / 1EdTech CASE Service v1.1, OpenAPI 3.0 (PSM). YAML source — first YAML forge in the universal-contract tool.

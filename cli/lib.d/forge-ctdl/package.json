@@ -1,0 +1,9 @@
+{
+  "name": "forge-ctdl",
+  "version": "1.0.0",
+  "private": true,
+  "description": "CTDL forge bundle for edf-forge: parses the Credential Engine CTDL JSON-LD vocabulary (ctdl-schema.json) into the universal forge property contract (DmeStandardRoot + the six roles, native-URI stableIds, canonical ownership edges HAS_CLASS/HAS_PROPERTY/HAS_OPTION_SET/HAS_VALUE, SUBCLASS_OF, REFERENCES, crossRefs carrying any harvested CEDS optionSet anchors normalized to canonical cedsId, searchText, embeddings). JSON-LD-family trailblazer. Harvested-and-adapted from the old forge-ctdl parser. JSON source — no js-yaml needed.",
+  "main": "forgeCtdl.js",
+  "author": "tqii",
+  "license": "ISC"
+}

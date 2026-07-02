@@ -1,0 +1,7 @@
+{
+	"name": "forge-medbiquitous",
+	"version": "1.0.0",
+	"main": "forgeMedbiquitous.js",
+	"description": "MedBiquitous XML Schema (XSD) + WSDL forge bundle — parses the MedBiquitous schema set (14 content standards + 4 shared substrate schemas across a nested per-standard/per-version XSD tree, plus 6 WSDL service files for Activity Report / Professional Profile / Journal) and emits the universal forge property contract (six Dme* roles, synthetic medbiq:<kind>/<source>/<name> stableIds, complexType->DmeClass / element|attribute->DmeProperty / enum-simpleType->DmeOptionSet / named-simpleType|group|attributeGroup|WSDL-construct->DmeSupport, SUBCLASS_OF from xs:extension, voyage-4-large embeddings). XSD-family; standard-pure (no CEDS crosswalk in source; WSDL service descriptions modeled as DmeSupport).",
+	"private": true
+}

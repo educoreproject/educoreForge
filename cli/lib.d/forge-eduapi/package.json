@@ -1,0 +1,9 @@
+{
+  "name": "forge-eduapi",
+  "version": "1.0.0",
+  "private": true,
+  "description": "EduAPI forge bundle for edf-forge: parses the 1EdTech Ed-API (Edu-API) v1.0 OpenAPI 3.0 JSON schema (higher-ed institutional data: people, organizations, course/program offerings, enrollments) into the universal forge property contract (DmeStandardRoot + the six roles, canonical ownership edges, polymorphic REFERENCES, crossRefs carrying any harvested CEDS element ids normalized to canonical cedsId, searchText, embeddings). Harvested-and-adapted from trackA forge-eduapi. Pure JSON parse — no extra runtime deps (mirrors forge-lif).",
+  "main": "forgeEduapi.js",
+  "author": "tqii",
+  "license": "ISC"
+}

@@ -76,9 +76,17 @@ const parseLif = ({ sourcePath, xLog }, callback) => {
 
 	let filePath = sourcePath;
 	if (fs.statSync(sourcePath).isDirectory()) {
-		const candidates = fs.readdirSync(sourcePath).filter((n) => n.endsWith('.json'));
+		// L15: sorted for cross-machine determinism; EXACTLY ONE candidate required — a stray
+		// second source file would silently forge a different standard on another machine.
+		const candidates = fs.readdirSync(sourcePath).filter((n) => n.endsWith('.json')).sort();
 		if (!candidates.length) {
 			callback(`No .json source file in ${sourcePath}`);
+			return;
+		}
+		if (candidates.length > 1) {
+			callback(
+				`${candidates.length} candidate .json source files in ${sourcePath} (${candidates.join(', ')}) — expected exactly one; remove the extras.`,
+			);
 			return;
 		}
 		filePath = path.join(sourcePath, candidates[0]);

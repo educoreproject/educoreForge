@@ -45,6 +45,13 @@ const CORE_LIB = path.join(
 	'lib',
 );
 const buildSearchTextFactory = require(path.join(CORE_LIB, 'search-text', 'build-search-text'));
+const { NODE_LABELS, DME_ROLES, EDGE_TYPES, PROVENANCE_TIER } = require(path.join(CORE_LIB, 'vocabulary', 'vocabulary'));
+// the central structural-property authority (Wave-2 items 5/6; M7/M8): enforces the parentId ->
+// member-stableId referent, derives depth (= parentId-chain length), stamps crossRefs universally,
+// and aligns single-owner optionSet parenting. Called as buildContractGraph's LAST step.
+const { finalizeStructuralContract } = require(
+	path.join(CORE_LIB, 'structural-contract', 'structural-contract'),
+);
 
 const STANDARD_KEY = 'lif';
 const STANDARD_SOURCE = 'LIF';
@@ -177,7 +184,7 @@ const moduleFunction =
 				});
 
 				const node = {
-					labels: ['ForgedNode', perStandardLabel, role],
+					labels: [NODE_LABELS.FORGED_NODE, perStandardLabel, role],
 					stableId,
 					role,
 					properties,
@@ -197,7 +204,7 @@ const moduleFunction =
 					type,
 					fromRef: { source: STANDARD_SOURCE, id: fromStableId },
 					toRef: { source: STANDARD_SOURCE, id: toStableId },
-					properties: { provenanceTier: 'structural' },
+					properties: { provenanceTier: PROVENANCE_TIER.STRUCTURAL },
 				});
 			};
 
@@ -227,20 +234,20 @@ const moduleFunction =
 			// ---- DmeStandardRoot (per-standard top; provenance block + stableUriPropertyName +
 			//      mappingInstruction with the CEDS anchor fields populated, DECISIONS §6/§7/§12) ----
 			const rootSearchText = buildSearchText({
-				role: 'DmeStandardRoot',
+				role: DME_ROLES.STANDARD_ROOT,
 				name: 'LIF',
 				standardName: metadata.schemaTitle || 'Learner Information Framework',
 			});
 			nodes.push({
-				labels: ['ForgedNode', 'LifRoot', 'DmeStandardRoot'],
+				labels: [NODE_LABELS.FORGED_NODE, 'LifRoot', DME_ROLES.STANDARD_ROOT],
 				stableId: ROOT_LIF_PATH,
-				role: 'DmeStandardRoot',
+				role: DME_ROLES.STANDARD_ROOT,
 				properties: {
 					_id: ROOT_ID,
 					_source: STANDARD_SOURCE,
 					name: 'LIF',
 					description: `${metadata.schemaTitle || 'Learner Information Framework'} OpenAPI ${metadata.openapiVersion} schema, version ${metadata.version}`,
-					role: 'DmeStandardRoot',
+					role: DME_ROLES.STANDARD_ROOT,
 					lifPath: ROOT_LIF_PATH,
 					searchText: rootSearchText,
 					// provenance block (DESIGN §B "Required on the DmeStandardRoot")
@@ -251,7 +258,9 @@ const moduleFunction =
 					sourceFiles: metadata.sourceFiles,
 					sourceUrl: metadata.sourceUrl,
 					parserVersion: '1',
-					ingestedAt: new Date().toISOString(),
+					// ingestedAt is intentionally NOT stamped (H5): a wall-clock inside hashed node props
+					// broke same-source -> same-blockId determinism. The run timestamp lives in the store
+					// row (blocks.createdAt), never in content-addressed block text.
 					coreVersion: '2.0.0',
 					// stableUriPropertyName + mappingInstruction (DECISIONS §6/§12)
 					stableUriPropertyName: STABLE_URI_PROPERTY_NAME,
@@ -263,7 +272,7 @@ const moduleFunction =
 			lifEntities.forEach((ent) => {
 				const stableId = entityPath(ent.name);
 				makeNode({
-					role: 'DmeClass',
+					role: DME_ROLES.CLASS,
 					perStandardLabel: 'LifEntity',
 					stableId,
 					name: ent.name,
@@ -281,7 +290,7 @@ const moduleFunction =
 					structural: { parentId: ROOT_ID, depth: 1, path: ent.name },
 				});
 				// HAS_CLASS: root -> class (canonical ownership)
-				addEdge('HAS_CLASS', ROOT_LIF_PATH, stableId);
+				addEdge(EDGE_TYPES.HAS_CLASS, ROOT_LIF_PATH, stableId);
 			});
 
 			// ---- DmeClass nodes for composites (array-of-object containers are structural classes) ----
@@ -292,7 +301,7 @@ const moduleFunction =
 					? compositePath(comp.entityName, comp.parentPath)
 					: entityPath(comp.entityName);
 				makeNode({
-					role: 'DmeClass',
+					role: DME_ROLES.CLASS,
 					perStandardLabel: 'LifComposite',
 					stableId,
 					name: comp.name,
@@ -314,7 +323,7 @@ const moduleFunction =
 					},
 				});
 				// HAS_CLASS: owning entity/composite -> composite class (immediate containment)
-				addEdge('HAS_CLASS', parentStableId, stableId);
+				addEdge(EDGE_TYPES.HAS_CLASS, parentStableId, stableId);
 			});
 
 			// ---- DmeProperty nodes (carry owning entity/composite name in searchText) ----
@@ -336,7 +345,7 @@ const moduleFunction =
 				};
 
 				makeNode({
-					role: 'DmeProperty',
+					role: DME_ROLES.PROPERTY,
 					perStandardLabel: 'LifProperty',
 					stableId,
 					name: prop.name,
@@ -356,13 +365,13 @@ const moduleFunction =
 				});
 
 				// HAS_PROPERTY: owning entity/composite -> property (immediate containment)
-				addEdge('HAS_PROPERTY', parentStableId, stableId);
+				addEdge(EDGE_TYPES.HAS_PROPERTY, parentStableId, stableId);
 
 				// REFERENCES: a Ref property points at its target entity/composite (DESIGN §F)
 				if (prop.isRef) {
 					const targetStableId = refTargetStableId(prop.refResolution);
 					if (targetStableId) {
-						addEdge('REFERENCES', stableId, targetStableId);
+						addEdge(EDGE_TYPES.REFERENCES, stableId, targetStableId);
 					}
 				}
 			});
@@ -373,7 +382,7 @@ const moduleFunction =
 				const propertyStableId = propPath(os.entityName, os.propertyPath);
 				const setName = `${os.entityName}.${os.propertyPath}`;
 				makeNode({
-					role: 'DmeOptionSet',
+					role: DME_ROLES.OPTION_SET,
 					perStandardLabel: 'LifOptionSet',
 					stableId,
 					name: setName,
@@ -391,7 +400,7 @@ const moduleFunction =
 					},
 				});
 				// HAS_OPTION_SET: property -> option set
-				addEdge('HAS_OPTION_SET', propertyStableId, stableId);
+				addEdge(EDGE_TYPES.HAS_OPTION_SET, propertyStableId, stableId);
 			});
 
 			// ---- DmeOptionValue nodes (each carries its set + owner in searchText) ----
@@ -400,7 +409,7 @@ const moduleFunction =
 				const owningSetStableId = optionSetPath(ov.entityName, ov.propertyPath);
 				const optionSetName = `${ov.entityName}.${ov.propertyPath}`;
 				makeNode({
-					role: 'DmeOptionValue',
+					role: DME_ROLES.OPTION_VALUE,
 					perStandardLabel: 'LifOptionValue',
 					stableId,
 					name: ov.value,
@@ -419,10 +428,13 @@ const moduleFunction =
 					},
 				});
 				// HAS_VALUE: option set -> value
-				addEdge('HAS_VALUE', owningSetStableId, stableId);
+				addEdge(EDGE_TYPES.HAS_VALUE, owningSetStableId, stableId);
 			});
 
-			return { nodes, edges };
+			// the shared contract finalizer (M7/M8): parentId referent enforced, depth derived
+			// (= chain length; supersedes the per-role stamps above), crossRefs universal,
+			// single-owner optionSets re-parented to their owning property. Throws loudly.
+			return finalizeStructuralContract({ nodes, edges });
 		};
 
 		// =====================================================================

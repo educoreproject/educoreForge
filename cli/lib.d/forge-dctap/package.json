@@ -1,0 +1,9 @@
+{
+  "name": "forge-dctap",
+  "version": "1.0.0",
+  "private": true,
+  "description": "DCTAP forge bundle for edf-forge: parses the Dublin Core Tabular Application Profile JSON-LD meta-vocabulary (dctap-elements.jsonld) into the universal forge property contract (DmeStandardRoot + roles, native-URI stableIds, canonical ownership edges HAS_CLASS/HAS_PROPERTY/HAS_OPTION_SET/HAS_VALUE, SUBCLASS_OF, searchText, embeddings). JSON-LD family (follows the CTDL trailblazer). STANDARD-PURE meta-vocabulary — no cross-standard edges. Harvested-and-adapted from the old forge-dctap parser. JSON source — no js-yaml needed.",
+  "main": "forgeDctap.js",
+  "author": "tqii",
+  "license": "ISC"
+}

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- edited with XMLSpy v2008 rel. 2 sp2 (http://www.altova.com) by Michael Morris (ACT MCCARREL CENTER) -->
+<xs:schema xmlns:tsr="urn:org:pesc:message:TestScoreReport:v1.1.0" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:AcRec="urn:org:pesc:sector:AcademicRecord:v1.11.0" targetNamespace="urn:org:pesc:message:TestScoreReport:v1.1.0" elementFormDefault="unqualified" attributeFormDefault="unqualified">
+	<xs:import namespace="urn:org:pesc:sector:AcademicRecord:v1.11.0" schemaLocation="AcademicRecord_v1.11.0.xsd"/>
+	<!--Name:   TestScoreReporting.xsd   -->
+	<!--Version: 1.0.0-->
+	<!--Date:  30-March-2009 -->
+	<!---->
+	<!--ChangeCode Log:-->
+	<!--v1.0.0 30-March-2009 Jeffrey Funck  -  -->
+	<!--Implementation of type definitions required for ETSR Schema. -->
+	<!--   Change #   KB20081027050500-->
+	<!--v1.6.0 09-September-2016 -->
+	<!-- Modified imports and namespaces to Academic Record 1.11.0-->
+	<!--   Change #JW160901-03 -->
+	<!--=========================================================================================================-->
+	<xs:element name="TestScoreReport" type="AcRec:TestScoreReportType">
+		<xs:annotation>
+			<xs:documentation>The complete test score report for multiple students</xs:documentation>
+		</xs:annotation>
+	</xs:element>
+	<!--========================================================================================================-->
+</xs:schema>

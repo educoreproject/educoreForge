@@ -320,8 +320,14 @@ module.exports = (sourcePath, options, callback) => {
 	let tsvPath = sourcePath;
 	let resolutionMapInDir = null;
 	if (fs.statSync(sourcePath).isDirectory()) {
-		const f = fs.readdirSync(sourcePath).filter((n) => n.endsWith('.tsv') && n !== 'refIdResolutionMap.tsv');
+		// L15: sorted for cross-machine determinism; EXACTLY ONE candidate required — a stray
+		// second source file would silently forge a different standard on another machine.
+		const f = fs.readdirSync(sourcePath).filter((n) => n.endsWith('.tsv') && n !== 'refIdResolutionMap.tsv').sort();
 		if (!f.length) { callback(`No ImplementationSpecification .tsv source file in ${sourcePath}`); return; }
+		if (f.length > 1) {
+			callback(`${f.length} candidate .tsv source files in ${sourcePath} (${f.join(', ')}) — expected exactly one; remove the extras.`);
+			return;
+		}
 		tsvPath = path.join(sourcePath, f[0]);
 		resolutionMapInDir = path.join(sourcePath, 'refIdResolutionMap.tsv');
 	}
@@ -333,17 +339,17 @@ module.exports = (sourcePath, options, callback) => {
 			? options.resolutionMapPath
 			: path.join(sourceDir, 'refIdResolutionMap.tsv'));
 
-	console.log(`[sif-tsv/parser] Parsing TSV: ${tsvPath}`);
+	console.error(`[sif-tsv/parser] Parsing TSV: ${tsvPath}`);
 
 	// Step 1: Parse TSV
 	const sifObjectList = parseTsvFile(tsvPath);
-	console.log(`[sif-tsv/parser] Parsed ${sifObjectList.length} SIF objects`);
+	console.error(`[sif-tsv/parser] Parsed ${sifObjectList.length} SIF objects`);
 
 	// Step 2: Resolve RefId targets
 	const manualResolutions = loadResolutionMap(resolutionMapPath);
 	const rawEdges = resolveRefIdTargets(sifObjectList, manualResolutions);
 	const referenceEdges = deduplicateEdges(rawEdges);
-	console.log(`[sif-tsv/parser] Resolved ${referenceEdges.length} REFERENCES edges`);
+	console.error(`[sif-tsv/parser] Resolved ${referenceEdges.length} REFERENCES edges`);
 
 	// Step 3: Build in-memory data structures
 	const typeRegistry = buildTypeRegistry(sifObjectList);
@@ -354,10 +360,10 @@ module.exports = (sourcePath, options, callback) => {
 	const primitiveTypes = [...typeRegistry.values()].filter(t => t.category === 'primitive');
 	const simpleTypes = [...typeRegistry.values()].filter(t => t.category === 'simple');
 
-	console.log(`[sif-tsv/parser] Types: ${primitiveTypes.length} primitive, ${simpleTypes.length} simple`);
-	console.log(`[sif-tsv/parser] Codesets: ${codesetMap.size}`);
-	console.log(`[sif-tsv/parser] ComplexTypes: ${complexTypeMap.size}`);
-	console.log(`[sif-tsv/parser] XmlElements: ${elementMap.size}`);
+	console.error(`[sif-tsv/parser] Types: ${primitiveTypes.length} primitive, ${simpleTypes.length} simple`);
+	console.error(`[sif-tsv/parser] Codesets: ${codesetMap.size}`);
+	console.error(`[sif-tsv/parser] ComplexTypes: ${complexTypeMap.size}`);
+	console.error(`[sif-tsv/parser] XmlElements: ${elementMap.size}`);
 
 	// Step 4: Build graphForge standard nodes
 	const nodes = [];
@@ -686,10 +692,10 @@ module.exports = (sourcePath, options, callback) => {
 		if (n._parentEdge) { parentEdgeCount++; }
 	});
 
-	console.log(`[sif-tsv/parser] Total nodes: ${nodes.length}`);
-	console.log(`[sif-tsv/parser] Total edges (declared): ${totalEdges}`);
-	console.log(`[sif-tsv/parser] Parent edges (HAS_FIELD): ${parentEdgeCount}`);
-	console.log(`[sif-tsv/parser] Fields with cedsId: ${fieldsWithCedsId}`);
+	console.error(`[sif-tsv/parser] Total nodes: ${nodes.length}`);
+	console.error(`[sif-tsv/parser] Total edges (declared): ${totalEdges}`);
+	console.error(`[sif-tsv/parser] Parent edges (HAS_FIELD): ${parentEdgeCount}`);
+	console.error(`[sif-tsv/parser] Fields with cedsId: ${fieldsWithCedsId}`);
 
 	callback('', {
 		nodes,

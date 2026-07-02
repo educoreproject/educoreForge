@@ -1,0 +1,7 @@
+{
+	"name": "forge-pesc",
+	"version": "1.0.0",
+	"main": "forgePesc.js",
+	"description": "PESC XML Schema (XSD) forge bundle — parses the PESC .xsd schema set (CoreMain + AcademicRecord + AdmissionsRecord + message schemas + imported iso_3166-1 codes) and emits the universal forge property contract (six Dme* roles, synthetic pesc:<kind>/<source>/<name> stableIds, complexType->DmeClass / element|attribute->DmeProperty / enum-simpleType->DmeOptionSet / named-simpleType|group->DmeSupport, SUBCLASS_OF from xs:extension, voyage-4-large embeddings). XSD-family trailblazer; standard-pure (no CEDS crosswalk in source).",
+	"private": true
+}

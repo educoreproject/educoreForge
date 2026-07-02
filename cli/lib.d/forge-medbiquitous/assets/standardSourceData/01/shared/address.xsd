@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xsd:schema xmlns="http://ns.medbiq.org/address/v2/" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:mbq="http://ns.medbiq.org/common/v2/" targetNamespace="http://ns.medbiq.org/address/v2/" elementFormDefault="qualified" attributeFormDefault="unqualified">
+	<xsd:import namespace="http://ns.medbiq.org/common/v2/" schemaLocation="http://ns.medbiq.org/common/v2/common.xsd"/>
+	<!--Modified March 31, 2025-->
+	<xsd:attributeGroup name="CommonAttributes">
+		<xsd:attribute name="id" type="xsd:ID"/>
+		<xsd:attribute name="source" type="xsd:string"/>
+		<xsd:attribute name="validityDate" type="xsd:date"/>
+		<xsd:attribute name="restrictions" type="mbq:RestrictionsType"/>
+	</xsd:attributeGroup>
+	<xsd:simpleType name="AddressCategoryType">
+		<xsd:restriction base="xsd:string">
+			<xsd:enumeration value="Residential"/>
+			<xsd:enumeration value="Business"/>
+			<xsd:enumeration value="Undeliverable"/>
+		</xsd:restriction>
+	</xsd:simpleType>
+	<xsd:simpleType name="NonNullString">
+		<xsd:restriction base="xsd:string">
+			<xsd:minLength value="1"/>
+		</xsd:restriction>
+	</xsd:simpleType>
+	<xsd:complexType name="CountryType">
+		<xsd:sequence>
+			<xsd:element name="CountryName" type="NonNullString" minOccurs="0"/>
+			<xsd:element name="CountryCode" type="NonNullString" minOccurs="0"/>
+		</xsd:sequence>
+	</xsd:complexType>
+	<xsd:complexType name="AddressType">
+		<xsd:sequence>
+			<xsd:element name="ID" type="NonNullString" minOccurs="0"/>
+			<xsd:element name="Organization" type="NonNullString" minOccurs="0" maxOccurs="unbounded"/>
+			<xsd:element name="StreetAddressLine" type="StreetAddressLineType" minOccurs="0" maxOccurs="unbounded"/>
+			<xsd:element name="City" type="NonNullString" minOccurs="0"/>
+			<xsd:element name="StateOrProvince" type="NonNullString" minOccurs="0"/>
+			<xsd:element name="PostalCode" type="NonNullString" minOccurs="0"/>
+			<xsd:element name="Region" type="NonNullString" minOccurs="0"/>
+			<xsd:element name="District" type="NonNullString" minOccurs="0"/>
+			<xsd:element name="Country" type="CountryType" minOccurs="0"/>
+		</xsd:sequence>
+		<xsd:attribute name="addressCategory" type="AddressCategoryType"/>
+		<xsd:attributeGroup ref="CommonAttributes"/>
+	</xsd:complexType>
+	<xsd:element name="Address" type="AddressType"/>
+	<xsd:complexType name="StreetAddressLineType">
+		<xsd:simpleContent>
+			<xsd:extension base="NonNullString">
+				<xsd:attribute name="restrictions" type="mbq:RestrictionsType"/>
+			</xsd:extension>
+		</xsd:simpleContent>
+	</xsd:complexType>
+	<xsd:complexType name="CountryTypeWithAttributes">
+		<xsd:annotation>
+			<xsd:documentation>Complex type using CountryType as its base to allow custom attributes.</xsd:documentation>
+		</xsd:annotation>
+		<xsd:complexContent>
+			<xsd:extension base="CountryType">
+				<xsd:attributeGroup ref="CommonAttributes"/>
+			</xsd:extension>
+		</xsd:complexContent>
+	</xsd:complexType>
+</xsd:schema>

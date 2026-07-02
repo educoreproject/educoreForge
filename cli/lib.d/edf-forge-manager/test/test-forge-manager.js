@@ -16,6 +16,10 @@
 // Force-tears-down ALL test containers/volumes at the END even on failure. Touches ONLY graphs it
 // created (unique-tagged + the named 'golden'/'goldenCheck'); never the unrelated gf_ containers.
 //
+// STORE: the whole suite runs on a throwaway os.tmpdir() sqlite store; subprocesses are
+// redirected there via EDF_FORGE_STORE_DB. The canonical dataStores/forgeStore.sqlite3 is
+// never opened, never written, never deleted.
+//
 // Run: node test-forge-manager.js
 
 const path = require('path');
@@ -29,7 +33,14 @@ const findProjectRoot = ({ rootFolderName = 'system' } = {}) =>
 const projectRoot = findProjectRoot();
 const LIB_D = path.join(projectRoot, 'code', 'cli', 'lib.d');
 const CORE_LIB = path.join(projectRoot, 'code', 'npm', 'qtools-graph-forge-core', 'lib');
-const CANONICAL_DB_PATH = path.join(projectRoot, 'dataStores', 'forgeStore.sqlite3');
+// STORE SAFETY (Phase 4 STEP 0): this suite runs ENTIRELY on a throwaway tmpdir store — like
+// test-replay-manager. The CANONICAL dataStores/forgeStore.sqlite3 must NEVER be touched: the
+// suite's subprocesses (manager/replay) are redirected via the EDF_FORGE_STORE_DB env override,
+// and every in-process store open + cleanup targets TEST_DB_PATH only.
+const TEST_DB_PATH = path.join(
+	os.tmpdir(),
+	`__TEST_edfForgeManager_${process.pid}.sqlite3`,
+);
 const MANAGER = path.join(LIB_D, 'edf-forge-manager', 'edfForgeManager.js');
 const REPLAY = path.join(LIB_D, 'edf-replay', 'edfReplay.js');
 
@@ -69,7 +80,12 @@ const runNode = (entryPath, args, callback) => {
 	execFile(
 		'node',
 		[entryPath, ...args],
-		{ encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 },
+		{
+			encoding: 'utf8',
+			maxBuffer: 64 * 1024 * 1024,
+			// redirect every subprocess to the throwaway tmpdir store — never the canonical.
+			env: { ...process.env, EDF_FORGE_STORE_DB: TEST_DB_PATH },
+		},
 		(err, stdout, stderr) => {
 			if (err) {
 				callback(`exit ${err.code}: ${(stderr || '').trim() || err.message}`);
@@ -92,7 +108,7 @@ const runNode = (entryPath, args, callback) => {
 // --- forge-store reads (manifest pointer, graph rows) ---------------------------------------
 const openStore = (callback) => {
 	const forgeStore = require(path.join(CORE_LIB, 'forge-store', 'forge-store'))();
-	forgeStore.init({ dbPath: CANONICAL_DB_PATH }, (err) => callback(err, forgeStore));
+	forgeStore.init({ dbPath: TEST_DB_PATH }, (err) => callback(err, forgeStore));
 };
 
 // --- snapshot a graph's nodes+edges by name (via the registry credential) -------------------
@@ -213,15 +229,18 @@ const forceTeardown = () => {
 			log(`  could not remove volume ${name}: ${e.message}`);
 		}
 	});
-	// the canonical store is test scaffolding here; remove it so reruns are clean.
-	try {
-		if (fs.existsSync(CANONICAL_DB_PATH)) {
-			fs.unlinkSync(CANONICAL_DB_PATH);
-			log('  removed test forgeStore.sqlite3');
+	// remove the THROWAWAY tmpdir store (and sqlite sidecars) so reruns are clean. The canonical
+	// dataStores/forgeStore.sqlite3 is NEVER touched by this suite.
+	[TEST_DB_PATH, `${TEST_DB_PATH}-shm`, `${TEST_DB_PATH}-wal`].forEach((onePath) => {
+		try {
+			if (fs.existsSync(onePath)) {
+				fs.unlinkSync(onePath);
+				log(`  removed test store file ${path.basename(onePath)}`);
+			}
+		} catch (e) {
+			log(`  could not remove test store file ${onePath}: ${e.message}`);
 		}
-	} catch (e) {
-		log(`  could not remove store: ${e.message}`);
-	}
+	});
 };
 
 // =====================================================================

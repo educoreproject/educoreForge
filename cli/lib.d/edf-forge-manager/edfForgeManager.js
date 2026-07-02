@@ -48,7 +48,17 @@ const CONFIGS_DIR = path.join(projectRoot, 'configs');
 const LIB_D = path.join(projectRoot, 'code', 'cli', 'lib.d');
 
 // the ONE canonical store all components share (the hardcoded sibling path).
-const CANONICAL_DB_PATH = path.join(projectRoot, 'dataStores', 'forgeStore.sqlite3');
+// EDF_FORGE_STORE_DB redirects the store (test harnesses); absent -> canonical, byte-identical.
+// An active override is ANNOUNCED on stderr: a stray env var in a real shell must never
+// silently redirect production writes.
+const CANONICAL_DB_PATH =
+	process.env.EDF_FORGE_STORE_DB ||
+	path.join(projectRoot, 'dataStores', 'forgeStore.sqlite3');
+if (process.env.EDF_FORGE_STORE_DB) {
+	console.error(
+		`STORE OVERRIDE ACTIVE: forgeStore db = ${CANONICAL_DB_PATH} (EDF_FORGE_STORE_DB)`,
+	);
+}
 
 // ABSOLUTE entry paths to each component CLI (shelled out by `node <entryPath> ...`).
 const ENTRIES = {

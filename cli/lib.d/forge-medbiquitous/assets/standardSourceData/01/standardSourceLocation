@@ -1,0 +1,9 @@
+standard: forge-medbiquitous
+displayName: MedBiquitous — Health Professions Education and Credentialing Standards Portfolio
+sourceRepository: https://github.com/medbiq/medbiq (master)
+nsBase: https://ns.medbiq.org/
+copiedFrom: educoreForgeOLD/system/code/cli/lib.d/forge-medbiquitous/assets/standardSourceData/01
+copiedDate: 2026-06-23
+contents: 27 XSD content+substrate schemas + 6 WSDL service descriptions (Activity Report, Professional Profile, Journal) + manifest.json
+note: nested per-standard/per-version tree preserved verbatim; the parser auto-discovers every *.xsd and *.wsdl recursively and source-qualifies by relative path. The OLD forge's .meta.json sidecars and refetch.sh are intentionally omitted (provenance lives in manifest.json + this marker).
+license: MedBiquitous Consortium XML Public License and Terms of Use (http://www.medbiq.org/license)

@@ -46,6 +46,13 @@ const CORE_LIB = path.join(
 	'lib',
 );
 const buildSearchTextFactory = require(path.join(CORE_LIB, 'search-text', 'build-search-text'));
+const { NODE_LABELS, DME_ROLES, EDGE_TYPES, PROVENANCE_TIER } = require(path.join(CORE_LIB, 'vocabulary', 'vocabulary'));
+// the central structural-property authority (Wave-2 items 5/6; M7/M8): enforces the parentId ->
+// member-stableId referent, derives depth (= parentId-chain length), stamps crossRefs universally,
+// and aligns single-owner optionSet parenting. Called as buildContractGraph's LAST step.
+const { finalizeStructuralContract } = require(
+	path.join(CORE_LIB, 'structural-contract', 'structural-contract'),
+);
 
 const STANDARD_KEY = 'sif';
 const STANDARD_SOURCE = 'SIF'; // === the registry standardName, EXACT (no literals elsewhere, no toLower)
@@ -67,13 +74,13 @@ const sifMappingInstruction = {
 
 // nativeLabel -> { role, kind, perStandardLabel }. Registry, not switch (ruling 2026-06-22).
 const roleSpecByNativeLabel = {
-	SifObject: { role: 'DmeClass', kind: 'object', perStandardLabel: 'SifObject' },
-	SifComplexType: { role: 'DmeClass', kind: 'complexType', perStandardLabel: 'SifComplexType' },
-	SifField: { role: 'DmeProperty', kind: 'field', perStandardLabel: 'SifField' },
-	SifCodeset: { role: 'DmeOptionSet', kind: 'codeset', perStandardLabel: 'SifCodeset' },
-	SifSimpleType: { role: 'DmeSupport', kind: 'simpleType', perStandardLabel: 'SifSimpleType' },
-	SifPrimitiveType: { role: 'DmeSupport', kind: 'primitiveType', perStandardLabel: 'SifPrimitiveType' },
-	SifXmlElement: { role: 'DmeSupport', kind: 'xmlElement', perStandardLabel: 'SifXmlElement' },
+	SifObject: { role: DME_ROLES.CLASS, kind: 'object', perStandardLabel: 'SifObject' },
+	SifComplexType: { role: DME_ROLES.CLASS, kind: 'complexType', perStandardLabel: 'SifComplexType' },
+	SifField: { role: DME_ROLES.PROPERTY, kind: 'field', perStandardLabel: 'SifField' },
+	SifCodeset: { role: DME_ROLES.OPTION_SET, kind: 'codeset', perStandardLabel: 'SifCodeset' },
+	SifSimpleType: { role: DME_ROLES.SUPPORT, kind: 'simpleType', perStandardLabel: 'SifSimpleType' },
+	SifPrimitiveType: { role: DME_ROLES.SUPPORT, kind: 'primitiveType', perStandardLabel: 'SifPrimitiveType' },
+	SifXmlElement: { role: DME_ROLES.SUPPORT, kind: 'xmlElement', perStandardLabel: 'SifXmlElement' },
 };
 
 // native key extractor per kind — the natural key that makes the synthetic stableId deterministic.
@@ -91,26 +98,26 @@ const naturalKeyByKind = {
 // are canonical ownership; the rest are non-ownership internal references (DESIGN §F). Synthesized
 // ownership edges (HAS_CLASS/HAS_SUPPORT/HAS_VALUE) are added directly, not via this table.
 const edgeTypeTranslation = {
-	HAS_FIELD: 'HAS_PROPERTY', // object -> field (from the native _parentEdge)
-	CONSTRAINED_BY: 'HAS_OPTION_SET', // field -> codeset (a property's option set)
-	USES_COMPLEX_TYPE: 'REFERENCES',
-	CONTAINS: 'REFERENCES',
-	HAS_TYPE: 'REFERENCES',
-	MEMBER_OF: 'REFERENCES',
-	HAS_ROOT_ELEMENT: 'REFERENCES',
-	CHILD_ELEMENT: 'REFERENCES',
-	TYPED_AS: 'REFERENCES',
-	REALIZED_BY: 'REFERENCES',
-	REFERENCES: 'REFERENCES',
+	HAS_FIELD: EDGE_TYPES.HAS_PROPERTY, // object -> field (from the native _parentEdge)
+	CONSTRAINED_BY: EDGE_TYPES.HAS_OPTION_SET, // field -> codeset (a property's option set)
+	USES_COMPLEX_TYPE: EDGE_TYPES.REFERENCES,
+	CONTAINS: EDGE_TYPES.REFERENCES,
+	HAS_TYPE: EDGE_TYPES.REFERENCES,
+	MEMBER_OF: EDGE_TYPES.REFERENCES,
+	HAS_ROOT_ELEMENT: EDGE_TYPES.REFERENCES,
+	CHILD_ELEMENT: EDGE_TYPES.REFERENCES,
+	TYPED_AS: EDGE_TYPES.REFERENCES,
+	REALIZED_BY: EDGE_TYPES.REFERENCES,
+	REFERENCES: EDGE_TYPES.REFERENCES,
 };
 
 // kinds that the root owns directly (the synthesized HAS_CLASS / HAS_SUPPORT ownership edges).
 const ownershipEdgeForKind = {
-	object: 'HAS_CLASS',
-	complexType: 'HAS_CLASS',
-	simpleType: 'HAS_SUPPORT',
-	primitiveType: 'HAS_SUPPORT',
-	xmlElement: 'HAS_SUPPORT',
+	object: EDGE_TYPES.HAS_CLASS,
+	complexType: EDGE_TYPES.HAS_CLASS,
+	simpleType: EDGE_TYPES.HAS_SUPPORT,
+	primitiveType: EDGE_TYPES.HAS_SUPPORT,
+	xmlElement: EDGE_TYPES.HAS_SUPPORT,
 };
 
 // structural depth per role (mirrors the forge-ceds depth convention).
@@ -152,16 +159,16 @@ const moduleFunction =
 
 		// the searchText element for a role, built from structural context only (DECISIONS §8).
 		const searchTextElementFor = ({ role, name, owningName }) => {
-			if (role === 'DmeClass') {
+			if (role === DME_ROLES.CLASS) {
 				return { role, name, standardName: STANDARD_SOURCE, owningName: STANDARD_SOURCE };
 			}
-			if (role === 'DmeProperty') {
+			if (role === DME_ROLES.PROPERTY) {
 				return { role, name, owningClassName: owningName || STANDARD_SOURCE, owningName: owningName || STANDARD_SOURCE };
 			}
-			if (role === 'DmeOptionSet') {
+			if (role === DME_ROLES.OPTION_SET) {
 				return { role, name, owningClassName: STANDARD_SOURCE, owningName: STANDARD_SOURCE };
 			}
-			if (role === 'DmeOptionValue') {
+			if (role === DME_ROLES.OPTION_VALUE) {
 				return { role, name, optionSetName: owningName, owningName, owningClassName: STANDARD_SOURCE };
 			}
 			// DmeSupport
@@ -200,7 +207,7 @@ const moduleFunction =
 				if (nativeNode.label === 'SifRoot') {
 					nativeIdToStable[nativeNode.id] = {
 						stableId: ROOT_STABLE_ID,
-						role: 'DmeStandardRoot',
+						role: DME_ROLES.STANDARD_ROOT,
 						name: STANDARD_SOURCE,
 					};
 					return;
@@ -229,7 +236,7 @@ const moduleFunction =
 					type,
 					fromRef: { source: STANDARD_SOURCE, id: fromStableId },
 					toRef: { source: STANDARD_SOURCE, id: toStableId },
-					properties: { provenanceTier: 'structural' },
+					properties: { provenanceTier: PROVENANCE_TIER.STRUCTURAL },
 				});
 			};
 
@@ -237,7 +244,7 @@ const moduleFunction =
 			const makeNode = ({ role, perStandardLabel, stableId, name, description, structural, extraProps }) => {
 				const searchText = buildSearchText(searchTextElementFor({ role, name, owningName: structural.owningName }));
 				const node = {
-					labels: ['ForgedNode', perStandardLabel, role],
+					labels: [NODE_LABELS.FORGED_NODE, perStandardLabel, role],
 					stableId,
 					role,
 					properties: {
@@ -261,20 +268,20 @@ const moduleFunction =
 
 			// ---- DmeStandardRoot (provenance block + stableUriPropertyName + mappingInstruction) ----
 			const rootSearchText = buildSearchText({
-				role: 'DmeStandardRoot',
+				role: DME_ROLES.STANDARD_ROOT,
 				name: STANDARD_SOURCE,
 				standardName: STANDARD_DISPLAY,
 			});
 			nodes.push({
-				labels: ['ForgedNode', 'SifRoot', 'DmeStandardRoot'],
+				labels: [NODE_LABELS.FORGED_NODE, 'SifRoot', DME_ROLES.STANDARD_ROOT],
 				stableId: ROOT_STABLE_ID,
-				role: 'DmeStandardRoot',
+				role: DME_ROLES.STANDARD_ROOT,
 				properties: {
 					_id: ROOT_STABLE_ID,
 					_source: STANDARD_SOURCE,
 					name: STANDARD_SOURCE,
 					description: `${STANDARD_DISPLAY} — ${metadata.objectCount} objects, ${metadata.fieldCount} fields`,
-					role: 'DmeStandardRoot',
+					role: DME_ROLES.STANDARD_ROOT,
 					[STABLE_URI_PROPERTY_NAME]: ROOT_STABLE_ID,
 					searchText: rootSearchText,
 					// provenance block (DESIGN §B "Required on the DmeStandardRoot")
@@ -285,7 +292,9 @@ const moduleFunction =
 					sourceFiles: metadata.sourceFiles || [],
 					sourceUrl: metadata.sourceUrl || '',
 					parserVersion: '1',
-					ingestedAt: new Date().toISOString(),
+					// ingestedAt is intentionally NOT stamped (H5): a wall-clock inside hashed node props
+					// broke same-source -> same-blockId determinism. The run timestamp lives in the store
+					// row (blocks.createdAt), never in content-addressed block text.
 					coreVersion: '2.0.0',
 					stableUriPropertyName: STABLE_URI_PROPERTY_NAME,
 					mappingInstruction: JSON.stringify(sifMappingInstruction),
@@ -384,7 +393,7 @@ const moduleFunction =
 							key: `${props.fingerprint}/${value}`,
 						});
 						makeNode({
-							role: 'DmeOptionValue',
+							role: DME_ROLES.OPTION_VALUE,
 							perStandardLabel: 'SifCodesetValue',
 							stableId: valueStableId,
 							name: value,
@@ -397,7 +406,7 @@ const moduleFunction =
 							},
 							extraProps: { scalar: {}, crossRefs: [] },
 						});
-						addEdge('HAS_VALUE', self.stableId, valueStableId, 'codeset->value');
+						addEdge(EDGE_TYPES.HAS_VALUE, self.stableId, valueStableId, 'codeset->value');
 						stats.optionValuesExpanded++;
 					});
 				}
@@ -414,7 +423,7 @@ const moduleFunction =
 					const owner = nativeIdToStable[nativeNode._parentEdge.fromId];
 					const canonical = edgeTypeTranslation[nativeNode._parentEdge.type];
 					addEdge(
-						canonical || 'REFERENCES',
+						canonical || EDGE_TYPES.REFERENCES,
 						owner && owner.stableId,
 						self.stableId,
 						`${nativeNode._parentEdge.type}:${nativeNode._parentEdge.fromId}->${nativeNode.id}`,
@@ -447,6 +456,10 @@ const moduleFunction =
 				);
 			}
 
+			// the shared contract finalizer (M7/M8): parentId referent enforced, depth derived
+			// (= chain length; supersedes the per-role stamps above), crossRefs universal,
+			// single-owner optionSets re-parented to their owning property. Throws loudly.
+			finalizeStructuralContract({ nodes, edges });
 			return { nodes, edges, stats };
 		};
 

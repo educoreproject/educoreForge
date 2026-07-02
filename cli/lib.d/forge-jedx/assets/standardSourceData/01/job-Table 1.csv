@@ -1,0 +1,20 @@
+Name,Type,Description,Path,Code Set,Annotation,Keys
+RefId,string,Reference Id for the root object.,job.RefId,,,PK
+senderId,string,Reference Id for the sender.,job.senderId,,Leave blank,
+receiverId,string,Reference Id for the receiver.,job.receiverId,,Leave blank,
+organizationRefId,string,Reference Id to the associated organization for the worker.,job.organizationRefId,,,FK
+organizationId,string,The organization Id associated with the job. ,job.organizationId,,,
+jobId,string,The identifier of the job. ,job.jobId,,,
+title,string,The title or name of the job. ,job.title,,,
+jobDuties,string,Describes the tasks and responsibilities of a job.,job.jobDuties,,,
+classificationSys,string,"""Choose a code below to indicate which occupational classification is used:
+1. Standard Occupational Classification (SOC) - United States
+2. International Standard Classification of Occupations (ISCO)
+3. European Skills, Competences, Qualifications and Oc",job.socInfo[].classificationSys,1,,
+assigningEntity,string,"""Choose a code below to indicate which entity assigned the occupational classification code:
+1. Employer
+2. State agency responsible for Unemployment Insurance administration.
+3. U.S. Bureau of Labor Statistics
+4. U.S. Census Bureau
+5. Other - specify""",job.socInfo[].assigningEntity,2,,
+socCodeValue,string,,job.socInfo[].socCodeValue,,use codes from this url: https://www.bls.gov/soc/2018/soc_2018_definitions.pdf,

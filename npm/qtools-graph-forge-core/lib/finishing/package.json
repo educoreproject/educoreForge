@@ -1,0 +1,6 @@
+{
+	"name": "finishing",
+	"version": "1.0.0",
+	"description": "replayManager FINISHER REGISTRY (Phase 7) — ordered, pluggable, post-build finishers (schema constraints + self-describing schema view), with a global skip switch. Owns schema from the vocabulary registry; the manifest carries nothing schema-related.",
+	"main": "finishing.js"
+}

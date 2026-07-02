@@ -1,0 +1,5 @@
+standard: forge-pesc
+copiedFrom: /Users/tqwhite/Documents/webdev/A4L/unityObjectGenerator/system/code/assets/databaseDefinitionss/PESC/schemas
+copiedDate: 2026-05-28
+upstreamUrl: TBD (not recorded for pre-existing forge; backfill when known)
+note: migrated to in-forge canonical location on 2026-05-28; original left in place

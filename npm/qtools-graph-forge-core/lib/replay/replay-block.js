@@ -27,18 +27,16 @@ const SERIALIZER_VERSION = '1';
 
 // Edge type is a validated identifier (CONTRACT; schemas.md §2). Guards against Cypher
 // injection through the relationship-type position, which cannot be parameterized.
-const EDGE_TYPE_RE = /^[A-Za-z_][A-Za-z0-9_]*$/;
-const isValidEdgeType = (oneType) =>
-	typeof oneType === 'string' && EDGE_TYPE_RE.test(oneType);
+// Phase 1: the edge-type regex + validator now come from the canonical vocabulary registry (single
+// source of truth). Values/behavior are byte-identical; replay-block still re-exports them, so its
+// public API is unchanged.
+const { EDGE_TYPE_RE, isValidEdgeType } = require('../vocabulary/vocabulary');
 
 // provenanceTier — the four-value canonical set (DECISIONS §11/§21).
-const PROVENANCE_TIERS = [
-	'spec-authoritative',
-	'embedding-inferred',
-	'structural',
-	'user-asserted',
-];
-const isValidProvenanceTier = (oneTier) => PROVENANCE_TIERS.indexOf(oneTier) !== -1;
+// Phase 1: the canonical provenanceTier set + validator come from the vocabulary registry (single
+// source of truth). The array order + values are byte-identical; replay-block re-exports them, so its
+// public API (PROVENANCE_TIERS, isValidProvenanceTier) is unchanged.
+const { PROVENANCE_TIERS, isValidProvenanceTier } = require('../vocabulary/vocabulary');
 
 // =====================================================================
 // EMBEDDING CODEC — explicit little-endian float32 (byte order intrinsic)
@@ -197,12 +195,12 @@ const deserializeBlock = (blockText) => {
 			`replay-block.deserializeBlock: line 1 kind '${header.kind}' is not 'header'`,
 		);
 	}
+	// L13 contract (Phase R, authorized AZURE_PEAK 2026-07-02): edge-only blocks
+	// (mapping/inferredMapping) carry NO embedding header fields, so embeddingDims is
+	// validated ONLY when an embedded node line actually needs it. A block that carries an
+	// embedding without a valid dims still refuses loudly, per-line, below.
 	const dims = header.embeddingDims;
-	if (typeof dims !== 'number' || dims <= 0) {
-		throw new Error(
-			`replay-block.deserializeBlock: header.embeddingDims '${dims}' is invalid`,
-		);
-	}
+	const dimsValid = typeof dims === 'number' && dims > 0;
 
 	const nodes = [];
 	const edges = [];
@@ -219,6 +217,12 @@ const deserializeBlock = (blockText) => {
 				embeddingModelVersion: rec.embeddingModelVersion || null,
 			};
 			if (rec.embedding !== undefined && rec.embedding !== null) {
+				if (!dimsValid) {
+					throw new Error(
+						`replay-block.deserializeBlock: line ${i + 1} carries an embedding but ` +
+							`header.embeddingDims '${dims}' is invalid`,
+					);
+				}
 				node.embedding = decodeEmbedding(rec.embedding, dims);
 			}
 			nodes.push(node);

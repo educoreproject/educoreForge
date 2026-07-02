@@ -22,14 +22,34 @@ const moduleFunction =
 		const blockIdForText = (text) => sha256Hex(text == null ? '' : `${text}`);
 
 		// -----
+		// dedupMembersByBlockId — membership is a SET of blocks (M5): the same blockId appearing
+		//   twice in a members list (the natural shape when a prior manifest's members are fed
+		//   back in and a producer re-appends a block already present) is ONE member. First
+		//   occurrence wins, position included; later duplicates are dropped. saveManifest and
+		//   manifestKeyForMembership MUST share this exact rule, or the stored membership rows
+		//   would not match the key they were addressed under.
+
+		const dedupMembersByBlockId = (members = []) => {
+			const seen = new Set();
+			return members.filter((oneMember) => {
+				if (seen.has(oneMember.blockId)) {
+					return false;
+				}
+				seen.add(oneMember.blockId);
+				return true;
+			});
+		};
+
+		// -----
 		// manifestKeyForMembership — canonical hash over membership.
-		//   canonical serialization = members sorted by blockId, each rendered
-		//   `blockId + ':' + (position==null ? '' : position)`, joined by '\n', sha256.
-		//   Identical membership (same blockIds + positions) => identical key;
-		//   ANY change => different key.
+		//   canonical serialization = members deduped by blockId (first occurrence wins), sorted
+		//   by blockId, each rendered `blockId + ':' + (position==null ? '' : position)`, joined
+		//   by '\n', sha256. Identical EFFECTIVE membership (same blockIds + positions) =>
+		//   identical key; ANY change => different key. A duplicated blockId no longer mints a
+		//   spuriously distinct key for identical effective membership (M5).
 
 		const manifestKeyForMembership = (members = []) => {
-			const canonical = members
+			const canonical = dedupMembersByBlockId(members)
 				.map((oneMember) => ({
 					blockId: oneMember.blockId,
 					position: oneMember.position == null ? null : oneMember.position,
@@ -50,7 +70,7 @@ const moduleFunction =
 			return sha256Hex(canonical);
 		};
 
-		return { blockIdForText, manifestKeyForMembership, sha256Hex };
+		return { blockIdForText, manifestKeyForMembership, dedupMembersByBlockId, sha256Hex };
 	};
 
 // END OF moduleFunction() ============================================================

@@ -55,6 +55,166 @@ const registry = {
 			'01',
 		),
 	},
+	case: {
+		standardName: 'CASE',
+		bundleFactoryPath: path.join(FORGE_BUNDLE_DIR, 'forge-case', 'forgeCase'),
+		// the IMS Global / 1EdTech CASE Service v1.1 OpenAPI 3.0 YAML schema (first YAML forge). The
+		// parser accepts either the file or its containing version directory.
+		defaultSource: path.join(
+			FORGE_BUNDLE_DIR,
+			'forge-case',
+			'assets',
+			'standardSourceData',
+			'01',
+			'imscasev1p1_openapi3_v1p0.yaml.txt',
+		),
+	},
+	edfi: {
+		standardName: 'EdFi',
+		bundleFactoryPath: path.join(FORGE_BUNDLE_DIR, 'forge-edfi', 'forgeEdfi'),
+		// the parser accepts the version DIRECTORY (it resolves both EdFi→CEDS crosswalk CSVs —
+		// EdFiEntityElementsToCEDS.csv + EdFiEntityDescriptorsToCEDS.csv — from inside it).
+		defaultSource: path.join(
+			FORGE_BUNDLE_DIR,
+			'forge-edfi',
+			'assets',
+			'standardSourceData',
+			'01',
+		),
+	},
+	// --- Wave-2 CSV-family standards (cloned from forge-sif/forge-edfi; CSV runbook) -------------
+	// standardName === _source EXACT (forgeManager invariant: --subject/--scope === standardName ===
+	// _source, no case transform). defaultSource is the version DIRECTORY; each forge resolves its
+	// source file(s) from inside it (the SIF/EdFi pattern). The bundleFactory + source are populated
+	// by each standard's Wave-2 forge agent at the path below.
+	jedx: {
+		standardName: 'JEDx',
+		bundleFactoryPath: path.join(FORGE_BUNDLE_DIR, 'forge-jedx', 'forgeJedx'),
+		defaultSource: path.join(
+			FORGE_BUNDLE_DIR,
+			'forge-jedx',
+			'assets',
+			'standardSourceData',
+			'01',
+		),
+	},
+	sedm: {
+		standardName: 'SEDM',
+		bundleFactoryPath: path.join(FORGE_BUNDLE_DIR, 'forge-sedm', 'forgeSedm'),
+		defaultSource: path.join(
+			FORGE_BUNDLE_DIR,
+			'forge-sedm',
+			'assets',
+			'standardSourceData',
+			'01',
+		),
+	},
+	cip: {
+		standardName: 'CIP',
+		bundleFactoryPath: path.join(FORGE_BUNDLE_DIR, 'forge-cip', 'forgeCip'),
+		defaultSource: path.join(
+			FORGE_BUNDLE_DIR,
+			'forge-cip',
+			'assets',
+			'standardSourceData',
+			'01',
+		),
+	},
+	soc: {
+		standardName: 'SOC',
+		bundleFactoryPath: path.join(FORGE_BUNDLE_DIR, 'forge-soc', 'forgeSoc'),
+		defaultSource: path.join(
+			FORGE_BUNDLE_DIR,
+			'forge-soc',
+			'assets',
+			'standardSourceData',
+			'01',
+		),
+	},
+	// --- Wave-3 OpenAPI-family standards (cloned from forge-lif/forge-case; OpenAPI runbook) -----
+	// defaultSource is the version DIRECTORY; the OpenAPI parser accepts the file OR its containing
+	// directory (the CASE/LIF pattern). standardName === _source EXACT. Populated by each Wave-3 agent.
+	clr: {
+		standardName: 'CLR',
+		bundleFactoryPath: path.join(FORGE_BUNDLE_DIR, 'forge-clr', 'forgeClr'),
+		defaultSource: path.join(
+			FORGE_BUNDLE_DIR,
+			'forge-clr',
+			'assets',
+			'standardSourceData',
+			'01',
+		),
+	},
+	openbadges: {
+		standardName: 'OpenBadges',
+		bundleFactoryPath: path.join(FORGE_BUNDLE_DIR, 'forge-openbadges', 'forgeOpenbadges'),
+		defaultSource: path.join(
+			FORGE_BUNDLE_DIR,
+			'forge-openbadges',
+			'assets',
+			'standardSourceData',
+			'01',
+		),
+	},
+	eduapi: {
+		standardName: 'EduAPI',
+		bundleFactoryPath: path.join(FORGE_BUNDLE_DIR, 'forge-eduapi', 'forgeEduapi'),
+		defaultSource: path.join(
+			FORGE_BUNDLE_DIR,
+			'forge-eduapi',
+			'assets',
+			'standardSourceData',
+			'01',
+		),
+	},
+	// --- Wave-4 XSD-family standards (new pattern; trailblazer PESC writes the XSD runbook) ------
+	// defaultSource is the version DIRECTORY (multiple .xsd / .wsdl schema files resolved inside).
+	// standardName === _source EXACT. Populated by each Wave-4 agent.
+	pesc: {
+		standardName: 'PESC',
+		bundleFactoryPath: path.join(FORGE_BUNDLE_DIR, 'forge-pesc', 'forgePesc'),
+		defaultSource: path.join(
+			FORGE_BUNDLE_DIR,
+			'forge-pesc',
+			'assets',
+			'standardSourceData',
+			'01',
+		),
+	},
+	medbiquitous: {
+		standardName: 'MedBiquitous',
+		bundleFactoryPath: path.join(FORGE_BUNDLE_DIR, 'forge-medbiquitous', 'forgeMedbiquitous'),
+		defaultSource: path.join(
+			FORGE_BUNDLE_DIR,
+			'forge-medbiquitous',
+			'assets',
+			'standardSourceData',
+			'01',
+		),
+	},
+	// --- Wave-5 JSON-LD-family standards (new pattern; trailblazer CTDL writes the JSON-LD runbook)
+	ctdl: {
+		standardName: 'CTDL',
+		bundleFactoryPath: path.join(FORGE_BUNDLE_DIR, 'forge-ctdl', 'forgeCtdl'),
+		defaultSource: path.join(
+			FORGE_BUNDLE_DIR,
+			'forge-ctdl',
+			'assets',
+			'standardSourceData',
+			'01',
+		),
+	},
+	dctap: {
+		standardName: 'DCTAP',
+		bundleFactoryPath: path.join(FORGE_BUNDLE_DIR, 'forge-dctap', 'forgeDctap'),
+		defaultSource: path.join(
+			FORGE_BUNDLE_DIR,
+			'forge-dctap',
+			'assets',
+			'standardSourceData',
+			'01',
+		),
+	},
 	// --- Phase-6 forgeManager TEST-GATE bundles (synthetic; not real standards) -----------------
 	// These two rows let the forgeManager golden flow run fast and key-free. The hub bundle's
 	// nodes carry _source 'CEDS' (canonical hub casing — mirrors the real forge-ceds hub so the

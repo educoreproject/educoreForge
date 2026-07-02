@@ -37,9 +37,37 @@ const CORE_LIB = path.join(
 );
 const buildSearchTextFactory = require(path.join(CORE_LIB, 'search-text', 'build-search-text'));
 
+// canonical vocabulary (Phase 1 registry). Values are byte-identical to the prior inline literals, so
+// the emitted nodes/edges are unchanged (verified by the structural-fingerprint gate).
+const { NODE_LABELS, DME_ROLES, EDGE_TYPES, PROVENANCE_TIER, CANONICAL_ADDRESS_PROPERTIES } = require(
+	path.join(CORE_LIB, 'vocabulary', 'vocabulary'),
+);
+// canonical-address component property NAMES, now sourced from the registry (Phase 3 promotion of the
+// Phase-2 local literals; HANDOFF (d)). Byte-identical: same key strings, proven by forgeStructuralFingerprint.
+const A = CANONICAL_ADDRESS_PROPERTIES;
+
+// the central structural-property authority (Wave-2 items 5/6; M7/M8): enforces the parentId ->
+// member-stableId referent, derives depth (= parentId-chain length), stamps crossRefs universally,
+// and aligns single-owner optionSet parenting. Called as buildContractGraph's LAST step.
+const { finalizeStructuralContract } = require(
+	path.join(CORE_LIB, 'structural-contract', 'structural-contract'),
+);
+
 const STANDARD_KEY = 'ceds';
 const STABLE_URI_PROPERTY_NAME = 'uri';
 const EMBED_BATCH_SIZE = 128; // voyage batch ceiling headroom; bounds per-call payload.
+
+// Phase 2 — CANONICAL ADDRESSING (WHITEPAPER §4.2 per-slot id table; §5 stratum 2: "hub nodes carry
+// their canonical-address components + version"). PROPERTY-ONLY delta: adds address components to the
+// CEDS hub structural nodes — NO node or edge is added or removed.
+//   canonicalKey = the KIND-PREFIXED CEDS id (P-form for DmeProperty, OV-form for DmeOptionValue) — the
+//     version-stable DURABLE join key. (The bare 6-digit Global ID is reused across a class and its
+//     characterizing property — 201 C/P core collisions in the Ed-Fi crosswalk — so it is NOT unique
+//     alone; the kind-prefixed form is. Clarified with WILD_FALCON 2026-06-29.)
+//   domainId / rangeOptionSetId = version-scoped slot ids (the class id / the option-set id) — these are
+//     this-version structure, NEVER durable keys, so they are NOT called canonicalKey (§4.2).
+//   hubName / hubVersion tag every hub structural node (§8 "hub structural nodes tagged with hubName").
+const HUB_NAME = 'CEDS';
 
 // The mappingInstruction fields are DECLARED present-but-unpopulated for CEDS (DECISIONS §12).
 const emptyMappingInstruction = {
@@ -117,8 +145,38 @@ const moduleFunction =
 				searchTextElement,
 				extraProps,
 				structural,
+				addressSlots,
 			}) => {
 				const canonicalCedsId = canonicalFor(rawEntity.cedsId, kind, rawEntity.uri);
+
+				// Phase 2 canonical-address components (per-slot id table, §4.2). The node stamps the slot
+				// it IS (a property/value carries the durable canonicalKey; a class is the domain slot; an
+				// option set is the range slot); the caller supplies the OTHER slots it points at
+				// (a property's owning class + range; a value's owning set) via addressSlots.
+				const addressProps = { [A.HUB_NAME]: HUB_NAME, [A.HUB_VERSION]: metadata.version };
+				if (kind === 'property' || kind === 'optionValue') {
+					addressProps[A.CANONICAL_KEY] = canonicalCedsId; // durable join key (P-form / OV-form)
+				}
+				if (kind === 'class') {
+					addressProps[A.DOMAIN_ID] = canonicalCedsId; // the class IS the domain slot (version-scoped)
+				}
+				if (kind === 'optionSet') {
+					addressProps[A.RANGE_OPTION_SET_ID] = canonicalCedsId; // the set IS the range slot (version-scoped)
+				}
+				if (addressSlots) {
+					if (addressSlots.domainId) {
+						addressProps[A.DOMAIN_ID] = addressSlots.domainId;
+					}
+					if (addressSlots.rangeOptionSetId) {
+						addressProps[A.RANGE_OPTION_SET_ID] = addressSlots.rangeOptionSetId;
+					}
+					if (addressSlots.rangeClassId) {
+						addressProps[A.RANGE_CLASS_ID] = addressSlots.rangeClassId;
+					}
+					if (addressSlots.rangeDatatype) {
+						addressProps[A.RANGE_DATATYPE] = addressSlots.rangeDatatype;
+					}
+				}
 				const stableId = rawEntity.uri; // CEDS stableUriPropertyName = 'uri'
 				if (!normalize.isCleanStableId(stableId)) {
 					throw new Error(
@@ -130,7 +188,7 @@ const moduleFunction =
 				const searchText = buildSearchText({ role, ...searchTextElement });
 
 				const node = {
-					labels: ['ForgedNode', perStandardLabel, role],
+					labels: [NODE_LABELS.FORGED_NODE, perStandardLabel, role],
 					stableId,
 					role,
 					properties: {
@@ -146,6 +204,7 @@ const moduleFunction =
 						crossRefs: JSON.stringify(
 							crossRefsForCeds({ canonicalCedsId, rawAnchor: rawEntity.cedsId }),
 						),
+						...addressProps, // Phase 2 canonical-address components
 						...(extraProps || {}),
 					},
 				};
@@ -164,27 +223,27 @@ const moduleFunction =
 					type,
 					fromRef: { source: 'CEDS', id: fromStableId },
 					toRef: { source: 'CEDS', id: toStableId },
-					properties: { provenanceTier: 'structural' },
+					properties: { provenanceTier: PROVENANCE_TIER.STRUCTURAL },
 				});
 			};
 
 			// ---- DmeStandardRoot (the per-standard top; provenance block + stableUriPropertyName
 			//      + DECLARED-but-unpopulated mappingInstruction, DECISIONS §6/§7/§12) ----
 			const rootSearchText = buildSearchText({
-				role: 'DmeStandardRoot',
+				role: DME_ROLES.STANDARD_ROOT,
 				name: 'CEDS',
 				standardName: 'Common Education Data Standards',
 			});
 			nodes.push({
-				labels: ['ForgedNode', 'CedsOntology', 'DmeStandardRoot'],
+				labels: [NODE_LABELS.FORGED_NODE, 'CedsOntology', DME_ROLES.STANDARD_ROOT],
 				stableId: metadata.sourceUrl,
-				role: 'DmeStandardRoot',
+				role: DME_ROLES.STANDARD_ROOT,
 				properties: {
 					_id: ROOT_ID,
 					_source: 'CEDS',
 					name: 'CEDS',
 					description: `Common Education Data Standards ontology, version ${metadata.version}`,
-					role: 'DmeStandardRoot',
+					role: DME_ROLES.STANDARD_ROOT,
 					uri: metadata.sourceUrl,
 					searchText: rootSearchText,
 					// provenance block (DESIGN §B "Required on the DmeStandardRoot")
@@ -195,7 +254,9 @@ const moduleFunction =
 					sourceFiles: metadata.sourceFiles,
 					sourceUrl: metadata.sourceUrl,
 					parserVersion: '1',
-					ingestedAt: new Date().toISOString(),
+					// ingestedAt is intentionally NOT stamped (H5): a wall-clock inside hashed node props
+					// broke same-source -> same-blockId determinism. The run timestamp lives in the store
+					// row (blocks.createdAt), never in content-addressed block text.
 					coreVersion: '2.0.0',
 					// stableUriPropertyName + mappingInstruction (DECISIONS §6/§12)
 					stableUriPropertyName: STABLE_URI_PROPERTY_NAME,
@@ -208,7 +269,7 @@ const moduleFunction =
 			classes.forEach((cls) => {
 				const className = cls.label || cls.cedsId;
 				const built = makeNode({
-					role: 'DmeClass',
+					role: DME_ROLES.CLASS,
 					perStandardLabel: 'CedsClass',
 					rawEntity: cls,
 					kind: 'class',
@@ -218,17 +279,18 @@ const moduleFunction =
 						owningName: 'CEDS',
 					},
 					extraProps: { notation: cls.notation || '' },
-					structural: { parentId: ROOT_ID, depth: 1, path: className },
+					// parentId referent = MEMBER stableId (M7) — the root's stableId, not the _id-form ROOT_ID
+					structural: { parentId: metadata.sourceUrl, depth: 1, path: className },
 				});
 				classCanonicalByUri[cls.uri] = { className, stableId: built.stableId };
 				// HAS_CLASS: root -> class (canonical ownership)
-				addEdge('HAS_CLASS', metadata.sourceUrl, built.stableId);
+				addEdge(EDGE_TYPES.HAS_CLASS, metadata.sourceUrl, built.stableId);
 			});
 
 			// SUBCLASS_OF (after all classes exist so the parent stableId is resolvable)
 			classes.forEach((cls) => {
 				if (cls.parentRef && classByUri[cls.parentRef]) {
-					addEdge('SUBCLASS_OF', cls.uri, cls.parentRef);
+					addEdge(EDGE_TYPES.SUBCLASS_OF, cls.uri, cls.parentRef);
 				}
 			});
 
@@ -255,8 +317,67 @@ const moduleFunction =
 				}
 				extraProps.notation = prop.notation || '';
 
+				// Phase 2 address slots: the property's owning-class domain id + its range. domainId is the
+				// owning class's canonical C-id (version-scoped). The range slot is the first rangeRef that
+				// resolves to an option set (its OS-id) ELSE the first rangeRef that resolves to a CEDS
+				// class (its C-id) ELSE the property's scalar datatype (§4.2/070126 update: range = option-
+				// set id OR class id OR datatype — three mutually exclusive first-class shapes).
+				const domainSlotId = owningClassUri
+					? normalize.normalizeCedsId({
+							rawValue: classByUri[owningClassUri].cedsId,
+							kind: 'class',
+						}).cedsId
+					: undefined;
+				let rangeOptionSetSlotId;
+				(prop.rangeRefs || []).forEach((rangeUri) => {
+					if (!rangeOptionSetSlotId && optionSetByUri[rangeUri]) {
+						const resolved = normalize.normalizeCedsId({
+							rawValue: optionSetByUri[rangeUri].cedsId,
+							kind: 'optionSet',
+						});
+						if (!resolved.error) {
+							rangeOptionSetSlotId = resolved.cedsId;
+						}
+					}
+				});
+				// Range slot has THREE first-class source shapes, mutually exclusive in source (confirmed
+				// INVESTIGATION-rangelessHubs-070126.md: an object/association property carries no dataType
+				// signal, and vice versa): an option set (rangeOptionSetSlotId, above), a CEDS CLASS
+				// reference (rangeClassSlotId — an object/association property whose range IS another CEDS
+				// class, e.g. 'Has Assessment' -> Assessment; §schema:rangeIncludes -> C-class), or an XSD
+				// scalar datatype. A class range was previously either dropped entirely (2-slot tuple) or
+				// (interim conservative fix) flattened into a 'reference' rangeDatatype marker; it is now
+				// modeled as its own address slot — the class's canonical (version-scoped) id — mirroring
+				// rangeOptionSetId exactly. This also feeds a real HAS_CEDS_RANGE -> CedsClass edge at the
+				// HubReference layer (referenceSubgraph.js), parallel to HAS_CEDS_RANGE -> DmeOptionSet.
+				// Pure/deterministic (classByUri is built from source), so addressSignature stays stable
+				// per input (though its VALUE differs from both the pre-fix and the interim-marker forge —
+				// expected, see DEVLOG-pureGraph3Build-070126.md).
+				let rangeClassSlotId;
+				if (!rangeOptionSetSlotId) {
+					(prop.rangeRefs || []).forEach((rangeUri) => {
+						if (!rangeClassSlotId && classByUri[rangeUri]) {
+							const resolved = normalize.normalizeCedsId({
+								rawValue: classByUri[rangeUri].cedsId,
+								kind: 'class',
+							});
+							if (!resolved.error) {
+								rangeClassSlotId = resolved.cedsId;
+							}
+						}
+					});
+				}
+				// 'unspecified' is reserved for the genuinely-empty case (source: P001396 — no option set,
+				// no class, no datatype). It is NEVER stamped when a class range was found.
+				const rangeDatatypeSlot =
+					rangeOptionSetSlotId || rangeClassSlotId
+						? undefined
+						: prop.dataType
+							? prop.dataType
+							: 'unspecified';
+
 				const built = makeNode({
-					role: 'DmeProperty',
+					role: DME_ROLES.PROPERTY,
 					perStandardLabel: 'CedsProperty',
 					rawEntity: prop,
 					kind: 'property',
@@ -266,30 +387,31 @@ const moduleFunction =
 						owningName: owningClassName || 'CEDS',
 					},
 					extraProps,
+					addressSlots: {
+						domainId: domainSlotId,
+						rangeOptionSetId: rangeOptionSetSlotId,
+						rangeClassId: rangeClassSlotId,
+						rangeDatatype: rangeDatatypeSlot,
+					},
 					structural: {
-						parentId: owningClassUri
-							? idFor(
-									normalize.normalizeCedsId({
-										rawValue: classByUri[owningClassUri].cedsId,
-										kind: 'class',
-									}).cedsId,
-								)
-							: ROOT_ID,
+						// parentId referent = MEMBER stableId (M7): the owning class's uri (its stableId),
+						// or the root's stableId — the same value the HAS_PROPERTY edge uses (parentStableId).
+						parentId: parentStableId,
 						depth: owningClassUri ? 2 : 1,
 						path: `${owningClassName || 'CEDS'}.${propName}`,
 					},
 				});
 
 				// HAS_PROPERTY: owning class -> property (immediate containment, DESIGN §F)
-				addEdge('HAS_PROPERTY', parentStableId, built.stableId);
+				addEdge(EDGE_TYPES.HAS_PROPERTY, parentStableId, built.stableId);
 
 				// HAS_OPTION_SET: property -> option set (range that is itself an option set)
 				(prop.rangeRefs || []).forEach((rangeUri) => {
 					if (optionSetByUri[rangeUri]) {
-						addEdge('HAS_OPTION_SET', built.stableId, rangeUri);
+						addEdge(EDGE_TYPES.HAS_OPTION_SET, built.stableId, rangeUri);
 					} else if (classByUri[rangeUri]) {
 						// range pointing at a class is a REFERENCE (DESIGN §F)
-						addEdge('REFERENCES', built.stableId, rangeUri);
+						addEdge(EDGE_TYPES.REFERENCES, built.stableId, rangeUri);
 					}
 				});
 			});
@@ -299,7 +421,7 @@ const moduleFunction =
 			optionSets.forEach((os) => {
 				const setName = os.label || os.cedsId;
 				const built = makeNode({
-					role: 'DmeOptionSet',
+					role: DME_ROLES.OPTION_SET,
 					perStandardLabel: 'CedsOptionSet',
 					rawEntity: os,
 					kind: 'optionSet',
@@ -309,7 +431,9 @@ const moduleFunction =
 						owningClassName: 'CEDS',
 					},
 					extraProps: { notation: os.notation || '' },
-					structural: { parentId: ROOT_ID, depth: 2, path: setName },
+					// parentId referent = MEMBER stableId (M7); single-owner sets are re-parented to their
+					// owning property by the shared structural-contract finalizer (M8).
+					structural: { parentId: metadata.sourceUrl, depth: 2, path: setName },
 				});
 				optionSetCanonicalByUri[os.uri] = { setName, stableId: built.stableId };
 			});
@@ -321,8 +445,17 @@ const moduleFunction =
 				const owningSet = owningSetUri ? optionSetCanonicalByUri[owningSetUri] : undefined;
 				const optionSetName = owningSet ? owningSet.setName : 'CEDS';
 
+				// Phase 2 address slot: the value's range is its owning option set's canonical OS-id.
+				const owningSetRangeId =
+					owningSetUri && optionSetByUri[owningSetUri]
+						? normalize.normalizeCedsId({
+								rawValue: optionSetByUri[owningSetUri].cedsId,
+								kind: 'optionSet',
+							}).cedsId
+						: undefined;
+
 				const built = makeNode({
-					role: 'DmeOptionValue',
+					role: DME_ROLES.OPTION_VALUE,
 					perStandardLabel: 'CedsOptionValue',
 					rawEntity: ov,
 					kind: 'optionValue',
@@ -333,8 +466,11 @@ const moduleFunction =
 						owningClassName: 'CEDS',
 					},
 					extraProps: { notation: ov.notation || '' },
+					addressSlots: { rangeOptionSetId: owningSetRangeId },
 					structural: {
-						parentId: owningSet ? owningSet.stableId : ROOT_ID,
+						// parentId referent = MEMBER stableId (M7); the orphan branch anchors to the root's
+						// stableId, not the _id-form ROOT_ID.
+						parentId: owningSet ? owningSet.stableId : metadata.sourceUrl,
 						depth: 3,
 						path: `${optionSetName}.${valueName}`,
 					},
@@ -342,11 +478,14 @@ const moduleFunction =
 
 				// HAS_VALUE: option set -> value (immediate containment)
 				if (owningSet) {
-					addEdge('HAS_VALUE', owningSet.stableId, built.stableId);
+					addEdge(EDGE_TYPES.HAS_VALUE, owningSet.stableId, built.stableId);
 				}
 			});
 
-			return { nodes, edges };
+			// the shared contract finalizer (M7/M8): parentId referent enforced, depth derived
+			// (= chain length; supersedes the per-role stamps above), crossRefs universal,
+			// single-owner optionSets re-parented to their owning property. Throws loudly.
+			return finalizeStructuralContract({ nodes, edges });
 		};
 
 		// =====================================================================

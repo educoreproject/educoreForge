@@ -9,6 +9,7 @@
   "author": "TQ White II",
   "license": "ISC",
   "dependencies": {
+    "js-yaml": "^4.2.0",
     "qtools-asynchronous-pipe-plus": "^1.0.4",
     "qtools-config-file-processor": "^1.0.18",
     "qtools-functional-library": "^2.0.4",

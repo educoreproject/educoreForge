@@ -1,0 +1,14 @@
+standard: DCTAP — Dublin Core Tabular Application Profile
+publisher: Dublin Core Metadata Initiative (editor: Karen Coyle)
+retrieved: 2026-06-23 (copied from educoreForgeOLD/.../forge-dctap/assets/standardSourceData/01/)
+version: Draft - Request for Comments (publishedDate 2022-12-16)
+sources:
+  - https://www.dublincore.org/specifications/dctap/elements/   (dctap-elements.jsonld — hand-authored JSON-LD)
+note: JSON-LD meta-vocabulary. @graph holds Standard (1), Component (2: shape,
+      statementTemplate), Element (12), AllowedValueSet (3), AllowedValue (15),
+      Concept (3: Profile, Shape, StatementTemplate). @ids are dctap: CURIEs and are the
+      native stableIds (stableUriPropertyName = 'uri'). DCTAP is a META-vocabulary for
+      describing application profiles — STANDARD-PURE, NO CEDS / cross-standard anchors.
+      Per-standard role mapping (see forgeDctap.js header): Component -> DmeClass,
+      Element -> DmeProperty, AllowedValueSet -> DmeOptionSet, AllowedValue -> DmeOptionValue,
+      Concept -> DmeClass (a SKOS broader glossary hierarchy -> SUBCLASS_OF).

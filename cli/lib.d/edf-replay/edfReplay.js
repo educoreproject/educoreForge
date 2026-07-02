@@ -60,7 +60,7 @@ NAME
 
 SYNOPSIS
      edf-replay -buildGraph    --manifest=<manifestKey> --destination=<bronze|golden|user>
-                               [--owner=<:golden|:user>]
+                               [--owner=<:golden|:user>] [--skipFinishing]
      edf-replay -extractSchema --from=<graphName> --selector=<standard|relationships|overlay>
                                [--subject=<standardKey>] [--out=<path>] [--tearDown] [--force]
 
@@ -77,9 +77,12 @@ DESCRIPTION
 
 COMMANDS
      -buildGraph     CREATE + register the destination instance, resolve the manifest's ordered
-                     blocks (CEDS-first topo), replay them in, stamp every node/edge --owner, and
-                     finally stamp ONE :GraphProvenance passport node (graph-level provenance,
-                     history + status) — excluded from content equality (Option A).
+                     blocks (CEDS-first topo), replay them in, run the FINISHING phase (the
+                     replayManager finisher registry — schema view + structural constraints, sourced
+                     from the vocabulary registry, NOT the manifest), stamp every node/edge --owner,
+                     and finally stamp ONE :GraphProvenance passport node (graph-level provenance,
+                     history + status) — excluded from content equality (Option A). --skipFinishing
+                     yields a raw/unconstrained graph (no finisher output).
      -extractSchema  Serialize part of a live graph back out as exactly one PG-JSONL schemaBlock.
 
 OPTIONS
@@ -87,6 +90,8 @@ OPTIONS
      --destination=<bronze|golden|user>  Where to materialize.
      --owner=<:golden|:user>         ownerStamp. Defaults from --destination (golden -> :golden,
                                      otherwise :user). Override allowed.
+     --skipFinishing                 (-buildGraph) GLOBAL skip switch for the finishing phase: build a
+                                     raw graph with NO finisher output (no schema view, no constraints).
      --from=<graphName>              (-extractSchema) The live graph to read from.
      --selector=<standard|relationships|overlay>
                                      standard = one standard's nodes + internal edges;
@@ -143,7 +148,16 @@ const bootstrapGlobal = () => {
 // SHARED RESOURCES — open forge-store, build credential-accessor + lifecycle.
 // =====================================================================
 
-const dbPath = () => path.join(projectRoot, 'dataStores', 'forgeStore.sqlite3');
+// EDF_FORGE_STORE_DB redirects the store (test harnesses); absent -> canonical, byte-identical.
+// An active override is ANNOUNCED on stderr so it can never silently redirect production writes.
+const dbPath = () =>
+	process.env.EDF_FORGE_STORE_DB ||
+	path.join(projectRoot, 'dataStores', 'forgeStore.sqlite3');
+if (process.env.EDF_FORGE_STORE_DB) {
+	console.error(
+		`STORE OVERRIDE ACTIVE: forgeStore db = ${dbPath()} (EDF_FORGE_STORE_DB)`,
+	);
+}
 
 const buildSharedResources = (callback) => {
 	const forgeStore = require(path.join(CORE_LIB, 'forge-store', 'forge-store'))();
@@ -189,6 +203,13 @@ const handleBuildGraph = ({ forgeStore, lifecycle }, callback) => {
 	const manifestKey = (commandLineParameters.values.manifest || [])[0];
 	const destination = (commandLineParameters.values.destination || [])[0];
 	const owner = (commandLineParameters.values.owner || [])[0];
+	// --skipFinishing / -skipFinishing — the GLOBAL finishing skip switch (Phase 7). Accept both the
+	// single-hyphen switch form and the valueless double-hyphen form (qtools lands the latter as ===true).
+	const skipFinishing =
+		!!commandLineParameters.switches.skipFinishing ||
+		commandLineParameters.values.skipFinishing === true ||
+		(Array.isArray(commandLineParameters.values.skipFinishing) &&
+			commandLineParameters.values.skipFinishing[0] === true);
 
 	if (!manifestKey) {
 		callback('edf-replay -buildGraph: --manifest is required. Use -help.');
@@ -204,7 +225,7 @@ const handleBuildGraph = ({ forgeStore, lifecycle }, callback) => {
 	// build would split these; graph-builder already supports a distinct `role`.)
 	const graphBuilder = graphBuilderFactory({ forgeStore, lifecycle });
 	graphBuilder.buildGraph(
-		{ manifestKey, destination, owner, role: destination },
+		{ manifestKey, destination, owner, role: destination, skipFinishing },
 		(err, result) => {
 			if (err) {
 				callback(err);
@@ -222,6 +243,7 @@ const handleBuildGraph = ({ forgeStore, lifecycle }, callback) => {
 						edgesMerged: result.replayResult.edgesMerged,
 						danglingRefs: (result.replayResult.danglingRefs || []).length,
 						indexesBuilt: result.replayResult.indexesBuilt,
+						finishing: result.finishResult,
 						ownerStamped: result.ownerStampResult,
 						graphProvenance: result.provenanceResult,
 					},

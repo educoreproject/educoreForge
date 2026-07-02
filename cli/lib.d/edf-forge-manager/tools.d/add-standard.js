@@ -203,6 +203,21 @@ const moduleFunction =
 				);
 			});
 
+			// 5-pre. reset bronze to a FRESH instance before the build (mirrors golden's 9a). The
+			//     replay engine MERGEs and never deletes, and the step-7 extraction gathers ALL
+			//     cross-source edges graph-wide — a surviving bronze from a FAILED prior run (teardown
+			//     only happens on success) would sweep that run's stale edges into THIS run's
+			//     content-addressed relationships block. No-op when bronze is absent (the normal case).
+			taskList.push((args, next) => {
+				storeAccess.resetGraph({ graphName: bronzeGraph }, (err) => {
+					if (err) {
+						next(err);
+						return;
+					}
+					next('', { ...args });
+				});
+			});
+
 			// 5. replay -buildGraph --destination=bronze (the working graph)
 			taskList.push((args, next) => {
 				subCli.runComponentJson(

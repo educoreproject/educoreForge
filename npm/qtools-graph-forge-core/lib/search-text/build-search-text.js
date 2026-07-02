@@ -3,6 +3,10 @@
 
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
+// the canonical Dme* role names come from the vocabulary registry (Phase 1, single source of truth).
+// Values are byte-identical to the prior inline keys, so searchText output is unchanged.
+const { DME_ROLES } = require('../vocabulary/vocabulary');
+
 // build-search-text.js — the ONE shared searchText builder (contract §1C, DESIGN §C, DECISIONS §8/§23-R4)
 //
 // Composes a pipe-delimited searchText identically for every standard, from the
@@ -43,34 +47,34 @@ const moduleFunction =
 		//   Built from structural context only — description is deliberately never read here.
 
 		const segmentBuildersByRole = {
-			DmeStandardRoot: ({ name, standardName }) => [standardName, name],
+			[DME_ROLES.STANDARD_ROOT]: ({ name, standardName }) => [standardName, name],
 
-			DmeClass: ({ name, standardName, owningName }) => [
+			[DME_ROLES.CLASS]: ({ name, standardName, owningName }) => [
 				standardName,
 				owningName,
 				name,
 			],
 
 			// a Property ALWAYS carries its owning Class name (the CEDS hub fix)
-			DmeProperty: ({ name, owningClassName, owningName }) => [
+			[DME_ROLES.PROPERTY]: ({ name, owningClassName, owningName }) => [
 				owningClassName || owningName,
 				name,
 			],
 
-			DmeOptionSet: ({ name, owningClassName, owningName }) => [
+			[DME_ROLES.OPTION_SET]: ({ name, owningClassName, owningName }) => [
 				owningClassName || owningName,
 				name,
 			],
 
 			// an OptionValue ALWAYS carries its set + owner
-			DmeOptionValue: ({ name, optionSetName, owningName, owningClassName }) => [
+			[DME_ROLES.OPTION_VALUE]: ({ name, optionSetName, owningName, owningClassName }) => [
 				owningClassName,
 				owningName || optionSetName,
 				optionSetName,
 				name,
 			],
 
-			DmeSupport: ({ name, owningName, standardName }) => [
+			[DME_ROLES.SUPPORT]: ({ name, owningName, standardName }) => [
 				standardName,
 				owningName,
 				name,

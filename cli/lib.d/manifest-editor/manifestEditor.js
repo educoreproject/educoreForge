@@ -49,6 +49,8 @@ USAGE
   manifestEditor -show     --manifest=<manifestKey>
   manifestEditor -validate --manifest=<manifestKey>
   manifestEditor -diff     --from=<manifestKey> --to=<manifestKey>
+  manifestEditor -listBlocks
+  manifestEditor -listManifests
 
   [--db=<sqlitePath>]   override the store location (else config, else dataStore default)
 
@@ -63,6 +65,9 @@ USAGE
   -validate Bridge-closure check: every relationships/overlay block's required subjects
             are present AND ordered earlier.
   -diff     Block-membership delta between two manifests.
+  -listBlocks     List catalog blocks (type standard/reference/mapping — bridge and
+                  inferredDecision blocks are excluded) as blockId/type/subject/version/requires.
+  -listManifests  List all manifests as manifestKey/label/note/basedOn/createdAt.
 `;
 
 		// -----
@@ -117,9 +122,23 @@ USAGE
 		// standardKey; a consolidated relationships block has none (=> null); a per-pair
 		// relationships block (future) projects pairA::pairB.
 
+		//
+		// L9: the header parse is guarded — a malformed first line returns { error } for the
+		// caller's error channel (named, explicit), never a raw JSON.parse stack. The guard is
+		// isolated to the parse itself (the sanctioned local exception).
+
 		const blockMetaFromHeader = (text) => {
 			const firstLine = `${text}`.split('\n')[0];
-			const header = JSON.parse(firstLine);
+			let header;
+			try {
+				header = JSON.parse(firstLine);
+			} catch (parseErr) {
+				return {
+					error:
+						`block header (first line) is not valid JSON (${parseErr.message}): ` +
+						`${firstLine.slice(0, 120)}`,
+				};
+			}
 			const subject =
 				header.standardKey != null
 					? header.standardKey
@@ -146,6 +165,10 @@ USAGE
 			}
 			const text = readBlockText(blockSource);
 			const meta = blockMetaFromHeader(text);
+			if (meta.error) {
+				callback(`-save: ${meta.error} [${moduleName}]`);
+				return;
+			}
 			if (!meta.type) {
 				callback(`-save: block header has no blockType [${moduleName}]`);
 				return;
@@ -215,6 +238,18 @@ USAGE
 			);
 		};
 
+		const handleListBlocks = (manifestEditor, callback) => {
+			manifestEditor.listBlocks((err, blocks) =>
+				callback(err, err ? undefined : blocks),
+			);
+		};
+
+		const handleListManifests = (manifestEditor, callback) => {
+			manifestEditor.listManifests((err, manifests) =>
+				callback(err, err ? undefined : manifests),
+			);
+		};
+
 		// dispatch map (registry pattern — the single action switch selects a handler)
 		const dispatchMap = {
 			save: handleSave,
@@ -222,6 +257,8 @@ USAGE
 			validate: handleValidate,
 			show: handleShow,
 			diff: handleDiff,
+			listBlocks: handleListBlocks,
+			listManifests: handleListManifests,
 		};
 
 		// =====================================================================
@@ -239,7 +276,7 @@ USAGE
 
 		if (selectedActions.length === 0) {
 			xLog.error(
-				`no action: one of -save -combine -validate -show -diff is required (use --help)`,
+				`no action: one of -save -combine -validate -show -diff -listBlocks -listManifests is required (use --help)`,
 			);
 			return {};
 		}

@@ -185,9 +185,15 @@ const mergeNodes = (session, nodes, callback) => {
 			const batch = batches[bi];
 			bi++;
 			// GREENFIELD: MERGE on stableId (the durable resolution key), NOT (_source,_id).
+			// H8: the MERGE match key is :ForgedNode {stableId} ALONE — matching on the batch's
+			// full label-set forked one stableId into duplicate nodes when two blocks stated
+			// different label-sets for it (the overlay/curation shape). The remaining labels are
+			// SET after the match, so label-sets UNION onto the single node. Every replayed node
+			// carries :ForgedNode — enforced at deserialize time in replay(), before any write.
 			const query = `
 				UNWIND $batch AS row
-				MERGE (n:${clause} {stableId: row.stableId})
+				MERGE (n:\`ForgedNode\` {stableId: row.stableId})
+				SET n:${clause}
 				SET n += row.props
 			`;
 			session
@@ -254,10 +260,16 @@ const mergeEdges = (session, edges, callback) => {
 			bi++;
 			// GREENFIELD: resolve BOTH endpoints on stableId, anywhere in the store (so cross-
 			// source bridges resolve). Write only if both resolve; never a partial edge.
+				// PERF: endpoints labeled :ForgedNode so the reskey RANGE index on :ForgedNode(stableId)
+				// drives a NodeIndexSeek (was AllNodesScan-per-row => O(edges x nodes)). Every replayed
+				// node carries :ForgedNode — ENFORCED at deserialize time in replay() (a block with a
+				// node missing the label is a hard error before any write), so the resolution SET is
+				// identical — purely a plan change; MERGE, the two-endpoint orphan gate, batching and
+				// danglingRefs semantics are unchanged.
 			const query = `
 				UNWIND $edges AS e
-				OPTIONAL MATCH (from {stableId: e.fromStableId})
-				OPTIONAL MATCH (to   {stableId: e.toStableId})
+				OPTIONAL MATCH (from:ForgedNode {stableId: e.fromStableId})
+				OPTIONAL MATCH (to:ForgedNode   {stableId: e.toStableId})
 				FOREACH (_ IN CASE WHEN from IS NULL OR to IS NULL THEN [] ELSE [1] END |
 					MERGE (from)-[r:\`${edgeType}\`]->(to) SET r += e.props)
 				RETURN e.fromSrc AS fromSrc, e.fromStableId AS fromStableId,
@@ -539,18 +551,82 @@ const replay = ({ manifest, boltUri, password, graphName }, callback) => {
 	const taskList = new taskListPlus();
 
 	// --- Deserialize the manifest (pure) -> all nodes + all edges (edges tagged blockType).
+	//     ForgedNode ENFORCEMENT (at deserialize, before ANY write): edge endpoint resolution
+	//     matches (:ForgedNode {stableId}) ONLY, so a node without the ForgedNode label merges
+	//     fine and then EVERY edge touching it silently lands in danglingRefs while replay exits
+	//     0. That convention is now a CHECK: a block containing any node without ForgedNode is a
+	//     hard error NAMING the block — never a silent dangle.
 	taskList.push((args, next) => {
 		const allNodes = [];
 		const allEdges = [];
 		let embeddingDims = null;
-		manifest.forEach((entry) => {
-			const block = replayBlock.deserializeBlock(readManifestEntry(entry));
+		const labelViolations = [];
+		const nullIdViolations = [];
+		for (let entryIndex = 0; entryIndex < manifest.length; entryIndex++) {
+			const entry = manifest[entryIndex];
+			const entryName =
+				typeof entry === 'string' && entry.indexOf('\n') === -1 ? ` (${entry})` : '';
+			// F7: deserializeBlock throws on corrupt/malformed block text. Contain the throw at
+			// this boundary and route it error-first through the pipe, so the session/driver close
+			// on the normal error path instead of leaking through a process crash.
+			let block;
+			try {
+				block = replayBlock.deserializeBlock(readManifestEntry(entry));
+			} catch (deserializeError) {
+				next(
+					`deserialize failed: manifest[${entryIndex}]${entryName} is not a readable ` +
+						`block — ${deserializeError.message}. No writes performed.`,
+				);
+				return;
+			}
+			const h = block.header || {};
+			const blockName =
+				h.blockType === 'bridge'
+					? `bridge ${h.pairA}~${h.pairB}`
+					: `${h.blockType} ${h.standardKey} v${h.version}`;
+			const offenders = block.nodes.filter(
+				(oneNode) => (oneNode.labels || []).indexOf('ForgedNode') === -1,
+			);
+			if (offenders.length > 0) {
+				labelViolations.push(
+					`manifest[${entryIndex}] ${blockName}${entryName}: ${offenders.length} node(s) missing the ` +
+						`ForgedNode label; first offender stableId='${offenders[0].stableId}' ` +
+						`labels=[${(offenders[0].labels || []).join(', ')}]`,
+				);
+			}
+			// F8: a null/missing stableId previously aborted MID-BATCH with an opaque Neo4j error
+			// after earlier batches had committed — a silent partial graph. Refuse BEFORE any write.
+			const nullIdOffenders = block.nodes.filter(
+				(oneNode) => oneNode.stableId === null || oneNode.stableId === undefined,
+			);
+			if (nullIdOffenders.length > 0) {
+				nullIdViolations.push(
+					`manifest[${entryIndex}] ${blockName}${entryName}: ${nullIdOffenders.length} node(s) with ` +
+						`null/missing stableId; first offender labels=[${(nullIdOffenders[0].labels || []).join(', ')}]`,
+				);
+			}
 			if (embeddingDims === null) embeddingDims = block.header.embeddingDims;
 			block.nodes.forEach((oneNode) => allNodes.push(oneNode));
 			block.edges.forEach((oneEdge) =>
 				allEdges.push({ ...oneEdge, blockType: block.header.blockType }),
 			);
-		});
+		}
+		if (labelViolations.length > 0) {
+			next(
+				`ForgedNode enforcement: ${labelViolations.length} non-conforming block(s) — every replayed node ` +
+					`must carry the ForgedNode label (edge endpoints resolve ONLY via :ForgedNode(stableId); a node ` +
+					`without it makes every touching edge dangle silently). ${labelViolations.join(' | ')} No writes performed.`,
+			);
+			return;
+		}
+		if (nullIdViolations.length > 0) {
+			next(
+				`stableId enforcement: ${nullIdViolations.length} non-conforming block(s) — every replayed node ` +
+					`must carry a non-null stableId (it is the MERGE resolution key; a null aborts mid-batch and ` +
+					`leaves a partial graph). ${nullIdViolations.join(' | ')} No writes performed.`,
+			);
+			return;
+		}
 		next('', { ...args, allNodes, allEdges, embeddingDims });
 	});
 

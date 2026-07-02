@@ -48,6 +48,9 @@ const CORE_LIB = path.join(
 	'qtools-graph-forge-core',
 	'lib',
 );
+// canonical owner/role tokens from the vocabulary registry (Phase 1, single source of truth). Values
+// are byte-identical to the prior inline literals, so owner-stamp + instance type are unchanged.
+const { OWNER_TOKENS, ROLE_TYPES } = require(path.join(CORE_LIB, 'vocabulary', 'vocabulary'));
 const replayEngine = require(path.join(CORE_LIB, 'replay', 'replay-engine'));
 // replay-block is a PURE constants/codec module (no Neo4j); we read SERIALIZER_VERSION from it
 // for the :GraphProvenance passport rather than hardcoding the serializer version.
@@ -55,19 +58,22 @@ const replayBlock = require(path.join(CORE_LIB, 'replay', 'replay-block'));
 // the engine/format version stamped on the passport is the version of the package that SHIPS the
 // replay engine (qtools-graph-forge-core); read it rather than hardcoding or inventing a constant.
 const FORGE_CORE_VERSION = require(path.join(CORE_LIB, '..', 'package.json')).version;
+// the Phase-7 FINISHER REGISTRY (replayManager-owned, schema-as-code from the vocabulary registry). Runs
+// AFTER replay and BEFORE ownerStamp+stampProvenance so finisher output is owner-stamped + provenance-counted.
+const finishingFactory = require(path.join(CORE_LIB, 'finishing', 'finishing'));
 
 // role -> instance type (registry `type`, which the teardown guard reads). bronze is ephemeral
 // (freely tearable); golden/user are protected. The ROLE is the canonical destination token
 // (bronze|golden|user); the graph NAME may equal the role (first-app: golden IS named 'golden')
 // or differ (a tenant graph 'tenantA' has role 'user'). Anything not bronze/golden is 'user'.
 const typeForRole = (role) => {
-	if (role === 'bronze') return 'bronze';
-	if (role === 'golden') return 'golden';
-	return 'user';
+	if (role === ROLE_TYPES.BRONZE) return ROLE_TYPES.BRONZE;
+	if (role === ROLE_TYPES.GOLDEN) return ROLE_TYPES.GOLDEN;
+	return ROLE_TYPES.USER;
 };
 
 // owner derives from role (golden -> :golden, otherwise :user); override allowed (§14).
-const ownerForRole = (role) => (role === 'golden' ? ':golden' : ':user');
+const ownerForRole = (role) => (role === ROLE_TYPES.GOLDEN ? OWNER_TOKENS.GOLDEN : OWNER_TOKENS.USER);
 
 // the owner token as a bare Neo4j label (strip the leading ':'); validated as an identifier so it
 // can never inject through the label position (which cannot be parameterized).
@@ -80,6 +86,9 @@ const moduleFunction =
 	({ moduleName } = {}) =>
 	({ forgeStore, lifecycle } = {}) => {
 		const { xLog } = process.global;
+
+		// the finisher registry (Phase 7) — instantiated with the injected lifecycle (its cypher chokepoint).
+		const finishing = finishingFactory({ lifecycle });
 
 		// -----
 		// resolveOrderedBlockTexts — the forge-store manifest->blocks READ path. Returns the
@@ -273,11 +282,13 @@ const moduleFunction =
 		//   provenanceTierComplete reflect the finished graph. Content facts (counts, standardsIncluded,
 		//   embeddingModelVersion, tier-completeness) are computed IN-CYPHER over (:ForgedNode) — so the
 		//   passport excludes ITSELF — while the externally-known scalars are passed as params. ONE
-		//   parameterized CREATE (SPEC §6). The passport is NOT a :ForgedNode and carries no _source
-		//   (Option A), so content-equality scoping to (:ForgedNode) excludes it. Neo4j drops
-		//   null-valued map properties on CREATE, so fields with no source today (schemaVersion,
-		//   buildSequence, triggeredBy, description, publishedAt, previousManifestId-when-null) read
-		//   back as null.
+		//   parameterized MERGE keyed on graphName + full-map SET (F5): rebuilding INTO an existing
+		//   graph name refreshes the single passport in place rather than stamping a second one
+		//   (CREATE accumulated one passport per rebuild). The passport is NOT a :ForgedNode and
+		//   carries no _source (Option A), so content-equality scoping to (:ForgedNode) excludes it.
+		//   'SET p = map' removes properties whose map value is null (same observable read-back as
+		//   CREATE's null-drop), so fields with no source today (schemaVersion, buildSequence,
+		//   triggeredBy, description, publishedAt, previousManifestId-when-null) read back as null.
 		const stampProvenance = (
 			{ destination, manifestKey, owner, graphType, isEphemeral, builtAt },
 			callback,
@@ -344,7 +355,8 @@ const moduleFunction =
 					WITH nodeCountAtBuild, edgeCountAtBuild, missingTier,
 						[s IN standardsRaw WHERE s IS NOT NULL] AS standardsIncluded,
 						head(emvList) AS embeddingModelVersion
-					CREATE (p:GraphProvenance {
+					MERGE (p:GraphProvenance {graphName: $graphName})
+					SET p = {
 						graphName: $graphName,
 						graphType: $graphType,
 						owner: $owner,
@@ -366,7 +378,7 @@ const moduleFunction =
 						standardsIncluded: standardsIncluded,
 						embeddingModelVersion: embeddingModelVersion,
 						provenanceTierComplete: (missingTier = 0)
-					})
+					}
 					RETURN elementId(p) AS elementId, properties(p) AS provenance
 				`;
 				lifecycle.runCypher(
@@ -402,7 +414,10 @@ const moduleFunction =
 			});
 		};
 
-		const buildGraph = ({ manifestKey, destination, owner, role }, callback) => {
+		const buildGraph = (
+			{ manifestKey, destination, owner, role, skipFinishing } = {},
+			callback,
+		) => {
 			const effectiveRole = role || destination;
 			const effectiveOwner = owner || ownerForRole(effectiveRole);
 			const instanceType = typeForRole(effectiveRole);
@@ -484,6 +499,29 @@ const moduleFunction =
 				);
 			});
 
+			// 3.5 FINISHING phase (Phase 7): the replayManager-owned finisher registry (schema constraints +
+			//     the self-describing schema view), sourced from the vocabulary registry — NOT the manifest.
+			//     Runs AFTER replay and BEFORE ownerStamp+stampProvenance so any :ForgedNode a finisher emits
+			//     is owner-stamped + provenance-counted and any finisher edge (carrying provenanceTier) keeps
+			//     provenanceTierComplete true. The GLOBAL skip switch (skipFinishing) yields a raw graph.
+			taskList.push((args, next) => {
+				finishing.applyFinishers(
+					{ graphName: destination, skipFinishing: !!skipFinishing },
+					(err, finishResult) => {
+						if (err) {
+							next(err);
+							return;
+						}
+						xLog.status(
+							finishResult.skipped
+								? `[graph-builder] finishing: SKIPPED (raw graph)`
+								: `[graph-builder] finishing: ${finishResult.applied.map((oneApplied) => oneApplied.name).join(', ') || '(no finishers)'}`,
+						);
+						next('', { ...args, finishResult });
+					},
+				);
+			});
+
 			// 4. ownerStamp (node label + edge property)
 			taskList.push((args, next) => {
 				stampOwner(
@@ -540,6 +578,7 @@ const moduleFunction =
 					owner: effectiveOwner,
 					blockCount: args.blockTexts.length,
 					replayResult: args.replayResult,
+					finishResult: args.finishResult,
 					ownerStampResult: args.ownerStampResult,
 					provenanceResult: args.provenanceResult,
 				});
