@@ -1,8 +1,7 @@
 {
   "name": "qtools-graph-forge-core",
   "version": "2.0.0",
-  "private": true,
-  "description": "educoreForge greenfield core: SQLite forge-store (blocks/manifests/graphs registry), Neo4j/docker instance lifecycle, searchText builder, voyage-4-large embedding client, and the PG-JSONL replay engine. Harvested-and-adapted from the trackA/trackB prototypes per DECISIONS-firstApp §1.",
+  "description": "educoreForge greenfield core: SQLite forge-store (blocks/manifests/graphs registry), Neo4j/docker instance lifecycle, searchText builder, voyage-4-large embedding client, and the PG-JSONL replay engine. Harvested-and-adapted from the trackA/trackB prototypes per DECISIONS-firstApp \u00a71.",
   "main": "lib/qtools-graph-forge-core.js",
   "author": "TQ White II",
   "license": "ISC",

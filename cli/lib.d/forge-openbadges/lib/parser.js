@@ -393,6 +393,9 @@ const parseOpenbadges = ({ sourcePath, xLog }, callback) => {
 		maps: { keptNameSet },
 		metadata: {
 			version: info.version || 'unknown',
+			// versionSource (2026-07-04, going-forward): 'spec' ONLY when info.version was actually
+			// present in the source; the 'unknown' path stamps nothing.
+			...(info.version ? { versionSource: 'spec' } : {}),
 			schemaTitle: info.title || 'Open Badges 3.0',
 			openapiVersion: spec.openapi || '',
 			publisher: (info.contact && info.contact.name) || 'IMS Global / 1EdTech',

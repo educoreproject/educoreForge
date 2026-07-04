@@ -267,6 +267,9 @@ const parseCeds = ({ sourcePath, xLog }, callback) => {
 			maps: { classByUri, optionSetByUri },
 			metadata: {
 				version,
+				// versionSource (2026-07-04, going-forward): 'spec' ONLY when owl:versionInfo was read
+				// from the ontology; the 'unknown' path stamps nothing.
+				...(version !== 'unknown' ? { versionSource: 'spec' } : {}),
 				sourceFormat: 'rdf-xml',
 				sourceFiles: [path.basename(filePath)],
 				sourceUrl: CEDS_URI_PREFIX,

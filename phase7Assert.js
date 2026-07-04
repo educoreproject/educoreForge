@@ -2,7 +2,8 @@
 'use strict';
 
 // phase7Assert.js — Phase-7 acceptance assertion harness (TEMPORARY; removed at teardown).
-// Mirrors edfBridge.js shared-resource init: opens the ONE canonical forge-store, builds the
+// Mirrors the retired edfBridge.js shared-resource init (edf-bridge deleted 2026-07-04): opens the
+// ONE canonical forge-store, builds the
 // credential-accessor + instance-lifecycle, then runs cypher against a named LIVE graph (creds
 // resolved from the store row — no credential file, no echoing of secrets). Also exposes a
 // force-destroy for goldenCheck teardown.

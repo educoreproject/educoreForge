@@ -254,6 +254,9 @@ const moduleFunction =
 					standardKey: STANDARD_KEY,
 					standardName: metadata.schemaTitle || 'Learner Information Framework',
 					version: metadata.version,
+					// versionSource passthrough (2026-07-04): stamped ONLY when the parser traced the
+					// version to the spec content; absent otherwise (finisher 'declared' covers honestly).
+					...(metadata.versionSource ? { versionSource: metadata.versionSource } : {}),
 					sourceFormat: metadata.sourceFormat,
 					sourceFiles: metadata.sourceFiles,
 					sourceUrl: metadata.sourceUrl,

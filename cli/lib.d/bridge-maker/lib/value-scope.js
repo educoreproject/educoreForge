@@ -19,7 +19,7 @@ const v1 = (arrayOrScalar) => (Array.isArray(arrayOrScalar) ? arrayOrScalar[0] :
 
 // buildPropertyRangeOptionSetIndex — CEDS reference block's UNQUALIFIED property-tier HubReference nodes:
 // propertyKey -> rangeOptionSetId. (Same shape as edf-mapping/lib/value-crosswalk.js's index of the same
-// name — duplicated here, not required, to keep edf-implied's lib/ self-contained the way node-loader.js
+// name — duplicated here, not required, to keep bridgeMaker's lib/ self-contained the way node-loader.js
 // already is; both read the identical reference-block property shape.)
 const buildPropertyRangeOptionSetIndex = (referenceNodes) => {
 	const index = {};

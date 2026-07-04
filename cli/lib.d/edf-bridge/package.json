@@ -1,9 +1,0 @@
-{
-  "name": "edf-bridge",
-  "version": "1.0.0",
-  "private": true,
-  "description": "edf-bridge (bridgeMaker) — adds cross-standard mapping edges of one provenance tier to a working graph. One app, three registry-dispatched modes: -specified (deterministic cedsId anchor pass -> SPECIFIED_MAPPING, confidence 1.0, no matchPredicate), -derived (STUB, no-op per DECISIONS §18), -implied (findMappedItem; Stage-1 embedding retrieve adapted from trackA, Stage-2 rerank/calibrate [PINNED-DEFERRED]). Generic: reads each standard's mappingInstruction from its DmeStandardRoot; no per-standard code. Graph access resolved by name via instance-lifecycle; idempotent MERGE; unresolved endpoints -> orphan report.",
-  "main": "edfBridge.js",
-  "author": "tqii",
-  "license": "ISC"
-}

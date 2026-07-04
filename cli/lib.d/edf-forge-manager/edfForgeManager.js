@@ -6,23 +6,24 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // edfForgeManager.js — the `edf-forge-manager` CLI (forgeManager, Phase 6). The ORCHESTRATOR:
 // it owns the ordered workflows and NOTHING else (helpSpec — "Thin by mandate"). Each command is a
 // sequence of shell-outs (by ABSOLUTE PATH to each component entry .js) to forger / replayManager /
-// bridgeMaker / manifestEditor, plus cross-step invariant enforcement and the publish/rollback/list
+// manifestEditor, plus cross-step invariant enforcement and the publish/rollback/list
 // store bookkeeping that no component CLI owns. NO domain logic, NO neo4j, NO raw forge SQL.
 //
-// 3-layer orchestrator (mirrors edf-forge / edf-replay / edf-bridge):
+// 3-layer orchestrator (mirrors edf-forge / edf-replay):
 //   Layer 1 (this file): bootstrap process.global; resolve the canonical store path + component
 //     entry paths; instantiate shared resources (sub-cli shell-out helper, store-access view);
 //     registry-dispatch the action (registry, NOT a switch).
 //   Layer 2 (lib/): sub-cli (the shell-out + stdout-JSON parser), store-access (forge-store view).
 //   Layer 3 (tools.d/): one handler per action — add-standard, rollback, list.
 //
-// STORE INVARIANT: forger/replay/bridge HARDCODE <projectRoot>/dataStores/forgeStore.sqlite3 (no
+// STORE INVARIANT: forger/replay HARDCODE <projectRoot>/dataStores/forgeStore.sqlite3 (no
 // --db flag); manifestEditor accepts --db and otherwise defaults elsewhere. So the canonical store
 // IS that hardcoded path, and add-standard passes --db=<canonical> to EVERY manifestEditor shell-out.
 //
 // SUBJECT/SCOPE INVARIANT: a forge emits _source === its registry standardName; forgeManager passes
-// that SAME standardName (from the registry row) as --subject (extractSchema) and --scope (bridge),
-// with NO case transform, so they match _source.
+// that SAME standardName (from the registry row) as --subject (extractSchema), with NO case
+// transform, so it matches _source. (2026-07-04: the --scope consumer, the legacy bridge step,
+// was retired with edf-bridge.)
 //
 // Action flags single-hyphen (-addStandard); parameters double-hyphen (--standardName=...).
 //
@@ -64,7 +65,6 @@ if (process.env.EDF_FORGE_STORE_DB) {
 const ENTRIES = {
 	forger: path.join(LIB_D, 'edf-forge', 'edfForge.js'),
 	replay: path.join(LIB_D, 'edf-replay', 'edfReplay.js'),
-	bridge: path.join(LIB_D, 'edf-bridge', 'edfBridge.js'),
 	manifest: path.join(LIB_D, 'manifest-editor', 'manifestEditor.js'),
 };
 
@@ -91,16 +91,16 @@ SYNOPSIS
 
 DESCRIPTION
      forgeManager owns the ordered workflows and nothing else. It holds NO domain logic: each
-     command is a sequence of shell-outs to forger, replayManager, bridgeMaker, and manifestEditor,
+     command is a sequence of shell-outs to forger, replayManager, and manifestEditor,
      plus the enforcement of cross-step invariants. Thin by mandate.
 
      Action flags take a single hyphen; parameters take a double hyphen.
 
 COMMANDS
      -addStandard   The full golden flow end to end: forge -> extract standard -> save+combine
-                    (bronze) -> buildGraph bronze -> bridge specified/derived/implied -> extract
-                    relationships (tearDown) -> save+combine (golden) -> buildGraph golden ->
-                    PUBLISH (advance golden's pointer). --no-publish stops before the publish.
+                    (bronze) -> buildGraph bronze -> extract relationships (tearDown) ->
+                    save+combine (golden) -> buildGraph golden -> PUBLISH (advance golden's
+                    pointer). --no-publish stops before the publish.
      -rollback      Repoint a graph's currentManifest to a prior manifestKey and rebuild. --to
                     defaults to the immediately prior pointer.
      -list          Inspect the store: blocks | manifests | graphs. --stale flags orphan blocks
@@ -115,8 +115,8 @@ OPTIONS
      --stale                        (-list) Show only stale/orphan entries.
 
 OUTPUT
-     A run summary: the new manifestKey(s), the materialized graph location, and per-tier bridge
-     counts. Errors surface the failing component and step.
+     A run summary: the new manifestKey(s) and the materialized graph location. Errors surface
+     the failing component and step.
 `;
 
 // =====================================================================

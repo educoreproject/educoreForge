@@ -305,6 +305,9 @@ const parseDctap = ({ sourcePath, xLog } = {}, callback) => {
 		nodes,
 		metadata: {
 			version: std.version || 'Draft - Request for Comments',
+			// versionSource (2026-07-04, going-forward): 'spec' ONLY when the JSON-LD Standard node
+			// carried a version; the literal alternative stamps nothing.
+			...(std.version ? { versionSource: 'spec' } : {}),
 			sourceFormat: 'json-ld',
 			sourceFiles: [path.basename(jsonPath)],
 			sourceUrl: std.sourceURL || 'https://www.dublincore.org/specifications/dctap/elements/',

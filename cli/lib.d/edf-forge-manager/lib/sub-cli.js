@@ -7,8 +7,8 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // each component's stdout. forgeManager holds NO domain logic and NO neo4j/SQL of its own.
 //
 // PARSING CONTRACT (confirmed from the sub-CLI sources this phase — see PHASE6-REPORT.md):
-//   * forger (edfForge.js), replayManager -buildGraph (edfReplay.js), bridgeMaker (edfBridge.js),
-//     manifestEditor (manifestEditor.js): emit EXACTLY ONE JSON object on STDOUT (xLog.result ->
+//   * forger (edfForge.js), replayManager -buildGraph (edfReplay.js), manifestEditor
+//     (manifestEditor.js): emit EXACTLY ONE JSON object on STDOUT (xLog.result ->
 //     console.log). All status/progress is on STDERR. => parse stdout as JSON.
 //   * replayManager -extractSchema (edfReplay.js): with --out=<path> the BLOCK goes to the file and
 //     STDOUT IS EMPTY (the summary JSON goes to STDERR via xLog.status). So forgeManager ALWAYS

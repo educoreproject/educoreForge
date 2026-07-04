@@ -60,7 +60,7 @@ const moduleFunction =
 		subjectVersion = '',
 		objectSource = 'CEDS',
 		objectVersion = '',
-		mappingTool = 'edf-implied',
+		mappingTool = 'bridgeMaker', // default follows the renamed tool (2026-07-04); frozen-era callers pass 'edf-implied' explicitly
 		method = 'definitionEmbedding-opusRerank-v1',
 		decisionBlockHash = '',
 	} = {}) => {

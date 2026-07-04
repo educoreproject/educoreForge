@@ -7,8 +7,10 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // NOT a real standard. Emits the forge() contract (forgeCeds.js return shape). Its _source is its
 // OWN standardName ('synthstd') — distinct from the hub's 'CEDS' — which is exactly what the now-
 // FIXED materializer preserves (ref.source = oneNode.properties._source). Each node carries a
-// `cedsId` crossRef pointing at a forge-p6hub node's cedsId, so edf-bridge -specified --scope=synthstd
-// resolves real SPECIFIED_MAPPING edges (src._source='synthstd' with cedsId -> hub _source='CEDS').
+// `cedsId` crossRef pointing at a forge-p6hub node's cedsId, so a specified-tier bridge pass could
+// resolve real SPECIFIED_MAPPING edges (src._source='synthstd' with cedsId -> hub _source='CEDS').
+// (2026-07-04: that consumer, edf-bridge -specified, is RETIRED; the crossRef shape remains valid
+// test data for the current mapping machinery.)
 //
 // PURE/deterministic; tiny deterministic 1024-dim embeddings (no Voyage). Injected embedder ignored.
 //

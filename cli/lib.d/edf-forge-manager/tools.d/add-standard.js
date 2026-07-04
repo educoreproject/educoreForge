@@ -12,14 +12,17 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //   3. manifest -save (the standard block)         -> blockId
 //   4. manifest -combine (golden base + new block) -> bronze manifestKey
 //   5. replay  -buildGraph --destination=bronze    -> bronze graph (the working graph)
-//   6. bridge  -specified / -derived / -implied  --scope=std --owner=:golden   (mutates bronze)
-//   7. replay  -extractSchema=relationships --tearDown --out  -> relationships block file (tears bronze)
-//   8. manifest -save (relationships) + -combine (golden + standard + relationships) -> golden manifestKey
-//   9. replay  -buildGraph --destination=golden    -> the rebuilt golden  (== replay(goldenManifest))
-//  10. PUBLISH: advance golden's currentManifest pointer to the new golden manifestKey.
-//      --no-publish stops before step 10 (production/composition split).
+//   6. replay  -extractSchema=relationships --tearDown --out  -> relationships block file (tears bronze)
+//   7. manifest -save (relationships) + -combine (golden + standard + relationships) -> golden manifestKey
+//   8. replay  -buildGraph --destination=golden    -> the rebuilt golden  (== replay(goldenManifest))
+//   9. PUBLISH: advance golden's currentManifest pointer to the new golden manifestKey.
+//      --no-publish stops before step 9 (production/composition split).
 //
-// The STORE: every component reads/writes ONE canonical store. forger/replay/bridge HARDCODE
+// (2026-07-04, edf-bridge retirement: the legacy bridge -specified/-derived/-implied step that
+// mutated bronze between build and extract is GONE — mapping edges come from mapping blocks at
+// replay, never from a live bridge pass; every live graph carries zero legacy edges.)
+//
+// The STORE: every component reads/writes ONE canonical store. forger/replay HARDCODE
 // <projectRoot>/dataStores/forgeStore.sqlite3 (no --db flag); manifestEditor accepts --db and
 // defaults elsewhere, so forgeManager passes --db=<canonical> to EVERY manifestEditor shell-out.
 //
@@ -244,42 +247,7 @@ const moduleFunction =
 				);
 			});
 
-			// 6. bridgeMaker -specified / -derived / -implied  --scope=standardKey --owner=:golden
-			//    fixed order; each mutates the bronze working graph. Counts are threaded for the summary.
-			const bridgeModes = ['-specified', '-derived', '-implied'];
-			bridgeModes.forEach((oneMode) => {
-				taskList.push((args, next) => {
-					subCli.runComponentJson(
-						{
-							entryPath: entries.bridge,
-							args: [
-								oneMode,
-								`--graph=${bronzeGraph}`,
-								`--scope=${standardKey}`, // === _source — NO case transform
-								'--owner=:golden',
-							],
-							label: `bridge ${oneMode}`,
-						},
-						(err, bridgeResult) => {
-							if (err) {
-								next(err);
-								return;
-							}
-							const bridgeCounts = { ...(args.bridgeCounts || {}) };
-							bridgeCounts[oneMode] = {
-								edgesMerged: bridgeResult.edgesMerged || 0,
-								orphanCount: bridgeResult.orphanCount || 0,
-							};
-							xLog.status(
-								`[addStandard] bridge ${oneMode}: ${bridgeResult.edgesMerged || 0} edge(s), ${bridgeResult.orphanCount || 0} orphan(s)`,
-							);
-							next('', { ...args, bridgeCounts });
-						},
-					);
-				});
-			});
-
-			// 7. replay -extractSchema=relationships --tearDown --out (tears down bronze)
+			// 6. replay -extractSchema=relationships --tearDown --out (tears down bronze)
 			taskList.push((args, next) => {
 				subCli.runComponent(
 					{
@@ -307,7 +275,7 @@ const moduleFunction =
 				);
 			});
 
-			// 8a. manifestEditor -save (relationships block) -> relationships blockId
+			// 7a. manifestEditor -save (relationships block) -> relationships blockId
 			taskList.push((args, next) => {
 				subCli.runComponentJson(
 					{
@@ -330,7 +298,7 @@ const moduleFunction =
 				);
 			});
 
-			// 8b. manifestEditor -combine (golden base + standard + relationships) -> golden manifestKey
+			// 7b. manifestEditor -combine (golden base + standard + relationships) -> golden manifestKey
 			taskList.push((args, next) => {
 				const setBlocks = `${args.standardBlockId},${args.relationshipsBlockId}`;
 				const combineArgs = ['-combine', `--set=${setBlocks}`, '--label=golden'];
@@ -354,7 +322,7 @@ const moduleFunction =
 				);
 			});
 
-			// 9a. reset golden to a FRESH instance before the promote. The replay engine MERGEs and
+			// 8a. reset golden to a FRESH instance before the promote. The replay engine MERGEs and
 			//     never deletes, building its index on an EMPTY store, so `golden ≡ replay(goldenManifest)`
 			//     holds only against a clean instance. On the first standard golden is absent (no-op).
 			taskList.push((args, next) => {
@@ -367,8 +335,8 @@ const moduleFunction =
 				});
 			});
 
-			// 9b. replay -buildGraph --destination=golden (the atomic promote = rebuild-into-golden).
-			//    golden ≡ replay(goldenManifest). NOT the publish — the pointer move is step 10.
+			// 8b. replay -buildGraph --destination=golden (the atomic promote = rebuild-into-golden).
+			//    golden ≡ replay(goldenManifest). NOT the publish — the pointer move is step 9.
 			taskList.push((args, next) => {
 				subCli.runComponentJson(
 					{
@@ -394,7 +362,7 @@ const moduleFunction =
 				);
 			});
 
-			// 10. PUBLISH — advance golden's currentManifest pointer. --no-publish stops before this.
+			// 9. PUBLISH — advance golden's currentManifest pointer. --no-publish stops before this.
 			taskList.push((args, next) => {
 				if (noPublish) {
 					xLog.status('[addStandard] --no-publish: golden built but pointer NOT advanced');
@@ -434,7 +402,6 @@ const moduleFunction =
 					goldenGraph,
 					goldenLocation: args.goldenLocation,
 					published: args.published,
-					bridges: args.bridgeCounts || {},
 				});
 			});
 		};
