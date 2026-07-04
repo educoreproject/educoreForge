@@ -16,9 +16,11 @@
 //   - NODE_LABELS ...................... replay-engine.js / graph-builder.js (:ForgedNode, :GraphProvenance)
 //   - DME_ROLES ........................ forge-ceds.js makeNode + search-text/build-search-text.js
 //   - EDGE_TYPES ....................... forge-ceds.js addEdge + the other producers (recon)
-//   - MAPPING_EDGE_TYPES ............... edf-bridge (SPECIFIED_/IMPLIED_/DERIVED_MAPPING)
+//   - MAPPING_EDGE_TYPES ............... graph-builder.js legacy-0 purity gate + schema-view-finisher.js
+//                                        (2026-07-04: emitter edf-bridge RETIRED; names kept to PROVE ABSENCE)
 //   - PROVENANCE_TIERS / validators .... replay-block.js (the canonical set + isValid*)
-//   - SKOS_PREDICATES .................. edf-bridge/lib/implied-pipeline.js + classify-predicate.js
+//   - SKOS_PREDICATES .................. schema-validator.js (live predicate validation) + schema-view-finisher.js
+//                                        (2026-07-04: original edf-bridge consumers retired; vocabulary is LIVE)
 //   - SSSOM_JUSTIFICATIONS ............. NEW (not yet in code) — defined here for the mapping phases
 //   - UNIQUENESS_KEYS / REQUIRED_* ..... replay-engine.js (stableId MERGE key) + forge-ceds.js root props
 //
@@ -66,11 +68,21 @@ const EDGE_TYPES = {
 	REFERENCES_TYPE: 'REFERENCES_TYPE',
 };
 
-// mapping/bridge edge types (edf-bridge). Defined here; bridge wiring lands with the bridge phases.
+// LEGACY mapping/bridge edge types (emitter edf-bridge RETIRED 2026-07-04). Kept deliberately: the
+// graph-builder legacy-edge purity gate enumerates these names to prove their ABSENCE (legacy 0),
+// and the schema-view finisher describes them. Proving absence requires the names.
 const MAPPING_EDGE_TYPES = {
 	SPECIFIED_MAPPING: 'SPECIFIED_MAPPING',
 	IMPLIED_MAPPING: 'IMPLIED_MAPPING',
 	DERIVED_MAPPING: 'DERIVED_MAPPING',
+};
+
+// classification-crosswalk edge types (A0.3, workorder inferenceAndSelfDoc-070226): published
+// cross-taxonomy correspondence tables (NCES CIP↔SOC) materialized island-to-island. Spec-
+// authoritative but NOT equivalence — these edges never touch a HubReference and never compose
+// with the EXACT_MATCH/CLOSE_MATCH hub-resolution model (enforced by the A0.3 red test).
+const CLASSIFICATION_EDGE_TYPES = {
+	CLASSIFICATION_CROSSWALK: 'CLASSIFICATION_CROSSWALK',
 };
 
 // =====================================================================
@@ -100,7 +112,9 @@ const isValidEdgeType = (oneType) =>
 	typeof oneType === 'string' && EDGE_TYPE_RE.test(oneType);
 
 // =====================================================================
-// SKOS PREDICATES (edf-bridge/lib/implied-pipeline.js PREDICATES + classify-predicate.js). The only
+// SKOS PREDICATES (LIVE vocabulary: schema-validator.js validates every mapping edge's predicate
+// against this list; schema-view-finisher describes them. Original edf-bridge consumers retired
+// 2026-07-04 — the list is NOT legacy). The only
 // relation that composes to equivalence is exactMatch (WHITEPAPER §6.3). Order preserved.
 // =====================================================================
 const SKOS_PREDICATES = [
@@ -362,8 +376,66 @@ const SCHEMA_VIEW = {
 		REFERENCE_TIER: 'referenceTier',
 		REQUIRED_PROPERTY_SET: 'requiredPropertySet',
 		UNIQUENESS_KEY: 'uniquenessKey',
+		// Wave B (self-documentation): the range shapes a property-tier hub address can carry, and the
+		// slots of the hub tuple model — enumerated so the view documents the addressing model itself.
+		RANGE_SHAPE: 'rangeShape',
+		TUPLE_SLOT: 'tupleSlot',
 	},
 };
+
+// the three mutually-exclusive range shapes of a property-tier hub address (CANONICAL_ADDRESS_PROPERTIES:
+// rangeOptionSetId | rangeClassId | rangeDatatype — INVESTIGATION-rangelessHubs-070126.md). Enumerated for
+// the schema view's rangeShape kind (Wave B).
+const RANGE_SHAPES = ['optionSet', 'class', 'datatype'];
+
+// =====================================================================
+// SELF-DOCUMENTATION VOCABULARY (Wave B — PLAN-inGraphSelfDocumentationEnrichment-070126.md; WORKORDER-
+// inferenceAndSelfDoc-070226.md WAVE B). The manifest recipe + per-standard definitions materialized IN-GRAPH
+// at finishing time so a bolt-only consumer can read what the graph is and how it was built. All nodes are
+// deterministic functions of the manifest/store rows the replay already reads plus the built graph itself.
+// =====================================================================
+const SELF_DOC = {
+	NODE_LABELS: {
+		MANIFEST_RECIPE: 'ManifestRecipe',
+		RECIPE_BLOCK: 'RecipeBlock',
+		STANDARD_DEFINITION: 'StandardDefinition',
+	},
+	EDGE_TYPES: {
+		BUILT_FROM: 'BUILT_FROM', // GraphProvenance passport -> ManifestRecipe (created at stampProvenance)
+		HAS_BLOCK: 'HAS_BLOCK', // ManifestRecipe -> RecipeBlock member
+		BASED_ON: 'BASED_ON', // ManifestRecipe -> parent ManifestRecipe (the lineage)
+	},
+	PROVENANCE_TIER: PROVENANCE_TIER.STRUCTURAL, // self-doc edges carry the structural tier
+	MANIFEST_RECIPE_STABLE_ID_PREFIX: 'manifestRecipe:', // + manifestKey
+	RECIPE_BLOCK_STABLE_ID_PREFIX: 'recipeBlock:', // + blockId
+	STANDARD_DEFINITION_STABLE_ID_PREFIX: 'standardDefinition:', // + _source
+};
+
+// =====================================================================
+// GRAPH-META MARKER (Wave B — CRIMSON gate 6). The STRUCTURAL purity exemption: every legitimately
+// source-less node carries :GraphMeta, stamped by the graph-meta finisher (the GraphProvenance passport,
+// minted after finishing, stamps itself in graph-builder.stampProvenance). The G2 purity gate becomes:
+// for EVERY node, (_source IS NOT NULL) XOR (:GraphMeta) — a new meta node type is ONE entry in
+// META_NODE_LABELS; the gate needs zero edits.
+// =====================================================================
+const GRAPH_META = {
+	LABEL: 'GraphMeta',
+	// NOTE (Wave B correction to the workorder's gate-6 enumeration, reported to SCARLET_PEAK):
+	// HubDefinition is NOT here — it is BLOCK CONTENT carrying an honest `_source: hubName`
+	// (reference-subgraph/referenceSubgraph.js:422), so the XOR invariant already covers it on the
+	// _source side; stamping it :GraphMeta would make it a both-sides violation.
+	META_NODE_LABELS: [
+		SCHEMA_VIEW.LABEL,
+		SELF_DOC.NODE_LABELS.MANIFEST_RECIPE,
+		SELF_DOC.NODE_LABELS.RECIPE_BLOCK,
+		SELF_DOC.NODE_LABELS.STANDARD_DEFINITION,
+		NODE_LABELS.GRAPH_PROVENANCE,
+	],
+};
+
+// the human definitions for every term the registry enumerates (authored schema-as-code, sibling file).
+// The schema-view finisher REFUSES a member with no definition — new registry terms REQUIRE a definition.
+const { TERM_DEFINITIONS } = require('./vocabulary-definitions');
 
 const vocabulary = {
 	OWNER_TOKENS,
@@ -372,6 +444,7 @@ const vocabulary = {
 	DME_ROLES,
 	EDGE_TYPES,
 	MAPPING_EDGE_TYPES,
+	CLASSIFICATION_EDGE_TYPES,
 	PROVENANCE_TIERS,
 	PROVENANCE_TIER,
 	isValidProvenanceTier,
@@ -404,6 +477,11 @@ const vocabulary = {
 	STRUCTURAL_PROPERTIES,
 	// schema-view vocabulary (Phase 7)
 	SCHEMA_VIEW,
+	// self-documentation vocabulary (Wave B)
+	RANGE_SHAPES,
+	SELF_DOC,
+	GRAPH_META,
+	TERM_DEFINITIONS,
 };
 
 // freeze deeply-enough to prevent accidental mutation of the single source of truth.

@@ -14,7 +14,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //               [--gatingManifest=K] [--model=claude-opus-4-8]
 //
 // Action flags single-hyphen; parameters double-hyphen (the project's edf-* CLI convention). No async/await,
-// no try/catch for control flow. camelCase only. Mirrors edf-implied's bootstrap.
+// no try/catch for control flow. camelCase only. Mirrors bridgeMaker's bootstrap (ex edf-implied).
 
 const path = require('path');
 const fs = require('fs');

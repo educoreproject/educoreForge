@@ -30,6 +30,17 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // absent, the value track is skipped with a status log (never a hard failure — property track is
 // unaffected). --includeValues=false is an escape hatch back to pre-CODESET behavior.
 //
+// ANCHOR-FORM STRATEGY REGISTRY (WORKORDER-inferenceAndSelfDoc-070226 A0.2, added 070226): anchor
+// resolution is a REGISTRY of strategies (lib/anchor-strategies.js) selected by the `anchorForm`
+// declaration on the source standard's DmeStandardRoot NODE (per-standard authored data; absent =
+// pForm). -build (the EdFi crosswalk path) routes its extracted P-tokens through the registry's
+// pFormDirect strategy; -buildNative derives the pairs from the source block's OWN native anchors
+// (SEDM/SIF cedsId crossRefs = pFormDirect, extracted verbatim from the standards-campaign emit;
+// CTDL OS-form value anchors = osFragmentJoin). A new anchor format = one new registered strategy,
+// never a new module.
+//
+//   edf-mapping -buildNative --gatingManifest=<key> --sourceStandard=<SEDM|SIF|CTDL|…>
+//
 // Action flags single-hyphen; parameters double-hyphen. Async style: qtools taskListPlus/pipeRunner; no
 // async/await, no try/catch for control flow. camelCase only.
 
@@ -52,9 +63,11 @@ const CONFIGS_DIR = path.join(projectRoot, 'configs');
 const GROUND_TRUTH = path.join(projectRoot, 'code', 'cli', 'lib.d', 'edf-gate', 'lib', 'ground-truth', 'groundTruth');
 
 const replayBlock = require(path.join(CORE_LIB, 'replay', 'replay-block'));
+const { CLASSIFICATION_EDGE_TYPES, PROVENANCE_TIER } = require(path.join(CORE_LIB, 'vocabulary', 'vocabulary'));
 const mappingSubgraphFactory = require(path.join(CORE_LIB, 'mapping-subgraph', 'mappingSubgraph'));
 const versionBridge = require(path.join(__dirname, 'assets', 'versionBridge'));
 const valueCrosswalk = require(path.join(__dirname, 'lib', 'value-crosswalk'));
+const anchorStrategies = require(path.join(__dirname, 'lib', 'anchor-strategies'));
 
 const DEFAULT_GATING_MANIFEST =
 	'ef7d99309413d955e4885141c75bde39d92fa559ba6090441b5da83278effc31';
@@ -270,7 +283,26 @@ const handleBuild = (resources, callback) => {
 	taskList.push((args, next) => {
 		const sourceBlock = replayBlock.deserializeBlock(args.sourceRow.text);
 		const referenceBlock = replayBlock.deserializeBlock(args.referenceRow.text);
-		const { authoredMappings: propertyMappings, totalYesRows, tokenlessRows } = loadAuthoredMappings({ sourceStandard });
+		// A0.2 registry routing: the crosswalk path is P-form by construction — the source standard's
+		// DmeStandardRoot must therefore declare pForm (or nothing). Its extracted tokens resolve to
+		// targetKeys through the registry's pFormDirect strategy (identity for a P-token; the routing
+		// is byte-neutral, proven by the retrofit red test).
+		const strategySelection = anchorStrategies.strategyForSourceNodes(sourceBlock.nodes);
+		if (strategySelection.error) {
+			next(`edf-mapping -build: ${strategySelection.error}`);
+			return;
+		}
+		if (strategySelection.strategy.strategyName !== 'pFormDirect') {
+			next(
+				`edf-mapping -build: the authored-crosswalk path requires anchorForm 'pForm' (or none) — '${sourceStandard}' declares '${strategySelection.anchorForm}'; use -buildNative for native-anchor standards`,
+			);
+			return;
+		}
+		const { authoredMappings: rawPropertyMappings, totalYesRows, tokenlessRows } = loadAuthoredMappings({ sourceStandard });
+		const propertyMappings = rawPropertyMappings.map((oneMapping) => ({
+			...oneMapping,
+			targetKey: strategySelection.strategy.resolveTargetKey(oneMapping.targetKey),
+		}));
 
 		// CODESET-VALUE (Phase A): authored descriptor (value-tier) rows, additive alongside property rows.
 		let valueMappings = [];
@@ -465,9 +497,588 @@ const handleBuild = (resources, callback) => {
 };
 
 // =====================================================================
+// ACTION: -buildNative — authored mapping block from a standard's OWN native CEDS anchors,
+// resolved through the anchor-form strategy registry (A0.2). The pFormDirect leg is the
+// standards-campaign emit (SEDM 220 / SIF 2,202 EXACT) EXTRACTED VERBATIM — its blocks re-emit
+// byte-identically (the retrofit red test). The osFragmentJoin leg is CTDL's OS+fragment→notation
+// join → authored VALUE-tier EXACT_MATCH block (subject '<standard>-value' — the M14 discovery
+// convention: a value-only block must never masquerade as the property-tier gating block).
+// NO manifest is assembled here (campaign manifests are assembled deliberately, per wave).
+// =====================================================================
+const handleBuildNative = (resources, callback) => {
+	const { xLog } = process.global;
+	const { forgeStore } = resources;
+	const gatingManifest = (commandLineParameters.values.gatingManifest || [])[0] || null;
+	const sourceStandard = (commandLineParameters.values.sourceStandard || [])[0] || null;
+	if (!gatingManifest || !sourceStandard) {
+		callback(
+			'edf-mapping -buildNative: --gatingManifest= and --sourceStandard= are both required (no defaults across builds)',
+		);
+		return;
+	}
+
+	const taskList = new taskListPlus();
+
+	// 1) read the gating manifest's members
+	taskList.push((args, next) => {
+		forgeStore.getManifest({ manifestKey: gatingManifest }, (err, manifest) => {
+			if (err) {
+				next(`getManifest('${gatingManifest}') failed: ${err}`);
+				return;
+			}
+			if (!manifest) {
+				next(`no gating manifest '${gatingManifest}'`);
+				return;
+			}
+			next('', { ...args, members: manifest.members || [] });
+		});
+	});
+
+	// 2) locate the source-standard block, the CEDS reference block, and the CEDS standard block.
+	//    ALL THREE are REQUIRED read inputs on the native path: the reference resolves hubs, and the
+	//    CEDS standard block classifies orphans (pForm) / supplies the notation join rows (osFragment)
+	//    — requires = [source, reference, cedsStandard] is the honest full declaration (M3 doctrine).
+	taskList.push((args, next) => {
+		const sub = new taskListPlus();
+		let sourceRow = null;
+		let referenceRow = null;
+		let cedsStandardRow = null;
+		args.members.forEach((oneMember) => {
+			sub.push((a2, n2) => {
+				if (sourceRow && referenceRow && cedsStandardRow) {
+					n2('', a2);
+					return;
+				}
+				forgeStore.getBlock({ blockId: oneMember.blockId }, (err, row) => {
+					if (err) {
+						n2(err);
+						return;
+					}
+					if (row && row.type === 'standard' && row.subject === sourceStandard) {
+						sourceRow = row;
+					}
+					if (row && row.type === 'reference' && row.subject === 'CEDS') {
+						referenceRow = row;
+					}
+					if (row && row.type === 'standard' && row.subject === 'CEDS') {
+						cedsStandardRow = row;
+					}
+					n2('', a2);
+				});
+			});
+		});
+		pipeRunner(sub.getList(), {}, (err) => {
+			if (err) {
+				next(err);
+				return;
+			}
+			if (!sourceRow) {
+				next(`no '${sourceStandard}' standard block found in the gating manifest`);
+				return;
+			}
+			if (!referenceRow) {
+				next('no CEDS reference block found in the gating manifest (run edf-reference first)');
+				return;
+			}
+			if (!cedsStandardRow) {
+				next('no CEDS standard block found in the gating manifest — the native path REQUIRES it (orphan classification / notation join)');
+				return;
+			}
+			next('', { ...args, sourceRow, referenceRow, cedsStandardRow });
+		});
+	});
+
+	// 3) deserialize; select the strategy from the root's anchorForm declaration; harvest + resolve
+	taskList.push((args, next) => {
+		const sourceBlock = replayBlock.deserializeBlock(args.sourceRow.text);
+		const referenceBlock = replayBlock.deserializeBlock(args.referenceRow.text);
+		const cedsStandardBlock = replayBlock.deserializeBlock(args.cedsStandardRow.text);
+		const strategySelection = anchorStrategies.strategyForSourceNodes(sourceBlock.nodes);
+		if (strategySelection.error) {
+			next(`edf-mapping -buildNative: ${strategySelection.error}`);
+			return;
+		}
+		const { strategy, anchorForm } = strategySelection;
+		const resolutionContext = strategy.buildResolutionContext({
+			referenceNodes: referenceBlock.nodes,
+			cedsStandardNodes: cedsStandardBlock.nodes,
+		});
+		const harvest = strategy.harvestNativeAnchors({
+			sourceNodes: sourceBlock.nodes,
+			resolutionContext,
+		});
+		xLog.status(
+			`[edf-mapping -buildNative ${sourceStandard}] anchorForm=${anchorForm} strategy=${strategy.strategyName}: ` +
+				`${harvest.authoredMappings.length} resolved pair(s), ${harvest.unresolvedRows.length} abstain(s); ` +
+				`report=${JSON.stringify({
+					...harvest.report,
+					nonPForm: (harvest.report.nonPForm || []).length,
+					unknownToCeds: (harvest.report.unknownToCeds || []).length,
+				})}`,
+		);
+		if (harvest.unresolvedRows.length > 0) {
+			xLog.status(
+				`[edf-mapping -buildNative ${sourceStandard}] ABSTAINS (true reasons): ${JSON.stringify(harvest.unresolvedRows.slice(0, 10))}${harvest.unresolvedRows.length > 10 ? ' …' : ''}`,
+			);
+		}
+		if ((harvest.report.unknownToCeds || []).length > 0) {
+			xLog.status(
+				`[edf-mapping -buildNative ${sourceStandard}] unknownToCeds (will orphan in the core): ${JSON.stringify((harvest.report.unknownToCeds || []).slice(0, 10))}${harvest.report.unknownToCeds.length > 10 ? ' …' : ''}`,
+			);
+		}
+		next('', { ...args, sourceBlock, referenceBlock, strategy, anchorForm, harvest });
+	});
+
+	// 4) derive PURELY through the same core; serialize; deserialize-back read; save (additive)
+	taskList.push((args, next) => {
+		const { sourceBlock, referenceBlock, strategy, harvest } = args;
+		// pFormDirect keeps the stamp frozen into the campaign blocks (byte-identity + re-derivability
+		// pin it); every OTHER strategy stamps 'edf-mapping:<strategyName>' (the registry stamping rule,
+		// SCARLET_PEAK ruling 070226).
+		const mappingTool =
+			strategy.strategyName === 'pFormDirect'
+				? strategy.nativeMappingTool
+				: `edf-mapping:${strategy.strategyName}`;
+		const builder = mappingSubgraphFactory({
+			predicate: 'exactMatch',
+			mappingJustification: 'semapv:ManualMappingCuration',
+			subjectSource: sourceStandard,
+			subjectVersion: sourceBlock.header.version || '',
+			objectSource: 'CEDS',
+			objectVersion: referenceBlock.header.version || '',
+			mappingTool,
+		});
+		const subgraph = builder.buildMappingSubgraph({
+			authoredMappings: harvest.authoredMappings,
+			sourceNodes: sourceBlock.nodes,
+			referenceNodes: referenceBlock.nodes,
+			versionBridge,
+		});
+		xLog.status(
+			`[edf-mapping -buildNative ${sourceStandard}] derived ${subgraph.counts.edgesTotal} distinct EXACT_MATCH edges ` +
+				`(${subgraph.counts.direct} direct / ${subgraph.counts.directValue} value-direct / ${subgraph.counts.versionBridge} version-bridge); ` +
+				`orphans=${subgraph.counts.orphans}; fromGaps=${subgraph.counts.fromGaps}`,
+		);
+		if (subgraph.orphans.length > 0) {
+			xLog.status(
+				`[edf-mapping -buildNative ${sourceStandard}] ORPHANS: ${JSON.stringify(subgraph.orphans.slice(0, 10))}${subgraph.orphans.length > 10 ? ' …' : ''}`,
+			);
+		}
+		// the M14 discovery convention: a value-tier block's store subject carries '-value' so it can
+		// never masquerade as the property-tier gating block; the in-text header standardKey stays the
+		// bare standard (the edf-implied value-block precedent exactly).
+		const blockSubject =
+			strategy.strategyName === 'osFragmentJoin' ? `${sourceStandard}-value` : `${sourceRowSubject(args)}`;
+		// L13 doctrine: edges-only block, NO embedding metadata in the header
+		const header = {
+			blockType: 'mapping',
+			standardKey: strategy.strategyName === 'osFragmentJoin' ? sourceStandard : blockSubject,
+			version: sourceBlock.header.version || null,
+			stableUriPropertyName: 'uri',
+			resolutionKey: 'uri',
+		};
+		const blockText = replayBlock.serializeBlock({
+			header,
+			nodes: [], // mappings are EDGES (reify-on-demand): zero nodes
+			edges: subgraph.edges.map(toBlockEdge),
+		});
+		// doctrine (Phase R STOP FORK 2): emit acceptance includes a deserialize-back READ
+		const readBack = replayBlock.deserializeBlock(blockText);
+		if (readBack.edges.length !== subgraph.edges.length || readBack.nodes.length !== 0) {
+			next(
+				`deserialize-back FAILED: wrote ${subgraph.edges.length} edges/0 nodes, read ${readBack.edges.length}/${readBack.nodes.length}`,
+			);
+			return;
+		}
+		forgeStore.saveBlock(
+			{
+				type: 'mapping',
+				subject: blockSubject,
+				version: sourceBlock.header.version || null,
+				requires: [args.sourceRow.blockId, args.referenceRow.blockId, args.cedsStandardRow.blockId],
+				text: blockText,
+				producedBy: 'edf-mapping',
+			},
+			(err, result) => {
+				if (err) {
+					next(`saveBlock failed: ${err}`);
+					return;
+				}
+				xLog.status(
+					`[edf-mapping -buildNative ${sourceStandard}] mapping block saved: ${result.blockId} (${blockText.split('\n').filter(Boolean).length} lines)`,
+				);
+				next('', { ...args, mappingBlockId: result.blockId, blockSubject, subgraph });
+			},
+		);
+	});
+
+	pipeRunner(taskList.getList(), {}, (err, args) => {
+		if (err) {
+			callback(err);
+			return;
+		}
+		xLog.result(
+			JSON.stringify(
+				{
+					action: 'buildNative',
+					gatingManifest,
+					sourceStandard,
+					anchorForm: args.anchorForm,
+					strategy: args.strategy.strategyName,
+					blockSubject: args.blockSubject,
+					sourceBlockId: args.sourceRow.blockId,
+					referenceBlockId: args.referenceRow.blockId,
+					cedsStandardBlockId: args.cedsStandardRow.blockId,
+					mappingBlockId: args.mappingBlockId,
+					counts: args.subgraph.counts,
+					abstains: args.harvest.unresolvedRows,
+					orphans: args.subgraph.orphans,
+				},
+				null,
+				2,
+			),
+		);
+		callback('');
+	});
+};
+
+// the pForm block subject is the SOURCE ROW's subject verbatim (byte-lock with the campaign rows)
+const sourceRowSubject = (args) => args.sourceRow.subject;
+
+// =====================================================================
+// ACTION: -buildCrosswalk — A0.3 CLASSIFICATION_CROSSWALK producer (workorder
+// inferenceAndSelfDoc-070226, AZURE_OCEAN rulings 2026-07-02). Reads the SOURCE standard's
+// stashed cross-taxonomy crossRefs (system=--crossRefSystem) and the TARGET standard's code
+// index (--targetCodeProperty) from the gating manifest, and emits direct node-to-node
+// CLASSIFICATION_CROSSWALK edges in a normal content-addressed 'mapping' block, subject
+// '<sourceStandard>-crosswalk' (M14 anti-masquerade — never the bare standard).
+// NO hub semantics BY CONSTRUCTION: requires is 2-strong [source, target] (no CEDS reference,
+// no CEDS standard block) and no edge ever touches a HubReference. NOT equivalence: no
+// predicate, no SSSOM justification — a crosswalk correspondence is not a mapping.
+// REPEATABILITY RIDER (AZURE_OCEAN, binding): the COMPLETE parameter set is stamped into the
+// block header as crosswalkInstruction — the block is self-describing; re-derivation needs
+// repo code + store only.
+// =====================================================================
+const handleBuildCrosswalk = (resources, callback) => {
+	const { xLog } = process.global;
+	const { forgeStore } = resources;
+	const requiredParams = [
+		'gatingManifest',
+		'sourceStandard',
+		'targetStandard',
+		'crossRefSystem',
+		'targetCodeProperty',
+		'edgeFrom',
+		'edgeTo',
+		'crosswalkSource',
+	];
+	const paramValues = {};
+	const missingParams = requiredParams.filter((oneName) => {
+		paramValues[oneName] = (commandLineParameters.values[oneName] || [])[0] || null;
+		return !paramValues[oneName];
+	});
+	if (missingParams.length) {
+		callback(
+			`edf-mapping -buildCrosswalk: missing required parameter(s): ${missingParams
+				.map((oneName) => `--${oneName}=`)
+				.join(' ')} (no defaults across builds)`,
+		);
+		return;
+	}
+	// optional: refs whose code matches this pattern abstain as sentinelNoMatch (data-declared)
+	const sentinelCodePattern =
+		(commandLineParameters.values.sentinelCodePattern || [])[0] || null;
+	const {
+		gatingManifest,
+		sourceStandard,
+		targetStandard,
+		crossRefSystem,
+		targetCodeProperty,
+		edgeFrom,
+		edgeTo,
+		crosswalkSource,
+	} = paramValues;
+	// the stated direction must be a permutation of {source, target} — declared, never implied
+	const directionOk =
+		(edgeFrom === sourceStandard && edgeTo === targetStandard) ||
+		(edgeFrom === targetStandard && edgeTo === sourceStandard);
+	if (!directionOk || edgeFrom === edgeTo) {
+		callback(
+			`edf-mapping -buildCrosswalk: --edgeFrom/--edgeTo must be a permutation of --sourceStandard/--targetStandard (got ${edgeFrom}->${edgeTo})`,
+		);
+		return;
+	}
+	const crosswalkEdgeType = CLASSIFICATION_EDGE_TYPES.CLASSIFICATION_CROSSWALK;
+	const mappingTool = 'edf-mapping:classificationCrosswalk';
+
+	const taskList = new taskListPlus();
+
+	// 1) read the gating manifest's members
+	taskList.push((args, next) => {
+		forgeStore.getManifest({ manifestKey: gatingManifest }, (err, manifest) => {
+			if (err) {
+				next(`getManifest('${gatingManifest}') failed: ${err}`);
+				return;
+			}
+			if (!manifest) {
+				next(`no gating manifest '${gatingManifest}'`);
+				return;
+			}
+			next('', { ...args, members: manifest.members || [] });
+		});
+	});
+
+	// 2) locate the source and target standard blocks — the ONLY read inputs (2-strong requires:
+	//    no CEDS reference, no CEDS standard; the no-hub-semantics guarantee lives in the shape)
+	taskList.push((args, next) => {
+		const sub = new taskListPlus();
+		let sourceRow = null;
+		let targetRow = null;
+		args.members.forEach((oneMember) => {
+			sub.push((a2, n2) => {
+				if (sourceRow && targetRow) {
+					n2('', a2);
+					return;
+				}
+				forgeStore.getBlock({ blockId: oneMember.blockId }, (err, row) => {
+					if (err) {
+						n2(err);
+						return;
+					}
+					if (row && row.type === 'standard' && row.subject === sourceStandard) {
+						sourceRow = row;
+					}
+					if (row && row.type === 'standard' && row.subject === targetStandard) {
+						targetRow = row;
+					}
+					n2('', a2);
+				});
+			});
+		});
+		pipeRunner(sub.getList(), {}, (err) => {
+			if (err) {
+				next(err);
+				return;
+			}
+			if (!sourceRow || !targetRow) {
+				next(
+					`edf-mapping -buildCrosswalk: gating manifest lacks required standard block(s): ${[
+						!sourceRow ? sourceStandard : null,
+						!targetRow ? targetStandard : null,
+					]
+						.filter(Boolean)
+						.join(', ')}`,
+				);
+				return;
+			}
+			next('', {
+				...args,
+				sourceRow,
+				targetRow,
+				sourceBlock: replayBlock.deserializeBlock(sourceRow.text),
+				targetBlock: replayBlock.deserializeBlock(targetRow.text),
+			});
+		});
+	});
+
+	// 3) target code index (unique-owner-or-abstain) + source crossRef harvest + resolution
+	taskList.push((args, next) => {
+		const firstValue = (oneVal) => (Array.isArray(oneVal) ? oneVal[0] : oneVal);
+		const codeIndex = new Map(); // code -> [stableIds] (multi-owner detected, abstained)
+		(args.targetBlock.nodes || []).forEach((oneNode) => {
+			const codeValue = firstValue((oneNode.properties || {})[targetCodeProperty]);
+			if (codeValue === undefined || codeValue === null || codeValue === '') {
+				return;
+			}
+			if (!codeIndex.has(codeValue)) {
+				codeIndex.set(codeValue, []);
+			}
+			codeIndex.get(codeValue).push(oneNode.stableId);
+		});
+		const sentinelRe = sentinelCodePattern ? new RegExp(sentinelCodePattern) : null;
+		const abstainRows = [];
+		const abstainTally = {};
+		const seenPairKeys = new Set();
+		const edgeList = [];
+		let refsTotal = 0;
+		let duplicatePairs = 0;
+		(args.sourceBlock.nodes || []).forEach((oneNode) => {
+			const rawCrossRefs = firstValue((oneNode.properties || {}).crossRefs);
+			if (!rawCrossRefs || rawCrossRefs === '[]') {
+				return;
+			}
+			let crossRefList = null;
+			try {
+				crossRefList = JSON.parse(rawCrossRefs);
+			} catch (parseErr) {
+				crossRefList = null;
+			}
+			if (!Array.isArray(crossRefList)) {
+				return;
+			}
+			crossRefList
+				.filter((oneRef) => oneRef.system === crossRefSystem)
+				.forEach((oneRef) => {
+					refsTotal += 1;
+					const abstain = (reason) => {
+						abstainTally[reason] = (abstainTally[reason] || 0) + 1;
+						abstainRows.push({
+							reason,
+							sourceStableId: oneNode.stableId,
+							code: oneRef.id,
+							raw: oneRef.raw,
+							locator: oneRef.locator,
+						});
+					};
+					if (sentinelRe && sentinelRe.test(oneRef.id)) {
+						abstain('sentinelNoMatch');
+						return;
+					}
+					const ownerList = codeIndex.get(oneRef.id) || [];
+					if (ownerList.length === 0) {
+						abstain(`targetCodeNotIn${targetStandard}Standard`);
+						return;
+					}
+					if (ownerList.length > 1) {
+						abstain('ambiguousTargetCode');
+						return;
+					}
+					const targetStableId = ownerList[0];
+					const fromNode = edgeFrom === targetStandard ? targetStableId : oneNode.stableId;
+					const toNode = edgeTo === sourceStandard ? oneNode.stableId : targetStableId;
+					const pairKey = `${fromNode}|${toNode}`;
+					if (seenPairKeys.has(pairKey)) {
+						duplicatePairs += 1;
+						return;
+					}
+					seenPairKeys.add(pairKey);
+					edgeList.push({
+						type: crosswalkEdgeType,
+						fromRef: { source: edgeFrom, id: fromNode },
+						toRef: { source: edgeTo, id: toNode },
+						properties: {
+							confidence: [1],
+							crosswalkSource: [crosswalkSource],
+							mappingTool: [mappingTool],
+							provenanceTier: [PROVENANCE_TIER.SPEC_AUTHORITATIVE],
+						},
+					});
+				});
+		});
+		xLog.status(
+			`[edf-mapping -buildCrosswalk ${sourceStandard}->${targetStandard}] refs=${refsTotal}: ` +
+				`${edgeList.length} distinct ${crosswalkEdgeType} edge(s) (direction ${edgeFrom}->${edgeTo}), ` +
+				`${duplicatePairs} duplicate pair(s) deduped, abstains=${JSON.stringify(abstainTally)}`,
+		);
+		if (abstainRows.length > 0) {
+			xLog.status(
+				`[edf-mapping -buildCrosswalk] ABSTAINS (true reasons): ${JSON.stringify(abstainRows.slice(0, 10))}${abstainRows.length > 10 ? ' …' : ''}`,
+			);
+		}
+		next('', { ...args, edgeList, abstainRows, abstainTally, refsTotal, duplicatePairs });
+	});
+
+	// 4) serialize (edges-only, L13); deserialize-back read; save (additive, 2-strong requires)
+	taskList.push((args, next) => {
+		const header = {
+			blockType: 'mapping',
+			standardKey: sourceStandard,
+			version: args.sourceBlock.header.version || null,
+			stableUriPropertyName: 'uri',
+			resolutionKey: 'uri',
+			// the repeatability rider: the block re-describes its own derivation completely
+			crosswalkInstruction: {
+				sourceStandard,
+				targetStandard,
+				crossRefSystem,
+				targetCodeProperty,
+				edgeFrom,
+				edgeTo,
+				crosswalkSource,
+				sentinelCodePattern,
+			},
+		};
+		const blockText = replayBlock.serializeBlock({
+			header,
+			nodes: [], // crosswalk correspondences are EDGES: zero nodes
+			edges: args.edgeList,
+		});
+		const readBack = replayBlock.deserializeBlock(blockText);
+		if (readBack.edges.length !== args.edgeList.length || readBack.nodes.length !== 0) {
+			next(
+				`deserialize-back FAILED: wrote ${args.edgeList.length} edges/0 nodes, read ${readBack.edges.length}/${readBack.nodes.length}`,
+			);
+			return;
+		}
+		forgeStore.saveBlock(
+			{
+				type: 'mapping',
+				subject: `${sourceStandard}-crosswalk`,
+				version: args.sourceBlock.header.version || null,
+				requires: [args.sourceRow.blockId, args.targetRow.blockId],
+				text: blockText,
+				producedBy: 'edf-mapping',
+			},
+			(err, result) => {
+				if (err) {
+					next(`saveBlock failed: ${err}`);
+					return;
+				}
+				xLog.status(
+					`[edf-mapping -buildCrosswalk] crosswalk block saved: ${result.blockId} (${blockText.split('\n').filter(Boolean).length} lines)`,
+				);
+				next('', { ...args, crosswalkBlockId: result.blockId });
+			},
+		);
+	});
+
+	pipeRunner(taskList.getList(), {}, (err, args) => {
+		if (err) {
+			callback(err);
+			return;
+		}
+		xLog.result(
+			JSON.stringify(
+				{
+					action: 'buildCrosswalk',
+					gatingManifest,
+					crosswalkInstruction: {
+						sourceStandard,
+						targetStandard,
+						crossRefSystem,
+						targetCodeProperty,
+						edgeFrom,
+						edgeTo,
+						crosswalkSource,
+						sentinelCodePattern,
+					},
+					sourceBlockId: args.sourceRow.blockId,
+					targetBlockId: args.targetRow.blockId,
+					crosswalkBlockId: args.crosswalkBlockId,
+					counts: {
+						refsTotal: args.refsTotal,
+						distinctEdges: args.edgeList.length,
+						duplicatePairs: args.duplicatePairs,
+						abstains: args.abstainTally,
+					},
+					abstainSamples: args.abstainRows.slice(0, 20),
+				},
+				null,
+				2,
+			),
+		);
+		callback('');
+	});
+};
+
+// =====================================================================
 // DISPATCH
 // =====================================================================
-const dispatchMap = { build: handleBuild };
+const dispatchMap = {
+	build: handleBuild,
+	buildNative: handleBuildNative,
+	buildCrosswalk: handleBuildCrosswalk,
+};
 
 const main = () => {
 	bootstrapGlobal();
@@ -477,7 +1088,7 @@ const main = () => {
 	);
 	if (!action) {
 		xLog.error(
-			'edf-mapping: unknown action. Actions: -build. Params: --gatingManifest= --sourceStandard= --label= --keyOut= --includeValues=',
+			'edf-mapping: unknown action. Actions: -build, -buildNative, -buildCrosswalk. Params: --gatingManifest= --sourceStandard= --label= --keyOut= --includeValues= | crosswalk: --targetStandard= --crossRefSystem= --targetCodeProperty= --edgeFrom= --edgeTo= --crosswalkSource= [--sentinelCodePattern=]',
 		);
 		process.exit(2);
 	}

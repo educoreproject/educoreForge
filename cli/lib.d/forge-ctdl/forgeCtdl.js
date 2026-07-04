@@ -323,6 +323,13 @@ const moduleFunction =
 					coreVersion: '2.0.0',
 					stableUriPropertyName: STABLE_URI_PROPERTY_NAME,
 					mappingInstruction: JSON.stringify(ctdlMappingInstruction),
+					// anchorForm DECLARATION (WORKORDER-inferenceAndSelfDoc-070226 A0.2, CRIMSON condition 2):
+					// CTDL's native CEDS anchors are option-SET-form references whose raw text carries a value
+					// fragment (owl:equivalentClass 'ceds:000113#Assistantships' on concepts). The harvest above
+					// stays raw/lossless; this per-standard AUTHORED datum tells the generic authored maker
+					// (edf-mapping) to resolve them through its osFragmentJoin strategy. Declared on the
+					// DmeStandardRoot NODE alongside the mapping instruction — never in the block header.
+					anchorForm: 'osFragment',
 				},
 			});
 

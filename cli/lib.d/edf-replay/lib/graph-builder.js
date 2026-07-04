@@ -50,7 +50,9 @@ const CORE_LIB = path.join(
 );
 // canonical owner/role tokens from the vocabulary registry (Phase 1, single source of truth). Values
 // are byte-identical to the prior inline literals, so owner-stamp + instance type are unchanged.
-const { OWNER_TOKENS, ROLE_TYPES } = require(path.join(CORE_LIB, 'vocabulary', 'vocabulary'));
+const { OWNER_TOKENS, ROLE_TYPES, SELF_DOC, GRAPH_META, MAPPING_EDGE_TYPES } = require(
+	path.join(CORE_LIB, 'vocabulary', 'vocabulary'),
+);
 const replayEngine = require(path.join(CORE_LIB, 'replay', 'replay-engine'));
 // replay-block is a PURE constants/codec module (no Neo4j); we read SERIALIZER_VERSION from it
 // for the :GraphProvenance passport rather than hardcoding the serializer version.
@@ -88,7 +90,8 @@ const moduleFunction =
 		const { xLog } = process.global;
 
 		// the finisher registry (Phase 7) — instantiated with the injected lifecycle (its cypher chokepoint).
-		const finishing = finishingFactory({ lifecycle });
+		// forgeStore (Wave B, additive) feeds the manifest-recipe finisher's METADATA reads (never block text).
+		const finishing = finishingFactory({ lifecycle, forgeStore });
 
 		// -----
 		// resolveOrderedBlockTexts — the forge-store manifest->blocks READ path. Returns the
@@ -296,8 +299,9 @@ const moduleFunction =
 			const taskList = new taskListPlus();
 
 			// previousManifestId — the manifest pointer this build advances FROM
-			// (graphs.currentManifest). buildGraph does NOT itself move the pointer, so for a graph
-			// only ever built here this is null (the registry column exists but is unset).
+			// (graphs.currentManifest). Read BEFORE the build's own registry-hygiene pointer publish
+			// (buildGraph step 6, Wave B), so the passport records what the graph carried before this
+			// build; null on a first build.
 			taskList.push((args, next) => {
 				forgeStore.getGraphByName({ name: destination }, (err, graphRow) => {
 					if (err) {
@@ -309,6 +313,77 @@ const moduleFunction =
 						previousManifestId: graphRow
 							? graphRow.currentManifest || null
 							: null,
+					});
+				});
+			});
+
+			// Wave B enrichment reads (PLAN §3): the per-standard breakdown (reused from the
+			// standard-definition finisher's nodes — empty when finishing was skipped, honest) and the
+			// capability flags, computed over the finished graph. All deterministic content facts; the
+			// breakdown is stored as a KEY-SORTED JSON string (Neo4j properties cannot carry maps).
+			taskList.push((args, next) => {
+				const cypher = `
+					CALL { OPTIONAL MATCH (d:\`${SELF_DOC.NODE_LABELS.STANDARD_DEFINITION}\`)
+						RETURN collect(d { .source, .displayName, .version, .versionSource, .nodeCount,
+							.propertyCount, .exactMappedProperties, .closeMappedProperties,
+							.mappingDisposition }) AS standardRows }
+					CALL { RETURN EXISTS { MATCH (h:HubReference) WHERE h.rangeClassId IS NOT NULL } AS classRangeModeled }
+					CALL { RETURN EXISTS { MATCH (:ForgedNode)-[:EXACT_MATCH|CLOSE_MATCH]->(v:HubReference { referenceTier: 'value' }) } AS codesetMatching }
+					CALL { RETURN EXISTS { MATCH (:ForgedNode)-[:EXACT_MATCH]->(:HubReference) } AS equivalenceLayer }
+					CALL { OPTIONAL MATCH ()-[legacy:\`${MAPPING_EDGE_TYPES.SPECIFIED_MAPPING}\`|\`${MAPPING_EDGE_TYPES.IMPLIED_MAPPING}\`|\`${MAPPING_EDGE_TYPES.DERIVED_MAPPING}\`|MAPS_TO]->()
+						RETURN count(legacy) AS legacyEdgeCount }
+					RETURN standardRows, classRangeModeled, codesetMatching, equivalenceLayer, legacyEdgeCount`;
+				lifecycle.runCypher({ graphName: destination, cypher }, (err, result) => {
+					if (err) {
+						next(err);
+						return;
+					}
+					const row = result.records[0];
+					const standardRows = (row.standardRows || []).filter(
+						(oneRow) => oneRow && oneRow.source,
+					);
+					// key-sorted by source so the serialized JSON is byte-stable across twin builds.
+					standardRows.sort((a, b) =>
+						a.source < b.source ? -1 : a.source > b.source ? 1 : 0,
+					);
+					const breakdown = {};
+					standardRows.forEach((oneRow) => {
+						breakdown[oneRow.source] = {
+							displayName: oneRow.displayName || null,
+							version: oneRow.version || null,
+							versionSource: oneRow.versionSource || null,
+							nodeCount: Number(oneRow.nodeCount || 0),
+							propertyCount: Number(oneRow.propertyCount || 0),
+							exactMappedProperties: Number(oneRow.exactMappedProperties || 0),
+							closeMappedProperties: Number(oneRow.closeMappedProperties || 0),
+							mappingDisposition: oneRow.mappingDisposition || null,
+						};
+					});
+					const standardNames = standardRows.map((oneRow) => oneRow.source);
+					const exactTotal = standardRows.reduce(
+						(sum, oneRow) => sum + Number(oneRow.exactMappedProperties || 0),
+						0,
+					);
+					const closeTotal = standardRows.reduce(
+						(sum, oneRow) => sum + Number(oneRow.closeMappedProperties || 0),
+						0,
+					);
+					next('', {
+						...args,
+						standardsBreakdown: JSON.stringify(breakdown),
+						capabilityFlags: {
+							classRangeModeled: !!row.classRangeModeled,
+							codesetMatching: !!row.codesetMatching,
+							equivalenceLayer: !!row.equivalenceLayer,
+							legacyEdgeCount: Number(row.legacyEdgeCount || 0),
+						},
+						// deterministic human description assembled from content facts (no clock); honest
+						// when finishing was skipped (no standard-definition rows to describe).
+						graphDescription: standardNames.length
+							? `Education-standards graph built from manifest ${manifestKey}: ` +
+								`${standardNames.length} standard(s) — ${standardNames.join(', ')}; ` +
+								`${exactTotal} authored-EXACT and ${closeTotal} inferred-CLOSE property resolutions to the hub.`
+							: `Graph built from manifest ${manifestKey} (no standard-definition self-documentation present).`,
 					});
 				});
 			});
@@ -332,16 +407,24 @@ const moduleFunction =
 					builtAt,
 					// not passed to replayManager today (null + flagged)
 					triggeredBy: null,
-					// the manifest pointer this build advances FROM; buildGraph does not move the
-					// pointer (that is a promote action), so null for replayManager-built graphs
+					// the manifest pointer this build advances FROM (read before step 6's pointer
+					// publish); null on a first build
 					previousManifestId: args.previousManifestId,
 					// the registry tracks no monotonic build counter today; promote populates later
 					buildSequence: null,
 					status: statusForType(graphType),
 					// publishedAt is a PROMOTE-time field (golden 'built'->'live'); never set at build
 					publishedAt: null,
-					// no --description control-surface input today (null + flagged)
-					description: null,
+					// Wave B: the deterministic content-fact description assembled above (PLAN §3) —
+					// no longer a null-flagged gap.
+					description: args.graphDescription,
+					// Wave B enrichment (PLAN §3): per-standard breakdown + capability flags.
+					standardsBreakdown: args.standardsBreakdown,
+					classRangeModeled: args.capabilityFlags.classRangeModeled,
+					codesetMatching: args.capabilityFlags.codesetMatching,
+					equivalenceLayer: args.capabilityFlags.equivalenceLayer,
+					legacyEdgeCount: args.capabilityFlags.legacyEdgeCount,
+					legacyEdgesPresent: args.capabilityFlags.legacyEdgeCount > 0,
 				};
 				const cypher = `
 					CALL { MATCH (n:ForgedNode)
@@ -373,12 +456,19 @@ const moduleFunction =
 						status: $status,
 						publishedAt: $publishedAt,
 						description: $description,
+						standardsBreakdown: $standardsBreakdown,
+						classRangeModeled: $classRangeModeled,
+						codesetMatching: $codesetMatching,
+						equivalenceLayer: $equivalenceLayer,
+						legacyEdgeCount: $legacyEdgeCount,
+						legacyEdgesPresent: $legacyEdgesPresent,
 						nodeCountAtBuild: nodeCountAtBuild,
 						edgeCountAtBuild: edgeCountAtBuild,
 						standardsIncluded: standardsIncluded,
 						embeddingModelVersion: embeddingModelVersion,
 						provenanceTierComplete: (missingTier = 0)
 					}
+					SET p:\`${GRAPH_META.LABEL}\`
 					RETURN elementId(p) AS elementId, properties(p) AS provenance
 				`;
 				lifecycle.runCypher(
@@ -399,6 +489,44 @@ const moduleFunction =
 								nodeCountAtBuild: Number(provenance.nodeCountAtBuild),
 								edgeCountAtBuild: Number(provenance.edgeCountAtBuild),
 								provenanceTierComplete: provenance.provenanceTierComplete,
+							},
+						});
+					},
+				);
+			});
+
+			// Wave B (PLAN §1): passport -[:BUILT_FROM]-> ManifestRecipe. Created HERE because the
+			// passport is minted after finishing. MATCH (not MERGE-create) on both ends: when finishing
+			// was skipped there is no recipe node, the MATCH yields zero rows, and no edge appears —
+			// honest degradation, never an error. The edge is excluded from fingerprints automatically
+			// (one endpoint is the :GraphProvenance passport).
+			taskList.push((args, next) => {
+				const cypher = `MATCH (p:GraphProvenance { graphName: $graphName })
+					MATCH (r:\`${SELF_DOC.NODE_LABELS.MANIFEST_RECIPE}\` { stableId: $recipeStableId })
+					MERGE (p)-[e:\`${SELF_DOC.EDGE_TYPES.BUILT_FROM}\`]->(r)
+					SET e.provenanceTier = $selfDocTier, e.owner = $owner
+					RETURN count(e) AS builtFromCount`;
+				lifecycle.runCypher(
+					{
+						graphName: destination,
+						cypher,
+						params: {
+							graphName: destination,
+							recipeStableId: `${SELF_DOC.MANIFEST_RECIPE_STABLE_ID_PREFIX}${manifestKey}`,
+							selfDocTier: SELF_DOC.PROVENANCE_TIER,
+							owner: `${owner}`,
+						},
+					},
+					(err, result) => {
+						if (err) {
+							next(`stampProvenance BUILT_FROM edge failed: ${err}`);
+							return;
+						}
+						next('', {
+							...args,
+							provenanceResult: {
+								...args.provenanceResult,
+								builtFromRecipe: Number(result.records[0].builtFromCount) > 0,
 							},
 						});
 					},
@@ -506,7 +634,13 @@ const moduleFunction =
 			//     provenanceTierComplete true. The GLOBAL skip switch (skipFinishing) yields a raw graph.
 			taskList.push((args, next) => {
 				finishing.applyFinishers(
-					{ graphName: destination, skipFinishing: !!skipFinishing },
+					{
+						graphName: destination,
+						skipFinishing: !!skipFinishing,
+						// Wave B buildContext: replay-time facts for the self-doc finishers (the manifest
+						// recipe materializes from the same manifest this build just replayed).
+						buildContext: { manifestKey },
+					},
 					(err, finishResult) => {
 						if (err) {
 							next(err);
@@ -562,6 +696,26 @@ const moduleFunction =
 								`provenanceTierComplete=${provenanceResult.provenanceTierComplete}`,
 						);
 						next('', { ...args, provenanceResult });
+					},
+				);
+			});
+
+			// 6. REGISTRY HYGIENE (Wave B item 6): every built graph's row carries currentManifest.
+			//    Runs AFTER stampProvenance (which reads previousManifestId from the pointer BEFORE this
+			//    advance, so the passport records what the graph carried before this build). Pointer-log
+			//    preserving (setCurrentManifest appends to manifestPointerLog; never deletes).
+			taskList.push((args, next) => {
+				forgeStore.setCurrentManifest(
+					{ name: destination, manifestKey },
+					(err) => {
+						if (err) {
+							next(`buildGraph setCurrentManifest('${destination}') failed: ${err}`);
+							return;
+						}
+						xLog.status(
+							`[graph-builder] registry: currentManifest('${destination}') -> ${manifestKey}`,
+						);
+						next('', args);
 					},
 				);
 			});

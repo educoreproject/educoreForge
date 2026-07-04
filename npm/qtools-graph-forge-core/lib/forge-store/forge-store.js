@@ -271,6 +271,34 @@ const moduleFunction =
 			);
 		};
 
+		// getBlockMeta — the block's ROW METADATA ONLY (no text BLOB, so no content-address
+		// recompute and no multi-hundred-MB read). For consumers that need what a block IS
+		// (type/subject/version/producedBy/createdAt/requires) without its content — the Wave-B
+		// manifest-recipe finisher is the first. Content reads stay on getBlock (the verify-on-read
+		// choke point); this reads NOTHING that content-addressing protects.
+		const getBlockMeta = ({ blockId }, callback) => {
+			getRows(
+				`SELECT blockId, type, subject, version, requires, producedBy, createdAt
+					FROM blocks WHERE blockId=${esc(blockId)};`,
+				(err, rows) => {
+					if (err) {
+						callback(err);
+						return;
+					}
+					const row = rows.qtGetSurePath('[0]', null);
+					if (row) {
+						const parsedRequires = parseRequiresColumn(row);
+						if (parsedRequires.error) {
+							callback(`getBlockMeta: ${parsedRequires.error}`);
+							return;
+						}
+						row.requires = parsedRequires.requires;
+					}
+					callback('', row);
+				},
+			);
+		};
+
 		// listBlocks — all block rows; requires parsed back to an array per row
 		// (mirrors getBlock's requires-parsing). No filtering — callers (e.g.
 		// manifest-editor) apply any type-scoping semantics.
@@ -950,6 +978,7 @@ const moduleFunction =
 			init,
 			saveBlock,
 			getBlock,
+			getBlockMeta,
 			listBlocks,
 			saveManifest,
 			getManifest,

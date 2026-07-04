@@ -14,7 +14,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 const path = require('path');
 
 const RESOLVE_LIB = path.join(__dirname, '..', '..', '..', 'edf-resolve', 'lib');
-const IMPLIED_LIB = path.join(__dirname, '..', '..', '..', 'edf-implied', 'lib');
+const IMPLIED_LIB = path.join(__dirname, '..', '..', '..', 'bridge-maker', 'lib');
 
 const resolveCoreFactory = require(path.join(RESOLVE_LIB, 'resolve-core'));
 const defEmbedderFactory = require(path.join(IMPLIED_LIB, 'def-embedder'));

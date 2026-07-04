@@ -5,7 +5,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // value-crosswalk.js — CODESET-VALUE (PLAN-codesetValueMatching-070126.md Phase A/B) shared, PURE helpers
 // for the AUTHORED descriptor ("codeset value") crosswalk. Factored out of edfMapping.js so BOTH the
 // Phase-4 authored-value producer (edf-mapping -build) and the Phase-5 value gold harness
-// (edf-implied's gold-harness.js, for -accuracy --tier=value) read the SAME join logic — one source of
+// (bridgeMaker's gold-harness.js, for -accuracy --tier=value) read the SAME join logic — one source of
 // truth for how a source EdFi descriptor value resolves to a CEDS value hub.
 //
 // Pure + synchronous. No async/await, no try/catch for control flow, no network/graph access — reads only
@@ -249,7 +249,7 @@ const loadAuthoredValueMappings = ({ sourceStandard, valueIndex, propertyRangeOp
 		// property-scoped value resolution (a bare OV token is ambiguous: option SETS are shared across many
 		// CEDS properties — see mappingSubgraph.js buildReferenceIndex's baseValueRef comment). valueToken
 		// (the bare OV token) is kept alongside for gold-frame / accuracy comparisons that need to compare
-		// against a raw CEDS candidate's own cedsId (e.g. edf-implied's -accuracy --tier=value).
+		// against a raw CEDS candidate's own cedsId (e.g. bridgeMaker's -accuracy --tier=value).
 		const targetKey = `${propertyToken}|${valueToken}`;
 		authoredMappings.push({ fromStableId, targetKey, valueToken, rangeOptionSetId, elementName, codeValue });
 		(byFrom[fromStableId] = byFrom[fromStableId] || new Set()).add(targetKey);

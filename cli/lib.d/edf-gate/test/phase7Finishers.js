@@ -160,7 +160,8 @@ const teardown = (resources, graphName, callback) => {
 // the registry-derived expectations (schema view + constraints), from the finishers themselves.
 const schemaViewFinisher = schemaViewFinisherFactory({ lifecycle: null, vocabulary });
 const schemaConstraintFinisher = schemaConstraintFinisherFactory({ lifecycle: null, vocabulary });
-const expectedMembers = schemaViewFinisher.buildMembers();
+// Wave B: buildMembers returns { members, missingDefinitions } (definitions readability gate).
+const expectedMembers = schemaViewFinisher.buildMembers().members;
 const expectedMemberStableIds = new Set(expectedMembers.map((oneMember) => oneMember.stableId));
 const expectedConstraintNames = schemaConstraintFinisher.constraintSpecs.map((oneSpec) => oneSpec.constraintName);
 const SCHEMA_VIEW = vocabulary.SCHEMA_VIEW;
@@ -198,7 +199,9 @@ buildSharedResources((resErr, resources) => {
 		process.exit(1);
 	}
 	const { lifecycle, fingerprinter, differ, baselineStore } = resources;
-	const finishing = finishingFactory({ lifecycle });
+	// Wave B: forgeStore injected (manifest-recipe finisher metadata reads); the re-apply below passes
+	// buildContext:{manifestKey} so the idempotency check covers the self-doc finishers too.
+	const finishing = finishingFactory({ lifecycle, forgeStore: resources.forgeStore });
 	const liveConstraintFinisher = schemaConstraintFinisherFactory({ lifecycle, vocabulary });
 
 	const state = {}; // carries fingerprints + manifests between stages
@@ -352,7 +355,7 @@ buildSharedResources((resErr, resources) => {
 	});
 	// finisherIdempotent — re-running the finishers leaves the all-scope fingerprint unchanged.
 	taskList.push((args, next) => {
-		finishing.applyFinishers({ graphName: finGraph, skipFinishing: false }, (err) => {
+		finishing.applyFinishers({ graphName: finGraph, skipFinishing: false, buildContext: { manifestKey } }, (err) => {
 			if (err) {
 				next(`finisher re-apply: ${err}`);
 				return;

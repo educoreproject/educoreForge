@@ -16,7 +16,7 @@ const findProjectRoot = ({ rootFolderName = 'system' } = {}) =>
 const projectRoot = findProjectRoot();
 const CODE = path.join(projectRoot, 'code');
 const CORE_LIB = path.join(CODE, 'npm', 'qtools-graph-forge-core', 'lib');
-const IMPLIED_LIB = path.join(CODE, 'cli', 'lib.d', 'edf-implied', 'lib');
+const IMPLIED_LIB = path.join(CODE, 'cli', 'lib.d', 'bridge-maker', 'lib');
 const DATASTORES = path.join(projectRoot, 'dataStores');
 
 const { pipeRunner, taskListPlus } = new require(path.join(

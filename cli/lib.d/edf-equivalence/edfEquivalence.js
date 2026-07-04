@@ -24,7 +24,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //
 // Action flags single-hyphen; parameters double-hyphen. qtools taskListPlus/pipeRunner; no async/await, no
 // try/catch for control flow; native JS only where no qtools lib applies. camelCase only. Mirrors edf-mapping
-// / edf-implied (Phase 4/5).
+// / bridgeMaker (ex edf-implied; Phase 4/5).
 
 const path = require('path');
 const fs = require('fs');
@@ -84,7 +84,7 @@ const bootstrapGlobal = () => {
 
 const strParam = (name, fallback) => (commandLineParameters.values[name] || [])[0] || fallback;
 
-// edge / node serialization (mirror edf-mapping/edf-implied): every property value a PG-JSON array.
+// edge / node serialization (mirror edf-mapping/bridgeMaker): every property value a PG-JSON array.
 const toBlockEdge = (oneEdge) => {
 	const properties = {};
 	Object.keys(oneEdge.properties || {}).forEach((oneKey) => {

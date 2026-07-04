@@ -43,6 +43,7 @@ const moduleFunction =
 			EQUIVALENCE_NODE_LABELS,
 			EDGE_TYPES,
 			MAPPING_EDGE_TYPES,
+			CLASSIFICATION_EDGE_TYPES,
 			SKOS_EDGE_TYPES,
 			HUB_DECOMPOSITION_EDGE_TYPES,
 			CEDS_HUB_EDGE_TYPES,
@@ -54,6 +55,11 @@ const moduleFunction =
 			REFERENCE_TIERS,
 			REQUIRED_PROPERTIES,
 			UNIQUENESS_KEYS,
+			RANGE_SHAPES,
+			HUB_DECOMPOSITION_SLOTS,
+			SELF_DOC,
+			GRAPH_META,
+			TERM_DEFINITIONS,
 		} = vocabulary;
 
 		const KINDS = SCHEMA_VIEW.KINDS;
@@ -61,37 +67,50 @@ const moduleFunction =
 		const asArray = (oneVal) => (Array.isArray(oneVal) ? oneVal : [oneVal]);
 
 		// ----- buildMembers — derive the COMPLETE, deterministic member set from the registry. Each member is
-		//   { stableId, kind, value, name, properties? }. SELF-DESCRIBING: the view's own label + edge type are
-		//   folded into the nodeLabel / edgeType enumerations.
+		//   { stableId, kind, value, name, description, properties? }. SELF-DESCRIBING: the view's own label +
+		//   edge type are folded into the nodeLabel / edgeType enumerations. Wave B readability bar: every
+		//   member carries the human description from TERM_DEFINITIONS; a term with NO definition is collected
+		//   into missingDefinitions and REFUSED by finish() — adding a registry term REQUIRES its definition.
 		const buildMembers = () => {
 			const members = [];
-			const add = (kind, value, extra = {}) =>
+			const missingDefinitions = [];
+			const add = (kind, value, extra = {}) => {
+				const description = ((TERM_DEFINITIONS || {})[kind] || {})[value];
+				if (!description) {
+					missingDefinitions.push(`${kind}:${value}`);
+				}
 				members.push({
 					stableId: `schemaView:${kind}:${value}`,
 					kind,
 					value: `${value}`,
 					name: `${value}`,
+					description: description || null,
 					...extra,
 				});
+			};
 
 			// node labels — the UNIVERSAL registry labels (NOT per-standard labels, which are producer-local),
-			// including the view's own :SchemaView (self-describing).
+			// including the view's own :SchemaView (self-describing) and the Wave-B self-doc/meta labels.
 			uniq([
 				...Object.values(NODE_LABELS),
 				...Object.values(EQUIVALENCE_NODE_LABELS),
 				SCHEMA_VIEW.LABEL,
+				...Object.values(SELF_DOC.NODE_LABELS),
+				GRAPH_META.LABEL,
 			]).forEach((oneLabel) => add(KINDS.NODE_LABEL, oneLabel));
 
 			// edge types — every structural/mapping/equivalence/decomposition edge type the registry declares,
-			// including the view's own HAS_SCHEMA_TERM (self-describing).
+			// including the view's own HAS_SCHEMA_TERM (self-describing) and the Wave-B self-doc edges.
 			uniq([
 				...Object.values(EDGE_TYPES),
 				...Object.values(MAPPING_EDGE_TYPES),
+				...Object.values(CLASSIFICATION_EDGE_TYPES),
 				...Object.values(SKOS_EDGE_TYPES),
 				...Object.values(HUB_DECOMPOSITION_EDGE_TYPES),
 				...Object.values(CEDS_HUB_EDGE_TYPES),
 				IN_HUB_EDGE_TYPE,
 				SCHEMA_VIEW.EDGE_TYPE,
+				...Object.values(SELF_DOC.EDGE_TYPES),
 			]).forEach((oneType) => add(KINDS.EDGE_TYPE, oneType));
 
 			// enums
@@ -100,6 +119,9 @@ const moduleFunction =
 			SSSOM_JUSTIFICATIONS.forEach((oneJ) => add(KINDS.SSSOM_JUSTIFICATION, oneJ));
 			Object.values(DME_ROLES).forEach((oneRole) => add(KINDS.DME_ROLE, oneRole));
 			REFERENCE_TIERS.forEach((oneTier) => add(KINDS.REFERENCE_TIER, oneTier));
+			// Wave B: the range shapes + hub tuple slots — the addressing model documents itself.
+			RANGE_SHAPES.forEach((oneShape) => add(KINDS.RANGE_SHAPE, oneShape));
+			HUB_DECOMPOSITION_SLOTS.forEach((oneSlot) => add(KINDS.TUPLE_SLOT, oneSlot));
 
 			// required-property SETS — one member per set, carrying the set's property list (deterministic).
 			Object.keys(REQUIRED_PROPERTIES).forEach((oneSetName) =>
@@ -118,18 +140,29 @@ const moduleFunction =
 			// DETERMINISTIC order — sort by stableId (the unique key). The fingerprint is order-independent,
 			// but a sorted emission keeps construction stable + auditable (WILD_FALCON).
 			members.sort((a, b) => (a.stableId < b.stableId ? -1 : a.stableId > b.stableId ? 1 : 0));
-			return members;
+			return { members, missingDefinitions };
 		};
 
 		// ----- finish — MERGE the root + all members + HAS_SCHEMA_TERM edges in one parameterized pass.
 		//   Labels/edge-type are constants (cannot be parameterized) sourced from the frozen registry. props
 		//   travel as a parameter list (injection-safe). The view edges carry provenanceTier 'structural'.
 		const finish = ({ graphName } = {}, callback) => {
-			const members = buildMembers();
+			const { members, missingDefinitions } = buildMembers();
 			const rootStableId = SCHEMA_VIEW.ROOT_STABLE_ID;
 			const viewTier = SCHEMA_VIEW.PROVENANCE_TIER;
 			const viewLabel = SCHEMA_VIEW.LABEL; // 'SchemaView'
 			const edgeType = SCHEMA_VIEW.EDGE_TYPE; // 'HAS_SCHEMA_TERM'
+
+			// Wave B finisher validator (the plan's readability gate): a registry term with no human
+			// definition REFUSES the build loudly — never emit a name==value term.
+			if (missingDefinitions.length) {
+				callback(
+					`schema-view-finisher: ${missingDefinitions.length} registry term(s) have NO definition in ` +
+						`vocabulary-definitions.js — refusing to emit an undocumented schema view. ` +
+						`Missing: ${missingDefinitions.join(', ')}`,
+				);
+				return;
+			}
 
 			const taskList = new taskListPlus();
 
@@ -137,7 +170,8 @@ const moduleFunction =
 			taskList.push((args, next) => {
 				const cypher = `MERGE (root:ForgedNode:\`${viewLabel}\` { stableId: $rootStableId })
 					SET root.kind = 'schemaViewRoot', root.value = 'root',
-						root.name = 'educoreForge schema view (generated from the vocabulary registry)'
+						root.name = 'educoreForge schema view (generated from the vocabulary registry)',
+						root.description = 'The generated in-graph catalog of the vocabulary registry: one member node per schema term (labels, edge types, tiers, predicates, roles, shapes, slots, property contracts), each carrying its human definition. Regenerated every build; code is truth.'
 					RETURN root.stableId AS id`;
 				lifecycle.runCypher({ graphName, cypher, params: { rootStableId } }, (err) => {
 					if (err) {
@@ -154,6 +188,7 @@ const moduleFunction =
 					UNWIND $members AS member
 					MERGE (m:ForgedNode:\`${viewLabel}\` { stableId: member.stableId })
 						SET m.kind = member.kind, m.value = member.value, m.name = member.name,
+							m.description = member.description,
 							m.properties = member.properties
 					MERGE (root)-[e:\`${edgeType}\`]->(m)
 						SET e.provenanceTier = $viewTier

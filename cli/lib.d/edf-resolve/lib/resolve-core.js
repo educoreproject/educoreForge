@@ -17,7 +17,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // REUSES the SAME Phase-5 inference machinery (def-embedder + inference-pipeline retrieve->floor->rerank->
 // ABSTAIN) and the SAME reference resolver (mapping-subgraph.buildReferenceIndex) that the authored/inferred
 // tracks use to turn a chosen CEDS key into a property-tier HubReference address. The prior-generation
-// edf-bridge/implied-pipeline.js and replay-engine.js are NEVER touched.
+// edf-bridge/implied-pipeline.js (RETIRED and deleted 2026-07-04) and replay-engine.js were NEVER touched.
 //
 // DEPENDENCY-INJECTED (programming-skills discipline): the caller supplies forgeStore + defEmbedder +
 // llmClient so this module is free of commandLineParameters and is callable identically from CLI, an MCP
@@ -40,7 +40,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 const path = require('path');
 
 const CORE_LIB = path.join(__dirname, '..', '..', '..', '..', 'npm', 'qtools-graph-forge-core', 'lib');
-const IMPLIED_LIB = path.join(__dirname, '..', '..', 'edf-implied', 'lib');
+const IMPLIED_LIB = path.join(__dirname, '..', '..', 'bridge-maker', 'lib');
 
 const nodeLoaderFactory = require(path.join(IMPLIED_LIB, 'node-loader'));
 const inferencePipelineFactory = require(path.join(IMPLIED_LIB, 'inference-pipeline'));

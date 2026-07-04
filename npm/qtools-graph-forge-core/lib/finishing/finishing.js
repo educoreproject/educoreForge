@@ -32,12 +32,14 @@ const vocabulary = require(path.join(CORE_LIB, 'vocabulary', 'vocabulary'));
 
 const moduleFunction =
 	({ moduleName } = {}) =>
-	({ lifecycle } = {}) => {
+	({ lifecycle, forgeStore } = {}) => {
 		const { xLog } = process.global;
 
 		// ----- instantiate the pluggable finisher modules (registry members). Each receives the injected
 		//   lifecycle (its cypher chokepoint) and the frozen vocabulary registry (schema-as-code). NEW
-		//   finishers are added to the ORDERED array below; nothing else changes.
+		//   finishers are added to the ORDERED array below; nothing else changes. forgeStore (Wave B) is an
+		//   ADDITIVE injection — only the manifest-recipe finisher reads it (manifest/block METADATA, never
+		//   block text), and it is optional: absent forgeStore disables the recipe finisher loudly at run time.
 		const schemaViewFinisher = require('./lib/schema-view-finisher')({
 			lifecycle,
 			vocabulary,
@@ -46,11 +48,27 @@ const moduleFunction =
 			lifecycle,
 			vocabulary,
 		});
+		const manifestRecipeFinisher = require('./lib/manifest-recipe-finisher')({
+			lifecycle,
+			vocabulary,
+			forgeStore,
+		});
+		const standardDefinitionFinisher = require('./lib/standard-definition-finisher')({
+			lifecycle,
+			vocabulary,
+		});
+		const graphMetaFinisher = require('./lib/graph-meta-finisher')({
+			lifecycle,
+			vocabulary,
+		});
 
 		// ----- THE ORDERED REGISTRY. Order is significant and explicit (top-to-bottom run order). `enabled`
 		//   is the per-finisher toggle. The self-describing schema-VIEW finisher runs FIRST so its emitted
 		//   :ForgedNode:SchemaView nodes exist before the schema-CONSTRAINT finisher creates the uniqueness
-		//   constraints (which then cover the view nodes too).
+		//   constraints (which then cover the view nodes too). The Wave-B self-doc finishers follow
+		//   (manifestRecipe needs the buildContext manifestKey; standardDefinition reads the replayed
+		//   content); graphMeta runs LAST so every meta node minted above exists before :GraphMeta stamping
+		//   + the XOR purity verification.
 		const REGISTRY = [
 			{
 				name: 'schemaView',
@@ -62,12 +80,30 @@ const moduleFunction =
 				enabled: true,
 				finisher: schemaConstraintFinisher,
 			},
+			{
+				name: 'manifestRecipe',
+				enabled: true,
+				finisher: manifestRecipeFinisher,
+			},
+			{
+				name: 'standardDefinition',
+				enabled: true,
+				finisher: standardDefinitionFinisher,
+			},
+			{
+				name: 'graphMeta',
+				enabled: true,
+				finisher: graphMetaFinisher,
+			},
 		];
 
-		// ----- applyFinishers({ graphName, skipFinishing?, disabled? }, cb) -> { skipped, applied:[{name,...}] }.
-		//   Runs each ENABLED, non-disabled finisher IN REGISTRY ORDER. The GLOBAL skip switch short-circuits
-		//   the whole phase (a raw graph). A finisher error aborts the phase and surfaces (NEVER swallowed).
-		const applyFinishers = ({ graphName, skipFinishing, disabled = [] } = {}, callback) => {
+		// ----- applyFinishers({ graphName, skipFinishing?, disabled?, buildContext? }, cb) ->
+		//   { skipped, applied:[{name,...}] }. Runs each ENABLED, non-disabled finisher IN REGISTRY ORDER.
+		//   The GLOBAL skip switch short-circuits the whole phase (a raw graph). A finisher error aborts the
+		//   phase and surfaces (NEVER swallowed). buildContext (Wave B, ADDITIVE) carries replay-time facts
+		//   the self-doc finishers need — today { manifestKey }; it is spread into each finisher's finish()
+		//   args so existing finishers (which read only graphName) are untouched.
+		const applyFinishers = ({ graphName, skipFinishing, disabled = [], buildContext = {} } = {}, callback) => {
 			if (skipFinishing) {
 				xLog.status(
 					`[finishing] SKIPPED (global skip switch) — raw/unconstrained graph '${graphName}'`,
@@ -85,7 +121,7 @@ const moduleFunction =
 
 			active.forEach((oneEntry) => {
 				taskList.push((args, next) => {
-					oneEntry.finisher.finish({ graphName }, (err, result) => {
+					oneEntry.finisher.finish({ graphName, ...buildContext }, (err, result) => {
 						if (err) {
 							next(`[finishing] finisher '${oneEntry.name}' failed: ${err}`);
 							return;
