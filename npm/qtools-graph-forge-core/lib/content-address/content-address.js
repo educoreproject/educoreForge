@@ -70,7 +70,41 @@ const moduleFunction =
 			return sha256Hex(canonical);
 		};
 
-		return { blockIdForText, manifestKeyForMembership, dedupMembersByBlockId, sha256Hex };
+		// -----
+		// vectorIdForInput — content-addressing key for a node embedding VECTOR (embedding
+		//   sidecar, PLAN §3.1). A node's vector is a pure function of its determinants
+		//   (embeddingModelVersion, embeddingInputText = searchText); this hashes THOSE, so
+		//   identical inputs under the same model intern to ONE vectorId (dedup) and the ref is
+		//   recomputable from the block alone. The single NUL separator (\u0000) is an unambiguous
+		//   boundary: searchText is a printable pipe-delimited string, so a 0x00 byte cannot occur
+		//   inside either field. EVERY phase that mints or verifies an embeddingRef (vector-store
+		//   put/get, block serialize/deserialize, fingerprint) MUST use THIS function with the
+		//   identical separator + field order — the same shared-rule discipline
+		//   manifestKeyForMembership enforces. Determinants must be present; a null determinant is
+		//   a caller bug, surfaced by the vector store's own required-field guard (not here).
+
+		const vectorIdForInput = (embeddingModelVersion, embeddingInputText) =>
+			sha256Hex(`${embeddingModelVersion}\u0000${embeddingInputText}`);
+
+		// -----
+		// vectorHashForBytes — payload-integrity hash over the RAW vector bytes (the stored
+		//   little-endian float32 BLOB). vectorId addresses the INPUT (for dedup); vectorHash
+		//   addresses the PAYLOAD, so the vector store's verify-on-read can refuse a corrupted
+		//   vector the same way forge-store refuses corrupted block text (blockId==sha256(text)).
+		//   Hashes the Buffer bytes DIRECTLY — a utf-8 round-trip (as sha256Hex does for strings)
+		//   would corrupt binary, so this is a distinct primitive.
+
+		const vectorHashForBytes = (vectorBytes) =>
+			crypto.createHash('sha256').update(vectorBytes).digest('hex');
+
+		return {
+			blockIdForText,
+			manifestKeyForMembership,
+			dedupMembersByBlockId,
+			sha256Hex,
+			vectorIdForInput,
+			vectorHashForBytes,
+		};
 	};
 
 // END OF moduleFunction() ============================================================
