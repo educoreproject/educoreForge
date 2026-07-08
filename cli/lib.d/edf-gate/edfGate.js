@@ -59,6 +59,7 @@ const productionGuardFactory = require('./lib/production-guard/productionGuard')
 const baselineStoreFactory = require('./lib/baseline-store/baselineStore');
 const gateSuiteFactory = require('./lib/gate-suite/gateSuite');
 const groundTruthFactory = require('./lib/ground-truth/groundTruth');
+const graphEquivalenceFactory = require('./lib/graph-equivalence/graphEquivalence');
 
 // booleanFlag — accept -name (switch), --name (valueless at end), or --name=true. Mirrors
 // edfReplay.js so the apparatus parses boolean flags the same way the rest of the CLI does.
@@ -82,6 +83,7 @@ SYNOPSIS
      edf-gate -freezeBaseline   --manifest=<manifestKey> [--target=phase0baseline] [--label=golden] [--keepGraph]
      edf-gate -diff             --baseline=<snapshotFile> --candidateGraph=<graphName>
      edf-gate -runSuite         [--manifest=<manifestKey>]
+     edf-gate -assertGraphEquivalence --graphA=<graphName> --graphB=<graphName> [--ignoreOwnerStamp] [--scope=all]
 
 DESCRIPTION
      The proving apparatus for the cross-standard-equivalence build. Fingerprints are
@@ -89,6 +91,17 @@ DESCRIPTION
      passport is excluded). -proveDeterminism replays ONE manifest into TWO independent isolated
      graphs and asserts identical fingerprints — the keystone determinism proof. Never touches the
      production golden (productionGuard refuses golden targets).
+
+     -assertGraphEquivalence asserts two materialized graphs are identical UP TO embedding-vector
+     values (structural fingerprint + per-node embeddingHash), reusing the fingerprint + diff
+     machinery. It is NOT the Phase-6 'edf-equivalence' mapping tool. Its 'regime' output maps 1:1
+     onto PLAN Decision D2 (transport-the-cache vs rebuild-on-target):
+         transport          = byteIdentical; the DEFAULT deploy regime (golden byte-reproducible).
+         rebuild-equivalent = structurally equal but embeddings re-embedded/drifted; the D2 rebuild
+                              opt-in (valid only where bit-identical reproduction is not asserted).
+         divergent          = a real structural fault (not the same graph).
+     A verdict is VALID only when both graphs are non-empty AND embeddingHash is populated on both
+     sides (the embedding-axis liveness guard prevents a vacuous null==null byteIdentical GREEN).
 
      Action flags single-hyphen; parameters double-hyphen.
 `;
@@ -171,6 +184,9 @@ const buildSharedResources = (callback) => {
 		const baselineStore = baselineStoreFactory({ projectRoot });
 		const gateSuite = gateSuiteFactory();
 		const groundTruth = groundTruthFactory();
+		// graphEquivalence reuses the fingerprinter + differ (never forks them) to assert two
+		// materialized graphs are identical up to embedding-vector values (Phase 0, embedding sidecar).
+		const graphEquivalence = graphEquivalenceFactory({ fingerprinter, differ });
 		callback('', {
 			forgeStore,
 			credentialAccessor,
@@ -182,6 +198,7 @@ const buildSharedResources = (callback) => {
 			baselineStore,
 			gateSuite,
 			groundTruth,
+			graphEquivalence,
 		});
 	});
 };
@@ -684,12 +701,88 @@ const handleDiff = (resources, callback) => {
 	});
 };
 
+// =====================================================================
+// ACTION: -assertGraphEquivalence (two materialized graphs identical up to embedding values)
+// =====================================================================
+// NOT the Phase-6 `edf-equivalence` mapping tool — this is whole-graph materialization equivalence.
+// The `regime` maps 1:1 onto PLAN Decision D2 (transport-the-cache vs rebuild-on-target):
+//   transport          -> byteIdentical; the default deploy regime (golden stays byte-reproducible)
+//   rebuild-equivalent -> structurally equal, embeddings re-embedded/drifted; the D2 rebuild opt-in
+//   divergent          -> a real structural fault (not the same graph)
+// A verdict is VALID only when both graphs are non-empty AND the embeddingHash axis is populated on
+// both sides (else byteIdentical could be a vacuous null==null GREEN — the embedding-axis liveness
+// guard). An invalid verdict is reported RED regardless of byteIdentical.
+
+const handleAssertGraphEquivalence = (resources, callback) => {
+	const { xLog } = process.global;
+	const graphA = (commandLineParameters.values.graphA || [])[0];
+	const graphB = (commandLineParameters.values.graphB || [])[0];
+	const ignoreOwnerStamp = booleanFlag('ignoreOwnerStamp');
+	const scope = booleanFlag('allScope') || (commandLineParameters.values.scope || [])[0] === 'all'
+		? 'all'
+		: 'forgedNode';
+
+	if (!graphA || !graphB) {
+		callback('edf-gate -assertGraphEquivalence: --graphA and --graphB are both required. Use -help.');
+		return;
+	}
+
+	resources.graphEquivalence.assertGraphEquivalence(
+		{ graphA, graphB, ignoreOwnerStamp, scope },
+		(err, result) => {
+			if (err) {
+				callback(err);
+				return;
+			}
+			const verdict = !result.valid
+				? `INVALID (RED) — ${!result.nonEmpty ? 'empty graph(s)' : 'embedding axis not populated (embeddingHash absent — cannot trust a byteIdentical GREEN)'}`
+				: result.byteIdentical
+					? 'BYTE-IDENTICAL (GREEN) — transport regime'
+					: result.structurallyEquivalent
+						? 'EQUIVALENT UP TO EMBEDDING VALUES (rebuild-equivalent regime) — GREEN only under the D2 rebuild opt-in'
+						: 'DIVERGENT (RED) — structural difference';
+			xLog.result(
+				JSON.stringify(
+					{
+						action: 'assertGraphEquivalence',
+						graphA,
+						graphB,
+						verdict,
+						valid: result.valid,
+						regime: result.regime,
+						equivalent: result.equivalent,
+						structurallyEquivalent: result.structurallyEquivalent,
+						byteIdentical: result.byteIdentical,
+						nonEmpty: result.nonEmpty,
+						embeddingAxisLive: result.embeddingAxisLive,
+						embeddingCoverageA: result.embeddingCoverageA,
+						embeddingCoverageB: result.embeddingCoverageB,
+						embeddingDivergentCount: result.embeddingDivergentCount,
+						embeddingDivergence: result.embeddingDivergence.slice(0, 20),
+						nodeCountA: result.nodeCountA,
+						nodeCountB: result.nodeCountB,
+						edgeCountA: result.edgeCountA,
+						edgeCountB: result.edgeCountB,
+						fingerprintA: result.fingerprintA,
+						fingerprintB: result.fingerprintB,
+						diffSummary: result.diff.summary,
+					},
+					null,
+					2,
+				),
+			);
+			callback('');
+		},
+	);
+};
+
 const actionRegistry = {
 	fingerprint: handleFingerprint,
 	proveDeterminism: handleProveDeterminism,
 	freezeBaseline: handleFreezeBaseline,
 	runSuite: handleRunSuite,
 	diff: handleDiff,
+	assertGraphEquivalence: handleAssertGraphEquivalence,
 };
 
 const run = () => {
@@ -706,7 +799,7 @@ const run = () => {
 	const actionName = Object.keys(actionRegistry).find((name) => switches[name]);
 	if (!actionName) {
 		xLog.error(
-			'edf-gate: unknown action. Actions: -fingerprint, -proveDeterminism, -freezeBaseline, -runSuite, -diff. Use -help.',
+			'edf-gate: unknown action. Actions: -fingerprint, -proveDeterminism, -freezeBaseline, -runSuite, -diff, -assertGraphEquivalence. Use -help.',
 		);
 		process.exit(1);
 		return;
