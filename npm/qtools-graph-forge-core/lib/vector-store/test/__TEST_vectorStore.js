@@ -56,8 +56,12 @@ const encode = (vals) => {
 	return buf;
 };
 const fr = (arr) => arr.map((value) => Math.fround(value));
+// Object.is (not ===) so the edge floats compare correctly: NaN === NaN is false but
+// Object.is(NaN, NaN) is true, and Object.is distinguishes -0 from +0 (the point of the -0 fixture).
 const sameNumbers = (a, b) =>
-	Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((v, i) => v === b[i]);
+	Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((v, i) => Object.is(v, b[i]));
+
+const NUL = String.fromCharCode(0);
 
 const results = [];
 const check = (name, pass, detail) => {
@@ -68,7 +72,9 @@ const check = (name, pass, detail) => {
 // fixture
 const modelVersion = 'voyage-4-large';
 const inputText = 'role|name|structural-context-alpha'; // no quotes -> easy inline raw restore
-const inputVector = [0.1, -0.25, 3.5, 0.0, -1.0, 123.456, 1e-6, -0.0009765625];
+// includes float EDGE cases (QUIET_ECHO closeout item 2): NaN, +Infinity, -Infinity, -0 — a
+// STANDING regression that they round-trip through the float32 BLOB (compared via Object.is).
+const inputVector = [0.1, -0.25, 3.5, 0.0, -1.0, 123.456, 1e-6, -0.0009765625, NaN, Infinity, -Infinity, -0];
 const expectedVectorId = contentAddress.vectorIdForInput(modelVersion, inputText);
 const originalBuffer = encode(inputVector);
 const originalHex = originalBuffer.toString('hex');
@@ -248,6 +254,58 @@ taskList.push((args, next) => {
 	vs.putVector({ modelVersion, inputText, vector: [] }, (err, result) => {
 		check('putVector empty vector -> refused', !!err && !result, err ? String(err).slice(0, 60) : 'NO ERROR');
 		next('', args);
+	});
+});
+
+// --- NUL guard (unit): vectorIdForInput THROWS on a NUL-containing determinant (load-bearing;
+//     every later phase recomputes against it)
+taskList.push((args, next) => {
+	let threw = false;
+	try {
+		contentAddress.vectorIdForInput('voyage-4-large', 'x' + NUL + 'y');
+	} catch (thrownError) {
+		threw = /must not contain a NUL/.test(thrownError.message);
+	}
+	check('vectorIdForInput THROWS on NUL in a determinant', threw, threw ? '' : 'did NOT throw');
+	next('', args);
+});
+
+// --- NUL guard (write side): NUL in inputText -> putVector refuses, no data
+taskList.push((args, next) => {
+	vs.putVector({ modelVersion, inputText: 'has' + NUL + 'nul', vector: inputVector }, (err, result) => {
+		check('putVector NUL in inputText -> refused', !!err && !result, err ? String(err).slice(0, 70) : 'NO ERROR — did not refuse');
+		next('', args);
+	});
+});
+
+// --- NUL guard (write side): NUL in modelVersion -> putVector refuses, no data
+taskList.push((args, next) => {
+	vs.putVector({ modelVersion: modelVersion + NUL, inputText: 'clean-input', vector: inputVector }, (err, result) => {
+		check('putVector NUL in modelVersion -> refused', !!err && !result, err ? String(err).slice(0, 70) : 'NO ERROR — did not refuse');
+		next('', args);
+	});
+});
+
+// --- NUL guard (read side): a NUL directly injected into a stored determinant -> getVector REFUSES
+//     loudly WITHOUT letting vectorIdForInput throw uncaught. Injected via CAST(X'<hex>' AS TEXT)
+//     so the NUL byte lands inside the stored TEXT. Self-validates the NUL actually stored first.
+//     (This is the LAST check — it corrupts the happy-path row.)
+taskList.push((args, next) => {
+	const tamperedHex = Buffer.from('a' + NUL + 'b', 'utf8').toString('hex');
+	rawRun(`UPDATE vectors SET inputText=CAST(X'${tamperedHex}' AS TEXT) WHERE vectorId='${expectedVectorId}';`, (err) => {
+		if (err) { next(err, args); return; }
+		rawGet(`SELECT inputText FROM vectors WHERE vectorId='${expectedVectorId}';`, (selErr, rows) => {
+			const stored = rows && rows[0] ? String(rows[0].inputText) : '';
+			const nulActuallyStored = stored.indexOf(NUL) !== -1;
+			vs.getVector({ vectorId: expectedVectorId }, (getErr, record) => {
+				const refused = !!getErr && (record === undefined || record === null);
+				// only a meaningful assertion if the injection truly embedded a NUL
+				check('RED NUL-in-stored-determinant: getVector REFUSES (no throw leak)',
+					nulActuallyStored ? refused : true,
+					nulActuallyStored ? (getErr ? String(getErr).slice(0, 70) : 'NO ERROR / THREW') : 'SKIPPED — SQLite did not store an embedded NUL');
+				next('', args);
+			});
+		});
 	});
 });
 

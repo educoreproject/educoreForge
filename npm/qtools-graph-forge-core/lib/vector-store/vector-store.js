@@ -63,6 +63,7 @@ const moduleFunction =
 
 		const DTYPE = 'float32';
 		const BYTES_PER_FLOAT = 4;
+		const NUL = String.fromCharCode(0);
 
 		// -----
 		// helpers
@@ -160,6 +161,17 @@ const moduleFunction =
 				callback(`${moduleName}.putVector: inputText is required`);
 				return;
 			}
+			// NUL-free guard (separator-collision): a NUL in either determinant would make the
+			// vectorId key ambiguous (NUL is the field separator in vectorIdForInput). Refuse loudly
+			// on the callback channel BEFORE computing the key, so no colliding pair is ever stored
+			// and vectorIdForInput never has to throw on the write path.
+			if (`${modelVersion}`.indexOf(NUL) !== -1 || `${inputText}`.indexOf(NUL) !== -1) {
+				callback(
+					`${moduleName}.putVector: modelVersion/inputText must not contain a NUL byte ` +
+						`(NUL is the vectorId field separator — it would make the key ambiguous)`,
+				);
+				return;
+			}
 			if (
 				vector == null ||
 				typeof vector.length !== 'number' ||
@@ -236,6 +248,20 @@ const moduleFunction =
 								`${Buffer.isBuffer(row.vector) ? row.vector.length : '(not a blob)'} != ` +
 								`expected ${expectedBytes} (${row.dims} dims x ${BYTES_PER_FLOAT}-byte float32) ` +
 								`— the row is corrupt. Refusing to return it.`,
+						);
+						return;
+					}
+
+					// stored-determinant NUL guard — a NUL in a stored determinant is corruption /
+					// tampering (putVector rejects it on write). Refuse loudly, AND prevent the
+					// determinant re-hash below (vectorIdForInput) from THROWING on the NUL.
+					if (
+						`${row.modelVersion}`.indexOf(NUL) !== -1 ||
+						`${row.inputText}`.indexOf(NUL) !== -1
+					) {
+						callback(
+							`${moduleName}.getVector: vector ${row.vectorId} has a NUL byte in a stored ` +
+								`determinant — the row is corrupt or tampered. Refusing to return it.`,
 						);
 						return;
 					}

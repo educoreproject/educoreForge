@@ -83,8 +83,28 @@ const moduleFunction =
 		//   manifestKeyForMembership enforces. Determinants must be present; a null determinant is
 		//   a caller bug, surfaced by the vector store's own required-field guard (not here).
 
-		const vectorIdForInput = (embeddingModelVersion, embeddingInputText) =>
-			sha256Hex(`${embeddingModelVersion}\u0000${embeddingInputText}`);
+		const NUL = String.fromCharCode(0);
+
+		const vectorIdForInput = (embeddingModelVersion, embeddingInputText) => {
+			// PRECONDITION (separator-collision guard): neither determinant may contain a NUL. The
+			// NUL is the field SEPARATOR, so a NUL inside a field makes the boundary ambiguous and
+			// lets two DISTINCT (modelVersion, inputText) pairs collide to ONE vectorId
+			// (e.g. ('a', NUL+'b') and ('a'+NUL, 'b') both serialize to 'a'+NUL+NUL+'b'). searchText
+			// is a printable pipe-delimited string, so a NUL is a programming error: fail HARD here
+			// (mirrors replay-block.encodeEmbedding throwing on malformed input). The vector-store
+			// entry points (putVector/getVector) screen NUL on the CALLBACK channel before calling
+			// this, so this throw only fires for a future caller that skipped that guard.
+			if (
+				`${embeddingModelVersion}`.indexOf(NUL) !== -1 ||
+				`${embeddingInputText}`.indexOf(NUL) !== -1
+			) {
+				throw new Error(
+					'content-address.vectorIdForInput: modelVersion/inputText must not contain a NUL ' +
+						'byte (NUL is the field separator; a NUL inside a field makes vectorId ambiguous)',
+				);
+			}
+			return sha256Hex(`${embeddingModelVersion}${NUL}${embeddingInputText}`);
+		};
 
 		// -----
 		// vectorHashForBytes — payload-integrity hash over the RAW vector bytes (the stored
