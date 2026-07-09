@@ -137,8 +137,16 @@ const serializeNodeLine = (node) => {
 		ordered.stableId = node.stableId;
 	}
 	ordered.properties = canonicalProperties(node.properties);
-	if (node.embedding !== undefined && node.embedding !== null) {
-		ordered.embedding = node.embedding; // base64 scalar
+	// Embedding sidecar (PLAN §3.3): a node carries EITHER embeddingRef (the content-hash of the
+	// vector input — the new persisted-block format, written by the EXTRACT path) OR the legacy
+	// inline embedding base64 scalar (still emitted by the materializer's ephemeral-graph block,
+	// F2). They are mutually exclusive; embeddingRef takes precedence. The field occupies the same
+	// stable position either way, so node-line byte-order is unchanged (determinism).
+	if (node.embeddingRef !== undefined && node.embeddingRef !== null) {
+		ordered.embeddingRef = node.embeddingRef; // 64-hex vectorId
+		ordered.embeddingModelVersion = node.embeddingModelVersion;
+	} else if (node.embedding !== undefined && node.embedding !== null) {
+		ordered.embedding = node.embedding; // base64 scalar (legacy / materializer)
 		ordered.embeddingModelVersion = node.embeddingModelVersion;
 	}
 	return JSON.stringify(ordered);

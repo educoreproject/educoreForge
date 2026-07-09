@@ -50,6 +50,11 @@ const CONFIGS_DIR = path.join(projectRoot, 'configs');
 const graphBuilderFactory = require('./lib/graph-builder');
 const schemaExtractorFactory = require('./lib/schema-extractor');
 
+// embedding sidecar: the per-standard vector store + its SHARED path-derivation helper (F3 —
+// the single source of truth the forge and extract both use, so they hit the same file).
+const vectorStoreFactory = require(path.join(CORE_LIB, 'vector-store', 'vector-store'));
+const vectorStorePath = require(path.join(CORE_LIB, 'vector-store', 'vector-store-path'))();
+
 // =====================================================================
 // HELP TEXT — matches specification/replayManager/helpSpec.md (the control surface IS the contract)
 // =====================================================================
@@ -298,10 +303,43 @@ const handleExtractSchema = ({ lifecycle }, callback) => {
 		});
 	});
 
+	// build+init the per-standard vector sidecar store when a subject is named (standard/overlay).
+	// The extract emits embeddingRef and putVectors distinct vectors into it (F1/F4). The path is
+	// derived via the SHARED helper (F3), so it is the SAME file the forge's decorator fills for
+	// this standard. No subject (relationships) -> no store (that block carries 0 nodes anyway).
+	taskList.push((args, next) => {
+		if (!subject) {
+			next('', { ...args, vectorStore: null });
+			return;
+		}
+		const vectorStore = vectorStoreFactory();
+		const vectorStoreDbPath = vectorStorePath.vectorStoreDbPathForStandard({
+			projectRoot,
+			standardKey: subject,
+		});
+		if (process.env.EDF_FORGE_VECTORSTORE_DIR) {
+			console.error(
+				`VECTORSTORE OVERRIDE ACTIVE: dir = ${process.env.EDF_FORGE_VECTORSTORE_DIR} (EDF_FORGE_VECTORSTORE_DIR)`,
+			);
+		}
+		const vectorStoreDir = path.dirname(vectorStoreDbPath);
+		if (!fs.existsSync(vectorStoreDir)) {
+			fs.mkdirSync(vectorStoreDir, { recursive: true });
+		}
+		vectorStore.init({ dbPath: vectorStoreDbPath }, (err) => {
+			if (err) {
+				next(`edf-replay -extractSchema vectorStore init: ${err}`);
+				return;
+			}
+			xLog.status(`[edf-replay] vector sidecar store: ${vectorStoreDbPath}`);
+			next('', { ...args, vectorStore });
+		});
+	});
+
 	// serialize EXACTLY ONE block
 	taskList.push((args, next) => {
 		schemaExtractor.extractSchema(
-			{ access: args.access, from, selector, subject },
+			{ access: args.access, from, selector, subject, vectorStore: args.vectorStore },
 			(err, extractResult) => {
 				if (err) {
 					next(err);

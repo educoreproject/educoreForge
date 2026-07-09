@@ -42,6 +42,7 @@ const fs = require('fs');
 const neo4j = require('neo4j-driver');
 const { pipeRunner, taskListPlus } = new (require('qtools-asynchronous-pipe-plus'))();
 const replayBlock = require('./replay-block');
+const contentAddress = require('../content-address/content-address')();
 
 const BATCH_SIZE = 500;
 const NEO4J_USER = 'neo4j';
@@ -330,7 +331,7 @@ const sourceOf = (oneSelector) =>
 		? oneSelector
 		: oneSelector.standardKey || oneSelector.source;
 
-const shapeNode = (neoNode, header) => {
+const shapeNode = (neoNode, header, emitEmbeddingRef) => {
 	const props = neoNode.properties || {};
 	const properties = {};
 	Object.keys(props).forEach((oneKey) => {
@@ -360,10 +361,123 @@ const shapeNode = (neoNode, header) => {
 		properties,
 	};
 	if (Array.isArray(props.embedding) && props.embedding.length > 0) {
-		node.embedding = replayBlock.encodeEmbedding(props.embedding.map(neoToJs));
-		node.embeddingModelVersion = header.embeddingModelVersion;
+		if (emitEmbeddingRef) {
+			// EXTRACT-path embedding sidecar (PLAN §3.4): the persisted block carries the
+			// content-hash REF of the vector INPUT, not the base64 vector. The ref is a pure
+			// function of (embeddingModelVersion, searchText) via the shared addressing rule —
+			// identical to the forge decorator's key (F7). The raw vector + its determinants ride
+			// on non-serialized _sidecar* fields so extractBlock can putVector them (F4);
+			// serializeNodeLine whitelists fields, so these never reach the block text.
+			const searchTextValue =
+				props.searchText !== undefined && props.searchText !== null
+					? `${neoToJs(props.searchText)}`
+					: null;
+			if (searchTextValue === null || searchTextValue.trim() === '') {
+				throw new Error(
+					`replay-engine.shapeNode: node '${stableId}' carries an embedding but no ` +
+						`searchText — cannot compute embeddingRef (the addressing input is missing)`,
+				);
+			}
+			node.embeddingRef = contentAddress.vectorIdForInput(
+				header.embeddingModelVersion,
+				searchTextValue,
+			);
+			node.embeddingModelVersion = header.embeddingModelVersion;
+			node._sidecarVector = props.embedding.map(neoToJs);
+			node._sidecarInputText = searchTextValue;
+		} else {
+			node.embedding = replayBlock.encodeEmbedding(props.embedding.map(neoToJs));
+			node.embeddingModelVersion = header.embeddingModelVersion;
+		}
 	}
 	return node;
+};
+
+// eachEntrySequentialStackSafe — run an async worker over items ONE at a time, STACK-SAFE whether
+// the worker's callback fires synchronously (sqlite-instance/better-sqlite3 IS synchronous) or
+// asynchronously. A naive putOne(i+1)-from-the-callback recursion grows the stack by one frame per
+// item under a synchronous store — thousands deep on a real standard (~14k distinct searchText for
+// CEDS) → stack overflow. This trampoline loops on synchronous completion instead of recursing, and
+// re-enters on asynchronous completion. (The existing forges sidestep this by recursing per BATCH,
+// not per item; the extract puts one row per distinct vector, so it needs the flat driver.)
+const eachEntrySequentialStackSafe = (items, worker, done) => {
+	let index = 0;
+	let running = false;
+	let advanced = false;
+	const iterate = () => {
+		if (running) {
+			advanced = true; // a synchronous completion re-entered — let the active loop continue
+			return;
+		}
+		running = true;
+		advanced = true;
+		while (advanced) {
+			advanced = false;
+			if (index >= items.length) {
+				running = false;
+				done('');
+				return;
+			}
+			const current = items[index];
+			index++;
+			worker(current, (err) => {
+				if (err) {
+					running = false;
+					done(err);
+					return;
+				}
+				if (running) {
+					advanced = true; // synchronous callback: continue the while loop, no recursion
+				} else {
+					iterate(); // asynchronous callback: re-enter the driver
+				}
+			});
+		}
+		running = false;
+	};
+	iterate();
+};
+
+// putDistinctNodeVectors — persist each DISTINCT embeddingRef's raw vector (carried on the
+// _sidecar* fields shapeNode attached in emitEmbeddingRef mode) into the injected per-standard
+// store, idempotent first-write-wins, then strip those carrier fields. No vectorStore -> no-op.
+// NEVER reorders `nodes` (determinism). Extracted from extractBlock so the gate can drive it
+// graph-free; exported alongside shapeNode.
+const putDistinctNodeVectors = ({ nodes, vectorStore }, callback) => {
+	if (!vectorStore) {
+		callback('');
+		return;
+	}
+	const distinctByRef = new Map();
+	(nodes || []).forEach((oneNode) => {
+		if (
+			oneNode.embeddingRef &&
+			oneNode._sidecarVector &&
+			!distinctByRef.has(oneNode.embeddingRef)
+		) {
+			distinctByRef.set(oneNode.embeddingRef, {
+				modelVersion: oneNode.embeddingModelVersion,
+				inputText: oneNode._sidecarInputText,
+				vector: oneNode._sidecarVector,
+			});
+		}
+	});
+	const distinctEntries = Array.from(distinctByRef.values());
+	eachEntrySequentialStackSafe(
+		distinctEntries,
+		(oneEntry, entryDone) => vectorStore.putVector(oneEntry, entryDone),
+		(err) => {
+			if (err) {
+				callback(`extractBlock putVector: ${err}`);
+				return;
+			}
+			(nodes || []).forEach((oneNode) => {
+				delete oneNode._sidecarVector;
+				delete oneNode._sidecarInputText;
+			});
+			callback('');
+		},
+	);
 };
 
 const shapeEdgeProps = (props) => {
@@ -374,7 +488,7 @@ const shapeEdgeProps = (props) => {
 	return out;
 };
 
-const fetchNodesPaged = (session, source, header, callback) => {
+const fetchNodesPaged = (session, source, header, emitEmbeddingRef, callback) => {
 	const nodes = [];
 	const pageNext = (skip) => {
 		session
@@ -388,7 +502,7 @@ const fetchNodesPaged = (session, source, header, callback) => {
 			)
 			.then((result) => {
 				result.records.forEach((rec) =>
-					nodes.push(shapeNode(rec.get('n'), header)),
+					nodes.push(shapeNode(rec.get('n'), header, emitEmbeddingRef)),
 				);
 				if (result.records.length < NODE_PAGE_SIZE) {
 					callback('', nodes);
@@ -451,10 +565,14 @@ const fetchBridgeEdges = (session, pairASource, pairBSource, callback) => {
 		);
 };
 
-const extractBlock = ({ boltUri, password, selector, header }, callback) => {
+const extractBlock = ({ boltUri, password, selector, header, vectorStore }, callback) => {
 	const driver = openDriver(boltUri, password);
 	const session = driver.session({ defaultAccessMode: neo4j.session.READ });
 	const isBridge = !!(selector && selector.pairA);
+	// EXTRACT-path embedding sidecar (F1/F2): when a per-standard vectorStore is injected, shapeNode
+	// emits embeddingRef (not base64) and the raw vectors are persisted below. Absent a vectorStore,
+	// the extract keeps the legacy inline base64 (unchanged behavior for callers that don't opt in).
+	const emitEmbeddingRef = !!vectorStore;
 
 	const taskList = new taskListPlus();
 
@@ -463,13 +581,29 @@ const extractBlock = ({ boltUri, password, selector, header }, callback) => {
 			next('', { ...args, nodes: [] });
 			return;
 		}
-		fetchNodesPaged(session, sourceOf(selector.source), header, (err, nodes) => {
-			if (err) {
-				next(err);
-				return;
-			}
-			next('', { ...args, nodes });
-		});
+		fetchNodesPaged(
+			session,
+			sourceOf(selector.source),
+			header,
+			emitEmbeddingRef,
+			(err, nodes) => {
+				if (err) {
+					next(err);
+					return;
+				}
+				next('', { ...args, nodes });
+			},
+		);
+	});
+
+	// EXTRACT-side vector persistence (F4): putVector every DISTINCT embeddingRef's raw vector into
+	// the per-standard store (idempotent first-write-wins), so the block's refs resolve. The forge
+	// decorator is the authoritative writer on a fresh forge; this is the ref-writer + safety net.
+	// Order-independent: serialization below uses args.nodes AS-IS, so node-line order is unchanged.
+	taskList.push((args, next) => {
+		putDistinctNodeVectors({ nodes: args.nodes, vectorStore }, (err) =>
+			next(err, args),
+		);
 	});
 
 	taskList.push((args, next) => {
@@ -753,4 +887,4 @@ const replay = ({ manifest, boltUri, password, graphName }, callback) => {
 	});
 };
 
-module.exports = { extractBlock, replay };
+module.exports = { extractBlock, replay, shapeNode, putDistinctNodeVectors };

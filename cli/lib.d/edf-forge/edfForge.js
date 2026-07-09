@@ -198,6 +198,32 @@ const run = () => {
 		configFilePath: VOYAGE_CONFIG_PATH,
 	});
 
+	// embedding sidecar (PLAN §3.4): the per-standard vector store + the caching-embedder DECORATOR
+	// that wraps the raw embedder at the single injection point below. The decorator interns identical
+	// searchText inputs to ONE embed call + ONE stored row and is the AUTHORITATIVE store writer on a
+	// fresh forge (F4). The store path is derived via the SHARED helper (F3) — the SAME file the
+	// extract path reads/writes for this standard. The forge keeps stamping INLINE embeddings on nodes
+	// (F2); the block-format embeddingRef change is the extract path's job, not the forge's.
+	const vectorStore = require(path.join(CORE_LIB, 'vector-store', 'vector-store'))();
+	const vectorStorePath = require(path.join(
+		CORE_LIB,
+		'vector-store',
+		'vector-store-path',
+	))();
+	const vectorStoreDbPath = vectorStorePath.vectorStoreDbPathForStandard({
+		projectRoot,
+		standardKey: resolved.standardName,
+	});
+	if (process.env.EDF_FORGE_VECTORSTORE_DIR) {
+		console.error(
+			`VECTORSTORE OVERRIDE ACTIVE: dir = ${process.env.EDF_FORGE_VECTORSTORE_DIR} (EDF_FORGE_VECTORSTORE_DIR)`,
+		);
+	}
+	const cachingEmbedder = require(path.join(CORE_LIB, 'embedding', 'caching-embedder'))({
+		embedder,
+		vectorStore,
+	});
+
 	// EDF_FORGE_STORE_DB redirects the store (test harnesses); absent -> canonical, byte-identical.
 	// An active override is ANNOUNCED on stderr so it can never silently redirect production writes.
 	const dbPath =
@@ -221,6 +247,16 @@ const run = () => {
 		forgeStore.init({ dbPath }, (err) => next(err, args));
 	});
 
+	// open the per-standard vector sidecar store (the decorator fills it during the embed pass)
+	taskList.push((args, next) => {
+		const fs = require('fs');
+		const vectorStoreDir = path.dirname(vectorStoreDbPath);
+		if (!fs.existsSync(vectorStoreDir)) {
+			fs.mkdirSync(vectorStoreDir, { recursive: true });
+		}
+		vectorStore.init({ dbPath: vectorStoreDbPath }, (err) => next(err, args));
+	});
+
 	// build the shared instance-lifecycle (provisions/owns the validation graph)
 	taskList.push((args, next) => {
 		require(path.join(CORE_LIB, 'instance-lifecycle', 'instance-lifecycle'))({
@@ -231,7 +267,7 @@ const run = () => {
 
 	// run the resolved forge bundle (Layer 3)
 	taskList.push((args, next) => {
-		const bundle = resolved.bundleFactory({ embedder });
+		const bundle = resolved.bundleFactory({ embedder: cachingEmbedder });
 		xLog.status(
 			`edf-forge: forging ${resolved.standardName} from ${sourcePath} -> graph '${destination}' (owner ${owner})`,
 		);

@@ -126,7 +126,7 @@ const moduleFunction =
 
 		// -----
 		// extractStandard — one standard's nodes + internal edges via the engine.
-		const extractStandard = ({ access, subject }, callback) => {
+		const extractStandard = ({ access, subject, vectorStore }, callback) => {
 			if (!subject) {
 				callback('extractSchema --selector=standard requires --subject=<standardKey>');
 				return;
@@ -146,6 +146,7 @@ const moduleFunction =
 					password: access.credential.value,
 					selector: { source: subject },
 					header,
+					vectorStore, // embedding sidecar: extract emits embeddingRef + putVectors (F1/F4)
 				},
 				callback,
 			);
@@ -154,7 +155,7 @@ const moduleFunction =
 		// -----
 		// extractOverlay — a tenant delta. First-app form: single-source extraction over the
 		//   overlay owner (--subject); header blockType 'overlay'.
-		const extractOverlay = ({ access, subject }, callback) => {
+		const extractOverlay = ({ access, subject, vectorStore }, callback) => {
 			if (!subject) {
 				callback('extractSchema --selector=overlay requires --subject=<overlayOwner>');
 				return;
@@ -174,6 +175,7 @@ const moduleFunction =
 					password: access.credential.value,
 					selector: { source: subject },
 					header,
+					vectorStore, // embedding sidecar: extract emits embeddingRef + putVectors (F1/F4)
 				},
 				(err, result) => {
 					if (err) {
@@ -287,7 +289,7 @@ const moduleFunction =
 			overlay: extractOverlay,
 		};
 
-		const extractSchema = ({ access, from, selector, subject }, callback) => {
+		const extractSchema = ({ access, from, selector, subject, vectorStore }, callback) => {
 			const handler = selectorRegistry[selector];
 			if (!handler) {
 				callback(
@@ -298,7 +300,7 @@ const moduleFunction =
 			xLog.status(
 				`[schema-extractor] extracting selector='${selector}'${subject ? ` subject='${subject}'` : ''} from '${from}'`,
 			);
-			handler({ access, from, subject }, (err, result) => {
+			handler({ access, from, subject, vectorStore }, (err, result) => {
 				if (err) {
 					callback(err);
 					return;
