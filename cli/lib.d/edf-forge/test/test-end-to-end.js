@@ -57,7 +57,7 @@ const credentialAccessor = require(path.join(
 const embedder = require(path.join(CORE_LIB, 'embedding', 'embedding-client'))({
 	configFilePath: VOYAGE_CONFIG_PATH,
 });
-const forgeBundle = require('../../forge-ceds/forgeCeds')({ embedder });
+const forgeBundle = require('../../../parserLib/forge-ceds/forgeCeds')({ embedder });
 const os = require('os');
 const fs = require('fs');
 

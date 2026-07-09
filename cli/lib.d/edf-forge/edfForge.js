@@ -7,7 +7,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //   Layer 1 (this file): bootstrap process.global; instantiate shared resources (forge-store,
 //     credential-accessor, instance-lifecycle, embedding-client); dispatch the -forge action.
 //   Layer 2 (lib/): standard-registry (registry, not switch), materializer.
-//   Layer 3: the per-standard forge bundle resolved from --standardName (e.g. lib.d/forge-ceds).
+//   Layer 3: the per-standard forge bundle resolved from --standardName (e.g. parserLib/forge-ceds).
 //
 //   edf-forge -forge --standardName=<key> --source=<path> --destination=<graphName>
 //             [--owner=<:golden|:user>]

@@ -14,7 +14,9 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
 const path = require('path');
 
-const FORGE_BUNDLE_DIR = path.join(__dirname, '..', '..');
+// parser bundles live in cli/parserLib/ (peer to lib.d, out of initCli's symlink scan);
+// synthetic test bundles live under cli/parserLib/_test/.
+const FORGE_BUNDLE_DIR = path.join(__dirname, '..', '..', '..', 'parserLib');
 
 // registry rows — keyed by the lowercased standardName for case-insensitive lookup.
 const registry = {
@@ -224,13 +226,13 @@ const registry = {
 	// === _source, no case transform).
 	p6hub: {
 		standardName: 'CEDS',
-		bundleFactoryPath: path.join(FORGE_BUNDLE_DIR, 'forge-p6hub', 'forgeP6hub'),
-		defaultSource: path.join(FORGE_BUNDLE_DIR, 'forge-p6hub', 'assets', 'source.json'),
+		bundleFactoryPath: path.join(FORGE_BUNDLE_DIR, '_test', 'forge-p6hub', 'forgeP6hub'),
+		defaultSource: path.join(FORGE_BUNDLE_DIR, '_test', 'forge-p6hub', 'assets', 'source.json'),
 	},
 	p6second: {
 		standardName: 'synthstd',
-		bundleFactoryPath: path.join(FORGE_BUNDLE_DIR, 'forge-p6second', 'forgeP6second'),
-		defaultSource: path.join(FORGE_BUNDLE_DIR, 'forge-p6second', 'assets', 'source.json'),
+		bundleFactoryPath: path.join(FORGE_BUNDLE_DIR, '_test', 'forge-p6second', 'forgeP6second'),
+		defaultSource: path.join(FORGE_BUNDLE_DIR, '_test', 'forge-p6second', 'assets', 'source.json'),
 	},
 };
 
