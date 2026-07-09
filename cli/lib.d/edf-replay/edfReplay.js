@@ -202,6 +202,60 @@ const buildSharedResources = (callback) => {
 // ACTION HANDLERS (registry, not switch)
 // =====================================================================
 
+// buildStoreResolver — the READ-path per-standard store RESOLVER for -buildGraph (PLAN §3.5). replay
+// resolves each node's embeddingRef against the vector store for THAT node's standard; a golden manifest
+// spans many standards, each with its OWN per-standard vectorStore.sqlite3 (D1), so a single store is
+// wrong. This returns a storeResolver(standardKey, cb) that lazily opens+inits each standard's store ON
+// FIRST NEED and caches it (Map) for the rest of the build. The path comes from the SHARED helper (F3) —
+// the SAME file the forge decorator / extract filled for that standard. A missing store file fails loud
+// (transport gap); the store's own getVector fails loud on a missing/corrupt ref. Additive + inert on a
+// legacy inline manifest (no node carries an embeddingRef, so the resolver is never invoked).
+const buildStoreResolver = () => {
+	const cache = new Map(); // standardKey -> initialized vectorStore
+	if (process.env.EDF_FORGE_VECTORSTORE_DIR) {
+		console.error(
+			`VECTORSTORE OVERRIDE ACTIVE: dir = ${process.env.EDF_FORGE_VECTORSTORE_DIR} (EDF_FORGE_VECTORSTORE_DIR)`,
+		);
+	}
+	return (standardKey, callback) => {
+		if (cache.has(standardKey)) {
+			callback('', cache.get(standardKey));
+			return;
+		}
+		// vectorStoreDbPathForStandard THROWS on a null/unsafe standardKey; contain the throw at this
+		// library boundary and route it error-first — the SAME containment the replay engine uses for
+		// deserializeBlock (a boundary guard, NOT control flow).
+		let vectorStoreDbPath;
+		try {
+			vectorStoreDbPath = vectorStorePath.vectorStoreDbPathForStandard({
+				projectRoot,
+				standardKey,
+			});
+		} catch (pathError) {
+			callback(`storeResolver: ${pathError.message}`);
+			return;
+		}
+		if (!fs.existsSync(vectorStoreDbPath)) {
+			callback(
+				`storeResolver: no vector store for standard '${standardKey}' at ` +
+					`${vectorStoreDbPath} — the per-standard sidecar is missing (transport gap).`,
+			);
+			return;
+		}
+		const vectorStore = vectorStoreFactory();
+		vectorStore.init({ dbPath: vectorStoreDbPath }, (initErr) => {
+			if (initErr) {
+				callback(
+					`storeResolver: vectorStore init for standard '${standardKey}' failed: ${initErr}`,
+				);
+				return;
+			}
+			cache.set(standardKey, vectorStore);
+			callback('', vectorStore);
+		});
+	};
+};
+
 const handleBuildGraph = ({ forgeStore, lifecycle }, callback) => {
 	const { xLog } = process.global;
 
@@ -229,8 +283,11 @@ const handleBuildGraph = ({ forgeStore, lifecycle }, callback) => {
 	// ALSO the graph name for the first app — so role === destination here. (A future tenant-named
 	// build would split these; graph-builder already supports a distinct `role`.)
 	const graphBuilder = graphBuilderFactory({ forgeStore, lifecycle });
+	// embedding sidecar READ path (PLAN §3.5): the per-standard store resolver replay uses to turn each
+	// node's embeddingRef into its vector. Inert on legacy inline manifests (never invoked).
+	const storeResolver = buildStoreResolver();
 	graphBuilder.buildGraph(
-		{ manifestKey, destination, owner, role: destination, skipFinishing },
+		{ manifestKey, destination, owner, role: destination, skipFinishing, storeResolver },
 		(err, result) => {
 			if (err) {
 				callback(err);

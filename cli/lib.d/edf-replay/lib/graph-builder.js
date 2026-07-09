@@ -543,7 +543,7 @@ const moduleFunction =
 		};
 
 		const buildGraph = (
-			{ manifestKey, destination, owner, role, skipFinishing } = {},
+			{ manifestKey, destination, owner, role, skipFinishing, storeResolver } = {},
 			callback,
 		) => {
 			const effectiveRole = role || destination;
@@ -613,6 +613,10 @@ const moduleFunction =
 						boltUri: access.location,
 						password: access.credential.value,
 						graphName: destination,
+						// embedding sidecar READ path (PLAN §3.5): the per-standard store RESOLVER. When
+						// present, replay resolves each node's embeddingRef -> vector against that node's
+						// standard store; absent (legacy inline blocks), replay is unchanged (no-op).
+						storeResolver,
 					},
 					(err, replayResult) => {
 						if (err) {

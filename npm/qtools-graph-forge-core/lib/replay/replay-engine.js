@@ -480,6 +480,133 @@ const putDistinctNodeVectors = ({ nodes, vectorStore }, callback) => {
 	);
 };
 
+// resolveNodeVectors — the READ-side mirror of putDistinctNodeVectors (PLAN §3.5, Phase 3). For every
+// node carrying an embeddingRef (and NO inline embedding — the dual-read leaves legacy inline nodes to
+// the untouched path), resolve the ref to its raw vector via the per-standard sidecar store and set
+// node.embedding (the number[] buildNodeRow persists — buildNodeRow is UNCHANGED). The store is chosen
+// PER NODE by its standardKey: a golden manifest spans MANY standards, each with its OWN vectorStore, so
+// the injected dependency is a store-RESOLVER storeResolver(standardKey, cb)->vectorStore (lazy+cached in
+// the CLI), NOT one fixed store.
+//
+// Distinct work is keyed on (standardKey, embeddingRef): identical inputs INTERN to ONE getVector, then
+// the resolved vector fans out to every node sharing that key. The per-entry loop runs through
+// eachEntrySequentialStackSafe because sqlite-instance callbacks are SYNCHRONOUS — a naive per-ref
+// recursion would overflow the stack over ~15k distinct refs, exactly the hazard the write-side driver
+// guards.
+//
+// FAIL-LOUD is the crux (PLAN §6, risk "non-determinism leak"): getVector returns ('', null) on ABSENCE
+// (a cold-cache miss is not an error at the store layer), so a MISSING ref at replay time must be made
+// to fail HERE, naming standardKey+embeddingRef — a silently-null embedding would corrupt the graph. A
+// resolver "no store" error, a getVector corrupt-row refusal, and a resolved-dims != header.embeddingDims
+// mismatch ALL propagate error-first. NO storeResolver -> NO-OP (legacy inline replay + the untouched
+// materializer ephemeral path are unaffected). Mutates node.embedding in place; NEVER reorders nodes.
+const resolveNodeVectors = ({ nodes, storeResolver, header }, callback) => {
+	const REF_KEY_SEP = String.fromCharCode(0);
+	const compositeKey = (standardKey, embeddingRef) =>
+		`${standardKey}${REF_KEY_SEP}${embeddingRef}`;
+
+	if (!storeResolver) {
+		// NO-OP path: strip the transient standardKey tag (set in replay()'s accumulation) so it
+		// never lingers, and leave inline embeddings exactly as the legacy read produced them.
+		(nodes || []).forEach((oneNode) => {
+			delete oneNode._standardKey;
+		});
+		callback('');
+		return;
+	}
+
+	const headerDims =
+		header && typeof header.embeddingDims === 'number' ? header.embeddingDims : null;
+
+	// DISTINCT (standardKey, embeddingRef) over ref-carrying nodes without an inline embedding.
+	const distinctByKey = new Map();
+	(nodes || []).forEach((oneNode) => {
+		if (oneNode.embeddingRef && !oneNode.embedding) {
+			const key = compositeKey(oneNode._standardKey, oneNode.embeddingRef);
+			if (!distinctByKey.has(key)) {
+				distinctByKey.set(key, {
+					standardKey: oneNode._standardKey,
+					embeddingRef: oneNode.embeddingRef,
+				});
+			}
+		}
+	});
+	const distinctEntries = Array.from(distinctByKey.values());
+	const resolvedByKey = new Map(); // (standardKey,ref) -> vector (number[])
+
+	eachEntrySequentialStackSafe(
+		distinctEntries,
+		(oneEntry, entryDone) => {
+			storeResolver(oneEntry.standardKey, (resolverErr, vectorStore) => {
+				if (resolverErr) {
+					entryDone(
+						`resolveNodeVectors: cannot resolve a vector store for standard ` +
+							`'${oneEntry.standardKey}' (embeddingRef ${oneEntry.embeddingRef}): ${resolverErr}`,
+					);
+					return;
+				}
+				vectorStore.getVector(
+					{ vectorId: oneEntry.embeddingRef },
+					(getErr, record) => {
+						if (getErr) {
+							entryDone(
+								`resolveNodeVectors: getVector refused embeddingRef ` +
+									`${oneEntry.embeddingRef} (standard '${oneEntry.standardKey}'): ${getErr}`,
+							);
+							return;
+						}
+						if (!record) {
+							// FAIL LOUD: absence is not a store error, but a missing ref at replay time
+							// means the per-standard sidecar is incomplete — a null embedding would
+							// silently corrupt the graph. Refuse, naming the ref + standard.
+							entryDone(
+								`resolveNodeVectors: embeddingRef ${oneEntry.embeddingRef} is ABSENT ` +
+									`from the vector store for standard '${oneEntry.standardKey}' — the ` +
+									`per-standard sidecar is incomplete (transport gap). No graph written.`,
+							);
+							return;
+						}
+						if (headerDims !== null && record.dims !== headerDims) {
+							entryDone(
+								`resolveNodeVectors: embeddingRef ${oneEntry.embeddingRef} (standard ` +
+									`'${oneEntry.standardKey}') resolved to ${record.dims} dims but the block ` +
+									`header declares embeddingDims=${headerDims} — store/header mismatch. ` +
+									`No graph written.`,
+							);
+							return;
+						}
+						resolvedByKey.set(
+							compositeKey(oneEntry.standardKey, oneEntry.embeddingRef),
+							record.vector,
+						);
+						entryDone('');
+					},
+				);
+			});
+		},
+		(err) => {
+			if (err) {
+				callback(err);
+				return;
+			}
+			// INTERN: fan the resolved vector out to every node sharing (standardKey, embeddingRef), then
+			// strip the transient standardKey tag so it never reaches buildNodeRow / the materialized graph.
+			(nodes || []).forEach((oneNode) => {
+				if (oneNode.embeddingRef && !oneNode.embedding) {
+					const vector = resolvedByKey.get(
+						compositeKey(oneNode._standardKey, oneNode.embeddingRef),
+					);
+					if (vector) {
+						oneNode.embedding = vector;
+					}
+				}
+				delete oneNode._standardKey;
+			});
+			callback('');
+		},
+	);
+};
+
 const shapeEdgeProps = (props) => {
 	const out = {};
 	Object.keys(props || {}).forEach((oneKey) => {
@@ -676,7 +803,7 @@ const extractBlock = ({ boltUri, password, selector, header, vectorStore }, call
 // =====================================================================
 // PUBLIC API — replay({ manifest, boltUri, password, graphName? }, callback)
 // =====================================================================
-const replay = ({ manifest, boltUri, password, graphName }, callback) => {
+const replay = ({ manifest, boltUri, password, graphName, storeResolver }, callback) => {
 	const driver = openDriver(boltUri, password);
 	const session = driver.session();
 	const resKeyIndex = resKeyIndexName();
@@ -740,7 +867,14 @@ const replay = ({ manifest, boltUri, password, graphName }, callback) => {
 				);
 			}
 			if (embeddingDims === null) embeddingDims = block.header.embeddingDims;
-			block.nodes.forEach((oneNode) => allNodes.push(oneNode));
+			block.nodes.forEach((oneNode) => {
+				// Tag each node with its block's standardKey — a TRANSIENT carrier resolveNodeVectors
+				// reads to pick the per-standard store, then STRIPS (it never persists; buildNodeRow
+				// whitelists fields). Mirrors how edges are tagged with blockType just below. Bridge
+				// blocks carry no standardKey but also no nodes, so this never tags a null.
+				oneNode._standardKey = block.header.standardKey;
+				allNodes.push(oneNode);
+			});
 			block.edges.forEach((oneEdge) =>
 				allEdges.push({ ...oneEdge, blockType: block.header.blockType }),
 			);
@@ -779,6 +913,29 @@ const replay = ({ manifest, boltUri, password, graphName }, callback) => {
 			return;
 		}
 		next('', args);
+	});
+
+	// --- RESOLVE embedding refs (PLAN §3.5, Phase 3): the dual-read READ side. For every node carrying
+	//     an embeddingRef, resolve it to the vector via the per-standard storeResolver and set
+	//     node.embedding BEFORE any write, so buildNodeRow (UNCHANGED) persists it exactly as the legacy
+	//     inline path would. FAIL LOUD on a missing/corrupt/dims-mismatched ref. NO storeResolver -> no-op
+	//     (legacy inline blocks replay byte-identically). Placed BEFORE the Phase-1 index so a resolution
+	//     failure means NO writes were performed (matching the deserialize/enforcement guards above).
+	taskList.push((args, next) => {
+		resolveNodeVectors(
+			{
+				nodes: args.allNodes,
+				storeResolver,
+				header: { embeddingDims: args.embeddingDims },
+			},
+			(err) => {
+				if (err) {
+					next(err);
+					return;
+				}
+				next('', args);
+			},
+		);
 	});
 
 	// --- PHASE 1 (before node MERGE): resolution-key index on stableId, on the EMPTY store.
@@ -887,4 +1044,11 @@ const replay = ({ manifest, boltUri, password, graphName }, callback) => {
 	});
 };
 
-module.exports = { extractBlock, replay, shapeNode, putDistinctNodeVectors };
+module.exports = {
+	extractBlock,
+	replay,
+	shapeNode,
+	putDistinctNodeVectors,
+	buildNodeRow,
+	resolveNodeVectors,
+};

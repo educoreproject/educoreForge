@@ -182,11 +182,15 @@ const serializeBlock = ({ header, nodes, edges }) => {
 // =====================================================================
 // DESERIALIZE
 // =====================================================================
-// Returns { header, nodes, edges }. Embeddings are decoded base64 -> number[] (float32 LE) and
-// attached as node.embedding; the raw PG-JSON property arrays are returned UNCHANGED — the
-// single-element [x] -> scalar mapping is the engine's job at MERGE time, not the serializer's.
-// Fails LOUD (throws) on any structural violation: a corrupt block is a failure, never a silent
-// partial parse.
+// Returns { header, nodes, edges }. Embedding sidecar DUAL-READ (PLAN §3.5, §5): a node line carries
+// EITHER the legacy inline base64 `embedding` (decoded here to node.embedding, number[] float32 LE) OR
+// the new `embeddingRef` (a 64-hex content-hash of the vector INPUT — carried through as node.embeddingRef
+// with node.embedding left null; the replay ENGINE resolves the ref to the vector against the per-standard
+// sidecar store before MERGE). The two are mutually exclusive (serializeNodeLine writes one or the other).
+// This codec stays PURE + synchronous — it does no store lookup. The raw PG-JSON property arrays are
+// returned UNCHANGED — the single-element [x] -> scalar mapping is the engine's job at MERGE time, not
+// the serializer's. Fails LOUD (throws) on any structural violation: a corrupt block is a failure, never
+// a silent partial parse.
 
 const deserializeBlock = (blockText) => {
 	if (typeof blockText !== 'string' || blockText.length === 0) {
@@ -222,8 +226,12 @@ const deserializeBlock = (blockText) => {
 				stableId: rec.stableId !== undefined ? rec.stableId : null,
 				properties: rec.properties || {},
 				embedding: null,
+				embeddingRef: null,
 				embeddingModelVersion: rec.embeddingModelVersion || null,
 			};
+			// DUAL-READ (PLAN §3.5, §5): legacy inline base64 `embedding` OR new `embeddingRef` — mutually
+			// exclusive. Legacy path UNCHANGED, including the dims-invalid loud throw. A ref is carried as a
+			// string (engine resolves it); embedding stays null. Neither present -> embedding null (as today).
 			if (rec.embedding !== undefined && rec.embedding !== null) {
 				if (!dimsValid) {
 					throw new Error(
@@ -232,6 +240,8 @@ const deserializeBlock = (blockText) => {
 					);
 				}
 				node.embedding = decodeEmbedding(rec.embedding, dims);
+			} else if (rec.embeddingRef !== undefined && rec.embeddingRef !== null) {
+				node.embeddingRef = rec.embeddingRef;
 			}
 			nodes.push(node);
 		} else if (rec.kind === 'edge') {
