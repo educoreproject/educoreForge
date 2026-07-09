@@ -209,7 +209,9 @@ vectorStore.init({ dbPath }, (initErr) => {
 	// overflow (the sqlite-instance callback is synchronous; a naive per-vector recursion would grow
 	// the stack by one frame per row — thousands deep on a real standard). Proven, not asserted.
 	function runStackSafety(done) {
-		const bigCount = 6000;
+		// > the real CEDS distinct-searchText count (~14-15k, the overflow threshold I named), with
+		// margin, so this PROVES the driver at actual scale — not merely a sub-threshold sample.
+		const bigCount = 20000;
 		const bigNodes = [];
 		for (let n = 0; n < bigCount; n++) {
 			bigNodes.push(
@@ -243,7 +245,7 @@ vectorStore.init({ dbPath }, (initErr) => {
 						return;
 					}
 					if (bigRows === bigCount) {
-						ok('stack-safe: putDistinctNodeVectors over 6000 distinct vectors completed', `rows=${bigRows}, no overflow`);
+						ok(`stack-safe: putDistinctNodeVectors over ${bigCount} distinct vectors completed`, `rows=${bigRows} (> ~15k CEDS threshold), no overflow`);
 					} else {
 						bad('stack-safety row count', `rows=${bigRows} != ${bigCount}`);
 					}
