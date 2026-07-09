@@ -9,10 +9,12 @@
 // carried since Phase 3). Per GILDED_PRISM's marching orders (TQ ruling):
 //   (i)  STRUCTURAL: replay(legacy A) vs replay(migrated A) are structurallyEquivalent — same nodes,
 //        same edges, every non-embedding property byte-equal (zero tolerance).
-//   (ii) EMBEDDINGS: byte-identical on every node EXCEPT exactly the census collision set; the set of
-//        embedding-divergent stableIds must EQUAL the predicted divergent set (count == 3,622 for A,
-//        same identities), and each divergent node's cosine to its legacy vector is within the measured
-//        envelope (>= ~0.976, maxAbsDiff <= ~0.022) — no node moved MORE than predicted.
+//   (ii) EMBEDDINGS: byte-identical on every node EXCEPT exactly the PER-STANDARD canonicalization set; the set
+//        of embedding-divergent stableIds must EQUAL the predicted divergent set (count == 3,479 for A — the
+//        per-standard scope: 3,622 global same-input collisions = 3,479 within-standard canonicalized + 143
+//        cross-standard shared-searchText nodes PRESERVED byte-identical, since the D1 stores are per-standard;
+//        matched by IDENTITY, not just count), and each divergent node's cosine to its legacy vector is within
+//        the measured envelope (>= ~0.976, maxAbsDiff <= ~0.022) — no node moved MORE than predicted.
 //   (iii) FORWARD DETERMINISM (Phase-4-deferred Option C): replay(migrated) twice -> byteIdentical graphs.
 //
 // Runs against a COPY store + scratch per-standard vector stores. Builds EPHEMERAL bronze scratch graphs
