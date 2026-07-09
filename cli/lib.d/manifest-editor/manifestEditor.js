@@ -52,7 +52,8 @@ USAGE
   manifestEditor -listBlocks
   manifestEditor -listManifests
 
-  [--db=<sqlitePath>]   override the store location (else config, else dataStore default)
+  [--db=<sqlitePath>]   override the store location (else config, else the canonical
+                        <projectRoot>/dataStores/forgeStore.sqlite3 shared by all forge CLIs)
 
   -save     Persist a schemaBlock (PG-JSONL) to the blocks table; returns its blockId
             (= sha256 of the block text). Idempotent. type/subject/version/requires are
@@ -91,10 +92,13 @@ USAGE
 		};
 
 		// -----
-		// dbPath resolution: --db override, else config, else dataStore default
+		// dbPath resolution: --db override, else config, else the canonical shared store
 		// (created if missing). forge-store owns the table names; this picks the file.
+		// forger/replay/bridge/gate all HARDCODE <projectRoot>/dataStores/forgeStore.sqlite3;
+		// manifestEditor now defaults to that SAME store so a bare invocation reads/writes the
+		// one canonical file. (repoRoot is code/; the store lives one level up under system/.)
 
-		const repoRoot = path.join(__dirname, '../../..');
+		const projectRoot = path.join(__dirname, '../../../..');
 		const resolveDbPath = () => {
 			const override = first('db');
 			if (override) {
@@ -103,7 +107,7 @@ USAGE
 			if (localConfig.dbPath) {
 				return localConfig.dbPath;
 			}
-			return path.join(repoRoot, 'dataStore', 'forgeStore.sqlite');
+			return path.join(projectRoot, 'dataStores', 'forgeStore.sqlite3');
 		};
 
 		// -----
