@@ -63,12 +63,12 @@ if (process.env.EDF_FORGE_STORE_DB) {
 
 // ABSOLUTE entry paths to each component CLI (shelled out by `node <entryPath> ...`).
 const ENTRIES = {
-	forger: path.join(LIB_D, 'edf-forge', 'edfForge.js'),
+	forger: path.join(LIB_D, 'forger', 'forger.js'),
 	replay: path.join(LIB_D, 'edf-replay', 'edfReplay.js'),
 	manifest: path.join(LIB_D, 'manifest-editor', 'manifestEditor.js'),
 };
 
-const standardRegistry = require(path.join(LIB_D, 'edf-forge', 'lib', 'standard-registry'));
+const standardRegistry = require(path.join(LIB_D, 'forger', 'lib', 'standard-registry'));
 
 const subCliFactory = require('./lib/sub-cli');
 const storeAccessFactory = require('./lib/store-access');

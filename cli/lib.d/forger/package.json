@@ -1,0 +1,9 @@
+{
+  "name": "forger",
+  "version": "1.0.0",
+  "private": true,
+  "description": "forger — the forger CLI. Runs a per-standard forge bundle (resolved from --standardName via a registry) over a standard's source and materializes a single-standard validation graph carrying the universal forge property contract.",
+  "main": "forger.js",
+  "author": "tqii",
+  "license": "ISC"
+}

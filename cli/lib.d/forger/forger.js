@@ -3,13 +3,13 @@
 
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
-// edfForge.js — the `edf-forge` CLI (forger, the first app). 3-layer orchestrator:
+// forger.js — the `forger` CLI (the first app). 3-layer orchestrator:
 //   Layer 1 (this file): bootstrap process.global; instantiate shared resources (forge-store,
 //     credential-accessor, instance-lifecycle, embedding-client); dispatch the -forge action.
 //   Layer 2 (lib/): standard-registry (registry, not switch), materializer.
 //   Layer 3: the per-standard forge bundle resolved from --standardName (e.g. parserLib/forge-ceds).
 //
-//   edf-forge -forge --standardName=<key> --source=<path> --destination=<graphName>
+//   forger -forge --standardName=<key> --source=<path> --destination=<graphName>
 //             [--owner=<:golden|:user>]
 //
 // The control surface IS the contract (helpSpec.md). Action flags single-hyphen (-forge);

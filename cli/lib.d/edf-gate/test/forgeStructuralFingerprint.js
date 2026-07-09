@@ -25,7 +25,7 @@ const findProjectRoot = ({ rootFolderName = 'system' } = {}) =>
 	__dirname.replace(new RegExp(`^(.*\\/${rootFolderName}).*$`), '$1');
 const projectRoot = findProjectRoot();
 const CORE_LIB = path.join(projectRoot, 'code', 'npm', 'qtools-graph-forge-core', 'lib');
-const EDF_FORGE_LIB = path.join(projectRoot, 'code', 'cli', 'lib.d', 'edf-forge', 'lib');
+const EDF_FORGE_LIB = path.join(projectRoot, 'code', 'cli', 'lib.d', 'forger', 'lib');
 
 process.global = {
 	xLog: { status: () => {}, error: (...a) => console.error(...a), result: () => {}, verbose: () => {} },
