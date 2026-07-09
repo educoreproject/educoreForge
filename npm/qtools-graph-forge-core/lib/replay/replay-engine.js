@@ -597,6 +597,11 @@ const resolveNodeVectors = ({ nodes, storeResolver, header }, callback) => {
 						compositeKey(oneNode._standardKey, oneNode.embeddingRef),
 					);
 					if (vector) {
+						// INVARIANT: node.embedding here is a SHARED array reference across all nodes with the
+						// same (standardKey, embeddingRef); it MUST be treated read-only downstream — in-place
+						// mutation would corrupt every co-referring node. Verified 2026-07-09: no downstream
+						// mutation exists. If a future change must mutate embeddings post-resolution, .slice()
+						// per node first.
 						oneNode.embedding = vector;
 					}
 				}

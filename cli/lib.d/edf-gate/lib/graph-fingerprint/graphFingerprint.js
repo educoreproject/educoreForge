@@ -24,6 +24,19 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //   The ignoreEmbedding salt is only appended when the flag is ON, so the DEFAULT (full) fingerprint
 //   value is unchanged from before this mode existed — the frozen baseline stays valid.
 //
+// EMBEDDING-SIDECAR NOTE (Phase 4, 2026-07-09): the producer-phase EMBEDDING-EXCLUDED mode exists ONLY
+// because the OLD forge re-embedded every node, so the volatile base64 vector varied run-to-run. Post
+// embedding-sidecar, a producer BLOCK carries a STABLE embeddingRef (a content hash of the vector INPUT,
+// content-address.vectorIdForInput) in place of that volatile scalar, so blockId = sha256(block text) is
+// now byte-stable across a warm-cache re-forge — the MOTIVATION for the exclusion is removed at the BLOCK
+// level (the long-standing Q4 hazard is closed). That block-level determinism is proven, graph-free, by the
+// standing twin gates.d/36-blockDeterminismEmbeddingRef.js. This GRAPH fingerprint is deliberately NOT
+// changed here: the materialized graph never carries embeddingRef (replay resolves ref -> embedding BEFORE
+// the MERGE), so producer-phase gates keep ignoreEmbedding=true and the replay-side embeddingHash fold
+// stays as-is. Dropping ignoreEmbedding on producer-phase gates (so the graph fingerprint also folds the
+// now-deterministic embedding) is DEFERRED to Phase 5, which has the docker warm-store replay needed to
+// demonstrate the resolved embedding is byte-identical across a re-forge.
+//
 // Owner stamp: graph-builder stamps an owner LABEL on nodes (golden->`golden`, else `user`) and an
 // `owner` edge PROPERTY. ignoreOwnerStamp=true strips them for cross-owner comparison.
 //
