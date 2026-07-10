@@ -1,4 +1,7 @@
 standard: DCTAP — Dublin Core Tabular Application Profile
+publishedVersion: Draft - Request for Comments
+publishedVersionEvidence: publishedDate 2022-12-16, recorded at harvest
+upstreamUrl: https://www.dublincore.org/specifications/dctap/elements/
 publisher: Dublin Core Metadata Initiative (editor: Karen Coyle)
 retrieved: 2026-06-23 (copied from educoreForgeOLD/.../forge-dctap/assets/standardSourceData/01/)
 version: Draft - Request for Comments (publishedDate 2022-12-16)

@@ -2,7 +2,7 @@
 'use strict';
 
 // forgeStructuralFingerprint.js — the Phase-1 GATE OF RECORD harness (embedding-excluded, producer
-// level). For each registered standard, runs its producer's forge() with skipEmbedding (PURE structural
+// level). For each discovered standard, runs its producer's forge() with skipEmbedding (PURE structural
 // output, no API calls) and computes a canonical, order-independent STRUCTURAL fingerprint of the
 // emitted {nodes, edges} — excluding the known volatile properties (embedding, embeddingModelVersion,
 // ingestedAt). Capturing this BEFORE and AFTER the vocabulary-registry swap and comparing per standard
@@ -33,7 +33,10 @@ process.global = {
 	commandLineParameters: { switches: {}, values: {}, fileList: [] },
 };
 
-const { resolveBundle, registry } = require(path.join(EDF_FORGE_LIB, 'standard-registry'));
+// migrated to parser-bundle auto-discovery in the same change that swapped the roster's source
+// (BINDING spec §3.5 — "the measuring instrument migrates in the same step"). Test mode: this
+// harness fingerprints ALL bundles including the two synthetics.
+const { roster } = require(path.join(EDF_FORGE_LIB, 'standard-discovery'));
 const embedder = require(path.join(CORE_LIB, 'embedding', 'embedding-client'))({});
 
 // volatile properties excluded from the structural fingerprint (non-deterministic or embedding-borne).
@@ -85,7 +88,26 @@ const argOnly = (process.argv.find((a) => a.startsWith('--only=')) || '').replac
 const argOut = (process.argv.find((a) => a.startsWith('--out=')) || '').replace('--out=', '');
 const onlyKeys = argOnly ? argOnly.split(',').map((s) => s.trim()).filter(Boolean) : null;
 
-const allKeys = Object.keys(registry);
+const rosterEntries = roster({ includeSynthetic: true });
+const entryByKey = {};
+rosterEntries.forEach((entry) => {
+	entryByKey[entry.registryKey] = entry;
+});
+
+// REPORT KEY ORDER: the legacy registry (wave) order the frozen baselines were captured in.
+// The discovery roster sorts canonically by bundleDir; re-ordering the REPORT would break
+// byte-identity with fp-preA.json on order alone while the forge is unchanged — the same
+// comparability rationale as the registryKey naming pin (boundary review C3(ii)). Standards
+// unknown to the legacy order (added after the swap) append at the end, sorted.
+const LEGACY_REPORT_ORDER = [
+	'ceds', 'lif', 'sif', 'case', 'edfi', 'jedx', 'sedm', 'cip', 'soc', 'clr',
+	'openbadges', 'eduapi', 'pesc', 'medbiquitous', 'ctdl', 'dctap', 'p6hub', 'p6second',
+];
+const presentKeys = Object.keys(entryByKey);
+const allKeys = [
+	...LEGACY_REPORT_ORDER.filter((key) => presentKeys.indexOf(key) !== -1),
+	...presentKeys.filter((key) => LEGACY_REPORT_ORDER.indexOf(key) === -1).sort(),
+];
 const keys = onlyKeys ? allKeys.filter((k) => onlyKeys.indexOf(k) !== -1) : allKeys;
 
 const results = {};
@@ -104,12 +126,14 @@ const nextStandard = () => {
 	}
 	const key = keys[i];
 	i++;
-	// resolve the bundle by its registry PATH (not by standardName — p6hub/p6second share standardNames
-	// with other rows, which would mis-resolve). Each key maps to exactly one producer bundle.
-	const bundleFactory = require(registry[key].bundleFactoryPath);
+	// resolve the bundle by its roster entry's PATH (not by standardName — p6hub/p6second share
+	// standardNames with other bundles, which would mis-resolve). Each key maps to exactly one
+	// producer bundle.
+	const rosterEntry = entryByKey[key];
+	const bundleFactory = require(rosterEntry.bundleFactoryPath);
 	const bundle = bundleFactory({ embedder });
-	const standardName = registry[key].standardName;
-	bundle.forge({ sourcePath: registry[key].defaultSource, skipEmbedding: true }, (err, forged) => {
+	const standardName = rosterEntry.standardName;
+	bundle.forge({ sourcePath: rosterEntry.defaultSource, skipEmbedding: true }, (err, forged) => {
 		if (err) {
 			results[key] = { error: `forge failed: ${err}` };
 			nextStandard();

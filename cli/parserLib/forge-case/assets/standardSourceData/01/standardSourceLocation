@@ -1,4 +1,6 @@
 standard: forge-case
+publishedVersion: 1.1
+publishedVersionEvidence: openapi info.version; CASE Service v1.1
 sourceFile: imscasev1p1_openapi3_v1p0.yaml.txt
 copiedFrom: /Users/tqwhite/Documents/webdev/educoreForgeOLD/system/code/cli/lib.d/forge-case/assets/standardSourceData/01/imscasev1p1_openapi3_v1p0.yaml.txt
 copiedDate: 2026-06-23

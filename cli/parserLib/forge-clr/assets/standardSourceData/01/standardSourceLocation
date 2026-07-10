@@ -1,5 +1,7 @@
 standard: forge-clr
+publishedVersion: 2.0
+publishedVersionEvidence: openapi info.version, x-status Final
+upstreamUrl: unknown (publisher: 1EdTech — https://www.imsglobal.org; artifact URL not recorded at harvest)
 copiedFrom: /Users/tqwhite/Documents/webdev/A4L/unityObjectGenerator/system/code/assets/databaseDefinitionss/CLR
 copiedDate: 2026-05-28
-upstreamUrl: TBD (not recorded for pre-existing forge; backfill when known)
 note: migrated to in-forge canonical location on 2026-05-28; original left in place

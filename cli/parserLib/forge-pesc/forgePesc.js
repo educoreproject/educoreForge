@@ -57,6 +57,9 @@ const normalize = require('./lib/normalize');
 
 const CORE_LIB = path.join(__dirname, '..', '..', '..', 'npm', 'qtools-graph-forge-core', 'lib');
 const buildSearchTextFactory = require(path.join(CORE_LIB, 'search-text', 'build-search-text'));
+const { deriveVersionStamp } = require(
+	path.join(CORE_LIB, 'snapshot-provenance', 'snapshot-provenance'),
+);
 
 // canonical vocabulary (Phase 1 registry). Values are byte-identical to the prior inline literals, so
 // the emitted nodes/edges are unchanged.
@@ -306,6 +309,11 @@ const moduleFunction =
 					standardKey: STANDARD_KEY,
 					standardName: STANDARD_DISPLAY,
 					version: metadata.version,
+					// version-provenance stamp (spec §3.3, Phase A): always present post-stamping —
+					// versionSource 'spec' | 'provenance-file' | 'unknown' per the precedence rule.
+					snapshotKey: metadata.snapshotKey,
+					publishedVersion: metadata.publishedVersion,
+					versionSource: metadata.versionSource,
 					sourceFormat: metadata.sourceFormat,
 					sourceFiles: metadata.sourceFiles || [],
 					sourceUrl: metadata.sourceUrl || '',
@@ -553,6 +561,19 @@ const moduleFunction =
 						next(`forge-pesc parse: ${err}`);
 						return;
 					}
+					// version-provenance stamp (BINDING spec §3.3, Phase A): snapshotKey +
+					// publishedVersion + versionSource from the handed snapshot directory; a
+					// self-described source version wins over the provenance file (disagreements
+					// warned with both values named, never silently resolved).
+					Object.assign(
+						parsed.metadata,
+						deriveVersionStamp({
+							sourcePath,
+							sourceVersion:
+								parsed.metadata.versionSource === 'spec' ? parsed.metadata.version : null,
+							warn: (message) => xLog.error(message),
+						}),
+					);
 					next('', { ...args, parsed });
 				});
 			});

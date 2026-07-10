@@ -1,0 +1,110 @@
+{
+  "ceds": {
+    "standardName": "CEDS",
+    "fingerprint": "d5fb858766143659c29f632ce533207ad6a383e1765c2b27330d78fb1c538c20",
+    "nodeCount": 23238,
+    "edgeCount": 24015
+  },
+  "lif": {
+    "standardName": "LIF",
+    "fingerprint": "8ae7f607db8955515100d1a1be4dc467c2a6eaa527fabe154233e510a2bcb05e",
+    "nodeCount": 2982,
+    "edgeCount": 3058
+  },
+  "sif": {
+    "standardName": "SIF",
+    "fingerprint": "71516bd8d6eb9713344dbe5c607bbea76416e52ae9bead932bd5e4ab887319b8",
+    "nodeCount": 27069,
+    "edgeCount": 88766
+  },
+  "case": {
+    "standardName": "CASE",
+    "fingerprint": "5cebad822131b61ef4e8bf955827237f980593a8ff3e2c20bdfbebdf2a62537f",
+    "nodeCount": 259,
+    "edgeCount": 314
+  },
+  "edfi": {
+    "standardName": "EdFi",
+    "fingerprint": "0227aa4cfe8132624dc2ca1be4f67bfc02b84570fde50671ff7628a77b976421",
+    "nodeCount": 4922,
+    "edgeCount": 5012
+  },
+  "jedx": {
+    "standardName": "JEDx",
+    "fingerprint": "832ab5c4c9e3902d5de13eb2603eb3fdf52f502b20b5a7ceccd2c04ca0ac71d3",
+    "nodeCount": 156,
+    "edgeCount": 166
+  },
+  "sedm": {
+    "standardName": "SEDM",
+    "fingerprint": "c00abf5b595c83c93606874fb521606d385acd7b2e9ba591591370e60f7acdf4",
+    "nodeCount": 2086,
+    "edgeCount": 2169
+  },
+  "cip": {
+    "standardName": "CIP",
+    "fingerprint": "af803a6c662559cd8317e5b2337fca7822aa91d7585f62f14372db2777d062e7",
+    "nodeCount": 2539,
+    "edgeCount": 3104
+  },
+  "soc": {
+    "standardName": "SOC",
+    "fingerprint": "cbbab5a3fa1daff7d7645b905008d2528942cad2b968a8fb7000780217b3af62",
+    "nodeCount": 2011,
+    "edgeCount": 3991
+  },
+  "clr": {
+    "standardName": "CLR",
+    "fingerprint": "1b7fd2b0377d56021b5f1c52bc156296d5d8b1290fad48c07b2e065bcfadde40",
+    "nodeCount": 312,
+    "edgeCount": 358
+  },
+  "openbadges": {
+    "standardName": "OpenBadges",
+    "fingerprint": "1f96c1cd40fa08420fdabd14e440355b69d715795f0f3717aea142ab5191610c",
+    "nodeCount": 295,
+    "edgeCount": 335
+  },
+  "eduapi": {
+    "standardName": "EduAPI",
+    "fingerprint": "975982f4f7ae8159cfaf3acb1bec1e34637d6d3fc9185e3522ea79db60cf553c",
+    "nodeCount": 704,
+    "edgeCount": 785
+  },
+  "pesc": {
+    "standardName": "PESC",
+    "fingerprint": "31524647496a0d2d7e5afb5d4b515d40e4aa8a1e326adf3f32a37ba494a7f24e",
+    "nodeCount": 5560,
+    "edgeCount": 7163
+  },
+  "medbiquitous": {
+    "standardName": "MedBiquitous",
+    "fingerprint": "b29867ea2f92dd6612cd61dd2932bc29423d57220b3b18825ce577c7510a6574",
+    "nodeCount": 2502,
+    "edgeCount": 3626
+  },
+  "ctdl": {
+    "standardName": "CTDL",
+    "fingerprint": "4efc91325f152f8bff48164765c1791edf02ad4ed7aa82441d66f675b85c299f",
+    "nodeCount": 1014,
+    "edgeCount": 10289
+  },
+  "dctap": {
+    "standardName": "DCTAP",
+    "fingerprint": "0ea8f8ad3303ba05c08306d4656cdbd31ecee4f5d1492098dbf7d6beb3eb8a4e",
+    "nodeCount": 36,
+    "edgeCount": 38
+  },
+  "p6hub": {
+    "standardName": "CEDS",
+    "fingerprint": "3debecb9d3996c85e89b2ad72e86fcdd9e0416c4a66c4ce3cfd0ebd6a84223f5",
+    "nodeCount": 4,
+    "edgeCount": 3
+  },
+  "p6second": {
+    "standardName": "synthstd",
+    "fingerprint": "678212dc05ef4ca17a76a8aa35d77f1a232a013d55eee5ffab551e71cedf2945",
+    "nodeCount": 4,
+    "edgeCount": 3
+  }
+}

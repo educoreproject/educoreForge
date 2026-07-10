@@ -36,7 +36,7 @@ const { pipeRunner, taskListPlus } = new require('qtools-asynchronous-pipe-plus'
 
 const moduleFunction =
 	({ moduleName } = {}) =>
-	({ subCli, storeAccess, entries, dbPath, standardRegistry, tmpDir } = {}) => {
+	({ subCli, storeAccess, entries, dbPath, standardDiscovery, tmpDir } = {}) => {
 		const { xLog } = process.global;
 
 		// manifestEditor always gets --db so it shares the canonical store with the siblings.
@@ -57,9 +57,9 @@ const moduleFunction =
 				return;
 			}
 
-			// INVARIANT: resolve the registry row so the canonical standardName (=== the forged
-			// _source) drives --subject/--scope. NO case transform — pass it through verbatim.
-			const resolved = standardRegistry.resolveBundle({ standardName: standardNameArg });
+			// INVARIANT: resolve the discovery roster entry so the canonical standardName (=== the
+			// forged _source) drives --subject/--scope. NO case transform — pass it through verbatim.
+			const resolved = standardDiscovery.resolveBundle({ standardName: standardNameArg });
 			if (resolved.error) {
 				callback(`forgeManager -addStandard: ${resolved.error}`);
 				return;

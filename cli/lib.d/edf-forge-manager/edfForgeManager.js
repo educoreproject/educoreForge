@@ -68,7 +68,7 @@ const ENTRIES = {
 	manifest: path.join(LIB_D, 'manifest-editor', 'manifestEditor.js'),
 };
 
-const standardRegistry = require(path.join(LIB_D, 'forger', 'lib', 'standard-registry'));
+const standardDiscovery = require(path.join(LIB_D, 'forger', 'lib', 'standard-discovery'));
 
 const subCliFactory = require('./lib/sub-cli');
 const storeAccessFactory = require('./lib/store-access');
@@ -107,7 +107,7 @@ COMMANDS
                     or graphs whose currentManifest is behind the newest pointer.
 
 OPTIONS
-     --standardName=<standardKey>   The standard to add (resolved through the forge registry).
+     --standardName=<standardKey>   The standard to add (resolved through parser-bundle auto-discovery).
      --source=<path>                (-addStandard) The standard's source data (else bundle default).
      --no-publish                   (-addStandard) Build everything but do not advance golden.
      --graph=<graphName>            (-rollback) The target graph.
@@ -186,7 +186,7 @@ const run = () => {
 				storeAccess,
 				entries: ENTRIES,
 				dbPath: CANONICAL_DB_PATH,
-				standardRegistry,
+				standardDiscovery,
 				tmpDir,
 			}).addStandard,
 		rollback: () => rollbackFactory({ subCli, storeAccess, entries: ENTRIES }).rollback,

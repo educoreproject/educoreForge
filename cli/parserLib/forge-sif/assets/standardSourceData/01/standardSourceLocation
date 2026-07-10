@@ -1,5 +1,7 @@
 standard: forge-sif-tsv
+publishedVersion: unknown
+publishedVersionEvidence: no version recorded in the implementation-spec TSV; filename date-code 031326
+upstreamUrl: unknown (publisher: A4L — https://www.a4l.org; artifact URL not recorded)
 copiedFrom: /Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/sourceData/forge-sif-tsv
 copiedDate: 2026-05-28
-upstreamUrl: TBD (not recorded for pre-existing forge; backfill when known)
 note: migrated to in-forge canonical location on 2026-05-28; original left in place

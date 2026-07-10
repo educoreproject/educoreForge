@@ -1,4 +1,7 @@
 standard: forge-medbiquitous
+publishedVersion: unknown
+publishedVersionEvidence: portfolio — per-schema versions; retrieved from repo master 2026-06-23, see manifest.json
+upstreamUrl: https://github.com/medbiq/medbiq
 displayName: MedBiquitous — Health Professions Education and Credentialing Standards Portfolio
 sourceRepository: https://github.com/medbiq/medbiq (master)
 nsBase: https://ns.medbiq.org/

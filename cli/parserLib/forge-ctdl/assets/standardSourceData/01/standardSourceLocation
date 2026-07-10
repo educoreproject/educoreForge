@@ -1,4 +1,7 @@
 standard: CTDL — Credential Transparency Description Language
+publishedVersion: Release 20260327
+publishedVersionEvidence: version line recorded at harvest
+upstreamUrl: https://credreg.net/ctdl/schema/encoding/json
 publisher: Credential Engine
 retrieved: 2026-06-23 (copied from educoreForgeOLD/.../forge-ctdl/assets/standardSourceData/01/)
 version: Release 20260327

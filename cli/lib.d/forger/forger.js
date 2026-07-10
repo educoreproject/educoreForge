@@ -6,7 +6,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // forger.js — the `forger` CLI (the first app). 3-layer orchestrator:
 //   Layer 1 (this file): bootstrap process.global; instantiate shared resources (forge-store,
 //     credential-accessor, instance-lifecycle, embedding-client); dispatch the -forge action.
-//   Layer 2 (lib/): standard-registry (registry, not switch), materializer.
+//   Layer 2 (lib/): standard-discovery (parser-bundle auto-discovery roster), materializer.
 //   Layer 3: the per-standard forge bundle resolved from --standardName (e.g. parserLib/forge-ceds).
 //
 //   forger -forge --standardName=<key> --source=<path> --destination=<graphName>
@@ -45,7 +45,7 @@ const VOYAGE_CONFIG_PATH = path.join(
 	'voyageEmbedding.ini',
 );
 
-const standardRegistry = require('./lib/standard-registry');
+const standardDiscovery = require('./lib/standard-discovery');
 
 // =====================================================================
 // HELP TEXT — matches specification/forger/helpSpec.md (the control surface IS the contract)
@@ -76,8 +76,8 @@ COMMANDS
 
 OPTIONS
      --standardName=<standardKey>
-            The standard being forged (e.g. CEDS). The per-standard forge module in lib.d/ is
-            resolved from this name via a registry.   Known: ${standardRegistry
+            The standard being forged (e.g. CEDS). The per-standard forge module is resolved
+            from this name via parser-bundle auto-discovery.   Known: ${standardDiscovery
 				.knownStandardNames()
 				.join(', ')}
 
@@ -178,8 +178,8 @@ const run = () => {
 		return;
 	}
 
-	// resolve the forge bundle from the registry (registry, not switch)
-	const resolved = standardRegistry.resolveBundle({ standardName });
+	// resolve the forge bundle from the discovery roster (registry pattern, not switch)
+	const resolved = standardDiscovery.resolveBundle({ standardName });
 	if (resolved.error) {
 		xLog.error(`edf-forge: ${resolved.error}`);
 		process.exit(1);

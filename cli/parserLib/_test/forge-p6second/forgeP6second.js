@@ -19,6 +19,13 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 const fs = require('fs');
 const path = require('path');
 
+// core-lib snapshot-provenance helper (BINDING spec §3.3, Phase A) — resolved relative to this
+// bundle (cli/parserLib/_test/<bundle>/ -> code root -> npm/qtools-graph-forge-core/lib).
+const { deriveVersionStamp } = require(path.join(
+	__dirname, '..', '..', '..', '..',
+	'npm', 'qtools-graph-forge-core', 'lib', 'snapshot-provenance', 'snapshot-provenance',
+));
+
 const STANDARD_KEY = 'synthstd'; // its own _source — distinct from the hub's 'CEDS'
 const STABLE_URI_PROPERTY_NAME = 'uri';
 const EMBEDDING_DIMS = 1024;
@@ -37,7 +44,9 @@ const deterministicEmbedding = (seed) => {
 	return vector;
 };
 
-const DEFAULT_SOURCE = path.join(__dirname, 'assets', 'source.json');
+// snapshot layout (spec §3.5, Phase A): synthetic bundles conform to the standard
+// assets/standardSourceData/<snapshot>/ shape — one validation rule holds everywhere.
+const DEFAULT_SOURCE = path.join(__dirname, 'assets', 'standardSourceData', '01', 'source.json');
 
 // START OF moduleFunction() ============================================================
 
@@ -137,6 +146,18 @@ const moduleFunction =
 					return;
 				}
 				const graph = buildContractGraph(parsed);
+				// version-provenance stamp (spec §3.3, Phase A): the synthetic source does not
+				// self-describe, so the snapshot's standardSourceLocation supplies publishedVersion
+				// ('synthetic-01', versionSource 'provenance-file'). Stamped onto the root + metadata.
+				const versionStamp = deriveVersionStamp({
+					sourcePath: effectiveSource,
+					sourceVersion: null,
+					warn: (message) => (xLog && xLog.error ? xLog.error(message) : console.error(message)),
+				});
+				Object.assign(
+					graph.nodes.find((oneNode) => oneNode.role === 'DmeStandardRoot').properties,
+					versionStamp,
+				);
 				embedNodes({ nodes: graph.nodes });
 				if (xLog && xLog.status) {
 					xLog.status(`[forge-p6second] forged ${graph.nodes.length} nodes, ${graph.edges.length} edges`);
@@ -144,7 +165,7 @@ const moduleFunction =
 				callback('', {
 					nodes: graph.nodes,
 					edges: graph.edges,
-					metadata: { version: '1' },
+					metadata: { version: '1', ...versionStamp },
 					embedCallCount: 0,
 					standardKey: STANDARD_KEY,
 					stableUriPropertyName: STABLE_URI_PROPERTY_NAME,
