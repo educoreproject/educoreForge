@@ -30,7 +30,9 @@ const EDFI_ASSET_DIR = path.join(
 	findProjectRoot(),
 	'code',
 	'cli',
-	'lib.d',
+	// REORG-REPAIR (Phase 0, supervisor-authorized): parser bundles moved lib.d -> parserLib
+	// (reorg pass-1, commit fe76c5d); this consumer was missed. Scaffolding restoration only.
+	'parserLib',
 	'forge-edfi',
 	'assets',
 	'standardSourceData',

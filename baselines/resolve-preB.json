@@ -1,0 +1,4716 @@
+{
+  "harness": "resolve-baseline-harness/v1",
+  "gatingManifest": "a9c2efcfbb302d84f69890ce86d2bd8c0f274e0901b309ce55baf4fc8a5c4d11",
+  "params": {
+    "topK": 15,
+    "cosineFloor": 0,
+    "reranker": "stub-reranker-pick1"
+  },
+  "queryCount": 17,
+  "results": [
+    {
+      "label": "curated-01-edfi:field/AcademicHonor.AcademicHonorCategoryDescriptor",
+      "input": {
+        "term": "AcademicHonorCategoryDescriptor",
+        "definition": "A designation of the type of academic distinctions earned by or awarded to the individual."
+      },
+      "result": {
+        "query": {
+          "term": "AcademicHonorCategoryDescriptor",
+          "definition": "A designation of the type of academic distinctions earned by or awarded to the individual.",
+          "datatype": null,
+          "contextText": null,
+          "targetHub": "CEDS"
+        },
+        "abstain": false,
+        "abstainReason": null,
+        "suggested": {
+          "hubReference": {
+            "address": "cedsHubRef:701200ae7c42b99da70e31c206a30d2b75e5c8e030fb6668c577a8c72e0291a2",
+            "addressSignature": "701200ae7c42b99da70e31c206a30d2b75e5c8e030fb6668c577a8c72e0291a2",
+            "canonicalKey": "P000004",
+            "name": "Has Academic Honors Type",
+            "referenceTier": "property",
+            "hubName": "CEDS",
+            "hubVersion": "14.0.0.0"
+          },
+          "confidence": 0.943922,
+          "predicate": "closeMatch",
+          "retrievalRank": 1
+        },
+        "candidates": [
+          {
+            "rank": 1,
+            "cedsId": "P000004",
+            "cosine": 0.943922,
+            "confidence": 0.943922,
+            "hubReference": {
+              "address": "cedsHubRef:701200ae7c42b99da70e31c206a30d2b75e5c8e030fb6668c577a8c72e0291a2",
+              "addressSignature": "701200ae7c42b99da70e31c206a30d2b75e5c8e030fb6668c577a8c72e0291a2",
+              "canonicalKey": "P000004",
+              "name": "Has Academic Honors Type",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 2,
+            "cedsId": "P000150",
+            "cosine": 0.937532,
+            "confidence": 0.937532,
+            "hubReference": {
+              "address": "cedsHubRef:c8fce3179ad0ea5e488629753a0f0cc22610187228dbd606af1d904836f8ea36",
+              "addressSignature": "c8fce3179ad0ea5e488629753a0f0cc22610187228dbd606af1d904836f8ea36",
+              "canonicalKey": "P000150",
+              "name": "Honors Description",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 3,
+            "cedsId": "P000002",
+            "cosine": 0.781677,
+            "confidence": 0.781677,
+            "hubReference": {
+              "address": "cedsHubRef:5afe88fc99dca83d3110f5c1f2b02ce822053ace24ff2a6a6436b5dd3a2d0838",
+              "addressSignature": "5afe88fc99dca83d3110f5c1f2b02ce822053ace24ff2a6a6436b5dd3a2d0838",
+              "canonicalKey": "P000002",
+              "name": "Has Academic Award Level Conferred",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 4,
+            "cedsId": "P001668",
+            "cosine": 0.7773,
+            "confidence": 0.7773,
+            "hubReference": {
+              "address": "cedsHubRef:a114feb6d4ce0cc5411cd15735b884662aac390d8925608c8736e145dbda8791",
+              "addressSignature": "a114feb6d4ce0cc5411cd15735b884662aac390d8925608c8736e145dbda8791",
+              "canonicalKey": "P001668",
+              "name": "Has PESC Award Level Type",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 5,
+            "cedsId": "P000342",
+            "cosine": 0.772456,
+            "confidence": 0.772456,
+            "hubReference": {
+              "address": "cedsHubRef:d190d106a60f4ed979837891f04918cffc428865479eb51dab213389786086c9",
+              "addressSignature": "d190d106a60f4ed979837891f04918cffc428865479eb51dab213389786086c9",
+              "canonicalKey": "P000342",
+              "name": "Degree or Certificate Title or Subject",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 6,
+            "cedsId": "P600033",
+            "cosine": 0.759303,
+            "confidence": 0.759303,
+            "hubReference": {
+              "address": "cedsHubRef:5ffab126978d736261e64176c83111ab9d1dc4ffa00777e96e2268d109290b42",
+              "addressSignature": "5ffab126978d736261e64176c83111ab9d1dc4ffa00777e96e2268d109290b42",
+              "canonicalKey": "P600033",
+              "name": "Has Person Degree Or Certificate",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 7,
+            "cedsId": "P000343",
+            "cosine": 0.75141,
+            "confidence": 0.75141,
+            "hubReference": {
+              "address": "cedsHubRef:69d5e5bb981a439ac5d58618e01bd547210be997bcc5eb40d90d41ffb0e8e348",
+              "addressSignature": "69d5e5bb981a439ac5d58618e01bd547210be997bcc5eb40d90d41ffb0e8e348",
+              "canonicalKey": "P000343",
+              "name": "Has Degree or Certificate Type",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 8,
+            "cedsId": "P600269",
+            "cosine": 0.733056,
+            "confidence": 0.733056,
+            "hubReference": {
+              "address": "cedsHubRef:a53d2eec0aa344416f0d6870d5600d1a02c98601b5460e6297bf017ec6ef1b3e",
+              "addressSignature": "a53d2eec0aa344416f0d6870d5600d1a02c98601b5460e6297bf017ec6ef1b3e",
+              "canonicalKey": "P600269",
+              "name": "Has Postsecondary Student Academic Award",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 9,
+            "cedsId": "P000713",
+            "cosine": 0.720737,
+            "confidence": 0.720737,
+            "hubReference": {
+              "address": "cedsHubRef:738fcfa9101a67971859d3efce5a370d9bf3a1463284102bf27022870dbfe23e",
+              "addressSignature": "738fcfa9101a67971859d3efce5a370d9bf3a1463284102bf27022870dbfe23e",
+              "canonicalKey": "P000713",
+              "name": "Has High School Diploma Distinction Type",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 10,
+            "cedsId": "P000138",
+            "cosine": 0.718005,
+            "confidence": 0.718005,
+            "hubReference": {
+              "address": "cedsHubRef:3d7e184798e8d8218479fc79dc365b68e2e0e16ca7d4d1579754a3bae6763649",
+              "addressSignature": "3d7e184798e8d8218479fc79dc365b68e2e0e16ca7d4d1579754a3bae6763649",
+              "canonicalKey": "P000138",
+              "name": "Has High School Diploma Type",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 11,
+            "cedsId": "P000003",
+            "cosine": 0.706704,
+            "confidence": 0.706704,
+            "hubReference": {
+              "address": "cedsHubRef:6f75e50b9d312c16a6986433aa106d304aa9f78719fba0366457a56b4da16cd1",
+              "addressSignature": "6f75e50b9d312c16a6986433aa106d304aa9f78719fba0366457a56b4da16cd1",
+              "canonicalKey": "P000003",
+              "name": "Academic Award Title",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 12,
+            "cedsId": "P000893",
+            "cosine": 0.706485,
+            "confidence": 0.706485,
+            "hubReference": {
+              "address": "cedsHubRef:11558945b796bff868886873d8a333562809f9aa0ed80c1270898ce76ce7a100",
+              "addressSignature": "11558945b796bff868886873d8a333562809f9aa0ed80c1270898ce76ce7a100",
+              "canonicalKey": "P000893",
+              "name": "Credential Definition Title",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 13,
+            "cedsId": "P000071",
+            "cosine": 0.695991,
+            "confidence": 0.695991,
+            "hubReference": {
+              "address": "cedsHubRef:9383e59c59b83bbfce44f5fbfeb6f5cd1cdbb438f2fbba8ba4e31ba4e0cbbb64",
+              "addressSignature": "9383e59c59b83bbfce44f5fbfeb6f5cd1cdbb438f2fbba8ba4e31ba4e0cbbb64",
+              "canonicalKey": "P000071",
+              "name": "Has Credential Type",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 14,
+            "cedsId": "P000229",
+            "cosine": 0.685086,
+            "confidence": 0.685086,
+            "hubReference": {
+              "address": "cedsHubRef:c4e139f81601d4021eeb772d61eedf974ebfc0daf750ce6f471b7ee8a4aa45f8",
+              "addressSignature": "c4e139f81601d4021eeb772d61eedf974ebfc0daf750ce6f471b7ee8a4aa45f8",
+              "canonicalKey": "P000229",
+              "name": "Has Recognition for Participation or Performance in an Activity",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 15,
+            "cedsId": "P002026",
+            "cosine": 0.684463,
+            "confidence": 0.684463,
+            "hubReference": {
+              "address": "cedsHubRef:56baee3ba7b77fc1cd2991a5f49124812765c2a2f6125b256ee2c3990305f897",
+              "addressSignature": "56baee3ba7b77fc1cd2991a5f49124812765c2a2f6125b256ee2c3990305f897",
+              "canonicalKey": "P002026",
+              "name": "Has Projected High School Diploma Type",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          }
+        ],
+        "meta": {
+          "model": "stub-reranker-pick1",
+          "topK": 15,
+          "cosineFloor": 0,
+          "gatingManifest": "a9c2efcfbb302d84f69890ce86d2bd8c0f274e0901b309ce55baf4fc8a5c4d11",
+          "bestCosine": 0.943922,
+          "candidatePoolSize": 2324,
+          "hubReferenceCount": 2324
+        }
+      }
+    },
+    {
+      "label": "curated-02-edfi:field/AcademicWeek.BeginDate",
+      "input": {
+        "term": "BeginDate",
+        "definition": "The start date for the academic week. Note: Date interpretation may vary. Ed-Fi recommends inclusive dates, but states may define dates as inclusive or exclusive. For calculations, align with local guidelines."
+      },
+      "result": {
+        "query": {
+          "term": "BeginDate",
+          "definition": "The start date for the academic week. Note: Date interpretation may vary. Ed-Fi recommends inclusive dates, but states may define dates as inclusive or exclusive. For calculations, align with local guidelines.",
+          "datatype": null,
+          "contextText": null,
+          "targetHub": "CEDS"
+        },
+        "abstain": false,
+        "abstainReason": null,
+        "suggested": {
+          "hubReference": {
+            "address": "cedsHubRef:8b623d92b0a4976afe86b2e47921537b451c1069c9be29be48ba8420f7237477",
+            "addressSignature": "8b623d92b0a4976afe86b2e47921537b451c1069c9be29be48ba8420f7237477",
+            "canonicalKey": "P000497",
+            "name": "First Instruction Date",
+            "referenceTier": "property",
+            "hubName": "CEDS",
+            "hubVersion": "14.0.0.0"
+          },
+          "confidence": 0.708232,
+          "predicate": "closeMatch",
+          "retrievalRank": 1
+        },
+        "candidates": [
+          {
+            "rank": 1,
+            "cedsId": "P000497",
+            "cosine": 0.708232,
+            "confidence": 0.708232,
+            "hubReference": {
+              "address": "cedsHubRef:8b623d92b0a4976afe86b2e47921537b451c1069c9be29be48ba8420f7237477",
+              "addressSignature": "8b623d92b0a4976afe86b2e47921537b451c1069c9be29be48ba8420f7237477",
+              "canonicalKey": "P000497",
+              "name": "First Instruction Date",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 2,
+            "cedsId": "P000962",
+            "cosine": 0.706727,
+            "confidence": 0.706727,
+            "hubReference": {
+              "address": "cedsHubRef:652971a140243e10e31f4675691295d692e210167aed95d61b67e46e2550c631",
+              "addressSignature": "652971a140243e10e31f4675691295d692e210167aed95d61b67e46e2550c631",
+              "canonicalKey": "P000962",
+              "name": "Assessment Administration Start Date",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 3,
+            "cedsId": "P000645",
+            "cosine": 0.701688,
+            "confidence": 0.701688,
+            "hubReference": {
+              "address": "cedsHubRef:f65660b7fb4b4fe27ee26eb694ced98e9830dad1ccbeb06cdd1746ee985f6f6e",
+              "addressSignature": "f65660b7fb4b4fe27ee26eb694ced98e9830dad1ccbeb06cdd1746ee985f6f6e",
+              "canonicalKey": "P000645",
+              "name": "Teaching Assignment Start Date",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 4,
+            "cedsId": "P000054",
+            "cosine": 0.683841,
+            "confidence": 0.683841,
+            "hubReference": {
+              "address": "cedsHubRef:72c03696c4cb8e90d0317940f885a9a43a082aba8b7bedc569b7c3ac06848161",
+              "addressSignature": "72c03696c4cb8e90d0317940f885a9a43a082aba8b7bedc569b7c3ac06848161",
+              "canonicalKey": "P000054",
+              "name": "Course Begin Date",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 5,
+            "cedsId": "P001455",
+            "cosine": 0.679679,
+            "confidence": 0.679679,
+            "hubReference": {
+              "address": "cedsHubRef:81fe1509660b1c0886b26a86a2b62cedf3d1c41616ba799e9972c0454e57fb27",
+              "addressSignature": "81fe1509660b1c0886b26a86a2b62cedf3d1c41616ba799e9972c0454e57fb27",
+              "canonicalKey": "P001455",
+              "name": "Professional Development Session Start Date",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 6,
+            "cedsId": "P001061",
+            "cosine": 0.6751,
+            "confidence": 0.6751,
+            "hubReference": {
+              "address": "cedsHubRef:40e9868552d41300e2eae54cd331be13b59b40672ca4769512e578593dec1414",
+              "addressSignature": "40e9868552d41300e2eae54cd331be13b59b40672ca4769512e578593dec1414",
+              "canonicalKey": "P001061",
+              "name": "Staff Professional Development Activity Start Date",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 7,
+            "cedsId": "P000251",
+            "cosine": 0.643525,
+            "confidence": 0.643525,
+            "hubReference": {
+              "address": "cedsHubRef:3e3e2f9480e63ebbfe7eb7ae3a41db3ed506634512e2ce46f02738e61bde90c6",
+              "addressSignature": "3e3e2f9480e63ebbfe7eb7ae3a41db3ed506634512e2ce46f02738e61bde90c6",
+              "canonicalKey": "P000251",
+              "name": "Session Begin Date",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 8,
+            "cedsId": "P001642",
+            "cosine": 0.632173,
+            "confidence": 0.632173,
+            "hubReference": {
+              "address": "cedsHubRef:fc298a7e9114918b7ad83f0a717125d1a6212ddec246c69b669fb6c702ab5e45",
+              "addressSignature": "fc298a7e9114918b7ad83f0a717125d1a6212ddec246c69b669fb6c702ab5e45",
+              "canonicalKey": "P001642",
+              "name": "Fiscal Period Begin Date",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 9,
+            "cedsId": "P001186",
+            "cosine": 0.622673,
+            "confidence": 0.622673,
+            "hubReference": {
+              "address": "cedsHubRef:d7f7eed257351d17213d7732bb1feb4be6cd010d03037f759cf25b6976ed3943",
+              "addressSignature": "d7f7eed257351d17213d7732bb1feb4be6cd010d03037f759cf25b6976ed3943",
+              "canonicalKey": "P001186",
+              "name": "Intended Administration Start Date",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 10,
+            "cedsId": "P000097",
+            "cosine": 0.614079,
+            "confidence": 0.614079,
+            "hubReference": {
+              "address": "cedsHubRef:05570e1868fc6445e8c93627e4405041531f9e50bdf02e1727802ee62cadf1cc",
+              "addressSignature": "05570e1868fc6445e8c93627e4405041531f9e50bdf02e1727802ee62cadf1cc",
+              "canonicalKey": "P000097",
+              "name": "Enrollment Entry Date",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 11,
+            "cedsId": "P000992",
+            "cosine": 0.60838,
+            "confidence": 0.60838,
+            "hubReference": {
+              "address": "cedsHubRef:917e3858b005465a821e51d822342c5cbfe0e51d8266fd6e85c6c62839b153fc",
+              "addressSignature": "917e3858b005465a821e51d822342c5cbfe0e51d8266fd6e85c6c62839b153fc",
+              "canonicalKey": "P000992",
+              "name": "Employment Record Reference Period Start Date",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 12,
+            "cedsId": "P000793",
+            "cosine": 0.607623,
+            "confidence": 0.607623,
+            "hubReference": {
+              "address": "cedsHubRef:cfbee529f61e5095250946ac0aa5fd485ee4af455055f7c144625a41e2a0de9f",
+              "addressSignature": "cfbee529f61e5095250946ac0aa5fd485ee4af455055f7c144625a41e2a0de9f",
+              "canonicalKey": "P000793",
+              "name": "Staff Education Entry Date",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 13,
+            "cedsId": "P000998",
+            "cosine": 0.600225,
+            "confidence": 0.600225,
+            "hubReference": {
+              "address": "cedsHubRef:7773cac9c2ea0ea533f5f1b8e60bb1347c91eb80e87181b4ac35cde087dd7d85",
+              "addressSignature": "7773cac9c2ea0ea533f5f1b8e60bb1347c91eb80e87181b4ac35cde087dd7d85",
+              "canonicalKey": "P000998",
+              "name": "Workforce Program Participation Start Date",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 14,
+            "cedsId": "P000974",
+            "cosine": 0.597717,
+            "confidence": 0.597717,
+            "hubReference": {
+              "address": "cedsHubRef:9e63aa6174c64efd1ac418890e7843aacdedd2b720dba7ab57328f387f6a1c6e",
+              "addressSignature": "9e63aa6174c64efd1ac418890e7843aacdedd2b720dba7ab57328f387f6a1c6e",
+              "canonicalKey": "P000974",
+              "name": "Course Section Enrollment Status Start Date",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 15,
+            "cedsId": "P000083",
+            "cosine": 0.594763,
+            "confidence": 0.594763,
+            "hubReference": {
+              "address": "cedsHubRef:5eeac3e2965a7bafb3341d5b5c7347a5fdb8a71d39c4f51a0b34510e0a01ff9d",
+              "addressSignature": "5eeac3e2965a7bafb3341d5b5c7347a5fdb8a71d39c4f51a0b34510e0a01ff9d",
+              "canonicalKey": "P000083",
+              "name": "Disciplinary Action Start Date",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          }
+        ],
+        "meta": {
+          "model": "stub-reranker-pick1",
+          "topK": 15,
+          "cosineFloor": 0,
+          "gatingManifest": "a9c2efcfbb302d84f69890ce86d2bd8c0f274e0901b309ce55baf4fc8a5c4d11",
+          "bestCosine": 0.708232,
+          "candidatePoolSize": 2324,
+          "hubReferenceCount": 2324
+        }
+      }
+    },
+    {
+      "label": "curated-03-edfi:field/AcademicWeek.EndDate",
+      "input": {
+        "term": "EndDate",
+        "definition": "The end date for the academic week. Note: Date interpretation may vary. Ed-Fi recommends inclusive dates, but states may define dates as inclusive or exclusive. For calculations, align with local guidelines."
+      },
+      "result": {
+        "query": {
+          "term": "EndDate",
+          "definition": "The end date for the academic week. Note: Date interpretation may vary. Ed-Fi recommends inclusive dates, but states may define dates as inclusive or exclusive. For calculations, align with local guidelines.",
+          "datatype": null,
+          "contextText": null,
+          "targetHub": "CEDS"
+        },
+        "abstain": false,
+        "abstainReason": null,
+        "suggested": {
+          "hubReference": {
+            "address": "cedsHubRef:31f996073ec182d64f5bc90ac10a7d26d2c2d67f2102201ac536d5015bb5f2b4",
+            "addressSignature": "31f996073ec182d64f5bc90ac10a7d26d2c2d67f2102201ac536d5015bb5f2b4",
+            "canonicalKey": "P000646",
+            "name": "Teaching Assignment End Date",
+            "referenceTier": "property",
+            "hubName": "CEDS",
+            "hubVersion": "14.0.0.0"
+          },
+          "confidence": 0.716773,
+          "predicate": "closeMatch",
+          "retrievalRank": 1
+        },
+        "candidates": [
+          {
+            "rank": 1,
+            "cedsId": "P000646",
+            "cosine": 0.716773,
+            "confidence": 0.716773,
+            "hubReference": {
+              "address": "cedsHubRef:31f996073ec182d64f5bc90ac10a7d26d2c2d67f2102201ac536d5015bb5f2b4",
+              "addressSignature": "31f996073ec182d64f5bc90ac10a7d26d2c2d67f2102201ac536d5015bb5f2b4",
+              "canonicalKey": "P000646",
+              "name": "Teaching Assignment End Date",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 2,
+            "cedsId": "P000059",
+            "cosine": 0.70941,
+            "confidence": 0.70941,
+            "hubReference": {
+              "address": "cedsHubRef:c1048c3a9df52aa7b9764f2365f257b7337b5ecbd7303070d0478c9c64c8a4a0",
+              "addressSignature": "c1048c3a9df52aa7b9764f2365f257b7337b5ecbd7303070d0478c9c64c8a4a0",
+              "canonicalKey": "P000059",
+              "name": "Course End Date",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 3,
+            "cedsId": "P001447",
+            "cosine": 0.70759,
+            "confidence": 0.70759,
+            "hubReference": {
+              "address": "cedsHubRef:a97d0c5a7eb53d794d9ac4ce15eb43de0390f94cac724d7c4302afc6c0bd80d4",
+              "addressSignature": "a97d0c5a7eb53d794d9ac4ce15eb43de0390f94cac724d7c4302afc6c0bd80d4",
+              "canonicalKey": "P001447",
+              "name": "Professional Development Session End Date",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 4,
+            "cedsId": "P001187",
+            "cosine": 0.702342,
+            "confidence": 0.702342,
+            "hubReference": {
+              "address": "cedsHubRef:02fb60975e6deac32fe8e733ff567c7ab9f72a0cdc0c8c712211d2380c133fa0",
+              "addressSignature": "02fb60975e6deac32fe8e733ff567c7ab9f72a0cdc0c8c712211d2380c133fa0",
+              "canonicalKey": "P001187",
+              "name": "Assessment Form Intended Administration End Date",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 5,
+            "cedsId": "P000498",
+            "cosine": 0.696159,
+            "confidence": 0.696159,
+            "hubReference": {
+              "address": "cedsHubRef:88e1b5547cb5831ffb28629c4d4d14476b9548e9ee8f7d2dcc40e7da02b0acde",
+              "addressSignature": "88e1b5547cb5831ffb28629c4d4d14476b9548e9ee8f7d2dcc40e7da02b0acde",
+              "canonicalKey": "P000498",
+              "name": "Last Instruction Date",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 6,
+            "cedsId": "P000964",
+            "cosine": 0.692872,
+            "confidence": 0.692872,
+            "hubReference": {
+              "address": "cedsHubRef:f4475b28907f6f8ed561a0a0f34ee6b9e8b5acaf84e91b2e3ae87b2dc7064f16",
+              "addressSignature": "f4475b28907f6f8ed561a0a0f34ee6b9e8b5acaf84e91b2e3ae87b2dc7064f16",
+              "canonicalKey": "P000964",
+              "name": "Assessment Administration Finish Date",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 7,
+            "cedsId": "P000975",
+            "cosine": 0.671296,
+            "confidence": 0.671296,
+            "hubReference": {
+              "address": "cedsHubRef:6298731676af5a342ec77b1579f037fc7530a9922bf32aff8eb88c1ba8137f5a",
+              "addressSignature": "6298731676af5a342ec77b1579f037fc7530a9922bf32aff8eb88c1ba8137f5a",
+              "canonicalKey": "P000975",
+              "name": "Course Section Enrollment Status End Date",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 8,
+            "cedsId": "P000253",
+            "cosine": 0.668889,
+            "confidence": 0.668889,
+            "hubReference": {
+              "address": "cedsHubRef:031f4acb05020e4aea48f813eb629ba53590ffc8a4f313030f2718e9e697848a",
+              "addressSignature": "031f4acb05020e4aea48f813eb629ba53590ffc8a4f313030f2718e9e697848a",
+              "canonicalKey": "P000253",
+              "name": "Session End Date",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 9,
+            "cedsId": "P002091",
+            "cosine": 0.647415,
+            "confidence": 0.647415,
+            "hubReference": {
+              "address": "cedsHubRef:61cfc574b238cbac636f2ac395ca53d9213bf22f0c1933507ddd17937d0bc634",
+              "addressSignature": "61cfc574b238cbac636f2ac395ca53d9213bf22f0c1933507ddd17937d0bc634",
+              "canonicalKey": "P002091",
+              "name": "Accessible Format Issued End Date",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 10,
+            "cedsId": "P000082",
+            "cosine": 0.643752,
+            "confidence": 0.643752,
+            "hubReference": {
+              "address": "cedsHubRef:f1ae5279c513b11be574b57b33068cded03e522a923367d78e1bb67c547eb7ed",
+              "addressSignature": "f1ae5279c513b11be574b57b33068cded03e522a923367d78e1bb67c547eb7ed",
+              "canonicalKey": "P000082",
+              "name": "Disciplinary Action End Date",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 11,
+            "cedsId": "P001969",
+            "cosine": 0.64248,
+            "confidence": 0.64248,
+            "hubReference": {
+              "address": "cedsHubRef:f751a831aac7cde1de92bcd5a33e3d25b25ef74c812b75d2495b59e7c8abc4ad",
+              "addressSignature": "f751a831aac7cde1de92bcd5a33e3d25b25ef74c812b75d2495b59e7c8abc4ad",
+              "canonicalKey": "P001969",
+              "name": "Data Collection Close Date",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 12,
+            "cedsId": "P001643",
+            "cosine": 0.638043,
+            "confidence": 0.638043,
+            "hubReference": {
+              "address": "cedsHubRef:55a686b539a2ad421ac39a5f84d9102a6298af4dfb2a961aae560fc1a2b452a3",
+              "addressSignature": "55a686b539a2ad421ac39a5f84d9102a6298af4dfb2a961aae560fc1a2b452a3",
+              "canonicalKey": "P001643",
+              "name": "Fiscal Period End Date",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 13,
+            "cedsId": "P001918",
+            "cosine": 0.636117,
+            "confidence": 0.636117,
+            "hubReference": {
+              "address": "cedsHubRef:2be5c2e82391bd16eb86b722c7d63d9063d3e5fc5c2e99151257d8d9d9f48535",
+              "addressSignature": "2be5c2e82391bd16eb86b722c7d63d9063d3e5fc5c2e99151257d8d9d9f48535",
+              "canonicalKey": "P001918",
+              "name": "Record End Date Time",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 14,
+            "cedsId": "P000107",
+            "cosine": 0.618461,
+            "confidence": 0.618461,
+            "hubReference": {
+              "address": "cedsHubRef:2d16a6a9992b7e1687d35c1ecf2362b39389a867b47a8ec61a0aaca2d0290565",
+              "addressSignature": "2d16a6a9992b7e1687d35c1ecf2362b39389a867b47a8ec61a0aaca2d0290565",
+              "canonicalKey": "P000107",
+              "name": "Enrollment Exit Date",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 15,
+            "cedsId": "P000527",
+            "cosine": 0.609572,
+            "confidence": 0.609572,
+            "hubReference": {
+              "address": "cedsHubRef:55a1ca69a283ce96e789b68715d1bc45ff063c427c5ce9ad1a1d5770728a8056",
+              "addressSignature": "55a1ca69a283ce96e789b68715d1bc45ff063c427c5ce9ad1a1d5770728a8056",
+              "canonicalKey": "P000527",
+              "name": "Assignment End Date",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          }
+        ],
+        "meta": {
+          "model": "stub-reranker-pick1",
+          "topK": 15,
+          "cosineFloor": 0,
+          "gatingManifest": "a9c2efcfbb302d84f69890ce86d2bd8c0f274e0901b309ce55baf4fc8a5c4d11",
+          "bestCosine": 0.716773,
+          "candidatePoolSize": 2324,
+          "hubReferenceCount": 2324
+        }
+      }
+    },
+    {
+      "label": "curated-04-edfi:field/AcademicWeek.TotalInstructionalDays",
+      "input": {
+        "term": "TotalInstructionalDays",
+        "definition": "The total instructional days during the academic week."
+      },
+      "result": {
+        "query": {
+          "term": "TotalInstructionalDays",
+          "definition": "The total instructional days during the academic week.",
+          "datatype": null,
+          "contextText": null,
+          "targetHub": "CEDS"
+        },
+        "abstain": false,
+        "abstainReason": null,
+        "suggested": {
+          "hubReference": {
+            "address": "cedsHubRef:af7d469512ed7c0a51f23134d20e759c427cb1e57f44329e5cf97b0516672e12",
+            "addressSignature": "af7d469512ed7c0a51f23134d20e759c427cb1e57f44329e5cf97b0516672e12",
+            "canonicalKey": "P000355",
+            "name": "Days Available Per Week",
+            "referenceTier": "property",
+            "hubName": "CEDS",
+            "hubVersion": "14.0.0.0"
+          },
+          "confidence": 0.703436,
+          "predicate": "closeMatch",
+          "retrievalRank": 1
+        },
+        "candidates": [
+          {
+            "rank": 1,
+            "cedsId": "P000355",
+            "cosine": 0.703436,
+            "confidence": 0.703436,
+            "hubReference": {
+              "address": "cedsHubRef:af7d469512ed7c0a51f23134d20e759c427cb1e57f44329e5cf97b0516672e12",
+              "addressSignature": "af7d469512ed7c0a51f23134d20e759c427cb1e57f44329e5cf97b0516672e12",
+              "canonicalKey": "P000355",
+              "name": "Days Available Per Week",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 2,
+            "cedsId": "P002099",
+            "cosine": 0.701384,
+            "confidence": 0.701384,
+            "hubReference": {
+              "address": "cedsHubRef:25f6f0274dc8767e78065c20d0ad75c5ab29d2a1ae4d728814564696549bb38d",
+              "addressSignature": "25f6f0274dc8767e78065c20d0ad75c5ab29d2a1ae4d728814564696549bb38d",
+              "canonicalKey": "P002099",
+              "name": "Instructional Minutes Per Day",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 3,
+            "cedsId": "P000496",
+            "cosine": 0.684196,
+            "confidence": 0.684196,
+            "hubReference": {
+              "address": "cedsHubRef:abcd2ea4a47217ac6f11f5e4761fb8d72d0c5264bffe4c04f8b182a1801b3ae4",
+              "addressSignature": "abcd2ea4a47217ac6f11f5e4761fb8d72d0c5264bffe4c04f8b182a1801b3ae4",
+              "canonicalKey": "P000496",
+              "name": "Days in Session",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 4,
+            "cedsId": "P001015",
+            "cosine": 0.679713,
+            "confidence": 0.679713,
+            "hubReference": {
+              "address": "cedsHubRef:293ee2000f8e6c91428e1973fc621fa916e55c9873d364df96dfa2193beac00b",
+              "addressSignature": "293ee2000f8e6c91428e1973fc621fa916e55c9873d364df96dfa2193beac00b",
+              "canonicalKey": "P001015",
+              "name": "Assessment Registration Days of Instruction",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 5,
+            "cedsId": "P000825",
+            "cosine": 0.654579,
+            "confidence": 0.654579,
+            "hubReference": {
+              "address": "cedsHubRef:cd5e98c43c89ec5c9ab97887f1c3054e2becd96a53680b53d5d2e4f01c0b9a33",
+              "addressSignature": "cd5e98c43c89ec5c9ab97887f1c3054e2becd96a53680b53d5d2e4f01c0b9a33",
+              "canonicalKey": "P000825",
+              "name": "Early Learning Program Annual Operating Weeks",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 6,
+            "cedsId": "P000500",
+            "cosine": 0.639075,
+            "confidence": 0.639075,
+            "hubReference": {
+              "address": "cedsHubRef:11e182ba388702e26f408533008f4fe2c18c71a8b3da91e4a0eac5d47e99ebf9",
+              "addressSignature": "11e182ba388702e26f408533008f4fe2c18c71a8b3da91e4a0eac5d47e99ebf9",
+              "canonicalKey": "P000500",
+              "name": "Minutes Per Day",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 7,
+            "cedsId": "P000521",
+            "cosine": 0.619215,
+            "confidence": 0.619215,
+            "hubReference": {
+              "address": "cedsHubRef:9cf66cf0ed2b605ce82b7f94a2e6b820e7525acb5023bc2695c8bf058ed29c91",
+              "addressSignature": "9cf66cf0ed2b605ce82b7f94a2e6b820e7525acb5023bc2695c8bf058ed29c91",
+              "canonicalKey": "P000521",
+              "name": "Class Meeting Days",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 8,
+            "cedsId": "P000202",
+            "cosine": 0.617922,
+            "confidence": 0.617922,
+            "hubReference": {
+              "address": "cedsHubRef:8069a6f1fe2fcd05bf8d793daba32760a50e5f8a88189629d0b5a4caa1aa7d4e",
+              "addressSignature": "8069a6f1fe2fcd05bf8d793daba32760a50e5f8a88189629d0b5a4caa1aa7d4e",
+              "canonicalKey": "P000202",
+              "name": "Number of Days in Attendance",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 9,
+            "cedsId": "P600357",
+            "cosine": 0.603061,
+            "confidence": 0.603061,
+            "hubReference": {
+              "address": "cedsHubRef:83a3447fe93a64a11cb6d07658be4f4c28c487214c1fbbdf8c23f742aab02991",
+              "addressSignature": "83a3447fe93a64a11cb6d07658be4f4c28c487214c1fbbdf8c23f742aab02991",
+              "canonicalKey": "P600357",
+              "name": "Has Course Section Schedule",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 10,
+            "cedsId": "P000244",
+            "cosine": 0.602371,
+            "confidence": 0.602371,
+            "hubReference": {
+              "address": "cedsHubRef:845d4f2584ef039fc874a30ca5ee36e6443cfbf4397265a6ec7967631dcd183a",
+              "addressSignature": "845d4f2584ef039fc874a30ca5ee36e6443cfbf4397265a6ec7967631dcd183a",
+              "canonicalKey": "P000244",
+              "name": "School Year Minutes",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 11,
+            "cedsId": "P000499",
+            "cosine": 0.582073,
+            "confidence": 0.582073,
+            "hubReference": {
+              "address": "cedsHubRef:f0b579c968a8a03a7159656cab3b1060451ad15fb9755c0177ec89a200f59fb1",
+              "addressSignature": "f0b579c968a8a03a7159656cab3b1060451ad15fb9755c0177ec89a200f59fb1",
+              "canonicalKey": "P000499",
+              "name": "Instructional Minutes",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 12,
+            "cedsId": "P002185",
+            "cosine": 0.576519,
+            "confidence": 0.576519,
+            "hubReference": {
+              "address": "cedsHubRef:03e2caa6dc9b01f37a36c940690f22e73731938f6ec3d56ccb2dc9863b56733a",
+              "addressSignature": "03e2caa6dc9b01f37a36c940690f22e73731938f6ec3d56ccb2dc9863b56733a",
+              "canonicalKey": "P002185",
+              "name": "Has Preschool Daily Length",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 13,
+            "cedsId": "P000522",
+            "cosine": 0.575678,
+            "confidence": 0.575678,
+            "hubReference": {
+              "address": "cedsHubRef:268fa7e5ced5c03dac008ee1cb1101c3eb9177a6249022a5fbbf9d95c2e93910",
+              "addressSignature": "268fa7e5ced5c03dac008ee1cb1101c3eb9177a6249022a5fbbf9d95c2e93910",
+              "canonicalKey": "P000522",
+              "name": "Class Period",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 14,
+            "cedsId": "P000491",
+            "cosine": 0.573837,
+            "confidence": 0.573837,
+            "hubReference": {
+              "address": "cedsHubRef:747937b4d0440e65fddb4be7dd326604a626ad0480ac14aaf78b7c4bcaa708b5",
+              "addressSignature": "747937b4d0440e65fddb4be7dd326604a626ad0480ac14aaf78b7c4bcaa708b5",
+              "canonicalKey": "P000491",
+              "name": "Has Kindergarten Daily Length",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 15,
+            "cedsId": "P001957",
+            "cosine": 0.572632,
+            "confidence": 0.572632,
+            "hubReference": {
+              "address": "cedsHubRef:7fd39bf48a13516d9e71de0fa6fbcc3afc0dd13d5e52c2a3f9415ee7bf169cd1",
+              "addressSignature": "7fd39bf48a13516d9e71de0fa6fbcc3afc0dd13d5e52c2a3f9415ee7bf169cd1",
+              "canonicalKey": "P001957",
+              "name": "Number of Days Tardy",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          }
+        ],
+        "meta": {
+          "model": "stub-reranker-pick1",
+          "topK": 15,
+          "cosineFloor": 0,
+          "gatingManifest": "a9c2efcfbb302d84f69890ce86d2bd8c0f274e0901b309ce55baf4fc8a5c4d11",
+          "bestCosine": 0.703436,
+          "candidatePoolSize": 2324,
+          "hubReferenceCount": 2324
+        }
+      }
+    },
+    {
+      "label": "curated-05-edfi:field/AcademicWeek.WeekIdentifier",
+      "input": {
+        "term": "WeekIdentifier",
+        "definition": "The school label for the week."
+      },
+      "result": {
+        "query": {
+          "term": "WeekIdentifier",
+          "definition": "The school label for the week.",
+          "datatype": null,
+          "contextText": null,
+          "targetHub": "CEDS"
+        },
+        "abstain": false,
+        "abstainReason": null,
+        "suggested": {
+          "hubReference": {
+            "address": "cedsHubRef:3ef542c81ddf78a84ab4344c61e2b5a2e9b8223c6830ab2ac1b16fa024d60399",
+            "addressSignature": "3ef542c81ddf78a84ab4344c61e2b5a2e9b8223c6830ab2ac1b16fa024d60399",
+            "canonicalKey": "P000638",
+            "name": "Responsible School Identifier",
+            "referenceTier": "property",
+            "hubName": "CEDS",
+            "hubVersion": "14.0.0.0"
+          },
+          "confidence": 0.495462,
+          "predicate": "closeMatch",
+          "retrievalRank": 1
+        },
+        "candidates": [
+          {
+            "rank": 1,
+            "cedsId": "P000638",
+            "cosine": 0.495462,
+            "confidence": 0.495462,
+            "hubReference": {
+              "address": "cedsHubRef:3ef542c81ddf78a84ab4344c61e2b5a2e9b8223c6830ab2ac1b16fa024d60399",
+              "addressSignature": "3ef542c81ddf78a84ab4344c61e2b5a2e9b8223c6830ab2ac1b16fa024d60399",
+              "canonicalKey": "P000638",
+              "name": "Responsible School Identifier",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 2,
+            "cedsId": "P000598",
+            "cosine": 0.484368,
+            "confidence": 0.484368,
+            "hubReference": {
+              "address": "cedsHubRef:2c1a8d044b88618009ec9e089dc51b1259daa80fa45ac9b0fe91089fa82876a0",
+              "addressSignature": "2c1a8d044b88618009ec9e089dc51b1259daa80fa45ac9b0fe91089fa82876a0",
+              "canonicalKey": "P000598",
+              "name": "Alternate Day Name",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 3,
+            "cedsId": "P600011",
+            "cosine": 0.482234,
+            "confidence": 0.482234,
+            "hubReference": {
+              "address": "cedsHubRef:781d2ac576683506b11477c5542f434e68c3a9bb86ddb0c89c357d2a7923a791",
+              "addressSignature": "781d2ac576683506b11477c5542f434e68c3a9bb86ddb0c89c357d2a7923a791",
+              "canonicalKey": "P600011",
+              "name": "Has Facility School Design",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 4,
+            "cedsId": "P000533",
+            "cosine": 0.481604,
+            "confidence": 0.481604,
+            "hubReference": {
+              "address": "cedsHubRef:30c04291c1702f733a9987e31f549c1cfcb774930ca11adf1720645c20525f11",
+              "addressSignature": "30c04291c1702f733a9987e31f549c1cfcb774930ca11adf1720645c20525f11",
+              "canonicalKey": "P000533",
+              "name": "Has School Operational Status",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 5,
+            "cedsId": "P000243",
+            "cosine": 0.477138,
+            "confidence": 0.477138,
+            "hubReference": {
+              "address": "cedsHubRef:bee7947ff12a9a2a152c91cb08f05406b6f48c38f99b6d14cff8372d8737405c",
+              "addressSignature": "bee7947ff12a9a2a152c91cb08f05406b6f48c38f99b6d14cff8372d8737405c",
+              "canonicalKey": "P000243",
+              "name": "School Year",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 6,
+            "cedsId": "P001828",
+            "cosine": 0.47001,
+            "confidence": 0.47001,
+            "hubReference": {
+              "address": "cedsHubRef:64e4f318540a9bb688fa04512d5f4a151ad91422602da18662dab719850300da",
+              "addressSignature": "64e4f318540a9bb688fa04512d5f4a151ad91422602da18662dab719850300da",
+              "canonicalKey": "P001828",
+              "name": "Has Building School Design Type",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 7,
+            "cedsId": "P000727",
+            "cosine": 0.461637,
+            "confidence": 0.461637,
+            "hubReference": {
+              "address": "cedsHubRef:2576eba321801b825c4c08caa17838776fa4dc0ef0ccbe1a46477985d90b8250",
+              "addressSignature": "2576eba321801b825c4c08caa17838776fa4dc0ef0ccbe1a46477985d90b8250",
+              "canonicalKey": "P000727",
+              "name": "Has Academic Term Designator",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 8,
+            "cedsId": "P000521",
+            "cosine": 0.459193,
+            "confidence": 0.459193,
+            "hubReference": {
+              "address": "cedsHubRef:9cf66cf0ed2b605ce82b7f94a2e6b820e7525acb5023bc2695c8bf058ed29c91",
+              "addressSignature": "9cf66cf0ed2b605ce82b7f94a2e6b820e7525acb5023bc2695c8bf058ed29c91",
+              "canonicalKey": "P000521",
+              "name": "Class Meeting Days",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 9,
+            "cedsId": "P000437",
+            "cosine": 0.457975,
+            "confidence": 0.457975,
+            "hubReference": {
+              "address": "cedsHubRef:579bbcbec4a7de4cfc40027e7ce6541c67a42c0f14d1b9f719c8ef8c03668f90",
+              "addressSignature": "579bbcbec4a7de4cfc40027e7ce6541c67a42c0f14d1b9f719c8ef8c03668f90",
+              "canonicalKey": "P000437",
+              "name": "Has Migrant Education Program Enrollment Type",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 10,
+            "cedsId": "P000710",
+            "cosine": 0.455724,
+            "confidence": 0.455724,
+            "hubReference": {
+              "address": "cedsHubRef:7d1ba94a976333c4aa18a98c884855acc757a12daca02fd31c35dd5d352e7265",
+              "addressSignature": "7d1ba94a976333c4aa18a98c884855acc757a12daca02fd31c35dd5d352e7265",
+              "canonicalKey": "P000710",
+              "name": "Has Charter School Type",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 11,
+            "cedsId": "P001777",
+            "cosine": 0.453943,
+            "confidence": 0.453943,
+            "hubReference": {
+              "address": "cedsHubRef:ebf1f4d787dde7238890a637bb8a7ec780c4ed09792e6b0e2323c4143cbd1697",
+              "addressSignature": "ebf1f4d787dde7238890a637bb8a7ec780c4ed09792e6b0e2323c4143cbd1697",
+              "canonicalKey": "P001777",
+              "name": "Has Building Primary Use Type",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 12,
+            "cedsId": "P600264",
+            "cosine": 0.452444,
+            "confidence": 0.452444,
+            "hubReference": {
+              "address": "cedsHubRef:b74ece0c4e5e919ea32cfb6c994d270ebe869e17cc902311a2cd3c7d7d413131",
+              "addressSignature": "b74ece0c4e5e919ea32cfb6c994d270ebe869e17cc902311a2cd3c7d7d413131",
+              "canonicalKey": "P600264",
+              "name": "Has K12 School Status",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 13,
+            "cedsId": "P600552",
+            "cosine": 0.449015,
+            "confidence": 0.449015,
+            "hubReference": {
+              "address": "cedsHubRef:45874b3876e053ae53c02525ec592ee14c15009affe44d351a2aa96aba26474a",
+              "addressSignature": "45874b3876e053ae53c02525ec592ee14c15009affe44d351a2aa96aba26474a",
+              "canonicalKey": "P600552",
+              "name": "Has School Operational Detail",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 14,
+            "cedsId": "P000182",
+            "cosine": 0.447265,
+            "confidence": 0.447265,
+            "hubReference": {
+              "address": "cedsHubRef:6d6e2b16518439a0239e9a261fd6e78811c5945c5f263e1e0427f96d07c59402",
+              "addressSignature": "6d6e2b16518439a0239e9a261fd6e78811c5945c5f263e1e0427f96d07c59402",
+              "canonicalKey": "P000182",
+              "name": "Marking Period Name",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 15,
+            "cedsId": "P002130",
+            "cosine": 0.444529,
+            "confidence": 0.444529,
+            "hubReference": {
+              "address": "cedsHubRef:593ca71ed401dbfb166d00d311b5258061c5d6c7263d10223f6526346ba9f6b1",
+              "addressSignature": "593ca71ed401dbfb166d00d311b5258061c5d6c7263d10223f6526346ba9f6b1",
+              "canonicalKey": "P002130",
+              "name": "Has Locale",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          }
+        ],
+        "meta": {
+          "model": "stub-reranker-pick1",
+          "topK": 15,
+          "cosineFloor": 0,
+          "gatingManifest": "a9c2efcfbb302d84f69890ce86d2bd8c0f274e0901b309ce55baf4fc8a5c4d11",
+          "bestCosine": 0.495462,
+          "candidatePoolSize": 2324,
+          "hubReferenceCount": 2324
+        }
+      }
+    },
+    {
+      "label": "curated-06-edfi:field/Achievement.AchievementCategoryDescriptor",
+      "input": {
+        "term": "AchievementCategoryDescriptor",
+        "definition": "The category of achievement attributed to the individual."
+      },
+      "result": {
+        "query": {
+          "term": "AchievementCategoryDescriptor",
+          "definition": "The category of achievement attributed to the individual.",
+          "datatype": null,
+          "contextText": null,
+          "targetHub": "CEDS"
+        },
+        "abstain": false,
+        "abstainReason": null,
+        "suggested": {
+          "hubReference": {
+            "address": "cedsHubRef:041f2c1331f0f5dd55d6768d7aa283cc556ae3697e5469833467a232ded6b341",
+            "addressSignature": "041f2c1331f0f5dd55d6768d7aa283cc556ae3697e5469833467a232ded6b341",
+            "canonicalKey": "P000892",
+            "name": "Credential Definition Category Type",
+            "referenceTier": "property",
+            "hubName": "CEDS",
+            "hubVersion": "14.0.0.0"
+          },
+          "confidence": 0.712524,
+          "predicate": "closeMatch",
+          "retrievalRank": 1
+        },
+        "candidates": [
+          {
+            "rank": 1,
+            "cedsId": "P000892",
+            "cosine": 0.712524,
+            "confidence": 0.712524,
+            "hubReference": {
+              "address": "cedsHubRef:041f2c1331f0f5dd55d6768d7aa283cc556ae3697e5469833467a232ded6b341",
+              "addressSignature": "041f2c1331f0f5dd55d6768d7aa283cc556ae3697e5469833467a232ded6b341",
+              "canonicalKey": "P000892",
+              "name": "Credential Definition Category Type",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 2,
+            "cedsId": "P000893",
+            "cosine": 0.62328,
+            "confidence": 0.62328,
+            "hubReference": {
+              "address": "cedsHubRef:11558945b796bff868886873d8a333562809f9aa0ed80c1270898ce76ce7a100",
+              "addressSignature": "11558945b796bff868886873d8a333562809f9aa0ed80c1270898ce76ce7a100",
+              "canonicalKey": "P000893",
+              "name": "Credential Definition Title",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 3,
+            "cedsId": "P000150",
+            "cosine": 0.618173,
+            "confidence": 0.618173,
+            "hubReference": {
+              "address": "cedsHubRef:c8fce3179ad0ea5e488629753a0f0cc22610187228dbd606af1d904836f8ea36",
+              "addressSignature": "c8fce3179ad0ea5e488629753a0f0cc22610187228dbd606af1d904836f8ea36",
+              "canonicalKey": "P000150",
+              "name": "Honors Description",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 4,
+            "cedsId": "P000071",
+            "cosine": 0.615159,
+            "confidence": 0.615159,
+            "hubReference": {
+              "address": "cedsHubRef:9383e59c59b83bbfce44f5fbfeb6f5cd1cdbb438f2fbba8ba4e31ba4e0cbbb64",
+              "addressSignature": "9383e59c59b83bbfce44f5fbfeb6f5cd1cdbb438f2fbba8ba4e31ba4e0cbbb64",
+              "canonicalKey": "P000071",
+              "name": "Has Credential Type",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 5,
+            "cedsId": "P000895",
+            "cosine": 0.612011,
+            "confidence": 0.612011,
+            "hubReference": {
+              "address": "cedsHubRef:56d3ce231fbce12cf92705a60b24d959b59f121829b9f1b41b5d8f277f0bbff2",
+              "addressSignature": "56d3ce231fbce12cf92705a60b24d959b59f121829b9f1b41b5d8f277f0bbff2",
+              "canonicalKey": "P000895",
+              "name": "Credential Definition Description",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 6,
+            "cedsId": "P001668",
+            "cosine": 0.601775,
+            "confidence": 0.601775,
+            "hubReference": {
+              "address": "cedsHubRef:a114feb6d4ce0cc5411cd15735b884662aac390d8925608c8736e145dbda8791",
+              "addressSignature": "a114feb6d4ce0cc5411cd15735b884662aac390d8925608c8736e145dbda8791",
+              "canonicalKey": "P001668",
+              "name": "Has PESC Award Level Type",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 7,
+            "cedsId": "P000002",
+            "cosine": 0.598897,
+            "confidence": 0.598897,
+            "hubReference": {
+              "address": "cedsHubRef:5afe88fc99dca83d3110f5c1f2b02ce822053ace24ff2a6a6436b5dd3a2d0838",
+              "addressSignature": "5afe88fc99dca83d3110f5c1f2b02ce822053ace24ff2a6a6436b5dd3a2d0838",
+              "canonicalKey": "P000002",
+              "name": "Has Academic Award Level Conferred",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 8,
+            "cedsId": "P000004",
+            "cosine": 0.58822,
+            "confidence": 0.58822,
+            "hubReference": {
+              "address": "cedsHubRef:701200ae7c42b99da70e31c206a30d2b75e5c8e030fb6668c577a8c72e0291a2",
+              "addressSignature": "701200ae7c42b99da70e31c206a30d2b75e5c8e030fb6668c577a8c72e0291a2",
+              "canonicalKey": "P000004",
+              "name": "Has Academic Honors Type",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 9,
+            "cedsId": "P600358",
+            "cosine": 0.583933,
+            "confidence": 0.583933,
+            "hubReference": {
+              "address": "cedsHubRef:a849577992826deba796bd114a6bf1d89523687fa2bb7b9cda1a7b95492d7b3e",
+              "addressSignature": "a849577992826deba796bd114a6bf1d89523687fa2bb7b9cda1a7b95492d7b3e",
+              "canonicalKey": "P600358",
+              "name": "Has Credential Definition",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 10,
+            "cedsId": "P000229",
+            "cosine": 0.582238,
+            "confidence": 0.582238,
+            "hubReference": {
+              "address": "cedsHubRef:c4e139f81601d4021eeb772d61eedf974ebfc0daf750ce6f471b7ee8a4aa45f8",
+              "addressSignature": "c4e139f81601d4021eeb772d61eedf974ebfc0daf750ce6f471b7ee8a4aa45f8",
+              "canonicalKey": "P000229",
+              "name": "Has Recognition for Participation or Performance in an Activity",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 11,
+            "cedsId": "P000896",
+            "cosine": 0.576462,
+            "confidence": 0.576462,
+            "hubReference": {
+              "address": "cedsHubRef:a31325ab259d94b86b43634ba70175b3f96aa72440f4ec5c2eb9567f16e4129e",
+              "addressSignature": "a31325ab259d94b86b43634ba70175b3f96aa72440f4ec5c2eb9567f16e4129e",
+              "canonicalKey": "P000896",
+              "name": "Credential Definition Criteria",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 12,
+            "cedsId": "P000901",
+            "cosine": 0.567962,
+            "confidence": 0.567962,
+            "hubReference": {
+              "address": "cedsHubRef:58af06765912725d0b85205cfab55dc6b713acbe9046ddfde0c5ea57ec2d85ae",
+              "addressSignature": "58af06765912725d0b85205cfab55dc6b713acbe9046ddfde0c5ea57ec2d85ae",
+              "canonicalKey": "P000901",
+              "name": "Credential Evidence Statement",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 13,
+            "cedsId": "P001085",
+            "cosine": 0.560677,
+            "confidence": 0.560677,
+            "hubReference": {
+              "address": "cedsHubRef:13b29bd1a57999c44949ae10190efb3b3c915d4a49b6e6cc1b39bc2b4a61378a",
+              "addressSignature": "13b29bd1a57999c44949ae10190efb3b3c915d4a49b6e6cc1b39bc2b4a61378a",
+              "canonicalKey": "P001085",
+              "name": "Has Adult Education Certification Type",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 14,
+            "cedsId": "P000343",
+            "cosine": 0.553743,
+            "confidence": 0.553743,
+            "hubReference": {
+              "address": "cedsHubRef:69d5e5bb981a439ac5d58618e01bd547210be997bcc5eb40d90d41ffb0e8e348",
+              "addressSignature": "69d5e5bb981a439ac5d58618e01bd547210be997bcc5eb40d90d41ffb0e8e348",
+              "canonicalKey": "P000343",
+              "name": "Has Degree or Certificate Type",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 15,
+            "cedsId": "P600539",
+            "cosine": 0.551801,
+            "confidence": 0.551801,
+            "hubReference": {
+              "address": "cedsHubRef:ccdfe2892b6039801133c06d99402d571f8af4b78f1ae2422c5e5379b5def5d1",
+              "addressSignature": "ccdfe2892b6039801133c06d99402d571f8af4b78f1ae2422c5e5379b5def5d1",
+              "canonicalKey": "P600539",
+              "name": "Has Person Credential",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          }
+        ],
+        "meta": {
+          "model": "stub-reranker-pick1",
+          "topK": 15,
+          "cosineFloor": 0,
+          "gatingManifest": "a9c2efcfbb302d84f69890ce86d2bd8c0f274e0901b309ce55baf4fc8a5c4d11",
+          "bestCosine": 0.712524,
+          "candidatePoolSize": 2324,
+          "hubReferenceCount": 2324
+        }
+      }
+    },
+    {
+      "label": "curated-07-edfi:field/AdditionalCredits.AdditionalCreditTypeDescriptor",
+      "input": {
+        "term": "AdditionalCreditTypeDescriptor",
+        "definition": "The type of credits or units of value awarded for the completion of a course."
+      },
+      "result": {
+        "query": {
+          "term": "AdditionalCreditTypeDescriptor",
+          "definition": "The type of credits or units of value awarded for the completion of a course.",
+          "datatype": null,
+          "contextText": null,
+          "targetHub": "CEDS"
+        },
+        "abstain": false,
+        "abstainReason": null,
+        "suggested": {
+          "hubReference": {
+            "address": "cedsHubRef:7e1e14f622b6d0e101a777908687e7dd1d26303cf9c19f45234577cec5ede75c",
+            "addressSignature": "7e1e14f622b6d0e101a777908687e7dd1d26303cf9c19f45234577cec5ede75c",
+            "canonicalKey": "P000072",
+            "name": "Has Credit Unit Type",
+            "referenceTier": "property",
+            "hubName": "CEDS",
+            "hubVersion": "14.0.0.0"
+          },
+          "confidence": 1,
+          "predicate": "closeMatch",
+          "retrievalRank": 1
+        },
+        "candidates": [
+          {
+            "rank": 1,
+            "cedsId": "P000072",
+            "cosine": 1,
+            "confidence": 1,
+            "hubReference": {
+              "address": "cedsHubRef:7e1e14f622b6d0e101a777908687e7dd1d26303cf9c19f45234577cec5ede75c",
+              "addressSignature": "7e1e14f622b6d0e101a777908687e7dd1d26303cf9c19f45234577cec5ede75c",
+              "canonicalKey": "P000072",
+              "name": "Has Credit Unit Type",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 2,
+            "cedsId": "P000057",
+            "cosine": 0.86722,
+            "confidence": 0.86722,
+            "hubReference": {
+              "address": "cedsHubRef:ed5a5c3fc8b1b00c5a2ecc40277be0de03ad2124f251a6e4e39c9d6e7e77f77f",
+              "addressSignature": "ed5a5c3fc8b1b00c5a2ecc40277be0de03ad2124f251a6e4e39c9d6e7e77f77f",
+              "canonicalKey": "P000057",
+              "name": "Has Course Credit Units",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 3,
+            "cedsId": "P000596",
+            "cosine": 0.805036,
+            "confidence": 0.805036,
+            "hubReference": {
+              "address": "cedsHubRef:5db3ecbcfe55c598acf92000d052fce0d6b6ad2255851f52e9af24ae2a98d07e",
+              "addressSignature": "5db3ecbcfe55c598acf92000d052fce0d6b6ad2255851f52e9af24ae2a98d07e",
+              "canonicalKey": "P000596",
+              "name": "Has Additional Credit Type",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 4,
+            "cedsId": "P000058",
+            "cosine": 0.783122,
+            "confidence": 0.783122,
+            "hubReference": {
+              "address": "cedsHubRef:c84628d8ecf910e98d1580a571398ef77ba453a05011123bb708c80974d01021",
+              "addressSignature": "c84628d8ecf910e98d1580a571398ef77ba453a05011123bb708c80974d01021",
+              "canonicalKey": "P000058",
+              "name": "Credit Value",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 5,
+            "cedsId": "P001436",
+            "cosine": 0.765519,
+            "confidence": 0.765519,
+            "hubReference": {
+              "address": "cedsHubRef:4ede2addb2089b8962c2875355eda7a72c18774531b6bec1a5908d6adf242545",
+              "addressSignature": "4ede2addb2089b8962c2875355eda7a72c18774531b6bec1a5908d6adf242545",
+              "canonicalKey": "P001436",
+              "name": "Has Professional Development Activity Credit Type",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 6,
+            "cedsId": "P000199",
+            "cosine": 0.754705,
+            "confidence": 0.754705,
+            "hubReference": {
+              "address": "cedsHubRef:9f6274e602ccf0b4fd4aab9497d1bcc9972b2129a4ef861d459b198636712c74",
+              "addressSignature": "9f6274e602ccf0b4fd4aab9497d1bcc9972b2129a4ef861d459b198636712c74",
+              "canonicalKey": "P000199",
+              "name": "Number of Credits Attempted",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 7,
+            "cedsId": "P001304",
+            "cosine": 0.722138,
+            "confidence": 0.722138,
+            "hubReference": {
+              "address": "cedsHubRef:9920a3fbdcfa354254e4726475df71b1a0a72d1922bc952b63825ef24bd1e4d3",
+              "addressSignature": "9920a3fbdcfa354254e4726475df71b1a0a72d1922bc952b63825ef24bd1e4d3",
+              "canonicalKey": "P001304",
+              "name": "Has Course Credit Level Type",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 8,
+            "cedsId": "P000224",
+            "cosine": 0.712585,
+            "confidence": 0.712585,
+            "hubReference": {
+              "address": "cedsHubRef:8bf1c2721c93cb7e7263387d91275d771a4c98b8bedca5ed9dbe7d24b618e3c1",
+              "addressSignature": "8bf1c2721c93cb7e7263387d91275d771a4c98b8bedca5ed9dbe7d24b618e3c1",
+              "canonicalKey": "P000224",
+              "name": "Has Program Length Hours Type",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 9,
+            "cedsId": "P000200",
+            "cosine": 0.706212,
+            "confidence": 0.706212,
+            "hubReference": {
+              "address": "cedsHubRef:9278655ed64b74176d031a1d5349806e30ebd8c124d4b745f8079d58d7954700",
+              "addressSignature": "9278655ed64b74176d031a1d5349806e30ebd8c124d4b745f8079d58d7954700",
+              "canonicalKey": "P000200",
+              "name": "Number of Credits Earned",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 10,
+            "cedsId": "P000030",
+            "cosine": 0.676425,
+            "confidence": 0.676425,
+            "hubReference": {
+              "address": "cedsHubRef:c247ea0157391191654f385c31c6ba9fcef838171d44d2ff0870e3baae1e7b34",
+              "addressSignature": "c247ea0157391191654f385c31c6ba9fcef838171d44d2ff0870e3baae1e7b34",
+              "canonicalKey": "P000030",
+              "name": "Available Carnegie Unit Credit",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 11,
+            "cedsId": "P600568",
+            "cosine": 0.671274,
+            "confidence": 0.671274,
+            "hubReference": {
+              "address": "cedsHubRef:cd08790edefa2f0df50de0807d20f1d793bca3230d4dfd842e0302788b841082",
+              "addressSignature": "cd08790edefa2f0df50de0807d20f1d793bca3230d4dfd842e0302788b841082",
+              "canonicalKey": "P600568",
+              "name": "Has Credits Earned",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 12,
+            "cedsId": "P000741",
+            "cosine": 0.664229,
+            "confidence": 0.664229,
+            "hubReference": {
+              "address": "cedsHubRef:d60aa91869a4e4d4fc480d1dbd1f835749dbdbef1c66c3ed240d7425883d08b2",
+              "addressSignature": "d60aa91869a4e4d4fc480d1dbd1f835749dbdbef1c66c3ed240d7425883d08b2",
+              "canonicalKey": "P000741",
+              "name": "Has Instruction Credit Type",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 13,
+            "cedsId": "P000002",
+            "cosine": 0.660832,
+            "confidence": 0.660832,
+            "hubReference": {
+              "address": "cedsHubRef:5afe88fc99dca83d3110f5c1f2b02ce822053ace24ff2a6a6436b5dd3a2d0838",
+              "addressSignature": "5afe88fc99dca83d3110f5c1f2b02ce822053ace24ff2a6a6436b5dd3a2d0838",
+              "canonicalKey": "P000002",
+              "name": "Has Academic Award Level Conferred",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 14,
+            "cedsId": "P001668",
+            "cosine": 0.655975,
+            "confidence": 0.655975,
+            "hubReference": {
+              "address": "cedsHubRef:a114feb6d4ce0cc5411cd15735b884662aac390d8925608c8736e145dbda8791",
+              "addressSignature": "a114feb6d4ce0cc5411cd15735b884662aac390d8925608c8736e145dbda8791",
+              "canonicalKey": "P001668",
+              "name": "Has PESC Award Level Type",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 15,
+            "cedsId": "P000343",
+            "cosine": 0.654259,
+            "confidence": 0.654259,
+            "hubReference": {
+              "address": "cedsHubRef:69d5e5bb981a439ac5d58618e01bd547210be997bcc5eb40d90d41ffb0e8e348",
+              "addressSignature": "69d5e5bb981a439ac5d58618e01bd547210be997bcc5eb40d90d41ffb0e8e348",
+              "canonicalKey": "P000343",
+              "name": "Has Degree or Certificate Type",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          }
+        ],
+        "meta": {
+          "model": "stub-reranker-pick1",
+          "topK": 15,
+          "cosineFloor": 0,
+          "gatingManifest": "a9c2efcfbb302d84f69890ce86d2bd8c0f274e0901b309ce55baf4fc8a5c4d11",
+          "bestCosine": 1,
+          "candidatePoolSize": 2324,
+          "hubReferenceCount": 2324
+        }
+      }
+    },
+    {
+      "label": "curated-08-edfi:field/Address.AddressTypeDescriptor",
+      "input": {
+        "term": "AddressTypeDescriptor",
+        "definition": "The type of address listed for an individual or organization. For example: Physical Address, Mailing Address, Home Address, etc.)"
+      },
+      "result": {
+        "query": {
+          "term": "AddressTypeDescriptor",
+          "definition": "The type of address listed for an individual or organization. For example: Physical Address, Mailing Address, Home Address, etc.)",
+          "datatype": null,
+          "contextText": null,
+          "targetHub": "CEDS"
+        },
+        "abstain": false,
+        "abstainReason": null,
+        "suggested": {
+          "hubReference": {
+            "address": "cedsHubRef:41f9aa032746d133469e231bb1371acf9fe5fb89202c0043d980e0e645d8d783",
+            "addressSignature": "41f9aa032746d133469e231bb1371acf9fe5fb89202c0043d980e0e645d8d783",
+            "canonicalKey": "P000010",
+            "name": "Has Address Type for Learner or Family",
+            "referenceTier": "property",
+            "hubName": "CEDS",
+            "hubVersion": "14.0.0.0"
+          },
+          "confidence": 0.857998,
+          "predicate": "closeMatch",
+          "retrievalRank": 1
+        },
+        "candidates": [
+          {
+            "rank": 1,
+            "cedsId": "P000010",
+            "cosine": 0.857998,
+            "confidence": 0.857998,
+            "hubReference": {
+              "address": "cedsHubRef:41f9aa032746d133469e231bb1371acf9fe5fb89202c0043d980e0e645d8d783",
+              "addressSignature": "41f9aa032746d133469e231bb1371acf9fe5fb89202c0043d980e0e645d8d783",
+              "canonicalKey": "P000010",
+              "name": "Has Address Type for Learner or Family",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 2,
+            "cedsId": "P201004",
+            "cosine": 0.849006,
+            "confidence": 0.849006,
+            "hubReference": {
+              "address": "cedsHubRef:7f1b4f5e75bce7f4ba56bb83086c91757e072e5998abc1bc668bcb37c8aa612d",
+              "addressSignature": "7f1b4f5e75bce7f4ba56bb83086c91757e072e5998abc1bc668bcb37c8aa612d",
+              "canonicalKey": "P201004",
+              "name": "Has Address Type for Organization",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 3,
+            "cedsId": "P000089",
+            "cosine": 0.729686,
+            "confidence": 0.729686,
+            "hubReference": {
+              "address": "cedsHubRef:bfca5af52cccaab212b13e2112e6dcfa0d29741e9a7d3feb615a20a0208aa62a",
+              "addressSignature": "bfca5af52cccaab212b13e2112e6dcfa0d29741e9a7d3feb615a20a0208aa62a",
+              "canonicalKey": "P000089",
+              "name": "Has Electronic Mail Address Type",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 4,
+            "cedsId": "P000722",
+            "cosine": 0.715598,
+            "confidence": 0.715598,
+            "hubReference": {
+              "address": "cedsHubRef:3ecd5d41b48d5054991bb9de025f3f969b3eec7b262907b0222262b3604359a4",
+              "addressSignature": "3ecd5d41b48d5054991bb9de025f3f969b3eec7b262907b0222262b3604359a4",
+              "canonicalKey": "P000722",
+              "name": "Has Address Type for Staff",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 5,
+            "cedsId": "P600299",
+            "cosine": 0.687127,
+            "confidence": 0.687127,
+            "hubReference": {
+              "address": "cedsHubRef:d10a54270d75943eeee320a4b39625ecafd7baacd936b5cdc205f74204a8f86f",
+              "addressSignature": "d10a54270d75943eeee320a4b39625ecafd7baacd936b5cdc205f74204a8f86f",
+              "canonicalKey": "P600299",
+              "name": "Has Location",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 6,
+            "cedsId": "P000269",
+            "cosine": 0.68355,
+            "confidence": 0.68355,
+            "hubReference": {
+              "address": "cedsHubRef:c0e66b35a172b5750e287a52773e1fedbdd2c429201cf2e800587eb337d5cbbb",
+              "addressSignature": "c0e66b35a172b5750e287a52773e1fedbdd2c429201cf2e800587eb337d5cbbb",
+              "canonicalKey": "P000269",
+              "name": "Address Street Number and Name",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 7,
+            "cedsId": "P000190",
+            "cosine": 0.623246,
+            "confidence": 0.623246,
+            "hubReference": {
+              "address": "cedsHubRef:b7c97ca2a04b805601fe7f30c17e0021e7a2f45218a83ed1ffd11e134f6d7f06",
+              "addressSignature": "b7c97ca2a04b805601fe7f30c17e0021e7a2f45218a83ed1ffd11e134f6d7f06",
+              "canonicalKey": "P000190",
+              "name": "Address County Name",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 8,
+            "cedsId": "P000167",
+            "cosine": 0.608573,
+            "confidence": 0.608573,
+            "hubReference": {
+              "address": "cedsHubRef:18575d266eedbee45a06682955406500b010922f87a6c14edebc1050ddc6e90a",
+              "addressSignature": "18575d266eedbee45a06682955406500b010922f87a6c14edebc1050ddc6e90a",
+              "canonicalKey": "P000167",
+              "name": "Has Institution Telephone Number Type",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 9,
+            "cedsId": "P000280",
+            "cosine": 0.605084,
+            "confidence": 0.605084,
+            "hubReference": {
+              "address": "cedsHubRef:65e2adb43dc849786a05a1dc8665b2b9c27fe41114e578fbdad32bfb8b920eb4",
+              "addressSignature": "65e2adb43dc849786a05a1dc8665b2b9c27fe41114e578fbdad32bfb8b920eb4",
+              "canonicalKey": "P000280",
+              "name": "Has Telephone Number Type",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 10,
+            "cedsId": "P002130",
+            "cosine": 0.5942,
+            "confidence": 0.5942,
+            "hubReference": {
+              "address": "cedsHubRef:593ca71ed401dbfb166d00d311b5258061c5d6c7263d10223f6526346ba9f6b1",
+              "addressSignature": "593ca71ed401dbfb166d00d311b5258061c5d6c7263d10223f6526346ba9f6b1",
+              "canonicalKey": "P002130",
+              "name": "Has Locale",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 11,
+            "cedsId": "P000267",
+            "cosine": 0.580754,
+            "confidence": 0.580754,
+            "hubReference": {
+              "address": "cedsHubRef:0baac1be38e31d15a119c12b3bee2b30eb1aba7485a45c3b1bc5f6c803efe258",
+              "addressSignature": "0baac1be38e31d15a119c12b3bee2b30eb1aba7485a45c3b1bc5f6c803efe258",
+              "canonicalKey": "P000267",
+              "name": "Has State Abbreviation",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 12,
+            "cedsId": "P000524",
+            "cosine": 0.578686,
+            "confidence": 0.578686,
+            "hubReference": {
+              "address": "cedsHubRef:217b78bb4ee0bcbc82108b31466c8b6f0c72dbea758c5f0712eb140459e682ba",
+              "addressSignature": "217b78bb4ee0bcbc82108b31466c8b6f0c72dbea758c5f0712eb140459e682ba",
+              "canonicalKey": "P000524",
+              "name": "Has Receiving Location of Instruction",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 13,
+            "cedsId": "P000214",
+            "cosine": 0.574608,
+            "confidence": 0.574608,
+            "hubReference": {
+              "address": "cedsHubRef:eb32825807d6e601cdb25a94bcf8744ae6d0987af5a4292d773596715d4dac32",
+              "addressSignature": "eb32825807d6e601cdb25a94bcf8744ae6d0987af5a4292d773596715d4dac32",
+              "canonicalKey": "P000214",
+              "name": "Address Postal Code",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 14,
+            "cedsId": "P001310",
+            "cosine": 0.573011,
+            "confidence": 0.573011,
+            "hubReference": {
+              "address": "cedsHubRef:60fcf2826059fbab47286c95759b7bc1ea36fec49b2cc340d19cb2953901b862",
+              "addressSignature": "60fcf2826059fbab47286c95759b7bc1ea36fec49b2cc340d19cb2953901b862",
+              "canonicalKey": "P001310",
+              "name": "Has Course Instruction Site Type",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 15,
+            "cedsId": "P000040",
+            "cosine": 0.570139,
+            "confidence": 0.570139,
+            "hubReference": {
+              "address": "cedsHubRef:07ebdfab0910a8401238c1be8670891e953b6104fecb04d5a94475014f197c2a",
+              "addressSignature": "07ebdfab0910a8401238c1be8670891e953b6104fecb04d5a94475014f197c2a",
+              "canonicalKey": "P000040",
+              "name": "Address City",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          }
+        ],
+        "meta": {
+          "model": "stub-reranker-pick1",
+          "topK": 15,
+          "cosineFloor": 0,
+          "gatingManifest": "a9c2efcfbb302d84f69890ce86d2bd8c0f274e0901b309ce55baf4fc8a5c4d11",
+          "bestCosine": 0.857998,
+          "candidatePoolSize": 2324,
+          "hubReferenceCount": 2324
+        }
+      }
+    },
+    {
+      "label": "curated-09-edfi:field/Address.AddressTypeDescriptor",
+      "input": {
+        "term": "AddressTypeDescriptor",
+        "definition": "The type of address listed for an individual or organization. For example: Physical Address, Mailing Address, Home Address, etc.)"
+      },
+      "result": {
+        "query": {
+          "term": "AddressTypeDescriptor",
+          "definition": "The type of address listed for an individual or organization. For example: Physical Address, Mailing Address, Home Address, etc.)",
+          "datatype": null,
+          "contextText": null,
+          "targetHub": "CEDS"
+        },
+        "abstain": false,
+        "abstainReason": null,
+        "suggested": {
+          "hubReference": {
+            "address": "cedsHubRef:41f9aa032746d133469e231bb1371acf9fe5fb89202c0043d980e0e645d8d783",
+            "addressSignature": "41f9aa032746d133469e231bb1371acf9fe5fb89202c0043d980e0e645d8d783",
+            "canonicalKey": "P000010",
+            "name": "Has Address Type for Learner or Family",
+            "referenceTier": "property",
+            "hubName": "CEDS",
+            "hubVersion": "14.0.0.0"
+          },
+          "confidence": 0.857998,
+          "predicate": "closeMatch",
+          "retrievalRank": 1
+        },
+        "candidates": [
+          {
+            "rank": 1,
+            "cedsId": "P000010",
+            "cosine": 0.857998,
+            "confidence": 0.857998,
+            "hubReference": {
+              "address": "cedsHubRef:41f9aa032746d133469e231bb1371acf9fe5fb89202c0043d980e0e645d8d783",
+              "addressSignature": "41f9aa032746d133469e231bb1371acf9fe5fb89202c0043d980e0e645d8d783",
+              "canonicalKey": "P000010",
+              "name": "Has Address Type for Learner or Family",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 2,
+            "cedsId": "P201004",
+            "cosine": 0.849006,
+            "confidence": 0.849006,
+            "hubReference": {
+              "address": "cedsHubRef:7f1b4f5e75bce7f4ba56bb83086c91757e072e5998abc1bc668bcb37c8aa612d",
+              "addressSignature": "7f1b4f5e75bce7f4ba56bb83086c91757e072e5998abc1bc668bcb37c8aa612d",
+              "canonicalKey": "P201004",
+              "name": "Has Address Type for Organization",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 3,
+            "cedsId": "P000089",
+            "cosine": 0.729686,
+            "confidence": 0.729686,
+            "hubReference": {
+              "address": "cedsHubRef:bfca5af52cccaab212b13e2112e6dcfa0d29741e9a7d3feb615a20a0208aa62a",
+              "addressSignature": "bfca5af52cccaab212b13e2112e6dcfa0d29741e9a7d3feb615a20a0208aa62a",
+              "canonicalKey": "P000089",
+              "name": "Has Electronic Mail Address Type",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 4,
+            "cedsId": "P000722",
+            "cosine": 0.715598,
+            "confidence": 0.715598,
+            "hubReference": {
+              "address": "cedsHubRef:3ecd5d41b48d5054991bb9de025f3f969b3eec7b262907b0222262b3604359a4",
+              "addressSignature": "3ecd5d41b48d5054991bb9de025f3f969b3eec7b262907b0222262b3604359a4",
+              "canonicalKey": "P000722",
+              "name": "Has Address Type for Staff",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 5,
+            "cedsId": "P600299",
+            "cosine": 0.687127,
+            "confidence": 0.687127,
+            "hubReference": {
+              "address": "cedsHubRef:d10a54270d75943eeee320a4b39625ecafd7baacd936b5cdc205f74204a8f86f",
+              "addressSignature": "d10a54270d75943eeee320a4b39625ecafd7baacd936b5cdc205f74204a8f86f",
+              "canonicalKey": "P600299",
+              "name": "Has Location",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 6,
+            "cedsId": "P000269",
+            "cosine": 0.68355,
+            "confidence": 0.68355,
+            "hubReference": {
+              "address": "cedsHubRef:c0e66b35a172b5750e287a52773e1fedbdd2c429201cf2e800587eb337d5cbbb",
+              "addressSignature": "c0e66b35a172b5750e287a52773e1fedbdd2c429201cf2e800587eb337d5cbbb",
+              "canonicalKey": "P000269",
+              "name": "Address Street Number and Name",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 7,
+            "cedsId": "P000190",
+            "cosine": 0.623246,
+            "confidence": 0.623246,
+            "hubReference": {
+              "address": "cedsHubRef:b7c97ca2a04b805601fe7f30c17e0021e7a2f45218a83ed1ffd11e134f6d7f06",
+              "addressSignature": "b7c97ca2a04b805601fe7f30c17e0021e7a2f45218a83ed1ffd11e134f6d7f06",
+              "canonicalKey": "P000190",
+              "name": "Address County Name",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 8,
+            "cedsId": "P000167",
+            "cosine": 0.608573,
+            "confidence": 0.608573,
+            "hubReference": {
+              "address": "cedsHubRef:18575d266eedbee45a06682955406500b010922f87a6c14edebc1050ddc6e90a",
+              "addressSignature": "18575d266eedbee45a06682955406500b010922f87a6c14edebc1050ddc6e90a",
+              "canonicalKey": "P000167",
+              "name": "Has Institution Telephone Number Type",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 9,
+            "cedsId": "P000280",
+            "cosine": 0.605084,
+            "confidence": 0.605084,
+            "hubReference": {
+              "address": "cedsHubRef:65e2adb43dc849786a05a1dc8665b2b9c27fe41114e578fbdad32bfb8b920eb4",
+              "addressSignature": "65e2adb43dc849786a05a1dc8665b2b9c27fe41114e578fbdad32bfb8b920eb4",
+              "canonicalKey": "P000280",
+              "name": "Has Telephone Number Type",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 10,
+            "cedsId": "P002130",
+            "cosine": 0.5942,
+            "confidence": 0.5942,
+            "hubReference": {
+              "address": "cedsHubRef:593ca71ed401dbfb166d00d311b5258061c5d6c7263d10223f6526346ba9f6b1",
+              "addressSignature": "593ca71ed401dbfb166d00d311b5258061c5d6c7263d10223f6526346ba9f6b1",
+              "canonicalKey": "P002130",
+              "name": "Has Locale",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 11,
+            "cedsId": "P000267",
+            "cosine": 0.580754,
+            "confidence": 0.580754,
+            "hubReference": {
+              "address": "cedsHubRef:0baac1be38e31d15a119c12b3bee2b30eb1aba7485a45c3b1bc5f6c803efe258",
+              "addressSignature": "0baac1be38e31d15a119c12b3bee2b30eb1aba7485a45c3b1bc5f6c803efe258",
+              "canonicalKey": "P000267",
+              "name": "Has State Abbreviation",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 12,
+            "cedsId": "P000524",
+            "cosine": 0.578686,
+            "confidence": 0.578686,
+            "hubReference": {
+              "address": "cedsHubRef:217b78bb4ee0bcbc82108b31466c8b6f0c72dbea758c5f0712eb140459e682ba",
+              "addressSignature": "217b78bb4ee0bcbc82108b31466c8b6f0c72dbea758c5f0712eb140459e682ba",
+              "canonicalKey": "P000524",
+              "name": "Has Receiving Location of Instruction",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 13,
+            "cedsId": "P000214",
+            "cosine": 0.574608,
+            "confidence": 0.574608,
+            "hubReference": {
+              "address": "cedsHubRef:eb32825807d6e601cdb25a94bcf8744ae6d0987af5a4292d773596715d4dac32",
+              "addressSignature": "eb32825807d6e601cdb25a94bcf8744ae6d0987af5a4292d773596715d4dac32",
+              "canonicalKey": "P000214",
+              "name": "Address Postal Code",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 14,
+            "cedsId": "P001310",
+            "cosine": 0.573011,
+            "confidence": 0.573011,
+            "hubReference": {
+              "address": "cedsHubRef:60fcf2826059fbab47286c95759b7bc1ea36fec49b2cc340d19cb2953901b862",
+              "addressSignature": "60fcf2826059fbab47286c95759b7bc1ea36fec49b2cc340d19cb2953901b862",
+              "canonicalKey": "P001310",
+              "name": "Has Course Instruction Site Type",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 15,
+            "cedsId": "P000040",
+            "cosine": 0.570139,
+            "confidence": 0.570139,
+            "hubReference": {
+              "address": "cedsHubRef:07ebdfab0910a8401238c1be8670891e953b6104fecb04d5a94475014f197c2a",
+              "addressSignature": "07ebdfab0910a8401238c1be8670891e953b6104fecb04d5a94475014f197c2a",
+              "canonicalKey": "P000040",
+              "name": "Address City",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          }
+        ],
+        "meta": {
+          "model": "stub-reranker-pick1",
+          "topK": 15,
+          "cosineFloor": 0,
+          "gatingManifest": "a9c2efcfbb302d84f69890ce86d2bd8c0f274e0901b309ce55baf4fc8a5c4d11",
+          "bestCosine": 0.857998,
+          "candidatePoolSize": 2324,
+          "hubReferenceCount": 2324
+        }
+      }
+    },
+    {
+      "label": "curated-10-edfi:field/Address.AddressTypeDescriptor",
+      "input": {
+        "term": "AddressTypeDescriptor",
+        "definition": "The type of address listed for an individual or organization. For example: Physical Address, Mailing Address, Home Address, etc.)"
+      },
+      "result": {
+        "query": {
+          "term": "AddressTypeDescriptor",
+          "definition": "The type of address listed for an individual or organization. For example: Physical Address, Mailing Address, Home Address, etc.)",
+          "datatype": null,
+          "contextText": null,
+          "targetHub": "CEDS"
+        },
+        "abstain": false,
+        "abstainReason": null,
+        "suggested": {
+          "hubReference": {
+            "address": "cedsHubRef:41f9aa032746d133469e231bb1371acf9fe5fb89202c0043d980e0e645d8d783",
+            "addressSignature": "41f9aa032746d133469e231bb1371acf9fe5fb89202c0043d980e0e645d8d783",
+            "canonicalKey": "P000010",
+            "name": "Has Address Type for Learner or Family",
+            "referenceTier": "property",
+            "hubName": "CEDS",
+            "hubVersion": "14.0.0.0"
+          },
+          "confidence": 0.857998,
+          "predicate": "closeMatch",
+          "retrievalRank": 1
+        },
+        "candidates": [
+          {
+            "rank": 1,
+            "cedsId": "P000010",
+            "cosine": 0.857998,
+            "confidence": 0.857998,
+            "hubReference": {
+              "address": "cedsHubRef:41f9aa032746d133469e231bb1371acf9fe5fb89202c0043d980e0e645d8d783",
+              "addressSignature": "41f9aa032746d133469e231bb1371acf9fe5fb89202c0043d980e0e645d8d783",
+              "canonicalKey": "P000010",
+              "name": "Has Address Type for Learner or Family",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 2,
+            "cedsId": "P201004",
+            "cosine": 0.849006,
+            "confidence": 0.849006,
+            "hubReference": {
+              "address": "cedsHubRef:7f1b4f5e75bce7f4ba56bb83086c91757e072e5998abc1bc668bcb37c8aa612d",
+              "addressSignature": "7f1b4f5e75bce7f4ba56bb83086c91757e072e5998abc1bc668bcb37c8aa612d",
+              "canonicalKey": "P201004",
+              "name": "Has Address Type for Organization",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 3,
+            "cedsId": "P000089",
+            "cosine": 0.729686,
+            "confidence": 0.729686,
+            "hubReference": {
+              "address": "cedsHubRef:bfca5af52cccaab212b13e2112e6dcfa0d29741e9a7d3feb615a20a0208aa62a",
+              "addressSignature": "bfca5af52cccaab212b13e2112e6dcfa0d29741e9a7d3feb615a20a0208aa62a",
+              "canonicalKey": "P000089",
+              "name": "Has Electronic Mail Address Type",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 4,
+            "cedsId": "P000722",
+            "cosine": 0.715598,
+            "confidence": 0.715598,
+            "hubReference": {
+              "address": "cedsHubRef:3ecd5d41b48d5054991bb9de025f3f969b3eec7b262907b0222262b3604359a4",
+              "addressSignature": "3ecd5d41b48d5054991bb9de025f3f969b3eec7b262907b0222262b3604359a4",
+              "canonicalKey": "P000722",
+              "name": "Has Address Type for Staff",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 5,
+            "cedsId": "P600299",
+            "cosine": 0.687127,
+            "confidence": 0.687127,
+            "hubReference": {
+              "address": "cedsHubRef:d10a54270d75943eeee320a4b39625ecafd7baacd936b5cdc205f74204a8f86f",
+              "addressSignature": "d10a54270d75943eeee320a4b39625ecafd7baacd936b5cdc205f74204a8f86f",
+              "canonicalKey": "P600299",
+              "name": "Has Location",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 6,
+            "cedsId": "P000269",
+            "cosine": 0.68355,
+            "confidence": 0.68355,
+            "hubReference": {
+              "address": "cedsHubRef:c0e66b35a172b5750e287a52773e1fedbdd2c429201cf2e800587eb337d5cbbb",
+              "addressSignature": "c0e66b35a172b5750e287a52773e1fedbdd2c429201cf2e800587eb337d5cbbb",
+              "canonicalKey": "P000269",
+              "name": "Address Street Number and Name",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 7,
+            "cedsId": "P000190",
+            "cosine": 0.623246,
+            "confidence": 0.623246,
+            "hubReference": {
+              "address": "cedsHubRef:b7c97ca2a04b805601fe7f30c17e0021e7a2f45218a83ed1ffd11e134f6d7f06",
+              "addressSignature": "b7c97ca2a04b805601fe7f30c17e0021e7a2f45218a83ed1ffd11e134f6d7f06",
+              "canonicalKey": "P000190",
+              "name": "Address County Name",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 8,
+            "cedsId": "P000167",
+            "cosine": 0.608573,
+            "confidence": 0.608573,
+            "hubReference": {
+              "address": "cedsHubRef:18575d266eedbee45a06682955406500b010922f87a6c14edebc1050ddc6e90a",
+              "addressSignature": "18575d266eedbee45a06682955406500b010922f87a6c14edebc1050ddc6e90a",
+              "canonicalKey": "P000167",
+              "name": "Has Institution Telephone Number Type",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 9,
+            "cedsId": "P000280",
+            "cosine": 0.605084,
+            "confidence": 0.605084,
+            "hubReference": {
+              "address": "cedsHubRef:65e2adb43dc849786a05a1dc8665b2b9c27fe41114e578fbdad32bfb8b920eb4",
+              "addressSignature": "65e2adb43dc849786a05a1dc8665b2b9c27fe41114e578fbdad32bfb8b920eb4",
+              "canonicalKey": "P000280",
+              "name": "Has Telephone Number Type",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 10,
+            "cedsId": "P002130",
+            "cosine": 0.5942,
+            "confidence": 0.5942,
+            "hubReference": {
+              "address": "cedsHubRef:593ca71ed401dbfb166d00d311b5258061c5d6c7263d10223f6526346ba9f6b1",
+              "addressSignature": "593ca71ed401dbfb166d00d311b5258061c5d6c7263d10223f6526346ba9f6b1",
+              "canonicalKey": "P002130",
+              "name": "Has Locale",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 11,
+            "cedsId": "P000267",
+            "cosine": 0.580754,
+            "confidence": 0.580754,
+            "hubReference": {
+              "address": "cedsHubRef:0baac1be38e31d15a119c12b3bee2b30eb1aba7485a45c3b1bc5f6c803efe258",
+              "addressSignature": "0baac1be38e31d15a119c12b3bee2b30eb1aba7485a45c3b1bc5f6c803efe258",
+              "canonicalKey": "P000267",
+              "name": "Has State Abbreviation",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 12,
+            "cedsId": "P000524",
+            "cosine": 0.578686,
+            "confidence": 0.578686,
+            "hubReference": {
+              "address": "cedsHubRef:217b78bb4ee0bcbc82108b31466c8b6f0c72dbea758c5f0712eb140459e682ba",
+              "addressSignature": "217b78bb4ee0bcbc82108b31466c8b6f0c72dbea758c5f0712eb140459e682ba",
+              "canonicalKey": "P000524",
+              "name": "Has Receiving Location of Instruction",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 13,
+            "cedsId": "P000214",
+            "cosine": 0.574608,
+            "confidence": 0.574608,
+            "hubReference": {
+              "address": "cedsHubRef:eb32825807d6e601cdb25a94bcf8744ae6d0987af5a4292d773596715d4dac32",
+              "addressSignature": "eb32825807d6e601cdb25a94bcf8744ae6d0987af5a4292d773596715d4dac32",
+              "canonicalKey": "P000214",
+              "name": "Address Postal Code",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 14,
+            "cedsId": "P001310",
+            "cosine": 0.573011,
+            "confidence": 0.573011,
+            "hubReference": {
+              "address": "cedsHubRef:60fcf2826059fbab47286c95759b7bc1ea36fec49b2cc340d19cb2953901b862",
+              "addressSignature": "60fcf2826059fbab47286c95759b7bc1ea36fec49b2cc340d19cb2953901b862",
+              "canonicalKey": "P001310",
+              "name": "Has Course Instruction Site Type",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 15,
+            "cedsId": "P000040",
+            "cosine": 0.570139,
+            "confidence": 0.570139,
+            "hubReference": {
+              "address": "cedsHubRef:07ebdfab0910a8401238c1be8670891e953b6104fecb04d5a94475014f197c2a",
+              "addressSignature": "07ebdfab0910a8401238c1be8670891e953b6104fecb04d5a94475014f197c2a",
+              "canonicalKey": "P000040",
+              "name": "Address City",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          }
+        ],
+        "meta": {
+          "model": "stub-reranker-pick1",
+          "topK": 15,
+          "cosineFloor": 0,
+          "gatingManifest": "a9c2efcfbb302d84f69890ce86d2bd8c0f274e0901b309ce55baf4fc8a5c4d11",
+          "bestCosine": 0.857998,
+          "candidatePoolSize": 2324,
+          "hubReferenceCount": 2324
+        }
+      }
+    },
+    {
+      "label": "curated-11-edfi:field/Address.LocaleDescriptor",
+      "input": {
+        "term": "LocaleDescriptor",
+        "definition": "A general geographic indicator that categorizes U.S. territory (e.g., City, Suburban)."
+      },
+      "result": {
+        "query": {
+          "term": "LocaleDescriptor",
+          "definition": "A general geographic indicator that categorizes U.S. territory (e.g., City, Suburban).",
+          "datatype": null,
+          "contextText": null,
+          "targetHub": "CEDS"
+        },
+        "abstain": false,
+        "abstainReason": null,
+        "suggested": {
+          "hubReference": {
+            "address": "cedsHubRef:593ca71ed401dbfb166d00d311b5258061c5d6c7263d10223f6526346ba9f6b1",
+            "addressSignature": "593ca71ed401dbfb166d00d311b5258061c5d6c7263d10223f6526346ba9f6b1",
+            "canonicalKey": "P002130",
+            "name": "Has Locale",
+            "referenceTier": "property",
+            "hubName": "CEDS",
+            "hubVersion": "14.0.0.0"
+          },
+          "confidence": 0.775593,
+          "predicate": "closeMatch",
+          "retrievalRank": 1
+        },
+        "candidates": [
+          {
+            "rank": 1,
+            "cedsId": "P002130",
+            "cosine": 0.775593,
+            "confidence": 0.775593,
+            "hubReference": {
+              "address": "cedsHubRef:593ca71ed401dbfb166d00d311b5258061c5d6c7263d10223f6526346ba9f6b1",
+              "addressSignature": "593ca71ed401dbfb166d00d311b5258061c5d6c7263d10223f6526346ba9f6b1",
+              "canonicalKey": "P002130",
+              "name": "Has Locale",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 2,
+            "cedsId": "P000190",
+            "cosine": 0.632562,
+            "confidence": 0.632562,
+            "hubReference": {
+              "address": "cedsHubRef:b7c97ca2a04b805601fe7f30c17e0021e7a2f45218a83ed1ffd11e134f6d7f06",
+              "addressSignature": "b7c97ca2a04b805601fe7f30c17e0021e7a2f45218a83ed1ffd11e134f6d7f06",
+              "canonicalKey": "P000190",
+              "name": "Address County Name",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 3,
+            "cedsId": "P000267",
+            "cosine": 0.611535,
+            "confidence": 0.611535,
+            "hubReference": {
+              "address": "cedsHubRef:0baac1be38e31d15a119c12b3bee2b30eb1aba7485a45c3b1bc5f6c803efe258",
+              "addressSignature": "0baac1be38e31d15a119c12b3bee2b30eb1aba7485a45c3b1bc5f6c803efe258",
+              "canonicalKey": "P000267",
+              "name": "Has State Abbreviation",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 4,
+            "cedsId": "P000532",
+            "cosine": 0.606601,
+            "confidence": 0.606601,
+            "hubReference": {
+              "address": "cedsHubRef:34ca0916834909321f7d03627c2284f8060615b5695d2ffa44ccc2aeea54f052",
+              "addressSignature": "34ca0916834909321f7d03627c2284f8060615b5695d2ffa44ccc2aeea54f052",
+              "canonicalKey": "P000532",
+              "name": "Has Public School Residence Status",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 5,
+            "cedsId": "P000214",
+            "cosine": 0.599285,
+            "confidence": 0.599285,
+            "hubReference": {
+              "address": "cedsHubRef:eb32825807d6e601cdb25a94bcf8744ae6d0987af5a4292d773596715d4dac32",
+              "addressSignature": "eb32825807d6e601cdb25a94bcf8744ae6d0987af5a4292d773596715d4dac32",
+              "canonicalKey": "P000214",
+              "name": "Address Postal Code",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 6,
+            "cedsId": "P000010",
+            "cosine": 0.596322,
+            "confidence": 0.596322,
+            "hubReference": {
+              "address": "cedsHubRef:41f9aa032746d133469e231bb1371acf9fe5fb89202c0043d980e0e645d8d783",
+              "addressSignature": "41f9aa032746d133469e231bb1371acf9fe5fb89202c0043d980e0e645d8d783",
+              "canonicalKey": "P000010",
+              "name": "Has Address Type for Learner or Family",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 7,
+            "cedsId": "P001310",
+            "cosine": 0.595582,
+            "confidence": 0.595582,
+            "hubReference": {
+              "address": "cedsHubRef:60fcf2826059fbab47286c95759b7bc1ea36fec49b2cc340d19cb2953901b862",
+              "addressSignature": "60fcf2826059fbab47286c95759b7bc1ea36fec49b2cc340d19cb2953901b862",
+              "canonicalKey": "P001310",
+              "name": "Has Course Instruction Site Type",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 8,
+            "cedsId": "P000040",
+            "cosine": 0.576805,
+            "confidence": 0.576805,
+            "hubReference": {
+              "address": "cedsHubRef:07ebdfab0910a8401238c1be8670891e953b6104fecb04d5a94475014f197c2a",
+              "addressSignature": "07ebdfab0910a8401238c1be8670891e953b6104fecb04d5a94475014f197c2a",
+              "canonicalKey": "P000040",
+              "name": "Address City",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 9,
+            "cedsId": "P000778",
+            "cosine": 0.57576,
+            "confidence": 0.57576,
+            "hubReference": {
+              "address": "cedsHubRef:b96c7fded883785f3e9312fbd83dc3d77a6b43cd197a640149fb3d299bc085dc",
+              "addressSignature": "b96c7fded883785f3e9312fbd83dc3d77a6b43cd197a640149fb3d299bc085dc",
+              "canonicalKey": "P000778",
+              "name": "Has Rural Residency Status",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 10,
+            "cedsId": "P001787",
+            "cosine": 0.566937,
+            "confidence": 0.566937,
+            "hubReference": {
+              "address": "cedsHubRef:7d8264bbccdd06a88d3b1441479a89bf5c0af88091c4f83b095fd609a20387c3",
+              "addressSignature": "7d8264bbccdd06a88d3b1441479a89bf5c0af88091c4f83b095fd609a20387c3",
+              "canonicalKey": "P001787",
+              "name": "Has Facility Site Improvement Location Type",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 11,
+            "cedsId": "P000862",
+            "cosine": 0.566652,
+            "confidence": 0.566652,
+            "hubReference": {
+              "address": "cedsHubRef:695e8898da7d9e32bfb3102a16ce24e7347206902b429323415dd28f971be8b1",
+              "addressSignature": "695e8898da7d9e32bfb3102a16ce24e7347206902b429323415dd28f971be8b1",
+              "canonicalKey": "P000862",
+              "name": "Has Economic Research Service Rural-Urban Continuum Code",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 12,
+            "cedsId": "P001743",
+            "cosine": 0.564462,
+            "confidence": 0.564462,
+            "hubReference": {
+              "address": "cedsHubRef:db582f4446bcac7116e31307a069e729da2b0e6bcb386c76f407a285ca8f3360",
+              "addressSignature": "db582f4446bcac7116e31307a069e729da2b0e6bcb386c76f407a285ca8f3360",
+              "canonicalKey": "P001743",
+              "name": "Credential Definition Jurisdiction Region",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 13,
+            "cedsId": "P001209",
+            "cosine": 0.558481,
+            "confidence": 0.558481,
+            "hubReference": {
+              "address": "cedsHubRef:08c43d72af4d438bd3706b0880aa50f14b3a93bc0c391ca42b9b7e35ec9d7783",
+              "addressSignature": "08c43d72af4d438bd3706b0880aa50f14b3a93bc0c391ca42b9b7e35ec9d7783",
+              "canonicalKey": "P001209",
+              "name": "Has County ANSI Code",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 14,
+            "cedsId": "P000524",
+            "cosine": 0.556285,
+            "confidence": 0.556285,
+            "hubReference": {
+              "address": "cedsHubRef:217b78bb4ee0bcbc82108b31466c8b6f0c72dbea758c5f0712eb140459e682ba",
+              "addressSignature": "217b78bb4ee0bcbc82108b31466c8b6f0c72dbea758c5f0712eb140459e682ba",
+              "canonicalKey": "P000524",
+              "name": "Has Receiving Location of Instruction",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 15,
+            "cedsId": "P201004",
+            "cosine": 0.551282,
+            "confidence": 0.551282,
+            "hubReference": {
+              "address": "cedsHubRef:7f1b4f5e75bce7f4ba56bb83086c91757e072e5998abc1bc668bcb37c8aa612d",
+              "addressSignature": "7f1b4f5e75bce7f4ba56bb83086c91757e072e5998abc1bc668bcb37c8aa612d",
+              "canonicalKey": "P201004",
+              "name": "Has Address Type for Organization",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          }
+        ],
+        "meta": {
+          "model": "stub-reranker-pick1",
+          "topK": 15,
+          "cosineFloor": 0,
+          "gatingManifest": "a9c2efcfbb302d84f69890ce86d2bd8c0f274e0901b309ce55baf4fc8a5c4d11",
+          "bestCosine": 0.775593,
+          "candidatePoolSize": 2324,
+          "hubReferenceCount": 2324
+        }
+      }
+    },
+    {
+      "label": "curated-12-edfi:field/Address.StateAbbreviationDescriptor",
+      "input": {
+        "term": "StateAbbreviationDescriptor",
+        "definition": "The abbreviation for the state (within the United States) or outlying area in which an address is located."
+      },
+      "result": {
+        "query": {
+          "term": "StateAbbreviationDescriptor",
+          "definition": "The abbreviation for the state (within the United States) or outlying area in which an address is located.",
+          "datatype": null,
+          "contextText": null,
+          "targetHub": "CEDS"
+        },
+        "abstain": false,
+        "abstainReason": null,
+        "suggested": {
+          "hubReference": {
+            "address": "cedsHubRef:0baac1be38e31d15a119c12b3bee2b30eb1aba7485a45c3b1bc5f6c803efe258",
+            "addressSignature": "0baac1be38e31d15a119c12b3bee2b30eb1aba7485a45c3b1bc5f6c803efe258",
+            "canonicalKey": "P000267",
+            "name": "Has State Abbreviation",
+            "referenceTier": "property",
+            "hubName": "CEDS",
+            "hubVersion": "14.0.0.0"
+          },
+          "confidence": 1,
+          "predicate": "closeMatch",
+          "retrievalRank": 1
+        },
+        "candidates": [
+          {
+            "rank": 1,
+            "cedsId": "P000267",
+            "cosine": 1,
+            "confidence": 1,
+            "hubReference": {
+              "address": "cedsHubRef:0baac1be38e31d15a119c12b3bee2b30eb1aba7485a45c3b1bc5f6c803efe258",
+              "addressSignature": "0baac1be38e31d15a119c12b3bee2b30eb1aba7485a45c3b1bc5f6c803efe258",
+              "canonicalKey": "P000267",
+              "name": "Has State Abbreviation",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 2,
+            "cedsId": "P000427",
+            "cosine": 0.75393,
+            "confidence": 0.75393,
+            "hubReference": {
+              "address": "cedsHubRef:9afa91e9e4b6f908acd4e796e4a2dcf3c4d1660c4907c0e62cb78b8b5a249672",
+              "addressSignature": "9afa91e9e4b6f908acd4e796e4a2dcf3c4d1660c4907c0e62cb78b8b5a249672",
+              "canonicalKey": "P000427",
+              "name": "Has State of Birth Abbreviation",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 3,
+            "cedsId": "P002177",
+            "cosine": 0.720004,
+            "confidence": 0.720004,
+            "hubReference": {
+              "address": "cedsHubRef:b2da431150bfd6b4b9fc5f47d8a39df33f0af7a706d055584e5e0b0012963c02",
+              "addressSignature": "b2da431150bfd6b4b9fc5f47d8a39df33f0af7a706d055584e5e0b0012963c02",
+              "canonicalKey": "P002177",
+              "name": "Has Canadian Province Abbreviation",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 4,
+            "cedsId": "P000190",
+            "cosine": 0.650737,
+            "confidence": 0.650737,
+            "hubReference": {
+              "address": "cedsHubRef:b7c97ca2a04b805601fe7f30c17e0021e7a2f45218a83ed1ffd11e134f6d7f06",
+              "addressSignature": "b7c97ca2a04b805601fe7f30c17e0021e7a2f45218a83ed1ffd11e134f6d7f06",
+              "canonicalKey": "P000190",
+              "name": "Address County Name",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 5,
+            "cedsId": "P000435",
+            "cosine": 0.646641,
+            "confidence": 0.646641,
+            "hubReference": {
+              "address": "cedsHubRef:d7cb02c9f4be5f8a78861f898843e9b86efea2c9b05b23674da44e3baab9daed",
+              "addressSignature": "d7cb02c9f4be5f8a78861f898843e9b86efea2c9b05b23674da44e3baab9daed",
+              "canonicalKey": "P000435",
+              "name": "Has Qualifying Move From State",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 6,
+            "cedsId": "P000050",
+            "cosine": 0.602524,
+            "confidence": 0.602524,
+            "hubReference": {
+              "address": "cedsHubRef:cf376f4d83df2327057dc605310b52aaf0a9671dfccfc7f51cf9a3ec28ce9348",
+              "addressSignature": "cf376f4d83df2327057dc605310b52aaf0a9671dfccfc7f51cf9a3ec28ce9348",
+              "canonicalKey": "P000050",
+              "name": "Has Country Code",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 7,
+            "cedsId": "P000214",
+            "cosine": 0.593531,
+            "confidence": 0.593531,
+            "hubReference": {
+              "address": "cedsHubRef:eb32825807d6e601cdb25a94bcf8744ae6d0987af5a4292d773596715d4dac32",
+              "addressSignature": "eb32825807d6e601cdb25a94bcf8744ae6d0987af5a4292d773596715d4dac32",
+              "canonicalKey": "P000214",
+              "name": "Address Postal Code",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 8,
+            "cedsId": "P000990",
+            "cosine": 0.588297,
+            "confidence": 0.588297,
+            "hubReference": {
+              "address": "cedsHubRef:3175119c39fd27f9aded75fa4dcc98b228293f554b03bad1a8d42fa0dfc04555",
+              "addressSignature": "3175119c39fd27f9aded75fa4dcc98b228293f554b03bad1a8d42fa0dfc04555",
+              "canonicalKey": "P000990",
+              "name": "Has Employment Location",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 9,
+            "cedsId": "P001209",
+            "cosine": 0.579673,
+            "confidence": 0.579673,
+            "hubReference": {
+              "address": "cedsHubRef:08c43d72af4d438bd3706b0880aa50f14b3a93bc0c391ca42b9b7e35ec9d7783",
+              "addressSignature": "08c43d72af4d438bd3706b0880aa50f14b3a93bc0c391ca42b9b7e35ec9d7783",
+              "canonicalKey": "P001209",
+              "name": "Has County ANSI Code",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 10,
+            "cedsId": "P000269",
+            "cosine": 0.567194,
+            "confidence": 0.567194,
+            "hubReference": {
+              "address": "cedsHubRef:c0e66b35a172b5750e287a52773e1fedbdd2c429201cf2e800587eb337d5cbbb",
+              "addressSignature": "c0e66b35a172b5750e287a52773e1fedbdd2c429201cf2e800587eb337d5cbbb",
+              "canonicalKey": "P000269",
+              "name": "Address Street Number and Name",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 11,
+            "cedsId": "P000699",
+            "cosine": 0.559655,
+            "confidence": 0.559655,
+            "hubReference": {
+              "address": "cedsHubRef:114f515b1ef33d9ae695d71615d5fcd388952e9850b9f80c4b12b8b71ba7c829",
+              "addressSignature": "114f515b1ef33d9ae695d71615d5fcd388952e9850b9f80c4b12b8b71ba7c829",
+              "canonicalKey": "P000699",
+              "name": "Competency Framework Jurisdiction",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 12,
+            "cedsId": "P002130",
+            "cosine": 0.541547,
+            "confidence": 0.541547,
+            "hubReference": {
+              "address": "cedsHubRef:593ca71ed401dbfb166d00d311b5258061c5d6c7263d10223f6526346ba9f6b1",
+              "addressSignature": "593ca71ed401dbfb166d00d311b5258061c5d6c7263d10223f6526346ba9f6b1",
+              "canonicalKey": "P002130",
+              "name": "Has Locale",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 13,
+            "cedsId": "P001491",
+            "cosine": 0.541491,
+            "confidence": 0.541491,
+            "hubReference": {
+              "address": "cedsHubRef:e40ddbcd8f5a451c274e4327b2e1892cd6b90d6e9c89b4a49ceff6af658b7c69",
+              "addressSignature": "e40ddbcd8f5a451c274e4327b2e1892cd6b90d6e9c89b4a49ceff6af658b7c69",
+              "canonicalKey": "P001491",
+              "name": "Has State Agency Identification System",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 14,
+            "cedsId": "P000424",
+            "cosine": 0.539984,
+            "confidence": 0.539984,
+            "hubReference": {
+              "address": "cedsHubRef:a06b154dad239a0e7dea99dc7d02bdf45374a6497c2cb829561afce527480194",
+              "addressSignature": "a06b154dad239a0e7dea99dc7d02bdf45374a6497c2cb829561afce527480194",
+              "canonicalKey": "P000424",
+              "name": "Has State ANSI Code",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 15,
+            "cedsId": "P000019",
+            "cosine": 0.538281,
+            "confidence": 0.538281,
+            "hubReference": {
+              "address": "cedsHubRef:5f5f26aa14a87e1aeeb152ff9b0310f26a6f16dadb5bcc29545007b42c5c5515",
+              "addressSignature": "5f5f26aa14a87e1aeeb152ff9b0310f26a6f16dadb5bcc29545007b42c5c5515",
+              "canonicalKey": "P000019",
+              "name": "Address Apartment Room or Suite Number",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          }
+        ],
+        "meta": {
+          "model": "stub-reranker-pick1",
+          "topK": 15,
+          "cosineFloor": 0,
+          "gatingManifest": "a9c2efcfbb302d84f69890ce86d2bd8c0f274e0901b309ce55baf4fc8a5c4d11",
+          "bestCosine": 1,
+          "candidatePoolSize": 2324,
+          "hubReferenceCount": 2324
+        }
+      }
+    },
+    {
+      "label": "curated-13-edfi:field/Assessment.AcademicSubjectDescriptor",
+      "input": {
+        "term": "AcademicSubjectDescriptor",
+        "definition": "The description of the content or subject area (e.g., arts, mathematics, reading, stenography, or a foreign language) of an assessment."
+      },
+      "result": {
+        "query": {
+          "term": "AcademicSubjectDescriptor",
+          "definition": "The description of the content or subject area (e.g., arts, mathematics, reading, stenography, or a foreign language) of an assessment.",
+          "datatype": null,
+          "contextText": null,
+          "targetHub": "CEDS"
+        },
+        "abstain": false,
+        "abstainReason": null,
+        "suggested": {
+          "hubReference": {
+            "address": "cedsHubRef:c2f8a9f21fc6bab37bcc5de8cdc073757ca820ad0556e99642e17d79037a7912",
+            "addressSignature": "c2f8a9f21fc6bab37bcc5de8cdc073757ca820ad0556e99642e17d79037a7912",
+            "canonicalKey": "P000021",
+            "name": "Has Assessment Academic Subject",
+            "referenceTier": "property",
+            "hubName": "CEDS",
+            "hubVersion": "14.0.0.0"
+          },
+          "confidence": 0.863895,
+          "predicate": "closeMatch",
+          "retrievalRank": 1
+        },
+        "candidates": [
+          {
+            "rank": 1,
+            "cedsId": "P000021",
+            "cosine": 0.863895,
+            "confidence": 0.863895,
+            "hubReference": {
+              "address": "cedsHubRef:c2f8a9f21fc6bab37bcc5de8cdc073757ca820ad0556e99642e17d79037a7912",
+              "addressSignature": "c2f8a9f21fc6bab37bcc5de8cdc073757ca820ad0556e99642e17d79037a7912",
+              "canonicalKey": "P000021",
+              "name": "Has Assessment Academic Subject",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 2,
+            "cedsId": "P000913",
+            "cosine": 0.753017,
+            "confidence": 0.753017,
+            "hubReference": {
+              "address": "cedsHubRef:24d8a5e6ae818fa9b84c84880b5be2a885285b8ee14ee07549c67859b5a989be",
+              "addressSignature": "24d8a5e6ae818fa9b84c84880b5be2a885285b8ee14ee07549c67859b5a989be",
+              "canonicalKey": "P000913",
+              "name": "Learning Resource Subject Name",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 3,
+            "cedsId": "P000274",
+            "cosine": 0.723848,
+            "confidence": 0.723848,
+            "hubReference": {
+              "address": "cedsHubRef:8bc8038854a2eac62603b4f24c4387ab0ac4e68dce3dc8ebe6814de117614889",
+              "addressSignature": "8bc8038854a2eac62603b4f24c4387ab0ac4e68dce3dc8ebe6814de117614889",
+              "canonicalKey": "P000274",
+              "name": "Assessment Subtest Description",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 4,
+            "cedsId": "P000067",
+            "cosine": 0.70853,
+            "confidence": 0.70853,
+            "hubReference": {
+              "address": "cedsHubRef:84464d914db733a6b38fd94bc0fb483f965f051face355efe6d7c25152366561",
+              "addressSignature": "84464d914db733a6b38fd94bc0fb483f965f051face355efe6d7c25152366561",
+              "canonicalKey": "P000067",
+              "name": "Course Title",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 5,
+            "cedsId": "P000341",
+            "cosine": 0.680169,
+            "confidence": 0.680169,
+            "hubReference": {
+              "address": "cedsHubRef:1568357c6703bb91690de38d31df67f4cfbd0b37808478607d1f70de9624bf02",
+              "addressSignature": "1568357c6703bb91690de38d31df67f4cfbd0b37808478607d1f70de9624bf02",
+              "canonicalKey": "P000341",
+              "name": "Has Level of Specialization in Early Learning",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 6,
+            "cedsId": "P001196",
+            "cosine": 0.678888,
+            "confidence": 0.678888,
+            "hubReference": {
+              "address": "cedsHubRef:eb33623fa1918b3a5a3ef6bfed0d7df3861f277bd25e4db2ed051d4f9fc31629",
+              "addressSignature": "eb33623fa1918b3a5a3ef6bfed0d7df3861f277bd25e4db2ed051d4f9fc31629",
+              "canonicalKey": "P001196",
+              "name": "Has Assessment Asset Type",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 7,
+            "cedsId": "P000702",
+            "cosine": 0.677334,
+            "confidence": 0.677334,
+            "hubReference": {
+              "address": "cedsHubRef:76952dd6a8d107ec5ae5abd85ec9cc24e34af1e07581efb6303f4a1a283a423e",
+              "addressSignature": "76952dd6a8d107ec5ae5abd85ec9cc24e34af1e07581efb6303f4a1a283a423e",
+              "canonicalKey": "P000702",
+              "name": "Competency Framework Subject",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 8,
+            "cedsId": "P001518",
+            "cosine": 0.668831,
+            "confidence": 0.668831,
+            "hubReference": {
+              "address": "cedsHubRef:9c9aa224bc79669b21f340ad8c4719cb942c141dc1bf54f82ead5971e5eddd19",
+              "addressSignature": "9c9aa224bc79669b21f340ad8c4719cb942c141dc1bf54f82ead5971e5eddd19",
+              "canonicalKey": "P001518",
+              "name": "Has School Courses for the Exchange of Data Course Subject Area",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 9,
+            "cedsId": "P600146",
+            "cosine": 0.658512,
+            "confidence": 0.658512,
+            "hubReference": {
+              "address": "cedsHubRef:058ce25f3ba3e3fb32cfc28ae8fec87502fa9099dcaec515a180e5eac730d1f0",
+              "addressSignature": "058ce25f3ba3e3fb32cfc28ae8fec87502fa9099dcaec515a180e5eac730d1f0",
+              "canonicalKey": "P600146",
+              "name": "Has Individualized Program Accessibility Feature Subject",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 10,
+            "cedsId": "P000914",
+            "cosine": 0.655736,
+            "confidence": 0.655736,
+            "hubReference": {
+              "address": "cedsHubRef:d19bbec49c9e6b1c07895e51dfa727644389d7f744c30fee04a432e3193200a5",
+              "addressSignature": "d19bbec49c9e6b1c07895e51dfa727644389d7f744c30fee04a432e3193200a5",
+              "canonicalKey": "P000914",
+              "name": "Learning Resource Subject Code",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 11,
+            "cedsId": "P000177",
+            "cosine": 0.642446,
+            "confidence": 0.642446,
+            "hubReference": {
+              "address": "cedsHubRef:3c4e4289eef1837d68037c4965900ccf6a8525ba53bd7365a6c67570bf0048e6",
+              "addressSignature": "3c4e4289eef1837d68037c4965900ccf6a8525ba53bd7365a6c67570bf0048e6",
+              "canonicalKey": "P000177",
+              "name": "Has Assessment Level for Which Designed",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 12,
+            "cedsId": "P000915",
+            "cosine": 0.641162,
+            "confidence": 0.641162,
+            "hubReference": {
+              "address": "cedsHubRef:9f116997ea685568a6a46f1df1013a78a7e36fae09456876ae4d37ada34c41d8",
+              "addressSignature": "9f116997ea685568a6a46f1df1013a78a7e36fae09456876ae4d37ada34c41d8",
+              "canonicalKey": "P000915",
+              "name": "Learning Resource Subject Code System",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 13,
+            "cedsId": "P000895",
+            "cosine": 0.64065,
+            "confidence": 0.64065,
+            "hubReference": {
+              "address": "cedsHubRef:56d3ce231fbce12cf92705a60b24d959b59f121829b9f1b41b5d8f277f0bbff2",
+              "addressSignature": "56d3ce231fbce12cf92705a60b24d959b59f121829b9f1b41b5d8f277f0bbff2",
+              "canonicalKey": "P000895",
+              "name": "Credential Definition Description",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 14,
+            "cedsId": "P000371",
+            "cosine": 0.635147,
+            "confidence": 0.635147,
+            "hubReference": {
+              "address": "cedsHubRef:5349e9e188206cd883e59f1d0fef95904f18497daf86da2bfa4f90f795e9e433",
+              "addressSignature": "5349e9e188206cd883e59f1d0fef95904f18497daf86da2bfa4f90f795e9e433",
+              "canonicalKey": "P000371",
+              "name": "Has Assessment Participant Session Language",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 15,
+            "cedsId": "P001219",
+            "cosine": 0.631797,
+            "confidence": 0.631797,
+            "hubReference": {
+              "address": "cedsHubRef:93d542b415ae560a0b567b81f42f036dfd8f7389068190219bce7286bfd1cf4b",
+              "addressSignature": "93d542b415ae560a0b567b81f42f036dfd8f7389068190219bce7286bfd1cf4b",
+              "canonicalKey": "P001219",
+              "name": "Assessment Result Diagnostic Statement",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          }
+        ],
+        "meta": {
+          "model": "stub-reranker-pick1",
+          "topK": 15,
+          "cosineFloor": 0,
+          "gatingManifest": "a9c2efcfbb302d84f69890ce86d2bd8c0f274e0901b309ce55baf4fc8a5c4d11",
+          "bestCosine": 0.863895,
+          "candidatePoolSize": 2324,
+          "hubReferenceCount": 2324
+        }
+      }
+    },
+    {
+      "label": "curated-14-edfi:field/Assessment.AdaptiveAssessment",
+      "input": {
+        "term": "AdaptiveAssessment",
+        "definition": "Indicates that the assessment is adaptive."
+      },
+      "result": {
+        "query": {
+          "term": "AdaptiveAssessment",
+          "definition": "Indicates that the assessment is adaptive.",
+          "datatype": null,
+          "contextText": null,
+          "targetHub": "CEDS"
+        },
+        "abstain": false,
+        "abstainReason": null,
+        "suggested": {
+          "hubReference": {
+            "address": "cedsHubRef:a84f85fbba3b52d74458e39a4fb04870f2bf1e6502b0bd89dda85e83f3178ba9",
+            "addressSignature": "a84f85fbba3b52d74458e39a4fb04870f2bf1e6502b0bd89dda85e83f3178ba9",
+            "canonicalKey": "P001139",
+            "name": "Has Assessment Item Adaptive Indicator",
+            "referenceTier": "property",
+            "hubName": "CEDS",
+            "hubVersion": "14.0.0.0"
+          },
+          "confidence": 0.869664,
+          "predicate": "closeMatch",
+          "retrievalRank": 1
+        },
+        "candidates": [
+          {
+            "rank": 1,
+            "cedsId": "P001139",
+            "cosine": 0.869664,
+            "confidence": 0.869664,
+            "hubReference": {
+              "address": "cedsHubRef:a84f85fbba3b52d74458e39a4fb04870f2bf1e6502b0bd89dda85e83f3178ba9",
+              "addressSignature": "a84f85fbba3b52d74458e39a4fb04870f2bf1e6502b0bd89dda85e83f3178ba9",
+              "canonicalKey": "P001139",
+              "name": "Has Assessment Item Adaptive Indicator",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 2,
+            "cedsId": "P001532",
+            "cosine": 0.651163,
+            "confidence": 0.651163,
+            "hubReference": {
+              "address": "cedsHubRef:8510a50f2793813aa694cb88396771512cc7e836bdd2dade5c4b785b9e1ef31a",
+              "addressSignature": "8510a50f2793813aa694cb88396771512cc7e836bdd2dade5c4b785b9e1ef31a",
+              "canonicalKey": "P001532",
+              "name": "Has Assessment Form Adaptive Indicator",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 3,
+            "cedsId": "P001533",
+            "cosine": 0.617291,
+            "confidence": 0.617291,
+            "hubReference": {
+              "address": "cedsHubRef:7de616f3294532c51f2b6ec7dd8450340dc38d8cdc533af8a716e8e3a0d726fb",
+              "addressSignature": "7de616f3294532c51f2b6ec7dd8450340dc38d8cdc533af8a716e8e3a0d726fb",
+              "canonicalKey": "P001533",
+              "name": "Assessment Form Algorithm Identifier",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 4,
+            "cedsId": "P001411",
+            "cosine": 0.591246,
+            "confidence": 0.591246,
+            "hubReference": {
+              "address": "cedsHubRef:2cdd5e4f0a96123e4077860486ae9aad4e859e013c8983b468bd29a8db1d0b95",
+              "addressSignature": "2cdd5e4f0a96123e4077860486ae9aad4e859e013c8983b468bd29a8db1d0b95",
+              "canonicalKey": "P001411",
+              "name": "Has Competency Definition Testability Type",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 5,
+            "cedsId": "P600210",
+            "cosine": 0.578011,
+            "confidence": 0.578011,
+            "hubReference": {
+              "address": "cedsHubRef:5ede56d4a7680c4d8953bf5d816273d3af2db4503856678b93a30ed559cab46d",
+              "addressSignature": "5ede56d4a7680c4d8953bf5d816273d3af2db4503856678b93a30ed559cab46d",
+              "canonicalKey": "P600210",
+              "name": "Has Assessment Personal Needs Profile Content",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 6,
+            "cedsId": "P001536",
+            "cosine": 0.571672,
+            "confidence": 0.571672,
+            "hubReference": {
+              "address": "cedsHubRef:c8633d90a070723da1392577f645029dbeb1ae1fb27fd00c672f05eaf94bad4a",
+              "addressSignature": "c8633d90a070723da1392577f645029dbeb1ae1fb27fd00c672f05eaf94bad4a",
+              "canonicalKey": "P001536",
+              "name": "Has Assessment Form Section Item Field Test Indicator",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 7,
+            "cedsId": "P001534",
+            "cosine": 0.570909,
+            "confidence": 0.570909,
+            "hubReference": {
+              "address": "cedsHubRef:4f5c78516d5cc4f3592c6ac3ed6522ec74134dcd8e93b3a9d9626480ab1d85c4",
+              "addressSignature": "4f5c78516d5cc4f3592c6ac3ed6522ec74134dcd8e93b3a9d9626480ab1d85c4",
+              "canonicalKey": "P001534",
+              "name": "Assessment Form Algorithm Version",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 8,
+            "cedsId": "P600211",
+            "cosine": 0.562916,
+            "confidence": 0.562916,
+            "hubReference": {
+              "address": "cedsHubRef:acda2132d214e4548156c6ab238fa8aafe513bd4b62936cf97fc8e2371e3e3e0",
+              "addressSignature": "acda2132d214e4548156c6ab238fa8aafe513bd4b62936cf97fc8e2371e3e3e0",
+              "canonicalKey": "P600211",
+              "name": "Has Assessment Personal Needs Profile Control",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 9,
+            "cedsId": "P000954",
+            "cosine": 0.554952,
+            "confidence": 0.554952,
+            "hubReference": {
+              "address": "cedsHubRef:2b44369fd5eecdf4921db89f69891a180ad0e3609376022c560ccec56375757e",
+              "addressSignature": "2b44369fd5eecdf4921db89f69891a180ad0e3609376022c560ccec56375757e",
+              "canonicalKey": "P000954",
+              "name": "Has Assessment Item Response Scaffolding Item Flag",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 10,
+            "cedsId": "P002143",
+            "cosine": 0.554829,
+            "confidence": 0.554829,
+            "hubReference": {
+              "address": "cedsHubRef:d96a8dbb5a17396ee029836ac5d4e616bdb0bfea3a20bfea08eaa0330bc0f572",
+              "addressSignature": "d96a8dbb5a17396ee029836ac5d4e616bdb0bfea3a20bfea08eaa0330bc0f572",
+              "canonicalKey": "P002143",
+              "name": "Has Adaptive Calculator Type",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 11,
+            "cedsId": "P600212",
+            "cosine": 0.551333,
+            "confidence": 0.551333,
+            "hubReference": {
+              "address": "cedsHubRef:0b6c7b4b2280353cda88eef25c5cee5593ec780a3f398fffa873d33861b40396",
+              "addressSignature": "0b6c7b4b2280353cda88eef25c5cee5593ec780a3f398fffa873d33861b40396",
+              "canonicalKey": "P600212",
+              "name": "Has Assessment Personal Needs Profile Display",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 12,
+            "cedsId": "P600127",
+            "cosine": 0.549661,
+            "confidence": 0.549661,
+            "hubReference": {
+              "address": "cedsHubRef:5e23a24e690184893541a2f79a3dd6339c315e26ad4fd130223696f129ab0e1b",
+              "addressSignature": "5e23a24e690184893541a2f79a3dd6339c315e26ad4fd130223696f129ab0e1b",
+              "canonicalKey": "P600127",
+              "name": "Has Assessment Item Response",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 13,
+            "cedsId": "P000383",
+            "cosine": 0.54955,
+            "confidence": 0.54955,
+            "hubReference": {
+              "address": "cedsHubRef:b40810964543e9e904a15044f30e3ced52371eb6148c997d47d3cc85d0acbb42",
+              "addressSignature": "b40810964543e9e904a15044f30e3ced52371eb6148c997d47d3cc85d0acbb42",
+              "canonicalKey": "P000383",
+              "name": "Has Assessment Accommodation Category",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 14,
+            "cedsId": "P000605",
+            "cosine": 0.53908,
+            "confidence": 0.53908,
+            "hubReference": {
+              "address": "cedsHubRef:588dce3f75b4b1506739c941cd8008b868c3df4fbcdeb161a37de85125758bcc",
+              "addressSignature": "588dce3f75b4b1506739c941cd8008b868c3df4fbcdeb161a37de85125758bcc",
+              "canonicalKey": "P000605",
+              "name": "Has Assessment Content Standard Type",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 15,
+            "cedsId": "P000025",
+            "cosine": 0.537607,
+            "confidence": 0.537607,
+            "hubReference": {
+              "address": "cedsHubRef:d2243369c0961bf13ccaf63553666e13b7be1eafd341ac94e20f5f12916426fa",
+              "addressSignature": "d2243369c0961bf13ccaf63553666e13b7be1eafd341ac94e20f5f12916426fa",
+              "canonicalKey": "P000025",
+              "name": "Has Assessment Registration Participation Indicator",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          }
+        ],
+        "meta": {
+          "model": "stub-reranker-pick1",
+          "topK": 15,
+          "cosineFloor": 0,
+          "gatingManifest": "a9c2efcfbb302d84f69890ce86d2bd8c0f274e0901b309ce55baf4fc8a5c4d11",
+          "bestCosine": 0.869664,
+          "candidatePoolSize": 2324,
+          "hubReferenceCount": 2324
+        }
+      }
+    },
+    {
+      "label": "curated-15-edfi:field/Assessment.AssessmentCategoryDescriptor",
+      "input": {
+        "term": "AssessmentCategoryDescriptor",
+        "definition": "The category of an assessment based on format and content."
+      },
+      "result": {
+        "query": {
+          "term": "AssessmentCategoryDescriptor",
+          "definition": "The category of an assessment based on format and content.",
+          "datatype": null,
+          "contextText": null,
+          "targetHub": "CEDS"
+        },
+        "abstain": false,
+        "abstainReason": null,
+        "suggested": {
+          "hubReference": {
+            "address": "cedsHubRef:f5d98fcc01a188cad3d27555bbeed79c547a804082d49ff59d5d5c0f7732d2ea",
+            "addressSignature": "f5d98fcc01a188cad3d27555bbeed79c547a804082d49ff59d5d5c0f7732d2ea",
+            "canonicalKey": "P000029",
+            "name": "Has Assessment Type",
+            "referenceTier": "property",
+            "hubName": "CEDS",
+            "hubVersion": "14.0.0.0"
+          },
+          "confidence": 1,
+          "predicate": "closeMatch",
+          "retrievalRank": 1
+        },
+        "candidates": [
+          {
+            "rank": 1,
+            "cedsId": "P000029",
+            "cosine": 1,
+            "confidence": 1,
+            "hubReference": {
+              "address": "cedsHubRef:f5d98fcc01a188cad3d27555bbeed79c547a804082d49ff59d5d5c0f7732d2ea",
+              "addressSignature": "f5d98fcc01a188cad3d27555bbeed79c547a804082d49ff59d5d5c0f7732d2ea",
+              "canonicalKey": "P000029",
+              "name": "Has Assessment Type",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 2,
+            "cedsId": "P000415",
+            "cosine": 0.697345,
+            "confidence": 0.697345,
+            "hubReference": {
+              "address": "cedsHubRef:8aa4cad240a0497512dc15f5d9b4d70bddb9ba26dd8e391ce6a1a1f9b8545f93",
+              "addressSignature": "8aa4cad240a0497512dc15f5d9b4d70bddb9ba26dd8e391ce6a1a1f9b8545f93",
+              "canonicalKey": "P000415",
+              "name": "Has Assessment Type Administered",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 3,
+            "cedsId": "P000390",
+            "cosine": 0.685469,
+            "confidence": 0.685469,
+            "hubReference": {
+              "address": "cedsHubRef:eb881aa12a38eb955280cc98ef41a3c86fe3e5eebac908fcf7c615eac9f5247e",
+              "addressSignature": "eb881aa12a38eb955280cc98ef41a3c86fe3e5eebac908fcf7c615eac9f5247e",
+              "canonicalKey": "P000390",
+              "name": "Has Assessment Item Type",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 4,
+            "cedsId": "P000383",
+            "cosine": 0.620418,
+            "confidence": 0.620418,
+            "hubReference": {
+              "address": "cedsHubRef:b40810964543e9e904a15044f30e3ced52371eb6148c997d47d3cc85d0acbb42",
+              "addressSignature": "b40810964543e9e904a15044f30e3ced52371eb6148c997d47d3cc85d0acbb42",
+              "canonicalKey": "P000383",
+              "name": "Has Assessment Accommodation Category",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 5,
+            "cedsId": "P001196",
+            "cosine": 0.61153,
+            "confidence": 0.61153,
+            "hubReference": {
+              "address": "cedsHubRef:eb33623fa1918b3a5a3ef6bfed0d7df3861f277bd25e4db2ed051d4f9fc31629",
+              "addressSignature": "eb33623fa1918b3a5a3ef6bfed0d7df3861f277bd25e4db2ed051d4f9fc31629",
+              "canonicalKey": "P001196",
+              "name": "Has Assessment Asset Type",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 6,
+            "cedsId": "P000392",
+            "cosine": 0.609549,
+            "confidence": 0.609549,
+            "hubReference": {
+              "address": "cedsHubRef:1e1c7d7f09cc1687273cc63efa862f0c6d0d3d21e4216967cba972418b311067",
+              "addressSignature": "1e1c7d7f09cc1687273cc63efa862f0c6d0d3d21e4216967cba972418b311067",
+              "canonicalKey": "P000392",
+              "name": "Has Assessment Item Characteristic Type",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 7,
+            "cedsId": "P001203",
+            "cosine": 0.569841,
+            "confidence": 0.569841,
+            "hubReference": {
+              "address": "cedsHubRef:1b3154f7eb59b6a5ec748019fa3f32143aa44246305b893e31ba6ccda9463768",
+              "addressSignature": "1b3154f7eb59b6a5ec748019fa3f32143aa44246305b893e31ba6ccda9463768",
+              "canonicalKey": "P001203",
+              "name": "Assessment Asset Content Mime Type",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 8,
+            "cedsId": "P001738",
+            "cosine": 0.563329,
+            "confidence": 0.563329,
+            "hubReference": {
+              "address": "cedsHubRef:9548dd8d9d1d2838d4252ee9299dd147ea2ae5e541d854e75582cd40c4fd6d6e",
+              "addressSignature": "9548dd8d9d1d2838d4252ee9299dd147ea2ae5e541d854e75582cd40c4fd6d6e",
+              "canonicalKey": "P001738",
+              "name": "Has Credential Definition Assessment Method Type",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 9,
+            "cedsId": "P001729",
+            "cosine": 0.551413,
+            "confidence": 0.551413,
+            "hubReference": {
+              "address": "cedsHubRef:80f79035442dbb40b5454a6f893d6e2bcce1c8f64a323e8c2d2e1021b3dc8faf",
+              "addressSignature": "80f79035442dbb40b5454a6f893d6e2bcce1c8f64a323e8c2d2e1021b3dc8faf",
+              "canonicalKey": "P001729",
+              "name": "Has IDEAEligibility Evaluation Category",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 10,
+            "cedsId": "P001543",
+            "cosine": 0.538349,
+            "confidence": 0.538349,
+            "hubReference": {
+              "address": "cedsHubRef:ce544cf43cef0b29ce3d77df3ad3ce7735d1e7a0f049b97c0ec4ca45bdcc4308",
+              "addressSignature": "ce544cf43cef0b29ce3d77df3ad3ce7735d1e7a0f049b97c0ec4ca45bdcc4308",
+              "canonicalKey": "P001543",
+              "name": "Has Assessment Result Data Type",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 11,
+            "cedsId": "P001253",
+            "cosine": 0.538159,
+            "confidence": 0.538159,
+            "hubReference": {
+              "address": "cedsHubRef:9fc8e975444a212dc866d4e654d775668c9eb41c968dc64d73604a86e1aa17e8",
+              "addressSignature": "9fc8e975444a212dc866d4e654d775668c9eb41c968dc64d73604a86e1aa17e8",
+              "canonicalKey": "P001253",
+              "name": "Has Assessment Item Response Theory Parameter Difficulty Category",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 12,
+            "cedsId": "P000369",
+            "cosine": 0.537361,
+            "confidence": 0.537361,
+            "hubReference": {
+              "address": "cedsHubRef:afba75862fd995dd07f5048326287136b25fd5ade29a1b7fff34c02f06337857",
+              "addressSignature": "afba75862fd995dd07f5048326287136b25fd5ade29a1b7fff34c02f06337857",
+              "canonicalKey": "P000369",
+              "name": "Has Assessment Score Metric Type",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 13,
+            "cedsId": "P001190",
+            "cosine": 0.533339,
+            "confidence": 0.533339,
+            "hubReference": {
+              "address": "cedsHubRef:89b898896e49ada65bb73e743c2cf831c5c0b007b4ef0a66f0f9b9a84f24beb7",
+              "addressSignature": "89b898896e49ada65bb73e743c2cf831c5c0b007b4ef0a66f0f9b9a84f24beb7",
+              "canonicalKey": "P001190",
+              "name": "Has Identification System for Assessment Form Section",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 14,
+            "cedsId": "P000774",
+            "cosine": 0.532604,
+            "confidence": 0.532604,
+            "hubReference": {
+              "address": "cedsHubRef:53fab70393fb17e5e6d50956d699196529107a1f081320c2a6863cbe0027f285",
+              "addressSignature": "53fab70393fb17e5e6d50956d699196529107a1f081320c2a6863cbe0027f285",
+              "canonicalKey": "P000774",
+              "name": "Has Teacher Education Credential Exam Score Type",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 15,
+            "cedsId": "P000967",
+            "cosine": 0.524689,
+            "confidence": 0.524689,
+            "hubReference": {
+              "address": "cedsHubRef:992ebba5cf0a50ed7c2f0900957216273bc8cadeb06b2f6cb304e262cafe97fa",
+              "addressSignature": "992ebba5cf0a50ed7c2f0900957216273bc8cadeb06b2f6cb304e262cafe97fa",
+              "canonicalKey": "P000967",
+              "name": "Assessment Administration Assessment Family",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          }
+        ],
+        "meta": {
+          "model": "stub-reranker-pick1",
+          "topK": 15,
+          "cosineFloor": 0,
+          "gatingManifest": "a9c2efcfbb302d84f69890ce86d2bd8c0f274e0901b309ce55baf4fc8a5c4d11",
+          "bestCosine": 1,
+          "candidatePoolSize": 2324,
+          "hubReferenceCount": 2324
+        }
+      }
+    },
+    {
+      "label": "parity-minimal",
+      "input": {
+        "term": "School Identifier",
+        "definition": "A unique identifier assigned to a school."
+      },
+      "result": {
+        "query": {
+          "term": "School Identifier",
+          "definition": "A unique identifier assigned to a school.",
+          "datatype": null,
+          "contextText": null,
+          "targetHub": "CEDS"
+        },
+        "abstain": false,
+        "abstainReason": null,
+        "suggested": {
+          "hubReference": {
+            "address": "cedsHubRef:689ceb42126106e3c37425265e9d9dfe4d617dbd8ecdbf9592f34fca649e99ef",
+            "addressSignature": "689ceb42126106e3c37425265e9d9dfe4d617dbd8ecdbf9592f34fca649e99ef",
+            "canonicalKey": "P001069",
+            "name": "School Identifier",
+            "referenceTier": "property",
+            "hubName": "CEDS",
+            "hubVersion": "14.0.0.0"
+          },
+          "confidence": 0.818199,
+          "predicate": "closeMatch",
+          "retrievalRank": 1
+        },
+        "candidates": [
+          {
+            "rank": 1,
+            "cedsId": "P001069",
+            "cosine": 0.818199,
+            "confidence": 0.818199,
+            "hubReference": {
+              "address": "cedsHubRef:689ceb42126106e3c37425265e9d9dfe4d617dbd8ecdbf9592f34fca649e99ef",
+              "addressSignature": "689ceb42126106e3c37425265e9d9dfe4d617dbd8ecdbf9592f34fca649e99ef",
+              "canonicalKey": "P001069",
+              "name": "School Identifier",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 2,
+            "cedsId": "P001076",
+            "cosine": 0.818199,
+            "confidence": 0.818199,
+            "hubReference": {
+              "address": "cedsHubRef:e37a1ae6fdf7226208f9c3d78a863b60fba91218839c53ad2143ad3852d261db",
+              "addressSignature": "e37a1ae6fdf7226208f9c3d78a863b60fba91218839c53ad2143ad3852d261db",
+              "canonicalKey": "P001076",
+              "name": "Adult Education Service Provider Identifier",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 3,
+            "cedsId": "P000826",
+            "cosine": 0.803722,
+            "confidence": 0.803722,
+            "hubReference": {
+              "address": "cedsHubRef:2b09fee4f42a20a4d9bc934af1faa2f04cb4d7a5f21df3ae5d5ef158b30c92dc",
+              "addressSignature": "2b09fee4f42a20a4d9bc934af1faa2f04cb4d7a5f21df3ae5d5ef158b30c92dc",
+              "canonicalKey": "P000826",
+              "name": "Organization Identifier",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 4,
+            "cedsId": "P600502",
+            "cosine": 0.803722,
+            "confidence": 0.803722,
+            "hubReference": {
+              "address": "cedsHubRef:66becafcf4f66a497bca4249aaa08aef26b9cd56e23a1bd31b4b531dfcd3522d",
+              "addressSignature": "66becafcf4f66a497bca4249aaa08aef26b9cd56e23a1bd31b4b531dfcd3522d",
+              "canonicalKey": "P600502",
+              "name": "Has Organization Identifier",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 5,
+            "cedsId": "P000436",
+            "cosine": 0.776601,
+            "confidence": 0.776601,
+            "hubReference": {
+              "address": "cedsHubRef:d7e93bca473a7b9cc7cf09d65512cabeea9495148c85a6d736b94bbc88294812",
+              "addressSignature": "d7e93bca473a7b9cc7cf09d65512cabeea9495148c85a6d736b94bbc88294812",
+              "canonicalKey": "P000436",
+              "name": "Designated Graduation School Identifier",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 6,
+            "cedsId": "P001068",
+            "cosine": 0.773644,
+            "confidence": 0.773644,
+            "hubReference": {
+              "address": "cedsHubRef:5b4ee53ac9060e9ab64f6e6346857350baaf2d1e68de7dcda0e8bfa8ce61e32f",
+              "addressSignature": "5b4ee53ac9060e9ab64f6e6346857350baaf2d1e68de7dcda0e8bfa8ce61e32f",
+              "canonicalKey": "P001068",
+              "name": "Local Education Agency Identifier",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 7,
+            "cedsId": "P001572",
+            "cosine": 0.765383,
+            "confidence": 0.765383,
+            "hubReference": {
+              "address": "cedsHubRef:0b706bbd36f65f62d33196833ccc97bb97159c45ecb111c898abaec83095f797",
+              "addressSignature": "0b706bbd36f65f62d33196833ccc97bb97159c45ecb111c898abaec83095f797",
+              "canonicalKey": "P001572",
+              "name": "Person Identifier",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 8,
+            "cedsId": "P001840",
+            "cosine": 0.76453,
+            "confidence": 0.76453,
+            "hubReference": {
+              "address": "cedsHubRef:87a0db31ee9eeb46cbe9786e2f876aea20cdc7d5a18a630cc2fddda217df7ada",
+              "addressSignature": "87a0db31ee9eeb46cbe9786e2f876aea20cdc7d5a18a630cc2fddda217df7ada",
+              "canonicalKey": "P001840",
+              "name": "Facility Component Identification Code",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 9,
+            "cedsId": "P000787",
+            "cosine": 0.73818,
+            "confidence": 0.73818,
+            "hubReference": {
+              "address": "cedsHubRef:e5657f896bf0bab55d38cb1d07ec06496854828c532dbb380d39107ccdf52a81",
+              "addressSignature": "e5657f896bf0bab55d38cb1d07ec06496854828c532dbb380d39107ccdf52a81",
+              "canonicalKey": "P000787",
+              "name": "Family Identifier",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 10,
+            "cedsId": "P000494",
+            "cosine": 0.735636,
+            "confidence": 0.735636,
+            "hubReference": {
+              "address": "cedsHubRef:f0263c39781ace7cfc12b4cc3036de399d27ffd14cdd1edbf2cb8118bf79f93d",
+              "addressSignature": "f0263c39781ace7cfc12b4cc3036de399d27ffd14cdd1edbf2cb8118bf79f93d",
+              "canonicalKey": "P000494",
+              "name": "Calendar Code",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 11,
+            "cedsId": "P000820",
+            "cosine": 0.729462,
+            "confidence": 0.729462,
+            "hubReference": {
+              "address": "cedsHubRef:60e9820008a6dfafd01a2cf7ed8144908fe53d2d0516455aab4425b25d76f18e",
+              "addressSignature": "60e9820008a6dfafd01a2cf7ed8144908fe53d2d0516455aab4425b25d76f18e",
+              "canonicalKey": "P000820",
+              "name": "Early Learning Class Group Identifier",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 12,
+            "cedsId": "P000625",
+            "cosine": 0.728652,
+            "confidence": 0.728652,
+            "hubReference": {
+              "address": "cedsHubRef:97d53a8d6de50d126375dc9d2ce8f11568f04eec224ede5bfb28f7d6da4caeb5",
+              "addressSignature": "97d53a8d6de50d126375dc9d2ce8f11568f04eec224ede5bfb28f7d6da4caeb5",
+              "canonicalKey": "P000625",
+              "name": "Program Identifier",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 13,
+            "cedsId": "P600567",
+            "cosine": 0.698474,
+            "confidence": 0.698474,
+            "hubReference": {
+              "address": "cedsHubRef:a9ba6063388f5c6114320d08e27ff3aa5dca5cd023b1082957acdd7ab5a6ebc7",
+              "addressSignature": "a9ba6063388f5c6114320d08e27ff3aa5dca5cd023b1082957acdd7ab5a6ebc7",
+              "canonicalKey": "P600567",
+              "name": "Has Organization Identifier Type",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 14,
+            "cedsId": "P000166",
+            "cosine": 0.69247,
+            "confidence": 0.69247,
+            "hubReference": {
+              "address": "cedsHubRef:6664fa5e8891beb3ae0dcceb1af80ff83195281e074f38e1fd76eefcd3922c83",
+              "addressSignature": "6664fa5e8891beb3ae0dcceb1af80ff83195281e074f38e1fd76eefcd3922c83",
+              "canonicalKey": "P000166",
+              "name": "Institution IPEDS UnitID",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 15,
+            "cedsId": "P000364",
+            "cosine": 0.683878,
+            "confidence": 0.683878,
+            "hubReference": {
+              "address": "cedsHubRef:480a5fa752a1e44010328a7c55ff6ad437356fed752926396df7119b6986083c",
+              "addressSignature": "480a5fa752a1e44010328a7c55ff6ad437356fed752926396df7119b6986083c",
+              "canonicalKey": "P000364",
+              "name": "Classroom Identifier",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          }
+        ],
+        "meta": {
+          "model": "stub-reranker-pick1",
+          "topK": 15,
+          "cosineFloor": 0,
+          "gatingManifest": "a9c2efcfbb302d84f69890ce86d2bd8c0f274e0901b309ce55baf4fc8a5c4d11",
+          "bestCosine": 0.818199,
+          "candidatePoolSize": 2324,
+          "hubReferenceCount": 2324
+        }
+      }
+    },
+    {
+      "label": "parity-allOptionalParams",
+      "input": {
+        "term": "School Identifier",
+        "definition": "A unique identifier assigned to a school.",
+        "datatype": "string",
+        "context": "organization identification",
+        "topK": 8,
+        "cosineFloor": 0.1
+      },
+      "result": {
+        "query": {
+          "term": "School Identifier",
+          "definition": "A unique identifier assigned to a school.",
+          "datatype": "string",
+          "contextText": null,
+          "targetHub": "CEDS"
+        },
+        "abstain": false,
+        "abstainReason": null,
+        "suggested": {
+          "hubReference": {
+            "address": "cedsHubRef:689ceb42126106e3c37425265e9d9dfe4d617dbd8ecdbf9592f34fca649e99ef",
+            "addressSignature": "689ceb42126106e3c37425265e9d9dfe4d617dbd8ecdbf9592f34fca649e99ef",
+            "canonicalKey": "P001069",
+            "name": "School Identifier",
+            "referenceTier": "property",
+            "hubName": "CEDS",
+            "hubVersion": "14.0.0.0"
+          },
+          "confidence": 0.818199,
+          "predicate": "closeMatch",
+          "retrievalRank": 1
+        },
+        "candidates": [
+          {
+            "rank": 1,
+            "cedsId": "P001069",
+            "cosine": 0.818199,
+            "confidence": 0.818199,
+            "hubReference": {
+              "address": "cedsHubRef:689ceb42126106e3c37425265e9d9dfe4d617dbd8ecdbf9592f34fca649e99ef",
+              "addressSignature": "689ceb42126106e3c37425265e9d9dfe4d617dbd8ecdbf9592f34fca649e99ef",
+              "canonicalKey": "P001069",
+              "name": "School Identifier",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 2,
+            "cedsId": "P001076",
+            "cosine": 0.818199,
+            "confidence": 0.818199,
+            "hubReference": {
+              "address": "cedsHubRef:e37a1ae6fdf7226208f9c3d78a863b60fba91218839c53ad2143ad3852d261db",
+              "addressSignature": "e37a1ae6fdf7226208f9c3d78a863b60fba91218839c53ad2143ad3852d261db",
+              "canonicalKey": "P001076",
+              "name": "Adult Education Service Provider Identifier",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 3,
+            "cedsId": "P000826",
+            "cosine": 0.803722,
+            "confidence": 0.803722,
+            "hubReference": {
+              "address": "cedsHubRef:2b09fee4f42a20a4d9bc934af1faa2f04cb4d7a5f21df3ae5d5ef158b30c92dc",
+              "addressSignature": "2b09fee4f42a20a4d9bc934af1faa2f04cb4d7a5f21df3ae5d5ef158b30c92dc",
+              "canonicalKey": "P000826",
+              "name": "Organization Identifier",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 4,
+            "cedsId": "P600502",
+            "cosine": 0.803722,
+            "confidence": 0.803722,
+            "hubReference": {
+              "address": "cedsHubRef:66becafcf4f66a497bca4249aaa08aef26b9cd56e23a1bd31b4b531dfcd3522d",
+              "addressSignature": "66becafcf4f66a497bca4249aaa08aef26b9cd56e23a1bd31b4b531dfcd3522d",
+              "canonicalKey": "P600502",
+              "name": "Has Organization Identifier",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 5,
+            "cedsId": "P000436",
+            "cosine": 0.776601,
+            "confidence": 0.776601,
+            "hubReference": {
+              "address": "cedsHubRef:d7e93bca473a7b9cc7cf09d65512cabeea9495148c85a6d736b94bbc88294812",
+              "addressSignature": "d7e93bca473a7b9cc7cf09d65512cabeea9495148c85a6d736b94bbc88294812",
+              "canonicalKey": "P000436",
+              "name": "Designated Graduation School Identifier",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 6,
+            "cedsId": "P001068",
+            "cosine": 0.773644,
+            "confidence": 0.773644,
+            "hubReference": {
+              "address": "cedsHubRef:5b4ee53ac9060e9ab64f6e6346857350baaf2d1e68de7dcda0e8bfa8ce61e32f",
+              "addressSignature": "5b4ee53ac9060e9ab64f6e6346857350baaf2d1e68de7dcda0e8bfa8ce61e32f",
+              "canonicalKey": "P001068",
+              "name": "Local Education Agency Identifier",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 7,
+            "cedsId": "P001572",
+            "cosine": 0.765383,
+            "confidence": 0.765383,
+            "hubReference": {
+              "address": "cedsHubRef:0b706bbd36f65f62d33196833ccc97bb97159c45ecb111c898abaec83095f797",
+              "addressSignature": "0b706bbd36f65f62d33196833ccc97bb97159c45ecb111c898abaec83095f797",
+              "canonicalKey": "P001572",
+              "name": "Person Identifier",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          },
+          {
+            "rank": 8,
+            "cedsId": "P001840",
+            "cosine": 0.76453,
+            "confidence": 0.76453,
+            "hubReference": {
+              "address": "cedsHubRef:87a0db31ee9eeb46cbe9786e2f876aea20cdc7d5a18a630cc2fddda217df7ada",
+              "addressSignature": "87a0db31ee9eeb46cbe9786e2f876aea20cdc7d5a18a630cc2fddda217df7ada",
+              "canonicalKey": "P001840",
+              "name": "Facility Component Identification Code",
+              "referenceTier": "property",
+              "hubName": "CEDS",
+              "hubVersion": "14.0.0.0"
+            },
+            "resolved": true
+          }
+        ],
+        "meta": {
+          "model": "stub-reranker-pick1",
+          "topK": 8,
+          "cosineFloor": 0.1,
+          "gatingManifest": "a9c2efcfbb302d84f69890ce86d2bd8c0f274e0901b309ce55baf4fc8a5c4d11",
+          "bestCosine": 0.818199,
+          "candidatePoolSize": 2324,
+          "hubReferenceCount": 2324
+        }
+      }
+    }
+  ],
+  "resultsDigest": "09b4193dfe9c87a7deeb60e2f085f284f3489ec9ede9f619613b04900f810ad3"
+}

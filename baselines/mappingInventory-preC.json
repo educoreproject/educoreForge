@@ -1,0 +1,335 @@
+{
+  "goldenManifest": "a9a79df51f5745bf7c331bb798ebff239114ec27e16d10d8aaf76273c06d6957",
+  "label": "a4-SIF-inferredProperty-070226",
+  "capturedAt": "2026-07-10",
+  "memberTotals": {
+    "standard": 16,
+    "reference": 1,
+    "mapping": 20
+  },
+  "mappingEdgeTotal": 24926,
+  "inventory": [
+    {
+      "blockId": "5388a1576b2323c2afffc396cef208c994d6d49c2e278e2efe198184969b38f7",
+      "type": "mapping",
+      "subject": "CASE",
+      "producedBy": "edf-implied",
+      "lineCount": 107,
+      "edgeLineCount": 106,
+      "edgeRegionDigest": "869db12e76fa2e0f5323cfbcd86656e54b083b0ea3773d201408115c360115ab",
+      "tierCounts": {
+        "embedding-inferred": 106
+      },
+      "edgeTypeCounts": {
+        "CLOSE_MATCH": 106
+      }
+    },
+    {
+      "blockId": "172bfa58cfffc4b7414fd1e7255320082d35e8cdcd6dc920ba7083cf0b73bf62",
+      "type": "mapping",
+      "subject": "CLR",
+      "producedBy": "edf-implied",
+      "lineCount": 77,
+      "edgeLineCount": 76,
+      "edgeRegionDigest": "d8b47a6e2a0a180e16d1d939c34da34dd977598f2ef14de3546336401c6d3543",
+      "tierCounts": {
+        "embedding-inferred": 76
+      },
+      "edgeTypeCounts": {
+        "CLOSE_MATCH": 76
+      }
+    },
+    {
+      "blockId": "a5b9e462d8572d371f3b50ea12b0154d0e7623869df8d4c9bc7230cb1d886d07",
+      "type": "mapping",
+      "subject": "CTDL",
+      "producedBy": "edf-implied",
+      "lineCount": 120,
+      "edgeLineCount": 119,
+      "edgeRegionDigest": "0e8a4c1ca153e2cf55fbc524bb846312e0fc1530ae67c1021e3e51962670f434",
+      "tierCounts": {
+        "embedding-inferred": 119
+      },
+      "edgeTypeCounts": {
+        "CLOSE_MATCH": 119
+      }
+    },
+    {
+      "blockId": "0b0218d0e8ca7bce787312bda69c996917ba95cedab7e14022b2f04042b17091",
+      "type": "mapping",
+      "subject": "CTDL-value",
+      "producedBy": "edf-implied",
+      "lineCount": 34,
+      "edgeLineCount": 33,
+      "edgeRegionDigest": "fd3a7f50b0bec8ad00cf7111ded34c8cbab905fa1f72b132e24571245cf727d4",
+      "tierCounts": {
+        "embedding-inferred": 33
+      },
+      "edgeTypeCounts": {
+        "CLOSE_MATCH": 33
+      }
+    },
+    {
+      "blockId": "4cd14d66d1302732ad5b79d9b742ae1304257d9e6c36540757f0503ef1437028",
+      "type": "mapping",
+      "subject": "CTDL-value",
+      "producedBy": "edf-mapping",
+      "lineCount": 25,
+      "edgeLineCount": 24,
+      "edgeRegionDigest": "b5ad78bf3c6fe34e613ad37a2d919b66bfd3778da5631d7e618ce711cd7c2ea4",
+      "tierCounts": {
+        "spec-authoritative": 24
+      },
+      "edgeTypeCounts": {
+        "EXACT_MATCH": 24
+      }
+    },
+    {
+      "blockId": "907f73dcfd020250df8e31009a1b3af5de5bd79e6901372e6d18fa9bb063ee78",
+      "type": "mapping",
+      "subject": "EdFi",
+      "producedBy": "edf-mapping",
+      "lineCount": 5260,
+      "edgeLineCount": 5259,
+      "edgeRegionDigest": "7e3dc81dd5ff8673edee5cab9ecd668ee9e5cac57ba7ef047a5c4189aa751c29",
+      "tierCounts": {
+        "spec-authoritative": 5259
+      },
+      "edgeTypeCounts": {
+        "EXACT_MATCH": 5259
+      }
+    },
+    {
+      "blockId": "6b8046f17f7410d1d927b444fa7a82bd07e327a10ff88880dbf78017cfae2ec1",
+      "type": "mapping",
+      "subject": "JEDx",
+      "producedBy": "edf-implied",
+      "lineCount": 40,
+      "edgeLineCount": 39,
+      "edgeRegionDigest": "0b0105b2da0c8be749ddb051061b3fdd368ba6886834836ca679a3a69cd382a5",
+      "tierCounts": {
+        "embedding-inferred": 39
+      },
+      "edgeTypeCounts": {
+        "CLOSE_MATCH": 39
+      }
+    },
+    {
+      "blockId": "adc6f313184a19ab49cca055f38a5419b6785683fbaebb123228ca547c838807",
+      "type": "mapping",
+      "subject": "LIF",
+      "producedBy": "edf-implied",
+      "lineCount": 546,
+      "edgeLineCount": 545,
+      "edgeRegionDigest": "fee56393753fbd1edfcb3f4f84e4d64a48b19083716851847ddb51ca1fcd6c1f",
+      "tierCounts": {
+        "embedding-inferred": 545
+      },
+      "edgeTypeCounts": {
+        "CLOSE_MATCH": 545
+      }
+    },
+    {
+      "blockId": "dcfccc2f1aec4ff5a6bf5bce941d83969bfdb0f3fe73048ae8c3d1887facd4af",
+      "type": "mapping",
+      "subject": "LIF-value",
+      "producedBy": "edf-implied",
+      "lineCount": 689,
+      "edgeLineCount": 688,
+      "edgeRegionDigest": "f8185cf03d56f279867191067b40a84d6e734d543659c935146ab85421a0243e",
+      "tierCounts": {
+        "embedding-inferred": 688
+      },
+      "edgeTypeCounts": {
+        "CLOSE_MATCH": 688
+      }
+    },
+    {
+      "blockId": "5570d920edc59f5db7184f38ce8b0e6b1f6f473bec3490756f49761dedadebdf",
+      "type": "mapping",
+      "subject": "MedBiquitous",
+      "producedBy": "edf-implied",
+      "lineCount": 205,
+      "edgeLineCount": 204,
+      "edgeRegionDigest": "49070e15681da959f5674ef82491d777043f9d1d76a6b09efb6462085bb3c454",
+      "tierCounts": {
+        "embedding-inferred": 204
+      },
+      "edgeTypeCounts": {
+        "CLOSE_MATCH": 204
+      }
+    },
+    {
+      "blockId": "a397a721cf95c14d695c8a347f1f95274185101e55974ffcd8d05e68af61b862",
+      "type": "mapping",
+      "subject": "OpenBadges",
+      "producedBy": "edf-implied",
+      "lineCount": 81,
+      "edgeLineCount": 80,
+      "edgeRegionDigest": "1d26318ba334fd4522ce1da284adab3ea5d883eaafe170db05224019046cf640",
+      "tierCounts": {
+        "embedding-inferred": 80
+      },
+      "edgeTypeCounts": {
+        "CLOSE_MATCH": 80
+      }
+    },
+    {
+      "blockId": "d5e3338b62ca883e71f707c1c18a1cbae1ca416f6f7b91ddb1555d601aa962cd",
+      "type": "mapping",
+      "subject": "PESC",
+      "producedBy": "edf-implied",
+      "lineCount": 587,
+      "edgeLineCount": 586,
+      "edgeRegionDigest": "d8f11d2ec70f04f462c2ff74d95b8cb0e23408fc0935e77ca87f171961d30543",
+      "tierCounts": {
+        "embedding-inferred": 586
+      },
+      "edgeTypeCounts": {
+        "CLOSE_MATCH": 586
+      }
+    },
+    {
+      "blockId": "9e5c49a07d348d0fd97f9d74a22d07b215ff5369d0c023cd9a8478cef7f88cb7",
+      "type": "mapping",
+      "subject": "SEDM",
+      "producedBy": "standardsCampaign-nativeCrossRef:070226",
+      "lineCount": 221,
+      "edgeLineCount": 220,
+      "edgeRegionDigest": "d5d76c60d362237e4b930dc925566b65245379076bbe6f1ad7197abe72eaabe8",
+      "tierCounts": {
+        "spec-authoritative": 220
+      },
+      "edgeTypeCounts": {
+        "EXACT_MATCH": 220
+      }
+    },
+    {
+      "blockId": "8acb9de57277e99905ee3e071da258441ebe10ac97689f8a1c884124fdbddcb0",
+      "type": "mapping",
+      "subject": "SEDM-value",
+      "producedBy": "edf-implied",
+      "lineCount": 1465,
+      "edgeLineCount": 1464,
+      "edgeRegionDigest": "5ff82bb52041b3c6f9fb95c3a66b9e191d554bbf8dba80178e877e6fc09d852a",
+      "tierCounts": {
+        "embedding-inferred": 1464
+      },
+      "edgeTypeCounts": {
+        "CLOSE_MATCH": 1464
+      }
+    },
+    {
+      "blockId": "07f0b78a19cc9dce18282e8b6197bd8505cb89572b1d64777aee556e4bf8d634",
+      "type": "mapping",
+      "subject": "SIF",
+      "producedBy": "standardsCampaign-nativeCrossRef:070226",
+      "lineCount": 2203,
+      "edgeLineCount": 2202,
+      "edgeRegionDigest": "abd95a43643a27c275538f2de14e9cc8d82edcb1b0f3deebe29f93349cf98ab3",
+      "tierCounts": {
+        "spec-authoritative": 2202
+      },
+      "edgeTypeCounts": {
+        "EXACT_MATCH": 2202
+      }
+    },
+    {
+      "blockId": "b28e9c7136a708bd48069821a946c1adb9dad54811a6b41c22ef3352086be9ad",
+      "type": "mapping",
+      "subject": "SIF",
+      "producedBy": "edf-implied",
+      "lineCount": 2410,
+      "edgeLineCount": 2409,
+      "edgeRegionDigest": "c34da143cc5b639b5d11c3d27c86a02e7722c5cc48ec0862c7ed0c3f59542df5",
+      "tierCounts": {
+        "embedding-inferred": 2409
+      },
+      "edgeTypeCounts": {
+        "CLOSE_MATCH": 2409
+      }
+    },
+    {
+      "blockId": "23890153b36915dd8693169774b9ef028bd429be5f23b1c9f7b1304385731cff",
+      "type": "mapping",
+      "subject": "SIF-value",
+      "producedBy": "edf-implied",
+      "lineCount": 2395,
+      "edgeLineCount": 2394,
+      "edgeRegionDigest": "e5893be5e67465447fabece8b393a243cfb0752db4940f020ff3a5a7ae8b4011",
+      "tierCounts": {
+        "embedding-inferred": 2394
+      },
+      "edgeTypeCounts": {
+        "CLOSE_MATCH": 2394
+      }
+    },
+    {
+      "blockId": "21cbdda40fefa74992a8c1c6deba03a4dd8051b3c0d30c4d69cc5210df8b8d7e",
+      "type": "mapping",
+      "subject": "SOC-crosswalk",
+      "producedBy": "edf-mapping",
+      "lineCount": 8325,
+      "edgeLineCount": 8324,
+      "edgeRegionDigest": "813e51213e080c38561a82fc12b08961e592d14dfba1d275a89678649373db00",
+      "tierCounts": {
+        "spec-authoritative": 8324
+      },
+      "edgeTypeCounts": {
+        "CLASSIFICATION_CROSSWALK": 8324
+      }
+    },
+    {
+      "blockId": "6d5d3272e6eab0a0627fd20f12d3038451d1acd45ebcf6e00632727201ff4f1d",
+      "type": "mapping",
+      "subject": "eduAPI",
+      "producedBy": "edf-implied",
+      "lineCount": 145,
+      "edgeLineCount": 144,
+      "edgeRegionDigest": "7ed4c0f567219c2e5a59775f3ca1aa9a1dc5a40d87eb78abee885796eef5ae0b",
+      "tierCounts": {
+        "embedding-inferred": 144
+      },
+      "edgeTypeCounts": {
+        "CLOSE_MATCH": 144
+      }
+    },
+    {
+      "blockId": "a7c3ec6fb2eca62b476e0bf1a508384d6c14f1b14446ae7fd0672538e844b490",
+      "type": "mapping",
+      "subject": "eduAPI-value",
+      "producedBy": "edf-implied",
+      "lineCount": 11,
+      "edgeLineCount": 10,
+      "edgeRegionDigest": "200f8f068a9ef545affeba415dd8726b1aac99b7d3afdda2f8524ad93c48c6ea",
+      "tierCounts": {
+        "embedding-inferred": 10
+      },
+      "edgeTypeCounts": {
+        "CLOSE_MATCH": 10
+      }
+    },
+    {
+      "blockId": "7c5d9ace970a7520d95794199ca01ded60277350f80b15013eec265b3dd3f2ab",
+      "type": "reference",
+      "subject": "CEDS",
+      "producedBy": "edf-reference",
+      "lineCount": 175412,
+      "edgeLineCount": 175411,
+      "edgeRegionDigest": "945c00f96d83d3417716b6062086f80dac0bd5a0afa94a886e1311c62822c31c",
+      "tierCounts": {
+        "none": 29789,
+        "structural": 145622
+      },
+      "edgeTypeCounts": {
+        "none": 29789,
+        "HAS_CEDS_DOMAIN": 29788,
+        "HAS_CEDS_PROPERTY": 29788,
+        "HAS_CEDS_QUALIFIER": 27,
+        "HAS_CEDS_RANGE": 28794,
+        "HAS_CEDS_VALUE": 27437,
+        "IN_HUB": 29788
+      }
+    }
+  ]
+}

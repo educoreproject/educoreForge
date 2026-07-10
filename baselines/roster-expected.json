@@ -1,0 +1,116 @@
+{
+  "note": "frozen Phase-0 roster expectation — 16 real + 2 synthetic",
+  "count": 18,
+  "real": 16,
+  "synthetic": 2,
+  "bundles": [
+    {
+      "registryKey": "case",
+      "bundleDir": "forge-case",
+      "standardName": "CASE",
+      "synthetic": false
+    },
+    {
+      "registryKey": "ceds",
+      "bundleDir": "forge-ceds",
+      "standardName": "CEDS",
+      "synthetic": false
+    },
+    {
+      "registryKey": "cip",
+      "bundleDir": "forge-cip",
+      "standardName": "CIP",
+      "synthetic": false
+    },
+    {
+      "registryKey": "clr",
+      "bundleDir": "forge-clr",
+      "standardName": "CLR",
+      "synthetic": false
+    },
+    {
+      "registryKey": "ctdl",
+      "bundleDir": "forge-ctdl",
+      "standardName": "CTDL",
+      "synthetic": false
+    },
+    {
+      "registryKey": "dctap",
+      "bundleDir": "forge-dctap",
+      "standardName": "DCTAP",
+      "synthetic": false
+    },
+    {
+      "registryKey": "edfi",
+      "bundleDir": "forge-edfi",
+      "standardName": "EdFi",
+      "synthetic": false
+    },
+    {
+      "registryKey": "eduapi",
+      "bundleDir": "forge-eduapi",
+      "standardName": "EduAPI",
+      "synthetic": false
+    },
+    {
+      "registryKey": "jedx",
+      "bundleDir": "forge-jedx",
+      "standardName": "JEDx",
+      "synthetic": false
+    },
+    {
+      "registryKey": "lif",
+      "bundleDir": "forge-lif",
+      "standardName": "LIF",
+      "synthetic": false
+    },
+    {
+      "registryKey": "medbiquitous",
+      "bundleDir": "forge-medbiquitous",
+      "standardName": "MedBiquitous",
+      "synthetic": false
+    },
+    {
+      "registryKey": "openbadges",
+      "bundleDir": "forge-openbadges",
+      "standardName": "OpenBadges",
+      "synthetic": false
+    },
+    {
+      "registryKey": "p6hub",
+      "bundleDir": "forge-p6hub",
+      "standardName": "CEDS",
+      "synthetic": true
+    },
+    {
+      "registryKey": "p6second",
+      "bundleDir": "forge-p6second",
+      "standardName": "synthstd",
+      "synthetic": true
+    },
+    {
+      "registryKey": "pesc",
+      "bundleDir": "forge-pesc",
+      "standardName": "PESC",
+      "synthetic": false
+    },
+    {
+      "registryKey": "sedm",
+      "bundleDir": "forge-sedm",
+      "standardName": "SEDM",
+      "synthetic": false
+    },
+    {
+      "registryKey": "sif",
+      "bundleDir": "forge-sif",
+      "standardName": "SIF",
+      "synthetic": false
+    },
+    {
+      "registryKey": "soc",
+      "bundleDir": "forge-soc",
+      "standardName": "SOC",
+      "synthetic": false
+    }
+  ]
+}

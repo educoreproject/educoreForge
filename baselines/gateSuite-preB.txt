@@ -1,0 +1,438 @@
+[edf-gate] reusing existing graph 'pvs0a'
+[edf-gate] reusing existing graph 'pvs0b'
+[gateSuite] running productionGuard.refusesGolden (twin)…
+[gateSuite]   -> PASS: productionGuard.refusesGolden
+[gateSuite] running groundTruth.fixturesLoad (health)…
+[gateSuite]   -> PASS: groundTruth.fixturesLoad
+[gateSuite] running determinism.fingerprintIdentical (positive)…
+[gateSuite]   -> PASS: determinism.fingerprintIdentical
+[gateSuite] running diff.detectsInjectedFault (twin)…
+[gateSuite]   -> PASS: diff.detectsInjectedFault
+[gateSuite] running diff.emptyForIdentical (positive)…
+[gateSuite]   -> PASS: diff.emptyForIdentical
+[gateSuite] running baseline.frozenImmutable (health)…
+[gateSuite]   -> PASS: baseline.frozenImmutable
+[gateSuite] running determinism.gateCatchesNonDeterminism (twin)…
+[gateSuite]   -> PASS: determinism.gateCatchesNonDeterminism
+[gateSuite] running baseline.fingerprintMatches (positive)…
+[gateSuite]   -> PASS: baseline.fingerprintMatches
+[gateSuite] running baseline.fingerprintGateCatchesCountPreservingCorruption (twin)…
+[gateSuite]   -> PASS: baseline.fingerprintGateCatchesCountPreservingCorruption
+[gateSuite] running regression.studentIdEquivalence (regression)…
+[gateSuite]   -> PASS: regression.studentIdEquivalence
+[gateSuite] running regression.studentVsStaffDistinct (regression)…
+[gateSuite]   -> PASS: regression.studentVsStaffDistinct
+[gateSuite] running regression.schoolVsLeaStatus (regression)…
+[gateSuite]   -> PASS: regression.schoolVsLeaStatus
+[gateSuite] running regression.conservativity (regression)…
+[gateSuite]   -> PASS: regression.conservativity
+[gateSuite] running baseline.allScopeFingerprintMatches (positive)…
+[gateSuite]   -> PASS: baseline.allScopeFingerprintMatches
+[gateSuite] running allScope.catchesOutOfScopeChange (twin)…
+[gateSuite]   -> PASS: allScope.catchesOutOfScopeChange
+[gateSuite] running canonicalAddressing.canonicalKeyPresentUnique (positive)…
+[gateSuite]   -> PASS: canonicalAddressing.canonicalKeyPresentUnique
+[gateSuite] running canonicalAddressing.edfiGlobalIdJoin (regression)…
+[gateSuite]   -> PASS: canonicalAddressing.edfiGlobalIdJoin
+[gateSuite] running referenceSubgraph.hubReferenceCountDerived (positive)…
+[gateSuite]   -> PASS: referenceSubgraph.hubReferenceCountDerived
+[gateSuite] running referenceSubgraph.addressSignatureUniqueness (positive)…
+[gateSuite]   -> PASS: referenceSubgraph.addressSignatureUniqueness
+[gateSuite] running referenceSubgraph.decompositionInvariants (positive)…
+[gateSuite]   -> PASS: referenceSubgraph.decompositionInvariants
+[gateSuite] running versionBridge.studentStaffDistinct (regression)…
+[gateSuite]   -> PASS: versionBridge.studentStaffDistinct
+[gateSuite] running inferred.closeMatchStampedAndUnreified (regression)…
+[gateSuite]   -> PASS: inferred.closeMatchStampedAndUnreified
+[gateSuite] running schemaValidator.goldenBlocksConformant (positive)…
+[gateSuite]   -> PASS: schemaValidator.goldenBlocksConformant
+[gateSuite] running schemaValidator.catchesOffSchemaBlock (twin)…
+[gateSuite]   -> PASS: schemaValidator.catchesOffSchemaBlock
+[gateSuite] running finisher.schemaConstraintsPresent (positive)…
+[gateSuite]   -> PASS: finisher.schemaConstraintsPresent
+[gateSuite] running resolve.accuracyKnownTermsRecallAtK (positive)…
+[resolve] embedding 2324 CEDS candidate definitions (cached after first run)…
+[def-embedder] 2324 texts; 0 distinct cache-miss to embed (voyage-4-large)
+[def-embedder] 1 texts; 0 distinct cache-miss to embed (voyage-4-large)
+[def-embedder] 1 texts; 0 distinct cache-miss to embed (voyage-4-large)
+[def-embedder] 1 texts; 0 distinct cache-miss to embed (voyage-4-large)
+[def-embedder] 1 texts; 0 distinct cache-miss to embed (voyage-4-large)
+[def-embedder] 1 texts; 0 distinct cache-miss to embed (voyage-4-large)
+[def-embedder] 1 texts; 0 distinct cache-miss to embed (voyage-4-large)
+[def-embedder] 1 texts; 0 distinct cache-miss to embed (voyage-4-large)
+[def-embedder] 1 texts; 0 distinct cache-miss to embed (voyage-4-large)
+[def-embedder] 1 texts; 0 distinct cache-miss to embed (voyage-4-large)
+[def-embedder] 1 texts; 0 distinct cache-miss to embed (voyage-4-large)
+[def-embedder] 1 texts; 0 distinct cache-miss to embed (voyage-4-large)
+[def-embedder] 1 texts; 0 distinct cache-miss to embed (voyage-4-large)
+[def-embedder] 1 texts; 0 distinct cache-miss to embed (voyage-4-large)
+[def-embedder] 1 texts; 0 distinct cache-miss to embed (voyage-4-large)
+[def-embedder] 1 texts; 0 distinct cache-miss to embed (voyage-4-large)
+[gateSuite]   -> PASS: resolve.accuracyKnownTermsRecallAtK
+[gateSuite] running resolve.abstainsBelowFloorNotMappable (twin)…
+[def-embedder] 1 texts; 0 distinct cache-miss to embed (voyage-4-large)
+[def-embedder] 1 texts; 0 distinct cache-miss to embed (voyage-4-large)
+[gateSuite]   -> PASS: resolve.abstainsBelowFloorNotMappable
+[gateSuite] running resolve.readOnlyFingerprintUnchanged (positive)…
+[def-embedder] 1 texts; 0 distinct cache-miss to embed (voyage-4-large)
+[gateSuite]   -> PASS: resolve.readOnlyFingerprintUnchanged
+[gateSuite] running resolve.surfacesParityThreeWay (positive)…
+[def-embedder] 1 texts; 0 distinct cache-miss to embed (voyage-4-large)
+[def-embedder] 1 texts; 0 distinct cache-miss to embed (voyage-4-large)
+[def-embedder] 1 texts; 0 distinct cache-miss to embed (voyage-4-large)
+[def-embedder] 1 texts; 0 distinct cache-miss to embed (voyage-4-large)
+[def-embedder] 1 texts; 0 distinct cache-miss to embed (voyage-4-large)
+[def-embedder] 1 texts; 0 distinct cache-miss to embed (voyage-4-large)
+[gateSuite]   -> PASS: resolve.surfacesParityThreeWay
+[gateSuite] running purity.graphMetaXor (positive)…
+[gateSuite]   -> PASS: purity.graphMetaXor
+[gateSuite] running equivalence.catchesVectorMutation (twin)…
+[gateSuite]   -> PASS: equivalence.catchesVectorMutation
+[gateSuite] running equivalence.catchesDroppedNode (twin)…
+[gateSuite]   -> PASS: equivalence.catchesDroppedNode
+[gateSuite] running equivalence.greenOnIdentical (positive)…
+[gateSuite]   -> PASS: equivalence.greenOnIdentical
+[gateSuite] running equivalence.embeddingAxisLivenessGuard (twin)…
+[gateSuite]   -> PASS: equivalence.embeddingAxisLivenessGuard
+[gateSuite] running equivalence.liveValidGuard (twin)…
+[gateSuite]   -> PASS: equivalence.liveValidGuard
+[gateSuite] running determinism.blockDeterminismEmbeddingRef (twin)…
+[gateSuite]   -> PASS: determinism.blockDeterminismEmbeddingRef
+{
+  "action": "runSuite",
+  "verdict": "GREEN",
+  "green": true,
+  "summary": {
+    "total": 36,
+    "passed": 36,
+    "realFailures": 0,
+    "expectedFailures": 0,
+    "unexpectedPasses": 0
+  },
+  "gates": [
+    {
+      "name": "productionGuard.refusesGolden",
+      "phase": "Phase0",
+      "kind": "twin",
+      "expectFail": false,
+      "verdict": "PASS",
+      "passed": true,
+      "detail": "golden refused=true, 'pvs0a' allowed=true"
+    },
+    {
+      "name": "groundTruth.fixturesLoad",
+      "phase": "Phase0",
+      "kind": "health",
+      "expectFail": false,
+      "verdict": "PASS",
+      "passed": true,
+      "detail": "elements 1666 rows / 27 cols; descriptors 8310 rows / 18 cols"
+    },
+    {
+      "name": "determinism.fingerprintIdentical",
+      "phase": "Phase0",
+      "kind": "positive",
+      "expectFail": false,
+      "verdict": "PASS",
+      "passed": true,
+      "detail": "identical=true, nonEmpty=true (105609n/336318e), baselineCountMatch=true"
+    },
+    {
+      "name": "diff.detectsInjectedFault",
+      "phase": "Phase0",
+      "kind": "twin",
+      "expectFail": false,
+      "verdict": "PASS",
+      "passed": true,
+      "detail": "changedNodes=1, props=[\"__twinInjectedFault\"]"
+    },
+    {
+      "name": "diff.emptyForIdentical",
+      "phase": "Phase0",
+      "kind": "positive",
+      "expectFail": false,
+      "verdict": "PASS",
+      "passed": true,
+      "detail": "identical=true, summary={\"addedNodes\":0,\"removedNodes\":0,\"changedNodes\":0,\"addedEdges\":0,\"removedEdges\":0}"
+    },
+    {
+      "name": "baseline.frozenImmutable",
+      "phase": "Phase0",
+      "kind": "health",
+      "expectFail": false,
+      "verdict": "PASS",
+      "passed": true,
+      "detail": "fingerprint=e020bf533c631a62…, mode=0444, immutable=true"
+    },
+    {
+      "name": "determinism.gateCatchesNonDeterminism",
+      "phase": "Phase0",
+      "kind": "twin",
+      "expectFail": false,
+      "verdict": "PASS",
+      "passed": true,
+      "detail": "fingerprintEqualityDetectsDelta=true, diffChangedNodes=1 (original e020bf533c63… vs perturbed d965382d1095…)"
+    },
+    {
+      "name": "baseline.fingerprintMatches",
+      "phase": "Phase0",
+      "kind": "positive",
+      "expectFail": false,
+      "verdict": "PASS",
+      "passed": true,
+      "detail": "live=e020bf533c63… baseline=e020bf533c63… match=true, nonEmpty=true (105609n/336318e), mode=full"
+    },
+    {
+      "name": "baseline.fingerprintGateCatchesCountPreservingCorruption",
+      "phase": "Phase0",
+      "kind": "twin",
+      "expectFail": false,
+      "verdict": "PASS",
+      "passed": true,
+      "detail": "recomputeMatchesBaseline=true, countPreserved=true (105609n/336318e), fingerprintDetectsCorruption=true"
+    },
+    {
+      "name": "regression.studentIdEquivalence",
+      "phase": "Equivalence",
+      "kind": "regression",
+      "expectFail": false,
+      "verdict": "PASS",
+      "passed": true,
+      "detail": "studentRefs=1, maxDistinctExactMatchSourcesOnOneRef=2 (REQUIRED: ONE shared ref with ≥2 DISTINCT sources — equivalence cluster; needs the SIF source at Phase 6)"
+    },
+    {
+      "name": "regression.studentVsStaffDistinct",
+      "phase": "Equivalence",
+      "kind": "regression",
+      "expectFail": false,
+      "verdict": "PASS",
+      "passed": true,
+      "detail": "studentRefs=1, staffRefs=1, overlap=0 (REQUIRED: both ≥1 AND distinct nodes, overlap=0)"
+    },
+    {
+      "name": "regression.schoolVsLeaStatus",
+      "phase": "Equivalence",
+      "kind": "regression",
+      "expectFail": false,
+      "verdict": "PASS",
+      "passed": true,
+      "detail": "distinctCanonicalKeysPresent=2/2 (P000533 school, P000174 LEA; HubReference subgraph lands in Phase 3)"
+    },
+    {
+      "name": "regression.conservativity",
+      "phase": "Equivalence",
+      "kind": "regression",
+      "expectFail": false,
+      "verdict": "PASS",
+      "passed": true,
+      "detail": "equivalenceClusters=142 (must be >=1); sources bridging a same-property/different-qualifier reference pair=0 (must be 0 — the generalized must-never-merge invariant; covers student/staff + all qualifier-distinct pairs)"
+    },
+    {
+      "name": "baseline.allScopeFingerprintMatches",
+      "phase": "Phase0",
+      "kind": "positive",
+      "expectFail": false,
+      "verdict": "PASS",
+      "passed": true,
+      "detail": "live=b7f0dd1b3530… baseline=b7f0dd1b3530… match=true (105609n/336318e), scope=all"
+    },
+    {
+      "name": "allScope.catchesOutOfScopeChange",
+      "phase": "Phase0",
+      "kind": "twin",
+      "expectFail": false,
+      "verdict": "PASS",
+      "passed": true,
+      "detail": "allScopeDetectsOutOfScopeChange=true, allScope!=scoped=true (scoped would stay GREEN on this change; all-scope goes RED — blind spot closed)"
+    },
+    {
+      "name": "canonicalAddressing.canonicalKeyPresentUnique",
+      "phase": "CanonicalAddressing",
+      "kind": "positive",
+      "expectFail": false,
+      "verdict": "PASS",
+      "passed": true,
+      "detail": "distinctCanonicalKeys=21870 violations=0 (REQUIRED: present>0 & unique)"
+    },
+    {
+      "name": "canonicalAddressing.edfiGlobalIdJoin",
+      "phase": "CanonicalAddressing",
+      "kind": "regression",
+      "expectFail": false,
+      "verdict": "PASS",
+      "passed": true,
+      "detail": "joined=379/385; missing=[P001070,P001071,P001072,P001073,P001074,P001075] expectMissing=[P001070,P001071,P001072,P001073,P001074,P001075] setExact=true (REQUIRED: 379/385, 6 missing = remodeled person-ids -> Phase-4)"
+    },
+    {
+      "name": "referenceSubgraph.hubReferenceCountDerived",
+      "phase": "ReferenceSubgraph",
+      "kind": "positive",
+      "expectFail": false,
+      "verdict": "PASS",
+      "passed": true,
+      "detail": "HubReference=29788 (property=2324/2324, value=27437/27437, qualified=27/27); HubDefinition=1/1 (REQUIRED total 29788)"
+    },
+    {
+      "name": "referenceSubgraph.addressSignatureUniqueness",
+      "phase": "ReferenceSubgraph",
+      "kind": "positive",
+      "expectFail": false,
+      "verdict": "PASS",
+      "passed": true,
+      "detail": "distinct (hubName,addressSignature)=29788 total=29788 violations=0 (REQUIRED: 29788/29788/0)"
+    },
+    {
+      "name": "referenceSubgraph.decompositionInvariants",
+      "phase": "ReferenceSubgraph",
+      "kind": "positive",
+      "expectFail": false,
+      "verdict": "PASS",
+      "passed": true,
+      "detail": "missing DOMAIN=0 PROPERTY=0 IN_HUB=0; value-tier missing VALUE=0 RANGE=0; HAS_CEDS_* edges=115471 dangling=0 (REQUIRED all 0, edges>0)"
+    },
+    {
+      "name": "versionBridge.studentStaffDistinct",
+      "phase": "Mapping",
+      "kind": "regression",
+      "expectFail": false,
+      "verdict": "PASS",
+      "passed": true,
+      "detail": "studentRefs=1 (qualified=1) staffRefs=1 (qualified=1) overlap=0 (REQUIRED: each maps to its OWN type-qualified ref AND the two are DISTINCT, overlap=0)"
+    },
+    {
+      "name": "inferred.closeMatchStampedAndUnreified",
+      "phase": "Mapping",
+      "kind": "regression",
+      "expectFail": false,
+      "verdict": "PASS",
+      "passed": true,
+      "detail": "CLOSE_MATCH=68 (expect 68); fully-stamped+pinned=68; ->HubReference=68; NON-curation MappingAssertion nodes=0 (REQUIRED: edges==stamped==toHubRef==68 AND non-curation MappingAssertion==0 — the inferred track is unreified; Phase-6 curation MappingAssertions (justification=ManualMappingCuration) are EXCLUDED and allowed)"
+    },
+    {
+      "name": "schemaValidator.goldenBlocksConformant",
+      "phase": "Phase7",
+      "kind": "positive",
+      "expectFail": false,
+      "verdict": "PASS",
+      "passed": true,
+      "detail": "validated 32 block(s): 105476 node(s)/336209 edge(s); violations=0 (REQUIRED: 0 — every block element on-schema)"
+    },
+    {
+      "name": "schemaValidator.catchesOffSchemaBlock",
+      "phase": "Phase7",
+      "kind": "twin",
+      "expectFail": false,
+      "verdict": "PASS",
+      "passed": true,
+      "detail": "control violations=0 (REQUIRED 0); off-schema violations=26 across codes [E1_invalidEdgeType,E2_badProvenanceTier,E2_missingProvenanceTier,E3_badEnum,N1_missingForgedNodeLabel,N2_missingStableId,N3_hubReferenceMissingRequired,N4_hubDefinitionMissingRequired,N5_badEnum,N6_baseNodeMissingRequired,N7_missingRefIdentity,N8_standardRootMissingRequired]; missing expected codes=[] (REQUIRED none) — proves the validator bites"
+    },
+    {
+      "name": "finisher.schemaConstraintsPresent",
+      "phase": "Phase7",
+      "kind": "positive",
+      "expectFail": false,
+      "verdict": "PASS",
+      "passed": true,
+      "detail": "constraints present=[unique_ForgedNode_stableId,unique_HubDefinition_hubName,unique_HubReference_hubName_addressSignature]; expected=[unique_ForgedNode_stableId,unique_HubReference_hubName_addressSignature,unique_HubDefinition_hubName]; missing=[] (REQUIRED: all present — finishing phase ran)"
+    },
+    {
+      "name": "resolve.accuracyKnownTermsRecallAtK",
+      "phase": "Phase8",
+      "kind": "positive",
+      "expectFail": false,
+      "verdict": "PASS",
+      "passed": true,
+      "detail": "recall@15=13/15=0.8667 (REQUIRED >= 0.8); gold HubReference present in ranked candidates. misses: [AcademicWeek.WeekIdentifier, Address.AddressTypeDescriptor] (deterministic retrieval; stub reranker)"
+    },
+    {
+      "name": "resolve.abstainsBelowFloorNotMappable",
+      "phase": "Phase8",
+      "kind": "twin",
+      "expectFail": false,
+      "verdict": "PASS",
+      "passed": true,
+      "detail": "floor=0.5: UNMAPPABLE(gibberish best=0.353141) abstain=true reason=cosineFloor suggested=null | CONTROL('AcademicHonor.AcademicHonorCategoryDescriptor' best=0.943922) abstain=false suggested=SET (REQUIRED: unmappable abstains via cosineFloor AND mappable resolves)"
+    },
+    {
+      "name": "resolve.readOnlyFingerprintUnchanged",
+      "phase": "Phase8",
+      "kind": "positive",
+      "expectFail": false,
+      "verdict": "PASS",
+      "passed": true,
+      "detail": "all-scope fingerprint before==after: true (b7f0dd1b3530…); nodes 105609->105609, edges 336318->336318 (REQUIRED: identical — a resolve call does not mutate the graph; detector twin-proven by gates 04/07/09)"
+    },
+    {
+      "name": "resolve.surfacesParityThreeWay",
+      "phase": "Phase8",
+      "kind": "positive",
+      "expectFail": false,
+      "verdict": "PASS",
+      "passed": true,
+      "detail": "3 surfaces (cli/mcp/askMilo) over one shared core, 2 inputs (incl. all optional params) -> JSON-identical: true. minimal:identical[abstain=false suggested=P001069 candidates=15 topK=15 cosineFloor=0] | allOptionalParams:identical[abstain=false suggested=P001069 candidates=8 topK=8 cosineFloor=0.1] (REQUIRED: byte-identical for every input)"
+    },
+    {
+      "name": "purity.graphMetaXor",
+      "phase": "WaveB",
+      "kind": "positive",
+      "expectFail": false,
+      "verdict": "PASS",
+      "passed": true,
+      "detail": "graphMetaXor violations=0 (REQUIRED: every node carries _source XOR :GraphMeta — structural marker, no exempt list)"
+    },
+    {
+      "name": "equivalence.catchesVectorMutation",
+      "phase": "Phase0",
+      "kind": "twin",
+      "expectFail": false,
+      "verdict": "PASS",
+      "passed": true,
+      "detail": "GREEN(identical)->regime=transport,byteIdentical=true; RED(vectorMutation)->regime=rebuild-equivalent,structurallyEquivalent=true,byteIdentical=false,embeddingDivergence=[\"ceds:twinAlpha\"]"
+    },
+    {
+      "name": "equivalence.catchesDroppedNode",
+      "phase": "Phase0",
+      "kind": "twin",
+      "expectFail": false,
+      "verdict": "PASS",
+      "passed": true,
+      "detail": "GREEN(identical)->byteIdentical=true; RED(droppedNode ceds:twinAlpha)->regime=divergent,structurallyEquivalent=false,removedNodes=1"
+    },
+    {
+      "name": "equivalence.greenOnIdentical",
+      "phase": "Phase0",
+      "kind": "positive",
+      "expectFail": false,
+      "verdict": "PASS",
+      "passed": true,
+      "detail": "regime=transport,byteIdentical=true,structurallyEquivalent=true,embeddingDivergentCount=0"
+    },
+    {
+      "name": "equivalence.embeddingAxisLivenessGuard",
+      "phase": "Phase0",
+      "kind": "twin",
+      "expectFail": false,
+      "verdict": "PASS",
+      "passed": true,
+      "detail": "vacuousByteIdenticalOnEmpty=true,emptyCoverage=0/0,populatedCoverage=2/3"
+    },
+    {
+      "name": "equivalence.liveValidGuard",
+      "phase": "Phase0",
+      "kind": "twin",
+      "expectFail": false,
+      "verdict": "PASS",
+      "passed": true,
+      "detail": "RED(empty)->byteIdentical=true,valid=false; RED(allNull)->byteIdentical=true,axisLive=false,valid=false; GREEN(populated)->byteIdentical=true,axisLive=true,valid=true"
+    },
+    {
+      "name": "determinism.blockDeterminismEmbeddingRef",
+      "phase": "Phase0",
+      "kind": "twin",
+      "expectFail": false,
+      "verdict": "PASS",
+      "passed": true,
+      "detail": "GREEN(stable)->sameBlockId=true (d08fcfdc07cd…); refReproducible=true; RED(refDrift)->differentBlockId=true (base d08fcfdc07cd… vs mutated 5a95eee87d05…); GUARD(refLoadBearing)->1 line changed, refOnly=true, blockIdMoved=true"
+    }
+  ]
+}
