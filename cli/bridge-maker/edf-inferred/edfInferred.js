@@ -3,13 +3,15 @@
 
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
-// bridgeMaker.js — the `bridgeMaker` CLI: PHASE-5 INFERRED-track producer (probabilistic track).
-// (Renamed from edf-implied/edfImplied.js 2026-07-04 — TQ's historic tool name restored. Frozen
-// blocks minted before the rename carry producedBy/mappingTool 'edf-implied' as honest history;
-// emissions from here on stamp 'bridgeMaker'. Mixed stamps across eras are expected.)
+// edfInferred.js — the `edf-inferred` CLI: PHASE-5 INFERRED-track producer (probabilistic track).
+// (Renamed from bridge-maker/bridgeMaker.js 2026-07-10 per spec §9 D2; earlier from
+// edf-implied/edfImplied.js 2026-07-04. Frozen blocks minted before the renames carry
+// producedBy/mappingTool 'edf-implied' or 'bridgeMaker' as honest history; this module STILL
+// stamps 'bridgeMaker' — emission stamps are block content and change only with Phase C's
+// producer work, never in a behavior-identical reorg. Mixed stamps across eras are expected.)
 //
-//   bridgeMaker -accuracy [--gatingManifest=K] [--limit=N] [--cosineFloor=F] [--concurrency=C]
-//   bridgeMaker -emit --scope=sifAnchor [--sampleSize=N] [--gatingManifest=K] [--cosineFloor=F] ...
+//   edfInferred -accuracy [--gatingManifest=K] [--limit=N] [--cosineFloor=F] [--concurrency=C]
+//   edfInferred -emit --scope=sifAnchor [--sampleSize=N] [--gatingManifest=K] [--cosineFloor=F] ...
 //
 // -accuracy : the PRODUCER-ACCURACY gate (production-time, vs Appendix A). Runs the inference pipeline on
 //   the Ed-Fi gold harness (the authored crosswalk frame) and reports recall@15, reranker-only rank-1,
@@ -44,13 +46,13 @@ const DATASTORES = path.join(projectRoot, 'dataStores');
 
 const replayBlock = require(path.join(CORE_LIB, 'replay', 'replay-block'));
 const inferredSubgraphFactory = require(path.join(CORE_LIB, 'inferred-subgraph', 'inferredSubgraph'));
-const nodeLoaderFactory = require(path.join(__dirname, 'lib', 'node-loader'));
-const defEmbedderFactory = require(path.join(__dirname, 'lib', 'def-embedder'));
-const inferencePipelineFactory = require(path.join(__dirname, 'lib', 'inference-pipeline'));
-const llmClientFactory = require(path.join(__dirname, 'lib', 'llm-client'));
-const goldHarnessFactory = require(path.join(__dirname, 'lib', 'gold-harness'));
+const nodeLoaderFactory = require(path.join(CORE_LIB, 'node-loader', 'node-loader'));
+const defEmbedderFactory = require(path.join(CORE_LIB, 'def-embedder', 'def-embedder'));
+const inferencePipelineFactory = require(path.join(CORE_LIB, 'inference-pipeline', 'inference-pipeline'));
+const llmClientFactory = require(path.join(CORE_LIB, 'llm-client', 'llm-client'));
+const goldHarnessFactory = require(path.join(CORE_LIB, 'gold-harness', 'gold-harness'));
 const valueScope = require(path.join(__dirname, 'lib', 'value-scope'));
-const valueCrosswalk = require(path.join(projectRoot, 'code', 'cli', 'lib.d', 'edf-mapping', 'lib', 'value-crosswalk'));
+const valueCrosswalk = require(path.join(projectRoot, 'code', 'cli', 'bridge-maker', 'edf-mapping', 'lib', 'value-crosswalk'));
 
 const DEFAULT_GATING_MANIFEST =
 	'14665fcf49c3614ce7f8448b729545e7194bee50a598fa721cbd4c1431d6d12d';
@@ -375,7 +377,7 @@ const handleAccuracy = (resources, callback) => {
 	});
 	taskList.push((args, next) => {
 		xLog.status(
-			`[bridgeMaker -accuracy] harness=${args.harness.length} (pos+neg), CEDS property candidates=${args.candidateRecords.length}; embedding definitions…`,
+			`[edfInferred -accuracy] harness=${args.harness.length} (pos+neg), CEDS property candidates=${args.candidateRecords.length}; embedding definitions…`,
 		);
 		const sourceRecords = args.harness.map((h) => h.src);
 		attachVectors({ defEmbedder, candidateRecords: args.candidateRecords, sourceRecords }, (err) =>
@@ -390,7 +392,7 @@ const handleAccuracy = (resources, callback) => {
 		args.harness.forEach((h) => {
 			labelByStableId[h.src.stableId] = h.label;
 		});
-		xLog.status(`[bridgeMaker -accuracy] reranking ${sources.length} sources via ${resources.llmClient.model}…`);
+		xLog.status(`[edfInferred -accuracy] reranking ${sources.length} sources via ${resources.llmClient.model}…`);
 		pipeline.processSources(
 			{
 				sources,
@@ -576,7 +578,7 @@ const handleAccuracyValue = (resources, callback) => {
 		const sampled = positives.filter((_, i) => i % stride === 0).slice(0, sampleSize);
 		const optionSetCandidateIndex = valueScope.buildOptionSetCandidateIndex(args.cedsRecords);
 		xLog.status(
-			`[bridgeMaker -accuracy --tier=value] gold positives=${positives.length}, sampled (stride=${stride})=${sampled.length}`,
+			`[edfInferred -accuracy --tier=value] gold positives=${positives.length}, sampled (stride=${stride})=${sampled.length}`,
 		);
 		next('', { ...args, sourceById, sampled, optionSetCandidateIndex });
 	});
@@ -596,7 +598,7 @@ const handleAccuracyValue = (resources, callback) => {
 			}
 		});
 		xLog.status(
-			`[bridgeMaker -accuracy --tier=value] exact-shortcut resolved ${exactDecisions.length} (${
+			`[edfInferred -accuracy --tier=value] exact-shortcut resolved ${exactDecisions.length} (${
 				exactDecisions.filter((d) => d.correct).length
 			} correct); ${needsLlm.length} need LLM rerank`,
 		);
@@ -622,7 +624,7 @@ const handleAccuracyValue = (resources, callback) => {
 			});
 		});
 		xLog.status(
-			`[bridgeMaker -accuracy --tier=value] embedding ${sourceRecords.length} sources + ${candidateUnion.length} scoped candidates…`,
+			`[edfInferred -accuracy --tier=value] embedding ${sourceRecords.length} sources + ${candidateUnion.length} scoped candidates…`,
 		);
 		attachVectors({ defEmbedder, candidateRecords: candidateUnion, sourceRecords }, (err) =>
 			next(err, { ...args, candidatesByOptionSet }),
@@ -640,7 +642,7 @@ const handleAccuracyValue = (resources, callback) => {
 		});
 		const sources = args.needsLlm.map((n) => n.sourceRecord);
 		const candidatePoolForSource = (source) => args.candidatesByOptionSet[goldByStableId[source.stableId].rangeOptionSetId] || [];
-		xLog.status(`[bridgeMaker -accuracy --tier=value] reranking ${sources.length} sources via ${resources.llmClient.model}…`);
+		xLog.status(`[edfInferred -accuracy --tier=value] reranking ${sources.length} sources via ${resources.llmClient.model}…`);
 		pipeline.processSources(
 			{ sources, candidatePoolByRole: {}, candidatePoolForSource, sourceClassIndex: {}, candidateClassIndex: {} },
 			(err, out) => {
@@ -760,7 +762,7 @@ const handleEmit = (resources, callback) => {
 			(oneRecord) => oneRecord.role !== 'DmeProperty' || gapIds.has(oneRecord.stableId),
 		);
 		xLog.status(
-			`[bridgeMaker -emit] GAP-FILL (A0.1, authored wins): ${gapFill.sourcePropertyCount} ${sourceStandard} DmeProperty, ` +
+			`[edfInferred -emit] GAP-FILL (A0.1, authored wins): ${gapFill.sourcePropertyCount} ${sourceStandard} DmeProperty, ` +
 				`${gapFill.authoredMappedCount} authored-mapped (PROPERTY-tier EXACT_MATCH), gap=${gapFill.gapCount}; ` +
 				`consulted mapping block(s): ${gapFill.consultedBlockIds.map((oneId) => oneId.slice(0, 12)).join(', ') || '(none in gating manifest)'}`,
 		);
@@ -774,10 +776,10 @@ const handleEmit = (resources, callback) => {
 		}
 		const candidateRecords = args.cedsRecords.filter((r) => r.role === 'DmeProperty');
 		xLog.status(
-			`[bridgeMaker -emit] scope='${scope}' selected=${selected.length} (anchors=${sel.anchorCount}, sample=${sel.sampleCount}) of gap=${args.gapFill.gapCount} (${args.sourceRecords.filter((r) => r.role === 'DmeProperty').length} total ${sourceStandard} DmeProperty); candidates=${candidateRecords.length}`,
+			`[edfInferred -emit] scope='${scope}' selected=${selected.length} (anchors=${sel.anchorCount}, sample=${sel.sampleCount}) of gap=${args.gapFill.gapCount} (${args.sourceRecords.filter((r) => r.role === 'DmeProperty').length} total ${sourceStandard} DmeProperty); candidates=${candidateRecords.length}`,
 		);
 		xLog.status(
-			`[bridgeMaker -emit] DEFERRED SCOPE (NOT run, logged per WILD_FALCON no-silent-cap): all other ${sourceStandard} roles + any un-run crosswalk-less standards — a parameterized re-run, not new code.`,
+			`[edfInferred -emit] DEFERRED SCOPE (NOT run, logged per WILD_FALCON no-silent-cap): all other ${sourceStandard} roles + any un-run crosswalk-less standards — a parameterized re-run, not new code.`,
 		);
 		next('', { ...args, selected, candidateRecords, scopeMeta: sel });
 	});
@@ -816,7 +818,7 @@ const handleEmit = (resources, callback) => {
 		const toScore = args.selected.filter((r) => !resumedIds.has(r.stableId));
 		if (resumedDecisions.length > 0) {
 			xLog.status(
-				`[bridgeMaker -emit] resume: ${resumedDecisions.length} decision(s) replayed from ${resumeJournal}; ${toScore.length} still to score`,
+				`[edfInferred -emit] resume: ${resumedDecisions.length} decision(s) replayed from ${resumeJournal}; ${toScore.length} still to score`,
 			);
 		}
 		fs.mkdirSync(path.dirname(decisionJournal), { recursive: true });
@@ -837,9 +839,9 @@ const handleEmit = (resources, callback) => {
 			};
 			fs.writeSync(journalFd, `${JSON.stringify(slim)}\n`);
 		};
-		xLog.status(`[bridgeMaker -emit] decision journal (incremental freeze): ${decisionJournal}`);
+		xLog.status(`[edfInferred -emit] decision journal (incremental freeze): ${decisionJournal}`);
 		const candidatePoolByRole = { DmeProperty: args.candidateRecords };
-		xLog.status(`[bridgeMaker -emit] reranking ${toScore.length} sources via ${resources.llmClient.model}…`);
+		xLog.status(`[edfInferred -emit] reranking ${toScore.length} sources via ${resources.llmClient.model}…`);
 		pipeline.processSources(
 			{
 				sources: toScore,
@@ -886,7 +888,7 @@ const handleEmit = (resources, callback) => {
 					next(`saveBlock(inferredDecision) failed: ${err}`);
 					return;
 				}
-				xLog.status(`[bridgeMaker -emit] frozen decision block: ${result.blockId.slice(0, 12)}… (pin)`);
+				xLog.status(`[edfInferred -emit] frozen decision block: ${result.blockId.slice(0, 12)}… (pin)`);
 				next('', { ...args, decisionBlockId: result.blockId });
 			},
 		);
@@ -924,7 +926,7 @@ const handleEmit = (resources, callback) => {
 			abstainByReason[d.abstainReason] = (abstainByReason[d.abstainReason] || 0) + 1;
 		});
 		xLog.status(
-			`[bridgeMaker -emit] decisions=${args.decisions.length}: picks=${args.decisions.length - abstains}, abstains=${abstains} ${JSON.stringify(abstainByReason)}; CLOSE_MATCH edges=${subgraph.counts.edgesTotal} (orphans=${subgraph.counts.orphans}, fromGaps=${subgraph.counts.fromGaps})`,
+			`[edfInferred -emit] decisions=${args.decisions.length}: picks=${args.decisions.length - abstains}, abstains=${abstains} ${JSON.stringify(abstainByReason)}; CLOSE_MATCH edges=${subgraph.counts.edgesTotal} (orphans=${subgraph.counts.orphans}, fromGaps=${subgraph.counts.fromGaps})`,
 		);
 		next('', { ...args, subgraph, abstains, abstainByReason });
 	});
@@ -967,7 +969,7 @@ const handleEmit = (resources, callback) => {
 					return;
 				}
 				xLog.status(
-					`[bridgeMaker -emit] inferred mapping block saved: ${result.blockId.slice(0, 12)}… (${blockText.split('\n').filter(Boolean).length} lines)`,
+					`[edfInferred -emit] inferred mapping block saved: ${result.blockId.slice(0, 12)}… (${blockText.split('\n').filter(Boolean).length} lines)`,
 				);
 				next('', { ...args, mappingBlockId: result.blockId });
 			},
@@ -1082,9 +1084,9 @@ const handleEmitValue = (resources, callback) => {
 		});
 		if (candidates.length === 0) {
 			next(
-				`[bridgeMaker -emit --tier=value] no property-tier mapping block (type 'mapping', subject '${sourceStandard}') ` +
+				`[edfInferred -emit --tier=value] no property-tier mapping block (type 'mapping', subject '${sourceStandard}') ` +
 					`in gating manifest '${gatingManifest}' — the parent-match set that scopes values is MISSING. ` +
-					`Emit the property tier first (bridgeMaker -emit / edf-mapping -build) or pin one explicitly ` +
+					`Emit the property tier first (edfInferred -emit / edf-mapping -build) or pin one explicitly ` +
 					`with --matchedMappingBlock=. Refusing to default across builds.`,
 			);
 			return;
@@ -1092,12 +1094,12 @@ const handleEmitValue = (resources, callback) => {
 		const row = candidates[0];
 		if (candidates.length > 1) {
 			xLog.status(
-				`[bridgeMaker -emit --tier=value] ${candidates.length} property-tier mapping blocks for '${sourceStandard}' ` +
+				`[edfInferred -emit --tier=value] ${candidates.length} property-tier mapping blocks for '${sourceStandard}' ` +
 					`in the gating manifest; using newest ${row.blockId.slice(0, 12)}… (createdAt ${row.createdAt})`,
 			);
 		}
 		xLog.status(
-			`[bridgeMaker -emit --tier=value] matchedMappingBlock discovered in gating manifest: ${row.blockId.slice(0, 12)}…`,
+			`[edfInferred -emit --tier=value] matchedMappingBlock discovered in gating manifest: ${row.blockId.slice(0, 12)}…`,
 		);
 		const matchedBlock = replayBlock.deserializeBlock(row.text);
 		next('', { ...args, matchedMappingBlockRow: row, matchedMappingEdges: matchedBlock.edges });
@@ -1154,11 +1156,11 @@ const handleEmitValue = (resources, callback) => {
 		);
 		if (violationCount > 0) {
 			xLog.error(
-				`[bridgeMaker -emit --tier=value] ${sourceStandard} parentId CONTRACT VIOLATION on ${violationCount}/${sourceValues.length} values (${JSON.stringify(unscopableTally)}) — the source block's parentId chain is broken (wrong referent or dangling); these abstains are a block defect, NOT a scoping outcome`,
+				`[edfInferred -emit --tier=value] ${sourceStandard} parentId CONTRACT VIOLATION on ${violationCount}/${sourceValues.length} values (${JSON.stringify(unscopableTally)}) — the source block's parentId chain is broken (wrong referent or dangling); these abstains are a block defect, NOT a scoping outcome`,
 			);
 		}
 		xLog.status(
-			`[bridgeMaker -emit --tier=value] ${sourceStandard} DmeOptionValue=${sourceValues.length}; scoped=${scoped.length}, unscoped=${unscopedDecisions.length} byReason=${JSON.stringify(unscopableTally)} (scopeParentFloor=${scopeParentFloor}: CLOSE parents below it abstain as parentMatchBelowFloor)`,
+			`[edfInferred -emit --tier=value] ${sourceStandard} DmeOptionValue=${sourceValues.length}; scoped=${scoped.length}, unscoped=${unscopedDecisions.length} byReason=${JSON.stringify(unscopableTally)} (scopeParentFloor=${scopeParentFloor}: CLOSE parents below it abstain as parentMatchBelowFloor)`,
 		);
 		next('', { ...args, scoped, unscopedDecisions });
 	});
@@ -1196,10 +1198,10 @@ const handleEmitValue = (resources, callback) => {
 		});
 		if (ambiguousShortcuts.length > 0) {
 			xLog.status(
-				`[bridgeMaker -emit --tier=value] L4 AMBIGUOUS exact-shortcut collisions (no deterministic pick — routed to LLM rerank): ${ambiguousShortcuts.length} source(s): ${JSON.stringify(ambiguousShortcuts.slice(0, 10))}${ambiguousShortcuts.length > 10 ? ' …' : ''}`,
+				`[edfInferred -emit --tier=value] L4 AMBIGUOUS exact-shortcut collisions (no deterministic pick — routed to LLM rerank): ${ambiguousShortcuts.length} source(s): ${JSON.stringify(ambiguousShortcuts.slice(0, 10))}${ambiguousShortcuts.length > 10 ? ' …' : ''}`,
 			);
 		}
-		xLog.status(`[bridgeMaker -emit --tier=value] exact-shortcut resolved ${exactDecisions.length}; ${needsLlm.length} need LLM rerank (${ambiguousShortcuts.length} of those ambiguous multi-hit)`);
+		xLog.status(`[edfInferred -emit --tier=value] exact-shortcut resolved ${exactDecisions.length}; ${needsLlm.length} need LLM rerank (${ambiguousShortcuts.length} of those ambiguous multi-hit)`);
 		next('', { ...args, exactDecisions, needsLlm });
 	});
 	// embed + scoped rerank for shortcut misses
@@ -1221,7 +1223,7 @@ const handleEmitValue = (resources, callback) => {
 				}
 			});
 		});
-		xLog.status(`[bridgeMaker -emit --tier=value] embedding ${sourceRecords.length} sources + ${candidateUnion.length} scoped candidates…`);
+		xLog.status(`[edfInferred -emit --tier=value] embedding ${sourceRecords.length} sources + ${candidateUnion.length} scoped candidates…`);
 		attachVectors({ defEmbedder, candidateRecords: candidateUnion, sourceRecords }, (err) =>
 			next(err, { ...args, candidatesBySourceId }),
 		);
@@ -1239,7 +1241,7 @@ const handleEmitValue = (resources, callback) => {
 			targetPropertyKeyBySourceId[n.sourceRecord.stableId] = n.scope.targetPropertyKey;
 			scopeBySourceId[n.sourceRecord.stableId] = n.scope;
 		});
-		xLog.status(`[bridgeMaker -emit --tier=value] reranking ${sources.length} sources via ${resources.llmClient.model}…`);
+		xLog.status(`[edfInferred -emit --tier=value] reranking ${sources.length} sources via ${resources.llmClient.model}…`);
 		pipeline.processSources(
 			{ sources, candidatePoolByRole: {}, candidatePoolForSource, sourceClassIndex: {}, candidateClassIndex: {} },
 			(err, out) => {
@@ -1302,7 +1304,7 @@ const handleEmitValue = (resources, callback) => {
 					next(`saveBlock(inferredDecision) failed: ${err}`);
 					return;
 				}
-				xLog.status(`[bridgeMaker -emit --tier=value] frozen decision block: ${result.blockId.slice(0, 12)}… (pin)`);
+				xLog.status(`[edfInferred -emit --tier=value] frozen decision block: ${result.blockId.slice(0, 12)}… (pin)`);
 				next('', { ...args, decisionBlockId: result.blockId, decisions });
 			},
 		);
@@ -1361,7 +1363,7 @@ const handleEmitValue = (resources, callback) => {
 			abstainByReason[d.abstainReason] = (abstainByReason[d.abstainReason] || 0) + 1;
 		});
 		xLog.status(
-			`[bridgeMaker -emit --tier=value] decisions=${args.decisions.length}: picks=${args.decisions.length - abstains}, abstains=${abstains} ${JSON.stringify(abstainByReason)}; CLOSE_MATCH edges=${subgraph.counts.edgesTotal} (orphans=${subgraph.counts.orphans}, fromGaps=${subgraph.counts.fromGaps})`,
+			`[edfInferred -emit --tier=value] decisions=${args.decisions.length}: picks=${args.decisions.length - abstains}, abstains=${abstains} ${JSON.stringify(abstainByReason)}; CLOSE_MATCH edges=${subgraph.counts.edgesTotal} (orphans=${subgraph.counts.orphans}, fromGaps=${subgraph.counts.fromGaps})`,
 		);
 		next('', { ...args, subgraph, abstains, abstainByReason });
 	});
@@ -1406,7 +1408,7 @@ const handleEmitValue = (resources, callback) => {
 					return;
 				}
 				xLog.status(
-					`[bridgeMaker -emit --tier=value] inferred VALUE mapping block saved: ${result.blockId.slice(0, 12)}… (${blockText.split('\n').filter(Boolean).length} lines)`,
+					`[edfInferred -emit --tier=value] inferred VALUE mapping block saved: ${result.blockId.slice(0, 12)}… (${blockText.split('\n').filter(Boolean).length} lines)`,
 				);
 				next('', { ...args, mappingBlockId: result.blockId });
 			},
@@ -1477,7 +1479,7 @@ const handleGapCheck = (resources, callback) => {
 	const { forgeStore, nodeLoader } = resources;
 	const decisionBlockId = strParam('decisionBlock', '');
 	if (!decisionBlockId) {
-		callback('bridgeMaker -gapCheck: --decisionBlock= is required');
+		callback('edfInferred -gapCheck: --decisionBlock= is required');
 		return;
 	}
 	const taskList = new taskListPlus();
@@ -1556,18 +1558,18 @@ const main = () => {
 	const action = Object.keys(commandLineParameters.switches).find((s) => dispatchMap[s]);
 	if (!action) {
 		xLog.error(
-			'bridgeMaker: unknown action. Actions: -accuracy | -emit | -gapCheck. Params: --gatingManifest= --scope= --sampleSize= --limit= --cosineFloor= --concurrency= --model= --decisionJournal= --resumeJournal= --decisionBlock=',
+			'edfInferred: unknown action. Actions: -accuracy | -emit | -gapCheck. Params: --gatingManifest= --scope= --sampleSize= --limit= --cosineFloor= --concurrency= --model= --decisionJournal= --resumeJournal= --decisionBlock=',
 		);
 		process.exit(2);
 	}
 	buildSharedResources((err, resources) => {
 		if (err) {
-			xLog.error(`bridgeMaker bootstrap failed: ${err}`);
+			xLog.error(`edfInferred bootstrap failed: ${err}`);
 			process.exit(2);
 		}
 		dispatchMap[action](resources, (handlerErr) => {
 			if (handlerErr) {
-				xLog.error(`[bridgeMaker] ERROR: ${handlerErr}`);
+				xLog.error(`[edfInferred] ERROR: ${handlerErr}`);
 				process.exit(1);
 			}
 			process.exit(0);

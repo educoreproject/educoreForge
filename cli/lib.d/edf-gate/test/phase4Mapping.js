@@ -49,7 +49,7 @@ const GROUND_TRUTH = path.join(__dirname, '..', 'lib', 'ground-truth', 'groundTr
 
 const replayBlock = require(path.join(CORE_LIB, 'replay', 'replay-block'));
 const mappingSubgraphFactory = require(path.join(CORE_LIB, 'mapping-subgraph', 'mappingSubgraph'));
-const versionBridge = require(path.join(projectRoot, 'code', 'cli', 'lib.d', 'edf-mapping', 'assets', 'versionBridge'));
+const versionBridge = require(path.join(projectRoot, 'code', 'cli', 'bridge-maker', 'edf-mapping', 'assets', 'versionBridge'));
 
 // the DERIVED expectations (the producer's deterministic ROW-DRIVEN output for the EdFi authored crosswalk).
 const EXPECTED_MAPPING_EDGES = 918; // distinct (source element, HubReference) EXACT_MATCH edges

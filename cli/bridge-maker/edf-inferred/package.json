@@ -1,0 +1,6 @@
+{
+	"name": "edf-inferred",
+	"version": "1.0.0",
+	"description": "edfInferred — inferred-track mapping producer (renamed from bridge-maker 2026-07-10 per spec §9 D2; earlier from edf-implied 2026-07-04)",
+	"main": "edfInferred.js"
+}

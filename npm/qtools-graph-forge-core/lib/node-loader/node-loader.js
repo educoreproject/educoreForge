@@ -21,7 +21,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
 const path = require('path');
 
-const CORE_LIB = path.join(__dirname, '..', '..', '..', '..', 'npm', 'qtools-graph-forge-core', 'lib');
+const CORE_LIB = path.join(__dirname, '..');
 const replayBlock = require(path.join(CORE_LIB, 'replay', 'replay-block'));
 
 // single-element PG-JSON array -> scalar.

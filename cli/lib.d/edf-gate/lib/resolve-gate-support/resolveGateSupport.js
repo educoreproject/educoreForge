@@ -14,12 +14,12 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 const path = require('path');
 
 const RESOLVE_LIB = path.join(__dirname, '..', '..', '..', 'edf-resolve', 'lib');
-const IMPLIED_LIB = path.join(__dirname, '..', '..', '..', 'bridge-maker', 'lib');
+const CORE_LIB = path.join(__dirname, '..', '..', '..', '..', '..', 'npm', 'qtools-graph-forge-core', 'lib');
 
 const resolveCoreFactory = require(path.join(RESOLVE_LIB, 'resolve-core'));
-const defEmbedderFactory = require(path.join(IMPLIED_LIB, 'def-embedder'));
-const nodeLoaderFactory = require(path.join(IMPLIED_LIB, 'node-loader'));
-const goldHarnessFactory = require(path.join(IMPLIED_LIB, 'gold-harness'));
+const defEmbedderFactory = require(path.join(CORE_LIB, 'def-embedder', 'def-embedder'));
+const nodeLoaderFactory = require(path.join(CORE_LIB, 'node-loader', 'node-loader'));
+const goldHarnessFactory = require(path.join(CORE_LIB, 'gold-harness', 'gold-harness'));
 
 const { pipeRunner, taskListPlus } = new require(path.join(
 	__dirname,

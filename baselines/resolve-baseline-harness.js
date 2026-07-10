@@ -30,7 +30,8 @@ const projectRoot = findProjectRoot();
 const CODE = path.join(projectRoot, 'code');
 const CORE_LIB = path.join(CODE, 'npm', 'qtools-graph-forge-core', 'lib');
 const RESOLVE_LIB = path.join(CODE, 'cli', 'lib.d', 'edf-resolve', 'lib');
-const IMPLIED_LIB = path.join(CODE, 'cli', 'lib.d', 'bridge-maker', 'lib');
+// G-B2 AUTHORIZED INSTRUMENT MIGRATION (Phase B, work item 5): def-embedder extracted to the core lib
+// (spec §9 D4); RESOLVE_LIB and GATE_SUPPORT did not move and remain as frozen at Phase 0.
 const GATE_SUPPORT = path.join(CODE, 'cli', 'lib.d', 'edf-gate', 'lib', 'resolve-gate-support', 'resolveGateSupport');
 const DATASTORES = path.join(projectRoot, 'dataStores');
 
@@ -48,7 +49,7 @@ process.global = {
 const { pipeRunner, taskListPlus } = new (require(path.join(CODE, 'cli', 'node_modules', 'qtools-asynchronous-pipe-plus')))();
 
 const resolveCoreFactory = require(path.join(RESOLVE_LIB, 'resolve-core'));
-const defEmbedderFactory = require(path.join(IMPLIED_LIB, 'def-embedder'));
+const defEmbedderFactory = require(path.join(CORE_LIB, 'def-embedder', 'def-embedder'));
 const { getCuratedKnownTerms } = require(GATE_SUPPORT);
 
 // the suite's gating manifest — the one the frozen phase0Baselines pin (golden.baseline.json)

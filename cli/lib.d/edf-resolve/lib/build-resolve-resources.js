@@ -16,7 +16,6 @@ const findProjectRoot = ({ rootFolderName = 'system' } = {}) =>
 const projectRoot = findProjectRoot();
 const CODE = path.join(projectRoot, 'code');
 const CORE_LIB = path.join(CODE, 'npm', 'qtools-graph-forge-core', 'lib');
-const IMPLIED_LIB = path.join(CODE, 'cli', 'lib.d', 'bridge-maker', 'lib');
 const DATASTORES = path.join(projectRoot, 'dataStores');
 
 const { pipeRunner, taskListPlus } = new require(path.join(
@@ -26,8 +25,8 @@ const { pipeRunner, taskListPlus } = new require(path.join(
 	'qtools-asynchronous-pipe-plus',
 ))();
 
-const defEmbedderFactory = require(path.join(IMPLIED_LIB, 'def-embedder'));
-const llmClientFactory = require(path.join(IMPLIED_LIB, 'llm-client'));
+const defEmbedderFactory = require(path.join(CORE_LIB, 'def-embedder', 'def-embedder'));
+const llmClientFactory = require(path.join(CORE_LIB, 'llm-client', 'llm-client'));
 const resolveCoreFactory = require(path.join(__dirname, 'resolve-core'));
 
 // the gating manifest the Phase-7 re-freeze targets (the finished golden's content blocks). Overridable.

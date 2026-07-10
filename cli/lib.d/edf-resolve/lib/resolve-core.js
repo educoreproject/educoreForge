@@ -40,10 +40,9 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 const path = require('path');
 
 const CORE_LIB = path.join(__dirname, '..', '..', '..', '..', 'npm', 'qtools-graph-forge-core', 'lib');
-const IMPLIED_LIB = path.join(__dirname, '..', '..', 'bridge-maker', 'lib');
 
-const nodeLoaderFactory = require(path.join(IMPLIED_LIB, 'node-loader'));
-const inferencePipelineFactory = require(path.join(IMPLIED_LIB, 'inference-pipeline'));
+const nodeLoaderFactory = require(path.join(CORE_LIB, 'node-loader', 'node-loader'));
+const inferencePipelineFactory = require(path.join(CORE_LIB, 'inference-pipeline', 'inference-pipeline'));
 const mappingSubgraphFactory = require(path.join(CORE_LIB, 'mapping-subgraph', 'mappingSubgraph'));
 
 const { pipeRunner, taskListPlus } = new require(path.join(

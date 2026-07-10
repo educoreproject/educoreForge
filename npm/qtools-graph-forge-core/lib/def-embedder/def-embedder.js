@@ -22,7 +22,7 @@ const fs = require('fs');
 const crypto = require('crypto');
 const { pipeRunner, taskListPlus } = new require('qtools-asynchronous-pipe-plus')();
 
-const CORE_LIB = path.join(__dirname, '..', '..', '..', '..', 'npm', 'qtools-graph-forge-core', 'lib');
+const CORE_LIB = path.join(__dirname, '..');
 const embeddingClientFactory = require(path.join(CORE_LIB, 'embedding', 'embedding-client'));
 
 const BATCH_SIZE = 128;

@@ -1,6 +1,0 @@
-{
-	"name": "bridge-maker",
-	"version": "1.0.0",
-	"description": "bridgeMaker — inferred-track mapping producer (renamed from edf-implied 2026-07-04)",
-	"main": "bridgeMaker.js"
-}

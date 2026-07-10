@@ -53,7 +53,7 @@ const GATE_LIB = path.join(__dirname, '..', 'lib');
 
 const replayBlock = require(path.join(CORE_LIB, 'replay', 'replay-block'));
 const equivalenceSubgraphFactory = require(path.join(CORE_LIB, 'equivalence-subgraph', 'equivalenceSubgraph'));
-const curationFixture = require(path.join(projectRoot, 'code', 'cli', 'lib.d', 'edf-equivalence', 'assets', 'curationInputs'));
+const curationFixture = require(path.join(projectRoot, 'code', 'cli', 'bridge-maker', 'edf-equivalence', 'assets', 'curationInputs'));
 
 const DEFAULT_GATING_MANIFEST = '181be81d4b7fb3c1e42867735e1d3dc36f312dc80ba694d63f4231b1a16467dd';
 
