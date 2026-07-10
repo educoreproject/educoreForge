@@ -41,6 +41,19 @@ const CONFIGS_DIR = path.join(projectRoot, 'configs');
 const replayBlock = require(path.join(CORE_LIB, 'replay', 'replay-block'));
 const referenceSubgraphFactory = require(path.join(CORE_LIB, 'reference-subgraph', 'referenceSubgraph'));
 
+// discovery (spec §4.3, Phase C): the reference block is HUB-VERSION KEYED — its header
+// gains hubSnapshotKey from the hub bundle's discovery binding. A new CEDS snapshot
+// therefore yields a new reference block; existing behavior otherwise unchanged.
+const standardDiscovery = require(path.join(
+	projectRoot,
+	'code',
+	'cli',
+	'lib.d',
+	'forger',
+	'lib',
+	'standard-discovery',
+));
+
 const DEFAULT_GATING_MANIFEST =
 	'0a952b7bd3ba6d0da3e1234ef83feb7607ee70e13f87fad48973352c3ead6263';
 const EMBEDDING_DIMS = 1024;
@@ -228,10 +241,22 @@ const handleBuild = (resources, callback) => {
 	// 4) serialize the reference block + content-address it into forgeStore (additive; dedup on blockId)
 	taskList.push((args, next) => {
 		const { subgraph, cedsRow } = args;
+		// hubSnapshotKey (spec §4.3): the hub bundle's discovery-bound default snapshot.
+		const hubEntry = standardDiscovery
+			.roster()
+			.find((oneEntry) => oneEntry.standardName === standardDiscovery.cedsHubStandardName);
+		if (!hubEntry) {
+			next(
+				`edf-reference: discovery roster carries no production bundle named ` +
+					`'${standardDiscovery.cedsHubStandardName}' — cannot stamp hubSnapshotKey`,
+			);
+			return;
+		}
 		const header = {
 			blockType: 'reference',
 			standardKey: 'CEDS',
 			version: args.hubVersion,
+			hubSnapshotKey: hubEntry.defaultSnapshot,
 			stableUriPropertyName: 'uri',
 			resolutionKey: 'uri',
 			embeddingModelVersion: 'voyage-4-large',

@@ -69,6 +69,22 @@ const versionBridge = require(path.join(__dirname, 'assets', 'versionBridge'));
 const valueCrosswalk = require(path.join(__dirname, 'lib', 'value-crosswalk'));
 const anchorStrategies = require(path.join(__dirname, 'lib', 'anchor-strategies'));
 
+// pair-keying (spec §4/§7.1, Phase C): fresh emissions stamp subject = 'CEDS::<spoke>' with
+// the version key from the discovery bindings; the header carries the pair fields + tierScope
+// (granularity axis — DISTINCT from the edges' provenanceTier authorship axis).
+const standardDiscovery = require(path.join(projectRoot, 'code', 'cli', 'lib.d', 'forger', 'lib', 'standard-discovery'));
+const pairBinding = require(path.join(CORE_LIB, 'pair-binding', 'pair-binding'))({});
+
+// resolveEmitPairBinding — the discovery-bound pair stamp for one spoke; a named error is
+// FATAL to the action (the saveBlock choke point would reject a keyless emission anyway).
+const resolveEmitPairBinding = ({ spokeStandardName, warn }) =>
+	pairBinding.resolvePairBinding({
+		roster: standardDiscovery.roster({ includeSynthetic: true }),
+		hubStandardName: standardDiscovery.cedsHubStandardName,
+		spokeStandardName,
+		warn,
+	});
+
 const DEFAULT_GATING_MANIFEST =
 	'ef7d99309413d955e4885141c75bde39d92fa559ba6090441b5da83278effc31';
 
@@ -213,6 +229,16 @@ const handleBuild = (resources, callback) => {
 		return;
 	}
 	const includeValues = rawIncludeValues !== 'false';
+
+	// the discovery-bound pair stamp (spec §7.1) — fatal when unresolvable.
+	const emitPairBinding = resolveEmitPairBinding({
+		spokeStandardName: sourceStandard,
+		warn: (message) => xLog.error(message),
+	});
+	if (emitPairBinding.error) {
+		callback(`[edf-mapping -build] ${emitPairBinding.error}`);
+		return;
+	}
 
 	const taskList = new taskListPlus();
 
@@ -407,12 +433,20 @@ const handleBuild = (resources, callback) => {
 		);
 		// L13: NO embedding metadata here — this block is EDGES ONLY (zero nodes, zero
 		// embeddings); stamping model/dims was misleading provenance for header readers.
+		// Phase C: pair fields replace standardKey; the authored -build block is the
+		// property-tier gating block, tierScope 'property'.
 		const header = {
 			blockType: 'mapping',
-			standardKey: `${sourceRow.subject}`,
 			version: args.subjectVersion,
 			stableUriPropertyName: 'uri',
 			resolutionKey: 'uri',
+			pairA: emitPairBinding.pairA,
+			pairAVersion: emitPairBinding.pairAVersion,
+			pairB: emitPairBinding.pairB,
+			pairBVersion: emitPairBinding.pairBVersion,
+			publishedVersionA: emitPairBinding.publishedVersionA,
+			publishedVersionB: emitPairBinding.publishedVersionB,
+			tierScope: 'property',
 		};
 		const blockText = replayBlock.serializeBlock({
 			header,
@@ -422,8 +456,8 @@ const handleBuild = (resources, callback) => {
 		forgeStore.saveBlock(
 			{
 				type: 'mapping',
-				subject: `${sourceRow.subject}`,
-				version: args.subjectVersion,
+				subject: emitPairBinding.pairSubject,
+				version: emitPairBinding.versionKey,
 				requires,
 				text: blockText,
 				producedBy: 'edf-mapping',
@@ -514,6 +548,16 @@ const handleBuildNative = (resources, callback) => {
 		callback(
 			'edf-mapping -buildNative: --gatingManifest= and --sourceStandard= are both required (no defaults across builds)',
 		);
+		return;
+	}
+
+	// the discovery-bound pair stamp (spec §7.1) — fatal when unresolvable.
+	const emitPairBinding = resolveEmitPairBinding({
+		spokeStandardName: sourceStandard,
+		warn: (message) => xLog.error(message),
+	});
+	if (emitPairBinding.error) {
+		callback(`[edf-mapping -buildNative] ${emitPairBinding.error}`);
 		return;
 	}
 
@@ -664,18 +708,24 @@ const handleBuildNative = (resources, callback) => {
 				`[edf-mapping -buildNative ${sourceStandard}] ORPHANS: ${JSON.stringify(subgraph.orphans.slice(0, 10))}${subgraph.orphans.length > 10 ? ' …' : ''}`,
 			);
 		}
-		// the M14 discovery convention: a value-tier block's store subject carries '-value' so it can
-		// never masquerade as the property-tier gating block; the in-text header standardKey stays the
-		// bare standard (the edf-implied value-block precedent exactly).
-		const blockSubject =
-			strategy.strategyName === 'osFragmentJoin' ? `${sourceStandard}-value` : `${sourceRowSubject(args)}`;
+		// Phase C: the M14 subject-suffix convention is SUCCEEDED by the declared tierScope
+		// header field — the row subject is the pure pair, and osFragmentJoin (the codeset-value
+		// strategy) declares tierScope 'value' where every other native strategy is 'property'.
+		const blockTierScope =
+			strategy.strategyName === 'osFragmentJoin' ? 'value' : 'property';
 		// L13 doctrine: edges-only block, NO embedding metadata in the header
 		const header = {
 			blockType: 'mapping',
-			standardKey: strategy.strategyName === 'osFragmentJoin' ? sourceStandard : blockSubject,
 			version: sourceBlock.header.version || null,
 			stableUriPropertyName: 'uri',
 			resolutionKey: 'uri',
+			pairA: emitPairBinding.pairA,
+			pairAVersion: emitPairBinding.pairAVersion,
+			pairB: emitPairBinding.pairB,
+			pairBVersion: emitPairBinding.pairBVersion,
+			publishedVersionA: emitPairBinding.publishedVersionA,
+			publishedVersionB: emitPairBinding.publishedVersionB,
+			tierScope: blockTierScope,
 		};
 		const blockText = replayBlock.serializeBlock({
 			header,
@@ -693,8 +743,8 @@ const handleBuildNative = (resources, callback) => {
 		forgeStore.saveBlock(
 			{
 				type: 'mapping',
-				subject: blockSubject,
-				version: sourceBlock.header.version || null,
+				subject: emitPairBinding.pairSubject,
+				version: emitPairBinding.versionKey,
 				requires: [args.sourceRow.blockId, args.referenceRow.blockId, args.cedsStandardRow.blockId],
 				text: blockText,
 				producedBy: 'edf-mapping',
@@ -707,7 +757,7 @@ const handleBuildNative = (resources, callback) => {
 				xLog.status(
 					`[edf-mapping -buildNative ${sourceStandard}] mapping block saved: ${result.blockId} (${blockText.split('\n').filter(Boolean).length} lines)`,
 				);
-				next('', { ...args, mappingBlockId: result.blockId, blockSubject, subgraph });
+				next('', { ...args, mappingBlockId: result.blockId, blockSubject: emitPairBinding.pairSubject, blockTierScope, subgraph });
 			},
 		);
 	});
@@ -726,6 +776,7 @@ const handleBuildNative = (resources, callback) => {
 					anchorForm: args.anchorForm,
 					strategy: args.strategy.strategyName,
 					blockSubject: args.blockSubject,
+					blockTierScope: args.blockTierScope,
 					sourceBlockId: args.sourceRow.blockId,
 					referenceBlockId: args.referenceRow.blockId,
 					cedsStandardBlockId: args.cedsStandardRow.blockId,
@@ -742,8 +793,8 @@ const handleBuildNative = (resources, callback) => {
 	});
 };
 
-// the pForm block subject is the SOURCE ROW's subject verbatim (byte-lock with the campaign rows)
-const sourceRowSubject = (args) => args.sourceRow.subject;
+// (the pForm sourceRowSubject helper retired with the M14 subject-suffix convention —
+// Phase C row subjects are the pure pair; tierScope in the header discriminates.)
 
 // =====================================================================
 // ACTION: -buildCrosswalk — A0.3 CLASSIFICATION_CROSSWALK producer (workorder
@@ -810,6 +861,20 @@ const handleBuildCrosswalk = (resources, callback) => {
 	}
 	const crosswalkEdgeType = CLASSIFICATION_EDGE_TYPES.CLASSIFICATION_CROSSWALK;
 	const mappingTool = 'edf-mapping:classificationCrosswalk';
+
+	// the discovery-bound pair stamp (Q12 ruling of record): an island-to-island crosswalk
+	// pairs the two standards it actually connects — pairA = edgeFrom, pairB = edgeTo (the
+	// non-hub ordering rule); the hub is not involved and is never named in the version key.
+	const emitPairBinding = pairBinding.resolvePairBinding({
+		roster: standardDiscovery.roster({ includeSynthetic: true }),
+		hubStandardName: edgeFrom,
+		spokeStandardName: edgeTo,
+		warn: (message) => xLog.error(message),
+	});
+	if (emitPairBinding.error) {
+		callback(`[edf-mapping -buildCrosswalk] ${emitPairBinding.error}`);
+		return;
+	}
 
 	const taskList = new taskListPlus();
 
@@ -980,13 +1045,24 @@ const handleBuildCrosswalk = (resources, callback) => {
 
 	// 4) serialize (edges-only, L13); deserialize-back read; save (additive, 2-strong requires)
 	taskList.push((args, next) => {
+		// Phase C: pair fields replace standardKey — the crosswalk's honest pair is
+		// edgeFrom::edgeTo (Q12); tierScope 'crosswalk'.
 		const header = {
 			blockType: 'mapping',
-			standardKey: sourceStandard,
 			version: args.sourceBlock.header.version || null,
 			stableUriPropertyName: 'uri',
 			resolutionKey: 'uri',
+			pairA: emitPairBinding.pairA,
+			pairAVersion: emitPairBinding.pairAVersion,
+			pairB: emitPairBinding.pairB,
+			pairBVersion: emitPairBinding.pairBVersion,
+			publishedVersionA: emitPairBinding.publishedVersionA,
+			publishedVersionB: emitPairBinding.publishedVersionB,
+			tierScope: 'crosswalk',
 			// the repeatability rider: the block re-describes its own derivation completely
+			// (NOTE of record: crosswalkInstruction was ALWAYS dropped by the serializer's
+			// fixed whitelist — a pre-existing observed defect with a named home in the
+			// Phase-C handoff; the whitelist extension deliberately did not adopt it.)
 			crosswalkInstruction: {
 				sourceStandard,
 				targetStandard,
@@ -1013,8 +1089,8 @@ const handleBuildCrosswalk = (resources, callback) => {
 		forgeStore.saveBlock(
 			{
 				type: 'mapping',
-				subject: `${sourceStandard}-crosswalk`,
-				version: args.sourceBlock.header.version || null,
+				subject: emitPairBinding.pairSubject,
+				version: emitPairBinding.versionKey,
 				requires: [args.sourceRow.blockId, args.targetRow.blockId],
 				text: blockText,
 				producedBy: 'edf-mapping',

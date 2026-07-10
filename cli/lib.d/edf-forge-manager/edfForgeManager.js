@@ -75,6 +75,12 @@ const storeAccessFactory = require('./lib/store-access');
 const addStandardFactory = require('./tools.d/add-standard');
 const rollbackFactory = require('./tools.d/rollback');
 const listFactory = require('./tools.d/list');
+const mintPairGroupFactory = require('./tools.d/mint-pair-group');
+
+// pair-group minting deps (Phase C): the pure pair-binding resolver + the vocabulary's
+// canonical pair/versionKey text forms (one source of truth, spec §4/§5).
+const pairBinding = require(path.join(CORE_LIB, 'pair-binding', 'pair-binding'))({});
+const vocabulary = require(path.join(CORE_LIB, 'vocabulary', 'vocabulary'));
 
 // =====================================================================
 // HELP TEXT — matches specification/forgeManager/helpSpec.md (the control surface IS the contract)
@@ -88,6 +94,9 @@ SYNOPSIS
      edf-forge-manager -addStandard --standardName=<standardKey> --source=<path> [--no-publish]
      edf-forge-manager -rollback    --graph=<graphName> [--to=<manifestKey>]
      edf-forge-manager -list        <blocks|manifests|graphs> [--stale]
+     edf-forge-manager -mintPairGroup    --pair=CEDS::SIF --versionKey=(01,01)
+                                         [--members=<id>,...] [--displayName=<text>] [--note=<text>]
+     edf-forge-manager -resolvePairGroup --pair=CEDS::SIF --versionKey=(01,01) [--history]
 
 DESCRIPTION
      forgeManager owns the ordered workflows and nothing else. It holds NO domain logic: each
@@ -105,6 +114,15 @@ COMMANDS
                     defaults to the immediately prior pointer.
      -list          Inspect the store: blocks | manifests | graphs. --stale flags orphan blocks
                     or graphs whose currentManifest is behind the newest pointer.
+     -mintPairGroup Mint the canonical pair-group block over the pair's mapping blocks at one
+                    version key and ADVANCE the CURRENT pointer (mint-and-repoint — the §5.6
+                    overwrite semantics). Members default to the store's blocks for that
+                    pair@versionKey; an empty group is never minted. Prior generations are
+                    retained but invisible.
+     -resolvePairGroup
+                    Resolve the symbolic pair@versionKey to its CURRENT group — only the
+                    current one, ever; --history is the single door to superseded generations
+                    (displayName, mint date, pointer-log notes).
 
 OPTIONS
      --standardName=<standardKey>   The standard to add (resolved through parser-bundle auto-discovery).
@@ -191,6 +209,12 @@ const run = () => {
 			}).addStandard,
 		rollback: () => rollbackFactory({ subCli, storeAccess, entries: ENTRIES }).rollback,
 		list: () => listFactory({ storeAccess }).list,
+		mintPairGroup: () =>
+			mintPairGroupFactory({ storeAccess, standardDiscovery, pairBinding, vocabulary })
+				.mintPairGroup,
+		resolvePairGroup: () =>
+			mintPairGroupFactory({ storeAccess, standardDiscovery, pairBinding, vocabulary })
+				.resolvePairGroup,
 	};
 
 	const actionName = Object.keys(actionRegistry).find((name) => switches[name]);

@@ -1,0 +1,6 @@
+{
+  "name": "edf-rekey",
+  "version": "1.0.0",
+  "description": "Phase-C deterministic re-key transformer (pairwiseVersionSwitching): re-files frozen mapping blocks under pair subjects + version keys, byte-preserving every edge line; zero-LLM by construction.",
+  "main": "edfRekey.js"
+}

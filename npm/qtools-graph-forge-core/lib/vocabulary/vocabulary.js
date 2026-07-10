@@ -86,6 +86,35 @@ const CLASSIFICATION_EDGE_TYPES = {
 };
 
 // =====================================================================
+// PAIR / VERSION-KEY VOCABULARY (Phase C, spec §4/§5). MAPPING_BLOCK_TYPES is THE one
+// authoritative list of block TYPES that carry per-pair mapping content and therefore
+// MUST enter the store with a complete version key (spec §4.2/§4.4, invariant 11.8).
+// Three consumers by design — forge-store.saveBlock validation, the re-key transformer
+// census, and the connect-report rollup — one list, zero divergence: a silently-missed
+// block type is structurally impossible. 'pairGroup' is deliberately NOT in this list
+// (it is a selection artifact, not mapping content) but shares the version-key
+// completeness rule at the saveBlock choke point.
+// =====================================================================
+const MAPPING_BLOCK_TYPES = ['mapping', 'inferredDecision'];
+const isMappingBlockType = (oneType) => MAPPING_BLOCK_TYPES.indexOf(oneType) !== -1;
+
+const PAIR_GROUP_BLOCK_TYPE = 'pairGroup';
+
+// canonical machine forms (supervisor-ruled 2026-07-10): pair subject 'CEDS::SIF'
+// (hub first, exact discovery standardName casing); versionKey '(aVersion,bVersion)'
+// — bare snapshot keys, no h/s prefixes (those belong to DISPLAY generation, §5.3);
+// symbolic reference 'CEDS::SIF@(01,01)'.
+const PAIR_SUBJECT_SEPARATOR = '::';
+const pairSubjectText = (pairA, pairB) =>
+	`${pairA}${PAIR_SUBJECT_SEPARATOR}${pairB}`;
+const versionKeyText = (aVersion, bVersion) => `(${aVersion},${bVersion})`;
+const symbolicPairReference = ({ pairA, pairB, aVersion, bVersion }) =>
+	`${pairSubjectText(pairA, pairB)}@${versionKeyText(aVersion, bVersion)}`;
+
+// the four header fields whose joint presence IS version-key completeness (§4.2)
+const VERSION_KEY_HEADER_FIELDS = ['pairA', 'pairAVersion', 'pairB', 'pairBVersion'];
+
+// =====================================================================
 // PROVENANCE TIERS — THE canonical four-value set (replay-block.js). Order is significant and
 // preserved exactly; replay-block re-exports PROVENANCE_TIERS/isValidProvenanceTier from here.
 // =====================================================================
@@ -445,6 +474,15 @@ const vocabulary = {
 	EDGE_TYPES,
 	MAPPING_EDGE_TYPES,
 	CLASSIFICATION_EDGE_TYPES,
+	// pair / version-key vocabulary (Phase C)
+	MAPPING_BLOCK_TYPES,
+	isMappingBlockType,
+	PAIR_GROUP_BLOCK_TYPE,
+	PAIR_SUBJECT_SEPARATOR,
+	pairSubjectText,
+	versionKeyText,
+	symbolicPairReference,
+	VERSION_KEY_HEADER_FIELDS,
 	PROVENANCE_TIERS,
 	PROVENANCE_TIER,
 	isValidProvenanceTier,

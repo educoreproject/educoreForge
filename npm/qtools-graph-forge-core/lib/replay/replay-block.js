@@ -112,6 +112,22 @@ const serializeHeaderLine = (header) => {
 		ordered.standardKey = h.standardKey;
 		ordered.version = h.version;
 	}
+	// pair/version-key + tier-scope fields (BINDING spec §4.2/§4.3, Phase C) — ALL OPTIONAL:
+	// an undefined value is omitted by JSON.stringify, so every pre-Phase-C block's header
+	// bytes are unchanged. Pair-keyed mapping blocks carry pairA/pairB INSTEAD of standardKey
+	// (the undefined standardKey above vanishes the same way). tierScope is the granularity
+	// axis (property|value|crosswalk) — distinct from the edges' provenanceTier authorship
+	// axis. hubSnapshotKey is the reference block's §4.3 hub-version key.
+	if (h.blockType !== 'bridge') {
+		ordered.pairA = h.pairA;
+		ordered.pairB = h.pairB;
+	}
+	ordered.pairAVersion = h.pairAVersion;
+	ordered.pairBVersion = h.pairBVersion;
+	ordered.publishedVersionA = h.publishedVersionA;
+	ordered.publishedVersionB = h.publishedVersionB;
+	ordered.tierScope = h.tierScope;
+	ordered.hubSnapshotKey = h.hubSnapshotKey;
 	ordered.stableUriPropertyName = h.stableUriPropertyName;
 	ordered.resolutionKey = h.resolutionKey;
 	ordered.goldenVersionAuthoredAgainst = h.goldenVersionAuthoredAgainst;

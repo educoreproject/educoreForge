@@ -6,9 +6,10 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // edfInferred.js — the `edf-inferred` CLI: PHASE-5 INFERRED-track producer (probabilistic track).
 // (Renamed from bridge-maker/bridgeMaker.js 2026-07-10 per spec §9 D2; earlier from
 // edf-implied/edfImplied.js 2026-07-04. Frozen blocks minted before the renames carry
-// producedBy/mappingTool 'edf-implied' or 'bridgeMaker' as honest history; this module STILL
-// stamps 'bridgeMaker' — emission stamps are block content and change only with Phase C's
-// producer work, never in a behavior-identical reorg. Mixed stamps across eras are expected.)
+// producedBy/mappingTool 'edf-implied' or 'bridgeMaker' as honest history; as of Phase C
+// this module stamps 'edf-inferred' (the producedBy pin), subject = the pair 'CEDS::<spoke>',
+// version = the version key '(a,b)', with pair fields + tierScope in the header (spec §4).
+// Mixed stamps across eras are expected — frozen history is never rewritten.)
 //
 //   edfInferred -accuracy [--gatingManifest=K] [--limit=N] [--cosineFloor=F] [--concurrency=C]
 //   edfInferred -emit --scope=sifAnchor [--sampleSize=N] [--gatingManifest=K] [--cosineFloor=F] ...
@@ -53,6 +54,46 @@ const llmClientFactory = require(path.join(CORE_LIB, 'llm-client', 'llm-client')
 const goldHarnessFactory = require(path.join(CORE_LIB, 'gold-harness', 'gold-harness'));
 const valueScope = require(path.join(__dirname, 'lib', 'value-scope'));
 const valueCrosswalk = require(path.join(projectRoot, 'code', 'cli', 'bridge-maker', 'edf-mapping', 'lib', 'value-crosswalk'));
+
+// pair-keying (spec §4/§7.1, Phase C): fresh emissions stamp subject = 'CEDS::<spoke>' with
+// the version key read from the discovery bindings of the two standards.
+const standardDiscovery = require(path.join(projectRoot, 'code', 'cli', 'lib.d', 'forger', 'lib', 'standard-discovery'));
+const pairBinding = require(path.join(CORE_LIB, 'pair-binding', 'pair-binding'))({});
+
+// resolveEmitPairBinding — the discovery-bound pair stamp for one spoke; a named error is
+// FATAL to the action (a fresh emission without a complete version key would be rejected
+// at the saveBlock choke point anyway — fail here, earlier and clearer).
+const resolveEmitPairBinding = ({ spokeStandardName, warn }) =>
+	pairBinding.resolvePairBinding({
+		roster: standardDiscovery.roster({ includeSynthetic: true }),
+		hubStandardName: standardDiscovery.cedsHubStandardName,
+		spokeStandardName,
+		warn,
+	});
+
+// headerTierScope — guarded read of a mapping block row's header tierScope (Phase C+ blocks
+// declare it; pre-Phase-C blocks carry none and are read by the legacy subject convention).
+const headerTierScope = (row) => {
+	let header;
+	try {
+		header = JSON.parse(`${row.text}`.split('\n')[0]);
+	} catch (parseErr) {
+		return null;
+	}
+	return header && header.tierScope ? header.tierScope : null;
+};
+
+// isPropertyTierMappingRowForSource — the ONE gating discrimination (M14 convention, Phase-C
+// form): legacy rows match by bare subject EXACTLY (the '-value' suffix can never match);
+// pair-keyed rows match by pair subject + declared tierScope 'property'. tierScope and the
+// edge property provenanceTier are DIFFERENT AXES (tierScope = granularity level;
+// provenanceTier = authorship class) — never conflate them.
+const isPropertyTierMappingRowForSource = ({ row, sourceStandard, pairSubject }) => {
+	if (row.subject === sourceStandard) {
+		return true; // legacy bare-subject convention (pre-Phase-C blocks)
+	}
+	return pairSubject != null && row.subject === pairSubject && headerTierScope(row) === 'property';
+};
 
 const DEFAULT_GATING_MANIFEST =
 	'14665fcf49c3614ce7f8448b729545e7194bee50a598fa721cbd4c1431d6d12d';
@@ -138,9 +179,16 @@ const buildSharedResources = (callback) => {
 			callback(err);
 			return;
 		}
-		const llmClient = llmClientFactory({ model: strParam('model', undefined) });
+		// pass-through config knobs (Phase C injection-survey adjudication): behavior-neutral
+		// when unused — an undefined value leaves each client's own default in force. These are
+		// the doors the zero-spend recipe points at keyless scratch inis.
+		const llmClient = llmClientFactory({
+			model: strParam('model', undefined),
+			configFilePath: strParam('configFilePath', undefined),
+		});
 		const defEmbedder = defEmbedderFactory({
 			cacheFilePath: path.join(DATASTORES, 'phase5DefEmbCache.json'),
+			embeddingConfigFilePath: strParam('embeddingConfigFilePath', undefined),
 		});
 		const nodeLoader = nodeLoaderFactory();
 		const cosineFloor = floatParam('cosineFloor', 0);
@@ -152,7 +200,7 @@ const buildSharedResources = (callback) => {
 
 // read the gating manifest and return the deserialized blocks we need.
 //   -> { members, cedsRecords (by role idx), referenceBlock {row, nodes}, sourceRow, sourceRecords }
-const loadBlocks = ({ forgeStore, nodeLoader, gatingManifest, sourceStandard }, callback) => {
+const loadBlocks = ({ forgeStore, nodeLoader, gatingManifest, sourceStandard, pairSubject }, callback) => {
 	const taskList = new taskListPlus();
 	taskList.push((args, next) => {
 		forgeStore.getManifest({ manifestKey: gatingManifest }, (err, manifest) => {
@@ -183,7 +231,14 @@ const loadBlocks = ({ forgeStore, nodeLoader, gatingManifest, sourceStandard }, 
 					if (row && row.type === 'standard' && row.subject === 'CEDS') cedsRow = row;
 					if (row && row.type === 'reference' && row.subject === 'CEDS') referenceRow = row;
 					if (row && row.type === 'standard' && row.subject === sourceStandard) sourceRow = row;
-					if (row && row.type === 'mapping' && row.subject === sourceStandard) propertyMappingRows.push(row);
+					// property-tier gating match, Phase-C form: legacy bare subject OR pair subject +
+					// declared tierScope 'property' (the tierScope-preferential compatibility contract).
+					if (
+						row &&
+						row.type === 'mapping' &&
+						isPropertyTierMappingRowForSource({ row, sourceStandard, pairSubject })
+					)
+						propertyMappingRows.push(row);
 					n2('', a2);
 				});
 			});
@@ -252,6 +307,8 @@ const serializeDecisions = ({
 	matchedMappingBlockId,
 	gapFill,
 	decisions,
+	pairStamp,
+	tierScope,
 }) => {
 	const sorted = decisions
 		.map((d) => ({
@@ -272,6 +329,21 @@ const serializeDecisions = ({
 			recordType: 'inferredDecisionRecord',
 			phase: 5,
 			method: 'definitionEmbedding-opusRerank-v1',
+			// pair/version-key fields (spec §4.4 — the decision record is a per-pair audit record;
+			// the whole single-line record IS the block's first line, so these fields are what the
+			// saveBlock choke point validates). tierScope: granularity level (property|value),
+			// a DIFFERENT AXIS from the edges' provenanceTier (authorship class).
+			...(pairStamp
+				? {
+						pairA: pairStamp.pairA,
+						pairAVersion: pairStamp.pairAVersion,
+						pairB: pairStamp.pairB,
+						pairBVersion: pairStamp.pairBVersion,
+						publishedVersionA: pairStamp.publishedVersionA,
+						publishedVersionB: pairStamp.publishedVersionB,
+					}
+				: {}),
+			...(tierScope ? { tierScope } : {}),
 			sourceStandard,
 			topK: TOP_K,
 			basedOnGatingManifest: gatingManifest,
@@ -744,10 +816,22 @@ const handleEmit = (resources, callback) => {
 	);
 	const resumeJournal = strParam('resumeJournal', '');
 
+	// the discovery-bound pair stamp (spec §7.1) — fatal when unresolvable: a fresh emission
+	// without a complete version key is rejected at the saveBlock choke point anyway.
+	const emitPairBinding = resolveEmitPairBinding({
+		spokeStandardName: sourceStandard,
+		warn: (message) => xLog.error(message),
+	});
+	if (emitPairBinding.error) {
+		callback(`[edfInferred -emit] ${emitPairBinding.error}`);
+		return;
+	}
+
 	const taskList = new taskListPlus();
 	taskList.push((args, next) => {
-		loadBlocks({ forgeStore, nodeLoader, gatingManifest, sourceStandard }, (err, loaded) =>
-			next(err, { ...args, ...loaded }),
+		loadBlocks(
+			{ forgeStore, nodeLoader, gatingManifest, sourceStandard, pairSubject: emitPairBinding.pairSubject },
+			(err, loaded) => next(err, { ...args, ...loaded }),
 		);
 	});
 	// A0.1 GAP-FILL (permanent default policy): compute the engine gap set and restrict selection to it.
@@ -866,12 +950,14 @@ const handleEmit = (resources, callback) => {
 			cedsStandardBlockId: args.cedsRow.blockId,
 			gapFill: args.gapFill,
 			decisions: args.decisions,
+			pairStamp: emitPairBinding,
+			tierScope: 'property',
 		});
 		forgeStore.saveBlock(
 			{
 				type: 'inferredDecision',
-				subject: sourceStandard,
-				version: args.sourceVersion,
+				subject: emitPairBinding.pairSubject,
+				version: emitPairBinding.versionKey,
 				// FULL derivation inputs (M3 pattern): the CEDS standard block supplied the
 				// DmeProperty candidate pool these decisions chose from — declared like the
 				// mapping block below already does.
@@ -881,7 +967,7 @@ const handleEmit = (resources, callback) => {
 					args.cedsRow.blockId,
 				],
 				text,
-				producedBy: 'bridgeMaker',
+				producedBy: 'edf-inferred',
 			},
 			(err, result) => {
 				if (err) {
@@ -912,7 +998,7 @@ const handleEmit = (resources, callback) => {
 			subjectVersion: args.sourceVersion,
 			objectSource: 'CEDS',
 			objectVersion: args.referenceVersion,
-			mappingTool: 'bridgeMaker',
+			mappingTool: 'edf-inferred',
 			decisionBlockHash: args.decisionBlockId,
 		});
 		const subgraph = builder.buildInferredSubgraph({
@@ -934,12 +1020,22 @@ const handleEmit = (resources, callback) => {
 	taskList.push((args, next) => {
 		// L13: NO embedding metadata here — this block is EDGES ONLY (zero nodes, zero
 		// embeddings); stamping model/dims was misleading provenance for header readers.
+		// Phase C: the header carries the PAIR FIELDS instead of standardKey (spec §4.1/§4.2;
+		// the manifestEditor header->row projection anticipates exactly this shape) + tierScope
+		// ('property' — granularity axis, distinct from the edges' provenanceTier authorship axis).
+		// The spoke's own version string stays in the preserved `version` field.
 		const header = {
 			blockType: 'inferredMapping',
-			standardKey: sourceStandard,
 			version: args.sourceVersion,
 			stableUriPropertyName: 'uri',
 			resolutionKey: 'uri',
+			pairA: emitPairBinding.pairA,
+			pairAVersion: emitPairBinding.pairAVersion,
+			pairB: emitPairBinding.pairB,
+			pairBVersion: emitPairBinding.pairBVersion,
+			publishedVersionA: emitPairBinding.publishedVersionA,
+			publishedVersionB: emitPairBinding.publishedVersionB,
+			tierScope: 'property',
 			decisionBlockHash: args.decisionBlockId,
 			method: 'definitionEmbedding-opusRerank-v1',
 		};
@@ -951,8 +1047,8 @@ const handleEmit = (resources, callback) => {
 		forgeStore.saveBlock(
 			{
 				type: 'mapping',
-				subject: sourceStandard,
-				version: args.sourceVersion,
+				subject: emitPairBinding.pairSubject,
+				version: emitPairBinding.versionKey,
 				// FULL derivation inputs (M3 pattern): source + reference + the CEDS standard block
 				// whose DmeProperty records supplied the candidate pool — every read input declared.
 				requires: [
@@ -961,7 +1057,7 @@ const handleEmit = (resources, callback) => {
 					args.cedsRow.blockId,
 				],
 				text: blockText,
-				producedBy: 'bridgeMaker',
+				producedBy: 'edf-inferred',
 			},
 			(err, result) => {
 				if (err) {
@@ -1056,10 +1152,21 @@ const handleEmitValue = (resources, callback) => {
 	const scopeParentFloor = floatParam('scopeParentFloor', APPENDIX_A.rerankerFloor);
 	const label = strParam('label', 'phase5-codesetValue-inferred-candidate');
 
+	// the discovery-bound pair stamp (spec §7.1) — fatal when unresolvable.
+	const emitPairBinding = resolveEmitPairBinding({
+		spokeStandardName: sourceStandard,
+		warn: (message) => xLog.error(message),
+	});
+	if (emitPairBinding.error) {
+		callback(`[edfInferred -emit --tier=value] ${emitPairBinding.error}`);
+		return;
+	}
+
 	const taskList = new taskListPlus();
 	taskList.push((args, next) => {
-		loadBlocks({ forgeStore, nodeLoader, gatingManifest, sourceStandard }, (err, loaded) =>
-			next(err, { ...args, ...loaded }),
+		loadBlocks(
+			{ forgeStore, nodeLoader, gatingManifest, sourceStandard, pairSubject: emitPairBinding.pairSubject },
+			(err, loaded) => next(err, { ...args, ...loaded }),
 		);
 	});
 	// resolve the gating property-tier mapping block: explicit --matchedMappingBlock pin, else
@@ -1282,12 +1389,14 @@ const handleEmitValue = (resources, callback) => {
 			cedsStandardBlockId: args.cedsRow.blockId,
 			matchedMappingBlockId: args.matchedMappingBlockRow.blockId,
 			decisions,
+			pairStamp: emitPairBinding,
+			tierScope: 'value',
 		});
 		forgeStore.saveBlock(
 			{
 				type: 'inferredDecision',
-				subject: `${sourceStandard}-value`,
-				version: args.sourceVersion,
+				subject: emitPairBinding.pairSubject,
+				version: emitPairBinding.versionKey,
 				// FULL derivation inputs (M3 pattern): the CEDS standard block supplied the scoped
 				// candidate pool for these decisions — declared alongside the scoping mapping block.
 				requires: [
@@ -1297,7 +1406,7 @@ const handleEmitValue = (resources, callback) => {
 					args.matchedMappingBlockRow.blockId,
 				],
 				text,
-				producedBy: 'bridgeMaker',
+				producedBy: 'edf-inferred',
 			},
 			(err, result) => {
 				if (err) {
@@ -1349,7 +1458,7 @@ const handleEmitValue = (resources, callback) => {
 			subjectVersion: args.sourceVersion,
 			objectSource: 'CEDS',
 			objectVersion: args.referenceVersion,
-			mappingTool: 'bridgeMaker',
+			mappingTool: 'edf-inferred',
 			decisionBlockHash: args.decisionBlockId,
 		});
 		const subgraph = builder.buildInferredSubgraph({
@@ -1371,12 +1480,20 @@ const handleEmitValue = (resources, callback) => {
 	taskList.push((args, next) => {
 		// L13: NO embedding metadata here — this block is EDGES ONLY (zero nodes, zero
 		// embeddings); stamping model/dims was misleading provenance for header readers.
+		// Phase C: pair fields replace standardKey; tierScope 'value' is the declared
+		// granularity discriminator (the M14 subject-suffix convention's successor).
 		const header = {
 			blockType: 'inferredMapping',
-			standardKey: sourceStandard,
 			version: args.sourceVersion,
 			stableUriPropertyName: 'uri',
 			resolutionKey: 'uri',
+			pairA: emitPairBinding.pairA,
+			pairAVersion: emitPairBinding.pairAVersion,
+			pairB: emitPairBinding.pairB,
+			pairBVersion: emitPairBinding.pairBVersion,
+			publishedVersionA: emitPairBinding.publishedVersionA,
+			publishedVersionB: emitPairBinding.publishedVersionB,
+			tierScope: 'value',
 			decisionBlockHash: args.decisionBlockId,
 			method: 'definitionEmbedding-opusRerank-v1_valueTierScoped',
 		};
@@ -1388,8 +1505,8 @@ const handleEmitValue = (resources, callback) => {
 		forgeStore.saveBlock(
 			{
 				type: 'mapping',
-				subject: `${sourceStandard}-value`,
-				version: args.sourceVersion,
+				subject: emitPairBinding.pairSubject,
+				version: emitPairBinding.versionKey,
 				// FULL derivation inputs (Phase C): source + reference + the CEDS standard block that
 				// supplied the scoped candidate pool + the property-tier mapping block that scoped it —
 				// dependency-driven invalidation and requires-walking provenance need every read input.
@@ -1400,7 +1517,7 @@ const handleEmitValue = (resources, callback) => {
 					args.matchedMappingBlockRow.blockId,
 				],
 				text: blockText,
-				producedBy: 'bridgeMaker',
+				producedBy: 'edf-inferred',
 			},
 			(err, result) => {
 				if (err) {

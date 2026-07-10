@@ -46,6 +46,19 @@ const replayBlock = require(path.join(CORE_LIB, 'replay', 'replay-block'));
 const equivalenceSubgraphFactory = require(path.join(CORE_LIB, 'equivalence-subgraph', 'equivalenceSubgraph'));
 const curationFixture = require(path.join(__dirname, 'assets', 'curationInputs'));
 
+// pair-keying (spec §4/§7.1, Phase C): fresh emissions stamp subject = 'CEDS::<spoke>' with
+// the version key from the discovery bindings; header carries pair fields + tierScope.
+const standardDiscovery = require(path.join(projectRoot, 'code', 'cli', 'lib.d', 'forger', 'lib', 'standard-discovery'));
+const pairBinding = require(path.join(CORE_LIB, 'pair-binding', 'pair-binding'))({});
+
+const resolveEmitPairBinding = ({ spokeStandardName, warn }) =>
+	pairBinding.resolvePairBinding({
+		roster: standardDiscovery.roster({ includeSynthetic: true }),
+		hubStandardName: standardDiscovery.cedsHubStandardName,
+		spokeStandardName,
+		warn,
+	});
+
 // the SIF-anchor gating manifest (Phase-5 re-freeze, 181be81d) — the basedOn for this additive candidate.
 const DEFAULT_GATING_MANIFEST =
 	'181be81d4b7fb3c1e42867735e1d3dc36f312dc80ba694d63f4231b1a16467dd';
@@ -182,6 +195,16 @@ const handleEmit = (resources, callback) => {
 	const sourceStandard = curationFixture.sourceStandard || 'SIF';
 	const label = strParam('label', 'phase6-equivalence-candidate');
 
+	// the discovery-bound pair stamp (spec §7.1) — fatal when unresolvable.
+	const emitPairBinding = resolveEmitPairBinding({
+		spokeStandardName: sourceStandard,
+		warn: (message) => xLog.error(message),
+	});
+	if (emitPairBinding.error) {
+		callback(`[edf-equivalence -emit] ${emitPairBinding.error}`);
+		return;
+	}
+
 	const taskList = new taskListPlus();
 	taskList.push((args, next) => {
 		loadBlocks({ forgeStore, manifestKey: gatingManifest, sourceStandard }, (err, loaded) =>
@@ -219,12 +242,21 @@ const handleEmit = (resources, callback) => {
 		next('', { ...args, subgraph });
 	});
 	taskList.push((args, next) => {
+		// Phase C: pair fields replace standardKey; curated promotions are property-level
+		// EXACT_MATCH, tierScope 'property' (granularity axis — the curated AUTHORSHIP class
+		// lives on the edges' provenanceTier, a different axis).
 		const header = {
 			blockType: 'curatedMapping',
-			standardKey: sourceStandard,
 			version: args.subjectVersion,
 			stableUriPropertyName: 'uri',
 			resolutionKey: 'uri',
+			pairA: emitPairBinding.pairA,
+			pairAVersion: emitPairBinding.pairAVersion,
+			pairB: emitPairBinding.pairB,
+			pairBVersion: emitPairBinding.pairBVersion,
+			publishedVersionA: emitPairBinding.publishedVersionA,
+			publishedVersionB: emitPairBinding.publishedVersionB,
+			tierScope: 'property',
 			embeddingModelVersion: 'voyage-4-large',
 			embeddingEncoding: 'base64',
 			embeddingDtype: 'float32',
@@ -239,8 +271,8 @@ const handleEmit = (resources, callback) => {
 		forgeStore.saveBlock(
 			{
 				type: 'mapping',
-				subject: sourceStandard,
-				version: args.subjectVersion,
+				subject: emitPairBinding.pairSubject,
+				version: emitPairBinding.versionKey,
 				requires: [args.sourceRow.blockId, args.referenceRow.blockId],
 				text: blockText,
 				producedBy: 'edf-equivalence',

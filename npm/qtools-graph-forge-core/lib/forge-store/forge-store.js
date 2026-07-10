@@ -13,6 +13,17 @@ const sqliteInstance = require('../../../../server/data-model/lib/sqlite-instanc
 
 const contentAddress = require('../content-address/content-address')();
 
+// pair / version-key vocabulary (Phase C, spec §4/§5): the ONE authoritative
+// MAPPING_BLOCK_TYPES list plus the canonical pair-subject/versionKey text forms.
+const {
+	MAPPING_BLOCK_TYPES,
+	isMappingBlockType,
+	PAIR_GROUP_BLOCK_TYPE,
+	pairSubjectText,
+	versionKeyText,
+	VERSION_KEY_HEADER_FIELDS,
+} = require('../vocabulary/vocabulary');
+
 // START OF moduleFunction() ============================================================
 //
 // forge-store — the relational SQLite store (schemas.md §1). Five content-addressed,
@@ -166,6 +177,37 @@ const moduleFunction =
 				runSql(createPointerLog, (err) => next(err, args));
 			});
 
+			// currentPairGroup — the CURRENT pointer per pair@versionKey (spec §5.6): TQ's
+			// overwrite semantics via mint-and-repoint. Prior generations are retained in the
+			// blocks table (retain-all) but INVISIBLE — the pointer is the only default door.
+			taskList.push((args, next) => {
+				const createCurrentPairGroup = `CREATE TABLE IF NOT EXISTS currentPairGroup (
+					pairSubject         TEXT NOT NULL,
+					versionKey          TEXT NOT NULL,
+					currentGroupBlockId TEXT NOT NULL,
+					PRIMARY KEY (pairSubject, versionKey),
+					FOREIGN KEY (currentGroupBlockId) REFERENCES blocks(blockId)
+				);`;
+				runSql(createCurrentPairGroup, (err) => next(err, args));
+			});
+
+			// pairGroupPointerLog — append-only pointer history, mirroring manifestPointerLog's
+			// discipline (monotonic fromTime, never deleted). ONE deliberate divergence from the
+			// mirror: the note column — spec §5.6 requires the log to narrate what superseded
+			// what and why (supervisor-ruled 2026-07-10).
+			taskList.push((args, next) => {
+				const createPairGroupPointerLog = `CREATE TABLE IF NOT EXISTS pairGroupPointerLog (
+					pairSubject  TEXT NOT NULL,
+					versionKey   TEXT NOT NULL,
+					groupBlockId TEXT NOT NULL,
+					note         TEXT,
+					fromTime     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+					PRIMARY KEY (pairSubject, versionKey, fromTime),
+					FOREIGN KEY (groupBlockId) REFERENCES blocks(blockId)
+				);`;
+				runSql(createPairGroupPointerLog, (err) => next(err, args));
+			});
+
 			pipeRunner(taskList.getList(), {}, (err) => {
 				callback(err, err ? undefined : {});
 			});
@@ -175,7 +217,137 @@ const moduleFunction =
 		// BLOCKS
 		// =====================================================================
 
+		// parseBlockHeaderLine — guarded parse of a block text's FIRST line (the PG-JSONL
+		// header; schemas.md §2: the header is authoritative). Returns { header } or a named
+		// { error } for the caller's error channel. The guard is isolated to the parse itself
+		// (the sanctioned local exception, mirroring parseRequiresColumn).
+		const parseBlockHeaderLine = (text) => {
+			const firstLine = `${text}`.split('\n')[0];
+			let header;
+			try {
+				header = JSON.parse(firstLine);
+			} catch (parseErr) {
+				return {
+					error: `block header (first line) is not valid JSON (${parseErr.message}): ${firstLine.slice(0, 120)}`,
+				};
+			}
+			return { header };
+		};
+
+		// validateVersionKeyedSave — THE §4.2 CHOKE POINT (invariant 11.8, Phase C). A block
+		// whose type is in MAPPING_BLOCK_TYPES, or is a pairGroup, is REJECTED unless its
+		// header carries the COMPLETE version key (pairA/pairAVersion/pairB/pairBVersion) and
+		// a row subject equal to the canonical pair form. A pairGroup is additionally rejected
+		// when any member blockId in its content line does not exist in the blocks table.
+		// Producers validate earlier as a courtesy; THIS is what enforces. Runs STRICTLY
+		// BEFORE the dedup existence check (supervisor-ruled): a keyless save is a defect
+		// even when its bytes already exist. Async only for the pairGroup member lookups.
+		const validateVersionKeyedSave = ({ type, subject, text }, callback) => {
+			const versionKeyed =
+				isMappingBlockType(type) || type === PAIR_GROUP_BLOCK_TYPE;
+			if (!versionKeyed) {
+				callback('');
+				return;
+			}
+
+			const rejectionPreamble = `saveBlock: ${type} block REJECTED (spec §4.2 choke point)`;
+
+			const parsed = parseBlockHeaderLine(text);
+			if (parsed.error) {
+				callback(`${rejectionPreamble} — ${parsed.error}`);
+				return;
+			}
+			const { header } = parsed;
+
+			const missingFields = VERSION_KEY_HEADER_FIELDS.filter(
+				(oneField) =>
+					header[oneField] == null || `${header[oneField]}`.trim() === '',
+			);
+			if (missingFields.length > 0) {
+				callback(
+					`${rejectionPreamble} — incomplete version key: missing ${missingFields.join(', ')} ` +
+						`(required: ${VERSION_KEY_HEADER_FIELDS.join(', ')})`,
+				);
+				return;
+			}
+
+			const canonicalSubject = pairSubjectText(header.pairA, header.pairB);
+			if (subject !== canonicalSubject) {
+				callback(
+					`${rejectionPreamble} — subject '${subject}' does not match the header's canonical ` +
+						`pair form '${canonicalSubject}'`,
+				);
+				return;
+			}
+
+			if (type !== PAIR_GROUP_BLOCK_TYPE) {
+				callback('');
+				return;
+			}
+
+			// pairGroup content line (line 2): canonical JSON { kind, members, versionKey }
+			const contentLine = `${text}`.split('\n')[1];
+			let content;
+			try {
+				content = JSON.parse(contentLine == null ? '' : contentLine);
+			} catch (parseErr) {
+				callback(
+					`${rejectionPreamble} — pairGroup content (line 2) is not valid JSON (${parseErr.message})`,
+				);
+				return;
+			}
+			if (content.kind !== 'pairGroupContent') {
+				callback(
+					`${rejectionPreamble} — pairGroup content line kind '${content.kind}' is not 'pairGroupContent'`,
+				);
+				return;
+			}
+			if (!Array.isArray(content.members) || content.members.length === 0) {
+				callback(`${rejectionPreamble} — pairGroup members list is missing or empty`);
+				return;
+			}
+			const expectedVersionKey = versionKeyText(
+				header.pairAVersion,
+				header.pairBVersion,
+			);
+			if (content.versionKey !== expectedVersionKey) {
+				callback(
+					`${rejectionPreamble} — pairGroup content versionKey '${content.versionKey}' does not ` +
+						`match the header's '${expectedVersionKey}'`,
+				);
+				return;
+			}
+
+			// every member must EXIST (a phantom member blockId is a rejection, G-C2)
+			const memberTaskList = new taskListPlus();
+			content.members.forEach((oneMemberBlockId) => {
+				memberTaskList.push((memberArgs, memberNext) => {
+					getRows(
+						`SELECT blockId FROM blocks WHERE blockId=${esc(oneMemberBlockId)};`,
+						(err, rows) => {
+							if (err) {
+								memberNext(err, memberArgs);
+								return;
+							}
+							if (!rows || rows.length === 0) {
+								memberNext(
+									`${rejectionPreamble} — pairGroup member blockId ${oneMemberBlockId} ` +
+										`does not exist in the blocks table`,
+									memberArgs,
+								);
+								return;
+							}
+							memberNext('', memberArgs);
+						},
+					);
+				});
+			});
+			pipeRunner(memberTaskList.getList(), {}, (err) => callback(err || ''));
+		};
+
 		// saveBlock — content-address the text, insert if absent (dedup on blockId).
+		//   Phase C: version-keyed types (MAPPING_BLOCK_TYPES + pairGroup) pass the
+		//   validateVersionKeyedSave choke point FIRST — before the dedup check.
 		const saveBlock = (
 			{ type, subject, version, requires, text, producedBy },
 			callback,
@@ -183,6 +355,12 @@ const moduleFunction =
 			const blockId = blockIdForText(text);
 
 			const taskList = new taskListPlus();
+
+			taskList.push((args, next) => {
+				validateVersionKeyedSave({ type, subject, text }, (err) =>
+					next(err, args),
+				);
+			});
 
 			taskList.push((args, next) => {
 				getRows(
@@ -657,6 +835,168 @@ const moduleFunction =
 		};
 
 		// =====================================================================
+		// PAIR-GROUP CURRENT POINTER (spec §5.6 — mint-and-repoint, Phase C)
+		//
+		// The store keeps ONE current pointer per pair@versionKey. Minting a new group
+		// ADVANCES the pointer (logical overwrite); prior generations stay in the blocks
+		// table but are INVISIBLE — never offered, never resolved to; pairGroupHistory
+		// (the --history door) is the only way to see them. Pointer rows and log rows
+		// are NEVER deleted.
+		// =====================================================================
+
+		// advancePairGroupPointer — verify the target block exists and is a pairGroup,
+		// then UPSERT the CURRENT pointer and append a log row (with the §5.6 note).
+		const advancePairGroupPointer = (
+			{ pairSubject, versionKey, groupBlockId, note },
+			callback,
+		) => {
+			const taskList = new taskListPlus();
+
+			taskList.push((args, next) => {
+				getBlockMeta({ blockId: groupBlockId }, (err, blockMeta) => {
+					if (err) {
+						next(err, args);
+						return;
+					}
+					if (!blockMeta) {
+						next(
+							`advancePairGroupPointer: blockId ${groupBlockId} does not exist — ` +
+								`refusing to aim the ${pairSubject}@${versionKey} pointer at nothing`,
+							args,
+						);
+						return;
+					}
+					if (blockMeta.type !== PAIR_GROUP_BLOCK_TYPE) {
+						next(
+							`advancePairGroupPointer: blockId ${groupBlockId} is type '${blockMeta.type}', ` +
+								`not '${PAIR_GROUP_BLOCK_TYPE}' — refusing`,
+							args,
+						);
+						return;
+					}
+					next('', args);
+				});
+			});
+
+			taskList.push((args, next) => {
+				getRows(
+					`SELECT pairSubject FROM currentPairGroup
+						WHERE pairSubject=${esc(pairSubject)} AND versionKey=${esc(versionKey)};`,
+					(err, rows) => next(err, { ...args, pointerExists: rows && rows.length > 0 }),
+				);
+			});
+
+			taskList.push((args, next) => {
+				const statement = args.pointerExists
+					? `UPDATE currentPairGroup SET currentGroupBlockId=${esc(groupBlockId)}
+						WHERE pairSubject=${esc(pairSubject)} AND versionKey=${esc(versionKey)};`
+					: `INSERT INTO currentPairGroup (pairSubject, versionKey, currentGroupBlockId)
+						VALUES (${esc(pairSubject)}, ${esc(versionKey)}, ${esc(groupBlockId)});`;
+				runSql(statement, (err) => next(err, args));
+			});
+
+			taskList.push((args, next) => {
+				runSql(
+					`INSERT INTO pairGroupPointerLog (pairSubject, versionKey, groupBlockId, note, fromTime)
+						VALUES (${esc(pairSubject)}, ${esc(versionKey)}, ${esc(groupBlockId)},
+							${esc(note)}, ${esc(nextPointerTime())});`,
+					(err) => next(err, args),
+				);
+			});
+
+			pipeRunner(taskList.getList(), {}, (err) => {
+				callback(err, err ? undefined : { pairSubject, versionKey, groupBlockId });
+			});
+		};
+
+		// resolveCurrentPairGroup — symbolic pair@versionKey -> the CURRENT group block.
+		// FAILS LOUDLY on every degraded state (G-C5): no pointer -> named error; pointer
+		// aiming at a missing blockId -> named CORRUPTION error. No silent recovery, no
+		// quiet re-mint, ever. (getBlock's verify-on-read additionally refuses corrupted
+		// text.) Returns { pairSubject, versionKey, groupBlockId, block }.
+		const resolveCurrentPairGroup = ({ pairSubject, versionKey }, callback) => {
+			const taskList = new taskListPlus();
+
+			taskList.push((args, next) => {
+				getRows(
+					`SELECT currentGroupBlockId FROM currentPairGroup
+						WHERE pairSubject=${esc(pairSubject)} AND versionKey=${esc(versionKey)};`,
+					(err, rows) => {
+						if (err) {
+							next(err, args);
+							return;
+						}
+						const pointerRow = rows.qtGetSurePath('[0]', null);
+						if (!pointerRow) {
+							next(
+								`resolveCurrentPairGroup: no CURRENT pair-group exists for ` +
+									`${pairSubject}@${versionKey}`,
+								args,
+							);
+							return;
+						}
+						next('', { ...args, groupBlockId: pointerRow.currentGroupBlockId });
+					},
+				);
+			});
+
+			taskList.push((args, next) => {
+				getBlock({ blockId: args.groupBlockId }, (err, blockRow) => {
+					if (err) {
+						next(err, args);
+						return;
+					}
+					if (!blockRow) {
+						next(
+							`resolveCurrentPairGroup: POINTER CORRUPT — currentPairGroup for ` +
+								`${pairSubject}@${versionKey} aims at blockId ${args.groupBlockId} which does ` +
+								`not exist in the blocks table. Refusing silent recovery; repair the pointer ` +
+								`(advancePairGroupPointer to a real pairGroup block) or restore the store backup.`,
+							args,
+						);
+						return;
+					}
+					next('', { ...args, block: blockRow });
+				});
+			});
+
+			pipeRunner(taskList.getList(), {}, (err, args) => {
+				if (err) {
+					callback(err);
+					return;
+				}
+				callback('', {
+					pairSubject,
+					versionKey,
+					groupBlockId: args.groupBlockId,
+					block: args.block,
+				});
+			});
+		};
+
+		// pairGroupHistory — the --history door (§5.6): ALL pointer-log rows for one
+		// pair@versionKey, ascending fromTime. The only surface that shows superseded
+		// generations.
+		const pairGroupHistory = ({ pairSubject, versionKey }, callback) => {
+			getRows(
+				`SELECT pairSubject, versionKey, groupBlockId, note, fromTime
+					FROM pairGroupPointerLog
+					WHERE pairSubject=${esc(pairSubject)} AND versionKey=${esc(versionKey)}
+					ORDER BY fromTime ASC;`,
+				(err, rows) => callback(err, err ? undefined : rows),
+			);
+		};
+
+		// listCurrentPairGroups — every CURRENT pointer row (the G-C6 census face).
+		const listCurrentPairGroups = (callback) => {
+			getRows(
+				`SELECT pairSubject, versionKey, currentGroupBlockId FROM currentPairGroup
+					ORDER BY pairSubject, versionKey;`,
+				(err, rows) => callback(err, err ? undefined : rows),
+			);
+		};
+
+		// =====================================================================
 		// GC (retain-all)
 		// =====================================================================
 
@@ -989,6 +1329,10 @@ const moduleFunction =
 			rollbackPointer,
 			listGraphs,
 			dropGraph,
+			advancePairGroupPointer,
+			resolveCurrentPairGroup,
+			pairGroupHistory,
+			listCurrentPairGroups,
 			collectibleBlockIds,
 			validateManifestClosure,
 			deriveBuildOrder,
