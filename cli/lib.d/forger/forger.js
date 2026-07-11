@@ -58,6 +58,7 @@ NAME
 SYNOPSIS
      edf-forge -forge --standardName=<standardKey> --source=<path>
                       --destination=<graphName> [--owner=<:golden|:user>]
+                      [--embeddingConfigFilePath=<path>]
 
 DESCRIPTION
      edf-forge executes a standard/parser bundle (a forge in lib.d/) over a standard's source
@@ -91,6 +92,12 @@ OPTIONS
 
      --owner=<:golden|:user>
             ownerStamp for the produced nodes/edges. Default :golden.
+
+     --embeddingConfigFilePath=<path>
+            Override the Voyage embedding-client config ini (pass-through to the
+            embedding-client's configFilePath; the edfInferred knob precedent). Absent =
+            the standard voyageEmbedding.ini — behavior unchanged. An active override is
+            ANNOUNCED on stderr so it can never silently redirect embedding credentials.
 
 OUTPUT
      A materialized single-standard validation graph. Its nodes carry _id, _source, name,
@@ -166,6 +173,12 @@ const run = () => {
 	const destination = (commandLineParameters.values.destination || [])[0];
 	const ownerFlag = (commandLineParameters.values.owner || [])[0];
 	const owner = ownerFlag || ':golden';
+	// Phase-E Q1 adjudication (the edfInferred knob precedent): optional pass-through
+	// override for the embedding-client config ini — behavior-neutral when absent (the
+	// hardcoded VOYAGE_CONFIG_PATH default is unchanged). Lets gated runs point at a
+	// keyless tripwire ini so a cache miss REFUSES loudly instead of spending.
+	const embeddingConfigFilePath = (commandLineParameters.values
+		.embeddingConfigFilePath || [])[0];
 
 	if (!standardName) {
 		xLog.error('edf-forge: --standardName is required. Use -help.');
@@ -194,8 +207,13 @@ const run = () => {
 		'credential-accessor',
 		'credential-accessor',
 	))({ forgeStore });
+	if (embeddingConfigFilePath) {
+		console.error(
+			`EMBEDDING CONFIG OVERRIDE ACTIVE: configFilePath = ${embeddingConfigFilePath} (--embeddingConfigFilePath)`,
+		);
+	}
 	const embedder = require(path.join(CORE_LIB, 'embedding', 'embedding-client'))({
-		configFilePath: VOYAGE_CONFIG_PATH,
+		configFilePath: embeddingConfigFilePath || VOYAGE_CONFIG_PATH,
 	});
 
 	// embedding sidecar (PLAN §3.4): the per-standard vector store + the caching-embedder DECORATOR

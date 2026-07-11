@@ -13,6 +13,10 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //   - version passes through from the root; versionSource passes through when present, defaults to
 //     'declared' ONLY when a version exists (the producer parsed it from source), stays null when the
 //     version itself is absent — a missing version reads as an honest null, never an invented value.
+//   - publishedVersion and snapshotKey (the Phase-A §3.3 provenance stamp) pass through from the root
+//     the same way (Phase E work item 4 — the Phase-A flag-2 landing): present when the root carries
+//     the stamp (post-Phase-A fresh forges), honest null when it does not (pre-provenance blocks) —
+//     never derived, never defaulted.
 //   - description passes through from the root; when the source is silent the node SAYS SO explicitly.
 //
 // Async style: qtools taskListPlus/pipeRunner; cypher at the leaf via the injected lifecycle. No
@@ -66,6 +70,7 @@ const moduleFunction =
 					RETURN root._source AS source, root.standardKey AS standardKey,
 						root.standardName AS standardName, root.name AS rootName,
 						root.version AS version, root.versionSource AS versionSource,
+						root.publishedVersion AS publishedVersion, root.snapshotKey AS snapshotKey,
 						root.sourceFormat AS sourceFormat, root.sourceUrl AS sourceUrl,
 						root.description AS rootDescription,
 						nodeCount, propertyCount, classCount, optionSetCount, optionValueCount,
@@ -110,6 +115,10 @@ const moduleFunction =
 									: 'island';
 					const version = oneRow.version || null;
 					const versionSource = oneRow.versionSource || (version ? 'declared' : null);
+					// Phase E work item 4: the §3.3 stamp passes through untransformed — honest null
+					// when the root predates provenance stamping (never defaulted, never derived).
+					const publishedVersion = oneRow.publishedVersion || null;
+					const snapshotKey = oneRow.snapshotKey || null;
 					const displayName = oneRow.standardName || oneRow.rootName || oneRow.source;
 					const description = oneRow.rootDescription
 						? oneRow.rootDescription
@@ -122,6 +131,8 @@ const moduleFunction =
 						name: displayName,
 						version,
 						versionSource,
+						publishedVersion,
+						snapshotKey,
 						sourceFormat: oneRow.sourceFormat || null,
 						sourceUrl: oneRow.sourceUrl || null,
 						description,
@@ -152,6 +163,7 @@ const moduleFunction =
 					SET d.source = row.source, d.standardKey = row.standardKey,
 						d.displayName = row.displayName, d.name = row.name,
 						d.version = row.version, d.versionSource = row.versionSource,
+						d.publishedVersion = row.publishedVersion, d.snapshotKey = row.snapshotKey,
 						d.sourceFormat = row.sourceFormat, d.sourceUrl = row.sourceUrl,
 						d.description = row.description,
 						d.nodeCount = row.nodeCount, d.propertyCount = row.propertyCount,

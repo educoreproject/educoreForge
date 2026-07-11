@@ -81,6 +81,13 @@ const moduleFunction =
 			const taskList = new taskListPlus();
 
 			// 1. hasVector for each distinct input -> hit flags (already-stored inputs skip the API).
+			//    STACK-SAFE stepping (Phase-E fix, supervisor-adjudicated): better-sqlite3 answers
+			//    synchronously, so direct-callback recursion here accumulates one stack frame per
+			//    input ACROSS the whole multi-batch chain (forge bundles chain batches inside
+			//    callbacks) — CEDS's 182×128 warm pass blew the stack at ~batch 5. setImmediate
+			//    gives every step an event-loop boundary; same order, same calls, same results.
+			//    (The trampoline precedent: replay-engine.js:403 and the migrator's
+			//    each-entry-sequential-stack-safe — one shared core-lib home is a Phase-F item.)
 			taskList.push((args, next) => {
 				const hitFlags = new Array(distinctTexts.length).fill(false);
 				const checkOne = (distinctIdx) => {
@@ -96,7 +103,7 @@ const moduleFunction =
 								return;
 							}
 							hitFlags[distinctIdx] = !!present;
-							checkOne(distinctIdx + 1);
+							setImmediate(() => checkOne(distinctIdx + 1));
 						},
 					);
 				};
@@ -170,7 +177,8 @@ const moduleFunction =
 								next(`${moduleName}.embedTexts putVector[${distinctIdx}]: ${err}`);
 								return;
 							}
-							putOne(missPosition + 1);
+							// stack-safe stepping — see the step-1 walker's comment.
+							setImmediate(() => putOne(missPosition + 1));
 						},
 					);
 				};
@@ -189,7 +197,8 @@ const moduleFunction =
 					}
 					if (!hitFlags[distinctIdx]) {
 						distinctVectors[distinctIdx] = missVectorByDistinctIndex[distinctIdx];
-						resolveOne(distinctIdx + 1);
+						// stack-safe stepping — this branch is a bare synchronous recursion.
+						setImmediate(() => resolveOne(distinctIdx + 1));
 						return;
 					}
 					vectorStore.getVector(
@@ -208,7 +217,8 @@ const moduleFunction =
 								return;
 							}
 							distinctVectors[distinctIdx] = Float32Array.from(record.vector);
-							resolveOne(distinctIdx + 1);
+							// stack-safe stepping — see the step-1 walker's comment.
+							setImmediate(() => resolveOne(distinctIdx + 1));
 						},
 					);
 				};
