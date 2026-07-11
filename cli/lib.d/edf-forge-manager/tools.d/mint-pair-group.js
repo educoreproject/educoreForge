@@ -25,12 +25,16 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
 const { pipeRunner, taskListPlus } = new require('qtools-asynchronous-pipe-plus')();
 
+// the ONE mint-and-repoint code path (Phase D ruling D-D1) — shared with manifestEditor
+// -defineGroup; validate/compose/save/advance all live there, never here.
+const pairGroupMintFactory = require('../../../../npm/qtools-graph-forge-core/lib/pair-group-mint/pair-group-mint');
+
 const moduleFunction =
 	({ moduleName } = {}) =>
 	({ storeAccess, standardDiscovery, pairBinding, vocabulary } = {}) => {
 		const { xLog, commandLineParameters } = process.global;
 		const { forgeStore } = storeAccess;
-		const { pairSubjectText, versionKeyText, PAIR_GROUP_BLOCK_TYPE } = vocabulary;
+		const { mintPairGroupIntoStore } = pairGroupMintFactory({});
 
 		const strParam = (name, dflt) => {
 			const values = commandLineParameters.values[name];
@@ -73,27 +77,25 @@ const moduleFunction =
 				return { error: `--versionKey '${versionKeyRaw}' is not canonical (a,b) form` };
 			}
 			const roster = standardDiscovery.roster({ includeSynthetic: true });
-			const binding = pairBinding.resolvePairBinding({
+			// the CALLER's key is authoritative for selection; discovery casing is
+			// authoritative for the pair names (spec §4.1 / Q10); each side's
+			// publishedVersion stamps from the CHOSEN snapshot's provenance (Phase D —
+			// a non-default snapshot must never inherit the default's version string).
+			// --hubBundleDir (optional, D-D5 rider 3): the synthetic flows pass it so a
+			// p6hub-derived group header stamps p6hub's own provenance.
+			const binding = pairBinding.resolvePairBindingAtVersions({
 				roster,
 				hubStandardName: pairMatch[1],
 				spokeStandardName: pairMatch[2],
+				aVersion: keyMatch[1],
+				bVersion: keyMatch[2],
+				preferredHubBundleDir: strParam('hubBundleDir', null),
 				warn: (message) => xLog.status(`[${moduleName}] ${message}`),
 			});
 			if (binding.error) {
 				return { error: binding.error };
 			}
-			// the CALLER's key is authoritative for selection; discovery casing is
-			// authoritative for the pair names (spec §4.1 / Q10).
-			return {
-				pairSubject: pairSubjectText(binding.pairA, binding.pairB),
-				versionKey: versionKeyText(keyMatch[1], keyMatch[2]),
-				pairA: binding.pairA,
-				pairAVersion: keyMatch[1],
-				pairB: binding.pairB,
-				pairBVersion: keyMatch[2],
-				publishedVersionA: binding.publishedVersionA,
-				publishedVersionB: binding.publishedVersionB,
-			};
+			return binding;
 		};
 
 		// memberRowsForPair — the §5.4 default membership: every type='mapping' block filed
@@ -115,63 +117,6 @@ const moduleFunction =
 					.sort();
 				callback('', members);
 			});
-		};
-
-		// validateMemberList — every member exists, is type 'mapping', and is filed under
-		// exactly this pair@versionKey (the -validateGroup contract applied at mint time).
-		const validateMemberList = ({ members, pairSubject, versionKey }, callback) => {
-			const sub = new taskListPlus();
-			members.forEach((oneBlockId) => {
-				sub.push((a2, n2) => {
-					forgeStore.getBlockMeta({ blockId: oneBlockId }, (err, blockMeta) => {
-						if (err) {
-							n2(err);
-							return;
-						}
-						if (!blockMeta) {
-							n2(`member ${oneBlockId} does not exist`);
-							return;
-						}
-						if (blockMeta.type !== 'mapping') {
-							n2(`member ${oneBlockId} is type '${blockMeta.type}', not 'mapping'`);
-							return;
-						}
-						if (blockMeta.subject !== pairSubject || blockMeta.version !== versionKey) {
-							n2(
-								`member ${oneBlockId} is filed under '${blockMeta.subject}'@'${blockMeta.version}', ` +
-									`not '${pairSubject}'@'${versionKey}'`,
-							);
-							return;
-						}
-						n2('', a2);
-					});
-				});
-			});
-			pipeRunner(sub.getList(), {}, (err) => callback(err || ''));
-		};
-
-		// composePairGroupText — the D4 canonical two-line PG-JSONL. Deterministic: fixed
-		// header field order, members sorted ascending. (Composed directly — the pairGroup
-		// block never enters the replay path, so it does not use replay-block's serializer.)
-		const composePairGroupText = ({ parsed, members, displayName }) => {
-			const headerLine = JSON.stringify({
-				kind: 'header',
-				blockType: PAIR_GROUP_BLOCK_TYPE,
-				serializerVersion: '1',
-				pairA: parsed.pairA,
-				pairAVersion: parsed.pairAVersion,
-				pairB: parsed.pairB,
-				pairBVersion: parsed.pairBVersion,
-				publishedVersionA: parsed.publishedVersionA,
-				publishedVersionB: parsed.publishedVersionB,
-				displayName,
-			});
-			const contentLine = JSON.stringify({
-				kind: 'pairGroupContent',
-				members: [...members].sort(),
-				versionKey: parsed.versionKey,
-			});
-			return `${headerLine}\n${contentLine}\n`;
 		};
 
 		// --- ACTION: -mintPairGroup --------------------------------------------------------
@@ -208,38 +153,17 @@ const moduleFunction =
 					);
 					return;
 				}
-				validateMemberList({ members: args.members, ...parsed }, (err) => next(err, args));
-			});
-
-			taskList.push((args, next) => {
-				// §6.3 default displayName: formal name + mint date; freely overridable.
-				const displayName =
-					joinedParam('displayName', null) ||
-					`${parsed.pairSubject} @ ${parsed.versionKey} — minted ${new Date().toISOString().slice(0, 10)}`;
-				const text = composePairGroupText({ parsed, members: args.members, displayName });
-				forgeStore.saveBlock(
+				// the ONE mint-and-repoint path (D-D1): validate → compose → save → advance.
+				mintPairGroupIntoStore(
 					{
-						type: PAIR_GROUP_BLOCK_TYPE,
-						subject: parsed.pairSubject,
-						version: parsed.versionKey,
-						requires: args.members, // a group depends on exactly its members
-						text,
+						forgeStore,
+						...parsed,
+						members: args.members,
+						displayName: joinedParam('displayName', null),
+						note,
 						producedBy: 'forgeManager:mintPairGroup',
 					},
-					(err, result) =>
-						next(err, { ...args, groupBlockId: result ? result.blockId : null, displayName }),
-				);
-			});
-
-			taskList.push((args, next) => {
-				forgeStore.advancePairGroupPointer(
-					{
-						pairSubject: parsed.pairSubject,
-						versionKey: parsed.versionKey,
-						groupBlockId: args.groupBlockId,
-						note: note || `mint: ${args.displayName}`,
-					},
-					(err) => next(err, args),
+					(err, minted) => next(err, { ...args, minted }),
 				);
 			});
 
@@ -250,12 +174,7 @@ const moduleFunction =
 				}
 				callback('', {
 					action: 'mintPairGroup',
-					pairSubject: parsed.pairSubject,
-					versionKey: parsed.versionKey,
-					groupBlockId: args.groupBlockId,
-					displayName: args.displayName,
-					memberCount: args.members.length,
-					members: args.members,
+					...args.minted,
 				});
 			});
 		};

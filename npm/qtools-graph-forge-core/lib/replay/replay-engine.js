@@ -241,6 +241,9 @@ const mergeEdges = (session, edges, callback) => {
 		}
 
 		// Edge endpoints externalize the stableId value (carried in ref.id).
+		// provenanceTier rides the row (the blockType precedent) so a dangling edge's record
+		// can carry it — spec §10.3's single authorized engine addition. PG-JSON single-element
+		// array or scalar, same acceptance as findProvenanceViolations.
 		const rows = byType[edgeType].map((oneEdge) => ({
 			fromStableId: oneEdge.fromRef.id,
 			toStableId: oneEdge.toRef.id,
@@ -248,6 +251,9 @@ const mergeEdges = (session, edges, callback) => {
 			toSrc: oneEdge.toRef.source,
 			props: pgToStored(oneEdge.properties),
 			blockType: oneEdge.blockType,
+			provenanceTier: Array.isArray((oneEdge.properties || {}).provenanceTier)
+				? (oneEdge.properties || {}).provenanceTier[0]
+				: (oneEdge.properties || {}).provenanceTier,
 		}));
 		const batches = batchArray(rows, BATCH_SIZE);
 		let bi = 0;
@@ -276,6 +282,7 @@ const mergeEdges = (session, edges, callback) => {
 				RETURN e.fromSrc AS fromSrc, e.fromStableId AS fromStableId,
 				       e.toSrc AS toSrc, e.toStableId AS toStableId,
 				       e.blockType AS blockType,
+				       e.provenanceTier AS provenanceTier,
 				       (from IS NULL) AS fromMissing, (to IS NULL) AS toMissing
 			`;
 			session
@@ -290,6 +297,7 @@ const mergeEdges = (session, edges, callback) => {
 						}
 						danglingRefs.push({
 							blockType: rec.get('blockType'),
+							provenanceTier: rec.get('provenanceTier'),
 							edgeType,
 							fromRef: {
 								source: rec.get('fromSrc'),

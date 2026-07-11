@@ -114,6 +114,43 @@ const symbolicPairReference = ({ pairA, pairB, aVersion, bVersion }) =>
 // the four header fields whose joint presence IS version-key completeness (§4.2)
 const VERSION_KEY_HEADER_FIELDS = ['pairA', 'pairAVersion', 'pairB', 'pairBVersion'];
 
+// composePairGroupText — the D4 canonical two-line PG-JSONL pairGroup text. Deterministic:
+// fixed header field order, members sorted ascending (sorted members = deterministic content
+// address). Homed HERE (Phase D) so every group-creating verb — forgeManager -mintPairGroup,
+// manifestEditor -defineGroup — composes byte-identical text from one function (the
+// MAPPING_BLOCK_TYPES one-list-N-consumers doctrine applied to the group's canonical form).
+// The pairGroup block never enters the replay path, so it does not use replay-block's serializer.
+const composePairGroupText = ({
+	pairA,
+	pairAVersion,
+	pairB,
+	pairBVersion,
+	publishedVersionA,
+	publishedVersionB,
+	displayName,
+	members,
+	versionKey,
+}) => {
+	const headerLine = JSON.stringify({
+		kind: 'header',
+		blockType: PAIR_GROUP_BLOCK_TYPE,
+		serializerVersion: '1',
+		pairA,
+		pairAVersion,
+		pairB,
+		pairBVersion,
+		publishedVersionA,
+		publishedVersionB,
+		displayName,
+	});
+	const contentLine = JSON.stringify({
+		kind: 'pairGroupContent',
+		members: [...members].sort(),
+		versionKey,
+	});
+	return `${headerLine}\n${contentLine}\n`;
+};
+
 // =====================================================================
 // PROVENANCE TIERS — THE canonical four-value set (replay-block.js). Order is significant and
 // preserved exactly; replay-block re-exports PROVENANCE_TIERS/isValidProvenanceTier from here.
@@ -483,6 +520,7 @@ const vocabulary = {
 	versionKeyText,
 	symbolicPairReference,
 	VERSION_KEY_HEADER_FIELDS,
+	composePairGroupText,
 	PROVENANCE_TIERS,
 	PROVENANCE_TIER,
 	isValidProvenanceTier,

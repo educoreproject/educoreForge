@@ -304,6 +304,9 @@ const handleBuildGraph = ({ forgeStore, lifecycle }, callback) => {
 						nodesMerged: result.replayResult.nodesMerged,
 						edgesMerged: result.replayResult.edgesMerged,
 						danglingRefs: (result.replayResult.danglingRefs || []).length,
+						// the per-pair connect report (spec §10) — emitted WITH the build summary
+						// (invariant 11.9: silence about a dangling pair is a defect).
+						connectReport: result.connectReport,
 						indexesBuilt: result.replayResult.indexesBuilt,
 						finishing: result.finishResult,
 						ownerStamped: result.ownerStampResult,

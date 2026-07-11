@@ -63,6 +63,10 @@ const FORGE_CORE_VERSION = require(path.join(CORE_LIB, '..', 'package.json')).ve
 // the Phase-7 FINISHER REGISTRY (replayManager-owned, schema-as-code from the vocabulary registry). Runs
 // AFTER replay and BEFORE ownerStamp+stampProvenance so finisher output is owner-stamped + provenance-counted.
 const finishingFactory = require(path.join(CORE_LIB, 'finishing', 'finishing'));
+// the per-pair connect report (BINDING spec §10, Phase D): rolls the replay's danglingRefs
+// up by pair — permit-and-detect; emitted with the build summary and persisted on the
+// :GraphProvenance passport ("alongside the graph's provenance").
+const connectReportFactory = require(path.join(CORE_LIB, 'connect-report', 'connect-report'));
 
 // role -> instance type (registry `type`, which the teardown guard reads). bronze is ephemeral
 // (freely tearable); golden/user are protected. The ROLE is the canonical destination token
@@ -293,7 +297,7 @@ const moduleFunction =
 		//   CREATE's null-drop), so fields with no source today (schemaVersion, buildSequence,
 		//   triggeredBy, description, publishedAt, previousManifestId-when-null) read back as null.
 		const stampProvenance = (
-			{ destination, manifestKey, owner, graphType, isEphemeral, builtAt },
+			{ destination, manifestKey, owner, graphType, isEphemeral, builtAt, connectReport },
 			callback,
 		) => {
 			const taskList = new taskListPlus();
@@ -425,6 +429,12 @@ const moduleFunction =
 					equivalenceLayer: args.capabilityFlags.equivalenceLayer,
 					legacyEdgeCount: args.capabilityFlags.legacyEdgeCount,
 					legacyEdgesPresent: args.capabilityFlags.legacyEdgeCount > 0,
+					// the per-pair connect report (spec §10, Phase D) — persisted alongside the
+					// graph's provenance as a KEY-STABLE JSON string (Neo4j properties cannot
+					// carry maps); null when the builder had none to give (never fabricated).
+					connectReport: connectReport ? JSON.stringify(connectReport) : null,
+					connectReportAllConnected: connectReport ? connectReport.allConnected : null,
+					connectReportPairCount: connectReport ? connectReport.pairCount : null,
 				};
 				const cypher = `
 					CALL { MATCH (n:ForgedNode)
@@ -462,6 +472,9 @@ const moduleFunction =
 						equivalenceLayer: $equivalenceLayer,
 						legacyEdgeCount: $legacyEdgeCount,
 						legacyEdgesPresent: $legacyEdgesPresent,
+						connectReport: $connectReport,
+						connectReportAllConnected: $connectReportAllConnected,
+						connectReportPairCount: $connectReportPairCount,
 						nodeCountAtBuild: nodeCountAtBuild,
 						edgeCountAtBuild: edgeCountAtBuild,
 						standardsIncluded: standardsIncluded,
@@ -631,6 +644,42 @@ const moduleFunction =
 				);
 			});
 
+			// 3.2 CONNECT REPORT (spec §10, Phase D): roll the replay's danglingRefs up by pair.
+			//     Permit-and-detect — the build proceeds regardless; the report NAMES any degraded
+			//     pair (invariant 11.9: silence about a dangling pair is a defect). Correlation is
+			//     by the member blocks' own edge content (the Q10 pin — never roster-name matching).
+			//     hubStandardName (for the §5.3 h/s display prefix) comes from discovery, required
+			//     lazily so the store/replay path itself stays discovery-free.
+			taskList.push((args, next) => {
+				const { cedsHubStandardName } = require('../../forger/lib/standard-discovery');
+				const { buildConnectReport } = connectReportFactory({});
+				buildConnectReport(
+					{
+						forgeStore,
+						manifestKey,
+						danglingRefs: args.replayResult.danglingRefs || [],
+						hubStandardName: cedsHubStandardName,
+					},
+					(err, connectReport) => {
+						if (err) {
+							next(`buildGraph connect report failed: ${err}`);
+							return;
+						}
+						const pairSummary = connectReport.pairs
+							.map((onePair) => `${onePair.pair} ${onePair.verdict}`)
+							.join(' · ');
+						xLog.status(
+							`[graph-builder] connect report: ${connectReport.pairCount} pair(s)` +
+								(connectReport.pairCount ? ` — ${pairSummary}` : '') +
+								(connectReport.unattributedDangling
+									? ` — ${connectReport.unattributedDangling.length} unattributed dangling`
+									: ''),
+						);
+						next('', { ...args, connectReport });
+					},
+				);
+			});
+
 			// 3.5 FINISHING phase (Phase 7): the replayManager-owned finisher registry (schema constraints +
 			//     the self-describing schema view), sourced from the vocabulary registry — NOT the manifest.
 			//     Runs AFTER replay and BEFORE ownerStamp+stampProvenance so any :ForgedNode a finisher emits
@@ -687,6 +736,7 @@ const moduleFunction =
 						graphType: instanceType,
 						isEphemeral: instanceType === 'bronze',
 						builtAt: new Date().toISOString(),
+						connectReport: args.connectReport,
 					},
 					(err, provenanceResult) => {
 						if (err) {
@@ -736,6 +786,7 @@ const moduleFunction =
 					owner: effectiveOwner,
 					blockCount: args.blockTexts.length,
 					replayResult: args.replayResult,
+					connectReport: args.connectReport,
 					finishResult: args.finishResult,
 					ownerStampResult: args.ownerStampResult,
 					provenanceResult: args.provenanceResult,

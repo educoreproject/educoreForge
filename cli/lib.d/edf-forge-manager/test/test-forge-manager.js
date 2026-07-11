@@ -5,12 +5,21 @@
 //
 // Uses the two synthetic forge bundles (forge-p6hub _source 'CEDS', forge-p6second _source
 // 'synthstd' with cedsId crossRefs into the hub) so the golden flow runs without the full CEDS
-// parse or Voyage embeddings. Asserts:
+// parse or Voyage embeddings. Asserts (the POST-RETIREMENT contract — pairwiseVersionSwitching
+// Phase D rewrite, rulings D-D6/D-D8: the retired-bridge SPECIFIED_MAPPING assertions are
+// replaced by pair-group expectations; every assertion is REAL, no adjudicated-stale entries):
 //   GATE 1  -addStandard p6hub  then  -addStandard p6second  -> published golden with BOTH
-//           standards' nodes AND >=1 SPECIFIED_MAPPING bridge.
+//           standards' nodes; THEN the pair machinery end to end: -syntheticNativeMapping
+//           (the D-D8 test-scaffolding producer; LLM-free) emits the pair-keyed
+//           CEDS::synthstd@(01,01) mapping block -> -mintPairGroup advances the CURRENT
+//           pointer -> manifestEditor -combine --group expands it into a paired manifest ->
+//           -buildGraph goldenPaired carries >=1 EXACT_MATCH edge AND the §10 connect report
+//           names the pair CONNECTED.
 //   GATE 2  golden ≡ replay(goldenManifest): rebuild the golden manifest into a fresh graph and
 //           assert it is node/edge-identical to the live golden.
-//   GATE 3  -rollback golden (to the pre-second manifest) rebuilds a graph identical to hub-only golden.
+//   GATE 3  -rollback golden (to the pre-second manifest) rebuilds a graph identical to hub-only
+//           golden — zero synthstd nodes, zero EXACT_MATCH edges (REAL both directions: the
+//           goldenPaired forward state witnessed >=1).
 //   GATE 4  -list blocks|manifests|graphs reflects reality; --stale flags a constructed drift case.
 //
 // Force-tears-down ALL test containers/volumes at the END even on failure. Touches ONLY graphs it
@@ -43,6 +52,9 @@ const TEST_DB_PATH = path.join(
 );
 const MANAGER = path.join(LIB_D, 'edf-forge-manager', 'edfForgeManager.js');
 const REPLAY = path.join(LIB_D, 'edf-replay', 'edfReplay.js');
+// manifestEditor does NOT read EDF_FORGE_STORE_DB (it takes --db); every direct shell-out
+// below passes --db=TEST_DB_PATH explicitly, mirroring forgeManager's withDb discipline.
+const MANIFEST = path.join(LIB_D, 'manifest-editor', 'manifestEditor.js');
 
 const NEO4J_USER = 'neo4j';
 
@@ -152,11 +164,14 @@ const snapshotGraph = (graphName, callback) => {
 							const specifiedCount = edges.filter((e) =>
 								e.includes('[SPECIFIED_MAPPING]'),
 							).length;
+							const exactMatchCount = edges.filter((e) =>
+								e.includes('[EXACT_MATCH]'),
+							).length;
 							session
 								.close()
 								.then(() => driver.close())
 								.then(() =>
-									callback('', { nodes, edges, specifiedCount }),
+									callback('', { nodes, edges, specifiedCount, exactMatchCount }),
 								);
 						})
 						.catch((e) => {
@@ -177,7 +192,7 @@ const sameSet = (a, b) =>
 
 // --- docker cleanup -------------------------------------------------------------------------
 const TEST_GRAPH_PREFIXES = ['p6val_']; // ephemeral validation graphs; tagged by run
-const TEST_NAMED_GRAPHS = ['bronze', 'golden', 'goldenCheck', 'rollbackCheck'];
+const TEST_NAMED_GRAPHS = ['bronze', 'golden', 'goldenCheck', 'goldenPaired', 'rollbackCheck'];
 
 const dockerContainerNames = () => {
 	const out = execFileSync(
@@ -324,16 +339,130 @@ const main = () => {
 							bothSnap.nodes.some((n) => n.startsWith('synthstd::')),
 						'GATE1: published golden contains BOTH standards\' nodes',
 					);
-					assert(
-						bothSnap.specifiedCount >= 1,
-						`GATE1: golden has >=1 SPECIFIED_MAPPING bridge (got ${bothSnap.specifiedCount})`,
-					);
 
-					gate2(bothGoldenSnapshot, goldenAfterSecond, hubGoldenSnapshot, goldenAfterHub);
+					gate1Pair(bothGoldenSnapshot, goldenAfterSecond, hubGoldenSnapshot, goldenAfterHub);
 				});
 			});
 		});
 	});
+};
+
+// GATE 1 (pair machinery — the post-retirement contract, rulings D-D6/D-D8): the synthetic
+// mapping producer emits the pair-keyed block, the pair-group is minted (CURRENT pointer),
+// -combine --group expands it into a paired manifest, and the built graph carries the
+// mapping edges with the §10 connect report naming the pair CONNECTED.
+const gate1Pair = (bothSnap, goldenAfterSecond, hubSnap, goldenAfterHub) => {
+	log('\n=== GATE 1c: pair machinery (syntheticNativeMapping -> mintPairGroup -> --group -> build) ===');
+	runNode(
+		MANAGER,
+		[
+			'-syntheticNativeMapping',
+			`--gatingManifest=${goldenAfterSecond}`,
+			'--sourceStandard=synthstd',
+		],
+		(emitErr, emitRes) => {
+			if (emitErr) {
+				finish(`-syntheticNativeMapping failed: ${emitErr}`);
+				return;
+			}
+			assert(
+				!!emitRes.parsed &&
+					emitRes.parsed.pairSubject === 'CEDS::synthstd' &&
+					emitRes.parsed.versionKey === '(01,01)' &&
+					emitRes.parsed.edgeCount >= 1,
+				`GATE1: synthetic mapping emitted pair-keyed CEDS::synthstd@(01,01) with >=1 edge (got ${emitRes.parsed && emitRes.parsed.edgeCount})`,
+			);
+			assert(
+				!!emitRes.parsed && emitRes.parsed.publishedVersionA === 'synthetic-01',
+				`GATE1: hub side stamps p6hub's own provenance 'synthetic-01' (the D-D5 honesty knob; got '${emitRes.parsed && emitRes.parsed.publishedVersionA}')`,
+			);
+
+			runNode(
+				MANAGER,
+				['-mintPairGroup', '--pair=CEDS::synthstd', '--versionKey=(01,01)'],
+				(mintErr, mintRes) => {
+					if (mintErr) {
+						finish(`-mintPairGroup CEDS::synthstd failed: ${mintErr}`);
+						return;
+					}
+					assert(
+						!!mintRes.parsed &&
+							!!mintRes.parsed.groupBlockId &&
+							mintRes.parsed.memberCount >= 1,
+						`GATE1: CURRENT pair-group minted for CEDS::synthstd@(01,01) with >=1 member (got ${mintRes.parsed && mintRes.parsed.memberCount})`,
+					);
+
+					runNode(
+						MANIFEST,
+						[
+							'-combine',
+							`--base=${goldenAfterSecond}`,
+							'--group=CEDS::synthstd@(01,01)',
+							'--label=e2e-goldenPaired',
+							`--db=${TEST_DB_PATH}`,
+						],
+						(combineErr, combineRes) => {
+							if (combineErr) {
+								finish(`-combine --group failed: ${combineErr}`);
+								return;
+							}
+							const pairedManifestKey =
+								combineRes.parsed && combineRes.parsed.manifestKey;
+							assert(
+								!!pairedManifestKey,
+								'GATE1: --group expansion composed the paired manifest',
+							);
+
+							runNode(
+								REPLAY,
+								[
+									'-buildGraph',
+									`--manifest=${pairedManifestKey}`,
+									'--destination=goldenPaired',
+									'--owner=:golden',
+								],
+								(buildErr, buildRes) => {
+									if (buildErr) {
+										finish(`build goldenPaired failed: ${buildErr}`);
+										return;
+									}
+									const report =
+										buildRes.parsed && buildRes.parsed.connectReport;
+									const pairEntry =
+										report &&
+										(report.pairs || []).find((onePair) =>
+											`${onePair.pair}`.startsWith('CEDS::synthstd'),
+										);
+									assert(
+										!!report && report.pairCount >= 1,
+										`GATE1: connect report emitted with pairCount >= 1 (got ${report && report.pairCount})`,
+									);
+									assert(
+										!!pairEntry &&
+											pairEntry.verdict === 'CONNECTED' &&
+											pairEntry.edgesDangling === 0,
+										`GATE1: connect report names CEDS::synthstd CONNECTED with zero dangling (got ${pairEntry && pairEntry.verdict}/${pairEntry && pairEntry.edgesDangling})`,
+									);
+
+									snapshotGraph('goldenPaired', (pairSnapErr, pairedSnap) => {
+										if (pairSnapErr) {
+											finish(`snapshot goldenPaired failed: ${pairSnapErr}`);
+											return;
+										}
+										assert(
+											pairedSnap.exactMatchCount >= 1,
+											`GATE1: goldenPaired carries >=1 EXACT_MATCH mapping edge (got ${pairedSnap.exactMatchCount})`,
+										);
+										gate2(bothSnap, goldenAfterSecond, hubSnap, goldenAfterHub);
+									});
+								},
+							);
+						},
+					);
+				},
+			);
+		},
+	);
 };
 
 // GATE 2: golden ≡ replay(goldenManifest) — rebuild the golden manifest into a fresh graph.
@@ -399,9 +528,15 @@ const gate3 = (hubSnap, goldenAfterHub) => {
 					sameSet(rolledSnap.edges, hubSnap.edges),
 					'GATE3: rolled-back golden edge set identical to hub-only golden',
 				);
+				// REAL both directions (D-D6): goldenPaired witnessed >=1 EXACT_MATCH in
+				// GATE 1c; the rolled-back golden must carry none of the pair's content.
 				assert(
-					rolledSnap.specifiedCount === 0,
-					'GATE3: rolled-back golden has no SPECIFIED_MAPPING (second standard gone)',
+					!rolledSnap.nodes.some((n) => n.startsWith('synthstd::')),
+					'GATE3: rolled-back golden has ZERO synthstd nodes (second standard gone)',
+				);
+				assert(
+					rolledSnap.exactMatchCount === 0,
+					`GATE3: rolled-back golden has ZERO EXACT_MATCH mapping edges (goldenPaired witnessed >=1; got ${rolledSnap.exactMatchCount})`,
 				);
 				gate4();
 			});

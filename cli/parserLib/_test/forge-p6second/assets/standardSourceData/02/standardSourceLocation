@@ -1,0 +1,6 @@
+standard: forge-p6second
+sourceFile: source.json
+publishedVersion: synthetic-02
+upstreamUrl: none (synthetic test fixture, no upstream)
+copiedDate: 2026-07-10
+note: Phase-D SYNTHETIC second version (pairwiseVersionSwitching work item 6) — the ADDRESS-MOVING delta enumerated in PHASE-D-DEVLOG §3.2 BEFORE minting: Learner localId RENAMED S200001 -> S200101 (stableId urn:p6second:S200001 -> urn:p6second:S200101, the moved address); Unit S200003 REMOVED (the deliberate orphan departs); nothing else changed. Snapshot 01 remains the descriptor default until the separate PROMOTE act (three-acts discipline: forge / promote / ship).

@@ -1,0 +1,6 @@
+{
+  "elements": [
+    { "localId": "S200101", "name": "Learner", "description": "Maps to hub Person (address MOVED from S200001 in snapshot 02 — the pairwiseVersionSwitching G-D3 mismatch witness)", "cedsRef": "C100001" },
+    { "localId": "S200002", "name": "School", "description": "Maps to hub Organization", "cedsRef": "C100002" }
+  ]
+}

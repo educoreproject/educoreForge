@@ -76,6 +76,9 @@ const addStandardFactory = require('./tools.d/add-standard');
 const rollbackFactory = require('./tools.d/rollback');
 const listFactory = require('./tools.d/list');
 const mintPairGroupFactory = require('./tools.d/mint-pair-group');
+// TEST SCAFFOLDING (Phase D ruling D-D8): the synthetic fixtures' LLM-free mapping
+// producer — hard-guarded to synthetic:true standards only, never a production flow.
+const syntheticNativeMappingFactory = require('./tools.d/synthetic-native-mapping');
 
 // pair-group minting deps (Phase C): the pure pair-binding resolver + the vocabulary's
 // canonical pair/versionKey text forms (one source of truth, spec §4/§5).
@@ -97,6 +100,8 @@ SYNOPSIS
      edf-forge-manager -mintPairGroup    --pair=CEDS::SIF --versionKey=(01,01)
                                          [--members=<id>,...] [--displayName=<text>] [--note=<text>]
      edf-forge-manager -resolvePairGroup --pair=CEDS::SIF --versionKey=(01,01) [--history]
+     edf-forge-manager -syntheticNativeMapping --gatingManifest=<key> --sourceStandard=<synthetic>
+                                         [--hubBundleDir=<dir>]   (TEST SCAFFOLDING: synthetic standards ONLY)
 
 DESCRIPTION
      forgeManager owns the ordered workflows and nothing else. It holds NO domain logic: each
@@ -215,6 +220,13 @@ const run = () => {
 		resolvePairGroup: () =>
 			mintPairGroupFactory({ storeAccess, standardDiscovery, pairBinding, vocabulary })
 				.resolvePairGroup,
+		syntheticNativeMapping: () =>
+			syntheticNativeMappingFactory({
+				storeAccess,
+				standardDiscovery,
+				pairBinding,
+				vocabulary,
+			}).syntheticNativeMapping,
 	};
 
 	const actionName = Object.keys(actionRegistry).find((name) => switches[name]);
