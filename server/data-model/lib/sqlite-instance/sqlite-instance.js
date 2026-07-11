@@ -81,15 +81,23 @@ const moduleFunction = function ({ unused }) {
 			suppressStatementLog || xLog.status(finalStatement);
 
 			if (typeof callback == 'function') {
+				// the callback runs OUTSIDE the try: a synchronous throw anywhere in the
+				// downstream callback chain must propagate, never re-enter this catch and
+				// fire the callback a second time (forking the chain).
+				let execError = null;
 				try {
 					db.exec(finalStatement);
-					callback(null);
 				} catch (err) {
 					xLog.error(
 						`${''.padEnd(50, '-')}\nSQL Error; ${err.toString()}\nBad Statement:\n\t${finalStatement}\n${''.padEnd(50, '-')}\n`,
 					);
-					callback(err.toString());
+					execError = err.toString();
 				}
+				if (execError) {
+					callback(execError);
+					return;
+				}
+				callback(null);
 			} else {
 				db.exec(finalStatement);
 			}
@@ -130,13 +138,22 @@ const moduleFunction = function ({ unused }) {
 			suppressStatementLog || xLog.status(finalStatement);
 
 			if (typeof callback == 'function') {
+				// the callback runs OUTSIDE the try: a synchronous throw anywhere in the
+				// downstream callback chain must propagate, never re-enter this catch and
+				// fire the callback a second time (forking the chain).
+				let queryError = null;
+				let result = [];
 				try {
 					const stmt = db.prepare(finalStatement);
-					const result = stmt.all();
-					callback(null, result);
+					result = stmt.all();
 				} catch (err) {
-					callback(err.toString(), []);
+					queryError = err.toString();
 				}
+				if (queryError) {
+					callback(queryError, []);
+					return;
+				}
+				callback(null, result);
 			} else {
 				const stmt = db.prepare(finalStatement);
 				return stmt.all();
@@ -453,23 +470,30 @@ const moduleFunction = function ({ unused }) {
 	const checkTableExistsActual = (db) => (tableName, callback) => {
 		const query = "SELECT COUNT(*) as count FROM sqlite_master WHERE type='table' AND name=?";
 
+		// the callback runs OUTSIDE the try: a synchronous throw anywhere in the
+		// downstream callback chain must propagate, never re-enter this catch and
+		// fire the callback a second time (forking the chain).
+		let checkError = null;
+		let exists = false;
 		try {
 			const result = db.prepare(query).get(tableName);
-			const exists = result && result.count > 0;
-
-			if (callback) {
-				callback(null, exists);
-			} else {
-				return exists;
-			}
+			exists = result && result.count > 0;
 		} catch (err) {
 			xLog.error(`Error checking table existence for ${tableName}: ${err.toString()}`);
-			if (callback) {
-				callback(err.toString(), false);
-			} else {
-				return false;
-			}
+			checkError = err.toString();
 		}
+		if (checkError) {
+			if (callback) {
+				callback(checkError, false);
+				return;
+			}
+			return false;
+		}
+		if (callback) {
+			callback(null, exists);
+			return;
+		}
+		return exists;
 	};
 
 	// =====================================================================

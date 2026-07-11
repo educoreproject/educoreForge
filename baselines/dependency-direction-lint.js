@@ -8,9 +8,11 @@
 // WHAT IT ASSERTS (spec §9 D5: nothing may come to depend on edf-gate; the shared machinery
 // lands in the neutral lib, never in the gate):
 //   CHECK 1 — no product-code module outside cli/lib.d/edf-gate/ imports from edf-gate,
-//             EXCEPT the two named-exemption edges below (exact-match, never a pattern).
-//   CHECK 2 — the five shared modules (def-embedder, llm-client, node-loader,
-//             inference-pipeline, gold-harness) exist ONLY at their core-lib homes.
+//             with NO exemptions (the table below was EMPTIED in Phase F when ground-truth
+//             moved to the neutral core lib — the named court date was kept).
+//   CHECK 2 — the six shared modules (def-embedder, llm-client, node-loader,
+//             inference-pipeline, gold-harness, ground-truth) exist ONLY at their
+//             core-lib homes.
 //   CHECK 3 — zero residual imports of the RETIRED bridge-maker/lib module path (the
 //             pre-Phase-B home of the five; distinct from the cli/bridge-maker/ parent dir).
 //
@@ -20,12 +22,12 @@
 // Files are comment-stripped and whitespace-collapsed before require/path.join argument
 // regions are examined.
 //
-// NAMED EXEMPTION TABLE (supervisor rulings, NOBLE_TRAIL 2026-07-10 20:31Z + 20:33Z — binding):
-// exactly TWO edges, each exact-match on (file -> edf-gate ground-truth). Growth by even one
-// edge = RED; a second edf-gate import inside an exempted file = RED (no shelter).
-// DISPOSITION HOME (shared): Phase F's spec-compliance sweep formally adjudicates relocating
-// ground-truth to its true home (likely the neutral core lib) and EMPTYING this table.
-// Acknowledged debt with a named court date, not a rug.
+// NAMED EXEMPTION TABLE — EMPTIED (Phase F, supervisor ruling NOBLE_TRAIL 2026-07-11):
+// the two exempted ground-truth edges (gold-harness, edf-mapping) were retired by relocating
+// ground-truth to npm/qtools-graph-forge-core/lib/ground-truth and repointing every consumer
+// (including edf-mapping/lib/value-crosswalk.js, a third edge the pre-Phase-F truncating
+// region capture could not see). The Phase-B disposition ("Phase F adjudicates… and EMPTYING
+// this table") is hereby executed. Any inbound edf-gate import is now RED, no exceptions.
 //
 // Informational (outside product-code scope, PRINTED on every run so they can never hide):
 // the G-B2-authorized baseline instrument and test scaffolding that also touch edf-gate paths.
@@ -40,25 +42,20 @@ const findProjectRoot = ({ rootFolderName = 'system' } = {}) =>
 const CODE = path.join(findProjectRoot(), 'code');
 const CORE_LIB_REL = path.join('npm', 'qtools-graph-forge-core', 'lib');
 
-// the five extracted shared modules and their one legitimate home each (CHECK 2)
-const SHARED_MODULES = ['def-embedder', 'llm-client', 'node-loader', 'inference-pipeline', 'gold-harness'];
+// the shared modules and their one legitimate home each (CHECK 2). fileName defaults to
+// <name>.js; ground-truth's entry file is camelCase groundTruth.js (relocated Phase F).
+const SHARED_MODULES = [
+	{ name: 'def-embedder' },
+	{ name: 'llm-client' },
+	{ name: 'node-loader' },
+	{ name: 'inference-pipeline' },
+	{ name: 'gold-harness' },
+	{ name: 'ground-truth', fileName: 'groundTruth.js' },
+];
 
 // CHECK 1 exemption table — EXACT-MATCH edges, never patterns. Each row: file (repo-relative),
 // required target fragment (the edge), why, disposition.
-const NAMED_EXEMPTIONS = [
-	{
-		file: 'npm/qtools-graph-forge-core/lib/gold-harness/gold-harness.js',
-		targetFragment: 'ground-truth',
-		why: 'gate-consumed-only test machinery: gold-harness has zero consumers in edf-resolve/edf-inferred; the edge is traversed only when the gate itself runs — D5 runtime invariant intact',
-		disposition: 'Phase F adjudicates relocating ground-truth to its true home and emptying this table',
-	},
-	{
-		file: 'cli/bridge-maker/edf-mapping/edfMapping.js',
-		targetFragment: 'ground-truth',
-		why: 'producer loading its OWN source data (EdFi crosswalk CSVs serve double duty as producer input and gate truth-set) through a loader mishoused inside the gate — not consumption of judgment',
-		disposition: 'Phase F adjudicates relocating ground-truth to its true home and emptying this table',
-	},
-];
+const NAMED_EXEMPTIONS = [];
 
 // informational: instruments/tests outside product-code scope; printed every run, never hidden
 const INFORMATIONAL = [
@@ -96,13 +93,29 @@ const normalize = (source) => {
 	return noLineComments.replace(/\s+/g, ' ');
 };
 
-// require/path.join argument regions of the normalized text
+// require/path.join argument regions of the normalized text. Capture is PAREN-BALANCE-AWARE
+// (Phase F): the earlier /\(([^)]*)\)/ capture died at the FIRST close-paren, so any region
+// containing a nested call — path.join(findProjectRoot(), ..., 'edf-gate', ...) — truncated
+// before its meat and CHECK 1 was born blind to it (the witnessed value-crosswalk evasion).
 const argRegions = (normalizedText) => {
 	const regions = [];
-	const finder = /(?:require|path\.join)\s*\(([^)]*)\)/g;
+	const finder = /(?:require|path\.join)\s*\(/g;
 	let oneMatch;
 	while ((oneMatch = finder.exec(normalizedText)) !== null) {
-		regions.push(oneMatch[1]);
+		const start = oneMatch.index + oneMatch[0].length;
+		let depth = 1;
+		let cursor = start;
+		while (cursor < normalizedText.length && depth > 0) {
+			const oneChar = normalizedText[cursor];
+			if (oneChar === '(') {
+				depth++;
+			}
+			if (oneChar === ')') {
+				depth--;
+			}
+			cursor++;
+		}
+		regions.push(normalizedText.slice(start, cursor - 1));
 	}
 	return regions;
 };
@@ -146,15 +159,16 @@ allFiles.forEach((oneFile) => {
 		});
 });
 
-// ---- CHECK 2: the five shared modules exist only at their core-lib homes ---------------------
-SHARED_MODULES.forEach((oneName) => {
-	const expected = path.join(CORE_LIB_REL, oneName, `${oneName}.js`);
+// ---- CHECK 2: the six shared modules exist only at their core-lib homes ----------------------
+SHARED_MODULES.forEach((oneModule) => {
+	const fileName = oneModule.fileName || `${oneModule.name}.js`;
+	const expected = path.join(CORE_LIB_REL, oneModule.name, fileName);
 	const found = allFiles
 		.map((oneFile) => path.relative(CODE, oneFile))
-		.filter((rel) => path.basename(rel) === `${oneName}.js`);
+		.filter((rel) => path.basename(rel) === fileName);
 	if (found.length !== 1 || found[0] !== expected) {
 		problems.push(
-			`SHARED-MODULE PLACEMENT: ${oneName}.js must exist EXACTLY once at ${expected}; found [${found.join(', ') || 'none'}]`,
+			`SHARED-MODULE PLACEMENT: ${fileName} must exist EXACTLY once at ${expected}; found [${found.join(', ') || 'none'}]`,
 		);
 	}
 });
@@ -185,5 +199,5 @@ if (problems.length) {
 	console.error(`verdict: RED (${problems.length} problem${problems.length === 1 ? '' : 's'})`);
 	process.exit(1);
 }
-console.log('verdict: GREEN — dependency direction holds (D5); five shared modules sited only in the core lib; retired paths dead');
+console.log('verdict: GREEN — dependency direction holds (D5), ZERO exemptions; six shared modules sited only in the core lib; retired paths dead');
 process.exit(0);

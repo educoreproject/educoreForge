@@ -22,9 +22,8 @@ const findProjectRoot = ({ rootFolderName = 'system' } = {}) =>
 const GROUND_TRUTH = path.join(
 	findProjectRoot(),
 	'code',
-	'cli',
-	'lib.d',
-	'edf-gate',
+	'npm',
+	'qtools-graph-forge-core',
 	'lib',
 	'ground-truth',
 	'groundTruth',

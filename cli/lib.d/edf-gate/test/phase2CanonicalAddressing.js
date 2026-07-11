@@ -115,7 +115,7 @@ const buildSharedResources = (callback) => {
 			fingerprinter: require(path.join(GATE_LIB, 'graph-fingerprint', 'graphFingerprint'))({ lifecycle }),
 			differ: require(path.join(GATE_LIB, 'graph-diff', 'graphDiff'))(),
 			productionGuard: require(path.join(GATE_LIB, 'production-guard', 'productionGuard'))({ forgeStore }),
-			groundTruth: require(path.join(GATE_LIB, 'ground-truth', 'groundTruth'))(),
+			groundTruth: require(path.join(CORE_LIB, 'ground-truth', 'groundTruth'))(),
 		});
 	});
 };

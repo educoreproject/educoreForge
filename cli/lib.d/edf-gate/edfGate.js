@@ -58,7 +58,7 @@ const differFactory = require('./lib/graph-diff/graphDiff');
 const productionGuardFactory = require('./lib/production-guard/productionGuard');
 const baselineStoreFactory = require('./lib/baseline-store/baselineStore');
 const gateSuiteFactory = require('./lib/gate-suite/gateSuite');
-const groundTruthFactory = require('./lib/ground-truth/groundTruth');
+const groundTruthFactory = require(path.join(CORE_LIB, 'ground-truth', 'groundTruth'));
 const graphEquivalenceFactory = require('./lib/graph-equivalence/graphEquivalence');
 
 // booleanFlag — accept -name (switch), --name (valueless at end), or --name=true. Mirrors

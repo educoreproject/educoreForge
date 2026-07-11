@@ -45,7 +45,7 @@ const CORE_LIB = path.join(projectRoot, 'code', 'npm', 'qtools-graph-forge-core'
 const CONFIGS_DIR = path.join(projectRoot, 'configs');
 const GRAPH_BUILDER = path.join(projectRoot, 'code', 'cli', 'lib.d', 'edf-replay', 'lib', 'graph-builder');
 const GATE_LIB = path.join(__dirname, '..', 'lib');
-const GROUND_TRUTH = path.join(__dirname, '..', 'lib', 'ground-truth', 'groundTruth');
+const GROUND_TRUTH = path.join(CORE_LIB, 'ground-truth', 'groundTruth');
 
 const replayBlock = require(path.join(CORE_LIB, 'replay', 'replay-block'));
 const mappingSubgraphFactory = require(path.join(CORE_LIB, 'mapping-subgraph', 'mappingSubgraph'));

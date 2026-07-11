@@ -60,7 +60,7 @@ const findProjectRoot = ({ rootFolderName = 'system' } = {}) =>
 const projectRoot = findProjectRoot();
 const CORE_LIB = path.join(projectRoot, 'code', 'npm', 'qtools-graph-forge-core', 'lib');
 const CONFIGS_DIR = path.join(projectRoot, 'configs');
-const GROUND_TRUTH = path.join(projectRoot, 'code', 'cli', 'lib.d', 'edf-gate', 'lib', 'ground-truth', 'groundTruth');
+const GROUND_TRUTH = path.join(CORE_LIB, 'ground-truth', 'groundTruth');
 
 const replayBlock = require(path.join(CORE_LIB, 'replay', 'replay-block'));
 const { CLASSIFICATION_EDGE_TYPES, PROVENANCE_TIER } = require(path.join(CORE_LIB, 'vocabulary', 'vocabulary'));

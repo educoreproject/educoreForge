@@ -22,19 +22,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
 const path = require('path');
 
-const GROUND_TRUTH = path.join(
-	__dirname,
-	'..',
-	'..',
-	'..',
-	'..',
-	'cli',
-	'lib.d',
-	'edf-gate',
-	'lib',
-	'ground-truth',
-	'groundTruth',
-);
+const GROUND_TRUTH = path.join(__dirname, '..', 'ground-truth', 'groundTruth');
 
 // START OF moduleFunction() ============================================================
 
