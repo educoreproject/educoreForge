@@ -144,7 +144,16 @@ const bootstrapGlobal = () => {
 // SHARED RESOURCES (mirror edfReplay.js + apparatus modules)
 // =====================================================================
 
-const dbPath = () => path.join(projectRoot, 'dataStores', 'forgeStore.sqlite3');
+// EDF_FORGE_STORE_DB redirects the store (test harnesses); absent -> canonical, byte-identical.
+// An active override is ANNOUNCED on stderr so it can never silently redirect production writes.
+const dbPath = () =>
+	process.env.EDF_FORGE_STORE_DB ||
+	path.join(projectRoot, 'dataStores', 'forgeStore.sqlite3');
+if (process.env.EDF_FORGE_STORE_DB) {
+	console.error(
+		`STORE OVERRIDE ACTIVE: forgeStore db = ${dbPath()} (EDF_FORGE_STORE_DB)`,
+	);
+}
 
 const buildSharedResources = (callback) => {
 	const forgeStore = require(path.join(CORE_LIB, 'forge-store', 'forge-store'))();
