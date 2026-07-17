@@ -1,0 +1,111 @@
+{
+  "gate": "G1-identity",
+  "spec": "SPECIFICATION.md v2 S10 G1 (the Leg-A F1 carry-forward, committed)",
+  "classifierNotes": [
+    "familyReassigned:* is MEASURED membership in a sibling fresh genesis block (Leg-A #1-C ownership), not a prefix list",
+    "owl:* added to the ruled-foreign prefixes beyond the #1-B LOCKED list — owl:sameAs observed in the old block leak with no family owner (flagged for design-authority ratification)"
+  ],
+  "oldBlock": {
+    "blockId": "020fb8aa878a383c4282d87b9c650664f5ff8aa44a38a521e04dbe4704325186",
+    "source": "goldEval260716 store copy (fixture-c legacy carrier)",
+    "nodeCount": 1014
+  },
+  "freshBlock": {
+    "blockId": "06443d78033a3de13a2424e3d6e83ac4743b33dc21c9f8be4a97bbb8a9f897ee",
+    "producedBy": "pilotPhase3:freshForge-genesisSeed",
+    "nodeCount": 994
+  },
+  "verdict": {
+    "supersetHolds": true,
+    "dropCount": 20,
+    "dropClassCounts": {
+      "familyReassigned:CTDLASN": 7,
+      "ruledForeign": 2,
+      "familyReassigned:CTDLQData": 11
+    },
+    "addCount": 0
+  },
+  "drops": [
+    {
+      "stableId": "ceasn:abilityEmbodied",
+      "class": "familyReassigned:CTDLASN"
+    },
+    {
+      "stableId": "ceasn:comment",
+      "class": "familyReassigned:CTDLASN"
+    },
+    {
+      "stableId": "ceasn:hasChild",
+      "class": "familyReassigned:CTDLASN"
+    },
+    {
+      "stableId": "ceasn:isChildOf",
+      "class": "familyReassigned:CTDLASN"
+    },
+    {
+      "stableId": "ceasn:knowledgeEmbodied",
+      "class": "familyReassigned:CTDLASN"
+    },
+    {
+      "stableId": "ceasn:listID",
+      "class": "familyReassigned:CTDLASN"
+    },
+    {
+      "stableId": "ceasn:skillEmbodied",
+      "class": "familyReassigned:CTDLASN"
+    },
+    {
+      "stableId": "owl:sameAs",
+      "class": "ruledForeign"
+    },
+    {
+      "stableId": "qdata:dataCollectionMethodType",
+      "class": "familyReassigned:CTDLQData"
+    },
+    {
+      "stableId": "qdata:dataProvider",
+      "class": "familyReassigned:CTDLQData"
+    },
+    {
+      "stableId": "qdata:percentage",
+      "class": "familyReassigned:CTDLQData"
+    },
+    {
+      "stableId": "qdata:relevantDataSet",
+      "class": "familyReassigned:CTDLQData"
+    },
+    {
+      "stableId": "schema:MonetaryAmount",
+      "class": "familyReassigned:CTDLQData"
+    },
+    {
+      "stableId": "schema:QuantitativeValue",
+      "class": "familyReassigned:CTDLQData"
+    },
+    {
+      "stableId": "schema:description",
+      "class": "familyReassigned:CTDLQData"
+    },
+    {
+      "stableId": "schema:maxValue",
+      "class": "familyReassigned:CTDLQData"
+    },
+    {
+      "stableId": "schema:minValue",
+      "class": "familyReassigned:CTDLQData"
+    },
+    {
+      "stableId": "schema:subjectOf",
+      "class": "ruledForeign"
+    },
+    {
+      "stableId": "schema:unitText",
+      "class": "familyReassigned:CTDLQData"
+    },
+    {
+      "stableId": "schema:value",
+      "class": "familyReassigned:CTDLQData"
+    }
+  ],
+  "adds": []
+}
