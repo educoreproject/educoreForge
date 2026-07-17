@@ -6,7 +6,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // owns the WORKFLOW; the component CLIs own the heavy lifting (forge/replay/bridge/manifest). But two
 // pieces of bookkeeping are NOT owned by any component CLI and so fall to forgeManager:
 //   * PUBLISH (advance a graph's currentManifest pointer) — -buildGraph builds the graph but does
-//     NOT move the pointer; -addStandard's publish step (and --no-publish's omission of it) is the
+//     NOT move the pointer; -addStandard's publish step (and -noPublish's omission of it) is the
 //     forgeManager's invariant to enforce.
 //   * ROLLBACK pointer move + prior-manifest discovery (manifestPointerLog).
 //   * LIST blocks|manifests|graphs (+ --stale) inspection.

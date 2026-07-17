@@ -94,7 +94,7 @@ NAME
      forgeManager -- orchestrator; runs the multistep processes by shelling out to the components
 
 SYNOPSIS
-     edf-forge-manager -addStandard --standardName=<standardKey> --source=<path> [--no-publish]
+     edf-forge-manager -addStandard --standardName=<standardKey> --source=<path> [-noPublish]
      edf-forge-manager -rollback    --graph=<graphName> [--to=<manifestKey>]
      edf-forge-manager -list        <blocks|manifests|graphs> [--stale]
      edf-forge-manager -mintPairGroup    --pair=CEDS::SIF --versionKey=(01,01)
@@ -114,7 +114,7 @@ COMMANDS
      -addStandard   The full golden flow end to end: forge -> extract standard -> save+combine
                     (bronze) -> buildGraph bronze -> extract relationships (tearDown) ->
                     save+combine (golden) -> buildGraph golden -> PUBLISH (advance golden's
-                    pointer). --no-publish stops before the publish.
+                    pointer). -noPublish stops before the publish.
      -rollback      Repoint a graph's currentManifest to a prior manifestKey and rebuild. --to
                     defaults to the immediately prior pointer.
      -list          Inspect the store: blocks | manifests | graphs. --stale flags orphan blocks
@@ -132,7 +132,7 @@ COMMANDS
 OPTIONS
      --standardName=<standardKey>   The standard to add (resolved through parser-bundle auto-discovery).
      --source=<path>                (-addStandard) The standard's source data (else bundle default).
-     --no-publish                   (-addStandard) Build everything but do not advance golden.
+     -noPublish                     (-addStandard) Build everything but do not advance golden. Boolean switch (single hyphen).
      --graph=<graphName>            (-rollback) The target graph.
      --to=<manifestKey>             (-rollback) The manifest to repoint to.
      --stale                        (-list) Show only stale/orphan entries.

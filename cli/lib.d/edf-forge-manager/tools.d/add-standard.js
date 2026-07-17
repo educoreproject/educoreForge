@@ -16,7 +16,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //   7. manifest -save (relationships) + -combine (golden + standard + relationships) -> golden manifestKey
 //   8. replay  -buildGraph --destination=golden    -> the rebuilt golden  (== replay(goldenManifest))
 //   9. PUBLISH: advance golden's currentManifest pointer to the new golden manifestKey.
-//      --no-publish stops before step 9 (production/composition split).
+//      -noPublish stops before step 9 (production/composition split).
 //
 // (2026-07-04, edf-bridge retirement: the legacy bridge -specified/-derived/-implied step that
 // mutated bronze between build and extract is GONE — mapping edges come from mapping blocks at
@@ -46,11 +46,10 @@ const moduleFunction =
 			const clp = process.global.commandLineParameters;
 			const standardNameArg = (clp.values.standardName || [])[0];
 			const source = (clp.values.source || [])[0];
-			const noPublish =
-				!!clp.switches['no-publish'] ||
-				clp.values['no-publish'] === true ||
-				(Array.isArray(clp.values['no-publish']) &&
-					clp.values['no-publish'][0] === true);
+			// -noPublish is a single-dash boolean SWITCH (read from switches). qtools-parse-command-line
+			// terminates a single-dash switch name at the first hyphen, so a hyphenated '-no-publish'
+			// would parse to switches.no and drop 'publish'; the camelCase name is the only clean idiom.
+			const noPublish = !!clp.switches.noPublish;
 
 			if (!standardNameArg) {
 				callback('forgeManager -addStandard: --standardName is required. Use -help.');
@@ -362,10 +361,10 @@ const moduleFunction =
 				);
 			});
 
-			// 9. PUBLISH — advance golden's currentManifest pointer. --no-publish stops before this.
+			// 9. PUBLISH — advance golden's currentManifest pointer. -noPublish stops before this.
 			taskList.push((args, next) => {
 				if (noPublish) {
-					xLog.status('[addStandard] --no-publish: golden built but pointer NOT advanced');
+					xLog.status('[addStandard] -noPublish: golden built but pointer NOT advanced');
 					next('', { ...args, published: false });
 					return;
 				}
