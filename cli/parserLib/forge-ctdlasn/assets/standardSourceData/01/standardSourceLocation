@@ -1,0 +1,14 @@
+standard: CTDLASN — Credential Transparency Description Language, Achievement Standards Network (CTDL-ASN)
+publishedVersion: 20230929
+publishedVersionEvidence: credreg schema release timeline (credreg.net/page/schemareleasetimeline); NOT embedded in the source file. ASN has been frozen since the 2023-09-29 release (0 ASN term changes observed through 2026). Timeline-derived, not self-describing.
+upstreamUrl: https://credreg.net/ctdlasn/schema/encoding/json
+publisher: Credential Engine
+retrieved: 2026-07-15 (curled the PLAIN encoding — NOT metaproperties-stripped — per TQ+Brandon confirmation)
+version: Release 20230929
+sources:
+  - https://credreg.net/ctdlasn/schema/encoding/json   (ctdlasn.json — JSON-LD, plain encoding)
+note: JSON-LD vocabulary. @graph holds rdfs:Class (11), rdf:Property (101), skos:ConceptScheme (2),
+      skos:Concept (8). @ids are CURIEs and are the native stableIds (stableUriPropertyName = 'uri').
+      Native namespaces: ceasn, asn, evalCat, publicationStatus, skos. The 4 ceterms:* terms
+      (all properties) are CTDL-overlap: FILTERED (not emitted); native references to them are stashed
+      as {system:'ctdl', ...} crossRefs (standard-pure — no cross-standard node or edge). Zero CEDS anchors.

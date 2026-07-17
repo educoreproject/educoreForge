@@ -2,55 +2,47 @@
 
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
-// forgeCtdl.js — the CTDL forge bundle. Parses the Credential Engine CTDL JSON-LD vocabulary
-// (ctdl-schema.json) and emits the UNIVERSAL FORGE PROPERTY CONTRACT (the SAME contract
-// forge-ceds / forge-edfi / forge-openbadges emit), so CTDL lands in the validation graph
-// interoperably. JSON-LD-family TRAILBLAZER (the template DCTAP will follow off of).
+// forgeCtdlasn.js — the CTDL-ASN forge bundle. Parses the Credential Engine CTDL Achievement Standards
+// Network JSON-LD vocabulary (ctdlasn.json, plain encoding) and emits the UNIVERSAL FORGE PROPERTY
+// CONTRACT (the SAME contract forge-ctdl / forge-ceds / forge-edfi emit), so CTDL-ASN lands in the
+// validation graph interoperably. Clone-and-adapt of forge-ctdl (the JSON-LD-family trailblazer).
 //
-// JSON-LD ROLE-MAPPING DECISION (CODE FACT — verified against forge-ceds's RDF role mapping, the old
-// forge-ctdl parser, and the real source; documented in forgeCampaignRunbook-JSONLD.md):
-//   rdfs:Class        -> DmeClass          (138)
-//   rdf:Property      -> DmeProperty       (396)
-//   skos:ConceptScheme-> DmeOptionSet      (34)   (a controlled vocabulary = an option set)
-//   skos:Concept      -> DmeOptionValue    (445)  (a vocabulary term = an option value)
+// JSON-LD ROLE-MAPPING (CODE FACT — identical to forge-ctdl):
+//   rdfs:Class        -> DmeClass          (11)
+//   rdf:Property      -> DmeProperty       (97, the 4 ceterms:* overlap properties FILTERED OUT)
+//   skos:ConceptScheme-> DmeOptionSet      (2)
+//   skos:Concept      -> DmeOptionValue    (8)
 //   schema root       -> DmeStandardRoot   (1)
-//   (no DmeSupport — CTDL declares no datatype/support scaffolding worth a node.)
-// JSON-LD is just another RDF serialization, so this is identical in spirit to forge-ceds's RDF
-// mapping; the only difference is the native field names (skos:prefLabel/definition for concepts,
-// meta:targetScheme for the option-set constraint).
 //
-// IDENTITY IS NATIVE-URI (DESIGN §D — the CEDS/URI model, NOT the structural-path model): every CTDL
-// term carries a globally-unique CURIE in `@id` (e.g. ceterms:AcademicCertificate). The stableId IS
-// that CURIE and stableUriPropertyName = 'uri'. No path minting is needed (unlike OpenBadges/SIF).
+// IDENTITY IS NATIVE-URI (DESIGN §D — the CEDS/URI model): every CTDL-ASN term carries a globally-
+// unique CURIE in `@id` (e.g. ceasn:competencyText). The stableId IS that CURIE and
+// stableUriPropertyName = 'uri'. No path minting is needed.
 //
-// EDGE CONVENTION (MANDATORY — from forge-sif:95 / forge-edfi; the property OWNS its option set):
-//   native HAS_FIELD  (class<-property, from schema:domainIncludes) -> HAS_PROPERTY
-//   native HAS_VALUE  (scheme<-concept, from skos:inScheme)         -> HAS_VALUE
-//   native CONSTRAINED_BY (property->scheme, from meta:targetScheme) -> HAS_OPTION_SET
-//        (FROM the DmeProperty TO the DmeOptionSet — the property owns its option set; NEVER REFERENCES)
-//   native SUBCLASS_OF (class->class, from rdfs:subClassOf)          -> SUBCLASS_OF
-//   native REFERENCES  (property->class, from schema:rangeIncludes)  -> REFERENCES
-//   root synthesizes HAS_CLASS to every class. An option set (concept scheme) constrained by ZERO
-//   properties is a true orphan -> anchored from the root via HAS_OPTION_SET (dedicated pass after
-//   edge translation) so nothing is unreachable. Report the orphan-anchored count.
+// CROSS-STANDARD REFERENCES — FILTER-AND-REFERENCE (WORKORDER Phase 1, Decision 1; generalized per
+// FADED_FORGE ruling 2026-07-15). CTDL-ASN's `ceterms:*` overlap terms emit NO nodes, and ASN also
+// references `qdata:*` classes. Any native ASN term referencing a cross-standard term stashes a
+// `{system, id, raw, locator}` crossRef on the referencing node (the parser sets `_crossRefs`; this
+// forge merges it into the `crossRefs` JSON node property), keyed by target standard: ceterms ->
+// system 'ctdl', qdata -> system 'qdata'. NOTHING is silently dropped and NO cross-standard node or
+// edge is emitted — STANDARD-PURE, mirroring exactly how forge-ctdl stamps CEDS anchors
+// (`forgeCtdl.js:182-206, 283, 370-378`). The bridges to CTDL's `ceterms:*` nodes and CTDL-QData's
+// classes are separate additive phases (WORKORDER Phase 3.5), never authored here.
 //
-// STANDARD-PURE: CTDL carries 26 native CEDS anchors on skos:Concepts (owl:equivalentClass values
-// like `ceds:000113#Assistantships`). These are BRIDGE data for a LATER phase — stashed as the
-// `cedsId` (canonical OS<6-digit>, R3) + `crossRefs` JSON node properties; NO cross-standard edge is
-// emitted here (cross-standard mapping is the downstream forgeManager bridge's job).
+// NO CEDS ANCHORS: CTDL-ASN carries zero CEDS crosswalks, so this bundle authors NO CEDS bridge
+// instructions (impliedTargets: []) and stamps no cedsId — never manufacturing an anchor the source
+// does not supply (never-fabricate).
 //
-// PURITY: buildContractGraph is a PURE, synchronous, deterministic function of the parsed source —
-// same source -> identical nodes/edges (modulo embeddings, added in a separate embedNodes pass).
+// PURITY: buildContractGraph is a PURE, synchronous, deterministic function of the parsed source.
 // forge() runs parse -> buildContractGraph -> embedNodes. An R3 normalization miss, an empty
 // searchText (R4), or an unresolved edge endpoint THROWS — surfaced as a forge error.
 //
-// Async style: qtools taskListPlus/pipeRunner; the embedding pass batches via 1C embedTexts. No
-// async/await, no try/catch-for-control-flow. camelCase only.
+// Async style: qtools taskListPlus/pipeRunner. No async/await, no try/catch-for-control-flow.
+// camelCase only.
 
 const path = require('path');
 const { pipeRunner, taskListPlus } = new require('qtools-asynchronous-pipe-plus')();
 
-const parseCtdl = require('./lib/parser');
+const parseCtdlasn = require('./lib/parser');
 const normalize = require('./lib/normalize');
 
 const CORE_LIB = path.join(
@@ -74,31 +66,30 @@ const { finalizeStructuralContract } = require(
 	path.join(CORE_LIB, 'structural-contract', 'structural-contract'),
 );
 
-const STANDARD_KEY = 'ctdl';
-const STANDARD_SOURCE = 'CTDL'; // === the registry standardName, EXACT (no toLower anywhere)
-const STANDARD_DISPLAY = 'Credential Transparency Description Language';
+const STANDARD_KEY = 'ctdlasn';
+const STANDARD_SOURCE = 'CTDLASN'; // === the registry standardName, EXACT (no toLower anywhere); distinct from 'CTDL'
+const STANDARD_DISPLAY = 'Credential Transparency Description Language — Achievement Standards Network (CTDL-ASN)';
 const STABLE_URI_PROPERTY_NAME = 'uri';
 const EMBED_BATCH_SIZE = 128; // voyage batch ceiling headroom; bounds per-call payload.
-const CEDS_ANCHOR_PROPERTY_NAME = 'owl:equivalentClass'; // native CEDS crosswalk locator (provenance)
 
 // native per-standard label -> { role, kind }. Registry, not switch.
 const roleSpecByNativeLabel = {
-	CtdlClass: { role: DME_ROLES.CLASS, kind: 'class' },
-	CtdlProperty: { role: DME_ROLES.PROPERTY, kind: 'property' },
-	CtdlConceptScheme: { role: DME_ROLES.OPTION_SET, kind: 'optionSet' },
-	CtdlConcept: { role: DME_ROLES.OPTION_VALUE, kind: 'optionValue' },
+	CtdlasnClass: { role: DME_ROLES.CLASS, kind: 'class' },
+	CtdlasnProperty: { role: DME_ROLES.PROPERTY, kind: 'property' },
+	CtdlasnConceptScheme: { role: DME_ROLES.OPTION_SET, kind: 'optionSet' },
+	CtdlasnConcept: { role: DME_ROLES.OPTION_VALUE, kind: 'optionValue' },
 };
 
-// native edge type -> canonical (all stamped 'structural'). Mirrors forge-edfi:97 / forge-sif:95.
+// native edge type -> canonical (all stamped 'structural'). Mirrors forge-ctdl:93-99.
 const edgeTypeTranslation = {
 	HAS_FIELD: EDGE_TYPES.HAS_PROPERTY, // class -> property (from the native _parentEdge / extra domains)
 	HAS_VALUE: EDGE_TYPES.HAS_VALUE, // scheme -> concept (from the native _parentEdge)
 	CONSTRAINED_BY: EDGE_TYPES.HAS_OPTION_SET, // property -> scheme: the property's option set (SIF-canonical)
 	SUBCLASS_OF: EDGE_TYPES.SUBCLASS_OF, // class -> class
-	REFERENCES: EDGE_TYPES.REFERENCES, // property -> class (a genuine reference, schema:rangeIncludes)
+	REFERENCES: EDGE_TYPES.REFERENCES, // property -> class (schema:rangeIncludes)
 };
 
-// structural depth per kind (mirrors the forge-ceds/forge-edfi depth convention).
+// structural depth per kind (mirrors the forge-ctdl depth convention).
 const depthByKind = {
 	class: 1,
 	property: 2,
@@ -106,17 +97,16 @@ const depthByKind = {
 	optionValue: 2,
 };
 
-// The mappingInstruction fields are DECLARED on the DmeStandardRoot (DECISIONS §12). CTDL bridges TO
-// the CEDS hub (impliedTargets ['CEDS']); its native CEDS anchor origin is the concept-level
-// owl:equivalentClass. The generic -specified bridge (a LATER phase) resolves CTDL.cedsId ==
-// CedsOptionSet.cedsId. (Only 26 concepts carry such an anchor; the declaration is always present.)
-const ctdlMappingInstruction = {
-	cedsOriginalAnchorPropertyName: [CEDS_ANCHOR_PROPERTY_NAME],
-	cedsOptionOriginalAnchorPropertyName: [CEDS_ANCHOR_PROPERTY_NAME],
+// The mappingInstruction fields are DECLARED on the DmeStandardRoot (DECISIONS §12). CTDL-ASN is an
+// ISLAND at the forge layer: it carries NO CEDS anchors, so impliedTargets is empty and no CEDS anchor
+// property names are declared (never-fabricate). Its overlap with CTDL is handled by the ceterms
+// crossRef stash and promoted to EXACT_MATCH edges in the separate additive bridge phase (Phase 3.5),
+// never by an implied bridge here.
+const ctdlasnMappingInstruction = {
 	crosswalkPrefix: [],
 	crosswalkResolveProperty: STABLE_URI_PROPERTY_NAME,
-	includeInImplied: true,
-	impliedTargets: ['CEDS'],
+	includeInImplied: false,
+	impliedTargets: [],
 };
 
 // START OF moduleFunction() ============================================================
@@ -127,24 +117,21 @@ const moduleFunction =
 		const { xLog } = process.global;
 		const { buildSearchText } = buildSearchTextFactory();
 
-		const ROOT_STABLE_ID = 'ctdl:root';
+		const ROOT_STABLE_ID = 'ctdlasn:root';
 
 		// -----
-		// _id from natural keys (DESIGN §B "deterministic from natural keys"):
-		//   <standardKey>:<curie-localName>. The CURIE is already namespaced + unique, so the _id is
-		//   the standardKey followed by the full CURIE (which itself contains a ':'), keeping it
-		//   deterministic and collision-free.
+		// _id from natural keys: <standardKey>|<curie>. The CURIE is already namespaced + unique.
 		const idFor = (stableId) => `${STANDARD_KEY}|${stableId}`;
 
 		// resolve + validate the stableId for a native node; throws on a blank @id (R3, never silent).
 		const stableIdFor = (rawId) => {
 			const result = normalize.buildStableId({ id: rawId });
 			if (result.error) {
-				throw new Error(`forge-ctdl R3 stableId miss: ${result.error}`);
+				throw new Error(`forge-ctdlasn R3 stableId miss: ${result.error}`);
 			}
 			if (!normalize.isCleanStableId(result.stableId)) {
 				throw new Error(
-					`forge-ctdl: produced an unclean stableId '${result.stableId}' from @id '${rawId}'`,
+					`forge-ctdlasn: produced an unclean stableId '${result.stableId}' from @id '${rawId}'`,
 				);
 			}
 			return result.stableId;
@@ -176,35 +163,6 @@ const moduleFunction =
 			};
 		};
 
-		// crossRefsForCtdl — a concept's harvested CEDS anchors -> DESIGN §E crossRefs shape
-		//   {system,id,raw,locator}. `id` is the canonical CEDS optionSet anchor (R3). A normalization
-		//   MISS throws (never silent). Returns { crossRefs, canonicalCedsId } (canonical = first hit).
-		const crossRefsForCtdl = (cedsAnchors) => {
-			const crossRefs = [];
-			let canonicalCedsId = null;
-			(cedsAnchors || []).forEach((rawAnchor) => {
-				const norm = normalize.normalizeCedsCrossRef({ rawValue: rawAnchor, kind: 'optionSet' });
-				if (norm.absent) {
-					return;
-				}
-				if (norm.error) {
-					throw new Error(
-						`forge-ctdl R3 CEDS cross-ref miss: ${norm.error} (anchor='${rawAnchor}')`,
-					);
-				}
-				if (!canonicalCedsId) {
-					canonicalCedsId = norm.cedsId;
-				}
-				crossRefs.push({
-					system: 'ceds',
-					id: norm.cedsId,
-					raw: `${rawAnchor}`,
-					locator: CEDS_ANCHOR_PROPERTY_NAME,
-				});
-			});
-			return { crossRefs, canonicalCedsId };
-		};
-
 		// =====================================================================
 		// buildContractGraph — PURE, deterministic. parsed -> { nodes, edges, stats }.
 		// =====================================================================
@@ -213,10 +171,9 @@ const moduleFunction =
 			const edges = [];
 
 			const stats = {
-				cedsAnnotatedConcepts: 0, // concepts carrying a canonical CEDS cross-ref (bridge stash)
-				crossRefNodes: 0, // native nodes carrying >=1 cross-standard crossRef (filter-and-reference)
+				crossRefNodes: 0, // native nodes carrying >=1 cross-standard crossRef (filter-and-reference stash)
 				crossRefTotal: 0, // total cross-standard crossRefs stashed across all nodes
-				crossRefBySystem: {}, // per-target-standard tally (ctdlasn + qdata; FORK #1-C three-standards)
+				crossRefBySystem: {}, // per-target-standard tally (ctdl + qdata)
 				propertyOptionSetEdges: 0, // property -> scheme HAS_OPTION_SET edges
 				orphanAnchoredOptionSets: 0, // schemes constrained by 0 properties, anchored from root
 				referencesEdges: 0, // property -> class REFERENCES
@@ -230,7 +187,7 @@ const moduleFunction =
 			// PASS 1 — index every native node, resolve its stableId + role + display name.
 			const nativeIdToSelf = {};
 			nativeNodes.forEach((nativeNode) => {
-				if (nativeNode.label === 'CtdlRoot') {
+				if (nativeNode.label === 'CtdlasnRoot') {
 					nativeIdToSelf[nativeNode.id] = {
 						stableId: ROOT_STABLE_ID,
 						role: DME_ROLES.STANDARD_ROOT,
@@ -240,7 +197,7 @@ const moduleFunction =
 				}
 				const spec = roleSpecByNativeLabel[nativeNode.label];
 				if (!spec) {
-					throw new Error(`forge-ctdl: unknown native CTDL label '${nativeNode.label}'`);
+					throw new Error(`forge-ctdlasn: unknown native CTDL-ASN label '${nativeNode.label}'`);
 				}
 				const stableId = stableIdFor(nativeNode.id);
 				nativeIdToSelf[nativeNode.id] = {
@@ -303,7 +260,7 @@ const moduleFunction =
 				standardName: STANDARD_DISPLAY,
 			});
 			nodes.push({
-				labels: [NODE_LABELS.FORGED_NODE, 'CtdlRoot', DME_ROLES.STANDARD_ROOT],
+				labels: [NODE_LABELS.FORGED_NODE, 'CtdlasnRoot', DME_ROLES.STANDARD_ROOT],
 				stableId: ROOT_STABLE_ID,
 				role: DME_ROLES.STANDARD_ROOT,
 				properties: {
@@ -318,8 +275,9 @@ const moduleFunction =
 					standardKey: STANDARD_KEY,
 					standardName: STANDARD_DISPLAY,
 					version: metadata.version,
-					// version-provenance stamp (spec §3.3, Phase A): always present post-stamping —
-					// versionSource 'spec' | 'provenance-file' | 'unknown' per the precedence rule.
+					// version-provenance stamp (spec §3.3, Phase A): always present post-stamping. CTDL-ASN's
+					// source does not self-describe a version, so publishedVersion/versionSource are derived
+					// from the snapshot's standardSourceLocation (versionSource 'provenance-file').
 					snapshotKey: metadata.snapshotKey,
 					publishedVersion: metadata.publishedVersion,
 					versionSource: metadata.versionSource,
@@ -329,24 +287,19 @@ const moduleFunction =
 					publisher: 'Credential Engine',
 					parserVersion: '1',
 					// ingestedAt is intentionally NOT stamped (H5): a wall-clock inside hashed node props
-					// broke same-source -> same-blockId determinism. The run timestamp lives in the store
-					// row (blocks.createdAt), never in content-addressed block text.
+					// broke same-source -> same-blockId determinism.
 					coreVersion: '2.0.0',
 					stableUriPropertyName: STABLE_URI_PROPERTY_NAME,
-					mappingInstruction: JSON.stringify(ctdlMappingInstruction),
-					// anchorForm DECLARATION (WORKORDER-inferenceAndSelfDoc-070226 A0.2, CRIMSON condition 2):
-					// CTDL's native CEDS anchors are option-SET-form references whose raw text carries a value
-					// fragment (owl:equivalentClass 'ceds:000113#Assistantships' on concepts). The harvest above
-					// stays raw/lossless; this per-standard AUTHORED datum tells the generic authored maker
-					// (edf-mapping) to resolve them through its osFragmentJoin strategy. Declared on the
-					// DmeStandardRoot NODE alongside the mapping instruction — never in the block header.
-					anchorForm: 'osFragment',
+					mappingInstruction: JSON.stringify(ctdlasnMappingInstruction),
+					// NOTE: no anchorForm and no cedsOriginalAnchorPropertyName — CTDL-ASN carries no CEDS
+					// anchors, so no anchor form is declared (never-fabricate). The ceterms overlap is handled
+					// by node-level crossRefs and the additive Phase 3.5 bridge, not by a root anchor form.
 				},
 			});
 
 			// ---- structural nodes (classes, properties, concept schemes, concepts) ----
 			nativeNodes.forEach((nativeNode) => {
-				if (nativeNode.label === 'CtdlRoot') {
+				if (nativeNode.label === 'CtdlasnRoot') {
 					return;
 				}
 				const self = nativeIdToSelf[nativeNode.id];
@@ -363,30 +316,16 @@ const moduleFunction =
 					}
 				}
 
-				// faithful native scalars.
+				// faithful native scalars (honest-empty: an absent status/usageNote is simply not stamped).
 				const extraProps = { scalar: {}, crossRefs: [] };
 				if (props.status) extraProps.scalar.status = props.status;
 				if (props.usageNote) extraProps.scalar.usageNote = props.usageNote;
 				if (typeof props.domainCount === 'number') extraProps.scalar.domainCount = props.domainCount;
 
-				// CONCEPT CEDS cross-ref (bridge stash — canonical OS######, NO edge; STANDARD-PURE).
-				if (self.kind === 'optionValue' && Array.isArray(props._cedsAnchors) && props._cedsAnchors.length) {
-					const { crossRefs, canonicalCedsId } = crossRefsForCtdl(props._cedsAnchors);
-					if (canonicalCedsId) {
-						extraProps.scalar.cedsId = canonicalCedsId;
-						extraProps.scalar.cedsOriginalAnchorPropertyName = [CEDS_ANCHOR_PROPERTY_NAME];
-						extraProps.crossRefs = crossRefs;
-						stats.cedsAnnotatedConcepts++;
-					}
-				}
-
-				// CROSS-STANDARD crossRefs (FORK #1-C, THREE standards): merge the parser's generalized
-				// cross-standard references (ceasn/asn -> 'ctdlasn'; qdata + the shared schema: structural
-				// classes -> 'qdata') into the node's crossRefs. CONCAT with any CEDS crossRefs set above.
-				// STANDARD-PURE: NO cross-standard node, NO cross-standard edge is emitted here; the held
-				// structure-maker promotes these crossRefs to real edges with structural provenance.
+				// cross-standard crossRefs (Decision 1, generalized): merge the parser's ceterms + qdata
+				// references into the node's crossRefs. STANDARD-PURE — NO cross-standard node, NO edge.
 				if (Array.isArray(props._crossRefs) && props._crossRefs.length) {
-					extraProps.crossRefs = extraProps.crossRefs.concat(props._crossRefs);
+					extraProps.crossRefs = props._crossRefs;
 					stats.crossRefNodes++;
 					stats.crossRefTotal += props._crossRefs.length;
 					props._crossRefs.forEach((cr) => {
@@ -431,7 +370,7 @@ const moduleFunction =
 					const canonical = edgeTypeTranslation[nativeNode._parentEdge.type];
 					if (!canonical) {
 						throw new Error(
-							`forge-ctdl: untranslated native parent edge type '${nativeNode._parentEdge.type}'`,
+							`forge-ctdlasn: untranslated native parent edge type '${nativeNode._parentEdge.type}'`,
 						);
 					}
 					addEdge(
@@ -442,8 +381,7 @@ const moduleFunction =
 					);
 				}
 
-				// EXTRA owning classes for a shared property -> additional HAS_PROPERTY edges (so the
-				// property is reachable from every owning class, not just the structural parent).
+				// EXTRA owning classes for a shared property -> additional HAS_PROPERTY edges.
 				if (Array.isArray(nativeNode._owningClassIds) && nativeNode._owningClassIds.length > 1) {
 					nativeNode._owningClassIds.slice(1).forEach((classRawId) => {
 						const owner = nativeIdToSelf[classRawId];
@@ -457,7 +395,7 @@ const moduleFunction =
 					const canonical = edgeTypeTranslation[nativeEdge.type];
 					if (!canonical) {
 						throw new Error(
-							`forge-ctdl: untranslated native edge type '${nativeEdge.type}' (${nativeNode.id} -> ${nativeEdge.targetId})`,
+							`forge-ctdlasn: untranslated native edge type '${nativeEdge.type}' (${nativeNode.id} -> ${nativeEdge.targetId})`,
 						);
 					}
 					if (nativeEdge.type === 'CONSTRAINED_BY') {
@@ -482,10 +420,9 @@ const moduleFunction =
 			});
 
 			// ---- ORPHAN-ANCHOR pass: a concept scheme (DmeOptionSet) constrained by ZERO properties
-			// would be unreachable (option sets are property-owned via HAS_OPTION_SET, not root-owned).
-			// Anchor each true orphan from the DmeStandardRoot via HAS_OPTION_SET. (Mirrors forge-edfi.)
+			// would be unreachable. Anchor each true orphan from the DmeStandardRoot via HAS_OPTION_SET.
 			nativeNodes.forEach((nativeNode) => {
-				if (nativeNode.label !== 'CtdlConceptScheme') {
+				if (nativeNode.label !== 'CtdlasnConceptScheme') {
 					return;
 				}
 				const self = nativeIdToSelf[nativeNode.id];
@@ -500,30 +437,29 @@ const moduleFunction =
 
 			if (stats.danglingEdges.length > 0) {
 				throw new Error(
-					`forge-ctdl: ${stats.danglingEdges.length} edge(s) had an unresolved endpoint (first: ${JSON.stringify(stats.danglingEdges[0])}) — never emit a partial edge`,
+					`forge-ctdlasn: ${stats.danglingEdges.length} edge(s) had an unresolved endpoint (first: ${JSON.stringify(stats.danglingEdges[0])}) — never emit a partial edge`,
 				);
 			}
 
-			// the shared contract finalizer (M7/M8): parentId referent enforced, depth derived
-			// (= chain length; supersedes the per-role stamps above), crossRefs universal,
-			// single-owner optionSets re-parented to their owning property. Throws loudly.
+			// the shared contract finalizer (M7/M8): parentId referent enforced, depth derived,
+			// crossRefs universal, single-owner optionSets re-parented to their owning property.
 			finalizeStructuralContract({ nodes, edges });
 			return { nodes, edges, stats };
 		};
 
 		// perStandardLabelFor — the native label that pairs with a role on a forged node.
 		const perStandardLabelByRole = {
-			[DME_ROLES.CLASS]: 'CtdlClass',
-			[DME_ROLES.PROPERTY]: 'CtdlProperty',
-			[DME_ROLES.OPTION_SET]: 'CtdlConceptScheme',
-			[DME_ROLES.OPTION_VALUE]: 'CtdlConcept',
+			[DME_ROLES.CLASS]: 'CtdlasnClass',
+			[DME_ROLES.PROPERTY]: 'CtdlasnProperty',
+			[DME_ROLES.OPTION_SET]: 'CtdlasnConceptScheme',
+			[DME_ROLES.OPTION_VALUE]: 'CtdlasnConcept',
 		};
 		function perStandardLabelFor(role) {
-			return perStandardLabelByRole[role] || 'CtdlTerm';
+			return perStandardLabelByRole[role] || 'CtdlasnTerm';
 		}
 
 		// =====================================================================
-		// embedNodes — batched embedding pass (1C embedTexts). IDENTICAL to forge-edfi/forge-ceds.
+		// embedNodes — batched embedding pass (1C embedTexts). IDENTICAL to forge-ctdl.
 		// =====================================================================
 		const embedNodes = ({ nodes, nodeSubsetLimit }, callback) => {
 			const targetNodes =
@@ -549,7 +485,7 @@ const moduleFunction =
 				const texts = batch.map((oneNode) => oneNode.properties.searchText);
 				embedder.embedTexts({ texts }, (err, result) => {
 					if (err) {
-						callback(`forge-ctdl embedNodes batch ${bi} failed: ${err}`);
+						callback(`forge-ctdlasn embedNodes batch ${bi} failed: ${err}`);
 						return;
 					}
 					embedCallCount++;
@@ -561,7 +497,7 @@ const moduleFunction =
 					});
 					if (xLog && xLog.status) {
 						xLog.status(
-							`[forge-ctdl] embedded batch ${bi}/${batches.length} (${batch.length} nodes)`,
+							`[forge-ctdlasn] embedded batch ${bi}/${batches.length} (${batch.length} nodes)`,
 						);
 					}
 					nextBatch();
@@ -572,22 +508,21 @@ const moduleFunction =
 		};
 
 		// =====================================================================
-		// forge — orchestrate parse -> buildContractGraph -> embedNodes. Mirrors forge-edfi/forge-ceds.
+		// forge — orchestrate parse -> buildContractGraph -> embedNodes. Mirrors forge-ctdl.
 		//   options: { sourcePath, owner, embedNodeLimit, skipEmbedding }.
 		// =====================================================================
 		const forge = ({ sourcePath, owner, embedNodeLimit, skipEmbedding } = {}, callback) => {
 			const taskList = new taskListPlus();
 
 			taskList.push((args, next) => {
-				parseCtdl({ sourcePath, xLog }, (err, parsed) => {
+				parseCtdlasn({ sourcePath, xLog }, (err, parsed) => {
 					if (err) {
-						next(`forge-ctdl parse: ${err}`);
+						next(`forge-ctdlasn parse: ${err}`);
 						return;
 					}
-					// version-provenance stamp (BINDING spec §3.3, Phase A): snapshotKey +
-					// publishedVersion + versionSource from the handed snapshot directory; a
-					// self-described source version wins over the provenance file (disagreements
-					// warned with both values named, never silently resolved).
+					// version-provenance stamp (BINDING spec §3.3, Phase A). CTDL-ASN's source does not
+					// self-describe a version (parser sets no versionSource), so sourceVersion is null and
+					// publishedVersion is taken from the snapshot's standardSourceLocation.
 					Object.assign(
 						parsed.metadata,
 						deriveVersionStamp({
@@ -611,14 +546,12 @@ const moduleFunction =
 					buildError = err.message;
 				}
 				if (buildError) {
-					next(`forge-ctdl buildContractGraph: ${buildError}`);
+					next(`forge-ctdlasn buildContractGraph: ${buildError}`);
 					return;
 				}
 				xLog.status(
-					`[forge-ctdl] contract graph: ${graph.nodes.length} nodes, ${graph.edges.length} edges ` +
-						`(${graph.stats.cedsAnnotatedConcepts} CEDS-annotated concepts, ` +
-						`${graph.stats.crossRefTotal} cross-standard crossRefs on ${graph.stats.crossRefNodes} nodes ` +
-						`${JSON.stringify(graph.stats.crossRefBySystem)}, ` +
+					`[forge-ctdlasn] contract graph: ${graph.nodes.length} nodes, ${graph.edges.length} edges ` +
+						`(${graph.stats.crossRefTotal} cross-standard crossRefs on ${graph.stats.crossRefNodes} nodes ${JSON.stringify(graph.stats.crossRefBySystem)}, ` +
 						`${graph.stats.propertyOptionSetEdges} property->optionSet HAS_OPTION_SET, ` +
 						`${graph.stats.orphanAnchoredOptionSets} orphan-anchored option sets, ` +
 						`${graph.stats.subClassOfEdges} SUBCLASS_OF, ${graph.stats.referencesEdges} REFERENCES)`,

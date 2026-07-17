@@ -220,6 +220,68 @@ try {
 check('unnormalizable CEDS anchor throws (R3 surfaced)', threw);
 
 // =====================================================================
+// 2.5 PARSER-LEVEL — honest-empty status (divergence #2) + filter-and-reference partition, on a tiny
+//     SYNTHETIC ctdl-schema.json written to a temp dir. Proves the never-fabricate status fix and the
+//     standard-pure filtering directly at the parser boundary (the real source supplies vs:term_status
+//     on every term, so honest-empty is only observable on a synthetic silent term). parseCtdl invokes
+//     its callback synchronously, so these checks accumulate before the async real-data run below.
+// =====================================================================
+
+const fs = require('fs');
+const os = require('os');
+const parseCtdl = require('../lib/parser');
+
+const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ctdl-parser-test-'));
+const syntheticSource = {
+	'@graph': [
+		// native class WITH status -> carried verbatim
+		{ '@id': 'ceterms:WithStatus', '@type': 'rdfs:Class', 'rdfs:label': { 'en-US': 'With Status' }, 'dct:description': { 'en-US': 'has a status' }, 'vs:term_status': 'vs:stable' },
+		// native class WITHOUT status -> honest-empty '' (NEVER fabricated to 'stable')
+		{ '@id': 'ceterms:NoStatus', '@type': 'rdfs:Class', 'rdfs:label': { 'en-US': 'No Status' }, 'dct:description': { 'en-US': 'no status field' } },
+		// native class subClassOf a shared schema: class (-> qdata crossRef) AND schema.org upper (-> drop)
+		{ '@id': 'ceterms:ValueThing', '@type': 'rdfs:Class', 'rdfs:label': { 'en-US': 'Value Thing' }, 'rdfs:subClassOf': ['schema:QuantitativeValue', 'schema:CreativeWork'] },
+		// FOREIGN shared schema class -> filtered, NOT emitted (counted as cross-standard: qdata)
+		{ '@id': 'schema:QuantitativeValue', '@type': 'rdfs:Class', 'rdfs:label': { 'en-US': 'Quantitative Value' } },
+		// native property rangeIncludes a ceasn class (-> ctdlasn crossRef) and an xsd datatype (-> drop)
+		{ '@id': 'ceterms:pointsToAsn', '@type': 'rdf:Property', 'rdfs:label': { 'en-US': 'Points To Asn' }, 'schema:domainIncludes': ['ceterms:WithStatus'], 'schema:rangeIncludes': ['ceasn:Competency', 'xsd:string'] },
+		// FOREIGN ceasn property -> filtered, NOT emitted (counted as cross-standard: ctdlasn)
+		{ '@id': 'ceasn:hasChild', '@type': 'rdf:Property', 'rdfs:label': { 'en-US': 'Has Child' } },
+	],
+};
+fs.writeFileSync(path.join(tmpDir, 'ctdl-schema.json'), JSON.stringify(syntheticSource));
+
+parseCtdl({ sourcePath: tmpDir }, (perr, parsed) => {
+	check('parser: no error on synthetic source', !perr);
+	const pnodes = (parsed && parsed.nodes) || [];
+	const byId = {};
+	pnodes.forEach((n) => { byId[n.id] = n; });
+	// honest-empty status (the never-fabricate fix)
+	check('parser: WithStatus carries real status "stable"', byId['ceterms:WithStatus'] && byId['ceterms:WithStatus'].properties.status === 'stable');
+	check('parser: NoStatus status is honest-empty "" (NOT fabricated "stable")', byId['ceterms:NoStatus'] && byId['ceterms:NoStatus'].properties.status === '');
+	// filter: foreign nodes NOT emitted
+	check('parser: foreign schema:QuantitativeValue NOT emitted', !byId['schema:QuantitativeValue']);
+	check('parser: foreign ceasn:hasChild NOT emitted', !byId['ceasn:hasChild']);
+	// filter-and-reference: shared schema class -> qdata crossRef; schema.org upper -> dropped
+	const vtRefs = (byId['ceterms:ValueThing'] && byId['ceterms:ValueThing'].properties._crossRefs) || [];
+	check('parser: subClassOf schema:QuantitativeValue -> qdata crossRef', vtRefs.some((cr) => cr.system === 'qdata' && cr.id === 'schema:QuantitativeValue'));
+	check('parser: subClassOf schema:CreativeWork (upper-ontology) -> dropped (no crossRef)', !vtRefs.some((cr) => cr.id === 'schema:CreativeWork'));
+	// reference: ceasn range -> ctdlasn crossRef; xsd datatype -> dropped
+	const paRefs = (byId['ceterms:pointsToAsn'] && byId['ceterms:pointsToAsn'].properties._crossRefs) || [];
+	check('parser: rangeIncludes ceasn:Competency -> ctdlasn crossRef', paRefs.some((cr) => cr.system === 'ctdlasn' && cr.id === 'ceasn:Competency'));
+	check('parser: rangeIncludes xsd:string (datatype) -> dropped (no crossRef)', !paRefs.some((cr) => cr.id === 'xsd:string'));
+	// counts: 3 native classes + 1 native property emitted; the 2 foreign terms filtered as cross-standard
+	check('parser: 3 native classes emitted (foreign schema class filtered)', parsed.metadata.classCount === 3);
+	check('parser: 1 native property emitted (foreign ceasn prop filtered)', parsed.metadata.propertyCount === 1);
+	check('parser: filteredCrossStandardCount === 2, filteredUnknownCount === 0', parsed.metadata.filteredCrossStandardCount === 2 && parsed.metadata.filteredUnknownCount === 0);
+});
+
+try {
+	fs.rmSync(tmpDir, { recursive: true, force: true });
+} catch (cleanupErr) {
+	console.error(`  (temp cleanup skipped: ${cleanupErr.message})`);
+}
+
+// =====================================================================
 // 3. REAL-DATA run via forge({skipEmbedding:true}) — full contract over the actual CTDL JSON-LD asset.
 // =====================================================================
 
@@ -238,12 +300,16 @@ bundle.forge({ sourcePath: assetDir, skipEmbedding: true }, (err, result) => {
 	const edgeCount = {};
 	edges.forEach((e) => { edgeCount[e.type] = (edgeCount[e.type] || 0) + 1; });
 
+	// FILTER-AND-REFERENCE counts (ctdlModernization_071626, THREE standards): the original forge
+	// emitted 138 classes / 396 properties (1014 nodes) INCLUDING ~20 foreign nodes (2 schema classes +
+	// 7 ceasn / 4 qdata / 6 schema / 1 owl:sameAs properties). Standard-pure CTDL emits ONLY the native
+	// core -> 136 classes / 378 properties; option sets (34) + concepts (445) are all native, unchanged.
 	check('real: exactly one DmeStandardRoot', roleCount.DmeStandardRoot === 1);
-	check('real: 138 DmeClass', roleCount.DmeClass === 138);
-	check('real: 396 DmeProperty', roleCount.DmeProperty === 396);
+	check('real: 136 DmeClass (138 - 2 schema classes)', roleCount.DmeClass === 136);
+	check('real: 378 DmeProperty (396 - 18 foreign props)', roleCount.DmeProperty === 378);
 	check('real: 34 DmeOptionSet', roleCount.DmeOptionSet === 34);
 	check('real: 445 DmeOptionValue', roleCount.DmeOptionValue === 445);
-	check('real: total 1014 nodes', nodes.length === 1014);
+	check('real: total 994 nodes (1014 - 20 foreign leak)', nodes.length === 994);
 	check('real: every node clean stableId', nodes.every((n) => normalize.isCleanStableId(n.stableId)));
 	check('real: every node _source === CTDL', nodes.every((n) => n.properties._source === 'CTDL'));
 	check('real: every node non-empty searchText', nodes.every((n) => n.properties.searchText && n.properties.searchText.length > 0));
@@ -256,12 +322,39 @@ bundle.forge({ sourcePath: assetDir, skipEmbedding: true }, (err, result) => {
 	check('real: every DmeOptionSet reachable via HAS_OPTION_SET', nodes.filter((n) => n.role === 'DmeOptionSet').every((os) => edges.some((e) => e.type === 'HAS_OPTION_SET' && e.toRef.id === os.stableId)));
 	check('real: no embedding stamped (skipEmbedding)', nodes.every((n) => n.properties.embedding === undefined));
 
+	// ---- STANDARD-PURITY: zero foreign nodes emitted (the whole point of the modernization) ----
+	const NATIVE_CORE = new Set(['ceterms', 'accommodation', 'actionStat', 'agentSector', 'agreementCat', 'alignment', 'array', 'assessMethod', 'assessUse', 'audLevel', 'audience', 'claimType', 'collectionCategory', 'compare', 'costType', 'credentialStat', 'creditUnit', 'deliveryType', 'financialAid', 'inputType', 'learnMethod', 'lifeCycle', 'logic', 'lrEvidence', 'lrMethod', 'lrOutcome', 'lrSource', 'orgType', 'residency', 'scheduleFrequency', 'scheduleTiming', 'score', 'serviceType', 'statementCat', 'support']);
+	const prefixOf = (id) => `${id}`.split(':')[0];
+	const nonRootNodes = nodes.filter((n) => n.stableId !== 'ctdl:root');
+	check('real: STANDARD-PURE — every emitted node prefix is native core (0 foreign nodes)', nonRootNodes.every((n) => NATIVE_CORE.has(prefixOf(n.stableId))));
+	// the closed 20-node leak — the specific foreign URIs the original emitted must be ABSENT now.
+	const idSet = new Set(nodes.map((n) => n.stableId));
+	const LEAK_URIS = ['schema:MonetaryAmount', 'schema:QuantitativeValue', 'schema:description', 'schema:maxValue', 'schema:minValue', 'schema:subjectOf', 'schema:unitText', 'schema:value', 'ceasn:abilityEmbodied', 'ceasn:hasChild', 'ceasn:isChildOf', 'qdata:dataProvider', 'qdata:percentage', 'qdata:relevantDataSet', 'owl:sameAs'];
+	check('real: leak closed — no foreign schema/ceasn/qdata/owl @graph node emitted', LEAK_URIS.every((u) => !idSet.has(u)));
+
+	// ---- FILTER-AND-REFERENCE: the foreign structural references survive as crossRefs (bridge material) ----
+	const crossRefSystems = {};
+	let crossRefTotal = 0;
+	nodes.forEach((n) => {
+		JSON.parse(n.properties.crossRefs || '[]').forEach((cr) => {
+			crossRefSystems[cr.system] = (crossRefSystems[cr.system] || 0) + 1;
+			crossRefTotal++;
+		});
+	});
+	check('real: crossRefs carry ctdlasn refs (ceasn/asn -> ctdlasn)', crossRefSystems.ctdlasn > 0);
+	check('real: crossRefs carry qdata refs (qdata + shared schema: classes -> qdata)', crossRefSystems.qdata > 0);
+	check('real: every crossRef system is ceds|ctdlasn|qdata (no other/foreign)', Object.keys(crossRefSystems).every((s) => ['ceds', 'ctdlasn', 'qdata'].includes(s)));
+	check('real: crossRefBySystem stat matches counted crossRefs', result.stats.crossRefTotal === (crossRefTotal - (crossRefSystems.ceds || 0)));
+
 	console.log('\n=== CTDL REAL-DATA DRY COUNT (no embedding) ===');
 	console.log(`nodes: ${nodes.length}  edges: ${edges.length}`);
 	console.log('by role:', JSON.stringify(roleCount));
 	console.log('by edge type:', JSON.stringify(edgeCount));
 	console.log('stats:', JSON.stringify({
 		cedsAnnotatedConcepts: result.stats.cedsAnnotatedConcepts,
+		crossRefNodes: result.stats.crossRefNodes,
+		crossRefTotal: result.stats.crossRefTotal,
+		crossRefBySystem: result.stats.crossRefBySystem,
 		propertyOptionSetEdges: result.stats.propertyOptionSetEdges,
 		orphanAnchoredOptionSets: result.stats.orphanAnchoredOptionSets,
 		subClassOfEdges: result.stats.subClassOfEdges,

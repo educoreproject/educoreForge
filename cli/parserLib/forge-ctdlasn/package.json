@@ -1,0 +1,9 @@
+{
+  "name": "forge-ctdlasn",
+  "version": "1.0.0",
+  "private": true,
+  "description": "CTDL-ASN forge bundle for edf-forge: parses the Credential Engine CTDL Achievement Standards Network JSON-LD vocabulary (ctdlasn.json, plain encoding) into the universal forge property contract (DmeStandardRoot + the six roles, native-URI stableIds, canonical ownership edges HAS_CLASS/HAS_PROPERTY/HAS_OPTION_SET/HAS_VALUE, SUBCLASS_OF, REFERENCES, searchText, embeddings). The 4 ceterms:* CTDL-overlap terms are FILTERED (not emitted); native references to them are stashed as {system:'ctdl',...} crossRefs (standard-pure — no cross-standard node or edge). Clone-and-adapt of forge-ctdl, the JSON-LD-family trailblazer. JSON source — no js-yaml needed.",
+  "main": "forgeCtdlasn.js",
+  "author": "tqii",
+  "license": "ISC"
+}
