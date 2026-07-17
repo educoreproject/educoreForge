@@ -1,0 +1,8 @@
+{
+  // forgeRecipe (standard-version kind) — version-pure: ONE standard @ ONE version.
+  "recipeKind": "standardVersion",
+  "standardKey": "soc",
+  "standardName": "SOC",
+  "forgeModule": "forge-soc",
+  "source": { "snapshotKey": "01", "publishedVersion": "O*NET-SOC 2019", "versionSource": "provenance-file" }
+}

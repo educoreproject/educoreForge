@@ -1,0 +1,8 @@
+{
+  // forgeRecipe (standard-version kind) — version-pure: ONE standard @ ONE version.
+  "recipeKind": "standardVersion",
+  "standardKey": "dctap",
+  "standardName": "DCTAP",
+  "forgeModule": "forge-dctap",
+  "source": { "snapshotKey": "01", "publishedVersion": "Draft - Request for Comments", "versionSource": "spec" }
+}

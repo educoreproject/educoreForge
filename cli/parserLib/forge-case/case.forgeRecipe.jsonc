@@ -1,0 +1,8 @@
+{
+  // forgeRecipe (standard-version kind) — version-pure: ONE standard @ ONE version.
+  "recipeKind": "standardVersion",
+  "standardKey": "case",
+  "standardName": "CASE",
+  "forgeModule": "forge-case",
+  "source": { "snapshotKey": "01", "publishedVersion": "1.1", "versionSource": "spec" }
+}

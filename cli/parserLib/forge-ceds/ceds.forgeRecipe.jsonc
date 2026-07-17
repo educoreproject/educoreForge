@@ -1,0 +1,9 @@
+{
+  // forgeRecipe (standard-version kind) — version-pure: ONE standard @ ONE version.
+  "recipeKind": "standardVersion",
+  "standardKey": "ceds",
+  "standardName": "CEDS",
+  "forgeModule": "forge-ceds",
+  "source": { "snapshotKey": "01", "publishedVersion": "14.0.0.0", "versionSource": "spec" },
+  "notes": "The canonical hub. Also owns the hub reference block (see the golden recipe)."
+}

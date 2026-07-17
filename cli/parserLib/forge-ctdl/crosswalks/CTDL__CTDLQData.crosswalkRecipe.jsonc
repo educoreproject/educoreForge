@@ -1,0 +1,11 @@
+{
+  // crosswalkRecipe — an ordered version-pair owning its bridge content. Version-keyed.
+  "recipeKind": "crosswalk",
+  "pairSubject": "CTDL::CTDLQData",
+  "versionKey": "(01,01)",
+  "kind": "structural",
+  "requires": ["CTDL", "CTDLQData"],
+  "modules": ["ctdlFamilyStructure"],
+  "selection": "currentPairGroup(pairSubject, versionKey)",
+  "notes": "Structural family pairing (pair-scoped version-keyed structuralBridge, per the TQ ruling: composable like mapping edges). Produced by the co-located ctdlFamilyStructure module via edf-bridge-maker. Currently MANIFEST-PINNED in 81627d17; pair-group mint + CURRENT pointer await the runner."
+}

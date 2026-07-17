@@ -1,0 +1,8 @@
+{
+  // forgeRecipe (standard-version kind) — version-pure: ONE standard @ ONE version.
+  "recipeKind": "standardVersion",
+  "standardKey": "cip",
+  "standardName": "CIP",
+  "forgeModule": "forge-cip",
+  "source": { "snapshotKey": "01", "publishedVersion": "2020", "versionSource": "provenance-file" }
+}

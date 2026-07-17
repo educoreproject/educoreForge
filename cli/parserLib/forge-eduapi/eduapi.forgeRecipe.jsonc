@@ -1,0 +1,8 @@
+{
+  // forgeRecipe (standard-version kind) — version-pure: ONE standard @ ONE version.
+  "recipeKind": "standardVersion",
+  "standardKey": "eduapi",
+  "standardName": "EduAPI",
+  "forgeModule": "forge-eduapi",
+  "source": { "snapshotKey": "01", "publishedVersion": "1.0", "versionSource": "spec" }
+}
