@@ -1,0 +1,6 @@
+{
+	"name": "edf-bridge-maker",
+	"version": "1.0.0",
+	"description": "Minimal bridgeMaker runner (forgeArchitectureRefactor pilot): loads a uniform-contract forge module, runs it over an injected store-plane reader, stages structuralBridge blocks, and mints pairGroups union-with-current (stage-then-point).",
+	"main": "edfBridgeMaker.js"
+}

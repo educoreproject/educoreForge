@@ -69,13 +69,11 @@ const PRODUCED_BY = 'edf-ctdl-uri-bridge';
 const PROVENANCE_SOURCE = 'uriBridge';
 
 // crossRef locator -> the CORRECT structural edge (type + direction). Ratified by FADED_FORGE.
-//   direction 'targetToSource' emits (target)->(source); 'sourceToTarget' emits (source)->(target).
-const LOCATOR_EDGE = {
-	'schema:domainIncludes': { type: 'HAS_PROPERTY', direction: 'targetToSource' },
-	'schema:rangeIncludes': { type: 'REFERENCES', direction: 'sourceToTarget' },
-	'rdfs:subClassOf': { type: 'SUBCLASS_OF', direction: 'sourceToTarget' },
-	'meta:targetScheme': { type: 'HAS_OPTION_SET', direction: 'sourceToTarget' },
-};
+// MOVED (forgeArchitectureRefactor SPECIFICATION v2 S2): the table's single source of truth
+// is now the ctdlFamilyStructure module; this tool consumes it from there until its retirement.
+const { LOCATOR_EDGE } = require(
+	path.join(projectRoot, 'code', 'cli', 'parserLib', 'forge-ctdl', 'modules', 'ctdlFamilyStructure'),
+);
 
 // =====================================================================
 // BOOTSTRAP process.global (mirror edf-mapping.bootstrapGlobal)

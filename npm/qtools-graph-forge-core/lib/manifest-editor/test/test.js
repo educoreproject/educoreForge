@@ -156,7 +156,7 @@ taskList.push((args, next) => {
 });
 taskList.push((args, next) => {
 	manifestEditor.saveSchemaBlock(
-		{ type: 'relationships', subject: null, requires: ['CEDS', 'CIP'], text: relText },
+		{ type: 'relationships', subject: null, requires: [args.cedsId, args.cipId], text: relText },
 		(err, result) => next(err, { ...args, relId: result.blockId }),
 	);
 });
@@ -213,7 +213,7 @@ taskList.push((args, next) => {
 	// explicit-position members sort first => rel lands ahead of its subject in build order.
 	const memberBlocks = [
 		{ blockId: args.cedsId, position: null, type: 'standard', subject: 'CEDS', requires: [] },
-		{ blockId: args.relId, position: 0, type: 'relationships', subject: null, requires: ['CEDS'] },
+		{ blockId: args.relId, position: 0, type: 'relationships', subject: null, requires: [args.cedsId] },
 	];
 	const ordered = forgeStore.deriveBuildOrder(memberBlocks);
 	assert('topo: explicit position overrides derived order (pinned block leads)', !ordered.cycle && ordered.list[0].blockId === args.relId);
@@ -271,7 +271,7 @@ taskList.push((args, next) => {
 // ---- compose-by-selection: RE-EXTRACT the relationships block (subject NULL) ----
 taskList.push((args, next) => {
 	manifestEditor.saveSchemaBlock(
-		{ type: 'relationships', subject: null, requires: ['CEDS', 'CIP'], text: relV2Text },
+		{ type: 'relationships', subject: null, requires: [args.cedsId, args.cipId], text: relV2Text },
 		(err, result) => next(err, { ...args, relV2Id: result.blockId }),
 	);
 });

@@ -175,13 +175,13 @@ taskList.push((args, next) => {
 // ---- relationships + overlay blocks (for closure tests) ----
 taskList.push((args, next) => {
 	forgeStore.saveBlock(
-		{ type: 'relationships', subject: 'CEDS_REL', requires: ['CEDS'], text: relText },
+		{ type: 'relationships', subject: 'CEDS_REL', requires: [args.cedsBlockId], text: relText },
 		(err, result) => next(err, { ...args, relBlockId: result.blockId }),
 	);
 });
 taskList.push((args, next) => {
 	forgeStore.saveBlock(
-		{ type: 'overlay', subject: 'CEDS_OV', requires: ['CEDS'], text: overlayText },
+		{ type: 'overlay', subject: 'CEDS_OV', requires: [args.cedsBlockId], text: overlayText },
 		(err, result) => next(err, { ...args, overlayBlockId: result.blockId }),
 	);
 });
@@ -446,7 +446,9 @@ taskList.push((args, next) => {
 	forgeStore.validateManifestClosure({ manifestKey: args.badOrderKey }, (err, verdict) => {
 		assert(
 			'closure: rel block ordered before its required subject => NOT wellFormed',
-			!err && verdict.wellFormed === false && verdict.violations.length > 0,
+			!err &&
+				verdict.wellFormed === false &&
+				verdict.violations.some((oneViolation) => oneViolation.kind === 'order'),
 		);
 		next(err, args);
 	});
