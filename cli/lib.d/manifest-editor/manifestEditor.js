@@ -331,14 +331,22 @@ USAGE
 		};
 
 		// -----
-		// dbPath resolution: --db override, else config, else the canonical shared store
-		// (created if missing). forge-store owns the table names; this picks the file.
-		// forger/replay/bridge/gate all HARDCODE <projectRoot>/dataStores/forgeStore.sqlite3;
-		// manifestEditor now defaults to that SAME store so a bare invocation reads/writes the
-		// one canonical file. (repoRoot is code/; the store lives one level up under system/.)
+		// dbPath resolution: EDF_FORGE_STORE_DB env override (the family convention —
+		// forger/edf-replay/edf-bridge-maker/edf-gate all honor it), else --db, else
+		// config, else the canonical shared store (created if missing). forge-store owns
+		// the table names; this picks the file.
+		//
+		// The env override was ADDED 2026-07-17 (FADED_FORGE incident ruling): before it,
+		// manifestEditor was WELDED TO CANONICAL — a scratch-intended `-save` run under
+		// EDF_FORGE_STORE_DB silently appended a block to the canonical store (blockId
+		// 9767c883…, the pilot Phase-4 incident). An active override is ANNOUNCED on
+		// stderr (the edf-gate precedent) so it can never silently redirect writes.
 
 		const projectRoot = path.join(__dirname, '../../../..');
 		const resolveDbPath = () => {
+			if (process.env.EDF_FORGE_STORE_DB) {
+				return process.env.EDF_FORGE_STORE_DB;
+			}
 			const override = first('db');
 			if (override) {
 				return override;
@@ -348,6 +356,11 @@ USAGE
 			}
 			return path.join(projectRoot, 'dataStores', 'forgeStore.sqlite3');
 		};
+		if (process.env.EDF_FORGE_STORE_DB) {
+			console.error(
+				`STORE OVERRIDE ACTIVE: forgeStore db = ${process.env.EDF_FORGE_STORE_DB} (EDF_FORGE_STORE_DB)`,
+			);
+		}
 
 		// -----
 		// readBlockText — file path, or '-' for stdin

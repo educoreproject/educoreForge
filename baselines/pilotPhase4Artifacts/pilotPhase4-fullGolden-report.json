@@ -1,0 +1,57 @@
+{
+  "gate": "Phase4-S14-fullGolden",
+  "spec": "SPECIFICATION.md v2 S14; IMPLEMENTATION_PLAN v2 Phase 4",
+  "deliverable": {
+    "containerName": "GOLD_EVAL_260717",
+    "volume": "GOLD_EVAL_260717_data",
+    "boltPort": 7940,
+    "httpPort": 7941,
+    "composedManifestKey": "81627d173883ecf2223fd3e56b2d518e2d9ed9b6035a073c2fe8e7434fa48fc9",
+    "baseManifestKey": "d8606a1e51e198d073fe521e4279be13b7b2c65bf10d6f840b029a487ec650fc",
+    "embeddedCtdlBlockId": "9767c8835959ec4a22763e5997adfb6b6ca6e458cac360bef088acfd21b45af0",
+    "nodeCount": 105923,
+    "edgeCount": 318871,
+    "nodeDumpSha256": "86bdd13d564f4d374f07468263c2bb9f739fd12f9c64c55936f636f178b9b59f",
+    "edgeDumpSha256": "8e0f6d55eb356a8b92e0be4071a88c56efaec57063c52323fac13c82b262a3e3"
+  },
+  "purity": {
+    "violations": 0,
+    "metaCount": 135,
+    "total": 105923
+  },
+  "census": {
+    "baseline": {
+      "reproducedTotal": 376,
+      "correctLoss": [
+        "HAS_CLASS|ctdl:root|schema:MonetaryAmount",
+        "HAS_CLASS|ctdl:root|schema:QuantitativeValue"
+      ],
+      "unresolved": 0
+    },
+    "familyPopulation": {
+      "CTDL::CTDLQData": 178,
+      "CTDL::CTDLASN": 311,
+      "CTDLASN::CTDLQData": 17
+    },
+    "surplus": {
+      "reciprocal": {
+        "CTDL::CTDLASN": 68,
+        "CTDL::CTDLQData": 79,
+        "CTDLASN::CTDLQData": 0
+      },
+      "novelModern": {
+        "CTDL::CTDLASN": 96,
+        "CTDL::CTDLQData": 34,
+        "CTDLASN::CTDLQData": 0
+      },
+      "neither": 0
+    }
+  },
+  "ctdlCedsHistogram": {
+    "EXACT_MATCH": 24
+  },
+  "embeddingReuse": {
+    "warmBatches": 8,
+    "missBatches": 0
+  }
+}

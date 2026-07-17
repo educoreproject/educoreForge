@@ -1,0 +1,447 @@
+{
+  "artifact": "legacyClosureDebt",
+  "ruling": "FADED_FORGE 2026-07-17: delta-closure approved; absolute closure deferred to a future legacy mapping-block requires rekey campaign (prerequisite: BR1-4 version-following re-key verb)",
+  "baseManifestKey": "d8606a1e51e198d073fe521e4279be13b7b2c65bf10d6f840b029a487ec650fc",
+  "composedManifestKey": "81627d173883ecf2223fd3e56b2d518e2d9ed9b6035a073c2fe8e7434fa48fc9",
+  "violationCount": 41,
+  "byOwningBlock": {
+    "block db227d12 (mapping CEDS::CASE)": [
+      {
+        "requiredBlockId": "bec5bda557a61cd9b2c89cd617fac74f4d79830892b06ec58842c9446ce4c009",
+        "detail": "block db227d12 (mapping CEDS::CASE) requires bec5bda5 (standard CASE) which is absent from the manifest"
+      },
+      {
+        "requiredBlockId": "7c5d9ace970a7520d95794199ca01ded60277350f80b15013eec265b3dd3f2ab",
+        "detail": "block db227d12 (mapping CEDS::CASE) requires 7c5d9ace (reference CEDS) which is absent from the manifest"
+      },
+      {
+        "requiredBlockId": "a84cd4b2917adbcbfe8814fba1f0126167a283186d522e8d87a69ead0497f93f",
+        "detail": "block db227d12 (mapping CEDS::CASE) requires a84cd4b2 (standard CEDS) which is absent from the manifest"
+      }
+    ],
+    "block 46f1f426 (mapping CEDS::CLR)": [
+      {
+        "requiredBlockId": "09b46d83c527033cfc6decff7dbbdea8ae480a9cf299338d21fdb0ac2bd0f715",
+        "detail": "block 46f1f426 (mapping CEDS::CLR) requires 09b46d83 (standard CLR) which is absent from the manifest"
+      },
+      {
+        "requiredBlockId": "7c5d9ace970a7520d95794199ca01ded60277350f80b15013eec265b3dd3f2ab",
+        "detail": "block 46f1f426 (mapping CEDS::CLR) requires 7c5d9ace (reference CEDS) which is absent from the manifest"
+      },
+      {
+        "requiredBlockId": "a84cd4b2917adbcbfe8814fba1f0126167a283186d522e8d87a69ead0497f93f",
+        "detail": "block 46f1f426 (mapping CEDS::CLR) requires a84cd4b2 (standard CEDS) which is absent from the manifest"
+      }
+    ],
+    "block f957b88c (mapping CEDS::CTDL)": [
+      {
+        "requiredBlockId": "dd0424a44bef4b88da4448e084acd1a10ed4274e53f475c3c8ab46a209ad5ca5",
+        "detail": "block f957b88c (mapping CEDS::CTDL) requires dd0424a4 (standard CTDL) which is absent from the manifest"
+      },
+      {
+        "requiredBlockId": "7c5d9ace970a7520d95794199ca01ded60277350f80b15013eec265b3dd3f2ab",
+        "detail": "block f957b88c (mapping CEDS::CTDL) requires 7c5d9ace (reference CEDS) which is absent from the manifest"
+      },
+      {
+        "requiredBlockId": "a84cd4b2917adbcbfe8814fba1f0126167a283186d522e8d87a69ead0497f93f",
+        "detail": "block f957b88c (mapping CEDS::CTDL) requires a84cd4b2 (standard CEDS) which is absent from the manifest"
+      }
+    ],
+    "block d04f52ff (mapping CEDS::EdFi)": [
+      {
+        "requiredBlockId": "4b27112d4081e492245630cfcd0d4bd6ec9a5f9005d0fb2ccbbd6bce189f522a",
+        "detail": "block d04f52ff (mapping CEDS::EdFi) requires 4b27112d (standard EdFi) which is absent from the manifest"
+      },
+      {
+        "requiredBlockId": "7c5d9ace970a7520d95794199ca01ded60277350f80b15013eec265b3dd3f2ab",
+        "detail": "block d04f52ff (mapping CEDS::EdFi) requires 7c5d9ace (reference CEDS) which is absent from the manifest"
+      },
+      {
+        "requiredBlockId": "a84cd4b2917adbcbfe8814fba1f0126167a283186d522e8d87a69ead0497f93f",
+        "detail": "block d04f52ff (mapping CEDS::EdFi) requires a84cd4b2 (standard CEDS) which is absent from the manifest"
+      }
+    ],
+    "block 483517ce (mapping CEDS::EduAPI)": [
+      {
+        "requiredBlockId": "8c7fd0d9d5e75ae9ff07f67d1c8c1fec736f353a1b4fa66f974d23011b430138",
+        "detail": "block 483517ce (mapping CEDS::EduAPI) requires 8c7fd0d9 (standard eduAPI) which is absent from the manifest"
+      },
+      {
+        "requiredBlockId": "7c5d9ace970a7520d95794199ca01ded60277350f80b15013eec265b3dd3f2ab",
+        "detail": "block 483517ce (mapping CEDS::EduAPI) requires 7c5d9ace (reference CEDS) which is absent from the manifest"
+      },
+      {
+        "requiredBlockId": "a84cd4b2917adbcbfe8814fba1f0126167a283186d522e8d87a69ead0497f93f",
+        "detail": "block 483517ce (mapping CEDS::EduAPI) requires a84cd4b2 (standard CEDS) which is absent from the manifest"
+      },
+      {
+        "requiredBlockId": "6d5d3272e6eab0a0627fd20f12d3038451d1acd45ebcf6e00632727201ff4f1d",
+        "detail": "block 483517ce (mapping CEDS::EduAPI) requires 6d5d3272 (mapping eduAPI) which is absent from the manifest"
+      }
+    ],
+    "block 2fd51b2c (mapping CEDS::JEDx)": [
+      {
+        "requiredBlockId": "1094d5341e240728bae102dc5306deb9ee107524c91e2df70cf477277037caeb",
+        "detail": "block 2fd51b2c (mapping CEDS::JEDx) requires 1094d534 (standard JEDx) which is absent from the manifest"
+      },
+      {
+        "requiredBlockId": "7c5d9ace970a7520d95794199ca01ded60277350f80b15013eec265b3dd3f2ab",
+        "detail": "block 2fd51b2c (mapping CEDS::JEDx) requires 7c5d9ace (reference CEDS) which is absent from the manifest"
+      },
+      {
+        "requiredBlockId": "a84cd4b2917adbcbfe8814fba1f0126167a283186d522e8d87a69ead0497f93f",
+        "detail": "block 2fd51b2c (mapping CEDS::JEDx) requires a84cd4b2 (standard CEDS) which is absent from the manifest"
+      }
+    ],
+    "block cc1ac0f8 (mapping CEDS::LIF)": [
+      {
+        "requiredBlockId": "ae72442ce6be1134d81f6f249b2b5a00d46b73bcc139211016dbbe45935a7c70",
+        "detail": "block cc1ac0f8 (mapping CEDS::LIF) requires ae72442c (standard LIF) which is absent from the manifest"
+      },
+      {
+        "requiredBlockId": "7c5d9ace970a7520d95794199ca01ded60277350f80b15013eec265b3dd3f2ab",
+        "detail": "block cc1ac0f8 (mapping CEDS::LIF) requires 7c5d9ace (reference CEDS) which is absent from the manifest"
+      },
+      {
+        "requiredBlockId": "a84cd4b2917adbcbfe8814fba1f0126167a283186d522e8d87a69ead0497f93f",
+        "detail": "block cc1ac0f8 (mapping CEDS::LIF) requires a84cd4b2 (standard CEDS) which is absent from the manifest"
+      },
+      {
+        "requiredBlockId": "adc6f313184a19ab49cca055f38a5419b6785683fbaebb123228ca547c838807",
+        "detail": "block cc1ac0f8 (mapping CEDS::LIF) requires adc6f313 (mapping LIF) which is absent from the manifest"
+      }
+    ],
+    "block 91057b28 (mapping CEDS::MedBiquitous)": [
+      {
+        "requiredBlockId": "74b74809cb0de2e71f2d5380573f8df3746a36ee2605fabc58500c121bc60485",
+        "detail": "block 91057b28 (mapping CEDS::MedBiquitous) requires 74b74809 (standard MedBiquitous) which is absent from the manifest"
+      },
+      {
+        "requiredBlockId": "7c5d9ace970a7520d95794199ca01ded60277350f80b15013eec265b3dd3f2ab",
+        "detail": "block 91057b28 (mapping CEDS::MedBiquitous) requires 7c5d9ace (reference CEDS) which is absent from the manifest"
+      },
+      {
+        "requiredBlockId": "a84cd4b2917adbcbfe8814fba1f0126167a283186d522e8d87a69ead0497f93f",
+        "detail": "block 91057b28 (mapping CEDS::MedBiquitous) requires a84cd4b2 (standard CEDS) which is absent from the manifest"
+      }
+    ],
+    "block 73359113 (mapping CEDS::OpenBadges)": [
+      {
+        "requiredBlockId": "297616065a4202f3655817b90d8309b4677ac2c039d629a6b8d41056472dc694",
+        "detail": "block 73359113 (mapping CEDS::OpenBadges) requires 29761606 (standard OpenBadges) which is absent from the manifest"
+      },
+      {
+        "requiredBlockId": "7c5d9ace970a7520d95794199ca01ded60277350f80b15013eec265b3dd3f2ab",
+        "detail": "block 73359113 (mapping CEDS::OpenBadges) requires 7c5d9ace (reference CEDS) which is absent from the manifest"
+      },
+      {
+        "requiredBlockId": "a84cd4b2917adbcbfe8814fba1f0126167a283186d522e8d87a69ead0497f93f",
+        "detail": "block 73359113 (mapping CEDS::OpenBadges) requires a84cd4b2 (standard CEDS) which is absent from the manifest"
+      }
+    ],
+    "block 0524e91a (mapping CEDS::PESC)": [
+      {
+        "requiredBlockId": "e029ea4964f77b88778299e978eccb228b23e03ef6cca06e76da125f718c80cf",
+        "detail": "block 0524e91a (mapping CEDS::PESC) requires e029ea49 (standard PESC) which is absent from the manifest"
+      },
+      {
+        "requiredBlockId": "7c5d9ace970a7520d95794199ca01ded60277350f80b15013eec265b3dd3f2ab",
+        "detail": "block 0524e91a (mapping CEDS::PESC) requires 7c5d9ace (reference CEDS) which is absent from the manifest"
+      },
+      {
+        "requiredBlockId": "a84cd4b2917adbcbfe8814fba1f0126167a283186d522e8d87a69ead0497f93f",
+        "detail": "block 0524e91a (mapping CEDS::PESC) requires a84cd4b2 (standard CEDS) which is absent from the manifest"
+      }
+    ],
+    "block ba1dd372 (mapping CEDS::SEDM)": [
+      {
+        "requiredBlockId": "e08a874dfe7a51e26be028985450101563c5c9b13b0d40d533a726ad70d6ac0a",
+        "detail": "block ba1dd372 (mapping CEDS::SEDM) requires e08a874d (standard SEDM) which is absent from the manifest"
+      },
+      {
+        "requiredBlockId": "7c5d9ace970a7520d95794199ca01ded60277350f80b15013eec265b3dd3f2ab",
+        "detail": "block ba1dd372 (mapping CEDS::SEDM) requires 7c5d9ace (reference CEDS) which is absent from the manifest"
+      },
+      {
+        "requiredBlockId": "a84cd4b2917adbcbfe8814fba1f0126167a283186d522e8d87a69ead0497f93f",
+        "detail": "block ba1dd372 (mapping CEDS::SEDM) requires a84cd4b2 (standard CEDS) which is absent from the manifest"
+      },
+      {
+        "requiredBlockId": "9e5c49a07d348d0fd97f9d74a22d07b215ff5369d0c023cd9a8478cef7f88cb7",
+        "detail": "block ba1dd372 (mapping CEDS::SEDM) requires 9e5c49a0 (mapping SEDM) which is absent from the manifest"
+      }
+    ],
+    "block e1dd9d8f (mapping CEDS::SIF)": [
+      {
+        "requiredBlockId": "053e7e14ce4f4265f984273ade930d86831d20463f4074a0d6a17fdb324a9b8d",
+        "detail": "block e1dd9d8f (mapping CEDS::SIF) requires 053e7e14 (standard SIF) which is absent from the manifest"
+      },
+      {
+        "requiredBlockId": "7c5d9ace970a7520d95794199ca01ded60277350f80b15013eec265b3dd3f2ab",
+        "detail": "block e1dd9d8f (mapping CEDS::SIF) requires 7c5d9ace (reference CEDS) which is absent from the manifest"
+      },
+      {
+        "requiredBlockId": "a84cd4b2917adbcbfe8814fba1f0126167a283186d522e8d87a69ead0497f93f",
+        "detail": "block e1dd9d8f (mapping CEDS::SIF) requires a84cd4b2 (standard CEDS) which is absent from the manifest"
+      }
+    ],
+    "block 30879134 (mapping CIP::SOC)": [
+      {
+        "requiredBlockId": "19e565937f61bae15640b53daa5110e5efa5ed4f6ce184e3672decb0cefed802",
+        "detail": "block 30879134 (mapping CIP::SOC) requires 19e56593 (standard SOC) which is absent from the manifest"
+      },
+      {
+        "requiredBlockId": "b1a247064b1e88cd34b1b8281473fb968bfa229d8ebd5b1d1036289a596a4aaa",
+        "detail": "block 30879134 (mapping CIP::SOC) requires b1a24706 (standard CIP) which is absent from the manifest"
+      }
+    ]
+  },
+  "violations": [
+    {
+      "kind": "missing",
+      "blockId": "db227d12333decc02d41479e5c6922862ba9219d56b099422e7eaf93c972cbad",
+      "requiredBlockId": "bec5bda557a61cd9b2c89cd617fac74f4d79830892b06ec58842c9446ce4c009",
+      "detail": "block db227d12 (mapping CEDS::CASE) requires bec5bda5 (standard CASE) which is absent from the manifest"
+    },
+    {
+      "kind": "missing",
+      "blockId": "db227d12333decc02d41479e5c6922862ba9219d56b099422e7eaf93c972cbad",
+      "requiredBlockId": "7c5d9ace970a7520d95794199ca01ded60277350f80b15013eec265b3dd3f2ab",
+      "detail": "block db227d12 (mapping CEDS::CASE) requires 7c5d9ace (reference CEDS) which is absent from the manifest"
+    },
+    {
+      "kind": "missing",
+      "blockId": "db227d12333decc02d41479e5c6922862ba9219d56b099422e7eaf93c972cbad",
+      "requiredBlockId": "a84cd4b2917adbcbfe8814fba1f0126167a283186d522e8d87a69ead0497f93f",
+      "detail": "block db227d12 (mapping CEDS::CASE) requires a84cd4b2 (standard CEDS) which is absent from the manifest"
+    },
+    {
+      "kind": "missing",
+      "blockId": "46f1f426e1aef1fcc00f5c8c674f59c4a24bb19445914ab7e31979e50d1e740f",
+      "requiredBlockId": "09b46d83c527033cfc6decff7dbbdea8ae480a9cf299338d21fdb0ac2bd0f715",
+      "detail": "block 46f1f426 (mapping CEDS::CLR) requires 09b46d83 (standard CLR) which is absent from the manifest"
+    },
+    {
+      "kind": "missing",
+      "blockId": "46f1f426e1aef1fcc00f5c8c674f59c4a24bb19445914ab7e31979e50d1e740f",
+      "requiredBlockId": "7c5d9ace970a7520d95794199ca01ded60277350f80b15013eec265b3dd3f2ab",
+      "detail": "block 46f1f426 (mapping CEDS::CLR) requires 7c5d9ace (reference CEDS) which is absent from the manifest"
+    },
+    {
+      "kind": "missing",
+      "blockId": "46f1f426e1aef1fcc00f5c8c674f59c4a24bb19445914ab7e31979e50d1e740f",
+      "requiredBlockId": "a84cd4b2917adbcbfe8814fba1f0126167a283186d522e8d87a69ead0497f93f",
+      "detail": "block 46f1f426 (mapping CEDS::CLR) requires a84cd4b2 (standard CEDS) which is absent from the manifest"
+    },
+    {
+      "kind": "missing",
+      "blockId": "f957b88c959005651e146214dffa1fef95ea6863070531f0692c4bf6a585ab7f",
+      "requiredBlockId": "dd0424a44bef4b88da4448e084acd1a10ed4274e53f475c3c8ab46a209ad5ca5",
+      "detail": "block f957b88c (mapping CEDS::CTDL) requires dd0424a4 (standard CTDL) which is absent from the manifest"
+    },
+    {
+      "kind": "missing",
+      "blockId": "f957b88c959005651e146214dffa1fef95ea6863070531f0692c4bf6a585ab7f",
+      "requiredBlockId": "7c5d9ace970a7520d95794199ca01ded60277350f80b15013eec265b3dd3f2ab",
+      "detail": "block f957b88c (mapping CEDS::CTDL) requires 7c5d9ace (reference CEDS) which is absent from the manifest"
+    },
+    {
+      "kind": "missing",
+      "blockId": "f957b88c959005651e146214dffa1fef95ea6863070531f0692c4bf6a585ab7f",
+      "requiredBlockId": "a84cd4b2917adbcbfe8814fba1f0126167a283186d522e8d87a69ead0497f93f",
+      "detail": "block f957b88c (mapping CEDS::CTDL) requires a84cd4b2 (standard CEDS) which is absent from the manifest"
+    },
+    {
+      "kind": "missing",
+      "blockId": "d04f52ffae381b359139ec50c2ea84a7987d59c1d0c69c955ba20582a9f80b7a",
+      "requiredBlockId": "4b27112d4081e492245630cfcd0d4bd6ec9a5f9005d0fb2ccbbd6bce189f522a",
+      "detail": "block d04f52ff (mapping CEDS::EdFi) requires 4b27112d (standard EdFi) which is absent from the manifest"
+    },
+    {
+      "kind": "missing",
+      "blockId": "d04f52ffae381b359139ec50c2ea84a7987d59c1d0c69c955ba20582a9f80b7a",
+      "requiredBlockId": "7c5d9ace970a7520d95794199ca01ded60277350f80b15013eec265b3dd3f2ab",
+      "detail": "block d04f52ff (mapping CEDS::EdFi) requires 7c5d9ace (reference CEDS) which is absent from the manifest"
+    },
+    {
+      "kind": "missing",
+      "blockId": "d04f52ffae381b359139ec50c2ea84a7987d59c1d0c69c955ba20582a9f80b7a",
+      "requiredBlockId": "a84cd4b2917adbcbfe8814fba1f0126167a283186d522e8d87a69ead0497f93f",
+      "detail": "block d04f52ff (mapping CEDS::EdFi) requires a84cd4b2 (standard CEDS) which is absent from the manifest"
+    },
+    {
+      "kind": "missing",
+      "blockId": "483517ce61bae2f6f457db9a43e012e1c64946eef6098e26302b82ddb2d312ce",
+      "requiredBlockId": "8c7fd0d9d5e75ae9ff07f67d1c8c1fec736f353a1b4fa66f974d23011b430138",
+      "detail": "block 483517ce (mapping CEDS::EduAPI) requires 8c7fd0d9 (standard eduAPI) which is absent from the manifest"
+    },
+    {
+      "kind": "missing",
+      "blockId": "483517ce61bae2f6f457db9a43e012e1c64946eef6098e26302b82ddb2d312ce",
+      "requiredBlockId": "7c5d9ace970a7520d95794199ca01ded60277350f80b15013eec265b3dd3f2ab",
+      "detail": "block 483517ce (mapping CEDS::EduAPI) requires 7c5d9ace (reference CEDS) which is absent from the manifest"
+    },
+    {
+      "kind": "missing",
+      "blockId": "483517ce61bae2f6f457db9a43e012e1c64946eef6098e26302b82ddb2d312ce",
+      "requiredBlockId": "a84cd4b2917adbcbfe8814fba1f0126167a283186d522e8d87a69ead0497f93f",
+      "detail": "block 483517ce (mapping CEDS::EduAPI) requires a84cd4b2 (standard CEDS) which is absent from the manifest"
+    },
+    {
+      "kind": "missing",
+      "blockId": "483517ce61bae2f6f457db9a43e012e1c64946eef6098e26302b82ddb2d312ce",
+      "requiredBlockId": "6d5d3272e6eab0a0627fd20f12d3038451d1acd45ebcf6e00632727201ff4f1d",
+      "detail": "block 483517ce (mapping CEDS::EduAPI) requires 6d5d3272 (mapping eduAPI) which is absent from the manifest"
+    },
+    {
+      "kind": "missing",
+      "blockId": "2fd51b2cc496c1454ac4876f35ef254e2d34e79f441f1a5b81a3fb786d71789a",
+      "requiredBlockId": "1094d5341e240728bae102dc5306deb9ee107524c91e2df70cf477277037caeb",
+      "detail": "block 2fd51b2c (mapping CEDS::JEDx) requires 1094d534 (standard JEDx) which is absent from the manifest"
+    },
+    {
+      "kind": "missing",
+      "blockId": "2fd51b2cc496c1454ac4876f35ef254e2d34e79f441f1a5b81a3fb786d71789a",
+      "requiredBlockId": "7c5d9ace970a7520d95794199ca01ded60277350f80b15013eec265b3dd3f2ab",
+      "detail": "block 2fd51b2c (mapping CEDS::JEDx) requires 7c5d9ace (reference CEDS) which is absent from the manifest"
+    },
+    {
+      "kind": "missing",
+      "blockId": "2fd51b2cc496c1454ac4876f35ef254e2d34e79f441f1a5b81a3fb786d71789a",
+      "requiredBlockId": "a84cd4b2917adbcbfe8814fba1f0126167a283186d522e8d87a69ead0497f93f",
+      "detail": "block 2fd51b2c (mapping CEDS::JEDx) requires a84cd4b2 (standard CEDS) which is absent from the manifest"
+    },
+    {
+      "kind": "missing",
+      "blockId": "cc1ac0f83fe4259f623b84faa20e724a73591e741ca008185a477f02a619e14d",
+      "requiredBlockId": "ae72442ce6be1134d81f6f249b2b5a00d46b73bcc139211016dbbe45935a7c70",
+      "detail": "block cc1ac0f8 (mapping CEDS::LIF) requires ae72442c (standard LIF) which is absent from the manifest"
+    },
+    {
+      "kind": "missing",
+      "blockId": "cc1ac0f83fe4259f623b84faa20e724a73591e741ca008185a477f02a619e14d",
+      "requiredBlockId": "7c5d9ace970a7520d95794199ca01ded60277350f80b15013eec265b3dd3f2ab",
+      "detail": "block cc1ac0f8 (mapping CEDS::LIF) requires 7c5d9ace (reference CEDS) which is absent from the manifest"
+    },
+    {
+      "kind": "missing",
+      "blockId": "cc1ac0f83fe4259f623b84faa20e724a73591e741ca008185a477f02a619e14d",
+      "requiredBlockId": "a84cd4b2917adbcbfe8814fba1f0126167a283186d522e8d87a69ead0497f93f",
+      "detail": "block cc1ac0f8 (mapping CEDS::LIF) requires a84cd4b2 (standard CEDS) which is absent from the manifest"
+    },
+    {
+      "kind": "missing",
+      "blockId": "cc1ac0f83fe4259f623b84faa20e724a73591e741ca008185a477f02a619e14d",
+      "requiredBlockId": "adc6f313184a19ab49cca055f38a5419b6785683fbaebb123228ca547c838807",
+      "detail": "block cc1ac0f8 (mapping CEDS::LIF) requires adc6f313 (mapping LIF) which is absent from the manifest"
+    },
+    {
+      "kind": "missing",
+      "blockId": "91057b28afbf3ab2ff8cb268d65c4b10d514023e2c10952a671ce240c521c6f8",
+      "requiredBlockId": "74b74809cb0de2e71f2d5380573f8df3746a36ee2605fabc58500c121bc60485",
+      "detail": "block 91057b28 (mapping CEDS::MedBiquitous) requires 74b74809 (standard MedBiquitous) which is absent from the manifest"
+    },
+    {
+      "kind": "missing",
+      "blockId": "91057b28afbf3ab2ff8cb268d65c4b10d514023e2c10952a671ce240c521c6f8",
+      "requiredBlockId": "7c5d9ace970a7520d95794199ca01ded60277350f80b15013eec265b3dd3f2ab",
+      "detail": "block 91057b28 (mapping CEDS::MedBiquitous) requires 7c5d9ace (reference CEDS) which is absent from the manifest"
+    },
+    {
+      "kind": "missing",
+      "blockId": "91057b28afbf3ab2ff8cb268d65c4b10d514023e2c10952a671ce240c521c6f8",
+      "requiredBlockId": "a84cd4b2917adbcbfe8814fba1f0126167a283186d522e8d87a69ead0497f93f",
+      "detail": "block 91057b28 (mapping CEDS::MedBiquitous) requires a84cd4b2 (standard CEDS) which is absent from the manifest"
+    },
+    {
+      "kind": "missing",
+      "blockId": "73359113bd9782f8e32aae164c0e03591702c7247c005581d32604b7809217e5",
+      "requiredBlockId": "297616065a4202f3655817b90d8309b4677ac2c039d629a6b8d41056472dc694",
+      "detail": "block 73359113 (mapping CEDS::OpenBadges) requires 29761606 (standard OpenBadges) which is absent from the manifest"
+    },
+    {
+      "kind": "missing",
+      "blockId": "73359113bd9782f8e32aae164c0e03591702c7247c005581d32604b7809217e5",
+      "requiredBlockId": "7c5d9ace970a7520d95794199ca01ded60277350f80b15013eec265b3dd3f2ab",
+      "detail": "block 73359113 (mapping CEDS::OpenBadges) requires 7c5d9ace (reference CEDS) which is absent from the manifest"
+    },
+    {
+      "kind": "missing",
+      "blockId": "73359113bd9782f8e32aae164c0e03591702c7247c005581d32604b7809217e5",
+      "requiredBlockId": "a84cd4b2917adbcbfe8814fba1f0126167a283186d522e8d87a69ead0497f93f",
+      "detail": "block 73359113 (mapping CEDS::OpenBadges) requires a84cd4b2 (standard CEDS) which is absent from the manifest"
+    },
+    {
+      "kind": "missing",
+      "blockId": "0524e91a41e860ea5d9bf1475fd8ea292a273a03ee14cf70204e060461dcad17",
+      "requiredBlockId": "e029ea4964f77b88778299e978eccb228b23e03ef6cca06e76da125f718c80cf",
+      "detail": "block 0524e91a (mapping CEDS::PESC) requires e029ea49 (standard PESC) which is absent from the manifest"
+    },
+    {
+      "kind": "missing",
+      "blockId": "0524e91a41e860ea5d9bf1475fd8ea292a273a03ee14cf70204e060461dcad17",
+      "requiredBlockId": "7c5d9ace970a7520d95794199ca01ded60277350f80b15013eec265b3dd3f2ab",
+      "detail": "block 0524e91a (mapping CEDS::PESC) requires 7c5d9ace (reference CEDS) which is absent from the manifest"
+    },
+    {
+      "kind": "missing",
+      "blockId": "0524e91a41e860ea5d9bf1475fd8ea292a273a03ee14cf70204e060461dcad17",
+      "requiredBlockId": "a84cd4b2917adbcbfe8814fba1f0126167a283186d522e8d87a69ead0497f93f",
+      "detail": "block 0524e91a (mapping CEDS::PESC) requires a84cd4b2 (standard CEDS) which is absent from the manifest"
+    },
+    {
+      "kind": "missing",
+      "blockId": "ba1dd372cb7259c8ce1b2866a1a96e971176d218edac0703c4fb9045b8f3fa4f",
+      "requiredBlockId": "e08a874dfe7a51e26be028985450101563c5c9b13b0d40d533a726ad70d6ac0a",
+      "detail": "block ba1dd372 (mapping CEDS::SEDM) requires e08a874d (standard SEDM) which is absent from the manifest"
+    },
+    {
+      "kind": "missing",
+      "blockId": "ba1dd372cb7259c8ce1b2866a1a96e971176d218edac0703c4fb9045b8f3fa4f",
+      "requiredBlockId": "7c5d9ace970a7520d95794199ca01ded60277350f80b15013eec265b3dd3f2ab",
+      "detail": "block ba1dd372 (mapping CEDS::SEDM) requires 7c5d9ace (reference CEDS) which is absent from the manifest"
+    },
+    {
+      "kind": "missing",
+      "blockId": "ba1dd372cb7259c8ce1b2866a1a96e971176d218edac0703c4fb9045b8f3fa4f",
+      "requiredBlockId": "a84cd4b2917adbcbfe8814fba1f0126167a283186d522e8d87a69ead0497f93f",
+      "detail": "block ba1dd372 (mapping CEDS::SEDM) requires a84cd4b2 (standard CEDS) which is absent from the manifest"
+    },
+    {
+      "kind": "missing",
+      "blockId": "ba1dd372cb7259c8ce1b2866a1a96e971176d218edac0703c4fb9045b8f3fa4f",
+      "requiredBlockId": "9e5c49a07d348d0fd97f9d74a22d07b215ff5369d0c023cd9a8478cef7f88cb7",
+      "detail": "block ba1dd372 (mapping CEDS::SEDM) requires 9e5c49a0 (mapping SEDM) which is absent from the manifest"
+    },
+    {
+      "kind": "missing",
+      "blockId": "e1dd9d8fa87624d630d45a8be32515fa5eb9a8854c7355f5a370c2285e19c583",
+      "requiredBlockId": "053e7e14ce4f4265f984273ade930d86831d20463f4074a0d6a17fdb324a9b8d",
+      "detail": "block e1dd9d8f (mapping CEDS::SIF) requires 053e7e14 (standard SIF) which is absent from the manifest"
+    },
+    {
+      "kind": "missing",
+      "blockId": "e1dd9d8fa87624d630d45a8be32515fa5eb9a8854c7355f5a370c2285e19c583",
+      "requiredBlockId": "7c5d9ace970a7520d95794199ca01ded60277350f80b15013eec265b3dd3f2ab",
+      "detail": "block e1dd9d8f (mapping CEDS::SIF) requires 7c5d9ace (reference CEDS) which is absent from the manifest"
+    },
+    {
+      "kind": "missing",
+      "blockId": "e1dd9d8fa87624d630d45a8be32515fa5eb9a8854c7355f5a370c2285e19c583",
+      "requiredBlockId": "a84cd4b2917adbcbfe8814fba1f0126167a283186d522e8d87a69ead0497f93f",
+      "detail": "block e1dd9d8f (mapping CEDS::SIF) requires a84cd4b2 (standard CEDS) which is absent from the manifest"
+    },
+    {
+      "kind": "missing",
+      "blockId": "30879134600c17180166efa2b4fad624f053aae3bbb27b698788c52b6cb7bd56",
+      "requiredBlockId": "19e565937f61bae15640b53daa5110e5efa5ed4f6ce184e3672decb0cefed802",
+      "detail": "block 30879134 (mapping CIP::SOC) requires 19e56593 (standard SOC) which is absent from the manifest"
+    },
+    {
+      "kind": "missing",
+      "blockId": "30879134600c17180166efa2b4fad624f053aae3bbb27b698788c52b6cb7bd56",
+      "requiredBlockId": "b1a247064b1e88cd34b1b8281473fb968bfa229d8ebd5b1d1036289a596a4aaa",
+      "detail": "block 30879134 (mapping CIP::SOC) requires b1a24706 (standard CIP) which is absent from the manifest"
+    }
+  ]
+}
