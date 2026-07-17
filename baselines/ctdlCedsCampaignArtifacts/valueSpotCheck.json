@@ -1,0 +1,303 @@
+{
+ "tier": "value",
+ "totalPicks": 33,
+ "sample": [
+  {
+   "source": "assessMethod:Artifact",
+   "sourceName": "Artifact",
+   "targetProperty": "P001738",
+   "targetValueName": "Artifact",
+   "targetNotation": "Artifact",
+   "confidence": 0.885255,
+   "mappingTool": "edf-inferred"
+  },
+  {
+   "source": "assessMethod:Exam",
+   "sourceName": "Exam",
+   "targetProperty": "P001738",
+   "targetValueName": "Exam",
+   "targetNotation": "Exam",
+   "confidence": 0.885255,
+   "mappingTool": "edf-inferred"
+  },
+  {
+   "source": "assessMethod:Performance",
+   "sourceName": "Performance",
+   "targetProperty": "P001738",
+   "targetValueName": "Performance",
+   "targetNotation": "Performance",
+   "confidence": 0.885255,
+   "mappingTool": "edf-inferred"
+  },
+  {
+   "source": "credentialStat:Active",
+   "sourceName": "Active",
+   "targetProperty": "P001740",
+   "targetValueName": "Active",
+   "targetNotation": "Active",
+   "confidence": 0.828163,
+   "mappingTool": "edf-inferred"
+  },
+  {
+   "source": "credentialStat:Deprecated",
+   "sourceName": "Deprecated",
+   "targetProperty": "P001740",
+   "targetValueName": "Deprecated",
+   "targetNotation": "Deprecated",
+   "confidence": 0.828163,
+   "mappingTool": "edf-inferred"
+  },
+  {
+   "source": "credentialStat:Probationary",
+   "sourceName": "Probationary",
+   "targetProperty": "P001740",
+   "targetValueName": "Probationary",
+   "targetNotation": "Probationary",
+   "confidence": 0.828163,
+   "mappingTool": "edf-inferred"
+  },
+  {
+   "source": "creditUnit:CarnegieUnit",
+   "sourceName": "Carnegie Unit",
+   "targetProperty": "P000057",
+   "targetValueName": "Carnegie Units",
+   "targetNotation": "CarnegieUnits",
+   "confidence": 0.635222,
+   "mappingTool": "edf-inferred"
+  },
+  {
+   "source": "creditUnit:ClockHour",
+   "sourceName": "Clock Hour",
+   "targetProperty": "P000057",
+   "targetValueName": "Clock Hours",
+   "targetNotation": "ClockHours",
+   "confidence": 0.608891,
+   "mappingTool": "edf-inferred"
+  },
+  {
+   "source": "creditUnit:ContactHour",
+   "sourceName": "Contact Hour",
+   "targetProperty": "P000057",
+   "targetValueName": "Clock Hours",
+   "targetNotation": "ClockHours",
+   "confidence": 0.720297,
+   "mappingTool": "edf-inferred"
+  },
+  {
+   "source": "creditUnit:ContinuingEducationUnit",
+   "sourceName": "Continuing Education Unit",
+   "targetProperty": "P000057",
+   "targetValueName": "Continuing Education Units",
+   "targetNotation": "ContinuingEducationUnits",
+   "confidence": 0.635674,
+   "mappingTool": "edf-inferred"
+  },
+  {
+   "source": "creditUnit:QuarterHour",
+   "sourceName": "Quarter Hour",
+   "targetProperty": "P000057",
+   "targetValueName": "Quarter",
+   "targetNotation": "Quarter",
+   "confidence": 0.757021,
+   "mappingTool": "edf-inferred"
+  },
+  {
+   "source": "creditUnit:SemesterHour",
+   "sourceName": "Semester Hour",
+   "targetProperty": "P000057",
+   "targetValueName": "Semester",
+   "targetNotation": "Semester",
+   "confidence": 0.764173,
+   "mappingTool": "edf-inferred"
+  },
+  {
+   "source": "orgType:AccreditationBody",
+   "sourceName": "Accreditation Body",
+   "targetProperty": "P001755",
+   "targetValueName": "Quality Assurance Body",
+   "targetNotation": "QualityAssurance",
+   "confidence": 0.72966,
+   "mappingTool": "edf-inferred"
+  },
+  {
+   "source": "orgType:AssessmentBody",
+   "sourceName": "Assessment Body",
+   "targetProperty": "P001755",
+   "targetValueName": "Assessment Body",
+   "targetNotation": "AssessmentBody",
+   "confidence": 0.834407,
+   "mappingTool": "edf-inferred"
+  },
+  {
+   "source": "orgType:BusinessAssociation",
+   "sourceName": "Business or Industry Association",
+   "targetProperty": "P001755",
+   "targetValueName": "Business or Industry Association",
+   "targetNotation": "BusinessAssociation",
+   "confidence": 0.834407,
+   "mappingTool": "edf-inferred"
+  },
+  {
+   "source": "orgType:Business",
+   "sourceName": "Business",
+   "targetProperty": "P001755",
+   "targetValueName": "Business",
+   "targetNotation": "Business",
+   "confidence": 0.834407,
+   "mappingTool": "edf-inferred"
+  },
+  {
+   "source": "orgType:CertificationBody",
+   "sourceName": "Certification Body",
+   "targetProperty": "P001755",
+   "targetValueName": "Certification Body",
+   "targetNotation": "CertificationBody",
+   "confidence": 0.834407,
+   "mappingTool": "edf-inferred"
+  },
+  {
+   "source": "orgType:FourYear",
+   "sourceName": "Four-Year College",
+   "targetProperty": "P001755",
+   "targetValueName": "Four-Year College",
+   "targetNotation": "FourYear",
+   "confidence": 0.834407,
+   "mappingTool": "edf-inferred"
+  },
+  {
+   "source": "orgType:Government",
+   "sourceName": "Government Agency",
+   "targetProperty": "P001755",
+   "targetValueName": "Government Agency",
+   "targetNotation": "Government",
+   "confidence": 0.834407,
+   "mappingTool": "edf-inferred"
+  },
+  {
+   "source": "orgType:HighSchool",
+   "sourceName": "High School",
+   "targetProperty": "P001755",
+   "targetValueName": "High School",
+   "targetNotation": "HighSchool",
+   "confidence": 0.834407,
+   "mappingTool": "edf-inferred"
+  },
+  {
+   "source": "orgType:LaborUnion",
+   "sourceName": "Labor Union",
+   "targetProperty": "P001755",
+   "targetValueName": "Labor Union",
+   "targetNotation": "LaborUnion",
+   "confidence": 0.834407,
+   "mappingTool": "edf-inferred"
+  },
+  {
+   "source": "orgType:Magnet",
+   "sourceName": "Magnet/Competitive Admissions School",
+   "targetProperty": "P001755",
+   "targetValueName": "Magnet/Competitive Admissions School",
+   "targetNotation": "Magnet",
+   "confidence": 0.834407,
+   "mappingTool": "edf-inferred"
+  },
+  {
+   "source": "orgType:Military",
+   "sourceName": "Military",
+   "targetProperty": "P001755",
+   "targetValueName": "Military",
+   "targetNotation": "Military",
+   "confidence": 0.834407,
+   "mappingTool": "edf-inferred"
+  },
+  {
+   "source": "orgType:NonTraditional",
+   "sourceName": "Alternative/Non-Traditional School",
+   "targetProperty": "P001755",
+   "targetValueName": "Alternative/Non-Traditional School",
+   "targetNotation": "NonTraditional",
+   "confidence": 0.834407,
+   "mappingTool": "edf-inferred"
+  },
+  {
+   "source": "orgType:Postsecondary",
+   "sourceName": "Postsecondary Educational Institution",
+   "targetProperty": "P001755",
+   "targetValueName": "Postsecondary Educational Institution",
+   "targetNotation": "Postsecondary",
+   "confidence": 0.834407,
+   "mappingTool": "edf-inferred"
+  },
+  {
+   "source": "orgType:PrimarilyOnline",
+   "sourceName": "Primarily Online",
+   "targetProperty": "P001755",
+   "targetValueName": "Primarily Online",
+   "targetNotation": "PrimarilyOnline",
+   "confidence": 0.834407,
+   "mappingTool": "edf-inferred"
+  },
+  {
+   "source": "orgType:ProfessionalAssociation",
+   "sourceName": "Professional Association",
+   "targetProperty": "P001755",
+   "targetValueName": "Professional Association",
+   "targetNotation": "ProfessionalAssociation",
+   "confidence": 0.834407,
+   "mappingTool": "edf-inferred"
+  },
+  {
+   "source": "orgType:QualityAssurance",
+   "sourceName": "Quality Assurance Body",
+   "targetProperty": "P001755",
+   "targetValueName": "Quality Assurance Body",
+   "targetNotation": "QualityAssurance",
+   "confidence": 0.834407,
+   "mappingTool": "edf-inferred"
+  },
+  {
+   "source": "orgType:SecondarySchool",
+   "sourceName": "Secondary School",
+   "targetProperty": "P001755",
+   "targetValueName": "Secondary School",
+   "targetNotation": "SecondarySchool",
+   "confidence": 0.834407,
+   "mappingTool": "edf-inferred"
+  },
+  {
+   "source": "orgType:Technical",
+   "sourceName": "Career and Technical School",
+   "targetProperty": "P001755",
+   "targetValueName": "Career and Technical School",
+   "targetNotation": "Technical",
+   "confidence": 0.834407,
+   "mappingTool": "edf-inferred"
+  },
+  {
+   "source": "orgType:TrainingProvider",
+   "sourceName": "Education and Training Provider",
+   "targetProperty": "P001755",
+   "targetValueName": "Education and Training Provider",
+   "targetNotation": "TrainingProvider",
+   "confidence": 0.834407,
+   "mappingTool": "edf-inferred"
+  },
+  {
+   "source": "orgType:TwoYear",
+   "sourceName": "Two-Year College",
+   "targetProperty": "P001755",
+   "targetValueName": "Two-Year College",
+   "targetNotation": "TwoYear",
+   "confidence": 0.834407,
+   "mappingTool": "edf-inferred"
+  },
+  {
+   "source": "orgType:Vendor",
+   "sourceName": "Vendor",
+   "targetProperty": "P001755",
+   "targetValueName": "Vendor",
+   "targetNotation": "Vendor",
+   "confidence": 0.834407,
+   "mappingTool": "edf-inferred"
+  }
+ ]
+}

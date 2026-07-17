@@ -1,0 +1,189 @@
+{
+ "tier": "class",
+ "totalPicks": 26,
+ "materializationNote": "ALL 26 picks orphaned at edge materialization: the CEDS reference block carries no class-tier HubReferences; decisions frozen in block 260fa6d8, zero edges fabricated",
+ "sample": [
+  {
+   "source": "ceterms:AlignmentMap",
+   "sourceName": "Alignment Map",
+   "targetKey": "C200064",
+   "targetName": "Competency Definition Association",
+   "cosine": 0.491418
+  },
+  {
+   "source": "ceterms:AlignmentObject",
+   "sourceName": "Alignment Object",
+   "targetKey": "C200067",
+   "targetName": "Competency Framework",
+   "cosine": 0.431538
+  },
+  {
+   "source": "ceterms:Assessment",
+   "sourceName": "Assessment",
+   "targetKey": "C200010",
+   "targetName": "Assessment",
+   "cosine": 0.641429
+  },
+  {
+   "source": "ceterms:AssociateOfAppliedArtsDegree",
+   "sourceName": "Associate of Applied Arts Degree",
+   "targetKey": "C200281",
+   "targetName": "Person Degree Or Certificate",
+   "cosine": 0.550813
+  },
+  {
+   "source": "ceterms:Badge",
+   "sourceName": "Badge",
+   "targetKey": "C200087",
+   "targetName": "Credential Definition",
+   "cosine": 0.637979
+  },
+  {
+   "source": "ceterms:Course",
+   "sourceName": "Course",
+   "targetKey": "C200072",
+   "targetName": "Course",
+   "cosine": 0.572882
+  },
+  {
+   "source": "ceterms:Credential",
+   "sourceName": "Credential",
+   "targetKey": "C200087",
+   "targetName": "Credential Definition",
+   "cosine": 0.591947
+  },
+  {
+   "source": "ceterms:CredentialAlignmentObject",
+   "sourceName": "Credential Alignment Object",
+   "targetKey": "C200064",
+   "targetName": "Competency Definition Association",
+   "cosine": 0.765603
+  },
+  {
+   "source": "ceterms:CredentialAssertion",
+   "sourceName": "Credential Assertion",
+   "targetKey": "C200280",
+   "targetName": "Person Credential",
+   "cosine": 0.929954
+  },
+  {
+   "source": "ceterms:CredentialComponent",
+   "sourceName": "Credential Component",
+   "targetKey": "C200087",
+   "targetName": "Credential Definition",
+   "cosine": 0.583232
+  },
+  {
+   "source": "ceterms:CredentialFramework",
+   "sourceName": "Credential Framework",
+   "targetKey": "C200067",
+   "targetName": "Competency Framework",
+   "cosine": 0.663375
+  },
+  {
+   "source": "ceterms:CredentialOrganization",
+   "sourceName": "Credential Organization",
+   "targetKey": "C200083",
+   "targetName": "Credential Definition Agent",
+   "cosine": 0.739411
+  },
+  {
+   "source": "ceterms:CredentialPerson",
+   "sourceName": "CredentialPerson",
+   "targetKey": "C200088",
+   "targetName": "Credential Issuer",
+   "cosine": 0.613352
+  },
+  {
+   "source": "ceterms:CredentialType",
+   "sourceName": "Credential Type",
+   "targetKey": "C200087",
+   "targetName": "Credential Definition",
+   "cosine": 0.632488
+  },
+  {
+   "source": "ceterms:Degree",
+   "sourceName": "Degree",
+   "targetKey": "C200335",
+   "targetName": "Postsecondary Student Academic Award",
+   "cosine": 0.892174
+  },
+  {
+   "source": "ceterms:Diploma",
+   "sourceName": "Diploma",
+   "targetKey": "C200280",
+   "targetName": "Person Credential",
+   "cosine": 0.727344
+  },
+  {
+   "source": "ceterms:Job",
+   "sourceName": "Job",
+   "targetKey": "C200175",
+   "targetName": "Job",
+   "cosine": 0.627357
+  },
+  {
+   "source": "ceterms:JurisdictionProfile",
+   "sourceName": "Jurisdiction Profile",
+   "targetKey": "C200255",
+   "targetName": "Organization Jurisdiction",
+   "cosine": 0.458052
+  },
+  {
+   "source": "ceterms:LearningProgram",
+   "sourceName": "Learning Program",
+   "targetKey": "C200315",
+   "targetName": "Program",
+   "cosine": 0.71221
+  },
+  {
+   "source": "ceterms:LearningResource",
+   "sourceName": "Learning Resource",
+   "targetKey": "C200228",
+   "targetName": "Learning Resource",
+   "cosine": 0.876123
+  },
+  {
+   "source": "ceterms:Organization",
+   "sourceName": "Organization",
+   "targetKey": "C200239",
+   "targetName": "Organization",
+   "cosine": 0.6517
+  },
+  {
+   "source": "ceterms:PayProfile",
+   "sourceName": "Pay Profile",
+   "targetKey": "C200362",
+   "targetName": "Staff Compensation",
+   "cosine": 0.57197
+  },
+  {
+   "source": "ceterms:PostalAddress",
+   "sourceName": "Postal Address",
+   "targetKey": "C200238",
+   "targetName": "Location Address",
+   "cosine": 0.583591
+  },
+  {
+   "source": "ceterms:PriorLearningPolicy",
+   "sourceName": "Prior Learning Policy",
+   "targetKey": "C200261",
+   "targetName": "Organization Policy",
+   "cosine": 0.537127
+  },
+  {
+   "source": "ceterms:ScheduledOffering",
+   "sourceName": "Scheduled Offering",
+   "targetKey": "C200074",
+   "targetName": "Course Section",
+   "cosine": 0.660928
+  },
+  {
+   "source": "ceterms:SupportService",
+   "sourceName": "Support Service",
+   "targetKey": "C200358",
+   "targetName": "Service Provided",
+   "cosine": 0.542844
+  }
+ ]
+}

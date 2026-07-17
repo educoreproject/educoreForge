@@ -371,7 +371,7 @@ const serializeDecisions = ({
 // suppresses property inference; inferred property blocks in the manifest contribute nothing because
 // they emit CLOSE_MATCH only, and a combined authored block's value-tier EXACT edges have value-node
 // fromRefs that cannot collide with DmeProperty stableIds). Deterministic: sorted outputs only.
-const computeAuthoredGapSet = ({ sourceRecords, propertyMappingRows, nodeLoader }) => {
+const computeAuthoredGapSet = ({ sourceRecords, propertyMappingRows, nodeLoader, sourceRole = 'DmeProperty' }) => {
 	const authoredMappedFromIds = new Set();
 	const consultedBlockIds = [];
 	(propertyMappingRows || []).forEach((oneRow) => {
@@ -384,7 +384,7 @@ const computeAuthoredGapSet = ({ sourceRecords, propertyMappingRows, nodeLoader 
 		});
 	});
 	const allPropertyIds = sourceRecords
-		.filter((oneRecord) => oneRecord.role === 'DmeProperty')
+		.filter((oneRecord) => oneRecord.role === sourceRole)
 		.map((oneRecord) => oneRecord.stableId);
 	const gapSetSorted = allPropertyIds
 		.filter((oneId) => !authoredMappedFromIds.has(oneId))		.sort();
@@ -774,17 +774,17 @@ const handleAccuracyValue = (resources, callback) => {
 // =====================================================================
 // ACTION: -emit (scoped frozen-decision block + closeMatch edge block + candidate manifest)
 // =====================================================================
-const selectScopeSources = ({ sourceRecords, scope, sampleSize }) => {
+const selectScopeSources = ({ sourceRecords, scope, sampleSize, sourceRole = 'DmeProperty' }) => {
 	// the SIF person/identifier anchor set: identifier-reference properties (the Appendix-B #1 dependency).
 	const isAnchor = (r) =>
-		r.role === 'DmeProperty' &&
+		r.role === sourceRole &&
 		/RefId$/i.test(r.name) &&
 		/(student|staff|person|contact|teacher|employee)/i.test(r.name);
 	const anchors = sourceRecords.filter(isAnchor);
 	const anchorIds = new Set(anchors.map((r) => r.stableId));
-	// a deterministic representative sample of OTHER DmeProperty sources (sorted by stableId).
+	// a deterministic representative sample of OTHER same-role sources (sorted by stableId).
 	const others = sourceRecords
-		.filter((r) => r.role === 'DmeProperty' && !anchorIds.has(r.stableId))
+		.filter((r) => r.role === sourceRole && !anchorIds.has(r.stableId))
 		.sort((a, b) => (a.stableId < b.stableId ? -1 : 1))
 		.slice(0, sampleSize);
 	const selected = anchors.concat(others);
@@ -804,6 +804,19 @@ const handleEmit = (resources, callback) => {
 	const sampleSize = intParam('sampleSize', 50);
 	const limit = intParam('limit', 0);
 	const label = strParam('label', 'phase5-inferred-candidate');
+	// ADDITIVE role selector (ctdlCedsMapping_071726; FADED_FORGE-authorized 2026-07-17):
+	// --role chooses the source/candidate record role. The default DmeProperty is the exact
+	// pre-existing behavior (every rendered string identical without the flag). DmeClass adds
+	// the class tier (tierScope 'class'). Any other value refuses loudly, naming the set.
+	const sourceRole = strParam('role', 'DmeProperty');
+	const tierScopeByRole = { DmeProperty: 'property', DmeClass: 'class' };
+	const emitTierScope = tierScopeByRole[sourceRole];
+	if (!emitTierScope) {
+		callback(
+			`[edfInferred -emit] unsupported --role '${sourceRole}' — supported: ${Object.keys(tierScopeByRole).join(', ')}`,
+		);
+		return;
+	}
 
 	// incremental decision freezing (CRIMSON condition 8): each completed decision appends one slim
 	// JSON line to the journal as it lands, so a mid-run failure loses minutes, not hours —
@@ -812,7 +825,7 @@ const handleEmit = (resources, callback) => {
 	// the block is byte-identical whether the run was interrupted or not).
 	const decisionJournal = strParam(
 		'decisionJournal',
-		path.join(DATASTORES, 'emitJournals', `${sourceStandard}-property-pid${process.pid}.jsonl`),
+		path.join(DATASTORES, 'emitJournals', `${sourceStandard}-${emitTierScope}-pid${process.pid}.jsonl`),
 	);
 	const resumeJournal = strParam('resumeJournal', '');
 
@@ -840,27 +853,28 @@ const handleEmit = (resources, callback) => {
 			sourceRecords: args.sourceRecords,
 			propertyMappingRows: args.propertyMappingRows,
 			nodeLoader,
+			sourceRole,
 		});
 		const gapIds = new Set(gapFill.gapSetSorted);
 		const gapScopedSourceRecords = args.sourceRecords.filter(
-			(oneRecord) => oneRecord.role !== 'DmeProperty' || gapIds.has(oneRecord.stableId),
+			(oneRecord) => oneRecord.role !== sourceRole || gapIds.has(oneRecord.stableId),
 		);
 		xLog.status(
-			`[edfInferred -emit] GAP-FILL (A0.1, authored wins): ${gapFill.sourcePropertyCount} ${sourceStandard} DmeProperty, ` +
+			`[edfInferred -emit] GAP-FILL (A0.1, authored wins): ${gapFill.sourcePropertyCount} ${sourceStandard} ${sourceRole}, ` +
 				`${gapFill.authoredMappedCount} authored-mapped (PROPERTY-tier EXACT_MATCH), gap=${gapFill.gapCount}; ` +
 				`consulted mapping block(s): ${gapFill.consultedBlockIds.map((oneId) => oneId.slice(0, 12)).join(', ') || '(none in gating manifest)'}`,
 		);
 		next('', { ...args, gapFill, gapScopedSourceRecords });
 	});
 	taskList.push((args, next) => {
-		const sel = selectScopeSources({ sourceRecords: args.gapScopedSourceRecords, scope, sampleSize });
+		const sel = selectScopeSources({ sourceRecords: args.gapScopedSourceRecords, scope, sampleSize, sourceRole });
 		let selected = sel.selected;
 		if (limit > 0) {
 			selected = selected.slice(0, limit);
 		}
-		const candidateRecords = args.cedsRecords.filter((r) => r.role === 'DmeProperty');
+		const candidateRecords = args.cedsRecords.filter((r) => r.role === sourceRole);
 		xLog.status(
-			`[edfInferred -emit] scope='${scope}' selected=${selected.length} (anchors=${sel.anchorCount}, sample=${sel.sampleCount}) of gap=${args.gapFill.gapCount} (${args.sourceRecords.filter((r) => r.role === 'DmeProperty').length} total ${sourceStandard} DmeProperty); candidates=${candidateRecords.length}`,
+			`[edfInferred -emit] scope='${scope}' selected=${selected.length} (anchors=${sel.anchorCount}, sample=${sel.sampleCount}) of gap=${args.gapFill.gapCount} (${args.sourceRecords.filter((r) => r.role === sourceRole).length} total ${sourceStandard} ${sourceRole}); candidates=${candidateRecords.length}`,
 		);
 		xLog.status(
 			`[edfInferred -emit] DEFERRED SCOPE (NOT run, logged per WILD_FALCON no-silent-cap): all other ${sourceStandard} roles + any un-run crosswalk-less standards — a parameterized re-run, not new code.`,
@@ -924,7 +938,7 @@ const handleEmit = (resources, callback) => {
 			fs.writeSync(journalFd, `${JSON.stringify(slim)}\n`);
 		};
 		xLog.status(`[edfInferred -emit] decision journal (incremental freeze): ${decisionJournal}`);
-		const candidatePoolByRole = { DmeProperty: args.candidateRecords };
+		const candidatePoolByRole = { [sourceRole]: args.candidateRecords };
 		xLog.status(`[edfInferred -emit] reranking ${toScore.length} sources via ${resources.llmClient.model}…`);
 		pipeline.processSources(
 			{
@@ -951,7 +965,7 @@ const handleEmit = (resources, callback) => {
 			gapFill: args.gapFill,
 			decisions: args.decisions,
 			pairStamp: emitPairBinding,
-			tierScope: 'property',
+			tierScope: emitTierScope,
 		});
 		forgeStore.saveBlock(
 			{
@@ -1035,7 +1049,7 @@ const handleEmit = (resources, callback) => {
 			pairBVersion: emitPairBinding.pairBVersion,
 			publishedVersionA: emitPairBinding.publishedVersionA,
 			publishedVersionB: emitPairBinding.publishedVersionB,
-			tierScope: 'property',
+			tierScope: emitTierScope,
 			decisionBlockHash: args.decisionBlockId,
 			method: 'definitionEmbedding-opusRerank-v1',
 		};
