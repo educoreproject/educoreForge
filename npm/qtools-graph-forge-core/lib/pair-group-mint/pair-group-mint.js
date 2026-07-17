@@ -23,13 +23,17 @@ const { pipeRunner, taskListPlus } = new require('qtools-asynchronous-pipe-plus'
 const {
 	composePairGroupText,
 	PAIR_GROUP_BLOCK_TYPE,
+	PAIR_GROUP_MEMBER_TYPES,
+	isPairGroupMemberType,
 } = require('../vocabulary/vocabulary');
 
 const moduleFunction =
 	({ moduleName } = {}) =>
 	({ unused } = {}) => {
-		// validateMemberList — every member exists, is type 'mapping', and is filed under
-		// exactly this pair@versionKey (the -validateGroup contract applied at mint time).
+		// validateMemberList — every member exists, is a pair-group member type
+		// (vocabulary.isPairGroupMemberType: mapping ∪ structuralBridge — S1.2,
+		// forgeArchitectureRefactor), and is filed under exactly this pair@versionKey
+		// (the -validateGroup contract applied at mint time).
 		const validateMemberList = (
 			{ forgeStore, members, pairSubject, versionKey },
 			callback,
@@ -46,9 +50,10 @@ const moduleFunction =
 							next(`member ${oneBlockId} does not exist`, args);
 							return;
 						}
-						if (blockMeta.type !== 'mapping') {
+						if (!isPairGroupMemberType(blockMeta.type)) {
 							next(
-								`member ${oneBlockId} is type '${blockMeta.type}', not 'mapping'`,
+								`member ${oneBlockId} is type '${blockMeta.type}', not a pair-group ` +
+									`member type [${PAIR_GROUP_MEMBER_TYPES.join(', ')}]`,
 								args,
 							);
 							return;

@@ -493,8 +493,13 @@ USAGE
 					callback(err);
 					return;
 				}
-				// version-key presence joins -validate's checks (spec §8): mapping-content
-				// members are classified pair-keyed vs legacy. Legacy (standardKey-headed)
+				// version-key presence joins -validate's checks (spec §8): version-keyed
+				// CONTENT members (mapping ∪ inferredDecision ∪ structuralBridge — the
+				// shared isRekeyableBlockType set, S1.4) are classified pair-keyed vs
+				// legacy. NOTE (A3/BR1-5): isRekeyableBlockType is a PROXY for
+				// 'version-keyed content' here — the two sets coincide today; if they ever
+				// diverge, mint a dedicated content predicate in vocabulary.
+				// Legacy (standardKey-headed)
 				// members are REPORTED, not failed — retain-all means pre-Phase-C manifests
 				// must keep validating; the store's saveBlock choke point makes a half-keyed
 				// pair block impossible, so presence-of-pair-key IS completeness.
@@ -519,7 +524,7 @@ USAGE
 										next(metaErr, args);
 										return;
 									}
-									if (!blockMeta || !vocabulary.isMappingBlockType(blockMeta.type)) {
+									if (!blockMeta || !vocabulary.isRekeyableBlockType(blockMeta.type)) {
 										next('', args);
 										return;
 									}
@@ -795,9 +800,10 @@ USAGE
 								next('', args);
 								return;
 							}
-							if (blockMeta.type !== 'mapping') {
+							if (!vocabulary.isPairGroupMemberType(blockMeta.type)) {
 								problems.push(
-									`member ${oneBlockId} is type '${blockMeta.type}', not 'mapping'`,
+									`member ${oneBlockId} is type '${blockMeta.type}', not a pair-group ` +
+										`member type [${vocabulary.PAIR_GROUP_MEMBER_TYPES.join(', ')}]`,
 								);
 							}
 							if (

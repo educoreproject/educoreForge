@@ -100,6 +100,45 @@ const isMappingBlockType = (oneType) => MAPPING_BLOCK_TYPES.indexOf(oneType) !==
 
 const PAIR_GROUP_BLOCK_TYPE = 'pairGroup';
 
+// =====================================================================
+// STRUCTURAL BRIDGE (forgeArchitectureRefactor SPECIFICATION v2 S1 — Option B,
+// TQ-ruled 2026-07-16). A NEW store type for pair-scoped, version-keyed STRUCTURAL
+// cross-standard edges (the CTDL-family locator edges are the pilot). This ruling
+// SUPERSEDES the prior "structural edges do not belong in mapping machinery" comment
+// (edfCtdlUriBridge.js:25-29): structural bridges ARE pair-scoped + version-keyed +
+// composable exactly like mapping content — via THIS type, never by overloading
+// 'mapping' (mapping-only consumers such as the connect-report rollup keep reading
+// MAPPING_BLOCK_TYPES unchanged). Legacy keyless 'bridge' blocks (the consolidated
+// relationships block, the retired family bridge) are deliberately NOT enforced —
+// they must remain loadable as historical artifacts (S1.5).
+//
+// Three predicates, one list each, N consumers (the MAPPING_BLOCK_TYPES doctrine):
+//   isVersionKeyedBlockType — the saveBlock CHOKE set (S1.1): content types that are
+//       REJECTED without a complete pairA/pairAVersion/pairB/pairBVersion header.
+//   isPairGroupMemberType   — pairGroup MEMBERSHIP (S1.2) + combine group-swap:
+//       mapping ∪ structuralBridge. inferredDecision stays excluded (audit records,
+//       not relationship content — the standing supervisor rider).
+//   isRekeyableBlockType    — edf-rekey's type gates (S1.3a, R2-5): mapping types ∪
+//       structuralBridge. pairGroup is not rekeyable (a selection artifact).
+// =====================================================================
+const STRUCTURAL_BRIDGE_BLOCK_TYPE = 'structuralBridge';
+
+const VERSION_KEYED_BLOCK_TYPES = [
+	...MAPPING_BLOCK_TYPES,
+	PAIR_GROUP_BLOCK_TYPE,
+	STRUCTURAL_BRIDGE_BLOCK_TYPE,
+];
+const isVersionKeyedBlockType = (oneType) =>
+	VERSION_KEYED_BLOCK_TYPES.indexOf(oneType) !== -1;
+
+const PAIR_GROUP_MEMBER_TYPES = ['mapping', STRUCTURAL_BRIDGE_BLOCK_TYPE];
+const isPairGroupMemberType = (oneType) =>
+	PAIR_GROUP_MEMBER_TYPES.indexOf(oneType) !== -1;
+
+const REKEYABLE_BLOCK_TYPES = [...MAPPING_BLOCK_TYPES, STRUCTURAL_BRIDGE_BLOCK_TYPE];
+const isRekeyableBlockType = (oneType) =>
+	REKEYABLE_BLOCK_TYPES.indexOf(oneType) !== -1;
+
 // canonical machine forms (supervisor-ruled 2026-07-10): pair subject 'CEDS::SIF'
 // (hub first, exact discovery standardName casing); versionKey '(aVersion,bVersion)'
 // — bare snapshot keys, no h/s prefixes (those belong to DISPLAY generation, §5.3);
@@ -515,6 +554,14 @@ const vocabulary = {
 	MAPPING_BLOCK_TYPES,
 	isMappingBlockType,
 	PAIR_GROUP_BLOCK_TYPE,
+	// structural-bridge vocabulary (forgeArchitectureRefactor S1)
+	STRUCTURAL_BRIDGE_BLOCK_TYPE,
+	VERSION_KEYED_BLOCK_TYPES,
+	isVersionKeyedBlockType,
+	PAIR_GROUP_MEMBER_TYPES,
+	isPairGroupMemberType,
+	REKEYABLE_BLOCK_TYPES,
+	isRekeyableBlockType,
 	PAIR_SUBJECT_SEPARATOR,
 	pairSubjectText,
 	versionKeyText,

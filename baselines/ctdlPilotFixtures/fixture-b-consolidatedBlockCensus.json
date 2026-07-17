@@ -1,0 +1,1979 @@
+{
+	"fixture": "b-consolidatedBlockCensus",
+	"spec": "SPECIFICATION.md v2 S5 (residue census licensing retirement); any OTHER is a pre-ruled STOP",
+	"baselineManifestKey": "d8606a1e51e198d073fe521e4279be13b7b2c65bf10d6f840b029a487ec650fc",
+	"consolidatedBlockId": "2210ae1ab86ff6e36af9244c9d91d86047c7a0b10731371b6a6ebdb38c6974c6",
+	"edgeLineCount": 19211,
+	"distinctTripleCount": 19211,
+	"classCounts": {
+		"ctdl149": 149,
+		"bridgeAuthoredDuplicate": 19062,
+		"other": 0
+	},
+	"otherTriples": [],
+	"ctdl149Triples": [
+		{
+			"type": "HAS_CLASS",
+			"fromStableId": "ctdl:root",
+			"toStableId": "schema:MonetaryAmount",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_CLASS",
+			"fromStableId": "ctdl:root",
+			"toStableId": "schema:QuantitativeValue",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:AcademicCertificate",
+			"toStableId": "qdata:relevantDataSet",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:ApprenticeshipCertificate",
+			"toStableId": "qdata:relevantDataSet",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:AssessmentComponent",
+			"toStableId": "ceasn:hasChild",
+			"fromSource": "CTDL",
+			"toSource": "CTDLASN",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:AssessmentComponent",
+			"toStableId": "ceasn:isChildOf",
+			"fromSource": "CTDL",
+			"toSource": "CTDLASN",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:AssessmentProfile",
+			"toStableId": "qdata:relevantDataSet",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:AssociateDegree",
+			"toStableId": "qdata:relevantDataSet",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:AssociateOfAppliedArtsDegree",
+			"toStableId": "qdata:relevantDataSet",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:AssociateOfAppliedScienceDegree",
+			"toStableId": "qdata:relevantDataSet",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:AssociateOfArtsDegree",
+			"toStableId": "qdata:relevantDataSet",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:AssociateOfScienceDegree",
+			"toStableId": "qdata:relevantDataSet",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:BachelorDegree",
+			"toStableId": "qdata:relevantDataSet",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:BachelorOfArtsDegree",
+			"toStableId": "qdata:relevantDataSet",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:BachelorOfScienceDegree",
+			"toStableId": "qdata:relevantDataSet",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:Badge",
+			"toStableId": "qdata:relevantDataSet",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:BasicComponent",
+			"toStableId": "ceasn:hasChild",
+			"fromSource": "CTDL",
+			"toSource": "CTDLASN",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:BasicComponent",
+			"toStableId": "ceasn:isChildOf",
+			"fromSource": "CTDL",
+			"toSource": "CTDLASN",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:BasicTechnicalCertificate",
+			"toStableId": "qdata:relevantDataSet",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:Certificate",
+			"toStableId": "qdata:relevantDataSet",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:CertificateOfCompletion",
+			"toStableId": "qdata:relevantDataSet",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:CertificateOfParticipation",
+			"toStableId": "qdata:relevantDataSet",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:Certification",
+			"toStableId": "qdata:relevantDataSet",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:CocurricularComponent",
+			"toStableId": "ceasn:hasChild",
+			"fromSource": "CTDL",
+			"toSource": "CTDLASN",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:CocurricularComponent",
+			"toStableId": "ceasn:isChildOf",
+			"fromSource": "CTDL",
+			"toSource": "CTDLASN",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:CollectionComponent",
+			"toStableId": "ceasn:hasChild",
+			"fromSource": "CTDL",
+			"toSource": "CTDLASN",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:CollectionComponent",
+			"toStableId": "ceasn:isChildOf",
+			"fromSource": "CTDL",
+			"toSource": "CTDLASN",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:CompetencyComponent",
+			"toStableId": "ceasn:hasChild",
+			"fromSource": "CTDL",
+			"toSource": "CTDLASN",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:CompetencyComponent",
+			"toStableId": "ceasn:isChildOf",
+			"fromSource": "CTDL",
+			"toSource": "CTDLASN",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:Course",
+			"toStableId": "qdata:relevantDataSet",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:CourseComponent",
+			"toStableId": "ceasn:hasChild",
+			"fromSource": "CTDL",
+			"toSource": "CTDLASN",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:CourseComponent",
+			"toStableId": "ceasn:isChildOf",
+			"fromSource": "CTDL",
+			"toSource": "CTDLASN",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:Credential",
+			"toStableId": "qdata:relevantDataSet",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:CredentialComponent",
+			"toStableId": "ceasn:hasChild",
+			"fromSource": "CTDL",
+			"toSource": "CTDLASN",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:CredentialComponent",
+			"toStableId": "ceasn:isChildOf",
+			"fromSource": "CTDL",
+			"toSource": "CTDLASN",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:CredentialOrganization",
+			"toStableId": "qdata:relevantDataSet",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:CredentialType",
+			"toStableId": "qdata:relevantDataSet",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:Degree",
+			"toStableId": "qdata:relevantDataSet",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:DigitalBadge",
+			"toStableId": "qdata:relevantDataSet",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:Diploma",
+			"toStableId": "qdata:relevantDataSet",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:DoctoralDegree",
+			"toStableId": "qdata:relevantDataSet",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:ExtracurricularComponent",
+			"toStableId": "ceasn:hasChild",
+			"fromSource": "CTDL",
+			"toSource": "CTDLASN",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:ExtracurricularComponent",
+			"toStableId": "ceasn:isChildOf",
+			"fromSource": "CTDL",
+			"toSource": "CTDLASN",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:GeneralEducationDevelopment",
+			"toStableId": "qdata:relevantDataSet",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:GeneralEducationLevel1Certificate",
+			"toStableId": "qdata:relevantDataSet",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:GeneralEducationLevel2Certificate",
+			"toStableId": "qdata:relevantDataSet",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:HigherEducationLevel1Certificate",
+			"toStableId": "qdata:relevantDataSet",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:HigherEducationLevel2Certificate",
+			"toStableId": "qdata:relevantDataSet",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:Industry",
+			"toStableId": "ceasn:comment",
+			"fromSource": "CTDL",
+			"toSource": "CTDLASN",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:Industry",
+			"toStableId": "qdata:relevantDataSet",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:Job",
+			"toStableId": "ceasn:abilityEmbodied",
+			"fromSource": "CTDL",
+			"toSource": "CTDLASN",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:Job",
+			"toStableId": "ceasn:comment",
+			"fromSource": "CTDL",
+			"toSource": "CTDLASN",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:Job",
+			"toStableId": "ceasn:knowledgeEmbodied",
+			"fromSource": "CTDL",
+			"toSource": "CTDLASN",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:Job",
+			"toStableId": "ceasn:skillEmbodied",
+			"fromSource": "CTDL",
+			"toSource": "CTDLASN",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:Job",
+			"toStableId": "qdata:relevantDataSet",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:JobComponent",
+			"toStableId": "ceasn:hasChild",
+			"fromSource": "CTDL",
+			"toSource": "CTDLASN",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:JobComponent",
+			"toStableId": "ceasn:isChildOf",
+			"fromSource": "CTDL",
+			"toSource": "CTDLASN",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:JourneymanCertificate",
+			"toStableId": "qdata:relevantDataSet",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:LearningOpportunityProfile",
+			"toStableId": "qdata:relevantDataSet",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:LearningProgram",
+			"toStableId": "qdata:relevantDataSet",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:License",
+			"toStableId": "qdata:relevantDataSet",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:MasterCertificate",
+			"toStableId": "qdata:relevantDataSet",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:MasterDegree",
+			"toStableId": "qdata:relevantDataSet",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:MasterOfArtsDegree",
+			"toStableId": "qdata:relevantDataSet",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:MasterOfScienceDegree",
+			"toStableId": "qdata:relevantDataSet",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:MicroCredential",
+			"toStableId": "qdata:relevantDataSet",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:MultiComponent",
+			"toStableId": "ceasn:hasChild",
+			"fromSource": "CTDL",
+			"toSource": "CTDLASN",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:MultiComponent",
+			"toStableId": "ceasn:isChildOf",
+			"fromSource": "CTDL",
+			"toSource": "CTDLASN",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:Occupation",
+			"toStableId": "ceasn:abilityEmbodied",
+			"fromSource": "CTDL",
+			"toSource": "CTDLASN",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:Occupation",
+			"toStableId": "ceasn:comment",
+			"fromSource": "CTDL",
+			"toSource": "CTDLASN",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:Occupation",
+			"toStableId": "ceasn:knowledgeEmbodied",
+			"fromSource": "CTDL",
+			"toSource": "CTDLASN",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:Occupation",
+			"toStableId": "ceasn:skillEmbodied",
+			"fromSource": "CTDL",
+			"toSource": "CTDLASN",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:Occupation",
+			"toStableId": "qdata:relevantDataSet",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:OpenBadge",
+			"toStableId": "qdata:relevantDataSet",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:Organization",
+			"toStableId": "qdata:relevantDataSet",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:Pathway",
+			"toStableId": "qdata:relevantDataSet",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:PayProfile",
+			"toStableId": "schema:maxValue",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:PayProfile",
+			"toStableId": "schema:minValue",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:PayProfile",
+			"toStableId": "schema:value",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:PostBaccalaureateCertificate",
+			"toStableId": "qdata:relevantDataSet",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:PostMasterCertificate",
+			"toStableId": "qdata:relevantDataSet",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:PreApprenticeshipCertificate",
+			"toStableId": "qdata:relevantDataSet",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:ProcessProfile",
+			"toStableId": "qdata:dataCollectionMethodType",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:ProfessionalCertificate",
+			"toStableId": "qdata:relevantDataSet",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:ProfessionalDoctorate",
+			"toStableId": "qdata:relevantDataSet",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:ProficiencyCertificate",
+			"toStableId": "qdata:relevantDataSet",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:QACredentialOrganization",
+			"toStableId": "qdata:relevantDataSet",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:QualityAssuranceCredential",
+			"toStableId": "qdata:relevantDataSet",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:ResearchDoctorate",
+			"toStableId": "qdata:relevantDataSet",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:SecondaryEducationCertificate",
+			"toStableId": "qdata:relevantDataSet",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:SecondarySchoolDiploma",
+			"toStableId": "qdata:relevantDataSet",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:SpecialistDegree",
+			"toStableId": "qdata:relevantDataSet",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:StructuredStatement",
+			"toStableId": "ceasn:listID",
+			"fromSource": "CTDL",
+			"toSource": "CTDLASN",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:Task",
+			"toStableId": "ceasn:abilityEmbodied",
+			"fromSource": "CTDL",
+			"toSource": "CTDLASN",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:Task",
+			"toStableId": "ceasn:comment",
+			"fromSource": "CTDL",
+			"toSource": "CTDLASN",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:Task",
+			"toStableId": "ceasn:hasChild",
+			"fromSource": "CTDL",
+			"toSource": "CTDLASN",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:Task",
+			"toStableId": "ceasn:isChildOf",
+			"fromSource": "CTDL",
+			"toSource": "CTDLASN",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:Task",
+			"toStableId": "ceasn:knowledgeEmbodied",
+			"fromSource": "CTDL",
+			"toSource": "CTDLASN",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:Task",
+			"toStableId": "ceasn:listID",
+			"fromSource": "CTDL",
+			"toSource": "CTDLASN",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:Task",
+			"toStableId": "ceasn:skillEmbodied",
+			"fromSource": "CTDL",
+			"toSource": "CTDLASN",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:TechnicalLevel1Certificate",
+			"toStableId": "qdata:relevantDataSet",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:TechnicalLevel2Certificate",
+			"toStableId": "qdata:relevantDataSet",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:TechnicalLevel3Certificate",
+			"toStableId": "qdata:relevantDataSet",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:ValueProfile",
+			"toStableId": "qdata:percentage",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:ValueProfile",
+			"toStableId": "schema:description",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:ValueProfile",
+			"toStableId": "schema:maxValue",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:ValueProfile",
+			"toStableId": "schema:minValue",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:ValueProfile",
+			"toStableId": "schema:value",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:WorkBasedLearningCertificate",
+			"toStableId": "qdata:relevantDataSet",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:WorkExperienceComponent",
+			"toStableId": "ceasn:hasChild",
+			"fromSource": "CTDL",
+			"toSource": "CTDLASN",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:WorkExperienceComponent",
+			"toStableId": "ceasn:isChildOf",
+			"fromSource": "CTDL",
+			"toSource": "CTDLASN",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:WorkRole",
+			"toStableId": "ceasn:abilityEmbodied",
+			"fromSource": "CTDL",
+			"toSource": "CTDLASN",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:WorkRole",
+			"toStableId": "ceasn:comment",
+			"fromSource": "CTDL",
+			"toSource": "CTDLASN",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:WorkRole",
+			"toStableId": "ceasn:knowledgeEmbodied",
+			"fromSource": "CTDL",
+			"toSource": "CTDLASN",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromStableId": "ceterms:WorkRole",
+			"toStableId": "ceasn:skillEmbodied",
+			"fromSource": "CTDL",
+			"toSource": "CTDLASN",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "REFERENCES",
+			"fromStableId": "ceasn:hasChild",
+			"toStableId": "ceterms:AssessmentComponent",
+			"fromSource": "CTDLASN",
+			"toSource": "CTDL",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "REFERENCES",
+			"fromStableId": "ceasn:hasChild",
+			"toStableId": "ceterms:BasicComponent",
+			"fromSource": "CTDLASN",
+			"toSource": "CTDL",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "REFERENCES",
+			"fromStableId": "ceasn:hasChild",
+			"toStableId": "ceterms:CocurricularComponent",
+			"fromSource": "CTDLASN",
+			"toSource": "CTDL",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "REFERENCES",
+			"fromStableId": "ceasn:hasChild",
+			"toStableId": "ceterms:CollectionComponent",
+			"fromSource": "CTDLASN",
+			"toSource": "CTDL",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "REFERENCES",
+			"fromStableId": "ceasn:hasChild",
+			"toStableId": "ceterms:CompetencyComponent",
+			"fromSource": "CTDLASN",
+			"toSource": "CTDL",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "REFERENCES",
+			"fromStableId": "ceasn:hasChild",
+			"toStableId": "ceterms:CourseComponent",
+			"fromSource": "CTDLASN",
+			"toSource": "CTDL",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "REFERENCES",
+			"fromStableId": "ceasn:hasChild",
+			"toStableId": "ceterms:CredentialComponent",
+			"fromSource": "CTDLASN",
+			"toSource": "CTDL",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "REFERENCES",
+			"fromStableId": "ceasn:hasChild",
+			"toStableId": "ceterms:ExtracurricularComponent",
+			"fromSource": "CTDLASN",
+			"toSource": "CTDL",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "REFERENCES",
+			"fromStableId": "ceasn:hasChild",
+			"toStableId": "ceterms:JobComponent",
+			"fromSource": "CTDLASN",
+			"toSource": "CTDL",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "REFERENCES",
+			"fromStableId": "ceasn:hasChild",
+			"toStableId": "ceterms:MultiComponent",
+			"fromSource": "CTDLASN",
+			"toSource": "CTDL",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "REFERENCES",
+			"fromStableId": "ceasn:hasChild",
+			"toStableId": "ceterms:Task",
+			"fromSource": "CTDLASN",
+			"toSource": "CTDL",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "REFERENCES",
+			"fromStableId": "ceasn:hasChild",
+			"toStableId": "ceterms:WorkExperienceComponent",
+			"fromSource": "CTDLASN",
+			"toSource": "CTDL",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "REFERENCES",
+			"fromStableId": "ceasn:isChildOf",
+			"toStableId": "ceterms:AssessmentComponent",
+			"fromSource": "CTDLASN",
+			"toSource": "CTDL",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "REFERENCES",
+			"fromStableId": "ceasn:isChildOf",
+			"toStableId": "ceterms:BasicComponent",
+			"fromSource": "CTDLASN",
+			"toSource": "CTDL",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "REFERENCES",
+			"fromStableId": "ceasn:isChildOf",
+			"toStableId": "ceterms:CocurricularComponent",
+			"fromSource": "CTDLASN",
+			"toSource": "CTDL",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "REFERENCES",
+			"fromStableId": "ceasn:isChildOf",
+			"toStableId": "ceterms:CollectionComponent",
+			"fromSource": "CTDLASN",
+			"toSource": "CTDL",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "REFERENCES",
+			"fromStableId": "ceasn:isChildOf",
+			"toStableId": "ceterms:CompetencyComponent",
+			"fromSource": "CTDLASN",
+			"toSource": "CTDL",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "REFERENCES",
+			"fromStableId": "ceasn:isChildOf",
+			"toStableId": "ceterms:CourseComponent",
+			"fromSource": "CTDLASN",
+			"toSource": "CTDL",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "REFERENCES",
+			"fromStableId": "ceasn:isChildOf",
+			"toStableId": "ceterms:CredentialComponent",
+			"fromSource": "CTDLASN",
+			"toSource": "CTDL",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "REFERENCES",
+			"fromStableId": "ceasn:isChildOf",
+			"toStableId": "ceterms:ExtracurricularComponent",
+			"fromSource": "CTDLASN",
+			"toSource": "CTDL",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "REFERENCES",
+			"fromStableId": "ceasn:isChildOf",
+			"toStableId": "ceterms:JobComponent",
+			"fromSource": "CTDLASN",
+			"toSource": "CTDL",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "REFERENCES",
+			"fromStableId": "ceasn:isChildOf",
+			"toStableId": "ceterms:MultiComponent",
+			"fromSource": "CTDLASN",
+			"toSource": "CTDL",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "REFERENCES",
+			"fromStableId": "ceasn:isChildOf",
+			"toStableId": "ceterms:Pathway",
+			"fromSource": "CTDLASN",
+			"toSource": "CTDL",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "REFERENCES",
+			"fromStableId": "ceasn:isChildOf",
+			"toStableId": "ceterms:Task",
+			"fromSource": "CTDLASN",
+			"toSource": "CTDL",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "REFERENCES",
+			"fromStableId": "ceasn:isChildOf",
+			"toStableId": "ceterms:WorkExperienceComponent",
+			"fromSource": "CTDLASN",
+			"toSource": "CTDL",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "REFERENCES",
+			"fromStableId": "ceterms:financialAssistanceValue",
+			"toStableId": "schema:QuantitativeValue",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "REFERENCES",
+			"fromStableId": "ceterms:jobsObtained",
+			"toStableId": "schema:QuantitativeValue",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "REFERENCES",
+			"fromStableId": "ceterms:pointValue",
+			"toStableId": "schema:QuantitativeValue",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "REFERENCES",
+			"fromStableId": "qdata:dataProvider",
+			"toStableId": "ceterms:CredentialOrganization",
+			"fromSource": "CTDLQData",
+			"toSource": "CTDL",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "REFERENCES",
+			"fromStableId": "qdata:dataProvider",
+			"toStableId": "ceterms:Organization",
+			"fromSource": "CTDLQData",
+			"toSource": "CTDL",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "REFERENCES",
+			"fromStableId": "qdata:dataProvider",
+			"toStableId": "ceterms:QACredentialOrganization",
+			"fromSource": "CTDLQData",
+			"toSource": "CTDL",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "REFERENCES",
+			"fromStableId": "schema:unitText",
+			"toStableId": "ceterms:CredentialAlignmentObject",
+			"fromSource": "CTDLQData",
+			"toSource": "CTDL",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "SUBCLASS_OF",
+			"fromStableId": "ceterms:PayProfile",
+			"toStableId": "schema:MonetaryAmount",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		},
+		{
+			"type": "SUBCLASS_OF",
+			"fromStableId": "ceterms:ValueProfile",
+			"toStableId": "schema:QuantitativeValue",
+			"fromSource": "CTDL",
+			"toSource": "CTDLQData",
+			"provenanceSource": null,
+			"bridgeAuthored": false,
+			"carriers": [
+				"standard|CTDL|020fb8aa878a"
+			],
+			"duplicateLineCount": 1
+		}
+	],
+	"duplicateCarrierHistogram": {
+		"mapping|CIP::SOC|30879134600c": 8324,
+		"mapping|CEDS::CASE|db227d12333d": 106,
+		"mapping|CEDS::CLR|46f1f426e1ae": 76,
+		"mapping|CEDS::EduAPI|483517ce61ba": 10,
+		"mapping|CEDS::JEDx|2fd51b2cc496": 39,
+		"mapping|CEDS::LIF|cc1ac0f83fe4": 688,
+		"mapping|CEDS::MedBiquitous|91057b28afbf": 204,
+		"mapping|CEDS::OpenBadges|73359113bd97": 80,
+		"mapping|CEDS::PESC|0524e91a41e8": 586,
+		"mapping|CEDS::SEDM|ba1dd372cb72": 1464,
+		"mapping|CEDS::EdFi|d04f52ffae38": 5259,
+		"mapping|CEDS::CTDL|f957b88c9590": 24,
+		"mapping|CEDS::SIF|e1dd9d8fa876": 2202
+	},
+	"duplicatesSidecar": {
+		"file": "fixture-b-duplicates.jsonl",
+		"sha256": "379f2342b43e7beb9df69f2bed9657b27a6888e8b5af955355c3744068cce8fa"
+	},
+	"oldCtdlStandardBlockCarrierOverlap": {
+		"oldCtdlStandardBlockFamilyEdgeCount": 160,
+		"ctdl149Count": 149,
+		"inBoth": 149,
+		"onlyInConsolidated": 0,
+		"onlyInOldCtdlStandardBlock": 11
+	}
+}

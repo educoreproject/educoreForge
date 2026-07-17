@@ -1,0 +1,3063 @@
+{
+	"fixture": "a-familyEndpointTriples",
+	"spec": "SPECIFICATION.md v2 S9.1/S9.4; IMPLEMENTATION_PLAN.md v2 Phase 0.2 (R2-7 per-pairing decomposition)",
+	"baselineManifestKey": "d8606a1e51e198d073fe521e4279be13b7b2c65bf10d6f840b029a487ec650fc",
+	"tripleIdentity": "(type, fromStableId, toStableId); stableId = ref.id verbatim (replay-engine.js:247-249)",
+	"gatheredDefinition": "consolidated-block edges, both endpoint _source in the CTDL family, cross-source, NULL provenanceSource (the merge-accident population)",
+	"authoredDefinition": "every edge of the ctdlFamilyUriBridge bridge block",
+	"counts": {
+		"gathered": 149,
+		"authored": 229,
+		"union": 378
+	},
+	"byPairing": {
+		"CTDL::CTDLASN": {
+			"total": 215,
+			"gatheredOnly": 68,
+			"authoredOnly": 147,
+			"both": 0,
+			"triples": [
+				{
+					"type": "HAS_OPTION_SET",
+					"fromStableId": "ceasn:educationLevelType",
+					"toStableId": "ceterms:AudienceLevel",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:AlignmentMap",
+					"toStableId": "ceasn:approximateDateCreated",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:AlignmentMap",
+					"toStableId": "ceasn:approximateDateModified",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:AlignmentMap",
+					"toStableId": "ceasn:author",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:AlignmentMap",
+					"toStableId": "ceasn:creator",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:AlignmentMap",
+					"toStableId": "ceasn:dateCopyrighted",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:AlignmentMap",
+					"toStableId": "ceasn:dateCreated",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:AlignmentMap",
+					"toStableId": "ceasn:dateModified",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:AlignmentMap",
+					"toStableId": "ceasn:dateValidFrom",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:AlignmentMap",
+					"toStableId": "ceasn:dateValidUntil",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:AlignmentMap",
+					"toStableId": "ceasn:derivedFrom",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:AlignmentMap",
+					"toStableId": "ceasn:license",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:AlignmentMap",
+					"toStableId": "ceasn:publicationStatusType",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:AlignmentMap",
+					"toStableId": "ceasn:publisher",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:AlignmentMap",
+					"toStableId": "ceasn:publisherName",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:AlignmentMap",
+					"toStableId": "ceasn:rights",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:AlignmentMap",
+					"toStableId": "ceasn:sourceDocumentation",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:AssessmentComponent",
+					"toStableId": "asn:hasProgressionLevel",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:AssessmentComponent",
+					"toStableId": "ceasn:hasChild",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:AssessmentComponent",
+					"toStableId": "ceasn:isChildOf",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:BasicComponent",
+					"toStableId": "asn:hasProgressionLevel",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:BasicComponent",
+					"toStableId": "ceasn:hasChild",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:BasicComponent",
+					"toStableId": "ceasn:isChildOf",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:CocurricularComponent",
+					"toStableId": "asn:hasProgressionLevel",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:CocurricularComponent",
+					"toStableId": "ceasn:hasChild",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:CocurricularComponent",
+					"toStableId": "ceasn:isChildOf",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:Collection",
+					"toStableId": "ceasn:license",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:CollectionComponent",
+					"toStableId": "asn:hasProgressionLevel",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:CollectionComponent",
+					"toStableId": "ceasn:hasChild",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:CollectionComponent",
+					"toStableId": "ceasn:isChildOf",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:CompetencyComponent",
+					"toStableId": "asn:hasProgressionLevel",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:CompetencyComponent",
+					"toStableId": "ceasn:hasChild",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:CompetencyComponent",
+					"toStableId": "ceasn:isChildOf",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:CourseComponent",
+					"toStableId": "asn:hasProgressionLevel",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:CourseComponent",
+					"toStableId": "ceasn:hasChild",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:CourseComponent",
+					"toStableId": "ceasn:isChildOf",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:CredentialComponent",
+					"toStableId": "asn:hasProgressionLevel",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:CredentialComponent",
+					"toStableId": "ceasn:hasChild",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:CredentialComponent",
+					"toStableId": "ceasn:isChildOf",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:ExtracurricularComponent",
+					"toStableId": "asn:hasProgressionLevel",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:ExtracurricularComponent",
+					"toStableId": "ceasn:hasChild",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:ExtracurricularComponent",
+					"toStableId": "ceasn:isChildOf",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:FinancialAssistanceProfile",
+					"toStableId": "ceasn:derivedFrom",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:Industry",
+					"toStableId": "ceasn:comment",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:Job",
+					"toStableId": "ceasn:abilityEmbodied",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:Job",
+					"toStableId": "ceasn:comment",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:Job",
+					"toStableId": "ceasn:knowledgeEmbodied",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:Job",
+					"toStableId": "ceasn:skillEmbodied",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:JobComponent",
+					"toStableId": "asn:hasProgressionLevel",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:JobComponent",
+					"toStableId": "ceasn:hasChild",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:JobComponent",
+					"toStableId": "ceasn:isChildOf",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:MultiComponent",
+					"toStableId": "asn:hasProgressionLevel",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:MultiComponent",
+					"toStableId": "ceasn:hasChild",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:MultiComponent",
+					"toStableId": "ceasn:isChildOf",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:Occupation",
+					"toStableId": "ceasn:abilityEmbodied",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:Occupation",
+					"toStableId": "ceasn:approximateDateModified",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:Occupation",
+					"toStableId": "ceasn:comment",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:Occupation",
+					"toStableId": "ceasn:dateModified",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:Occupation",
+					"toStableId": "ceasn:knowledgeEmbodied",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:Occupation",
+					"toStableId": "ceasn:skillEmbodied",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:Pathway",
+					"toStableId": "asn:hasProgressionModel",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:PriorLearningPolicy",
+					"toStableId": "ceasn:approximateDateCreated",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:PriorLearningPolicy",
+					"toStableId": "ceasn:approximateDateModified",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:PriorLearningPolicy",
+					"toStableId": "ceasn:dateCopyrighted",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:PriorLearningPolicy",
+					"toStableId": "ceasn:dateCreated",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:PriorLearningPolicy",
+					"toStableId": "ceasn:dateModified",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:PriorLearningPolicy",
+					"toStableId": "ceasn:derivedFrom",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:PriorLearningPolicy",
+					"toStableId": "ceasn:license",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:PriorLearningPolicy",
+					"toStableId": "ceasn:publicationStatusType",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:PriorLearningPolicy",
+					"toStableId": "ceasn:rights",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:PriorLearningPolicy",
+					"toStableId": "ceasn:rightsHolder",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:PriorLearningPolicy",
+					"toStableId": "ceasn:tableOfContents",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:QualificationsFramework",
+					"toStableId": "asn:hasProgressionModel",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:QualificationsFramework",
+					"toStableId": "ceasn:approximateDateCreated",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:QualificationsFramework",
+					"toStableId": "ceasn:approximateDateModified",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:QualificationsFramework",
+					"toStableId": "ceasn:author",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:QualificationsFramework",
+					"toStableId": "ceasn:creator",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:QualificationsFramework",
+					"toStableId": "ceasn:dateCopyrighted",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:QualificationsFramework",
+					"toStableId": "ceasn:dateCreated",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:QualificationsFramework",
+					"toStableId": "ceasn:dateModified",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:QualificationsFramework",
+					"toStableId": "ceasn:dateValidFrom",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:QualificationsFramework",
+					"toStableId": "ceasn:dateValidUntil",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:QualificationsFramework",
+					"toStableId": "ceasn:derivedFrom",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:QualificationsFramework",
+					"toStableId": "ceasn:license",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:QualificationsFramework",
+					"toStableId": "ceasn:publicationStatusType",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:QualificationsFramework",
+					"toStableId": "ceasn:publisher",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:QualificationsFramework",
+					"toStableId": "ceasn:publisherName",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:QualificationsFramework",
+					"toStableId": "ceasn:rights",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:QualificationsFramework",
+					"toStableId": "ceasn:sourceDocumentation",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:StructuredStatement",
+					"toStableId": "ceasn:listID",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:Task",
+					"toStableId": "ceasn:abilityEmbodied",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:Task",
+					"toStableId": "ceasn:approximateDateModified",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:Task",
+					"toStableId": "ceasn:comment",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:Task",
+					"toStableId": "ceasn:dateModified",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:Task",
+					"toStableId": "ceasn:hasChild",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:Task",
+					"toStableId": "ceasn:isChildOf",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:Task",
+					"toStableId": "ceasn:knowledgeEmbodied",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:Task",
+					"toStableId": "ceasn:listID",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:Task",
+					"toStableId": "ceasn:skillEmbodied",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:TransferAgreement",
+					"toStableId": "ceasn:approximateDateCreated",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:TransferAgreement",
+					"toStableId": "ceasn:approximateDateModified",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:TransferAgreement",
+					"toStableId": "ceasn:creator",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:TransferAgreement",
+					"toStableId": "ceasn:dateCopyrighted",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:TransferAgreement",
+					"toStableId": "ceasn:dateCreated",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:TransferAgreement",
+					"toStableId": "ceasn:dateModified",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:TransferAgreement",
+					"toStableId": "ceasn:derivedFrom",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:TransferAgreement",
+					"toStableId": "ceasn:license",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:TransferAgreement",
+					"toStableId": "ceasn:publicationStatusType",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:TransferAgreement",
+					"toStableId": "ceasn:rights",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:TransferAgreement",
+					"toStableId": "ceasn:rightsHolder",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:TransferAgreement",
+					"toStableId": "ceasn:tableOfContents",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:TransferValueProfile",
+					"toStableId": "ceasn:derivedFrom",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:WorkExperienceComponent",
+					"toStableId": "asn:hasProgressionLevel",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:WorkExperienceComponent",
+					"toStableId": "ceasn:hasChild",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:WorkExperienceComponent",
+					"toStableId": "ceasn:isChildOf",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:WorkRole",
+					"toStableId": "ceasn:abilityEmbodied",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:WorkRole",
+					"toStableId": "ceasn:comment",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:WorkRole",
+					"toStableId": "ceasn:knowledgeEmbodied",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:WorkRole",
+					"toStableId": "ceasn:skillEmbodied",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:creator",
+					"toStableId": "ceterms:CredentialOrganization",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:creator",
+					"toStableId": "ceterms:Organization",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:creator",
+					"toStableId": "ceterms:QACredentialOrganization",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:derivedFrom",
+					"toStableId": "ceterms:AlignmentMap",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:derivedFrom",
+					"toStableId": "ceterms:FinancialAssistanceProfile",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:derivedFrom",
+					"toStableId": "ceterms:PriorLearningPolicy",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:derivedFrom",
+					"toStableId": "ceterms:QualificationsFramework",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:derivedFrom",
+					"toStableId": "ceterms:TransferAgreement",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:derivedFrom",
+					"toStableId": "ceterms:TransferValueProfile",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:hasChild",
+					"toStableId": "ceterms:AssessmentComponent",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:hasChild",
+					"toStableId": "ceterms:BasicComponent",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:hasChild",
+					"toStableId": "ceterms:CocurricularComponent",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:hasChild",
+					"toStableId": "ceterms:CollectionComponent",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:hasChild",
+					"toStableId": "ceterms:CompetencyComponent",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:hasChild",
+					"toStableId": "ceterms:CourseComponent",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:hasChild",
+					"toStableId": "ceterms:CredentialComponent",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:hasChild",
+					"toStableId": "ceterms:ExtracurricularComponent",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:hasChild",
+					"toStableId": "ceterms:JobComponent",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:hasChild",
+					"toStableId": "ceterms:MultiComponent",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:hasChild",
+					"toStableId": "ceterms:Task",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:hasChild",
+					"toStableId": "ceterms:WorkExperienceComponent",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:isChildOf",
+					"toStableId": "ceterms:AssessmentComponent",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:isChildOf",
+					"toStableId": "ceterms:BasicComponent",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:isChildOf",
+					"toStableId": "ceterms:CocurricularComponent",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:isChildOf",
+					"toStableId": "ceterms:CollectionComponent",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:isChildOf",
+					"toStableId": "ceterms:CompetencyComponent",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:isChildOf",
+					"toStableId": "ceterms:CourseComponent",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:isChildOf",
+					"toStableId": "ceterms:CredentialComponent",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:isChildOf",
+					"toStableId": "ceterms:ExtracurricularComponent",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:isChildOf",
+					"toStableId": "ceterms:JobComponent",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:isChildOf",
+					"toStableId": "ceterms:MultiComponent",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:isChildOf",
+					"toStableId": "ceterms:Pathway",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:isChildOf",
+					"toStableId": "ceterms:Task",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:isChildOf",
+					"toStableId": "ceterms:WorkExperienceComponent",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:publisher",
+					"toStableId": "ceterms:CredentialOrganization",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:publisher",
+					"toStableId": "ceterms:Organization",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:publisher",
+					"toStableId": "ceterms:QACredentialOrganization",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:rightsHolder",
+					"toStableId": "ceterms:CredentialOrganization",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:rightsHolder",
+					"toStableId": "ceterms:Organization",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:rightsHolder",
+					"toStableId": "ceterms:QACredentialOrganization",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:substantiatingCredential",
+					"toStableId": "ceterms:AcademicCertificate",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:substantiatingCredential",
+					"toStableId": "ceterms:ApprenticeshipCertificate",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:substantiatingCredential",
+					"toStableId": "ceterms:AssociateDegree",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:substantiatingCredential",
+					"toStableId": "ceterms:AssociateOfAppliedArtsDegree",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:substantiatingCredential",
+					"toStableId": "ceterms:AssociateOfAppliedScienceDegree",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:substantiatingCredential",
+					"toStableId": "ceterms:AssociateOfArtsDegree",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:substantiatingCredential",
+					"toStableId": "ceterms:AssociateOfScienceDegree",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:substantiatingCredential",
+					"toStableId": "ceterms:BachelorDegree",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:substantiatingCredential",
+					"toStableId": "ceterms:BachelorOfArtsDegree",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:substantiatingCredential",
+					"toStableId": "ceterms:BachelorOfScienceDegree",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:substantiatingCredential",
+					"toStableId": "ceterms:Badge",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:substantiatingCredential",
+					"toStableId": "ceterms:BasicTechnicalCertificate",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:substantiatingCredential",
+					"toStableId": "ceterms:Certificate",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:substantiatingCredential",
+					"toStableId": "ceterms:CertificateOfCompletion",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:substantiatingCredential",
+					"toStableId": "ceterms:CertificateOfParticipation",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:substantiatingCredential",
+					"toStableId": "ceterms:Certification",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:substantiatingCredential",
+					"toStableId": "ceterms:Credential",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:substantiatingCredential",
+					"toStableId": "ceterms:Degree",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:substantiatingCredential",
+					"toStableId": "ceterms:DigitalBadge",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:substantiatingCredential",
+					"toStableId": "ceterms:Diploma",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:substantiatingCredential",
+					"toStableId": "ceterms:DoctoralDegree",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:substantiatingCredential",
+					"toStableId": "ceterms:GeneralEducationDevelopment",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:substantiatingCredential",
+					"toStableId": "ceterms:GeneralEducationLevel1Certificate",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:substantiatingCredential",
+					"toStableId": "ceterms:GeneralEducationLevel2Certificate",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:substantiatingCredential",
+					"toStableId": "ceterms:HigherEducationLevel1Certificate",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:substantiatingCredential",
+					"toStableId": "ceterms:HigherEducationLevel2Certificate",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:substantiatingCredential",
+					"toStableId": "ceterms:JourneymanCertificate",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:substantiatingCredential",
+					"toStableId": "ceterms:License",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:substantiatingCredential",
+					"toStableId": "ceterms:MasterCertificate",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:substantiatingCredential",
+					"toStableId": "ceterms:MasterDegree",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:substantiatingCredential",
+					"toStableId": "ceterms:MasterOfArtsDegree",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:substantiatingCredential",
+					"toStableId": "ceterms:MasterOfScienceDegree",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:substantiatingCredential",
+					"toStableId": "ceterms:MicroCredential",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:substantiatingCredential",
+					"toStableId": "ceterms:OpenBadge",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:substantiatingCredential",
+					"toStableId": "ceterms:PostBaccalaureateCertificate",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:substantiatingCredential",
+					"toStableId": "ceterms:PostMasterCertificate",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:substantiatingCredential",
+					"toStableId": "ceterms:PreApprenticeshipCertificate",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:substantiatingCredential",
+					"toStableId": "ceterms:ProfessionalCertificate",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:substantiatingCredential",
+					"toStableId": "ceterms:ProfessionalDoctorate",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:substantiatingCredential",
+					"toStableId": "ceterms:ProficiencyCertificate",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:substantiatingCredential",
+					"toStableId": "ceterms:QualityAssuranceCredential",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:substantiatingCredential",
+					"toStableId": "ceterms:ResearchDoctorate",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:substantiatingCredential",
+					"toStableId": "ceterms:SecondaryEducationCertificate",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:substantiatingCredential",
+					"toStableId": "ceterms:SecondarySchoolDiploma",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:substantiatingCredential",
+					"toStableId": "ceterms:TechnicalLevel1Certificate",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:substantiatingCredential",
+					"toStableId": "ceterms:TechnicalLevel2Certificate",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:substantiatingCredential",
+					"toStableId": "ceterms:TechnicalLevel3Certificate",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:substantiatingCredential",
+					"toStableId": "ceterms:WorkBasedLearningCertificate",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:substantiatingJob",
+					"toStableId": "ceterms:Job",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:substantiatingOccupation",
+					"toStableId": "ceterms:Occupation",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:substantiatingOrganization",
+					"toStableId": "ceterms:CredentialOrganization",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:substantiatingOrganization",
+					"toStableId": "ceterms:Organization",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:substantiatingOrganization",
+					"toStableId": "ceterms:QACredentialOrganization",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:substantiatingTask",
+					"toStableId": "ceterms:Task",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:substantiatingWorkRole",
+					"toStableId": "ceterms:WorkRole",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "SUBCLASS_OF",
+					"fromStableId": "ceasn:CompetencyFramework",
+					"toStableId": "ceterms:Collection",
+					"pairing": "CTDL::CTDLASN",
+					"gathered": false,
+					"authored": true
+				}
+			]
+		},
+		"CTDL::CTDLQData": {
+			"total": 146,
+			"gatheredOnly": 81,
+			"authoredOnly": 65,
+			"both": 0,
+			"triples": [
+				{
+					"type": "HAS_CLASS",
+					"fromStableId": "ctdl:root",
+					"toStableId": "schema:MonetaryAmount",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_CLASS",
+					"fromStableId": "ctdl:root",
+					"toStableId": "schema:QuantitativeValue",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:AcademicCertificate",
+					"toStableId": "qdata:relevantDataSet",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:AggregateDataProfile",
+					"toStableId": "qdata:facultyToStudentRatio",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:AlignmentMap",
+					"toStableId": "schema:about",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:ApprenticeshipCertificate",
+					"toStableId": "qdata:relevantDataSet",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:AssessmentProfile",
+					"toStableId": "qdata:relevantDataSet",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:AssociateDegree",
+					"toStableId": "qdata:relevantDataSet",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:AssociateOfAppliedArtsDegree",
+					"toStableId": "qdata:relevantDataSet",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:AssociateOfAppliedScienceDegree",
+					"toStableId": "qdata:relevantDataSet",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:AssociateOfArtsDegree",
+					"toStableId": "qdata:relevantDataSet",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:AssociateOfScienceDegree",
+					"toStableId": "qdata:relevantDataSet",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:BachelorDegree",
+					"toStableId": "qdata:relevantDataSet",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:BachelorOfArtsDegree",
+					"toStableId": "qdata:relevantDataSet",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:BachelorOfScienceDegree",
+					"toStableId": "qdata:relevantDataSet",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:Badge",
+					"toStableId": "qdata:relevantDataSet",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:BasicTechnicalCertificate",
+					"toStableId": "qdata:relevantDataSet",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:Certificate",
+					"toStableId": "qdata:relevantDataSet",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:CertificateOfCompletion",
+					"toStableId": "qdata:relevantDataSet",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:CertificateOfParticipation",
+					"toStableId": "qdata:relevantDataSet",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:Certification",
+					"toStableId": "qdata:relevantDataSet",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:Course",
+					"toStableId": "qdata:relevantDataSet",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:Credential",
+					"toStableId": "qdata:relevantDataSet",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:CredentialOrganization",
+					"toStableId": "qdata:relevantDataSet",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:CredentialType",
+					"toStableId": "qdata:relevantDataSet",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:Degree",
+					"toStableId": "qdata:relevantDataSet",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:DigitalBadge",
+					"toStableId": "qdata:relevantDataSet",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:Diploma",
+					"toStableId": "qdata:relevantDataSet",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:DoctoralDegree",
+					"toStableId": "qdata:relevantDataSet",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:GeneralEducationDevelopment",
+					"toStableId": "qdata:relevantDataSet",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:GeneralEducationLevel1Certificate",
+					"toStableId": "qdata:relevantDataSet",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:GeneralEducationLevel2Certificate",
+					"toStableId": "qdata:relevantDataSet",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:HigherEducationLevel1Certificate",
+					"toStableId": "qdata:relevantDataSet",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:HigherEducationLevel2Certificate",
+					"toStableId": "qdata:relevantDataSet",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:Industry",
+					"toStableId": "qdata:relevantDataSet",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:Job",
+					"toStableId": "qdata:relevantDataSet",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:JourneymanCertificate",
+					"toStableId": "qdata:relevantDataSet",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:LearningOpportunityProfile",
+					"toStableId": "qdata:relevantDataSet",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:LearningProgram",
+					"toStableId": "qdata:relevantDataSet",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:License",
+					"toStableId": "qdata:relevantDataSet",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:MasterCertificate",
+					"toStableId": "qdata:relevantDataSet",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:MasterDegree",
+					"toStableId": "qdata:relevantDataSet",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:MasterOfArtsDegree",
+					"toStableId": "qdata:relevantDataSet",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:MasterOfScienceDegree",
+					"toStableId": "qdata:relevantDataSet",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:MicroCredential",
+					"toStableId": "qdata:relevantDataSet",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:Occupation",
+					"toStableId": "qdata:relevantDataSet",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:OpenBadge",
+					"toStableId": "qdata:relevantDataSet",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:Organization",
+					"toStableId": "qdata:relevantDataSet",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:Pathway",
+					"toStableId": "qdata:relevantDataSet",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:PayProfile",
+					"toStableId": "schema:maxValue",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:PayProfile",
+					"toStableId": "schema:minValue",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:PayProfile",
+					"toStableId": "schema:value",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:PostBaccalaureateCertificate",
+					"toStableId": "qdata:relevantDataSet",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:PostMasterCertificate",
+					"toStableId": "qdata:relevantDataSet",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:PreApprenticeshipCertificate",
+					"toStableId": "qdata:relevantDataSet",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:ProcessProfile",
+					"toStableId": "qdata:dataCollectionMethodType",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:ProfessionalCertificate",
+					"toStableId": "qdata:relevantDataSet",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:ProfessionalDoctorate",
+					"toStableId": "qdata:relevantDataSet",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:ProficiencyCertificate",
+					"toStableId": "qdata:relevantDataSet",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:QACredentialOrganization",
+					"toStableId": "qdata:relevantDataSet",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:QualityAssuranceCredential",
+					"toStableId": "qdata:relevantDataSet",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:ResearchDoctorate",
+					"toStableId": "qdata:relevantDataSet",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:SecondaryEducationCertificate",
+					"toStableId": "qdata:relevantDataSet",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:SecondarySchoolDiploma",
+					"toStableId": "qdata:relevantDataSet",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:SpecialistDegree",
+					"toStableId": "qdata:relevantDataSet",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:TechnicalLevel1Certificate",
+					"toStableId": "qdata:relevantDataSet",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:TechnicalLevel2Certificate",
+					"toStableId": "qdata:relevantDataSet",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:TechnicalLevel3Certificate",
+					"toStableId": "qdata:relevantDataSet",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:ValueProfile",
+					"toStableId": "qdata:maxPercentage",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:ValueProfile",
+					"toStableId": "qdata:minPercentage",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:ValueProfile",
+					"toStableId": "qdata:percentage",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:ValueProfile",
+					"toStableId": "schema:description",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:ValueProfile",
+					"toStableId": "schema:maxValue",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:ValueProfile",
+					"toStableId": "schema:minValue",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:ValueProfile",
+					"toStableId": "schema:value",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceterms:WorkBasedLearningCertificate",
+					"toStableId": "qdata:relevantDataSet",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceterms:financialAssistanceValue",
+					"toStableId": "schema:QuantitativeValue",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceterms:jobsObtained",
+					"toStableId": "schema:QuantitativeValue",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceterms:pointValue",
+					"toStableId": "schema:QuantitativeValue",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "qdata:dataProvider",
+					"toStableId": "ceterms:CredentialOrganization",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "qdata:dataProvider",
+					"toStableId": "ceterms:Organization",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "qdata:dataProvider",
+					"toStableId": "ceterms:QACredentialOrganization",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "qdata:dataSetSpatialCoverage",
+					"toStableId": "ceterms:Place",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "qdata:relevantDataSetFor",
+					"toStableId": "ceterms:AcademicCertificate",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "qdata:relevantDataSetFor",
+					"toStableId": "ceterms:ApprenticeshipCertificate",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "qdata:relevantDataSetFor",
+					"toStableId": "ceterms:AssessmentProfile",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "qdata:relevantDataSetFor",
+					"toStableId": "ceterms:AssociateDegree",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "qdata:relevantDataSetFor",
+					"toStableId": "ceterms:AssociateOfAppliedArtsDegree",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "qdata:relevantDataSetFor",
+					"toStableId": "ceterms:AssociateOfAppliedScienceDegree",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "qdata:relevantDataSetFor",
+					"toStableId": "ceterms:AssociateOfArtsDegree",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "qdata:relevantDataSetFor",
+					"toStableId": "ceterms:AssociateOfScienceDegree",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "qdata:relevantDataSetFor",
+					"toStableId": "ceterms:BachelorDegree",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "qdata:relevantDataSetFor",
+					"toStableId": "ceterms:BachelorOfArtsDegree",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "qdata:relevantDataSetFor",
+					"toStableId": "ceterms:BachelorOfScienceDegree",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "qdata:relevantDataSetFor",
+					"toStableId": "ceterms:Badge",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "qdata:relevantDataSetFor",
+					"toStableId": "ceterms:BasicTechnicalCertificate",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "qdata:relevantDataSetFor",
+					"toStableId": "ceterms:Certificate",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "qdata:relevantDataSetFor",
+					"toStableId": "ceterms:CertificateOfCompletion",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "qdata:relevantDataSetFor",
+					"toStableId": "ceterms:CertificateOfParticipation",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "qdata:relevantDataSetFor",
+					"toStableId": "ceterms:Certification",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "qdata:relevantDataSetFor",
+					"toStableId": "ceterms:Course",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "qdata:relevantDataSetFor",
+					"toStableId": "ceterms:Credential",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "qdata:relevantDataSetFor",
+					"toStableId": "ceterms:CredentialOrganization",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "qdata:relevantDataSetFor",
+					"toStableId": "ceterms:Degree",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "qdata:relevantDataSetFor",
+					"toStableId": "ceterms:DigitalBadge",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "qdata:relevantDataSetFor",
+					"toStableId": "ceterms:Diploma",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "qdata:relevantDataSetFor",
+					"toStableId": "ceterms:DoctoralDegree",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "qdata:relevantDataSetFor",
+					"toStableId": "ceterms:GeneralEducationDevelopment",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "qdata:relevantDataSetFor",
+					"toStableId": "ceterms:GeneralEducationLevel1Certificate",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "qdata:relevantDataSetFor",
+					"toStableId": "ceterms:GeneralEducationLevel2Certificate",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "qdata:relevantDataSetFor",
+					"toStableId": "ceterms:HigherEducationLevel1Certificate",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "qdata:relevantDataSetFor",
+					"toStableId": "ceterms:HigherEducationLevel2Certificate",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "qdata:relevantDataSetFor",
+					"toStableId": "ceterms:Industry",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "qdata:relevantDataSetFor",
+					"toStableId": "ceterms:Job",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "qdata:relevantDataSetFor",
+					"toStableId": "ceterms:JourneymanCertificate",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "qdata:relevantDataSetFor",
+					"toStableId": "ceterms:LearningOpportunityProfile",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "qdata:relevantDataSetFor",
+					"toStableId": "ceterms:LearningProgram",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "qdata:relevantDataSetFor",
+					"toStableId": "ceterms:License",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "qdata:relevantDataSetFor",
+					"toStableId": "ceterms:MasterCertificate",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "qdata:relevantDataSetFor",
+					"toStableId": "ceterms:MasterDegree",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "qdata:relevantDataSetFor",
+					"toStableId": "ceterms:MasterOfArtsDegree",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "qdata:relevantDataSetFor",
+					"toStableId": "ceterms:MasterOfScienceDegree",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "qdata:relevantDataSetFor",
+					"toStableId": "ceterms:MicroCredential",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "qdata:relevantDataSetFor",
+					"toStableId": "ceterms:Occupation",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "qdata:relevantDataSetFor",
+					"toStableId": "ceterms:OpenBadge",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "qdata:relevantDataSetFor",
+					"toStableId": "ceterms:Organization",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "qdata:relevantDataSetFor",
+					"toStableId": "ceterms:Pathway",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "qdata:relevantDataSetFor",
+					"toStableId": "ceterms:PostBaccalaureateCertificate",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "qdata:relevantDataSetFor",
+					"toStableId": "ceterms:PostMasterCertificate",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "qdata:relevantDataSetFor",
+					"toStableId": "ceterms:PreApprenticeshipCertificate",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "qdata:relevantDataSetFor",
+					"toStableId": "ceterms:ProfessionalCertificate",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "qdata:relevantDataSetFor",
+					"toStableId": "ceterms:ProfessionalDoctorate",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "qdata:relevantDataSetFor",
+					"toStableId": "ceterms:ProficiencyCertificate",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "qdata:relevantDataSetFor",
+					"toStableId": "ceterms:QACredentialOrganization",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "qdata:relevantDataSetFor",
+					"toStableId": "ceterms:QualityAssuranceCredential",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "qdata:relevantDataSetFor",
+					"toStableId": "ceterms:ResearchDoctorate",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "qdata:relevantDataSetFor",
+					"toStableId": "ceterms:SecondaryEducationCertificate",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "qdata:relevantDataSetFor",
+					"toStableId": "ceterms:SecondarySchoolDiploma",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "qdata:relevantDataSetFor",
+					"toStableId": "ceterms:SpecialistDegree",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "qdata:relevantDataSetFor",
+					"toStableId": "ceterms:TechnicalLevel1Certificate",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "qdata:relevantDataSetFor",
+					"toStableId": "ceterms:TechnicalLevel2Certificate",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "qdata:relevantDataSetFor",
+					"toStableId": "ceterms:TechnicalLevel3Certificate",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "qdata:relevantDataSetFor",
+					"toStableId": "ceterms:WorkBasedLearningCertificate",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "schema:unitText",
+					"toStableId": "ceterms:CredentialAlignmentObject",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "SUBCLASS_OF",
+					"fromStableId": "ceterms:PayProfile",
+					"toStableId": "schema:MonetaryAmount",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				},
+				{
+					"type": "SUBCLASS_OF",
+					"fromStableId": "ceterms:ValueProfile",
+					"toStableId": "schema:QuantitativeValue",
+					"pairing": "CTDL::CTDLQData",
+					"gathered": true,
+					"authored": false
+				}
+			]
+		},
+		"CTDLASN::CTDLQData": {
+			"total": 17,
+			"gatheredOnly": 0,
+			"authoredOnly": 17,
+			"both": 0,
+			"triples": [
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceasn:CriterionLevel",
+					"toStableId": "qdata:maxPercentage",
+					"pairing": "CTDLASN::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceasn:CriterionLevel",
+					"toStableId": "qdata:minPercentage",
+					"pairing": "CTDLASN::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceasn:CriterionLevel",
+					"toStableId": "qdata:percentage",
+					"pairing": "CTDLASN::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceasn:CriterionLevel",
+					"toStableId": "schema:maxValue",
+					"pairing": "CTDLASN::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceasn:CriterionLevel",
+					"toStableId": "schema:minValue",
+					"pairing": "CTDLASN::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "ceasn:CriterionLevel",
+					"toStableId": "schema:value",
+					"pairing": "CTDLASN::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "qdata:DataSetDistribution",
+					"toStableId": "ceasn:license",
+					"pairing": "CTDLASN::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "qdata:DataSetDistribution",
+					"toStableId": "ceasn:rights",
+					"pairing": "CTDLASN::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "qdata:DataSetProfile",
+					"toStableId": "ceasn:license",
+					"pairing": "CTDLASN::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "qdata:DataSetProfile",
+					"toStableId": "ceasn:publicationStatusType",
+					"pairing": "CTDLASN::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "qdata:DataSetProfile",
+					"toStableId": "ceasn:rights",
+					"pairing": "CTDLASN::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "qdata:DataSetService",
+					"toStableId": "ceasn:license",
+					"pairing": "CTDLASN::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "qdata:DataSetService",
+					"toStableId": "ceasn:rights",
+					"pairing": "CTDLASN::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "qdata:Metric",
+					"toStableId": "ceasn:derivedFrom",
+					"pairing": "CTDLASN::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "qdata:Metric",
+					"toStableId": "ceasn:publisher",
+					"pairing": "CTDLASN::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "HAS_PROPERTY",
+					"fromStableId": "qdata:Observation",
+					"toStableId": "ceasn:comment",
+					"pairing": "CTDLASN::CTDLQData",
+					"gathered": false,
+					"authored": true
+				},
+				{
+					"type": "REFERENCES",
+					"fromStableId": "ceasn:derivedFrom",
+					"toStableId": "qdata:Metric",
+					"pairing": "CTDLASN::CTDLQData",
+					"gathered": false,
+					"authored": true
+				}
+			]
+		}
+	}
+}

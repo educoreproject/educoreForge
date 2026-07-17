@@ -13,8 +13,9 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //   edf-rekey -transform --sourceBlock=<blockId> [--dryRun] [--db=<path>]
 //
 // -census    : STORE-QUERY inventory (front-gate F2): every member of the manifest whose
-//              type is in MAPPING_BLOCK_TYPES, with its derived pair, tierScope, and edge
-//              region digest — the disposition table's mechanical core. Read-only.
+//              type is REKEYABLE (mapping types ∪ structuralBridge — S1.3a), with its
+//              derived pair, tierScope, and edge region digest — the disposition
+//              table's mechanical core. Read-only.
 // -transform : re-key ONE block. The new text = newHeaderLine + '\n' + (every byte of the
 //              source text after its first newline, untouched) — byte-preservation holds
 //              BY CONSTRUCTION and is re-verified by digest before the save.
@@ -27,11 +28,16 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // originalStandardKey + originalSubject. Row producedBy = 'edf-rekey' — transformation
 // never masquerades as original authorship. requires copied VERBATIM from the source row.
 //
-// PAIR DERIVATION: hub-pair blocks (tierScope property|value) pair CEDS::<header
-// standardKey resolved through discovery casing> (D6, Q10). Crosswalk blocks (tierScope
-// crosswalk) pair by their EDGE ENDPOINTS — pairA = the uniform fromRef.source, pairB =
-// the uniform toRef.source (Q12: an island-to-island crosswalk never read the hub; a
-// non-uniform endpoint set is a loud refusal, never a guess).
+// PAIR DERIVATION: HEADER-PAIR-FIRST (forgeArchitectureRefactor S1.3b) — a block whose
+// header already names pairA/pairB derives from the HEADER through discovery casing,
+// never from edge-endpoint uniformity (structural bridges are inherently bidirectional
+// per the ratified LOCATOR_EDGE table, so the uniform-endpoint rule can never describe
+// them). Legacy standardKey-headed blocks keep the original branches: hub-pair blocks
+// (tierScope property|value) pair CEDS::<header standardKey resolved through discovery
+// casing> (D6, Q10); crosswalk blocks (tierScope crosswalk) pair by their EDGE
+// ENDPOINTS — pairA = the uniform fromRef.source, pairB = the uniform toRef.source
+// (Q12: an island-to-island crosswalk never read the hub; a non-uniform endpoint set
+// is a loud refusal, never a guess).
 //
 // ZERO-LLM ABSOLUTE: this module imports neither llm-client nor embedding-client (the
 // G-C7 grep gate proves it). It re-keys frozen blocks; it never re-infers.
@@ -58,8 +64,10 @@ const CORE_LIB = path.join(projectRoot, 'code', 'npm', 'qtools-graph-forge-core'
 const CONFIGS_DIR = path.join(projectRoot, 'configs');
 
 const {
-	MAPPING_BLOCK_TYPES,
-	isMappingBlockType,
+	REKEYABLE_BLOCK_TYPES,
+	isRekeyableBlockType,
+	STRUCTURAL_BRIDGE_BLOCK_TYPE,
+	PROVENANCE_TIER,
 	pairSubjectText,
 	versionKeyText,
 } = require(path.join(CORE_LIB, 'vocabulary', 'vocabulary'));
@@ -186,8 +194,35 @@ const crosswalkEndpoints = (text) => {
 // -> { pairA, pairAVersion, publishedVersionA, pairB, pairBVersion, publishedVersionB,
 //      pairSubject, versionKey, tierScope } | { error }
 const derivePairStamp = ({ row, header, warn }) => {
-	const tierScope = tierScopeForOriginalSubject(row.subject);
 	const roster = standardDiscovery.roster({ includeSynthetic: true });
+
+	// HEADER-PAIR-FIRST (S1.3b): when the header names its pair, the header WINS —
+	// resolve both names through discovery casing at their CURRENT default snapshots
+	// (rekey's job is following a version change). resolvePairBinding is caller-order-
+	// preserving (pair-binding.js pairA = first argument's discovery casing), so the
+	// header's family-root-first ordering (S11) survives resolution. tierScope: the
+	// header's own value when present; a structuralBridge block without one carries
+	// the structural tier by definition; anything else keeps the legacy suffix rule.
+	if (header.pairA != null && header.pairB != null) {
+		const binding = pairBinding.resolvePairBinding({
+			roster,
+			hubStandardName: header.pairA,
+			spokeStandardName: header.pairB,
+			warn,
+		});
+		if (binding.error) {
+			return { error: `header-pair derivation failed: ${binding.error}` };
+		}
+		const headerTierScope =
+			header.tierScope != null
+				? header.tierScope
+				: header.blockType === STRUCTURAL_BRIDGE_BLOCK_TYPE
+					? PROVENANCE_TIER.STRUCTURAL
+					: tierScopeForOriginalSubject(row.subject);
+		return { ...binding, tierScope: headerTierScope };
+	}
+
+	const tierScope = tierScopeForOriginalSubject(row.subject);
 
 	if (tierScope === 'crosswalk') {
 		const endpoints = crosswalkEndpoints(row.text);
@@ -294,13 +329,13 @@ const handleCensus = (resources, callback) => {
 						n2(err || `member block ${oneMember.blockId} not found`);
 						return;
 					}
-					if (!isMappingBlockType(row.type)) {
+					if (!isRekeyableBlockType(row.type)) {
 						censusRows.push({
 							blockId: row.blockId,
 							type: row.type,
 							subject: row.subject,
 							producedBy: row.producedBy,
-							disposition: 'not-a-mapping-block-type',
+							disposition: 'not-a-rekeyable-block-type',
 						});
 						n2('', a2);
 						return;
@@ -371,10 +406,10 @@ const handleTransform = (resources, callback) => {
 				next(`edf-rekey: no block ${sourceBlockId} in the store`);
 				return;
 			}
-			if (!isMappingBlockType(row.type)) {
+			if (!isRekeyableBlockType(row.type)) {
 				next(
-					`edf-rekey: block ${sourceBlockId} is type '${row.type}' — not in MAPPING_BLOCK_TYPES ` +
-						`[${MAPPING_BLOCK_TYPES.join(', ')}]; refusing to transform`,
+					`edf-rekey: block ${sourceBlockId} is type '${row.type}' — not in REKEYABLE_BLOCK_TYPES ` +
+						`[${REKEYABLE_BLOCK_TYPES.join(', ')}]; refusing to transform`,
 				);
 				return;
 			}
@@ -389,7 +424,18 @@ const handleTransform = (resources, callback) => {
 			next(`edf-rekey: block ${sourceBlockId}: ${parsed.error}`);
 			return;
 		}
-		if (parsed.header.pairA != null && parsed.header.pairAVersion != null) {
+		// the pair-header refusal guards against double-transforming a legacy->pair
+		// OUTPUT. A structuralBridge natively carries its pair header (choke-enforced),
+		// so the refusal cannot apply to it: its transform IS the version-following
+		// re-key to the roster's current defaults via header-pair-first derivation
+		// (addendum A1/BR1-1; a dedicated arbitrary-target-version verb remains the
+		// BR1-4 future work-order). Idempotent by content address: re-transforming an
+		// already-current structuralBridge dedups to the same blockId.
+		if (
+			row.type !== STRUCTURAL_BRIDGE_BLOCK_TYPE &&
+			parsed.header.pairA != null &&
+			parsed.header.pairAVersion != null
+		) {
 			next(
 				`edf-rekey: block ${sourceBlockId} already carries a pair header ` +
 					`(${parsed.header.pairA}::${parsed.header.pairB}) — refusing to re-transform`,

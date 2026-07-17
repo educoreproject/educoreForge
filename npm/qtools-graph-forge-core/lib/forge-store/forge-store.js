@@ -13,11 +13,11 @@ const sqliteInstance = require('../../../../server/data-model/lib/sqlite-instanc
 
 const contentAddress = require('../content-address/content-address')();
 
-// pair / version-key vocabulary (Phase C, spec §4/§5): the ONE authoritative
-// MAPPING_BLOCK_TYPES list plus the canonical pair-subject/versionKey text forms.
+// pair / version-key vocabulary (Phase C, spec §4/§5; forgeArchitectureRefactor S1):
+// the ONE authoritative version-keyed-type predicate plus the canonical
+// pair-subject/versionKey text forms.
 const {
-	MAPPING_BLOCK_TYPES,
-	isMappingBlockType,
+	isVersionKeyedBlockType,
 	PAIR_GROUP_BLOCK_TYPE,
 	pairSubjectText,
 	versionKeyText,
@@ -234,17 +234,19 @@ const moduleFunction =
 			return { header };
 		};
 
-		// validateVersionKeyedSave — THE §4.2 CHOKE POINT (invariant 11.8, Phase C). A block
-		// whose type is in MAPPING_BLOCK_TYPES, or is a pairGroup, is REJECTED unless its
-		// header carries the COMPLETE version key (pairA/pairAVersion/pairB/pairBVersion) and
-		// a row subject equal to the canonical pair form. A pairGroup is additionally rejected
-		// when any member blockId in its content line does not exist in the blocks table.
-		// Producers validate earlier as a courtesy; THIS is what enforces. Runs STRICTLY
-		// BEFORE the dedup existence check (supervisor-ruled): a keyless save is a defect
-		// even when its bytes already exist. Async only for the pairGroup member lookups.
+		// validateVersionKeyedSave — THE §4.2 CHOKE POINT (invariant 11.8, Phase C;
+		// widened forgeArchitectureRefactor S1.1). A block whose type is version-keyed
+		// (vocabulary.isVersionKeyedBlockType: mapping types ∪ pairGroup ∪
+		// structuralBridge) is REJECTED unless its header carries the COMPLETE version
+		// key (pairA/pairAVersion/pairB/pairBVersion) and a row subject equal to the
+		// canonical pair form. Legacy keyless 'bridge' blocks stay un-choked (S1.5).
+		// A pairGroup is additionally rejected when any member blockId in its content
+		// line does not exist in the blocks table. Producers validate earlier as a
+		// courtesy; THIS is what enforces. Runs STRICTLY BEFORE the dedup existence
+		// check (supervisor-ruled): a keyless save is a defect even when its bytes
+		// already exist. Async only for the pairGroup member lookups.
 		const validateVersionKeyedSave = ({ type, subject, text }, callback) => {
-			const versionKeyed =
-				isMappingBlockType(type) || type === PAIR_GROUP_BLOCK_TYPE;
+			const versionKeyed = isVersionKeyedBlockType(type);
 			if (!versionKeyed) {
 				callback('');
 				return;
@@ -346,7 +348,7 @@ const moduleFunction =
 		};
 
 		// saveBlock — content-address the text, insert if absent (dedup on blockId).
-		//   Phase C: version-keyed types (MAPPING_BLOCK_TYPES + pairGroup) pass the
+		//   Phase C: version-keyed types (vocabulary.isVersionKeyedBlockType) pass the
 		//   validateVersionKeyedSave choke point FIRST — before the dedup check.
 		const saveBlock = (
 			{ type, subject, version, requires, text, producedBy },
