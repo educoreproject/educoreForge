@@ -9,7 +9,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // never touches the frozen golden/baselines. Makes an LLM rerank call at query time (interactive, not part
 // of the deterministic build/replay).
 //
-//   edf-resolve -resolve --term="Student Identifier" [--definition="..."] [--datatype=string]
+//   edfResolve  -resolve --term="Student Identifier" [--definition="..."] [--datatype=string]
 //               [--context="..."] [--targetHub=CEDS] [--topK=15] [--cosineFloor=0]
 //               [--gatingManifest=K] [--model=claude-opus-4-8]
 //

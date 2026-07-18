@@ -9,8 +9,8 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // preserves every subsequent byte of the block text VERBATIM, and saves the result as a
 // NEW content-addressed block. Nothing existing is ever mutated (append-only doctrine).
 //
-//   edf-rekey -census    [--manifest=<key>] [--db=<path>]
-//   edf-rekey -transform --sourceBlock=<blockId> [--dryRun] [--db=<path>]
+//   edfRekey -census    [--manifest=<key>] [--db=<path>]
+//   edfRekey -transform --sourceBlock=<blockId> [--dryRun] [--db=<path>]
 //
 // -census    : STORE-QUERY inventory (front-gate F2): every member of the manifest whose
 //              type is REKEYABLE (mapping types ∪ structuralBridge — S1.3a), with its
@@ -519,11 +519,11 @@ const handleTransform = (resources, callback) => {
 // DISPATCH (registry, not a switch)
 // =====================================================================
 const helpText = `
-edf-rekey — the Phase-C deterministic re-key transformer (zero-LLM; append-only).
+edfRekey — the Phase-C deterministic re-key transformer (zero-LLM; append-only).
 
 USAGE
-  edf-rekey -census    --manifest=<manifestKey> [--db=<sqlitePath>]
-  edf-rekey -transform --sourceBlock=<blockId> [--dryRun] [--db=<sqlitePath>]
+  edfRekey -census    --manifest=<manifestKey> [--db=<sqlitePath>]
+  edfRekey -transform --sourceBlock=<blockId> [--dryRun] [--db=<sqlitePath>]
 
   -census    Read-only store-query inventory of the manifest's mapping-type members with
              derived pair/tierScope and edge-region digests (the disposition table's core).

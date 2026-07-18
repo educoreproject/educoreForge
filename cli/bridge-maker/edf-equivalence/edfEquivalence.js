@@ -5,8 +5,8 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
 // edfEquivalence.js — the `edf-equivalence` CLI: PHASE-6 EQUIVALENCE-LAYER producer (the keystone).
 //
-//   edf-equivalence -emit [--gatingManifest=K] [--label=L]
-//   edf-equivalence -conservativity [--manifest=K]
+//   node edfEquivalence.js -emit [--gatingManifest=K] [--label=L]
+//   node edfEquivalence.js -conservativity [--manifest=K]
 //
 // Equivalence itself is DERIVED, never materialized (WHITEPAPER §4.7/§7: a HubReference with >=2 exactMatch
 // sources IS the cluster; NO Cluster node). So the ONLY graph mutation this producer makes is the CURATION:

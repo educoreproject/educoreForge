@@ -94,13 +94,13 @@ NAME
      forgeManager -- orchestrator; runs the multistep processes by shelling out to the components
 
 SYNOPSIS
-     edf-forge-manager -addStandard --standardName=<standardKey> --source=<path> [-noPublish]
-     edf-forge-manager -rollback    --graph=<graphName> [--to=<manifestKey>]
-     edf-forge-manager -list        <blocks|manifests|graphs> [--stale]
-     edf-forge-manager -mintPairGroup    --pair=CEDS::SIF --versionKey=(01,01)
+     edfForgeManager   -addStandard --standardName=<standardKey> --source=<path> [-noPublish]
+     edfForgeManager   -rollback    --graph=<graphName> [--to=<manifestKey>]
+     edfForgeManager   -list        <blocks|manifests|graphs> [--stale]
+     edfForgeManager   -mintPairGroup    --pair=CEDS::SIF --versionKey=(01,01)
                                          [--members=<id>,...] [--displayName=<text>] [--note=<text>]
-     edf-forge-manager -resolvePairGroup --pair=CEDS::SIF --versionKey=(01,01) [--history]
-     edf-forge-manager -syntheticNativeMapping --gatingManifest=<key> --sourceStandard=<synthetic>
+     edfForgeManager   -resolvePairGroup --pair=CEDS::SIF --versionKey=(01,01) [--history]
+     edfForgeManager   -syntheticNativeMapping --gatingManifest=<key> --sourceStandard=<synthetic>
                                          [--hubBundleDir=<dir>]   (TEST SCAFFOLDING: synthetic standards ONLY)
 
 DESCRIPTION

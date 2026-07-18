@@ -5,7 +5,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
 // edfReference.js — the `edf-reference` CLI: PHASE-3 reference-subgraph producer (HubReference subgraph).
 //
-//   edf-reference -build [--gatingManifest=<key>] [--hubVersion=<v>] [--label=<text>] [--keyOut=<path>]
+//   node edfReference.js -build [--gatingManifest=<key>] [--hubVersion=<v>] [--label=<text>] [--keyOut=<path>]
 //
 // Reads the ADDRESSED CEDS hub block from forgeStore, derives the HubReference reference subgraph (PURE,
 // via the core reference-subgraph lib), serializes it as ONE additive 'reference' block, content-addresses

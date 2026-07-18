@@ -6,9 +6,9 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // edfReplay.js — the `edf-replay` CLI (replayManager, Phase 4). The single block<->graph
 // boundary, BOTH directions (helpSpec.md — the control surface IS the contract):
 //
-//   edf-replay -buildGraph    --manifest=<manifestKey> --destination=<bronze|golden|user>
+//   edfReplay  -buildGraph    --manifest=<manifestKey> --destination=<bronze|golden|user>
 //                             [--owner=<:golden|:user>]
-//   edf-replay -extractSchema --from=<graphName> --selector=<standard|relationships|overlay>
+//   edfReplay  -extractSchema --from=<graphName> --selector=<standard|relationships|overlay>
 //                             [--subject=<standardKey>] [--out=<path>] [--tearDown] [--force]
 //
 // 3-layer orchestrator:
@@ -61,12 +61,12 @@ const vectorStorePath = require(path.join(CORE_LIB, 'vector-store', 'vector-stor
 
 const helpText = () => `
 NAME
-     edf-replay -- replayManager: the single block<->graph boundary, both directions
+     edfReplay -- replayManager: the single block<->graph boundary, both directions
 
 SYNOPSIS
-     edf-replay -buildGraph    --manifest=<manifestKey> --destination=<bronze|golden|user>
+     edfReplay  -buildGraph    --manifest=<manifestKey> --destination=<bronze|golden|user>
                                [--owner=<:golden|:user>] [--skipFinishing]
-     edf-replay -extractSchema --from=<graphName> --selector=<standard|relationships|overlay>
+     edfReplay  -extractSchema --from=<graphName> --selector=<standard|relationships|overlay>
                                [--subject=<standardKey>] [--out=<path>] [--tearDown] [--force]
 
 DESCRIPTION

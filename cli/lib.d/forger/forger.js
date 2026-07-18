@@ -53,15 +53,15 @@ const standardDiscovery = require('./lib/standard-discovery');
 
 const helpText = () => `
 NAME
-     edf-forge -- run a per-standard forge to produce a single-standard graph
+     forger -- run a per-standard forge to produce a single-standard graph
 
 SYNOPSIS
-     edf-forge -forge --standardName=<standardKey> --source=<path>
+     forger    -forge --standardName=<standardKey> --source=<path>
                       --destination=<graphName> [--owner=<:golden|:user>]
                       [--embeddingConfigFilePath=<path>]
 
 DESCRIPTION
-     edf-forge executes a standard/parser bundle (a forge in lib.d/) over a standard's source
+     forger executes a standard/parser bundle (a forge in lib.d/) over a standard's source
      data and produces that standard's graph: its nodes (carrying the universal property
      contract) plus its internal edges. Embeddings are written by a library call as the nodes
      are written. The forge is PURE and deterministic for a given (source, standardName).

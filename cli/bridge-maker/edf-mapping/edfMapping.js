@@ -5,8 +5,8 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
 // edfMapping.js — the `edf-mapping` CLI: PHASE-4 AUTHORED-CROSSWALK bridge producer (deterministic track).
 //
-//   edf-mapping -build [--gatingManifest=<key>] [--sourceStandard=EdFi] [--label=<text>] [--keyOut=<path>]
-//                      [--includeValues=false]
+//   node edfMapping.js -build [--gatingManifest=<key>] [--sourceStandard=EdFi] [--label=<text>] [--keyOut=<path>]
+//                             [--includeValues=false]
 //
 // Converts the AUTHORED Ed-Fi CEDS crosswalk into EXACT_MATCH mapping EDGES (source element -> HubReference)
 // PURELY (no LLM, no network), THROUGH the maintained version-bridge table for the CEDS-remodeled person-ids
@@ -39,7 +39,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // CTDL OS-form value anchors = osFragmentJoin). A new anchor format = one new registered strategy,
 // never a new module.
 //
-//   edf-mapping -buildNative --gatingManifest=<key> --sourceStandard=<SEDM|SIF|CTDL|…>
+//   node edfMapping.js -buildNative --gatingManifest=<key> --sourceStandard=<SEDM|SIF|CTDL|…>
 //
 // Action flags single-hyphen; parameters double-hyphen. Async style: qtools taskListPlus/pipeRunner; no
 // async/await, no try/catch for control flow. camelCase only.
