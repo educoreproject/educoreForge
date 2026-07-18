@@ -5,13 +5,13 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
 // edfGate.js — the `edf-gate` CLI: the Phase-0 proving apparatus (gate harness).
 //
-//   edf-gate -fingerprint      --graph=<graphName> [--ignoreOwnerStamp]
-//   edf-gate -proveDeterminism --manifest=<manifestKey> [--targetA=phase0a] [--targetB=phase0b]
-//                              [--keepGraphs]
-//   edf-gate -freezeBaseline   --manifest=<manifestKey> [--target=phase0baseline] [--label=golden]
-//                              [--keepGraph]
-//   edf-gate -diff             --baseline=<snapshotFile> --candidateGraph=<graphName>
-//   edf-gate -runSuite         [--manifest=<manifestKey>]
+//   edfGate -fingerprint      --graph=<graphName> [--ignoreOwnerStamp]
+//   edfGate -proveDeterminism --manifest=<manifestKey> [--targetA=phase0a] [--targetB=phase0b]
+//                             [--keepGraphs]
+//   edfGate -freezeBaseline   --manifest=<manifestKey> [--target=phase0baseline] [--label=golden]
+//                             [--keepGraph]
+//   edfGate -diff             --baseline=<snapshotFile> --candidateGraph=<graphName>
+//   edfGate -runSuite         [--manifest=<manifestKey>]
 //
 // 3-layer orchestrator (mirrors edf-replay): Layer 1 (this file) bootstraps process.global and
 // instantiates shared resources (forge-store, credential-accessor, instance-lifecycle, AND reuses
@@ -60,6 +60,8 @@ const baselineStoreFactory = require('./lib/baseline-store/baselineStore');
 const gateSuiteFactory = require('./lib/gate-suite/gateSuite');
 const groundTruthFactory = require(path.join(CORE_LIB, 'ground-truth', 'groundTruth'));
 const graphEquivalenceFactory = require('./lib/graph-equivalence/graphEquivalence');
+const manifestPreservationFactory = require('./lib/manifest-preservation/manifestPreservation');
+const closureDeltaFactory = require('./lib/closure-delta/closureDelta');
 
 // booleanFlag — accept -name (switch), --name (valueless at end), or --name=true. Mirrors
 // edfReplay.js so the apparatus parses boolean flags the same way the rest of the CLI does.
@@ -75,15 +77,15 @@ const booleanFlag = (name) =>
 
 const helpText = () => `
 NAME
-     edf-gate -- Phase-0 proving apparatus: fingerprint, diff, determinism proof, baseline freeze.
+     edfGate -- Phase-0 proving apparatus: fingerprint, diff, determinism proof, baseline freeze.
 
 SYNOPSIS
-     edf-gate -fingerprint      --graph=<graphName> [--ignoreOwnerStamp]
-     edf-gate -proveDeterminism --manifest=<manifestKey> [--targetA=phase0a] [--targetB=phase0b] [--keepGraphs]
-     edf-gate -freezeBaseline   --manifest=<manifestKey> [--target=phase0baseline] [--label=golden] [--keepGraph]
-     edf-gate -diff             --baseline=<snapshotFile> --candidateGraph=<graphName>
-     edf-gate -runSuite         [--manifest=<manifestKey>]
-     edf-gate -assertGraphEquivalence --graphA=<graphName> --graphB=<graphName> [--ignoreOwnerStamp] [--scope=all]
+     edfGate -fingerprint      --graph=<graphName> [--ignoreOwnerStamp]
+     edfGate -proveDeterminism --manifest=<manifestKey> [--targetA=phase0a] [--targetB=phase0b] [--keepGraphs]
+     edfGate -freezeBaseline   --manifest=<manifestKey> [--target=phase0baseline] [--label=golden] [--keepGraph]
+     edfGate -diff             --baseline=<snapshotFile> --candidateGraph=<graphName>
+     edfGate -runSuite         [--manifest=<manifestKey>]
+     edfGate -assertGraphEquivalence --graphA=<graphName> --graphB=<graphName> [--ignoreOwnerStamp] [--scope=all]
 
 DESCRIPTION
      The proving apparatus for the cross-standard-equivalence build. Fingerprints are
@@ -196,6 +198,10 @@ const buildSharedResources = (callback) => {
 		// graphEquivalence reuses the fingerprinter + differ (never forks them) to assert two
 		// materialized graphs are identical up to embedding-vector values (Phase 0, embedding sidecar).
 		const graphEquivalence = graphEquivalenceFactory({ fingerprinter, differ });
+		// Standing gate comparators (Phase 0). PURE, synchronous; generalized out of the CTDL→CEDS
+		// campaign battery so preservation + delta-closure are reusable gates, not per-build asserts.
+		const manifestPreservation = manifestPreservationFactory();
+		const closureDelta = closureDeltaFactory();
 		callback('', {
 			forgeStore,
 			credentialAccessor,
@@ -208,6 +214,8 @@ const buildSharedResources = (callback) => {
 			gateSuite,
 			groundTruth,
 			graphEquivalence,
+			manifestPreservation,
+			closureDelta,
 		});
 	});
 };
