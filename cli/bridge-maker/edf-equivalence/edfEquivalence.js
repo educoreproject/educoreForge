@@ -116,11 +116,26 @@ const toBlockNode = (oneNode) => {
 };
 
 // =====================================================================
+// EDF_FORGE_STORE_DB redirects the store (scratch builds / test harnesses); absent -> canonical,
+// byte-identical. An active override is ANNOUNCED on stderr so it can never silently redirect
+// production writes (mirrors edf-replay / edf-gate).
+const dbPath = () =>
+	process.env.EDF_FORGE_STORE_DB || path.join(DATASTORES, 'forgeStore.sqlite3');
+if (process.env.EDF_FORGE_STORE_DB) {
+	console.error(
+		`STORE OVERRIDE ACTIVE: forgeStore db = ${dbPath()} (EDF_FORGE_STORE_DB)`,
+	);
+}
+
 const buildSharedResources = (callback) => {
 	const forgeStore = require(path.join(CORE_LIB, 'forge-store', 'forge-store'))();
 	const taskList = new taskListPlus();
 	taskList.push((args, next) => {
-		forgeStore.init({ dbPath: path.join(DATASTORES, 'forgeStore.sqlite3') }, (err) => next(err, args));
+		const storeDir = path.dirname(dbPath());
+		if (!fs.existsSync(storeDir)) {
+			fs.mkdirSync(storeDir, { recursive: true });
+		}
+		forgeStore.init({ dbPath: dbPath() }, (err) => next(err, args));
 	});
 	pipeRunner(taskList.getList(), {}, (err) => {
 		if (err) {
