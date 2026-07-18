@@ -511,6 +511,33 @@ const moduleFunction =
 			});
 		};
 
+		// findBlocksMeta — the SUBJECT-INDEXED metadata lookup (recipe-resolution finisher,
+		// P1 spec §2.1.1). Returns ROW METADATA ONLY (blockId/type/subject/version — no text
+		// BLOB, so no 2GB content read and no content-address recompute) for every block
+		// matching an EXACT type and a CASE-INSENSITIVE subject, optionally pinned to a
+		// version. The recipe declares standards by lowercase standardKey ('ceds') while the
+		// store files them under discovery casing ('CEDS'), so subject matching is
+		// case-insensitive; type is exact. version, when supplied, is matched exactly (null
+		// selects the null-version rows). The recipe→manifest resolver applies the §2.1.1
+		// uniqueness rule (exactly one candidate, else THROW) over this candidate list — this
+		// method REPORTS candidates, it does not choose. There is no CURRENT-pointer discipline
+		// for standard/reference blocks (only pair-scoped mapping/structuralBridge blocks carry
+		// currentPairGroup pointers), so multiple resident generations surface here as multiple
+		// rows and the caller throws on ambiguity per §2.1.1(b).
+		const findBlocksMeta = ({ type, subject, version }, callback) => {
+			const clauses = [`type=${esc(type)}`];
+			if (subject != null) {
+				clauses.push(`LOWER(subject)=LOWER(${esc(subject)})`);
+			}
+			if (version !== undefined) {
+				clauses.push(version == null ? `version IS NULL` : `version=${esc(version)}`);
+			}
+			getRows(
+				`SELECT blockId, type, subject, version FROM blocks WHERE ${clauses.join(' AND ')};`,
+				(err, rows) => callback(err, err ? undefined : rows || []),
+			);
+		};
+
 		// =====================================================================
 		// MANIFESTS
 		// =====================================================================
@@ -1322,6 +1349,7 @@ const moduleFunction =
 			getBlock,
 			getBlockMeta,
 			listBlocks,
+			findBlocksMeta,
 			saveManifest,
 			getManifest,
 			listManifests,

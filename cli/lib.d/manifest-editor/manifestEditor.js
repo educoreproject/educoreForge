@@ -59,6 +59,7 @@ USAGE
   manifestEditor -combine  [--base=<manifestKey>] [--set=<blockId>[,<blockId>...]]
                            [--group=<groupBlockId|pair@(a,b)>[,...]]
                            [--label=<text>] [--note=<text>]
+  manifestEditor -fromRecipe --recipeFilePath=<path>   (or just --recipeFilePath=<path>)
   manifestEditor -show     --manifest=<manifestKey>
   manifestEditor -validate --manifest=<manifestKey>
   manifestEditor -diff     --from=<manifestKey> --to=<manifestKey>
@@ -83,6 +84,11 @@ USAGE
             SUPERSEDES the base's block for its (type,subject) or ADDS a new subject.
             Nothing is mutated; the manifestKey is derived. With no --base, composes a
             genesis manifest from --set alone.
+  -fromRecipe  Compose a manifest from a goldenRecipe (*.goldenRecipe.jsonc). FORGE-FREE:
+            resolves every declared member (standards + hubReferences by subject/version;
+            crosswalks via the CURRENT pair-group pointer) to a RESIDENT blockId, then
+            composes. THROWS on a missing block or an ambiguous generation (§2.1.1) — it
+            never runs a forge. Bare --recipeFilePath=<path> selects this action.
   -show     Print a manifest's membership in derived build order.
   -validate Bridge-closure check: every relationships/overlay block's required subjects
             are present AND ordered earlier.
@@ -373,6 +379,68 @@ USAGE
 		};
 
 		// -----
+		// stripJsonComments — a string-aware JSONC comment remover for goldenRecipe files
+		// (*.goldenRecipe.jsonc carry // and /* */ comments). String literals are respected
+		// (a // or /* inside a quoted value survives), so a future recipe field containing
+		// 'http://…' is not truncated. Trailing commas are NOT stripped — the goldenRecipes
+		// are valid JSON once de-commented, and a stray trailing comma surfaces as a named
+		// JSON.parse error rather than being silently tolerated. No jsonc/json5 dependency
+		// exists in the tree, so this is the local, dependency-free reader.
+		const stripJsonComments = (text) => {
+			let out = '';
+			let inString = false;
+			let inLine = false;
+			let inBlock = false;
+			let escaped = false;
+			for (let index = 0; index < text.length; index++) {
+				const oneChar = text[index];
+				const nextChar = text[index + 1];
+				if (inLine) {
+					if (oneChar === '\n') {
+						inLine = false;
+						out += oneChar;
+					}
+					continue;
+				}
+				if (inBlock) {
+					if (oneChar === '*' && nextChar === '/') {
+						inBlock = false;
+						index++;
+					}
+					continue;
+				}
+				if (inString) {
+					out += oneChar;
+					if (escaped) {
+						escaped = false;
+					} else if (oneChar === '\\') {
+						escaped = true;
+					} else if (oneChar === '"') {
+						inString = false;
+					}
+					continue;
+				}
+				if (oneChar === '"') {
+					inString = true;
+					out += oneChar;
+					continue;
+				}
+				if (oneChar === '/' && nextChar === '/') {
+					inLine = true;
+					index++;
+					continue;
+				}
+				if (oneChar === '/' && nextChar === '*') {
+					inBlock = true;
+					index++;
+					continue;
+				}
+				out += oneChar;
+			}
+			return out;
+		};
+
+		// -----
 		// blockMetaFromHeader — type/subject/version/requires are a PROJECTION of the
 		// PG-JSONL header (schemas.md §2: the header is authoritative). subject is the
 		// standardKey; a consolidated relationships block has none (=> null); a per-pair
@@ -601,6 +669,39 @@ USAGE
 		const handleListManifests = ({ manifestEditor }, callback) => {
 			manifestEditor.listManifests((err, manifests) =>
 				callback(err, err ? undefined : manifests),
+			);
+		};
+
+		// handleFromRecipe — recipe → manifest (spec §2.1 / §2.1.1). Reads the goldenRecipe
+		// JSONC, hands the parsed object to the manifest-editor lib's fromRecipe (the resolver
+		// + compose), and prints the resulting manifestKey + resolution report. FORGE-FREE:
+		// the lib THROWS (never forges) on a missing block or an ambiguous generation.
+		const handleFromRecipe = ({ manifestEditor }, callback) => {
+			const recipeFilePath = first('recipeFilePath');
+			if (!recipeFilePath) {
+				callback(`-fromRecipe requires --recipeFilePath=<path>`);
+				return;
+			}
+			let raw;
+			try {
+				raw = fs.readFileSync(recipeFilePath, 'utf8');
+			} catch (readErr) {
+				callback(
+					`-fromRecipe: cannot read recipe file '${recipeFilePath}': ${readErr.message} [${moduleName}]`,
+				);
+				return;
+			}
+			let recipe;
+			try {
+				recipe = JSON.parse(stripJsonComments(raw));
+			} catch (parseErr) {
+				callback(
+					`-fromRecipe: recipe '${recipeFilePath}' is not valid JSONC (${parseErr.message}) [${moduleName}]`,
+				);
+				return;
+			}
+			manifestEditor.fromRecipe({ recipe, recipeFilePath }, (err, result) =>
+				callback(err, err ? undefined : result),
 			);
 		};
 
@@ -1282,6 +1383,7 @@ USAGE
 			diff: handleDiff,
 			listBlocks: handleListBlocks,
 			listManifests: handleListManifests,
+			fromRecipe: handleFromRecipe,
 			defineGroup: handleDefineGroup,
 			showGroup: handleShowGroup,
 			validateGroup: handleValidateGroup,
@@ -1302,6 +1404,14 @@ USAGE
 		const selectedActions = Object.keys(dispatchMap).filter(
 			(oneAction) => commandLineParameters.switches[oneAction],
 		);
+
+		// IMPLIED ACTION (spec §2.1 surface): `manifestEditor --recipeFilePath=<path>` selects
+		// the recipe→manifest action with no explicit `-fromRecipe` switch. Only applies when
+		// no action switch was given, so it never overrides an explicit one-action-at-a-time
+		// selection (the multi-action guard below still fires for `-save --recipeFilePath=…`).
+		if (selectedActions.length === 0 && first('recipeFilePath')) {
+			selectedActions.push('fromRecipe');
+		}
 
 		if (selectedActions.length === 0) {
 			xLog.error(

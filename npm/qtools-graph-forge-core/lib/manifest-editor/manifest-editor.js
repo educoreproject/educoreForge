@@ -504,7 +504,347 @@ const moduleFunction =
 			});
 		};
 
-		return { saveSchemaBlock, combine, validate, show, diff, listBlocks, listManifests };
+		// =====================================================================
+		// FROM RECIPE — recipe → manifest (spec §2.1 / §2.1.1). FORGE-FREE resolution:
+		// resolve every DECLARED member to a RESIDENT blockId via the store's subject/
+		// version keys and the CURRENT pair-group pointer, then compose via combine().
+		// THROWS (never forges) on any missing block or ambiguous generation.
+		// =====================================================================
+		//
+		// The resolution contract (§2.1.1 — the crux) yields EXACTLY ONE blockId per
+		// (standard, version, role):
+		//   - standards  : the recipe names a lowercase standardKey; resolve the unique
+		//                  type='standard' block whose subject matches (case-insensitive).
+		//   - references : {kind:'hubReference', standard, hubVersion}; resolve the unique
+		//                  type='reference' block at that subject+version.
+		//   - crosswalks : 'A__B' → pairSubject 'A::B'; the CURRENT pair-group pointer
+		//                  (resolveCurrentPairGroup) names the explicit member set (mapping
+		//                  ∪ structuralBridge blockIds) — the SAME version-keyed pointer
+		//                  discipline used for family bridges. These enter combine() as
+		//                  GROUPS (explicit expansion — never through the (type,subject)
+		//                  supersede collapse, which would collapse a pair's several mapping
+		//                  members to one survivor, the RECIPE §0B defect).
+		//   - blockIdMembers : the §2.1.1 escape hatch for authored authority blocks with no
+		//                  reproducible stable ref — referenced directly by blockId; validated
+		//                  resident (P2's curation producer will make these stable-ref'd).
+		//
+		// UNIQUENESS / AMBIGUITY (§2.1.1(a,b)): standard and reference blocks have NO
+		// CURRENT-pointer discipline (only pair-scoped mapping/structuralBridge blocks carry
+		// currentPairGroup pointers). When more than one resident generation matches a
+		// standard/reference ref, or a crosswalk's pair has more than one CURRENT version key
+		// and the recipe names no version, resolution THROWS rather than binding a stale
+		// generation. Preparing a single-winner store for the acceptance run (or minting the
+		// intended pair-group pointer BEFORE this resolution) is the caller's responsibility.
+		const resolveUniqueBlock = ({ role, ref, rows }) => {
+			if (!rows || rows.length === 0) {
+				return {
+					error:
+						`fromRecipe: no resident ${role} block for '${ref}' — forge-free resolution ` +
+						`THROWS on a missing block (produce it before composing) [${moduleName}]`,
+				};
+			}
+			if (rows.length > 1) {
+				return {
+					error:
+						`fromRecipe: ${role} '${ref}' is AMBIGUOUS — ${rows.length} resident ` +
+						`generations [${rows.map((oneRow) => `${oneRow.blockId}`.slice(0, 8)).join(', ')}] ` +
+						`and no CURRENT-pointer discipline exists for ${role} blocks; refusing to bind a ` +
+						`stale generation (§2.1.1(b)) [${moduleName}]`,
+				};
+			}
+			return { blockId: rows[0].blockId };
+		};
+
+		const parseGroupBlock = ({ blockRow, crosswalkName }) => {
+			const lines = `${blockRow.text}`.split('\n');
+			let header;
+			let content;
+			try {
+				header = JSON.parse(lines[0]);
+				content = JSON.parse(lines[1]);
+			} catch (parseErr) {
+				return {
+					error:
+						`fromRecipe: crosswalk '${crosswalkName}': pair-group block ${blockRow.blockId} ` +
+						`is not valid two-line PG-JSONL (${parseErr.message}) [${moduleName}]`,
+				};
+			}
+			const members = Array.isArray(content.members) ? content.members : [];
+			if (members.length === 0) {
+				return {
+					error:
+						`fromRecipe: crosswalk '${crosswalkName}': pair-group ${blockRow.blockId} has no ` +
+						`members [${moduleName}]`,
+				};
+			}
+			return { members, displayName: header.displayName };
+		};
+
+		const fromRecipe = ({ recipe, recipeFilePath }, callback) => {
+			if (!recipe || typeof recipe !== 'object') {
+				callback(`fromRecipe: recipe is not an object [${moduleName}]`);
+				return;
+			}
+
+			const standards = Array.isArray(recipe.standards) ? recipe.standards : [];
+			const references = Array.isArray(recipe.references) ? recipe.references : [];
+			const crosswalks = Array.isArray(recipe.crosswalks) ? recipe.crosswalks : [];
+			const blockIdMembers = Array.isArray(recipe.blockIdMembers)
+				? recipe.blockIdMembers
+				: [];
+
+			if (
+				standards.length === 0 &&
+				references.length === 0 &&
+				crosswalks.length === 0 &&
+				blockIdMembers.length === 0
+			) {
+				callback(
+					`fromRecipe: recipe declares no members (standards/crosswalks/references/` +
+						`blockIdMembers all empty) [${moduleName}]`,
+				);
+				return;
+			}
+
+			const setBlockIds = [];
+			const groups = [];
+			const resolution = {
+				standards: [],
+				references: [],
+				crosswalks: [],
+				blockIdMembers: [],
+			};
+
+			const taskList = new taskListPlus();
+
+			// ---- STANDARDS: unique type='standard' subject match, or THROW
+			standards.forEach((oneKey) => {
+				taskList.push((args, next) => {
+					forgeStore.findBlocksMeta(
+						{ type: 'standard', subject: oneKey },
+						(err, rows) => {
+							if (err) {
+								next(err, args);
+								return;
+							}
+							const resolved = resolveUniqueBlock({
+								role: 'standard',
+								ref: oneKey,
+								rows,
+							});
+							if (resolved.error) {
+								next(resolved.error, args);
+								return;
+							}
+							setBlockIds.push(resolved.blockId);
+							resolution.standards.push({ standard: oneKey, blockId: resolved.blockId });
+							next('', args);
+						},
+					);
+				});
+			});
+
+			// ---- REFERENCES: unique type='reference' subject+version match, or THROW
+			references.forEach((oneRef) => {
+				taskList.push((args, next) => {
+					if (oneRef && oneRef.kind && oneRef.kind !== 'hubReference') {
+						next(
+							`fromRecipe: reference kind '${oneRef.kind}' not supported (only ` +
+								`'hubReference') [${moduleName}]`,
+							args,
+						);
+						return;
+					}
+					const standardName = oneRef && oneRef.standard;
+					const hubVersion = oneRef && oneRef.hubVersion;
+					if (!standardName || !hubVersion) {
+						next(
+							`fromRecipe: hubReference requires standard + hubVersion, got ` +
+								`${JSON.stringify(oneRef)} [${moduleName}]`,
+							args,
+						);
+						return;
+					}
+					forgeStore.findBlocksMeta(
+						{ type: 'reference', subject: standardName, version: hubVersion },
+						(err, rows) => {
+							if (err) {
+								next(err, args);
+								return;
+							}
+							const resolved = resolveUniqueBlock({
+								role: 'reference',
+								ref: `${standardName}@${hubVersion}`,
+								rows,
+							});
+							if (resolved.error) {
+								next(resolved.error, args);
+								return;
+							}
+							setBlockIds.push(resolved.blockId);
+							resolution.references.push({
+								standard: standardName,
+								hubVersion,
+								blockId: resolved.blockId,
+							});
+							next('', args);
+						},
+					);
+				});
+			});
+
+			// ---- CROSSWALKS: load the CURRENT pointer rows ONCE, then resolve each pair
+			//      via the pointer discipline (unique version key per pair, or THROW).
+			taskList.push((args, next) => {
+				if (crosswalks.length === 0) {
+					next('', { ...args, pointerRows: [] });
+					return;
+				}
+				forgeStore.listCurrentPairGroups((err, rows) =>
+					next(err, { ...args, pointerRows: rows || [] }),
+				);
+			});
+
+			crosswalks.forEach((oneName) => {
+				taskList.push((args, next) => {
+					const wantSubject = `${oneName}`.replace(/__/g, '::');
+					const matches = (args.pointerRows || []).filter(
+						(oneRow) =>
+							`${oneRow.pairSubject}`.toLowerCase() === wantSubject.toLowerCase(),
+					);
+					if (matches.length === 0) {
+						next(
+							`fromRecipe: crosswalk '${oneName}' (pair '${wantSubject}') has NO current ` +
+								`pair-group in the store — forge-free resolution cannot bind it; produce the ` +
+								`pair's mapping/structuralBridge blocks and mint the pair-group first ` +
+								`[${moduleName}]`,
+							args,
+						);
+						return;
+					}
+					const distinctKeys = [
+						...new Set(matches.map((oneRow) => oneRow.versionKey)),
+					];
+					if (distinctKeys.length > 1) {
+						next(
+							`fromRecipe: crosswalk '${oneName}' (pair '${matches[0].pairSubject}') is ` +
+								`AMBIGUOUS — ${distinctKeys.length} CURRENT version keys ` +
+								`[${distinctKeys.join(', ')}] and the recipe names no version; refusing to ` +
+								`bind a generation (§2.1.1(b)) [${moduleName}]`,
+							args,
+						);
+						return;
+					}
+					const row = matches[0];
+					forgeStore.resolveCurrentPairGroup(
+						{ pairSubject: row.pairSubject, versionKey: row.versionKey },
+						(err, resolved) => {
+							if (err) {
+								next(err, args);
+								return;
+							}
+							const parsed = parseGroupBlock({
+								blockRow: resolved.block,
+								crosswalkName: oneName,
+							});
+							if (parsed.error) {
+								next(parsed.error, args);
+								return;
+							}
+							groups.push({
+								pairSubject: row.pairSubject,
+								versionKey: row.versionKey,
+								groupBlockId: row.currentGroupBlockId,
+								displayName: parsed.displayName,
+								members: parsed.members,
+							});
+							resolution.crosswalks.push({
+								crosswalk: oneName,
+								pairSubject: row.pairSubject,
+								versionKey: row.versionKey,
+								groupBlockId: row.currentGroupBlockId,
+								memberCount: parsed.members.length,
+							});
+							next('', args);
+						},
+					);
+				});
+			});
+
+			// ---- BLOCKID MEMBERS (§2.1.1 authored-authority escape hatch): validate resident.
+			blockIdMembers.forEach((oneEntry) => {
+				taskList.push((args, next) => {
+					const blockId =
+						typeof oneEntry === 'string' ? oneEntry : oneEntry && oneEntry.blockId;
+					if (!blockId || !/^[0-9a-f]{64}$/.test(`${blockId}`)) {
+						next(
+							`fromRecipe: blockIdMembers entry is not a 64-hex blockId: ` +
+								`${JSON.stringify(oneEntry)} [${moduleName}]`,
+							args,
+						);
+						return;
+					}
+					forgeStore.getBlockMeta({ blockId }, (err, meta) => {
+						if (err) {
+							next(err, args);
+							return;
+						}
+						if (!meta) {
+							next(
+								`fromRecipe: blockIdMembers references blockId ${blockId} which is NOT ` +
+									`resident — forge-free resolution throws on a missing block [${moduleName}]`,
+								args,
+							);
+							return;
+						}
+						setBlockIds.push(blockId);
+						resolution.blockIdMembers.push({
+							blockId,
+							type: meta.type,
+							subject: meta.subject,
+						});
+						next('', args);
+					});
+				});
+			});
+
+			pipeRunner(taskList.getList(), {}, (err) => {
+				if (err) {
+					callback(err);
+					return;
+				}
+				const label = recipe.goldenName != null ? `${recipe.goldenName}` : null;
+				const note =
+					`recipe->manifest` +
+					`${recipeFilePath ? ` from ${recipeFilePath}` : ''}` +
+					`${recipe.goldenName ? ` (${recipe.goldenName})` : ''}`;
+				combine(
+					{ set: setBlockIds, groups, label, note },
+					(combineErr, result) => {
+						if (combineErr) {
+							callback(combineErr);
+							return;
+						}
+						callback('', {
+							manifestKey: result.manifestKey,
+							memberCount: result.memberCount,
+							resolution,
+						});
+					},
+				);
+			});
+		};
+
+		return {
+			saveSchemaBlock,
+			combine,
+			validate,
+			show,
+			diff,
+			listBlocks,
+			listManifests,
+			fromRecipe,
+		};
 	};
 
 // END OF moduleFunction() ============================================================
