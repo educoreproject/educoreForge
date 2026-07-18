@@ -265,7 +265,7 @@ const run = ({ reader, emitBlock, log }, callback) => {
 };
 
 module.exports = {
-	kind: 'structure',
+	kind: 'structuralBridgeModule',
 	name: MODULE_NAME,
 	requires: REQUIRED_STANDARDS,
 	run,

@@ -146,8 +146,8 @@ const validateModuleInterface = ({ forgeModule, moduleNameWanted }) => {
 	if (!forgeModule || typeof forgeModule !== 'object') {
 		return { error: `module '${moduleNameWanted}' did not export an object` };
 	}
-	if (forgeModule.kind !== 'structure') {
-		problems.push(`kind '${forgeModule.kind}' (pilot supports 'structure')`);
+	if (forgeModule.kind !== 'structuralBridgeModule') {
+		problems.push(`kind '${forgeModule.kind}' (pilot supports 'structuralBridgeModule')`);
 	}
 	if (forgeModule.name !== moduleNameWanted) {
 		problems.push(`name '${forgeModule.name}' does not match the requested '${moduleNameWanted}'`);

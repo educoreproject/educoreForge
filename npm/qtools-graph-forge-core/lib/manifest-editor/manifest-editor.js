@@ -722,6 +722,23 @@ const moduleFunction =
 						);
 						return;
 					}
+					// GAP-1 hardening (§2.1.1): the case-insensitive pairSubject filter can admit
+					// two case-variant CURRENT pointers (e.g. `CEDS::CTDL` and `ceds::ctdl`) at the
+					// SAME versionKey; keying ambiguity on versionKey alone would silently bind the
+					// first. Any distinct pairSubject among the matches is genuine ambiguity → THROW.
+					const distinctPairSubjects = [
+						...new Set(matches.map((oneRow) => `${oneRow.pairSubject}`)),
+					];
+					if (distinctPairSubjects.length > 1) {
+						next(
+							`fromRecipe: crosswalk '${oneName}' (pair '${wantSubject}') is ` +
+								`AMBIGUOUS — ${distinctPairSubjects.length} distinct CURRENT pairSubject ` +
+								`rows [${distinctPairSubjects.join(', ')}] differ only by case; refusing to ` +
+								`bind a generation (§2.1.1(b)) [${moduleName}]`,
+							args,
+						);
+						return;
+					}
 					const distinctKeys = [
 						...new Set(matches.map((oneRow) => oneRow.versionKey)),
 					];
