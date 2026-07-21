@@ -22,10 +22,10 @@
 
 // the real components. Overridable one at a time through deps.components (see COMPONENT SEAM).
 const defaultComponents = {
-	forger: require('../../forger/forger'),
-	replayManager: require('../../replay-manager/replayManager'),
-	bridgeMaker: require('../../bridge-maker/bridgeMaker'),
-	manifestEditor: require('../../manifest-editor/manifestEditor'),
+	forger: require('../apps/forger'),
+	replayManager: require('../apps/replay-manager'),
+	bridgeMaker: require('../apps/bridge-maker'),
+	manifestEditor: require('../apps/manifest-editor'),
 };
 
 const RELATION_LABEL = ':BRIDGEDRELATION:';

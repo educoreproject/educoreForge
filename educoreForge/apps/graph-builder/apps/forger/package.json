@@ -1,0 +1,9 @@
+{
+  "name": "forger",
+  "version": "0.1.0",
+  "private": true,
+  "description": "forger — forges ONE standard's source into a materialized graph. In-process module of graphBuilder (stub).",
+  "main": "forger.js",
+  "author": "tqii",
+  "license": "ISC"
+}

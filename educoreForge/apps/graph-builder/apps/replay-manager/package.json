@@ -1,0 +1,9 @@
+{
+  "name": "replay-manager",
+  "version": "0.1.0",
+  "private": true,
+  "description": "replayManager — the single block<->graph boundary, both directions. In-process module of graphBuilder (stub).",
+  "main": "replayManager.js",
+  "author": "tqii",
+  "license": "ISC"
+}

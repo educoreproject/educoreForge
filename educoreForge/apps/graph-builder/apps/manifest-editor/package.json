@@ -1,0 +1,9 @@
+{
+  "name": "manifest-editor",
+  "version": "0.1.0",
+  "private": true,
+  "description": "manifestEditor — composes a manifest from block references (compose-by-selection). In-process module of graphBuilder (stub).",
+  "main": "manifestEditor.js",
+  "author": "tqii",
+  "license": "ISC"
+}

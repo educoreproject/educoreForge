@@ -10,9 +10,14 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // control surface, qtools-x-log for output, -help that states what it does, and a meaningful
 // exit code. It is the app you run to learn whether the tree is sound.
 //
-// Suites are DISCOVERED by convention -- apps/<app>/test/test-*.js -- so a new suite is picked
-// up the moment it is written and there is no registry to forget. Apps with NO suite are
-// reported as such on every run: an untested app must be visible, never silently absent.
+// Suites are DISCOVERED by convention, RECURSIVELY: a MODULE is any directory under apps/ that
+// carries a package.json (graphBuilder AND its nested in-process components), and a module's
+// suites are the test-*.js files in its OWN test/ dir. Discovering suites wherever they live
+// serves two ends at once: an app-level suite proves overall correctness, while a suite sitting
+// next to a component localizes a failure to that component. A module with a package.json but no
+// suite is reported as untested on every full run -- a coverage gap must be visible, never
+// silently absent. (Forge bundles under forges/ are out of scope here: their correctness is
+// proven through graphBuilder building a recipe, not a standalone suite.)
 //
 // Each suite runs as its OWN process, so a suite that crashes outright counts as failed rather
 // than taking the runner down with it. Output flags are FORWARDED to the children, because
@@ -41,8 +46,9 @@ SYNOPSIS
      runAllTests [-list] [--app=<name>] [--suite=<name>] [-verbose] [-quiet] [-help]
 
 DESCRIPTION
-     Discovers every suite matching apps/<app>/test/test-*.js, runs each in its own process,
-     and exits 0 only if every selected suite passed. Apps with no suite at all are listed as
+     Discovers every suite matching apps/**/test/test-*.js (recursively, so a suite next to a
+     nested component is found too), runs each in its own process, and exits 0 only if every
+     selected suite passed. Modules (package.json dirs) with no suite at all are listed as
      untested so their absence cannot be mistaken for coverage.
 
      Also available as: npm test
@@ -83,27 +89,26 @@ const firstValue = (name) => (commandLineParameters.values[name] || [])[0];
 // DISCOVERY
 // =====================================================================
 
-const listDirectories = (dirPath) => {
+// A MODULE is any directory carrying a package.json. Walk apps/ recursively so both the one
+// consolidated graphBuilder app AND its nested in-process components (forger, replay-manager,
+// bridge-maker, manifest-editor) are found. A module owns the suites in its OWN test/ dir; its
+// behaviour is still gated through graphBuilder (the component seam), but a suite that lives next
+// to a component is what turns a red run into "the forger is broken" rather than "something in
+// the app is broken." node_modules is never descended into.
+const findModuleDirs = (dirPath) => {
 	if (!fs.existsSync(dirPath)) {
 		return [];
 	}
-	return fs
+	const here = fs.existsSync(path.join(dirPath, 'package.json')) ? [dirPath] : [];
+	const deeper = fs
 		.readdirSync(dirPath, { withFileTypes: true })
-		.filter((entry) => entry.isDirectory())
-		.map((entry) => entry.name)
-		.sort();
+		.filter((entry) => entry.isDirectory() && entry.name !== 'node_modules')
+		.reduce((soFar, entry) => soFar.concat(findModuleDirs(path.join(dirPath, entry.name))), []);
+	return here.concat(deeper);
 };
 
-// An APP is a directory carrying a package.json. The component directories (forger,
-// replay-manager, bridge-maker, manifest-editor) are deliberately NOT apps -- they are
-// in-process modules of the one consolidated graphBuilder app (TQ's judgment, 2026-07-21).
-// Reporting them as "untested" every run would be a standing false accusation about
-// directories that will never have suites of their own; their behaviour is gated through
-// graphBuilder, including via the component seam.
-const isApp = (appName) => fs.existsSync(path.join(appsDir, appName, 'package.json'));
-
-const suitesForApp = (appName) => {
-	const testDir = path.join(appsDir, appName, 'test');
+const suitesInModule = (moduleDir) => {
+	const testDir = path.join(moduleDir, 'test');
 	if (!fs.existsSync(testDir)) {
 		return [];
 	}
@@ -114,24 +119,26 @@ const suitesForApp = (appName) => {
 		.map((name) => path.join(testDir, name));
 };
 
-const apps = listDirectories(appsDir);
 const appFilter = firstValue('app');
 const suiteFilter = firstValue('suite');
 
-const selectedApps = appFilter ? apps.filter((name) => name === appFilter) : apps;
+const allModules = findModuleDirs(appsDir).sort();
+const selectedModules = appFilter
+	? allModules.filter((moduleDir) => path.basename(moduleDir) === appFilter)
+	: allModules;
 
-// Untested apps are reported only on a full-coverage run. When --suite narrows the selection the
-// operator is asking about one suite, not about coverage, and listing every app without tests
-// would be noise pretending to be diligence.
-const untestedApps = suiteFilter
+// Untested modules are reported only on a full-coverage run. When --suite narrows the selection
+// the operator is asking about one suite, not about coverage, and listing every module without
+// tests would be noise pretending to be diligence.
+const untestedModules = suiteFilter
 	? []
-	: selectedApps.filter((appName) => isApp(appName) && suitesForApp(appName).length === 0);
+	: selectedModules.filter((moduleDir) => suitesInModule(moduleDir).length === 0);
 
-const allSuites = selectedApps
-	.reduce((soFar, appName) => soFar.concat(suitesForApp(appName)), [])
+const allSuites = selectedModules
+	.reduce((soFar, moduleDir) => soFar.concat(suitesInModule(moduleDir)), [])
 	.filter((suitePath) => !suiteFilter || path.basename(suitePath).includes(suiteFilter));
 
-const relative = (suitePath) => path.relative(treeRoot, suitePath);
+const relative = (aPath) => path.relative(treeRoot, aPath);
 
 // =====================================================================
 // ACTIONS
@@ -140,7 +147,7 @@ const relative = (suitePath) => path.relative(treeRoot, suitePath);
 const doList = () => {
 	xLog.status(`${moduleName}: discovered suites`);
 	allSuites.forEach((suitePath) => xLog.result(`${relative(suitePath)}\n`));
-	untestedApps.forEach((appName) => xLog.status(`  (apps/${appName} has no test suite)`));
+	untestedModules.forEach((moduleDir) => xLog.status(`  (${relative(moduleDir)} has no test suite)`));
 	process.exit(0);
 };
 
@@ -182,14 +189,14 @@ const doRun = () => {
 			xLog.error(line);
 		}
 	});
-	untestedApps.forEach((appName) => {
-		xLog.status(`NONE  apps/${appName}  -- no test suite yet`);
+	untestedModules.forEach((moduleDir) => {
+		xLog.status(`NONE  ${relative(moduleDir)}  -- no test suite yet`);
 	});
 	xLog.status('='.repeat(70));
 
 	xLog.result(
 		`${moduleName}: ${results.length - failed.length}/${results.length} suite(s) passed` +
-			(untestedApps.length ? `; ${untestedApps.length} app(s) untested` : '') +
+			(untestedModules.length ? `; ${untestedModules.length} module(s) untested` : '') +
 			'\n',
 	);
 

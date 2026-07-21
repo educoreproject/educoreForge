@@ -1,0 +1,7 @@
+standard: forge-lif
+publishedVersion: 2.0
+publishedVersionEvidence: openapi info.version, "Machine-Readable Schema for LIF"
+upstreamUrl: unknown (A4L-internal LIF schema; no public URL recorded)
+copiedFrom: /Users/tqwhite/Documents/webdev/A4L/unityObjectGenerator/system/code/assets/databaseDefinitionss/LIF
+copiedDate: 2026-05-28
+note: migrated to in-forge canonical location on 2026-05-28; original left in place

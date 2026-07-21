@@ -1,0 +1,9 @@
+{
+  "name": "bridge-maker",
+  "version": "0.1.0",
+  "private": true,
+  "description": "bridgeMaker — runs a bridge module over a materialized dependency graph, writing new labeled relationships into the graph. In-process module of graphBuilder (stub).",
+  "main": "bridgeMaker.js",
+  "author": "tqii",
+  "license": "ISC"
+}
