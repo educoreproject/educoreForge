@@ -94,6 +94,14 @@ const listDirectories = (dirPath) => {
 		.sort();
 };
 
+// An APP is a directory carrying a package.json. The component directories (forger,
+// replay-manager, bridge-maker, manifest-editor) are deliberately NOT apps -- they are
+// in-process modules of the one consolidated graphBuilder app (TQ's judgment, 2026-07-21).
+// Reporting them as "untested" every run would be a standing false accusation about
+// directories that will never have suites of their own; their behaviour is gated through
+// graphBuilder, including via the component seam.
+const isApp = (appName) => fs.existsSync(path.join(appsDir, appName, 'package.json'));
+
 const suitesForApp = (appName) => {
 	const testDir = path.join(appsDir, appName, 'test');
 	if (!fs.existsSync(testDir)) {
@@ -117,7 +125,7 @@ const selectedApps = appFilter ? apps.filter((name) => name === appFilter) : app
 // would be noise pretending to be diligence.
 const untestedApps = suiteFilter
 	? []
-	: selectedApps.filter((appName) => suitesForApp(appName).length === 0);
+	: selectedApps.filter((appName) => isApp(appName) && suitesForApp(appName).length === 0);
 
 const allSuites = selectedApps
 	.reduce((soFar, appName) => soFar.concat(suitesForApp(appName)), [])

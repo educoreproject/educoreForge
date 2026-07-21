@@ -97,6 +97,7 @@ harness.ok(
 	Array.isArray((parsedStdout(depsRun) || {}).availableForges),
 	depsRun.stdout,
 );
+harness.match('-deps stdout ends with a newline', depsRun.stdout, /\}\n$/);
 
 // =====================================================================
 harness.section('-validate — STRICT about all three layers');
@@ -127,6 +128,7 @@ harness.ok(
 	(parsedStdout(validateMalformed) || {}).valid === false,
 	validateMalformed.stdout,
 );
+harness.match('-validate stdout ends with a newline', validateGood.stdout, /\}\n$/);
 
 const validateMissingPath = runCli(['-validate']);
 harness.equal('-validate without a recipe path exits 1', validateMissingPath.status, 1);
@@ -152,6 +154,12 @@ harness.ok('-build emits parseable JSON on stdout', buildResult !== null, buildG
 harness.ok('  carrying a manifestId', !!(buildResult || {}).manifestId, buildGood.stdout);
 harness.ok('  carrying a boltUrl', !!(buildResult || {}).boltUrl, buildGood.stdout);
 harness.equal('  reporting 4 members for cedsLif', (buildResult || {}).memberCount, 4);
+
+// qtools-x-log's result() appends NO newline (the caller owns line termination so results stay
+// pipe-composable). Every result-bearing action must supply its own, or stdout ends mid-line and
+// the next thing written to the terminal runs into it. This was found by fault injection AFTER
+// the refactor slipped past every other assertion — hence a gate of its own.
+harness.match('-build stdout ends with a newline', buildGood.stdout, /\}\n$/);
 
 harness.match('progress goes to stderr', buildGood.stderr, /\[A\] forge ceds@current/);
 harness.ok(
