@@ -1,0 +1,9 @@
+{
+  "name": "graph-builder",
+  "version": "0.1.0",
+  "description": "graphBuilder — build any graph (up to a full golden) from a recipe, under program control.",
+  "main": "graphBuilder.js",
+  "bin": {
+    "graphBuilder": "graphBuilder.js"
+  }
+}
