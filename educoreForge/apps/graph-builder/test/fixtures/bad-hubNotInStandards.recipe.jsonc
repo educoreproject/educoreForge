@@ -1,0 +1,10 @@
+{
+  // ISOLATED FAULT (referential): hubs[0].standard names a standard not declared in standards[].
+  // Structurally valid — this must be caught by Layer 2, not Layer 1.
+  "schemaVersion": "1.0.0",
+  "recipeName": "badHubNotInStandards",
+  "kind": "dev",
+  "standards": [{ "token": "lif", "version": "current" }],
+  "hubs": [{ "standard": "ceds", "candidateFinder": "semanticDefText" }],
+  "bridges": []
+}

@@ -1,0 +1,9 @@
+{
+  // ISOLATED FAULT: the INCUMBENT (legacy golden) shape — goldenName instead of recipeName,
+  // plus a 'crosswalks' section. additionalProperties:false must reject it. This recipe is
+  // rejected BY DESIGN; it is a legacy artifact, not a new-format build recipe.
+  "schemaVersion": "1.0.0",
+  "goldenName": "allStandards",
+  "standards": [{ "token": "lif", "version": "current" }],
+  "crosswalks": ["lif->ceds"]
+}

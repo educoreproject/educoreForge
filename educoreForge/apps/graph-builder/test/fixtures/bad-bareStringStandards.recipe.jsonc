@@ -1,0 +1,8 @@
+{
+  // ISOLATED FAULT: standards as BARE STRINGS. The new format requires {token, version}
+  // objects; bare strings are the legacy shape and must be rejected.
+  "schemaVersion": "1.0.0",
+  "recipeName": "badBareStringStandards",
+  "kind": "dev",
+  "standards": ["lif", "ceds"]
+}

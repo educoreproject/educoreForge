@@ -1,0 +1,7 @@
+{
+  // ISOLATED FAULT: schemaVersion is not the required three-part form.
+  "schemaVersion": "1.0",
+  "recipeName": "badSchemaVersion",
+  "kind": "dev",
+  "standards": [{ "token": "lif", "version": "current" }]
+}

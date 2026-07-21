@@ -1,0 +1,13 @@
+{
+  // ISOLATED FAULT: a structural bridge (no hub) that fails to name its mapper.
+  "schemaVersion": "1.0.0",
+  "recipeName": "badStructuralBridgeNoMapper",
+  "kind": "dev",
+  "standards": [
+    { "token": "ceds", "version": "current" },
+    { "token": "lif", "version": "current" }
+  ],
+  "bridges": [
+    { "source": "lif", "dependencies": ["lif", "ceds"], "cacheMode": "reuse" }
+  ]
+}

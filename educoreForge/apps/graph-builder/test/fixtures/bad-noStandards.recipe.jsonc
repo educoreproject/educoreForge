@@ -1,0 +1,6 @@
+{
+  // ISOLATED FAULT: required 'standards' is absent. Everything else is well formed.
+  "schemaVersion": "1.0.0",
+  "recipeName": "badNoStandards",
+  "kind": "dev"
+}

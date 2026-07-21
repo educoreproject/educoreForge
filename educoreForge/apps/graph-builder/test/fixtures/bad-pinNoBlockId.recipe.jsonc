@@ -1,0 +1,14 @@
+{
+  // ISOLATED FAULT: cacheMode 'pin' without the pinBlockId the conditional requires.
+  "schemaVersion": "1.0.0",
+  "recipeName": "badPinNoBlockId",
+  "kind": "dev",
+  "standards": [
+    { "token": "ceds", "version": "current" },
+    { "token": "lif", "version": "current" }
+  ],
+  "hubs": [{ "standard": "ceds", "candidateFinder": "semanticDefText" }],
+  "bridges": [
+    { "source": "lif", "hub": "ceds", "dependencies": ["lif", "ceds"], "cacheMode": "pin" }
+  ]
+}

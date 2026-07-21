@@ -1,0 +1,15 @@
+{
+  // ISOLATED FAULT (referential): bridges[0].hub names a standard that is in standards[]
+  // but was never DECLARED as a hub. Being a standard is not the same as being a hub.
+  "schemaVersion": "1.0.0",
+  "recipeName": "badBridgeHubNotDeclared",
+  "kind": "dev",
+  "standards": [
+    { "token": "ceds", "version": "current" },
+    { "token": "lif", "version": "current" }
+  ],
+  "hubs": [],
+  "bridges": [
+    { "source": "lif", "hub": "ceds", "dependencies": ["lif", "ceds"], "cacheMode": "reuse" }
+  ]
+}

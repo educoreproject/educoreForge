@@ -1,0 +1,7 @@
+{
+  // ISOLATED FAULT: 'standards' present but empty (schema requires minItems 1).
+  "schemaVersion": "1.0.0",
+  "recipeName": "badEmptyStandards",
+  "kind": "dev",
+  "standards": []
+}

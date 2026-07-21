@@ -1,0 +1,2 @@
+// ISOLATED FAULT: parses cleanly but the root is an ARRAY, not an object.
+["lif", "ceds"]

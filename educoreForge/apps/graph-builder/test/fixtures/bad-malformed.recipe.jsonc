@@ -1,0 +1,5 @@
+{
+  // ISOLATED FAULT: unparseable. The load layer must reject before validation is attempted.
+  "schemaVersion": "1.0.0",
+  "recipeName": "badMalformed"
+  "standards": [

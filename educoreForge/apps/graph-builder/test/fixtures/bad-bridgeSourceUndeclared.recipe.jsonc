@@ -1,0 +1,11 @@
+{
+  // ISOLATED FAULT (referential): bridges[0].source is not in standards[].
+  "schemaVersion": "1.0.0",
+  "recipeName": "badBridgeSourceUndeclared",
+  "kind": "dev",
+  "standards": [{ "token": "ceds", "version": "current" }],
+  "hubs": [{ "standard": "ceds", "candidateFinder": "semanticDefText" }],
+  "bridges": [
+    { "source": "lif", "hub": "ceds", "dependencies": ["ceds"], "cacheMode": "reuse" }
+  ]
+}

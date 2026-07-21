@@ -1,0 +1,14 @@
+{
+  // ISOLATED FAULT (referential): a dependency names a standard not in standards[].
+  "schemaVersion": "1.0.0",
+  "recipeName": "badDepUndeclared",
+  "kind": "dev",
+  "standards": [
+    { "token": "ceds", "version": "current" },
+    { "token": "lif", "version": "current" }
+  ],
+  "hubs": [{ "standard": "ceds", "candidateFinder": "semanticDefText" }],
+  "bridges": [
+    { "source": "lif", "hub": "ceds", "dependencies": ["lif", "sif"], "cacheMode": "reuse" }
+  ]
+}
