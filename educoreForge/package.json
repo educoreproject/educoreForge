@@ -1,0 +1,18 @@
+{
+  "name": "educore-forge",
+  "version": "0.1.0",
+  "private": true,
+  "description": "educoreForge grand recreation — a self-contained, relocatable graph build system (forges, bridges, hubs, apps, recipes). Rename this folder freely; dependency resolution is relative.",
+  "scripts": {
+    "test": "node test/runAllTests.js"
+  },
+  "dependencies": {
+    "ajv": "^8.20.0",
+    "json5": "^2.2.3",
+    "qtools-asynchronous-pipe-plus": "^1.0.4",
+    "qtools-config-file-processor": "^1.0.18",
+    "qtools-functional-library": "^2.0.4",
+    "qtools-parse-command-line": "^1.0.9",
+    "qtools-x-log": "^1.0.16"
+  }
+}

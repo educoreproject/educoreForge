@@ -1,0 +1,13 @@
+{
+  // lifOnly — a minimal NEW-FORMAT build recipe: forge LIF alone, no hubs, no bridges.
+  // Proves graphBuilder accepts the new recipe shape (version-pinned token standards).
+  "schemaVersion": "1.0.0",
+  "recipeName": "lifOnly",
+  "kind": "dev",
+  "description": "Forge the LIF standard base only — the smallest useful recipe.",
+  "standards": [
+    { "token": "lif", "version": "current" }
+  ],
+  "hubs": [],
+  "bridges": []
+}
