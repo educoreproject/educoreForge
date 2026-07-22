@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 
-// test-forger.js — FAST gates for the forger module: the destination guard (proven to REFUSE,
+// test-forger.js — FAST gates for the forger module: that its destination guard MOVED intact to
 // in every direction — a guard never observed refusing is unproven), bundle resolution against
 // the real forges/ tree, and the pure standard-block serializer. NOTHING here touches Docker,
 // Neo4j, or Voyage; the full produce-and-write path is proven by the deliberate integration
@@ -19,7 +19,7 @@ SYNOPSIS
      ${moduleName} [-verbose] [-quiet] [-help]
 
 DESCRIPTION
-     Proves the forger's HARD SAFETY LINE refuses every forbidden destination shape (GOLD_*,
+     Proves the DEV_*-only line moved intact to replayManager (GOLD_*,
      gf_*, non-DEV names, malformed handles) and admits DEV_* handles; that bundle resolution
      finds the real LIF bundle and rejects unknown standards naming the known roster; and that
      the pure standard-block serializer emits the proven PG-JSONL shape. No Docker, no Neo4j,
@@ -34,58 +34,54 @@ require('../../../../../test/testLib/testAppStartup')({ moduleName, helpText: he
 const harness = require('../../../../../test/testLib/harness')(moduleName);
 
 const forgerModule = require('../forger');
-const { destinationRefusal, resolveBundle } = forgerModule;
+const { resolveBundle } = forgerModule;
 const { buildStandardBlock } = require('../lib/standard-block');
 
 // =====================================================================
-harness.section('THE GUARD — refuses every forbidden destination (the failure side FIRST)');
+harness.section('THE GUARD MOVED — the forger has no destination left to refuse');
 // =====================================================================
+// The forger used to carry its own DEV_*-only destination refusal. Work order Phase 5 took its
+// destination away entirely: it produces nodeEdges and writes nothing, so there is nothing here
+// to guard. A removed guard must be PROVEN to have moved rather than assumed to have — the
+// migration is checked at the site of the removal, not asserted in a comment.
 
-const goodHandle = { graphName: 'DEV_gb_test_1', boltUrl: 'bolt://localhost:7999', password: 'x' };
+harness.ok(
+	'the forger no longer exports a destination guard (it has no destination)',
+	forgerModule.destinationRefusal === undefined,
+	typeof forgerModule.destinationRefusal,
+);
 
+const replayManagerModule = require('../../replay-manager/replayManager');
 harness.match(
-	'GOLD_* is REFUSED by name',
-	destinationRefusal({ ...goodHandle, graphName: 'GOLD_260718' }),
-	/REFUSED.*GOLD_/,
+	'the DEV_*-only line is now held by replayManager: GOLD_* refused',
+	replayManagerModule.nameRefusal('GOLD_260718', 'init'),
+	/REFUSED.*production\/live/,
 );
 harness.match(
-	'gf_* is REFUSED by name',
-	destinationRefusal({ ...goodHandle, graphName: 'gf_devGolden' }),
-	/REFUSED.*GOLD_\*\/gf_\*/,
-);
-harness.match(
-	'the refusal is case-insensitive (gold_ sneaking past casing)',
-	destinationRefusal({ ...goodHandle, graphName: 'gold_evil' }),
+	'  gf_* refused',
+	replayManagerModule.nameRefusal('gf_devGolden', 'init'),
 	/REFUSED/,
 );
 harness.match(
-	'a non-DEV name is REFUSED even when harmless-looking',
-	destinationRefusal({ ...goodHandle, graphName: 'myScratch' }),
+	'  and a non-DEV name refused',
+	replayManagerModule.nameRefusal('myScratch', 'init'),
 	/not a DEV_\* scratch graph/,
 );
-harness.match(
-	'a missing handle is refused as malformed',
-	destinationRefusal(undefined),
-	/must be a graph handle/,
-);
-harness.match(
-	'a handle without a password is refused as malformed',
-	destinationRefusal({ graphName: 'DEV_x', boltUrl: 'bolt://localhost:1' }),
-	/must be a graph handle/,
+harness.equal(
+	'  while a proper DEV_* name is ADMITTED (a guard that refuses everything is not a guard)',
+	replayManagerModule.nameRefusal('DEV_gb_test_1', 'init'),
+	'',
 );
 
-// positive control: the guard must ADMIT a proper DEV_* handle, or every refusal above is
-// meaningless (a guard that refuses everything is not a guard).
-harness.equal('a proper DEV_* handle is ADMITTED', destinationRefusal(goodHandle), '');
-
-// the guard fires INSIDE forge() before anything else — no bundle load, no connection.
+// A destination handed to forge() is now IGNORED, not honored: there is no code path from the
+// forger to a graph at all. Passing one cannot cause a write, which is the property that matters.
 const forge = forgerModule().forge;
-forge({ standard: 'lif', destination: { graphName: 'GOLD_260718', boltUrl: 'b', password: 'p' } }, (err) => {
-	harness.match('forge() itself refuses a GOLD_* destination', err, /REFUSED.*GOLD_/);
-});
-forge({ standard: 'lif', destination: null }, (err) => {
-	harness.match('forge() itself refuses a missing destination', err, /must be a graph handle/);
-});
+harness.ok(
+	'forge() takes no destination — the forger module never requires the replay engine',
+	require('fs')
+		.readFileSync(require('path').join(__dirname, '..', 'forger.js'), 'utf8')
+		.indexOf('replay-engine') === -1,
+);
 
 // =====================================================================
 harness.section('BUNDLE RESOLUTION — the real forges/ tree');

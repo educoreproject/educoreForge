@@ -10,6 +10,17 @@
 // replayManager harvests OUT of the graph later (materialize-and-harvest). Keeping this serializer
 // byte-faithful to the incumbent is what keeps that eventual round-trip comparable.
 //
+// !! NO LONGER PART OF THE PIPELINE (work order Phase 5, 2026-07-22) !!
+// The forger used to call this to serialize a schema block and hand it to replay(), which
+// deserialized it again — objects -> string -> objects, purely to reach the only writer that
+// existed. replayManager.init takes objects, so that round trip is gone and a schema block is now
+// born in exactly ONE place: replayManager.harvest.
+//
+// This module survives DELIBERATELY, as the fixture for the punch-24 fidelity gate
+// (apps/graph-builder/apps/replay-manager/test/integration-harvest.js): it is the only way to
+// produce the "in-memory" side of the in-memory-vs-harvested comparison. Do not wire it back into
+// the pipeline. If the fidelity gate is ever retired, this goes with it.
+//
 // PURE: no I/O, no process.global. ({ forged }) -> { blockText, nodeCount, edgeCount }.
 
 const path = require('path');

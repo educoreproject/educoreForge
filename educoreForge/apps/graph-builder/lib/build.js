@@ -18,7 +18,7 @@
 //   C  per bridge: create dep graph   -> bridgeMaker.run (labels edges) -> harvest labeled block
 //                                      -> manifest.add(pair@versionKey, 'relationship', ...)
 //   compose   -> manifest.id()
-//   material  -> replayManager.create({ purpose:'materialize', manifestId }) -> boltUrl
+//   material  -> replayManager.create({ purpose:'materialize', manifestId }) -> the eval golden
 
 // STUB-ERA defaults. The pipeline runs against stub components until EVERY component is real —
 // a real forger provisions Docker and spends Voyage credit, which must never happen inside
@@ -79,15 +79,26 @@ const build = (recipe, deps, callback) => {
 		eachSeries(
 			standards,
 			(std, cb) => {
-				replay.create({ purpose: 'forge' }, (e1, boltUrl) => {
+				replay.create({ purpose: 'forge' }, (e1, workingGraph) => {
 					if (e1) return cb(`create(forge) for ${std.token}: ${e1}`);
 					forger.forge(
-						{ standard: std.token, version: std.version, destination: boltUrl },
-						(e2) => {
+						{ standard: std.token, version: std.version },
+						(e2, forgeReport) => {
 							if (e2) return cb(`forge ${std.token}: ${e2}`);
+							// the forger produced; replayManager loads. The label the harvest will
+							// select on is the label init stamps — handed down, not hoped for.
+							replay.init(
+								{
+									inGraph: workingGraph,
+									nodeEdges: forgeReport.nodeEdges,
+									applyLabels: [BASE_GRAPH_LABEL],
+									sourceLabel: `nodeEdges from forge bundle '${std.token}'`,
+								},
+								(eInit) => {
+							if (eInit) return cb(`init ${std.token}: ${eInit}`);
 							replay.harvest(
 								{
-									inGraph: boltUrl,
+									inGraph: workingGraph,
 									selectionLabels: [BASE_GRAPH_LABEL],
 									header: { blockType: 'standardBase', standardKey: std.token, version: std.version },
 								},
@@ -99,7 +110,7 @@ const build = (recipe, deps, callback) => {
 								);
 								const afterHub = (eh) => {
 									if (eh) return cb(eh);
-									replay.delete(boltUrl, (e5) => cb(e5 || ''));
+									replay.delete(workingGraph, (e5) => cb(e5 || ''));
 								};
 								if (!hubStdSet.has(String(std.token).toLowerCase())) {
 									afterHub('');
@@ -107,7 +118,7 @@ const build = (recipe, deps, callback) => {
 								}
 								replay.harvest(
 									{
-										inGraph: boltUrl,
+										inGraph: workingGraph,
 										selectionLabels: [HUB_LABEL],
 										header: {
 											blockType: 'hub',
@@ -128,6 +139,8 @@ const build = (recipe, deps, callback) => {
 							);
 						},
 					);
+						},
+					);
 				});
 			},
 			done,
@@ -141,19 +154,19 @@ const build = (recipe, deps, callback) => {
 			(bridge, cb) => {
 				replay.create(
 					{ purpose: 'dependencyGraph', dependencies: bridge.dependencies },
-					(e1, depBolt) => {
+					(e1, depGraph) => {
 						if (e1) return cb(`create(dep) ${pairKey(bridge)}: ${e1}`);
 						bridgeMaker.run(
 							{
-								graphBoltUrl: depBolt,
+								inGraph: depGraph,
 								mapper: bridge.mapper || 'defaultSemantic',
-								label: RELATION_LABEL,
+								applyLabel: RELATION_LABEL,
 							},
 							(e2) => {
 								if (e2) return cb(`bridge ${pairKey(bridge)}: ${e2}`);
 								replay.harvest(
 									{
-										inGraph: depBolt,
+										inGraph: depGraph,
 										selectionLabels: [RELATION_LABEL],
 										header: {
 											blockType: 'relationship',
@@ -168,7 +181,7 @@ const build = (recipe, deps, callback) => {
 												bridge.mapper || 'defaultSemantic'
 											}) -> relationship ${relBlock.blockId}`,
 										);
-										replay.delete(depBolt, (e4) => cb(e4 || ''));
+										replay.delete(depGraph, (e4) => cb(e4 || ''));
 									},
 								);
 							},

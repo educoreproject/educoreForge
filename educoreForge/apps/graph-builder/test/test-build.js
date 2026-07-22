@@ -88,6 +88,7 @@ const workingReplayManager = (overrides) => () =>
 	Object.assign(
 		{
 			create: (spec, cb) => cb('', `bolt://test/${spec.purpose}`),
+			init: (spec, cb) => cb('', { nodesMerged: 0, edgesMerged: 0 }),
 			harvest: ({ inGraph, selectionLabels }, cb) =>
 				cb('', {
 					blockId: `block:${(selectionLabels || []).join('')}`,

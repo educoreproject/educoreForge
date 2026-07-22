@@ -32,8 +32,6 @@
  * @property {string}      standard        token resolving forges/<standard>/ (e.g. 'lif')
  * @property {string}      [version]       recipe version token (reported; the bundle stamps
  *                                         real version provenance itself)
- * @property {GraphHandle} destination     the graph to write into — the forger NEVER
- *                                         provisions, deletes, or registers one
  * @property {string}      [source]        source-data path; default = the bundle's own asset
  * @property {string}      [owner]         ownerStamp pass-through (default ':golden')
  * @property {boolean}     [vectorize=true]  the SPEND KNOB — false constructs no Voyage client
@@ -45,20 +43,20 @@
  * @typedef {Object} ForgeReport
  * @property {string} standard        resolved standardName (e.g. 'LIF')
  * @property {string} version         the version the bundle stamped
- * @property {string} destination     graphName written into
- * @property {string} boltUrl
+ * @property {{nodes: Array, edges: Array, embeddingDims: number|null}} nodeEdges
+ *                                    ENGINE-shaped, ready for ReplayManagerComponent.init
  * @property {number} nodeCount
  * @property {number} edgeCount
  * @property {number} embedCallCount
- * @property {number} nodesMerged
- * @property {number} edgesMerged
  */
 
 /**
  * @interface ForgerComponent
- * Produce-and-write ONLY (targetArchitectureDesign §4: `thisStandard.forge(g)`): resolve the
- * bundle, run it with an injected Embedder, write {nodes,edges} into the HANDED graph. No
- * store, no cache, no provisioning. HARD SAFETY LINE: refuses any destination not DEV_*.
+ * PRODUCE ONLY (targetArchitectureDesign §4.1): resolve which forge bundle answers to a standard,
+ * wire its Embedder, run it, and translate the result to engine shape. It does NOT write to a
+ * graph — exactly three things touch a graph and the forger is not one of them. No store, no
+ * cache, no provisioning, no writing. The orchestrator hands the returned nodeEdges to
+ * ReplayManagerComponent.init, whose nameRefusal is where the DEV_*-only line is now held.
  * @property {function(ForgeSpec, function(string, ForgeReport=): void): void} forge
  */
 
@@ -96,7 +94,13 @@
  * @interface BridgeMakerComponent
  * Runs a bridge module over a materialized dependency graph, writing new LABELED relationship
  * edges INTO the graph (label-based delta harvest, §4 Phase C). Stub-bodied as of 2026-07-22.
- * @property {function({graphBoltUrl: string, mapper: string, label: string}, function(string, Object=): void): void} run
+ *
+ * It takes a GraphHandle, not a URL. The scaffolded orchestrator named replayManager.create's
+ * result `boltUrl` and passed it as `graphBoltUrl`, which was harmless only while every component
+ * was a stub: the real create returns a HANDLE, and a handle is not a string. Calling the
+ * parameter what it is removes the trap rather than documenting it.
+ * @property {function({inGraph: GraphHandle, mapper: string, applyLabel: string},
+ *           function(string, Object=): void): void} run
  */
 
 /**

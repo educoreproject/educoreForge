@@ -24,13 +24,16 @@ let forgeSeq = 0;
 
 // stub forger — reports a placeholder result without parsing, embedding, or writing anything.
 const forger = () => {
-	const forge = ({ standard, version, source, destination }, callback) => {
+	const forge = (spec, callback) => {
+		const { standard, version, source } = spec || {};
 		forgeSeq += 1;
+		// A stub that INVENTS content would let the orchestrator look correct while carrying
+		// nothing, so it returns an honestly empty nodeEdges of the right SHAPE.
 		callback('', {
 			standard,
 			version,
 			source: source || '(bundle default)',
-			destination,
+			nodeEdges: { nodes: [], edges: [], embeddingDims: null },
 			nodeCount: 0,
 			edgeCount: 0,
 			note: `stub forge #${forgeSeq}`,

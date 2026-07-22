@@ -71,6 +71,7 @@ const { DME_ROLES } = require(path.join(TREE_LIB, 'vocabulary', 'vocabulary'));
 const neo4j = require('neo4j-driver');
 
 const replayManager = require('../../replay-manager')();
+const BASE_GRAPH_LABEL = 'StandardBase';
 const forger = require('../forger')();
 
 // one cypher round-trip against the scratch graph
@@ -148,34 +149,54 @@ replayManager.create({ purpose: `${standardTokens.join('')}Proof` }, (createErr,
 			return;
 		}
 		const oneToken = standardTokens[tokenIndex];
-		forger.forge(
-			{ standard: oneToken, version: 'current', destination: handle, vectorize },
-			(forgeErr, forged) => {
-				if (forgeErr) {
-					harness.ok(`forge ${oneToken} into scratch graph`, false, forgeErr);
-					finish(handle, 1);
-					return;
-				}
-				harness.section(`FORGE — real ${oneToken.toUpperCase()} into the shared scratch graph`);
-				harness.equal(
-					'forger reports the standard',
-					String(forged.standard).toLowerCase(),
-					oneToken.toLowerCase(),
-				);
-				harness.ok(
-					`forged the real corpus (${forged.nodeCount} nodes >= floor ${MIN_NODES[oneToken]})`,
-					forged.nodeCount >= MIN_NODES[oneToken],
-					forged.nodeCount,
-				);
-				harness.equal('every serialized node was merged', forged.nodesMerged, forged.nodeCount);
-				harness.equal('every serialized edge was merged', forged.edgesMerged, forged.edgeCount);
-				if (vectorize) {
-					harness.ok(`embedding calls were made (${forged.embedCallCount})`, forged.embedCallCount > 0);
-				}
-				forgedReports.push(forged);
-				forgeNext(tokenIndex + 1, afterAllForges);
-			},
-		);
+		// The forger PRODUCES; replayManager LOADS. The forger has no path to a graph at all
+		// (targetArchitectureDesign §4.1), so the seam under proof here is forge -> init.
+		forger.forge({ standard: oneToken, version: 'current', vectorize }, (forgeErr, forged) => {
+			if (forgeErr) {
+				harness.ok(`forge ${oneToken}`, false, forgeErr);
+				finish(handle, 1);
+				return;
+			}
+			harness.section(`FORGE — real ${oneToken.toUpperCase()} produced in memory`);
+			harness.equal(
+				'forger reports the standard',
+				String(forged.standard).toLowerCase(),
+				oneToken.toLowerCase(),
+			);
+			harness.ok(
+				`forged the real corpus (${forged.nodeCount} nodes >= floor ${MIN_NODES[oneToken]})`,
+				forged.nodeCount >= MIN_NODES[oneToken],
+				forged.nodeCount,
+			);
+			harness.ok(
+				'the forger handed back engine-shaped nodeEdges, not a graph',
+				!!forged.nodeEdges && Array.isArray(forged.nodeEdges.nodes),
+			);
+			if (vectorize) {
+				harness.ok(`embedding calls were made (${forged.embedCallCount})`, forged.embedCallCount > 0);
+			}
+
+			replayManager.init(
+				{
+					inGraph: handle,
+					nodeEdges: forged.nodeEdges,
+					applyLabels: [BASE_GRAPH_LABEL],
+					sourceLabel: `nodeEdges from forge bundle '${forged.standard}'`,
+				},
+				(initErr, loadReport) => {
+					if (initErr) {
+						harness.ok(`init ${oneToken} into the scratch graph`, false, initErr);
+						finish(handle, 1);
+						return;
+					}
+					harness.section(`INIT — ${oneToken.toUpperCase()} loaded into the shared scratch graph`);
+					harness.equal('every node was merged', loadReport.nodesMerged, forged.nodeCount);
+					harness.equal('every edge was merged', loadReport.edgesMerged, forged.edgeCount);
+					forgedReports.push(forged);
+					forgeNext(tokenIndex + 1, afterAllForges);
+				},
+			);
+		});
 	};
 
 	forgeNext(0, () => {

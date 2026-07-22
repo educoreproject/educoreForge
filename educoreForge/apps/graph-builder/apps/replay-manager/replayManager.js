@@ -189,8 +189,20 @@ const waitForBoltPort = (boltPort, deadline, readyTimeoutMs, callback) => {
 
 const waitForAuthenticatedCypher = (boltUrl, password, deadline, readyTimeoutMs, callback) => {
 	const neo4j = require('neo4j-driver');
+	// LATENT BUG FIXED 2026-07-22: the success path used to invoke callback INSIDE the promise
+	// chain, so any exception thrown DOWNSTREAM of the callback — anywhere in the caller's entire
+	// continuation — was caught by this .catch, mistaken for "not ready yet", and the whole thing
+	// RETRIED. A caller bug therefore presented as a 90-second authentication timeout, and the
+	// caller's continuation ran several times over. `settled` makes the callback fire exactly once
+	// and the deferral takes it out of the promise chain entirely, so a downstream throw is a
+	// downstream throw.
+	let settled = false;
 	const attempt = () => {
+		if (settled) {
+			return;
+		}
 		if (Date.now() > deadline) {
+			settled = true;
 			callback(`neo4j at ${boltUrl} never authenticated within ${readyTimeoutMs / 1000}s`);
 			return;
 		}
@@ -202,14 +214,24 @@ const waitForAuthenticatedCypher = (boltUrl, password, deadline, readyTimeoutMs,
 				session
 					.close()
 					.then(() => driver.close())
-					.then(() => callback('')),
+					.then(() => {
+						if (settled) {
+							return;
+						}
+						settled = true;
+						setImmediate(() => callback(''));
+					}),
 			)
 			.catch(() => {
 				session
 					.close()
 					.then(() => driver.close())
 					.catch(() => {})
-					.then(() => setTimeout(attempt, 2000));
+					.then(() => {
+						if (!settled) {
+							setTimeout(attempt, 2000);
+						}
+					});
 			});
 	};
 	attempt();

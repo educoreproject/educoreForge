@@ -3,9 +3,15 @@
 /** @implements {ForgerComponent} — formal contract declared in apps/graph-builder/interfaces.js
  *  (ForgeSpec/ForgeReport/GraphHandle typedefs there); conformance enforced by test-interfaces. */
 
-// forger — forge ONE standard's source INTO a graph it is handed. In-process module of
+// forger — run ONE standard's forge bundle and hand back what it produced. In-process module of
 // graphBuilder; async callback style (err-string first, no async/await, no try/catch for
 // control flow).
+//
+// IT DOES NOT WRITE TO A GRAPH, and this is the point (targetArchitectureDesign §4.1). Exactly
+// three things touch a graph — replayManager owns it, bridgeMaker works over it, and the forger
+// is not one of them. Its job is to resolve WHICH forge bundle answers to a standard, wire the
+// bundle's embedder, run it, and translate the result to engine shape. The orchestrator then
+// hands that to replayManager.init.
 //
 //   forger() -> { forge(spec, callback) }
 //
@@ -13,9 +19,6 @@
 //       standard                   token, e.g. 'lif' (resolves forges/<standard>/)
 //       version                    recipe version token (reported; the bundle stamps the real
 //                                  version provenance itself via deriveVersionStamp)
-//       destination                the graph HANDLE from replayManager.create():
-//                                  { graphName, boltUrl, password } — the forger writes into
-//                                  this graph; it NEVER provisions, deletes, or registers one
 //       source?                    path to source data; default = the bundle's own asset
 //       owner?                     ownerStamp pass-through (default ':golden', incumbent-faithful)
 //       vectorize?                 default true. false = skip the embedding pass entirely — the
@@ -25,19 +28,24 @@
 //                                  stderr so it can never silently redirect embedding credentials
 //     }
 //
-//     callback('', { standard, version, destination, boltUrl, nodeCount, edgeCount,
-//                    embedCallCount, nodesMerged, edgesMerged })
+//     callback('', { standard, version, nodeEdges, nodeCount, edgeCount, embedCallCount })
 //
-// SEAM (targetArchitectureDesign §4): `g = replayManager.create(); thisStandard.forge(g); ...`
-// — replayManager owns the graph lifecycle; the forger's ONLY job is produce-and-write. The
-// deliberate CONTRAST with the incumbent forger app (cli/lib.d/forger): no forge-store, no
+//     nodeEdges = { nodes, edges, embeddingDims } in ENGINE shape, ready for replayManager.init.
+//
+// SEAM (targetArchitectureDesign §4):
+//     const nodeEdges = thisStandard.forge();
+//     replayManager.init({ inGraph: workingGraph, nodeEdges, applyLabels: [BASE_GRAPH_LABEL] });
+//
+// WHERE THE SAFETY GUARD WENT. The forger used to carry its own DEV_*-only destination refusal.
+// It no longer has a destination to refuse, so the guard MOVED rather than vanished: every write
+// now goes through replayManager.init, whose nameRefusal refuses GOLD_*, gf_* and any non-DEV_*
+// name before a connection is attempted, and which is gated in test-replay-manager. One write
+// path means one place to hold the line, which is stronger than two places that might disagree —
+// but it is only stronger if the remaining one is actually proven, so it is.
+//
+// The deliberate CONTRAST with the incumbent forger app (cli/lib.d/forger): no forge-store, no
 // vector-store cache (TQ 2026-07-21: real Voyage, no cache — "Voyage is very cheap"), no
-// credential registry, no instance-lifecycle, no provisioning.
-//
-// HARD SAFETY LINE: the forger writes ONLY to graphs named DEV_* (GNC-001 scratch tier). Any
-// other destination — and explicitly anything matching GOLD_* or gf_* — is REFUSED before a
-// connection is even attempted. This is the 2026-07-17 store-corruption lesson one layer down:
-// being well-behaved is not enough; the write path is structurally unable to reach production.
+// credential registry, no instance-lifecycle, no provisioning, and now no writing.
 //
 // SECRET: the Voyage key is read ONLY by the embedding-client from voyageEmbedding.ini; it is
 // never on the command line, in env, logged, or echoed here.
@@ -48,7 +56,7 @@ const fs = require('fs');
 const configFileProcessor = require('qtools-config-file-processor');
 const { pipeRunner, taskListPlus } = new require('qtools-asynchronous-pipe-plus')();
 
-const { buildStandardBlock } = require('./lib/standard-block');
+const { shapeForgedGraph } = require('./lib/shape-forged-graph');
 
 // tree root (educoreForge/) is four levels up: forger -> apps -> graph-builder -> apps -> root
 const TREE_ROOT = path.join(__dirname, '..', '..', '..', '..');
@@ -64,7 +72,6 @@ const DEFAULT_VOYAGE_CONFIG_PATH = path.join(
 	'voyageEmbedding.ini',
 );
 
-const replayEngine = require(path.join(TREE_LIB, 'replay', 'replay-engine'));
 
 // -----
 // resolveVoyageConfigPath — the Voyage ini precedence as ONE provable rule: call param (announced
@@ -73,26 +80,6 @@ const replayEngine = require(path.join(TREE_LIB, 'replay', 'replay-engine'));
 const resolveVoyageConfigPath = ({ paramPath, getConfig = process.global.getConfig } = {}) => {
 	const configuredPath = ((getConfig && getConfig('forger')) || {}).voyageConfigFilePath;
 	return paramPath || configuredPath || DEFAULT_VOYAGE_CONFIG_PATH;
-};
-
-// -----
-// destinationRefusal — the HARD SAFETY LINE, applied before any connection. Returns '' when the
-// destination is writable, otherwise the refusal message. Exported for the test suite: a guard
-// never observed refusing is unproven.
-const destinationRefusal = (destination) => {
-	const graphName = destination && destination.graphName;
-	if (!graphName || !destination.boltUrl || !destination.password) {
-		return `forger: destination must be a graph handle { graphName, boltUrl, password } from replayManager.create — got ${JSON.stringify(
-			destination,
-		)}`;
-	}
-	if (/^(GOLD_|gf_)/i.test(graphName)) {
-		return `forger: REFUSED — destination '${graphName}' matches GOLD_*/gf_* (production/live tier). The forger writes only to DEV_* scratch graphs.`;
-	}
-	if (!/^DEV_/.test(graphName)) {
-		return `forger: REFUSED — destination '${graphName}' is not a DEV_* scratch graph (GNC-001). The forger writes only to DEV_* graphs.`;
-	}
-	return '';
 };
 
 // -----
@@ -159,20 +146,12 @@ const forger = () => {
 		const {
 			standard,
 			version,
-			destination,
 			source,
 			owner = ':golden',
 			vectorize = true,
 			embedNodeLimit,
 			embeddingConfigFilePath,
 		} = spec || {};
-
-		// the guard fires FIRST — before the bundle loads, before anything connects.
-		const refusal = destinationRefusal(destination);
-		if (refusal) {
-			callback(refusal);
-			return;
-		}
 
 		const resolved = resolveBundle({ standard });
 		if (resolved.error) {
@@ -214,9 +193,9 @@ const forger = () => {
 		// run the forge bundle: parse -> contract graph -> (embed)
 		taskList.push((args, next) => {
 			xLog.status(
-				`[forger] forging ${resolved.standardName} from ${path.basename(
-					sourcePath,
-				)} -> graph '${destination.graphName}'${vectorize ? '' : ' (vectorize OFF)'}`,
+				`[forger] forging ${resolved.standardName} from ${path.basename(sourcePath)}${
+					vectorize ? '' : ' (vectorize OFF)'
+				}`,
 			);
 			bundle.forge(
 				{ sourcePath, owner, embedNodeLimit, skipEmbedding: !vectorize },
@@ -233,32 +212,21 @@ const forger = () => {
 			);
 		});
 
-		// serialize the ONE standard block (pure; the transport into the scratch graph)
+		// translate the bundle's output to ENGINE shape. This is where the deleted transport used
+		// to be: the forger serialized a schema block and handed it to replay(), which immediately
+		// deserialized it — objects -> string -> objects, to reach the only writer that existed.
+		// replayManager.init takes objects, so the round trip is gone and a schema block is now
+		// born in exactly one place: harvest.
 		taskList.push((args, next) => {
-			const block = buildStandardBlock({ forged: args.forged });
+			const shaped = shapeForgedGraph({ forged: args.forged });
+			if (shaped.error) {
+				next(`forger: ${shaped.error}`);
+				return;
+			}
 			xLog.status(
-				`[forger] serialized standard block: ${block.nodeCount} nodes, ${block.edgeCount} edges`,
+				`[forger] shaped ${shaped.nodes.length} nodes, ${shaped.edges.length} edges for loading`,
 			);
-			next('', { ...args, block });
-		});
-
-		// write into the handed graph (replay-engine MERGE; idempotent)
-		taskList.push((args, next) => {
-			replayEngine.replay(
-				{
-					manifest: [args.block.blockText],
-					boltUri: destination.boltUrl,
-					password: destination.password,
-					graphName: destination.graphName,
-				},
-				(err, replayResult) => {
-					if (err) {
-						next(`forger: replay into '${destination.graphName}' failed: ${err}`);
-						return;
-					}
-					next('', { ...args, replayResult });
-				},
-			);
+			next('', { ...args, shaped });
 		});
 
 		pipeRunner(taskList.getList(), {}, (err, args) => {
@@ -269,13 +237,10 @@ const forger = () => {
 			callback('', {
 				standard: resolved.standardName,
 				version: args.forged.metadata.version || version,
-				destination: destination.graphName,
-				boltUrl: destination.boltUrl,
-				nodeCount: args.block.nodeCount,
-				edgeCount: args.block.edgeCount,
+				nodeEdges: args.shaped,
+				nodeCount: args.shaped.nodes.length,
+				edgeCount: args.shaped.edges.length,
 				embedCallCount: args.forged.embedCallCount,
-				nodesMerged: args.replayResult.nodesMerged,
-				edgesMerged: args.replayResult.edgesMerged,
 			});
 		});
 	};
@@ -286,7 +251,6 @@ const forger = () => {
 // END OF moduleFunction() ============================================================
 
 module.exports = forger;
-module.exports.destinationRefusal = destinationRefusal;
 module.exports.resolveBundle = resolveBundle;
 module.exports.resolveVoyageConfigPath = resolveVoyageConfigPath;
 module.exports.DEFAULT_VOYAGE_CONFIG_PATH = DEFAULT_VOYAGE_CONFIG_PATH;
