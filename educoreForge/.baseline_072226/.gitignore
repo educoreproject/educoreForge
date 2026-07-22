@@ -1,0 +1,9 @@
+# Phase-0 evidence for workOrder_initHarvest_072226.md.
+#
+# The .jsonl schema blocks are ~54MB of GENERATED artifact and do not belong in git; they live on
+# this disk as the physical "before" side of the punch-24 comparison and are reproducible only
+# until Phase 5 deletes the transport serialization.
+#
+# The .meta.json files ARE committed: they carry the sha256, byte length and counts, which is the
+# durable evidence. A hash is a fact; a 30MB blob is a copy.
+*.schemaBlock.jsonl

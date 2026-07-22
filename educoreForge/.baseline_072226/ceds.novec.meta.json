@@ -1,0 +1,17 @@
+{
+	"capturedFor": "workOrder_initHarvest_072226.md Phase 0",
+	"standard": "CEDS",
+	"standardToken": "ceds",
+	"vectorize": false,
+	"sourceFile": "CEDS-Ontology.rdf",
+	"sha256": "4621f84897ea7c9c70b43687e222a7d25ff064d89f39ca7bc0dc7c158d621de1",
+	"byteLength": 30704026,
+	"reportedNodeCount": 23238,
+	"reportedEdgeCount": 24015,
+	"lineKindCounts": {
+		"header": 1,
+		"node": 23238,
+		"edge": 24015
+	},
+	"blockFile": "ceds.novec.schemaBlock.jsonl"
+}

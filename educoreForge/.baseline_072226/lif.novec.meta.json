@@ -1,0 +1,17 @@
+{
+	"capturedFor": "workOrder_initHarvest_072226.md Phase 0",
+	"standard": "LIF",
+	"standardToken": "lif",
+	"vectorize": false,
+	"sourceFile": "data_model_1_bare_openapi_schema.1.json",
+	"sha256": "529fdc1d5c8c4c1160ddf361c6a7451ce2f5309cf3fca1d13b74a3a351a9858d",
+	"byteLength": 3262098,
+	"reportedNodeCount": 2982,
+	"reportedEdgeCount": 3058,
+	"lineKindCounts": {
+		"header": 1,
+		"node": 2982,
+		"edge": 3058
+	},
+	"blockFile": "lif.novec.schemaBlock.jsonl"
+}
