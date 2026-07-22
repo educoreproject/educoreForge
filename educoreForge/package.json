@@ -14,6 +14,7 @@
     "qtools-config-file-processor": "^1.0.18",
     "qtools-functional-library": "^2.0.4",
     "qtools-parse-command-line": "^1.0.9",
-    "qtools-x-log": "^1.0.16"
+    "qtools-x-log": "^1.0.16",
+    "xml2js": "^0.6.2"
   }
 }

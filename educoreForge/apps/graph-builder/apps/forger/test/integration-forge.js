@@ -1,15 +1,19 @@
 #!/usr/bin/env node
 'use strict';
 
-// integration-forge-lif.js — the LIVE milestone proof: replayManager.create provisions a real
-// DEV_* scratch Neo4j; the forger forges REAL LIF into it; Cypher gates verify the graph in both
-// directions (including one gate PROVEN TO GO RED on an injected fault); the scratch graph is
-// destroyed. Spends real resources (a docker container; Voyage credit unless --vectorize=false),
-// so it is DELIBERATE: its name does not match test-*.js and runAllTests never runs it.
+// integration-forge.js — the LIVE proof for ANY ported forge: replayManager.create provisions a
+// real DEV_* scratch Neo4j; the forger forges the REAL standard into it; Cypher gates verify the
+// graph in both directions (including one gate PROVEN TO GO RED on an injected fault); the
+// scratch graph is destroyed. Spends real resources (a docker container; Voyage credit unless
+// --vectorize=false), so it is DELIBERATE: its name does not match test-*.js and runAllTests
+// never runs it.
 //
-//   node integration-forge-lif.js                  full proof (real Voyage embeddings)
-//   node integration-forge-lif.js --vectorize=false smoke mode: no Voyage spend, embedding gate skipped
-//   node integration-forge-lif.js -keepGraph       leave the scratch graph up for inspection
+//   node integration-forge.js --standard=lif        full proof (real Voyage embeddings)
+//   node integration-forge.js --standard=ceds --vectorize=false   smoke: no Voyage, G6 skipped
+//   node integration-forge.js -keepGraph            leave the scratch graph up for inspection
+//
+// Per-standard sanity floors (MIN_NODES) keep G1 honest: equality with the forger's own report
+// proves consistency, the floor proves we forged the real corpus rather than a stub.
 //
 // On gate FAILURE the scratch graph is kept and named so it can be inspected (delete by hand:
 // docker rm -f <name>). On success it is destroyed unless -keepGraph.
@@ -18,16 +22,17 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
 const helpText = () => `
 NAME
-     ${moduleName} -- live proof: provision scratch graph, forge real LIF, Cypher-gate, destroy
+     ${moduleName} -- live proof: provision scratch graph, forge a real standard, Cypher-gate, destroy
 
 SYNOPSIS
-     ${moduleName} [--vectorize=false] [-keepGraph] [-verbose] [-help]
+     ${moduleName} [--standard=<token>] [--vectorize=false] [-keepGraph] [-verbose] [-help]
 
 DESCRIPTION
-     The forge-LIF milestone acceptance run. Provisions a throwaway DEV_* Neo4j container,
-     forges the real LIF source into it with real Voyage embeddings (unless --vectorize=false),
-     asserts the Cypher gates, proves the searchText gate BITES by injecting a fault and
-     watching it go red, and destroys the container.
+     The forge milestone acceptance run for any ported forge (default --standard=lif).
+     Provisions a throwaway DEV_* Neo4j container, forges the real source into it with real
+     Voyage embeddings (unless --vectorize=false), asserts the Cypher gates, proves the
+     searchText gate BITES by injecting a fault and watching it go red, and destroys the
+     container.
 
 EXIT STATUS
      0 all gates green AND the red-gate proof fired;  1 otherwise.
@@ -45,6 +50,18 @@ const { xLog } = process.global;
 
 const vectorize = (commandLineParameters.values.vectorize || [])[0] !== 'false';
 const keepGraph = !!commandLineParameters.switches.keepGraph;
+const standardToken = (commandLineParameters.values.standard || [])[0] || 'lif';
+
+// sanity floor per standard: proves the REAL corpus was forged, not a stub or a truncation
+const MIN_NODES = { lif: 2900, ceds: 23000 };
+const minNodes = MIN_NODES[standardToken];
+if (minNodes === undefined) {
+	xLogEarlyExit(`no MIN_NODES floor for standard '${standardToken}' — add it before proving`);
+}
+function xLogEarlyExit(message) {
+	console.error(`${moduleName}: ${message}`);
+	process.exit(1);
+}
 
 const TREE_LIB = path.join(__dirname, '..', '..', '..', '..', '..', 'lib');
 const { DME_ROLES } = require(path.join(TREE_LIB, 'vocabulary', 'vocabulary'));
@@ -108,9 +125,9 @@ const finish = (handle, exitCode) => {
 // THE RUN — create -> forge -> gates -> red-proof -> destroy
 // =====================================================================
 
-xLog.status(`[${moduleName}] vectorize=${vectorize} keepGraph=${keepGraph}`);
+xLog.status(`[${moduleName}] standard=${standardToken} vectorize=${vectorize} keepGraph=${keepGraph}`);
 
-replayManager.create({ purpose: 'lifProof' }, (createErr, handle) => {
+replayManager.create({ purpose: `${standardToken}Proof` }, (createErr, handle) => {
 	if (createErr) {
 		harness.ok('scratch graph provisioned', false, createErr);
 		finish(null, 1);
@@ -121,16 +138,24 @@ replayManager.create({ purpose: 'lifProof' }, (createErr, handle) => {
 	harness.match('bolt url handed back', handle.boltUrl, /^bolt:\/\/localhost:\d+$/);
 
 	forger.forge(
-		{ standard: 'lif', version: 'current', destination: handle, vectorize },
+		{ standard: standardToken, version: 'current', destination: handle, vectorize },
 		(forgeErr, forged) => {
 			if (forgeErr) {
 				harness.ok('forge LIF into scratch graph', false, forgeErr);
 				finish(handle, 1);
 				return;
 			}
-			harness.section('FORGE — real LIF into the scratch graph');
-			harness.equal('forger reports the standard', forged.standard, 'LIF');
-			harness.ok(`forged a real graph (${forged.nodeCount} nodes)`, forged.nodeCount > 2900, forged.nodeCount);
+			harness.section(`FORGE — real ${standardToken.toUpperCase()} into the scratch graph`);
+			harness.equal(
+				'forger reports the standard',
+				String(forged.standard).toLowerCase(),
+				standardToken.toLowerCase(),
+			);
+			harness.ok(
+				`forged the real corpus (${forged.nodeCount} nodes >= floor ${minNodes})`,
+				forged.nodeCount >= minNodes,
+				forged.nodeCount,
+			);
 			harness.equal('every serialized node was merged', forged.nodesMerged, forged.nodeCount);
 			harness.equal('every serialized edge was merged', forged.edgesMerged, forged.edgeCount);
 			if (vectorize) {
@@ -166,7 +191,7 @@ replayManager.create({ purpose: 'lifProof' }, (createErr, handle) => {
 
 								runCypher(
 									handle,
-									`MATCH ()-[r]->() WHERE type(r) IN ['HAS_CLASS','HAS_PROPERTY','HAS_OPTION_SET','HAS_VALUE','REFERENCES'] AND r.provenanceTier IS NULL RETURN count(r) AS v`,
+									`MATCH ()-[r]->() WHERE type(r) IN ['HAS_CLASS','HAS_PROPERTY','HAS_OPTION_SET','HAS_VALUE','REFERENCES','SUBCLASS_OF'] AND r.provenanceTier IS NULL RETURN count(r) AS v`,
 									(e5, r5) => {
 										if (e5) { harness.ok('provenanceTier gate query', false, e5); finish(handle, 1); return; }
 										harness.equal('G4 every ownership/reference edge carries provenanceTier', asNumber(r5[0].v), 0);

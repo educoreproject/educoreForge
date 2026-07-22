@@ -1,0 +1,7 @@
+standard: forge-ceds-rdf
+publishedVersion: 14.0.0.0
+publishedVersionEvidence: owl:versionInfo in CEDS-Ontology.rdf
+upstreamUrl: unknown (publisher: US Department of Education CEDS — https://ceds.ed.gov; exact ontology download URL not recorded at harvest)
+copiedFrom: /Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/sourceData/forge-ceds-rdf
+copiedDate: 2026-05-28
+note: migrated to in-forge canonical location on 2026-05-28; original left in place

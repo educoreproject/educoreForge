@@ -1,0 +1,11 @@
+{
+  // crosswalkRecipe — an ordered version-pair owning its bridge content. Version-keyed.
+  "recipeKind": "crosswalk",
+  "pairSubject": "CEDS::MedBiquitous",
+  "versionKey": "(01,01)",
+  "kind": "mapping",
+  "requires": ["CEDS", "MedBiquitous"],
+  "modules": ["cedsMapping", "inferredMapping"],
+  "selection": "currentPairGroup(pairSubject, versionKey)",
+  "notes": "Legacy pair-group-minted mapping content (SSSOM EXACT/CLOSE tiers). Future module: cedsMapping/inferredMapping (fold-in pending). KNOWN DEBT: this pair's mapping blocks pin requires to superseded standard generations (legacyClosureDebt.json) — retired by the future rekey campaign."
+}
