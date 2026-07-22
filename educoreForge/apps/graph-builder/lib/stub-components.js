@@ -1,5 +1,10 @@
 'use strict';
 
+/** The stub implementations here conform to the SAME formal contracts as the real components
+ *  ({ForgerComponent}, {ReplayManagerComponent}, {BridgeMakerComponent}, {ManifestEditorComponent}
+ *  — declared in ../interfaces.js) except for return-value REALITY, not shape. test-interfaces
+ *  enforces the conformance on both sides, so stub/real drift turns the suite red. */
+
 // stub-components — the ORCHESTRATOR's stub-era scaffolding, gathered in one place.
 //
 // These stubs were born inside the component modules; they moved HERE (2026-07-21) the moment the

@@ -1,5 +1,8 @@
 'use strict';
 
+/** @implements {ForgerComponent} — formal contract declared in apps/graph-builder/interfaces.js
+ *  (ForgeSpec/ForgeReport/GraphHandle typedefs there); conformance enforced by test-interfaces. */
+
 // forger — forge ONE standard's source INTO a graph it is handed. In-process module of
 // graphBuilder; async callback style (err-string first, no async/await, no try/catch for
 // control flow).

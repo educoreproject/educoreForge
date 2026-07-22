@@ -1,5 +1,8 @@
 'use strict';
 
+/** @implements {BridgeMakerComponent} — formal contract declared in
+ *  apps/graph-builder/interfaces.js; enforced by test-interfaces. */
+
 // bridgeMaker (STUB) — runs a bridge module over a materialized dependency graph, writing new
 // (labeled) relationships INTO the graph. In-process module; body stubbed. Async callback style.
 //

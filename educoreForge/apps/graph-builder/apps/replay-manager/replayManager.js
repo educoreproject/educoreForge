@@ -1,5 +1,8 @@
 'use strict';
 
+/** @implements {ReplayManagerComponent} — formal contract declared in
+ *  apps/graph-builder/interfaces.js (GraphHandle typedef there); enforced by test-interfaces. */
+
 // replayManager — the single block<->graph boundary (targetArchitectureDesign §4). In-process
 // module of graphBuilder; async callback style (err-string first, no async/await).
 //

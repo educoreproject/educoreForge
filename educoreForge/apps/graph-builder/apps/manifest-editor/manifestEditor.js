@@ -1,5 +1,8 @@
 'use strict';
 
+/** @implements {ManifestEditorComponent} — formal contract declared in
+ *  apps/graph-builder/interfaces.js; enforced by test-interfaces. */
+
 // manifestEditor (STUB) — composes a manifest from block references (compose-by-selection).
 // In-process module; synchronous accumulator per the graphBuilder pseudocode.
 //
