@@ -64,13 +64,28 @@
 
 /**
  * @interface ReplayManagerComponent
- * The single block<->graph boundary; the ONE owner of the scratch-graph lifecycle
- * (`g = replayManager.create(); ...; replayManager.extract(g, kind); replayManager.delete(g)`).
- * All provisioning (docker, ports, credentials) lives here and nowhere else.
+ * The ONE owner of everything a graph is and everything that crosses its boundary
+ * (targetArchitectureDesign §4): create / init / harvest / delete. All provisioning (docker,
+ * ports, credentials) lives here and nowhere else, and no other component writes to a graph.
+ *
+ * `create` is deliberately MONOMORPHIC — it means "an empty graph", always. Everything that
+ * varies about putting content into a graph varies in `init`, which is the single polymorphic
+ * loader, because there are exactly two kinds of thing that can enter a graph and they have
+ * different histories: freshly forged material that has never been a schema block, and schema
+ * blocks harvested earlier.
+ *
  * @property {function({purpose?: string, graphName?: string}, function(string, GraphHandle=): void): void} create
+ * @property {function({inGraph: GraphHandle, nodeEdges?: {nodes: Array, edges: Array,
+ *           embeddingDims?: number}, schemaBlocks?: Array, applyLabels?: string[],
+ *           sourceLabel?: string}, function(string, Object=): void): void} init
+ *           CREATION takes nodeEdges; RESTORATION takes schemaBlocks (a later milestone — it
+ *           refuses honestly). `applyLabels` is stamped on every node loaded, which is how the
+ *           orchestrator's label vocabulary reaches the graph without a forge bundle ever
+ *           learning it. Delegates to replay-engine.writeShapedGraph — the SAME write path
+ *           replay() uses, so the guards cannot diverge between creation and restoration.
  * @property {function(GraphHandle, string, function(string, Object=): void): void} extract
  *           selector: 'standardBase' | 'hub' | a relationship label. NOT IMPLEMENTED until the
- *           replayManager milestone (punch item 24); until then it errors honestly.
+ *           harvest milestone (punch item 24); until then it errors honestly.
  * @property {function(GraphHandle, function(string): void): void} delete
  */
 
@@ -124,7 +139,7 @@
 
 const COMPONENT_SHAPES = {
 	forger: ['forge'],
-	replayManager: ['create', 'delete', 'extract'],
+	replayManager: ['create', 'init', 'delete', 'extract'],
 	bridgeMaker: ['run'],
 	manifestEditor: ['init'],
 };

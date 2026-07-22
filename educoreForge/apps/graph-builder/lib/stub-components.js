@@ -48,6 +48,19 @@ const replayManager = () => {
 		callback('', `stub://graph/${purpose}/${graphSeq}`);
 	};
 
+	// stub init — reports what it was handed so the pipeline's data flow stays observable, and
+	// counts nothing it was not given (a stub that invents numbers is worse than no stub).
+	const init = (spec, callback) => {
+		const { nodeEdges, schemaBlocks, applyLabels } = spec || {};
+		callback('', {
+			nodesMerged: nodeEdges ? nodeEdges.nodes.length : 0,
+			edgesMerged: nodeEdges ? nodeEdges.edges.length : 0,
+			schemaBlockCount: schemaBlocks ? schemaBlocks.length : 0,
+			appliedLabels: applyLabels || [],
+			note: 'stub init',
+		});
+	};
+
 	const extract = (boltUrl, selector, callback) => {
 		blockSeq += 1;
 		const tag = String(selector).replace(/[^A-Za-z0-9]+/g, '') || 'block';
@@ -62,7 +75,7 @@ const replayManager = () => {
 		callback('');
 	};
 
-	return { create, extract, delete: deleteGraph };
+	return { create, init, extract, delete: deleteGraph };
 };
 
 module.exports = {

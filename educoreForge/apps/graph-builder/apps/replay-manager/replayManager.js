@@ -32,9 +32,14 @@
 // GOLD_* and gf_* are refused by name before any docker command runs.
 
 const net = require('net');
+const path = require('path');
 const crypto = require('crypto');
 const { execFile } = require('child_process');
 const { pipeRunner, taskListPlus } = new require('qtools-asynchronous-pipe-plus')();
+
+// tree-root lib/ (five levels up: replay-manager -> apps -> graph-builder -> apps -> root)
+const TREE_LIB = path.join(__dirname, '..', '..', '..', '..', 'lib');
+const replayEngine = require(path.join(TREE_LIB, 'replay', 'replay-engine'));
 
 // in-code DEFAULTS; each is overridable via getConfig('replay-manager') — graphBuilder.ini,
 // [replay-manager] section (neo4jImage, portSearchStart, portSearchSpan, readyTimeoutSeconds).
@@ -61,6 +66,25 @@ const resolveSettings = (getConfig = process.global.getConfig) => {
 };
 
 let createSeq = 0;
+
+// -----
+// withAppliedLabels — add the orchestrator's labels to every node, WITHOUT mutating the caller's
+// objects. Non-mutation is the point: the same nodeEdges are reused by the forger and by the
+// fidelity gate, and a second use of the same objects must behave exactly like the first.
+// Idempotent, because a label set is a set.
+const withAppliedLabels = (nodes, applyLabels) => {
+	if (!applyLabels || applyLabels.length === 0) {
+		return nodes;
+	}
+	return nodes.map((oneNode) => {
+		const existing = oneNode.labels || [];
+		const additions = applyLabels.filter((oneLabel) => existing.indexOf(oneLabel) === -1);
+		if (additions.length === 0) {
+			return oneNode;
+		}
+		return { ...oneNode, labels: existing.concat(additions) };
+	});
+};
 
 // -----
 // nameRefusal — the GNC-001 guard, applied before any docker command. '' = allowed.
@@ -285,6 +309,111 @@ const replayManager = () => {
 	};
 
 	// -----
+	// init — the LOADER, and the creation entry point into the shared write path
+	// (targetArchitectureDesign §4). It is deliberately the ONLY polymorphic verb: `create` means
+	// exactly one thing forever, and everything that varies about "put something into a graph"
+	// varies here. Two payloads exist because there are exactly two kinds of thing that can enter
+	// a graph, and they have different histories:
+	//
+	//     init({ inGraph, nodeEdges,    applyLabels })   CREATION    — freshly forged material
+	//     init({ inGraph, schemaBlocks, applyLabels })   RESTORATION — previously harvested
+	//
+	// Only the creation payload is implemented in this milestone; schemaBlocks refuses honestly.
+	//
+	// The guards, the resolution-key index, the merge order and the vector index are NOT
+	// reimplemented here — they live in replay-engine.writeShapedGraph, which replay() also uses.
+	// Two entry points into one write path cannot disagree about what a safe write is.
+	const init = (spec, callback) => {
+		const { xLog } = process.global;
+		const { inGraph, nodeEdges, schemaBlocks, applyLabels = [], sourceLabel } = spec || {};
+
+		// the name guard fires FIRST, before any payload is examined and before anything connects
+		const graphName = inGraph && (inGraph.containerName || inGraph.graphName);
+		const refusal = nameRefusal(graphName, 'init');
+		if (refusal) {
+			callback(refusal);
+			return;
+		}
+
+		if (schemaBlocks !== undefined) {
+			callback(
+				`replayManager.init: the schemaBlocks payload is not implemented yet — restoring a ` +
+					`graph from harvested schema blocks is its own milestone. Refusing rather than ` +
+					`silently loading nothing.`,
+			);
+			return;
+		}
+
+		// A missing array must never read as an empty one — the fail-closed rule the shared write
+		// path learned the hard way. "I could not find any nodes" and "there were no nodes" are
+		// different facts and must not produce the same behavior.
+		if (
+			!nodeEdges ||
+			typeof nodeEdges !== 'object' ||
+			!Array.isArray(nodeEdges.nodes) ||
+			!Array.isArray(nodeEdges.edges)
+		) {
+			callback(
+				`replayManager.init: nodeEdges must carry nodes[] and edges[] (got ` +
+					`${nodeEdges === undefined ? 'nothing' : JSON.stringify(Object.keys(nodeEdges || {}))}). ` +
+					`Nothing loaded.`,
+			);
+			return;
+		}
+		if (!Array.isArray(applyLabels)) {
+			callback(
+				`replayManager.init: applyLabels must be an array of label names, got ` +
+					`${typeof applyLabels}. Nothing loaded.`,
+			);
+			return;
+		}
+		if (!inGraph.boltUrl || !inGraph.password) {
+			callback(
+				`replayManager.init: the handle for '${graphName}' carries no boltUrl/password — a ` +
+					`graph handle is the capability token, and half of one is not a credential.`,
+			);
+			return;
+		}
+
+		const groups = [
+			{
+				sourceLabel: sourceLabel || `nodeEdges loaded into ${graphName}`,
+				nodes: withAppliedLabels(nodeEdges.nodes, applyLabels),
+				edges: nodeEdges.edges,
+			},
+		];
+
+		const driver = require('neo4j-driver').driver(
+			inGraph.boltUrl,
+			require('neo4j-driver').auth.basic(NEO4J_USER, inGraph.password),
+			{ encrypted: false },
+		);
+		const session = driver.session();
+
+		xLog.status(
+			`[replayManager] loading ${nodeEdges.nodes.length} nodes, ${nodeEdges.edges.length} edges ` +
+				`into '${graphName}'${applyLabels.length ? ` as [${applyLabels.join(', ')}]` : ''}`,
+		);
+
+		replayEngine.writeShapedGraph(
+			{
+				session,
+				groups,
+				embeddingDims: nodeEdges.embeddingDims || null,
+				graphName,
+			},
+			(err, result) => {
+				session.close().then(() => driver.close());
+				if (err) {
+					callback(`replayManager.init '${graphName}': ${err}`);
+					return;
+				}
+				callback('', result);
+			},
+		);
+	};
+
+	// -----
 	// extract — the harvest reversal. NOT IMPLEMENTED YET; failing honestly beats minting a
 	// fake block ref (the replayManager milestone owns this, with its fidelity proof).
 	const extract = (handle, selector, callback) => {
@@ -313,11 +442,12 @@ const replayManager = () => {
 		});
 	};
 
-	return { create, extract, delete: deleteGraph };
+	return { create, init, extract, delete: deleteGraph };
 };
 
 // END OF moduleFunction() ============================================================
 
 module.exports = replayManager;
 module.exports.nameRefusal = nameRefusal;
+module.exports.withAppliedLabels = withAppliedLabels;
 module.exports.resolveSettings = resolveSettings;

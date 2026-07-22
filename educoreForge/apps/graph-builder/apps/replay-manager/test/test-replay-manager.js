@@ -103,4 +103,89 @@ harness.equal(
 	7811,
 );
 
+// =====================================================================
+harness.section('INIT — the loader: refusals first, then the pure label application');
+// =====================================================================
+// init is the CREATION entry point into the shared write path (targetArchitectureDesign §4).
+// Everything gated here happens BEFORE any bolt traffic, so no docker and no Neo4j: a refusal
+// that arrives without a connection is itself the proof that nothing was written. The happy path
+// is proven live by the deliberate integration script.
+
+const DEV_HANDLE = {
+	graphName: 'DEV_gb_test_1',
+	containerName: 'DEV_gb_test_1',
+	boltUrl: 'bolt://localhost:1',
+	password: 'unused',
+};
+const nodeEdgesOf = (nodes, edges) => ({ nodes: nodes || [], edges: edges || [] });
+
+manager.init({ inGraph: { graphName: 'GOLD_260718' }, nodeEdges: nodeEdgesOf() }, (err) => {
+	harness.match('init() refuses a GOLD_* graph', err, /REFUSED/);
+});
+manager.init({ inGraph: { graphName: 'gf_devGolden' }, nodeEdges: nodeEdgesOf() }, (err) => {
+	harness.match('init() refuses a gf_* graph', err, /REFUSED/);
+});
+manager.init({ inGraph: { graphName: 'scratch' }, nodeEdges: nodeEdgesOf() }, (err) => {
+	harness.match('init() refuses a non-DEV_* graph', err, /not a DEV_\*/);
+});
+manager.init({ nodeEdges: nodeEdgesOf() }, (err) => {
+	harness.match('init() with no graph at all is refused', err, /no graphName/);
+});
+
+// The payload must BE what it claims. A missing array must never read as an empty one — the same
+// fail-closed rule the shared write path learned the hard way.
+manager.init({ inGraph: DEV_HANDLE }, (err) => {
+	harness.match('init() with no payload is refused', err, /nodeEdges/);
+});
+manager.init({ inGraph: DEV_HANDLE, nodeEdges: { nodes: [] } }, (err) => {
+	harness.match('init() refuses nodeEdges missing its edges array', err, /nodes\[\] and edges\[\]/);
+});
+manager.init({ inGraph: DEV_HANDLE, nodeEdges: [] }, (err) => {
+	harness.match('init() refuses a bare array as nodeEdges', err, /nodes\[\] and edges\[\]/);
+});
+manager.init(
+	{ inGraph: DEV_HANDLE, nodeEdges: nodeEdgesOf(), applyLabels: ':StandardBase:' },
+	(err) => {
+		harness.match('init() refuses a non-array applyLabels', err, /applyLabels must be an array/);
+	},
+);
+manager.init({ inGraph: DEV_HANDLE, schemaBlocks: ['...'] }, (err) => {
+	harness.match(
+		'init() refuses the schemaBlocks payload HONESTLY (it is a later milestone)',
+		err,
+		/not implemented yet/,
+	);
+});
+
+// -----
+// withAppliedLabels — pure, and exported so the labelling can be gated without a database.
+const { withAppliedLabels } = replayManagerModule;
+const sourceNodes = [
+	{ stableId: 'urn:a', labels: ['ForgedNode', 'DmeClass'], properties: {} },
+	{ stableId: 'urn:b', labels: ['ForgedNode'], properties: {} },
+];
+
+const labelled = withAppliedLabels(sourceNodes, ['StandardBase']);
+harness.ok('every node gains the applied label', labelled.every((n) => n.labels.includes('StandardBase')));
+harness.ok('  and keeps the labels it arrived with', labelled[0].labels.includes('DmeClass'));
+harness.equal('  with no duplication', labelled[0].labels.filter((l) => l === 'StandardBase').length, 1);
+
+// The caller's nodes are reused by the forger and by the Phase-4 fidelity gate. Mutating them
+// would make a second use of the same objects behave differently from the first.
+harness.ok(
+	'the CALLER\'s nodes are NOT mutated',
+	sourceNodes[0].labels.indexOf('StandardBase') === -1,
+	sourceNodes[0].labels,
+);
+harness.equal(
+	'applying an already-present label is idempotent',
+	withAppliedLabels([{ labels: ['ForgedNode', 'StandardBase'] }], ['StandardBase'])[0].labels.length,
+	2,
+);
+harness.equal(
+	'applying NO labels leaves the label set alone',
+	withAppliedLabels(sourceNodes, [])[0].labels.length,
+	2,
+);
+
 harness.report();
