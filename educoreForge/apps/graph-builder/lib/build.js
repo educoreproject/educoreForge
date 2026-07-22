@@ -13,9 +13,9 @@
 // paths could never be observed firing, and a path never observed is a path unproven.
 //
 // Pipeline (materialize-and-harvest):
-//   A  forge each standardBase        -> extract 'standardBase' block -> manifest.add
-//      (if the standard is a hub)     -> extract 'hub' block          -> manifest.add
-//   C  per bridge: create dep graph   -> bridgeMaker.run (labels edges) -> extract labeled block
+//   A  forge each standardBase        -> harvest StandardBase schema block -> manifest.add
+//      (if the standard is a hub)     -> harvest HubReference schema block -> manifest.add
+//   C  per bridge: create dep graph   -> bridgeMaker.run (labels edges) -> harvest labeled block
 //                                      -> manifest.add(pair@versionKey, 'relationship', ...)
 //   compose   -> manifest.id()
 //   material  -> replayManager.create({ purpose:'materialize', manifestId }) -> boltUrl
@@ -28,7 +28,13 @@
 // Overridable one at a time through deps.components (see COMPONENT SEAM).
 const defaultComponents = require('./stub-components');
 
-const RELATION_LABEL = ':BRIDGEDRELATION:';
+// Label vocabulary — BARE NAMES. The colons in ':BridgedRelation:' are Cypher notation, not part
+// of the name; a constant carrying them would create a label literally called ':BridgedRelation:'.
+// These are handed DOWN: init stamps them, harvest selects on them, so the producing side and the
+// harvesting side agree by parameter instead of by two hopeful literals.
+const BASE_GRAPH_LABEL = 'StandardBase';
+const HUB_LABEL = 'HubReference';
+const RELATION_LABEL = 'BridgedRelation';
 
 // minimal sequential async iterator (err-string convention)
 const eachSeries = (items, iterator, done) => {
@@ -79,11 +85,17 @@ const build = (recipe, deps, callback) => {
 						{ standard: std.token, version: std.version, destination: boltUrl },
 						(e2) => {
 							if (e2) return cb(`forge ${std.token}: ${e2}`);
-							replay.extract(boltUrl, 'standardBase', (e3, block) => {
-								if (e3) return cb(`extract standardBase ${std.token}: ${e3}`);
-								manifest.add(standardKey(std), 'standardBase', block.blockRef);
+							replay.harvest(
+								{
+									inGraph: boltUrl,
+									selectionLabels: [BASE_GRAPH_LABEL],
+									header: { blockType: 'standardBase', standardKey: std.token, version: std.version },
+								},
+								(e3, block) => {
+								if (e3) return cb(`harvest standardBase ${std.token}: ${e3}`);
+								manifest.add(standardKey(std), 'standardBase', block.blockId);
 								xLog.status(
-									`  [A] forge ${standardKey(std)} -> standardBase ${block.blockRef}`,
+									`  [A] forge ${standardKey(std)} -> standardBase ${block.blockId}`,
 								);
 								const afterHub = (eh) => {
 									if (eh) return cb(eh);
@@ -93,15 +105,27 @@ const build = (recipe, deps, callback) => {
 									afterHub('');
 									return;
 								}
-								replay.extract(boltUrl, 'hub', (e4, hubBlock) => {
-									if (e4) return afterHub(`extract hub ${std.token}: ${e4}`);
-									manifest.add(standardKey(std), 'hub', hubBlock.blockRef);
-									xLog.status(
-										`  [B] hub block ${std.token} -> ${hubBlock.blockRef}`,
-									);
-									afterHub('');
-								});
-							});
+								replay.harvest(
+									{
+										inGraph: boltUrl,
+										selectionLabels: [HUB_LABEL],
+										header: {
+											blockType: 'hub',
+											standardKey: std.token,
+											version: std.version,
+										},
+									},
+									(e4, hubBlock) => {
+										if (e4) return afterHub(`harvest hub ${std.token}: ${e4}`);
+										manifest.add(standardKey(std), 'hub', hubBlock.blockId);
+										xLog.status(
+											`  [B] hub block ${std.token} -> ${hubBlock.blockId}`,
+										);
+										afterHub('');
+									},
+								);
+								},
+							);
 						},
 					);
 				});
@@ -127,16 +151,26 @@ const build = (recipe, deps, callback) => {
 							},
 							(e2) => {
 								if (e2) return cb(`bridge ${pairKey(bridge)}: ${e2}`);
-								replay.extract(depBolt, RELATION_LABEL, (e3, relBlock) => {
-									if (e3) return cb(`extract relationships ${pairKey(bridge)}: ${e3}`);
-									manifest.add(pairKey(bridge), 'relationship', relBlock.blockRef);
-									xLog.status(
-										`  [C] bridge ${pairKey(bridge)} (mapper=${
-											bridge.mapper || 'defaultSemantic'
-										}) -> relationship ${relBlock.blockRef}`,
-									);
-									replay.delete(depBolt, (e4) => cb(e4 || ''));
-								});
+								replay.harvest(
+									{
+										inGraph: depBolt,
+										selectionLabels: [RELATION_LABEL],
+										header: {
+											blockType: 'relationship',
+											standardKey: pairKey(bridge),
+										},
+									},
+									(e3, relBlock) => {
+										if (e3) return cb(`harvest relationships ${pairKey(bridge)}: ${e3}`);
+										manifest.add(pairKey(bridge), 'relationship', relBlock.blockId);
+										xLog.status(
+											`  [C] bridge ${pairKey(bridge)} (mapper=${
+												bridge.mapper || 'defaultSemantic'
+											}) -> relationship ${relBlock.blockId}`,
+										);
+										replay.delete(depBolt, (e4) => cb(e4 || ''));
+									},
+								);
 							},
 						);
 					},

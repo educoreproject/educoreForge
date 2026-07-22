@@ -14,7 +14,7 @@
 // switch away from the legacy prototype. serializerVersion is stamped "1" and read, but NO
 // version-dispatch logic exists until a second block format does (§20).
 //
-// Async style (DECISIONS §2): the (de)serializer codec is PURE and synchronous; extractBlock
+// Async style (DECISIONS §2): the (de)serializer codec is PURE and synchronous; harvestBlock
 // lives in replay-engine.js. No async/await, no try/catch for control flow. camelCase only.
 //
 // @concept: [[ReplayBlock]]
@@ -82,7 +82,7 @@ const decodeEmbedding = (base64Scalar, expectedDims) => {
 // =====================================================================
 // Byte-identical output across re-extractions is a contract goal (incremental-add: untouched
 // blocks must be byte-identical). Determinism is enforced HERE so it cannot be forgotten by a
-// caller: property-map keys are sorted, labels are sorted. The caller (extractBlock) is still
+// caller: property-map keys are sorted, labels are sorted. The caller (harvestBlock) is still
 // responsible for emitting nodes/edges in a stable ORDER (it orders by stableId).
 
 const canonicalProperties = (properties) => {
@@ -141,7 +141,7 @@ const serializeHeaderLine = (header) => {
 
 // node: { ref:{source,id}, labels:[...], stableId, properties:{}, embedding?:base64,
 //         embeddingModelVersion? }. embedding is ALREADY a base64 scalar string here;
-// extractBlock encodes the live number[] before calling this. ref.id externalizes the
+// harvestBlock encodes the live number[] before calling this. ref.id externalizes the
 // node's stableId value (the greenfield resolution key).
 const serializeNodeLine = (node) => {
 	const ordered = {

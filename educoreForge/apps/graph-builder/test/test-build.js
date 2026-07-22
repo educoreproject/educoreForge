@@ -4,7 +4,7 @@
 // test-build.js — gates for the -build ORCHESTRATION (apps/graph-builder/lib/build.js) as it runs
 // over the component stubs. What is under test here is the PIPELINE, not the components: that the
 // right phases run in the right order, that real recipe data (tokens, versions, pair keys) is
-// threaded through rather than invented, and that block refs flow extract -> manifest.add.
+// threaded through rather than invented, and that schema block ids flow harvest -> manifest.add.
 //
 // These gates are written to survive the stub-to-real swap. They assert SHAPE and SEQUENCE, not
 // stub placeholder text, so they keep their meaning when a real component body lands.
@@ -88,8 +88,12 @@ const workingReplayManager = (overrides) => () =>
 	Object.assign(
 		{
 			create: (spec, cb) => cb('', `bolt://test/${spec.purpose}`),
-			extract: (boltUrl, selector, cb) =>
-				cb('', { blockRef: `block:${selector}`, selector, boltUrl }),
+			harvest: ({ inGraph, selectionLabels }, cb) =>
+				cb('', {
+					blockId: `block:${(selectionLabels || []).join('')}`,
+					selectionLabels,
+					inGraph,
+				}),
 			delete: (boltUrl, cb) => cb(''),
 		},
 		overrides || {},
@@ -125,11 +129,16 @@ const replayFailingCreateFor = (purpose, message) =>
 			spec.purpose === purpose ? cb(message) : cb('', `bolt://test/${spec.purpose}`),
 	});
 
-// a replayManager whose extract() fails for ONE selector
-const replayFailingExtractFor = (selector, message) =>
+// a replayManager whose harvest() fails for ONE label selection — the seam exists so the
+// orchestrator's error paths can be OBSERVED firing, and a path never observed is a path unproven.
+const replayFailingHarvestFor = (label, message) =>
 	workingReplayManager({
-		extract: (boltUrl, sel, cb) =>
-			sel === selector ? cb(message) : cb('', { blockRef: `block:${sel}`, selector: sel, boltUrl }),
+		harvest: ({ inGraph, selectionLabels }, cb) => {
+			const selected = (selectionLabels || []).join('');
+			return selected === label
+				? cb(message)
+				: cb('', { blockId: `block:${selected}`, selectionLabels, inGraph });
+		},
 	});
 
 // =====================================================================
@@ -206,7 +215,7 @@ const stageCedsLif = () => {
 		);
 
 		harness.ok(
-			'a block ref extracted in a phase is what reaches the manifest (refs are threaded, not invented)',
+			'a schema block id harvested in a phase is what reaches the manifest (ids are threaded, not invented)',
 			/-> standardBase (\S+)/.test(xLog.text()) && /-> relationship (\S+)/.test(xLog.text()),
 			xLog.text(),
 		);
@@ -275,14 +284,14 @@ const faultCases = [
 		pattern: /phase A \(forge\) failed: forge ceds: source bundle unreadable/,
 	},
 	{
-		label: 'phase A: extracting the standardBase block fails',
-		components: { replayManager: replayFailingExtractFor('standardBase', 'harvest returned nothing') },
-		pattern: /phase A \(forge\) failed: extract standardBase ceds: harvest returned nothing/,
+		label: 'phase A: harvesting the standardBase schema block fails',
+		components: { replayManager: replayFailingHarvestFor('StandardBase', 'harvest returned nothing') },
+		pattern: /phase A \(forge\) failed: harvest standardBase ceds: harvest returned nothing/,
 	},
 	{
-		label: 'phase A: extracting the HUB block fails',
-		components: { replayManager: replayFailingExtractFor('hub', 'no hub subgraph present') },
-		pattern: /phase A \(forge\) failed: extract hub ceds: no hub subgraph present/,
+		label: 'phase A: harvesting the HUB schema block fails',
+		components: { replayManager: replayFailingHarvestFor('HubReference', 'no hub subgraph present') },
+		pattern: /phase A \(forge\) failed: harvest hub ceds: no hub subgraph present/,
 	},
 	{
 		label: 'phase A: disposing the scratch graph fails',
@@ -304,11 +313,11 @@ const faultCases = [
 		pattern: /phase C \(bridge\) failed: bridge lif::ceds: mapper not found/,
 	},
 	{
-		label: 'phase C: extracting the labeled relationship block fails',
+		label: 'phase C: harvesting the labeled relationship schema block fails',
 		components: {
-			replayManager: replayFailingExtractFor(':BRIDGEDRELATION:', 'no labeled edges to harvest'),
+			replayManager: replayFailingHarvestFor('BridgedRelation', 'no labeled edges to harvest'),
 		},
-		pattern: /phase C \(bridge\) failed: extract relationships lif::ceds: no labeled edges to harvest/,
+		pattern: /phase C \(bridge\) failed: harvest relationships lif::ceds: no labeled edges to harvest/,
 	},
 	{
 		label: 'materialize: the final graph cannot be created',

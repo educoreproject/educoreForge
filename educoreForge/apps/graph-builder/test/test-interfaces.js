@@ -95,7 +95,7 @@ harness.section('THE GATE BITES — drifted shapes are caught (failure side prov
 harness.match(
 	'a missing method is caught and named',
 	shapeViolation({ create: () => {}, delete: () => {} }, COMPONENT_SHAPES.replayManager),
-	/missing.*extract/,
+	/missing.*harvest/,
 );
 harness.match(
 	'an undeclared extra method is caught and named',

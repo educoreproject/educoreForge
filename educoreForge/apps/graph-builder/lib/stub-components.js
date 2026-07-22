@@ -39,7 +39,7 @@ const forger = () => {
 	return { forge };
 };
 
-// stub replayManager — mints deterministic placeholder bolt urls and block refs so the pipeline
+// stub replayManager — mints deterministic placeholder bolt urls and schema block ids so the pipeline
 // data-flow is observable.
 const replayManager = () => {
 	const create = (spec, callback) => {
@@ -61,13 +61,14 @@ const replayManager = () => {
 		});
 	};
 
-	const extract = (boltUrl, selector, callback) => {
+	const harvest = (spec, callback) => {
+		const { inGraph, selectionLabels } = spec || {};
 		blockSeq += 1;
-		const tag = String(selector).replace(/[^A-Za-z0-9]+/g, '') || 'block';
+		const tag = (selectionLabels || []).join('') || 'block';
 		callback('', {
-			blockRef: `stub-block:${tag}:${blockSeq}`,
-			selector,
-			boltUrl,
+			blockId: `stub-block:${tag}:${blockSeq}`,
+			selectionLabels,
+			inGraph,
 		});
 	};
 
@@ -75,7 +76,7 @@ const replayManager = () => {
 		callback('');
 	};
 
-	return { create, init, extract, delete: deleteGraph };
+	return { create, init, harvest, delete: deleteGraph };
 };
 
 module.exports = {

@@ -1,7 +1,7 @@
 'use strict';
 
-// replay-engine.js — the single block<->graph boundary (Phase 2). extractBlock serializes a
-// graph subset into a PG-JSONL block; replay materializes an ordered manifest of blocks into a
+// replay-engine.js — the single schema-block<->graph boundary. harvestBlock serializes a
+// graph subset into a PG-JSONL schema block; replay materializes an ordered manifest of blocks into a
 // FRESH store. Dependency-light: connects to bolt directly via neo4j-driver (the CLI resolves
 // access by name and passes boltUri + password).
 //
@@ -328,7 +328,7 @@ const mergeEdges = (session, edges, callback) => {
 };
 
 // =====================================================================
-// extractBlock — read a graph subset (READ-mode) into a PG-JSONL block.
+// harvestBlock — read a graph subset (READ-mode) into a PG-JSONL schema block.
 // =====================================================================
 // selector: {source:'CEDS'} for a standard block; {pairA,pairB} for a bridge block. Returns
 // { blockText, nodeCount, edgeCount, stableIdCoverage }. Orders by stableId for byte-stable
@@ -374,7 +374,7 @@ const shapeNode = (neoNode, header, emitEmbeddingRef) => {
 			// content-hash REF of the vector INPUT, not the base64 vector. The ref is a pure
 			// function of (embeddingModelVersion, searchText) via the shared addressing rule —
 			// identical to the forge decorator's key (F7). The raw vector + its determinants ride
-			// on non-serialized _sidecar* fields so extractBlock can putVector them (F4);
+			// on non-serialized _sidecar* fields so harvestBlock can putVector them (F4);
 			// serializeNodeLine whitelists fields, so these never reach the block text.
 			const searchTextValue =
 				props.searchText !== undefined && props.searchText !== null
@@ -449,7 +449,7 @@ const eachEntrySequentialStackSafe = (items, worker, done) => {
 // putDistinctNodeVectors — persist each DISTINCT embeddingRef's raw vector (carried on the
 // _sidecar* fields shapeNode attached in emitEmbeddingRef mode) into the injected per-standard
 // store, idempotent first-write-wins, then strip those carrier fields. No vectorStore -> no-op.
-// NEVER reorders `nodes` (determinism). Extracted from extractBlock so the gate can drive it
+// NEVER reorders `nodes` (determinism). Split out of harvestBlock so the gate can drive it
 // graph-free; exported alongside shapeNode.
 const putDistinctNodeVectors = ({ nodes, vectorStore }, callback) => {
 	if (!vectorStore) {
@@ -476,7 +476,7 @@ const putDistinctNodeVectors = ({ nodes, vectorStore }, callback) => {
 		(oneEntry, entryDone) => vectorStore.putVector(oneEntry, entryDone),
 		(err) => {
 			if (err) {
-				callback(`extractBlock putVector: ${err}`);
+				callback(`harvestBlock putVector: ${err}`);
 				return;
 			}
 			(nodes || []).forEach((oneNode) => {
@@ -650,7 +650,7 @@ const fetchNodesPaged = (session, source, header, emitEmbeddingRef, callback) =>
 				}
 				pageNext(skip + NODE_PAGE_SIZE);
 			})
-			.catch((err) => callback(`extractBlock fetchNodes failed: ${err.message}`));
+			.catch((err) => callback(`harvestBlock fetchNodes failed: ${err.message}`));
 	};
 	pageNext(0);
 };
@@ -676,7 +676,7 @@ const fetchStandardEdges = (session, source, callback) => {
 			callback('', edges);
 		})
 		.catch((err) =>
-			callback(`extractBlock fetchStandardEdges failed: ${err.message}`),
+			callback(`harvestBlock fetchStandardEdges failed: ${err.message}`),
 		);
 };
 
@@ -701,14 +701,99 @@ const fetchBridgeEdges = (session, pairASource, pairBSource, callback) => {
 			callback('', edges);
 		})
 		.catch((err) =>
-			callback(`extractBlock fetchBridgeEdges failed: ${err.message}`),
+			callback(`harvestBlock fetchBridgeEdges failed: ${err.message}`),
 		);
 };
 
-const extractBlock = ({ boltUri, password, selector, header, vectorStore }, callback) => {
+// LABEL-SCOPED HARVEST (targetArchitectureDesign §4). The incumbent selected a block by the
+// `_source` property; the recreation selects POSITIVELY BY LABEL, because the orchestrator hands
+// the label down at init time and therefore knows it is the same word on both sides. A graph may
+// hold a standard's base AND its hub subgraph at once, which `_source` alone cannot separate.
+//
+// Labels are validated as bare identifiers before interpolation: a label position cannot be
+// parameterized in Cypher, so this is the same injection guard the edge-type validator provides.
+const LABEL_RE = /^[A-Za-z][A-Za-z0-9_]*$/;
+
+const labelRefusal = (selectionLabels) => {
+	if (!Array.isArray(selectionLabels) || selectionLabels.length === 0) {
+		return 'harvestBlock: selectionLabels must be a non-empty array of label names';
+	}
+	const bad = selectionLabels.filter((oneLabel) => !LABEL_RE.test(oneLabel));
+	if (bad.length > 0) {
+		return (
+			`harvestBlock: invalid label name(s) ${JSON.stringify(bad)} — a label is a bare ` +
+			`identifier (the colons in ':StandardBase:' are Cypher notation, not part of the name)`
+		);
+	}
+	return '';
+};
+
+const labelMatch = (selectionLabels) =>
+	selectionLabels.map((oneLabel) => `\`${oneLabel}\``).join(':');
+
+const fetchNodesByLabelsPaged = (session, selectionLabels, header, emitEmbeddingRef, callback) => {
+	const nodes = [];
+	const clause = labelMatch(selectionLabels);
+	const pageNext = (skip) => {
+		session
+			.run(
+				`MATCH (n:${clause}) RETURN n ORDER BY n.stableId SKIP $skip LIMIT $limit`,
+				{ skip: neo4j.int(skip), limit: neo4j.int(NODE_PAGE_SIZE) },
+			)
+			.then((result) => {
+				result.records.forEach((rec) =>
+					nodes.push(shapeNode(rec.get('n'), header, emitEmbeddingRef)),
+				);
+				if (result.records.length < NODE_PAGE_SIZE) {
+					callback('', nodes);
+					return;
+				}
+				pageNext(skip + NODE_PAGE_SIZE);
+			})
+			.catch((err) => callback(`harvestBlock fetchNodesByLabels failed: ${err.message}`));
+	};
+	pageNext(0);
+};
+
+// Edges with BOTH endpoints inside the selected labels. A block carries only the edges whose
+// endpoints it also carries; anything else would deserialize into a dangling reference.
+const fetchEdgesWithinLabels = (session, selectionLabels, callback) => {
+	const clause = labelMatch(selectionLabels);
+	session
+		.run(
+			`MATCH (a:${clause})-[r]->(b:${clause})
+			 RETURN a._source AS fromSrc, a.stableId AS fromStableId, type(r) AS type,
+			        b._source AS toSrc, b.stableId AS toStableId, properties(r) AS props
+			 ORDER BY fromStableId, type, toStableId`,
+		)
+		.then((result) => {
+			const edges = result.records.map((rec) => ({
+				type: rec.get('type'),
+				fromRef: { source: rec.get('fromSrc'), id: rec.get('fromStableId') },
+				toRef: { source: rec.get('toSrc'), id: rec.get('toStableId') },
+				properties: shapeEdgeProps(rec.get('props')),
+			}));
+			callback('', edges);
+		})
+		.catch((err) => callback(`harvestBlock fetchEdgesWithinLabels failed: ${err.message}`));
+};
+
+const harvestBlock = ({ boltUri, password, selector, header, vectorStore }, callback) => {
 	const driver = openDriver(boltUri, password);
 	const session = driver.session({ defaultAccessMode: neo4j.session.READ });
 	const isBridge = !!(selector && selector.pairA);
+	// selector = { selectionLabels: [...] } is the RECREATION path; { source } and { pairA, pairB }
+	// are the incumbent-faithful ones, kept because they are proven and cost nothing.
+	const selectionLabels = selector && selector.selectionLabels;
+	const isLabelScoped = !!selectionLabels;
+	if (isLabelScoped) {
+		const refusal = labelRefusal(selectionLabels);
+		if (refusal) {
+			session.close().then(() => driver.close());
+			callback(refusal);
+			return;
+		}
+	}
 	// EXTRACT-path embedding sidecar (F1/F2): when a per-standard vectorStore is injected, shapeNode
 	// emits embeddingRef (not base64) and the raw vectors are persisted below. Absent a vectorStore,
 	// the extract keeps the legacy inline base64 (unchanged behavior for callers that don't opt in).
@@ -721,19 +806,18 @@ const extractBlock = ({ boltUri, password, selector, header, vectorStore }, call
 			next('', { ...args, nodes: [] });
 			return;
 		}
-		fetchNodesPaged(
-			session,
-			sourceOf(selector.source),
-			header,
-			emitEmbeddingRef,
-			(err, nodes) => {
-				if (err) {
-					next(err);
-					return;
-				}
-				next('', { ...args, nodes });
-			},
-		);
+		const collect = (err, nodes) => {
+			if (err) {
+				next(err);
+				return;
+			}
+			next('', { ...args, nodes });
+		};
+		if (isLabelScoped) {
+			fetchNodesByLabelsPaged(session, selectionLabels, header, emitEmbeddingRef, collect);
+			return;
+		}
+		fetchNodesPaged(session, sourceOf(selector.source), header, emitEmbeddingRef, collect);
 	});
 
 	// EXTRACT-side vector persistence (F4): putVector every DISTINCT embeddingRef's raw vector into
@@ -762,13 +846,18 @@ const extractBlock = ({ boltUri, password, selector, header, vectorStore }, call
 			);
 			return;
 		}
-		fetchStandardEdges(session, sourceOf(selector.source), (err, edges) => {
+		const collectEdges = (err, edges) => {
 			if (err) {
 				next(err);
 				return;
 			}
 			next('', { ...args, edges });
-		});
+		};
+		if (isLabelScoped) {
+			fetchEdgesWithinLabels(session, selectionLabels, collectEdges);
+			return;
+		}
+		fetchStandardEdges(session, sourceOf(selector.source), collectEdges);
 	});
 
 	taskList.push((args, next) => {
@@ -1170,7 +1259,11 @@ const replay = ({ manifest, boltUri, password, graphName, storeResolver }, callb
 };
 
 module.exports = {
-	extractBlock,
+	// HARVEST is the word (targetArchitectureDesign vocabulary): the operation takes a schema block
+	// OUT of a graph and changes nothing. The old name `extractBlock` is deliberately NOT aliased —
+	// a second vocabulary surviving one layer down is exactly what the rename exists to prevent.
+	harvestBlock,
+	labelRefusal,
 	replay,
 	// the shared write path — replay() and replayManager.init() are its two entry points
 	writeShapedGraph,

@@ -65,14 +65,30 @@ manager.delete({}, (err) => {
 });
 
 // =====================================================================
-harness.section('EXTRACT — fails honestly until the replayManager milestone lands');
+harness.section('HARVEST — refusals fire before any bolt traffic');
 // =====================================================================
 
-manager.extract({ graphName: 'DEV_x' }, 'standardBase', (err, result) => {
-	harness.match('extract refuses with a reason', err, /not implemented yet/);
-	harness.match('  naming the milestone that owns it', err, /replayManager milestone/);
-	harness.ok('  and returns NO fake block ref', result === undefined);
+manager.harvest({ inGraph: { graphName: 'GOLD_260718' } }, (err) => {
+	harness.match('harvest refuses a GOLD_* graph', err, /REFUSED/);
 });
+manager.harvest({ inGraph: { graphName: 'DEV_x' } }, (err, result) => {
+	harness.match(
+		'harvest refuses a handle with no credential',
+		err,
+		/carries no boltUrl\/password/,
+	);
+	harness.ok('  and returns NO schema block', result === undefined);
+});
+manager.harvest(
+	{ inGraph: { graphName: 'DEV_x', boltUrl: 'bolt://localhost:1', password: 'p' } },
+	(err) => {
+		harness.match(
+			'harvest refuses to mint a schema block with a GUESSED header',
+			err,
+			/header carrying at least blockType and standardKey is required/,
+		);
+	},
+);
 
 // =====================================================================
 harness.section('SETTINGS — config overrides map to provisioning knobs, defaults govern absent config');

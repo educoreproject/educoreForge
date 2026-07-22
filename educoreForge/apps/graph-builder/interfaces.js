@@ -83,9 +83,12 @@
  *           orchestrator's label vocabulary reaches the graph without a forge bundle ever
  *           learning it. Delegates to replay-engine.writeShapedGraph — the SAME write path
  *           replay() uses, so the guards cannot diverge between creation and restoration.
- * @property {function(GraphHandle, string, function(string, Object=): void): void} extract
- *           selector: 'standardBase' | 'hub' | a relationship label. NOT IMPLEMENTED until the
- *           harvest milestone (punch item 24); until then it errors honestly.
+ * @property {function({inGraph: GraphHandle, selectionLabels: string[], header: Object},
+ *           function(string, Object=): void): void} harvest
+ *           THE ONLY PLACE A SCHEMA BLOCK IS BORN. Selection is POSITIVE and by label — the same
+ *           label the orchestrator handed to init — so producer and harvester agree by parameter
+ *           rather than by two hopeful literals. Returns { blockText, blockId, nodeCount,
+ *           edgeCount, stableIdCoverage }; it PERSISTS nothing (manifestEditor owns storing).
  * @property {function(GraphHandle, function(string): void): void} delete
  */
 
@@ -139,7 +142,7 @@
 
 const COMPONENT_SHAPES = {
 	forger: ['forge'],
-	replayManager: ['create', 'init', 'delete', 'extract'],
+	replayManager: ['create', 'init', 'harvest', 'delete'],
 	bridgeMaker: ['run'],
 	manifestEditor: ['init'],
 };

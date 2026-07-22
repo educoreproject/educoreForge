@@ -11,7 +11,8 @@
 //                                                     boltUrl, password, boltPort, httpPort }
 //        spec = { purpose?, graphName? } — graphName is minted DEV_gb_<purpose>_<pid>_<seq>
 //        when not given; a GIVEN name must be DEV_* (GNC-001 scratch tier) or create REFUSES.
-//     extract(handle, selector, callback)           -> NOT IMPLEMENTED YET (honest error)
+//     init(spec, callback)        -> ('', report)   spec = { inGraph, nodeEdges, applyLabels }
+//     harvest(spec, callback)     -> ('', schemaBlock)  spec = { inGraph, selectionLabels, header }
 //     delete(handle, callback)    -> ('')           removes the container; DEV_* only
 //   }
 //
@@ -40,6 +41,7 @@ const { pipeRunner, taskListPlus } = new require('qtools-asynchronous-pipe-plus'
 // tree-root lib/ (five levels up: replay-manager -> apps -> graph-builder -> apps -> root)
 const TREE_LIB = path.join(__dirname, '..', '..', '..', '..', 'lib');
 const replayEngine = require(path.join(TREE_LIB, 'replay', 'replay-engine'));
+const contentAddress = require(path.join(TREE_LIB, 'content-address', 'content-address'))();
 
 // in-code DEFAULTS; each is overridable via getConfig('replay-manager') — graphBuilder.ini,
 // [replay-manager] section (neo4jImage, portSearchStart, portSearchSpan, readyTimeoutSeconds).
@@ -414,11 +416,65 @@ const replayManager = () => {
 	};
 
 	// -----
-	// extract — the harvest reversal. NOT IMPLEMENTED YET; failing honestly beats minting a
-	// fake block ref (the replayManager milestone owns this, with its fidelity proof).
-	const extract = (handle, selector, callback) => {
-		callback(
-			`replayManager.extract: not implemented yet — the block-harvest reversal is the replayManager milestone (punch item 24). Refusing to mint a fake '${selector}' block ref.`,
+	// harvest — take a schema block OUT of a graph. THE ONLY PLACE A SCHEMA BLOCK IS BORN
+	// (targetArchitectureDesign §4.3); nothing else in the system creates one.
+	//
+	// Selection is POSITIVE and by LABEL. The orchestrator hands the label down at init time and
+	// selects with the same constant here, so the produce side and the harvest side agree by
+	// PARAMETER rather than by two hardcoded literals hoping to match. There is deliberately no
+	// excludeLabels: one mechanism, not two.
+	//
+	// harvest is READ-ONLY (a READ-mode session; the graph is unchanged). The DEV_* refusal below
+	// is therefore a SCOPE decision, not a safety necessity — this module's stated invariant is
+	// that it touches only scratch graphs, and reading a golden is not in its remit today.
+	const harvest = (spec, callback) => {
+		const { xLog } = process.global;
+		const { inGraph, selectionLabels, header } = spec || {};
+
+		const graphName = inGraph && (inGraph.containerName || inGraph.graphName);
+		const refusal = nameRefusal(graphName, 'harvest');
+		if (refusal) {
+			callback(refusal);
+			return;
+		}
+		if (!inGraph.boltUrl || !inGraph.password) {
+			callback(
+				`replayManager.harvest: the handle for '${graphName}' carries no boltUrl/password.`,
+			);
+			return;
+		}
+		// A schema block without a header is not a schema block: the header carries the standard
+		// key, the version and the embedding contract that make the bytes interpretable later.
+		// Deriving it by guesswork would produce a block that deserializes and means nothing.
+		if (!header || typeof header !== 'object' || !header.blockType || !header.standardKey) {
+			callback(
+				`replayManager.harvest: a header carrying at least blockType and standardKey is ` +
+					`required — a schema block whose provenance is guessed is worse than no block.`,
+			);
+			return;
+		}
+
+		replayEngine.harvestBlock(
+			{
+				boltUri: inGraph.boltUrl,
+				password: inGraph.password,
+				selector: { selectionLabels },
+				header,
+			},
+			(err, result) => {
+				if (err) {
+					callback(`replayManager.harvest '${graphName}': ${err}`);
+					return;
+				}
+				// The content address is minted HERE, at the moment the block comes into existence,
+				// so no caller can hold a block whose id it computed by a different rule.
+				const blockId = contentAddress.blockIdForText(result.blockText);
+				xLog.status(
+					`[replayManager] harvested ${result.nodeCount} nodes, ${result.edgeCount} edges ` +
+						`from '${graphName}' [${(selectionLabels || []).join(', ')}] -> ${blockId.slice(0, 12)}...`,
+				);
+				callback('', { ...result, blockId });
+			},
 		);
 	};
 
@@ -442,7 +498,7 @@ const replayManager = () => {
 		});
 	};
 
-	return { create, init, extract, delete: deleteGraph };
+	return { create, init, harvest, delete: deleteGraph };
 };
 
 // END OF moduleFunction() ============================================================
