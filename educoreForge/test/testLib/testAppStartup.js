@@ -31,17 +31,23 @@
 
 const commandLineParser = require('qtools-parse-command-line');
 
+// the ONE config loader (graphBuilder.ini, host-aware, {} when absent) — shared with the app so
+// a module under test reads the SAME configuration it reads in production. Two loaders that can
+// disagree about the same fact will eventually disagree.
+const { loadConfig } = require('../../apps/graph-builder/lib/startup');
+
 const startTestApp = ({ moduleName, helpText }) => {
 	const commandLineParameters = commandLineParser.getParameters({ noFunctions: true });
 	const xLog = require('qtools-x-log');
 	xLog.logToStdOut();
 
 	if (!process.global) {
+		const { getConfig, wholeConfig } = loadConfig();
 		process.global = {
 			xLog,
-			getConfig: () => ({}),
+			getConfig,
 			commandLineParameters,
-			rawConfig: {},
+			rawConfig: wholeConfig,
 		};
 		Object.freeze(process.global);
 	}

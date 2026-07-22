@@ -20,13 +20,13 @@
 //   compose   -> manifest.id()
 //   material  -> replayManager.create({ purpose:'materialize', manifestId }) -> boltUrl
 
-// the real components. Overridable one at a time through deps.components (see COMPONENT SEAM).
-const defaultComponents = {
-	forger: require('../apps/forger'),
-	replayManager: require('../apps/replay-manager'),
-	bridgeMaker: require('../apps/bridge-maker'),
-	manifestEditor: require('../apps/manifest-editor'),
-};
+// STUB-ERA defaults. The pipeline runs against stub components until EVERY component is real —
+// a real forger provisions Docker and spends Voyage credit, which must never happen inside
+// `npm test` or a casual -build. The real modules (apps/forger, apps/replay-manager have real
+// bodies already) are exercised through their own suites and the integration proof scripts;
+// when the last component lands, this line flips to the real modules and stub-components.js dies.
+// Overridable one at a time through deps.components (see COMPONENT SEAM).
+const defaultComponents = require('./stub-components');
 
 const RELATION_LABEL = ':BRIDGEDRELATION:';
 

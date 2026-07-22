@@ -15,7 +15,11 @@
 // resolved commandLineParameters. Frozen because a global that anything may reshape mid-run is
 // not a global, it is a rumour.
 
+const path = require('path');
+const fs = require('fs');
+
 const commandLineParser = require('qtools-parse-command-line');
+const configFileProcessor = require('qtools-config-file-processor');
 
 // ---------------------------------------------------------------------
 // PARAMETER RESOLUTION — JSON-on-stdin overrides the command line
@@ -58,6 +62,62 @@ const resolveParameters = (callback) => {
 };
 
 // ---------------------------------------------------------------------
+// CONFIG RESOLUTION — the project convention is per-concern ini files in
+// system/configs/instanceSpecific/<host>/; this app's file is graphBuilder.ini, one section
+// per component ([forger], [replay-manager], ...). SECRETS never live here — they stay in
+// their own files (voyageEmbedding.ini), which this file may POINT AT but never contains.
+//
+// An absent ini is not an error: getConfig answers {} for every section and each module
+// falls back to its in-code defaults, so a relocated tree runs identically unconfigured.
+// ---------------------------------------------------------------------
+
+const findSystemRoot = () =>
+	__dirname.replace(new RegExp(`^(.*/system).*$`), '$1');
+
+// DISCOVERY, not a hostname whitelist. (The incumbent gated on os.hostname() === 'qMax.local' |
+// 'qbook.local' — and this machine is qMini.local, so the incumbent has been silently running
+// configless here for its whole life. A whitelist that rots is worse than no gate.) The file's
+// PRESENCE is authoritative: look in configs/instanceSpecific/*/ and configs/ flat; exactly one
+// hit wins; more than one is a LOUD error (ambiguity is never resolved silently); none -> {}.
+const discoverConfigFile = () => {
+	const configsRoot = path.join(findSystemRoot(), 'configs');
+	const candidates = [];
+	const instanceSpecificDir = path.join(configsRoot, 'instanceSpecific');
+	if (fs.existsSync(instanceSpecificDir)) {
+		fs.readdirSync(instanceSpecificDir, { withFileTypes: true })
+			.filter((oneEntry) => oneEntry.isDirectory())
+			.forEach((oneEntry) => {
+				const candidate = path.join(instanceSpecificDir, oneEntry.name, 'graphBuilder.ini');
+				if (fs.existsSync(candidate)) {
+					candidates.push(candidate);
+				}
+			});
+	}
+	const flatCandidate = path.join(configsRoot, 'graphBuilder.ini');
+	if (fs.existsSync(flatCandidate)) {
+		candidates.push(flatCandidate);
+	}
+	if (candidates.length > 1) {
+		throw new Error(
+			`graphBuilder: MORE THAN ONE graphBuilder.ini found — refusing to guess which governs: ${candidates.join(
+				', ',
+			)}`,
+		);
+	}
+	return candidates[0] || null;
+};
+
+const loadConfig = () => {
+	const configFilePath = discoverConfigFile();
+	const wholeConfig = configFilePath
+		? configFileProcessor.getConfig(configFilePath) || {}
+		: {};
+	const getConfig = (sectionName) =>
+		sectionName === 'allConfigs' ? wholeConfig : wholeConfig[sectionName] || {};
+	return { getConfig, wholeConfig, configFilePath };
+};
+
+// ---------------------------------------------------------------------
 // BOOTSTRAP process.global (xLog + getConfig + commandLineParameters), frozen once
 // ---------------------------------------------------------------------
 
@@ -77,13 +137,10 @@ const bootstrapGlobal = (commandLineParameters) => {
 	// worth revisiting if that changes.
 	const xLog = require('qtools-x-log');
 
-	// Config wiring is DEFERRED (the scaffold needs none). getConfig answers {} for every
-	// section so the module stays self-contained and relocatable; real config resolution
-	// (a tree-local systemParameters.ini) lands when a phase first needs it.
-	const getConfig = () => ({});
+	const { getConfig, wholeConfig } = loadConfig();
 
-	process.global = { xLog, getConfig, commandLineParameters, rawConfig: {} };
+	process.global = { xLog, getConfig, commandLineParameters, rawConfig: wholeConfig };
 	Object.freeze(process.global);
 };
 
-module.exports = { resolveParameters, bootstrapGlobal };
+module.exports = { resolveParameters, bootstrapGlobal, loadConfig };

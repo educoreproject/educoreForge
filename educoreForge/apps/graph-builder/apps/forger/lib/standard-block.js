@@ -1,0 +1,80 @@
+'use strict';
+
+// standard-block.js — serialize a forged contract graph into ONE PG-JSONL 'standard' block.
+//
+// CARRIED FAITHFULLY from the incumbent forger's materializer (cli/lib.d/forger/lib/
+// materializer.js buildStandardBlock, 2026-07-21): this is the PROVEN serialization — PG-JSON
+// multi-valued arrays (every property value an array), the base64 float32 little-endian embedding
+// exception, resolutionKey = stableUriPropertyName (greenfield, DECISIONS §1/§20). The block text
+// is the forger's TRANSPORT into the scratch graph; the canonical stored block is the one
+// replayManager harvests OUT of the graph later (materialize-and-harvest). Keeping this serializer
+// byte-faithful to the incumbent is what keeps that eventual round-trip comparable.
+//
+// PURE: no I/O, no process.global. ({ forged }) -> { blockText, nodeCount, edgeCount }.
+
+const path = require('path');
+
+// tree-root lib/ (five levels up: forger/lib -> forger -> apps -> graph-builder -> apps -> root)
+const TREE_LIB = path.join(__dirname, '..', '..', '..', '..', '..', 'lib');
+const replayBlock = require(path.join(TREE_LIB, 'replay', 'replay-block'));
+
+const EMBEDDING_DIMS = 1024;
+
+const buildStandardBlock = ({ forged }) => {
+	const header = {
+		blockType: 'standard',
+		standardKey: forged.standardKey,
+		version: forged.metadata.version,
+		stableUriPropertyName: forged.stableUriPropertyName,
+		resolutionKey: forged.stableUriPropertyName,
+		embeddingModelVersion: 'voyage-4-large',
+		embeddingEncoding: 'base64',
+		embeddingDtype: 'float32',
+		embeddingByteOrder: 'little-endian',
+		embeddingDims: EMBEDDING_DIMS,
+	};
+
+	const nodes = forged.nodes.map((oneNode) => {
+		// PG-JSON multi-valued arrays: every property value an array (embedding excepted).
+		const properties = {};
+		Object.keys(oneNode.properties).forEach((oneKey) => {
+			if (oneKey === 'embedding' || oneKey === 'embeddingModelVersion') {
+				return; // embedding is the base64 scalar exception; modelVersion rides the node
+			}
+			const value = oneNode.properties[oneKey];
+			properties[oneKey] = Array.isArray(value) ? value : [value];
+		});
+
+		const serialized = {
+			ref: { source: oneNode.properties._source, id: oneNode.stableId },
+			labels: oneNode.labels,
+			stableId: oneNode.stableId,
+			properties,
+		};
+		if (oneNode.properties.embedding) {
+			serialized.embedding = replayBlock.encodeEmbedding(oneNode.properties.embedding);
+			serialized.embeddingModelVersion =
+				oneNode.properties.embeddingModelVersion || 'voyage-4-large';
+		}
+		return serialized;
+	});
+
+	const edges = forged.edges.map((oneEdge) => {
+		const properties = {};
+		Object.keys(oneEdge.properties || {}).forEach((oneKey) => {
+			const value = oneEdge.properties[oneKey];
+			properties[oneKey] = Array.isArray(value) ? value : [value];
+		});
+		return {
+			type: oneEdge.type,
+			fromRef: oneEdge.fromRef,
+			toRef: oneEdge.toRef,
+			properties,
+		};
+	});
+
+	const blockText = replayBlock.serializeBlock({ header, nodes, edges });
+	return { blockText, nodeCount: nodes.length, edgeCount: edges.length };
+};
+
+module.exports = { buildStandardBlock, EMBEDDING_DIMS };
