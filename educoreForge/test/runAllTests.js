@@ -46,10 +46,15 @@ SYNOPSIS
      runAllTests [-list] [--app=<name>] [--suite=<name>] [-verbose] [-quiet] [-help]
 
 DESCRIPTION
-     Discovers every suite matching apps/**/test/test-*.js (recursively, so a suite next to a
-     nested component is found too), runs each in its own process, and exits 0 only if every
-     selected suite passed. Modules (package.json dirs) with no suite at all are listed as
-     untested so their absence cannot be mistaken for coverage.
+     Discovers every suite matching apps/**/test/test-*.js AND lib/**/test/test-*.js
+     (recursively, so a suite next to a nested component is found too), runs each in its own
+     process, and exits 0 only if every selected suite passed. Modules with no suite at all are
+     listed as untested so their absence cannot be mistaken for coverage -- an app module is a
+     package.json dir, a lib module is any lib directory holding .js files.
+
+     --app selects among APP modules only and therefore drops every lib suite; that is
+     deliberate (you are asking about one app, not about the substrate) and is why -list
+     shows fewer suites when it is used.
 
      Also available as: npm test
 
@@ -119,22 +124,63 @@ const suitesInModule = (moduleDir) => {
 		.map((name) => path.join(testDir, name));
 };
 
+// tree-root lib/ is the shared SUBSTRATE, not a set of packages — its directories carry no
+// package.json, so findModuleDirs cannot see them. It still holds the most safety-critical code in
+// the tree (the replay engine's write path), and a suite that cannot be discovered is a suite that
+// silently stops running.
+//
+// A LIB MODULE is any lib directory holding .js files. Defining it that way — rather than "a
+// directory that happens to have a test/ dir" — is what makes DISAPPEARANCE loud: delete
+// lib/replay/test/ and lib/replay flips from PASS to NONE instead of vanishing from the report
+// while the runner still prints all-green. (Found by adversarial review, 2026-07-22: the first
+// version discovered only dirs that already had tests, so removing a suite was silent.) The price
+// is an honest list of untested substrate modules, which is a price worth paying.
+const findLibModuleDirs = (dirPath) => {
+	if (!fs.existsSync(dirPath) || !fs.statSync(dirPath).isDirectory()) {
+		return [];
+	}
+	const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+	const here = entries.some((entry) => entry.isFile() && /\.js$/.test(entry.name))
+		? [dirPath]
+		: [];
+	const deeper = entries
+		.filter(
+			(entry) => entry.isDirectory() && entry.name !== 'node_modules' && entry.name !== 'test',
+		)
+		.reduce(
+			(soFar, entry) => soFar.concat(findLibModuleDirs(path.join(dirPath, entry.name))),
+			[],
+		);
+	return here.concat(deeper);
+};
+
 const appFilter = firstValue('app');
 const suiteFilter = firstValue('suite');
 
 const allModules = findModuleDirs(appsDir).sort();
+const libModuleDirs = findLibModuleDirs(path.join(treeRoot, 'lib')).sort();
 const selectedModules = appFilter
 	? allModules.filter((moduleDir) => path.basename(moduleDir) === appFilter)
 	: allModules;
 
+// lib suites join the run unless --app narrowed the selection to one app (then the operator is
+// asking about that app, not about the substrate).
+const selectedLibDirs = appFilter ? [] : libModuleDirs;
+
 // Untested modules are reported only on a full-coverage run. When --suite narrows the selection
 // the operator is asking about one suite, not about coverage, and listing every module without
 // tests would be noise pretending to be diligence.
+//
+// LIB modules are counted here too, which is the whole point of discovering them as modules: a
+// lib suite that is deleted turns its module NONE rather than simply ceasing to exist.
 const untestedModules = suiteFilter
 	? []
-	: selectedModules.filter((moduleDir) => suitesInModule(moduleDir).length === 0);
+	: selectedModules
+			.concat(selectedLibDirs)
+			.filter((moduleDir) => suitesInModule(moduleDir).length === 0);
 
 const allSuites = selectedModules
+	.concat(selectedLibDirs)
 	.reduce((soFar, moduleDir) => soFar.concat(suitesInModule(moduleDir)), [])
 	.filter((suitePath) => !suiteFilter || path.basename(suitePath).includes(suiteFilter));
 

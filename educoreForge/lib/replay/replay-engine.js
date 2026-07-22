@@ -814,133 +814,187 @@ const extractBlock = ({ boltUri, password, selector, header, vectorStore }, call
 };
 
 // =====================================================================
-// PUBLIC API — replay({ manifest, boltUri, password, graphName? }, callback)
+// THE SHARED WRITE PATH — one implementation, two entry points
 // =====================================================================
-const replay = ({ manifest, boltUri, password, graphName, storeResolver }, callback) => {
-	const driver = openDriver(boltUri, password);
-	const session = driver.session();
+// Everything below the deserialize boundary is common to BOTH ways content reaches a graph:
+//
+//     replay()  =  deserialize block text  -> writeShapedGraph      (RESTORATION)
+//     init()    =  applyLabels to nodeEdges -> writeShapedGraph     (CREATION)
+//
+// It is one function because it was very nearly two. The guards, the resolution-key index, the
+// merge order and the vector index all used to live inside replay(), reachable only through block
+// TEXT; a creation path that took shaped objects would have had to reimplement them, and a second
+// implementation is a second thing to drift. Two entry points into one write path cannot disagree
+// about what a safe write is.
+//
+// A "group" is one labeled batch of shaped nodes+edges: replay passes ONE PER BLOCK so its errors
+// keep naming the offending block, and init passes a single group naming its forge bundle.
+//   group = { sourceLabel: string, nodes: [...], edges: [...] }
+
+// validateShapedGraph — the SHAPE check and the THREE pre-write guards, pure and synchronous.
+// Returns { error, nodes, edges }: error '' means admitted, and nodes/edges are the SINGLE
+// flattened walk the writer then uses (assembling them twice would let the thing that was
+// validated drift from the thing that gets written).
+//
+// It FAILS CLOSED on a malformed argument. That is not defensive noise: the first review of this
+// function found that `groups = []` plus `oneGroup.nodes || []` made "I could not find any nodes"
+// indistinguishable from "there were no nodes", so handing it a bare node array — precisely the
+// shape a caller has in hand — admitted a graph in which every node violated every guard. A guard
+// that can be bypassed by a caller's shape mistake is the same silent failure as a guard that was
+// deleted, wearing a different hat.
+//
+// Guard order is significant and matches the original replay(): label, then stableId, then
+// provenanceTier. Every message names the offending group and the first offender, because a
+// failure that names nothing is a failure you cannot act on.
+const validateShapedGraph = (groups) => {
+	const refuse = (message) => ({ error: message, nodes: [], edges: [] });
+
+	if (!Array.isArray(groups)) {
+		return refuse(
+			`shape enforcement: writeShapedGraph expects an ARRAY of groups, got ` +
+				`${groups === null ? 'null' : typeof groups}. No writes performed.`,
+		);
+	}
+
+	const labelViolations = [];
+	const nullIdViolations = [];
+	const provenanceViolations = [];
+	const allNodes = [];
+	const allEdges = [];
+
+	for (let groupIndex = 0; groupIndex < groups.length; groupIndex++) {
+		const oneGroup = groups[groupIndex];
+
+		// SHAPE — a group must BE a group. Anything else is a caller bug, not an empty graph.
+		if (!oneGroup || typeof oneGroup !== 'object' || Array.isArray(oneGroup)) {
+			return refuse(
+				`shape enforcement: groups[${groupIndex}] is not a group object ` +
+					`{sourceLabel, nodes, edges}. No writes performed.`,
+			);
+		}
+		if (typeof oneGroup.sourceLabel !== 'string' || oneGroup.sourceLabel.trim() === '') {
+			return refuse(
+				`shape enforcement: groups[${groupIndex}] has no sourceLabel — every guard message ` +
+					`must be able to name where the offending content came from. No writes performed.`,
+			);
+		}
+		if (!Array.isArray(oneGroup.nodes) || !Array.isArray(oneGroup.edges)) {
+			return refuse(
+				`shape enforcement: group '${oneGroup.sourceLabel}' must carry nodes[] and edges[] ` +
+					`(got nodes=${typeof oneGroup.nodes}, edges=${typeof oneGroup.edges}). ` +
+					`A missing array must never read as an empty one. No writes performed.`,
+			);
+		}
+
+		const sourceLabel = oneGroup.sourceLabel;
+
+		// GUARD 1 — every written node must carry :ForgedNode. Edge endpoints resolve ONLY via
+		// (:ForgedNode {stableId}), so a node without it merges fine and then every edge touching
+		// it lands in danglingRefs while the run exits 0. Silent, and therefore the worst kind.
+		// `labels` must BE an array: a bare string would satisfy indexOf by substring.
+		const badLabelShape = oneGroup.nodes.filter((oneNode) => !Array.isArray(oneNode.labels));
+		if (badLabelShape.length > 0) {
+			return refuse(
+				`shape enforcement: group '${sourceLabel}' has ${badLabelShape.length} node(s) whose ` +
+					`labels is not an array (first: stableId='${badLabelShape[0].stableId}', ` +
+					`labels=${JSON.stringify(badLabelShape[0].labels)}). No writes performed.`,
+			);
+		}
+		const offenders = oneGroup.nodes.filter(
+			(oneNode) => oneNode.labels.indexOf('ForgedNode') === -1,
+		);
+		if (offenders.length > 0) {
+			labelViolations.push(
+				`${sourceLabel}: ${offenders.length} node(s) missing the ForgedNode label; ` +
+					`first offender stableId='${offenders[0].stableId}' ` +
+					`labels=[${offenders[0].labels.join(', ')}]`,
+			);
+		}
+
+		// GUARD 2 — stableId is the MERGE resolution key. A null one used to abort MID-BATCH,
+		// after earlier batches had already committed: a silently partial graph. The empty string
+		// is refused for the same reason a null is — it is not an identity, and every node
+		// carrying it would MERGE onto one another.
+		const nullIdOffenders = oneGroup.nodes.filter(
+			(oneNode) =>
+				oneNode.stableId === null || oneNode.stableId === undefined || oneNode.stableId === '',
+		);
+		if (nullIdOffenders.length > 0) {
+			nullIdViolations.push(
+				`${sourceLabel}: ${nullIdOffenders.length} node(s) with null/missing/empty stableId; ` +
+					`first offender labels=[${(nullIdOffenders[0].labels || []).join(', ')}]`,
+			);
+		}
+
+		// GUARD 3 — provenanceTier on every edge (§21). Checked PER GROUP so the refusal can name
+		// the source, which the first version of this function could not do.
+		findProvenanceViolations(oneGroup.edges).forEach((oneViolation) =>
+			provenanceViolations.push({ ...oneViolation, sourceLabel }),
+		);
+
+		oneGroup.nodes.forEach((oneNode) => allNodes.push(oneNode));
+		oneGroup.edges.forEach((oneEdge) => allEdges.push(oneEdge));
+	}
+
+	if (labelViolations.length > 0) {
+		return refuse(
+			`ForgedNode enforcement: ${labelViolations.length} non-conforming source(s) — every written node ` +
+				`must carry the ForgedNode label (edge endpoints resolve ONLY via :ForgedNode(stableId); a node ` +
+				`without it makes every touching edge dangle silently). ${labelViolations.join(' | ')} No writes performed.`,
+		);
+	}
+	if (nullIdViolations.length > 0) {
+		return refuse(
+			`stableId enforcement: ${nullIdViolations.length} non-conforming source(s) — every written node ` +
+				`must carry a non-null stableId (it is the MERGE resolution key; a null aborts mid-batch and ` +
+				`leaves a partial graph). ${nullIdViolations.join(' | ')} No writes performed.`,
+		);
+	}
+	if (provenanceViolations.length > 0) {
+		const sample = provenanceViolations[0];
+		return refuse(
+			`provenanceTier enforcement: ${provenanceViolations.length} edge(s) missing/invalid ` +
+				`provenanceTier (must be one of ${replayBlock.PROVENANCE_TIERS.join(', ')}); ` +
+				`first offender in '${sample.sourceLabel}': ${sample.edgeType} ${JSON.stringify(sample.fromRef)} -> ` +
+				`${JSON.stringify(sample.toRef)} tier=${JSON.stringify(sample.provenanceTier)}. ` +
+				`No edges written.`,
+		);
+	}
+
+	return { error: '', nodes: allNodes, edges: allEdges };
+};
+// writeShapedGraph — validate, resolve vectors, index, merge, index. The caller owns the session
+// (and closing it); this owns what a safe write IS.
+const writeShapedGraph = (
+	{ session, groups, storeResolver, embeddingDims, graphName },
+	callback,
+) => {
 	const resKeyIndex = resKeyIndexName();
 	const vectorIndex = vectorIndexName(graphName);
-
 	const taskList = new taskListPlus();
 
-	// --- Deserialize the manifest (pure) -> all nodes + all edges (edges tagged blockType).
-	//     ForgedNode ENFORCEMENT (at deserialize, before ANY write): edge endpoint resolution
-	//     matches (:ForgedNode {stableId}) ONLY, so a node without the ForgedNode label merges
-	//     fine and then EVERY edge touching it silently lands in danglingRefs while replay exits
-	//     0. That convention is now a CHECK: a block containing any node without ForgedNode is a
-	//     hard error NAMING the block — never a silent dangle.
+	// --- SHAPE + ALL THREE GUARDS, before anything is written. This is the load-bearing line of
+	//     the whole extraction: nothing may touch the session until validateShapedGraph has
+	//     admitted the content, and the nodes/edges written below are the ones IT walked — not a
+	//     second, independently assembled flattening that could drift from what was checked.
 	taskList.push((args, next) => {
-		const allNodes = [];
-		const allEdges = [];
-		let embeddingDims = null;
-		const labelViolations = [];
-		const nullIdViolations = [];
-		for (let entryIndex = 0; entryIndex < manifest.length; entryIndex++) {
-			const entry = manifest[entryIndex];
-			const entryName =
-				typeof entry === 'string' && entry.indexOf('\n') === -1 ? ` (${entry})` : '';
-			// F7: deserializeBlock throws on corrupt/malformed block text. Contain the throw at
-			// this boundary and route it error-first through the pipe, so the session/driver close
-			// on the normal error path instead of leaking through a process crash.
-			let block;
-			try {
-				block = replayBlock.deserializeBlock(readManifestEntry(entry));
-			} catch (deserializeError) {
-				next(
-					`deserialize failed: manifest[${entryIndex}]${entryName} is not a readable ` +
-						`block — ${deserializeError.message}. No writes performed.`,
-				);
-				return;
-			}
-			const h = block.header || {};
-			const blockName =
-				h.blockType === 'bridge'
-					? `bridge ${h.pairA}~${h.pairB}`
-					: `${h.blockType} ${h.standardKey} v${h.version}`;
-			const offenders = block.nodes.filter(
-				(oneNode) => (oneNode.labels || []).indexOf('ForgedNode') === -1,
-			);
-			if (offenders.length > 0) {
-				labelViolations.push(
-					`manifest[${entryIndex}] ${blockName}${entryName}: ${offenders.length} node(s) missing the ` +
-						`ForgedNode label; first offender stableId='${offenders[0].stableId}' ` +
-						`labels=[${(offenders[0].labels || []).join(', ')}]`,
-				);
-			}
-			// F8: a null/missing stableId previously aborted MID-BATCH with an opaque Neo4j error
-			// after earlier batches had committed — a silent partial graph. Refuse BEFORE any write.
-			const nullIdOffenders = block.nodes.filter(
-				(oneNode) => oneNode.stableId === null || oneNode.stableId === undefined,
-			);
-			if (nullIdOffenders.length > 0) {
-				nullIdViolations.push(
-					`manifest[${entryIndex}] ${blockName}${entryName}: ${nullIdOffenders.length} node(s) with ` +
-						`null/missing stableId; first offender labels=[${(nullIdOffenders[0].labels || []).join(', ')}]`,
-				);
-			}
-			if (embeddingDims === null) embeddingDims = block.header.embeddingDims;
-			block.nodes.forEach((oneNode) => {
-				// Tag each node with its block's standardKey — a TRANSIENT carrier resolveNodeVectors
-				// reads to pick the per-standard store, then STRIPS (it never persists; buildNodeRow
-				// whitelists fields). Mirrors how edges are tagged with blockType just below. Bridge
-				// blocks carry no standardKey but also no nodes, so this never tags a null.
-				oneNode._standardKey = block.header.standardKey;
-				allNodes.push(oneNode);
-			});
-			block.edges.forEach((oneEdge) =>
-				allEdges.push({ ...oneEdge, blockType: block.header.blockType }),
-			);
-		}
-		if (labelViolations.length > 0) {
-			next(
-				`ForgedNode enforcement: ${labelViolations.length} non-conforming block(s) — every replayed node ` +
-					`must carry the ForgedNode label (edge endpoints resolve ONLY via :ForgedNode(stableId); a node ` +
-					`without it makes every touching edge dangle silently). ${labelViolations.join(' | ')} No writes performed.`,
-			);
+		const validated = validateShapedGraph(groups);
+		if (validated.error) {
+			next(validated.error);
 			return;
 		}
-		if (nullIdViolations.length > 0) {
-			next(
-				`stableId enforcement: ${nullIdViolations.length} non-conforming block(s) — every replayed node ` +
-					`must carry a non-null stableId (it is the MERGE resolution key; a null aborts mid-batch and ` +
-					`leaves a partial graph). ${nullIdViolations.join(' | ')} No writes performed.`,
-			);
-			return;
-		}
-		next('', { ...args, allNodes, allEdges, embeddingDims });
+		next('', { ...args, allNodes: validated.nodes, allEdges: validated.edges });
 	});
 
-	// --- provenanceTier ENFORCEMENT (§21): malformed-edge ERROR before any write.
-	taskList.push((args, next) => {
-		const violations = findProvenanceViolations(args.allEdges);
-		if (violations.length > 0) {
-			const sample = violations[0];
-			next(
-				`provenanceTier enforcement: ${violations.length} edge(s) missing/invalid ` +
-					`provenanceTier (must be one of ${replayBlock.PROVENANCE_TIERS.join(', ')}); ` +
-					`first offender: ${sample.edgeType} ${JSON.stringify(sample.fromRef)} -> ` +
-					`${JSON.stringify(sample.toRef)} tier=${JSON.stringify(sample.provenanceTier)}. ` +
-					`No edges written.`,
-			);
-			return;
-		}
-		next('', args);
-	});
-
-	// --- RESOLVE embedding refs (PLAN §3.5, Phase 3): the dual-read READ side. For every node carrying
-	//     an embeddingRef, resolve it to the vector via the per-standard storeResolver and set
-	//     node.embedding BEFORE any write, so buildNodeRow (UNCHANGED) persists it exactly as the legacy
-	//     inline path would. FAIL LOUD on a missing/corrupt/dims-mismatched ref. NO storeResolver -> no-op
-	//     (legacy inline blocks replay byte-identically). Placed BEFORE the Phase-1 index so a resolution
-	//     failure means NO writes were performed (matching the deserialize/enforcement guards above).
+	// --- RESOLVE embedding refs (PLAN §3.5): for every node carrying an embeddingRef, resolve it to
+	//     the vector via the per-standard storeResolver and set node.embedding BEFORE any write, so
+	//     buildNodeRow persists it exactly as the legacy inline path would. FAIL LOUD on a
+	//     missing/corrupt/dims-mismatched ref. NO storeResolver -> no-op (the creation path and
+	//     legacy inline blocks are both unaffected). Placed BEFORE the index so a resolution failure
+	//     means NO writes were performed, matching the guards above.
 	taskList.push((args, next) => {
 		resolveNodeVectors(
-			{
-				nodes: args.allNodes,
-				storeResolver,
-				header: { embeddingDims: args.embeddingDims },
-			},
+			{ nodes: args.allNodes, storeResolver, header: { embeddingDims } },
 			(err) => {
 				if (err) {
 					next(err);
@@ -954,14 +1008,10 @@ const replay = ({ manifest, boltUri, password, graphName, storeResolver }, callb
 	// --- PHASE 1 (before node MERGE): resolution-key index on stableId, on the EMPTY store.
 	taskList.push((args, next) => {
 		session
-			.run(
-				`CREATE INDEX ${resKeyIndex} IF NOT EXISTS FOR (n:ForgedNode) ON (n.stableId)`,
-			)
+			.run(`CREATE INDEX ${resKeyIndex} IF NOT EXISTS FOR (n:ForgedNode) ON (n.stableId)`)
 			.then(() => session.run('CALL db.awaitIndexes(300)'))
 			.then(() => next('', args))
-			.catch((err) =>
-				next(`phase1 resolution-key index failed: ${err.message}`),
-			);
+			.catch((err) => next(`phase1 resolution-key index failed: ${err.message}`));
 	});
 
 	// --- PHASE 2a: replay nodes (indexed MERGE on stableId).
@@ -990,16 +1040,14 @@ const replay = ({ manifest, boltUri, password, graphName, storeResolver }, callb
 		});
 	});
 
-	// --- PHASE 3 (after edges): vector index (1024-dim cosine), off the replay hot path.
-	// The PRODUCTION form is the GA Cypher `CREATE VECTOR INDEX ... OPTIONS {...}` (SPEC §4.5,
-	// schemas §4), which requires a Neo4j kernel >= 5.13. We probe the server's kernel version
-	// first: on a capable server the index is built per spec; on an older server (e.g. the
-	// neo4j:5.5 test substrate, which has NO vector-index support in any syntax) we record the
-	// index as skipped rather than erroring — replay correctness does not depend on it, and the
-	// production golden runs a modern Neo4j. The resolution-key index and all data are unaffected.
+	// --- PHASE 3 (after edges): vector index (cosine), off the write hot path. The PRODUCTION form
+	// is the GA Cypher `CREATE VECTOR INDEX ... OPTIONS {...}`, which requires a Neo4j kernel >=
+	// 5.13. We probe the server's kernel version first: on a capable server the index is built per
+	// spec; on an older server we record the index as skipped rather than erroring — write
+	// correctness does not depend on it, and the production golden runs a modern Neo4j.
 	taskList.push((args, next) => {
 		const indexesBuilt = [resKeyIndex];
-		if (!args.embeddingDims) {
+		if (!embeddingDims) {
 			next('', { ...args, indexesBuilt });
 			return;
 		}
@@ -1014,7 +1062,7 @@ const replay = ({ manifest, boltUri, password, graphName, storeResolver }, callb
 				CREATE VECTOR INDEX ${vectorIndex} IF NOT EXISTS
 				FOR (n:ForgedNode) ON (n.embedding)
 				OPTIONS {indexConfig: {
-					\`vector.dimensions\`: ${args.embeddingDims},
+					\`vector.dimensions\`: ${embeddingDims},
 					\`vector.similarity_function\`: 'cosine'
 				}}
 			`;
@@ -1028,10 +1076,9 @@ const replay = ({ manifest, boltUri, password, graphName, storeResolver }, callb
 				.catch((err) => next(`phase3 vector index failed: ${err.message}`));
 		};
 		session
-			.run("CALL dbms.components() YIELD versions RETURN versions[0] AS kernelVersion")
+			.run('CALL dbms.components() YIELD versions RETURN versions[0] AS kernelVersion')
 			.then((result) => {
-				const kernelVersion =
-					result.records[0] && result.records[0].get('kernelVersion');
+				const kernelVersion = result.records[0] && result.records[0].get('kernelVersion');
 				if (versionAtLeast513(kernelVersion)) {
 					buildVectorIndex();
 					return;
@@ -1043,7 +1090,6 @@ const replay = ({ manifest, boltUri, password, graphName, storeResolver }, callb
 	});
 
 	pipeRunner(taskList.getList(), {}, (err, args) => {
-		session.close().then(() => driver.close());
 		if (err) {
 			callback(err);
 			return;
@@ -1057,9 +1103,78 @@ const replay = ({ manifest, boltUri, password, graphName, storeResolver }, callb
 	});
 };
 
+// =====================================================================
+// PUBLIC API — replay({ manifest, boltUri, password, graphName? }, callback)
+// =====================================================================
+const replay = ({ manifest, boltUri, password, graphName, storeResolver }, callback) => {
+	const driver = openDriver(boltUri, password);
+	const session = driver.session();
+
+	// --- Deserialize the manifest (pure) -> ONE GROUP PER BLOCK. The group's sourceLabel carries
+	//     the block's identity, so every guard message from writeShapedGraph still names the
+	//     offending block exactly as it did when the guards lived here.
+	const groups = [];
+	let embeddingDims = null;
+
+	for (let entryIndex = 0; entryIndex < manifest.length; entryIndex++) {
+		const entry = manifest[entryIndex];
+		const entryName =
+			typeof entry === 'string' && entry.indexOf('\n') === -1 ? ` (${entry})` : '';
+		// deserializeBlock throws on corrupt/malformed block text. Contain the throw at this
+		// boundary and route it error-first, so the session/driver close on the normal error path
+		// instead of leaking through a process crash.
+		let block;
+		try {
+			block = replayBlock.deserializeBlock(readManifestEntry(entry));
+		} catch (deserializeError) {
+			session.close().then(() => driver.close());
+			callback(
+				`deserialize failed: manifest[${entryIndex}]${entryName} is not a readable ` +
+					`block — ${deserializeError.message}. No writes performed.`,
+			);
+			return;
+		}
+		const h = block.header || {};
+		const blockName =
+			h.blockType === 'bridge'
+				? `bridge ${h.pairA}~${h.pairB}`
+				: `${h.blockType} ${h.standardKey} v${h.version}`;
+
+		if (embeddingDims === null) embeddingDims = h.embeddingDims;
+
+		// Tag each node with its block's standardKey — a TRANSIENT carrier resolveNodeVectors reads
+		// to pick the per-standard store, then STRIPS (it never persists; buildNodeRow whitelists
+		// fields). Edges are tagged with blockType the same way, for violation reporting.
+		block.nodes.forEach((oneNode) => {
+			oneNode._standardKey = h.standardKey;
+		});
+
+		groups.push({
+			sourceLabel: `manifest[${entryIndex}] ${blockName}${entryName}`,
+			nodes: block.nodes,
+			edges: block.edges.map((oneEdge) => ({ ...oneEdge, blockType: h.blockType })),
+		});
+	}
+
+	writeShapedGraph(
+		{ session, groups, storeResolver, embeddingDims, graphName },
+		(err, result) => {
+			session.close().then(() => driver.close());
+			if (err) {
+				callback(err);
+				return;
+			}
+			callback('', result);
+		},
+	);
+};
+
 module.exports = {
 	extractBlock,
 	replay,
+	// the shared write path — replay() and replayManager.init() are its two entry points
+	writeShapedGraph,
+	validateShapedGraph,
 	shapeNode,
 	putDistinctNodeVectors,
 	buildNodeRow,
