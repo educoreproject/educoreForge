@@ -77,7 +77,7 @@ const manifestEditor = () => {
 	// it, and never consulted for a decision. manifestEditor is handed resolved subjects and schema
 	// blocks; a component that read the recipe to decide something would be a second resolver, free
 	// to disagree with the first.
-	const init = ({ name, description, recipe, store }) => {
+	const init = ({ name, description, recipe, recipeText, store }) => {
 		if (!store || typeof store.saveBlock !== 'function') {
 			throw new Error(
 				`manifestEditor.init '${name}': a store is REQUIRED and has no default. A manifest ` +
@@ -102,6 +102,12 @@ const manifestEditor = () => {
 			name,
 			description,
 			recipeName: (recipe && recipe.recipeName) || '',
+			// The recipe's own content address, when the caller has the file text. A recipe NAME
+			// says which recipe; a recipe named 'cedsLif' is a different document in March than in
+			// July, and two goldens built from "the same recipe" can differ entirely. The hash is
+			// what makes "built from exactly this" answerable. Optional, because a caller that does
+			// not have the text should record nothing rather than invent precision.
+			recipeRefId: recipeText ? contentAddress.blockIdForText(recipeText) : '',
 			store,
 			members: [],
 			storedRefId: '',
@@ -151,7 +157,11 @@ const manifestEditor = () => {
 				makeManifest({
 					name: storedManifest.name,
 					description: storedManifest.description,
-					recipeName: '',
+					// The provenance SURVIVES the reopen, which is the entire reason it is stored:
+					// a manifest that cannot say what composed it is a golden nobody can account
+					// for six months later. (TQ, 2026-07-22: "Yes, I want the provenance.")
+					recipeName: storedManifest.recipeName || '',
+					recipeRefId: storedManifest.recipeRefId || '',
 					store,
 					members,
 					storedRefId: manifestRefId,
@@ -173,7 +183,7 @@ const manifestEditor = () => {
 // callback nest above, where a const would sit in the temporal dead zone. The resulting
 // ReferenceError is swallowed by sqlite-instance's SQL error handling and RETRIED, so a one-line
 // hoisting mistake presents as dozens of unrelated assertion failures.
-function makeManifest({ name, description, recipeName, store, members, storedRefId }) {
+function makeManifest({ name, description, recipeName, recipeRefId, store, members, storedRefId }) {
 	// how this manifest names itself in a refusal: a stored one by its address, a composed one by
 	// its name, because a composed manifest's address changes with every add.
 	const selfName = () => (storedRefId ? `manifest ${storedRefId}` : `manifest '${name}'`);
@@ -367,7 +377,9 @@ function makeManifest({ name, description, recipeName, store, members, storedRef
 			);
 			return;
 		}
-		store.saveManifest({ name, description, members }, (err, saveReport) => {
+		store.saveManifest(
+			{ name, description, recipeName, recipeRefId, members },
+			(err, saveReport) => {
 			if (err) {
 				callback(`manifestEditor.save ${selfName()}: ${err}`);
 				return;
@@ -377,7 +389,8 @@ function makeManifest({ name, description, recipeName, store, members, storedRef
 				memberCount: saveReport.memberCount,
 				alreadyPresent: saveReport.alreadyPresent,
 			});
-		});
+			},
+		);
 	};
 
 	return {
@@ -387,6 +400,7 @@ function makeManifest({ name, description, recipeName, store, members, storedRef
 		schemaBlocks,
 		save,
 		recipeName: () => recipeName,
+		recipeRefId: () => recipeRefId || '',
 	};
 }
 

@@ -44,6 +44,10 @@ require('../../../../../test/testLib/testAppStartup')({ moduleName, helpText: he
 
 const harness = require('../../../../../test/testLib/harness')(moduleName);
 
+// The recipe TEXT, not just its name: provenance has to answer "built from exactly which recipe",
+// and a recipe called 'gateRecipe' is a different document on two different days.
+const GATE_RECIPE_TEXT = '{"recipeName":"gateRecipe","standards":[{"token":"lif"}]}\n';
+
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -157,6 +161,7 @@ standardsDatabase.open({ databaseFilePath }, (openErr, store) => {
 		name: 'gateManifest',
 		description: 'the manifest this suite composes',
 		recipe: { recipeName: 'gateRecipe' },
+		recipeText: GATE_RECIPE_TEXT,
 		store,
 	});
 	harness.ok('a well-formed manifest is composed', !!manifest);
@@ -630,6 +635,28 @@ function openGates(store, composedAddress) {
 						'  and it re-addresses to exactly what it was stored under',
 						reopened.refId(),
 						composedAddress,
+					);
+
+					// PROVENANCE SURVIVES THE REOPEN (TQ, 2026-07-22: "Yes, I want the
+					// provenance."). A manifest that cannot say what composed it is a golden
+					// nobody can account for six months later. The recipe NAME says which recipe;
+					// the recipe refId says which VERSION of it, because a recipe called 'cedsLif'
+					// is a different document in March than in July and two goldens built from
+					// "the same recipe" can differ entirely.
+					harness.equal(
+						'PROVENANCE: the recipe NAME survived being stored and reopened',
+						reopened.recipeName(),
+						'gateRecipe',
+					);
+					harness.match(
+						'  and the recipe CONTENT ADDRESS survived too',
+						reopened.recipeRefId(),
+						/^[0-9a-f]{64}$/,
+					);
+					harness.equal(
+						'  matching what the composing manifest computed',
+						reopened.recipeRefId(),
+						contentAddress.blockIdForText(GATE_RECIPE_TEXT),
 					);
 
 					// Adding to a manifest already addressed by its membership would make its refId

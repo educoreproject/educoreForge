@@ -96,7 +96,7 @@ const standardsDatabase = () => {
 				const runSql = (statement, cb) => tableRef.runStatement(statement, RAW_OPTS, cb);
 				const getRows = (statement, cb) => tableRef.getData(statement, RAW_OPTS, cb);
 
-				buildSchema({ runSql }, (schemaErr) => {
+				buildSchema({ runSql, getRows }, (schemaErr) => {
 					if (schemaErr) {
 						callback(`standardsDatabase.open '${databaseFilePath}': ${schemaErr}`);
 						return;
@@ -112,7 +112,7 @@ const standardsDatabase = () => {
 
 // -----
 // buildSchema — CREATE TABLE IF NOT EXISTS, in dependency order.
-const buildSchema = ({ runSql }, callback) => {
+const buildSchema = ({ runSql, getRows }, callback) => {
 	const taskList = new taskListPlus();
 
 	// blocks — the content-addressed heart. refId IS sha256(text).
@@ -140,6 +140,8 @@ const buildSchema = ({ runSql }, callback) => {
 				refId                 TEXT PRIMARY KEY,
 				name                  TEXT,
 				description           TEXT,
+				recipeName            TEXT,
+				recipeRefId           TEXT,
 				basedOnManifestRefId  TEXT,
 				createdAt             TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 				FOREIGN KEY (basedOnManifestRefId) REFERENCES manifests(refId)
@@ -167,7 +169,64 @@ const buildSchema = ({ runSql }, callback) => {
 		);
 	});
 
+	// sqlite-instance adds columns dynamically for objects saved through saveObject — but this
+	// module writes hand-written INSERTs through runStatement, so it bypasses that machinery
+	// entirely. CREATE TABLE IF NOT EXISTS does NOT retrofit a table that already exists, so a
+	// database made before a column was added would silently lack it and every write of that column
+	// would fail. Ask the table what it actually has and add what is missing.
+	taskList.push((args, next) => {
+		ensureColumns(
+			{ runSql, getRows },
+			{
+				manifests: { recipeName: 'TEXT', recipeRefId: 'TEXT' },
+			},
+			(err) => next(err, args),
+		);
+	});
+
 	pipeRunner(taskList.getList(), {}, (err) => callback(err || ''));
+};
+
+// -----
+// ensureColumns — idempotent, additive, and never destructive. Reads PRAGMA table_info and ALTERs
+// in only the columns a table lacks. Adding a column is the one schema change sqlite does cheaply
+// and safely; anything more than adding belongs in a deliberate migration, not here.
+const ensureColumns = ({ runSql, getRows }, wanted, callback) => {
+	const tableNames = Object.keys(wanted);
+	const nextTable = (index) => {
+		if (index >= tableNames.length) {
+			callback('');
+			return;
+		}
+		const tableName = tableNames[index];
+		getRows(`PRAGMA table_info(${tableName});`, (err, rows) => {
+			if (err) {
+				callback(`ensureColumns ${tableName}: ${err}`);
+				return;
+			}
+			const present = new Set((rows || []).map((oneRow) => oneRow.name));
+			const missing = Object.keys(wanted[tableName]).filter((one) => !present.has(one));
+			const nextColumn = (columnIndex) => {
+				if (columnIndex >= missing.length) {
+					nextTable(index + 1);
+					return;
+				}
+				const columnName = missing[columnIndex];
+				runSql(
+					`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${wanted[tableName][columnName]};`,
+					(alterErr) => {
+						if (alterErr) {
+							callback(`ensureColumns ${tableName}.${columnName}: ${alterErr}`);
+							return;
+						}
+						nextColumn(columnIndex + 1);
+					},
+				);
+			};
+			nextColumn(0);
+		});
+	};
+	nextTable(0);
 };
 
 // -----
@@ -272,7 +331,10 @@ const makeApi = ({ esc, escJson, runSql, getRows, databaseFilePath }) => {
 	// members speak `schemaBlockRefId`. The mapping happens HERE, at the boundary, rather than by
 	// changing the shared rule — every phase that mints or verifies a manifest address must use the
 	// identical function or two manifests with the same members would get different addresses.
-	const saveManifest = ({ name, description, basedOnManifestRefId, members = [] }, callback) => {
+	const saveManifest = (
+		{ name, description, recipeName, recipeRefId, basedOnManifestRefId, members = [] },
+		callback,
+	) => {
 		const forAddressing = members.map((oneMember) => ({
 			blockId: oneMember.schemaBlockRefId,
 			position: oneMember.position,
@@ -307,8 +369,10 @@ const makeApi = ({ esc, escJson, runSql, getRows, databaseFilePath }) => {
 				return;
 			}
 			runSql(
-				`INSERT INTO manifests (refId, name, description, basedOnManifestRefId)
-				 VALUES (${esc(refId)}, ${esc(name)}, ${esc(description)}, ${esc(basedOnManifestRefId)});`,
+				`INSERT INTO manifests
+					(refId, name, description, recipeName, recipeRefId, basedOnManifestRefId)
+				 VALUES (${esc(refId)}, ${esc(name)}, ${esc(description)}, ${esc(recipeName)},
+				         ${esc(recipeRefId)}, ${esc(basedOnManifestRefId)});`,
 				(err) => next(err, args),
 			);
 		});
