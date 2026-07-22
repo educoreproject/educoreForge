@@ -64,6 +64,15 @@ const DEFAULT_VOYAGE_CONFIG_PATH = path.join(
 const replayEngine = require(path.join(TREE_LIB, 'replay', 'replay-engine'));
 
 // -----
+// resolveVoyageConfigPath — the Voyage ini precedence as ONE provable rule: call param (announced
+// by the caller) > getConfig('forger').voyageConfigFilePath (graphBuilder.ini) > the computed
+// in-code default. getConfig is injectable for the test suite only; production passes nothing.
+const resolveVoyageConfigPath = ({ paramPath, getConfig = process.global.getConfig } = {}) => {
+	const configuredPath = ((getConfig && getConfig('forger')) || {}).voyageConfigFilePath;
+	return paramPath || configuredPath || DEFAULT_VOYAGE_CONFIG_PATH;
+};
+
+// -----
 // destinationRefusal — the HARD SAFETY LINE, applied before any connection. Returns '' when the
 // destination is writable, otherwise the refusal message. Exported for the test suite: a guard
 // never observed refusing is unproven.
@@ -185,16 +194,13 @@ const forger = () => {
 		// the POINTER is configurable.
 		let embedder = null;
 		if (vectorize) {
-			const { getConfig } = process.global;
-			const configuredPath = (getConfig('forger') || {}).voyageConfigFilePath;
 			if (embeddingConfigFilePath) {
 				console.error(
 					`EMBEDDING CONFIG OVERRIDE ACTIVE: configFilePath = ${embeddingConfigFilePath} (embeddingConfigFilePath)`,
 				);
 			}
 			embedder = require(path.join(TREE_LIB, 'embedding', 'embedding-client'))({
-				configFilePath:
-					embeddingConfigFilePath || configuredPath || DEFAULT_VOYAGE_CONFIG_PATH,
+				configFilePath: resolveVoyageConfigPath({ paramPath: embeddingConfigFilePath }),
 			});
 		}
 
@@ -279,3 +285,5 @@ const forger = () => {
 module.exports = forger;
 module.exports.destinationRefusal = destinationRefusal;
 module.exports.resolveBundle = resolveBundle;
+module.exports.resolveVoyageConfigPath = resolveVoyageConfigPath;
+module.exports.DEFAULT_VOYAGE_CONFIG_PATH = DEFAULT_VOYAGE_CONFIG_PATH;

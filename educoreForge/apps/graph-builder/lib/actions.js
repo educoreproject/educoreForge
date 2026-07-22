@@ -23,10 +23,12 @@ const buildLib = require('./build');
 // ---------------------------------------------------------------------
 // ENVIRONMENT DISCOVERY
 // ---------------------------------------------------------------------
-// Which standards this environment can actually forge — a scan of forges/<STD>/forge.js.
-// Empty until forges are ported; feeds Layer-2 resolvability so un-ported forges are flagged
-// honestly rather than assumed present. It lives beside its callers because both -build and
-// -deps need it and nothing else does.
+// Which standards this environment can actually forge. A forge bundle IS its own registration
+// (discovery pattern, not a registry): forges/<token>/parserDescriptor.ini names the entryModule,
+// and the bundle counts as available only when that entry actually exists on disk. This is the
+// SAME rule the forger's resolveBundle applies, so what -deps advertises is exactly what forge()
+// will accept. (Replaces the original forge.js filename guess, which predated the ports and saw
+// nothing.) Feeds Layer-2 resolvability so un-ported forges are flagged honestly.
 
 const scanAvailableForges = () => {
 	const forgesDir = path.join(__dirname, '..', '..', '..', 'forges');
@@ -36,10 +38,19 @@ const scanAvailableForges = () => {
 	try {
 		return fs
 			.readdirSync(forgesDir, { withFileTypes: true })
-			.filter(
-				(entry) =>
-					entry.isDirectory() && fs.existsSync(path.join(forgesDir, entry.name, 'forge.js')),
-			)
+			.filter((entry) => {
+				if (!entry.isDirectory()) {
+					return false;
+				}
+				const descriptorPath = path.join(forgesDir, entry.name, 'parserDescriptor.ini');
+				if (!fs.existsSync(descriptorPath)) {
+					return false;
+				}
+				const entryModule = (fs
+					.readFileSync(descriptorPath, 'utf8')
+					.match(/^entryModule[ \t]*=[ \t]*(.+?)[ \t]*$/m) || [])[1];
+				return !!entryModule && fs.existsSync(path.join(forgesDir, entry.name, entryModule));
+			})
 			.map((entry) => entry.name);
 	} catch (scanError) {
 		return [];

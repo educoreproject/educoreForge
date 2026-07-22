@@ -74,4 +74,33 @@ manager.extract({ graphName: 'DEV_x' }, 'standardBase', (err, result) => {
 	harness.ok('  and returns NO fake block ref', result === undefined);
 });
 
+// =====================================================================
+harness.section('SETTINGS — config overrides map to provisioning knobs, defaults govern absent config');
+// =====================================================================
+
+const { resolveSettings } = replayManagerModule;
+
+const defaults = resolveSettings(() => ({}));
+harness.equal('default image', defaults.neo4jImage, 'neo4j:5.26');
+harness.equal('default portSearchStart', defaults.portSearchStart, 7801);
+harness.equal('default portSearchSpan', defaults.portSearchSpan, 200);
+harness.equal('default readyTimeout (ms)', defaults.readyTimeoutMs, 90000);
+
+const overridden = resolveSettings(() => ({
+	neo4jImage: 'neo4j:9.99',
+	portSearchStart: '7811', // ini values may arrive as strings — must coerce
+	readyTimeoutSeconds: 5,
+}));
+harness.equal('configured image wins', overridden.neo4jImage, 'neo4j:9.99');
+harness.equal('configured start coerces string -> number', overridden.portSearchStart, 7811);
+harness.equal('configured timeout converts seconds -> ms', overridden.readyTimeoutMs, 5000);
+harness.equal('unconfigured knob keeps its default alongside overrides', overridden.portSearchSpan, 200);
+
+// the LIVE-proven behavior, now gated: the real tree config moves the port off the default
+harness.equal(
+	'the real graphBuilder.ini governs (portSearchStart 7811, proven live 2026-07-21)',
+	resolveSettings().portSearchStart,
+	7811,
+);
+
 harness.report();

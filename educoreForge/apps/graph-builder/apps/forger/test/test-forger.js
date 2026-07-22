@@ -178,4 +178,34 @@ harness.ok('a node without embedding gets NO embedding field', plainNode.embeddi
 const edgeLine = lines.find((oneLine) => oneLine.type === 'HAS_CLASS');
 harness.ok('edge carries provenanceTier (array-wrapped)', edgeLine.properties.provenanceTier[0] === 'structural', JSON.stringify(edgeLine.properties));
 
+// =====================================================================
+harness.section('VOYAGE CONFIG PATH — the precedence rule: param > config > default');
+// =====================================================================
+
+const { resolveVoyageConfigPath, DEFAULT_VOYAGE_CONFIG_PATH } = forgerModule;
+
+harness.equal(
+	'the call param wins over everything',
+	resolveVoyageConfigPath({
+		paramPath: '/tmp/override.ini',
+		getConfig: () => ({ voyageConfigFilePath: '/configured/path.ini' }),
+	}),
+	'/tmp/override.ini',
+);
+harness.equal(
+	'the configured path wins when no param',
+	resolveVoyageConfigPath({ getConfig: () => ({ voyageConfigFilePath: '/configured/path.ini' }) }),
+	'/configured/path.ini',
+);
+harness.equal(
+	'the in-code default governs when neither is given',
+	resolveVoyageConfigPath({ getConfig: () => ({}) }),
+	DEFAULT_VOYAGE_CONFIG_PATH,
+);
+harness.match(
+	'and the default points at voyageEmbedding.ini (the secret stays in its own file)',
+	DEFAULT_VOYAGE_CONFIG_PATH,
+	/voyageEmbedding\.ini$/,
+);
+
 harness.report();

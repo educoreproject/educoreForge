@@ -1,0 +1,14 @@
+{
+  // bad-unforgedStandard — structurally and referentially SOUND, but names a standard with no
+  // ported forge. Exists so the resolvability layer's failure side stays proven: when the real
+  // forges landed (2026-07-22), cedsLif went fully green and stopped exercising this direction.
+  "schemaVersion": "1.0.0",
+  "recipeName": "unforgedStandard",
+  "kind": "dev",
+  "description": "A sound recipe naming a standard this tree cannot forge.",
+  "standards": [
+    { "token": "zorg", "version": "current" }
+  ],
+  "hubs": [],
+  "bridges": []
+}

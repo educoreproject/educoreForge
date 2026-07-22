@@ -42,9 +42,12 @@ const DEFAULT_PORT_SEARCH_START = 7801;
 const DEFAULT_PORT_SEARCH_SPAN = 200;
 const DEFAULT_READY_TIMEOUT_SECONDS = 90;
 
-// resolve the effective settings at CALL time (process.global may not exist at require time)
-const resolveSettings = () => {
-	const config = (process.global.getConfig && process.global.getConfig('replay-manager')) || {};
+// resolve the effective settings at CALL time (process.global may not exist at require time).
+// getConfig is injectable for the test suite ONLY — production callers pass nothing and get the
+// frozen process.global one. Exported so the config->settings mapping is provable without a
+// live container.
+const resolveSettings = (getConfig = process.global.getConfig) => {
+	const config = (getConfig && getConfig('replay-manager')) || {};
 	return {
 		neo4jImage: config.neo4jImage || DEFAULT_NEO4J_IMAGE,
 		portSearchStart: Number(config.portSearchStart) || DEFAULT_PORT_SEARCH_START,
@@ -314,3 +317,4 @@ const replayManager = () => {
 
 module.exports = replayManager;
 module.exports.nameRefusal = nameRefusal;
+module.exports.resolveSettings = resolveSettings;

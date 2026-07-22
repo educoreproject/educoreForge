@@ -50,18 +50,21 @@ const { xLog } = process.global;
 
 const vectorize = (commandLineParameters.values.vectorize || [])[0] !== 'false';
 const keepGraph = !!commandLineParameters.switches.keepGraph;
-const standardToken = (commandLineParameters.values.standard || [])[0] || 'lif';
+// --standard takes ONE token or a COMMA LIST (--standard=ceds,lif). A list forges each
+// standard IN SEQUENCE into the SAME scratch graph — the coexistence a golden build implies —
+// and the gates then check both the whole graph and each standard's own subgraph.
+// the shared list-value rule (see testLib/parse-list-value.js for the comma code-fact story)
+const { parseListValue } = require('../../../../../test/testLib/parse-list-value');
+const standardTokens = parseListValue(commandLineParameters.values.standard, ['lif']);
 
 // sanity floor per standard: proves the REAL corpus was forged, not a stub or a truncation
 const MIN_NODES = { lif: 2900, ceds: 23000 };
-const minNodes = MIN_NODES[standardToken];
-if (minNodes === undefined) {
-	xLogEarlyExit(`no MIN_NODES floor for standard '${standardToken}' — add it before proving`);
-}
-function xLogEarlyExit(message) {
-	console.error(`${moduleName}: ${message}`);
-	process.exit(1);
-}
+standardTokens.forEach((oneToken) => {
+	if (MIN_NODES[oneToken] === undefined) {
+		console.error(`${moduleName}: no MIN_NODES floor for standard '${oneToken}' — add it before proving`);
+		process.exit(1);
+	}
+});
 
 const TREE_LIB = path.join(__dirname, '..', '..', '..', '..', '..', 'lib');
 const { DME_ROLES } = require(path.join(TREE_LIB, 'vocabulary', 'vocabulary'));
@@ -125,9 +128,9 @@ const finish = (handle, exitCode) => {
 // THE RUN — create -> forge -> gates -> red-proof -> destroy
 // =====================================================================
 
-xLog.status(`[${moduleName}] standard=${standardToken} vectorize=${vectorize} keepGraph=${keepGraph}`);
+xLog.status(`[${moduleName}] standards=${standardTokens.join('+')} vectorize=${vectorize} keepGraph=${keepGraph}`);
 
-replayManager.create({ purpose: `${standardToken}Proof` }, (createErr, handle) => {
+replayManager.create({ purpose: `${standardTokens.join('')}Proof` }, (createErr, handle) => {
 	if (createErr) {
 		harness.ok('scratch graph provisioned', false, createErr);
 		finish(null, 1);
@@ -137,36 +140,74 @@ replayManager.create({ purpose: `${standardToken}Proof` }, (createErr, handle) =
 	harness.match('graph name is DEV_* (GNC-001 scratch tier)', handle.graphName, /^DEV_/);
 	harness.match('bolt url handed back', handle.boltUrl, /^bolt:\/\/localhost:\d+$/);
 
-	forger.forge(
-		{ standard: standardToken, version: 'current', destination: handle, vectorize },
-		(forgeErr, forged) => {
-			if (forgeErr) {
-				harness.ok('forge LIF into scratch graph', false, forgeErr);
-				finish(handle, 1);
-				return;
-			}
-			harness.section(`FORGE — real ${standardToken.toUpperCase()} into the scratch graph`);
-			harness.equal(
-				'forger reports the standard',
-				String(forged.standard).toLowerCase(),
-				standardToken.toLowerCase(),
-			);
-			harness.ok(
-				`forged the real corpus (${forged.nodeCount} nodes >= floor ${minNodes})`,
-				forged.nodeCount >= minNodes,
-				forged.nodeCount,
-			);
-			harness.equal('every serialized node was merged', forged.nodesMerged, forged.nodeCount);
-			harness.equal('every serialized edge was merged', forged.edgesMerged, forged.edgeCount);
-			if (vectorize) {
-				harness.ok(`embedding calls were made (${forged.embedCallCount})`, forged.embedCallCount > 0);
-			}
+	// forge each standard IN SEQUENCE into the same graph, collecting each report
+	const forgedReports = [];
+	const forgeNext = (tokenIndex, afterAllForges) => {
+		if (tokenIndex >= standardTokens.length) {
+			afterAllForges();
+			return;
+		}
+		const oneToken = standardTokens[tokenIndex];
+		forger.forge(
+			{ standard: oneToken, version: 'current', destination: handle, vectorize },
+			(forgeErr, forged) => {
+				if (forgeErr) {
+					harness.ok(`forge ${oneToken} into scratch graph`, false, forgeErr);
+					finish(handle, 1);
+					return;
+				}
+				harness.section(`FORGE — real ${oneToken.toUpperCase()} into the shared scratch graph`);
+				harness.equal(
+					'forger reports the standard',
+					String(forged.standard).toLowerCase(),
+					oneToken.toLowerCase(),
+				);
+				harness.ok(
+					`forged the real corpus (${forged.nodeCount} nodes >= floor ${MIN_NODES[oneToken]})`,
+					forged.nodeCount >= MIN_NODES[oneToken],
+					forged.nodeCount,
+				);
+				harness.equal('every serialized node was merged', forged.nodesMerged, forged.nodeCount);
+				harness.equal('every serialized edge was merged', forged.edgesMerged, forged.edgeCount);
+				if (vectorize) {
+					harness.ok(`embedding calls were made (${forged.embedCallCount})`, forged.embedCallCount > 0);
+				}
+				forgedReports.push(forged);
+				forgeNext(tokenIndex + 1, afterAllForges);
+			},
+		);
+	};
+
+	forgeNext(0, () => {
+		{
+			const forged = {
+				nodeCount: forgedReports.reduce((sum, oneReport) => sum + oneReport.nodeCount, 0),
+			};
 
 			harness.section('CYPHER GATES — the graph itself testifies');
 
 			runCypher(handle, `MATCH (n:ForgedNode) RETURN count(n) AS n`, (e1, r1) => {
 				if (e1) { harness.ok('node count query', false, e1); finish(handle, 1); return; }
-				harness.equal('G1 node count in graph == forger report', asNumber(r1[0].n), forged.nodeCount);
+				harness.equal(
+					'G1 whole-graph node count == sum of forger reports (standards COEXIST, no collisions)',
+					asNumber(r1[0].n),
+					forged.nodeCount,
+				);
+				// per-standard subgraph: each standard's own nodes are intact in the shared graph
+				runCypher(
+					handle,
+					`MATCH (n:ForgedNode) RETURN n._source AS source, count(n) AS c`,
+					(e1b, r1b) => {
+						if (e1b) { harness.ok('per-source count query', false, e1b); finish(handle, 1); return; }
+						const bySource = {};
+						r1b.forEach((oneRow) => (bySource[oneRow.source] = asNumber(oneRow.c)));
+						forgedReports.forEach((oneReport) => {
+							harness.equal(
+								`G1b ${oneReport.standard} subgraph holds exactly its own ${oneReport.nodeCount} nodes`,
+								bySource[oneReport.standard],
+								oneReport.nodeCount,
+							);
+						});
 
 				runCypher(
 					handle,
@@ -245,7 +286,9 @@ replayManager.create({ purpose: `${standardToken}Proof` }, (createErr, handle) =
 						});
 					},
 				);
+						},
+					);
 			});
-		},
-	);
+		}
+	});
 });

@@ -103,22 +103,34 @@ harness.match('-deps stdout ends with a newline', depsRun.stdout, /\}\n$/);
 harness.section('-validate — STRICT about all three layers');
 // =====================================================================
 
+// Since 2026-07-22 the ceds and lif forges are PORTED, so cedsLif resolves fully — strict
+// validate passes all three layers. The failure direction moved to bad-unforgedStandard.
 const validateGood = runCli(['-validate', '--recipePath=' + goodRecipe('cedsLif')]);
+harness.equal('a fully-resolvable recipe passes strict validate (exit 0)', validateGood.status, 0);
+harness.ok(
+	'  with all three layers reporting PASS',
+	((parsedStdout(validateGood) || {}).layers || {}).structural?.ok === true &&
+		((parsedStdout(validateGood) || {}).layers || {}).referential?.ok === true &&
+		((parsedStdout(validateGood) || {}).layers || {}).resolvability?.ok === true,
+	validateGood.stdout,
+);
+
+const validateUnforged = runCli(['-validate', '--recipePath=' + fixture('bad-unforgedStandard')]);
 harness.equal(
-	'a structurally+referentially good recipe still FAILS strict validate (no forges ported)',
-	validateGood.status,
+	'a sound recipe naming an UN-FORGED standard fails strict validate (exit 1)',
+	validateUnforged.status,
 	1,
 );
 harness.ok(
 	'  and says so via the resolvability layer, not by lumping it in elsewhere',
-	((parsedStdout(validateGood) || {}).layers || {}).resolvability?.ok === false,
-	validateGood.stdout,
+	((parsedStdout(validateUnforged) || {}).layers || {}).resolvability?.ok === false,
+	validateUnforged.stdout,
 );
 harness.ok(
 	'  while reporting structural and referential as PASSING',
-	((parsedStdout(validateGood) || {}).layers || {}).structural?.ok === true &&
-		((parsedStdout(validateGood) || {}).layers || {}).referential?.ok === true,
-	validateGood.stdout,
+	((parsedStdout(validateUnforged) || {}).layers || {}).structural?.ok === true &&
+		((parsedStdout(validateUnforged) || {}).layers || {}).referential?.ok === true,
+	validateUnforged.stdout,
 );
 
 const validateMalformed = runCli(['-validate', '--recipePath=' + fixture('bad-malformed')]);
@@ -201,25 +213,36 @@ harness.equal('a REFERENTIAL fault blocks the build (exit 1)', buildReferential.
 harness.match('  and the rejection is announced', buildReferential.stderr, /recipe REJECTED/);
 harness.match('  naming the referential cause', buildReferential.stderr, /referential:/);
 
+const buildUnforged = runCli(['-build', '--recipePath=' + fixture('bad-unforgedStandard')]);
 harness.equal(
 	'a RESOLVABILITY fault does NOT block the build (exit 0) — the stub-era policy',
-	buildGood.status,
+	buildUnforged.status,
 	0,
 );
 harness.match(
 	'  but is announced as an explicit NOTE rather than passing silently',
-	buildGood.stderr,
-	/NOTE -- 2 standard\(s\) have no forge yet/,
+	buildUnforged.stderr,
+	/NOTE -- 1 standard\(s\) have no forge yet/,
 );
 harness.match(
 	'  and the validation summary reports the layer as FAIL, honestly',
-	buildGood.stderr,
+	buildUnforged.stderr,
 	/resolvability FAIL/,
 );
 harness.match(
 	'  while reporting the two gating layers as PASS',
-	buildGood.stderr,
+	buildUnforged.stderr,
 	/structural PASS; referential PASS/,
+);
+harness.match(
+	'a fully-resolvable recipe reports resolvability PASS (both forges discovered)',
+	buildGood.stderr,
+	/structural PASS; referential PASS; resolvability PASS/,
+);
+harness.ok(
+	'  with NO no-forge NOTE',
+	!/have no forge yet/.test(buildGood.stderr),
+	buildGood.stderr.split('\n').filter((l) => /NOTE/.test(l)).join(' '),
 );
 
 const buildDupPairing = runCli(['-build', '--recipePath=' + fixture('bad-dupPairing')]);
