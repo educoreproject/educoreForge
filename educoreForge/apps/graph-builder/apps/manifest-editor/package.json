@@ -2,7 +2,7 @@
   "name": "manifest-editor",
   "version": "0.1.0",
   "private": true,
-  "description": "manifestEditor — composes a manifest from block references (compose-by-selection). In-process module of graphBuilder (stub).",
+  "description": "manifestEditor — composes a manifest from harvested schema blocks, writing each block through to the standards database on add. In-process module of graphBuilder.",
   "main": "manifestEditor.js",
   "author": "tqii",
   "license": "ISC"

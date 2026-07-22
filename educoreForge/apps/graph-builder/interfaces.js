@@ -105,9 +105,32 @@
 
 /**
  * @interface ManifestEditorComponent
- * Composes a manifest from RESOLVED block references (compose-by-selection; never handed the
- * recipe itself — the orchestrator resolves recipe -> keys). Stub-bodied as of 2026-07-22.
- * @property {function(string, Object): {add: function(string, string, Object): void, id: function(): string}} init
+ * Composes a manifest from RESOLVED subjects and harvested schema blocks (compose-by-selection;
+ * the recipe is held only as a provenance REFERENCE, never consulted for a decision — the
+ * orchestrator resolves recipe -> subjects). Real-bodied as of 2026-07-22.
+ *
+ * TWO DOORS, deliberately. `init` composes a NEW manifest and is the only one that can grow:
+ * `add` writes its schema block THROUGH to the store immediately, so nothing accumulates in RAM
+ * and a failed build leaves a warm cache. `open` loads a STORED manifest and DISABLES `add` —
+ * a manifest addressed by its membership cannot grow without making that address a lie.
+ *
+ * A manifest's refId IS contentAddress.manifestKeyForMembership over its membership. Names and
+ * descriptions are REQUIRED (a membership of sha256 addresses is unreadable) and are OUTSIDE the
+ * address (fixing a typo must never mint a different manifest).
+ *
+ * init() and the handle's members()/refId() are SYNCHRONOUS — the §4.4 build sequence composes
+ * with them inline — so their refusals are throws; everything that reaches the store is
+ * callback-shaped.
+ *
+ * @property {function({name: string, description: string, recipe?: Object, store: Object}):
+ *           {add: function({subjectRefId: string, kind: string, description: string,
+ *            schemaBlock: Object}, function(string, Object=): void): void,
+ *            members: function(): Array, refId: function(): string,
+ *            schemaBlocks: function(function(string, Array=): void): void,
+ *            save: function(function(string, Object=): void): void,
+ *            recipeName: function(): string}} init
+ * @property {function({store: Object, manifestRefId: string},
+ *           function(string, Object=): void): void} open
  */
 
 /**
@@ -148,7 +171,7 @@ const COMPONENT_SHAPES = {
 	forger: ['forge'],
 	replayManager: ['create', 'init', 'harvest', 'delete'],
 	bridgeMaker: ['run'],
-	manifestEditor: ['init'],
+	manifestEditor: ['init', 'open'],
 };
 
 module.exports = { COMPONENT_SHAPES };

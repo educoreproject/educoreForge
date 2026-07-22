@@ -14,13 +14,14 @@
 // the pipeline keeps using these until EVERY component is real, at which point build.js flips its
 // defaultComponents to the real modules and this file is deleted.
 //
-// bridgeMaker and manifestEditor are still stubs IN their modules, so they are required from there
-// (one source of truth); forger and replayManager have real bodies now, so their stub-era
-// behaviors live here verbatim.
+// bridgeMaker is still a stub IN its module, so it is required from there (one source of truth);
+// forger, replayManager and manifestEditor have real bodies now, so their stub-era behaviors live
+// here verbatim.
 
 let graphSeq = 0;
 let blockSeq = 0;
 let forgeSeq = 0;
+let manifestSeq = 0;
 
 // stub forger — reports a placeholder result without parsing, embedding, or writing anything.
 const forger = () => {
@@ -82,9 +83,44 @@ const replayManager = () => {
 	return { create, init, harvest, delete: deleteGraph };
 };
 
+// stub manifestEditor — the accumulator the orchestrator was built against, moved here VERBATIM
+// (2026-07-22) when the module grew its real body. It keeps members in memory and mints a
+// placeholder manifest id; the real one requires a store, demands a description on every member,
+// and writes each schema block through on add. build.js still composes with block IDS rather than
+// schema BLOCKS, so it cannot yet drive the real editor — flipping it is the end-to-end milestone,
+// not this one, and a pipeline that half-flipped would prove less than either state.
+const manifestEditor = () => {
+	const init = (name, recipe) => {
+		manifestSeq += 1;
+		const manifestId = `stub-manifest:${name || 'unnamed'}:${manifestSeq}`;
+		const members = [];
+		const recipeName = recipe && recipe.recipeName ? recipe.recipeName : name;
+		return {
+			add: (key, kind, blockRef) => {
+				members.push({ key, kind, blockRef });
+				return members.length;
+			},
+			id: () => manifestId,
+			members: () => members.slice(),
+			recipeName: () => recipeName,
+		};
+	};
+
+	// The real open() reads a stored manifest. A stub with no store has nothing to read, and a stub
+	// that invented a membership would let a caller believe it had reopened something.
+	const open = ({ manifestRefId }, callback) => {
+		callback(
+			`stub manifestEditor.open '${manifestRefId}': there is no store behind this stub, so ` +
+				`there is nothing to open. Use the real manifestEditor.`,
+		);
+	};
+
+	return { init, open };
+};
+
 module.exports = {
 	forger,
 	replayManager,
 	bridgeMaker: require('../apps/bridge-maker'),
-	manifestEditor: require('../apps/manifest-editor'),
+	manifestEditor,
 };
