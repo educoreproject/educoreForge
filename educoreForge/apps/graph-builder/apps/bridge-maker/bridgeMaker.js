@@ -6,8 +6,8 @@
 // bridgeMaker (STUB) — runs a bridge module over a materialized dependency graph, writing new
 // (labeled) relationships INTO the graph. In-process module; body stubbed. Async callback style.
 //
-//   bridgeMaker() -> { run({ graphBoltUrl, mapper, label }, callback) }
-//     callback('', { graphBoltUrl, mapper, label, edgesWritten, note })
+//   bridgeMaker() -> { run({ inGraph, mapper, applyLabel }, callback) }
+//     callback('', { inGraph, mapper, applyLabel, edgesWritten, note })
 //
 // The real bridgeMaker loads the mapper (source extractor + hub candidate finder + shared
 // adjudicator, or a bespoke module) and labels the edges it authors with `label` so replayManager
@@ -16,12 +16,12 @@
 let seq = 0;
 
 const bridgeMaker = () => {
-	const run = ({ graphBoltUrl, mapper, label }, callback) => {
+	const run = ({ inGraph, mapper, applyLabel }, callback) => {
 		seq += 1;
 		callback('', {
-			graphBoltUrl,
+			inGraph,
 			mapper,
-			label,
+			applyLabel,
 			edgesWritten: 0,
 			note: `stub bridge #${seq}`,
 		});
