@@ -735,4 +735,108 @@ harness.equal(
 	'',
 );
 
-harness.report();
+// =====================================================================
+harness.section('DISPOSE — the shared best-effort idiom, DEV_* only, proven with a docker SPY (no docker)');
+// =====================================================================
+// Item 4. disposeScratchGraph is the ONE dispose-then-report helper the three provisioning homes
+// share. Here it is proven directly: a DEV_* name is disposed (the spy sees `rm -f <name>`); a
+// GOLD_*/gf_* name is REFUSED before any docker command (the spy is never called — no door from
+// this module opens onto a production graph); a failed rm is REPORTED, not swallowed.
+
+const { disposeScratchGraph } = replayManagerModule;
+
+// a docker-command spy: records the args it was handed, answers as instructed. NEVER a real docker.
+const dockerSpy = (outcome) => {
+	const calls = [];
+	return {
+		calls,
+		run: (args, cb) => {
+			calls.push(args);
+			outcome === 'ok' ? cb(null, '', '') : cb(new Error(outcome), '', outcome);
+		},
+	};
+};
+
+const okDispose = dockerSpy('ok');
+disposeScratchGraph({ graphName: 'DEV_gb_forge_9', runDockerCommand: okDispose.run }, (err) => {
+	harness.equal('a DEV_* graph is disposed cleanly', err, '');
+});
+harness.equal(
+	'  and the spy saw exactly `rm -f <name>`',
+	JSON.stringify(okDispose.calls),
+	JSON.stringify([['rm', '-f', 'DEV_gb_forge_9']]),
+);
+
+const goldDispose = dockerSpy('ok');
+disposeScratchGraph({ graphName: 'GOLD_260718', runDockerCommand: goldDispose.run }, (err) => {
+	harness.match('a GOLD_* graph is REFUSED before any docker command', err, /REFUSED/);
+});
+harness.equal(
+	'  and the spy was NEVER called — no docker touched a production/live graph',
+	goldDispose.calls.length,
+	0,
+);
+
+const gfDispose = dockerSpy('ok');
+disposeScratchGraph({ graphName: 'gf_live', runDockerCommand: gfDispose.run }, (err) => {
+	harness.match('a gf_* graph is REFUSED too', err, /REFUSED/);
+});
+harness.equal('  and its spy was never called either', gfDispose.calls.length, 0);
+
+const failDispose = dockerSpy('daemon unreachable');
+disposeScratchGraph({ graphName: 'DEV_x', runDockerCommand: failDispose.run }, (err) => {
+	harness.match(
+		'a FAILED docker rm is REPORTED (the caller decides best-effort vs fatal), never swallowed',
+		err,
+		/docker rm -f 'DEV_x' failed[\s\S]*daemon unreachable/,
+	);
+});
+
+// =====================================================================
+harness.section('CREATE — a post-launch failure DISPOSES the container it started (proven via spy)');
+// =====================================================================
+// The leak (finding H2): docker run succeeds, readiness times out, and the old code returned the
+// error while LEAVING THE CONTAINER RUNNING — holding its port pair and hundreds of MB, with no
+// handle handed back to clean it. Driven here entirely through injected seams: a docker spy (run
+// succeeds, rm is recorded), a fake port pair, and a readiness that fails. No real container, port,
+// or neo4j is touched.
+
+const createDockerSpy = () => {
+	const calls = [];
+	return {
+		calls,
+		run: (args, cb) => {
+			calls.push(args);
+			cb(null, args[0] === 'run' ? 'containerId\n' : '', '');
+		},
+	};
+};
+
+const createSpy = createDockerSpy();
+const rmUnderTest = replayManagerModule({
+	runDockerCommand: createSpy.run,
+	findAvailablePortPair: (settings, cb) => cb('', { boltPort: 17801, httpPort: 17802 }),
+	waitForReadiness: (readySpec, cb) => cb('neo4j never authenticated within 1s'),
+});
+
+rmUnderTest.create({ purpose: 'forge' }, (createErr, createHandle) => {
+	harness.match('create reports the readiness failure', createErr, /never authenticated/);
+	harness.match('  and says the container it launched WAS disposed', createErr, /was disposed/);
+	harness.ok('  and hands back no handle', createHandle === undefined, JSON.stringify(createHandle));
+
+	const runCalls = createSpy.calls.filter((oneCall) => oneCall[0] === 'run');
+	const rmCalls = createSpy.calls.filter((oneCall) => oneCall[0] === 'rm');
+	harness.equal('  the spy saw a docker run (the container was launched)', runCalls.length, 1);
+	harness.equal(
+		'  and THEN a `docker rm -f` for the DEV_* graph it created — the leak is closed',
+		rmCalls.length,
+		1,
+	);
+	harness.match(
+		'    naming that exact DEV_* container',
+		(rmCalls[0] || []).join(' '),
+		/rm -f DEV_gb_forge_/,
+	);
+
+	harness.report();
+});

@@ -327,6 +327,52 @@ const nameRefusal = (graphName, verb) => {
 };
 
 // -----
+// defaultRunDockerCommand — the real docker executor. Injectable (second-stage dep) so the dispose
+// idiom and create's failure path can be PROVEN firing with a spy, never a real container.
+const defaultRunDockerCommand = (dockerArgs, callback) =>
+	execFile('docker', dockerArgs, { encoding: 'utf-8' }, callback);
+
+// -----
+// disposeScratchGraph — THE ONE shared best-effort-dispose-then-report idiom (Item 4), applied in
+// all three homes that provision a DEV_* container: replayManager.create's failure path (a readiness
+// timeout used to leak the container it just started), replayManager.delete (the success-path
+// destroy), and — through replayManager.delete — build.js's mid-pipeline failures and the
+// evaluator's cleanup. The GNC-001 guard fires FIRST, so a GOLD_*/gf_* name is refused before any
+// docker command could run; it NEVER disposes a production/live graph. Reports '' on success, or a
+// message (a name refusal or a failed `docker rm`) that the caller decides is fatal (delete) or
+// merely a note to append to an error it is already reporting (a failure path).
+const disposeScratchGraph = (
+	{ graphName, verb = 'dispose', runDockerCommand = defaultRunDockerCommand },
+	callback,
+) => {
+	const refusal = nameRefusal(graphName, verb);
+	if (refusal) {
+		callback(refusal);
+		return;
+	}
+	runDockerCommand(['rm', '-f', graphName], (err, stdout, stderr) => {
+		if (err) {
+			callback(`docker rm -f '${graphName}' failed: ${err.message}${stderr ? `\n${stderr}` : ''}`);
+			return;
+		}
+		callback('');
+	});
+};
+
+// -----
+// defaultWaitForReadiness — bolt TCP open, then an authenticated cypher round-trip. Injectable so a
+// create-failure test can force a readiness timeout without a real container.
+const defaultWaitForReadiness = ({ boltPort, boltUrl, password, deadline, readyTimeoutMs }, callback) => {
+	waitForBoltPort(boltPort, deadline, readyTimeoutMs, (portErr) => {
+		if (portErr) {
+			callback(portErr);
+			return;
+		}
+		waitForAuthenticatedCypher(boltUrl, password, deadline, readyTimeoutMs, callback);
+	});
+};
+
+// -----
 // port-pair allocation (carried from instance-lifecycle): a (bolt, http) consecutive pair that
 // is OS-bindable AND not already published by a running container.
 const getDockerBoundPorts = (callback) => {
@@ -466,11 +512,24 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
 const moduleFunction =
 	({ moduleName } = {}) =>
-	(unusedDeps = {}) => {
+	(deps = {}) => {
+	// The three docker/readiness seams. Production passes nothing and gets the real implementations;
+	// a test injects spies so create's SUCCESS and FAILURE paths (including the disposal of a leaked
+	// container) are proven without a real container, a real port, or a real neo4j.
+	const runDockerCommand = deps.runDockerCommand || defaultRunDockerCommand;
+	const findPortPair = deps.findAvailablePortPair || findAvailablePortPair;
+	const waitForReadiness = deps.waitForReadiness || defaultWaitForReadiness;
+
 	// -----
 	// create — provision a throwaway DEV_* Neo4j container; hand back the graph handle. The
 	// credential is generated here and lives ONLY in the handle (no registry, no file). No
 	// docker volume: the data's lifetime IS the container's lifetime.
+	//
+	// FAILURE DISPOSES WHAT IT STARTED (Item 4). Once `docker run` has succeeded, the container is
+	// live; if readiness then times out (the common failure on a memory-tight box, which is exactly
+	// when neo4j is slow to come up), the old code returned the error and LEFT THE CONTAINER RUNNING
+	// — holding its port pair and hundreds of MB, and the caller got no handle to clean it with. Now
+	// a post-launch failure best-effort disposes the container it created before reporting.
 	const create = (spec, callback) => {
 		const { xLog } = process.global;
 		createSeq += 1;
@@ -486,10 +545,11 @@ const moduleFunction =
 
 		const settings = resolveSettings();
 		const password = crypto.randomBytes(18).toString('base64url');
+		let containerLaunched = false;
 		const taskList = new taskListPlus();
 
 		taskList.push((args, next) => {
-			findAvailablePortPair(settings, (err, ports) => next(err, { ...args, ...ports }));
+			findPortPair(settings, (err, ports) => next(err, { ...args, ...ports }));
 		});
 
 		taskList.push((args, next) => {
@@ -515,11 +575,13 @@ const moduleFunction =
 			xLog.status(
 				`[replayManager] provisioning scratch graph '${graphName}' (bolt ${args.boltPort})...`,
 			);
-			execFile('docker', dockerArgs, { encoding: 'utf-8' }, (err, stdout, stderr) => {
+			runDockerCommand(dockerArgs, (err, stdout, stderr) => {
 				if (err) {
-					next(`docker run failed for '${graphName}': ${err.message}\n${stderr}`);
+					next(`docker run failed for '${graphName}': ${err.message}\n${stderr || ''}`);
 					return;
 				}
+				// the container is now live; every failure past this point must dispose it
+				containerLaunched = true;
 				next('', args);
 			});
 		});
@@ -527,24 +589,29 @@ const moduleFunction =
 		taskList.push((args, next) => {
 			const deadline = Date.now() + settings.readyTimeoutMs;
 			const boltUrl = `bolt://localhost:${args.boltPort}`;
-			waitForBoltPort(args.boltPort, deadline, settings.readyTimeoutMs, (portErr) => {
-				if (portErr) {
-					next(portErr);
-					return;
-				}
-				waitForAuthenticatedCypher(
-					boltUrl,
-					password,
-					deadline,
-					settings.readyTimeoutMs,
-					(authErr) => next(authErr, { ...args, boltUrl }),
-				);
-			});
+			waitForReadiness(
+				{ boltPort: args.boltPort, boltUrl, password, deadline, readyTimeoutMs: settings.readyTimeoutMs },
+				(readyErr) => next(readyErr, { ...args, boltUrl }),
+			);
 		});
 
 		pipeRunner(taskList.getList(), {}, (err, args) => {
 			if (err) {
-				callback(`replayManager.create '${graphName}': ${err}`);
+				if (!containerLaunched) {
+					// nothing was started (port search or docker run itself failed) — nothing to dispose
+					callback(`replayManager.create '${graphName}': ${err}`);
+					return;
+				}
+				// a container WAS started and then something failed — dispose it before reporting, so a
+				// failed provision does not leak the DEV_* container it just launched.
+				disposeScratchGraph({ graphName, verb: 'create', runDockerCommand }, (disposeErr) => {
+					callback(
+						disposeErr
+							? `replayManager.create '${graphName}': ${err} — AND the container it launched could ` +
+									`NOT be disposed (it is leaking): ${disposeErr}`
+							: `replayManager.create '${graphName}': ${err} (the container it launched was disposed)`,
+					);
+				});
 				return;
 			}
 			xLog.status(`[replayManager] scratch graph '${graphName}' ready at ${args.boltUrl}`);
@@ -815,18 +882,17 @@ const moduleFunction =
 	};
 
 	// -----
-	// delete — destroy the scratch container (data dies with it). DEV_* only, same guard.
+	// delete — destroy the scratch container (data dies with it). DEV_* only, same guard. It is the
+	// STRICT face of the shared disposal idiom: a refusal or a failed rm is surfaced to the caller,
+	// who decides (build.js's mid-pipeline failures and the evaluator's cleanup call it BEST-EFFORT,
+	// reporting the delete error alongside the error they were already carrying rather than masking
+	// either one).
 	const deleteGraph = (handle, callback) => {
 		const { xLog } = process.global;
 		const graphName = handle && (handle.containerName || handle.graphName);
-		const refusal = nameRefusal(graphName, 'delete');
-		if (refusal) {
-			callback(refusal);
-			return;
-		}
-		execFile('docker', ['rm', '-f', graphName], { encoding: 'utf-8' }, (err, stdout, stderr) => {
+		disposeScratchGraph({ graphName, verb: 'delete', runDockerCommand }, (err) => {
 			if (err) {
-				callback(`replayManager.delete '${graphName}': docker rm failed: ${err.message}\n${stderr}`);
+				callback(err);
 				return;
 			}
 			xLog.status(`[replayManager] scratch graph '${graphName}' destroyed`);
@@ -845,3 +911,4 @@ module.exports.withAppliedLabels = withAppliedLabels;
 module.exports.schemaBlockTexts = schemaBlockTexts;
 module.exports.resolveSettings = resolveSettings;
 module.exports.resolveEmbeddingDims = resolveEmbeddingDims;
+module.exports.disposeScratchGraph = disposeScratchGraph;

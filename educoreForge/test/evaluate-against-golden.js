@@ -193,7 +193,19 @@ const harvestedStableIds = ({ token }, callback) => {
 					callback(err, payload);
 					return;
 				}
-				replayManager.delete(handle, () => callback(err, payload));
+				// BEST-EFFORT-DISPOSE-THEN-REPORT (Item 4). The evaluator spends a docker container per
+				// standard, so a swallowed delete error leaks them silently across a multi-standard run.
+				// The disposal error is REPORTED (it must not mask the evaluation err/payload we are
+				// carrying), never dropped on the floor.
+				replayManager.delete(handle, (deleteErr) => {
+					if (deleteErr) {
+						xLog.error(
+							`[${moduleName}] scratch graph '${handle.graphName}' failed to dispose and may be ` +
+								`leaking a docker container: ${deleteErr}`,
+						);
+					}
+					callback(err, payload);
+				});
 			};
 			replayManager.init(
 				{

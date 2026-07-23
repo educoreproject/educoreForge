@@ -193,6 +193,15 @@ const build = (recipe, deps, callback) => {
 		const subjectRefId = standardKey(std);
 		const taskList = new taskListPlus();
 
+		// DISPOSE-ON-FAILURE (Item 4). The scratch graph is created mid-pipeline; every step after it
+		// (init, harvest, add) can fail, and pipeRunner aborts the list before its trailing delete
+		// task runs — stranding a live DEV_* container. createdGraph/deleteAttempted let the final
+		// handler best-effort dispose exactly what was created, exactly once: the success path's own
+		// delete task runs (deleteAttempted), so the handler does not double-delete; a mid-pipeline
+		// failure did NOT reach that task, so the handler disposes.
+		let createdGraph = null;
+		let deleteAttempted = false;
+
 		taskList.push((args, next) => {
 			// vectorize is STATED, not omitted. The forger has no default for it (Phase 4, work
 			// group 4) precisely because this call used to leave it out and get real embeddings and
@@ -211,6 +220,9 @@ const build = (recipe, deps, callback) => {
 
 		taskList.push((args, next) => {
 			replay.create({ purpose: 'forge' }, (err, workingGraph) => {
+				if (!err) {
+					createdGraph = workingGraph;
+				}
 				next(err ? `create(forge) for ${std.token}: ${err}` : '', { ...args, workingGraph });
 			});
 		});
@@ -312,10 +324,26 @@ const build = (recipe, deps, callback) => {
 		}
 
 		taskList.push((args, next) => {
+			deleteAttempted = true;
 			replay.delete(args.workingGraph, (err) => next(err || '', args));
 		});
 
-		pipeRunner(taskList.getList(), {}, (err) => done(err || ''));
+		pipeRunner(taskList.getList(), {}, (err) => {
+			if (err && createdGraph && !deleteAttempted) {
+				// a mid-pipeline failure stranded the forge graph — best-effort dispose it, then report
+				// the ORIGINAL error (with a note if disposal also failed). The build's failure is the
+				// forge failure; a disposal that also fails must not mask it.
+				replay.delete(createdGraph, (deleteErr) => {
+					done(
+						deleteErr
+							? `${err} (its scratch graph '${createdGraph.graphName}' also failed to dispose and is leaking: ${deleteErr})`
+							: err,
+					);
+				});
+				return;
+			}
+			done(err || '');
+		});
 	};
 
 	const phaseA = (done) => eachSeries(standards, forgeOneStandard, done);
@@ -341,10 +369,18 @@ const build = (recipe, deps, callback) => {
 		}
 		const taskList = new taskListPlus();
 
+		// DISPOSE-ON-FAILURE (Item 4), same idiom as phase A: a bridge failure after create must not
+		// strand the dependency graph.
+		let createdGraph = null;
+		let deleteAttempted = false;
+
 		// create means "an empty graph", always. The dependency schema blocks go IN through init's
 		// RESTORATION payload once dependency resolution lands with the rest of Phase C.
 		taskList.push((args, next) => {
 			replay.create({ purpose: 'dependencyGraph' }, (err, depGraph) => {
+				if (!err) {
+					createdGraph = depGraph;
+				}
 				next(err ? `create(dep) ${subjectRefId}: ${err}` : '', { ...args, depGraph });
 			});
 		});
@@ -394,10 +430,23 @@ const build = (recipe, deps, callback) => {
 		});
 
 		taskList.push((args, next) => {
+			deleteAttempted = true;
 			replay.delete(args.depGraph, (err) => next(err || '', args));
 		});
 
-		pipeRunner(taskList.getList(), {}, (err) => done(err || ''));
+		pipeRunner(taskList.getList(), {}, (err) => {
+			if (err && createdGraph && !deleteAttempted) {
+				replay.delete(createdGraph, (deleteErr) => {
+					done(
+						deleteErr
+							? `${err} (its dependency graph '${createdGraph.graphName}' also failed to dispose and is leaking: ${deleteErr})`
+							: err,
+					);
+				});
+				return;
+			}
+			done(err || '');
+		});
 	};
 
 	const phaseC = (done) => eachSeries(bridges, bridgeOnePairing, done);
@@ -439,9 +488,17 @@ const build = (recipe, deps, callback) => {
 					{ inGraph: goldEval, schemaBlocks: resolvedSchemaBlocks },
 					(initError) => {
 						if (initError) {
-							callback(
-								`materialize failed: loading ${resolvedSchemaBlocks.length} schema block(s): ${initError}`,
-							);
+							// DISPOSE-ON-FAILURE (Item 4). goldEval was created three lines up and is NOT the
+							// product when its own fill fails — a bare error here would strand it running. On
+							// SUCCESS it is deliberately kept (it IS the product); only this failure disposes it.
+							replay.delete(goldEval, (deleteErr) => {
+								callback(
+									deleteErr
+										? `materialize failed: loading ${resolvedSchemaBlocks.length} schema block(s): ${initError} ` +
+												`(and the eval golden '${goldEval.graphName}' also failed to dispose and is leaking: ${deleteErr})`
+										: `materialize failed: loading ${resolvedSchemaBlocks.length} schema block(s): ${initError}`,
+								);
+							});
 							return;
 						}
 						xLog.status(`  [materialize] -> ${goldEval.boltUrl}`);

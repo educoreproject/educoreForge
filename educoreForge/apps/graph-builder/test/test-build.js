@@ -1000,10 +1000,57 @@ const stageVectorize = () => {
 						JSON.stringify(capturedInvalid),
 					);
 
-					harness.report();
+					stageDisposeOnFailure();
 				});
 			});
 		});
+	});
+};
+
+// =====================================================================
+// DISPOSE-ON-FAILURE — a mid-pipeline failure disposes the DEV_* graph it created (Item 4)
+// =====================================================================
+// replay.delete was scheduled ONLY as the last task of each per-standard taskList, and pipeRunner
+// aborts the list on the first error — so any failure after replay.create (init, harvest, add) left
+// a live DEV_* container with no cleanup. Here a replayManager double records every create and
+// delete and FAILS the standardBase harvest; the orchestrator must dispose the graph it created
+// before the error propagates. No docker: the double is a spy.
+
+const stageDisposeOnFailure = () => {
+	harness.section('DISPOSE-ON-FAILURE — a mid-pipeline failure disposes the scratch graph it created');
+
+	const created = [];
+	const deleted = [];
+	const recordingReplay = () => {
+		const working = workingReplayManager()();
+		return Object.assign({}, working, {
+			create: (spec, cb) =>
+				working.create(spec, (err, handle) => {
+					if (!err) {
+						created.push(handle.graphName);
+					}
+					cb(err, handle);
+				}),
+			// fail the standardBase harvest — a failure AFTER create, BEFORE the trailing delete task
+			harvest: (spec, cb) => cb('harvest returned nothing'),
+			delete: (handle, cb) => {
+				deleted.push(handle && handle.graphName);
+				cb('');
+			},
+		});
+	};
+
+	runBuildWith(loadOrDie(goodRecipe('lifOnly')), { replayManager: recordingReplay }, ({ err, result }) => {
+		harness.match('the build fails at the mid-pipeline harvest', err, /phase A \(forge\) failed: harvest standardBase/);
+		harness.ok('  and hands back no result', result === undefined, JSON.stringify(result));
+		harness.equal('  a scratch graph WAS created', created.length, 1);
+		harness.ok(
+			'  and that exact created graph was DISPOSED before the error propagated — no leak',
+			deleted.includes(created[0]),
+			`created=${JSON.stringify(created)} deleted=${JSON.stringify(deleted)}`,
+		);
+
+		harness.report();
 	});
 };
 
