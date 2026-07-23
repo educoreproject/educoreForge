@@ -155,7 +155,10 @@ const syntheticForged = {
 	],
 };
 
-const block = buildStandardBlock({ forged: syntheticForged });
+// The declared width is the width of the vectors this fixture actually carries (3), not the 1024
+// the module used to stamp on every header regardless. That old assertion certified the shadow
+// constant: a three-element vector produced a header claiming a thousand-and-twenty-four.
+const block = buildStandardBlock({ forged: syntheticForged, declaredEmbeddingDims: 3 });
 harness.equal('node count reported', block.nodeCount, 2);
 harness.equal('edge count reported', block.edgeCount, 1);
 
@@ -164,7 +167,7 @@ const header = lines[0];
 harness.equal('header blockType', header.blockType, 'standardBase');
 harness.equal('header standardKey', header.standardKey, 'lif');
 harness.equal('header resolutionKey IS the stableUriPropertyName', header.resolutionKey, 'lifPath');
-harness.equal('header embeddingDims', header.embeddingDims, 1024);
+harness.equal('header embeddingDims is the width GIVEN, not an in-code constant', header.embeddingDims, 3);
 
 const embeddedNode = lines.find((oneLine) => oneLine.stableId === 'lif:root');
 harness.ok('embedded node carries base64 embedding scalar', typeof embeddedNode.embedding === 'string', JSON.stringify(embeddedNode.embedding));
@@ -320,6 +323,7 @@ harness.rejects(
 
 const builtConfigured = buildStandardBlock({
 	forged: forgedWith({ embeddingModelVersion: 'voyage-context-3' }),
+	declaredEmbeddingDims: 1024,
 });
 harness.equal(
 	'a CARRIED embeddingModelVersion is serialized verbatim — the positive control',
@@ -394,14 +398,40 @@ harness.ok(
 );
 
 // =====================================================================
-harness.section('STATE 1 — CERTIFYING THE DEFECT: a block header declares 1024 regardless');
+harness.section('STANDARD-BLOCK DIMS — the header declares the width it was given');
 // =====================================================================
 
+harness.rejects(
+	'an ABSENT declaredEmbeddingDims is refused when vectors are present, naming the key',
+	(() => {
+		const answer = buildStandardBlock({ forged: forgedOfDims(1024) });
+		return answer.error ? [answer.error] : [];
+	})(),
+	/declaredEmbeddingDims.*embeddingDims/s,
+);
+
+harness.rejects(
+	'an INVALID declaredEmbeddingDims is refused rather than corrected',
+	(() => {
+		const answer = buildStandardBlock({ forged: forgedOfDims(1024), declaredEmbeddingDims: '102o' });
+		return answer.error ? [answer.error] : [];
+	})(),
+	/declaredEmbeddingDims.*'102o'/s,
+);
+
 harness.equal(
-	'and a serialized block header declares 1024 whatever the vectors actually are',
-	JSON.parse(buildStandardBlock({ forged: forgedOfDims(512) }).blockText.split('\n')[0])
-		.embeddingDims,
-	1024,
+	'a CONFIGURED 512 is what the header declares — the positive control',
+	(() => {
+		const answer = buildStandardBlock({ forged: forgedOfDims(512), declaredEmbeddingDims: 512 });
+		return answer.error || JSON.parse(answer.blockText.split('\n')[0]).embeddingDims;
+	})(),
+	512,
+);
+
+harness.ok(
+	'no dimension literal survives anywhere in standard-block.js',
+	!/\b(1024|512)\b/.test(codeOf(path.join(__dirname, '..', 'lib', 'standard-block.js'))),
+	(codeOf(path.join(__dirname, '..', 'lib', 'standard-block.js')).match(/.*\b(1024|512)\b.*/g) || []).join('\n'),
 );
 
 harness.report();

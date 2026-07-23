@@ -21,7 +21,15 @@
 // produce the "in-memory" side of the in-memory-vs-harvested comparison. Do not wire it back into
 // the pipeline. If the fidelity gate is ever retired, this goes with it.
 //
-// PURE: no I/O, no process.global. ({ forged }) -> { blockText, nodeCount, edgeCount }.
+// PURE: no I/O, no process.global.
+//   ({ forged, declaredEmbeddingDims }) -> { blockText, nodeCount, edgeCount } | { error }
+//
+// declaredEmbeddingDims is the width the vectors were MADE at — [voyageEmbedding].embeddingDims,
+// read by the embedding client and handed down by the caller. It used to be an in-code
+// EMBEDDING_DIMS = 1024 stamped into every header regardless of what the block actually carried,
+// which shadowed that settable key (polyArch2 §6). REQUIRED whenever any node carries a vector;
+// with nothing embedded there is no width to declare and the header omits the key. Held in
+// lockstep with shape-forged-graph, which makes the identical demand.
 
 const path = require('path');
 
@@ -29,8 +37,6 @@ const path = require('path');
 const TREE_LIB = path.join(__dirname, '..', '..', '..', '..', '..', 'lib');
 const replayBlock = require(path.join(TREE_LIB, 'replay', 'replay-block'));
 const { SCHEMA_BLOCK_KIND } = require(path.join(TREE_LIB, 'vocabulary', 'vocabulary'));
-
-const EMBEDDING_DIMS = 1024;
 
 // -----
 // carriedModelVersion — the ONE model version the embedded nodes say produced their vectors.
@@ -81,10 +87,24 @@ const carriedModelVersion = (forged) => {
 	return { modelVersion: distinct[0] };
 };
 
-const buildStandardBlock = ({ forged }) => {
+const buildStandardBlock = ({ forged, declaredEmbeddingDims }) => {
 	const carried = carriedModelVersion(forged);
 	if (carried.error) {
 		return { error: carried.error };
+	}
+
+	const anythingEmbedded = forged.nodes.some((oneNode) => oneNode.properties.embedding);
+	if (
+		anythingEmbedded &&
+		(!Number.isInteger(declaredEmbeddingDims) || declaredEmbeddingDims <= 0)
+	) {
+		return {
+			error:
+				`buildStandardBlock: declaredEmbeddingDims is ${
+					declaredEmbeddingDims === undefined ? 'absent' : `'${declaredEmbeddingDims}'`
+				}, and these nodes carry vectors. Pass the [voyageEmbedding].embeddingDims the ` +
+				`vectors were made at — there is no in-code width to declare in the header.`,
+		};
 	}
 
 	const header = {
@@ -100,7 +120,7 @@ const buildStandardBlock = ({ forged }) => {
 		embeddingEncoding: 'base64',
 		embeddingDtype: 'float32',
 		embeddingByteOrder: 'little-endian',
-		embeddingDims: EMBEDDING_DIMS,
+		embeddingDims: declaredEmbeddingDims,
 	};
 
 	const nodes = forged.nodes.map((oneNode) => {
@@ -145,4 +165,4 @@ const buildStandardBlock = ({ forged }) => {
 	return { blockText, nodeCount: nodes.length, edgeCount: edges.length };
 };
 
-module.exports = { buildStandardBlock, EMBEDDING_DIMS };
+module.exports = { buildStandardBlock };

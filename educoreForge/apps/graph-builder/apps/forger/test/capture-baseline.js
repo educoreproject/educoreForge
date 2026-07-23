@@ -68,6 +68,10 @@ if (vectorize) {
 	});
 }
 
+// the declared vector width is the SAME ini value the embedder sends to the API; there is no
+// in-code width standing in for it (polyArch2 §6). Nothing embedded means nothing to declare.
+const declaredEmbeddingDims = embedder ? embedder.resolveEmbeddingIdentity().embeddingDims : undefined;
+
 const bundle = require(resolved.entryPath)({ embedder });
 
 xLog.status(
@@ -84,7 +88,7 @@ bundle.forge(
 			process.exit(1);
 		}
 
-		const block = buildStandardBlock({ forged });
+		const block = buildStandardBlock({ forged, declaredEmbeddingDims });
 		if (block.error) {
 			xLog.error(`capture-baseline: ${block.error}`);
 			process.exit(1);

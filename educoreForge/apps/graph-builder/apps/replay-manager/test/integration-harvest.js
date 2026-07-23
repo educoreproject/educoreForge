@@ -129,7 +129,7 @@ require(resolved.entryPath)({ embedder }).forge(
 		}
 
 		// SIDE A — the in-memory schema block, exactly as the pipeline builds it today
-		const sideA = buildStandardBlock({ forged });
+		const sideA = buildStandardBlock({ forged, declaredEmbeddingDims });
 		if (sideA.error) {
 			harness.ok('buildStandardBlock produced the in-memory side', false, sideA.error);
 			finish(null, 1);
