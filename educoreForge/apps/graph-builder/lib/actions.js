@@ -38,31 +38,101 @@ const requireStandardsDatabase = () =>
 // will accept. (Replaces the original forge.js filename guess, which predated the ports and saw
 // nothing.) Feeds Layer-2 resolvability so un-ported forges are flagged honestly.
 
-const scanAvailableForges = () => {
-	const forgesDir = path.join(__dirname, '..', '..', '..', 'forges');
+// FORGES_DIR is the one legitimate constant here: the forges live inside the tree at a fixed
+// place, there is no key to set and nothing to omit, so it shadows nothing (polyArch2 §6).
+const FORGES_DIR = path.join(__dirname, '..', '..', '..', 'forges');
+
+// scanAvailableForges({ forgesDir }) -> { availableForges } | { error }
+//
+// It used to answer `[]` for three DIFFERENT facts: a genuinely empty forges/, a directory it
+// could not read (try/catch returning a default — the grep-invisible shape), and a bundle whose
+// parserDescriptor.ini exists but is malformed. "I could not read the directory" and "the
+// directory has no forges" became the same answer, and a typo'd `entryModule` key made a forge
+// VANISH from -deps while forger.resolveBundle refused the identical file BY NAME. Two paths, one
+// condition, opposite conduct. This is now the loud one, so what -deps advertises and what forge()
+// will accept are the same answer arrived at the same way.
+//
+// A directory with NO parserDescriptor.ini at all is still simply not a forge bundle: it makes no
+// claim to be one. A descriptor that EXISTS is a claim, and a claim that does not hold up is a
+// fault, not an occasion to look away.
+const scanAvailableForges = ({ forgesDir } = {}) => {
+	if (typeof forgesDir !== 'string' || forgesDir.trim() === '') {
+		return {
+			error:
+				`graphBuilder scanAvailableForges: forgesDir is required and has no default. ` +
+				`The caller says which tree is being scanned.`,
+		};
+	}
 	if (!fs.existsSync(forgesDir)) {
-		return [];
+		return {
+			error:
+				`graphBuilder scanAvailableForges: the forges directory '${forgesDir}' does not ` +
+				`exist. That is not the same fact as "this tree has no forges", and it is not ` +
+				`reported as one.`,
+		};
 	}
+
+	let entries;
 	try {
-		return fs
-			.readdirSync(forgesDir, { withFileTypes: true })
-			.filter((entry) => {
-				if (!entry.isDirectory()) {
-					return false;
-				}
-				const descriptorPath = path.join(forgesDir, entry.name, 'parserDescriptor.ini');
-				if (!fs.existsSync(descriptorPath)) {
-					return false;
-				}
-				const entryModule = (fs
-					.readFileSync(descriptorPath, 'utf8')
-					.match(/^entryModule[ \t]*=[ \t]*(.+?)[ \t]*$/m) || [])[1];
-				return !!entryModule && fs.existsSync(path.join(forgesDir, entry.name, entryModule));
-			})
-			.map((entry) => entry.name);
+		entries = fs.readdirSync(forgesDir, { withFileTypes: true });
 	} catch (scanError) {
-		return [];
+		return {
+			error:
+				`graphBuilder scanAvailableForges: could not read '${forgesDir}' — ` +
+				`${scanError.message}. A scan that FAILED is reported as a failure, never as an ` +
+				`empty roster.`,
+		};
 	}
+
+	const availableForges = [];
+	const problems = [];
+
+	entries
+		.filter((oneEntry) => oneEntry.isDirectory())
+		.forEach((oneEntry) => {
+			const descriptorPath = path.join(forgesDir, oneEntry.name, 'parserDescriptor.ini');
+			if (!fs.existsSync(descriptorPath)) {
+				// no descriptor is no CLAIM to be a forge bundle. Not a fault.
+				return;
+			}
+			let descriptorText;
+			try {
+				descriptorText = fs.readFileSync(descriptorPath, 'utf8');
+			} catch (readError) {
+				problems.push(`${descriptorPath} could not be read — ${readError.message}`);
+				return;
+			}
+			const entryModule = (descriptorText.match(
+				/^entryModule[ \t]*=[ \t]*(.+?)[ \t]*$/m,
+			) || [])[1];
+			if (!entryModule) {
+				problems.push(
+					`${descriptorPath} declares no entryModule (the key must be spelled exactly ` +
+						`'entryModule' and live under the [parserDescriptor] header)`,
+				);
+				return;
+			}
+			const entryPath = path.join(forgesDir, oneEntry.name, entryModule);
+			if (!fs.existsSync(entryPath)) {
+				problems.push(
+					`${descriptorPath} names entryModule '${entryModule}', which is not on disk ` +
+						`(${entryPath})`,
+				);
+				return;
+			}
+			availableForges.push(oneEntry.name);
+		});
+
+	if (problems.length) {
+		return {
+			error:
+				`graphBuilder scanAvailableForges: ${problems.length} forge bundle(s) in ` +
+				`'${forgesDir}' are MALFORMED and were NOT silently omitted from the roster:\n  - ` +
+				`${problems.join('\n  - ')}`,
+		};
+	}
+
+	return { availableForges };
 };
 
 // ---------------------------------------------------------------------
@@ -95,9 +165,16 @@ const readAndValidate = (actionName) => {
 
 	xLog.status(recipeLib.summarizeRecipe(loaded.recipe));
 
+	// A scan that FAILED must not reach the resolvability layer as an empty roster: every
+	// standard would be flagged unresolvable and the recipe blamed for the environment's fault.
+	const scan = scanAvailableForges({ forgesDir: FORGES_DIR });
+	if (scan.error) {
+		return { recipePath, error: `graphBuilder ${actionName}: ${scan.error}` };
+	}
+
 	const verdict = recipeLib.validateRecipe(loaded.recipe, {
 		contentValidation: true, // Layer 2 (referential + resolvability) active
-		availableForges: scanAvailableForges(),
+		availableForges: scan.availableForges,
 	});
 
 	return { recipePath, recipe: loaded.recipe, verdict };
@@ -224,7 +301,12 @@ const validate = (callback) => {
 
 const deps = (callback) => {
 	const { xLog } = process.global;
-	const availableForges = scanAvailableForges();
+	const scan = scanAvailableForges({ forgesDir: FORGES_DIR });
+	if (scan.error) {
+		callback(scan.error);
+		return;
+	}
+	const availableForges = scan.availableForges;
 
 	xLog.status(
 		`graphBuilder: [deps] ${availableForges.length} standard(s) have a ported forge in this tree.`,

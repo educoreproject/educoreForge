@@ -111,6 +111,85 @@ harness.ok(
 harness.match('-deps stdout ends with a newline', depsRun.stdout, /\}\n$/);
 
 // =====================================================================
+harness.section('FORGE SCAN — "I could not read it" is never "there is nothing there"');
+// =====================================================================
+// scanAvailableForges answered [] for THREE different facts: a genuinely empty forges/, a
+// directory it could not read, and a bundle whose parserDescriptor.ini is malformed. The last one
+// is the loud one: the forge-time path (forger.resolveBundle) errors BY NAME on exactly the same
+// condition, so the availability answer and the forging answer disagreed about the same file, and
+// the operator was told nothing. polyArch2 §6: absent or invalid input is a fault.
+
+const actions = require('../lib/actions');
+
+const scanDir = fs.mkdtempSync(path.join(os.tmpdir(), 'educoreForge-forgeScan-'));
+const bundleWith = (token, descriptorText, entryFileName) => {
+	const bundleDir = path.join(scanDir, token);
+	fs.mkdirSync(bundleDir, { recursive: true });
+	if (descriptorText !== null) {
+		fs.writeFileSync(path.join(bundleDir, 'parserDescriptor.ini'), descriptorText);
+	}
+	if (entryFileName) {
+		fs.writeFileSync(path.join(bundleDir, entryFileName), '// a forge entry module\n');
+	}
+	return bundleDir;
+};
+
+const scanOf = (forgesDir) => {
+	let answer;
+	try {
+		answer = actions.scanAvailableForges({ forgesDir });
+	} catch (scanError) {
+		answer = { error: `THREW: ${scanError.message}` };
+	}
+	return answer || {};
+};
+
+bundleWith('goodone', '[parserDescriptor]\nentryModule=forgeGoodone.js\n', 'forgeGoodone.js');
+
+harness.equal(
+	'a well-formed bundle is available — the positive control',
+	(scanOf(scanDir).availableForges || []).join(','),
+	'goodone',
+);
+
+const malformedDir = fs.mkdtempSync(path.join(os.tmpdir(), 'educoreForge-forgeScanBad-'));
+fs.mkdirSync(path.join(malformedDir, 'typoed'), { recursive: true });
+fs.writeFileSync(
+	path.join(malformedDir, 'typoed', 'parserDescriptor.ini'),
+	'[parserDescriptor]\nentryModul=forgeTypoed.js\n',
+);
+harness.match(
+	'a descriptor that declares no entryModule is REFUSED by name, not silently dropped',
+	scanOf(malformedDir).error,
+	/typoed[\s\S]*parserDescriptor\.ini[\s\S]*entryModule/,
+);
+
+const missingEntryDir = fs.mkdtempSync(path.join(os.tmpdir(), 'educoreForge-forgeScanGone-'));
+fs.mkdirSync(path.join(missingEntryDir, 'ghost'), { recursive: true });
+fs.writeFileSync(
+	path.join(missingEntryDir, 'ghost', 'parserDescriptor.ini'),
+	'[parserDescriptor]\nentryModule=forgeGhost.js\n',
+);
+harness.match(
+	'a descriptor naming an entryModule that is not on disk is REFUSED, naming the file',
+	scanOf(missingEntryDir).error,
+	/ghost[\s\S]*forgeGhost\.js/,
+);
+
+harness.match(
+	'a forges directory that is not there is REFUSED, naming where it looked',
+	scanOf(path.join(scanDir, 'noSuchForgesDirectory')).error,
+	/noSuchForgesDirectory/,
+);
+
+harness.ok(
+	'and the real tree still scans clean through the same door',
+	Array.isArray(scanOf(path.join(treeRoot, 'forges')).availableForges) &&
+		!scanOf(path.join(treeRoot, 'forges')).error,
+	JSON.stringify(scanOf(path.join(treeRoot, 'forges'))),
+);
+
+// =====================================================================
 harness.section('-validate — STRICT about all three layers');
 // =====================================================================
 
