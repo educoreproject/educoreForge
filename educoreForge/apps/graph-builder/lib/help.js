@@ -9,7 +9,14 @@
 //
 // Keep it accurate before keeping it pretty.
 
-const helpText = () => `
+const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
+
+// START OF moduleFunction() ============================================================
+
+const moduleFunction =
+	({ moduleName } = {}) =>
+	(unusedDeps = {}) => {
+		const helpText = () => `
 NAME
      graphBuilder -- build any graph (up to a full golden) from a recipe, under program control
 
@@ -70,5 +77,9 @@ EXIT STATUS
      0    the requested action succeeded (a -validate verdict of valid, a completed build)
      1    the recipe was rejected, a required parameter was missing, or the build failed
 `;
+		return { helpText };
+	};
 
-module.exports = { helpText };
+// END OF moduleFunction() ============================================================
+
+module.exports = moduleFunction({ moduleName });

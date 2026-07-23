@@ -26,6 +26,13 @@ const configFileProcessor = require('qtools-config-file-processor');
 // ---------------------------------------------------------------------
 // Errors are values (callback(errString)); no try/catch for control flow beyond the parse.
 
+const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
+
+// START OF moduleFunction() ============================================================
+
+const moduleFunction =
+	({ moduleName } = {}) =>
+	(unusedDeps = {}) => {
 const resolveParameters = (callback) => {
 	const cliParameters = commandLineParser.getParameters({ noFunctions: true });
 
@@ -167,4 +174,9 @@ const bootstrapGlobal = (commandLineParameters) => {
 	Object.freeze(process.global);
 };
 
-module.exports = { resolveParameters, bootstrapGlobal, loadConfig };
+return { resolveParameters, bootstrapGlobal, loadConfig };
+};
+
+// END OF moduleFunction() ============================================================
+
+module.exports = moduleFunction({ moduleName });

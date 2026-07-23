@@ -59,7 +59,7 @@ const realComponents = {
 	bridgeMaker: require('../apps/bridge-maker'),
 	manifestEditor: require('../apps/manifest-editor'),
 };
-const buildLib = require('../lib/build');
+const buildLib = require('../lib/build')();
 
 // =====================================================================
 // THE CHECKERS — one per declared field, each returning '' for conformance and a NAMED violation

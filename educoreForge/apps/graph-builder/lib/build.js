@@ -88,6 +88,13 @@ const pairKey = (bridge) => `${bridge.source}::${bridge.hub || '(structural)'}`;
 
 const isBlank = (value) => typeof value !== 'string' || value.trim() === '';
 
+const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
+
+// START OF moduleFunction() ============================================================
+
+const moduleFunction =
+	({ moduleName } = {}) =>
+	(unusedDeps = {}) => {
 const build = (recipe, deps, callback) => {
 	const { xLog, standardsDatabase } = deps;
 	const components = { ...defaultComponents, ...(deps.components || {}) };
@@ -421,8 +428,12 @@ const build = (recipe, deps, callback) => {
 	});
 };
 
-module.exports = { build };
-// exported so test-interfaces can assert the orchestrator's DEFAULTS are the real modules
-// themselves — the gate that replaces "the stub set conforms too", which passed for a year while
-// the arguments drifted underneath it.
-module.exports.defaultComponents = defaultComponents;
+return { build, defaultComponents };
+};
+
+// END OF moduleFunction() ============================================================
+
+// defaultComponents is RETURNED in the API (not a static) so test-interfaces can assert the
+// orchestrator's DEFAULTS are the real modules themselves — the gate that replaces "the stub set
+// conforms too", which passed for a year while the arguments drifted underneath it.
+module.exports = moduleFunction({ moduleName });

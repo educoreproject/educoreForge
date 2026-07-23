@@ -42,7 +42,7 @@ require('../../../test/testLib/testAppStartup')({ moduleName, helpText: helpText
 
 const harness = require('../../../test/testLib/harness')(moduleName);
 
-const { loadConfig } = require('../lib/startup');
+const { loadConfig } = require('../lib/startup')();
 const { parseListValue } = require('../../../test/testLib/parse-list-value');
 
 // =====================================================================
@@ -97,7 +97,7 @@ const buildScenarioTree = (scenarioName) => {
 
 const freshLoadConfig = (startupPath) => {
 	delete require.cache[require.resolve(startupPath)];
-	return require(startupPath).loadConfig;
+	return require(startupPath)().loadConfig;
 };
 
 const iniText = '[replay-manager]\nportSearchStart=7777\n';

@@ -39,7 +39,7 @@ EXIT STATUS
 require('../../../test/testLib/testAppStartup')({ moduleName, helpText: helpText() });
 
 const harness = require('../../../test/testLib/harness')(moduleName);
-const recipeLib = require('../lib/recipe');
+const recipeLib = require('../lib/recipe')();
 
 const fixture = (name) => path.join(__dirname, 'fixtures', `${name}.recipe.jsonc`);
 const goodRecipe = (name) =>

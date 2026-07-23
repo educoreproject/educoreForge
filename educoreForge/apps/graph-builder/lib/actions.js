@@ -17,14 +17,21 @@
 const path = require('path');
 const fs = require('fs');
 
-const recipeLib = require('./recipe');
-const buildLib = require('./build');
+const recipeLib = require('./recipe')();
+const buildLib = require('./build')();
 
 // standards-database is required LAZILY, inside build(), and this is not a style choice: it pulls
 // in sqlite-instance, which DESTRUCTURES process.global at REQUIRE time. graphBuilder.js requires
 // this module before bootstrapGlobal() runs, so a top-level require here makes every action --
 // including -help -- die on startup. (manifestEditor documents the same trap; it escaped by moving
 // the block taxonomy to lib/vocabulary. There is no such escape for the store itself.)
+const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
+
+// START OF moduleFunction() ============================================================
+
+const moduleFunction =
+	({ moduleName } = {}) =>
+	(unusedDeps = {}) => {
 const requireStandardsDatabase = () =>
 	require(path.join(__dirname, '..', '..', '..', 'lib', 'standards-database', 'standards-database'));
 
@@ -327,4 +334,9 @@ const deps = (callback) => {
 	});
 };
 
-module.exports = { build, validate, deps, scanAvailableForges };
+return { build, validate, deps, scanAvailableForges };
+};
+
+// END OF moduleFunction() ============================================================
+
+module.exports = moduleFunction({ moduleName });

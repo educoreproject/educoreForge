@@ -119,7 +119,7 @@ harness.section('FORGE SCAN — "I could not read it" is never "there is nothing
 // condition, so the availability answer and the forging answer disagreed about the same file, and
 // the operator was told nothing. polyArch2 §6: absent or invalid input is a fault.
 
-const actions = require('../lib/actions');
+const actions = require('../lib/actions')();
 
 const scanDir = fs.mkdtempSync(path.join(os.tmpdir(), 'educoreForge-forgeScan-'));
 const bundleWith = (token, descriptorText, entryFileName) => {

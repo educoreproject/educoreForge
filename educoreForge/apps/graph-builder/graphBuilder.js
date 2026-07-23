@@ -34,9 +34,9 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // Action flags take a single hyphen (-build); parameters take a double hyphen (--recipePath=).
 // =====================================================================
 
-const { helpText } = require('./lib/help');
-const { resolveParameters, bootstrapGlobal } = require('./lib/startup');
-const actions = require('./lib/actions');
+const { helpText } = require('./lib/help')();
+const { resolveParameters, bootstrapGlobal } = require('./lib/startup')();
+const actions = require('./lib/actions')();
 
 const finish = (xLog) => (err, outcome) => {
 	if (err) {

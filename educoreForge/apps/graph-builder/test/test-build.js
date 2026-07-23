@@ -61,8 +61,8 @@ EXIT STATUS
 require('../../../test/testLib/testAppStartup')({ moduleName, helpText: helpText() });
 
 const harness = require('../../../test/testLib/harness')(moduleName);
-const recipeLib = require('../lib/recipe');
-const buildLib = require('../lib/build');
+const recipeLib = require('../lib/recipe')();
+const buildLib = require('../lib/build')();
 const realManifestEditor = require('../apps/manifest-editor');
 const contentAddress = require('../../../lib/content-address/content-address')();
 

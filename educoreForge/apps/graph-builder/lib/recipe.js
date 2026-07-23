@@ -21,6 +21,13 @@ const Ajv = require('ajv');
 // LAYER 1 — strict NEW-format structural schema
 // =====================================================================
 
+const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
+
+// START OF moduleFunction() ============================================================
+
+const moduleFunction =
+	({ moduleName } = {}) =>
+	(unusedDeps = {}) => {
 const RECIPE_SCHEMA = {
 	$id: 'educoreForge/recipe/v1',
 	type: 'object',
@@ -309,4 +316,9 @@ const validateRecipe = (recipe, options = {}) => {
 	};
 };
 
-module.exports = { loadRecipe, summarizeRecipe, validateRecipe };
+return { loadRecipe, summarizeRecipe, validateRecipe };
+};
+
+// END OF moduleFunction() ============================================================
+
+module.exports = moduleFunction({ moduleName });
