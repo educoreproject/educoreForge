@@ -113,6 +113,10 @@ const embedder = vectorize
 		})
 	: null;
 
+// the declared vector width is the SAME ini value the embedder sends to the API; there is no
+// in-code width standing in for it (polyArch2 §6). Nothing embedded means nothing to declare.
+const declaredEmbeddingDims = embedder ? embedder.resolveEmbeddingIdentity().embeddingDims : undefined;
+
 xLog.status(`[${moduleName}] forging ${resolved.standardName} (vectorize=${vectorize})`);
 
 require(resolved.entryPath)({ embedder }).forge(
@@ -131,7 +135,7 @@ require(resolved.entryPath)({ embedder }).forge(
 			finish(null, 1);
 			return;
 		}
-		const shaped = shapeForgedGraph({ forged });
+		const shaped = shapeForgedGraph({ forged, declaredEmbeddingDims });
 		if (shaped.error) {
 			harness.ok('shapeForgedGraph produced engine shape', false, shaped.error);
 			finish(null, 1);

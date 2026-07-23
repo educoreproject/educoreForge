@@ -269,6 +269,7 @@ harness.rejects(
 
 const shapedConfigured = shapeForgedGraph({
 	forged: forgedWith({ embeddingModelVersion: 'voyage-context-3' }),
+	declaredEmbeddingDims: 1024,
 });
 harness.equal(
 	'a CARRIED embeddingModelVersion survives verbatim — the positive control',
@@ -330,6 +331,77 @@ harness.ok(
 	'no model-version literal survives anywhere in standard-block.js',
 	!/voyage-[0-9]/.test(codeOf(path.join(__dirname, '..', 'lib', 'standard-block.js'))),
 	(codeOf(path.join(__dirname, '..', 'lib', 'standard-block.js')).match(/.*voyage-[0-9].*/g) || []).join('\n'),
+);
+
+// =====================================================================
+harness.section('STATE 1 — CERTIFYING THE DEFECT: an in-code 1024 overrules the configured dims');
+// =====================================================================
+// These assertions document the behaviour being removed, in its own words. They PASS today.
+
+// -----
+// forgedOfDims — the same one-node bundle at an arbitrary vector width.
+
+const forgedOfDims = (dims) => {
+	const built = forgedWith({ embeddingModelVersion: 'voyage-context-3' });
+	built.nodes[0].properties.embedding = new Array(dims).fill(0.5);
+	return built;
+};
+
+// =====================================================================
+harness.section('SHAPE-FORGED-GRAPH DIMS — the declared width comes from the caller, not the code');
+// =====================================================================
+// EMBEDDING_DIMS = 1024 shadowed [voyageEmbedding].embeddingDims: set the ini to 512 and every
+// vector was refused for disagreeing with a number the operator never typed. §6 permits an
+// in-code constant only where nothing is settable, and this is settable.
+
+harness.rejects(
+	'an ABSENT declaredEmbeddingDims is refused when vectors are present, naming the key',
+	(() => {
+		const answer = shapeForgedGraph({ forged: forgedOfDims(1024) });
+		return answer.error ? [answer.error] : [];
+	})(),
+	/declaredEmbeddingDims.*embeddingDims/s,
+);
+
+harness.rejects(
+	'an INVALID declaredEmbeddingDims is refused rather than corrected',
+	(() => {
+		const answer = shapeForgedGraph({ forged: forgedOfDims(1024), declaredEmbeddingDims: '102o' });
+		return answer.error ? [answer.error] : [];
+	})(),
+	/declaredEmbeddingDims.*'102o'/s,
+);
+
+harness.equal(
+	'a CONFIGURED 512 admits a 512-dim vector set — the positive control',
+	(() => {
+		const answer = shapeForgedGraph({ forged: forgedOfDims(512), declaredEmbeddingDims: 512 });
+		return answer.error || answer.embeddingDims;
+	})(),
+	512,
+);
+
+harness.match(
+	'and a vector set that disagrees with the DECLARED width is still refused, naming both',
+	shapeForgedGraph({ forged: forgedOfDims(512), declaredEmbeddingDims: 1024 }).error,
+	/512 does not match the declared 1024/,
+);
+
+harness.ok(
+	'no dimension literal survives anywhere in shape-forged-graph.js',
+	!/\b(1024|512)\b/.test(codeOf(path.join(__dirname, '..', 'lib', 'shape-forged-graph.js'))),
+	(codeOf(path.join(__dirname, '..', 'lib', 'shape-forged-graph.js')).match(/.*\b(1024|512)\b.*/g) || []).join('\n'),
+);
+
+// =====================================================================
+harness.section('STATE 1 — CERTIFYING THE DEFECT: a block header declares 1024 regardless');
+// =====================================================================
+
+harness.equal(
+	'and a serialized block header declares 1024 whatever the vectors actually are',
+	JSON.parse(buildStandardBlock({ forged: forgedOfDims(512) }).blockText.split('\n')[0])
+		.embeddingDims,
+	1024,
 );
 
 harness.report();

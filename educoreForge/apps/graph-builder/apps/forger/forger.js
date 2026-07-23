@@ -174,7 +174,12 @@ const forger = () => {
 		// embedding credentials) > getConfig('forger').voyageConfigFilePath (graphBuilder.ini) >
 		// the computed in-code default. The SECRET stays in voyageEmbedding.ini either way; only
 		// the POINTER is configurable.
+		//
+		// declaredEmbeddingDims comes from the SAME ini reading that governs the API call, so the
+		// width the shaper checks against is the width the vectors were actually made at. There is
+		// no in-code width standing in for it any more (polyArch2 §6).
 		let embedder = null;
+		let declaredEmbeddingDims;
 		if (vectorize) {
 			if (embeddingConfigFilePath) {
 				console.error(
@@ -184,6 +189,7 @@ const forger = () => {
 			embedder = require(path.join(TREE_LIB, 'embedding', 'embedding-client'))({
 				configFilePath: resolveVoyageConfigPath({ paramPath: embeddingConfigFilePath }),
 			});
+			declaredEmbeddingDims = embedder.resolveEmbeddingIdentity().embeddingDims;
 		}
 
 		const bundle = require(resolved.entryPath)({ embedder });
@@ -218,7 +224,7 @@ const forger = () => {
 		// replayManager.init takes objects, so the round trip is gone and a schema block is now
 		// born in exactly one place: harvest.
 		taskList.push((args, next) => {
-			const shaped = shapeForgedGraph({ forged: args.forged });
+			const shaped = shapeForgedGraph({ forged: args.forged, declaredEmbeddingDims });
 			if (shaped.error) {
 				next(`forger: ${shaped.error}`);
 				return;

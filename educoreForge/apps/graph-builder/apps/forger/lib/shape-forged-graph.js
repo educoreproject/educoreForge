@@ -14,9 +14,15 @@
 // serializing a schema block. The serializing half is what the architecture is deleting: a schema
 // block is born only at harvest.
 //
-// PURE: no I/O, no process.global. ({ forged }) -> { nodes, edges, embeddingDims }.
-
-const EMBEDDING_DIMS = 1024;
+// PURE: no I/O, no process.global.
+//   ({ forged, declaredEmbeddingDims }) -> { nodes, edges, embeddingDims }
+//
+// declaredEmbeddingDims is the width the vectors were MADE at — [voyageEmbedding].embeddingDims,
+// read by the embedding client and handed down by the caller. It used to be an in-code
+// EMBEDDING_DIMS = 1024, which shadowed that settable key: configure 512 and every vector was
+// refused for disagreeing with a number the operator never typed (polyArch2 §6 — an in-code
+// constant is legitimate only where nothing is settable). It is REQUIRED whenever any node
+// carries a vector, and unused when none does: with no vectors there is no width to agree about.
 
 // The float32 NARROWING is deliberate and load-bearing (code fact, 2026-07-22): the block path
 // encoded every vector to base64 float32 and decoded it again, so what actually reached Neo4j was
@@ -26,7 +32,7 @@ const EMBEDDING_DIMS = 1024;
 // the serialization round trip does not quietly change the data that survives it.
 const narrowToFloat32 = (floatList) => floatList.map((oneValue) => Math.fround(oneValue));
 
-const shapeForgedGraph = ({ forged }) => {
+const shapeForgedGraph = ({ forged, declaredEmbeddingDims }) => {
 	if (!forged || !Array.isArray(forged.nodes) || !Array.isArray(forged.edges)) {
 		return { error: 'shapeForgedGraph: forged must carry nodes[] and edges[]' };
 	}
@@ -108,12 +114,25 @@ const shapeForgedGraph = ({ forged }) => {
 				`ragged vector set.`,
 		};
 	}
-	if (dimsSeen !== null && dimsSeen !== EMBEDDING_DIMS) {
-		return {
-			error:
-				`shapeForgedGraph: embedding dimension ${dimsSeen} does not match the declared ` +
-				`${EMBEDDING_DIMS}. The addressing model and the vector model must agree.`,
-		};
+	if (dimsSeen !== null) {
+		if (!Number.isInteger(declaredEmbeddingDims) || declaredEmbeddingDims <= 0) {
+			return {
+				error:
+					`shapeForgedGraph: declaredEmbeddingDims is ${
+						declaredEmbeddingDims === undefined
+							? 'absent'
+							: `'${declaredEmbeddingDims}'`
+					}, and these nodes carry vectors. Pass the [voyageEmbedding].embeddingDims the ` +
+					`vectors were made at — there is no in-code width to compare against.`,
+			};
+		}
+		if (dimsSeen !== declaredEmbeddingDims) {
+			return {
+				error:
+					`shapeForgedGraph: embedding dimension ${dimsSeen} does not match the declared ` +
+					`${declaredEmbeddingDims}. The addressing model and the vector model must agree.`,
+			};
+		}
 	}
 
 	const edges = forged.edges.map((oneEdge) => {
@@ -135,4 +154,4 @@ const shapeForgedGraph = ({ forged }) => {
 	return { nodes, edges, embeddingDims: dimsSeen };
 };
 
-module.exports = { shapeForgedGraph, EMBEDDING_DIMS, narrowToFloat32 };
+module.exports = { shapeForgedGraph, narrowToFloat32 };
