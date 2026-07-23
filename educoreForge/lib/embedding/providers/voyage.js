@@ -16,16 +16,28 @@ const https = require('https');
 
 const moduleFunction =
 	({ moduleName } = {}) =>
-	(unusedDeps = {}) => {
+	({ httpsRequest = https.request } = {}) => {
+		// httpsRequest is the transport seam: production takes the real https.request; the test
+		// suite injects a fake so the built request payload and the returned-vector length check
+		// can be proven WITHOUT a socket or a Voyage bill. It is inert plumbing — it changes no
+		// behavior of a live call, which uses the default.
 		// -----
 		// embed — POST one batch of texts to Voyage; callback (err, embeddings:number[][]).
 		//   resolvedConfig: { apiKey, model, dimension }. The apiKey appears ONLY in the
 		//   Authorization header — never logged, never returned, never placed in an error string.
 
 		const embed = (texts, resolvedConfig, callback) => {
+			// output_dimension carries the CONFIGURED width to Voyage. voyage-4-large (and the
+			// other Matryoshka models) answer at their OWN default width when it is omitted, so a
+			// config of 512 against a 1024-default model used to bill the call AND hand back
+			// 1024-long vectors that a 512-wide index then silently dropped — money spent, search
+			// empty. resolvedConfig.dimension is the ini's embeddingDims, already validated as a
+			// positive integer by embedding-client before it reaches here.
+			// API field name per https://docs.voyageai.com/docs/embeddings — output_dimension.
 			const payload = JSON.stringify({
 				input: texts,
 				model: resolvedConfig.model,
+				output_dimension: resolvedConfig.dimension,
 			});
 
 			const options = {
@@ -40,7 +52,7 @@ const moduleFunction =
 				},
 			};
 
-			const req = https.request(options, (res) => {
+			const req = httpsRequest(options, (res) => {
 				let body = '';
 				res.on('data', (chunk) => {
 					body += chunk;
@@ -64,6 +76,31 @@ const moduleFunction =
 					}
 
 					const embeddings = parsed.value.data.map((one) => one.embedding);
+
+					// EVERY returned vector must be the CONFIGURED width. output_dimension asks for
+					// it; this refuses to trust that it was honoured. A vector of any other length
+					// is one the downstream index would silently drop, so it is caught HERE, named,
+					// rather than handed on to disappear. Operational fault (the provider answered
+					// badly) → it travels by CALLBACK, like every other response fault in this
+					// module — a throw inside this async response handler would be uncaught.
+					const expectedDimension = resolvedConfig.dimension;
+					const wrongIndex = embeddings.findIndex(
+						(oneEmbedding) =>
+							!Array.isArray(oneEmbedding) || oneEmbedding.length !== expectedDimension,
+					);
+					if (wrongIndex !== -1) {
+						const gotLength = Array.isArray(embeddings[wrongIndex])
+							? embeddings[wrongIndex].length
+							: 'not-an-array';
+						callback(
+							`Voyage returned a vector of the WRONG length at index ${wrongIndex}: ` +
+								`expected ${expectedDimension} (the configured embeddingDims, sent as ` +
+								`output_dimension), got ${gotLength}. The vector is refused rather than ` +
+								`handed on to be silently dropped by a ${expectedDimension}-wide index.`,
+						);
+						return;
+					}
+
 					callback('', embeddings);
 				});
 			});
