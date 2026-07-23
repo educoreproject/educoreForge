@@ -10,7 +10,16 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // The key is read ONLY from config (never from env), referred to as config.voyageEmbedding.apiKey,
 // and is never logged, echoed, returned, or written anywhere.
 //
-//   const embedder = require('./embedding-client')({ configFilePath });
+//   const embedder = require('./embedding-client')({ configFilePath, providerName });
+//     configFilePath?  the .ini holding [voyageEmbedding]; default = the canonical project config
+//                      named at the top of this file.
+//     providerName?    which provider in ./providers/ makes the vectors. DEFAULT: 'voyage'.
+//                      Legitimately optional and DOCUMENTED HERE, which is what §6 requires of a
+//                      default: voyage is the only provider on disk, the registry is a discovery
+//                      pattern, and a caller that names nothing gets the one that exists. An
+//                      UNKNOWN or blank name is REFUSED when the client is built — not later,
+//                      inside a callback, after the credentials file has been opened.
+//   embedder.providerName() -> the provider actually in force (so a caller can SEE the default)
 //   embedder.embedText({ text }, (err, { vector, embeddingModelVersion }) => {...});
 //     vector: Float32Array of the configured dimension; embeddingModelVersion is the model that
 //     ACTUALLY made it — the same [voyageEmbedding].model value that was sent to the API.
@@ -28,6 +37,12 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 const path = require('path');
 const fs = require('fs');
 const configFileProcessor = require('qtools-config-file-processor');
+
+// The DOCUMENTED default provider (header interface block above). It shadows no config key —
+// there is no ini setting for the provider — so it is a plain constant standing behind a
+// legitimately optional module parameter, which is what polyArch2 §6 permits when the default is
+// stated in the module's interface. It is stated there.
+const DEFAULT_PROVIDER_NAME = 'voyage';
 
 // canonical config home for this project (DECISIONS §3; secrets live ONLY here)
 const defaultConfigFilePath =
@@ -51,7 +66,27 @@ fs.readdirSync(providersDir).forEach((file) => {
 
 const moduleFunction =
 	({ moduleName } = {}) =>
-	({ configFilePath = defaultConfigFilePath, providerName = 'voyage' } = {}) => {
+	({ configFilePath = defaultConfigFilePath, providerName = DEFAULT_PROVIDER_NAME } = {}) => {
+		// THE PROVIDER IS CHECKED WHEN THE CLIENT IS BUILT. An unknown name used to construct
+		// cleanly, answer resolveEmbeddingIdentity() as though all were well, and be refused only
+		// at embedText time — deep inside a callback, after the credentials file had been opened.
+		// The default itself is legitimate and is documented in the header interface block above;
+		// what was not legitimate was discovering a bad value three steps downstream (polyArch2 §6).
+		if (typeof providerName !== 'string' || providerName.trim() === '') {
+			throw new Error(
+				`embedding-client: providerName is ${JSON.stringify(providerName)}, which is not a ` +
+					`provider name. Omit it to take the documented default ` +
+					`('${DEFAULT_PROVIDER_NAME}'), or name one of: ${Object.keys(providers).sort().join(', ')}.`,
+			);
+		}
+		if (!providers[providerName]) {
+			throw new Error(
+				`embedding-client: unknown provider '${providerName}'. Available providers ` +
+					`(discovered in ./providers/): ${Object.keys(providers).sort().join(', ')}. It was ` +
+					`NOT quietly replaced with the default.`,
+			);
+		}
+
 		// -----
 		// resolveEmbeddingIdentity — the ONE reading of the vector model's identity from the ini.
 		//   Public so a caller can learn what identity governs WITHOUT holding the key: the same
@@ -127,6 +162,7 @@ const moduleFunction =
 			};
 		};
 
+		// guaranteed present: an unknown providerName was refused at construction, above.
 		const provider = providers[providerName];
 
 		// -----
@@ -137,13 +173,6 @@ const moduleFunction =
 		const embedText = ({ text } = {}, callback) => {
 			if (text == null || `${text}`.trim() === '') {
 				callback('embedding-client.embedText: text is required and must be non-empty');
-				return;
-			}
-
-			if (!provider) {
-				callback(
-					`embedding-client.embedText: unknown provider '${providerName}' (available: ${Object.keys(providers).join(', ')})`,
-				);
 				return;
 			}
 
@@ -192,13 +221,6 @@ const moduleFunction =
 			);
 			if (emptyIndex !== -1) {
 				callback(`embedding-client.embedTexts: texts[${emptyIndex}] is empty (every text must be non-empty)`);
-				return;
-			}
-
-			if (!provider) {
-				callback(
-					`embedding-client.embedTexts: unknown provider '${providerName}' (available: ${Object.keys(providers).join(', ')})`,
-				);
 				return;
 			}
 
@@ -269,7 +291,15 @@ const moduleFunction =
 			return float32;
 		};
 
-		return { embedText, embedTexts, encodeVector, decodeVector, resolveEmbeddingIdentity };
+		return {
+			embedText,
+			embedTexts,
+			encodeVector,
+			decodeVector,
+			resolveEmbeddingIdentity,
+			// so a caller can SEE which provider is in force rather than assume the default took
+			providerName: () => providerName,
+		};
 	};
 
 // END OF moduleFunction() ============================================================

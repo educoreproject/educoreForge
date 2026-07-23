@@ -188,4 +188,62 @@ harness.ok(
 	(codeOf(path.join(__dirname, '..', 'embedding-client.js')).match(/.*\b(1024|512)\b.*/g) || []).join('\n'),
 );
 
+// =====================================================================
+harness.section('THE PROVIDER — a documented default, and an unknown one refused AT CONSTRUCTION');
+// =====================================================================
+// `providerName = 'voyage'` is a DEFAULT PARAMETER on the module boundary, and the audit put it
+// in bucket 1 for one reason: the default was not stated in the module's header interface block,
+// where the configFilePath default IS stated. An undocumented default is indistinguishable from
+// the defect (polyArch2 §6).
+//
+// DISPOSITION: documented optional, not required. §6 permits a default for a legitimately
+// optional input "and it must be documented in -help or the module's stated interface" — this
+// module's stated interface is its header block, which now names it. Voyage is the only provider
+// on disk, the registry is a discovery pattern, and making every caller type the same literal
+// would add a word without adding a fact.
+//
+// What was a REAL defect underneath it: an UNKNOWN provider constructed cleanly, answered
+// resolveEmbeddingIdentity() as though all was well, and was only refused at embedText time —
+// deep inside a callback, after the credentials file had already been opened.
+
+const GOOD_INI = () => iniWith(['model=voyage-context-3', 'embeddingDims=1024']);
+
+harness.rejects(
+	'an UNKNOWN providerName is refused AT CONSTRUCTION, naming it and what IS available',
+	thrownMessage(() => embeddingClient({ configFilePath: GOOD_INI(), providerName: 'nosuchprovider' })),
+	/nosuchprovider[\s\S]*voyage/,
+);
+
+harness.rejects(
+	'a BLANK providerName is refused too — a blank name is not a name',
+	thrownMessage(() => embeddingClient({ configFilePath: GOOD_INI(), providerName: '  ' })),
+	/providerName/,
+);
+
+harness.rejects(
+	'a non-string providerName is refused, naming what was given',
+	thrownMessage(() => embeddingClient({ configFilePath: GOOD_INI(), providerName: 7 })),
+	/providerName/,
+);
+
+harness.equal(
+	'an OMITTED providerName takes the DOCUMENTED default — the positive control',
+	identityOrError(() => embeddingClient({ configFilePath: GOOD_INI() }).providerName()),
+	'voyage',
+);
+
+harness.equal(
+	'  and naming it explicitly reaches the same provider',
+	identityOrError(() =>
+		embeddingClient({ configFilePath: GOOD_INI(), providerName: 'voyage' }).providerName(),
+	),
+	'voyage',
+);
+
+harness.match(
+	"the module's STATED INTERFACE names providerName and its default — an undocumented default is the defect",
+	fs.readFileSync(path.join(__dirname, '..', 'embedding-client.js'), 'utf8'),
+	/providerName\?[\s\S]*default[\s\S]*voyage/,
+);
+
 harness.report();
