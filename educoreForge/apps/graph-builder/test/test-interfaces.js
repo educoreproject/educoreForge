@@ -3,9 +3,15 @@
 
 // test-interfaces.js — the formal contracts of interfaces.js, ENFORCED. polyArch2 requires
 // declared interfaces so implementations cannot drift; this suite is what gives the declaration
-// teeth: every component implementation — the REAL modules AND the stub-era ones the -build
-// pipeline runs on — must expose EXACTLY the declared method set. A half-implemented component,
-// a renamed method, or a stub that forgot to grow with the contract turns this suite red.
+// teeth: every component implementation must expose EXACTLY the declared method set. A
+// half-implemented component or a renamed method turns this suite red.
+//
+// THERE IS ONE SET OF IMPLEMENTATIONS. Until 2026-07-23 this suite also held a parallel
+// stub-components.js to the same shapes, on the theory that gating both sides would keep them
+// together. It did not: the shapes matched while the ARGUMENTS drifted (a positional
+// manifest.add, an id() the real manifest never had, a create() called three ways), and the
+// orchestrator was written against the stubs. The stubs are deleted; build.js drives the real
+// modules and its own suite injects doubles where Docker and Voyage would otherwise be reached.
 //
 // Run: node apps/graph-builder/test/test-interfaces.js
 
@@ -19,10 +25,9 @@ SYNOPSIS
      ${moduleName} [-verbose] [-quiet] [-help]
 
 DESCRIPTION
-     Instantiates every component implementation (real modules and stub-components) and holds
-     each to EXACTLY the method set COMPONENT_SHAPES declares — nothing missing, nothing extra,
-     everything callable. Proven in the failure direction too: a deliberately-drifted shape is
-     shown to be caught.
+     Instantiates every component implementation and holds each to EXACTLY the method set
+     COMPONENT_SHAPES declares — nothing missing, nothing extra, everything callable. Proven in
+     the failure direction too: a deliberately-drifted shape is shown to be caught.
 
 EXIT STATUS
      0 all assertions passed;  1 at least one failed.
@@ -40,7 +45,7 @@ const realComponents = {
 	bridgeMaker: require('../apps/bridge-maker'),
 	manifestEditor: require('../apps/manifest-editor'),
 };
-const stubComponents = require('../lib/stub-components');
+const buildLib = require('../lib/build');
 
 // conformance verdict for one instance against one declared shape: '' = conforms.
 const shapeViolation = (instance, declaredMethods) => {
@@ -81,10 +86,13 @@ Object.keys(COMPONENT_SHAPES).forEach((oneComponentName) => {
 		shapeViolation(realComponents[oneComponentName](), declared),
 		'',
 	);
-	harness.equal(
-		`STUB ${oneComponentName}() conforms identically`,
-		shapeViolation(stubComponents[oneComponentName](), declared),
-		'',
+	// and the orchestrator's DEFAULT for that component IS that same real module — not a
+	// look-alike with its own arguments. This is what the deleted stub-conformance assertion was
+	// reaching for and never actually held.
+	harness.ok(
+		`  and -build's default ${oneComponentName} IS that module`,
+		buildLib.defaultComponents[oneComponentName] === realComponents[oneComponentName],
+		`default was ${typeof buildLib.defaultComponents[oneComponentName]}`,
 	);
 });
 

@@ -12,13 +12,24 @@
 //
 // Also gated here: the -build vs -validate POLICY difference, which is a deliberate decision and
 // exactly the sort of thing that erodes silently. -build hard-gates on structural + referential
-// only, treating resolvability as a non-blocking note during the stub era; -validate is strict
-// about all three.
+// only, treating resolvability as a non-blocking note; -validate is strict about all three.
+//
+// WHAT THIS SUITE CAN NO LONGER PROVE, AND WHY (2026-07-23). -build used to run to completion
+// here, because it ran over stub components. It now drives the REAL forger and replayManager: a
+// completed -build provisions Docker containers and spends Voyage credit, and `runAllTests` does
+// neither, ever. So the gates below stop at the point where real work would begin -- which is far
+// enough to prove the control surface, the exit codes, the policy, and that the pipeline is
+// genuinely entered and genuinely wired to the real components (the forger refuses an un-ported
+// standard BY NAME, before any docker command). The completed pipeline is proven in
+// test-build.js, which injects doubles at the component boundary. The gap is declared out loud
+// below rather than left to be discovered.
 //
 // Run: node apps/graph-builder/test/test-cli.js
 
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
+const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const { spawnSync } = require('child_process');
 
@@ -155,53 +166,93 @@ harness.equal('-validate on a nonexistent file exits 1', validateNoSuchFile.stat
 harness.match('  and names the missing file', validateNoSuchFile.stderr, /not found/);
 
 // =====================================================================
-harness.section('-build — succeeds on a good recipe, with channel discipline');
+harness.section('-build — the required parameters, and the pipeline genuinely entered');
 // =====================================================================
 
-const buildGood = runCli(['-build', '--recipePath=' + goodRecipe('cedsLif')]);
-harness.equal('-build exits 0 on a good recipe', buildGood.status, 0);
-
-const buildResult = parsedStdout(buildGood);
-harness.ok('-build emits parseable JSON on stdout', buildResult !== null, buildGood.stdout);
-harness.ok('  carrying a manifestId', !!(buildResult || {}).manifestId, buildGood.stdout);
-harness.ok('  carrying a boltUrl', !!(buildResult || {}).boltUrl, buildGood.stdout);
-harness.equal('  reporting 4 members for cedsLif', (buildResult || {}).memberCount, 4);
-
-// qtools-x-log's result() appends NO newline (the caller owns line termination so results stay
-// pipe-composable). Every result-bearing action must supply its own, or stdout ends mid-line and
-// the next thing written to the terminal runs into it. This was found by fault injection AFTER
-// the refactor slipped past every other assertion — hence a gate of its own.
-harness.match('-build stdout ends with a newline', buildGood.stdout, /\}\n$/);
-
-harness.match('progress goes to stderr', buildGood.stderr, /\[A\] forge ceds@current/);
-harness.ok(
-	'stdout carries the RESULT ONLY — no progress chatter (a pipeline could consume it)',
-	!/\[A\]|\[C\]|recipe understood/.test(buildGood.stdout),
-	buildGood.stdout,
-);
-
-const buildMinimal = runCli(['-build', '--recipePath=' + goodRecipe('lifOnly')]);
-harness.equal('-build exits 0 on the minimal recipe', buildMinimal.status, 0);
-harness.equal('  reporting 1 member', (parsedStdout(buildMinimal) || {}).memberCount, 1);
-
-const buildPositional = runCli(['-build', goodRecipe('lifOnly')]);
-harness.equal('the recipe path may be given as a positional', buildPositional.status, 0);
-harness.equal(
-	'  with the same result as the flag form',
-	(parsedStdout(buildPositional) || {}).memberCount,
-	1,
-);
+// A throwaway store OUTSIDE the project. The suite never opens a project database; this proves
+// the store injection reaches the pipeline, and it is deleted with the temp directory.
+const scratchDir = fs.mkdtempSync(path.join(os.tmpdir(), 'edfCliGate-'));
+const scratchStore = path.join(scratchDir, `cliGate_${process.pid}.sqlite3`);
 
 const buildMissingPath = runCli(['-build']);
 harness.equal('-build without a recipe path exits 1', buildMissingPath.status, 1);
 harness.match('  and says which parameter is missing', buildMissingPath.stderr, /--recipePath/);
 
+// The store path is REQUIRED and has no default. This is the 2026-07-17 lesson as a gate: a build
+// that does not say where it writes must not be allowed to guess.
+const buildNoStore = runCli(['-build', '--recipePath=' + goodRecipe('cedsLif')]);
+harness.equal('-build without a standards database exits 1', buildNoStore.status, 1);
+harness.match(
+	'  naming the missing parameter',
+	buildNoStore.stderr,
+	/--standardsDatabaseFilePath=<path> is REQUIRED and has no default/,
+);
+harness.ok(
+	'  and nothing is written to stdout, so no caller reads a refusal as a result',
+	buildNoStore.stdout === '',
+	buildNoStore.stdout,
+);
+harness.match('-help documents that parameter', helpRun.stdout, /--standardsDatabaseFilePath=/);
+
+// The recipe is still read and summarized before the refusal, so the validation verdict for a
+// fully-resolvable recipe is observable without running the pipeline.
+harness.match(
+	'a fully-resolvable recipe reports all three layers PASS (both forges discovered)',
+	buildNoStore.stderr,
+	/structural PASS; referential PASS; resolvability PASS/,
+);
+harness.ok(
+	'  with NO no-forge NOTE',
+	!/have no forge yet/.test(buildNoStore.stderr),
+	buildNoStore.stderr.split('\n').filter((l) => /NOTE/.test(l)).join(' '),
+);
+
+// THE PIPELINE IS GENUINELY ENTERED, AND GENUINELY WIRED TO THE REAL COMPONENTS. An un-ported
+// standard passes both gating layers, reaches phase A, and is refused BY THE REAL FORGER, by name,
+// before any docker command is attempted -- which is why this case can run here at all.
+const buildUnforged = runCli([
+	'-build',
+	'--recipePath=' + fixture('bad-unforgedStandard'),
+	'--standardsDatabaseFilePath=' + scratchStore,
+]);
+harness.equal('a recipe naming an un-forged standard reaches the pipeline and fails', buildUnforged.status, 1);
+harness.match(
+	'  the REAL forger refuses it by name (not a stub reporting success)',
+	buildUnforged.stderr,
+	/phase A \(forge\) failed: forge zorg: forger: no forge bundle for standard 'zorg'/,
+);
+harness.match(
+	'  and lists what this tree can actually forge',
+	buildUnforged.stderr,
+	/Known forges: ceds, lif/,
+);
+harness.ok(
+	'  the store was opened, so the injection reached the pipeline',
+	fs.existsSync(scratchStore),
+	`no database at ${scratchStore}`,
+);
+harness.ok(
+	'stdout carries no progress chatter (a pipeline could consume it)',
+	!/\[A\]|\[C\]|recipe understood/.test(buildUnforged.stdout),
+	buildUnforged.stdout,
+);
+
+harness.note(
+	'DECLARED GAP — a COMPLETED -build is not gated here. It provisions Docker and spends Voyage\n' +
+		'credit, and runAllTests does neither. The completed pipeline (result JSON on stdout, the\n' +
+		'trailing newline, memberCount, the phase sequence) is gated in test-build.js against\n' +
+		'component doubles. What is missing at the CLI level is the channel discipline of a\n' +
+		'SUCCESSFUL -build; -deps and -validate carry the same result path and are gated above.',
+);
+
 // =====================================================================
 harness.section('-build POLICY — what blocks a build and what merely warns');
 // =====================================================================
-// The deliberate asymmetry. Structural and referential faults STOP the build; an un-ported forge
-// does not, so a new-format recipe can flow through the component pipeline before any forge is
-// ported. Both halves are gated, because a policy proven in only one direction is not a policy.
+// The deliberate asymmetry. Structural and referential faults STOP the build at the VALIDATION
+// gate; an un-ported forge does not -- it is a NOTE, and the recipe proceeds into the pipeline,
+// where the forger answers for it. Both halves are gated, because a policy proven in only one
+// direction is not a policy. Note what the asymmetry now buys: the refusal comes from the
+// component that actually knows, naming the standard, rather than from a validator's guess.
 
 const buildStructural = runCli(['-build', '--recipePath=' + fixture('bad-noStandards')]);
 harness.equal('a STRUCTURAL fault blocks the build (exit 1)', buildStructural.status, 1);
@@ -213,14 +264,8 @@ harness.equal('a REFERENTIAL fault blocks the build (exit 1)', buildReferential.
 harness.match('  and the rejection is announced', buildReferential.stderr, /recipe REJECTED/);
 harness.match('  naming the referential cause', buildReferential.stderr, /referential:/);
 
-const buildUnforged = runCli(['-build', '--recipePath=' + fixture('bad-unforgedStandard')]);
-harness.equal(
-	'a RESOLVABILITY fault does NOT block the build (exit 0) — the stub-era policy',
-	buildUnforged.status,
-	0,
-);
 harness.match(
-	'  but is announced as an explicit NOTE rather than passing silently',
+	'a RESOLVABILITY fault does NOT block at the validation gate — it is an explicit NOTE',
 	buildUnforged.stderr,
 	/NOTE -- 1 standard\(s\) have no forge yet/,
 );
@@ -234,15 +279,10 @@ harness.match(
 	buildUnforged.stderr,
 	/structural PASS; referential PASS/,
 );
-harness.match(
-	'a fully-resolvable recipe reports resolvability PASS (both forges discovered)',
-	buildGood.stderr,
-	/structural PASS; referential PASS; resolvability PASS/,
-);
 harness.ok(
-	'  with NO no-forge NOTE',
-	!/have no forge yet/.test(buildGood.stderr),
-	buildGood.stderr.split('\n').filter((l) => /NOTE/.test(l)).join(' '),
+	'  so the recipe reaches the pipeline and is refused THERE, not by the validator',
+	!/recipe REJECTED/.test(buildUnforged.stderr) && /phase A \(forge\) failed/.test(buildUnforged.stderr),
+	buildUnforged.stderr,
 );
 
 const buildDupPairing = runCli(['-build', '--recipePath=' + fixture('bad-dupPairing')]);
@@ -269,11 +309,18 @@ const stdinBuild = runCli(
 		fileList: [],
 	}),
 );
-harness.equal('stdin OVERRIDES a conflicting command-line action', stdinBuild.status, 0);
-harness.equal(
+// The stdin-supplied -build stops at the required store parameter, which is itself the proof:
+// -deps has no such parameter and would have exited 0 with an availableForges listing.
+harness.equal('stdin OVERRIDES a conflicting command-line action', stdinBuild.status, 1);
+harness.match(
 	'  the stdin action is what ran (build, not deps)',
-	(parsedStdout(stdinBuild) || {}).memberCount,
-	1,
+	stdinBuild.stderr,
+	/graphBuilder -build: --standardsDatabaseFilePath/,
+);
+harness.ok(
+	'  and the command-line action did NOT run',
+	!/availableForges/.test(stdinBuild.stdout),
+	stdinBuild.stdout,
 );
 
 const stdinBadJson = runCli([], '{ not json');

@@ -14,7 +14,7 @@ NAME
      graphBuilder -- build any graph (up to a full golden) from a recipe, under program control
 
 SYNOPSIS
-     graphBuilder   -build    --recipePath=<path>
+     graphBuilder   -build    --recipePath=<path> --standardsDatabaseFilePath=<path>
      graphBuilder   -validate --recipePath=<path>
      graphBuilder   -deps
      graphBuilder   -help
@@ -33,8 +33,9 @@ DESCRIPTION
 
      Action flags take a single hyphen; parameters take a double hyphen.
 
-     STATUS: SCAFFOLD -- control surface, help, JSON-stdin channel, and phase pipeline are
-     in place; the phase bodies are stubs (they log their intent and thread state).
+     STATUS: -build drives the REAL components (forger, replayManager, manifestEditor). It
+     provisions DEV_* Docker graphs and spends embedding credit. bridgeMaker is still
+     stub-bodied, so phase C records empty relationship blocks until bridging lands.
 
 INPUT
      Parameters may be supplied as command-line flags OR as a JSON object on stdin. When
@@ -52,6 +53,11 @@ COMMANDS
 OPTIONS
      --recipePath=<path>   The recipe file (a build/golden recipe). Required for -build and
                            -validate. May also be given as a positional (fileList).
+     --standardsDatabaseFilePath=<path>
+                           Where the harvested schema blocks and the composed manifest are
+                           written. REQUIRED for -build; there is NO default, deliberately --
+                           a build that does not say where it writes is one edit away from
+                           writing the canonical store.
      -verbose              Emit verbose diagnostic detail on stderr.
      -quiet                Suppress progress; results and errors only.
 

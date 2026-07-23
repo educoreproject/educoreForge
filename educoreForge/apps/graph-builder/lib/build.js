@@ -1,32 +1,57 @@
 'use strict';
 
 // build.js — graphBuilder's -build orchestration. Requires the component modules IN-PROCESS and
-// drives the pipeline, threading real recipe data (tokens, versions, block refs, manifest keys)
-// through stub component bodies. Swap a component's stub body for the real one with the contract
-// already proven here.
+// drives the §4.4 build sequence over them, threading real recipe data (tokens, versions, pair
+// keys, harvested schema blocks) through the contracts declared in ../interfaces.js.
 //
-//   build(recipe, { xLog, components }, callback) -> callback('', { manifestId, boltUrl, memberCount })
+//   build(recipe, { xLog, standardsDatabase, components }, callback)
+//       -> callback('', { manifestId, boltUrl, memberCount })
+//
+// IT DRIVES THE REAL COMPONENTS. Until 2026-07-23 this file drove a set of stub bodies and its
+// own header claimed the contract was "already proven here" — which was false: what was proven
+// was the STUB contract, and the two had drifted apart in three places at once (a positional
+// manifest.add, an id() the manifest never had, and a create() called with three different
+// argument shapes expecting a bolt url back). The stubs are gone and the calls below are the
+// declared ones.
+//
+// STANDARDS DATABASE: injected, never discovered here. A manifest writes every schema block
+// THROUGH to the store on add, so the store is a stateful shared resource and belongs to the
+// orchestrator above this one (polyArch2 §2, "Injected Shared Resources"). It is REQUIRED and has
+// no default — standards-database's own rule, carried to its caller: a build that must say where
+// it writes cannot fall through to writing the canonical store, which is exactly what happened on
+// 2026-07-17.
 //
 // COMPONENT SEAM: `deps.components` may override any of the four component FACTORIES; anything not
 // named falls through to the real module. Production passes nothing and gets the real four. The
-// seam exists so a test can inject a component that FAILS — without it the orchestrator's error
-// paths could never be observed firing, and a path never observed is a path unproven.
+// seam exists so a test can drive the whole pipeline WITHOUT Docker, Voyage or a database, and so
+// a test can inject a component that FAILS — without it the orchestrator's error paths could never
+// be observed firing, and a path never observed is a path unproven.
 //
-// Pipeline (materialize-and-harvest):
-//   A  forge each standardBase        -> harvest StandardBase schema block -> manifest.add
-//      (if the standard is a hub)     -> harvest HubReference schema block -> manifest.add
-//   C  per bridge: create dep graph   -> bridgeMaker.run (labels edges) -> harvest labeled block
-//                                      -> manifest.add(pair@versionKey, 'relationship', ...)
-//   compose   -> manifest.id()
-//   material  -> replayManager.create({ purpose:'materialize', manifestId }) -> the eval golden
+// Pipeline (targetArchitectureDesign §4.4):
+//   A  forger.forge -> replayManager.create -> init(nodeEdges, applyLabels:[StandardBase])
+//                   -> harvest(selectionLabels:[StandardBase]) -> manifest.add({...})
+//      (if the standard is a hub)  -> harvest(:HubReference) -> manifest.add({...})
+//                                  -> replayManager.delete
+//   C  per bridge: create -> bridgeMaker.run (labels edges) -> harvest(:BridgedRelation)
+//                        -> manifest.add({...}) -> delete
+//   compose      -> manifest.refId() over the membership
+//   materialize  -> create() (an EMPTY graph, always) then init({ schemaBlocks }) to fill it.
+//                   create is MONOMORPHIC: it does not take a manifest and does not return a url.
+//                   All polymorphism about putting content INTO a graph lives in init.
 
-// STUB-ERA defaults. The pipeline runs against stub components until EVERY component is real —
-// a real forger provisions Docker and spends Voyage credit, which must never happen inside
-// `npm test` or a casual -build. The real modules (apps/forger, apps/replay-manager have real
-// bodies already) are exercised through their own suites and the integration proof scripts;
-// when the last component lands, this line flips to the real modules and stub-components.js dies.
-// Overridable one at a time through deps.components (see COMPONENT SEAM).
-const defaultComponents = require('./stub-components');
+const path = require('path');
+const { pipeRunner, taskListPlus } = new require('qtools-asynchronous-pipe-plus')();
+
+// The four component modules. bridgeMaker is REAL-required but STUB-BODIED by design as of
+// 2026-07-22 (its body lands with Phase C bridging); the other three have real bodies. There is no
+// stub-components.js any more — a second set of implementations is a second contract, and the
+// drift this file just had is what that costs.
+const defaultComponents = {
+	forger: require(path.join(__dirname, '..', 'apps', 'forger')),
+	replayManager: require(path.join(__dirname, '..', 'apps', 'replay-manager')),
+	bridgeMaker: require(path.join(__dirname, '..', 'apps', 'bridge-maker')),
+	manifestEditor: require(path.join(__dirname, '..', 'apps', 'manifest-editor')),
+};
 
 // Label vocabulary — BARE NAMES. The colons in ':BridgedRelation:' are Cypher notation, not part
 // of the name; a constant carrying them would create a label literally called ':BridgedRelation:'.
@@ -36,7 +61,8 @@ const BASE_GRAPH_LABEL = 'StandardBase';
 const HUB_LABEL = 'HubReference';
 const RELATION_LABEL = 'BridgedRelation';
 
-// minimal sequential async iterator (err-string convention)
+// minimal sequential async iterator (err-string convention). taskListPlus sequences a KNOWN list
+// of steps; this sequences an unknown-length list of items, each of which is itself a taskList.
 const eachSeries = (items, iterator, done) => {
 	let index = 0;
 	const step = () => {
@@ -60,14 +86,51 @@ const eachSeries = (items, iterator, done) => {
 const standardKey = (std) => `${std.token}@${std.version}`;
 const pairKey = (bridge) => `${bridge.source}::${bridge.hub || '(structural)'}`;
 
+const isBlank = (value) => typeof value !== 'string' || value.trim() === '';
+
 const build = (recipe, deps, callback) => {
-	const { xLog } = deps;
+	const { xLog, standardsDatabase } = deps;
 	const components = { ...defaultComponents, ...(deps.components || {}) };
+
+	// ---- the orchestrator's own inputs, checked before a single component is constructed ----
+	// These fire FIRST for a second reason as well as the doctrinal one: every component below is
+	// now the real thing, and the real forger spends Voyage credit while the real replayManager
+	// provisions Docker. A caller that has not said where its schema blocks are to be written has
+	// not asked for a build, and must never get as far as either.
+	if (!standardsDatabase || typeof standardsDatabase.saveBlock !== 'function') {
+		callback(
+			`graphBuilder build: a standardsDatabase is REQUIRED in deps and has no default. Every ` +
+				`schema block is written THROUGH to the store as it is harvested, so a build with ` +
+				`nowhere to write is a build that silently loses everything it made.`,
+		);
+		return;
+	}
+	if (isBlank(recipe && recipe.recipeName)) {
+		callback(
+			`graphBuilder build: the recipe has no recipeName. It names the manifest this build ` +
+				`composes, and a manifest nobody can name is a manifest nobody can find again.`,
+		);
+		return;
+	}
+	if (isBlank(recipe.description)) {
+		callback(
+			`graphBuilder build: recipe '${recipe.recipeName}' has no description. The manifest ` +
+				`REQUIRES one — a membership of sha256 addresses is unreadable, and the description ` +
+				`is what tells the next person whether this is the graph they wanted. Add a ` +
+				`"description" to the recipe.`,
+		);
+		return;
+	}
 
 	const forger = components.forger();
 	const replay = components.replayManager();
 	const bridgeMaker = components.bridgeMaker();
-	const manifest = components.manifestEditor().init(recipe.recipeName, recipe);
+	const manifest = components.manifestEditor().init({
+		name: recipe.recipeName,
+		description: recipe.description,
+		recipe,
+		store: standardsDatabase,
+	});
 
 	const standards = Array.isArray(recipe.standards) ? recipe.standards : [];
 	const hubs = Array.isArray(recipe.hubs) ? recipe.hubs : [];
@@ -75,143 +138,266 @@ const build = (recipe, deps, callback) => {
 	const hubStdSet = new Set(hubs.map((h) => String(h.standard).toLowerCase()));
 
 	// ---- Phase A: forge each standardBase (+ hub block when the standard is a hub) ----
-	const phaseA = (done) => {
-		eachSeries(
-			standards,
-			(std, cb) => {
-				replay.create({ purpose: 'forge' }, (e1, workingGraph) => {
-					if (e1) return cb(`create(forge) for ${std.token}: ${e1}`);
-					forger.forge(
-						{ standard: std.token, version: std.version },
-						(e2, forgeReport) => {
-							if (e2) return cb(`forge ${std.token}: ${e2}`);
-							// the forger produced; replayManager loads. The label the harvest will
-							// select on is the label init stamps — handed down, not hoped for.
-							replay.init(
-								{
-									inGraph: workingGraph,
-									nodeEdges: forgeReport.nodeEdges,
-									applyLabels: [BASE_GRAPH_LABEL],
-									sourceLabel: `nodeEdges from forge bundle '${std.token}'`,
-								},
-								(eInit) => {
-							if (eInit) return cb(`init ${std.token}: ${eInit}`);
-							replay.harvest(
-								{
-									inGraph: workingGraph,
-									selectionLabels: [BASE_GRAPH_LABEL],
-									header: { blockType: 'standardBase', standardKey: std.token, version: std.version },
-								},
-								(e3, block) => {
-								if (e3) return cb(`harvest standardBase ${std.token}: ${e3}`);
-								manifest.add(standardKey(std), 'standardBase', block.blockId);
-								xLog.status(
-									`  [A] forge ${standardKey(std)} -> standardBase ${block.blockId}`,
-								);
-								const afterHub = (eh) => {
-									if (eh) return cb(eh);
-									replay.delete(workingGraph, (e5) => cb(e5 || ''));
-								};
-								if (!hubStdSet.has(String(std.token).toLowerCase())) {
-									afterHub('');
-									return;
-								}
-								replay.harvest(
-									{
-										inGraph: workingGraph,
-										selectionLabels: [HUB_LABEL],
-										header: {
-											blockType: 'hub',
-											standardKey: std.token,
-											version: std.version,
-										},
-									},
-									(e4, hubBlock) => {
-										if (e4) return afterHub(`harvest hub ${std.token}: ${e4}`);
-										manifest.add(standardKey(std), 'hub', hubBlock.blockId);
-										xLog.status(
-											`  [B] hub block ${std.token} -> ${hubBlock.blockId}`,
-										);
-										afterHub('');
-									},
-								);
-								},
-							);
-						},
-					);
-						},
-					);
-				});
-			},
-			done,
-		);
-	};
+	// The forge runs BEFORE the graph is provisioned (targetArchitectureDesign §4.4). A forge
+	// bundle never sees, needs or wants a graph, so provisioning one first would spend a container
+	// on material that may not exist — and a standard with no forge bundle now fails before any
+	// docker command is attempted.
+	const forgeOneStandard = (std, done) => {
+		const subjectRefId = standardKey(std);
+		const taskList = new taskListPlus();
 
-	// ---- Phase C: bridges (materialize dep graph, run bridge, harvest labeled relationships) ----
-	const phaseC = (done) => {
-		eachSeries(
-			bridges,
-			(bridge, cb) => {
-				replay.create(
-					{ purpose: 'dependencyGraph', dependencies: bridge.dependencies },
-					(e1, depGraph) => {
-						if (e1) return cb(`create(dep) ${pairKey(bridge)}: ${e1}`);
-						bridgeMaker.run(
-							{
-								inGraph: depGraph,
-								mapper: bridge.mapper || 'defaultSemantic',
-								applyLabel: RELATION_LABEL,
-							},
-							(e2) => {
-								if (e2) return cb(`bridge ${pairKey(bridge)}: ${e2}`);
-								replay.harvest(
-									{
-										inGraph: depGraph,
-										selectionLabels: [RELATION_LABEL],
-										header: {
-											blockType: 'relationship',
-											standardKey: pairKey(bridge),
-										},
-									},
-									(e3, relBlock) => {
-										if (e3) return cb(`harvest relationships ${pairKey(bridge)}: ${e3}`);
-										manifest.add(pairKey(bridge), 'relationship', relBlock.blockId);
-										xLog.status(
-											`  [C] bridge ${pairKey(bridge)} (mapper=${
-												bridge.mapper || 'defaultSemantic'
-											}) -> relationship ${relBlock.blockId}`,
-										);
-										replay.delete(depGraph, (e4) => cb(e4 || ''));
-									},
-								);
-							},
-						);
+		taskList.push((args, next) => {
+			forger.forge({ standard: std.token, version: std.version }, (err, forgeReport) => {
+				next(err ? `forge ${std.token}: ${err}` : '', { ...args, forgeReport });
+			});
+		});
+
+		taskList.push((args, next) => {
+			replay.create({ purpose: 'forge' }, (err, workingGraph) => {
+				next(err ? `create(forge) for ${std.token}: ${err}` : '', { ...args, workingGraph });
+			});
+		});
+
+		// the forger produced; replayManager loads. The label the harvest will select on is the
+		// label init stamps — handed down, not hoped for.
+		taskList.push((args, next) => {
+			replay.init(
+				{
+					inGraph: args.workingGraph,
+					nodeEdges: args.forgeReport.nodeEdges,
+					applyLabels: [BASE_GRAPH_LABEL],
+					sourceLabel: `nodeEdges from forge bundle '${std.token}'`,
+				},
+				(err) => next(err ? `init ${std.token}: ${err}` : '', args),
+			);
+		});
+
+		taskList.push((args, next) => {
+			replay.harvest(
+				{
+					inGraph: args.workingGraph,
+					selectionLabels: [BASE_GRAPH_LABEL],
+					header: {
+						blockType: 'standardBase',
+						standardKey: std.token,
+						version: std.version,
+					},
+				},
+				(err, schemaBlock) => {
+					next(err ? `harvest standardBase ${std.token}: ${err}` : '', { ...args, schemaBlock });
+				},
+			);
+		});
+
+		// add takes the harvested SCHEMA BLOCK, not an id: manifestEditor owns storing, and it
+		// re-derives the content address from the text before writing, so a block cannot enter the
+		// store under an address that does not describe it.
+		taskList.push((args, next) => {
+			manifest.add(
+				{
+					subjectRefId,
+					kind: 'standardBase',
+					description: `standardBase schema block for ${subjectRefId}, forged by recipe '${recipe.recipeName}'`,
+					schemaBlock: args.schemaBlock,
+				},
+				(err, addReport) => {
+					if (err) {
+						next(`add standardBase ${subjectRefId}: ${err}`);
+						return;
+					}
+					xLog.status(
+						`  [A] forge ${subjectRefId} -> standardBase ${addReport.schemaBlockRefId}`,
+					);
+					next('', args);
+				},
+			);
+		});
+
+		// A hub emits a SECOND schema block from the same working graph (§2). Deriving that block
+		// from the harvested base — forgeHub — is deferred with the rest of the hub step; what is
+		// here is the harvest-and-record half, speaking the declared contract like everything else.
+		if (hubStdSet.has(String(std.token).toLowerCase())) {
+			taskList.push((args, next) => {
+				replay.harvest(
+					{
+						inGraph: args.workingGraph,
+						selectionLabels: [HUB_LABEL],
+						header: {
+							blockType: 'hub',
+							standardKey: std.token,
+							version: std.version,
+						},
+					},
+					(err, hubSchemaBlock) => {
+						next(err ? `harvest hub ${std.token}: ${err}` : '', { ...args, hubSchemaBlock });
 					},
 				);
-			},
-			done,
-		);
+			});
+
+			taskList.push((args, next) => {
+				manifest.add(
+					{
+						subjectRefId,
+						kind: 'hub',
+						description: `hub reference schema block for ${subjectRefId}, from recipe '${recipe.recipeName}'`,
+						schemaBlock: args.hubSchemaBlock,
+					},
+					(err, addReport) => {
+						if (err) {
+							next(`add hub ${subjectRefId}: ${err}`);
+							return;
+						}
+						xLog.status(`  [B] hub block ${std.token} -> ${addReport.schemaBlockRefId}`);
+						next('', args);
+					},
+				);
+			});
+		}
+
+		taskList.push((args, next) => {
+			replay.delete(args.workingGraph, (err) => next(err || '', args));
+		});
+
+		pipeRunner(taskList.getList(), {}, (err) => done(err || ''));
 	};
 
-	phaseA((eA) => {
-		if (eA) return callback(`phase A (forge) failed: ${eA}`);
-		phaseC((eC) => {
-			if (eC) return callback(`phase C (bridge) failed: ${eC}`);
-			const manifestId = manifest.id();
-			xLog.status(
-				`  [compose] manifest ${manifestId} -- ${manifest.members().length} members`,
-			);
-			replay.create({ purpose: 'materialize', manifestId }, (eM, boltUrl) => {
-				if (eM) return callback(`materialize failed: ${eM}`);
-				xLog.status(`  [materialize] -> ${boltUrl}`);
-				callback('', {
-					manifestId,
-					boltUrl,
-					memberCount: manifest.members().length,
-				});
+	const phaseA = (done) => eachSeries(standards, forgeOneStandard, done);
+
+	// ---- Phase C: bridges (materialize dep graph, run bridge, harvest labeled relationships) ----
+	const bridgeOnePairing = (bridge, done) => {
+		const subjectRefId = pairKey(bridge);
+		const mapper = bridge.mapper || 'defaultSemantic';
+		const taskList = new taskListPlus();
+
+		// create means "an empty graph", always. The dependency schema blocks go IN through init's
+		// RESTORATION payload once dependency resolution lands with the rest of Phase C.
+		taskList.push((args, next) => {
+			replay.create({ purpose: 'dependencyGraph' }, (err, depGraph) => {
+				next(err ? `create(dep) ${subjectRefId}: ${err}` : '', { ...args, depGraph });
 			});
+		});
+
+		taskList.push((args, next) => {
+			bridgeMaker.run(
+				{ inGraph: args.depGraph, mapper, applyLabel: RELATION_LABEL },
+				(err) => next(err ? `bridge ${subjectRefId}: ${err}` : '', args),
+			);
+		});
+
+		taskList.push((args, next) => {
+			replay.harvest(
+				{
+					inGraph: args.depGraph,
+					selectionLabels: [RELATION_LABEL],
+					header: { blockType: 'relationship', standardKey: subjectRefId },
+				},
+				(err, schemaBlock) => {
+					next(err ? `harvest relationships ${subjectRefId}: ${err}` : '', {
+						...args,
+						schemaBlock,
+					});
+				},
+			);
+		});
+
+		taskList.push((args, next) => {
+			manifest.add(
+				{
+					subjectRefId,
+					kind: 'relationship',
+					description: `relationship schema block for ${subjectRefId}, bridged by mapper '${mapper}' from recipe '${recipe.recipeName}'`,
+					schemaBlock: args.schemaBlock,
+				},
+				(err, addReport) => {
+					if (err) {
+						next(`add relationship ${subjectRefId}: ${err}`);
+						return;
+					}
+					xLog.status(
+						`  [C] bridge ${subjectRefId} (mapper=${mapper}) -> relationship ${addReport.schemaBlockRefId}`,
+					);
+					next('', args);
+				},
+			);
+		});
+
+		taskList.push((args, next) => {
+			replay.delete(args.depGraph, (err) => next(err || '', args));
+		});
+
+		pipeRunner(taskList.getList(), {}, (err) => done(err || ''));
+	};
+
+	const phaseC = (done) => eachSeries(bridges, bridgeOnePairing, done);
+
+	// ---- Finish: compose the manifest, then materialize the eval golden ----
+	const composeAndMaterialize = () => {
+		const memberCount = manifest.members().length;
+
+		// refId() REFUSES an empty membership by throwing, and it is right to: the address of an
+		// empty membership is a constant every empty manifest would share. The orchestrator answers
+		// for its own recipe rather than letting that throw escape a callback-shaped API.
+		if (memberCount === 0) {
+			callback(
+				`compose failed: recipe '${recipe.recipeName}' produced no schema blocks, so there is ` +
+					`no manifest to address. A build that materializes nothing and reports success is ` +
+					`the failure this refuses to be.`,
+			);
+			return;
+		}
+
+		const manifestId = manifest.refId();
+		xLog.status(`  [compose] manifest ${manifestId} -- ${memberCount} members`);
+
+		manifest.schemaBlocks((blocksError, resolvedSchemaBlocks) => {
+			if (blocksError) {
+				callback(`compose failed: ${blocksError}`);
+				return;
+			}
+			replay.create({ purpose: 'materialize' }, (createError, goldEval) => {
+				if (createError) {
+					callback(`materialize failed: creating the eval golden: ${createError}`);
+					return;
+				}
+				// The eval golden is filled through init's RESTORATION payload — no applyLabels, which
+				// init refuses on that path: a harvested block already carries the labels stamped when
+				// its material was created, and stamping more would make the block and the graph
+				// restored from it disagree.
+				replay.init(
+					{ inGraph: goldEval, schemaBlocks: resolvedSchemaBlocks },
+					(initError) => {
+						if (initError) {
+							callback(
+								`materialize failed: loading ${resolvedSchemaBlocks.length} schema block(s): ${initError}`,
+							);
+							return;
+						}
+						xLog.status(`  [materialize] -> ${goldEval.boltUrl}`);
+						// NOT deleted — this graph is the product.
+						callback('', { manifestId, boltUrl: goldEval.boltUrl, memberCount });
+					},
+				);
+			});
+		});
+	};
+
+	phaseA((phaseAError) => {
+		if (phaseAError) {
+			callback(`phase A (forge) failed: ${phaseAError}`);
+			return;
+		}
+		phaseC((phaseCError) => {
+			if (phaseCError) {
+				callback(`phase C (bridge) failed: ${phaseCError}`);
+				return;
+			}
+			composeAndMaterialize();
 		});
 	});
 };
 
 module.exports = { build };
+// exported so test-interfaces can assert the orchestrator's DEFAULTS are the real modules
+// themselves — the gate that replaces "the stub set conforms too", which passed for a year while
+// the arguments drifted underneath it.
+module.exports.defaultComponents = defaultComponents;

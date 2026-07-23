@@ -19,13 +19,12 @@
 //     delete(handle, callback)    -> ('')           removes the container; DEV_* only
 //   }
 //
-// TODAY'S SCOPE: create/delete are REAL — they provision and destroy throwaway DEV_* Neo4j
-// containers so the forger has a graph to write into (the §4 seam: `g = replayManager.create();
-// thisStandard.forge(g)`). extract — harvesting a schemaBlock OUT of a graph, the fidelity-
-// critical reversal (punch item 24) — is its own deliberate milestone; until then it FAILS
-// HONESTLY rather than minting a fake block ref. The stub-era placeholder behaviors live in
-// graph-builder/lib/stub-components.js, which the -build pipeline uses until every component
-// is real.
+// TODAY'S SCOPE: all four verbs are REAL. create/delete provision and destroy throwaway DEV_*
+// Neo4j containers; init loads either payload through the shared write path; harvest is the
+// fidelity-critical reversal (punch item 24) and is the ONLY place a schema block is born. The
+// -build orchestrator drives this module directly as of 2026-07-23 — the stub-era placeholder
+// behaviors in graph-builder/lib/stub-components.js are DELETED, along with the file, because a
+// second set of implementations turned out to be a second contract that drifted.
 //
 // Provisioning mechanics (image, port-pair allocation, auth env, readiness = bolt TCP + an
 // authenticated cypher round-trip) are carried from the incumbent instance-lifecycle — MINUS
