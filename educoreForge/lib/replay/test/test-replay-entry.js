@@ -42,8 +42,8 @@ require('../../../test/testLib/testAppStartup')({ moduleName, helpText: helpText
 
 const harness = require('../../../test/testLib/harness')(moduleName);
 
-const { replay } = require('../replay-engine');
-const replayBlock = require('../replay-block');
+const { replay } = require('../replay-engine')();
+const replayBlock = require('../replay-block')();
 
 // deliberately unreachable: port 1 is not something we will ever be listening on
 const NOWHERE = { boltUri: 'bolt://localhost:1', password: 'unused' };

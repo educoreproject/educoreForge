@@ -62,7 +62,7 @@ const neo4j = require('neo4j-driver');
 const replayManagerModule = require('../replayManager');
 const replayManager = replayManagerModule();
 const forgerModule = require('../../forger/forger');
-const { shapeForgedGraph } = require('../../forger/lib/shape-forged-graph');
+const { shapeForgedGraph } = require('../../forger/lib/shape-forged-graph')();
 
 const BASE_GRAPH_LABEL = 'StandardBase';
 const STANDARD = 'lif';

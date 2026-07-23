@@ -42,7 +42,7 @@ const { pipeRunner, taskListPlus } = new require('qtools-asynchronous-pipe-plus'
 
 // tree-root lib/ (five levels up: replay-manager -> apps -> graph-builder -> apps -> root)
 const TREE_LIB = path.join(__dirname, '..', '..', '..', '..', 'lib');
-const replayEngine = require(path.join(TREE_LIB, 'replay', 'replay-engine'));
+const replayEngine = require(path.join(TREE_LIB, 'replay', 'replay-engine'))();
 const contentAddress = require(path.join(TREE_LIB, 'content-address', 'content-address'))();
 
 // The provisioning knobs live in graphBuilder.ini, [replay-manager] section: neo4jImage,

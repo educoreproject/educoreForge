@@ -73,8 +73,8 @@ const { xLog } = process.global;
 const replayManagerModule = require('../replayManager');
 const replayManager = replayManagerModule();
 const forgerModule = require('../../forger/forger');
-const { shapeForgedGraph } = require('../../forger/lib/shape-forged-graph');
-const { buildStandardBlock } = require('../../forger/lib/standard-block');
+const { shapeForgedGraph } = require('../../forger/lib/shape-forged-graph')();
+const { buildStandardBlock } = require('../../forger/lib/standard-block')();
 
 const TREE_LIB = path.join(__dirname, '..', '..', '..', '..', '..', 'lib');
 

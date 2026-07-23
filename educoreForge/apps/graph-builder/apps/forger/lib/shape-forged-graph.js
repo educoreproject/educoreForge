@@ -30,6 +30,13 @@
 // straight through would silently store MORE precision than the old path did and change every
 // vector in the graph. Math.fround performs exactly the narrowing the codec performed, so removing
 // the serialization round trip does not quietly change the data that survives it.
+const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
+
+// START OF moduleFunction() ============================================================
+
+const moduleFunction =
+	({ moduleName } = {}) =>
+	(unusedDeps = {}) => {
 const narrowToFloat32 = (floatList) => floatList.map((oneValue) => Math.fround(oneValue));
 
 const shapeForgedGraph = ({ forged, declaredEmbeddingDims }) => {
@@ -154,4 +161,9 @@ const shapeForgedGraph = ({ forged, declaredEmbeddingDims }) => {
 	return { nodes, edges, embeddingDims: dimsSeen };
 };
 
-module.exports = { shapeForgedGraph, narrowToFloat32 };
+return { shapeForgedGraph, narrowToFloat32 };
+};
+
+// END OF moduleFunction() ============================================================
+
+module.exports = moduleFunction({ moduleName });

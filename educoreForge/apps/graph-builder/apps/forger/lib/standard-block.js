@@ -35,7 +35,7 @@ const path = require('path');
 
 // tree-root lib/ (five levels up: forger/lib -> forger -> apps -> graph-builder -> apps -> root)
 const TREE_LIB = path.join(__dirname, '..', '..', '..', '..', '..', 'lib');
-const replayBlock = require(path.join(TREE_LIB, 'replay', 'replay-block'));
+const replayBlock = require(path.join(TREE_LIB, 'replay', 'replay-block'))();
 const { SCHEMA_BLOCK_KIND } = require(path.join(TREE_LIB, 'vocabulary', 'vocabulary'));
 
 // -----
@@ -46,6 +46,13 @@ const { SCHEMA_BLOCK_KIND } = require(path.join(TREE_LIB, 'vocabulary', 'vocabul
 //   refusal — the fidelity gate compares what these two produce, so a silent stamp on either
 //   side weakens exactly the comparison this module exists for.
 
+const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
+
+// START OF moduleFunction() ============================================================
+
+const moduleFunction =
+	({ moduleName } = {}) =>
+	(unusedDeps = {}) => {
 const carriedModelVersion = (forged) => {
 	const embeddedNodes = forged.nodes.filter((oneNode) => oneNode.properties.embedding);
 
@@ -165,4 +172,9 @@ const buildStandardBlock = ({ forged, declaredEmbeddingDims }) => {
 	return { blockText, nodeCount: nodes.length, edgeCount: edges.length };
 };
 
-module.exports = { buildStandardBlock };
+return { buildStandardBlock };
+};
+
+// END OF moduleFunction() ============================================================
+
+module.exports = moduleFunction({ moduleName });

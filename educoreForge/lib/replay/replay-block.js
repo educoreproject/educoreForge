@@ -46,6 +46,13 @@ const { PROVENANCE_TIERS, isValidProvenanceTier } = require('../vocabulary/vocab
 // therefore at float32 precision, NOT double precision — the harness compares embeddings
 // with a float32 tolerance and all other properties exactly.
 
+const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
+
+// START OF moduleFunction() ============================================================
+
+const moduleFunction =
+	({ moduleName } = {}) =>
+	(unusedDeps = {}) => {
 const encodeEmbedding = (floatList) => {
 	if (!Array.isArray(floatList)) {
 		throw new Error('replay-block.encodeEmbedding: expected a number[]');
@@ -282,7 +289,7 @@ const deserializeBlock = (blockText) => {
 	return { header, nodes, edges };
 };
 
-module.exports = {
+return {
 	SERIALIZER_VERSION,
 	PROVENANCE_TIERS,
 	isValidEdgeType,
@@ -296,3 +303,8 @@ module.exports = {
 	serializeBlock,
 	deserializeBlock,
 };
+};
+
+// END OF moduleFunction() ============================================================
+
+module.exports = moduleFunction({ moduleName });

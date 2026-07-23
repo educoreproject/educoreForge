@@ -41,7 +41,7 @@
 const fs = require('fs');
 const neo4j = require('neo4j-driver');
 const { pipeRunner, taskListPlus } = new (require('qtools-asynchronous-pipe-plus'))();
-const replayBlock = require('./replay-block');
+const replayBlock = require('./replay-block')();
 const contentAddress = require('../content-address/content-address')();
 
 const BATCH_SIZE = 500;
@@ -52,6 +52,13 @@ const NODE_PAGE_SIZE = 2000; // bounds driver memory: embedded nodes carry 1024 
 // HELPERS — pure
 // =====================================================================
 
+const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
+
+// START OF moduleFunction() ============================================================
+
+const moduleFunction =
+	({ moduleName } = {}) =>
+	(unusedDeps = {}) => {
 const batchArray = (arr, size) => {
 	const out = [];
 	for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
@@ -1292,7 +1299,7 @@ const replay = ({ manifest, boltUri, password, graphName, storeResolver }, callb
 	);
 };
 
-module.exports = {
+return {
 	// HARVEST is the word (targetArchitectureDesign vocabulary): the operation takes a schema block
 	// OUT of a graph and changes nothing. The old name `extractBlock` is deliberately NOT aliased —
 	// a second vocabulary surviving one layer down is exactly what the rename exists to prevent.
@@ -1308,3 +1315,8 @@ module.exports = {
 	resolveNodeVectors,
 	kernelSupportsVectorIndex,
 };
+};
+
+// END OF moduleFunction() ============================================================
+
+module.exports = moduleFunction({ moduleName });

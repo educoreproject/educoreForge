@@ -64,7 +64,7 @@ const TREE_LIB = path.join(TREE_ROOT, 'lib');
 const BASELINE_DIR = path.join(TREE_ROOT, '.baseline_072226');
 
 const forgerModule = require('../forger');
-const { buildStandardBlock } = require('../lib/standard-block');
+const { buildStandardBlock } = require('../lib/standard-block')();
 
 // the ONE reading of the spend knob, shared with every other entry point that takes it
 const { requireBooleanValue } = require('../../../../../test/testLib/require-boolean-value');

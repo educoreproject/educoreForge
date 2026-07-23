@@ -66,7 +66,7 @@ const neo4j = require('neo4j-driver');
 const replayManagerModule = require('../replayManager');
 const replayManager = replayManagerModule();
 const forgerModule = require('../../forger/forger');
-const { shapeForgedGraph } = require('../../forger/lib/shape-forged-graph');
+const { shapeForgedGraph } = require('../../forger/lib/shape-forged-graph')();
 
 const TREE_LIB = path.join(__dirname, '..', '..', '..', '..', '..', 'lib');
 

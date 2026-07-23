@@ -44,9 +44,9 @@ require('../../../test/testLib/testAppStartup')({ moduleName, helpText: helpText
 
 const harness = require('../../../test/testLib/harness')(moduleName);
 
-const replayEngine = require('../replay-engine');
+const replayEngine = require('../replay-engine')();
 const { validateShapedGraph, writeShapedGraph } = replayEngine;
-const { PROVENANCE_TIERS } = require('../replay-block');
+const { PROVENANCE_TIERS } = require('../replay-block')();
 
 const GOOD_TIER = PROVENANCE_TIERS[0];
 

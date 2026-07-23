@@ -35,8 +35,8 @@ const harness = require('../../../../../test/testLib/harness')(moduleName);
 
 const forgerModule = require('../forger');
 const { resolveBundle } = forgerModule;
-const { buildStandardBlock } = require('../lib/standard-block');
-const { shapeForgedGraph } = require('../lib/shape-forged-graph');
+const { buildStandardBlock } = require('../lib/standard-block')();
+const { shapeForgedGraph } = require('../lib/shape-forged-graph')();
 
 const fs = require('fs');
 const path = require('path');

@@ -67,7 +67,7 @@ const fs = require('fs');
 const configFileProcessor = require('qtools-config-file-processor');
 const { pipeRunner, taskListPlus } = new require('qtools-asynchronous-pipe-plus')();
 
-const { shapeForgedGraph } = require('./lib/shape-forged-graph');
+const { shapeForgedGraph } = require('./lib/shape-forged-graph')();
 
 // tree root (educoreForge/) is four levels up: forger -> apps -> graph-builder -> apps -> root
 const TREE_ROOT = path.join(__dirname, '..', '..', '..', '..');
