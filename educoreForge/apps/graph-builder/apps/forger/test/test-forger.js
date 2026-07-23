@@ -143,6 +143,7 @@ harness.section('BUNDLE REGISTRATION — a bundle that registers nothing is refu
 //   Returns whatever resolveBundle answered. The directory never outlives the call.
 
 const FORGES_DIR_FOR_TEST = path.join(__dirname, '..', '..', '..', '..', '..', 'forges');
+const FORGER_PATH_EARLY = path.join(__dirname, '..', 'forger.js');
 
 const withTempBundle = (bundleName, descriptorText) => {
 	const bundleDir = path.join(FORGES_DIR_FOR_TEST, bundleName);
@@ -232,6 +233,53 @@ harness.equal(
 	'  while the REAL lif bundle still resolves — the second positive control',
 	resolveBundle({ standard: 'lif' }).error || '',
 	'',
+);
+
+// -----
+// THE DECLARED NAME. `standardName: descriptor.standardName || standard` silently substituted the
+// lowercase DIRECTORY TOKEN for the name the descriptor was supposed to declare: delete
+// `standardName=LIF` and every report, every block header naming path and every node description
+// says 'lif'. Undocumented anywhere, and resolveBundle already refuses a missing entryModule for
+// the identical class of fault — the descriptor is the bundle's whole registration (audit B1,
+// forger.js:135).
+
+const NO_NAME_BUNDLE = 'zztestonlynostandardname';
+const BLANK_NAME_BUNDLE = 'zztestonlyblankstandardname';
+
+harness.rejects(
+	'a descriptor that declares NO standardName is refused, naming the bundle and the file',
+	bundleErrors(
+		withTempBundle(NO_NAME_BUNDLE, '[parserDescriptor]\nentryModule=forgeZz.js\n'),
+	),
+	/standardName[\s\S]*parserDescriptor\.ini/,
+);
+
+harness.rejects(
+	'a BLANK standardName is refused too — a blank name is not a name',
+	bundleErrors(
+		withTempBundle(
+			BLANK_NAME_BUNDLE,
+			'[parserDescriptor]\nstandardName=   \nentryModule=forgeZz.js\n',
+		),
+	),
+	/standardName/,
+);
+
+harness.equal(
+	'the REAL lif bundle still answers its DECLARED name, not its directory token',
+	resolveBundle({ standard: 'lif' }).standardName,
+	'LIF',
+);
+harness.equal(
+	'  and the real ceds bundle likewise — the positive controls',
+	resolveBundle({ standard: 'ceds' }).standardName,
+	'CEDS',
+);
+
+harness.ok(
+	'no `standardName || standard` fallthrough survives in forger.js',
+	!/standardName:\s*descriptor\.standardName\s*\|\|/.test(codeOf(FORGER_PATH_EARLY)),
+	(codeOf(FORGER_PATH_EARLY).match(/.*standardName.*\|\|.*/g) || []).join('\n'),
 );
 
 harness.ok(

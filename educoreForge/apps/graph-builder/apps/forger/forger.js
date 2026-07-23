@@ -185,6 +185,26 @@ const resolveBundle = ({ standard }) => {
 			error: `forger: forge bundle '${standard}' declares no entryModule in ${descriptorPath}`,
 		};
 	}
+	// THE DECLARED NAME IS DECLARED. `descriptor.standardName || standard` substituted the
+	// lowercase DIRECTORY TOKEN when the key was missing, so deleting `standardName=LIF` turned
+	// every report, every block-header naming path and every node description from 'LIF' to 'lif'
+	// with nothing said. The descriptor IS the bundle's whole registration, and entryModule two
+	// lines above already gets exactly this treatment — one rule for the registration, not two
+	// (polyArch2 §6).
+	if (
+		descriptor.standardName === undefined ||
+		descriptor.standardName === null ||
+		`${descriptor.standardName}`.trim() === ''
+	) {
+		return {
+			error:
+				`forger: forge bundle '${standard}' declares ` +
+				`${descriptor.standardName === undefined ? 'no' : 'a BLANK'} standardName in ` +
+				`${descriptorPath}. It is the name this standard is CALLED — in reports, in block ` +
+				`headers and in node descriptions — and the directory token '${standard}' is not a ` +
+				`substitute for it. Add standardName= to the [parserDescriptor] section.`,
+		};
+	}
 	// canonicalize defaultSnapshot against the ENUMERATED snapshot directory names:
 	// qtools-config-file-processor coerces `01` to the NUMBER 1 (code fact, same hazard the
 	// incumbent standard-discovery documents), so the directory name is authoritative — match
@@ -212,7 +232,7 @@ const resolveBundle = ({ standard }) => {
 	}
 	return {
 		bundleDir,
-		standardName: descriptor.standardName || standard,
+		standardName: `${descriptor.standardName}`.trim(),
 		entryPath: path.join(bundleDir, descriptor.entryModule),
 		defaultSource,
 	};
