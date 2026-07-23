@@ -6,9 +6,10 @@
 // Every contract here has at least two implementations (a real one and a stub, and for
 // ForgeBundle, eighteen incumbents) — exactly the situation polyArch2 says demands a formally
 // declared interface rather than prose. The JSDoc blocks are the declarations editors and
-// static analysis consume; COMPONENT_SHAPES at the bottom is the same contract as a
-// runtime-checkable manifest, enforced by test-interfaces.js so stub/real drift turns a suite
-// red instead of surfacing mid-build.
+// static analysis consume; COMPONENT_SHAPES at the bottom is the same contract as DATA, enforced
+// by test-interfaces.js. What that enforcement covers, and what it does not, is stated exactly
+// where COMPONENT_SHAPES is declared — an interface file that overstates its own enforcement is
+// worse than one that admits its limits, because the overstatement is believed.
 //
 // House async style everywhere: callback(errString, result) — err is '' on success, a
 // human-readable string on failure. No exceptions for control flow, no Promises surfaced.
@@ -126,15 +127,18 @@
  * with them inline — so their refusals are throws; everything that reaches the store is
  * callback-shaped.
  *
- * @property {function({name: string, description: string, recipe?: Object, store: Object}):
+ * @property {function({name: string, description: string, recipe?: Object, recipeText?: string,
+ *            store: Object}):
  *           {add: function({subjectRefId: string, kind: string, description: string,
  *            schemaBlock: Object}, function(string, Object=): void): void,
  *            members: function(): Array, refId: function(): string,
  *            schemaBlocks: function(function(string, Array=): void): void,
  *            save: function(function(string, Object=): void): void,
- *            recipeName: function(): string}} init
+ *            recipeName: function(): string, recipeRefId: function(): string}} init
  * @property {function({store: Object, manifestRefId: string},
  *           function(string, Object=): void): void} open
+ *           hands back a manifest handle of the SAME shape init returns — one factory serves both
+ *           doors — with `add` disabled.
  */
 
 /**
@@ -166,16 +170,133 @@
  */
 
 // ---------------------------------------------------------------------
-// COMPONENT_SHAPES — the same contract, runtime-checkable. test-interfaces.js asserts every
-// component implementation (real AND stub) exposes EXACTLY these methods, so a drifted or
-// half-implemented component turns the suite red. Keys are build.js's component names.
+// COMPONENT_SHAPES — the same contract, as DATA. Keys are build.js's component names; each names
+// its methods; each method declares its shape in three fields and no more. A registry of data,
+// deliberately not a type system.
+//
+// WHY THIS EXISTS IN THIS FORM. Until 2026-07-23 this manifest was a list of method NAMES, and
+// test-interfaces.js checked that each name existed and was a function. Nothing else. That is how
+// build.js came to call manifest.add(key, kind, blockId) positionally against an interface
+// declaring one named-argument object, to call id() where the contract says refId(), and to read
+// a GraphHandle as a bolt url — for weeks, with the interface gate reporting conformance the
+// whole time. A gate that checks only names certifies only names.
+//
+// EACH FIELD
+//   arity       the exact Function.prototype.length the contract requires. This is the field that
+//               catches positional drift: add({...}, callback) has arity 2 and
+//               add(key, kind, blockId) has arity 3, and no amount of correct naming hides it.
+//   argKeys     the REQUIRED keys of the ONE named-argument object. [] means the argument object
+//               exists but every key in it is optional; null means the method takes no argument
+//               object at all (delete takes a GraphHandle positionally, by contract; members()
+//               takes nothing).
+//   resultKeys  the REQUIRED keys of the value handed to the callback — or returned directly, for
+//               a synchronous verb. null means the contract names no result shape.
+//   resultShape (in place of resultKeys) a nested method registry, when the result is itself a
+//               component-shaped handle. Its method names ARE the required result keys, and each
+//               is checked by these same three fields.
+//
+// WHAT test-interfaces.js ACTUALLY CHECKS, exactly — no more than this:
+//   1. METHOD SET — every implementation exposes exactly the declared methods, each a function.
+//      Nothing missing, nothing extra.
+//   2. ARITY — `fn.length` equals the declared arity, for every method of every implementation
+//      including the nested manifest handle.
+//   3. argKeys — every declared key is visibly READ off the argument object in the method's own
+//      source: destructured from it (`const {inGraph} = spec`) or accessed on it (`spec.inGraph`).
+//      This is a source-text check, so it can pass for the wrong reason (a key name that appears
+//      but is never used); it cannot pass a signature that never mentions the key at all, which
+//      is what positional drift looks like.
+//   4. resultKeys / resultShape — checked against the value the method ACTUALLY PRODUCES, which
+//      requires invoking it. The suite may not spawn Docker, call Voyage, or open a database, so
+//      this check reaches only what can be invoked under that line: bridgeMaker.run,
+//      manifestEditor.init/open and the manifest handle (against an in-memory store double), and
+//      every drift fixture. forger.forge and replayManager.create/init/harvest/delete are NOT
+//      invoked, and their declared result shapes are therefore enforced against fixtures standing
+//      in their place and nowhere else. That is a real gap in the gate, declared here and by
+//      harness.note in the suite rather than left to be discovered.
+//
+// Types are NOT checked. A declared key holding the wrong sort of value passes. The declaration
+// is a shape, not a type, and this comment is the whole of what it promises.
 // ---------------------------------------------------------------------
 
-const COMPONENT_SHAPES = {
-	forger: ['forge'],
-	replayManager: ['create', 'init', 'harvest', 'delete'],
-	bridgeMaker: ['run'],
-	manifestEditor: ['init', 'open'],
+// The manifest handle — the result of BOTH manifestEditor doors, because one factory serves both.
+const MANIFEST_HANDLE_SHAPE = {
+	add: {
+		arity: 2,
+		argKeys: ['subjectRefId', 'kind', 'description', 'schemaBlock'],
+		resultKeys: ['memberCount', 'schemaBlockRefId', 'alreadyPresent'],
+	},
+	members: { arity: 0, argKeys: null, resultKeys: null },
+	refId: { arity: 0, argKeys: null, resultKeys: null },
+	schemaBlocks: { arity: 1, argKeys: null, resultKeys: null },
+	save: {
+		arity: 1,
+		argKeys: null,
+		resultKeys: ['manifestRefId', 'memberCount', 'alreadyPresent'],
+	},
+	recipeName: { arity: 0, argKeys: null, resultKeys: null },
+	recipeRefId: { arity: 0, argKeys: null, resultKeys: null },
 };
 
-module.exports = { COMPONENT_SHAPES };
+const COMPONENT_SHAPES = {
+	forger: {
+		forge: {
+			arity: 2,
+			argKeys: ['standard'],
+			resultKeys: [
+				'standard',
+				'version',
+				'nodeEdges',
+				'nodeCount',
+				'edgeCount',
+				'embedCallCount',
+			],
+		},
+	},
+	replayManager: {
+		// MONOMORPHIC: an empty graph, always. Both spec keys are optional — hence [] rather than
+		// null — and the result is a GraphHandle, which is why a caller reading it as a bolt url
+		// string is a shape violation and not a matter of taste.
+		create: {
+			arity: 2,
+			argKeys: [],
+			resultKeys: [
+				'graphName',
+				'containerName',
+				'boltUrl',
+				'password',
+				'boltPort',
+				'httpPort',
+			],
+		},
+		init: { arity: 2, argKeys: ['inGraph'], resultKeys: null },
+		harvest: {
+			arity: 2,
+			argKeys: ['inGraph', 'selectionLabels', 'header'],
+			resultKeys: ['blockText', 'blockId', 'nodeCount', 'edgeCount', 'stableIdCoverage'],
+		},
+		// takes a GraphHandle positionally, by contract — no argument object to declare keys of.
+		delete: { arity: 2, argKeys: null, resultKeys: null },
+	},
+	bridgeMaker: {
+		run: {
+			arity: 2,
+			argKeys: ['inGraph', 'mapper', 'applyLabel'],
+			resultKeys: ['inGraph', 'mapper', 'applyLabel', 'edgesWritten', 'note'],
+		},
+	},
+	manifestEditor: {
+		// SYNCHRONOUS (arity 1, no callback) — the §4.4 build sequence composes with it inline.
+		init: {
+			arity: 1,
+			argKeys: ['name', 'description', 'store'],
+			resultShape: MANIFEST_HANDLE_SHAPE,
+		},
+		open: {
+			arity: 2,
+			argKeys: ['store', 'manifestRefId'],
+			resultShape: MANIFEST_HANDLE_SHAPE,
+		},
+	},
+};
+
+module.exports = { COMPONENT_SHAPES, MANIFEST_HANDLE_SHAPE };
