@@ -1054,6 +1054,41 @@ const validateShapedGraph = (groups) => {
 };
 // writeShapedGraph — validate, resolve vectors, index, merge, index. The caller owns the session
 // (and closing it); this owns what a safe write IS.
+// -----
+// kernelSupportsVectorIndex — does this Neo4j kernel have the GA CREATE VECTOR INDEX (>= 5.13)?
+//
+//   kernelSupportsVectorIndex(versionString) -> { supported } | { error }
+//
+// `const major = parts[0] || 0; const minor = parts[1] || 0;` read an UNPARSEABLE version
+// (parseInt -> NaN) as 0.0 — "older than 5.13" — and the index was skipped. The skip WAS recorded,
+// but as the wrong fact: "this server is too old" when the truth was "I could not read what this
+// server said". Two different facts producing one behavior, with the report asserting the false
+// one. A version string is external input, and polyArch2 §6 puts a present-but-invalid input in
+// the worst class. It is refused, quoting exactly what the server answered.
+const kernelSupportsVectorIndex = (versionString) => {
+	if (versionString === undefined || versionString === null || `${versionString}`.trim() === '') {
+		return {
+			error:
+				`the server answered no kernel version (dbms.components() returned ` +
+				`${JSON.stringify(versionString)}). Whether the vector index can be built is not a ` +
+				`question to answer by guessing.`,
+		};
+	}
+	const given = `${versionString}`.trim();
+	const parts = given.split('.');
+	if (parts.length < 2 || !/^\d+$/.test(parts[0]) || !/^\d+$/.test(parts[1])) {
+		return {
+			error:
+				`unparseable kernel version '${given}'. A version this module cannot read is NOT ` +
+				`the same fact as a server older than 5.13, and it is not reported as one — the ` +
+				`vector index was neither built nor recorded as skipped-for-age.`,
+		};
+	}
+	const major = Number(parts[0]);
+	const minor = Number(parts[1]);
+	return { supported: major > 5 || (major === 5 && minor >= 13) };
+};
+
 const writeShapedGraph = (
 	{ session, groups, storeResolver, embeddingDims, graphName },
 	callback,
@@ -1140,12 +1175,6 @@ const writeShapedGraph = (
 			next('', { ...args, indexesBuilt });
 			return;
 		}
-		const versionAtLeast513 = (versionString) => {
-			const parts = `${versionString}`.split('.').map((oneSeg) => parseInt(oneSeg, 10));
-			const major = parts[0] || 0;
-			const minor = parts[1] || 0;
-			return major > 5 || (major === 5 && minor >= 13);
-		};
 		const buildVectorIndex = () => {
 			const vectorQuery = `
 				CREATE VECTOR INDEX ${vectorIndex} IF NOT EXISTS
@@ -1168,7 +1197,12 @@ const writeShapedGraph = (
 			.run('CALL dbms.components() YIELD versions RETURN versions[0] AS kernelVersion')
 			.then((result) => {
 				const kernelVersion = result.records[0] && result.records[0].get('kernelVersion');
-				if (versionAtLeast513(kernelVersion)) {
+				const capability = kernelSupportsVectorIndex(kernelVersion);
+				if (capability.error) {
+					next(`phase3 version probe: ${capability.error}`);
+					return;
+				}
+				if (capability.supported) {
 					buildVectorIndex();
 					return;
 				}
@@ -1272,4 +1306,5 @@ module.exports = {
 	putDistinctNodeVectors,
 	buildNodeRow,
 	resolveNodeVectors,
+	kernelSupportsVectorIndex,
 };

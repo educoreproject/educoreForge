@@ -44,7 +44,8 @@ require('../../../test/testLib/testAppStartup')({ moduleName, helpText: helpText
 
 const harness = require('../../../test/testLib/harness')(moduleName);
 
-const { validateShapedGraph, writeShapedGraph } = require('../replay-engine');
+const replayEngine = require('../replay-engine');
+const { validateShapedGraph, writeShapedGraph } = replayEngine;
 const { PROVENANCE_TIERS } = require('../replay-block');
 
 const GOOD_TIER = PROVENANCE_TIERS[0];
@@ -321,6 +322,63 @@ try {
 harness.ok(
 	'RED PROOF: admissible content DOES reach the session (so the refusals above are the guard, not inertness)',
 	sessionWasReached,
+);
+
+// =====================================================================
+harness.section('KERNEL VERSION PROBE — a garbled version is not an old server');
+// =====================================================================
+// `const major = parts[0] || 0; const minor = parts[1] || 0;` read an UNPARSEABLE kernel version
+// (parseInt -> NaN) as version 0.0, i.e. "older than 5.13", and the vector index was skipped. The
+// skip IS recorded — but as the WRONG FACT: "this server is too old" when the truth is "I could
+// not read what this server said". Two different facts, one behavior, and the report asserts the
+// one that is false. polyArch2 §6: a present-but-invalid input is the worse fault (audit B1,
+// replay-engine.js:1145-1146).
+
+const { kernelSupportsVectorIndex } = replayEngine;
+const kernelAnswer = (versionString) =>
+	(kernelSupportsVectorIndex || (() => ({})))(versionString) || {};
+
+harness.equal('5.26.0 supports the vector index — the positive control', kernelAnswer('5.26.0').supported, true);
+harness.equal('5.13.0 is the boundary and supports it', kernelAnswer('5.13.0').supported, true);
+harness.equal('6.0.0 supports it', kernelAnswer('6.0.0').supported, true);
+harness.equal('4.4.0 genuinely does NOT — an honest old server', kernelAnswer('4.4.0').supported, false);
+harness.equal('5.12.0 genuinely does NOT either', kernelAnswer('5.12.0').supported, false);
+
+harness.match(
+	"a GARBLED version ('neo4j-5.26') is REFUSED, quoting it, not filed as an old server",
+	kernelAnswer('neo4j-5.26').error,
+	/neo4j-5\.26/,
+);
+harness.match(
+	"a leading-v version ('v5.26.0') is refused rather than read as 0.0",
+	kernelAnswer('v5.26.0').error,
+	/v5\.26\.0/,
+);
+harness.match(
+	'an EMPTY version string is refused',
+	kernelAnswer('').error,
+	/kernel version/i,
+);
+harness.match(
+	'a version the server did not answer at all is refused',
+	kernelAnswer(null).error,
+	/kernel version/i,
+);
+harness.match(
+	'a MAJOR-only version is refused — a missing minor is not minor 0',
+	kernelAnswer('5').error,
+	/'5'/,
+);
+
+harness.ok(
+	'no `parts[0] || 0` version defaulting survives in replay-engine.js',
+	!/parts\[0\]\s*\|\|/.test(
+		require('fs')
+			.readFileSync(require('path').join(__dirname, '..', 'replay-engine.js'), 'utf8')
+			.split('\n')
+			.filter((oneLine) => !/^\s*(\/\/|\*|\/\*)/.test(oneLine))
+			.join('\n'),
+	),
 );
 
 harness.report();
