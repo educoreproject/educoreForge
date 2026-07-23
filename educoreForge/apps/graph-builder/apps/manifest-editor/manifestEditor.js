@@ -66,9 +66,13 @@ const refIdOfSchemaBlock = (schemaBlock) =>
 
 const isBlank = (value) => typeof value !== 'string' || value.trim() === '';
 
+const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
+
 // START OF moduleFunction() ============================================================
 
-const manifestEditor = () => {
+const moduleFunction =
+	({ moduleName } = {}) =>
+	(unusedDeps = {}) => {
 	// -----
 	// init — compose a NEW manifest. Synchronous; refuses by throwing (see ASYNC STYLE above).
 	//
@@ -404,4 +408,4 @@ function makeManifest({ name, description, recipeName, recipeRefId, store, membe
 
 // END OF moduleFunction() ============================================================
 
-module.exports = manifestEditor;
+module.exports = moduleFunction({ moduleName });

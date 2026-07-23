@@ -460,9 +460,13 @@ const waitForAuthenticatedCypher = (boltUrl, password, deadline, readyTimeoutMs,
 	attempt();
 };
 
+const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
+
 // START OF moduleFunction() ============================================================
 
-const replayManager = () => {
+const moduleFunction =
+	({ moduleName } = {}) =>
+	(unusedDeps = {}) => {
 	// -----
 	// create — provision a throwaway DEV_* Neo4j container; hand back the graph handle. The
 	// credential is generated here and lives ONLY in the handle (no registry, no file). No
@@ -835,7 +839,7 @@ const replayManager = () => {
 
 // END OF moduleFunction() ============================================================
 
-module.exports = replayManager;
+module.exports = moduleFunction({ moduleName });
 module.exports.nameRefusal = nameRefusal;
 module.exports.withAppliedLabels = withAppliedLabels;
 module.exports.schemaBlockTexts = schemaBlockTexts;

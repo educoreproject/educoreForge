@@ -282,9 +282,13 @@ const resolveReportedVersion = ({ bundleVersion, requestedVersion } = {}) => {
 	};
 };
 
+const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
+
 // START OF moduleFunction() ============================================================
 
-const forger = () => {
+const moduleFunction =
+	({ moduleName } = {}) =>
+	(unusedDeps = {}) => {
 	const forge = (spec, callback) => {
 		const { xLog } = process.global;
 		const {
@@ -450,7 +454,7 @@ const forger = () => {
 
 // END OF moduleFunction() ============================================================
 
-module.exports = forger;
+module.exports = moduleFunction({ moduleName });
 module.exports.resolveBundle = resolveBundle;
 module.exports.resolveVoyageConfigPath = resolveVoyageConfigPath;
 module.exports.resolveReportedVersion = resolveReportedVersion;

@@ -13,20 +13,28 @@
 // adjudicator, or a bespoke module) and labels the edges it authors with `label` so replayManager
 // can harvest exactly those. The stub reports a placeholder result.
 
+const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
+
 let seq = 0;
 
-const bridgeMaker = () => {
-	const run = ({ inGraph, mapper, applyLabel }, callback) => {
-		seq += 1;
-		callback('', {
-			inGraph,
-			mapper,
-			applyLabel,
-			edgesWritten: 0,
-			note: `stub bridge #${seq}`,
-		});
-	};
-	return { run };
-};
+// START OF moduleFunction() ============================================================
 
-module.exports = bridgeMaker;
+const moduleFunction =
+	({ moduleName } = {}) =>
+	(unusedDeps = {}) => {
+		const run = ({ inGraph, mapper, applyLabel }, callback) => {
+			seq += 1;
+			callback('', {
+				inGraph,
+				mapper,
+				applyLabel,
+				edgesWritten: 0,
+				note: `stub bridge #${seq}`,
+			});
+		};
+		return { run };
+	};
+
+// END OF moduleFunction() ============================================================
+
+module.exports = moduleFunction({ moduleName });
