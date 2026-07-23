@@ -36,6 +36,21 @@ const harness = require('../../../../../test/testLib/harness')(moduleName);
 const forgerModule = require('../forger');
 const { resolveBundle } = forgerModule;
 const { buildStandardBlock } = require('../lib/standard-block');
+const { shapeForgedGraph } = require('../lib/shape-forged-graph');
+
+const fs = require('fs');
+const path = require('path');
+
+// -----
+// codeOf — a file's source with whole-line comments stripped, so a scan for a surviving in-code
+//   constant is not fooled by prose in the header (and is not defeated by it either).
+
+const codeOf = (filePath) =>
+	fs
+		.readFileSync(filePath, 'utf8')
+		.split('\n')
+		.filter((oneLine) => !/^\s*(\/\/|\*|\/\*)/.test(oneLine))
+		.join('\n');
 
 // =====================================================================
 harness.section('THE GUARD MOVED — the forger has no destination left to refuse');
@@ -202,6 +217,71 @@ harness.match(
 	'and the default points at voyageEmbedding.ini (the secret stays in its own file)',
 	DEFAULT_VOYAGE_CONFIG_PATH,
 	/voyageEmbedding\.ini$/,
+);
+
+// =====================================================================
+harness.section('SHAPE-FORGED-GRAPH — the model version is CARRIED, never invented');
+// =====================================================================
+// A vector's embeddingModelVersion is what vectorIdForInput hashes: substituting one does not
+// merely behave oddly, it silently changes what every content address means (polyArch2 §6). A
+// bundle that embedded a node without stamping the model that did it is malformed output, and
+// this module already knows how to say so — the ragged-dims refusal below is the pattern.
+
+// -----
+// forgedWith — the smallest bundle output that carries ONE embedded node, so a test can vary
+//   exactly the property under examination and nothing else.
+
+const forgedWith = (embeddingProperties) => ({
+	standardKey: 'lif',
+	stableUriPropertyName: 'lifPath',
+	metadata: { version: '2.0' },
+	nodes: [
+		{
+			stableId: 'lif:embedded',
+			labels: ['ForgedNode', 'LifRoot'],
+			properties: {
+				_id: 'lif:embedded',
+				_source: 'LIF',
+				name: 'LIF',
+				embedding: new Array(1024).fill(0.5),
+				...embeddingProperties,
+			},
+		},
+	],
+	edges: [],
+});
+
+const shapedMissingVersion = shapeForgedGraph({ forged: forgedWith({}) });
+harness.rejects(
+	'an embedded node with NO embeddingModelVersion is refused, naming the offending node',
+	shapedMissingVersion.error ? [shapedMissingVersion.error] : [],
+	/node 'lif:embedded'.*embeddingModelVersion/s,
+);
+
+const shapedBlankVersion = shapeForgedGraph({
+	forged: forgedWith({ embeddingModelVersion: '   ' }),
+});
+harness.rejects(
+	'an embedded node with a BLANK embeddingModelVersion is refused, not normalized',
+	shapedBlankVersion.error ? [shapedBlankVersion.error] : [],
+	/node 'lif:embedded'.*embeddingModelVersion/s,
+);
+
+const shapedConfigured = shapeForgedGraph({
+	forged: forgedWith({ embeddingModelVersion: 'voyage-context-3' }),
+});
+harness.equal(
+	'a CARRIED embeddingModelVersion survives verbatim — the positive control',
+	shapedConfigured.nodes ? shapedConfigured.nodes[0].embeddingModelVersion : shapedConfigured.error,
+	'voyage-context-3',
+);
+
+harness.ok(
+	'no model-version literal survives anywhere in shape-forged-graph.js',
+	!/voyage-[0-9]/.test(codeOf(path.join(__dirname, '..', 'lib', 'shape-forged-graph.js'))),
+	(codeOf(path.join(__dirname, '..', 'lib', 'shape-forged-graph.js')).match(/.*voyage-[0-9].*/g) || []).join(
+		'\n',
+	),
 );
 
 harness.report();

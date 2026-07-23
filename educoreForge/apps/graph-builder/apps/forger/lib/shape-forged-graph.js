@@ -17,7 +17,6 @@
 // PURE: no I/O, no process.global. ({ forged }) -> { nodes, edges, embeddingDims }.
 
 const EMBEDDING_DIMS = 1024;
-const DEFAULT_EMBEDDING_MODEL_VERSION = 'voyage-4-large';
 
 // The float32 NARROWING is deliberate and load-bearing (code fact, 2026-07-22): the block path
 // encoded every vector to base64 float32 and decoded it again, so what actually reached Neo4j was
@@ -34,6 +33,7 @@ const shapeForgedGraph = ({ forged }) => {
 
 	let dimsSeen = null;
 	let dimsOffender = null;
+	let modelVersionOffender = null;
 
 	const nodes = forged.nodes.map((oneNode) => {
 		// PG-JSON multi-valued arrays: every property value an array. The embedding is the
@@ -63,12 +63,40 @@ const shapeForgedGraph = ({ forged }) => {
 				dimsOffender = { stableId: oneNode.stableId, length: vector.length };
 			}
 			shaped.embedding = narrowToFloat32(vector);
-			shaped.embeddingModelVersion =
-				oneNode.properties.embeddingModelVersion || DEFAULT_EMBEDDING_MODEL_VERSION;
+			// The model version is CARRIED, never invented. It is what vectorIdForInput hashes,
+			// so standing in for a missing one does not merely behave oddly — it silently changes
+			// what every content address means (polyArch2 §6). A bundle that embedded a node
+			// without stamping the model that did it produced malformed output; say so.
+			const carriedModelVersion = oneNode.properties.embeddingModelVersion;
+			if (
+				carriedModelVersion === undefined ||
+				`${carriedModelVersion}`.trim() === ''
+			) {
+				if (modelVersionOffender === null) {
+					modelVersionOffender = {
+						stableId: oneNode.stableId,
+						given: carriedModelVersion,
+					};
+				}
+			}
+			shaped.embeddingModelVersion = carriedModelVersion;
 		}
 
 		return shaped;
 	});
+
+	if (modelVersionOffender) {
+		return {
+			error:
+				`shapeForgedGraph: node '${modelVersionOffender.stableId}' carries an embedding but ` +
+				`its embeddingModelVersion is ${
+					modelVersionOffender.given === undefined
+						? 'absent'
+						: `'${modelVersionOffender.given}'`
+				}. The forge bundle must stamp the model that produced the vector — every content ` +
+				`address is computed from it, so there is nothing to stand in for it.`,
+		};
+	}
 
 	// A ragged vector set means the addressing model changed mid-run or a provider truncated a
 	// batch. It would be written happily and poison every similarity query, so refuse loudly.
