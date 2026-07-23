@@ -132,6 +132,7 @@ const settingsOrError = (fn) => {
 // reached keeps its certifying assertion in its own words below, until its own commit.
 const REQUIRED = {
 	neo4jImage: 'neo4j:5.26',
+	portSearchStart: '7811', // ini values arrive as strings — coercion is required, guessing is not
 };
 const omitting = (keyName) => {
 	const config = { ...REQUIRED };
@@ -159,20 +160,34 @@ harness.equal(
 );
 
 // -----
+harness.rejects(
+	'an ABSENT portSearchStart is refused, naming the key, the section and the file',
+	thrownMessage(() => resolveSettings(omitting('portSearchStart'))),
+	/portSearchStart.*\[replay-manager\].*graphBuilder\.ini/s,
+);
+harness.rejects(
+	"a MISTYPED portSearchStart='78o1' is refused, naming what was given (NEVER read as 7801)",
+	thrownMessage(() => resolveSettings(asGiven('portSearchStart', '78o1'))),
+	/portSearchStart='78o1'/,
+);
+harness.equal(
+	'a CONFIGURED portSearchStart coerces string -> number — the positive control',
+	settingsOrError(() => resolveSettings(asGiven('portSearchStart', '7811'))).portSearchStart,
+	7811,
+);
+
+// -----
 // The knobs still awaiting their own commit, certified in their own words.
 const stillDefaulting = settingsOrError(() => resolveSettings(justRequired));
-harness.equal('default portSearchStart', stillDefaulting.portSearchStart, 7801);
 harness.equal('default portSearchSpan', stillDefaulting.portSearchSpan, 200);
 harness.equal('default readyTimeout (ms)', stillDefaulting.readyTimeoutMs, 90000);
 
 const overridden = settingsOrError(() =>
 	resolveSettings(() => ({
 		...REQUIRED,
-		portSearchStart: '7811', // ini values may arrive as strings — must coerce
 		readyTimeoutSeconds: 5,
 	})),
 );
-harness.equal('configured start coerces string -> number', overridden.portSearchStart, 7811);
 harness.equal('configured timeout converts seconds -> ms', overridden.readyTimeoutMs, 5000);
 harness.equal('unconfigured knob keeps its default alongside overrides', overridden.portSearchSpan, 200);
 

@@ -50,7 +50,6 @@ const contentAddress = require(path.join(TREE_LIB, 'content-address', 'content-a
 // from in-code defaults to REQUIRED keys (Phase 4, work group 2); the DEFAULT_ constants below
 // are what remains of the old behavior and die with their own commits.
 const NEO4J_USER = 'neo4j';
-const DEFAULT_PORT_SEARCH_START = 7801;
 const DEFAULT_PORT_SEARCH_SPAN = 200;
 const DEFAULT_READY_TIMEOUT_SECONDS = 90;
 
@@ -95,6 +94,22 @@ const requiredImageReference = (config, keyName) => {
 	return value;
 };
 
+// -----
+// requiredConfigNumber — ini values arrive as strings, so Number() is required; what is NOT
+// permitted is `Number(x) || DEFAULT`, which reads a typo and an absence as the same thing and
+// answers with a value nobody chose. An unparseable value is refused BY NAME.
+const requiredConfigNumber = (config, keyName) => {
+	const value = requiredConfigText(config, keyName);
+	const number = Number(value);
+	if (!Number.isFinite(number)) {
+		throw new Error(
+			`[replayManager] ${keyName}='${value}' is not a number. Fix it in the ` +
+				`[${CONFIG_SECTION}] section of ${CONFIG_FILE}. It was NOT corrected to a default.`,
+		);
+	}
+	return number;
+};
+
 // resolve the effective settings at CALL time (process.global may not exist at require time).
 // getConfig is injectable for the test suite ONLY — production callers pass nothing and get the
 // frozen process.global one. Exported so the config->settings mapping is provable without a
@@ -107,7 +122,7 @@ const resolveSettings = (getConfig = process.global.getConfig) => {
 	const config = (getConfig && getConfig(CONFIG_SECTION)) || {};
 	return {
 		neo4jImage: requiredImageReference(config, 'neo4jImage'),
-		portSearchStart: Number(config.portSearchStart) || DEFAULT_PORT_SEARCH_START,
+		portSearchStart: requiredConfigNumber(config, 'portSearchStart'),
 		portSearchSpan: Number(config.portSearchSpan) || DEFAULT_PORT_SEARCH_SPAN,
 		readyTimeoutMs:
 			(Number(config.readyTimeoutSeconds) || DEFAULT_READY_TIMEOUT_SECONDS) * 1000,
