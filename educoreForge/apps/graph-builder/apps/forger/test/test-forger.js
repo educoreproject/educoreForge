@@ -194,34 +194,98 @@ const edgeLine = lines.find((oneLine) => oneLine.type === 'HAS_CLASS');
 harness.ok('edge carries provenanceTier (array-wrapped)', edgeLine.properties.provenanceTier[0] === 'structural', JSON.stringify(edgeLine.properties));
 
 // =====================================================================
-harness.section('VOYAGE CONFIG PATH — the precedence rule: param > config > default');
+harness.section('VOYAGE CONFIG PATH — the credential pointer is READ, never invented');
 // =====================================================================
+// Phase 4, work group 4, site 1. `paramPath || configuredPath || DEFAULT_VOYAGE_CONFIG_PATH` put
+// an in-code constant BEHIND a settable key, and the key points at CREDENTIALS. Delete
+// `voyageConfigFilePath=` from graphBuilder.ini and embedding credentials silently came from a
+// machine-specific absolute path baked into the source — wrong on every machine but one, and
+// announced nowhere. The param-level override IS announced on stderr; the config->constant
+// fallthrough was not. polyArch2 §6: a constant that shadows a settable key is the anti-pattern,
+// and it applies with particular force where the value selects which identity a run authenticates
+// as.
+//
+// NO CREDENTIAL VALUE APPEARS ANYWHERE IN THIS SECTION. The fixtures are empty files in an OS
+// temp directory; what is under test is the POINTER, and the pointer is not the secret. Nothing
+// here opens a file's contents, constructs an embedding client, or calls Voyage.
 
-const { resolveVoyageConfigPath, DEFAULT_VOYAGE_CONFIG_PATH } = forgerModule;
+const os = require('os');
 
-harness.equal(
-	'the call param wins over everything',
-	resolveVoyageConfigPath({
-		paramPath: '/tmp/override.ini',
-		getConfig: () => ({ voyageConfigFilePath: '/configured/path.ini' }),
-	}),
-	'/tmp/override.ini',
+const { resolveVoyageConfigPath } = forgerModule;
+
+// -----
+// anExistingIniPath — an empty file in an OS temp dir, standing in for a real credential ini.
+//   It carries NO keys and NO secret: the existence check is the only thing under test.
+const voyageFixtureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'educoreForge-voyagePointer-'));
+const anExistingIniPath = path.join(voyageFixtureDir, 'notARealCredentialFile.ini');
+fs.writeFileSync(anExistingIniPath, '# fixture: an existing path, deliberately empty\n');
+const aMissingIniPath = path.join(voyageFixtureDir, 'thisFileWasNeverWritten.ini');
+
+// -----
+// pathErrors — the refusal as a LIST, so harness.rejects can insist on the SPECIFIC reason.
+const pathErrors = (answer) => (answer && answer.error ? [answer.error] : []);
+
+harness.rejects(
+	'an ABSENT voyageConfigFilePath is refused, naming the key, the section and the file',
+	pathErrors(resolveVoyageConfigPath({ getConfig: () => ({}) })),
+	/voyageConfigFilePath[\s\S]*\[forger\][\s\S]*graphBuilder\.ini/,
 );
-harness.equal(
-	'the configured path wins when no param',
-	resolveVoyageConfigPath({ getConfig: () => ({ voyageConfigFilePath: '/configured/path.ini' }) }),
-	'/configured/path.ini',
+harness.rejects(
+	'  and a BLANK one is refused too — a blank pointer is not a pointer',
+	pathErrors(resolveVoyageConfigPath({ getConfig: () => ({ voyageConfigFilePath: '   ' }) })),
+	/voyageConfigFilePath[\s\S]*EMPTY/,
 );
-harness.equal(
-	'the in-code default governs when neither is given',
-	resolveVoyageConfigPath({ getConfig: () => ({}) }),
-	DEFAULT_VOYAGE_CONFIG_PATH,
+harness.rejects(
+	'an INVALID voyageConfigFilePath (no such file) is refused, naming the path it looked at',
+	pathErrors(
+		resolveVoyageConfigPath({ getConfig: () => ({ voyageConfigFilePath: aMissingIniPath }) }),
+	),
+	new RegExp(aMissingIniPath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')),
 );
 harness.match(
-	'and the default points at voyageEmbedding.ini (the secret stays in its own file)',
-	DEFAULT_VOYAGE_CONFIG_PATH,
-	/voyageEmbedding\.ini$/,
+	'  and says WHICH source supplied it, so the operator knows which line to fix',
+	(resolveVoyageConfigPath({ getConfig: () => ({ voyageConfigFilePath: aMissingIniPath }) }) || {})
+		.error,
+	/\[forger\]\.voyageConfigFilePath/,
 );
+harness.rejects(
+	'an INVALID call-param path (no such file) is refused too — the override is not exempt',
+	pathErrors(
+		resolveVoyageConfigPath({ paramPath: aMissingIniPath, getConfig: () => ({}) }),
+	),
+	/embeddingConfigFilePath/,
+);
+harness.equal(
+	'a CONFIGURED path that EXISTS is honoured verbatim — the positive control',
+	(resolveVoyageConfigPath({ getConfig: () => ({ voyageConfigFilePath: anExistingIniPath }) }) || {})
+		.configFilePath,
+	anExistingIniPath,
+);
+harness.equal(
+	'  and the call param still wins over a configured one — the precedence is unchanged',
+	(
+		resolveVoyageConfigPath({
+			paramPath: anExistingIniPath,
+			getConfig: () => ({ voyageConfigFilePath: aMissingIniPath }),
+		}) || {}
+	).configFilePath,
+	anExistingIniPath,
+);
+
+harness.ok(
+	'no in-code credential path survives in forger.js',
+	!/voyageEmbedding\.ini/.test(codeOf(path.join(__dirname, '..', 'forger.js'))),
+	(codeOf(path.join(__dirname, '..', 'forger.js')).match(/.*voyageEmbedding\.ini.*/g) || []).join(
+		'\n',
+	),
+);
+harness.ok(
+	'  and the module exports no DEFAULT_VOYAGE_CONFIG_PATH to stand behind the key',
+	forgerModule.DEFAULT_VOYAGE_CONFIG_PATH === undefined,
+	String(forgerModule.DEFAULT_VOYAGE_CONFIG_PATH),
+);
+
+fs.rmSync(voyageFixtureDir, { recursive: true, force: true });
 
 // =====================================================================
 harness.section('SHAPE-FORGED-GRAPH — the model version is CARRIED, never invented');

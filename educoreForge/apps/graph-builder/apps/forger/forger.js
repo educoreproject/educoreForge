@@ -62,24 +62,64 @@ const { shapeForgedGraph } = require('./lib/shape-forged-graph');
 const TREE_ROOT = path.join(__dirname, '..', '..', '..', '..');
 const TREE_LIB = path.join(TREE_ROOT, 'lib');
 const FORGES_DIR = path.join(TREE_ROOT, 'forges');
-// the system/ root (configs live beside code/, not inside it): educoreForge -> code -> system
-const SYSTEM_ROOT = path.join(TREE_ROOT, '..', '..');
-const DEFAULT_VOYAGE_CONFIG_PATH = path.join(
-	SYSTEM_ROOT,
-	'configs',
-	'instanceSpecific',
-	'qbook',
-	'voyageEmbedding.ini',
-);
 
+const CONFIG_SECTION = 'forger';
+const CONFIG_FILE = 'graphBuilder.ini';
 
 // -----
-// resolveVoyageConfigPath — the Voyage ini precedence as ONE provable rule: call param (announced
-// by the caller) > getConfig('forger').voyageConfigFilePath (graphBuilder.ini) > the computed
-// in-code default. getConfig is injectable for the test suite only; production passes nothing.
+// resolveVoyageConfigPath — the Voyage ini pointer as ONE provable rule: call param (announced by
+// the caller) > getConfig('forger').voyageConfigFilePath (graphBuilder.ini). There is NO third
+// arm, and this is the whole point of the site: an in-code absolute path used to stand behind the
+// settable key, so deleting `voyageConfigFilePath=` sent embedding credentials to a
+// machine-specific location that exists on one machine and is wrong on every other — silently.
+// polyArch2 §6: a constant that shadows a settable key is the anti-pattern, and a pointer to
+// CREDENTIALS is the worst place to keep one, because a wrong-but-silent path means the run
+// authenticates as something other than what was configured, or fails far from the cause.
+//
+// A path that does not EXIST is an invalid value, not an occasion to look elsewhere. It is
+// refused naming the path AND the source that supplied it, so the operator knows which line to
+// fix rather than which program to read.
+//
+// Answers { configFilePath } or { error } — the same idiom resolveBundle uses ten lines below,
+// because forge() is callback-style and nothing here may throw past it. getConfig is injectable
+// for the test suite only; production passes nothing.
+//
+// THE SECRET IS NOT HERE. This resolves a POINTER; only embedding-client ever opens the file, and
+// the key is never read, logged, or returned by this module.
 const resolveVoyageConfigPath = ({ paramPath, getConfig = process.global.getConfig } = {}) => {
-	const configuredPath = ((getConfig && getConfig('forger')) || {}).voyageConfigFilePath;
-	return paramPath || configuredPath || DEFAULT_VOYAGE_CONFIG_PATH;
+	const configuredPath = ((getConfig && getConfig(CONFIG_SECTION)) || {}).voyageConfigFilePath;
+	const givenPath = paramPath === undefined || paramPath === null ? configuredPath : paramPath;
+	const sourceName =
+		paramPath === undefined || paramPath === null
+			? `[${CONFIG_SECTION}].voyageConfigFilePath in ${CONFIG_FILE}`
+			: 'the embeddingConfigFilePath call parameter';
+
+	if (givenPath === undefined || givenPath === null) {
+		return {
+			error:
+				`forger: voyageConfigFilePath is not configured. Add it to the [${CONFIG_SECTION}] ` +
+				`section of ${CONFIG_FILE} (or pass embeddingConfigFilePath in the spec). It points ` +
+				`at the embedding CREDENTIALS, and there is no default: a path guessed in code is a ` +
+				`run authenticating as something nobody chose.`,
+		};
+	}
+	const value = String(givenPath).trim();
+	if (value === '') {
+		return {
+			error:
+				`forger: voyageConfigFilePath is present but EMPTY (${sourceName}). A blank pointer ` +
+				`is not a pointer; give it a path or the key is a lie.`,
+		};
+	}
+	if (!fs.existsSync(value)) {
+		return {
+			error:
+				`forger: voyageConfigFilePath '${value}' does not exist (${sourceName}). A credential ` +
+				`pointer that names no file is an INVALID value, not an occasion to look somewhere ` +
+				`else. Nothing was substituted for it.`,
+		};
+	}
+	return { configFilePath: value };
 };
 
 // -----
@@ -171,9 +211,10 @@ const forger = () => {
 		// no Voyage client is constructed at all, and the bundle runs skipEmbedding.
 		//
 		// Voyage config path precedence: call param (announced — it can never silently redirect
-		// embedding credentials) > getConfig('forger').voyageConfigFilePath (graphBuilder.ini) >
-		// the computed in-code default. The SECRET stays in voyageEmbedding.ini either way; only
-		// the POINTER is configurable.
+		// embedding credentials) > getConfig('forger').voyageConfigFilePath (graphBuilder.ini).
+		// There is no third arm: nothing in code stands behind the key any more, and a path that
+		// names no file is refused rather than replaced (polyArch2 §6). The SECRET stays in its
+		// own ini either way; only the POINTER is configurable.
 		//
 		// declaredEmbeddingDims comes from the SAME ini reading that governs the API call, so the
 		// width the shaper checks against is the width the vectors were actually made at. There is
@@ -186,8 +227,13 @@ const forger = () => {
 					`EMBEDDING CONFIG OVERRIDE ACTIVE: configFilePath = ${embeddingConfigFilePath} (embeddingConfigFilePath)`,
 				);
 			}
+			const voyagePointer = resolveVoyageConfigPath({ paramPath: embeddingConfigFilePath });
+			if (voyagePointer.error) {
+				callback(voyagePointer.error);
+				return;
+			}
 			embedder = require(path.join(TREE_LIB, 'embedding', 'embedding-client'))({
-				configFilePath: resolveVoyageConfigPath({ paramPath: embeddingConfigFilePath }),
+				configFilePath: voyagePointer.configFilePath,
 			});
 			declaredEmbeddingDims = embedder.resolveEmbeddingIdentity().embeddingDims;
 		}
@@ -259,4 +305,3 @@ const forger = () => {
 module.exports = forger;
 module.exports.resolveBundle = resolveBundle;
 module.exports.resolveVoyageConfigPath = resolveVoyageConfigPath;
-module.exports.DEFAULT_VOYAGE_CONFIG_PATH = DEFAULT_VOYAGE_CONFIG_PATH;
