@@ -132,7 +132,46 @@ waitFor(
 				);
 				harness.match('  and stating nothing was written', guardErr, /No writes performed/);
 
-				harness.report();
+				// ==============================================================
+				harness.section('embeddingDims DISAGREEMENT — refused through replay(), before any bolt traffic');
+				// ==============================================================
+				// Two well-formed blocks whose headers declare DIFFERENT embeddingDims is a corruption
+				// (deep-dive review). replay() reconciles the per-block dimension BEFORE it hands the
+				// shared write path a session, so the refusal — like the guards above — arrives with no
+				// connection to the unreachable bolt URI, proving nothing was written.
+
+				const headerWithDims = (dims) => ({ ...header, embeddingDims: dims });
+				const blockTextWithDims = (dims, nodes) =>
+					replayBlock.serializeBlock({ header: headerWithDims(dims), nodes: nodes || [], edges: [] });
+
+				let dimsErr = null;
+				replay(
+					{
+						manifest: [
+							blockTextWithDims(1024, [shapedNode('urn:a')]),
+							blockTextWithDims(512, [shapedNode('urn:b')]),
+						],
+						...NOWHERE,
+					},
+					(err) => {
+						dimsErr = err;
+					},
+				);
+
+				waitFor(
+					() => dimsErr,
+					() => {
+						harness.match(
+							'blocks declaring different embeddingDims are REFUSED',
+							dimsErr,
+							/embeddingDims disagreement/,
+						);
+						harness.match('  naming both declared dimensions', dimsErr, /1024.*512/);
+						harness.match('  and stating nothing was written', dimsErr, /No writes performed/);
+
+						harness.report();
+					},
+				);
 			},
 		);
 	},

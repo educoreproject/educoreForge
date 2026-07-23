@@ -1234,6 +1234,47 @@ const writeShapedGraph = (
 };
 
 // =====================================================================
+// resolveManifestEmbeddingDims — reconcile the embeddingDims declared across a manifest's blocks
+// into the ONE value the vector index is built from (writeShapedGraph builds the cosine index iff
+// this is truthy). Returns { error, embeddingDims }, error-first like every refusal in this module.
+// =====================================================================
+// The defect this closes (deep-dive review): the accumulator was `if (dims === null) dims =
+// h.embeddingDims`. Only a block that DECLARES a dimension should contribute, but an edge-only
+// first block carries embeddingDims === undefined; the old guard seeded `dims = undefined`, its
+// strict `=== null` test never fired again, and a LATER vectorized block's real dimension was
+// dropped — writeShapedGraph then read a falsy dims and SKIPPED the index with no error. A
+// one-position manifest reordering silently decided whether the golden was searchable. Two fixes,
+// one invariant (a graph that should be searchable is never silently left unsearchable):
+//   (a) undefined and null are treated IDENTICALLY — neither is a declaration, so only a numeric
+//       embeddingDims seeds or is compared; an edge-only block can no longer strand the value.
+//   (b) blocks that declare DIFFERENT dimensions is a corruption we REFUSE loudly, naming both
+//       blocks and both values — never silently pick one and build an index the other's vectors
+//       cannot use. An all-edge-only manifest yields null (no vectors, so no index is correct).
+const resolveManifestEmbeddingDims = (blockDims) => {
+	let embeddingDims = null;
+	let declaringBlockName = null;
+	for (let index = 0; index < blockDims.length; index++) {
+		const oneBlock = blockDims[index];
+		if (typeof oneBlock.embeddingDims !== 'number') continue;
+		if (embeddingDims === null) {
+			embeddingDims = oneBlock.embeddingDims;
+			declaringBlockName = oneBlock.blockName;
+			continue;
+		}
+		if (oneBlock.embeddingDims !== embeddingDims) {
+			return {
+				error:
+					`embeddingDims disagreement across manifest blocks: ${declaringBlockName} ` +
+					`declares ${embeddingDims} but ${oneBlock.blockName} declares ` +
+					`${oneBlock.embeddingDims}. A single graph cannot carry two vector dimensions. ` +
+					`No writes performed.`,
+			};
+		}
+	}
+	return { error: '', embeddingDims };
+};
+
+// =====================================================================
 // PUBLIC API — replay({ manifest, boltUri, password, graphName? }, callback)
 // =====================================================================
 const replay = ({ manifest, boltUri, password, graphName, storeResolver }, callback) => {
@@ -1244,7 +1285,7 @@ const replay = ({ manifest, boltUri, password, graphName, storeResolver }, callb
 	//     the block's identity, so every guard message from writeShapedGraph still names the
 	//     offending block exactly as it did when the guards lived here.
 	const groups = [];
-	let embeddingDims = null;
+	const blockDims = [];
 
 	for (let entryIndex = 0; entryIndex < manifest.length; entryIndex++) {
 		const entry = manifest[entryIndex];
@@ -1270,7 +1311,7 @@ const replay = ({ manifest, boltUri, password, graphName, storeResolver }, callb
 				? `bridge ${h.pairA}~${h.pairB}`
 				: `${h.blockType} ${h.standardKey} v${h.version}`;
 
-		if (embeddingDims === null) embeddingDims = h.embeddingDims;
+		blockDims.push({ blockName, embeddingDims: h.embeddingDims });
 
 		// Tag each node with its block's standardKey — a TRANSIENT carrier resolveNodeVectors reads
 		// to pick the per-standard store, then STRIPS (it never persists; buildNodeRow whitelists
@@ -1285,6 +1326,14 @@ const replay = ({ manifest, boltUri, password, graphName, storeResolver }, callb
 			edges: block.edges.map((oneEdge) => ({ ...oneEdge, blockType: h.blockType })),
 		});
 	}
+
+	const dimsResolution = resolveManifestEmbeddingDims(blockDims);
+	if (dimsResolution.error) {
+		session.close().then(() => driver.close());
+		callback(dimsResolution.error);
+		return;
+	}
+	const embeddingDims = dimsResolution.embeddingDims;
 
 	writeShapedGraph(
 		{ session, groups, storeResolver, embeddingDims, graphName },
@@ -1314,6 +1363,7 @@ return {
 	buildNodeRow,
 	resolveNodeVectors,
 	kernelSupportsVectorIndex,
+	resolveManifestEmbeddingDims,
 };
 };
 

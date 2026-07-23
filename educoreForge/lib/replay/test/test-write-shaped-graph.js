@@ -45,7 +45,7 @@ require('../../../test/testLib/testAppStartup')({ moduleName, helpText: helpText
 const harness = require('../../../test/testLib/harness')(moduleName);
 
 const replayEngine = require('../replay-engine')();
-const { validateShapedGraph, writeShapedGraph } = replayEngine;
+const { validateShapedGraph, writeShapedGraph, resolveManifestEmbeddingDims } = replayEngine;
 const { PROVENANCE_TIERS } = require('../replay-block')();
 
 const GOOD_TIER = PROVENANCE_TIERS[0];
@@ -380,5 +380,54 @@ harness.ok(
 			.join('\n'),
 	),
 );
+
+// =====================================================================
+harness.section('MANIFEST embeddingDims RECONCILIATION — an edge-first block may not silently skip the index');
+// =====================================================================
+// replay() accumulates ONE embeddingDims across a manifest's blocks and hands it to
+// writeShapedGraph, where `if (!embeddingDims)` decides whether the vector index is built. The
+// defect (deep-dive review, replay-engine.js ~1273): the accumulator was `if (dims === null) dims =
+// h.embeddingDims`. An edge-only FIRST block declares no dimension, so `h.embeddingDims` is
+// `undefined`; that seeds `dims = undefined`, the strict `=== null` guard never fires again, and a
+// LATER vectorized block's real dimension is dropped. writeShapedGraph then sees a falsy dims and
+// SKIPS the index with no error — a one-position manifest reordering silently decides whether the
+// golden is searchable. The reconciliation must treat undefined and null identically (neither is a
+// declaration) and must REFUSE a cross-block disagreement loudly rather than pick one.
+//
+// Testing the reducer directly needs no database: it is the pure kernel of replay()'s loop.
+
+const dimsOf = (pairs) =>
+	resolveManifestEmbeddingDims(pairs.map(([blockName, embeddingDims]) => ({ blockName, embeddingDims })));
+
+// (1) THE RED PROOF — edge-only FIRST, then a vectorized block: the dimension must survive.
+harness.equal(
+	'an edge-only first block does NOT strand the later block\'s dimension (index stays buildable)',
+	dimsOf([['bridge LIF~CEDS', undefined], ['standardBase LIF v1', 1024]]).embeddingDims,
+	1024,
+);
+harness.equal(
+	'  order-independence: dimension declared first is equally honored',
+	dimsOf([['standardBase LIF v1', 1024], ['bridge LIF~CEDS', undefined]]).embeddingDims,
+	1024,
+);
+
+// (2) an invalid state — two blocks disagree on the dimension — is REFUSED, naming the disagreement.
+const disagreement = dimsOf([['standardBase LIF v1', 1024], ['standardBase CEDS v14.0.0.0', 512]]);
+harness.match('two blocks declaring DIFFERENT dims is REFUSED', disagreement.error, /disagreement/i);
+harness.match('  the refusal names the first dimension', disagreement.error, /1024/);
+harness.match('  and the second dimension', disagreement.error, /512/);
+harness.match('  and the block that first declared', disagreement.error, /standardBase LIF v1/);
+harness.match('  and the block that disagreed', disagreement.error, /standardBase CEDS v14\.0\.0\.0/);
+harness.match('  and states nothing was written', disagreement.error, /No writes performed/);
+
+// (3) POSITIVE CONTROLS — a consistent value is honored, and genuine absence stays absent (null),
+//     so writeShapedGraph's `!embeddingDims` legitimately skips the index when there ARE no vectors.
+const agreeing = dimsOf([['standardBase LIF v1', 1024], ['standardBase CEDS v14.0.0.0', 1024]]);
+harness.equal('two blocks agreeing on the dimension is admitted', agreeing.error, '');
+harness.equal('  and the agreed dimension is returned', agreeing.embeddingDims, 1024);
+
+const allEdgeOnly = dimsOf([['bridge A~B', undefined], ['bridge C~D', undefined]]);
+harness.equal('an all-edge-only manifest declares no dimension (null, not undefined)', allEdgeOnly.embeddingDims, null);
+harness.equal('  and is not an error (a graph with no vectors legitimately has no vector index)', allEdgeOnly.error, '');
 
 harness.report();
