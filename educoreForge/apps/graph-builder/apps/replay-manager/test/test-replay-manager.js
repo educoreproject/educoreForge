@@ -165,13 +165,126 @@ manager.init(
 		harness.match('init() refuses a non-array applyLabels', err, /applyLabels must be an array/);
 	},
 );
-manager.init({ inGraph: DEV_HANDLE, schemaBlocks: ['...'] }, (err) => {
+// =====================================================================
+harness.section('INIT — the RESTORATION payload: refusals first, then the pure address check');
+// =====================================================================
+// init({ schemaBlocks }) routes to replay-engine.replay, which is deserialize -> writeShapedGraph:
+// the SAME write path the creation payload uses. Everything gated here happens BEFORE any bolt
+// traffic, so a refusal arriving without a connection is itself the proof nothing was written.
+// The happy path is proven live by the deliberate integration script (integration-restore.js).
+
+const contentAddress = require('../../../../../lib/content-address/content-address')();
+
+// a syntactically plausible block text; these gates never reach a deserializer, so its content
+// only has to be a string whose content address is computable.
+const BLOCK_TEXT = '#HEADER {"blockType":"standardBase"}\n#NODE {"stableId":"urn:a"}\n';
+const TRUE_ADDRESS = contentAddress.blockIdForText(BLOCK_TEXT);
+
+// -----
+// The name guard still fires FIRST — before the payload is even looked at.
+manager.init({ inGraph: { graphName: 'GOLD_260718' }, schemaBlocks: [BLOCK_TEXT] }, (err) => {
+	harness.match('a GOLD_* graph is refused BEFORE the restoration payload is examined', err, /REFUSED/);
+});
+
+// -----
+// An EMPTY array is REFUSED. Loading nothing and reporting success is the silent-failure shape
+// this project keeps designing out.
+manager.init({ inGraph: DEV_HANDLE, schemaBlocks: [] }, (err) => {
+	harness.match('an EMPTY schemaBlocks array is refused', err, /schemaBlocks is empty/);
+});
+manager.init({ inGraph: DEV_HANDLE, schemaBlocks: BLOCK_TEXT }, (err) => {
 	harness.match(
-		'init() refuses the schemaBlocks payload HONESTLY (it is a later milestone)',
+		'a bare string as schemaBlocks is refused (a missing array must never read as one)',
 		err,
-		/not implemented yet/,
+		/schemaBlocks must be an array/,
 	);
 });
+
+// -----
+// BOTH payloads at once: a caller supplying both has not decided what it is doing.
+manager.init(
+	{ inGraph: DEV_HANDLE, nodeEdges: nodeEdgesOf(), schemaBlocks: [BLOCK_TEXT] },
+	(err) => {
+		harness.match(
+			'nodeEdges AND schemaBlocks together are refused',
+			err,
+			/both nodeEdges and schemaBlocks/,
+		);
+	},
+);
+
+// -----
+// applyLabels on the RESTORATION path is refused, WITH THE REASON: a harvested block already
+// carries the labels stamped at creation time, so stamping more would make the block and the
+// graph restored from it disagree about what is in the graph.
+manager.init(
+	{ inGraph: DEV_HANDLE, schemaBlocks: [BLOCK_TEXT], applyLabels: ['StandardBase'] },
+	(err) => {
+		harness.match('applyLabels on the restoration path is refused', err, /applyLabels/);
+		harness.match(
+			'  and the refusal gives the REASON (the block already carries its labels)',
+			err,
+			/already carr/i,
+		);
+		harness.match('  and it names the offending labels', err, /StandardBase/);
+	},
+);
+
+// -----
+// A LYING refId. Never trust a caller's id — harvest mints it, manifestEditor.add recomputes it,
+// and this is the third door.
+manager.init(
+	{ inGraph: DEV_HANDLE, schemaBlocks: [{ text: BLOCK_TEXT, refId: 'deadbeefNotTheAddress' }] },
+	(err) => {
+		harness.match('a block whose claimed refId is a LIE is refused', err, /content address/i);
+		harness.match('  and the refusal names the CLAIMED address', err, /deadbeefNotTheAddress/);
+		harness.match('  and the refusal names the TRUE address', err, new RegExp(TRUE_ADDRESS));
+	},
+);
+
+// -----
+// schemaBlockTexts — the pure normalizer, exported so both sides of the address check can be
+// gated without a database (the same reason withAppliedLabels is exported).
+const { schemaBlockTexts } = replayManagerModule;
+
+harness.equal(
+	'a bare TEXT string is admitted as-is',
+	schemaBlockTexts([BLOCK_TEXT]).texts[0],
+	BLOCK_TEXT,
+);
+harness.equal(
+	'  and admitting it produces no error (positive control)',
+	schemaBlockTexts([BLOCK_TEXT]).error,
+	'',
+);
+const honestObject = schemaBlockTexts([{ text: BLOCK_TEXT, refId: TRUE_ADDRESS }]);
+harness.equal('an object whose refId is TRUE is admitted', honestObject.error, '');
+harness.equal('  and yields the block text', honestObject.texts[0], BLOCK_TEXT);
+harness.equal(
+	'an object with NO refId is admitted (there is nothing to verify against)',
+	schemaBlockTexts([{ text: BLOCK_TEXT }]).error,
+	'',
+);
+harness.match(
+	'a block with no text at all is refused, by index',
+	schemaBlockTexts([{ refId: TRUE_ADDRESS }]).error,
+	/schemaBlocks\[0\]/,
+);
+harness.match(
+	'an empty text is refused (an empty block is not a block)',
+	schemaBlockTexts(['']).error,
+	/schemaBlocks\[0\]/,
+);
+harness.match(
+	'a non-string, non-object entry is refused by index',
+	schemaBlockTexts([BLOCK_TEXT, 42]).error,
+	/schemaBlocks\[1\]/,
+);
+harness.equal(
+	'a refused payload yields NO texts — nothing partially normalized escapes',
+	schemaBlockTexts([BLOCK_TEXT, 42]).texts.length,
+	0,
+);
 
 // -----
 // withAppliedLabels — pure, and exported so the labelling can be gated without a database.

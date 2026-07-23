@@ -76,11 +76,15 @@
  * @property {function({inGraph: GraphHandle, nodeEdges?: {nodes: Array, edges: Array,
  *           embeddingDims?: number}, schemaBlocks?: Array, applyLabels?: string[],
  *           sourceLabel?: string}, function(string, Object=): void): void} init
- *           CREATION takes nodeEdges; RESTORATION takes schemaBlocks (a later milestone — it
- *           refuses honestly). `applyLabels` is stamped on every node loaded, which is how the
- *           orchestrator's label vocabulary reaches the graph without a forge bundle ever
- *           learning it. Delegates to replay-engine.writeShapedGraph — the SAME write path
- *           replay() uses, so the guards cannot diverge between creation and restoration.
+ *           CREATION takes nodeEdges; RESTORATION takes schemaBlocks (block texts or stored
+ *           { text, refId } records, whose claimed content address is VERIFIED, never trusted).
+ *           Supplying both payloads is refused. `applyLabels` belongs to CREATION only — it is
+ *           stamped on every node loaded, which is how the orchestrator's label vocabulary
+ *           reaches the graph without a forge bundle ever learning it; on RESTORATION it is
+ *           REFUSED, because a harvested block already carries the labels stamped at creation
+ *           time and stamping more would make the block and the graph restored from it disagree.
+ *           Both payloads reach replay-engine.writeShapedGraph — creation directly, restoration
+ *           through replay() — so the guards cannot diverge between them.
  * @property {function({inGraph: GraphHandle, selectionLabels: string[], header: Object},
  *           function(string, Object=): void): void} harvest
  *           THE ONLY PLACE A SCHEMA BLOCK IS BORN. Selection is POSITIVE and by label — the same

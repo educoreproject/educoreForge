@@ -11,7 +11,10 @@
 //                                                     boltUrl, password, boltPort, httpPort }
 //        spec = { purpose?, graphName? } — graphName is minted DEV_gb_<purpose>_<pid>_<seq>
 //        when not given; a GIVEN name must be DEV_* (GNC-001 scratch tier) or create REFUSES.
-//     init(spec, callback)        -> ('', report)   spec = { inGraph, nodeEdges, applyLabels }
+//     init(spec, callback)        -> ('', report)   THE ONE polymorphic loader, two payloads:
+//        spec = { inGraph, nodeEdges, applyLabels }  CREATION    — freshly forged material
+//        spec = { inGraph, schemaBlocks }            RESTORATION — previously harvested blocks
+//        report = { nodesMerged, edgesMerged, danglingRefs, indexesBuilt } from EITHER payload
 //     harvest(spec, callback)     -> ('', schemaBlock)  spec = { inGraph, selectionLabels, header }
 //     delete(handle, callback)    -> ('')           removes the container; DEV_* only
 //   }
@@ -86,6 +89,94 @@ const withAppliedLabels = (nodes, applyLabels) => {
 		}
 		return { ...oneNode, labels: existing.concat(additions) };
 	});
+};
+
+// -----
+// schemaBlockTexts — normalize the RESTORATION payload to the ordered plain block texts that
+// replay-engine.replay consumes, verifying every claimed content address on the way through.
+// Returns { error, texts }: error '' means admitted, and `texts` is empty on any refusal so that
+// nothing partially normalized can escape into a write.
+//
+// Two entry shapes exist because two kinds of caller exist. A producer holding a block it just
+// harvested has the TEXT; a caller holding a block it fetched from the store has the stored
+// RECORD, `{ text, refId, ... }`. Accepting both is what lets a manifest's resolved members be
+// handed straight to init without a translation step whose only job would be to lose the refId.
+//
+// A CALLER'S refId IS NEVER TAKEN ON TRUST. harvest mints the address itself at the moment the
+// block is born, manifestEditor.add recomputes it before storing, and this recomputes it before
+// loading — three doors into content-addressed storage, one rule at each. A caller whose id does
+// not match its text either fetched the wrong row or is holding corrupted bytes, and either way
+// the graph it would build is not the graph its manifest names. The refusal states BOTH addresses
+// because "these do not match" without the values is a fact you cannot act on.
+//
+// A block arriving with NO refId is admitted: there is no claim to verify, and the deserializer
+// downstream is the authority on whether the bytes are a block. This function checks claims, not
+// syntax.
+const schemaBlockTexts = (schemaBlocks) => {
+	const refuse = (message) => ({ error: message, texts: [] });
+
+	if (!Array.isArray(schemaBlocks)) {
+		return refuse(
+			`replayManager.init: schemaBlocks must be an array of block texts or ` +
+				`{ text, refId } records, got ${schemaBlocks === null ? 'null' : typeof schemaBlocks}. ` +
+				`Nothing loaded.`,
+		);
+	}
+	if (schemaBlocks.length === 0) {
+		return refuse(
+			`replayManager.init: REFUSED — schemaBlocks is empty. Materializing a graph from no ` +
+				`blocks and reporting success is a silent failure; if there is genuinely nothing to ` +
+				`restore, the caller must not call init.`,
+		);
+	}
+
+	const texts = [];
+	for (let blockIndex = 0; blockIndex < schemaBlocks.length; blockIndex++) {
+		const oneBlock = schemaBlocks[blockIndex];
+
+		if (typeof oneBlock === 'string') {
+			if (oneBlock === '') {
+				return refuse(
+					`replayManager.init: schemaBlocks[${blockIndex}] is an empty string. An empty ` +
+						`block is not a block. Nothing loaded.`,
+				);
+			}
+			texts.push(oneBlock);
+			continue;
+		}
+
+		if (!oneBlock || typeof oneBlock !== 'object' || Array.isArray(oneBlock)) {
+			return refuse(
+				`replayManager.init: schemaBlocks[${blockIndex}] is neither block text nor a ` +
+					`{ text, refId } record (got ${oneBlock === null ? 'null' : typeof oneBlock}). ` +
+					`Nothing loaded.`,
+			);
+		}
+
+		const blockText = oneBlock.text;
+		if (typeof blockText !== 'string' || blockText === '') {
+			return refuse(
+				`replayManager.init: schemaBlocks[${blockIndex}] carries no block text ` +
+					`(refId ${oneBlock.refId || 'absent'}). Nothing loaded.`,
+			);
+		}
+
+		if (oneBlock.refId) {
+			const trueAddress = contentAddress.blockIdForText(blockText);
+			if (oneBlock.refId !== trueAddress) {
+				return refuse(
+					`replayManager.init: schemaBlocks[${blockIndex}] fails content address ` +
+						`verification — it CLAIMS refId '${oneBlock.refId}' but its text hashes to ` +
+						`'${trueAddress}'. A caller's id is never taken on trust; the bytes are wrong, ` +
+						`the id is wrong, or the wrong row was fetched. Nothing loaded.`,
+				);
+			}
+		}
+
+		texts.push(blockText);
+	}
+
+	return { error: '', texts };
 };
 
 // -----
@@ -333,6 +424,75 @@ const replayManager = () => {
 	};
 
 	// -----
+	// restore — init's RESTORATION branch (targetArchitectureDesign §4.2/§4.3). A FUNCTION
+	// DECLARATION, not a const arrow: it is reached from inside init and a const defined after its
+	// caller sits in the temporal dead zone, where the ReferenceError gets swallowed by surrounding
+	// error handling and presents as something else entirely.
+	//
+	// It is thin BY DESIGN. replay-engine.replay() already is deserialize -> writeShapedGraph,
+	// which is precisely what restoring a graph from harvested blocks means; everything this
+	// function owns is what replay() cannot know — whether the caller's payload is honest, and
+	// which graph's credentials to use. It deliberately does NOT re-check ForgedNode labels,
+	// stableIds or provenance tiers: those live once, in the shared write path, and both entry
+	// points reach them there.
+	function restore({ inGraph, graphName, schemaBlocks, applyLabels }, callback) {
+		const { xLog } = process.global;
+
+		// applyLabels is REFUSED here, and this is a design decision rather than an omission. A
+		// harvested schema block already carries, in its own node lines, the labels that were
+		// stamped when the material was created. Stamping more on the way back in would make the
+		// block and the graph restored from it disagree about what is in that graph — the block
+		// would no longer describe its own materialization. If a deliberate re-labeling is ever
+		// wanted, it becomes an explicit decision, not a parameter that happened to be passed along.
+		if (applyLabels !== undefined) {
+			callback(
+				`replayManager.init: REFUSED — applyLabels ${JSON.stringify(applyLabels)} was supplied ` +
+					`with the RESTORATION payload for '${graphName}'. Harvested schema blocks already ` +
+					`carry the labels stamped at creation time; stamping more on the way back in would ` +
+					`make the block and the graph restored from it disagree about what is in the graph. ` +
+					`Nothing loaded.`,
+			);
+			return;
+		}
+
+		const normalized = schemaBlockTexts(schemaBlocks);
+		if (normalized.error) {
+			callback(normalized.error);
+			return;
+		}
+
+		if (!inGraph.boltUrl || !inGraph.password) {
+			callback(
+				`replayManager.init: the handle for '${graphName}' carries no boltUrl/password — a ` +
+					`graph handle is the capability token, and half of one is not a credential.`,
+			);
+			return;
+		}
+
+		xLog.status(
+			`[replayManager] restoring ${normalized.texts.length} schema block(s) into '${graphName}'`,
+		);
+
+		// replay() owns its own driver and session and closes both on every path, so there is no
+		// session for this verb to manage — another reason the restoration branch stays thin.
+		replayEngine.replay(
+			{
+				manifest: normalized.texts,
+				boltUri: inGraph.boltUrl,
+				password: inGraph.password,
+				graphName,
+			},
+			(err, result) => {
+				if (err) {
+					callback(`replayManager.init '${graphName}': ${err}`);
+					return;
+				}
+				callback('', result);
+			},
+		);
+	}
+
+	// -----
 	// init — the LOADER, and the creation entry point into the shared write path
 	// (targetArchitectureDesign §4). It is deliberately the ONLY polymorphic verb: `create` means
 	// exactly one thing forever, and everything that varies about "put something into a graph"
@@ -340,16 +500,18 @@ const replayManager = () => {
 	// a graph, and they have different histories:
 	//
 	//     init({ inGraph, nodeEdges,    applyLabels })   CREATION    — freshly forged material
-	//     init({ inGraph, schemaBlocks, applyLabels })   RESTORATION — previously harvested
-	//
-	// Only the creation payload is implemented in this milestone; schemaBlocks refuses honestly.
+	//     init({ inGraph, schemaBlocks })                RESTORATION — previously harvested
 	//
 	// The guards, the resolution-key index, the merge order and the vector index are NOT
 	// reimplemented here — they live in replay-engine.writeShapedGraph, which replay() also uses.
-	// Two entry points into one write path cannot disagree about what a safe write is.
+	// Two entry points into one write path cannot disagree about what a safe write is. The
+	// restoration branch below is correspondingly THIN on purpose: replay() already IS
+	// deserialize -> writeShapedGraph, so this verb's whole contribution is to check the payload's
+	// claims and hand over the handle's credentials. A second deserialize loop here, or a second
+	// copy of the ForgedNode/stableId guards, would be a second thing to drift.
 	const init = (spec, callback) => {
 		const { xLog } = process.global;
-		const { inGraph, nodeEdges, schemaBlocks, applyLabels = [], sourceLabel } = spec || {};
+		const { inGraph, nodeEdges, schemaBlocks, applyLabels, sourceLabel } = spec || {};
 
 		// the name guard fires FIRST, before any payload is examined and before anything connects
 		const graphName = inGraph && (inGraph.containerName || inGraph.graphName);
@@ -359,12 +521,20 @@ const replayManager = () => {
 			return;
 		}
 
-		if (schemaBlocks !== undefined) {
+		// A caller offering BOTH payloads has not decided what it is doing. Choosing one for it —
+		// by precedence, by order of evaluation, by anything — would make the other half silently
+		// vanish, and the caller would never learn which half ran.
+		if (nodeEdges !== undefined && schemaBlocks !== undefined) {
 			callback(
-				`replayManager.init: the schemaBlocks payload is not implemented yet — restoring a ` +
-					`graph from harvested schema blocks is its own milestone. Refusing rather than ` +
-					`silently loading nothing.`,
+				`replayManager.init: REFUSED — spec carries both nodeEdges and schemaBlocks for ` +
+					`'${graphName}'. Those are the CREATION and RESTORATION payloads; a caller supplying ` +
+					`both has not decided which it is doing. Nothing loaded.`,
 			);
+			return;
+		}
+
+		if (schemaBlocks !== undefined) {
+			restore({ inGraph, graphName, schemaBlocks, applyLabels }, callback);
 			return;
 		}
 
@@ -384,7 +554,10 @@ const replayManager = () => {
 			);
 			return;
 		}
-		if (!Array.isArray(applyLabels)) {
+		// applyLabels is OPTIONAL on the creation path (stamp nothing), but a supplied one must BE
+		// an array — a bare string would satisfy the label machinery by accident and stamp garbage.
+		const creationLabels = applyLabels === undefined ? [] : applyLabels;
+		if (!Array.isArray(creationLabels)) {
 			callback(
 				`replayManager.init: applyLabels must be an array of label names, got ` +
 					`${typeof applyLabels}. Nothing loaded.`,
@@ -402,7 +575,7 @@ const replayManager = () => {
 		const groups = [
 			{
 				sourceLabel: sourceLabel || `nodeEdges loaded into ${graphName}`,
-				nodes: withAppliedLabels(nodeEdges.nodes, applyLabels),
+				nodes: withAppliedLabels(nodeEdges.nodes, creationLabels),
 				edges: nodeEdges.edges,
 			},
 		];
@@ -416,7 +589,7 @@ const replayManager = () => {
 
 		xLog.status(
 			`[replayManager] loading ${nodeEdges.nodes.length} nodes, ${nodeEdges.edges.length} edges ` +
-				`into '${graphName}'${applyLabels.length ? ` as [${applyLabels.join(', ')}]` : ''}`,
+				`into '${graphName}'${creationLabels.length ? ` as [${creationLabels.join(', ')}]` : ''}`,
 		);
 
 		replayEngine.writeShapedGraph(
@@ -528,4 +701,5 @@ const replayManager = () => {
 module.exports = replayManager;
 module.exports.nameRefusal = nameRefusal;
 module.exports.withAppliedLabels = withAppliedLabels;
+module.exports.schemaBlockTexts = schemaBlockTexts;
 module.exports.resolveSettings = resolveSettings;
