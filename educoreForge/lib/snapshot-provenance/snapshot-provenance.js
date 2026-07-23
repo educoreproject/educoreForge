@@ -60,8 +60,26 @@ const readProvenanceVersion = (snapshotDirPath) => {
 //   { snapshotKey, publishedVersion, versionSource }
 // sourceVersion: the version string the parser itself read from a SELF-DESCRIBING source
 //   (owl:versionInfo, openapi info.version, …), or null when the source does not self-describe.
-// warn: (message) => void — receives the §3.2/§3.3 warnings (callers pass xLog.error).
-const deriveVersionStamp = ({ sourcePath, sourceVersion = null, warn = () => {} } = {}) => {
+// warn: (message) => void — REQUIRED. Receives the §3.2/§3.3 warnings (callers pass xLog.error).
+//   There is no default: the warnings are mandated by the spec this module implements, so a
+//   caller that does not name a channel for them is refused rather than quietly deprived.
+const deriveVersionStamp = ({ sourcePath, sourceVersion = null, warn } = {}) => {
+	// WARN IS PART OF THE CONTRACT, NOT AN OPTION. `warn = () => {}` used to sit in this parameter
+	// list, so a caller that forgot it discarded every warning the BINDING spec mandates —
+	// version disagreements, missing provenance, all of it — into a function that does nothing.
+	// Both callers on disk pass xLog.error, so nothing was lost today; the default existed purely
+	// to let a future caller lose it. polyArch2 §6: a required input that is missing is a fault
+	// named where it happened, and this one is required by the spec this module implements.
+	if (typeof warn !== 'function') {
+		throw new Error(
+			`${moduleName}.deriveVersionStamp: warn is ${
+				warn === undefined ? 'not given' : `a ${typeof warn}`
+			} and must be a function. The §3.2/§3.3 warnings — a version DISAGREEMENT between the ` +
+				`source and the provenance file, and a publishedVersion nobody supplies — are ` +
+				`MANDATED by the binding spec. They are part of this function's contract, not an ` +
+				`option, and there is no do-nothing default to swallow them.`,
+		);
+	}
 	const snapshotDirPath = sourcePath ? findSnapshotDirPath(sourcePath) : null;
 	const snapshotKey = snapshotDirPath ? path.basename(snapshotDirPath) : 'unknown';
 	if (!snapshotDirPath) {
