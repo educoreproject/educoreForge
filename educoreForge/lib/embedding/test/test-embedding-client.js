@@ -346,4 +346,67 @@ harness.match(
 	/non-empty array/,
 );
 
+// =====================================================================
+harness.section('ENCODE VECTOR — a non-vector is refused, never coerced to an empty or NaN one');
+// =====================================================================
+// `Float32Array.from(float32 || [])` silently turned null/undefined into an EMPTY vector and — the
+// worse case — a stray STRING into a NaN-filled one that base64-encodes to a real-looking payload.
+// encodeVector is a public codec on the module surface; a caller that hands it the wrong thing
+// should hear so, not get a plausible-looking blob (polyArch2 §6). The audit filed this B2 (an
+// internal utility whose callers pass real vectors); the work-group brief named it, and a codec
+// that fabricates a payload from a typo is worth closing. NOTE flagged in the report, not
+// reclassified on my own authority.
+
+const client = () => embeddingClient({ configFilePath: iniWith(['model=voyage-context-3', 'embeddingDims=1024']) });
+
+harness.rejects(
+	'encodeVector(null) is REFUSED, not silently encoded as an empty vector',
+	thrownMessage(() => client().encodeVector(null)),
+	/encodeVector[\s\S]*vector/i,
+);
+harness.rejects(
+	'encodeVector(undefined) is refused',
+	thrownMessage(() => client().encodeVector(undefined)),
+	/encodeVector/,
+);
+harness.rejects(
+	"encodeVector('not a vector') is REFUSED — never coerced to a NaN-filled payload",
+	thrownMessage(() => client().encodeVector('not a vector')),
+	/encodeVector/,
+);
+harness.rejects(
+	'encodeVector({}) is refused',
+	thrownMessage(() => client().encodeVector({})),
+	/encodeVector/,
+);
+harness.rejects(
+	'encodeVector of a list carrying a NaN is refused — a vector of not-numbers is not a vector',
+	thrownMessage(() => client().encodeVector(Float32Array.from([0.5, NaN]))),
+	/encodeVector[\s\S]*(NaN|finite|number)/i,
+);
+
+harness.equal(
+	'a Float32Array round-trips through encode/decode byte-exact — the positive control',
+	(() => {
+		const c = client();
+		const original = Float32Array.from([0.5, 0.25, -0.125]);
+		const back = c.decodeVector(c.encodeVector(original));
+		return Array.from(back).join(',');
+	})(),
+	'0.5,0.25,-0.125',
+);
+harness.equal(
+	'a plain number array is accepted and round-trips too — the second positive control',
+	(() => {
+		const c = client();
+		return Array.from(c.decodeVector(c.encodeVector([1, 0.5]))).join(',');
+	})(),
+	'1,0.5',
+);
+harness.equal(
+	'an EMPTY vector is a legitimate value and encodes to the empty string, not a refusal',
+	client().encodeVector(Float32Array.from([])),
+	'',
+);
+
 harness.report();

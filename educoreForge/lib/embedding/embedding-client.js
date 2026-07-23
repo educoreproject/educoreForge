@@ -25,7 +25,9 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //     ACTUALLY made it — the same [voyageEmbedding].model value that was sent to the API.
 //   embedder.embedTexts({ texts }, (err, { vectors, embeddingModelVersion }) => {...});
 //   embedder.resolveEmbeddingIdentity() -> { model, embeddingDims }  (never the key)
-//   embedder.encodeVector(float32) -> base64 (little-endian float32)
+//   embedder.encodeVector(float32) -> base64 (little-endian float32). Takes a Float32Array or
+//     an array of finite numbers; anything else is REFUSED rather than coerced. An EMPTY vector
+//     is a legitimate value and encodes to the empty string.
 //   embedder.decodeVector(base64)  -> Float32Array (round-trip identical)
 //
 // CHANNELS: CONFIGURATION FAULTS THROW; OPERATIONAL FAULTS CALL BACK. apiKey, model and
@@ -285,8 +287,31 @@ const moduleFunction =
 		};
 
 		const encodeVector = (float32) => {
+			// `Float32Array.from(float32 || [])` used to sit here. It turned null and undefined
+			// into an EMPTY vector, and — the worse case — a stray STRING into a NaN-filled one
+			// that base64-encodes to a real-looking payload. This is a public codec on the module
+			// surface: a caller who hands it the wrong thing must hear so, not receive a plausible
+			// blob (polyArch2 §6). An empty vector remains a legitimate VALUE; what is refused is
+			// a non-vector.
+			if (!(float32 instanceof Float32Array) && !Array.isArray(float32)) {
+				throw new Error(
+					`embedding-client.encodeVector: expected a Float32Array or an array of numbers, ` +
+						`got ${float32 === null ? 'null' : typeof float32}. A vector is not something ` +
+						`this codec will invent from what it was handed.`,
+				);
+			}
+			const badIndex = Array.from(float32).findIndex(
+				(oneValue) => typeof oneValue !== 'number' || !Number.isFinite(oneValue),
+			);
+			if (badIndex !== -1) {
+				throw new Error(
+					`embedding-client.encodeVector: element [${badIndex}] is ` +
+						`${JSON.stringify(float32[badIndex])}, which is not a finite number. A vector ` +
+						`carrying a NaN is not a vector, and it is not encoded as though it were.`,
+				);
+			}
 			const source =
-				float32 instanceof Float32Array ? float32 : Float32Array.from(float32 || []);
+				float32 instanceof Float32Array ? float32 : Float32Array.from(float32);
 			// Buffer.from over the underlying bytes; x86/arm are little-endian, which the
 			// decoder mirrors, so the round-trip is byte-exact on this platform.
 			const buffer = Buffer.from(
