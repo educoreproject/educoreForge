@@ -629,6 +629,60 @@ harness.ok(
 	).join('\n'),
 );
 
+// =====================================================================
+harness.section('THE REQUIRED VERSION IS CHECKED BEFORE ANY SPEND — not after the embedding pass');
+// =====================================================================
+// version is declared REQUIRED in the module header, but it used to be validated only in the
+// completion callback (inside resolveReportedVersion), AFTER the full parse AND the full Voyage
+// embedding pass. forge({ standard, vectorize:true }) with no version therefore ran the entire
+// real-credit embedding run and was refused only once the bill was already paid — the refusal
+// cost the whole spend it exists to protect. The presence check now sits BESIDE the spend knob,
+// before any bundle is resolved or any embedder is constructed.
+//
+// NO SPEND IS POSSIBLE HERE, EITHER DIRECTION — same fixtures as the spend section (the
+// UNREACHABLE bundle and the deliberately incomplete voyage ini). A run that DID reach embedding
+// stops inside embedding-client naming that fixture, touching no network. The evidence that the
+// refusal precedes the spend is that it NEVER reaches embedding-client at all.
+
+const noVersionSpec = (() => {
+	const spec = spendSpec({ vectorize: true });
+	delete spec.version;
+	return spec;
+})();
+const noVersion = forgeOutcome(noVersionSpec);
+
+harness.rejects(
+	'a spec with NO version is refused, naming the missing version token',
+	noVersion.all,
+	/version token|no version|version is REQUIRED/i,
+);
+harness.ok(
+	'  and it stops BEFORE an embedding client exists — a missing version cannot cost Voyage credit',
+	!noVersion.all.some((one) => /embedding-client/.test(one)),
+	noVersion.all.join('\n'),
+);
+harness.ok(
+	'  and it travels by CALLBACK, not a throw — forge() is callback-style all the way down',
+	noVersion.thrown.length === 0 && noVersion.callbackErrors.length === 1,
+	`thrown: ${noVersion.thrown.join('|')} / callback: ${noVersion.callbackErrors.join('|')}`,
+);
+
+// POSITIVE CONTROL — WITH a version present, vectorize:true proceeds PAST the version gate and
+// reaches the embedding client (where the fixture ini stops it). Without this, "refuse always"
+// would satisfy the rejection above.
+const versionPresent = forgeOutcome(spendSpec({ vectorize: true }));
+harness.ok(
+	'a version-present spec proceeds PAST the version gate to the embedding client — the positive control',
+	versionPresent.all.some((one) => /embedding-client/.test(one)),
+	versionPresent.all.join('\n'),
+);
+
+harness.ok(
+	'no version presence check is deferred to the completion callback in forger.js — the guard precedes the pipe',
+	/version === undefined[\s\S]*resolveBundle/.test(codeOf(path.join(__dirname, '..', 'forger.js'))),
+	'the early version guard must appear before resolveBundle in forge()',
+);
+
 fs.rmSync(unreachableBundleDir, { recursive: true, force: true });
 fs.rmSync(spendFixtureDir, { recursive: true, force: true });
 

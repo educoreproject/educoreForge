@@ -333,6 +333,27 @@ const moduleFunction =
 			return;
 		}
 
+		// THE REQUIRED VERSION IS STATED BEFORE ANY SPEND, BESIDE THE SPEND KNOB. version is
+		// declared REQUIRED in this module's header, but its presence used to be checked ONLY in
+		// the completion callback (inside resolveReportedVersion), AFTER the full parse AND the
+		// full Voyage embedding pass — so forge({ standard, vectorize:true }) with no version ran
+		// the entire real-credit embedding run and was refused only once the bill was already
+		// paid. The presence check moves HERE, before any bundle is resolved or any embedder is
+		// constructed, so a missing version costs nothing. resolveReportedVersion still runs at
+		// the end and is UNCHANGED — it keeps the two provenance claims (the bundle's own stamp vs
+		// the recipe's requested token) distinct; this only front-loads the part that must precede
+		// the spend (polyArch2 §6).
+		if (version === undefined || version === null || `${version}`.trim() === '') {
+			callback(
+				`forger: the forge spec names no version token. version is REQUIRED — it is ` +
+					`reported alongside the bundle's own stamp so the two provenance claims stay ` +
+					`distinct, and there is no default for it. This is checked BEFORE any bundle is ` +
+					`resolved or any embedder is constructed, so a missing version cannot cost ` +
+					`Voyage credit.`,
+			);
+			return;
+		}
+
 		const resolved = resolveBundle({ standard });
 		if (resolved.error) {
 			callback(resolved.error);
