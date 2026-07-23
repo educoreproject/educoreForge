@@ -8,14 +8,19 @@
 // left untouched — the guards proven to bite where it actually matters rather than only in
 // memory.
 //
-// Spends a docker container. Spends Voyage credit only with --vectorize=true (default OFF here:
-// the guards and the load are what this proves, and embeddings are proven by integration-forge).
+// Spends a docker container. Spends Voyage credit with --vectorize=true.
 // Deliberate: its name does not match test-*.js, so runAllTests never runs it.
 //
-//   node integration-init.js                     LIF, no embeddings
-//   node integration-init.js --standard=ceds     the big one
-//   node integration-init.js --vectorize=true    with real embeddings
-//   node integration-init.js -keepGraph          leave the scratch graph up for inspection
+// --vectorize is REQUIRED and has no default. It used to be read as `=== 'true'` — the OPPOSITE
+// polarity from the forger's entry points, which read `!== 'false'` — so one spelling meant two
+// opposite things across the tree and neither said so: --vectorize=yes asked for the embedding
+// leg and silently didn't get it, leaving the proof to pass vacuously. It now takes exactly
+// 'true' or exactly 'false' and refuses anything else by name (polyArch2 §6).
+//
+//   node integration-init.js --vectorize=false                  LIF, no embeddings
+//   node integration-init.js --standard=ceds --vectorize=false  the big one
+//   node integration-init.js --vectorize=true                   with real embeddings
+//   node integration-init.js --vectorize=false -keepGraph       leave the scratch graph up
 
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
@@ -24,13 +29,24 @@ NAME
      ${moduleName} -- live proof: provision, shape a real forge bundle's output, init it, gate it
 
 SYNOPSIS
-     ${moduleName} [--standard=<token>] [--vectorize=true] [-keepGraph] [-verbose] [-help]
+     ${moduleName} --vectorize=true|false [--standard=<token>] [-keepGraph] [-verbose] [-help]
 
 DESCRIPTION
      Provisions a throwaway DEV_* Neo4j, runs a real forge bundle in memory, shapes its output to
      engine shape, loads it with replayManager.init applying the StandardBase label, and asserts
      Cypher gates over the resulting graph. Then proves the pre-write guards REFUSE through init
      against the live graph without writing anything, and destroys the container.
+
+OPTIONS
+     --vectorize=true|false   REQUIRED, and there is NO DEFAULT. true runs the forge with real
+                              Voyage embeddings and spends real credit; false skips the embedding
+                              pass -- the guards and the load are what this script proves, and
+                              embeddings are proven by integration-forge. Exactly those two
+                              spellings are accepted -- 'yes', 'no', '1', '0', 'on', 'off' and
+                              'True' are refused by name rather than guessed at, because a
+                              silently-ignored 'yes' would make the embedding leg pass vacuously.
+     --standard=<token>       which forge bundle to run (default: lif).
+     -keepGraph               leave the scratch graph up for inspection.
 
 EXIT STATUS
      0 all gates green AND the red-gate proof fired;  1 otherwise.
@@ -57,7 +73,22 @@ const TREE_LIB = path.join(__dirname, '..', '..', '..', '..', '..', 'lib');
 const BASE_GRAPH_LABEL = 'StandardBase';
 const MIN_NODES = { lif: 2900, ceds: 23000 };
 
-const vectorize = (commandLineParameters.values.vectorize || [])[0] === 'true';
+// the ONE reading of the spend knob, shared with every other entry point that takes it
+const { requireBooleanValue } = require('../../../../../test/testLib/require-boolean-value');
+
+const vectorize = requireBooleanValue({
+	name: 'vectorize',
+	commandLineParameters,
+	moduleName,
+	whatItControls: 'whether real Voyage embeddings are requested, which spends real credit',
+});
+// the spend decision is announced BEFORE anything is spent, so the operator can see what he
+// actually asked for while stopping is still free.
+xLog.status(
+	`[${moduleName}] vectorize=${vectorize}` +
+		(vectorize ? ' — real Voyage credit WILL be spent' : ' — no Voyage spend'),
+);
+
 const keepGraph = !!commandLineParameters.switches.keepGraph;
 const standard = (commandLineParameters.values.standard || ['lif'])[0];
 

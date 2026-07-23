@@ -32,6 +32,7 @@ const harness = require('../../../../../test/testLib/harness')(moduleName);
 
 const fs = require('fs');
 const path = require('path');
+const { spawnSync } = require('child_process');
 
 const replayManagerModule = require('../replayManager');
 const { nameRefusal } = replayManagerModule;
@@ -445,6 +446,113 @@ harness.equal(
 	'applying NO labels leaves the label set alone',
 	withAppliedLabels(sourceNodes, [])[0].labels.length,
 	2,
+);
+
+// =====================================================================
+harness.section('INTEGRATION-INIT --vectorize — the opposite polarity, made one polarity');
+// =====================================================================
+// integration-init.js read the spend knob as `=== 'true'` — the OPPOSITE polarity from the
+// forger's two entry points, which read `!== 'false'`. One switch, one spelling, two opposite
+// behaviours: --vectorize=no ran WITH embeddings over there and WITHOUT them here, and
+// --vectorize=yes asked for the embedding leg and silently didn't get it, so the proof the
+// operator ran to exercise embeddings passed vacuously. It now reads through the same
+// requireBooleanValue as the forger's entry points, so there is one rule to know.
+
+// -----
+// codeOf — a file's source with whole-line comments stripped, so a scan for a surviving
+//   hand-rolled comparison is not fooled by prose in the header, nor defeated by it.
+
+const codeOf = (filePath) =>
+	fs
+		.readFileSync(filePath, 'utf8')
+		.split('\n')
+		.filter((oneLine) => !/^\s*(\/\/|\*|\/\*)/.test(oneLine))
+		.join('\n');
+
+// NO SPEND IS POSSIBLE FROM THESE RUNS, in either polarity. Every spawn carries a --standard
+// token with no MIN_NODES floor, so integration-init exits on that check before an embedding
+// client is constructed or replayManager.create is called; the --vectorize refusals fire before
+// even that, on the first read after startup. Each run ends in about a third of a second having
+// touched no network, no docker and no database.
+
+const NO_SUCH_STANDARD = '__no_such_standard_this_test_only__';
+const TREE_ROOT = path.join(__dirname, '..', '..', '..', '..', '..');
+
+// -----
+// runEntryPoint — run one of the deliberate integration entry points to the point where it reads
+//   --vectorize, and hand back everything it said plus how it exited. stdout and stderr are
+//   joined because testAppStartup routes xLog to stdout while an uncaught refusal lands on
+//   stderr, and the assertion cares about what the operator sees, which is both.
+
+const runEntryPoint = (entryPath, extraArgs) => {
+	const run = spawnSync(
+		process.execPath,
+		[entryPath, `--standard=${NO_SUCH_STANDARD}`, ...extraArgs],
+		{ encoding: 'utf8', cwd: TREE_ROOT, timeout: 60000 },
+	);
+	return { status: run.status, text: `${run.stdout || ''}${run.stderr || ''}` };
+};
+
+const INTEGRATION_INIT = path.join(__dirname, 'integration-init.js');
+
+const initAbsent = runEntryPoint(INTEGRATION_INIT, []);
+harness.match(
+	'an ABSENT --vectorize is refused, naming the switch and both accepted spellings',
+	initAbsent.text,
+	/--vectorize is not set[\s\S]*--vectorize=true[\s\S]*--vectorize=false/,
+);
+harness.equal('  and the run stops rather than choosing for him', initAbsent.status !== 0, true);
+
+const initInvalid = runEntryPoint(INTEGRATION_INIT, ['--vectorize=yes']);
+harness.match(
+	"an INVALID --vectorize=yes is refused, naming 'yes' — never silently read as FALSE",
+	initInvalid.text,
+	/--vectorize='yes'[\s\S]*--vectorize=true[\s\S]*--vectorize=false/,
+);
+const initInvalidNo = runEntryPoint(INTEGRATION_INIT, ['--vectorize=no']);
+harness.match(
+	"  and --vectorize=no is refused HERE too — the spelling that used to mean TRUE in the forger",
+	initInvalidNo.text,
+	/--vectorize='no'/,
+);
+
+const initTrue = runEntryPoint(INTEGRATION_INIT, ['--vectorize=true']);
+const initFalse = runEntryPoint(INTEGRATION_INIT, ['--vectorize=false']);
+harness.match(
+	'a VALID --vectorize=true is honoured as TRUE — the positive control, ON direction',
+	initTrue.text,
+	/vectorize=true/,
+);
+harness.match(
+	'a VALID --vectorize=false is honoured as FALSE — the positive control, OFF direction',
+	initFalse.text,
+	/vectorize=false/,
+);
+harness.ok(
+	'  the two directions differ — a one-direction control would not have caught the polarity bug',
+	/vectorize=true/.test(initTrue.text) && !/vectorize=true/.test(initFalse.text),
+	`--vectorize=true said:\n${initTrue.text}\n--vectorize=false said:\n${initFalse.text}`,
+);
+harness.match(
+	'  and both valid runs walked past the switch to the MIN_NODES floor, having spent nothing',
+	initFalse.text,
+	/no MIN_NODES floor/,
+);
+
+harness.ok(
+	'no hand-rolled --vectorize comparison survives in integration-init.js',
+	!/values\.vectorize/.test(codeOf(INTEGRATION_INIT)),
+	(codeOf(INTEGRATION_INIT).match(/.*values\.vectorize.*/g) || []).join('\n'),
+);
+harness.match(
+	'  it reads the switch through the SAME shared rule the forger entry points use',
+	codeOf(INTEGRATION_INIT),
+	/requireBooleanValue\(/,
+);
+harness.match(
+	'  and its own -help states the switch is REQUIRED with no default — the contract where he looks',
+	runEntryPoint(INTEGRATION_INIT, ['-help']).text,
+	/--vectorize=true\|false[\s\S]*REQUIRED, and there is NO DEFAULT/,
 );
 
 harness.report();
