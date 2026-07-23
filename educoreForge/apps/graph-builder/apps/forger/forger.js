@@ -141,9 +141,38 @@ const resolveBundle = ({ standard }) => {
 			error: `forger: no forge bundle for standard '${standard}' (no ${descriptorPath}). Known forges: ${known}`,
 		};
 	}
-	const descriptor = (configFileProcessor.getConfig(descriptorPath) || {}).parserDescriptor || {};
+	// THE BUNDLE IS ITS OWN REGISTRATION. The central standard-registry was deleted and the
+	// [parserDescriptor] section is what replaced it, so an ABSENT section is a bundle that is not
+	// registered at all. `.parserDescriptor || {}` used to let it walk on as though it were, and
+	// it died two lines later blaming a missing entryModule — a disguise, because the operator has
+	// very likely already written that key under a header he forgot or mistyped. CODE FACT:
+	// qtools-config-file-processor DISCARDS sectionless keys, so a wrong header makes every key in
+	// the file invisible at once. polyArch2 §6: the absence is the error, and it must say what is
+	// missing and where it belongs.
+	const descriptor = (configFileProcessor.getConfig(descriptorPath) || {}).parserDescriptor;
+	if (descriptor === undefined || descriptor === null) {
+		return {
+			error:
+				`forger: forge bundle '${standard}' is NOT REGISTERED — ${descriptorPath} has no ` +
+				`[parserDescriptor] section. A forge bundle IS its own registration; that section is ` +
+				`the whole of it, and it must declare standardName, entryModule, defaultSnapshot and ` +
+				`sourceFile. NOTE: sectionless keys are DISCARDED by the ini reader, so a missing or ` +
+				`mistyped [parserDescriptor] header makes every key in the file invisible at once.`,
+		};
+	}
+	if (!Object.keys(descriptor).length) {
+		return {
+			error:
+				`forger: forge bundle '${standard}' REGISTERS NOTHING — [parserDescriptor] in ` +
+				`${descriptorPath} is present but empty. A registration that declares nothing is not ` +
+				`a registration; it must declare standardName, entryModule, defaultSnapshot and ` +
+				`sourceFile.`,
+		};
+	}
 	if (!descriptor.entryModule) {
-		return { error: `forger: ${descriptorPath} has no entryModule` };
+		return {
+			error: `forger: forge bundle '${standard}' declares no entryModule in ${descriptorPath}`,
+		};
 	}
 	// canonicalize defaultSnapshot against the ENUMERATED snapshot directory names:
 	// qtools-config-file-processor coerces `01` to the NUMBER 1 (code fact, same hazard the

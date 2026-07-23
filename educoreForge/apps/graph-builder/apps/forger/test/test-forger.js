@@ -119,6 +119,130 @@ harness.match('an unknown standard errors', unknown.error, /no forge bundle for 
 harness.match('  and names the known roster so the caller can self-correct', unknown.error, /Known forges: .*lif/);
 
 // =====================================================================
+harness.section('BUNDLE REGISTRATION — a bundle that registers nothing is refused BY NAME');
+// =====================================================================
+// forger.js:104 reads `(getConfig(descriptorPath) || {}).parserDescriptor || {}`. A forge bundle
+// IS its own registration — the central standard-registry was deleted and the [parserDescriptor]
+// section is what replaced it — so an ABSENT section is a bundle that is not registered at all.
+// The `|| {}` lets it walk on as though it were, and it dies two lines later blaming a MISSING
+// KEY. That refusal is a disguise: it tells the operator to add `entryModule=` to a file where
+// he has very likely already written it, under a section header he forgot or mistyped.
+//
+// CODE FACT, probed against this tree's copy of qtools-config-file-processor rather than assumed:
+// SECTIONLESS KEYS ARE DISCARDED. `entryModule=forgeThing.js` written with no [parserDescriptor]
+// header does not appear in the parsed config at all — the bundle's own descriptor comment says
+// so in its first four lines. So the mistyped-header case is not hypothetical; it is the single
+// most likely way to author a descriptor wrongly, and it is the case the `|| {}` hides.
+//
+// The fixture bundles are temp directories created and removed inside the real forges/ tree,
+// because resolveBundle computes its own bundle path from FORGES_DIR and offers no seam. They are
+// removed by the helper on every path, and named so a leftover is unmistakable.
+
+// -----
+// withTempBundle — write forges/<name>/parserDescriptor.ini, resolve against it, remove it.
+//   Returns whatever resolveBundle answered. The directory never outlives the call.
+
+const FORGES_DIR_FOR_TEST = path.join(__dirname, '..', '..', '..', '..', '..', 'forges');
+
+const withTempBundle = (bundleName, descriptorText) => {
+	const bundleDir = path.join(FORGES_DIR_FOR_TEST, bundleName);
+	fs.rmSync(bundleDir, { recursive: true, force: true });
+	fs.mkdirSync(bundleDir, { recursive: true });
+	fs.writeFileSync(path.join(bundleDir, 'parserDescriptor.ini'), descriptorText);
+	let answer;
+	try {
+		answer = resolveBundle({ standard: bundleName });
+	} finally {
+		fs.rmSync(bundleDir, { recursive: true, force: true });
+	}
+	return answer;
+};
+
+const NO_SECTION_BUNDLE = 'zztestonlynosection';
+const EMPTY_SECTION_BUNDLE = 'zztestonlyemptysection';
+const GOOD_BUNDLE = 'zztestonlygoodsection';
+
+// -----
+// bundleErrors — the refusal as a LIST, so harness.rejects can insist on the SPECIFIC reason.
+const bundleErrors = (answer) => (answer && answer.error ? [answer.error] : []);
+
+const noSection = withTempBundle(
+	NO_SECTION_BUNDLE,
+	'# the operator wrote the keys but forgot the section header\nentryModule=forgeThing.js\nstandardName=ZZ\n',
+);
+harness.rejects(
+	'an ABSENT [parserDescriptor] section is refused, naming the BUNDLE and the FILE it looked for',
+	bundleErrors(noSection),
+	new RegExp(`'${NO_SECTION_BUNDLE}'[\\s\\S]*parserDescriptor\\.ini`),
+);
+harness.match(
+	'  and it names the SECTION HEADER, which is what is actually absent — no longer a disguise',
+	noSection.error,
+	/\[parserDescriptor\] section/,
+);
+harness.match(
+	'  and says WHY a right-looking file can still be empty: sectionless keys are DISCARDED',
+	noSection.error,
+	/sectionless keys/i,
+);
+harness.ok(
+	'  and it does NOT blame a missing entryModule — the key the operator already wrote',
+	!/has no entryModule/.test(String(noSection.error)),
+	noSection.error,
+);
+
+const emptySection = withTempBundle(
+	EMPTY_SECTION_BUNDLE,
+	'[parserDescriptor]\n# a registration that registers nothing\n',
+);
+harness.rejects(
+	'an EMPTY [parserDescriptor] section is refused as an INVALID registration, naming the bundle',
+	bundleErrors(emptySection),
+	new RegExp(`'${EMPTY_SECTION_BUNDLE}'[\\s\\S]*registers nothing`, 'i'),
+);
+harness.ok(
+	'  and it is a DIFFERENT sentence from the absent-section one — two faults, two messages',
+	String(emptySection.error).replace(new RegExp(EMPTY_SECTION_BUNDLE, 'g'), '<b>') !==
+		String(noSection.error).replace(new RegExp(NO_SECTION_BUNDLE, 'g'), '<b>'),
+	`${noSection.error}\n${emptySection.error}`,
+);
+
+const missingEntryModule = withTempBundle(
+	EMPTY_SECTION_BUNDLE,
+	'[parserDescriptor]\nstandardName=ZZ\n',
+);
+harness.rejects(
+	'a registration missing entryModule is still refused — and now names the bundle too',
+	bundleErrors(missingEntryModule),
+	new RegExp(`'${EMPTY_SECTION_BUNDLE}'[\\s\\S]*entryModule`),
+);
+
+const goodSection = withTempBundle(
+	GOOD_BUNDLE,
+	'[parserDescriptor]\nstandardName=ZZ\nentryModule=forgeZz.js\n',
+);
+harness.equal(
+	'a bundle that DOES register itself resolves without error — the positive control',
+	goodSection.error || '',
+	'',
+);
+harness.equal('  and carries its declared standardName', goodSection.standardName, 'ZZ');
+harness.match('  and its declared entryModule', goodSection.entryPath, /forgeZz\.js$/);
+harness.equal(
+	'  while the REAL lif bundle still resolves — the second positive control',
+	resolveBundle({ standard: 'lif' }).error || '',
+	'',
+);
+
+harness.ok(
+	'no `parserDescriptor || {}` survives in forger.js',
+	!/parserDescriptor\s*\|\|\s*\{\}/.test(codeOf(path.join(__dirname, '..', 'forger.js'))),
+	(codeOf(path.join(__dirname, '..', 'forger.js')).match(/.*parserDescriptor.*\|\|.*/g) || []).join(
+		'\n',
+	),
+);
+
+// =====================================================================
 harness.section('STANDARD-BLOCK SERIALIZER — the pure transport (incumbent-faithful shape)');
 // =====================================================================
 
