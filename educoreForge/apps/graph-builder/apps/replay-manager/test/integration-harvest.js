@@ -149,7 +149,8 @@ const embedder = vectorize
 
 // the declared vector width is the SAME ini value the embedder sends to the API; there is no
 // in-code width standing in for it (polyArch2 §6). Nothing embedded means nothing to declare.
-const declaredEmbeddingDims = embedder ? embedder.resolveEmbeddingIdentity().embeddingDims : undefined;
+const embeddingIdentity = embedder ? embedder.resolveEmbeddingIdentity() : null;
+const declaredEmbeddingDims = embeddingIdentity ? embeddingIdentity.embeddingDims : undefined;
 
 xLog.status(`[${moduleName}] forging ${resolved.standardName} (vectorize=${vectorize})`);
 
@@ -178,17 +179,25 @@ require(resolved.entryPath)({ embedder }).forge(
 
 		// The header is handed to BOTH sides so header bytes are identical by construction and the
 		// comparison is about CONTENT. A header difference would be a caller choice, not a finding.
+		// The embedding descriptors come from the SAME embedder identity the vectors were made
+		// with — never an in-code 'voyage-4-large'/1024, which is the very constant group 1 tore
+		// out of shape-forged-graph and standard-block. With nothing embedded there is nothing to
+		// declare, so the keys are omitted, exactly as buildStandardBlock now does (polyArch2 §6).
 		const header = {
 			blockType: 'standardBase',
 			standardKey: forged.standardKey,
 			version: forged.metadata.version,
 			stableUriPropertyName: forged.stableUriPropertyName,
 			resolutionKey: forged.stableUriPropertyName,
-			embeddingModelVersion: 'voyage-4-large',
-			embeddingEncoding: 'base64',
-			embeddingDtype: 'float32',
-			embeddingByteOrder: 'little-endian',
-			embeddingDims: 1024,
+			...(embeddingIdentity
+				? {
+						embeddingModelVersion: embeddingIdentity.model,
+						embeddingEncoding: 'base64',
+						embeddingDtype: 'float32',
+						embeddingByteOrder: 'little-endian',
+						embeddingDims: embeddingIdentity.embeddingDims,
+					}
+				: {}),
 		};
 
 		replayManager.create({ purpose: `${standard}HarvestProof` }, (createErr, handle) => {
