@@ -16,11 +16,18 @@
 // difference as NORMALIZATION (a stable, intentional canonical form) or LOSS (a fact that went in
 // and did not come out). Loss is a defect regardless of bytes.
 //
-// Spends a docker container; Voyage credit only with --vectorize=true.
+// Spends a docker container; Voyage credit with --vectorize=true.
 //
-//   node integration-harvest.js                  LIF, no embeddings
-//   node integration-harvest.js --vectorize=true LIF with real vectors (proves the embedding leg)
-//   node integration-harvest.js --standard=ceds  the big one
+// --vectorize is REQUIRED and has no default. It used to be read as `=== 'true'`, which decided
+// more than spend here: LOSS CHECK 5 (embeddings survive the round trip byte-for-byte) runs only
+// when it is true. So --vectorize=yes turned off the very check the operator typed it to switch
+// on, and the run reported NO LOSS having never looked. It now takes exactly 'true' or exactly
+// 'false' and refuses anything else by name (polyArch2 §6).
+//
+//   node integration-harvest.js --vectorize=false                  LIF, no embeddings
+//   node integration-harvest.js --vectorize=true                   LIF with real vectors (proves
+//                                                                  the embedding leg, LOSS CHECK 5)
+//   node integration-harvest.js --standard=ceds --vectorize=false  the big one
 
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
@@ -29,7 +36,7 @@ NAME
      ${moduleName} -- live harvest proof + the punch-24 information-loss diagnostic
 
 SYNOPSIS
-     ${moduleName} [--standard=<token>] [--vectorize=true] [-keepGraph] [-verbose] [-help]
+     ${moduleName} --vectorize=true|false [--standard=<token>] [-keepGraph] [-verbose] [-help]
 
 DESCRIPTION
      Forges a real standard in memory, builds the in-memory schema block, loads the same content
@@ -37,6 +44,17 @@ DESCRIPTION
      replayManager.harvest, and reports every difference between the two -- classified as
      NORMALIZATION or as LOSS. Asserts that nothing was LOST; ordering and canonical-form
      differences are reported, not failed.
+
+OPTIONS
+     --vectorize=true|false   REQUIRED, and there is NO DEFAULT. true forges with real Voyage
+                              embeddings, spends real credit, and is what makes LOSS CHECK 5
+                              (embeddings survive the round trip byte-for-byte) run at all;
+                              false skips the embedding pass and says so. Exactly those two
+                              spellings are accepted -- 'yes', 'no', '1', '0', 'on', 'off' and
+                              'True' are refused by name rather than guessed at, because a
+                              silently-ignored 'yes' would report NO LOSS having never looked.
+     --standard=<token>       which forge bundle to run (default: lif).
+     -keepGraph               leave the scratch graph up for inspection.
 
 EXIT STATUS
      0 no information loss;  1 loss detected or a gate failed.
@@ -62,7 +80,23 @@ const TREE_LIB = path.join(__dirname, '..', '..', '..', '..', '..', 'lib');
 
 const BASE_GRAPH_LABEL = 'StandardBase';
 
-const vectorize = (commandLineParameters.values.vectorize || [])[0] === 'true';
+// the ONE reading of the spend knob, shared with every other entry point that takes it
+const { requireBooleanValue } = require('../../../../../test/testLib/require-boolean-value');
+
+const vectorize = requireBooleanValue({
+	name: 'vectorize',
+	commandLineParameters,
+	moduleName,
+	whatItControls:
+		'whether real Voyage embeddings are requested — it spends real credit, and it is what makes LOSS CHECK 5 run',
+});
+// the spend decision is announced BEFORE anything is spent, so the operator can see what he
+// actually asked for while stopping is still free.
+xLog.status(
+	`[${moduleName}] vectorize=${vectorize}` +
+		(vectorize ? ' — real Voyage credit WILL be spent' : ' — no Voyage spend'),
+);
+
 const keepGraph = !!commandLineParameters.switches.keepGraph;
 const standard = (commandLineParameters.values.standard || ['lif'])[0];
 

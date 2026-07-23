@@ -555,4 +555,107 @@ harness.match(
 	/--vectorize=true\|false[\s\S]*REQUIRED, and there is NO DEFAULT/,
 );
 
+// =====================================================================
+harness.section('INTEGRATION-HARVEST --vectorize — the fourth reading, and the last one');
+// =====================================================================
+// integration-harvest.js carried the same `=== 'true'` reading as integration-init did, and here
+// it decides more than spend: LOSS CHECK 5 (embeddings survive the round trip byte-for-byte)
+// runs only when vectorize is true, and otherwise emits a note. So --vectorize=yes turned off
+// the very check the operator typed it to switch on, and the run reported NO LOSS having never
+// looked. It now reads through the same requireBooleanValue as the other three.
+//
+// NO SPEND IS POSSIBLE FROM THESE RUNS, in either polarity: the spawns carry a --standard token
+// resolveBundle cannot resolve, so the script stops on the known-forges roster error before an
+// embedding client is constructed; the --vectorize refusals fire before even that.
+
+const INTEGRATION_HARVEST = path.join(__dirname, 'integration-harvest.js');
+
+const harvestAbsent = runEntryPoint(INTEGRATION_HARVEST, []);
+harness.match(
+	'an ABSENT --vectorize is refused, naming the switch and both accepted spellings',
+	harvestAbsent.text,
+	/--vectorize is not set[\s\S]*--vectorize=true[\s\S]*--vectorize=false/,
+);
+harness.equal('  and the run stops rather than choosing for him', harvestAbsent.status !== 0, true);
+
+const harvestInvalid = runEntryPoint(INTEGRATION_HARVEST, ['--vectorize=yes']);
+harness.match(
+	"an INVALID --vectorize=yes is refused, naming 'yes' — LOSS CHECK 5 is never skipped in silence",
+	harvestInvalid.text,
+	/--vectorize='yes'[\s\S]*--vectorize=true[\s\S]*--vectorize=false/,
+);
+harness.match(
+	"  and --vectorize=1 is refused too, naming '1' — a number is not a spelling of true",
+	runEntryPoint(INTEGRATION_HARVEST, ['--vectorize=1']).text,
+	/--vectorize='1'/,
+);
+
+const harvestTrue = runEntryPoint(INTEGRATION_HARVEST, ['--vectorize=true']);
+const harvestFalse = runEntryPoint(INTEGRATION_HARVEST, ['--vectorize=false']);
+harness.match(
+	'a VALID --vectorize=true is honoured as TRUE — the positive control, ON direction',
+	harvestTrue.text,
+	/vectorize=true/,
+);
+harness.match(
+	'a VALID --vectorize=false is honoured as FALSE — the positive control, OFF direction',
+	harvestFalse.text,
+	/vectorize=false/,
+);
+harness.ok(
+	'  the two directions differ — a one-direction control would not have caught the polarity bug',
+	/vectorize=true/.test(harvestTrue.text) && !/vectorize=true/.test(harvestFalse.text),
+	`--vectorize=true said:\n${harvestTrue.text}\n--vectorize=false said:\n${harvestFalse.text}`,
+);
+harness.match(
+	'  and both valid runs walked past the switch to the roster error, having spent nothing',
+	harvestFalse.text,
+	/no forge bundle for standard/,
+);
+
+harness.ok(
+	'no hand-rolled --vectorize comparison survives in integration-harvest.js',
+	!/values\.vectorize/.test(codeOf(INTEGRATION_HARVEST)),
+	(codeOf(INTEGRATION_HARVEST).match(/.*values\.vectorize.*/g) || []).join('\n'),
+);
+harness.match(
+	'  it reads the switch through the SAME shared rule the other three use',
+	codeOf(INTEGRATION_HARVEST),
+	/requireBooleanValue\(/,
+);
+harness.match(
+	'  and its own -help states the switch is REQUIRED with no default — the contract where he looks',
+	runEntryPoint(INTEGRATION_HARVEST, ['-help']).text,
+	/--vectorize=true\|false[\s\S]*REQUIRED, and there is NO DEFAULT/,
+);
+
+// -----
+// THE CLOSING GATE — the whole point of the work group, asserted over all four sites at once.
+// Four readings in two polarities is a thing that can grow back one file at a time; this is the
+// assertion that goes red the moment a fifth hand-rolled reading appears anywhere in the tree.
+
+const FORGER_TEST_DIR = path.join(TREE_ROOT, 'apps', 'graph-builder', 'apps', 'forger', 'test');
+const ALL_FOUR_SITES = [
+	path.join(FORGER_TEST_DIR, 'capture-baseline.js'),
+	path.join(FORGER_TEST_DIR, 'integration-forge.js'),
+	INTEGRATION_INIT,
+	INTEGRATION_HARVEST,
+];
+
+harness.equal(
+	'ALL FOUR sites read --vectorize through the one shared rule',
+	ALL_FOUR_SITES.filter((onePath) => /requireBooleanValue\(/.test(codeOf(onePath))).length,
+	4,
+);
+harness.equal(
+	'  and NOT ONE of them still touches values.vectorize by hand, in either polarity',
+	ALL_FOUR_SITES.filter((onePath) => /values\.vectorize/.test(codeOf(onePath))).join(', '),
+	'',
+);
+harness.equal(
+	"  no `!== 'false'` and no `=== 'true'` survives at any of the four",
+	ALL_FOUR_SITES.filter((onePath) => /!== 'false'|=== 'true'/.test(codeOf(onePath))).join(', '),
+	'',
+);
+
 harness.report();
