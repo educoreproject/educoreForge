@@ -284,4 +284,52 @@ harness.ok(
 	),
 );
 
+// =====================================================================
+harness.section('STANDARD-BLOCK SERIALIZER — the model version is CARRIED here too');
+// =====================================================================
+// This module is the fidelity gate's fixture: it produces the "in-memory" side of the
+// in-memory-vs-harvested comparison. A silently stamped side A weakens exactly the comparison
+// the fixture exists for, so it holds the same line as shapeForgedGraph — in lockstep, by design.
+
+// -----
+// serializedNodeOf — the ONE node line out of a built block, parsed back from its JSONL.
+
+const serializedNodeOf = (built) =>
+	built.blockText
+		.trim()
+		.split('\n')
+		.map((oneLine) => JSON.parse(oneLine))
+		.find((oneLine) => oneLine.stableId === 'lif:embedded');
+
+const builtMissingVersion = buildStandardBlock({ forged: forgedWith({}) });
+harness.rejects(
+	'an embedded node with NO embeddingModelVersion is refused, naming the offending node',
+	builtMissingVersion.error ? [builtMissingVersion.error] : [],
+	/node 'lif:embedded'.*embeddingModelVersion/s,
+);
+
+const builtBlankVersion = buildStandardBlock({
+	forged: forgedWith({ embeddingModelVersion: '   ' }),
+});
+harness.rejects(
+	'an embedded node with a BLANK embeddingModelVersion is refused, not normalized',
+	builtBlankVersion.error ? [builtBlankVersion.error] : [],
+	/node 'lif:embedded'.*embeddingModelVersion/s,
+);
+
+const builtConfigured = buildStandardBlock({
+	forged: forgedWith({ embeddingModelVersion: 'voyage-context-3' }),
+});
+harness.equal(
+	'a CARRIED embeddingModelVersion is serialized verbatim — the positive control',
+	builtConfigured.error || serializedNodeOf(builtConfigured).embeddingModelVersion,
+	'voyage-context-3',
+);
+
+harness.ok(
+	'no model-version literal survives anywhere in standard-block.js',
+	!/voyage-[0-9]/.test(codeOf(path.join(__dirname, '..', 'lib', 'standard-block.js'))),
+	(codeOf(path.join(__dirname, '..', 'lib', 'standard-block.js')).match(/.*voyage-[0-9].*/g) || []).join('\n'),
+);
+
 harness.report();

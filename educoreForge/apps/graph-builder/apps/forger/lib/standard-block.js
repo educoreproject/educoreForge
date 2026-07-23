@@ -32,7 +32,61 @@ const { SCHEMA_BLOCK_KIND } = require(path.join(TREE_LIB, 'vocabulary', 'vocabul
 
 const EMBEDDING_DIMS = 1024;
 
+// -----
+// carriedModelVersion — the ONE model version the embedded nodes say produced their vectors.
+//   Returns { modelVersion } or { error }. It is CARRIED, never invented: this value is what
+//   vectorIdForInput hashes, so standing in for a missing one silently changes what every
+//   content address means (polyArch2 §6). Held in lockstep with shape-forged-graph's identical
+//   refusal — the fidelity gate compares what these two produce, so a silent stamp on either
+//   side weakens exactly the comparison this module exists for.
+
+const carriedModelVersion = (forged) => {
+	const embeddedNodes = forged.nodes.filter((oneNode) => oneNode.properties.embedding);
+
+	const offender = embeddedNodes.find(
+		(oneNode) =>
+			oneNode.properties.embeddingModelVersion === undefined ||
+			`${oneNode.properties.embeddingModelVersion}`.trim() === '',
+	);
+	if (offender) {
+		return {
+			error:
+				`buildStandardBlock: node '${offender.stableId}' carries an embedding but its ` +
+				`embeddingModelVersion is ${
+					offender.properties.embeddingModelVersion === undefined
+						? 'absent'
+						: `'${offender.properties.embeddingModelVersion}'`
+				}. The forge bundle must stamp the model that produced the vector — every content ` +
+				`address is computed from it, so there is nothing to stand in for it.`,
+		};
+	}
+
+	const distinct = embeddedNodes.reduce(
+		(soFar, oneNode) =>
+			soFar.includes(`${oneNode.properties.embeddingModelVersion}`.trim())
+				? soFar
+				: soFar.concat(`${oneNode.properties.embeddingModelVersion}`.trim()),
+		[],
+	);
+	if (distinct.length > 1) {
+		return {
+			error:
+				`buildStandardBlock: the block's nodes disagree about which model made their ` +
+				`vectors (${distinct.join(', ')}). One block header can declare only one model ` +
+				`version, and the addressing model must not change mid-block.`,
+		};
+	}
+
+	// No embeddings means no vectors, and no vectors means there is no model version to declare.
+	return { modelVersion: distinct[0] };
+};
+
 const buildStandardBlock = ({ forged }) => {
+	const carried = carriedModelVersion(forged);
+	if (carried.error) {
+		return { error: carried.error };
+	}
+
 	const header = {
 		// The kind is READ from the vocabulary registry, not spelled here. This header used to say
 		// 'standard' while the store accepted only 'standardBase' — one concept with two live words
@@ -42,7 +96,7 @@ const buildStandardBlock = ({ forged }) => {
 		version: forged.metadata.version,
 		stableUriPropertyName: forged.stableUriPropertyName,
 		resolutionKey: forged.stableUriPropertyName,
-		embeddingModelVersion: 'voyage-4-large',
+		embeddingModelVersion: carried.modelVersion,
 		embeddingEncoding: 'base64',
 		embeddingDtype: 'float32',
 		embeddingByteOrder: 'little-endian',
@@ -68,8 +122,7 @@ const buildStandardBlock = ({ forged }) => {
 		};
 		if (oneNode.properties.embedding) {
 			serialized.embedding = replayBlock.encodeEmbedding(oneNode.properties.embedding);
-			serialized.embeddingModelVersion =
-				oneNode.properties.embeddingModelVersion || 'voyage-4-large';
+			serialized.embeddingModelVersion = oneNode.properties.embeddingModelVersion;
 		}
 		return serialized;
 	});

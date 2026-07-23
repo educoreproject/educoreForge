@@ -85,6 +85,10 @@ bundle.forge(
 		}
 
 		const block = buildStandardBlock({ forged });
+		if (block.error) {
+			xLog.error(`capture-baseline: ${block.error}`);
+			process.exit(1);
+		}
 		const sha256 = crypto.createHash('sha256').update(Buffer.from(block.blockText, 'utf8')).digest('hex');
 
 		if (!fs.existsSync(BASELINE_DIR)) {
