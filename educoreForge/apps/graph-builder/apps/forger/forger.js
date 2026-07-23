@@ -21,8 +21,12 @@
 //                                  version provenance itself via deriveVersionStamp)
 //       source?                    path to source data; default = the bundle's own asset
 //       owner?                     ownerStamp pass-through (default ':golden', incumbent-faithful)
-//       vectorize?                 default true. false = skip the embedding pass entirely — the
-//                                  SPEND KNOB: no Voyage client is even constructed
+//       vectorize                  REQUIRED, boolean, NO DEFAULT. The SPEND KNOB: true forges
+//                                  with real Voyage embeddings and spends credit; false skips the
+//                                  embedding pass entirely and constructs no client at all. A
+//                                  spec that does not say is REFUSED — 'I did not say' is not
+//                                  'yes, bill me' — and a string ('false' is truthy!), a number
+//                                  or null are refused rather than guessed at.
 //       embedNodeLimit?            embed only the first N nodes (spend bound for smoke runs)
 //       embeddingConfigFilePath?   override the Voyage ini; an active override is ANNOUNCED on
 //                                  stderr so it can never silently redirect embedding credentials
@@ -217,10 +221,42 @@ const forger = () => {
 			version,
 			source,
 			owner = ':golden',
-			vectorize = true,
+			vectorize,
 			embedNodeLimit,
 			embeddingConfigFilePath,
 		} = spec || {};
+
+		// THE SPEND KNOB IS STATED OR THE FORGE DOES NOT START. `vectorize = true` used to sit in
+		// this destructure, so a caller that said nothing got real Voyage embeddings and a real
+		// bill — and build.js, the ONE production caller, said nothing. Work group 3 made all four
+		// entry points REQUIRE --vectorize with no default, on the ground that "I did not say" must
+		// never be read as "yes, bill me"; this is the site that ACTS on that word, so the same
+		// rule holds here or it holds nowhere. A STRING is refused as loudly as an absence: the old
+		// code read vectorize:'false' as truthy and spent, which is §6's worse fault — the caller
+		// who typed a value believed it took effect.
+		//
+		// This is the FIRST thing forge() does. Nothing is resolved, required, or constructed
+		// until the money question has an answer, so a refusal can never itself cost anything.
+		if (vectorize === undefined) {
+			callback(
+				`forger: vectorize is not set in the forge spec. It is the SPEND KNOB — true forges ` +
+					`with real Voyage embeddings and spends credit, false skips the embedding pass ` +
+					`entirely and constructs no client at all — and there is NO DEFAULT, deliberately: ` +
+					`'I did not say' must never be read as 'yes, bill me'. Pass vectorize: true or ` +
+					`vectorize: false.`,
+			);
+			return;
+		}
+		if (typeof vectorize !== 'boolean') {
+			callback(
+				`forger: vectorize is ${
+					typeof vectorize === 'string' ? `'${vectorize}' (a string)` : JSON.stringify(vectorize)
+				}, which is not a boolean. It is the SPEND KNOB and there is NO DEFAULT. Pass the ` +
+					`boolean true or the boolean false — a string, a number and null are REFUSED rather ` +
+					`than guessed at, because 'false' is truthy and would have spent your money.`,
+			);
+			return;
+		}
 
 		const resolved = resolveBundle({ standard });
 		if (resolved.error) {

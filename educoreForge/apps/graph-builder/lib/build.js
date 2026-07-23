@@ -147,7 +147,17 @@ const build = (recipe, deps, callback) => {
 		const taskList = new taskListPlus();
 
 		taskList.push((args, next) => {
-			forger.forge({ standard: std.token, version: std.version }, (err, forgeReport) => {
+			// vectorize is STATED, not omitted. The forger has no default for it (Phase 4, work
+			// group 4) precisely because this call used to leave it out and get real embeddings and
+			// a real bill by silence. -build's contract, in graphBuilder's own -help, is that it
+			// "spends embedding credit"; that promise is now made HERE, in one greppable place,
+			// rather than by an absent field agreeing with an in-code true.
+			//
+			// RECORDED, NOT FIXED, and out of this work group's scope: the graphBuilder OPERATOR
+			// still cannot turn this off — there is no --vectorize on the app's command line, so
+			// the true below is a constant with nothing settable behind it. Giving -build a
+			// --vectorize=true|false of its own is the next honest step.
+			forger.forge({ standard: std.token, version: std.version, vectorize: true }, (err, forgeReport) => {
 				next(err ? `forge ${std.token}: ${err}` : '', { ...args, forgeReport });
 			});
 		});

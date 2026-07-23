@@ -35,7 +35,11 @@
  *                                         real version provenance itself)
  * @property {string}      [source]        source-data path; default = the bundle's own asset
  * @property {string}      [owner]         ownerStamp pass-through (default ':golden')
- * @property {boolean}     [vectorize=true]  the SPEND KNOB — false constructs no Voyage client
+ * @property {boolean}     vectorize       REQUIRED, boolean, NO DEFAULT — the SPEND KNOB. true
+ *                                         forges with real Voyage embeddings and spends credit;
+ *                                         false constructs no Voyage client at all. A spec that
+ *                                         does not say is refused, and so is a string, a number
+ *                                         or null ('false' is truthy and used to spend).
  * @property {number}      [embedNodeLimit]  embed only the first N nodes (spend bound)
  * @property {string}      [embeddingConfigFilePath]  announced override of the Voyage ini
  */
@@ -241,7 +245,10 @@ const COMPONENT_SHAPES = {
 	forger: {
 		forge: {
 			arity: 2,
-			argKeys: ['standard'],
+			// vectorize is declared here as well as standard because it is REQUIRED and has no
+			// default: an implementation that stopped reading it off the spec would be back to
+			// deciding the spend for its caller, and argKeys is where that drift is caught.
+			argKeys: ['standard', 'vectorize'],
 			resultKeys: [
 				'standard',
 				'version',

@@ -412,6 +412,179 @@ harness.ok(
 fs.rmSync(voyageFixtureDir, { recursive: true, force: true });
 
 // =====================================================================
+harness.section('THE SPEND KNOB — vectorize is STATED, or the forge does not start');
+// =====================================================================
+// forger.js:151 destructures `vectorize = true`. The forger is where the money is actually spent
+// — work group 3 fixed the four ENTRY POINTS that READ the operator's --vectorize; this is the
+// site that ACTS on it. Its only production caller, build.js, does not pass the field at all, so
+// every `graphBuilder -build` embeds a whole recipe because nobody said anything either way.
+//
+// NO SPEND IS POSSIBLE FROM ANY ASSERTION IN THIS SECTION, IN EITHER POLARITY. The fixtures are:
+//   - a temp forge bundle registered in forges/ whose entryModule names a file that was never
+//     written, so the run cannot reach a parser;
+//   - a temp voyage ini that is DELIBERATELY INCOMPLETE — no model, and no apiKey, so an
+//     embedding client built against it cannot resolve an identity, let alone call an API.
+// vectorize=true therefore stops inside embedding-client naming that fixture ini, and
+// vectorize=false stops later at the missing entry module. Two different stops is exactly the
+// evidence wanted: it shows WHICH branch each value took, and neither branch touches the network.
+// NO CREDENTIAL VALUE APPEARS ANYWHERE — the fixture ini has no key in it to appear.
+
+const spendFixtureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'educoreForge-spendKnob-'));
+const incompleteVoyageIniPath = path.join(spendFixtureDir, 'notARealCredentialFile.ini');
+fs.writeFileSync(
+	incompleteVoyageIniPath,
+	'[voyageEmbedding]\n# fixture: deliberately incomplete — no model, no apiKey, nothing to spend\n',
+);
+
+const UNREACHABLE_BUNDLE = 'zztestonlyunreachablebundle';
+const unreachableBundleDir = path.join(FORGES_DIR_FOR_TEST, UNREACHABLE_BUNDLE);
+fs.rmSync(unreachableBundleDir, { recursive: true, force: true });
+fs.mkdirSync(unreachableBundleDir, { recursive: true });
+fs.writeFileSync(
+	path.join(unreachableBundleDir, 'parserDescriptor.ini'),
+	'[parserDescriptor]\nstandardName=ZZ\nentryModule=thisEntryModuleWasNeverWritten.js\n',
+);
+
+// -----
+// forgeOutcome — call forge() with a spec and hand back everything it said, as LISTS so
+//   harness.rejects can insist on the SPECIFIC reason. Every path exercised here answers or
+//   throws SYNCHRONOUSLY (the spec gates, the roster refusal, the embedding-client identity
+//   read and the missing-module require all precede the pipeRunner), so nothing is left running
+//   after the assertion. try/catch is localized to this one test boundary and is never control
+//   flow in the code under test.
+
+const forgeOutcome = (spec) => {
+	const answered = [];
+	let thrown = [];
+	try {
+		forgerModule().forge(spec, (err, report) => {
+			answered.push({ err, report });
+		});
+	} catch (error) {
+		thrown = [error.message];
+	}
+	return {
+		thrown,
+		callbackErrors: answered.filter((one) => one.err).map((one) => one.err),
+		all: [...thrown, ...answered.filter((one) => one.err).map((one) => one.err)],
+	};
+};
+
+const spendSpec = (vectorizeArgs) => ({
+	standard: UNREACHABLE_BUNDLE,
+	version: 'testOnly',
+	source: path.join(spendFixtureDir, 'noSuchSourceFile.json'),
+	embeddingConfigFilePath: incompleteVoyageIniPath,
+	...vectorizeArgs,
+});
+
+const unstated = forgeOutcome(spendSpec({}));
+harness.rejects(
+	'an ABSENT vectorize is refused, naming the field and both accepted values',
+	unstated.callbackErrors,
+	/vectorize is not set[\s\S]*vectorize: true[\s\S]*vectorize: false/,
+);
+harness.match(
+	'  and says it is the SPEND KNOB with NO DEFAULT — the reason absence cannot be answered',
+	unstated.callbackErrors.join('\n'),
+	/spend knob[\s\S]*no default/i,
+);
+harness.ok(
+	'  and it stops BEFORE an embedding client exists — the refusal cannot itself cost anything',
+	!unstated.all.some((one) => /embedding-client/.test(one)),
+	unstated.all.join('\n'),
+);
+harness.ok(
+	'  and it travels by CALLBACK, not a throw — forge() is callback-style all the way down',
+	unstated.thrown.length === 0 && unstated.callbackErrors.length === 1,
+	`thrown: ${unstated.thrown.join('|')} / callback: ${unstated.callbackErrors.join('|')}`,
+);
+
+const stringFalse = forgeOutcome(spendSpec({ vectorize: 'false' }));
+harness.rejects(
+	"an INVALID vectorize:'false' (a STRING, and therefore truthy) is refused, naming what was given",
+	stringFalse.callbackErrors,
+	/vectorize is 'false'[\s\S]*string/,
+);
+harness.ok(
+	'  and it NEVER reaches the embedding client — the truthy string used to spend silently',
+	!stringFalse.all.some((one) => /embedding-client/.test(one)),
+	stringFalse.all.join('\n'),
+);
+harness.rejects(
+	"  and vectorize:'true' is refused too — the string is not a spelling of the boolean",
+	forgeOutcome(spendSpec({ vectorize: 'true' })).callbackErrors,
+	/vectorize is 'true'/,
+);
+harness.rejects(
+	'  and vectorize:1 is refused, naming the number — a truthy number is not a decision',
+	forgeOutcome(spendSpec({ vectorize: 1 })).callbackErrors,
+	/vectorize is 1/,
+);
+harness.rejects(
+	'  and vectorize:null is refused rather than read as "no" — absence in disguise is still absence',
+	forgeOutcome(spendSpec({ vectorize: null })).callbackErrors,
+	/vectorize is null/,
+);
+
+const booleanFalse = forgeOutcome(spendSpec({ vectorize: false }));
+harness.ok(
+	'a VALID vectorize:false is honoured as FALSE — the positive control, OFF direction',
+	booleanFalse.all.some((one) => /thisEntryModuleWasNeverWritten/.test(one)),
+	booleanFalse.all.join('\n'),
+);
+harness.ok(
+	'  and no embedding client is constructed at all — the spend knob really does bind',
+	!booleanFalse.all.some((one) => /embedding-client/.test(one)),
+	booleanFalse.all.join('\n'),
+);
+
+const booleanTrue = forgeOutcome(spendSpec({ vectorize: true }));
+harness.ok(
+	'a VALID vectorize:true is honoured as TRUE — the positive control, ON direction',
+	booleanTrue.all.some((one) => /embedding-client/.test(one)),
+	booleanTrue.all.join('\n'),
+);
+harness.ok(
+	'  the two directions differ — a one-direction control proves only that nothing was rejected',
+	booleanTrue.all.some((one) => /embedding-client/.test(one)) &&
+		!booleanFalse.all.some((one) => /embedding-client/.test(one)),
+	`true said:\n${booleanTrue.all.join('\n')}\nfalse said:\n${booleanFalse.all.join('\n')}`,
+);
+harness.ok(
+	'  and BOTH valid runs stopped on a fixture fault, having touched no network — nothing was spent',
+	booleanTrue.all.concat(booleanFalse.all).every((one) => /embedding-client|Cannot find module/.test(one)),
+	booleanTrue.all.concat(booleanFalse.all).join('\n'),
+);
+
+harness.ok(
+	'no `vectorize = true` default survives in forger.js',
+	!/vectorize\s*=\s*true/.test(codeOf(path.join(__dirname, '..', 'forger.js'))),
+	(codeOf(path.join(__dirname, '..', 'forger.js')).match(/.*vectorize\s*=\s*true.*/g) || []).join(
+		'\n',
+	),
+);
+harness.match(
+	"and build.js — the ONE production caller — now STATES the spend instead of omitting it",
+	codeOf(path.join(__dirname, '..', '..', '..', 'lib', 'build.js')),
+	/forger\.forge\(\{[\s\S]{0,200}vectorize:/,
+);
+harness.ok(
+	'and interfaces.js declares vectorize REQUIRED, not an optional defaulting to true',
+	!/\[vectorize=true\]/.test(
+		fs.readFileSync(path.join(__dirname, '..', '..', '..', 'interfaces.js'), 'utf8'),
+	),
+	(
+		fs
+			.readFileSync(path.join(__dirname, '..', '..', '..', 'interfaces.js'), 'utf8')
+			.match(/.*vectorize.*/g) || []
+	).join('\n'),
+);
+
+fs.rmSync(unreachableBundleDir, { recursive: true, force: true });
+fs.rmSync(spendFixtureDir, { recursive: true, force: true });
+
+// =====================================================================
 harness.section('SHAPE-FORGED-GRAPH — the model version is CARRIED, never invented');
 // =====================================================================
 // A vector's embeddingModelVersion is what vectorIdForInput hashes: substituting one does not
