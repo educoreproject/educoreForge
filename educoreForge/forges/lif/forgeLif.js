@@ -236,7 +236,7 @@ const moduleFunction =
 			const rootSearchText = buildSearchText({
 				role: DME_ROLES.STANDARD_ROOT,
 				name: 'LIF',
-				standardName: metadata.schemaTitle || 'Learner Information Framework',
+				standardName: metadata.schemaTitle,
 			});
 			nodes.push({
 				labels: [NODE_LABELS.FORGED_NODE, 'LifRoot', DME_ROLES.STANDARD_ROOT],
@@ -246,13 +246,13 @@ const moduleFunction =
 					_id: ROOT_ID,
 					_source: STANDARD_SOURCE,
 					name: 'LIF',
-					description: `${metadata.schemaTitle || 'Learner Information Framework'} OpenAPI ${metadata.openapiVersion} schema, version ${metadata.version}`,
+					description: `${metadata.schemaTitle} OpenAPI ${metadata.openapiVersion} schema, version ${metadata.version}`,
 					role: DME_ROLES.STANDARD_ROOT,
 					lifPath: ROOT_LIF_PATH,
 					searchText: rootSearchText,
 					// provenance block (DESIGN §B "Required on the DmeStandardRoot")
 					standardKey: STANDARD_KEY,
-					standardName: metadata.schemaTitle || 'Learner Information Framework',
+					standardName: metadata.schemaTitle,
 					version: metadata.version,
 					// version-provenance stamp (spec §3.3, Phase A): always present post-stamping —
 					// versionSource 'spec' | 'provenance-file' | 'unknown' per the precedence rule.

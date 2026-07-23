@@ -108,6 +108,26 @@ const parseLif = ({ sourcePath, xLog }, callback) => {
 
 	const schemas = (spec.components && spec.components.schemas) || {};
 	const info = spec.info || {};
+	// THE SOURCE NAMES ITSELF. `schemaTitle: info.title || 'Learner Information Framework'` used
+	// to invent a plausible standard name for a document that declared none, and that invented
+	// name flows straight into standardName and into every node description (forgeLif.js carried
+	// the same constant three more times). Read it beside the line that stamps the VERSION —
+	// `info.version || 'unknown'`, with a whole versionSource machinery built to keep that gap
+	// honest — and the inconsistency is the finding: adjacent lines, opposite conduct.
+	// `info.title` is REQUIRED by OpenAPI 3.0, so a document without one is not a valid OpenAPI
+	// document; polyArch2 §6 puts that in the worst class, and a name is not a thing to guess.
+	if (info.title === undefined || info.title === null || `${info.title}`.trim() === '') {
+		callback(
+			`LIF OpenAPI source ${filePath} declares ${
+				info.title === undefined ? 'no' : 'a BLANK'
+			} info.title. It is REQUIRED by OpenAPI 3.0, and it is the name this standard is ` +
+				`CALLED — it becomes standardName and appears in every node description. There is ` +
+				`no default: a title invented in code would name the standard something nobody ` +
+				`chose. (Contrast info.version, which is stamped 'unknown' HONESTLY when the ` +
+				`source does not declare one — a visible gap, not a fabricated value.)`,
+		);
+		return;
+	}
 	const allNames = Object.keys(schemas);
 	const entityNames = allNames.filter((n) => !JUNK_ENTITIES.has(n));
 	const filteredCount = allNames.length - entityNames.length;
@@ -331,7 +351,7 @@ const parseLif = ({ sourcePath, xLog }, callback) => {
 			// versionSource (2026-07-04, going-forward): 'spec' ONLY when info.version was actually
 			// present in the source; the 'unknown' path stamps nothing.
 			...(info.version ? { versionSource: 'spec' } : {}),
-			schemaTitle: info.title || 'Learner Information Framework',
+			schemaTitle: `${info.title}`.trim(),
 			openapiVersion: spec.openapi || '',
 			sourceFormat: 'openapi-3.0-json',
 			sourceFiles: [path.basename(filePath)],

@@ -157,7 +157,14 @@ const findLibModuleDirs = (dirPath) => {
 const appFilter = firstValue('app');
 const suiteFilter = firstValue('suite');
 
-const allModules = findModuleDirs(appsDir).sort();
+// forges/ IS DISCOVERED TOO. Each forge bundle carries a package.json, so findModuleDirs sees it
+// the same way it sees the in-process apps — but the runner used to look only at apps/ and lib/,
+// so every forge bundle was invisible to the coverage report: a suite written there would not
+// have run, and the ABSENCE of one could not be seen. The forges hold the source-document
+// readers, which is where the tree's provenance stamps are decided. (Phase 4, work group 5.)
+const forgesDir = path.join(treeRoot, 'forges');
+
+const allModules = findModuleDirs(appsDir).concat(findModuleDirs(forgesDir)).sort();
 const libModuleDirs = findLibModuleDirs(path.join(treeRoot, 'lib')).sort();
 const selectedModules = appFilter
 	? allModules.filter((moduleDir) => path.basename(moduleDir) === appFilter)
