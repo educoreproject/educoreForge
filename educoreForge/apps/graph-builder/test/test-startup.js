@@ -8,10 +8,10 @@
 //   - the HAPPY PATH runs against the REAL project layout — the tests live in this tree, so
 //     findSystemRoot resolves from here exactly as it does from the app, and the real
 //     graphBuilder.ini IS the fixture (TQ's point, 2026-07-22: no seam needed);
-//   - the FAILURE directions (zero inis -> {} defaults; TWO inis -> loud refusal) run against
+//   - the FAILURE directions (zero inis -> LOUD refusal; TWO inis -> loud refusal) run against
 //     THROWAWAY temp copies of the tree shape — fault-inject on a copy, never the real configs
-//     (a crashed test must not leave the app broken). The refusal is watched actually firing:
-//     a guard never observed refusing is unproven.
+//     (a crashed test must not leave the app broken). Both refusals are watched actually firing:
+//     a guard never observed refusing is unproven. Absence and ambiguity are both fatal now.
 //
 // Run: node apps/graph-builder/test/test-startup.js
 
@@ -30,9 +30,9 @@ SYNOPSIS
 
 DESCRIPTION
      Proves loadConfig finds the real graphBuilder.ini from the real project layout, answers {}
-     for unknown sections; and on throwaway tree copies: zero inis -> null path + {} sections,
-     a single ini in either legal home -> found, TWO inis -> the loud ambiguity refusal, proven
-     to actually fire. Also gates parseListValue (the comma/array rule for qtools values).
+     for unknown sections; and on throwaway tree copies: zero inis -> loud refusal naming both
+     legal homes, a single ini in either legal home -> found, TWO inis -> the loud ambiguity
+     refusal, both proven to actually fire. Also gates parseListValue (the comma/array rule).
 
 EXIT STATUS
      0 all assertions passed;  1 at least one failed.
@@ -102,14 +102,26 @@ const freshLoadConfig = (startupPath) => {
 
 const iniText = '[replay-manager]\nportSearchStart=7777\n';
 
-// --- zero inis: relocated-tree behavior, in-code defaults ---
+// --- zero inis: discovery finds NOTHING and must say so and STOP ---
+// The module already refuses TWO inis ("refusing to guess which governs"); it treated ZERO as
+// acceptable and reverted the whole tree to in-code values silently. That asymmetry is the defect.
+// Now both directions are fatal. polyArch2 §6: "Discovery that finds nothing must say so and stop."
 const zero = buildScenarioTree('zero');
-const zeroResult = freshLoadConfig(zero.startupPath)();
-harness.equal('ZERO inis: configFilePath is null', zeroResult.configFilePath, null);
-harness.equal(
-	'  and every section answers {} so in-code defaults govern',
-	JSON.stringify(zeroResult.getConfig('replay-manager')),
-	'{}',
+let zeroRefusalMessage = '';
+try {
+	freshLoadConfig(zero.startupPath)();
+} catch (zeroError) {
+	zeroRefusalMessage = zeroError.message;
+}
+harness.match(
+	'ZERO inis REFUSE loudly rather than silently reverting to in-code values',
+	zeroRefusalMessage,
+	/NO graphBuilder\.ini/,
+);
+harness.match(
+	'  naming BOTH legal homes so the operator knows where the file belongs',
+	zeroRefusalMessage,
+	/instanceSpecific[\s\S]*graphBuilder\.ini[\s\S]*configs[\/\\]graphBuilder\.ini/,
 );
 
 // --- one ini, instanceSpecific home ---

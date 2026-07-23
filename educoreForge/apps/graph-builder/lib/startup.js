@@ -67,8 +67,12 @@ const resolveParameters = (callback) => {
 // per component ([forger], [replay-manager], ...). SECRETS never live here — they stay in
 // their own files (voyageEmbedding.ini), which this file may POINT AT but never contains.
 //
-// An absent ini is not an error: getConfig answers {} for every section and each module
-// falls back to its in-code defaults, so a relocated tree runs identically unconfigured.
+// An absent ini IS an error. Discovery that finds nothing must say so and STOP (polyArch2 §6):
+// "No config file found, so use in-code values" is the same silent-default defect wearing a hat —
+// the operator who moved or misnamed graphBuilder.ini would be told nothing while the whole tree
+// reverted to in-code values. A missing SECTION still answers {} (each leaf module now refuses its
+// own required keys BY NAME), but a missing FILE is fatal, named, and loud. This is the same law
+// the module already applied to TWO inis; ZERO is no longer the exception.
 // ---------------------------------------------------------------------
 
 const findSystemRoot = () =>
@@ -78,7 +82,8 @@ const findSystemRoot = () =>
 // 'qbook.local' — and this machine is qMini.local, so the incumbent has been silently running
 // configless here for its whole life. A whitelist that rots is worse than no gate.) The file's
 // PRESENCE is authoritative: look in configs/instanceSpecific/*/ and configs/ flat; exactly one
-// hit wins; more than one is a LOUD error (ambiguity is never resolved silently); none -> {}.
+// hit wins; more than one is a LOUD error and ZERO is a LOUD error too — ambiguity and absence are
+// BOTH fatal, neither is ever resolved silently. Returns a real path or throws; never null.
 const discoverConfigFile = () => {
 	const configsRoot = path.join(findSystemRoot(), 'configs');
 	const candidates = [];
@@ -104,14 +109,33 @@ const discoverConfigFile = () => {
 			)}`,
 		);
 	}
-	return candidates[0] || null;
+	if (candidates.length === 0) {
+		throw new Error(
+			`graphBuilder: NO graphBuilder.ini found — discovery that finds nothing must say so ` +
+				`and STOP; there is no configless default. Looked in ` +
+				`${path.join(instanceSpecificDir, '<host>', 'graphBuilder.ini')} and ${flatCandidate}. ` +
+				`Put the file in exactly one of those two homes. ` +
+				`(The same discovery REFUSES more than one graphBuilder.ini, for the same reason — ` +
+				`absence and ambiguity are both fatal.)`,
+		);
+	}
+	return candidates[0];
 };
 
 const loadConfig = () => {
-	const configFilePath = discoverConfigFile();
-	const wholeConfig = configFilePath
-		? configFileProcessor.getConfig(configFilePath) || {}
-		: {};
+	const configFilePath = discoverConfigFile(); // a real, existing path or it has already thrown
+	// getConfig returns undefined ONLY when the file is absent; discoverConfigFile guarantees an
+	// existing path, so a falsy answer here means the found file yielded nothing usable — name it
+	// and stop rather than silently substituting {} (audit row 53, the discovery-clause of §6).
+	const wholeConfig = configFileProcessor.getConfig(configFilePath);
+	if (!wholeConfig || typeof wholeConfig !== 'object') {
+		throw new Error(
+			`graphBuilder: ${configFilePath} was found but yielded no configuration object. ` +
+				`The file is present but parsed to nothing usable. There is no default.`,
+		);
+	}
+	// A missing SECTION still answers {} — sanctioned plumbing now that each leaf module refuses
+	// its own required keys by name (Phase 4 groups 1-5). Only the FILE and its parse are fatal.
 	const getConfig = (sectionName) =>
 		sectionName === 'allConfigs' ? wholeConfig : wholeConfig[sectionName] || {};
 	return { getConfig, wholeConfig, configFilePath };
