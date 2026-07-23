@@ -12,9 +12,18 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //
 //   const embedder = require('./embedding-client')({ configFilePath });
 //   embedder.embedText({ text }, (err, { vector, embeddingModelVersion }) => {...});
-//     vector: Float32Array(1024), embeddingModelVersion: 'voyage-4-large'
+//     vector: Float32Array of the configured dimension; embeddingModelVersion is the model that
+//     ACTUALLY made it — the same [voyageEmbedding].model value that was sent to the API.
+//   embedder.embedTexts({ texts }, (err, { vectors, embeddingModelVersion }) => {...});
+//   embedder.resolveEmbeddingIdentity() -> { model, embeddingDims }  (never the key)
 //   embedder.encodeVector(float32) -> base64 (little-endian float32)
-//   embedder.decodeVector(base64)  -> Float32Array (round-trip identical, length 1024)
+//   embedder.decodeVector(base64)  -> Float32Array (round-trip identical)
+//
+// NO IN-CODE MODEL CONSTANT (Phase 4 work group 1, 2026-07-23). The model sent to Voyage used to
+// come from the ini while the model stamped onto every node came from a constant here, so
+// configuring any other model produced vectors whose content address named a model that did not
+// make them. The stamp lied, and silently. There is now exactly ONE reading of the model, used
+// for both the call and the stamp, and its absence is a fault (polyArch2 §6).
 
 const path = require('path');
 const fs = require('fs');
@@ -23,8 +32,6 @@ const configFileProcessor = require('qtools-config-file-processor');
 // canonical config home for this project (DECISIONS §3; secrets live ONLY here)
 const defaultConfigFilePath =
 	'/Users/tqwhite/Documents/webdev/educoreForge/system/configs/instanceSpecific/qbook/voyageEmbedding.ini';
-
-const stampedModelVersion = 'voyage-4-large';
 
 // =====================================================================
 // PROVIDER REGISTRY — auto-discovered from ./providers/ (registry, not switch)
@@ -46,6 +53,35 @@ const moduleFunction =
 	({ moduleName } = {}) =>
 	({ configFilePath = defaultConfigFilePath, providerName = 'voyage' } = {}) => {
 		// -----
+		// resolveEmbeddingIdentity — the ONE reading of the vector model's identity from the ini.
+		//   Public so a caller can learn what identity governs WITHOUT holding the key: the same
+		//   values are used for the API call and for the stamp, and there is no other source for
+		//   either. Absent or invalid is a fault, not an occasion for a default (polyArch2 §6) —
+		//   these values participate in content addressing, so substituting one silently changes
+		//   what every block id means.
+
+		const resolveEmbeddingIdentity = () => {
+			const wholeConfig = configFileProcessor.getConfig(configFilePath);
+			const voyageEmbedding = (wholeConfig && wholeConfig.voyageEmbedding) || {};
+
+			const model = voyageEmbedding.model;
+			if (model === undefined || `${model}`.trim() === '') {
+				throw new Error(
+					`embedding-client: [voyageEmbedding].model is ${
+						model === undefined ? 'not configured' : `'${model}'`
+					}. Add it to the [voyageEmbedding] section of ${configFilePath}. There is no ` +
+						`default: this value is sent to the API AND stamped on every vector as ` +
+						`embeddingModelVersion, which every content address is computed from.`,
+				);
+			}
+
+			return {
+				model: `${model}`.trim(),
+				embeddingDims: parseInt(voyageEmbedding.embeddingDims, 10) || 1024,
+			};
+		};
+
+		// -----
 		// loadVoyageConfig — pull [voyageEmbedding] from the .ini (key/model/dims).
 		//   Never logs or returns the key beyond the resolved config object the provider needs.
 
@@ -59,11 +95,13 @@ const moduleFunction =
 				};
 			}
 
+			const identity = resolveEmbeddingIdentity();
+
 			return {
 				resolvedConfig: {
 					apiKey: voyageEmbedding.apiKey,
-					model: voyageEmbedding.model || stampedModelVersion,
-					dimension: parseInt(voyageEmbedding.embeddingDims, 10) || 1024,
+					model: identity.model,
+					dimension: identity.embeddingDims,
 				},
 			};
 		};
@@ -72,8 +110,8 @@ const moduleFunction =
 
 		// -----
 		// embedText — embed ONE text; callback (err, { vector, embeddingModelVersion }).
-		//   vector is a Float32Array of length dimension (1024); embeddingModelVersion is
-		//   stamped 'voyage-4-large' per DECISIONS §3 regardless of the query-side model.
+		//   vector is a Float32Array of the configured dimension; embeddingModelVersion is the
+		//   model that was ACTUALLY sent, read from the same resolved config the provider got.
 
 		const embedText = ({ text } = {}, callback) => {
 			if (text == null || `${text}`.trim() === '') {
@@ -109,7 +147,7 @@ const moduleFunction =
 
 				callback('', {
 					vector,
-					embeddingModelVersion: stampedModelVersion,
+					embeddingModelVersion: loaded.resolvedConfig.model,
 				});
 			});
 		};
@@ -117,7 +155,7 @@ const moduleFunction =
 		// -----
 		// encodeVector — Float32Array -> base64 of its little-endian float32 bytes.
 
-		// embedTexts — embed an ARRAY of texts in ONE batched voyage-4-large call;
+		// embedTexts — embed an ARRAY of texts in ONE batched call to the configured model;
 		// callback (err, { vectors, embeddingModelVersion }). vectors is a Float32Array[]
 		// aligned 1:1 with input order (vectors[i] is the embedding of texts[i]). Additive,
 		// non-breaking sibling of embedText (embedText is unchanged). Used by the forger to
@@ -180,7 +218,7 @@ const moduleFunction =
 
 				callback('', {
 					vectors,
-					embeddingModelVersion: stampedModelVersion,
+					embeddingModelVersion: loaded.resolvedConfig.model,
 				});
 			});
 		};
@@ -210,7 +248,7 @@ const moduleFunction =
 			return float32;
 		};
 
-		return { embedText, embedTexts, encodeVector, decodeVector, stampedModelVersion };
+		return { embedText, embedTexts, encodeVector, decodeVector, resolveEmbeddingIdentity };
 	};
 
 // END OF moduleFunction() ============================================================
