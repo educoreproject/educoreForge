@@ -45,6 +45,12 @@ OPTIONS
                                   It used to default to ceds, so a run that named nothing
                                   compared one standard and called that "the comparison".
 
+     (there is no --vectorize)    This script NEVER vectorizes and spends no Voyage credit. The
+                                  comparison is a SET comparison over stableIds, which do not
+                                  depend on embeddings, so the forge is pinned to
+                                  vectorize=false and the value is not settable. A --vectorize
+                                  offered anyway is REFUSED rather than accepted and ignored.
+
 DESCRIPTION
      Runs forge -> init -> harvest for each standard, then compares the harvested schema block's
      stableId SET against the golden's, scoped to the six DME base roles. Reports missing, extra
@@ -100,6 +106,28 @@ const goldenPort = (commandLineParameters.values.goldenPort || [])[0];
 const goldenPassword = (commandLineParameters.values.goldenPassword || [])[0];
 const keepGraph = !!commandLineParameters.switches.keepGraph;
 
+// THE SPEND KNOB THIS SCRIPT DOES NOT HAVE. The forge below is pinned to vectorize:false, and the
+// pin is correct: the comparison is a SET comparison over stableIds, and a stableId does not
+// depend on an embedding, so Voyage credit spent here would buy exactly nothing. polyArch2 §6
+// permits an in-code constant only where the value is NOT SETTABLE — which is the case here, and
+// is now said out loud in -help instead of being a number nobody could see. What is NOT permitted
+// is accepting a --vectorize and ignoring it: the operator who types a value believes it took
+// effect, and here he would believe he was paying for embeddings he never got.
+const VECTORIZE_IS_PINNED_OFF = false;
+if (
+	commandLineParameters.values.vectorize !== undefined ||
+	commandLineParameters.switches.vectorize
+) {
+	xLog.error(
+		`${moduleName}: --vectorize is not an option of this script, and it will not be silently ` +
+			`ignored. The comparison is a SET comparison over stableIds, which do not depend on ` +
+			`embeddings, so this run forges with vectorize=false ALWAYS and spends no Voyage ` +
+			`credit. Remove the switch. (--vectorize=false is refused too: agreeing with the pin ` +
+			`is still asking to set something this script does not let you set.)`,
+	);
+	process.exit(1);
+}
+
 if (!goldenPort || !goldenPassword) {
 	xLog.error(
 		`${moduleName}: --goldenPort and --goldenPassword are required. Resolve them with ` +
@@ -147,7 +175,9 @@ const harvestedStableIds = ({ token }, callback) => {
 		return;
 	}
 
-	forgerModule().forge({ standard: token, version: 'current', vectorize: false }, (forgeErr, forged) => {
+	forgerModule().forge(
+		{ standard: token, version: 'current', vectorize: VECTORIZE_IS_PINNED_OFF },
+		(forgeErr, forged) => {
 		if (forgeErr) {
 			callback(forgeErr);
 			return;

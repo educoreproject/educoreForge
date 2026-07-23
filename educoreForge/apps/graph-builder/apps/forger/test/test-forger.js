@@ -1135,4 +1135,69 @@ harness.match(
 	/--standard=<token\[,token\]>[\s\S]*REQUIRED|REQUIRED[\s\S]*--standard/,
 );
 
+// =====================================================================
+harness.section('EVALUATE-AGAINST-GOLDEN — the spend knob it does NOT have, said out loud');
+// =====================================================================
+// evaluate-against-golden hard-pins `vectorize: false` in its forge call, and that pin is CORRECT:
+// the comparison is a set comparison over stableIds, which do not depend on embeddings, so
+// spending Voyage credit here would buy nothing. But it was a constant nobody could see — the
+// helpText named no --vectorize, the code named no reason — and a --vectorize=true typed on the
+// command line was ACCEPTED AND IGNORED, which is §6's worse fault: the operator who typed it
+// believed it took effect and believed he was paying for embeddings.
+//
+// DISPOSITION: not settable, therefore a legitimate constant (polyArch2 §6, "a constant with
+// nothing to shadow is simply a constant") — but DOCUMENTED, and a --vectorize offered to it is
+// REFUSED rather than swallowed.
+
+harness.match(
+	'-help states that this run never vectorizes, and why',
+	runEvaluator(['-help']).text,
+	/vectoriz/i,
+);
+
+const evaluatorWithVectorize = runEvaluator([
+	'--standard=lif',
+	'--vectorize=true',
+	'--goldenPort=1',
+	'--goldenPassword=x',
+]);
+harness.match(
+	'a --vectorize offered to it is REFUSED by name — never accepted and ignored',
+	evaluatorWithVectorize.text,
+	/--vectorize[\s\S]*(not|no).*(knob|option|spend|embedding)|vectoriz[\s\S]*ignored/i,
+);
+harness.ok(
+	'  and it stops rather than running a comparison the operator misunderstands',
+	!/=== LIF ===/.test(evaluatorWithVectorize.text),
+	evaluatorWithVectorize.text.slice(0, 400),
+);
+
+const evaluatorWithVectorizeFalse = runEvaluator([
+	'--standard=lif',
+	'--vectorize=false',
+	'--goldenPort=1',
+	'--goldenPassword=x',
+]);
+harness.match(
+	'  and even --vectorize=false is refused — agreeing with the constant is still asking to set it',
+	evaluatorWithVectorizeFalse.text,
+	/--vectorize/,
+);
+
+const evaluatorNoVectorize = runEvaluator([
+	'--standard=lif',
+	'--goldenPort=1',
+	'--goldenPassword=x',
+]);
+harness.ok(
+	'a run that does NOT offer --vectorize proceeds past the gate — the positive control',
+	/=== LIF ===/.test(evaluatorNoVectorize.text),
+	evaluatorNoVectorize.text.slice(0, 400),
+);
+harness.match(
+	'  and announces that it is forging WITHOUT embeddings, so the pin is visible in the run',
+	evaluatorNoVectorize.text,
+	/vectorize OFF/i,
+);
+
 harness.report();
