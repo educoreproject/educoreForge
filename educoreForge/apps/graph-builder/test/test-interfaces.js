@@ -304,11 +304,10 @@ harness.note('nowhere else. interfaces.js says so in the same words.');
 // manifestEditor — both doors and the handle they hand back, against the standardsDatabase double.
 (() => {
 	const standardsDatabase = standardsDatabaseDouble();
-	const manifest = realComponents.manifestEditor().init({
+	const manifest = realComponents.manifestEditor({ standardsDatabase }).init({
 		name: 'shapeProbeManifest',
 		description: 'composed by test-interfaces to observe the declared result shape',
 		recipe: { recipeName: 'shapeProbeRecipe' },
-		standardsDatabase,
 	});
 
 	harness.equal(
@@ -353,8 +352,8 @@ harness.note('nowhere else. interfaces.js says so in the same words.');
 	);
 
 	let openObserved = null;
-	realComponents.manifestEditor().open(
-		{ standardsDatabase, manifestRefId: 'manifestDouble:1' },
+	realComponents.manifestEditor({ standardsDatabase }).open(
+		{ manifestRefId: 'manifestDouble:1' },
 		(err, reopened) => {
 			openObserved = { err, reopened };
 		},
@@ -412,7 +411,7 @@ const positionallyDriftedManifestEditor = () => ({
 		recipeName: () => recipe,
 		recipeRefId: () => '',
 	}),
-	open: ({ standardsDatabase, manifestRefId }, callback) => callback('nothing to open'),
+	open: ({ manifestRefId }, callback) => callback('nothing to open'),
 });
 
 harness.match(
@@ -431,7 +430,7 @@ harness.match(
 		COMPONENT_SHAPES.manifestEditor,
 		'driftedManifestEditor',
 	),
-	/never reads declared argument key\(s\).*name.*description.*standardsDatabase/,
+	/never reads declared argument key\(s\).*name.*description/,
 );
 harness.match(
 	'  and the handle it returns is caught positionally too',

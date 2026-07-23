@@ -132,11 +132,10 @@ const build = (recipe, deps, callback) => {
 	const forger = components.forger();
 	const replay = components.replayManager();
 	const bridgeMaker = components.bridgeMaker();
-	const manifest = components.manifestEditor().init({
+	const manifest = components.manifestEditor({ standardsDatabase }).init({
 		name: recipe.recipeName,
 		description: recipe.description,
 		recipe,
-		standardsDatabase,
 	});
 
 	const standards = Array.isArray(recipe.standards) ? recipe.standards : [];

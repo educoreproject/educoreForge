@@ -131,15 +131,20 @@
  * with them inline — so their refusals are throws; everything that reaches the store is
  * callback-shaped.
  *
- * @property {function({name: string, description: string, recipe?: Object, recipeText?: string,
- *            standardsDatabase: Object}):
+ * standardsDatabase is a CONSTRUCTION dependency, NOT a per-call argument: the module is built as
+ * manifestEditor({ standardsDatabase }) and the same database backs every manifest it composes or
+ * opens. It is therefore absent from both init's and open's argument shapes — an invariant handed
+ * once cannot be a signature key that pretends to vary. It is validated at first use (init throws,
+ * open calls back an error) so the component can still be constructed for shape inspection.
+ *
+ * @property {function({name: string, description: string, recipe?: Object, recipeText?: string}):
  *           {add: function({subjectRefId: string, kind: string, description: string,
  *            schemaBlock: Object}, function(string, Object=): void): void,
  *            members: function(): Array, refId: function(): string,
  *            schemaBlocks: function(function(string, Array=): void): void,
  *            save: function(function(string, Object=): void): void,
  *            recipeName: function(): string, recipeRefId: function(): string}} init
- * @property {function({standardsDatabase: Object, manifestRefId: string},
+ * @property {function({manifestRefId: string},
  *           function(string, Object=): void): void} open
  *           hands back a manifest handle of the SAME shape init returns — one factory serves both
  *           doors — with `add` disabled.
@@ -295,12 +300,12 @@ const COMPONENT_SHAPES = {
 		// SYNCHRONOUS (arity 1, no callback) — the §4.4 build sequence composes with it inline.
 		init: {
 			arity: 1,
-			argKeys: ['name', 'description', 'standardsDatabase'],
+			argKeys: ['name', 'description'],
 			resultShape: MANIFEST_HANDLE_SHAPE,
 		},
 		open: {
 			arity: 2,
-			argKeys: ['standardsDatabase', 'manifestRefId'],
+			argKeys: ['manifestRefId'],
 			resultShape: MANIFEST_HANDLE_SHAPE,
 		},
 	},

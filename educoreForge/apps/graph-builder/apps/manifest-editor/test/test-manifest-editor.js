@@ -52,7 +52,10 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const manifestEditor = require('../manifestEditor')();
+// The factory (moduleFunction's second stage). standardsDatabase is a CONSTRUCTION dependency now,
+// so a manifestEditor is built as manifestEditor({ standardsDatabase }); manifestEditor() with none
+// is a valid construction whose init/open refuse at first use.
+const manifestEditor = require('../manifestEditor');
 const standardsDatabaseModule = require('../../../../../lib/standards-database/standards-database')();
 const contentAddress = require('../../../../../lib/content-address/content-address')();
 
@@ -124,12 +127,12 @@ harness.section('INIT — refuses what it cannot compose with');
 
 harness.match(
 	'a manifest with no standardsDatabase is REFUSED',
-	refusalFrom(() => manifestEditor.init({ name: 'noStore', description: 'has no standardsDatabase' })),
+	refusalFrom(() => manifestEditor().init({ name: 'noStore', description: 'has no standardsDatabase' })),
 	/standardsDatabase is REQUIRED/,
 );
 harness.match(
 	'  naming the manifest that asked',
-	refusalFrom(() => manifestEditor.init({ name: 'noStore', description: 'has no standardsDatabase' })),
+	refusalFrom(() => manifestEditor().init({ name: 'noStore', description: 'has no standardsDatabase' })),
 	/noStore/,
 );
 
@@ -141,28 +144,30 @@ standardsDatabaseModule.open({ databaseFilePath }, (openErr, standardsDatabase) 
 	}
 	harness.ok('a throwaway standards database opened', !!standardsDatabase);
 
+	// standardsDatabase is now a CONSTRUCTION dependency — built once, backs every manifest.
+	const manifestEditorWithDb = manifestEditor({ standardsDatabase });
+
 	harness.match(
 		'a blank name is REFUSED',
-		refusalFrom(() => manifestEditor.init({ name: '   ', description: 'described', standardsDatabase })),
+		refusalFrom(() => manifestEditorWithDb.init({ name: '   ', description: 'described' })),
 		/name is REQUIRED/,
 	);
 	harness.match(
 		'a blank description is REFUSED',
-		refusalFrom(() => manifestEditor.init({ name: 'unDescribed', description: '', standardsDatabase })),
+		refusalFrom(() => manifestEditorWithDb.init({ name: 'unDescribed', description: '' })),
 		/description is REQUIRED/,
 	);
 	harness.match(
 		'  naming the manifest that asked',
-		refusalFrom(() => manifestEditor.init({ name: 'unDescribed', description: '', standardsDatabase })),
+		refusalFrom(() => manifestEditorWithDb.init({ name: 'unDescribed', description: '' })),
 		/unDescribed/,
 	);
 
-	const manifest = manifestEditor.init({
+	const manifest = manifestEditorWithDb.init({
 		name: 'gateManifest',
 		description: 'the manifest this suite composes',
 		recipe: { recipeName: 'gateRecipe' },
 		recipeText: GATE_RECIPE_TEXT,
-		standardsDatabase,
 	});
 	harness.ok('a well-formed manifest is composed', !!manifest);
 	harness.equal(
@@ -527,11 +532,11 @@ function descriptionGates(standardsDatabase, composedAddress) {
 	// manifestKeyForMembership hashes schemaBlockRefId + position, nothing else. Fixing a typo in
 	// a description must never change a manifest's identity, or nobody will ever dare fix one.
 
-	const twin = manifestEditor.init({
+	const manifestEditorWithDb = manifestEditor({ standardsDatabase });
+	const twin = manifestEditorWithDb.init({
 		name: 'a completely different name',
 		description: 'entirely different prose about the same thing',
 		recipe: { recipeName: 'someOtherRecipe' },
-		standardsDatabase,
 	});
 
 	twin.add(
@@ -604,13 +609,16 @@ function descriptionGates(standardsDatabase, composedAddress) {
 function openGates(standardsDatabase, composedAddress) {
 	harness.section('OPEN — a stored manifest is immutable, and says so');
 
-	manifestEditor.open({ manifestRefId: composedAddress }, (noStoreErr) => {
+	const manifestEditorWithDb = manifestEditor({ standardsDatabase });
+
+	// a no-database construction: open refuses at first use (the dependency is at construction now).
+	manifestEditor().open({ manifestRefId: composedAddress }, (noStoreErr) => {
 		harness.match('opening with no standardsDatabase is REFUSED', noStoreErr, /standardsDatabase is REQUIRED/);
 
-		manifestEditor.open({ standardsDatabase, manifestRefId: '' }, (noRefErr) => {
+		manifestEditorWithDb.open({ manifestRefId: '' }, (noRefErr) => {
 			harness.match('opening with no manifestRefId is REFUSED', noRefErr, /manifestRefId is REQUIRED/);
 
-			manifestEditor.open({ standardsDatabase, manifestRefId: 'noSuchManifest' }, (missingErr) => {
+			manifestEditorWithDb.open({ manifestRefId: 'noSuchManifest' }, (missingErr) => {
 				harness.match(
 					'opening a manifest that is not there is REFUSED',
 					missingErr,
@@ -618,7 +626,7 @@ function openGates(standardsDatabase, composedAddress) {
 				);
 				harness.match('  naming the address asked for', missingErr, /noSuchManifest/);
 
-				manifestEditor.open({ standardsDatabase, manifestRefId: composedAddress }, (openErr, reopened) => {
+				manifestEditorWithDb.open({ manifestRefId: composedAddress }, (openErr, reopened) => {
 					if (openErr) {
 						harness.ok('a stored manifest reopens', false, openErr);
 						finish();
@@ -715,7 +723,9 @@ function absentBlockGates(standardsDatabase, composedAddress) {
 		},
 	};
 
-	manifestEditor.open({ standardsDatabase: amnesiacStandardsDatabase, manifestRefId: composedAddress }, (openErr, gappy) => {
+	// the stand-in database is the CONSTRUCTION dependency of this manifestEditor instance.
+	const manifestEditorAmnesiac = manifestEditor({ standardsDatabase: amnesiacStandardsDatabase });
+	manifestEditorAmnesiac.open({ manifestRefId: composedAddress }, (openErr, gappy) => {
 		if (openErr) {
 			harness.ok('the manifest reopens against the stand-in standardsDatabase', false, openErr);
 			finish();

@@ -72,7 +72,12 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
 const moduleFunction =
 	({ moduleName } = {}) =>
-	(unusedDeps = {}) => {
+	({ standardsDatabase } = {}) => {
+	// standardsDatabase is a CONSTRUCTION dependency, handed once (manifestEditor({ standardsDatabase }))
+	// rather than on every init/open. It is an invariant across a manifestEditor's whole life — the
+	// same database backs every manifest it composes or opens — so passing it per-call made the
+	// signatures lie about what varies. It is validated at first use (init throws, open calls back an
+	// error) so the component can still be constructed for shape inspection without a live database.
 	// -----
 	// init — compose a NEW manifest. Synchronous; refuses by throwing (see ASYNC STYLE above).
 	//
@@ -80,12 +85,13 @@ const moduleFunction =
 	// it, and never consulted for a decision. manifestEditor is handed resolved subjects and schema
 	// blocks; a component that read the recipe to decide something would be a second resolver, free
 	// to disagree with the first.
-	const init = ({ name, description, recipe, recipeText, standardsDatabase }) => {
+	const init = ({ name, description, recipe, recipeText }) => {
 		if (!standardsDatabase || typeof standardsDatabase.saveBlock !== 'function') {
 			throw new Error(
-				`manifestEditor.init '${name}': a standardsDatabase is REQUIRED and has no default. A manifest ` +
-					`writes its schema blocks through on every add, so a manifest with nowhere to ` +
-					`write is a manifest that silently loses them.`,
+				`manifestEditor.init '${name}': a standardsDatabase is REQUIRED at construction ` +
+					`(manifestEditor({ standardsDatabase })) and has no default. A manifest writes its ` +
+					`schema blocks through on every add, so a manifest with nowhere to write is a ` +
+					`manifest that silently loses them.`,
 			);
 		}
 		if (isBlank(name)) {
@@ -120,9 +126,12 @@ const moduleFunction =
 	// -----
 	// open — load a STORED manifest. Its add is DISABLED: the manifest is already addressed by its
 	// membership, and adding to it would make that address a lie about what it contains.
-	const open = ({ standardsDatabase, manifestRefId }, callback) => {
+	const open = ({ manifestRefId }, callback) => {
 		if (!standardsDatabase || typeof standardsDatabase.getManifest !== 'function') {
-			callback(`manifestEditor.open '${manifestRefId}': a standardsDatabase is REQUIRED and has no default.`);
+			callback(
+				`manifestEditor.open '${manifestRefId}': a standardsDatabase is REQUIRED at ` +
+					`construction (manifestEditor({ standardsDatabase })) and has no default.`,
+			);
 			return;
 		}
 		if (isBlank(manifestRefId)) {

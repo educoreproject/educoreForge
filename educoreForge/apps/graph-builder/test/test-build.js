@@ -251,10 +251,10 @@ const workingBridgeMaker = (overrides) => () =>
 // A manifestEditor double that holds build.js to the DECLARED contract: init takes named
 // arguments, add takes ONE named-argument object carrying a schema BLOCK and answers through a
 // callback, and the composed address comes from refId() -- never id().
-const workingManifestEditor = (overrides) => () =>
+const workingManifestEditor = (overrides) => ({ standardsDatabase } = {}) =>
 	Object.assign(
 		{
-			init: ({ name, description, recipe, standardsDatabase }) => {
+			init: ({ name, description, recipe }) => {
 				if (typeof name !== 'string' || name.trim() === '') {
 					throw new Error(`manifestEditor double init: a name is REQUIRED (got ${typeof name})`);
 				}
@@ -382,8 +382,8 @@ const replayFailingDeleteFor = (purpose, message) => {
 };
 
 // a manifestEditor whose add() fails for ONE kind of member
-const manifestFailingAddFor = (kind, message) => () => {
-	const working = workingManifestEditor()();
+const manifestFailingAddFor = (kind, message) => ({ standardsDatabase } = {}) => {
+	const working = workingManifestEditor()({ standardsDatabase });
 	return {
 		open: working.open,
 		init: (spec) => {
@@ -397,8 +397,8 @@ const manifestFailingAddFor = (kind, message) => () => {
 };
 
 // a manifestEditor whose composed handle fails on a chosen verb
-const manifestWithHandleOverride = (handleOverrides) => () => {
-	const working = workingManifestEditor()();
+const manifestWithHandleOverride = (handleOverrides) => ({ standardsDatabase } = {}) => {
+	const working = workingManifestEditor()({ standardsDatabase });
 	return {
 		open: working.open,
 		init: (spec) => Object.assign({}, working.init(spec), handleOverrides),
