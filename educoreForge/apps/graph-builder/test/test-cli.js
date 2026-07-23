@@ -369,6 +369,60 @@ harness.equal('a duplicate pairing blocks the build', buildDupPairing.status, 1)
 harness.match('  naming the duplicate', buildDupPairing.stderr, /duplicate bridge pairing/);
 
 // =====================================================================
+harness.section('--vectorize — a real operator off-switch, refused invalid, honored both ways');
+// =====================================================================
+// build.js used to hardcode vectorize:true with no terminal off-switch (finding #6). It is now a
+// documented --vectorize=true|false. These cases spend NOTHING: they use the un-forged-standard
+// recipe, which the REAL forger refuses BY NAME before any docker/Voyage — so an INVALID vectorize
+// is refused BEFORE phase A (naming the value), while a VALID one is accepted and the run walks on
+// to the forge refusal, proving the value was honored rather than rejected for vectorize reasons.
+
+const vectorizeStore = path.join(scratchDir, `cliVectorize_${process.pid}.sqlite3`);
+const buildVecArgs = (vectorizeArg) =>
+	[
+		'-build',
+		'--recipePath=' + fixture('bad-unforgedStandard'),
+		'--standardsDatabaseFilePath=' + vectorizeStore,
+	].concat(vectorizeArg ? [vectorizeArg] : []);
+
+const buildVecInvalid = runCli(buildVecArgs('--vectorize=no'));
+harness.equal('--vectorize=no exits 1 (refused, never silently ignored)', buildVecInvalid.status, 1);
+harness.match("  naming 'no' as the unrecognized value", buildVecInvalid.stderr, /--vectorize='no'/);
+harness.ok(
+	'  and refusing BEFORE phase A — the forge is never reached',
+	!/phase A \(forge\) failed/.test(buildVecInvalid.stderr),
+	buildVecInvalid.stderr,
+);
+
+const buildVecFalse = runCli(buildVecArgs('--vectorize=false'));
+harness.equal('--vectorize=false is ACCEPTED and the run proceeds (exit 1 at the forge, not the switch)', buildVecFalse.status, 1);
+harness.match(
+	'  the value was honored — the run walked past it to the real forger',
+	buildVecFalse.stderr,
+	/phase A \(forge\) failed: forge zorg/,
+);
+harness.ok(
+	'  and NO vectorize complaint appears',
+	!/vectorize/.test(buildVecFalse.stderr),
+	buildVecFalse.stderr,
+);
+
+const buildVecDefault = runCli(buildVecArgs(null));
+harness.match(
+	'omitting --vectorize applies the documented default and proceeds (no vectorize complaint)',
+	buildVecDefault.stderr,
+	/phase A \(forge\) failed: forge zorg/,
+);
+harness.ok(
+	'  with no vectorize complaint — the default is silent',
+	!/vectorize/.test(buildVecDefault.stderr),
+	buildVecDefault.stderr,
+);
+
+harness.match('-help documents --vectorize', helpRun.stdout, /--vectorize=true\|false/);
+harness.match('  and states the default is true', helpRun.stdout, /DEFAULTS TO true/);
+
+// =====================================================================
 harness.section('INPUT CHANNELS — JSON on stdin REPLACES the command line');
 // =====================================================================
 

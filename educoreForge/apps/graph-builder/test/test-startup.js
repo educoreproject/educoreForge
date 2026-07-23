@@ -313,4 +313,71 @@ harness.rejects(
 	/requireBooleanValue.*name/s,
 );
 
+// =====================================================================
+harness.section('OPTIONAL BOOLEAN RULE — the production reader: documented default, invalid refused');
+// =====================================================================
+// Item 11. --vectorize is a legitimately-OPTIONAL input with a default documented in -help, so
+// unlike the REQUIRED require-boolean-value the integration scripts use, an ABSENT value yields the
+// default here rather than a refusal (polyArch2 §6). A PRESENT-but-invalid value is still the worse
+// fault and is refused BY NAME. This is production code (lib/, not test/testLib), so the app does
+// not depend on test code. It RETURNS { value } / { error } — no throw for control flow.
+
+const { readOptionalBooleanValue } = require('../lib/optional-boolean-value');
+
+const readOptional = (commandLineParameters, defaultValue) =>
+	readOptionalBooleanValue({
+		name: 'vectorize',
+		commandLineParameters,
+		moduleName: 'someApp',
+		whatItControls: 'whether embeddings are requested',
+		defaultValue,
+	});
+const asVal = (given) => ({ values: { vectorize: given }, switches: {} });
+
+harness.equal(
+	'ABSENT yields the documented default true (the optional case require-boolean-value forbids)',
+	readOptional({ values: {}, switches: {} }, true).value,
+	true,
+);
+harness.equal(
+	'ABSENT yields the documented default false when that is the stated default',
+	readOptional({ values: {}, switches: {} }, false).value,
+	false,
+);
+harness.equal(
+	'a VALID --vectorize=false is honored as FALSE — the OFF direction',
+	readOptional(asVal(['false']), true).value,
+	false,
+);
+harness.equal(
+	'a VALID --vectorize=true is honored as TRUE — the ON direction',
+	readOptional(asVal(['true']), false).value,
+	true,
+);
+harness.match(
+	"an INVALID --vectorize=no is refused by name, not read as the default",
+	readOptional(asVal(['no']), true).error,
+	/--vectorize='no'[\s\S]*--vectorize=true[\s\S]*--vectorize=false/,
+);
+harness.match(
+	"case is not a synonym: --vectorize=True is refused, naming 'True'",
+	readOptional(asVal(['True']), true).error,
+	/--vectorize='True'/,
+);
+harness.match(
+	'--vectorize with no value (qtools hands back true) is refused',
+	readOptional(asVal(true), true).error,
+	/was given with no value/,
+);
+harness.match(
+	'-vectorize (single hyphen -> switches) is refused, not silently unseen',
+	readOptional({ values: {}, switches: { vectorize: true } }, true).error,
+	/'-vectorize' is a switch spelling/,
+);
+harness.match(
+	'--vectorize=true,false (qtools splits commas) is refused rather than resolved to one',
+	readOptional(asVal(['true', 'false']), true).error,
+	/was given 2 values/,
+);
+
 harness.report();

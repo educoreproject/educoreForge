@@ -65,6 +65,13 @@ OPTIONS
                            written. REQUIRED for -build; there is NO default, deliberately --
                            a build that does not say where it writes is one edit away from
                            writing the canonical store.
+     --vectorize=true|false
+                           Whether -build spends real Voyage embedding credit. OPTIONAL, and it
+                           DEFAULTS TO true -- the normal gold build vectorizes. Pass
+                           --vectorize=false to rehearse a build without spending (the graph is
+                           forged and materialized with no embeddings). Only the exact strings
+                           'true' and 'false' are accepted; 'yes'/'no'/'1'/'0' are NOT synonyms
+                           and are refused by name rather than guessed at.
      -verbose              Emit verbose diagnostic detail on stderr.
      -quiet                Suppress progress; results and errors only.
 

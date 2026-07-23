@@ -911,7 +911,98 @@ const stageMonomorphicCreate = () => {
 			);
 			harness.match('  whose graphName is DEV_* scratch tier', okHandle.graphName, /^DEV_/);
 
-			harness.report();
+			stageVectorize();
+		});
+	});
+};
+
+// =====================================================================
+// VECTORIZE — the spend knob is a real operator switch now, threaded to forge()
+// =====================================================================
+// build.js:166 used to hardcode `vectorize: true`, and its own comment recorded that the operator
+// had no off-switch ("RECORDED, NOT FIXED ... the next honest step"). It is now settable:
+// deps.vectorize (the explicit dependency the orchestrator hands down, and the test seam here)
+// overrides; absent, it reads --vectorize through the production optional reader with a DOCUMENTED
+// default of true (polyArch2 §6: a default is permitted for a legitimately-optional input that
+// -help documents). Both directions are honored down to the forge call, and an INVALID value is
+// refused by name rather than silently corrected.
+
+const buildCapturingVectorize = (vectorizeDep, done) => {
+	const captured = [];
+	const xLog = capturingXLog();
+	const standardsDatabase = standardsDatabaseDouble();
+	const capturingForger = () => ({
+		forge: ({ standard, version, vectorize }, fcb) => {
+			captured.push(vectorize);
+			fcb('', {
+				standard,
+				version,
+				nodeEdges: { nodes: [], edges: [], embeddingDims: null },
+				nodeCount: 0,
+				edgeCount: 0,
+				embedCallCount: 0,
+			});
+		},
+	});
+	const deps = {
+		xLog,
+		standardsDatabase,
+		components: {
+			forger: capturingForger,
+			replayManager: workingReplayManager(),
+			bridgeMaker: workingBridgeMaker(),
+			manifestEditor: workingManifestEditor(),
+		},
+	};
+	if (vectorizeDep !== 'OMIT') {
+		deps.vectorize = vectorizeDep;
+	}
+	buildLib.build(loadOrDie(goodRecipe('lifOnly')), deps, (err, result) => done({ err, result, captured }));
+};
+
+const stageVectorize = () => {
+	harness.section('VECTORIZE — threaded to forge(), honored both ways, default documented, invalid refused');
+
+	buildCapturingVectorize(false, ({ err, captured }) => {
+		harness.equal('vectorize=false builds without error', err, '');
+		harness.equal(
+			'and forge() is called with vectorize=false — the OFF direction actually reaches the forger',
+			JSON.stringify(captured),
+			JSON.stringify([false]),
+		);
+
+		buildCapturingVectorize(true, ({ err: errTrue, captured: capturedTrue }) => {
+			harness.equal('vectorize=true builds without error', errTrue, '');
+			harness.equal(
+				'and forge() is called with vectorize=true — the ON direction, the positive control',
+				JSON.stringify(capturedTrue),
+				JSON.stringify([true]),
+			);
+
+			buildCapturingVectorize('OMIT', ({ err: errDefault, captured: capturedDefault }) => {
+				harness.equal('an omitted vectorize builds without error', errDefault, '');
+				harness.equal(
+					'and forge() receives the DOCUMENTED default of true when nothing is supplied',
+					JSON.stringify(capturedDefault),
+					JSON.stringify([true]),
+				);
+
+				buildCapturingVectorize('no', ({ err: errInvalid, result: resultInvalid, captured: capturedInvalid }) => {
+					harness.match(
+						"an INVALID deps.vectorize is refused by name, not silently corrected to a default",
+						errInvalid,
+						/vectorize must be a boolean/,
+					);
+					harness.ok('  and hands back no result', resultInvalid === undefined, JSON.stringify(resultInvalid));
+					harness.ok(
+						'  and forge() is never reached (nothing captured)',
+						capturedInvalid.length === 0,
+						JSON.stringify(capturedInvalid),
+					);
+
+					harness.report();
+				});
+			});
 		});
 	});
 };

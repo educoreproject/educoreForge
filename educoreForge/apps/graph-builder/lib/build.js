@@ -41,6 +41,7 @@
 
 const path = require('path');
 const { pipeRunner, taskListPlus } = new require('qtools-asynchronous-pipe-plus')();
+const { readOptionalBooleanValue } = require('./optional-boolean-value');
 
 // The four component modules. bridgeMaker is REAL-required but STUB-BODIED by design as of
 // 2026-07-22 (its body lands with Phase C bridging); the other three have real bodies. There is no
@@ -81,6 +82,35 @@ const eachSeries = (items, iterator, done) => {
 		});
 	};
 	step();
+};
+
+// resolveVectorize — the spend knob, made an operator switch (Item 11). Precedence: an explicit
+// deps.vectorize (the orchestrator's/test's injected boolean) wins; absent, --vectorize is read
+// through the production optional reader with a DOCUMENTED default of true. The normal gold build
+// vectorizes, so true is the right default AND it is stated in -help — which is exactly what
+// polyArch2 §6 permits for a legitimately-optional input. A supplied-but-non-boolean deps.vectorize
+// and a typed-but-invalid --vectorize=no are both refused BY NAME rather than silently corrected.
+// Returns { value } or { error }; no throw, so build() routes a refusal through its callback.
+const resolveVectorize = (deps) => {
+	if (deps.vectorize !== undefined) {
+		if (typeof deps.vectorize !== 'boolean') {
+			return {
+				error:
+					`graphBuilder build: deps.vectorize must be a boolean when supplied, got ` +
+					`${typeof deps.vectorize} (${JSON.stringify(deps.vectorize)}). It was NOT corrected to a default.`,
+			};
+		}
+		return { value: deps.vectorize };
+	}
+	const commandLineParameters =
+		(process.global && process.global.commandLineParameters) || { values: {}, switches: {} };
+	return readOptionalBooleanValue({
+		name: 'vectorize',
+		commandLineParameters,
+		moduleName: 'graphBuilder -build',
+		whatItControls: 'whether -build spends real Voyage embedding credit (the normal gold build vectorizes)',
+		defaultValue: true,
+	});
 };
 
 const standardKey = (std) => `${std.token}@${std.version}`;
@@ -129,6 +159,17 @@ const build = (recipe, deps, callback) => {
 		return;
 	}
 
+	// vectorize is resolved BEFORE a single component is constructed: it decides whether the real
+	// forger spends Voyage credit, and a caller who typed --vectorize=no must be refused here, not
+	// after a container has been provisioned. deps.vectorize wins (the test seam and any future
+	// programmatic caller); absent, --vectorize is read with a documented default of true.
+	const vectorizeResolution = resolveVectorize(deps);
+	if (vectorizeResolution.error) {
+		callback(vectorizeResolution.error);
+		return;
+	}
+	const vectorizeSpend = vectorizeResolution.value;
+
 	const forger = components.forger();
 	const replay = components.replayManager();
 	const bridgeMaker = components.bridgeMaker();
@@ -156,14 +197,14 @@ const build = (recipe, deps, callback) => {
 			// vectorize is STATED, not omitted. The forger has no default for it (Phase 4, work
 			// group 4) precisely because this call used to leave it out and get real embeddings and
 			// a real bill by silence. -build's contract, in graphBuilder's own -help, is that it
-			// "spends embedding credit"; that promise is now made HERE, in one greppable place,
-			// rather than by an absent field agreeing with an in-code true.
+			// "spends embedding credit BY DEFAULT"; that promise is made HERE, in one greppable
+			// place, rather than by an absent field agreeing with an in-code true.
 			//
-			// RECORDED, NOT FIXED, and out of this work group's scope: the graphBuilder OPERATOR
-			// still cannot turn this off — there is no --vectorize on the app's command line, so
-			// the true below is a constant with nothing settable behind it. Giving -build a
-			// --vectorize=true|false of its own is the next honest step.
-			forger.forge({ standard: std.token, version: std.version, vectorize: true }, (err, forgeReport) => {
+			// FIXED (Item 11): the graphBuilder operator CAN now turn this off. `vectorize` is
+			// resolved once at the top of build() from --vectorize (documented default true) or an
+			// explicit deps.vectorize, and threaded here — so a rehearsal build (`--vectorize=false`)
+			// spends nothing, and a typed `--vectorize=no` is refused rather than silently ignored.
+			forger.forge({ standard: std.token, version: std.version, vectorize: vectorizeSpend }, (err, forgeReport) => {
 				next(err ? `forge ${std.token}: ${err}` : '', { ...args, forgeReport });
 			});
 		});
