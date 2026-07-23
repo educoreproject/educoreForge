@@ -133,6 +133,7 @@ const settingsOrError = (fn) => {
 const REQUIRED = {
 	neo4jImage: 'neo4j:5.26',
 	portSearchStart: '7811', // ini values arrive as strings — coercion is required, guessing is not
+	portSearchSpan: '200',
 };
 const omitting = (keyName) => {
 	const config = { ...REQUIRED };
@@ -177,9 +178,25 @@ harness.equal(
 );
 
 // -----
-// The knobs still awaiting their own commit, certified in their own words.
+harness.rejects(
+	'an ABSENT portSearchSpan is refused, naming the key, the section and the file',
+	thrownMessage(() => resolveSettings(omitting('portSearchSpan'))),
+	/portSearchSpan.*\[replay-manager\].*graphBuilder\.ini/s,
+);
+harness.rejects(
+	"a MISTYPED portSearchSpan='2oo' is refused, naming what was given (NEVER read as 200)",
+	thrownMessage(() => resolveSettings(asGiven('portSearchSpan', '2oo'))),
+	/portSearchSpan='2oo'/,
+);
+harness.equal(
+	'a CONFIGURED portSearchSpan is honoured verbatim — the positive control',
+	settingsOrError(() => resolveSettings(asGiven('portSearchSpan', '250'))).portSearchSpan,
+	250,
+);
+
+// -----
+// The knob still awaiting its own commit, certified in its own words.
 const stillDefaulting = settingsOrError(() => resolveSettings(justRequired));
-harness.equal('default portSearchSpan', stillDefaulting.portSearchSpan, 200);
 harness.equal('default readyTimeout (ms)', stillDefaulting.readyTimeoutMs, 90000);
 
 const overridden = settingsOrError(() =>
@@ -189,7 +206,6 @@ const overridden = settingsOrError(() =>
 	})),
 );
 harness.equal('configured timeout converts seconds -> ms', overridden.readyTimeoutMs, 5000);
-harness.equal('unconfigured knob keeps its default alongside overrides', overridden.portSearchSpan, 200);
 
 // the LIVE-proven behavior, now gated: the real tree config moves the port off the default
 harness.equal(

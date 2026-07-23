@@ -50,7 +50,6 @@ const contentAddress = require(path.join(TREE_LIB, 'content-address', 'content-a
 // from in-code defaults to REQUIRED keys (Phase 4, work group 2); the DEFAULT_ constants below
 // are what remains of the old behavior and die with their own commits.
 const NEO4J_USER = 'neo4j';
-const DEFAULT_PORT_SEARCH_SPAN = 200;
 const DEFAULT_READY_TIMEOUT_SECONDS = 90;
 
 const CONFIG_SECTION = 'replay-manager';
@@ -123,7 +122,7 @@ const resolveSettings = (getConfig = process.global.getConfig) => {
 	return {
 		neo4jImage: requiredImageReference(config, 'neo4jImage'),
 		portSearchStart: requiredConfigNumber(config, 'portSearchStart'),
-		portSearchSpan: Number(config.portSearchSpan) || DEFAULT_PORT_SEARCH_SPAN,
+		portSearchSpan: requiredConfigNumber(config, 'portSearchSpan'),
 		readyTimeoutMs:
 			(Number(config.readyTimeoutSeconds) || DEFAULT_READY_TIMEOUT_SECONDS) * 1000,
 	};
