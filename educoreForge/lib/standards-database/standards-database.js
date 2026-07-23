@@ -46,12 +46,42 @@ const { pipeRunner, taskListPlus } = new (require('qtools-asynchronous-pipe-plus
 const TREE_LIB = path.join(__dirname, '..');
 const sqliteInstance = require(path.join(TREE_LIB, 'sqlite-instance', 'sqlite-instance'))({});
 const contentAddress = require(path.join(TREE_LIB, 'content-address', 'content-address'))();
+const vocabulary = require(path.join(TREE_LIB, 'vocabulary', 'vocabulary'));
 
 // The option shape sqlite-instance needs for hand-written SQL: runStatement REFUSES a statement
 // with no <!tableName!> substitution tag unless noTableNameOk says the caller means it.
 const RAW_OPTS = { noTableNameOk: true, suppressStatementLog: true };
 
-const KINDS = ['standardBase', 'hub', 'relationship'];
+// The LOCKED block taxonomy is the VOCABULARY REGISTRY's, not this module's. It used to be
+// declared here and re-exported to manifestEditor, which made the store the accidental home of a
+// word list that has nothing to do with sqlite — and forced manifestEditor into a lazy require to
+// avoid dragging sqlite-instance in behind it. vocabulary is a pure data module, so the import is
+// unconditional and the load-order debt is gone.
+const KINDS = vocabulary.SCHEMA_BLOCK_KINDS;
+
+// -----
+// headerBlockTypeOfText — what a schema block SAYS it is, read from its own first line.
+//
+// A schema block is PG-JSONL and line 1 IS the header (replay-block.serializeHeaderLine). Read
+// here with a plain JSON.parse rather than through replay-block.deserializeBlock deliberately: the
+// store must not parse a few hundred megabytes of node lines to learn one field, and a store that
+// required the replay codec would refuse blocks it is perfectly able to hold.
+//
+// Returns '' when there is no readable header — which saveBlock treats as a refusal, not as
+// permission. A block whose kind nothing certifies is exactly the case this gate exists for.
+const headerBlockTypeOfText = (text) => {
+	const firstLine = String(text).split('\n')[0];
+	let header;
+	try {
+		header = JSON.parse(firstLine);
+	} catch (parseError) {
+		return '';
+	}
+	if (!header || typeof header !== 'object' || typeof header.blockType !== 'string') {
+		return '';
+	}
+	return header.blockType;
+};
 
 // START OF moduleFunction() ============================================================
 
@@ -243,6 +273,32 @@ const makeApi = ({ esc, escJson, runSql, getRows, databaseFilePath }) => {
 				`standardsDatabase.saveBlock: kind '${kind}' is not one of ${KINDS.join(' | ')}. ` +
 					`The block taxonomy is LOCKED (targetArchitectureDesign §2); an unknown kind is a ` +
 					`caller bug, not an extension point.`,
+			);
+			return;
+		}
+
+		// HEADER vs KIND. The block says what it is; the caller says what it is being stored under.
+		// Until 2026-07-23 nothing reconciled the two, so a block harvested carrying one word could
+		// be stored under the other and the store would hold a row whose text contradicts its own
+		// kind column — silently, and forever, because the text is content-addressed and immutable.
+		// Both values are named because either one may be the mistaken one, and the caller cannot
+		// tell which without seeing both.
+		const headerBlockType = headerBlockTypeOfText(text);
+		if (!headerBlockType) {
+			callback(
+				`standardsDatabase.saveBlock: the schema block being stored under kind '${kind}' ` +
+					`carries no readable header — line 1 is not JSON, or declares no blockType. A ` +
+					`block whose kind nothing certifies is a block stored on the caller's word alone.`,
+			);
+			return;
+		}
+		if (headerBlockType !== kind) {
+			callback(
+				`standardsDatabase.saveBlock: the schema block's header says blockType ` +
+					`'${headerBlockType}' but it is being stored under kind '${kind}'. One of the two ` +
+					`is wrong and the store cannot tell which. The block taxonomy is LOCKED ` +
+					`(targetArchitectureDesign §2) and a block's header is the same vocabulary as its ` +
+					`kind: ${KINDS.join(' | ')}.`,
 			);
 			return;
 		}
@@ -460,5 +516,6 @@ const makeApi = ({ esc, escJson, runSql, getRows, databaseFilePath }) => {
 
 // END OF moduleFunction() ============================================================
 
+// KINDS is deliberately NOT re-exported here. It lives in lib/vocabulary and every consumer reads
+// it from there; a second door onto a locked taxonomy is how the taxonomy stops being locked.
 module.exports = standardsDatabase;
-module.exports.KINDS = KINDS;

@@ -1,6 +1,6 @@
 'use strict';
 
-// standard-block.js — serialize a forged contract graph into ONE PG-JSONL 'standard' block.
+// standard-block.js — serialize a forged contract graph into ONE PG-JSONL 'standardBase' block.
 //
 // CARRIED FAITHFULLY from the incumbent forger's materializer (cli/lib.d/forger/lib/
 // materializer.js buildStandardBlock, 2026-07-21): this is the PROVEN serialization — PG-JSON
@@ -28,12 +28,16 @@ const path = require('path');
 // tree-root lib/ (five levels up: forger/lib -> forger -> apps -> graph-builder -> apps -> root)
 const TREE_LIB = path.join(__dirname, '..', '..', '..', '..', '..', 'lib');
 const replayBlock = require(path.join(TREE_LIB, 'replay', 'replay-block'));
+const { SCHEMA_BLOCK_KIND } = require(path.join(TREE_LIB, 'vocabulary', 'vocabulary'));
 
 const EMBEDDING_DIMS = 1024;
 
 const buildStandardBlock = ({ forged }) => {
 	const header = {
-		blockType: 'standard',
+		// The kind is READ from the vocabulary registry, not spelled here. This header used to say
+		// 'standard' while the store accepted only 'standardBase' — one concept with two live words
+		// and nothing reconciling them (Phase 1, 2026-07-23).
+		blockType: SCHEMA_BLOCK_KIND.STANDARD_BASE,
 		standardKey: forged.standardKey,
 		version: forged.metadata.version,
 		stableUriPropertyName: forged.stableUriPropertyName,

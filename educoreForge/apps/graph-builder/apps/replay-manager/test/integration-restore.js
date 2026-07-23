@@ -168,7 +168,7 @@ require(resolved.entryPath)({ embedder: null }).forge(
 		// what was actually forged rather than from a constant, so a header cannot claim vectors the
 		// block does not carry.
 		const header = {
-			blockType: 'standard',
+			blockType: 'standardBase',
 			standardKey: forged.standardKey,
 			version: forged.metadata.version,
 			stableUriPropertyName: forged.stableUriPropertyName,

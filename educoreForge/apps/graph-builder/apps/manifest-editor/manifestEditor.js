@@ -43,17 +43,16 @@ const path = require('path');
 const TREE_LIB = path.join(__dirname, '..', '..', '..', '..', 'lib');
 const contentAddress = require(path.join(TREE_LIB, 'content-address', 'content-address'))();
 
-// The block taxonomy is LOCKED (targetArchitectureDesign §2) and the store already holds the list.
-// Importing it rather than restating it is the point: two copies of a locked taxonomy is how a kind
-// comes to be acceptable here and refused one layer down.
+// The block taxonomy is LOCKED (targetArchitectureDesign §2). Importing it rather than restating it
+// is the point: two copies of a locked taxonomy is how a kind comes to be acceptable here and
+// refused one layer down.
 //
-// LAZY, and deliberately so (supervisor, 2026-07-22): standards-database pulls in sqlite-instance,
-// which destructures process.global at REQUIRE time. Importing KINDS at the top made this module
-// impossible to require before the app bootstraps — a coupling it did not have before, and one
-// that would bite the first tool wanting to read the taxonomy without opening a database. Resolving
-// it at call time keeps the single source of truth without the load-order debt.
-const lockedKinds = () =>
-	require(path.join(TREE_LIB, 'standards-database', 'standards-database')).KINDS;
+// It is read from lib/vocabulary, the registry that exists for exactly this purpose. It used to be
+// read from standards-database, which forced a LAZY require: standards-database pulls in
+// sqlite-instance, which destructures process.global at REQUIRE time, so importing the taxonomy at
+// the top made this module impossible to require before the app bootstrapped. vocabulary is a pure
+// data module with no such appetite, so the import is unconditional and that debt is retired.
+const KINDS = require(path.join(TREE_LIB, 'vocabulary', 'vocabulary')).SCHEMA_BLOCK_KINDS;
 
 // replayManager.harvest — the only place a schema block is born — hands back { blockText, blockId }.
 // The settled vocabulary is { text, refId }, and replayManager is out of scope for this phase, so
@@ -212,7 +211,6 @@ function makeManifest({ name, description, recipeName, recipeRefId, store, membe
 			);
 			return;
 		}
-		const KINDS = lockedKinds();
 		if (!KINDS.includes(kind)) {
 			callback(
 				`manifestEditor.add to ${selfName()}: kind '${kind}' for subject '${subjectRefId}' ` +

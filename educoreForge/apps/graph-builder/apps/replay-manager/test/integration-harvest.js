@@ -136,7 +136,7 @@ require(resolved.entryPath)({ embedder }).forge(
 		// The header is handed to BOTH sides so header bytes are identical by construction and the
 		// comparison is about CONTENT. A header difference would be a caller choice, not a finding.
 		const header = {
-			blockType: 'standard',
+			blockType: 'standardBase',
 			standardKey: forged.standardKey,
 			version: forged.metadata.version,
 			stableUriPropertyName: forged.stableUriPropertyName,

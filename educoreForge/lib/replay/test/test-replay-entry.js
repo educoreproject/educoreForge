@@ -49,7 +49,7 @@ const replayBlock = require('../replay-block');
 const NOWHERE = { boltUri: 'bolt://localhost:1', password: 'unused' };
 
 const header = {
-	blockType: 'standard',
+	blockType: 'standardBase',
 	standardKey: 'LIF',
 	version: '1',
 	stableUriPropertyName: 'uri',
@@ -123,7 +123,7 @@ waitFor(
 					/ForgedNode enforcement/,
 				);
 				harness.match('  naming the offending manifest index', guardErr, /manifest\[1\]/);
-				harness.match('  naming the offending block', guardErr, /standard LIF v1/);
+				harness.match('  naming the offending block', guardErr, /standardBase LIF v1/);
 				harness.match('  naming the offending node', guardErr, /urn:bad/);
 				harness.ok(
 					'  and NOT naming the clean block',

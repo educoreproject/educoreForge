@@ -146,7 +146,7 @@ harness.equal('edge count reported', block.edgeCount, 1);
 
 const lines = block.blockText.trim().split('\n').map((oneLine) => JSON.parse(oneLine));
 const header = lines[0];
-harness.equal('header blockType', header.blockType, 'standard');
+harness.equal('header blockType', header.blockType, 'standardBase');
 harness.equal('header standardKey', header.standardKey, 'lif');
 harness.equal('header resolutionKey IS the stableUriPropertyName', header.resolutionKey, 'lifPath');
 harness.equal('header embeddingDims', header.embeddingDims, 1024);

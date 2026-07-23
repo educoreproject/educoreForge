@@ -47,6 +47,14 @@ const BLOCK_TEXT = `{"kind":"header","blockType":"standardBase","standardKey":"L
 `;
 const OTHER_TEXT = `{"kind":"header","blockType":"standardBase","standardKey":"CEDS"}\n`;
 
+// HEADER-vs-KIND fixtures. A schema block says what it is in its own header; the caller says what
+// kind it is being stored under. Nothing reconciled the two until now, so a block could be
+// harvested carrying one word and stored under the other with no complaint.
+const HUB_TEXT = `{"kind":"header","blockType":"hub","standardKey":"CEDS"}
+{"kind":"node","stableId":"urn:ceds:hubRef:1"}
+`;
+const HEADERLESS_TEXT = `not a header line at all\n`;
+
 // =====================================================================
 harness.section('THE PATH IS REQUIRED — proven REFUSING, because this is the whole safety story');
 // =====================================================================
@@ -220,8 +228,7 @@ function manifestGates(store, otherBlockRefId) {
 
 								store.getManifest({ refId: 'noSuchManifest' }, (mErr, mRow) => {
 									harness.ok('an absent manifest is null, not an error', !mErr && mRow === null);
-									cleanup();
-									harness.report();
+									headerKindGates(store);
 								});
 							});
 						},
@@ -231,3 +238,61 @@ function manifestGates(store, otherBlockRefId) {
 		);
 	});
 };
+
+// =====================================================================
+// A function DECLARATION for the same hoisting reason as manifestGates: it is called from inside
+// the gates above, before its own definition is reached.
+function headerKindGates(store) {
+	harness.section('HEADER-vs-KIND — a block is stored under the kind it SAYS it is');
+
+	// A schema block says what it is in its own header; the caller says what kind it is being
+	// stored under. Nothing reconciled the two, so a block harvested carrying one word could be
+	// stored under the other and the store would hold a row whose text contradicts its own column.
+	// The vocabulary split ('standard' vs 'standardBase') was the symptom; this is the defect.
+
+	store.saveBlock({ text: HUB_TEXT, kind: 'standardBase', subjectRefId: 'ceds@1:hub' }, (disagreeErr) => {
+		harness.match(
+			'RED PROOF: a header disagreeing with the kind it is stored under is REFUSED',
+			disagreeErr,
+			/header says blockType/,
+		);
+		harness.match('  naming what the header says', disagreeErr, /blockType 'hub'/);
+		harness.match(
+			'  and naming the kind it was being stored under',
+			disagreeErr,
+			/kind 'standardBase'/,
+		);
+
+		store.saveBlock({ text: HEADERLESS_TEXT, kind: 'standardBase', subjectRefId: 'nothing@1' }, (headerlessErr) => {
+			harness.match(
+				'text carrying no readable header is REFUSED',
+				headerlessErr,
+				/no readable header/,
+			);
+			harness.match(
+				'  naming the kind it was being stored under',
+				headerlessErr,
+				/kind 'standardBase'/,
+			);
+
+			store.saveBlock({ text: HUB_TEXT, kind: 'hub', subjectRefId: 'ceds@1:hub' }, (agreeErr, hubBlock) => {
+				harness.ok(
+					'a header AGREEING with its kind is admitted',
+					!agreeErr && !!hubBlock && !!hubBlock.refId,
+					agreeErr,
+				);
+
+				store.saveBlock({ text: HUB_TEXT, kind: 'somethingInvented', subjectRefId: 'x@1' }, (kindErr) => {
+					harness.match(
+						'an unknown kind is STILL refused, header or no header',
+						kindErr,
+						/is not one of standardBase \| hub \| relationship/,
+					);
+
+					cleanup();
+					harness.report();
+				});
+			});
+		});
+	});
+}

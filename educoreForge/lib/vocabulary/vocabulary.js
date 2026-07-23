@@ -86,6 +86,34 @@ const CLASSIFICATION_EDGE_TYPES = {
 };
 
 // =====================================================================
+// SCHEMA BLOCK KINDS — the LOCKED block taxonomy (targetArchitectureDesign_072026 §2).
+// =====================================================================
+// The three kinds a schema block can be, and the ONLY words for them. Homed here rather than in
+// standards-database (where the list previously lived) because this is the registry that exists for
+// exactly this purpose and because the list has more than one consumer: the store's saveBlock
+// taxonomy gate, manifestEditor.add's taxonomy gate, and the header-vs-kind reconciliation. Two
+// copies of a locked taxonomy is how a kind comes to be acceptable in one place and refused one
+// layer down.
+//
+// A schema block's HEADER blockType is drawn from this same set — header and stored kind are one
+// vocabulary, which is what makes reconciling them meaningful (standardsDatabase.saveBlock).
+// 'standardBase' supersedes the incumbent's 'standard' (§2 table, "Incumbent name" column).
+//
+// The named tokens come first and the list is DERIVED from them, so a producer naming one kind and
+// a gate enumerating all three cannot drift apart.
+const SCHEMA_BLOCK_KIND = {
+	STANDARD_BASE: 'standardBase',
+	HUB: 'hub',
+	RELATIONSHIP: 'relationship',
+};
+const SCHEMA_BLOCK_KINDS = [
+	SCHEMA_BLOCK_KIND.STANDARD_BASE,
+	SCHEMA_BLOCK_KIND.HUB,
+	SCHEMA_BLOCK_KIND.RELATIONSHIP,
+];
+const isSchemaBlockKind = (oneKind) => SCHEMA_BLOCK_KINDS.indexOf(oneKind) !== -1;
+
+// =====================================================================
 // PAIR / VERSION-KEY VOCABULARY (Phase C, spec §4/§5). MAPPING_BLOCK_TYPES is THE one
 // authoritative list of block TYPES that carry per-pair mapping content and therefore
 // MUST enter the store with a complete version key (spec §4.2/§4.4, invariant 11.8).
@@ -550,6 +578,10 @@ const vocabulary = {
 	EDGE_TYPES,
 	MAPPING_EDGE_TYPES,
 	CLASSIFICATION_EDGE_TYPES,
+	// schema block taxonomy (targetArchitectureDesign §2 — LOCKED)
+	SCHEMA_BLOCK_KIND,
+	SCHEMA_BLOCK_KINDS,
+	isSchemaBlockKind,
 	// pair / version-key vocabulary (Phase C)
 	MAPPING_BLOCK_TYPES,
 	isMappingBlockType,
