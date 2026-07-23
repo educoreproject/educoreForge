@@ -17,8 +17,9 @@
 //
 //     spec = {
 //       standard                   token, e.g. 'lif' (resolves forges/<standard>/)
-//       version                    recipe version token (reported; the bundle stamps the real
-//                                  version provenance itself via deriveVersionStamp)
+//       version                    REQUIRED recipe version token. Reported back as
+//                                  requestedVersion, kept DISTINCT from what the bundle stamped;
+//                                  it never stands in for the bundle's own version claim.
 //       source?                    path to source data; default = the bundle's own asset
 //       owner?                     ownerStamp pass-through (default ':golden', incumbent-faithful)
 //       vectorize                  REQUIRED, boolean, NO DEFAULT. The SPEND KNOB: true forges
@@ -32,7 +33,13 @@
 //                                  stderr so it can never silently redirect embedding credentials
 //     }
 //
-//     callback('', { standard, version, nodeEdges, nodeCount, edgeCount, embedCallCount })
+//     callback('', { standard, version, bundleVersion, requestedVersion, nodeEdges, nodeCount,
+//                    edgeCount, embedCallCount })
+//       bundleVersion    what the BUNDLE read out of the source document ('unknown' is its own
+//                        honest word for a source that does not self-describe, not an absence)
+//       requestedVersion the token the RECIPE asked for. Two provenance claims, two fields; a
+//                        bundle that stamps NOTHING is refused rather than lent the recipe's token.
+//       version          === bundleVersion, kept for callers that read it.
 //
 //     nodeEdges = { nodes, edges, embeddingDims } in ENGINE shape, ready for replayManager.init.
 //
@@ -211,6 +218,50 @@ const resolveBundle = ({ standard }) => {
 	};
 };
 
+// -----
+// resolveReportedVersion — the two version claims, kept apart.
+//
+//   resolveReportedVersion({ bundleVersion, requestedVersion })
+//       -> { bundleVersion, requestedVersion } | { error }
+//
+// `version: args.forged.metadata.version || version` collapsed two DIFFERENT provenance claims
+// into one field: what the bundle actually READ out of the source document, and the version token
+// the RECIPE asked for. A bundle that stamped nothing reported the recipe's token as though the
+// bundle had stamped it, and no trace of the substitution survived to say otherwise. Both parsers
+// stamp an honest 'unknown' rather than empty, so this arm rarely fires — which is precisely what
+// makes it a comfortable place for a lie to live (polyArch2 §6, identity clause).
+//
+// 'unknown' is NOT the same thing as absent: it is the snapshot-provenance layer's deliberate,
+// warned, honest-gap marker, and it passes through as the bundle's own word.
+const resolveReportedVersion = ({ bundleVersion, requestedVersion } = {}) => {
+	if (bundleVersion === undefined || bundleVersion === null || `${bundleVersion}`.trim() === '') {
+		return {
+			error:
+				`forger: the forge bundle stamped no version in its metadata (requested version ` +
+				`token: '${requestedVersion}'). The requested token is what the RECIPE asked for; ` +
+				`it is NOT evidence of what the source document says, and it will not be reported ` +
+				`as though the bundle had stamped it. A bundle that cannot read a version stamps ` +
+				`'unknown' honestly — an empty stamp is a bundle defect.`,
+		};
+	}
+	if (
+		requestedVersion === undefined ||
+		requestedVersion === null ||
+		`${requestedVersion}`.trim() === ''
+	) {
+		return {
+			error:
+				`forger: the forge spec names no version token. The requested version is reported ` +
+				`alongside the bundle's own stamp so the two provenance claims stay distinct, and ` +
+				`there is no default for it.`,
+		};
+	}
+	return {
+		bundleVersion: `${bundleVersion}`.trim(),
+		requestedVersion: `${requestedVersion}`.trim(),
+	};
+};
+
 // START OF moduleFunction() ============================================================
 
 const forger = () => {
@@ -351,9 +402,21 @@ const forger = () => {
 				callback(err);
 				return;
 			}
+			// THE TWO VERSION CLAIMS ARE REPORTED SEPARATELY. `metadata.version || version` used to
+			// merge them, so a bundle that stamped nothing reported the recipe's token as its own.
+			const versions = resolveReportedVersion({
+				bundleVersion: args.forged.metadata.version,
+				requestedVersion: version,
+			});
+			if (versions.error) {
+				callback(versions.error);
+				return;
+			}
 			callback('', {
 				standard: resolved.standardName,
-				version: args.forged.metadata.version || version,
+				version: versions.bundleVersion,
+				bundleVersion: versions.bundleVersion,
+				requestedVersion: versions.requestedVersion,
 				nodeEdges: args.shaped,
 				nodeCount: args.shaped.nodes.length,
 				edgeCount: args.shaped.edges.length,
@@ -370,3 +433,4 @@ const forger = () => {
 module.exports = forger;
 module.exports.resolveBundle = resolveBundle;
 module.exports.resolveVoyageConfigPath = resolveVoyageConfigPath;
+module.exports.resolveReportedVersion = resolveReportedVersion;

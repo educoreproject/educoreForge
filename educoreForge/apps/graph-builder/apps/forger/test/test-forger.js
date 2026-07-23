@@ -961,4 +961,62 @@ harness.match(
 	/--vectorize=true\|false[\s\S]*REQUIRED, and there is NO DEFAULT/,
 );
 
+// =====================================================================
+harness.section('THE REPORTED VERSION — the bundle stamps it, or the forge says so');
+// =====================================================================
+// `version: args.forged.metadata.version || version` collapsed TWO different provenance claims
+// into one field: what the BUNDLE read out of the source document, and the version token the
+// RECIPE asked for. A bundle that stamped nothing reported the recipe's token as though the
+// bundle had stamped it, and no trace of the substitution survived. Both parsers stamp 'unknown'
+// rather than empty today, so this arm rarely fires — which is exactly what makes it a good place
+// for a lie to live undisturbed (audit B1, forger.js:239).
+//
+// resolveReportedVersion is the pure reading, exported so it is provable without running a forge.
+
+const FORGER_PATH = path.join(__dirname, '..', 'forger.js');
+const { resolveReportedVersion } = forgerModule;
+const versionAnswer = (args) => (resolveReportedVersion || (() => ({})))(args) || {};
+
+harness.match(
+	'a bundle that stamped NO version is REFUSED — the recipe token never stands in for it',
+	versionAnswer({ bundleVersion: undefined, requestedVersion: 'current' }).error,
+	/bundle[\s\S]*version[\s\S]*current/i,
+);
+
+harness.match(
+	'a bundle that stamped a BLANK version is refused too',
+	versionAnswer({ bundleVersion: '   ', requestedVersion: 'current' }).error,
+	/version/i,
+);
+
+harness.match(
+	'a forge that requested NO version is refused — the recipe names what it asked for',
+	versionAnswer({ bundleVersion: '3.0.1', requestedVersion: undefined }).error,
+	/requested|version token/i,
+);
+
+harness.equal(
+	'a stamped version is reported verbatim as the BUNDLE version — the positive control',
+	versionAnswer({ bundleVersion: '3.0.1', requestedVersion: 'current' }).bundleVersion,
+	'3.0.1',
+);
+
+harness.equal(
+	'  and the requested token is reported SEPARATELY, never merged into it',
+	versionAnswer({ bundleVersion: '3.0.1', requestedVersion: 'current' }).requestedVersion,
+	'current',
+);
+
+harness.equal(
+	"  and an honest 'unknown' stamp is passed through as the bundle's own word",
+	versionAnswer({ bundleVersion: 'unknown', requestedVersion: 'current' }).bundleVersion,
+	'unknown',
+);
+
+harness.ok(
+	'no `metadata.version || version` fallthrough survives in forger.js',
+	!/metadata\.version \|\|/.test(codeOf(FORGER_PATH)),
+	(codeOf(FORGER_PATH).match(/.*metadata\.version \|\|.*/g) || []).join('\n'),
+);
+
 harness.report();
