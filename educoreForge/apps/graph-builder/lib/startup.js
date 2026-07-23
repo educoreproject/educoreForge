@@ -28,6 +28,52 @@ const configFileProcessor = require('qtools-config-file-processor');
 
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
+// ---------------------------------------------------------------------
+// STDIN ENVELOPE VALIDATION — a parse is not a command (polyArch2 §6)
+// ---------------------------------------------------------------------
+// The machine channel exists for PROGRAMS, which cannot notice help prose the way a human can. So
+// a JSON that PARSES but is not a command envelope must be REFUSED by name, not degraded to
+// `{switches:{},values:{},fileList:[]}` (via `parsed.switches || {}`) — that degradation reads as
+// "no action", which the entry file treats as a HELP request and EXITS 0. A build script piping a
+// flat {"build":true,...}, checking the documented exit contract (0 = the action succeeded), then
+// believing a graph was built while stdout is help prose, is exactly the silent-default defect the
+// remediation removed everywhere else. Present-but-invalid operator input is the WORSE fault.
+//
+// A valid envelope carries at least ONE of switches/values/fileList, each of the right type. An
+// empty-but-well-formed envelope ({"switches":{}}) is admitted — it is a legitimate empty command,
+// distinct from a shape that never was an envelope. Returns '' when admitted, else the refusal.
+const stdinEnvelopeError = (parsed) => {
+	if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+		return (
+			`graphBuilder: stdin JSON parsed, but its root is ` +
+			`${Array.isArray(parsed) ? 'an array' : parsed === null ? 'null' : typeof parsed} — ` +
+			`not a command envelope object. The machine channel expects { switches, values, fileList }: ` +
+			`actions under "switches" (e.g. {"switches":{"build":true}}), parameters under "values". ` +
+			`It is NOT silently treated as a help request.`
+		);
+	}
+	const has = (key) => Object.prototype.hasOwnProperty.call(parsed, key);
+	if (!has('switches') && !has('values') && !has('fileList')) {
+		return (
+			`graphBuilder: stdin JSON parsed, but carries NONE of the command-envelope keys ` +
+			`(switches, values, fileList). Received keys: [${Object.keys(parsed).join(', ') || '(none)'}]. ` +
+			`A flat shape like {"build":true,...} is NOT the envelope — actions go under "switches" and ` +
+			`parameters under "values". Refusing rather than silently degrading to help (exit 0).`
+		);
+	}
+	const isPlainObject = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
+	if (has('switches') && !isPlainObject(parsed.switches)) {
+		return `graphBuilder: stdin envelope 'switches' must be an object of action flags, got ${Array.isArray(parsed.switches) ? 'an array' : typeof parsed.switches}.`;
+	}
+	if (has('values') && !isPlainObject(parsed.values)) {
+		return `graphBuilder: stdin envelope 'values' must be an object of parameter arrays, got ${Array.isArray(parsed.values) ? 'an array' : typeof parsed.values}.`;
+	}
+	if (has('fileList') && !Array.isArray(parsed.fileList)) {
+		return `graphBuilder: stdin envelope 'fileList' must be an array, got ${typeof parsed.fileList}.`;
+	}
+	return '';
+};
+
 // START OF moduleFunction() ============================================================
 
 const moduleFunction =
@@ -58,6 +104,13 @@ const resolveParameters = (callback) => {
 			parsed = JSON.parse(buffer);
 		} catch (parseError) {
 			callback(`graphBuilder: invalid JSON on stdin: ${parseError.message}`);
+			return;
+		}
+		// A PARSE IS NOT A COMMAND. A JSON that parses but is not a command envelope is refused by
+		// name here, never degraded to an empty envelope that the entry file reads as "help, exit 0".
+		const envelopeError = stdinEnvelopeError(parsed);
+		if (envelopeError) {
+			callback(envelopeError);
 			return;
 		}
 		callback('', {

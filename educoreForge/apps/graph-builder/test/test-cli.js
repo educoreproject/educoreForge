@@ -413,4 +413,39 @@ harness.equal(
 	0,
 );
 
+// =====================================================================
+harness.section('INPUT CHANNELS — a parseable-but-wrong-shaped stdin JSON is REFUSED, never help-with-0');
+// =====================================================================
+// The machine channel exists for PROGRAMS, which cannot notice help prose the way a human can. A
+// caller that pipes a FLAT shape ({"build":true,...}, the switches envelope missing) used to have
+// its input silently discarded by `parsed.switches || {}`, degrade to "no action", and be treated
+// as a help request that EXITS 0 -- so a build script checking the documented exit contract
+// believed a graph was built when stdout was help prose. polyArch2 §6: operator-supplied input
+// that is present-but-invalid is the WORSE fault, refused by name, never guessed at.
+
+const stdinFlatShape = runCli([], JSON.stringify({ build: true, recipePath: [goodRecipe('lifOnly')] }));
+harness.ok(
+	'a FLAT JSON lacking the switches envelope exits NONZERO (never help-with-0)',
+	stdinFlatShape.status !== 0,
+	`status=${stdinFlatShape.status}`,
+);
+harness.match(
+	'  naming the envelope problem rather than silently degrading to help',
+	stdinFlatShape.stderr,
+	/NONE of the command-envelope keys|not a command envelope/i,
+);
+harness.ok(
+	'  and does NOT print help text as if the action succeeded',
+	!/SYNOPSIS/.test(stdinFlatShape.stdout),
+	stdinFlatShape.stdout,
+);
+
+const stdinArrayRoot = runCli([], JSON.stringify([1, 2, 3]));
+harness.ok('a JSON ARRAY root on stdin exits nonzero', stdinArrayRoot.status !== 0, `status=${stdinArrayRoot.status}`);
+harness.match('  naming the root as not an envelope object', stdinArrayRoot.stderr, /array|not a command envelope/);
+
+const stdinBadSwitches = runCli([], JSON.stringify({ switches: [1, 2] }));
+harness.ok('an envelope whose switches is not an object exits nonzero', stdinBadSwitches.status !== 0, `status=${stdinBadSwitches.status}`);
+harness.match("  naming 'switches' as the malformed member", stdinBadSwitches.stderr, /'switches' must be an object/);
+
 harness.report();
