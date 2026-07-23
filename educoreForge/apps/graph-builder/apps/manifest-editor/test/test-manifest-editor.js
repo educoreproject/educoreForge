@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 
-// test-manifest-editor.js — gates for manifestEditor (store/manifest work order Phase 3).
+// test-manifest-editor.js — gates for manifestEditor (standardsDatabase/manifest work order Phase 3).
 //
 // Everything runs against a throwaway standards database under the OS temp directory. No project
 // database is opened, no Docker is spawned, no vectorizer is called: manifestEditor composes and
@@ -25,15 +25,15 @@ SYNOPSIS
      ${moduleName} [-verbose] [-quiet] [-help]
 
 DESCRIPTION
-     Proves init refuses a missing store / blank name / blank description; that add refuses a
+     Proves init refuses a missing standardsDatabase / blank name / blank description; that add refuses a
      blank subjectRefId, a kind outside the LOCKED taxonomy, a blank description, a schema block
      with no text, a schema block whose id is not sha256 of its text, and a repeated subjectRefId;
-     that add writes the schema block THROUGH to the store immediately rather than accumulating
+     that add writes the schema block THROUGH to the standardsDatabase immediately rather than accumulating
      text; that members() hands back a COPY; that refId() is manifestKeyForMembership and that it
      and save() both refuse an empty manifest; that schemaBlocks() resolves in order and refuses
      an absent block by name;
      that save() dedups on identical membership; that DESCRIPTIONS ARE OUTSIDE THE ADDRESS; and
-     that a manifest reopened from the store has a DISABLED add. Throwaway database under the OS
+     that a manifest reopened from the standardsDatabase has a DISABLED add. Throwaway database under the OS
      temp directory.
 
 EXIT STATUS
@@ -53,7 +53,7 @@ const os = require('os');
 const path = require('path');
 
 const manifestEditor = require('../manifestEditor')();
-const standardsDatabase = require('../../../../../lib/standards-database/standards-database')();
+const standardsDatabaseModule = require('../../../../../lib/standards-database/standards-database')();
 const contentAddress = require('../../../../../lib/content-address/content-address')();
 
 const scratchDir = fs.mkdtempSync(path.join(os.tmpdir(), 'edfManifestGate-'));
@@ -84,7 +84,7 @@ const finish = () => {
 };
 
 // The shape replayManager.harvest hands back: block TEXT plus the id minted from it at the moment
-// the block came into existence. Built here with the same shared rule the store uses, because a
+// the block came into existence. Built here with the same shared rule the standardsDatabase uses, because a
 // fixture that invented its own id would be testing nothing.
 const makeSchemaBlock = (blockText) => ({
 	blockText,
@@ -123,37 +123,37 @@ harness.section('INIT — refuses what it cannot compose with');
 // =====================================================================
 
 harness.match(
-	'a manifest with no store is REFUSED',
-	refusalFrom(() => manifestEditor.init({ name: 'noStore', description: 'has no store' })),
-	/store is REQUIRED/,
+	'a manifest with no standardsDatabase is REFUSED',
+	refusalFrom(() => manifestEditor.init({ name: 'noStore', description: 'has no standardsDatabase' })),
+	/standardsDatabase is REQUIRED/,
 );
 harness.match(
 	'  naming the manifest that asked',
-	refusalFrom(() => manifestEditor.init({ name: 'noStore', description: 'has no store' })),
+	refusalFrom(() => manifestEditor.init({ name: 'noStore', description: 'has no standardsDatabase' })),
 	/noStore/,
 );
 
-standardsDatabase.open({ databaseFilePath }, (openErr, store) => {
+standardsDatabaseModule.open({ databaseFilePath }, (openErr, standardsDatabase) => {
 	if (openErr) {
 		harness.ok('a throwaway standards database opened', false, openErr);
 		finish();
 		return;
 	}
-	harness.ok('a throwaway standards database opened', !!store);
+	harness.ok('a throwaway standards database opened', !!standardsDatabase);
 
 	harness.match(
 		'a blank name is REFUSED',
-		refusalFrom(() => manifestEditor.init({ name: '   ', description: 'described', store })),
+		refusalFrom(() => manifestEditor.init({ name: '   ', description: 'described', standardsDatabase })),
 		/name is REQUIRED/,
 	);
 	harness.match(
 		'a blank description is REFUSED',
-		refusalFrom(() => manifestEditor.init({ name: 'unDescribed', description: '', store })),
+		refusalFrom(() => manifestEditor.init({ name: 'unDescribed', description: '', standardsDatabase })),
 		/description is REQUIRED/,
 	);
 	harness.match(
 		'  naming the manifest that asked',
-		refusalFrom(() => manifestEditor.init({ name: 'unDescribed', description: '', store })),
+		refusalFrom(() => manifestEditor.init({ name: 'unDescribed', description: '', standardsDatabase })),
 		/unDescribed/,
 	);
 
@@ -162,7 +162,7 @@ standardsDatabase.open({ databaseFilePath }, (openErr, store) => {
 		description: 'the manifest this suite composes',
 		recipe: { recipeName: 'gateRecipe' },
 		recipeText: GATE_RECIPE_TEXT,
-		store,
+		standardsDatabase,
 	});
 	harness.ok('a well-formed manifest is composed', !!manifest);
 	harness.equal(
@@ -194,7 +194,7 @@ standardsDatabase.open({ databaseFilePath }, (openErr, store) => {
 		);
 		harness.match('  naming the manifest', emptySaveErr, /gateManifest/);
 
-		addRefusalGates(store, manifest);
+		addRefusalGates(standardsDatabase, manifest);
 	});
 });
 
@@ -203,7 +203,7 @@ standardsDatabase.open({ databaseFilePath }, (openErr, store) => {
 // ReferenceError is swallowed by sqlite-instance's SQL error handling and RETRIED, so a one-line
 // hoisting mistake presents as dozens of assertion failures and a wall of bad-statement output.
 // (Same trap recorded in test-standards-database.)
-function addRefusalGates(store, manifest) {
+function addRefusalGates(standardsDatabase, manifest) {
 	harness.section('ADD — every refusal, firing, naming what offended');
 
 	manifest.add(
@@ -297,7 +297,7 @@ function addRefusalGates(store, manifest) {
 												0,
 											);
 
-											writeThroughGates(store, manifest);
+											writeThroughGates(standardsDatabase, manifest);
 										},
 									);
 								},
@@ -310,8 +310,8 @@ function addRefusalGates(store, manifest) {
 	);
 }
 
-function writeThroughGates(store, manifest) {
-	harness.section('ADD — the schema block is written THROUGH to the store IMMEDIATELY');
+function writeThroughGates(standardsDatabase, manifest) {
+	harness.section('ADD — the schema block is written THROUGH to the standardsDatabase IMMEDIATELY');
 
 	manifest.add(
 		{
@@ -334,9 +334,9 @@ function writeThroughGates(store, manifest) {
 				LIF_BLOCK.blockId,
 			);
 
-			// THE POINT: the text is in the store NOW, before save() has been called. Nothing is
+			// THE POINT: the text is in the standardsDatabase NOW, before save() has been called. Nothing is
 			// accumulating in RAM waiting for a save that a failed build may never reach.
-			store.getBlock({ refId: LIF_BLOCK.blockId }, (readErr, row) => {
+			standardsDatabase.getBlock({ refId: LIF_BLOCK.blockId }, (readErr, row) => {
 				harness.ok(
 					'the schema block is IN THE STORE before save() is ever called',
 					!readErr && !!row,
@@ -397,7 +397,7 @@ function writeThroughGates(store, manifest) {
 											manifest.members().length,
 											3,
 										);
-										membershipGates(store, manifest);
+										membershipGates(standardsDatabase, manifest);
 									},
 								);
 							},
@@ -409,7 +409,7 @@ function writeThroughGates(store, manifest) {
 	);
 }
 
-function membershipGates(store, manifest) {
+function membershipGates(standardsDatabase, manifest) {
 	harness.section('MEMBERS — a COPY, positioned by the order they were added');
 
 	const members = manifest.members();
@@ -459,11 +459,11 @@ function membershipGates(store, manifest) {
 		),
 	);
 
-	schemaBlockGates(store, manifest);
+	schemaBlockGates(standardsDatabase, manifest);
 }
 
-function schemaBlockGates(store, manifest) {
-	harness.section('SCHEMABLOCKS — resolved through the store, in order');
+function schemaBlockGates(standardsDatabase, manifest) {
+	harness.section('SCHEMABLOCKS — resolved through the standardsDatabase, in order');
 
 	manifest.schemaBlocks((err, blocks) => {
 		if (err) {
@@ -479,11 +479,11 @@ function schemaBlockGates(store, manifest) {
 		);
 		harness.equal('  carrying the block text', blocks[0].text, LIF_BLOCK.blockText);
 
-		saveGates(store, manifest);
+		saveGates(standardsDatabase, manifest);
 	});
 }
 
-function saveGates(store, manifest) {
+function saveGates(standardsDatabase, manifest) {
 	harness.section('SAVE — the stored address IS the composed address, and it dedups');
 
 	const composedAddress = manifest.refId();
@@ -506,8 +506,8 @@ function saveGates(store, manifest) {
 			harness.equal('saving again is the SAME manifest', again.manifestRefId, composedAddress);
 			harness.equal('  and it deduped rather than making a second one', again.alreadyPresent, true);
 
-			store.getManifest({ refId: composedAddress }, (readErr, stored) => {
-				harness.ok('the manifest reads back from the store', !readErr && !!stored, readErr);
+			standardsDatabase.getManifest({ refId: composedAddress }, (readErr, stored) => {
+				harness.ok('the manifest reads back from the standardsDatabase', !readErr && !!stored, readErr);
 				harness.equal('  with its membership', stored.members.length, 3);
 				harness.equal(
 					'  carrying the human description of a member',
@@ -516,13 +516,13 @@ function saveGates(store, manifest) {
 				);
 				harness.equal('  and the manifest name', stored.name, 'gateManifest');
 
-				descriptionGates(store, composedAddress);
+				descriptionGates(standardsDatabase, composedAddress);
 			});
 		});
 	});
 }
 
-function descriptionGates(store, composedAddress) {
+function descriptionGates(standardsDatabase, composedAddress) {
 	harness.section('DESCRIPTIONS ARE OUTSIDE THE ADDRESS — the whole point, proven');
 	// manifestKeyForMembership hashes schemaBlockRefId + position, nothing else. Fixing a typo in
 	// a description must never change a manifest's identity, or nobody will ever dare fix one.
@@ -531,7 +531,7 @@ function descriptionGates(store, composedAddress) {
 		name: 'a completely different name',
 		description: 'entirely different prose about the same thing',
 		recipe: { recipeName: 'someOtherRecipe' },
-		store,
+		standardsDatabase,
 	});
 
 	twin.add(
@@ -591,7 +591,7 @@ function descriptionGates(store, composedAddress) {
 									true,
 								);
 
-								openGates(store, composedAddress);
+								openGates(standardsDatabase, composedAddress);
 							});
 						},
 					);
@@ -601,16 +601,16 @@ function descriptionGates(store, composedAddress) {
 	);
 }
 
-function openGates(store, composedAddress) {
+function openGates(standardsDatabase, composedAddress) {
 	harness.section('OPEN — a stored manifest is immutable, and says so');
 
 	manifestEditor.open({ manifestRefId: composedAddress }, (noStoreErr) => {
-		harness.match('opening with no store is REFUSED', noStoreErr, /store is REQUIRED/);
+		harness.match('opening with no standardsDatabase is REFUSED', noStoreErr, /standardsDatabase is REQUIRED/);
 
-		manifestEditor.open({ store, manifestRefId: '' }, (noRefErr) => {
+		manifestEditor.open({ standardsDatabase, manifestRefId: '' }, (noRefErr) => {
 			harness.match('opening with no manifestRefId is REFUSED', noRefErr, /manifestRefId is REQUIRED/);
 
-			manifestEditor.open({ store, manifestRefId: 'noSuchManifest' }, (missingErr) => {
+			manifestEditor.open({ standardsDatabase, manifestRefId: 'noSuchManifest' }, (missingErr) => {
 				harness.match(
 					'opening a manifest that is not there is REFUSED',
 					missingErr,
@@ -618,7 +618,7 @@ function openGates(store, composedAddress) {
 				);
 				harness.match('  naming the address asked for', missingErr, /noSuchManifest/);
 
-				manifestEditor.open({ store, manifestRefId: composedAddress }, (openErr, reopened) => {
+				manifestEditor.open({ standardsDatabase, manifestRefId: composedAddress }, (openErr, reopened) => {
 					if (openErr) {
 						harness.ok('a stored manifest reopens', false, openErr);
 						finish();
@@ -682,7 +682,7 @@ function openGates(store, composedAddress) {
 								3,
 							);
 
-							absentBlockGates(store, composedAddress);
+							absentBlockGates(standardsDatabase, composedAddress);
 						},
 					);
 				});
@@ -691,33 +691,33 @@ function openGates(store, composedAddress) {
 	});
 }
 
-function absentBlockGates(store, composedAddress) {
+function absentBlockGates(standardsDatabase, composedAddress) {
 	harness.section('SCHEMABLOCKS — an absent block is REFUSED, not skipped');
 	// A manifest that quietly resolves two of its three blocks materializes a partial graph that
 	// looks like a whole one. That is the failure this refusal exists to make impossible.
 	//
-	// The gap is staged with a stand-in that DELEGATES everything to the real store except one
+	// The gap is staged with a stand-in that DELEGATES everything to the real standardsDatabase except one
 	// getBlock, rather than by deleting the row: sqlite-instance enforces foreign keys, so the
-	// store physically refuses to lose a block a manifest still references (proven — the DELETE
+	// standardsDatabase physically refuses to lose a block a manifest still references (proven — the DELETE
 	// comes back 'FOREIGN KEY constraint failed'). That refusal is a property worth having, and it
-	// means the only honest way to observe manifestEditor's own behaviour is to have the store
-	// answer null — which is exactly what the real store does for a block that is not there
+	// means the only honest way to observe manifestEditor's own behaviour is to have the standardsDatabase
+	// answer null — which is exactly what the real standardsDatabase does for a block that is not there
 	// (proven in test-standards-database). Everything else here is real: real open, real
 	// membership, real ordering.
-	const amnesiacStore = {
-		...store,
+	const amnesiacStandardsDatabase = {
+		...standardsDatabase,
 		getBlock: ({ refId }, callback) => {
 			if (refId === CEDS_BLOCK.blockId) {
 				callback('', null);
 				return;
 			}
-			store.getBlock({ refId }, callback);
+			standardsDatabase.getBlock({ refId }, callback);
 		},
 	};
 
-	manifestEditor.open({ store: amnesiacStore, manifestRefId: composedAddress }, (openErr, gappy) => {
+	manifestEditor.open({ standardsDatabase: amnesiacStandardsDatabase, manifestRefId: composedAddress }, (openErr, gappy) => {
 		if (openErr) {
-			harness.ok('the manifest reopens against the stand-in store', false, openErr);
+			harness.ok('the manifest reopens against the stand-in standardsDatabase', false, openErr);
 			finish();
 			return;
 		}
@@ -725,7 +725,7 @@ function absentBlockGates(store, composedAddress) {
 			harness.match(
 				'RED PROOF: a member whose schema block is gone is REFUSED',
 				err,
-				/is not in the store/,
+				/is not in the standardsDatabase/,
 			);
 			harness.match('  naming the manifest', err, new RegExp(composedAddress));
 			harness.match('  naming the member subject', err, /ceds@11/);

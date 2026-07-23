@@ -136,7 +136,7 @@ const build = (recipe, deps, callback) => {
 		name: recipe.recipeName,
 		description: recipe.description,
 		recipe,
-		store: standardsDatabase,
+		standardsDatabase,
 	});
 
 	const standards = Array.isArray(recipe.standards) ? recipe.standards : [];

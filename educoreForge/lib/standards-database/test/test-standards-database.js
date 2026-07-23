@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 
-// test-standards-database.js — gates for the store (store work order Phase 2).
+// test-standards-database.js — gates for the standardsDatabase (standardsDatabase work order Phase 2).
 //
 // Everything runs against a throwaway database under the OS temp directory. No project database is
 // opened by anything in runAllTests — which is not merely a convention here but the property the
@@ -36,7 +36,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const standardsDatabase = require('../standards-database')();
+const standardsDatabaseModule = require('../standards-database')();
 
 const scratchDir = fs.mkdtempSync(path.join(os.tmpdir(), 'edfStoreGate-'));
 const databaseFilePath = path.join(scratchDir, `gate_${process.pid}.sqlite3`);
@@ -58,17 +58,17 @@ const HEADERLESS_TEXT = `not a header line at all\n`;
 // =====================================================================
 harness.section('THE PATH IS REQUIRED — proven REFUSING, because this is the whole safety story');
 // =====================================================================
-// 2026-07-17: a scratch-intended save silently wrote the canonical store because it had no path
+// 2026-07-17: a scratch-intended save silently wrote the canonical standardsDatabase because it had no path
 // handling and fell through to one. A caller that must say where it writes cannot fall through.
 
-standardsDatabase.open({}, (err) => {
+standardsDatabaseModule.open({}, (err) => {
 	harness.match('opening with no path is REFUSED', err, /databaseFilePath is REQUIRED/);
 	harness.match('  and says why there is no default', err, /can write anywhere/);
 });
-standardsDatabase.open({ databaseFilePath: '' }, (err) => {
+standardsDatabaseModule.open({ databaseFilePath: '' }, (err) => {
 	harness.match('a blank path is REFUSED', err, /REQUIRED/);
 });
-standardsDatabase.open({ databaseFilePath: '/no/such/directory/x.sqlite3' }, (err) => {
+standardsDatabaseModule.open({ databaseFilePath: '/no/such/directory/x.sqlite3' }, (err) => {
 	harness.match(
 		'a path in a directory nobody prepared is REFUSED',
 		err,
@@ -76,20 +76,20 @@ standardsDatabase.open({ databaseFilePath: '/no/such/directory/x.sqlite3' }, (er
 	);
 });
 
-standardsDatabase.open({ databaseFilePath }, (openErr, store) => {
+standardsDatabaseModule.open({ databaseFilePath }, (openErr, standardsDatabase) => {
 	if (openErr) {
 		harness.ok('a throwaway database opened', false, openErr);
 		cleanup();
 		harness.report();
 		return;
 	}
-	harness.ok('a throwaway database opened', !!store);
+	harness.ok('a throwaway database opened', !!standardsDatabase);
 
 	// =====================================================================
 	harness.section('BLOCKS — content-addressed, deduping, taxonomy enforced');
 	// =====================================================================
 
-	store.saveBlock({ text: BLOCK_TEXT, kind: 'standardBase', subjectRefId: 'lif@1', version: '1' }, (e1, first) => {
+	standardsDatabase.saveBlock({ text: BLOCK_TEXT, kind: 'standardBase', subjectRefId: 'lif@1', version: '1' }, (e1, first) => {
 		if (e1) {
 			harness.ok('a block saved', false, e1);
 			cleanup();
@@ -99,14 +99,14 @@ standardsDatabase.open({ databaseFilePath }, (openErr, store) => {
 		harness.match('a block saved under a sha256 address', first.refId, /^[0-9a-f]{64}$/);
 		harness.equal('  and it was genuinely new', first.alreadyPresent, false);
 
-		store.saveBlock({ text: BLOCK_TEXT, kind: 'standardBase', subjectRefId: 'lif@1', version: '1' }, (e2, again) => {
+		standardsDatabase.saveBlock({ text: BLOCK_TEXT, kind: 'standardBase', subjectRefId: 'lif@1', version: '1' }, (e2, again) => {
 			harness.equal('the SAME bytes are the SAME block', again.refId, first.refId);
 			harness.equal('  and the second write is a no-op, not a rewrite', again.alreadyPresent, true);
 
-			store.saveBlock({ text: OTHER_TEXT, kind: 'standardBase', subjectRefId: 'ceds@1' }, (e3, other) => {
+			standardsDatabase.saveBlock({ text: OTHER_TEXT, kind: 'standardBase', subjectRefId: 'ceds@1' }, (e3, other) => {
 				harness.ok('different bytes get a different address', other.refId !== first.refId);
 
-				store.saveBlock({ text: 'x', kind: 'somethingInvented' }, (kindErr) => {
+				standardsDatabase.saveBlock({ text: 'x', kind: 'somethingInvented' }, (kindErr) => {
 					harness.match(
 						'an unknown kind is REFUSED (the taxonomy is LOCKED)',
 						kindErr,
@@ -114,21 +114,21 @@ standardsDatabase.open({ databaseFilePath }, (openErr, store) => {
 					);
 					harness.match('  and says it is a caller bug, not an extension point', kindErr, /not an extension point/);
 
-					store.saveBlock({ text: '', kind: 'standardBase' }, (emptyErr) => {
+					standardsDatabase.saveBlock({ text: '', kind: 'standardBase' }, (emptyErr) => {
 						harness.match('empty text is REFUSED', emptyErr, /non-empty string/);
 
 						// =====================================================================
 						harness.section('VERIFY-ON-READ — a corrupted block is refused BY NAME');
 						// =====================================================================
 
-						store.getBlock({ refId: first.refId }, (readErr, row) => {
+						standardsDatabase.getBlock({ refId: first.refId }, (readErr, row) => {
 							harness.ok('a clean block reads back', !readErr && !!row, readErr);
 							harness.equal('  with its text intact, apostrophe and all', row.text, BLOCK_TEXT);
 
-							store.getBlock({ refId: 'noSuchBlock' }, (missErr, missRow) => {
+							standardsDatabase.getBlock({ refId: 'noSuchBlock' }, (missErr, missRow) => {
 								harness.ok('an absent block is null, not an error', !missErr && missRow === null);
 
-								// Corrupt the stored text behind the store's back — exactly the
+								// Corrupt the stored text behind the standardsDatabase's back — exactly the
 								// scenario verify-on-read exists for.
 								const sqliteInstance = require('../../sqlite-instance/sqlite-instance')({});
 								sqliteInstance.initDatabaseInstance(databaseFilePath, (ie, di) => {
@@ -137,7 +137,7 @@ standardsDatabase.open({ databaseFilePath }, (openErr, store) => {
 											`UPDATE blocks SET text='tampered' WHERE refId='${first.refId}';`,
 											{ noTableNameOk: true, suppressStatementLog: true },
 											() => {
-												store.getBlock({ refId: first.refId }, (corruptErr, corruptRow) => {
+												standardsDatabase.getBlock({ refId: first.refId }, (corruptErr, corruptRow) => {
 													harness.match(
 														'RED PROOF: a tampered block is REFUSED',
 														corruptErr,
@@ -147,7 +147,7 @@ standardsDatabase.open({ databaseFilePath }, (openErr, store) => {
 													harness.match('  and what it actually hashes to', corruptErr, /hashes to [0-9a-f]{64}/);
 													harness.ok('  and returns NOTHING', corruptRow === undefined);
 
-													manifestGates(store, other.refId);
+													manifestGates(standardsDatabase, other.refId);
 												});
 											},
 										);
@@ -168,14 +168,14 @@ standardsDatabase.open({ databaseFilePath }, (openErr, store) => {
 // ReferenceError was swallowed by sqlite-instance's SQL error handling and RETRIED, so a plain
 // hoisting mistake presented as twenty-seven assertion failures. Same shape as the readiness-probe
 // bug fixed earlier today: an infrastructure catch that cannot tell a caller's throw from its own.)
-function manifestGates(store, otherBlockRefId) {
+function manifestGates(standardsDatabase, otherBlockRefId) {
 	harness.section('MANIFESTS — addressed by MEMBERSHIP, described for humans');
 
 	const members = [
 		{ schemaBlockRefId: otherBlockRefId, position: 0, description: 'CEDS 1 — standardBase' },
 	];
 
-	store.saveManifest({ name: 'gateManifest', description: 'the first one', members }, (e1, first) => {
+	standardsDatabase.saveManifest({ name: 'gateManifest', description: 'the first one', members }, (e1, first) => {
 		if (e1) {
 			harness.ok('a manifest saved', false, e1);
 			cleanup();
@@ -186,7 +186,7 @@ function manifestGates(store, otherBlockRefId) {
 		harness.equal('  with its member count', first.memberCount, 1);
 
 		// THE POINT OF THE WHOLE DESCRIPTION DECISION: same membership, different words.
-		store.saveManifest(
+		standardsDatabase.saveManifest(
 			{
 				name: 'a completely different name',
 				description: 'entirely different prose',
@@ -202,17 +202,17 @@ function manifestGates(store, otherBlockRefId) {
 				);
 				harness.equal('  and it deduped rather than making a second one', second.alreadyPresent, true);
 
-				store.saveManifest({ name: 'x', members: [] }, (e3, empty) => {
+				standardsDatabase.saveManifest({ name: 'x', members: [] }, (e3, empty) => {
 					harness.ok('an empty membership still addresses (the caller decides if that is sane)', !!empty.refId);
 					harness.ok('  and it is a DIFFERENT address from a populated one', empty.refId !== first.refId);
 
-					store.saveManifest(
+					standardsDatabase.saveManifest(
 						{ name: 'bad', members: [{ schemaBlockRefId: otherBlockRefId, position: 'first' }] },
 						(posErr) => {
 							harness.match('a non-numeric position is REFUSED', posErr, /non-numeric position/);
 							harness.match('  naming the offender', posErr, new RegExp(otherBlockRefId));
 
-							store.getManifest({ refId: first.refId }, (readErr, manifest) => {
+							standardsDatabase.getManifest({ refId: first.refId }, (readErr, manifest) => {
 								harness.ok('the manifest reads back', !readErr && !!manifest, readErr);
 								harness.equal('  with its membership', manifest.members.length, 1);
 								harness.equal(
@@ -226,9 +226,9 @@ function manifestGates(store, otherBlockRefId) {
 									'ceds@1',
 								);
 
-								store.getManifest({ refId: 'noSuchManifest' }, (mErr, mRow) => {
+								standardsDatabase.getManifest({ refId: 'noSuchManifest' }, (mErr, mRow) => {
 									harness.ok('an absent manifest is null, not an error', !mErr && mRow === null);
-									headerKindGates(store);
+									headerKindGates(standardsDatabase);
 								});
 							});
 						},
@@ -242,15 +242,15 @@ function manifestGates(store, otherBlockRefId) {
 // =====================================================================
 // A function DECLARATION for the same hoisting reason as manifestGates: it is called from inside
 // the gates above, before its own definition is reached.
-function headerKindGates(store) {
+function headerKindGates(standardsDatabase) {
 	harness.section('HEADER-vs-KIND — a block is stored under the kind it SAYS it is');
 
 	// A schema block says what it is in its own header; the caller says what kind it is being
 	// stored under. Nothing reconciled the two, so a block harvested carrying one word could be
-	// stored under the other and the store would hold a row whose text contradicts its own column.
+	// stored under the other and the standardsDatabase would hold a row whose text contradicts its own column.
 	// The vocabulary split ('standard' vs 'standardBase') was the symptom; this is the defect.
 
-	store.saveBlock({ text: HUB_TEXT, kind: 'standardBase', subjectRefId: 'ceds@1:hub' }, (disagreeErr) => {
+	standardsDatabase.saveBlock({ text: HUB_TEXT, kind: 'standardBase', subjectRefId: 'ceds@1:hub' }, (disagreeErr) => {
 		harness.match(
 			'RED PROOF: a header disagreeing with the kind it is stored under is REFUSED',
 			disagreeErr,
@@ -263,7 +263,7 @@ function headerKindGates(store) {
 			/kind 'standardBase'/,
 		);
 
-		store.saveBlock({ text: HEADERLESS_TEXT, kind: 'standardBase', subjectRefId: 'nothing@1' }, (headerlessErr) => {
+		standardsDatabase.saveBlock({ text: HEADERLESS_TEXT, kind: 'standardBase', subjectRefId: 'nothing@1' }, (headerlessErr) => {
 			harness.match(
 				'text carrying no readable header is REFUSED',
 				headerlessErr,
@@ -275,14 +275,14 @@ function headerKindGates(store) {
 				/kind 'standardBase'/,
 			);
 
-			store.saveBlock({ text: HUB_TEXT, kind: 'hub', subjectRefId: 'ceds@1:hub' }, (agreeErr, hubBlock) => {
+			standardsDatabase.saveBlock({ text: HUB_TEXT, kind: 'hub', subjectRefId: 'ceds@1:hub' }, (agreeErr, hubBlock) => {
 				harness.ok(
 					'a header AGREEING with its kind is admitted',
 					!agreeErr && !!hubBlock && !!hubBlock.refId,
 					agreeErr,
 				);
 
-				store.saveBlock({ text: HUB_TEXT, kind: 'somethingInvented', subjectRefId: 'x@1' }, (kindErr) => {
+				standardsDatabase.saveBlock({ text: HUB_TEXT, kind: 'somethingInvented', subjectRefId: 'x@1' }, (kindErr) => {
 					harness.match(
 						'an unknown kind is STILL refused, header or no header',
 						kindErr,

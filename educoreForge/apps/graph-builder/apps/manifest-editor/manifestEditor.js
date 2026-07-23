@@ -32,7 +32,7 @@
 // another thing. "key" is banned as too general. Member record:
 // { subjectRefId, kind, schemaBlockRefId, position, description }.
 //
-// ASYNC STYLE: callback(errString, result) — err is '' on success. The verbs that reach the store
+// ASYNC STYLE: callback(errString, result) — err is '' on success. The verbs that reach the standardsDatabase
 // (add, schemaBlocks, save, open) are callback-shaped. init(), members() and refId() are
 // SYNCHRONOUS by design — the §4.4 build sequence composes with them inline — so their refusals are
 // throws, the same choice content-address.vectorIdForInput makes for a violated precondition. A
@@ -80,10 +80,10 @@ const moduleFunction =
 	// it, and never consulted for a decision. manifestEditor is handed resolved subjects and schema
 	// blocks; a component that read the recipe to decide something would be a second resolver, free
 	// to disagree with the first.
-	const init = ({ name, description, recipe, recipeText, store }) => {
-		if (!store || typeof store.saveBlock !== 'function') {
+	const init = ({ name, description, recipe, recipeText, standardsDatabase }) => {
+		if (!standardsDatabase || typeof standardsDatabase.saveBlock !== 'function') {
 			throw new Error(
-				`manifestEditor.init '${name}': a store is REQUIRED and has no default. A manifest ` +
+				`manifestEditor.init '${name}': a standardsDatabase is REQUIRED and has no default. A manifest ` +
 					`writes its schema blocks through on every add, so a manifest with nowhere to ` +
 					`write is a manifest that silently loses them.`,
 			);
@@ -111,7 +111,7 @@ const moduleFunction =
 			// what makes "built from exactly this" answerable. Optional, because a caller that does
 			// not have the text should record nothing rather than invent precision.
 			recipeRefId: recipeText ? contentAddress.blockIdForText(recipeText) : '',
-			store,
+			standardsDatabase,
 			members: [],
 			storedRefId: '',
 		});
@@ -120,9 +120,9 @@ const moduleFunction =
 	// -----
 	// open — load a STORED manifest. Its add is DISABLED: the manifest is already addressed by its
 	// membership, and adding to it would make that address a lie about what it contains.
-	const open = ({ store, manifestRefId }, callback) => {
-		if (!store || typeof store.getManifest !== 'function') {
-			callback(`manifestEditor.open '${manifestRefId}': a store is REQUIRED and has no default.`);
+	const open = ({ standardsDatabase, manifestRefId }, callback) => {
+		if (!standardsDatabase || typeof standardsDatabase.getManifest !== 'function') {
+			callback(`manifestEditor.open '${manifestRefId}': a standardsDatabase is REQUIRED and has no default.`);
 			return;
 		}
 		if (isBlank(manifestRefId)) {
@@ -130,15 +130,15 @@ const moduleFunction =
 			return;
 		}
 
-		store.getManifest({ refId: manifestRefId }, (err, storedManifest) => {
+		standardsDatabase.getManifest({ refId: manifestRefId }, (err, storedManifest) => {
 			if (err) {
 				callback(`manifestEditor.open '${manifestRefId}': ${err}`);
 				return;
 			}
 			if (!storedManifest) {
 				callback(
-					`manifestEditor.open: there is no manifest '${manifestRefId}' in the store at ` +
-						`'${store.databaseFilePath}'. Refusing to hand back an empty manifest that ` +
+					`manifestEditor.open: there is no manifest '${manifestRefId}' in the standardsDatabase at ` +
+						`'${standardsDatabase.databaseFilePath}'. Refusing to hand back an empty manifest that ` +
 						`would be indistinguishable from an emptied one.`,
 				);
 				return;
@@ -146,7 +146,7 @@ const moduleFunction =
 
 			// getManifest joins each membership row to its block's kind and subject, so the stored
 			// rows already carry the whole member record. Copied into our own shape so nothing the
-			// store happens to select rides along unnoticed.
+			// standardsDatabase happens to select rides along unnoticed.
 			const members = (storedManifest.members || []).map((oneRow) => ({
 				subjectRefId: oneRow.subjectRefId,
 				kind: oneRow.kind,
@@ -165,7 +165,7 @@ const moduleFunction =
 					// for six months later. (TQ, 2026-07-22: "Yes, I want the provenance.")
 					recipeName: storedManifest.recipeName || '',
 					recipeRefId: storedManifest.recipeRefId || '',
-					store,
+					standardsDatabase,
 					members,
 					storedRefId: manifestRefId,
 				}),
@@ -178,7 +178,7 @@ const moduleFunction =
 
 // -----
 // makeManifest — the manifest handle. ONE factory for both doors, because a manifest opened from
-// the store and a manifest being composed must address themselves by the identical rule; two
+// the standardsDatabase and a manifest being composed must address themselves by the identical rule; two
 // factories is how they would come to disagree. The only difference between them is storedRefId,
 // which is what disables add.
 //
@@ -186,18 +186,18 @@ const moduleFunction =
 // callback nest above, where a const would sit in the temporal dead zone. The resulting
 // ReferenceError is swallowed by sqlite-instance's SQL error handling and RETRIED, so a one-line
 // hoisting mistake presents as dozens of unrelated assertion failures.
-function makeManifest({ name, description, recipeName, recipeRefId, store, members, storedRefId }) {
+function makeManifest({ name, description, recipeName, recipeRefId, standardsDatabase, members, storedRefId }) {
 	// how this manifest names itself in a refusal: a stored one by its address, a composed one by
 	// its name, because a composed manifest's address changes with every add.
 	const selfName = () => (storedRefId ? `manifest ${storedRefId}` : `manifest '${name}'`);
 
 	// -----
-	// add — validate, write the schema block THROUGH to the store, then record the membership.
+	// add — validate, write the schema block THROUGH to the standardsDatabase, then record the membership.
 	const add = ({ subjectRefId, kind, description: memberDescription, schemaBlock }, callback) => {
 		if (storedRefId) {
 			callback(
 				`manifestEditor.add '${subjectRefId}' to ${selfName()}: REFUSED — a manifest opened ` +
-					`from the store is immutable. Its refId IS its membership, so adding to it would ` +
+					`from the standardsDatabase is immutable. Its refId IS its membership, so adding to it would ` +
 					`make the address it is stored under a lie about what it contains. Compose a new ` +
 					`manifest instead.`,
 			);
@@ -243,14 +243,14 @@ function makeManifest({ name, description, recipeName, recipeRefId, store, membe
 		}
 
 		// The producer minted the address when the block came into existence. Recomputing it here
-		// and demanding the two agree is what stops a block entering the store under an address
-		// that does not describe it — the store's verify-on-read would then refuse it forever after.
+		// and demanding the two agree is what stops a block entering the standardsDatabase under an address
+		// that does not describe it — the standardsDatabase's verify-on-read would then refuse it forever after.
 		const actualRefId = contentAddress.blockIdForText(blockText);
 		if (claimedRefId !== actualRefId) {
 			callback(
 				`manifestEditor.add '${subjectRefId}' to ${selfName()}: the schemaBlock claims ` +
 					`content address '${claimedRefId}' but its text hashes to ${actualRefId}. ` +
-					`Refusing to store a block under an address that does not describe it.`,
+					`Refusing to standardsDatabase a block under an address that does not describe it.`,
 			);
 			return;
 		}
@@ -268,7 +268,7 @@ function makeManifest({ name, description, recipeName, recipeRefId, store, membe
 
 		// version is not passed separately: subjectRefId IS standardName@version (§2), and a second
 		// version field would be a second answer to the same question.
-		store.saveBlock(
+		standardsDatabase.saveBlock(
 			{
 				text: blockText,
 				kind,
@@ -304,8 +304,8 @@ function makeManifest({ name, description, recipeName, recipeRefId, store, membe
 	const membersCopy = () => members.map((oneMember) => ({ ...oneMember }));
 
 	// -----
-	// refId — the ONE addressing rule, shared with the store so a composed address and a stored
-	// address cannot differ. The store's members speak schemaBlockRefId and the shared rule speaks
+	// refId — the ONE addressing rule, shared with the standardsDatabase so a composed address and a stored
+	// address cannot differ. The standardsDatabase's members speak schemaBlockRefId and the shared rule speaks
 	// blockId; the mapping happens at the boundary, here and in saveManifest, rather than by
 	// changing the shared rule out from under every other phase that uses it.
 	const refId = () => {
@@ -325,21 +325,21 @@ function makeManifest({ name, description, recipeName, recipeRefId, store, membe
 	};
 
 	// -----
-	// schemaBlocks — resolve every member through the store, IN MEMBERSHIP ORDER. An absent block
+	// schemaBlocks — resolve every member through the standardsDatabase, IN MEMBERSHIP ORDER. An absent block
 	// is refused by name rather than skipped: a manifest that quietly resolves two of its three
 	// members materializes a partial graph that looks like a whole one.
 	const schemaBlocks = (callback) => {
 		const resolved = [];
 
 		// a DECLARATION for the same temporal-dead-zone reason as makeManifest: it calls itself
-		// from inside the store's callback.
+		// from inside the standardsDatabase's callback.
 		function resolveNext(index) {
 			if (index >= members.length) {
 				callback('', resolved);
 				return;
 			}
 			const oneMember = members[index];
-			store.getBlock({ refId: oneMember.schemaBlockRefId }, (err, row) => {
+			standardsDatabase.getBlock({ refId: oneMember.schemaBlockRefId }, (err, row) => {
 				if (err) {
 					callback(
 						`manifestEditor.schemaBlocks for ${selfName()}: member ` +
@@ -350,8 +350,8 @@ function makeManifest({ name, description, recipeName, recipeRefId, store, membe
 				if (!row) {
 					callback(
 						`manifestEditor.schemaBlocks for ${selfName()}: member ` +
-							`'${oneMember.subjectRefId}' names schema block ${oneMember.schemaBlockRefId}, which is not in the store ` +
-							`at '${store.databaseFilePath}'. Refusing to resolve a partial membership.`,
+							`'${oneMember.subjectRefId}' names schema block ${oneMember.schemaBlockRefId}, which is not in the standardsDatabase ` +
+							`at '${standardsDatabase.databaseFilePath}'. Refusing to resolve a partial membership.`,
 					);
 					return;
 				}
@@ -364,7 +364,7 @@ function makeManifest({ name, description, recipeName, recipeRefId, store, membe
 	};
 
 	// -----
-	// save — persist the membership. The store addresses it BY that membership, so saving the same
+	// save — persist the membership. The standardsDatabase addresses it BY that membership, so saving the same
 	// composition twice dedups onto the manifest already there.
 	//
 	// An empty manifest is refused here for the same reason refId() refuses it, and through the
@@ -379,7 +379,7 @@ function makeManifest({ name, description, recipeName, recipeRefId, store, membe
 			);
 			return;
 		}
-		store.saveManifest(
+		standardsDatabase.saveManifest(
 			{ name, description, recipeName, recipeRefId, members },
 			(err, saveReport) => {
 			if (err) {

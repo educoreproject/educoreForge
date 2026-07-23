@@ -24,7 +24,7 @@ const buildLib = require('./build')();
 // in sqlite-instance, which DESTRUCTURES process.global at REQUIRE time. graphBuilder.js requires
 // this module before bootstrapGlobal() runs, so a top-level require here makes every action --
 // including -help -- die on startup. (manifestEditor documents the same trap; it escaped by moving
-// the block taxonomy to lib/vocabulary. There is no such escape for the store itself.)
+// the block taxonomy to lib/vocabulary. There is no such escape for the standardsDatabase itself.)
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
 // START OF moduleFunction() ============================================================
@@ -233,7 +233,7 @@ const build = (callback) => {
 	// THE STANDARDS DATABASE IS OPENED HERE, NOT IN build.js. It is a stateful shared resource, so
 	// the orchestrator owns it (polyArch2 §2) and the pipeline receives it. The path is REQUIRED and
 	// has no default: standards-database refuses to invent one because on 2026-07-17 a
-	// scratch-intended save silently wrote the canonical store, and a build that must say where it
+	// scratch-intended save silently wrote the canonical standardsDatabase, and a build that must say where it
 	// writes cannot fall through to writing anywhere.
 	const standardsDatabaseFilePath = firstValue(
 		process.global.commandLineParameters,
@@ -242,18 +242,18 @@ const build = (callback) => {
 	if (!standardsDatabaseFilePath) {
 		callback(
 			`graphBuilder -build: --standardsDatabaseFilePath=<path> is REQUIRED and has no default. ` +
-				`Every schema block this build harvests is written through to that store, and a build ` +
+				`Every schema block this build harvests is written through to that standardsDatabase, and a build ` +
 				`that does not say where it writes is one edit away from writing the canonical one.`,
 		);
 		return;
 	}
 
-	requireStandardsDatabase()().open({ databaseFilePath: standardsDatabaseFilePath }, (openError, store) => {
+	requireStandardsDatabase()().open({ databaseFilePath: standardsDatabaseFilePath }, (openError, standardsDatabase) => {
 		if (openError) {
 			callback(`graphBuilder -build: ${openError}`);
 			return;
 		}
-		buildLib.build(recipe, { xLog, standardsDatabase: store }, (buildError, result) => {
+		buildLib.build(recipe, { xLog, standardsDatabase }, (buildError, result) => {
 			if (buildError) {
 				callback(`graphBuilder -build failed: ${buildError}`);
 				return;

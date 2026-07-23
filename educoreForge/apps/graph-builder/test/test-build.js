@@ -5,7 +5,7 @@
 // over the DECLARED component contracts (../interfaces.js). What is under test here is the
 // PIPELINE, not the components: that the right phases run in the right order, that real recipe
 // data (tokens, versions, pair keys) is threaded through rather than invented, and that a
-// harvested SCHEMA BLOCK flows harvest -> manifest.add -> the store.
+// harvested SCHEMA BLOCK flows harvest -> manifest.add -> the standardsDatabase.
 //
 // NO DOCKER, NO VOYAGE, NO DATABASE. The orchestrator drives the real component modules in
 // production; two of them (forger, replayManager) provision containers and spend embedding credit,
@@ -22,7 +22,7 @@
 //     through a callback. A positional add(key, kind, blockId) cannot satisfy it.
 //
 // And the strongest gate of all, in its own section: the pipeline is run once against the REAL
-// manifestEditor with an in-memory store double, so what build.js passes to add() is validated by
+// manifestEditor with an in-memory standardsDatabase double, so what build.js passes to add() is validated by
 // the actual module — content address recomputed from the block text and all.
 //
 // FAULT INJECTION: every error path in the orchestrator is exercised by a component that
@@ -44,7 +44,7 @@ SYNOPSIS
 DESCRIPTION
      Drives the build pipeline over contract-ENFORCING component doubles (no Docker, no Voyage,
      no database) and asserts SHAPE and SEQUENCE. Runs the pipeline once against the REAL
-     manifestEditor with an in-memory store double so the named-argument add() contract is
+     manifestEditor with an in-memory standardsDatabase double so the named-argument add() contract is
      validated by the module itself. Then injects failing components through the deps.components
      seam so every error path in the orchestrator is watched firing -- including a positive
      control proving the seam itself changes nothing.
@@ -106,13 +106,13 @@ const capturingXLog = () => {
 // composition and addressing, not sqlite.
 // ---------------------------------------------------------------------
 
-const storeDouble = () => {
+const standardsDatabaseDouble = () => {
 	const savedBlocks = {};
 	const savedManifests = [];
 	return {
 		savedBlocks,
 		savedManifests,
-		databaseFilePath: '(in-memory store double — no database is opened)',
+		databaseFilePath: '(in-memory standardsDatabase double — no database is opened)',
 		saveBlock: ({ text, kind, subjectRefId, producedBy }, cb) => {
 			const refId = contentAddress.blockIdForText(text);
 			const alreadyPresent = !!savedBlocks[refId];
@@ -254,15 +254,15 @@ const workingBridgeMaker = (overrides) => () =>
 const workingManifestEditor = (overrides) => () =>
 	Object.assign(
 		{
-			init: ({ name, description, recipe, store }) => {
+			init: ({ name, description, recipe, standardsDatabase }) => {
 				if (typeof name !== 'string' || name.trim() === '') {
 					throw new Error(`manifestEditor double init: a name is REQUIRED (got ${typeof name})`);
 				}
 				if (typeof description !== 'string' || description.trim() === '') {
 					throw new Error(`manifestEditor double init '${name}': a description is REQUIRED`);
 				}
-				if (!store || typeof store.saveBlock !== 'function') {
-					throw new Error(`manifestEditor double init '${name}': a store is REQUIRED`);
+				if (!standardsDatabase || typeof standardsDatabase.saveBlock !== 'function') {
+					throw new Error(`manifestEditor double init '${name}': a standardsDatabase is REQUIRED`);
 				}
 				const members = [];
 				return {
@@ -333,7 +333,7 @@ const workingManifestEditor = (overrides) => () =>
 // (Voyage) or the real replayManager (Docker). Overrides merge on top of the safe default set.
 const runBuildWith = (recipe, componentOverrides, callback) => {
 	const xLog = capturingXLog();
-	const store = storeDouble();
+	const standardsDatabase = standardsDatabaseDouble();
 	const components = {
 		forger: workingForger(),
 		replayManager: workingReplayManager(),
@@ -341,8 +341,8 @@ const runBuildWith = (recipe, componentOverrides, callback) => {
 		manifestEditor: workingManifestEditor(),
 		...(componentOverrides || {}),
 	};
-	buildLib.build(recipe, { xLog, standardsDatabase: store, components }, (err, result) =>
-		callback({ err, result, xLog, store }),
+	buildLib.build(recipe, { xLog, standardsDatabase: standardsDatabase, components }, (err, result) =>
+		callback({ err, result, xLog, standardsDatabase }),
 	);
 };
 
@@ -412,7 +412,7 @@ const manifestWithHandleOverride = (handleOverrides) => () => {
 const stagePreflight = () => {
 	harness.section("PRE-FLIGHT — the orchestrator's own inputs, refused before any component runs");
 
-	// The store gate is also the safety interlock: every component below is the real thing in
+	// The standardsDatabase gate is also the safety interlock: every component below is the real thing in
 	// production, and a build that has not said where its schema blocks go must never reach them.
 	const xLog = capturingXLog();
 	buildLib.build(
@@ -662,18 +662,18 @@ const stageEdgeCasesRest = () => {
 // A double proves build.js calls what this suite believes the contract to be. Only the real
 // module proves it calls what the contract IS: named arguments, a member description, a schema
 // block whose text hashes to the address it claims, and a subject that is not already present.
-// The store is an in-memory double, so no database is opened.
+// The standardsDatabase is an in-memory double, so no database is opened.
 
 const stageRealManifestEditor = () => {
 	harness.section('REAL manifestEditor — build.js validated by the module, not by a double');
 
 	const xLog = capturingXLog();
-	const store = storeDouble();
+	const standardsDatabase = standardsDatabaseDouble();
 	buildLib.build(
 		loadOrDie(goodRecipe('lifOnly')),
 		{
 			xLog,
-			standardsDatabase: store,
+			standardsDatabase: standardsDatabase,
 			components: {
 				forger: workingForger(),
 				replayManager: workingReplayManager(),
@@ -690,22 +690,22 @@ const stageRealManifestEditor = () => {
 				/^[0-9a-f]{16,}$/,
 			);
 
-			const storedRefIds = Object.keys(store.savedBlocks);
-			harness.equal('add() wrote the schema block THROUGH to the store', storedRefIds.length, 1);
+			const storedRefIds = Object.keys(standardsDatabase.savedBlocks);
+			harness.equal('add() wrote the schema block THROUGH to the standardsDatabase', storedRefIds.length, 1);
 			harness.equal(
 				'  under the kind the orchestrator declared',
-				store.savedBlocks[storedRefIds[0]].kind,
+				standardsDatabase.savedBlocks[storedRefIds[0]].kind,
 				'standardBase',
 			);
 			harness.equal(
 				'  keyed by the subject, resolved standardName@version',
-				store.savedBlocks[storedRefIds[0]].subjectRefId,
+				standardsDatabase.savedBlocks[storedRefIds[0]].subjectRefId,
 				'lif@current',
 			);
 			harness.equal(
 				'  and the stored address IS sha256 of the block text (harvest minted it, add re-derived it)',
 				storedRefIds[0],
-				contentAddress.blockIdForText(store.savedBlocks[storedRefIds[0]].text),
+				contentAddress.blockIdForText(standardsDatabase.savedBlocks[storedRefIds[0]].text),
 			);
 
 			harness.note(
@@ -757,8 +757,8 @@ const faultCases = [
 	},
 	{
 		label: 'phase A: recording the standardBase member fails',
-		components: { manifestEditor: manifestFailingAddFor('standardBase', 'store write refused') },
-		pattern: /phase A \(forge\) failed: add standardBase ceds@current: store write refused/,
+		components: { manifestEditor: manifestFailingAddFor('standardBase', 'standardsDatabase write refused') },
+		pattern: /phase A \(forge\) failed: add standardBase ceds@current: standardsDatabase write refused/,
 	},
 	{
 		label: 'phase A: harvesting the HUB schema block fails',
@@ -808,10 +808,10 @@ const faultCases = [
 		label: 'compose: resolving the manifest members fails',
 		components: {
 			manifestEditor: manifestWithHandleOverride({
-				schemaBlocks: (cb) => cb('member names a block that is not in the store'),
+				schemaBlocks: (cb) => cb('member names a block that is not in the standardsDatabase'),
 			}),
 		},
-		pattern: /compose failed: member names a block that is not in the store/,
+		pattern: /compose failed: member names a block that is not in the standardsDatabase/,
 	},
 	{
 		label: 'materialize: the eval golden cannot be created',

@@ -132,14 +132,14 @@
  * callback-shaped.
  *
  * @property {function({name: string, description: string, recipe?: Object, recipeText?: string,
- *            store: Object}):
+ *            standardsDatabase: Object}):
  *           {add: function({subjectRefId: string, kind: string, description: string,
  *            schemaBlock: Object}, function(string, Object=): void): void,
  *            members: function(): Array, refId: function(): string,
  *            schemaBlocks: function(function(string, Array=): void): void,
  *            save: function(function(string, Object=): void): void,
  *            recipeName: function(): string, recipeRefId: function(): string}} init
- * @property {function({store: Object, manifestRefId: string},
+ * @property {function({standardsDatabase: Object, manifestRefId: string},
  *           function(string, Object=): void): void} open
  *           hands back a manifest handle of the SAME shape init returns — one factory serves both
  *           doors — with `add` disabled.
@@ -295,12 +295,12 @@ const COMPONENT_SHAPES = {
 		// SYNCHRONOUS (arity 1, no callback) — the §4.4 build sequence composes with it inline.
 		init: {
 			arity: 1,
-			argKeys: ['name', 'description', 'store'],
+			argKeys: ['name', 'description', 'standardsDatabase'],
 			resultShape: MANIFEST_HANDLE_SHAPE,
 		},
 		open: {
 			arity: 2,
-			argKeys: ['store', 'manifestRefId'],
+			argKeys: ['standardsDatabase', 'manifestRefId'],
 			resultShape: MANIFEST_HANDLE_SHAPE,
 		},
 	},

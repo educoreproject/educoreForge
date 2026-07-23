@@ -170,14 +170,14 @@ const nameOnlyViolation = (instance, declaredShape) =>
 // verbs can be driven inside this suite, which is what makes its result shapes observable.
 // =====================================================================
 
-const storeDouble = () => {
+const standardsDatabaseDouble = () => {
 	const savedBlocks = {};
 	const savedManifests = [];
 	let storedManifest = null;
 	return {
 		savedBlocks,
 		savedManifests,
-		databaseFilePath: '(in-memory store double — no database is opened)',
+		databaseFilePath: '(in-memory standardsDatabase double — no database is opened)',
 		saveBlock: ({ text, kind, subjectRefId, producedBy }, callback) => {
 			const refId = contentAddress.blockIdForText(text);
 			const alreadyPresent = !!savedBlocks[refId];
@@ -301,14 +301,14 @@ harness.note('nowhere else. interfaces.js says so in the same words.');
 	);
 })();
 
-// manifestEditor — both doors and the handle they hand back, against the store double.
+// manifestEditor — both doors and the handle they hand back, against the standardsDatabase double.
 (() => {
-	const store = storeDouble();
+	const standardsDatabase = standardsDatabaseDouble();
 	const manifest = realComponents.manifestEditor().init({
 		name: 'shapeProbeManifest',
 		description: 'composed by test-interfaces to observe the declared result shape',
 		recipe: { recipeName: 'shapeProbeRecipe' },
-		store,
+		standardsDatabase,
 	});
 
 	harness.equal(
@@ -345,7 +345,7 @@ harness.note('nowhere else. interfaces.js says so in the same words.');
 	manifest.save((err, result) => {
 		saveObserved = { err, result };
 	});
-	harness.equal('manifest.save succeeds against the store double', saveObserved.err, '');
+	harness.equal('manifest.save succeeds against the standardsDatabase double', saveObserved.err, '');
 	harness.equal(
 		'  and its result carries every declared key',
 		resultShapeViolation(saveObserved.result, MANIFEST_HANDLE_SHAPE.save, 'manifest.save'),
@@ -354,12 +354,12 @@ harness.note('nowhere else. interfaces.js says so in the same words.');
 
 	let openObserved = null;
 	realComponents.manifestEditor().open(
-		{ store, manifestRefId: 'manifestDouble:1' },
+		{ standardsDatabase, manifestRefId: 'manifestDouble:1' },
 		(err, reopened) => {
 			openObserved = { err, reopened };
 		},
 	);
-	harness.equal('manifestEditor.open succeeds against the store double', openObserved.err, '');
+	harness.equal('manifestEditor.open succeeds against the standardsDatabase double', openObserved.err, '');
 	harness.equal(
 		'manifestEditor.open hands back a handle carrying every declared key',
 		resultShapeViolation(
@@ -412,7 +412,7 @@ const positionallyDriftedManifestEditor = () => ({
 		recipeName: () => recipe,
 		recipeRefId: () => '',
 	}),
-	open: ({ store, manifestRefId }, callback) => callback('nothing to open'),
+	open: ({ standardsDatabase, manifestRefId }, callback) => callback('nothing to open'),
 });
 
 harness.match(
@@ -431,7 +431,7 @@ harness.match(
 		COMPONENT_SHAPES.manifestEditor,
 		'driftedManifestEditor',
 	),
-	/never reads declared argument key\(s\).*name.*description.*store/,
+	/never reads declared argument key\(s\).*name.*description.*standardsDatabase/,
 );
 harness.match(
 	'  and the handle it returns is caught positionally too',
