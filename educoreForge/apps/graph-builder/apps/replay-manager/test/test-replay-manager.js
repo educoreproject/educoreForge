@@ -30,6 +30,9 @@ require('../../../../../test/testLib/testAppStartup')({ moduleName, helpText: he
 
 const harness = require('../../../../../test/testLib/harness')(moduleName);
 
+const fs = require('fs');
+const path = require('path');
+
 const replayManagerModule = require('../replayManager');
 const { nameRefusal } = replayManagerModule;
 const manager = replayManagerModule();
@@ -134,6 +137,7 @@ const REQUIRED = {
 	neo4jImage: 'neo4j:5.26',
 	portSearchStart: '7811', // ini values arrive as strings — coercion is required, guessing is not
 	portSearchSpan: '200',
+	readyTimeoutSeconds: '90',
 };
 const omitting = (keyName) => {
 	const config = { ...REQUIRED };
@@ -195,19 +199,50 @@ harness.equal(
 );
 
 // -----
-// The knob still awaiting its own commit, certified in its own words.
-const stillDefaulting = settingsOrError(() => resolveSettings(justRequired));
-harness.equal('default readyTimeout (ms)', stillDefaulting.readyTimeoutMs, 90000);
-
-const overridden = settingsOrError(() =>
-	resolveSettings(() => ({
-		...REQUIRED,
-		readyTimeoutSeconds: 5,
-	})),
+harness.rejects(
+	'an ABSENT readyTimeoutSeconds is refused, naming the key, the section and the file',
+	thrownMessage(() => resolveSettings(omitting('readyTimeoutSeconds'))),
+	/readyTimeoutSeconds.*\[replay-manager\].*graphBuilder\.ini/s,
 );
-harness.equal('configured timeout converts seconds -> ms', overridden.readyTimeoutMs, 5000);
+harness.rejects(
+	"a MISTYPED readyTimeoutSeconds='ninety' is refused, naming what was given (NEVER read as 90)",
+	thrownMessage(() => resolveSettings(asGiven('readyTimeoutSeconds', 'ninety'))),
+	/readyTimeoutSeconds='ninety'/,
+);
+harness.equal(
+	'a CONFIGURED readyTimeoutSeconds converts seconds -> ms — the positive control',
+	settingsOrError(() => resolveSettings(asGiven('readyTimeoutSeconds', 5))).readyTimeoutMs,
+	5000,
+);
 
-// the LIVE-proven behavior, now gated: the real tree config moves the port off the default
+// -----
+// The whole point, stated once: a COMPLETE section resolves, and every knob is the operator's.
+const complete = settingsOrError(() => resolveSettings(justRequired));
+harness.equal('a COMPLETE section resolves without complaint', complete.error, undefined);
+
+// -----
+// moduleCode — replayManager.js with whole-line comments stripped, so a scan for a surviving
+//   in-code default is neither fooled by prose in the header nor defeated by it.
+const moduleCode = fs
+	.readFileSync(path.join(__dirname, '..', 'replayManager.js'), 'utf8')
+	.split('\n')
+	.filter((oneLine) => !/^\s*(\/\/|\*|\/\*)/.test(oneLine))
+	.join('\n');
+const linesMatching = (regex) => (moduleCode.match(regex) || []).join('\n');
+
+harness.ok(
+	'no in-code provisioning default survives in replayManager.js',
+	!/^\s*const DEFAULT_/m.test(moduleCode),
+	linesMatching(/^\s*const DEFAULT_.*$/gm),
+);
+harness.ok(
+	'no `Number(x) || default` idiom survives in replayManager.js',
+	!/Number\([^)]*\)\s*\|\|/.test(moduleCode),
+	linesMatching(/.*Number\([^)]*\)\s*\|\|.*/g),
+);
+
+// the LIVE-proven behavior, now gated: the real tree config governs, and it is now the ONLY
+// thing that can — there is nothing left in the code for it to override.
 harness.equal(
 	'the real graphBuilder.ini governs (portSearchStart 7811, proven live 2026-07-21)',
 	resolveSettings().portSearchStart,

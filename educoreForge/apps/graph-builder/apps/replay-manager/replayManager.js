@@ -45,12 +45,16 @@ const TREE_LIB = path.join(__dirname, '..', '..', '..', '..', 'lib');
 const replayEngine = require(path.join(TREE_LIB, 'replay', 'replay-engine'));
 const contentAddress = require(path.join(TREE_LIB, 'content-address', 'content-address'))();
 
-// The provisioning knobs live in graphBuilder.ini, [replay-manager] section (neo4jImage,
-// portSearchStart, portSearchSpan, readyTimeoutSeconds). They are being converted one at a time
-// from in-code defaults to REQUIRED keys (Phase 4, work group 2); the DEFAULT_ constants below
-// are what remains of the old behavior and die with their own commits.
+// The provisioning knobs live in graphBuilder.ini, [replay-manager] section: neo4jImage,
+// portSearchStart, portSearchSpan, readyTimeoutSeconds. All four are REQUIRED and all four are
+// VALIDATED (Phase 4, work group 2). There is no in-code default for any of them, and there is
+// deliberately nothing here to shadow a settable key: this module once claimed in its own header
+// that "an unconfigured tree runs on exactly these values", which made a deleted config line and
+// a mistyped one produce the same silence.
+//
+// NEO4J_USER is the one legitimate constant in this file — it is not settable at all, so there
+// is nothing to omit and nothing to shadow (polyArch2 §6).
 const NEO4J_USER = 'neo4j';
-const DEFAULT_READY_TIMEOUT_SECONDS = 90;
 
 const CONFIG_SECTION = 'replay-manager';
 const CONFIG_FILE = 'graphBuilder.ini';
@@ -95,8 +99,8 @@ const requiredImageReference = (config, keyName) => {
 
 // -----
 // requiredConfigNumber — ini values arrive as strings, so Number() is required; what is NOT
-// permitted is `Number(x) || DEFAULT`, which reads a typo and an absence as the same thing and
-// answers with a value nobody chose. An unparseable value is refused BY NAME.
+// permitted is coercing and then defaulting, which reads a typo and an absence as the same thing
+// and answers with a value nobody chose. An unparseable value is refused BY NAME.
 const requiredConfigNumber = (config, keyName) => {
 	const value = requiredConfigText(config, keyName);
 	const number = Number(value);
@@ -123,8 +127,7 @@ const resolveSettings = (getConfig = process.global.getConfig) => {
 		neo4jImage: requiredImageReference(config, 'neo4jImage'),
 		portSearchStart: requiredConfigNumber(config, 'portSearchStart'),
 		portSearchSpan: requiredConfigNumber(config, 'portSearchSpan'),
-		readyTimeoutMs:
-			(Number(config.readyTimeoutSeconds) || DEFAULT_READY_TIMEOUT_SECONDS) * 1000,
+		readyTimeoutMs: requiredConfigNumber(config, 'readyTimeoutSeconds') * 1000,
 	};
 };
 
