@@ -75,9 +75,30 @@ const moduleFunction =
 				);
 			}
 
+			// `parseInt(x, 10) || DEFAULT` used to sit here, which is two defects in one
+			// expression: an absent key and a typo'd one both produced the same in-code number,
+			// and 'embeddingDims=102o' produced 102 — a value nobody typed and nobody would see.
+			// Numeric() is exact: a trailing character makes it NaN rather than a truncated number.
+			const givenDims = voyageEmbedding.embeddingDims;
+			const embeddingDims = Number(`${givenDims}`.trim());
+			if (
+				givenDims === undefined ||
+				`${givenDims}`.trim() === '' ||
+				!Number.isInteger(embeddingDims) ||
+				embeddingDims <= 0
+			) {
+				throw new Error(
+					`embedding-client: [voyageEmbedding].embeddingDims is ${
+						givenDims === undefined ? 'not configured' : `'${givenDims}'`
+					}, which is not a positive whole number. Add it to the [voyageEmbedding] section ` +
+						`of ${configFilePath}. There is no default: this value governs the vector ` +
+						`index and is part of the vector model's identity.`,
+				);
+			}
+
 			return {
 				model: `${model}`.trim(),
-				embeddingDims: parseInt(voyageEmbedding.embeddingDims, 10) || 1024,
+				embeddingDims,
 			};
 		};
 

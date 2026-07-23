@@ -140,4 +140,52 @@ harness.ok(
 	(codeOf(path.join(__dirname, '..', 'embedding-client.js')).match(/.*voyage-[0-9].*/g) || []).join('\n'),
 );
 
+// =====================================================================
+harness.section('EMBEDDING DIMS — required, validated, and never quietly corrected');
+// =====================================================================
+
+harness.rejects(
+	'an ABSENT embeddingDims is refused, naming the key, the section and the file',
+	thrownMessage(() =>
+		embeddingClient({ configFilePath: iniWith(['model=voyage-4-large']) }).resolveEmbeddingIdentity(),
+	),
+	/\[voyageEmbedding\]\.embeddingDims.*voyageEmbedding-\d+\.ini/s,
+);
+
+harness.rejects(
+	'a MISTYPED embeddingDims=102o is refused, naming what was given (never truncated to 102)',
+	thrownMessage(() =>
+		embeddingClient({
+			configFilePath: iniWith(['model=voyage-4-large', 'embeddingDims=102o']),
+		}).resolveEmbeddingIdentity(),
+	),
+	/\[voyageEmbedding\]\.embeddingDims.*'102o'/s,
+);
+
+harness.rejects(
+	'an OUT-OF-RANGE embeddingDims=0 is refused rather than replaced',
+	thrownMessage(() =>
+		embeddingClient({
+			configFilePath: iniWith(['model=voyage-4-large', 'embeddingDims=0']),
+		}).resolveEmbeddingIdentity(),
+	),
+	/\[voyageEmbedding\]\.embeddingDims.*'0'/s,
+);
+
+harness.equal(
+	'a CONFIGURED embeddingDims is honoured verbatim as a number — the positive control',
+	identityOrError(() =>
+		embeddingClient({
+			configFilePath: iniWith(['model=voyage-context-3', 'embeddingDims=512']),
+		}).resolveEmbeddingIdentity(),
+	).embeddingDims,
+	512,
+);
+
+harness.ok(
+	'no dimension literal survives anywhere in embedding-client.js',
+	!/\b(1024|512)\b/.test(codeOf(path.join(__dirname, '..', 'embedding-client.js'))),
+	(codeOf(path.join(__dirname, '..', 'embedding-client.js')).match(/.*\b(1024|512)\b.*/g) || []).join('\n'),
+);
+
 harness.report();
