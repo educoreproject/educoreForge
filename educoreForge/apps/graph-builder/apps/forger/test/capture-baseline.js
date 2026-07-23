@@ -7,10 +7,15 @@
 // treated as immutable evidence.
 //
 // It needs NO graph: the in-memory schema block is a pure function of the forge bundle's output
-// (standard-block.js is pure). It DOES spend Voyage credit unless --vectorize=false.
+// (standard-block.js is pure). It DOES spend Voyage credit when --vectorize=true.
 //
-//   node capture-baseline.js --standard=lif                    real embeddings (small: ~2,982 nodes)
-//   node capture-baseline.js --standard=ceds --vectorize=false structure only, no Voyage spend
+// --vectorize is REQUIRED and has no default. It is the spend knob, and it used to be read as
+// `!== 'false'`, so --vectorize=no ran WITH embeddings and billed the one person who was paying
+// enough attention to try to turn them off. It now takes exactly 'true' or exactly 'false', and
+// refuses anything else by name (polyArch2 §6).
+//
+//   node capture-baseline.js --standard=lif --vectorize=true    real embeddings (small: ~2,982 nodes)
+//   node capture-baseline.js --standard=ceds --vectorize=false  structure only, no Voyage spend
 //
 // Writes <treeRoot>/.baseline_072226/<standard>[.novec].schemaBlock.jsonl plus a .meta.json
 // carrying sha256, counts, and the capture parameters. Deliberate: its name does not match
@@ -23,12 +28,21 @@ NAME
      ${moduleName} -- capture the pre-change in-memory schema block (work order Phase 0)
 
 SYNOPSIS
-     ${moduleName} [--standard=<token>] [--vectorize=false] [-verbose] [-help]
+     ${moduleName} --vectorize=true|false [--standard=<token>] [-verbose] [-help]
 
 DESCRIPTION
      Runs a forge bundle in memory and serializes its output through the pure standard-block
      serializer, writing the resulting schema block text and its sha256 to .baseline_072226/.
      No graph is provisioned. No store is touched.
+
+OPTIONS
+     --vectorize=true|false   REQUIRED, and there is NO DEFAULT. true requests real Voyage
+                              embeddings and spends real credit; false skips the embedding pass
+                              entirely. Exactly those two spellings are accepted -- 'yes', 'no',
+                              '1', '0', 'on', 'off' and 'True' are refused by name rather than
+                              guessed at, because a misread spend knob costs money in one
+                              direction and produces vectorless output in the other.
+     --standard=<token>       which forge bundle to run (default: lif).
 
 EXIT STATUS
      0 captured;  1 otherwise.
@@ -52,7 +66,22 @@ const BASELINE_DIR = path.join(TREE_ROOT, '.baseline_072226');
 const forgerModule = require('../forger');
 const { buildStandardBlock } = require('../lib/standard-block');
 
-const vectorize = (commandLineParameters.values.vectorize || [])[0] !== 'false';
+// the ONE reading of the spend knob, shared with every other entry point that takes it
+const { requireBooleanValue } = require('../../../../../test/testLib/require-boolean-value');
+
+const vectorize = requireBooleanValue({
+	name: 'vectorize',
+	commandLineParameters,
+	moduleName,
+	whatItControls: 'whether real Voyage embeddings are requested, which spends real credit',
+});
+// the spend decision is announced BEFORE anything is spent, so the operator can see what he
+// actually asked for while stopping is still free.
+xLog.status(
+	`[${moduleName}] vectorize=${vectorize}` +
+		(vectorize ? ' — real Voyage credit WILL be spent' : ' — no Voyage spend'),
+);
+
 const standard = (commandLineParameters.values.standard || ['lif'])[0];
 
 const resolved = forgerModule.resolveBundle({ standard });

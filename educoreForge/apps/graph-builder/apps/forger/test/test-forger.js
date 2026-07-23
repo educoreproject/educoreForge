@@ -40,6 +40,7 @@ const { shapeForgedGraph } = require('../lib/shape-forged-graph');
 
 const fs = require('fs');
 const path = require('path');
+const { spawnSync } = require('child_process');
 
 // -----
 // codeOf — a file's source with whole-line comments stripped, so a scan for a surviving in-code
@@ -432,6 +433,99 @@ harness.ok(
 	'no dimension literal survives anywhere in standard-block.js',
 	!/\b(1024|512)\b/.test(codeOf(path.join(__dirname, '..', 'lib', 'standard-block.js'))),
 	(codeOf(path.join(__dirname, '..', 'lib', 'standard-block.js')).match(/.*\b(1024|512)\b.*/g) || []).join('\n'),
+);
+
+// =====================================================================
+harness.section('CAPTURE-BASELINE --vectorize — the spend knob is read ONCE, or refused');
+// =====================================================================
+// capture-baseline.js read the spend knob as `!== 'false'`: a not-equal test against ONE
+// spelling, so 'no', 'off', 'False' and an absent switch alike were read as TRUE and spent real
+// Voyage credit against the operator's explicit attempt to turn it off. It now reads through
+// requireBooleanValue — exactly 'true' or exactly 'false', absence refused, anything else named.
+//
+// NO SPEND IS POSSIBLE FROM THESE RUNS, in either polarity. Every spawn carries a --standard
+// token that resolveBundle cannot resolve, so the script stops on the known-forges roster error
+// before an embedding client is ever constructed; and the --vectorize refusals fire earlier
+// still, on the first read after startup. Each run ends in about a fifth of a second having
+// touched no network, no docker, and no database.
+
+const NO_SUCH_STANDARD = '__no_such_standard_this_test_only__';
+const TREE_ROOT = path.join(__dirname, '..', '..', '..', '..', '..');
+
+// -----
+// runEntryPoint — run one of the deliberate integration entry points to the point where it
+//   reads --vectorize, and hand back everything it said plus how it exited. stdout and stderr
+//   are joined because testAppStartup routes xLog to stdout while an uncaught refusal lands on
+//   stderr, and the assertion cares about what the operator sees, which is both.
+
+const runEntryPoint = (entryPath, extraArgs) => {
+	const run = spawnSync(
+		process.execPath,
+		[entryPath, `--standard=${NO_SUCH_STANDARD}`, ...extraArgs],
+		{ encoding: 'utf8', cwd: TREE_ROOT, timeout: 60000 },
+	);
+	return { status: run.status, text: `${run.stdout || ''}${run.stderr || ''}` };
+};
+
+const CAPTURE_BASELINE = path.join(__dirname, 'capture-baseline.js');
+
+const captureAbsent = runEntryPoint(CAPTURE_BASELINE, []);
+harness.match(
+	'an ABSENT --vectorize is refused, naming the switch and both accepted spellings',
+	captureAbsent.text,
+	/--vectorize is not set[\s\S]*--vectorize=true[\s\S]*--vectorize=false/,
+);
+harness.equal('  and the run stops rather than choosing for him', captureAbsent.status !== 0, true);
+
+const captureInvalid = runEntryPoint(CAPTURE_BASELINE, ['--vectorize=no']);
+harness.match(
+	"an INVALID --vectorize=no is refused, naming 'no' and what IS accepted — never read as TRUE",
+	captureInvalid.text,
+	/--vectorize='no'[\s\S]*--vectorize=true[\s\S]*--vectorize=false/,
+);
+harness.equal(
+	'  and it stops before an embedding client exists, so the typo cannot spend a cent',
+	captureInvalid.status !== 0,
+	true,
+);
+
+const captureTrue = runEntryPoint(CAPTURE_BASELINE, ['--vectorize=true']);
+const captureFalse = runEntryPoint(CAPTURE_BASELINE, ['--vectorize=false']);
+harness.match(
+	'a VALID --vectorize=true is honoured as TRUE — the positive control, ON direction',
+	captureTrue.text,
+	/vectorize=true/,
+);
+harness.match(
+	'a VALID --vectorize=false is honoured as FALSE — the positive control, OFF direction',
+	captureFalse.text,
+	/vectorize=false/,
+);
+harness.ok(
+	'  the two directions differ — a one-direction control would not have caught the polarity bug',
+	/vectorize=true/.test(captureTrue.text) && !/vectorize=true/.test(captureFalse.text),
+	`--vectorize=true said:\n${captureTrue.text}\n--vectorize=false said:\n${captureFalse.text}`,
+);
+harness.match(
+	'  and both valid runs walked past the switch to the roster error, having spent nothing',
+	captureFalse.text,
+	/no forge bundle for standard/,
+);
+
+harness.ok(
+	'no hand-rolled --vectorize comparison survives in capture-baseline.js',
+	!/values\.vectorize/.test(codeOf(CAPTURE_BASELINE)),
+	(codeOf(CAPTURE_BASELINE).match(/.*values\.vectorize.*/g) || []).join('\n'),
+);
+harness.match(
+	'  it reads the switch through the one shared rule instead',
+	codeOf(CAPTURE_BASELINE),
+	/requireBooleanValue\(/,
+);
+harness.match(
+	'  and its own -help states the switch is REQUIRED with no default — the contract where he looks',
+	runEntryPoint(CAPTURE_BASELINE, ['-help']).text,
+	/--vectorize=true\|false[\s\S]*REQUIRED, and there is NO DEFAULT/,
 );
 
 harness.report();

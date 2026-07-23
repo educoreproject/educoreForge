@@ -194,4 +194,111 @@ harness.equal(
 	JSON.stringify(['ceds', 'lif']),
 );
 
+// =====================================================================
+harness.section('BOOLEAN-VALUE RULE — one spelling, one polarity, and nothing else guessed at');
+// =====================================================================
+// Phase 4, work group 3. Four entry points read --vectorize four times in TWO OPPOSITE
+// POLARITIES (`!== 'false'` and `=== 'true'`), so one spelling — --vectorize=no — meant TRUE in
+// two of them and FALSE in the other two, and neither told the operator anything. requireBooleanValue
+// is now the ONE reading: exactly 'true' or exactly 'false', anything else refused by name.
+// polyArch2 §6 — a value someone TYPED and had silently overruled is the worse of the two faults.
+
+// -----
+// readBoolean — the helper's answer, or {error} carrying why it refused. try/catch is localized
+//   to this one test boundary, never used for control flow in the code under test.
+const readBoolean = (commandLineParameters) => {
+	let answer;
+	try {
+		const {
+			requireBooleanValue,
+		} = require('../../../test/testLib/require-boolean-value');
+		answer = {
+			value: requireBooleanValue({
+				name: 'vectorize',
+				commandLineParameters,
+				moduleName: 'someEntryPoint',
+				whatItControls: 'whether real Voyage embeddings are requested',
+			}),
+		};
+	} catch (error) {
+		answer = { error: error.message };
+	}
+	return answer;
+};
+const booleanRefusal = (commandLineParameters) => {
+	const answer = readBoolean(commandLineParameters);
+	return answer.error === undefined ? [] : [answer.error];
+};
+
+// the shapes qtools-parse-command-line actually produces (probed against this tree's copy)
+const asValue = (given) => ({ values: { vectorize: given }, switches: {} });
+
+harness.rejects(
+	'an ABSENT --vectorize is refused, naming the switch and both accepted spellings',
+	booleanRefusal({ values: {}, switches: {} }),
+	/--vectorize is not set[\s\S]*--vectorize=true[\s\S]*--vectorize=false/,
+);
+harness.rejects(
+	"an INVALID --vectorize=no is refused, naming 'no' and what IS accepted — never guessed at",
+	booleanRefusal(asValue(['no'])),
+	/--vectorize='no'[\s\S]*--vectorize=true[\s\S]*--vectorize=false/,
+);
+harness.rejects(
+	"an INVALID --vectorize=yes is refused, naming 'yes' — the opposite-polarity twin of 'no'",
+	booleanRefusal(asValue(['yes'])),
+	/--vectorize='yes'/,
+);
+harness.rejects(
+	"an INVALID --vectorize=1 is refused, naming '1' — a number is not a spelling of true",
+	booleanRefusal(asValue(['1'])),
+	/--vectorize='1'/,
+);
+harness.rejects(
+	"case is NOT a synonym: --vectorize=True is refused, naming 'True'",
+	booleanRefusal(asValue(['True'])),
+	/--vectorize='True'/,
+);
+harness.rejects(
+	'--vectorize with NO value (qtools hands back the boolean true, not an array) is refused',
+	booleanRefusal(asValue(true)),
+	/--vectorize was given with no value/,
+);
+harness.rejects(
+	'-vectorize (single hyphen) lands in switches and is refused, not silently unseen',
+	booleanRefusal({ values: {}, switches: { vectorize: true } }),
+	/'-vectorize' is a switch spelling/,
+);
+harness.rejects(
+	'--vectorize=true,false (qtools splits commas) is refused rather than resolved to one of them',
+	booleanRefusal(asValue(['true', 'false'])),
+	/--vectorize was given 2 values \('true', 'false'\)/,
+);
+harness.equal(
+	'a VALID --vectorize=true is honoured as TRUE — the positive control, ON direction',
+	readBoolean(asValue(['true'])).value,
+	true,
+);
+harness.equal(
+	'a VALID --vectorize=false is honoured as FALSE — the positive control, OFF direction',
+	readBoolean(asValue(['false'])).value,
+	false,
+);
+harness.rejects(
+	'the helper holds ITSELF to §6: an omitted name argument is refused, not defaulted',
+	(() => {
+		let messages = [];
+		try {
+			require('../../../test/testLib/require-boolean-value').requireBooleanValue({
+				commandLineParameters: { values: {}, switches: {} },
+				moduleName: 'someEntryPoint',
+				whatItControls: 'something',
+			});
+		} catch (error) {
+			messages = [error.message];
+		}
+		return messages;
+	})(),
+	/requireBooleanValue.*name/s,
+);
+
 harness.report();
