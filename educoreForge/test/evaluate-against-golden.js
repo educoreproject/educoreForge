@@ -36,8 +36,14 @@ NAME
      ${moduleName} -- compare the recreated pipeline's output against the live production golden
 
 SYNOPSIS
-     ${moduleName} --goldenPort=<port> --goldenPassword=<pw> [--standard=<token[,token]>]
+     ${moduleName} --standard=<token[,token]> --goldenPort=<port> --goldenPassword=<pw>
                    [--goldenHost=localhost] [-keepGraph] [-verbose] [-help]
+
+OPTIONS
+     --standard=<token[,token]>   REQUIRED, and there is NO DEFAULT. Which standard(s) to
+                                  compare against the golden. A comma list runs each in turn.
+                                  It used to default to ceds, so a run that named nothing
+                                  compared one standard and called that "the comparison".
 
 DESCRIPTION
      Runs forge -> init -> harvest for each standard, then compares the harvested schema block's
@@ -73,7 +79,22 @@ const { DME_ROLES } = require(path.join(TREE_LIB, 'vocabulary', 'vocabulary'));
 const BASE_GRAPH_LABEL = 'StandardBase';
 const BASE_ROLES = Object.values(DME_ROLES);
 
-const standardTokens = parseListValue(commandLineParameters.values.standard, ['ceds']);
+// THE STANDARD SET IS ASKED FOR. `parseListValue(values.standard, ['ceds'])` gave this
+// evaluator a silent default, so a run with no --standard compared ONLY CEDS and then reported
+// success for "the comparison" with every other standard unexamined. --goldenPort and
+// --goldenPassword below are required and loud; this flag is now held to the same rule
+// (polyArch2 §6). An acceptance evaluator that decides for itself what it evaluated is not an
+// acceptance evaluator.
+const standardTokens = parseListValue(commandLineParameters.values.standard, []);
+if (!standardTokens.length) {
+	xLog.error(
+		`${moduleName}: --standard is not set, and it is REQUIRED. It names WHAT is being ` +
+			`compared against the golden, and there is no default: a run that quietly evaluated ` +
+			`one standard and reported success for "the comparison" would be reporting a result ` +
+			`nobody asked for. Give --standard=<token> or --standard=<token>,<token>.`,
+	);
+	process.exit(1);
+}
 const goldenHost = (commandLineParameters.values.goldenHost || ['localhost'])[0];
 const goldenPort = (commandLineParameters.values.goldenPort || [])[0];
 const goldenPassword = (commandLineParameters.values.goldenPassword || [])[0];

@@ -1067,4 +1067,72 @@ harness.ok(
 	(codeOf(FORGER_PATH).match(/.*metadata\.version \|\|.*/g) || []).join('\n'),
 );
 
+// =====================================================================
+harness.section('EVALUATE-AGAINST-GOLDEN — the standard set is asked for, never assumed');
+// =====================================================================
+// `parseListValue(values.standard, ['ceds'])` gave the tree's own acceptance evaluator a silent
+// default: a run with no --standard evaluated ONLY CEDS and then reported success for "the
+// comparison", with every other standard unexamined and nothing saying so. --goldenPort and
+// --goldenPassword in the same file are REQUIRED and loud; this flag missed the house style
+// (audit B1, evaluate-against-golden.js:76).
+
+const EVALUATE_AGAINST_GOLDEN = path.join(TREE_ROOT, 'test', 'evaluate-against-golden.js');
+
+const runEvaluator = (extraArgs) => {
+	const run = spawnSync(process.execPath, [EVALUATE_AGAINST_GOLDEN, ...extraArgs], {
+		encoding: 'utf8',
+		cwd: TREE_ROOT,
+		timeout: 60000,
+	});
+	return { status: run.status, text: `${run.stdout || ''}${run.stderr || ''}` };
+};
+
+const evaluatorNoStandard = runEvaluator(['--goldenPort=1', '--goldenPassword=x']);
+harness.match(
+	'an ABSENT --standard is refused — it never quietly evaluates CEDS alone and calls it the comparison',
+	evaluatorNoStandard.text,
+	/--standard is not set|--standard[\s\S]*required/i,
+);
+harness.ok(
+	'  having named no standard, it names none in its output either',
+	!/=== CEDS ===/.test(evaluatorNoStandard.text),
+	evaluatorNoStandard.text.slice(0, 300),
+);
+
+// `--standard=,` is the blank-token spelling that survives qtools intact (a bare `--standard=`
+// is parsed as a boolean and SWALLOWS the next argument — a qtools code fact, documented in
+// require-boolean-value.js, and a different fault from this one).
+const evaluatorBlankStandard = runEvaluator([
+	'--standard=,',
+	'--goldenPort=1',
+	'--goldenPassword=x',
+]);
+harness.match(
+	'a --standard given with no value is refused too, naming the switch',
+	evaluatorBlankStandard.text,
+	/--standard/,
+);
+harness.ok(
+	'  and nothing was forged on that path either',
+	!/=== (CEDS|LIF) ===/.test(evaluatorBlankStandard.text),
+	evaluatorBlankStandard.text.slice(0, 300),
+);
+
+const evaluatorUnknownStandard = runEvaluator([
+	'--standard=zorg',
+	'--goldenPort=1',
+	'--goldenPassword=x',
+]);
+harness.match(
+	"an UNKNOWN standard token is refused BY NAME, not forged and blamed later",
+	evaluatorUnknownStandard.text,
+	/zorg/,
+);
+
+harness.match(
+	'-help states --standard as REQUIRED, so the control surface says what the code does',
+	runEvaluator(['-help']).text,
+	/--standard=<token\[,token\]>[\s\S]*REQUIRED|REQUIRED[\s\S]*--standard/,
+);
+
 harness.report();
