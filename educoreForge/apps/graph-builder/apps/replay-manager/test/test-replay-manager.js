@@ -91,23 +91,87 @@ manager.harvest(
 );
 
 // =====================================================================
-harness.section('SETTINGS — config overrides map to provisioning knobs, defaults govern absent config');
+harness.section('SETTINGS — every provisioning knob is REQUIRED and VALIDATED (polyArch2 §6)');
 // =====================================================================
+// Phase 4, work group 2. These four knobs were read as `config.x || DEFAULT` and
+// `Number(config.x) || DEFAULT`, so an absent key and a MISTYPED one produced the identical
+// silent substitution: `portSearchStart=78o1` provisioned on 7801 and said nothing, leaving the
+// operator to debug a config file that was being ignored. Nothing here runs docker —
+// resolveSettings is a pure config->settings mapping, reached before any command is built.
 
 const { resolveSettings } = replayManagerModule;
 
-const defaults = resolveSettings(() => ({}));
-harness.equal('default image', defaults.neo4jImage, 'neo4j:5.26');
-harness.equal('default portSearchStart', defaults.portSearchStart, 7801);
-harness.equal('default portSearchSpan', defaults.portSearchSpan, 200);
-harness.equal('default readyTimeout (ms)', defaults.readyTimeoutMs, 90000);
+// -----
+// thrownMessage — the thrown message as a LIST, so harness.rejects can insist on the SPECIFIC
+//   reason. try/catch is localized to this one test boundary, never used for control flow in
+//   the code under test.
+const thrownMessage = (fn) => {
+	let messages = [];
+	try {
+		fn();
+	} catch (error) {
+		messages = [error.message];
+	}
+	return messages;
+};
 
-const overridden = resolveSettings(() => ({
-	neo4jImage: 'neo4j:9.99',
-	portSearchStart: '7811', // ini values may arrive as strings — must coerce
-	readyTimeoutSeconds: 5,
-}));
-harness.equal('configured image wins', overridden.neo4jImage, 'neo4j:9.99');
+// -----
+// settingsOrError — the settings a resolve returns, or {error} carrying why it refused, so a
+//   POSITIVE control reports "expected X, got undefined" instead of taking the suite down.
+const settingsOrError = (fn) => {
+	let answer;
+	try {
+		answer = fn();
+	} catch (error) {
+		answer = { error: error.message };
+	}
+	return answer;
+};
+
+// REQUIRED — the keys that have ALREADY become mandatory, in commit order. A knob not yet
+// reached keeps its certifying assertion in its own words below, until its own commit.
+const REQUIRED = {
+	neo4jImage: 'neo4j:5.26',
+};
+const omitting = (keyName) => {
+	const config = { ...REQUIRED };
+	delete config[keyName];
+	return () => config;
+};
+const asGiven = (keyName, value) => () => ({ ...REQUIRED, [keyName]: value });
+const justRequired = () => ({ ...REQUIRED });
+
+// -----
+harness.rejects(
+	'an ABSENT neo4jImage is refused, naming the key, the section and the file',
+	thrownMessage(() => resolveSettings(omitting('neo4jImage'))),
+	/neo4jImage.*\[replay-manager\].*graphBuilder\.ini/s,
+);
+harness.rejects(
+	"an INVALID neo4jImage ('neo4j: 5.26', a stray space) is refused, naming what was given",
+	thrownMessage(() => resolveSettings(asGiven('neo4jImage', 'neo4j: 5.26'))),
+	/neo4j: 5\.26/,
+);
+harness.equal(
+	'a CONFIGURED neo4jImage is honoured verbatim — the positive control',
+	settingsOrError(() => resolveSettings(asGiven('neo4jImage', 'neo4j:9.99'))).neo4jImage,
+	'neo4j:9.99',
+);
+
+// -----
+// The knobs still awaiting their own commit, certified in their own words.
+const stillDefaulting = settingsOrError(() => resolveSettings(justRequired));
+harness.equal('default portSearchStart', stillDefaulting.portSearchStart, 7801);
+harness.equal('default portSearchSpan', stillDefaulting.portSearchSpan, 200);
+harness.equal('default readyTimeout (ms)', stillDefaulting.readyTimeoutMs, 90000);
+
+const overridden = settingsOrError(() =>
+	resolveSettings(() => ({
+		...REQUIRED,
+		portSearchStart: '7811', // ini values may arrive as strings — must coerce
+		readyTimeoutSeconds: 5,
+	})),
+);
 harness.equal('configured start coerces string -> number', overridden.portSearchStart, 7811);
 harness.equal('configured timeout converts seconds -> ms', overridden.readyTimeoutMs, 5000);
 harness.equal('unconfigured knob keeps its default alongside overrides', overridden.portSearchSpan, 200);

@@ -45,23 +45,68 @@ const TREE_LIB = path.join(__dirname, '..', '..', '..', '..', 'lib');
 const replayEngine = require(path.join(TREE_LIB, 'replay', 'replay-engine'));
 const contentAddress = require(path.join(TREE_LIB, 'content-address', 'content-address'))();
 
-// in-code DEFAULTS; each is overridable via getConfig('replay-manager') — graphBuilder.ini,
-// [replay-manager] section (neo4jImage, portSearchStart, portSearchSpan, readyTimeoutSeconds).
-// An unconfigured tree runs on exactly these values.
-const DEFAULT_NEO4J_IMAGE = 'neo4j:5.26'; // incumbent-faithful: 5.26 carries vector-index support
+// The provisioning knobs live in graphBuilder.ini, [replay-manager] section (neo4jImage,
+// portSearchStart, portSearchSpan, readyTimeoutSeconds). They are being converted one at a time
+// from in-code defaults to REQUIRED keys (Phase 4, work group 2); the DEFAULT_ constants below
+// are what remains of the old behavior and die with their own commits.
 const NEO4J_USER = 'neo4j';
 const DEFAULT_PORT_SEARCH_START = 7801;
 const DEFAULT_PORT_SEARCH_SPAN = 200;
 const DEFAULT_READY_TIMEOUT_SECONDS = 90;
 
+const CONFIG_SECTION = 'replay-manager';
+const CONFIG_FILE = 'graphBuilder.ini';
+
+// -----
+// requiredConfigText — the ONE reading of a [replay-manager] key. polyArch2 §6: an absent key is
+// a fault, and a PRESENT-but-invalid one is the worse fault, because the person who typed it
+// believes it took effect. Nothing here substitutes; a refusal names the key, the section, the
+// file, and — when there is one — the value that was actually given.
+const requiredConfigText = (config, keyName) => {
+	const rawValue = config[keyName];
+	if (rawValue === undefined || rawValue === null) {
+		throw new Error(
+			`[replayManager] ${keyName} is not configured. Add it to the [${CONFIG_SECTION}] ` +
+				`section of ${CONFIG_FILE}. There is no default.`,
+		);
+	}
+	const value = String(rawValue).trim();
+	if (value === '') {
+		throw new Error(
+			`[replayManager] ${keyName} is present but EMPTY in the [${CONFIG_SECTION}] section ` +
+				`of ${CONFIG_FILE}. A blank value is not a value; give it one or the key is a lie.`,
+		);
+	}
+	return value;
+};
+
+// -----
+// requiredImageReference — a docker image reference cannot contain whitespace, so `neo4j: 5.26`
+// (the stray space a human leaves behind) is INVALID, not something to normalize.
+const requiredImageReference = (config, keyName) => {
+	const value = requiredConfigText(config, keyName);
+	if (/\s/.test(value)) {
+		throw new Error(
+			`[replayManager] ${keyName}='${value}' is not a docker image reference — it contains ` +
+				`whitespace. Fix it in the [${CONFIG_SECTION}] section of ${CONFIG_FILE}. It was ` +
+				`NOT corrected to a default.`,
+		);
+	}
+	return value;
+};
+
 // resolve the effective settings at CALL time (process.global may not exist at require time).
 // getConfig is injectable for the test suite ONLY — production callers pass nothing and get the
 // frozen process.global one. Exported so the config->settings mapping is provable without a
 // live container.
+//
+// A configuration fault THROWS rather than answering an error string: this function has no
+// callback, it is the single reading of the section, and a tree whose provisioning knobs are
+// wrong has nothing sensible to do next. polyArch2 §6's own example is this very key set.
 const resolveSettings = (getConfig = process.global.getConfig) => {
-	const config = (getConfig && getConfig('replay-manager')) || {};
+	const config = (getConfig && getConfig(CONFIG_SECTION)) || {};
 	return {
-		neo4jImage: config.neo4jImage || DEFAULT_NEO4J_IMAGE,
+		neo4jImage: requiredImageReference(config, 'neo4jImage'),
 		portSearchStart: Number(config.portSearchStart) || DEFAULT_PORT_SEARCH_START,
 		portSearchSpan: Number(config.portSearchSpan) || DEFAULT_PORT_SEARCH_SPAN,
 		readyTimeoutMs:
