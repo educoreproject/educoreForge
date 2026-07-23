@@ -4,13 +4,17 @@
 // integration-forge.js — the LIVE proof for ANY ported forge: replayManager.create provisions a
 // real DEV_* scratch Neo4j; the forger forges the REAL standard into it; Cypher gates verify the
 // graph in both directions (including one gate PROVEN TO GO RED on an injected fault); the
-// scratch graph is destroyed. Spends real resources (a docker container; Voyage credit unless
-// --vectorize=false), so it is DELIBERATE: its name does not match test-*.js and runAllTests
+// scratch graph is destroyed. Spends real resources (a docker container; Voyage credit when
+// --vectorize=true), so it is DELIBERATE: its name does not match test-*.js and runAllTests
 // never runs it.
 //
-//   node integration-forge.js --standard=lif        full proof (real Voyage embeddings)
+// --vectorize is REQUIRED and has no default. It is the spend knob, and it used to be read as
+// `!== 'false'`, so --vectorize=no embedded a whole standard against the intent that was typed.
+// It now takes exactly 'true' or exactly 'false' and refuses anything else by name (polyArch2 §6).
+//
+//   node integration-forge.js --standard=lif --vectorize=true     full proof (real Voyage embeddings)
 //   node integration-forge.js --standard=ceds --vectorize=false   smoke: no Voyage, G6 skipped
-//   node integration-forge.js -keepGraph            leave the scratch graph up for inspection
+//   node integration-forge.js --vectorize=false -keepGraph        leave the scratch graph up
 //
 // Per-standard sanity floors (MIN_NODES) keep G1 honest: equality with the forger's own report
 // proves consistency, the floor proves we forged the real corpus rather than a stub.
@@ -25,14 +29,23 @@ NAME
      ${moduleName} -- live proof: provision scratch graph, forge a real standard, Cypher-gate, destroy
 
 SYNOPSIS
-     ${moduleName} [--standard=<token>] [--vectorize=false] [-keepGraph] [-verbose] [-help]
+     ${moduleName} --vectorize=true|false [--standard=<token>] [-keepGraph] [-verbose] [-help]
 
 DESCRIPTION
      The forge milestone acceptance run for any ported forge (default --standard=lif).
-     Provisions a throwaway DEV_* Neo4j container, forges the real source into it with real
-     Voyage embeddings (unless --vectorize=false), asserts the Cypher gates, proves the
+     Provisions a throwaway DEV_* Neo4j container, forges the real source into it (with real
+     Voyage embeddings when --vectorize=true), asserts the Cypher gates, proves the
      searchText gate BITES by injecting a fault and watching it go red, and destroys the
      container.
+
+OPTIONS
+     --vectorize=true|false   REQUIRED, and there is NO DEFAULT. true forges with real Voyage
+                              embeddings and spends real credit; false skips the embedding pass
+                              and the G6 embedding gate with it. Exactly those two spellings are
+                              accepted -- 'yes', 'no', '1', '0', 'on', 'off' and 'True' are
+                              refused by name rather than guessed at.
+     --standard=<token>       one token or a comma list (default: lif).
+     -keepGraph               leave the scratch graph up for inspection.
 
 EXIT STATUS
      0 all gates green AND the red-gate proof fired;  1 otherwise.
@@ -48,7 +61,22 @@ const commandLineParameters = require('../../../../../test/testLib/testAppStartu
 const harness = require('../../../../../test/testLib/harness')(moduleName);
 const { xLog } = process.global;
 
-const vectorize = (commandLineParameters.values.vectorize || [])[0] !== 'false';
+// the ONE reading of the spend knob, shared with every other entry point that takes it
+const { requireBooleanValue } = require('../../../../../test/testLib/require-boolean-value');
+
+const vectorize = requireBooleanValue({
+	name: 'vectorize',
+	commandLineParameters,
+	moduleName,
+	whatItControls: 'whether real Voyage embeddings are requested, which spends real credit',
+});
+// the spend decision is announced BEFORE anything is spent, so the operator can see what he
+// actually asked for while stopping is still free.
+xLog.status(
+	`[${moduleName}] vectorize=${vectorize}` +
+		(vectorize ? ' — real Voyage credit WILL be spent' : ' — no Voyage spend'),
+);
+
 const keepGraph = !!commandLineParameters.switches.keepGraph;
 // --standard takes ONE token or a COMMA LIST (--standard=ceds,lif). A list forges each
 // standard IN SEQUENCE into the SAME scratch graph — the coexistence a golden build implies —

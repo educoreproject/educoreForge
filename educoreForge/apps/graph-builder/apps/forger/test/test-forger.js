@@ -528,4 +528,76 @@ harness.match(
 	/--vectorize=true\|false[\s\S]*REQUIRED, and there is NO DEFAULT/,
 );
 
+// =====================================================================
+harness.section('INTEGRATION-FORGE --vectorize — the same knob, read the same one way');
+// =====================================================================
+// integration-forge.js carried the SAME `!== 'false'` reading. It is the heavier of the two — it
+// provisions a container AND embeds a whole standard — so the same typo cost more here. It now
+// reads through the same requireBooleanValue as capture-baseline, so there is one rule to know.
+//
+// NO SPEND IS POSSIBLE FROM THESE RUNS EITHER, in either polarity: the spawns carry a --standard
+// token with no MIN_NODES floor, so the script exits on that check before replayManager.create
+// is ever called; the --vectorize refusals fire before even that.
+
+const INTEGRATION_FORGE = path.join(__dirname, 'integration-forge.js');
+
+const forgeAbsent = runEntryPoint(INTEGRATION_FORGE, []);
+harness.match(
+	'an ABSENT --vectorize is refused, naming the switch and both accepted spellings',
+	forgeAbsent.text,
+	/--vectorize is not set[\s\S]*--vectorize=true[\s\S]*--vectorize=false/,
+);
+harness.equal('  and the run stops rather than choosing for him', forgeAbsent.status !== 0, true);
+
+const forgeInvalid = runEntryPoint(INTEGRATION_FORGE, ['--vectorize=no']);
+harness.match(
+	"an INVALID --vectorize=no is refused, naming 'no' and what IS accepted — never read as TRUE",
+	forgeInvalid.text,
+	/--vectorize='no'[\s\S]*--vectorize=true[\s\S]*--vectorize=false/,
+);
+harness.equal(
+	'  and it stops before a container is asked for, so the typo cannot spend a cent',
+	forgeInvalid.status !== 0,
+	true,
+);
+
+const forgeTrue = runEntryPoint(INTEGRATION_FORGE, ['--vectorize=true']);
+const forgeFalse = runEntryPoint(INTEGRATION_FORGE, ['--vectorize=false']);
+harness.match(
+	'a VALID --vectorize=true is honoured as TRUE — the positive control, ON direction',
+	forgeTrue.text,
+	/vectorize=true/,
+);
+harness.match(
+	'a VALID --vectorize=false is honoured as FALSE — the positive control, OFF direction',
+	forgeFalse.text,
+	/vectorize=false/,
+);
+harness.ok(
+	'  the two directions differ — a one-direction control would not have caught the polarity bug',
+	/vectorize=true/.test(forgeTrue.text) && !/vectorize=true/.test(forgeFalse.text),
+	`--vectorize=true said:\n${forgeTrue.text}\n--vectorize=false said:\n${forgeFalse.text}`,
+);
+harness.match(
+	'  and both valid runs walked past the switch to the MIN_NODES floor, having spent nothing',
+	forgeFalse.text,
+	/no MIN_NODES floor for standard/,
+);
+
+harness.ok(
+	'no hand-rolled --vectorize comparison survives in integration-forge.js',
+	!/values\.vectorize/.test(codeOf(INTEGRATION_FORGE)),
+	(codeOf(INTEGRATION_FORGE).match(/.*values\.vectorize.*/g) || []).join('\n'),
+);
+harness.match(
+	'  it reads the switch through the one shared rule instead',
+	codeOf(INTEGRATION_FORGE),
+	/requireBooleanValue\(/,
+);
+harness.match(
+	'  and its own -help states the switch is REQUIRED with no default — the contract where he looks',
+	runEntryPoint(INTEGRATION_FORGE, ['-help']).text,
+	/--vectorize=true\|false[\s\S]*REQUIRED, and there is NO DEFAULT/,
+);
+
 harness.report();
