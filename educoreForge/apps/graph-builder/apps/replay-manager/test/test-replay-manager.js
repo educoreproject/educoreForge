@@ -297,6 +297,83 @@ manager.init(
 	},
 );
 // =====================================================================
+harness.section('INIT — the DECLARED VECTOR WIDTH is read, never inferred');
+// =====================================================================
+// `embeddingDims: nodeEdges.embeddingDims || null` sat on the forger->replayManager boundary and
+// answered null for three different facts: nothing was embedded, the producer forgot to declare
+// the width, and the width was declared as 0. null means "no vector index", so a payload full of
+// vectors could be loaded with the vectors silently unindexed and nothing would say so. It also
+// passed a STRING straight through into the index clause. shapeForgedGraph always sets the key
+// (to a number, or to null when the spend knob was off), so the producer on disk today is safe —
+// the guard was swallowing the NEXT producer's error (audit B1, replayManager.js:599).
+//
+// resolveEmbeddingDims is the pure reading, exported so it is provable without a container.
+
+const { resolveEmbeddingDims } = replayManagerModule;
+
+const withVectors = (embeddingDims) => ({
+	nodes: [
+		{ ref: { source: 'lif', id: '1' }, labels: ['ForgedNode'], embedding: [0.1, 0.2] },
+	],
+	edges: [],
+	...(embeddingDims === undefined ? {} : { embeddingDims }),
+});
+const withoutVectors = (embeddingDims) => ({
+	nodes: [{ ref: { source: 'lif', id: '1' }, labels: ['ForgedNode'] }],
+	edges: [],
+	...(embeddingDims === undefined ? {} : { embeddingDims }),
+});
+const dimsAnswer = (nodeEdges) => (resolveEmbeddingDims || (() => ({})))(nodeEdges) || {};
+
+harness.match(
+	'a payload carrying VECTORS but no declared width is REFUSED, not silently unindexed',
+	dimsAnswer(withVectors(undefined)).error,
+	/embeddingDims[\s\S]*vector/i,
+);
+
+harness.match(
+	'a declared width of 0 alongside vectors is REFUSED — 0 is not "nothing embedded"',
+	dimsAnswer(withVectors(0)).error,
+	/embeddingDims[\s\S]*'?0'?/,
+);
+
+harness.match(
+	"a declared width of '1024' (a STRING) is REFUSED rather than passed to the index clause",
+	dimsAnswer(withVectors('1024')).error,
+	/embeddingDims[\s\S]*1024/,
+);
+
+harness.match(
+	'a fractional width is REFUSED',
+	dimsAnswer(withVectors(10.5)).error,
+	/embeddingDims[\s\S]*10\.5/,
+);
+
+harness.equal(
+	'a declared width alongside vectors is honoured verbatim — the positive control',
+	dimsAnswer(withVectors(512)).embeddingDims,
+	512,
+);
+
+harness.equal(
+	'null with NOTHING embedded is the one legitimate answer: no vectors, no index',
+	dimsAnswer(withoutVectors(null)).embeddingDims,
+	null,
+);
+
+harness.match(
+	'but an ABSENT key is refused even with nothing embedded — the producer says so out loud',
+	dimsAnswer(withoutVectors(undefined)).error,
+	/embeddingDims/,
+);
+
+harness.match(
+	'and a declared width with nothing embedded is refused as a contradiction',
+	dimsAnswer(withoutVectors(1024)).error,
+	/embeddingDims[\s\S]*no node/i,
+);
+
+// =====================================================================
 harness.section('INIT — the RESTORATION payload: refusals first, then the pure address check');
 // =====================================================================
 // init({ schemaBlocks }) routes to replay-engine.replay, which is deserialize -> writeShapedGraph:

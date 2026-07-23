@@ -131,6 +131,77 @@ const resolveSettings = (getConfig = process.global.getConfig) => {
 	};
 };
 
+// -----
+// resolveEmbeddingDims — the DECLARED VECTOR WIDTH of a creation payload, or a refusal.
+//
+//   resolveEmbeddingDims(nodeEdges) -> { embeddingDims } | { error }
+//
+// `embeddingDims: nodeEdges.embeddingDims || null` used to sit at the init call site, and null is
+// not a neutral value here: it is the engine's instruction to build NO VECTOR INDEX. So a payload
+// full of vectors whose producer forgot to declare the width, and a payload that declared the
+// width as 0, both loaded their vectors unindexed and said nothing — the same silence as a
+// payload that genuinely carried none. A STRING width went through untouched into the index
+// clause. polyArch2 §6, and the audit's B1 row for this line: the guard sat on a MODULE BOUNDARY,
+// so what it swallows is the producer's error.
+//
+// THE ONE LEGITIMATE null: the key present and explicitly null WITH no node carrying a vector.
+// That is a producer STATING "nothing was embedded" (shapeForgedGraph does exactly this when the
+// vectorize spend knob is off), which is a different act from omitting the key. Absence is a
+// fault; a declaration of absence is an answer.
+const resolveEmbeddingDims = (nodeEdges) => {
+	const nodes = (nodeEdges && nodeEdges.nodes) || [];
+	const anyVectors = nodes.some(
+		(oneNode) =>
+			oneNode &&
+			((oneNode.embedding !== undefined && oneNode.embedding !== null) ||
+				(oneNode.embeddingRef !== undefined && oneNode.embeddingRef !== null)),
+	);
+	const given = nodeEdges ? nodeEdges.embeddingDims : undefined;
+
+	if (given === undefined) {
+		return {
+			error:
+				`replayManager.init: nodeEdges declares no embeddingDims. It is REQUIRED — it is the ` +
+				`width the VECTOR INDEX is built at, and an absent one used to read as null, which ` +
+				`is this engine's instruction to build NO INDEX. Declare the width the vectors were ` +
+				`made at, or declare null to say nothing was embedded. ` +
+				`(This payload carries ${anyVectors ? 'vectors' : 'no vectors'}.)`,
+		};
+	}
+
+	if (given === null) {
+		if (anyVectors) {
+			return {
+				error:
+					`replayManager.init: nodeEdges declares embeddingDims null — "nothing was ` +
+					`embedded" — but nodes in the payload CARRY vectors. Those vectors would be ` +
+					`written with no vector index and nothing would say so. Nothing loaded.`,
+			};
+		}
+		return { embeddingDims: null };
+	}
+
+	if (!Number.isInteger(given) || given <= 0) {
+		return {
+			error:
+				`replayManager.init: nodeEdges declares embeddingDims ${JSON.stringify(given)}, ` +
+				`which is not a positive whole number. It was NOT corrected to a default and it was ` +
+				`NOT read as "no index". Nothing loaded.`,
+		};
+	}
+
+	if (!anyVectors) {
+		return {
+			error:
+				`replayManager.init: nodeEdges declares embeddingDims ${given} but no node in the ` +
+				`payload carries a vector. A declared width with nothing to index is a ` +
+				`contradiction, not something to reconcile quietly. Nothing loaded.`,
+		};
+	}
+
+	return { embeddingDims: given };
+};
+
 let createSeq = 0;
 
 // -----
@@ -625,6 +696,11 @@ const replayManager = () => {
 			);
 			return;
 		}
+		const declaredDims = resolveEmbeddingDims(nodeEdges);
+		if (declaredDims.error) {
+			callback(declaredDims.error);
+			return;
+		}
 		if (!inGraph.boltUrl || !inGraph.password) {
 			callback(
 				`replayManager.init: the handle for '${graphName}' carries no boltUrl/password — a ` +
@@ -657,7 +733,7 @@ const replayManager = () => {
 			{
 				session,
 				groups,
-				embeddingDims: nodeEdges.embeddingDims || null,
+				embeddingDims: declaredDims.embeddingDims,
 				graphName,
 			},
 			(err, result) => {
@@ -764,3 +840,4 @@ module.exports.nameRefusal = nameRefusal;
 module.exports.withAppliedLabels = withAppliedLabels;
 module.exports.schemaBlockTexts = schemaBlockTexts;
 module.exports.resolveSettings = resolveSettings;
+module.exports.resolveEmbeddingDims = resolveEmbeddingDims;
