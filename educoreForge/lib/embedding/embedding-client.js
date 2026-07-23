@@ -28,6 +28,12 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //   embedder.encodeVector(float32) -> base64 (little-endian float32)
 //   embedder.decodeVector(base64)  -> Float32Array (round-trip identical)
 //
+// CHANNELS: CONFIGURATION FAULTS THROW; OPERATIONAL FAULTS CALL BACK. apiKey, model and
+// embeddingDims are three keys in one section of one file, read in one pass, and all three THROW
+// when absent or invalid — they are read in a synchronous resolver before any provider is touched
+// and long before a socket exists, and resolveEmbeddingIdentity() is public with no callback at
+// all. An empty text, or a provider that answered badly, travels by callback.
+//
 // NO IN-CODE MODEL CONSTANT (Phase 4 work group 1, 2026-07-23). The model sent to Voyage used to
 // come from the ini while the model stamped onto every node came from a constant here, so
 // configuring any other model produced vectors whose content address named a model that did not
@@ -143,19 +149,39 @@ const moduleFunction =
 
 		const loadVoyageConfig = () => {
 			const wholeConfig = configFileProcessor.getConfig(configFilePath);
-			const voyageEmbedding = wholeConfig && wholeConfig.voyageEmbedding;
+			const voyageEmbedding = (wholeConfig && wholeConfig.voyageEmbedding) || {};
+			const apiKey = voyageEmbedding.apiKey;
 
-			if (!voyageEmbedding || !voyageEmbedding.apiKey) {
-				return {
-					configError: `embedding-client: missing [voyageEmbedding].apiKey in config (${configFilePath})`,
-				};
+			// ONE CHANNEL FOR ONE CLASS OF FAULT. This used to answer a callback error string for
+			// a missing apiKey while resolveEmbeddingIdentity() THREW for a missing model or a
+			// mistyped embeddingDims — three keys, one section, one file, read in one pass,
+			// reported on two channels. The throw already escaped embedText, so a caller had to
+			// handle both anyway; the split bought nothing and hid the symmetry.
+			//
+			// THROW is the channel, for the same reasons work group 2 gave for replayManager's
+			// resolveSettings: the read happens in a synchronous resolver before any provider is
+			// touched and long before a socket exists, so nothing is in flight for a callback to
+			// unwind; resolveEmbeddingIdentity() is PUBLIC and has no callback at all, so it must
+			// throw regardless; and routing the throw into the callback would take a try/catch
+			// around a synchronous call, which is try/catch as control flow and is forbidden here.
+			//
+			// The line this draws is CONFIGURATION THROWS, OPERATION CALLS BACK. An empty text or
+			// a provider that answered badly still travels by callback, as it should.
+			if (apiKey === undefined || apiKey === null || `${apiKey}`.trim() === '') {
+				throw new Error(
+					`embedding-client: [voyageEmbedding].apiKey is ${
+						apiKey === undefined ? 'not configured' : 'present but EMPTY'
+					}. Add it to the [voyageEmbedding] section of ${configFilePath}. There is no ` +
+						`default and no other source: the key is read ONLY from config, never from ` +
+						`the environment and never from the command line.`,
+				);
 			}
 
 			const identity = resolveEmbeddingIdentity();
 
 			return {
 				resolvedConfig: {
-					apiKey: voyageEmbedding.apiKey,
+					apiKey,
 					model: identity.model,
 					dimension: identity.embeddingDims,
 				},
@@ -177,10 +203,6 @@ const moduleFunction =
 			}
 
 			const loaded = loadVoyageConfig();
-			if (loaded.configError) {
-				callback(loaded.configError);
-				return;
-			}
 
 			provider.embed([`${text}`], loaded.resolvedConfig, (err, embeddings) => {
 				if (err) {
@@ -225,10 +247,6 @@ const moduleFunction =
 			}
 
 			const loaded = loadVoyageConfig();
-			if (loaded.configError) {
-				callback(loaded.configError);
-				return;
-			}
 
 			const stringified = texts.map((oneText) => `${oneText}`);
 

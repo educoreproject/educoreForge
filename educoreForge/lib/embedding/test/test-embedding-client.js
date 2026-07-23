@@ -246,4 +246,104 @@ harness.match(
 	/providerName\?[\s\S]*default[\s\S]*voyage/,
 );
 
+// =====================================================================
+harness.section('ONE CHANNEL FOR ONE FAULT — a missing key THROWS, like the model and the dims');
+// =====================================================================
+// Three keys live in one section of one file, read in one pass: apiKey, model, embeddingDims. A
+// missing model or a mistyped embeddingDims THREW (work group 1). A missing apiKey answered a
+// callback error string. Same file, same section, same moment, same class of fault — two
+// channels, and a caller had to handle both anyway, because the throw already escaped embedText.
+//
+// DECIDED: throw, uniformly, on the same reasoning work group 2 applied to replayManager's
+// resolveSettings.
+//   1. The reading happens in a SYNCHRONOUS resolver, before any provider is touched and long
+//      before a socket exists. There is nothing in flight for a callback to unwind.
+//   2. resolveEmbeddingIdentity() is PUBLIC and has no callback at all. It must throw. Routing
+//      the apiKey to a callback keeps two channels for the one act of reading the ini.
+//   3. Routing the throw INTO the callback would need a try/catch around a synchronous call —
+//      try/catch as control flow, which the house style forbids.
+//   4. A tree whose embedding credentials are unconfigured has nothing sensible to do next.
+// Operational faults — empty text, a provider that answered badly — still travel by callback.
+// That is the line: CONFIGURATION throws, OPERATION calls back.
+
+const keyless = (extraLines) => {
+	iniSerial += 1;
+	const filePath = path.join(tempDir, `voyageNoKey-${iniSerial}.ini`);
+	fs.writeFileSync(filePath, ['[voyageEmbedding]'].concat(extraLines).join('\n') + '\n');
+	return filePath;
+};
+
+harness.rejects(
+	'a MISSING apiKey THROWS, naming the key, the section and the file',
+	thrownMessage(() =>
+		embeddingClient({
+			configFilePath: keyless(['model=voyage-context-3', 'embeddingDims=1024']),
+		}).embedText({ text: 'anything' }, () => {}),
+	),
+	/\[voyageEmbedding\]\.apiKey[\s\S]*voyageNoKey-\d+\.ini/,
+);
+
+harness.rejects(
+	'a BLANK apiKey throws too — a blank credential is not a credential',
+	thrownMessage(() =>
+		embeddingClient({
+			configFilePath: keyless(['apiKey=', 'model=voyage-context-3', 'embeddingDims=1024']),
+		}).embedText({ text: 'anything' }, () => {}),
+	),
+	/\[voyageEmbedding\]\.apiKey/,
+);
+
+harness.rejects(
+	'embedTexts uses the SAME reading and the SAME channel',
+	thrownMessage(() =>
+		embeddingClient({
+			configFilePath: keyless(['model=voyage-context-3', 'embeddingDims=1024']),
+		}).embedTexts({ texts: ['anything'] }, () => {}),
+	),
+	/\[voyageEmbedding\]\.apiKey/,
+);
+
+harness.rejects(
+	'a MISSING section entirely throws about the section, not about a key inside it',
+	thrownMessage(() => {
+		iniSerial += 1;
+		const filePath = path.join(tempDir, `voyageNoSection-${iniSerial}.ini`);
+		fs.writeFileSync(filePath, '[somethingElse]\nunrelated=1\n');
+		embeddingClient({ configFilePath: filePath }).embedText({ text: 'anything' }, () => {});
+	}),
+	/\[voyageEmbedding\]/,
+);
+
+harness.ok(
+	'no configError callback channel survives in embedding-client.js',
+	!/configError/.test(codeOf(path.join(__dirname, '..', 'embedding-client.js'))),
+	(codeOf(path.join(__dirname, '..', 'embedding-client.js')).match(/.*configError.*/g) || []).join('\n'),
+);
+
+// -----
+// THE LINE HOLDS IN THE OTHER DIRECTION TOO: an OPERATIONAL fault still travels by callback.
+// Without this, "throw everything" would satisfy every assertion above.
+
+const operationalErrors = [];
+embeddingClient({
+	configFilePath: iniWith(['model=voyage-context-3', 'embeddingDims=1024']),
+}).embedText({ text: '   ' }, (err) => operationalErrors.push(err));
+
+harness.match(
+	'an EMPTY text is still an operational fault and still travels by CALLBACK — the positive control',
+	operationalErrors.join('\n'),
+	/text is required/,
+);
+
+const operationalListErrors = [];
+embeddingClient({
+	configFilePath: iniWith(['model=voyage-context-3', 'embeddingDims=1024']),
+}).embedTexts({ texts: [] }, (err) => operationalListErrors.push(err));
+
+harness.match(
+	'  and so does an empty texts array',
+	operationalListErrors.join('\n'),
+	/non-empty array/,
+);
+
 harness.report();
