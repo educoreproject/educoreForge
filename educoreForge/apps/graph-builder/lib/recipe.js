@@ -66,7 +66,12 @@ const RECIPE_SCHEMA = {
 			items: {
 				type: 'object',
 				additionalProperties: false,
-				required: ['source', 'dependencies', 'cacheMode'],
+				// mapper is required on EVERY bridge, hub or structural. It used to be required
+				// only on the structural kind, and build.js quietly supplied 'defaultSemantic' for
+				// the hub kind — a mapper nobody chose, named nowhere in -help or in this schema
+				// (polyArch2 §6). Naming it is one word in the recipe and it is the whole
+				// description of what the bridge DOES.
+				required: ['source', 'dependencies', 'cacheMode', 'mapper'],
 				properties: {
 					source: { type: 'string', minLength: 1 },
 					hub: { type: 'string', minLength: 1 },
@@ -85,11 +90,6 @@ const RECIPE_SCHEMA = {
 					{
 						if: { properties: { cacheMode: { const: 'pin' } }, required: ['cacheMode'] },
 						then: { required: ['pinBlockId'] },
-					},
-					{
-						// a structural bridge (no hub) MUST name its mapper
-						if: { not: { required: ['hub'] } },
-						then: { required: ['mapper'] },
 					},
 				],
 			},

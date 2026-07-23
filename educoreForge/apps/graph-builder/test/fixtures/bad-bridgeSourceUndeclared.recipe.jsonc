@@ -6,6 +6,6 @@
   "standards": [{ "token": "ceds", "version": "current" }],
   "hubs": [{ "standard": "ceds", "candidateFinder": "semanticDefText" }],
   "bridges": [
-    { "source": "lif", "hub": "ceds", "dependencies": ["ceds"], "cacheMode": "reuse" }
+    { "source": "lif", "mapper": "lifIntoCedsSemantic", "hub": "ceds", "dependencies": ["ceds"], "cacheMode": "reuse" }
   ]
 }

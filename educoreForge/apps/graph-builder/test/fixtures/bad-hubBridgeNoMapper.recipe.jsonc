@@ -1,0 +1,18 @@
+{
+  // ISOLATED FAULT: a HUB bridge (hub declared) that fails to name its mapper.
+  // The structural-bridge case has always been refused; the hub case used to be ACCEPTED and
+  // then silently handed 'defaultSemantic' by build.js. Every bridge names its mapper now.
+  "schemaVersion": "1.0.0",
+  "recipeName": "badHubBridgeNoMapper",
+  "kind": "dev",
+  "standards": [
+    { "token": "ceds", "version": "current" },
+    { "token": "lif", "version": "current" }
+  ],
+  "hubs": [
+    { "standard": "ceds", "candidateFinder": "semanticDefText" }
+  ],
+  "bridges": [
+    { "source": "lif", "hub": "ceds", "dependencies": ["lif", "ceds"], "cacheMode": "reuse" }
+  ]
+}

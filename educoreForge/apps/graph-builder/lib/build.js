@@ -276,7 +276,22 @@ const build = (recipe, deps, callback) => {
 	// ---- Phase C: bridges (materialize dep graph, run bridge, harvest labeled relationships) ----
 	const bridgeOnePairing = (bridge, done) => {
 		const subjectRefId = pairKey(bridge);
-		const mapper = bridge.mapper || 'defaultSemantic';
+		// THE RECIPE NAMES THE MAPPER. RECIPE_SCHEMA requires it on every bridge, so a recipe that
+		// reaches here has one; there is no in-code name standing behind the key any more
+		// (polyArch2 §6). The guard is here rather than only in the schema because build() is
+		// reachable with a recipe object that never went through validateRecipe (the test seam
+		// does exactly that), and a bridge whose mapper is absent must say so rather than run
+		// something nobody asked for.
+		const mapper = bridge.mapper;
+		if (typeof mapper !== 'string' || mapper.trim() === '') {
+			done(
+				`bridge ${subjectRefId}: mapper is ${
+					mapper === undefined ? 'not named' : JSON.stringify(mapper)
+				}. Every bridge names its mapper in the recipe — it IS what the bridge does, and ` +
+					`there is no default. Nothing was substituted for it.`,
+			);
+			return;
+		}
 		const taskList = new taskListPlus();
 
 		// create means "an empty graph", always. The dependency schema blocks go IN through init's

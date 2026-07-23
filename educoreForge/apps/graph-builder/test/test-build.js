@@ -69,6 +69,15 @@ const contentAddress = require('../../../lib/content-address/content-address')()
 const goodRecipe = (name) =>
 	path.join(__dirname, '..', '..', '..', 'recipes', `${name}.recipe.jsonc`);
 
+// sourceOf — a file's source with whole-line comments stripped, so a scan for a surviving in-code
+// constant is not fooled by prose in the header (and is not defeated by it either).
+const sourceOf = (filePath) =>
+	require('fs')
+		.readFileSync(filePath, 'utf8')
+		.split('\n')
+		.filter((oneLine) => !/^\s*(\/\/|\*|\/\*)/.test(oneLine))
+		.join('\n');
+
 const loadOrDie = (filePath) => {
 	const loaded = recipeLib.loadRecipe(filePath);
 	if (loaded.error) {
@@ -513,6 +522,22 @@ const stageCedsLif = () => {
 			xLog.text(),
 			/\[C\] bridge lif::ceds \(mapper=/,
 		);
+		// THE POSITIVE CONTROL. `bridge.mapper || 'defaultSemantic'` also satisfied the assertion
+		// above, which is exactly why it survived: "names A mapper" and "names THE RECIPE'S
+		// mapper" are different claims. cedsLif authors its mapper now, and this insists the
+		// build ran that one.
+		harness.match(
+			'the mapper it ran is the one THE RECIPE named, not one the code chose',
+			xLog.text(),
+			/\[C\] bridge lif::ceds \(mapper=lifIntoCedsSemantic\)/,
+		);
+		harness.ok(
+			'no in-code mapper name survives in build.js to stand behind the recipe key',
+			!/defaultSemantic/.test(sourceOf(path.join(__dirname, '..', 'lib', 'build.js'))),
+			(sourceOf(path.join(__dirname, '..', 'lib', 'build.js')).match(/.*defaultSemantic.*/g) || []).join(
+				'\n',
+			),
+		);
 		harness.match(
 			'the bridge yields a relationship block',
 			xLog.text(),
@@ -539,6 +564,46 @@ const stageCedsLif = () => {
 
 const stageEdgeCases = () => {
 	harness.section('EDGE CASES — degenerate and hostile recipe shapes');
+
+	// build() is reachable with a recipe object that never went through validateRecipe — this
+	// suite does it on every line below — so the schema's `required: mapper` is not the only
+	// place the absence can arrive. A bridge with no mapper used to run 'defaultSemantic' here.
+	const bridgeRecipe = (bridge) => ({
+		recipeName: 'bridgeMapperProbe',
+		description: 'one bridge, whatever mapper it was given',
+		standards: [{ token: 'lif', version: 'current' }],
+		hubs: [],
+		bridges: [{ source: 'lif', hub: 'ceds', dependencies: ['lif'], cacheMode: 'reuse', ...bridge }],
+	});
+
+	runBuild(bridgeRecipe({}), ({ err }) => {
+		harness.match(
+			'a bridge with NO mapper is refused by name — nothing is substituted',
+			err,
+			/bridge lif::ceds: mapper is not named[\s\S]*no default/,
+		);
+
+		runBuild(bridgeRecipe({ mapper: '   ' }), ({ err: blankErr }) => {
+			harness.match(
+				'a BLANK mapper is refused too, quoting what was given',
+				blankErr,
+				/bridge lif::ceds: mapper is "   "/,
+			);
+
+			runBuild(bridgeRecipe({ mapper: 'bespokeMapper' }), ({ err: goodErr, xLog: goodLog }) => {
+				harness.equal('a NAMED mapper builds — the positive control', goodErr, '');
+				harness.match(
+					'and the build ran exactly the mapper it was handed',
+					goodLog.text(),
+					/\[C\] bridge lif::ceds \(mapper=bespokeMapper\)/,
+				);
+				stageEdgeCasesRest();
+			});
+		});
+	});
+};
+
+const stageEdgeCasesRest = () => {
 
 	// A recipe that produces nothing can no longer report success: a manifest with no members has
 	// no address (its address would be the constant every empty manifest shares) and there is

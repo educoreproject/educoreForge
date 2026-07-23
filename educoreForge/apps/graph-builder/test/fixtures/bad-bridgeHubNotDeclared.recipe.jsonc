@@ -10,6 +10,6 @@
   ],
   "hubs": [],
   "bridges": [
-    { "source": "lif", "hub": "ceds", "dependencies": ["lif", "ceds"], "cacheMode": "reuse" }
+    { "source": "lif", "mapper": "lifIntoCedsSemantic", "hub": "ceds", "dependencies": ["lif", "ceds"], "cacheMode": "reuse" }
   ]
 }

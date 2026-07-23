@@ -9,6 +9,6 @@
   ],
   "hubs": [{ "standard": "ceds", "candidateFinder": "semanticDefText" }],
   "bridges": [
-    { "source": "lif", "hub": "ceds", "dependencies": ["lif", "ceds"], "cacheMode": "pin" }
+    { "source": "lif", "mapper": "lifIntoCedsSemantic", "hub": "ceds", "dependencies": ["lif", "ceds"], "cacheMode": "pin" }
   ]
 }

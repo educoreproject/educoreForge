@@ -9,7 +9,7 @@
   ],
   "hubs": [{ "standard": "ceds", "candidateFinder": "semanticDefText" }],
   "bridges": [
-    { "source": "lif", "hub": "ceds", "dependencies": ["lif", "ceds"], "cacheMode": "reuse" },
-    { "source": "lif", "hub": "ceds", "dependencies": ["lif", "ceds"], "cacheMode": "fresh" }
+    { "source": "lif", "mapper": "lifIntoCedsSemantic", "hub": "ceds", "dependencies": ["lif", "ceds"], "cacheMode": "reuse" },
+    { "source": "lif", "mapper": "lifIntoCedsSemantic", "hub": "ceds", "dependencies": ["lif", "ceds"], "cacheMode": "fresh" }
   ]
 }

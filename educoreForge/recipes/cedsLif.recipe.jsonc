@@ -14,7 +14,8 @@
   ],
   "bridges": [
     {
-      "source": "lif", "hub": "ceds", "extractor": "defaultSearchObject",
+      "source": "lif", "hub": "ceds", "mapper": "lifIntoCedsSemantic",
+      "extractor": "defaultSearchObject",
       "dependencies": ["lif", "ceds"], "cacheMode": "reuse"
     }
   ]

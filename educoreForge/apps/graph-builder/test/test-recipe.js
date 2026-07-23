@@ -149,6 +149,11 @@ const structuralCases = [
 	['malformed schemaVersion', 'bad-schemaVersion', /schemaVersion.*pattern/],
 	['cacheMode pin without pinBlockId', 'bad-pinNoBlockId', /pinBlockId/],
 	['structural bridge without mapper', 'bad-structuralBridgeNoMapper', /mapper/],
+	// EVERY bridge names its mapper — the hub case used to be accepted here and silently handed
+	// 'defaultSemantic' by build.js:279, so a recipe author who never chose a mapper got one
+	// anyway and nothing said so (polyArch2 §6).
+	['hub bridge without mapper', 'bad-hubBridgeNoMapper', /mapper/],
+	['bridge with a BLANK mapper', 'bad-bridgeBlankMapper', /mapper.*fewer than 1 characters|minLength/i],
 ];
 
 structuralCases.forEach(([label, name, pattern]) => {
