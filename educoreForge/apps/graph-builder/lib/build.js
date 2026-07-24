@@ -129,6 +129,55 @@ const resolveVectorize = (deps) => {
 	});
 };
 
+// resolveRebridge — the INFERENCE spend knob (design §5.5), an operator switch with the same §6 discipline
+// as resolveVectorize. A normal -build MATERIALIZES from whatever frozen decision blocks exist (zero LLM,
+// zero Voyage); --rebridge (SCOPED) is the only thing that RUNS the inference pre-pass to produce/refresh a
+// pair's frozen block. Precedence: an explicit deps.rebridge (the orchestrator's/test's injected scope) wins;
+// absent, --rebridge is read from the command line. The DOCUMENTED default is NONE (no pair rebridges — a
+// plain build never silently spends; a pair with no frozen block simply has no inferred edges). Scope values:
+// an array of source tokens (['ctdl']), the string 'all', or absent/empty (none). A supplied-but-wrong-typed
+// deps.rebridge is refused BY NAME rather than silently corrected. Returns { value } (a normalized scope:
+// 'all' | string[] ) or { error }; no throw, so build() routes a refusal through its callback.
+const resolveRebridge = (deps) => {
+	if (deps.rebridge !== undefined) {
+		if (deps.rebridge === 'all' || Array.isArray(deps.rebridge)) {
+			return { value: deps.rebridge };
+		}
+		return {
+			error:
+				`graphBuilder build: deps.rebridge must be an array of source tokens or the string 'all' when ` +
+				`supplied, got ${typeof deps.rebridge} (${JSON.stringify(deps.rebridge)}). It was NOT corrected ` +
+				`to a default.`,
+		};
+	}
+	const commandLineParameters =
+		(process.global && process.global.commandLineParameters) || { values: {}, switches: {} };
+	const scopeValues = (commandLineParameters.values && commandLineParameters.values.rebridge) || [];
+	// --rebridge=all OR --rebridge=ctdl,lif OR repeated --rebridge=ctdl --rebridge=lif; absent -> [] (none).
+	if (scopeValues.some((oneValue) => `${oneValue}`.trim().toLowerCase() === 'all')) {
+		return { value: 'all' };
+	}
+	const tokens = scopeValues
+		.reduce((soFar, oneValue) => soFar.concat(`${oneValue}`.split(',')), [])
+		.map((oneToken) => oneToken.trim())
+		.filter((oneToken) => oneToken !== '');
+	return { value: tokens };
+};
+
+// pairInRebridgeScope — is THIS pairing to run the inference pre-pass? The scope match happens HERE, where
+// the recipe pair is known, not guessed inside the plugin (§6 no-silent-default). 'all' rebridges every pair;
+// an array rebridges a pair whose source token is named (case-insensitive).
+const pairInRebridgeScope = (rebridgeScope, bridge) => {
+	if (rebridgeScope === 'all') {
+		return true;
+	}
+	if (!Array.isArray(rebridgeScope) || rebridgeScope.length === 0) {
+		return false;
+	}
+	const source = `${bridge.source}`.toLowerCase();
+	return rebridgeScope.some((oneToken) => `${oneToken}`.toLowerCase() === source);
+};
+
 const standardKey = (std) => `${std.token}@${std.version}`;
 const pairKey = (bridge) => `${bridge.source}::${bridge.hub || '(structural)'}`;
 
@@ -185,6 +234,22 @@ const build = (recipe, deps, callback) => {
 		return;
 	}
 	const vectorizeSpend = vectorizeResolution.value;
+
+	// rebridge scope is resolved alongside vectorize, same §6 discipline: a plain build MATERIALIZES frozen
+	// decisions (no spend); --rebridge (scoped) RUNS the inference pre-pass. The documented default is NONE.
+	const rebridgeResolution = resolveRebridge(deps);
+	if (rebridgeResolution.error) {
+		callback(rebridgeResolution.error);
+		return;
+	}
+	const rebridgeScope = rebridgeResolution.value;
+	// the inferred producer's run resources — injected by the orchestrator for a real reforge (P3b):
+	// decisionStore is where a frozen decision block is read (plain build) / written (--rebridge);
+	// inferenceConfig carries the real llmClient + topK/cosineFloor for a real --rebridge. Absent for an
+	// authored-only build (the authored producer ignores both). A semantic bridge run WITHOUT a decisionStore
+	// refuses BY NAME in the plugin — never a silent zero-edge success (§6).
+	const decisionStore = deps.decisionStore || null;
+	const inferenceConfig = deps.inferenceConfig || {};
 
 	const forger = components.forger();
 	const replay = components.replayManager();
@@ -442,14 +507,45 @@ const build = (recipe, deps, callback) => {
 			// run report: a deterministic authored producer returns decisionBlock null (-> _exact); an
 			// inferred producer returns a frozen decision block (-> _close). The producer suffix is DERIVED
 			// from that, then the version-keyed relationship name is composed with the REAL resolved versions.
+			// this pairing's inferred inputs (§5.5): rebridge is TRUE only when this pair's source is in the
+			// resolved --rebridge scope — the scope match happens HERE, where the recipe pair is known, not
+			// guessed in the plugin. config carries the producer's own operational data (the source standard
+			// + the REAL resolved versions the forge read; the a4a0da2 rule). An authored producer ignores
+			// rebridge/decisionStore/inferenceConfig entirely.
+			const thisPairRebridges = pairInRebridgeScope(rebridgeScope, bridge);
 			bridgeMaker.run(
-				{ inGraph: args.depGraph, mapper, hub: bridge.hub, applyLabel: RELATION_LABEL },
+				{
+					inGraph: args.depGraph,
+					mapper,
+					hub: bridge.hub,
+					applyLabel: RELATION_LABEL,
+					rebridge: thisPairRebridges,
+					decisionStore,
+					inferenceConfig,
+					config: {
+						sourceStandard: bridge.source,
+						sourceVersion: resolvedVersionByToken[bridge.source],
+						hubVersion: resolvedVersionByToken[bridge.hub],
+					},
+				},
 				(err, runReport) => {
 					if (err) {
 						next(`bridge ${pairLabel}: ${err}`);
 						return;
 					}
-					const producer = runReport && runReport.decisionBlock != null ? 'inferred' : 'authored';
+					// THE PRODUCER DECLARES ITS OWN KIND (polyArch2 §6). A producer that says runReport.producer
+					// is believed; only a producer that stays silent is inferred from decisionBlock (authored ->
+					// null -> _exact). This matters for the INFERRED producer's no-frozen-block case: it writes
+					// zero edges and honestly returns decisionBlock null, but it is STILL the inferred producer
+					// (an empty _close block), NOT authored — inferring _exact from the null would collide with
+					// the authored pair's _exact block for the SAME pair (the intended two-producers-per-pair
+					// design, §1). The producer naming itself removes that ambiguity at the source.
+					const producer =
+						runReport && (runReport.producer === 'inferred' || runReport.producer === 'authored')
+							? runReport.producer
+							: runReport && runReport.decisionBlock != null
+								? 'inferred'
+								: 'authored';
 					const composed = vocabulary.relationshipSubjectRefId({
 						hubStandard: bridge.hub,
 						hubVersion: resolvedVersionByToken[bridge.hub],
@@ -609,3 +705,7 @@ return { build, defaultComponents };
 // orchestrator's DEFAULTS are the real modules themselves — the gate that replaces "the stub set
 // conforms too", which passed for a year while the arguments drifted underneath it.
 module.exports = moduleFunction({ moduleName });
+// pure helpers exported as statics so the rebridge-scope resolution + per-pair scope match can be gated
+// directly (§6 no-silent-default), without standing up the whole build pipeline.
+module.exports.resolveRebridge = resolveRebridge;
+module.exports.pairInRebridgeScope = pairInRebridgeScope;

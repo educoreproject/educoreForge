@@ -73,6 +73,13 @@ const BRIDGE_PLUGIN_BY_MAPPER = {
 	// no branch to edit. The recipe's CTDL->CEDS bridge names this mapper. Token follows the
 	// '<source>IntoCeds<Producer>' shape the LIF bridge uses ('lifIntoCedsSemantic').
 	ctdlIntoCedsAuthored: require(path.join(__dirname, 'lib', 'bridgePlugins', 'ctdlAuthoredBridge')),
+	// INFERRED CLOSE_MATCH producer (P3a) — the semantic bridge. The SAME plugin serves every semantic
+	// pair (a generic plugin, design §1), so it is registered under BOTH the generic 'semanticBridge'
+	// token AND the per-source 'ctdlIntoCedsSemantic' / 'lifIntoCedsSemantic' tokens a recipe may name.
+	// It produces a frozen decisionBlock (-> build.js's _close suffix). Registry rows, never a branch.
+	semanticBridge: require(path.join(__dirname, 'lib', 'bridgePlugins', 'semanticBridge')),
+	ctdlIntoCedsSemantic: require(path.join(__dirname, 'lib', 'bridgePlugins', 'semanticBridge')),
+	lifIntoCedsSemantic: require(path.join(__dirname, 'lib', 'bridgePlugins', 'semanticBridge')),
 };
 
 // -----
@@ -151,7 +158,29 @@ const moduleFunction =
 		graphWriterFactory = neo4jGraphWriter,
 		graphReaderFactory = neo4jGraphReader,
 	} = {}) => {
-		const run = ({ inGraph, mapper, hub = null, applyLabel }, callback) => {
+		const run = (
+			{
+				inGraph,
+				mapper,
+				hub = null,
+				applyLabel,
+				// P3a INFERRED inputs (all optional; the authored/generic plugins ignore them). rebridge is
+				// the pair-scoped boolean build.js sets when this pair is in the --rebridge scope (§5.5); a
+				// falsy rebridge means MATERIALIZE from an existing frozen block. decisionStore is where a
+				// frozen decision block is read (plain build) and written (--rebridge). inferenceConfig
+				// ({ llmClient, topK, cosineFloor, concurrency }) is what the semantic producer hands the
+				// pipeline — the suite passes a STUB llmClient so the run is hermetic. config carries the
+				// producer's own operational data (sourceStandard, resolved versions).
+				rebridge = null,
+				decisionStore = null,
+				inferenceConfig = {},
+				config = {},
+				// the NET seam — the suite passes { vectorizer: fakeFactory } so the semantic producer's
+				// rebridge path runs with fixture vectors and no Voyage call (§3 hard line 2).
+				componentOverrides = {},
+			},
+			callback,
+		) => {
 			// ARGUMENT REFUSALS — every required argument is stated or the run does not start
 			// (polyArch2 §6). None is guessed.
 			if (!inGraph) {
@@ -191,7 +220,15 @@ const moduleFunction =
 			// WALK the dependency graph. The suite injects a reader double, so the producer's read path is
 			// proven without a container (§3 hard line 2), exactly as the writer double proves the write path.
 			const graphWriter = graphWriterFactory({ inGraph });
-			const componentLibrary = buildComponentLibrary({ graphWriter, graphReader: graphReaderFactory });
+			const componentLibrary = buildComponentLibrary({
+				graphWriter,
+				graphReader: graphReaderFactory,
+				decisionStore,
+				rebridge,
+				inferenceConfig,
+				config,
+				componentOverrides,
+			});
 
 			let pluginCallable;
 			try {

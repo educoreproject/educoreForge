@@ -23,9 +23,18 @@
 // P2 UPDATE: relationshipWriter (WRITE seam), graphReader (READ seam) and referenceIndex (the ported pure
 // mappingSubgraph) now have real bodies; the rest remain P0 skeletons filled by P3.
 //
-// The NET components (vectorizer, and the selector's llm mode) run only in a real reforge, never
-// the suite (§3 hard line 2). config/xLog travel with the library so a plugin reads them from its
-// injected tools rather than reaching for process.global mid-compose.
+// P3a UPDATE: the inferred machinery lands — vectorizer (the ported def-embedder, NET), inferencePipeline
+// (the ported retrieve/floor/rerank; takes the injected llmClient), inferredIndex (the ported pure
+// inferredSubgraph materializer) and decisionFreezer (the content-addressed freeze) now have real bodies.
+// The semantic producer (semanticBridge) composes them. Still-skeleton: semanticMatcher, evidenceGatherer,
+// selector, sourceWalker, authoredCrosswalkLoader, hubCandidateModule — the incumbent FUSES retrieve+select
+// inside inferencePipeline (which semanticBridge composes), so these decomposed slots are not called on the
+// ported path; they remain loud skeletons rather than false-green no-ops (polyArch2 §6).
+//
+// The NET components (vectorizer, and the pipeline's llm rerank) run only in a real --rebridge, never the
+// suite (§3 hard line 2). config/xLog travel with the library so a plugin reads them from its injected tools
+// rather than reaching for process.global mid-compose. decisionStore/rebridge/inferenceConfig are the
+// per-run inferred inputs, passed straight through from bridgeMaker.run.
 
 const path = require('path');
 
@@ -35,6 +44,13 @@ const relationshipWriterFactory = require(path.join(__dirname, 'relationshipWrit
 // versions, mappingTool — the producer's operational data, parameter-ownership §4) and calls
 // buildMappingSubgraph. No graphWriter, no graphReader, no network.
 const referenceIndexFactory = require(path.join(__dirname, 'referenceIndex'));
+// P3a inferred components — ported faithfully from the incumbent (repointed requires). Pure factories
+// (inferredIndex, decisionFreezer) and NET/injected ones (vectorizer, inferencePipeline) all injected AS
+// FACTORIES; a producer composes each with its own options.
+const inferredIndexFactory = require(path.join(__dirname, 'inferredIndex'));
+const decisionFreezerFactory = require(path.join(__dirname, 'decisionFreezer'));
+const vectorizerFactory = require(path.join(__dirname, 'vectorizer'));
+const inferencePipelineFactory = require(path.join(__dirname, 'inferencePipeline'));
 
 // -----
 // skeletonComponent — a P0 contract stub. It is a curried moduleFunction like every real
@@ -50,32 +66,22 @@ const skeletonComponent = (componentName, landsInPhase, contractLine) =>
 		);
 	};
 
-// The generic, hub-agnostic library (design §3, items 1-9) — skeletons except relationshipWriter.
+// The generic, hub-agnostic library (design §3, items 1-9) — skeletons except the real bodies wired below.
 const SKELETON_FACTORIES = {
-	vectorizer: skeletonComponent(
-		'vectorizer',
-		'a real reforge (NET)',
-		'vectorizer({provider}) ({texts}, cb) -> cb("", {vectors, embeddingModelVersion})',
-	),
 	semanticMatcher: skeletonComponent(
 		'semanticMatcher',
-		'P3 (PURE)',
+		'a later decomposition (the incumbent fuses retrieve+select in inferencePipeline)',
 		'semanticMatcher({vectorizer}) ({hub, hubVectorProperty, queryVector, candidatePool, topK}) -> candidates[]',
 	),
 	evidenceGatherer: skeletonComponent(
 		'evidenceGatherer',
-		'P3 (PURE)',
+		'a later decomposition (P3b prompt-tuning demotes evidenceBundle to prompt material, design §5.5)',
 		'evidenceGatherer() ({sourceElement, candidate}) -> evidenceBundle',
 	),
 	selector: skeletonComponent(
 		'selector',
-		'P2 (threshold, PURE) / P3 (llm, NET)',
+		'a later decomposition (the incumbent fuses the cosineFloor+llm rerank in inferencePipeline)',
 		'selector({mode}) ({candidates, evidence}, cb) -> cb("", {chosen|none, confidence, rationale})',
-	),
-	decisionFreezer: skeletonComponent(
-		'decisionFreezer',
-		'P3 (PURE)',
-		'decisionFreezer() ({decisions}) -> frozenDecisionBlock (content-addressed)',
 	),
 	sourceWalker: skeletonComponent(
 		'sourceWalker',
@@ -100,7 +106,21 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
 // START OF moduleFunction() ============================================================
 
-const buildComponentLibrary = ({ graphWriter, graphReader, config = {}, xLog } = {}) => {
+const buildComponentLibrary = ({
+	graphWriter,
+	graphReader,
+	decisionStore = null,
+	rebridge = null,
+	inferenceConfig = {},
+	config = {},
+	// componentOverrides — the NET seam (§3 hard line 2). The vectorizer reaches Voyage, so the SUITE
+	// replaces it with a fake that returns fixture vectors; a production build passes nothing and gets the
+	// real ported def-embedder. Any named entry here REPLACES the wired component AFTER the real bodies are
+	// installed, so a test proves the whole compose/run path with a double and no network. Mirrors build.js's
+	// deps.components seam.
+	componentOverrides = {},
+	xLog,
+} = {}) => {
 	const library = { config, xLog: xLog || (process.global && process.global.xLog) };
 
 	Object.keys(SKELETON_FACTORIES).forEach((oneComponentName) => {
@@ -109,6 +129,25 @@ const buildComponentLibrary = ({ graphWriter, graphReader, config = {}, xLog } =
 
 	// the ONE real WRITE seam — constructed over the run's graphWriter.
 	library.relationshipWriter = relationshipWriterFactory({ graphWriter });
+
+	// P3a inferred components — injected as FACTORIES (a producer composes each with its own options).
+	// inferredIndex + decisionFreezer are PURE; vectorizer + inferencePipeline are NET/llm-bound and run
+	// only in a real --rebridge, never the suite. inferenceConfig ({ llmClient, topK, cosineFloor,
+	// concurrency }) travels for the producer to hand inferencePipeline; decisionStore and rebridge are the
+	// per-run inferred inputs (a plain build reads a frozen block from the store; --rebridge writes one).
+	library.inferredIndex = inferredIndexFactory;
+	library.decisionFreezer = decisionFreezerFactory;
+	library.vectorizer = vectorizerFactory;
+	library.inferencePipeline = inferencePipelineFactory;
+	library.inferenceConfig = inferenceConfig;
+	library.decisionStore = decisionStore;
+	library.rebridge = rebridge;
+
+	// componentOverrides — the LAST word (the NET seam). A named override replaces the wired component so a
+	// test can drive the whole path with a fake vectorizer and no Voyage call.
+	Object.keys(componentOverrides || {}).forEach((oneName) => {
+		library[oneName] = componentOverrides[oneName];
+	});
 
 	// referenceIndex — real body (P2): the ported pure mappingSubgraph FACTORY, injected as-is (§3.7).
 	// A producer instantiates it with its own mapping options; it needs no run resources.

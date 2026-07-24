@@ -644,6 +644,70 @@ const stageRelationshipBlockNaming = () => {
 					/restore deps ctdl::ceds: dependency base block\(s\) not forged in this build: ceds/,
 				);
 				harness.ok('  and hands back no result', restoreResult === undefined, JSON.stringify(restoreResult));
+				stageRebridgeWiring();
+			});
+		});
+	});
+};
+
+// =====================================================================
+// REBRIDGE WIRING (P3a §5.5) — build.js reads --rebridge with §6 discipline and threads the inferred
+// inputs (rebridge boolean, decisionStore, config) into bridgeMaker.run for the SCOPED pair.
+// =====================================================================
+const buildStatics = require('../lib/build');
+
+const stageRebridgeWiring = () => {
+	harness.section('REBRIDGE WIRING — --rebridge scope resolution + per-pair threading (§6 no-silent-default)');
+
+	// the PURE helpers (resolveRebridge / pairInRebridgeScope) — no build pipeline needed.
+	harness.equal('resolveRebridge: deps.rebridge=[] -> none (default plain build MATERIALIZES)', JSON.stringify(buildStatics.resolveRebridge({ rebridge: [] }).value), '[]');
+	harness.equal("resolveRebridge: deps.rebridge='all' -> all", buildStatics.resolveRebridge({ rebridge: 'all' }).value, 'all');
+	harness.equal("resolveRebridge: deps.rebridge=['ctdl'] -> ['ctdl']", JSON.stringify(buildStatics.resolveRebridge({ rebridge: ['ctdl'] }).value), '["ctdl"]');
+	harness.match('resolveRebridge: a WRONG-typed deps.rebridge is REFUSED by name (not corrected)', buildStatics.resolveRebridge({ rebridge: 5 }).error, /deps\.rebridge must be an array of source tokens or the string 'all'[\s\S]*NOT corrected/);
+	harness.ok("pairInRebridgeScope: 'all' rebridges every pair", buildStatics.pairInRebridgeScope('all', { source: 'ctdl' }) === true);
+	harness.ok("pairInRebridgeScope: ['ctdl'] rebridges the ctdl pair", buildStatics.pairInRebridgeScope(['ctdl'], { source: 'ctdl' }) === true);
+	harness.ok("pairInRebridgeScope: ['lif'] does NOT rebridge the ctdl pair", buildStatics.pairInRebridgeScope(['lif'], { source: 'ctdl' }) === false);
+	harness.ok('pairInRebridgeScope: [] (default) rebridges NOTHING', buildStatics.pairInRebridgeScope([], { source: 'ctdl' }) === false);
+
+	// THE PRODUCER DECLARES ITS KIND: an inferred producer that wrote NO edges (no frozen block yet) still
+	// returns producer:'inferred', so build.js names the empty block _close — NOT _exact, which would collide
+	// with the authored pair's _exact for the SAME pair (the two-producers-per-pair design). Proven via a
+	// double so no docker/graph is needed.
+	const emptyInferredBridgeMaker = () => ({ run: (spec, cb) => cb('', { ...spec, edgesWritten: 0, decisionBlock: null, producer: 'inferred', counts: { inferred: 0 } }) });
+	runBuildWith(cedsCtdlRecipe, { bridgeMaker: emptyInferredBridgeMaker }, ({ err: emptyErr, xLog: emptyLog }) => {
+		harness.equal('an empty inferred block (no frozen decisions yet) still builds', emptyErr, '');
+		harness.match('  build.js names it _close from producer=inferred (NOT _exact from the null decisionBlock)', emptyLog.text(), /-> relationship ceds@current_rel_ctdl@current_close /);
+
+		continueRebridgeWiring();
+	});
+	};
+
+	const continueRebridgeWiring = () => {
+	const capturedSpecs = [];
+	const captureBridgeMaker = () => ({ run: (spec, cb) => { capturedSpecs.push(spec); cb('', { ...spec, edgesWritten: 0, decisionBlock: null, counts: {} }); } });
+	const fakeDecisionStore = { getDecisionBlock: (a, cb) => cb('', { frozenText: null }), saveDecisionBlock: (a, cb) => cb('') };
+	const runRebridge = (extraDeps, cb) => {
+		const xLog = capturingXLog();
+		const standardsDatabase = standardsDatabaseDouble();
+		const components = { forger: workingForger(), replayManager: workingReplayManager(), bridgeMaker: captureBridgeMaker, manifestEditor: workingManifestEditor() };
+		buildLib.build(cedsCtdlRecipe, { xLog, standardsDatabase, components, ...extraDeps }, (err, result) => cb({ err, result }));
+	};
+
+	runRebridge({ rebridge: ['ctdl'], decisionStore: fakeDecisionStore }, ({ err }) => {
+		harness.equal('scoped --rebridge=ctdl build succeeds', err, '');
+		const spec = capturedSpecs[capturedSpecs.length - 1];
+		harness.ok('  build.js passed rebridge=TRUE for the scoped ctdl pair', spec && spec.rebridge === true);
+		harness.equal('  and threaded config.sourceStandard=ctdl (the a4a0da2 real versions)', spec && spec.config && spec.config.sourceStandard, 'ctdl');
+		harness.equal('  and config.hubVersion=current (resolved, not the recipe token)', spec && spec.config && spec.config.hubVersion, 'current');
+		harness.ok('  and threaded the injected decisionStore through', spec && spec.decisionStore === fakeDecisionStore);
+
+		runRebridge({ decisionStore: fakeDecisionStore }, ({ err: plainErr }) => {
+			harness.equal('a plain build (no --rebridge) succeeds', plainErr, '');
+			const plainSpec = capturedSpecs[capturedSpecs.length - 1];
+			harness.ok('  build.js passed rebridge=FALSE (plain build MATERIALIZES, never a silent spend)', plainSpec && plainSpec.rebridge === false);
+
+			runRebridge({ rebridge: 7 }, ({ err: badErr }) => {
+				harness.match('a WRONG-typed deps.rebridge refuses the whole build by name', badErr, /deps\.rebridge must be an array of source tokens or the string 'all'/);
 				stageEdgeCases();
 			});
 		});
