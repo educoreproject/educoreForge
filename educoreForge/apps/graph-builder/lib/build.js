@@ -200,6 +200,14 @@ const build = (recipe, deps, callback) => {
 	const bridges = Array.isArray(recipe.bridges) ? recipe.bridges : [];
 	const hubStdSet = new Set(hubs.map((h) => String(h.standard).toLowerCase()));
 
+	// PHASE A -> PHASE C carry (P2, implementationPlan_bridge_072426 §7). A bridge's relationship block
+	// name is version-keyed on BOTH endpoints with the REAL resolved versions the forge READ (the a4a0da2
+	// rule) — NOT the recipe token — so Phase A records, per standard TOKEN, the resolved version the forger
+	// reported and the harvested base schema block (the bridge restores its dependency bases from these into
+	// the dependency graph so the producer can WALK them).
+	const resolvedVersionByToken = {};
+	const baseBlockByToken = {};
+
 	// ---- Phase A: forge each standardBase (+ hub block when the standard is a hub) ----
 	// The forge runs BEFORE the graph is provisioned (targetArchitectureDesign §4.4). A forge
 	// bundle never sees, needs or wants a graph, so provisioning one first would spend a container
@@ -249,6 +257,11 @@ const build = (recipe, deps, callback) => {
 					deriveHub: hubStdSet.has(String(std.token).toLowerCase()),
 				},
 				(err, forgeReport) => {
+					if (!err) {
+						// the RESOLVED version the bundle READ (a4a0da2) — recorded per token for the
+						// version-keyed relationship block name Phase C composes; NOT the recipe token.
+						resolvedVersionByToken[std.token] = forgeReport.version;
+					}
 					next(err ? `forge ${std.token}: ${err}` : '', { ...args, forgeReport });
 				},
 			);
@@ -293,6 +306,11 @@ const build = (recipe, deps, callback) => {
 					},
 				},
 				(err, schemaBlock) => {
+					if (!err) {
+						// the harvested base block — kept per token so a bridge can RESTORE its dependency
+						// bases into the dependency graph (Phase C), the source the producer WALKs.
+						baseBlockByToken[std.token] = schemaBlock;
+					}
 					next(err ? `harvest standardBase ${std.token}: ${err}` : '', { ...args, schemaBlock });
 				},
 			);
@@ -358,7 +376,11 @@ const build = (recipe, deps, callback) => {
 
 	// ---- Phase C: bridges (materialize dep graph, run bridge, harvest labeled relationships) ----
 	const bridgeOnePairing = (bridge, done) => {
-		const subjectRefId = pairKey(bridge);
+		// pairLabel identifies the pairing for the operator (source::hub); the version-keyed,
+		// producer-suffixed subjectRefId is COMPOSED after the bridge runs (the run result says whether the
+		// producer was authored -> _exact or inferred -> _close). §7.
+		const pairLabel = pairKey(bridge);
+		let subjectRefId = null;
 		// THE RECIPE NAMES THE MAPPER. RECIPE_SCHEMA requires it on every bridge, so a recipe that
 		// reaches here has one; there is no in-code name standing behind the key any more
 		// (polyArch2 §6). The guard is here rather than only in the schema because build() is
@@ -368,7 +390,7 @@ const build = (recipe, deps, callback) => {
 		const mapper = bridge.mapper;
 		if (typeof mapper !== 'string' || mapper.trim() === '') {
 			done(
-				`bridge ${subjectRefId}: mapper is ${
+				`bridge ${pairLabel}: mapper is ${
 					mapper === undefined ? 'not named' : JSON.stringify(mapper)
 				}. Every bridge names its mapper in the recipe — it IS what the bridge does, and ` +
 					`there is no default. Nothing was substituted for it.`,
@@ -383,20 +405,65 @@ const build = (recipe, deps, callback) => {
 		let deleteAttempted = false;
 
 		// create means "an empty graph", always. The dependency schema blocks go IN through init's
-		// RESTORATION payload once dependency resolution lands with the rest of Phase C.
+		// RESTORATION payload in the next task — the producer WALKs the restored nodes.
 		taskList.push((args, next) => {
 			replay.create({ purpose: 'dependencyGraph' }, (err, depGraph) => {
 				if (!err) {
 					createdGraph = depGraph;
 				}
-				next(err ? `create(dep) ${subjectRefId}: ${err}` : '', { ...args, depGraph });
+				next(err ? `create(dep) ${pairLabel}: ${err}` : '', { ...args, depGraph });
 			});
 		});
 
+		// RESTORE the bridge's dependency bases (source + hub) into the dependency graph, so the producer
+		// has real nodes to read: the source standard's elements, the CEDS HubReferences and the CEDS
+		// standard rows all live in these two base blocks (the hub is FOLDED into the CEDS base). A missing
+		// dependency base is a recipe/order fault, named — never a silent empty graph (polyArch2 §6).
 		taskList.push((args, next) => {
+			const dependencyTokens = [bridge.source, bridge.hub].filter(
+				(oneToken) => oneToken !== undefined && oneToken !== null && `${oneToken}`.trim() !== '',
+			);
+			const missing = dependencyTokens.filter((oneToken) => !baseBlockByToken[oneToken]);
+			if (missing.length) {
+				next(
+					`restore deps ${pairLabel}: dependency base block(s) not forged in this build: ${missing.join(', ')}. ` +
+						`A bridge's source and hub must both be forged before it runs; nothing was substituted.`,
+				);
+				return;
+			}
+			const schemaBlocks = dependencyTokens.map((oneToken) => baseBlockByToken[oneToken].blockText);
+			replay.init({ inGraph: args.depGraph, schemaBlocks }, (err) =>
+				next(err ? `restore deps ${pairLabel}: ${err}` : '', args),
+			);
+		});
+
+		taskList.push((args, next) => {
+			// THREAD the recipe's hub token so the producer knows which hub it authors toward. CAPTURE the
+			// run report: a deterministic authored producer returns decisionBlock null (-> _exact); an
+			// inferred producer returns a frozen decision block (-> _close). The producer suffix is DERIVED
+			// from that, then the version-keyed relationship name is composed with the REAL resolved versions.
 			bridgeMaker.run(
-				{ inGraph: args.depGraph, mapper, applyLabel: RELATION_LABEL },
-				(err) => next(err ? `bridge ${subjectRefId}: ${err}` : '', args),
+				{ inGraph: args.depGraph, mapper, hub: bridge.hub, applyLabel: RELATION_LABEL },
+				(err, runReport) => {
+					if (err) {
+						next(`bridge ${pairLabel}: ${err}`);
+						return;
+					}
+					const producer = runReport && runReport.decisionBlock != null ? 'inferred' : 'authored';
+					const composed = vocabulary.relationshipSubjectRefId({
+						hubStandard: bridge.hub,
+						hubVersion: resolvedVersionByToken[bridge.hub],
+						sourceStandard: bridge.source,
+						sourceVersion: resolvedVersionByToken[bridge.source],
+						producer,
+					});
+					if (composed.error) {
+						next(`bridge ${pairLabel}: ${composed.error}`);
+						return;
+					}
+					subjectRefId = composed.subjectRefId;
+					next('', args);
+				},
 			);
 		});
 
@@ -408,7 +475,7 @@ const build = (recipe, deps, callback) => {
 					header: { blockType: 'relationship', standardKey: subjectRefId },
 				},
 				(err, schemaBlock) => {
-					next(err ? `harvest relationships ${subjectRefId}: ${err}` : '', {
+					next(err ? `harvest relationships ${pairLabel}: ${err}` : '', {
 						...args,
 						schemaBlock,
 					});
@@ -426,11 +493,11 @@ const build = (recipe, deps, callback) => {
 				},
 				(err, addReport) => {
 					if (err) {
-						next(`add relationship ${subjectRefId}: ${err}`);
+						next(`add relationship ${pairLabel}: ${err}`);
 						return;
 					}
 					xLog.status(
-						`  [C] bridge ${subjectRefId} (mapper=${mapper}) -> relationship ${addReport.schemaBlockRefId}`,
+						`  [C] bridge ${pairLabel} (mapper=${mapper}) -> relationship ${subjectRefId} ${addReport.schemaBlockRefId}`,
 					);
 					next('', args);
 				},

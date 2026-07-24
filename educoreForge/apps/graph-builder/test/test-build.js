@@ -585,7 +585,68 @@ const stageCedsLif = () => {
 			xLog.text(),
 		);
 
-		stageEdgeCases();
+		stageRelationshipBlockNaming();
+	});
+};
+
+// =====================================================================
+// RELATIONSHIP BLOCK NAMING (P2 Phase C) — the version-keyed, producer-suffixed subjectRefId
+// =====================================================================
+// A bridge's relationship block is named '<hub>@<hubVer>_rel_<source>@<sourceVer>_exact|_close' — pair-
+// scoped, version-keyed on BOTH endpoints with the REAL resolved versions (the a4a0da2 rule), and
+// producer-suffixed (authored -> _exact from decisionBlock null; inferred -> _close from a frozen
+// decision block). Proven both ways through bridgeMaker doubles, plus the dependency-restore refusal.
+const cedsCtdlRecipe = {
+	recipeName: 'cedsCtdl',
+	description: 'CTDL bridged into the CEDS hub — the authored EXACT_MATCH pairing',
+	standards: [{ token: 'ceds', version: 'current' }, { token: 'ctdl', version: 'current' }],
+	hubs: [{ standard: 'ceds' }],
+	bridges: [{ source: 'ctdl', hub: 'ceds', mapper: 'ctdlIntoCedsAuthored' }],
+};
+
+const stageRelationshipBlockNaming = () => {
+	harness.section('RELATIONSHIP BLOCK NAMING — version-keyed, producer-suffixed (authored _exact / inferred _close)');
+
+	// authored: the bridgeMaker double returns decisionBlock null -> _exact.
+	const authoredBridgeMaker = () => ({ run: (spec, cb) => cb('', { ...spec, edgesWritten: 26, decisionBlock: null, counts: { authored: 26 } }) });
+	runBuildWith(cedsCtdlRecipe, { bridgeMaker: authoredBridgeMaker }, ({ err, result, xLog }) => {
+		harness.equal('the authored CTDL pairing builds', err, '');
+		harness.equal('  3 members (ceds base w/ folded hub + ctdl base + 1 relationship)', result.memberCount, 3);
+		harness.match(
+			'  the relationship block is named ceds@current_rel_ctdl@current_exact (version-keyed, _exact)',
+			xLog.text(),
+			/-> relationship ceds@current_rel_ctdl@current_exact /,
+		);
+		harness.match('  the bridge threads hub=ceds and ran the authored mapper', xLog.text(), /\[C\] bridge ctdl::ceds \(mapper=ctdlIntoCedsAuthored\)/);
+
+		// inferred: a frozen decisionBlock -> _close (the SAME pair, a DIFFERENT producer block).
+		const inferredBridgeMaker = () => ({ run: (spec, cb) => cb('', { ...spec, edgesWritten: 5, decisionBlock: { hash: 'frozen' }, counts: { inferred: 5 } }) });
+		runBuildWith(cedsCtdlRecipe, { bridgeMaker: inferredBridgeMaker }, ({ err: inferErr, xLog: inferLog }) => {
+			harness.equal('the inferred producer variant also builds', inferErr, '');
+			harness.match(
+				'  a frozen decisionBlock names the block ..._close (producer-derived, not pair-derived)',
+				inferLog.text(),
+				/-> relationship ceds@current_rel_ctdl@current_close /,
+			);
+
+			// dependency-restore refusal: a bridge whose hub is not forged has no HubReferences to author against.
+			const hublessRecipe = {
+				recipeName: 'ctdlNoHub',
+				description: 'a CTDL bridge whose hub standard is not forged',
+				standards: [{ token: 'ctdl', version: 'current' }],
+				hubs: [],
+				bridges: [{ source: 'ctdl', hub: 'ceds', mapper: 'ctdlIntoCedsAuthored' }],
+			};
+			runBuildWith(hublessRecipe, {}, ({ err: restoreErr, result: restoreResult }) => {
+				harness.match(
+					'a bridge whose hub base is not forged is REFUSED at restore, naming the missing dependency',
+					restoreErr,
+					/restore deps ctdl::ceds: dependency base block\(s\) not forged in this build: ceds/,
+				);
+				harness.ok('  and hands back no result', restoreResult === undefined, JSON.stringify(restoreResult));
+				stageEdgeCases();
+			});
+		});
 	});
 };
 
@@ -595,11 +656,14 @@ const stageEdgeCases = () => {
 	// build() is reachable with a recipe object that never went through validateRecipe — this
 	// suite does it on every line below — so the schema's `required: mapper` is not the only
 	// place the absence can arrive. A bridge with no mapper used to run 'defaultSemantic' here.
+	// BOTH endpoints are forged: a bridge RESTORES its source and hub base blocks into the dependency
+	// graph before it runs (P2 Phase C), so the hub standard must be forged too — a bridge whose hub is
+	// not in the build has no HubReferences to author against.
 	const bridgeRecipe = (bridge) => ({
 		recipeName: 'bridgeMapperProbe',
 		description: 'one bridge, whatever mapper it was given',
-		standards: [{ token: 'lif', version: 'current' }],
-		hubs: [],
+		standards: [{ token: 'lif', version: 'current' }, { token: 'ceds', version: 'current' }],
+		hubs: [{ standard: 'ceds' }],
 		bridges: [{ source: 'lif', hub: 'ceds', dependencies: ['lif'], cacheMode: 'reuse', ...bridge }],
 	});
 
@@ -1138,7 +1202,7 @@ const faultCases = [
 				return () =>
 					Object.assign({}, working, {
 						init: (spec, cb) =>
-							spec.schemaBlocks !== undefined
+							spec.schemaBlocks !== undefined && spec.inGraph && String(spec.inGraph.graphName).includes('materialize')
 								? cb('content address verification failed')
 								: working.init(spec, cb),
 					});

@@ -129,10 +129,63 @@ const isSchemaBlockKind = (oneKind) => SCHEMA_BLOCK_KINDS.indexOf(oneKind) !== -
 // relationship name continues past it with the source pair, <hub>@<ver>_rel_<source>@<ver>), so its
 // agreement test is CONTAINMENT, not endsWith. The match MODE is itself data, resolved through the
 // SUFFIX_MATCHERS registry, so the gate stays a table lookup rather than a switch on kind.
+// RELATIONSHIP PRODUCER SUFFIX (implementationPlan_bridge_072426 §7, P2). A relationship block is
+// per-(pair × producer): the AUTHORED deterministic producer emits '..._exact', the INFERRED frozen
+// producer emits '..._close' (settled decision #2). The producer suffix TRAILS the pair infix, so a
+// relationship subjectRefId is '<hub>@<hubVer>_rel_<source>@<sourceVer>_exact|_close' — pair-scoped,
+// version-keyed on BOTH endpoints (the a4a0da2 rule: REAL resolved versions), and self-describing about
+// WHICH producer authored it so re-running inference never disturbs the authored block. DATA-keyed by
+// producer, one row per producer.
+const RELATIONSHIP_PRODUCER_SUFFIX = {
+	authored: '_exact',
+	inferred: '_close',
+};
+const RELATIONSHIP_PRODUCER_SUFFIXES = Object.keys(RELATIONSHIP_PRODUCER_SUFFIX).map(
+	(oneProducer) => RELATIONSHIP_PRODUCER_SUFFIX[oneProducer],
+);
+const RELATIONSHIP_PAIR_INFIX = '_rel_';
+
+// suffixForRelationshipProducer — the trailing producer marker a relationship subjectRefId must carry.
+// Returns undefined for an unknown producer; a caller that REQUIRES it treats undefined as a refusal
+// naming the producer (never a silent default).
+const suffixForRelationshipProducer = (oneProducer) => RELATIONSHIP_PRODUCER_SUFFIX[oneProducer];
+
+// relationshipSubjectRefId — COMPOSE the pair-scoped, version-keyed relationship name. Both versions are
+// REQUIRED (there is no default — a relationship block that cannot name a resolved version on both
+// endpoints has no address, polyArch2 §6). Returns { subjectRefId } or { error }.
+const relationshipSubjectRefId = ({ hubStandard, hubVersion, sourceStandard, sourceVersion, producer } = {}) => {
+	const producerSuffix = suffixForRelationshipProducer(producer);
+	const missing = [
+		[hubStandard, 'hubStandard'],
+		[hubVersion, 'hubVersion'],
+		[sourceStandard, 'sourceStandard'],
+		[sourceVersion, 'sourceVersion'],
+	].filter(([oneValue]) => oneValue === undefined || oneValue === null || `${oneValue}`.trim() === '');
+	if (missing.length) {
+		return { error: `relationshipSubjectRefId: missing ${missing.map(([, name]) => name).join(', ')} — a relationship block is version-keyed on BOTH endpoints; there is no default.` };
+	}
+	if (!producerSuffix) {
+		return { error: `relationshipSubjectRefId: producer '${producer}' has no registered suffix — known producers: ${Object.keys(RELATIONSHIP_PRODUCER_SUFFIX).join(', ')}.` };
+	}
+	return { subjectRefId: `${hubStandard}@${hubVersion}${RELATIONSHIP_PAIR_INFIX}${sourceStandard}@${sourceVersion}${producerSuffix}` };
+};
+
+// relationshipProducerFromSubjectRefId — which producer's suffix (if any) a relationship subjectRefId
+// carries. Used to make a gate refusal specific; returns undefined when no known producer suffix trails.
+const relationshipProducerFromSubjectRefId = (subjectRefId) =>
+	typeof subjectRefId !== 'string'
+		? undefined
+		: Object.keys(RELATIONSHIP_PRODUCER_SUFFIX).filter(
+				(oneProducer) => subjectRefId.endsWith(RELATIONSHIP_PRODUCER_SUFFIX[oneProducer]),
+		  )[0];
+
 const SCHEMA_BLOCK_KIND_SUFFIX = {
 	[SCHEMA_BLOCK_KIND.STANDARD_BASE]: { marker: '_base', match: 'trailing' },
 	[SCHEMA_BLOCK_KIND.HUB]: { marker: '_hub', match: 'trailing' },
-	[SCHEMA_BLOCK_KIND.RELATIONSHIP]: { marker: '_rel_', match: 'infix' },
+	// RELATIONSHIP now requires the pair infix '_rel_' AND a trailing producer suffix ('_exact'|'_close')
+	// — a bare '..._rel_...' with no producer suffix is REFUSED (a relationship block that does not say
+	// which producer authored it cannot be gated per-producer; §7 / settled decision #2).
+	[SCHEMA_BLOCK_KIND.RELATIONSHIP]: { marker: '_rel_', match: 'relationshipPairProducer' },
 };
 
 // match-mode registry: mode name -> (subjectRefId, marker) predicate. A new match mode is one entry
@@ -140,6 +193,10 @@ const SCHEMA_BLOCK_KIND_SUFFIX = {
 const SUFFIX_MATCHERS = {
 	trailing: (subjectRefId, marker) => subjectRefId.endsWith(marker),
 	infix: (subjectRefId, marker) => subjectRefId.indexOf(marker) !== -1,
+	// relationshipPairProducer — the pair infix is PRESENT and a KNOWN producer suffix TRAILS.
+	relationshipPairProducer: (subjectRefId, marker) =>
+		subjectRefId.indexOf(marker) !== -1 &&
+		RELATIONSHIP_PRODUCER_SUFFIXES.some((oneSuffix) => subjectRefId.endsWith(oneSuffix)),
 };
 
 // suffixMarkerForKind — DERIVE the role marker a kind's subjectRefId must carry (the "expected suffix
@@ -645,6 +702,12 @@ const vocabulary = {
 	suffixMarkerForKind,
 	subjectRefIdAgreesWithKind,
 	kindImpliedBySubjectRefId,
+	// relationship producer suffix ↔ (pair × producer) block name (implementationPlan_bridge_072426 §7)
+	RELATIONSHIP_PRODUCER_SUFFIX,
+	RELATIONSHIP_PRODUCER_SUFFIXES,
+	suffixForRelationshipProducer,
+	relationshipSubjectRefId,
+	relationshipProducerFromSubjectRefId,
 	// pair / version-key vocabulary (Phase C)
 	MAPPING_BLOCK_TYPES,
 	isMappingBlockType,
