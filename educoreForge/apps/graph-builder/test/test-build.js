@@ -479,7 +479,7 @@ const stageLifOnly = () => {
 		harness.match(
 			'phase A forges the standard under its versioned key',
 			xLog.text(),
-			/\[A\] forge lif@current -> standardBase /,
+			/\[A\] forge lif@current_base -> standardBase /,
 		);
 		harness.ok(
 			'no hub phase runs when no hub is declared',
@@ -509,8 +509,8 @@ const stageCedsLif = () => {
 			4,
 		);
 
-		harness.match('ceds is forged', xLog.text(), /\[A\] forge ceds@current -> standardBase /);
-		harness.match('lif is forged', xLog.text(), /\[A\] forge lif@current -> standardBase /);
+		harness.match('ceds is forged', xLog.text(), /\[A\] forge ceds@current_base -> standardBase /);
+		harness.match('lif is forged', xLog.text(), /\[A\] forge lif@current_base -> standardBase /);
 		harness.match('the declared hub yields a hub block', xLog.text(), /\[B\] hub block ceds -> /);
 		harness.match(
 			'the bridge is keyed by its source::hub pairing',
@@ -698,9 +698,9 @@ const stageRealManifestEditor = () => {
 				'standardBase',
 			);
 			harness.equal(
-				'  keyed by the subject, resolved standardName@version',
+				'  keyed by the subject, resolved standardName@version with its _base role marker',
 				standardsDatabase.savedBlocks[storedRefIds[0]].subjectRefId,
-				'lif@current',
+				'lif@current_base',
 			);
 			harness.equal(
 				'  and the stored address IS sha256 of the block text (harvest minted it, add re-derived it)',
@@ -758,7 +758,7 @@ const faultCases = [
 	{
 		label: 'phase A: recording the standardBase member fails',
 		components: { manifestEditor: manifestFailingAddFor('standardBase', 'standardsDatabase write refused') },
-		pattern: /phase A \(forge\) failed: add standardBase ceds@current: standardsDatabase write refused/,
+		pattern: /phase A \(forge\) failed: add standardBase ceds@current_base: standardsDatabase write refused/,
 	},
 	{
 		label: 'phase A: harvesting the HUB schema block fails',

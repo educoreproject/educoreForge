@@ -55,6 +55,15 @@ const HUB_TEXT = `{"kind":"header","blockType":"hub","standardKey":"CEDS"}
 `;
 const HEADERLESS_TEXT = `not a header line at all\n`;
 
+// SUFFIX-vs-KIND fixtures (implementationPlan_hubPort_072326 §1). All three carry a header that
+// SAYS standardBase, so the header-vs-kind gate lets them by — the suffix gate is the only thing
+// that can catch a subjectRefId whose ROLE MARKER contradicts the kind. Distinct texts so each gets
+// its own content address (the gate fires before the insert, but distinctness keeps the fixtures
+// honest).
+const BASE_TEXT_A = `{"kind":"header","blockType":"standardBase","standardKey":"CEDS","fixture":"a"}\n`;
+const BASE_TEXT_B = `{"kind":"header","blockType":"standardBase","standardKey":"CEDS","fixture":"b"}\n`;
+const BASE_TEXT_C = `{"kind":"header","blockType":"standardBase","standardKey":"CEDS","fixture":"c"}\n`;
+
 // =====================================================================
 harness.section('THE PATH IS REQUIRED — proven REFUSING, because this is the whole safety story');
 // =====================================================================
@@ -89,7 +98,7 @@ standardsDatabaseModule.open({ databaseFilePath }, (openErr, standardsDatabase) 
 	harness.section('BLOCKS — content-addressed, deduping, taxonomy enforced');
 	// =====================================================================
 
-	standardsDatabase.saveBlock({ text: BLOCK_TEXT, kind: 'standardBase', subjectRefId: 'lif@1', version: '1' }, (e1, first) => {
+	standardsDatabase.saveBlock({ text: BLOCK_TEXT, kind: 'standardBase', subjectRefId: 'lif@1_base', version: '1' }, (e1, first) => {
 		if (e1) {
 			harness.ok('a block saved', false, e1);
 			cleanup();
@@ -99,11 +108,11 @@ standardsDatabaseModule.open({ databaseFilePath }, (openErr, standardsDatabase) 
 		harness.match('a block saved under a sha256 address', first.refId, /^[0-9a-f]{64}$/);
 		harness.equal('  and it was genuinely new', first.alreadyPresent, false);
 
-		standardsDatabase.saveBlock({ text: BLOCK_TEXT, kind: 'standardBase', subjectRefId: 'lif@1', version: '1' }, (e2, again) => {
+		standardsDatabase.saveBlock({ text: BLOCK_TEXT, kind: 'standardBase', subjectRefId: 'lif@1_base', version: '1' }, (e2, again) => {
 			harness.equal('the SAME bytes are the SAME block', again.refId, first.refId);
 			harness.equal('  and the second write is a no-op, not a rewrite', again.alreadyPresent, true);
 
-			standardsDatabase.saveBlock({ text: OTHER_TEXT, kind: 'standardBase', subjectRefId: 'ceds@1' }, (e3, other) => {
+			standardsDatabase.saveBlock({ text: OTHER_TEXT, kind: 'standardBase', subjectRefId: 'ceds@1_base' }, (e3, other) => {
 				harness.ok('different bytes get a different address', other.refId !== first.refId);
 
 				standardsDatabase.saveBlock({ text: 'x', kind: 'somethingInvented' }, (kindErr) => {
@@ -223,7 +232,7 @@ function manifestGates(standardsDatabase, otherBlockRefId) {
 								harness.equal(
 									'  and the block subject, joined so a human can read it without a second trip',
 									manifest.members[0].subjectRefId,
-									'ceds@1',
+									'ceds@1_base',
 								);
 
 								standardsDatabase.getManifest({ refId: 'noSuchManifest' }, (mErr, mRow) => {
@@ -275,7 +284,7 @@ function headerKindGates(standardsDatabase) {
 				/kind 'standardBase'/,
 			);
 
-			standardsDatabase.saveBlock({ text: HUB_TEXT, kind: 'hub', subjectRefId: 'ceds@1:hub' }, (agreeErr, hubBlock) => {
+			standardsDatabase.saveBlock({ text: HUB_TEXT, kind: 'hub', subjectRefId: 'ceds@1_hub' }, (agreeErr, hubBlock) => {
 				harness.ok(
 					'a header AGREEING with its kind is admitted',
 					!agreeErr && !!hubBlock && !!hubBlock.refId,
@@ -289,10 +298,67 @@ function headerKindGates(standardsDatabase) {
 						/is not one of standardBase \| hub \| relationship/,
 					);
 
-					cleanup();
-					harness.report();
+					suffixKindGates(standardsDatabase);
 				});
 			});
 		});
 	});
+}
+
+// =====================================================================
+// A function DECLARATION for the same hoisting reason as headerKindGates: it is called from inside
+// the gates above, before its own definition is reached.
+function suffixKindGates(standardsDatabase) {
+	harness.section('SUFFIX-vs-KIND — a subjectRefId carries the role marker its kind requires (hubPort §1)');
+
+	// A subjectRefId's role marker (_base / _hub / _rel_) makes a block self-describing by name; the
+	// kind column is the machine authority and the two MUST agree. A _hub-marked name stored under
+	// kind 'standardBase' has an AGREEING header (both say standardBase), so the header gate lets it
+	// by — and it was ADMITTED until this gate existed (proven: State-1 probe). Both the marker the
+	// name carries and the kind it is stored under are named, because either could be the mistake.
+	standardsDatabase.saveBlock(
+		{ text: BASE_TEXT_A, kind: 'standardBase', subjectRefId: 'ceds@current_hub' },
+		(disagreeErr) => {
+			harness.match(
+				'RED PROOF: a _hub-marked subjectRefId under kind standardBase is REFUSED',
+				disagreeErr,
+				/does not carry the '_base' role marker/,
+			);
+			harness.match('  naming the marker its NAME carries', disagreeErr, /'_hub'/);
+			harness.match('  and the kind it is stored under', disagreeErr, /kind 'standardBase'/);
+
+			standardsDatabase.saveBlock(
+				{ text: BASE_TEXT_B, kind: 'standardBase', subjectRefId: 'ceds@current' },
+				(absentErr) => {
+					harness.match(
+						'a subjectRefId carrying NO role marker under a kind that requires one is REFUSED',
+						absentErr,
+						/does not carry the '_base' role marker/,
+					);
+					harness.match(
+						'  saying it carries no recognized marker',
+						absentErr,
+						/no recognized role marker/,
+					);
+					harness.match('  and naming the kind', absentErr, /kind 'standardBase'/);
+
+					// POSITIVE CONTROL — a _base-marked name under kind standardBase is admitted, without
+					// which "refuse everything" would satisfy the two refusals above.
+					standardsDatabase.saveBlock(
+						{ text: BASE_TEXT_C, kind: 'standardBase', subjectRefId: 'ceds@current_base' },
+						(agreeErr, agreed) => {
+							harness.ok(
+								'a _base-marked subjectRefId under kind standardBase is ADMITTED (positive control)',
+								!agreeErr && !!agreed && !!agreed.refId,
+								agreeErr,
+							);
+
+							cleanup();
+							harness.report();
+						},
+					);
+				},
+			);
+		},
+	);
 }

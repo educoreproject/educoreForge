@@ -222,7 +222,7 @@ function addRefusalGates(standardsDatabase, manifest) {
 
 			manifest.add(
 				{
-					subjectRefId: 'lif@1.0',
+					subjectRefId: 'lif@1.0_base',
 					kind: 'somethingInvented',
 					description: 'd',
 					schemaBlock: LIF_BLOCK,
@@ -237,7 +237,7 @@ function addRefusalGates(standardsDatabase, manifest) {
 
 					manifest.add(
 						{
-							subjectRefId: 'lif@1.0',
+							subjectRefId: 'lif@1.0_base',
 							kind: 'standardBase',
 							description: '   ',
 							schemaBlock: LIF_BLOCK,
@@ -256,7 +256,7 @@ function addRefusalGates(standardsDatabase, manifest) {
 
 							manifest.add(
 								{
-									subjectRefId: 'lif@1.0',
+									subjectRefId: 'lif@1.0_base',
 									kind: 'standardBase',
 									description: 'd',
 									schemaBlock: { blockId: 'whatever', blockText: '' },
@@ -271,7 +271,7 @@ function addRefusalGates(standardsDatabase, manifest) {
 
 									manifest.add(
 										{
-											subjectRefId: 'lif@1.0',
+											subjectRefId: 'lif@1.0_base',
 											kind: 'standardBase',
 											description: 'd',
 											schemaBlock: {
@@ -320,7 +320,7 @@ function writeThroughGates(standardsDatabase, manifest) {
 
 	manifest.add(
 		{
-			subjectRefId: 'lif@1.0',
+			subjectRefId: 'lif@1.0_base',
 			kind: 'standardBase',
 			description: 'LIF 1.0 — the standard\'s own nodes and internal edges',
 			schemaBlock: LIF_BLOCK,
@@ -349,11 +349,11 @@ function writeThroughGates(standardsDatabase, manifest) {
 				);
 				harness.equal('  with its text intact, apostrophe and all', row.text, LIF_BLOCK.blockText);
 				harness.equal('  under the LOCKED taxonomy kind it was added as', row.kind, 'standardBase');
-				harness.equal('  carrying its subject', row.subjectRefId, 'lif@1.0');
+				harness.equal('  carrying its subject', row.subjectRefId, 'lif@1.0_base');
 
 				manifest.add(
 					{
-						subjectRefId: 'lif@1.0',
+						subjectRefId: 'lif@1.0_base',
 						kind: 'standardBase',
 						description: 'a second try at the same subject',
 						schemaBlock: LIF_BLOCK,
@@ -373,7 +373,7 @@ function writeThroughGates(standardsDatabase, manifest) {
 
 						manifest.add(
 							{
-								subjectRefId: 'ceds@11',
+								subjectRefId: 'ceds@11_base',
 								kind: 'standardBase',
 								description: 'CEDS 11 — the standard base',
 								schemaBlock: CEDS_BLOCK,
@@ -386,7 +386,7 @@ function writeThroughGates(standardsDatabase, manifest) {
 								}
 								manifest.add(
 									{
-										subjectRefId: 'ceds@11:hub',
+										subjectRefId: 'ceds@11_hub',
 										kind: 'hub',
 										description: 'CEDS 11 — the hub reference subgraph',
 										schemaBlock: HUB_BLOCK,
@@ -427,7 +427,7 @@ function membershipGates(standardsDatabase, manifest) {
 	harness.equal(
 		'subjects are in insertion order',
 		members.map((one) => one.subjectRefId).join(','),
-		'lif@1.0,ceds@11,ceds@11:hub',
+		'lif@1.0_base,ceds@11_base,ceds@11_hub',
 	);
 
 	// A caller that can mutate membership can change the manifest's identity without anyone
@@ -541,7 +541,7 @@ function descriptionGates(standardsDatabase, composedAddress) {
 
 	twin.add(
 		{
-			subjectRefId: 'lif@1.0',
+			subjectRefId: 'lif@1.0_base',
 			kind: 'standardBase',
 			description: 'described in wholly different words',
 			schemaBlock: LIF_BLOCK,
@@ -554,7 +554,7 @@ function descriptionGates(standardsDatabase, composedAddress) {
 			}
 			twin.add(
 				{
-					subjectRefId: 'ceds@11',
+					subjectRefId: 'ceds@11_base',
 					kind: 'standardBase',
 					description: 'and so is this one',
 					schemaBlock: CEDS_BLOCK,
@@ -567,7 +567,7 @@ function descriptionGates(standardsDatabase, composedAddress) {
 					}
 					twin.add(
 						{
-							subjectRefId: 'ceds@11:hub',
+							subjectRefId: 'ceds@11_hub',
 							kind: 'hub',
 							description: 'and this one too',
 							schemaBlock: HUB_BLOCK,
@@ -637,7 +637,7 @@ function openGates(standardsDatabase, composedAddress) {
 					harness.equal(
 						'  in the order it was composed',
 						reopened.members().map((one) => one.subjectRefId).join(','),
-						'lif@1.0,ceds@11,ceds@11:hub',
+						'lif@1.0_base,ceds@11_base,ceds@11_hub',
 					);
 					harness.equal(
 						'  and it re-addresses to exactly what it was stored under',

@@ -43,6 +43,11 @@ const path = require('path');
 const { pipeRunner, taskListPlus } = new require('qtools-asynchronous-pipe-plus')();
 const { readOptionalBooleanValue } = require('./optional-boolean-value');
 
+// the VOCABULARY REGISTRY — read here for the subjectRefId role marker (§1 of the hub-port plan).
+// The base block's subjectRefId is <standard>@<version> plus the marker its KIND requires; the
+// marker comes from ONE table (SCHEMA_BLOCK_KIND_SUFFIX), never a literal composed here.
+const vocabulary = require(path.join(__dirname, '..', '..', '..', 'lib', 'vocabulary', 'vocabulary'));
+
 // The four component modules. bridgeMaker is REAL-required but STUB-BODIED by design as of
 // 2026-07-22 (its body lands with Phase C bridging); the other three have real bodies. There is no
 // stub-components.js any more — a second set of implementations is a second contract, and the
@@ -191,6 +196,14 @@ const build = (recipe, deps, callback) => {
 	// docker command is attempted.
 	const forgeOneStandard = (std, done) => {
 		const subjectRefId = standardKey(std);
+		// The BASE block's subject is <standard>@<version>_base (§1). The prefix is the recipe's
+		// standard-version, unchanged; the '_base' marker is DERIVED from the block's kind so the name
+		// and the kind cannot drift (the store's suffix↔kind gate refuses them if they do). The hub
+		// block keeps the bare subjectRefId here — its '_hub' marker lands in Phase 3, with the
+		// derivation that makes a hub block exist at all.
+		const baseSubjectRefId = `${subjectRefId}${vocabulary.suffixMarkerForKind(
+			vocabulary.SCHEMA_BLOCK_KIND.STANDARD_BASE,
+		)}`;
 		const taskList = new taskListPlus();
 
 		// DISPOSE-ON-FAILURE (Item 4). The scratch graph is created mid-pipeline; every step after it
@@ -264,18 +277,18 @@ const build = (recipe, deps, callback) => {
 		taskList.push((args, next) => {
 			manifest.add(
 				{
-					subjectRefId,
+					subjectRefId: baseSubjectRefId,
 					kind: 'standardBase',
-					description: `standardBase schema block for ${subjectRefId}, forged by recipe '${recipe.recipeName}'`,
+					description: `standardBase schema block for ${baseSubjectRefId}, forged by recipe '${recipe.recipeName}'`,
 					schemaBlock: args.schemaBlock,
 				},
 				(err, addReport) => {
 					if (err) {
-						next(`add standardBase ${subjectRefId}: ${err}`);
+						next(`add standardBase ${baseSubjectRefId}: ${err}`);
 						return;
 					}
 					xLog.status(
-						`  [A] forge ${subjectRefId} -> standardBase ${addReport.schemaBlockRefId}`,
+						`  [A] forge ${baseSubjectRefId} -> standardBase ${addReport.schemaBlockRefId}`,
 					);
 					next('', args);
 				},

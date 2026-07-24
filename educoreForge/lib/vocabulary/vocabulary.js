@@ -114,6 +114,64 @@ const SCHEMA_BLOCK_KINDS = [
 const isSchemaBlockKind = (oneKind) => SCHEMA_BLOCK_KINDS.indexOf(oneKind) !== -1;
 
 // =====================================================================
+// SUBJECT-REF-ID ROLE MARKER ↔ KIND (implementationPlan_hubPort_072326 §1, TQ 2026-07-23).
+// =====================================================================
+// A schema block's subjectRefId carries a role/pair marker so every block is globally unique by its
+// name alone and legible at a glance: <standard>@<version>_base | _hub | _rel_<source>@<version>.
+// The <standard>@<version> PREFIX is untouched (whatever version token the recipe supplies); the
+// marker is ADDED. The marker is human sugar; the `kind` column stays the machine authority; a gate
+// (standardsDatabase.saveBlock) requires the two AGREE — one more place a block cannot misdescribe
+// itself, extending the header/blockType↔kind gate.
+//
+// Declared as DATA keyed by kind — one entry per kind, DERIVED from SCHEMA_BLOCK_KIND — so a producer
+// composing a name and the gate validating it read ONE table, never a per-kind conditional. `_base`
+// and `_hub` are TRAILING markers (the whole role suffix); `_rel_` is an INFIX marker (the
+// relationship name continues past it with the source pair, <hub>@<ver>_rel_<source>@<ver>), so its
+// agreement test is CONTAINMENT, not endsWith. The match MODE is itself data, resolved through the
+// SUFFIX_MATCHERS registry, so the gate stays a table lookup rather than a switch on kind.
+const SCHEMA_BLOCK_KIND_SUFFIX = {
+	[SCHEMA_BLOCK_KIND.STANDARD_BASE]: { marker: '_base', match: 'trailing' },
+	[SCHEMA_BLOCK_KIND.HUB]: { marker: '_hub', match: 'trailing' },
+	[SCHEMA_BLOCK_KIND.RELATIONSHIP]: { marker: '_rel_', match: 'infix' },
+};
+
+// match-mode registry: mode name -> (subjectRefId, marker) predicate. A new match mode is one entry
+// here and one `match:` value above — no branch to edit (polyArch2 §7, the Registry Pattern).
+const SUFFIX_MATCHERS = {
+	trailing: (subjectRefId, marker) => subjectRefId.endsWith(marker),
+	infix: (subjectRefId, marker) => subjectRefId.indexOf(marker) !== -1,
+};
+
+// suffixMarkerForKind — DERIVE the role marker a kind's subjectRefId must carry (the "expected suffix
+// from a kind" helper, §1). Returns undefined for an unknown kind; a caller that REQUIRES a marker
+// (the saveBlock gate) treats undefined as a refusal, naming the kind — never a silent default.
+const suffixMarkerForKind = (oneKind) => {
+	const entry = SCHEMA_BLOCK_KIND_SUFFIX[oneKind];
+	return entry ? entry.marker : undefined;
+};
+
+// subjectRefIdAgreesWithKind — VALIDATE a subjectRefId against a kind: does it carry the role marker
+// that kind requires? DATA-driven — looks the kind up in SCHEMA_BLOCK_KIND_SUFFIX and applies that
+// kind's declared match mode via SUFFIX_MATCHERS. Returns false for an unknown kind or a non-string
+// subjectRefId (the gate turns a false into a named refusal); it does not substitute or normalize.
+const subjectRefIdAgreesWithKind = (subjectRefId, oneKind) => {
+	const entry = SCHEMA_BLOCK_KIND_SUFFIX[oneKind];
+	if (!entry || typeof subjectRefId !== 'string') {
+		return false;
+	}
+	return SUFFIX_MATCHERS[entry.match](subjectRefId, entry.marker);
+};
+
+// kindImpliedBySubjectRefId — which kind's role marker (if any) a subjectRefId actually carries. Used
+// ONLY to make a refusal specific ("it carries _hub but is stored under standardBase"), never to
+// DECIDE a block's kind (the kind column is the authority, §1). Returns undefined when no declared
+// marker matches.
+const kindImpliedBySubjectRefId = (subjectRefId) =>
+	typeof subjectRefId !== 'string'
+		? undefined
+		: SCHEMA_BLOCK_KINDS.filter((oneKind) => subjectRefIdAgreesWithKind(subjectRefId, oneKind))[0];
+
+// =====================================================================
 // PAIR / VERSION-KEY VOCABULARY (Phase C, spec §4/§5). MAPPING_BLOCK_TYPES is THE one
 // authoritative list of block TYPES that carry per-pair mapping content and therefore
 // MUST enter the store with a complete version key (spec §4.2/§4.4, invariant 11.8).
@@ -582,6 +640,11 @@ const vocabulary = {
 	SCHEMA_BLOCK_KIND,
 	SCHEMA_BLOCK_KINDS,
 	isSchemaBlockKind,
+	// subjectRefId role marker ↔ kind (implementationPlan_hubPort_072326 §1)
+	SCHEMA_BLOCK_KIND_SUFFIX,
+	suffixMarkerForKind,
+	subjectRefIdAgreesWithKind,
+	kindImpliedBySubjectRefId,
 	// pair / version-key vocabulary (Phase C)
 	MAPPING_BLOCK_TYPES,
 	isMappingBlockType,

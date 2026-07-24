@@ -303,6 +303,31 @@ const makeApi = ({ esc, escJson, runSql, getRows, databaseFilePath }) => {
 			return;
 		}
 
+		// SUFFIX vs KIND (implementationPlan_hubPort_072326 §1). The subjectRefId carries a role
+		// marker (_base / _hub / _rel_) so a block is self-describing by NAME; the kind column is the
+		// authority and the two MUST agree. This EXTENDS the header/kind gate above — one more place a
+		// block cannot misdescribe itself. A _hub-marked name stored under kind 'standardBase' has an
+		// AGREEING header (both standardBase), so only THIS gate can catch it; it was admitted until
+		// now (proven — the suffix-gate RED PROOF). Both the marker the NAME carries and the kind it is
+		// stored under are named, because either could be the mistake. The suffix↔kind mapping is DATA
+		// in lib/vocabulary (SCHEMA_BLOCK_KIND_SUFFIX), consulted here, never a conditional.
+		if (!vocabulary.subjectRefIdAgreesWithKind(subjectRefId, kind)) {
+			const requiredMarker = vocabulary.suffixMarkerForKind(kind);
+			const carriedKind = vocabulary.kindImpliedBySubjectRefId(subjectRefId);
+			const carriedNote = carriedKind
+				? `It carries the '${vocabulary.suffixMarkerForKind(carriedKind)}' role marker of kind ` +
+					`'${carriedKind}' instead.`
+				: `It carries no recognized role marker.`;
+			callback(
+				`standardsDatabase.saveBlock: the schema block's subjectRefId ` +
+					`'${subjectRefId}' does not carry the '${requiredMarker}' role marker that kind ` +
+					`'${kind}' requires. ${carriedNote} A block's NAME must describe its kind ` +
+					`(implementationPlan_hubPort_072326 §1): _base->standardBase, _hub->hub, ` +
+					`_rel_->relationship.`,
+			);
+			return;
+		}
+
 		const refId = contentAddress.blockIdForText(text);
 
 		getRows(`SELECT refId FROM blocks WHERE refId=${esc(refId)};`, (err, rows) => {
