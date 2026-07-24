@@ -686,6 +686,10 @@ const stageRebridgeWiring = () => {
 	const capturedSpecs = [];
 	const captureBridgeMaker = () => ({ run: (spec, cb) => { capturedSpecs.push(spec); cb('', { ...spec, edgesWritten: 0, decisionBlock: null, counts: {} }); } });
 	const fakeDecisionStore = { getDecisionBlock: (a, cb) => cb('', { frozenText: null }), saveDecisionBlock: (a, cb) => cb('') };
+	// a deterministic STUB reranker — the hermetic suite's llmClient. Injected on inferenceConfig, it is the
+	// real-vs-stub seam's STUB arm: with it present, resolveInferenceConfig NEVER mints the real Anthropic
+	// client, so a --rebridge-scoped build stays hermetic (no key needed, no network — §3 hard line 2).
+	const stubReranker = { model: 'stub-reranker', rerank: (a, cb) => cb('', { choice: 'NONE' }) };
 	const runRebridge = (extraDeps, cb) => {
 		const xLog = capturingXLog();
 		const standardsDatabase = standardsDatabaseDouble();
@@ -693,26 +697,78 @@ const stageRebridgeWiring = () => {
 		buildLib.build(cedsCtdlRecipe, { xLog, standardsDatabase, components, ...extraDeps }, (err, result) => cb({ err, result }));
 	};
 
-	runRebridge({ rebridge: ['ctdl'], decisionStore: fakeDecisionStore }, ({ err }) => {
+	// scoped --rebridge WITH a stub llmClient injected: the build runs the (doubled) pre-pass path hermetically.
+	runRebridge({ rebridge: ['ctdl'], decisionStore: fakeDecisionStore, inferenceConfig: { llmClient: stubReranker } }, ({ err }) => {
 		harness.equal('scoped --rebridge=ctdl build succeeds', err, '');
 		const spec = capturedSpecs[capturedSpecs.length - 1];
 		harness.ok('  build.js passed rebridge=TRUE for the scoped ctdl pair', spec && spec.rebridge === true);
 		harness.equal('  and threaded config.sourceStandard=ctdl (the a4a0da2 real versions)', spec && spec.config && spec.config.sourceStandard, 'ctdl');
 		harness.equal('  and config.hubVersion=current (resolved, not the recipe token)', spec && spec.config && spec.config.hubVersion, 'current');
 		harness.ok('  and threaded the injected decisionStore through', spec && spec.decisionStore === fakeDecisionStore);
+		// FACTORY SELECTION — STUB arm: the injected stub is what reaches bridgeMaker.run, never the real client.
+		harness.ok('  the INJECTED STUB llmClient is threaded to bridgeMaker.run (never the real client under test)', spec && spec.inferenceConfig && spec.inferenceConfig.llmClient === stubReranker);
 
 		runRebridge({ decisionStore: fakeDecisionStore }, ({ err: plainErr }) => {
 			harness.equal('a plain build (no --rebridge) succeeds', plainErr, '');
 			const plainSpec = capturedSpecs[capturedSpecs.length - 1];
 			harness.ok('  build.js passed rebridge=FALSE (plain build MATERIALIZES, never a silent spend)', plainSpec && plainSpec.rebridge === false);
+			// FACTORY SELECTION — a plain build's INACTIVE scope mints NO client (no key touched, no construction).
+			harness.ok('  a plain build carries NO llmClient (nothing minted when not rebridging)', plainSpec && plainSpec.inferenceConfig && plainSpec.inferenceConfig.llmClient === undefined);
 
 			runRebridge({ rebridge: 7 }, ({ err: badErr }) => {
 				harness.match('a WRONG-typed deps.rebridge refuses the whole build by name', badErr, /deps\.rebridge must be an array of source tokens or the string 'all'/);
-				stageEdgeCases();
+				stageFactorySelection();
 			});
 		});
 	});
-};
+	};
+
+	// =====================================================================
+	// FACTORY SELECTION (P3b) — resolveInferenceConfig picks the real vs stub reranker with §6 discipline. The
+	// core P3b-wire proof: a real --rebridge run mints the REAL client via the (injected/default) factory; the
+	// suite's injected STUB is used as-is and the real factory is never consulted; a keyless mint is REFUSED by
+	// name; a plain build mints nothing. All hermetic — a FAKE factory stands in for the real one, so no key
+	// and no network are ever touched here.
+	// =====================================================================
+	const stageFactorySelection = () => {
+		harness.section('FACTORY SELECTION — resolveInferenceConfig real-vs-stub reranker (§6 no-silent-default)');
+		const sentinelClient = { model: 'sentinel', rerank: () => {} };
+		let factoryCalls = 0;
+		let lastFactoryArg = null;
+		const fakeFactory = (opts) => { factoryCalls++; lastFactoryArg = opts; return sentinelClient; };
+		const injectedStub = { model: 'injected-stub', rerank: () => {} };
+
+		// 1. STUB injected -> used AS-IS; the factory is NOT consulted (the suite path).
+		const stubRes = buildStatics.resolveInferenceConfig({ inferenceConfig: { llmClient: injectedStub }, llmClientFactory: fakeFactory }, ['ctdl']);
+		harness.ok('an INJECTED llmClient is used as-is (the stub arm)', stubRes.value && stubRes.value.llmClient === injectedStub);
+		harness.equal('  and the factory is NEVER called when a client is injected (suite never mints the real one)', factoryCalls, 0);
+
+		// 2. active scope, NO injected client -> the REAL run mints via the factory (the real arm).
+		const realRes = buildStatics.resolveInferenceConfig({ inferenceConfig: { topK: 15 }, llmClientFactory: fakeFactory }, 'all');
+		harness.ok('an active --rebridge with no injected client MINTS via the factory (the real arm)', realRes.value && realRes.value.llmClient === sentinelClient);
+		harness.equal('  the factory was called exactly once', factoryCalls, 1);
+		harness.equal('  and pointed at the canonical [anthropicAi] config path', lastFactoryArg && /anthropicAi\.ini$/.test(lastFactoryArg.configFilePath), true);
+		harness.equal('  operator inferenceConfig fields (topK) survive alongside the minted client', realRes.value && realRes.value.topK, 15);
+
+		// 3. INACTIVE scope (plain build) -> mints nothing; no factory call.
+		const plainRes = buildStatics.resolveInferenceConfig({ llmClientFactory: fakeFactory }, []);
+		harness.ok('an inactive scope mints NO client (plain build materializes)', plainRes.value && plainRes.value.llmClient === undefined);
+		harness.equal('  and does NOT call the factory', factoryCalls, 1);
+
+		// 4. a factory that THROWS (a keyless real client refusing at construction) -> refused BY NAME, as an
+		//    error-object routed through the build callback, never a throw past it or a silent no-op.
+		const throwingFactory = () => { throw new Error('llmClient: no Anthropic API key resolved'); };
+		const refusedRes = buildStatics.resolveInferenceConfig({ llmClientFactory: throwingFactory }, ['ctdl']);
+		harness.match('a keyless mint on an active --rebridge is REFUSED by name (no silent no-op)', refusedRes.error, /Anthropic reranker could not be constructed[\s\S]*no Anthropic API key/);
+		harness.ok('  and yields no value (the build is refused, not run with a broken client)', refusedRes.value === undefined);
+
+		// rebridgeScopeIsActive — the active/inactive predicate, gated directly.
+		harness.ok("rebridgeScopeIsActive: 'all' is active", buildStatics.rebridgeScopeIsActive('all') === true);
+		harness.ok("rebridgeScopeIsActive: ['ctdl'] is active", buildStatics.rebridgeScopeIsActive(['ctdl']) === true);
+		harness.ok('rebridgeScopeIsActive: [] (default) is NOT active', buildStatics.rebridgeScopeIsActive([]) === false);
+
+		stageEdgeCases();
+	};
 
 const stageEdgeCases = () => {
 	harness.section('EDGE CASES — degenerate and hostile recipe shapes');

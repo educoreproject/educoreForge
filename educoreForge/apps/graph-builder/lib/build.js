@@ -71,6 +71,20 @@ const defaultComponents = {
 	manifestEditor: require(path.join(__dirname, '..', 'apps', 'manifest-editor')),
 };
 
+// The REAL Anthropic reranker llmClient factory (P3b) — the DEFAULT the inference pre-pass constructs when a
+// real --rebridge runs. It is a factory (curried moduleFunction) build.js calls to MINT a client; a test
+// injects its own via deps.llmClientFactory, and the hermetic suite bypasses it entirely by injecting a
+// ready STUB on deps.inferenceConfig.llmClient (so this real factory is NEVER called under runAllTests —
+// §3 hard line 2). It is required at module top like every other component; it is only CALLED for a real
+// --rebridge (resolveInferenceConfig's eager gate below).
+const realLlmClientFactory = require(path.join(__dirname, '..', 'apps', 'bridge-maker', 'lib', 'llmClient'));
+
+// canonical [anthropicAi] config home (the twin of embedding-client's [voyageEmbedding] path). The real
+// llmClient reads the key from here OR from ANTHROPIC_API_KEY, and THROWS BY NAME at construction if neither
+// resolves (§6 no-silent-default). Absolute, so both trees name the one file that holds the secret.
+const ANTHROPIC_CONFIG_FILE_PATH =
+	'/Users/tqwhite/Documents/webdev/educoreForge/system/configs/instanceSpecific/qbook/anthropicAi.ini';
+
 // Label vocabulary — BARE NAMES. The colons in ':BridgedRelation:' are Cypher notation, not part
 // of the name; a constant carrying them would create a label literally called ':BridgedRelation:'.
 // These are handed DOWN: init stamps them, harvest selects on them, so the producing side and the
@@ -178,6 +192,47 @@ const pairInRebridgeScope = (rebridgeScope, bridge) => {
 	return rebridgeScope.some((oneToken) => `${oneToken}`.toLowerCase() === source);
 };
 
+// rebridgeScopeIsActive — does the resolved scope mean a real --rebridge is happening this run (as opposed
+// to a plain build that only MATERIALIZES frozen blocks)? 'all' or a non-empty token array is active; an
+// empty array (the documented default, §5.5) is not.
+const rebridgeScopeIsActive = (rebridgeScope) =>
+	rebridgeScope === 'all' || (Array.isArray(rebridgeScope) && rebridgeScope.length > 0);
+
+// resolveInferenceConfig — assemble the inferred producer's run config, SELECTING the reranker llmClient with
+// the same §6 discipline as vectorize/rebridge. This is the real-vs-stub seam (the FACTORY):
+//   1. deps.inferenceConfig.llmClient present -> used AS-IS. The hermetic suite injects a deterministic STUB
+//      this way, so the real factory is NEVER consulted under runAllTests (§3 hard line 2). An orchestrator
+//      may likewise inject its own client.
+//   2. else, when the --rebridge scope is ACTIVE (a real reforge WILL run the pre-pass), MINT a real llmClient
+//      from the injected/default factory. Constructed ONLY when actually rebridging — a plain build (empty
+//      scope) mints nothing, and neither does a build that only materializes. Construction THROWS BY NAME when
+//      no key resolves (llmClient's own §6 refusal), surfaced here through the build's callback so a keyless
+//      --rebridge fails LOUDLY before any Voyage/Opus credit is spent, never a silent no-op.
+//   3. else (plain build, inactive scope) -> the config as given; the materialize path needs no llmClient.
+// Answers { value } or { error } — the error-object idiom, so build() routes a refusal through its callback
+// rather than throwing past it.
+const resolveInferenceConfig = (deps, rebridgeScope) => {
+	const base = deps.inferenceConfig || {};
+	if (base.llmClient || !rebridgeScopeIsActive(rebridgeScope)) {
+		return { value: base };
+	}
+	const llmClientFactory = deps.llmClientFactory || realLlmClientFactory;
+	let mintedClient;
+	// boundary translation of a CONSTRUCTION (configuration) fault into the orchestrator's callback channel —
+	// the same pattern bridgeMaker uses when composing a plugin throws. Not control flow: the throw IS the §6
+	// refusal, caught only to name it through build()'s callback.
+	try {
+		mintedClient = llmClientFactory({ configFilePath: ANTHROPIC_CONFIG_FILE_PATH });
+	} catch (constructError) {
+		return {
+			error:
+				`graphBuilder build: --rebridge is scoped active but the Anthropic reranker could not be ` +
+				`constructed: ${constructError.message}`,
+		};
+	}
+	return { value: { ...base, llmClient: mintedClient } };
+};
+
 const standardKey = (std) => `${std.token}@${std.version}`;
 const pairKey = (bridge) => `${bridge.source}::${bridge.hub || '(structural)'}`;
 
@@ -249,7 +304,15 @@ const build = (recipe, deps, callback) => {
 	// authored-only build (the authored producer ignores both). A semantic bridge run WITHOUT a decisionStore
 	// refuses BY NAME in the plugin — never a silent zero-edge success (§6).
 	const decisionStore = deps.decisionStore || null;
-	const inferenceConfig = deps.inferenceConfig || {};
+	// inferenceConfig carries the reranker llmClient for a real --rebridge. The real-vs-stub SELECTION lives in
+	// resolveInferenceConfig (the FACTORY seam): the suite injects a STUB via deps.inferenceConfig.llmClient; a
+	// real --rebridge with no injected client MINTS the real one, which throws BY NAME when no key resolves.
+	const inferenceConfigResolution = resolveInferenceConfig(deps, rebridgeScope);
+	if (inferenceConfigResolution.error) {
+		callback(inferenceConfigResolution.error);
+		return;
+	}
+	const inferenceConfig = inferenceConfigResolution.value;
 
 	const forger = components.forger();
 	const replay = components.replayManager();
@@ -709,3 +772,7 @@ module.exports = moduleFunction({ moduleName });
 // directly (§6 no-silent-default), without standing up the whole build pipeline.
 module.exports.resolveRebridge = resolveRebridge;
 module.exports.pairInRebridgeScope = pairInRebridgeScope;
+module.exports.rebridgeScopeIsActive = rebridgeScopeIsActive;
+// the real-vs-stub reranker SELECTION seam (P3b), exported so the factory choice is gated directly: a stub is
+// used when injected, a real client is minted (via the injected/default factory) for an active --rebridge.
+module.exports.resolveInferenceConfig = resolveInferenceConfig;
