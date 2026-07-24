@@ -310,10 +310,36 @@ harness.ok(
 	fs.existsSync(scratchStore),
 	`no database at ${scratchStore}`,
 );
+// P3b-store WIRING: actions.build() also opens a REAL decisionStore and threads it into the pipeline.
+// Its path DEFAULTS to a sibling of the standardsDatabase ('<name>.decisions<ext>'), so a completed
+// build's semanticBridge reads/writes frozen decision blocks from a real store from the CLI — no more
+// null-injection refusal. The derived db existing after the run is the proof the store was opened and
+// threaded, exactly as the scratchStore existence check proves it for the standardsDatabase.
+const derivedDecisionStore = path.join(scratchDir, `cliGate_${process.pid}.decisions.sqlite3`);
+harness.ok(
+	'  the DERIVED decision store was ALSO opened, so a real decisionStore reached the pipeline',
+	fs.existsSync(derivedDecisionStore),
+	`no decision store at ${derivedDecisionStore}`,
+);
 harness.ok(
 	'stdout carries no progress chatter (a pipeline could consume it)',
 	!/\[A\]|\[C\]|recipe understood/.test(buildUnforged.stdout),
 	buildUnforged.stdout,
+);
+
+// An explicit --decisionStoreFilePath OVERRIDE is honored (the operator names a canonical decisions db).
+const overrideDecisionStore = path.join(scratchDir, `cliOverride_${process.pid}.decisions.sqlite3`);
+const buildWithOverride = runCli([
+	'-build',
+	'--recipePath=' + fixture('bad-unforgedStandard'),
+	'--standardsDatabaseFilePath=' + scratchStore,
+	'--decisionStoreFilePath=' + overrideDecisionStore,
+]);
+harness.equal('a build with an explicit --decisionStoreFilePath still reaches the forge refusal', buildWithOverride.status, 1);
+harness.ok(
+	'  and the decision store was opened AT THE OVERRIDE PATH, not the derived sibling',
+	fs.existsSync(overrideDecisionStore),
+	`no decision store at the override path ${overrideDecisionStore}`,
 );
 
 harness.note(

@@ -65,6 +65,18 @@ OPTIONS
                            written. REQUIRED for -build; there is NO default, deliberately --
                            a build that does not say where it writes is one edit away from
                            writing the canonical store.
+     --decisionStoreFilePath=<path>
+                           Where FROZEN inferred-decision blocks are read (a plain build MATERIALIZES
+                           them) and written (--rebridge FREEZES a new one). OPTIONAL: it DEFAULTS to a
+                           sibling of --standardsDatabaseFilePath ('<name>.decisions<ext>' in the same
+                           directory). Pass it to point a build at a canonical decisions database.
+     --rebridge=all | --rebridge=<token>[,<token>...]
+                           SCOPE the semantic re-inference. OPTIONAL, DEFAULTS TO NONE: a plain build
+                           MATERIALIZES whatever frozen decision blocks already exist (zero LLM, zero
+                           Voyage). --rebridge RUNS the inference pre-pass for the named source tokens
+                           (or every pair with 'all'), FREEZES the result to the decision store, and
+                           materializes it. This is the only mode that spends reranker/embedding credit
+                           for inference.
      --vectorize=true|false
                            Whether -build spends real Voyage embedding credit. OPTIONAL, and it
                            DEFAULTS TO true -- the normal gold build vectorizes. Pass

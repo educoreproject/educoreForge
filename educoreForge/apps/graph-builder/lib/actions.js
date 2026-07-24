@@ -35,6 +35,44 @@ const moduleFunction =
 const requireStandardsDatabase = () =>
 	require(path.join(__dirname, '..', '..', '..', 'lib', 'standards-database', 'standards-database'));
 
+// decision-store is required LAZILY for the SAME reason standards-database is: it pulls in
+// sqlite-instance, which DESTRUCTURES process.global at REQUIRE time, and this module is required
+// before bootstrapGlobal() runs. A top-level require here would kill every action, -help included.
+const requireDecisionStore = () =>
+	require(path.join(__dirname, '..', '..', '..', 'lib', 'decision-store', 'decision-store'));
+
+// decisionStorePathFrom — where a build reads/writes FROZEN decision blocks. An explicit
+// --decisionStoreFilePath WINS (the operator names a canonical decisions db); absent, it is DERIVED
+// beside the standardsDatabase (`<name>.decisions<ext>` in the same directory). Deriving is not a
+// silent default: it is anchored to the standardsDatabaseFilePath the caller ALREADY had to name
+// (§6's real safety concern is a fall-through to "anywhere", and a path pinned to an explicit path is
+// nowhere near that). Returns { decisionStoreFilePath } or { error } — refused BY NAME if neither the
+// override nor the required standardsDatabaseFilePath resolves.
+const decisionStorePathFrom = (standardsDatabaseFilePath, explicitPath) => {
+	if (typeof explicitPath === 'string' && explicitPath.trim() !== '') {
+		return { decisionStoreFilePath: explicitPath };
+	}
+	if (typeof explicitPath === 'string') {
+		return {
+			error:
+				`graphBuilder -build: --decisionStoreFilePath was given but blank. It names where FROZEN ` +
+				`decision blocks are read (plain build) and written (--rebridge); a blank path is refused ` +
+				`rather than derived, so the operator's intent is never guessed at.`,
+		};
+	}
+	if (typeof standardsDatabaseFilePath !== 'string' || standardsDatabaseFilePath.trim() === '') {
+		return {
+			error:
+				`graphBuilder -build: the decision-store path is unresolvable — no --decisionStoreFilePath ` +
+				`override and no --standardsDatabaseFilePath to derive it from. There is no default.`,
+		};
+	}
+	const parsed = path.parse(standardsDatabaseFilePath);
+	return {
+		decisionStoreFilePath: path.join(parsed.dir, `${parsed.name}.decisions${parsed.ext || '.sqlite'}`),
+	};
+};
+
 // ---------------------------------------------------------------------
 // ENVIRONMENT DISCOVERY
 // ---------------------------------------------------------------------
@@ -248,17 +286,40 @@ const build = (callback) => {
 		return;
 	}
 
+	// THE DECISION STORE IS OPENED HERE ALONGSIDE THE STANDARDS DATABASE, and for the same reason: it
+	// is a stateful shared resource, so the orchestrator owns it (polyArch2 §2) and the pipeline
+	// receives it. A semantic bridge READS a pair's frozen decision block from it on a plain build and
+	// WRITES one on --rebridge; without it semanticBridge refuses BY NAME (never a silent zero-edge
+	// success). An authored-only build opens it and never touches it — harmless. Its path is the
+	// standardsDatabase's sibling unless --decisionStoreFilePath overrides it (decisionStorePathFrom).
+	const decisionStorePathResolution = decisionStorePathFrom(
+		standardsDatabaseFilePath,
+		firstValue(process.global.commandLineParameters, 'decisionStoreFilePath'),
+	);
+	if (decisionStorePathResolution.error) {
+		callback(decisionStorePathResolution.error);
+		return;
+	}
+	const decisionStoreFilePath = decisionStorePathResolution.decisionStoreFilePath;
+
 	requireStandardsDatabase()().open({ databaseFilePath: standardsDatabaseFilePath }, (openError, standardsDatabase) => {
 		if (openError) {
 			callback(`graphBuilder -build: ${openError}`);
 			return;
 		}
-		buildLib.build(recipe, { xLog, standardsDatabase }, (buildError, result) => {
-			if (buildError) {
-				callback(`graphBuilder -build failed: ${buildError}`);
+		requireDecisionStore()().open({ databaseFilePath: decisionStoreFilePath }, (decisionOpenError, decisionStore) => {
+			if (decisionOpenError) {
+				callback(`graphBuilder -build: ${decisionOpenError}`);
 				return;
 			}
-			callback('', { exitCode: 0, resultText: JSON.stringify(result, null, 2) });
+			xLog.status(`graphBuilder: decision store at ${decisionStoreFilePath}`);
+			buildLib.build(recipe, { xLog, standardsDatabase, decisionStore }, (buildError, result) => {
+				if (buildError) {
+					callback(`graphBuilder -build failed: ${buildError}`);
+					return;
+				}
+				callback('', { exitCode: 0, resultText: JSON.stringify(result, null, 2) });
+			});
 		});
 	});
 };
