@@ -1,0 +1,23 @@
+{
+  // cedsCtdlAuthored — CEDS(base+hub) + CTDL + the authored CTDL->CEDS EXACT_MATCH bridge only.
+  // The P2 beachhead integration proof: deterministic authored bridge, NO inferred/semantic (that is P3),
+  // NO vectors. Should materialize the 26 CTDL->HubReference EXACT_MATCH edges to reconcile vs the golden.
+  "schemaVersion": "1.0.0",
+  "recipeName": "cedsCtdlAuthored",
+  "kind": "dev",
+  "description": "CEDS+hub + CTDL + authored CTDL->CEDS EXACT_MATCH bridge (no inferred, no vectors).",
+  "standards": [
+    { "token": "ceds", "version": "current" },
+    { "token": "ctdl", "version": "current" }
+  ],
+  "hubs": [
+    { "standard": "ceds", "candidateFinder": "semanticDefText", "params": { "topK": 15, "cosineFloor": 0 } }
+  ],
+  "bridges": [
+    {
+      "source": "ctdl", "hub": "ceds", "mapper": "ctdlIntoCedsAuthored",
+      "extractor": "defaultSearchObject",
+      "dependencies": ["ctdl", "ceds"], "cacheMode": "reuse"
+    }
+  ]
+}
