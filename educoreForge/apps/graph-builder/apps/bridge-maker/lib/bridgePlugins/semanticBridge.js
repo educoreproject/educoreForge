@@ -1,6 +1,6 @@
 'use strict';
 
-// semanticBridge — the INFERRED `CLOSE_MATCH` producer (P3a; design §1 "a default generic plugin", §2 the
+// semanticBridge — the INFERRED `CLOSE_MATCH` producer (P3a/P3c; design §1 "a default generic plugin", §2 the
 // five-move loop with ONE freeze, §5.5 the --rebridge/freeze model). A bridge.js plugin registered in
 // bridgeMaker's BRIDGE_PLUGIN_BY_MAPPER. It composes the ported inference machinery into the semantic half
 // of the bridge, and it PRODUCES a decisionBlock (so build.js's suffix logic yields `_close`).
@@ -19,15 +19,26 @@
 //     injected llmClient) -> decisionFreezer FREEZE (content-addressed) -> SAVE to the decisionStore ->
 //     MATERIALIZE the frozen picks -> WRITE. Returns the frozen block's hash as decisionBlock.
 //
+// TWO TIERS (the recreation covers the SAME source basis the golden's inferred track does — 113 DmeProperty
+// + 33 DmeOptionValue sources yield the 146 CTDL->CEDS CLOSE_MATCH edges):
+//   PROPERTY tier — DmeProperty sources retrieved/reranked against CEDS DmeProperty candidates (the P3a spine).
+//   VALUE tier    — DmeOptionValue sources SCOPED (via valueScope, ported from edf-inferred/lib/value-scope)
+//     to the option set of their OWN parent property's ALREADY-MATCHED CEDS target, then exact-shortcut or
+//     scoped-rerank picked. A value's target is the COMPOSITE '${matchedPropertyKey}|${valueOVtoken}' that
+//     inferredIndex resolves through baseValueRef. A source whose parent property did not match, or whose
+//     matched CEDS property has no option set, ABSTAINS (never a global retrieve — value-scope's gate).
+//
+// THE CASE RULE: the recipe names a source token LOWERCASE ('ctdl'); the forge stamps `_source` UPPERCASE
+// ('CTDL'). Every graph read and every stamp here uses the UPPERCASE key (sourceStandardKey), exactly as the
+// authored producer (ctdlAuthoredBridge) uses its uppercase 'CTDL' literal — so both producers resolve the
+// same nodes. Reading `_source` by the raw lowercase token was the "0 sources extracted" bug.
+//
 // THE FREEZE SEAM (design §2): the select step does NOT write to the graph. rebridge freezes the pipeline's
 // decisions into a content-addressed block first; the SAME pure inferredIndex then writes edges from the
 // frozen decisions in BOTH modes — so a replay (plain -build) is byte-identical to the rebridge that made it
-// and never re-runs the LLM (G2).
-//
-// It reads inGraph, hub and applyLabel off its ONE named-argument object (the shape gate). `hub` names the
-// CEDS hub this bridge targets — read here so the producer refuses a graph whose hub is not the one it bridges
-// toward. The injected `rebridge` boolean is ALREADY pair-scoped by build.js (§6 no-silent-default: the scope
-// match happens where the recipe pair is known, not guessed here).
+// and never re-runs the LLM (G2). (The composite value targetKey survives the freeze; the scopeParent* stamps
+// do not yet — see decisionFreezer — so a value edge's identity replays exactly, its parent-evidence stamps
+// are a follow-on fidelity item.)
 //
 // House style: qtools curried moduleFunction; callback(errString, result) with '' on success; no async/await
 // or try/catch for control flow; registry-over-switch; compound names.
@@ -36,20 +47,31 @@ const path = require('path');
 
 const { pipeRunner, taskListPlus } = new require('qtools-asynchronous-pipe-plus')();
 
+const valueScope = require(path.join(__dirname, '..', 'valueScope'));
+
 // This bridge authors the <source> -> CEDS hub SEMANTIC crosswalk. The source standard is read from the
 // injected config (a generic plugin serves every semantic pair); the hub is CEDS. These constants have
 // nothing to shadow — the plugin IS the semantic producer (polyArch2 §6).
 const HUB_STANDARD = 'CEDS';
 const HUB_REFERENCE_LABEL = 'HubReference';
-const SOURCE_ROLE = 'DmeProperty';
+const PROPERTY_ROLE = 'DmeProperty';
+const VALUE_ROLE = 'DmeOptionValue';
+const OPTION_SET_ROLE = 'DmeOptionSet';
 const MAPPING_TOOL = 'semanticBridge';
+
+// value-tier floors ported from edf-inferred -emit --tier=value (golden 260718):
+//   VALUE_SCOPE_PARENT_FLOOR — a CLOSE_MATCH parent property match must clear this before it may scope child
+//     values (EXACT parents always pass); == APPENDIX_A.rerankerFloor in the incumbent.
+//   VALUE_ABSTAIN_FLOOR — a value-tier pick whose retrieval cosine is below this abstains (Phase-B derived).
+const VALUE_SCOPE_PARENT_FLOOR = 0.78;
+const VALUE_ABSTAIN_FLOOR = 0.3924;
 
 const v1 = (arrayOrScalar) => (Array.isArray(arrayOrScalar) ? arrayOrScalar[0] : arrayOrScalar);
 
-// flattenSourceRecord / flattenCandidateRecord — a graphReader node ({ stableId, properties }, SCALAR props)
-// -> the flat record shape the inferencePipeline + inferredIndex work in (the incumbent's collapseNodes
-// output). defText is the definition the retrieval embeds; a candidate's cedsId is the CEDS Global ID token
-// the pipeline picks and inferredIndex resolves to a HubReference by canonicalKey.
+// flattenNodeRecord — a graphReader node ({ stableId, properties }, SCALAR props) -> the flat record shape the
+// inferencePipeline + inferredIndex + valueScope work in (the incumbent's collapseNodes output). defText is
+// the definition the retrieval embeds. parentId/notation/canonicalKey/rangeOptionSetId are the value-tier
+// scoping fields (the 2-hop parentId chain, the exact-shortcut text, the composite key parts).
 const flattenNodeRecord = (oneNode) => {
 	const props = oneNode.properties || {};
 	return {
@@ -59,6 +81,10 @@ const flattenNodeRecord = (oneNode) => {
 		defText: v1(props.defText) || v1(props.description) || v1(props.searchText) || v1(props.name),
 		domainId: v1(props.domainId) || null,
 		rangeDatatype: v1(props.rangeDatatype) || null,
+		parentId: v1(props.parentId) || null,
+		notation: v1(props.notation) || null,
+		canonicalKey: v1(props.canonicalKey) || null,
+		rangeOptionSetId: v1(props.rangeOptionSetId) || null,
 	};
 };
 
@@ -68,7 +94,7 @@ const flattenCandidateRecord = (oneNode) => {
 		...flattenNodeRecord(oneNode),
 		// the CEDS Global ID the pipeline emits as targetKey. In the golden the CEDS DmeProperty's cedsId
 		// equals the HubReference canonicalKey ('P######'); both keys are read here so the fixture and the
-		// real reforge resolve identically. (Real-reforge field confirmation is P3b's; the fixture pins it.)
+		// real reforge resolve identically. (A value candidate carries its OV canonicalKey too, read above.)
 		cedsId: v1(props.cedsId) || v1(props.canonicalKey) || v1(props.propertyKey),
 	};
 };
@@ -127,9 +153,12 @@ const moduleFunction =
 			callback(`${moduleName}: config.sourceStandard is not set — the semantic producer must be told which source standard it bridges (a generic plugin serves every pair); there is no default.`);
 			return;
 		}
+		// THE CASE RULE: the recipe token is lowercase ('ctdl'); forged `_source` is uppercase ('CTDL'). Read
+		// and stamp by the uppercase key, exactly as ctdlAuthoredBridge uses its uppercase 'CTDL' literal.
+		const sourceStandardKey = sourceStandard.toUpperCase();
 		const subjectVersion = (config && config.sourceVersion) || '';
 		const objectVersion = (config && config.hubVersion) || '';
-		const pairKey = `${HUB_STANDARD}::${sourceStandard}`;
+		const pairKey = `${HUB_STANDARD}::${sourceStandardKey}`;
 
 		const reader = graphReader({ inGraph });
 		const freezer = decisionFreezer();
@@ -141,7 +170,7 @@ const moduleFunction =
 			const builder = inferredIndex({
 				predicate: 'closeMatch',
 				mappingJustification: 'semapv:SemanticSimilarity',
-				subjectSource: sourceStandard,
+				subjectSource: sourceStandardKey,
 				subjectVersion,
 				objectSource: HUB_STANDARD,
 				objectVersion,
@@ -181,16 +210,28 @@ const moduleFunction =
 			});
 		};
 
-		// readReferenceNodes — the CEDS HubReference nodes (both modes need them to resolve targetKeys).
+		// readReferenceNodes — the CEDS HubReference nodes (RAW { stableId, properties }; both the value-scope
+		// property-range index and inferredIndex's buildReferenceIndex read the raw property shape).
 		const readReferenceNodes = (done) => {
 			reader.readNodes({ label: HUB_REFERENCE_LABEL, propertyEquals: {} }, (err, out) =>
 				done(err ? `${moduleName}: reading ${HUB_STANDARD} HubReference nodes: ${err}` : '', (out || {}).nodes || []),
 			);
 		};
-		// readSourceNodes — the source standard's bridgeable elements (DmeProperty tier).
+		// readForged — a role-scoped ForgedNode read for the given standard, flattened. reusable helper.
+		const readForged = ({ standardKey, role, flatten = flattenNodeRecord, describe }, done) => {
+			reader.readNodes({ label: 'ForgedNode', propertyEquals: { _source: standardKey, role } }, (err, out) =>
+				done(err ? `${moduleName}: reading ${describe}: ${err}` : '', ((out || {}).nodes || []).map(flatten)),
+			);
+		};
+
+		// readSourceNodes — the source standard's bridgeable elements: BOTH tiers (DmeProperty + DmeOptionValue).
+		// This is the deterministic SOURCE-EXTRACTION set the golden's 146 CLOSE_MATCH sources are drawn from.
 		const readSourceNodes = (done) => {
-			reader.readNodes({ label: 'ForgedNode', propertyEquals: { _source: sourceStandard, role: SOURCE_ROLE } }, (err, out) =>
-				done(err ? `${moduleName}: reading ${sourceStandard} source nodes: ${err}` : '', (out || {}).nodes || []),
+			const taskList = new taskListPlus();
+			taskList.push((args, next) => readForged({ standardKey: sourceStandardKey, role: PROPERTY_ROLE, describe: `${sourceStandardKey} ${PROPERTY_ROLE} source nodes` }, (err, nodes) => next(err, { ...args, propertyNodes: nodes })));
+			taskList.push((args, next) => readForged({ standardKey: sourceStandardKey, role: VALUE_ROLE, describe: `${sourceStandardKey} ${VALUE_ROLE} source nodes` }, (err, nodes) => next(err, { ...args, valueNodes: nodes })));
+			pipeRunner(taskList.getList(), {}, (err, args) =>
+				done(err || '', err ? [] : args.propertyNodes.concat(args.valueNodes)),
 			);
 		};
 
@@ -220,7 +261,8 @@ const moduleFunction =
 				}
 				const decisionBlockHash = contentAddress.blockIdForText(frozenText);
 				const taskList = new taskListPlus();
-				taskList.push((args, next) => readSourceNodes((err, nodes) => next(err, { ...args, sourceNodes: nodes.map(flattenNodeRecord) })));
+				// BOTH-tier source nodes so inferredIndex validates value fromStableIds (not just property).
+				taskList.push((args, next) => readSourceNodes((err, nodes) => next(err, { ...args, sourceNodes: nodes })));
 				taskList.push((args, next) => readReferenceNodes((err, nodes) => next(err, { ...args, referenceNodes: nodes })));
 				taskList.push((args, next) => {
 					buildAndWrite(
@@ -262,57 +304,221 @@ const moduleFunction =
 			const vectorize = vectorizer((config && config.vectorizerConfig) || {});
 			const taskList = new taskListPlus();
 
-			// WALK
-			taskList.push((args, next) => readSourceNodes((err, nodes) => next(err, { ...args, sourceRecords: nodes.map(flattenNodeRecord) })));
-			taskList.push((args, next) => {
-				reader.readNodes({ label: 'ForgedNode', propertyEquals: { _source: HUB_STANDARD, role: SOURCE_ROLE } }, (err, out) =>
-					next(err ? `${moduleName}: reading ${HUB_STANDARD} candidate nodes: ${err}` : '', { ...args, candidateRecords: ((out || {}).nodes || []).map(flattenCandidateRecord) }),
-				);
-			});
+			// WALK — read every node set both tiers need (deterministic; the case-correct uppercase key).
+			taskList.push((args, next) => readForged({ standardKey: sourceStandardKey, role: PROPERTY_ROLE, describe: `${sourceStandardKey} ${PROPERTY_ROLE} source nodes` }, (err, nodes) => next(err, { ...args, propertySources: nodes })));
+			taskList.push((args, next) => readForged({ standardKey: sourceStandardKey, role: VALUE_ROLE, describe: `${sourceStandardKey} ${VALUE_ROLE} source nodes` }, (err, nodes) => next(err, { ...args, valueSources: nodes })));
+			taskList.push((args, next) => readForged({ standardKey: sourceStandardKey, role: OPTION_SET_ROLE, describe: `${sourceStandardKey} ${OPTION_SET_ROLE} chain nodes` }, (err, nodes) => next(err, { ...args, optionSetNodes: nodes })));
+			taskList.push((args, next) => readForged({ standardKey: HUB_STANDARD, role: PROPERTY_ROLE, flatten: flattenCandidateRecord, describe: `${HUB_STANDARD} ${PROPERTY_ROLE} candidate nodes` }, (err, nodes) => next(err, { ...args, propertyCandidates: nodes })));
+			taskList.push((args, next) => readForged({ standardKey: HUB_STANDARD, role: VALUE_ROLE, flatten: flattenCandidateRecord, describe: `${HUB_STANDARD} ${VALUE_ROLE} candidate nodes` }, (err, nodes) => next(err, { ...args, valueCandidates: nodes })));
 			taskList.push((args, next) => readReferenceNodes((err, nodes) => next(err, { ...args, referenceNodes: nodes })));
 
-			// VECTORIZE (NET) — embed source + candidate defTexts, attach .vector in place.
+			// ---- PROPERTY TIER ---------------------------------------------------------------------------
+			// VECTORIZE (NET) — embed property source + property candidate defTexts, attach .vector in place.
 			taskList.push((args, next) => {
-				const allRecords = args.candidateRecords.concat(args.sourceRecords);
+				const allRecords = args.propertyCandidates.concat(args.propertySources);
 				vectorize.batchEmbed({ texts: allRecords.map((r) => r.defText) }, (err, result) => {
 					if (err) {
-						next(`${moduleName}: vectorizing defTexts: ${err}`);
+						next(`${moduleName}: vectorizing property defTexts: ${err}`);
 						return;
 					}
 					allRecords.forEach((r, i) => { r.vector = result.vectors[i]; });
 					next('', args);
 				});
 			});
-
 			// PIPELINE — retrieve -> cosineFloor -> rerank (the ONE non-deterministic step).
 			taskList.push((args, next) => {
 				pipeline.processSources(
 					{
-						sources: args.sourceRecords,
-						candidatePoolByRole: { [SOURCE_ROLE]: args.candidateRecords },
+						sources: args.propertySources,
+						candidatePoolByRole: { [PROPERTY_ROLE]: args.propertyCandidates },
 						sourceClassIndex: {},
 						candidateClassIndex: {},
 					},
-					(err, out) => next(err ? `${moduleName}: ${err}` : '', { ...args, decisions: (out || {}).decisions || [] }),
+					(err, out) => next(err ? `${moduleName}: property tier: ${err}` : '', { ...args, propertyDecisions: (out || {}).decisions || [] }),
 				);
 			});
 
-			// FREEZE -> content-addressed block, then SAVE to the decisionStore.
+			// ---- VALUE TIER (scoped; ported from edf-inferred -emit --tier=value) -------------------------
+			// SCOPE every value source to its parent property's ALREADY-MATCHED CEDS option set. The matched-
+			// target index is built DIRECTLY from this rebridge's non-abstain property picks (the recreation
+			// has the picks in hand — the incumbent read them back off a materialized mapping block; same set).
 			taskList.push((args, next) => {
+				const propertyRangeOptionSetIndex = valueScope.buildPropertyRangeOptionSetIndex(args.referenceNodes);
+				const optionSetCandidateIndex = valueScope.buildOptionSetCandidateIndex(args.valueCandidates);
+				const matchedTargetIndex = {};
+				args.propertyDecisions.forEach((oneDecision) => {
+					if (oneDecision.abstain || !oneDecision.targetKey) {
+						return;
+					}
+					// one property pick per source (the reranker chooses one) -> no L5 ambiguity here.
+					matchedTargetIndex[oneDecision.source.stableId] = {
+						targetPropertyKey: oneDecision.targetKey,
+						predicate: 'CLOSE_MATCH',
+						confidence: typeof oneDecision.cosineScore === 'number' ? oneDecision.cosineScore : null,
+						ambiguousTargets: null,
+					};
+				});
+				// sourceRecordsById MUST include the DmeOptionSet intermediates (the 2-hop chain scaffolding)
+				// and the DmeProperty parents, not only the value sources being scoped.
+				const sourceRecordsById = {};
+				args.propertySources.concat(args.valueSources).concat(args.optionSetNodes).forEach((r) => {
+					sourceRecordsById[r.stableId] = r;
+				});
+				const scoped = [];
+				const unscopedDecisions = [];
+				const unscopableTally = {};
+				args.valueSources.forEach((oneValue) => {
+					const { scope, unscopableReason } = valueScope.resolveValueParentScope({
+						sourceValueRecord: oneValue,
+						sourceRecordsById,
+						matchedTargetIndex,
+						propertyRangeOptionSetIndex,
+						rerankerFloor: VALUE_SCOPE_PARENT_FLOOR,
+					});
+					if (!scope) {
+						unscopableTally[unscopableReason] = (unscopableTally[unscopableReason] || 0) + 1;
+						unscopedDecisions.push({
+							source: { stableId: oneValue.stableId, role: oneValue.role },
+							abstain: true,
+							abstainReason: 'unscopedParent',
+							unscopableReason,
+							targetKey: null,
+							pool: [],
+						});
+						return;
+					}
+					scoped.push({ sourceRecord: oneValue, scope, candidates: optionSetCandidateIndex[scope.rangeOptionSetId] || [] });
+				});
+				xLog.status(`  [${moduleName}] value tier: ${args.valueSources.length} DmeOptionValue; scoped=${scoped.length}, unscoped=${unscopedDecisions.length} byReason=${JSON.stringify(unscopableTally)}`);
+				next('', { ...args, scoped, unscopedDecisions });
+			});
+			// EXACT-SHORTCUT split (deterministic, no LLM) — a scoped value whose name/notation matches ONE
+			// candidate resolves immediately to the composite '${targetPropertyKey}|${OVtoken}'.
+			taskList.push((args, next) => {
+				const exactDecisions = [];
+				const needsLlm = [];
+				args.scoped.forEach((oneScoped) => {
+					const { hit } = valueScope.exactShortcut(oneScoped.sourceRecord, oneScoped.candidates);
+					if (hit) {
+						exactDecisions.push({
+							source: { stableId: oneScoped.sourceRecord.stableId, role: oneScoped.sourceRecord.role },
+							abstain: false,
+							abstainReason: null,
+							targetKey: `${oneScoped.scope.targetPropertyKey}|${hit.canonicalKey}`,
+							chosenStableId: hit.stableId,
+							cosineScore: 1.0,
+							bestCosine: 1.0,
+							retrievalRank: 1,
+							pool: [{ stableId: hit.stableId, cedsId: hit.canonicalKey, cosine: 1.0 }],
+							scopeParentPredicate: oneScoped.scope.parentPredicate,
+							scopeParentConfidence: oneScoped.scope.parentConfidence,
+						});
+					} else {
+						needsLlm.push(oneScoped);
+					}
+				});
+				next('', { ...args, exactDecisions, needsLlm });
+			});
+			// SCOPED VECTORIZE + RERANK for the exact-shortcut misses (per-source pool via candidatePoolForSource).
+			taskList.push((args, next) => {
+				if (args.needsLlm.length === 0) {
+					next('', { ...args, valueLlmDecisions: [] });
+					return;
+				}
+				const sourceRecords = args.needsLlm.map((n) => n.sourceRecord);
+				const candidateUnion = [];
+				const seen = new Set();
+				args.needsLlm.forEach((n) => {
+					n.candidates.forEach((c) => {
+						if (!seen.has(c.stableId)) {
+							seen.add(c.stableId);
+							candidateUnion.push(c);
+						}
+					});
+				});
+				const allRecords = candidateUnion.concat(sourceRecords);
+				vectorize.batchEmbed({ texts: allRecords.map((r) => r.defText) }, (err, result) => {
+					if (err) {
+						next(`${moduleName}: vectorizing value defTexts: ${err}`);
+						return;
+					}
+					allRecords.forEach((r, i) => { r.vector = result.vectors[i]; });
+					next('', args);
+				});
+			});
+			taskList.push((args, next) => {
+				if (args.needsLlm.length === 0) {
+					next('', { ...args, valueLlmDecisions: [] });
+					return;
+				}
+				const candidatesBySourceId = {};
+				const scopeBySourceId = {};
+				args.needsLlm.forEach((n) => {
+					candidatesBySourceId[n.sourceRecord.stableId] = n.candidates;
+					scopeBySourceId[n.sourceRecord.stableId] = n.scope;
+				});
+				const sources = args.needsLlm.map((n) => n.sourceRecord);
+				const candidatePoolForSource = (source) => candidatesBySourceId[source.stableId] || [];
+				pipeline.processSources(
+					{ sources, candidatePoolByRole: {}, candidatePoolForSource, sourceClassIndex: {}, candidateClassIndex: {} },
+					(err, out) => {
+						if (err) {
+							next(`${moduleName}: value tier: ${err}`);
+							return;
+						}
+						// gate below the value abstain floor, then REWRITE targetKey to the COMPOSITE
+						// '${matchedPropertyKey}|${OVtoken}' (the OV token is the chosen candidate's canonicalKey,
+						// looked up by chosenStableId — never a bare OV, which baseValueRef cannot resolve).
+						const gated = (out.decisions || []).map((oneDecision) => {
+							if (!oneDecision.abstain && typeof oneDecision.cosineScore === 'number' && oneDecision.cosineScore < VALUE_ABSTAIN_FLOOR) {
+								return { ...oneDecision, abstain: true, abstainReason: 'belowValueFloor', targetKey: null };
+							}
+							if (!oneDecision.abstain && oneDecision.targetKey) {
+								const scope = scopeBySourceId[oneDecision.source.stableId] || {};
+								const pool = candidatesBySourceId[oneDecision.source.stableId] || [];
+								const chosen = pool.find((c) => c.stableId === oneDecision.chosenStableId);
+								const ovToken = chosen ? chosen.canonicalKey : oneDecision.targetKey;
+								return {
+									...oneDecision,
+									targetKey: `${scope.targetPropertyKey}|${ovToken}`,
+									scopeParentPredicate: scope.parentPredicate,
+									scopeParentConfidence: scope.parentConfidence,
+								};
+							}
+							return oneDecision;
+						});
+						next('', { ...args, valueLlmDecisions: gated });
+					},
+				);
+			});
+
+			// FREEZE all decisions (property + value exact + value llm + value unscoped) -> content-addressed
+			// block, then SAVE to the decisionStore.
+			taskList.push((args, next) => {
+				const allDecisions = args.propertyDecisions
+					.concat(args.exactDecisions)
+					.concat(args.valueLlmDecisions)
+					.concat(args.unscopedDecisions);
 				const frozen = freezer.freeze({
-					pairStamp: { subjectSource: sourceStandard, subjectVersion, objectSource: HUB_STANDARD, objectVersion },
-					decisions: args.decisions,
+					pairStamp: { subjectSource: sourceStandardKey, subjectVersion, objectSource: HUB_STANDARD, objectVersion },
+					decisions: allDecisions,
 				});
 				decisionStore.saveDecisionBlock(
 					{ pairKey, frozenText: frozen.frozenText, decisionBlockHash: frozen.decisionBlockHash },
-					(err) => next(err ? `${moduleName}: saving frozen decision block: ${err}` : '', { ...args, frozen }),
+					(err) => next(err ? `${moduleName}: saving frozen decision block: ${err}` : '', { ...args, frozen, allDecisions }),
 				);
 			});
 
-			// MATERIALIZE the frozen picks + WRITE.
+			// MATERIALIZE the frozen picks + WRITE (both tiers; inferredIndex resolves property tokens via
+			// basePropertyRef and composite value keys via baseValueRef).
 			taskList.push((args, next) => {
 				buildAndWrite(
-					{ inferredDecisions: args.frozen.inferredDecisions, sourceNodes: args.sourceRecords, referenceNodes: args.referenceNodes, decisionBlockHash: args.frozen.decisionBlockHash },
+					{
+						inferredDecisions: args.frozen.inferredDecisions,
+						sourceNodes: args.propertySources.concat(args.valueSources),
+						referenceNodes: args.referenceNodes,
+						decisionBlockHash: args.frozen.decisionBlockHash,
+					},
 					(err, out) => next(err, { ...args, ...out }),
 				);
 			});
@@ -322,7 +528,7 @@ const moduleFunction =
 					finish(err);
 					return;
 				}
-				const abstains = args.decisions.filter((d) => d.abstain).length;
+				const abstains = args.allDecisions.filter((d) => d.abstain).length;
 				finish('', {
 					edgesWritten: args.edgesWritten,
 					decisionBlock: args.frozen.decisionBlockHash,
@@ -330,9 +536,12 @@ const moduleFunction =
 					counts: {
 						inferred: args.edgesWritten,
 						mode: 'rebridge',
-						decisionsConsidered: args.decisions.length,
-						picks: args.decisions.length - abstains,
+						decisionsConsidered: args.allDecisions.length,
+						picks: args.allDecisions.length - abstains,
 						abstains,
+						propertySources: args.propertySources.length,
+						valueSources: args.valueSources.length,
+						valueScoped: args.scoped.length,
 						orphans: args.subgraph.counts.orphans,
 						fromGaps: args.subgraph.counts.fromGaps,
 					},
