@@ -47,7 +47,9 @@ const path = require('path');
 
 const harness = require('../../../test/testLib/harness')(moduleName);
 
-const { COMPONENT_SHAPES, MANIFEST_HANDLE_SHAPE } = require('../interfaces');
+const { COMPONENT_SHAPES, MANIFEST_HANDLE_SHAPE, BRIDGE_MODULE_SHAPE } = require('../interfaces');
+const bridgeMakerModule = require('../apps/bridge-maker');
+const { DEFAULT_GENERIC_MAPPER } = bridgeMakerModule;
 
 const TREE_LIB = path.join(__dirname, '..', '..', '..', 'lib');
 const contentAddress = require(path.join(TREE_LIB, 'content-address', 'content-address'))();
@@ -284,11 +286,14 @@ harness.note(
 );
 harness.note('nowhere else. interfaces.js says so in the same words.');
 
-// bridgeMaker is stub-bodied by design, so its whole contract runs in-process.
+// bridgeMaker's DEFAULT generic plugin writes no edges and opens no connection, so its whole
+// contract runs in-process without Docker. The mapper must RESOLVE (an unregistered one is now
+// refused by name), so the probe names the registered default; the deeper resolution/refusal and
+// write-path proofs live in bridge-maker/test/test-bridge-maker.js.
 (() => {
 	let observed = null;
 	realComponents.bridgeMaker().run(
-		{ inGraph: { graphName: 'DEV_shapeProbe' }, mapper: 'probeMapper', applyLabel: 'ProbeEdge' },
+		{ inGraph: { graphName: 'DEV_shapeProbe' }, mapper: DEFAULT_GENERIC_MAPPER, applyLabel: 'ProbeEdge' },
 		(err, result) => {
 			observed = { err, result };
 		},
@@ -374,6 +379,40 @@ harness.note('nowhere else. interfaces.js says so in the same words.');
 		'',
 	);
 })();
+
+// =====================================================================
+harness.section('BRIDGE MODULE — the mapper contract (@interface BridgeModule) and its gate');
+// =====================================================================
+
+harness.equal(
+	'BRIDGE_MODULE_SHAPE declares arity, argKeys and resultKeys',
+	String(
+		BRIDGE_MODULE_SHAPE.arity === 2 &&
+			Array.isArray(BRIDGE_MODULE_SHAPE.argKeys) &&
+			Array.isArray(BRIDGE_MODULE_SHAPE.resultKeys),
+	),
+	'true',
+);
+
+// bridgeMaker holds a resolved plugin to BRIDGE_MODULE_SHAPE at RUNTIME; the checker is exported
+// so the gate can be observed in both directions here too (a gate never seen failing is not one).
+const { bridgeModuleShapeViolation } = bridgeMakerModule;
+
+harness.equal(
+	'a CONFORMING bridge-module callable ({inGraph,hub,applyLabel}, cb) passes the gate',
+	bridgeModuleShapeViolation(({ inGraph, hub, applyLabel }, callback) => callback(''), 'conformingMapper'),
+	'',
+);
+harness.match(
+	'a POSITIONAL (arity-3) bridge-module callable is caught, naming the mapper',
+	bridgeModuleShapeViolation((inGraph, hub, applyLabel) => {}, 'positionalMapper'),
+	/positionalMapper.*takes 3 argument/,
+);
+harness.match(
+	'a bridge-module callable that never reads a declared key is caught, naming it',
+	bridgeModuleShapeViolation(({ inGraph, applyLabel }, callback) => callback(''), 'renamedMapper'),
+	/renamedMapper.*never reads.*hub/,
+);
 
 // =====================================================================
 harness.section('THE GATE BITES — drifted shapes are caught (failure side proven)');

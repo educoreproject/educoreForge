@@ -111,14 +111,53 @@
 /**
  * @interface BridgeMakerComponent
  * Runs a bridge module over a materialized dependency graph, writing new LABELED relationship
- * edges INTO the graph (label-based delta harvest, §4 Phase C). Stub-bodied as of 2026-07-22.
+ * edges INTO the graph (label-based delta harvest, §4 Phase C). Real-bodied as of 2026-07-24
+ * (P0 of the bridge): it RESOLVES `mapper` through a registry to a BridgeModule plugin (refusing
+ * an unregistered mapper by name — no silent default), mints a graph writer from the handle,
+ * composes the component library over it, runs the plugin, and returns a STATUS report. The P0
+ * default generic plugin writes ZERO edges, so `run` still travels its whole path in-process
+ * without a container; the producers that write real edges land in P2/P3.
  *
  * It takes a GraphHandle, not a URL. The scaffolded orchestrator named replayManager.create's
  * result `boltUrl` and passed it as `graphBoltUrl`, which was harmless only while every component
  * was a stub: the real create returns a HANDLE, and a handle is not a string. Calling the
  * parameter what it is removes the trap rather than documenting it.
+ *
+ * CONSTRUCTION (both legitimately optional, documented defaults): bridgeMaker({ bridgePluginRegistry,
+ * graphWriterFactory }). bridgePluginRegistry defaults to the module's BRIDGE_PLUGIN_BY_MAPPER;
+ * graphWriterFactory defaults to the real neo4j-backed writer and is injected as a DOUBLE by the
+ * suite, which is how the write-into-graph path is proven without Docker.
  * @property {function({inGraph: GraphHandle, mapper: string, applyLabel: string},
  *           function(string, Object=): void): void} run
+ *           result: { inGraph, mapper, applyLabel, edgesWritten, note } (also carries decisionBlock
+ *           and counts). The edges stay in the graph; harvesting them by label is
+ *           replayManager.harvest's job, not this one's.
+ */
+
+/**
+ * @interface BridgeModule
+ * The MAPPER CONTRACT — what a bridge.js plugin must expose (design_bridgeComponentLibrary §3.11).
+ * `mapper` (a recipe token) resolves through bridgeMaker's registry to one of these; the default
+ * generic plugin covers authored + semantic, a standard registers an OVERRIDE for bespoke logic.
+ *
+ * It is a CURRIED factory: the injected library tools first, then a single callable over the graph.
+ *
+ *   bridgeModule({ vectorizer, semanticMatcher, evidenceGatherer, selector, decisionFreezer,
+ *                  relationshipWriter, referenceIndex, sourceWalker, authoredCrosswalkLoader,
+ *                  hubCandidateModule, config, xLog })
+ *       -> ({ inGraph: GraphHandle, hub: string|null, applyLabel: string },
+ *           function(string, {edgesWritten: number, decisionBlock: Object|null,
+ *                             counts: Object}=): void): void
+ *
+ * The callable takes ONE named-argument object plus the callback (arity 2 — a positional
+ * signature is drift). It reads inGraph/hub/applyLabel off that object, writes labeled edges via
+ * the injected relationshipWriter, and calls back a status carrying edgesWritten and counts
+ * (decisionBlock is null for a deterministic bridge, a content-addressed block for a frozen
+ * inferred one). bridgeMaker holds a resolved plugin to BRIDGE_MODULE_SHAPE and refuses drift by
+ * name before running it. `hub` is null in P0 until build.js threads the recipe's hub token
+ * through bridgeMaker.run.
+ * @property {function(Object): function({inGraph: GraphHandle, hub: string, applyLabel: string},
+ *           function(string, Object=): void): void} (the curried callable; see above)
  */
 
 /**
@@ -255,6 +294,22 @@ const MANIFEST_HANDLE_SHAPE = {
 	recipeRefId: { arity: 0, argKeys: null, resultKeys: null },
 };
 
+// The BRIDGE MODULE contract, as DATA — the mapper/bridge.js plugin @interface BridgeModule, in
+// the same three fields the top-level components use. It is NOT a member of COMPONENT_SHAPES (that
+// map is exactly the four components build.js wires); a bridge module is not a build.js component
+// but a plugin bridgeMaker resolves and runs, so its shape lives beside MANIFEST_HANDLE_SHAPE and
+// is enforced at RUNTIME by bridgeMaker (bridgeModuleShapeViolation) rather than by the static
+// component sweep. A bridge module's produced callable is arity 2 (one named-argument object plus
+// the callback), reads inGraph/hub/applyLabel off that object, and calls back a status carrying
+// edgesWritten and counts. What is CHECKED is exactly that — arity and argKeys statically (a
+// source-text argKeys check that can pass for the wrong reason but never a signature that omits a
+// key), resultKeys only after the callable runs. Types are not checked.
+const BRIDGE_MODULE_SHAPE = {
+	arity: 2,
+	argKeys: ['inGraph', 'hub', 'applyLabel'],
+	resultKeys: ['edgesWritten', 'counts'],
+};
+
 const COMPONENT_SHAPES = {
 	forger: {
 		forge: {
@@ -320,4 +375,4 @@ const COMPONENT_SHAPES = {
 	},
 };
 
-module.exports = { COMPONENT_SHAPES, MANIFEST_HANDLE_SHAPE };
+module.exports = { COMPONENT_SHAPES, MANIFEST_HANDLE_SHAPE, BRIDGE_MODULE_SHAPE };
