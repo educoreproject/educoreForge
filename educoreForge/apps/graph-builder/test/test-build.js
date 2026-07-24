@@ -836,9 +836,13 @@ const hubFoldingForger = (baseNodeEdges) => () => ({
 	forge: ({ standard, version, deriveHub }, cb) => {
 		let nodeEdges = baseNodeEdges;
 		if (deriveHub) {
+			// the production forger routes the RESOLVED bundle version (what the bundle READ) to the hub,
+			// not the recipe token; this synthetic base stands in for a bundle read at `version`, so
+			// bundleVersion === version here (the ground-truth forgeHub above uses the same value).
 			const folded = foldHubIntoNodeEdges({
 				standard,
-				hubVersion: version,
+				bundleVersion: version,
+				requestedVersion: version,
 				baseNodeEdges,
 				declaredEmbeddingDims: baseNodeEdges.embeddingDims,
 			});

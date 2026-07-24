@@ -1324,7 +1324,8 @@ const foldLabelCount = (nodes, label) =>
 
 const folded = foldHubIntoNodeEdges({
 	standard: 'ceds',
-	hubVersion: '2',
+	bundleVersion: '2',
+	requestedVersion: '2',
 	baseNodeEdges: engineShapeCedsBase,
 	declaredEmbeddingDims: undefined,
 });
@@ -1391,11 +1392,79 @@ harness.ok(
 	JSON.stringify(expectedHub.counts),
 );
 
+// =====================================================================
+harness.section('HUB VERSION ROUTING — the hub is stamped the RESOLVED bundle version, NEVER the recipe token');
+// =====================================================================
+// Golden-diff defect (2026-07-24): a CEDS dry reforge stamped the hub with hubVersion='current' — the
+// recipe's version TOKEN (requestedVersion) — while the base nodes in the same block carried the REAL
+// metadata.version ('14.0.0.0', bundleVersion). hubVersion folds into every hub addressSignature
+// (referenceSubgraph.js), so all 29,788 hub stableIds diverged from the golden's though the structure
+// was identical. The hub must be stamped with the version the bundle READ, not the token the recipe
+// asked for. foldHubIntoNodeEdges now takes the TWO version claims and resolves the real one through
+// resolveReportedVersion — the same validated reading forge() reports with — so a placeholder can
+// never reach a content address (polyArch2 §6, identity clause).
+
+// -----
+// aFoldedHubVersion — the hubVersion a folded HubReference carries (engine shape: PG-JSON array).
+const aFoldedHubVersion = (fold) => {
+	const hubNode = (fold.nodeEdges ? fold.nodeEdges.nodes : []).find(
+		(oneNode) => (oneNode.labels || []).indexOf('HubReference') !== -1,
+	);
+	if (!hubNode) {
+		return undefined;
+	}
+	return Array.isArray(hubNode.properties.hubVersion)
+		? hubNode.properties.hubVersion[0]
+		: hubNode.properties.hubVersion;
+};
+
+// the bundle READ '14.0.0.0' out of the source (bundleVersion); the recipe asked for 'current'
+// (requestedVersion). hubVersion:'current' is the OLD recipe-token param — it MUST be inert now, so
+// even a caller who names it cannot slip the token onto an address.
+const routedFold = foldHubIntoNodeEdges({
+	standard: 'ceds',
+	hubVersion: 'current', // the OLD single-param name — must be ignored in favour of the resolved version
+	bundleVersion: '14.0.0.0', // what the bundle READ — the base nodes carry this
+	requestedVersion: 'current', // the recipe TOKEN — must NOT reach the address
+	baseNodeEdges: engineShapeCedsBase,
+});
+harness.equal(
+	'foldHubIntoNodeEdges answers without error when the bundle version resolves',
+	routedFold.error || '',
+	'',
+);
+harness.equal(
+	'the folded hub carries the RESOLVED bundle version (14.0.0.0), NEVER the recipe token (current)',
+	aFoldedHubVersion(routedFold),
+	'14.0.0.0',
+);
+
+// NEGATIVE CONTROL — a bundle that resolved NO real version cannot fold a hub: the recipe token is
+// not evidence of what the source says, so the hub path is REFUSED rather than lent the token. This
+// leverages resolveReportedVersion's existing throw, now covering the hub address.
+const noRealVersionFold = foldHubIntoNodeEdges({
+	standard: 'ceds',
+	bundleVersion: undefined, // the bundle stamped nothing
+	requestedVersion: 'current',
+	baseNodeEdges: engineShapeCedsBase,
+});
+harness.match(
+	'a hub whose bundle resolved NO real version is REFUSED, naming the token that must not stand in',
+	noRealVersionFold.error,
+	/bundle[\s\S]*version[\s\S]*current/i,
+);
+harness.ok(
+	'  and it hands back no nodeEdges — no placeholder-addressed hub is produced',
+	noRealVersionFold.nodeEdges === undefined,
+	JSON.stringify(noRealVersionFold.nodeEdges),
+);
+
 // NO SILENT DEFAULT — a standard declared a hub with no registered forge is refused BY NAME (this is
 // the refusal the first Phase-3 attempt kept in build.js; it now lives here, where the registry does).
 const unregistered = foldHubIntoNodeEdges({
 	standard: 'lif',
-	hubVersion: 'current',
+	bundleVersion: '14.0.0.0',
+	requestedVersion: 'current',
 	baseNodeEdges: engineShapeCedsBase,
 });
 harness.match(
@@ -1408,7 +1477,7 @@ harness.ok('  and it hands back no nodeEdges', unregistered.nodeEdges === undefi
 
 // a malformed base is CONTAINED as an error-first answer (forgeHub throws; foldHubIntoNodeEdges
 // catches at the boundary and routes it, never past forge()'s callback).
-const malformed = foldHubIntoNodeEdges({ standard: 'ceds', hubVersion: '2', baseNodeEdges: { nodes: 'nope', edges: [] } });
+const malformed = foldHubIntoNodeEdges({ standard: 'ceds', bundleVersion: '2', requestedVersion: '2', baseNodeEdges: { nodes: 'nope', edges: [] } });
 harness.match(
 	'a malformed base is contained as an error, not a throw',
 	malformed.error,

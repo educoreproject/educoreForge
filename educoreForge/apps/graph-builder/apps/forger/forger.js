@@ -310,8 +310,17 @@ const HUB_FORGE_BY_STANDARD = {
 // { nodeEdges } or { error } — the same error-object idiom resolveBundle uses, so nothing here
 // throws past forge()'s callback.
 //
-//   foldHubIntoNodeEdges({ standard, hubVersion, baseNodeEdges, declaredEmbeddingDims })
+//   foldHubIntoNodeEdges({ standard, bundleVersion, requestedVersion, baseNodeEdges, declaredEmbeddingDims })
 //       -> { nodeEdges: { nodes, edges, embeddingDims } } | { error }
+//
+// THE HUB IS STAMPED WITH THE BUNDLE'S REAL VERSION, NEVER THE RECIPE TOKEN. hubVersion folds into
+// every hub addressSignature (referenceSubgraph.js) and the base nodes carry metadata.version; if the
+// hub took the recipe token ('current') instead of what the bundle READ ('14.0.0.0'), base and hub
+// would address-DIVERGE though the structure is identical — the golden-diff defect (2026-07-24). So
+// this seam takes the TWO version claims and resolves the real one through resolveReportedVersion —
+// the SAME validated reading forge() reports with — which THROWS (error-object) when the bundle
+// stamped no real version, so a placeholder can never reach a content address (polyArch2 §6, identity
+// clause). requestedVersion is carried only so the refusal can name the token that must not stand in.
 //
 // forgeHub reads the forger's ENGINE-SHAPE nodeEdges DIRECTLY (verified, PLAN §7): its v1() unwraps
 // scalar-OR-single-element-array, and engine-shape nodes carry stableId + PG-JSON-array properties
@@ -325,7 +334,13 @@ const HUB_FORGE_BY_STANDARD = {
 // leaves declaredEmbeddingDims unused there; the BASE's embeddingDims stands for the folded block.
 // The hub's HAS_CEDS_* edges reference base-node stableIds that are present in the same combined
 // nodeEdges, so once build.js loads this under [StandardBase] the edges resolve WITHIN one block.
-const foldHubIntoNodeEdges = ({ standard, hubVersion, baseNodeEdges, declaredEmbeddingDims }) => {
+const foldHubIntoNodeEdges = ({
+	standard,
+	bundleVersion,
+	requestedVersion,
+	baseNodeEdges,
+	declaredEmbeddingDims,
+}) => {
 	const hubForgeFactory = HUB_FORGE_BY_STANDARD[String(standard).toLowerCase()];
 	if (!hubForgeFactory) {
 		const known = Object.keys(HUB_FORGE_BY_STANDARD).join(', ') || '(none)';
@@ -336,6 +351,17 @@ const foldHubIntoNodeEdges = ({ standard, hubVersion, baseNodeEdges, declaredEmb
 				`recipe error; nothing was substituted.`,
 		};
 	}
+
+	// THE HUB TAKES THE RESOLVED BUNDLE VERSION, NOT THE RECIPE TOKEN. hubVersion is folded into every
+	// hub addressSignature; the base carries metadata.version. resolveReportedVersion is the one
+	// validated reading — it refuses (error-object) when the bundle stamped no real version, so the
+	// recipe token can never reach a content address (polyArch2 §6). Answered error-first so nothing
+	// throws past forge()'s callback.
+	const versions = resolveReportedVersion({ bundleVersion, requestedVersion });
+	if (versions.error) {
+		return { error: versions.error };
+	}
+	const hubVersion = versions.bundleVersion;
 
 	// DERIVE the hub from the base (PURE forgeHub). forgeHub THROWS on a malformed block by design;
 	// contain that throw at this boundary and route it error-first — boundary containment, not
@@ -554,6 +580,13 @@ const moduleFunction =
 		// no registered derivation is refused BY NAME inside foldHubIntoNodeEdges (no silent default).
 		// declaredEmbeddingDims is threaded through: the hub embeds nothing, so it is unused there,
 		// but passing it keeps the shaper's contract honest if a future hub ever carried vectors.
+		//
+		// THE HUB IS STAMPED WITH THE VERSION THE BUNDLE READ, NOT THE RECIPE TOKEN. `version` is the
+		// recipe's requestedVersion (e.g. 'current'); `args.forged.metadata.version` is what the bundle
+		// actually read out of the source (e.g. '14.0.0.0'), the SAME value the base nodes carry. Both
+		// go to foldHubIntoNodeEdges, which resolves the real one through resolveReportedVersion so base
+		// and hub agree on the real version and no placeholder reaches a hub address (golden-diff defect,
+		// 2026-07-24; polyArch2 §6).
 		taskList.push((args, next) => {
 			if (!deriveHub) {
 				next('', args);
@@ -561,7 +594,8 @@ const moduleFunction =
 			}
 			const folded = foldHubIntoNodeEdges({
 				standard,
-				hubVersion: version,
+				bundleVersion: args.forged.metadata.version,
+				requestedVersion: version,
 				baseNodeEdges: args.shaped,
 				declaredEmbeddingDims,
 			});
