@@ -65,6 +65,11 @@ const recipeLib = require('../lib/recipe')();
 const buildLib = require('../lib/build')();
 const realManifestEditor = require('../apps/manifest-editor');
 const contentAddress = require('../../../lib/content-address/content-address')();
+// the REAL block codec + the REAL ceds hub derivation — the hub round-trip stage drives forgeHub's
+// ACTUAL output through the pipeline (not a placeholder), so it needs both, hermetically (pure, no
+// docker/voyage/db).
+const realReplayBlock = require('../../../lib/replay/replay-block')();
+const cedsHubForge = require('../../../forges/ceds/lib/referenceSubgraph');
 
 const goodRecipe = (name) =>
 	path.join(__dirname, '..', '..', '..', 'recipes', `${name}.recipe.jsonc`);
@@ -134,11 +139,29 @@ const standardsDatabaseDouble = () => {
 // ---------------------------------------------------------------------
 
 // the block text a harvest double hands back. Distinct per subject and label so two members of one
-// manifest never collide on their content address, and shaped as PG-JSONL (header line first)
-// because that is what a schema block IS.
-const doubleBlockText = (header, selectionLabels) =>
-	`${JSON.stringify({ ...header, selectionLabels })}\n` +
-	`{"stableId":"${header.standardKey}/${(selectionLabels || []).join('')}","labels":${JSON.stringify(selectionLabels || [])}}\n`;
+// manifest never collide on their content address, and shaped as a REAL PG-JSONL block (kind:'header'
+// line first, then a kind:'node' line) — deserializable by replay-block, because build.js now
+// deserializes the harvested base block to feed forgeHub, and a block that will not deserialize is
+// not a schema block. embeddingDims is declared null (this double embeds nothing).
+const doubleBlockText = (header, selectionLabels) => {
+	const stableId = `${header.standardKey}/${(selectionLabels || []).join('')}`;
+	const headerLine = JSON.stringify({
+		kind: 'header',
+		blockType: header.blockType,
+		standardKey: header.standardKey,
+		version: header.version,
+		embeddingDims: null,
+		selectionLabels,
+	});
+	const nodeLine = JSON.stringify({
+		kind: 'node',
+		ref: { source: header.standardKey, id: stableId },
+		labels: (selectionLabels || []).concat('ForgedNode'),
+		stableId,
+		properties: {},
+	});
+	return `${headerLine}\n${nodeLine}\n`;
+};
 
 const CREATE_DECLARED_KEYS = ['purpose', 'graphName'];
 
@@ -647,7 +670,33 @@ const stageEdgeCasesRest = () => {
 							);
 							harness.ok('no [B] line appears', !/\[B\]/.test(xLog.text()), xLog.text());
 
-							stageRealManifestEditor();
+							// a FORGED standard declared a hub, but no hub derivation is registered for it:
+							// refused BY NAME (registry-over-switch, no silent default) — lif is a real
+							// standard here but there is no lif hub forge.
+							runBuild(
+								{
+									recipeName: 'unregisteredHubForge',
+									description: 'a forged standard declared a hub with no registered derivation',
+									standards: [{ token: 'lif', version: 'current' }],
+									hubs: [{ standard: 'lif' }],
+									bridges: [],
+								},
+								({ err: regErr, result: regResult }) => {
+									harness.match(
+										'a hub standard with no registered hub forge is refused, naming it and what is known',
+										regErr,
+										/hub standard 'lif' has no registered hub forge — known hub forges: ceds/,
+									);
+									harness.ok(
+										'  and nothing was substituted',
+										/nothing was substituted/.test(regErr || ''),
+										regErr,
+									);
+									harness.ok('  and hands back no result', regResult === undefined, JSON.stringify(regResult));
+
+									stageRealManifestEditor();
+								},
+							);
 						},
 					);
 				},
@@ -709,11 +758,240 @@ const stageRealManifestEditor = () => {
 			);
 
 			harness.note(
-				'DECLARED GAP — a hub contributes a SECOND schema block under the SAME subject key\n' +
-					'(targetArchitectureDesign §2/§4.4: both are keyed standardName@version), and the real\n' +
-					'manifestEditor refuses a repeated subjectRefId. A hub recipe therefore cannot compose\n' +
-					'against the real editor today. The hub step is out of scope for this remediation\n' +
-					'(implementationPlan_remediation_072326 §11); the collision is recorded, not papered over.',
+				'GAP NOW CLOSED — the base and the hub are DISTINCT subjects (ceds@v_base vs ceds@v_hub,\n' +
+					'§1/§7), so the real manifestEditor no longer sees a repeated subjectRefId. The next\n' +
+					'stage composes BOTH against the REAL editor and proves it.',
+			);
+
+			stageHubRoundTrip();
+		},
+	);
+};
+
+// =====================================================================
+// HUB ROUND-TRIP — forgeHub wired: forge -> base-harvest -> forgeHub -> init -> hub-harvest -> compose
+// =====================================================================
+// The whole Phase-3 wiring, end to end, against the REAL manifestEditor (so the two-block composition
+// is validated by the module, not a double) with a replayManager DOUBLE that faithfully round-trips
+// forgeHub's ACTUAL output: it hands back a RICH synthetic CEDS base block for the base harvest, RETAINS
+// whatever the orchestrator loads via the forgeHub init, and serializes THAT back out on the hub harvest.
+// No docker, no voyage, no database — forgeHub and the block codec are pure. State 2 for this stage: run
+// against the unwired build.js (no forgeHub/init) and the hub harvest comes back EMPTY and unsuffixed —
+// these assertions go red; wire it and they compose.
+
+// A minimal but non-trivial CEDS base: one class, one ENUMERATED property (option set + two values),
+// and the HAS_PROPERTY/HAS_OPTION_SET/HAS_VALUE structural edges forgeHub reads. Properties are PG-JSON
+// single-element arrays, exactly as a deserialized block carries them.
+const syntheticCedsBaseBlockText = (() => {
+	const arr = (scalar) => [scalar];
+	const node = (stableId, properties) => ({
+		ref: { source: 'CEDS', id: stableId },
+		labels: ['ForgedNode', 'StandardBase'],
+		stableId,
+		properties,
+	});
+	const edge = (type, fromId, toId) => ({
+		type,
+		fromRef: { source: 'CEDS', id: fromId },
+		toRef: { source: 'CEDS', id: toId },
+		properties: { provenanceTier: arr('structural') },
+	});
+	const nodes = [
+		node('cls:assessment', {
+			role: arr('DmeClass'),
+			domainId: arr('C-Assessment'),
+			canonicalKey: arr('C-Assessment'),
+			name: arr('Assessment'),
+		}),
+		node('prop:status', {
+			role: arr('DmeProperty'),
+			domainId: arr('C-Assessment'),
+			canonicalKey: arr('P-Status'),
+			name: arr('Assessment Status'),
+		}),
+		node('os:status', {
+			role: arr('DmeOptionSet'),
+			rangeOptionSetId: arr('OS-Status'),
+		}),
+		node('ov:active', {
+			role: arr('DmeOptionValue'),
+			canonicalKey: arr('OV-Active'),
+			name: arr('Active'),
+		}),
+		node('ov:closed', {
+			role: arr('DmeOptionValue'),
+			canonicalKey: arr('OV-Closed'),
+			name: arr('Closed'),
+		}),
+	];
+	const edges = [
+		edge('HAS_PROPERTY', 'cls:assessment', 'prop:status'),
+		edge('HAS_OPTION_SET', 'prop:status', 'os:status'),
+		edge('HAS_VALUE', 'os:status', 'ov:active'),
+		edge('HAS_VALUE', 'os:status', 'ov:closed'),
+	];
+	return realReplayBlock.serializeBlock({
+		header: { blockType: 'standardBase', standardKey: 'ceds', version: '2', embeddingDims: null },
+		nodes,
+		edges,
+	});
+})();
+
+// the replayManager double that ROUND-TRIPS forgeHub. Built on the working double; it overrides init
+// (to retain the forgeHub load) and harvest (base -> synthetic block; hub -> the retained load, serialized).
+const roundTrippingReplayManager = (baseBlockText) => () => {
+	const working = workingReplayManager()();
+	let retainedHub = null; // { nodes, edges } captured from the forgeHub init
+	const blockResult = (blockText, nodeCount, edgeCount) => ({
+		blockText,
+		blockId: contentAddress.blockIdForText(blockText),
+		nodeCount,
+		edgeCount,
+		stableIdCoverage: null,
+	});
+	return Object.assign({}, working, {
+		init: (spec, cb) => {
+			// the forgeHub load: nodeEdges, NO applyLabels, sourceLabel names forgeHub. Retain it.
+			if (
+				spec &&
+				spec.nodeEdges &&
+				spec.applyLabels === undefined &&
+				/forgeHub reference subgraph/.test(spec.sourceLabel || '')
+			) {
+				retainedHub = { nodes: spec.nodeEdges.nodes, edges: spec.nodeEdges.edges };
+			}
+			working.init(spec, cb);
+		},
+		harvest: (spec, cb) => {
+			const labels = (spec && spec.selectionLabels) || [];
+			if (labels.indexOf('StandardBase') !== -1) {
+				const base = realReplayBlock.deserializeBlock(baseBlockText);
+				cb('', blockResult(baseBlockText, base.nodes.length, base.edges.length));
+				return;
+			}
+			if (labels.indexOf('HubReference') !== -1) {
+				// serialize the RETAINED forgeHub output back out (empty if nothing was loaded — the
+				// unwired State-2 shape). Map forgeHub's { labels, stableId, role, properties } nodes to
+				// the { ref, labels, stableId, properties } the codec writes, deriving ref from _source.
+				const rt = retainedHub || { nodes: [], edges: [] };
+				const blockText = realReplayBlock.serializeBlock({
+					header: {
+						blockType: 'hub',
+						standardKey: (spec.header && spec.header.standardKey) || 'ceds',
+						version: (spec.header && spec.header.version) || '2',
+						embeddingDims: null,
+					},
+					nodes: rt.nodes.map((oneNode) => ({
+						ref: { source: oneNode.properties._source, id: oneNode.stableId },
+						labels: oneNode.labels,
+						stableId: oneNode.stableId,
+						properties: oneNode.properties,
+					})),
+					edges: rt.edges,
+				});
+				cb('', blockResult(blockText, rt.nodes.length, rt.edges.length));
+				return;
+			}
+			working.harvest(spec, cb);
+		},
+	});
+};
+
+const labelCount = (nodes, label) =>
+	nodes.filter((oneNode) => (oneNode.labels || []).indexOf(label) !== -1).length;
+
+const stageHubRoundTrip = () => {
+	harness.section('HUB ROUND-TRIP — forgeHub wired, composing base + hub against the REAL manifestEditor');
+
+	// what forgeHub INDEPENDENTLY derives from the same synthetic base — the ground truth the harvested
+	// hub block must reproduce (a placeholder would not).
+	const expected = cedsHubForge({ hubVersion: '2' }).forgeHub(
+		realReplayBlock.deserializeBlock(syntheticCedsBaseBlockText),
+	);
+
+	const xLog = capturingXLog();
+	const standardsDatabase = standardsDatabaseDouble();
+	buildLib.build(
+		{
+			recipeName: 'cedsHubOnly',
+			description: 'ceds forged as a hub, no bridge — the Phase-3 round-trip',
+			standards: [{ token: 'ceds', version: '2' }],
+			hubs: [{ standard: 'ceds' }],
+			bridges: [],
+		},
+		{
+			xLog,
+			standardsDatabase,
+			components: {
+				forger: workingForger(),
+				replayManager: roundTrippingReplayManager(syntheticCedsBaseBlockText),
+				bridgeMaker: workingBridgeMaker(),
+				manifestEditor: realManifestEditor,
+			},
+		},
+		(err, result) => {
+			harness.equal('the hub recipe builds without error against the real editor', err, '');
+			harness.equal('memberCount is 2 (one base + one hub)', (result || {}).memberCount, 2);
+
+			const saved = Object.values(standardsDatabase.savedBlocks);
+			const baseSaved = saved.filter((oneBlock) => oneBlock.kind === 'standardBase')[0];
+			const hubSaved = saved.filter((oneBlock) => oneBlock.kind === 'hub')[0];
+
+			harness.ok('a base block reached the store', !!baseSaved, JSON.stringify(saved.map((b) => b.kind)));
+			harness.ok('a hub block reached the store', !!hubSaved, JSON.stringify(saved.map((b) => b.kind)));
+			harness.equal(
+				'the base is subjectRefId ceds@2_base under kind standardBase',
+				baseSaved && baseSaved.subjectRefId,
+				'ceds@2_base',
+			);
+			harness.equal(
+				'the hub is subjectRefId ceds@2_hub under kind hub — a DISTINCT subject, suffix agreeing with kind',
+				hubSaved && hubSaved.subjectRefId,
+				'ceds@2_hub',
+			);
+
+			// the derived hub node set actually round-tripped — parse the stored hub block and compare
+			// against forgeHub's own counts over the same base (not a placeholder, not one label only).
+			const hubBlock = realReplayBlock.deserializeBlock(hubSaved.text);
+			harness.equal(
+				'the hub block carries BOTH node types: the HubReferences forgeHub derived',
+				labelCount(hubBlock.nodes, 'HubReference'),
+				expected.counts.hubReferenceTotal,
+			);
+			harness.equal(
+				'  and its ONE HubDefinition (a single-label harvest would have dropped it)',
+				labelCount(hubBlock.nodes, 'HubDefinition'),
+				1,
+			);
+			harness.equal(
+				'  the node total matches forgeHub exactly (3 refs + 1 definition)',
+				hubBlock.nodes.length,
+				expected.counts.nodeTotal,
+			);
+			harness.equal(
+				'  and every derived decomposition/IN_HUB edge is present',
+				hubBlock.edges.length,
+				expected.counts.edgeTotal,
+			);
+			harness.ok(
+				'  the decomposition edges (HAS_CEDS_* onto base stableIds) and IN_HUB are there',
+				['HAS_CEDS_DOMAIN', 'HAS_CEDS_PROPERTY', 'HAS_CEDS_RANGE', 'HAS_CEDS_VALUE', 'IN_HUB'].every(
+					(oneType) => hubBlock.edges.some((oneEdge) => oneEdge.type === oneType),
+				),
+				JSON.stringify([...new Set(hubBlock.edges.map((e) => e.type))]),
+			);
+			// sanity that the ground truth is non-trivial — a green here must mean the derivation RAN,
+			// not that both sides were empty.
+			harness.ok(
+				'  (ground-truth is non-trivial: forgeHub derived at least 3 references)',
+				expected.counts.hubReferenceTotal >= 3,
+				JSON.stringify(expected.counts),
+			);
+
+			harness.match(
+				'the log shows the hub block minted [B]',
+				xLog.text(),
+				/\[B\] hub block ceds -> /,
 			);
 
 			stageFaultInjection();
@@ -761,14 +1039,37 @@ const faultCases = [
 		pattern: /phase A \(forge\) failed: add standardBase ceds@current_base: standardsDatabase write refused/,
 	},
 	{
+		label: 'phase A: deriving+loading the hub subgraph (forgeHub -> init) fails',
+		components: {
+			replayManager: (() => {
+				const working = workingReplayManager()();
+				return () =>
+					Object.assign({}, working, {
+						// fail ONLY the hub load — the CREATION init whose sourceLabel names forgeHub. The
+						// base init (sourceLabel names the forge bundle) still succeeds, so this proves the
+						// NEW hub-load error path, distinct from the base-load one above.
+						init: (spec, cb) =>
+							/forgeHub reference subgraph/.test((spec && spec.sourceLabel) || '')
+								? cb('write path refused the hub nodes')
+								: working.init(spec, cb),
+					});
+			})(),
+		},
+		pattern: /phase A \(forge\) failed: init hub ceds: write path refused the hub nodes/,
+	},
+	{
 		label: 'phase A: harvesting the HUB schema block fails',
-		components: { replayManager: replayFailingHarvestFor('HubReference', 'no hub subgraph present') },
+		// the hub harvest now selects BOTH hub node labels, so the label-join key is the pair.
+		components: {
+			replayManager: replayFailingHarvestFor('HubReferenceHubDefinition', 'no hub subgraph present'),
+		},
 		pattern: /phase A \(forge\) failed: harvest hub ceds: no hub subgraph present/,
 	},
 	{
 		label: 'phase A: recording the HUB member fails',
 		components: { manifestEditor: manifestFailingAddFor('hub', 'subject already present') },
-		pattern: /phase A \(forge\) failed: add hub ceds@current: subject already present/,
+		// the hub member is keyed by its _hub-suffixed subject now, not the bare standard key.
+		pattern: /phase A \(forge\) failed: add hub ceds@current_hub: subject already present/,
 	},
 	{
 		label: 'phase A: disposing the scratch graph fails',

@@ -29,9 +29,11 @@
 //
 // Pipeline (targetArchitectureDesign §4.4):
 //   A  forger.forge -> replayManager.create -> init(nodeEdges, applyLabels:[StandardBase])
-//                   -> harvest(selectionLabels:[StandardBase]) -> manifest.add({...})
-//      (if the standard is a hub)  -> harvest(:HubReference) -> manifest.add({...})
-//                                  -> replayManager.delete
+//                   -> harvest(selectionLabels:[StandardBase]) -> manifest.add({..._base})
+//      (if the standard is a hub)  -> deserialize the base block -> forgeHub -> init(the derived
+//                                     hub nodeEdges, NO applyLabels — they carry their own labels)
+//                                  -> harvest(:HubReference:HubDefinition) -> manifest.add({..._hub})
+//                                  -> replayManager.delete (LAST — the graph survives the hub harvest)
 //   C  per bridge: create -> bridgeMaker.run (labels edges) -> harvest(:BridgedRelation)
 //                        -> manifest.add({...}) -> delete
 //   compose      -> manifest.refId() over the membership
@@ -47,6 +49,22 @@ const { readOptionalBooleanValue } = require('./optional-boolean-value');
 // The base block's subjectRefId is <standard>@<version> plus the marker its KIND requires; the
 // marker comes from ONE table (SCHEMA_BLOCK_KIND_SUFFIX), never a literal composed here.
 const vocabulary = require(path.join(__dirname, '..', '..', '..', 'lib', 'vocabulary', 'vocabulary'));
+
+// the PURE block codec — deserializeBlock turns the just-harvested CEDS base block text back into
+// { header, nodes, edges } (nodes carrying their PG-JSON property arrays), which is exactly the
+// DESERIALIZED input contract forgeHub declares (Phase 3, §7). Same codec the base was serialized
+// with, so the round-trip is byte-faithful.
+const replayBlock = require(path.join(__dirname, '..', '..', '..', 'lib', 'replay', 'replay-block'))();
+
+// HUB FORGE REGISTRY (registry-over-switch; polyArch2 §7) — the pure per-standard hub derivation,
+// keyed by standard token. A hub standard resolves its forgeHub here; an UNREGISTERED hub standard
+// is refused BY NAME (no silent default — a hub declared for a standard with no derivation is a
+// recipe bug, not a zero-reference hub). ceds is the only hub derivation today; a second hub is one
+// more row here, not a branch to edit.
+const cedsHubForge = require(
+	path.join(__dirname, '..', '..', '..', 'forges', 'ceds', 'lib', 'referenceSubgraph'),
+);
+const HUB_FORGE_BY_STANDARD = { ceds: cedsHubForge };
 
 // The four component modules. bridgeMaker is REAL-required but STUB-BODIED by design as of
 // 2026-07-22 (its body lands with Phase C bridging); the other three have real bodies. There is no
@@ -64,7 +82,17 @@ const defaultComponents = {
 // These are handed DOWN: init stamps them, harvest selects on them, so the producing side and the
 // harvesting side agree by parameter instead of by two hopeful literals.
 const BASE_GRAPH_LABEL = 'StandardBase';
-const HUB_LABEL = 'HubReference';
+// The hub subgraph is TWO node types — HubReference AND the one HubDefinition — and a harvest that
+// selects only one leaves a block missing the definition (and, with it, the IN_HUB decomposition
+// edges). The selection is BOTH labels, drawn from the vocabulary registry so the harvest names the
+// same words forgeHub stamps. (NOTE, code fact: replay-engine.labelMatch composes selectionLabels as
+// a CONJUNCTIVE Cypher clause `A`:`B` and fetchEdgesWithinLabels requires both endpoints in-set — see
+// the closure note at the hub step and the report — so this two-label selection is the correct
+// INTENT the orchestrator declares, harvested faithfully by the doubles here.)
+const HUB_NODE_LABELS = [
+	vocabulary.EQUIVALENCE_NODE_LABELS.HUB_REFERENCE,
+	vocabulary.EQUIVALENCE_NODE_LABELS.HUB_DEFINITION,
+];
 const RELATION_LABEL = 'BridgedRelation';
 
 // minimal sequential async iterator (err-string convention). taskListPlus sequences a KNOWN list
@@ -295,15 +323,72 @@ const build = (recipe, deps, callback) => {
 			);
 		});
 
-		// A hub emits a SECOND schema block from the same working graph (§2). Deriving that block
-		// from the harvested base — forgeHub — is deferred with the rest of the hub step; what is
-		// here is the harvest-and-record half, speaking the declared contract like everything else.
+		// A hub emits a SECOND schema block from the SAME working graph (§7). The derivation is now
+		// wired: deserialize the just-harvested base, run forgeHub over it, load the derived hub
+		// nodes/edges INTO this graph beside the base, and let the label-scoped harvest mint the hub
+		// block. The working graph must SURVIVE until after that harvest — and it does: the delete
+		// task below is pushed LAST, after these hub tasks, so forgeHub's nodes have somewhere to
+		// load and the hub harvest has something to read (lifecycle verified — §7 "subtlety 1").
 		if (hubStdSet.has(String(std.token).toLowerCase())) {
+			// REGISTRY RESOLVE (no silent default): a hub standard with no registered derivation is
+			// refused by name before the pipeline runs. This whole standard fails — a declared hub we
+			// cannot derive is not a hub with zero references.
+			const hubForgeFactory = HUB_FORGE_BY_STANDARD[String(std.token).toLowerCase()];
+			if (!hubForgeFactory) {
+				const known = Object.keys(HUB_FORGE_BY_STANDARD).join(', ') || '(none)';
+				done(
+					`hub standard '${std.token}' has no registered hub forge — known hub forges: ${known}. ` +
+						`A hub declared for a standard with no derivation is a recipe error; nothing was substituted.`,
+				);
+				return;
+			}
+
+			// DERIVE the hub subgraph from the harvested base (PURE forgeHub). deserializeBlock and
+			// forgeHub both THROW on a malformed block by design; contain that throw at this boundary
+			// and route it error-first, exactly as replay-engine.replay contains deserializeBlock's
+			// throw (replay-engine.js ~:1298) — boundary containment, not control flow. In the normal
+			// pipeline the base block is well-formed (this same codec serialized it a step ago), so the
+			// catch is defensive.
+			taskList.push((args, next) => {
+				let hubSubgraph;
+				try {
+					const deserializedBase = replayBlock.deserializeBlock(args.schemaBlock.blockText);
+					hubSubgraph = hubForgeFactory({ hubVersion: std.version }).forgeHub(deserializedBase);
+				} catch (forgeError) {
+					next(`forgeHub ${std.token}: ${forgeError.message}`);
+					return;
+				}
+				next('', { ...args, hubSubgraph });
+			});
+
+			// LOAD the derived hub nodes/edges into the SAME working graph, via the CREATION path. The
+			// hub nodes carry their OWN labels ([ForgedNode,HubReference] / [ForgedNode,HubDefinition]),
+			// so NO applyLabels is passed — a uniform applyLabels would wrong-stamp the HubDefinition
+			// with HubReference (§7 "do NOT applyLabels"). embeddingDims is DECLARED null: the hub is a
+			// structural derivation, nothing is embedded (the one legitimate null, resolveEmbeddingDims).
+			// The hub edges reference base-node stableIds, which are present because the base is already
+			// in this graph (closure — §7 "subtlety 2").
+			taskList.push((args, next) => {
+				replay.init(
+					{
+						inGraph: args.workingGraph,
+						nodeEdges: {
+							nodes: args.hubSubgraph.nodes,
+							edges: args.hubSubgraph.edges,
+							embeddingDims: null,
+						},
+						sourceLabel: `forgeHub reference subgraph for '${std.token}'`,
+					},
+					(err) => next(err ? `init hub ${std.token}: ${err}` : '', args),
+				);
+			});
+
 			taskList.push((args, next) => {
 				replay.harvest(
 					{
 						inGraph: args.workingGraph,
-						selectionLabels: [HUB_LABEL],
+						// BOTH hub node types (and their HAS_CEDS_*/IN_HUB edges) — never one label.
+						selectionLabels: HUB_NODE_LABELS,
 						header: {
 							blockType: 'hub',
 							standardKey: std.token,
@@ -316,17 +401,24 @@ const build = (recipe, deps, callback) => {
 				);
 			});
 
+			// The hub block's subject is <standard>@<version>_hub (§1/§7) — a DISTINCT subject from the
+			// base's <standard>@<version>_base, so the two coexist in one manifest under single-column
+			// uniqueness. The '_hub' marker is DERIVED from the block's kind (never a literal here), so
+			// the name and the kind cannot drift (the store's suffix↔kind gate refuses them if they do).
+			const hubSubjectRefId = `${subjectRefId}${vocabulary.suffixMarkerForKind(
+				vocabulary.SCHEMA_BLOCK_KIND.HUB,
+			)}`;
 			taskList.push((args, next) => {
 				manifest.add(
 					{
-						subjectRefId,
+						subjectRefId: hubSubjectRefId,
 						kind: 'hub',
-						description: `hub reference schema block for ${subjectRefId}, from recipe '${recipe.recipeName}'`,
+						description: `hub reference schema block for ${hubSubjectRefId}, from recipe '${recipe.recipeName}'`,
 						schemaBlock: args.hubSchemaBlock,
 					},
 					(err, addReport) => {
 						if (err) {
-							next(`add hub ${subjectRefId}: ${err}`);
+							next(`add hub ${hubSubjectRefId}: ${err}`);
 							return;
 						}
 						xLog.status(`  [B] hub block ${std.token} -> ${addReport.schemaBlockRefId}`);
