@@ -1,0 +1,17 @@
+{
+  // cedsHub — CEDS base WITH its folded hub, no bridge. The hub-fold integration proof (TQ design
+  // 2026-07-24): the forger derives the CEDS hub and folds it into the single CEDS standardBase block.
+  // No bridge (bridgeMaker is still stub-bodied), so this recipe completes cleanly and exercises the
+  // whole forge -> fold-hub -> load[StandardBase] -> harvest[StandardBase] -> compose -> materialize spine.
+  "schemaVersion": "1.0.0",
+  "recipeName": "cedsHub",
+  "kind": "dev",
+  "description": "CEDS standardBase with its folded HubReference subgraph (no bridge).",
+  "standards": [
+    { "token": "ceds", "version": "current" }
+  ],
+  "hubs": [
+    { "standard": "ceds", "candidateFinder": "semanticDefText", "params": { "topK": 15, "cosineFloor": 0 } }
+  ],
+  "bridges": []
+}
