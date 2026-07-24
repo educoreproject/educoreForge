@@ -37,6 +37,9 @@ const forgerModule = require('../forger');
 const { resolveBundle } = forgerModule;
 const { buildStandardBlock } = require('../lib/standard-block')();
 const { shapeForgedGraph } = require('../lib/shape-forged-graph')();
+// the REAL ceds hub derivation — the fold section drives foldHubIntoNodeEdges against forgeHub's
+// ACTUAL output over a synthetic engine-shape base (pure; no docker/voyage/db).
+const cedsHubForge = require('../../../../../forges/ceds/lib/referenceSubgraph');
 
 const fs = require('fs');
 const path = require('path');
@@ -615,7 +618,7 @@ harness.ok(
 harness.match(
 	"and build.js — the ONE production caller — now STATES the spend instead of omitting it",
 	codeOf(path.join(__dirname, '..', '..', '..', 'lib', 'build.js')),
-	/forger\.forge\(\{[\s\S]{0,200}vectorize:/,
+	/forger\.forge\(\s*\{[\s\S]{0,200}vectorize:/,
 );
 harness.ok(
 	'and interfaces.js declares vectorize REQUIRED, not an optional defaulting to true',
@@ -1252,6 +1255,207 @@ harness.match(
 	'  and announces that it is forging WITHOUT embeddings, so the pin is visible in the run',
 	evaluatorNoVectorize.text,
 	/vectorize OFF/i,
+);
+
+// =====================================================================
+harness.section('HUB FOLD — the forger derives a hub standard hub and FOLDS it into the base nodeEdges');
+// =====================================================================
+// New design (TQ 2026-07-24): the hub folds INTO the base block. foldHubIntoNodeEdges derives the
+// hub from the base nodeEdges and concatenates it, so ONE block per standard carries its hub. This
+// is proven here against forgeHub's ACTUAL output over a synthetic engine-shape CEDS base — pure, no
+// docker/voyage/db. STATE 2 for this section: while foldHubIntoNodeEdges is the base-only
+// pass-through, the folded nodeEdges carry NO hub and the "folded in" assertions go RED; implement
+// the real fold and they pass.
+//
+// forgeHub reads the ENGINE-SHAPE base DIRECTLY — its v1() unwraps scalar-or-single-element-array,
+// so a base whose properties are PG-JSON arrays (as the forger's nodeEdges are) reads unchanged.
+
+const { foldHubIntoNodeEdges } = forgerModule;
+
+// a synthetic CEDS base in ENGINE shape (what the forger hands foldHubIntoNodeEdges): one class, one
+// ENUMERATED property (option set + two values), the HAS_PROPERTY/HAS_OPTION_SET/HAS_VALUE edges.
+// Properties are PG-JSON single-element arrays; nodes carry [ForgedNode].
+const engineShapeCedsBase = (() => {
+	const arr = (scalar) => [scalar];
+	const node = (stableId, properties) => ({
+		ref: { source: 'CEDS', id: stableId },
+		labels: ['ForgedNode'],
+		stableId,
+		properties,
+	});
+	const edge = (type, fromId, toId) => ({
+		type,
+		fromRef: { source: 'CEDS', id: fromId },
+		toRef: { source: 'CEDS', id: toId },
+		properties: { provenanceTier: arr('structural') },
+	});
+	return {
+		nodes: [
+			node('cls:assessment', {
+				role: arr('DmeClass'),
+				domainId: arr('C-Assessment'),
+				canonicalKey: arr('C-Assessment'),
+				name: arr('Assessment'),
+			}),
+			node('prop:status', {
+				role: arr('DmeProperty'),
+				domainId: arr('C-Assessment'),
+				canonicalKey: arr('P-Status'),
+				name: arr('Assessment Status'),
+			}),
+			node('os:status', { role: arr('DmeOptionSet'), rangeOptionSetId: arr('OS-Status') }),
+			node('ov:active', { role: arr('DmeOptionValue'), canonicalKey: arr('OV-Active'), name: arr('Active') }),
+			node('ov:closed', { role: arr('DmeOptionValue'), canonicalKey: arr('OV-Closed'), name: arr('Closed') }),
+		],
+		edges: [
+			edge('HAS_PROPERTY', 'cls:assessment', 'prop:status'),
+			edge('HAS_OPTION_SET', 'prop:status', 'os:status'),
+			edge('HAS_VALUE', 'os:status', 'ov:active'),
+			edge('HAS_VALUE', 'os:status', 'ov:closed'),
+		],
+		embeddingDims: null,
+	};
+})();
+
+// the ground truth: what forgeHub INDEPENDENTLY derives from the same base (a base-only fold reproduces none of it).
+const expectedHub = cedsHubForge({ hubVersion: '2' }).forgeHub(engineShapeCedsBase);
+const foldLabelCount = (nodes, label) =>
+	(nodes || []).filter((oneNode) => (oneNode.labels || []).indexOf(label) !== -1).length;
+
+const folded = foldHubIntoNodeEdges({
+	standard: 'ceds',
+	hubVersion: '2',
+	baseNodeEdges: engineShapeCedsBase,
+	declaredEmbeddingDims: undefined,
+});
+
+harness.equal('foldHubIntoNodeEdges answers without error for a registered hub standard', folded.error || '', '');
+harness.equal(
+	'the folded nodeEdges carry the HubReferences forgeHub derived — the hub is folded INTO the base',
+	foldLabelCount(folded.nodeEdges && folded.nodeEdges.nodes, 'HubReference'),
+	expectedHub.counts.hubReferenceTotal,
+);
+harness.equal(
+	'  and its ONE HubDefinition',
+	foldLabelCount(folded.nodeEdges && folded.nodeEdges.nodes, 'HubDefinition'),
+	1,
+);
+harness.equal(
+	'  the node total is base + derived hub (5 base + refs + definition)',
+	(folded.nodeEdges && folded.nodeEdges.nodes.length) || 0,
+	engineShapeCedsBase.nodes.length + expectedHub.counts.nodeTotal,
+);
+harness.equal(
+	'  the edge total is base + derived hub edges',
+	(folded.nodeEdges && folded.nodeEdges.edges.length) || 0,
+	engineShapeCedsBase.edges.length + expectedHub.counts.edgeTotal,
+);
+harness.ok(
+	'  the base nodes are NOT displaced — every base stableId is still present',
+	(() => {
+		const foldedIds = new Set((folded.nodeEdges ? folded.nodeEdges.nodes : []).map((oneNode) => oneNode.stableId));
+		return engineShapeCedsBase.nodes.every((oneNode) => foldedIds.has(oneNode.stableId));
+	})(),
+	JSON.stringify((folded.nodeEdges ? folded.nodeEdges.nodes : []).map((oneNode) => oneNode.stableId)),
+);
+harness.ok(
+	'  the decomposition edges (HAS_CEDS_*) and IN_HUB are present in the folded set',
+	['HAS_CEDS_DOMAIN', 'HAS_CEDS_PROPERTY', 'HAS_CEDS_RANGE', 'HAS_CEDS_VALUE', 'IN_HUB'].every((oneType) =>
+		(folded.nodeEdges ? folded.nodeEdges.edges : []).some((oneEdge) => oneEdge.type === oneType),
+	),
+	JSON.stringify([...new Set((folded.nodeEdges ? folded.nodeEdges.edges : []).map((e) => e.type))]),
+);
+harness.ok(
+	'  the folded hub nodes are ENGINE-SHAPE (shapeForgedGraph ran): ref.source set, properties PG-JSON arrays',
+	(() => {
+		const hubNode = (folded.nodeEdges ? folded.nodeEdges.nodes : []).find(
+			(oneNode) => (oneNode.labels || []).indexOf('HubReference') !== -1,
+		);
+		return (
+			!!hubNode &&
+			hubNode.ref &&
+			hubNode.ref.source === 'CEDS' &&
+			Array.isArray(hubNode.properties.hubName)
+		);
+	})(),
+	JSON.stringify((folded.nodeEdges ? folded.nodeEdges.nodes : []).find((oneNode) => (oneNode.labels || []).indexOf('HubReference') !== -1)),
+);
+harness.ok(
+	'  the base embeddingDims is preserved on the folded nodeEdges (the hub embeds nothing)',
+	folded.nodeEdges && folded.nodeEdges.embeddingDims === engineShapeCedsBase.embeddingDims,
+	JSON.stringify(folded.nodeEdges && folded.nodeEdges.embeddingDims),
+);
+harness.ok(
+	'  (ground-truth is non-trivial: forgeHub derived at least 3 references)',
+	expectedHub.counts.hubReferenceTotal >= 3,
+	JSON.stringify(expectedHub.counts),
+);
+
+// NO SILENT DEFAULT — a standard declared a hub with no registered forge is refused BY NAME (this is
+// the refusal the first Phase-3 attempt kept in build.js; it now lives here, where the registry does).
+const unregistered = foldHubIntoNodeEdges({
+	standard: 'lif',
+	hubVersion: 'current',
+	baseNodeEdges: engineShapeCedsBase,
+});
+harness.match(
+	'a standard declared a hub with NO registered hub forge is refused, naming it and what is known',
+	unregistered.error,
+	/standard 'lif' is declared a hub but has no registered hub forge — known hub forges: ceds/,
+);
+harness.ok('  and nothing was substituted', /nothing was substituted/.test(unregistered.error || ''), unregistered.error);
+harness.ok('  and it hands back no nodeEdges', unregistered.nodeEdges === undefined, JSON.stringify(unregistered.nodeEdges));
+
+// a malformed base is CONTAINED as an error-first answer (forgeHub throws; foldHubIntoNodeEdges
+// catches at the boundary and routes it, never past forge()'s callback).
+const malformed = foldHubIntoNodeEdges({ standard: 'ceds', hubVersion: '2', baseNodeEdges: { nodes: 'nope', edges: [] } });
+harness.match(
+	'a malformed base is contained as an error, not a throw',
+	malformed.error,
+	/forgeHub for 'ceds' failed/,
+);
+
+// deriveHub is OPTIONAL (default: not a hub) but a SUPPLIED value must BE a boolean — a truthy
+// string ('false' is truthy!) would fold a hub against a caller who typed the opposite, the same §6
+// fault vectorize guards against. Refused BY NAME, before any bundle resolution or spend.
+const deriveHubString = forgeOutcome({ standard: 'ceds', version: '2', vectorize: false, deriveHub: 'true' });
+harness.rejects(
+	"a non-boolean deriveHub ('true' string) is refused by name, not coerced to truthy",
+	deriveHubString.callbackErrors,
+	/deriveHub is 'true'[\s\S]*not a boolean/,
+);
+harness.ok(
+	'  and it travels by CALLBACK and is the only thing said — the refusal precedes bundle resolution',
+	deriveHubString.thrown.length === 0 && deriveHubString.all.length === 1,
+	`thrown: ${deriveHubString.thrown.join('|')} / callback: ${deriveHubString.callbackErrors.join('|')}`,
+);
+// POSITIVE CONTROL: a BOOLEAN deriveHub passes the guard (and then fails later for an unrelated
+// reason — an unknown bundle — proving the guard let it through, not that everything is refused).
+const deriveHubBoolean = forgeOutcome({ standard: '__noSuchStandard__', version: '2', vectorize: false, deriveHub: true });
+harness.ok(
+	'a boolean deriveHub passes the guard — it fails only later, at bundle resolution',
+	deriveHubBoolean.all.some((one) => /no forge bundle/.test(one)) &&
+		!deriveHubBoolean.all.some((one) => /deriveHub/.test(one)),
+	deriveHubBoolean.all.join('\n'),
+);
+
+// the registry is DATA keyed by standard token (registry-over-switch)
+harness.ok(
+	'HUB_FORGE_BY_STANDARD is a registry keyed by standard token, carrying ceds',
+	!!forgerModule.HUB_FORGE_BY_STANDARD && typeof forgerModule.HUB_FORGE_BY_STANDARD.ceds === 'function',
+	JSON.stringify(Object.keys(forgerModule.HUB_FORGE_BY_STANDARD || {})),
+);
+
+// forge() actually WIRES the fold in, reading deriveHub and calling foldHubIntoNodeEdges
+harness.match(
+	'forge() reads deriveHub off the spec',
+	codeOf(path.join(__dirname, '..', 'forger.js')),
+	/deriveHub/,
+);
+harness.match(
+	'  and calls foldHubIntoNodeEdges when the standard is a hub',
+	codeOf(path.join(__dirname, '..', 'forger.js')),
+	/if \(!deriveHub\)[\s\S]{0,400}foldHubIntoNodeEdges\(/,
 );
 
 harness.report();

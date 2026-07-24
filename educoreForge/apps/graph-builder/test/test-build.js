@@ -527,14 +527,18 @@ const stageCedsLif = () => {
 
 		harness.equal('build succeeds (no error)', err, '');
 		harness.equal(
-			'memberCount is 4 (2 standardBase + 1 hub + 1 relationship)',
+			'memberCount is 3 (2 standardBase + 1 relationship) — the ceds hub FOLDS into its base block, not a 4th member',
 			result.memberCount,
-			4,
+			3,
 		);
 
 		harness.match('ceds is forged', xLog.text(), /\[A\] forge ceds@current_base -> standardBase /);
 		harness.match('lif is forged', xLog.text(), /\[A\] forge lif@current_base -> standardBase /);
-		harness.match('the declared hub yields a hub block', xLog.text(), /\[B\] hub block ceds -> /);
+		harness.ok(
+			'the declared hub yields NO separate hub block — it is folded into the ceds base block',
+			!/\[B\]/.test(xLog.text()),
+			xLog.text(),
+		);
 		harness.match(
 			'the bridge is keyed by its source::hub pairing',
 			xLog.text(),
@@ -570,9 +574,9 @@ const stageCedsLif = () => {
 		const order = xLog.lines.map((l) => (l.match(/\[(A|B|C|compose|materialize)\]/) || [])[1]);
 		const sequence = order.filter(Boolean).join(',');
 		harness.equal(
-			'phases run in order: A, B(hub), A, C, compose, materialize',
+			'phases run in order: A, A, C, compose, materialize (no B — the hub folds into A)',
 			sequence,
-			'A,B,A,C,compose,materialize',
+			'A,A,C,compose,materialize',
 		);
 
 		harness.ok(
@@ -670,33 +674,13 @@ const stageEdgeCasesRest = () => {
 							);
 							harness.ok('no [B] line appears', !/\[B\]/.test(xLog.text()), xLog.text());
 
-							// a FORGED standard declared a hub, but no hub derivation is registered for it:
-							// refused BY NAME (registry-over-switch, no silent default) — lif is a real
-							// standard here but there is no lif hub forge.
-							runBuild(
-								{
-									recipeName: 'unregisteredHubForge',
-									description: 'a forged standard declared a hub with no registered derivation',
-									standards: [{ token: 'lif', version: 'current' }],
-									hubs: [{ standard: 'lif' }],
-									bridges: [],
-								},
-								({ err: regErr, result: regResult }) => {
-									harness.match(
-										'a hub standard with no registered hub forge is refused, naming it and what is known',
-										regErr,
-										/hub standard 'lif' has no registered hub forge — known hub forges: ceds/,
-									);
-									harness.ok(
-										'  and nothing was substituted',
-										/nothing was substituted/.test(regErr || ''),
-										regErr,
-									);
-									harness.ok('  and hands back no result', regResult === undefined, JSON.stringify(regResult));
-
-									stageRealManifestEditor();
-								},
-							);
+							// NOTE (hub-fold design): the registry that refuses a declared-but-unregistered
+							// hub forge now lives in the FORGER (foldHubIntoNodeEdges), not in build.js — a
+							// working forger double here never consults it. That refusal is proven where it
+							// now lives, in test-forger.js. build.js's job is only to SET deriveHub from
+							// recipe.hubs; the fault path it still owns (a forge that fails) is exercised in
+							// FAULT INJECTION below.
+							stageRealManifestEditor();
 						},
 					);
 				},
@@ -758,35 +742,44 @@ const stageRealManifestEditor = () => {
 			);
 
 			harness.note(
-				'GAP NOW CLOSED — the base and the hub are DISTINCT subjects (ceds@v_base vs ceds@v_hub,\n' +
-					'§1/§7), so the real manifestEditor no longer sees a repeated subjectRefId. The next\n' +
-					'stage composes BOTH against the REAL editor and proves it.',
+				'HUB FOLDS INTO BASE (design 2026-07-24) — a hub standard yields ONE [StandardBase]\n' +
+					'block that already carries its hub; there is NO separate hub member. The next stage\n' +
+					'proves that one block, composed against the REAL editor, holds base + derived hub.',
 			);
 
-			stageHubRoundTrip();
+			stageHubFoldedIntoBase();
 		},
 	);
 };
 
 // =====================================================================
-// HUB ROUND-TRIP — forgeHub wired: forge -> base-harvest -> forgeHub -> init -> hub-harvest -> compose
+// HUB FOLDED INTO BASE — one [StandardBase] block carries base + hub, composed against the REAL editor
 // =====================================================================
-// The whole Phase-3 wiring, end to end, against the REAL manifestEditor (so the two-block composition
-// is validated by the module, not a double) with a replayManager DOUBLE that faithfully round-trips
-// forgeHub's ACTUAL output: it hands back a RICH synthetic CEDS base block for the base harvest, RETAINS
-// whatever the orchestrator loads via the forgeHub init, and serializes THAT back out on the hub harvest.
-// No docker, no voyage, no database — forgeHub and the block codec are pure. State 2 for this stage: run
-// against the unwired build.js (no forgeHub/init) and the hub harvest comes back EMPTY and unsuffixed —
-// these assertions go red; wire it and they compose.
+// The whole hub-fold design (TQ 2026-07-24), end to end, against the REAL manifestEditor (so the ONE-
+// member composition is validated by the module, not a double). The FORGER folds the hub in: this
+// stage's forger double returns a RICH synthetic CEDS base as nodeEdges and, when deriveHub is set,
+// runs it through the REAL foldHubIntoNodeEdges so the returned nodeEdges genuinely carry base + hub.
+// The replayManager double mirrors the real engine: init UNIONS applyLabels onto every loaded node
+// (so hub nodes gain StandardBase beside their intrinsic HubReference/HubDefinition), and the ONE
+// [StandardBase] harvest serializes them all back out as a single block. No docker, no voyage, no
+// database — foldHubIntoNodeEdges, shapeForgedGraph and the block codec are all pure.
+//
+// STATE 2 for this stage: while foldHubIntoNodeEdges is the base-only pass-through, the forger returns
+// base-only nodeEdges, the harvested [StandardBase] block carries NO hub, and the "block contains the
+// derived hub" assertions go RED. Implement the real fold and they compose.
 
-// A minimal but non-trivial CEDS base: one class, one ENUMERATED property (option set + two values),
-// and the HAS_PROPERTY/HAS_OPTION_SET/HAS_VALUE structural edges forgeHub reads. Properties are PG-JSON
-// single-element arrays, exactly as a deserialized block carries them.
-const syntheticCedsBaseBlockText = (() => {
+const forgerModule = require('../apps/forger');
+const { foldHubIntoNodeEdges } = forgerModule;
+
+// A minimal but non-trivial CEDS base, in ENGINE shape (what the forger returns): one class, one
+// ENUMERATED property (option set + two values), and the HAS_PROPERTY/HAS_OPTION_SET/HAS_VALUE
+// structural edges forgeHub reads. Properties are PG-JSON single-element arrays; nodes carry their
+// own [ForgedNode] label (build.js's init is what stamps StandardBase, exactly as in production).
+const syntheticCedsBaseNodeEdges = (() => {
 	const arr = (scalar) => [scalar];
 	const node = (stableId, properties) => ({
 		ref: { source: 'CEDS', id: stableId },
-		labels: ['ForgedNode', 'StandardBase'],
+		labels: ['ForgedNode'],
 		stableId,
 		properties,
 	});
@@ -796,52 +789,89 @@ const syntheticCedsBaseBlockText = (() => {
 		toRef: { source: 'CEDS', id: toId },
 		properties: { provenanceTier: arr('structural') },
 	});
-	const nodes = [
-		node('cls:assessment', {
-			role: arr('DmeClass'),
-			domainId: arr('C-Assessment'),
-			canonicalKey: arr('C-Assessment'),
-			name: arr('Assessment'),
-		}),
-		node('prop:status', {
-			role: arr('DmeProperty'),
-			domainId: arr('C-Assessment'),
-			canonicalKey: arr('P-Status'),
-			name: arr('Assessment Status'),
-		}),
-		node('os:status', {
-			role: arr('DmeOptionSet'),
-			rangeOptionSetId: arr('OS-Status'),
-		}),
-		node('ov:active', {
-			role: arr('DmeOptionValue'),
-			canonicalKey: arr('OV-Active'),
-			name: arr('Active'),
-		}),
-		node('ov:closed', {
-			role: arr('DmeOptionValue'),
-			canonicalKey: arr('OV-Closed'),
-			name: arr('Closed'),
-		}),
-	];
-	const edges = [
-		edge('HAS_PROPERTY', 'cls:assessment', 'prop:status'),
-		edge('HAS_OPTION_SET', 'prop:status', 'os:status'),
-		edge('HAS_VALUE', 'os:status', 'ov:active'),
-		edge('HAS_VALUE', 'os:status', 'ov:closed'),
-	];
-	return realReplayBlock.serializeBlock({
-		header: { blockType: 'standardBase', standardKey: 'ceds', version: '2', embeddingDims: null },
-		nodes,
-		edges,
-	});
+	return {
+		nodes: [
+			node('cls:assessment', {
+				role: arr('DmeClass'),
+				domainId: arr('C-Assessment'),
+				canonicalKey: arr('C-Assessment'),
+				name: arr('Assessment'),
+			}),
+			node('prop:status', {
+				role: arr('DmeProperty'),
+				domainId: arr('C-Assessment'),
+				canonicalKey: arr('P-Status'),
+				name: arr('Assessment Status'),
+			}),
+			node('os:status', {
+				role: arr('DmeOptionSet'),
+				rangeOptionSetId: arr('OS-Status'),
+			}),
+			node('ov:active', {
+				role: arr('DmeOptionValue'),
+				canonicalKey: arr('OV-Active'),
+				name: arr('Active'),
+			}),
+			node('ov:closed', {
+				role: arr('DmeOptionValue'),
+				canonicalKey: arr('OV-Closed'),
+				name: arr('Closed'),
+			}),
+		],
+		edges: [
+			edge('HAS_PROPERTY', 'cls:assessment', 'prop:status'),
+			edge('HAS_OPTION_SET', 'prop:status', 'os:status'),
+			edge('HAS_VALUE', 'os:status', 'ov:active'),
+			edge('HAS_VALUE', 'os:status', 'ov:closed'),
+		],
+		embeddingDims: null,
+	};
 })();
 
-// the replayManager double that ROUND-TRIPS forgeHub. Built on the working double; it overrides init
-// (to retain the forgeHub load) and harvest (base -> synthetic block; hub -> the retained load, serialized).
-const roundTrippingReplayManager = (baseBlockText) => () => {
+// the forger double for the fold stage: returns the synthetic CEDS base and, when the standard is a
+// hub (deriveHub), runs the REAL foldHubIntoNodeEdges over it so the returned nodeEdges carry base +
+// hub — exactly what the production forger does. This is where the fold is genuinely exercised
+// through the orchestrator (the fold LOGIC itself is unit-proven in test-forger.js).
+const hubFoldingForger = (baseNodeEdges) => () => ({
+	forge: ({ standard, version, deriveHub }, cb) => {
+		let nodeEdges = baseNodeEdges;
+		if (deriveHub) {
+			const folded = foldHubIntoNodeEdges({
+				standard,
+				hubVersion: version,
+				baseNodeEdges,
+				declaredEmbeddingDims: baseNodeEdges.embeddingDims,
+			});
+			if (folded.error) {
+				cb(folded.error);
+				return;
+			}
+			nodeEdges = folded.nodeEdges;
+		}
+		cb('', {
+			standard,
+			version,
+			nodeEdges,
+			nodeCount: nodeEdges.nodes.length,
+			edgeCount: nodeEdges.edges.length,
+			embedCallCount: 0,
+		});
+	},
+});
+
+// the replayManager double that mirrors the real engine's label-union on CREATION and serializes the
+// retained material on the [StandardBase] harvest. init UNIONS applyLabels into every node's labels
+// (replayManager withAppliedLabels, code fact), retaining the result; the [StandardBase] harvest
+// serializes exactly that back out as one block.
+const retainingReplayManager = () => () => {
 	const working = workingReplayManager()();
-	let retainedHub = null; // { nodes, edges } captured from the forgeHub init
+	let retained = null; // { nodes, edges } after applyLabels union, captured from the CREATION init
+	const unionLabels = (nodes, applyLabels) =>
+		(nodes || []).map((oneNode) => {
+			const existing = oneNode.labels || [];
+			const additions = (applyLabels || []).filter((one) => existing.indexOf(one) === -1);
+			return additions.length === 0 ? oneNode : { ...oneNode, labels: existing.concat(additions) };
+		});
 	const blockResult = (blockText, nodeCount, edgeCount) => ({
 		blockText,
 		blockId: contentAddress.blockIdForText(blockText),
@@ -851,45 +881,30 @@ const roundTrippingReplayManager = (baseBlockText) => () => {
 	});
 	return Object.assign({}, working, {
 		init: (spec, cb) => {
-			// the forgeHub load: nodeEdges, NO applyLabels, sourceLabel names forgeHub. Retain it.
-			if (
-				spec &&
-				spec.nodeEdges &&
-				spec.applyLabels === undefined &&
-				/forgeHub reference subgraph/.test(spec.sourceLabel || '')
-			) {
-				retainedHub = { nodes: spec.nodeEdges.nodes, edges: spec.nodeEdges.edges };
+			if (spec && spec.nodeEdges) {
+				retained = {
+					nodes: unionLabels(spec.nodeEdges.nodes, spec.applyLabels),
+					edges: spec.nodeEdges.edges,
+				};
 			}
 			working.init(spec, cb);
 		},
 		harvest: (spec, cb) => {
 			const labels = (spec && spec.selectionLabels) || [];
 			if (labels.indexOf('StandardBase') !== -1) {
-				const base = realReplayBlock.deserializeBlock(baseBlockText);
-				cb('', blockResult(baseBlockText, base.nodes.length, base.edges.length));
-				return;
-			}
-			if (labels.indexOf('HubReference') !== -1) {
-				// serialize the RETAINED forgeHub output back out (empty if nothing was loaded — the
-				// unwired State-2 shape). Map forgeHub's { labels, stableId, role, properties } nodes to
-				// the { ref, labels, stableId, properties } the codec writes, deriving ref from _source.
-				const rt = retainedHub || { nodes: [], edges: [] };
+				const rt = retained || { nodes: [], edges: [] };
+				const selected = rt.nodes.filter((oneNode) => (oneNode.labels || []).indexOf('StandardBase') !== -1);
 				const blockText = realReplayBlock.serializeBlock({
 					header: {
-						blockType: 'hub',
+						blockType: (spec.header && spec.header.blockType) || 'standardBase',
 						standardKey: (spec.header && spec.header.standardKey) || 'ceds',
 						version: (spec.header && spec.header.version) || '2',
 						embeddingDims: null,
 					},
-					nodes: rt.nodes.map((oneNode) => ({
-						ref: { source: oneNode.properties._source, id: oneNode.stableId },
-						labels: oneNode.labels,
-						stableId: oneNode.stableId,
-						properties: oneNode.properties,
-					})),
+					nodes: selected,
 					edges: rt.edges,
 				});
-				cb('', blockResult(blockText, rt.nodes.length, rt.edges.length));
+				cb('', blockResult(blockText, selected.length, rt.edges.length));
 				return;
 			}
 			working.harvest(spec, cb);
@@ -900,21 +915,20 @@ const roundTrippingReplayManager = (baseBlockText) => () => {
 const labelCount = (nodes, label) =>
 	nodes.filter((oneNode) => (oneNode.labels || []).indexOf(label) !== -1).length;
 
-const stageHubRoundTrip = () => {
-	harness.section('HUB ROUND-TRIP — forgeHub wired, composing base + hub against the REAL manifestEditor');
+const stageHubFoldedIntoBase = () => {
+	harness.section('HUB FOLDED INTO BASE — one [StandardBase] block carries base + hub, composed against the REAL editor');
 
-	// what forgeHub INDEPENDENTLY derives from the same synthetic base — the ground truth the harvested
-	// hub block must reproduce (a placeholder would not).
-	const expected = cedsHubForge({ hubVersion: '2' }).forgeHub(
-		realReplayBlock.deserializeBlock(syntheticCedsBaseBlockText),
-	);
+	// what forgeHub INDEPENDENTLY derives from the same synthetic base — the ground truth the folded
+	// block's hub set must reproduce (a base-only block would not).
+	const expected = cedsHubForge({ hubVersion: '2' }).forgeHub(syntheticCedsBaseNodeEdges);
+	const baseNodeCount = syntheticCedsBaseNodeEdges.nodes.length;
 
 	const xLog = capturingXLog();
 	const standardsDatabase = standardsDatabaseDouble();
 	buildLib.build(
 		{
 			recipeName: 'cedsHubOnly',
-			description: 'ceds forged as a hub, no bridge — the Phase-3 round-trip',
+			description: 'ceds forged as a hub, no bridge — the hub folds into its base block',
 			standards: [{ token: 'ceds', version: '2' }],
 			hubs: [{ standard: 'ceds' }],
 			bridges: [],
@@ -923,62 +937,92 @@ const stageHubRoundTrip = () => {
 			xLog,
 			standardsDatabase,
 			components: {
-				forger: workingForger(),
-				replayManager: roundTrippingReplayManager(syntheticCedsBaseBlockText),
+				forger: hubFoldingForger(syntheticCedsBaseNodeEdges),
+				replayManager: retainingReplayManager(),
 				bridgeMaker: workingBridgeMaker(),
 				manifestEditor: realManifestEditor,
 			},
 		},
 		(err, result) => {
 			harness.equal('the hub recipe builds without error against the real editor', err, '');
-			harness.equal('memberCount is 2 (one base + one hub)', (result || {}).memberCount, 2);
+			harness.equal(
+				'memberCount is 1 — ONE [StandardBase] member, NO separate hub member',
+				(result || {}).memberCount,
+				1,
+			);
 
 			const saved = Object.values(standardsDatabase.savedBlocks);
-			const baseSaved = saved.filter((oneBlock) => oneBlock.kind === 'standardBase')[0];
-			const hubSaved = saved.filter((oneBlock) => oneBlock.kind === 'hub')[0];
-
-			harness.ok('a base block reached the store', !!baseSaved, JSON.stringify(saved.map((b) => b.kind)));
-			harness.ok('a hub block reached the store', !!hubSaved, JSON.stringify(saved.map((b) => b.kind)));
+			harness.equal('exactly one schema block reached the store', saved.length, 1);
+			const only = saved[0];
+			harness.equal('  and its kind is standardBase (there is no hub-kind block)', only.kind, 'standardBase');
 			harness.equal(
-				'the base is subjectRefId ceds@2_base under kind standardBase',
-				baseSaved && baseSaved.subjectRefId,
+				'  keyed by the base subject ceds@2_base with its _base marker',
+				only.subjectRefId,
 				'ceds@2_base',
 			);
-			harness.equal(
-				'the hub is subjectRefId ceds@2_hub under kind hub — a DISTINCT subject, suffix agreeing with kind',
-				hubSaved && hubSaved.subjectRefId,
-				'ceds@2_hub',
+			harness.ok(
+				'  no block of kind hub was composed at all',
+				!saved.some((oneBlock) => oneBlock.kind === 'hub'),
+				JSON.stringify(saved.map((b) => b.kind)),
 			);
 
-			// the derived hub node set actually round-tripped — parse the stored hub block and compare
-			// against forgeHub's own counts over the same base (not a placeholder, not one label only).
-			const hubBlock = realReplayBlock.deserializeBlock(hubSaved.text);
+			// parse the ONE block and prove it carries base AND the derived hub — this is the assertion
+			// observed RED in State 2 (base-only pass-through) before the forger folded the hub in.
+			const block = realReplayBlock.deserializeBlock(only.text);
 			harness.equal(
-				'the hub block carries BOTH node types: the HubReferences forgeHub derived',
-				labelCount(hubBlock.nodes, 'HubReference'),
+				'the ONE block carries the HubReferences forgeHub derived, folded in beside the base',
+				labelCount(block.nodes, 'HubReference'),
 				expected.counts.hubReferenceTotal,
 			);
 			harness.equal(
-				'  and its ONE HubDefinition (a single-label harvest would have dropped it)',
-				labelCount(hubBlock.nodes, 'HubDefinition'),
+				'  and its ONE HubDefinition (folded in, not dropped)',
+				labelCount(block.nodes, 'HubDefinition'),
 				1,
 			);
 			harness.equal(
-				'  the node total matches forgeHub exactly (3 refs + 1 definition)',
-				hubBlock.nodes.length,
-				expected.counts.nodeTotal,
+				'  the block node total is base + derived hub (5 base + refs + definition)',
+				block.nodes.length,
+				baseNodeCount + expected.counts.nodeTotal,
 			);
 			harness.equal(
-				'  and every derived decomposition/IN_HUB edge is present',
-				hubBlock.edges.length,
-				expected.counts.edgeTotal,
+				'  and every base structural node still carries StandardBase (the base is not displaced)',
+				labelCount(block.nodes, 'StandardBase'),
+				block.nodes.length,
+			);
+			harness.ok(
+				'  the hub nodes gained StandardBase while KEEPING their intrinsic HubReference/HubDefinition',
+				block.nodes
+					.filter((oneNode) => (oneNode.labels || []).indexOf('HubReference') !== -1)
+					.every((oneNode) => (oneNode.labels || []).indexOf('StandardBase') !== -1),
+				JSON.stringify(
+					block.nodes.map((oneNode) => oneNode.labels).filter((ls) => ls.indexOf('HubReference') !== -1)[0],
+				),
+			);
+			harness.equal(
+				'  and every derived decomposition/IN_HUB edge is present in the same block as the base edges',
+				block.edges.length,
+				syntheticCedsBaseNodeEdges.edges.length + expected.counts.edgeTotal,
 			);
 			harness.ok(
 				'  the decomposition edges (HAS_CEDS_* onto base stableIds) and IN_HUB are there',
 				['HAS_CEDS_DOMAIN', 'HAS_CEDS_PROPERTY', 'HAS_CEDS_RANGE', 'HAS_CEDS_VALUE', 'IN_HUB'].every(
-					(oneType) => hubBlock.edges.some((oneEdge) => oneEdge.type === oneType),
+					(oneType) => block.edges.some((oneEdge) => oneEdge.type === oneType),
 				),
-				JSON.stringify([...new Set(hubBlock.edges.map((e) => e.type))]),
+				JSON.stringify([...new Set(block.edges.map((e) => e.type))]),
+			);
+			// the WHOLE POINT of folding: the hub's HAS_CEDS_* edges resolve WITHIN this one block,
+			// because both endpoints (a hub node and a base node) are present in it.
+			const stableIdsInBlock = new Set(block.nodes.map((oneNode) => oneNode.stableId));
+			harness.ok(
+				'  every hub edge endpoint resolves within the one block — no cross-boundary edge is dropped',
+				block.edges.every(
+					(oneEdge) => stableIdsInBlock.has(oneEdge.fromRef.id) && stableIdsInBlock.has(oneEdge.toRef.id),
+				),
+				JSON.stringify(
+					block.edges
+						.filter((oneEdge) => !stableIdsInBlock.has(oneEdge.fromRef.id) || !stableIdsInBlock.has(oneEdge.toRef.id))
+						.slice(0, 3),
+				),
 			);
 			// sanity that the ground truth is non-trivial — a green here must mean the derivation RAN,
 			// not that both sides were empty.
@@ -988,11 +1032,7 @@ const stageHubRoundTrip = () => {
 				JSON.stringify(expected.counts),
 			);
 
-			harness.match(
-				'the log shows the hub block minted [B]',
-				xLog.text(),
-				/\[B\] hub block ceds -> /,
-			);
+			harness.ok('the log shows NO [B] line — nothing minted a separate hub block', !/\[B\]/.test(xLog.text()), xLog.text());
 
 			stageFaultInjection();
 		},
@@ -1037,39 +1077,6 @@ const faultCases = [
 		label: 'phase A: recording the standardBase member fails',
 		components: { manifestEditor: manifestFailingAddFor('standardBase', 'standardsDatabase write refused') },
 		pattern: /phase A \(forge\) failed: add standardBase ceds@current_base: standardsDatabase write refused/,
-	},
-	{
-		label: 'phase A: deriving+loading the hub subgraph (forgeHub -> init) fails',
-		components: {
-			replayManager: (() => {
-				const working = workingReplayManager()();
-				return () =>
-					Object.assign({}, working, {
-						// fail ONLY the hub load — the CREATION init whose sourceLabel names forgeHub. The
-						// base init (sourceLabel names the forge bundle) still succeeds, so this proves the
-						// NEW hub-load error path, distinct from the base-load one above.
-						init: (spec, cb) =>
-							/forgeHub reference subgraph/.test((spec && spec.sourceLabel) || '')
-								? cb('write path refused the hub nodes')
-								: working.init(spec, cb),
-					});
-			})(),
-		},
-		pattern: /phase A \(forge\) failed: init hub ceds: write path refused the hub nodes/,
-	},
-	{
-		label: 'phase A: harvesting the HUB schema block fails',
-		// the hub harvest now selects BOTH hub node labels, so the label-join key is the pair.
-		components: {
-			replayManager: replayFailingHarvestFor('HubReferenceHubDefinition', 'no hub subgraph present'),
-		},
-		pattern: /phase A \(forge\) failed: harvest hub ceds: no hub subgraph present/,
-	},
-	{
-		label: 'phase A: recording the HUB member fails',
-		components: { manifestEditor: manifestFailingAddFor('hub', 'subject already present') },
-		// the hub member is keyed by its _hub-suffixed subject now, not the bare standard key.
-		pattern: /phase A \(forge\) failed: add hub ceds@current_hub: subject already present/,
 	},
 	{
 		label: 'phase A: disposing the scratch graph fails',
@@ -1133,7 +1140,7 @@ const faultCases = [
 					});
 			})(),
 		},
-		pattern: /materialize failed: loading 4 schema block\(s\): content address verification failed/,
+		pattern: /materialize failed: loading 3 schema block\(s\): content address verification failed/,
 	},
 ];
 
@@ -1153,7 +1160,7 @@ const stageFaultInjection = () => {
 		},
 		({ err, result }) => {
 			harness.equal('working injected components build without error', err, '');
-			harness.equal('  and still produce 4 members', result.memberCount, 4);
+			harness.equal('  and still produce 3 members (2 base incl. folded hub + 1 relationship)', result.memberCount, 3);
 
 			harness.section('FAULT INJECTION — every orchestrator error path, watched firing');
 

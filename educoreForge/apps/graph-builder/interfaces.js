@@ -35,6 +35,12 @@
  *                                         real version provenance itself)
  * @property {string}      [source]        source-data path; default = the bundle's own asset
  * @property {string}      [owner]         ownerStamp pass-through (default ':golden')
+ * @property {boolean}     [deriveHub]     OPTIONAL, default false — the HUB-FOLD SIGNAL (new design
+ *                                         2026-07-24). true makes the forger derive this standard's
+ *                                         hub and FOLD it into the returned nodeEdges, so ONE block
+ *                                         per standard carries its hub. build.js sets it from
+ *                                         recipe.hubs; a standard declared a hub with no registered
+ *                                         derivation is refused by name (no silent default).
  * @property {boolean}     vectorize       REQUIRED, boolean, NO DEFAULT — the SPEND KNOB. true
  *                                         forges with real Voyage embeddings and spends credit;
  *                                         false constructs no Voyage client at all. A spec that
@@ -49,7 +55,10 @@
  * @property {string} standard        resolved standardName (e.g. 'LIF')
  * @property {string} version         the version the bundle stamped
  * @property {{nodes: Array, edges: Array, embeddingDims: number|null}} nodeEdges
- *                                    ENGINE-shaped, ready for ReplayManagerComponent.init
+ *                                    ENGINE-shaped, ready for ReplayManagerComponent.init. When the
+ *                                    spec set deriveHub, this ALSO carries the standard's folded hub
+ *                                    (HubReference + HubDefinition nodes and their HAS_CEDS_ and IN_HUB
+ *                                    edges), so a single [StandardBase] load mints one block with both.
  * @property {number} nodeCount
  * @property {number} edgeCount
  * @property {number} embedCallCount

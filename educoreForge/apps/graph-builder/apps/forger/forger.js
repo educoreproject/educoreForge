@@ -22,6 +22,14 @@
 //                                  it never stands in for the bundle's own version claim.
 //       source?                    path to source data; default = the bundle's own asset
 //       owner?                     ownerStamp pass-through (default ':golden', incumbent-faithful)
+//       deriveHub?                 OPTIONAL boolean, default false — the HUB-FOLD SIGNAL (new
+//                                  design 2026-07-24). When true, the forger DERIVES this standard's
+//                                  hub from the base nodeEdges it just produced and FOLDS the hub
+//                                  nodes/edges INTO the nodeEdges it returns, so ONE block per
+//                                  standard already carries its hub. build.js reads recipe.hubs and
+//                                  sets it. A standard DECLARED a hub (deriveHub true) with no entry
+//                                  in HUB_FORGE_BY_STANDARD is REFUSED BY NAME (no silent default);
+//                                  a standard that is not a hub (the default) returns base-only.
 //       vectorize                  REQUIRED, boolean, NO DEFAULT. The SPEND KNOB: true forges
 //                                  with real Voyage embeddings and spends credit; false skips the
 //                                  embedding pass entirely and constructs no client at all. A
@@ -282,6 +290,84 @@ const resolveReportedVersion = ({ bundleVersion, requestedVersion } = {}) => {
 	};
 };
 
+// -----
+// HUB FORGE REGISTRY (registry-over-switch; polyArch2 §7) — the pure per-standard hub derivation,
+// keyed by the LOWERCASE standard token. A standard DECLARED a hub (spec.deriveHub) resolves its
+// forgeHub here; a standard declared a hub with NO registered derivation is REFUSED BY NAME in
+// foldHubIntoNodeEdges (no silent default — a hub we cannot derive is a recipe error, not a
+// zero-reference hub). ceds is the only hub derivation today; a second hub is one MORE ROW here,
+// never a branch to edit. Each value is a factory ({ hubVersion }) -> { forgeHub, ... } (PLAN
+// Phase 2's pure seam), required once at module load.
+const HUB_FORGE_BY_STANDARD = {
+	ceds: require(path.join(FORGES_DIR, 'ceds', 'lib', 'referenceSubgraph')),
+};
+
+// -----
+// foldHubIntoNodeEdges — the NEW-DESIGN (TQ 2026-07-24) hub seam. DERIVE this standard's hub from
+// the base nodeEdges just shaped and FOLD its nodes/edges into the SAME nodeEdges, so ONE block per
+// standard carries its hub (no separate hub block, no separate harvest, no change to the graph engine).
+// Pure and synchronous; called by forge() ONLY when the recipe declares the standard a hub. Answers
+// { nodeEdges } or { error } — the same error-object idiom resolveBundle uses, so nothing here
+// throws past forge()'s callback.
+//
+//   foldHubIntoNodeEdges({ standard, hubVersion, baseNodeEdges, declaredEmbeddingDims })
+//       -> { nodeEdges: { nodes, edges, embeddingDims } } | { error }
+//
+// forgeHub reads the forger's ENGINE-SHAPE nodeEdges DIRECTLY (verified, PLAN §7): its v1() unwraps
+// scalar-OR-single-element-array, and engine-shape nodes carry stableId + PG-JSON-array properties
+// while engine-shape edges carry type + fromRef.id + toRef.id — exactly the fields forgeHub reads.
+// No adapter is required.
+//
+// forgeHub returns the derived hub in PRODUCER shape ({labels, stableId, role, scalar properties});
+// shapeForgedGraph — the forger's OWN producer->engine translator — turns those into engine shape
+// ({ref, PG-JSON-array properties}) so they concatenate onto the base cleanly. The hub embeds
+// NOTHING (a structural derivation), so its shaping sees no vectors, yields embeddingDims null and
+// leaves declaredEmbeddingDims unused there; the BASE's embeddingDims stands for the folded block.
+// The hub's HAS_CEDS_* edges reference base-node stableIds that are present in the same combined
+// nodeEdges, so once build.js loads this under [StandardBase] the edges resolve WITHIN one block.
+const foldHubIntoNodeEdges = ({ standard, hubVersion, baseNodeEdges, declaredEmbeddingDims }) => {
+	const hubForgeFactory = HUB_FORGE_BY_STANDARD[String(standard).toLowerCase()];
+	if (!hubForgeFactory) {
+		const known = Object.keys(HUB_FORGE_BY_STANDARD).join(', ') || '(none)';
+		return {
+			error:
+				`forger: standard '${standard}' is declared a hub but has no registered hub forge — ` +
+				`known hub forges: ${known}. A hub declared for a standard with no derivation is a ` +
+				`recipe error; nothing was substituted.`,
+		};
+	}
+
+	// DERIVE the hub from the base (PURE forgeHub). forgeHub THROWS on a malformed block by design;
+	// contain that throw at this boundary and route it error-first — boundary containment, not
+	// control flow. In the normal pipeline the base is well-formed (the forger just shaped it), so
+	// the catch is defensive.
+	let hubSubgraph;
+	try {
+		hubSubgraph = hubForgeFactory({ hubVersion }).forgeHub(baseNodeEdges);
+	} catch (hubError) {
+		return { error: `forger: forgeHub for '${standard}' failed: ${hubError.message}` };
+	}
+
+	// SHAPE the derived hub (producer -> engine) with the forger's OWN translator, so the hub nodes
+	// concatenate onto the base in one shape. The hub embeds nothing, so shapeForgedGraph sees no
+	// vectors, returns embeddingDims null and leaves declaredEmbeddingDims unused.
+	const shapedHub = shapeForgedGraph({ forged: hubSubgraph, declaredEmbeddingDims });
+	if (shapedHub.error) {
+		return { error: `forger: shaping the derived hub for '${standard}': ${shapedHub.error}` };
+	}
+
+	// FOLD: concatenate the shaped hub onto the base. The base's embeddingDims stands for the folded
+	// block (the hub added no vectors). The hub's HAS_CEDS_* edges reference base-node stableIds now
+	// sitting in the same nodeEdges, so once loaded under [StandardBase] they resolve within one block.
+	return {
+		nodeEdges: {
+			nodes: baseNodeEdges.nodes.concat(shapedHub.nodes),
+			edges: baseNodeEdges.edges.concat(shapedHub.edges),
+			embeddingDims: baseNodeEdges.embeddingDims,
+		},
+	};
+};
+
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
 // START OF moduleFunction() ============================================================
@@ -296,6 +382,7 @@ const moduleFunction =
 			version,
 			source,
 			owner = ':golden',
+			deriveHub = false,
 			vectorize,
 			embedNodeLimit,
 			embeddingConfigFilePath,
@@ -350,6 +437,24 @@ const moduleFunction =
 					`distinct, and there is no default for it. This is checked BEFORE any bundle is ` +
 					`resolved or any embedder is constructed, so a missing version cannot cost ` +
 					`Voyage credit.`,
+			);
+			return;
+		}
+
+		// deriveHub is the OPTIONAL hub-fold signal (default: not a hub). A SUPPLIED value must BE a
+		// boolean: a truthy string ('false' is truthy!) would fold a hub against a caller who typed
+		// the opposite — the same §6 fault the vectorize guard above refuses. A non-boolean is REFUSED
+		// BY NAME rather than coerced. This is a cheap refusal placed before resolveBundle, so a bad
+		// signal costs neither a bundle read nor Voyage credit. Absence is fine and means not-a-hub.
+		if (spec && spec.deriveHub !== undefined && typeof spec.deriveHub !== 'boolean') {
+			callback(
+				`forger: deriveHub is ${
+					typeof spec.deriveHub === 'string'
+						? `'${spec.deriveHub}' (a string)`
+						: JSON.stringify(spec.deriveHub)
+				}, which is not a boolean. It is the OPTIONAL hub-fold signal (default: not a hub); a ` +
+					`SUPPLIED value must be the boolean true or false. A string, number or null is REFUSED ` +
+					`rather than coerced, because a truthy non-boolean would fold a hub nobody asked for.`,
 			);
 			return;
 		}
@@ -442,6 +547,34 @@ const moduleFunction =
 			next('', { ...args, shaped });
 		});
 
+		// FOLD THE HUB INTO THE BASE (new design 2026-07-24). When the recipe declares this standard
+		// a hub (deriveHub), derive its hub from the just-shaped base nodeEdges and fold it in, so the
+		// single block this standard produces already contains its hub. A non-hub standard (the
+		// default) skips this entirely and returns base-only nodeEdges. A standard DECLARED a hub with
+		// no registered derivation is refused BY NAME inside foldHubIntoNodeEdges (no silent default).
+		// declaredEmbeddingDims is threaded through: the hub embeds nothing, so it is unused there,
+		// but passing it keeps the shaper's contract honest if a future hub ever carried vectors.
+		taskList.push((args, next) => {
+			if (!deriveHub) {
+				next('', args);
+				return;
+			}
+			const folded = foldHubIntoNodeEdges({
+				standard,
+				hubVersion: version,
+				baseNodeEdges: args.shaped,
+				declaredEmbeddingDims,
+			});
+			if (folded.error) {
+				next(folded.error);
+				return;
+			}
+			xLog.status(
+				`[forger] folded '${standard}' hub into its base block: nodeEdges now ${folded.nodeEdges.nodes.length} nodes, ${folded.nodeEdges.edges.length} edges`,
+			);
+			next('', { ...args, shaped: folded.nodeEdges });
+		});
+
 		pipeRunner(taskList.getList(), {}, (err, args) => {
 			if (err) {
 				callback(err);
@@ -479,3 +612,7 @@ module.exports = moduleFunction({ moduleName });
 module.exports.resolveBundle = resolveBundle;
 module.exports.resolveVoyageConfigPath = resolveVoyageConfigPath;
 module.exports.resolveReportedVersion = resolveReportedVersion;
+// the hub-fold seam and its registry, exported so the fold logic is provable WITHOUT running a
+// whole forge (test-forger drives foldHubIntoNodeEdges over a synthetic engine-shape base).
+module.exports.foldHubIntoNodeEdges = foldHubIntoNodeEdges;
+module.exports.HUB_FORGE_BY_STANDARD = HUB_FORGE_BY_STANDARD;
