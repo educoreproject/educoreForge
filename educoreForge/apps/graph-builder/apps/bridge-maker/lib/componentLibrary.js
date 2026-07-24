@@ -27,6 +27,11 @@
 const path = require('path');
 
 const relationshipWriterFactory = require(path.join(__dirname, 'relationshipWriter'));
+// referenceIndex — the ported pure mappingSubgraph (P2). A pure module needing no run resources, so it
+// is injected as its FACTORY: a producer composes it with its OWN mapping options (subjectSource,
+// versions, mappingTool — the producer's operational data, parameter-ownership §4) and calls
+// buildMappingSubgraph. No graphWriter, no graphReader, no network.
+const referenceIndexFactory = require(path.join(__dirname, 'referenceIndex'));
 
 // -----
 // skeletonComponent — a P0 contract stub. It is a curried moduleFunction like every real
@@ -69,11 +74,6 @@ const SKELETON_FACTORIES = {
 		'P3 (PURE)',
 		'decisionFreezer() ({decisions}) -> frozenDecisionBlock (content-addressed)',
 	),
-	referenceIndex: skeletonComponent(
-		'referenceIndex',
-		'P2 (PURE, the ported mappingSubgraph)',
-		'referenceIndex() ({referenceNodes}) -> {resolve(targetKey) -> hubRefStableId}',
-	),
 	sourceWalker: skeletonComponent(
 		'sourceWalker',
 		'P2 (PURE)',
@@ -104,8 +104,12 @@ const buildComponentLibrary = ({ graphWriter, config = {}, xLog } = {}) => {
 		library[oneComponentName] = SKELETON_FACTORIES[oneComponentName]();
 	});
 
-	// the ONE real body — the write seam, constructed over the run's graphWriter.
+	// the ONE real WRITE seam — constructed over the run's graphWriter.
 	library.relationshipWriter = relationshipWriterFactory({ graphWriter });
+
+	// referenceIndex — real body (P2): the ported pure mappingSubgraph FACTORY, injected as-is (§3.7).
+	// A producer instantiates it with its own mapping options; it needs no run resources.
+	library.referenceIndex = referenceIndexFactory;
 
 	return library;
 };
