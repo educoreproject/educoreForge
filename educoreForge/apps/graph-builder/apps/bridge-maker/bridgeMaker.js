@@ -58,6 +58,7 @@ const { pipeRunner, taskListPlus } = new require('qtools-asynchronous-pipe-plus'
 const { BRIDGE_MODULE_SHAPE } = require(path.join(__dirname, '..', '..', 'interfaces'));
 const { buildComponentLibrary } = require(path.join(__dirname, 'lib', 'componentLibrary'));
 const neo4jGraphWriter = require(path.join(__dirname, 'lib', 'neo4jGraphWriter'));
+const neo4jGraphReader = require(path.join(__dirname, 'lib', 'neo4jGraphReader'));
 
 // -----
 // THE BRIDGE PLUGIN REGISTRY (registry-over-switch; polyArch2 §7) — DATA keyed by mapper token,
@@ -68,6 +69,10 @@ const DEFAULT_GENERIC_MAPPER = 'genericBridge';
 
 const BRIDGE_PLUGIN_BY_MAPPER = {
 	[DEFAULT_GENERIC_MAPPER]: require(path.join(__dirname, 'lib', 'bridgePlugins', 'genericBridge')),
+	// CTDL authored EXACT_MATCH producer (P2) — a per-standard OVERRIDE (design §1), ONE more row here,
+	// no branch to edit. The recipe's CTDL->CEDS bridge names this mapper. Token follows the
+	// '<source>IntoCeds<Producer>' shape the LIF bridge uses ('lifIntoCedsSemantic').
+	ctdlIntoCedsAuthored: require(path.join(__dirname, 'lib', 'bridgePlugins', 'ctdlAuthoredBridge')),
 };
 
 // -----
@@ -141,8 +146,12 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
 const moduleFunction =
 	({ moduleName } = {}) =>
-	({ bridgePluginRegistry = BRIDGE_PLUGIN_BY_MAPPER, graphWriterFactory = neo4jGraphWriter } = {}) => {
-		const run = ({ inGraph, mapper, applyLabel }, callback) => {
+	({
+		bridgePluginRegistry = BRIDGE_PLUGIN_BY_MAPPER,
+		graphWriterFactory = neo4jGraphWriter,
+		graphReaderFactory = neo4jGraphReader,
+	} = {}) => {
+		const run = ({ inGraph, mapper, hub = null, applyLabel }, callback) => {
 			// ARGUMENT REFUSALS — every required argument is stated or the run does not start
 			// (polyArch2 §6). None is guessed.
 			if (!inGraph) {
@@ -177,9 +186,12 @@ const moduleFunction =
 				return;
 			}
 
-			// MINT the write substrate from the handle, build the library over it, COMPOSE the plugin.
+			// MINT the write substrate from the handle, build the library over it, COMPOSE the plugin. The
+			// graphReader FACTORY is injected too (P2): an authored producer mints+closes its own reader to
+			// WALK the dependency graph. The suite injects a reader double, so the producer's read path is
+			// proven without a container (§3 hard line 2), exactly as the writer double proves the write path.
 			const graphWriter = graphWriterFactory({ inGraph });
-			const componentLibrary = buildComponentLibrary({ graphWriter });
+			const componentLibrary = buildComponentLibrary({ graphWriter, graphReader: graphReaderFactory });
 
 			let pluginCallable;
 			try {
@@ -198,9 +210,12 @@ const moduleFunction =
 
 			const taskList = new taskListPlus();
 
-			// RUN the plugin over the live graph. hub is null in P0 (see header seam note).
+			// RUN the plugin over the live graph. hub is THREADED from run's spec (P2): build.js's Phase C
+			// passes the recipe's hub token so an authored producer knows which hub it bridges toward and
+			// can refuse a graph whose hub is not the one it authors against. It defaults to null when a
+			// caller omits it (a hub-agnostic bridge ignores it).
 			taskList.push((args, next) => {
-				pluginCallable({ inGraph, hub: null, applyLabel }, (err, pluginResult) => {
+				pluginCallable({ inGraph, hub, applyLabel }, (err, pluginResult) => {
 					next(err ? `mapper '${mapper}' failed: ${err}` : '', { ...args, pluginResult });
 				});
 			});

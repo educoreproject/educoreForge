@@ -14,11 +14,14 @@
 // plugin (genericBridge) composes the library but calls none of the skeletons: it writes zero
 // edges in P0 and so exercises only the real resolve+run+return path.
 //
-//   buildComponentLibrary({ graphWriter, config, xLog }) -> {
+//   buildComponentLibrary({ graphWriter, graphReader, config, xLog }) -> {
 //       vectorizer, semanticMatcher, evidenceGatherer, selector, decisionFreezer,
-//       relationshipWriter, referenceIndex, sourceWalker, authoredCrosswalkLoader,
+//       relationshipWriter, graphReader, referenceIndex, sourceWalker, authoredCrosswalkLoader,
 //       hubCandidateModule, config, xLog
 //   }
+//
+// P2 UPDATE: relationshipWriter (WRITE seam), graphReader (READ seam) and referenceIndex (the ported pure
+// mappingSubgraph) now have real bodies; the rest remain P0 skeletons filled by P3.
 //
 // The NET components (vectorizer, and the selector's llm mode) run only in a real reforge, never
 // the suite (§3 hard line 2). config/xLog travel with the library so a plugin reads them from its
@@ -97,7 +100,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
 // START OF moduleFunction() ============================================================
 
-const buildComponentLibrary = ({ graphWriter, config = {}, xLog } = {}) => {
+const buildComponentLibrary = ({ graphWriter, graphReader, config = {}, xLog } = {}) => {
 	const library = { config, xLog: xLog || (process.global && process.global.xLog) };
 
 	Object.keys(SKELETON_FACTORIES).forEach((oneComponentName) => {
@@ -110,6 +113,13 @@ const buildComponentLibrary = ({ graphWriter, config = {}, xLog } = {}) => {
 	// referenceIndex — real body (P2): the ported pure mappingSubgraph FACTORY, injected as-is (§3.7).
 	// A producer instantiates it with its own mapping options; it needs no run resources.
 	library.referenceIndex = referenceIndexFactory;
+
+	// graphReader — the READ seam (P2), the twin of relationshipWriter's write seam. Injected as the
+	// FACTORY bridgeMaker minted from the run's GraphHandle (default neo4jGraphReader; a double in the
+	// suite). An authored producer mints+closes its own reader to WALK the dependency graph. It is a
+	// required run resource: a library built without it hands a producer nothing to read, so absence is a
+	// wiring fault the producer names, never a silent empty read (polyArch2 §6).
+	library.graphReader = graphReader;
 
 	return library;
 };
