@@ -15,7 +15,7 @@
   ],
   "bridges": [
     {
-      "source": "ctdl", "hub": "ceds", "mapper": "ctdlIntoCedsAuthored",
+      "source": "ctdl", "hub": "ceds", "bridge": "ctdlAuthoredBridge",
       "extractor": "defaultSearchObject",
       "dependencies": ["ctdl", "ceds"], "cacheMode": "reuse"
     }

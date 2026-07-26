@@ -1,0 +1,19 @@
+{
+  // A LEGAL two-producer pairing: TWO DIFFERENT bridges on the SAME (source, hub) pair. This is
+  // the case the old source::hub uniqueness key wrongly refused; the source::hub::<bridgeName>
+  // key (design_bridgeResolution_072526 §3a) accepts it because the bridge NAMES differ. Its
+  // same-name twin (bad-dupBridge) is still refused. Structurally and referentially clean.
+  "schemaVersion": "1.0.0",
+  "recipeName": "goodTwoBridgesOnePair",
+  "kind": "dev",
+  "description": "Two DIFFERENT bridges on one (lif,ceds) pairing — the legal two-producer case.",
+  "standards": [
+    { "token": "ceds", "version": "current" },
+    { "token": "lif", "version": "current" }
+  ],
+  "hubs": [{ "standard": "ceds", "candidateFinder": "semanticDefText" }],
+  "bridges": [
+    { "source": "lif", "bridge": "ctdlAuthoredBridge", "hub": "ceds", "dependencies": ["lif", "ceds"], "cacheMode": "reuse" },
+    { "source": "lif", "bridge": "semanticBridge", "hub": "ceds", "dependencies": ["lif", "ceds"], "cacheMode": "reuse" }
+  ]
+}

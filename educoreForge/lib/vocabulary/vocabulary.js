@@ -139,6 +139,14 @@ const isSchemaBlockKind = (oneKind) => SCHEMA_BLOCK_KINDS.indexOf(oneKind) !== -
 const RELATIONSHIP_PRODUCER_SUFFIX = {
 	authored: '_exact',
 	inferred: '_close',
+	// STRUCTURAL — the deterministic intra-family structure producer (ctdlFamilyStructure): pairwise
+	// HAS_PROPERTY / REFERENCES / SUBCLASS_OF / HAS_OPTION_SET edges authored by a same-URI identity join,
+	// no vectors and no LLM. A structural pairing is a THIRD producer kind alongside authored/inferred, so
+	// its relationship block earns its own self-describing suffix rather than masquerading as _exact (which
+	// connotes an EXACT_MATCH mapping this is not). Adding this ONE data row extends BOTH the composer's
+	// allowed producers AND the RELATIONSHIP kind gate (RELATIONSHIP_PRODUCER_SUFFIXES is derived from this
+	// map) with no per-producer conditional anywhere.
+	structural: '_struct',
 };
 const RELATIONSHIP_PRODUCER_SUFFIXES = Object.keys(RELATIONSHIP_PRODUCER_SUFFIX).map(
 	(oneProducer) => RELATIONSHIP_PRODUCER_SUFFIX[oneProducer],

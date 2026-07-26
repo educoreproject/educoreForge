@@ -1,11 +1,13 @@
 'use strict';
 
 // semanticBridge — the INFERRED `CLOSE_MATCH` producer (P3a/P3c; design §1 "a default generic plugin", §2 the
-// five-move loop with ONE freeze, §5.5 the --rebridge/freeze model). A bridge.js plugin registered in
-// bridgeMaker's BRIDGE_PLUGIN_BY_MAPPER. It composes the ported inference machinery into the semantic half
-// of the bridge, and it PRODUCES a decisionBlock (so build.js's suffix logic yields `_close`).
+// five-move loop with ONE freeze, §5.5 the --rebridge/freeze model). A generic bridge plugin in the
+// LIBRARY scope (bridge-maker/bridges/), resolved BY NAME through bridgeMaker's three-directory search
+// path (design_bridgeResolution_072526 §4) — it serves every semantic pair (ctdl, lif, …). It composes
+// the ported inference machinery into the semantic half of the bridge, and it PRODUCES a decisionBlock
+// (so build.js's suffix logic yields `_close`).
 //
-// THE MAPPER CONTRACT (interfaces.js @interface BridgeModule):
+// THE BRIDGE CONTRACT (interfaces.js @interface BridgeModule):
 //   bridgeModule({ ...injected library tools }) ({ inGraph, hub, applyLabel }, cb)
 //       -> cb('', { edgesWritten, decisionBlock, counts })
 //
@@ -47,7 +49,7 @@ const path = require('path');
 
 const { pipeRunner, taskListPlus } = new require('qtools-asynchronous-pipe-plus')();
 
-const valueScope = require(path.join(__dirname, '..', 'valueScope'));
+const valueScope = require(path.join(__dirname, '..', 'lib', 'valueScope'));
 
 // This bridge authors the <source> -> CEDS hub SEMANTIC crosswalk. The source standard is read from the
 // injected config (a generic plugin serves every semantic pair); the hub is CEDS. These constants have
@@ -238,7 +240,7 @@ const moduleFunction =
 		// ================= MATERIALIZE (plain -build) — pure replay of a frozen block =================
 		const runMaterialize = () => {
 			const contentAddress = require(path.join(
-				__dirname, '..', '..', '..', '..', '..', '..', 'lib', 'content-address', 'content-address',
+				__dirname, '..', '..', '..', '..', '..', 'lib', 'content-address', 'content-address',
 			))();
 			decisionStore.getDecisionBlock({ pairKey }, (loadErr, loaded) => {
 				if (loadErr) {

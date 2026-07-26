@@ -1,9 +1,0 @@
-node_modules/
-output/
-*.sqlite
-*.sqlite3
-*.sqlite-wal
-*.sqlite-shm
-# large standard source blob stays local (canonical URL kept in standardSourceLocation)
-assets/standardSourceData/**/*.json
-assets/standardSourceData/**/*.jsonld

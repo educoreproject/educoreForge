@@ -1,11 +1,14 @@
 'use strict';
 
 // ctdlAuthoredBridge — the CTDL AUTHORED `EXACT_MATCH` producer (P2 beachhead; design §1 "a standard
-// needing bespoke logic registers an OVERRIDE", §3.11). A per-standard override of the generic bridge.js,
-// registered in bridgeMaker's BRIDGE_PLUGIN_BY_MAPPER under CTDL's mapper token. Deterministic: no vectors,
-// no LLM, no network — the whole authored spine, proven before a cent of Voyage (plan §7).
+// needing bespoke logic", §3.11). A CTDL-SPECIFIC bridge: it reads each forged CTDL node's NATIVE
+// crossRefs CEDS anchor, so it belongs to CTDL and lives in the STANDARD-LOCAL scope
+// (forges/ctdl/bridges/), resolved BY NAME through bridgeMaker's three-directory search path when a
+// recipe entry names source 'ctdl' and bridge 'ctdlAuthoredBridge'
+// (design_bridgeResolution_072526 §4). Deterministic: no vectors, no LLM, no network — the whole
+// authored spine, proven before a cent of Voyage (plan §7).
 //
-// THE MAPPER CONTRACT (interfaces.js @interface BridgeModule):
+// THE BRIDGE CONTRACT (interfaces.js @interface BridgeModule):
 //   bridgeModule({ ...injected library tools }) ({ inGraph, hub, applyLabel }, cb)
 //       -> cb('', { edgesWritten, decisionBlock, counts })
 //
@@ -34,7 +37,12 @@ const path = require('path');
 
 const { pipeRunner, taskListPlus } = new require('qtools-asynchronous-pipe-plus')();
 
-const ctdlAnchorHarvest = require(path.join(__dirname, '..', 'ctdlAnchorHarvest'));
+// ctdlAnchorHarvest is a bridge-maker library helper (it stays in bridge-maker/lib/); this
+// standard-local bridge reaches ACROSS the tree to reuse it. The path climbs from
+// forges/ctdl/bridges/ to the tree root, then down into the bridge-maker library.
+const ctdlAnchorHarvest = require(path.join(
+	__dirname, '..', '..', '..', 'apps', 'graph-builder', 'apps', 'bridge-maker', 'lib', 'ctdlAnchorHarvest',
+));
 
 // This bridge's identity is fixed: it authors the CTDL -> CEDS hub crosswalk. These are NOT settable knobs
 // (polyArch2 §6 "a constant with nothing to shadow is simply a constant") — the plugin IS the CTDL-to-CEDS

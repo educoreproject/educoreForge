@@ -1,6 +1,6 @@
 {
-  // ISOLATED FAULT: a bridge whose mapper is present but BLANK. A key that is present and empty
-  // is the worse fault of the two — the author believes he named a mapper.
+  // ISOLATED FAULT: a bridge whose `bridge` name is present but BLANK. A key that is present and
+  // empty is the worse fault of the two — the author believes he named a bridge.
   "schemaVersion": "1.0.0",
   "recipeName": "badBridgeBlankMapper",
   "kind": "dev",
@@ -12,6 +12,6 @@
     { "standard": "ceds", "candidateFinder": "semanticDefText" }
   ],
   "bridges": [
-    { "source": "lif", "hub": "ceds", "mapper": "", "dependencies": ["lif", "ceds"], "cacheMode": "reuse" }
+    { "source": "lif", "hub": "ceds", "bridge": "", "dependencies": ["lif", "ceds"], "cacheMode": "reuse" }
   ]
 }

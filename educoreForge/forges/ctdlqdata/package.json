@@ -1,0 +1,9 @@
+{
+  "name": "forge-ctdlqdata",
+  "version": "1.0.0",
+  "private": true,
+  "description": "CTDL-QData forge bundle for edf-forge: parses the Credential Engine CTDL Quantitative Data JSON-LD vocabulary (qdata.json, includemetaproperties=false stripped encoding) into the universal forge property contract (DmeStandardRoot + the six roles, native-URI stableIds, canonical ownership edges HAS_CLASS/HAS_PROPERTY/HAS_OPTION_SET/HAS_VALUE, SUBCLASS_OF, REFERENCES, searchText, embeddings). The 31 ceterms:* CTDL-overlap terms (7 classes + 24 properties) are FILTERED (not emitted); native references to them are stashed as {system:'ctdl',...} crossRefs, and references to CTDL-ASN terms (ceasn:/asn:) as {system:'ctdlasn',...} crossRefs (standard-pure — no cross-standard node or edge). schema:* is NATIVE for QData (emitted as nodes); xsd:* stays a non-node datatype. Clone-and-adapt of forge-ctdlasn, the enriched filter-and-reference template. JSON source — no js-yaml needed.",
+  "main": "forgeCtdlqdata.js",
+  "author": "tqii",
+  "license": "ISC"
+}

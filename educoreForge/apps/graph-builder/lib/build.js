@@ -114,6 +114,42 @@ const eachSeries = (items, iterator, done) => {
 	step();
 };
 
+// materializeSchemaBlocks — RESTORE a resolved set of schema blocks into a FRESH eval graph, and
+// hand back { manifestId, boltUrl, memberCount }. This is the pure materialize/restore tail shared by
+// TWO callers: composeAndMaterialize (a manifest just composed by a -build) and replay (a manifest
+// OPENED from storage by -replay). Both do the identical last act — create an EMPTY graph, then
+// init({schemaBlocks}) to fill it — so it lives once here rather than drifting apart in two places.
+// It takes ALREADY-RESOLVED blocks: resolving a manifest's members is the caller's step (compose
+// names its failure 'compose failed'; replay names its own), and keeping that out of here is what lets
+// the messages below stay identical for both. create is MONOMORPHIC (no manifest, no url back) and the
+// RESTORATION init carries no applyLabels — a harvested block already carries its stamped labels.
+// DISPOSE-ON-FAILURE (Item 4): the eval graph is created here and is the product ONLY on success; an
+// init failure disposes it rather than stranding a live DEV_* container. No forger, no bridge.
+const materializeSchemaBlocks = ({ xLog, replay, resolvedSchemaBlocks, manifestId, memberCount }, callback) => {
+	replay.create({ purpose: 'materialize' }, (createError, goldEval) => {
+		if (createError) {
+			callback(`materialize failed: creating the eval golden: ${createError}`);
+			return;
+		}
+		replay.init({ inGraph: goldEval, schemaBlocks: resolvedSchemaBlocks }, (initError) => {
+			if (initError) {
+				replay.delete(goldEval, (deleteErr) => {
+					callback(
+						deleteErr
+							? `materialize failed: loading ${resolvedSchemaBlocks.length} schema block(s): ${initError} ` +
+									`(and the eval golden '${goldEval.graphName}' also failed to dispose and is leaking: ${deleteErr})`
+							: `materialize failed: loading ${resolvedSchemaBlocks.length} schema block(s): ${initError}`,
+					);
+				});
+				return;
+			}
+			xLog.status(`  [materialize] -> ${goldEval.boltUrl}`);
+			// NOT deleted — this graph is the product.
+			callback('', { manifestId, boltUrl: goldEval.boltUrl, memberCount });
+		});
+	});
+};
+
 // resolveVectorize — the spend knob, made an operator switch (Item 11). Precedence: an explicit
 // deps.vectorize (the orchestrator's/test's injected boolean) wins; absent, --vectorize is read
 // through the production optional reader with a DOCUMENTED default of true. The normal gold build
@@ -234,7 +270,21 @@ const resolveInferenceConfig = (deps, rebridgeScope) => {
 };
 
 const standardKey = (std) => `${std.token}@${std.version}`;
-const pairKey = (bridge) => `${bridge.source}::${bridge.hub || '(structural)'}`;
+// secondEndpointOf — the pairing's SECOND endpoint: the hub (mapping bridge) or the pairWith sibling
+// (STRUCTURAL bridge), whichever the recipe named. ONE derivation, consumed by pairKey (the label) and the
+// version-keyed subjectRefId composition below, so the two idioms can never drift.
+const secondEndpointOf = (bridge) =>
+	bridge.hub !== undefined
+		? bridge.hub
+		: bridge.pairWith !== undefined
+			? bridge.pairWith
+			: bridge.familyStandards !== undefined
+				? 'family'
+				: undefined;
+// pairKey — the operator-facing pairing label. A hubless bridge that also names no pairWith degrades to
+// '(structural)' only as a last resort (recipe validation refuses that shape upstream). This is what gives
+// the CTDL family's two same-source structural entries DISTINCT labels: ctdl::ctdlasn and ctdl::ctdlqdata.
+const pairKey = (bridge) => `${bridge.source}::${secondEndpointOf(bridge) || '(structural)'}`;
 
 const isBlank = (value) => typeof value !== 'string' || value.trim() === '';
 
@@ -504,23 +554,24 @@ const build = (recipe, deps, callback) => {
 
 	// ---- Phase C: bridges (materialize dep graph, run bridge, harvest labeled relationships) ----
 	const bridgeOnePairing = (bridge, done) => {
-		// pairLabel identifies the pairing for the operator (source::hub); the version-keyed,
-		// producer-suffixed subjectRefId is COMPOSED after the bridge runs (the run result says whether the
-		// producer was authored -> _exact or inferred -> _close). §7.
+		// pairLabel identifies the pairing for the operator (source::hub / source::pairWith / source::family);
+		// the version-keyed, producer-suffixed subjectRefId is COMPOSED PER EMITTED BLOCK after the bridge runs
+		// (multi-block change 2026-07-26 — one invocation may emit several pair-scoped blocks). §7.
 		const pairLabel = pairKey(bridge);
-		let subjectRefId = null;
-		// THE RECIPE NAMES THE MAPPER. RECIPE_SCHEMA requires it on every bridge, so a recipe that
+		// THE RECIPE NAMES THE BRIDGE. RECIPE_SCHEMA requires it on every bridge, so a recipe that
 		// reaches here has one; there is no in-code name standing behind the key any more
 		// (polyArch2 §6). The guard is here rather than only in the schema because build() is
 		// reachable with a recipe object that never went through validateRecipe (the test seam
-		// does exactly that), and a bridge whose mapper is absent must say so rather than run
-		// something nobody asked for.
-		const mapper = bridge.mapper;
-		if (typeof mapper !== 'string' || mapper.trim() === '') {
+		// does exactly that), and a bridge whose name is absent must say so rather than run
+		// something nobody asked for. `bridgeName` is the entry's `.bridge` field — the resolvable
+		// bridge NAME (was `mapper`; it names a mapping OR a structural producer, so 'mapper' was a
+		// misnomer, renamed per design_bridgeResolution_072526 §5).
+		const bridgeName = bridge.bridge;
+		if (typeof bridgeName !== 'string' || bridgeName.trim() === '') {
 			done(
-				`bridge ${pairLabel}: mapper is ${
-					mapper === undefined ? 'not named' : JSON.stringify(mapper)
-				}. Every bridge names its mapper in the recipe — it IS what the bridge does, and ` +
+				`bridge ${pairLabel}: bridge is ${
+					bridgeName === undefined ? 'not named' : JSON.stringify(bridgeName)
+				}. Every bridge entry names its bridge in the recipe — it IS what the bridge does, and ` +
 					`there is no default. Nothing was substituted for it.`,
 			);
 			return;
@@ -548,8 +599,18 @@ const build = (recipe, deps, callback) => {
 		// standard rows all live in these two base blocks (the hub is FOLDED into the CEDS base). A missing
 		// dependency base is a recipe/order fault, named — never a silent empty graph (polyArch2 §6).
 		taskList.push((args, next) => {
-			const dependencyTokens = [bridge.source, bridge.hub].filter(
-				(oneToken) => oneToken !== undefined && oneToken !== null && `${oneToken}`.trim() !== '',
+			// RESTORE the pairing's two endpoints (source + hub-or-pairWith) AND the bridge's declared
+			// `dependencies` (design_bridgeResolution_072526 §5: "dependencies is what gets loaded to read").
+			// For a mapping bridge dependencies is [source, hub] — no change. For a STRUCTURAL bridge it is the
+			// whole family, so the THIRD sibling's base is restored too and the producer can resolve crossRefs
+			// against the WHOLE family (telling a cross-sibling ref apart from a dangler). Deduped; a missing
+			// base is a recipe/order fault, named — never a silent empty graph (polyArch2 §6).
+			const dependencyTokens = Array.from(
+				new Set(
+					[bridge.source, bridge.hub, bridge.pairWith]
+						.concat(bridge.dependencies || [])
+						.filter((oneToken) => oneToken !== undefined && oneToken !== null && `${oneToken}`.trim() !== ''),
+				),
 			);
 			const missing = dependencyTokens.filter((oneToken) => !baseBlockByToken[oneToken]);
 			if (missing.length) {
@@ -579,7 +640,11 @@ const build = (recipe, deps, callback) => {
 			bridgeMaker.run(
 				{
 					inGraph: args.depGraph,
-					mapper,
+					bridge: bridgeName,
+					// source selects the standard-local bridge search directory
+					// (forges/<source>/bridges/) so a standard's bespoke bridge is found; a
+					// forges-shared or library bridge resolves without it.
+					source: bridge.source,
 					hub: bridge.hub,
 					applyLabel: RELATION_LABEL,
 					rebridge: thisPairRebridges,
@@ -589,6 +654,14 @@ const build = (recipe, deps, callback) => {
 						sourceStandard: bridge.source,
 						sourceVersion: resolvedVersionByToken[bridge.source],
 						hubVersion: resolvedVersionByToken[bridge.hub],
+						// pairWith + its resolved version reach a STRUCTURAL producer (ctdlFamilyStructure) so it
+						// knows its sibling pairing endpoint; undefined for a mapping bridge, which ignores them.
+						pairWith: bridge.pairWith,
+						pairWithVersion: resolvedVersionByToken[bridge.pairWith],
+						// familyStandards is the READ scope a structural producer resolves crossRefs against — the
+						// whole family, so a cross-sibling ref is told apart from a dangler (the third sibling is
+						// among the restored dependency bases). undefined for a mapping bridge, which ignores it.
+						familyStandards: bridge.familyStandards || bridge.dependencies,
 					},
 				},
 				(err, runReport) => {
@@ -596,70 +669,102 @@ const build = (recipe, deps, callback) => {
 						next(`bridge ${pairLabel}: ${err}`);
 						return;
 					}
-					// THE PRODUCER DECLARES ITS OWN KIND (polyArch2 §6). A producer that says runReport.producer
-					// is believed; only a producer that stays silent is inferred from decisionBlock (authored ->
-					// null -> _exact). This matters for the INFERRED producer's no-frozen-block case: it writes
-					// zero edges and honestly returns decisionBlock null, but it is STILL the inferred producer
-					// (an empty _close block), NOT authored — inferring _exact from the null would collide with
-					// the authored pair's _exact block for the SAME pair (the intended two-producers-per-pair
-					// design, §1). The producer naming itself removes that ambiguity at the source.
+					// MULTI-BLOCK HARVEST (contract change 2026-07-26). A bridge invocation may emit MORE THAN ONE
+					// pair-scoped block. NORMALIZE runReport into a `blocks` array so ONE code path serves both:
+					//   * a coordinating producer (ctdlFamilyStructure) returns blocks[] — each with its OWN
+					//     applyLabel (the distinct per-pair label it WROTE under) and its pair's firstStandard/
+					//     secondStandard TOKENS, so build.js version-keys EACH block on its own two endpoints;
+					//   * a single-block mapping bridge (ctdlAuthoredBridge, semanticBridge) returns NO blocks[];
+					//     the degenerate list-of-one is synthesized from the top-level status, its endpoints
+					//     falling back to the RECIPE (hub/source or source/pairWith) exactly as before.
+					const emittedBlocks = Array.isArray(runReport.blocks) && runReport.blocks.length
+						? runReport.blocks
+						: [{ applyLabel: RELATION_LABEL, firstStandard: undefined, secondStandard: undefined, producer: runReport.producer, decisionBlock: runReport.decisionBlock }];
+					next('', { ...args, emittedBlocks });
+				},
+			);
+		});
+
+		// HARVEST-AND-ADD EACH emitted block into its OWN version-keyed, pair-scoped manifest member. The
+		// three CTDL-family pairings (or the one mapping block) are harvested in the order the producer
+		// emitted them (S11: root-first then lexicographic for the family). eachSeries sequences the
+		// unknown-length block list; a failure on any block names its label and aborts the pairing.
+		taskList.push((args, next) => {
+			eachSeries(
+				args.emittedBlocks,
+				(oneBlock, blockDone) => {
+					// THE PRODUCER DECLARES ITS OWN KIND (polyArch2 §6). A named producer is BELIEVED iff the
+					// vocabulary registers a suffix for it (authored/inferred/structural — one data row, no edit
+					// here). Only a silent producer is inferred from decisionBlock (null -> authored/_exact;
+					// non-null -> inferred/_close), preserving the two-producers-per-pair distinction.
 					const producer =
-						runReport && (runReport.producer === 'inferred' || runReport.producer === 'authored')
-							? runReport.producer
-							: runReport && runReport.decisionBlock != null
+						oneBlock && vocabulary.suffixForRelationshipProducer(oneBlock.producer)
+							? oneBlock.producer
+							: oneBlock && oneBlock.decisionBlock != null
 								? 'inferred'
 								: 'authored';
+					// VERSION-KEY ON BOTH ENDPOINTS, ROOT-FIRST. A multi-block producer supplies the pair's two
+					// TOKENS (root-first then lexicographic); a single mapping block falls back to the recipe
+					// (hub_rel_source for a mapping bridge, source_rel_pairWith for a structural pair). Both
+					// endpoints carry their REAL resolved version (the a4a0da2 rule), looked up per token.
+					const nameFirst =
+						oneBlock.firstStandard !== undefined
+							? oneBlock.firstStandard
+							: bridge.hub !== undefined
+								? bridge.hub
+								: bridge.source;
+					const nameSecond =
+						oneBlock.secondStandard !== undefined
+							? oneBlock.secondStandard
+							: bridge.hub !== undefined
+								? bridge.source
+								: bridge.pairWith;
 					const composed = vocabulary.relationshipSubjectRefId({
-						hubStandard: bridge.hub,
-						hubVersion: resolvedVersionByToken[bridge.hub],
-						sourceStandard: bridge.source,
-						sourceVersion: resolvedVersionByToken[bridge.source],
+						hubStandard: nameFirst,
+						hubVersion: resolvedVersionByToken[nameFirst],
+						sourceStandard: nameSecond,
+						sourceVersion: resolvedVersionByToken[nameSecond],
 						producer,
 					});
 					if (composed.error) {
-						next(`bridge ${pairLabel}: ${composed.error}`);
+						blockDone(`bridge ${pairLabel}: ${composed.error}`);
 						return;
 					}
-					subjectRefId = composed.subjectRefId;
-					next('', args);
-				},
-			);
-		});
-
-		taskList.push((args, next) => {
-			replay.harvest(
-				{
-					inGraph: args.depGraph,
-					selectionLabels: [RELATION_LABEL],
-					header: { blockType: 'relationship', standardKey: subjectRefId },
-				},
-				(err, schemaBlock) => {
-					next(err ? `harvest relationships ${pairLabel}: ${err}` : '', {
-						...args,
-						schemaBlock,
-					});
-				},
-			);
-		});
-
-		taskList.push((args, next) => {
-			manifest.add(
-				{
-					subjectRefId,
-					kind: 'relationship',
-					description: `relationship schema block for ${subjectRefId}, bridged by mapper '${mapper}' from recipe '${recipe.recipeName}'`,
-					schemaBlock: args.schemaBlock,
-				},
-				(err, addReport) => {
-					if (err) {
-						next(`add relationship ${pairLabel}: ${err}`);
-						return;
-					}
-					xLog.status(
-						`  [C] bridge ${pairLabel} (mapper=${mapper}) -> relationship ${subjectRefId} ${addReport.schemaBlockRefId}`,
+					const oneSubjectRefId = composed.subjectRefId;
+					const blockLabel = oneBlock.applyLabel || RELATION_LABEL;
+					replay.harvest(
+						{
+							inGraph: args.depGraph,
+							selectionLabels: [blockLabel],
+							header: { blockType: 'relationship', standardKey: oneSubjectRefId },
+						},
+						(harvestErr, schemaBlock) => {
+							if (harvestErr) {
+								blockDone(`harvest relationships ${pairLabel}: ${harvestErr}`);
+								return;
+							}
+							manifest.add(
+								{
+									subjectRefId: oneSubjectRefId,
+									kind: 'relationship',
+									description: `relationship schema block for ${oneSubjectRefId}, bridged by bridge '${bridgeName}' from recipe '${recipe.recipeName}'`,
+									schemaBlock,
+								},
+								(addErr, addReport) => {
+									if (addErr) {
+										blockDone(`add relationship ${pairLabel}: ${addErr}`);
+										return;
+									}
+									xLog.status(
+										`  [C] bridge ${pairLabel} (bridge=${bridgeName}) -> relationship ${oneSubjectRefId} ${addReport.schemaBlockRefId}`,
+									);
+									blockDone('');
+								},
+							);
+						},
 					);
-					next('', args);
 				},
+				(eachErr) => next(eachErr || '', args),
 			);
 		});
 
@@ -704,43 +809,42 @@ const build = (recipe, deps, callback) => {
 		const manifestId = manifest.refId();
 		xLog.status(`  [compose] manifest ${manifestId} -- ${memberCount} members`);
 
+		// materialize the eval golden FROM the composed manifest. Held as a named continuation so the
+		// SAVE below can gate it: the manifest is persisted at compose time, then this runs.
+		const materializeFromManifest = () =>
 		manifest.schemaBlocks((blocksError, resolvedSchemaBlocks) => {
 			if (blocksError) {
 				callback(`compose failed: ${blocksError}`);
 				return;
 			}
-			replay.create({ purpose: 'materialize' }, (createError, goldEval) => {
-				if (createError) {
-					callback(`materialize failed: creating the eval golden: ${createError}`);
-					return;
-				}
-				// The eval golden is filled through init's RESTORATION payload — no applyLabels, which
-				// init refuses on that path: a harvested block already carries the labels stamped when
-				// its material was created, and stamping more would make the block and the graph
-				// restored from it disagree.
-				replay.init(
-					{ inGraph: goldEval, schemaBlocks: resolvedSchemaBlocks },
-					(initError) => {
-						if (initError) {
-							// DISPOSE-ON-FAILURE (Item 4). goldEval was created three lines up and is NOT the
-							// product when its own fill fails — a bare error here would strand it running. On
-							// SUCCESS it is deliberately kept (it IS the product); only this failure disposes it.
-							replay.delete(goldEval, (deleteErr) => {
-								callback(
-									deleteErr
-										? `materialize failed: loading ${resolvedSchemaBlocks.length} schema block(s): ${initError} ` +
-												`(and the eval golden '${goldEval.graphName}' also failed to dispose and is leaking: ${deleteErr})`
-										: `materialize failed: loading ${resolvedSchemaBlocks.length} schema block(s): ${initError}`,
-								);
-							});
-							return;
-						}
-						xLog.status(`  [materialize] -> ${goldEval.boltUrl}`);
-						// NOT deleted — this graph is the product.
-						callback('', { manifestId, boltUrl: goldEval.boltUrl, memberCount });
-					},
-				);
-			});
+			// the shared materialize/restore tail (also used by -replay). create is MONOMORPHIC, the
+			// RESTORATION init carries no applyLabels, and a mid-fill failure disposes the eval graph
+			// rather than stranding it — all of that lives in materializeSchemaBlocks now.
+			materializeSchemaBlocks(
+				{ xLog, replay, resolvedSchemaBlocks, manifestId, memberCount },
+				callback,
+			);
+		});
+
+		// PERSIST THE MANIFEST AT COMPOSE TIME — the change that makes a -build ALWAYS write a manifest
+		// that regenerates the graph it just built. The manifest IS the compose artifact (the named,
+		// ordered membership); until 2026-07-25 a -build composed it and materialized from it but never
+		// called save(), so the manifests/manifestBlocks tables stayed EMPTY and the graph could not be
+		// regenerated from storage. save() assembles the membership from the manifest's own state and
+		// writes it through standardsDatabase.saveManifest, which addresses BY that membership — so a
+		// re-run over the same blocks dedups onto the manifest already there rather than erroring or
+		// duplicating. A save failure is NAMED through the callback, never stranded past this
+		// callback-shaped API, the same idiom as the dispose-on-failure handling above. Saved BEFORE
+		// materialize because the manifest is the compose artifact, not a by-product of materializing.
+		manifest.save((saveError) => {
+			if (saveError) {
+				callback(`compose failed: persisting the manifest ${manifestId}: ${saveError}`);
+				return;
+			}
+			// No separate phase marker: persistence is a sub-step of COMPOSE, not a distinct phase, and
+			// the compose line above already named this manifest. A second '[compose]' token would make
+			// the pipeline look like it composed twice.
+			materializeFromManifest();
 		});
 	};
 
@@ -759,7 +863,78 @@ const build = (recipe, deps, callback) => {
 	});
 };
 
-return { build, defaultComponents };
+// replay — regenerate a graph FROM A STORED MANIFEST, with NO forging and NO bridge runs. This is
+// what makes a persisted manifest a usable reproducibility artifact: given a standards database
+// (blocks + manifest) and a manifest refId, OPEN the manifest, RESOLVE its member schema blocks, and
+// RESTORE them into a fresh DEV_ eval graph — the SAME materialize/restore tail a -build runs after
+// it composes (materializeSchemaBlocks), and nothing else. NO forger, NO bridgeMaker, NO decision
+// store, NO Voyage/LLM: replay reads what a build already wrote and rebuilds exactly that graph.
+//
+//   replay({ manifestRefId }, { xLog, standardsDatabase, components? }, callback)
+//       -> callback('', { manifestId, boltUrl, memberCount })
+//
+// Every refusal fires BY NAME (polyArch2 §6), never a silent empty graph:
+//   * a missing standardsDatabase and a missing/blank manifestRefId are refused HERE, before a
+//     component is constructed;
+//   * a refId absent from the manifests table is refused by manifestEditor.open (it will not hand
+//     back an empty manifest indistinguishable from an emptied one);
+//   * a member block absent from the blocks table is refused by manifest.schemaBlocks (it refuses a
+//     partial membership rather than materializing a graph that looks whole and is not).
+// The manifestId returned is the refId the caller asked for and the store was found under — the
+// honest answer to "which manifest did this reproduce", echoed so the caller can confirm the match.
+const replay = ({ manifestRefId } = {}, deps = {}, callback) => {
+	const { xLog, standardsDatabase } = deps;
+	const components = { ...defaultComponents, ...(deps.components || {}) };
+
+	// the store gate is also the safety interlock, exactly as it is for build(): a replay with nowhere
+	// to READ has nothing to reproduce, and getManifest is the door every step below goes through.
+	if (!standardsDatabase || typeof standardsDatabase.getManifest !== 'function') {
+		callback(
+			`graphBuilder replay: a standardsDatabase is REQUIRED in deps and has no default. A replay ` +
+				`OPENS a stored manifest and resolves its member blocks from the store; a replay with ` +
+				`nowhere to read has nothing to reproduce.`,
+		);
+		return;
+	}
+	if (isBlank(manifestRefId)) {
+		callback(
+			`graphBuilder replay: a manifestRefId is REQUIRED and has no default — it names the stored ` +
+				`manifest to reproduce, and there is nothing to open without it.`,
+		);
+		return;
+	}
+
+	const replayEngine = components.replayManager();
+	const manifestEditor = components.manifestEditor({ standardsDatabase });
+
+	// open() loads the stored membership by refId and REFUSES an absent one by name; it also disables
+	// add, which a replay never wants — an opened manifest is immutable by design.
+	manifestEditor.open({ manifestRefId }, (openError, manifest) => {
+		if (openError) {
+			callback(`graphBuilder replay: ${openError}`);
+			return;
+		}
+
+		const memberCount = manifest.members().length;
+		// the refId the caller asked for IS the manifest's identity; echo it rather than recompute one
+		// that could only ever be equal or a lie.
+		const manifestId = manifestRefId;
+		xLog.status(`  [replay] manifest ${manifestId} -- ${memberCount} member(s)`);
+
+		manifest.schemaBlocks((blocksError, resolvedSchemaBlocks) => {
+			if (blocksError) {
+				callback(`replay failed: ${blocksError}`);
+				return;
+			}
+			materializeSchemaBlocks(
+				{ xLog, replay: replayEngine, resolvedSchemaBlocks, manifestId, memberCount },
+				callback,
+			);
+		});
+	});
+};
+
+return { build, replay, defaultComponents };
 };
 
 // END OF moduleFunction() ============================================================

@@ -303,7 +303,7 @@ harness.match(
 harness.match(
 	'  and lists what this tree can actually forge',
 	buildUnforged.stderr,
-	/Known forges: ceds, ctdl, lif/,
+	/Known forges: ceds, ctdl, ctdlasn, ctdlqdata, lif/,
 );
 harness.ok(
 	'  the store was opened, so the injection reached the pipeline',
@@ -390,9 +390,12 @@ harness.ok(
 	buildUnforged.stderr,
 );
 
-const buildDupPairing = runCli(['-build', '--recipePath=' + fixture('bad-dupPairing')]);
-harness.equal('a duplicate pairing blocks the build', buildDupPairing.status, 1);
-harness.match('  naming the duplicate', buildDupPairing.stderr, /duplicate bridge pairing/);
+// The uniqueness key is source::hub::<bridgeName> (design §3a): the SAME bridge named twice on a
+// pair is the collision that blocks the build, refused BY NAME (two DIFFERENT bridges on one pair
+// are legal now).
+const buildDupBridge = runCli(['-build', '--recipePath=' + fixture('bad-dupBridge')]);
+harness.equal('the same bridge named twice on a pair blocks the build', buildDupBridge.status, 1);
+harness.match('  naming the duplicate bridge', buildDupBridge.stderr, /duplicate bridge 'semanticBridge' for pairing 'lif::ceds'/);
 
 // =====================================================================
 harness.section('--vectorize — a real operator off-switch, refused invalid, honored both ways');

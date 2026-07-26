@@ -1,1 +1,7 @@
 system/dataStores/
+node_modules/
+output/
+*.sqlite
+*.sqlite3
+*.sqlite-wal
+*.sqlite-shm

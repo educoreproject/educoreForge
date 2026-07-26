@@ -16,7 +16,7 @@
   ],
   "bridges": [
     {
-      "source": "ctdl", "hub": "ceds", "mapper": "ctdlIntoCedsSemantic",
+      "source": "ctdl", "hub": "ceds", "bridge": "semanticBridge",
       "extractor": "defaultSearchObject",
       "dependencies": ["ctdl", "ceds"], "cacheMode": "reuse"
     }

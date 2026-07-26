@@ -1,22 +1,28 @@
 #!/usr/bin/env node
 'use strict';
 
-// test-bridge-maker.js — the REAL bridgeMaker's contract, ENFORCED. P0 of the bridge
-// (implementationPlan_bridge_072426.md §5).
+// test-bridge-maker.js — the REAL bridgeMaker's contract, ENFORCED. P0 of the bridge, updated for
+// the directory search-path resolver (design_bridgeResolution_072526.md §3b/§4).
 //
-// What P0 has to prove, and this suite does, WITHOUT Docker/Voyage/a database (§3 hard line 2):
-//   1. mapper resolves through a REGISTRY (BRIDGE_PLUGIN_BY_MAPPER, the HUB_FORGE_BY_STANDARD
-//      shape) to a bridge plugin — and a mapper naming NO registered plugin is REFUSED BY NAME,
-//      no silent default (§6 / polyArch2 §6). [failure side, observed red]
-//   2. a DRIFTED bridge plugin (wrong argument/result shape) is REFUSED BY NAME before it runs —
+// What this suite proves, WITHOUT Docker/Voyage/a database (§3 hard line 2):
+//   1. a bridge NAME resolves through a three-directory SEARCH PATH (standard-local, forges-shared,
+//      library). EXACTLY ONE match loads it; MORE THAN ONE THROWS by name (ambiguity fails loudly,
+//      no precedence); ZERO is refused BY NAME — no silent default (§6 / polyArch2 §6). Proven with
+//      TEMP fixture dirs so no real forge tree is touched. [three-state, observed red first]
+//   2. a bridge name naming NO file is REFUSED BY NAME through the real resolver. [failure side]
+//   3. a DRIFTED bridge plugin (wrong argument/result shape) is REFUSED BY NAME before it runs —
 //      the shape gate bites. [failure side, observed red]
-//   3. the WRITE-INTO-GRAPH substrate is real: a resolved plugin composes the injected
+//   4. the WRITE-INTO-GRAPH substrate is real: a resolved plugin composes the injected
 //      relationshipWriter, which drives an injected graphWriter — proven with a graphWriter
 //      DOUBLE (no container). [success side]
-//   4. the DEFAULT generic plugin writes ZERO edges and returns a valid status — the P0
-//      placeholder that nonetheless travels the real resolve+run+return path (never opens a
-//      graph connection). [success side]
-//   5. argument refusals: a run missing inGraph, mapper or applyLabel is refused, not guessed.
+//   5. the DEFAULT generic plugin (now JUST a library file) writes ZERO edges and returns a valid
+//      status — the P0 placeholder that nonetheless travels the real resolve+run+return path
+//      (never opens a graph connection). [success side]
+//   6. argument refusals: a run missing inGraph, bridge or applyLabel is refused, not guessed.
+//
+// The shape-gate and write-path tests inject a `bridgePluginResolver` DOUBLE so an in-closure fake
+// plugin can be resolved without writing a file; the resolution three-state and the not-found
+// refusal exercise the REAL directory resolver (temp dirs / the real library dir).
 //
 // DOCTRINE: a gate never observed failing is not a gate (harness.js). Every refusal below is a
 // negative assertion naming the SPECIFIC error it expects, so a rejection for the wrong reason
@@ -28,16 +34,17 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
 const helpText = () => `
 NAME
-     ${moduleName} -- enforce the real bridgeMaker contract (mapper resolution, drift refusal,
-     the write-into-graph substrate under doubles, the zero-edge default plugin)
+     ${moduleName} -- enforce the real bridgeMaker contract (directory bridge resolution, drift
+     refusal, the write-into-graph substrate under doubles, the zero-edge default plugin)
 
 SYNOPSIS
      ${moduleName} [-verbose] [-quiet] [-help]
 
 DESCRIPTION
-     Drives the real bridgeMaker with an injected bridge-plugin registry and an injected
+     Drives the real bridgeMaker with an injected bridge-plugin resolver and an injected
      graphWriter double, so the whole resolve -> compose -> write path runs in-process. Proven
-     in the failure direction: an unregistered mapper and a drifted plugin are shown refused.
+     in the failure direction: an unresolvable name and a drifted plugin are shown refused, and an
+     ambiguous name is shown to throw.
 
 EXIT STATUS
      0 all assertions passed;  1 at least one failed.
@@ -46,6 +53,10 @@ EXIT STATUS
 require('../../../../../test/testLib/testAppStartup')({ moduleName, helpText: helpText() });
 
 const harness = require('../../../../../test/testLib/harness')(moduleName);
+
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
 
 const bridgeMakerModule = require('../bridgeMaker');
 
@@ -117,46 +128,111 @@ const driftedBridgePlugin = () => (inGraph, hub, applyLabel) => {
 	// never reached — the gate refuses it first.
 };
 
+// a resolver double: hands back a fixed pluginFactory, so a fake in-closure plugin can be resolved
+// without planting a file. The production path uses the real directory resolver (exercised below).
+const resolverReturning = (pluginFactory) => () => ({ pluginFactory });
+
 // =====================================================================
-harness.section('DECLARATION — the registry and the declared default are exported');
+harness.section('DECLARATION — the resolver and the library default are exported and real');
 // =====================================================================
 
 harness.equal(
-	'bridgeMaker exports DEFAULT_GENERIC_MAPPER = genericBridge',
-	bridgeMakerModule.DEFAULT_GENERIC_MAPPER,
+	'bridgeMaker exports DEFAULT_GENERIC_BRIDGE = genericBridge',
+	bridgeMakerModule.DEFAULT_GENERIC_BRIDGE,
 	'genericBridge',
 );
 
 harness.ok(
-	'bridgeMaker exports BRIDGE_PLUGIN_BY_MAPPER as a data registry',
-	!!bridgeMakerModule.BRIDGE_PLUGIN_BY_MAPPER &&
-		typeof bridgeMakerModule.BRIDGE_PLUGIN_BY_MAPPER === 'object',
-	`got ${typeof bridgeMakerModule.BRIDGE_PLUGIN_BY_MAPPER}`,
+	'bridgeMaker exports resolveBridgePlugin as a function (the directory resolver)',
+	typeof bridgeMakerModule.resolveBridgePlugin === 'function',
+	`got ${typeof bridgeMakerModule.resolveBridgePlugin}`,
 );
 
 harness.ok(
-	'the default generic plugin occupies its registry slot',
-	typeof (bridgeMakerModule.BRIDGE_PLUGIN_BY_MAPPER || {}).genericBridge === 'function',
-	'genericBridge slot is not a plugin factory',
+	'bridgeMaker exports bridgeSearchPath as a function (the three ordered scopes)',
+	typeof bridgeMakerModule.bridgeSearchPath === 'function',
+	`got ${typeof bridgeMakerModule.bridgeSearchPath}`,
+);
+
+harness.ok(
+	'the default generic bridge is JUST a library file — it resolves through the real search path',
+	(() => {
+		const resolved = bridgeMakerModule.resolveBridgePlugin({ bridge: 'genericBridge' });
+		return !!resolved && typeof resolved.pluginFactory === 'function' && !resolved.error;
+	})(),
+	'genericBridge did not resolve from the library dir',
 );
 
 // =====================================================================
-harness.section('RESOLUTION — an unregistered mapper is REFUSED BY NAME (no silent default)');
+harness.section('DIRECTORY RESOLUTION — a bridge name resolves to exactly one file, or fails loudly');
+// =====================================================================
+// The three-directory search-path resolver (design §3b/§4), proven with TEMP fixture dirs so no
+// real forge tree, Docker, Voyage or LLM is touched (§3 hard line 2). EXACTLY ONE match -> loads;
+// MORE THAN ONE -> THROWS by name (no precedence); ZERO -> refused BY NAME (error-object idiom).
+
+(() => {
+	const { resolveBridgePlugin } = bridgeMakerModule;
+
+	const makeTempBridgeDir = (label) => fs.mkdtempSync(path.join(os.tmpdir(), `bridgeResolve-${label}-`));
+	const plantBridge = (dir, name) =>
+		fs.writeFileSync(path.join(dir, `${name}.js`), 'module.exports = () => (namedArgs, cb) => cb("", {});\n');
+
+	const dirNarrow = makeTempBridgeDir('narrow');
+	const dirMiddle = makeTempBridgeDir('middle');
+	const dirLibrary = makeTempBridgeDir('library');
+	const searchDirs = [dirNarrow, dirMiddle, dirLibrary];
+
+	// EXACTLY ONE — only the library dir carries the file.
+	plantBridge(dirLibrary, 'soleBridge');
+	const one = resolveBridgePlugin({ bridge: 'soleBridge', searchDirs });
+	harness.ok(
+		'a name matching exactly ONE file across the path resolves to a pluginFactory',
+		!!one && typeof one.pluginFactory === 'function' && !one.error,
+		`got ${JSON.stringify(one)}`,
+	);
+
+	// MORE THAN ONE — the same name in the narrow AND library dirs must THROW, no precedence.
+	plantBridge(dirNarrow, 'ambiguousBridge');
+	plantBridge(dirLibrary, 'ambiguousBridge');
+	let ambiguityThrown = null;
+	try {
+		resolveBridgePlugin({ bridge: 'ambiguousBridge', searchDirs });
+	} catch (ambiguityError) {
+		ambiguityThrown = ambiguityError.message;
+	}
+	harness.rejects(
+		'a name resolving in >1 directory THROWS, naming the count and the paths',
+		[ambiguityThrown],
+		/ambiguousBridge.*resolves in 2 directories/,
+	);
+
+	// ZERO — nowhere on the path. Refused BY NAME (error object, routed through run's callback).
+	const none = resolveBridgePlugin({ bridge: 'noSuchBridge', searchDirs });
+	harness.rejects(
+		'a name resolving to ZERO files is refused BY NAME',
+		[none && none.error],
+		/noSuchBridge.*resolves to no bridge file/,
+	);
+})();
+
+// =====================================================================
+harness.section('RESOLUTION — an unresolvable bridge name is REFUSED BY NAME (no silent default)');
 // =====================================================================
 
-// against the REAL registry (no test override) — this is the production refusal.
+// against the REAL directory resolver (no override) — this is the production refusal. A name that
+// exists in none of the three scopes is a recipe error, refused by name, no default fallthrough.
 (() => {
 	let observed = null;
 	bridgeMakerModule().run(
-		{ inGraph: { graphName: 'DEV_probe' }, mapper: 'totallyUnregistered', applyLabel: 'BridgedRelation' },
+		{ inGraph: { graphName: 'DEV_probe' }, bridge: 'totallyUnresolvable', source: 'lif', applyLabel: 'BridgedRelation' },
 		(err, result) => {
 			observed = { err, result };
 		},
 	);
 	harness.rejects(
-		'an unregistered mapper is refused, naming the mapper and the known plugins',
+		'an unresolvable bridge name is refused, naming the bridge and that no file resolves',
 		[observed && observed.err],
-		/totallyUnregistered.*genericBridge|genericBridge.*totallyUnregistered/,
+		/totallyUnresolvable.*resolves to no bridge file/,
 	);
 	harness.equal(
 		'  and nothing is produced on refusal',
@@ -171,16 +247,18 @@ harness.section('THE SHAPE GATE BITES — a drifted bridge plugin is refused bef
 
 (() => {
 	const writer = graphWriterDouble();
-	const testRegistry = { driftedBridge: driftedBridgePlugin };
 	let observed = null;
-	bridgeMakerModule({ bridgePluginRegistry: testRegistry, graphWriterFactory: writer.factory }).run(
-		{ inGraph: { graphName: 'DEV_probe' }, mapper: 'driftedBridge', applyLabel: 'BridgedRelation' },
+	bridgeMakerModule({
+		bridgePluginResolver: resolverReturning(driftedBridgePlugin),
+		graphWriterFactory: writer.factory,
+	}).run(
+		{ inGraph: { graphName: 'DEV_probe' }, bridge: 'driftedBridge', applyLabel: 'BridgedRelation' },
 		(err, result) => {
 			observed = { err, result };
 		},
 	);
 	harness.rejects(
-		'a positional (arity-3) plugin callable is refused, naming the mapper',
+		'a positional (arity-3) plugin callable is refused, naming the bridge',
 		[observed && observed.err],
 		/driftedBridge.*(shape|arity|argument|drift)/i,
 	);
@@ -197,10 +275,12 @@ harness.section('WRITE-INTO-GRAPH — the substrate is real, proven under a grap
 
 (() => {
 	const writer = graphWriterDouble();
-	const testRegistry = { spyBridge: spyBridgePlugin };
 	let observed = null;
-	bridgeMakerModule({ bridgePluginRegistry: testRegistry, graphWriterFactory: writer.factory }).run(
-		{ inGraph: { graphName: 'DEV_probe' }, mapper: 'spyBridge', applyLabel: 'BridgedRelation' },
+	bridgeMakerModule({
+		bridgePluginResolver: resolverReturning(spyBridgePlugin),
+		graphWriterFactory: writer.factory,
+	}).run(
+		{ inGraph: { graphName: 'DEV_probe' }, bridge: 'spyBridge', applyLabel: 'BridgedRelation' },
 		(err, result) => {
 			observed = { err, result };
 		},
@@ -229,11 +309,11 @@ harness.section('WRITE-INTO-GRAPH — the substrate is real, proven under a grap
 		2,
 	);
 	harness.ok(
-		'the status report carries the declared keys (inGraph, mapper, applyLabel, edgesWritten, note)',
+		'the status report carries the declared keys (inGraph, bridge, applyLabel, edgesWritten, note)',
 		observed &&
 			observed.result &&
 			observed.result.inGraph !== undefined &&
-			observed.result.mapper === 'spyBridge' &&
+			observed.result.bridge === 'spyBridge' &&
 			observed.result.applyLabel === 'BridgedRelation' &&
 			observed.result.edgesWritten === 2 &&
 			observed.result.note !== undefined,
@@ -247,16 +327,99 @@ harness.section('WRITE-INTO-GRAPH — the substrate is real, proven under a grap
 })();
 
 // =====================================================================
+harness.section('MULTI-BLOCK PASS-THROUGH — a coordinating producer emits SEVERAL pair-scoped blocks');
+// =====================================================================
+// The contract change (2026-07-26): a bridge invocation may emit MORE THAN ONE pair-scoped block. bridgeMaker
+// forwards the producer's blocks[] UNCHANGED; a single-block bridge returns NO blocks[] (the degenerate case
+// build.js synthesizes downstream). Both are proven here under the real componentLibrary + a graphWriter double.
+
+// a multi-block plugin: writes one edge under EACH of two distinct pair labels and returns blocks[].
+const multiBlockBridgePlugin = (injectedTools) => {
+	const { relationshipWriter } = injectedTools;
+	return ({ inGraph, hub, applyLabel }, callback) => {
+		void inGraph;
+		void hub;
+		relationshipWriter(
+			{ authoredMapping: { fromStableId: 'a:1', toStableId: 'b:1', relationshipType: 'REFERENCES' }, applyLabel: `${applyLabel}_A_B` },
+			(firstErr) => {
+				if (firstErr) {
+					callback(firstErr);
+					return;
+				}
+				relationshipWriter(
+					{ authoredMapping: { fromStableId: 'c:1', toStableId: 'd:1', relationshipType: 'SUBCLASS_OF' }, applyLabel: `${applyLabel}_C_D` },
+					(secondErr) => {
+						if (secondErr) {
+							callback(secondErr);
+							return;
+						}
+						callback('', {
+							edgesWritten: 2,
+							decisionBlock: null,
+							producer: 'structural',
+							counts: { structural: 2 },
+							blocks: [
+								{ applyLabel: `${applyLabel}_A_B`, firstStandard: 'a', secondStandard: 'b', producer: 'structural', decisionBlock: null, emptyPairing: false, edgesWritten: 1, counts: {} },
+								{ applyLabel: `${applyLabel}_C_D`, firstStandard: 'c', secondStandard: 'd', producer: 'structural', decisionBlock: null, emptyPairing: false, edgesWritten: 1, counts: {} },
+							],
+						});
+					},
+				);
+			},
+		);
+	};
+};
+
+(() => {
+	// single-block bridge: NO blocks[] in the run report.
+	const singleWriter = graphWriterDouble();
+	let single = null;
+	bridgeMakerModule({ bridgePluginResolver: resolverReturning(spyBridgePlugin), graphWriterFactory: singleWriter.factory }).run(
+		{ inGraph: { graphName: 'DEV_probe' }, bridge: 'spyBridge', applyLabel: 'BridgedRelation' },
+		(err, result) => {
+			single = { err, result };
+		},
+	);
+	harness.ok(
+		'a single-block bridge returns NO blocks[] (the degenerate list-of-one is synthesized in build.js)',
+		single && single.result && single.result.blocks === undefined,
+		`blocks was ${JSON.stringify(single && single.result && single.result.blocks)}`,
+	);
+
+	// multi-block bridge: blocks[] forwarded unchanged, each pairing written under its OWN label.
+	const multiWriter = graphWriterDouble();
+	let multi = null;
+	bridgeMakerModule({ bridgePluginResolver: resolverReturning(multiBlockBridgePlugin), graphWriterFactory: multiWriter.factory }).run(
+		{ inGraph: { graphName: 'DEV_probe' }, bridge: 'multiBlockBridge', applyLabel: 'BridgedRelation' },
+		(err, result) => {
+			multi = { err, result };
+		},
+	);
+	harness.equal('a multi-block run completes without error', multi && multi.err, '');
+	harness.ok(
+		'bridgeMaker forwards blocks[] unchanged (two pair-scoped entries)',
+		multi && multi.result && Array.isArray(multi.result.blocks) && multi.result.blocks.length === 2,
+		`blocks was ${JSON.stringify(multi && multi.result && multi.result.blocks)}`,
+	);
+	harness.equal('  block[0] applyLabel preserved', multi.result.blocks[0].applyLabel, 'BridgedRelation_A_B');
+	harness.equal('  block[1] applyLabel preserved', multi.result.blocks[1].applyLabel, 'BridgedRelation_C_D');
+	harness.equal('  each pairing wrote under its OWN distinct label', multiWriter.writes.map((oneWrite) => oneWrite.applyLabel).join(','), 'BridgedRelation_A_B,BridgedRelation_C_D');
+	harness.equal('  the producer kind is forwarded', multi.result.producer, 'structural');
+	harness.ok('  the multi-block run closed its graphWriter', multiWriter.wasClosed(), 'graphWriter.close was never called');
+})();
+
+// =====================================================================
 harness.section('THE DEFAULT GENERIC PLUGIN — zero edges, valid status, no graph connection');
 // =====================================================================
 
 (() => {
 	const writer = graphWriterDouble();
 	let observed = null;
-	// default registry (no override), default mapper. graphWriterFactory injected only to PROVE it
-	// is never used — the default plugin writes nothing and opens nothing.
+	// the REAL resolver (no override), the default bridge name. It resolves genericBridge from the
+	// library dir. graphWriterFactory injected only to PROVE it is never used — the default plugin
+	// writes nothing and opens nothing.
 	bridgeMakerModule({ graphWriterFactory: writer.factory }).run(
-		{ inGraph: { graphName: 'DEV_probe' }, mapper: 'genericBridge', applyLabel: 'BridgedRelation' },
+		{ inGraph: { graphName: 'DEV_probe' }, bridge: 'genericBridge', applyLabel: 'BridgedRelation' },
 		(err, result) => {
 			observed = { err, result };
 		},
@@ -277,7 +440,7 @@ harness.section('THE DEFAULT GENERIC PLUGIN — zero edges, valid status, no gra
 		observed &&
 			observed.result &&
 			observed.result.inGraph !== undefined &&
-			observed.result.mapper === 'genericBridge' &&
+			observed.result.bridge === 'genericBridge' &&
 			observed.result.applyLabel === 'BridgedRelation' &&
 			observed.result.edgesWritten === 0 &&
 			observed.result.note !== undefined,
@@ -292,25 +455,25 @@ harness.section('ARGUMENT REFUSALS — a missing required argument is refused, n
 (() => {
 	let missingGraph = null;
 	bridgeMakerModule().run(
-		{ mapper: 'genericBridge', applyLabel: 'BridgedRelation' },
+		{ bridge: 'genericBridge', applyLabel: 'BridgedRelation' },
 		(err) => {
 			missingGraph = err;
 		},
 	);
 	harness.rejects('run without inGraph is refused', [missingGraph], /inGraph/);
 
-	let missingMapper = null;
+	let missingBridge = null;
 	bridgeMakerModule().run(
 		{ inGraph: { graphName: 'DEV_probe' }, applyLabel: 'BridgedRelation' },
 		(err) => {
-			missingMapper = err;
+			missingBridge = err;
 		},
 	);
-	harness.rejects('run without mapper is refused', [missingMapper], /mapper/);
+	harness.rejects('run without bridge is refused', [missingBridge], /bridge/);
 
 	let missingLabel = null;
 	bridgeMakerModule().run(
-		{ inGraph: { graphName: 'DEV_probe' }, mapper: 'genericBridge' },
+		{ inGraph: { graphName: 'DEV_probe' }, bridge: 'genericBridge' },
 		(err) => {
 			missingLabel = err;
 		},

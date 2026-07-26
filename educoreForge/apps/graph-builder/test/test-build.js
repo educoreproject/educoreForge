@@ -71,6 +71,18 @@ const contentAddress = require('../../../lib/content-address/content-address')()
 const realReplayBlock = require('../../../lib/replay/replay-block')();
 const cedsHubForge = require('../../../forges/ceds/lib/referenceSubgraph');
 
+// The REAL standards-database + a throwaway sqlite file — used by ONE stage (MANIFEST PERSISTED)
+// that must prove a -build writes its manifest THROUGH to a store, not merely composes it. Every
+// other stage uses the in-memory standardsDatabaseDouble, which never looks at its manifests table;
+// this stage opens a real temp-file store (hermetic — the same throwaway-file discipline
+// lib/standards-database's own suite uses; NO docker/voyage/llm) so the manifests and manifestBlocks
+// tables are genuinely populated and can be read back. sqliteInstance is required for a raw COUNT
+// read the store API does not expose.
+const os = require('os');
+const fs = require('fs');
+const standardsDatabaseModule = require('../../../lib/standards-database/standards-database')();
+const sqliteInstance = require('../../../lib/sqlite-instance/sqlite-instance')({});
+
 const goodRecipe = (name) =>
 	path.join(__dirname, '..', '..', '..', 'recipes', `${name}.recipe.jsonc`);
 
@@ -545,21 +557,21 @@ const stageCedsLif = () => {
 			/\[C\] bridge lif::ceds /,
 		);
 		harness.match(
-			'the bridge names the mapper it ran',
+			'the bridge names the bridge it ran',
 			xLog.text(),
-			/\[C\] bridge lif::ceds \(mapper=/,
+			/\[C\] bridge lif::ceds \(bridge=/,
 		);
-		// THE POSITIVE CONTROL. `bridge.mapper || 'defaultSemantic'` also satisfied the assertion
-		// above, which is exactly why it survived: "names A mapper" and "names THE RECIPE'S
-		// mapper" are different claims. cedsLif authors its mapper now, and this insists the
+		// THE POSITIVE CONTROL. `bridge.bridge || 'defaultSemantic'` also satisfied the assertion
+		// above, which is exactly why it survived: "names A bridge" and "names THE RECIPE'S
+		// bridge" are different claims. cedsLif names its bridge now, and this insists the
 		// build ran that one.
 		harness.match(
-			'the mapper it ran is the one THE RECIPE named, not one the code chose',
+			'the bridge it ran is the one THE RECIPE named, not one the code chose',
 			xLog.text(),
-			/\[C\] bridge lif::ceds \(mapper=lifIntoCedsSemantic\)/,
+			/\[C\] bridge lif::ceds \(bridge=semanticBridge\)/,
 		);
 		harness.ok(
-			'no in-code mapper name survives in build.js to stand behind the recipe key',
+			'no in-code bridge name survives in build.js to stand behind the recipe key',
 			!/defaultSemantic/.test(sourceOf(path.join(__dirname, '..', 'lib', 'build.js'))),
 			(sourceOf(path.join(__dirname, '..', 'lib', 'build.js')).match(/.*defaultSemantic.*/g) || []).join(
 				'\n',
@@ -601,7 +613,7 @@ const cedsCtdlRecipe = {
 	description: 'CTDL bridged into the CEDS hub — the authored EXACT_MATCH pairing',
 	standards: [{ token: 'ceds', version: 'current' }, { token: 'ctdl', version: 'current' }],
 	hubs: [{ standard: 'ceds' }],
-	bridges: [{ source: 'ctdl', hub: 'ceds', mapper: 'ctdlIntoCedsAuthored' }],
+	bridges: [{ source: 'ctdl', hub: 'ceds', bridge: 'ctdlAuthoredBridge' }],
 };
 
 const stageRelationshipBlockNaming = () => {
@@ -617,7 +629,7 @@ const stageRelationshipBlockNaming = () => {
 			xLog.text(),
 			/-> relationship ceds@current_rel_ctdl@current_exact /,
 		);
-		harness.match('  the bridge threads hub=ceds and ran the authored mapper', xLog.text(), /\[C\] bridge ctdl::ceds \(mapper=ctdlIntoCedsAuthored\)/);
+		harness.match('  the bridge threads hub=ceds and ran the authored bridge', xLog.text(), /\[C\] bridge ctdl::ceds \(bridge=ctdlAuthoredBridge\)/);
 
 		// inferred: a frozen decisionBlock -> _close (the SAME pair, a DIFFERENT producer block).
 		const inferredBridgeMaker = () => ({ run: (spec, cb) => cb('', { ...spec, edgesWritten: 5, decisionBlock: { hash: 'frozen' }, counts: { inferred: 5 } }) });
@@ -635,7 +647,7 @@ const stageRelationshipBlockNaming = () => {
 				description: 'a CTDL bridge whose hub standard is not forged',
 				standards: [{ token: 'ctdl', version: 'current' }],
 				hubs: [],
-				bridges: [{ source: 'ctdl', hub: 'ceds', mapper: 'ctdlIntoCedsAuthored' }],
+				bridges: [{ source: 'ctdl', hub: 'ceds', bridge: 'ctdlAuthoredBridge' }],
 			};
 			runBuildWith(hublessRecipe, {}, ({ err: restoreErr, result: restoreResult }) => {
 				harness.match(
@@ -644,9 +656,87 @@ const stageRelationshipBlockNaming = () => {
 					/restore deps ctdl::ceds: dependency base block\(s\) not forged in this build: ceds/,
 				);
 				harness.ok('  and hands back no result', restoreResult === undefined, JSON.stringify(restoreResult));
-				stageRebridgeWiring();
+
+				// STRUCTURAL PAIRING — a HUB-LESS bridge names its sibling endpoint in `pairWith`. build.js
+				// threads pairWith as the SECOND endpoint through pairKey, dependency restore, config, and the
+				// version-keyed subjectRefId, and honours a producer:'structural' -> _struct suffix. The block is
+				// keyed on BOTH endpoints (source + pairWith) so it never collides with a mapping pair's block.
+				const ctdlFamilyRecipe = {
+					recipeName: 'ctdlFamily',
+					description: 'CTDL family intra-family structural pairing ctdl::ctdlasn',
+					standards: [{ token: 'ctdl', version: 'current' }, { token: 'ctdlasn', version: 'current' }],
+					hubs: [],
+					bridges: [{ source: 'ctdl', pairWith: 'ctdlasn', bridge: 'ctdlFamilyStructure', dependencies: ['ctdl', 'ctdlasn'], cacheMode: 'reuse' }],
+				};
+				const structuralBridgeMaker = () => ({ run: (spec, cb) => cb('', { ...spec, edgesWritten: 4, decisionBlock: null, producer: 'structural', counts: { structural: 4 } }) });
+				runBuildWith(ctdlFamilyRecipe, { bridgeMaker: structuralBridgeMaker }, ({ err: structErr, result: structResult, xLog: structLog }) => {
+					harness.equal('a STRUCTURAL pairing (hub-less, pairWith names the sibling) builds', structErr, '');
+					harness.equal('  3 members (ctdl base + ctdlasn base + 1 structural relationship)', structResult.memberCount, 3);
+					harness.match('  the pairing label is source::pairWith', structLog.text(), /\[C\] bridge ctdl::ctdlasn \(bridge=ctdlFamilyStructure\)/);
+					harness.match(
+						'  the block is version-keyed on BOTH endpoints, _struct-suffixed, ROOT-FIRST (source before pairWith)',
+						structLog.text(),
+						/-> relationship ctdl@current_rel_ctdlasn@current_struct /,
+					);
+					stageMultiBlockFamily();
+				});
 			});
 		});
+	});
+};
+
+// =====================================================================
+// MULTI-BLOCK FAMILY (contract change 2026-07-26) — ONE bridge invocation may emit SEVERAL pair-scoped
+// blocks. build.js Phase C must harvest EACH into its OWN version-keyed, _struct-suffixed manifest member.
+// A bridgeMaker double returns blocks[] with three pair-scoped entries (distinct labels + endpoint TOKENS);
+// build.js version-keys each on its OWN two endpoints and adds three relationship members, not one.
+// =====================================================================
+const stageMultiBlockFamily = () => {
+	harness.section('MULTI-BLOCK FAMILY — one invocation, three pair-scoped version-keyed blocks harvested');
+
+	const familyRecipe = {
+		recipeName: 'ctdlFamily',
+		description: 'CTDL family — one coordinating structural bridge emitting three pair-scoped blocks',
+		standards: [
+			{ token: 'ctdl', version: 'current' },
+			{ token: 'ctdlasn', version: 'current' },
+			{ token: 'ctdlqdata', version: 'current' },
+		],
+		hubs: [],
+		bridges: [
+			{
+				source: 'ctdl',
+				bridge: 'ctdlFamilyStructure',
+				familyStandards: ['ctdl', 'ctdlasn', 'ctdlqdata'],
+				dependencies: ['ctdl', 'ctdlasn', 'ctdlqdata'],
+				cacheMode: 'reuse',
+			},
+		],
+	};
+	// the coordinating producer's status, as a double: THREE pair-scoped blocks, each with its OWN distinct
+	// applyLabel (what its edges were written under) and its pair's endpoint TOKENS root-first.
+	const familyBridgeMaker = () => ({
+		run: (spec, cb) =>
+			cb('', {
+				...spec,
+				edgesWritten: 4,
+				decisionBlock: null,
+				producer: 'structural',
+				counts: { structural: 4 },
+				blocks: [
+					{ applyLabel: 'BridgedRelation_CTDL_CTDLASN', firstStandard: 'ctdl', secondStandard: 'ctdlasn', producer: 'structural', decisionBlock: null, emptyPairing: false, edgesWritten: 2, counts: {} },
+					{ applyLabel: 'BridgedRelation_CTDL_CTDLQDATA', firstStandard: 'ctdl', secondStandard: 'ctdlqdata', producer: 'structural', decisionBlock: null, emptyPairing: false, edgesWritten: 1, counts: {} },
+					{ applyLabel: 'BridgedRelation_CTDLASN_CTDLQDATA', firstStandard: 'ctdlasn', secondStandard: 'ctdlqdata', producer: 'structural', decisionBlock: null, emptyPairing: false, edgesWritten: 1, counts: {} },
+				],
+			}),
+	});
+	runBuildWith(familyRecipe, { bridgeMaker: familyBridgeMaker }, ({ err: famErr, result: famResult, xLog: famLog }) => {
+		harness.equal('the ONE-entry family builds', famErr, '');
+		harness.equal('  6 members (3 base + 3 pair-scoped structural relationships)', famResult && famResult.memberCount, 6);
+		harness.match('  ctdl::ctdlasn block is version-keyed + _struct-suffixed, root-first', famLog.text(), /-> relationship ctdl@current_rel_ctdlasn@current_struct /);
+		harness.match('  ctdl::ctdlqdata block is version-keyed + _struct-suffixed, root-first', famLog.text(), /-> relationship ctdl@current_rel_ctdlqdata@current_struct /);
+		harness.match('  ctdlasn::ctdlqdata block (the cross-pair) is version-keyed + _struct-suffixed', famLog.text(), /-> relationship ctdlasn@current_rel_ctdlqdata@current_struct /);
+		stageRebridgeWiring();
 	});
 };
 
@@ -774,39 +864,39 @@ const stageEdgeCases = () => {
 	harness.section('EDGE CASES — degenerate and hostile recipe shapes');
 
 	// build() is reachable with a recipe object that never went through validateRecipe — this
-	// suite does it on every line below — so the schema's `required: mapper` is not the only
-	// place the absence can arrive. A bridge with no mapper used to run 'defaultSemantic' here.
+	// suite does it on every line below — so the schema's `required: bridge` is not the only
+	// place the absence can arrive. A bridge with no name used to run 'defaultSemantic' here.
 	// BOTH endpoints are forged: a bridge RESTORES its source and hub base blocks into the dependency
 	// graph before it runs (P2 Phase C), so the hub standard must be forged too — a bridge whose hub is
 	// not in the build has no HubReferences to author against.
-	const bridgeRecipe = (bridge) => ({
-		recipeName: 'bridgeMapperProbe',
-		description: 'one bridge, whatever mapper it was given',
+	const bridgeRecipe = (bridgeEntry) => ({
+		recipeName: 'bridgeNameProbe',
+		description: 'one bridge, whatever bridge name it was given',
 		standards: [{ token: 'lif', version: 'current' }, { token: 'ceds', version: 'current' }],
 		hubs: [{ standard: 'ceds' }],
-		bridges: [{ source: 'lif', hub: 'ceds', dependencies: ['lif'], cacheMode: 'reuse', ...bridge }],
+		bridges: [{ source: 'lif', hub: 'ceds', dependencies: ['lif'], cacheMode: 'reuse', ...bridgeEntry }],
 	});
 
 	runBuild(bridgeRecipe({}), ({ err }) => {
 		harness.match(
-			'a bridge with NO mapper is refused by name — nothing is substituted',
+			'a bridge with NO name is refused by name — nothing is substituted',
 			err,
-			/bridge lif::ceds: mapper is not named[\s\S]*no default/,
+			/bridge lif::ceds: bridge is not named[\s\S]*no default/,
 		);
 
-		runBuild(bridgeRecipe({ mapper: '   ' }), ({ err: blankErr }) => {
+		runBuild(bridgeRecipe({ bridge: '   ' }), ({ err: blankErr }) => {
 			harness.match(
-				'a BLANK mapper is refused too, quoting what was given',
+				'a BLANK bridge name is refused too, quoting what was given',
 				blankErr,
-				/bridge lif::ceds: mapper is "   "/,
+				/bridge lif::ceds: bridge is "   "/,
 			);
 
-			runBuild(bridgeRecipe({ mapper: 'bespokeMapper' }), ({ err: goodErr, xLog: goodLog }) => {
-				harness.equal('a NAMED mapper builds — the positive control', goodErr, '');
+			runBuild(bridgeRecipe({ bridge: 'bespokeBridge' }), ({ err: goodErr, xLog: goodLog }) => {
+				harness.equal('a NAMED bridge builds — the positive control', goodErr, '');
 				harness.match(
-					'and the build ran exactly the mapper it was handed',
+					'and the build ran exactly the bridge it was handed',
 					goodLog.text(),
-					/\[C\] bridge lif::ceds \(mapper=bespokeMapper\)/,
+					/\[C\] bridge lif::ceds \(bridge=bespokeBridge\)/,
 				);
 				stageEdgeCasesRest();
 			});
@@ -1280,8 +1370,8 @@ const faultCases = [
 	},
 	{
 		label: 'phase C: bridgeMaker.run fails',
-		components: { bridgeMaker: workingBridgeMaker({ run: (spec, cb) => cb('mapper not found') }) },
-		pattern: /phase C \(bridge\) failed: bridge lif::ceds: mapper not found/,
+		components: { bridgeMaker: workingBridgeMaker({ run: (spec, cb) => cb('bridge not found') }) },
+		pattern: /phase C \(bridge\) failed: bridge lif::ceds: bridge not found/,
 	},
 	{
 		label: 'phase C: harvesting the labeled relationship schema block fails',
@@ -1546,7 +1636,154 @@ const stageDisposeOnFailure = () => {
 			`created=${JSON.stringify(created)} deleted=${JSON.stringify(deleted)}`,
 		);
 
-		harness.report();
+		stageManifestPersistedToStore();
+	});
+};
+
+// =====================================================================
+// MANIFEST PERSISTED — a -build writes the manifest + its membership THROUGH to a real store
+// =====================================================================
+// THE PRINCIPLE (TQ, 2026-07-25): a -build must ALWAYS persist a manifest that regenerates the graph
+// it just built. Composing the manifest and materializing from it is not enough — if the manifest is
+// never SAVED, the manifests and manifestBlocks tables stay empty and the graph cannot be
+// regenerated. Every other stage uses the in-memory standardsDatabaseDouble and never inspects its
+// manifests table, so the gap was invisible. This stage opens a REAL temp-file standardsDatabase
+// (hermetic; no docker/voyage/llm) and proves:
+//   * the manifests table holds EXACTLY ONE row whose refId EQUALS the composed manifestId;
+//   * manifestBlocks holds memberCount rows for it;
+//   * ROUND TRIP — the stored membership (schemaBlockRefIds + positions) re-hashes, through the ONE
+//     addressing rule, back to the composed manifestId, so "this manifest regenerates this graph" is
+//     provable from storage alone;
+//   * IDEMPOTENCE — a second build over the same blocks does not error and does not duplicate the
+//     manifest or its membership (saveManifest dedups on the membership hash).
+//
+// STATE 1 (RED): with no manifest.save() in composeAndMaterialize, the build still SUCCEEDS (err is
+// '') but the manifests table is EMPTY — every assertion below the build goes red. STATE 2 (GREEN):
+// add manifest.save(cb) at compose time and they pass.
+
+const stageManifestPersistedToStore = () => {
+	harness.section('MANIFEST PERSISTED — a -build writes its manifest + membership to a real store');
+
+	const scratchDir = fs.mkdtempSync(path.join(os.tmpdir(), 'edfBuildManifest-'));
+	const databaseFilePath = path.join(scratchDir, `manifestGate_${process.pid}.sqlite3`);
+
+	// a raw COUNT read the store API does not expose — opened READ-side against the same file, exactly
+	// as lib/standards-database's own suite reads behind the store to prove verify-on-read.
+	const RAW = { noTableNameOk: true, suppressStatementLog: true };
+	const countRows = (sql, cb) => {
+		sqliteInstance.initDatabaseInstance(databaseFilePath, (initErr, dbInstance) => {
+			if (initErr) {
+				cb(initErr);
+				return;
+			}
+			dbInstance.getTable('manifestRowCounter', RAW, (tableErr, tableRef) => {
+				if (tableErr) {
+					cb(tableErr);
+					return;
+				}
+				tableRef.getData(sql, RAW, (queryErr, rows) =>
+					cb(queryErr || '', (rows && rows[0] && rows[0].n) || 0),
+				);
+			});
+		});
+	};
+
+	standardsDatabaseModule.open({ databaseFilePath }, (openErr, standardsDatabase) => {
+		if (openErr) {
+			harness.ok('a throwaway standardsDatabase opened', false, openErr);
+			harness.report();
+			return;
+		}
+
+		// cedsLif composes THREE members (2 standardBase + 1 relationship) — a manifest with real
+		// membership, so positions 0..2 and a multi-member round trip are exercised, not a trivial one.
+		const runBuild = (whenDone) =>
+			buildLib.build(
+				loadOrDie(goodRecipe('cedsLif')),
+				{
+					xLog: capturingXLog(),
+					standardsDatabase,
+					components: {
+						forger: workingForger(),
+						replayManager: workingReplayManager(),
+						bridgeMaker: workingBridgeMaker(),
+						manifestEditor: realManifestEditor,
+					},
+				},
+				whenDone,
+			);
+
+		runBuild((err, result) => {
+			harness.equal('the build succeeded against the real store', err, '');
+			const composedManifestId = (result || {}).manifestId;
+			const memberCount = (result || {}).memberCount;
+			harness.equal('  composing a three-member manifest', memberCount, 3);
+			harness.match('  addressed by manifestKeyForMembership', composedManifestId, /^[0-9a-f]{16,}$/);
+
+			countRows('SELECT count(*) AS n FROM manifests;', (countErr, manifestCount) => {
+				harness.equal('RED PROOF: the manifests table holds EXACTLY ONE row after a build', manifestCount, 1);
+				if (countErr) {
+					harness.ok('  the manifests table could be counted', false, countErr);
+				}
+
+				standardsDatabase.getManifest({ refId: composedManifestId }, (getErr, storedManifest) => {
+					harness.equal('the ONE manifest is keyed by the composed manifestId', getErr, '');
+					harness.ok(
+						'  the composed manifestId names a stored manifest (not null)',
+						!!storedManifest,
+						JSON.stringify(storedManifest),
+					);
+					const storedMembers = (storedManifest && storedManifest.members) || [];
+					harness.equal('manifestBlocks holds memberCount rows for it', storedMembers.length, memberCount);
+
+					// ROUND TRIP — the stored membership regenerates the composed graph's identity. If the
+					// stored (schemaBlockRefId, position) pairs re-hash through the ONE addressing rule back to
+					// the composed manifestId, the manifest genuinely regenerates the graph it was built from.
+					const regeneratedKey = contentAddress.manifestKeyForMembership(
+						storedMembers.map((oneMember) => ({
+							blockId: oneMember.schemaBlockRefId,
+							position: oneMember.position,
+						})),
+					);
+					harness.equal(
+						'ROUND TRIP: the stored membership re-hashes to the composed manifestId',
+						regeneratedKey,
+						composedManifestId,
+					);
+					harness.equal(
+						'  positions are the total 0..memberCount-1 ordering',
+						storedMembers.map((oneMember) => oneMember.position).join(','),
+						'0,1,2',
+					);
+
+					// IDEMPOTENCE — a second build over the same blocks must not error and must not duplicate
+					// the manifest or its membership (saveManifest dedups on the membership hash).
+					runBuild((secondErr, secondResult) => {
+						harness.equal('IDEMPOTENCE: a second identical build does not error', secondErr, '');
+						harness.equal(
+							'  and composes the SAME manifestId',
+							(secondResult || {}).manifestId,
+							composedManifestId,
+						);
+						countRows('SELECT count(*) AS n FROM manifests;', (reCountErr, manifestCount2) => {
+							harness.equal('  the manifests table STILL holds exactly one row (no duplicate)', manifestCount2, 1);
+							countRows(
+								'SELECT count(*) AS n FROM manifestBlocks;',
+								(mbErr, manifestBlockCount) => {
+									harness.equal(
+										'  manifestBlocks STILL holds exactly memberCount rows (no duplicate membership)',
+										manifestBlockCount,
+										memberCount,
+									);
+									fs.rmSync(scratchDir, { recursive: true, force: true });
+									harness.report();
+								},
+							);
+						});
+					});
+				});
+			});
+		});
 	});
 };
 

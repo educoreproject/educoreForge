@@ -1,11 +1,12 @@
 'use strict';
 
-// genericBridge — the DEFAULT generic bridge.js plugin (design §1, §3.11). It is the plugin most
-// (source, hub) pairings resolve to: bringing in a new standard's bridge is normally a recipe
-// entry + a crosswalk file + THIS plugin, no new code. A standard needing bespoke logic (CTDL's
-// structural bridge) registers an OVERRIDE in bridgeMaker's registry alongside it.
+// genericBridge — the DEFAULT generic bridge plugin (design §1, §3.11). It lives in the LIBRARY
+// scope (bridge-maker/bridges/) and is resolved BY NAME through bridgeMaker's three-directory
+// search path like any other bridge — it is not special-cased (design_bridgeResolution_072526 §2).
+// Bringing in a new standard's bridge is normally a recipe entry + a crosswalk file + THIS plugin,
+// no new code. A standard needing bespoke logic supplies a standard-local bridge file of its own.
 //
-// THE MAPPER CONTRACT (interfaces.js @interface BridgeModule):
+// THE BRIDGE CONTRACT (interfaces.js @interface BridgeModule):
 //   bridgeModule({ ...injected library tools }) ({ inGraph, hub, applyLabel }, cb)
 //       -> cb('', { edgesWritten, decisionBlock, counts })
 //

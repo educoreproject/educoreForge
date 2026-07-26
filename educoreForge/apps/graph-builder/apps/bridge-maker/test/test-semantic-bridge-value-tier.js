@@ -114,7 +114,7 @@ const rebridgeWrites = [];
 bridgeMakerModule({ graphWriterFactory: makeWriterDouble(rebridgeWrites), graphReaderFactory: graphReaderDouble }).run(
 	{
 		inGraph: { graphName: 'DEV_valueTier', boltUrl: 'bolt://x', password: 'x' },
-		mapper: 'ctdlIntoCedsSemantic', hub: 'ceds', applyLabel: 'BridgedRelation',
+		bridge: 'semanticBridge', hub: 'ceds', applyLabel: 'BridgedRelation',
 		rebridge: true, decisionStore, inferenceConfig, config: runConfig,
 		componentOverrides: { vectorizer: fakeVectorizerFactory },
 	},
@@ -151,7 +151,7 @@ bridgeMakerModule({ graphWriterFactory: makeWriterDouble(rebridgeWrites), graphR
 		bridgeMakerModule({ graphWriterFactory: makeWriterDouble(matWrites), graphReaderFactory: graphReaderDouble }).run(
 			{
 				inGraph: { graphName: 'DEV_valueTier2', boltUrl: 'bolt://x', password: 'x' },
-				mapper: 'ctdlIntoCedsSemantic', hub: 'ceds', applyLabel: 'BridgedRelation',
+				bridge: 'semanticBridge', hub: 'ceds', applyLabel: 'BridgedRelation',
 				rebridge: false, decisionStore, inferenceConfig, config: runConfig,
 				componentOverrides: { vectorizer: fakeVectorizerFactory },
 			},

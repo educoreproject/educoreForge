@@ -192,7 +192,7 @@ ctdlBundle.forge({ sourcePath: CTDL_ASSET_DIR, skipEmbedding: true }, (forgeErr,
 	});
 
 	bridgeMakerModule({ graphWriterFactory: graphWriterDouble, graphReaderFactory: graphReaderDouble }).run(
-		{ inGraph: { graphName: 'DEV_probe', boltUrl: 'bolt://x', password: 'x' }, mapper: 'ctdlIntoCedsAuthored', hub: 'ceds', applyLabel: 'BridgedRelation' },
+		{ inGraph: { graphName: 'DEV_probe', boltUrl: 'bolt://x', password: 'x' }, bridge: 'ctdlAuthoredBridge', source: 'ctdl', hub: 'ceds', applyLabel: 'BridgedRelation' },
 		(runErr, report) => {
 			harness.ok(`producer run did not error (${runErr || 'ok'})`, !runErr, runErr);
 			harness.equal('the producer wrote exactly 26 EXACT_MATCH edges', report && report.edgesWritten, 26);

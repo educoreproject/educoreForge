@@ -103,7 +103,7 @@ const runOne = ({ decisionStore, rebridge, writes }, callback) =>
 	bridgeMakerModule({ graphWriterFactory: makeWriterDouble(writes), graphReaderFactory: graphReaderDouble }).run(
 		{
 			inGraph: { graphName: 'DEV_probe', boltUrl: 'bolt://x', password: 'x' },
-			mapper: 'ctdlIntoCedsSemantic', hub: 'ceds', applyLabel: 'BridgedRelation',
+			bridge: 'semanticBridge', hub: 'ceds', applyLabel: 'BridgedRelation',
 			rebridge, decisionStore, inferenceConfig, config: runConfig,
 			componentOverrides: { vectorizer: fakeVectorizerFactory },
 		},

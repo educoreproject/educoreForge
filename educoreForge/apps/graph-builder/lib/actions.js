@@ -395,7 +395,65 @@ const deps = (callback) => {
 	});
 };
 
-return { build, validate, deps, scanAvailableForges };
+// ---------------------------------------------------------------------
+// -replay
+// ---------------------------------------------------------------------
+// Regenerate a graph FROM A STORED MANIFEST — no forging, no bridge runs. A -build persists a
+// manifest that regenerates the graph it just built; -replay is the verb that cashes that promise:
+// it opens the manifest by refId, resolves its member schema blocks, and materializes them into a
+// fresh DEV_ graph. NO recipe, NO decision store, NO Voyage/LLM. Its two parameters are REQUIRED and
+// have no default (the same 2026-07-17 lesson as -build): a replay that does not say WHICH store and
+// WHICH manifest cannot be allowed to guess. The absent-manifest and absent-member refusals live in
+// buildLib.replay (routed through the store and manifestEditor), named there.
+
+const replay = (callback) => {
+	const { xLog } = process.global;
+
+	const standardsDatabaseFilePath = firstValue(
+		process.global.commandLineParameters,
+		'standardsDatabaseFilePath',
+	);
+	if (!standardsDatabaseFilePath) {
+		callback(
+			`graphBuilder -replay: --standardsDatabaseFilePath=<path> is REQUIRED and has no default. ` +
+				`A replay reads the blocks and the manifest from that standardsDatabase; a replay that does ` +
+				`not say where it reads has nothing to reproduce.`,
+		);
+		return;
+	}
+
+	const manifestRefId = firstValue(process.global.commandLineParameters, 'manifestRefId');
+	if (!manifestRefId) {
+		callback(
+			`graphBuilder -replay: --manifestRefId=<refId> is REQUIRED and has no default. It names the ` +
+				`stored manifest to reproduce, and there is nothing to open without it.`,
+		);
+		return;
+	}
+
+	requireStandardsDatabase()().open(
+		{ databaseFilePath: standardsDatabaseFilePath },
+		(openError, standardsDatabase) => {
+			if (openError) {
+				callback(`graphBuilder -replay: ${openError}`);
+				return;
+			}
+			buildLib.replay(
+				{ manifestRefId },
+				{ xLog, standardsDatabase },
+				(replayError, result) => {
+					if (replayError) {
+						callback(`graphBuilder -replay failed: ${replayError}`);
+						return;
+					}
+					callback('', { exitCode: 0, resultText: JSON.stringify(result, null, 2) });
+				},
+			);
+		},
+	);
+};
+
+return { build, validate, deps, replay, scanAvailableForges };
 };
 
 // END OF moduleFunction() ============================================================

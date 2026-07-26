@@ -49,7 +49,7 @@ const harness = require('../../../test/testLib/harness')(moduleName);
 
 const { COMPONENT_SHAPES, MANIFEST_HANDLE_SHAPE, BRIDGE_MODULE_SHAPE } = require('../interfaces');
 const bridgeMakerModule = require('../apps/bridge-maker');
-const { DEFAULT_GENERIC_MAPPER } = bridgeMakerModule;
+const { DEFAULT_GENERIC_BRIDGE } = bridgeMakerModule;
 
 const TREE_LIB = path.join(__dirname, '..', '..', '..', 'lib');
 const contentAddress = require(path.join(TREE_LIB, 'content-address', 'content-address'))();
@@ -287,13 +287,13 @@ harness.note(
 harness.note('nowhere else. interfaces.js says so in the same words.');
 
 // bridgeMaker's DEFAULT generic plugin writes no edges and opens no connection, so its whole
-// contract runs in-process without Docker. The mapper must RESOLVE (an unregistered one is now
-// refused by name), so the probe names the registered default; the deeper resolution/refusal and
+// contract runs in-process without Docker. The bridge name must RESOLVE (an unresolvable one is
+// now refused by name), so the probe names the library default; the deeper resolution/refusal and
 // write-path proofs live in bridge-maker/test/test-bridge-maker.js.
 (() => {
 	let observed = null;
 	realComponents.bridgeMaker().run(
-		{ inGraph: { graphName: 'DEV_shapeProbe' }, mapper: DEFAULT_GENERIC_MAPPER, applyLabel: 'ProbeEdge' },
+		{ inGraph: { graphName: 'DEV_shapeProbe' }, bridge: DEFAULT_GENERIC_BRIDGE, applyLabel: 'ProbeEdge' },
 		(err, result) => {
 			observed = { err, result };
 		},

@@ -66,6 +66,8 @@ const run = () => {
 			? actions.validate
 			: switches.deps
 			? actions.deps
+			: switches.replay
+			? actions.replay
 			: null;
 
 		// help is the default: an invocation that names no action is a question, not an error

@@ -1,0 +1,18 @@
+{
+  // ISOLATED FAULT (referential): the SAME bridge named TWICE on the SAME (source, hub) pairing.
+  // Two DIFFERENT bridges on one pair is now legal (design_bridgeResolution_072526 §3a) — the
+  // referential key is source::hub::<bridgeName>, so only a repeated bridge NAME collides. This
+  // fixture is the same-name collision; good-twoBridgesOnePair is its legal twin.
+  "schemaVersion": "1.0.0",
+  "recipeName": "badDupBridge",
+  "kind": "dev",
+  "standards": [
+    { "token": "ceds", "version": "current" },
+    { "token": "lif", "version": "current" }
+  ],
+  "hubs": [{ "standard": "ceds", "candidateFinder": "semanticDefText" }],
+  "bridges": [
+    { "source": "lif", "bridge": "semanticBridge", "hub": "ceds", "dependencies": ["lif", "ceds"], "cacheMode": "reuse" },
+    { "source": "lif", "bridge": "semanticBridge", "hub": "ceds", "dependencies": ["lif", "ceds"], "cacheMode": "fresh" }
+  ]
+}

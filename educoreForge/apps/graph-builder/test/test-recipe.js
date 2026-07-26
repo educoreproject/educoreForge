@@ -148,12 +148,12 @@ const structuralCases = [
 	['incumbent legacy format', 'bad-incumbentFormat', /must NOT have additional properties|recipeName/],
 	['malformed schemaVersion', 'bad-schemaVersion', /schemaVersion.*pattern/],
 	['cacheMode pin without pinBlockId', 'bad-pinNoBlockId', /pinBlockId/],
-	['structural bridge without mapper', 'bad-structuralBridgeNoMapper', /mapper/],
-	// EVERY bridge names its mapper — the hub case used to be accepted here and silently handed
-	// 'defaultSemantic' by build.js:279, so a recipe author who never chose a mapper got one
+	['structural bridge without a bridge name', 'bad-structuralBridgeNoMapper', /bridge/],
+	// EVERY bridge entry names its bridge — the hub case used to be accepted here and silently
+	// handed 'defaultSemantic' by build.js, so a recipe author who never chose a bridge got one
 	// anyway and nothing said so (polyArch2 §6).
-	['hub bridge without mapper', 'bad-hubBridgeNoMapper', /mapper/],
-	['bridge with a BLANK mapper', 'bad-bridgeBlankMapper', /mapper.*fewer than 1 characters|minLength/i],
+	['hub bridge without a bridge name', 'bad-hubBridgeNoMapper', /bridge/],
+	['bridge with a BLANK bridge name', 'bad-bridgeBlankMapper', /bridge.*fewer than 1 characters|minLength/i],
 ];
 
 structuralCases.forEach(([label, name, pattern]) => {
@@ -185,7 +185,10 @@ const referentialCases = [
 	['bridge source not in standards[]', 'bad-bridgeSourceUndeclared', /bridges\[0\]\.source 'lif' is not in standards/],
 	['dependency not in standards[]', 'bad-depUndeclared', /dependencies 'sif' is not in standards/],
 	['bridge hub never declared as a hub', 'bad-bridgeHubNotDeclared', /bridges\[0\]\.hub 'ceds' is not a declared hub/],
-	['duplicate (source, hub) pairing', 'bad-dupPairing', /duplicate bridge pairing 'lif::ceds'/],
+	// The uniqueness key is source::hub::<bridgeName> (design §3a): two DIFFERENT bridges on one
+	// pair are legal (accepted below); only the SAME bridge NAME twice on a pair collides, and it
+	// is refused BY NAME — not by bare pairing.
+	['same bridge named twice on one pair', 'bad-dupBridge', /duplicate bridge 'semanticBridge' for pairing 'lif::ceds'/],
 ];
 
 referentialCases.forEach(([label, name, pattern]) => {
@@ -201,6 +204,18 @@ referentialCases.forEach(([label, name, pattern]) => {
 harness.accepts(
 	'ACCEPTS a referentially coherent recipe (cedsLif)',
 	validateFully(loadOrDie(goodRecipe('cedsLif'))).layers.referential.errors,
+);
+
+// The two-producer case the old source::hub key wrongly refused (design §3a): two DIFFERENT
+// bridges on the SAME (source,hub) pair are legal because the uniqueness key now includes the
+// bridge name. Structurally clean too — the fault it must NOT raise is purely referential.
+harness.accepts(
+	'  (fixture good-twoBridgesOnePair is structurally clean)',
+	validateStructuralOnly(loadOrDie(fixture('good-twoBridgesOnePair'))).layers.structural.errors,
+);
+harness.accepts(
+	'ACCEPTS two DIFFERENT bridges on the same (source,hub) pair — the legal two-producer case',
+	validateFully(loadOrDie(fixture('good-twoBridgesOnePair'))).layers.referential.errors,
 );
 
 harness.accepts(

@@ -23,6 +23,7 @@ NAME
 SYNOPSIS
      graphBuilder   -build    --recipePath=<path> --standardsDatabaseFilePath=<path>
      graphBuilder   -validate --recipePath=<path>
+     graphBuilder   -replay   --standardsDatabaseFilePath=<path> --manifestRefId=<refId>
      graphBuilder   -deps
      graphBuilder   -help
 
@@ -55,6 +56,11 @@ INPUT
 COMMANDS
      -build       Build the graph described by the recipe. Returns { manifestId, boltUrl }.
      -validate    Validate a recipe (Layer 1 JSON Schema + Layer 2 semantic/referential).
+     -replay      Regenerate a graph FROM A STORED MANIFEST -- open the manifest by refId, resolve
+                  its member schema blocks, and materialize them into a fresh DEV_ graph. NO forging,
+                  NO bridge runs, NO Voyage/LLM: it rebuilds exactly what a -build already wrote, so a
+                  persisted manifest is a reproducibility artifact. Returns
+                  { manifestId, boltUrl, memberCount }.
      -deps        List the resolvable standard tokens, versions, and hub group aliases.
 
 OPTIONS
@@ -62,9 +68,15 @@ OPTIONS
                            -validate. May also be given as a positional (fileList).
      --standardsDatabaseFilePath=<path>
                            Where the harvested schema blocks and the composed manifest are
-                           written. REQUIRED for -build; there is NO default, deliberately --
+                           written (-build) and where a stored manifest and its member blocks are
+                           read (-replay). REQUIRED for both; there is NO default, deliberately --
                            a build that does not say where it writes is one edit away from
-                           writing the canonical store.
+                           writing the canonical store, and a replay must say where it reads.
+     --manifestRefId=<refId>
+                           The stored manifest to reproduce. REQUIRED for -replay; there is NO
+                           default -- there is nothing to open without it. A refId absent from the
+                           manifests table, or a member block absent from the blocks table, is
+                           refused BY NAME rather than materialized as a partial graph.
      --decisionStoreFilePath=<path>
                            Where FROZEN inferred-decision blocks are read (a plain build MATERIALIZES
                            them) and written (--rebridge FREEZES a new one). OPTIONAL: it DEFAULTS to a
@@ -90,6 +102,7 @@ OPTIONS
 OUTPUT
      -build:    JSON { manifestId, boltUrl } on stdout (progress on stderr).
      -validate: JSON validation verdict on stdout.
+     -replay:   JSON { manifestId, boltUrl, memberCount } on stdout (progress on stderr).
      -deps:     JSON discovery listing on stdout.
 
 EXIT STATUS

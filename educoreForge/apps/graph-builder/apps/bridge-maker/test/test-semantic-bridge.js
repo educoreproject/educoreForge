@@ -173,7 +173,7 @@ function runSectionD() {
 	bridgeMakerModule({ graphWriterFactory: makeWriterDouble([]), graphReaderFactory: graphReaderDouble }).run(
 		{
 			inGraph: { graphName: 'DEV_g', boltUrl: 'bolt://x', password: 'x' },
-			mapper: 'ctdlIntoCedsSemantic', hub: 'ceds', applyLabel: 'BridgedRelation',
+			bridge: 'semanticBridge', hub: 'ceds', applyLabel: 'BridgedRelation',
 			rebridge: true, decisionStore, inferenceConfig: {}, config: runConfig,
 			componentOverrides: { vectorizer: fakeVectorizerFactory },
 		},
@@ -188,7 +188,7 @@ function runSectionD() {
 	bridgeMakerModule({ graphWriterFactory: makeWriterDouble(rebridgeWrites), graphReaderFactory: graphReaderDouble }).run(
 		{
 			inGraph: { graphName: 'DEV_probe', boltUrl: 'bolt://x', password: 'x' },
-			mapper: 'ctdlIntoCedsSemantic', hub: 'ceds', applyLabel: 'BridgedRelation',
+			bridge: 'semanticBridge', hub: 'ceds', applyLabel: 'BridgedRelation',
 			rebridge: true, decisionStore, inferenceConfig, config: runConfig,
 			componentOverrides: { vectorizer: fakeVectorizerFactory },
 		},
@@ -211,7 +211,7 @@ function runSectionD() {
 			bridgeMakerModule({ graphWriterFactory: makeWriterDouble(matWrites), graphReaderFactory: graphReaderDouble }).run(
 				{
 					inGraph: { graphName: 'DEV_probe2', boltUrl: 'bolt://x', password: 'x' },
-					mapper: 'ctdlIntoCedsSemantic', hub: 'ceds', applyLabel: 'BridgedRelation',
+					bridge: 'semanticBridge', hub: 'ceds', applyLabel: 'BridgedRelation',
 					rebridge: false, decisionStore, inferenceConfig, config: runConfig,
 					componentOverrides: { vectorizer: fakeVectorizerFactory },
 				},
@@ -230,7 +230,7 @@ function runSectionD() {
 					bridgeMakerModule({ graphWriterFactory: makeWriterDouble(noWrites), graphReaderFactory: graphReaderDouble }).run(
 						{
 							inGraph: { graphName: 'DEV_probe3', boltUrl: 'bolt://x', password: 'x' },
-							mapper: 'ctdlIntoCedsSemantic', hub: 'ceds', applyLabel: 'BridgedRelation',
+							bridge: 'semanticBridge', hub: 'ceds', applyLabel: 'BridgedRelation',
 							rebridge: false, decisionStore: emptyStore, inferenceConfig, config: runConfig,
 							componentOverrides: { vectorizer: fakeVectorizerFactory },
 						},

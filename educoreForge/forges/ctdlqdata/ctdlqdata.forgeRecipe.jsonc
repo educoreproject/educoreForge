@@ -1,0 +1,8 @@
+{
+  // forgeRecipe (standard-version kind) — version-pure: ONE standard @ ONE version.
+  "recipeKind": "standardVersion",
+  "standardKey": "ctdlqdata",
+  "standardName": "CTDLQData",
+  "forgeModule": "forge-ctdlqdata",
+  "source": { "snapshotKey": "01", "publishedVersion": "20260130", "versionSource": "provenance-file" }
+}

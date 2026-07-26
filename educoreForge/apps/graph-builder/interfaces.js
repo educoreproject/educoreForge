@@ -112,8 +112,9 @@
  * @interface BridgeMakerComponent
  * Runs a bridge module over a materialized dependency graph, writing new LABELED relationship
  * edges INTO the graph (label-based delta harvest, §4 Phase C). Real-bodied as of 2026-07-24
- * (P0 of the bridge): it RESOLVES `mapper` through a registry to a BridgeModule plugin (refusing
- * an unregistered mapper by name — no silent default), mints a graph writer from the handle,
+ * (P0 of the bridge): it RESOLVES `bridge` (the recipe's bridge NAME) through a three-directory
+ * search path to a BridgeModule plugin (refusing an unresolvable name by name — no silent default;
+ * an ambiguous name throws), mints a graph writer from the handle,
  * composes the component library over it, runs the plugin, and returns a STATUS report. The P0
  * default generic plugin writes ZERO edges, so `run` still travels its whole path in-process
  * without a container; the producers that write real edges land in P2/P3.
@@ -123,22 +124,22 @@
  * was a stub: the real create returns a HANDLE, and a handle is not a string. Calling the
  * parameter what it is removes the trap rather than documenting it.
  *
- * CONSTRUCTION (both legitimately optional, documented defaults): bridgeMaker({ bridgePluginRegistry,
- * graphWriterFactory }). bridgePluginRegistry defaults to the module's BRIDGE_PLUGIN_BY_MAPPER;
- * graphWriterFactory defaults to the real neo4j-backed writer and is injected as a DOUBLE by the
- * suite, which is how the write-into-graph path is proven without Docker.
- * @property {function({inGraph: GraphHandle, mapper: string, applyLabel: string},
+ * CONSTRUCTION (all legitimately optional, documented defaults): bridgeMaker({ bridgePluginResolver,
+ * graphWriterFactory }). bridgePluginResolver defaults to the module's directory search-path
+ * resolver (resolveBridgePlugin); graphWriterFactory defaults to the real neo4j-backed writer and
+ * is injected as a DOUBLE by the suite, which is how the write-into-graph path is proven without Docker.
+ * @property {function({inGraph: GraphHandle, bridge: string, source: string, applyLabel: string},
  *           function(string, Object=): void): void} run
- *           result: { inGraph, mapper, applyLabel, edgesWritten, note } (also carries decisionBlock
+ *           result: { inGraph, bridge, applyLabel, edgesWritten, note } (also carries decisionBlock
  *           and counts). The edges stay in the graph; harvesting them by label is
  *           replayManager.harvest's job, not this one's.
  */
 
 /**
  * @interface BridgeModule
- * The MAPPER CONTRACT — what a bridge.js plugin must expose (design_bridgeComponentLibrary §3.11).
- * `mapper` (a recipe token) resolves through bridgeMaker's registry to one of these; the default
- * generic plugin covers authored + semantic, a standard registers an OVERRIDE for bespoke logic.
+ * The BRIDGE CONTRACT — what a bridge plugin file must expose (design_bridgeComponentLibrary §3.11).
+ * The recipe's `bridge` NAME resolves through bridgeMaker's directory search path to one of these;
+ * the generic default is just a library file, a standard supplies a standard-local file for bespoke logic.
  *
  * It is a CURRIED factory: the injected library tools first, then a single callable over the graph.
  *
@@ -156,6 +157,19 @@
  * inferred one). bridgeMaker holds a resolved plugin to BRIDGE_MODULE_SHAPE and refuses drift by
  * name before running it. `hub` is null in P0 until build.js threads the recipe's hub token
  * through bridgeMaker.run.
+ *
+ * BLOCK-OR-BLOCKS (multi-block emit, contract change 2026-07-26). A bridge invocation may emit
+ * EITHER one relationship block (the single-block mapping bridges — ctdlAuthoredBridge,
+ * semanticBridge — write all edges under the ONE applyLabel build.js handed and return NO `blocks`
+ * key) OR SEVERAL pair-scoped blocks (a COORDINATING producer — ctdlFamilyStructure — reads the
+ * whole family once, writes each pairing's edges under its OWN distinct per-pair applyLabel, and
+ * returns them in an OPTIONAL `blocks[]` array). Each blocks[] entry carries { applyLabel,
+ * firstStandard, secondStandard, producer, decisionBlock, emptyPairing, counts }: applyLabel is the
+ * label THAT pairing's edges were written under (so build.js harvests each on its own),
+ * firstStandard/secondStandard are the pair's endpoint TOKENS root-first (so build.js version-keys
+ * each block independently). `blocks` is DELIBERATELY NOT a required resultKey — one block is the
+ * degenerate "list of one", synthesized by build.js from the top-level status when `blocks` is
+ * absent, which is exactly what keeps the single-block bridges working unchanged.
  * @property {function(Object): function({inGraph: GraphHandle, hub: string, applyLabel: string},
  *           function(string, Object=): void): void} (the curried callable; see above)
  */
@@ -294,7 +308,7 @@ const MANIFEST_HANDLE_SHAPE = {
 	recipeRefId: { arity: 0, argKeys: null, resultKeys: null },
 };
 
-// The BRIDGE MODULE contract, as DATA — the mapper/bridge.js plugin @interface BridgeModule, in
+// The BRIDGE MODULE contract, as DATA — the bridge plugin @interface BridgeModule, in
 // the same three fields the top-level components use. It is NOT a member of COMPONENT_SHAPES (that
 // map is exactly the four components build.js wires); a bridge module is not a build.js component
 // but a plugin bridgeMaker resolves and runs, so its shape lives beside MANIFEST_HANDLE_SHAPE and
@@ -304,6 +318,12 @@ const MANIFEST_HANDLE_SHAPE = {
 // edgesWritten and counts. What is CHECKED is exactly that — arity and argKeys statically (a
 // source-text argKeys check that can pass for the wrong reason but never a signature that omits a
 // key), resultKeys only after the callable runs. Types are not checked.
+//
+// `blocks` is an OPTIONAL result key (the block-or-blocks contract in @interface BridgeModule): a
+// coordinating producer emits SEVERAL pair-scoped blocks in it, a single-block bridge omits it. It
+// is deliberately NOT in resultKeys — requiring it would break every single-block bridge, and the
+// degenerate one-block case is synthesized downstream. So the enforced result shape is unchanged;
+// the multi-block capability rides on an optional key, exactly as a backward-compatible extension must.
 const BRIDGE_MODULE_SHAPE = {
 	arity: 2,
 	argKeys: ['inGraph', 'hub', 'applyLabel'],
@@ -356,8 +376,8 @@ const COMPONENT_SHAPES = {
 	bridgeMaker: {
 		run: {
 			arity: 2,
-			argKeys: ['inGraph', 'mapper', 'applyLabel'],
-			resultKeys: ['inGraph', 'mapper', 'applyLabel', 'edgesWritten', 'note'],
+			argKeys: ['inGraph', 'bridge', 'applyLabel'],
+			resultKeys: ['inGraph', 'bridge', 'applyLabel', 'edgesWritten', 'note'],
 		},
 	},
 	manifestEditor: {
