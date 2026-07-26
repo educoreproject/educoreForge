@@ -1,0 +1,17 @@
+{
+  // dctapOnly — forge DCTAP alone, no hubs, no bridges. The smallest recipe that exercises the ported
+  // forges/dctap bundle: it self-registers via parserDescriptor, resolves through the forger, forges
+  // to its standardBase graph, composes a 1-member manifest and materializes. DCTAP (Dublin Core
+  // Tabular Application Profiles) is a small JSON-LD meta-vocabulary — 36 nodes in GOLD_260718 — with
+  // no CEDS mappings, so it is an ISLAND at the forge layer and carries NO hub and NO bridge, exactly
+  // like ctdlasnOnly / lifOnly.
+  "schemaVersion": "1.0.0",
+  "recipeName": "dctapOnly",
+  "kind": "dev",
+  "description": "Forge the DCTAP standard base only — proves the ported DCTAP bundle forges.",
+  "standards": [
+    { "token": "dctap", "version": "current" }
+  ],
+  "hubs": [],
+  "bridges": []
+}
