@@ -513,6 +513,7 @@ const moduleFunction =
 		// no in-code width standing in for it any more (polyArch2 §6).
 		let embedder = null;
 		let declaredEmbeddingDims;
+		let declaredEmbeddingModelVersion;
 		if (vectorize) {
 			if (embeddingConfigFilePath) {
 				console.error(
@@ -527,7 +528,15 @@ const moduleFunction =
 			embedder = require(path.join(TREE_LIB, 'embedding', 'embedding-client'))({
 				configFilePath: voyagePointer.configFilePath,
 			});
-			declaredEmbeddingDims = embedder.resolveEmbeddingIdentity().embeddingDims;
+			// dims AND model come from the SAME embedding identity — they are the width and the model
+			// the vectors were MADE at. The standardBase block header must declare both (the block
+			// serializer copies them and the restore gate refuses an embedded block that omits
+			// embeddingDims); both are surfaced on the forge report so build.js can thread them into
+			// the harvest header. On --vectorize=false there is no embedder, so both stay undefined and
+			// the header carries no embedding fields — exactly as an un-embedded block should.
+			const embeddingIdentity = embedder.resolveEmbeddingIdentity();
+			declaredEmbeddingDims = embeddingIdentity.embeddingDims;
+			declaredEmbeddingModelVersion = embeddingIdentity.model;
 		}
 
 		const bundle = require(resolved.entryPath)({ embedder });
@@ -633,6 +642,11 @@ const moduleFunction =
 				nodeCount: args.shaped.nodes.length,
 				edgeCount: args.shaped.edges.length,
 				embedCallCount: args.forged.embedCallCount,
+				// header material for build.js's standardBase harvest — CARRIED from the forge, never
+				// invented: stableUriPropertyName names the stable-URI property, embeddingModelVersion is
+				// the model the vectors were made at (undefined when --vectorize=false).
+				stableUriPropertyName: args.forged.stableUriPropertyName,
+				embeddingModelVersion: declaredEmbeddingModelVersion,
 			});
 		});
 	};

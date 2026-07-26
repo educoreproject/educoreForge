@@ -385,6 +385,13 @@ const build = (recipe, deps, callback) => {
 	// the dependency graph so the producer can WALK them).
 	const resolvedVersionByToken = {};
 	const baseBlockByToken = {};
+	// The build's ONE embedding identity (all standards in a run share the run's embedder), captured
+	// in Phase A and reused for the Phase C relationship-block harvest header: a bridged node is an
+	// embedded base node, so its relationship block must declare the SAME embeddingDims/model as the
+	// bases or the materialize restore gate refuses it. Undefined on --vectorize=false, when the
+	// optional header fields drop and no block carries a vector.
+	let buildEmbeddingModelVersion;
+	let buildEmbeddingDims;
 
 	// ---- Phase A: forge each standardBase (+ hub block when the standard is a hub) ----
 	// The forge runs BEFORE the graph is provisioned (targetArchitectureDesign §4.4). A forge
@@ -439,6 +446,10 @@ const build = (recipe, deps, callback) => {
 						// the RESOLVED version the bundle READ (a4a0da2) — recorded per token for the
 						// version-keyed relationship block name Phase C composes; NOT the recipe token.
 						resolvedVersionByToken[std.token] = forgeReport.version;
+							// same embedder for every standard in the run — captured for Phase C's
+							// relationship harvest header (undefined on --vectorize=false).
+							buildEmbeddingModelVersion = forgeReport.embeddingModelVersion;
+							buildEmbeddingDims = forgeReport.nodeEdges.embeddingDims;
 					}
 					next(err ? `forge ${std.token}: ${err}` : '', { ...args, forgeReport });
 				},
@@ -481,6 +492,23 @@ const build = (recipe, deps, callback) => {
 						blockType: 'standardBase',
 						standardKey: std.token,
 						version: std.version,
+						// EMBEDDING/ADDRESSING HEADER (restored 2026-07-26). A standardBase block that
+						// CARRIES vectors must declare, in its header, the property naming its stable URI
+						// and the width + model the vectors were made at: the block serializer copies these
+						// from the header (replay-block.serializeHeaderLine) and the restore gate REFUSES an
+						// embedded block whose header omits embeddingDims. From the 2026-07-23 stub->real
+						// rewrite (1b091d1) this header was a bare {blockType,standardKey,version}, so EVERY
+						// embedded build failed on restore while un-embedded builds (which need none of
+						// this) passed — a whole path no credit-free suite could see. Values are CARRIED
+						// from the forge report, never invented; on --vectorize=false the forger reports
+						// them undefined/null and the optional fields drop, as an un-embedded block wants.
+						stableUriPropertyName: args.forgeReport.stableUriPropertyName,
+						resolutionKey: args.forgeReport.stableUriPropertyName,
+						embeddingModelVersion: args.forgeReport.embeddingModelVersion,
+						embeddingEncoding: 'base64',
+						embeddingDtype: 'float32',
+						embeddingByteOrder: 'little-endian',
+						embeddingDims: args.forgeReport.nodeEdges.embeddingDims,
 					},
 				},
 				(err, schemaBlock) => {
@@ -736,7 +764,23 @@ const build = (recipe, deps, callback) => {
 						{
 							inGraph: args.depGraph,
 							selectionLabels: [blockLabel],
-							header: { blockType: 'relationship', standardKey: oneSubjectRefId },
+							header: {
+								blockType: 'relationship',
+								standardKey: oneSubjectRefId,
+								// SECOND SITE of the missing-embedding-header defect (2026-07-26). A bridged
+								// node is an embedded base node, so a relationship block that carries it must
+								// declare the SAME embedding width/model as the bases, or the materialize
+								// restore gate refuses it (this is why --vectorize=false sailed through and
+								// --vectorize=true failed at manifest[3]). stableUriPropertyName is
+								// deliberately OMITTED: these nodes were already replayed, so shapeNode
+								// round-trips them off the stored stableId ("re-extract byte-identical").
+								// undefined on --vectorize=false, when the optional fields drop.
+								embeddingModelVersion: buildEmbeddingModelVersion,
+								embeddingEncoding: 'base64',
+								embeddingDtype: 'float32',
+								embeddingByteOrder: 'little-endian',
+								embeddingDims: buildEmbeddingDims,
+							},
 						},
 						(harvestErr, schemaBlock) => {
 							if (harvestErr) {
