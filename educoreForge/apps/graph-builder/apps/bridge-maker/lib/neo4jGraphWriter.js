@@ -22,7 +22,7 @@
 // endpoint nodes and MERGEs the typed relationship carrying `properties`, which is exactly what
 // replayManager.harvest's label-scoped selection (replay-engine.fetchEdgesWithinLabels: an edge
 // whose BOTH endpoints carry the label) reads back out. What bridging metadata `properties`
-// actually contains (matchType, confidence, provenanceTier, decisionBlockHash, ...) is authored
+// actually contains (predicate, confidence, provenanceTier, decisionBlockHash, ...) is authored
 // by the producers in P2/P3; this module only needs the fields to WRITE them, and it does.
 //
 // relationshipType and applyLabel are interpolated (a Cypher relationship type and a label

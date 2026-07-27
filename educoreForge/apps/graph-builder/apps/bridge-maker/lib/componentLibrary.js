@@ -38,6 +38,12 @@
 
 const path = require('path');
 
+// vocabulary — the single source of truth for the edge contract relationshipWriter enforces
+// (sanctioned types, required stamps, mapping-predicate agreement). deriveEdgePolicy (below) is the
+// ONLY place that reads it into the shape relationshipWriter consumes; nothing hand-copies these
+// literals elsewhere (polyArch2 §6 — a duplicated list is how a guard and its source drift apart).
+const vocabulary = require(path.join(__dirname, '..', '..', '..', '..', '..', 'lib', 'vocabulary', 'vocabulary'));
+
 const relationshipWriterFactory = require(path.join(__dirname, 'relationshipWriter'));
 // referenceIndex — the ported pure mappingSubgraph (P2). A pure module needing no run resources, so it
 // is injected as its FACTORY: a producer composes it with its OWN mapping options (subjectSource,
@@ -104,6 +110,47 @@ const SKELETON_FACTORIES = {
 
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
+// -----
+// deriveEdgePolicy — the ONE DERIVATION of relationshipWriter's edgePolicy from vocabulary.js. A pure
+// function of the vocabulary module (no run resources), exported so every construction site (this
+// factory, and any test that needs a REAL policy rather than a hand-copied fixture) composes the
+// SAME derivation. Never hand-copy these sets elsewhere — that is exactly how a guard and its source
+// of truth drift apart (polyArch2 §6).
+//
+//   sanctionedTypes          — structural EDGE_TYPES ∪ SKOS mapping predicates ∪ CLASSIFICATION_EDGE_TYPES
+//   structuralTypes          — EDGE_TYPES values (HAS_PROPERTY, HAS_OPTION_SET, SUBCLASS_OF, REFERENCES,
+//                               REFERENCES_TYPE, HAS_SUPPORT, HAS_CLASS, HAS_VALUE)
+//   mappingTypeToPredicate   — SKOS_EDGE_TYPES INVERTED: relationshipType -> predicate string
+//                               ('EXACT_MATCH' -> 'exactMatch', 'CLOSE_MATCH' -> 'closeMatch', ...)
+//   crosswalkTypes           — CLASSIFICATION_EDGE_TYPES values (CLASSIFICATION_CROSSWALK) — sanctioned,
+//                               but deliberately NOT a mapping predicate (vocabulary.js: never a hub match)
+//   requiredEdgeProperties   — REQUIRED_PROPERTIES.EDGE (['provenanceTier'])
+//   structuralProvenanceTier — PROVENANCE_TIER.STRUCTURAL ('structural')
+//   closeMatchType           — SKOS_EDGE_TYPES.closeMatch ('CLOSE_MATCH') — the one mapping type that
+//                               additionally requires decisionBlockHash + confidence
+const deriveEdgePolicy = (vocab = vocabulary) => {
+	const structuralTypes = new Set(Object.values(vocab.EDGE_TYPES));
+	const mappingTypeToPredicate = {};
+	Object.keys(vocab.SKOS_EDGE_TYPES).forEach((onePredicate) => {
+		mappingTypeToPredicate[vocab.SKOS_EDGE_TYPES[onePredicate]] = onePredicate;
+	});
+	const crosswalkTypes = new Set(Object.values(vocab.CLASSIFICATION_EDGE_TYPES));
+	const sanctionedTypes = new Set([
+		...structuralTypes,
+		...Object.keys(mappingTypeToPredicate),
+		...crosswalkTypes,
+	]);
+	return {
+		sanctionedTypes,
+		structuralTypes,
+		mappingTypeToPredicate,
+		crosswalkTypes,
+		requiredEdgeProperties: vocab.REQUIRED_PROPERTIES.EDGE,
+		structuralProvenanceTier: vocab.PROVENANCE_TIER.STRUCTURAL,
+		closeMatchType: vocab.SKOS_EDGE_TYPES.closeMatch,
+	};
+};
+
 // START OF moduleFunction() ============================================================
 
 const buildComponentLibrary = ({
@@ -127,8 +174,10 @@ const buildComponentLibrary = ({
 		library[oneComponentName] = SKELETON_FACTORIES[oneComponentName]();
 	});
 
-	// the ONE real WRITE seam — constructed over the run's graphWriter.
-	library.relationshipWriter = relationshipWriterFactory({ graphWriter });
+	// the ONE real WRITE seam — constructed over the run's graphWriter PLUS the edgePolicy DERIVED from
+	// the vocabulary (deriveEdgePolicy above). Every producer's edges pass through this ONE guarded
+	// instance; there is no path to graphWriter that skips it (see the invariant assertion below).
+	library.relationshipWriter = relationshipWriterFactory({ graphWriter, edgePolicy: deriveEdgePolicy() });
 
 	// P3a inferred components — injected as FACTORIES (a producer composes each with its own options).
 	// inferredIndex + decisionFreezer are PURE; vectorizer + inferencePipeline are NET/llm-bound and run
@@ -160,9 +209,22 @@ const buildComponentLibrary = ({
 	// wiring fault the producer names, never a silent empty read (polyArch2 §6).
 	library.graphReader = graphReader;
 
+	// INVARIANT — the raw graphWriter is NEVER placed on the returned library object. It is used ONLY
+	// to construct the guarded relationshipWriter above; a plugin composing this library can reach the
+	// graph ONLY through that guarded seam, never around it. If some future edit ever assigns
+	// `library.graphWriter = ...`, this throws immediately rather than silently reopening the
+	// unguarded path (polyArch2 §6 — the invariant is asserted, not merely commented).
+	if (library.graphWriter !== undefined) {
+		throw new Error(
+			`${moduleName}: invariant violated — the raw graphWriter must never be placed on the ` +
+				`returned component library (plugins receive only the guarded relationshipWriter). ` +
+				`library.graphWriter was set.`,
+		);
+	}
+
 	return library;
 };
 
 // END OF moduleFunction() ============================================================
 
-module.exports = { buildComponentLibrary, SKELETON_FACTORIES };
+module.exports = { buildComponentLibrary, SKELETON_FACTORIES, deriveEdgePolicy };

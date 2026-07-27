@@ -91,9 +91,13 @@ const graphWriterDouble = () => {
 const spyBridgePlugin = (injectedTools) => {
 	const { relationshipWriter } = injectedTools;
 	return ({ inGraph, hub, applyLabel }, callback) => {
+		// EXACT_MATCH is a sanctioned mapping predicate (relationshipWriter's vocabulary guard,
+		// componentLibrary.deriveEdgePolicy): it requires properties.provenanceTier (every edge) and
+		// properties.predicate agreeing with the type ('EXACT_MATCH' <-> 'exactMatch' — the golden-
+		// canonical stamp, confirmed against GOLD_260718).
 		const authoredMappings = [
-			{ fromStableId: 'src:1', toStableId: 'hub:1', relationshipType: 'EXACT_MATCH' },
-			{ fromStableId: 'src:2', toStableId: 'hub:2', relationshipType: 'EXACT_MATCH' },
+			{ fromStableId: 'src:1', toStableId: 'hub:1', relationshipType: 'EXACT_MATCH', properties: { provenanceTier: 'spec-authoritative', predicate: 'exactMatch' } },
+			{ fromStableId: 'src:2', toStableId: 'hub:2', relationshipType: 'EXACT_MATCH', properties: { provenanceTier: 'spec-authoritative', predicate: 'exactMatch' } },
 		];
 		let index = 0;
 		let written = 0;
@@ -339,15 +343,18 @@ const multiBlockBridgePlugin = (injectedTools) => {
 	return ({ inGraph, hub, applyLabel }, callback) => {
 		void inGraph;
 		void hub;
+		// REFERENCES / SUBCLASS_OF are structural EDGE_TYPES (relationshipWriter's vocabulary guard,
+		// componentLibrary.deriveEdgePolicy): every structural edge requires properties.provenanceTier
+		// === 'structural' exactly.
 		relationshipWriter(
-			{ authoredMapping: { fromStableId: 'a:1', toStableId: 'b:1', relationshipType: 'REFERENCES' }, applyLabel: `${applyLabel}_A_B` },
+			{ authoredMapping: { fromStableId: 'a:1', toStableId: 'b:1', relationshipType: 'REFERENCES', properties: { provenanceTier: 'structural' } }, applyLabel: `${applyLabel}_A_B` },
 			(firstErr) => {
 				if (firstErr) {
 					callback(firstErr);
 					return;
 				}
 				relationshipWriter(
-					{ authoredMapping: { fromStableId: 'c:1', toStableId: 'd:1', relationshipType: 'SUBCLASS_OF' }, applyLabel: `${applyLabel}_C_D` },
+					{ authoredMapping: { fromStableId: 'c:1', toStableId: 'd:1', relationshipType: 'SUBCLASS_OF', properties: { provenanceTier: 'structural' } }, applyLabel: `${applyLabel}_C_D` },
 					(secondErr) => {
 						if (secondErr) {
 							callback(secondErr);

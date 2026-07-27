@@ -51,6 +51,11 @@ const harness = require('../../../../../test/testLib/harness')(moduleName);
 
 const bridgeMakerModule = require('../bridgeMaker');
 const relationshipWriterFactory = require('../lib/relationshipWriter');
+// deriveEdgePolicy — the SAME derivation componentLibrary uses to construct relationshipWriter's
+// vocabulary guard. A DIRECT construction (bypassing bridgeMaker.run's componentLibrary) must supply
+// a REAL derived edgePolicy too, never a hand-copied fixture, so this suite proves the write path
+// under the SAME guard a real reforge composes (componentLibrary.deriveEdgePolicy).
+const { deriveEdgePolicy } = require('../lib/componentLibrary');
 const producerFactory = require('../../../../../forges/ctdl/bridges/ctdlFamilyStructure');
 const recipeLib = require('../../../lib/recipe')();
 const vocabulary = require('../../../../../lib/vocabulary/vocabulary');
@@ -146,7 +151,7 @@ const recordingWriterDouble = (writes) => () => ({
 const runDirect = ({ ctdlNodes, asnNodes, qdataNodes, hub = null, config }, callback) => {
 	const writes = [];
 	const graphWriter = { writeRelationshipEdge: (spec, cb) => { writes.push(spec); cb('', { edgeWritten: true }); }, close: (cb) => cb('') };
-	const relationshipWriter = relationshipWriterFactory({ graphWriter });
+	const relationshipWriter = relationshipWriterFactory({ graphWriter, edgePolicy: deriveEdgePolicy() });
 	const callable = producerFactory({
 		graphReader: readerDoubleFor(ctdlNodes, asnNodes, qdataNodes || []),
 		relationshipWriter,
