@@ -218,7 +218,7 @@ const resolveBundle = ({ standard }) => {
 	// incumbent standard-discovery documents), so the directory name is authoritative — match
 	// numerically, use the canonical name ('01').
 	let defaultSource = null;
-	if (descriptor.defaultSnapshot !== undefined && descriptor.sourceFile) {
+	if (descriptor.defaultSnapshot !== undefined) {
 		const snapshotsDir = path.join(bundleDir, 'assets', 'standardSourceData');
 		const snapshotDirNames = fs.existsSync(snapshotsDir)
 			? fs
@@ -236,7 +236,15 @@ const resolveBundle = ({ standard }) => {
 				} snapshot directory (found: ${snapshotDirNames.join(', ') || 'none'})`,
 			};
 		}
-		defaultSource = path.join(snapshotsDir, matches[0], `${descriptor.sourceFile}`);
+		const snapshotDir = path.join(snapshotsDir, matches[0]);
+		// sourceFile is OPTIONAL. A single-file parser names its file (sourceFile=ctdlasn.json) and gets
+		// that file. A DIRECTORY-source parser (a multi-file standard: medbiquitous XSD/WSDL set, jedx
+		// CSV tables, pesc XSD set, the CSV/TSV crosswalk standards) OMITS sourceFile and gets the
+		// snapshot DIRECTORY, which is what its parser demands ("--source must be the version directory").
+		// Single-file behavior is unchanged: sourceFile present -> the same file path as before.
+		defaultSource = descriptor.sourceFile
+			? path.join(snapshotDir, `${descriptor.sourceFile}`)
+			: snapshotDir;
 	}
 	return {
 		bundleDir,

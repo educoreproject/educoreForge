@@ -1,0 +1,7 @@
+standard: forge-sedm
+publishedVersion: unknown
+publishedVersionEvidence: source _meta carries extraction version 1.0 of the Conceptual Model structures — not a SEDM published version
+upstreamUrl: unknown (A4L SEDM working documents; no public URL recorded)
+copiedFrom: /Users/tqwhite/Documents/webdev/educoreForgeOLD/system/code/cli/lib.d/forge-sedm/assets/standardSourceData/01
+copiedDate: 2026-06-23
+note: harvested into the universal-contract forge bundle on 2026-06-23 (CSV family). Two source files: SEDM Logical Model and Maps - 6. CEDS Map.csv (the crosswalk-like CEDS-Map: 326 SEDM-flagged CEDS elements with inline Option Set definitions) + sedm-domain-structures.json (ontology classes, compliance categories, IDEA indicators, event milestones, IEP components, ETL templates, use cases, declared option sets). SEDM is an IDEA-compliance domain model layered over CEDS; the CEDS target Global IDs are BRIDGE data for a later phase, stashed as node properties (cedsId = P<6-digit>), NOT emitted as cross-standard edges. This block is standard-PURE SEDM.

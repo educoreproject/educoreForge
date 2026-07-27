@@ -1,0 +1,11 @@
+standard: EduAPI — 1EdTech Ed-API (Edu-API) v1.0
+publishedVersion: 1.0
+publishedVersionEvidence: openapi info.version, x-status Candidate Final
+upstreamUrl: https://purl.imsglobal.org/spec/eduapi/v1p0/schema/openapi/eduapi_v1p0_openapi3.json
+publisher: 1EdTech (IMS Global)
+retrieved: 2026-05-28
+sources:
+  - https://purl.imsglobal.org/spec/eduapi/v1p0/schema/openapi/eduapi_v1p0_openapi3.json
+note: OpenAPI 3.0.1; data model parsed from components.schemas. REST/JSON API and vocabulary for
+      higher-education institutional data: people, organizations, course/program offerings,
+      enrollments, affiliations. Successor to LIS ("OneRoster for Higher Education").

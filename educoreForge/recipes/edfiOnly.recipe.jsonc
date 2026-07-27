@@ -1,0 +1,10 @@
+{
+  // edfiOnly - forge edfi alone (no hubs, no bridges): resolve -> forge -> standardBase -> materialize.
+  "schemaVersion": "1.0.0",
+  "recipeName": "edfiOnly",
+  "kind": "dev",
+  "description": "Forge the edfi standard base only - proves the ported edfi bundle forges.",
+  "standards": [ { "token": "edfi", "version": "current" } ],
+  "hubs": [],
+  "bridges": []
+}

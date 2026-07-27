@@ -1,0 +1,10 @@
+{
+  // sedmOnly - forge sedm alone (no hubs, no bridges): resolve -> forge -> standardBase -> materialize.
+  "schemaVersion": "1.0.0",
+  "recipeName": "sedmOnly",
+  "kind": "dev",
+  "description": "Forge the sedm standard base only - proves the ported sedm bundle forges.",
+  "standards": [ { "token": "sedm", "version": "current" } ],
+  "hubs": [],
+  "bridges": []
+}

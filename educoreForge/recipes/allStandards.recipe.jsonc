@@ -1,0 +1,34 @@
+{
+  // allStandards - forge every ported standard's base graph into one graph. NO hubs, NO bridges: this
+  // is the all-standards BASE load, the foundation the CEDS hub and the cross-standard bridges layer
+  // onto next. All 18 standards are ported into forges/ and each is golden-verified individually vs
+  // GOLD_260718; this recipe is the manifest that loads them together. Directory-source standards
+  // (medbiquitous, jedx, pesc, soc, edfi, sedm, sif) resolve their version directory via the
+  // sourceFile-optional forger path; the rest name their single source file in their descriptor.
+  "schemaVersion": "1.0.0",
+  "recipeName": "allStandards",
+  "kind": "dev",
+  "description": "Forge all 18 standard bases into one graph (no hubs, no bridges) - the base load the hub and bridges build onto.",
+  "standards": [
+    { "token": "ceds", "version": "current" },
+    { "token": "ctdl", "version": "current" },
+    { "token": "ctdlasn", "version": "current" },
+    { "token": "ctdlqdata", "version": "current" },
+    { "token": "lif", "version": "current" },
+    { "token": "dctap", "version": "current" },
+    { "token": "clr", "version": "current" },
+    { "token": "openbadges", "version": "current" },
+    { "token": "case", "version": "current" },
+    { "token": "eduapi", "version": "current" },
+    { "token": "medbiquitous", "version": "current" },
+    { "token": "cip", "version": "current" },
+    { "token": "jedx", "version": "current" },
+    { "token": "pesc", "version": "current" },
+    { "token": "soc", "version": "current" },
+    { "token": "edfi", "version": "current" },
+    { "token": "sedm", "version": "current" },
+    { "token": "sif", "version": "current" }
+  ],
+  "hubs": [],
+  "bridges": []
+}

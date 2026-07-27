@@ -1,0 +1,11 @@
+{
+  // clrOnly — forge clr alone (no hubs, no bridges). The smallest recipe that exercises the
+  // ported forges/clr bundle end to end: resolve -> forge -> standardBase -> materialize.
+  "schemaVersion": "1.0.0",
+  "recipeName": "clrOnly",
+  "kind": "dev",
+  "description": "Forge the clr standard base only - proves the ported clr bundle forges.",
+  "standards": [ { "token": "clr", "version": "current" } ],
+  "hubs": [],
+  "bridges": []
+}

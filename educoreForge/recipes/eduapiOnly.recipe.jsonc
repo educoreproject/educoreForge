@@ -1,0 +1,11 @@
+{
+  // eduapiOnly — forge eduapi alone (no hubs, no bridges). The smallest recipe that exercises the
+  // ported forges/eduapi bundle end to end: resolve -> forge -> standardBase -> materialize.
+  "schemaVersion": "1.0.0",
+  "recipeName": "eduapiOnly",
+  "kind": "dev",
+  "description": "Forge the eduapi standard base only - proves the ported eduapi bundle forges.",
+  "standards": [ { "token": "eduapi", "version": "current" } ],
+  "hubs": [],
+  "bridges": []
+}

@@ -1,0 +1,11 @@
+{
+  // openbadgesOnly — forge openbadges alone (no hubs, no bridges). The smallest recipe that exercises the
+  // ported forges/openbadges bundle end to end: resolve -> forge -> standardBase -> materialize.
+  "schemaVersion": "1.0.0",
+  "recipeName": "openbadgesOnly",
+  "kind": "dev",
+  "description": "Forge the openbadges standard base only - proves the ported openbadges bundle forges.",
+  "standards": [ { "token": "openbadges", "version": "current" } ],
+  "hubs": [],
+  "bridges": []
+}

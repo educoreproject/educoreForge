@@ -1,0 +1,521 @@
+{
+  "_meta": {
+    "description": "SEDM domain structures extracted from the Conceptual Model document. These structures exist only in prose and supplement the CEDS Map CSV which provides the element-level data.",
+    "source": "SEDM Conceptual Model.md, Sections 0.0, 1.0, 3.0-3.6, 4.1, Appendix C",
+    "extractedDate": "2026-04-01",
+    "version": "1.0"
+  },
+
+  "ontologicalClasses": [
+    {
+      "name": "Time",
+      "definition": "A standard way of documenting a point in time, duration between start and end date, or a time period",
+      "subtypes": ["DateTime", "Session/SchoolYear"]
+    },
+    {
+      "name": "Person",
+      "definition": "A human being, alive or deceased",
+      "subtypes": []
+    },
+    {
+      "name": "Organization",
+      "definition": "A group that people can be a part of",
+      "subtypes": ["SEA", "IDEA Administrative Unit", "IDEA Delivery Unit", "Class Section", "Service Provider", "Family"]
+    },
+    {
+      "name": "Role",
+      "definition": "A relationship a person has with an organization for a particular period of time",
+      "subtypes": ["Parent/Guardian", "K12 Student", "K12 Staff", "Provider"]
+    },
+    {
+      "name": "Resource",
+      "definition": "A digital or physical asset that can be drawn on by a person or organization",
+      "subtypes": ["IEP", "Resource"]
+    },
+    {
+      "name": "Event",
+      "definition": "A class that has attributes of a person, org, role, or resource that occurred or changed at or over a particular time",
+      "subtypes": ["Enrollment", "Standard Event Milestone", "Service Log Record", "Assessment Result"]
+    }
+  ],
+
+  "complianceCategories": [
+    {
+      "id": "SEDM-CC-01",
+      "number": 1,
+      "name": "Identification",
+      "description": "Child Find - proactive identification, location, and evaluation of all children suspected of having disabilities",
+      "ideaIndicators": [7, 9, 10, 12],
+      "ideaStatuteRef": "§1412(2)(A), §1418(d)(1)"
+    },
+    {
+      "id": "SEDM-CC-02",
+      "number": 2,
+      "name": "Initial Referral and Evaluation",
+      "description": "Process from referral through parental consent to completed evaluation within 60 days",
+      "ideaIndicators": [11],
+      "ideaStatuteRef": "§1414(a), §1414(C)(I)"
+    },
+    {
+      "id": "SEDM-CC-03",
+      "number": 3,
+      "name": "IEP Team Meeting and Eligibility Determination",
+      "description": "Initial IEP team meeting and specific disability eligibility determination",
+      "ideaIndicators": [],
+      "ideaStatuteRef": "§1414(b), §1414(c)"
+    },
+    {
+      "id": "SEDM-CC-04",
+      "number": 4,
+      "name": "Individual Education Plans",
+      "description": "Development of IEP including PLAAFP, measurable annual goals, services, accommodations, and transition planning",
+      "ideaIndicators": [],
+      "ideaStatuteRef": "§1414(d)(1)(A)"
+    },
+    {
+      "id": "SEDM-CC-05",
+      "number": 5,
+      "name": "Services/Programming",
+      "description": "Delivery of special education services, related services, and supplementary aids in appropriate settings",
+      "ideaIndicators": [5, 6],
+      "ideaStatuteRef": "§1412(5)(A)"
+    },
+    {
+      "id": "SEDM-CC-06",
+      "number": 6,
+      "name": "Discipline",
+      "description": "Disciplinary actions, interim removals, manifestation determinations, and educational services after removal",
+      "ideaIndicators": [4],
+      "ideaStatuteRef": "§1415(k)"
+    },
+    {
+      "id": "SEDM-CC-07",
+      "number": 7,
+      "name": "Progress Monitoring",
+      "description": "Ongoing assessment and observation to measure progress toward IEP goals",
+      "ideaIndicators": [],
+      "ideaStatuteRef": "§1414(d)(1)(A)(i)(III)"
+    },
+    {
+      "id": "SEDM-CC-08",
+      "number": 8,
+      "name": "Academic Performance",
+      "description": "State assessment participation and performance for students with disabilities",
+      "ideaIndicators": [3],
+      "ideaStatuteRef": "§1412(a)(16)"
+    },
+    {
+      "id": "SEDM-CC-09",
+      "number": 9,
+      "name": "Issue Resolution",
+      "description": "Parent complaints, surrogate assignment, due process hearings, mediation, and written decisions",
+      "ideaIndicators": [15, 16],
+      "ideaStatuteRef": "§1415"
+    },
+    {
+      "id": "SEDM-CC-10",
+      "number": 10,
+      "name": "Annual Review",
+      "description": "Annual IEP review requirement - review due dates and completion tracking",
+      "ideaIndicators": [],
+      "ideaStatuteRef": "§1414(d)(4)"
+    },
+    {
+      "id": "SEDM-CC-11",
+      "number": 11,
+      "name": "IEP Transfer and PS Transition Planning",
+      "description": "IEP transfer between districts, transition planning for post-secondary beginning at age 16",
+      "ideaIndicators": [13, 14],
+      "ideaStatuteRef": "§1414(d)(1)(A)(i)(VIII), §1414(d)(2)(C)"
+    },
+    {
+      "id": "SEDM-CC-12",
+      "number": 12,
+      "name": "Completion",
+      "description": "IEP completion, parent consent withdrawn, graduation, dropout tracking",
+      "ideaIndicators": [1, 2, 14],
+      "ideaStatuteRef": "§1412(a)(1)"
+    },
+    {
+      "id": "SEDM-CC-13",
+      "number": 13,
+      "name": "Staffing",
+      "description": "Special education teacher qualifications, paraprofessional status, certification, and workforce metrics",
+      "ideaIndicators": [],
+      "ideaStatuteRef": "§1412(a)(14)"
+    },
+    {
+      "id": "SEDM-CC-14",
+      "number": 14,
+      "name": "Facilities",
+      "description": "Physical facilities and settings for special education service delivery",
+      "ideaIndicators": [],
+      "ideaStatuteRef": ""
+    },
+    {
+      "id": "SEDM-CC-15",
+      "number": 15,
+      "name": "Financial",
+      "description": "Financial requirements and reporting for IDEA funding",
+      "ideaIndicators": [],
+      "ideaStatuteRef": ""
+    },
+    {
+      "id": "SEDM-CC-16",
+      "number": 16,
+      "name": "Oversight",
+      "description": "State systemic improvement plan, parent participation surveys, noncompliance correction",
+      "ideaIndicators": [8, 17, 18],
+      "ideaStatuteRef": ""
+    }
+  ],
+
+  "ideaIndicators": [
+    {
+      "number": 1,
+      "name": "Graduation",
+      "description": "Percent of youths with IEPs graduating from high school with a regular diploma",
+      "dataSource": "FS-009",
+      "complianceCategory": 12
+    },
+    {
+      "number": 2,
+      "name": "Dropout",
+      "description": "Percent of youths with IEPs dropping out of high school",
+      "dataSource": "FS-009",
+      "complianceCategory": 12
+    },
+    {
+      "number": 3,
+      "name": "State Assessments Participation & Performance",
+      "description": "Participation rate and proficiency rate for children with IEPs on statewide assessments, including gap analysis",
+      "dataSource": "FS-175, FS-178, FS-185, FS-188",
+      "complianceCategory": 8
+    },
+    {
+      "number": 4,
+      "name": "Discipline",
+      "description": "Rates of suspension/expulsion, significant discrepancy by race/ethnicity",
+      "dataSource": "FS-006, FS-002, FS-089 + GenEd Denominator",
+      "complianceCategory": 6
+    },
+    {
+      "number": 5,
+      "name": "Educational Environment Ages 6-21",
+      "description": "Percent of children with IEPs aged 6-21 served inside regular class 80%+ of day, less than 40%, or in separate settings",
+      "dataSource": "FS-002",
+      "complianceCategory": 5
+    },
+    {
+      "number": 6,
+      "name": "Educational Environment Ages 3-5",
+      "description": "Percent of children with IEPs aged 3-5 in regular early childhood program, separate class, or home",
+      "dataSource": "FS-089",
+      "complianceCategory": 5
+    },
+    {
+      "number": 7,
+      "name": "Early Childhood Outcomes",
+      "description": "Percent of preschool children ages 3-5 with IEPs who demonstrate improvement in social-emotional skills, knowledge acquisition, and appropriate behaviors",
+      "dataSource": "State Selected Data",
+      "complianceCategory": 1
+    },
+    {
+      "number": 8,
+      "name": "Parent Participation",
+      "description": "Percent of parents with a child receiving special education services who report that schools facilitated parent involvement",
+      "dataSource": "State Selected Data",
+      "complianceCategory": 16
+    },
+    {
+      "number": 9,
+      "name": "Disproportionality by Race/Ethnicity",
+      "description": "Percent of LEAs with disproportionate representation of racial and ethnic groups in special education due to inappropriate identification",
+      "dataSource": "FS-002 + State Selected Data",
+      "complianceCategory": 1
+    },
+    {
+      "number": 10,
+      "name": "Disproportionality by Specific Disability",
+      "description": "Percent of LEAs with disproportionate representation of racial and ethnic groups in specific disability categories due to inappropriate identification",
+      "dataSource": "FS-002 + State Selected Data",
+      "complianceCategory": 1
+    },
+    {
+      "number": 11,
+      "name": "Child Find/Timely Evaluations",
+      "description": "Percent of children who were evaluated within 60 days of receiving parental consent for initial evaluation or state-established timeframe",
+      "dataSource": "State Selected Data",
+      "complianceCategory": 2
+    },
+    {
+      "number": 12,
+      "name": "Early Childhood Transition",
+      "description": "Percent of children referred by Part C prior to age 3, found eligible for Part B, with IEP developed and implemented by third birthday",
+      "dataSource": "State Selected Data",
+      "complianceCategory": 1
+    },
+    {
+      "number": 13,
+      "name": "Secondary Transition",
+      "description": "Percent of youth with IEPs aged 16+ with measurable, annually updated IEP goals and appropriate transition assessment, services, and courses",
+      "dataSource": "State Selected Data",
+      "complianceCategory": 11
+    },
+    {
+      "number": 14,
+      "name": "Post School Outcomes",
+      "description": "Percent of youth no longer in secondary school who had IEPs, grouped by enrollment in higher education, competitive employment, or other employment",
+      "dataSource": "State Selected Data",
+      "complianceCategory": 11
+    },
+    {
+      "number": 15,
+      "name": "General Supervision - Resolution Sessions",
+      "description": "Percent of hearing requests that went to resolution sessions that were resolved through settlement agreements",
+      "dataSource": "EMAPS Survey",
+      "complianceCategory": 9
+    },
+    {
+      "number": 16,
+      "name": "Mediation",
+      "description": "Percent of mediations held resulting in mediation agreements",
+      "dataSource": "EMAPS Survey",
+      "complianceCategory": 9
+    },
+    {
+      "number": 17,
+      "name": "State Systemic Improvement Plan",
+      "description": "SPP/APR includes comprehensive, ambitious, yet achievable multi-year SSIP with stakeholder engagement for improving results",
+      "dataSource": "State Selected Data",
+      "complianceCategory": 16
+    },
+    {
+      "number": 18,
+      "name": "Noncompliance Correction",
+      "description": "Percent of findings of noncompliance corrected within one year of identification",
+      "dataSource": "State Selected Data",
+      "complianceCategory": 16
+    }
+  ],
+
+  "standardEventMilestones": {
+    "description": "Proposed CEDS entity for tracking IDEA compliance dates. Each milestone has a date, type, and description.",
+    "proposedElements": [
+      {
+        "name": "IDEA Standard Event Milestone Date",
+        "definition": "The effective date of the Standard Event Milestone",
+        "format": "YYYY-MM-DD"
+      },
+      {
+        "name": "IDEA Standard Event Milestone Type",
+        "definition": "The type of IDEA Standard Event Milestone recorded",
+        "format": "Option Set"
+      },
+      {
+        "name": "IDEA Standard Event Milestone Description",
+        "definition": "Description of the Standard Event Milestone",
+        "format": "Alphanumeric - 40 characters maximum"
+      }
+    ],
+    "milestoneTypes": [
+      { "number": 1,  "name": "Parental Consent for Evaluation Given", "complianceCategory": 2, "ideaRequired": true },
+      { "number": 2,  "name": "Evaluation Complete", "complianceCategory": 2, "ideaRequired": true },
+      { "number": 3,  "name": "Specific Disability Eligibility Determination", "complianceCategory": 3, "ideaRequired": true },
+      { "number": 4,  "name": "IEP Team Initially Convened", "complianceCategory": 4, "ideaRequired": false },
+      { "number": 5,  "name": "Parental Consent for Implementing IEP Given", "complianceCategory": 4, "ideaRequired": true },
+      { "number": 6,  "name": "Parental Consent for Implementing IEP Decline", "complianceCategory": 4, "ideaRequired": true },
+      { "number": 7,  "name": "Service Begins", "complianceCategory": 5, "ideaRequired": true },
+      { "number": 8,  "name": "Incident", "complianceCategory": 6, "ideaRequired": true },
+      { "number": 9,  "name": "Removed from Least Restrictive Environment", "complianceCategory": 6, "ideaRequired": true },
+      { "number": 10, "name": "Manifestation Determination", "complianceCategory": 6, "ideaRequired": true },
+      { "number": 11, "name": "Parent Complaint (SEA/LEA)", "complianceCategory": 9, "ideaRequired": true },
+      { "number": 12, "name": "Surrogate Need Identification", "complianceCategory": 9, "ideaRequired": true },
+      { "number": 13, "name": "Surrogate Assignment", "complianceCategory": 9, "ideaRequired": true },
+      { "number": 14, "name": "Hearing Officer Assigned", "complianceCategory": 9, "ideaRequired": true },
+      { "number": 15, "name": "Hearing Conducted", "complianceCategory": 9, "ideaRequired": true },
+      { "number": 16, "name": "Written Decision (SEA/LEA)", "complianceCategory": 9, "ideaRequired": true },
+      { "number": 17, "name": "Action Taken", "complianceCategory": 9, "ideaRequired": true },
+      { "number": 18, "name": "IEP Review Due", "complianceCategory": 10, "ideaRequired": true },
+      { "number": 19, "name": "IEP Review Complete", "complianceCategory": 10, "ideaRequired": true },
+      { "number": 20, "name": "Transfer Report Completion", "complianceCategory": 11, "ideaRequired": true },
+      { "number": 21, "name": "Transfer Student IEP Adoption", "complianceCategory": 11, "ideaRequired": true },
+      { "number": 22, "name": "IEP Parent Consent Withdrawn", "complianceCategory": 12, "ideaRequired": true },
+      { "number": 23, "name": "IEP Completion", "complianceCategory": 12, "ideaRequired": true }
+    ]
+  },
+
+  "iepComponents": [
+    {
+      "number": 1,
+      "name": "Present Levels of Academic Achievement and Functional Performance",
+      "abbreviation": "PLAAFP",
+      "description": "Current academic and functional performance, how disability affects involvement in general education curriculum",
+      "dataNeeded": ["Academic achievement", "Functional performance"]
+    },
+    {
+      "number": 2,
+      "name": "Measurable Annual Goals",
+      "abbreviation": "Goals",
+      "description": "SMART goals for academic achievement and functional performance",
+      "dataNeeded": ["Academic achievement goals", "Functional performance goals"],
+      "subcomponents": [
+        { "name": "Benchmarks or Short-Term Objectives", "note": "Required for students taking alternate assessments" },
+        { "name": "Progress Measurement Description", "note": "How and when progress reports will be provided" }
+      ]
+    },
+    {
+      "number": 5,
+      "name": "Special Education and Related Services",
+      "abbreviation": "Services",
+      "description": "Instruction, related services, and supplementary aids tailored to child's needs",
+      "dataNeeded": ["Service type", "Related services", "Supplementary aids and services"]
+    },
+    {
+      "number": 6,
+      "name": "Service Delivery",
+      "abbreviation": "ServiceDelivery",
+      "description": "Frequency, location, and duration of each service",
+      "dataNeeded": ["Associated goal", "Frequency", "Primary/Additional providers", "Location", "Duration"]
+    },
+    {
+      "number": 7,
+      "name": "Accommodations and Modifications",
+      "abbreviation": "Accommodations",
+      "description": "Adjustments for classroom instruction and assessments",
+      "dataNeeded": ["Setting", "Scheduling", "Presentation", "Assessment"],
+      "subcomponents": [
+        { "name": "Accommodations", "fields": ["Type", "Begin Date", "End Date"] },
+        { "name": "Modifications", "fields": ["Type", "Begin Date", "End Date"] },
+        { "name": "Supplementary Aid/Service", "fields": ["Begin Date", "End Date", "Frequency", "Duration", "Title/Name of Provider"] }
+      ]
+    },
+    {
+      "number": 8,
+      "name": "Consideration of Special Factors",
+      "abbreviation": "SpecialFactors",
+      "description": "Behavioral issues, limited English proficiency, visual/hearing impairment, assistive technology",
+      "dataNeeded": ["Behavioral Intervention Plan", "English Proficiency Plan", "Braille needs", "Communication needs", "Assistive technology needs"]
+    },
+    {
+      "number": 9,
+      "name": "Extent of Placement with Nondisabled Peers",
+      "abbreviation": "LRE",
+      "description": "Least Restrictive Environment determination and justification for any removal from general education",
+      "dataNeeded": ["Participation extent", "Removal justification"]
+    },
+    {
+      "number": 10,
+      "name": "Transition Services",
+      "abbreviation": "Transition",
+      "description": "Post-secondary goals and transition services beginning at age 16",
+      "dataNeeded": ["Postsecondary goals", "Transition services", "Courses of study"],
+      "ageRequirement": "Beginning not later than age 16"
+    },
+    {
+      "number": 11,
+      "name": "Parent and Student Participation",
+      "abbreviation": "Participation",
+      "description": "Parent as equal IEP team member, student involvement in transition planning, translation requirements",
+      "dataNeeded": ["Parent participation", "Student preferences and interests", "Translation needs"]
+    },
+    {
+      "number": 12,
+      "name": "Extended School Year Services",
+      "abbreviation": "ESY",
+      "description": "Services beyond regular school year if needed to receive FAPE, based on regression risk",
+      "dataNeeded": ["ESY eligibility determination", "ESY services"]
+    }
+  ],
+
+  "entityHierarchy": {
+    "description": "Ontological relationships from Section 4.1 - the hierarchical structure of SEDM entities",
+    "relationships": [
+      { "parent": "District", "children": ["SchoolYear", "School"] },
+      { "parent": "SchoolYear", "children": ["ReportingPeriod", "ESYPeriod", "Day"] },
+      { "parent": "School", "children": ["DayLength", "SchoolArea", "Staff"] },
+      { "parent": "Staff", "children": ["Group", "Section", "Caseload"] },
+      { "parent": "Group/Section/Caseload", "children": ["Student"] },
+      {
+        "parent": "Student",
+        "children": [
+          "Enrollment", "Picture", "Parent", "Event", "Immunization/HealthAlert",
+          "DailyAttendance", "TotalAttendance", "Transportation", "Goal",
+          "Evaluation", "Screening", "ServiceLogStatus", "Service",
+          "Incident", "DisputeResolution", "Participation",
+          "Intervention", "Accommodation", "Assessment"
+        ]
+      },
+      { "parent": "Evaluation", "children": ["Assessment"] },
+      { "parent": "Service", "children": ["Narrative", "ServiceLog", "Reimbursement", "Certification"] },
+      { "parent": "Incident", "children": ["Behavior", "Discipline"] },
+      {
+        "parent": "Enrollment",
+        "children": ["Student", "District", "School", "ClassSection", "Caseload", "Cohort", "Group"],
+        "properties": ["StartDate", "EndDate", "Type"]
+      },
+      { "parent": "Agency", "children": ["Provider"] },
+      { "parent": "Provider", "children": ["NonBillableDate", "Service"] }
+    ]
+  },
+
+  "optionSets": {
+    "primaryDisabilityType": {
+      "cedsElementName": "Primary Disability Type",
+      "values": [
+        { "code": "AUT", "name": "Autism" },
+        { "code": "DB", "name": "Deaf-blindness" },
+        { "code": "DD", "name": "Developmental delay" },
+        { "code": "EMN", "name": "Emotional disturbance" },
+        { "code": "HI", "name": "Hearing impairment" },
+        { "code": "ID", "name": "Intellectual Disability" },
+        { "code": "MD", "name": "Multiple disabilities" },
+        { "code": "OI", "name": "Orthopedic impairment" },
+        { "code": "OHI", "name": "Other health impairment" },
+        { "code": "SLD", "name": "Specific learning disability" },
+        { "code": "SLI", "name": "Speech or language impairment" },
+        { "code": "TBI", "name": "Traumatic brain injury" },
+        { "code": "VI", "name": "Visual impairment" }
+      ]
+    },
+    "accommodationCategories": {
+      "values": [
+        { "name": "Setting", "description": "How the environment is made accessible for instruction and assessment" },
+        { "name": "Scheduling", "description": "How time demands and schedules may be adjusted" },
+        { "name": "Presentation", "description": "How students receive information" },
+        { "name": "Assessment", "description": "How students show what they know" }
+      ]
+    }
+  },
+
+  "useCases": [
+    {
+      "id": "SEDM-UC-FS002",
+      "name": "FS002 - Children with Disabilities (IDEA) School Age",
+      "description": "IDEA child count EdFacts report - unduplicated count of children ages 5-21 with IEPs on state child count date",
+      "edFactsCode": "FS002",
+      "dataGroup": "74",
+      "requiredElementCount": 19,
+      "reportingLevel": ["State", "LEA", "School"],
+      "totalPermutations": { "required": 1955, "optional": 806, "total": 2761 },
+      "sourceFile": "FS002 Data Requirements.md"
+    }
+  ],
+
+  "generateEtlTemplates": [
+    { "name": "Assessment ETL", "csvColumn": "Assessment ETL" },
+    { "name": "Base IDEA ETL", "csvColumn": "Base IDEA ETL" },
+    { "name": "Charter ETL", "csvColumn": "Charter ETL" },
+    { "name": "Child Count ETL", "csvColumn": "Child Count ETL" },
+    { "name": "Directory ETL", "csvColumn": "Directory ETL" },
+    { "name": "Directory Lite ETL", "csvColumn": "Directory Lite ETL" },
+    { "name": "Discipline ETL", "csvColumn": "Discipline ETL" },
+    { "name": "Exiting ETL", "csvColumn": "Exiting ETL" },
+    { "name": "Membership ETL", "csvColumn": "Membership ETL" },
+    { "name": "NorD Participation ETL", "csvColumn": "NorD Participation ETL" },
+    { "name": "OESE ETL", "csvColumn": "OESE ETL" },
+    { "name": "Personnel ETL", "csvColumn": "Personnel ETL" },
+    { "name": "Title I ETL", "csvColumn": "Title I ETL" },
+    { "name": "Title III ETL", "csvColumn": "Title III ETL" }
+  ]
+}

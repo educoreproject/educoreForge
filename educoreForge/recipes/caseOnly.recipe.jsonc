@@ -1,0 +1,11 @@
+{
+  // caseOnly — forge case alone (no hubs, no bridges). The smallest recipe that exercises the
+  // ported forges/case bundle end to end: resolve -> forge -> standardBase -> materialize.
+  "schemaVersion": "1.0.0",
+  "recipeName": "caseOnly",
+  "kind": "dev",
+  "description": "Forge the case standard base only - proves the ported case bundle forges.",
+  "standards": [ { "token": "case", "version": "current" } ],
+  "hubs": [],
+  "bridges": []
+}

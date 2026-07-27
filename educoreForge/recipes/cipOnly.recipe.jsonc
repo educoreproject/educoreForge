@@ -1,0 +1,10 @@
+{
+  // cipOnly - forge cip alone (no hubs, no bridges): resolve -> forge -> standardBase -> materialize.
+  "schemaVersion": "1.0.0",
+  "recipeName": "cipOnly",
+  "kind": "dev",
+  "description": "Forge the cip standard base only - proves the ported cip bundle forges.",
+  "standards": [ { "token": "cip", "version": "current" } ],
+  "hubs": [],
+  "bridges": []
+}

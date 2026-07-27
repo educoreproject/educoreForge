@@ -1,0 +1,7 @@
+{
+	"name": "forge-jedx",
+	"version": "1.0.0",
+	"main": "forgeJedx.js",
+	"description": "JEDx Data Model forge bundle — parses the JEDx per-entity CSVs and emits the universal forge property contract (DmeClass/DmeProperty/DmeOptionSet roles, synthetic jedx:<kind>/<key> stableIds, field->codeset HAS_OPTION_SET ownership, entity->entity REFERENCES, voyage-4-large embeddings). No CEDS crosswalk in source — naturally CEDS-pure.",
+	"private": true
+}

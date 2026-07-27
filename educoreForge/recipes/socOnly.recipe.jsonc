@@ -1,0 +1,10 @@
+{
+  // socOnly - forge soc alone (no hubs, no bridges): resolve -> forge -> standardBase -> materialize.
+  "schemaVersion": "1.0.0",
+  "recipeName": "socOnly",
+  "kind": "dev",
+  "description": "Forge the soc standard base only - proves the ported soc bundle forges.",
+  "standards": [ { "token": "soc", "version": "current" } ],
+  "hubs": [],
+  "bridges": []
+}

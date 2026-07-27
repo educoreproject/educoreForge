@@ -1,0 +1,7 @@
+standard: forge-pesc
+publishedVersion: unknown
+publishedVersionEvidence: suite of per-document versions: CoreMain v1.19.1, AcademicRecord v1.14.0, CollegeTranscript v1.8.0, HighSchoolTranscript v1.6.0, TestScoreReport v1.1.0, others v1.0.0/v1.4.0/v1.6.0
+upstreamUrl: unknown (publisher: PESC — https://www.pesc.org; exact schema-download URLs not recorded)
+copiedFrom: /Users/tqwhite/Documents/webdev/A4L/unityObjectGenerator/system/code/assets/databaseDefinitionss/PESC/schemas
+copiedDate: 2026-05-28
+note: migrated to in-forge canonical location on 2026-05-28; original left in place

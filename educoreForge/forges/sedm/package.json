@@ -1,0 +1,7 @@
+{
+	"name": "forge-sedm",
+	"version": "1.0.0",
+	"main": "forgeSedm.js",
+	"description": "SEDM (Special Education Data Model) forge bundle — parses the SEDM CEDS-Map CSV + domain-structures JSON and emits the universal forge property contract (DmeClass/DmeProperty/DmeOptionSet/DmeOptionValue/DmeSupport roles, synthetic sedm:<kind>/<key> stableIds, P###### CEDS cross-refs stashed for later bridging, voyage embeddings). IDEA-compliance domain model layered over CEDS; standard-pure SEDM block, no cross-standard edges.",
+	"private": true
+}

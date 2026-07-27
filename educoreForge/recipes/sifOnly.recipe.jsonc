@@ -1,0 +1,10 @@
+{
+  // sifOnly - forge sif alone (no hubs, no bridges): resolve -> forge -> standardBase -> materialize.
+  "schemaVersion": "1.0.0",
+  "recipeName": "sifOnly",
+  "kind": "dev",
+  "description": "Forge the sif standard base only - proves the ported sif bundle forges.",
+  "standards": [ { "token": "sif", "version": "current" } ],
+  "hubs": [],
+  "bridges": []
+}

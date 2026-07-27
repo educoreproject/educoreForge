@@ -303,7 +303,7 @@ harness.match(
 harness.match(
 	'  and lists what this tree can actually forge',
 	buildUnforged.stderr,
-	/Known forges: ceds, ctdl, ctdlasn, ctdlqdata, dctap, lif/,
+	/Known forges: case, ceds, cip, clr, ctdl, ctdlasn, ctdlqdata, dctap, edfi, eduapi, jedx, lif, medbiquitous, openbadges, pesc, sedm, sif, soc/,
 );
 harness.ok(
 	'  the store was opened, so the injection reached the pipeline',

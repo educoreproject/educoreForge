@@ -1,0 +1,10 @@
+{
+  // jedxOnly - forge jedx alone (no hubs, no bridges): resolve -> forge -> standardBase -> materialize.
+  "schemaVersion": "1.0.0",
+  "recipeName": "jedxOnly",
+  "kind": "dev",
+  "description": "Forge the jedx standard base only - proves the ported jedx bundle forges.",
+  "standards": [ { "token": "jedx", "version": "current" } ],
+  "hubs": [],
+  "bridges": []
+}

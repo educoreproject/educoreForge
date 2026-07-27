@@ -1,0 +1,7 @@
+standard: forge-jedx
+publishedVersion: unknown
+publishedVersionEvidence: no version recorded in the JEDx CSV data model
+upstreamUrl: unknown (publisher not recorded at harvest)
+copiedFrom: /Users/tqwhite/Documents/webdev/educoreForgeOLD/system/code/cli/lib.d/forge-jedx/assets/standardSourceData/01/
+copiedDate: 2026-06-23
+note: the JEDx CSV data model (one CSV per entity: organization, worker, job, worker_compensation_report, worker_paid_hours_report). Harvested into the in-forge canonical location for the universal-contract forge-jedx bundle. Columns: Name,Type,Description,Path,Code Set,Annotation,Keys.
