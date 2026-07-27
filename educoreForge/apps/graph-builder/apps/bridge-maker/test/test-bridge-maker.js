@@ -488,4 +488,148 @@ harness.section('ARGUMENT REFUSALS — a missing required argument is refused, n
 	harness.rejects('run without applyLabel is refused', [missingLabel], /applyLabel/);
 })();
 
+// =====================================================================
+harness.section('THE NEGATIVE SUBSTRATE SCAN — a plugin file reaching for the raw write substrate is refused BY NAME');
+// =====================================================================
+// The single remaining bypass door (design): a plugin that opens its OWN neo4j connection using
+// the credentials on `inGraph` (require('neo4j-driver') / require(neo4jGraphWriter) / inGraph.boltUrl
+// / inGraph.password) instead of writing through the injected relationshipWriter. bridgeMaker now
+// reads the plugin's MODULE FILE (not just pluginCallable.toString(), which only sees the inner
+// callable) and refuses it BY NAME before it ever runs. Proven with TEMP fixture files (no forge
+// tree, no container) — RED for each forbidden shape, GREEN for a clean fixture, and GREEN (no
+// false positive) for the three REAL bridge files that ship today.
+
+(() => {
+	const { resolveBridgePlugin, bridgeModuleShapeViolation } = bridgeMakerModule;
+
+	const fixtureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'bridgeSubstrateScan-'));
+	const plantFixture = (name, source) => fs.writeFileSync(path.join(fixtureDir, `${name}.js`), source);
+
+	// RED #1 — a plugin whose module file directly requires('neo4j-driver'). Correctly shaped
+	// otherwise (arity 2, reads inGraph/hub/applyLabel) so the ONLY thing that can refuse it is the
+	// substrate scan, not an unrelated shape drift.
+	plantFixture(
+		'driverRequiringBridge',
+		`'use strict';\n` +
+			`module.exports = () => ({ inGraph, hub, applyLabel }, callback) => {\n` +
+			`\t// FIXTURE — deliberately opens its own neo4j-driver connection; must be refused before it runs.\n` +
+			`\tconst neo4jDriver = require('neo4j-driver');\n` +
+			`\tvoid neo4jDriver; void inGraph; void hub; void applyLabel;\n` +
+			`\tcallback('', { edgesWritten: 0, counts: {} });\n` +
+			`};\n`,
+	);
+
+	// RED #2 — a plugin whose module file reaches for inGraph's raw credential fields directly
+	// (boltUrl + password) rather than the injected relationshipWriter.
+	plantFixture(
+		'credentialReadingBridge',
+		`'use strict';\n` +
+			`module.exports = () => ({ inGraph, hub, applyLabel }, callback) => {\n` +
+			`\t// FIXTURE — deliberately reaches for inGraph's raw credential fields; must be refused.\n` +
+			`\tconst rawBoltUrl = inGraph.boltUrl;\n` +
+			`\tconst rawPassword = inGraph.password;\n` +
+			`\tvoid rawBoltUrl; void rawPassword; void hub; void applyLabel;\n` +
+			`\tcallback('', { edgesWritten: 0, counts: {} });\n` +
+			`};\n`,
+	);
+
+	// GREEN — a clean fixture: same shape, no forbidden reference anywhere in the file.
+	plantFixture(
+		'cleanBridge',
+		`'use strict';\n` +
+			`module.exports = () => ({ inGraph, hub, applyLabel }, callback) => {\n` +
+			`\tvoid inGraph; void hub; void applyLabel;\n` +
+			`\tcallback('', { edgesWritten: 0, counts: {} });\n` +
+			`};\n`,
+	);
+
+	// ---- unit-level: bridgeModuleShapeViolation directly, against each fixture's REAL resolved path ----
+	const loadCallable = (resolvedBridge) => {
+		const resolved = resolveBridgePlugin({ bridge: resolvedBridge, searchDirs: [fixtureDir] });
+		return { callable: resolved.pluginFactory({}), resolvedPath: resolved.resolvedPath };
+	};
+
+	const driverFixture = loadCallable('driverRequiringBridge');
+	harness.rejects(
+		'RED: a fixture requiring neo4j-driver is refused BY NAME, naming the bridge and the substrate',
+		[bridgeModuleShapeViolation(driverFixture.callable, 'driverRequiringBridge', driverFixture.resolvedPath)],
+		/driverRequiringBridge.*REFUSED.*neo4j-driver/s,
+	);
+
+	const credentialFixture = loadCallable('credentialReadingBridge');
+	harness.rejects(
+		'RED: a fixture reading inGraph.boltUrl/.password is refused BY NAME, naming the bridge and the substrate',
+		[bridgeModuleShapeViolation(credentialFixture.callable, 'credentialReadingBridge', credentialFixture.resolvedPath)],
+		/credentialReadingBridge.*REFUSED.*(boltUrl|password)/s,
+	);
+
+	const cleanFixture = loadCallable('cleanBridge');
+	harness.equal(
+		'GREEN: a clean fixture of the same shape passes the gate (no violation)',
+		bridgeModuleShapeViolation(cleanFixture.callable, 'cleanBridge', cleanFixture.resolvedPath),
+		'',
+	);
+
+	// ---- end-to-end: run() through the REAL resolver, so resolvedPath reaches the gate the same way
+	// production does, and the refused plugin is proven to have NEVER run (zero writes). ----
+	const realResolverOverFixtureDir = ({ bridge }) => resolveBridgePlugin({ bridge, searchDirs: [fixtureDir] });
+
+	const driverWriter = graphWriterDouble();
+	let driverRunObserved = null;
+	bridgeMakerModule({
+		bridgePluginResolver: realResolverOverFixtureDir,
+		graphWriterFactory: driverWriter.factory,
+	}).run(
+		{ inGraph: { graphName: 'DEV_probe' }, bridge: 'driverRequiringBridge', applyLabel: 'BridgedRelation' },
+		(err, result) => {
+			driverRunObserved = { err, result };
+		},
+	);
+	harness.rejects(
+		'RED end-to-end: run() refuses the neo4j-driver fixture by name before it ever executes',
+		[driverRunObserved && driverRunObserved.err],
+		/driverRequiringBridge.*REFUSED.*neo4j-driver/s,
+	);
+	harness.equal(
+		'  and the refused plugin never reached the graphWriter (zero writes)',
+		driverWriter.writes.length,
+		0,
+	);
+
+	const cleanWriter = graphWriterDouble();
+	let cleanRunObserved = null;
+	bridgeMakerModule({
+		bridgePluginResolver: realResolverOverFixtureDir,
+		graphWriterFactory: cleanWriter.factory,
+	}).run(
+		{ inGraph: { graphName: 'DEV_probe' }, bridge: 'cleanBridge', applyLabel: 'BridgedRelation' },
+		(err, result) => {
+			cleanRunObserved = { err, result };
+		},
+	);
+	harness.equal(
+		'GREEN end-to-end: run() allows the clean fixture through with no error',
+		cleanRunObserved && cleanRunObserved.err,
+		'',
+	);
+
+	// ---- NO FALSE POSITIVES — the 3 REAL bridges shipped today must pass the scan unchanged. ----
+	const TREE_ROOT = path.join(__dirname, '..', '..', '..', '..', '..');
+	const REAL_BRIDGES = [
+		{ name: 'ctdlAuthoredBridge', filePath: path.join(TREE_ROOT, 'forges', 'ctdl', 'bridges', 'ctdlAuthoredBridge.js') },
+		{ name: 'ctdlFamilyStructure', filePath: path.join(TREE_ROOT, 'forges', 'ctdl', 'bridges', 'ctdlFamilyStructure.js') },
+		{ name: 'semanticBridge', filePath: path.join(__dirname, '..', 'bridges', 'semanticBridge.js') },
+	];
+	REAL_BRIDGES.forEach((oneRealBridge) => {
+		const realCallable = require(oneRealBridge.filePath)({});
+		harness.equal(
+			`GREEN (no false positive): the real ${oneRealBridge.name} passes the substrate scan unchanged`,
+			bridgeModuleShapeViolation(realCallable, oneRealBridge.name, oneRealBridge.filePath),
+			'',
+		);
+	});
+})();
+
+// =====================================================================
+
 harness.report();

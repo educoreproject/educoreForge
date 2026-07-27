@@ -118,25 +118,90 @@ const resolveBridgePlugin = ({ bridge, source, searchDirs } = {}) => {
 				`nothing was substituted for it.`,
 		};
 	}
-	return { pluginFactory: require(matches[0]) };
+	// resolvedPath is returned alongside the factory (not just required and discarded) because the
+	// shape gate's NEGATIVE SUBSTRATE SCAN (bridgeModuleShapeViolation, below) needs the MODULE FILE
+	// on disk to read its own source text — `pluginCallable.toString()` alone only sees the inner
+	// callable, never a bridge file's top-level helpers or requires.
+	return { pluginFactory: require(matches[0]), resolvedPath: matches[0] };
 };
 
 // -----
-// bridgeModuleShapeViolation — the runtime shape gate for a resolved plugin's produced callable,
-// against @interface BridgeModule (BRIDGE_MODULE_SHAPE). Two static checks, the same ones
-// test-interfaces applies to the top-level components:
+// bridgeModuleShapeViolation — the runtime shape gate for a resolved plugin, against @interface
+// BridgeModule (BRIDGE_MODULE_SHAPE). THREE static checks now, the first two the same ones
+// test-interfaces applies to the top-level components, the third new (design: close the raw-write
+// bypass door):
 //   ARITY  — the callable takes ONE named-argument object plus the callback (arity 2). A
 //            positional (inGraph, hub, applyLabel) callable has arity 3 and is caught here.
 //   argKeys — the callable's own source visibly READS inGraph/hub/applyLabel off its argument
 //            object (destructured or accessed). A source-text check: it cannot pass a signature
 //            that never mentions a key, which is what drift looks like. It CAN pass for the wrong
 //            reason (a named-but-unused key), and this comment does not pretend otherwise.
+//   SUBSTRATE — the plugin's MODULE FILE (read fresh off disk at resolvedPath, not just the inner
+//            callable's toString()) is scanned for a reference to the raw write substrate: opening
+//            neo4j-driver directly, requiring neo4jGraphWriter, or reaching for the credential
+//            fields (inGraph.boltUrl / inGraph.password) that a real bridge is handed but is never
+//            supposed to touch (every real bridge writes ONLY through the injected
+//            relationshipWriter). This is why resolveBridgePlugin now returns resolvedPath instead
+//            of discarding it after require() — pluginCallable.toString() alone only sees the inner
+//            arrow function; a top-level module helper (or a stray require) never shows up there.
 // Types are not checked; result keys are checked AFTER the plugin runs (resultKeysViolation).
 const READS_KEY = (functionSource, oneKey) =>
 	new RegExp(`[{,]\\s*${oneKey}\\s*[,:=}]`).test(functionSource) ||
 	new RegExp(`\\.${oneKey}\\b`).test(functionSource);
 
-const bridgeModuleShapeViolation = (pluginCallable, bridge) => {
+// FORBIDDEN_SUBSTRATE_PATTERNS — the negative scan's vocabulary, as DATA (one entry per bypass
+// shape), not as scattered inline regexes. Each pattern targets an actual USE, not a bare word
+// occurrence, precisely so a comment merely mentioning the substrate does not trip the gate (the
+// three real bridges — ctdlAuthoredBridge, ctdlFamilyStructure, semanticBridge — were read and
+// checked: none references any of these; genericBridge likewise clean):
+//   - a literal require('neo4j-driver') call — the plugin opening its own driver
+//   - a require(...) whose argument names neo4jGraphWriter — reaching for P0's writer module directly
+//   - a `.boltUrl` / `.password` property access — the two credential fields the GraphHandle carries
+//     (see interfaces.js @typedef GraphHandle). Matched bare (not qualified to `inGraph.`) so a
+//     plugin that destructures or renames inGraph first (`const g = inGraph; g.boltUrl`) is still
+//     caught — the credential field name itself is the tell, not the variable holding it.
+const FORBIDDEN_SUBSTRATE_PATTERNS = [
+	{ name: `a direct require('neo4j-driver')`, regex: /require\(\s*['"]neo4j-driver['"]\s*\)/ },
+	{ name: 'a direct require of the neo4jGraphWriter module', regex: /require\([^)]*neo4jGraphWriter[^)]*\)/ },
+	{ name: 'a .boltUrl property access (the raw connection URL)', regex: /\.boltUrl\b/ },
+	{ name: 'a .password property access (the raw graph credential)', regex: /\.password\b/ },
+];
+
+// substrateBypassViolation — read resolvedPath fresh (the file may be required-and-cached, but the
+// SOURCE TEXT scan wants the bytes, not the module object) and test it against every forbidden
+// pattern. Returns the offending pattern's name, or null when clean.
+//
+// HONESTY (polyArch2 §6 applies to what this claims, not just what it does): this is a STATIC
+// heuristic — a source-text regex scan — not a sandbox. It defends against drift and laziness: a
+// plugin author who reaches for the raw substrate by the obvious means is refused by name before a
+// single edge is written. It does NOT defend against a determined adversary, who could obfuscate a
+// dynamic require (e.g. building the module specifier from string concatenation or `global.require`)
+// past a text scan entirely. What it buys is real and bounded: bypass must now visibly NAME the
+// forbidden substrate in the file bridgeMaker itself reads, where it is a code-review artifact
+// forever, rather than being invisible until harvested. "Nothing stops bypass" becomes "bypass must
+// out itself" — raising the bar, not sealing the door.
+const substrateBypassViolation = (resolvedPath) => {
+	if (typeof resolvedPath !== 'string' || resolvedPath.trim() === '') {
+		// no file to scan (e.g. an in-closure test double standing in for a plugin with no real file
+		// on disk) — the substrate scan simply has nothing to read; it is not silently "passed", it is
+		// not APPLICABLE. Real bridges always resolve through resolveBridgePlugin, which always sets
+		// resolvedPath, so production runs never take this branch.
+		return null;
+	}
+	let moduleSource;
+	try {
+		moduleSource = fs.readFileSync(resolvedPath, 'utf8');
+	} catch (readError) {
+		return `could not read its module file at '${resolvedPath}' to scan for forbidden raw-write-substrate references: ${readError.message}`;
+	}
+	const hit = FORBIDDEN_SUBSTRATE_PATTERNS.find((onePattern) => onePattern.regex.test(moduleSource));
+	return hit
+		? `its module file (${resolvedPath}) contains ${hit.name} — a bridge must write through the ` +
+				`injected relationshipWriter, not open its own connection to the raw write substrate`
+		: null;
+};
+
+const bridgeModuleShapeViolation = (pluginCallable, bridge, resolvedPath) => {
 	if (typeof pluginCallable !== 'function') {
 		return `bridge '${bridge}' produced ${typeof pluginCallable}, not a bridge-module callable`;
 	}
@@ -154,6 +219,10 @@ const bridgeModuleShapeViolation = (pluginCallable, bridge) => {
 			`bridge '${bridge}' has a drifted SHAPE: its callable never reads declared argument ` +
 			`key(s) off its argument object: ${unread.join(', ')}`
 		);
+	}
+	const substrateViolation = substrateBypassViolation(resolvedPath);
+	if (substrateViolation) {
+		return `bridge '${bridge}' is REFUSED: ${substrateViolation}.`;
 	}
 	return '';
 };
@@ -270,7 +339,11 @@ const moduleFunction =
 			}
 
 			// THE SHAPE GATE — refuse a drifted plugin BY NAME before it runs against the graph.
-			const shapeViolation = bridgeModuleShapeViolation(pluginCallable, bridge);
+			// resolved.resolvedPath (set by resolveBridgePlugin) is threaded through so the gate can also
+			// scan the plugin's MODULE FILE for a raw-write-substrate reference (see
+			// bridgeModuleShapeViolation / substrateBypassViolation above); a resolver double with no
+			// real file on disk simply leaves resolvedPath undefined and that half of the gate no-ops.
+			const shapeViolation = bridgeModuleShapeViolation(pluginCallable, bridge, resolved.resolvedPath);
 			if (shapeViolation) {
 				callback(`bridgeMaker: ${shapeViolation}`);
 				return;
