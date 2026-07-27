@@ -180,10 +180,10 @@ const standardsDatabaseDouble = () => {
 		savedBlocks,
 		savedManifests,
 		databaseFilePath: '(in-memory standardsDatabase double — no database is opened)',
-		saveBlock: ({ text, kind, subjectRefId, producedBy }, callback) => {
+		saveBlock: ({ text, kind, subject, producedBy }, callback) => {
 			const refId = contentAddress.blockIdForText(text);
 			const alreadyPresent = !!savedBlocks[refId];
-			savedBlocks[refId] = { text, refId, kind, subjectRefId, producedBy };
+			savedBlocks[refId] = { text, refId, kind, subject, producedBy };
 			callback('', { refId, alreadyPresent });
 		},
 		getBlock: ({ refId }, callback) => callback('', savedBlocks[refId] || null),
@@ -193,7 +193,8 @@ const standardsDatabaseDouble = () => {
 				name: spec.name,
 				description: spec.description,
 				recipeName: spec.recipeName,
-				recipeRefId: spec.recipeRefId,
+				recipeHash: spec.recipeHash,
+				recipeFileName: spec.recipeFileName,
 				members: spec.members.map((oneMember) => ({ ...oneMember })),
 			};
 			callback('', {
@@ -329,7 +330,7 @@ harness.note('nowhere else. interfaces.js says so in the same words.');
 	let addObserved = null;
 	manifest.add(
 		{
-			subjectRefId: 'probe@1.0',
+			subject: 'probe@1.0',
 			kind: SCHEMA_BLOCK_KIND.STANDARD_BASE,
 			description: 'the one member of the probe manifest',
 			schemaBlock: schemaBlockDouble('#probe schema block text\n'),
@@ -442,13 +443,14 @@ harness.match(
 // THE ASSERTION THAT MATTERS: correct method NAMES, wrong ARGUMENT SHAPE.
 const positionallyDriftedManifestEditor = () => ({
 	init: (name, recipe) => ({
-		add: (subjectRefId, kind, schemaBlock) => members.length,
+		add: (subject, kind, schemaBlock) => members.length,
 		members: () => [],
 		refId: () => 'x',
 		schemaBlocks: (callback) => callback('', []),
 		save: (callback) => callback('', {}),
 		recipeName: () => recipe,
-		recipeRefId: () => '',
+		recipeHash: () => '',
+		recipeFileName: () => '',
 	}),
 	open: ({ manifestRefId }, callback) => callback('nothing to open'),
 });
@@ -591,7 +593,8 @@ const phase2HandleWithNamesCorrected = () => {
 		schemaBlocks: (callback) => callback('', []),
 		save: (callback) => callback('', {}),
 		recipeName: drifted.recipeName,
-		recipeRefId: () => '',
+		recipeHash: () => '',
+		recipeFileName: () => '',
 	};
 };
 

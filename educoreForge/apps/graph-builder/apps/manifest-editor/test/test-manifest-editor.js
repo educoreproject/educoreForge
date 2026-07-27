@@ -26,8 +26,8 @@ SYNOPSIS
 
 DESCRIPTION
      Proves init refuses a missing standardsDatabase / blank name / blank description; that add refuses a
-     blank subjectRefId, a kind outside the LOCKED taxonomy, a blank description, a schema block
-     with no text, a schema block whose id is not sha256 of its text, and a repeated subjectRefId;
+     blank subject, a kind outside the LOCKED taxonomy, a blank description, a schema block
+     with no text, a schema block whose id is not sha256 of its text, and a repeated subject;
      that add writes the schema block THROUGH to the standardsDatabase immediately rather than accumulating
      text; that members() hands back a COPY; that refId() is manifestKeyForMembership and that it
      and save() both refuse an empty manifest; that schemaBlocks() resolves in order and refuses
@@ -212,17 +212,17 @@ function addRefusalGates(standardsDatabase, manifest) {
 	harness.section('ADD — every refusal, firing, naming what offended');
 
 	manifest.add(
-		{ subjectRefId: '', kind: 'standardBase', description: 'd', schemaBlock: LIF_BLOCK },
+		{ subject: '', kind: 'standardBase', description: 'd', schemaBlock: LIF_BLOCK },
 		(blankSubjectErr) => {
 			harness.match(
-				'a blank subjectRefId is REFUSED',
+				'a blank subject is REFUSED',
 				blankSubjectErr,
-				/subjectRefId is REQUIRED/,
+				/subject is REQUIRED/,
 			);
 
 			manifest.add(
 				{
-					subjectRefId: 'lif@1.0_base',
+					subject: 'lif@1.0_base',
 					kind: 'somethingInvented',
 					description: 'd',
 					schemaBlock: LIF_BLOCK,
@@ -237,7 +237,7 @@ function addRefusalGates(standardsDatabase, manifest) {
 
 					manifest.add(
 						{
-							subjectRefId: 'lif@1.0_base',
+							subject: 'lif@1.0_base',
 							kind: 'standardBase',
 							description: '   ',
 							schemaBlock: LIF_BLOCK,
@@ -256,7 +256,7 @@ function addRefusalGates(standardsDatabase, manifest) {
 
 							manifest.add(
 								{
-									subjectRefId: 'lif@1.0_base',
+									subject: 'lif@1.0_base',
 									kind: 'standardBase',
 									description: 'd',
 									schemaBlock: { blockId: 'whatever', blockText: '' },
@@ -271,7 +271,7 @@ function addRefusalGates(standardsDatabase, manifest) {
 
 									manifest.add(
 										{
-											subjectRefId: 'lif@1.0_base',
+											subject: 'lif@1.0_base',
 											kind: 'standardBase',
 											description: 'd',
 											schemaBlock: {
@@ -320,7 +320,7 @@ function writeThroughGates(standardsDatabase, manifest) {
 
 	manifest.add(
 		{
-			subjectRefId: 'lif@1.0_base',
+			subject: 'lif@1.0_base',
 			kind: 'standardBase',
 			description: 'LIF 1.0 — the standard\'s own nodes and internal edges',
 			schemaBlock: LIF_BLOCK,
@@ -349,18 +349,18 @@ function writeThroughGates(standardsDatabase, manifest) {
 				);
 				harness.equal('  with its text intact, apostrophe and all', row.text, LIF_BLOCK.blockText);
 				harness.equal('  under the LOCKED taxonomy kind it was added as', row.kind, 'standardBase');
-				harness.equal('  carrying its subject', row.subjectRefId, 'lif@1.0_base');
+				harness.equal('  carrying its subject', row.subject, 'lif@1.0_base');
 
 				manifest.add(
 					{
-						subjectRefId: 'lif@1.0_base',
+						subject: 'lif@1.0_base',
 						kind: 'standardBase',
 						description: 'a second try at the same subject',
 						schemaBlock: LIF_BLOCK,
 					},
 					(dupErr) => {
 						harness.match(
-							'a subjectRefId already present is REFUSED',
+							'a subject already present is REFUSED',
 							dupErr,
 							/already present/,
 						);
@@ -373,7 +373,7 @@ function writeThroughGates(standardsDatabase, manifest) {
 
 						manifest.add(
 							{
-								subjectRefId: 'ceds@11_base',
+								subject: 'ceds@11_base',
 								kind: 'standardBase',
 								description: 'CEDS 11 — the standard base',
 								schemaBlock: CEDS_BLOCK,
@@ -386,7 +386,7 @@ function writeThroughGates(standardsDatabase, manifest) {
 								}
 								manifest.add(
 									{
-										subjectRefId: 'ceds@11_hub',
+										subject: 'ceds@11_hub',
 										kind: 'hub',
 										description: 'CEDS 11 — the hub reference subgraph',
 										schemaBlock: HUB_BLOCK,
@@ -421,12 +421,12 @@ function membershipGates(standardsDatabase, manifest) {
 	harness.equal(
 		'the member record carries the settled vocabulary',
 		Object.keys(members[0]).sort().join(','),
-		'description,kind,position,schemaBlockRefId,subjectRefId',
+		'description,kind,position,schemaBlockRefId,subject',
 	);
 	harness.equal('positions are the insertion order', members.map((one) => one.position).join(','), '0,1,2');
 	harness.equal(
 		'subjects are in insertion order',
-		members.map((one) => one.subjectRefId).join(','),
+		members.map((one) => one.subject).join(','),
 		'lif@1.0_base,ceds@11_base,ceds@11_hub',
 	);
 
@@ -434,7 +434,7 @@ function membershipGates(standardsDatabase, manifest) {
 	// noticing, because identity IS membership. So members() hands back a copy of the records,
 	// not the records.
 	const addressBefore = manifest.refId();
-	members.push({ subjectRefId: 'smuggled@1', kind: 'hub', schemaBlockRefId: 'x', position: 99 });
+	members.push({ subject: 'smuggled@1', kind: 'hub', schemaBlockRefId: 'x', position: 99 });
 	members[0].schemaBlockRefId = 'tampered';
 	members[0].position = 42;
 
@@ -541,7 +541,7 @@ function descriptionGates(standardsDatabase, composedAddress) {
 
 	twin.add(
 		{
-			subjectRefId: 'lif@1.0_base',
+			subject: 'lif@1.0_base',
 			kind: 'standardBase',
 			description: 'described in wholly different words',
 			schemaBlock: LIF_BLOCK,
@@ -554,7 +554,7 @@ function descriptionGates(standardsDatabase, composedAddress) {
 			}
 			twin.add(
 				{
-					subjectRefId: 'ceds@11_base',
+					subject: 'ceds@11_base',
 					kind: 'standardBase',
 					description: 'and so is this one',
 					schemaBlock: CEDS_BLOCK,
@@ -567,7 +567,7 @@ function descriptionGates(standardsDatabase, composedAddress) {
 					}
 					twin.add(
 						{
-							subjectRefId: 'ceds@11_hub',
+							subject: 'ceds@11_hub',
 							kind: 'hub',
 							description: 'and this one too',
 							schemaBlock: HUB_BLOCK,
@@ -636,7 +636,7 @@ function openGates(standardsDatabase, composedAddress) {
 					harness.equal('  with its membership', reopened.members().length, 3);
 					harness.equal(
 						'  in the order it was composed',
-						reopened.members().map((one) => one.subjectRefId).join(','),
+						reopened.members().map((one) => one.subject).join(','),
 						'lif@1.0_base,ceds@11_base,ceds@11_hub',
 					);
 					harness.equal(
@@ -658,12 +658,12 @@ function openGates(standardsDatabase, composedAddress) {
 					);
 					harness.match(
 						'  and the recipe CONTENT ADDRESS survived too',
-						reopened.recipeRefId(),
+						reopened.recipeHash(),
 						/^[0-9a-f]{64}$/,
 					);
 					harness.equal(
 						'  matching what the composing manifest computed',
-						reopened.recipeRefId(),
+						reopened.recipeHash(),
 						contentAddress.blockIdForText(GATE_RECIPE_TEXT),
 					);
 
@@ -671,7 +671,7 @@ function openGates(standardsDatabase, composedAddress) {
 					// a lie: the stored address describes a membership that no longer holds.
 					reopened.add(
 						{
-							subjectRefId: 'sneak@1',
+							subject: 'sneak@1',
 							kind: 'standardBase',
 							description: 'smuggled in after the fact',
 							schemaBlock: CEDS_BLOCK,

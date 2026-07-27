@@ -160,7 +160,7 @@ const loadRecipe = (recipePath) => {
 	if (recipe === null || typeof recipe !== 'object' || Array.isArray(recipe)) {
 		return { error: 'recipe must be a JSON object' };
 	}
-	return { recipe };
+	return { recipe, recipeText: text };
 };
 
 // =====================================================================
@@ -264,7 +264,7 @@ const referentialErrors = (recipe) => {
 	// DIFFERENT bridges on ONE (source,hub) pair are legal — a pair that needs two producers
 	// (authored EXACT + inferred CLOSE) is two entries, distinct keys. Only the SAME bridge NAME
 	// twice on a pair collides, and it is refused BY NAME. The real duplicate-block guard is
-	// downstream and unchanged (the content-addressed subjectRefId refuses two identical blocks);
+	// downstream and unchanged (the content-addressed subject refuses two identical blocks);
 	// this recipe-level check only catches the obvious typo.
 	const seenBridges = new Set();
 	bridges.forEach((b, i) => {

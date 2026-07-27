@@ -56,6 +56,14 @@ const DEFAULT_PROVIDER_NAME = 'voyage';
 const defaultConfigFilePath =
 	'/Users/tqwhite/Documents/webdev/educoreForge/system/configs/instanceSpecific/qbook/voyageEmbedding.ini';
 
+// canonical home of the ONE shared vector cache (dataStores, used by every forge and every bridge).
+// A DOCUMENTED default standing behind an optional module parameter — polyArch2 §6 permits exactly
+// that: the cache is ON by default because a vector is a once-ever cost and isolating it per build is
+// waste, and a caller (the test suite) turns it OFF or redirects it by passing cacheFilePath. Passing
+// `false` disables caching entirely (pure provider path); passing another path redirects it.
+const defaultCacheFilePath =
+	'/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/vectorCache/vectorCache.sqlite3';
+
 // =====================================================================
 // PROVIDER REGISTRY — auto-discovered from ./providers/ (registry, not switch)
 // =====================================================================
@@ -74,7 +82,11 @@ fs.readdirSync(providersDir).forEach((file) => {
 
 const moduleFunction =
 	({ moduleName } = {}) =>
-	({ configFilePath = defaultConfigFilePath, providerName = DEFAULT_PROVIDER_NAME } = {}) => {
+	({
+		configFilePath = defaultConfigFilePath,
+		providerName = DEFAULT_PROVIDER_NAME,
+		cacheFilePath = defaultCacheFilePath,
+	} = {}) => {
 		// THE PROVIDER IS CHECKED WHEN THE CLIENT IS BUILT. An unknown name used to construct
 		// cleanly, answer resolveEmbeddingIdentity() as though all were well, and be refused only
 		// at embedText time — deep inside a callback, after the credentials file had been opened.
@@ -194,6 +206,178 @@ const moduleFunction =
 		const provider = providers[providerName];
 
 		// -----
+		// THE TRANSPARENT VECTOR CACHE. Caching is ON by default (cacheFilePath defaults to the
+		// shared dataStores store); `false`/`null` disables it and reproduces the original pure
+		// provider path exactly. vectorCache is required LAZILY — only here, on the first embed
+		// with caching on — because it requires sqlite-instance at load, which destructures
+		// process.global; a top-level require would kill -help (the same trap decision-store
+		// carries). cacheOpenState memoizes the opened cache so the file opens once per client.
+		const cachingEnabled = !(cacheFilePath === false || cacheFilePath == null);
+		let vectorCacheModule = null;
+		let cacheOpenState = null; // null=unopened; { api } once opened
+
+		const getVectorCacheModule = () => {
+			if (!vectorCacheModule) {
+				vectorCacheModule = require('./vectorCache')();
+			}
+			return vectorCacheModule;
+		};
+
+		// ensureCache — yields the opened cache api, or null when caching is disabled. Opens the
+		// shared store once and memoizes it. A cache open failure is a fault named through the
+		// callback, not a silent fall-through to an uncached path (which would resume spending
+		// Voyage without anyone asking).
+		const ensureCache = (cacheCallback) => {
+			if (!cachingEnabled) {
+				cacheCallback('', null);
+				return;
+			}
+			if (cacheOpenState) {
+				cacheCallback('', cacheOpenState.api);
+				return;
+			}
+			getVectorCacheModule().open({ databaseFilePath: cacheFilePath }, (openErr, api) => {
+				if (openErr) {
+					cacheCallback(`embedding-client: opening vector cache '${cacheFilePath}': ${openErr}`);
+					return;
+				}
+				cacheOpenState = { api };
+				cacheCallback('', api);
+			});
+		};
+
+		// vectorsFromProvider — the raw provider call + the validation both embed doors used to
+		// carry inline, now in one place: texts -> Float32Array[] aligned 1:1 with input order.
+		const vectorsFromProvider = (stringified, resolvedConfig, provCallback) => {
+			provider.embed(stringified, resolvedConfig, (err, embeddings) => {
+				if (err) {
+					provCallback(err);
+					return;
+				}
+				if (!Array.isArray(embeddings) || embeddings.length !== stringified.length) {
+					provCallback(
+						`embedding-client: provider returned ${
+							embeddings ? embeddings.length : 'no'
+						} embeddings for ${stringified.length} texts`,
+					);
+					return;
+				}
+				const badIndex = embeddings.findIndex(
+					(oneEmbedding) => !oneEmbedding || !oneEmbedding.length,
+				);
+				if (badIndex !== -1) {
+					provCallback(`embedding-client: provider returned an empty embedding at index ${badIndex}`);
+					return;
+				}
+				provCallback('', embeddings.map((oneEmbedding) => Float32Array.from(oneEmbedding)));
+			});
+		};
+
+		// cachedEmbedTexts — the ONE cached embedding path both embedText and embedTexts funnel
+		// through. Look up every text's (model, dims, textHash) in the shared cache, send ONLY the
+		// distinct misses to the provider, store the new vectors, and assemble the result in input
+		// order. With caching disabled it is exactly the old provider path. Returns Float32Array[]
+		// aligned 1:1 with `stringified`, plus the embeddingModelVersion actually in force.
+		const cachedEmbedTexts = (stringified, embedCallback) => {
+			const loaded = loadVoyageConfig(); // config faults THROW here, before anything async
+			const model = loaded.resolvedConfig.model;
+			const dims = loaded.resolvedConfig.dimension;
+
+			ensureCache((cacheErr, cacheApi) => {
+				if (cacheErr) {
+					embedCallback(cacheErr);
+					return;
+				}
+
+				if (!cacheApi) {
+					// caching disabled — the original behavior, unchanged.
+					vectorsFromProvider(stringified, loaded.resolvedConfig, (err, vectors) => {
+						if (err) {
+							embedCallback(err);
+							return;
+						}
+						embedCallback('', { vectors, embeddingModelVersion: model });
+					});
+					return;
+				}
+
+				const cacheModule = getVectorCacheModule();
+				const hashes = stringified.map((oneText) => cacheModule.textHashOf(oneText));
+
+				cacheApi.getVectors(
+					{ embeddingModelVersion: model, embeddingDims: dims, textHashes: hashes },
+					(getErr, getResult) => {
+						if (getErr) {
+							embedCallback(getErr);
+							return;
+						}
+						const byHash = getResult.byHash;
+
+						// distinct misses only — a batch may repeat a text, and two texts that hash
+						// the same are one embedding cost, not two.
+						const missSeen = new Set();
+						const missTexts = [];
+						const missHashes = [];
+						stringified.forEach((oneText, index) => {
+							const oneHash = hashes[index];
+							if (!byHash[oneHash] && !missSeen.has(oneHash)) {
+								missSeen.add(oneHash);
+								missTexts.push(oneText);
+								missHashes.push(oneHash);
+							}
+						});
+
+						// observability, mirroring the bridge vectorizer's long-standing line: every
+						// text not named a miss was served from the shared cache and cost no Voyage.
+						const { xLog } = process.global || {};
+						if (xLog && xLog.status) {
+							xLog.status(
+								`[embedding-client] vector cache: ${stringified.length} text(s), ` +
+									`${missTexts.length} distinct miss to embed, ` +
+									`${stringified.length - missTexts.length} served from cache`,
+							);
+						}
+
+						const assemble = () => {
+							// every hash is now present in byHash (hits + just-stored misses)
+							const vectors = stringified.map((oneText, index) =>
+								decodeVector(byHash[hashes[index]]),
+							);
+							embedCallback('', { vectors, embeddingModelVersion: model });
+						};
+
+						if (missTexts.length === 0) {
+							assemble();
+							return;
+						}
+
+						vectorsFromProvider(missTexts, loaded.resolvedConfig, (err, missVectors) => {
+							if (err) {
+								embedCallback(err);
+								return;
+							}
+							const entries = missTexts.map((oneText, index) => {
+								const vectorBase64 = encodeVector(missVectors[index]);
+								byHash[missHashes[index]] = vectorBase64; // fill for assembly
+								return { textHash: missHashes[index], sourceText: oneText, vectorBase64 };
+							});
+							cacheApi.putVectors(
+								{ embeddingModelVersion: model, embeddingDims: dims, entries },
+								(putErr) => {
+									if (putErr) {
+										embedCallback(putErr);
+										return;
+									}
+									assemble();
+								},
+							);
+						});
+					},
+				);
+			});
+		};
+
+		// -----
 		// embedText — embed ONE text; callback (err, { vector, embeddingModelVersion }).
 		//   vector is a Float32Array of the configured dimension; embeddingModelVersion is the
 		//   model that was ACTUALLY sent, read from the same resolved config the provider got.
@@ -204,24 +388,15 @@ const moduleFunction =
 				return;
 			}
 
-			const loaded = loadVoyageConfig();
-
-			provider.embed([`${text}`], loaded.resolvedConfig, (err, embeddings) => {
+			// funnels through the ONE cached path; a single-text embed is a one-element batch.
+			cachedEmbedTexts([`${text}`], (err, result) => {
 				if (err) {
 					callback(err);
 					return;
 				}
-
-				if (!embeddings || !embeddings[0] || !embeddings[0].length) {
-					callback('embedding-client.embedText: provider returned no embedding');
-					return;
-				}
-
-				const vector = Float32Array.from(embeddings[0]);
-
 				callback('', {
-					vector,
-					embeddingModelVersion: loaded.resolvedConfig.model,
+					vector: result.vectors[0],
+					embeddingModelVersion: result.embeddingModelVersion,
 				});
 			});
 		};
@@ -231,9 +406,9 @@ const moduleFunction =
 
 		// embedTexts — embed an ARRAY of texts in ONE batched call to the configured model;
 		// callback (err, { vectors, embeddingModelVersion }). vectors is a Float32Array[]
-		// aligned 1:1 with input order (vectors[i] is the embedding of texts[i]). Additive,
-		// non-breaking sibling of embedText (embedText is unchanged). Used by the forger to
-		// batch-embed nodes within embedding cost/throughput limits.
+		// aligned 1:1 with input order (vectors[i] is the embedding of texts[i]). Used by the
+		// forger to batch-embed nodes. Now cache-aware: it funnels through cachedEmbedTexts, so
+		// only distinct cache-MISSES reach the provider — the same public contract, transparently.
 		const embedTexts = ({ texts } = {}, callback) => {
 			if (!Array.isArray(texts) || texts.length === 0) {
 				callback('embedding-client.embedTexts: texts is required and must be a non-empty array');
@@ -248,42 +423,8 @@ const moduleFunction =
 				return;
 			}
 
-			const loaded = loadVoyageConfig();
-
 			const stringified = texts.map((oneText) => `${oneText}`);
-
-			provider.embed(stringified, loaded.resolvedConfig, (err, embeddings) => {
-				if (err) {
-					callback(err);
-					return;
-				}
-
-				if (!Array.isArray(embeddings) || embeddings.length !== stringified.length) {
-					callback(
-						`embedding-client.embedTexts: provider returned ${
-							embeddings ? embeddings.length : 'no'
-						} embeddings for ${stringified.length} texts`,
-					);
-					return;
-				}
-
-				const badIndex = embeddings.findIndex(
-					(oneEmbedding) => !oneEmbedding || !oneEmbedding.length,
-				);
-				if (badIndex !== -1) {
-					callback(`embedding-client.embedTexts: provider returned an empty embedding at index ${badIndex}`);
-					return;
-				}
-
-				const vectors = embeddings.map((oneEmbedding) =>
-					Float32Array.from(oneEmbedding),
-				);
-
-				callback('', {
-					vectors,
-					embeddingModelVersion: loaded.resolvedConfig.model,
-				});
-			});
+			cachedEmbedTexts(stringified, callback);
 		};
 
 		const encodeVector = (float32) => {

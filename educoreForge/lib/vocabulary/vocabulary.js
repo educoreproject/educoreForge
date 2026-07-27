@@ -116,7 +116,7 @@ const isSchemaBlockKind = (oneKind) => SCHEMA_BLOCK_KINDS.indexOf(oneKind) !== -
 // =====================================================================
 // SUBJECT-REF-ID ROLE MARKER ↔ KIND (implementationPlan_hubPort_072326 §1, TQ 2026-07-23).
 // =====================================================================
-// A schema block's subjectRefId carries a role/pair marker so every block is globally unique by its
+// A schema block's subject carries a role/pair marker so every block is globally unique by its
 // name alone and legible at a glance: <standard>@<version>_base | _hub | _rel_<source>@<version>.
 // The <standard>@<version> PREFIX is untouched (whatever version token the recipe supplies); the
 // marker is ADDED. The marker is human sugar; the `kind` column stays the machine authority; a gate
@@ -132,7 +132,7 @@ const isSchemaBlockKind = (oneKind) => SCHEMA_BLOCK_KINDS.indexOf(oneKind) !== -
 // RELATIONSHIP PRODUCER SUFFIX (implementationPlan_bridge_072426 §7, P2). A relationship block is
 // per-(pair × producer): the AUTHORED deterministic producer emits '..._exact', the INFERRED frozen
 // producer emits '..._close' (settled decision #2). The producer suffix TRAILS the pair infix, so a
-// relationship subjectRefId is '<hub>@<hubVer>_rel_<source>@<sourceVer>_exact|_close' — pair-scoped,
+// relationship subject is '<hub>@<hubVer>_rel_<source>@<sourceVer>_exact|_close' — pair-scoped,
 // version-keyed on BOTH endpoints (the a4a0da2 rule: REAL resolved versions), and self-describing about
 // WHICH producer authored it so re-running inference never disturbs the authored block. DATA-keyed by
 // producer, one row per producer.
@@ -153,15 +153,15 @@ const RELATIONSHIP_PRODUCER_SUFFIXES = Object.keys(RELATIONSHIP_PRODUCER_SUFFIX)
 );
 const RELATIONSHIP_PAIR_INFIX = '_rel_';
 
-// suffixForRelationshipProducer — the trailing producer marker a relationship subjectRefId must carry.
+// suffixForRelationshipProducer — the trailing producer marker a relationship subject must carry.
 // Returns undefined for an unknown producer; a caller that REQUIRES it treats undefined as a refusal
 // naming the producer (never a silent default).
 const suffixForRelationshipProducer = (oneProducer) => RELATIONSHIP_PRODUCER_SUFFIX[oneProducer];
 
-// relationshipSubjectRefId — COMPOSE the pair-scoped, version-keyed relationship name. Both versions are
+// relationshipSubject — COMPOSE the pair-scoped, version-keyed relationship name. Both versions are
 // REQUIRED (there is no default — a relationship block that cannot name a resolved version on both
-// endpoints has no address, polyArch2 §6). Returns { subjectRefId } or { error }.
-const relationshipSubjectRefId = ({ hubStandard, hubVersion, sourceStandard, sourceVersion, producer } = {}) => {
+// endpoints has no address, polyArch2 §6). Returns { subject } or { error }.
+const relationshipSubject = ({ hubStandard, hubVersion, sourceStandard, sourceVersion, producer } = {}) => {
 	const producerSuffix = suffixForRelationshipProducer(producer);
 	const missing = [
 		[hubStandard, 'hubStandard'],
@@ -170,21 +170,21 @@ const relationshipSubjectRefId = ({ hubStandard, hubVersion, sourceStandard, sou
 		[sourceVersion, 'sourceVersion'],
 	].filter(([oneValue]) => oneValue === undefined || oneValue === null || `${oneValue}`.trim() === '');
 	if (missing.length) {
-		return { error: `relationshipSubjectRefId: missing ${missing.map(([, name]) => name).join(', ')} — a relationship block is version-keyed on BOTH endpoints; there is no default.` };
+		return { error: `relationshipSubject: missing ${missing.map(([, name]) => name).join(', ')} — a relationship block is version-keyed on BOTH endpoints; there is no default.` };
 	}
 	if (!producerSuffix) {
-		return { error: `relationshipSubjectRefId: producer '${producer}' has no registered suffix — known producers: ${Object.keys(RELATIONSHIP_PRODUCER_SUFFIX).join(', ')}.` };
+		return { error: `relationshipSubject: producer '${producer}' has no registered suffix — known producers: ${Object.keys(RELATIONSHIP_PRODUCER_SUFFIX).join(', ')}.` };
 	}
-	return { subjectRefId: `${hubStandard}@${hubVersion}${RELATIONSHIP_PAIR_INFIX}${sourceStandard}@${sourceVersion}${producerSuffix}` };
+	return { subject: `${hubStandard}@${hubVersion}${RELATIONSHIP_PAIR_INFIX}${sourceStandard}@${sourceVersion}${producerSuffix}` };
 };
 
-// relationshipProducerFromSubjectRefId — which producer's suffix (if any) a relationship subjectRefId
+// relationshipProducerFromSubject — which producer's suffix (if any) a relationship subject
 // carries. Used to make a gate refusal specific; returns undefined when no known producer suffix trails.
-const relationshipProducerFromSubjectRefId = (subjectRefId) =>
-	typeof subjectRefId !== 'string'
+const relationshipProducerFromSubject = (subject) =>
+	typeof subject !== 'string'
 		? undefined
 		: Object.keys(RELATIONSHIP_PRODUCER_SUFFIX).filter(
-				(oneProducer) => subjectRefId.endsWith(RELATIONSHIP_PRODUCER_SUFFIX[oneProducer]),
+				(oneProducer) => subject.endsWith(RELATIONSHIP_PRODUCER_SUFFIX[oneProducer]),
 		  )[0];
 
 const SCHEMA_BLOCK_KIND_SUFFIX = {
@@ -196,18 +196,18 @@ const SCHEMA_BLOCK_KIND_SUFFIX = {
 	[SCHEMA_BLOCK_KIND.RELATIONSHIP]: { marker: '_rel_', match: 'relationshipPairProducer' },
 };
 
-// match-mode registry: mode name -> (subjectRefId, marker) predicate. A new match mode is one entry
+// match-mode registry: mode name -> (subject, marker) predicate. A new match mode is one entry
 // here and one `match:` value above — no branch to edit (polyArch2 §7, the Registry Pattern).
 const SUFFIX_MATCHERS = {
-	trailing: (subjectRefId, marker) => subjectRefId.endsWith(marker),
-	infix: (subjectRefId, marker) => subjectRefId.indexOf(marker) !== -1,
+	trailing: (subject, marker) => subject.endsWith(marker),
+	infix: (subject, marker) => subject.indexOf(marker) !== -1,
 	// relationshipPairProducer — the pair infix is PRESENT and a KNOWN producer suffix TRAILS.
-	relationshipPairProducer: (subjectRefId, marker) =>
-		subjectRefId.indexOf(marker) !== -1 &&
-		RELATIONSHIP_PRODUCER_SUFFIXES.some((oneSuffix) => subjectRefId.endsWith(oneSuffix)),
+	relationshipPairProducer: (subject, marker) =>
+		subject.indexOf(marker) !== -1 &&
+		RELATIONSHIP_PRODUCER_SUFFIXES.some((oneSuffix) => subject.endsWith(oneSuffix)),
 };
 
-// suffixMarkerForKind — DERIVE the role marker a kind's subjectRefId must carry (the "expected suffix
+// suffixMarkerForKind — DERIVE the role marker a kind's subject must carry (the "expected suffix
 // from a kind" helper, §1). Returns undefined for an unknown kind; a caller that REQUIRES a marker
 // (the saveBlock gate) treats undefined as a refusal, naming the kind — never a silent default.
 const suffixMarkerForKind = (oneKind) => {
@@ -215,26 +215,26 @@ const suffixMarkerForKind = (oneKind) => {
 	return entry ? entry.marker : undefined;
 };
 
-// subjectRefIdAgreesWithKind — VALIDATE a subjectRefId against a kind: does it carry the role marker
+// subjectAgreesWithKind — VALIDATE a subject against a kind: does it carry the role marker
 // that kind requires? DATA-driven — looks the kind up in SCHEMA_BLOCK_KIND_SUFFIX and applies that
 // kind's declared match mode via SUFFIX_MATCHERS. Returns false for an unknown kind or a non-string
-// subjectRefId (the gate turns a false into a named refusal); it does not substitute or normalize.
-const subjectRefIdAgreesWithKind = (subjectRefId, oneKind) => {
+// subject (the gate turns a false into a named refusal); it does not substitute or normalize.
+const subjectAgreesWithKind = (subject, oneKind) => {
 	const entry = SCHEMA_BLOCK_KIND_SUFFIX[oneKind];
-	if (!entry || typeof subjectRefId !== 'string') {
+	if (!entry || typeof subject !== 'string') {
 		return false;
 	}
-	return SUFFIX_MATCHERS[entry.match](subjectRefId, entry.marker);
+	return SUFFIX_MATCHERS[entry.match](subject, entry.marker);
 };
 
-// kindImpliedBySubjectRefId — which kind's role marker (if any) a subjectRefId actually carries. Used
+// kindImpliedBySubject — which kind's role marker (if any) a subject actually carries. Used
 // ONLY to make a refusal specific ("it carries _hub but is stored under standardBase"), never to
 // DECIDE a block's kind (the kind column is the authority, §1). Returns undefined when no declared
 // marker matches.
-const kindImpliedBySubjectRefId = (subjectRefId) =>
-	typeof subjectRefId !== 'string'
+const kindImpliedBySubject = (subject) =>
+	typeof subject !== 'string'
 		? undefined
-		: SCHEMA_BLOCK_KINDS.filter((oneKind) => subjectRefIdAgreesWithKind(subjectRefId, oneKind))[0];
+		: SCHEMA_BLOCK_KINDS.filter((oneKind) => subjectAgreesWithKind(subject, oneKind))[0];
 
 // =====================================================================
 // PAIR / VERSION-KEY VOCABULARY (Phase C, spec §4/§5). MAPPING_BLOCK_TYPES is THE one
@@ -705,17 +705,17 @@ const vocabulary = {
 	SCHEMA_BLOCK_KIND,
 	SCHEMA_BLOCK_KINDS,
 	isSchemaBlockKind,
-	// subjectRefId role marker ↔ kind (implementationPlan_hubPort_072326 §1)
+	// subject role marker ↔ kind (implementationPlan_hubPort_072326 §1)
 	SCHEMA_BLOCK_KIND_SUFFIX,
 	suffixMarkerForKind,
-	subjectRefIdAgreesWithKind,
-	kindImpliedBySubjectRefId,
+	subjectAgreesWithKind,
+	kindImpliedBySubject,
 	// relationship producer suffix ↔ (pair × producer) block name (implementationPlan_bridge_072426 §7)
 	RELATIONSHIP_PRODUCER_SUFFIX,
 	RELATIONSHIP_PRODUCER_SUFFIXES,
 	suffixForRelationshipProducer,
-	relationshipSubjectRefId,
-	relationshipProducerFromSubjectRefId,
+	relationshipSubject,
+	relationshipProducerFromSubject,
 	// pair / version-key vocabulary (Phase C)
 	MAPPING_BLOCK_TYPES,
 	isMappingBlockType,

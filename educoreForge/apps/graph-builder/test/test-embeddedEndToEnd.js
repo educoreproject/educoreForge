@@ -56,9 +56,14 @@ const recipePath = path.join(treeRoot, 'recipes', 'ctdlasnOnly.recipe.jsonc');
 // that refuses a default path exists because a scratch save once wrote the canonical store).
 const scratchDir = fs.mkdtempSync(path.join(os.tmpdir(), 'gbEmbeddedGate-'));
 const standardsDatabaseFilePath = path.join(scratchDir, 'embeddedGate.standardsDatabase.sqlite');
+// ISOLATED vector cache in the same throwaway dir. The shared vector cache is ON by default, so without
+// this override a warm production cache would serve every text for free and this gate would stop spending
+// Voyage — the very thing it exists to exercise. Pointing it at a fresh temp cache keeps the run COLD (real
+// embedding, real credit, BY DESIGN) and keeps the suite from writing into the production cache.
+const isolatedCacheFilePath = path.join(scratchDir, 'isolatedGate.vectorCache.sqlite3');
 
 harness.section('REAL embedded end-to-end — ctdlasnOnly, --vectorize=true, cold');
-harness.note('provisions a DEV_* Docker graph and spends Voyage embedding credit BY DESIGN');
+harness.note('provisions a DEV_* Docker graph and spends Voyage embedding credit BY DESIGN (isolated cache)');
 
 const run = spawnSync(
 	'node',
@@ -67,6 +72,7 @@ const run = spawnSync(
 		'-build',
 		`--recipePath=${recipePath}`,
 		`--standardsDatabaseFilePath=${standardsDatabaseFilePath}`,
+		`--embeddingCacheFilePath=${isolatedCacheFilePath}`,
 		'--vectorize=true',
 	],
 	{ encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 },

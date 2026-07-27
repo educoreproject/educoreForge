@@ -420,6 +420,7 @@ const moduleFunction =
 			vectorize,
 			embedNodeLimit,
 			embeddingConfigFilePath,
+			embeddingCacheFilePath,
 		} = spec || {};
 
 		// THE SPEND KNOB IS STATED OR THE FORGE DOES NOT START. `vectorize = true` used to sit in
@@ -528,6 +529,11 @@ const moduleFunction =
 					`EMBEDDING CONFIG OVERRIDE ACTIVE: configFilePath = ${embeddingConfigFilePath} (embeddingConfigFilePath)`,
 				);
 			}
+			if (embeddingCacheFilePath !== undefined) {
+				console.error(
+					`EMBEDDING CACHE OVERRIDE ACTIVE: cacheFilePath = ${embeddingCacheFilePath} (embeddingCacheFilePath)`,
+				);
+			}
 			const voyagePointer = resolveVoyageConfigPath({ paramPath: embeddingConfigFilePath });
 			if (voyagePointer.error) {
 				callback(voyagePointer.error);
@@ -535,6 +541,12 @@ const moduleFunction =
 			}
 			embedder = require(path.join(TREE_LIB, 'embedding', 'embedding-client'))({
 				configFilePath: voyagePointer.configFilePath,
+				// Cache override for test isolation. The standing policy is the shared vector cache ON by
+				// default, so a build that says nothing passes no override and the embedder takes its
+				// documented default (the one dataStores cache). A caller/test that names a path REDIRECTS
+				// it — the embedded end-to-end gate points at a throwaway cache so it keeps spending real
+				// Voyage rather than being served free from the warm production cache.
+				...(embeddingCacheFilePath !== undefined ? { cacheFilePath: embeddingCacheFilePath } : {}),
 			});
 			// dims AND model come from the SAME embedding identity — they are the width and the model
 			// the vectors were MADE at. The standardBase block header must declare both (the block
@@ -646,6 +658,14 @@ const moduleFunction =
 				version: versions.bundleVersion,
 				bundleVersion: versions.bundleVersion,
 				requestedVersion: versions.requestedVersion,
+				// the snapshot-provenance triple the bundle stamped from the snapshot directory: the
+				// honest published version, WHERE it came from, and WHICH snapshot on disk. build.js
+				// derives the EXPLICIT stored version from these (publishedVersion when known;
+				// 'unknown_<snapshotKey>' when versionSource is 'unknown'), so no floating 'current'
+				// and no laundered default ever reaches a persisted subject, header, or column.
+				snapshotKey: args.forged.metadata.snapshotKey,
+				publishedVersion: args.forged.metadata.publishedVersion,
+				versionSource: args.forged.metadata.versionSource,
 				nodeEdges: args.shaped,
 				nodeCount: args.shaped.nodes.length,
 				edgeCount: args.shaped.edges.length,

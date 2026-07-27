@@ -641,7 +641,17 @@ const moduleFunction = function ({ unused }) {
 
 	const initDatabaseInstance = (dbFilePath, callback) => {
 		const db = new Database(dbFilePath);
+		// WAL lets many readers proceed concurrently with one writer without blocking — the read side of
+		// the web workload (concurrent semantic-search query embeddings hitting the shared vector cache).
 		db.pragma('journal_mode = WAL');
+		// busy_timeout is the WRITE side of collision-safety. WAL still serializes writers, and without a
+		// timeout a second concurrent writer fails IMMEDIATELY with SQLITE_BUSY rather than waiting. Web
+		// users whose query is a cache MISS, and parallel forge agents writing new vectors, are exactly
+		// those concurrent writers; here each WAITS up to 5s for the lock instead of erroring. Cache and
+		// block writes are single short statements, so the lock is held briefly and 5s absorbs heavy
+		// contention. Applies to EVERY store opened through sqlite-instance (vector cache, standards
+		// database, decision store), so collision-safety is a property of the substrate, not one caller.
+		db.pragma('busy_timeout = 5000');
 		const getTable = getTableActual(db, defaultOptions);
 		const checkTableExists = checkTableExistsActual(db);
 

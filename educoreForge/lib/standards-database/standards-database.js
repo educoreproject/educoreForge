@@ -151,7 +151,7 @@ const buildSchema = ({ runSql, getRows }, callback) => {
 			`CREATE TABLE IF NOT EXISTS blocks (
 				refId        TEXT PRIMARY KEY,
 				kind         TEXT NOT NULL,
-				subjectRefId TEXT,
+				subject TEXT,
 				version      TEXT,
 				requires     TEXT,
 				text         BLOB NOT NULL,
@@ -171,7 +171,8 @@ const buildSchema = ({ runSql, getRows }, callback) => {
 				name                  TEXT,
 				description           TEXT,
 				recipeName            TEXT,
-				recipeRefId           TEXT,
+				recipeHash            TEXT,
+				recipeFileName        TEXT,
 				basedOnManifestRefId  TEXT,
 				createdAt             TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 				FOREIGN KEY (basedOnManifestRefId) REFERENCES manifests(refId)
@@ -208,7 +209,7 @@ const buildSchema = ({ runSql, getRows }, callback) => {
 		ensureColumns(
 			{ runSql, getRows },
 			{
-				manifests: { recipeName: 'TEXT', recipeRefId: 'TEXT' },
+				manifests: { recipeName: 'TEXT', recipeHash: 'TEXT', recipeFileName: 'TEXT' },
 			},
 			(err) => next(err, args),
 		);
@@ -263,7 +264,7 @@ const ensureColumns = ({ runSql, getRows }, wanted, callback) => {
 const makeApi = ({ esc, escJson, runSql, getRows, databaseFilePath }) => {
 	// -----
 	// saveBlock — content-address the text, insert if absent. Idempotent by construction.
-	const saveBlock = ({ text, kind, subjectRefId, version, requires, producedBy }, callback) => {
+	const saveBlock = ({ text, kind, subject, version, requires, producedBy }, callback) => {
 		if (typeof text !== 'string' || text.length === 0) {
 			callback('standardsDatabase.saveBlock: text is required and must be a non-empty string');
 			return;
@@ -303,7 +304,7 @@ const makeApi = ({ esc, escJson, runSql, getRows, databaseFilePath }) => {
 			return;
 		}
 
-		// SUFFIX vs KIND (implementationPlan_hubPort_072326 §1). The subjectRefId carries a role
+		// SUFFIX vs KIND (implementationPlan_hubPort_072326 §1). The subject carries a role
 		// marker (_base / _hub / _rel_) so a block is self-describing by NAME; the kind column is the
 		// authority and the two MUST agree. This EXTENDS the header/kind gate above — one more place a
 		// block cannot misdescribe itself. A _hub-marked name stored under kind 'standardBase' has an
@@ -311,16 +312,16 @@ const makeApi = ({ esc, escJson, runSql, getRows, databaseFilePath }) => {
 		// now (proven — the suffix-gate RED PROOF). Both the marker the NAME carries and the kind it is
 		// stored under are named, because either could be the mistake. The suffix↔kind mapping is DATA
 		// in lib/vocabulary (SCHEMA_BLOCK_KIND_SUFFIX), consulted here, never a conditional.
-		if (!vocabulary.subjectRefIdAgreesWithKind(subjectRefId, kind)) {
+		if (!vocabulary.subjectAgreesWithKind(subject, kind)) {
 			const requiredMarker = vocabulary.suffixMarkerForKind(kind);
-			const carriedKind = vocabulary.kindImpliedBySubjectRefId(subjectRefId);
+			const carriedKind = vocabulary.kindImpliedBySubject(subject);
 			const carriedNote = carriedKind
 				? `It carries the '${vocabulary.suffixMarkerForKind(carriedKind)}' role marker of kind ` +
 					`'${carriedKind}' instead.`
 				: `It carries no recognized role marker.`;
 			callback(
-				`standardsDatabase.saveBlock: the schema block's subjectRefId ` +
-					`'${subjectRefId}' does not carry the '${requiredMarker}' role marker that kind ` +
+				`standardsDatabase.saveBlock: the schema block's subject ` +
+					`'${subject}' does not carry the '${requiredMarker}' role marker that kind ` +
 					`'${kind}' requires. ${carriedNote} A block's NAME must describe its kind ` +
 					`(implementationPlan_hubPort_072326 §1): _base->standardBase, _hub->hub, ` +
 					`_rel_->relationship.`,
@@ -341,8 +342,8 @@ const makeApi = ({ esc, escJson, runSql, getRows, databaseFilePath }) => {
 				return;
 			}
 			runSql(
-				`INSERT INTO blocks (refId, kind, subjectRefId, version, requires, text, producedBy)
-				 VALUES (${esc(refId)}, ${esc(kind)}, ${esc(subjectRefId)}, ${esc(version)},
+				`INSERT INTO blocks (refId, kind, subject, version, requires, text, producedBy)
+				 VALUES (${esc(refId)}, ${esc(kind)}, ${esc(subject)}, ${esc(version)},
 				         ${escJson(requires)}, ${esc(text)}, ${esc(producedBy)});`,
 				(insertErr) => {
 					if (insertErr) {
@@ -379,7 +380,7 @@ const makeApi = ({ esc, escJson, runSql, getRows, databaseFilePath }) => {
 			if (recomputed !== row.refId) {
 				callback(
 					`standardsDatabase.getBlock: content-address verification FAILED for block ` +
-						`${row.refId} (kind ${row.kind}, subject ${row.subjectRefId}, version ` +
+						`${row.refId} (kind ${row.kind}, subject ${row.subject}, version ` +
 						`${row.version}): the stored text hashes to ${recomputed}. The text is corrupt ` +
 						`or tampered. Refusing to return it.`,
 				);
@@ -398,7 +399,7 @@ const makeApi = ({ esc, escJson, runSql, getRows, databaseFilePath }) => {
 	// and no multi-hundred-megabyte read to pay for.
 	const getBlockMeta = ({ refId }, callback) => {
 		getRows(
-			`SELECT refId, kind, subjectRefId, version, producedBy, createdAt
+			`SELECT refId, kind, subject, version, producedBy, createdAt
 			 FROM blocks WHERE refId=${esc(refId)};`,
 			(err, rows) => callback(err || '', err ? undefined : (rows && rows[0]) || null),
 		);
@@ -413,7 +414,7 @@ const makeApi = ({ esc, escJson, runSql, getRows, databaseFilePath }) => {
 	// changing the shared rule — every phase that mints or verifies a manifest address must use the
 	// identical function or two manifests with the same members would get different addresses.
 	const saveManifest = (
-		{ name, description, recipeName, recipeRefId, basedOnManifestRefId, members = [] },
+		{ name, description, recipeName, recipeHash, recipeFileName, basedOnManifestRefId, members = [] },
 		callback,
 	) => {
 		const forAddressing = members.map((oneMember) => ({
@@ -451,9 +452,9 @@ const makeApi = ({ esc, escJson, runSql, getRows, databaseFilePath }) => {
 			}
 			runSql(
 				`INSERT INTO manifests
-					(refId, name, description, recipeName, recipeRefId, basedOnManifestRefId)
+					(refId, name, description, recipeName, recipeHash, recipeFileName, basedOnManifestRefId)
 				 VALUES (${esc(refId)}, ${esc(name)}, ${esc(description)}, ${esc(recipeName)},
-				         ${esc(recipeRefId)}, ${esc(basedOnManifestRefId)});`,
+				         ${esc(recipeHash)}, ${esc(recipeFileName)}, ${esc(basedOnManifestRefId)});`,
 				(err) => next(err, args),
 			);
 		});
@@ -513,7 +514,7 @@ const makeApi = ({ esc, escJson, runSql, getRows, databaseFilePath }) => {
 			}
 			getRows(
 				`SELECT mb.schemaBlockRefId, mb.position, mb.description,
-				        b.kind, b.subjectRefId, b.version
+				        b.kind, b.subject, b.version
 				 FROM manifestBlocks mb
 				 LEFT JOIN blocks b ON b.refId = mb.schemaBlockRefId
 				 WHERE mb.manifestRefId=${esc(refId)}

@@ -96,6 +96,14 @@ OPTIONS
                            forged and materialized with no embeddings). Only the exact strings
                            'true' and 'false' are accepted; 'yes'/'no'/'1'/'0' are NOT synonyms
                            and are refused by name rather than guessed at.
+     --embeddingCacheFilePath=<path>
+                           REDIRECT the shared vector cache for this build. OPTIONAL. The standing
+                           policy is that forging uses the ONE content-addressed vector cache in
+                           dataStores, ON by default -- so a build that omits this shares that cache
+                           and pays Voyage only for texts never embedded before (under this model).
+                           Name a path to point the build at a DIFFERENT cache, e.g. a throwaway one
+                           so a test keeps spending real credit instead of being served free from the
+                           warm production cache.
      -verbose              Emit verbose diagnostic detail on stderr.
      -quiet                Suppress progress; results and errors only.
 

@@ -371,11 +371,11 @@ const runCaseInsensitiveSourceRead = () => {
 const runVersionKeying = () => {
 	harness.section('E — version-keyed, _struct-suffixed relationship block names (both endpoints)');
 	// build.js composes each structural block ROOT-FIRST: firstStandard leads, secondStandard follows.
-	const composed = vocabulary.relationshipSubjectRefId({ hubStandard: 'ctdl', hubVersion: '2', sourceStandard: 'ctdlasn', sourceVersion: '1', producer: 'structural' });
-	harness.equal('structural -> ctdl@2_rel_ctdlasn@1_struct (version-keyed on BOTH endpoints, root-first)', composed.subjectRefId, 'ctdl@2_rel_ctdlasn@1_struct');
-	harness.equal('read-back: ..._struct -> structural', vocabulary.relationshipProducerFromSubjectRefId('ctdl@2_rel_ctdlasn@1_struct'), 'structural');
-	harness.ok('the RELATIONSHIP kind gate ACCEPTS a _struct name', vocabulary.subjectRefIdAgreesWithKind('ctdl@2_rel_ctdlasn@1_struct', vocabulary.SCHEMA_BLOCK_KIND.RELATIONSHIP));
-	harness.ok('an unknown producer is STILL refused (no silent default)', !!vocabulary.relationshipSubjectRefId({ hubStandard: 'ctdlasn', hubVersion: '1', sourceStandard: 'ctdl', sourceVersion: '2', producer: 'guessed' }).error);
+	const composed = vocabulary.relationshipSubject({ hubStandard: 'ctdl', hubVersion: '2', sourceStandard: 'ctdlasn', sourceVersion: '1', producer: 'structural' });
+	harness.equal('structural -> ctdl@2_rel_ctdlasn@1_struct (version-keyed on BOTH endpoints, root-first)', composed.subject, 'ctdl@2_rel_ctdlasn@1_struct');
+	harness.equal('read-back: ..._struct -> structural', vocabulary.relationshipProducerFromSubject('ctdl@2_rel_ctdlasn@1_struct'), 'structural');
+	harness.ok('the RELATIONSHIP kind gate ACCEPTS a _struct name', vocabulary.subjectAgreesWithKind('ctdl@2_rel_ctdlasn@1_struct', vocabulary.SCHEMA_BLOCK_KIND.RELATIONSHIP));
+	harness.ok('an unknown producer is STILL refused (no silent default)', !!vocabulary.relationshipSubject({ hubStandard: 'ctdlasn', hubVersion: '1', sourceStandard: 'ctdl', sourceVersion: '2', producer: 'guessed' }).error);
 
 	harness.report();
 };

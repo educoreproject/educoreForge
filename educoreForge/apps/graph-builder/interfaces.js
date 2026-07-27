@@ -200,12 +200,12 @@
  * open calls back an error) so the component can still be constructed for shape inspection.
  *
  * @property {function({name: string, description: string, recipe?: Object, recipeText?: string}):
- *           {add: function({subjectRefId: string, kind: string, description: string,
+ *           {add: function({subject: string, kind: string, description: string,
  *            schemaBlock: Object}, function(string, Object=): void): void,
  *            members: function(): Array, refId: function(): string,
  *            schemaBlocks: function(function(string, Array=): void): void,
  *            save: function(function(string, Object=): void): void,
- *            recipeName: function(): string, recipeRefId: function(): string}} init
+ *            recipeName: function(): string, recipeHash: function(): string, recipeFileName: function(): string}} init
  * @property {function({manifestRefId: string},
  *           function(string, Object=): void): void} open
  *           hands back a manifest handle of the SAME shape init returns — one factory serves both
@@ -293,7 +293,7 @@
 const MANIFEST_HANDLE_SHAPE = {
 	add: {
 		arity: 2,
-		argKeys: ['subjectRefId', 'kind', 'description', 'schemaBlock'],
+		argKeys: ['subject', 'kind', 'description', 'schemaBlock'],
 		resultKeys: ['memberCount', 'schemaBlockRefId', 'alreadyPresent'],
 	},
 	members: { arity: 0, argKeys: null, resultKeys: null },
@@ -305,7 +305,8 @@ const MANIFEST_HANDLE_SHAPE = {
 		resultKeys: ['manifestRefId', 'memberCount', 'alreadyPresent'],
 	},
 	recipeName: { arity: 0, argKeys: null, resultKeys: null },
-	recipeRefId: { arity: 0, argKeys: null, resultKeys: null },
+	recipeHash: { arity: 0, argKeys: null, resultKeys: null },
+	recipeFileName: { arity: 0, argKeys: null, resultKeys: null },
 };
 
 // The BRIDGE MODULE contract, as DATA — the bridge plugin @interface BridgeModule, in

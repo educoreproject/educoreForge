@@ -130,10 +130,10 @@ const standardsDatabaseDouble = () => {
 		savedBlocks,
 		savedManifests,
 		databaseFilePath: '(in-memory standardsDatabase double — no database is opened)',
-		saveBlock: ({ text, kind, subjectRefId, producedBy }, cb) => {
+		saveBlock: ({ text, kind, subject, producedBy }, cb) => {
 			const refId = contentAddress.blockIdForText(text);
 			const alreadyPresent = !!savedBlocks[refId];
-			savedBlocks[refId] = { text, refId, kind, subjectRefId, producedBy };
+			savedBlocks[refId] = { text, refId, kind, subject, producedBy };
 			cb('', { refId, alreadyPresent });
 		},
 		getBlock: ({ refId }, cb) => cb('', savedBlocks[refId] || null),
@@ -266,6 +266,9 @@ const workingForger = (overrides) => () =>
 				cb('', {
 					standard,
 					version,
+					snapshotKey: '01',
+					publishedVersion: version,
+					versionSource: 'spec',
 					nodeEdges: { nodes: [], edges: [], embeddingDims: null },
 					nodeCount: 0,
 					edgeCount: 0,
@@ -306,28 +309,28 @@ const workingManifestEditor = (overrides) => ({ standardsDatabase } = {}) =>
 							cb(`manifestEditor.add takes ONE named-argument object, got ${typeof spec}`);
 							return;
 						}
-						const { subjectRefId, kind, description: memberDescription, schemaBlock } = spec;
-						if (typeof subjectRefId !== 'string' || subjectRefId.trim() === '') {
-							cb(`manifestEditor.add: a subjectRefId is REQUIRED`);
+						const { subject, kind, description: memberDescription, schemaBlock } = spec;
+						if (typeof subject !== 'string' || subject.trim() === '') {
+							cb(`manifestEditor.add: a subject is REQUIRED`);
 							return;
 						}
 						if (typeof kind !== 'string' || kind.trim() === '') {
-							cb(`manifestEditor.add '${subjectRefId}': a kind is REQUIRED`);
+							cb(`manifestEditor.add '${subject}': a kind is REQUIRED`);
 							return;
 						}
 						if (typeof memberDescription !== 'string' || memberDescription.trim() === '') {
-							cb(`manifestEditor.add '${subjectRefId}': a description is REQUIRED`);
+							cb(`manifestEditor.add '${subject}': a description is REQUIRED`);
 							return;
 						}
 						if (!schemaBlock || typeof schemaBlock.blockText !== 'string') {
 							cb(
-								`manifestEditor.add '${subjectRefId}': a schemaBlock carrying blockText is ` +
+								`manifestEditor.add '${subject}': a schemaBlock carrying blockText is ` +
 									`REQUIRED — an id is not a schema block`,
 							);
 							return;
 						}
 						members.push({
-							subjectRefId,
+							subject,
 							kind,
 							schemaBlockRefId: schemaBlock.blockId,
 							position: members.length,
@@ -350,7 +353,7 @@ const workingManifestEditor = (overrides) => ({ standardsDatabase } = {}) =>
 						cb(
 							'',
 							members.map((oneMember) => ({
-								text: `restored ${oneMember.subjectRefId}`,
+								text: `restored ${oneMember.subject}`,
 								refId: oneMember.schemaBlockRefId,
 							})),
 						),
@@ -602,7 +605,7 @@ const stageCedsLif = () => {
 };
 
 // =====================================================================
-// RELATIONSHIP BLOCK NAMING (P2 Phase C) — the version-keyed, producer-suffixed subjectRefId
+// RELATIONSHIP BLOCK NAMING (P2 Phase C) — the version-keyed, producer-suffixed subject
 // =====================================================================
 // A bridge's relationship block is named '<hub>@<hubVer>_rel_<source>@<sourceVer>_exact|_close' — pair-
 // scoped, version-keyed on BOTH endpoints with the REAL resolved versions (the a4a0da2 rule), and
@@ -659,7 +662,7 @@ const stageRelationshipBlockNaming = () => {
 
 				// STRUCTURAL PAIRING — a HUB-LESS bridge names its sibling endpoint in `pairWith`. build.js
 				// threads pairWith as the SECOND endpoint through pairKey, dependency restore, config, and the
-				// version-keyed subjectRefId, and honours a producer:'structural' -> _struct suffix. The block is
+				// version-keyed subject, and honours a producer:'structural' -> _struct suffix. The block is
 				// keyed on BOTH endpoints (source + pairWith) so it never collides with a mapping pair's block.
 				const ctdlFamilyRecipe = {
 					recipeName: 'ctdlFamily',
@@ -1006,7 +1009,7 @@ const stageRealManifestEditor = () => {
 			);
 			harness.equal(
 				'  keyed by the subject, resolved standardName@version with its _base role marker',
-				standardsDatabase.savedBlocks[storedRefIds[0]].subjectRefId,
+				standardsDatabase.savedBlocks[storedRefIds[0]].subject,
 				'lif@current_base',
 			);
 			harness.equal(
@@ -1129,6 +1132,11 @@ const hubFoldingForger = (baseNodeEdges) => () => ({
 		cb('', {
 			standard,
 			version,
+			// snapshot-provenance triple: this double simulates a source whose declared version equals the
+			// recipe token, so explicitVersionFrom yields `version` and it flows to subject/header/column.
+			snapshotKey: '01',
+			publishedVersion: version,
+			versionSource: 'spec',
 			nodeEdges,
 			nodeCount: nodeEdges.nodes.length,
 			edgeCount: nodeEdges.edges.length,
@@ -1235,7 +1243,7 @@ const stageHubFoldedIntoBase = () => {
 			harness.equal('  and its kind is standardBase (there is no hub-kind block)', only.kind, 'standardBase');
 			harness.equal(
 				'  keyed by the base subject ceds@2_base with its _base marker',
-				only.subjectRefId,
+				only.subject,
 				'ceds@2_base',
 			);
 			harness.ok(
@@ -1523,6 +1531,9 @@ const buildCapturingVectorize = (vectorizeDep, done) => {
 			fcb('', {
 				standard,
 				version,
+				snapshotKey: '01',
+				publishedVersion: version,
+				versionSource: 'spec',
 				nodeEdges: { nodes: [], edges: [], embeddingDims: null },
 				nodeCount: 0,
 				edgeCount: 0,

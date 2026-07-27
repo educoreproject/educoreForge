@@ -222,7 +222,7 @@ const readAndValidate = (actionName) => {
 		availableForges: scan.availableForges,
 	});
 
-	return { recipePath, recipe: loaded.recipe, verdict };
+	return { recipePath, recipe: loaded.recipe, recipeText: loaded.recipeText, verdict };
 };
 
 // ---------------------------------------------------------------------
@@ -313,7 +313,7 @@ const build = (callback) => {
 				return;
 			}
 			xLog.status(`graphBuilder: decision store at ${decisionStoreFilePath}`);
-			buildLib.build(recipe, { xLog, standardsDatabase, decisionStore }, (buildError, result) => {
+			buildLib.build(recipe, { xLog, standardsDatabase, decisionStore, recipePath: read.recipePath, recipeText: read.recipeText }, (buildError, result) => {
 				if (buildError) {
 					callback(`graphBuilder -build failed: ${buildError}`);
 					return;

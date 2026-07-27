@@ -49,8 +49,8 @@ const path = require('path');
 const { pipeRunner, taskListPlus } = new require('qtools-asynchronous-pipe-plus')();
 const { readOptionalBooleanValue } = require('./optional-boolean-value');
 
-// the VOCABULARY REGISTRY — read here for the subjectRefId role marker (§1 of the hub-port plan).
-// The base block's subjectRefId is <standard>@<version> plus the marker its KIND requires; the
+// the VOCABULARY REGISTRY — read here for the subject role marker (§1 of the hub-port plan).
+// The base block's subject is <standard>@<version> plus the marker its KIND requires; the
 // marker comes from ONE table (SCHEMA_BLOCK_KIND_SUFFIX), never a literal composed here.
 const vocabulary = require(path.join(__dirname, '..', '..', '..', 'lib', 'vocabulary', 'vocabulary'));
 
@@ -179,6 +179,26 @@ const resolveVectorize = (deps) => {
 	});
 };
 
+// resolveEmbeddingCacheFilePath — the vector-cache override ("unless we say otherwise" / test isolation).
+// The STANDING POLICY is the shared, content-addressed vector cache ON by default: a build that names
+// nothing passes no override and the forger constructs the embedder with its documented default (the one
+// dataStores cache). A caller REDIRECTS it by naming a path — the embedded end-to-end gate points at a
+// throwaway cache so it keeps spending real Voyage instead of being served free from the warm production
+// cache. Precedence: deps.embeddingCacheFilePath (test/orchestrator injection) wins; absent, the command
+// line --embeddingCacheFilePath is read; absent entirely, undefined (no override). No throw: it is a path
+// or nothing, threaded verbatim to the forger, which threads it to the embedder as cacheFilePath.
+const resolveEmbeddingCacheFilePath = (deps) => {
+	if (deps.embeddingCacheFilePath !== undefined) {
+		return deps.embeddingCacheFilePath;
+	}
+	const commandLineParameters =
+		(process.global && process.global.commandLineParameters) || { values: {} };
+	// qtools parses every --flag=value into an ARRAY under values[name]; the first element is the
+	// value (the same `(values[name] || [])[0]` idiom actions.js reads recipePath/standardsDatabase by).
+	// Reading the array itself would hand the embedder a non-string path that vectorCache.open refuses.
+	return (commandLineParameters.values.embeddingCacheFilePath || [])[0];
+};
+
 // resolveRebridge — the INFERENCE spend knob (design §5.5), an operator switch with the same §6 discipline
 // as resolveVectorize. A normal -build MATERIALIZES from whatever frozen decision blocks exist (zero LLM,
 // zero Voyage); --rebridge (SCOPED) is the only thing that RUNS the inference pre-pass to produce/refresh a
@@ -270,9 +290,21 @@ const resolveInferenceConfig = (deps, rebridgeScope) => {
 };
 
 const standardKey = (std) => `${std.token}@${std.version}`;
+
+// slugifyVersion — a version string made safe to sit in a SUBJECT (a subject is a key, not prose):
+// every run of non-alphanumerics collapses to a single '_'. Only the subject is slugged; the PRETTY
+// version is kept verbatim in blocks.version and on the node.
+const slugifyVersion = (version) => `${version}`.replace(/[^A-Za-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+
+// explicitVersionFrom — the resolved EXPLICIT version a persisted block carries in place of the recipe's
+// floating 'current'. A KNOWN source gives the published version; source 'unknown' gives an honest
+// 'unknown_<snapshotKey>' that names the concrete snapshot on disk rather than laundering a default into
+// something that looks like a version. Derived from the forge report's snapshot-provenance triple.
+const explicitVersionFrom = ({ versionSource, publishedVersion, snapshotKey }) =>
+	versionSource === 'unknown' ? `unknown_${snapshotKey}` : `${publishedVersion}`;
 // secondEndpointOf — the pairing's SECOND endpoint: the hub (mapping bridge) or the pairWith sibling
 // (STRUCTURAL bridge), whichever the recipe named. ONE derivation, consumed by pairKey (the label) and the
-// version-keyed subjectRefId composition below, so the two idioms can never drift.
+// version-keyed subject composition below, so the two idioms can never drift.
 const secondEndpointOf = (bridge) =>
 	bridge.hub !== undefined
 		? bridge.hub
@@ -340,6 +372,10 @@ const build = (recipe, deps, callback) => {
 	}
 	const vectorizeSpend = vectorizeResolution.value;
 
+	// the vector-cache override, resolved once and threaded to every standard's forge (undefined = the
+	// shared dataStores cache, ON by default per standing policy; a path redirects it, e.g. test isolation).
+	const embeddingCacheFilePath = resolveEmbeddingCacheFilePath(deps);
+
 	// rebridge scope is resolved alongside vectorize, same §6 discipline: a plain build MATERIALIZES frozen
 	// decisions (no spend); --rebridge (scoped) RUNS the inference pre-pass. The documented default is NONE.
 	const rebridgeResolution = resolveRebridge(deps);
@@ -371,6 +407,11 @@ const build = (recipe, deps, callback) => {
 		name: recipe.recipeName,
 		description: recipe.description,
 		recipe,
+		// provenance for the manifest: the recipe's own content hash (verifies "built from exactly
+		// this recipe text") and the recipe file's name. Both come from the build entry (actions.js
+		// read the file); a caller that has neither records nothing rather than inventing precision.
+		recipeText: deps.recipeText,
+		recipeFileName: deps.recipePath ? path.basename(deps.recipePath) : '',
 	});
 
 	const standards = Array.isArray(recipe.standards) ? recipe.standards : [];
@@ -399,15 +440,14 @@ const build = (recipe, deps, callback) => {
 	// on material that may not exist — and a standard with no forge bundle now fails before any
 	// docker command is attempted.
 	const forgeOneStandard = (std, done) => {
-		const subjectRefId = standardKey(std);
-		// The BASE block's subject is <standard>@<version>_base (§1). The prefix is the recipe's
-		// standard-version, unchanged; the '_base' marker is DERIVED from the block's kind so the name
-		// and the kind cannot drift (the store's suffix↔kind gate refuses them if they do). The hub
-		// block keeps the bare subjectRefId here — its '_hub' marker lands in Phase 3, with the
-		// derivation that makes a hub block exist at all.
-		const baseSubjectRefId = `${subjectRefId}${vocabulary.suffixMarkerForKind(
-			vocabulary.SCHEMA_BLOCK_KIND.STANDARD_BASE,
-		)}`;
+		// The base block's subject and version are the RESOLVED EXPLICIT version, never the recipe's
+		// floating 'current' — so they are composed AFTER the forge, from its snapshot-provenance triple
+		// (in the forge task below). explicitVersion is the pretty resolved version (blocks.version and
+		// the harvest header); baseSubject SLUGS it for a clean key and appends the '_base' marker DERIVED
+		// from the kind, so the name and the kind cannot drift (the store's suffix<->kind gate refuses
+		// them if they do). Both are filled before the harvest/add tasks that read them run.
+		let explicitVersion = '';
+		let baseSubject = '';
 		const taskList = new taskListPlus();
 
 		// DISPOSE-ON-FAILURE (Item 4). The scratch graph is created mid-pipeline; every step after it
@@ -439,13 +479,21 @@ const build = (recipe, deps, callback) => {
 					standard: std.token,
 					version: std.version,
 					vectorize: vectorizeSpend,
+					embeddingCacheFilePath,
 					deriveHub: hubStdSet.has(String(std.token).toLowerCase()),
 				},
 				(err, forgeReport) => {
 					if (!err) {
-						// the RESOLVED version the bundle READ (a4a0da2) — recorded per token for the
-						// version-keyed relationship block name Phase C composes; NOT the recipe token.
-						resolvedVersionByToken[std.token] = forgeReport.version;
+						// The EXPLICIT resolved version replaces the recipe's floating 'current' in every
+						// persisted place: composed HERE from the forge's snapshot-provenance triple, then
+						// read by the harvest header (pretty), the block subject (slugged), and blocks.version.
+						explicitVersion = explicitVersionFrom(forgeReport);
+						baseSubject = `${std.token}@${slugifyVersion(explicitVersion)}${vocabulary.suffixMarkerForKind(
+							vocabulary.SCHEMA_BLOCK_KIND.STANDARD_BASE,
+						)}`;
+						// carried per token for Phase C's version-keyed relationship subjects — NOT the
+						// recipe token, NOT bundleVersion.
+						resolvedVersionByToken[std.token] = explicitVersion;
 							// same embedder for every standard in the run — captured for Phase C's
 							// relationship harvest header (undefined on --vectorize=false).
 							buildEmbeddingModelVersion = forgeReport.embeddingModelVersion;
@@ -491,7 +539,7 @@ const build = (recipe, deps, callback) => {
 					header: {
 						blockType: 'standardBase',
 						standardKey: std.token,
-						version: std.version,
+						version: explicitVersion,
 						// EMBEDDING/ADDRESSING HEADER (restored 2026-07-26). A standardBase block that
 						// CARRIES vectors must declare, in its header, the property naming its stable URI
 						// and the width + model the vectors were made at: the block serializer copies these
@@ -528,18 +576,19 @@ const build = (recipe, deps, callback) => {
 		taskList.push((args, next) => {
 			manifest.add(
 				{
-					subjectRefId: baseSubjectRefId,
+					subject: baseSubject,
 					kind: 'standardBase',
-					description: `standardBase schema block for ${baseSubjectRefId}, forged by recipe '${recipe.recipeName}'`,
+					version: explicitVersion,
+					description: `standardBase schema block for ${baseSubject}, forged by recipe '${recipe.recipeName}'`,
 					schemaBlock: args.schemaBlock,
 				},
 				(err, addReport) => {
 					if (err) {
-						next(`add standardBase ${baseSubjectRefId}: ${err}`);
+						next(`add standardBase ${baseSubject}: ${err}`);
 						return;
 					}
 					xLog.status(
-						`  [A] forge ${baseSubjectRefId} -> standardBase ${addReport.schemaBlockRefId}`,
+						`  [A] forge ${baseSubject} -> standardBase ${addReport.schemaBlockRefId}`,
 					);
 					next('', args);
 				},
@@ -552,7 +601,7 @@ const build = (recipe, deps, callback) => {
 		// harvest(:HubReference:HubDefinition) -> add({..._hub})) is deleted: the replay engine's
 		// conjunctive labelMatch could not union two hub node types and fetchEdgesWithinLabels dropped
 		// the hub's cross-boundary HAS_CEDS_* edges. Folding into the base dissolves both — the edges
-		// live within one [StandardBase] block, both endpoints present. The '_hub' subjectRefId marker
+		// live within one [StandardBase] block, both endpoints present. The '_hub' subject marker
 		// and kind:'hub' stay RESERVED in vocabulary, harmless and unused.
 
 		taskList.push((args, next) => {
@@ -583,7 +632,7 @@ const build = (recipe, deps, callback) => {
 	// ---- Phase C: bridges (materialize dep graph, run bridge, harvest labeled relationships) ----
 	const bridgeOnePairing = (bridge, done) => {
 		// pairLabel identifies the pairing for the operator (source::hub / source::pairWith / source::family);
-		// the version-keyed, producer-suffixed subjectRefId is COMPOSED PER EMITTED BLOCK after the bridge runs
+		// the version-keyed, producer-suffixed subject is COMPOSED PER EMITTED BLOCK after the bridge runs
 		// (multi-block change 2026-07-26 — one invocation may emit several pair-scoped blocks). §7.
 		const pairLabel = pairKey(bridge);
 		// THE RECIPE NAMES THE BRIDGE. RECIPE_SCHEMA requires it on every bridge, so a recipe that
@@ -747,7 +796,7 @@ const build = (recipe, deps, callback) => {
 							: bridge.hub !== undefined
 								? bridge.source
 								: bridge.pairWith;
-					const composed = vocabulary.relationshipSubjectRefId({
+					const composed = vocabulary.relationshipSubject({
 						hubStandard: nameFirst,
 						hubVersion: resolvedVersionByToken[nameFirst],
 						sourceStandard: nameSecond,
@@ -758,7 +807,7 @@ const build = (recipe, deps, callback) => {
 						blockDone(`bridge ${pairLabel}: ${composed.error}`);
 						return;
 					}
-					const oneSubjectRefId = composed.subjectRefId;
+					const oneSubject = composed.subject;
 					const blockLabel = oneBlock.applyLabel || RELATION_LABEL;
 					replay.harvest(
 						{
@@ -766,7 +815,7 @@ const build = (recipe, deps, callback) => {
 							selectionLabels: [blockLabel],
 							header: {
 								blockType: 'relationship',
-								standardKey: oneSubjectRefId,
+								standardKey: oneSubject,
 								// SECOND SITE of the missing-embedding-header defect (2026-07-26). A bridged
 								// node is an embedded base node, so a relationship block that carries it must
 								// declare the SAME embedding width/model as the bases, or the materialize
@@ -789,9 +838,9 @@ const build = (recipe, deps, callback) => {
 							}
 							manifest.add(
 								{
-									subjectRefId: oneSubjectRefId,
+									subject: oneSubject,
 									kind: 'relationship',
-									description: `relationship schema block for ${oneSubjectRefId}, bridged by bridge '${bridgeName}' from recipe '${recipe.recipeName}'`,
+									description: `relationship schema block for ${oneSubject}, bridged by bridge '${bridgeName}' from recipe '${recipe.recipeName}'`,
 									schemaBlock,
 								},
 								(addErr, addReport) => {
@@ -800,7 +849,7 @@ const build = (recipe, deps, callback) => {
 										return;
 									}
 									xLog.status(
-										`  [C] bridge ${pairLabel} (bridge=${bridgeName}) -> relationship ${oneSubjectRefId} ${addReport.schemaBlockRefId}`,
+										`  [C] bridge ${pairLabel} (bridge=${bridgeName}) -> relationship ${oneSubject} ${addReport.schemaBlockRefId}`,
 									);
 									blockDone('');
 								},

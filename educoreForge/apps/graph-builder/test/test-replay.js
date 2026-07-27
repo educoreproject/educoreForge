@@ -202,7 +202,7 @@ const partialStoreDouble = (membershipRefIds) => ({
 			members: membershipRefIds.map((schemaBlockRefId, index) => ({
 				schemaBlockRefId,
 				kind: 'standardBase',
-				subjectRefId: `seed@current_base_${index}`,
+				subject: `seed@current_base_${index}`,
 				position: index,
 				description: 'a seeded member',
 			})),
