@@ -1,0 +1,24 @@
+{
+  // cedsLifGeneric — Bridge Kit Refactor Phase 3 pilot: identical to cedsLif.recipe.jsonc EXCEPT
+  // the bridge names 'genericBridge' (the lib.d-composed Phase 2 module) instead of the old fused
+  // 'semanticBridge'. CEDS as hub, LIF mapped into it. Referentially coherent: hub.standard and
+  // bridge endpoints all resolve within standards[].
+  "schemaVersion": "1.0.0",
+  "recipeName": "cedsLifGeneric",
+  "kind": "dev",
+  "description": "CEDS + LIF with a LIF->CEDS mapping bridge, using genericBridge (the lib.d kit) instead of semanticBridge.",
+  "standards": [
+    { "token": "ceds", "version": "current" },
+    { "token": "lif", "version": "current" }
+  ],
+  "hubs": [
+    { "standard": "ceds", "candidateFinder": "semanticDefText", "params": { "topK": 15, "cosineFloor": 0 } }
+  ],
+  "bridges": [
+    {
+      "source": "lif", "hub": "ceds", "bridge": "genericBridge",
+      "extractor": "defaultSearchObject",
+      "dependencies": ["lif", "ceds"], "cacheMode": "reuse"
+    }
+  ]
+}
