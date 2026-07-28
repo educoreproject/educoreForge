@@ -60,6 +60,12 @@ const { BRIDGE_MODULE_SHAPE } = require(path.join(__dirname, '..', '..', 'interf
 const { buildComponentLibrary } = require(path.join(__dirname, 'lib', 'componentLibrary'));
 const neo4jGraphWriter = require(path.join(__dirname, 'lib', 'neo4jGraphWriter'));
 const neo4jGraphReader = require(path.join(__dirname, 'lib', 'neo4jGraphReader'));
+// buildKit — the lib.d kit loader (bridgeKitRefactor_072726 Phase 1, design §4.1). ADDITIVE ONLY:
+// nothing below wires this into run()'s existing pipeline. buildComponentLibrary (above) remains
+// the sole path run() composes a plugin over, so the three existing bridges keep working on the old
+// flat bag untouched (design P2 — coexist, then tear out). Exported at the bottom alongside
+// bridgeMaker's other utility exports so a Phase-2 bridge (or a test) can build the kit directly.
+const { buildKit } = require(path.join(__dirname, 'lib', 'kitLoader'));
 
 // -----
 // THE THREE SEARCH DIRECTORIES (design §4), narrowest first. The tree root is five levels up from
@@ -421,3 +427,6 @@ module.exports.resolveBridgePlugin = resolveBridgePlugin;
 module.exports.bridgeSearchPath = bridgeSearchPath;
 module.exports.bridgeModuleShapeViolation = bridgeModuleShapeViolation;
 module.exports.DEFAULT_GENERIC_BRIDGE = DEFAULT_GENERIC_BRIDGE;
+// buildKit — bridgeMaker CAN load/instantiate the lib.d kit (Phase 1, design §4.1). Additive: run()
+// above is unchanged and does not call this. A Phase-2 bridge composes it directly.
+module.exports.buildKit = buildKit;
