@@ -57,14 +57,16 @@ const path = require('path');
 const { pipeRunner, taskListPlus } = new require('qtools-asynchronous-pipe-plus')();
 
 const { BRIDGE_MODULE_SHAPE } = require(path.join(__dirname, '..', '..', 'interfaces'));
-const { buildComponentLibrary } = require(path.join(__dirname, 'lib', 'componentLibrary'));
+const { buildComponentLibrary, deriveEdgePolicy } = require(path.join(__dirname, 'lib', 'componentLibrary'));
 const neo4jGraphWriter = require(path.join(__dirname, 'lib', 'neo4jGraphWriter'));
 const neo4jGraphReader = require(path.join(__dirname, 'lib', 'neo4jGraphReader'));
-// buildKit — the lib.d kit loader (bridgeKitRefactor_072726 Phase 1, design §4.1). ADDITIVE ONLY:
-// nothing below wires this into run()'s existing pipeline. buildComponentLibrary (above) remains
-// the sole path run() composes a plugin over, so the three existing bridges keep working on the old
-// flat bag untouched (design P2 — coexist, then tear out). Exported at the bottom alongside
-// bridgeMaker's other utility exports so a Phase-2 bridge (or a test) can build the kit directly.
+// buildKit — the lib.d kit loader (bridgeKitRefactor_072726 Phase 1, design §4.1). Phase 2 (design §5
+// step 1) wires this INTO run()'s pipeline, ADDITIVELY: run() below builds the kit ALONGSIDE the
+// existing flat componentLibrary (over the SAME run resources) and injects it as
+// componentLibrary.kit — buildComponentLibrary's own return value is byte-untouched, so the three
+// existing bridges (which never read `.kit`) keep composing the old flat bag exactly as before
+// (design P2 — coexist, then tear out). Exported at the bottom too, alongside bridgeMaker's other
+// utility exports, so a test can build the kit directly without going through run().
 const { buildKit } = require(path.join(__dirname, 'lib', 'kitLoader'));
 
 // -----
@@ -335,6 +337,40 @@ const moduleFunction =
 				config,
 				componentOverrides,
 			});
+
+			// THE ADDITIVE KIT (bridgeKitRefactor_072726 Phase 2, design §5 step 1). bridgeMaker ALSO
+			// builds the lib.d kit over the SAME run resources and injects it as componentLibrary.kit,
+			// ALONGSIDE the flat library just built above — nothing above changes, and old bridges never
+			// read `.kit` so they are unaffected. A Phase-2 bridge (genericBridge, forges/bridges/)
+			// composes ONLY kit. A kit-build failure (a real wiring defect — a missing lib.d module, a
+			// mis-derived edgePolicy) is surfaced through run's callback rather than silently dropped,
+			// exactly like every other construction-time invariant in this tree (polyArch2 §6) — it is a
+			// tree defect regardless of which bridge happens to be running, not something only a
+			// kit-composing bridge should discover three calls downstream.
+			let kit;
+			try {
+				kit = buildKit({
+					inGraph,
+					graphWriter,
+					edgePolicy: deriveEdgePolicy(),
+					config,
+					decisionStore,
+					rebridge,
+					inferenceConfig,
+					componentOverrides,
+				});
+			} catch (kitBuildError) {
+				graphWriter.close((closeError) => {
+					callback(
+						closeError
+							? `bridgeMaker: building the lib.d kit for bridge '${bridge}': ${kitBuildError.message} ` +
+									`(and the graph writer also failed to close: ${closeError})`
+							: `bridgeMaker: building the lib.d kit for bridge '${bridge}': ${kitBuildError.message}`,
+					);
+				});
+				return;
+			}
+			componentLibrary.kit = kit;
 
 			let pluginCallable;
 			try {

@@ -159,12 +159,13 @@ harness.ok(
 );
 
 harness.ok(
-	'the default generic bridge is JUST a library file — it resolves through the real search path',
+	'the default generic bridge is JUST a forges-shared file — it resolves through the real search path ' +
+		'(bridgeKitRefactor_072726 Phase 2: moved from the library dir to forges/bridges/, the real kit-composing bridge)',
 	(() => {
 		const resolved = bridgeMakerModule.resolveBridgePlugin({ bridge: 'genericBridge' });
 		return !!resolved && typeof resolved.pluginFactory === 'function' && !resolved.error;
 	})(),
-	'genericBridge did not resolve from the library dir',
+	'genericBridge did not resolve from forges/bridges/',
 );
 
 // =====================================================================
@@ -416,24 +417,44 @@ const multiBlockBridgePlugin = (injectedTools) => {
 })();
 
 // =====================================================================
-harness.section('THE DEFAULT GENERIC PLUGIN — zero edges, valid status, no graph connection');
+harness.section('THE DEFAULT GENERIC PLUGIN — genericBridge (Phase 2, forges/bridges/): zero edges on a ' +
+	'no-decision-block MATERIALIZE, valid status, no graph connection opened');
 // =====================================================================
+// bridgeKitRefactor_072726 Phase 2 replaced the P0 placeholder (which wrote zero edges unconditionally
+// and never even looked at its arguments) with the REAL generic inferred bridge composing the kit
+// (forges/bridges/genericBridge.js). Its P0-EQUIVALENT honest-zero-edges case is now the MATERIALIZE
+// path with NO frozen decision block for the pair (design §5.5: never a silent spend) — proven here
+// with a decisionStore fixture holding no block, exactly the shape test-semantic-bridge.js proves for
+// semanticBridge's own no-block case. graphWriterFactory is injected only to prove kit.writer is never
+// reached (no block -> no materialize -> no write, and MATERIALIZE-no-block returns before even
+// opening the graph reader — see genericBridge.js runMaterialize).
 
 (() => {
 	const writer = graphWriterDouble();
+	const emptyDecisionStore = {
+		getDecisionBlock: ({ pairKey }, cb) => { void pairKey; cb('', { frozenText: null }); },
+		saveDecisionBlock: (a, cb) => cb(''),
+	};
 	let observed = null;
-	// the REAL resolver (no override), the default bridge name. It resolves genericBridge from the
-	// library dir. graphWriterFactory injected only to PROVE it is never used — the default plugin
-	// writes nothing and opens nothing.
+	// the REAL resolver (no override), the default bridge name. It resolves genericBridge from
+	// forges/bridges/ (the forges-shared scope). graphWriterFactory injected only to PROVE it is
+	// never used — the no-block MATERIALIZE path writes nothing and opens nothing.
 	bridgeMakerModule({ graphWriterFactory: writer.factory }).run(
-		{ inGraph: { graphName: 'DEV_probe' }, bridge: 'genericBridge', applyLabel: 'BridgedRelation' },
+		{
+			inGraph: { graphName: 'DEV_probe' },
+			bridge: 'genericBridge',
+			hub: 'ceds',
+			applyLabel: 'BridgedRelation',
+			decisionStore: emptyDecisionStore,
+			config: { sourceStandard: 'lif' },
+		},
 		(err, result) => {
 			observed = { err, result };
 		},
 	);
 	harness.equal('the default generic plugin runs with no error', observed && observed.err, '');
 	harness.equal(
-		'  and writes ZERO edges (the honest P0 placeholder)',
+		'  and writes ZERO edges (no frozen decision block for this pair — never a silent spend)',
 		observed && observed.result && observed.result.edgesWritten,
 		0,
 	);
@@ -613,12 +634,15 @@ harness.section('THE NEGATIVE SUBSTRATE SCAN — a plugin file reaching for the 
 		'',
 	);
 
-	// ---- NO FALSE POSITIVES — the 3 REAL bridges shipped today must pass the scan unchanged. ----
+	// ---- NO FALSE POSITIVES — the 4 REAL bridges shipped today must pass the scan unchanged. ----
 	const TREE_ROOT = path.join(__dirname, '..', '..', '..', '..', '..');
 	const REAL_BRIDGES = [
 		{ name: 'ctdlAuthoredBridge', filePath: path.join(TREE_ROOT, 'forges', 'ctdl', 'bridges', 'ctdlAuthoredBridge.js') },
 		{ name: 'ctdlFamilyStructure', filePath: path.join(TREE_ROOT, 'forges', 'ctdl', 'bridges', 'ctdlFamilyStructure.js') },
 		{ name: 'semanticBridge', filePath: path.join(__dirname, '..', 'bridges', 'semanticBridge.js') },
+		// genericBridge (bridgeKitRefactor_072726 Phase 2): now the REAL kit-composing bridge, moved
+		// from the library scope to forges/bridges/ (forges-shared).
+		{ name: 'genericBridge', filePath: path.join(TREE_ROOT, 'forges', 'bridges', 'genericBridge.js') },
 	];
 	REAL_BRIDGES.forEach((oneRealBridge) => {
 		const realCallable = require(oneRealBridge.filePath)({});

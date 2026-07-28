@@ -287,14 +287,28 @@ harness.note(
 );
 harness.note('nowhere else. interfaces.js says so in the same words.');
 
-// bridgeMaker's DEFAULT generic plugin writes no edges and opens no connection, so its whole
-// contract runs in-process without Docker. The bridge name must RESOLVE (an unresolvable one is
-// now refused by name), so the probe names the library default; the deeper resolution/refusal and
-// write-path proofs live in bridge-maker/test/test-bridge-maker.js.
+// bridgeMaker's DEFAULT generic plugin (bridgeKitRefactor_072726 Phase 2: the REAL genericBridge,
+// forges/bridges/, composing the kit) writes no edges and opens no graph connection on a MATERIALIZE
+// run with no frozen decision block for the pair (design §5.5 — never a silent spend), so its whole
+// contract still runs in-process without Docker. It DOES need a decisionStore + config.sourceStandard
+// now (it is a real producer, not the old zero-argument P0 stub) — supplied here as the minimal
+// no-block fixture; the deeper resolution/refusal, write-path and equivalence proofs live in
+// bridge-maker/test/test-bridge-maker.js and test-generic-bridge-equivalence.js.
 (() => {
 	let observed = null;
+	const noBlockDecisionStore = {
+		getDecisionBlock: ({ pairKey }, cb) => { void pairKey; cb('', { frozenText: null }); },
+		saveDecisionBlock: (a, cb) => cb(''),
+	};
 	realComponents.bridgeMaker().run(
-		{ inGraph: { graphName: 'DEV_shapeProbe' }, bridge: DEFAULT_GENERIC_BRIDGE, applyLabel: 'ProbeEdge' },
+		{
+			inGraph: { graphName: 'DEV_shapeProbe' },
+			bridge: DEFAULT_GENERIC_BRIDGE,
+			hub: 'ceds',
+			applyLabel: 'ProbeEdge',
+			decisionStore: noBlockDecisionStore,
+			config: { sourceStandard: 'lif' },
+		},
 		(err, result) => {
 			observed = { err, result };
 		},

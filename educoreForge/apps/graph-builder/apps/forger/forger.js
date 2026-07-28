@@ -148,11 +148,18 @@ const resolveBundle = ({ standard }) => {
 	const bundleDir = path.join(FORGES_DIR, String(standard).toLowerCase());
 	const descriptorPath = path.join(bundleDir, 'parserDescriptor.ini');
 	if (!fs.existsSync(descriptorPath)) {
+		// KNOWN FORGES — a forge BUNDLE is one carrying its own parserDescriptor.ini (the bundle IS its
+		// own registration, per the comment above); forges/ ALSO holds non-bundle scopes that are not
+		// standards at all (forges/bridges/, the forges-shared BRIDGE scope bridgeMaker's directory
+		// search path resolves against — bridgeKitRefactor_072726 Phase 2) and stray files (README.md).
+		// Filtering to "carries parserDescriptor.ini" is what keeps a directory like that from being
+		// listed as a forgeable standard it never claimed to be.
 		const known = fs.existsSync(FORGES_DIR)
 			? fs
 					.readdirSync(FORGES_DIR, { withFileTypes: true })
 					.filter((oneEntry) => oneEntry.isDirectory())
 					.map((oneEntry) => oneEntry.name)
+					.filter((oneName) => fs.existsSync(path.join(FORGES_DIR, oneName, 'parserDescriptor.ini')))
 					.sort()
 					.join(', ')
 			: '(none)';
