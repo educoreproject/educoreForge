@@ -1,0 +1,24 @@
+{
+  // cedsCaseGeneric — Bridge Kit Refactor Phase 5 A/B CONTROL: CEDS + CASE, mapped with the plain
+  // genericBridge (pure definition-cosine, lib.d kit, NO structural override). Identical to
+  // cedsCaseStructural.recipe.jsonc EXCEPT the bridge name, so the two builds are a clean A/B:
+  // same standards, same hub, same recipe shape, only the matcher differs.
+  "schemaVersion": "1.0.0",
+  "recipeName": "cedsCaseGeneric",
+  "kind": "dev",
+  "description": "CEDS + CASE with a CASE->CEDS mapping bridge, using the plain genericBridge (pure def-cosine) — the A/B control for cedsCaseStructural.",
+  "standards": [
+    { "token": "ceds", "version": "current" },
+    { "token": "case", "version": "current" }
+  ],
+  "hubs": [
+    { "standard": "ceds", "candidateFinder": "semanticDefText", "params": { "topK": 15, "cosineFloor": 0 } }
+  ],
+  "bridges": [
+    {
+      "source": "case", "hub": "ceds", "bridge": "genericBridge",
+      "extractor": "defaultSearchObject",
+      "dependencies": ["case", "ceds"], "cacheMode": "reuse"
+    }
+  ]
+}
