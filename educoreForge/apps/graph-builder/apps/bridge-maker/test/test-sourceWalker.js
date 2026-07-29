@@ -45,6 +45,26 @@ const graphNodes = [
 const candidateNodes = [
 	{ stableId: 'c1', properties: { _source: 'CEDS', role: 'DmeProperty', name: 'ceds one', defText: 'ceds P1 def', cedsId: 'P1' } },
 ];
+const hubReferenceNodes = [
+	{
+		stableId: 'ceds:P600253',
+		properties: {
+			_source: 'CEDS',
+			role: 'HubReference',
+			name: 'Has LEA Title I Support Service',
+			defText: 'has-lea-def',
+			cedsId: 'P600253',
+			canonicalKey: 'P600253',
+			hubName: 'CEDS',
+			hubVersion: '14.0.0.0',
+			referenceTier: 'property',
+			qualifierKeys: [],
+			domainId: 'C200188',
+			rangeClassId: 'C200196',
+			anchorUri: 'https://ceds.ed.gov/element/000253',
+		},
+	},
+];
 
 const graphReaderDouble = () => {
 	const readCalls = [];
@@ -62,6 +82,10 @@ const graphReaderDouble = () => {
 			}
 			if (propertyEquals._source === 'CEDS' && propertyEquals.role === 'DmeProperty') {
 				callback('', { nodes: candidateNodes });
+				return;
+			}
+			if (propertyEquals._source === 'CEDS' && propertyEquals.role === 'HubReference') {
+				callback('', { nodes: hubReferenceNodes });
 				return;
 			}
 			callback('', { nodes: [] });
@@ -127,6 +151,58 @@ harness.section('GREEN — candidate-tier read via the injected flattenCandidate
 	harness.ok('walk() did not error', observed && !observed.err, observed && observed.err);
 	harness.equal('candidate flatten carries cedsId', observed.out.sourceNodes[0].cedsId, 'P1');
 	harness.equal('candidate flatten still carries the base fields', observed.out.sourceNodes[0].defText, 'ceds P1 def');
+})();
+
+// =====================================================================
+harness.section('GREEN — flattenFullRecord (spec §5 retrieval-enrichment reversal): the FULL element');
+// =====================================================================
+(() => {
+	const reader = graphReaderDouble();
+	const walker = sourceWalkerFactory({ graphReader: reader });
+	let observed = null;
+	walker.walk({ standard: 'ceds', role: 'HubReference', flatten: sourceWalkerFactory.flattenFullRecord }, (err, out) => {
+		observed = { err, out };
+	});
+	harness.ok('walk() did not error', observed && !observed.err, observed && observed.err);
+	const full = observed.out.sourceNodes[0];
+	harness.equal('full flatten still carries the flat convenience fields (stableId)', full.stableId, 'ceds:P600253');
+	harness.equal('full flatten still carries the defText fallback-computed field', full.defText, 'has-lea-def');
+	harness.equal('full flatten still carries cedsId (flattenCandidateRecord layer)', full.cedsId, 'P600253');
+	harness.equal(
+		'full flatten ALSO carries raw properties the flat shapes never surfaced (hubName)',
+		full.hubName,
+		'CEDS',
+	);
+	harness.equal('full flatten carries hubVersion (raw, not in the flat shape)', full.hubVersion, '14.0.0.0');
+	harness.equal('full flatten carries referenceTier (raw, not in the flat shape)', full.referenceTier, 'property');
+	harness.equal('full flatten carries anchorUri (raw, not in the flat shape)', full.anchorUri, 'https://ceds.ed.gov/element/000253');
+	harness.equal(
+		'full flatten carries rangeClassId (raw; the flat shape only ever surfaced rangeDatatype/rangeOptionSetId)',
+		full.rangeClassId,
+		'C200196',
+	);
+})();
+
+// =====================================================================
+harness.section('COEXISTENCE — flattenFullRecord is opt-in ONLY: the default walk (no flatten override) is byte-identical to before');
+// =====================================================================
+(() => {
+	const reader = graphReaderDouble();
+	const walker = sourceWalkerFactory({ graphReader: reader });
+	let observed = null;
+	// same call as the very first GREEN section above (default flatten, no override) — proves adding
+	// flattenFullRecord to this module did not perturb the existing default path in any way.
+	walker.walk({ standard: 'lif' }, (err, out) => {
+		observed = { err, out };
+	});
+	harness.ok('walk() did not error', observed && !observed.err, observed && observed.err);
+	harness.equal(
+		'default-flatten shape is UNCHANGED: exactly the 9 documented keys, nothing more',
+		Object.keys(observed.out.sourceNodes[0]).sort().join(','),
+		['stableId', 'role', 'name', 'defText', 'domainId', 'rangeDatatype', 'parentId', 'notation', 'canonicalKey', 'rangeOptionSetId']
+			.sort()
+			.join(','),
+	);
 })();
 
 harness.report();

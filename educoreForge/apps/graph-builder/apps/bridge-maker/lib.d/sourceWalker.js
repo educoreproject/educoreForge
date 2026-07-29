@@ -55,6 +55,36 @@ const flattenCandidateRecord = (oneNode) => {
 	};
 };
 
+// flattenFullRecord — bridgeEvidenceRefactor-spec.md §5 retrieval-enrichment reversal. NEW, ADDITIVE:
+// flattenNodeRecord/flattenCandidateRecord above are UNTOUCHED, byte-for-byte, and every existing
+// caller (inferencePipeline, semanticBridge, bridgeSkeleton's default walk move) keeps calling `walk`
+// with its existing `flatten` (or none) and keeps getting the exact same thin slice it always has —
+// this is a THIRD flatten a caller opts INTO by passing `flatten: flattenFullRecord`, never a change
+// to what the other two produce. COEXISTENCE is therefore by construction, not by convention: nothing
+// here can perturb an existing consumer because nothing existing ever names this function.
+//
+// The evidence composer (lib/evidenceComposer.js, P2) needs the FULL element on both sides — "every
+// property the graph node carries", not the name/defText slice §5 says retrieval currently
+// pre-decides relevance with. Mechanism chosen: every RAW scalar property the node carries is merged
+// in FIRST, then flattenCandidateRecord's own computed fields (the defText fallback chain, cedsId,
+// the null-coalesced convenience keys) are layered on TOP and win on overlap — a caller reading
+// record.defText still gets the fallback-computed value, never a raw `undefined` that happened to
+// exist on the node; everything the flat shape does NOT already surface (hubName, hubVersion,
+// addressSignature, qualifierKeys, referenceTier, anchorUri, embedding, uri, ...) rides through
+// unfiltered. Scalar-normalized with the SAME v1() the flat fields already use, so an array-collapsed
+// Neo4j property reads identically whether accessed via its flat key or its raw key.
+const flattenFullRecord = (oneNode) => {
+	const props = oneNode.properties || {};
+	const rawScalars = {};
+	Object.keys(props).forEach((oneKey) => {
+		rawScalars[oneKey] = v1(props[oneKey]);
+	});
+	return {
+		...rawScalars,
+		...flattenCandidateRecord(oneNode),
+	};
+};
+
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
 // START OF moduleFunction() ============================================================
@@ -101,3 +131,4 @@ const moduleFunction =
 module.exports = moduleFunction({ moduleName });
 module.exports.flattenNodeRecord = flattenNodeRecord;
 module.exports.flattenCandidateRecord = flattenCandidateRecord;
+module.exports.flattenFullRecord = flattenFullRecord;
