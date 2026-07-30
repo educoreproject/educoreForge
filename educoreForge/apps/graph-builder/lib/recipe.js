@@ -59,7 +59,13 @@ const RECIPE_SCHEMA = {
 			items: {
 				type: 'object',
 				additionalProperties: false,
-				required: ['standard', 'candidateFinder'],
+				// candidateFinder is VESTIGIAL (P5 teardown, 2026-07-30, re-verified by grep before this
+				// edit): unread at runtime — build.js's hub handling only ever reads h.standard, and the
+				// lib.d/candidateFinder.js module it used to name is itself retired (see kitLoader.js's
+				// tombstone). No longer required, so OLD recipes still populating it keep validating; new
+				// recipes should not carry it. Same for `params` (topK/cosineFloor ride inferenceConfig,
+				// resolved from build.js's own CLI/config, never from here) — left optional, unread.
+				required: ['standard'],
 				properties: {
 					standard: { type: 'string', minLength: 1 },
 					candidateFinder: { type: 'string', minLength: 1 },
@@ -105,6 +111,12 @@ const RECIPE_SCHEMA = {
 						items: { type: 'string', minLength: 1 },
 					},
 					bridge: { type: 'string', minLength: 1 },
+					// extractor and params (below) are VESTIGIAL (P5 teardown, 2026-07-30, re-verified by grep
+					// before this edit): neither is read anywhere at runtime — no bridge or forge module ever
+					// does `.extractor` or reads a bridge's `.params`. Already optional (never in `required`
+					// above), so this changes nothing structurally; the comment exists so no new recipe copies
+					// the ceremony from an old example. Left declared, not removed, so OLD recipes still
+					// populating them keep validating.
 					extractor: { type: 'string', minLength: 1 },
 					dependencies: {
 						type: 'array',

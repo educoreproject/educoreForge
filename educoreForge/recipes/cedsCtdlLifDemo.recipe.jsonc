@@ -23,22 +23,19 @@
     { "token": "lif", "version": "current" }
   ],
   "hubs": [
-    { "standard": "ceds", "candidateFinder": "semanticDefText", "params": { "topK": 15, "cosineFloor": 0 } }
+    { "standard": "ceds" }
   ],
   "bridges": [
     {
       "source": "ctdl", "hub": "ceds", "bridge": "ctdlAuthoredBridge",
-      "extractor": "defaultSearchObject",
       "dependencies": ["ctdl", "ceds"], "cacheMode": "reuse"
     },
     {
       "source": "ctdl", "hub": "ceds", "bridge": "semanticBridge",
-      "extractor": "defaultSearchObject",
       "dependencies": ["ctdl", "ceds"], "cacheMode": "reuse"
     },
     {
       "source": "lif", "hub": "ceds", "bridge": "semanticBridge",
-      "extractor": "defaultSearchObject",
       "dependencies": ["lif", "ceds"], "cacheMode": "reuse"
     }
   ]

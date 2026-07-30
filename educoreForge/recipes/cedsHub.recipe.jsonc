@@ -11,7 +11,7 @@
     { "token": "ceds", "version": "current" }
   ],
   "hubs": [
-    { "standard": "ceds", "candidateFinder": "semanticDefText", "params": { "topK": 15, "cosineFloor": 0 } }
+    { "standard": "ceds" }
   ],
   "bridges": []
 }

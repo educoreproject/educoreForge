@@ -10,10 +10,15 @@
 //          never silently instantiated.
 //   GREEN — building the kit against the REAL lib.d/ directory succeeds and produces every declared
 //          member, correctly shaped: the writer/graphReader/sourceWalker/semanticMatcher/
-//          candidateFinder/decisionFreezer are functions/objects with their expected methods, the
+//          decisionFreezer are functions/objects with their expected methods, the
 //          materializer travels UNINSTANTIATED (a bare factory), selector is null when no
 //          llmClient is injected and present when one is, and the NET seam (componentOverrides.
 //          vectorizer) is honoured exactly as componentLibrary's own seam is.
+//
+// ⟪P5 TEARDOWN, 2026-07-30⟫ — candidateFinder dropped from the kit (lib.d/candidateFinder.js RETIRED;
+// see kitLoader.js's own tombstone). It dispatched a recipe's matcher-name token to a matcher
+// implementation ONLY for bridgeSkeleton.js's defaultMatchMove, which is retired alongside it; no
+// surviving kit consumer ever read kit.candidateFinder.
 //
 // PURE / hermetic: graphWriter/graphReader/vectorizer DOUBLES only; no Neo4j, no network, no LLM.
 //
@@ -169,7 +174,7 @@ harness.section('GREEN — buildKit() against the REAL lib.d/ produces every dec
 	harness.equal('kit.decisionFreezer.freeze is a function', typeof materializeKit.decisionFreezer.freeze, 'function');
 	harness.equal('kit.sourceWalker.walk is a function', typeof materializeKit.sourceWalker.walk, 'function');
 	harness.equal('kit.semanticMatcher.retrieve is a function', typeof materializeKit.semanticMatcher.retrieve, 'function');
-	harness.equal('kit.candidateFinder.find is a function', typeof materializeKit.candidateFinder.find, 'function');
+	harness.equal('kit.candidateFinder is gone (retired P5 — no surviving consumer)', materializeKit.candidateFinder, undefined);
 	harness.equal('kit.materializer travels UNINSTANTIATED (a bare factory)', typeof materializeKit.materializer, 'function');
 	harness.equal('kit.materializer IS the real inferredIndex factory', materializeKit.materializer, require('../lib/inferredIndex'));
 	harness.equal('no llmClient injected -> kit.selector is null', materializeKit.selector, null);

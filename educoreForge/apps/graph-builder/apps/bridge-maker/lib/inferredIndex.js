@@ -1,5 +1,15 @@
 'use strict';
 
+// =====================================================================
+// VALUE-TIER RELIC (P5 teardown ruling, 2026-07-30): the property-tier scalar path is superseded by
+// the evidence architecture (see genericBridge/caseEvidenceBridge); this module survives ONLY as the
+// sole value-tier implementation. Do not extend; do not use for new property-tier work; dies when
+// value-tier is re-expressed on the evidence path.
+// (This module is ALSO reused, unmodified, as the evidence path's kit.materializer — see
+// kitLoader.js/genericBridge.js — so it is NOT dead code; only the VALUE-TIER call shape it serves
+// through semanticBridge/inferencePipeline is the relic.)
+// =====================================================================
+
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
 // inferredIndex.js — the PURE, deterministic INFERRED-track materializer (design §3, the bridge library's

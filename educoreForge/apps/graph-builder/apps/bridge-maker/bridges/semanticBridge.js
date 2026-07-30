@@ -1,5 +1,12 @@
 'use strict';
 
+// =====================================================================
+// VALUE-TIER RELIC (P5 teardown ruling, 2026-07-30): the property-tier scalar path is superseded by
+// the evidence architecture (see genericBridge/caseEvidenceBridge); this module survives ONLY as the
+// sole value-tier implementation. Do not extend; do not use for new property-tier work; dies when
+// value-tier is re-expressed on the evidence path.
+// =====================================================================
+
 // semanticBridge — the INFERRED `CLOSE_MATCH` producer (P3a/P3c; design §1 "a default generic plugin", §2 the
 // five-move loop with ONE freeze, §5.5 the --rebridge/freeze model). A generic bridge plugin in the
 // LIBRARY scope (bridge-maker/bridges/), resolved BY NAME through bridgeMaker's three-directory search

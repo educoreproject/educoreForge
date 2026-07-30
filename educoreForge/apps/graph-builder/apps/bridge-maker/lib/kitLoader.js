@@ -25,7 +25,6 @@
 //     kit.decisionFreezer   — lib.d/decisionFreezer()
 //     kit.sourceWalker      — lib.d/sourceWalker({ graphReader: kit.graphReader })
 //     kit.semanticMatcher   — lib.d/semanticMatcher({ topK: inferenceConfig.topK })
-//     kit.candidateFinder   — lib.d/candidateFinder({ semanticMatcher: kit.semanticMatcher })
 //     kit.selector          — lib.d/selector({ llmClient, cosineFloor })         built ONLY when
 //                             inferenceConfig.llmClient is injected (a materialize-only kit build has
 //                             no reranker to build one with — the same "no llmClient, no reranker"
@@ -54,6 +53,18 @@
 //     kit.evidenceFreezer   — lib.d/evidenceFreezer (THIN WRAPPER over lib/evidenceFreezer.js), a
 //                             no-arg FACTORY invoked here exactly like kit.decisionFreezer.
 //
+// ⟪P5 TEARDOWN TOMBSTONE, 2026-07-30⟫ — kit.candidateFinder RETIRED (lib.d/candidateFinder.js and its
+// test-candidateFinder.js git rm'd; dropped from EXPECTED_KIT_MODULES and from construction below). It
+// dispatched a recipe's matcher-name token ('semanticDefText') to a matcher implementation for exactly
+// ONE caller: bridgeSkeleton.js's defaultMatchMove (`kit.candidateFinder.find(matcherName)`), which
+// itself is retired this same date (see bridgeSkeleton's tombstone in genericBridge.js) after its last
+// live consumer, caseStructuralBridge.js, lost the P5 A/B. Grepping `.candidateFinder` across the tree
+// after both removals turns up no other reader — the registry-over-switch dispatch it offered (design
+// §4.1 open item O3, "a future custom matcher joins by name") never gained a second entry, because the
+// evidence path's kit.evidenceSelect judges categorically rather than dispatching to a named matcher at
+// all. The recipe field hubs[].candidateFinder that fed it is a SEPARATE thing (a recipe-schema token,
+// not this module) — see recipe.js's own vestigial-field note for its fate.
+//
 // Construction is SYNCHRONOUS; a wiring fault THROWS (matching componentLibrary's own construction-
 // time invariants: relationshipWriterFactory/decisionFreezerFactory etc. all throw at construction,
 // never three steps into a run) rather than surfacing as a mid-run crash.
@@ -74,7 +85,7 @@ const EXPECTED_KIT_MODULES = [
 	'selector',
 	'decisionFreezer',
 	'materializer',
-	'candidateFinder',
+	// candidateFinder RETIRED (P5 teardown, 2026-07-30) — see the tombstone above.
 	// ⟪P3 ADDITIONS⟫ bridgeEvidenceRefactor-spec.md §7 — the evidence path's six new kit members.
 	'cedsHubModule',
 	'evidenceRenderer',
@@ -182,7 +193,7 @@ const buildKit = (
 
 	kit.semanticMatcher = requireKitModule(libDDir, 'semanticMatcher')({ topK: inferenceConfig.topK || 15 });
 
-	kit.candidateFinder = requireKitModule(libDDir, 'candidateFinder')({ semanticMatcher: kit.semanticMatcher });
+	// candidateFinder RETIRED (P5 teardown, 2026-07-30) — see the tombstone above.
 
 	// a materialize-only kit build (plain -build, no --rebridge) legitimately has no llmClient to
 	// rerank with; selector is built ONLY when one is injected, exactly the same "no llmClient, no

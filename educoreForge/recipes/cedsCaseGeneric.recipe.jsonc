@@ -12,12 +12,11 @@
     { "token": "case", "version": "current" }
   ],
   "hubs": [
-    { "standard": "ceds", "candidateFinder": "semanticDefText", "params": { "topK": 15, "cosineFloor": 0 } }
+    { "standard": "ceds" }
   ],
   "bridges": [
     {
       "source": "case", "hub": "ceds", "bridge": "genericBridge",
-      "extractor": "defaultSearchObject",
       "dependencies": ["case", "ceds"], "cacheMode": "reuse"
     }
   ]

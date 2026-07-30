@@ -1,5 +1,12 @@
 'use strict';
 
+// =====================================================================
+// VALUE-TIER RELIC (P5 teardown ruling, 2026-07-30): the property-tier scalar path is superseded by
+// the evidence architecture (see genericBridge/caseEvidenceBridge); this module survives ONLY as the
+// sole value-tier implementation. Do not extend; do not use for new property-tier work; dies when
+// value-tier is re-expressed on the evidence path.
+// =====================================================================
+
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
 // valueScope.js — CODESET-VALUE scoping helpers for the INFERRED value-tier track. FAITHFUL PORT of the

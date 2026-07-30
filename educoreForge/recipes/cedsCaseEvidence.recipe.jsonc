@@ -1,0 +1,28 @@
+{
+  // cedsCaseEvidence — Bridge Evidence-Package Refactor Phase 5 (bridgeEvidenceRefactor-spec.md §7 P5):
+  // CEDS + CASE, mapped with caseEvidenceBridge (forges/case/bridges/caseEvidenceBridge.js) —
+  // caseStructuralBridge's scalar structural blend re-expressed as EVIDENCE: a nomination hook (⟪A1⟫)
+  // recovers cosine-missed structurally-related candidates into the union pool, a per-candidate
+  // consideration states the source's structural location + token overlap, and one deduped global
+  // segment (R6/⟪A2⟫) tells the judge how to read CASE's often-thin property prose. Identical to
+  // cedsCaseGeneric.recipe.jsonc / cedsCaseStructural.recipe.jsonc EXCEPT the bridge name — a clean
+  // three-way A/B/B' set: plain cosine (cedsCaseGeneric), scalar structural blend (cedsCaseStructural),
+  // and structural-signal-as-evidence (this recipe).
+  "schemaVersion": "1.0.0",
+  "recipeName": "cedsCaseEvidence",
+  "kind": "dev",
+  "description": "CEDS + CASE with a CASE->CEDS mapping bridge, using caseEvidenceBridge (evidence-mode: cosine ∪ structural nominations, per-candidate structural-location considerations, one deduped CASE-prose guidance segment) — Phase 5's evidence-path demonstrator, A/B'd against cedsCaseGeneric and cedsCaseStructural.",
+  "standards": [
+    { "token": "ceds", "version": "current" },
+    { "token": "case", "version": "current" }
+  ],
+  "hubs": [
+    { "standard": "ceds" }
+  ],
+  "bridges": [
+    {
+      "source": "case", "hub": "ceds", "bridge": "caseEvidenceBridge",
+      "dependencies": ["case", "ceds"], "cacheMode": "reuse"
+    }
+  ]
+}

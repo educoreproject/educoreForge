@@ -17,9 +17,23 @@
 // LLM calls, pure) and REBRIDGE (the full evidence flow, one non-deterministic step: evidenceSelect).
 //
 // ⟪A9⟫ — semanticBridge (bridge-maker/bridges/semanticBridge.js) is the SCALAR COMPARATOR and survives
-// BYTE-UNTOUCHED, together with its own skeleton path (bridgeSkeleton.js, unmodified by this file —
-// see the SKELETON-VS-DIRECT decision below) and inferencePipeline.js. Nothing in this port touches any
-// of the three.
+// BYTE-UNTOUCHED, together with inferencePipeline.js. Nothing in this port touches either (see the
+// VALUE-TIER RELIC header on each — they now survive P5's teardown as the sole value-tier
+// implementation, not as an active comparator with a live successor path).
+//
+// ⟪P5 TEARDOWN TOMBSTONE, 2026-07-30⟫ — apps/graph-builder/apps/bridge-maker/lib/bridgeSkeleton.js
+// RETIRED (git rm, along with its test, test-bridgeSkeleton.js). At P4 (see the SKELETON-VS-DIRECT
+// decision below, preserved for the historical reasoning) bridgeSkeleton.js still had a second live
+// consumer — forges/case/bridges/caseStructuralBridge.js — which is WHY this file deliberately did not
+// build on it: perturbing the shell risked perturbing that scalar bridge's byte-identical behavior. P5's
+// A/B (evidence+structural vs. evidence-generic vs. scalar) came back complete and emphatic in evidence's
+// favor (see caseEvidenceBridge.js's own tombstone for the numbers), caseStructuralBridge.js was retired,
+// and that removal left bridgeSkeleton.js — the reusable five-move (walk/match/select/freeze/materialize)
+// shell purpose-built for the scalar loop — with NO consumer at all: grepped and confirmed, every
+// remaining mention of "bridgeSkeleton" in the tree after the retirement was a comment, not a require().
+// Its own reusable pieces (defaultMatchMove's kit.candidateFinder dispatch, its construction-time
+// requiredKitMembersFor discipline) do not survive it in a new location — see lib.d/candidateFinder.js's
+// own tombstone for what became of the ONE downstream piece that mattered.
 //
 // =====================================================================
 // SKELETON-VS-DIRECT — the ONE construction choice this phase's work order leaves to the Programmer

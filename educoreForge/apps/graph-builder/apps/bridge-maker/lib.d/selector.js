@@ -1,5 +1,12 @@
 'use strict';
 
+// =====================================================================
+// VALUE-TIER RELIC (P5 teardown ruling, 2026-07-30): the property-tier scalar path is superseded by
+// the evidence architecture (see genericBridge/caseEvidenceBridge); this module survives ONLY as the
+// sole value-tier implementation. Do not extend; do not use for new property-tier work; dies when
+// value-tier is re-expressed on the evidence path.
+// =====================================================================
+
 // selector.js — lib.d EXTRACT (bridgeKitRefactor_072726 design §4.1). A faithful COPY of
 // inferencePipeline.scoreSource's FLOOR-GATE + RERANK tail (Opus abstain-first;
 // bridge-maker/lib/inferencePipeline.js) — given a source and its ALREADY-RETRIEVED candidate pool
