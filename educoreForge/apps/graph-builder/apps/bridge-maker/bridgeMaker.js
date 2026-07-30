@@ -442,6 +442,14 @@ const moduleFunction =
 						counts: pluginResult.counts,
 						producer: pluginResult.producer,
 						blocks: pluginResult.blocks,
+						// ⟪P4 ADDITION⟫ bridgeEvidenceRefactor-spec.md §7 P4 — the evidence path's ⟪A6⟫
+						// self-description fields, forwarded OPTIONALLY exactly like producer/blocks above: a
+						// bridge that never sets them (every bridge before this port) gets `undefined` here,
+						// unchanged from today. genericBridge (forges/bridges/) is the first bridge to set
+						// them, so a caller can learn which generation/renderer produced a run's edges without
+						// re-parsing the frozen decision block.
+						generation: pluginResult.generation,
+						rendererVersion: pluginResult.rendererVersion,
 						note: `bridge '${bridge}' wrote ${pluginResult.edgesWritten} edge(s)` +
 							(Array.isArray(pluginResult.blocks) && pluginResult.blocks.length > 1
 								? ` across ${pluginResult.blocks.length} pair-scoped block(s)`

@@ -256,4 +256,69 @@ harness.section('GREEN — domainsComplete:false is the uniform default (P0 §2.
 	harness.equal('value-tier domainsComplete is false', valueTier.presentation.domainsComplete, false);
 })();
 
+// =====================================================================
+// GREEN — ⟪P4 FIX⟫ allDomainIds: a candidate carrying the forgeCeds.js additive property reports the
+// FULL domains[] list, domainsComplete:true (bridgeEvidenceRefactor-spec.md §7 P4).
+// =====================================================================
+harness.section('GREEN — ⟪P4 FIX⟫ allDomainIds present: domains[] is the FULL list, domainsComplete:true');
+
+// a genuinely multi-domain property (P001917-shaped, P0 §2.4's own cited example): allDomainIds is a
+// real array, zipped with allDomainNames.
+(() => {
+	const observed = callWith({
+		referenceTier: 'property',
+		canonicalKey: 'P001917',
+		propertyKey: 'P001917',
+		name: 'Record Start Date Time',
+		domainId: 'C000000', // the single ADDRESS SLOT — first-resolvable, UNCHANGED
+		allDomainIds: ['C000000', 'C200410'],
+		allDomainNames: ['Root', 'Some Owning Class'],
+		rangeDatatype: 'dateTime',
+	});
+	harness.equal('multi-domain: no error', observed.err, '');
+	harness.equal('multi-domain: passes the REAL oracle', hubModulePresentationViolation(observed.presentation), '');
+	harness.equal('multi-domain: domains[] has BOTH entries', observed.presentation.domains.length, 2);
+	harness.equal('multi-domain: domains[0] is the address-slot domain (first-resolvable, unchanged)', observed.presentation.domains[0].domainId, 'C000000');
+	harness.equal('multi-domain: domains[1] is the SECOND resolvable domain', observed.presentation.domains[1].domainId, 'C200410');
+	harness.equal('multi-domain: domainName zipped positionally', observed.presentation.domains[1].domainName, 'Some Owning Class');
+	harness.equal('multi-domain: domainsComplete is HONESTLY true (proven, not guessed)', observed.presentation.domainsComplete, true);
+})();
+
+// a single-domain property carrying allDomainIds as a ONE-element PG-JSON COLLAPSE (a bare scalar
+// string, not an array) — the live-graph shape the P0 §2.5 qualifierKeys collapse note documents for
+// any single-element list property; asList must normalize this exactly as it does for qualifierKeys.
+(() => {
+	const observed = callWith({
+		referenceTier: 'property',
+		canonicalKey: 'P000104',
+		propertyKey: 'P000104',
+		name: 'Staff Evaluation Score or Rating',
+		domainId: 'C200366',
+		allDomainIds: 'C200366', // collapsed scalar, not ['C200366']
+		allDomainNames: 'Staff Evaluation',
+		rangeDatatype: 'string',
+	});
+	harness.equal('single-domain (collapsed scalar allDomainIds): no error', observed.err, '');
+	harness.equal('single-domain (collapsed scalar allDomainIds): passes the REAL oracle', hubModulePresentationViolation(observed.presentation), '');
+	harness.equal('single-domain (collapsed scalar allDomainIds): domains[] has exactly ONE entry', observed.presentation.domains.length, 1);
+	harness.equal('single-domain (collapsed scalar allDomainIds): domainsComplete is HONESTLY true', observed.presentation.domainsComplete, true);
+})();
+
+// a candidate with allDomainIds present but NO allDomainNames — domainName falls back to null per
+// entry, never a fabricated placeholder (the SAME null-coalesce the single-domain path already used).
+(() => {
+	const observed = callWith({
+		referenceTier: 'property',
+		canonicalKey: 'P001917',
+		propertyKey: 'P001917',
+		name: 'Record Start Date Time',
+		domainId: 'C000000',
+		allDomainIds: ['C000000', 'C200410'],
+		rangeDatatype: 'dateTime',
+	});
+	harness.equal('multi-domain, no allDomainNames: no error', observed.err, '');
+	harness.equal('multi-domain, no allDomainNames: passes the REAL oracle', hubModulePresentationViolation(observed.presentation), '');
+	harness.equal('multi-domain, no allDomainNames: domainName is null, not fabricated', observed.presentation.domains[1].domainName, null);
+})();
+
 harness.report();

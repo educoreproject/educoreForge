@@ -210,6 +210,15 @@ const buildKit = (
 	// invoked — a no-arg factory, exactly like kit.decisionFreezer (see lib.d/evidenceFreezer.js's wrapper header).
 	kit.evidenceFreezer = requireKitModule(libDDir, 'evidenceFreezer')();
 
+	// ⟪P4 ADDITION⟫ bridgeEvidenceRefactor-spec.md §7 P4 kit wiring (deliverable #6). kit.evidenceSelect's
+	// llmClient rides the CALL signature (SELECT_SHAPE), not construction (see kit.evidenceSelect's own
+	// build line above) — unlike kit.selector, nothing here builds an evidence-mode reranker at
+	// construction time, so nothing on `kit` otherwise carries the llmClient an evidence-mode BRIDGE
+	// needs to hand to kit.evidenceSelect at CALL time. Passed straight through, exactly like
+	// kit.config/kit.decisionStore/kit.rebridge above (additive: a kit consumer that never reads
+	// kit.inferenceConfig — every existing bridge — is unaffected).
+	kit.inferenceConfig = inferenceConfig;
+
 	return kit;
 };
 

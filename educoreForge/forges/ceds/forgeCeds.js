@@ -310,9 +310,46 @@ const moduleFunction =
 					: undefined;
 				const parentStableId = owningClassUri || metadata.sourceUrl;
 
+				// ⟪P4 FIX — bridgeEvidenceRefactor-spec.md §7 P4, ⟪P0-finding⟫⟫ ADDITIVE ONLY, per
+				// design-authority ruling: domainSlotId (below, feeding addressSlots.domainId — the
+				// canonical ADDRESS SLOT that addressSignature/blockIds key off) stays EXACTLY the
+				// first-resolvable schema:domainIncludes reference, byte-unchanged. 256/2324 (11%) CEDS
+				// properties carry MORE than one resolvable domainRefs entry (P0 §2.4); every one after
+				// the first was, until now, silently and permanently dropped with no trace anywhere in
+				// the materialized graph. allDomainIds/allDomainNames below is a NEW, additional property
+				// carrying the FULL resolvable list — never read by domainSlotId, addressSlots, or the
+				// HAS_PROPERTY edge (parentStableId), so every existing consumer of this node (the
+				// address signature, the ownership edge, every downstream forge/bridge reading domainId)
+				// sees byte-identical output. allDomainIds[0] === domainSlotId always, by construction
+				// (same source array, same iteration order, same resolvability filter).
+				const allDomainUris = (prop.domainRefs || []).filter((u) => classByUri[u]);
+				const allDomainIds = [];
+				const allDomainNames = [];
+				allDomainUris.forEach((oneDomainUri) => {
+					const resolved = normalize.normalizeCedsId({
+						rawValue: classByUri[oneDomainUri].cedsId,
+						kind: 'class',
+					});
+					if (resolved.error) {
+						return; // same silent-skip discipline domainSlotId's own resolution already applies
+					}
+					allDomainIds.push(resolved.cedsId);
+					allDomainNames.push(
+						(classCanonicalByUri[oneDomainUri] && classCanonicalByUri[oneDomainUri].className) || null,
+					);
+				});
+
 				const extraProps = {};
 				if (prop.dataType) {
 					extraProps.dataType = prop.dataType;
+				}
+				// ⟪P4 FIX⟫ stamped ONLY when at least one domain resolved (mirrors domainSlotId's own
+				// "undefined when nothing resolves" discipline — never an empty-array placeholder for a
+				// property with zero resolvable domains, which forges its own DmeProperty-with-no-owner
+				// case via parentStableId=metadata.sourceUrl above, unaffected by this addition).
+				if (allDomainIds.length > 0) {
+					extraProps.allDomainIds = allDomainIds;
+					extraProps.allDomainNames = allDomainNames;
 				}
 				if (prop.textFormat) {
 					extraProps.textFormat = prop.textFormat;

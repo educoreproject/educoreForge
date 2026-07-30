@@ -16,10 +16,23 @@
 // "refuse BY NAME before it contaminates anything downstream" discipline, applied to data instead of
 // to a function's shape.
 //
-// ⟪A8⟫ STATUS MARKER — every one of these six contracts is DRAFT, explicitly, until the P3 boundary
-// review hardens it public-ready (bridgeEvidenceRefactor-spec.md §4, §7 P1/P3). CONTRACT_STATUS below
-// is that literal marker; EVIDENCE_CONTRACTS stamps it onto every declared contract in one place so a
-// reader (or a test) can confirm none of them silently claims to be final.
+// ⟪A8⟫ STATUS MARKER — every one of these six contracts was DRAFT until the P3 boundary review
+// (2026-07-29, bridgeEvidenceRefactor-spec.md §7) hardened them public-ready, WITH TWO RIDERS, both now
+// resolved/dispositioned in P4:
+//   (R-a) evidenceSelect's llmClient response shape ({choice, category, rationale}) was proven only
+//     against the hermetic STUB in P3; P4 wired the LIVE lib/llmClient.js (the real Anthropic tool
+//     schema) to additionally emit category/rationale — ADDITIVE, lib.d/selector.js's {choice}-only
+//     contract unbroken (test-llm-client.js's R-a section, test-selector.js byte-unchanged).
+//   (R-b) per-source {category, rationale, normalizedConfidence} ride inside frozenEvidence.judgment
+//     (the frozen decision block), NOT promoted to first-class materializer/edge-property fields in
+//     P4 — lib/inferredIndex.js (the shared scalar+evidence materializer) is byte-untouched; a
+//     category/rationale reader retrieves them by loading the pair's frozen block
+//     (kit.decisionStore.getDecisionBlock + kit.evidenceFreezer.parse) and reading
+//     frozenEvidence[i].judgment, keyed by source stableId. Promoting them to first-class
+//     freezer-schema fields remains a noted FUTURE extension, not P4 scope. See
+//     forges/bridges/genericBridge.js's own header for the full P4 disposition.
+// CONTRACT_STATUS below is that literal marker; EVIDENCE_CONTRACTS stamps it onto every declared
+// contract in one place so a reader (or a test) can confirm every one of them is now public-ready.
 //
 // R2 — these are third-party PLUGIN contracts: documented as if a stranger, never having seen this
 // refactor discussed, will implement one of the six from scratch. Each section below carries the
@@ -55,8 +68,11 @@
 
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
-// ⟪A8⟫ the literal status every one of the six contracts below carries.
-const CONTRACT_STATUS = 'DRAFT — living until the P3 boundary review hardens it public-ready.';
+// ⟪A8⟫ the literal status every one of the six contracts below carries. HARDENED at the P3 boundary
+// review (2026-07-29), riders R-a/R-b recorded above and resolved/dispositioned by P4.
+const CONTRACT_STATUS =
+	'HARDENED — public-ready as of the P3 boundary review (2026-07-29), riders R-a (llmClient live-wired, P4) ' +
+	'and R-b (category/rationale/normalizedConfidence ride in frozenEvidence.judgment, not first-class fields) recorded.';
 
 // =====================================================================
 // SHARED CALLABLE-SHAPE CHECKERS — the same three mechanics interfaces.js's own test suite applies

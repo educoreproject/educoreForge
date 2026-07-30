@@ -205,6 +205,40 @@ harness.section('RED — llmClient omitting a valid category is refused, never f
 })();
 
 // =====================================================================
+harness.section('RED — llmClient omitting a rationale for its PICK is refused, never fabricated (⟪R-a REAL-RUN FINDING⟫)');
+// =====================================================================
+// THIS is the exact production fault a live LIF --rebridge against real Opus hit (2026-07-30): a pick
+// with a valid category but no rationale. evidenceSelect.js is THE enforcer of this refusal (see
+// lib/llmClient.js's own header for the "which layer enforces" disposition) — this is that enforcement,
+// proven directly.
+(() => {
+	const stubLlm = { rerank: (spec, callback) => callback('', { choice: '1', category: 'strong' }) };
+	let observed = null;
+	select(conformingEvidencePackage(), stubLlm, (err) => {
+		observed = err;
+	});
+	harness.match('refused, naming the missing rationale for the pick', observed, /did not supply a rationale for its pick/);
+})();
+
+// =====================================================================
+harness.section('GREEN — evidenceSelect requests the EVIDENCE tool-schema variant on EVERY call (requireJudgment:true)');
+// =====================================================================
+// ⟪R-a REAL-RUN FIX⟫ item 2: evidenceSelect.js must request llmClient's stricter, category+rationale-
+// REQUIRED schema variant on every rerank call — proven by inspecting what the stub llmClient actually
+// received, never by reading evidenceSelect.js's own source text.
+(() => {
+	let observedSpec = null;
+	const stubLlm = {
+		rerank: (spec, callback) => {
+			observedSpec = spec;
+			callback('', { choice: '1', category: 'strong', rationale: 'x' });
+		},
+	};
+	select(conformingEvidencePackage(), stubLlm, () => {});
+	harness.equal('requireJudgment:true was passed to llmClient.rerank', observedSpec && observedSpec.requireJudgment, true);
+})();
+
+// =====================================================================
 harness.section('RED — llmClient returning an out-of-range choice is refused, named');
 // =====================================================================
 (() => {

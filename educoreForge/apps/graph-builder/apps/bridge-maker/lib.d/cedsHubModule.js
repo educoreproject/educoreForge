@@ -22,16 +22,20 @@
 //
 // FIELD PROVENANCE (every mapping below is a P0 code-fact, cited):
 //
-//   domains[] / domainsComplete — P0-cedsTupleModel.md §2.4 (forgeCeds.js:306, code-fact): domainId is
-//     ALWAYS a single scalar in the materialized graph; the graph carries NO per-node signal
-//     distinguishing a genuinely single-domain property from one of the 256/2324 (11%) that had a
-//     domain SILENTLY DROPPED at forge time. A HubReference node can therefore never PROVE its
-//     domains[] is complete — domainsComplete is UNCONDITIONALLY false here, for every candidate,
-//     until spec §7 P4's forgeCeds.js:306 fix lands and the graph itself starts carrying a
-//     completeness signal. (This is the honest reading of P4's own instruction: "until the fix lands,
-//     the renderer marks the domain list as known-incomplete rather than presenting a partial fact as
-//     complete" — there is no per-node way to tell which of the 2324 properties are among the 256, so
-//     ALL of them must carry the same honest disclaimer today, not just the ones known to be affected.)
+//   domains[] / domainsComplete — P0-cedsTupleModel.md §2.4 (forgeCeds.js:306, code-fact): domainId
+//     (the ADDRESS SLOT — canonical addressing/blockIds key off it, UNCHANGED by the P4 fix below) is
+//     ALWAYS a single scalar in the materialized graph. ⟪P4 FIX LANDED⟫ (spec §7 P4, additive-only per
+//     design-authority ruling): forgeCeds.js now ALSO stamps `allDomainIds` (+ `allDomainNames`) on
+//     every forged DmeProperty — the FULL list of resolvable schema:domainIncludes references, not
+//     just the first — carried through to the materialized HubReference candidate unchanged. When a
+//     candidate carries `allDomainIds` (resolveDomains below, via asList — a single-element PG-JSON
+//     array collapses to a scalar at MERGE, exactly like qualifierKeys), this hub module reports the
+//     FULL domains[] list and domainsComplete:true — an honest, PROVEN-complete fact, not a guess. A
+//     candidate with NO `allDomainIds` (a node forged before the fix, or a hand-built test/fixture
+//     double) falls back to the single-domainId presentation with domainsComplete:false, EXACTLY the
+//     prior honest disclaimer — this fallback is not a special case, it is what every existing caller
+//     of this module (test-cedsHubModule.js's original P0-fidelity fixtures, test-evidenceFlow.js) still
+//     gets, unchanged.
 //
 //   range shape — P0 §2.1/§2.3: exactly one of rangeDatatype/rangeClassId/rangeOptionSetId is ever set
 //     on a live HubReference (graph-fact: Q6/Q7, zero exceptions across 29,788 live nodes). This
@@ -121,6 +125,31 @@ const resolveQualifier = (candidate) => {
 	return { isQualified: true, qualifier: { qualifierKey, qualifierName: nameMatch[1] } };
 };
 
+// resolveDomains — ⟪P4 FIX⟫ (spec §7 P4, see file header): a candidate carrying `allDomainIds` (the
+// forgeCeds.js additive property, the FULL resolvable domain list) reports domains[] as that full
+// list, zipped positionally with `allDomainNames` when present, domainsComplete:true. asList handles
+// BOTH shapes a PG-JSON property can arrive in (a genuine array, or a single-element scalar collapsed
+// at MERGE — the SAME collapse resolveQualifier already guards against for qualifierKeys). A
+// candidate with no allDomainIds at all (empty asList) falls back to the single-domainId,
+// domainsComplete:false presentation, BYTE-IDENTICAL to this module's pre-P4 behavior.
+const resolveDomains = (candidate) => {
+	const allDomainIds = asList(candidate.allDomainIds);
+	if (allDomainIds.length === 0) {
+		return {
+			domains: [{ domainId: candidate.domainId, domainName: candidate.domainName || null }],
+			domainsComplete: false,
+		};
+	}
+	const allDomainNames = asList(candidate.allDomainNames);
+	return {
+		domains: allDomainIds.map((oneDomainId, oneIndex) => ({
+			domainId: oneDomainId,
+			domainName: allDomainNames[oneIndex] || null,
+		})),
+		domainsComplete: true,
+	};
+};
+
 // resolveValueContext — referenceTier !== 'value' -> { value: null }. Value tier -> the {valueKey,
 // owningPropertyKey, owningOptionSetId} scope P0 §2.6 requires (already on the node — no graph walk).
 const resolveValueContext = (candidate) => {
@@ -198,15 +227,14 @@ const moduleFunction =
 				return;
 			}
 
+			const { domains, domainsComplete } = resolveDomains(candidate);
 			const baseTupleEvidence = {
 				referenceTier: candidate.referenceTier,
 				canonicalKey: candidate.canonicalKey,
 				propertyKey: candidate.propertyKey,
 				name: candidate.name,
-				domains: [{ domainId: candidate.domainId, domainName: candidate.domainName || null }],
-				// P0 §2.4 — see the file header: the materialized graph carries no per-node completeness
-				// signal, so this is UNCONDITIONALLY false until spec §7 P4's forgeCeds.js:306 fix lands.
-				domainsComplete: false,
+				domains,
+				domainsComplete,
 				range,
 				isQualified,
 				qualifier,
@@ -231,5 +259,6 @@ const moduleFunction =
 module.exports = moduleFunction({ moduleName });
 module.exports.resolveRange = resolveRange;
 module.exports.resolveQualifier = resolveQualifier;
+module.exports.resolveDomains = resolveDomains;
 module.exports.resolveValueContext = resolveValueContext;
 module.exports.asList = asList;

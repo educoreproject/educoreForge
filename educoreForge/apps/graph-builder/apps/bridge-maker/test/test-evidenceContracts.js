@@ -126,14 +126,17 @@ const conformingEvidencePackage = () => ({
 });
 
 // =====================================================================
-harness.section('DECLARATION — every contract carries the ⟪A8⟫ DRAFT status marker');
+harness.section('DECLARATION — every contract carries the ⟪A8⟫ HARDENED status marker (P4)');
 // =====================================================================
 
 harness.equal(
-	'CONTRACT_STATUS is the literal DRAFT marker',
+	'CONTRACT_STATUS is the literal HARDENED marker, riders R-a/R-b recorded',
 	CONTRACT_STATUS,
-	'DRAFT — living until the P3 boundary review hardens it public-ready.',
+	'HARDENED — public-ready as of the P3 boundary review (2026-07-29), riders R-a (llmClient live-wired, P4) ' +
+		'and R-b (category/rationale/normalizedConfidence ride in frozenEvidence.judgment, not first-class fields) recorded.',
 );
+harness.ok('CONTRACT_STATUS names rider R-a', CONTRACT_STATUS.includes('R-a'));
+harness.ok('CONTRACT_STATUS names rider R-b', CONTRACT_STATUS.includes('R-b'));
 
 harness.equal(
 	'EVIDENCE_CONTRACTS declares exactly the six contracts',

@@ -42,17 +42,27 @@
 
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
-const RENDERER_VERSION = 'evidenceRenderer-v1';
+// RENDERER_VERSION bumped v1 -> v2: BASE_ABSTAIN_FIRST_INSTRUCTION's text changed (the R-a real-run
+// fix's belt-and-suspenders addition, below) — a prompt-render change silently changes picks and MUST
+// be legible as a generation change (⟪A2⟫/⟪A6⟫; this is exactly what the version field is for).
+const RENDERER_VERSION = 'evidenceRenderer-v2';
 
 // BASE_ABSTAIN_FIRST_INSTRUCTION — composition order slot 1 (RENDERER_COMPOSITION_ORDER[0]), a fixed
 // constant, the SAME abstain-first discipline lib.d/selector.js's SYSTEM_PROMPT states for the scalar
 // path, restated for a judge that weighs MULTIPLE evidence blocks per candidate rather than one line.
+// ⟪R-a REAL-RUN FIX, 2026-07-30⟫ BELT + SUSPENDERS: a live LIF --rebridge against real Opus omitted the
+// tool call's rationale for a pick (llmClient.js's request now REQUIRES it — see that file's own header
+// for the primary fix); this second sentence presses the SAME requirement at the prompt-text level too,
+// so the instruction and the tool schema agree rather than relying on the schema alone.
 const BASE_ABSTAIN_FIRST_INSTRUCTION =
 	'You are weighing ALL of the evidence below to judge whether ONE candidate is the correct match. ' +
 	'Judge by the evidence as a whole — the tuple facts, any notes, and any nomination rationale — not ' +
 	'by surface wording. Choose the single candidate the evidence, taken together, supports. If no ' +
 	'candidate is genuinely supported by the evidence, abstain (choose NONE). Prefer NONE over a weak ' +
-	'or merely-related match.';
+	'or merely-related match. When you choose a candidate, you MUST ALSO report a discrete confidence ' +
+	'category (strong, moderate, or weakButReal) and a one-sentence rationale for that specific choice — ' +
+	'never omit them for a pick. When you abstain (NONE), give a short rationale for why nothing is ' +
+	'genuinely supported.';
 
 const round6 = (n) => Math.round(n * 1e6) / 1e6;
 

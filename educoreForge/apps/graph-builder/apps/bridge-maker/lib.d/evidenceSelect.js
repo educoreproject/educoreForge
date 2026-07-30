@@ -80,7 +80,13 @@ const moduleFunction =
 				return;
 			}
 			const choiceEnum = pool.map((oneEntry, idx) => `${idx + 1}`).concat(['NONE']);
-			llmClient.rerank({ systemPrompt: EVIDENCE_SELECT_SYSTEM_PROMPT, userPrompt: promptText, choiceEnum }, (err, result) => {
+			// ⟪R-a REAL-RUN FIX, 2026-07-30⟫ requireJudgment: true on EVERY call — requests
+			// lib/llmClient.js's EVIDENCE tool-schema variant (category+rationale REQUIRED), not the scalar
+			// default. This module remains the ENFORCER of "a pick without a rationale is refused" (the
+			// check just below, unchanged) — requireJudgment only makes the underlying API REQUEST press
+			// the model harder to comply; it does not move or duplicate the refusal itself (see
+			// llmClient.js's own header for the full "which layer enforces" disposition).
+			llmClient.rerank({ systemPrompt: EVIDENCE_SELECT_SYSTEM_PROMPT, userPrompt: promptText, choiceEnum, requireJudgment: true }, (err, result) => {
 				if (err) {
 					callback(`${moduleName}: llmClient.rerank failed: ${err}`);
 					return;
