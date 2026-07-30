@@ -35,6 +35,25 @@
 //                             componentLibrary hands producers `library.inferredIndex` today.
 //     kit.decisionStore / kit.rebridge / kit.config — the per-run inferred inputs, passed straight through.
 //
+// ⟪P3 ADDITIONS⟫ bridgeEvidenceRefactor-spec.md §7 P3 kit wiring — the evidence path's six new members,
+// unconditionally built (none of them needs an llmClient AT CONSTRUCTION — see evidenceSelect's own
+// header for why that differs from kit.selector):
+//     kit.cedsHubModule     — lib.d/cedsHubModule({}), the REAL CEDS hub module (R5): (candidate,
+//                             callback(err, baseTupleEvidence)).
+//     kit.evidenceRenderer  — lib.d/evidenceRenderer(), the named pure renderer: { render, RENDERER_VERSION }.
+//     kit.evidenceSelect    — lib.d/evidenceSelect({ renderer: kit.evidenceRenderer }), the evidence-
+//                             based judge (SIBLING of kit.selector, not built from it). llmClient rides
+//                             the CALL signature (⟪TQ RULING⟫/SELECT_SHAPE), not construction, so this
+//                             is built on EVERY kit regardless of inferenceConfig.llmClient.
+//     kit.confidenceNormalizer — lib.d/confidenceNormalizer(), the deterministic f(category, cosine, context).
+//     kit.evidenceComposer  — lib.d/evidenceComposer (THIN WRAPPER over lib/evidenceComposer.js),
+//                             UNINSTANTIATED — a bare factory, exactly like kit.materializer: a
+//                             producer composes it with its OWN per-run { semanticMatcher, nominate,
+//                             walk, dependencies } (recipe/standard-specific, never generic across a
+//                             whole kit build).
+//     kit.evidenceFreezer   — lib.d/evidenceFreezer (THIN WRAPPER over lib/evidenceFreezer.js), a
+//                             no-arg FACTORY invoked here exactly like kit.decisionFreezer.
+//
 // Construction is SYNCHRONOUS; a wiring fault THROWS (matching componentLibrary's own construction-
 // time invariants: relationshipWriterFactory/decisionFreezerFactory etc. all throw at construction,
 // never three steps into a run) rather than surfacing as a mid-run crash.
@@ -56,6 +75,13 @@ const EXPECTED_KIT_MODULES = [
 	'decisionFreezer',
 	'materializer',
 	'candidateFinder',
+	// ⟪P3 ADDITIONS⟫ bridgeEvidenceRefactor-spec.md §7 — the evidence path's six new kit members.
+	'cedsHubModule',
+	'evidenceRenderer',
+	'evidenceSelect',
+	'confidenceNormalizer',
+	'evidenceComposer',
+	'evidenceFreezer',
 ];
 
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
@@ -171,6 +197,18 @@ const buildKit = (
 	// UNINSTANTIATED — a producer composes inferredIndex with its own mapping options per run,
 	// exactly as componentLibrary hands producers `library.inferredIndex` as a bare factory today.
 	kit.materializer = requireKitModule(libDDir, 'materializer');
+
+	// ⟪P3 ADDITIONS⟫ bridgeEvidenceRefactor-spec.md §7 — the evidence path, unconditionally built
+	// (see the file header's ⟪P3 ADDITIONS⟫ note for why none of these needs inferenceConfig.llmClient
+	// at construction the way kit.selector does).
+	kit.cedsHubModule = requireKitModule(libDDir, 'cedsHubModule')();
+	kit.evidenceRenderer = requireKitModule(libDDir, 'evidenceRenderer')();
+	kit.evidenceSelect = requireKitModule(libDDir, 'evidenceSelect')({ renderer: kit.evidenceRenderer });
+	kit.confidenceNormalizer = requireKitModule(libDDir, 'confidenceNormalizer')();
+	// bare, UNINSTANTIATED — a producer composes it with its own per-run spec (mirrors kit.materializer).
+	kit.evidenceComposer = requireKitModule(libDDir, 'evidenceComposer');
+	// invoked — a no-arg factory, exactly like kit.decisionFreezer (see lib.d/evidenceFreezer.js's wrapper header).
+	kit.evidenceFreezer = requireKitModule(libDDir, 'evidenceFreezer')();
 
 	return kit;
 };

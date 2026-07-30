@@ -184,6 +184,63 @@ harness.section('GREEN — buildKit() against the REAL lib.d/ produces every dec
 		inferenceConfig: { llmClient: stubLlm, topK: 10, cosineFloor: 0.5 },
 	});
 	harness.equal('llmClient injected -> kit.selector.selectFromPool is a function', typeof rebridgeKit.selector.selectFromPool, 'function');
+})();
+
+// =====================================================================
+harness.section('⟪P3⟫ GREEN — the evidence path\'s six new kit members, correctly shaped');
+// =====================================================================
+(() => {
+	const graphWriterDouble = { writeRelationshipEdge: (spec, cb) => cb('', { edgeWritten: true }) };
+	const graphReaderDouble = () => ({ readNodes: (spec, cb) => cb('', { nodes: [] }), close: (cb) => cb('') });
+	const fakeVectorizerFactory = () => ({ batchEmbed: ({ texts }, cb) => cb('', { vectors: (texts || []).map(() => null) }) });
+
+	const kit = kitLoader.buildKit({
+		inGraph: { graphName: 'DEV_probe', boltUrl: 'bolt://x', password: 'x' },
+		graphWriter: graphWriterDouble,
+		edgePolicy,
+		componentOverrides: { graphReader: graphReaderDouble, vectorizer: fakeVectorizerFactory },
+	});
+
+	harness.equal('kit.cedsHubModule is a function (candidate, callback), arity 2', kit.cedsHubModule.length, 2);
+	harness.equal('kit.evidenceRenderer.render is a function', typeof kit.evidenceRenderer.render, 'function');
+	harness.equal(
+		'kit.evidenceRenderer.RENDERER_VERSION is a non-empty string',
+		typeof kit.evidenceRenderer.RENDERER_VERSION === 'string' && !!kit.evidenceRenderer.RENDERER_VERSION.trim(),
+		true,
+	);
+	harness.equal('kit.evidenceSelect is a function (renderedPromptOrPackage, llmClient, callback), arity 3', kit.evidenceSelect.length, 3);
+	harness.equal('kit.confidenceNormalizer is a function (category, cosine, context, callback), arity 4', kit.confidenceNormalizer.length, 4);
+	harness.equal(
+		'kit.evidenceComposer travels UNINSTANTIATED (a bare factory, like kit.materializer)',
+		typeof kit.evidenceComposer,
+		'function',
+	);
+	harness.equal('kit.evidenceComposer IS the real lib/evidenceComposer.js factory', kit.evidenceComposer, require('../lib/evidenceComposer'));
+	harness.equal('kit.evidenceFreezer.freeze is a function (invoked factory, like kit.decisionFreezer)', typeof kit.evidenceFreezer.freeze, 'function');
+	harness.equal('kit.evidenceFreezer.parse is a function', typeof kit.evidenceFreezer.parse, 'function');
+
+	// a composed candidate -> a conforming BaseTupleEvidence, verified against the REAL contract oracle.
+	const { hubModulePresentationViolation } = require('../lib/evidenceContracts');
+	let hubObserved = null;
+	kit.cedsHubModule(
+		{
+			referenceTier: 'property',
+			canonicalKey: 'P000104',
+			propertyKey: 'P000104',
+			name: 'Staff Evaluation Score or Rating',
+			domainId: 'C200366',
+			rangeDatatype: 'string',
+		},
+		(err, presentation) => {
+			hubObserved = { err, presentation };
+		},
+	);
+	harness.equal('kit.cedsHubModule calls back with no error for a conforming candidate', hubObserved.err, '');
+	harness.equal(
+		'kit.cedsHubModule\'s presentation passes the REAL hubModulePresentationViolation oracle',
+		hubModulePresentationViolation(hubObserved.presentation),
+		'',
+	);
 
 	harness.report();
 })();
