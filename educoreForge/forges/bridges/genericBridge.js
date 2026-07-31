@@ -379,9 +379,22 @@ module.exports = (injectedTools = {}) =>
 			);
 			return;
 		}
-		// THE CASE RULE (lib.d/sourceWalker.js): the recipe token is lowercase; forged `_source` is
-		// uppercase. Read and stamp by the uppercase key.
-		const sourceStandardKey = sourceStandard.toUpperCase();
+		// THE EXACT-NAME RULE (supersedes THE CASE RULE, 2026-07-31 — the bronze build's second
+		// case-mismatch casualty in one night): the forged `_source` carries the bundle's DECLARED
+		// standardName VERBATIM, and it is NOT always the uppercased token — OpenBadges/EduAPI/JEDx/
+		// MedBiquitous all stamp mixed case, so toUpperCase matched ZERO nodes and this bridge silently
+		// judged 0/0 per pair and froze EMPTY blocks as success. build.js resolves the declared name
+		// from parserDescriptor.ini (forger.resolveBundle) and passes config.sourceStandardName; this
+		// bridge requires it and matches EXACTLY — refuse-by-name, no default, no normalization.
+		const sourceStandardKey = config.sourceStandardName;
+		if (typeof sourceStandardKey !== 'string' || sourceStandardKey.trim() === '') {
+			callback(
+				`${MAPPING_TOOL}: config.sourceStandardName is not set — the EXACT declared standardName ` +
+					`(parserDescriptor.ini) is required for _source matching; the recipe token's case is not ` +
+					`trustworthy (OpenBadges != OPENBADGES). There is no default.`,
+			);
+			return;
+		}
 		const subjectVersion = config.sourceVersion || '';
 		const objectVersion = config.hubVersion || '';
 		const role = config.role || DEFAULT_ROLE;
@@ -525,10 +538,29 @@ module.exports = (injectedTools = {}) =>
 			const taskList = new taskListPlus();
 
 			// WALK — the source standard's FULL elements (spec §5 retrieval-enrichment reversal).
+			// ZERO SOURCES IS A REFUSAL (2026-07-31): the bronze build's four mixed-case pairs each
+			// judged 0/0 and froze an EMPTY block as green — a recipe named this pair, so an empty
+			// harvest means the name is wrong or the dependency graph is; refuse BY NAME, never
+			// materialize silence.
 			taskList.push((args, next) =>
-				kit.sourceWalker.walk({ standard: sourceStandardKey, role, flatten: flattenFullRecord }, (err, out) =>
-					next(err, { ...args, sourceNodes: out && out.sourceNodes }),
-				),
+				kit.sourceWalker.walk({ standard: sourceStandardKey, role, flatten: flattenFullRecord }, (err, out) => {
+					if (err) {
+						next(err, args);
+						return;
+					}
+					const sourceNodes = (out && out.sourceNodes) || [];
+					if (sourceNodes.length === 0) {
+						next(
+							`${MAPPING_TOOL}: found ZERO ${role} nodes with _source '${sourceStandardKey}' in the ` +
+								`dependency graph — the named source standard is absent (wrong sourceStandardName, or ` +
+								`the recipe's dependencies do not include it). An empty source set is refused, never ` +
+								`frozen as an empty block.`,
+							args,
+						);
+						return;
+					}
+					next('', { ...args, sourceNodes });
+				}),
 			);
 			// the FULL CEDS HubReference candidate elements (R5's base evidence source, all tiers).
 			taskList.push((args, next) =>

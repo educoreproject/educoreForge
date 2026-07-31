@@ -109,8 +109,14 @@ const moduleFunction =
 				);
 				return;
 			}
-			// THE CASE RULE: the recipe token is lowercase ('ctdl'); forged _source is uppercase ('CTDL').
-			const standardKey = standard.toUpperCase();
+			// THE EXACT-NAME RULE (supersedes THE CASE RULE here, 2026-07-31): the caller passes the
+			// DECLARED standardName VERBATIM and it is matched EXACTLY — never uppercased. The old rule
+			// ('recipe token lowercase, forged _source uppercase') was FALSE for four of the ten bronze
+			// pairs (OpenBadges/EduAPI/JEDx/MedBiquitous stamp mixed-case _source): toUpperCase matched
+			// ZERO nodes and genericBridge silently judged 0/0 per pair. One canonical source
+			// (parserDescriptor.ini's standardName, threaded via config.sourceStandardName), exact match
+			// at the comparison site, no normalization.
+			const standardKey = standard;
 			graphReader.readNodes(
 				{ label: 'ForgedNode', propertyEquals: { _source: standardKey, role } },
 				(err, out) => {

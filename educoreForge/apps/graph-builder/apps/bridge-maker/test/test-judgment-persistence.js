@@ -265,7 +265,7 @@ const fakeVectorizerFactory = () => ({
 	batchEmbed: ({ texts }, cb) => cb('', { vectors: (texts || []).map((t) => textVectors[t] || null) }),
 });
 
-const runConfigBase = { sourceStandard: 'lif', sourceVersion: 'v1', hubVersion: 'v14.0.0.0' };
+const runConfigBase = { sourceStandard: 'lif', sourceStandardName: 'LIF', sourceVersion: 'v1', hubVersion: 'v14.0.0.0' };
 
 // runPersistencePass — one REBRIDGE through the REAL bridgeMaker.run with a REAL judgment cache
 // (and optionally a REAL forensics writer) wired in exactly as build.js wires them.
@@ -467,7 +467,7 @@ const runPartE = () => {
 	(() => {
 		const genericBridgeFactory = require(path.join(TREE_ROOT, 'forges', 'bridges', 'genericBridge'));
 		const noopKit = {
-			config: { sourceStandard: 'lif', judgmentKey: 'notAFunction' },
+			config: { sourceStandard: 'lif', sourceStandardName: 'LIF', judgmentKey: 'notAFunction' },
 			decisionStore: { getDecisionBlock: (a, cb) => cb('', { frozenText: null }), saveDecisionBlock: (a, cb) => cb('') },
 			rebridge: false,
 			graphReader: { readNodes: (s, cb) => cb('', { nodes: [] }), close: (cb) => cb('') },

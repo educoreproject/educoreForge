@@ -446,7 +446,7 @@ harness.section('THE DEFAULT GENERIC PLUGIN — genericBridge (Phase 2, forges/b
 			hub: 'ceds',
 			applyLabel: 'BridgedRelation',
 			decisionStore: emptyDecisionStore,
-			config: { sourceStandard: 'lif' },
+			config: { sourceStandard: 'lif', sourceStandardName: 'LIF' },
 		},
 		(err, result) => {
 			observed = { err, result };

@@ -99,7 +99,7 @@ const noBlockDecisionStore = {
 // runMaterialize returns before any of these stub members actually do meaningful work). Each RED case
 // below starts from this and breaks EXACTLY one thing.
 const baseKit = (overrides = {}) => ({
-	config: { sourceStandard: 'lif' },
+	config: { sourceStandard: 'lif', sourceStandardName: 'LIF' },
 	decisionStore: noBlockDecisionStore,
 	rebridge: false,
 	graphReader: noopGraphReader,
@@ -224,7 +224,7 @@ const BASE_ARGS = { inGraph: { graphName: 'DEV_probe' }, hub: 'ceds', applyLabel
 // ---- RED #9 — config.evidenceJudgeConcurrency malformed (p8-judgeConcurrency's one new refusal) ----
 (() => {
 	let observed = null;
-	runDirect({ kit: baseKit({ config: { sourceStandard: 'lif', evidenceJudgeConcurrency: 2.5 } }) }, BASE_ARGS, (err) => { observed = err; });
+	runDirect({ kit: baseKit({ config: { sourceStandard: 'lif', sourceStandardName: 'LIF', evidenceJudgeConcurrency: 2.5 } }) }, BASE_ARGS, (err) => { observed = err; });
 	harness.rejects(
 		'RED: a non-positive-integer config.evidenceJudgeConcurrency is refused by name',
 		[observed],
@@ -290,7 +290,7 @@ const fakeVectorizerFactory = () => ({
 	batchEmbed: ({ texts }, cb) => cb('', { vectors: (texts || []).map((t) => textVectors[t] || null) }),
 });
 
-const runConfig = { sourceStandard: 'lif', sourceVersion: 'v1', hubVersion: 'v14.0.0.0' };
+const runConfig = { sourceStandard: 'lif', sourceStandardName: 'LIF', sourceVersion: 'v1', hubVersion: 'v14.0.0.0' };
 
 // stubLlm — a HERMETIC double of the R-a-wired live llmClient: returns {choice, category, rationale}
 // exactly as the real Anthropic tool call now does. Distinguishes s1 from s2 by the retrieval-cosine

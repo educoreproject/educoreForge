@@ -432,7 +432,7 @@ const BASE_ARGS6 = { inGraph: { graphName: 'DEV_probe' }, hub: 'ceds', applyLabe
 // ---- THIS BRIDGE'S OWN new refusal — a source standard other than CASE ----
 (() => {
 	let observed = null;
-	runDirect6({ kit: baseKit6({ config: { sourceStandard: 'lif' } }) }, BASE_ARGS6, (err) => { observed = err; });
+	runDirect6({ kit: baseKit6({ config: { sourceStandard: 'lif', sourceStandardName: 'LIF' } }) }, BASE_ARGS6, (err) => { observed = err; });
 	harness.rejects(
 		`RED (new to this bridge): source standard other than ${SOURCE_STANDARD} is refused by name`,
 		[observed],

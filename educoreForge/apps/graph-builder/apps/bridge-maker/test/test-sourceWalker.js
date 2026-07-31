@@ -125,12 +125,12 @@ harness.section('GREEN — THE CASE RULE + default flatten (subject-standard rea
 	const reader = graphReaderDouble();
 	const walker = sourceWalkerFactory({ graphReader: reader });
 	let observed = null;
-	// lowercase recipe token 'lif' -> must upcase to 'LIF' when reading (THE CASE RULE).
-	walker.walk({ standard: 'lif' }, (err, out) => {
+	// THE EXACT-NAME RULE (2026-07-31): the caller passes the DECLARED standardName VERBATIM ('LIF').
+	walker.walk({ standard: 'LIF' }, (err, out) => {
 		observed = { err, out };
 	});
 	harness.ok('walk() did not error', observed && !observed.err, observed && observed.err);
-	harness.equal('read by the UPPERCASE _source (the case rule)', reader.readCalls[0].propertyEquals._source, 'LIF');
+	harness.equal('read by the EXACT declared _source (the exact-name rule)', reader.readCalls[0].propertyEquals._source, 'LIF');
 	harness.equal('default role is DmeProperty', reader.readCalls[0].propertyEquals.role, 'DmeProperty');
 	harness.equal('exactly 1 flattened source node', observed.out.sourceNodes.length, 1);
 	harness.equal('stableId carried through', observed.out.sourceNodes[0].stableId, 's1');
@@ -145,7 +145,7 @@ harness.section('GREEN — candidate-tier read via the injected flattenCandidate
 	const reader = graphReaderDouble();
 	const walker = sourceWalkerFactory({ graphReader: reader });
 	let observed = null;
-	walker.walk({ standard: 'ceds', flatten: sourceWalkerFactory.flattenCandidateRecord }, (err, out) => {
+	walker.walk({ standard: 'CEDS', flatten: sourceWalkerFactory.flattenCandidateRecord }, (err, out) => {
 		observed = { err, out };
 	});
 	harness.ok('walk() did not error', observed && !observed.err, observed && observed.err);
@@ -160,7 +160,7 @@ harness.section('GREEN — flattenFullRecord (spec §5 retrieval-enrichment reve
 	const reader = graphReaderDouble();
 	const walker = sourceWalkerFactory({ graphReader: reader });
 	let observed = null;
-	walker.walk({ standard: 'ceds', role: 'HubReference', flatten: sourceWalkerFactory.flattenFullRecord }, (err, out) => {
+	walker.walk({ standard: 'CEDS', role: 'HubReference', flatten: sourceWalkerFactory.flattenFullRecord }, (err, out) => {
 		observed = { err, out };
 	});
 	harness.ok('walk() did not error', observed && !observed.err, observed && observed.err);
@@ -192,7 +192,7 @@ harness.section('COEXISTENCE — flattenFullRecord is opt-in ONLY: the default w
 	let observed = null;
 	// same call as the very first GREEN section above (default flatten, no override) — proves adding
 	// flattenFullRecord to this module did not perturb the existing default path in any way.
-	walker.walk({ standard: 'lif' }, (err, out) => {
+	walker.walk({ standard: 'LIF' }, (err, out) => {
 		observed = { err, out };
 	});
 	harness.ok('walk() did not error', observed && !observed.err, observed && observed.err);

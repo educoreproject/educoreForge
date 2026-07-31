@@ -307,7 +307,7 @@ harness.note('nowhere else. interfaces.js says so in the same words.');
 			hub: 'ceds',
 			applyLabel: 'ProbeEdge',
 			decisionStore: noBlockDecisionStore,
-			config: { sourceStandard: 'lif' },
+			config: { sourceStandard: 'lif', sourceStandardName: 'LIF' },
 		},
 		(err, result) => {
 			observed = { err, result };

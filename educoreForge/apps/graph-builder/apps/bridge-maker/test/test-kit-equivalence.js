@@ -140,12 +140,12 @@ const walker = sourceWalkerFactory({ graphReader: graphReaderDouble });
 
 const taskList = new taskListPlus();
 taskList.push((args, next) =>
-	walker.walk({ standard: 'lif', role: 'DmeProperty' }, (err, out) =>
+	walker.walk({ standard: 'LIF', role: 'DmeProperty' }, (err, out) =>
 		next(err, { ...args, srcs: out && out.sourceNodes }),
 	),
 );
 taskList.push((args, next) =>
-	walker.walk({ standard: 'ceds', role: 'DmeProperty', flatten: sourceWalkerFactory.flattenCandidateRecord }, (err, out) =>
+	walker.walk({ standard: 'CEDS', role: 'DmeProperty', flatten: sourceWalkerFactory.flattenCandidateRecord }, (err, out) =>
 		next(err, { ...args, cand: out && out.sourceNodes }),
 	),
 );
