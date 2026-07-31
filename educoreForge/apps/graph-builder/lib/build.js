@@ -748,6 +748,11 @@ const build = (recipe, deps, callback) => {
 					matchForensics,
 					inferenceConfig,
 					config: {
+						// bridges[].params — DE-VESTIGIALIZED (2026-07-31, the SIF StudentPersonal trial):
+						// a recipe's bridge entry may now carry bridge-specific options (e.g. the SIF
+						// bridge's sifObjectScope) and they reach the producer as config keys. Spread FIRST
+						// so the orchestrator-owned keys below always win over a recipe collision.
+						...(bridge.params || {}),
 						sourceStandard: bridge.source,
 						sourceStandardName: sourceBundle.standardName,
 						sourceVersion: resolvedVersionByToken[bridge.source],

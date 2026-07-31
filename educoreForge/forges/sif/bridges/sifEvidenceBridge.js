@@ -319,6 +319,43 @@ const sequenceNeighborNamesDescription = (sourceElement, siblingNodes) => {
 // same recall cap). Mirrors CASE's own CASE_NOMINATION_TOPK discipline: nominate, do not flood.
 const SIF_NOMINATION_TOPK = 10;
 
+// =====================================================================
+// applySifObjectScope — the TRIAL-SCOPE seam (TQ ruling 2026-07-31: "bridge the SIF StudentPersonals
+// object as a trial... so that we can build the rest without redoing it"). config.sifObjectScope
+// (recipe bridges[].params.sifObjectScope, threaded by build.js) names the owning SIF OBJECTS whose
+// fields this run judges — a field's owner is its xpath's second segment
+// ('/StudentPersonals/StudentPersonal/...' -> 'StudentPersonal'). Absent scope = every field (the
+// full-SIF default, unchanged). WHY THE TRIAL COSTS NOTHING LATER: every scoped judgment lands in
+// the judgment cache under its promptHash, and the eventual FULL run re-renders byte-identical
+// prompts and replays them free — the scope changes WHICH sources are judged now, never HOW any
+// source is judged (quality untouchable). Refuse-by-value: a malformed scope, or a scope matching
+// ZERO fields, is refused BY NAME — never a silent empty run (the CASE-RULE lesson, same night).
+// =====================================================================
+const applySifObjectScope = (sourceNodes, config) => {
+	const scope = config.sifObjectScope;
+	if (scope === undefined || scope === null) {
+		return { sourceNodes };
+	}
+	if (!Array.isArray(scope) || scope.length === 0 || scope.some((oneName) => typeof oneName !== 'string' || oneName.trim() === '')) {
+		return {
+			error:
+				`${MAPPING_TOOL}: config.sifObjectScope must be a non-empty array of non-empty object names ` +
+				`(got ${JSON.stringify(scope)}) — omit it entirely to judge every SIF field.`,
+		};
+	}
+	const scopeSet = new Set(scope);
+	const scoped = sourceNodes.filter((oneNode) => scopeSet.has(String(oneNode.xpath || '').split('/')[2]));
+	if (scoped.length === 0) {
+		return {
+			error:
+				`${MAPPING_TOOL}: config.sifObjectScope ${JSON.stringify(scope)} matched ZERO fields — the named ` +
+				`object(s) do not exist in the forged SIF asset (owner = xpath's second segment, e.g. ` +
+				`'StudentPersonal'). An empty scoped run is refused, never judged as silence.`,
+		};
+	}
+	return { sourceNodes: scoped, scopedFrom: sourceNodes.length };
+};
+
 // sifNominate — evidenceComposer's NOMINATE contract: ({ sourceElement, candidateElements },
 // callback(errString, [{candidate, nominatedBy, rationale}, ...])).
 const sifNominate = ({ sourceElement, candidateElements } = {}, callback) => {
@@ -758,9 +795,14 @@ module.exports = (injectedTools = {}) =>
 
 				const taskList = new taskListPlus();
 				taskList.push((args, next) =>
-					kit.sourceWalker.walk({ standard: sourceStandardKey, role, flatten: flattenFullRecord }, (err, out) =>
-						next(err, { ...args, sourceNodes: out && out.sourceNodes }),
-					),
+					kit.sourceWalker.walk({ standard: sourceStandardKey, role, flatten: flattenFullRecord }, (err, out) => {
+						if (err) {
+							next(err, args);
+							return;
+						}
+						const scopedOut = applySifObjectScope((out && out.sourceNodes) || [], config);
+						next(scopedOut.error || '', { ...args, sourceNodes: scopedOut.sourceNodes });
+					}),
 				);
 				taskList.push((args, next) => readReferenceNodes((err, nodes) => next(err, { ...args, referenceNodes: nodes })));
 				taskList.push((args, next) => {
@@ -808,9 +850,22 @@ module.exports = (injectedTools = {}) =>
 			const taskList = new taskListPlus();
 
 			taskList.push((args, next) =>
-				kit.sourceWalker.walk({ standard: sourceStandardKey, role, flatten: flattenFullRecord }, (err, out) =>
-					next(err, { ...args, sourceNodes: out && out.sourceNodes }),
-				),
+				kit.sourceWalker.walk({ standard: sourceStandardKey, role, flatten: flattenFullRecord }, (err, out) => {
+					if (err) {
+						next(err, args);
+						return;
+					}
+					const scopedOut = applySifObjectScope((out && out.sourceNodes) || [], config);
+					if (!scopedOut.error && scopedOut.scopedFrom !== undefined) {
+						const { xLog } = process.global;
+						xLog.status(
+							`[${MAPPING_TOOL}] sifObjectScope ${JSON.stringify(config.sifObjectScope)}: judging ` +
+								`${scopedOut.sourceNodes.length} of ${scopedOut.scopedFrom} fields (trial scope; the ` +
+								`full run replays these free from the judgment cache)`,
+						);
+					}
+					next(scopedOut.error || '', { ...args, sourceNodes: scopedOut.sourceNodes });
+				}),
 			);
 			taskList.push((args, next) =>
 				readReferenceNodes((err, nodes) =>
@@ -1087,3 +1142,5 @@ module.exports.sifWalk = sifWalk;
 // for the real-asset key-count measurement (test-sif-judgment-dedupe.js).
 module.exports.sifJudgmentKey = sifJudgmentKey;
 module.exports.SIF_FIELD_GROUP_KEY_PATTERN = SIF_FIELD_GROUP_KEY_PATTERN;
+// the trial-scope seam (TQ ruling 2026-07-31), exported for the unit test ONLY.
+module.exports.applySifObjectScope = applySifObjectScope;
