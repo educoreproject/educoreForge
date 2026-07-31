@@ -289,10 +289,21 @@ harness.ok(
 // THE PIPELINE IS GENUINELY ENTERED, AND GENUINELY WIRED TO THE REAL COMPONENTS. An un-ported
 // standard passes both gating layers, reaches phase A, and is refused BY THE REAL FORGER, by name,
 // before any docker command is attempted -- which is why this case can run here at all.
+// ⟪P9⟫ every -build in this suite OVERRIDES the judgment-cache/forensics paths into the scratch
+// directory: their documented defaults are the CANONICAL dataStores homes (default ON is the whole
+// point in production), and a hermetic suite must never write into the shared production stores.
+const scratchJudgmentCache = path.join(scratchDir, `cliGate_${process.pid}.judgments.sqlite3`);
+const scratchForensicsDir = path.join(scratchDir, 'matchForensics');
+const p9ScratchArgs = [
+	'--judgmentCacheFilePath=' + scratchJudgmentCache,
+	'--matchForensicsDirPath=' + scratchForensicsDir,
+];
+
 const buildUnforged = runCli([
 	'-build',
 	'--recipePath=' + fixture('bad-unforgedStandard'),
 	'--standardsDatabaseFilePath=' + scratchStore,
+	...p9ScratchArgs,
 ]);
 harness.equal('a recipe naming an un-forged standard reaches the pipeline and fails', buildUnforged.status, 1);
 harness.match(
@@ -321,6 +332,28 @@ harness.ok(
 	fs.existsSync(derivedDecisionStore),
 	`no decision store at ${derivedDecisionStore}`,
 );
+// ⟪P9⟫ WIRING: actions.build() also opens the judgment cache (decided = persisted) and threads it
+// into the pipeline — the db existing at the OVERRIDE path is the same proof the decisionStore
+// check above makes, for the P9 store.
+harness.ok(
+	'  the JUDGMENT CACHE was opened at its override path, so the P9 checkpoint store reached the pipeline',
+	fs.existsSync(scratchJudgmentCache),
+	`no judgment cache at ${scratchJudgmentCache}`,
+);
+harness.match('  and the run announced it', buildUnforged.stderr, /judgment cache at .*cliGate_.*\.judgments\.sqlite3/);
+harness.match('  and announced the forensic match log too', buildUnforged.stderr, /forensic match log at /);
+
+// ⟪P9⟫ the '=false' DISABLE path: both stores off, the run still proceeds to the forge refusal.
+const buildP9Disabled = runCli([
+	'-build',
+	'--recipePath=' + fixture('bad-unforgedStandard'),
+	'--standardsDatabaseFilePath=' + scratchStore,
+	'--judgmentCacheFilePath=false',
+	'--matchForensicsDirPath=false',
+]);
+harness.equal("--judgmentCacheFilePath=false / --matchForensicsDirPath=false still reach the forge refusal (disable is a mode, not a fault)", buildP9Disabled.status, 1);
+harness.match('  and the run says the judgment cache is DISABLED', buildP9Disabled.stderr, /judgment cache DISABLED/);
+harness.match('  and the forensic log is DISABLED', buildP9Disabled.stderr, /forensic match log DISABLED/);
 harness.ok(
 	'stdout carries no progress chatter (a pipeline could consume it)',
 	!/\[A\]|\[C\]|recipe understood/.test(buildUnforged.stdout),
@@ -334,6 +367,7 @@ const buildWithOverride = runCli([
 	'--recipePath=' + fixture('bad-unforgedStandard'),
 	'--standardsDatabaseFilePath=' + scratchStore,
 	'--decisionStoreFilePath=' + overrideDecisionStore,
+	...p9ScratchArgs,
 ]);
 harness.equal('a build with an explicit --decisionStoreFilePath still reaches the forge refusal', buildWithOverride.status, 1);
 harness.ok(
@@ -412,6 +446,7 @@ const buildVecArgs = (vectorizeArg) =>
 		'-build',
 		'--recipePath=' + fixture('bad-unforgedStandard'),
 		'--standardsDatabaseFilePath=' + vectorizeStore,
+		...p9ScratchArgs, // ⟪P9⟫ never the canonical dataStores homes from a hermetic suite
 	].concat(vectorizeArg ? [vectorizeArg] : []);
 
 const buildVecInvalid = runCli(buildVecArgs('--vectorize=no'));

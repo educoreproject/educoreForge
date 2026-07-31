@@ -277,6 +277,11 @@ const moduleFunction =
 				// the NET seam — the suite passes { vectorizer: fakeFactory } so the semantic producer's
 				// rebridge path runs with fixture vectors and no Voyage call (§3 hard line 2).
 				componentOverrides = {},
+				// ⟪P9, p9-judgmentPersistence 2026-07-31⟫ the two persistence resources the evidence
+				// bridges consume via the kit (see kitLoader.js's own P9 note): the shared judgment
+				// cache (decided = persisted) and the forensic match log. Both optional; null disables.
+				judgmentCache = null,
+				matchForensics = null,
 			},
 			callback,
 		) => {
@@ -358,6 +363,8 @@ const moduleFunction =
 					rebridge,
 					inferenceConfig,
 					componentOverrides,
+					judgmentCache,
+					matchForensics,
 				});
 			} catch (kitBuildError) {
 				graphWriter.close((closeError) => {

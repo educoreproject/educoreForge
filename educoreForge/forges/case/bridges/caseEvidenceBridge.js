@@ -94,6 +94,17 @@ const sourceWalkerModule = require(
 );
 const flattenFullRecord = sourceWalkerModule.flattenFullRecord;
 
+// ⟪P9, p9-judgmentPersistence 2026-07-31⟫ cachedJudgment — the judgment-persistence seam (same
+// three-level climb). EVERY evidence bridge's per-source judgment routes through it: cache check
+// before any API call, decided = persisted before downstream use, one forensic record per
+// judgment. With kit.judgmentCache/kit.matchForensics absent (this bridge's hermetic suite), it is
+// the byte-identical original kit.evidenceSelect call. This bridge does NOT opt into the P9
+// structural dedupe (no judgmentKey hook — CASE's stableId-borne structure is per-source identity,
+// not shared plumbing); genericBridge.js/sifEvidenceBridge.js carry that seam.
+const cachedJudgment = require(
+	path.join(__dirname, '..', '..', '..', 'apps', 'graph-builder', 'apps', 'bridge-maker', 'lib', 'cachedJudgment'),
+);
+
 // candidateKeyFor — REUSED from lib/evidenceComposer.js, not reimplemented: the walk hook below keys
 // perCandidateNotes by the SAME identity the composer itself uses to look them back up when assembling
 // the evidence package (stableId || canonicalKey || cedsId || valueKey || name) — a locally-invented key
@@ -593,6 +604,16 @@ module.exports = (injectedTools = {}) =>
 				dependencies: composerDependencies,
 			});
 			const llmClient = kit.inferenceConfig.llmClient;
+			// ⟪P9⟫ the persistence-seamed judge (see the cachedJudgment require note above).
+			const judgeOne = cachedJudgment({
+				judgmentCache: kit.judgmentCache || null,
+				matchForensics: kit.matchForensics || null,
+				pairKey,
+				generation: EVIDENCE_GENERATION,
+				rendererVersion: kit.evidenceRenderer.RENDERER_VERSION,
+				evidenceSelect: kit.evidenceSelect,
+				llmClient,
+			});
 
 			const taskList = new taskListPlus();
 
@@ -639,11 +660,14 @@ module.exports = (injectedTools = {}) =>
 										n2(`${MAPPING_TOOL}: rendering evidence for ${oneSource.stableId}: ${renderErr}`);
 										return;
 									}
-									kit.evidenceSelect({ promptText, pool: evidencePackage.pool }, llmClient, (selectErr, selectResult) => {
+									// ⟪P9⟫ through the persistence seam: cache check first, decided = persisted,
+									// one forensic record — byte-identical to the direct call when both are off.
+									judgeOne({ promptText, pool: evidencePackage.pool, sourceStableId: oneSource.stableId, sourceName: oneSource.name }, (selectErr, judged) => {
 										if (selectErr) {
 											n2(`${MAPPING_TOOL}: selecting for ${oneSource.stableId}: ${selectErr}`);
 											return;
 										}
+										const selectResult = judged.selectResult;
 										const bestCosine = evidencePackage.pool.length ? evidencePackage.pool[0].cosine : -1;
 										const chosenEntry = selectResult.abstain
 											? null

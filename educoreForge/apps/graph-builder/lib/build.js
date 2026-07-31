@@ -390,6 +390,13 @@ const build = (recipe, deps, callback) => {
 	// authored-only build (the authored producer ignores both). A semantic bridge run WITHOUT a decisionStore
 	// refuses BY NAME in the plugin — never a silent zero-edge success (§6).
 	const decisionStore = deps.decisionStore || null;
+	// ⟪P9, p9-judgmentPersistence 2026-07-31⟫ the judgment cache (decided = persisted; every
+	// per-source LLM judgment lands on disk the moment it is decided) and the forensic match log
+	// (one JSONL record per judgment, organized by pair). Opened by the orchestrator (actions.js,
+	// which owns the documented defaults + the --judgmentCacheFilePath/--matchForensicsDirPath
+	// overrides); null disables. The hermetic suites inject their own or omit them.
+	const judgmentCache = deps.judgmentCache || null;
+	const matchForensics = deps.matchForensics || null;
 	// inferenceConfig carries the reranker llmClient for a real --rebridge. The real-vs-stub SELECTION lives in
 	// resolveInferenceConfig (the FACTORY seam): the suite injects a STUB via deps.inferenceConfig.llmClient; a
 	// real --rebridge with no injected client MINTS the real one, which throws BY NAME when no key resolves.
@@ -737,6 +744,8 @@ const build = (recipe, deps, callback) => {
 					applyLabel: RELATION_LABEL,
 					rebridge: thisPairRebridges,
 					decisionStore,
+					judgmentCache,
+					matchForensics,
 					inferenceConfig,
 					config: {
 						sourceStandard: bridge.source,

@@ -390,14 +390,70 @@ process.env.ANTHROPIC_API_KEY = 'sk-test-throwaway-never-sent';
 												harness.equal('G3: attempts reflects the retry (2 attempts)', resultG3 && resultG3.attempts, 2);
 												harness.equal('G3: postOnce was actually called twice', callsG3, 2);
 
-												// restore the process env exactly as found (mirrors section B's own restore discipline).
-												if (savedEnvKey === undefined) {
-													delete process.env.ANTHROPIC_API_KEY;
-												} else {
-													process.env.ANTHROPIC_API_KEY = savedEnvKey;
-												}
+												// =====================================================================
+												harness.section('H — ⟪P9 FORENSICS⟫ usage/stopReason/retryReasons ride the rerank payload ADDITIVELY');
+												// =====================================================================
+												// H1 — an envelope WITH usage (every real Anthropic response carries one): the token
+												// counts and stop_reason surface on the result; retryReasons empty on a clean call.
+												const postOnceH1 = (specH1, callbackH1) => {
+													const envelopeH1 = mockToolUseResponse({ choice: '1', category: 'strong', rationale: 'x' });
+													envelopeH1.usage = { input_tokens: 1234, output_tokens: 56 };
+													envelopeH1.stop_reason = 'tool_use';
+													callbackH1('', envelopeH1, 200);
+												};
+												const clientH1 = llmClientFactory({ configFilePath: NONEXISTENT_INI, componentOverrides: { postOnce: postOnceH1 } });
+												clientH1.rerank(
+													{ systemPrompt: 's', userPrompt: 'u', choiceEnum: ['1', 'NONE'], requireJudgment: true },
+													(errH1, resultH1) => {
+														harness.equal('H1: rerank succeeds', errH1, '');
+														harness.equal('H1: usage.inputTokens surfaces from the envelope (⟪TQ⟫ "you get the costs in the return")', resultH1 && resultH1.usage && resultH1.usage.inputTokens, 1234);
+														harness.equal('H1: usage.outputTokens surfaces too', resultH1 && resultH1.usage && resultH1.usage.outputTokens, 56);
+														harness.equal('H1: stopReason surfaces', resultH1 && resultH1.stopReason, 'tool_use');
+														harness.ok('H1: retryReasons is an EMPTY array on a clean single attempt', resultH1 && Array.isArray(resultH1.retryReasons) && resultH1.retryReasons.length === 0);
 
-												harness.report();
+														// H2 — a retried call: retryReasons EXPLAINS the retry; usage is the FINAL attempt's.
+														let callsH2 = 0;
+														const postOnceH2 = (specH2, callbackH2) => {
+															callsH2 += 1;
+															const envelopeH2 = mockToolUseResponse(
+																callsH2 === 1 ? { choice: '1', category: 'strong' } : { choice: '1', category: 'strong', rationale: 'now complete' },
+															);
+															envelopeH2.usage = { input_tokens: 1000 + callsH2, output_tokens: 10 + callsH2 };
+															callbackH2('', envelopeH2, 200);
+														};
+														const clientH2 = llmClientFactory({ configFilePath: NONEXISTENT_INI, componentOverrides: { postOnce: postOnceH2 } });
+														clientH2.rerank(
+															{ systemPrompt: 's', userPrompt: 'u', choiceEnum: ['1', 'NONE'], requireJudgment: true, maxRetries: 3 },
+															(errH2, resultH2) => {
+																harness.equal('H2: the retried call succeeds', errH2, '');
+																harness.equal('H2: retryReasons carries ONE entry', resultH2 && resultH2.retryReasons && resultH2.retryReasons.length, 1);
+																harness.match('H2: and it EXPLAINS the retry by name (judgmentIncomplete, rationale missing)', resultH2 && resultH2.retryReasons && resultH2.retryReasons[0], /judgmentIncomplete.*rationale missing/);
+																harness.equal("H2: usage is the FINAL attempt's (the tokens of the decisive response)", resultH2 && resultH2.usage && resultH2.usage.inputTokens, 1002);
+
+																// H3 — an envelope WITHOUT usage: null, never a fabricated number.
+																const postOnceH3 = (specH3, callbackH3) => callbackH3('', mockToolUseResponse({ choice: '1', category: 'strong', rationale: 'x' }), 200);
+																const clientH3 = llmClientFactory({ configFilePath: NONEXISTENT_INI, componentOverrides: { postOnce: postOnceH3 } });
+																clientH3.rerank(
+																	{ systemPrompt: 's', userPrompt: 'u', choiceEnum: ['1', 'NONE'], requireJudgment: true },
+																	(errH3, resultH3) => {
+																		harness.equal('H3: succeeds', errH3, '');
+																		harness.ok('H3: usage is null when the envelope carries none — never fabricated', resultH3 && resultH3.usage === null);
+																		harness.ok('H3: stopReason is null when the envelope carries none', resultH3 && resultH3.stopReason === null);
+
+																		// restore the process env exactly as found (mirrors section B's own restore discipline).
+																		if (savedEnvKey === undefined) {
+																			delete process.env.ANTHROPIC_API_KEY;
+																		} else {
+																			process.env.ANTHROPIC_API_KEY = savedEnvKey;
+																		}
+
+																		harness.report();
+																	},
+																);
+															},
+														);
+													},
+												);
 											},
 										);
 									});

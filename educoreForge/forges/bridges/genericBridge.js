@@ -139,6 +139,23 @@ const boundedRunner = require(
 	path.join(__dirname, '..', '..', 'apps', 'graph-builder', 'apps', 'bridge-maker', 'lib', 'boundedRunner'),
 );
 
+// ⟪P9, p9-judgmentPersistence 2026-07-31⟫ the judgment-persistence seams (same two-level climb):
+//   cachedJudgment — wraps the per-source kit.evidenceSelect call so EVERY judgment (a) checks the
+//     shared judgment cache before any API call (a hit is zero spend) and (b) is WRITTEN TO DISK
+//     BEFORE it is used downstream (decided = persisted — ⟪TQ RULING, 2026-07-30⟫ "make totally
+//     sure that all the results are written to disk as they are decided. Losing data is crazy."),
+//     plus one forensic match-log record per judgment. With kit.judgmentCache/kit.matchForensics
+//     absent (every hermetic suite that predates P9), it is the byte-identical original call.
+//   judgmentDedupe — the OPT-IN structural dedupe fan-out (planJudgmentGroups/fanOutJudgedResults).
+//     genericBridge does NOT implement a judgmentKey of its own (see the config.judgmentKey seam
+//     below): with no hook the plan is the identity and behavior is byte-unchanged for LIF/CASE.
+const cachedJudgment = require(
+	path.join(__dirname, '..', '..', 'apps', 'graph-builder', 'apps', 'bridge-maker', 'lib', 'cachedJudgment'),
+);
+const { planJudgmentGroups, fanOutJudgedResults } = require(
+	path.join(__dirname, '..', '..', 'apps', 'graph-builder', 'apps', 'bridge-maker', 'lib', 'judgmentDedupe'),
+);
+
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
 // =====================================================================
@@ -344,6 +361,24 @@ module.exports = (injectedTools = {}) =>
 			);
 			return;
 		}
+		// ⟪P9⟫ config.judgmentKey — THE OPT-IN STRUCTURAL-DEDUPE SEAM. A hook
+		// (sourceElement, callback(err, keyOrNull)) mapping a source to a shared-structure identity
+		// (null = judge individually); sources sharing a key are judged ONCE and the verdict fans out
+		// honestly (judgmentDedupe.js). genericBridge itself supplies NO key — undefined/null/false
+		// all mean "no dedupe, byte-unchanged behavior"; anything else that is not a function is
+		// refused by name. (A recipe file cannot carry a function today — the seam is consumed by a
+		// composing orchestrator or a standard-local bridge; sifEvidenceBridge.js implements its own.)
+		const judgmentKeyHook =
+			config.judgmentKey === undefined || config.judgmentKey === null || config.judgmentKey === false
+				? null
+				: config.judgmentKey;
+		if (judgmentKeyHook !== null && typeof judgmentKeyHook !== 'function') {
+			callback(
+				`${MAPPING_TOOL}: config.judgmentKey is ${JSON.stringify(config.judgmentKey)} — when given ` +
+					`it must be a function (sourceElement, callback(err, keyOrNull)) or false; there is no default.`,
+			);
+			return;
+		}
 		// THE CASE RULE (lib.d/sourceWalker.js): the recipe token is lowercase; forged `_source` is
 		// uppercase. Read and stamp by the uppercase key.
 		const sourceStandardKey = sourceStandard.toUpperCase();
@@ -531,83 +566,142 @@ module.exports = (injectedTools = {}) =>
 			taskList.push((args, next) => {
 				const { xLog } = process.global;
 				const sourceCount = args.sourceNodes.length;
-				xLog.status(`[${MAPPING_TOOL}] judging ${sourceCount} source elements (concurrency ${evidenceJudgeConcurrency})`);
-				let judgedCount = 0;
-				boundedRunner(
-					{
-						items: args.sourceNodes,
-						concurrencyLimit: evidenceJudgeConcurrency,
-						oneItem: (oneSource, sourceIndex, itemDone) => {
-							void sourceIndex; // identity rides on oneSource.stableId; ORDER rides on boundedRunner's own index
-							composer(
-								{ sourceElement: oneSource, candidateElements: args.candidateElements, graphReader: kit.graphReader, hubModule: kit.cedsHubModule },
-								(composeErr, evidencePackage) => {
-									if (composeErr) {
-										itemDone(`${MAPPING_TOOL}: composing evidence for ${oneSource.stableId}: ${composeErr}`);
-										return;
-									}
-									kit.evidenceRenderer.render(evidencePackage, HUB_SEGMENTS, {}, (renderErr, promptText) => {
-										if (renderErr) {
-											itemDone(`${MAPPING_TOOL}: rendering evidence for ${oneSource.stableId}: ${renderErr}`);
+				// ⟪P9⟫ judgeOne — the persistence-seamed judge (cachedJudgment.js): checks the shared
+				// judgment cache BEFORE any API call, persists a live judgment BEFORE it is used
+				// downstream (decided = persisted), and writes one forensic record per judgment. With
+				// kit.judgmentCache/kit.matchForensics absent it is the byte-identical original
+				// kit.evidenceSelect call.
+				const judgeOne = cachedJudgment({
+					judgmentCache: kit.judgmentCache || null,
+					matchForensics: kit.matchForensics || null,
+					pairKey,
+					generation: EVIDENCE_GENERATION,
+					rendererVersion: kit.evidenceRenderer.RENDERER_VERSION,
+					evidenceSelect: kit.evidenceSelect,
+					llmClient,
+				});
+				// ⟪P9⟫ the dedupe plan — with no judgmentKeyHook (this bridge's default) the plan is
+				// the identity: every source judged individually, byte-unchanged behavior.
+				planJudgmentGroups({ sourceNodes: args.sourceNodes, judgmentKeyHook }, (planErr, plan) => {
+					if (planErr) {
+						next(`${MAPPING_TOOL}: ${planErr}`, args);
+						return;
+					}
+					const judgeCount = plan.judgeIndexes.length;
+					const dedupeNote = plan.dedupedCount
+						? `; ${plan.dedupedCount} source(s) share ${plan.sharedGroupCount} structural judgment group(s) and fan out`
+						: '';
+					xLog.status(
+						`[${MAPPING_TOOL}] judging ${judgeCount} of ${sourceCount} source elements (concurrency ${evidenceJudgeConcurrency}${dedupeNote})`,
+					);
+					let judgedCount = 0;
+					let cacheHitCount = 0;
+					boundedRunner(
+						{
+							items: plan.judgeIndexes.map((oneSourceIndex) => args.sourceNodes[oneSourceIndex]),
+							concurrencyLimit: evidenceJudgeConcurrency,
+							oneItem: (oneSource, judgeSlotIndex, itemDone) => {
+								void judgeSlotIndex; // identity rides on oneSource.stableId; ORDER rides on boundedRunner's own index
+								composer(
+									{ sourceElement: oneSource, candidateElements: args.candidateElements, graphReader: kit.graphReader, hubModule: kit.cedsHubModule },
+									(composeErr, evidencePackage) => {
+										if (composeErr) {
+											itemDone(`${MAPPING_TOOL}: composing evidence for ${oneSource.stableId}: ${composeErr}`);
 											return;
 										}
-										kit.evidenceSelect({ promptText, pool: evidencePackage.pool }, llmClient, (selectErr, selectResult) => {
-											if (selectErr) {
-												itemDone(`${MAPPING_TOOL}: selecting for ${oneSource.stableId}: ${selectErr}`);
+										kit.evidenceRenderer.render(evidencePackage, HUB_SEGMENTS, {}, (renderErr, promptText) => {
+											if (renderErr) {
+												itemDone(`${MAPPING_TOOL}: rendering evidence for ${oneSource.stableId}: ${renderErr}`);
 												return;
 											}
-											const bestCosine = evidencePackage.pool.length ? evidencePackage.pool[0].cosine : -1;
-											const chosenEntry = selectResult.abstain
-												? null
-												: evidencePackage.pool.find((oneEntry) => oneEntry.candidate === selectResult.pick);
-											const retrievalCosine = chosenEntry ? chosenEntry.cosine : bestCosine;
-											kit.confidenceNormalizer(selectResult.category, retrievalCosine, {}, (normalizeErr, normalizedConfidence) => {
-												if (normalizeErr) {
-													itemDone(`${MAPPING_TOOL}: normalizing confidence for ${oneSource.stableId}: ${normalizeErr}`);
-													return;
-												}
-												const ordinal = chosenEntry ? evidencePackage.pool.indexOf(chosenEntry) + 1 : null;
-												judgedCount += 1;
-												if (judgedCount % 50 === 0 && judgedCount < sourceCount) {
-													xLog.status(`[${MAPPING_TOOL}] judged ${judgedCount}/${sourceCount}`);
-												}
-												itemDone('', {
-													decision: {
-														source: { stableId: oneSource.stableId, role: oneSource.role },
-														abstain: selectResult.abstain,
-														abstainReason: selectResult.abstain ? 'evidenceAbstain' : null,
-														targetKey: selectResult.abstain ? null : targetKeyFor(selectResult.pick),
-														chosenStableId: selectResult.abstain ? null : selectResult.pick.stableId,
-														retrievalRank: ordinal,
-														cosineScore: retrievalCosine,
-													},
-													frozenEntry: {
-														sourceStableId: oneSource.stableId,
-														evidencePackage,
-														judgment: { category: selectResult.category, rationale: selectResult.rationale, normalizedConfidence },
-													},
-												});
-											});
+											judgeOne(
+												{ promptText, pool: evidencePackage.pool, sourceStableId: oneSource.stableId, sourceName: oneSource.name },
+												(judgeErr, judged) => {
+													if (judgeErr) {
+														itemDone(`${MAPPING_TOOL}: selecting for ${oneSource.stableId}: ${judgeErr}`);
+														return;
+													}
+													const selectResult = judged.selectResult;
+													if (judged.judgeMeta.servedFromCache) {
+														cacheHitCount += 1;
+													}
+													const bestCosine = evidencePackage.pool.length ? evidencePackage.pool[0].cosine : -1;
+													const chosenEntry = selectResult.abstain
+														? null
+														: evidencePackage.pool.find((oneEntry) => oneEntry.candidate === selectResult.pick);
+													const retrievalCosine = chosenEntry ? chosenEntry.cosine : bestCosine;
+													kit.confidenceNormalizer(selectResult.category, retrievalCosine, {}, (normalizeErr, normalizedConfidence) => {
+														if (normalizeErr) {
+															itemDone(`${MAPPING_TOOL}: normalizing confidence for ${oneSource.stableId}: ${normalizeErr}`);
+															return;
+														}
+														const ordinal = chosenEntry ? evidencePackage.pool.indexOf(chosenEntry) + 1 : null;
+														judgedCount += 1;
+														if (judgedCount % 50 === 0 && judgedCount < judgeCount) {
+															xLog.status(`[${MAPPING_TOOL}] judged ${judgedCount}/${judgeCount} (${cacheHitCount} served from the judgment cache)`);
+														}
+														itemDone('', {
+															decision: {
+																source: { stableId: oneSource.stableId, role: oneSource.role },
+																abstain: selectResult.abstain,
+																abstainReason: selectResult.abstain ? 'evidenceAbstain' : null,
+																targetKey: selectResult.abstain ? null : targetKeyFor(selectResult.pick),
+																chosenStableId: selectResult.abstain ? null : selectResult.pick.stableId,
+																retrievalRank: ordinal,
+																cosineScore: retrievalCosine,
+															},
+															frozenEntry: {
+																sourceStableId: oneSource.stableId,
+																evidencePackage,
+																judgment: { category: selectResult.category, rationale: selectResult.rationale, normalizedConfidence },
+															},
+															judgeMeta: judged.judgeMeta,
+														});
+													});
+												},
+											);
 										});
+									},
+								);
+							},
+						},
+						(runErr, out) => {
+							if (runErr) {
+								next(runErr, args);
+								return;
+							}
+							xLog.status(
+								`[${MAPPING_TOOL}] judged ${judgeCount}/${judgeCount} (${cacheHitCount} served from the judgment cache, ${judgeCount - cacheHitCount} live)`,
+							);
+							// SOURCE-ORDER ASSEMBLY — out.results[j] belongs to plan.judgeIndexes[j] (boundedRunner's
+							// by-index contract); fanOutJudgedResults re-addresses every fanned-out member honestly
+							// and returns the FULL per-source array in SOURCE ORDER (⟪P9⟫).
+							fanOutJudgedResults(
+								{
+									sourceNodes: args.sourceNodes,
+									judgeIndexes: plan.judgeIndexes,
+									memberPlanBySourceIndex: plan.memberPlanBySourceIndex,
+									judgedResults: out.results,
+									matchForensics: kit.matchForensics || null,
+									pairKey,
+									generation: EVIDENCE_GENERATION,
+									rendererVersion: kit.evidenceRenderer.RENDERER_VERSION,
+								},
+								(fanErr, fanned) => {
+									if (fanErr) {
+										next(`${MAPPING_TOOL}: ${fanErr}`, args);
+										return;
+									}
+									next('', {
+										...args,
+										decisions: fanned.perSourceResults.map((onePerSourceResult) => onePerSourceResult.decision),
+										frozenEvidencePayload: fanned.perSourceResults.map((onePerSourceResult) => onePerSourceResult.frozenEntry),
 									});
 								},
 							);
 						},
-					},
-					(runErr, out) => {
-						if (runErr) {
-							next(runErr, args);
-							return;
-						}
-						xLog.status(`[${MAPPING_TOOL}] judged ${sourceCount}/${sourceCount}`);
-						// SOURCE-ORDER ASSEMBLY — out.results[i] belongs to sourceNodes[i], by boundedRunner's contract.
-						next('', {
-							...args,
-							decisions: out.results.map((onePerSourceResult) => onePerSourceResult.decision),
-							frozenEvidencePayload: out.results.map((onePerSourceResult) => onePerSourceResult.frozenEntry),
-						});
-					},
-				);
+					);
+				});
 			});
 
 			// FREEZE all decisions + the frozen evidence payload -> content-addressed block, self-

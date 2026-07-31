@@ -89,6 +89,17 @@ const boundedRunner = require(
 	path.join(__dirname, '..', '..', '..', 'apps', 'graph-builder', 'apps', 'bridge-maker', 'lib', 'boundedRunner'),
 );
 
+// ⟪P9, p9-judgmentPersistence 2026-07-31⟫ the judgment-persistence seams (same three-level climb):
+// cachedJudgment (the judgment cache IS the checkpoint — decided = persisted — plus the forensic
+// match log) and judgmentDedupe (structural dedupe fan-out; THIS bridge implements the hook — see
+// sifJudgmentKey below). See genericBridge.js's own P9 require note for the full rationale.
+const cachedJudgment = require(
+	path.join(__dirname, '..', '..', '..', 'apps', 'graph-builder', 'apps', 'bridge-maker', 'lib', 'cachedJudgment'),
+);
+const { planJudgmentGroups, fanOutJudgedResults } = require(
+	path.join(__dirname, '..', '..', '..', 'apps', 'graph-builder', 'apps', 'bridge-maker', 'lib', 'judgmentDedupe'),
+);
+
 // candidateKeyFor — REUSED from lib/evidenceComposer.js, not reimplemented, for the SAME reason
 // caseEvidenceBridge.js reuses it: the walk hook keys perCandidateNotes by the SAME identity the
 // composer itself looks entries back up by, so a locally-invented key function can never drift.
@@ -111,7 +122,11 @@ const MATERIALIZER_CONFIG = { predicate: 'closeMatch', mappingJustification: 'se
 
 // EVIDENCE_GENERATION — this bridge's OWN generation tag (⟪A6⟫, R4): a SIF-nominating, SIF-
 // considering pipeline produces a different generation of picks even over the identical graph state.
-const EVIDENCE_GENERATION = 'sifEvidenceBridge-evidence-v1';
+// v1 -> v2 (⟪P9, 2026-07-31⟫): the structural dedupe fan-out (sifJudgmentKey below) changes WHICH
+// sources are judged directly and reshapes member frozenEvidence entries (reference, not duplicate)
+// — a differently-judging pipeline is a different generation of picks over identical graph state
+// and must be legible as one, exactly the ⟪A6⟫ discipline this constant exists for.
+const EVIDENCE_GENERATION = 'sifEvidenceBridge-evidence-v2';
 
 // EVIDENCE_JUDGE_CONCURRENCY — how many per-source evidence judgments (compose -> ⟪A3⟫ gate ->
 // render -> select -> normalize) may be IN FLIGHT at once during REBRIDGE. The serial loop this
@@ -356,6 +371,74 @@ const sifNominate = ({ sourceElement, candidateElements } = {}, callback) => {
 	}
 
 	callback('', Array.from(byKey.values()));
+};
+
+// =====================================================================
+// ⟪P9⟫ THE JUDGMENT-KEY HOOK — judgmentDedupe's opt-in structural-dedupe seam (⟪TQ RULING⟫ dedupe
+// for EVERYONE; SIF is the first implementer). The key is the OWNER-STRIPPED SHARED-STRUCTURE
+// IDENTITY: sequenceGroupKey MINUS the owner segment, PLUS the leaf field name, PLUS nativeType —
+// so the 136 copies of .../SIF_Metadata/LifeCycle/Modified/By (one per owning SifObject) judge
+// ONCE and the verdict fans out honestly.
+//
+// WHY STRIPPING THE OWNER IS RIGHT **HERE** WHEN forgeSif's SEQUENCE CAPTURE deliberately ADDED it
+// (its ⟪ADVERSARIAL-REVIEW FIX, 2026-07-30⟫ owner-scoped 'sif:fieldGroup:<owner>:<pathSegments>'):
+// the two keys answer DIFFERENT questions and both answers are correct. Sibling ORDINALS are
+// per-document truth — "child 3 of 7 under Modified" is only true within ONE object's contiguous
+// TSV rows, so the sequence group MUST be owner-scoped or ordinals lie (952-member groups, the
+// defect that fix corrected). The CEDS MAPPING of shared plumbing, by contrast, is owner-
+// independent — what .../Modified/By MEANS against CEDS does not change with which SifObject
+// carries the copy; that identity is the relative structure + leaf + native type, so the dedupe
+// key MUST strip the owner scoping the sequence stamp deliberately added. Same string, two
+// legitimate scopes.
+//
+// KEY FORMS (mirroring forgeSif.js's two sequenceGroupKey shapes exactly):
+//   nested field  'sif:fieldGroup:<owner>:<pathSegments>' -> 'sif:judgeKey:<pathSegments>:<name>:<nativeType>:<cedsId>'
+//   root field    'sif:fieldGroup:root:<ownerName>'        -> 'sif:judgeKey:root:<name>:<nativeType>:<cedsId>'
+// (the root form's owner segment is its LAST token — stripping it merges root-level fields by
+// leaf name + native type across owners, the literal owner-stripped identity).
+// nativeType is IN the key (never optional): two fields at the same relative path with different
+// native types are DIFFERENT mapping questions and must never share a judgment — the negative
+// control test-sif-judgment-dedupe.js proves it. A field with no sequenceGroupKey, no name, or a
+// groupKey not in the forge's stamped format returns null — judged individually, never a guessed
+// grouping (quality is untouchable: an unassertable identity buys no dedupe).
+//
+// ⟪QUALITY-FIRST DEVIATION, measured and deliberate⟫ the AUTHORED cedsId ANCHOR is ALSO in the
+// key ('(none)' when absent) — one term MORE than the work order's literal formula (structure +
+// leaf + nativeType). Measured against the real asset, the literal formula produced 595 shared
+// groups of which 16 carried CONFLICTING author-declared 'CEDS ID' anchors and 23 mixed
+// anchored/anchorless members. Fanning ONE verdict across members whose own authors declared
+// DIFFERENT CEDS anchors — or whose representative's evidence pool carried a crossref nomination
+// the member's would not — is a quality-for-cost trade, and ⟪TQ RULING, 2026-07-31⟫ forbids
+// exactly that ("I do not want *any* compromise in the quality of the matches"). With the anchor
+// in the key those groups split and their members judge individually/per-anchor; measured cost:
+// 4,666 -> 4,716 judgments on the real asset (50 more), still a 70% reduction from 15,620.
+// =====================================================================
+
+const SIF_FIELD_GROUP_KEY_PATTERN = /^sif:fieldGroup:([^:]+):(.+)$/;
+
+// sifJudgmentKey — judgmentDedupe's JUDGMENT-KEY contract: (sourceElement, callback(err, keyOrNull)).
+const sifJudgmentKey = (sourceElement, callback) => {
+	const record = sourceElement || {};
+	const groupKey = record.sequenceGroupKey;
+	const leafName = record.name;
+	if (typeof groupKey !== 'string' || typeof leafName !== 'string' || leafName.trim() === '') {
+		callback('', null); // no asserted structure -> judged individually, never a guessed grouping
+		return;
+	}
+	const match = groupKey.match(SIF_FIELD_GROUP_KEY_PATTERN);
+	if (!match) {
+		callback('', null); // not the forge's stamped format -> no shared-structure claim to make
+		return;
+	}
+	const ownerSegment = match[1];
+	// owner-stripped structural identity: the nested form's remainder IS the owner-relative path
+	// (parser.js strips the owning object's own segments before stamping); the root form's
+	// remainder is the OWNER ITSELF, so stripping the owner leaves only the 'root' position.
+	const strippedPath = ownerSegment === 'root' ? 'root' : match[2];
+	const nativeType = typeof record.nativeType === 'string' && record.nativeType.trim() !== '' ? record.nativeType : '(none)';
+	// the authored anchor term (the quality-first deviation documented above).
+	const cedsAnchor = typeof record.cedsId === 'string' && record.cedsId.trim() !== '' ? record.cedsId : '(none)';
+	callback('', `sif:judgeKey:${strippedPath}:${leafName}:${nativeType}:${cedsAnchor}`);
 };
 
 // =====================================================================
@@ -755,89 +838,147 @@ module.exports = (injectedTools = {}) =>
 				// constant's header for the wall-clock arithmetic and the rate-limit reasoning).
 				// DETERMINISM IS SACRED: results come back BY INDEX and decisions[]/frozenEvidencePayload[]
 				// are assembled in SOURCE ORDER after ALL sources settle, so the frozen decision block is
-				// BYTE-IDENTICAL to what the serial loop produced regardless of completion order.
+				// BYTE-IDENTICAL across reruns regardless of completion order.
 				// PROGRESS: the judging phase used to run silent for hours (long enough that an orchestrator
 				// once killed a healthy build as hung, 2026-07-29) — it now announces itself and reports
 				// every 50 completions through xLog, the same channel the surrounding build machinery logs on.
+				// ⟪P9⟫ TWO seams fold in here (see genericBridge.js's twin step for the shared rationale):
+				// cachedJudgment (the judgment cache IS the checkpoint; decided = persisted; forensic
+				// records per judgment) and the structural dedupe plan/fan-out — THIS bridge supplies
+				// sifJudgmentKey, so shared SIF plumbing (owner-stripped structure + leaf + nativeType)
+				// is judged ONCE and fans out honestly.
 				const { xLog } = process.global;
 				const sourceCount = args.sourceNodes.length;
-				xLog.status(`[${MAPPING_TOOL}] judging ${sourceCount} source elements (concurrency ${evidenceJudgeConcurrency})`);
-				let judgedCount = 0;
-				boundedRunner(
-					{
-						items: args.sourceNodes,
-						concurrencyLimit: evidenceJudgeConcurrency,
-						oneItem: (oneSource, sourceIndex, itemDone) => {
-							void sourceIndex; // identity rides on oneSource.stableId; ORDER rides on boundedRunner's own index
-							composer(
-								{ sourceElement: oneSource, candidateElements: args.candidateElements, graphReader: kit.graphReader, hubModule: kit.cedsHubModule },
-								(composeErr, evidencePackage) => {
-									if (composeErr) {
-										itemDone(`${MAPPING_TOOL}: composing evidence for ${oneSource.stableId}: ${composeErr}`);
-										return;
-									}
-									kit.evidenceRenderer.render(evidencePackage, HUB_SEGMENTS, {}, (renderErr, promptText) => {
-										if (renderErr) {
-											itemDone(`${MAPPING_TOOL}: rendering evidence for ${oneSource.stableId}: ${renderErr}`);
+				const judgeOne = cachedJudgment({
+					judgmentCache: kit.judgmentCache || null,
+					matchForensics: kit.matchForensics || null,
+					pairKey,
+					generation: EVIDENCE_GENERATION,
+					rendererVersion: kit.evidenceRenderer.RENDERER_VERSION,
+					evidenceSelect: kit.evidenceSelect,
+					llmClient,
+				});
+				planJudgmentGroups({ sourceNodes: args.sourceNodes, judgmentKeyHook: sifJudgmentKey }, (planErr, plan) => {
+					if (planErr) {
+						next(`${MAPPING_TOOL}: ${planErr}`, args);
+						return;
+					}
+					const judgeCount = plan.judgeIndexes.length;
+					const dedupeNote = plan.dedupedCount
+						? `; ${plan.dedupedCount} source(s) share ${plan.sharedGroupCount} structural judgment group(s) and fan out`
+						: '';
+					xLog.status(
+						`[${MAPPING_TOOL}] judging ${judgeCount} of ${sourceCount} source elements (concurrency ${evidenceJudgeConcurrency}${dedupeNote})`,
+					);
+					let judgedCount = 0;
+					let cacheHitCount = 0;
+					boundedRunner(
+						{
+							items: plan.judgeIndexes.map((oneSourceIndex) => args.sourceNodes[oneSourceIndex]),
+							concurrencyLimit: evidenceJudgeConcurrency,
+							oneItem: (oneSource, judgeSlotIndex, itemDone) => {
+								void judgeSlotIndex; // identity rides on oneSource.stableId; ORDER rides on boundedRunner's own index
+								composer(
+									{ sourceElement: oneSource, candidateElements: args.candidateElements, graphReader: kit.graphReader, hubModule: kit.cedsHubModule },
+									(composeErr, evidencePackage) => {
+										if (composeErr) {
+											itemDone(`${MAPPING_TOOL}: composing evidence for ${oneSource.stableId}: ${composeErr}`);
 											return;
 										}
-										kit.evidenceSelect({ promptText, pool: evidencePackage.pool }, llmClient, (selectErr, selectResult) => {
-											if (selectErr) {
-												itemDone(`${MAPPING_TOOL}: selecting for ${oneSource.stableId}: ${selectErr}`);
+										kit.evidenceRenderer.render(evidencePackage, HUB_SEGMENTS, {}, (renderErr, promptText) => {
+											if (renderErr) {
+												itemDone(`${MAPPING_TOOL}: rendering evidence for ${oneSource.stableId}: ${renderErr}`);
 												return;
 											}
-											const bestCosine = evidencePackage.pool.length ? evidencePackage.pool[0].cosine : -1;
-											const chosenEntry = selectResult.abstain
-												? null
-												: evidencePackage.pool.find((oneEntry) => oneEntry.candidate === selectResult.pick);
-											const retrievalCosine = chosenEntry ? chosenEntry.cosine : bestCosine;
-											kit.confidenceNormalizer(selectResult.category, retrievalCosine, {}, (normalizeErr, normalizedConfidence) => {
-												if (normalizeErr) {
-													itemDone(`${MAPPING_TOOL}: normalizing confidence for ${oneSource.stableId}: ${normalizeErr}`);
-													return;
-												}
-												const ordinal = chosenEntry ? evidencePackage.pool.indexOf(chosenEntry) + 1 : null;
-												judgedCount += 1;
-												if (judgedCount % 50 === 0 && judgedCount < sourceCount) {
-													xLog.status(`[${MAPPING_TOOL}] judged ${judgedCount}/${sourceCount}`);
-												}
-												itemDone('', {
-													decision: {
-														source: { stableId: oneSource.stableId, role: oneSource.role },
-														abstain: selectResult.abstain,
-														abstainReason: selectResult.abstain ? 'evidenceAbstain' : null,
-														targetKey: selectResult.abstain ? null : targetKeyFor(selectResult.pick),
-														chosenStableId: selectResult.abstain ? null : selectResult.pick.stableId,
-														retrievalRank: ordinal,
-														cosineScore: retrievalCosine,
-													},
-													frozenEntry: {
-														sourceStableId: oneSource.stableId,
-														evidencePackage,
-														judgment: { category: selectResult.category, rationale: selectResult.rationale, normalizedConfidence },
-													},
-												});
-											});
+											judgeOne(
+												{ promptText, pool: evidencePackage.pool, sourceStableId: oneSource.stableId, sourceName: oneSource.name },
+												(judgeErr, judged) => {
+													if (judgeErr) {
+														itemDone(`${MAPPING_TOOL}: selecting for ${oneSource.stableId}: ${judgeErr}`);
+														return;
+													}
+													const selectResult = judged.selectResult;
+													if (judged.judgeMeta.servedFromCache) {
+														cacheHitCount += 1;
+													}
+													const bestCosine = evidencePackage.pool.length ? evidencePackage.pool[0].cosine : -1;
+													const chosenEntry = selectResult.abstain
+														? null
+														: evidencePackage.pool.find((oneEntry) => oneEntry.candidate === selectResult.pick);
+													const retrievalCosine = chosenEntry ? chosenEntry.cosine : bestCosine;
+													kit.confidenceNormalizer(selectResult.category, retrievalCosine, {}, (normalizeErr, normalizedConfidence) => {
+														if (normalizeErr) {
+															itemDone(`${MAPPING_TOOL}: normalizing confidence for ${oneSource.stableId}: ${normalizeErr}`);
+															return;
+														}
+														const ordinal = chosenEntry ? evidencePackage.pool.indexOf(chosenEntry) + 1 : null;
+														judgedCount += 1;
+														if (judgedCount % 50 === 0 && judgedCount < judgeCount) {
+															xLog.status(`[${MAPPING_TOOL}] judged ${judgedCount}/${judgeCount} (${cacheHitCount} served from the judgment cache)`);
+														}
+														itemDone('', {
+															decision: {
+																source: { stableId: oneSource.stableId, role: oneSource.role },
+																abstain: selectResult.abstain,
+																abstainReason: selectResult.abstain ? 'evidenceAbstain' : null,
+																targetKey: selectResult.abstain ? null : targetKeyFor(selectResult.pick),
+																chosenStableId: selectResult.abstain ? null : selectResult.pick.stableId,
+																retrievalRank: ordinal,
+																cosineScore: retrievalCosine,
+															},
+															frozenEntry: {
+																sourceStableId: oneSource.stableId,
+																evidencePackage,
+																judgment: { category: selectResult.category, rationale: selectResult.rationale, normalizedConfidence },
+															},
+															judgeMeta: judged.judgeMeta,
+														});
+													});
+												},
+											);
 										});
+									},
+								);
+							},
+						},
+						(runErr, out) => {
+							if (runErr) {
+								next(runErr, args);
+								return;
+							}
+							xLog.status(
+								`[${MAPPING_TOOL}] judged ${judgeCount}/${judgeCount} (${cacheHitCount} served from the judgment cache, ${judgeCount - cacheHitCount} live)`,
+							);
+							// SOURCE-ORDER ASSEMBLY — out.results[j] belongs to plan.judgeIndexes[j] (boundedRunner's
+							// by-index contract); fanOutJudgedResults re-addresses every fanned-out member honestly
+							// (judgedVia 'dedupe:<key>' + representativeSourceStableId, evidencePackage REFERENCED not
+							// duplicated) and returns the FULL per-source array in SOURCE ORDER (⟪P9⟫).
+							fanOutJudgedResults(
+								{
+									sourceNodes: args.sourceNodes,
+									judgeIndexes: plan.judgeIndexes,
+									memberPlanBySourceIndex: plan.memberPlanBySourceIndex,
+									judgedResults: out.results,
+									matchForensics: kit.matchForensics || null,
+									pairKey,
+									generation: EVIDENCE_GENERATION,
+									rendererVersion: kit.evidenceRenderer.RENDERER_VERSION,
+								},
+								(fanErr, fanned) => {
+									if (fanErr) {
+										next(`${MAPPING_TOOL}: ${fanErr}`, args);
+										return;
+									}
+									next('', {
+										...args,
+										decisions: fanned.perSourceResults.map((onePerSourceResult) => onePerSourceResult.decision),
+										frozenEvidencePayload: fanned.perSourceResults.map((onePerSourceResult) => onePerSourceResult.frozenEntry),
 									});
 								},
 							);
 						},
-					},
-					(runErr, out) => {
-						if (runErr) {
-							next(runErr, args);
-							return;
-						}
-						xLog.status(`[${MAPPING_TOOL}] judged ${sourceCount}/${sourceCount}`);
-						// SOURCE-ORDER ASSEMBLY — out.results[i] belongs to sourceNodes[i], by boundedRunner's contract.
-						next('', {
-							...args,
-							decisions: out.results.map((onePerSourceResult) => onePerSourceResult.decision),
-							frozenEvidencePayload: out.results.map((onePerSourceResult) => onePerSourceResult.frozenEntry),
-						});
-					},
-				);
+					);
+				});
 			});
 
 			taskList.push((args, next) => {
@@ -939,3 +1080,7 @@ module.exports.sequenceBaselineDescription = sequenceBaselineDescription;
 module.exports.sequenceNeighborNamesDescription = sequenceNeighborNamesDescription;
 module.exports.sifNominate = sifNominate;
 module.exports.sifWalk = sifWalk;
+// ⟪P9⟫ the structural-dedupe judgment-key hook (and its pattern), exported for the unit test AND
+// for the real-asset key-count measurement (test-sif-judgment-dedupe.js).
+module.exports.sifJudgmentKey = sifJudgmentKey;
+module.exports.SIF_FIELD_GROUP_KEY_PATTERN = SIF_FIELD_GROUP_KEY_PATTERN;

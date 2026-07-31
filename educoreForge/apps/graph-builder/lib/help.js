@@ -82,6 +82,22 @@ OPTIONS
                            them) and written (--rebridge FREEZES a new one). OPTIONAL: it DEFAULTS to a
                            sibling of --standardsDatabaseFilePath ('<name>.decisions<ext>' in the same
                            directory). Pass it to point a build at a canonical decisions database.
+     --judgmentCacheFilePath=<path> | --judgmentCacheFilePath=false
+                           Where the shared JUDGMENT CACHE lives — every per-source LLM judgment a
+                           --rebridge buys is written there THE MOMENT IT IS DECIDED (decided =
+                           persisted), keyed (promptHash, model, rendererVersion), so a killed run
+                           resumes free and a decided judgment can never be lost with the process.
+                           OPTIONAL, ON BY DEFAULT at the canonical dataStores home
+                           (system/dataStores/judgmentCache/judgmentCache.sqlite3). Pass a path to
+                           redirect it (e.g. a throwaway for a spend test), or 'false' to disable.
+     --matchForensicsDirPath=<path> | --matchForensicsDirPath=false
+                           Where the FORENSIC MATCH LOG lives — one JSONL record per judgment
+                           (live, cache-hit, and dedupe fan-out alike), organized by standard as
+                           <dir>/<pairKey>/<generation>.jsonl. OPTIONAL, ON BY DEFAULT at
+                           system/dataStores/matchForensics. Pass a path to redirect, or 'false'
+                           to disable. A forensics write failure never kills a build (logged loudly
+                           and the run continues); the judgment cache is the gate, this is the
+                           testimony.
      --rebridge=all | --rebridge=<token>[,<token>...]
                            SCOPE the semantic re-inference. OPTIONAL, DEFAULTS TO NONE: a plain build
                            MATERIALIZES whatever frozen decision blocks already exist (zero LLM, zero

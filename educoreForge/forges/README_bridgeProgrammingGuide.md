@@ -260,8 +260,26 @@ subsequent plain `-build` then MATERIALIZEs your frozen decisions for free.
 generation, rendererVersion, evidencePackages })` stamps the bridge's own `EVIDENCE_GENERATION` tag
 and the renderer's `RENDERER_VERSION` into the block, so a reader never has to infer what produced
 it. Every bridge declares its own generation constant (`'caseEvidenceBridge-evidence-v1'`,
-`'sifEvidenceBridge-evidence-v1'`) — a differently-nominating pipeline is a different generation of
-picks even over identical graph state, and must be legible as such.
+`'sifEvidenceBridge-evidence-v2'` — SIF bumped v1→v2 when the P9 structural dedupe landed) — a
+differently-nominating (or differently-judging) pipeline is a different generation of picks even
+over identical graph state, and must be legible as such.
+
+**⟪P9, 2026-07-31⟫ decided = persisted — the judgment cache and the forensic match log.** A killed
+`--rebridge` no longer loses its judgments: every per-source LLM judgment is written to the shared
+**judgment cache** (`lib/judgment-cache`, keyed `(promptHash, model, rendererVersion)`, WAL sqlite,
+default ON at `system/dataStores/judgmentCache/`) **the moment it is decided**, before it is used
+downstream, and checked **before** any API call — so a rerun after a crash re-renders identical
+prompts and resumes free (`--judgmentCacheFilePath` redirects it; `=false` disables). Alongside it,
+the **forensic match log** (`lib/match-forensics`, default ON at
+`system/dataStores/matchForensics/<pairKey>/<generation>.jsonl`) appends one JSONL record per
+judgment — live, cache-hit, and dedupe fan-out alike — carrying the full rendered prompt, the
+response, token usage, retries, and latency; a forensics write failure is loud but never kills a
+run. Bridges consume both through `kit.judgmentCache`/`kit.matchForensics` via the shared seam
+(`bridge-maker/lib/cachedJudgment.js`); the OPT-IN structural dedupe (a per-bridge `judgmentKey`
+hook, `bridge-maker/lib/judgmentDedupe.js` — SIF implements it; genericBridge exposes the
+`config.judgmentKey` seam with no default hook) judges shared structure once and fans the verdict
+out honestly (`judgedVia: 'dedupe:<key>'` + the representative's `sourceStableId`; the member's
+frozen entry references, never duplicates, the representative's evidence package).
 
 ---
 

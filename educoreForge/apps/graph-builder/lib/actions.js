@@ -41,6 +41,52 @@ const requireStandardsDatabase = () =>
 const requireDecisionStore = () =>
 	require(path.join(__dirname, '..', '..', '..', 'lib', 'decision-store', 'decision-store'));
 
+// judgment-cache carries the IDENTICAL sqlite-instance lazy-require trap — required lazily too.
+const requireJudgmentCache = () =>
+	require(path.join(__dirname, '..', '..', '..', 'lib', 'judgment-cache', 'judgment-cache'));
+
+// match-forensics has NO sqlite pull (fs/path only) — lazily required anyway, for symmetry with
+// its two sibling persistence stores; the trap discipline is easier to audit when uniform.
+const requireMatchForensics = () =>
+	require(path.join(__dirname, '..', '..', '..', 'lib', 'match-forensics', 'match-forensics'));
+
+// ⟪P9, p9-judgmentPersistence 2026-07-31⟫ the canonical homes of the TWO judgment-persistence
+// stores, in dataStores — the SAME config discipline the shared vector cache uses
+// (embedding-client.js's defaultCacheFilePath): a DOCUMENTED default standing behind an optional
+// command-line parameter, ON by default because a judgment is real spent money and losing one is
+// crazy (⟪TQ RULING, 2026-07-30⟫); '--<param>=false' disables; any other value redirects.
+const JUDGMENT_CACHE_DEFAULT_FILE_PATH =
+	'/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/judgmentCache/judgmentCache.sqlite3';
+const MATCH_FORENSICS_DEFAULT_DIR_PATH =
+	'/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/matchForensics';
+
+// resolvePersistencePath — shared resolution for both P9 stores. Returns
+// { filePath } (a path to open), { disabled: true } ('false' was passed), or { error } (blank).
+//   explicitValue   the raw --param value, or undefined when not given
+//   defaultPath     the documented canonical default (used when the param is absent)
+// When the DEFAULT is in force, its parent directory is PREPARED here (mkdirSync recursive) —
+// deliberately: default-ON must not fail on a fresh machine, and preparing the ONE canonical,
+// documented location is the orchestrator's job. An EXPLICIT override is NOT prepared: an operator
+// naming a path must name one that exists (the same refusal decision-store/judgment-cache apply).
+const resolvePersistencePath = ({ explicitValue, defaultPath, parameterName, prepareDir }) => {
+	if (typeof explicitValue === 'string' && explicitValue.trim() === 'false') {
+		return { disabled: true };
+	}
+	if (typeof explicitValue === 'string' && explicitValue.trim() !== '') {
+		return { filePath: explicitValue };
+	}
+	if (typeof explicitValue === 'string') {
+		return {
+			error:
+				`graphBuilder -build: --${parameterName} was given but blank. Pass a path, 'false' to ` +
+				`disable, or omit it to take the documented default (${defaultPath}). A blank is refused ` +
+				`rather than guessed at.`,
+		};
+	}
+	fs.mkdirSync(prepareDir, { recursive: true });
+	return { filePath: defaultPath };
+};
+
 // decisionStorePathFrom — where a build reads/writes FROZEN decision blocks. An explicit
 // --decisionStoreFilePath WINS (the operator names a canonical decisions db); absent, it is DERIVED
 // beside the standardsDatabase (`<name>.decisions<ext>` in the same directory). Deriving is not a
@@ -302,6 +348,65 @@ const build = (callback) => {
 	}
 	const decisionStoreFilePath = decisionStorePathResolution.decisionStoreFilePath;
 
+	// ⟪P9⟫ THE JUDGMENT CACHE AND THE FORENSIC MATCH LOG ARE OPENED HERE TOO — stateful shared
+	// resources, so the orchestrator owns them (polyArch2 §2) and the pipeline receives them. Both
+	// DEFAULT ON (their canonical dataStores homes, prepared above when defaulted); either is
+	// disabled with an explicit '=false'. An open failure is a FAULT named through the callback,
+	// never a silent fall-through to an uncached/unlogged run (embedding-client's own ensureCache
+	// discipline: silently resuming spend without persistence is exactly what P9 exists to end).
+	const judgmentCachePathResolution = resolvePersistencePath({
+		explicitValue: firstValue(process.global.commandLineParameters, 'judgmentCacheFilePath'),
+		defaultPath: JUDGMENT_CACHE_DEFAULT_FILE_PATH,
+		parameterName: 'judgmentCacheFilePath',
+		prepareDir: path.dirname(JUDGMENT_CACHE_DEFAULT_FILE_PATH),
+	});
+	if (judgmentCachePathResolution.error) {
+		callback(judgmentCachePathResolution.error);
+		return;
+	}
+	const matchForensicsPathResolution = resolvePersistencePath({
+		explicitValue: firstValue(process.global.commandLineParameters, 'matchForensicsDirPath'),
+		defaultPath: MATCH_FORENSICS_DEFAULT_DIR_PATH,
+		parameterName: 'matchForensicsDirPath',
+		prepareDir: MATCH_FORENSICS_DEFAULT_DIR_PATH,
+	});
+	if (matchForensicsPathResolution.error) {
+		callback(matchForensicsPathResolution.error);
+		return;
+	}
+
+	// openJudgmentCache / openMatchForensics — each yields its opened api, or null when disabled.
+	const openJudgmentCache = (done) => {
+		if (judgmentCachePathResolution.disabled) {
+			xLog.status(`graphBuilder: judgment cache DISABLED (--judgmentCacheFilePath=false)`);
+			done('', null);
+			return;
+		}
+		requireJudgmentCache()().open({ databaseFilePath: judgmentCachePathResolution.filePath }, (openErr, api) => {
+			if (openErr) {
+				done(`graphBuilder -build: ${openErr}`);
+				return;
+			}
+			xLog.status(`graphBuilder: judgment cache at ${judgmentCachePathResolution.filePath}`);
+			done('', api);
+		});
+	};
+	const openMatchForensics = (done) => {
+		if (matchForensicsPathResolution.disabled) {
+			xLog.status(`graphBuilder: forensic match log DISABLED (--matchForensicsDirPath=false)`);
+			done('', null);
+			return;
+		}
+		requireMatchForensics()().open({ baseDirPath: matchForensicsPathResolution.filePath }, (openErr, api) => {
+			if (openErr) {
+				done(`graphBuilder -build: ${openErr}`);
+				return;
+			}
+			xLog.status(`graphBuilder: forensic match log at ${matchForensicsPathResolution.filePath}`);
+			done('', api);
+		});
+	};
+
 	requireStandardsDatabase()().open({ databaseFilePath: standardsDatabaseFilePath }, (openError, standardsDatabase) => {
 		if (openError) {
 			callback(`graphBuilder -build: ${openError}`);
@@ -313,12 +418,36 @@ const build = (callback) => {
 				return;
 			}
 			xLog.status(`graphBuilder: decision store at ${decisionStoreFilePath}`);
-			buildLib.build(recipe, { xLog, standardsDatabase, decisionStore, recipePath: read.recipePath, recipeText: read.recipeText }, (buildError, result) => {
-				if (buildError) {
-					callback(`graphBuilder -build failed: ${buildError}`);
+			openJudgmentCache((judgmentCacheError, judgmentCache) => {
+				if (judgmentCacheError) {
+					callback(judgmentCacheError);
 					return;
 				}
-				callback('', { exitCode: 0, resultText: JSON.stringify(result, null, 2) });
+				openMatchForensics((matchForensicsError, matchForensics) => {
+					if (matchForensicsError) {
+						callback(matchForensicsError);
+						return;
+					}
+					buildLib.build(
+						recipe,
+						{
+							xLog,
+							standardsDatabase,
+							decisionStore,
+							judgmentCache,
+							matchForensics,
+							recipePath: read.recipePath,
+							recipeText: read.recipeText,
+						},
+						(buildError, result) => {
+							if (buildError) {
+								callback(`graphBuilder -build failed: ${buildError}`);
+								return;
+							}
+							callback('', { exitCode: 0, resultText: JSON.stringify(result, null, 2) });
+						},
+					);
+				});
 			});
 		});
 	});

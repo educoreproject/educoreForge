@@ -151,6 +151,15 @@ const buildKit = (
 		inferenceConfig = {},
 		componentOverrides = {},
 		libDDir = LIB_D_DIR,
+		// ⟪P9 ADDITIONS, p9-judgmentPersistence 2026-07-31⟫ — two per-run persistence resources,
+		// passed straight through exactly like decisionStore (the orchestrator owns opening them):
+		//   judgmentCache   the OPENED lib/judgment-cache api (getJudgment/putJudgment), or null
+		//                   (disabled). The evidence bridges route every per-source LLM judgment
+		//                   through it so decided = persisted (see cachedJudgment.js).
+		//   matchForensics  the OPENED lib/match-forensics api (appendRecord), or null (disabled).
+		//                   One JSONL record per judgment, organized by pair (standard).
+		judgmentCache = null,
+		matchForensics = null,
 	} = {},
 ) => {
 	const membershipViolation = verifyKitMembership(libDDir);
@@ -173,7 +182,7 @@ const buildKit = (
 		);
 	}
 
-	const kit = { config, decisionStore, rebridge };
+	const kit = { config, decisionStore, rebridge, judgmentCache, matchForensics };
 
 	kit.graphReader = componentOverrides.graphReader
 		? componentOverrides.graphReader({ inGraph })

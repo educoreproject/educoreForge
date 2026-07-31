@@ -368,6 +368,11 @@ const moduleFunction =
 			}
 
 			const backoffMs = [0, 500, 1200, 2500, 5000, 9000];
+			// ⟪FORENSICS, p9-judgmentPersistence 2026-07-31⟫ retryReasons — one entry per retried
+			// attempt, threaded into the success payload so the forensic match log can explain WHY a
+			// judgment took N attempts (⟪TQ RULING⟫ "support forensic examination to improve quality
+			// later"). Additive surplus: every existing caller destructures only the keys it reads.
+			const retryReasons = [];
 			// ⟪R-a SECOND REAL-RUN FINDING, 2026-07-30⟫ requireJudgment alone (schema `required`) did not
 			// reach 100%: a live run failed on a DIFFERENT source than the first finding, with the
 			// identical refusal — real Opus INTERMITTENTLY omits a schema-required field (roughly 1 call in
@@ -384,6 +389,7 @@ const moduleFunction =
 				postOnce({ payload }, (err, parsed, status) => {
 					const retriableTransport = status === 429 || (status >= 500 && status <= 599) || status === 0;
 					if ((err || retriableTransport) && attemptIndex + 1 < maxRetries) {
+						retryReasons.push(`transport (attempt ${attemptIndex + 1}): ${err || `status ${status}`}`);
 						const waitMs = backoffMs[Math.min(attemptIndex + 1, backoffMs.length - 1)];
 						setTimeout(() => tryAttempt(attemptIndex + 1), waitMs);
 						return;
@@ -413,11 +419,35 @@ const moduleFunction =
 					const truncated = !!requireJudgment && parsed && parsed.stop_reason === 'max_tokens';
 					const judgmentIncomplete = !!requireJudgment && (category === undefined || rationale === undefined || truncated);
 					if (judgmentIncomplete && attemptIndex + 1 < maxRetries) {
+						retryReasons.push(
+							`judgmentIncomplete (attempt ${attemptIndex + 1}): ` +
+								`${truncated ? 'stop_reason max_tokens (tool JSON truncated)' : `category ${category === undefined ? 'missing' : 'ok'}, rationale ${rationale === undefined ? 'missing' : 'ok'}`}`,
+						);
 						const waitMs = backoffMs[Math.min(attemptIndex + 1, backoffMs.length - 1)];
 						setTimeout(() => tryAttempt(attemptIndex + 1), waitMs);
 						return;
 					}
-					callback('', { choice, model: cfg.model, attempts: attemptIndex + 1, category, rationale });
+					// ⟪FORENSICS, p9-judgmentPersistence 2026-07-31⟫ usage/stopReason — the Anthropic
+					// response envelope's own accounting (usage.input_tokens/output_tokens are present in
+					// every Messages response; ⟪TQ⟫ "you get the costs in the return"), threaded up ADDITIVELY
+					// so the forensic match log can carry real per-judgment cost. Never fabricated: an
+					// envelope without usage yields null. Existing callers (lib.d/selector.js reads only
+					// .choice; lib.d/evidenceSelect.js reads choice/category/rationale) are unaffected —
+					// proven in test-llm-client.js's forensics section.
+					const usage =
+						parsed && parsed.usage
+							? { inputTokens: parsed.usage.input_tokens, outputTokens: parsed.usage.output_tokens }
+							: null;
+					callback('', {
+						choice,
+						model: cfg.model,
+						attempts: attemptIndex + 1,
+						category,
+						rationale,
+						usage,
+						stopReason: parsed && parsed.stop_reason !== undefined ? parsed.stop_reason : null,
+						retryReasons,
+					});
 				});
 			};
 			tryAttempt(0);
