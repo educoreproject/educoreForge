@@ -66,6 +66,71 @@ const contentAddress = require(
 
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
+// =====================================================================
+// THE SPEND METER + BUDGET GUARD (⟪TQ RULING, 2026-07-31⟫ "You have another $300. Spend it
+// wisely... DO something to be cost conscious" — and, same night: "I do not want *any* compromise
+// in the quality of the matches"): live-judgment cost is accumulated PROCESS-WIDE from the API's
+// own usage envelope (the truth TQ pointed at: "you get the costs in the return") priced by the
+// [anthropicAi] ini, and when the accumulated spend crosses budgetMaxUsd the NEXT live judgment is
+// REFUSED BY NAME — stop-and-resume, never degrade: the guard cannot skip, truncate, or downgrade
+// a judgment (quality untouchable); it can only halt the run at a moment when every completed
+// judgment is already on disk in the judgment cache, so the resume after a top-up costs $0.
+// Cache hits are never guarded (they spend nothing). A stub llmClient with no usage envelope
+// accrues nothing, so hermetic suites never trip the guard.
+// Config ([anthropicAi] in the same ini llmClient reads): budgetMaxUsd (default 250),
+// inputUsdPerMTok (default 15), outputUsdPerMTok (default 75). budgetMaxUsd=none disables.
+// =====================================================================
+const fs = require('fs');
+const budgetConfig = (() => {
+	const iniPath =
+		'/Users/tqwhite/Documents/webdev/educoreForge/system/configs/instanceSpecific/qbook/anthropicAi.ini';
+	const numbers = { budgetMaxUsd: 250, inputUsdPerMTok: 15, outputUsdPerMTok: 75 };
+	let disabled = false;
+	if (fs.existsSync(iniPath)) {
+		fs.readFileSync(iniPath, 'utf-8')
+			.split('\n')
+			.forEach((oneLine) => {
+				const match = oneLine.match(/^\s*(budgetMaxUsd|inputUsdPerMTok|outputUsdPerMTok)\s*=\s*(\S+)/);
+				if (!match) {
+					return;
+				}
+				if (match[1] === 'budgetMaxUsd' && match[2] === 'none') {
+					disabled = true;
+					return;
+				}
+				const value = parseFloat(match[2]);
+				if (!Number.isNaN(value) && value > 0) {
+					numbers[match[1]] = value;
+				}
+			});
+	}
+	return { ...numbers, disabled };
+})();
+const spendMeter = { spentUsd: 0, liveJudgments: 0 };
+const accrueSpend = (usage) => {
+	if (!usage || typeof usage.inputTokens !== 'number' || typeof usage.outputTokens !== 'number') {
+		return;
+	}
+	spendMeter.spentUsd +=
+		(usage.inputTokens * budgetConfig.inputUsdPerMTok + usage.outputTokens * budgetConfig.outputUsdPerMTok) /
+		1000000;
+	spendMeter.liveJudgments += 1;
+	if (spendMeter.liveJudgments % 25 === 0) {
+		const { xLog } = process.global;
+		xLog.status(
+			`[budget] $${spendMeter.spentUsd.toFixed(2)} of $${budgetConfig.budgetMaxUsd} spent ` +
+				`(${spendMeter.liveJudgments} live judgments this process)`,
+		);
+	}
+};
+const budgetExceededError = () =>
+	`${moduleName}: BUDGET GUARD — accumulated live-judgment spend $${spendMeter.spentUsd.toFixed(2)} ` +
+	`has reached [anthropicAi].budgetMaxUsd=$${budgetConfig.budgetMaxUsd}. The run stops rather than ` +
+	`overspending; NOTHING is lost — every completed judgment is on disk in the judgment cache, so ` +
+	`re-running the identical build after raising budgetMaxUsd (or topping up the API account) resumes ` +
+	`exactly where this stopped, at zero re-spend. Quality is never degraded to fit a budget (TQ ruling ` +
+	`2026-07-31); the guard stops, it never trims.`;
+
 // reconstructSelectResult — a stored decided-time judgment + the CURRENT pool -> the selectResult
 // the live judge would have delivered. Refuses BY NAME (error string return) when the stored
 // ordinal does not resolve or names a different candidate than it did at decision time — either
@@ -238,6 +303,12 @@ const moduleFunction =
 			// judgeLive — the byte-identical original judge path, decorated ONLY to capture the
 			// usage envelope, then persisted (cache first — FATAL on failure — then forensics).
 			const judgeLive = () => {
+				// the BUDGET GUARD stands at the live door only — cache hits spend nothing and are
+				// never blocked; see the spend-meter header above for the full doctrine.
+				if (!budgetConfig.disabled && spendMeter.spentUsd >= budgetConfig.budgetMaxUsd) {
+					callback(budgetExceededError());
+					return;
+				}
 				let capturedRerank = null;
 				const decoratedLlmClient = {
 					...llmClient,
@@ -260,6 +331,7 @@ const moduleFunction =
 						return;
 					}
 					const finishLive = () => {
+						accrueSpend(capturedRerank && capturedRerank.usage);
 						const liveRecord = {
 							timestamp: new Date().toISOString(),
 							sourceStableId: sourceStableId || null,
@@ -371,3 +443,6 @@ const moduleFunction =
 module.exports = moduleFunction({ moduleName });
 module.exports.reconstructSelectResult = reconstructSelectResult;
 module.exports.judgmentPayloadFrom = judgmentPayloadFrom;
+// exported for the unit test ONLY — the guard's threshold and meter must be drivable without a
+// real ini or real spend; production code never touches these.
+module.exports.budgetInternalsForTestOnly = { budgetConfig, spendMeter };
