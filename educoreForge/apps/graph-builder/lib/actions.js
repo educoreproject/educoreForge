@@ -6,9 +6,10 @@
 // would drift apart; written once, the difference between the two actions is visible in a
 // dozen lines instead of buried in duplication.
 //
-//   actions.build(callback)     -> callback(errString, { exitCode, resultText })
-//   actions.validate(callback)  -> callback(errString, { exitCode, resultText })
-//   actions.deps(callback)      -> callback(errString, { exitCode, resultText })
+//   actions.build(callback)             -> callback(errString, { exitCode, resultText })
+//   actions.validate(callback)          -> callback(errString, { exitCode, resultText })
+//   actions.deps(callback)              -> callback(errString, { exitCode, resultText })
+//   actions.retrievalMetrics(callback)  -> callback(errString, { exitCode, resultText })
 //
 // NO ACTION CALLS process.exit. Each RETURNS its outcome and the entry file owns exiting. A
 // function that kills the process cannot be called by a test, and an action that cannot be
@@ -49,6 +50,11 @@ const requireJudgmentCache = () =>
 // its two sibling persistence stores; the trap discipline is easier to audit when uniform.
 const requireMatchForensics = () =>
 	require(path.join(__dirname, '..', '..', '..', 'lib', 'match-forensics', 'match-forensics'));
+
+// ⟪P11⟫ retrieval-metrics READS what match-forensics WROTE. Same lazy-require discipline as its
+// four sibling stores, for the same auditability reason (it pulls no sqlite either).
+const requireRetrievalMetrics = () =>
+	require(path.join(__dirname, '..', '..', '..', 'lib', 'retrieval-metrics', 'retrieval-metrics'));
 
 // ⟪P9, p9-judgmentPersistence 2026-07-31⟫ the canonical homes of the TWO judgment-persistence
 // stores, in dataStores — the SAME config discipline the shared vector cache uses
@@ -582,7 +588,163 @@ const replay = (callback) => {
 	);
 };
 
-return { build, validate, deps, replay, scanAvailableForges };
+// ---------------------------------------------------------------------
+// -retrievalMetrics
+// ---------------------------------------------------------------------
+// ⟪P11, 2026-07-31⟫ THE INSTRUMENT. Measure how well candidate selection is working, from the
+// forensic match log a --rebridge already wrote. READ-ONLY and FREE: no graph, no standards
+// database, no decision store, no LLM, no Voyage — it opens .jsonl trails and computes. That is
+// the whole point: this project had been issuing quality verdicts with no instrument, and the
+// verdicts cost real money.
+//
+// --pairKey is REQUIRED and has no default (a measurement is always OF a standard pairing).
+// --generation is OPTIONAL and, absent, measures EVERY generation under the pair — comparing
+// generations side by side is why they are kept side by side, and picking one silently is exactly
+// the question a default would answer wrongly.
+//
+// The READABLE REPORT is the result on stdout; the JSON SIDECAR is written beside the trail it
+// measures (<pairDir>/<generation>.retrievalMetrics.json) so a stored number can always be traced
+// back to the trail and the instrument version that produced it.
+
+const retrievalMetricsAction = (callback) => {
+	const { xLog, commandLineParameters } = process.global;
+
+	const pairKey = firstValue(commandLineParameters, 'pairKey');
+	if (!pairKey) {
+		callback(
+			`graphBuilder -retrievalMetrics: --pairKey=<pairKey> is REQUIRED and has no default ` +
+				`(e.g. --pairKey=CEDS::CASE). A metrics run is always ABOUT one standard pairing; there ` +
+				`is no meaningful aggregate across pairings that judge different standards.`,
+		);
+		return;
+	}
+
+	// --matchForensicsDirPath names the SAME directory -build writes to — ONE name across both boundaries (house rule), and
+	// defaults to the SAME documented canonical home. The reader's parameter is named for what it
+	// reads; the writer's for what it writes. The default is NOT prepared here — a metrics run
+	// against a directory that does not exist has nothing to measure and says so.
+	const explicitForensicsDirPath = firstValue(commandLineParameters, 'matchForensicsDirPath');
+	if (typeof explicitForensicsDirPath === 'string' && explicitForensicsDirPath.trim() === '') {
+		callback(
+			`graphBuilder -retrievalMetrics: --matchForensicsDirPath was given but blank. Pass a path, or ` +
+				`omit it to take the documented default (${MATCH_FORENSICS_DEFAULT_DIR_PATH}). A blank is ` +
+				`refused rather than guessed at.`,
+		);
+		return;
+	}
+	const forensicsDirPath = explicitForensicsDirPath || MATCH_FORENSICS_DEFAULT_DIR_PATH;
+
+	const generation = firstValue(commandLineParameters, 'generation');
+
+	// --cosineCutoff restates the composer's own retrieval top-K, which the log does not record.
+	// Only a positive integer is accepted; a garbage value is refused BY NAME rather than
+	// NaN-ing every rank comparison downstream into silent falsehood.
+	const rawCosineCutoff = firstValue(commandLineParameters, 'cosineCutoff');
+	let cosineCutoff;
+	if (rawCosineCutoff !== undefined) {
+		if (!/^\d+$/.test(String(rawCosineCutoff).trim()) || parseInt(rawCosineCutoff, 10) < 1) {
+			callback(
+				`graphBuilder -retrievalMetrics: --cosineCutoff='${rawCosineCutoff}' is not a positive ` +
+					`integer. It names the cosine rank within which a candidate would have been retrieved ` +
+					`by cosine alone; omit it to take the documented default (15).`,
+			);
+			return;
+		}
+		cosineCutoff = parseInt(rawCosineCutoff, 10);
+	}
+
+	// --abstentionFlagPercent is stated as a PERCENT on the control surface (an operator says 5,
+	// not 0.05) and converted to the share the library takes. One name, two honest units, the
+	// conversion in exactly one place.
+	const rawFlagPercent = firstValue(commandLineParameters, 'abstentionFlagPercent');
+	let flagThreshold;
+	if (rawFlagPercent !== undefined) {
+		const parsedPercent = Number(String(rawFlagPercent).trim());
+		if (!isFinite(parsedPercent) || parsedPercent < 0 || parsedPercent > 100) {
+			callback(
+				`graphBuilder -retrievalMetrics: --abstentionFlagPercent='${rawFlagPercent}' is not a ` +
+					`number between 0 and 100. It is the share of abstentions above which a phrase probe ` +
+					`becomes a FLAGGED SIGNAL; omit it to take the documented default (5).`,
+			);
+			return;
+		}
+		flagThreshold = parsedPercent / 100;
+	}
+
+	const explicitSidecarDirPath = firstValue(commandLineParameters, 'sidecarDirPath');
+	if (typeof explicitSidecarDirPath === 'string' && explicitSidecarDirPath.trim() === '') {
+		callback(
+			`graphBuilder -retrievalMetrics: --sidecarDirPath was given but blank. Pass a directory, or ` +
+				`omit it to write each sidecar beside the trail it measures.`,
+		);
+		return;
+	}
+
+	const retrievalMetricsLib = requireRetrievalMetrics()();
+
+	retrievalMetricsLib.measurePair(
+		{ forensicsDirPath, pairKey, generation, cosineCutoff, flagThreshold },
+		(measureError, measured) => {
+			if (measureError) {
+				callback(`graphBuilder -retrievalMetrics: ${measureError}`);
+				return;
+			}
+
+			// The sidecar is written BEFORE the report is returned, and a write failure is a FAULT
+			// named through the callback. A run that printed numbers but silently failed to persist
+			// them would be a measurement nobody can go back and check — which is the condition this
+			// verb exists to end.
+			const sidecarPaths = [];
+			let sidecarFault = '';
+			measured.reports.forEach((oneReport) => {
+				if (sidecarFault) {
+					return;
+				}
+				const sidecarDirPath =
+					explicitSidecarDirPath || path.dirname(oneReport.forensicFilePath);
+				const sidecarFilePath = path.join(
+					sidecarDirPath,
+					`${oneReport.generation}.retrievalMetrics.json`,
+				);
+				try {
+					fs.mkdirSync(sidecarDirPath, { recursive: true });
+					fs.writeFileSync(sidecarFilePath, `${JSON.stringify(oneReport, null, 2)}\n`, 'utf8');
+				} catch (writeError) {
+					sidecarFault = `writing the JSON sidecar '${sidecarFilePath}': ${writeError.message}`;
+					return;
+				}
+				sidecarPaths.push(sidecarFilePath);
+			});
+			if (sidecarFault) {
+				callback(`graphBuilder -retrievalMetrics: ${sidecarFault}`);
+				return;
+			}
+
+			retrievalMetricsLib.renderReportText(
+				{ reports: measured.reports },
+				(renderError, rendered) => {
+					if (renderError) {
+						callback(`graphBuilder -retrievalMetrics: ${renderError}`);
+						return;
+					}
+					sidecarPaths.forEach((onePath) => {
+						xLog.status(`graphBuilder: retrieval-metrics sidecar written to ${onePath}`);
+					});
+					callback('', { exitCode: 0, resultText: rendered.reportText });
+				},
+			);
+		},
+	);
+};
+
+return {
+	build,
+	validate,
+	deps,
+	replay,
+	retrievalMetrics: retrievalMetricsAction,
+	scanAvailableForges,
+};
 };
 
 // END OF moduleFunction() ============================================================

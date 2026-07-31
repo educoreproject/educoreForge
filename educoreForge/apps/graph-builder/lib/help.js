@@ -25,6 +25,7 @@ SYNOPSIS
      graphBuilder   -validate --recipePath=<path>
      graphBuilder   -replay   --standardsDatabaseFilePath=<path> --manifestRefId=<refId>
      graphBuilder   -deps
+     graphBuilder   -retrievalMetrics --pairKey=<pairKey> [--generation=<generation>]
      graphBuilder   -help
 
      ... | graphBuilder                (JSON on stdin REPLACES command-line parameters)
@@ -62,6 +63,22 @@ COMMANDS
                   persisted manifest is a reproducibility artifact. Returns
                   { manifestId, boltUrl, memberCount }.
      -deps        List the resolvable standard tokens, versions, and hub group aliases.
+     -retrievalMetrics
+                  MEASURE how well candidate selection is working, from the forensic match log
+                  a --rebridge already wrote. READ-ONLY and FREE -- no graph, no standards
+                  database, no decision store, no LLM, no Voyage. Per pair+generation it reports:
+                  the WINNER RANK DISTRIBUTION (where the chosen candidate sat once the pool is
+                  re-sorted by retrieval cosine -- display order is NOT rank, because the composer
+                  appends nominated candidates after the cosine top-K); COSINE TOP-1 ACCURACY;
+                  RECALL within the cosine cutoff; RESCUE ATTRIBUTION; the ABSTENTION LINT; and
+                  POOL COMPOSITION. Prints a readable report on stdout AND writes a JSON sidecar.
+
+                  RESCUE ATTRIBUTION REPORTS TWO SEPARATE NUMBERS AND WILL NOT CONFLATE THEM.
+                  A GENUINE rescue is a winner that carried a nomination AND sat outside the
+                  cosine cutoff, so the nomination is the ONLY reason it was in the pool at all.
+                  "The winner merely carried a nomination" is the WEAKER claim -- cosine may well
+                  have retrieved it anyway. Reporting the second as the first is the specific
+                  error this verb was built to end (155 reported where the true count was 20).
 
 OPTIONS
      --recipePath=<path>   The recipe file (a build/golden recipe). Required for -build and
@@ -120,6 +137,42 @@ OPTIONS
                            Name a path to point the build at a DIFFERENT cache, e.g. a throwaway one
                            so a test keeps spending real credit instead of being served free from the
                            warm production cache.
+     --pairKey=<pairKey>   Which standard pairing to measure, e.g. --pairKey=CEDS::CASE. REQUIRED
+                           for -retrievalMetrics; there is NO default -- a measurement is always
+                           ABOUT one pairing, and there is no meaningful aggregate across pairings
+                           that judge different standards.
+     --generation=<generation>
+                           Which frozen generation's trail to measure, e.g.
+                           --generation=caseEvidenceBridge-evidence-v2. OPTIONAL for
+                           -retrievalMetrics: absent, EVERY generation under the pair is measured
+                           and reported. Comparing generations side by side is why they are kept
+                           side by side; choosing one silently is exactly the question a default
+                           would answer wrongly.
+     --matchForensicsDirPath=<path>
+                           Where the FORENSIC MATCH LOG is READ from -- the same directory -build
+                           WRITES with --matchForensicsDirPath (the reader's parameter is named
+                           for what it reads, the writer's for what it writes). OPTIONAL for
+                           -retrievalMetrics: it DEFAULTS to the same documented canonical home,
+                           system/dataStores/matchForensics. Unlike the writer's, this path is
+                           never created -- a metrics run against a directory that does not exist
+                           has nothing to measure and says so by name.
+     --cosineCutoff=<n>    The cosine rank at or within which a candidate would have been
+                           retrieved by cosine ALONE -- the composer's own retrieval top-K,
+                           restated as an analysis parameter because the log does not record it.
+                           OPTIONAL for -retrievalMetrics, DEFAULTS TO 15. It governs RECALL and
+                           the GENUINE-rescue test. It does NOT move the rank histogram's bin
+                           edges, which are fixed by the measurement contract so numbers stay
+                           comparable across runs. Only a positive integer is accepted.
+     --abstentionFlagPercent=<n>
+                           The share of abstentions above which an abstention-lint phrase probe
+                           becomes a FLAGGED SIGNAL. OPTIONAL for -retrievalMetrics, DEFAULTS TO 5
+                           (i.e. >5%). Stated as a PERCENT on the command line.
+     --sidecarDirPath=<path>
+                           Where the JSON sidecar is written. OPTIONAL for -retrievalMetrics:
+                           absent, each sidecar is written BESIDE the trail it measures, as
+                           <pairDir>/<generation>.retrievalMetrics.json, so a stored number can
+                           always be traced back to the trail and the instrument version that
+                           produced it.
      -verbose              Emit verbose diagnostic detail on stderr.
      -quiet                Suppress progress; results and errors only.
 
@@ -128,6 +181,11 @@ OUTPUT
      -validate: JSON validation verdict on stdout.
      -replay:   JSON { manifestId, boltUrl, memberCount } on stdout (progress on stderr).
      -deps:     JSON discovery listing on stdout.
+     -retrievalMetrics:
+                A readable per-pair+generation report on stdout; the machine-readable metrics as
+                a JSON sidecar on disk (its path announced on stderr). The report text and the
+                sidecar are rendered from the SAME metrics object and never recompute anything,
+                so the two can never disagree about a number.
 
 EXIT STATUS
      0    the requested action succeeded (a -validate verdict of valid, a completed build)

@@ -566,4 +566,122 @@ const stdinBadSwitches = runCli([], JSON.stringify({ switches: [1, 2] }));
 harness.ok('an envelope whose switches is not an object exits nonzero', stdinBadSwitches.status !== 0, `status=${stdinBadSwitches.status}`);
 harness.match("  naming 'switches' as the malformed member", stdinBadSwitches.stderr, /'switches' must be an object/);
 
+// =====================================================================
+harness.section('-retrievalMetrics — the instrument, over a SYNTHETIC forensic trail');
+// =====================================================================
+// ⟪P11⟫ Gated end-to-end here through the real binary, against a throwaway forensics directory
+// built in this suite, so the gate is hermetic: the CLI's own contract (required parameters,
+// refusals, the readable report on stdout, the JSON sidecar on disk, the exit codes) is proven
+// without depending on the dataStores corpus. The NUMBERS are gated separately, against real
+// data, in lib/retrieval-metrics/test/test-retrievalMetricsCaseAcceptance.js.
+
+harness.match('-help documents the -retrievalMetrics action', helpRun.stdout, /-retrievalMetrics/);
+harness.match(
+	'  and states the rescue distinction the verb exists to protect',
+	helpRun.stdout,
+	/GENUINE rescue[\s\S]*WEAKER claim/,
+);
+
+const metricsScratchDir = fs.mkdtempSync(path.join(os.tmpdir(), 'edfCliRetrievalMetrics-'));
+const metricsForensicsDir = path.join(metricsScratchDir, 'matchForensics');
+const metricsPairDir = path.join(metricsForensicsDir, 'CEDS::CLITEST');
+fs.mkdirSync(metricsPairDir, { recursive: true });
+
+// two candidates, cosine-ordered; the winner is the second, so it ranks 2 — a pick that is NOT
+// cosine top-1, which makes the top-1 accuracy assertion below meaningful rather than trivially 100%.
+const cliPromptText =
+	'EVIDENCE\n' +
+	'1) First Candidate — retrieval cosine 0.900000\n' +
+	'  CEDS Reference: P000001 — "First Candidate"\n' +
+	'2) Second Candidate — retrieval cosine 0.500000\n' +
+	'   Nominated by cliTestBridge: shares token(s) [second]\n' +
+	'  CEDS Reference: P000002 — "Second Candidate"\n' +
+	'Reply with the number.\n';
+const cliRecord = (choice, rationale) =>
+	JSON.stringify({
+		timestamp: '2026-07-31T00:00:00.000Z',
+		sourceStableId: 'cli:Thing.thing',
+		sourceName: 'thing',
+		promptText: cliPromptText,
+		judgedVia: 'cache:abc',
+		response: { choice, category: choice === 'NONE' ? 'none' : 'moderate', rationale },
+	});
+fs.writeFileSync(
+	path.join(metricsPairDir, 'cliTestBridge-evidence-v1.jsonl'),
+	`${cliRecord('2', 'the second one fits')}\n${cliRecord('NONE', 'none of the candidates are supported')}\n`,
+	'utf8',
+);
+
+const noPairKeyRun = runCli(['-retrievalMetrics']);
+harness.ok('-retrievalMetrics with no --pairKey exits nonzero', noPairKeyRun.status !== 0, `status=${noPairKeyRun.status}`);
+harness.match(
+	'  refusing BY NAME and saying there is no default',
+	noPairKeyRun.stderr,
+	/--pairKey=<pairKey> is REQUIRED and has no default/,
+);
+
+const unknownPairRun = runCli([
+	'-retrievalMetrics',
+	'--pairKey=CEDS::NOSUCHPAIR',
+	`--matchForensicsDirPath=${metricsForensicsDir}`,
+]);
+harness.ok('an unknown pairKey exits nonzero', unknownPairRun.status !== 0, `status=${unknownPairRun.status}`);
+harness.match('  and LISTS the pairs that are present', unknownPairRun.stderr, /Pairs present: CEDS::CLITEST/);
+
+const badCutoffRun = runCli([
+	'-retrievalMetrics',
+	'--pairKey=CEDS::CLITEST',
+	`--matchForensicsDirPath=${metricsForensicsDir}`,
+	'--cosineCutoff=banana',
+]);
+harness.ok('a non-numeric --cosineCutoff exits nonzero', badCutoffRun.status !== 0, `status=${badCutoffRun.status}`);
+harness.match('  refused by name rather than NaN-ing every rank', badCutoffRun.stderr, /is not a positive integer/);
+
+const metricsRun = runCli([
+	'-retrievalMetrics',
+	'--pairKey=CEDS::CLITEST',
+	`--matchForensicsDirPath=${metricsForensicsDir}`,
+]);
+harness.equal('a real -retrievalMetrics run exits 0', metricsRun.status, 0);
+harness.match('  the READABLE REPORT lands on stdout', metricsRun.stdout, /RETRIEVAL METRICS — CEDS::CLITEST/);
+harness.match('  reporting the winner rank distribution', metricsRun.stdout, /WINNER RANK DISTRIBUTION/);
+harness.match('  and BOTH rescue numbers, labelled', metricsRun.stdout, /GENUINE rescues[\s\S]*winner merely nominated/);
+harness.match('  and the abstention lint', metricsRun.stdout, /ABSTENTION LINT/);
+harness.ok(
+	'  progress (the sidecar path) goes to stderr, never polluting the report',
+	/retrieval-metrics sidecar written to/.test(metricsRun.stderr) &&
+		!/retrieval-metrics sidecar written to/.test(metricsRun.stdout),
+	`stdout=${metricsRun.stdout.slice(0, 200)}`,
+);
+
+const sidecarFilePath = path.join(metricsPairDir, 'cliTestBridge-evidence-v1.retrievalMetrics.json');
+harness.ok('  the JSON SIDECAR is written beside the trail it measures', fs.existsSync(sidecarFilePath), sidecarFilePath);
+(() => {
+	if (!fs.existsSync(sidecarFilePath)) {
+		return;
+	}
+	const sidecar = JSON.parse(fs.readFileSync(sidecarFilePath, 'utf8'));
+	harness.equal('  the sidecar names the pair', sidecar.pairKey, 'CEDS::CLITEST');
+	harness.equal('  and stamps the instrument version', sidecar.metricsVersion, 'retrievalMetrics-v1');
+	harness.equal('  and carries the pick count', sidecar.judgmentOutcomes.picks, 1);
+	harness.equal('  and the abstention count', sidecar.judgmentOutcomes.abstentions, 1);
+	harness.equal(
+		'  the winner ranked 2 by cosine, so top-1 accuracy is 0 (display order is not rank)',
+		sidecar.cosineTopOneAccuracy.hits,
+		0,
+	);
+	harness.equal(
+		'  the nominated winner sat INSIDE the cutoff, so it is NOT a genuine rescue',
+		sidecar.rescueAttribution.genuineRescues,
+		0,
+	);
+	harness.equal(
+		'  though it DID merely carry a nomination — the two numbers stay apart',
+		sidecar.rescueAttribution.winnerCarriedNomination,
+		1,
+	);
+})();
+
+fs.rmSync(metricsScratchDir, { recursive: true, force: true });
+
 harness.report();
