@@ -590,7 +590,15 @@ module.exports = (sourcePath, options, callback) => {
 				// XML sequence within the parent SifObject. 0-based. Source rows in
 				// ImplementationSpecification_*.tsv already arrive in XML-valid order;
 				// we stamp each field with its position so query consumers can ORDER BY.
-				sequenceInParent: fieldIndex
+				sequenceInParent: fieldIndex,
+				// the native XSD-derived value type (e.g. 'normalizedString', 'date', 'token') and its
+				// format annotation (bridgeEvidenceRefactor P6 grounding: forgeSif.js previously read the
+				// TSV's Type/Format columns only to build the type/codeset REGISTRIES, never propagated
+				// them onto the SifField node itself — added here, additively, so a consumer (e.g. the
+				// SIF evidence bridge's "value-ish hints" comparison) has a real value-type signal to
+				// read instead of none).
+				nativeType: field.type,
+				format: field.format
 			};
 
 			const searchParts = [fieldProps.name + ': ' + fieldProps.description];

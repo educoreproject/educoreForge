@@ -608,6 +608,28 @@ const STRUCTURAL_PROPERTIES = {
 };
 
 // =====================================================================
+// SEQUENCE PROPERTY NAMES (design-authority upgrade to the SIF sequence-capture work order,
+// 2026-07-30) — registered here for the SAME reason STRUCTURAL_PROPERTIES is: one canonical name per
+// property, read by lib/sequence-contract/sequence-contract.js (the finalizer that stamps them) and
+// any future consumer, never a per-standard literal. sequenceOrdinal/siblingCount are ADDITIVE
+// extraProps a forge gains only if it calls finalizeSequence; orderSemantics states HONESTLY whether
+// the caller's parser verified a schema-ordered group ('normative') or only knows document/source
+// order ('document') — never a guess. See lib/sequence-contract/sequence-contract.js for the full
+// contract.
+// =====================================================================
+const SEQUENCE_PROPERTIES = {
+	SEQUENCE_ORDINAL: 'sequenceOrdinal',
+	SIBLING_COUNT: 'siblingCount',
+	ORDER_SEMANTICS: 'orderSemantics',
+};
+const SEQUENCE_ORDER_SEMANTICS_VALUES = ['normative', 'document'];
+const SEQUENCE_ORDER_SEMANTICS = {
+	NORMATIVE: 'normative',
+	DOCUMENT: 'document',
+};
+const isValidSequenceOrderSemantics = (oneValue) => SEQUENCE_ORDER_SEMANTICS_VALUES.indexOf(oneValue) !== -1;
+
+// =====================================================================
 // SCHEMA-VIEW VOCABULARY (Phase 7 — the self-describing in-graph schema view; SPEC §3.3). The view is a
 // READ-ONLY generated projection of THIS registry, emitted by the replayManager schema-view FINISHER (NOT a
 // producer block; the manifest carries nothing schema-related). Its OWN label + edge type are registered
@@ -764,6 +786,11 @@ const vocabulary = {
 	ADDRESS_SIGNATURE_FIELD_ORDER,
 	// structural property names (Wave-2 items 5/6)
 	STRUCTURAL_PROPERTIES,
+	// sequence property names (design-authority upgrade, 2026-07-30 — lib/sequence-contract)
+	SEQUENCE_PROPERTIES,
+	SEQUENCE_ORDER_SEMANTICS_VALUES,
+	SEQUENCE_ORDER_SEMANTICS,
+	isValidSequenceOrderSemantics,
 	// schema-view vocabulary (Phase 7)
 	SCHEMA_VIEW,
 	// self-documentation vocabulary (Wave B)

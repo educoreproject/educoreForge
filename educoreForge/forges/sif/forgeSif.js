@@ -48,6 +48,14 @@ const { NODE_LABELS, DME_ROLES, EDGE_TYPES, PROVENANCE_TIER } = require(path.joi
 const { finalizeStructuralContract } = require(
 	path.join(CORE_LIB, 'structural-contract', 'structural-contract'),
 );
+// the central SEQUENCE-property authority (design-authority upgrade to the SIF sequence-capture work
+// order, 2026-07-30): stamps sequenceOrdinal/siblingCount/orderSemantics uniformly, ADDITIVE only.
+// SIF is the FIRST caller — see the SEQUENCE CAPTURE section below for the grounding (file:line) on
+// why every group this forge declares is honestly 'document', never 'normative'. Called BEFORE
+// finalizeStructuralContract (which must run LAST per its own contract).
+const { finalizeSequence } = require(
+	path.join(CORE_LIB, 'sequence-contract', 'sequence-contract'),
+);
 
 const STANDARD_KEY = 'sif';
 const STANDARD_SOURCE = 'SIF'; // === the registry standardName, EXACT (no literals elsewhere, no toLower)
@@ -176,6 +184,50 @@ const moduleFunction =
 		const buildContractGraph = ({ nodes: nativeNodes, metadata }) => {
 			const nodes = [];
 			const edges = [];
+
+			// ---- SEQUENCE CAPTURE (Phase A, design-authority upgrade 2026-07-30) ----
+			// GROUNDING (code fact, forges/sif/lib/parser.js): the SIF forge's ONLY source is a flattened
+			// Implementation-Specification TSV whose columns are Name / Mandatory / Characteristics /
+			// Type / Description / XPath / CEDS ID / Format (parser.js:60-72, the literal header row
+			// asserted in forges/sif/test/... and visible in the raw asset) — there is NO compositor
+			// column recording xs:sequence vs xs:choice anywhere in this source format. The parser only
+			// ever sees TSV ROW / XPath order: parser.js:590-593's own comment on `sequenceInParent`
+			// ("Source rows ... already arrive in XML-valid order"), and parser.js:638-645's
+			// CHILD_ELEMENT `sequence` (an insertion-order Set) are BOTH pure document order, never a
+			// verified schema compositor. This forge therefore NEVER stamps orderSemantics 'normative'
+			// — it has no way to verify a schema-ordered group — every sibling group below is honestly
+			// 'document' (the sequence-contract module refuses any forge that claims otherwise without
+			// grounds; SIF has none).
+			//
+			// TWO DISJOINT sibling-group families, both reconstructed from data the parser ALREADY
+			// computed and already carries on the native nodes/edges (no parser.js change needed):
+			//   (1) FIELD groups — every SifField belongs to EXACTLY ONE group, OWNER-SCOPED to its
+			//       SifObject: fields sharing the SAME immediate XML parent WITHIN THE SAME OBJECT
+			//       (their leaf xmlElement's parent-element path, e.g. all of Prefix/FirstName/
+			//       MiddleName/LastName under 'Name' inside ONE StudentPersonal record) when the field is
+			//       nested; fields with NO intermediate element (direct children of the SifObject) group
+			//       by their owning object, same as ever. This is the group Phase B's sibling-context
+			//       feature reads. ⟪ADVERSARIAL-REVIEW FIX, 2026-07-30⟫: the nested-group key was
+			//       originally keyed on pathSegments ALONE (object-relative by construction — see the
+			//       fix comment at the field-group site below), so a shared nested shape reused across
+			//       many SifObjects (e.g. 'SIF_Metadata/TimeElements/TimeElement', reused by 136 objects)
+			//       silently merged into ONE cross-object group. Fixed by folding the owning object's own
+			//       name into the key — see the full grounding + measured numbers at that site.
+			//   (2) ELEMENT groups — every non-root SifXmlElement belongs to EXACTLY ONE group: the
+			//       children of its own parent xmlElement (native CHILD_ELEMENT edges, already
+			//       document-ordered), DELIBERATELY NOT owner-scoped (see the ASYMMETRY note at that
+			//       site: an element node is already deduped to ONE per relativePath, so its children ARE
+			//       the one merged tree the graph actually contains — unlike a field, which is a distinct
+			//       node per object). Root elements (depth 1) are deliberately NOT grouped here: a
+			//       depth-1 relativePath (e.g. 'Name') is GLOBAL across the parser's elementMap and can
+			//       be the root of MULTIPLE distinct SifObjects with unrelated sibling sets (the same
+			//       `isShared` collision structural-contract's own optionSet alignment stays honestly
+			//       clear of for multi-owner sets) — forcing a single group there would silently pick a
+			//       winner. Nested groups have no such collision: a non-root element's relativePath
+			//       determines exactly one parent path by construction.
+			const SEQUENCE_ORDER_SEMANTICS_HERE = 'document';
+			const fieldGroups = {}; // groupKey -> { orderSemantics, members: [fieldStableId, ...] }
+			const elementGroups = {}; // groupKey -> { orderSemantics, members: [elementStableId, ...] }
 
 			// stats surfaced to the caller (counts, not silent): annotated/orphaned cross-refs,
 			// field-less complex types (the flag STEEL_WHEEL asked for), expanded option values.
@@ -354,6 +406,76 @@ const moduleFunction =
 				if (props.tableName) extraProps.scalar.tableName = props.tableName;
 				if (typeof props.mandatory === 'boolean') extraProps.scalar.mandatory = props.mandatory;
 				if (props.category) extraProps.scalar.category = props.category;
+				// the native XSD value type + format annotation (parser.js fieldProps.nativeType/format;
+				// see that file's own comment) — a real "value-ish hint" signal for a consumer comparing
+				// this field against a CEDS candidate's range slot (e.g. the SIF evidence bridge).
+				if (props.nativeType) extraProps.scalar.nativeType = props.nativeType;
+				if (props.format) extraProps.scalar.format = props.format;
+
+				// ---- SEQUENCE CAPTURE (Phase A) — FIELD groups. Every SifField belongs to EXACTLY ONE
+				// group: nested under its leaf xmlElement's parent-element path (props.pathSegments, when
+				// present) or, for a field with no intermediate element, at the root of its owning
+				// SifObject. sequenceGroupKey/sequenceGroupLabel are SIF-local scalars (not part of the
+				// canonical sequence-contract vocabulary) so Phase B's bridge can read a human-legible
+				// group name without a graph walk.
+				//
+				// ⟪ADVERSARIAL-REVIEW FIX, 2026-07-30⟫ — the group key MUST be owner-scoped.
+				// props.pathSegments is the xpath with the owning SifObject's own two path segments
+				// ALREADY STRIPPED (parser.js's field.pathSegments = xpathParts.slice(3, -1), relative to
+				// the object), so a SHARED nested shape (e.g. 'SIF_Metadata/TimeElements/TimeElement',
+				// reused by 136 different SifObjects) collided into ONE cross-object group keyed on
+				// pathSegments alone — 268 of 1,873 field groups merged, 10,933 of 15,620 fields (70%)
+				// sat in a merged group, worst case 952 members from 136 objects (measured against the
+				// real asset). owningName (the owning SifObject's own singular name, already resolved
+				// above) is folded into the key so the group is scoped to ONE object's TSV rows, which
+				// are contiguous for one parent within that object — per-owner ordinals are then correct
+				// by construction. The root-field key form was ALREADY owner-scoped (props.tableName is
+				// always undefined on a field node, so it always fell through to owningName) and is
+				// unchanged.
+				if (spec.kind === 'field') {
+					const hasParentElement = !!props.pathSegments;
+					const groupKey = hasParentElement
+						? `sif:fieldGroup:${owningName}:${props.pathSegments}`
+						: `sif:fieldGroup:root:${props.tableName || owningName}`;
+					const groupLabel = hasParentElement ? props.pathSegments.split('/').pop() : owningName;
+					extraProps.scalar.sequenceGroupKey = groupKey;
+					extraProps.scalar.sequenceGroupLabel = groupLabel;
+					(fieldGroups[groupKey] =
+						fieldGroups[groupKey] || { orderSemantics: SEQUENCE_ORDER_SEMANTICS_HERE, members: [] }
+					).members.push(self.stableId);
+				}
+
+				// ---- SEQUENCE CAPTURE (Phase A) — ELEMENT groups. A non-root SifXmlElement's CHILD
+				// elements are already document-ordered on its OWN native CHILD_ELEMENT edges
+				// (parser.js:638-645); one group per parent, computed in one shot from those edges.
+				// ASYMMETRY, noted deliberately (adversarial review, 2026-07-30): element groups are NOT
+				// owner-scoped the way field groups now are, and that is correct, not an oversight — a
+				// SifXmlElement is ALREADY deduped to ONE node per relativePath (elementMap is global in
+				// the parser; isShared marks exactly this), so its children ARE the one merged tree the
+				// forged graph actually contains. A field, by contrast, is a distinct node PER OBJECT
+				// even when it shares a relativePath with fields in other objects — grouping it at the
+				// element's merged scope would misrepresent a per-document position as a standard-wide
+				// one (the defect this fix corrects). Element-level siblingCount can therefore
+				// legitimately exceed what any single document instance shows; field-level siblingCount
+				// must not.
+				if (spec.kind === 'xmlElement' && Array.isArray(nativeNode.edges) && nativeNode.edges.length) {
+					const childEdges = nativeNode.edges
+						.filter((oneEdge) => oneEdge.type === 'CHILD_ELEMENT')
+						.slice()
+						.sort((a, b) => (a.properties && a.properties.sequence) - (b.properties && b.properties.sequence));
+					if (childEdges.length) {
+						const members = childEdges
+							.map((oneEdge) => nativeIdToStable[oneEdge.targetId])
+							.filter(Boolean)
+							.map((oneRef) => oneRef.stableId);
+						if (members.length) {
+							elementGroups[`sif:elementGroup:${props.path}`] = {
+								orderSemantics: SEQUENCE_ORDER_SEMANTICS_HERE,
+								members,
+							};
+						}
+					}
+				}
 
 				const pathLabel =
 					spec.kind === 'field' ? `${owningName}.${props.name}` : `${props.name}`;
@@ -411,6 +533,21 @@ const moduleFunction =
 					});
 				}
 			});
+
+			// ---- SEQUENCE CAPTURE (Phase A) — stamp sequenceOrdinal/siblingCount/orderSemantics via
+			// the shared sequence-contract module, over EVERY field group + element group collected
+			// above. Callback-shaped (R7); this module is pure/synchronous so the callback resolves on
+			// the same tick — converted to a throw here to match this function's own house style
+			// (buildContractGraph throws; forge()'s ONE sanctioned try/catch, further below, is the
+			// boundary that translates it to an error string, exactly as it already does for R3/R4).
+			const sequenceOrderingByParent = { ...fieldGroups, ...elementGroups };
+			let sequenceError = '';
+			finalizeSequence({ nodes, orderingByParent: sequenceOrderingByParent }, (err) => {
+				sequenceError = err;
+			});
+			if (sequenceError) {
+				throw new Error(`forge-sif sequence capture: ${sequenceError}`);
+			}
 
 			// ---- translate native edges (the source node's own .edges and the field _parentEdge) ----
 			nativeNodes.forEach((nativeNode) => {
