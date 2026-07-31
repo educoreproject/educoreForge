@@ -126,7 +126,7 @@ const MATERIALIZER_CONFIG = { predicate: 'closeMatch', mappingJustification: 'se
 // sources are judged directly and reshapes member frozenEvidence entries (reference, not duplicate)
 // — a differently-judging pipeline is a different generation of picks over identical graph state
 // and must be legible as one, exactly the ⟪A6⟫ discipline this constant exists for.
-const EVIDENCE_GENERATION = 'sifEvidenceBridge-evidence-v2';
+const EVIDENCE_GENERATION = 'sifEvidenceBridge-evidence-v3'; // v3 = freeze-by-reference (2026-07-31)
 
 // EVIDENCE_JUDGE_CONCURRENCY — how many per-source evidence judgments (compose -> ⟪A3⟫ gate ->
 // render -> select -> normalize) may be IN FLIGHT at once during REBRIDGE. The serial loop this
@@ -928,7 +928,10 @@ module.exports = (injectedTools = {}) =>
 															},
 															frozenEntry: {
 																sourceStableId: oneSource.stableId,
-																evidencePackage,
+																// ⟪FREEZE-BY-REFERENCE, 2026-07-31⟫ — see genericBridge.js's rider: the block
+																// carries the promptHash ADDRESS of the evidence (judgment cache + forensics
+																// hold the bytes), never the package itself. Generation bumped (v3).
+																evidencePackageRef: { promptHash: judged.judgeMeta.promptHash, rendererVersion: kit.evidenceRenderer.RENDERER_VERSION },
 																judgment: { category: selectResult.category, rationale: selectResult.rationale, normalizedConfidence },
 															},
 															judgeMeta: judged.judgeMeta,

@@ -173,7 +173,7 @@ const MATERIALIZER_CONFIG = { predicate: 'closeMatch', mappingJustification: 'se
 // whenever the evidence pipeline's own wiring (composer/renderer/select/normalizer, or which kit modules
 // they compose) changes in a way that could change picks over the SAME graph state — exactly the same
 // discipline RENDERER_VERSION applies to the renderer alone, one level up at the whole-pipeline scope.
-const EVIDENCE_GENERATION = 'genericBridge-evidence-v1';
+const EVIDENCE_GENERATION = 'genericBridge-evidence-v2'; // v2 = freeze-by-reference (2026-07-31)
 
 // EVIDENCE_JUDGE_CONCURRENCY — how many per-source evidence judgments (compose -> ⟪A3⟫ gate ->
 // render -> select -> normalize) may be IN FLIGHT at once during REBRIDGE. The serial loop this
@@ -652,7 +652,13 @@ module.exports = (injectedTools = {}) =>
 															},
 															frozenEntry: {
 																sourceStableId: oneSource.stableId,
-																evidencePackage,
+																// ⟪FREEZE-BY-REFERENCE, 2026-07-31⟫ the full evidencePackage is NOT duplicated
+																// into the frozen block any more — the bronze build's PESC pair proved 1,792
+																// embedded packages exceed V8's max string at serialize (RangeError). The
+																// judgment cache + matchForensics log (both keyed by this promptHash) are the
+																// single source of the full rendered evidence; the block carries the ADDRESS.
+																// Generation bumped (v2) — a v1 block replays unchanged via its own stored text.
+																evidencePackageRef: { promptHash: judged.judgeMeta.promptHash, rendererVersion: kit.evidenceRenderer.RENDERER_VERSION },
 																judgment: { category: selectResult.category, rationale: selectResult.rationale, normalizedConfidence },
 															},
 															judgeMeta: judged.judgeMeta,

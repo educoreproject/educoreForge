@@ -513,7 +513,10 @@ const runPartE = () => {
 					harness.equal("  HONESTY: it is stamped judgedVia 'dedupe:<key>'", memberEntry && memberEntry.judgedVia, 'dedupe:unit:sharedShape');
 					harness.equal('  and names its representative', memberEntry && memberEntry.representativeSourceStableId, 'sP1');
 					harness.ok('  and REFERENCES rather than duplicates the evidencePackage (none of its own)', memberEntry && memberEntry.evidencePackage === undefined);
-					harness.ok('  while the representative entry carries the real evidencePackage', representativeEntry && !!representativeEntry.evidencePackage);
+					harness.ok(
+						'  while the representative entry carries the evidencePackageRef address (freeze-by-reference, 2026-07-31)',
+						representativeEntry && representativeEntry.evidencePackageRef && typeof representativeEntry.evidencePackageRef.promptHash === 'string' && representativeEntry.evidencePackageRef.promptHash.length > 0,
+					);
 					harness.equal('  and the member inherited the representative judgment verbatim', JSON.stringify(memberEntry && memberEntry.judgment), JSON.stringify(representativeEntry && representativeEntry.judgment));
 
 					const memberDecision = parsed.decisions.find((oneDecision) => oneDecision.fromStableId === 'sP3');

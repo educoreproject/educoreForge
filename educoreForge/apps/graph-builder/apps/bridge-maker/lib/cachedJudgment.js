@@ -259,7 +259,11 @@ const moduleFunction =
 				return;
 			}
 
-			const promptHash = cacheActive || forensicsActive ? contentAddress.blockIdForText(promptText) : null;
+			// promptHash is computed UNCONDITIONALLY (2026-07-31, freeze-by-reference): the frozen
+			// decision block's evidencePackageRef addresses the evidence by this hash, so it must
+			// exist even when the cache and forensics are both disabled — the address is part of the
+			// judgment's identity, not an optional optimization.
+			const promptHash = contentAddress.blockIdForText(promptText);
 			const startedAtMs = Date.now();
 
 			// writeForensics — LOUD BUT NONFATAL (forensics are evidence, not a gate): an append

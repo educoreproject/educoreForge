@@ -243,7 +243,10 @@ runSifDedupePass({ graphName: 'DEV_sif_dedupe_rb', counter: counterOne, decision
 
 	const representativeEntry = parsed.frozenEvidence.find((e) => e.sourceStableId === 'sif:field/StudentPersonal/SIF_Metadata/LifeCycle/Modified/By');
 	const memberEntry = parsed.frozenEvidence.find((e) => e.sourceStableId === 'sif:field/SchoolInfo/SIF_Metadata/LifeCycle/Modified/By');
-	harness.ok('the representative (FIRST in source order) carries its real evidencePackage', representativeEntry && !!representativeEntry.evidencePackage);
+	harness.ok(
+		'the representative (FIRST in source order) carries the evidencePackageRef address (freeze-by-reference, 2026-07-31)',
+		representativeEntry && representativeEntry.evidencePackageRef && typeof representativeEntry.evidencePackageRef.promptHash === 'string' && representativeEntry.evidencePackageRef.promptHash.length > 0,
+	);
 	harness.equal(
 		"HONESTY: the member is stamped judgedVia 'dedupe:<owner-stripped key>'",
 		memberEntry && memberEntry.judgedVia,

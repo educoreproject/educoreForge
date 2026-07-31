@@ -128,7 +128,7 @@ const MATERIALIZER_CONFIG = { predicate: 'closeMatch', mappingJustification: 'se
 // EVIDENCE_GENERATION — this bridge's OWN generation tag (⟪A6⟫, R4), distinct from genericBridge's —
 // a CASE-nominating, CASE-considering pipeline produces a different generation of picks even over the
 // identical graph state, and must be legible as such.
-const EVIDENCE_GENERATION = 'caseEvidenceBridge-evidence-v1';
+const EVIDENCE_GENERATION = 'caseEvidenceBridge-evidence-v2'; // v2 = freeze-by-reference (2026-07-31)
 
 // HUB_SEGMENTS — composition-order slot 2 (hub-level framing), copied verbatim from genericBridge.js:
 // this bridge bridges toward the SAME CEDS hub, so the SAME hub-level instruction applies. Deliberately
@@ -690,7 +690,10 @@ module.exports = (injectedTools = {}) =>
 											});
 											frozenEvidencePayload.push({
 												sourceStableId: oneSource.stableId,
-												evidencePackage,
+												// ⟪FREEZE-BY-REFERENCE, 2026-07-31⟫ — see genericBridge.js's rider: the block
+												// carries the promptHash ADDRESS of the evidence (judgment cache + forensics
+												// hold the bytes), never the package itself. Generation bumped.
+												evidencePackageRef: { promptHash: judged.judgeMeta.promptHash, rendererVersion: kit.evidenceRenderer.RENDERER_VERSION },
 												judgment: { category: selectResult.category, rationale: selectResult.rationale, normalizedConfidence },
 											});
 											n2('', a2);

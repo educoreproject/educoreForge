@@ -349,19 +349,24 @@ harness.ok('a real frozen evidence-decision block was saved', !!frozenBlock);
 const parsedFrozen = evidenceFreezer.parse(frozenBlock.frozenText);
 harness.ok('the frozen block parses with no error', !parsedFrozen.error, parsedFrozen.error);
 harness.equal('the frozen block carries exactly 2 frozenEvidence entries (one per source)', parsedFrozen.frozenEvidence.length, 2);
+// ⟪FREEZE-BY-REFERENCE, 2026-07-31⟫ frozen entries carry the evidence's ADDRESS, not its bytes —
+// the bronze build's PESC pair proved embedded packages exceed V8's max string at freeze. The
+// package's contract conformance is proven upstream (the ⟪A3⟫ gate runs on every compose before
+// judging); here we prove the block addresses the evidence completely and honestly.
 parsedFrozen.frozenEvidence.forEach((oneEntry) => {
-	harness.equal(
-		`frozenEvidence[${oneEntry.sourceStableId}]'s evidencePackage passes the REAL evidencePackageViolation oracle (⟪A3⟫)`,
-		evidencePackageViolation(oneEntry.evidencePackage),
-		'',
+	harness.ok(
+		`frozenEvidence[${oneEntry.sourceStableId}] carries NO embedded evidencePackage (freeze-by-reference)`,
+		oneEntry.evidencePackage === undefined,
 	);
-	oneEntry.evidencePackage.pool.forEach((onePoolEntry) => {
-		harness.equal(
-			`  its pool candidate's hub tuple passes the REAL hubModulePresentationViolation oracle (R5)`,
-			hubModulePresentationViolation(onePoolEntry.considerations.tuple),
-			'',
-		);
-	});
+	harness.ok(
+		`  and its evidencePackageRef carries a non-empty promptHash`,
+		oneEntry.evidencePackageRef && typeof oneEntry.evidencePackageRef.promptHash === 'string' && oneEntry.evidencePackageRef.promptHash.length > 0,
+	);
+	harness.equal(
+		`  and names the renderer that produced the addressed evidence`,
+		oneEntry.evidencePackageRef && oneEntry.evidencePackageRef.rendererVersion,
+		require('../lib.d/evidenceRenderer').RENDERER_VERSION,
+	);
 });
 
 const s1Frozen = parsedFrozen.frozenEvidence.find((e) => e.sourceStableId === 's1');

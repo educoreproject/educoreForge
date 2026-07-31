@@ -630,10 +630,10 @@ const parsedFrozen7 = evidenceFreezerFactory7().parse(frozenBlock7.frozenText);
 harness.ok('the frozen block parses with no error', !parsedFrozen7.error, parsedFrozen7.error);
 const s1Frozen7 = parsedFrozen7.frozenEvidence.find((e) => e.sourceStableId === 'sif:field/StudentPersonal/Name/FirstName');
 harness.ok("s1's frozen evidence is retrievable", !!s1Frozen7);
-harness.equal("s1's frozen evidencePackage passes the REAL evidencePackageViolation oracle (⟪A3⟫)", evidencePackageViolation(s1Frozen7.evidencePackage), '');
-s1Frozen7.evidencePackage.pool.forEach((onePoolEntry) => {
-	harness.equal("  each pool candidate's hub tuple passes the REAL hubModulePresentationViolation oracle (R5)", hubModulePresentationViolation(onePoolEntry.considerations.tuple), '');
-});
+// ⟪FREEZE-BY-REFERENCE, 2026-07-31⟫ the frozen entry carries the evidence's ADDRESS, not its bytes
+// (the ⟪A3⟫ gate proved the package upstream, at compose time, before judging).
+harness.ok("s1's frozen entry carries NO embedded evidencePackage (freeze-by-reference)", s1Frozen7.evidencePackage === undefined);
+harness.ok("  and its evidencePackageRef carries a non-empty promptHash", s1Frozen7.evidencePackageRef && typeof s1Frozen7.evidencePackageRef.promptHash === 'string' && s1Frozen7.evidencePackageRef.promptHash.length > 0);
 harness.equal("s1's frozen category is 'strong'", s1Frozen7.judgment.category, 'strong');
 
 // =====================================================================
