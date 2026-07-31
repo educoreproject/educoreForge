@@ -259,23 +259,32 @@ const workingReplayManager = (overrides) => () => {
 	);
 };
 
-const workingForger = (overrides) => () =>
+// resolveBundle is a STATIC on the real forger module (token -> declared standardName from
+// parserDescriptor.ini); build.js's bridge phase consults it for exact `_source` matching (the
+// EXACT-NAME RULE, 2026-07-30). The double answers uppercase — matching these fixtures' forged
+// `_source` values — attached to the factory exactly where the real module carries it.
+const forgerRegistryDouble = ({ standard }) => ({ standardName: String(standard).toUpperCase() });
+const workingForger = (overrides) =>
 	Object.assign(
-		{
-			forge: ({ standard, version }, cb) =>
-				cb('', {
-					standard,
-					version,
-					snapshotKey: '01',
-					publishedVersion: version,
-					versionSource: 'spec',
-					nodeEdges: { nodes: [], edges: [], embeddingDims: null },
-					nodeCount: 0,
-					edgeCount: 0,
-					embedCallCount: 0,
-				}),
-		},
-		overrides || {},
+		() =>
+			Object.assign(
+				{
+					forge: ({ standard, version }, cb) =>
+						cb('', {
+							standard,
+							version,
+							snapshotKey: '01',
+							publishedVersion: version,
+							versionSource: 'spec',
+							nodeEdges: { nodes: [], edges: [], embeddingDims: null },
+							nodeCount: 0,
+							edgeCount: 0,
+							embedCallCount: 0,
+						}),
+				},
+				overrides || {},
+			),
+		{ resolveBundle: forgerRegistryDouble },
 	);
 
 const workingBridgeMaker = (overrides) => () =>

@@ -205,14 +205,20 @@ const makeGraphWriterDouble = (writes) => ({
 
 // runBridgeDirect — compose the bridge exactly the way the component library would, but with the
 // REAL referenceIndex + the REAL vocabulary-guarded relationshipWriter over a writer double.
-const runBridgeDirect = ({ sourceNodes, referenceNodes, sourceStandard, writes, saves }, callback) => {
+// THE EXACT-NAME RULE (2026-07-30): the double is keyed by the DECLARED standardName VERBATIM —
+// deliberately MIXED-CASE ('Xy') against a lowercase token ('xy'), because the first live EdFi run
+// proved a double that echoes the bridge's own case assumption (the old sourceStandard.toUpperCase()
+// here) can never catch a case mismatch. The double must be faithful to reality, not to the code
+// under test.
+const SYNTHETIC_STANDARD_NAME = 'Xy';
+const runBridgeDirect = ({ sourceNodes, referenceNodes, sourceStandard, sourceStandardName = SYNTHETIC_STANDARD_NAME, writes, saves }, callback) => {
 	const writer = relationshipWriterFactory({ graphWriter: makeGraphWriterDouble(writes), edgePolicy: deriveEdgePolicy() });
 	const bridgeCallable = authoredAnchorBridge({
-		graphReader: makeGraphReaderDouble({ sourceNodes, referenceNodes, sourceKey: sourceStandard.toUpperCase() }),
+		graphReader: makeGraphReaderDouble({ sourceNodes, referenceNodes, sourceKey: SYNTHETIC_STANDARD_NAME }),
 		referenceIndex: referenceIndexFactory,
 		relationshipWriter: writer,
 		decisionStore: makeDecisionStoreDouble(saves),
-		config: { sourceStandard },
+		config: { sourceStandard, sourceStandardName },
 	});
 	bridgeCallable({ inGraph: { graphName: 'DEV_probe' }, hub: 'ceds', applyLabel: 'BridgedRelation' }, callback);
 };
@@ -264,7 +270,7 @@ runBridgeDirect(
 		harness.ok('  decisionBlockHash stamped', !!(divergentClose && divergentClose.properties.decisionBlockHash));
 		harness.equal('  the stamped hash IS the returned decisionBlock', divergentClose && divergentClose.properties.decisionBlockHash, cResult && cResult.decisionBlock);
 		harness.equal('the manifest was saved once', cSaves.length, 1);
-		harness.equal('  under the bridge\'s OWN pairKey (never the evidence block\'s)', cSaves[0] && cSaves[0].pairKey, 'CEDS::XY::authoredAnchor');
+		harness.equal('  under the bridge\'s OWN pairKey (never the evidence block\'s)', cSaves[0] && cSaves[0].pairKey, 'CEDS::Xy::authoredAnchor');
 		harness.equal('  save hash === stamped hash', cSaves[0] && cSaves[0].decisionBlockHash, cResult && cResult.decisionBlock);
 
 		harness.equal('UNRESOLVABLE anchor -> zero edges from xy:c', cWrites.filter((w) => w.fromStableId === 'xy:c').length, 0);
@@ -357,12 +363,14 @@ function referenceFixtureFrom(forgedNodes) {
 	return [...anchorIds].sort().map(propertyRefFor);
 }
 
-function runThroughBridgeMaker({ forgedNodes, sourceToken, writes, saves }, callback) {
+function runThroughBridgeMaker({ forgedNodes, sourceToken, sourceStandardName, writes, saves }, callback) {
 	const referenceNodes = referenceFixtureFrom(forgedNodes);
+	// EXACT-NAME RULE: the double is keyed by the real forged _source (the declared standardName,
+	// VERBATIM — 'EdFi', not 'EDFI'), exactly what a live dependency graph carries.
 	const graphReaderDouble = makeGraphReaderDouble({
 		sourceNodes: forgedNodes,
 		referenceNodes,
-		sourceKey: sourceToken.toUpperCase(),
+		sourceKey: sourceStandardName,
 	});
 	const graphWriterDouble = () => makeGraphWriterDouble(writes);
 	bridgeMakerModule({ graphWriterFactory: graphWriterDouble, graphReaderFactory: graphReaderDouble }).run(
@@ -373,7 +381,7 @@ function runThroughBridgeMaker({ forgedNodes, sourceToken, writes, saves }, call
 			hub: 'ceds',
 			applyLabel: 'BridgedRelation',
 			decisionStore: makeDecisionStoreDouble(saves),
-			config: { sourceStandard: sourceToken },
+			config: { sourceStandard: sourceToken, sourceStandardName },
 		},
 		callback,
 	);
@@ -395,7 +403,7 @@ function runRealStandardSections() {
 		}
 		const fWrites = [];
 		const fSaves = [];
-		runThroughBridgeMaker({ forgedNodes: edfiResult.nodes, sourceToken: 'edfi', writes: fWrites, saves: fSaves }, (fErr, fReport) => {
+		runThroughBridgeMaker({ forgedNodes: edfiResult.nodes, sourceToken: 'edfi', sourceStandardName: 'EdFi', writes: fWrites, saves: fSaves }, (fErr, fReport) => {
 			harness.ok(`EdFi bridge run did not error (${fErr || 'ok'})`, !fErr, fErr);
 			harness.equal('1,190 edges written (every crosswalk assignment resolved)', fReport && fReport.edgesWritten, 1190);
 			harness.equal('counts.anchoredNodes === 1,147', fReport && fReport.counts && fReport.counts.anchoredNodes, 1147);
@@ -440,7 +448,7 @@ function runRealStandardSections() {
 				}
 				const gWrites = [];
 				const gSaves = [];
-				runThroughBridgeMaker({ forgedNodes: sedmResult.nodes, sourceToken: 'sedm', writes: gWrites, saves: gSaves }, (gErr, gReport) => {
+				runThroughBridgeMaker({ forgedNodes: sedmResult.nodes, sourceToken: 'sedm', sourceStandardName: 'SEDM', writes: gWrites, saves: gSaves }, (gErr, gReport) => {
 					harness.ok(`SEDM bridge run did not error (${gErr || 'ok'})`, !gErr, gErr);
 					harness.equal('230 edges written (230/321 elements carry an anchor)', gReport && gReport.edgesWritten, 230);
 					harness.equal('counts.dualAttested === 230 (SEDM stamps both sources together, always)', gReport && gReport.counts && gReport.counts.dualAttested, 230);
@@ -451,7 +459,38 @@ function runRealStandardSections() {
 					harness.equal('no manifest save', gSaves.length, 0);
 					harness.ok('every SEDM write is a doubly attested EXACT_MATCH', gWrites.every((w) => w.relationshipType === 'EXACT_MATCH' && w.properties.anchorAttestation === 'authoredCrossRef+nodeAnchor'));
 
-					harness.report();
+					// -----------------------------------------------------------------
+					harness.section('H — EXACT-NAME RULE refusals (RED): the first live EdFi run wrote an EMPTY block; never again');
+					// -----------------------------------------------------------------
+					// H1: missing sourceStandardName is refused BY NAME — the token's case is not trustworthy.
+					const hWriter = relationshipWriterFactory({ graphWriter: makeGraphWriterDouble([]), edgePolicy: deriveEdgePolicy() });
+					const hBridgeNoName = authoredAnchorBridge({
+						graphReader: makeGraphReaderDouble({ sourceNodes: syntheticSourceNodes, referenceNodes: syntheticReferenceNodes, sourceKey: SYNTHETIC_STANDARD_NAME }),
+						referenceIndex: referenceIndexFactory,
+						relationshipWriter: hWriter,
+						decisionStore: makeDecisionStoreDouble([]),
+						config: { sourceStandard: 'xy' },
+					});
+					hBridgeNoName({ inGraph: { graphName: 'DEV_probe' }, hub: 'ceds', applyLabel: 'BridgedRelation' }, (h1Err) => {
+						harness.ok('RED: missing config.sourceStandardName is refused', !!h1Err);
+						harness.match('  the refusal names the requirement', `${h1Err}`, /sourceStandardName is not set/);
+
+						// H2: a name matching ZERO nodes is refused — an empty source set is never written as
+						// an empty relationship block (the exact silent failure the live EdFi run produced).
+						const hBridgeWrongName = authoredAnchorBridge({
+							graphReader: makeGraphReaderDouble({ sourceNodes: syntheticSourceNodes, referenceNodes: syntheticReferenceNodes, sourceKey: SYNTHETIC_STANDARD_NAME }),
+							referenceIndex: referenceIndexFactory,
+							relationshipWriter: hWriter,
+							decisionStore: makeDecisionStoreDouble([]),
+							config: { sourceStandard: 'xy', sourceStandardName: 'XY' },
+						});
+						hBridgeWrongName({ inGraph: { graphName: 'DEV_probe' }, hub: 'ceds', applyLabel: 'BridgedRelation' }, (h2Err) => {
+							harness.ok("RED: a name matching zero nodes ('XY' vs forged 'Xy') is refused", !!h2Err);
+							harness.match('  the refusal names the empty source set', `${h2Err}`, /ZERO nodes with _source 'XY'/);
+
+							harness.report();
+						});
+					});
 				});
 			});
 		});

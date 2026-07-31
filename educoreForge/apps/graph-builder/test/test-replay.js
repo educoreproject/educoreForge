@@ -149,10 +149,15 @@ const seedReplayManager = () => () => {
 	};
 };
 
-const seedForger = () => () => ({
-	forge: ({ standard, version }, cb) =>
-		cb('', { standard, version, nodeEdges: { nodes: [], edges: [], embeddingDims: null }, nodeCount: 0, edgeCount: 0, embedCallCount: 0 }),
-});
+const seedForger = () =>
+	Object.assign(
+		() => ({
+			forge: ({ standard, version }, cb) =>
+				cb('', { standard, version, nodeEdges: { nodes: [], edges: [], embeddingDims: null }, nodeCount: 0, edgeCount: 0, embedCallCount: 0 }),
+		}),
+		// the EXACT-NAME RULE static (see test-build.js's forgerRegistryDouble note)
+		{ resolveBundle: ({ standard }) => ({ standardName: String(standard).toUpperCase() }) },
+	);
 
 const seedBridgeMaker = () => () => ({ run: (spec, cb) => cb('', { ...spec, edgesWritten: 0, decisionBlock: null }) });
 

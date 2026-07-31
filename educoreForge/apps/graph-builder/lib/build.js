@@ -714,6 +714,17 @@ const build = (recipe, deps, callback) => {
 			// + the REAL resolved versions the forge read; the a4a0da2 rule). An authored producer ignores
 			// rebridge/decisionStore/inferenceConfig entirely.
 			const thisPairRebridges = pairInRebridgeScope(rebridgeScope, bridge);
+			// sourceStandardName — the EXACT declared standardName from the source bundle's
+			// parserDescriptor.ini (the one canonical token->name authority; forged `_source` carries
+			// this value VERBATIM). Added 2026-07-30 after the EdFi authored-anchor run silently wrote
+			// an EMPTY relationship block: the bridge's old CASE-RULE uppercase of the recipe token
+			// ('edfi'->'EDFI') matched no `_source: 'EdFi'` node. One canonical source, exact match —
+			// never normalize at the comparison site.
+			const sourceBundle = components.forger.resolveBundle({ standard: bridge.source });
+			if (sourceBundle.error) {
+				next(`bridge ${pairLabel}: resolving source bundle for standardName: ${sourceBundle.error}`);
+				return;
+			}
 			bridgeMaker.run(
 				{
 					inGraph: args.depGraph,
@@ -729,6 +740,7 @@ const build = (recipe, deps, callback) => {
 					inferenceConfig,
 					config: {
 						sourceStandard: bridge.source,
+						sourceStandardName: sourceBundle.standardName,
 						sourceVersion: resolvedVersionByToken[bridge.source],
 						hubVersion: resolvedVersionByToken[bridge.hub],
 						// pairWith + its resolved version reach a STRUCTURAL producer (ctdlFamilyStructure) so it

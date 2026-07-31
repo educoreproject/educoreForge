@@ -268,9 +268,22 @@ const moduleFunction =
 			);
 			return;
 		}
-		// THE CASE RULE (lib.d/sourceWalker.js): the recipe token is lowercase; forged `_source` is
-		// uppercase. Read and stamp by the uppercase key.
-		const sourceStandardKey = sourceStandard.toUpperCase();
+		// THE EXACT-NAME RULE (supersedes the old CASE RULE here, 2026-07-30): forged `_source` carries
+		// the bundle's declared standardName VERBATIM — and it is NOT always the uppercased recipe token
+		// (EdFi stamps 'EdFi'; 'edfi'.toUpperCase() === 'EDFI' matched NOTHING and this bridge silently
+		// produced an empty block on its first live run). build.js resolves the declared name from
+		// parserDescriptor.ini (the one canonical authority) and passes it as config.sourceStandardName;
+		// this producer matches it EXACTLY — one canonical source, exact comparison, no normalization at
+		// the comparison site, and no default: a missing name is refused, never guessed from the token.
+		const sourceStandardKey = config.sourceStandardName;
+		if (typeof sourceStandardKey !== 'string' || sourceStandardKey.trim() === '') {
+			callback(
+				`${moduleName}: config.sourceStandardName is not set — the EXACT declared standardName ` +
+					`(parserDescriptor.ini) is required for _source matching; the recipe token's case is ` +
+					`not trustworthy (EdFi != EDFI). There is no default.`,
+			);
+			return;
+		}
 		const subjectVersion = config.sourceVersion || '';
 		const objectVersion = config.hubVersion || '';
 		const pairKey = `${HUB_STANDARD}::${sourceStandardKey}::authoredAnchor`;
@@ -289,10 +302,26 @@ const moduleFunction =
 		// HubReference set.
 		taskList.push((args, next) => {
 			reader.readNodes({ label: 'ForgedNode', propertyEquals: { _source: sourceStandardKey } }, (err, out) => {
-				next(err ? `${moduleName}: reading ${sourceStandardKey} source nodes: ${err}` : '', {
-					...args,
-					sourceNodes: (out || {}).nodes || [],
-				});
+				if (err) {
+					next(`${moduleName}: reading ${sourceStandardKey} source nodes: ${err}`);
+					return;
+				}
+				const sourceNodes = (out || {}).nodes || [];
+				// ZERO SOURCES IS A REFUSAL, not a success (added 2026-07-30 — the EdFi case-mismatch run
+				// wrote an EMPTY relationship block and reported green). A recipe named this pair; a graph
+				// containing not one node of the named source standard means the name is wrong or the
+				// dependency graph is — either way this producer refuses BY NAME rather than materialize
+				// silence as an empty block.
+				if (sourceNodes.length === 0) {
+					next(
+						`${moduleName}: found ZERO nodes with _source '${sourceStandardKey}' in the dependency ` +
+							`graph — the named source standard is absent (wrong sourceStandardName, or the recipe's ` +
+							`dependencies do not include it). An empty source set is refused, never written as an ` +
+							`empty relationship block.`,
+					);
+					return;
+				}
+				next('', { ...args, sourceNodes });
 			});
 		});
 		taskList.push((args, next) => {
