@@ -477,10 +477,17 @@ const sourceGraphNodes7 = [
 	{ stableId: 'case:CFRubric.rubricCriterionId', properties: { _source: 'CASE', role: 'DmeProperty', name: 'rubricCriterionId', defText: '' } }, // CASE's own frequent-empty-defText shape (file header)
 ];
 
+// ⟪P12, 2026-07-31⟫ keyed on the COMPOSITE `embedText` this bridge now embeds (lib/facetScan.js §4.1:
+// owning class name · property name · description · owning class description), NOT on `defText`. This
+// source carries an empty defText and no `description`, and this reader returns no DmeClass nodes, so
+// its composite reduces to its own `name`; each HubReference candidate's likewise reduces to its name.
+// That is itself the point of the change: under the retired fallback chain this source embedded the
+// EMPTY STRING, which is what a `defText || description || searchText || name` chain yields for CASE's
+// frequently-empty prose — a vector carrying no information at all.
 const textVectors7 = {
-	'': [0, 1], // s1's own empty defText -- ORTHOGONAL to candA, cosine 0 -- narrow topK=1 keeps only candA, s1's true structural match (candB) is cosine-invisible; only caseNominate can recover it
-	'Generic Caption': [1, 0], // addr1 -- the wrong-domain, HIGH-cosine distractor
-	'Rubric Criterion Identifier': [0, 0.999], // addr2 -- near-parallel to s1's vector -- the structurally-correct pick, deliberately kept OUT of a topK=1 slice by being narrowly second
+	rubricCriterionId: [0, 1], // s1's composite embedText -- ORTHOGONAL to addr1
+	'Generic Caption': [1, 0], // addr1 -- the wrong-domain distractor, orthogonal to s1
+	'Rubric Criterion Identifier': [0, 0.999], // addr2 -- near-parallel to s1: the structurally-correct pick
 };
 
 const graphReaderDouble7 = ({ inGraph }) => ({
@@ -556,7 +563,7 @@ harness.equal('REBRIDGE: result.generation is this bridge\'s own EVIDENCE_GENERA
 harness.ok('exactly one edge was written', rebridgeWrites7.length === 1, JSON.stringify(rebridgeWrites7));
 const writtenEdge7 = rebridgeWrites7[0];
 harness.equal(
-	'THE HEADLINE PROOF, end-to-end: the written edge targets addr2 -- the nomination-RECOVERED candidate, invisible to a topK=1 cosine retrieval alone',
+	'THE HEADLINE PROOF, end-to-end: the written edge targets addr2 -- the structurally-correct candidate, carried to the judge by caseNominate AND (⟪P12⟫) by the multi-facet scan\'s nameOverlap/contextOverlap seats',
 	writtenEdge7 && writtenEdge7.toStableId,
 	'cedsHubRef:addr2',
 );

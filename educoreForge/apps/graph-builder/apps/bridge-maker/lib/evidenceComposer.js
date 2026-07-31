@@ -20,7 +20,20 @@
 // suite today and by kitLoader's construction call in P3 tomorrow. Nothing existing requires this file;
 // nothing existing is touched by its presence.
 //
-//   evidenceComposer({ semanticMatcher, nominate, walk, dependencies }) -> matchComposeCallable
+//   evidenceComposer({ semanticMatcher, facetScanner, nominate, walk, dependencies }) -> matchComposeCallable
+//
+//     facetScanner      optional, DEFAULT null (the historical cosine-top-K base retrieval, byte-
+//                       unchanged). When supplied — an instance of lib/facetScan.js —
+//                       ⟪P12, candidateSelectionRedesign-073126.md §4⟫ the BASE POOL is chosen by the
+//                       MULTI-FACET SCAN + RESERVED-SLOT ALLOCATION instead of by a single cosine
+//                       cutoff, and every base entry arrives carrying its `facets` and the `slots` that
+//                       earned it a seat (§4.4 — no candidate occupies a seat for a reason the judge
+//                       cannot see). The nominate seam below is UNCHANGED and still unions on top: a
+//                       standard's own signal is evidence the scan does not have, not a duplicate of it.
+//                       WHY AN INJECTION AND NOT A REPLACEMENT: caseEvidenceBridge/sifEvidenceBridge and
+//                       every hermetic suite that predates P12 construct this composer with a
+//                       semanticMatcher alone, and must keep composing exactly the pool they always did
+//                       until their own bridge opts in.
 //
 //     semanticMatcher   REQUIRED — the kit's cosine module (lib.d/semanticMatcher.js): { retrieve(source,
 //                       candidatePool) -> [{candidate,cosine}] (already topK-sliced, sorted desc),
@@ -117,11 +130,19 @@ const scopeGraphReader = (graphReader, dependencies) => {
 
 const moduleFunction =
 	({ moduleName } = {}) =>
-	({ semanticMatcher, nominate = null, walk = null, dependencies = [] } = {}) => {
+	({ semanticMatcher, facetScanner = null, nominate = null, walk = null, dependencies = [] } = {}) => {
 		if (!semanticMatcher || typeof semanticMatcher.retrieve !== 'function' || typeof semanticMatcher.cosine !== 'function') {
 			throw new Error(
 				`${moduleName}: constructed without a semanticMatcher (retrieve/cosine) — the composer's ` +
 					`base retrieval signal (⟪A1⟫); there is no default retrieval signal to fall back to.`,
+			);
+		}
+		// ⟪P12⟫ a facetScanner, when given, must actually be one — a truthy value that cannot scan would
+		// otherwise silently degrade the pool back to cosine-top-K three call sites downstream.
+		if (facetScanner !== null && (typeof facetScanner !== 'object' || typeof facetScanner.scan !== 'function')) {
+			throw new Error(
+				`${moduleName}: facetScanner was given but carries no scan() — it must be a lib/facetScan.js ` +
+					`instance ({ scan, candidateCount }); there is no default and no silent degradation.`,
 			);
 		}
 
@@ -161,12 +182,23 @@ const moduleFunction =
 				return;
 			}
 
-			// 1. BASE RETRIEVAL — cosine top-K (⟪A1⟫'s first union member).
-			const cosineTopK = semanticMatcher.retrieve(sourceElement, candidateElements);
+			// 1. BASE RETRIEVAL — ⟪A1⟫'s first union member. Either the historical cosine top-K, or (when
+			// a facetScanner is injected, ⟪P12⟫) the multi-facet scan's reserved-slot allocation. The two
+			// produce the SAME entry shape; the facet path additionally carries facets/slots per entry.
+			const baseEntries = facetScanner
+				? facetScanner.scan(sourceElement).entries
+				: semanticMatcher
+						.retrieve(sourceElement, candidateElements)
+						.map((oneRetrieved) => ({ candidate: oneRetrieved.candidate, cosine: oneRetrieved.cosine }));
 
 			const poolByKey = new Map();
-			cosineTopK.forEach(({ candidate, cosine }) => {
-				poolByKey.set(candidateKeyFor(candidate), { candidate, cosine, notes: [] });
+			baseEntries.forEach((oneBaseEntry) => {
+				const entry = { candidate: oneBaseEntry.candidate, cosine: oneBaseEntry.cosine, notes: [] };
+				if (oneBaseEntry.facets) {
+					entry.facets = oneBaseEntry.facets;
+					entry.slots = oneBaseEntry.slots;
+				}
+				poolByKey.set(candidateKeyFor(oneBaseEntry.candidate), entry);
 			});
 
 			// applyNominations — ⟪A1⟫'s DEDUPE rule: a nomination whose candidate is ALREADY in the pool
@@ -256,6 +288,12 @@ const moduleFunction =
 							};
 							if (oneEntry.nomination) {
 								packaged.nomination = oneEntry.nomination;
+							}
+							// ⟪P12 §4.4⟫ facet provenance rides WITH the candidate it explains — the renderer
+							// states every facet that earned this candidate a seat, with values.
+							if (oneEntry.facets) {
+								packaged.facets = oneEntry.facets;
+								packaged.slots = oneEntry.slots;
 							}
 							return packaged;
 						});

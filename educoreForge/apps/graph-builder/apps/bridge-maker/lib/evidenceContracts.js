@@ -181,6 +181,20 @@ const callableArgumentKeyViolation = (fn, argKeys, label) => {
 // while the prompt was missing its subject.
 const EVIDENCE_PACKAGE_REQUIRED_KEYS = ['sourceElement', 'pool', 'promptSegments'];
 const CANDIDATE_EVIDENCE_REQUIRED_KEYS = ['candidate', 'cosine', 'considerations'];
+
+// ⟪P12, candidateSelectionRedesign-073126.md §4.2⟫ DECLARED_FACET_NAMES — the facet vocabulary, declared
+// HERE (the contracts module is the authority on what crosses the match->select seam) and IMPORTED by
+// lib/facetScan.js, so the producer and the gate can never drift into disagreeing about what a facet
+// set contains. Order is fixed: consumers — the renderer above all — read facets BY NAMED KEY in this
+// order and never iterate an object's own key order, which is what keeps the rendered prompt byte-stable.
+const DECLARED_FACET_NAMES = Object.freeze([
+	'cosine',
+	'nameOverlap',
+	'contextOverlap',
+	'anchorMatch',
+	'typeFit',
+	'tierMatch',
+]);
 const CONSIDERATIONS_REQUIRED_KEYS = ['tuple', 'notes'];
 
 // candidateIdentifyingTokens — the tokens a promptSegments entry must never mention verbatim (the
@@ -235,6 +249,43 @@ const candidateEvidenceViolation = (entry, index) => {
 				`that explains why it was nominated)`
 			);
 		}
+	}
+	// ⟪P12, candidateSelectionRedesign-073126.md §4.4⟫ FACET PROVENANCE — OPTIONAL (a pool composed by
+	// the historical cosine top-K carries none), but when present it must be COMPLETE: `slots` names the
+	// reserved slot(s) that earned this candidate its seat and `facets` states every declared facet with
+	// its value. The rule this gate exists to enforce is the same one ⟪A1⟫ enforces for nominations —
+	// "no candidate occupies a seat for a reason the judge cannot see" — so a half-populated facets
+	// object (some facets present, others quietly missing) is refused BY NAME rather than rendered as a
+	// prompt that under-states why a candidate is in front of the judge.
+	if (entry.facets !== undefined && entry.facets !== null) {
+		if (typeof entry.facets !== 'object') {
+			return `${label}: facets is present but is not an object (got ${typeof entry.facets})`;
+		}
+		const missingFacet = DECLARED_FACET_NAMES.find(
+			(oneFacetName) => !entry.facets[oneFacetName] || typeof entry.facets[oneFacetName] !== 'object',
+		);
+		if (missingFacet) {
+			return (
+				`${label}: facets is present but carries no '${missingFacet}' — the declared facet set is ` +
+				`${DECLARED_FACET_NAMES.join(', ')} and every one of them must state its value (§4.4)`
+			);
+		}
+		if (entry.facets.cosine.value !== undefined && typeof entry.facets.cosine.value !== 'number') {
+			return `${label}: facets.cosine.value is not a number (got ${JSON.stringify(entry.facets.cosine.value)})`;
+		}
+		if (!Array.isArray(entry.slots) || entry.slots.length === 0) {
+			return (
+				`${label}: facets are present but slots is ${JSON.stringify(entry.slots)} — a facet-scanned ` +
+				`candidate must name the reserved slot(s) that earned it a seat; an unattributed seat is ` +
+				`exactly what §4.4 forbids`
+			);
+		}
+		const badSlot = entry.slots.find((oneSlot) => typeof oneSlot !== 'string' || oneSlot.trim() === '');
+		if (badSlot !== undefined) {
+			return `${label}: slots contains a non-string entry (${JSON.stringify(badSlot)})`;
+		}
+	} else if (entry.slots !== undefined && entry.slots !== null) {
+		return `${label}: slots is present without facets — a seat attribution with no facet values behind it`;
 	}
 	return '';
 };
@@ -876,6 +927,7 @@ module.exports = {
 	EVIDENCE_PACKAGE_REQUIRED_KEYS,
 	CANDIDATE_EVIDENCE_REQUIRED_KEYS,
 	CONSIDERATIONS_REQUIRED_KEYS,
+	DECLARED_FACET_NAMES,
 	evidencePackageViolation,
 	candidateEvidenceViolation,
 

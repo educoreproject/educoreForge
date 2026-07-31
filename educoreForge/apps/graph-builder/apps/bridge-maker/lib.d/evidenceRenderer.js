@@ -40,6 +40,11 @@
 // for the one input this renderer cannot proceed without (a non-array pool); camelCase, compound
 // names. No async/await, no try/catch for control flow (none needed — pure synchronous string work).
 
+// DECLARED_FACET_NAMES — the contracts module is the authority on the facet vocabulary AND on its
+// ORDER; the renderer reads facets by named key in exactly this order, which is what keeps a
+// facet-carrying prompt byte-stable (⟪P12⟫, and the renderer's own determinism keystone below).
+const { DECLARED_FACET_NAMES } = require('../lib/evidenceContracts');
+
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
 // RENDERER_VERSION bumped v1 -> v2: BASE_ABSTAIN_FIRST_INSTRUCTION's text changed (the R-a real-run
@@ -53,7 +58,21 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // in sorted-key order — deterministic), reframes the instruction around matching FROM that source,
 // and REFUSES a package whose sourceElement has no name. Every v2 judgment is invalidated by this
 // version bump (the judgment cache keys on rendererVersion — that is the bump doing its job).
-const RENDERER_VERSION = 'evidenceRenderer-v3';
+// v3 -> v4 ⟪P12 MULTI-FACET SCAN, candidateSelectionRedesign-073126.md §4.4/§4.5⟫: TWO prompt changes,
+// both of which change picks and must therefore be legible as a generation change.
+//   (1) THE SOURCE BLOCK NAMES ITS OWNING CLASS — and states that class's DESCRIPTION. This is the
+//       specific fix for the `case:CFItem.uri` failure: the evidence named the owning class but never
+//       said what a CFItem IS, even though the CASE source defines it ("content that either describes a
+//       specific competency (learning objective)...") and that sentence sat unused on the class node in
+//       our own graph. The judge inferred CFItem's meaning from its NAME and could not have been right.
+//   (2) EVERY CANDIDATE STATES THE FACET(S) THAT EARNED IT A SEAT, with values — "cosine 0.397 (rank 16
+//       of 29,346); context tokens shared [definition]; type string<->string". Under the reserved-slot
+//       allocation a candidate can be seated for a reason invisible in its cosine, and a seat whose
+//       reason the judge cannot see is exactly what §4.4 forbids.
+// Every v3 judgment is invalidated by this bump (the judgment cache keys on rendererVersion — that is
+// the bump doing its job). A pool composed WITHOUT facets (the historical cosine-top-K path, still live
+// for any bridge that has not opted in) renders exactly as it did in v3 apart from the source block.
+const RENDERER_VERSION = 'evidenceRenderer-v4';
 
 // BASE_ABSTAIN_FIRST_INSTRUCTION — composition order slot 1 (RENDERER_COMPOSITION_ORDER[0]), a fixed
 // constant, the SAME abstain-first discipline lib.d/selector.js's SYSTEM_PROMPT states for the scalar
@@ -79,10 +98,32 @@ const SOURCE_SCALAR_VALUE_MAX_CHARS = 400;
 
 // SOURCE_IDENTITY_KEYS — rendered first, in THIS order, when present: the fields a judge needs to
 // know WHAT it is matching before anything else. Everything else renders after, in sorted-key order.
-const SOURCE_IDENTITY_KEYS = ['name', 'xpath', 'path', 'casePath', 'defText', 'description'];
+// ⟪P12 §4.5⟫ owningClassName/owningClassDescription join the list, positioned AFTER the path fields and
+// BEFORE the element's own definition — the reading order a human uses ("what class is this on, what is
+// that class, then what is this property").
+const SOURCE_IDENTITY_KEYS = [
+	'name',
+	'xpath',
+	'path',
+	'casePath',
+	'owningClassName',
+	'owningClassDescription',
+	'defText',
+	'description',
+];
+
+// SOURCE_KEY_LABELS — a judge-legible label for the few raw field names that do not read as English.
+// Read by NAMED key only (never Object.keys over this map), so it cannot perturb determinism.
+const SOURCE_KEY_LABELS = {
+	owningClassName: 'owning class',
+	owningClassDescription: 'owning class description',
+};
 
 // SOURCE_SKIP_KEYS — never rendered: vectors and internal plumbing carry no judge-legible meaning.
-const SOURCE_SKIP_KEYS = new Set(['vector', 'embedding', 'searchText', 'stableId', '_id']);
+// ⟪P12⟫ embedText joins them: it is the COMPOSED retrieval string (owning class · name · description ·
+// class description), so rendering it would restate every line the block already carries, at length,
+// for no added evidence.
+const SOURCE_SKIP_KEYS = new Set(['vector', 'embedding', 'searchText', 'stableId', '_id', 'embedText']);
 
 // renderSourceBlock ⟪SOURCE-PRESENCE HARDENING, 2026-07-31⟫ — composition slot 2: the source element
 // the judge matches FROM. Deterministic: identity keys in fixed order, then remaining scalar keys
@@ -108,7 +149,7 @@ const renderSourceBlock = (sourceElement) => {
 		if (text.length > SOURCE_SCALAR_VALUE_MAX_CHARS) {
 			text = `${text.slice(0, SOURCE_SCALAR_VALUE_MAX_CHARS)} [...value truncated]`;
 		}
-		lines.push(`  ${key}: ${text}`);
+		lines.push(`  ${SOURCE_KEY_LABELS[key] || key}: ${text}`);
 		rendered.add(key);
 	};
 	SOURCE_IDENTITY_KEYS.forEach((oneKey) => renderOne(oneKey, sourceElement[oneKey]));
@@ -173,6 +214,70 @@ const renderTupleBlock = (tuple) => {
 	return lines.join('\n');
 };
 
+// FACET_LINE_RENDERERS — ⟪P12 §4.4⟫ one named renderer per declared facet, read BY NAMED KEY in
+// DECLARED_FACET_NAMES order (never by iterating the facets object), so the provenance block is
+// byte-stable. Each returns a line, or '' when the facet has nothing to say for this candidate — a
+// facet that measured nothing is silent rather than noisy, but a facet that measured something ALWAYS
+// speaks, whether it favours the candidate or not: the judge is owed the negative evidence too
+// (a type mismatch and a tier mismatch are exactly the facts that should make it prefer NONE).
+const rankText = (facet) => `rank ${facet.rank} of ${facet.outOf}`;
+
+const tokenListText = (tokens) => (tokens && tokens.length ? `[${tokens.join(', ')}]` : '(none)');
+
+const FACET_LINE_RENDERERS = {
+	cosine: (facet) => `cosine ${round6(facet.value)} (${rankText(facet)})`,
+	nameOverlap: (facet) =>
+		`name overlap ${round6(facet.value)} (${rankText(facet)}); name tokens shared ${tokenListText(facet.sharedTokens)}`,
+	contextOverlap: (facet) =>
+		`context overlap ${round6(facet.value)} (${rankText(facet)}); source owning class ` +
+		`'${facet.sourceContext || '(none)'}' vs candidate domain '${facet.candidateContext || '(none)'}'; ` +
+		`context tokens shared ${tokenListText(facet.sharedTokens)}`,
+	anchorMatch: (facet) => {
+		if (facet.value) {
+			return `AUTHORED ANCHOR MATCH: the source declares CEDS id '${facet.anchorId}', which is this candidate's own key`;
+		}
+		return facet.anchorId
+			? `authored anchor: the source declares CEDS id '${facet.anchorId}', which is NOT this candidate's key`
+			: '';
+	},
+	typeFit: (facet) =>
+		facet.value === 'undetermined'
+			? `type fit: undetermined (source type ${facet.sourceType}, candidate range ${facet.candidateType})`
+			: `type fit: source ${facet.sourceType} <-> candidate ${facet.candidateType} — ${facet.value}`,
+	tierMatch: (facet) =>
+		`tier: source ${facet.sourceTier} <-> candidate ${facet.candidateTier} — ${facet.value ? 'match' : 'MISMATCH'}`,
+};
+
+// renderFacetProvenance — the seat attribution plus every facet's measured value. Deliberately states
+// the SLOT(S) first: a candidate seated only by `combinedRank` is one that is strong on several facets
+// and top of none, and the judge should be told that in those words rather than left to infer it.
+const renderFacetProvenance = (poolEntry) => {
+	const facets = poolEntry.facets;
+	if (!facets || typeof facets !== 'object') {
+		return [];
+	}
+	const slots = Array.isArray(poolEntry.slots) ? poolEntry.slots : [];
+	const lines = [`   Seat earned by: ${slots.join(', ') || '(unattributed)'}`];
+	DECLARED_FACET_NAMES.forEach((oneFacetName) => {
+		const facet = facets[oneFacetName];
+		const renderOneFacet = FACET_LINE_RENDERERS[oneFacetName];
+		if (!facet || !renderOneFacet) {
+			return;
+		}
+		const text = renderOneFacet(facet);
+		if (text) {
+			lines.push(`     ${text}`);
+		}
+	});
+	if (facets.combinedRank) {
+		lines.push(
+			`     combined rank-sum ${facets.combinedRank.value} across cosine+name+context ` +
+				`(${rankText(facets.combinedRank)})`,
+		);
+	}
+	return lines;
+};
+
 // renderCandidateBlock — composition order slot 4, one entry. Nomination line (if present) rides
 // right under the header, exactly where a reader needs to see WHY a non-top-cosine candidate is here.
 const renderCandidateBlock = (poolEntry, ordinal) => {
@@ -182,6 +287,7 @@ const renderCandidateBlock = (poolEntry, ordinal) => {
 	if (poolEntry.nomination) {
 		lines.push(`   Nominated by ${poolEntry.nomination.nominatedBy}: ${poolEntry.nomination.rationale}`);
 	}
+	renderFacetProvenance(poolEntry).forEach((oneLine) => lines.push(oneLine));
 	lines.push(renderTupleBlock((poolEntry.considerations || {}).tuple));
 	const notes = (poolEntry.considerations || {}).notes || [];
 	if (notes.length) {
@@ -277,3 +383,4 @@ module.exports.RENDERER_VERSION = RENDERER_VERSION;
 module.exports.renderTupleBlock = renderTupleBlock;
 module.exports.renderCandidateBlock = renderCandidateBlock;
 module.exports.renderSourceBlock = renderSourceBlock;
+module.exports.renderFacetProvenance = renderFacetProvenance;

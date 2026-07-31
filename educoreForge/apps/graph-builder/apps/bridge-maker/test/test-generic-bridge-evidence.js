@@ -263,11 +263,17 @@ const sourceGraphNodes = [
 	{ stableId: 's2', properties: { _source: 'LIF', role: 'DmeProperty', name: 'Something Unrelated', defText: 'unrelated text with no genuine match' } },
 ];
 
+// ⟪P12, 2026-07-31⟫ the fake vectorizer is keyed on the COMPOSITE `embedText` the bridge now embeds
+// (lib/facetScan.js §4.1: owning class name · property name · description · owning class description),
+// NOT on `defText`. These fixture nodes carry no `description` property and this reader returns no
+// DmeClass nodes, so a source's composite reduces to its own `name` and a HubReference candidate's to
+// its `name` — which is why the two candidate keys below are unchanged from the defText era while the
+// two source keys are the source NAMES rather than their definition prose.
 const textVectors = {
-	'A numeric evaluation score assigned to a staff member.': [1, 0, 0], // s1 defText
-	'unrelated text with no genuine match': [0, 0, 1], // s2 defText -- orthogonal to both candidates
-	'Staff Evaluation Score or Rating': [1, 0, 0], // addr1's own `name` (HubReference has no defText -- flattenFullRecord's fallback chain resolves defText to `name`)
-	'Has Local Education Agency Title I Support Service': [0, 1, 0], // addr2's own `name`
+	'Staff Eval Score': [1, 0, 0], // s1 composite embedText
+	'Something Unrelated': [0, 0, 1], // s2 composite embedText -- orthogonal to both candidates
+	'Staff Evaluation Score or Rating': [1, 0, 0], // addr1 composite embedText (name only: no domainName, no description)
+	'Has Local Education Agency Title I Support Service': [0, 1, 0], // addr2 composite embedText
 };
 
 const graphReaderDouble = ({ inGraph }) => ({
@@ -460,14 +466,15 @@ const sourceGraphNodesD = Array.from({ length: SOURCE_COUNT_D }, (ignore, i) => 
 	},
 }));
 
-// every probe defText embeds to the SAME vector (cosine 1.0 with addr1) — identity rides on the
-// stableIds; per-source VARIETY rides in the stub's per-call responses below.
+// every probe's COMPOSITE embedText (⟪P12⟫ — its `name`, since these fixtures carry no description and
+// this reader returns no DmeClass nodes) embeds to the SAME vector (cosine 1.0 with addr1) — identity
+// rides on the stableIds; per-source VARIETY rides in the stub's per-call responses below.
 const textVectorsD = {
 	'Staff Evaluation Score or Rating': [1, 0, 0],
 	'Has Local Education Agency Title I Support Service': [0, 1, 0],
 };
 sourceGraphNodesD.forEach((oneNode) => {
-	textVectorsD[oneNode.properties.defText] = [1, 0, 0];
+	textVectorsD[oneNode.properties.name] = [1, 0, 0];
 });
 
 const graphReaderDoubleD = ({ inGraph }) => ({

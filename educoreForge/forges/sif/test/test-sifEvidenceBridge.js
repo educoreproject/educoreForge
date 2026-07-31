@@ -541,10 +541,13 @@ const sourceGraphNodes7 = [
 	},
 ];
 
+// ⟪P12, 2026-07-31⟫ keyed on the COMPOSITE `embedText` this bridge now embeds (lib/facetScan.js §4.1),
+// NOT on `defText`. This reader returns no DmeClass nodes, so the source's composite is its name and
+// description joined; each HubReference candidate's reduces to its name.
 const textVectors7 = {
-	sourceDefText: [1, 0],
+	'FirstName · sourceDefText': [1, 0], // the source's composite embedText
 	'Generic Caption': [0.99, Math.sqrt(1 - 0.99 * 0.99)], // addr1 — HIGH-cosine, wrong-domain distractor
-	'Unrelated Widget Descriptor': [-1, 0], // addr2 — deliberately LOW cosine; unreachable except via crossref nomination
+	'Unrelated Widget Descriptor': [-1, 0], // addr2 — deliberately LOW cosine; reachable only via the AUTHORED anchor (the crossref nomination, and ⟪P12⟫ the scan's unconditional anchorMatch seat)
 };
 
 const graphReaderDouble7 = ({ inGraph }) => ({

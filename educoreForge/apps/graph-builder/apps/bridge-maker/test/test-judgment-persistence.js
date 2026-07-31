@@ -203,7 +203,9 @@ const textVectors = {
 	'Has Local Education Agency Title I Support Service': [0, 0, 1],
 };
 SOURCE_COSINES.forEach((oneCosine, i) => {
-	textVectors[`persistence probe text ${i + 1}`] = [oneCosine, Math.sqrt(1 - oneCosine * oneCosine), 0];
+	// keyed on the source NAME — the one token present in BOTH the old bare defText and the new
+	// composite embedText, so this fixture survives a composition-format change.
+	textVectors[`Persistence Probe ${i + 1}`] = [oneCosine, Math.sqrt(1 - oneCosine * oneCosine), 0];
 });
 
 // STUB_RESPONSES — keyed by the FIRST candidate's rendered cosine (round6 of the values above,
@@ -228,7 +230,7 @@ const makeStubLlm = ({ counter, errorOnCall = null }) => ({
 			callback('SIMULATED API CAP KILL (the $300 scenario)');
 			return;
 		}
-		const match = spec.userPrompt.match(/retrieval cosine ([0-9.]+)/);
+		const match = spec.userPrompt.match(/retrieval cosine (-?[0-9.]+)/);
 		const response = match ? STUB_RESPONSES[match[1]] : null;
 		if (!response) {
 			callback(`stub llm: unrecognized prompt (first cosine ${match && match[1]})`);
@@ -262,7 +264,18 @@ const makeWriterDouble = (writes) => ({ inGraph }) => ({
 });
 
 const fakeVectorizerFactory = () => ({
-	batchEmbed: ({ texts }, cb) => cb('', { vectors: (texts || []).map((t) => textVectors[t] || null) }),
+	// ⟪P12⟫ the bridge now embeds a COMPOSITE `embedText` (owning class · name · description · class
+	// description), not the bare defText this map was originally keyed on. Resolve by CONTAINMENT so
+	// the fixture asserts "this text belongs to this vector" rather than restating facetScan's
+	// composition format — a format change must not silently null every vector again (it did: cosine
+	// fell to the -1 no-vector sentinel and the stub could not parse a negative).
+	batchEmbed: ({ texts }, cb) =>
+		cb('', {
+			vectors: (texts || []).map((oneText) => {
+				const key = Object.keys(textVectors).find((oneKey) => `${oneText}`.includes(oneKey));
+				return key ? textVectors[key] : null;
+			}),
+		}),
 });
 
 const runConfigBase = { sourceStandard: 'lif', sourceStandardName: 'LIF', sourceVersion: 'v1', hubVersion: 'v14.0.0.0' };

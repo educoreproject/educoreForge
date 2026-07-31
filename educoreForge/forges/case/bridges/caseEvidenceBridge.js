@@ -113,6 +113,23 @@ const { candidateKeyFor } = require(
 	path.join(__dirname, '..', '..', '..', 'apps', 'graph-builder', 'apps', 'bridge-maker', 'lib', 'evidenceComposer'),
 );
 
+// ⟪P12, candidateSelectionRedesign-073126.md §4⟫ facetScan — the multi-facet scan + reserved-slot
+// allocation, and the composite-embed-text / owning-class-map helpers. CASE is the standard whose
+// `case:CFItem.uri` failure motivated this phase (the golden's answer, 'Competency Definition URL',
+// never entered the pool at all), so this bridge opts in ALONGSIDE its own nomination hook: the scan
+// supplies representation, caseNominate supplies CASE's own signal, and the composer unions them.
+const facetScan = require(
+	path.join(__dirname, '..', '..', '..', 'apps', 'graph-builder', 'apps', 'bridge-maker', 'lib', 'facetScan'),
+);
+const {
+	buildClassMap,
+	buildDomainMap,
+	stampOwningClass,
+	embedTextForSource,
+	embedTextForCandidate,
+	CLASS_ROLE,
+} = facetScan;
+
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
 // =====================================================================
@@ -128,7 +145,11 @@ const MATERIALIZER_CONFIG = { predicate: 'closeMatch', mappingJustification: 'se
 // EVIDENCE_GENERATION — this bridge's OWN generation tag (⟪A6⟫, R4), distinct from genericBridge's —
 // a CASE-nominating, CASE-considering pipeline produces a different generation of picks even over the
 // identical graph state, and must be legible as such.
-const EVIDENCE_GENERATION = 'caseEvidenceBridge-evidence-v3'; // v3 = source-presence hardening (2026-07-31)
+// v4 ⟪P12 MULTI-FACET SCAN, 2026-07-31⟫: composite embedded text (owning class · name · description ·
+// class description) replacing the defText fallback chain, six-facet reserved-slot pool allocation
+// alongside caseNominate, and renderer v4's owning-class + facet-provenance prompt. Any one of those
+// changes picks over identical graph state (⟪A6⟫/R4).
+const EVIDENCE_GENERATION = 'caseEvidenceBridge-evidence-v4';
 
 // HUB_SEGMENTS — composition-order slot 2 (hub-level framing), copied verbatim from genericBridge.js:
 // this bridge bridges toward the SAME CEDS hub, so the SAME hub-level instruction applies. Deliberately
@@ -597,12 +618,11 @@ module.exports = (injectedTools = {}) =>
 		// ================= genericBridge.js's own runRebridge, with ONE difference: the composer is
 		// ================= constructed with THIS bridge's nominate/walk hooks + declared dependencies.
 		const runRebridge = () => {
-			const composer = kit.evidenceComposer({
-				semanticMatcher: kit.semanticMatcher,
-				nominate: caseNominate,
-				walk: caseWalk,
-				dependencies: composerDependencies,
-			});
+			// ⟪P12⟫ the composer is now built INSIDE the pipeline (the ARM step below) rather than here,
+			// because its facetScanner's once-per-run precomputation needs the candidate VECTORS, which do
+			// not exist until the vectorize step has run. Declared here, assigned there, read by the
+			// per-source step that follows — the pipeline's own ordering is what guarantees it is set.
+			let composer = null;
 			const llmClient = kit.inferenceConfig.llmClient;
 			// ⟪P9⟫ the persistence-seamed judge (see the cachedJudgment require note above).
 			const judgeOne = cachedJudgment({
@@ -628,11 +648,65 @@ module.exports = (injectedTools = {}) =>
 				),
 			);
 
+			// ⟪P12 §4.5⟫ THE OWNING-CLASS MAP — one role-scoped read of every CASE DmeClass, outside the
+			// scan (§4.2 forbids a graph read inside it). CASE is the standard this exists for: CFItem's
+			// own class description ("content that either describes a specific competency (learning
+			// objective)...") sat unused on the class node while the judge inferred CFItem's meaning from
+			// its name. An empty result is honest absence; a failed read is refused by name.
+			taskList.push((args, next) => {
+				kit.graphReader.readNodes(
+					{ label: 'ForgedNode', propertyEquals: { _source: sourceStandardKey, role: CLASS_ROLE } },
+					(err, out) => {
+						if (err) {
+							next(`${MAPPING_TOOL}: reading ${sourceStandardKey} ${CLASS_ROLE} nodes for the owning-class map: ${err}`, args);
+							return;
+						}
+						const classNodes = ((out || {}).nodes || []).map(flattenFullRecord);
+						next('', { ...args, classMap: buildClassMap(classNodes) });
+					},
+				);
+			});
+
+			// ⟪P12 §4.2⟫ THE DOMAIN MAP — the CANDIDATE side's context, and the reason contextOverlap is a
+			// live facet rather than a dead one. A materialized CEDS HubReference carries its domain only
+			// as an opaque id (referenceSubgraph.js's emitReference stamps no domain NAME — see
+			// lib/facetScan.js's candidateDomainText for the verified code fact), so the hub's own DmeClass
+			// nodes are read ONCE here and turned into { cedsId -> className }. Same discipline as the
+			// owning-class map: one read, outside the scan, then a lookup.
+			taskList.push((args, next) => {
+				kit.graphReader.readNodes(
+					{ label: 'ForgedNode', propertyEquals: { _source: HUB_STANDARD, role: CLASS_ROLE } },
+					(err, out) => {
+						if (err) {
+							next(`${MAPPING_TOOL}: reading ${HUB_STANDARD} ${CLASS_ROLE} nodes for the domain map: ${err}`, args);
+							return;
+						}
+						const hubClassNodes = ((out || {}).nodes || []).map(flattenFullRecord);
+						next('', { ...args, domainMap: buildDomainMap(hubClassNodes) });
+					},
+				);
+			});
+
+			// ⟪P12 §4.1⟫ COMPOSE THE EMBEDDED TEXT — composite on both sides, onto a NEW `embedText` field;
+			// `defText` is untouched (caseNominate/caseWalk still tokenize name+defText, deliberately: a
+			// composite that already contains the class name would make the class-token overlap trivially
+			// self-satisfying and hollow out the nomination's own rationale).
+			taskList.push((args, next) => {
+				args.sourceNodes.forEach((oneSource) => {
+					stampOwningClass(oneSource, args.classMap);
+					oneSource.embedText = embedTextForSource(oneSource, args.classMap);
+				});
+				args.candidateElements.forEach((oneCandidate) => {
+					oneCandidate.embedText = embedTextForCandidate(oneCandidate, args.domainMap);
+				});
+				next('', args);
+			});
+
 			taskList.push((args, next) => {
 				const allRecords = args.candidateElements.concat(args.sourceNodes);
-				kit.vectorizer.batchEmbed({ texts: allRecords.map((r) => r.defText) }, (err, result) => {
+				kit.vectorizer.batchEmbed({ texts: allRecords.map((r) => r.embedText) }, (err, result) => {
 					if (err) {
-						next(`${MAPPING_TOOL}: vectorizing defTexts: ${err}`);
+						next(`${MAPPING_TOOL}: vectorizing composite embedTexts: ${err}`);
 						return;
 					}
 					allRecords.forEach((r, i) => {
@@ -640,6 +714,20 @@ module.exports = (injectedTools = {}) =>
 					});
 					next('', args);
 				});
+			});
+
+			// ARM THE SCAN ⟪P12⟫ — the scanner's per-candidate precomputation is paid ONCE for the whole
+			// run, here, now that every candidate carries a vector.
+			taskList.push((args, next) => {
+				const facetScanner = facetScan({ candidateElements: args.candidateElements, classMap: args.classMap, domainMap: args.domainMap });
+				composer = kit.evidenceComposer({
+					semanticMatcher: kit.semanticMatcher,
+					facetScanner,
+					nominate: caseNominate,
+					walk: caseWalk,
+					dependencies: composerDependencies,
+				});
+				next('', args);
 			});
 
 			taskList.push((args, next) => {
@@ -668,7 +756,13 @@ module.exports = (injectedTools = {}) =>
 											return;
 										}
 										const selectResult = judged.selectResult;
-										const bestCosine = evidencePackage.pool.length ? evidencePackage.pool[0].cosine : -1;
+										// ⟪P12⟫ computed, not read off pool[0]: under reserved-slot allocation an
+									// unconditional anchorMatch seat leads the pool, so pool[0] is no longer
+									// necessarily the highest-cosine entry.
+									const bestCosine = evidencePackage.pool.reduce(
+										(best, oneEntry) => (oneEntry.cosine > best ? oneEntry.cosine : best),
+										-1,
+									);
 										const chosenEntry = selectResult.abstain
 											? null
 											: evidencePackage.pool.find((oneEntry) => oneEntry.candidate === selectResult.pick);
