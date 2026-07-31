@@ -261,6 +261,11 @@ const moduleFunction =
 						});
 
 						const evidencePackage = {
+							// ⟪SOURCE-PRESENCE HARDENING, 2026-07-31⟫ the source element rides IN the package —
+							// it was received here all along (spec §5's "carry the full element to the composer")
+							// and then dropped at this exact line, which left the renderer nothing to render and
+							// the judge nothing to match FROM. Now a REQUIRED package key (⟪A3⟫ gate).
+							sourceElement,
 							pool,
 							// deduped, per ⟪A2⟫ — a walk hook is not trusted to have deduped its own segments.
 							promptSegments: Array.from(new Set(globalSegments)),

@@ -45,7 +45,15 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // RENDERER_VERSION bumped v1 -> v2: BASE_ABSTAIN_FIRST_INSTRUCTION's text changed (the R-a real-run
 // fix's belt-and-suspenders addition, below) — a prompt-render change silently changes picks and MUST
 // be legible as a generation change (⟪A2⟫/⟪A6⟫; this is exactly what the version field is for).
-const RENDERER_VERSION = 'evidenceRenderer-v2';
+// v2 -> v3 ⟪SOURCE-PRESENCE HARDENING, 2026-07-31⟫: the rendered prompt now CONTAINS THE SOURCE
+// ELEMENT. The bronze quality analysis proved v2 never told the judge what it was matching FROM —
+// no source section existed, the judge said "no source element was provided" in 3,137 abstention
+// rationales, and fabricated a source in most pick rationales. v3 renders a SOURCE ELEMENT section
+// FIRST after the instruction (name, identity/path fields, definition, then every remaining scalar
+// in sorted-key order — deterministic), reframes the instruction around matching FROM that source,
+// and REFUSES a package whose sourceElement has no name. Every v2 judgment is invalidated by this
+// version bump (the judgment cache keys on rendererVersion — that is the bump doing its job).
+const RENDERER_VERSION = 'evidenceRenderer-v3';
 
 // BASE_ABSTAIN_FIRST_INSTRUCTION — composition order slot 1 (RENDERER_COMPOSITION_ORDER[0]), a fixed
 // constant, the SAME abstain-first discipline lib.d/selector.js's SYSTEM_PROMPT states for the scalar
@@ -55,14 +63,61 @@ const RENDERER_VERSION = 'evidenceRenderer-v2';
 // for the primary fix); this second sentence presses the SAME requirement at the prompt-text level too,
 // so the instruction and the tool schema agree rather than relying on the schema alone.
 const BASE_ABSTAIN_FIRST_INSTRUCTION =
-	'You are weighing ALL of the evidence below to judge whether ONE candidate is the correct match. ' +
-	'Judge by the evidence as a whole — the tuple facts, any notes, and any nomination rationale — not ' +
-	'by surface wording. Choose the single candidate the evidence, taken together, supports. If no ' +
-	'candidate is genuinely supported by the evidence, abstain (choose NONE). Prefer NONE over a weak ' +
-	'or merely-related match. When you choose a candidate, you MUST ALSO report a discrete confidence ' +
-	'category (strong, moderate, or weakButReal) and a one-sentence rationale for that specific choice — ' +
-	'never omit them for a pick. When you abstain (NONE), give a short rationale for why nothing is ' +
-	'genuinely supported.';
+	'You are judging which ONE candidate below is the correct match FOR THE SOURCE ELEMENT stated ' +
+	'next. Weigh ALL of the evidence — the source element itself, each candidate\'s tuple facts, any ' +
+	'notes, and any nomination rationale — not surface wording. Choose the single candidate the ' +
+	'evidence, taken together, supports as equivalent to the source element. If no candidate is ' +
+	'genuinely supported, abstain (choose NONE). Prefer NONE over a weak or merely-related match. ' +
+	'When you choose a candidate, you MUST ALSO report a discrete confidence category (strong, ' +
+	'moderate, or weakButReal) and a one-sentence rationale for that specific choice — never omit ' +
+	'them for a pick. When you abstain (NONE), give a short rationale for why nothing is genuinely ' +
+	'supported.';
+
+// SOURCE_SCALAR_VALUE_MAX_CHARS — a single source scalar's rendered value cap (deterministic; an
+// over-long value is cut with an explicit marker, never silently).
+const SOURCE_SCALAR_VALUE_MAX_CHARS = 400;
+
+// SOURCE_IDENTITY_KEYS — rendered first, in THIS order, when present: the fields a judge needs to
+// know WHAT it is matching before anything else. Everything else renders after, in sorted-key order.
+const SOURCE_IDENTITY_KEYS = ['name', 'xpath', 'path', 'casePath', 'defText', 'description'];
+
+// SOURCE_SKIP_KEYS — never rendered: vectors and internal plumbing carry no judge-legible meaning.
+const SOURCE_SKIP_KEYS = new Set(['vector', 'embedding', 'searchText', 'stableId', '_id']);
+
+// renderSourceBlock ⟪SOURCE-PRESENCE HARDENING, 2026-07-31⟫ — composition slot 2: the source element
+// the judge matches FROM. Deterministic: identity keys in fixed order, then remaining scalar keys
+// SORTED; arrays of scalars joined; objects skipped (the flattened record is scalar by contract).
+const renderSourceBlock = (sourceElement) => {
+	const lines = ['SOURCE ELEMENT (you are matching FROM this):'];
+	const rendered = new Set();
+	const renderOne = (key, value) => {
+		if (value === undefined || value === null || value === '') {
+			return;
+		}
+		let text;
+		if (Array.isArray(value)) {
+			text = value.filter((v) => typeof v !== 'object').join(', ');
+			if (text === '') {
+				return;
+			}
+		} else if (typeof value === 'object') {
+			return;
+		} else {
+			text = `${value}`;
+		}
+		if (text.length > SOURCE_SCALAR_VALUE_MAX_CHARS) {
+			text = `${text.slice(0, SOURCE_SCALAR_VALUE_MAX_CHARS)} [...value truncated]`;
+		}
+		lines.push(`  ${key}: ${text}`);
+		rendered.add(key);
+	};
+	SOURCE_IDENTITY_KEYS.forEach((oneKey) => renderOne(oneKey, sourceElement[oneKey]));
+	Object.keys(sourceElement)
+		.filter((oneKey) => !rendered.has(oneKey) && !SOURCE_SKIP_KEYS.has(oneKey))
+		.sort()
+		.forEach((oneKey) => renderOne(oneKey, sourceElement[oneKey]));
+	return lines.join('\n');
+};
 
 const round6 = (n) => Math.round(n * 1e6) / 1e6;
 
@@ -166,6 +221,17 @@ const moduleFunction =
 				);
 				return;
 			}
+			// ⟪SOURCE-PRESENCE HARDENING, 2026-07-31⟫ a source without a name cannot be judged against —
+			// refuse-by-name, never render a subjectless prompt (the bronze proved what happens: the
+			// judge abstains saying "no source element was provided", or worse, invents one).
+			const sourceElement = evidencePackage.sourceElement;
+			if (!sourceElement || typeof sourceElement !== 'object' || typeof sourceElement.name !== 'string' || sourceElement.name.trim() === '') {
+				callback(
+					`${moduleName}: evidencePackage.sourceElement is missing or carries no name — a prompt ` +
+						`without its source is a question without a subject; there is no default.`,
+				);
+				return;
+			}
 
 			const budget = config || {};
 			const maxCandidates = typeof budget.maxCandidates === 'number' ? budget.maxCandidates : Infinity;
@@ -183,7 +249,7 @@ const moduleFunction =
 				);
 			}
 
-			const sections = [BASE_ABSTAIN_FIRST_INSTRUCTION];
+			const sections = [BASE_ABSTAIN_FIRST_INSTRUCTION, renderSourceBlock(sourceElement)];
 			if (combinedSegments.length) {
 				sections.push(combinedSegments.join('\n'));
 			}
@@ -210,3 +276,4 @@ module.exports = moduleFunction({ moduleName });
 module.exports.RENDERER_VERSION = RENDERER_VERSION;
 module.exports.renderTupleBlock = renderTupleBlock;
 module.exports.renderCandidateBlock = renderCandidateBlock;
+module.exports.renderSourceBlock = renderSourceBlock;

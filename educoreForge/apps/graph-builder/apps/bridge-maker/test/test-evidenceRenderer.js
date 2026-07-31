@@ -64,6 +64,7 @@ const poolEntry = (canonicalKey, name, cosine, overrides = {}) => ({
 });
 
 const conformingEvidencePackage = () => ({
+	sourceElement: { name: 'Rubric Criterion Identifier', casePath: 'case:CFRubric.rubricCriterionId', defText: 'the id of a rubric criterion' },
 	pool: [poolEntry('P1', 'Near Candidate', 0.9), poolEntry('P2', 'Far Candidate', 0.2)],
 	promptSegments: ['Judge CASE structural matches by owning-class term overlap.'],
 });
@@ -112,7 +113,7 @@ harness.section('GREEN — deterministic composition order (base -> hub -> globa
 	rendererModule.render(conformingEvidencePackage(), ['THE HUB SEGMENT'], {}, (err, out) => {
 		text = out;
 	});
-	const baseIdx = text.indexOf('You are weighing ALL of the evidence');
+	const baseIdx = text.indexOf('You are judging which ONE candidate below is the correct match FOR THE SOURCE ELEMENT');
 	const hubIdx = text.indexOf('THE HUB SEGMENT');
 	const globalIdx = text.indexOf('Judge CASE structural matches by owning-class term overlap.');
 	const candidate1Idx = text.indexOf('Near Candidate');
@@ -131,6 +132,7 @@ harness.section('GREEN — segment dedupe across hubSegments + evidencePackage.p
 // =====================================================================
 (() => {
 	const evidencePackage = {
+		sourceElement: { name: 'Rubric Criterion Identifier' },
 		pool: [poolEntry('P1', 'Near Candidate', 0.9)],
 		promptSegments: ['shared instruction'],
 	};
@@ -148,6 +150,7 @@ harness.section('GREEN — deterministic evidence budget: maxCandidates truncate
 // =====================================================================
 (() => {
 	const evidencePackage = {
+		sourceElement: { name: 'Rubric Criterion Identifier' },
 		pool: [poolEntry('P1', 'Cand One', 0.9), poolEntry('P2', 'Cand Two', 0.7), poolEntry('P3', 'Cand Three', 0.5)],
 		promptSegments: [],
 	};

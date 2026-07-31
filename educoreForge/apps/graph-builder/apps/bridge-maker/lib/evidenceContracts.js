@@ -170,7 +170,16 @@ const callableArgumentKeyViolation = (fn, argKeys, label) => {
 //
 // This is the runtime gate that will sit at the match -> select seam in P3 (spec §3, ⟪A3⟫).
 
-const EVIDENCE_PACKAGE_REQUIRED_KEYS = ['pool', 'promptSegments'];
+// ⟪SOURCE-PRESENCE HARDENING, 2026-07-31⟫ sourceElement joined the REQUIRED keys after the bronze
+// quality analysis proved the judge had been judging BLIND: the composer received the full source
+// element (TQ's "carry the full element to the composer" ruling) and then DROPPED it at packaging,
+// and the renderer never asked — so 94% of the bronze's property mappings were judged with no
+// statement of WHAT was being matched, the judge said so in 3,137 abstention rationales, and
+// fabricated sources in most rationales when it picked anyway. The package now carries the source;
+// the renderer renders it FIRST and refuses a source without a name; this gate refuses a package
+// without one. A completeness gap, not a determinism gap — every determinism gate stayed green
+// while the prompt was missing its subject.
+const EVIDENCE_PACKAGE_REQUIRED_KEYS = ['sourceElement', 'pool', 'promptSegments'];
 const CANDIDATE_EVIDENCE_REQUIRED_KEYS = ['candidate', 'cosine', 'considerations'];
 const CONSIDERATIONS_REQUIRED_KEYS = ['tuple', 'notes'];
 
@@ -233,6 +242,20 @@ const candidateEvidenceViolation = (entry, index) => {
 const evidencePackageViolation = (evidencePackage) => {
 	if (!evidencePackage || typeof evidencePackage !== 'object') {
 		return 'evidencePackage: not an object';
+	}
+	// ⟪SOURCE-PRESENCE HARDENING, 2026-07-31⟫ — see EVIDENCE_PACKAGE_REQUIRED_KEYS' rider: a package
+	// without a NAMED source element renders a prompt with no subject, and the judge judges blind.
+	if (
+		!evidencePackage.sourceElement ||
+		typeof evidencePackage.sourceElement !== 'object' ||
+		typeof evidencePackage.sourceElement.name !== 'string' ||
+		evidencePackage.sourceElement.name.trim() === ''
+	) {
+		return (
+			'evidencePackage: sourceElement is missing or carries no name — the judge cannot be asked ' +
+			'which candidate matches without being told WHAT it is matching (source-presence hardening, ' +
+			'2026-07-31; the bronze build proved this the expensive way)'
+		);
 	}
 	if (!Array.isArray(evidencePackage.pool)) {
 		return `evidencePackage: pool is not an array (got ${typeof evidencePackage.pool})`;

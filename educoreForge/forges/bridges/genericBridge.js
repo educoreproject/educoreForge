@@ -173,7 +173,7 @@ const MATERIALIZER_CONFIG = { predicate: 'closeMatch', mappingJustification: 'se
 // whenever the evidence pipeline's own wiring (composer/renderer/select/normalizer, or which kit modules
 // they compose) changes in a way that could change picks over the SAME graph state — exactly the same
 // discipline RENDERER_VERSION applies to the renderer alone, one level up at the whole-pipeline scope.
-const EVIDENCE_GENERATION = 'genericBridge-evidence-v2'; // v2 = freeze-by-reference (2026-07-31)
+const EVIDENCE_GENERATION = 'genericBridge-evidence-v3'; // v3 = source-presence hardening (2026-07-31)
 
 // EVIDENCE_JUDGE_CONCURRENCY — how many per-source evidence judgments (compose -> ⟪A3⟫ gate ->
 // render -> select -> normalize) may be IN FLIGHT at once during REBRIDGE. The serial loop this

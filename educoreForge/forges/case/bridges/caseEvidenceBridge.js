@@ -128,7 +128,7 @@ const MATERIALIZER_CONFIG = { predicate: 'closeMatch', mappingJustification: 'se
 // EVIDENCE_GENERATION — this bridge's OWN generation tag (⟪A6⟫, R4), distinct from genericBridge's —
 // a CASE-nominating, CASE-considering pipeline produces a different generation of picks even over the
 // identical graph state, and must be legible as such.
-const EVIDENCE_GENERATION = 'caseEvidenceBridge-evidence-v2'; // v2 = freeze-by-reference (2026-07-31)
+const EVIDENCE_GENERATION = 'caseEvidenceBridge-evidence-v3'; // v3 = source-presence hardening (2026-07-31)
 
 // HUB_SEGMENTS — composition-order slot 2 (hub-level framing), copied verbatim from genericBridge.js:
 // this bridge bridges toward the SAME CEDS hub, so the SAME hub-level instruction applies. Deliberately

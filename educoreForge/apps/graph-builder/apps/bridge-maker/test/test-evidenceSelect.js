@@ -67,6 +67,7 @@ const poolEntry = (canonicalKey, name, cosine) => ({
 });
 
 const conformingEvidencePackage = () => ({
+	sourceElement: { name: 'Rubric Criterion Identifier' },
 	pool: [poolEntry('P1', 'Near Candidate', 0.9), poolEntry('P2', 'Far Candidate', 0.2)],
 	promptSegments: ['Judge by definitions, not surface wording.'],
 });
@@ -123,7 +124,7 @@ harness.section('⟪A3⟫ RED — a MALFORMED EvidencePackage is refused BEFORE 
 // =====================================================================
 (() => {
 	const selectWithThrowingRenderer = evidenceSelectFactory({ renderer: throwingRenderer });
-	const malformedPackage = { pool: [{ candidate: {}, cosine: 'not-a-number', considerations: { tuple: {}, notes: [] } }], promptSegments: [] };
+	const malformedPackage = { sourceElement: { name: 's' }, pool: [{ candidate: {}, cosine: 'not-a-number', considerations: { tuple: {}, notes: [] } }], promptSegments: [] };
 	let observed = null;
 	// this call MUST refuse before ever invoking throwingRenderer.render — if it didn't, the test
 	// process itself would throw synchronously and this suite would crash rather than report a FAIL.

@@ -113,6 +113,8 @@ const conformingCandidateEvidence = (overrides = {}) => ({
 });
 
 const conformingEvidencePackage = () => ({
+	// ⟪SOURCE-PRESENCE HARDENING, 2026-07-31⟫ a conforming package CARRIES ITS SOURCE.
+	sourceElement: { name: 'Local Education Agency Identifier', defText: 'the id of an LEA' },
 	pool: [
 		conformingCandidateEvidence(),
 		conformingCandidateEvidence({
@@ -166,17 +168,18 @@ harness.equal('GREEN: a conforming evidence package passes', evidencePackageViol
 
 harness.match(
 	'RED: missing candidate is caught, named',
-	evidencePackageViolation({ pool: [conformingCandidateEvidence({ candidate: undefined })], promptSegments: [] }),
+	evidencePackageViolation({ sourceElement: { name: 's' }, pool: [conformingCandidateEvidence({ candidate: undefined })], promptSegments: [] }),
 	/pool\[0\]: missing candidate/,
 );
 harness.match(
 	'RED: non-numeric cosine is caught, named',
-	evidencePackageViolation({ pool: [conformingCandidateEvidence({ cosine: 'high' })], promptSegments: [] }),
+	evidencePackageViolation({ sourceElement: { name: 's' }, pool: [conformingCandidateEvidence({ cosine: 'high' })], promptSegments: [] }),
 	/pool\[0\]: cosine is not a finite number/,
 );
 harness.match(
 	'RED: considerations missing tuple is caught, named',
 	evidencePackageViolation({
+		sourceElement: { name: 's' },
 		pool: [conformingCandidateEvidence({ considerations: { tuple: null, notes: [] } })],
 		promptSegments: [],
 	}),
@@ -185,6 +188,7 @@ harness.match(
 harness.match(
 	'RED: considerations.notes not an array is caught, named',
 	evidencePackageViolation({
+		sourceElement: { name: 's' },
 		pool: [conformingCandidateEvidence({ considerations: { tuple: conformingBaseTupleShapeA(), notes: 'not an array' } })],
 		promptSegments: [],
 	}),
@@ -193,6 +197,7 @@ harness.match(
 harness.match(
 	'RED: a malformed nomination (missing rationale) is caught, named',
 	evidencePackageViolation({
+		sourceElement: { name: 's' },
 		pool: [conformingCandidateEvidence({ nomination: { nominatedBy: 'someBridge' } })],
 		promptSegments: [],
 	}),
@@ -200,22 +205,23 @@ harness.match(
 );
 harness.match(
 	'RED: promptSegments not an array is caught, named',
-	evidencePackageViolation({ pool: [], promptSegments: 'not an array' }),
+	evidencePackageViolation({ sourceElement: { name: 's' }, pool: [], promptSegments: 'not an array' }),
 	/evidencePackage: promptSegments is not an array/,
 );
 harness.match(
 	'RED: promptSegments with a non-string entry is caught, named',
-	evidencePackageViolation({ pool: [], promptSegments: ['fine', 42] }),
+	evidencePackageViolation({ sourceElement: { name: 's' }, pool: [], promptSegments: ['fine', 42] }),
 	/evidencePackage: promptSegments contains a non-string entry/,
 );
 harness.match(
 	'RED: promptSegments NOT deduped is caught (⟪A2⟫)',
-	evidencePackageViolation({ pool: [], promptSegments: ['same instruction', 'same instruction'] }),
+	evidencePackageViolation({ sourceElement: { name: 's' }, pool: [], promptSegments: ['same instruction', 'same instruction'] }),
 	/promptSegments contains duplicate entries/,
 );
 harness.match(
 	'RED: a per-candidate segment SMUGGLED into promptSegments is caught, naming the token (⟪A2⟫)',
 	evidencePackageViolation({
+		sourceElement: { name: 's' },
 		pool: [conformingCandidateEvidence({ candidate: { stableId: 'src:P600253', canonicalKey: 'P600253', name: 'x' } })],
 		promptSegments: ['This segment specifically discusses P600253 and nothing else.'],
 	}),
@@ -224,6 +230,7 @@ harness.match(
 harness.equal(
 	'GREEN (twin): the same segment text with NO matching candidate token in the pool passes',
 	evidencePackageViolation({
+		sourceElement: { name: 's' },
 		pool: [conformingCandidateEvidence({ candidate: { stableId: 'src:P999999', canonicalKey: 'P999999', name: 'y' } })],
 		promptSegments: ['A generic global instruction mentioning nothing candidate-specific.'],
 	}),
@@ -279,6 +286,7 @@ harness.match(
 const smugglingComposer = (spec, callback) => {
 	void spec;
 	callback('', {
+		sourceElement: { name: 's' },
 		pool: [conformingCandidateEvidence({ candidate: { stableId: 'src:P600253', canonicalKey: 'P600253', name: 'x' } })],
 		promptSegments: ['This global note is really about P600253 specifically.'],
 	});
