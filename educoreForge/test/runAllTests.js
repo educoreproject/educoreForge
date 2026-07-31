@@ -16,8 +16,9 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // serves two ends at once: an app-level suite proves overall correctness, while a suite sitting
 // next to a component localizes a failure to that component. A module with a package.json but no
 // suite is reported as untested on every full run -- a coverage gap must be visible, never
-// silently absent. (Forge bundles under forges/ are out of scope here: their correctness is
-// proven through graphBuilder building a recipe, not a standalone suite.)
+// silently absent. (Forge bundles under forges/ ARE discovered — their test/ suites run like any
+// other; a bundle's end-to-end correctness is additionally proven through graphBuilder building a
+// recipe.)
 //
 // Each suite runs as its OWN process, so a suite that crashes outright counts as failed rather
 // than taking the runner down with it. Output flags are FORWARDED to the children, because

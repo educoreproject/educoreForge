@@ -55,8 +55,19 @@ bridge built on it (`forges/case/bridges/caseStructuralBridge.js`) were torn dow
 teardown (2026-07-30) after a decisive A/B (§5.1). The files are gone from the tree (`git rm`);
 what survives are tombstone comments (e.g. the header of `caseEvidenceBridge.js`) and a vestigial,
 optional `candidateFinder` slot left in the recipe schema so old recipes keep validating
-(`apps/graph-builder/lib/recipe.js` marks it vestigial in a schema comment). Every live bridge in
-this tree is an **evidence** bridge.
+(`apps/graph-builder/lib/recipe.js` marks it vestigial in a schema comment). Every live *judged*
+bridge in this tree is an **evidence** bridge.
+
+**The second live family: deterministic (authored) bridges.** Not every bridge judges — three live
+bridges resolve author-declared identity with zero LLM calls: `forges/ctdl/bridges/ctdlAuthoredBridge.js`
+(CTDL's native `owl:equivalentClass` anchors), `forges/ctdl/bridges/ctdlFamilyStructure.js` (the
+CTDL-family URI-identity structural bridge), and `forges/bridges/authoredAnchorBridge.js` (the generic
+`cedsId == cedsId` anchor resolver serving EdFi and SEDM). These compose the **flat injected component
+library** (`graphReader` / `referenceIndex` / `relationshipWriter` / `decisionStore`) rather than §5's
+evidence kit — deliberately, because the kit carries no `referenceIndex` and a deterministic join needs
+one. They write through the same guarded writer and honor the same decision-store discipline. Building
+a deterministic bridge? Model on `ctdlAuthoredBridge` and `authoredAnchorBridge`, not on §5's evidence
+composition.
 
 ---
 
@@ -380,7 +391,8 @@ the same three-scope search as §2, with the same no-precedence rule: a same-nam
 scopes throws. Reference it from your recipe exactly like `genericBridge`, just naming your own
 bridge. Requires from a bundle-local bridge climb **three** levels to the tree root
 (`path.join(__dirname, '..', '..', '..', 'lib', ...)` — both exemplars document this at their own
-require sites).
+require sites); a forges-shared bridge at `forges/bridges/` climbs only **two**
+(`genericBridge.js` and `authoredAnchorBridge.js` both document this at their require sites).
 
 Export your pure helpers for the unit test (both exemplars end with an "exported for the unit test
 ONLY" block), and give the bridge its own `EVIDENCE_GENERATION` constant (§4).

@@ -1,0 +1,27 @@
+{
+  // cedsEdfiAuthored — CEDS(base+hub) + EdFi + the generic authored-anchor resolver ("item zero").
+  // Resolves the CEDS anchors forge-edfi STASHED on its nodes (per-node cedsId + crossRefs from the
+  // EdFiEntityElementsToCEDS / EdFiEntityDescriptorsToCEDS crosswalk CSVs) into EXACT_MATCH edges
+  // toward the CEDS HubReference set — dual-attested where the two anchor sources agree, plus a
+  // distinct CLOSE_MATCH per divergent, crosswalk-uncorroborated per-node anchor (TQ ruling
+  // 2026-07-30). Deterministic: no inferred/semantic judging, no vectors, no LLM.
+  // Measured over the 01 snapshot (2026-07-30): 1,147 anchored nodes, 1,190 authored crosswalk
+  // assignments (1,147 dual-attested + 43 crosswalk-only), 0 divergent per-node anchors.
+  "schemaVersion": "1.0.0",
+  "recipeName": "cedsEdfiAuthored",
+  "kind": "dev",
+  "description": "CEDS+hub + EdFi + generic authored-anchor EXACT_MATCH/CLOSE_MATCH resolver (no inferred, no vectors).",
+  "standards": [
+    { "token": "ceds", "version": "current" },
+    { "token": "edfi", "version": "current" }
+  ],
+  "hubs": [
+    { "standard": "ceds" }
+  ],
+  "bridges": [
+    {
+      "source": "edfi", "hub": "ceds", "bridge": "authoredAnchorBridge",
+      "dependencies": ["edfi", "ceds"], "cacheMode": "reuse"
+    }
+  ]
+}

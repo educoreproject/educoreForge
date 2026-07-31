@@ -1,0 +1,26 @@
+{
+  // cedsSedmAuthored — CEDS(base+hub) + SEDM + the generic authored-anchor resolver ("item zero").
+  // Resolves the CEDS anchors forge-sedm STASHED on its element nodes (per-node cedsId + crossRefs
+  // from the 'SEDM Logical Model and Maps - 6. CEDS Map.csv') into EXACT_MATCH edges toward the CEDS
+  // HubReference set. SEDM's element identity INCLUDES the Global ID (parser dedupe key), so its two
+  // anchor sources can never diverge: measured over the 01 snapshot (2026-07-30), 230 of 321
+  // DmeProperty elements carry an anchor — all 230 dual-attested, 0 divergent. Deterministic: no
+  // inferred/semantic judging, no vectors, no LLM.
+  "schemaVersion": "1.0.0",
+  "recipeName": "cedsSedmAuthored",
+  "kind": "dev",
+  "description": "CEDS+hub + SEDM + generic authored-anchor EXACT_MATCH resolver (no inferred, no vectors).",
+  "standards": [
+    { "token": "ceds", "version": "current" },
+    { "token": "sedm", "version": "current" }
+  ],
+  "hubs": [
+    { "standard": "ceds" }
+  ],
+  "bridges": [
+    {
+      "source": "sedm", "hub": "ceds", "bridge": "authoredAnchorBridge",
+      "dependencies": ["sedm", "ceds"], "cacheMode": "reuse"
+    }
+  ]
+}
