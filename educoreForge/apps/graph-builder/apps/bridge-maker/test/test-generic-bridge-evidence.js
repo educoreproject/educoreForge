@@ -221,6 +221,17 @@ const BASE_ARGS = { inGraph: { graphName: 'DEV_probe' }, hub: 'ceds', applyLabel
 	harness.rejects('RED: inGraph not given is refused by name', [observed], /inGraph is not given/);
 })();
 
+// ---- RED #9 — config.evidenceJudgeConcurrency malformed (p8-judgeConcurrency's one new refusal) ----
+(() => {
+	let observed = null;
+	runDirect({ kit: baseKit({ config: { sourceStandard: 'lif', evidenceJudgeConcurrency: 2.5 } }) }, BASE_ARGS, (err) => { observed = err; });
+	harness.rejects(
+		'RED: a non-positive-integer config.evidenceJudgeConcurrency is refused by name',
+		[observed],
+		/config\.evidenceJudgeConcurrency is 2\.5.*positive integer/s,
+	);
+})();
+
 // =====================================================================
 // PART B — THE FULL EVIDENCE FLOW, driven through the REAL bridgeMaker.run()
 // =====================================================================
@@ -427,4 +438,180 @@ harness.ok(
 );
 harness.equal('  and the resolved file IS forges/bridges/genericBridge.js', resolved.resolvedPath, newPath);
 
-harness.report();
+// =====================================================================
+// PART D — DETERMINISM UNDER CONCURRENCY (p8-judgeConcurrency): the frozen decision block is
+// BYTE-IDENTICAL between a concurrent run whose completions provably arrive OUT of source order
+// (a stub llmClient with reversed staggered delays) and a concurrencyLimit=1 (serial) run.
+// This section is ASYNC — real timers stagger the completions — so it owns harness.report().
+// =====================================================================
+harness.section('PART D — DETERMINISM: staggered-delay concurrent run vs concurrency-1 run, SAME frozen bytes');
+
+const SOURCE_COUNT_D = 6;
+const sourceGraphNodesD = Array.from({ length: SOURCE_COUNT_D }, (ignore, i) => ({
+	stableId: `sD${i + 1}`,
+	properties: {
+		_source: 'LIF', role: 'DmeProperty', name: `Determinism Probe ${i + 1}`,
+		defText: `determinism probe text ${i + 1}`,
+	},
+}));
+
+// every probe defText embeds to the SAME vector (cosine 1.0 with addr1) — identity rides on the
+// stableIds; per-source VARIETY rides in the stub's per-call responses below.
+const textVectorsD = {
+	'Staff Evaluation Score or Rating': [1, 0, 0],
+	'Has Local Education Agency Title I Support Service': [0, 1, 0],
+};
+sourceGraphNodesD.forEach((oneNode) => {
+	textVectorsD[oneNode.properties.defText] = [1, 0, 0];
+});
+
+const graphReaderDoubleD = ({ inGraph }) => ({
+	readNodes: ({ label, propertyEquals }, callback) => {
+		void inGraph;
+		const eq = propertyEquals || {};
+		if (label === 'HubReference') { callback('', { nodes: referenceNodesRaw }); return; }
+		if (eq._source === 'LIF' && eq.role === 'DmeProperty') { callback('', { nodes: sourceGraphNodesD }); return; }
+		callback('', { nodes: [] });
+	},
+	close: (callback) => callback(''),
+});
+
+const fakeVectorizerFactoryD = () => ({
+	batchEmbed: ({ texts }, cb) => cb('', { vectors: (texts || []).map((t) => textVectorsD[t] || null) }),
+});
+
+// makeStubLlmD — per-call responses VARY (category cycles; rationale carries the call ordinal; odd
+// calls abstain) so a wrong-order assembly would change the frozen bytes, not merely reshuffle
+// identical entries. All pre-select steps are synchronous with these doubles, so rerank call order
+// IS source launch order (strictly ascending index — boundedRunner's contract) in BOTH runs; only
+// the completion timing differs. delayForCall(callOrdinal) staggers the callbacks.
+const CATEGORY_CYCLE_D = ['strong', 'moderate', 'weakButReal'];
+const makeStubLlmD = ({ delayForCall, completionOrder, inFlightLedger }) => {
+	let callOrdinal = -1;
+	return {
+		rerank: (spec, callback) => {
+			void spec;
+			callOrdinal += 1;
+			const thisCall = callOrdinal;
+			if (inFlightLedger) {
+				inFlightLedger.now += 1;
+				inFlightLedger.max = Math.max(inFlightLedger.max, inFlightLedger.now);
+			}
+			const respond = () => {
+				if (inFlightLedger) {
+					inFlightLedger.now -= 1;
+				}
+				if (completionOrder) {
+					completionOrder.push(thisCall);
+				}
+				if (thisCall % 2 === 1) {
+					callback('', { choice: 'NONE', rationale: `determinism abstain rationale #${thisCall}` });
+					return;
+				}
+				callback('', {
+					choice: '1',
+					category: CATEGORY_CYCLE_D[(thisCall / 2) % CATEGORY_CYCLE_D.length],
+					rationale: `determinism pick rationale #${thisCall}`,
+				});
+			};
+			const delayMs = delayForCall(thisCall);
+			if (delayMs === 0) {
+				respond();
+				return;
+			}
+			setTimeout(respond, delayMs);
+		},
+	};
+};
+
+const runOneDeterminismPass = ({ graphName, stubLlm, configOverrides, writes }, passDone) => {
+	const decisionBlocksD = {};
+	const decisionStoreD = {
+		getDecisionBlock: ({ pairKey }, cb) => cb('', decisionBlocksD[pairKey] ? { frozenText: decisionBlocksD[pairKey].frozenText } : { frozenText: null }),
+		saveDecisionBlock: ({ pairKey, frozenText, decisionBlockHash }, cb) => { decisionBlocksD[pairKey] = { frozenText, decisionBlockHash }; cb('', { saved: true }); },
+	};
+	bridgeMakerModule({ graphWriterFactory: makeWriterDouble(writes), graphReaderFactory: graphReaderDoubleD }).run(
+		{
+			inGraph: { graphName, boltUrl: 'bolt://x', password: 'x' },
+			bridge: 'genericBridge', hub: 'ceds', applyLabel: 'BridgedRelation',
+			rebridge: true, decisionStore: decisionStoreD,
+			inferenceConfig: { llmClient: stubLlm, topK: 15, cosineFloor: 0.6, concurrency: 4 },
+			config: { ...runConfig, ...configOverrides },
+			componentOverrides: { vectorizer: fakeVectorizerFactoryD, graphReader: graphReaderDoubleD },
+		},
+		(err, report) => passDone(err, { report, frozenBlock: decisionBlocksD['CEDS::LIF'] }),
+	);
+};
+
+// PASS 1 — CONCURRENT (the bridge's own EVIDENCE_JUDGE_CONCURRENCY=8 default), REVERSED staggered
+// delays: the LAST-launched judgment completes FIRST, so completion order provably differs from
+// source order.
+const completionOrderD = [];
+const inFlightLedgerD = { now: 0, max: 0 };
+const concurrentWritesD = [];
+runOneDeterminismPass(
+	{
+		graphName: 'DEV_generic_determinism_concurrent',
+		stubLlm: makeStubLlmD({
+			delayForCall: (callOrdinal) => (SOURCE_COUNT_D - callOrdinal) * 12,
+			completionOrder: completionOrderD,
+			inFlightLedger: inFlightLedgerD,
+		}),
+		configOverrides: {},
+		writes: concurrentWritesD,
+	},
+	(concurrentErr, concurrentOut) => {
+		harness.ok(`the CONCURRENT rebridge pass did not error (${concurrentErr || 'ok'})`, !concurrentErr, concurrentErr);
+		harness.ok(
+			'the judgments genuinely OVERLAPPED (max concurrent rerank calls in flight > 1)',
+			inFlightLedgerD.max > 1,
+			`max in flight was ${inFlightLedgerD.max}`,
+		);
+		harness.ok(
+			`completion order provably DIFFERS from source order (was ${JSON.stringify(completionOrderD)})`,
+			JSON.stringify(completionOrderD) !== JSON.stringify(Array.from({ length: SOURCE_COUNT_D }, (ignore, i) => i)),
+			`completion order was ${JSON.stringify(completionOrderD)}`,
+		);
+
+		// PASS 2 — SERIAL comparator: config.evidenceJudgeConcurrency=1 (the documented override
+		// seam), zero delay — the exact behavior of the retired taskListPlus serial loop.
+		const serialWritesD = [];
+		runOneDeterminismPass(
+			{
+				graphName: 'DEV_generic_determinism_serial',
+				stubLlm: makeStubLlmD({ delayForCall: () => 0 }),
+				configOverrides: { evidenceJudgeConcurrency: 1 },
+				writes: serialWritesD,
+			},
+			(serialErr, serialOut) => {
+				harness.ok(`the SERIAL (concurrency-1) rebridge pass did not error (${serialErr || 'ok'})`, !serialErr, serialErr);
+
+				// THE PROOF — the frozen decision block is BYTE-IDENTICAL and hash-identical.
+				harness.ok('both passes saved a real frozen block', !!(concurrentOut.frozenBlock && serialOut.frozenBlock));
+				harness.equal(
+					'DETERMINISM PROVED: the frozen decision block TEXT is BYTE-IDENTICAL between the out-of-order concurrent run and the serial run',
+					concurrentOut.frozenBlock.frozenText,
+					serialOut.frozenBlock.frozenText,
+				);
+				harness.equal(
+					'  and the content-address (decisionBlockHash) is IDENTICAL',
+					concurrentOut.frozenBlock.decisionBlockHash,
+					serialOut.frozenBlock.decisionBlockHash,
+				);
+				harness.equal(
+					'  and both bridge reports pin the SAME decisionBlock hash',
+					concurrentOut.report.decisionBlock,
+					serialOut.report.decisionBlock,
+				);
+				harness.equal(
+					'  and the WRITTEN edges are byte-identical, in the same order',
+					JSON.stringify(concurrentWritesD),
+					JSON.stringify(serialWritesD),
+				);
+				harness.equal('  3 picks -> 3 edges in each pass (even ordinals pick, odd abstain)', concurrentWritesD.length, 3);
+
+				harness.report();
+			},
+		);
+	},
+);

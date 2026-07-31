@@ -81,6 +81,14 @@ const sourceWalkerModule = require(
 );
 const flattenFullRecord = sourceWalkerModule.flattenFullRecord;
 
+// boundedRunner — the bounded-concurrency per-source dispatcher (p8-judgeConcurrency; same
+// three-level climb as the sourceWalker require above). Pure orchestration: results are collected
+// BY INDEX so the per-source outputs assemble in SOURCE ORDER regardless of completion order (see
+// EVIDENCE_JUDGE_CONCURRENCY below for why that matters).
+const boundedRunner = require(
+	path.join(__dirname, '..', '..', '..', 'apps', 'graph-builder', 'apps', 'bridge-maker', 'lib', 'boundedRunner'),
+);
+
 // candidateKeyFor — REUSED from lib/evidenceComposer.js, not reimplemented, for the SAME reason
 // caseEvidenceBridge.js reuses it: the walk hook keys perCandidateNotes by the SAME identity the
 // composer itself looks entries back up by, so a locally-invented key function can never drift.
@@ -104,6 +112,22 @@ const MATERIALIZER_CONFIG = { predicate: 'closeMatch', mappingJustification: 'se
 // EVIDENCE_GENERATION — this bridge's OWN generation tag (⟪A6⟫, R4): a SIF-nominating, SIF-
 // considering pipeline produces a different generation of picks even over the identical graph state.
 const EVIDENCE_GENERATION = 'sifEvidenceBridge-evidence-v1';
+
+// EVIDENCE_JUDGE_CONCURRENCY — how many per-source evidence judgments (compose -> ⟪A3⟫ gate ->
+// render -> select -> normalize) may be IN FLIGHT at once during REBRIDGE. The serial loop this
+// replaces made THIS standard infeasible: measured 2026-07-29 on the live SIF run, ~25s per Opus
+// judgment × 15,620 sources ≈ 4.5 days of wall clock for one --rebridge. WHY 8: polite to
+// Anthropic rate limits — high enough to matter (~8× wall-clock division), low enough that a
+// healthy key rarely 429s; and a 429 that does occur is already retried with backoff INSIDE
+// llmClient (its own retriableTransport/backoffMs discipline), so a burst never surfaces as a
+// bridge error. DETERMINISM IS UNAFFECTED: boundedRunner collects results BY INDEX and
+// decisions[]/frozenEvidencePayload[] are assembled in SOURCE ORDER after completion, so the
+// frozen decision block stays BYTE-IDENTICAL to what the serial loop produced — proven
+// mechanically in test-sifEvidenceBridge.js SECTION 9 (a staggered-delay stub vs a concurrency-1
+// run, same frozen bytes, same hash). config.evidenceJudgeConcurrency (a positive integer)
+// overrides per run — that is the seam the determinism suite drives its concurrency-1 comparator
+// through; this constant is the production value.
+const EVIDENCE_JUDGE_CONCURRENCY = 8;
 
 // HUB_SEGMENTS — composition-order slot 2 (hub-level framing), the SAME hub-level instruction every
 // CEDS-hub bridge in this tree carries, deliberately duplicated (not required-in) per the established
@@ -528,6 +552,21 @@ module.exports = (injectedTools = {}) =>
 			);
 			return;
 		}
+		// evidenceJudgeConcurrency — EVIDENCE_JUDGE_CONCURRENCY unless config.evidenceJudgeConcurrency
+		// overrides it (the determinism suite's concurrency-1 comparator seam; also an operator knob
+		// for a rate-limited key). A malformed override is refused by name, never coerced.
+		const evidenceJudgeConcurrency =
+			config.evidenceJudgeConcurrency === undefined
+				? EVIDENCE_JUDGE_CONCURRENCY
+				: config.evidenceJudgeConcurrency;
+		if (!Number.isInteger(evidenceJudgeConcurrency) || evidenceJudgeConcurrency < 1) {
+			callback(
+				`${MAPPING_TOOL}: config.evidenceJudgeConcurrency is ${JSON.stringify(
+					config.evidenceJudgeConcurrency,
+				)} — when given it must be a positive integer (the default is ${EVIDENCE_JUDGE_CONCURRENCY}).`,
+			);
+			return;
+		}
 		// THE CASE RULE (lib.d/sourceWalker.js): the recipe token is lowercase; forged `_source` is
 		// uppercase. Read and stamp by the uppercase key.
 		const sourceStandardKey = sourceStandard.toUpperCase();
@@ -711,62 +750,94 @@ module.exports = (injectedTools = {}) =>
 			});
 
 			taskList.push((args, next) => {
-				const decisions = [];
-				const frozenEvidencePayload = [];
-				const perSourceTask = new taskListPlus();
-				args.sourceNodes.forEach((oneSource) => {
-					perSourceTask.push((a2, n2) => {
-						composer(
-							{ sourceElement: oneSource, candidateElements: args.candidateElements, graphReader: kit.graphReader, hubModule: kit.cedsHubModule },
-							(composeErr, evidencePackage) => {
-								if (composeErr) {
-									n2(`${MAPPING_TOOL}: composing evidence for ${oneSource.stableId}: ${composeErr}`);
-									return;
-								}
-								kit.evidenceRenderer.render(evidencePackage, HUB_SEGMENTS, {}, (renderErr, promptText) => {
-									if (renderErr) {
-										n2(`${MAPPING_TOOL}: rendering evidence for ${oneSource.stableId}: ${renderErr}`);
+				// PER-SOURCE: compose -> ⟪A3⟫ gate -> render -> select -> normalize — dispatched through
+				// boundedRunner with EVIDENCE_JUDGE_CONCURRENCY judgments in flight at once (see that
+				// constant's header for the wall-clock arithmetic and the rate-limit reasoning).
+				// DETERMINISM IS SACRED: results come back BY INDEX and decisions[]/frozenEvidencePayload[]
+				// are assembled in SOURCE ORDER after ALL sources settle, so the frozen decision block is
+				// BYTE-IDENTICAL to what the serial loop produced regardless of completion order.
+				// PROGRESS: the judging phase used to run silent for hours (long enough that an orchestrator
+				// once killed a healthy build as hung, 2026-07-29) — it now announces itself and reports
+				// every 50 completions through xLog, the same channel the surrounding build machinery logs on.
+				const { xLog } = process.global;
+				const sourceCount = args.sourceNodes.length;
+				xLog.status(`[${MAPPING_TOOL}] judging ${sourceCount} source elements (concurrency ${evidenceJudgeConcurrency})`);
+				let judgedCount = 0;
+				boundedRunner(
+					{
+						items: args.sourceNodes,
+						concurrencyLimit: evidenceJudgeConcurrency,
+						oneItem: (oneSource, sourceIndex, itemDone) => {
+							void sourceIndex; // identity rides on oneSource.stableId; ORDER rides on boundedRunner's own index
+							composer(
+								{ sourceElement: oneSource, candidateElements: args.candidateElements, graphReader: kit.graphReader, hubModule: kit.cedsHubModule },
+								(composeErr, evidencePackage) => {
+									if (composeErr) {
+										itemDone(`${MAPPING_TOOL}: composing evidence for ${oneSource.stableId}: ${composeErr}`);
 										return;
 									}
-									kit.evidenceSelect({ promptText, pool: evidencePackage.pool }, llmClient, (selectErr, selectResult) => {
-										if (selectErr) {
-											n2(`${MAPPING_TOOL}: selecting for ${oneSource.stableId}: ${selectErr}`);
+									kit.evidenceRenderer.render(evidencePackage, HUB_SEGMENTS, {}, (renderErr, promptText) => {
+										if (renderErr) {
+											itemDone(`${MAPPING_TOOL}: rendering evidence for ${oneSource.stableId}: ${renderErr}`);
 											return;
 										}
-										const bestCosine = evidencePackage.pool.length ? evidencePackage.pool[0].cosine : -1;
-										const chosenEntry = selectResult.abstain
-											? null
-											: evidencePackage.pool.find((oneEntry) => oneEntry.candidate === selectResult.pick);
-										const retrievalCosine = chosenEntry ? chosenEntry.cosine : bestCosine;
-										kit.confidenceNormalizer(selectResult.category, retrievalCosine, {}, (normalizeErr, normalizedConfidence) => {
-											if (normalizeErr) {
-												n2(`${MAPPING_TOOL}: normalizing confidence for ${oneSource.stableId}: ${normalizeErr}`);
+										kit.evidenceSelect({ promptText, pool: evidencePackage.pool }, llmClient, (selectErr, selectResult) => {
+											if (selectErr) {
+												itemDone(`${MAPPING_TOOL}: selecting for ${oneSource.stableId}: ${selectErr}`);
 												return;
 											}
-											const ordinal = chosenEntry ? evidencePackage.pool.indexOf(chosenEntry) + 1 : null;
-											decisions.push({
-												source: { stableId: oneSource.stableId, role: oneSource.role },
-												abstain: selectResult.abstain,
-												abstainReason: selectResult.abstain ? 'evidenceAbstain' : null,
-												targetKey: selectResult.abstain ? null : targetKeyFor(selectResult.pick),
-												chosenStableId: selectResult.abstain ? null : selectResult.pick.stableId,
-												retrievalRank: ordinal,
-												cosineScore: retrievalCosine,
+											const bestCosine = evidencePackage.pool.length ? evidencePackage.pool[0].cosine : -1;
+											const chosenEntry = selectResult.abstain
+												? null
+												: evidencePackage.pool.find((oneEntry) => oneEntry.candidate === selectResult.pick);
+											const retrievalCosine = chosenEntry ? chosenEntry.cosine : bestCosine;
+											kit.confidenceNormalizer(selectResult.category, retrievalCosine, {}, (normalizeErr, normalizedConfidence) => {
+												if (normalizeErr) {
+													itemDone(`${MAPPING_TOOL}: normalizing confidence for ${oneSource.stableId}: ${normalizeErr}`);
+													return;
+												}
+												const ordinal = chosenEntry ? evidencePackage.pool.indexOf(chosenEntry) + 1 : null;
+												judgedCount += 1;
+												if (judgedCount % 50 === 0 && judgedCount < sourceCount) {
+													xLog.status(`[${MAPPING_TOOL}] judged ${judgedCount}/${sourceCount}`);
+												}
+												itemDone('', {
+													decision: {
+														source: { stableId: oneSource.stableId, role: oneSource.role },
+														abstain: selectResult.abstain,
+														abstainReason: selectResult.abstain ? 'evidenceAbstain' : null,
+														targetKey: selectResult.abstain ? null : targetKeyFor(selectResult.pick),
+														chosenStableId: selectResult.abstain ? null : selectResult.pick.stableId,
+														retrievalRank: ordinal,
+														cosineScore: retrievalCosine,
+													},
+													frozenEntry: {
+														sourceStableId: oneSource.stableId,
+														evidencePackage,
+														judgment: { category: selectResult.category, rationale: selectResult.rationale, normalizedConfidence },
+													},
+												});
 											});
-											frozenEvidencePayload.push({
-												sourceStableId: oneSource.stableId,
-												evidencePackage,
-												judgment: { category: selectResult.category, rationale: selectResult.rationale, normalizedConfidence },
-											});
-											n2('', a2);
 										});
 									});
-								});
-							},
-						);
-					});
-				});
-				pipeRunner(perSourceTask.getList(), {}, (err) => next(err, { ...args, decisions, frozenEvidencePayload }));
+								},
+							);
+						},
+					},
+					(runErr, out) => {
+						if (runErr) {
+							next(runErr, args);
+							return;
+						}
+						xLog.status(`[${MAPPING_TOOL}] judged ${sourceCount}/${sourceCount}`);
+						// SOURCE-ORDER ASSEMBLY — out.results[i] belongs to sourceNodes[i], by boundedRunner's contract.
+						next('', {
+							...args,
+							decisions: out.results.map((onePerSourceResult) => onePerSourceResult.decision),
+							frozenEvidencePayload: out.results.map((onePerSourceResult) => onePerSourceResult.frozenEntry),
+						});
+					},
+				);
 			});
 
 			taskList.push((args, next) => {

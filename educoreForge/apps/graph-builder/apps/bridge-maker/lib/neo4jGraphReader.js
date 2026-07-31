@@ -15,9 +15,13 @@
 //
 // readNodes selects :label nodes whose given scalar properties equal the requested values and returns
 // each as { stableId, properties } with SCALAR property values (the live graph stores scalars — the
-// forge's PG-JSON arrays were collapsed at replay MERGE). It opens ONE driver+session lazily on the
-// first read (the same idiom neo4jGraphWriter and replayManager use — a handle carries its own
-// credential and nothing else does); close() is safe whether or not a connection was ever opened.
+// forge's PG-JSON arrays were collapsed at replay MERGE). It opens ONE driver lazily on the first read
+// (the same idiom neo4jGraphWriter and replayManager use — a handle carries its own credential and
+// nothing else does) but a SESSION PER readNodes CALL: since the bounded-concurrency judging change
+// (P8, 2026-07-30) up to EVIDENCE_JUDGE_CONCURRENCY walk hooks share this ONE reader concurrently, and
+// a neo4j session is a sequential container not safe for overlapping runs — per-call sessions ride the
+// driver's connection pool (neo4j's own documented pattern; sessions are cheap). close() closes the
+// driver and is safe whether or not a connection was ever opened.
 //
 // `label` is interpolated (a Cypher label position cannot be parameterized) so it is validated as a bare
 // identifier first — the same injection guard neo4jGraphWriter applies. propertyEquals VALUES are
@@ -34,17 +38,15 @@ const moduleFunction =
 	({ moduleName } = {}) =>
 	({ inGraph } = {}) => {
 		let driver = null;
-		let session = null;
 
-		const ensureSession = () => {
-			if (session) {
+		const ensureDriver = () => {
+			if (driver) {
 				return;
 			}
 			const neo4j = require('neo4j-driver');
 			driver = neo4j.driver(inGraph.boltUrl, neo4j.auth.basic('neo4j', inGraph.password), {
 				encrypted: false,
 			});
-			session = driver.session();
 		};
 
 		const readNodes = ({ label = 'ForgedNode', propertyEquals = {} } = {}, callback) => {
@@ -65,35 +67,45 @@ const moduleFunction =
 				return;
 			}
 
-			ensureSession();
+			ensureDriver();
 
 			const whereClause = propertyKeys.length
 				? 'WHERE ' + propertyKeys.map((oneKey) => `n.\`${oneKey}\` = $${oneKey}`).join(' AND ')
 				: '';
 			const cypher = `MATCH (n:\`${label}\`)\n${whereClause}\nRETURN n.stableId AS stableId, properties(n) AS properties`;
 
-			session
+			// one session per read (see header): the session is closed on BOTH outcomes before the
+			// callback fires, and a close failure after a good read is reported honestly, never swallowed.
+			const readSession = driver.session();
+			const finish = (errString, payload) => {
+				readSession.close().then(
+					() => callback(errString, payload),
+					(closeError) =>
+						callback(
+							errString || `${moduleName}: closing read session failed: ${closeError.message}`,
+							payload,
+						),
+				);
+			};
+			readSession
 				.run(cypher, propertyEquals)
 				.then((queryResult) => {
 					const nodes = queryResult.records.map((oneRecord) => ({
 						stableId: oneRecord.get('stableId'),
 						properties: oneRecord.get('properties') || {},
 					}));
-					callback('', { nodes });
+					finish('', { nodes });
 				})
-				.catch((error) =>
-					callback(`${moduleName}: reading :${label} nodes failed: ${error.message}`),
-				);
+				.catch((error) => finish(`${moduleName}: reading :${label} nodes failed: ${error.message}`));
 		};
 
 		const close = (callback) => {
-			if (!session) {
+			if (!driver) {
 				callback('');
 				return;
 			}
-			session
+			driver
 				.close()
-				.then(() => driver.close())
 				.then(() => callback(''))
 				.catch((error) => callback(`${moduleName}: closing graph reader failed: ${error.message}`));
 		};

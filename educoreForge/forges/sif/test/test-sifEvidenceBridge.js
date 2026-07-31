@@ -678,4 +678,171 @@ harness.ok(
 const expectedPath8 = path.join(__dirname, '..', 'bridges', 'sifEvidenceBridge.js');
 harness.equal('  and the resolved file IS forges/sif/bridges/sifEvidenceBridge.js', resolved8.resolvedPath, expectedPath8);
 
-harness.report();
+// =====================================================================
+harness.section('SECTION 9 — DETERMINISM UNDER CONCURRENCY: staggered-delay concurrent run vs concurrency-1 run, SAME frozen bytes');
+// =====================================================================
+// p8-judgeConcurrency: the per-source judge loop now dispatches through boundedRunner with
+// EVIDENCE_JUDGE_CONCURRENCY=8 in flight. The frozen decision block must stay BYTE-IDENTICAL to a
+// serial run — proven here with a stub llmClient whose responses arrive in REVERSED order (the
+// last-launched judgment completes first) against a config.evidenceJudgeConcurrency=1 comparator.
+// This section is ASYNC (real timers stagger completions), so it owns harness.report().
+
+const SOURCE_COUNT_9 = 6;
+const FIELD_NAMES_9 = ['FirstName', 'MiddleName', 'LastName', 'PreferredName', 'FormerName', 'AliasName'];
+const sourceGraphNodes9 = FIELD_NAMES_9.map((oneFieldName, i) => ({
+	stableId: `sif:field/StudentPersonal/Name/${oneFieldName}`,
+	properties: {
+		_source: 'SIF', role: 'DmeProperty', name: oneFieldName, description: 'sourceDefText',
+		xpath: `StudentPersonal/Name/${oneFieldName}`, tableName: 'StudentPersonal',
+		sequenceGroupLabel: 'Name', sequenceGroupKey: 'sif:fieldGroup:Name',
+		sequenceOrdinal: i + 1, siblingCount: SOURCE_COUNT_9, orderSemantics: 'document',
+		cedsId: 'P900002', // every probe carries the authored anchor, so addr2 is always in the pool
+	},
+}));
+
+const graphReaderDouble9 = ({ inGraph }) => ({
+	readNodes: ({ label, propertyEquals }, callback) => {
+		void inGraph;
+		const eq = propertyEquals || {};
+		if (label === 'HubReference') { callback('', { nodes: referenceNodesRaw7 }); return; }
+		if (eq._source === 'SIF' && eq.role === 'DmeProperty') { callback('', { nodes: sourceGraphNodes9 }); return; }
+		if (label === 'SifField') { callback('', { nodes: [] }); return; } // no siblings resolved — honest baseline
+		callback('', { nodes: [] });
+	},
+	close: (callback) => callback(''),
+});
+
+// makeStubLlm9 — per-call responses VARY (category cycles; rationale carries the call ordinal; odd
+// calls abstain) so a wrong-order assembly would change the frozen bytes, not merely reshuffle
+// identical entries. All pre-select steps are synchronous with these doubles, so rerank call order
+// IS source launch order (strictly ascending — boundedRunner's contract) in BOTH runs; only the
+// completion timing differs.
+const CATEGORY_CYCLE_9 = ['strong', 'moderate', 'weakButReal'];
+const makeStubLlm9 = ({ delayForCall, completionOrder, inFlightLedger }) => {
+	let callOrdinal = -1;
+	return {
+		rerank: (spec, callback) => {
+			callOrdinal += 1;
+			const thisCall = callOrdinal;
+			const crossrefOrdinalMatch = spec.userPrompt.match(/(\d+)\) Unrelated Widget Descriptor/);
+			if (inFlightLedger) {
+				inFlightLedger.now += 1;
+				inFlightLedger.max = Math.max(inFlightLedger.max, inFlightLedger.now);
+			}
+			const respond = () => {
+				if (inFlightLedger) {
+					inFlightLedger.now -= 1;
+				}
+				if (completionOrder) {
+					completionOrder.push(thisCall);
+				}
+				if (thisCall % 2 === 1 || !crossrefOrdinalMatch) {
+					callback('', { choice: 'NONE', rationale: `determinism abstain rationale #${thisCall}` });
+					return;
+				}
+				callback('', {
+					choice: crossrefOrdinalMatch[1],
+					category: CATEGORY_CYCLE_9[(thisCall / 2) % CATEGORY_CYCLE_9.length],
+					rationale: `determinism pick rationale #${thisCall}`,
+				});
+			};
+			const delayMs = delayForCall(thisCall);
+			if (delayMs === 0) {
+				respond();
+				return;
+			}
+			setTimeout(respond, delayMs);
+		},
+	};
+};
+
+const runOneDeterminismPass9 = ({ graphName, stubLlm, configOverrides, writes }, passDone) => {
+	const decisionBlocks9 = {};
+	const decisionStore9 = {
+		getDecisionBlock: ({ pairKey }, cb) => cb('', decisionBlocks9[pairKey] ? { frozenText: decisionBlocks9[pairKey].frozenText } : { frozenText: null }),
+		saveDecisionBlock: ({ pairKey, frozenText, decisionBlockHash }, cb) => { decisionBlocks9[pairKey] = { frozenText, decisionBlockHash }; cb('', { saved: true }); },
+	};
+	bridgeMakerModule({ graphWriterFactory: makeWriterDouble7(writes), graphReaderFactory: graphReaderDouble9 }).run(
+		{
+			inGraph: { graphName, boltUrl: 'bolt://x', password: 'x' },
+			bridge: 'sifEvidenceBridge', source: 'sif', hub: 'ceds', applyLabel: 'BridgedRelation',
+			rebridge: true, decisionStore: decisionStore9,
+			inferenceConfig: { llmClient: stubLlm, topK: 1, cosineFloor: -1, concurrency: 4 },
+			config: { ...runConfig7, ...configOverrides },
+			componentOverrides: { vectorizer: fakeVectorizerFactory7, graphReader: graphReaderDouble9 },
+		},
+		(err, report) => passDone(err, { report, frozenBlock: decisionBlocks9['CEDS::SIF'] }),
+	);
+};
+
+// PASS 1 — CONCURRENT (the bridge's EVIDENCE_JUDGE_CONCURRENCY=8 default), REVERSED staggered
+// delays: the LAST-launched judgment completes FIRST.
+const completionOrder9 = [];
+const inFlightLedger9 = { now: 0, max: 0 };
+const concurrentWrites9 = [];
+runOneDeterminismPass9(
+	{
+		graphName: 'DEV_sif_determinism_concurrent',
+		stubLlm: makeStubLlm9({
+			delayForCall: (callOrdinal) => (SOURCE_COUNT_9 - callOrdinal) * 12,
+			completionOrder: completionOrder9,
+			inFlightLedger: inFlightLedger9,
+		}),
+		configOverrides: {},
+		writes: concurrentWrites9,
+	},
+	(concurrentErr, concurrentOut) => {
+		harness.ok(`the CONCURRENT rebridge pass did not error (${concurrentErr || 'ok'})`, !concurrentErr, concurrentErr);
+		harness.ok(
+			'the judgments genuinely OVERLAPPED (max concurrent rerank calls in flight > 1)',
+			inFlightLedger9.max > 1,
+			`max in flight was ${inFlightLedger9.max}`,
+		);
+		harness.ok(
+			`completion order provably DIFFERS from source order (was ${JSON.stringify(completionOrder9)})`,
+			JSON.stringify(completionOrder9) !== JSON.stringify(Array.from({ length: SOURCE_COUNT_9 }, (ignore, i) => i)),
+			`completion order was ${JSON.stringify(completionOrder9)}`,
+		);
+
+		// PASS 2 — SERIAL comparator: config.evidenceJudgeConcurrency=1 (the documented override
+		// seam), zero delay — the exact behavior of the retired taskListPlus serial loop.
+		const serialWrites9 = [];
+		runOneDeterminismPass9(
+			{
+				graphName: 'DEV_sif_determinism_serial',
+				stubLlm: makeStubLlm9({ delayForCall: () => 0 }),
+				configOverrides: { evidenceJudgeConcurrency: 1 },
+				writes: serialWrites9,
+			},
+			(serialErr, serialOut) => {
+				harness.ok(`the SERIAL (concurrency-1) rebridge pass did not error (${serialErr || 'ok'})`, !serialErr, serialErr);
+
+				// THE PROOF — the frozen decision block is BYTE-IDENTICAL and hash-identical.
+				harness.ok('both passes saved a real frozen block', !!(concurrentOut.frozenBlock && serialOut.frozenBlock));
+				harness.equal(
+					'DETERMINISM PROVED: the frozen decision block TEXT is BYTE-IDENTICAL between the out-of-order concurrent run and the serial run',
+					concurrentOut.frozenBlock.frozenText,
+					serialOut.frozenBlock.frozenText,
+				);
+				harness.equal(
+					'  and the content-address (decisionBlockHash) is IDENTICAL',
+					concurrentOut.frozenBlock.decisionBlockHash,
+					serialOut.frozenBlock.decisionBlockHash,
+				);
+				harness.equal(
+					'  and both bridge reports pin the SAME decisionBlock hash',
+					concurrentOut.report.decisionBlock,
+					serialOut.report.decisionBlock,
+				);
+				harness.equal(
+					'  and the WRITTEN edges are byte-identical, in the same order',
+					JSON.stringify(concurrentWrites9),
+					JSON.stringify(serialWrites9),
+				);
+				harness.equal('  3 picks -> 3 edges in each pass (even ordinals pick addr2, odd abstain)', concurrentWrites9.length, 3);
+
+				harness.report();
+			},
+		);
+	},
+);
