@@ -58,6 +58,10 @@ const DME_ROLES = {
 	// golden_vector index and stays invisible to the DME's semantic search -- the same
 	// treatment HubReference already gets.
 	EDIT_HISTORY_ENTRY: 'DmeEditHistoryEntry',
+	// An owl:Restriction block -- a CLASS's constraint that a named property takes all its
+	// values from a named target. 18 in CEDS. Anonymous in the source, so identity is derived
+	// from owner + file position, exactly as DmeEditHistoryEntry is. Carries no embedding.
+	RESTRICTION: 'DmeRestriction',
 };
 
 // =====================================================================
@@ -74,6 +78,7 @@ const EDGE_TYPES = {
 	HAS_SUPPORT: 'HAS_SUPPORT',
 	REFERENCES_TYPE: 'REFERENCES_TYPE',
 	HAS_EDIT_HISTORY: 'HAS_EDIT_HISTORY',
+	HAS_RESTRICTION: 'HAS_RESTRICTION',
 };
 
 // LEGACY mapping/bridge edge types (emitter edf-bridge RETIRED 2026-07-04). Kept deliberately: the

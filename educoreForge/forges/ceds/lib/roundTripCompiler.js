@@ -161,7 +161,7 @@ const SCALAR_ANNOTATION_FIELDS = [
 ];
 const FIELD_ORDER_BY_KIND = {
 	ontology: ['versionInfo'],
-	class: [...SCALAR_ANNOTATION_FIELDS, 'subClassOf', 'editHistory'],
+	class: [...SCALAR_ANNOTATION_FIELDS, 'subClassOf', 'restrictions', 'editHistory'],
 	property: [
 		...SCALAR_ANNOTATION_FIELDS,
 		'domainIncludes',
@@ -281,6 +281,8 @@ const READ_PROPERTY_NAMES = [
 	// captured, then 3,849 INVENTED empty elements, then 8 statements sitting in the graph and
 	// reported LOST -- and each time the cause was a hand-maintained enumeration that a new
 	// field had to be remembered into. Worth a standing suspicion of every list in this file.
+	'onProperty',
+	'allValuesFrom',
 	'alternative',
 	'equivalentProperty',
 	'closeMatch',
@@ -354,6 +356,39 @@ const moduleFunction =
 			return parts.join('');
 		};
 
+		// restrictionsText — the owl:Restriction blocks, one <rdfs:subClassOf> wrapper apiece.
+		// Emitted in `sequence` order (FILE order), which is why the forge records a sequence at
+		// all: C200402 carries two and a re-emission must reproduce the document, not a tidier
+		// arrangement of it.
+		const restrictionsText = ({ blocks, indent }) => {
+			const parts = [];
+			(blocks || []).forEach((oneBlock) => {
+				parts.push(`${indent}<rdfs:subClassOf>\n`);
+				parts.push(`${indent}\t<owl:Restriction>\n`);
+				if (present(oneBlock.onProperty)) {
+					parts.push(
+						resourceElementText({
+							element: 'owl:onProperty',
+							value: oneBlock.onProperty,
+							indent: `${indent}\t\t`,
+						}),
+					);
+				}
+				if (present(oneBlock.allValuesFrom)) {
+					parts.push(
+						resourceElementText({
+							element: 'owl:allValuesFrom',
+							value: oneBlock.allValuesFrom,
+							indent: `${indent}\t\t`,
+						}),
+					);
+				}
+				parts.push(`${indent}\t</owl:Restriction>\n`);
+				parts.push(`${indent}</rdfs:subClassOf>\n`);
+			});
+			return parts.join('');
+		};
+
 		// entityText — ONE entity's XML. Pure and synchronous: given an entity it returns text, and
 		// it is the caller that decides where the text goes (a stream, a string, a test assertion).
 		const entityText = ({ kind, entity }) => {
@@ -381,6 +416,10 @@ const moduleFunction =
 				}
 				if (oneField === 'editHistory') {
 					parts.push(editHistoryText({ entries: value, indent: '\t\t' }));
+					return;
+				}
+				if (oneField === 'restrictions') {
+					parts.push(restrictionsText({ blocks: value, indent: '\t\t' }));
 					return;
 				}
 				const emission = FIELD_EMISSION[oneField];
@@ -744,6 +783,7 @@ const moduleFunction =
 					'DmeOptionSet',
 					'DmeOptionValue',
 					'DmeEditHistoryEntry',
+					'DmeRestriction',
 				].forEach(
 					(oneRole) => {
 						taskList.push((args, next) => {
@@ -816,6 +856,7 @@ const moduleFunction =
 							optionSetNodes: args.DmeOptionSet,
 							optionValueNodes: args.DmeOptionValue,
 						editHistoryEntryNodes: args.DmeEditHistoryEntry,
+						restrictionNodes: args.DmeRestriction,
 							subClassOfPairs: args.subClassOf,
 							rangePairs: args.range,
 							inSchemePairs: args.inScheme,
@@ -854,6 +895,7 @@ const moduleFunction =
 				optionSetNodes,
 				optionValueNodes,
 				editHistoryEntryNodes,
+				restrictionNodes,
 				subClassOfPairs,
 				rangePairs,
 				inSchemePairs,
@@ -919,12 +961,38 @@ const moduleFunction =
 			// cedsId -> uri, built from the CLASS nodes only. schema:domainIncludes always points at a
 			// class, and the CEDS forge records the full resolvable domain list as canonical class ids
 			// (allDomainIds) rather than as URIs, so this map is what turns them back into subjects.
+			// Restrictions group exactly as history does -- `<ownerUri>#restriction/<sequence>` --
+			// so one shape serves both and there is no second convention to remember.
+			const restrictionsByOwner = (() => {
+				const byOwner = {};
+				listOf(restrictionNodes).forEach((oneNode) => {
+					const uri = oneNode && oneNode.uri;
+					const separatorAt = typeof uri === 'string' ? uri.indexOf('#restriction/') : -1;
+					if (separatorAt < 1) {
+						return;
+					}
+					const ownerUri = uri.slice(0, separatorAt);
+					byOwner[ownerUri] = byOwner[ownerUri] || [];
+					byOwner[ownerUri].push(oneNode);
+				});
+				Object.keys(byOwner).forEach((oneOwnerUri) => {
+					byOwner[oneOwnerUri].sort(
+						(left, right) => Number(left.sequence || 0) - Number(right.sequence || 0),
+					);
+				});
+				return byOwner;
+			})();
+
 			// One pass over the entry nodes; every entity below then looks up its own history.
 			const historyByOwnerUri = editHistoryByOwnerUri(editHistoryEntryNodes);
 			const attachEditHistory = (entity) => {
 				const entries = historyByOwnerUri[entity.uri];
 				if (entries && entries.length) {
 					entity.editHistory = entries;
+				}
+				const blocks = restrictionsByOwner[entity.uri];
+				if (blocks && blocks.length) {
+					entity.restrictions = blocks;
 				}
 				return entity;
 			};

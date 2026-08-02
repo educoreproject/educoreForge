@@ -262,6 +262,58 @@ const extractEditHistory = (element) => {
 	return entries.length ? entries : undefined;
 };
 
+// ============================================================
+// owl:Restriction — the second nested structure, extracted as ORDERED RECORDS
+// ============================================================
+//
+// 18 blocks in the ontology, every one on a CLASS, each shaped
+//   <rdfs:subClassOf><owl:Restriction>
+//       <owl:onProperty rdf:resource="..."/><owl:allValuesFrom rdf:resource="..."/>
+//   </owl:Restriction></rdfs:subClassOf>
+// which is 4 statements apiece (the subClassOf, the rdf:type owl:Restriction, and the two
+// resource references) = 72.
+//
+// SAME TREATMENT AS editHistory, and for the same reasons: the record is ANONYMOUS in the
+// source, so identity is DERIVED from the owner plus file position and is reproducible from
+// the source alone; and `sequence` is FILE position so a re-emission reproduces the document
+// rather than a tidier one. C200402 carries two of these, which is why order is recorded at
+// all rather than assumed unique.
+//
+// Note the interaction with parentRef above: extractClass takes the first subClassOf carrying
+// an rdf:resource, and a restriction's subClassOf carries none, so the two readings do not
+// contend for the same element.
+const extractRestrictions = (element) => {
+	const subClassOfBlocks = element['rdfs:subClassOf'];
+	if (!subClassOfBlocks || !subClassOfBlocks.length) {
+		return undefined;
+	}
+	const restrictions = [];
+	subClassOfBlocks.forEach((oneBlock) => {
+		if (!oneBlock || typeof oneBlock !== 'object') {
+			return;
+		}
+		(oneBlock['owl:Restriction'] || []).forEach((oneRestriction) => {
+			if (!oneRestriction || typeof oneRestriction !== 'object') {
+				return;
+			}
+			const onProperty = getResourceRefs(oneRestriction, 'owl:onProperty')[0];
+			const allValuesFrom = getResourceRefs(oneRestriction, 'owl:allValuesFrom')[0];
+			if (!onProperty && !allValuesFrom) {
+				return;
+			}
+			const record = { sequence: restrictions.length };
+			if (onProperty) {
+				record.onProperty = onProperty;
+			}
+			if (allValuesFrom) {
+				record.allValuesFrom = allValuesFrom;
+			}
+			restrictions.push(record);
+		});
+	});
+	return restrictions.length ? restrictions : undefined;
+};
+
 const extractBaseProperties = (element, faults) => {
 	const uri = getAttr(element, 'rdf:about');
 	return {
@@ -277,9 +329,10 @@ const extractBaseProperties = (element, faults) => {
 		// that silently changes meaning every time either side gains a field.
 		annotations: extractGenericAnnotations(element, faults),
 
-		// The one nested structure, in FILE order. Becomes NODES in the forge, never a
-		// property -- see extractEditHistory above for why the order must not be tidied.
+		// The two nested structures, in FILE order. Both become NODES in the forge, never
+		// properties -- see extractEditHistory above for why the order must not be tidied.
 		editHistory: extractEditHistory(element),
+		restrictions: extractRestrictions(element),
 	};
 };
 

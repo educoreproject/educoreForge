@@ -314,6 +314,52 @@ const moduleFunction =
 				});
 			};
 
+			// ---------------------------------------------------------------------------
+			// addRestrictionNodes — owl:Restriction blocks, ORDERED BY FILE POSITION
+			// ---------------------------------------------------------------------------
+			// Identical treatment to addEditHistoryNodes and for identical reasons: the block is
+			// ANONYMOUS in the source, so the stableId is DERIVED (`<ownerUri>#restriction/<n>`)
+			// and reproducible from the source alone; `sequence` is FILE position, not meaning;
+			// no searchText and no embedding, so it never enters golden_vector.
+			//
+			// The two resource references are carried as PROPERTIES rather than edges. They point
+			// at CEDS properties, and a HAS_RESTRICTION -> onProperty edge chain would assert a
+			// traversal CEDS does not make: the restriction constrains a property, it does not
+			// contain one. Keeping them as references keeps the round-trip exact and invents
+			// nothing.
+			const addRestrictionNodes = ({ ownerStableId, ownerCedsId, restrictions }) => {
+				if (!restrictions || !restrictions.length) {
+					return;
+				}
+				restrictions.forEach((oneRestriction) => {
+					const stableId = `${ownerStableId}#restriction/${oneRestriction.sequence}`;
+					const restrictionProperties = {
+						_id: idFor(`${ownerCedsId}#restriction/${oneRestriction.sequence}`),
+						_source: 'CEDS',
+						role: DME_ROLES.RESTRICTION,
+						uri: stableId,
+						name: `${ownerCedsId} restriction ${oneRestriction.sequence}`,
+						sequence: oneRestriction.sequence,
+						ownerCedsId,
+						parentId: ownerStableId,
+						path: `${ownerCedsId}.restriction[${oneRestriction.sequence}]`,
+					};
+					if (oneRestriction.onProperty) {
+						restrictionProperties.onProperty = oneRestriction.onProperty;
+					}
+					if (oneRestriction.allValuesFrom) {
+						restrictionProperties.allValuesFrom = oneRestriction.allValuesFrom;
+					}
+					nodes.push({
+						labels: [NODE_LABELS.FORGED_NODE, 'CedsOntology', DME_ROLES.RESTRICTION],
+						stableId,
+						role: DME_ROLES.RESTRICTION,
+						properties: restrictionProperties,
+					});
+					addEdge(EDGE_TYPES.HAS_RESTRICTION, ownerStableId, stableId);
+				});
+			};
+
 			// edge — canonical ownership/reference edge, stamped structural (DECISIONS §11).
 			const addEdge = (type, fromStableId, toStableId) => {
 				edges.push({
@@ -391,6 +437,11 @@ const moduleFunction =
 					ownerStableId: built.stableId,
 					ownerCedsId: built.canonicalCedsId,
 					editHistory: cls.editHistory,
+				});
+				addRestrictionNodes({
+					ownerStableId: built.stableId,
+					ownerCedsId: built.canonicalCedsId,
+					restrictions: cls.restrictions,
 				});
 			});
 
@@ -685,7 +736,9 @@ const moduleFunction =
 			// embedding whitespace, which is the right failure: a node with nothing to say should
 			// not be given a vector that says something.
 			const embeddableNodes = nodes.filter(
-				(oneNode) => oneNode.role !== DME_ROLES.EDIT_HISTORY_ENTRY,
+				(oneNode) =>
+					oneNode.role !== DME_ROLES.EDIT_HISTORY_ENTRY &&
+					oneNode.role !== DME_ROLES.RESTRICTION,
 			);
 			const targetNodes =
 				nodeSubsetLimit && nodeSubsetLimit < embeddableNodes.length
