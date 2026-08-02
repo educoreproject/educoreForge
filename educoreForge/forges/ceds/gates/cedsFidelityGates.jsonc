@@ -129,10 +129,10 @@
     },
     {
       "id": "C-3", "family": "C",
-      "contract": "The source parses completely: the statement count matches an independently derived count exactly.",
-      "note": "Statements never seen on the source side cannot be reported lost.",
-      "measure": "probe:independentSourceCountAgrees", "comparator": "equals", "expected": true,
-      "twin": "constructHiddenFromCanonicalizer"
+      "contract": "An INDEPENDENT RDF parser agrees the emission and the source are the same graph, triple for triple, under STRICT literal equality.",
+      "note": "REWRITTEN 2026-08-02 ⟪TQ: \"Gate C3 should be updated\"⟫. It used to ask for an independently derived statement COUNT, which is the weaker half of the real question. The strong form is a triple-set comparison by a parser sharing no code with ours -- lib/rdf-independent-check, rdflib. That distinction is not academic: our canonicalizer collapses internal whitespace on BOTH sides by design, so when CEDS wrote 62 `&#13;` character references and our emitter wrote raw carriage returns, XML 1.0 §2.11 normalized them away on re-parse and 20 triples differed. Our own instrument reported ZERO, honestly, under its own definition. A tool cannot audit the assumption it is built on. STRICT is the verdict; the whitespace-normalized pass is a diagnostic that says WHICH KIND of repair a failure needs.",
+      "measure": "probe:independentRdfGraphsIdentical", "comparator": "equals", "expected": true,
+      "twin": "independentParserDisagrees"
     },
     {
       "id": "C-4", "family": "C",

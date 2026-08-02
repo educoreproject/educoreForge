@@ -1040,6 +1040,25 @@ const cedsGatesAction = (callback) => {
 							callback(`graphBuilder -cedsGates: ${diffProbeError}`);
 							return;
 						}
+						// C-3: the OUTSIDE opinion. Runs only when both documents are named --
+						// --sourcePath and --emittedPath -- because a comparison is always OF two
+						// specific files. Omitted, the gate reads UNMEASURED with that reason,
+						// which is the honest state and never a pass.
+						const independentSourcePath = firstValue(commandLineParameters, 'sourcePath');
+						const independentEmittedPath = firstValue(commandLineParameters, 'emittedPath');
+						if (independentSourcePath && independentEmittedPath) {
+							xLog.status(
+								`graphBuilder: -cedsGates running the INDEPENDENT rdflib comparison ` +
+									`(parses 19MB twice; ~90s)`,
+							);
+						}
+						measuresLib.deriveIndependentRdfProbe(
+							{ sourcePath: independentSourcePath, emittedPath: independentEmittedPath },
+							(independentError, independentProbes) => {
+						if (independentError) {
+							callback(`graphBuilder -cedsGates: ${independentError}`);
+							return;
+						}
 						measuresLib.recordDeferredMeasures();
 
 						const measurements = {
@@ -1049,6 +1068,7 @@ const cedsGatesAction = (callback) => {
 								...measuresLib.deriveStaticProbes(),
 								...canonicalProbes,
 								...diffProbes,
+								...independentProbes,
 							},
 							suite: {},
 						};
@@ -1107,6 +1127,8 @@ const cedsGatesAction = (callback) => {
 										);
 									},
 								);
+							},
+						);
 							},
 						);
 					});

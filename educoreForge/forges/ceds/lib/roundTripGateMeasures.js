@@ -27,6 +27,9 @@ const compilerLib = require('./roundTripCompiler')();
 const canonicalLib = require('./roundTripCanonical')();
 const diffLib = require('./roundTripDiff')();
 const gatesLib = require('./roundTripGates')();
+const independentCheckLib = require(
+	path.join(__dirname, '..', '..', '..', 'lib', 'rdf-independent-check', 'rdf-independent-check'),
+)();
 
 const SUITE_FACTS_PATH = path.join(__dirname, '..', 'gates', 'suiteFacts.jsonc');
 
@@ -637,17 +640,46 @@ const roundTripGateMeasures = () => {
 	};
 
 	// =================================================================================
+	// deriveIndependentRdfProbe — C-3, and the only measure NOT computed by our own code
+	// =================================================================================
+	// ⟪TQ, 2026-08-02⟫ "Gate C3 should be updated." It used to ask for an independently
+	// derived statement COUNT. The strong form is a TRIPLE-SET comparison by a parser that
+	// shares no code with ours, because our canonicalizer collapses internal whitespace on
+	// both sides by design -- which made 20 differing triples invisible to it while it
+	// honestly reported zero.
+	//
+	// Slow by nature: it parses a 19MB RDF/XML document twice, ~90s for the CEDS pair. That
+	// is the price of an outside opinion and it is worth paying once per acceptance run.
+	const deriveIndependentRdfProbe = ({ sourcePath, emittedPath } = {}, callback) => {
+		if (!sourcePath || !emittedPath) {
+			record(
+				'probe:independentRdfGraphsIdentical',
+				'no sourcePath/emittedPath supplied, so the independent RDF comparison did not run',
+			);
+			callback('', {});
+			return;
+		}
+		independentCheckLib.compareRdfDocuments({ sourcePath, emittedPath }, (compareError, result) => {
+			if (compareError) {
+				// UNAVAILABLE IS NOT PASSING. If python3 or rdflib is missing the gate must read
+				// UNMEASURED with the reason attached -- never green by default.
+				record('probe:independentRdfGraphsIdentical', compareError);
+				callback('', {});
+				return;
+			}
+			callback('', {
+				independentRdfGraphsIdentical: result.comparison.identical === true,
+				independentRdfComparison: result.comparison,
+			});
+		});
+	};
+
+	// =================================================================================
 	// measures this module will NOT fake
 	// =================================================================================
 	// Recorded as unsupplied WITH REASONS so their gates report UNMEASURED and a reader
 	// learns why rather than wondering. Each is a real piece of work, not an oversight.
 	const recordDeferredMeasures = () => {
-		record(
-			'probe:independentSourceCountAgrees',
-			'needs a SECOND, independent RDF parser to cross-check the 239,761 statement count. ' +
-				'Cross-checking the canonicalizer against itself proves nothing, and statements it ' +
-				'never sees cannot be reported lost -- so this stays honest-unknown rather than green.',
-		);
 		record(
 			'probe:forgeDeterminism',
 			'needs two full CEDS forges of identical source and a statement-set comparison. ' +
@@ -689,6 +721,7 @@ const roundTripGateMeasures = () => {
 	return {
 		loadSuiteFacts,
 		measureGraph,
+		deriveIndependentRdfProbe,
 		recordDeferredMeasures,
 		GRAPH_MEASURE_QUERIES,
 		deriveReportMeasures,

@@ -135,7 +135,10 @@ const roundTripGateTwins = () => {
 		// sides, so anything it discards it discards symmetrically.
 		collidingAdversarialPair: falsify('probe', 'adversarialPairsAllDistinct'),
 		realDifferenceHiddenInCosmeticRewrite: falsify('probe', 'spellingInvariance'),
-		constructHiddenFromCanonicalizer: falsify('probe', 'independentSourceCountAgrees'),
+		// C-3's twin: the OUTSIDE opinion disagrees. This is the only gate in the suite whose
+		// measure comes from a tool we did not write, which is exactly why it can fail when
+		// every one of our own checks is green.
+		independentParserDisagrees: falsify('probe', 'independentRdfGraphsIdentical'),
 		topLevelWithoutSubjectDropped: unsupply('report', 'topLevelWithoutSubjectSurfaced'),
 		forceOneCanonicalizationFault: ({ measurements }) => {
 			setIn(measurements, 'report.canonicalizationFaults', [
