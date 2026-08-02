@@ -59,6 +59,14 @@ const {
 } = vocab;
 
 // single-element PG-JSON array -> scalar (the engine does this at MERGE; the producer does it on read).
+// domainListOf — every declared domain, whatever shape it was stored in. The replay engine
+// scalarizes single-element arrays, so 2,068 of 2,324 property nodes hold allDomainIds as a
+// bare string; Array.isArray() would skip them and look like a working fix.
+const domainListOf = (value) =>
+	[]
+		.concat(value === undefined || value === null ? [] : value)
+		.filter((one) => typeof one === 'string' && one.trim() !== '');
+
 const v1 = (arrayOrScalar) =>
 	Array.isArray(arrayOrScalar) ? arrayOrScalar[0] : arrayOrScalar;
 
@@ -298,8 +306,28 @@ const moduleFunction =
 			propertiesByRole.DmeProperty.forEach((propertyNode) => {
 				const props = propertyNode.properties;
 				const propertyKey = v1(props.canonicalKey);
-				const domainId = v1(props.domainId);
-				const classNode = classByDomainId[domainId];
+
+				// ⟪TQ RULING, 2026-08-02⟫ "we absolutely want the higher resolution. It's not even
+				// a question. I don't care how many nodes it takes, I want to have a HubReference
+				// for EVERY IDEA THAT CEDS CAN REPRESENT."
+				//
+				// A CEDS property can be declared against SEVERAL domains, and each one is a
+				// different idea: a school address is not a student address. This loop used to read
+				// props.domainId -- ONE domain -- so the second and third contexts had no card and
+				// were unfindable by the matcher no matter how good the judge was. Same class of
+				// failure as a candidate that is never in the pool.
+				//
+				// READ SHAPE-AGNOSTICALLY. The replay engine scalarizes single-element arrays, so
+				// 2,068 of 2,324 property nodes store allDomainIds as a bare STRING. An
+				// Array.isArray() test here would silently visit one domain for 89% of the corpus
+				// and look exactly like a fix.
+				//
+				// NO COLLISION RISK: addressSignatureFor() already includes domainId, so the cards
+				// minted per domain are distinct by construction. The tuple model anticipated this
+				// from the start; only this loop had not caught up.
+				const declaredDomainIds = domainListOf(props.allDomainIds).length
+					? domainListOf(props.allDomainIds)
+					: domainListOf(props.domainId);
 				const optionSetNode = propOptionSetNode[propertyNode.stableId];
 				const rangeOptionSetId = optionSetNode
 					? v1(optionSetNode.properties.rangeOptionSetId)
@@ -311,6 +339,9 @@ const moduleFunction =
 				const rangeClassNode = rangeClassId ? classByDomainId[rangeClassId] : undefined;
 				const rangeDatatype =
 					optionSetNode || rangeClassId ? undefined : v1(props.rangeDatatype);
+
+				declaredDomainIds.forEach((domainId) => {
+				const classNode = classByDomainId[domainId];
 
 				// property-tier base reference (qualifierKeys empty)
 				emitReference({
@@ -357,6 +388,7 @@ const moduleFunction =
 						valueTierCount++;
 					});
 				}
+				});
 			});
 
 			// ---- PASS 2: qualified references (§4.3 identification pattern, stem-matched) ----

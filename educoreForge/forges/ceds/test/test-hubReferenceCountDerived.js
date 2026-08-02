@@ -76,14 +76,30 @@ const { HUB_REFERENCE_PROPERTIES: HR, REFERENCE_TIER, CEDS_HUB_EDGE_TYPES, IN_HU
 // the LOCAL CEDS source asset — a directory holding exactly one CEDS-Ontology.rdf (parser resolves it).
 const CEDS_SOURCE_PATH = path.join(__dirname, '..', 'assets', 'standardSourceData', '01');
 
+// ⟪TQ, 2026-08-02⟫ "Why do we have an expected number? Why isn't it, Create Hubs and count them?"
+//
+// A fair challenge, and it moved the burden of proof OFF this file. Correctness now lives in
+// test-hubTupleClosure.js, which derives BOTH sides from CEDS -- one card per declared
+// (domain, property) pair, one per (domain, property, value) triple -- and therefore needs no
+// re-baselining when CEDS changes or when the minter is deliberately improved.
+//
+// What is left here is a COARSE TRIPWIRE: a frozen size, useful only for catching a wild swing
+// nobody intended. It is NOT the correctness gate and must never be treated as one.
+//
+// RE-BASELINED 2026-08-02 by the multi-domain fix, and the delta was PROVEN before it was
+// pasted: property tier 2,324 -> 2,750 is exactly the count of domain declarations CEDS makes;
+// value tier 27,437 -> 91,825 because the 256 multi-domain properties hold 78,458 value-cards
+// across their declared domains while the 2,068 single-domain properties hold 13,367 between
+// them. The tuple-closure gate went RED-to-GREEN on the same change, which is the actual proof.
+//
 // The frozen EXPECTATION. This is the acceptance TARGET the derivation is asserted against — the same
 // role 2324/27437/27/29788/1 plays in incumbent gate-18. It is NOT a value production code reads; the
 // counts are re-derived every run by referenceSubgraph.js from the real CEDS parse.
 const EXPECTATION = Object.freeze({
-	propertyTier: 2324,
-	valueTier: 27437,
+	propertyTier: 2750,
+	valueTier: 91825,
 	qualified: 27,
-	hubReferenceTotal: 29788,
+	hubReferenceTotal: 94602,
 	hubDefinition: 1,
 	// BASELINE MOVED 2026-08-02, and the delta is PROVEN rather than accepted: 23238 -> 25151
 	// is exactly +1913, the DmeEditHistoryEntry nodes minted when change history became NODES
@@ -91,8 +107,8 @@ const EXPECTATION = Object.freeze({
 	// is the point of checking both: had the enrichment disturbed the derived hub, this number
 	// would have moved too and the fold total alone would not have said which side shifted.
 	baseNodeTotal: 25202, // 23238 + 1913 history + 18 restrictions + 26 vocabulary terms + 7 of their history
-	hubNodeTotal: 29789, // 29788 HubReferences + 1 HubDefinition — UNCHANGED by the enrichment
-	foldTotal: 54991, // base + hub-nodes — the folded [StandardBase] block of a hub standard
+	hubNodeTotal: 94603, // 29788 HubReferences + 1 HubDefinition — UNCHANGED by the enrichment
+	foldTotal: 119805, // base + hub-nodes — the folded [StandardBase] block of a hub standard
 });
 
 // single-element PG-JSON array -> scalar (forgeCeds emits scalars; forgeHub's v1 also accepts scalars —
@@ -170,12 +186,12 @@ forgeCeds.forge({ sourcePath: CEDS_SOURCE_PATH, skipEmbedding: true }, (forgeErr
 	// =====================================================================
 	// The module's OWN derivation (referenceSubgraph.js counts) — the authority.
 	harness.equal(
-		'property-tier == 2324 (referenceTier=property, no qualifiers) [module-derived]',
+		'property-tier == 2750 (referenceTier=property, no qualifiers) [module-derived]',
 		hub.counts.propertyTier,
 		EXPECTATION.propertyTier,
 	);
 	harness.equal(
-		'value-tier == 27437 (referenceTier=value) [module-derived]',
+		'value-tier == 91825 (referenceTier=value) [module-derived]',
 		hub.counts.valueTier,
 		EXPECTATION.valueTier,
 	);
@@ -185,7 +201,7 @@ forgeCeds.forge({ sourcePath: CEDS_SOURCE_PATH, skipEmbedding: true }, (forgeErr
 		EXPECTATION.qualified,
 	);
 	harness.equal(
-		'HubReference total == 29788 [module-derived]',
+		'HubReference total == 94602 [module-derived]',
 		hub.counts.hubReferenceTotal,
 		EXPECTATION.hubReferenceTotal,
 	);
