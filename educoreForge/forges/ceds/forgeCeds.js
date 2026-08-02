@@ -567,6 +567,7 @@ const moduleFunction =
 
 			// ---- DmeOptionSet nodes ----
 			const optionSetCanonicalByUri = {};
+			const optionSetParentRefByUri = {};
 			optionSets.forEach((os) => {
 				const setName = os.label || os.cedsId;
 				const built = makeNode({
@@ -585,11 +586,31 @@ const moduleFunction =
 					structural: { parentId: metadata.sourceUrl, depth: 2, path: setName },
 				});
 				optionSetCanonicalByUri[os.uri] = { setName, stableId: built.stableId };
+				optionSetParentRefByUri[os.uri] = os.parentRef;
 				addEditHistoryNodes({
 					ownerStableId: built.stableId,
 					ownerCedsId: built.canonicalCedsId,
 					editHistory: os.editHistory,
 				});
+			});
+
+			// SUBCLASS_OF for OPTION SETS — the 965 the forge used to drop on the floor.
+			//
+			// The parser has ALWAYS extracted parentRef for option sets (they run through the same
+			// extractClass as entity classes); only the emission was missing, so this loop is the
+			// whole fix. Emitted after the option-set nodes exist so the parent is resolvable, the
+			// same ordering the class loop above uses.
+			//
+			// MEASURED, not assumed: all 965 option sets declare a parent and every one resolves to
+			// an entity CLASS -- 963 to C000000 "Base CEDS Resource" and 2 to C200407. None points
+			// at another option set. So this is a flat root attachment rather than a deep codeset
+			// taxonomy, and its value is faithfulness rather than traversal depth; saying so because
+			// "the class taxonomy of every option set" would oversell what these 965 edges are.
+			optionSets.forEach((os) => {
+				const parentRef = optionSetParentRefByUri[os.uri];
+				if (parentRef && classCanonicalByUri[parentRef]) {
+					addEdge(EDGE_TYPES.SUBCLASS_OF, os.uri, parentRef);
+				}
 			});
 
 			// ---- DmeOptionValue nodes (each carries its set + owner in searchText) ----
