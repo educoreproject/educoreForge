@@ -70,6 +70,8 @@ const run = () => {
 			? actions.replay
 			: switches.retrievalMetrics
 			? actions.retrievalMetrics
+			: switches.cedsRoundTrip
+			? actions.cedsRoundTrip
 			: null;
 
 		// help is the default: an invocation that names no action is a question, not an error

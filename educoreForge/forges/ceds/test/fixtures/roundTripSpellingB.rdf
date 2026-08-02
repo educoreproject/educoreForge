@@ -1,0 +1,34 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!--
+  roundTripSpellingB.rdf — the other half of the CANONICALIZATION pair. Same statements as A:
+  different prefixes (dcterm/w3rdfs/skosCore/sdo, and the CEDS terms namespace bound to a PREFIX
+  instead of being the default), element order shuffled, entities in the opposite order, indentation
+  changed, one literal wrapped across lines, one editHistoryEntry field order swapped.
+-->
+<rdf:RDF
+      xmlns:ceds="https://w3id.org/CEDStandards/terms/"
+      xmlns:dcterm="http://purl.org/dc/elements/1.1/"
+      xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+      xmlns:w3rdfs="http://www.w3.org/2000/01/rdf-schema#"
+      xmlns:skosCore="http://www.w3.org/2004/02/skos/core#"
+      xmlns:sdo="https://schema.org/">
+  <rdf:Property rdf:about="https://w3id.org/CEDStandards/terms/P900001">
+          <sdo:domainIncludes rdf:resource="https://w3id.org/CEDStandards/terms/C900002"/>
+          <ceds:textFormat>   Alphanumeric   </ceds:textFormat>
+          <sdo:domainIncludes rdf:resource="https://w3id.org/CEDStandards/terms/C900001"/>
+          <w3rdfs:label>Fixture Learner Name</w3rdfs:label>
+  </rdf:Property>
+  <w3rdfs:Class rdf:about="https://w3id.org/CEDStandards/terms/C900001">
+          <ceds:editHistory rdf:parseType="Collection">
+                  <ceds:editHistoryEntry>
+                          <ceds:changeVersion>1</ceds:changeVersion>
+                          <ceds:changeDescription>Class introduced
+                                for the round-trip fixture.</ceds:changeDescription>
+                  </ceds:editHistoryEntry>
+          </ceds:editHistory>
+          <w3rdfs:subClassOf rdf:resource="https://w3id.org/CEDStandards/terms/C900000"/>
+          <dcterm:description>A person enrolled in the fixture.</dcterm:description>
+          <w3rdfs:label>Fixture Learner</w3rdfs:label>
+          <dcterm:identifier rdf:datatype="http://www.w3.org/2001/XMLSchema#token">C900001</dcterm:identifier>
+  </w3rdfs:Class>
+</rdf:RDF>

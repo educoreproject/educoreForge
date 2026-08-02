@@ -1,0 +1,28 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!--
+  roundTripSpellingA.rdf — one half of the CANONICALIZATION pair. A and B assert exactly the same
+  statements and are spelled as differently as RDF/XML allows: different prefixes, different element
+  order, different indentation, different attribute order, a wrapped literal. The canonicalizer must
+  reduce both to the SAME statement set; if it cannot, whitespace and prefix churn would masquerade
+  as loss in every real report.
+-->
+<rdf:RDF xmlns="https://w3id.org/CEDStandards/terms/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:owl="http://www.w3.org/2002/07/owl#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#" xmlns:skos="http://www.w3.org/2004/02/skos/core#" xmlns:schema="https://schema.org/">
+	<rdfs:Class rdf:about="https://w3id.org/CEDStandards/terms/C900001">
+		<dc:identifier rdf:datatype="http://www.w3.org/2001/XMLSchema#token">C900001</dc:identifier>
+		<rdfs:label>Fixture Learner</rdfs:label>
+		<dc:description>A person enrolled in the fixture.</dc:description>
+		<rdfs:subClassOf rdf:resource="https://w3id.org/CEDStandards/terms/C900000" />
+		<editHistory rdf:parseType="Collection">
+			<editHistoryEntry>
+				<changeDescription>Class introduced for the round-trip fixture.</changeDescription>
+				<changeVersion>1</changeVersion>
+			</editHistoryEntry>
+		</editHistory>
+	</rdfs:Class>
+	<rdf:Property rdf:about="https://w3id.org/CEDStandards/terms/P900001">
+		<rdfs:label>Fixture Learner Name</rdfs:label>
+		<schema:domainIncludes rdf:resource="https://w3id.org/CEDStandards/terms/C900001" />
+		<schema:domainIncludes rdf:resource="https://w3id.org/CEDStandards/terms/C900002" />
+		<textFormat>Alphanumeric</textFormat>
+	</rdf:Property>
+</rdf:RDF>

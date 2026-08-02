@@ -10,6 +10,7 @@
 //   actions.validate(callback)          -> callback(errString, { exitCode, resultText })
 //   actions.deps(callback)              -> callback(errString, { exitCode, resultText })
 //   actions.retrievalMetrics(callback)  -> callback(errString, { exitCode, resultText })
+//   actions.cedsRoundTrip(callback)     -> callback(errString, { exitCode, resultText })
 //
 // NO ACTION CALLS process.exit. Each RETURNS its outcome and the entry file owns exiting. A
 // function that kills the process cannot be called by a test, and an action that cannot be
@@ -737,12 +738,221 @@ const retrievalMetricsAction = (callback) => {
 	);
 };
 
+// ---------------------------------------------------------------------
+// -cedsRoundTrip
+// ---------------------------------------------------------------------
+// ⟪TQ RULING, 2026-08-02⟫ "the CEDS OWL source describes a graph. We want to represent it as a
+// graph. We should be able to write a graph that we could extract and compile back into the OWL."
+// ROUND-TRIP FIDELITY is the acceptance criterion for hub completeness, and this verb is the
+// MEASURING STICK: it compiles the materialized CEDS graph back into RDF/XML, diffs that emission
+// against the source ontology as canonical statement SETS, and reports the loss.
+//
+// READ-ONLY EVERYWHERE. It opens the named container over bolt and issues MATCH/RETURN only; it
+// never writes to a graph, never forges, never spends a cent of LLM or Voyage credit. The only
+// things it writes are its own three artifacts (the emitted RDF, the readable report, the JSON
+// sidecar).
+//
+// IT DOES NOT FIX ANYTHING. The loss it reports is expected to be enormous — the source carries
+// roughly 240,000 statements and the graph today carries a fraction. A large HONEST diff IS the
+// deliverable: it is the baseline every future enrichment gets scored against, and the
+// per-predicate loss table is the enrichment work order.
+//
+// --containerName is REQUIRED and has no default: a fidelity measurement is always OF one
+// materialized graph, and there is no meaningful "whichever graph happens to be running".
+
+const CEDS_ROUND_TRIP_DEFAULT_DIR_PATH =
+	'/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/cedsRoundTrip';
+
+const requireCedsRoundTripCompiler = () =>
+	require(path.join(__dirname, '..', '..', '..', 'forges', 'ceds', 'lib', 'roundTripCompiler'));
+const requireCedsRoundTripDiff = () =>
+	require(path.join(__dirname, '..', '..', '..', 'forges', 'ceds', 'lib', 'roundTripDiff'));
+
+// The CEDS source ontology's documented home in this tree: the snapshot the CEDS forge bundle
+// itself reads (forges/ceds/parserDescriptor.ini names snapshot 01 and CEDS-Ontology.rdf). The
+// default is DOCUMENTED rather than discovered so a measurement always names the file it measured.
+const CEDS_SOURCE_DEFAULT_PATH = path.join(
+	__dirname,
+	'..',
+	'..',
+	'..',
+	'forges',
+	'ceds',
+	'assets',
+	'standardSourceData',
+	'01',
+	'CEDS-Ontology.rdf',
+);
+
+const cedsRoundTripAction = (callback) => {
+	const { xLog, commandLineParameters } = process.global;
+
+	const containerName = firstValue(commandLineParameters, 'containerName');
+	if (!containerName) {
+		callback(
+			`graphBuilder -cedsRoundTrip: --containerName=<name> is REQUIRED and has no default. A ` +
+				`fidelity measurement is always OF one materialized graph; there is no meaningful ` +
+				`"whichever graph happens to be running". The bolt port and credential are read from ` +
+				`that container with 'docker inspect', never restated here where they could drift.`,
+		);
+		return;
+	}
+
+	// Each optional path follows the same discipline the P9 stores established: a blank value is
+	// REFUSED BY NAME rather than silently taken as "use the default".
+	const optionalPath = ({ parameterName, defaultPath }) => {
+		const explicitValue = firstValue(commandLineParameters, parameterName);
+		if (typeof explicitValue === 'string' && explicitValue.trim() === '') {
+			return {
+				error:
+					`graphBuilder -cedsRoundTrip: --${parameterName} was given but blank. Pass a path, or ` +
+					`omit it to take the documented default (${defaultPath}). A blank is refused rather ` +
+					`than guessed at.`,
+			};
+		}
+		return { filePath: explicitValue || defaultPath };
+	};
+
+	const sourceResolution = optionalPath({
+		parameterName: 'sourcePath',
+		defaultPath: CEDS_SOURCE_DEFAULT_PATH,
+	});
+	if (sourceResolution.error) {
+		callback(sourceResolution.error);
+		return;
+	}
+	if (!fs.existsSync(sourceResolution.filePath)) {
+		callback(
+			`graphBuilder -cedsRoundTrip: the CEDS source ontology '${sourceResolution.filePath}' does ` +
+				`not exist. There is nothing to measure the graph AGAINST, and a measurement without a ` +
+				`source is not a smaller measurement — it is no measurement at all.`,
+		);
+		return;
+	}
+
+	const outResolution = optionalPath({
+		parameterName: 'outPath',
+		defaultPath: path.join(CEDS_ROUND_TRIP_DEFAULT_DIR_PATH, `${containerName}.emitted.rdf`),
+	});
+	if (outResolution.error) {
+		callback(outResolution.error);
+		return;
+	}
+	const reportResolution = optionalPath({
+		parameterName: 'reportPath',
+		defaultPath: path.join(CEDS_ROUND_TRIP_DEFAULT_DIR_PATH, `${containerName}.roundTrip.txt`),
+	});
+	if (reportResolution.error) {
+		callback(reportResolution.error);
+		return;
+	}
+	const emittedFilePath = outResolution.filePath;
+	const reportFilePath = reportResolution.filePath;
+	const sidecarFilePath = `${reportFilePath.replace(/\.txt$/, '')}.json`;
+
+	const compilerLib = requireCedsRoundTripCompiler()();
+	const diffRoundTripLib = requireCedsRoundTripDiff()();
+
+	compilerLib.resolveContainerBolt({ containerName }, (resolveError, resolved) => {
+		if (resolveError) {
+			callback(`graphBuilder -cedsRoundTrip: ${resolveError}`);
+			return;
+		}
+		xLog.status(
+			`graphBuilder: -cedsRoundTrip reading '${containerName}' at ${resolved.boltUrl} ` +
+				`(MATCH/RETURN only — this verb never writes to a graph)`,
+		);
+
+		const reader = compilerLib.makeNeo4jCedsReader({
+			boltUrl: resolved.boltUrl,
+			user: resolved.user,
+			password: resolved.password,
+		});
+
+		compilerLib.compileToFile({ reader, outPath: emittedFilePath }, (compileError, compiled) => {
+			reader.close((closeError) => {
+				if (closeError) {
+					xLog.error(`graphBuilder -cedsRoundTrip: ${closeError}`);
+				}
+				if (compileError) {
+					callback(`graphBuilder -cedsRoundTrip: ${compileError}`);
+					return;
+				}
+				xLog.status(
+					`graphBuilder: -cedsRoundTrip emitted ${compiled.counts.class} class(es), ` +
+						`${compiled.counts.property} propert(ies), ${compiled.counts.optionSet} option set(s), ` +
+						`${compiled.counts.optionValue} option value(s) to ${emittedFilePath}`,
+				);
+				(compiled.readerNotes.unresolvedDomainIds || []).forEach((oneNote) =>
+					xLog.error(`graphBuilder -cedsRoundTrip: UNRESOLVABLE REFERENCE — ${oneNote}`),
+				);
+
+				diffRoundTripLib.compareRdfFiles(
+					{
+						sourcePath: sourceResolution.filePath,
+						emittedPath: emittedFilePath,
+						context: {
+							containerName,
+							boltUrl: resolved.boltUrl,
+							sourcePath: sourceResolution.filePath,
+							emittedPath: emittedFilePath,
+							emittedCounts: JSON.stringify(compiled.counts),
+						},
+					},
+					(compareError, compared) => {
+						if (compareError) {
+							callback(`graphBuilder -cedsRoundTrip: ${compareError}`);
+							return;
+						}
+						diffRoundTripLib.renderReportText(
+							{ report: compared.report },
+							(renderError, rendered) => {
+								if (renderError) {
+									callback(`graphBuilder -cedsRoundTrip: ${renderError}`);
+									return;
+								}
+								// BOTH artifacts are written BEFORE the report is returned, and a write
+								// failure is a FAULT named through the callback. A run that printed numbers
+								// and silently failed to persist them is a measurement nobody can go back
+								// and check — the same discipline -retrievalMetrics applies to its sidecar.
+								let writeFault = '';
+								try {
+									fs.mkdirSync(path.dirname(reportFilePath), { recursive: true });
+									fs.writeFileSync(reportFilePath, rendered.reportText, 'utf8');
+									fs.mkdirSync(path.dirname(sidecarFilePath), { recursive: true });
+									fs.writeFileSync(
+										sidecarFilePath,
+										`${JSON.stringify(compared.report, null, 2)}\n`,
+										'utf8',
+									);
+								} catch (writeError) {
+									writeFault = writeError.message;
+								}
+								if (writeFault) {
+									callback(
+										`graphBuilder -cedsRoundTrip: writing the report artifacts failed: ${writeFault}`,
+									);
+									return;
+								}
+								xLog.status(`graphBuilder: -cedsRoundTrip report written to ${reportFilePath}`);
+								xLog.status(`graphBuilder: -cedsRoundTrip JSON sidecar written to ${sidecarFilePath}`);
+								callback('', { exitCode: 0, resultText: rendered.reportText });
+							},
+						);
+					},
+				);
+			});
+		});
+	});
+};
+
 return {
 	build,
 	validate,
 	deps,
 	replay,
 	retrievalMetrics: retrievalMetricsAction,
+	cedsRoundTrip: cedsRoundTripAction,
 	scanAvailableForges,
 };
 };

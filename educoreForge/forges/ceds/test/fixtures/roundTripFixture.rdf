@@ -1,0 +1,147 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!--
+  roundTripFixture.rdf — a COMPLETE hand-built miniature of the CEDS-Ontology.rdf shape.
+
+  "Complete" means: every statement in this file is one the round-trip compiler can re-emit from a
+  graph that carries the corresponding property. It is the fixture behind the ZERO-LOSS /
+  ZERO-INVENTION gate — the test that proves the instrument can report success at all. A diff that
+  can never come back clean is not enforcement, it is decoration.
+
+  It deliberately spans the awkward corners of the real source: a subClassOf, a property with TWO
+  schema:domainIncludes, a nested editHistory block, a maxLength, an owl:deprecated, an option set
+  typed skos:ConceptScheme, and option values carrying two explicit rdf:type resources apiece.
+-->
+<rdf:RDF xmlns="https://w3id.org/CEDStandards/terms/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:owl="http://www.w3.org/2002/07/owl#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:xsd="http://www.w3.org/2001/XMLSchema#" xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#" xmlns:skos="http://www.w3.org/2004/02/skos/core#" xmlns:schema="https://schema.org/">
+	<owl:Ontology rdf:about="https://w3id.org/CEDStandards/terms/">
+		<owl:versionInfo>99.0.0.0</owl:versionInfo>
+	</owl:Ontology>
+	<rdfs:Class rdf:about="https://w3id.org/CEDStandards/terms/C900000">
+		<dc:creator>Common Education Data Standards</dc:creator>
+		<dc:identifier rdf:datatype="http://www.w3.org/2001/XMLSchema#token">C900000</dc:identifier>
+		<rdfs:label>Fixture Base Resource</rdfs:label>
+		<rdfs:comment>The root of the fixture class tree.</rdfs:comment>
+		<dc:description>The base resource of the round-trip fixture.</dc:description>
+		<skos:definition>The base resource of the round-trip fixture.</skos:definition>
+		<skos:notation>FixtureBaseResource</skos:notation>
+		<skos:prefLabel>Fixture Base Resource</skos:prefLabel>
+	</rdfs:Class>
+	<rdfs:Class rdf:about="https://w3id.org/CEDStandards/terms/C900001">
+		<dc:creator>Common Education Data Standards</dc:creator>
+		<dc:identifier rdf:datatype="http://www.w3.org/2001/XMLSchema#token">C900001</dc:identifier>
+		<rdfs:label>Fixture Learner</rdfs:label>
+		<dc:description>A person enrolled in the fixture.</dc:description>
+		<skos:definition>A person enrolled in the fixture.</skos:definition>
+		<skos:notation>FixtureLearner</skos:notation>
+		<skos:prefLabel>Fixture Learner</skos:prefLabel>
+		<rdfs:subClassOf rdf:resource="https://w3id.org/CEDStandards/terms/C900000" />
+		<editHistory rdf:parseType="Collection">
+			<editHistoryEntry>
+				<changeDescription>Class introduced for the round-trip fixture.</changeDescription>
+				<changeVersion>1</changeVersion>
+				<changeNew rdf:datatype="http://www.w3.org/2001/XMLSchema#boolean">true</changeNew>
+			</editHistoryEntry>
+		</editHistory>
+	</rdfs:Class>
+	<rdfs:Class rdf:about="https://w3id.org/CEDStandards/terms/C900002">
+		<dc:creator>Common Education Data Standards</dc:creator>
+		<dc:identifier rdf:datatype="http://www.w3.org/2001/XMLSchema#token">C900002</dc:identifier>
+		<rdfs:label>Fixture Enrollment</rdfs:label>
+		<dc:description>An enrollment of a fixture learner.</dc:description>
+		<skos:definition>An enrollment of a fixture learner.</skos:definition>
+		<skos:notation>FixtureEnrollment</skos:notation>
+		<skos:prefLabel>Fixture Enrollment</skos:prefLabel>
+		<rdfs:subClassOf rdf:resource="https://w3id.org/CEDStandards/terms/C900000" />
+	</rdfs:Class>
+	<rdf:Property rdf:about="https://w3id.org/CEDStandards/terms/P900001">
+		<dc:creator>Common Education Data Standards</dc:creator>
+		<dc:identifier rdf:datatype="http://www.w3.org/2001/XMLSchema#token">P900001</dc:identifier>
+		<rdfs:label>Fixture Learner Name</rdfs:label>
+		<dc:description>The name by which the fixture learner is known.</dc:description>
+		<skos:definition>The name by which the fixture learner is known.</skos:definition>
+		<skos:notation>FixtureLearnerName</skos:notation>
+		<skos:prefLabel>Fixture Learner Name</skos:prefLabel>
+		<schema:domainIncludes rdf:resource="https://w3id.org/CEDStandards/terms/C900001" />
+		<schema:domainIncludes rdf:resource="https://w3id.org/CEDStandards/terms/C900002" />
+		<schema:rangeIncludes rdf:resource="http://www.w3.org/2001/XMLSchema#string" />
+		<textFormat>Alphanumeric</textFormat>
+		<maxLength>75</maxLength>
+		<minLength>1</minLength>
+		<issueLink>https://example.invalid/issues/900001</issueLink>
+		<editHistory rdf:parseType="Collection">
+			<editHistoryEntry>
+				<changeDescription>Maximum length raised from 60 to 75.</changeDescription>
+				<changeVersion>2</changeVersion>
+				<changeUpdated rdf:datatype="http://www.w3.org/2001/XMLSchema#boolean">true</changeUpdated>
+			</editHistoryEntry>
+			<editHistoryEntry>
+				<changeDescription>Property added to Fixture Enrollment.</changeDescription>
+				<changeVersion>3</changeVersion>
+				<changePropertyAddedToClass rdf:datatype="http://www.w3.org/2001/XMLSchema#boolean">true</changePropertyAddedToClass>
+			</editHistoryEntry>
+		</editHistory>
+	</rdf:Property>
+	<rdf:Property rdf:about="https://w3id.org/CEDStandards/terms/P900002">
+		<dc:creator>Common Education Data Standards</dc:creator>
+		<dc:identifier rdf:datatype="http://www.w3.org/2001/XMLSchema#token">P900002</dc:identifier>
+		<rdfs:label>Fixture Enrollment Status</rdfs:label>
+		<dc:description>The status of the fixture enrollment.</dc:description>
+		<skos:definition>The status of the fixture enrollment.</skos:definition>
+		<skos:notation>FixtureEnrollmentStatus</skos:notation>
+		<skos:prefLabel>Fixture Enrollment Status</skos:prefLabel>
+		<schema:domainIncludes rdf:resource="https://w3id.org/CEDStandards/terms/C900002" />
+		<schema:rangeIncludes rdf:resource="https://w3id.org/CEDStandards/terms/C900003" />
+		<owl:deprecated rdf:datatype="http://www.w3.org/2001/XMLSchema#boolean">true</owl:deprecated>
+	</rdf:Property>
+	<rdf:Property rdf:about="https://w3id.org/CEDStandards/terms/P900003">
+		<dc:creator>Common Education Data Standards</dc:creator>
+		<dc:identifier rdf:datatype="http://www.w3.org/2001/XMLSchema#token">P900003</dc:identifier>
+		<rdfs:label>Fixture Enrollment Count</rdfs:label>
+		<dc:description>How many enrollments the fixture learner holds.</dc:description>
+		<skos:definition>How many enrollments the fixture learner holds.</skos:definition>
+		<skos:notation>FixtureEnrollmentCount</skos:notation>
+		<skos:prefLabel>Fixture Enrollment Count</skos:prefLabel>
+		<schema:domainIncludes rdf:resource="https://w3id.org/CEDStandards/terms/C900001" />
+		<schema:rangeIncludes rdf:resource="http://www.w3.org/2001/XMLSchema#integer" />
+		<minInclusive>0</minInclusive>
+		<maxInclusive>99</maxInclusive>
+		<decimalPlaces>0</decimalPlaces>
+		<minCount>0</minCount>
+		<maxCount>1</maxCount>
+	</rdf:Property>
+	<owl:Class rdf:about="https://w3id.org/CEDStandards/terms/C900003">
+		<dc:creator>Common Education Data Standards</dc:creator>
+		<dc:description>An indicator of the status of a fixture enrollment.</dc:description>
+		<dc:identifier rdf:datatype="http://www.w3.org/2001/XMLSchema#token">C900003</dc:identifier>
+		<rdf:type rdf:resource="http://www.w3.org/2004/02/skos/core#ConceptScheme" />
+		<rdfs:label>Fixture Enrollment Status</rdfs:label>
+		<rdfs:subClassOf rdf:resource="https://w3id.org/CEDStandards/terms/C900000" />
+		<skos:definition>An indicator of the status of a fixture enrollment.</skos:definition>
+		<skos:notation>FixtureEnrollmentStatus</skos:notation>
+		<skos:prefLabel>Fixture Enrollment Status</skos:prefLabel>
+	</owl:Class>
+	<owl:NamedIndividual rdf:about="https://w3id.org/CEDStandards/terms/NI900003000001">
+		<dc:creator>Common Education Data Standards</dc:creator>
+		<dc:description>The fixture learner is actively enrolled.</dc:description>
+		<dc:identifier rdf:datatype="http://www.w3.org/2001/XMLSchema#token">NI900003000001</dc:identifier>
+		<rdf:type rdf:resource="https://w3id.org/CEDStandards/terms/C900003" />
+		<rdf:type rdf:resource="http://www.w3.org/2004/02/skos/core#Concept" />
+		<rdfs:label>Active</rdfs:label>
+		<skos:definition>The fixture learner is actively enrolled.</skos:definition>
+		<skos:inScheme rdf:resource="https://w3id.org/CEDStandards/terms/C900003" />
+		<skos:notation>01</skos:notation>
+		<skos:prefLabel>Active</skos:prefLabel>
+	</owl:NamedIndividual>
+	<owl:NamedIndividual rdf:about="https://w3id.org/CEDStandards/terms/NI900003000002">
+		<dc:creator>Common Education Data Standards</dc:creator>
+		<dc:description>The fixture learner has withdrawn.</dc:description>
+		<dc:identifier rdf:datatype="http://www.w3.org/2001/XMLSchema#token">NI900003000002</dc:identifier>
+		<rdf:type rdf:resource="https://w3id.org/CEDStandards/terms/C900003" />
+		<rdf:type rdf:resource="http://www.w3.org/2004/02/skos/core#Concept" />
+		<rdfs:label>Withdrawn</rdfs:label>
+		<skos:definition>The fixture learner has withdrawn.</skos:definition>
+		<skos:inScheme rdf:resource="https://w3id.org/CEDStandards/terms/C900003" />
+		<skos:notation>02</skos:notation>
+		<skos:prefLabel>Withdrawn</skos:prefLabel>
+		<owl:deprecated rdf:datatype="http://www.w3.org/2001/XMLSchema#boolean">false</owl:deprecated>
+	</owl:NamedIndividual>
+</rdf:RDF>

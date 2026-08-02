@@ -26,6 +26,8 @@ SYNOPSIS
      graphBuilder   -replay   --standardsDatabaseFilePath=<path> --manifestRefId=<refId>
      graphBuilder   -deps
      graphBuilder   -retrievalMetrics --pairKey=<pairKey> [--generation=<generation>]
+     graphBuilder   -cedsRoundTrip --containerName=<name> [--sourcePath=<path>]
+                                   [--outPath=<path>] [--reportPath=<path>]
      graphBuilder   -help
 
      ... | graphBuilder                (JSON on stdin REPLACES command-line parameters)
@@ -79,6 +81,36 @@ COMMANDS
                   "The winner merely carried a nomination" is the WEAKER claim -- cosine may well
                   have retrieved it anyway. Reporting the second as the first is the specific
                   error this verb was built to end (155 reported where the true count was 20).
+     -cedsRoundTrip
+                  MEASURE CEDS ROUND-TRIP FIDELITY -- compile a materialized CEDS graph back into
+                  RDF/XML and diff that emission against the source ontology. The CEDS OWL source
+                  describes a graph; if our graph represents it faithfully we must be able to
+                  compile the graph back into the OWL, so round-trip fidelity is the acceptance
+                  criterion for hub completeness and this verb is the measuring stick.
+
+                  THE CRITERION IS SEMANTIC, NOT BYTE-IDENTICAL. Both documents are reduced to
+                  canonical statement SETS -- (subject, predicate, object, literal-or-resource,
+                  datatype) with prefixes expanded and literal whitespace normalized -- so
+                  whitespace, element order, attribute order and prefix choice CANNOT register as
+                  differences. A missing or extra STATEMENT can, and does.
+
+                  IT READS LAYER 1 ONLY. The graph carries two layers: CEDS faithfully represented
+                  (roles DmeStandardRoot / DmeClass / DmeProperty / DmeOptionSet / DmeOptionValue
+                  and the edges SUBCLASS_OF, HAS_OPTION_SET, REFERENCES, HAS_VALUE), and OUR
+                  matching index (HubReference / HubDefinition, addressSignature, embeddings,
+                  HAS_CEDS_DOMAIN / HAS_CEDS_PROPERTY / HAS_CEDS_RANGE / IN_HUB). CEDS contains no
+                  such second layer; emitting any of it would INVENT statements CEDS never made.
+                  Every read names its roles explicitly and is scoped _source='CEDS'.
+
+                  READ-ONLY AND FREE: MATCH/RETURN over bolt, no writes to any graph, no forging,
+                  no LLM, no Voyage. It writes only its own three artifacts.
+
+                  IT REPORTS LOSS, IT DOES NOT REPAIR IT. The loss is expected to be enormous. A
+                  large HONEST diff is the point -- it is the baseline every future enrichment is
+                  scored against, and the PER-PREDICATE LOSS TABLE is the enrichment work order.
+                  INVENTED statements (emitted but absent from the source) are reported separately
+                  and first, because an invention is not a coverage gap: it is an assertion about
+                  CEDS that CEDS never made.
 
 OPTIONS
      --recipePath=<path>   The recipe file (a build/golden recipe). Required for -build and
@@ -173,6 +205,30 @@ OPTIONS
                            <pairDir>/<generation>.retrievalMetrics.json, so a stored number can
                            always be traced back to the trail and the instrument version that
                            produced it.
+     --containerName=<name>
+                           Which MATERIALIZED graph to compile back into RDF/XML. REQUIRED for
+                           -cedsRoundTrip; there is NO default -- a fidelity measurement is always
+                           OF one graph, and "whichever graph happens to be running" is exactly the
+                           question a default would answer wrongly. The bolt port and the neo4j
+                           credential are READ FROM THE CONTAINER ('docker inspect'), never
+                           restated here where they could drift from the running truth. The same
+                           name replayManager gives a graph (GraphHandle.containerName) -- ONE name
+                           across both boundaries.
+     --sourcePath=<path>   The CEDS source ontology the emission is measured AGAINST. OPTIONAL for
+                           -cedsRoundTrip: it DEFAULTS to the snapshot the CEDS forge bundle itself
+                           reads, forges/ceds/assets/standardSourceData/01/CEDS-Ontology.rdf. A
+                           source that does not exist is refused by name -- a measurement without a
+                           source is not a smaller measurement, it is no measurement at all.
+     --outPath=<path>      Where the compiled RDF/XML is written. OPTIONAL for -cedsRoundTrip:
+                           DEFAULTS to system/dataStores/cedsRoundTrip/<containerName>.emitted.rdf.
+                           The emission is kept, not thrown away, so a reported number can always
+                           be traced back to the exact document that produced it.
+     --reportPath=<path>   Where the readable report is written. OPTIONAL for -cedsRoundTrip:
+                           DEFAULTS to system/dataStores/cedsRoundTrip/<containerName>.roundTrip.txt.
+                           The JSON SIDECAR is written beside it with the same stem and a .json
+                           extension. The report text and the sidecar are rendered from the SAME
+                           report object and never recompute anything, so the two can never
+                           disagree about a number.
      -verbose              Emit verbose diagnostic detail on stderr.
      -quiet                Suppress progress; results and errors only.
 
@@ -186,6 +242,13 @@ OUTPUT
                 a JSON sidecar on disk (its path announced on stderr). The report text and the
                 sidecar are rendered from the SAME metrics object and never recompute anything,
                 so the two can never disagree about a number.
+     -cedsRoundTrip:
+                The readable fidelity report on stdout AND on disk at --reportPath, its JSON
+                sidecar beside it, and the compiled RDF/XML at --outPath (all three paths
+                announced on stderr). The report leads with the headline (statements in source /
+                emitted / matched / LOST / INVENTED), then INVENTED statements, then the
+                per-predicate loss table, the per-entity-kind breakdown, and up to ten concrete
+                lost statements per predicate with their subject ids.
 
 EXIT STATUS
      0    the requested action succeeded (a -validate verdict of valid, a completed build)
