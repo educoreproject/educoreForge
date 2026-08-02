@@ -85,9 +85,14 @@ const EXPECTATION = Object.freeze({
 	qualified: 27,
 	hubReferenceTotal: 29788,
 	hubDefinition: 1,
-	baseNodeTotal: 23238,
-	hubNodeTotal: 29789, // 29788 HubReferences + 1 HubDefinition
-	foldTotal: 53027, // base + hub-nodes — the folded [StandardBase] block of a hub standard
+	// BASELINE MOVED 2026-08-02, and the delta is PROVEN rather than accepted: 23238 -> 25151
+	// is exactly +1913, the DmeEditHistoryEntry nodes minted when change history became NODES
+	// (⟪TQ ruling⟫, commit "CEDS change history as NODES"). The hub is UNCHANGED at 29789, which
+	// is the point of checking both: had the enrichment disturbed the derived hub, this number
+	// would have moved too and the fold total alone would not have said which side shifted.
+	baseNodeTotal: 25151, // was 23238 + 1913 change-history entries
+	hubNodeTotal: 29789, // 29788 HubReferences + 1 HubDefinition — UNCHANGED by the enrichment
+	foldTotal: 54940, // base + hub-nodes — the folded [StandardBase] block of a hub standard
 });
 
 // single-element PG-JSON array -> scalar (forgeCeds emits scalars; forgeHub's v1 also accepts scalars —
@@ -155,7 +160,7 @@ forgeCeds.forge({ sourcePath: CEDS_SOURCE_PATH, skipEmbedding: true }, (forgeErr
 	harness.section('SOURCE — the real CEDS base, forged from a local asset');
 	// =====================================================================
 	harness.equal(
-		'the CEDS base forges 23238 nodes from CEDS-Ontology.rdf (no embedding, no network)',
+		'the CEDS base forges 25151 nodes from CEDS-Ontology.rdf (no embedding, no network)',
 		baseNodeTotal,
 		EXPECTATION.baseNodeTotal,
 	);
@@ -217,11 +222,11 @@ forgeCeds.forge({ sourcePath: CEDS_SOURCE_PATH, skipEmbedding: true }, (forgeErr
 	);
 
 	// =====================================================================
-	harness.section('FOLD — base + hub in ONE [StandardBase] block (23238 + 29789 == 53027)');
+	harness.section('FOLD — base + hub in ONE [StandardBase] block (25151 + 29789 == 54940)');
 	// =====================================================================
 	harness.equal('hub contributes 29789 nodes (29788 refs + 1 definition)', hub.counts.nodeTotal, EXPECTATION.hubNodeTotal);
 	harness.equal(
-		'folded block total: base(23238) + hub(29789) == 53027',
+		'folded block total: base(25151) + hub(29789) == 54940',
 		baseNodeTotal + hub.counts.nodeTotal,
 		EXPECTATION.foldTotal,
 	);
