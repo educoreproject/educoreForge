@@ -1,0 +1,407 @@
+// =====================================================================================
+// cedsFidelityGates — the CEDS forge revision's gate suite, DECLARED AS DATA
+// =====================================================================================
+//
+// ⟪TQ, 2026-08-02⟫ "Please enhance the spec with very thorough gates."
+// Spec: system/management/zNotesPlansDocs/cedsHubEnrichment_080226/cedsForgeRevision-080226.md §9
+//
+// WHY THIS IS DATA AND NOT CODE. This project has twice shipped a gate that COMPUTED a
+// signal and forgot to ASSERT it (Phase-3, 2026-06-30; Phase-7 gate 23). A gate written as
+// code can always forget its own comparison. A gate written as {measure, comparator,
+// expected} cannot: the gate does not contain the check, the harness does. That failure
+// mode is designed out rather than watched for. Gate M-4 enforces the rule on the rule.
+//
+// EVERY GATE HAS A TWIN. A gate never observed failing is unproven, so each declares a
+// named fault injection that MUST turn it RED. A gate whose twin has not been observed
+// reports UNPROVEN -- never PASS -- and the suite cannot pass while anything is UNPROVEN.
+//
+// TWINS INJECT AT THE MEASURE BOUNDARY, not into the live system. The twin's job is to
+// prove THE GATE BITES, not to break production. Corrupting a cloned measurement is
+// sufficient for that and is hermetic; corrupting the graph is neither.
+//
+// A GATE THAT MEASURES UNBUILT WORK FAILS. It does not skip, and there is no
+// "expected-to-fail-for-now" state -- that is masking wearing a lanyard (gate M-2). During
+// the enrichment this suite is legitimately RED, and its redness is the work order.
+//
+// measure kinds:
+//   report.<dotted.path>   a value in the round-trip report (the JSON sidecar's shape)
+//   report:<namedMeasure>  a derived measure computed from the report by the harness
+//   graph:<namedMeasure>   a read-only Cypher measure against the named container
+//   probe:<namedMeasure>   a hermetic runtime probe (fixtures, stub drivers, no live graph)
+//   suite:<namedMeasure>   a measure of this suite itself (the meta-gates)
+//
+// comparators: equals · notEquals · atLeast · atMost · isEmpty · setEquals · mapEquals
+{
+  "suiteName": "cedsFidelity",
+  "suiteVersion": "1.0.0",
+  "acceptanceRule": "every gate PASS and every twin observed RED. No percentage participates.",
+
+  "gates": [
+
+    // -----------------------------------------------------------------------------
+    // FAMILY F — faithfulness
+    // -----------------------------------------------------------------------------
+    {
+      "id": "F-1", "family": "F",
+      "contract": "The graph loses no source statement.",
+      "measure": "report.headline.lost", "comparator": "equals", "expected": 0,
+      "twin": "dropOneSourceStatement"
+    },
+    {
+      "id": "F-2", "family": "F",
+      "contract": "Matching is total, not merely large.",
+      "measure": "report:matchedEqualsSource", "comparator": "equals", "expected": true,
+      "twin": "dropOneSourceStatement"
+    },
+    {
+      "id": "F-3", "family": "F",
+      "contract": "Non-emptiness floor: a run over an empty graph goes RED, not GREEN.",
+      "note": "Phase-0 Q1. Two empty things are identical, and identical is what a naive comparison calls success.",
+      "measure": "report:sizeFloors", "comparator": "equals", "expected": true,
+      "expectedDetail": { "sourceStatements": 239761, "emittedStatements": 239761, "emittedSubjects": 23237 },
+      "twin": "emptyGraphReport"
+    },
+    {
+      "id": "F-4", "family": "F",
+      "contract": "No percentage participates in any acceptance decision.",
+      "note": "A tampered emission carrying 4 fabricated statements still reported 71.936%. Proven live during the audit.",
+      "measure": "suite:gatesUsingPercentInAcceptance", "comparator": "equals", "expected": 0,
+      "twin": "gateDeclaredOnPercent"
+    },
+    {
+      "id": "F-5", "family": "F",
+      "contract": "Structural fidelity is reported separately from the headline.",
+      "note": "Option values carry 81.7% of statements. One option-value predicate moves the headline 8.6pp; losing the ENTIRE class taxonomy moves it 0.4pp. Both audits raised this independently.",
+      "measure": "report:structuralFidelityPresent", "comparator": "equals", "expected": true,
+      "twin": "structuralFidelityAbsent"
+    },
+    {
+      "id": "F-6", "family": "F",
+      "contract": "The loss decomposition is exhaustive: per-predicate rows sum exactly to headline.lost.",
+      "measure": "report:predicateRowsSumToLost", "comparator": "equals", "expected": true,
+      "twin": "doubleCountedPredicateRow"
+    },
+    {
+      "id": "F-7", "family": "F",
+      "contract": "The manifest of exclusions is empty. Zero loss means zero.",
+      "note": "⟪TQ governing rule⟫ 'If it is in the OWL, it has to come out of the graph.'",
+      "measure": "suite:exclusionManifestLength", "comparator": "equals", "expected": 0,
+      "twin": "nonEmptyExclusionManifest"
+    },
+
+    // -----------------------------------------------------------------------------
+    // FAMILY N — non-invention
+    // -----------------------------------------------------------------------------
+    {
+      "id": "N-1", "family": "N",
+      "contract": "The graph asserts nothing CEDS did not.",
+      "measure": "report.headline.invented", "comparator": "equals", "expected": 0,
+      "twin": "injectOneInventedStatement"
+    },
+    {
+      "id": "N-2", "family": "N",
+      "contract": "The diff is genuinely bidirectional: every fabrication is detected AND individually named.",
+      "measure": "probe:inventionsIndividuallyNamed", "comparator": "equals", "expected": true,
+      "twin": "inventionsCountedButNotNamed"
+    },
+    {
+      "id": "N-3", "family": "N",
+      "contract": "A combined figure cannot look clean while inventing.",
+      "measure": "probe:cleanFidelityFallsOnInvention", "comparator": "equals", "expected": true,
+      "twin": "cleanFidelityIgnoresInvention"
+    },
+
+    // -----------------------------------------------------------------------------
+    // FAMILY C — canonicalizer integrity (why the number is believable at all)
+    // -----------------------------------------------------------------------------
+    {
+      "id": "C-1", "family": "C",
+      "contract": "Genuinely different assertions never canonicalize equal.",
+      "note": "The same module canonicalizes BOTH sides, so anything it discards it discards symmetrically -- a statement never captured could score MATCHED because the distinguishing detail was erased on both sides. This is the deepest way the number could flatter us.",
+      "measure": "probe:adversarialPairsAllDistinct", "comparator": "equals", "expected": true,
+      "twin": "collidingAdversarialPair"
+    },
+    {
+      "id": "C-2", "family": "C",
+      "contract": "Cosmetic spelling differences never register as change.",
+      "measure": "probe:spellingInvariance", "comparator": "equals", "expected": true,
+      "twin": "realDifferenceHiddenInCosmeticRewrite"
+    },
+    {
+      "id": "C-3", "family": "C",
+      "contract": "The source parses completely: the statement count matches an independently derived count exactly.",
+      "note": "Statements never seen on the source side cannot be reported lost.",
+      "measure": "probe:independentSourceCountAgrees", "comparator": "equals", "expected": true,
+      "twin": "constructHiddenFromCanonicalizer"
+    },
+    {
+      "id": "C-4", "family": "C",
+      "contract": "Subject-less top-level elements are surfaced, never silently skipped.",
+      "measure": "report:topLevelWithoutSubjectSurfaced", "comparator": "equals", "expected": true,
+      "twin": "topLevelWithoutSubjectDropped"
+    },
+    {
+      "id": "C-5", "family": "C",
+      "contract": "Canonicalization faults are fatal, not advisory.",
+      "measure": "report.canonicalizationFaults", "comparator": "isEmpty", "expected": true,
+      "twin": "forceOneCanonicalizationFault"
+    },
+    {
+      "id": "C-6", "family": "C",
+      "contract": "Documented behavior matches actual behavior: a nested namespace redeclaration is REFUSED, as the header claims.",
+      "note": "The header claimed a refusal that did not exist. A redeclared prefix would key statements under the WRONG predicate URI and read as a clean match.",
+      "measure": "probe:nestedNamespaceRefused", "comparator": "equals", "expected": true,
+      "twin": "nestedNamespaceSilentlyHonoured"
+    },
+
+    // -----------------------------------------------------------------------------
+    // FAMILY L — layer boundary and anti-circularity
+    // -----------------------------------------------------------------------------
+    {
+      "id": "L-1", "family": "L",
+      "contract": "The compiler never reads the source ontology while building its emission.",
+      "note": "If it did, the diff measures the source against itself and every number is worthless.",
+      "measure": "probe:compilesWithSourceAbsent", "comparator": "equals", "expected": true,
+      "twin": "compilerConsultsSource"
+    },
+    {
+      "id": "L-2", "family": "L",
+      "contract": "The compiler never reads Layer 2 to rebuild Layer 1.",
+      "measure": "probe:emissionUnchangedWithHubStripped", "comparator": "equals", "expected": true,
+      "twin": "statementSourcedFromHubProperty"
+    },
+    {
+      "id": "L-3", "family": "L",
+      "contract": "The compiler never emits Layer 2.",
+      "note": "Emitting a HubReference into RDF is INVENTING a statement CEDS never made.",
+      "measure": "graph:hubStatementsInEmission", "comparator": "equals", "expected": 0,
+      "twin": "emitOneHubReference"
+    },
+    {
+      "id": "L-4", "family": "L",
+      "contract": "The layer exclusion is a STATED decision: every graph query is role-scoped on both endpoints.",
+      "measure": "probe:allQueriesRoleScoped", "comparator": "equals", "expected": true,
+      "twin": "unscopedQueryEndpoint"
+    },
+
+    // -----------------------------------------------------------------------------
+    // FAMILY P — per-predicate coverage (a good total hides a bad predicate)
+    // -----------------------------------------------------------------------------
+    {
+      "id": "P-1", "family": "P",
+      "contract": "Every predicate that round-trips today still does, to the statement.",
+      "measure": "report:matchedByPredicate", "comparator": "mapEquals",
+      "expected": {
+        "http://purl.org/dc/elements/1.1/identifier": 23237,
+        "http://www.w3.org/2004/02/skos/core#inScheme": 19546,
+        "https://w3id.org/CEDStandards/terms/textFormat": 1076,
+        "https://w3id.org/CEDStandards/terms/maxLength": 399,
+        "http://www.w3.org/2002/07/owl#versionInfo": 1,
+        "http://www.w3.org/2000/01/rdf-schema#label": 23237,
+        "http://www.w3.org/2004/02/skos/core#notation": 23237,
+        "http://purl.org/dc/elements/1.1/description": 12976,
+        "http://www.w3.org/1999/02/22-rdf-syntax-ns#type": 63295,
+        "https://schema.org/domainIncludes": 2750,
+        "https://schema.org/rangeIncludes": 2323
+      },
+      "twin": "regressOnePredicate"
+    },
+    {
+      "id": "P-2", "family": "P",
+      "contract": "Each enrichment predicate reaches its FULL source count. Partial delivery is failure, not progress.",
+      "measure": "report:matchedByPredicate", "comparator": "mapEquals",
+      "expected": {
+        "http://purl.org/dc/elements/1.1/creator": 23251,
+        "http://www.w3.org/2004/02/skos/core#prefLabel": 20513,
+        "http://www.w3.org/2004/02/skos/core#definition": 13023,
+        "https://w3id.org/CEDStandards/terms/issueLink": 604,
+        "http://www.w3.org/2000/01/rdf-schema#comment": 406,
+        "https://w3id.org/CEDStandards/terms/minInclusive": 138,
+        "https://w3id.org/CEDStandards/terms/decimalPlaces": 114,
+        "https://w3id.org/CEDStandards/terms/minLength": 26,
+        "https://w3id.org/CEDStandards/terms/maxInclusive": 20,
+        "http://www.w3.org/2002/07/owl#deprecated": 34
+      },
+      "twin": "deliverPredicateAtNinetyNinePercent"
+    },
+    {
+      "id": "P-3", "family": "P",
+      "contract": "No predicate may be marked complete while under-delivering: every predicate individually has lost == 0.",
+      "measure": "report:maxLostAcrossPredicates", "comparator": "equals", "expected": 0,
+      "twin": "oneStatementLostInOnePredicate"
+    },
+    {
+      "id": "P-4", "family": "P",
+      "contract": "skos:definition is ATTRIBUTED before it is implemented.",
+      "note": "13,023 statements whose relationship to the dc:description we already carry is unestablished. Nobody has looked.",
+      "measure": "suite:skosDefinitionFindingRecorded", "comparator": "equals", "expected": true,
+      "twin": "implementWithoutFinding"
+    },
+
+    // -----------------------------------------------------------------------------
+    // FAMILY S — structural correctness
+    // -----------------------------------------------------------------------------
+    {
+      "id": "S-1", "family": "S",
+      "contract": "The option-set taxonomy exists: exactly 965 SUBCLASS_OF out of DmeOptionSet.",
+      "note": "Source declares 965; the graph carries zero today. The single structural gap. The parser ALREADY extracts parentRef -- only the emission is missing.",
+      "measure": "graph:optionSetSubClassOfCount", "comparator": "equals", "expected": 965,
+      "twin": "dropOneOptionSetParent"
+    },
+    {
+      "id": "S-2", "family": "S",
+      "contract": "No dangling hierarchy: every SUBCLASS_OF endpoint resolves.",
+      "measure": "graph:danglingSubClassOfCount", "comparator": "equals", "expected": 0,
+      "twin": "pointSubClassOfAtMissingId"
+    },
+    {
+      "id": "S-3", "family": "S",
+      "contract": "The class taxonomy is unregressed: 398 class SUBCLASS_OF.",
+      "measure": "graph:classSubClassOfCount", "comparator": "equals", "expected": 398,
+      "twin": "changeClassSubClassOfCount"
+    },
+    {
+      "id": "S-4", "family": "S",
+      "contract": "owl:Restriction blocks are whole: 18 restrictions, each with one onProperty and one allValuesFrom, both resolving.",
+      "measure": "graph:wellFormedRestrictionCount", "comparator": "equals", "expected": 18,
+      "twin": "dropRestrictionInnerStatement"
+    },
+    {
+      "id": "S-5", "family": "S",
+      "contract": "editHistory is graph-native and connected: every entry links to exactly one element, no orphans, nothing stored as a serialized string.",
+      "measure": "graph:editHistoryIntegrity", "comparator": "equals", "expected": true,
+      "expectedDetail": { "elementsWithHistory": 1623, "entries": 1920, "orphanEntries": 0, "historyStoredAsString": 0 },
+      "twin": "orphanOneEditHistoryEntry"
+    },
+    {
+      "id": "S-6", "family": "S",
+      "contract": "Domain edges agree with the scalars they supersede.",
+      "measure": "graph:domainEdgeScalarMismatchCount", "comparator": "equals", "expected": 0,
+      "twin": "divergeOneDomainEdge"
+    },
+    {
+      "id": "S-7", "family": "S",
+      "contract": "allDomainIds is read SHAPE-AGNOSTICALLY: string and array forms yield identical results.",
+      "note": "The replay engine scalarizes singletons, so 2,068 of 2,324 property nodes store a bare STRING. An Array.isArray() branch silently ignores every one. Lossless today ONLY because allDomainIds[0] === domainId by construction. Do NOT 'fix' the storage -- the unwrap is the engine's deliberate PG-JSON convention.",
+      "measure": "probe:allDomainIdsShapeAgnostic", "comparator": "equals", "expected": true,
+      "twin": "arrayIsArrayBranchRestored"
+    },
+
+    // -----------------------------------------------------------------------------
+    // FAMILY A — anchor and identity fragility
+    // -----------------------------------------------------------------------------
+    {
+      "id": "A-1", "family": "A",
+      "contract": "The source dc:identifier remains reconstructible for all 20,511 rewritten entities.",
+      "note": "It survives in exactly ONE place: crossRefs[0].raw. Every option set and option value has a REWRITTEN cedsId (C000002->OS000002, NI...->OV...). If crossRefs were dropped, 20,511 statements become unreconstructible while every entity still looks perfectly healthy. The forge must never stop writing it.",
+      "measure": "graph:crossRefsRawPresentCount", "comparator": "equals", "expected": 20511,
+      "twin": "nullOneCrossRefsRaw"
+    },
+    {
+      "id": "A-2", "family": "A",
+      "contract": "The identifier datatype shape holds: all 23,237 identifiers carry xsd:token and nothing else does.",
+      "measure": "probe:identifierDatatypeExclusive", "comparator": "equals", "expected": true,
+      "twin": "changeOneIdentifierDatatype"
+    },
+
+    // -----------------------------------------------------------------------------
+    // FAMILY D — DME harm (the exploration tool must not degrade)
+    // -----------------------------------------------------------------------------
+    {
+      "id": "D-1", "family": "D",
+      "contract": "New node kinds are invisible to semantic search: no meta-vocabulary node carries an embedding.",
+      "note": "ONE vector index, golden_vector on :ForgedNode(embedding). Precedent: 0 of 29,788 HubReference nodes are embedded. No embedding means not in the index.",
+      "measure": "graph:metaVocabularyEmbeddedCount", "comparator": "equals", "expected": 0,
+      "twin": "embedOneMetaVocabularyNode"
+    },
+    {
+      "id": "D-2", "family": "D",
+      "contract": "New node kinds are invisible to browse: the DME's own role-selection queries return zero of them.",
+      "measure": "graph:metaVocabularyReachableByBrowseCount", "comparator": "equals", "expected": 0,
+      "twin": "retagMetaVocabularyAsDmeClass"
+    },
+    {
+      "id": "D-3", "family": "D",
+      "contract": "Documentation matches the graph: the roles present EQUAL the roles documented in schema-provider.js.",
+      "note": "This gate exists because the doc claimed six roles while the graph carried eight -- HubReference and HubDefinition -- for weeks. It converts that lapse into permanent enforcement.",
+      "measure": "graph:rolesPresentVersusDocumented", "comparator": "setEquals", "expected": true,
+      "twin": "addUndocumentedRole"
+    },
+    {
+      "id": "D-4", "family": "D",
+      "contract": "Enrichment does not break existing consumers: pre-existing role counts are unchanged.",
+      "measure": "graph:preExistingRoleCounts", "comparator": "mapEquals",
+      "expected": {
+        "DmeOptionValue": 34350, "DmeProperty": 25367, "DmeClass": 7393,
+        "DmeSupport": 7014, "DmeOptionSet": 1857, "DmeStandardRoot": 18,
+        "HubReference": 29788, "HubDefinition": 1
+      },
+      "twin": "changeOnePreExistingRoleCount"
+    },
+
+    // -----------------------------------------------------------------------------
+    // FAMILY M — meta-gates (the suite's own honesty)
+    // -----------------------------------------------------------------------------
+    {
+      "id": "M-1", "family": "M",
+      "contract": "Every gate has been observed RED by its twin.",
+      "note": "A gate never observed failing is unproven.",
+      "measure": "suite:gatesWithUnobservedTwin", "comparator": "equals", "expected": 0,
+      "twin": "selfEvident"
+    },
+    {
+      "id": "M-2", "family": "M",
+      "contract": "No masking: zero XFAIL, zero skipped.",
+      "measure": "suite:maskedGateCount", "comparator": "equals", "expected": 0,
+      "twin": "markOneGateExpectFail"
+    },
+    {
+      "id": "M-3", "family": "M",
+      "contract": "Gate scope reaches the new node kinds: every node minted by this revision carries :ForgedNode.",
+      "note": "Phase-0 Q2: the fingerprint/diff scope is :ForgedNode ONLY, so an unlabeled new node kind is invisible to the very gates meant to verify it.",
+      "measure": "graph:mintedNodesMissingForgedNodeLabel", "comparator": "equals", "expected": 0,
+      "twin": "mintNodeWithoutSuperLabel"
+    },
+    {
+      "id": "M-4", "family": "M",
+      "contract": "Pass conditions are ASSERTED, not merely computed: every gate declares a comparator the harness evaluates.",
+      "measure": "suite:gatesWithoutComparator", "comparator": "equals", "expected": 0,
+      "twin": "gateWithoutComparator"
+    },
+    {
+      "id": "M-5", "family": "M",
+      "contract": "Test-claim hygiene: environmental failures are attributed precisely, never aggregated.",
+      "note": "'12 x better-sqlite3 bindings + 1 x missing js-yaml (forges/case)', never '13 x better-sqlite3'. One wrong attribution invites doubt about the other twelve.",
+      "measure": "suite:aggregateFailureAttributionCount", "comparator": "equals", "expected": 0,
+      "twin": "aggregateAttribution"
+    },
+
+    // -----------------------------------------------------------------------------
+    // FAMILY R — standing regression (proving it once vs keeping it true)
+    // -----------------------------------------------------------------------------
+    {
+      "id": "R-1", "family": "R",
+      "contract": "Round-trip runs on every CEDS forge and FAILS THE BUILD on loss. Not a one-time acceptance criterion.",
+      "measure": "suite:wiredIntoGateOfRecord", "comparator": "equals", "expected": true,
+      "twin": "unwireFromGateOfRecord"
+    },
+    {
+      "id": "R-2", "family": "R",
+      "contract": "Forging is deterministic: two forges of identical source produce identical statement sets.",
+      "measure": "probe:forgeDeterminism", "comparator": "equals", "expected": true,
+      "twin": "nondeterministicForge"
+    },
+    {
+      "id": "R-3", "family": "R",
+      "contract": "Every expected value in this suite traces to a named, archived baseline run.",
+      "measure": "suite:expectationsWithoutBaselineProvenance", "comparator": "equals", "expected": 0,
+      "twin": "expectationWithoutProvenance"
+    },
+    {
+      "id": "R-4", "family": "R",
+      "contract": "The suite runs hermetically where it claims to, and never writes to a graph.",
+      "measure": "suite:graphWriteAttemptCount", "comparator": "equals", "expected": 0,
+      "twin": "attemptGraphWrite"
+    }
+  ]
+}
