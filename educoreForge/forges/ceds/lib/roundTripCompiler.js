@@ -93,6 +93,11 @@ const ENTITY_ELEMENT_NAME = {
 	property: 'rdf:Property',
 	optionSet: 'owl:Class',
 	optionValue: 'owl:NamedIndividual',
+	// vocabularyTerm has NO fixed element: CEDS declares its own vocabulary in FOUR shapes
+	// (owl:AnnotationProperty, rdfs:Class, owl:Class, rdf:Property), so the shape travels on the
+	// node as sourceElementName and entityText reads it from there. Reconstructing it from the
+	// role would be guessing at the one thing the source states outright.
+	vocabularyTerm: null,
 };
 
 // GRAPH_PROPERTY_BY_FIELD — THE ENRICHMENT CONTRACT, stated as data. Left: the serializer's field
@@ -116,6 +121,8 @@ const GRAPH_PROPERTY_BY_FIELD = {
 	alternative: 'alternative', // dc:alternative
 	equivalentProperty: 'equivalentProperty', // owl:equivalentProperty
 	closeMatch: 'closeMatch', // skos:closeMatch
+	range: 'range', // rdfs:range        — vocabulary declarations only
+	isDefinedBy: 'isDefinedBy', // rdfs:isDefinedBy — vocabulary declarations only
 	deprecated: 'deprecated', // owl:deprecated        — NOT carried today
 	textFormat: 'textFormat', // textFormat            — carried
 	maxLength: 'maxLength', // maxLength             — carried
@@ -178,6 +185,15 @@ const FIELD_ORDER_BY_KIND = {
 		'editHistory',
 	],
 	optionSet: [...SCALAR_ANNOTATION_FIELDS, 'typeResources', 'subClassOf', 'editHistory'],
+	vocabularyTerm: [
+		...SCALAR_ANNOTATION_FIELDS,
+		'domainIncludes',
+		'rangeIncludes',
+		'range',
+		'isDefinedBy',
+		'restrictions',
+		'editHistory',
+	],
 	optionValue: [
 		...SCALAR_ANNOTATION_FIELDS,
 		'typeResources',
@@ -204,6 +220,10 @@ const FIELD_EMISSION = {
 	alternative: { element: 'dc:alternative', objectKind: 'literal', many: true },
 	equivalentProperty: { element: 'owl:equivalentProperty', objectKind: 'resource' },
 	closeMatch: { element: 'skos:closeMatch', objectKind: 'resource' },
+	// rdfs:range and rdfs:isDefinedBy occur ONLY on vocabulary declarations -- measured, which
+	// is why they were deliberately left out when the long tail landed.
+	range: { element: 'rdfs:range', objectKind: 'resource' },
+	isDefinedBy: { element: 'rdfs:isDefinedBy', objectKind: 'resource' },
 	deprecated: { element: 'owl:deprecated', objectKind: 'literal', datatype: XSD_BOOLEAN },
 	textFormat: { element: 'textFormat', objectKind: 'literal' },
 	maxLength: { element: 'maxLength', objectKind: 'literal' },
@@ -283,6 +303,11 @@ const READ_PROPERTY_NAMES = [
 	// field had to be remembered into. Worth a standing suspicion of every list in this file.
 	'onProperty',
 	'allValuesFrom',
+	'sourceElementName',
+	'localName',
+	'vocabularyRangeRefs',
+	'range',
+	'isDefinedBy',
 	'alternative',
 	'equivalentProperty',
 	'closeMatch',
@@ -392,7 +417,9 @@ const moduleFunction =
 		// entityText — ONE entity's XML. Pure and synchronous: given an entity it returns text, and
 		// it is the caller that decides where the text goes (a stream, a string, a test assertion).
 		const entityText = ({ kind, entity }) => {
-			const elementName = ENTITY_ELEMENT_NAME[kind];
+			// A kind whose ENTITY_ELEMENT_NAME is null carries its shape per entity -- see the
+			// vocabularyTerm entry, which arrives in four different source shapes.
+			const elementName = ENTITY_ELEMENT_NAME[kind] || (entity && entity.sourceElementName);
 			if (!elementName) {
 				return { error: `${moduleName}: no CEDS element shape for entity kind '${kind}'.` };
 			}
@@ -507,6 +534,7 @@ const moduleFunction =
 			writeKind('property', cedsGraph.properties);
 			writeKind('optionSet', cedsGraph.optionSets);
 			writeKind('optionValue', cedsGraph.optionValues);
+			writeKind('vocabularyTerm', cedsGraph.vocabularyTerms);
 
 			if (refusal) {
 				callback(refusal);
@@ -784,6 +812,7 @@ const moduleFunction =
 					'DmeOptionValue',
 					'DmeEditHistoryEntry',
 					'DmeRestriction',
+					'DmeVocabularyTerm',
 				].forEach(
 					(oneRole) => {
 						taskList.push((args, next) => {
@@ -857,6 +886,7 @@ const moduleFunction =
 							optionValueNodes: args.DmeOptionValue,
 						editHistoryEntryNodes: args.DmeEditHistoryEntry,
 						restrictionNodes: args.DmeRestriction,
+						vocabularyTermNodes: args.DmeVocabularyTerm,
 							subClassOfPairs: args.subClassOf,
 							rangePairs: args.range,
 							inSchemePairs: args.inScheme,
@@ -896,6 +926,7 @@ const moduleFunction =
 				optionValueNodes,
 				editHistoryEntryNodes,
 				restrictionNodes,
+				vocabularyTermNodes,
 				subClassOfPairs,
 				rangePairs,
 				inSchemePairs,
@@ -1058,6 +1089,27 @@ const moduleFunction =
 				return entity;
 			});
 
+			// CEDS's own vocabulary declarations. sourceElementName rides through untouched: the
+			// serializer needs the shape the SOURCE used, and there are four of them.
+			const vocabularyTerms = listOf(vocabularyTermNodes).map((oneNode) => {
+				const entity = attachEditHistory(entityFromNode(oneNode));
+				entity.sourceElementName = oneNode.sourceElementName;
+				// domainIncludes rides on allDomainIds exactly as it does for ordinary properties,
+				// read shape-agnostically for the same scalarization reason (gate S-7).
+				const declaredDomains = valueListOf(oneNode.allDomainIds);
+				if (declaredDomains.length) {
+					entity.domainIncludes = declaredDomains;
+				}
+				// rangeIncludes is kept under its own property here rather than reusing the
+				// ordinary range machinery, which derives from HAS_OPTION_SET / REFERENCES edges
+				// a vocabulary term does not have.
+				const declaredRanges = valueListOf(oneNode.vocabularyRangeRefs);
+				if (declaredRanges.length) {
+					entity.rangeIncludes = declaredRanges;
+				}
+				return entity;
+			});
+
 			const optionSets = listOf(optionSetNodes).map((oneNode) => {
 				const entity = attachEditHistory(entityFromNode(oneNode));
 				// The explicit skos:ConceptScheme type IS what makes this node an option set in the
@@ -1096,7 +1148,14 @@ const moduleFunction =
 				: undefined;
 
 			callback('', {
-				cedsGraph: { ontology, classes, properties, optionSets, optionValues },
+				cedsGraph: {
+					ontology,
+					classes,
+					properties,
+					optionSets,
+					optionValues,
+					vocabularyTerms,
+				},
 				readerNotes: { unresolvedDomainIds },
 			});
 		};

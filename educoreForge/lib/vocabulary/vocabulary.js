@@ -62,6 +62,12 @@ const DME_ROLES = {
 	// values from a named target. 18 in CEDS. Anonymous in the source, so identity is derived
 	// from owner + file position, exactly as DmeEditHistoryEntry is. Carries no embedding.
 	RESTRICTION: 'DmeRestriction',
+	// A term CEDS defines for its OWN vocabulary -- textFormat, changeVersion, editHistory and
+	// the rest -- rather than a data element. ⟪TQ ruling, 2026-08-02: "mint the IDs"⟫ these get
+	// a synthetic VT<localName> id because CEDS assigns them none. Carries no embedding and no
+	// data role, so it is invisible to both the DME's browse (which selects by data role) and
+	// its semantic search (one index, on :ForgedNode(embedding)).
+	VOCABULARY_TERM: 'DmeVocabularyTerm',
 };
 
 // =====================================================================

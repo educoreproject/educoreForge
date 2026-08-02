@@ -90,9 +90,9 @@ const EXPECTATION = Object.freeze({
 	// (⟪TQ ruling⟫, commit "CEDS change history as NODES"). The hub is UNCHANGED at 29789, which
 	// is the point of checking both: had the enrichment disturbed the derived hub, this number
 	// would have moved too and the fold total alone would not have said which side shifted.
-	baseNodeTotal: 25169, // 23238 + 1913 change-history entries + 18 owl:Restriction blocks
+	baseNodeTotal: 25202, // 23238 + 1913 history + 18 restrictions + 26 vocabulary terms + 7 of their history
 	hubNodeTotal: 29789, // 29788 HubReferences + 1 HubDefinition — UNCHANGED by the enrichment
-	foldTotal: 54958, // base + hub-nodes — the folded [StandardBase] block of a hub standard
+	foldTotal: 54991, // base + hub-nodes — the folded [StandardBase] block of a hub standard
 });
 
 // single-element PG-JSON array -> scalar (forgeCeds emits scalars; forgeHub's v1 also accepts scalars —
@@ -160,7 +160,7 @@ forgeCeds.forge({ sourcePath: CEDS_SOURCE_PATH, skipEmbedding: true }, (forgeErr
 	harness.section('SOURCE — the real CEDS base, forged from a local asset');
 	// =====================================================================
 	harness.equal(
-		'the CEDS base forges 25169 nodes from CEDS-Ontology.rdf (no embedding, no network)',
+		'the CEDS base forges 25202 nodes from CEDS-Ontology.rdf (no embedding, no network)',
 		baseNodeTotal,
 		EXPECTATION.baseNodeTotal,
 	);
@@ -222,11 +222,11 @@ forgeCeds.forge({ sourcePath: CEDS_SOURCE_PATH, skipEmbedding: true }, (forgeErr
 	);
 
 	// =====================================================================
-	harness.section('FOLD — base + hub in ONE [StandardBase] block (25169 + 29789 == 54958)');
+	harness.section('FOLD — base + hub in ONE [StandardBase] block (25202 + 29789 == 54991)');
 	// =====================================================================
 	harness.equal('hub contributes 29789 nodes (29788 refs + 1 definition)', hub.counts.nodeTotal, EXPECTATION.hubNodeTotal);
 	harness.equal(
-		'folded block total: base(25169) + hub(29789) == 54958',
+		'folded block total: base(25202) + hub(29789) == 54991',
 		baseNodeTotal + hub.counts.nodeTotal,
 		EXPECTATION.foldTotal,
 	);

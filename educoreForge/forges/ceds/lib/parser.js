@@ -460,10 +460,67 @@ const parseCeds = ({ sourcePath, xLog }, callback) => {
 			isCedsUri(getAttr(el, 'rdf:about')),
 		);
 
+		const annotationFaults = [];
+
+		// ============================================================
+		// VOCABULARY TERMS — CEDS describing its OWN vocabulary
+		// ============================================================
+		// ⟪TQ ruling, 2026-08-02: "mint the IDs"⟫
+		//
+		// 26 declarations the forge has always skipped, because it keeps only entities carrying
+		// a dc:identifier and CEDS never gave these one -- correctly, since `textFormat` is
+		// GRAMMAR, not a data element. They are the definitions of the terms the ontology then
+		// uses on real elements: textFormat on 1,076 properties, changeVersion on 1,920 history
+		// entries, and so on. 259 statements hang off them, which is every statement still lost.
+		//
+		// WHAT MINTING COSTS, stated plainly because TQ ruled on it: these are TOP-LEVEL
+		// entities, so a synthetic `VT<localName>` id enters the addressing scheme as a new
+		// identifier KIND. That is a larger act than the derived ids used for editHistory
+		// entries and restrictions, which hang off an owner that already has one. The mint is
+		// deterministic from the source URI alone, so it is stable across re-forges.
+		//
+		// The element NAME is carried on the record: unlike the four ordinary kinds these come
+		// in four different shapes (owl:AnnotationProperty, rdfs:Class, owl:Class, rdf:Property)
+		// and the round-trip must re-emit each in the shape the source used.
+		const VOCABULARY_TERM_ELEMENT_NAMES = [
+			'owl:AnnotationProperty',
+			'rdfs:Class',
+			'owl:Class',
+			'rdf:Property',
+		];
+		const vocabularyTerms = [];
+		VOCABULARY_TERM_ELEMENT_NAMES.forEach((oneElementName) => {
+			(root[oneElementName] || []).forEach((oneElement) => {
+				if (typeof oneElement !== 'object') {
+					return;
+				}
+				const about = getAttr(oneElement, 'rdf:about');
+				if (!about) {
+					return;
+				}
+				// An ordinary forged entity is CEDS-scoped AND carries dc:identifier. Anything
+				// else in these element positions is a vocabulary declaration.
+				if (isCedsUri(about) && getText(oneElement, 'dc:identifier')) {
+					return;
+				}
+				const base = extractBaseProperties(oneElement, annotationFaults);
+				vocabularyTerms.push({
+					...base,
+					sourceElementName: oneElementName,
+					localName: about.split(/[#/]/).pop(),
+					restrictions: extractRestrictions(oneElement),
+					// The 12 CEDS vocabulary PROPERTIES declare their own domain and range, the
+					// same way ordinary properties do. They are INTERPRETED predicates so the
+					// open-list rule skips them by design; read explicitly here.
+					domainRefs: getResourceRefs(oneElement, 'schema:domainIncludes'),
+					rangeRefs: getResourceRefs(oneElement, 'schema:rangeIncludes'),
+				});
+			});
+		});
+
 		// Collected across every entity, then REFUSED on rather than logged past. A local-name
 		// collision means one predicate's statements vanish while the entity still looks
 		// perfectly healthy, which is the hardest class of loss to notice later.
-		const annotationFaults = [];
 
 		const rawClasses = [];
 		const rawOptionSets = [];
@@ -519,7 +576,7 @@ const parseCeds = ({ sourcePath, xLog }, callback) => {
 		});
 
 		callback('', {
-			entities: { classes, properties, optionSets, optionValues },
+			entities: { classes, properties, optionSets, optionValues, vocabularyTerms },
 			maps: { classByUri, optionSetByUri },
 			metadata: {
 				version,

@@ -360,6 +360,80 @@ const moduleFunction =
 				});
 			};
 
+			// ---------------------------------------------------------------------------
+			// addVocabularyTermNodes — CEDS's own vocabulary, with MINTED identity
+			// ---------------------------------------------------------------------------
+			// ⟪TQ ruling, 2026-08-02: "mint the IDs"⟫ after being told the cost: these are
+			// TOP-LEVEL entities with no dc:identifier, so `VT<localName>` enters the addressing
+			// scheme as a NEW identifier kind -- a larger act than the derived ids used for
+			// editHistory entries and restrictions, which hang off an owner that already has one.
+			//
+			// The mint is a pure function of the source URI's local name, so it is stable across
+			// re-forges and the byte-identical replay still holds.
+			//
+			// sourceElementName is carried because unlike the four ordinary kinds these arrive in
+			// FOUR different shapes (owl:AnnotationProperty, rdfs:Class, owl:Class, rdf:Property)
+			// and the round-trip must re-emit each in the shape the source used. Reconstructing
+			// it from the role would be guessing.
+			//
+			// No searchText, no embedding: `textFormat` is grammar, not a data element, and a
+			// search for a school must not return the definition of a formatting annotation.
+			const addVocabularyTermNodes = (terms) => {
+				(terms || []).forEach((oneTerm) => {
+					const mintedCedsId = `VT${oneTerm.localName}`;
+					const properties = {
+						_id: idFor(mintedCedsId),
+						_source: 'CEDS',
+						role: DME_ROLES.VOCABULARY_TERM,
+						uri: oneTerm.uri,
+						cedsId: mintedCedsId,
+						cedsIdIsMinted: true, // never confuse a minted id with one CEDS assigned
+						isMetaVocabulary: true, // what gate D-2 selects on
+						sourceElementName: oneTerm.sourceElementName,
+						localName: oneTerm.localName,
+						// NO FALLBACK TO localName. The four FOREIGN declarations (rdf:Property,
+						// rdfs:Class, owl:Class, owl:NamedIndividual) carry ONLY rdfs:isDefinedBy --
+						// the source gives them no label at all -- and synthesising one from the
+						// local name made the compiler emit 4 rdfs:label statements CEDS never
+						// made. The diff caught them as INVENTED, which is the category that
+						// matters most: a gap is a gap, but a fabrication is a lie about CEDS.
+						...(oneTerm.label ? { name: oneTerm.label } : {}),
+						...(oneTerm.description ? { description: oneTerm.description } : {}),
+						...(oneTerm.notation ? { notation: oneTerm.notation } : {}),
+						...(oneTerm.domainRefs && oneTerm.domainRefs.length
+							? { allDomainIds: oneTerm.domainRefs, domainId: oneTerm.domainRefs[0] }
+							: {}),
+						...(oneTerm.rangeRefs && oneTerm.rangeRefs.length
+							? { vocabularyRangeRefs: oneTerm.rangeRefs }
+							: {}),
+						parentId: metadata.sourceUrl,
+						path: `CEDS.vocabulary.${oneTerm.localName}`,
+						...(oneTerm.annotations || {}),
+					};
+					nodes.push({
+						labels: [
+							NODE_LABELS.FORGED_NODE,
+							'CedsOntology',
+							DME_ROLES.VOCABULARY_TERM,
+						],
+						stableId: oneTerm.uri,
+						role: DME_ROLES.VOCABULARY_TERM,
+						properties,
+					});
+					addEdge(EDGE_TYPES.HAS_SUPPORT, metadata.sourceUrl, oneTerm.uri);
+					addEditHistoryNodes({
+						ownerStableId: oneTerm.uri,
+						ownerCedsId: mintedCedsId,
+						editHistory: oneTerm.editHistory,
+					});
+					addRestrictionNodes({
+						ownerStableId: oneTerm.uri,
+						ownerCedsId: mintedCedsId,
+						restrictions: oneTerm.restrictions,
+					});
+				});
+			};
+
 			// edge — canonical ownership/reference edge, stamped structural (DECISIONS §11).
 			const addEdge = (type, fromStableId, toStableId) => {
 				edges.push({
@@ -713,6 +787,8 @@ const moduleFunction =
 				});
 			});
 
+			addVocabularyTermNodes(entities.vocabularyTerms);
+
 			// the shared contract finalizer (M7/M8): parentId referent enforced, depth derived
 			// (= chain length; supersedes the per-role stamps above), crossRefs universal,
 			// single-owner optionSets re-parented to their owning property. Throws loudly.
@@ -738,7 +814,8 @@ const moduleFunction =
 			const embeddableNodes = nodes.filter(
 				(oneNode) =>
 					oneNode.role !== DME_ROLES.EDIT_HISTORY_ENTRY &&
-					oneNode.role !== DME_ROLES.RESTRICTION,
+					oneNode.role !== DME_ROLES.RESTRICTION &&
+					oneNode.role !== DME_ROLES.VOCABULARY_TERM,
 			);
 			const targetNodes =
 				nodeSubsetLimit && nodeSubsetLimit < embeddableNodes.length
