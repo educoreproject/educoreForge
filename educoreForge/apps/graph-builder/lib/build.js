@@ -152,20 +152,21 @@ const runCedsFidelityGate = ({ xLog, graphName, standardTokens, commandLineParam
 		return;
 	}
 
-	const rawAllowance = ((commandLineParameters || {}).values || {}).allowFidelityLoss;
-	const allowanceText = Array.isArray(rawAllowance) ? rawAllowance[0] : rawAllowance;
-	let allowedLoss = 0;
-	if (allowanceText !== undefined) {
-		allowedLoss = Number(allowanceText);
-		if (!Number.isInteger(allowedLoss) || allowedLoss < 0) {
-			callback(
-				`graphBuilder build: --allowFidelityLoss must be a non-negative INTEGER naming the exact ` +
-					`number of lost statements you are accepting, got '${allowanceText}'. It is not an ` +
-					`on/off switch: a gate that can be silently disabled is not a gate.`,
-			);
-			return;
-		}
+	// THE DECISION LIVES IN ITS OWN MODULE so its failure branch can be negated in
+	// milliseconds instead of a five-minute forge. See
+	// lib/ceds-fidelity-judgment/test/test-cedsFidelityJudgment.js -- 26 assertions, every one
+	// a way this build must die. This function keeps only the I/O.
+	const judgmentLib = require(
+		path.join(__dirname, '..', '..', '..', 'lib', 'ceds-fidelity-judgment', 'ceds-fidelity-judgment'),
+	)();
+	const allowance = judgmentLib.resolveAllowance({
+		rawValue: ((commandLineParameters || {}).values || {}).allowFidelityLoss,
+	});
+	if (allowance.error) {
+		callback(`graphBuilder build: ${allowance.error}`);
+		return;
 	}
+	const allowedLoss = allowance.allowedLoss;
 
 	const compilerLib = require(
 		path.join(__dirname, '..', '..', '..', 'forges', 'ceds', 'lib', 'roundTripCompiler'),
@@ -221,36 +222,12 @@ const runCedsFidelityGate = ({ xLog, graphName, standardTokens, commandLineParam
 						`  [fidelity] source ${headline.sourceStatements}, matched ${headline.matched}, ` +
 							`LOST ${headline.lost}, INVENTED ${headline.invented}`,
 					);
-					// INVENTION IS NEVER ALLOWED. A gap is a gap; a fabrication is an assertion about
-					// CEDS that CEDS never made, and no allowance covers it.
-					if (headline.invented > 0) {
-						callback(
-							`graphBuilder build: FIDELITY GATE FAILED -- the graph would assert ` +
-								`${headline.invented} statement(s) CEDS does NOT make. Invention is never ` +
-								`permitted and --allowFidelityLoss does not cover it.`,
-						);
+					const verdict = judgmentLib.judgeFidelity({ headline, allowedLoss, graphName });
+					if (!verdict.passed) {
+						callback(`graphBuilder build: ${verdict.reason}`);
 						return;
 					}
-					if (headline.lost > allowedLoss) {
-						callback(
-							`graphBuilder build: FIDELITY GATE FAILED -- ${headline.lost} CEDS statement(s) ` +
-								`do not round-trip` +
-								(allowedLoss
-									? `, which exceeds the --allowFidelityLoss=${allowedLoss} you named.`
-									: `. Run 'graphBuilder -cedsRoundTrip --containerName=${graphName}' for the ` +
-										`per-predicate attribution, or name the gap you are accepting with ` +
-										`--allowFidelityLoss=${headline.lost}.`),
-						);
-						return;
-					}
-					if (allowedLoss) {
-						xLog.status(
-							`  [fidelity] PASSED under an EXPLICIT allowance of ${allowedLoss} lost ` +
-								`statement(s) -- this build is knowingly incomplete`,
-						);
-					} else {
-						xLog.status(`  [fidelity] PASSED -- zero lost, zero invented`);
-					}
+					xLog.status(`  [fidelity] ${verdict.reason}`);
 					callback('');
 				},
 			);
