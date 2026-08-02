@@ -192,6 +192,21 @@ const moduleFunction =
 					stableId,
 					role,
 					properties: {
+						// THE OPEN LIST, spread FIRST so every curated field below wins any contest.
+						// ⟬TQ, 2026-08-02⟭ the OWL->graph conversion is largely universal; only the role
+						// interpretation is CEDS-specific. These are the predicates the parser carried
+						// without interpreting -- dc:creator, skos:prefLabel, skos:definition, rdfs:comment,
+						// the constraint facets and the long tail -- named exactly as the SOURCE names them
+						// (its local name), which is what the round-trip compiler's GRAPH_PROPERTY_BY_FIELD
+						// already expects. No translation table, and the round-trip stays mechanical.
+						//
+						// Spread FIRST, deliberately: a curated field must never be clobbered by an
+						// annotation that happens to share its name. The parser already excludes every
+						// interpreted predicate, so this is belt-and-braces rather than a live risk -- but
+						// the ordering is the difference between 'cannot happen' and 'cannot happen
+						// silently'.
+						...(rawEntity.annotations || {}),
+
 						_id: idFor(canonicalCedsId),
 						_source: 'CEDS',
 						name: searchTextElement.name,

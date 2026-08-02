@@ -83,7 +83,130 @@ const hasConceptSchemeType = (element) => {
 // Entity extractors
 // ============================================================
 
-const extractBaseProperties = (element) => {
+// ============================================================
+// THE OPEN-LIST RULE — carry every predicate we do not interpret
+// ============================================================
+//
+// ⟪TQ, 2026-08-02⟫ "I would have thought that the conversion from OWL to graph is
+// essentially an algorithm that is universal without reference to the specific nature of
+// the source. Why isn't that true?"
+//
+// He was right, and this is the answer in code. Almost none of the ontology needs to know
+// it is CEDS. Only the ROLE INTERPRETATION does -- deciding that an rdfs:Class is an
+// entity, a skos:ConceptScheme is a codeset, a named individual in one is an allowed value.
+// Annotations need no interpretation whatsoever: they are literals hanging off an entity.
+//
+// This extractor used to keep a CLOSED list of four fields and silently drop everything
+// else, which is why 57,547 statements were missing -- not because they were hard, but
+// because nobody was looking for them. A closed list also loses, forever and without a
+// murmur, every predicate a future CEDS release adds.
+//
+// NAMING ⟪TQ approved, 2026-08-02⟫: a property is named exactly as the SOURCE names the
+// predicate -- its local name, which is also what the round-trip compiler's
+// GRAPH_PROPERTY_BY_FIELD already expects. No translation table to maintain, and the
+// round-trip stays mechanical.
+//
+// MEASURED BEFORE WRITING (2026-08-02, full ontology census): 27 distinct predicates, and
+// ZERO local-name collisions -- no two namespaces contend for one property name. The
+// collision refusal below is therefore not defending against anything today. It is there
+// because the day a release introduces one, silently overwriting a value would be
+// indistinguishable from working correctly.
+
+// Predicates the extractors READ THEMSELVES. Anything here is already represented -- as a
+// base property, an edge, or a role decision -- and must not be duplicated as a generic
+// annotation.
+const INTERPRETED_PREDICATES = new Set([
+	'dc:identifier', // -> cedsId
+	'rdfs:label', // -> label
+	'dc:description', // -> description
+	'skos:notation', // -> notation
+	'rdf:type', // -> the role decision
+	'rdfs:subClassOf', // -> SUBCLASS_OF edges
+	'schema:domainIncludes', // -> domainRefs
+	'schema:rangeIncludes', // -> rangeRefs / dataType
+	'skos:inScheme', // -> inSchemeRef
+	'textFormat', // -> textFormat (already carried)
+	'maxLength', // -> maxLength (already carried)
+]);
+
+// Predicates whose value is a NESTED STRUCTURE, not a literal. A nested value flattened
+// into a string would round-trip as a lie: the statement would be present and wrong.
+// editHistory is ruled to become NODES (spec §5.6), so it is deliberately left alone here
+// rather than half-captured.
+const NESTED_PREDICATES = new Set(['editHistory']);
+
+const localNameOf = (qualifiedName) =>
+	qualifiedName.indexOf(':') >= 0 ? qualifiedName.slice(qualifiedName.indexOf(':') + 1) : qualifiedName;
+
+// oneAnnotationValue — a literal, or the URI of a resource reference. Returns undefined for
+// anything else so the caller can decide, rather than coercing an object into "[object
+// Object]" and calling it carried.
+const oneAnnotationValue = (value) => {
+	if (typeof value === 'string') {
+		return value;
+	}
+	if (value && typeof value === 'object') {
+		if (value['_'] !== undefined) {
+			return value['_'];
+		}
+		if (value['$'] && value['$']['rdf:resource']) {
+			return value['$']['rdf:resource'];
+		}
+	}
+	return undefined;
+};
+
+const extractGenericAnnotations = (element, faults) => {
+	const carried = {};
+	const seenLocalNames = {};
+
+	Object.keys(element).forEach((oneKey) => {
+		if (oneKey === '$' || oneKey === '_') {
+			return;
+		}
+		if (INTERPRETED_PREDICATES.has(oneKey) || NESTED_PREDICATES.has(oneKey)) {
+			return;
+		}
+		const rawValues = (element[oneKey] || [])
+			.map(oneAnnotationValue)
+			.filter((oneValue) => oneValue !== undefined && oneValue !== '');
+
+		// DEDUPLICATE. An RDF document is a SET of statements: the same subject, predicate and
+		// object asserted twice is ONE statement, not two values. CEDS really does repeat
+		// itself -- P000101 carries <minInclusive>0</minInclusive> twice, verbatim, and there
+		// are 5 such duplicates in the ontology (the canonicalizer reports them collapsed).
+		// Keeping both turned a single-valued fact into a two-element array, and the round-trip
+		// compiler refused the emission by name rather than truncating it silently. That
+		// refusal is what found this.
+		const values = Array.from(new Set(rawValues));
+		if (!values.length) {
+			return;
+		}
+		const localName = localNameOf(oneKey);
+
+		if (seenLocalNames[localName] && seenLocalNames[localName] !== oneKey) {
+			// REFUSE rather than overwrite. Two namespaces contending for one property name
+			// means one of them wins silently and its statements vanish while every entity
+			// still looks perfectly healthy -- the same shape of invisible loss the crossRefs
+			// fragility has.
+			(faults || []).push(
+				`LOCAL NAME COLLISION on '${localName}': both '${seenLocalNames[localName]}' and ` +
+					`'${oneKey}' claim it on <${getAttr(element, 'rdf:about')}>. Refusing to guess which ` +
+					`one survives; the naming convention needs a disambiguation ruling.`,
+			);
+			return;
+		}
+		seenLocalNames[localName] = oneKey;
+
+		// Single values stay scalar, matching the replay engine's own PG-JSON convention of
+		// unwrapping singleton arrays. Multi-valued predicates stay arrays.
+		carried[localName] = values.length === 1 ? values[0] : values;
+	});
+
+	return carried;
+};
+
+const extractBaseProperties = (element, faults) => {
 	const uri = getAttr(element, 'rdf:about');
 	return {
 		cedsId: getText(element, 'dc:identifier'),
@@ -91,11 +214,17 @@ const extractBaseProperties = (element) => {
 		description: getText(element, 'dc:description'),
 		notation: getText(element, 'skos:notation'),
 		uri,
+		// THE OPEN LIST, under its own key rather than spread into the base.
+		// Keeping it named means the forge spreads `rawEntity.annotations` explicitly -- one
+		// grep finds both ends of the flow -- instead of the forge having to compute "every
+		// field that isn't one of the ones I already know about", which is a subtractive rule
+		// that silently changes meaning every time either side gains a field.
+		annotations: extractGenericAnnotations(element, faults),
 	};
 };
 
-const extractClass = (element) => {
-	const base = extractBaseProperties(element);
+const extractClass = (element, faults) => {
+	const base = extractBaseProperties(element, faults);
 	const subClassOf = element['rdfs:subClassOf'];
 	let parentRef;
 	if (subClassOf && subClassOf.length) {
@@ -112,8 +241,8 @@ const extractClass = (element) => {
 	return { ...base, parentRef };
 };
 
-const extractProperty = (element) => {
-	const base = extractBaseProperties(element);
+const extractProperty = (element, faults) => {
+	const base = extractBaseProperties(element, faults);
 	const allRangeRefs = getResourceRefs(element, 'schema:rangeIncludes');
 	const domainRefs = getResourceRefs(element, 'schema:domainIncludes').filter(isCedsUri);
 	const rangeRefs = allRangeRefs.filter(isCedsUri);
@@ -134,8 +263,8 @@ const extractProperty = (element) => {
 	return result;
 };
 
-const extractOptionValue = (element) => {
-	const base = extractBaseProperties(element);
+const extractOptionValue = (element, faults) => {
+	const base = extractBaseProperties(element, faults);
 	const inSchemeRefs = getResourceRefs(element, 'skos:inScheme');
 	const inSchemeRef = inSchemeRefs.length > 0 ? inSchemeRefs[0] : undefined;
 	return { ...base, inSchemeRef };
@@ -218,18 +347,32 @@ const parseCeds = ({ sourcePath, xLog }, callback) => {
 			isCedsUri(getAttr(el, 'rdf:about')),
 		);
 
+		// Collected across every entity, then REFUSED on rather than logged past. A local-name
+		// collision means one predicate's statements vanish while the entity still looks
+		// perfectly healthy, which is the hardest class of loss to notice later.
+		const annotationFaults = [];
+
 		const rawClasses = [];
 		const rawOptionSets = [];
 		[...rdfsClasses, ...owlClasses].forEach((el) => {
 			if (hasConceptSchemeType(el)) {
-				rawOptionSets.push(extractClass(el));
+				rawOptionSets.push(extractClass(el, annotationFaults));
 			} else {
-				rawClasses.push(extractClass(el));
+				rawClasses.push(extractClass(el, annotationFaults));
 			}
 		});
 
-		const rawProperties = rdfProperties.map(extractProperty);
-		const rawOptionValues = namedIndividuals.map(extractOptionValue);
+		const rawProperties = rdfProperties.map((el) => extractProperty(el, annotationFaults));
+		const rawOptionValues = namedIndividuals.map((el) => extractOptionValue(el, annotationFaults));
+
+		if (annotationFaults.length) {
+			callback(
+				`CEDS parser REFUSED: ${annotationFaults.length} annotation naming fault(s). ` +
+					`Forging past these would silently drop statements. ` +
+					annotationFaults.slice(0, 5).join(' | '),
+			);
+			return;
+		}
 
 		// keep only entities with a native dc:identifier anchor (trackA discipline)
 		const classes = rawClasses.filter((c) => c.cedsId);

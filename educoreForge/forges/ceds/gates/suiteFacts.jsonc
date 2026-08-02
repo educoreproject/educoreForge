@@ -35,9 +35,9 @@
   // `recorded` true ONLY when a written finding exists with counts, and name it here.
   // ---------------------------------------------------------------------------------
   "skosDefinitionFinding": {
-    "recorded": false,
-    "findingPath": "",
-    "note": "NOT YET INVESTIGATED. Nobody has compared skos:definition text against dc:description text. Implementing before this is answered risks carrying 13,023 duplicate statements or missing a distinct matching signal."
+    "recorded": true,
+    "findingPath": "system/management/zNotesPlansDocs/cedsHubEnrichment_080226/finding-skosDefinition-080226.md",
+    "note": "ANSWERED 2026-08-02 against the enriched graph: 13,001 nodes carry skos:definition; 12,930 are byte-identical to dc:description, 55 differ by whitespace only, and just 16 are genuinely different text. It is 99.88% redundant. CARRY IT (the governing rule is not negotiable against tidiness) but do NOT add it to the judge's evidence as a separate field -- 16 in 13,000 does not justify duplicating a block of text into every candidate prompt."
   },
 
   // ---------------------------------------------------------------------------------
