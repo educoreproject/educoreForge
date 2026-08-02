@@ -174,6 +174,65 @@ forgeCeds.forge({ sourcePath: CEDS_SOURCE_PATH, skipEmbedding: true }, (forgeErr
 	const extra = (want, have) => Array.from(have).filter((one) => !want.has(one));
 
 	// =====================================================================
+	// INTEGRITY OVER *EVERY* CARD — including the kinds this rule cannot enumerate
+	// =====================================================================
+	// ⟪TQ, 2026-08-02⟫ "We have since learned that there are two slot and three slot tuples."
+	//
+	// The closure rule above enumerates the tuples it can derive from CEDS: (domain, property)
+	// and (domain, property, value). It CANNOT enumerate the QUALIFIED references minted by
+	// referenceSubgraph's second pass -- the "Has X Identifier Type" identification patterns --
+	// without reimplementing that pass's stem-matching, which would make the gate a tautology
+	// (it would agree with the minter because it IS the minter).
+	//
+	// Found by checking before answering "is the hub done?": 27 qualified cards exist and the
+	// closure keys collapse them into entries that already exist, so they were invisible rather
+	// than correct. If that logic broke, this file stayed green.
+	//
+	// So the second half of the gate does not enumerate -- it AUDITS. Every card, whatever its
+	// slot count, must carry a well-formed address whose parts resolve to real nodes, and no two
+	// cards may share an address. That catches corruption in a tier this rule cannot predict,
+	// which is the honest thing a closure gate can say about a shape it does not model.
+	// INDEX THE SAME WAY THE MINTER DOES. A DmeClass is addressed by its OWN domainId (that id
+	// IS its canonical class id -- referenceSubgraph builds classByDomainId exactly this way),
+	// and an option set by its rangeOptionSetId. Indexing everything by canonicalKey looked
+	// reasonable and reported 188,119 unresolved slots -- my lookup, not the minter's output.
+	const nodeById = {};
+	base.nodes.forEach((oneNode) => {
+		const p = oneNode.properties || {};
+		[p.canonicalKey, p.domainId, p.rangeOptionSetId].forEach((oneKey) => {
+			if (oneKey && !nodeById[oneKey]) {
+				nodeById[oneKey] = oneNode;
+			}
+		});
+	});
+
+	const addressSeen = {};
+	const duplicateAddresses = [];
+	const malformed = [];
+	const unresolvedParts = [];
+	hubNodes.forEach((oneNode) => {
+		const p = oneNode.properties || {};
+		const signature = p.addressSignature;
+		if (!signature || !p.domainId || !p.propertyKey || !p.referenceTier) {
+			malformed.push(oneNode.stableId);
+			return;
+		}
+		if (addressSeen[signature]) {
+			duplicateAddresses.push(signature);
+		}
+		addressSeen[signature] = true;
+		// every slot that names a CEDS entity must name one that exists
+		[p.domainId, p.propertyKey, p.rangeOptionSetId, p.rangeClassId].forEach((onePart) => {
+			if (onePart && !nodeById[onePart]) {
+				unresolvedParts.push(`${oneNode.stableId} -> ${onePart}`);
+			}
+		});
+		if (p.referenceTier === 'value' && !nodeById[p.canonicalKey]) {
+			unresolvedParts.push(`${oneNode.stableId} -> value ${p.canonicalKey}`);
+		}
+	});
+
+	// =====================================================================
 	harness.section('THE RULE — both sides derived, no frozen literal anywhere');
 	harness.note(
 		`declared property-tier tuples ${expected.propertyTier.size}, minted ${actualPropertyTier.size}`,
@@ -223,6 +282,23 @@ forgeCeds.forge({ sourcePath: CEDS_SOURCE_PATH, skipEmbedding: true }, (forgeErr
 		missing(twinExpected.propertyTier, actualPropertyTier).length ===
 			missingProperty.length + 1,
 	);
+
+	// =====================================================================
+	harness.section('EVERY CARD — audited, including the qualified ones the rule cannot enumerate');
+	harness.note(`cards audited: ${hubNodes.length} (of which qualified: ${
+		hubNodes.filter((one) => ((one.properties || {}).qualifierKeys || []).length).length})`);
+	harness.equal('every card carries a well-formed address', malformed.length, 0);
+	if (malformed.length) {
+		harness.note(`first 3: ${malformed.slice(0, 3).join('  ')}`);
+	}
+	harness.equal('no two cards share an address', duplicateAddresses.length, 0);
+	if (duplicateAddresses.length) {
+		harness.note(`first 3: ${duplicateAddresses.slice(0, 3).join('  ')}`);
+	}
+	harness.equal('every address slot names a CEDS entity that exists', unresolvedParts.length, 0);
+	if (unresolvedParts.length) {
+		harness.note(`first 3: ${unresolvedParts.slice(0, 3).join('  ')}`);
+	}
 
 	harness.note('both sides read CEDS; nothing here needs re-baselining when CEDS changes');
 	harness.report();
