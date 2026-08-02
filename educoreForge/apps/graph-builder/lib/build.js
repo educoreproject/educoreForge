@@ -46,6 +46,8 @@
 //                   All polymorphism about putting content INTO a graph lives in init.
 
 const path = require('path');
+const fs = require('fs');
+const os = require('os');
 const { pipeRunner, taskListPlus } = new require('qtools-asynchronous-pipe-plus')();
 const { readOptionalBooleanValue } = require('./optional-boolean-value');
 
@@ -125,7 +127,141 @@ const eachSeries = (items, iterator, done) => {
 // RESTORATION init carries no applyLabels — a harvested block already carries its stamped labels.
 // DISPOSE-ON-FAILURE (Item 4): the eval graph is created here and is the product ONLY on success; an
 // init failure disposes it rather than stranding a live DEV_* container. No forger, no bridge.
-const materializeSchemaBlocks = ({ xLog, replay, resolvedSchemaBlocks, manifestId, memberCount }, callback) => {
+// =====================================================================================
+// runCedsFidelityGate — R-1: the round trip FAILS THE BUILD, it does not merely report
+// =====================================================================================
+// ⟪TQ, 2026-08-02: "yes, R1 please"⟫
+//
+// Until this existed, CEDS round-trip fidelity was a verb somebody had to remember to run.
+// A future change could break it, the build would succeed, and nothing would say a word.
+// Everything proven about the graph rested on someone CHOOSING to look. That is the whole
+// distance between "we proved it" and "it stays proven".
+//
+// RUNS ONLY WHEN CEDS IS IN THE GRAPH. A recipe without CEDS has nothing to check, and a
+// gate that fires on irrelevant builds gets disabled by the first person it inconveniences.
+//
+// THE ESCAPE HATCH REQUIRES YOU TO NAME THE NUMBER. `--allowFidelityLoss=<n>` accepts up to
+// n lost statements and NOTHING ELSE -- any loss above n still fails, and INVENTION always
+// fails regardless. So the flag cannot be left on to absorb a future regression: it is a
+// statement about a specific known gap, not a mute button. A plain on/off skip is exactly
+// the expectFail masking gate M-2 forbids, and it is deliberately not offered.
+const runCedsFidelityGate = ({ xLog, graphName, standardTokens, commandLineParameters }, callback) => {
+	const tokens = (standardTokens || []).map((one) => String(one).toLowerCase());
+	if (!tokens.includes('ceds')) {
+		callback('');
+		return;
+	}
+
+	const rawAllowance = ((commandLineParameters || {}).values || {}).allowFidelityLoss;
+	const allowanceText = Array.isArray(rawAllowance) ? rawAllowance[0] : rawAllowance;
+	let allowedLoss = 0;
+	if (allowanceText !== undefined) {
+		allowedLoss = Number(allowanceText);
+		if (!Number.isInteger(allowedLoss) || allowedLoss < 0) {
+			callback(
+				`graphBuilder build: --allowFidelityLoss must be a non-negative INTEGER naming the exact ` +
+					`number of lost statements you are accepting, got '${allowanceText}'. It is not an ` +
+					`on/off switch: a gate that can be silently disabled is not a gate.`,
+			);
+			return;
+		}
+	}
+
+	const compilerLib = require(
+		path.join(__dirname, '..', '..', '..', 'forges', 'ceds', 'lib', 'roundTripCompiler'),
+	)();
+	const canonicalLib = require(
+		path.join(__dirname, '..', '..', '..', 'forges', 'ceds', 'lib', 'roundTripCanonical'),
+	)();
+	const diffLib = require(
+		path.join(__dirname, '..', '..', '..', 'forges', 'ceds', 'lib', 'roundTripDiff'),
+	)();
+
+	const sourcePath = path.join(
+		__dirname, '..', '..', '..',
+		'forges', 'ceds', 'assets', 'standardSourceData', '01', 'CEDS-Ontology.rdf',
+	);
+	if (!fs.existsSync(sourcePath)) {
+		callback(
+			`graphBuilder build: the CEDS fidelity gate cannot run -- the source ontology ` +
+				`'${sourcePath}' does not exist. REFUSED rather than skipped: a gate that quietly ` +
+				`does not run is indistinguishable from one that passed.`,
+		);
+		return;
+	}
+
+	xLog.status(`  [fidelity] round-tripping CEDS out of '${graphName}' (R-1)`);
+	const emittedPath = path.join(
+		os.tmpdir(),
+		`cedsFidelityGate-${process.pid}-${resolvedSchemaBlocksCounter()}.rdf`,
+	);
+
+	compilerLib.resolveContainerBolt({ containerName: graphName }, (resolveError, resolved) => {
+		if (resolveError) {
+			callback(`graphBuilder build: the CEDS fidelity gate could not reach the graph: ${resolveError}`);
+			return;
+		}
+		const reader = compilerLib.makeNeo4jCedsReader(resolved);
+		compilerLib.compileToFile({ reader, outPath: emittedPath }, (compileError) => {
+			reader.close(() => {});
+			if (compileError) {
+				callback(`graphBuilder build: the CEDS fidelity gate failed to compile: ${compileError}`);
+				return;
+			}
+			diffLib.compareRdfFiles(
+				{ sourcePath, emittedPath, context: { gate: 'R-1', graphName } },
+				(compareError, compared) => {
+					fs.unlink(emittedPath, () => {});
+					if (compareError) {
+						callback(`graphBuilder build: the CEDS fidelity gate failed to diff: ${compareError}`);
+						return;
+					}
+					const { headline } = compared.report;
+					xLog.status(
+						`  [fidelity] source ${headline.sourceStatements}, matched ${headline.matched}, ` +
+							`LOST ${headline.lost}, INVENTED ${headline.invented}`,
+					);
+					// INVENTION IS NEVER ALLOWED. A gap is a gap; a fabrication is an assertion about
+					// CEDS that CEDS never made, and no allowance covers it.
+					if (headline.invented > 0) {
+						callback(
+							`graphBuilder build: FIDELITY GATE FAILED -- the graph would assert ` +
+								`${headline.invented} statement(s) CEDS does NOT make. Invention is never ` +
+								`permitted and --allowFidelityLoss does not cover it.`,
+						);
+						return;
+					}
+					if (headline.lost > allowedLoss) {
+						callback(
+							`graphBuilder build: FIDELITY GATE FAILED -- ${headline.lost} CEDS statement(s) ` +
+								`do not round-trip` +
+								(allowedLoss
+									? `, which exceeds the --allowFidelityLoss=${allowedLoss} you named.`
+									: `. Run 'graphBuilder -cedsRoundTrip --containerName=${graphName}' for the ` +
+										`per-predicate attribution, or name the gap you are accepting with ` +
+										`--allowFidelityLoss=${headline.lost}.`),
+						);
+						return;
+					}
+					if (allowedLoss) {
+						xLog.status(
+							`  [fidelity] PASSED under an EXPLICIT allowance of ${allowedLoss} lost ` +
+								`statement(s) -- this build is knowingly incomplete`,
+						);
+					} else {
+						xLog.status(`  [fidelity] PASSED -- zero lost, zero invented`);
+					}
+					callback('');
+				},
+			);
+		});
+	});
+};
+
+let materializeCounter = 0;
+const resolvedSchemaBlocksCounter = () => (materializeCounter += 1);
+
+const materializeSchemaBlocks = ({ xLog, replay, resolvedSchemaBlocks, manifestId, memberCount, standardTokens, commandLineParameters }, callback) => {
 	replay.create({ purpose: 'materialize' }, (createError, goldEval) => {
 		if (createError) {
 			callback(`materialize failed: creating the eval golden: ${createError}`);
@@ -144,8 +280,24 @@ const materializeSchemaBlocks = ({ xLog, replay, resolvedSchemaBlocks, manifestI
 				return;
 			}
 			xLog.status(`  [materialize] -> ${goldEval.boltUrl}`);
-			// NOT deleted — this graph is the product.
-			callback('', { manifestId, boltUrl: goldEval.boltUrl, memberCount });
+			// R-1: the product is not a product until it round-trips. The graph is NOT deleted on
+			// failure -- an operator needs to inspect the thing that failed.
+			runCedsFidelityGate(
+				{
+					xLog,
+					graphName: goldEval.graphName,
+					standardTokens,
+					commandLineParameters,
+				},
+				(fidelityError) => {
+					if (fidelityError) {
+						callback(fidelityError);
+						return;
+					}
+					// NOT deleted — this graph is the product.
+					callback('', { manifestId, boltUrl: goldEval.boltUrl, memberCount });
+				},
+			);
 		});
 	});
 };
@@ -940,7 +1092,16 @@ const build = (recipe, deps, callback) => {
 			// RESTORATION init carries no applyLabels, and a mid-fill failure disposes the eval graph
 			// rather than stranding it — all of that lives in materializeSchemaBlocks now.
 			materializeSchemaBlocks(
-				{ xLog, replay, resolvedSchemaBlocks, manifestId, memberCount },
+				{
+					xLog,
+					replay,
+					resolvedSchemaBlocks,
+					manifestId,
+					memberCount,
+					// R-1 needs to know whether CEDS is in this graph at all.
+					standardTokens: (recipe.standards || []).map((one) => one.token),
+					commandLineParameters: process.global && process.global.commandLineParameters,
+				},
 				callback,
 			);
 		});
