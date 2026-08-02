@@ -189,7 +189,8 @@
     // -----------------------------------------------------------------------------
     {
       "id": "P-1", "family": "P",
-      "contract": "Every predicate that round-trips today still does, to the statement.",
+      "contract": "Every predicate that round-trips still does, to the statement -- at its FULL SOURCE COUNT.",
+      "note": "RE-BASELINED 2026-08-02 when the CEDS graph reached zero loss. The original figures were the matched counts of a PARTIALLY enriched graph, so the gate asserted 'no worse than this morning'. Every one of them now equals the SOURCE total, which is a strictly stronger assertion: not merely unregressed, complete.",
       "measure": "report:matchedByPredicate", "comparator": "mapEquals",
       "expected": {
         "http://purl.org/dc/elements/1.1/identifier": 23237,
@@ -197,12 +198,12 @@
         "https://w3id.org/CEDStandards/terms/textFormat": 1076,
         "https://w3id.org/CEDStandards/terms/maxLength": 399,
         "http://www.w3.org/2002/07/owl#versionInfo": 1,
-        "http://www.w3.org/2000/01/rdf-schema#label": 23237,
-        "http://www.w3.org/2004/02/skos/core#notation": 23237,
-        "http://purl.org/dc/elements/1.1/description": 12976,
-        "http://www.w3.org/1999/02/22-rdf-syntax-ns#type": 63295,
-        "https://schema.org/domainIncludes": 2750,
-        "https://schema.org/rangeIncludes": 2323
+        "http://www.w3.org/2000/01/rdf-schema#label": 23259,
+        "http://www.w3.org/2004/02/skos/core#notation": 23251,
+        "http://purl.org/dc/elements/1.1/description": 13026,
+        "http://www.w3.org/1999/02/22-rdf-syntax-ns#type": 63322,
+        "https://schema.org/domainIncludes": 2768,
+        "https://schema.org/rangeIncludes": 2336
       },
       "twin": "regressOnePredicate"
     },

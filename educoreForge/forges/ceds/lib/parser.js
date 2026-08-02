@@ -314,13 +314,48 @@ const extractRestrictions = (element) => {
 	return restrictions.length ? restrictions : undefined;
 };
 
+// allTexts — EVERY value of a repeated literal predicate, deduplicated as an RDF set.
+// getText takes only the first, which silently drops the second: P600571 asserts TWO
+// genuinely different dc:description values ("The current status of..." and "References
+// the current status of...") and the first reading lost one of them.
+const allTexts = (element, tagName) => {
+	const values = (element[tagName] || [])
+		.map((oneValue) => {
+			if (typeof oneValue === 'string') {
+				return oneValue;
+			}
+			if (oneValue && typeof oneValue === 'object' && oneValue['_'] !== undefined) {
+				return oneValue['_'];
+			}
+			// An element written as <dc:description></dc:description> parses to an empty object.
+			// That IS a statement -- CEDS says there is a description and leaves it blank -- so it
+			// is returned as '' rather than dropped.
+			if (oneValue && typeof oneValue === 'object' && !Object.keys(oneValue).length) {
+				return '';
+			}
+			return undefined;
+		})
+		.filter((oneValue) => oneValue !== undefined);
+	const unique = Array.from(new Set(values));
+	if (!unique.length) {
+		return undefined;
+	}
+	return unique.length === 1 ? unique[0] : unique;
+};
+
 const extractBaseProperties = (element, faults) => {
 	const uri = getAttr(element, 'rdf:about');
+	// Explicit rdf:type resources beyond the one the element shape implies. P000131 is an
+	// rdf:Property that ALSO declares skos:ConceptScheme; the forge gives a node one role, so
+	// the second type has to travel as data. This is the one place where "the role IS the fact"
+	// stops being sufficient.
+	const declaredTypes = getResourceRefs(element, 'rdf:type');
 	return {
 		cedsId: getText(element, 'dc:identifier'),
 		label: getText(element, 'rdfs:label'),
-		description: getText(element, 'dc:description'),
-		notation: getText(element, 'skos:notation'),
+		description: allTexts(element, 'dc:description'),
+		notation: allTexts(element, 'skos:notation'),
+		...(declaredTypes.length ? { declaredTypes } : {}),
 		uri,
 		// THE OPEN LIST, under its own key rather than spread into the base.
 		// Keeping it named means the forge spreads `rawEntity.annotations` explicitly -- one
@@ -359,11 +394,19 @@ const extractProperty = (element, faults) => {
 	const allRangeRefs = getResourceRefs(element, 'schema:rangeIncludes');
 	const domainRefs = getResourceRefs(element, 'schema:domainIncludes').filter(isCedsUri);
 	const rangeRefs = allRangeRefs.filter(isCedsUri);
+	// A range can point at FOREIGN vocabulary. P001396 declares dc:format, which is neither a
+	// CEDS uri nor an XSD datatype, so both filters above drop it and the statement vanishes.
+	const foreignRangeRefs = allRangeRefs.filter(
+		(oneRef) => !isCedsUri(oneRef) && !oneRef.startsWith(XSD_PREFIX),
+	);
 	const xsdRefs = allRangeRefs.filter((r) => r.startsWith(XSD_PREFIX));
 	const dataType = xsdRefs.length > 0 ? xsdRefs[0].replace(XSD_PREFIX, '') : undefined;
 	const textFormat = getText(element, 'textFormat');
 	const maxLength = getText(element, 'maxLength');
 	const result = { ...base, domainRefs, rangeRefs };
+	if (foreignRangeRefs.length) {
+		result.foreignRangeRefs = foreignRangeRefs;
+	}
 	if (dataType) {
 		result.dataType = dataType;
 	}

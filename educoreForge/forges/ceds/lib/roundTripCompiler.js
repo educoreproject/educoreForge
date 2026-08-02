@@ -171,6 +171,7 @@ const FIELD_ORDER_BY_KIND = {
 	class: [...SCALAR_ANNOTATION_FIELDS, 'subClassOf', 'restrictions', 'editHistory'],
 	property: [
 		...SCALAR_ANNOTATION_FIELDS,
+		'typeResources',
 		'domainIncludes',
 		'rangeIncludes',
 		'textFormat',
@@ -211,9 +212,10 @@ const FIELD_EMISSION = {
 	identifier: { element: 'dc:identifier', objectKind: 'literal', datatype: XSD_TOKEN },
 	label: { element: 'rdfs:label', objectKind: 'literal' },
 	comment: { element: 'rdfs:comment', objectKind: 'literal' },
-	description: { element: 'dc:description', objectKind: 'literal' },
+	// many: P600571 asserts TWO genuinely different descriptions.
+	description: { element: 'dc:description', objectKind: 'literal', many: true },
 	definition: { element: 'skos:definition', objectKind: 'literal' },
-	notation: { element: 'skos:notation', objectKind: 'literal' },
+	notation: { element: 'skos:notation', objectKind: 'literal', many: true },
 	prefLabel: { element: 'skos:prefLabel', objectKind: 'literal' },
 	// many: true -- P000725 and P000972 each declare TWO alternate titles. Without it the
 	// single-valued refusal fires and the emission is (correctly) refused rather than truncated.
@@ -306,6 +308,8 @@ const READ_PROPERTY_NAMES = [
 	'sourceElementName',
 	'localName',
 	'vocabularyRangeRefs',
+	'declaredTypes',
+	'foreignRangeRefs',
 	'range',
 	'isDefinedBy',
 	'alternative',
@@ -341,6 +345,17 @@ const moduleFunction =
 		// present — the "absent" ruling in one place: undefined, null, '' and [] are all ABSENT.
 		// The CEDS forge stamps `notation: ''` to mean "there is no notation", and an empty element
 		// would be a statement the source never made.
+		// present — is there a STATEMENT here?
+		//
+		// AN EMPTY VALUE IS STILL A STATEMENT. CEDS asserts `<dc:description> </dc:description>`
+		// on 27 option values: it is SAYING there is a description and leaving it blank. This
+		// used to treat whitespace as absent, which dropped 54 statements the source makes.
+		// undefined/null means the property is not there at all; '' means it is there and empty.
+		//
+		// That distinction only works because the forge no longer stamps `description: ''` and
+		// `notation: ''` as defaults for entities the source is SILENT about. Fabricating a
+		// placeholder into a source-named property destroys exactly the difference this function
+		// now depends on -- "CEDS said nothing" and "CEDS said nothing useful" are different facts.
 		const present = (value) => {
 			if (value === undefined || value === null) {
 				return false;
@@ -348,7 +363,7 @@ const moduleFunction =
 			if (Array.isArray(value)) {
 				return value.length > 0;
 			}
-			return String(value).trim() !== '';
+			return true;
 		};
 
 		const literalElementText = ({ element, value, datatype, indent }) =>
@@ -1083,8 +1098,18 @@ const moduleFunction =
 				if (!rangeUris.length && oneNode.dataType) {
 					rangeUris.push(`${XSD_NAMESPACE}${oneNode.dataType}`);
 				}
-				if (rangeUris.length) {
-					entity.rangeIncludes = rangeUris;
+				// A property's range can also point at FOREIGN vocabulary (P001396 -> dc:format),
+				// which neither the CEDS-uri nor the XSD filter can carry.
+				const foreignRanges = valueListOf(oneNode.foreignRangeRefs);
+				const allRanges = rangeUris.concat(foreignRanges);
+				if (allRanges.length) {
+					entity.rangeIncludes = allRanges;
+				}
+				// An explicitly declared rdf:type beyond the one the element shape implies
+				// (P000131 is an rdf:Property that also declares skos:ConceptScheme).
+				const declared = valueListOf(oneNode.declaredTypes);
+				if (declared.length) {
+					entity.typeResources = declared;
 				}
 				return entity;
 			});

@@ -225,7 +225,20 @@ const moduleFunction =
 						_id: idFor(canonicalCedsId),
 						_source: 'CEDS',
 						name: searchTextElement.name,
-						description: rawEntity.description || '',
+						// NO '' DEFAULT. An absent description must stay ABSENT so the round trip can
+						// tell "CEDS said nothing" from "CEDS said nothing useful" -- the latter is a
+						// real statement (27 option values carry a blank one) and the former is not.
+						...(rawEntity.description !== undefined
+							? { description: rawEntity.description }
+							: {}),
+						// P000131 is an rdf:Property that ALSO declares skos:ConceptScheme, and
+						// P001396's range points at foreign vocabulary (dc:format). Both are
+						// statements the role and the CEDS/XSD range filters cannot express, so they
+						// travel as data rather than being inferred back.
+						...(rawEntity.declaredTypes ? { declaredTypes: rawEntity.declaredTypes } : {}),
+						...(rawEntity.foreignRangeRefs
+							? { foreignRangeRefs: rawEntity.foreignRangeRefs }
+							: {}),
 						role,
 						uri: stableId, // the stable identifier, under stableUriPropertyName
 						cedsId: canonicalCedsId, // canonical anchor (R3)
@@ -500,7 +513,7 @@ const moduleFunction =
 						standardName: 'CEDS',
 						owningName: 'CEDS',
 					},
-					extraProps: { notation: cls.notation || '' },
+					extraProps: cls.notation !== undefined ? { notation: cls.notation } : {},
 					// parentId referent = MEMBER stableId (M7) — the root's stableId, not the _id-form ROOT_ID
 					structural: { parentId: metadata.sourceUrl, depth: 1, path: className },
 				});
@@ -584,7 +597,9 @@ const moduleFunction =
 				if (prop.maxLength) {
 					extraProps.maxLength = prop.maxLength;
 				}
-				extraProps.notation = prop.notation || '';
+				if (prop.notation !== undefined) {
+					extraProps.notation = prop.notation;
+				}
 
 				// Phase 2 address slots: the property's owning-class domain id + its range. domainId is the
 				// owning class's canonical C-id (version-scoped). The range slot is the first rangeRef that
@@ -705,7 +720,7 @@ const moduleFunction =
 						owningName: 'CEDS',
 						owningClassName: 'CEDS',
 					},
-					extraProps: { notation: os.notation || '' },
+					extraProps: os.notation !== undefined ? { notation: os.notation } : {},
 					// parentId referent = MEMBER stableId (M7); single-owner sets are re-parented to their
 					// owning property by the shared structural-contract finalizer (M8).
 					structural: { parentId: metadata.sourceUrl, depth: 2, path: setName },
@@ -765,7 +780,7 @@ const moduleFunction =
 						owningName: optionSetName,
 						owningClassName: 'CEDS',
 					},
-					extraProps: { notation: ov.notation || '' },
+					extraProps: ov.notation !== undefined ? { notation: ov.notation } : {},
 					addressSlots: { rangeOptionSetId: owningSetRangeId },
 					structural: {
 						// parentId referent = MEMBER stableId (M7); the orphan branch anchors to the root's

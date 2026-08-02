@@ -593,12 +593,20 @@ const roundTripGateMeasures = () => {
 						// all, which is a FAILING state and correctly reported as such.
 						session
 							.run(
-								`MATCH (e:ForgedNode {role:'DmeEditHistoryEntry', _source:'CEDS'})
-								 OPTIONAL MATCH (e)<-[:HAS_EDIT_HISTORY]-(owner:ForgedNode)
-								 WITH count(e) AS entries, count(owner) AS owned
-								 MATCH (n:ForgedNode {_source:'CEDS'})
-								 WHERE n.editHistory IS NOT NULL
-								 RETURN entries, owned, count(n) AS storedAsProperty`,
+								// COUNT EACH LEG INDEPENDENTLY. The first version ended with a plain
+								// MATCH on `n.editHistory IS NOT NULL`, which acts as a FILTER ON THE
+								// WHOLE QUERY: when zero nodes store history as a property -- the
+								// CORRECT state -- that MATCH returns no rows and the entire result
+								// vanishes, so entries and owned both read 0 and the gate failed
+								// against a perfectly good graph. A gate that goes red when the thing
+								// it wants is true is worse than no gate.
+								`CALL () { MATCH (e:ForgedNode {role:'DmeEditHistoryEntry', _source:'CEDS'})
+								           RETURN count(e) AS entries }
+								 CALL () { MATCH (:ForgedNode)-[r:HAS_EDIT_HISTORY]->(:ForgedNode {role:'DmeEditHistoryEntry'})
+								           RETURN count(r) AS owned }
+								 CALL () { MATCH (n:ForgedNode {_source:'CEDS'}) WHERE n.editHistory IS NOT NULL
+								           RETURN count(n) AS storedAsProperty }
+								 RETURN entries, owned, storedAsProperty`,
 							)
 							.then((historyResult) => {
 								const row = historyResult.records[0];
