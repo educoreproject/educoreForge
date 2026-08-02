@@ -18,6 +18,12 @@ const TERM_DEFINITIONS = {
 			'The single build passport node per graph: what was built, from which manifest, when, by which engine versions. Non-deterministic (carries builtAt), so it is excluded from content fingerprints.',
 		HubDefinition:
 			'The per-hub descriptor node (one per hub standard, e.g. CEDS): hub name, version, canonical key scheme, slot profile. The anchor every HubReference belongs to via IN_HUB.',
+		DmeEditHistoryEntry:
+			'One record of a CEDS element\'s own change history: what changed, in which version, and the GitHub issue that drove it. Anonymous in the source, so its identity is DERIVED as <ownerUri>#editHistory/<sequence>, and `sequence` is position in the SOURCE FILE rather than in time -- CEDS\'s own ordering is untidy and tidying it would break round-trip fidelity. Carries no embedding, so it never enters semantic search.',
+		DmeRestriction:
+			'An owl:Restriction block: a class\'s constraint that a named property takes all its values from a named target. Its two references are PROPERTIES, not edges -- a restriction constrains a property, it does not contain one, and an edge would assert a traversal CEDS never makes. Anonymous in the source; identity derived like DmeEditHistoryEntry. Carries no embedding.',
+		DmeVocabularyTerm:
+			'A term CEDS defines for its OWN vocabulary -- textFormat, changeVersion, editHistory, issueLink -- rather than a data element. CEDS assigns these no dc:identifier because they are grammar, so the forge MINTS one (VT<localName>) and flags it cedsIdIsMinted so a minted id is never mistaken for one the standard assigned. Carries no embedding and no data role, so it is invisible to both the explorer\'s browse and its search.',
 		HubReference:
 			'A canonical hub tuple (property tier: domain·property·range; value tier: + value) that source-standard elements resolve to. Shared-hub resolution is what makes cross-standard equivalence computable.',
 		SchemaView:
@@ -37,6 +43,8 @@ const TERM_DEFINITIONS = {
 		HAS_OPTION_SET: 'Property or root to the enumerated option set constraining its values.',
 		HAS_VALUE: 'Option set to one of its enumerated option values.',
 		SUBCLASS_OF: 'Class to its parent class (specialization hierarchy within one standard).',
+		HAS_RESTRICTION:
+			'Class to one of its owl:Restriction blocks. Ordered by the block\'s `sequence`, which is its position in the SOURCE FILE: a class may carry more than one (C200402 carries two) and a re-emission must reproduce the document rather than a tidier arrangement of it.',
 		HAS_EDIT_HISTORY:
 			'Element to one record of its own change history. Ordered by the entry\'s `sequence`, which is its position in the SOURCE FILE and deliberately not its position in time -- CEDS\'s own ordering is untidy (P000225 runs 10, 11, 12, 3, 4, 7, 8) and tidying it would break round-trip fidelity.',
 		REFERENCES: 'Generic intra-standard reference between structural nodes.',
