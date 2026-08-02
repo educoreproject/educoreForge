@@ -1,0 +1,79 @@
+// =====================================================================================
+// suiteFacts — the declared facts the meta-gates measure, WITH PROVENANCE
+// =====================================================================================
+//
+// Gate R-3 requires that every expectation in this suite trace to a named, archived
+// baseline run. These are the facts that are not readable from a graph or a report: they
+// are things we have decided, recorded, or wired. Keeping them as DATA rather than as
+// constants in the harness means R-3 can audit them, and means changing one is a diff
+// somebody reviews rather than an edit nobody sees.
+//
+// A fact recorded here is a CLAIM WITH AN OWNER. If it stops being true and nobody edits
+// this file, the gate goes green on a lie -- so each carries the evidence that would let a
+// reader falsify it in a minute.
+{
+  "baselineProvenance": {
+    "runLabel": "DEV_evidenceAllStandards_073126 / 2026-08-02 09:35",
+    "container": "DEV_evidenceAllStandards_073126",
+    "sourceOntology": "forges/ceds/assets/standardSourceData/01/CEDS-Ontology.rdf",
+    "artifacts": "system/dataStores/cedsRoundTrip/DEV_evidenceAllStandards_073126.roundTrip.json",
+    "headline": { "sourceStatements": 239761, "matched": 172475, "lost": 67286, "invented": 0 },
+    "independentlyVerified": "per-predicate rows sum to exactly 67286; canonicalizationFaults empty",
+    "auditedBy": ["IVORY_OCEAN evaluationReport-roundTripCompiler-080226.md", "Gemini CLI audit"]
+  },
+
+  // ---------------------------------------------------------------------------------
+  // F-7 — the manifest of exclusions. ⟪TQ governing rule, 2026-08-02⟫ "If it is in the
+  // OWL, it has to come out of the graph." The manifest is expected to stay EMPTY:
+  // zero loss means zero, with nothing argued at the margin.
+  // ---------------------------------------------------------------------------------
+  "exclusionManifest": [],
+
+  // ---------------------------------------------------------------------------------
+  // P-4 — skos:definition must be ATTRIBUTED before it is implemented. 13,023 statements
+  // whose relationship to the dc:description we already carry is unestablished. Set
+  // `recorded` true ONLY when a written finding exists with counts, and name it here.
+  // ---------------------------------------------------------------------------------
+  "skosDefinitionFinding": {
+    "recorded": false,
+    "findingPath": "",
+    "note": "NOT YET INVESTIGATED. Nobody has compared skos:definition text against dc:description text. Implementing before this is answered risks carrying 13,023 duplicate statements or missing a distinct matching signal."
+  },
+
+  // ---------------------------------------------------------------------------------
+  // R-1 — round-trip must run on every CEDS forge and FAIL THE BUILD on loss, not merely
+  // report it. Proving fidelity once and keeping it true are different projects.
+  // ---------------------------------------------------------------------------------
+  "gateOfRecord": {
+    "wired": false,
+    "note": "NOT YET WIRED. The verb exists and the suite exists; nothing yet fails a build. Until this is true, a regression would be reported and ignored."
+  },
+
+  // ---------------------------------------------------------------------------------
+  // M-5 — test-claim hygiene. Environmental failures are attributed precisely, never
+  // aggregated. '12 x better-sqlite3 bindings + 1 x missing js-yaml (forges/case)',
+  // never '13 x better-sqlite3'. One wrong attribution invites doubt about the other 12.
+  // Each entry is one PRECISE attribution; an aggregate entry is a defect.
+  // ---------------------------------------------------------------------------------
+  "environmentalFailureAttributions": [
+    {
+      "count": 12,
+      "cause": "better-sqlite3 native binding not compiled in that worktree",
+      "scope": "worktree p13-cedsRoundTrip only",
+      "aggregate": false
+    },
+    {
+      "count": 1,
+      "cause": "missing js-yaml",
+      "scope": "forges/case, worktree p13-cedsRoundTrip only",
+      "aggregate": false
+    }
+  ],
+
+  // ---------------------------------------------------------------------------------
+  // R-4 — this suite never writes to a graph. Every measure is MATCH/RETURN. The count
+  // is maintained by the measures module, which refuses to issue a write clause at all;
+  // this entry records the standing claim so the gate has something to compare against.
+  // ---------------------------------------------------------------------------------
+  "graphWriteAttempts": 0
+}

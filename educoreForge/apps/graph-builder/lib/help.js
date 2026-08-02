@@ -28,6 +28,7 @@ SYNOPSIS
      graphBuilder   -retrievalMetrics --pairKey=<pairKey> [--generation=<generation>]
      graphBuilder   -cedsRoundTrip --containerName=<name> [--sourcePath=<path>]
                                    [--outPath=<path>] [--reportPath=<path>]
+     graphBuilder   -cedsGates --containerName=<name> [--reportJsonPath=<path>]
      graphBuilder   -help
 
      ... | graphBuilder                (JSON on stdin REPLACES command-line parameters)
@@ -81,6 +82,38 @@ COMMANDS
                   "The winner merely carried a nomination" is the WEAKER claim -- cosine may well
                   have retrieved it anyway. Reporting the second as the first is the specific
                   error this verb was built to end (155 reported where the true count was 20).
+     -cedsGates
+                  RUN THE CEDS FIDELITY GATE SUITE -- 46 gates declared as DATA in
+                  forges/ceds/gates/cedsFidelityGates.jsonc, evaluated against the named
+                  container and against the round-trip report.
+
+                  THE VERDICT IS A WORD, NEVER A PERCENTAGE. Acceptance is zero FAIL, zero
+                  UNMEASURED and zero UNPROVEN. A tampered emission carrying four fabricated
+                  statements still reported 71.936% fidelity -- proven live -- so no percentage
+                  participates in any acceptance decision here.
+
+                  EVERY GATE CARRIES A TWIN, a named fault injection that must turn it RED. A
+                  gate whose twin has not been observed reports UNPROVEN and can never be PASS:
+                  a gate never seen failing is unproven.
+
+                  A RED SUITE DURING ENRICHMENT IS CORRECT and its redness is the work order.
+                  There is deliberately no expected-to-fail state; that is masking. An
+                  UNMEASURED gate means nobody supplied the measure, which is a FAILURE rather
+                  than a skip -- a gate passing because it was never measured is the exact bug
+                  the suite exists to prevent, and the reason is printed for each one.
+
+                  READ-ONLY. Every measure is MATCH/RETURN, enforced mechanically before any
+                  statement is issued. Exit status 0 only when the suite is ACCEPTED.
+
+     --containerName=<name>
+                  REQUIRED for -cedsGates, no default: gates are always measured AGAINST one
+                  materialized graph.
+
+     --reportJsonPath=<path>
+                  OPTIONAL for -cedsGates: the JSON sidecar from -cedsRoundTrip. Omitting it
+                  leaves every report-derived gate UNMEASURED, which the suite reports as a
+                  failure rather than passing them by default.
+
      -cedsRoundTrip
                   MEASURE CEDS ROUND-TRIP FIDELITY -- compile a materialized CEDS graph back into
                   RDF/XML and diff that emission against the source ontology. The CEDS OWL source

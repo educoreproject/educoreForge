@@ -946,6 +946,176 @@ const cedsRoundTripAction = (callback) => {
 	});
 };
 
+// ---------------------------------------------------------------------
+// -cedsGates
+// ---------------------------------------------------------------------
+// ⟪TQ, 2026-08-02⟫ "Please enhance the spec with very thorough gates."
+//
+// Runs the CEDS fidelity gate suite: 46 gates declared as DATA in
+// forges/ceds/gates/cedsFidelityGates.jsonc, evaluated by roundTripGates, measured by
+// roundTripGateMeasures, and proven by roundTripGateTwins.
+//
+// THE VERDICT IS A WORD, NEVER A PERCENTAGE. Acceptance is zero FAIL, zero UNMEASURED and
+// zero UNPROVEN. A tampered emission carrying four fabricated statements still reported
+// 71.936% -- proven live during the audit -- so a percentage cannot be trusted to decide
+// anything, and none participates here.
+//
+// A RED SUITE DURING ENRICHMENT IS CORRECT. Its redness is the work order. There is
+// deliberately no expected-to-fail state; that is masking with a lanyard (gate M-2).
+//
+// READ-ONLY. Every measure is MATCH/RETURN and refuseIfWriteClause enforces it mechanically
+// before any statement is issued.
+
+const requireGatesLib = () =>
+	require(path.join(__dirname, '..', '..', '..', 'forges', 'ceds', 'lib', 'roundTripGates'));
+const requireGateMeasuresLib = () =>
+	require(path.join(__dirname, '..', '..', '..', 'forges', 'ceds', 'lib', 'roundTripGateMeasures'));
+const requireGateTwinsLib = () =>
+	require(path.join(__dirname, '..', '..', '..', 'forges', 'ceds', 'lib', 'roundTripGateTwins'));
+
+const cedsGatesAction = (callback) => {
+	const { xLog, commandLineParameters } = process.global;
+
+	const containerName = firstValue(commandLineParameters, 'containerName');
+	if (!containerName) {
+		callback(
+			`graphBuilder -cedsGates: --containerName=<name> is REQUIRED and has no default. Gates ` +
+				`are always measured AGAINST one materialized graph; there is no "whichever graph ` +
+				`happens to be running".`,
+		);
+		return;
+	}
+	const reportJsonPath = firstValue(commandLineParameters, 'reportJsonPath');
+
+	const gatesLib = requireGatesLib()();
+	const measuresLib = requireGateMeasuresLib()();
+	const twinsLib = requireGateTwinsLib()();
+
+	gatesLib.loadGateDeclarations({}, (loadError, loadResult) => {
+		if (loadError) {
+			callback(`graphBuilder -cedsGates: ${loadError}`);
+			return;
+		}
+		const { declarations } = loadResult;
+
+		measuresLib.loadSuiteFacts({}, (factsError, factsResult) => {
+			if (factsError) {
+				callback(`graphBuilder -cedsGates: ${factsError}`);
+				return;
+			}
+
+			// The round-trip report is OPTIONAL input. Without it every report-derived gate goes
+			// UNMEASURED, which is a failure and says so -- rather than a silent pass.
+			let report = null;
+			if (reportJsonPath) {
+				if (!fs.existsSync(reportJsonPath)) {
+					callback(
+						`graphBuilder -cedsGates: --reportJsonPath '${reportJsonPath}' does not exist. ` +
+							`Run -cedsRoundTrip first, or omit the flag and accept UNMEASURED report gates.`,
+					);
+					return;
+				}
+				report = JSON.parse(fs.readFileSync(reportJsonPath, 'utf8'));
+			} else {
+				measuresLib.record(
+					'report:*',
+					'no --reportJsonPath was given, so no round-trip report was supplied',
+				);
+			}
+
+			xLog.status(`graphBuilder: -cedsGates measuring '${containerName}' (read-only)`);
+
+			measuresLib.measureGraph({ containerName }, (graphError, graphResult) => {
+				if (graphError) {
+					callback(`graphBuilder -cedsGates: ${graphError}`);
+					return;
+				}
+				measuresLib.deriveCanonicalProbes((canonicalError, canonicalProbes) => {
+					if (canonicalError) {
+						callback(`graphBuilder -cedsGates: ${canonicalError}`);
+						return;
+					}
+					measuresLib.deriveDiffProbes((diffProbeError, diffProbes) => {
+						if (diffProbeError) {
+							callback(`graphBuilder -cedsGates: ${diffProbeError}`);
+							return;
+						}
+						measuresLib.recordDeferredMeasures();
+
+						const measurements = {
+							report: { ...(report || {}), ...measuresLib.deriveReportMeasures({ report }) },
+							graph: graphResult.graphMeasures,
+							probe: {
+								...measuresLib.deriveStaticProbes(),
+								...canonicalProbes,
+								...diffProbes,
+							},
+							suite: {},
+						};
+
+						// Twins run FIRST: a gate can only be PASS once its twin has been watched
+						// turning it RED, so the observation set is an input to the evaluation.
+						gatesLib.runTwins(
+							{ declarations, measurements, twinRegistry: twinsLib.twinRegistry },
+							(twinError, twinResult) => {
+								if (twinError) {
+									callback(`graphBuilder -cedsGates: ${twinError}`);
+									return;
+								}
+								measurements.suite = measuresLib.deriveSuiteMeasures({
+									declarations,
+									suiteFacts: factsResult.suiteFacts,
+									observedTwins: twinResult.observedTwins,
+								});
+
+								gatesLib.evaluateSuite(
+									{ declarations, measurements, observedTwins: twinResult.observedTwins },
+									(evaluateError, evaluateResult) => {
+										if (evaluateError) {
+											callback(`graphBuilder -cedsGates: ${evaluateError}`);
+											return;
+										}
+										gatesLib.renderSuiteText(
+											{
+												suiteResult: evaluateResult.suiteResult,
+												twinReports: twinResult.twinReports,
+											},
+											(renderError, rendered) => {
+												if (renderError) {
+													callback(`graphBuilder -cedsGates: ${renderError}`);
+													return;
+												}
+												const unsuppliedLines = measuresLib.unsupplied.length
+													? [
+															'',
+															'-'.repeat(96),
+															'UNSUPPLIED MEASURES — why these gates read UNMEASURED',
+															'-'.repeat(96),
+														].concat(
+															measuresLib.unsupplied.map(
+																(one) => `  ${one.name}\n      ${one.reason}`,
+															),
+														)
+													: [];
+												callback('', {
+													exitCode: evaluateResult.suiteResult.accepted ? 0 : 1,
+													resultText: [rendered.text]
+														.concat(unsuppliedLines)
+														.join('\n'),
+												});
+											},
+										);
+									},
+								);
+							},
+						);
+					});
+				});
+			});
+		});
+	});
+};
+
 return {
 	build,
 	validate,
@@ -953,6 +1123,7 @@ return {
 	replay,
 	retrievalMetrics: retrievalMetricsAction,
 	cedsRoundTrip: cedsRoundTripAction,
+	cedsGates: cedsGatesAction,
 	scanAvailableForges,
 };
 };
