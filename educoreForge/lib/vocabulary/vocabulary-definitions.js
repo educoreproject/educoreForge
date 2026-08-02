@@ -37,6 +37,8 @@ const TERM_DEFINITIONS = {
 		HAS_OPTION_SET: 'Property or root to the enumerated option set constraining its values.',
 		HAS_VALUE: 'Option set to one of its enumerated option values.',
 		SUBCLASS_OF: 'Class to its parent class (specialization hierarchy within one standard).',
+		HAS_EDIT_HISTORY:
+			'Element to one record of its own change history. Ordered by the entry\'s `sequence`, which is its position in the SOURCE FILE and deliberately not its position in time -- CEDS\'s own ordering is untidy (P000225 runs 10, 11, 12, 3, 4, 7, 8) and tidying it would break round-trip fidelity.',
 		REFERENCES: 'Generic intra-standard reference between structural nodes.',
 		HAS_SUPPORT: 'Node to producer-specific supporting material (documentation fragments, examples).',
 		REFERENCES_TYPE: 'Property/field to the named type it references within its own standard.',

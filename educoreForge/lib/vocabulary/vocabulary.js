@@ -51,6 +51,13 @@ const DME_ROLES = {
 	OPTION_SET: 'DmeOptionSet',
 	OPTION_VALUE: 'DmeOptionValue',
 	SUPPORT: 'DmeSupport',
+	// A CEDS change-history record. ⟪TQ ruling, 2026-08-02⟫ change history becomes NODES,
+	// not a JSON blob: a blob round-trips perfectly and answers nothing, and the point of
+	// holding this in a graph is to ask "what changed in 14.0.0.0" and "which elements we
+	// mapped against have moved since". Carries no embedding, so it never enters the single
+	// golden_vector index and stays invisible to the DME's semantic search -- the same
+	// treatment HubReference already gets.
+	EDIT_HISTORY_ENTRY: 'DmeEditHistoryEntry',
 };
 
 // =====================================================================
@@ -66,6 +73,7 @@ const EDGE_TYPES = {
 	REFERENCES: 'REFERENCES',
 	HAS_SUPPORT: 'HAS_SUPPORT',
 	REFERENCES_TYPE: 'REFERENCES_TYPE',
+	HAS_EDIT_HISTORY: 'HAS_EDIT_HISTORY',
 };
 
 // LEGACY mapping/bridge edge types (emitter edf-bridge RETIRED 2026-07-04). Kept deliberately: the

@@ -244,6 +244,19 @@ const READ_PROPERTY_NAMES = [
 	'maxCount',
 	'issueLink',
 	'editHistory',
+	// DmeEditHistoryEntry's own fields. ⟪TQ ruling, 2026-08-02⟫ change history is NODES, so the
+	// reader must project the entry's properties or the serializer receives objects with every
+	// field undefined and writes an EMPTY <editHistoryEntry> element -- which is exactly what
+	// the first run did: 3,849 statements INVENTED (empty entries whose content hash matches
+	// nothing) while the source's 8,562 stayed LOST. A closed projection list is the same
+	// disease as the parser's closed field list, one layer down, and it fails the same silent
+	// way: the structure is present and says nothing.
+	'sequence',
+	'changeDescription',
+	'changeVersion',
+	'changeNew',
+	'changeUpdated',
+	'changePropertyAddedToClass',
 ];
 
 const DEFAULT_PAGE_SIZE = 2000;
@@ -686,7 +699,19 @@ const moduleFunction =
 			const readAll = (callback) => {
 				const taskList = new taskListPlus();
 
-				['DmeStandardRoot', 'DmeClass', 'DmeProperty', 'DmeOptionSet', 'DmeOptionValue'].forEach(
+				// DmeEditHistoryEntry joins Layer 1 as of 2026-08-02. ⟪TQ ruling⟫ change history is
+				// NODES, not a blob, so the compiler must reassemble each element's history from
+				// its entry nodes rather than parse a JSON property. Owner and order are both
+				// recoverable from the entry alone: its uri is `<ownerUri>#editHistory/<sequence>`,
+				// derived precisely so this reassembly needs no extra query and no extra property.
+				[
+					'DmeStandardRoot',
+					'DmeClass',
+					'DmeProperty',
+					'DmeOptionSet',
+					'DmeOptionValue',
+					'DmeEditHistoryEntry',
+				].forEach(
 					(oneRole) => {
 						taskList.push((args, next) => {
 							readRolePaged({ role: oneRole }, (readError, result) => {
@@ -757,6 +782,7 @@ const moduleFunction =
 							propertyNodes: args.DmeProperty,
 							optionSetNodes: args.DmeOptionSet,
 							optionValueNodes: args.DmeOptionValue,
+						editHistoryEntryNodes: args.DmeEditHistoryEntry,
 							subClassOfPairs: args.subClassOf,
 							rangePairs: args.range,
 							inSchemePairs: args.inScheme,
@@ -794,6 +820,7 @@ const moduleFunction =
 				propertyNodes,
 				optionSetNodes,
 				optionValueNodes,
+				editHistoryEntryNodes,
 				subClassOfPairs,
 				rangePairs,
 				inSchemePairs,
@@ -801,6 +828,38 @@ const moduleFunction =
 			callback,
 		) => {
 			const listOf = (value) => (Array.isArray(value) ? value : []);
+
+			// ---------------------------------------------------------------------------
+			// editHistoryByOwnerUri — reassemble each element's change history IN FILE ORDER
+			// ---------------------------------------------------------------------------
+			// ⟪TQ ruling, 2026-08-02⟫ change history lives as NODES. Each entry's uri is
+			// `<ownerUri>#editHistory/<sequence>`, minted that way precisely so both the owner
+			// and the position are recoverable from the entry alone -- no join, no extra query.
+			//
+			// SORTED BY `sequence`, WHICH IS FILE POSITION AND NOT CHRONOLOGY. Neo4j returns
+			// rows in no guaranteed order, so the sort is mandatory rather than cosmetic. And it
+			// must sort on sequence: CEDS's own ordering is untidy (P000225 runs 10, 11, 12, 3,
+			// 4, 7, 8) and sorting by changeVersion would emit a tidier document that no longer
+			// matches the source -- loss and invention in the same move.
+			const editHistoryByOwnerUri = (entryNodes) => {
+				const byOwner = {};
+				listOf(entryNodes).forEach((oneNode) => {
+					const uri = oneNode && oneNode.uri;
+					const separatorAt = typeof uri === 'string' ? uri.indexOf('#editHistory/') : -1;
+					if (separatorAt < 1) {
+						return;
+					}
+					const ownerUri = uri.slice(0, separatorAt);
+					byOwner[ownerUri] = byOwner[ownerUri] || [];
+					byOwner[ownerUri].push(oneNode);
+				});
+				Object.keys(byOwner).forEach((oneOwnerUri) => {
+					byOwner[oneOwnerUri].sort(
+						(left, right) => Number(left.sequence || 0) - Number(right.sequence || 0),
+					);
+				});
+				return byOwner;
+			};
 
 			// valueListOf — read a graph property that MAY have been scalarized. The replay engine
 			// unwraps single-element arrays at MERGE (its deliberate PG-JSON convention), so a
@@ -827,6 +886,16 @@ const moduleFunction =
 			// cedsId -> uri, built from the CLASS nodes only. schema:domainIncludes always points at a
 			// class, and the CEDS forge records the full resolvable domain list as canonical class ids
 			// (allDomainIds) rather than as URIs, so this map is what turns them back into subjects.
+			// One pass over the entry nodes; every entity below then looks up its own history.
+			const historyByOwnerUri = editHistoryByOwnerUri(editHistoryEntryNodes);
+			const attachEditHistory = (entity) => {
+				const entries = historyByOwnerUri[entity.uri];
+				if (entries && entries.length) {
+					entity.editHistory = entries;
+				}
+				return entity;
+			};
+
 			const classUriByCedsId = {};
 			listOf(classNodes).forEach((oneNode) => {
 				if (oneNode && oneNode.cedsId && oneNode.uri) {
@@ -837,7 +906,7 @@ const moduleFunction =
 			const unresolvedDomainIds = [];
 
 			const classes = listOf(classNodes).map((oneNode) => {
-				const entity = entityFromNode(oneNode);
+				const entity = attachEditHistory(entityFromNode(oneNode));
 				const parents = subClassOfByUri[entity.uri];
 				if (parents && parents.length) {
 					entity.subClassOf = parents;
@@ -846,7 +915,7 @@ const moduleFunction =
 			});
 
 			const properties = listOf(propertyNodes).map((oneNode) => {
-				const entity = entityFromNode(oneNode);
+				const entity = attachEditHistory(entityFromNode(oneNode));
 				// domainIncludes: the FULL resolvable list when the forge stamped one (allDomainIds),
 				// otherwise the single address slot. Both are canonical class ids, mapped back to URIs.
 				//
@@ -889,7 +958,7 @@ const moduleFunction =
 			});
 
 			const optionSets = listOf(optionSetNodes).map((oneNode) => {
-				const entity = entityFromNode(oneNode);
+				const entity = attachEditHistory(entityFromNode(oneNode));
 				// The explicit skos:ConceptScheme type IS what makes this node an option set in the
 				// source, and the node's role is the graph's record of that same fact.
 				entity.typeResources = [SKOS_CONCEPT_SCHEME];
@@ -901,7 +970,7 @@ const moduleFunction =
 			});
 
 			const optionValues = listOf(optionValueNodes).map((oneNode) => {
-				const entity = entityFromNode(oneNode);
+				const entity = attachEditHistory(entityFromNode(oneNode));
 				const schemes = inSchemeByUri[entity.uri] || [];
 				if (schemes.length > 1) {
 					// One value in two schemes is not a shape this serializer can write honestly

@@ -206,6 +206,62 @@ const extractGenericAnnotations = (element, faults) => {
 	return carried;
 };
 
+// ============================================================
+// editHistory — the one nested structure, extracted as ORDERED RECORDS
+// ============================================================
+//
+// ⟪TQ ruling, 2026-08-02⟫ change history becomes NODES, not a JSON blob. A blob would
+// round-trip perfectly and answer nothing; the whole reason to hold this in a graph is to
+// be able to ask "what changed in 14.0.0.0" and "which elements we mapped against have
+// moved since".
+//
+// ORDER IS LOAD-BEARING AND IT IS NOT CHRONOLOGICAL. The source marks editHistory as
+// rdf:parseType="Collection" -- an ORDERED list -- and CEDS's own ordering is untidy.
+// P000225 "Has Program Type" carries seven entries in file order 10, 11, 12, 3, 4, 7, 8.
+// Sorting them by version is the obvious, helpful, WRONG thing: it produces a graph that
+// reads better and can no longer regenerate the file it came from. `sequence` below is the
+// position in the FILE, never the position in time. The chronological view is a query
+// (ORDER BY changeVersion) and costs nothing.
+//
+// 1,623 entities carry a history; 1,920 entries in total; 210 entities carry more than one
+// (155 have two, and a lone property has seven).
+
+const EDIT_HISTORY_ENTRY_FIELDS = [
+	'changeDescription',
+	'changeVersion',
+	'changeNew',
+	'changeUpdated',
+	'changePropertyAddedToClass',
+	'issueLink',
+];
+
+const extractEditHistory = (element) => {
+	const historyBlocks = element['editHistory'];
+	if (!historyBlocks || !historyBlocks.length) {
+		return undefined;
+	}
+	const entries = [];
+	historyBlocks.forEach((oneBlock) => {
+		if (!oneBlock || typeof oneBlock !== 'object') {
+			return;
+		}
+		(oneBlock['editHistoryEntry'] || []).forEach((oneEntry) => {
+			if (!oneEntry || typeof oneEntry !== 'object') {
+				return;
+			}
+			const record = { sequence: entries.length };
+			EDIT_HISTORY_ENTRY_FIELDS.forEach((oneField) => {
+				const value = getText(oneEntry, oneField);
+				if (value !== undefined && value !== '') {
+					record[oneField] = value;
+				}
+			});
+			entries.push(record);
+		});
+	});
+	return entries.length ? entries : undefined;
+};
+
 const extractBaseProperties = (element, faults) => {
 	const uri = getAttr(element, 'rdf:about');
 	return {
@@ -220,6 +276,10 @@ const extractBaseProperties = (element, faults) => {
 		// field that isn't one of the ones I already know about", which is a subtractive rule
 		// that silently changes meaning every time either side gains a field.
 		annotations: extractGenericAnnotations(element, faults),
+
+		// The one nested structure, in FILE order. Becomes NODES in the forge, never a
+		// property -- see extractEditHistory above for why the order must not be tidied.
+		editHistory: extractEditHistory(element),
 	};
 };
 

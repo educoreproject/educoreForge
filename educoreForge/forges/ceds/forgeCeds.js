@@ -42,6 +42,21 @@ const { deriveVersionStamp } = require(
 const { NODE_LABELS, DME_ROLES, EDGE_TYPES, PROVENANCE_TIER, CANONICAL_ADDRESS_PROPERTIES } = require(
 	path.join(CORE_LIB, 'vocabulary', 'vocabulary'),
 );
+
+
+// EDIT_HISTORY_ENTRY_PROPERTY_NAMES — the fields one change record may carry, named exactly as
+// the SOURCE names them, which is what the round-trip compiler's EDIT_HISTORY_ENTRY_FIELDS
+// already expects. Only changeDescription and changeVersion are present on every entry;
+// issueLink appears on 604, changeUpdated on 385, changeNew on 172, and
+// changePropertyAddedToClass on 18.
+const EDIT_HISTORY_ENTRY_PROPERTY_NAMES = [
+	'changeDescription',
+	'changeVersion',
+	'changeNew',
+	'changeUpdated',
+	'changePropertyAddedToClass',
+	'issueLink',
+];
 // canonical-address component property NAMES, now sourced from the registry (Phase 3 promotion of the
 // Phase-2 local literals; HANDOFF (d)). Byte-identical: same key strings, proven by forgeStructuralFingerprint.
 const A = CANONICAL_ADDRESS_PROPERTIES;
@@ -232,6 +247,73 @@ const moduleFunction =
 				return { node, canonicalCedsId, stableId };
 			};
 
+			// ---------------------------------------------------------------------------
+			// addEditHistoryNodes — one node per change record, ORDERED BY FILE POSITION
+			// ---------------------------------------------------------------------------
+			// ⟪TQ ruling, 2026-08-02⟫ change history becomes NODES, not a JSON blob. The blob
+			// would round-trip perfectly and answer nothing; the reason to hold this in a graph
+			// is to be able to ask "what changed in 14.0.0.0" and "which of the elements we
+			// mapped against have moved since".
+			//
+			// IDENTITY IS DERIVED, AND THAT IS LOAD-BEARING. These records are ANONYMOUS in the
+			// source -- no id, no URI, nothing to key on. Every forged node must carry a clean
+			// stableId, so one has to be minted. It is `<owner uri>#editHistory/<sequence>`:
+			// reproducible from the source alone, so forging twice yields the same ids and the
+			// byte-identical replay the whole build rests on still holds. Anything incidental
+			// (a counter, a hash of run state) would make every rebuild look like a change.
+			//
+			// SEQUENCE IS FILE ORDER, NEVER CHRONOLOGY. editHistory is rdf:parseType="Collection",
+			// an ORDERED list, and CEDS's own ordering is untidy -- P000225 runs 10, 11, 12, 3,
+			// 4, 7, 8. Sorting by version is the obvious helpful thing and it would produce a
+			// graph that reads better and can no longer regenerate the file it came from. The
+			// chronological view is a query (ORDER BY changeVersion) and costs nothing.
+			//
+			// NO EMBEDDING and NO searchText: these must never enter the single golden_vector
+			// index, or a search for a school would start returning changelog entries. Same
+			// treatment HubReference already gets (0 of 29,788 embedded).
+			const addEditHistoryNodes = ({ ownerStableId, ownerCedsId, editHistory }) => {
+				if (!editHistory || !editHistory.length) {
+					return;
+				}
+				editHistory.forEach((oneEntry) => {
+					const stableId = `${ownerStableId}#editHistory/${oneEntry.sequence}`;
+					const entryProperties = {
+						_id: idFor(`${ownerCedsId}#editHistory/${oneEntry.sequence}`),
+						_source: 'CEDS',
+						role: DME_ROLES.EDIT_HISTORY_ENTRY,
+						uri: stableId,
+						name: `${ownerCedsId} change ${oneEntry.sequence}`,
+						sequence: oneEntry.sequence,
+						ownerCedsId,
+						// The universal structural contract requires every forged node to declare its
+						// place in the ownership chain. The first build of these nodes omitted it and
+						// the contract refused all 1,913 of them by name -- which is the apparatus
+						// working: a node with no parent is unreachable by every traversal the DME
+						// makes, and would have been invisible rather than wrong.
+						// depth is DERIVED by the shared finalizer from the chain length; only the
+						// parent referent and the path are stated here.
+						parentId: ownerStableId,
+						path: `${ownerCedsId}.editHistory[${oneEntry.sequence}]`,
+					};
+					EDIT_HISTORY_ENTRY_PROPERTY_NAMES.forEach((oneName) => {
+						if (oneEntry[oneName] !== undefined && oneEntry[oneName] !== '') {
+							entryProperties[oneName] = oneEntry[oneName];
+						}
+					});
+					nodes.push({
+						labels: [
+							NODE_LABELS.FORGED_NODE,
+							'CedsOntology',
+							DME_ROLES.EDIT_HISTORY_ENTRY,
+						],
+						stableId,
+						role: DME_ROLES.EDIT_HISTORY_ENTRY,
+						properties: entryProperties,
+					});
+					addEdge(EDGE_TYPES.HAS_EDIT_HISTORY, ownerStableId, stableId);
+				});
+			};
+
 			// edge — canonical ownership/reference edge, stamped structural (DECISIONS §11).
 			const addEdge = (type, fromStableId, toStableId) => {
 				edges.push({
@@ -305,6 +387,11 @@ const moduleFunction =
 				classCanonicalByUri[cls.uri] = { className, stableId: built.stableId };
 				// HAS_CLASS: root -> class (canonical ownership)
 				addEdge(EDGE_TYPES.HAS_CLASS, metadata.sourceUrl, built.stableId);
+				addEditHistoryNodes({
+					ownerStableId: built.stableId,
+					ownerCedsId: built.canonicalCedsId,
+					editHistory: cls.editHistory,
+				});
 			});
 
 			// SUBCLASS_OF (after all classes exist so the parent stableId is resolvable)
@@ -461,6 +548,11 @@ const moduleFunction =
 
 				// HAS_PROPERTY: owning class -> property (immediate containment, DESIGN §F)
 				addEdge(EDGE_TYPES.HAS_PROPERTY, parentStableId, built.stableId);
+				addEditHistoryNodes({
+					ownerStableId: built.stableId,
+					ownerCedsId: built.canonicalCedsId,
+					editHistory: prop.editHistory,
+				});
 
 				// HAS_OPTION_SET: property -> option set (range that is itself an option set)
 				(prop.rangeRefs || []).forEach((rangeUri) => {
@@ -493,6 +585,11 @@ const moduleFunction =
 					structural: { parentId: metadata.sourceUrl, depth: 2, path: setName },
 				});
 				optionSetCanonicalByUri[os.uri] = { setName, stableId: built.stableId };
+				addEditHistoryNodes({
+					ownerStableId: built.stableId,
+					ownerCedsId: built.canonicalCedsId,
+					editHistory: os.editHistory,
+				});
 			});
 
 			// ---- DmeOptionValue nodes (each carries its set + owner in searchText) ----
@@ -537,6 +634,11 @@ const moduleFunction =
 				if (owningSet) {
 					addEdge(EDGE_TYPES.HAS_VALUE, owningSet.stableId, built.stableId);
 				}
+				addEditHistoryNodes({
+					ownerStableId: built.stableId,
+					ownerCedsId: built.canonicalCedsId,
+					editHistory: ov.editHistory,
+				});
 			});
 
 			// the shared contract finalizer (M7/M8): parentId referent enforced, depth derived
@@ -552,10 +654,22 @@ const moduleFunction =
 		// =====================================================================
 
 		const embedNodes = ({ nodes, nodeSubsetLimit }, callback) => {
+			// NOT EVERY NODE IS SEARCHABLE. DmeEditHistoryEntry carries no searchText by design:
+			// there is ONE vector index in the published graph, golden_vector on
+			// :ForgedNode(embedding), so anything embedded becomes a semantic-search result. A
+			// search for "school" must never start returning changelog entries. Excluded here the
+			// same way HubReference already is -- by carrying no embedding at all (0 of 29,788).
+			//
+			// This exclusion was found by the embedder REFUSING an empty text rather than
+			// embedding whitespace, which is the right failure: a node with nothing to say should
+			// not be given a vector that says something.
+			const embeddableNodes = nodes.filter(
+				(oneNode) => oneNode.role !== DME_ROLES.EDIT_HISTORY_ENTRY,
+			);
 			const targetNodes =
-				nodeSubsetLimit && nodeSubsetLimit < nodes.length
-					? nodes.slice(0, nodeSubsetLimit)
-					: nodes;
+				nodeSubsetLimit && nodeSubsetLimit < embeddableNodes.length
+					? embeddableNodes.slice(0, nodeSubsetLimit)
+					: embeddableNodes;
 
 			const batches = [];
 			for (let i = 0; i < targetNodes.length; i += EMBED_BATCH_SIZE) {
