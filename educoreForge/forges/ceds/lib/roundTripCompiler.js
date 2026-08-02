@@ -108,6 +108,14 @@ const GRAPH_PROPERTY_BY_FIELD = {
 	definition: 'definition', // skos:definition       — NOT carried today
 	notation: 'notation', // skos:notation         — carried
 	prefLabel: 'prefLabel', // skos:prefLabel        — NOT carried today
+	// FOUR lists must agree before ONE field emits: this map, READ_PROPERTY_NAMES (what the
+	// reader projects), FIELD_ORDER_BY_KIND (which kinds may carry it) and FIELD_EMISSION (how
+	// it becomes XML). Miss any one and the field vanishes SILENTLY -- no error, no warning,
+	// just a statement reported LOST that is sitting in the graph the whole time. That is
+	// exactly what happened to these three: they were in three of the four.
+	alternative: 'alternative', // dc:alternative
+	equivalentProperty: 'equivalentProperty', // owl:equivalentProperty
+	closeMatch: 'closeMatch', // skos:closeMatch
 	deprecated: 'deprecated', // owl:deprecated        — NOT carried today
 	textFormat: 'textFormat', // textFormat            — carried
 	maxLength: 'maxLength', // maxLength             — carried
@@ -139,6 +147,17 @@ const SCALAR_ANNOTATION_FIELDS = [
 	'notation',
 	'prefLabel',
 	'deprecated',
+	// THE LONG TAIL, added 2026-08-02. These were already IN the graph -- the parser's open-list
+	// rule carries them -- and were reported LOST purely because this serializer had no slot to
+	// write them back out. A forge gap and a compiler gap look identical in the diff, which is
+	// why each remaining predicate was attributed to a side before anything was written.
+	// MEASURED: alternative on 4 properties (6 statements, two of them genuinely two-valued),
+	// equivalentProperty on option set C001397, closeMatch on option value NI001943162280.
+	// rdfs:range and rdfs:isDefinedBy are deliberately NOT here: they occur ONLY on the
+	// meta-vocabulary declarations the forge does not build, so they belong to that work item.
+	'alternative',
+	'equivalentProperty',
+	'closeMatch',
 ];
 const FIELD_ORDER_BY_KIND = {
 	ontology: ['versionInfo'],
@@ -180,6 +199,11 @@ const FIELD_EMISSION = {
 	definition: { element: 'skos:definition', objectKind: 'literal' },
 	notation: { element: 'skos:notation', objectKind: 'literal' },
 	prefLabel: { element: 'skos:prefLabel', objectKind: 'literal' },
+	// many: true -- P000725 and P000972 each declare TWO alternate titles. Without it the
+	// single-valued refusal fires and the emission is (correctly) refused rather than truncated.
+	alternative: { element: 'dc:alternative', objectKind: 'literal', many: true },
+	equivalentProperty: { element: 'owl:equivalentProperty', objectKind: 'resource' },
+	closeMatch: { element: 'skos:closeMatch', objectKind: 'resource' },
 	deprecated: { element: 'owl:deprecated', objectKind: 'literal', datatype: XSD_BOOLEAN },
 	textFormat: { element: 'textFormat', objectKind: 'literal' },
 	maxLength: { element: 'maxLength', objectKind: 'literal' },
@@ -251,6 +275,15 @@ const READ_PROPERTY_NAMES = [
 	// nothing) while the source's 8,562 stayed LOST. A closed projection list is the same
 	// disease as the parser's closed field list, one layer down, and it fails the same silent
 	// way: the structure is present and says nothing.
+	// THE THIRD TIME A CLOSED LIST HAS SILENTLY DROPPED DATA TODAY: the parser's closed field
+	// list, then this projection missing the editHistory entry fields, and now this projection
+	// missing the long tail. Each time the symptom was different -- 57,547 statements never
+	// captured, then 3,849 INVENTED empty elements, then 8 statements sitting in the graph and
+	// reported LOST -- and each time the cause was a hand-maintained enumeration that a new
+	// field had to be remembered into. Worth a standing suspicion of every list in this file.
+	'alternative',
+	'equivalentProperty',
+	'closeMatch',
 	'sequence',
 	'changeDescription',
 	'changeVersion',
