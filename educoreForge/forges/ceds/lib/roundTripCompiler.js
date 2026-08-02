@@ -334,11 +334,26 @@ const moduleFunction =
 		// XML WRITING
 		// =====================================================================
 
+		// escapeText — the three XML metacharacters, PLUS the carriage return.
+		//
+		// THE CARRIAGE RETURN IS NOT COSMETIC, and it is not anyone's bug. XML 1.0 §2.11 REQUIRES
+		// every conformant parser to normalize a literal CR or CRLF to a single LF on input.
+		// CHARACTER REFERENCES ESCAPE THAT RULE: `&#13;` survives as a real carriage return.
+		//
+		// CEDS uses 62 `&#13;` references and zero raw CR bytes. So the source says "there is a
+		// carriage return here" in the only way XML allows you to say it. Writing the character
+		// back out RAW says something weaker: the next parser dutifully normalizes it to LF and
+		// the literal quietly changes. That is a real difference of 20 triples under strict RDF,
+		// invisible to our own canonicalizer because it collapses whitespace on both sides.
+		//
+		// Found by comparing against rdflib -- an independent RDF parser sharing no code with
+		// this one -- which is exactly the check our own instrument could not perform on itself.
 		const escapeText = (value) =>
 			String(value)
 				.replace(/&/g, '&amp;')
 				.replace(/</g, '&lt;')
-				.replace(/>/g, '&gt;');
+				.replace(/>/g, '&gt;')
+				.replace(/\r/g, '&#13;');
 
 		const escapeAttribute = (value) => escapeText(value).replace(/"/g, '&quot;');
 
