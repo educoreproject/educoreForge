@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+	<xs:element name="FixtureTranscript" type="FixtureEnrollmentType">
+		<xs:annotation>
+			<xs:documentation>The fixture's typed root message element.</xs:documentation>
+		</xs:annotation>
+	</xs:element>
+	<xs:element name="FixtureSummary">
+		<xs:annotation>
+			<xs:documentation>The fixture's inline-typed root message element.</xs:documentation>
+		</xs:annotation>
+		<!-- inline members are SELF-CLOSING deliberately: the incumbent parser's regex consumes
+		     the first close tag as the outer element's terminator, so an EXPANDED inline member
+		     (one carrying its own annotation) is invisible to it. The fixture exercises what the
+		     chain carries; the expanded-member loss class shows honestly in the real census. -->
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="SummaryTitle" type="xs:string"/>
+				<xs:element name="SummaryStatus" type="FixtureStatusCodeType" minOccurs="0"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	<xs:complexType name="FixtureRecordDetailType">
+		<xs:annotation>
+			<xs:documentation>A detail type local to the record file.</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="DetailValue" type="xs:string"/>
+		</xs:sequence>
+	</xs:complexType>
+</xs:schema>

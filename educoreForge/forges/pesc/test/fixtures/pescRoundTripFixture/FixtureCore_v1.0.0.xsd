@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+	<!-- Hermetic round-trip fixture (RT-7): a synthetic PESC-shaped core exercising the full
+	     vocabulary the forge->graph->re-emission chain carries. This comment is prose only,
+	     deliberately: it proves comment handling without hiding any XSD in a comment. -->
+	<xs:complexType name="FixturePersonType">
+		<xs:annotation>
+			<xs:documentation>A person known to the fixture.</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="PersonName" type="FixtureNameType">
+				<xs:annotation>
+					<xs:documentation>The name by which the fixture person is known.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="BirthDate" type="xs:date" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>The fixture person's date of birth.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="NoteMessage" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
+		</xs:sequence>
+		<xs:attribute name="personIndex" type="xs:integer" use="required">
+			<xs:annotation>
+				<xs:documentation>The fixture person's index attribute.</xs:documentation>
+			</xs:annotation>
+		</xs:attribute>
+		<xs:attribute name="legacyFlag" type="xs:string"/>
+	</xs:complexType>
+	<xs:complexType name="FixtureStudentType">
+		<xs:annotation>
+			<xs:documentation>A person enrolled in the fixture.</xs:documentation>
+		</xs:annotation>
+		<xs:complexContent>
+			<xs:extension base="FixturePersonType">
+				<xs:sequence>
+					<xs:element name="EnrollmentStatus" type="FixtureStatusCodeType">
+						<xs:annotation>
+							<xs:documentation>The status of the fixture enrollment.</xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="GradeCode" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>Code for the fixture grade, content-typed inline.</xs:documentation>
+						</xs:annotation>
+						<xs:complexType>
+							<xs:simpleContent>
+								<xs:restriction base="FixtureNameType"/>
+							</xs:simpleContent>
+						</xs:complexType>
+					</xs:element>
+					<xs:element name="LocalCode" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>A locally-defined code with an inline simple type.</xs:documentation>
+						</xs:annotation>
+						<xs:simpleType>
+							<xs:restriction base="xs:string"/>
+						</xs:simpleType>
+					</xs:element>
+				</xs:sequence>
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+	<xs:complexType name="FixtureEnrollmentType">
+		<xs:annotation>
+			<xs:documentation>An enrollment of a fixture student.</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="Student" type="FixtureStudentType">
+				<xs:annotation>
+					<xs:documentation>The enrolled fixture student.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="EnrollmentCount" type="xs:integer" minOccurs="0" maxOccurs="1"/>
+			<xs:group ref="FixtureContactGroup"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:group name="FixtureAddressGroup">
+		<xs:annotation>
+			<xs:documentation>Reusable address scaffolding for the fixture.</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="AddressLine" type="xs:string" maxOccurs="2">
+				<xs:annotation>
+					<xs:documentation>One line of the fixture address.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="PostalCode" type="xs:string" minOccurs="0"/>
+		</xs:sequence>
+	</xs:group>
+	<xs:group name="FixtureContactGroup">
+		<xs:annotation>
+			<xs:documentation>Contact scaffolding that itself uses the address group.</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="ContactName" type="FixtureNameType"/>
+			<xs:group ref="FixtureAddressGroup"/>
+		</xs:sequence>
+	</xs:group>
+	<xs:simpleType name="FixtureStatusCodeType">
+		<xs:annotation>
+			<xs:documentation>An indicator of the status of a fixture enrollment.</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="Active">
+				<xs:annotation>
+					<xs:documentation>The fixture student is actively enrolled.</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="Withdrawn">
+				<xs:annotation>
+					<xs:documentation>The fixture student has withdrawn.</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="Completed"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="FixtureOrphanCodeType">
+		<xs:annotation>
+			<xs:documentation>An enumerated type no field references — proves orphan option sets still round-trip.</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="Unreferenced">
+				<xs:annotation>
+					<xs:documentation>The one orphan value.</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="FixtureNameType">
+		<xs:annotation>
+			<xs:documentation>Reusable name scaffolding without enumeration.</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string"/>
+	</xs:simpleType>
+</xs:schema>

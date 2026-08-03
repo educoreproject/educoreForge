@@ -527,6 +527,42 @@ bundle.forge({ sourcePath: assetDir, skipEmbedding: true }, (err, result) => {
 		nodes.every((n) => !placeholderDescriptionRe.test(n.properties.description)),
 	);
 
+	// ---- R-PW-5 gates (Phase 2 round-trip catch, supervisor-authorized fixes) ----
+	// Defect A — extractComplexBase matched /<xs:complexContent>[\s\S]*?<xs:extension/ over the
+	// WHOLE block body, so a type with NO derivation of its own that contains a NESTED INLINE
+	// complexType with complexContent inherited the nested base as its own. Verified against
+	// CoreMain_v1.19.1.xsd source bytes: these three types open with a plain xs:sequence.
+	const nodeByStableId = {};
+	nodes.forEach((n) => { nodeByStableId[n.stableId] = n; });
+	['AcademicCompetitivenessGrantType', 'NationalSMARTGrantType', 'ReportingSchoolResponseType'].forEach(
+		(oneUnderivedTypeName) => {
+			const typeStableId = `pesc:class/CoreMain/${oneUnderivedTypeName}`;
+			const typeNode = nodeByStableId[typeStableId];
+			check(
+				`rpw5-A: ${oneUnderivedTypeName} carries NO derivation (nested inline complexContent is not its own)`,
+				!!typeNode &&
+					!typeNode.properties.baseType &&
+					!typeNode.properties.derivation &&
+					!edges.some((e) => e.type === 'SUBCLASS_OF' && e.fromRef.id === typeStableId),
+			);
+		},
+	);
+	// Defect B — the parser read COMMENTED-OUT XSD as live: AdmissionsRecord_v1.4.0.xsd carries a
+	// SponsorType definition inside an XML comment (JAF 2011/06/03) BEFORE the live definition;
+	// first-wins dedup kept the commented-out one and discarded the real one. The live definition
+	// types SponsorOrganization as AdmRec:ApplicationOrganizationType.
+	const sponsorOrganizationField =
+		nodeByStableId['pesc:field/AdmissionsRecord/SponsorType.element.SponsorOrganization'];
+	check(
+		'rpw5-B: SponsorType.SponsorOrganization typed from the LIVE definition, not the commented-out one',
+		!!sponsorOrganizationField &&
+			sponsorOrganizationField.properties.typeName === 'AdmRec:ApplicationOrganizationType',
+	);
+	check(
+		'rpw5-B: no duplicate definitions once comments are stripped (the XML source has ONE live SponsorType)',
+		!!result.stats.parseAudit && result.stats.parseAudit.dedupedNodeDefinitions === 0,
+	);
+
 	console.log('\n=== PESC REAL-DATA DRY COUNT (no embedding) ===');
 	console.log(`nodes: ${nodes.length}  edges: ${edges.length}`);
 	console.log('by role:', JSON.stringify(roleCount));

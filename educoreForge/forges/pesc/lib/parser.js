@@ -41,6 +41,16 @@ const crypto = require('crypto');
 
 const normalizeLineEndings = (text) => text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 
+// blankXmlComments — replace every <!-- … --> with EQUIVALENT WHITESPACE, newlines preserved
+// (R-PW-5 Defect B fix, 2026-08-03, implementation constraint from the supervisor ruling): the
+// regex extractors below cannot see comment boundaries, so commented-out XSD parsed as live —
+// AdmissionsRecord_v1.4.0.xsd carries a SponsorType definition inside a comment BEFORE the live
+// one, and first-wins dedup kept the DEAD definition and discarded the REAL one. Blanking (not
+// deleting) keeps every character offset and line number source-accurate, so refusals and
+// diagnostics that cite positions keep telling the truth.
+const blankXmlComments = (text) =>
+	text.replace(/<!--[\s\S]*?-->/g, (oneComment) => oneComment.replace(/[^\n]/g, ' '));
+
 const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 const extractDocumentation = (xmlFragment) => {
@@ -261,21 +271,31 @@ const extractRestrictionBase = (blockBody) => {
 };
 
 // the extension/restriction base of a complexType's complexContent (the SUBCLASS_OF base type).
+//
+// ANCHORED TO THE TYPE'S OWN DERIVATION (R-PW-5 Defect A fix, 2026-08-03): the earlier form
+// matched /<xs:complexContent>[\s\S]*?<xs:extension/ ANYWHERE in the block body, so a type with
+// no derivation of its own that contains a NESTED INLINE complexType with complexContent (e.g.
+// CoreMain's AcademicCompetitivenessGrantType / NationalSMARTGrantType / ReportingSchoolResponseType)
+// inherited the nested base as its own — three false SUBCLASS_OF edges, caught by the round-trip
+// diff as INVENTED statements. A type's OWN derivation wrapper is its first structural child
+// (only an annotation may precede it), so the match is anchored there. The recognized combos are
+// EXACTLY the incumbent's (complexContent extension/restriction, simpleContent extension) — the
+// source set holds zero named simpleContent-restriction types, verified 2026-08-03, and widening
+// recognition is not this fix's business.
 const extractComplexBase = (blockBody) => {
-	const ext = blockBody.match(/<xs:complexContent>[\s\S]*?<xs:extension\s+base="([^"]+)"/);
-	if (ext) {
-		return { base: ext[1], derivation: 'extension' };
+	const innerContent = blockBody.substring(blockBody.indexOf('>') + 1);
+	const ownDerivation = innerContent.match(
+		/^\s*(?:<xs:annotation>[\s\S]*?<\/xs:annotation>\s*)?<xs:(complexContent|simpleContent)>\s*<xs:(extension|restriction)\s+base="([^"]+)"/,
+	);
+	if (!ownDerivation) {
+		return { base: '', derivation: '' };
 	}
-	const restr = blockBody.match(/<xs:complexContent>[\s\S]*?<xs:restriction\s+base="([^"]+)"/);
-	if (restr) {
-		return { base: restr[1], derivation: 'restriction' };
+	const contentKind = ownDerivation[1];
+	const derivationKind = ownDerivation[2];
+	if (contentKind === 'simpleContent' && derivationKind === 'restriction') {
+		return { base: '', derivation: '' }; // incumbent parity — never captured this combo
 	}
-	// simpleContent extension (a type with text content + attributes) — also a base relationship.
-	const simpleExt = blockBody.match(/<xs:simpleContent>[\s\S]*?<xs:extension\s+base="([^"]+)"/);
-	if (simpleExt) {
-		return { base: simpleExt[1], derivation: 'extension' };
-	}
-	return { base: '', derivation: '' };
+	return { base: ownDerivation[3], derivation: derivationKind };
 };
 
 // top-level xs:element declarations (root elements in message schemas) — harvested.
@@ -476,11 +496,13 @@ module.exports = (sourcePath, options, callback) => {
 		trimmedEnumValues: 0,
 		emptyEnumValuesSkipped: 0,
 		dedupedEnumValues: 0,
+		dedupedNodeDefinitions: 0, // R-PW-5 B: with comments blanked, the XML source has no duplicates
 	};
 
 	for (const filename of xsdFiles) {
 		const filePath = path.join(sourcePath, filename);
-		const content = normalizeLineEndings(fs.readFileSync(filePath, 'utf8'));
+		// comments blanked to whitespace BEFORE any extraction — see blankXmlComments (R-PW-5 B).
+		const content = blankXmlComments(normalizeLineEndings(fs.readFileSync(filePath, 'utf8')));
 		const source = sourceLabel(filename);
 
 		const versionMatch = filename.match(/_v([\d.]+)\.xsd$/);
@@ -1014,6 +1036,8 @@ module.exports = (sourcePath, options, callback) => {
 			parentEdges++;
 		}
 	});
+
+	parseAudit.dedupedNodeDefinitions = dedupedNodes;
 
 	console.error(`[forge-pesc/parser] native node counts: ${JSON.stringify(labelCounts)}`);
 	console.error(
