@@ -1,0 +1,10 @@
+// malformedUnclassifiableLine.metaed — SYNTHETIC malformed fixture (Phase 1 proof
+// obligation): the parser must REFUSE this file BY NAME (file, line, offending text),
+// never skip. The rogue line below is lowercase junk no MetaEd token matches.
+
+Domain Entity FixtureBrokenEntity [9900]
+    documentation "A fixture entity that goes wrong on the next line."
+    thisisnotmetaed at all
+    integer FixtureBrokenId [9901]
+        documentation "Never reached."
+        is part of identity

@@ -1,0 +1,233 @@
+// comprehensiveCoreConstructs.metaed — SYNTHETIC hermetic fixture for the forge-edfi
+// independent MetaEd parser (Phase 1). Not Ed-Fi content: every construct here is invented to
+// exercise the grammar. Comments like this one are lexer-skipped per the reference grammar.
+
+Abstract Entity FixtureOrganization [9001]
+    documentation "An abstract fixture organization."
+    integer FixtureOrganizationId [9002]
+        documentation "The fixture organization identifier."
+        is part of identity
+        is queryable field
+        min value big
+
+Domain Entity FixtureStudent [9010]
+    documentation "A fixture student with an embedded ""quoted"" word and a
+multi-line documentation string."
+    allow primary key updates
+    shared string FixtureUniqueId named FixtureStudentUniqueId [9011]
+        documentation "The fixture student unique identifier."
+        is part of identity
+        role name Fixture shorten to Fix
+        is queryable field
+    bool FixtureActiveIndicator [9012]
+        documentation inherited
+        is optional
+    date FixtureBirthDate [9013]
+        deprecated "Use the fixture birth calendar instead."
+        documentation "The fixture birth date."
+        is optional
+    descriptor FixtureLevel [9014]
+        documentation "A fixture level descriptor reference."
+        is optional collection
+    domain entity FixtureSchool [9015]
+        documentation "A fixture school reference."
+        is required
+        potentially logical
+        is weak
+        merge FixtureSchool.FixtureSessionName with FixtureSession.FixtureSessionName
+
+Domain Entity FixtureSchool [9020]
+    documentation "A fixture school."
+    integer FixtureSchoolId [9021]
+        documentation "The fixture school identifier."
+        is part of identity
+    string FixtureSchoolName [9022]
+        documentation "The fixture school name."
+        is required
+        min length 1
+        max length 75
+    decimal FixtureFundingRatio [9023]
+        documentation "The fixture funding ratio."
+        is optional
+        total digits 5
+        decimal places 2
+        min value -1.5
+        max value 99.9
+    short FixtureGradeSpan [9024]
+        documentation "The fixture grade span."
+        is optional
+        min value 1
+        max value 12
+    year FixtureOpeningYear [9025]
+        documentation "The fixture opening year."
+        is optional
+    time FixtureBellTime [9026]
+        documentation "The fixture bell time."
+        is optional
+    datetime FixtureLastAudit [9027]
+        documentation "The fixture last audit timestamp."
+        is optional
+    duration FixtureClassPeriodLength [9028]
+        documentation "The fixture class period length."
+        is optional
+    currency FixtureAnnualBudget [9029]
+        documentation "The fixture annual budget."
+        is optional
+    percent FixtureAttendanceRate [9030]
+        documentation "The fixture attendance rate."
+        is optional
+    enumeration FixtureSchoolYear [9031]
+        documentation "The fixture school year reference."
+        is optional
+    common FixtureAddress [9032]
+        documentation "A fixture address."
+        is optional collection
+    inline common FixtureName [9033]
+        documentation "The fixture name block."
+        is required
+    choice FixturePublicationDate [9034]
+        documentation "The fixture publication date choice."
+        is optional
+    shared decimal FixtureRatio named FixtureLocalRatio [9035]
+        documentation "A shared fixture ratio."
+        is optional
+    shared integer FixtureCount [9036]
+        documentation "A shared fixture count."
+        is optional
+    shared short FixtureSmallCount [9037]
+        documentation "A shared fixture small count."
+        is optional
+
+Domain Entity FixtureCharterSchool based on FixtureSchool [9040]
+    documentation "A fixture charter school subclass."
+    integer FixtureCharterSchoolId [9041]
+        documentation "The renamed fixture charter school identifier."
+        renames identity property FixtureSchoolId
+    string FixtureCharterNetworkName [9042]
+        documentation "The fixture charter network name."
+        is queryable only
+        max length 40
+
+Association FixtureStudentSchoolAssociation [9050]
+    documentation "Associates a fixture student with a fixture school."
+    allow primary key updates
+    domain entity FixtureStudent [9051]
+        documentation "The fixture student in the association."
+        role name Enrolled
+    domain entity FixtureSchool [9052]
+        documentation "The fixture school in the association."
+        merge FixtureSchool.FixtureOrganizationId with FixtureStudent.FixtureOrganizationId
+    date FixtureEntryDate [9053]
+        documentation "The fixture entry date."
+        is part of identity
+
+Association FixtureCharterAffiliation based on FixtureStudentSchoolAssociation [9060]
+    documentation "A fixture association subclass."
+    bool FixtureAffiliationIndicator [9061]
+        documentation "The fixture affiliation indicator."
+        is required
+
+Common FixtureAddress [9070]
+    documentation "A fixture address common type."
+    string FixtureStreet [9071]
+        documentation "The fixture street."
+        is required
+        max length 150
+
+Common FixtureInternationalAddress based on FixtureAddress [9075]
+    documentation "A fixture address subclass."
+    string FixtureCountryCode [9076]
+        documentation "The fixture country code."
+        is required
+        max length 2
+
+Inline Common FixtureName [9080]
+    documentation "A fixture inline common name block."
+    string FixtureFirstName [9081]
+        documentation "The fixture first name."
+        is required
+        max length 60
+
+Choice FixturePublicationDate [9085]
+    documentation "A fixture publication choice."
+    date FixturePublicationFullDate [9086]
+        documentation "The full fixture publication date."
+        is required
+    year FixturePublicationYear [9087]
+        documentation "The fixture publication year."
+        is required
+
+Descriptor FixtureLevel [9090]
+    documentation "A fixture level descriptor."
+
+Descriptor FixtureCategory [9091]
+    documentation "A fixture category descriptor carrying a property and a map type."
+    string FixtureCategoryNote [9092]
+        documentation "A fixture note on the category."
+        is optional
+        max length 30
+    with map type
+        documentation "The fixture category map type."
+        item "Alpha" [9093]
+            documentation "The alpha fixture category."
+        item "Beta" [9094]
+
+Descriptor FixtureShade [9095]
+    documentation "A fixture shade descriptor with an optional map type."
+    with optional map type
+        documentation "The fixture shade map type."
+        item "Light"
+
+Enumeration FixtureSchoolYear [9100]
+    documentation "The fixture school year enumeration."
+    item "2025-2026" [9100-001]
+        documentation "The 2025-2026 fixture year."
+    item "2026-2027" [9100-002]
+
+Shared String FixtureUniqueId [9110]
+    documentation "A shared fixture unique identifier string."
+    min length 1
+    max length 32
+
+Shared Decimal FixtureRatio [9111]
+    documentation "A shared fixture ratio."
+    total digits 6
+    decimal places 3
+    min value 0.0
+    max value 100.0
+
+Shared Integer FixtureCount [9112]
+    documentation "A shared fixture count."
+    min value 0
+    max value big
+
+Shared Short FixtureSmallCount [9113]
+    documentation "A shared fixture small count."
+    min value 0
+    max value 100
+
+Domain FixtureLearning [9120]
+    documentation
+"A fixture domain whose documentation string opens on the following line."
+    domain entity FixtureStudent [9121]
+    domain entity FixtureSchool
+    association FixtureStudentSchoolAssociation
+    common FixtureAddress
+    inline common FixtureName
+    descriptor FixtureLevel
+    footer documentation "The fixture domain footer."
+
+Subdomain FixtureEnrollment of FixtureLearning [9130]
+    documentation "A fixture subdomain."
+    domain entity FixtureStudent
+    position 2
+
+Interchange FixtureStudentRoster [9140]
+    documentation "The fixture student roster interchange."
+    extended documentation "Extended fixture interchange documentation."
+    use case documentation "1. Exchange fixture rosters."
+    domain entity identity FixtureSchool [9141]
+    domain entity FixtureStudent [9142]
+    association FixtureStudentSchoolAssociation
+    descriptor FixtureLevel
+    association identity FixtureCharterAffiliation
