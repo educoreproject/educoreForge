@@ -22,6 +22,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 // ============================================================
 // NATIVE LABELS (consumed by the MAIN module's roleSpecByNativeLabel)
@@ -101,7 +102,15 @@ const extractNamedBlocks = (xsdText, tagName) => {
 			if (nextOpen !== -1 && nextOpen < nextClose) {
 				const charAfter = xsdText[nextOpen + openTag.length];
 				if (charAfter === ' ' || charAfter === '>') {
-					depth++;
+					// a SELF-CLOSING nested tag (e.g. a <xs:group ref="…"/> member) opens no block —
+					// its matching close never arrives, so counting it as an open unbalances the
+					// depth and the whole named block is silently discarded (the CoreMain
+					// address-group drop, Phase 1 defect D1).
+					const nestedTagEnd = xsdText.indexOf('>', nextOpen);
+					const nestedIsSelfClosing = nestedTagEnd !== -1 && xsdText[nestedTagEnd - 1] === '/';
+					if (!nestedIsSelfClosing) {
+						depth++;
+					}
 				}
 				searchStart = nextOpen + openTag.length;
 			} else {
@@ -208,9 +217,12 @@ const extractGroupRefs = (blockBody) => {
 	return refs;
 };
 
-// xs:enumeration values within a simpleType body. Returns { value, documentation }.
+// xs:enumeration values within a simpleType body. Returns { enums: [{ value, documentation }],
+// census: { trimmedValues, emptySkipped, dedupedValues } } — every canonicalization event is
+// COUNTED (Phase 1 D6): the trim/skip/dedupe decisions stand, but never silently.
 const extractEnumerations = (blockBody) => {
 	const enums = [];
+	const census = { trimmedValues: 0, emptySkipped: 0, dedupedValues: 0 };
 	const enumPattern = /<xs:enumeration\s+value="([^"]*)"(?:\s*\/>|>([\s\S]*?)<\/xs:enumeration>)/g;
 	let match;
 
@@ -220,8 +232,17 @@ const extractEnumerations = (blockBody) => {
 		// (e.g. value="NoCredit " alongside value="NoCredit") — an accidental source artifact, not a
 		// meaningful distinct option. The trimmed token is the value's canonical identity; dedupe
 		// whitespace variants within the same simpleType (first occurrence wins).
-		const value = match[1].trim();
-		if (value === '' || seenValues.has(value)) {
+		const rawValue = match[1];
+		const value = rawValue.trim();
+		if (value !== rawValue) {
+			census.trimmedValues++;
+		}
+		if (value === '') {
+			census.emptySkipped++;
+			continue;
+		}
+		if (seenValues.has(value)) {
+			census.dedupedValues++;
 			continue;
 		}
 		seenValues.add(value);
@@ -230,7 +251,7 @@ const extractEnumerations = (blockBody) => {
 		enums.push({ value, documentation: doc });
 	}
 
-	return enums;
+	return { enums, census };
 };
 
 // the restriction base of a simpleType (e.g. xs:string, or a named base type)
@@ -280,9 +301,9 @@ const extractRootElements = (xsdText) => {
 		}
 
 		const typeMatch = attrs.match(/type="([^"]+)"/);
-		const doc = innerContent
-			? extractLeadingDocumentation(innerContent) || extractDocumentation(innerContent)
-			: '';
+		// LEADING annotation only (Phase 1 D4): reaching for any nested xs:documentation when the
+		// element itself carries none would attribute a CHILD element's documentation to this one.
+		const doc = innerContent ? extractLeadingDocumentation(innerContent) : '';
 
 		const hasInlineComplexType = innerContent.indexOf('<xs:complexType>') !== -1;
 		let inlineElements = [];
@@ -344,18 +365,22 @@ const buildNamespacePrefixMap = (xsdText) => {
 const sourceLabel = (filename) => filename.replace(/_v[\d.]+\.xsd$/, '').replace(/\.xsd$/, '');
 
 // ============================================================
-// MAIN PARSER — graphForge parser contract: callback(err, { nodes, metadata })
+// MAIN PARSER — graphForge parser contract: callback(err, { nodes, metadata, parseAudit })
+// (parseAudit is the Phase 1 silent-source audit ledger — run diagnostics, never block content)
 // ============================================================
 
 module.exports = (sourcePath, options, callback) => {
+	// RT-3: every refusal names what is wrong AND where the acquisition recipe lives.
+	const acquisitionRecipeNote = `acquisition recipe: README_PROVENANCE.md in ${sourcePath}`;
+
 	if (!fs.existsSync(sourcePath)) {
-		callback(`forge-pesc parser: source not found: ${sourcePath}`);
+		callback(`forge-pesc parser: source not found: ${sourcePath} — ${acquisitionRecipeNote}`);
 		return;
 	}
 	const stat = fs.statSync(sourcePath);
 	if (!stat.isDirectory()) {
 		callback(
-			`forge-pesc parser: --source must be the version directory containing the .xsd schema set: ${sourcePath}`,
+			`forge-pesc parser: --source must be the version directory containing the .xsd schema set: ${sourcePath} — ${acquisitionRecipeNote}`,
 		);
 		return;
 	}
@@ -367,7 +392,68 @@ module.exports = (sourcePath, options, callback) => {
 		.sort(); // deterministic order
 
 	if (xsdFiles.length === 0) {
-		callback(`forge-pesc parser: no .xsd files found in ${sourcePath}`);
+		callback(`forge-pesc parser: no .xsd files found in ${sourcePath} — ${acquisitionRecipeNote}`);
+		return;
+	}
+
+	// ---- RT-3 source integrity (Phase 1 D5/D7): refuse by name, never skip, never guess ----
+
+	// D5: a versionless filename previously got version 'unknown' silently — a silent default.
+	const versionlessFiles = xsdFiles.filter((name) => !/_v[\d.]+\.xsd$/.test(name));
+	if (versionlessFiles.length > 0) {
+		callback(
+			`forge-pesc parser: source file(s) without a _v<version> filename suffix: ${versionlessFiles.join(', ')} — every snapshot .xsd carries its version in its filename; ${acquisitionRecipeNote}`,
+		);
+		return;
+	}
+
+	// D7: verify the source bytes against the snapshot's SHA256SUMS (provenance peer, RT-11).
+	// A checksum-failing, unlisted, or listed-but-absent source is a refusal that fails the
+	// build — a silently-substituted source is indistinguishable from the right one.
+	const checksumFilePath = path.join(sourcePath, 'SHA256SUMS');
+	if (!fs.existsSync(checksumFilePath)) {
+		callback(
+			`forge-pesc parser: SHA256SUMS is missing from ${sourcePath} — the snapshot's provenance checksums are required (RT-3/RT-11); ${acquisitionRecipeNote}`,
+		);
+		return;
+	}
+	const declaredChecksumByFilename = {};
+	fs.readFileSync(checksumFilePath, 'utf8')
+		.split('\n')
+		.filter((line) => line.trim() !== '')
+		.forEach((line) => {
+			const entryMatch = line.match(/^([0-9a-f]{64})\s+(.+)$/);
+			if (entryMatch) {
+				declaredChecksumByFilename[entryMatch[2].trim()] = entryMatch[1];
+			}
+		});
+	const listedButAbsent = Object.keys(declaredChecksumByFilename).filter(
+		(filename) => !fs.existsSync(path.join(sourcePath, filename)),
+	);
+	if (listedButAbsent.length > 0) {
+		callback(
+			`forge-pesc parser: SHA256SUMS lists source file(s) absent from ${sourcePath}: ${listedButAbsent.join(', ')} — a missing source fails the build (RT-3); ${acquisitionRecipeNote}`,
+		);
+		return;
+	}
+	const unlistedXsdFiles = xsdFiles.filter((name) => !declaredChecksumByFilename[name]);
+	if (unlistedXsdFiles.length > 0) {
+		callback(
+			`forge-pesc parser: .xsd file(s) present but not listed in SHA256SUMS: ${unlistedXsdFiles.join(', ')} — unchecksummed source is refused (RT-3); ${acquisitionRecipeNote}`,
+		);
+		return;
+	}
+	const checksumFailures = Object.keys(declaredChecksumByFilename).filter((filename) => {
+		const actualChecksum = crypto
+			.createHash('sha256')
+			.update(fs.readFileSync(path.join(sourcePath, filename)))
+			.digest('hex');
+		return actualChecksum !== declaredChecksumByFilename[filename];
+	});
+	if (checksumFailures.length > 0) {
+		callback(
+			`forge-pesc parser: checksum verification FAILED for: ${checksumFailures.join(', ')} — the source bytes do not match SHA256SUMS (RT-3: corrupt or altered source); ${acquisitionRecipeNote}`,
+		);
 		return;
 	}
 
@@ -381,16 +467,49 @@ module.exports = (sourcePath, options, callback) => {
 	const sourceFiles = [];
 	const namespaceMaps = {};
 
+	// parseAudit — the silent-source audit ledger (Phase 1, RT-2/R-PW-4): every decision the
+	// parser previously made in silence is recorded here. Run diagnostics only — the forge
+	// carries it in stats, never in metadata (which is block content).
+	const parseAudit = {
+		unresolvedTypeRefs: [], // { typeRef, source, context } — non-builtin refs resolving to nothing
+		importDeclarationDrift: [], // R-PW-4: declared schemaLocation absent; what resolved instead
+		trimmedEnumValues: 0,
+		emptyEnumValuesSkipped: 0,
+		dedupedEnumValues: 0,
+	};
+
 	for (const filename of xsdFiles) {
 		const filePath = path.join(sourcePath, filename);
 		const content = normalizeLineEndings(fs.readFileSync(filePath, 'utf8'));
 		const source = sourceLabel(filename);
 
 		const versionMatch = filename.match(/_v([\d.]+)\.xsd$/);
-		const version = versionMatch ? versionMatch[1] : 'unknown';
+		const version = versionMatch[1]; // pre-validated above: every filename carries _v<version>
 		sourceFiles.push({ filename, source, version });
 
 		namespaceMaps[source] = buildNamespacePrefixMap(content);
+
+		// R-PW-4 import-declaration drift census — derived mechanically from the xs:import /
+		// xs:include declarations themselves, never a hand-maintained list: a schemaLocation
+		// naming a file absent from the snapshot is recorded together with the same-label file
+		// the version-insensitive resolution reads instead. The curated-assembly posture this
+		// makes visible is declared in README_PROVENANCE.md; the drift is reported, never
+		// silently resolved and never refused (supervisor ruling R-PW-4, 2026-08-03).
+		const importPattern = /<xs:(?:import|include)\s+[^>]*?schemaLocation="([^"]+)"/g;
+		let importMatch;
+		while ((importMatch = importPattern.exec(content)) !== null) {
+			const declaredLocation = importMatch[1];
+			if (!xsdFiles.includes(declaredLocation)) {
+				const presentInstead = xsdFiles.find(
+					(candidateFilename) => sourceLabel(candidateFilename) === sourceLabel(declaredLocation),
+				);
+				parseAudit.importDeclarationDrift.push({
+					declaringFile: filename,
+					declaredSchemaLocation: declaredLocation,
+					presentInstead: presentInstead === undefined ? null : presentInstead,
+				});
+			}
+		}
 
 		// complexTypes
 		for (const block of extractNamedBlocks(content, 'complexType')) {
@@ -412,16 +531,21 @@ module.exports = (sourcePath, options, callback) => {
 		for (const block of extractNamedBlocks(content, 'simpleType')) {
 			const innerStart = block.body.indexOf('>') + 1;
 			const doc = extractLeadingDocumentation(block.body.substring(innerStart));
+			const { enums, census } = extractEnumerations(block.body);
+			parseAudit.trimmedEnumValues += census.trimmedValues;
+			parseAudit.emptyEnumValuesSkipped += census.emptySkipped;
+			parseAudit.dedupedEnumValues += census.dedupedValues;
 			allSimpleTypes.push({
 				name: block.name,
 				source,
 				documentation: doc,
 				restrictionBase: extractRestrictionBase(block.body),
-				enumerations: extractEnumerations(block.body),
+				enumerations: enums,
 			});
 		}
 
-		// groups
+		// groups (groupRefs too — a group whose members are <xs:group ref=…/> owns that
+		// scaffolding exactly as a complexType does; present-is-present, Phase 1 D1)
 		for (const block of extractNamedBlocks(content, 'group')) {
 			const innerStart = block.body.indexOf('>') + 1;
 			const doc = extractLeadingDocumentation(block.body.substring(innerStart));
@@ -430,6 +554,7 @@ module.exports = (sourcePath, options, callback) => {
 				source,
 				documentation: doc,
 				fields: extractElements(block.body),
+				groupRefs: extractGroupRefs(block.body),
 			});
 		}
 
@@ -504,6 +629,20 @@ module.exports = (sourcePath, options, callback) => {
 		return idByName[resolved.localName] || null;
 	};
 
+	// RT-2 visibility (Phase 1): a non-builtin reference that resolves to nothing was previously
+	// skipped without record — absent-is-absent requires the absence be OBSERVABLE. xs: built-ins
+	// legitimately resolve to nothing here (XML Schema's own vocabulary, not source types).
+	const recordUnresolvedTypeRef = (typeRef, currentSource, context) => {
+		if (!typeRef) {
+			return;
+		}
+		const resolved = resolveTypeRef(typeRef, namespaceMaps[currentSource] || {});
+		if (resolved && resolved.prefix === 'xs') {
+			return;
+		}
+		parseAudit.unresolvedTypeRefs.push({ typeRef, source: currentSource, context });
+	};
+
 	const targetLabelForKind = (kind) => {
 		if (kind === 'complexType') {
 			return 'PescComplexType';
@@ -570,6 +709,8 @@ module.exports = (sourcePath, options, callback) => {
 					targetLabel: targetLabelForKind(target.kind),
 					targetKind: target.kind,
 				});
+			} else {
+				recordUnresolvedTypeRef(field.type, source, `field ${ownerName}.${field.name}`);
 			}
 
 			const added = pushNode({
@@ -578,9 +719,9 @@ module.exports = (sourcePath, options, callback) => {
 				superLabel: 'PescModel',
 				properties: {
 					name: field.name,
-					description:
-						field.documentation ||
-						`PESC ${field.kind} ${field.name} within ${ownerName}`,
+					// absent is absent (RT-2, Phase 1 D2): the source's own xs:documentation or
+					// nothing — a synthesized placeholder is fabrication, the banned class.
+					description: field.documentation,
 					xsdKind: field.kind, // 'element' | 'attribute'
 					typeName: field.type || '',
 					minOccurs: field.minOccurs,
@@ -617,6 +758,8 @@ module.exports = (sourcePath, options, callback) => {
 		let ctSupportUsage = 0;
 
 		// SUBCLASS_OF: extension/restriction base when the base resolves to another complexType.
+		// (a base resolving to a simpleType/support is NOT unresolved — the derivation is retained
+		// in the baseType/derivation scalar properties; only a nothing-resolution is recorded.)
 		if (ct.base) {
 			const baseTarget = resolveTypeTo(ct.base, ct.source);
 			if (baseTarget && baseTarget.kind === 'complexType') {
@@ -627,6 +770,9 @@ module.exports = (sourcePath, options, callback) => {
 					targetKind: 'complexType',
 				});
 				ctSubclass++;
+			}
+			if (!baseTarget) {
+				recordUnresolvedTypeRef(ct.base, ct.source, `complexType ${ct.name} base`);
 			}
 		}
 
@@ -641,6 +787,8 @@ module.exports = (sourcePath, options, callback) => {
 					targetKind: 'support',
 				});
 				ctSupportUsage++;
+			} else {
+				recordUnresolvedTypeRef(gRef.ref, ct.source, `complexType ${ct.name} group ref`);
 			}
 		});
 
@@ -650,7 +798,7 @@ module.exports = (sourcePath, options, callback) => {
 			superLabel: 'PescModel',
 			properties: {
 				name: ct.name,
-				description: ct.documentation || `PESC complex type ${ct.name} from ${ct.source}`,
+				description: ct.documentation,
 				sourceFile: ct.source,
 				baseType: ct.base || '',
 				derivation: ct.derivation || '',
@@ -675,25 +823,47 @@ module.exports = (sourcePath, options, callback) => {
 		});
 	});
 
-	// -- PescSupport for groups (DmeSupport) + their member fields --
+	// -- PescSupport for groups (DmeSupport) + their member fields + group-to-group refs --
 	allGroups.forEach((grp) => {
 		const id = supportGroupNativeId(grp.source, grp.name);
+		const edges = [];
+
+		let grpSupportUsage = 0;
+		// group-to-group scaffolding (Phase 1 D1, present-is-present): a group whose members are
+		// <xs:group ref=…/> owns that scaffolding exactly as a complexType does — without these
+		// edges the address groups would land as empty husks.
+		grp.groupRefs.forEach((gRef) => {
+			const target = resolveTypeTo(gRef.ref, grp.source);
+			if (target && target.kind === 'support') {
+				edges.push({
+					type: 'USES_SUPPORT',
+					targetId: target.id,
+					targetLabel: 'PescSupport',
+					targetKind: 'support',
+				});
+				grpSupportUsage++;
+			} else {
+				recordUnresolvedTypeRef(gRef.ref, grp.source, `group ${grp.name} group ref`);
+			}
+		});
+
 		const grpAdded = pushNode({
 			id,
 			label: 'PescSupport',
 			superLabel: 'PescModel',
 			properties: {
 				name: grp.name,
-				description: grp.documentation || `PESC group (scaffolding) ${grp.name} from ${grp.source}`,
+				description: grp.documentation,
 				supportKind: 'group',
 				sourceFile: grp.source,
 				fieldCount: grp.fields.length,
 			},
-			edges: [],
+			edges,
 		});
 		if (!grpAdded) {
 			return;
 		}
+		supportUsageEdges += grpSupportUsage;
 
 		emitFields({
 			fields: grp.fields,
@@ -724,8 +894,7 @@ module.exports = (sourcePath, options, callback) => {
 					superLabel: 'PescModel',
 					properties: {
 						name: en.value,
-						description:
-							en.documentation || `Enumeration value "${en.value}" of ${st.name}`,
+						description: en.documentation,
 						optionSetName: st.name,
 						sourceFile: st.source,
 					},
@@ -747,7 +916,7 @@ module.exports = (sourcePath, options, callback) => {
 				superLabel: 'PescModel',
 				properties: {
 					name: st.name,
-					description: st.documentation || `PESC enumerated type ${st.name} from ${st.source}`,
+					description: st.documentation,
 					restrictionBase: st.restrictionBase || '',
 					sourceFile: st.source,
 					valueCount: st.enumerations.length,
@@ -762,7 +931,7 @@ module.exports = (sourcePath, options, callback) => {
 				superLabel: 'PescModel',
 				properties: {
 					name: st.name,
-					description: st.documentation || `PESC simple type ${st.name} from ${st.source}`,
+					description: st.documentation,
 					supportKind: 'simpleType',
 					restrictionBase: st.restrictionBase || '',
 					sourceFile: st.source,
@@ -797,6 +966,8 @@ module.exports = (sourcePath, options, callback) => {
 				} else {
 					reRefUsage++;
 				}
+			} else {
+				recordUnresolvedTypeRef(re.type, re.source, `root element ${re.name} type`);
 			}
 		}
 
@@ -806,7 +977,7 @@ module.exports = (sourcePath, options, callback) => {
 			superLabel: 'PescModel',
 			properties: {
 				name: re.name,
-				description: re.documentation || `PESC root (message) element ${re.name} from ${re.source}`,
+				description: re.documentation,
 				sourceFile: re.source,
 				baseType: '',
 				derivation: '',
@@ -854,9 +1025,17 @@ module.exports = (sourcePath, options, callback) => {
 			`optionSet-usage ${optionSetUsageEdges}, references ${referencesEdges}, ` +
 			`deduped duplicate definitions ${dedupedNodes}`,
 	);
+	console.error(
+		`[forge-pesc/parser] parseAudit: ${parseAudit.unresolvedTypeRefs.length} unresolved type refs, ` +
+			`${parseAudit.importDeclarationDrift.length} drifted import declarations, ` +
+			`${parseAudit.trimmedEnumValues} trimmed enum values, ` +
+			`${parseAudit.emptyEnumValuesSkipped} empty enum values skipped, ` +
+			`${parseAudit.dedupedEnumValues} deduped enum values`,
+	);
 
 	callback('', {
 		nodes,
+		parseAudit,
 		metadata: {
 			version: '1.0',
 			sourceFormat: 'xsd',

@@ -9,8 +9,16 @@
 // forge-sif/test/test-r3-canonical.js.
 //
 // Run: node cli/lib.d/forge-pesc/test/test-r3-canonical.js
+//
+// Phase 1 (round-trip retrofit, WORKORDER-pescRoundTripForge-080326) added section 4: the
+// silent-source audit gates (RT-2 absent-is-absent) and the refusal-by-name gates (RT-3),
+// including checksum verification against the snapshot's SHA256SUMS. Every section-4 gate was
+// observed RED against the pre-fix parser before the fixes made it green (gate doctrine RT-10).
 
 const path = require('path');
+const fs = require('fs');
+const os = require('os');
+const crypto = require('crypto');
 
 process.global = process.global || {};
 process.global.xLog = process.global.xLog || {
@@ -231,6 +239,214 @@ check('unknown native label throws', threw);
 // =====================================================================
 
 const assetDir = path.join(__dirname, '..', 'assets', 'standardSourceData', '01');
+
+// =====================================================================
+// 4. PHASE-1 GATES — refusal-by-name (RT-3) + hermetic self-closing-group extraction.
+//    Every refusal names what is wrong AND where the acquisition recipe lives
+//    (README_PROVENANCE.md beside the source bytes). Each gate here was observed RED
+//    against the pre-fix parser (RT-10) — see the Phase 1 DEVLOG entry for the red runs.
+// =====================================================================
+
+const parsePesc = require('../lib/parser');
+
+// scratch snapshot builder: writes the given files plus a SHA256SUMS matching the .xsd entries.
+const makeScratchSnapshot = (label, fileContentByName) => {
+	const scratchDir = fs.mkdtempSync(path.join(os.tmpdir(), `pescR3-${label}-`));
+	const sumLines = [];
+	Object.entries(fileContentByName).forEach(([filename, content]) => {
+		fs.writeFileSync(path.join(scratchDir, filename), content);
+		if (/\.xsd$/i.test(filename)) {
+			sumLines.push(
+				`${crypto.createHash('sha256').update(content).digest('hex')}  ${filename}`,
+			);
+		}
+	});
+	fs.writeFileSync(path.join(scratchDir, 'SHA256SUMS'), sumLines.join('\n') + '\n');
+	return scratchDir;
+};
+
+// copy the real snapshot's source bytes + SHA256SUMS into a scratch dir for corruption gates.
+const copyRealSnapshot = (label) => {
+	const scratchDir = fs.mkdtempSync(path.join(os.tmpdir(), `pescR3-${label}-`));
+	fs.readdirSync(assetDir)
+		.filter((name) => /\.xsd$/i.test(name) || name === 'SHA256SUMS')
+		.forEach((name) => {
+			fs.copyFileSync(path.join(assetDir, name), path.join(scratchDir, name));
+		});
+	return scratchDir;
+};
+
+// a minimal schema whose CompositeGroup members are SELF-CLOSING <xs:group ref=…/> elements —
+// the exact form that unbalanced the pre-fix depth counter and silently discarded the block.
+const SELF_CLOSING_GROUP_XSD = [
+	'<?xml version="1.0" encoding="UTF-8"?>',
+	'<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:core="urn:org:pesc:core:CoreMain:v1.19.1">',
+	'\t<xs:group name="MemberDetailsGroup">',
+	'\t\t<xs:sequence>',
+	'\t\t\t<xs:element name="MemberName" type="xs:string"/>',
+	'\t\t</xs:sequence>',
+	'\t</xs:group>',
+	'\t<xs:group name="CompositeGroup">',
+	'\t\t<xs:sequence>',
+	'\t\t\t<xs:group ref="core:MemberDetailsGroup"/>',
+	'\t\t</xs:sequence>',
+	'\t</xs:group>',
+	'\t<xs:complexType name="CarrierType">',
+	'\t\t<xs:sequence>',
+	'\t\t\t<xs:group ref="core:CompositeGroup"/>',
+	'\t\t</xs:sequence>',
+	'\t</xs:complexType>',
+	'</xs:schema>',
+	'',
+].join('\n');
+
+// sequential gate runner — each step receives a done() it must call exactly once.
+const runGateSteps = (steps, allDone) => {
+	let stepIndex = 0;
+	const nextStep = () => {
+		if (stepIndex >= steps.length) {
+			allDone();
+			return;
+		}
+		const oneStep = steps[stepIndex];
+		stepIndex++;
+		oneStep(nextStep);
+	};
+	nextStep();
+};
+
+function runPhase1Gates() {
+	const gateSteps = [];
+
+	// -- RT-3: missing source path refuses, naming the path and the acquisition recipe --
+	gateSteps.push((done) => {
+		parsePesc('/nonexistent/pescSourcePath', {}, (err) => {
+			check('rt3: missing source path refuses by name', !!err && `${err}`.indexOf('source not found') !== -1);
+			check('rt3: missing-path refusal names the acquisition recipe', !!err && `${err}`.indexOf('README_PROVENANCE.md') !== -1);
+			done();
+		});
+	});
+
+	// -- RT-3: a non-directory source path refuses, naming the recipe --
+	gateSteps.push((done) => {
+		parsePesc(path.join(assetDir, 'SHA256SUMS'), {}, (err) => {
+			check('rt3: non-directory source refuses by name', !!err && `${err}`.indexOf('version directory') !== -1);
+			check('rt3: non-directory refusal names the acquisition recipe', !!err && `${err}`.indexOf('README_PROVENANCE.md') !== -1);
+			done();
+		});
+	});
+
+	// -- RT-3: a directory with no .xsd files refuses, naming the recipe --
+	gateSteps.push((done) => {
+		const emptyDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pescR3-empty-'));
+		parsePesc(emptyDir, {}, (err) => {
+			check('rt3: empty source directory refuses by name', !!err && `${err}`.indexOf('no .xsd files') !== -1);
+			check('rt3: empty-directory refusal names the acquisition recipe', !!err && `${err}`.indexOf('README_PROVENANCE.md') !== -1);
+			done();
+		});
+	});
+
+	// -- RT-3: missing SHA256SUMS refuses (provenance checksums are required) --
+	gateSteps.push((done) => {
+		const scratchDir = makeScratchSnapshot('noSums', { 'Minimal_v1.0.0.xsd': SELF_CLOSING_GROUP_XSD });
+		fs.unlinkSync(path.join(scratchDir, 'SHA256SUMS'));
+		parsePesc(scratchDir, {}, (err) => {
+			check('rt3: missing SHA256SUMS refuses by name', !!err && `${err}`.indexOf('SHA256SUMS') !== -1);
+			done();
+		});
+	});
+
+	// -- RT-3: a checksum-failing source file refuses, naming the file --
+	gateSteps.push((done) => {
+		const scratchDir = copyRealSnapshot('corrupt');
+		fs.appendFileSync(path.join(scratchDir, 'CoreMain_v1.19.1.xsd'), '<!-- corrupted -->\n');
+		parsePesc(scratchDir, {}, (err) => {
+			check(
+				'rt3: checksum-failing source refuses, naming the file',
+				!!err && `${err}`.indexOf('CoreMain_v1.19.1.xsd') !== -1 && `${err}`.indexOf('checksum') !== -1,
+			);
+			done();
+		});
+	});
+
+	// -- RT-3: an .xsd present but unlisted in SHA256SUMS refuses (unchecksummed source) --
+	gateSteps.push((done) => {
+		const scratchDir = copyRealSnapshot('unlisted');
+		fs.writeFileSync(path.join(scratchDir, 'Extra_v1.0.0.xsd'), SELF_CLOSING_GROUP_XSD);
+		parsePesc(scratchDir, {}, (err) => {
+			check('rt3: unchecksummed .xsd refuses, naming the file', !!err && `${err}`.indexOf('Extra_v1.0.0.xsd') !== -1);
+			done();
+		});
+	});
+
+	// -- RT-3: a SHA256SUMS-listed file missing from the directory refuses, naming it --
+	gateSteps.push((done) => {
+		const scratchDir = copyRealSnapshot('missingListed');
+		fs.unlinkSync(path.join(scratchDir, 'iso_3166-1_v1.0.0.xsd'));
+		parsePesc(scratchDir, {}, (err) => {
+			check('rt3: SHA256SUMS-listed file missing refuses, naming the file', !!err && `${err}`.indexOf('iso_3166-1_v1.0.0.xsd') !== -1);
+			done();
+		});
+	});
+
+	// -- RT-2/RT-3: a source file without a _v<version> filename suffix refuses (was a silent
+	//    version:'unknown' default). Fires never on snapshot 01 — the gate proves the refusal path.
+	gateSteps.push((done) => {
+		const scratchDir = makeScratchSnapshot('noVersion', { 'NoVersion.xsd': SELF_CLOSING_GROUP_XSD });
+		parsePesc(scratchDir, {}, (err) => {
+			check('rt3: versionless .xsd filename refuses by name', !!err && `${err}`.indexOf('NoVersion.xsd') !== -1);
+			done();
+		});
+	});
+
+	// -- CONTROL (not a gate): an intact copy of the snapshot parses cleanly — the refusals
+	//    above must come from the injected faults, not from over-refusal of good source.
+	gateSteps.push((done) => {
+		const scratchDir = copyRealSnapshot('control');
+		parsePesc(scratchDir, {}, (err, parsed) => {
+			check('control: intact snapshot copy parses cleanly', !err && parsed && parsed.nodes.length > 0);
+			done();
+		});
+	});
+
+	// -- HERMETIC: self-closing-member group extraction (the D1 mechanism, isolated) --
+	gateSteps.push((done) => {
+		const scratchDir = makeScratchSnapshot('selfClose', { 'CoreMain_v1.19.1.xsd': SELF_CLOSING_GROUP_XSD });
+		parsePesc(scratchDir, {}, (err, parsed) => {
+			if (err) {
+				check(`hermetic: self-closing fixture parses (got: ${err})`, false);
+				done();
+				return;
+			}
+			const groupNodes = parsed.nodes.filter(
+				(n) => n.label === 'PescSupport' && n.properties.supportKind === 'group',
+			);
+			const compositeGroup = groupNodes.find((n) => n.properties.name === 'CompositeGroup');
+			check('hermetic: self-closing-member group captured', !!compositeGroup);
+			check(
+				'hermetic: group-to-group ref emits USES_SUPPORT',
+				!!compositeGroup &&
+					(compositeGroup.edges || []).some(
+						(e) => e.type === 'USES_SUPPORT' && e.targetId === 'pescsupport-group-CoreMain-MemberDetailsGroup',
+					),
+			);
+			const carrierType = parsed.nodes.find(
+				(n) => n.label === 'PescComplexType' && n.properties.name === 'CarrierType',
+			);
+			check(
+				'hermetic: complexType ref to self-closing-member group resolves',
+				!!carrierType &&
+					(carrierType.edges || []).some(
+						(e) => e.type === 'USES_SUPPORT' && e.targetId === 'pescsupport-group-CoreMain-CompositeGroup',
+					),
+			);
+			done();
+		});
+	});
+
+	runGateSteps(gateSteps, finish);
+}
+
 bundle.forge({ sourcePath: assetDir, skipEmbedding: true }, (err, result) => {
 	if (err) {
 		console.error(`  FAIL  real-data forge errored: ${err}`);
@@ -270,6 +486,47 @@ bundle.forge({ sourcePath: assetDir, skipEmbedding: true }, (err, result) => {
 	})());
 	check('real: no embedding stamped (skipEmbedding)', nodes.every((n) => n.properties.embedding === undefined));
 
+	// ---- Phase 1 gates: the 3-group silent drop (DEVLOG Finding 3) ----
+	// CoreMain_v1.19.1.xsd defines 9 xs:group blocks; the pre-fix parser emitted 6, silently
+	// dropping the three address groups whose members are SELF-CLOSING <xs:group ref=…/> elements.
+	check('real: all 9 source xs:group definitions emitted', result.metadata.groupCount === 9);
+	const supportStableIds = new Set(
+		nodes.filter((n) => n.role === 'DmeSupport').map((n) => n.stableId),
+	);
+	check('real: DomesticAddressGroup present', supportStableIds.has('pesc:support/CoreMain/DomesticAddressGroup'));
+	check('real: InternationalAddressGroup present', supportStableIds.has('pesc:support/CoreMain/InternationalAddressGroup'));
+	check('real: GeneralAddressGroup present', supportStableIds.has('pesc:support/CoreMain/GeneralAddressGroup'));
+	check(
+		'real: AddressType uses GeneralAddressGroup (HAS_SUPPORT)',
+		edges.some(
+			(e) =>
+				e.type === 'HAS_SUPPORT' &&
+				e.fromRef.id === 'pesc:class/CoreMain/AddressType' &&
+				e.toRef.id === 'pesc:support/CoreMain/GeneralAddressGroup',
+		),
+	);
+	// present-is-present: the address groups' entire content is group-refs; they must carry
+	// their scaffolding edges, not land as empty husks.
+	check(
+		'real: group-to-group scaffolding captured (GeneralAddressGroup -> CommonAddressDetailsGroup)',
+		edges.some(
+			(e) =>
+				e.type === 'HAS_SUPPORT' &&
+				e.fromRef.id === 'pesc:support/CoreMain/GeneralAddressGroup' &&
+				e.toRef.id === 'pesc:support/CoreMain/CommonAddressDetailsGroup',
+		),
+	);
+
+	// ---- Phase 1 gate: no fabricated placeholder descriptions (RT-2) ----
+	// The pre-fix parser synthesized descriptions ('PESC element X within Y', …) at 7 sites;
+	// 606 baseline nodes carried one. Absent source documentation is the contract-uniform ''.
+	const placeholderDescriptionRe =
+		/^(PESC (element|attribute|complex type|simple type|group \(scaffolding\)|enumerated type|root \(message\) element) |Enumeration value ")/;
+	check(
+		'real: no fabricated placeholder descriptions (RT-2 absent-is-absent)',
+		nodes.every((n) => !placeholderDescriptionRe.test(n.properties.description)),
+	);
+
 	console.log('\n=== PESC REAL-DATA DRY COUNT (no embedding) ===');
 	console.log(`nodes: ${nodes.length}  edges: ${edges.length}`);
 	console.log('by role:', JSON.stringify(roleCount));
@@ -284,8 +541,18 @@ bundle.forge({ sourcePath: assetDir, skipEmbedding: true }, (err, result) => {
 		orphanAnchoredOptionSets: result.stats.orphanAnchoredOptionSets,
 		danglingEdges: result.stats.danglingEdges.length,
 	}));
-	finish();
+	if (result.stats.parseAudit) {
+		console.log('parseAudit:', JSON.stringify({
+			unresolvedTypeRefs: result.stats.parseAudit.unresolvedTypeRefs.length,
+			importDeclarationDrift: result.stats.parseAudit.importDeclarationDrift.length,
+			trimmedEnumValues: result.stats.parseAudit.trimmedEnumValues,
+			emptyEnumValuesSkipped: result.stats.parseAudit.emptyEnumValuesSkipped,
+			dedupedEnumValues: result.stats.parseAudit.dedupedEnumValues,
+		}));
+	}
+	runPhase1Gates();
 });
+
 
 function finish() {
 	console.log(`\n=== R3 RESULT: ${pass} passed, ${fail} failed ===`);

@@ -591,6 +591,9 @@ const moduleFunction =
 					next(`forge-pesc buildContractGraph: ${buildError}`);
 					return;
 				}
+				// the parser's silent-source audit ledger (Phase 1, R-PW-4) rides in stats — run
+				// diagnostics, digest-excluded — never in metadata, which is block content.
+				graph.stats.parseAudit = args.parsed.parseAudit;
 				xLog.status(
 					`[forge-pesc] contract graph: ${graph.nodes.length} nodes, ${graph.edges.length} edges ` +
 						`(${graph.stats.fieldCount} fields, ${graph.stats.optionValuesEmitted} option values, ` +
