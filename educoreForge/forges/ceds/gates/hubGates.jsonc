@@ -1,0 +1,126 @@
+// =====================================================================================
+// hubGates — the HubReference reimplementation's CARD-LOCAL gate suite, DECLARED AS DATA
+// =====================================================================================
+//
+// SPEC-hubReimplementation-080326.md §7. ⟪TQ⟫ "We need complete gates, perfect gates."
+//
+// Same doctrine as cedsFidelityGates.jsonc, same harness (lib/roundTripGates.js): a gate
+// declares {measure, comparator, expected} and the harness performs the comparison — a gate
+// cannot forget a check it does not contain. EVERY gate has a named fault-injection twin
+// that MUST be OBSERVED turning it RED in the suite's own output; a gate whose twin has not
+// been observed reports UNPROVEN, never PASS. An unmeasured gate is a failure, not a skip.
+//
+// THIS FILE DECLARES ONLY THE CARD-LOCAL GATES (Phase 1): G-1..G-6, G-8..G-12 plus the
+// family-P proof gates added at the Phase-1 back-gate (G-P1 incumbent parity — retires with
+// the incumbent at Phase 5; G-P2 edge targets; G-P3 forge totality) — everything runnable
+// against the real parsed CEDS base with no graph, no build, no network. The
+// build-scoped gates (G-7 vectorPresent, G-13 determinism) and the bridge/evidence gates
+// (G-14, G-15, G-17) and the round-trip gate (G-16) arrive with Phases 2–3, where the
+// things they measure first exist.
+//
+// measure kind:
+//   hub:<namedMeasure>  computed by test-cedsHubForge.js from the forged base, the derived
+//                       hub, and its own INDEPENDENT re-derivations (both sides computed,
+//                       no frozen literal anywhere)
+//
+// comparators: equals · isEmpty  (the judging vocabulary of lib/roundTripGates.js)
+{
+	"suiteName": "cedsHubForge",
+	"suiteVersion": "1.0.0",
+	"acceptanceRule": "every gate PASS and every twin observed RED. No percentage participates.",
+
+	"gates": [
+
+		{
+			"id": "G-1", "family": "G",
+			"contract": "countDerived: card count equals the count RE-DERIVED from the base by tuple enumeration — both sides computed, no literal.",
+			"measure": "hub:cardCountDeltaForgedVsDerived", "comparator": "equals", "expected": 0,
+			"twin": "dropOneDeclaredDomainFromEnumeration"
+		},
+		{
+			"id": "G-2", "family": "G",
+			"contract": "addressPurity: recomputing every addressSignature from ADDRESS fields alone reproduces the stored value; editing a MEANING field changes NO signature; editing an ADDRESS field (canonicalKey) changes it. (R-P1-1: incumbent hash inputs, both directions proven.)",
+			"measure": "hub:addressPurityViolations", "comparator": "isEmpty", "expected": [],
+			"twin": "feedDefinitionIntoHash"
+		},
+		{
+			"id": "G-3", "family": "G",
+			"contract": "absentIsAbsent: zero ''-valued properties on any card — 'CEDS has no prose' and 'we failed to copy it' stay distinguishable.",
+			"measure": "hub:emptyStringPropertyViolations", "comparator": "isEmpty", "expected": [],
+			"twin": "stampEmptyDescription"
+		},
+		{
+			"id": "G-4", "family": "G",
+			"contract": "meaningCoverage: the FULL SPEC §1.3 stack, two-sided against source presence — domainName+domainDefinition+propertyName on 100% of cards; propertyDefinition, propertyNotation, propertyDataType, propertyTextFormat exactly where the property has them; rangeClassName/rangeClassDefinition on class-ranged cards; value tier adds valueName plus valueDefinition, valueNotation, valuePrefLabel and the option-set name/definition; qualifierNames parallel to qualifierKeys.",
+			"measure": "hub:meaningCoverageViolations", "comparator": "isEmpty", "expected": [],
+			"twin": "skipProseCopyForOneRole"
+		},
+		{
+			"id": "G-5", "family": "G",
+			"contract": "divergenceReport: the report exists (explicit-empty acceptable); 'both exist' means both carry PROSE (hasProse — null/'' are not prose); every row's two texts really differ; row count matches an independent recount from the base.",
+			"measure": "hub:divergenceReportViolations", "comparator": "isEmpty", "expected": [],
+			"twin": "suppressOneDivergenceRow"
+		},
+		{
+			"id": "G-6", "family": "G",
+			"contract": "embedTextReproducible: every card's embedText equals the SPEC §4 composition recomputed from the card's own fields, byte-for-byte, and is never empty.",
+			"measure": "hub:embedTextViolations", "comparator": "isEmpty", "expected": [],
+			"twin": "tamperOneStoredEmbedText"
+		},
+		{
+			"id": "G-8", "family": "G",
+			"contract": "uriMinting: every uri = <the FORGED HubDefinition's namespace property> + hubVersion + '/' + addressSignature (the expected prefix is READ from the forged card, never from a suite literal); the forged namespace equals the factory argument; a sentinel-namespace re-forge carries the sentinel into every card uri AND HubDefinition.namespace; stableId === uri; zero collisions.",
+			"measure": "hub:uriMintingViolations", "comparator": "isEmpty", "expected": [],
+			"twin": "mintOneUriFromLiteral"
+		},
+		{
+			"id": "G-9", "family": "G",
+			"contract": "hubDefinition: exactly one; namespace non-empty; uri === stableId === namespace + 'hubDefinition/CEDS'; version equals the base-derived hubVersion; displayName correct; slotProfile parses and covers EVERY address slot (hubName, hubVersion, referenceTier, domainId, propertyKey, all three range shapes, valueKey, qualifierKeys) plus the per-tier meaning fields; sourceProvenance populated; IN_HUB degree equals the card count and every IN_HUB targets the HubDefinition.",
+			"measure": "hub:hubDefinitionViolations", "comparator": "isEmpty", "expected": [],
+			"twin": "blankTheNamespace"
+		},
+		{
+			"id": "G-10", "family": "G",
+			"contract": "tupleClosure: every (domain·property[·value][·qualifier]) tuple derivable from the base has exactly one card — qualified refs INCLUDED in the enumeration key (closes the 2026-08-02 qualified-tuple blind spot).",
+			"measure": "hub:tupleClosureViolations", "comparator": "isEmpty", "expected": [],
+			"twin": "removeOneQualifiedCard"
+		},
+		{
+			"id": "G-11", "family": "G",
+			"contract": "vestigialAbsent: allDomainIds, allDomainNames, domainsComplete, description on ZERO cards — the multi-domain machinery and the ambiguous prose field do not ride the new card.",
+			"measure": "hub:vestigialFieldViolations", "comparator": "isEmpty", "expected": [],
+			"twin": "stampOneVestigialField"
+		},
+		{
+			"id": "G-12", "family": "G",
+			"contract": "rangeXor: exactly one of rangeDatatype | rangeClassId | rangeOptionSetId per card.",
+			"measure": "hub:rangeXorViolations", "comparator": "isEmpty", "expected": [],
+			"twin": "stampTwoRangeFields"
+		},
+
+		// -----------------------------------------------------------------------------
+		// FAMILY P — Phase-1 proof gates added at the supervisor's back-gate (adversarial
+		// review M-1/S-1/S-3). G-P1 exists ONLY while the incumbent referenceSubgraph.js
+		// still does: it is the ruling R-P1-1 made into a measured fact, and it RETIRES
+		// WITH THE INCUMBENT at Phase 5.
+		// -----------------------------------------------------------------------------
+		{
+			"id": "G-P1", "family": "P",
+			"contract": "incumbentParity (M-1, retires at Phase 5): the incumbent referenceSubgraph.js forged over the SAME base yields the SAME addressSignature set, the same tuple-key set, the same per-key ADDRESS fields, and the same tier counts — the only permitted deltas are the spec-mandated ones (no _id, no qualifier name suffix, URI stableIds, refusals).",
+			"measure": "hub:incumbentParityViolations", "comparator": "isEmpty", "expected": [],
+			"twin": "perturbOneSignatureVsIncumbent"
+		},
+		{
+			"id": "G-P2", "family": "P",
+			"contract": "edgeTargets (S-1): every card's HAS_CEDS_DOMAIN edge lands on the class its domainId names, PROPERTY on its property node, RANGE on its option set or range class, VALUE on its value node, QUALIFIER on each qualifier value node — and the edge total equals the per-card derivable expectation.",
+			"measure": "hub:edgeTargetViolations", "comparator": "isEmpty", "expected": [],
+			"twin": "retargetOneDomainEdge"
+		},
+		{
+			"id": "G-P3", "family": "P",
+			"contract": "forgeTotality (S-3): every base DmeProperty either produced at least one card or appears BY NAME in the skip report (reason zeroDeclaredDomains, verified against the base); the skip report exists (explicit-empty acceptable) and contains nothing else.",
+			"measure": "hub:forgeTotalityViolations", "comparator": "isEmpty", "expected": [],
+			"twin": "dropOnePropertysCardsWithoutSkipEntry"
+		}
+	]
+}
