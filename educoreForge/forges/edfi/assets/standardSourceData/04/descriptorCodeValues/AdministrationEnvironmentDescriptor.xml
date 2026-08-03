@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<InterchangeDescriptors xmlns="http://ed-fi.org/5.2.0" xmlns:ann="http://ed-fi.org/annotation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://ed-fi.org/5.2.0 ../Schemas/Bulk/Interchange-Descriptors.xsd">
+	<AdministrationEnvironmentDescriptor>
+		<CodeValue>Classroom</CodeValue>
+		<ShortDescription>Classroom</ShortDescription>
+		<Description>Classroom</Description>
+		<Namespace>uri://ed-fi.org/AdministrationEnvironmentDescriptor</Namespace>
+	</AdministrationEnvironmentDescriptor>
+	<AdministrationEnvironmentDescriptor>
+		<CodeValue>School</CodeValue>
+		<ShortDescription>School</ShortDescription>
+		<Description>School</Description>
+		<Namespace>uri://ed-fi.org/AdministrationEnvironmentDescriptor</Namespace>
+	</AdministrationEnvironmentDescriptor>
+	<AdministrationEnvironmentDescriptor>
+		<CodeValue>Testing Center</CodeValue>
+		<ShortDescription>Testing Center</ShortDescription>
+		<Description>Testing Center</Description>
+		<Namespace>uri://ed-fi.org/AdministrationEnvironmentDescriptor</Namespace>
+	</AdministrationEnvironmentDescriptor>
+	<AdministrationEnvironmentDescriptor>
+		<CodeValue>Remote</CodeValue>
+		<ShortDescription>Remote</ShortDescription>
+		<Description>Outside the school or district</Description>
+		<Namespace>uri://ed-fi.org/AdministrationEnvironmentDescriptor</Namespace>
+	</AdministrationEnvironmentDescriptor>
+</InterchangeDescriptors>

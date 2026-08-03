@@ -1,0 +1,17 @@
+Domain Entity EdFi.Staff additions
+  descriptor EdFi.AcademicSubject
+    documentation "The academic subject(s) in which the staff is deemed to be ""highly qualified""."
+    is optional collection
+    role name HighlyQualified
+  descriptor Gender
+    documentation "The gender with which a person associates."
+    is optional
+  common EducatorResearch
+    documentation "Educator preparation provider faculty that instruct teacher candidates in content area or pedagogy."
+    is optional
+  domain entity EducatorPreparationProgram
+    documentation "The Educator Preparation Program(s) completed by the teacher."
+    is optional collection
+  domain entity EdFi.OpenStaffPosition
+    documentation "Reference to the open staff position filled by the staff."
+    is optional

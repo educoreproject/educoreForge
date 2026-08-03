@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<InterchangeDescriptors xmlns="http://ed-fi.org/5.2.0" xmlns:ann="http://ed-fi.org/annotation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://ed-fi.org/5.2.0 ../Schemas/Bulk/Interchange-Descriptors.xsd">
+	<PerformanceLevelDescriptor>
+		<CodeValue>Advanced</CodeValue>
+		<ShortDescription>Advanced</ShortDescription>
+		<Description>Advanced</Description>
+		<Namespace>uri://ed-fi.org/PerformanceLevelDescriptor</Namespace>
+	</PerformanceLevelDescriptor>
+	<PerformanceLevelDescriptor>
+		<CodeValue>Basic</CodeValue>
+		<ShortDescription>Basic</ShortDescription>
+		<Description>Basic</Description>
+		<Namespace>uri://ed-fi.org/PerformanceLevelDescriptor</Namespace>
+	</PerformanceLevelDescriptor>
+	<PerformanceLevelDescriptor>
+		<CodeValue>Below Basic</CodeValue>
+		<ShortDescription>Below Basic</ShortDescription>
+		<Description>Below Basic</Description>
+		<Namespace>uri://ed-fi.org/PerformanceLevelDescriptor</Namespace>
+	</PerformanceLevelDescriptor>
+	<PerformanceLevelDescriptor>
+		<CodeValue>Well Below Basic</CodeValue>
+		<ShortDescription>Well Below Basic</ShortDescription>
+		<Description>Well Below Basic</Description>
+		<Namespace>uri://ed-fi.org/PerformanceLevelDescriptor</Namespace>
+	</PerformanceLevelDescriptor>
+	<PerformanceLevelDescriptor>
+		<CodeValue>Met Standard</CodeValue>
+		<ShortDescription>Met Standard</ShortDescription>
+		<Description>Met Standard</Description>
+		<Namespace>uri://ed-fi.org/PerformanceLevelDescriptor</Namespace>
+	</PerformanceLevelDescriptor>
+	<PerformanceLevelDescriptor>
+		<CodeValue>Did Not Meet Standard</CodeValue>
+		<ShortDescription>Did Not Meet Standard</ShortDescription>
+		<Description>Did Not Meet Standard</Description>
+		<Namespace>uri://ed-fi.org/PerformanceLevelDescriptor</Namespace>
+	</PerformanceLevelDescriptor>
+	<PerformanceLevelDescriptor>
+		<CodeValue>Pass</CodeValue>
+		<ShortDescription>Pass</ShortDescription>
+		<Description>Pass</Description>
+		<Namespace>uri://ed-fi.org/PerformanceLevelDescriptor</Namespace>
+	</PerformanceLevelDescriptor>
+	<PerformanceLevelDescriptor>
+		<CodeValue>Fail</CodeValue>
+		<ShortDescription>Fail</ShortDescription>
+		<Description>Fail</Description>
+		<Namespace>uri://ed-fi.org/PerformanceLevelDescriptor</Namespace>
+	</PerformanceLevelDescriptor>
+	<PerformanceLevelDescriptor>
+		<CodeValue>Commended Performance</CodeValue>
+		<ShortDescription>DEPRECATED: Commended Performance</ShortDescription>
+		<Description>DEPRECATED: Commended Performance</Description>
+		<Namespace>uri://ed-fi.org/PerformanceLevelDescriptor</Namespace>
+	</PerformanceLevelDescriptor>
+	<PerformanceLevelDescriptor>
+		<CodeValue>Above Benchmark</CodeValue>
+		<ShortDescription>DEPRECATED: Above Benchmark</ShortDescription>
+		<Description>DEPRECATED: Above Benchmark</Description>
+		<Namespace>uri://ed-fi.org/PerformanceLevelDescriptor</Namespace>
+	</PerformanceLevelDescriptor>
+	<PerformanceLevelDescriptor>
+		<CodeValue>Proficient</CodeValue>
+		<ShortDescription>DEPRECATED: Proficient</ShortDescription>
+		<Description>DEPRECATED: Proficient</Description>
+		<Namespace>uri://ed-fi.org/PerformanceLevelDescriptor</Namespace>
+	</PerformanceLevelDescriptor>
+	<PerformanceLevelDescriptor>
+		<CodeValue>Minimum</CodeValue>
+		<ShortDescription>DEPRECATED: Minimum</ShortDescription>
+		<Description>DEPRECATED: Minimum</Description>
+		<Namespace>uri://ed-fi.org/PerformanceLevelDescriptor</Namespace>
+	</PerformanceLevelDescriptor>
+	<PerformanceLevelDescriptor>
+		<CodeValue>Satisfactory</CodeValue>
+		<ShortDescription>DEPRECATED: Satisfactory</ShortDescription>
+		<Description>DEPRECATED: Satisfactory</Description>
+		<Namespace>uri://ed-fi.org/PerformanceLevelDescriptor</Namespace>
+	</PerformanceLevelDescriptor>
+	<PerformanceLevelDescriptor>
+		<CodeValue>Unsatisfactory</CodeValue>
+		<ShortDescription>DEPRECATED: Unsatisfactory</ShortDescription>
+		<Description>DEPRECATED: Unsatisfactory</Description>
+		<Namespace>uri://ed-fi.org/PerformanceLevelDescriptor</Namespace>
+	</PerformanceLevelDescriptor>
+</InterchangeDescriptors>

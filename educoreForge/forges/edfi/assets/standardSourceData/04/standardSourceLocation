@@ -1,0 +1,34 @@
+standard: forge-edfi
+publishedVersion: Ed-Fi Data Standard 5.2.0 (DS 5.2) + TPDM Community Model 1.2
+publishedVersionEvidence: metaEdModel/package.json metaEdProject.projectVersion = "5.2.0"; descriptor XMLs from Ed-Fi-Data-Standard git tag v5.2.0; cedsAuthoredCrosswalk descriptors CSV stamps EdFiVersionNumber=DS5.2 on all 8,310 data rows (full-column sweep, 2026-08-03)
+upstreamUrl: https://pkgs.dev.azure.com/ed-fi-alliance/Ed-Fi-Alliance-OSS/_packaging/EdFi/npm/registry/ (model package) + https://github.com/Ed-Fi-Alliance-OSS/Ed-Fi-Data-Standard + https://github.com/Ed-Fi-Exchange-OSS/Ed-Fi-TPDM-Community-Model + https://github.com/Ed-Fi-Alliance-OSS/Ed-Fi-TPDM-Artifacts
+acquiredDate: 2026-08-03
+note: |
+  Snapshot 04 — the round-trip forge snapshot (DOCTRINE-roundTripForgeContract-080326.md,
+  RT-11 layout as amended 2026-08-03; supervisor rulings AMBER_TOWER 2026-08-03). FIVE declared
+  source inputs, one subfolder each:
+
+  1. metaEdModel/ — @edfi/ed-fi-model-5.2 v3.0.1 unpacked (653 .metaed + LICENSE + package.json).
+     THE canonical source: the Ed-Fi Data Standard is authored in MetaEd. Acquisition class:
+     machine-canonical. Ed-Fi Alliance License Agreement — this subfolder is GITIGNORED (the
+     licensed bytes are never committed). Git-clone consumers: run the acquisition recipe in
+     README_PROVENANCE.md (peer of this file) before forging.
+  2. descriptorCodeValues/ — 203 descriptor code-value XMLs from Ed-Fi-Data-Standard tag v5.2.0
+     (commit bb65fc2e95f71cc7111a43b3a0ac9c6bc787cdaa), Apache-2.0, committed. The only
+     machine-readable home of the standard's default code sets. Acquisition class:
+     machine-canonical.
+  3. tpdmCommunityModel/ — TPDM Community Model v1.2 MetaEd sources (196 .metaed), from
+     Ed-Fi-Exchange-OSS/Ed-Fi-TPDM-Community-Model tag v1.2
+     (commit a43d2a1de2e8c88b62e4fd52e8770078453a85b4), Apache-2.0, committed. Acquisition
+     class: machine-canonical (Community superset; TPDM Core .metaed is not public).
+  4. tpdmDescriptorCodeValues/ — 27 TPDM descriptor code-value XMLs from
+     Ed-Fi-Alliance-OSS/Ed-Fi-TPDM-Artifacts (commit de6f7c27f31e8032321dd8bc860c76dc847699e3),
+     Apache-2.0, committed. Acquisition class: machine-canonical.
+  5. cedsAuthoredCrosswalk/ — the authored Ed-Fi→CEDS crosswalk, BOTH CSVs byte-identical to
+     old snapshot 01 (cmp-verified 2026-08-03). Authored DATA, not structure (R-WO-4 ruling:
+     carried verbatim as second declared source input). Acquisition class:
+     human-artifact-snapshot — upstream URL/version unrecorded by the original harvest; this
+     snapshot IS the authority for these bytes.
+
+  SHA256SUMS (peer) covers every source file in all five subfolders, gitignored bytes included,
+  so "same bytes" is provable on any machine. Verify: cd 04 && shasum -c SHA256SUMS --quiet

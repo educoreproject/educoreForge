@@ -5,3 +5,8 @@ output/
 *.sqlite3
 *.sqlite-wal
 *.sqlite-shm
+
+# forge-edfi snapshot 04: the Ed-Fi Alliance-licensed MetaEd bytes are never committed
+# (TQ snapshot-handling ruling 2026-08-03; RT-11). ONLY this subfolder — no negation patterns.
+# Git-clone consumers: acquisition recipe in the peer README_PROVENANCE.md one directory up.
+educoreForge/forges/edfi/assets/standardSourceData/04/metaEdModel/

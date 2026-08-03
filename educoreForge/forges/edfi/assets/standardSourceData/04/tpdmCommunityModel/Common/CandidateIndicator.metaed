@@ -1,0 +1,24 @@
+Common CandidateIndicator
+    documentation "An indicator or metric computed for the student (e.g., at risk) to influence more effective education or direct specific interventions."
+    shared string EdFi.IndicatorName named IndicatorGroup
+        documentation "The name for a group of indicators."
+        is optional
+    shared string EdFi.IndicatorName
+        documentation "The name of the indicator or metric."
+        is part of identity
+    date BeginDate
+        documentation "The month, day, and year when the indicator value is valid"
+        is part of identity
+    date EndDate
+        documentation "The month, day, and year when the indicator value is no longer valid"
+        is optional
+    shared string EdFi.Indicator
+        documentation "The value of the indicator or metric."
+        is required
+    shared string EdFi.DesignatedBy
+        documentation "The person, organization, or department that designated the program association."
+        is optional
+    common EdFi.Period
+        deprecated "Period on CandidateIndicator is being deprecated in favor of BeginDate and EndDate. Expect removal in a future release"
+        documentation "The time periods for which the indicator was effective."
+        is optional collection

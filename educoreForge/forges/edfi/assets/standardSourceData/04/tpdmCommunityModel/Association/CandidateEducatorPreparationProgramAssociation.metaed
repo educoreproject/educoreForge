@@ -1,0 +1,38 @@
+Association CandidateEducatorPreparationProgramAssociation
+  documentation "Information about the association between the Teacher Candidate and the EducatorPreparationProgram"
+  domain entity Candidate
+    documentation "Candidate for the association."
+  domain entity EducatorPreparationProgram
+    documentation "The Program associated to the Candidate."
+  date BeginDate
+    documentation "The begin date for the association."
+    is part of identity
+  date EndDate
+    documentation "The end date for the association."
+    is optional
+  descriptor EdFi.ReasonExited
+    documentation "Reason exited for the association."
+    is optional
+  common CandidateIndicator
+    documentation "Indicator(s) or metric(s) computed for the candidate in the EPP."
+    is optional collection
+  descriptor EPPProgramPathway
+    documentation "The program pathway the candidate is following; for example: Residency, Internship, Traditional"
+    is optional
+  shared string Specialization named MajorSpecialization
+      deprecated "This element has been replaced with DegreeSpecialization.MajorSpecialization. Expect this element to be removed in a future release"
+      documentation "The major area for a degree or area of specialization for a certificate."
+      is optional
+  shared string Specialization named MinorSpecialization
+      deprecated "This element has been replaced with DegreeSpecialization.MinorSpecialization. Expect this element to be removed in a future release"
+      documentation "The major area for a degree or area of specialization for a certificate."
+      is optional
+  common DegreeSpecialization
+      documentation "Information around the area(s) of specialization for an individual."
+      is optional collection
+  common EdFi.CohortYear
+      documentation "The type and year of a cohort the student belongs to as determined by the year that student entered a specific grade."
+      is optional collection
+  domain entity Application
+      documentation "The EPP application submitted by the accepted Candidate."
+      is optional

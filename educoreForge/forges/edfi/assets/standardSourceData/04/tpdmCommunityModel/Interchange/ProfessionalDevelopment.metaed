@@ -1,0 +1,6 @@
+Interchange ProfessionalDevelopment
+
+    documentation "?"
+
+    domain entity ProfessionalDevelopmentEvent
+    domain entity ProfessionalDevelopmentEventAttendance
