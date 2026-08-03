@@ -8,7 +8,11 @@
 //          candidateElements, graphReader, hubModule); a failing nominate()/hubModule()/walk() is
 //          propagated, named; a malformed nomination (no rationale) and a smuggled per-candidate
 //          walk segment are caught by the composer's OWN self-gate (⟪A3⟫) BEFORE it calls back; a
-//          walk hook reaching outside the declared `dependencies` is refused BY VALUE (⟪A5⟫).
+//          walk hook reaching outside the declared `dependencies` is refused BY VALUE (⟪A5⟫);
+//          ⟪hubReimplementation P3, SPEC-hubReimplementation-080326.md §6⟫ a hubModule double still
+//          emitting the RETIRED old-shape tuple (domains[]/domainsComplete/qualifier) is refused by
+//          the same self-gate, BY NAME — the fixture-shape twin proving the ⟪A3⟫ gate now enforces
+//          the tuple's MEANING contract, not merely its presence.
 //   GREEN — a cosine-only pool composes a conforming evidence package (verified against the REAL
 //          evidencePackageViolation oracle — the contract gate IS the acceptance oracle, not this
 //          suite's own assertions); the union-pool dedupe rule (⟪A1⟫: a nominated candidate already
@@ -62,16 +66,20 @@ const candidateNoVector = { stableId: 'ceds:P4', canonicalKey: 'P4', name: 'No-V
 
 const candidateElements = [candidateNear, candidateFar];
 
+// conformingBaseTupleFor — the ⟪hubReimplementation P3⟫ MEANING-shaped BaseTupleEvidence
+// (SPEC-hubReimplementation-080326.md §6 / evidenceContracts.js §3): the singular `domain` group
+// carrying its name, the `property` meaning group, and `qualifierNames` (always an array) — the
+// composer's ⟪A3⟫ self-gate now proves this shape on every pool entry's considerations.tuple.
 const conformingBaseTupleFor = (candidate) => ({
 	referenceTier: 'property',
 	canonicalKey: candidate.canonicalKey,
 	propertyKey: candidate.canonicalKey,
 	name: candidate.name,
-	domains: [{ domainId: 'C200000', domainName: 'Fixture Domain' }],
-	domainsComplete: true,
+	domain: { domainId: 'C200000', domainName: 'Fixture Domain', domainDefinition: 'The fixture owning class.' },
+	property: { propertyName: candidate.name, propertyDefinition: `The fixture definition of ${candidate.name}.` },
 	range: { shape: 'datatype', rangeDatatype: 'string', rangeClassId: null, rangeOptionSetId: null },
 	isQualified: false,
-	qualifier: null,
+	qualifierNames: [],
 	value: null,
 });
 
@@ -293,6 +301,41 @@ harness.section('RED — hubModule() failure for one candidate is propagated, na
 		},
 	);
 	harness.match('named with the failing candidate\'s key', observed, /hubModule failed for candidate 'ceds:P2': hub lookup timed out/);
+})();
+
+// =====================================================================
+harness.section('RED — fixture-shape twin (⟪hubReimplementation P3⟫): a hubModule double still emitting the RETIRED old-shape tuple is refused by the composer\'s OWN ⟪A3⟫ self-gate, BY NAME');
+// =====================================================================
+(() => {
+	// the EXACT tuple shape this suite's own conformingBaseTupleFor produced BEFORE the
+	// hubReimplementation P3 revision — domains[]/domainsComplete/qualifier, no meaning groups. A
+	// stale hub module (or a stale fixture like this one) must never put an id-only candidate in
+	// front of the judge again; the self-gate refuses it at the source, naming the retired field.
+	const oldShapeHubModule = (candidate, callback) =>
+		callback('', {
+			referenceTier: 'property',
+			canonicalKey: candidate.canonicalKey,
+			propertyKey: candidate.canonicalKey,
+			name: candidate.name,
+			domains: [{ domainId: 'C200000', domainName: 'Fixture Domain' }],
+			domainsComplete: true,
+			range: { shape: 'datatype', rangeDatatype: 'string', rangeClassId: null, rangeOptionSetId: null },
+			isQualified: false,
+			qualifier: null,
+			value: null,
+		});
+	let observed = null;
+	plainComposer(
+		{ sourceElement, candidateElements, graphReader: { readNodes: () => {}, close: (cb) => cb('') }, hubModule: oldShapeHubModule },
+		(err) => {
+			observed = err;
+		},
+	);
+	harness.match(
+		'refused before calling back with a package, naming the retired field',
+		observed,
+		/composed evidence package failed its own shape gate.*considerations\.tuple fails the meaning contract.*retired field 'domains'/,
+	);
 })();
 
 // =====================================================================

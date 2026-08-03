@@ -227,6 +227,9 @@ harness.section('⟪P3⟫ GREEN — the evidence path\'s six new kit members, co
 	// a composed candidate -> a conforming BaseTupleEvidence, verified against the REAL contract oracle.
 	const { hubModulePresentationViolation } = require('../lib/evidenceContracts');
 	let hubObserved = null;
+	// ⟪hubReimplementation P3 (SPEC §6)⟫ the conforming candidate is the SELF-SUFFICIENT card: it
+	// carries its own MEANING fields (domainName, propertyName, definitions) — kit.cedsHubModule
+	// refuses a card without them by name, never resolves them through a map.
 	kit.cedsHubModule(
 		{
 			referenceTier: 'property',
@@ -234,6 +237,10 @@ harness.section('⟪P3⟫ GREEN — the evidence path\'s six new kit members, co
 			propertyKey: 'P000104',
 			name: 'Staff Evaluation Score or Rating',
 			domainId: 'C200366',
+			domainName: 'Staff Evaluation',
+			domainDefinition: 'Information about the evaluation of a staff member.',
+			propertyName: 'Staff Evaluation Score or Rating',
+			propertyDefinition: 'The score or rating assigned to a staff member as the result of an evaluation.',
 			rangeDatatype: 'string',
 		},
 		(err, presentation) => {

@@ -72,7 +72,21 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // Every v3 judgment is invalidated by this bump (the judgment cache keys on rendererVersion — that is
 // the bump doing its job). A pool composed WITHOUT facets (the historical cosine-top-K path, still live
 // for any bridge that has not opted in) renders exactly as it did in v3 apart from the source block.
-const RENDERER_VERSION = 'evidenceRenderer-v4';
+// v4 -> v5 ⟪hubReimplementation P3, 2026-08-03 (SPEC-hubReimplementation-080326.md §6)⟫: THE CANDIDATE
+// GAINS ITS MEANING. renderTupleBlock now renders the revised BaseTupleEvidence — the card's own
+// prose, not its ids:
+//   (1) `Domain: <name> (<id>)` — SINGULAR, the name leading, and the completeness caveat is GONE
+//       (the incompleteness disclaimer described the retired card shape; the new card is one
+//       domain's complete view by construction, SPEC §1.1 — and the caveat's literal wording is
+//       deliberately not repeated even here: gate G-14 sweeps these sources for it).
+//   (2) DEFINITION LINES: the property's definition (the judge finally sees what the candidate MEANS
+//       — PLAN §1.2's whole finding), the domain's definition, the range's (class/option-set)
+//       definition, and the value's definition at value tier.
+//   (3) the qualifier line reads `qualifierNames` off the presentation — the " [qualifier]"
+//       name-suffix parse is retired with the naming convention itself (SPEC §1.6).
+// Every v4 judgment is invalidated by this bump (the judgment cache keys on rendererVersion — that is
+// the bump doing its job).
+const RENDERER_VERSION = 'evidenceRenderer-v5';
 
 // BASE_ABSTAIN_FIRST_INSTRUCTION — composition order slot 1 (RENDERER_COMPOSITION_ORDER[0]), a fixed
 // constant, the SAME abstain-first discipline lib.d/selector.js's SYSTEM_PROMPT states for the scalar
@@ -162,8 +176,10 @@ const renderSourceBlock = (sourceElement) => {
 
 const round6 = (n) => Math.round(n * 1e6) / 1e6;
 
-// renderRangeText — one line per BaseTupleEvidence.range shape (P0-cedsTupleModel.md §3 worked
-// examples), mutually exclusive by construction (hubModulePresentationViolation already proved it).
+// renderRangeText — one line per BaseTupleEvidence.range shape, mutually exclusive by construction
+// (hubModulePresentationViolation already proved it). ⟪hubReimplementation P3⟫ the option-set line
+// now carries the option set's NAME when the presentation has it — the id alone told the judge
+// nothing (an enumerated range named 'Grade Levels' is evidence; 'OS001637' is plumbing).
 const renderRangeText = (range) => {
 	if (!range) {
 		return '(unspecified)';
@@ -175,40 +191,75 @@ const renderRangeText = (range) => {
 		return `reference → CEDS class ${range.rangeClassId}${range.rangeClassName ? ` (${range.rangeClassName})` : ''}`;
 	}
 	if (range.shape === 'optionSet') {
-		return `enumerated — option set ${range.rangeOptionSetId}`;
+		return `enumerated — option set ${range.rangeOptionSetId}${range.rangeOptionSetName ? ` (${range.rangeOptionSetName})` : ''}`;
 	}
 	return `(unrecognized range shape '${range.shape}')`;
 };
 
+// rangeDefinitionOf — the range's own prose, whichever range shape carries it ('' when the shape has
+// none or the card carried none — a stated per-shape rule, not a chain: class ranges carry
+// rangeClassDefinition, option-set ranges carry rangeOptionSetDefinition, datatype ranges have no
+// prose by construction).
+const rangeDefinitionOf = (range) => {
+	if (!range) {
+		return '';
+	}
+	if (range.shape === 'class') {
+		return range.rangeClassDefinition || '';
+	}
+	if (range.shape === 'optionSet') {
+		return range.rangeOptionSetDefinition || '';
+	}
+	return '';
+};
+
 // renderTupleBlock — one BaseTupleEvidence (R5's presentation, evidenceContracts.js §3) rendered per
-// the P0-cedsTupleModel.md §3 PROPOSAL shapes, now the CONTRACT's own worked examples.
+// the ⟪hubReimplementation P3⟫ MEANING contract (SPEC §6): the judge sees every tuple slot's name AND
+// its prose. Reading order follows the incumbent scalar path's proven candidate line
+// (`domain · name — definition [range]`, PLAN §1.2a's donor prior art), unrolled into labeled lines:
+// what is this (reference + name), where does it live (domain, named), what does it MEAN (the
+// definitions), what shape is it (range), what scope binds it (value tier).
 const renderTupleBlock = (tuple) => {
 	if (!tuple || typeof tuple !== 'object') {
 		return '  (no tuple evidence)';
 	}
 	const lines = [];
 	const isValueTier = tuple.referenceTier === 'value';
+	const domain = tuple.domain || {};
+	const property = tuple.property || {};
 	lines.push(`  CEDS ${isValueTier ? 'Value ' : ''}Reference: ${tuple.canonicalKey} — "${tuple.name}"`);
-	const domainsText = (tuple.domains || [])
-		.map((oneDomain) => (oneDomain.domainName ? `${oneDomain.domainId} (${oneDomain.domainName})` : oneDomain.domainId))
-		.join(', ');
-	lines.push(
-		`  Domain(s): ${domainsText || '(none)'}` +
-			(tuple.domainsComplete ? '' : ' [domain list may be incomplete — known CEDS forge limitation, P0 §2.4]'),
-	);
-	if (tuple.isQualified && tuple.qualifier) {
+	lines.push(`  Domain: ${domain.domainName} (${domain.domainId})`);
+	if (isValueTier) {
+		lines.push(`  Property: ${property.propertyName} (${tuple.propertyKey})`);
+		if (property.propertyDefinition) {
+			lines.push(`  Property definition: ${property.propertyDefinition}`);
+		}
+		if (tuple.value && tuple.value.valueDefinition) {
+			lines.push(`  Value definition: ${tuple.value.valueDefinition}`);
+		}
+	} else if (property.propertyDefinition) {
+		lines.push(`  Definition: ${property.propertyDefinition}`);
+	}
+	if (domain.domainDefinition) {
+		lines.push(`  Domain definition: ${domain.domainDefinition}`);
+	}
+	if (tuple.isQualified && Array.isArray(tuple.qualifierNames) && tuple.qualifierNames.length) {
 		lines.push(
-			`  Qualifier: ${tuple.propertyKey} [${tuple.qualifier.qualifierName}] — this canonicalKey also has ` +
-				`an unqualified base and/or other qualified variants; match against THIS specific qualifier ` +
-				`context, never the bare property (P0 §2.2)`,
+			`  Qualifier: ${tuple.propertyKey} [${tuple.qualifierNames.join(', ')}] — this canonicalKey also ` +
+				`has an unqualified base and/or other qualified variants; match against THIS specific qualifier ` +
+				`context, never the bare property`,
 		);
 	}
 	lines.push(`  Range: ${renderRangeText(tuple.range)}`);
+	const rangeDefinition = rangeDefinitionOf(tuple.range);
+	if (rangeDefinition) {
+		lines.push(`  Range definition: ${rangeDefinition}`);
+	}
 	if (isValueTier && tuple.value) {
 		lines.push(
 			`  Scope: this value is a candidate ONLY within option set ${tuple.value.owningOptionSetId} of ` +
 				`property ${tuple.value.owningPropertyKey} — the same value token can recur under a DIFFERENT ` +
-				`owning property with a DIFFERENT meaning; never offered as a bare, unscoped candidate (P0 §2.6)`,
+				`owning property with a DIFFERENT meaning; never offered as a bare, unscoped candidate`,
 		);
 	}
 	return lines.join('\n');

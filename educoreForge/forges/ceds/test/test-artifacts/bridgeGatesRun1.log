@@ -1,0 +1,105 @@
+runCedsHubBridgeGates
+
+LIVE GRAPH — DEV_cedsHubV2_080326 @ bolt://localhost:7815
+
+===== G-14 RENDERED EVIDENCE BLOCK (REAL card P001470, VERBATIM) =====
+1) Rubric Criterion Description — retrieval cosine 0.5
+  CEDS Reference: P001470 — "Rubric Criterion Description"
+  Domain: Rubric Criterion (C200354)
+  Definition: Text describing a criterion that must be met to demonstrate quality for a product, process, or performance task.
+  Domain definition: A single criterion by which one aspect of an entity's competence may be evaluated.
+  Range: scalar — string
+=====
+[runCedsHubBridgeGates] G-15 mini-bridge: LIVE run over DEV_cedsHubV2_080326 (1 source element, real judgment)
+[embedding-client] vector cache: 1 text(s), 1 distinct miss to embed, 0 served from cache
+[genericBridge] multi-facet scan armed over 94602 candidate(s); 1 owning class(es) mapped for LIF; candidate vectors read off the cards (zero candidate embeds)
+[genericBridge] judging 1 of 1 source elements (concurrency 1)
+[genericBridge] judged 1/1 (0 served from the judgment cache, 1 live)
+
+MATERIAL GATHERING
+  --   G-15 bridge result: mode rebridge, decisionsConsidered 1, picks 1, abstains 0, edgesWritten 1, generation genericBridge-evidence-v5
+  --   G-15 seam observation: 1 text(s) crossed the embedding-client seam: 'Assessment · shortName · An abbreviated title for an assessm'
+
+G-15 CLEANUP VERIFICATION — the preserved graph exits as it entered (supervisor obligation)
+
+GATE DECLARATIONS — the bridge:-measured family-E gates
+
+THE TWIN SWEEP — each gate OBSERVED going RED under its own fault
+  --   G-14: twin 'renderAgainstOldShapeFixture' injected -> gate correctly went FAIL under its twin
+  --   G-15: twin 'forceOneCandidateEmbed' injected -> gate correctly went FAIL under its twin
+  --   G-17: twin 'renameOneEdgeInFixture' injected -> gate correctly went FAIL under its twin
+
+THE VERDICT — pristine measurements, twins observed
+================================================================================================
+CEDS FIDELITY GATES — cedsHubForge v1.0.0
+================================================================================================
+  acceptance: every gate PASS and every twin observed RED. No percentage participates.
+
+  3 gates: 2 PASS, 1 FAIL, 0 UNMEASURED, 0 UNPROVEN
+
+  VERDICT: NOT ACCEPTED
+
+  A red suite during enrichment is CORRECT. Its redness is the work order.
+  UNPROVEN means the gate passed but nobody has watched it fail.
+  UNMEASURED means nobody supplied the measure -- which is a failure, not a skip.
+
+------------------------------------------------------------------------------------------------
+  GATE   STATUS      TWIN     CONTRACT
+------------------------------------------------------------------------------------------------
+  G-14   FAIL        observed promptClean: a rendered evidence block for a REAL card read from the live Phase-2 graph contains the domain NAME (`Domain: <name> (<id>)`) and the property DEFINITION line, and does NOT contain the string 'may be incomplete'; a source-tree sweep of the bridge/evidence modules finds ZERO occurrences of that caveat string.
+                              -> length 1, expected 0
+  G-15   PASS        observed noCandidateReembed: a LIVE bridge run (real graph, real kit, real judgments) performs ZERO candidate embed calls — every text observed crossing the EMBEDDING-CLIENT seam (a counting proxy around the real client, injected through the vectorizer's embeddingClientFactory seam) is one of the run's SOURCE embedTexts, and at least one source text is observed (an unfired counter is vacuous, refused).
+  G-17   PASS        observed dmeShape: the live graph carries role HubReference, ALL SIX edge types (IN_HUB + HAS_CEDS_DOMAIN/PROPERTY/RANGE/VALUE/QUALIFIER), and canonicalKey with unchanged semantics (present on every card; P-prefixed on property tier, OV-prefixed on value tier); every HubReference-shape name the five DME reader files require (grepped from the SEPARATE educore repo) exists in the graph.
+  FAIL zero FAIL
+       expected 0, got 1
+  FAIL VERDICT: ACCEPTED
+       {
+         "suiteName": "cedsHubForge",
+         "suiteVersion": "1.0.0",
+         "acceptanceRule": "every gate PASS and every twin observed RED. No percentage participates.",
+         "total": 3,
+         "passed": 2,
+         "failed": 1,
+         "unmeasured": 0,
+         "unproven": 0,
+         "accepted": false,
+         "byFamily": {
+           "E": {
+             "total": 3,
+             "passed": 2
+           }
+         },
+         "gates": [
+           {
+             "id": "G-14",
+             "family": "E",
+             "contract": "promptClean: a rendered evidence block for a REAL card read from the live Phase-2 graph contains the domain NAME (`Domain: <name> (<id>)`) and the property DEFINITION line, and does NOT contain the string 'may be incomplete'; a source-tree sweep of the bridge/evidence modules finds ZERO occurrences of that caveat string.",
+             "note": "",
+             "measure": "bridge:promptCleanViolations",
+             "comparator": "isEmpty",
+             "status": "FAIL",
+             "detail": "length 1, expected 0",
+             "twin": "renderAgainstOldShapeFixture",
+             "twinObserved": true
+           },
+           {
+             "id": "G-15",
+             "family": "E",
+             "contract": "noCandidateReembed: a LIVE bridge run (real graph, real kit, real judgments) performs ZERO candidate embed calls — every text observed crossing the EMBEDDING-CLIENT seam (a counting proxy around the real client, injected through the vectorizer's embeddingClientFactory seam) is one of the run's SOURCE embedTexts, and at least one source text is observed (an unfired counter is vacuous, refused).",
+             "note": "",
+             "measure": "bridge:candidateReembedViolations",
+             "comparator": "isEmpty",
+             "status": "PASS",
+             "detail": "length 0, expected 0",
+             "twin": "forceOneCandidateEmbed",
+             "twinObserved": true
+           },
+           {
+             "id": "G-17",
+             "family": "E",
+             "contract": "dmeShape: the live graph carries role HubReference, ALL SIX edge types (IN_HUB + HAS_CEDS_DOMAIN/PROPERTY/RANGE/VALUE/QUALIFIER), and canonicalKey with unchanged semantics (present on every card; P-prefixed on property tier, OV-prefixed on value tier)
+
+runCedsHubBridgeGates: FAILURES
+  - zero FAIL
+  - VERDICT: ACCEPTED
+runCedsHubBridgeGates: 15/17 passed, 2 failed.

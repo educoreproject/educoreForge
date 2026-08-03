@@ -170,12 +170,37 @@ const stubCacheNeverHit = {
 // prompt is unique and the stub llm can answer as a PURE FUNCTION OF THE PROMPT (never call
 // order) — the property that makes a mixed cache-hit/live run byte-identical to an all-live run.
 // =====================================================================
+// ⟪hubReimplementation P3, SPEC-hubReimplementation-080326.md §1/§6⟫ the candidate fixtures are the
+// SELF-SUFFICIENT cards: MEANING (domainName/domainDefinition, propertyName/propertyDefinition) +
+// DERIVED (embedText, embedding) all ON the card. The bridge reads each card's forge-stamped
+// `embedding` as the candidate vector and refuses a vectorless (or embedText-less) candidate by
+// name — it never re-embeds; ONLY source embedTexts ever reach kit.vectorizer.batchEmbed (G-15).
+//
+// cardEmbeddingProperty — the reader-double shape of a card's `embedding` property: the bare
+// LIST<FLOAT> a live graph stores (lib/replay/replay-engine.js writes number[] verbatim).
+// ⟪RESOLVED per the P3 flatten ruling, 2026-08-03⟫ this helper previously PRE-WRAPPED the vector one
+// array level to survive flattenFullRecord's v1() collapse — a fixture accommodation that was itself
+// the finding: the collapse would have truncated every live card's 1024-dim embedding to its first
+// float. flattenFullRecord now carries LIST_VALUED_PROPERTY_NAMES (embedding/qualifierKeys/
+// qualifierNames pass through VERBATIM), so the fixture stores the honest live shape and the
+// accommodation is reverted. If this test ever fails with 'carries no embedding' again, suspect a
+// registry regression in sourceWalker.js before suspecting the bridge.
+const cardEmbeddingProperty = (vector) => vector;
+
 const referenceNodesRaw = [
 	{
 		stableId: 'cedsHubRef:addr1',
 		properties: {
 			role: 'HubReference', referenceTier: 'property', canonicalKey: 'P000104', propertyKey: 'P000104',
 			name: 'Staff Evaluation Score or Rating', domainId: 'C200366', rangeDatatype: 'string', qualifierKeys: [],
+			domainName: 'Staff Evaluation',
+			domainDefinition: 'Information about the evaluation of a staff member.',
+			propertyName: 'Staff Evaluation Score or Rating',
+			propertyDefinition: 'The score or rating assigned to a staff member as the result of an evaluation.',
+			embedText:
+				'Staff Evaluation · Staff Evaluation Score or Rating · The score or rating assigned to a staff ' +
+				'member as the result of an evaluation. · Information about the evaluation of a staff member.',
+			embedding: cardEmbeddingProperty([1, 0, 0]),
 		},
 	},
 	{
@@ -183,6 +208,16 @@ const referenceNodesRaw = [
 		properties: {
 			role: 'HubReference', referenceTier: 'property', canonicalKey: 'P600253', propertyKey: 'P600253',
 			name: 'Has Local Education Agency Title I Support Service', domainId: 'C200188', rangeClassId: 'C200196', qualifierKeys: [],
+			domainName: 'Local Education Agency',
+			domainDefinition: 'A local-level education agency that operates schools or contracts for educational services.',
+			propertyName: 'Has Local Education Agency Title I Support Service',
+			propertyDefinition: 'An indication that the local education agency provides a Title I support service.',
+			rangeClassName: 'Title I Support Service',
+			embedText:
+				'Local Education Agency · Has Local Education Agency Title I Support Service · An indication that ' +
+				'the local education agency provides a Title I support service. · A local-level education agency ' +
+				'that operates schools or contracts for educational services.',
+			embedding: cardEmbeddingProperty([0, 0, 1]),
 		},
 	},
 ];
@@ -198,10 +233,10 @@ const sourceGraphNodes = SOURCE_COSINES.map((oneCosine, i) => ({
 	},
 }));
 
-const textVectors = {
-	'Staff Evaluation Score or Rating': [1, 0, 0],
-	'Has Local Education Agency Title I Support Service': [0, 0, 1],
-};
+// SOURCES ONLY (⟪hubReimplementation P3⟫): the candidate vectors ride on the cards themselves
+// (referenceNodesRaw's forge-stamped embeddings) and never cross the vectorizer seam — the bridge
+// batchEmbeds ONLY the source composite embedTexts (G-15).
+const textVectors = {};
 SOURCE_COSINES.forEach((oneCosine, i) => {
 	// keyed on the source NAME — the one token present in BOTH the old bare defText and the new
 	// composite embedText, so this fixture survives a composition-format change.

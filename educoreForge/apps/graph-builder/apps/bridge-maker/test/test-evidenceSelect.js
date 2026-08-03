@@ -47,16 +47,20 @@ const { selectShapeViolation, selectResultViolation } = require('../lib/evidence
 
 const realRenderer = evidenceRendererFactory();
 
+// tupleFor — the ⟪hubReimplementation P3⟫ MEANING-shaped BaseTupleEvidence
+// (SPEC-hubReimplementation-080326.md §6 / evidenceContracts.js §3): the singular `domain` group
+// carrying its name, the `property` meaning group, and `qualifierNames` (always an array) — the
+// ⟪A3⟫ gate at the select seam refuses the retired domains[]/domainsComplete/qualifier shape on sight.
 const tupleFor = (canonicalKey, name) => ({
 	referenceTier: 'property',
 	canonicalKey,
 	propertyKey: canonicalKey,
 	name,
-	domains: [{ domainId: 'C200000', domainName: 'Fixture Domain' }],
-	domainsComplete: true,
+	domain: { domainId: 'C200000', domainName: 'Fixture Domain', domainDefinition: 'The fixture owning class.' },
+	property: { propertyName: name, propertyDefinition: `The fixture definition of ${name}.` },
 	range: { shape: 'datatype', rangeDatatype: 'string', rangeClassId: null, rangeOptionSetId: null },
 	isQualified: false,
-	qualifier: null,
+	qualifierNames: [],
 	value: null,
 });
 

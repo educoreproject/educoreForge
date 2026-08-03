@@ -1,0 +1,23 @@
+runCedsHubBridgeGates
+
+LIVE GRAPH — DEV_cedsHubV2_080326 @ bolt://localhost:7815
+
+===== G-14 RENDERED EVIDENCE BLOCK (REAL card P001470, VERBATIM) =====
+1) Rubric Criterion Description — retrieval cosine 0.5
+  CEDS Reference: P001470 — "Rubric Criterion Description"
+  Domain: Rubric Criterion (C200354)
+  Definition: Text describing a criterion that must be met to demonstrate quality for a product, process, or performance task.
+  Domain definition: A single criterion by which one aspect of an entity's competence may be evaluated.
+  Range: scalar — string
+=====
+
+G-15 CLEANUP VERIFICATION — always-run tail (SF-1); the preserved graph exits as it entered
+
+MATERIAL GATHERING
+  --   pipeline error (reported, not masked by cleanup): runCedsHubBridgeGates: FORCED MID-RUN FAILURE (-forceMidRunFailure) — the SF-1 probe: fixtures are in the graph and the pipeline is now dying on purpose so the cleanup tail can prove it runs on the failure path.
+  FAIL all live material gathered
+       runCedsHubBridgeGates: FORCED MID-RUN FAILURE (-forceMidRunFailure) — the SF-1 probe: fixtures are in the graph and the pipeline is now dying on purpose so the cleanup tail can prove it runs on the failure path.
+
+runCedsHubBridgeGates: FAILURES
+  - all live material gathered
+runCedsHubBridgeGates: 5/6 passed, 1 failed.

@@ -5,10 +5,14 @@
 // (candidateSelectionRedesign-073126.md §4; P12 deliverable). Proves, against the REAL modules and
 // hand-built fixtures only — no Docker, no Neo4j, no LLM, no network, no embedding call:
 //
-//   SECTION 1  composite embedded text — the EXACT documented format, on both sides; determinism
-//              (same inputs, same bytes, every time); whitespace normalization; slot omission; the
-//              degenerate all-empty case; and the defText fallback chain it REPLACES.
-//   SECTION 2  the owning-class map — build, lookup by parentId, honest absence, stamping.
+//   SECTION 1  composite embedded text — the SOURCE side's EXACT documented format; the CANDIDATE
+//              side's forge-stored embedText read VERBATIM (⟪hubReimplementation P3⟫: the card
+//              composes and stores its own retrieval string at forge time); determinism (same
+//              inputs, same bytes, every time); whitespace normalization; slot omission; the
+//              degenerate all-empty case; and the defText resolution chain it REPLACES.
+//   SECTION 2  the owning-class map — build, lookup by parentId, honest absence, stamping — and the
+//              candidate's context read straight off the card's own domainName (the bridge-side
+//              domain map is RETIRED with the card shape that made it necessary).
 //   SECTION 3  each facet in isolation, including its edge cases (missing vector, no tokens, an
 //              authored anchor that does NOT match, an undetermined type, an unknown tier).
 //   SECTION 4  slot allocation — every reserved slot is filled, dedupe seats a shared candidate ONCE
@@ -22,7 +26,9 @@
 //              class NAME and DESCRIPTION — proven through the REAL renderer, and through the REAL
 //              ⟪A3⟫ gate (evidencePackageViolation) as the acceptance oracle for the package shape.
 //   SECTION 7  refusals BY NAME — construction and shape guards on facetScan and on the composer's
-//              facetScanner injection, and the contracts gate's own facet/slot refusals (RED/GREEN).
+//              facetScanner injection; the reimplemented card's OWN refusals (no embedText, no
+//              domainName — each refused NAMING the candidate); the retired exports proven gone;
+//              and the contracts gate's own facet/slot refusals (RED/GREEN).
 //   SECTION 8  MEASURED SCAN COST at realistic scale (29,346 candidates × 1024 dims), reported as a
 //              number, not asserted — a timing assertion on shared hardware is a flake generator.
 //
@@ -60,11 +66,9 @@ const caseEvidenceBridge = require('../../../../../forges/case/bridges/caseEvide
 
 const {
 	composeSourceEmbedText,
-	composeCandidateEmbedText,
 	embedTextForSource,
 	embedTextForCandidate,
 	buildClassMap,
-	buildDomainMap,
 	candidateDomainText,
 	owningClassOf,
 	stampOwningClass,
@@ -91,18 +95,23 @@ const skipScale = !!(commandLineParameters && commandLineParameters.switches && 
 // unitVector — a 3-dim vector on the unit sphere so cosine values read by inspection.
 const v3 = (a, b, c) => [a, b, c];
 
-// hubModuleDouble — the minimum conforming BaseTupleEvidence a package gate accepts. Not the real
-// cedsHubModule (which demands a full P0-shaped HubReference); this suite is about the SCAN.
+// hubModuleDouble — the minimum conforming BaseTupleEvidence a package gate accepts, in the
+// ⟪hubReimplementation P3⟫ shape (SPEC §6: singular meaning-carrying `domain` group, `property`
+// group, `qualifierNames`). Not the real cedsHubModule (which demands a full reimplemented
+// HubReference card); this suite is about the SCAN. Every field is read from its ONE place on the
+// new-shape fixture card — no defaulting.
 const hubModuleDouble = (candidate, callback) =>
 	callback('', {
-		canonicalKey: candidate.canonicalKey || candidate.stableId,
+		referenceTier: candidate.referenceTier,
+		canonicalKey: candidate.canonicalKey,
+		propertyKey: candidate.propertyKey,
 		name: candidate.name,
-		referenceTier: candidate.referenceTier || 'property',
-		domains: candidate.domainId ? [{ domainId: candidate.domainId, domainName: candidate.domainName }] : [],
-		domainsComplete: true,
+		domain: { domainId: candidate.domainId, domainName: candidate.domainName },
+		property: { propertyName: candidate.propertyName, propertyDefinition: candidate.propertyDefinition },
+		range: { shape: 'datatype', rangeDatatype: candidate.rangeDatatype, rangeClassId: null, rangeOptionSetId: null },
 		isQualified: false,
-		qualifier: null,
-		range: { shape: 'datatype', rangeDatatype: candidate.rangeDatatype || 'string' },
+		qualifierNames: [],
+		value: null,
 	});
 
 const graphReaderDouble = {
@@ -127,14 +136,23 @@ harness.equal(
 	'CFItem · uri · The Uniform Resource Identifier. · This is the content that either describes a specific competency.',
 );
 
+// ⟪hubReimplementation P3⟫ the candidate side is composed AT FORGE TIME and STORED on the card as
+// `embedText` (SPEC §1.5/§4); embedTextForCandidate is a verbatim READ of that field — one
+// composition, one authority, inspectable in the graph.
 harness.equal(
-	'candidate composite: three slots, positionally aligned with the source side',
-	composeCandidateEmbedText({
+	"candidate side: embedTextForCandidate returns the card's STORED embedText VERBATIM",
+	embedTextForCandidate({
+		canonicalKey: 'P000887',
+		name: 'Competency Definition URL',
 		domainName: 'Competency Definition',
-		propertyName: 'Competency Definition URL',
-		description: 'The URL of the competency definition.',
+		embedText: 'Competency Definition · Competency Definition URL · The URL of the competency definition.',
 	}),
 	'Competency Definition · Competency Definition URL · The URL of the competency definition.',
+);
+harness.equal(
+	'the stored embedText comes back BYTE-FOR-BYTE — no renormalization, no recomposition, no second authority',
+	embedTextForCandidate({ canonicalKey: 'PRAW', domainName: 'Anything', embedText: '  raw   stored\tbytes ' }),
+	'  raw   stored\tbytes ',
 );
 
 harness.equal(
@@ -151,7 +169,7 @@ harness.equal(
 
 harness.equal(
 	'null/undefined slots behave exactly as empty ones',
-	composeCandidateEmbedText({ domainName: null, propertyName: 'Name', description: undefined }),
+	composeSourceEmbedText({ owningClassName: null, propertyName: 'Name', description: undefined, owningClassDescription: null }),
 	'Name',
 );
 
@@ -221,17 +239,6 @@ harness.equal(
 );
 
 harness.equal(
-	'candidate embedText prefers allDomainNames (the complete P4 domain list) over the single domainName',
-	embedTextForCandidate({
-		name: 'Competency Definition URL',
-		description: 'The URL.',
-		domainName: 'Assessment',
-		allDomainNames: ['Competency Definition', 'Learning Resource'],
-	}),
-	'Competency Definition, Learning Resource · Competency Definition URL · The URL.',
-);
-
-harness.equal(
 	'degenerate record (no class, no name, no description) falls back to defText FOR THAT RECORD ONLY',
 	embedTextForSource({ defText: 'last resort text' }, {}),
 	'last resort text',
@@ -283,49 +290,37 @@ harness.match(
 	/describes a specific competency/,
 );
 
-// ---- THE DOMAIN MAP: the candidate side's context (⟪CODE FACT⟫ a materialized CEDS HubReference
-// ---- carries its domain only as an opaque id — referenceSubgraph.js's emitReference stamps no
-// ---- domain NAME — so without this map contextOverlap would be a dead facet in production while
-// ---- passing every fixture that hands a candidate a domainName directly).
-const domainMap = buildDomainMap([
-	{ stableId: 'ceds:class/C200002', canonicalKey: 'C200002', cedsId: 'C200002', name: 'Competency Definition' },
-	{ stableId: 'ceds:class/C200003', canonicalKey: 'C200003', cedsId: 'C200003', name: 'Assessment' },
-	{ stableId: 'ceds:class/blank', canonicalKey: 'C999', name: '' },
-]);
-harness.equal('buildDomainMap keys a class name by its canonicalKey', domainMap.C200002, 'Competency Definition');
-harness.equal('buildDomainMap also keys by stableId', domainMap['ceds:class/C200002'], 'Competency Definition');
-harness.ok('buildDomainMap skips a class with no name — never an empty-string domain', domainMap.C999 === undefined);
+// ---- THE CANDIDATE'S CONTEXT (⟪hubReimplementation P3, SPEC §1.3/§6⟫): the reimplemented card
+// ---- carries `domainName` ITSELF (proven on 100% of cards by gate G-4) — the bridge-side domain
+// ---- map, and the resolution chain it fed, are RETIRED with the card shape that made them
+// ---- necessary. candidateDomainText is now a one-argument verbatim read; a card without a
+// ---- domainName is refused BY NAME (observed in SECTION 7).
 harness.equal(
-	'a HubReference-shaped candidate (domainId only, NO domain name anywhere on the node) resolves its ' +
-		'domain name THROUGH the map',
-	candidateDomainText({ name: 'Competency Definition URL', domainId: 'C200002' }, domainMap),
+	"candidateDomainText reads the card's own domainName, full stop",
+	candidateDomainText({ canonicalKey: 'P000887', name: 'Competency Definition URL', domainName: 'Competency Definition' }),
 	'Competency Definition',
 );
-harness.equal(
-	'and without the map it resolves to NOTHING — the defect this map exists to close, stated as a test',
-	candidateDomainText({ name: 'Competency Definition URL', domainId: 'C200002' }, null),
-	'',
-);
-harness.equal(
-	'a candidate that DOES carry allDomainNames still wins over the map (a future forge fix costs nothing here)',
-	candidateDomainText({ domainId: 'C200002', allDomainNames: ['Explicit One', 'Explicit Two'] }, domainMap),
-	'Explicit One, Explicit Two',
-);
-harness.equal(
-	'the composite embedText picks the mapped domain name up too',
-	embedTextForCandidate({ name: 'Competency Definition URL', description: 'The URL.', domainId: 'C200002' }, domainMap),
-	'Competency Definition · Competency Definition URL · The URL.',
-);
 
-const mappedScanner = facetScan({
+const cardContextScanner = facetScan({
 	candidateElements: [
-		{ stableId: 'ceds:mapped', canonicalKey: 'PM1', name: 'Competency Definition URL', domainId: 'C200002', referenceTier: 'property', rangeDatatype: 'anyURI', vector: v3(0, 1, 0) },
+		{
+			stableId: 'ceds:carded',
+			canonicalKey: 'PM1',
+			propertyKey: 'PM1',
+			name: 'Competency Definition URL',
+			propertyName: 'Competency Definition URL',
+			domainName: 'Competency Definition',
+			domainId: 'C200002',
+			referenceTier: 'property',
+			rangeDatatype: 'anyURI',
+			embedText: 'Competency Definition · Competency Definition URL',
+			vector: v3(0, 1, 0),
+		},
 	],
-	domainMap,
 });
 harness.equal(
-	'contextOverlap MEASURES through the domain map: an owning class matching a mapped domain name overlaps',
-	mappedScanner
+	"contextOverlap MEASURES through the card's own domainName: an owning class matching it overlaps",
+	cardContextScanner
 		.scan({ role: 'DmeProperty', name: 'uri', owningClassName: 'Competency Definition', vector: v3(1, 0, 0) })
 		.entries[0].facets.contextOverlap.sharedTokens.join(','),
 	'competency,definition',
@@ -379,47 +374,84 @@ harness.equal('an unrecognized role is UNKNOWN, never defaulted to property', so
 // -- anchorMatch --
 harness.equal('sourceAnchorId reads the authored cedsId', sourceAnchorId({ cedsId: ' P000887 ' }), 'P000887');
 harness.equal('sourceAnchorId is EMPTY when the source declares no anchor', sourceAnchorId({ name: 'uri' }), '');
+// ⟪hubReimplementation P3 (SPEC §6)⟫ the card carries NO cedsId — canonicalKey is the ONE anchor
+// identity, read from its one authority.
+const strayAnchorKeys = candidateAnchorKeys({ canonicalKey: 'P1', cedsId: 'P2' });
 harness.ok(
-	'candidateAnchorKeys carries canonicalKey and cedsId',
-	candidateAnchorKeys({ canonicalKey: 'P1', cedsId: 'P2' }).has('P1') && candidateAnchorKeys({ canonicalKey: 'P1', cedsId: 'P2' }).has('P2'),
+	'candidateAnchorKeys carries canonicalKey ONLY — exactly one anchor identity',
+	strayAnchorKeys.has('P1') && strayAnchorKeys.size === 1,
+	`keys: ${[...strayAnchorKeys].join(',')}`,
+);
+harness.ok(
+	'a STRAY cedsId property on a card contributes NO anchor — the retired second member stays retired',
+	!strayAnchorKeys.has('P2'),
 );
 
-// -- the facets as computed BY THE SCAN, over a small deterministic fixture --
+// -- the facets as computed BY THE SCAN, over a small deterministic fixture of NEW-SHAPE cards
+// -- (SPEC §1: meaning ON the card — domainName/propertyName/definitions; a stored embedText;
+// -- exactly ONE range member; valueKey on the value tier; NO cedsId/description/searchText) --
 const facetCandidates = [
 	{
 		stableId: 'ceds:A',
 		canonicalKey: 'P000001',
+		propertyKey: 'P000001',
 		name: 'Competency Definition URI',
-		description: 'The URI of a competency definition.',
+		propertyName: 'Competency Definition URI',
+		propertyDefinition: 'The URI of a competency definition.',
 		domainName: 'Competency Definition',
+		domainDefinition: 'Facts about a defined competency.',
 		domainId: 'D100',
 		referenceTier: 'property',
 		rangeDatatype: 'anyURI',
+		embedText: 'Competency Definition · Competency Definition URI · The URI of a competency definition. · Facts about a defined competency.',
 		vector: v3(1, 0, 0),
 	},
 	{
 		stableId: 'ceds:B',
 		canonicalKey: 'P000002',
+		propertyKey: 'P000002',
 		name: 'Assessment Registration Score',
-		description: 'A score.',
+		propertyName: 'Assessment Registration Score',
+		propertyDefinition: 'A score.',
 		domainName: 'Assessment',
+		domainDefinition: 'Facts about an assessment.',
 		domainId: 'D200',
 		referenceTier: 'property',
 		rangeDatatype: 'decimal',
+		embedText: 'Assessment · Assessment Registration Score · A score. · Facts about an assessment.',
 		vector: v3(0, 1, 0),
 	},
 	{
 		stableId: 'ceds:C',
 		canonicalKey: 'P000003',
+		propertyKey: 'P000003',
+		valueKey: 'P000003.OS1.V1',
 		name: 'Option Value Thing',
-		description: 'A value.',
+		propertyName: 'Option Value Property',
+		propertyDefinition: 'A property with an option-set range.',
+		valueName: 'Option Value Thing',
+		valueDefinition: 'A value.',
 		domainName: 'Assessment',
+		domainDefinition: 'Facts about an assessment.',
 		domainId: 'D200',
 		referenceTier: 'value',
 		rangeOptionSetId: 'OS1',
+		rangeOptionSetName: 'Thing Options',
+		embedText: 'Assessment · Option Value Thing · A value. · Facts about an assessment.',
 		vector: v3(0, 0, 1),
 	},
-	{ stableId: 'ceds:D', canonicalKey: 'P000004', name: 'No Vector Candidate', description: '', referenceTier: 'property', rangeDatatype: 'string' },
+	{
+		stableId: 'ceds:D',
+		canonicalKey: 'P000004',
+		propertyKey: 'P000004',
+		name: 'No Vector Candidate',
+		propertyName: 'No Vector Candidate',
+		domainName: 'Unrelated Area',
+		domainId: 'D300',
+		referenceTier: 'property',
+		rangeDatatype: 'string',
+		embedText: 'Unrelated Area · No Vector Candidate',
+	},
 ];
 
 const facetSource = {
@@ -515,10 +547,14 @@ for (let i = 0; i < 60; i++) {
 	allocationCandidates.push({
 		stableId: `ceds:alloc${i}`,
 		canonicalKey: `PA${i}`,
+		propertyKey: `PA${i}`,
 		name: `Filler Candidate ${i}`,
+		propertyName: `Filler Candidate ${i}`,
 		domainName: 'Filler Domain',
+		domainId: 'D400',
 		referenceTier: 'property',
 		rangeDatatype: 'string',
+		embedText: `Filler Domain · Filler Candidate ${i}`,
 		// a descending cosine ladder: alloc0 is closest, alloc59 furthest
 		vector: [Math.cos((i * Math.PI) / 200), Math.sin((i * Math.PI) / 200), 0],
 	});
@@ -527,30 +563,42 @@ for (let i = 0; i < 60; i++) {
 allocationCandidates.push({
 	stableId: 'ceds:nameOnly',
 	canonicalKey: 'PNAME',
+	propertyKey: 'PNAME',
 	name: 'Rubric Criterion Identifier',
+	propertyName: 'Rubric Criterion Identifier',
 	domainName: 'Filler Domain',
+	domainId: 'D400',
 	referenceTier: 'property',
 	rangeDatatype: 'string',
+	embedText: 'Filler Domain · Rubric Criterion Identifier',
 	vector: [0, 0, 1],
 });
 // a candidate that ONLY context-overlaps
 allocationCandidates.push({
 	stableId: 'ceds:contextOnly',
 	canonicalKey: 'PCTX',
+	propertyKey: 'PCTX',
 	name: 'Totally Different Wording',
+	propertyName: 'Totally Different Wording',
 	domainName: 'Competency Framework Rubric',
+	domainId: 'D401',
 	referenceTier: 'property',
 	rangeDatatype: 'string',
+	embedText: 'Competency Framework Rubric · Totally Different Wording',
 	vector: [0, 0, 1],
 });
 // the AUTHORED ANCHOR — deliberately the WORST candidate on every inferred signal
 allocationCandidates.push({
 	stableId: 'ceds:anchored',
 	canonicalKey: 'PANCHOR',
+	propertyKey: 'PANCHOR',
 	name: 'Nothing In Common Whatsoever',
+	propertyName: 'Nothing In Common Whatsoever',
 	domainName: 'Unrelated Domain',
+	domainId: 'D402',
 	referenceTier: 'property',
 	rangeDatatype: 'string',
+	embedText: 'Unrelated Domain · Nothing In Common Whatsoever',
 	vector: [-1, 0, 0],
 });
 
@@ -627,18 +675,21 @@ harness.section('SECTION 5 — regression: a candidate the OLD union excluded IS
 // token match on the property name alone. `cfItemUri`'s true answer is 'Competency Definition URL'.
 const regressionCandidates = [];
 // 30 decoys that all beat the true answer on raw cosine (a thin 'uri' description embeds toward
-// generic identifier prose), exactly the shape §2's worked failure describes.
+// generic identifier prose), exactly the shape §2's worked failure describes. NEW-SHAPE cards: no
+// cedsId, no defText, no description — the meaning fields and the stored embedText carry the prose.
 for (let i = 0; i < 30; i++) {
 	regressionCandidates.push({
 		stableId: `ceds:decoy${i}`,
 		canonicalKey: `PD${i}`,
-		cedsId: `PD${i}`,
+		propertyKey: `PD${i}`,
 		name: `Competency Framework Identifier URI ${i}`,
-		defText: `An identifier URI for framework artifact ${i}.`,
-		description: `An identifier URI for framework artifact ${i}.`,
+		propertyName: `Competency Framework Identifier URI ${i}`,
+		propertyDefinition: `An identifier URI for framework artifact ${i}.`,
 		domainName: 'Credential Definition',
+		domainId: 'C300',
 		referenceTier: 'property',
 		rangeDatatype: 'anyURI',
+		embedText: `Credential Definition · Competency Framework Identifier URI ${i} · An identifier URI for framework artifact ${i}.`,
 		vector: [Math.cos((i + 1) * 0.002), Math.sin((i + 1) * 0.002), 0],
 	});
 }
@@ -648,13 +699,15 @@ for (let i = 0; i < 30; i++) {
 const trueAnswer = {
 	stableId: 'ceds:P000887',
 	canonicalKey: 'P000887',
-	cedsId: 'P000887',
+	propertyKey: 'P000887',
 	name: 'Competency Definition URL',
-	defText: 'The Uniform Resource Locator of the competency definition.',
-	description: 'The Uniform Resource Locator of the competency definition.',
+	propertyName: 'Competency Definition URL',
+	propertyDefinition: 'The Uniform Resource Locator of the competency definition.',
 	domainName: 'Competency Definition',
+	domainId: 'C200354',
 	referenceTier: 'property',
 	rangeDatatype: 'anyURI',
+	embedText: 'Competency Definition · Competency Definition URL · The Uniform Resource Locator of the competency definition.',
 	vector: [Math.cos(0.4), Math.sin(0.4), 0], // clearly behind all 30 decoys on cosine
 };
 regressionCandidates.push(trueAnswer);
@@ -694,7 +747,7 @@ const caseScored = regressionCandidates
 const oldNominatedKeys = caseScored.map((oneScored) => oneScored.stableId);
 harness.ok(
 	'OLD UNION, half 2: the true answer is NOT in the nominate top-10 either — the casePath tokens ' +
-		'(item, uri) favour the 30 decoys that literally repeat them',
+		'(item, uri) favour the 30 decoys whose NAMES literally repeat them',
 	!oldNominatedKeys.includes('ceds:P000887'),
 	`nominated: ${oldNominatedKeys.join(', ') || '(none)'}`,
 );
@@ -779,7 +832,7 @@ harness.ok(
 );
 
 const renderer = evidenceRendererFactory();
-harness.equal('RENDERER_VERSION was bumped for the prompt change', renderer.RENDERER_VERSION, 'evidenceRenderer-v4');
+harness.equal('RENDERER_VERSION was bumped for the prompt change', renderer.RENDERER_VERSION, 'evidenceRenderer-v5');
 
 let renderedPrompt = null;
 let renderError = null;
@@ -847,6 +900,66 @@ harness.match(
 	'facetScan refuses a non-positive poolCap, BY NAME',
 	refusalOf(() => facetScan({ candidateElements: [], poolCap: 0 })),
 	/poolCap is 0/,
+);
+
+// ⟪hubReimplementation P3 (SPEC §6)⟫ THE CARD'S OWN REFUSALS — a broken card is refused NAMING the
+// candidate, never silently scanned as contextless and never handed a recomposed retrieval string.
+const missingEmbedTextRefusal = refusalOf(() =>
+	embedTextForCandidate({ canonicalKey: 'P000887', name: 'Competency Definition URL', domainName: 'Competency Definition' }),
+);
+harness.match(
+	'embedTextForCandidate refuses a card with NO stored embedText — the refusal NAMES the candidate',
+	missingEmbedTextRefusal,
+	/candidate 'P000887'/,
+);
+harness.match(
+	'and it states the missing field by name — there is no bridge-side recomposition and no default',
+	missingEmbedTextRefusal,
+	/embedText/,
+);
+harness.match(
+	'an EMPTY-STRING embedText is refused exactly as an absent one, naming the candidate',
+	refusalOf(() => embedTextForCandidate({ canonicalKey: 'PEMPTY', embedText: '' })),
+	/candidate 'PEMPTY'/,
+);
+
+const missingDomainNameRefusal = refusalOf(() => candidateDomainText({ canonicalKey: 'PCTXLESS', name: 'Some Property' }));
+harness.match(
+	'candidateDomainText refuses a card with NO domainName — the refusal NAMES the candidate',
+	missingDomainNameRefusal,
+	/candidate 'PCTXLESS'/,
+);
+harness.match(
+	'and it states the missing field by name — there is no map and no default',
+	missingDomainNameRefusal,
+	/domainName/,
+);
+harness.match(
+	'an EMPTY-STRING domainName is refused exactly as an absent one, naming the candidate',
+	refusalOf(() => candidateDomainText({ canonicalKey: 'PBLANK', domainName: '' })),
+	/candidate 'PBLANK'/,
+);
+harness.match(
+	'the SCAN ITSELF refuses a domainName-less card at construction — a broken card never enters the pass',
+	refusalOf(() =>
+		facetScan({
+			candidateElements: [
+				{ canonicalKey: 'PBROKEN', name: 'Broken Card', referenceTier: 'property', rangeDatatype: 'string', embedText: 'x' },
+			],
+		}),
+	),
+	/candidate 'PBROKEN'/,
+);
+
+// THE RETIRED EXPORTS, proven gone — the candidate side is composed at forge time and stored on the
+// card; a bridge-side recomposition surface left exported would be a second authority over one fact.
+harness.ok(
+	'composeCandidateEmbedText is NO LONGER exported — the forge composes the candidate side',
+	facetScan.composeCandidateEmbedText === undefined,
+);
+harness.ok(
+	'buildDomainMap is NO LONGER exported — the card carries its own domainName',
+	facetScan.buildDomainMap === undefined,
 );
 harness.match(
 	'the composer refuses a facetScanner that cannot scan, BY NAME — never a silent degradation to cosine top-K',
@@ -942,12 +1055,15 @@ if (skipScale) {
 		scaleCandidates[i] = {
 			stableId: `ceds:scale${i}`,
 			canonicalKey: `PS${i}`,
+			propertyKey: `PS${i}`,
 			name: `Scale Candidate ${i} Identifier Name`,
-			description: `A synthetic candidate ${i} for timing.`,
+			propertyName: `Scale Candidate ${i} Identifier Name`,
+			propertyDefinition: `A synthetic candidate ${i} for timing.`,
 			domainName: `Domain ${i % 40}`,
 			domainId: `D${i % 40}`,
 			referenceTier: 'property',
 			rangeDatatype: 'string',
+			embedText: `Domain ${i % 40} · Scale Candidate ${i} Identifier Name · A synthetic candidate ${i} for timing.`,
 			vector,
 		};
 	}

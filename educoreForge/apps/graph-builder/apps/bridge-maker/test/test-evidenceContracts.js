@@ -41,11 +41,13 @@ const {
 	CONTRACT_STATUS,
 	EVIDENCE_CONTRACTS,
 	evidencePackageViolation,
+	candidateEvidenceViolation,
 	MATCH_COMPOSE_SHAPE,
 	MATCH_COMPOSE_OBLIGATIONS,
 	matchComposeCallableViolation,
 	matchComposeResultViolation,
 	HUB_MODULE_SHAPE,
+	RETIRED_TUPLE_EVIDENCE_FIELDS,
 	hubModuleCallableViolation,
 	hubModulePresentationViolation,
 	RENDERER_SHAPE,
@@ -66,7 +68,81 @@ const {
 // FIXTURES — conforming (GREEN) building blocks reused across sections.
 // =====================================================================
 
+// ⟪hubReimplementation P3 (SPEC §6)⟫ the MEANING-revision fixtures: singular `domain` group with its
+// name (and definition prose), the `property` meaning group, qualifierNames ALWAYS an array. The
+// retired fields (domains[]/domainsComplete/qualifier) appear ONLY in oldShapeBaseTuple below, which
+// exists to be refused.
 const conformingBaseTupleShapeA = () => ({
+	referenceTier: 'property',
+	canonicalKey: 'P000104',
+	propertyKey: 'P000104',
+	name: 'Staff Evaluation Score or Rating',
+	domain: {
+		domainId: 'C200366',
+		domainName: 'Staff Evaluation',
+		domainDefinition: 'Information about the evaluation of a staff member.',
+	},
+	property: {
+		propertyName: 'Staff Evaluation Score or Rating',
+		propertyDefinition: 'The score or rating resulting from an evaluation of a staff member.',
+	},
+	range: { shape: 'datatype', rangeDatatype: 'string', rangeClassId: null, rangeOptionSetId: null },
+	isQualified: false,
+	qualifierNames: [],
+	value: null,
+});
+
+const conformingBaseTupleShapeD = () => ({
+	referenceTier: 'property',
+	canonicalKey: 'P600502',
+	propertyKey: 'P600502',
+	name: 'Has Organization Identifier',
+	domain: {
+		domainId: 'C200239',
+		domainName: 'Organization',
+		domainDefinition: 'Information about an organization.',
+	},
+	property: {
+		propertyName: 'Has Organization Identifier',
+		propertyDefinition: 'A reference to an identification code assigned to the organization.',
+	},
+	range: { shape: 'class', rangeClassId: 'C200252', rangeClassName: 'Identification Code', rangeOptionSetId: null, rangeDatatype: null },
+	isQualified: true,
+	qualifierNames: ['Provided by an internal assessment service'],
+	value: null,
+});
+
+const conformingBaseTupleShapeE = () => ({
+	referenceTier: 'value',
+	canonicalKey: 'OV001637175776',
+	propertyKey: 'P001637',
+	name: 'Twelfth grade',
+	domain: {
+		domainId: 'C200010',
+		domainName: 'Person',
+		domainDefinition: 'Information about a person.',
+	},
+	property: {
+		propertyName: 'Grade Level',
+		propertyDefinition: 'The grade level or primary instructional level of the person.',
+	},
+	range: {
+		shape: 'optionSet',
+		rangeOptionSetId: 'OS001637',
+		rangeOptionSetName: 'Grade Level Option Set',
+		rangeOptionSetDefinition: 'The set of grade-level option values.',
+		rangeDatatype: null,
+		rangeClassId: null,
+	},
+	isQualified: false,
+	qualifierNames: [],
+	value: { valueKey: 'OV001637175776', owningPropertyKey: 'P001637', owningOptionSetId: 'OS001637', valueName: 'Twelfth grade' },
+});
+
+// oldShapeBaseTuple — the RETIRED presentation shape (domains[]/domainsComplete/nullable qualifier),
+// exactly what a stale hub module or a pre-P3 fixture would still emit. It exists to be REFUSED — by
+// hubModulePresentationViolation directly, and by candidateEvidenceViolation at the ⟪A3⟫ seam.
+const oldShapeBaseTuple = () => ({
 	referenceTier: 'property',
 	canonicalKey: 'P000104',
 	propertyKey: 'P000104',
@@ -77,32 +153,6 @@ const conformingBaseTupleShapeA = () => ({
 	isQualified: false,
 	qualifier: null,
 	value: null,
-});
-
-const conformingBaseTupleShapeD = () => ({
-	referenceTier: 'property',
-	canonicalKey: 'P600502',
-	propertyKey: 'P600502',
-	name: 'Has Organization Identifier',
-	domains: [{ domainId: 'C200239', domainName: 'Organization' }],
-	domainsComplete: true,
-	range: { shape: 'class', rangeClassId: 'C200252', rangeClassName: 'Identification Code', rangeOptionSetId: null, rangeDatatype: null },
-	isQualified: true,
-	qualifier: { qualifierKey: 'OV_federalSchoolCode', qualifierName: 'Federal School Code', otherVariantCount: 3 },
-	value: null,
-});
-
-const conformingBaseTupleShapeE = () => ({
-	referenceTier: 'value',
-	canonicalKey: 'OV001637175776',
-	propertyKey: 'P001637',
-	name: 'Yankunytjatjara',
-	domains: [{ domainId: 'C200010', domainName: null }],
-	domainsComplete: true,
-	range: { shape: 'optionSet', rangeOptionSetId: 'OS001637', rangeDatatype: null, rangeClassId: null },
-	isQualified: false,
-	qualifier: null,
-	value: { valueKey: 'OV001637175776', owningPropertyKey: 'P001637', owningOptionSetId: 'OS001637' },
 });
 
 const conformingCandidateEvidence = (overrides = {}) => ({
@@ -184,6 +234,33 @@ harness.match(
 		promptSegments: [],
 	}),
 	/pool\[0\]: considerations\.tuple is missing/,
+);
+// ⟪hubReimplementation P3 (SPEC §6)⟫ the ⟪A3⟫ seam now proves the tuple's OWN shape, not merely its
+// presence — an old-shape or meaning-less tuple is refused at the seam, naming the tuple violation.
+harness.match(
+	'RED (⟪A3⟫): a pool entry whose considerations.tuple is OLD-SHAPE is refused by candidateEvidenceViolation, naming the tuple violation',
+	candidateEvidenceViolation(conformingCandidateEvidence({ considerations: { tuple: oldShapeBaseTuple(), notes: [] } }), 0),
+	/pool\[0\]: considerations\.tuple fails the meaning contract — .*carries retired field 'domains'/,
+);
+harness.match(
+	'RED (⟪A3⟫): a MEANING-LESS tuple (no domain group) in the pool is refused at the whole-package seam by evidencePackageViolation',
+	evidencePackageViolation({
+		sourceElement: { name: 's' },
+		pool: [
+			conformingCandidateEvidence({
+				considerations: {
+					tuple: (() => {
+						const tuple = conformingBaseTupleShapeA();
+						delete tuple.domain;
+						return tuple;
+					})(),
+					notes: [],
+				},
+			}),
+		],
+		promptSegments: [],
+	}),
+	/pool\[0\]: considerations\.tuple fails the meaning contract — .*domain is missing/,
 );
 harness.match(
 	'RED: considerations.notes not an array is caught, named',
@@ -312,7 +389,7 @@ harness.ok(
 );
 
 // =====================================================================
-harness.section('3. HUB MODULE — GREEN then RED (R5 tuple presentation, incl. domains[] AS A LIST)');
+harness.section('3. HUB MODULE — GREEN then RED (R5 tuple presentation, hubReimplementation P3 MEANING contract, SPEC §6)');
 // =====================================================================
 
 harness.equal(
@@ -353,27 +430,86 @@ harness.equal('GREEN: Shape A (scalar datatype) presentation passes', hubModuleP
 harness.equal('GREEN: Shape D (qualified) presentation passes', hubModulePresentationViolation(conformingBaseTupleShapeD()), '');
 harness.equal('GREEN: Shape E (value tier) presentation passes', hubModulePresentationViolation(conformingBaseTupleShapeE()), '');
 
-harness.match(
-	'RED: domains as a bare string (not a list) is caught, naming the P0 §2.4 requirement',
-	hubModulePresentationViolation({ ...conformingBaseTupleShapeA(), domains: 'C200366' }),
-	/domains must be an array.*list-shaped from day one/,
+// ---- the RETIRED old-shape fields are refused ON SIGHT, one RED per retired field (SPEC §6) ----
+harness.equal(
+	'RETIRED_TUPLE_EVIDENCE_FIELDS declares exactly the three old-shape fields',
+	RETIRED_TUPLE_EVIDENCE_FIELDS.join(','),
+	'domains,domainsComplete,qualifier',
 );
 harness.match(
-	'RED: an empty domains[] is caught',
-	hubModulePresentationViolation({ ...conformingBaseTupleShapeA(), domains: [] }),
-	/domains is empty/,
+	"RED: retired field 'domains' still present is refused BY NAME",
+	hubModulePresentationViolation({ ...conformingBaseTupleShapeA(), domains: [{ domainId: 'C200366', domainName: 'Staff Evaluation' }] }),
+	/carries retired field 'domains'/,
 );
 harness.match(
-	'RED: a missing domainsComplete flag is caught, naming P0 §2.4',
+	"RED: retired field 'domainsComplete' still present is refused BY NAME",
+	hubModulePresentationViolation({ ...conformingBaseTupleShapeA(), domainsComplete: true }),
+	/carries retired field 'domainsComplete'/,
+);
+harness.match(
+	"RED: retired field 'qualifier' still present is refused BY NAME — even null-valued (the old nullable shape)",
+	hubModulePresentationViolation({ ...conformingBaseTupleShapeA(), qualifier: null }),
+	/carries retired field 'qualifier'/,
+);
+harness.match(
+	'RED: the complete OLD-SHAPE presentation (a stale hub module\'s whole output) is refused, never rendered',
+	hubModulePresentationViolation(oldShapeBaseTuple()),
+	/carries retired field/,
+);
+// ---- the MEANING fields: domain group, property group (SPEC §6) ----
+harness.match(
+	'RED: a missing domain group is caught, naming the singular domain requirement',
 	(() => {
 		const evidence = conformingBaseTupleShapeA();
-		delete evidence.domainsComplete;
+		delete evidence.domain;
 		return hubModulePresentationViolation(evidence);
 	})(),
-	/domainsComplete \(boolean\) is missing/,
+	/domain is missing.*singular domain group/,
 );
 harness.match(
-	'RED: two range fields set at once is caught, naming P0 §2.1 mutual exclusivity',
+	'RED: a domain group without domainId is caught',
+	hubModulePresentationViolation({ ...conformingBaseTupleShapeA(), domain: { domainName: 'Staff Evaluation' } }),
+	/domain\.domainId is missing/,
+);
+harness.match(
+	'RED: a domain group without domainName is caught — a REQUIRED meaning field, the old id-only shape refused',
+	hubModulePresentationViolation({ ...conformingBaseTupleShapeA(), domain: { domainId: 'C200366' } }),
+	/domain\.domainName is missing.*REQUIRED meaning field/,
+);
+harness.match(
+	"RED: an ''-valued domainDefinition is caught — absent must stay absent, never ''",
+	hubModulePresentationViolation({
+		...conformingBaseTupleShapeA(),
+		domain: { domainId: 'C200366', domainName: 'Staff Evaluation', domainDefinition: '' },
+	}),
+	/domain\.domainDefinition is present but not a non-empty string/,
+);
+harness.match(
+	'RED: a missing property group is caught, naming the property-slot meaning group',
+	(() => {
+		const evidence = conformingBaseTupleShapeA();
+		delete evidence.property;
+		return hubModulePresentationViolation(evidence);
+	})(),
+	/property is missing.*property-slot meaning group/,
+);
+harness.match(
+	'RED: a property group without propertyName is caught — a REQUIRED meaning field',
+	hubModulePresentationViolation({ ...conformingBaseTupleShapeA(), property: { propertyDefinition: 'prose without a name' } }),
+	/property\.propertyName is missing.*REQUIRED meaning field/,
+);
+harness.match(
+	"RED: an ''-valued propertyDefinition is caught — absent must stay absent, never ''",
+	hubModulePresentationViolation({
+		...conformingBaseTupleShapeA(),
+		property: { propertyName: 'Staff Evaluation Score or Rating', propertyDefinition: '' },
+	}),
+	/property\.propertyDefinition is present but not a non-empty string/,
+);
+// ---- range: the XOR rules are unchanged; prose extras (rangeClassName etc.) already ride in the
+// GREEN Shape D/E fixtures above ----
+harness.match(
+	'RED: two range fields set at once is caught, naming the mutual exclusivity (SPEC §1.1, G-12)',
 	hubModulePresentationViolation({
 		...conformingBaseTupleShapeA(),
 		range: { shape: 'datatype', rangeDatatype: 'string', rangeClassId: 'C200196', rangeOptionSetId: null },
@@ -385,10 +521,26 @@ harness.match(
 	hubModulePresentationViolation({ ...conformingBaseTupleShapeA(), range: { shape: 'bogus' } }),
 	/range\.shape must be one of datatype, class, optionSet/,
 );
+// ---- qualifierNames: ALWAYS an array of non-empty strings, consistent with isQualified (SPEC §6) ----
 harness.match(
-	'RED: isQualified=true with no qualifier context is caught, naming P0 §2.2 ambiguity trap',
-	hubModulePresentationViolation({ ...conformingBaseTupleShapeD(), qualifier: null }),
-	/qualifier context \(qualifierKey, qualifierName\) is.*missing.*ambiguous once qualified/,
+	'RED: qualifierNames not an array (a bare string) is caught',
+	hubModulePresentationViolation({ ...conformingBaseTupleShapeD(), qualifierNames: 'Provided by an internal assessment service' }),
+	/qualifierNames must be an array/,
+);
+harness.match(
+	'RED: qualifierNames containing an empty-string entry is caught',
+	hubModulePresentationViolation({ ...conformingBaseTupleShapeD(), qualifierNames: [''] }),
+	/qualifierNames contains a non-string or empty entry/,
+);
+harness.match(
+	'RED: isQualified=true with EMPTY qualifierNames is caught — canonicalKey alone is ambiguous once qualified',
+	hubModulePresentationViolation({ ...conformingBaseTupleShapeD(), qualifierNames: [] }),
+	/isQualified is true but qualifierNames is empty.*ambiguous once qualified/,
+);
+harness.match(
+	'RED: isQualified=false with NON-EMPTY qualifierNames is caught (ambiguous self-description)',
+	hubModulePresentationViolation({ ...conformingBaseTupleShapeA(), qualifierNames: ['Stray Qualifier Name'] }),
+	/isQualified is false but qualifierNames is non-empty/,
 );
 harness.match(
 	'RED: referenceTier=value with no value context is caught, naming P0 §2.6 non-uniqueness',

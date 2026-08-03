@@ -1,18 +1,21 @@
 #!/usr/bin/env node
 'use strict';
 
-// test-cedsHubModule.js — hermetic gate for lib.d/cedsHubModule.js (bridgeEvidenceRefactor-spec.md
-// §6/§7 P3, R5). Proves, against the REAL hubModulePresentationViolation oracle (evidenceContracts.js
-// — the contract gate IS the acceptance oracle, never this suite's own assertions):
+// test-cedsHubModule.js — hermetic gate for lib.d/cedsHubModule.js (⟪hubReimplementation P3,
+// 2026-08-03⟫ SPEC-hubReimplementation-080326.md §6). Proves, against the REAL
+// hubModulePresentationViolation oracle (evidenceContracts.js — the contract gate IS the acceptance
+// oracle, never this suite's own assertions):
 //   RED  — call guards refuse BY NAME (missing candidate / referenceTier / canonicalKey / propertyKey
-//          / name / domainId; zero or two range fields present; a qualified candidate whose name
-//          carries no '[qualifier name]' suffix; a value-tier candidate missing its owning scope).
-//   GREEN — EVERY P0-cedsTupleModel.md §3 worked shape (A scalar, B class-range, C option-set,
-//          D qualified, E value-tier) renders a presentation that passes the REAL
-//          hubModulePresentationViolation gate — the P0-FIDELITY proof this module's whole job is.
+//          / name / domainId; zero or two range fields; missing domainName; missing propertyName;
+//          qualifierKeys/qualifierNames parallelism violations; a value-tier candidate missing its
+//          valueKey or owning scope) — and an OLD-SHAPE card (the retired ' [qualifier]' name-suffix
+//          convention with no qualifierNames) is refused, never parsed.
+//   GREEN — every worked card shape (scalar, class-range, option-set, qualified, value-tier) renders
+//          a MEANING-carrying presentation (domain group, property group, range prose, value prose,
+//          qualifierNames) that passes the REAL oracle; absent prose stays ABSENT (no key), never ''.
 //
 // Hermetic throughout: no Docker, no Neo4j, no LLM, no network — every candidate is a plain object,
-// exactly the flattenFullRecord shape a real HubReference :ForgedNode would produce.
+// exactly the flattenFullRecord shape a real reimplemented HubReference :ForgedNode would produce.
 //
 // Run: node apps/graph-builder/apps/bridge-maker/test/test-cedsHubModule.js
 
@@ -26,8 +29,9 @@ SYNOPSIS
      ${moduleName} [-verbose] [-quiet] [-help]
 
 DESCRIPTION
-     Proves cedsHubModule's call guards (RED) and every P0-cedsTupleModel.md §3 worked shape (A-E)
-     against the REAL hubModulePresentationViolation oracle (GREEN, P0-fidelity).
+     Proves cedsHubModule's call guards (RED) and every reimplemented card shape's MEANING-carrying
+     presentation (GREEN) against the REAL hubModulePresentationViolation oracle
+     (SPEC-hubReimplementation-080326.md §6).
 
 EXIT STATUS
      0 all assertions passed;  1 at least one failed.
@@ -42,11 +46,6 @@ const { hubModulePresentationViolation } = require('../lib/evidenceContracts');
 
 const hubModule = cedsHubModuleFactory();
 
-// =====================================================================
-// RED — call guards
-// =====================================================================
-harness.section('RED — call guards refuse BY NAME');
-
 const callWith = (candidate) => {
 	let observed = null;
 	hubModule(candidate, (err, presentation) => {
@@ -55,270 +54,298 @@ const callWith = (candidate) => {
 	return observed;
 };
 
+// newShapeCard — one canonical NEW-shape property-tier card, spread-overridable per test. Carries the
+// full MEANING group the reimplemented forge stamps (SPEC §1.3).
+const newShapeCard = (overrides = {}) => ({
+	referenceTier: 'property',
+	canonicalKey: 'P001470',
+	propertyKey: 'P001470',
+	name: 'Rubric Criterion Description',
+	domainId: 'C200354',
+	domainName: 'Rubric Criterion',
+	domainDefinition: 'Text describing a specific criterion within a rubric dimension.',
+	propertyName: 'Rubric Criterion Description',
+	propertyDefinition:
+		'Text describing a criterion that must be met to demonstrate quality for a product, process, or performance task.',
+	rangeDatatype: 'string',
+	...overrides,
+});
+
+// =====================================================================
+// RED — call guards
+// =====================================================================
+harness.section('RED — call guards refuse BY NAME');
+
 harness.match('missing candidate', callWith(null).err, /candidate is missing or not an object/);
 harness.match(
 	'missing/bad referenceTier',
-	callWith({ referenceTier: 'qualified', canonicalKey: 'P1', propertyKey: 'P1', name: 'x', domainId: 'C1', rangeDatatype: 'string' }).err,
+	callWith(newShapeCard({ referenceTier: 'qualified' })).err,
 	/referenceTier must be 'property' or 'value'/,
 );
 harness.match(
 	'missing canonicalKey',
-	callWith({ referenceTier: 'property', propertyKey: 'P1', name: 'x', domainId: 'C1', rangeDatatype: 'string' }).err,
+	callWith(newShapeCard({ canonicalKey: undefined })).err,
 	/candidate.canonicalKey is missing/,
 );
 harness.match(
-	'missing propertyKey',
-	callWith({ referenceTier: 'property', canonicalKey: 'P1', name: 'x', domainId: 'C1', rangeDatatype: 'string' }).err,
-	/candidate.propertyKey is missing/,
+	'missing propertyKey — refusal NAMES the card',
+	callWith(newShapeCard({ propertyKey: undefined })).err,
+	/candidate 'P001470': propertyKey is missing/,
 );
 harness.match(
-	'missing name',
-	callWith({ referenceTier: 'property', canonicalKey: 'P1', propertyKey: 'P1', domainId: 'C1', rangeDatatype: 'string' }).err,
-	/candidate.name is missing/,
+	'missing name — refusal NAMES the card',
+	callWith(newShapeCard({ name: undefined })).err,
+	/candidate 'P001470': name is missing/,
 );
 harness.match(
-	'missing domainId',
-	callWith({ referenceTier: 'property', canonicalKey: 'P1', propertyKey: 'P1', name: 'x', rangeDatatype: 'string' }).err,
-	/candidate.domainId is missing/,
+	'missing domainId — refusal NAMES the card',
+	callWith(newShapeCard({ domainId: undefined })).err,
+	/candidate 'P001470': domainId is missing/,
 );
 harness.match(
 	'ZERO range fields present',
-	callWith({ referenceTier: 'property', canonicalKey: 'P1', propertyKey: 'P1', name: 'x', domainId: 'C1' }).err,
+	callWith(newShapeCard({ rangeDatatype: undefined })).err,
 	/candidate carries 0 range field\(s\)/,
 );
 harness.match(
 	'TWO range fields present',
-	callWith({
-		referenceTier: 'property',
-		canonicalKey: 'P1',
-		propertyKey: 'P1',
-		name: 'x',
-		domainId: 'C1',
-		rangeDatatype: 'string',
-		rangeClassId: 'C2',
-	}).err,
+	callWith(newShapeCard({ rangeClassId: 'C200196' })).err,
 	/candidate carries 2 range field\(s\)/,
 );
+
+// THE REQUIRED MEANING FIELDS (SPEC §6) — a card without them is refused NAMING THE CARD.
 harness.match(
-	'qualified candidate (qualifierKeys set) whose name carries no bracket suffix',
-	callWith({
-		referenceTier: 'property',
-		canonicalKey: 'P600502',
-		propertyKey: 'P600502',
-		name: 'Has Organization Identifier', // no '[qualifier name]' suffix
-		domainId: 'C200239',
-		rangeClassId: 'C200252',
-		qualifierKeys: ['OV_federalSchoolCode'],
-	}).err,
-	/does not carry the '<token> \[<qualifier name>\]' suffix/,
+	'missing domainName — refused NAMING the card, never map-resolved',
+	callWith(newShapeCard({ domainName: undefined })).err,
+	/candidate 'P001470' carries no domainName/,
 );
 harness.match(
-	'value-tier candidate carrying the WRONG range shape (rangeDatatype instead of rangeOptionSetId) has no owning-option-set scope',
-	callWith({
-		referenceTier: 'value',
-		canonicalKey: 'OV001',
-		propertyKey: 'P001',
-		name: 'Some Value',
-		domainId: 'C200010',
-		rangeDatatype: 'string', // malformed: a value-tier ref should carry rangeOptionSetId, never this
-	}).err,
+	'missing propertyName — refused NAMING the card',
+	callWith(newShapeCard({ propertyName: undefined })).err,
+	/candidate 'P001470' carries no propertyName/,
+);
+
+// QUALIFIER PARALLELISM (SPEC §1.3) — and the retirement of the ' [qualifier]' name-suffix parse.
+harness.match(
+	'OLD-SHAPE qualified card (suffix-bearing name, qualifierKeys, NO qualifierNames) is REFUSED — the suffix parse is retired',
+	callWith(
+		newShapeCard({
+			canonicalKey: 'P600502',
+			propertyKey: 'P600502',
+			name: 'Has Organization Identifier [Federal School Code]',
+			propertyName: 'Has Organization Identifier',
+			rangeDatatype: undefined,
+			rangeClassId: 'C200252',
+			qualifierKeys: ['OV_federalSchoolCode'],
+		}),
+	).err,
+	/1 qualifierKeys but 0 qualifierNames/,
+);
+harness.match(
+	'qualifierNames WITHOUT qualifierKeys is refused (parallel lists)',
+	callWith(newShapeCard({ qualifierNames: ['Federal School Code'] })).err,
+	/qualifierNames .* but no qualifierKeys/,
+);
+harness.match(
+	'a non-string qualifierNames entry is refused',
+	callWith(
+		newShapeCard({
+			qualifierKeys: ['OV_federalSchoolCode'],
+			qualifierNames: [''],
+		}),
+	).err,
+	/qualifierNames entry that is not a non-empty string/,
+);
+
+// VALUE TIER — valueKey is read directly off the card; there is no canonicalKey recovery.
+harness.match(
+	'value-tier candidate missing valueKey is refused (no recovery from canonicalKey)',
+	callWith(
+		newShapeCard({
+			referenceTier: 'value',
+			canonicalKey: 'OV001637175776',
+			propertyKey: 'P001637',
+			name: 'Yankunytjatjara',
+			rangeDatatype: undefined,
+			rangeOptionSetId: 'OS001637',
+		}),
+	).err,
+	/candidate 'OV001637175776' has referenceTier='value' but is missing valueKey/,
+);
+harness.match(
+	'value-tier candidate carrying the WRONG range shape (rangeDatatype, no rangeOptionSetId) is refused',
+	callWith(
+		newShapeCard({
+			referenceTier: 'value',
+			canonicalKey: 'OV001',
+			propertyKey: 'P001',
+			name: 'Some Value',
+			valueKey: 'OV001',
+		}),
+	).err,
 	/missing valueKey\/propertyKey\/rangeOptionSetId/,
 );
 
 // =====================================================================
-// GREEN — P0-FIDELITY: every worked shape from P0-cedsTupleModel.md §3
+// GREEN — the MEANING-carrying presentation, every card shape, against the REAL oracle
 // =====================================================================
-harness.section('GREEN — P0-FIDELITY: every P0-cedsTupleModel.md §3 worked shape');
+harness.section('GREEN — every card shape renders a MEANING-carrying presentation (REAL oracle)');
 
-// Shape A — scalar datatype property (994 live instances)
+// Shape: scalar datatype property — the full meaning group rides through.
 (() => {
-	const observed = callWith({
-		referenceTier: 'property',
-		canonicalKey: 'P000104',
-		propertyKey: 'P000104',
-		name: 'Staff Evaluation Score or Rating',
-		domainId: 'C200366',
-		rangeDatatype: 'string',
-	});
-	harness.equal('Shape A: no error', observed.err, '');
-	harness.equal('Shape A: passes the REAL hubModulePresentationViolation oracle', hubModulePresentationViolation(observed.presentation), '');
-	harness.equal('Shape A: range.shape is datatype', observed.presentation.range.shape, 'datatype');
-	harness.equal('Shape A: domainsComplete is honestly false (P0 §2.4 — see file header)', observed.presentation.domainsComplete, false);
-	harness.equal('Shape A: isQualified is false', observed.presentation.isQualified, false);
-	harness.equal('Shape A: value is null (property tier)', observed.presentation.value, null);
+	const observed = callWith(newShapeCard());
+	harness.equal('scalar: no error', observed.err, '');
+	harness.equal('scalar: passes the REAL hubModulePresentationViolation oracle', hubModulePresentationViolation(observed.presentation), '');
+	harness.equal('scalar: domain is SINGULAR with its name', observed.presentation.domain.domainName, 'Rubric Criterion');
+	harness.equal('scalar: domain.domainId carried', observed.presentation.domain.domainId, 'C200354');
+	harness.match('scalar: domainDefinition carried', observed.presentation.domain.domainDefinition, /criterion within a rubric dimension/);
+	harness.match('scalar: propertyDefinition carried — the judge finally sees the meaning', observed.presentation.property.propertyDefinition, /^Text describing a criterion/);
+	harness.equal('scalar: range.shape is datatype', observed.presentation.range.shape, 'datatype');
+	harness.equal('scalar: isQualified is false', observed.presentation.isQualified, false);
+	harness.equal('scalar: qualifierNames is the EMPTY array', observed.presentation.qualifierNames.length, 0);
+	harness.equal('scalar: value is null (property tier)', observed.presentation.value, null);
+	harness.equal('scalar: retired domains[] is NOT present', 'domains' in observed.presentation, false);
+	harness.equal('scalar: retired domainsComplete is NOT present', 'domainsComplete' in observed.presentation, false);
+	harness.equal('scalar: retired qualifier object is NOT present', 'qualifier' in observed.presentation, false);
 })();
 
-// Shape B — class-range (object/association) property (363 live instances)
+// Shape: class-range property — range prose rides with the range.
 (() => {
-	const observed = callWith({
-		referenceTier: 'property',
-		canonicalKey: 'P600253',
-		propertyKey: 'P600253',
-		name: 'Has Local Education Agency Title I Support Service',
-		domainId: 'C200188',
-		rangeClassId: 'C200196',
-	});
-	harness.equal('Shape B: no error', observed.err, '');
-	harness.equal('Shape B: passes the REAL oracle', hubModulePresentationViolation(observed.presentation), '');
-	harness.equal('Shape B: range.shape is class', observed.presentation.range.shape, 'class');
-	harness.equal('Shape B: range.rangeClassId carried through', observed.presentation.range.rangeClassId, 'C200196');
+	const observed = callWith(
+		newShapeCard({
+			canonicalKey: 'P600253',
+			propertyKey: 'P600253',
+			name: 'Has Local Education Agency Title I Support Service',
+			propertyName: 'Has Local Education Agency Title I Support Service',
+			propertyDefinition: 'A relation to the Title I support service offered by the LEA.',
+			domainId: 'C200188',
+			domainName: 'Local Education Agency',
+			domainDefinition: 'A local education agency.',
+			rangeDatatype: undefined,
+			rangeClassId: 'C200196',
+			rangeClassName: 'Title I Support Service',
+			rangeClassDefinition: 'A service supported by Title I funds.',
+		}),
+	);
+	harness.equal('class-range: no error', observed.err, '');
+	harness.equal('class-range: passes the REAL oracle', hubModulePresentationViolation(observed.presentation), '');
+	harness.equal('class-range: range.shape is class', observed.presentation.range.shape, 'class');
+	harness.equal('class-range: rangeClassName carried', observed.presentation.range.rangeClassName, 'Title I Support Service');
+	harness.equal('class-range: rangeClassDefinition carried', observed.presentation.range.rangeClassDefinition, 'A service supported by Title I funds.');
 })();
 
-// Shape C — option-set (enumerated) property (994 live instances)
+// Shape: option-set property — option-set prose rides with the range.
 (() => {
-	const observed = callWith({
-		referenceTier: 'property',
-		canonicalKey: 'P001753',
-		propertyKey: 'P001753',
-		name: 'Has Credential Definition Verification Type',
-		domainId: 'C200087',
-		rangeOptionSetId: 'OS001753',
-	});
-	harness.equal('Shape C: no error', observed.err, '');
-	harness.equal('Shape C: passes the REAL oracle', hubModulePresentationViolation(observed.presentation), '');
-	harness.equal('Shape C: range.shape is optionSet', observed.presentation.range.shape, 'optionSet');
+	const observed = callWith(
+		newShapeCard({
+			canonicalKey: 'P001753',
+			propertyKey: 'P001753',
+			name: 'Has Credential Definition Verification Type',
+			propertyName: 'Has Credential Definition Verification Type',
+			rangeDatatype: undefined,
+			rangeOptionSetId: 'OS001753',
+			rangeOptionSetName: 'Credential Definition Verification Type',
+			rangeOptionSetDefinition: 'The types of verification available for a credential definition.',
+		}),
+	);
+	harness.equal('option-set: no error', observed.err, '');
+	harness.equal('option-set: passes the REAL oracle', hubModulePresentationViolation(observed.presentation), '');
+	harness.equal('option-set: range.shape is optionSet', observed.presentation.range.shape, 'optionSet');
+	harness.equal('option-set: rangeOptionSetName carried', observed.presentation.range.rangeOptionSetName, 'Credential Definition Verification Type');
+	harness.match('option-set: rangeOptionSetDefinition carried', observed.presentation.range.rangeOptionSetDefinition, /types of verification/);
 })();
 
-// Shape D — qualified property variant (27 live instances). referenceSubgraph.js:418's own naming
-// convention: `${tokenName} [${qualifierValueName}]`.
+// Shape: qualified property — qualifierNames read VERBATIM off the card; the card name carries NO
+// suffix (SPEC §1.6 retired the convention).
 (() => {
-	const observed = callWith({
-		referenceTier: 'property',
-		canonicalKey: 'P600502',
-		propertyKey: 'P600502',
-		name: 'Has Organization Identifier [Federal School Code]',
-		domainId: 'C200239',
-		rangeClassId: 'C200252',
-		qualifierKeys: ['OV_federalSchoolCode'],
-	});
-	harness.equal('Shape D: no error', observed.err, '');
-	harness.equal('Shape D: passes the REAL oracle', hubModulePresentationViolation(observed.presentation), '');
-	harness.equal('Shape D: isQualified is true', observed.presentation.isQualified, true);
-	harness.equal('Shape D: qualifierKey parsed correctly', observed.presentation.qualifier.qualifierKey, 'OV_federalSchoolCode');
-	harness.equal('Shape D: qualifierName parsed from the bracket suffix', observed.presentation.qualifier.qualifierName, 'Federal School Code');
+	const observed = callWith(
+		newShapeCard({
+			canonicalKey: 'P600502',
+			propertyKey: 'P600502',
+			name: 'Has Organization Identifier',
+			propertyName: 'Has Organization Identifier',
+			rangeDatatype: undefined,
+			rangeClassId: 'C200252',
+			qualifierKeys: ['OV_federalSchoolCode'],
+			qualifierNames: ['Federal School Code'],
+		}),
+	);
+	harness.equal('qualified: no error', observed.err, '');
+	harness.equal('qualified: passes the REAL oracle', hubModulePresentationViolation(observed.presentation), '');
+	harness.equal('qualified: isQualified is true', observed.presentation.isQualified, true);
+	harness.equal('qualified: qualifierNames read verbatim', observed.presentation.qualifierNames[0], 'Federal School Code');
 })();
 
-// Shape D twin — qualifierKeys single-element PG-JSON COLLAPSE (a scalar string, not an array) — the
-// live-graph shape P0 §2.5/Q/A3-A4 documents (all 27 qualified refs come back typed STRING, not LIST).
+// Shape: qualified with PG-JSON single-element COLLAPSE on BOTH lists (scalar strings, not arrays) —
+// the live-graph shape a single-element list property merges into.
 (() => {
-	const observed = callWith({
-		referenceTier: 'property',
-		canonicalKey: 'P600502',
-		propertyKey: 'P600502',
-		name: 'Has Organization Identifier [Federal School Code]',
-		domainId: 'C200239',
-		rangeClassId: 'C200252',
-		qualifierKeys: 'OV_federalSchoolCode', // collapsed scalar, not ['OV_federalSchoolCode']
-	});
-	harness.equal('Shape D (collapsed scalar qualifierKeys): no error', observed.err, '');
-	harness.equal('Shape D (collapsed scalar qualifierKeys): passes the REAL oracle', hubModulePresentationViolation(observed.presentation), '');
-	harness.equal('Shape D (collapsed scalar qualifierKeys): qualifierKey parsed correctly', observed.presentation.qualifier.qualifierKey, 'OV_federalSchoolCode');
+	const observed = callWith(
+		newShapeCard({
+			canonicalKey: 'P600502',
+			propertyKey: 'P600502',
+			name: 'Has Organization Identifier',
+			propertyName: 'Has Organization Identifier',
+			rangeDatatype: undefined,
+			rangeClassId: 'C200252',
+			qualifierKeys: 'OV_federalSchoolCode',
+			qualifierNames: 'Federal School Code',
+		}),
+	);
+	harness.equal('qualified (collapsed scalars): no error', observed.err, '');
+	harness.equal('qualified (collapsed scalars): passes the REAL oracle', hubModulePresentationViolation(observed.presentation), '');
+	harness.equal('qualified (collapsed scalars): qualifierNames normalized to a one-entry list', observed.presentation.qualifierNames.length, 1);
 })();
 
-// Shape E — value-tier option-value (4-slot) (27,437 live instances)
+// Shape: value-tier — owning scope + value prose; property group is the OWNING property's meaning.
 (() => {
-	const observed = callWith({
-		referenceTier: 'value',
-		canonicalKey: 'OV001637175776',
-		propertyKey: 'P001637',
-		name: 'Yankunytjatjara',
-		domainId: 'C200010',
-		rangeOptionSetId: 'OS001637',
-		valueKey: 'OV001637175776',
-	});
-	harness.equal('Shape E: no error', observed.err, '');
-	harness.equal('Shape E: passes the REAL oracle', hubModulePresentationViolation(observed.presentation), '');
-	harness.equal('Shape E: referenceTier is value', observed.presentation.referenceTier, 'value');
-	harness.equal('Shape E: value.owningPropertyKey', observed.presentation.value.owningPropertyKey, 'P001637');
-	harness.equal('Shape E: value.owningOptionSetId', observed.presentation.value.owningOptionSetId, 'OS001637');
-})();
-
-// GREEN — a domainsComplete:false case is the DEFAULT, not a special fixture (P0 §2.4 honesty).
-harness.section('GREEN — domainsComplete:false is the uniform default (P0 §2.4)');
-(() => {
-	const propertyTier = callWith({
-		referenceTier: 'property',
-		canonicalKey: 'P000104',
-		propertyKey: 'P000104',
-		name: 'Staff Evaluation Score or Rating',
-		domainId: 'C200366',
-		rangeDatatype: 'string',
-	});
-	const valueTier = callWith({
-		referenceTier: 'value',
-		canonicalKey: 'OV1',
-		propertyKey: 'P1',
-		name: 'V',
-		domainId: 'C1',
-		rangeOptionSetId: 'OS1',
-	});
-	harness.equal('property-tier domainsComplete is false', propertyTier.presentation.domainsComplete, false);
-	harness.equal('value-tier domainsComplete is false', valueTier.presentation.domainsComplete, false);
+	const observed = callWith(
+		newShapeCard({
+			referenceTier: 'value',
+			canonicalKey: 'OV001637175776',
+			propertyKey: 'P001637',
+			name: 'Yankunytjatjara',
+			propertyName: 'Language Type',
+			propertyDefinition: 'The specific language or dialect a person uses to communicate.',
+			domainId: 'C200010',
+			domainName: 'Person',
+			domainDefinition: 'An individual.',
+			rangeDatatype: undefined,
+			rangeOptionSetId: 'OS001637',
+			rangeOptionSetName: 'Language',
+			valueKey: 'OV001637175776',
+			valueName: 'Yankunytjatjara',
+			valueNotation: 'kdd',
+			valuePrefLabel: 'Yankunytjatjara',
+		}),
+	);
+	harness.equal('value-tier: no error', observed.err, '');
+	harness.equal('value-tier: passes the REAL oracle', hubModulePresentationViolation(observed.presentation), '');
+	harness.equal('value-tier: referenceTier is value', observed.presentation.referenceTier, 'value');
+	harness.equal('value-tier: value.owningPropertyKey', observed.presentation.value.owningPropertyKey, 'P001637');
+	harness.equal('value-tier: value.owningOptionSetId', observed.presentation.value.owningOptionSetId, 'OS001637');
+	harness.equal('value-tier: valueKey read DIRECTLY off the card', observed.presentation.value.valueKey, 'OV001637175776');
+	harness.equal('value-tier: value prose (valueNotation) carried', observed.presentation.value.valueNotation, 'kdd');
+	harness.equal('value-tier: OWNING property meaning carried', observed.presentation.property.propertyName, 'Language Type');
+	harness.match('value-tier: owning propertyDefinition carried', observed.presentation.property.propertyDefinition, /language or dialect/);
 })();
 
 // =====================================================================
-// GREEN — ⟪P4 FIX⟫ allDomainIds: a candidate carrying the forgeCeds.js additive property reports the
-// FULL domains[] list, domainsComplete:true (bridgeEvidenceRefactor-spec.md §7 P4).
+// GREEN — absent prose stays ABSENT (SPEC §1.3 "absent is absent"; G-3's contract)
 // =====================================================================
-harness.section('GREEN — ⟪P4 FIX⟫ allDomainIds present: domains[] is the FULL list, domainsComplete:true');
-
-// a genuinely multi-domain property (P001917-shaped, P0 §2.4's own cited example): allDomainIds is a
-// real array, zipped with allDomainNames.
+harness.section('GREEN — absent prose stays ABSENT (no key, never \'\')');
 (() => {
-	const observed = callWith({
-		referenceTier: 'property',
-		canonicalKey: 'P001917',
-		propertyKey: 'P001917',
-		name: 'Record Start Date Time',
-		domainId: 'C000000', // the single ADDRESS SLOT — first-resolvable, UNCHANGED
-		allDomainIds: ['C000000', 'C200410'],
-		allDomainNames: ['Root', 'Some Owning Class'],
-		rangeDatatype: 'dateTime',
-	});
-	harness.equal('multi-domain: no error', observed.err, '');
-	harness.equal('multi-domain: passes the REAL oracle', hubModulePresentationViolation(observed.presentation), '');
-	harness.equal('multi-domain: domains[] has BOTH entries', observed.presentation.domains.length, 2);
-	harness.equal('multi-domain: domains[0] is the address-slot domain (first-resolvable, unchanged)', observed.presentation.domains[0].domainId, 'C000000');
-	harness.equal('multi-domain: domains[1] is the SECOND resolvable domain', observed.presentation.domains[1].domainId, 'C200410');
-	harness.equal('multi-domain: domainName zipped positionally', observed.presentation.domains[1].domainName, 'Some Owning Class');
-	harness.equal('multi-domain: domainsComplete is HONESTLY true (proven, not guessed)', observed.presentation.domainsComplete, true);
-})();
-
-// a single-domain property carrying allDomainIds as a ONE-element PG-JSON COLLAPSE (a bare scalar
-// string, not an array) — the live-graph shape the P0 §2.5 qualifierKeys collapse note documents for
-// any single-element list property; asList must normalize this exactly as it does for qualifierKeys.
-(() => {
-	const observed = callWith({
-		referenceTier: 'property',
-		canonicalKey: 'P000104',
-		propertyKey: 'P000104',
-		name: 'Staff Evaluation Score or Rating',
-		domainId: 'C200366',
-		allDomainIds: 'C200366', // collapsed scalar, not ['C200366']
-		allDomainNames: 'Staff Evaluation',
-		rangeDatatype: 'string',
-	});
-	harness.equal('single-domain (collapsed scalar allDomainIds): no error', observed.err, '');
-	harness.equal('single-domain (collapsed scalar allDomainIds): passes the REAL oracle', hubModulePresentationViolation(observed.presentation), '');
-	harness.equal('single-domain (collapsed scalar allDomainIds): domains[] has exactly ONE entry', observed.presentation.domains.length, 1);
-	harness.equal('single-domain (collapsed scalar allDomainIds): domainsComplete is HONESTLY true', observed.presentation.domainsComplete, true);
-})();
-
-// a candidate with allDomainIds present but NO allDomainNames — domainName falls back to null per
-// entry, never a fabricated placeholder (the SAME null-coalesce the single-domain path already used).
-(() => {
-	const observed = callWith({
-		referenceTier: 'property',
-		canonicalKey: 'P001917',
-		propertyKey: 'P001917',
-		name: 'Record Start Date Time',
-		domainId: 'C000000',
-		allDomainIds: ['C000000', 'C200410'],
-		rangeDatatype: 'dateTime',
-	});
-	harness.equal('multi-domain, no allDomainNames: no error', observed.err, '');
-	harness.equal('multi-domain, no allDomainNames: passes the REAL oracle', hubModulePresentationViolation(observed.presentation), '');
-	harness.equal('multi-domain, no allDomainNames: domainName is null, not fabricated', observed.presentation.domains[1].domainName, null);
+	const observed = callWith(
+		newShapeCard({
+			canonicalKey: 'P000021',
+			propertyKey: 'P000021',
+			domainDefinition: undefined,
+			propertyDefinition: undefined,
+		}),
+	);
+	harness.equal('definition-less card: no error (definitions are not REQUIRED fields)', observed.err, '');
+	harness.equal('definition-less card: passes the REAL oracle', hubModulePresentationViolation(observed.presentation), '');
+	harness.equal('definition-less card: propertyDefinition key is ABSENT', 'propertyDefinition' in observed.presentation.property, false);
+	harness.equal('definition-less card: domainDefinition key is ABSENT', 'domainDefinition' in observed.presentation.domain, false);
 })();
 
 harness.report();

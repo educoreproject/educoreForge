@@ -227,6 +227,15 @@ const candidateEvidenceViolation = (entry, index) => {
 	if (considerations.tuple === undefined || considerations.tuple === null || typeof considerations.tuple !== 'object') {
 		return `${label}: considerations.tuple is missing — every candidate must carry the hub module's base tuple evidence`;
 	}
+	// ⟪hubReimplementation P3 (SPEC §6)⟫ the ⟪A3⟫ gate now proves the tuple's own shape, not merely its
+	// presence: a tuple evidence object missing the MEANING fields (the domain group with its name, the
+	// property group with its name, qualifierNames) — or still carrying the RETIRED old-shape fields —
+	// is refused BY NAME at the seam, so a stale hub module or an old-shape fixture can never put an
+	// id-only candidate in front of the judge again.
+	const tupleViolation = hubModulePresentationViolation(considerations.tuple);
+	if (tupleViolation) {
+		return `${label}: considerations.tuple fails the meaning contract — ${tupleViolation}`;
+	}
 	if (!Array.isArray(considerations.notes)) {
 		return `${label}: considerations.notes is not an array`;
 	}
@@ -432,63 +441,67 @@ const matchComposeResultViolation = evidencePackageViolation;
 //           `callback('', presentation)`); painful to retrofit later if a future hub module ever
 //           needs an async lookup (e.g. resolving a class name from a remote registry).)
 //
-// @typedef {Object} BaseTupleEvidence
-// @property {string}   referenceTier      'property' | 'value' — no third tier (P0 §2.2: a qualified
-//                                         ref is referenceTier='property' with qualifier populated)
+// @typedef {Object} BaseTupleEvidence — ⟪hubReimplementation P3, 2026-08-03⟫ the MEANING revision
+// (SPEC-hubReimplementation-080326.md §6): the presentation now carries every tuple slot's NAME and
+// PROSE, read directly off the self-sufficient card (SPEC §1.3). domains[]/domainsComplete and the
+// nullable qualifier object are GONE from the contract — they described a card shape (id-only, maybe
+// domain-collapsed, qualifier name parseable only out of the card's own name) that no longer exists.
+// @property {string}   referenceTier      'property' | 'value' — no third tier (a qualified ref is
+//                                         referenceTier='property' with qualifierNames populated)
 // @property {string}   canonicalKey       the P###### (property tier) or OV###### (value tier) token
 // @property {string}   propertyKey        the OWNING property's canonicalKey (== canonicalKey at
 //                                         property tier; the owning property at value tier)
 // @property {string}   name
-// @property {Object[]} domains            LIST, always >= 1 entry, each {domainId, domainName}. The
-//                                         CONTRACT is list-shaped from day one (P0 §2.4 / spec P4) even
-//                                         though today's forge only ever resolves the first —
-//                                         forgeCeds.js:306 silently drops every domain association
-//                                         after the first resolvable one for 256/2324 (11%) properties.
-// @property {boolean}  domainsComplete    P1's resolution of P0's open question #2: false whenever this
-//                                         presentation is known to have collapsed a genuinely
-//                                         multi-domain property to one entry (i.e. today, ALWAYS false
-//                                         for those 256 properties, true otherwise) — so the renderer
-//                                         can mark the list "known-incomplete" rather than presenting a
-//                                         partial fact as complete, exactly as spec §7 P4 instructs.
+// @property {Object}   domain             SINGULAR (SPEC §1.1: a card IS one domain's view of the
+//                                         idea) — { domainId, domainName, domainDefinition? }.
+//                                         domainId and domainName are REQUIRED; domainDefinition is
+//                                         present when the card carries it (G-4: always, on a
+//                                         conforming card).
+// @property {Object}   property           the property-slot MEANING group — { propertyName,
+//                                         propertyDefinition?, propertyNotation?, propertyDataType?,
+//                                         propertyTextFormat? }. propertyName REQUIRED; the rest as
+//                                         CEDS has them ("absent is absent" — never '').
 // @property {Object}   range
 // @property {string}   range.shape        'datatype' | 'class' | 'optionSet' — MUTUALLY EXCLUSIVE
-//                                         (P0 §2.1/2.3: every live HubReference has exactly one set)
 // @property {?string}  range.rangeDatatype    set iff shape === 'datatype'
 // @property {?string}  range.rangeClassId     set iff shape === 'class'
-// @property {?string}  range.rangeClassName   optional, resolved class name for 'class' shape
 // @property {?string}  range.rangeOptionSetId set iff shape === 'optionSet'
-// @property {boolean}  isQualified        whether this property-tier ref carries qualifierKeys
-// @property {?Object}  qualifier          REQUIRED non-null when isQualified — {qualifierKey,
-//                                         qualifierName} (+ optionally otherVariantCount). P0 §2.2: a
-//                                         qualified ref's canonicalKey is IDENTICAL to its unqualified
-//                                         base's, so the qualifier context is the ONLY thing that
-//                                         disambiguates it; omitting it here recreates exactly the
-//                                         ambiguity trap P0 flagged. null when isQualified is false.
+// @property {string=}  range.rangeClassName / range.rangeClassDefinition       class ranges, as carried
+// @property {string=}  range.rangeOptionSetName / range.rangeOptionSetDefinition option-set ranges, ditto
+// @property {boolean}  isQualified        whether this ref carries qualifiers
+// @property {string[]} qualifierNames     ALWAYS an array — empty on unqualified refs; the card's own
+//                                         qualifierNames (positionally parallel to its qualifierKeys,
+//                                         SPEC §1.3), every entry a non-empty string. Replaces the
+//                                         retired {qualifierKey, qualifierName} parse of the card's
+//                                         name suffix (SPEC §1.6: the " [qualifier]" convention is gone).
 // @property {?Object}  value              REQUIRED non-null when referenceTier === 'value' —
-//                                         {valueKey, owningPropertyKey, owningOptionSetId}. P0 §2.6: a
-//                                         bare option-value token is NOT unique across properties (one
-//                                         shared by 13 distinct properties, live); a value-tier
-//                                         presentation missing its owning-property/option-set scope is
-//                                         actively misleading, not merely incomplete. null at property tier.
+//                                         { valueKey, owningPropertyKey, owningOptionSetId,
+//                                         valueName?, valueDefinition?, valueNotation?,
+//                                         valuePrefLabel? }. A bare option-value token is NOT unique
+//                                         across properties; a value-tier presentation missing its
+//                                         owning scope is actively misleading. null at property tier.
 //
-// WORKED EXAMPLES (P0-cedsTupleModel.md §3, live, PROPOSAL there / CONTRACT here):
-//   Shape A (scalar):   { referenceTier: 'property', canonicalKey: 'P000104', propertyKey: 'P000104',
-//     name: 'Staff Evaluation Score or Rating', domains: [{domainId:'C200366', domainName:'Staff Evaluation'}],
-//     domainsComplete: true, range: {shape:'datatype', rangeDatatype:'string', rangeClassId:null,
-//     rangeOptionSetId:null}, isQualified: false, qualifier: null, value: null }
-//   Shape D (qualified): { ..., canonicalKey: 'P600502', isQualified: true,
-//     qualifier: { qualifierKey: 'OV_federalSchoolCode', qualifierName: 'Federal School Code',
-//     otherVariantCount: 3 }, ... }
-//   Shape E (value tier): { referenceTier: 'value', canonicalKey: 'OV001637175776', propertyKey: 'P001637',
-//     domains: [{domainId:'C200010', domainName:null}], domainsComplete: true,
-//     range: {shape:'optionSet', rangeOptionSetId:'OS001637', rangeDatatype:null, rangeClassId:null},
-//     isQualified: false, qualifier: null,
-//     value: { valueKey:'OV001637175776', owningPropertyKey:'P001637', owningOptionSetId:'OS001637' } }
+// WORKED EXAMPLES (the new card, SPEC §1):
+//   property tier: { referenceTier: 'property', canonicalKey: 'P001470', propertyKey: 'P001470',
+//     name: 'Rubric Criterion Description',
+//     domain: { domainId: 'C200354', domainName: 'Rubric Criterion', domainDefinition: '...' },
+//     property: { propertyName: 'Rubric Criterion Description', propertyDefinition: 'Text describing...' },
+//     range: { shape: 'datatype', rangeDatatype: 'string', rangeClassId: null, rangeOptionSetId: null },
+//     isQualified: false, qualifierNames: [], value: null }
+//   value tier: { referenceTier: 'value', canonicalKey: 'OV001637175776', propertyKey: 'P001637',
+//     name: '...', domain: {...}, property: { propertyName: '...', propertyDefinition: '...' },
+//     range: { shape: 'optionSet', rangeOptionSetId: 'OS001637', rangeOptionSetName: '...',
+//       rangeOptionSetDefinition: '...', rangeDatatype: null, rangeClassId: null },
+//     isQualified: false, qualifierNames: [],
+//     value: { valueKey: 'OV001637175776', owningPropertyKey: 'P001637', owningOptionSetId: 'OS001637',
+//       valueName: '...', valueNotation: '12' } }
 //
 // THE GATE: hubModulePresentationViolation(baseTupleEvidence) -> ''|reason. Refuses BY NAME every
-// field above that is missing, wrong-typed, or self-contradictory (domains not a list, an empty
-// domains list, a missing domainsComplete flag, more than one range field set, a qualified ref with
-// no qualifier context, a value-tier ref with no owning-property/option-set scope).
+// field above that is missing, wrong-typed, or self-contradictory — including a presentation missing
+// its MEANING fields (no domain group, a domain without its name, no property group, a property
+// without its name), more than one range field set, a qualified ref with empty qualifierNames, a
+// value-tier ref with no owning scope, and the RETIRED fields (domains, domainsComplete, qualifier)
+// still present — an old-shape presentation is refused by name, never rendered.
 
 const RANGE_SHAPES = Object.freeze(['datatype', 'class', 'optionSet']);
 const RANGE_SHAPE_FIELD = Object.freeze({
@@ -502,9 +515,23 @@ const HUB_MODULE_SHAPE = Object.freeze({ arity: 2, argKeys: null });
 
 const hubModuleCallableViolation = (fn, label = 'hubModule') => callableArityViolation(fn, HUB_MODULE_SHAPE.arity, label);
 
+// RETIRED_TUPLE_EVIDENCE_FIELDS — ⟪hubReimplementation P3⟫ the old-shape fields the revised contract
+// REFUSES ON SIGHT. A presentation still carrying any of them was composed against the retired card
+// shape (or by a stale hub module / fixture) — rendering it would quietly resurrect the id-only,
+// completeness-caveated prompt this phase exists to remove.
+const RETIRED_TUPLE_EVIDENCE_FIELDS = Object.freeze(['domains', 'domainsComplete', 'qualifier']);
+
 const hubModulePresentationViolation = (evidence) => {
 	if (!evidence || typeof evidence !== 'object') {
 		return 'baseTupleEvidence: not an object';
+	}
+	const retiredField = RETIRED_TUPLE_EVIDENCE_FIELDS.find((oneField) => evidence[oneField] !== undefined);
+	if (retiredField !== undefined) {
+		return (
+			`baseTupleEvidence: carries retired field '${retiredField}' — the hubReimplementation P3 contract ` +
+			`replaced domains[]/domainsComplete with the singular meaning-carrying \`domain\` group and the ` +
+			`qualifier object with \`qualifierNames\` (SPEC §6); an old-shape presentation is refused, never rendered`
+		);
 	}
 	if (evidence.referenceTier !== 'property' && evidence.referenceTier !== 'value') {
 		return `baseTupleEvidence: referenceTier must be 'property' or 'value' (got ${JSON.stringify(evidence.referenceTier)})`;
@@ -518,24 +545,34 @@ const hubModulePresentationViolation = (evidence) => {
 	if (typeof evidence.name !== 'string' || !evidence.name) {
 		return 'baseTupleEvidence: name is missing';
 	}
-	if (!Array.isArray(evidence.domains)) {
-		return `baseTupleEvidence: domains must be an array (got ${typeof evidence.domains}) — the contract is list-shaped from day one (P0 §2.4)`;
+	const domain = evidence.domain;
+	if (!domain || typeof domain !== 'object') {
+		return 'baseTupleEvidence: domain is missing — the presentation carries the card\'s singular domain group (SPEC §6)';
 	}
-	if (evidence.domains.length === 0) {
-		return 'baseTupleEvidence: domains is empty — every live HubReference has at least one owning class';
+	if (typeof domain.domainId !== 'string' || !domain.domainId) {
+		return 'baseTupleEvidence: domain.domainId is missing';
 	}
-	const badDomain = evidence.domains.find(
-		(oneDomain) => !oneDomain || typeof oneDomain !== 'object' || typeof oneDomain.domainId !== 'string' || !oneDomain.domainId,
-	);
-	if (badDomain !== undefined) {
-		return `baseTupleEvidence: a domains[] entry is missing domainId (${JSON.stringify(badDomain)})`;
-	}
-	if (typeof evidence.domainsComplete !== 'boolean') {
+	if (typeof domain.domainName !== 'string' || !domain.domainName) {
 		return (
-			'baseTupleEvidence: domainsComplete (boolean) is missing — the hub module must state whether ' +
-			'this presentation is known to have collapsed a multi-domain property (P0 §2.4), rather than ' +
-			'silently presenting a partial fact as complete'
+			'baseTupleEvidence: domain.domainName is missing — a REQUIRED meaning field (SPEC §6); a ' +
+			'presentation that names its domain only by id is the old shape, refused'
 		);
+	}
+	if (domain.domainDefinition !== undefined && (typeof domain.domainDefinition !== 'string' || !domain.domainDefinition)) {
+		return 'baseTupleEvidence: domain.domainDefinition is present but not a non-empty string — absent must stay absent, never \'\'';
+	}
+	const property = evidence.property;
+	if (!property || typeof property !== 'object') {
+		return 'baseTupleEvidence: property is missing — the presentation carries the property-slot meaning group (SPEC §6)';
+	}
+	if (typeof property.propertyName !== 'string' || !property.propertyName) {
+		return 'baseTupleEvidence: property.propertyName is missing — a REQUIRED meaning field (SPEC §6)';
+	}
+	if (
+		property.propertyDefinition !== undefined &&
+		(typeof property.propertyDefinition !== 'string' || !property.propertyDefinition)
+	) {
+		return 'baseTupleEvidence: property.propertyDefinition is present but not a non-empty string — absent must stay absent, never \'\'';
 	}
 	const range = evidence.range;
 	if (!range || typeof range !== 'object') {
@@ -554,30 +591,30 @@ const hubModulePresentationViolation = (evidence) => {
 	if (leakingField) {
 		return (
 			`baseTupleEvidence: range.shape is '${range.shape}' but range.${leakingField} is also set — ` +
-			`the three range shapes are mutually exclusive (P0 §2.1)`
+			`the three range shapes are mutually exclusive (SPEC §1.1, G-12)`
 		);
 	}
 	if (typeof evidence.isQualified !== 'boolean') {
 		return 'baseTupleEvidence: isQualified (boolean) is missing';
 	}
-	if (evidence.isQualified) {
-		const qualifier = evidence.qualifier;
-		if (
-			!qualifier ||
-			typeof qualifier !== 'object' ||
-			typeof qualifier.qualifierKey !== 'string' ||
-			!qualifier.qualifierKey ||
-			typeof qualifier.qualifierName !== 'string' ||
-			!qualifier.qualifierName
-		) {
-			return (
-				'baseTupleEvidence: isQualified is true but qualifier context (qualifierKey, qualifierName) is ' +
-				'missing — canonicalKey alone is ambiguous once qualified (P0 §2.2); the qualifier context MUST ' +
-				'ride in the presentation'
-			);
-		}
-	} else if (evidence.qualifier !== null && evidence.qualifier !== undefined) {
-		return 'baseTupleEvidence: isQualified is false but a qualifier object is present — ambiguous self-description';
+	if (!Array.isArray(evidence.qualifierNames)) {
+		return (
+			`baseTupleEvidence: qualifierNames must be an array (got ${typeof evidence.qualifierNames}) — ` +
+			`empty on unqualified refs, the card's own qualifier names otherwise (SPEC §6)`
+		);
+	}
+	const badQualifierName = evidence.qualifierNames.find((oneName) => typeof oneName !== 'string' || !oneName);
+	if (badQualifierName !== undefined) {
+		return `baseTupleEvidence: qualifierNames contains a non-string or empty entry (${JSON.stringify(badQualifierName)})`;
+	}
+	if (evidence.isQualified && evidence.qualifierNames.length === 0) {
+		return (
+			'baseTupleEvidence: isQualified is true but qualifierNames is empty — canonicalKey alone is ' +
+			'ambiguous once qualified; the qualifier names MUST ride in the presentation (SPEC §6)'
+		);
+	}
+	if (!evidence.isQualified && evidence.qualifierNames.length > 0) {
+		return 'baseTupleEvidence: isQualified is false but qualifierNames is non-empty — ambiguous self-description';
 	}
 	if (evidence.referenceTier === 'value') {
 		const value = evidence.value;
@@ -593,7 +630,7 @@ const hubModulePresentationViolation = (evidence) => {
 		) {
 			return (
 				'baseTupleEvidence: referenceTier is value but value context (valueKey, owningPropertyKey, ' +
-				'owningOptionSetId) is missing — a bare option-value token is NOT unique across properties (P0 §2.6)'
+				'owningOptionSetId) is missing — a bare option-value token is NOT unique across properties'
 			);
 		}
 	} else if (evidence.value !== null && evidence.value !== undefined) {
@@ -940,6 +977,7 @@ module.exports = {
 	// 3. hub module
 	HUB_MODULE_SHAPE,
 	RANGE_SHAPES,
+	RETIRED_TUPLE_EVIDENCE_FIELDS,
 	hubModuleCallableViolation,
 	hubModulePresentationViolation,
 

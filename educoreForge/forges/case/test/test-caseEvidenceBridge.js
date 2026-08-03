@@ -2,11 +2,24 @@
 'use strict';
 
 // test-caseEvidenceBridge.js — hermetic gate for forges/case/bridges/caseEvidenceBridge.js
-// (bridgeEvidenceRefactor-spec.md §7 P5): caseStructuralBridge's scalar signal re-expressed as
-// EVIDENCE. PURE + synchronous + deterministic where the module itself is (the pure helpers, the
-// nominate/walk hooks, the REAL evidenceComposer run); the full-flow sections drive the REAL
+// (bridgeEvidenceRefactor-spec.md §7 P5; REVISED for hubReimplementation P3, 2026-08-03, SPEC §6):
+// caseStructuralBridge's scalar signal re-expressed as EVIDENCE, now judged over the SELF-SUFFICIENT
+// HubReference card. PURE + synchronous + deterministic where the module itself is (the pure helpers,
+// the nominate/walk hooks, the REAL evidenceComposer run); the full-flow sections drive the REAL
 // bridgeMaker.run() with a STUBBED llmClient (no real Anthropic call) and graphReader/graphWriter/
-// vectorizer doubles, exactly test-generic-bridge-evidence.js's own PART B discipline.
+// vectorizer doubles.
+//
+// ⟪hubReimplementation P3 REVISION⟫ every HubReference candidate fixture in this suite is the NEW
+// card shape (SPEC §1/§6): referenceTier/canonicalKey/propertyKey/name, the MEANING fields
+// (domainId/domainName/domainDefinition, propertyName/propertyDefinition), exactly ONE range field,
+// a non-empty forge-composed `embedText`, and the forge-stamped `embedding` — and NONE of the retired
+// fields (cedsId, description, searchText, allDomainIds, allDomainNames). Candidates are NEVER
+// re-embedded: the bridge reads embedding/embedText off the card, refuses BY NAME a card lacking
+// either (proven OBSERVED-RED in SECTION 7.6), and batchEmbeds ONLY the source composites (the
+// vectorizer double records every text it is asked to embed and SECTION 7 asserts the list is
+// sources-only — gate G-15). The old hub-DmeClass domain-map read is DELETED from the bridge, so no
+// stub serves it; SECTION 4/5 run the REAL lib.d/cedsHubModule (the MEANING presentation) instead of
+// a hand-shaped tuple double.
 //
 // PROVES:
 //   SECTION 1 — the ported pure helpers (tokenize/casePathSegments/pathTokensFromStableId/
@@ -16,24 +29,28 @@
 //     (token-sharing candidates nominated with a rationale naming the shared tokens), the TOPK cap.
 //   SECTION 3 — caseWalk in isolation: a per-candidate note on EVERY pool candidate (including one with
 //     ZERO overlap — "retrieved by cosine alone"), and the ONE global segment.
-//   SECTION 4 — THE HEADLINE PROOF, through the REAL kit.evidenceComposer (lib/evidenceComposer.js,
-//     not a double): a candidate ABSENT from cosine top-K (topK=1) but token-sharing with the source's
-//     casePath ENTERS the pool via caseNominate, carrying its nomination rationale; a candidate that is
+//   SECTION 4 — THE HEADLINE PROOF, through the REAL kit.evidenceComposer AND the REAL cedsHubModule:
+//     a candidate ABSENT from cosine top-K (topK=1) but token-sharing with the source's casePath
+//     ENTERS the pool via caseNominate, carrying its nomination rationale; a candidate that is
 //     NEITHER cosine-top-K NOR token-sharing is ABSENT from the pool entirely; every pool candidate
-//     carries the per-candidate structural-location note; the assembled evidencePackage passes the REAL
-//     evidencePackageViolation oracle (⟪A3⟫); the global segment appears EXACTLY ONCE.
+//     carries the per-candidate structural-location note; the assembled evidencePackage passes the
+//     REAL evidencePackageViolation oracle (⟪A3⟫, which now proves the MEANING contract on every
+//     considerations.tuple); the global segment appears EXACTLY ONCE.
 //   SECTION 5 — THE SMUGGLING GATE (⟪A3⟫) TWIN: RED — a deliberately candidate-naming segment IS
 //     refused by the REAL evidencePackageViolation; GREEN — CASE_GLOBAL_SEGMENT, run through the SAME
-//     gate over the SAME pool, passes clean. Not asserted by inspection alone — both run through the
-//     real oracle.
+//     gate over the SAME pool (its tuple composed by the REAL cedsHubModule), passes clean.
 //   SECTION 6 — PART A-style wiring-fault twins (unit-level, direct calls, no bridgeMaker involved):
 //     every refusal genericBridge.js proves (missing kit, missing decisionStore, --rebridge with no
 //     llmClient, hub mismatch, missing config.sourceStandard, missing applyLabel/inGraph) PLUS this
 //     bridge's OWN new refusal (source standard other than CASE).
 //   SECTION 7 — THE FULL EVIDENCE FLOW through the REAL bridgeMaker.run(), REBRIDGE then MATERIALIZE:
 //     the nomination-recovered candidate is the one the stub LLM picks (proving the recall recovery is
-//     not merely a composer-level artifact but actually reaches a written edge); MATERIALIZE replays
-//     byte-identically with ZERO additional llmClient calls.
+//     not merely a composer-level artifact but actually reaches a written edge); the vectorizer is
+//     proven to have embedded ONLY source texts (G-15); MATERIALIZE replays byte-identically with
+//     ZERO additional llmClient calls and ZERO additional embeds.
+//   SECTION 7.6 — ⟪hubReimplementation P3⟫ OBSERVED-RED refusal twins: a candidate carrying no
+//     `embedding` is refused NAMING it; a candidate carrying no `embedText` is refused NAMING it —
+//     both through the REAL bridgeMaker.run(), both refused before any judging occurs.
 //   SECTION 8 — RESOLVER CHECK: 'caseEvidenceBridge' resolves to exactly ONE file via bridgeMaker's
 //     standard-local search (source: 'case').
 //
@@ -50,9 +67,10 @@ SYNOPSIS
 
 DESCRIPTION
      Proves the ported pure helpers, the nominate/walk hooks in isolation, the headline nomination-
-     recovers-recall proof through the REAL evidenceComposer, the ⟪A3⟫ smuggling-gate RED/GREEN twin,
-     the bridge's own wiring-fault twins, and the full evidence flow (REBRIDGE then MATERIALIZE)
-     through the REAL bridgeMaker.run() with a stubbed llmClient.
+     recovers-recall proof through the REAL evidenceComposer and REAL cedsHubModule, the ⟪A3⟫
+     smuggling-gate RED/GREEN twin, the bridge's own wiring-fault twins, the hubReimplementation P3
+     candidate-card refusals (no embedding / no embedText, OBSERVED RED), and the full evidence flow
+     (REBRIDGE then MATERIALIZE) through the REAL bridgeMaker.run() with a stubbed llmClient.
 
 EXIT STATUS
      0 all assertions passed;  1 at least one failed.
@@ -68,6 +86,10 @@ const bridgeModule = require('../bridges/caseEvidenceBridge');
 const bridgeMakerModule = require('../../../apps/graph-builder/apps/bridge-maker/bridgeMaker');
 const evidenceComposerFactory = require('../../../apps/graph-builder/apps/bridge-maker/lib/evidenceComposer');
 const { evidencePackageViolation } = require('../../../apps/graph-builder/apps/bridge-maker/lib/evidenceContracts');
+// the REAL hub module (⟪hubReimplementation P3⟫ the MEANING presentation, SPEC §6) — SECTION 4/5
+// compose their tuples through it rather than a hand-shaped double, so the suite proves the bridge's
+// hooks against the presentation the live pipeline actually renders.
+const cedsHubModule = require('../../../apps/graph-builder/apps/bridge-maker/lib.d/cedsHubModule')();
 
 const {
 	tokenize,
@@ -84,6 +106,34 @@ const {
 	MAPPING_TOOL,
 	SOURCE_STANDARD,
 } = bridgeModule;
+
+// =====================================================================
+// hubCandidateElementFor — ONE fixture builder for a FULL flattened HubReference element in the
+// ⟪hubReimplementation P3⟫ card shape (SPEC §1/§6): every MEANING field ON the element, its
+// forge-composed embedText and forge-stamped embedding, and NO cedsId/description/searchText/
+// allDomainIds/allDomainNames (those belong to the RETIRED card). `defText` mirrors
+// lib.d/sourceWalker.js flattenFullRecord's computed chain, which over the new card resolves to the
+// element's own name (the card stores its prose in propertyDefinition, which that chain never
+// reads). `vector` mirrors the bridge's own candidate step (candidate.vector = candidate.embedding).
+// =====================================================================
+const hubCandidateElementFor = ({ stableId, canonicalKey, name, domainId, domainName, domainDefinition, propertyDefinition, embedding }) => ({
+	stableId,
+	role: 'HubReference',
+	referenceTier: 'property',
+	canonicalKey,
+	propertyKey: canonicalKey,
+	name,
+	defText: name,
+	domainId,
+	domainName,
+	domainDefinition,
+	propertyName: name,
+	propertyDefinition,
+	rangeDatatype: 'string',
+	embedText: `${domainName} · ${name} · ${propertyDefinition}`,
+	embedding,
+	vector: embedding,
+});
 
 // =====================================================================
 harness.section('SECTION 1 — the ported pure helpers');
@@ -145,8 +195,19 @@ harness.section('SECTION 2 — caseNominate in isolation');
 // =====================================================================
 (() => {
 	const source = { stableId: 'case:CFRubric.rubricCriterionId', name: 'rubricCriterionId' };
-	const candA = { stableId: 'ceds:P900001', cedsId: 'P900001', name: 'Generic Caption', defText: 'A generic caption used for display purposes.' };
-	const candB = { stableId: 'ceds:P900002', cedsId: 'P900002', name: 'Rubric Criterion Identifier', defText: 'The identifier for a rubric criterion.' };
+	// ⟪hubReimplementation P3⟫ NEW-shape cards: the structural token signal now rides in name (+ the
+	// flatten-computed defText, which the new card resolves to name) — the retired card's prose fields
+	// are gone from the fixtures because they are gone from the card.
+	const candA = hubCandidateElementFor({
+		stableId: 'ceds:P900001', canonicalKey: 'P900001', name: 'Generic Caption',
+		domainId: 'C200001', domainName: 'Display Artifact', domainDefinition: 'Presentational display artifacts and captions.',
+		propertyDefinition: 'A generic caption used for display purposes.', embedding: [1, 0],
+	});
+	const candB = hubCandidateElementFor({
+		stableId: 'ceds:P900002', canonicalKey: 'P900002', name: 'Rubric Criterion Identifier',
+		domainId: 'C200002', domainName: 'Rubric Criterion', domainDefinition: 'A single criterion within a rubric.',
+		propertyDefinition: 'The identifier for a rubric criterion.', embedding: [0, 1],
+	});
 
 	// RED — a non-CASE-shaped source nominates NOTHING, never a guessed nomination.
 	let redResult = null;
@@ -170,12 +231,13 @@ harness.section('SECTION 2 — caseNominate in isolation');
 	harness.ok('GREEN: the rationale is a non-empty string (evidencePackageViolation\'s own nomination requirement)', typeof nomination.rationale === 'string' && nomination.rationale.trim().length > 0);
 
 	// CAP — CASE_NOMINATION_TOPK bounds the nomination list even when many candidates overlap.
-	const manyOverlapping = Array.from({ length: CASE_NOMINATION_TOPK + 5 }, (v, i) => ({
-		stableId: `ceds:Pmany${i}`,
-		cedsId: `Pmany${i}`,
-		name: `Rubric Criterion Variant ${i}`,
-		defText: 'rubric criterion text',
-	}));
+	const manyOverlapping = Array.from({ length: CASE_NOMINATION_TOPK + 5 }, (v, i) =>
+		hubCandidateElementFor({
+			stableId: `ceds:Pmany${i}`, canonicalKey: `Pmany${i}`, name: `Rubric Criterion Variant ${i}`,
+			domainId: 'C200002', domainName: 'Rubric Criterion', domainDefinition: 'A single criterion within a rubric.',
+			propertyDefinition: `Variant ${i} of the rubric criterion.`, embedding: [0, 1],
+		}),
+	);
 	let cappedResult = null;
 	caseNominate({ sourceElement: source, candidateElements: manyOverlapping }, (err, nominations) => {
 		cappedResult = { err, nominations };
@@ -188,8 +250,16 @@ harness.section('SECTION 3 — caseWalk in isolation');
 // =====================================================================
 (() => {
 	const source = { stableId: 'case:CFRubric.rubricCriterionId', name: 'rubricCriterionId' };
-	const candOverlap = { stableId: 'ceds:P900002', cedsId: 'P900002', name: 'Rubric Criterion Identifier', defText: 'The identifier for a rubric criterion.' };
-	const candNoOverlap = { stableId: 'ceds:P900001', cedsId: 'P900001', name: 'Generic Caption', defText: 'A generic caption used for display purposes.' };
+	const candOverlap = hubCandidateElementFor({
+		stableId: 'ceds:P900002', canonicalKey: 'P900002', name: 'Rubric Criterion Identifier',
+		domainId: 'C200002', domainName: 'Rubric Criterion', domainDefinition: 'A single criterion within a rubric.',
+		propertyDefinition: 'The identifier for a rubric criterion.', embedding: [0, 1],
+	});
+	const candNoOverlap = hubCandidateElementFor({
+		stableId: 'ceds:P900001', canonicalKey: 'P900001', name: 'Generic Caption',
+		domainId: 'C200001', domainName: 'Display Artifact', domainDefinition: 'Presentational display artifacts and captions.',
+		propertyDefinition: 'A generic caption used for display purposes.', embedding: [1, 0],
+	});
 
 	let walkResult = null;
 	caseWalk({ sourceElement: source, pool: [candOverlap, candNoOverlap], graphReader: null, dependencies: ['case', 'ceds'] }, (err, result) => {
@@ -219,10 +289,24 @@ harness.section('SECTION 4 — THE HEADLINE PROOF: nomination recovers a cosine 
 	// cosine alone). candB is a ZERO-cosine (orthogonal), structurally RELATED candidate — with topK=1,
 	// candB is excluded from cosine retrieval entirely; caseNominate is its ONLY way into the pool.
 	// candC is BOTH low-cosine AND structurally unrelated — it must be ABSENT from the final pool.
+	// ⟪hubReimplementation P3⟫ each candidate is a FULL new-shape card element; its `vector` is its own
+	// forge-stamped `embedding` (the bridge's candidate step), never a re-embed.
 	const source = { stableId: 'case:CFRubric.rubricCriterionId', name: 'rubricCriterionId', vector: [1, 0] };
-	const candA = { stableId: 'ceds:P900001', cedsId: 'P900001', name: 'Generic Caption', defText: 'A generic caption used for display purposes.', vector: [0.99, Math.sqrt(1 - 0.99 * 0.99)] };
-	const candB = { stableId: 'ceds:P900002', cedsId: 'P900002', name: 'Rubric Criterion Identifier', defText: 'The identifier for a rubric criterion.', vector: [0, 1] };
-	const candC = { stableId: 'ceds:P900003', cedsId: 'P900003', name: 'Unrelated Widget Description', defText: 'Completely unrelated content with no shared vocabulary.', vector: [-1, 0] };
+	const candA = hubCandidateElementFor({
+		stableId: 'ceds:P900001', canonicalKey: 'P900001', name: 'Generic Caption',
+		domainId: 'C200001', domainName: 'Display Artifact', domainDefinition: 'Presentational display artifacts and captions.',
+		propertyDefinition: 'A generic caption used for display purposes.', embedding: [0.99, Math.sqrt(1 - 0.99 * 0.99)],
+	});
+	const candB = hubCandidateElementFor({
+		stableId: 'ceds:P900002', canonicalKey: 'P900002', name: 'Rubric Criterion Identifier',
+		domainId: 'C200002', domainName: 'Rubric Criterion', domainDefinition: 'A single criterion within a rubric.',
+		propertyDefinition: 'The identifier for a rubric criterion.', embedding: [0, 1],
+	});
+	const candC = hubCandidateElementFor({
+		stableId: 'ceds:P900003', canonicalKey: 'P900003', name: 'Unrelated Widget Description',
+		domainId: 'C200003', domainName: 'Widget Registry', domainDefinition: 'Completely unrelated registry content.',
+		propertyDefinition: 'Completely unrelated content with no shared vocabulary.', embedding: [-1, 0],
+	});
 	const candidateElements = [candA, candB, candC];
 
 	// fixture sanity, computed with the SAME helpers the hooks use.
@@ -245,23 +329,10 @@ harness.section('SECTION 4 — THE HEADLINE PROOF: nomination recovers a cosine 
 			pool.map((c) => ({ candidate: c, cosine: cosine(src.vector, c.vector) })).sort((a, b) => b.cosine - a.cosine).slice(0, 1),
 	};
 
-	// a minimal, contract-conforming hub module double: every pool candidate gets a valid property-tier
-	// BaseTupleEvidence (hubModulePresentationViolation-clean), keyed off its own cedsId.
-	const fakeHubModule = (candidate, callback) => {
-		callback('', {
-			referenceTier: 'property',
-			canonicalKey: candidate.cedsId,
-			propertyKey: candidate.cedsId,
-			name: candidate.name,
-			domains: [{ domainId: 'C000001', domainName: null }],
-			domainsComplete: true,
-			range: { shape: 'datatype', rangeDatatype: 'string', rangeClassId: null, rangeOptionSetId: null },
-			isQualified: false,
-			qualifier: null,
-			value: null,
-		});
-	};
-	const noopGraphReader = { readNodes: (spec, cb) => cb('', { nodes: [] }), close: (cb) => cb('') };
+	// ⟪hubReimplementation P3⟫ the REAL cedsHubModule renders each candidate's MEANING presentation
+	// (SPEC §6) from the card's own fields — the hand-shaped tuple double this section used to carry
+	// described the RETIRED card shape and would now be refused by the ⟪A3⟫ gate itself.
+	const noopGraphReader = { readNodes: (spec, cb) => { void spec; cb('', { nodes: [] }); }, close: (cb) => cb('') };
 
 	const composer = evidenceComposerFactory({
 		semanticMatcher: narrowSemanticMatcher,
@@ -271,7 +342,7 @@ harness.section('SECTION 4 — THE HEADLINE PROOF: nomination recovers a cosine 
 	});
 
 	let composed = null;
-	composer({ sourceElement: source, candidateElements, graphReader: noopGraphReader, hubModule: fakeHubModule }, (err, evidencePackage) => {
+	composer({ sourceElement: source, candidateElements, graphReader: noopGraphReader, hubModule: cedsHubModule }, (err, evidencePackage) => {
 		composed = { err, evidencePackage };
 	});
 
@@ -293,6 +364,11 @@ harness.section('SECTION 4 — THE HEADLINE PROOF: nomination recovers a cosine 
 	const candAEntry = pool.find((e) => e.candidate.stableId === 'ceds:P900001');
 	harness.ok('candA (cosine-retrieved only) carries NO nomination field', !candAEntry.nomination);
 
+	// ⟪hubReimplementation P3⟫ the tuple is the MEANING presentation — the card's own domain name and
+	// definition prose, composed by the REAL cedsHubModule, sit ON the pool entry.
+	harness.equal('candB\'s considerations.tuple carries the card\'s own domainName (MEANING, not an opaque id)', candBEntry.considerations.tuple.domain.domainName, 'Rubric Criterion');
+	harness.equal('candB\'s considerations.tuple carries the card\'s own propertyDefinition', candBEntry.considerations.tuple.property.propertyDefinition, 'The identifier for a rubric criterion.');
+
 	// per-candidate consideration content, for BOTH pool members.
 	harness.match('candB\'s considerations.notes states the structural location + shared tokens', candBEntry.considerations.notes[0], /owning class 'CFRubric'.*rubric.*criterion/s);
 	harness.match('candA\'s considerations.notes is honest about having no overlap', candAEntry.considerations.notes[0], /\(none — retrieved by cosine alone\)/);
@@ -301,7 +377,8 @@ harness.section('SECTION 4 — THE HEADLINE PROOF: nomination recovers a cosine 
 	harness.equal('promptSegments carries EXACTLY ONE entry', composed.evidencePackage.promptSegments.length, 1);
 	harness.equal('the ONE entry IS CASE_GLOBAL_SEGMENT', composed.evidencePackage.promptSegments[0], CASE_GLOBAL_SEGMENT);
 
-	// ⟪A3⟫ THE REAL GATE — the composed package is proven, not merely asserted, contract-conforming.
+	// ⟪A3⟫ THE REAL GATE — the composed package is proven, not merely asserted, contract-conforming
+	// (and the gate now proves the MEANING contract on every considerations.tuple, SPEC §6).
 	harness.equal('the composed evidencePackage passes the REAL evidencePackageViolation oracle (⟪A3⟫)', evidencePackageViolation(composed.evidencePackage), '');
 })();
 
@@ -309,11 +386,24 @@ harness.section('SECTION 4 — THE HEADLINE PROOF: nomination recovers a cosine 
 harness.section('SECTION 5 — THE SMUGGLING GATE (⟪A3⟫) TWIN: a candidate-naming segment is RED; CASE_GLOBAL_SEGMENT is GREEN');
 // =====================================================================
 (() => {
+	// ⟪hubReimplementation P3⟫ the pool entry's tuple is composed by the REAL cedsHubModule from a
+	// new-shape card — the ⟪A3⟫ gate proves the tuple's MEANING shape before it ever reaches the
+	// smuggling scan, so a bare {referenceTier} stand-in would fail for the WRONG reason.
+	const smugglingCandidate = hubCandidateElementFor({
+		stableId: 'ceds:P900002', canonicalKey: 'P900002', name: 'Rubric Criterion Identifier',
+		domainId: 'C200002', domainName: 'Rubric Criterion', domainDefinition: 'A single criterion within a rubric.',
+		propertyDefinition: 'The identifier for a rubric criterion.', embedding: [0, 1],
+	});
+	let smugglingTuple = null;
+	cedsHubModule(smugglingCandidate, (hubErr, presentation) => {
+		harness.equal('fixture check: the REAL cedsHubModule composes the smuggling-pool tuple with no error', hubErr, '');
+		smugglingTuple = presentation;
+	});
 	const pool = [
 		{
-			candidate: { stableId: 'ceds:P900002', cedsId: 'P900002', name: 'Rubric Criterion Identifier' },
+			candidate: smugglingCandidate,
 			cosine: 0.5,
-			considerations: { tuple: { referenceTier: 'property' }, notes: [] },
+			considerations: { tuple: smugglingTuple, notes: [] },
 		},
 	];
 
@@ -468,64 +558,97 @@ harness.section('SECTION 7 — THE FULL EVIDENCE FLOW through the REAL bridgeMak
 // ONE CASE source whose casePath structurally matches a candidate a NARROW cosine top-K (topK=1) would
 // otherwise never see — the SAME fixture shape as SECTION 4, now driven end-to-end so the recovered
 // candidate is proven to reach an ACTUAL written edge, not merely the composer's own pool.
+//
+// ⟪hubReimplementation P3⟫ each HubReference is the NEW self-sufficient card (SPEC §1): its MEANING
+// fields, its stored `embedText` (never re-embedded here — G-15's whole assertion), and its
+// forge-stamped `embedding` — a FLAT number[] exactly as forgeCeds stamps properties.embedding,
+// which lib.d/sourceWalker.js flattenFullRecord's LIST_VALUED_PROPERTY_NAMES registry (supervisor
+// ruling 2026-08-03) passes through VERBATIM instead of v1-collapsing to its first float.
+const ADDR1_EMBEDDING_7 = [1, 0];
+const ADDR2_EMBEDDING_7 = [0, 0.999];
 const referenceNodesRaw7 = [
-	{ stableId: 'cedsHubRef:addr1', properties: { role: 'HubReference', referenceTier: 'property', canonicalKey: 'P900001', propertyKey: 'P900001', name: 'Generic Caption', domainId: 'C200001', rangeDatatype: 'string', qualifierKeys: [] } },
-	{ stableId: 'cedsHubRef:addr2', properties: { role: 'HubReference', referenceTier: 'property', canonicalKey: 'P900002', propertyKey: 'P900002', name: 'Rubric Criterion Identifier', domainId: 'C200002', rangeDatatype: 'string', qualifierKeys: [] } },
+	{
+		stableId: 'cedsHubRef:addr1',
+		properties: {
+			role: 'HubReference', referenceTier: 'property', canonicalKey: 'P900001', propertyKey: 'P900001',
+			name: 'Generic Caption', domainId: 'C200001', domainName: 'Display Artifact',
+			domainDefinition: 'Presentational display artifacts and captions.',
+			propertyName: 'Generic Caption', propertyDefinition: 'A generic caption used for display purposes.',
+			rangeDatatype: 'string',
+			embedText: 'Display Artifact · Generic Caption · A generic caption used for display purposes.',
+			embedding: ADDR1_EMBEDDING_7,
+		},
+	},
+	{
+		stableId: 'cedsHubRef:addr2',
+		properties: {
+			role: 'HubReference', referenceTier: 'property', canonicalKey: 'P900002', propertyKey: 'P900002',
+			name: 'Rubric Criterion Identifier', domainId: 'C200002', domainName: 'Rubric Criterion',
+			domainDefinition: 'A single criterion within a rubric.',
+			propertyName: 'Rubric Criterion Identifier', propertyDefinition: 'The identifier for a rubric criterion.',
+			rangeDatatype: 'string',
+			embedText: 'Rubric Criterion · Rubric Criterion Identifier · The identifier for a rubric criterion.',
+			embedding: ADDR2_EMBEDDING_7,
+		},
+	},
 ];
 
 const sourceGraphNodes7 = [
 	{ stableId: 'case:CFRubric.rubricCriterionId', properties: { _source: 'CASE', role: 'DmeProperty', name: 'rubricCriterionId', defText: '' } }, // CASE's own frequent-empty-defText shape (file header)
 ];
 
-// ⟪P12, 2026-07-31⟫ keyed on the COMPOSITE `embedText` this bridge now embeds (lib/facetScan.js §4.1:
-// owning class name · property name · description · owning class description), NOT on `defText`. This
-// source carries an empty defText and no `description`, and this reader returns no DmeClass nodes, so
-// its composite reduces to its own `name`; each HubReference candidate's likewise reduces to its name.
-// That is itself the point of the change: under the retired fallback chain this source embedded the
-// EMPTY STRING, which is what a `defText || description || searchText || name` chain yields for CASE's
-// frequently-empty prose — a vector carrying no information at all.
+// ⟪hubReimplementation P3 (SPEC §6)⟫ the vectorizer double serves ONLY the SOURCE side now: every
+// HubReference card arrives carrying its forge-stamped `embedding` (read off the card, never
+// re-embedded — gate G-15), so textVectors7 maps just the source's composite embedText
+// (lib/facetScan.js §4.1: owning class name · property name · description · owning class
+// description; this reader returns no CASE DmeClass nodes and the source carries no description, so
+// the composite reduces to the property name).
 const textVectors7 = {
-	rubricCriterionId: [0, 1], // s1's composite embedText -- ORTHOGONAL to addr1
-	'Generic Caption': [1, 0], // addr1 -- the wrong-domain distractor, orthogonal to s1
-	'Rubric Criterion Identifier': [0, 0.999], // addr2 -- near-parallel to s1: the structurally-correct pick
+	rubricCriterionId: [0, 1], // s1's composite embedText — near-parallel to addr2's card embedding, orthogonal to addr1's
 };
 
-const graphReaderDouble7 = ({ inGraph }) => ({
+// makeGraphReaderDouble7 — parameterized over the HubReference set so SECTION 7.6's refusal twins can
+// serve deliberately-broken cards through the SAME reader shape. The bridge's remaining reads are:
+// HubReference (the candidate cards), the CASE DmeProperty walk (the sources), and the CASE DmeClass
+// owning-class-map read (served honestly empty here). The old hub-DmeClass domain-map read is DELETED
+// from the bridge (the card carries domainName itself), so nothing serves it.
+const makeGraphReaderDouble7 = (referenceNodes) => ({ inGraph }) => ({
 	readNodes: ({ label, propertyEquals }, callback) => {
 		void inGraph;
 		const eq = propertyEquals || {};
-		if (label === 'HubReference') { callback('', { nodes: referenceNodesRaw7 }); return; }
+		if (label === 'HubReference') { callback('', { nodes: referenceNodes }); return; }
 		if (eq._source === 'CASE' && eq.role === 'DmeProperty') { callback('', { nodes: sourceGraphNodes7 }); return; }
 		callback('', { nodes: [] });
 	},
 	close: (callback) => callback(''),
 });
+const graphReaderDouble7 = makeGraphReaderDouble7(referenceNodesRaw7);
 
 const makeWriterDouble7 = (writes) => ({ inGraph }) => ({
 	writeRelationshipEdge: (spec, callback) => { void inGraph; writes.push({ ...spec }); callback('', { edgeWritten: true }); },
 	close: (callback) => callback(''),
 });
 
+// batchEmbedTexts7 — EVERY text the pipeline ever asks the vectorizer to embed, recorded so SECTION 7
+// can assert the list is the SOURCE composites and NOTHING else (G-15: zero candidate embeds).
+const batchEmbedTexts7 = [];
 const fakeVectorizerFactory7 = () => ({
-	batchEmbed: ({ texts }, cb) => cb('', { vectors: (texts || []).map((t) => textVectors7[t] || null) }),
+	batchEmbed: ({ texts }, cb) => {
+		batchEmbedTexts7.push(...(texts || []));
+		cb('', { vectors: (texts || []).map((t) => textVectors7[t] || null) });
+	},
 });
 
 const runConfig7 = { sourceStandard: 'case', sourceVersion: 'v1', hubVersion: 'v14.0.0.0', dependencies: ['case', 'ceds'] };
 
-// stubLlm — distinguishes candB (the nomination-recovered candidate) by its OWN nomination rationale
-// text, which the renderer stamps verbatim into the candidate block (evidenceRenderer.js's own
-// renderCandidateBlock: "Nominated by <tool>: <rationale>") — the one honest signal available to a
-// hermetic stub standing in for a real model that WOULD read the full evidence and judge accordingly.
+// stubLlm — distinguishes addr2 (the nomination-recovered candidate) by its OWN rendered header line
+// ("N) Rubric Criterion Identifier", evidenceRenderer.js renderCandidateBlock) — the one honest
+// signal available to a hermetic stub standing in for a real model that WOULD read the full evidence
+// (including the nomination rationale the renderer stamps verbatim) and judge accordingly.
 let rerankCallCount7 = 0;
 const stubLlm7 = {
 	rerank: (spec, callback) => {
 		rerankCallCount7 += 1;
-		const pickOrdinal = spec.userPrompt.includes(`Nominated by ${MAPPING_TOOL}`)
-			? spec.userPrompt.split('\n').findIndex((line) => line.includes(`Nominated by ${MAPPING_TOOL}`))
-			: -1;
-		void pickOrdinal;
-		// the nominated candidate's own header line carries "Rubric Criterion Identifier" -- find its
-		// ordinal directly off the rendered candidate headers rather than fragile line-splitting.
 		const match = spec.userPrompt.match(/(\d+)\) Rubric Criterion Identifier/);
 		if (match) {
 			callback('', { choice: match[1], category: 'strong', rationale: 'the nominated candidate shares the source\'s structural class/property tokens' });
@@ -559,20 +682,32 @@ harness.ok(`REBRIDGE did not error (${(rebridgeReport7 && rebridgeReport7.err) |
 harness.equal('REBRIDGE: exactly 1 rerank call (one source)', rerankCallCount7, 1);
 harness.equal('REBRIDGE: exactly ONE edge written', rebridgeReport7.report && rebridgeReport7.report.edgesWritten, 1);
 harness.equal('REBRIDGE: result.generation is this bridge\'s own EVIDENCE_GENERATION tag', rebridgeReport7.report.generation, bridgeModule.EVIDENCE_GENERATION);
+harness.equal(
+	'EVIDENCE_GENERATION is the ⟪hubReimplementation P3⟫ tag (SPEC §6: card-borne candidate vectors + the meaning prompt re-judge the world)',
+	bridgeModule.EVIDENCE_GENERATION,
+	'caseEvidenceBridge-evidence-v5',
+);
+
+// ⟪hubReimplementation P3, G-15⟫ CANDIDATES ARE NEVER RE-EMBEDDED — the vectorizer was asked to embed
+// EXACTLY the source composites, nothing else (the candidates' vectors came off their cards).
+harness.equal(
+	'REBRIDGE (G-15): batchEmbed received ONLY the source composite embedText — ZERO candidate texts',
+	JSON.stringify(batchEmbedTexts7),
+	JSON.stringify(['rubricCriterionId']),
+);
 
 harness.ok('exactly one edge was written', rebridgeWrites7.length === 1, JSON.stringify(rebridgeWrites7));
 const writtenEdge7 = rebridgeWrites7[0];
 harness.equal(
-	'THE HEADLINE PROOF, end-to-end: the written edge targets addr2 -- the structurally-correct candidate, carried to the judge by caseNominate AND (⟪P12⟫) by the multi-facet scan\'s nameOverlap/contextOverlap seats',
+	'THE HEADLINE PROOF, end-to-end: the written edge targets addr2 -- the structurally-correct candidate, carried to the judge by caseNominate AND (⟪P12⟫) by the multi-facet scan\'s nameOverlap/cosine seats',
 	writtenEdge7 && writtenEdge7.toStableId,
 	'cedsHubRef:addr2',
 );
 harness.equal('  mappingTool is this bridge\'s own name', writtenEdge7 && writtenEdge7.properties.mappingTool, MAPPING_TOOL);
 harness.equal('  predicate is stamped as ever', writtenEdge7 && writtenEdge7.properties.predicate, 'closeMatch');
 
-// the frozen block's own evidence package, re-checked through the REAL gates -- not merely trusted.
+// the frozen block's own evidence entries, re-checked through the REAL parser -- not merely trusted.
 const evidenceFreezerFactory7 = require('../../../apps/graph-builder/apps/bridge-maker/lib/evidenceFreezer');
-const { hubModulePresentationViolation } = require('../../../apps/graph-builder/apps/bridge-maker/lib/evidenceContracts');
 const frozenBlock7 = decisionBlocks7['CEDS::CASE'];
 harness.ok('a real frozen evidence-decision block was saved under pairKey CEDS::CASE', !!frozenBlock7);
 const parsedFrozen7 = evidenceFreezerFactory7().parse(frozenBlock7.frozenText);
@@ -590,6 +725,7 @@ harness.section('SECTION 7 (cont.) — MATERIALIZE: the SAME frozen block replay
 // =====================================================================
 
 const rerankCallsBeforeMaterialize7 = rerankCallCount7;
+const embedTextCountBeforeMaterialize7 = batchEmbedTexts7.length;
 const materializeWrites7 = [];
 let materializeReport7 = null;
 bridgeMakerModule({ graphWriterFactory: makeWriterDouble7(materializeWrites7), graphReaderFactory: graphReaderDouble7 }).run(
@@ -606,6 +742,7 @@ bridgeMakerModule({ graphWriterFactory: makeWriterDouble7(materializeWrites7), g
 
 harness.ok(`MATERIALIZE did not error (${(materializeReport7 && materializeReport7.err) || 'ok'})`, materializeReport7 && !materializeReport7.err, materializeReport7 && materializeReport7.err);
 harness.equal('MATERIALIZE: ZERO additional rerank calls (pure replay, never re-judges)', rerankCallCount7, rerankCallsBeforeMaterialize7);
+harness.equal('MATERIALIZE: ZERO additional batchEmbed texts (pure replay, never re-embeds anything)', batchEmbedTexts7.length, embedTextCountBeforeMaterialize7);
 harness.equal('MATERIALIZE: the SAME edge count (1)', materializeReport7.report.edgesWritten, 1);
 harness.equal('MATERIALIZE: pins to the SAME decisionBlockHash as the rebridge that produced it', materializeReport7.report.decisionBlock, rebridgeReport7.report.decisionBlock);
 harness.equal(
@@ -613,6 +750,65 @@ harness.equal(
 	JSON.stringify(materializeWrites7[0]),
 	JSON.stringify(rebridgeWrites7[0]),
 );
+
+// =====================================================================
+harness.section('SECTION 7.6 — ⟪hubReimplementation P3⟫ OBSERVED-RED refusal twins: a card lacking embedding or embedText is refused BY NAME, never re-embedded/recomposed');
+// =====================================================================
+// The bridge READS `embedding` and `embedText` off each HubReference card (SPEC §1.5, gates G-6/G-7)
+// and refuses a candidate lacking either — a vectorless candidate means the graph was materialized
+// without its vector store; an embedTextless one lost its stored retrieval string. Both twins run the
+// REAL bridgeMaker.run() and are refused BEFORE any judging (the rerank counter proves it).
+
+// withoutCardProperty — a deep clone of one raw reference node, minus one named card property.
+const withoutCardProperty = (oneNode, propertyName) => {
+	const cloned = JSON.parse(JSON.stringify(oneNode));
+	delete cloned.properties[propertyName];
+	return cloned;
+};
+
+const freshRefusalStore76 = () => ({
+	getDecisionBlock: (a, cb) => { void a; cb('', { frozenText: null }); },
+	saveDecisionBlock: (a, cb) => { void a; cb('', { saved: true }); },
+});
+
+const runRefusalRebridge76 = (brokenReferenceNodes, done) => {
+	const brokenReader = makeGraphReaderDouble7(brokenReferenceNodes);
+	bridgeMakerModule({ graphWriterFactory: makeWriterDouble7([]), graphReaderFactory: brokenReader }).run(
+		{
+			inGraph: { graphName: 'DEV_case_evidence_refusal', boltUrl: 'bolt://x', password: 'x' },
+			bridge: 'caseEvidenceBridge', source: 'case', hub: 'ceds', applyLabel: 'BridgedRelation',
+			rebridge: true, decisionStore: freshRefusalStore76(),
+			inferenceConfig: { llmClient: stubLlm7, topK: 1, cosineFloor: -1, concurrency: 4 },
+			config: runConfig7,
+			componentOverrides: { vectorizer: fakeVectorizerFactory7, graphReader: brokenReader },
+		},
+		(err) => done(err),
+	);
+};
+
+const rerankCallsBeforeRefusals76 = rerankCallCount7;
+
+(() => {
+	let observed = null;
+	runRefusalRebridge76([withoutCardProperty(referenceNodesRaw7[0], 'embedding'), referenceNodesRaw7[1]], (err) => { observed = err; });
+	harness.rejects(
+		'OBSERVED RED: a candidate carrying no embedding is refused NAMING the candidate, never re-embedded',
+		[observed],
+		/candidate 'P900001' carries no embedding.*Refusing rather than re-embedding/s,
+	);
+})();
+
+(() => {
+	let observed = null;
+	runRefusalRebridge76([withoutCardProperty(referenceNodesRaw7[0], 'embedText'), referenceNodesRaw7[1]], (err) => { observed = err; });
+	harness.rejects(
+		'OBSERVED RED: a candidate carrying no embedText is refused NAMING the candidate, never recomposed',
+		[observed],
+		/candidate 'P900001' carries no embedText.*Refusing rather than recomposing/s,
+	);
+})();
+
+harness.equal('both refusal twins were refused BEFORE any judging (zero additional rerank calls)', rerankCallCount7, rerankCallsBeforeRefusals76);
 
 // =====================================================================
 harness.section('SECTION 8 — RESOLVER CHECK: caseEvidenceBridge resolves uniquely via the standard-local search (source: case)');

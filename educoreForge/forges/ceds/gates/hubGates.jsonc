@@ -143,6 +143,34 @@
 			"contract": "determinism: two forges of the same base produce byte-identical folded nodes/edges (canonical sha256 over the full node/edge stream, vectors included). The contract is determinism GIVEN the shared content-addressed vector cache (cache-served on the second run); COLD-CACHE re-embed determinism is OUT OF CONTRACT — the embedding provider is not promised bit-stable across API calls. The twin injects a run-varying value into the ACTUAL run-2 stream and re-hashes it (P2-review S-3).",
 			"measure": "build:forgeDeterminismViolations", "comparator": "isEmpty", "expected": [],
 			"twin": "injectRunVaryingValue"
+		},
+
+		// -----------------------------------------------------------------------------
+		// FAMILY E — BRIDGE/EVIDENCE gates (hubReimplementation Phase 3, SPEC §6/§7).
+		// Measured by forges/ceds/test/runCedsHubBridgeGates.js against the LIVE Phase-2
+		// graph (DEV_cedsHubV2_080326) — deliberately NOT named test-*.js: the runner
+		// needs a live docker graph, real Voyage source embeds, and real Opus judgments,
+		// so it must never join the hermetic runAllTests sweep (the evaluate-against-
+		// golden.js precedent). Each runner judges the declarations whose measures it
+		// supplies; these are bridge:-prefixed, invisible to the hub:/build: runners.
+		// -----------------------------------------------------------------------------
+		{
+			"id": "G-14", "family": "E",
+			"contract": "promptClean: a rendered evidence block for a REAL card read from the live Phase-2 graph contains the domain NAME (`Domain: <name> (<id>)`) and the property DEFINITION line, and does NOT contain the string 'may be incomplete'; a source-tree sweep of the bridge/evidence modules finds ZERO occurrences of that caveat string.",
+			"measure": "bridge:promptCleanViolations", "comparator": "isEmpty", "expected": [],
+			"twin": "renderAgainstOldShapeFixture"
+		},
+		{
+			"id": "G-15", "family": "E",
+			"contract": "noCandidateReembed: a LIVE bridge run (real graph, real kit, real judgments) performs ZERO candidate embed calls — every text observed crossing the EMBEDDING-CLIENT seam (a counting proxy around the real client, injected through the vectorizer's embeddingClientFactory seam) is one of the run's SOURCE embedTexts, and at least one source text is observed (an unfired counter is vacuous, refused).",
+			"measure": "bridge:candidateReembedViolations", "comparator": "isEmpty", "expected": [],
+			"twin": "forceOneCandidateEmbed"
+		},
+		{
+			"id": "G-17", "family": "E",
+			"contract": "dmeShape: the live graph carries role HubReference, ALL SIX edge types (IN_HUB + HAS_CEDS_DOMAIN/PROPERTY/RANGE/VALUE/QUALIFIER), and canonicalKey with unchanged semantics (present on every card; P-prefixed on property tier, OV-prefixed on value tier); every HubReference-shape name the five DME reader files require (grepped from the SEPARATE educore repo) exists in the graph.",
+			"measure": "bridge:dmeShapeViolations", "comparator": "isEmpty", "expected": [],
+			"twin": "renameOneEdgeInFixture"
 		}
 	]
 }

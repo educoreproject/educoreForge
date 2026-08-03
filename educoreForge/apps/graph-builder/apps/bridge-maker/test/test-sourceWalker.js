@@ -205,4 +205,45 @@ harness.section('COEXISTENCE — flattenFullRecord is opt-in ONLY: the default w
 	);
 })();
 
+// =====================================================================
+// ⟪hubReimplementation P3, ruling 2026-08-03⟫ GREEN — flattenFullRecord LIST-VALUED PASSTHROUGH:
+// the declared list-valued properties (embedding, qualifierKeys, qualifierNames) ride through
+// VERBATIM — the v1() collapse that serves PG-collapsed scalars must never truncate a genuine list
+// to its first element (a live card's 1024-dim embedding collapsed to ONE FLOAT is how this was
+// found). Scalar collapse for every OTHER property is asserted PRESERVED byte-identically.
+// Three-state proof of record: this section was written FIRST and OBSERVED RED against the
+// pre-ruling flattenFullRecord (embedding read back as 0.25, qualifierKeys as 'OV1'), then the
+// registry fix landed and it went green — the gate bit before it passed.
+// =====================================================================
+harness.section('GREEN — flattenFullRecord list-valued passthrough (P3 ruling): lists stay lists, scalars still collapse');
+(() => {
+	const flattened = sourceWalkerFactory.flattenFullRecord({
+		stableId: 'ceds:listShapeProbe',
+		properties: {
+			role: 'HubReference',
+			name: 'List Shape Probe',
+			canonicalKey: 'P900001',
+			embedding: [0.25, 0.5, 0.75],
+			qualifierKeys: ['OV1', 'OV2'],
+			qualifierNames: ['First Qualifier', 'Second Qualifier'],
+			rangeDatatype: ['string'], // a PG-collapsible single-element list — MUST still collapse
+		},
+	});
+	harness.ok('embedding rides through as an ARRAY', Array.isArray(flattened.embedding));
+	harness.equal('embedding keeps EVERY element (no first-float truncation)', (flattened.embedding || []).length, 3);
+	harness.equal('embedding values intact', JSON.stringify(flattened.embedding), JSON.stringify([0.25, 0.5, 0.75]));
+	harness.ok('qualifierKeys rides through as an ARRAY', Array.isArray(flattened.qualifierKeys));
+	harness.equal('qualifierKeys keeps BOTH entries', (flattened.qualifierKeys || []).length, 2);
+	harness.ok('qualifierNames rides through as an ARRAY', Array.isArray(flattened.qualifierNames));
+	harness.equal('qualifierNames keeps BOTH entries', (flattened.qualifierNames || []).length, 2);
+	harness.equal('a NON-registry single-element list still collapses via v1 (existing behavior preserved)', flattened.rangeDatatype, 'string');
+	// a PG-collapsed registry property (stored as a bare scalar) is passed through UNTOUCHED — the
+	// asList consumers (cedsHubModule, referenceIndex) normalize it exactly as they always have.
+	const collapsedShape = sourceWalkerFactory.flattenFullRecord({
+		stableId: 'ceds:collapsedProbe',
+		properties: { role: 'HubReference', name: 'Collapsed Probe', qualifierKeys: 'OV_solo' },
+	});
+	harness.equal('a PG-collapsed registry property stays the scalar it arrived as', collapsedShape.qualifierKeys, 'OV_solo');
+})();
+
 harness.report();

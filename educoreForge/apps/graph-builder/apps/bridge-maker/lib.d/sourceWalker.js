@@ -72,12 +72,29 @@ const flattenCandidateRecord = (oneNode) => {
 // exist on the node; everything the flat shape does NOT already surface (hubName, hubVersion,
 // addressSignature, qualifierKeys, referenceTier, anchorUri, embedding, uri, ...) rides through
 // unfiltered. Scalar-normalized with the SAME v1() the flat fields already use, so an array-collapsed
-// Neo4j property reads identically whether accessed via its flat key or its raw key.
+// Neo4j property reads identically whether accessed via its flat key or its raw key — EXCEPT the
+// declared LIST-VALUED properties below, which ride through verbatim.
+//
+// LIST_VALUED_PROPERTY_NAMES — ⟪hubReimplementation P3, supervisor ruling 2026-08-03⟫ the properties
+// that are GENUINELY list-shaped on a live node and must NEVER be scalar-collapsed: v1() over a
+// card's 1024-dim `embedding` returned its FIRST FLOAT, silently — the bridges then refused every
+// candidate as vectorless, and only a fixture that pre-wrapped its vectors one array level could
+// pass, which is how this was found. Registry values pass through VERBATIM (a genuine array stays
+// an array; a PG-collapsed single-element scalar stays the scalar it arrived as — the asList
+// consumers normalize both shapes exactly as they always have).
+//
+// ⚠ THE TRAP THIS CLOSED LIST CARRIES (named per the ruling): this registry is CLOSED. A future
+// genuinely-list-valued node property that is NOT added here will be silently truncated to its
+// [0] element by the v1() collapse below — the exact disease family this registry exists to cure,
+// reintroduced one field at a time. When you add a list-valued property to any forged node shape,
+// add its name HERE, with a test proving both its array and its PG-collapsed arrival shapes.
+const LIST_VALUED_PROPERTY_NAMES = Object.freeze(['embedding', 'qualifierKeys', 'qualifierNames']);
+
 const flattenFullRecord = (oneNode) => {
 	const props = oneNode.properties || {};
 	const rawScalars = {};
 	Object.keys(props).forEach((oneKey) => {
-		rawScalars[oneKey] = v1(props[oneKey]);
+		rawScalars[oneKey] = LIST_VALUED_PROPERTY_NAMES.includes(oneKey) ? props[oneKey] : v1(props[oneKey]);
 	});
 	return {
 		...rawScalars,
@@ -138,3 +155,4 @@ module.exports = moduleFunction({ moduleName });
 module.exports.flattenNodeRecord = flattenNodeRecord;
 module.exports.flattenCandidateRecord = flattenCandidateRecord;
 module.exports.flattenFullRecord = flattenFullRecord;
+module.exports.LIST_VALUED_PROPERTY_NAMES = LIST_VALUED_PROPERTY_NAMES;

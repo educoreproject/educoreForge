@@ -37,6 +37,12 @@
 //                edge.
 //              MATERIALIZE — the SAME frozen block replayed: byte-identical edgesWritten/decisionBlock/
 //                confidence, and ZERO additional llmClient.rerank calls (pure replay, no re-judgment).
+//              OBSERVED-RED refusal twins (⟪hubReimplementation P3, 2026-08-03,
+//                SPEC-hubReimplementation-080326.md §6⟫): the bridge CONSUMES the self-sufficient card
+//                — every candidate's vector is the card's own forge-stamped `embedding` (ONLY source
+//                embedTexts ever reach kit.vectorizer.batchEmbed, gate G-15) — so a candidate missing
+//                its `embedding` (or its stored `embedText`) is refused BY NAME, naming that candidate;
+//                the bridge never re-embeds or recomposes a candidate.
 //   PART C — RESOLVER CHECK: 'genericBridge' still resolves to exactly ONE file
 //            (forges/bridges/genericBridge.js) across bridgeMaker's search path.
 //
@@ -238,21 +244,60 @@ const BASE_ARGS = { inGraph: { graphName: 'DEV_probe' }, hub: 'ceds', applyLabel
 harness.section('PART B — genericBridge, evidence mode, through bridgeMaker.run(): compose -> gate -> render -> select -> normalize -> freeze -> materialize -> write');
 
 // ---- shared fixture ----
-// ONE strong-match candidate (property tier, unqualified) + ONE distractor. Hand-picked vectors so
-// cosine ranks are unambiguous, exactly as test-evidenceFlow.js's own fixture does.
+// ONE strong-match candidate (property tier, unqualified) + ONE distractor — both in the
+// ⟪hubReimplementation P3⟫ SELF-SUFFICIENT card shape (SPEC-hubReimplementation-080326.md §1/§6):
+// ADDRESS + IDENTITY + MEANING (domainName/domainDefinition, propertyName/propertyDefinition, range
+// prose) + DERIVED (embedText, embedding) all ON the card. No cedsId, no description, no searchText,
+// no allDomainIds/allDomainNames, no ' [qualifier]' name suffix (SPEC §1.6). The card's forge-stamped
+// `embedding` IS the candidate vector (the bridge sets candidate.vector = candidate.embedding and
+// never re-embeds); hand-picked vectors so cosine ranks are unambiguous, exactly as
+// test-evidenceFlow.js's own fixture does.
+//
+// cardEmbeddingProperty — the reader-double shape of a card's `embedding` property: the bare
+// LIST<FLOAT> a live graph stores (lib/replay/replay-engine.js writes number[] verbatim).
+// ⟪RESOLVED per the P3 flatten ruling, 2026-08-03⟫ this helper previously PRE-WRAPPED the vector one
+// array level to survive flattenFullRecord's v1() collapse — a fixture accommodation that was itself
+// the finding: the collapse would have truncated every live card's 1024-dim embedding to its first
+// float. flattenFullRecord now carries LIST_VALUED_PROPERTY_NAMES (embedding/qualifierKeys/
+// qualifierNames pass through VERBATIM), so the fixture stores the honest live shape and the
+// accommodation is reverted. If this test ever fails with 'carries no embedding' again, suspect a
+// registry regression in sourceWalker.js before suspecting the bridge.
+const cardEmbeddingProperty = (vector) => vector;
+
 const referenceNodesRaw = [
 	{
 		stableId: 'cedsHubRef:addr1',
 		properties: {
 			role: 'HubReference', referenceTier: 'property', canonicalKey: 'P000104', propertyKey: 'P000104',
-			name: 'Staff Evaluation Score or Rating', domainId: 'C200366', rangeDatatype: 'string', qualifierKeys: [],
+			name: 'Staff Evaluation Score or Rating',
+			domainId: 'C200366', domainName: 'Staff Evaluation',
+			domainDefinition: 'Information about the evaluation of a staff member.',
+			propertyName: 'Staff Evaluation Score or Rating',
+			propertyDefinition: 'The score or rating assigned to a staff member as the result of an evaluation.',
+			rangeDatatype: 'string',
+			embedText:
+				'Staff Evaluation · Staff Evaluation Score or Rating · The score or rating assigned to a staff ' +
+				'member as the result of an evaluation. · Information about the evaluation of a staff member.',
+			embedding: cardEmbeddingProperty([1, 0, 0]),
 		},
 	},
 	{
 		stableId: 'cedsHubRef:addr2',
 		properties: {
 			role: 'HubReference', referenceTier: 'property', canonicalKey: 'P600253', propertyKey: 'P600253',
-			name: 'Has Local Education Agency Title I Support Service', domainId: 'C200188', rangeClassId: 'C200196', qualifierKeys: [],
+			name: 'Has Local Education Agency Title I Support Service',
+			domainId: 'C200188', domainName: 'Local Education Agency',
+			domainDefinition: 'A local-level education agency that operates schools or contracts for educational services.',
+			propertyName: 'Has Local Education Agency Title I Support Service',
+			propertyDefinition: 'An indication that the local education agency provides a Title I support service.',
+			rangeClassId: 'C200196',
+			rangeClassName: 'Title I Support Service',
+			rangeClassDefinition: 'A support service provided to students under Title I.',
+			embedText:
+				'Local Education Agency · Has Local Education Agency Title I Support Service · An indication that ' +
+				'the local education agency provides a Title I support service. · A local-level education agency ' +
+				'that operates schools or contracts for educational services.',
+			embedding: cardEmbeddingProperty([0, 1, 0]),
 		},
 	},
 ];
@@ -263,17 +308,16 @@ const sourceGraphNodes = [
 	{ stableId: 's2', properties: { _source: 'LIF', role: 'DmeProperty', name: 'Something Unrelated', defText: 'unrelated text with no genuine match' } },
 ];
 
-// ⟪P12, 2026-07-31⟫ the fake vectorizer is keyed on the COMPOSITE `embedText` the bridge now embeds
-// (lib/facetScan.js §4.1: owning class name · property name · description · owning class description),
-// NOT on `defText`. These fixture nodes carry no `description` property and this reader returns no
-// DmeClass nodes, so a source's composite reduces to its own `name` and a HubReference candidate's to
-// its `name` — which is why the two candidate keys below are unchanged from the defText era while the
-// two source keys are the source NAMES rather than their definition prose.
+// ⟪hubReimplementation P3, 2026-08-03 (SPEC §6)⟫ the fake vectorizer is keyed on the SOURCE composite
+// `embedText` ONLY (lib/facetScan.js §4.1: owning class name · property name · description · owning
+// class description — these fixture sources carry no `description` and this reader returns no source
+// DmeClass nodes, so each composite reduces to the source's own `name`). CANDIDATES NEVER APPEAR
+// HERE: the card's forge-stamped `embedding` is read off the graph node and becomes the candidate
+// vector directly — zero candidate embed calls is gate G-15's whole assertion, proven below against
+// this factory's own call ledger (batchEmbedCalls).
 const textVectors = {
 	'Staff Eval Score': [1, 0, 0], // s1 composite embedText
-	'Something Unrelated': [0, 0, 1], // s2 composite embedText -- orthogonal to both candidates
-	'Staff Evaluation Score or Rating': [1, 0, 0], // addr1 composite embedText (name only: no domainName, no description)
-	'Has Local Education Agency Title I Support Service': [0, 1, 0], // addr2 composite embedText
+	'Something Unrelated': [0, 0, 1], // s2 composite embedText -- orthogonal to both candidate vectors
 };
 
 const graphReaderDouble = ({ inGraph }) => ({
@@ -292,8 +336,14 @@ const makeWriterDouble = (writes) => ({ inGraph }) => ({
 	close: (callback) => callback(''),
 });
 
+// batchEmbedCalls — the vectorizer call ledger: every batchEmbed call's texts array, verbatim. This
+// is gate G-15's hermetic observation point — the suite proves ONLY source embedTexts ever cross it.
+const batchEmbedCalls = [];
 const fakeVectorizerFactory = () => ({
-	batchEmbed: ({ texts }, cb) => cb('', { vectors: (texts || []).map((t) => textVectors[t] || null) }),
+	batchEmbed: ({ texts }, cb) => {
+		batchEmbedCalls.push((texts || []).slice());
+		cb('', { vectors: (texts || []).map((t) => textVectors[t] || null) });
+	},
 });
 
 const runConfig = { sourceStandard: 'lif', sourceStandardName: 'LIF', sourceVersion: 'v1', hubVersion: 'v14.0.0.0' };
@@ -343,8 +393,22 @@ harness.equal('REBRIDGE: exactly 2 rerank calls (one per source)', rerankCallCou
 harness.equal('REBRIDGE: exactly ONE edge written (s1 picks; s2 honestly abstains)', rebridgeReport.report && rebridgeReport.report.edgesWritten, 1);
 harness.ok('REBRIDGE: decisionBlock is a real hash string', typeof rebridgeReport.report.decisionBlock === 'string' && rebridgeReport.report.decisionBlock.length > 0);
 
+// ⟪hubReimplementation P3 (SPEC §6, gate G-15)⟫ ONLY the SOURCE embedTexts crossed the vectorizer
+// seam — the candidate vectors came off the cards; zero candidate embed calls.
+harness.equal('REBRIDGE: exactly ONE batchEmbed call — the SOURCE composite embedTexts only (G-15: zero candidate embeds)', batchEmbedCalls.length, 1);
+harness.equal(
+	'  and it carried EXACTLY the two source embedTexts, in source order (no candidate text ever reaches the vectorizer)',
+	JSON.stringify(batchEmbedCalls[0]),
+	JSON.stringify(['Staff Eval Score', 'Something Unrelated']),
+);
+
 const genericBridgeFactoryModule = require(path.join(TREE_ROOT, 'forges', 'bridges', 'genericBridge'));
-harness.equal('REBRIDGE: result.generation is the bridge\'s own EVIDENCE_GENERATION tag (⟪A6⟫, surfaced additively)', rebridgeReport.report.generation, genericBridgeFactoryModule.EVIDENCE_GENERATION);
+harness.equal(
+	'the bridge\'s EVIDENCE_GENERATION is the ⟪hubReimplementation P3⟫ generation (card vectors consumed + meaning-carrying tuples, renderer v5)',
+	genericBridgeFactoryModule.EVIDENCE_GENERATION,
+	'genericBridge-evidence-v5',
+);
+harness.equal('REBRIDGE: result.generation is that same tag (⟪A6⟫, surfaced additively)', rebridgeReport.report.generation, 'genericBridge-evidence-v5');
 harness.ok('REBRIDGE: result.rendererVersion is a non-empty string (⟪A6⟫, surfaced additively)', typeof rebridgeReport.report.rendererVersion === 'string' && rebridgeReport.report.rendererVersion.length > 0);
 
 // the ⟪A3⟫ shape gate + the R5 hub-module gate, run over the FROZEN evidence -- proving every composed
@@ -426,12 +490,126 @@ harness.ok(`MATERIALIZE did not error (${(materializeReport && materializeReport
 harness.equal('MATERIALIZE: ZERO additional rerank calls (pure replay, never re-judges)', rerankCallCount, rerankCallsBeforeMaterialize);
 harness.equal('MATERIALIZE: the SAME edge count (1)', materializeReport.report.edgesWritten, 1);
 harness.equal('MATERIALIZE: pins to the SAME decisionBlockHash as the rebridge that produced it', materializeReport.report.decisionBlock, rebridgeReport.report.decisionBlock);
-harness.equal('MATERIALIZE: generation round-trips from the frozen block', materializeReport.report.generation, genericBridgeFactoryModule.EVIDENCE_GENERATION);
+harness.equal('MATERIALIZE: generation round-trips from the frozen block', materializeReport.report.generation, 'genericBridge-evidence-v5');
+harness.equal('MATERIALIZE: ZERO additional batchEmbed calls (pure replay never vectorizes)', batchEmbedCalls.length, 1);
 harness.equal(
 	'MATERIALIZE: BYTE-IDENTICAL replayed edge (endpoints, type, ALL properties incl. the NORMALIZED confidence)',
 	JSON.stringify(materializeWrites[0]),
 	JSON.stringify(rebridgeWrites[0]),
 );
+
+// =====================================================================
+// PART B (cont.) — OBSERVED-RED (⟪hubReimplementation P3, SPEC §6⟫): a candidate missing its
+// card-carried embedding or embedText is refused BY NAME. The bridge consumes the self-sufficient
+// card — it never re-embeds a vectorless candidate (that would both hide a graph materialized
+// without its vector store AND spend against the provider for a fact the card already carries) and
+// never recomposes a missing retrieval string. Each twin injects EXACTLY one broken card into an
+// otherwise-green candidate set, so the refusal provably names the ONE broken candidate.
+// =====================================================================
+harness.section('PART B (cont.) — OBSERVED-RED: a candidate missing card-carried embedding/embedText is refused BY NAME');
+
+// vectorlessCandidateNode — a conforming card in every respect EXCEPT the forge-stamped `embedding`.
+const vectorlessCandidateNode = {
+	stableId: 'cedsHubRef:addrNoEmbedding',
+	properties: {
+		role: 'HubReference', referenceTier: 'property', canonicalKey: 'P777001', propertyKey: 'P777001',
+		name: 'Card With No Embedding',
+		domainId: 'C200366', domainName: 'Staff Evaluation',
+		domainDefinition: 'Information about the evaluation of a staff member.',
+		propertyName: 'Card With No Embedding',
+		propertyDefinition: 'A broken card whose forge-stamped vector was dropped.',
+		rangeDatatype: 'string',
+		embedText: 'Staff Evaluation · Card With No Embedding · A broken card whose forge-stamped vector was dropped.',
+		// NO embedding — the injected fault (SPEC §1.5, G-7)
+	},
+};
+
+// embedTextlessCandidateNode — carries its vector but NOT its stored retrieval string.
+const embedTextlessCandidateNode = {
+	stableId: 'cedsHubRef:addrNoEmbedText',
+	properties: {
+		role: 'HubReference', referenceTier: 'property', canonicalKey: 'P777002', propertyKey: 'P777002',
+		name: 'Card With No EmbedText',
+		domainId: 'C200366', domainName: 'Staff Evaluation',
+		domainDefinition: 'Information about the evaluation of a staff member.',
+		propertyName: 'Card With No EmbedText',
+		propertyDefinition: 'A broken card whose stored retrieval string was dropped.',
+		rangeDatatype: 'string',
+		embedding: cardEmbeddingProperty([1, 0, 0]),
+		// NO embedText — the injected fault (SPEC §1.5, G-6)
+	},
+};
+
+const rerankCallsBeforeRefusalTwins = rerankCallCount;
+const batchEmbedCallsBeforeRefusalTwins = batchEmbedCalls.length;
+
+// runRefusalTwin — one full REBRIDGE attempt through the REAL bridgeMaker.run() over a candidate set
+// carrying exactly one broken card. Every double is synchronous, so the observed error is in hand
+// when this returns (refusal happens BEFORE vectorize/judge — proven by the ledgers below).
+const runRefusalTwin = ({ graphName, referenceNodes }) => {
+	const refusalReader = ({ inGraph }) => ({
+		readNodes: ({ label, propertyEquals }, callback) => {
+			void inGraph;
+			const eq = propertyEquals || {};
+			if (label === 'HubReference') { callback('', { nodes: referenceNodes }); return; }
+			if (eq._source === 'LIF' && eq.role === 'DmeProperty') { callback('', { nodes: sourceGraphNodes }); return; }
+			callback('', { nodes: [] });
+		},
+		close: (callback) => callback(''),
+	});
+	const refusalWrites = [];
+	const refusalDecisionBlocks = {};
+	const refusalDecisionStore = {
+		getDecisionBlock: ({ pairKey }, cb) => cb('', refusalDecisionBlocks[pairKey] ? { frozenText: refusalDecisionBlocks[pairKey].frozenText } : { frozenText: null }),
+		saveDecisionBlock: ({ pairKey, frozenText, decisionBlockHash }, cb) => { refusalDecisionBlocks[pairKey] = { frozenText, decisionBlockHash }; cb('', { saved: true }); },
+	};
+	let observed = null;
+	bridgeMakerModule({ graphWriterFactory: makeWriterDouble(refusalWrites), graphReaderFactory: refusalReader }).run(
+		{
+			inGraph: { graphName, boltUrl: 'bolt://x', password: 'x' },
+			bridge: 'genericBridge', hub: 'ceds', applyLabel: 'BridgedRelation',
+			rebridge: true, decisionStore: refusalDecisionStore,
+			inferenceConfig: { llmClient: stubLlm, topK: 15, cosineFloor: 0.6, concurrency: 4 },
+			config: runConfig,
+			componentOverrides: { vectorizer: fakeVectorizerFactory, graphReader: refusalReader },
+		},
+		(err) => { observed = { err, writes: refusalWrites, decisionBlocks: refusalDecisionBlocks }; },
+	);
+	return observed;
+};
+
+// ---- RED twin #1 — one candidate with NO embedding ----
+(() => {
+	const observed = runRefusalTwin({
+		graphName: 'DEV_generic_refuse_no_embedding',
+		referenceNodes: [...referenceNodesRaw, vectorlessCandidateNode],
+	});
+	harness.rejects(
+		"RED: a candidate with no card-carried `embedding` is refused NAMING that candidate ('carries no embedding')",
+		[observed && observed.err],
+		/candidate 'P777001' carries no embedding/,
+	);
+	harness.equal('  and no edge was written before the refusal', observed.writes.length, 0);
+	harness.equal('  and no frozen block was saved', Object.keys(observed.decisionBlocks).length, 0);
+})();
+
+// ---- RED twin #2 — one candidate with NO embedText ----
+(() => {
+	const observed = runRefusalTwin({
+		graphName: 'DEV_generic_refuse_no_embedtext',
+		referenceNodes: [...referenceNodesRaw, embedTextlessCandidateNode],
+	});
+	harness.rejects(
+		"RED: a candidate with no card-stored `embedText` is refused NAMING that candidate ('carries no embedText')",
+		[observed && observed.err],
+		/candidate 'P777002' carries no embedText/,
+	);
+	harness.equal('  and no edge was written before the refusal', observed.writes.length, 0);
+	harness.equal('  and no frozen block was saved', Object.keys(observed.decisionBlocks).length, 0);
+})();
+
+harness.equal('the refusal twins made ZERO rerank calls (refusal precedes judging)', rerankCallCount, rerankCallsBeforeRefusalTwins);
+harness.equal('the refusal twins made ZERO batchEmbed calls (refusal precedes source vectorization)', batchEmbedCalls.length, batchEmbedCallsBeforeRefusalTwins);
 
 // =====================================================================
 // PART C — RESOLVER CHECK: 'genericBridge' still resolves to exactly ONE file
@@ -466,13 +644,12 @@ const sourceGraphNodesD = Array.from({ length: SOURCE_COUNT_D }, (ignore, i) => 
 	},
 }));
 
-// every probe's COMPOSITE embedText (⟪P12⟫ — its `name`, since these fixtures carry no description and
-// this reader returns no DmeClass nodes) embeds to the SAME vector (cosine 1.0 with addr1) — identity
-// rides on the stableIds; per-source VARIETY rides in the stub's per-call responses below.
-const textVectorsD = {
-	'Staff Evaluation Score or Rating': [1, 0, 0],
-	'Has Local Education Agency Title I Support Service': [0, 1, 0],
-};
+// every probe's COMPOSITE embedText (its `name`, since these fixtures carry no description and this
+// reader returns no source DmeClass nodes) embeds to the SAME vector (cosine 1.0 with addr1) —
+// identity rides on the stableIds; per-source VARIETY rides in the stub's per-call responses below.
+// SOURCES ONLY (⟪hubReimplementation P3⟫): the candidate vectors ride on the cards themselves
+// (referenceNodesRaw's forge-stamped embeddings) and never cross the vectorizer seam.
+const textVectorsD = {};
 sourceGraphNodesD.forEach((oneNode) => {
 	textVectorsD[oneNode.properties.name] = [1, 0, 0];
 });

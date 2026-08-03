@@ -30,7 +30,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 const path = require('path');
 const { pipeRunner, taskListPlus } = new require('qtools-asynchronous-pipe-plus')();
 
-const embeddingClientFactory = require(path.join(
+const realEmbeddingClientFactory = require(path.join(
 	__dirname,
 	'..',
 	'..',
@@ -50,7 +50,20 @@ const BATCH_SIZE = 128;
 
 const moduleFunction =
 	({ moduleName } = {}) =>
-	({ embeddingConfigFilePath } = {}) => {
+	// embeddingClientFactory — ⟪hubReimplementation P3, 2026-08-03⟫ an INJECTABLE SEAM with the real
+	// embedding client as the DOCUMENTED DEFAULT (the R-P2-1 deps idiom: production behavior
+	// byte-unchanged when the argument is omitted). Exists so gate G-15 (noCandidateReembed) can wrap
+	// the REAL client with a counting proxy AT THE EMBEDDING-CLIENT SEAM — every embedTexts call a
+	// bridge run makes is observed at the one place they all pass through, not inferred from logs.
+	// A given-but-not-a-function value is refused by name, never quietly replaced.
+	({ embeddingConfigFilePath, embeddingClientFactory = realEmbeddingClientFactory } = {}) => {
+		if (typeof embeddingClientFactory !== 'function') {
+			throw new Error(
+				`${moduleName}: embeddingClientFactory was given but is not a function (got ` +
+					`${typeof embeddingClientFactory}) — when supplied it must construct an embedding client ` +
+					`({ embedTexts }); omit it for the real client. There is no silent replacement.`,
+			);
+		}
 		const embedder = embeddingClientFactory({
 			...(embeddingConfigFilePath ? { configFilePath: embeddingConfigFilePath } : {}),
 		});

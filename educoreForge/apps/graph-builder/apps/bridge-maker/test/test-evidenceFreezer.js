@@ -70,7 +70,12 @@ const decisions = [
 	{ source: { stableId: 's1', role: 'DmeProperty' }, abstain: false, targetKey: 'P1', cosineScore: 0.9, retrievalRank: 1 },
 	{ source: { stableId: 's2', role: 'DmeProperty' }, abstain: true, abstainReason: 'cosineFloor', targetKey: null },
 ];
+// ⟪hubReimplementation P3, SPEC-hubReimplementation-080326.md §6⟫ the fixture tuple carries the
+// MEANING-shaped BaseTupleEvidence (singular `domain` group with its name, the `property` meaning
+// group, `qualifierNames` always an array) — the retired domains[]/domainsComplete/qualifier fields
+// are refused on sight by the ⟪A3⟫ gate wherever this evidence crosses a gated seam.
 const evidencePackages = {
+	sourceElement: { name: 'Source One' },
 	pool: [
 		{
 			candidate: { stableId: 'ceds:P1', canonicalKey: 'P1', name: 'Near' },
@@ -81,11 +86,11 @@ const evidencePackages = {
 					canonicalKey: 'P1',
 					propertyKey: 'P1',
 					name: 'Near',
-					domains: [{ domainId: 'C1', domainName: 'D1' }],
-					domainsComplete: true,
+					domain: { domainId: 'C1', domainName: 'Fixture Domain', domainDefinition: 'The fixture owning class.' },
+					property: { propertyName: 'Near', propertyDefinition: 'The fixture definition of Near.' },
 					range: { shape: 'datatype', rangeDatatype: 'string', rangeClassId: null, rangeOptionSetId: null },
 					isQualified: false,
-					qualifier: null,
+					qualifierNames: [],
 					value: null,
 				},
 				notes: ['walked: found 1 related element'],
@@ -195,17 +200,19 @@ harness.section('END-TO-END — REAL evidenceComposer output, frozen, then repla
 
 	const sourceElement = { stableId: 'lif:s1', role: 'DmeProperty', name: 'Source One', defText: 'source def', vector: [1, 0, 0] };
 	const candidateElements = [{ stableId: 'ceds:P1', canonicalKey: 'P1', name: 'Near', vector: [1, 0, 0] }];
+	// ⟪hubReimplementation P3 (SPEC §6)⟫ the hubModule double emits the MEANING-shaped tuple — the
+	// composer's own ⟪A3⟫ self-gate refuses the retired domains[]/domainsComplete/qualifier shape.
 	const hubModule = (candidate, callback) =>
 		callback('', {
 			referenceTier: 'property',
 			canonicalKey: candidate.canonicalKey,
 			propertyKey: candidate.canonicalKey,
 			name: candidate.name,
-			domains: [{ domainId: 'C1', domainName: 'D1' }],
-			domainsComplete: true,
+			domain: { domainId: 'C1', domainName: 'Fixture Domain', domainDefinition: 'The fixture owning class.' },
+			property: { propertyName: candidate.name, propertyDefinition: `The fixture definition of ${candidate.name}.` },
 			range: { shape: 'datatype', rangeDatatype: 'string', rangeClassId: null, rangeOptionSetId: null },
 			isQualified: false,
-			qualifier: null,
+			qualifierNames: [],
 			value: null,
 		});
 	const graphReaderDouble = { readNodes: (s, cb) => cb('', { nodes: [] }), close: (cb) => cb('') };

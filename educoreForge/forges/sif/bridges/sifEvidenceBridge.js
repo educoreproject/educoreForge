@@ -116,10 +116,8 @@ const facetScan = require(
 );
 const {
 	buildClassMap,
-	buildDomainMap,
 	stampOwningClass,
 	embedTextForSource,
-	embedTextForCandidate,
 	CLASS_ROLE,
 } = facetScan;
 
@@ -143,9 +141,13 @@ const MATERIALIZER_CONFIG = { predicate: 'closeMatch', mappingJustification: 'se
 // — a differently-judging pipeline is a different generation of picks over identical graph state
 // and must be legible as one, exactly the ⟪A6⟫ discipline this constant exists for.
 // v5 ⟪P12 MULTI-FACET SCAN, 2026-07-31⟫: composite embedded text (owning class · name · description ·
-// class description) replacing the defText fallback chain, six-facet reserved-slot pool allocation
+// class description) replacing the defText resolution chain, six-facet reserved-slot pool allocation
 // alongside sifNominate, and renderer v4's owning-class + facet-provenance prompt.
-const EVIDENCE_GENERATION = 'sifEvidenceBridge-evidence-v5';
+// v6 ⟪hubReimplementation P3, 2026-08-03 (SPEC §6)⟫: candidates are no longer re-embedded (the
+// card's forge-stamped embedding of its definition-carrying embedText is read off the graph) and the
+// prompt's tuple block carries the card's MEANING via renderer v5 + the revised cedsHubModule —
+// either change alone re-judges the world.
+const EVIDENCE_GENERATION = 'sifEvidenceBridge-evidence-v6';
 
 // EVIDENCE_JUDGE_CONCURRENCY — how many per-source evidence judgments (compose -> ⟪A3⟫ gate ->
 // render -> select -> normalize) may be IN FLIGHT at once during REBRIDGE. The serial loop this
@@ -408,6 +410,13 @@ const sifNominate = ({ sourceElement, candidateElements } = {}, callback) => {
 	// evidence class this bridge offers; always included regardless of the token-overlap cap, and
 	// OVERWRITES any token-overlap nomination for the same candidate (a stronger rationale replaces a
 	// weaker one for the identical pick, never both diluting each other).
+	// ⟪DEFERRED DEBT, P3 review SF-4, 2026-08-03⟫ `oneCandidate.cedsId` here is NOT a card property —
+	// the reimplemented card carries none (SPEC §1) — it is flattenCandidateRecord's COMPUTED chain
+	// (`cedsId || canonicalKey || propertyKey`), which resolves to canonicalKey on every card: one
+	// fact riding two names via the flatten. facetScan.candidateAnchorKeys retired exactly this chain
+	// in favor of reading canonicalKey alone; this consumer was OUT of SPEC §6's named scope and is
+	// deliberately deferred — the real fix (read canonicalKey here and retire the computed field)
+	// belongs to Phase 5's teardown pass. Behavior today is identical either way.
 	const sourceCedsId = sourceElement && sourceElement.cedsId;
 	if (sourceCedsId) {
 		const crossRefMatch = (candidateElements || []).find((oneCandidate) => oneCandidate && oneCandidate.cedsId === sourceCedsId);
@@ -908,27 +917,46 @@ module.exports = (injectedTools = {}) =>
 				);
 			});
 
-			// ⟪P12 §4.2⟫ THE DOMAIN MAP — the CANDIDATE side's context, and the reason contextOverlap is a
-			// live facet rather than a dead one. A materialized CEDS HubReference carries its domain only
-			// as an opaque id (referenceSubgraph.js's emitReference stamps no domain NAME — see
-			// lib/facetScan.js's candidateDomainText for the verified code fact), so the hub's own DmeClass
-			// nodes are read ONCE here and turned into { cedsId -> className }. Same discipline as the
-			// owning-class map: one read, outside the scan, then a lookup.
+			// ⟪hubReimplementation P3 (SPEC §6)⟫ THE CANDIDATE VECTORS COME OFF THE CARD. Every
+			// reimplemented HubReference carries `embedText` (its forge-composed §4 retrieval string) and
+			// `embedding` (its forge-stamped 1024-dim vector, restored onto the graph node by the Phase-2
+			// sidecar wire) — the bridge READS them and refuses BY NAME any candidate lacking either; it
+			// never re-embeds a candidate. The old hub DmeClass domain-map read is retired with the
+			// bridge-side candidate composition (the card carries domainName itself).
 			taskList.push((args, next) => {
-				kit.graphReader.readNodes(
-					{ label: 'ForgedNode', propertyEquals: { _source: HUB_STANDARD, role: CLASS_ROLE } },
-					(err, out) => {
-						if (err) {
-							next(`${MAPPING_TOOL}: reading ${HUB_STANDARD} ${CLASS_ROLE} nodes for the domain map: ${err}`, args);
-							return;
-						}
-						const hubClassNodes = ((out || {}).nodes || []).map(flattenFullRecord);
-						next('', { ...args, domainMap: buildDomainMap(hubClassNodes) });
-					},
+				const vectorlessCandidate = args.candidateElements.find(
+					(oneCandidate) => !Array.isArray(oneCandidate.embedding) || oneCandidate.embedding.length === 0,
 				);
+				if (vectorlessCandidate !== undefined) {
+					next(
+						`${MAPPING_TOOL}: candidate '${vectorlessCandidate.canonicalKey || vectorlessCandidate.stableId}' ` +
+							`carries no embedding — every reimplemented HubReference is forged with its vector ` +
+							`(SPEC §1.5, G-7); a vectorless candidate means this graph was materialized without its ` +
+							`vector store. Refusing rather than re-embedding.`,
+						args,
+					);
+					return;
+				}
+				const embedTextlessCandidate = args.candidateElements.find(
+					(oneCandidate) => typeof oneCandidate.embedText !== 'string' || oneCandidate.embedText === '',
+				);
+				if (embedTextlessCandidate !== undefined) {
+					next(
+						`${MAPPING_TOOL}: candidate '${embedTextlessCandidate.canonicalKey || embedTextlessCandidate.stableId}' ` +
+							`carries no embedText — every reimplemented HubReference stores its composed retrieval ` +
+							`string (SPEC §1.5, G-6). Refusing rather than recomposing.`,
+						args,
+					);
+					return;
+				}
+				args.candidateElements.forEach((oneCandidate) => {
+					oneCandidate.vector = oneCandidate.embedding;
+				});
+				next('', args);
 			});
 
-			// ⟪P12 §4.1⟫ COMPOSE THE EMBEDDED TEXT — composite on both sides, onto a NEW `embedText` field;
+			// ⟪P12 §4.1⟫ COMPOSE THE SOURCE EMBEDDED TEXT — the source side is per-standard and per-run,
+			// so it is still composed and embedded here (candidates arrive pre-embedded on the card);
 			// `defText` is untouched (sifNominate/sifWalk still tokenize name+defText, deliberately — see
 			// lib/facetScan.js's header for the defText-vs-embedText decision and its evidence).
 			taskList.push((args, next) => {
@@ -936,21 +964,19 @@ module.exports = (injectedTools = {}) =>
 					stampOwningClass(oneSource, args.classMap);
 					oneSource.embedText = embedTextForSource(oneSource, args.classMap);
 				});
-				args.candidateElements.forEach((oneCandidate) => {
-					oneCandidate.embedText = embedTextForCandidate(oneCandidate, args.domainMap);
-				});
 				next('', args);
 			});
 
+			// VECTORIZE (NET) — SOURCE embedTexts only (⟪hubReimplementation P3⟫: zero candidate embeds,
+			// gate G-15's whole assertion).
 			taskList.push((args, next) => {
-				const allRecords = args.candidateElements.concat(args.sourceNodes);
-				kit.vectorizer.batchEmbed({ texts: allRecords.map((r) => r.embedText) }, (err, result) => {
+				kit.vectorizer.batchEmbed({ texts: args.sourceNodes.map((oneSource) => oneSource.embedText) }, (err, result) => {
 					if (err) {
-						next(`${MAPPING_TOOL}: vectorizing composite embedTexts: ${err}`);
+						next(`${MAPPING_TOOL}: vectorizing source composite embedTexts: ${err}`);
 						return;
 					}
-					allRecords.forEach((r, i) => {
-						r.vector = result.vectors[i];
+					args.sourceNodes.forEach((oneSource, i) => {
+						oneSource.vector = result.vectors[i];
 					});
 					next('', args);
 				});
@@ -959,7 +985,7 @@ module.exports = (injectedTools = {}) =>
 			// ARM THE SCAN ⟪P12⟫ — the scanner's per-candidate precomputation is paid ONCE for the whole
 			// run, here, now that every candidate carries a vector.
 			taskList.push((args, next) => {
-				const facetScanner = facetScan({ candidateElements: args.candidateElements, classMap: args.classMap, domainMap: args.domainMap });
+				const facetScanner = facetScan({ candidateElements: args.candidateElements, classMap: args.classMap });
 				composer = kit.evidenceComposer({
 					semanticMatcher: kit.semanticMatcher,
 					facetScanner,

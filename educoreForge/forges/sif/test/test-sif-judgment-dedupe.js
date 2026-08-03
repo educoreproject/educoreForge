@@ -138,12 +138,22 @@ harness.section('SECTION 2 — the full flow: judge once, fan out honestly, byte
 
 // THREE SIF fields: two copies of the shared .../LifeCycle/Modified/By structure under different
 // owners (dedupe pair), one distinct root-level field (judged individually).
+// ⟪hubReimplementation P3 (SPEC §6)⟫ the card is SELF-SUFFICIENT: it carries its meaning fields,
+// its stored embedText, and its forge-stamped embedding (bare number[] — the live LIST<FLOAT> shape;
+// the bridge reads candidate.embedding and NEVER re-embeds, so the vectorizer double below serves
+// sources only).
 const referenceNodesRaw = [
 	{
 		stableId: 'cedsHubRef:addr1',
 		properties: {
 			role: 'HubReference', referenceTier: 'property', canonicalKey: 'P800001', propertyKey: 'P800001',
-			name: 'Record Modification Author', domainId: 'C200900', rangeDatatype: 'string', qualifierKeys: [],
+			name: 'Record Modification Author', domainId: 'C200900',
+			domainName: 'Record Metadata', domainDefinition: 'Metadata about the lifecycle of a record.',
+			propertyName: 'Record Modification Author',
+			propertyDefinition: 'The person or system that most recently modified the record.',
+			rangeDatatype: 'string',
+			embedText: 'Record Metadata · Record Modification Author · The person or system that most recently modified the record.',
+			embedding: [1, 0],
 		},
 	},
 ];
@@ -171,7 +181,6 @@ const sourceGraphNodes2 = [
 const textVectors2 = {
 	sourceDefText: [1, 0],
 	refIdDefText: [0.7, Math.sqrt(1 - 0.49)],
-	'Record Modification Author': [1, 0],
 };
 
 const graphReaderDouble2 = ({ inGraph }) => ({

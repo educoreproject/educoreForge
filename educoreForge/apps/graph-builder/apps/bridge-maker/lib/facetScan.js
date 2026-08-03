@@ -49,29 +49,30 @@
 // =====================================================================
 // THE COMPOSITE EMBEDDED TEXT (§4.1) — the EXACT format, both sides
 // =====================================================================
-// Both sides are composed from the SAME positional slot order so the vectors are comparable:
+// Both sides compose the SAME positional slot order so the vectors are comparable
+// (SPEC-hubReimplementation-080326.md §4 is now the slot authority for BOTH sides):
 //
-//   slot 1   CONTEXT      source: owning class name      candidate: domain name(s)
-//   slot 2   NAME         source: property name          candidate: property name
-//   slot 3   DESCRIPTION  source: description            candidate: description
-//   slot 4   CONTEXT DESC source: owning class description   candidate: (none — see below)
+//   slot 1   CONTEXT      source: owning class name          candidate: domain name
+//   slot 2   NAME         source: property name              candidate: property/value name
+//   slot 3   DEFINITION   source: description                candidate: property/value definition
+//   slot 4   CONTEXT DEF  source: owning class description   candidate: domain (or option-set) definition
+//
+// ⟪hubReimplementation P3, 2026-08-03⟫ WHO COMPOSES WHICH SIDE CHANGED. The SOURCE side is still
+// composed HERE, per run (composeSourceEmbedText below — a source element is per-standard and has no
+// stored retrieval string). The CANDIDATE side is composed AT FORGE TIME by cedsHubForge (SPEC §4)
+// and STORED on the card as `embedText`, exactly as embedded — so `embedTextForCandidate` below is a
+// verbatim READ of the card's own field, and the bridge-side candidate recomposition (plus its
+// domain-map machinery) is retired. One composition, one authority, inspectable in the graph (G-6).
 //
 // Rendered as the non-empty slots, IN SLOT ORDER, joined by SEGMENT_SEPARATOR (' · '), each slot
-// whitespace-collapsed and trimmed. Empty slots contribute nothing (they do not emit a bare separator):
-// that keeps the function a pure, total function of its inputs — the same inputs always produce the same
-// bytes — while never handing the embedder a run of empty delimiters that carries no meaning.
+// whitespace-collapsed and trimmed. Empty slots contribute nothing (they do not emit a bare separator).
 //
-// The candidate side has no slot-4 analogue because CEDS's domain nodes carry no description the
-// HubReference candidate inherits (P0-cedsTupleModel.md §2.1: a HubReference carries domainId/domainName
-// and, since the P4 fix, allDomainIds/allDomainNames — no domain PROSE). Slots 1-3 align positionally
-// on both sides, which is the property that makes the vectors comparable; slot 4 is additive source-side
-// context, exactly as candidateSelectionRedesign-073126.md §4.1 specifies.
-//
-// DEGENERATE CASE, stated out loud: a record whose every slot is empty composes to ''. Embedding '' is
-// meaningless, so `embedTextForSource`/`embedTextForCandidate` fall back to the record's own `defText`
-// (then `name`) FOR THAT RECORD ONLY. This is NOT the old fallback chain returning: the chain PRE-EMPTED
+// DEGENERATE CASE (SOURCE side only), stated out loud: a source whose every slot is empty composes to
+// ''. Embedding '' is meaningless, so `embedTextForSource` reads the record's own `defText` (then
+// `name`) FOR THAT RECORD ONLY. This is NOT the old resolution chain returning: the chain PRE-EMPTED
 // composition on every record where any earlier field was non-empty; this fires only when composition
-// produced literally nothing.
+// produced literally nothing. The candidate side has no degenerate case: a card with no stored
+// embedText is refused by name (the forge guarantees one on every card, gate G-6).
 //
 // =====================================================================
 // THE SIX FACETS (§4.2) — and the HARD CONSTRAINT
@@ -79,7 +80,7 @@
 //   cosine          vector similarity — the dot product of two unit-normalized 1024-dim embeddings
 //   nameOverlap     source property-name tokens ↔ candidate name tokens (overlap coefficient)
 //   contextOverlap  source OWNING-CLASS tokens ↔ candidate DOMAIN tokens (overlap coefficient)
-//   anchorMatch     source's AUTHORED cedsId == candidate's canonicalKey/cedsId (set membership)
+//   anchorMatch     source's AUTHORED cedsId == candidate's canonicalKey (set membership)
 //   typeFit         source native type ↔ candidate range shape (two precomputed small integers)
 //   tierMatch       property↔property, value↔value (two precomputed small integers)
 //
@@ -231,86 +232,67 @@ const joinSegments = (segments) =>
 const composeSourceEmbedText = ({ owningClassName, propertyName, description, owningClassDescription } = {}) =>
 	joinSegments([owningClassName, propertyName, description, owningClassDescription]);
 
-// composeCandidateEmbedText — slot order: domain name · property name · description. Slots 1-3 align
-// positionally with the source side, which is what makes the two vectors comparable.
-const composeCandidateEmbedText = ({ domainName, propertyName, description } = {}) =>
-	joinSegments([domainName, propertyName, description]);
-
 // asList — PG-JSON single-element collapse guard (the SAME helper cedsHubModule.js/referenceIndex.js
 // each define locally: a single-element array collapses to a scalar at MERGE).
 const asList = (value) =>
 	Array.isArray(value) ? value : value === undefined || value === null || value === '' ? [] : [value];
 
-// candidateDomainText — every domain NAME a candidate carries, in the order it carries them.
-//
-// ⟪CODE FACT, verified 2026-07-31 by reading forges/ceds/lib/referenceSubgraph.js's emitReference⟫ a
-// materialized CEDS HubReference node carries NO domain NAME at all. Its property list is fixed and
-// closed — name, uri, hubName, hubVersion, canonicalKey, referenceTier, addressSignature,
-// qualifierKeys, domainId, propertyKey, and the range/value/anchor fields — and `allDomainNames` (the
-// P4 forge fix) is stamped on the CEDS **DmeProperty** node, never copied onto the HubReference the
-// bridges actually judge against. A candidate therefore knows its domain only as an opaque id
-// ('C200188'), which tokenizes to one meaningless token and would make `contextOverlap` a dead facet in
-// production while passing every hermetic fixture that hands a candidate a `domainName` directly.
-//
-// The DOMAIN MAP closes that gap the same way the owning-class map closes the source side's: ONE read
-// of the hub's own DmeClass nodes at the bridge, outside the scan, then a lookup. Resolution order:
-// allDomainNames (if a future forge does copy it), then domainName, then the domain map, keyed by
-// allDomainIds and then domainId. domainId itself is deliberately NOT put in the EMBEDDED text (an
-// opaque key is noise to an embedder) though it IS kept in the context TOKENS, where an exact id match
-// between an authored context and a domain key would be real signal.
-const candidateDomainText = (candidate, domainMap) => {
-	const allNames = asList(candidate.allDomainNames).filter((oneName) => !!oneName);
-	if (allNames.length) {
-		return allNames.join(', ');
+// candidateLabelOf — a DISPLAY label for refusal messages, nothing more. Stated as explicit
+// prose-order resolution (not an identity chain over data): a card is named by its canonicalKey; a
+// record that never got one is named by its graph identity; a record with neither is called what it
+// is. No downstream reader consumes this value — it exists to make an error message name its subject.
+const candidateLabelOf = (record) => {
+	if (typeof record.canonicalKey === 'string' && record.canonicalKey !== '') {
+		return record.canonicalKey;
 	}
-	if (candidate.domainName) {
-		return candidate.domainName;
+	if (typeof record.stableId === 'string' && record.stableId !== '') {
+		return record.stableId;
 	}
-	const map = domainMap || {};
-	const mappedNames = asList(candidate.allDomainIds)
-		.map((oneDomainId) => map[oneDomainId])
-		.filter((oneName) => !!oneName);
-	if (mappedNames.length) {
-		return mappedNames.join(', ');
-	}
-	return map[candidate.domainId] || '';
+	return '(unidentified)';
 };
 
-// buildDomainMap — the hub's OWN class nodes -> { <cedsId> : <className> }. Keyed by every identity a
-// HubReference's `domainId` could carry (canonicalKey is the normalized CEDS id forgeCeds resolves
-// domainId from; cedsId and stableId are indexed too so a differently-stamped hub still resolves).
-const buildDomainMap = (hubClassNodes) => {
-	const map = {};
-	(hubClassNodes || []).forEach((oneNode) => {
-		if (!oneNode) {
-			return;
-		}
-		const className = normalizeSegment(oneNode.name);
-		if (className === '') {
-			return;
-		}
-		[oneNode.canonicalKey, oneNode.cedsId, oneNode.stableId].forEach((oneKey) => {
-			if (typeof oneKey === 'string' && oneKey.trim() !== '') {
-				map[oneKey.trim()] = className;
-			}
-		});
-	});
-	return map;
+// candidateDomainText — the candidate's domain NAME, read off the card, full stop.
+//
+// ⟪hubReimplementation P3, 2026-08-03 (SPEC-hubReimplementation-080326.md §6)⟫ the reimplemented
+// HubReference card carries `domainName` itself (SPEC §1.3, proven on 100% of cards by gate G-4) —
+// the four-step resolution chain this function used to run (allDomainNames, then domainName, then a
+// bridge-built domain map keyed by allDomainIds, then domainId) and the `buildDomainMap` helper that
+// fed it are RETIRED with the card shape that made them necessary. A candidate without a domainName
+// is a broken card and is refused BY NAME — never silently scanned as contextless (the no-silent-
+// substitution rule; a ''-return here would quietly kill the contextOverlap facet for that card).
+const candidateDomainText = (candidate) => {
+	const record = candidate || {};
+	if (typeof record.domainName !== 'string' || record.domainName === '') {
+		throw new Error(
+			`facetScan: candidate '${candidateLabelOf(record)}' carries no ` +
+				`domainName — the reimplemented card carries its domain's name itself (SPEC §1.3); a card ` +
+				`without one is broken, not resolvable. There is no map and no default.`,
+		);
+	}
+	return record.domainName;
 };
 
 // descriptionTextOf — the record's own PROSE, read from the raw fields, NEVER from the computed
-// `defText` (whose fallback chain is exactly what this module replaces for the embedding input).
+// `defText` (whose resolution chain is exactly what this module replaced for the embedding input).
 const descriptionTextOf = (record) => record.description || record.definition || '';
 
-// embedTextForCandidate — the candidate side's composite, with the documented degenerate fallback.
-const embedTextForCandidate = (candidate, domainMap) => {
+// embedTextForCandidate — ⟪hubReimplementation P3⟫ the card's STORED `embedText`, verbatim. The card
+// composes and stores its own retrieval string at forge time (SPEC §1.5/§4: slot-ordered, definition-
+// carrying, stored exactly as embedded) — the bridge-side recomposition this function used to perform
+// (domainName · name · description, with a degenerate defText/name recovery) is retired: recomposing
+// here would be a second authority over one fact, and the bridge-side inputs (cards carry no
+// `description`) could never reproduce the forge's own composition anyway. A card without embedText
+// is refused by name.
+const embedTextForCandidate = (candidate) => {
 	const record = candidate || {};
-	const composed = composeCandidateEmbedText({
-		domainName: candidateDomainText(record, domainMap),
-		propertyName: record.name,
-		description: descriptionTextOf(record),
-	});
-	return composed || normalizeSegment(record.defText) || normalizeSegment(record.name) || '';
+	if (typeof record.embedText !== 'string' || record.embedText === '') {
+		throw new Error(
+			`facetScan: candidate '${candidateLabelOf(record)}' carries no ` +
+				`embedText — the reimplemented card stores its composed retrieval string itself (SPEC §1.5); ` +
+				`there is no bridge-side recomposition and no default.`,
+		);
+	}
+	return record.embedText;
 };
 
 // embedTextForSource — the source side's composite. `classMap` is the PREFETCHED owning-class map
@@ -490,17 +472,17 @@ const sourceTierCode = (sourceElement) => {
 	return TIER_UNKNOWN;
 };
 
-// candidateAnchorKeys — every identity a source's AUTHORED cedsId could legitimately name. canonicalKey
-// is the identity §4.2 specifies; cedsId is included because flattenCandidateRecord computes it as
-// `cedsId || canonicalKey || propertyKey` and the authored track (authoredAnchorBridge, SIF's crossref
-// nomination) joins on it — the two must not disagree about what an anchor is.
+// candidateAnchorKeys — the ONE identity a source's AUTHORED cedsId can name: the card's
+// `canonicalKey`. ⟪hubReimplementation P3 (SPEC §6)⟫ the old second member, `cedsId`, is retired:
+// cards carry no cedsId property (SPEC §1), so the flattened record's computed `cedsId` was the
+// `cedsId || canonicalKey || propertyKey` chain resolving to canonicalKey anyway — an identity chain
+// wearing a second name, exactly what the no-silent-substitution rule forbids. Reading canonicalKey
+// alone states the same fact once, from its one authority.
 const candidateAnchorKeys = (candidate) => {
 	const keys = new Set();
-	[candidate.canonicalKey, candidate.cedsId].forEach((oneKey) => {
-		if (typeof oneKey === 'string' && oneKey.trim() !== '') {
-			keys.add(oneKey.trim());
-		}
-	});
+	if (typeof candidate.canonicalKey === 'string' && candidate.canonicalKey.trim() !== '') {
+		keys.add(candidate.canonicalKey.trim());
+	}
 	return keys;
 };
 
@@ -556,7 +538,7 @@ const FACET_NAMES = DECLARED_FACET_NAMES;
 
 const moduleFunction =
 	({ moduleName } = {}) =>
-	({ candidateElements, reservations = DEFAULT_RESERVATIONS, poolCap = POOL_CAP, classMap = null, domainMap = null } = {}) => {
+	({ candidateElements, reservations = DEFAULT_RESERVATIONS, poolCap = POOL_CAP, classMap = null } = {}) => {
 		if (!Array.isArray(candidateElements)) {
 			throw new Error(
 				`${moduleName}: constructed without a candidateElements array (got ${typeof candidateElements}) — ` +
@@ -604,11 +586,12 @@ const moduleFunction =
 		candidateElements.forEach((oneCandidate, i) => {
 			const record = oneCandidate || {};
 			candidateNameTokens[i] = new Set(tokenize(record.name));
-			// the candidate's CONTEXT is its DOMAIN — every domain name it carries, plus the domainId
-			// token itself (an exact id match between an authored context and a domain key is signal, and
-			// tokenize() already splits 'D000123' into a single usable token).
+			// the candidate's CONTEXT is its DOMAIN — the card's own domainName (⟪hubReimplementation P3⟫
+			// read directly, no map), plus the domainId token itself (an exact id match between an
+			// authored context and a domain key is signal, and tokenize() already splits 'C200354' into a
+			// single usable token).
 			candidateContextTokens[i] = new Set([
-				...tokenize(candidateDomainText(record, domainMap)),
+				...tokenize(candidateDomainText(record)),
 				...tokenize(record.domainId),
 			]);
 			candidateAnchorKeySets[i] = candidateAnchorKeys(record);
@@ -797,7 +780,7 @@ const moduleFunction =
 							outOf: candidateCount,
 							sharedTokens: sharedTokenList(sourceContextTokens, candidateContextTokens[i]),
 							sourceContext: owningClass.name,
-							candidateContext: candidateDomainText(candidate || {}, domainMap),
+							candidateContext: candidateDomainText(candidate),
 						},
 						anchorMatch: {
 							value: anchorFlags[i] === 1,
@@ -838,11 +821,9 @@ module.exports.tokenize = tokenize;
 module.exports.overlapCoefficient = overlapCoefficient;
 module.exports.sharedTokenList = sharedTokenList;
 module.exports.composeSourceEmbedText = composeSourceEmbedText;
-module.exports.composeCandidateEmbedText = composeCandidateEmbedText;
 module.exports.embedTextForSource = embedTextForSource;
 module.exports.embedTextForCandidate = embedTextForCandidate;
 module.exports.buildClassMap = buildClassMap;
-module.exports.buildDomainMap = buildDomainMap;
 module.exports.candidateDomainText = candidateDomainText;
 module.exports.owningClassOf = owningClassOf;
 module.exports.stampOwningClass = stampOwningClass;

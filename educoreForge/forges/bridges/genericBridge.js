@@ -164,10 +164,8 @@ const facetScan = require(
 );
 const {
 	buildClassMap,
-	buildDomainMap,
 	stampOwningClass,
 	embedTextForSource,
-	embedTextForCandidate,
 	CLASS_ROLE,
 } = facetScan;
 
@@ -190,12 +188,19 @@ const MATERIALIZER_CONFIG = { predicate: 'closeMatch', mappingJustification: 'se
 // discipline RENDERER_VERSION applies to the renderer alone, one level up at the whole-pipeline scope.
 // v4 ⟪P12 MULTI-FACET SCAN, 2026-07-31⟫: three pipeline changes, any one of which changes picks over
 // identical graph state — (1) the embedded text is now the COMPOSITE (owning class · name · description
-// · class description) rather than the fallback chain's first non-empty field, so every vector moved;
+// · class description) rather than the resolution chain's first non-empty field, so every vector moved;
 // (2) the pool is chosen by six-facet reserved-slot allocation rather than cosine-top-15 unioned with a
 // nominate hook's own top-10; (3) the prompt carries the owning class description and per-candidate
 // facet provenance (renderer v4). A differently-retrieved, differently-framed judgment is a new
 // generation by definition (⟪A6⟫/R4).
-const EVIDENCE_GENERATION = 'genericBridge-evidence-v4';
+// v5 ⟪hubReimplementation P3, 2026-08-03 (SPEC-hubReimplementation-080326.md §6)⟫: the bridge now
+// CONSUMES the self-sufficient card — (1) candidates are NOT re-embedded: the card's forge-stamped
+// `embedding` (of its stored, definition-carrying `embedText`) is read off the graph, so every
+// candidate vector moved from the bridge-composed id-flavored text to the forge's §4 composition;
+// (2) the prompt's tuple block carries the card's MEANING (definitions for property/domain/range/
+// value; singular named domain; qualifierNames) via renderer v5 and the revised cedsHubModule.
+// Either change alone re-judges the world; together they are this generation.
+const EVIDENCE_GENERATION = 'genericBridge-evidence-v5';
 
 // EVIDENCE_JUDGE_CONCURRENCY — how many per-source evidence judgments (compose -> ⟪A3⟫ gate ->
 // render -> select -> normalize) may be IN FLIGHT at once during REBRIDGE. The serial loop this
@@ -611,55 +616,72 @@ module.exports = (injectedTools = {}) =>
 				);
 			});
 
-			// ⟪P12 §4.2⟫ THE DOMAIN MAP — the CANDIDATE side's context, and the reason contextOverlap is a
-			// live facet rather than a dead one. A materialized CEDS HubReference carries its domain only
-			// as an opaque id (referenceSubgraph.js's emitReference stamps no domain NAME — see
-			// lib/facetScan.js's candidateDomainText for the verified code fact), so the hub's own DmeClass
-			// nodes are read ONCE here and turned into { cedsId -> className }. Same discipline as the
-			// owning-class map: one read, outside the scan, then a lookup.
+			// ⟪hubReimplementation P3 (SPEC §6)⟫ THE CANDIDATE VECTORS COME OFF THE CARD. Every
+			// reimplemented HubReference carries `embedText` (its forge-composed §4 retrieval string,
+			// stored exactly as embedded) and `embedding` (its 1024-dim vector, stamped through the shared
+			// vector cache at forge time and restored onto the graph node by the Phase-2 sidecar wire) —
+			// so the bridge READS them, refusing BY NAME any candidate that lacks either. It never
+			// re-embeds a candidate: a missing vector means the graph was materialized without its vector
+			// store (the exact silent-vectorless failure the Phase-2 M-1/M-2 review closed), and quietly
+			// re-embedding here would both hide that defect and spend against the provider for a fact the
+			// card already carries. The old hub DmeClass domain-map read is retired with the bridge-side
+			// candidate composition (the card carries domainName itself).
 			taskList.push((args, next) => {
-				kit.graphReader.readNodes(
-					{ label: 'ForgedNode', propertyEquals: { _source: HUB_STANDARD, role: CLASS_ROLE } },
-					(err, out) => {
-						if (err) {
-							next(`${MAPPING_TOOL}: reading ${HUB_STANDARD} ${CLASS_ROLE} nodes for the domain map: ${err}`, args);
-							return;
-						}
-						const hubClassNodes = ((out || {}).nodes || []).map(flattenFullRecord);
-						next('', { ...args, domainMap: buildDomainMap(hubClassNodes) });
-					},
+				const vectorlessCandidate = args.candidateElements.find(
+					(oneCandidate) => !Array.isArray(oneCandidate.embedding) || oneCandidate.embedding.length === 0,
 				);
+				if (vectorlessCandidate !== undefined) {
+					next(
+						`${MAPPING_TOOL}: candidate '${vectorlessCandidate.canonicalKey || vectorlessCandidate.stableId}' ` +
+							`carries no embedding — every reimplemented HubReference is forged with its vector ` +
+							`(SPEC §1.5, G-7); a vectorless candidate means this graph was materialized without its ` +
+							`vector store. Refusing rather than re-embedding.`,
+						args,
+					);
+					return;
+				}
+				const embedTextlessCandidate = args.candidateElements.find(
+					(oneCandidate) => typeof oneCandidate.embedText !== 'string' || oneCandidate.embedText === '',
+				);
+				if (embedTextlessCandidate !== undefined) {
+					next(
+						`${MAPPING_TOOL}: candidate '${embedTextlessCandidate.canonicalKey || embedTextlessCandidate.stableId}' ` +
+							`carries no embedText — every reimplemented HubReference stores its composed retrieval ` +
+							`string (SPEC §1.5, G-6). Refusing rather than recomposing.`,
+						args,
+					);
+					return;
+				}
+				args.candidateElements.forEach((oneCandidate) => {
+					oneCandidate.vector = oneCandidate.embedding;
+				});
+				next('', args);
 			});
 
-			// ⟪P12 §4.1⟫ COMPOSE THE EMBEDDED TEXT — the composite, on BOTH sides, in the same slot order,
-			// REPLACING the `defText` fallback chain as the embedding input. `defText` itself is left
-			// untouched (it has four other live readers — see lib/facetScan.js's header for the decision
-			// and its evidence); the composite lands on a NEW field, `embedText`, named for its one job.
-			// Sources additionally get owningClassName/owningClassDescription stamped on, which is what
-			// the renderer's source block reads (§4.5).
+			// ⟪P12 §4.1⟫ COMPOSE THE SOURCE EMBEDDED TEXT — the source side is per-standard and per-run,
+			// so it is still composed and embedded HERE (candidates, above, arrive pre-embedded on the
+			// card). `defText` itself is left untouched (it has four other live readers — see
+			// lib/facetScan.js's header for the decision and its evidence); the composite lands on
+			// `embedText`, named for its one job. Sources additionally get owningClassName/
+			// owningClassDescription stamped on, which is what the renderer's source block reads (§4.5).
 			taskList.push((args, next) => {
 				args.sourceNodes.forEach((oneSource) => {
 					stampOwningClass(oneSource, args.classMap);
 					oneSource.embedText = embedTextForSource(oneSource, args.classMap);
 				});
-				args.candidateElements.forEach((oneCandidate) => {
-					oneCandidate.embedText = embedTextForCandidate(oneCandidate, args.domainMap);
-				});
 				next('', args);
 			});
 
-			// VECTORIZE (NET) — embed every source + candidate COMPOSITE embedText (⟪P12⟫; through v3 this
-			// embedded `defText`, whose fallback chain discarded the owning-class context on 794 of LIF's
-			// 803 properties and 1,256 of PESC's 1,792). Fixed orchestration, not a move.
+			// VECTORIZE (NET) — embed the SOURCE composite embedTexts only (⟪hubReimplementation P3⟫:
+			// zero candidate embed calls, gate G-15's whole assertion). Fixed orchestration, not a move.
 			taskList.push((args, next) => {
-				const allRecords = args.candidateElements.concat(args.sourceNodes);
-				kit.vectorizer.batchEmbed({ texts: allRecords.map((r) => r.embedText) }, (err, result) => {
+				kit.vectorizer.batchEmbed({ texts: args.sourceNodes.map((oneSource) => oneSource.embedText) }, (err, result) => {
 					if (err) {
-						next(`${MAPPING_TOOL}: vectorizing composite embedTexts: ${err}`);
+						next(`${MAPPING_TOOL}: vectorizing source composite embedTexts: ${err}`);
 						return;
 					}
-					allRecords.forEach((r, i) => {
-						r.vector = result.vectors[i];
+					args.sourceNodes.forEach((oneSource, i) => {
+						oneSource.vector = result.vectors[i];
 					});
 					next('', args);
 				});
@@ -682,11 +704,11 @@ module.exports = (injectedTools = {}) =>
 				// type/tier codes, and the reused per-source scratch buffers) needs the candidate VECTORS,
 				// which exist only after the vectorize step above. Constructed ONCE for the whole run: the
 				// per-candidate precomputation is paid once, not once per source.
-				const facetScanner = facetScan({ candidateElements: args.candidateElements, classMap: args.classMap, domainMap: args.domainMap });
+				const facetScanner = facetScan({ candidateElements: args.candidateElements, classMap: args.classMap });
 				xLog.status(
 					`[${MAPPING_TOOL}] multi-facet scan armed over ${facetScanner.candidateCount} candidate(s); ` +
-						`${Object.keys(args.classMap).length} owning class(es) mapped for ${sourceStandardKey}, ` +
-						`${Object.keys(args.domainMap).length} ${HUB_STANDARD} domain name(s) mapped`,
+						`${Object.keys(args.classMap).length} owning class(es) mapped for ${sourceStandardKey}; ` +
+						`candidate vectors read off the cards (zero candidate embeds)`,
 				);
 				const composer = kit.evidenceComposer({ semanticMatcher: kit.semanticMatcher, facetScanner });
 				// ⟪P9⟫ judgeOne — the persistence-seamed judge (cachedJudgment.js): checks the shared

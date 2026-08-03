@@ -43,17 +43,24 @@ const { rendererModuleViolation, rendererDeterminismViolation } = require('../li
 
 const rendererModule = evidenceRendererFactory();
 
-const tupleFor = (canonicalKey, name) => ({
+// tupleFor — a NEW-shape (⟪hubReimplementation P3⟫, SPEC §6) meaning-carrying BaseTupleEvidence.
+// FIXTURE-SHAPE NOTE, recorded as required: the pre-P3 version of this helper built the OLD shape
+// (domains[]/domainsComplete/qualifier) and this suite STILL PASSED 20/20 against the revised
+// renderer — because not one assertion bound the tuple block's content. That was a reportable
+// finding (a fixture that survives a contract change proves the suite never tested the contract);
+// the 'tuple block MEANING' section below now binds every line the revised contract renders.
+const tupleFor = (canonicalKey, name, overrides = {}) => ({
 	referenceTier: 'property',
 	canonicalKey,
 	propertyKey: canonicalKey,
 	name,
-	domains: [{ domainId: 'C200000', domainName: 'Fixture Domain' }],
-	domainsComplete: true,
+	domain: { domainId: 'C200000', domainName: 'Fixture Domain', domainDefinition: 'What a fixture domain is.' },
+	property: { propertyName: name, propertyDefinition: `What ${name} means.` },
 	range: { shape: 'datatype', rangeDatatype: 'string', rangeClassId: null, rangeOptionSetId: null },
 	isQualified: false,
-	qualifier: null,
+	qualifierNames: [],
 	value: null,
+	...overrides,
 });
 
 const poolEntry = (canonicalKey, name, cosine, overrides = {}) => ({
@@ -178,6 +185,91 @@ harness.section('GREEN — deterministic evidence budget: maxTotalChars truncate
 	});
 	harness.ok('the budgeted render is shorter than the unbudgeted one', truncated.length < full.length);
 	harness.match('an explicit truncation marker is appended', truncated, /\[\.\.\.evidence truncated by config\.maxTotalChars]/);
+})();
+
+// =====================================================================
+harness.section('GREEN — the tuple block MEANING (⟪hubReimplementation P3⟫, SPEC §6 / gate G-14 unit twin)');
+// =====================================================================
+// These assertions BIND the tuple block's bytes — the discipline whose absence let the pre-P3 suite
+// pass old-shape fixtures (see tupleFor's header note). Every line the revised contract renders is
+// asserted present; the retired caveat string is asserted ABSENT.
+(() => {
+	const { renderTupleBlock } = evidenceRendererFactory;
+	const propertyBlock = renderTupleBlock(
+		tupleFor('P001470', 'Rubric Criterion Description', {
+			domain: { domainId: 'C200354', domainName: 'Rubric Criterion', domainDefinition: 'A criterion within a rubric dimension.' },
+			property: {
+				propertyName: 'Rubric Criterion Description',
+				propertyDefinition: 'Text describing a criterion that must be met to demonstrate quality.',
+			},
+		}),
+	);
+	harness.match('Domain line is SINGULAR, name-first: Domain: <name> (<id>)', propertyBlock, /Domain: Rubric Criterion \(C200354\)/);
+	harness.match('the property DEFINITION line is rendered', propertyBlock, /Definition: Text describing a criterion that must be met/);
+	harness.match('the domain definition line is rendered', propertyBlock, /Domain definition: A criterion within a rubric dimension\./);
+	harness.ok('NO plural Domain(s) label survives', !propertyBlock.includes('Domain(s):'));
+	harness.ok('NO completeness caveat survives', !propertyBlock.includes('may be incomplete'));
+
+	const qualifiedBlock = renderTupleBlock(
+		tupleFor('P600502', 'Has Organization Identifier', {
+			isQualified: true,
+			qualifierNames: ['Federal School Code'],
+		}),
+	);
+	harness.match('the qualifier line reads qualifierNames (no name-suffix parse)', qualifiedBlock, /Qualifier: P600502 \[Federal School Code]/);
+
+	const valueBlock = renderTupleBlock(
+		tupleFor('OV001637175776', 'Yankunytjatjara', {
+			referenceTier: 'value',
+			propertyKey: 'P001637',
+			property: { propertyName: 'Language Type', propertyDefinition: 'The language a person uses.' },
+			range: {
+				shape: 'optionSet',
+				rangeOptionSetId: 'OS001637',
+				rangeOptionSetName: 'Language',
+				rangeOptionSetDefinition: 'The set of recognized languages.',
+				rangeDatatype: null,
+				rangeClassId: null,
+			},
+			value: {
+				valueKey: 'OV001637175776',
+				owningPropertyKey: 'P001637',
+				owningOptionSetId: 'OS001637',
+				valueDefinition: 'A Western Desert language of Central Australia.',
+			},
+		}),
+	);
+	harness.match('value tier names its OWNING property', valueBlock, /Property: Language Type \(P001637\)/);
+	harness.match('value tier renders the owning property definition', valueBlock, /Property definition: The language a person uses\./);
+	harness.match('value tier renders the value definition', valueBlock, /Value definition: A Western Desert language/);
+	harness.match('the option-set range line carries the option set NAME', valueBlock, /enumerated — option set OS001637 \(Language\)/);
+	harness.match('the range definition line is rendered', valueBlock, /Range definition: The set of recognized languages\./);
+	harness.match('the Scope line still binds the value to its owning option set', valueBlock, /Scope: this value is a candidate ONLY within option set OS001637/);
+})();
+
+// =====================================================================
+harness.section('RED-TELL — an OLD-shape tuple renders WITHOUT its meaning (the G-14 fixture twin)');
+// =====================================================================
+// The renderer does not gate tuples (the ⟪A3⟫ seam upstream does); this proves WHY the gate matters:
+// fed the retired shape, the rendered block carries neither the domain name nor a definition line —
+// exactly the red the G-14 twin ('render against an old-shape fixture') observes.
+(() => {
+	const { renderTupleBlock } = evidenceRendererFactory;
+	const oldShapeTuple = {
+		referenceTier: 'property',
+		canonicalKey: 'P001470',
+		propertyKey: 'P001470',
+		name: 'Rubric Criterion Description',
+		domains: [{ domainId: 'C200354', domainName: 'Rubric Criterion' }],
+		domainsComplete: false,
+		range: { shape: 'datatype', rangeDatatype: 'string', rangeClassId: null, rangeOptionSetId: null },
+		isQualified: false,
+		qualifier: null,
+		value: null,
+	};
+	const oldBlock = renderTupleBlock(oldShapeTuple);
+	harness.ok('old-shape tuple: the Domain line CANNOT name the domain', !oldBlock.includes('Domain: Rubric Criterion (C200354)'));
+	harness.ok('old-shape tuple: NO definition line renders', !oldBlock.includes('Definition:'));
 })();
 
 // =====================================================================
