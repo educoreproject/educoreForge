@@ -38,8 +38,10 @@ const { resolveBundle } = forgerModule;
 const { buildStandardBlock } = require('../lib/standard-block')();
 const { shapeForgedGraph } = require('../lib/shape-forged-graph')();
 // the REAL ceds hub derivation — the fold section drives foldHubIntoNodeEdges against forgeHub's
-// ACTUAL output over a synthetic engine-shape base (pure; no docker/voyage/db).
-const cedsHubForge = require('../../../../../forges/ceds/lib/referenceSubgraph');
+// ACTUAL output over a synthetic engine-shape base (pure; no docker/voyage/db). Phase 2 of the
+// hubReimplementation flipped the registry to cedsHubForge; the ground truth is the module the
+// registry actually resolves.
+const cedsHubForge = require('../../../../../forges/ceds/lib/cedsHubForge');
 
 const fs = require('fs');
 const path = require('path');
@@ -1272,9 +1274,13 @@ harness.section('HUB FOLD — the forger derives a hub standard hub and FOLDS it
 
 const { foldHubIntoNodeEdges } = forgerModule;
 
-// a synthetic CEDS base in ENGINE shape (what the forger hands foldHubIntoNodeEdges): one class, one
-// ENUMERATED property (option set + two values), the HAS_PROPERTY/HAS_OPTION_SET/HAS_VALUE edges.
-// Properties are PG-JSON single-element arrays; nodes carry [ForgedNode].
+// a synthetic CEDS base in ENGINE shape (what the forger hands foldHubIntoNodeEdges): the standard
+// root, one class, one ENUMERATED property (option set + two values), the HAS_PROPERTY/
+// HAS_OPTION_SET/HAS_VALUE edges. Properties are PG-JSON single-element arrays; nodes carry
+// [ForgedNode]. The Phase-2 module (cedsHubForge) REFUSES a base with no DmeStandardRoot
+// (sourceProvenance, SPEC §2) and refuses any tuple slot whose node lacks a uri (§1.4
+// provenance), so the fixture carries both — the refusals are the module's contract, and a
+// fixture that satisfies them is how this section stays about the FOLD, not the refusals.
 const engineShapeCedsBase = (() => {
 	const arr = (scalar) => [scalar];
 	const node = (stableId, properties) => ({
@@ -1291,21 +1297,46 @@ const engineShapeCedsBase = (() => {
 	});
 	return {
 		nodes: [
+			node('root:ceds', {
+				role: arr('DmeStandardRoot'),
+				standardKey: arr('ceds'),
+				snapshotKey: arr('testSnapshot'),
+				publishedVersion: arr('2'),
+				version: arr('2'),
+				sourceUrl: arr('https://example.test/ceds'),
+				uri: arr('https://example.test/ceds'),
+			}),
 			node('cls:assessment', {
 				role: arr('DmeClass'),
 				domainId: arr('C-Assessment'),
 				canonicalKey: arr('C-Assessment'),
 				name: arr('Assessment'),
+				uri: arr('https://example.test/ceds/cls/assessment'),
 			}),
 			node('prop:status', {
 				role: arr('DmeProperty'),
 				domainId: arr('C-Assessment'),
 				canonicalKey: arr('P-Status'),
 				name: arr('Assessment Status'),
+				uri: arr('https://example.test/ceds/prop/status'),
 			}),
-			node('os:status', { role: arr('DmeOptionSet'), rangeOptionSetId: arr('OS-Status') }),
-			node('ov:active', { role: arr('DmeOptionValue'), canonicalKey: arr('OV-Active'), name: arr('Active') }),
-			node('ov:closed', { role: arr('DmeOptionValue'), canonicalKey: arr('OV-Closed'), name: arr('Closed') }),
+			node('os:status', {
+				role: arr('DmeOptionSet'),
+				rangeOptionSetId: arr('OS-Status'),
+				uri: arr('https://example.test/ceds/os/status'),
+			}),
+			node('ov:active', {
+				role: arr('DmeOptionValue'),
+				canonicalKey: arr('OV-Active'),
+				name: arr('Active'),
+				uri: arr('https://example.test/ceds/ov/active'),
+			}),
+			node('ov:closed', {
+				role: arr('DmeOptionValue'),
+				canonicalKey: arr('OV-Closed'),
+				name: arr('Closed'),
+				uri: arr('https://example.test/ceds/ov/closed'),
+			}),
 		],
 		edges: [
 			edge('HAS_PROPERTY', 'cls:assessment', 'prop:status'),
@@ -1317,20 +1348,44 @@ const engineShapeCedsBase = (() => {
 	};
 })();
 
-// the ground truth: what forgeHub INDEPENDENTLY derives from the same base (a base-only fold reproduces none of it).
-const expectedHub = cedsHubForge({ hubVersion: '2' }).forgeHub(engineShapeCedsBase);
+// foldOutcome — capture adapter for the callback-shaped fold (hubReimplementation Phase 2).
+// With no embedder the fold completes synchronously (forgeHub is R7-callback-shaped but the
+// derivation is synchronous), so the outcome is readable immediately after the call.
+const foldOutcome = (foldArgs) => {
+	let outcome = { error: '(callback never fired)', result: undefined };
+	foldHubIntoNodeEdges(foldArgs, (foldError, foldResult) => {
+		outcome = { error: foldError || '', result: foldResult };
+	});
+	return outcome;
+};
+
+// the ground truth: what the REGISTERED hub forge (cedsHubForge, the Phase-2 flip)
+// INDEPENDENTLY derives from the same base — factory args from the registry row, so the
+// namespace has exactly ONE home (forger.js).
+const registryHubNamespace = forgerModule.HUB_FORGE_BY_STANDARD.ceds.hubNamespace;
+let expectedHub;
+cedsHubForge({ hubVersion: '2', hubNamespace: registryHubNamespace }).forgeHub(
+	engineShapeCedsBase,
+	(expectedHubError, expectedHubResult) => {
+		if (expectedHubError) {
+			throw new Error(`ground-truth forgeHub refused: ${expectedHubError}`);
+		}
+		expectedHub = expectedHubResult;
+	},
+);
 const foldLabelCount = (nodes, label) =>
 	(nodes || []).filter((oneNode) => (oneNode.labels || []).indexOf(label) !== -1).length;
 
-const folded = foldHubIntoNodeEdges({
+const foldedOutcome = foldOutcome({
 	standard: 'ceds',
 	bundleVersion: '2',
 	requestedVersion: '2',
 	baseNodeEdges: engineShapeCedsBase,
 	declaredEmbeddingDims: undefined,
 });
+const folded = foldedOutcome.result || {};
 
-harness.equal('foldHubIntoNodeEdges answers without error for a registered hub standard', folded.error || '', '');
+harness.equal('foldHubIntoNodeEdges answers without error for a registered hub standard', foldedOutcome.error, '');
 harness.equal(
 	'the folded nodeEdges carry the HubReferences forgeHub derived — the hub is folded INTO the base',
 	foldLabelCount(folded.nodeEdges && folded.nodeEdges.nodes, 'HubReference'),
@@ -1342,7 +1397,7 @@ harness.equal(
 	1,
 );
 harness.equal(
-	'  the node total is base + derived hub (5 base + refs + definition)',
+	'  the node total is base + derived hub (root + 5 base structural + refs + definition)',
 	(folded.nodeEdges && folded.nodeEdges.nodes.length) || 0,
 	engineShapeCedsBase.nodes.length + expectedHub.counts.nodeTotal,
 );
@@ -1382,7 +1437,7 @@ harness.ok(
 	JSON.stringify((folded.nodeEdges ? folded.nodeEdges.nodes : []).find((oneNode) => (oneNode.labels || []).indexOf('HubReference') !== -1)),
 );
 harness.ok(
-	'  the base embeddingDims is preserved on the folded nodeEdges (the hub embeds nothing)',
+	'  the base embeddingDims is preserved on the folded nodeEdges (no embedder handed in: hub cards carry embedText only, no vectors)',
 	folded.nodeEdges && folded.nodeEdges.embeddingDims === engineShapeCedsBase.embeddingDims,
 	JSON.stringify(folded.nodeEdges && folded.nodeEdges.embeddingDims),
 );
@@ -1421,16 +1476,17 @@ const aFoldedHubVersion = (fold) => {
 // the bundle READ '14.0.0.0' out of the source (bundleVersion); the recipe asked for 'current'
 // (requestedVersion). hubVersion:'current' is the OLD recipe-token param — it MUST be inert now, so
 // even a caller who names it cannot slip the token onto an address.
-const routedFold = foldHubIntoNodeEdges({
+const routedFoldOutcome = foldOutcome({
 	standard: 'ceds',
 	hubVersion: 'current', // the OLD single-param name — must be ignored in favour of the resolved version
 	bundleVersion: '14.0.0.0', // what the bundle READ — the base nodes carry this
 	requestedVersion: 'current', // the recipe TOKEN — must NOT reach the address
 	baseNodeEdges: engineShapeCedsBase,
 });
+const routedFold = routedFoldOutcome.result || {};
 harness.equal(
 	'foldHubIntoNodeEdges answers without error when the bundle version resolves',
-	routedFold.error || '',
+	routedFoldOutcome.error,
 	'',
 );
 harness.equal(
@@ -1441,8 +1497,8 @@ harness.equal(
 
 // NEGATIVE CONTROL — a bundle that resolved NO real version cannot fold a hub: the recipe token is
 // not evidence of what the source says, so the hub path is REFUSED rather than lent the token. This
-// leverages resolveReportedVersion's existing throw, now covering the hub address.
-const noRealVersionFold = foldHubIntoNodeEdges({
+// leverages resolveReportedVersion's existing refusal, now covering the hub address.
+const noRealVersionOutcome = foldOutcome({
 	standard: 'ceds',
 	bundleVersion: undefined, // the bundle stamped nothing
 	requestedVersion: 'current',
@@ -1450,18 +1506,18 @@ const noRealVersionFold = foldHubIntoNodeEdges({
 });
 harness.match(
 	'a hub whose bundle resolved NO real version is REFUSED, naming the token that must not stand in',
-	noRealVersionFold.error,
+	noRealVersionOutcome.error,
 	/bundle[\s\S]*version[\s\S]*current/i,
 );
 harness.ok(
 	'  and it hands back no nodeEdges — no placeholder-addressed hub is produced',
-	noRealVersionFold.nodeEdges === undefined,
-	JSON.stringify(noRealVersionFold.nodeEdges),
+	noRealVersionOutcome.result === undefined,
+	JSON.stringify(noRealVersionOutcome.result),
 );
 
 // NO SILENT DEFAULT — a standard declared a hub with no registered forge is refused BY NAME (this is
 // the refusal the first Phase-3 attempt kept in build.js; it now lives here, where the registry does).
-const unregistered = foldHubIntoNodeEdges({
+const unregisteredOutcome = foldOutcome({
 	standard: 'lif',
 	bundleVersion: '14.0.0.0',
 	requestedVersion: 'current',
@@ -1469,18 +1525,18 @@ const unregistered = foldHubIntoNodeEdges({
 });
 harness.match(
 	'a standard declared a hub with NO registered hub forge is refused, naming it and what is known',
-	unregistered.error,
+	unregisteredOutcome.error,
 	/standard 'lif' is declared a hub but has no registered hub forge — known hub forges: ceds/,
 );
-harness.ok('  and nothing was substituted', /nothing was substituted/.test(unregistered.error || ''), unregistered.error);
-harness.ok('  and it hands back no nodeEdges', unregistered.nodeEdges === undefined, JSON.stringify(unregistered.nodeEdges));
+harness.ok('  and nothing was substituted', /nothing was substituted/.test(unregisteredOutcome.error || ''), unregisteredOutcome.error);
+harness.ok('  and it hands back no nodeEdges', unregisteredOutcome.result === undefined, JSON.stringify(unregisteredOutcome.result));
 
-// a malformed base is CONTAINED as an error-first answer (forgeHub throws; foldHubIntoNodeEdges
-// catches at the boundary and routes it, never past forge()'s callback).
-const malformed = foldHubIntoNodeEdges({ standard: 'ceds', bundleVersion: '2', requestedVersion: '2', baseNodeEdges: { nodes: 'nope', edges: [] } });
+// a malformed base is CONTAINED as an error-first answer (the module refuses it by callback;
+// the fold routes the refusal, never a throw past forge()'s callback).
+const malformedOutcome = foldOutcome({ standard: 'ceds', bundleVersion: '2', requestedVersion: '2', baseNodeEdges: { nodes: 'nope', edges: [] } });
 harness.match(
 	'a malformed base is contained as an error, not a throw',
-	malformed.error,
+	malformedOutcome.error,
 	/forgeHub for 'ceds' failed/,
 );
 
@@ -1508,10 +1564,15 @@ harness.ok(
 	deriveHubBoolean.all.join('\n'),
 );
 
-// the registry is DATA keyed by standard token (registry-over-switch)
+// the registry is DATA keyed by standard token (registry-over-switch); each row carries the
+// factory AND the hub namespace — the namespace's ONE declared home (Phase 2)
 harness.ok(
-	'HUB_FORGE_BY_STANDARD is a registry keyed by standard token, carrying ceds',
-	!!forgerModule.HUB_FORGE_BY_STANDARD && typeof forgerModule.HUB_FORGE_BY_STANDARD.ceds === 'function',
+	'HUB_FORGE_BY_STANDARD is a registry keyed by standard token; the ceds row carries { hubForgeFactory, hubNamespace }',
+	!!forgerModule.HUB_FORGE_BY_STANDARD &&
+		typeof forgerModule.HUB_FORGE_BY_STANDARD.ceds === 'object' &&
+		typeof forgerModule.HUB_FORGE_BY_STANDARD.ceds.hubForgeFactory === 'function' &&
+		typeof forgerModule.HUB_FORGE_BY_STANDARD.ceds.hubNamespace === 'string' &&
+		forgerModule.HUB_FORGE_BY_STANDARD.ceds.hubNamespace.trim() !== '',
 	JSON.stringify(Object.keys(forgerModule.HUB_FORGE_BY_STANDARD || {})),
 );
 

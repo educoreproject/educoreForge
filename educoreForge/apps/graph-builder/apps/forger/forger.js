@@ -82,6 +82,10 @@ const TREE_ROOT = path.join(__dirname, '..', '..', '..', '..');
 const TREE_LIB = path.join(TREE_ROOT, 'lib');
 const FORGES_DIR = path.join(TREE_ROOT, 'forges');
 
+// the vocabulary's declared label names — the hub embed pass selects HubReference cards by the
+// SAME registry every producer stamps from, never a re-typed string.
+const { EQUIVALENCE_NODE_LABELS } = require(path.join(TREE_LIB, 'vocabulary', 'vocabulary'));
+
 const CONFIG_SECTION = 'forger';
 const CONFIG_FILE = 'graphBuilder.ini';
 
@@ -306,36 +310,148 @@ const resolveReportedVersion = ({ bundleVersion, requestedVersion } = {}) => {
 };
 
 // -----
-// HUB FORGE REGISTRY (registry-over-switch; polyArch2 §7) — the pure per-standard hub derivation,
+// HUB FORGE REGISTRY (registry-over-switch; polyArch2 §7) — the per-standard hub derivation,
 // keyed by the LOWERCASE standard token. A standard DECLARED a hub (spec.deriveHub) resolves its
-// forgeHub here; a standard declared a hub with NO registered derivation is REFUSED BY NAME in
+// row here; a standard declared a hub with NO registered derivation is REFUSED BY NAME in
 // foldHubIntoNodeEdges (no silent default — a hub we cannot derive is a recipe error, not a
 // zero-reference hub). ceds is the only hub derivation today; a second hub is one MORE ROW here,
-// never a branch to edit. Each value is a factory ({ hubVersion }) -> { forgeHub, ... } (PLAN
-// Phase 2's pure seam), required once at module load.
+// never a branch to edit.
+//
+// Each row is { hubForgeFactory, hubNamespace } (hubReimplementation Phase 2):
+//   hubForgeFactory  ({ hubVersion, hubNamespace }) -> { forgeHub } — forgeHub is R7
+//                    error-first callback-shaped: forgeHub(baseNodeEdges, callback) with
+//                    callback(errString, { nodes, edges, divergenceReport, skipReport, counts })
+//   hubNamespace     the ONE DECLARED HOME of this hub's URI root (SPEC §2). Every card uri and
+//                    the HubDefinition.namespace are minted FROM this value, which flows through
+//                    the factory argument — the module holds no literal, and neither may any
+//                    other site. A second occurrence of this URL anywhere in the tree is a defect.
 const HUB_FORGE_BY_STANDARD = {
-	ceds: require(path.join(FORGES_DIR, 'ceds', 'lib', 'referenceSubgraph')),
+	ceds: {
+		hubForgeFactory: require(path.join(FORGES_DIR, 'ceds', 'lib', 'cedsHubForge')),
+		hubNamespace: 'https://w3id.org/EDUcore/CEDStandards/hub/',
+	},
 };
 
 // -----
-// foldHubIntoNodeEdges — the NEW-DESIGN (TQ 2026-07-24) hub seam. DERIVE this standard's hub from
-// the base nodeEdges just shaped and FOLD its nodes/edges into the SAME nodeEdges, so ONE block per
-// standard carries its hub (no separate hub block, no separate harvest, no change to the graph engine).
-// Pure and synchronous; called by forge() ONLY when the recipe declares the standard a hub. Answers
-// { nodeEdges } or { error } — the same error-object idiom resolveBundle uses, so nothing here
-// throws past forge()'s callback.
+// HUB_EMBED_BATCH_SIZE — voyage batch ceiling headroom, the same bound the forge bundles use for
+// their base-node embedding pass (forgeCeds EMBED_BATCH_SIZE precedent). Bounds per-call payload;
+// serial batches keep memory and rate in check.
+const HUB_EMBED_BATCH_SIZE = 128;
+
+// -----
+// embedHubReferenceCards — the hub-card embedding pass (hubReimplementation Phase 2, SPEC §1.5/§3).
+// Every HubReference card carries embedText composed by the forge; a VECTORIZED build stamps
+// embedding + embeddingModelVersion on each card through the SAME embedding-client the base pass
+// used (shared content-addressed vector cache, so a repeat build is cache-served and spends
+// nothing). The HubDefinition is not a card and is not embedded.
 //
-//   foldHubIntoNodeEdges({ standard, bundleVersion, requestedVersion, baseNodeEdges, declaredEmbeddingDims })
-//       -> { nodeEdges: { nodes, edges, embeddingDims } } | { error }
+// embedder ABSENT means --vectorize=false: the spend knob is off, cards carry embedText only and
+// no vector — exactly as the base nodes do on that path (SPEC §3: gates report the vector gate
+// UNMEASURED, never silently pass). embedder PRESENT with a card missing embedText is a REFUSAL
+// BY NAME: a card that cannot be embedded is never quietly skipped (no silent substitution).
+//
+//   embedHubReferenceCards({ hubNodes, embedder }, callback)
+//     -> callback(errString, { embeddedCardCount, vectorized })
+const embedHubReferenceCards = ({ hubNodes, embedder }, callback) => {
+	if (!embedder) {
+		callback('', { embeddedCardCount: 0, vectorized: false });
+		return;
+	}
+	const hubReferenceCards = hubNodes.filter(
+		(oneNode) => oneNode.role === EQUIVALENCE_NODE_LABELS.HUB_REFERENCE,
+	);
+	if (!hubReferenceCards.length) {
+		callback('', { embeddedCardCount: 0, vectorized: true });
+		return;
+	}
+	const cardsMissingEmbedText = hubReferenceCards.filter((oneCard) => {
+		const embedTextValue = oneCard.properties.embedText;
+		return typeof embedTextValue !== 'string' || embedTextValue.trim() === '';
+	});
+	if (cardsMissingEmbedText.length) {
+		callback(
+			`forger: ${cardsMissingEmbedText.length} HubReference card(s) carry no embedText ` +
+				`(first: '${cardsMissingEmbedText[0].stableId}'). A card with nothing to embed is ` +
+				`refused, not quietly skipped — the forge composes embedText on every card (G-6).`,
+		);
+		return;
+	}
+
+	const batches = [];
+	for (
+		let batchStart = 0;
+		batchStart < hubReferenceCards.length;
+		batchStart += HUB_EMBED_BATCH_SIZE
+	) {
+		batches.push(hubReferenceCards.slice(batchStart, batchStart + HUB_EMBED_BATCH_SIZE));
+	}
+
+	const taskList = new taskListPlus();
+	batches.forEach((oneBatch, batchIndex) => {
+		taskList.push((args, next) => {
+			embedder.embedTexts(
+				{ texts: oneBatch.map((oneCard) => oneCard.properties.embedText) },
+				(embedError, embedResult) => {
+					if (embedError) {
+						next(
+							`forger: hub card embedding batch ${batchIndex + 1}/${batches.length} ` +
+								`failed: ${embedError}`,
+						);
+						return;
+					}
+					oneBatch.forEach((oneCard, cardIndex) => {
+						oneCard.properties.embedding = Array.from(embedResult.vectors[cardIndex]);
+						oneCard.properties.embeddingModelVersion = embedResult.embeddingModelVersion;
+						// ⟪R-P2-2⟫ the card DECLARES its embed input per node record: harvest's
+						// sidecar computes embeddingRef from the declared property (cards embed
+						// their composed embedText, SPEC §4/§1.5), while undeclared records — the
+						// base nodes — keep the original searchText addressing exactly.
+						oneCard.properties.embedSourceProperty = 'embedText';
+					});
+					next('', args);
+				},
+			);
+		});
+	});
+	pipeRunner(taskList.getList(), {}, (pipeError) => {
+		if (pipeError) {
+			callback(pipeError);
+			return;
+		}
+		callback('', { embeddedCardCount: hubReferenceCards.length, vectorized: true });
+	});
+};
+
+// -----
+// foldHubIntoNodeEdges — the NEW-DESIGN (TQ 2026-07-24) hub seam, callback-shaped since the
+// hubReimplementation Phase 2 flip (R7: the hub module's forgeHub is error-first callback-shaped,
+// and the vectorized fold performs real embedding I/O). DERIVE this standard's hub from the base
+// nodeEdges just shaped, EMBED its cards (vectorized builds), and FOLD its nodes/edges into the
+// SAME nodeEdges, so ONE block per standard carries its hub (no separate hub block, no separate
+// harvest, no change to the graph engine). Called by forge() ONLY when the recipe declares the
+// standard a hub.
+//
+//   foldHubIntoNodeEdges(
+//       { standard, bundleVersion, requestedVersion, baseNodeEdges, declaredEmbeddingDims, embedder },
+//       callback,
+//   )
+//     -> callback(errString, { nodeEdges: { nodes, edges, embeddingDims },
+//                              hubDivergenceReport, hubSkipReport, hubCounts,
+//                              hubEmbeddedCardCount })
+//
+//   embedder — the SAME embedding-client instance the base pass used (shared vector cache), or
+//              null on --vectorize=false, in which case cards carry embedText and no vector.
+//   hubDivergenceReport / hubSkipReport — the forge module's §5 prose-divergence rows and S-3
+//              zero-domain skip rows, carried up for the build orchestrator to WRITE (the fold
+//              does no report I/O; build.js owns the build's log directory).
 //
 // THE HUB IS STAMPED WITH THE BUNDLE'S REAL VERSION, NEVER THE RECIPE TOKEN. hubVersion folds into
-// every hub addressSignature (referenceSubgraph.js) and the base nodes carry metadata.version; if the
-// hub took the recipe token ('current') instead of what the bundle READ ('14.0.0.0'), base and hub
-// would address-DIVERGE though the structure is identical — the golden-diff defect (2026-07-24). So
-// this seam takes the TWO version claims and resolves the real one through resolveReportedVersion —
-// the SAME validated reading forge() reports with — which THROWS (error-object) when the bundle
-// stamped no real version, so a placeholder can never reach a content address (polyArch2 §6, identity
-// clause). requestedVersion is carried only so the refusal can name the token that must not stand in.
+// every hub addressSignature and the base nodes carry metadata.version; if the hub took the recipe
+// token ('current') instead of what the bundle READ ('14.0.0.0'), base and hub would
+// address-DIVERGE though the structure is identical — the golden-diff defect (2026-07-24). So this
+// seam takes the TWO version claims and resolves the real one through resolveReportedVersion — the
+// SAME validated reading forge() reports with — which refuses when the bundle stamped no real
+// version, so a placeholder can never reach a content address (polyArch2 §6, identity clause).
 //
 // forgeHub reads the forger's ENGINE-SHAPE nodeEdges DIRECTLY (verified, PLAN §7): its v1() unwraps
 // scalar-OR-single-element-array, and engine-shape nodes carry stableId + PG-JSON-array properties
@@ -344,69 +460,121 @@ const HUB_FORGE_BY_STANDARD = {
 //
 // forgeHub returns the derived hub in PRODUCER shape ({labels, stableId, role, scalar properties});
 // shapeForgedGraph — the forger's OWN producer->engine translator — turns those into engine shape
-// ({ref, PG-JSON-array properties}) so they concatenate onto the base cleanly. The hub embeds
-// NOTHING (a structural derivation), so its shaping sees no vectors, yields embeddingDims null and
-// leaves declaredEmbeddingDims unused there; the BASE's embeddingDims stands for the folded block.
-// The hub's HAS_CEDS_* edges reference base-node stableIds that are present in the same combined
-// nodeEdges, so once build.js loads this under [StandardBase] the edges resolve WITHIN one block.
-const foldHubIntoNodeEdges = ({
-	standard,
-	bundleVersion,
-	requestedVersion,
-	baseNodeEdges,
-	declaredEmbeddingDims,
-}) => {
-	const hubForgeFactory = HUB_FORGE_BY_STANDARD[String(standard).toLowerCase()];
-	if (!hubForgeFactory) {
+// ({ref, PG-JSON-array properties}, embedding lifted top-level and width-checked against
+// declaredEmbeddingDims) so they concatenate onto the base cleanly. The hub's HAS_CEDS_* edges
+// reference base-node stableIds that are present in the same combined nodeEdges, so once build.js
+// loads this under [StandardBase] the edges resolve WITHIN one block.
+const foldHubIntoNodeEdges = (
+	{
+		standard,
+		bundleVersion,
+		requestedVersion,
+		baseNodeEdges,
+		declaredEmbeddingDims,
+		embedder,
+	},
+	callback,
+) => {
+	const hubForgeRow = HUB_FORGE_BY_STANDARD[String(standard).toLowerCase()];
+	if (!hubForgeRow) {
 		const known = Object.keys(HUB_FORGE_BY_STANDARD).join(', ') || '(none)';
-		return {
-			error:
-				`forger: standard '${standard}' is declared a hub but has no registered hub forge — ` +
+		callback(
+			`forger: standard '${standard}' is declared a hub but has no registered hub forge — ` +
 				`known hub forges: ${known}. A hub declared for a standard with no derivation is a ` +
 				`recipe error; nothing was substituted.`,
-		};
+		);
+		return;
 	}
 
-	// THE HUB TAKES THE RESOLVED BUNDLE VERSION, NOT THE RECIPE TOKEN. hubVersion is folded into every
-	// hub addressSignature; the base carries metadata.version. resolveReportedVersion is the one
-	// validated reading — it refuses (error-object) when the bundle stamped no real version, so the
-	// recipe token can never reach a content address (polyArch2 §6). Answered error-first so nothing
-	// throws past forge()'s callback.
 	const versions = resolveReportedVersion({ bundleVersion, requestedVersion });
 	if (versions.error) {
-		return { error: versions.error };
+		callback(versions.error);
+		return;
 	}
 	const hubVersion = versions.bundleVersion;
 
-	// DERIVE the hub from the base (PURE forgeHub). forgeHub THROWS on a malformed block by design;
-	// contain that throw at this boundary and route it error-first — boundary containment, not
-	// control flow. In the normal pipeline the base is well-formed (the forger just shaped it), so
-	// the catch is defensive.
-	let hubSubgraph;
+	// CONSTRUCT the hub forge. The factory refuses an absent/empty hubVersion or hubNamespace by
+	// THROW (its documented contract); contain that throw at this one boundary and route it
+	// error-first — boundary containment, not control flow.
+	let hubForge;
 	try {
-		hubSubgraph = hubForgeFactory({ hubVersion }).forgeHub(baseNodeEdges);
-	} catch (hubError) {
-		return { error: `forger: forgeHub for '${standard}' failed: ${hubError.message}` };
+		hubForge = hubForgeRow.hubForgeFactory({
+			hubVersion,
+			hubNamespace: hubForgeRow.hubNamespace,
+		});
+	} catch (factoryError) {
+		callback(
+			`forger: hub forge factory for '${standard}' refused: ${factoryError.message}`,
+		);
+		return;
 	}
 
-	// SHAPE the derived hub (producer -> engine) with the forger's OWN translator, so the hub nodes
-	// concatenate onto the base in one shape. The hub embeds nothing, so shapeForgedGraph sees no
-	// vectors, returns embeddingDims null and leaves declaredEmbeddingDims unused.
-	const shapedHub = shapeForgedGraph({ forged: hubSubgraph, declaredEmbeddingDims });
-	if (shapedHub.error) {
-		return { error: `forger: shaping the derived hub for '${standard}': ${shapedHub.error}` };
-	}
+	hubForge.forgeHub(baseNodeEdges, (forgeHubError, hubSubgraph) => {
+		if (forgeHubError) {
+			callback(`forger: forgeHub for '${standard}' failed: ${forgeHubError}`);
+			return;
+		}
 
-	// FOLD: concatenate the shaped hub onto the base. The base's embeddingDims stands for the folded
-	// block (the hub added no vectors). The hub's HAS_CEDS_* edges reference base-node stableIds now
-	// sitting in the same nodeEdges, so once loaded under [StandardBase] they resolve within one block.
-	return {
-		nodeEdges: {
-			nodes: baseNodeEdges.nodes.concat(shapedHub.nodes),
-			edges: baseNodeEdges.edges.concat(shapedHub.edges),
-			embeddingDims: baseNodeEdges.embeddingDims,
-		},
-	};
+		// EMBED the cards (vectorized builds; the spend is cache-served on every repeat build)
+		embedHubReferenceCards(
+			{ hubNodes: hubSubgraph.nodes, embedder },
+			(embedError, embedOutcome) => {
+				if (embedError) {
+					callback(embedError);
+					return;
+				}
+
+				// SHAPE the derived hub (producer -> engine) with the forger's OWN translator; on a
+				// vectorized fold the shaper lifts each card's embedding top-level and enforces the
+				// declared width, exactly as it does for base nodes.
+				const shapedHub = shapeForgedGraph({ forged: hubSubgraph, declaredEmbeddingDims });
+				if (shapedHub.error) {
+					callback(`forger: shaping the derived hub for '${standard}': ${shapedHub.error}`);
+					return;
+				}
+
+				// EMBEDDING DIMS RECONCILIATION — a stated rule, not an identity chain: when BOTH the
+				// base and the hub carry vectors their widths must agree (both were checked against the
+				// same declaredEmbeddingDims, so disagreement means a shaping fault — refuse loudly);
+				// the folded block's width is the base's when the base carries vectors, otherwise the
+				// hub's, otherwise null (an un-embedded block).
+				const baseEmbeddingDims = baseNodeEdges.embeddingDims;
+				const hubEmbeddingDims = shapedHub.embeddingDims;
+				if (
+					baseEmbeddingDims !== null &&
+					baseEmbeddingDims !== undefined &&
+					hubEmbeddingDims !== null &&
+					baseEmbeddingDims !== hubEmbeddingDims
+				) {
+					callback(
+						`forger: folded hub for '${standard}' carries ${hubEmbeddingDims}-dim vectors ` +
+							`but the base block is ${baseEmbeddingDims}-dim. One block, one width; ` +
+							`refusing to fold a ragged block.`,
+					);
+					return;
+				}
+				const foldedEmbeddingDims =
+					baseEmbeddingDims !== null && baseEmbeddingDims !== undefined
+						? baseEmbeddingDims
+						: hubEmbeddingDims;
+
+				// FOLD: concatenate the shaped hub onto the base. The hub's HAS_CEDS_* edges reference
+				// base-node stableIds now sitting in the same nodeEdges, so once loaded under
+				// [StandardBase] they resolve within one block.
+				callback('', {
+					nodeEdges: {
+						nodes: baseNodeEdges.nodes.concat(shapedHub.nodes),
+						edges: baseNodeEdges.edges.concat(shapedHub.edges),
+						embeddingDims: foldedEmbeddingDims,
+					},
+					hubDivergenceReport: hubSubgraph.divergenceReport,
+					hubSkipReport: hubSubgraph.skipReport,
+					hubCounts: hubSubgraph.counts,
+					hubEmbeddedCardCount: embedOutcome.embeddedCardCount,
+				});
+			},
+		);
+	});
 };
 
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
@@ -628,21 +796,43 @@ const moduleFunction =
 				next('', args);
 				return;
 			}
-			const folded = foldHubIntoNodeEdges({
-				standard,
-				bundleVersion: args.forged.metadata.version,
-				requestedVersion: version,
-				baseNodeEdges: args.shaped,
-				declaredEmbeddingDims,
-			});
-			if (folded.error) {
-				next(folded.error);
-				return;
-			}
-			xLog.status(
-				`[forger] folded '${standard}' hub into its base block: nodeEdges now ${folded.nodeEdges.nodes.length} nodes, ${folded.nodeEdges.edges.length} edges`,
+			foldHubIntoNodeEdges(
+				{
+					standard,
+					bundleVersion: args.forged.metadata.version,
+					requestedVersion: version,
+					baseNodeEdges: args.shaped,
+					declaredEmbeddingDims,
+					// the SAME embedder the base pass used (shared vector cache); null on
+					// --vectorize=false, so hub cards carry embedText and no vector on that path
+					embedder,
+				},
+				(foldError, folded) => {
+					if (foldError) {
+						next(foldError);
+						return;
+					}
+					xLog.status(
+						`[forger] folded '${standard}' hub into its base block: nodeEdges now ` +
+							`${folded.nodeEdges.nodes.length} nodes, ${folded.nodeEdges.edges.length} edges` +
+							(folded.hubEmbeddedCardCount
+								? ` (${folded.hubEmbeddedCardCount} hub cards embedded)`
+								: ' (hub cards not vectorized)'),
+					);
+					next('', {
+						...args,
+						shaped: folded.nodeEdges,
+						// the fold's reports ride the forge report so the build orchestrator (which
+						// owns the build's log directory) can write them; the forger writes nothing
+						hubFoldReports: {
+							hubDivergenceReport: folded.hubDivergenceReport,
+							hubSkipReport: folded.hubSkipReport,
+							hubCounts: folded.hubCounts,
+							hubEmbeddedCardCount: folded.hubEmbeddedCardCount,
+						},
+					});
+				},
 			);
-			next('', { ...args, shaped: folded.nodeEdges });
 		});
 
 		pipeRunner(taskList.getList(), {}, (err, args) => {
@@ -677,6 +867,10 @@ const moduleFunction =
 				nodeCount: args.shaped.nodes.length,
 				edgeCount: args.shaped.edges.length,
 				embedCallCount: args.forged.embedCallCount,
+				// hub-fold reports (present ONLY when deriveHub ran): the module's §5
+				// prose-divergence rows, the S-3 skip rows, and the derivation counts — carried
+				// for build.js to WRITE into the build's log directory; the forger writes nothing.
+				...(args.hubFoldReports ? args.hubFoldReports : {}),
 				// header material for build.js's standardBase harvest — CARRIED from the forge, never
 				// invented: stableUriPropertyName names the stable-URI property, embeddingModelVersion is
 				// the model the vectors were made at (undefined when --vectorize=false).

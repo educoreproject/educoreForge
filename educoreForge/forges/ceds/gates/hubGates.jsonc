@@ -121,6 +121,28 @@
 			"contract": "forgeTotality (S-3): every base DmeProperty either produced at least one card or appears BY NAME in the skip report (reason zeroDeclaredDomains, verified against the base); the skip report exists (explicit-empty acceptable) and contains nothing else.",
 			"measure": "hub:forgeTotalityViolations", "comparator": "isEmpty", "expected": [],
 			"twin": "dropOnePropertysCardsWithoutSkipEntry"
+		},
+
+		// -----------------------------------------------------------------------------
+		// FAMILY B — BUILD-SCOPED gates (hubReimplementation Phase 2). Measured by
+		// test-cedsHubBuildGates.js, which runs the REAL forger seam (registry ->
+		// foldHubIntoNodeEdges -> embed pass -> shape) with the spend knob ON and the
+		// shared vector cache in force. The Phase-1 hermetic suite does NOT measure
+		// these (it evaluates the hub:-measured declarations only); each runner judges
+		// the declarations whose measures it supplies, so an unmeasured gate can never
+		// silently pass in either suite.
+		// -----------------------------------------------------------------------------
+		{
+			"id": "G-7", "family": "B",
+			"contract": "vectorPresent: in a VECTORIZED build every HubReference card carries embedding (exactly the declared width, 1024 at the current identity) and embeddingModelVersion; a --vectorize=false run reports this gate UNMEASURED, never a silent pass.",
+			"measure": "build:vectorPresentViolations", "comparator": "isEmpty", "expected": [],
+			"twin": "dropOneVector"
+		},
+		{
+			"id": "G-13", "family": "B",
+			"contract": "determinism: two forges of the same base produce byte-identical folded nodes/edges (canonical sha256 over the full node/edge stream, vectors included). The contract is determinism GIVEN the shared content-addressed vector cache (cache-served on the second run); COLD-CACHE re-embed determinism is OUT OF CONTRACT — the embedding provider is not promised bit-stable across API calls. The twin injects a run-varying value into the ACTUAL run-2 stream and re-hashes it (P2-review S-3).",
+			"measure": "build:forgeDeterminismViolations", "comparator": "isEmpty", "expected": [],
+			"twin": "injectRunVaryingValue"
 		}
 	]
 }

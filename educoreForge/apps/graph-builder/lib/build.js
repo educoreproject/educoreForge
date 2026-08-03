@@ -27,6 +27,12 @@
 // a test can inject a component that FAILS — without it the orchestrator's error paths could never
 // be observed firing, and a path never observed is a path unproven.
 //
+// FIDELITY-GATE SEAM (⟪R-P2-1⟫): `deps.cedsFidelityGateRunner` may override the R-1 in-build
+// fidelity gate with a function of the same signature; the documented default is the REAL
+// runCedsFidelityGate (byte-unchanged production behavior). The hermetic suites inject a
+// SELF-ANNOUNCING stub — the real gate reaches a LIVE graph over bolt (docker inspect), which
+// no hermetic double provides. A silent skip is not offered.
+//
 // Pipeline (targetArchitectureDesign §4.4; hub-fold design TQ 2026-07-24):
 //   A  forger.forge({..., deriveHub}) -> replayManager.create
 //                   -> init(nodeEdges, applyLabels:[StandardBase])
@@ -55,6 +61,122 @@ const { readOptionalBooleanValue } = require('./optional-boolean-value');
 // The base block's subject is <standard>@<version> plus the marker its KIND requires; the
 // marker comes from ONE table (SCHEMA_BLOCK_KIND_SUFFIX), never a literal composed here.
 const vocabulary = require(path.join(__dirname, '..', '..', '..', 'lib', 'vocabulary', 'vocabulary'));
+
+// the canonical home of per-run build reports (the same documented-default convention as the
+// judgment cache and match-forensics homes in actions.js): hub prose-divergence and skip
+// reports land under ONE run directory per build invocation, so "no report file" always means
+// "the fold did not run", never "the report went somewhere else".
+const BUILD_LOGS_DIR_PATH =
+	'/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/buildLogs';
+
+// ⟪R-P2-2, 2026-08-03⟫ the embedding SIDECAR stores' canonical home (same documented-default
+// convention): one content-addressed SQLite per standard, named by the block header's
+// standardKey verbatim. A VECTORIZED standardBase block persists its raw vectors here and
+// carries per-node embeddingRefs in its text — a block is never half a gigabyte of inline
+// base64 (the V8 max-string ceiling the 94,602-card hub block exceeded), and block identity
+// becomes embedding-excluded BY DESIGN.
+const VECTOR_STORES_DIR_PATH =
+	'/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/vectorStores';
+const vectorStoreModule = require(
+	path.join(__dirname, '..', '..', '..', 'lib', 'vector-store', 'vector-store'),
+);
+// ⟪P2-review M-3, RULED⟫ store filenames derive from the SAME AUTHORITY as the node _source
+// stamp — the forge bundle's standardName (resolveBundle; 'ceds' -> 'CEDS' -> CEDS.sqlite3).
+// ONE store per standard, SHARED with the incumbent producer BY DESIGN (content-addressed,
+// verify-on-read, first-write-wins). Never a casing literal and never the lowercase token:
+// on a case-insensitive filesystem the token spelling silently opened the incumbent's file
+// while claiming a separate one (the M-3 finding), and on the case-SENSITIVE deploy targets
+// it would name a file that does not exist.
+const { resolveBundle: resolveForgeBundle } = require(path.join(__dirname, '..', 'apps', 'forger'));
+
+// ⟪P2-review S-2⟫ resolveHeapAdequacy — refuse a vectorized load the process heap cannot
+// hold BEFORE a container is provisioned, naming the remedy. The engine-side JSON.stringify
+// in the LOAD path makes a vectorized build's heap appetite a large multiple of the raw
+// vector bytes; until the streaming batch write lands, the honest posture is a guard, not a
+// devlog sentence (an OOM kill also bypasses dispose-on-failure and strands the scratch
+// container — observed 2026-08-03). The multiplier is EMPIRICAL, calibrated on the
+// 119,805-node / 1024-dim hubV2 build: raw vector bytes ≈ 0.98GB, observed to OOM at an
+// 8GB heap and complete at 24GB — so the estimate uses 16× raw vector bytes + 1GB base,
+// which brackets the measurement. heapSizeLimitBytes is injectable so the refusal is
+// provable without shrinking a real process's heap.
+const HEAP_BYTES_PER_VECTOR_VALUE = 8; // a JS number in a packed double array
+const HEAP_LOAD_MULTIPLIER = 16; // empirical: forge copy + shape copy + load stringify + GC headroom
+const HEAP_BASE_NEED_BYTES = 1024 * 1024 * 1024; // non-vector material + engine overhead
+const resolveHeapAdequacy = ({
+	nodeCount,
+	embeddingDims,
+	heapSizeLimitBytes = require('v8').getHeapStatistics().heap_size_limit,
+}) => {
+	if (embeddingDims === null || embeddingDims === undefined) {
+		return {}; // un-vectorized payload: no vector term; the legacy sizes never OOM'd
+	}
+	const estimatedNeedBytes =
+		nodeCount * embeddingDims * HEAP_BYTES_PER_VECTOR_VALUE * HEAP_LOAD_MULTIPLIER +
+		HEAP_BASE_NEED_BYTES;
+	if (heapSizeLimitBytes < estimatedNeedBytes) {
+		const suggestedMb = Math.ceil((estimatedNeedBytes / (1024 * 1024)) * 1.25);
+		return {
+			error:
+				`build: REFUSED before provisioning — this vectorized load (${nodeCount} nodes × ` +
+				`${embeddingDims} dims) is estimated to need ~${Math.ceil(estimatedNeedBytes / (1024 * 1024 * 1024))}GB ` +
+				`of heap and this process is limited to ` +
+				`${Math.floor(heapSizeLimitBytes / (1024 * 1024 * 1024))}GB. Re-run with ` +
+				`node --max-old-space-size=${suggestedMb} (an OOM mid-build would also strand the ` +
+				`scratch container — the kill bypasses dispose-on-failure).`,
+		};
+	}
+	return {};
+};
+
+// makeVectorStoreResolver — storeResolver(standardKey, cb) -> vectorStore, lazy-open and
+// cached per standardKey for the life of ONE build/replay invocation. Used on BOTH sides of
+// the block boundary: the Phase-A harvest injects the store for the standard being harvested
+// (write side), and materialize/replay/depGraph-restore hand the resolver to the engine so
+// each ref-carrying node's vector is stamped back onto its graph node (read side). A store
+// file is only ever CREATED when something actually resolves — a build with no vectors
+// touches nothing.
+const makeVectorStoreResolver = () => {
+	const openStoresByStandardKey = {};
+	return (standardKey, callback) => {
+		if (standardKey === undefined || standardKey === null || `${standardKey}`.trim() === '') {
+			callback(
+				`vectorStoreResolver: a standardKey is REQUIRED to resolve a vector store — ` +
+					`nothing is substituted.`,
+			);
+			return;
+		}
+		const cachedStore = openStoresByStandardKey[standardKey];
+		if (cachedStore) {
+			callback('', cachedStore);
+			return;
+		}
+		// M-3: the filename authority. An unknown standard is a refusal naming it — a store
+		// file minted from an unresolvable token would be an inventory nobody owns.
+		const resolvedBundle = resolveForgeBundle({ standard: standardKey });
+		if (resolvedBundle.error) {
+			callback(
+				`vectorStoreResolver: cannot derive the store filename for '${standardKey}' — ` +
+					`${resolvedBundle.error}`,
+			);
+			return;
+		}
+		const oneStore = vectorStoreModule({});
+		oneStore.init(
+			{ dbPath: path.join(VECTOR_STORES_DIR_PATH, `${resolvedBundle.standardName}.sqlite3`) },
+			(initError) => {
+				if (initError) {
+					callback(
+						`vectorStoreResolver: opening the '${resolvedBundle.standardName}' vector ` +
+							`store: ${initError}`,
+					);
+					return;
+				}
+				openStoresByStandardKey[standardKey] = oneStore;
+				callback('', oneStore);
+			},
+		);
+	};
+};
 
 // NOTE (hub-fold design 2026-07-24): the hub derivation no longer lives here. It moved INTO the
 // forger (HUB_FORGE_BY_STANDARD + foldHubIntoNodeEdges), which folds each hub standard's hub into
@@ -238,13 +360,42 @@ const runCedsFidelityGate = ({ xLog, graphName, standardTokens, commandLineParam
 let materializeCounter = 0;
 const resolvedSchemaBlocksCounter = () => (materializeCounter += 1);
 
-const materializeSchemaBlocks = ({ xLog, replay, resolvedSchemaBlocks, manifestId, memberCount, standardTokens, commandLineParameters }, callback) => {
+const materializeSchemaBlocks = ({ xLog, replay, resolvedSchemaBlocks, manifestId, memberCount, standardTokens, commandLineParameters, fidelityGateRunner, storeResolver }, callback) => {
+	// ⟪R-P2-2⟫ the vector-store RESOLVER is REQUIRED here (both in-module callers supply it;
+	// the engine consults it only for ref-carrying nodes, so legacy inline blocks restore
+	// exactly as before). An absent resolver would restore a ref-style block into a graph
+	// whose nodes carry embeddingRef but NO embedding — a silently vector-less graph that
+	// every downstream cosine would search blind. Refused by name instead.
+	if (typeof storeResolver !== 'function') {
+		callback(
+			`materialize failed: a storeResolver is REQUIRED (the caller resolves ` +
+				`deps.vectorStoreResolver with the canonical-home resolver as its documented ` +
+				`default) — restoring ref-style blocks without one would materialize a graph ` +
+				`with no vectors and say nothing.`,
+		);
+		return;
+	}
+	// ⟪R-P2-1⟫ the fidelity gate arrives INJECTED (a function with runCedsFidelityGate's
+	// signature). Both in-module callers resolve it from deps with the REAL gate as the
+	// documented default, so production is byte-unchanged; the hermetic suites inject a
+	// SELF-ANNOUNCING stub (the real gate spawns `docker inspect` against a live container,
+	// which no hermetic double has — the wiring gap that silently broke test-build/test-replay
+	// from R-1's landing until 2026-08-03). An absent runner is REFUSED, never defaulted here:
+	// this function cannot know which caller forgot it.
+	if (typeof fidelityGateRunner !== 'function') {
+		callback(
+			`materialize failed: a fidelityGateRunner is REQUIRED (the caller resolves ` +
+				`deps.cedsFidelityGateRunner with the real R-1 gate as its documented default) — ` +
+				`an unstated gate would be indistinguishable from a passed one.`,
+		);
+		return;
+	}
 	replay.create({ purpose: 'materialize' }, (createError, goldEval) => {
 		if (createError) {
 			callback(`materialize failed: creating the eval golden: ${createError}`);
 			return;
 		}
-		replay.init({ inGraph: goldEval, schemaBlocks: resolvedSchemaBlocks }, (initError) => {
+		replay.init({ inGraph: goldEval, schemaBlocks: resolvedSchemaBlocks, storeResolver }, (initError) => {
 			if (initError) {
 				replay.delete(goldEval, (deleteErr) => {
 					callback(
@@ -259,7 +410,7 @@ const materializeSchemaBlocks = ({ xLog, replay, resolvedSchemaBlocks, manifestI
 			xLog.status(`  [materialize] -> ${goldEval.boltUrl}`);
 			// R-1: the product is not a product until it round-trips. The graph is NOT deleted on
 			// failure -- an operator needs to inspect the thing that failed.
-			runCedsFidelityGate(
+			fidelityGateRunner(
 				{
 					xLog,
 					graphName: goldEval.graphName,
@@ -526,6 +677,21 @@ const build = (recipe, deps, callback) => {
 	// overrides); null disables. The hermetic suites inject their own or omit them.
 	const judgmentCache = deps.judgmentCache || null;
 	const matchForensics = deps.matchForensics || null;
+	// ⟪R-P2-1, 2026-08-03⟫ the R-1 fidelity-gate SEAM: injectable via deps.cedsFidelityGateRunner,
+	// with the REAL gate as the documented default — the production path is byte-unchanged (same
+	// function, same refusals: missing ontology refuses, invention always fails). The hermetic
+	// suites inject a SELF-ANNOUNCING stub that prints its own [fidelity] HERMETIC STUB line —
+	// never a silent skip, which R-1's own doctrine forbids (a gate that quietly does not run is
+	// indistinguishable from one that passed). This seam existed nowhere from R-1's in-build
+	// landing (92aecda) until now, so every hermetic ceds-recipe build died at materialize on a
+	// `docker inspect` of a double's fake container.
+	const cedsFidelityGateRunner = deps.cedsFidelityGateRunner || runCedsFidelityGate;
+	// ⟪R-P2-2⟫ ONE vector-store resolver per build invocation (deps-injectable for tests; the
+	// documented default is the real canonical-home resolver). Harvest injects the resolved
+	// store per VECTORIZED standard; materialize hands the resolver to the restore path.
+	// Hermetic builds never reach it: the harvest side asks only when the forge report declares
+	// embeddingDims, and the restore side only consults it for ref-carrying nodes.
+	const vectorStoreResolver = deps.vectorStoreResolver || makeVectorStoreResolver();
 	// inferenceConfig carries the reranker llmClient for a real --rebridge. The real-vs-stub SELECTION lives in
 	// resolveInferenceConfig (the FACTORY seam): the suite injects a STUB via deps.inferenceConfig.llmClient; a
 	// real --rebridge with no injected client MINTS the real one, which throws BY NAME when no key resolves.
@@ -554,6 +720,22 @@ const build = (recipe, deps, callback) => {
 	const hubs = Array.isArray(recipe.hubs) ? recipe.hubs : [];
 	const bridges = Array.isArray(recipe.bridges) ? recipe.bridges : [];
 	const hubStdSet = new Set(hubs.map((h) => String(h.standard).toLowerCase()));
+
+	// ---- the build's report directory (hubReimplementation Phase 2, SPEC §5) ----
+	// ONE directory per build invocation under the canonical dataStores home (the actions.js
+	// documented-default precedent), named recipe + wall-clock start, created lazily by the
+	// first standard that has something to write. The hub prose-divergence and skip reports
+	// land here — the build orchestrator owns the build's log directory; the forger carries
+	// report DATA only and writes nothing.
+	const buildRunStamp = new Date()
+		.toISOString()
+		.replace(/[-:]/g, '')
+		.replace(/\..+$/, '')
+		.replace('T', '-');
+	const buildReportsDirPath = path.join(
+		BUILD_LOGS_DIR_PATH,
+		`${recipe.recipeName}_${buildRunStamp}`,
+	);
 
 	// PHASE A -> PHASE C carry (P2, implementationPlan_bridge_072426 §7). A bridge's relationship block
 	// name is version-keyed on BOTH endpoints with the REAL resolved versions the forge READ (the a4a0da2
@@ -640,6 +822,94 @@ const build = (recipe, deps, callback) => {
 			);
 		});
 
+		// ---- hub-fold reports (hubReimplementation Phase 2, SPEC §5) ----
+		// Present on the forge report ONLY when this standard's forge folded a hub. An EMPTY
+		// report is written explicitly (SPEC §5: "no report" must always mean "did not run").
+		taskList.push((args, next) => {
+			if (
+				args.forgeReport.hubDivergenceReport === undefined &&
+				args.forgeReport.hubSkipReport === undefined
+			) {
+				next('', args);
+				return;
+			}
+			// ⟪P2-review S-1⟫ the two reports are a PAIR from one fold; one without the other is
+			// a malformed forge report, refused BY NAME — not a JSON.stringify(undefined) crash
+			// inside the write callback.
+			if (
+				args.forgeReport.hubDivergenceReport === undefined ||
+				args.forgeReport.hubSkipReport === undefined
+			) {
+				next(
+					`build: the forge report for ${std.token} carries ` +
+						`${args.forgeReport.hubDivergenceReport === undefined ? 'NO hubDivergenceReport' : 'NO hubSkipReport'} ` +
+						`while its pair is present — the fold emits both together (explicit-empty when ` +
+						`empty), so half a pair is a malformed report, refused rather than half-written.`,
+				);
+				return;
+			}
+			fs.mkdir(buildReportsDirPath, { recursive: true }, (mkdirError) => {
+				if (mkdirError) {
+					next(
+						`build: cannot create the build report directory ` +
+							`'${buildReportsDirPath}': ${mkdirError.message}`,
+					);
+					return;
+				}
+				const divergenceReportPath = path.join(
+					buildReportsDirPath,
+					'cedsProseDivergence.json',
+				);
+				const skipReportPath = path.join(buildReportsDirPath, 'cedsHubSkipReport.json');
+				fs.writeFile(
+					divergenceReportPath,
+					JSON.stringify(args.forgeReport.hubDivergenceReport, null, '\t'),
+					(divergenceWriteError) => {
+						if (divergenceWriteError) {
+							next(
+								`build: cannot write '${divergenceReportPath}': ` +
+									`${divergenceWriteError.message}`,
+							);
+							return;
+						}
+						fs.writeFile(
+							skipReportPath,
+							JSON.stringify(args.forgeReport.hubSkipReport, null, '\t'),
+							(skipWriteError) => {
+								if (skipWriteError) {
+									next(
+										`build: cannot write '${skipReportPath}': ${skipWriteError.message}`,
+									);
+									return;
+								}
+								xLog.status(
+									`  [hubReports] ${args.forgeReport.hubDivergenceReport.length} ` +
+										`prose-divergence row(s) -> ${divergenceReportPath}; ` +
+										`${args.forgeReport.hubSkipReport.length} skip row(s) -> ${skipReportPath}`,
+								);
+								next('', args);
+							},
+						);
+					},
+				);
+			});
+		});
+
+		// ⟪P2-review S-2⟫ the heap gate fires BEFORE any container is provisioned, so an
+		// under-provisioned process refuses by name (with the --max-old-space-size remedy)
+		// instead of OOM-killing mid-load and stranding the scratch graph.
+		taskList.push((args, next) => {
+			const adequacy = resolveHeapAdequacy({
+				nodeCount: args.forgeReport.nodeEdges.nodes.length,
+				embeddingDims: args.forgeReport.nodeEdges.embeddingDims,
+			});
+			if (adequacy.error) {
+				next(adequacy.error);
+				return;
+			}
+			next('', args);
+		});
+
 		taskList.push((args, next) => {
 			replay.create({ purpose: 'forge' }, (err, workingGraph) => {
 				if (!err) {
@@ -667,11 +937,35 @@ const build = (recipe, deps, callback) => {
 			);
 		});
 
+		// ⟪R-P2-2⟫ resolve this standard's vector-store BEFORE the harvest, exactly when the block
+		// will carry vectors (the forge report's embeddingDims is the declaration). An un-vectorized
+		// build resolves nothing and creates no store file — hermetic runs never touch the canonical
+		// home. With the store injected, the harvested block carries per-node embeddingRefs and the
+		// raw vectors land in the sidecar, so the block text stays under the V8 string ceiling
+		// whatever the card population.
+		taskList.push((args, next) => {
+			if (
+				args.forgeReport.nodeEdges.embeddingDims === null ||
+				args.forgeReport.nodeEdges.embeddingDims === undefined
+			) {
+				next('', { ...args, standardVectorStore: undefined });
+				return;
+			}
+			vectorStoreResolver(std.token, (resolveError, standardVectorStore) => {
+				if (resolveError) {
+					next(`harvest standardBase ${std.token}: ${resolveError}`);
+					return;
+				}
+				next('', { ...args, standardVectorStore });
+			});
+		});
+
 		taskList.push((args, next) => {
 			replay.harvest(
 				{
 					inGraph: args.workingGraph,
 					selectionLabels: [BASE_GRAPH_LABEL],
+					vectorStore: args.standardVectorStore,
 					header: {
 						blockType: 'standardBase',
 						standardKey: std.token,
@@ -834,7 +1128,12 @@ const build = (recipe, deps, callback) => {
 				return;
 			}
 			const schemaBlocks = dependencyTokens.map((oneToken) => baseBlockByToken[oneToken].blockText);
-			replay.init({ inGraph: args.depGraph, schemaBlocks }, (err) =>
+			// ⟪P2-review M-1⟫ the dependency-graph restore carries the SAME resolver as the
+			// materialize leg: a bridge's dependency bases now arrive ref-style (every vectorized
+			// standard after R-P2-2), and a resolverless restore would hand the bridge a graph
+			// whose candidates carry no embedding — the exact path Phase 3's no-reembed contract
+			// (G-15) reads. The engine's M-2 refusal is the layer-owned backstop; this is the wire.
+			replay.init({ inGraph: args.depGraph, schemaBlocks, storeResolver: vectorStoreResolver }, (err) =>
 				next(err ? `restore deps ${pairLabel}: ${err}` : '', args),
 			);
 		});
@@ -1078,6 +1377,11 @@ const build = (recipe, deps, callback) => {
 					// R-1 needs to know whether CEDS is in this graph at all.
 					standardTokens: (recipe.standards || []).map((one) => one.token),
 					commandLineParameters: process.global && process.global.commandLineParameters,
+					// ⟪R-P2-1⟫ the injected-or-real fidelity gate, resolved once at the top of build()
+					fidelityGateRunner: cedsFidelityGateRunner,
+					// ⟪R-P2-2⟫ the same per-build resolver the harvest used — restore stamps each
+					// ref-carrying node's vector back onto its graph node
+					storeResolver: vectorStoreResolver,
 				},
 				callback,
 			);
@@ -1184,7 +1488,20 @@ const replay = ({ manifestRefId } = {}, deps = {}, callback) => {
 				return;
 			}
 			materializeSchemaBlocks(
-				{ xLog, replay: replayEngine, resolvedSchemaBlocks, manifestId, memberCount },
+				{
+					xLog,
+					replay: replayEngine,
+					resolvedSchemaBlocks,
+					manifestId,
+					memberCount,
+					// ⟪R-P2-1⟫ same seam as build(): injected runner or the real gate. (This path
+					// passes no standardTokens, so the real gate no-ops here exactly as before —
+					// the seam changes nothing about -replay's behavior.)
+					fidelityGateRunner: deps.cedsFidelityGateRunner || runCedsFidelityGate,
+					// ⟪R-P2-2⟫ a -replay of stored ref-style blocks resolves vectors from the same
+					// canonical home (deps-injectable for tests, real resolver by default)
+					storeResolver: deps.vectorStoreResolver || makeVectorStoreResolver(),
+				},
 				callback,
 			);
 		});
@@ -1208,3 +1525,6 @@ module.exports.rebridgeScopeIsActive = rebridgeScopeIsActive;
 // the real-vs-stub reranker SELECTION seam (P3b), exported so the factory choice is gated directly: a stub is
 // used when injected, a real client is minted (via the injected/default factory) for an active --rebridge.
 module.exports.resolveInferenceConfig = resolveInferenceConfig;
+// ⟪P2-review S-2⟫ the heap gate, exported as a static so its refusal is provable with an
+// injected limit — never by shrinking a real process's heap.
+module.exports.resolveHeapAdequacy = resolveHeapAdequacy;

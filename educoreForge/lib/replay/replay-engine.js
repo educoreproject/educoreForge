@@ -379,27 +379,66 @@ const shapeNode = (neoNode, header, emitEmbeddingRef) => {
 		if (emitEmbeddingRef) {
 			// EXTRACT-path embedding sidecar (PLAN §3.4): the persisted block carries the
 			// content-hash REF of the vector INPUT, not the base64 vector. The ref is a pure
-			// function of (embeddingModelVersion, searchText) via the shared addressing rule —
-			// identical to the forge decorator's key (F7). The raw vector + its determinants ride
-			// on non-serialized _sidecar* fields so harvestBlock can putVector them (F4);
-			// serializeNodeLine whitelists fields, so these never reach the block text.
-			const searchTextValue =
-				props.searchText !== undefined && props.searchText !== null
-					? `${neoToJs(props.searchText)}`
+			// function of (embeddingModelVersion, embed-input text) via the shared addressing
+			// rule — identical to the forge decorator's key (F7). The raw vector + its
+			// determinants ride on non-serialized _sidecar* fields so harvestBlock can putVector
+			// them (F4); serializeNodeLine whitelists fields, so these never reach the block text.
+			//
+			// ⟪R-P2-2, 2026-08-03⟫ WHICH property was embedded is FORMAT-VERSIONED PER NODE
+			// RECORD, because one folded block carries bases and hub cards together and they
+			// embed different properties. A record carrying `embedSourceProperty` DECLARES its
+			// embed input (hub cards declare 'embedText', stamped by the fold's embed pass); a
+			// record NOT carrying it is the ORIGINAL FORMAT and keeps the searchText behavior
+			// EXACTLY as it always was — a format discriminator, not a default. A DECLARED
+			// property that is absent/empty on the node is a refusal naming node and property;
+			// nothing is substituted.
+			const declaredSourcePropertyName =
+				props.embedSourceProperty !== undefined && props.embedSourceProperty !== null
+					? `${neoToJs(props.embedSourceProperty)}`
 					: null;
-			if (searchTextValue === null || searchTextValue.trim() === '') {
-				throw new Error(
-					`replay-engine.shapeNode: node '${stableId}' carries an embedding but no ` +
-						`searchText — cannot compute embeddingRef (the addressing input is missing)`,
-				);
+			let embedInputValue;
+			if (declaredSourcePropertyName !== null) {
+				if (declaredSourcePropertyName.trim() === '') {
+					throw new Error(
+						`replay-engine.shapeNode: node '${stableId}' declares an EMPTY ` +
+							`embedSourceProperty — a declaration must name a property; nothing is ` +
+							`substituted.`,
+					);
+				}
+				const declaredValue = props[declaredSourcePropertyName];
+				embedInputValue =
+					declaredValue !== undefined && declaredValue !== null
+						? `${neoToJs(declaredValue)}`
+						: null;
+				if (embedInputValue === null || embedInputValue.trim() === '') {
+					throw new Error(
+						`replay-engine.shapeNode: node '${stableId}' declares embedSourceProperty ` +
+							`'${declaredSourcePropertyName}' but carries no value under it — cannot ` +
+							`compute embeddingRef; a declared embed input that is absent is refused, ` +
+							`never substituted.`,
+					);
+				}
+			} else {
+				// ORIGINAL FORMAT — byte-identical behavior to the pre-R-P2-2 engine.
+				const searchTextValue =
+					props.searchText !== undefined && props.searchText !== null
+						? `${neoToJs(props.searchText)}`
+						: null;
+				if (searchTextValue === null || searchTextValue.trim() === '') {
+					throw new Error(
+						`replay-engine.shapeNode: node '${stableId}' carries an embedding but no ` +
+							`searchText — cannot compute embeddingRef (the addressing input is missing)`,
+					);
+				}
+				embedInputValue = searchTextValue;
 			}
 			node.embeddingRef = contentAddress.vectorIdForInput(
 				header.embeddingModelVersion,
-				searchTextValue,
+				embedInputValue,
 			);
 			node.embeddingModelVersion = header.embeddingModelVersion;
 			node._sidecarVector = props.embedding.map(neoToJs);
-			node._sidecarInputText = searchTextValue;
+			node._sidecarInputText = embedInputValue;
 		} else {
 			node.embedding = replayBlock.encodeEmbedding(props.embedding.map(neoToJs));
 			node.embeddingModelVersion = header.embeddingModelVersion;
@@ -521,8 +560,30 @@ const resolveNodeVectors = ({ nodes, storeResolver, header }, callback) => {
 		`${standardKey}${REF_KEY_SEP}${embeddingRef}`;
 
 	if (!storeResolver) {
-		// NO-OP path: strip the transient standardKey tag (set in replay()'s accumulation) so it
-		// never lingers, and leave inline embeddings exactly as the legacy read produced them.
+		// ⟪P2-review M-2⟫ NO RESOLVER is legal ONLY for legacy inline material. A node carrying
+		// embeddingRef without an inline embedding is REF-STYLE: its vector lives in the
+		// per-standard store, and proceeding without a resolver would merge it into the graph
+		// with no embedding and no trace (buildNodeRow does not persist the ref) — a silently
+		// blind graph every downstream cosine would search without noticing. The check IS the
+		// old-vs-ref format discriminator, in the R-P2-2 idiom: legacy inline manifests carry
+		// no refs and pass through exactly as they always did; a ref-style block without a
+		// resolver is refused naming the first offender.
+		const firstRefStyleNode = (nodes || []).find(
+			(oneNode) => oneNode.embeddingRef && !oneNode.embedding,
+		);
+		if (firstRefStyleNode) {
+			callback(
+				`replay-engine.resolveNodeVectors: REFUSED — node ` +
+					`'${firstRefStyleNode.stableId}' (standard ` +
+					`'${firstRefStyleNode._standardKey}') carries embeddingRef ` +
+					`'${firstRefStyleNode.embeddingRef}' with no inline embedding, and NO ` +
+					`storeResolver was supplied. A ref-style block requires a storeResolver; ` +
+					`restoring it without one would write a vectorless graph and say nothing.`,
+			);
+			return;
+		}
+		// legacy path: strip the transient standardKey tag (set in replay()'s accumulation) so
+		// it never lingers, and leave inline embeddings exactly as the legacy read produced them.
 		(nodes || []).forEach((oneNode) => {
 			delete oneNode._standardKey;
 		});

@@ -69,7 +69,10 @@ const contentAddress = require('../../../lib/content-address/content-address')()
 // ACTUAL output through the pipeline (not a placeholder), so it needs both, hermetically (pure, no
 // docker/voyage/db).
 const realReplayBlock = require('../../../lib/replay/replay-block')();
-const cedsHubForge = require('../../../forges/ceds/lib/referenceSubgraph');
+// Phase 2 of the hubReimplementation flipped the forger registry to cedsHubForge; the ground
+// truth here is the module the registry actually resolves (factory takes { hubVersion,
+// hubNamespace }; forgeHub is R7 callback-shaped).
+const cedsHubForge = require('../../../forges/ceds/lib/cedsHubForge');
 
 // The REAL standards-database + a throwaway sqlite file — used by ONE stage (MANIFEST PERSISTED)
 // that must prove a -build writes its manifest THROUGH to a store, not merely composes it. Every
@@ -376,8 +379,23 @@ const workingManifestEditor = (overrides) => ({ standardsDatabase } = {}) =>
 		overrides || {},
 	);
 
+// ⟪R-P2-1, 2026-08-03⟫ the SELF-ANNOUNCING hermetic double for the R-1 in-build fidelity gate.
+// The REAL gate (build.js runCedsFidelityGate, the production default) reaches a LIVE graph over
+// bolt via `docker inspect`, which no hermetic double provides — so from R-1's in-build landing
+// (92aecda) until this seam existed, every ceds-recipe stage here died at materialize. The stub
+// ANNOUNCES ITSELF in the captured xLog (asserted below), because a gate that quietly does not
+// run is indistinguishable from one that passed — the exact masking R-1's own doctrine forbids.
+const announcedFidelityGateStub = ({ xLog, graphName }, cb) => {
+	xLog.status(
+		`  [fidelity] HERMETIC STUB — R-1 NOT RUN for '${graphName}' (this suite has no live ` +
+			`graph; the production default is the real gate, byte-unchanged)`,
+	);
+	cb('');
+};
+
 // EVERY build in this suite goes through here, so no path can accidentally reach the real forger
 // (Voyage) or the real replayManager (Docker). Overrides merge on top of the safe default set.
+// The R-1 gate arrives as the self-announcing hermetic stub (⟪R-P2-1⟫ seam).
 const runBuildWith = (recipe, componentOverrides, callback) => {
 	const xLog = capturingXLog();
 	const standardsDatabase = standardsDatabaseDouble();
@@ -388,8 +406,15 @@ const runBuildWith = (recipe, componentOverrides, callback) => {
 		manifestEditor: workingManifestEditor(),
 		...(componentOverrides || {}),
 	};
-	buildLib.build(recipe, { xLog, standardsDatabase: standardsDatabase, components }, (err, result) =>
-		callback({ err, result, xLog, standardsDatabase }),
+	buildLib.build(
+		recipe,
+		{
+			xLog,
+			standardsDatabase: standardsDatabase,
+			components,
+			cedsFidelityGateRunner: announcedFidelityGateStub,
+		},
+		(err, result) => callback({ err, result, xLog, standardsDatabase }),
 	);
 };
 
@@ -550,6 +575,11 @@ const stageCedsLif = () => {
 		harness.section('cedsLif — two standards, one hub, one bridge');
 
 		harness.equal('build succeeds (no error)', err, '');
+		harness.match(
+			'the R-1 gate ran as the SELF-ANNOUNCING hermetic stub — visible in the output, never a silent skip (R-P2-1)',
+			xLog.text(),
+			/\[fidelity\] HERMETIC STUB — R-1 NOT RUN/,
+		);
 		harness.equal(
 			'memberCount is 3 (2 standardBase + 1 relationship) — the ceds hub FOLDS into its base block, not a 4th member',
 			result.memberCount,
@@ -796,7 +826,7 @@ const stageRebridgeWiring = () => {
 		const xLog = capturingXLog();
 		const standardsDatabase = standardsDatabaseDouble();
 		const components = { forger: workingForger(), replayManager: workingReplayManager(), bridgeMaker: captureBridgeMaker, manifestEditor: workingManifestEditor() };
-		buildLib.build(cedsCtdlRecipe, { xLog, standardsDatabase, components, ...extraDeps }, (err, result) => cb({ err, result }));
+		buildLib.build(cedsCtdlRecipe, { xLog, standardsDatabase, components, cedsFidelityGateRunner: announcedFidelityGateStub, ...extraDeps }, (err, result) => cb({ err, result }));
 	};
 
 	// scoped --rebridge WITH a stub llmClient injected: the build runs the (doubled) pre-pass path hermetically.
@@ -993,6 +1023,7 @@ const stageRealManifestEditor = () => {
 		{
 			xLog,
 			standardsDatabase: standardsDatabase,
+			cedsFidelityGateRunner: announcedFidelityGateStub,
 			components: {
 				forger: workingForger(),
 				replayManager: workingReplayManager(),
@@ -1075,33 +1106,51 @@ const syntheticCedsBaseNodeEdges = (() => {
 		toRef: { source: 'CEDS', id: toId },
 		properties: { provenanceTier: arr('structural') },
 	});
+	// the Phase-2 module (cedsHubForge) REFUSES a base with no DmeStandardRoot (sourceProvenance,
+	// SPEC §2) and refuses any tuple slot whose node lacks a uri (§1.4 provenance) — the fixture
+	// carries both so this stage stays about the FOLD-into-block path, not the refusals (which
+	// are proven in test-forger.js and the module's own suite).
 	return {
 		nodes: [
+			node('root:ceds', {
+				role: arr('DmeStandardRoot'),
+				standardKey: arr('ceds'),
+				snapshotKey: arr('testSnapshot'),
+				publishedVersion: arr('2'),
+				version: arr('2'),
+				sourceUrl: arr('https://example.test/ceds'),
+				uri: arr('https://example.test/ceds'),
+			}),
 			node('cls:assessment', {
 				role: arr('DmeClass'),
 				domainId: arr('C-Assessment'),
 				canonicalKey: arr('C-Assessment'),
 				name: arr('Assessment'),
+				uri: arr('https://example.test/ceds/cls/assessment'),
 			}),
 			node('prop:status', {
 				role: arr('DmeProperty'),
 				domainId: arr('C-Assessment'),
 				canonicalKey: arr('P-Status'),
 				name: arr('Assessment Status'),
+				uri: arr('https://example.test/ceds/prop/status'),
 			}),
 			node('os:status', {
 				role: arr('DmeOptionSet'),
 				rangeOptionSetId: arr('OS-Status'),
+				uri: arr('https://example.test/ceds/os/status'),
 			}),
 			node('ov:active', {
 				role: arr('DmeOptionValue'),
 				canonicalKey: arr('OV-Active'),
 				name: arr('Active'),
+				uri: arr('https://example.test/ceds/ov/active'),
 			}),
 			node('ov:closed', {
 				role: arr('DmeOptionValue'),
 				canonicalKey: arr('OV-Closed'),
 				name: arr('Closed'),
+				uri: arr('https://example.test/ceds/ov/closed'),
 			}),
 		],
 		edges: [
@@ -1120,37 +1169,48 @@ const syntheticCedsBaseNodeEdges = (() => {
 // through the orchestrator (the fold LOGIC itself is unit-proven in test-forger.js).
 const hubFoldingForger = (baseNodeEdges) => () => ({
 	forge: ({ standard, version, deriveHub }, cb) => {
-		let nodeEdges = baseNodeEdges;
+		const answerWith = (nodeEdges) =>
+			cb('', {
+				standard,
+				version,
+				// snapshot-provenance triple: this double simulates a source whose declared version equals the
+				// recipe token, so explicitVersionFrom yields `version` and it flows to subject/header/column.
+				snapshotKey: '01',
+				publishedVersion: version,
+				versionSource: 'spec',
+				nodeEdges,
+				nodeCount: nodeEdges.nodes.length,
+				edgeCount: nodeEdges.edges.length,
+				embedCallCount: 0,
+				// deliberately NO hubDivergenceReport/hubSkipReport on this double's report: build.js
+				// writes those to the real dataStores/buildLogs when present, and this suite is
+				// hermetic — the report-write path is not this stage's subject.
+			});
 		if (deriveHub) {
 			// the production forger routes the RESOLVED bundle version (what the bundle READ) to the hub,
 			// not the recipe token; this synthetic base stands in for a bundle read at `version`, so
 			// bundleVersion === version here (the ground-truth forgeHub above uses the same value).
-			const folded = foldHubIntoNodeEdges({
-				standard,
-				bundleVersion: version,
-				requestedVersion: version,
-				baseNodeEdges,
-				declaredEmbeddingDims: baseNodeEdges.embeddingDims,
-			});
-			if (folded.error) {
-				cb(folded.error);
-				return;
-			}
-			nodeEdges = folded.nodeEdges;
+			// No embedder handed in (hermetic): cards carry embedText only, exactly the
+			// --vectorize=false path.
+			foldHubIntoNodeEdges(
+				{
+					standard,
+					bundleVersion: version,
+					requestedVersion: version,
+					baseNodeEdges,
+					declaredEmbeddingDims: baseNodeEdges.embeddingDims,
+				},
+				(foldError, folded) => {
+					if (foldError) {
+						cb(foldError);
+						return;
+					}
+					answerWith(folded.nodeEdges);
+				},
+			);
+			return;
 		}
-		cb('', {
-			standard,
-			version,
-			// snapshot-provenance triple: this double simulates a source whose declared version equals the
-			// recipe token, so explicitVersionFrom yields `version` and it flows to subject/header/column.
-			snapshotKey: '01',
-			publishedVersion: version,
-			versionSource: 'spec',
-			nodeEdges,
-			nodeCount: nodeEdges.nodes.length,
-			edgeCount: nodeEdges.edges.length,
-			embedCallCount: 0,
-		});
+		answerWith(baseNodeEdges);
 	},
 });
 
@@ -1214,8 +1274,18 @@ const stageHubFoldedIntoBase = () => {
 	harness.section('HUB FOLDED INTO BASE — one [StandardBase] block carries base + hub, composed against the REAL editor');
 
 	// what forgeHub INDEPENDENTLY derives from the same synthetic base — the ground truth the folded
-	// block's hub set must reproduce (a base-only block would not).
-	const expected = cedsHubForge({ hubVersion: '2' }).forgeHub(syntheticCedsBaseNodeEdges);
+	// block's hub set must reproduce (a base-only block would not). Factory args come from the
+	// registry row (the namespace's ONE home); forgeHub calls back synchronously.
+	let expected;
+	cedsHubForge({
+		hubVersion: '2',
+		hubNamespace: forgerModule.HUB_FORGE_BY_STANDARD.ceds.hubNamespace,
+	}).forgeHub(syntheticCedsBaseNodeEdges, (expectedError, expectedResult) => {
+		if (expectedError) {
+			throw new Error(`ground-truth forgeHub refused: ${expectedError}`);
+		}
+		expected = expectedResult;
+	});
 	const baseNodeCount = syntheticCedsBaseNodeEdges.nodes.length;
 
 	const xLog = capturingXLog();
@@ -1231,6 +1301,7 @@ const stageHubFoldedIntoBase = () => {
 		{
 			xLog,
 			standardsDatabase,
+			cedsFidelityGateRunner: announcedFidelityGateStub,
 			components: {
 				forger: hubFoldingForger(syntheticCedsBaseNodeEdges),
 				replayManager: retainingReplayManager(),
@@ -1275,7 +1346,7 @@ const stageHubFoldedIntoBase = () => {
 				1,
 			);
 			harness.equal(
-				'  the block node total is base + derived hub (5 base + refs + definition)',
+				'  the block node total is base + derived hub (root + 5 base structural + refs + definition)',
 				block.nodes.length,
 				baseNodeCount + expected.counts.nodeTotal,
 			);
@@ -1723,6 +1794,7 @@ const stageManifestPersistedToStore = () => {
 				{
 					xLog: capturingXLog(),
 					standardsDatabase,
+					cedsFidelityGateRunner: announcedFidelityGateStub,
 					components: {
 						forger: workingForger(),
 						replayManager: workingReplayManager(),
@@ -1807,4 +1879,74 @@ const stageManifestPersistedToStore = () => {
 	});
 };
 
-stagePreflight();
+// =====================================================================
+// ⟪P2-review S-1/S-2⟫ seam guards — the report-pair refusal and the heap gate
+// =====================================================================
+const stageP2ReviewGuards = () => {
+	harness.section('P2-REVIEW GUARDS — report-pair refusal (S-1) and the heap gate (S-2)');
+
+	// S-2: the heap gate, proven with INJECTED limits (never by shrinking a real heap).
+	// RED first: the calibration case (119,805 nodes × 1024 dims) against the 8GB limit that
+	// really did OOM — the gate must refuse and name the remedy.
+	const heapRefusal = require('../lib/build').resolveHeapAdequacy({
+		nodeCount: 119805,
+		embeddingDims: 1024,
+		heapSizeLimitBytes: 8 * 1024 * 1024 * 1024,
+	});
+	harness.match(
+		'S-2 OBSERVED RED: the calibration load against an 8GB limit is refused naming --max-old-space-size',
+		heapRefusal.error || '',
+		/REFUSED before provisioning[\s\S]*--max-old-space-size=\d+/,
+	);
+	harness.ok(
+		'  GREEN: the same load passes a 32GB limit',
+		!require('../lib/build').resolveHeapAdequacy({
+			nodeCount: 119805,
+			embeddingDims: 1024,
+			heapSizeLimitBytes: 32 * 1024 * 1024 * 1024,
+		}).error,
+		'refused at 32GB',
+	);
+	harness.ok(
+		'  GREEN: an un-vectorized payload (embeddingDims null) is never heap-gated',
+		!require('../lib/build').resolveHeapAdequacy({
+			nodeCount: 119805,
+			embeddingDims: null,
+			heapSizeLimitBytes: 1024 * 1024,
+		}).error,
+		'gated an un-vectorized payload',
+	);
+
+	// S-1: a forge report carrying ONE hub report without its pair is refused by name —
+	// never a JSON.stringify(undefined) crash inside the write callback.
+	runBuildWith(
+		loadOrDie(goodRecipe('cedsLif')),
+		{
+			forger: workingForger({
+				forge: ({ standard, version }, cb) =>
+					cb('', {
+						standard,
+						version,
+						snapshotKey: '01',
+						publishedVersion: version,
+						versionSource: 'spec',
+						nodeEdges: { nodes: [], edges: [], embeddingDims: null },
+						nodeCount: 0,
+						edgeCount: 0,
+						embedCallCount: 0,
+						hubDivergenceReport: [], // present WITHOUT its pair — malformed by contract
+					}),
+			}),
+		},
+		({ err }) => {
+			harness.match(
+				'S-1 OBSERVED RED: a divergence report without its skip-report pair is refused by name',
+				err || '',
+				/NO hubSkipReport[\s\S]*half a pair is a malformed report/,
+			);
+			stagePreflight();
+		},
+	);
+};
+
+stageP2ReviewGuards();

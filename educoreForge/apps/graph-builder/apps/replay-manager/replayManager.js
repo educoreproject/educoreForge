@@ -638,7 +638,7 @@ const moduleFunction =
 	// which graph's credentials to use. It deliberately does NOT re-check ForgedNode labels,
 	// stableIds or provenance tiers: those live once, in the shared write path, and both entry
 	// points reach them there.
-	function restore({ inGraph, graphName, schemaBlocks, applyLabels }, callback) {
+	function restore({ inGraph, graphName, schemaBlocks, applyLabels, storeResolver }, callback) {
 		const { xLog } = process.global;
 
 		// applyLabels is REFUSED here, and this is a design decision rather than an omission. A
@@ -678,12 +678,18 @@ const moduleFunction =
 
 		// replay() owns its own driver and session and closes both on every path, so there is no
 		// session for this verb to manage — another reason the restoration branch stays thin.
+		// ⟪R-P2-2⟫ storeResolver rides through untouched: the engine's resolveNodeVectors uses it
+		// to stamp each ref-carrying node's vector back onto the graph node. Absent resolver is
+		// legal ONLY for legacy inline blocks (byte-compatible replay, exactly as before); a
+		// REF-STYLE block without one is REFUSED by the engine naming the first offender
+		// (⟪P2-review M-2⟫ — never a silently vectorless graph).
 		replayEngine.replay(
 			{
 				manifest: normalized.texts,
 				boltUri: inGraph.boltUrl,
 				password: inGraph.password,
 				graphName,
+				storeResolver,
 			},
 			(err, result) => {
 				if (err) {
@@ -737,7 +743,11 @@ const moduleFunction =
 		}
 
 		if (schemaBlocks !== undefined) {
-			restore({ inGraph, graphName, schemaBlocks, applyLabels }, callback);
+			// ⟪R-P2-2⟫ spec.storeResolver (optional) rides to the engine's vector-resolving
+			// restore path. Absent is legal only for legacy INLINE blocks (byte-compatible,
+			// exactly as before); the engine REFUSES a ref-style block without a resolver by
+			// name (⟪P2-review M-2⟫).
+			restore({ inGraph, graphName, schemaBlocks, applyLabels, storeResolver: (spec || {}).storeResolver }, callback);
 			return;
 		}
 
@@ -832,7 +842,12 @@ const moduleFunction =
 	// that it touches only scratch graphs, and reading a golden is not in its remit today.
 	const harvest = (spec, callback) => {
 		const { xLog } = process.global;
-		const { inGraph, selectionLabels, header } = spec || {};
+		// ⟪R-P2-2⟫ vectorStore (optional): the per-standard embedding sidecar. When supplied, the
+		// engine's shapeNode emits embeddingRef per vectored node (declared embed-input property,
+		// or the original searchText format) and persists raw vectors into the store — the block
+		// text carries refs, never half a gigabyte of inline base64. Absent = the legacy inline
+		// path, exactly as before.
+		const { inGraph, selectionLabels, header, vectorStore } = spec || {};
 
 		const graphName = inGraph && (inGraph.containerName || inGraph.graphName);
 		const refusal = nameRefusal(graphName, 'harvest');
@@ -863,6 +878,7 @@ const moduleFunction =
 				password: inGraph.password,
 				selector: { selectionLabels },
 				header,
+				vectorStore,
 			},
 			(err, result) => {
 				if (err) {

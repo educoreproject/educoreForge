@@ -234,11 +234,21 @@ standardsDatabaseModule.open({ databaseFilePath }, (openErr, standardsDatabase) 
 	}
 
 	// SEED: drive build() over doubles to populate blocks + manifests + manifestBlocks in the real store.
+	// ⟪R-P2-1⟫ the R-1 fidelity gate arrives as a SELF-ANNOUNCING hermetic stub: the real gate
+	// (the production default) reaches a live graph over bolt via docker inspect, which this
+	// suite's doubles do not provide. Announced, never silently skipped.
 	buildLib.build(
 		loadOrDie(goodRecipe('cedsLif')),
 		{
 			xLog: capturingXLog(),
 			standardsDatabase,
+			cedsFidelityGateRunner: ({ xLog, graphName }, gateDone) => {
+				xLog.status(
+					`  [fidelity] HERMETIC STUB — R-1 NOT RUN for '${graphName}' (no live graph ` +
+						`in this suite; the production default is the real gate, byte-unchanged)`,
+				);
+				gateDone('');
+			},
 			components: {
 				forger: seedForger(),
 				replayManager: seedReplayManager(),

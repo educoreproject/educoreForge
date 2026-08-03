@@ -2,6 +2,19 @@
 
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
+// =====================================================================================
+// TOMBSTONE (hubReimplementation Phase 2, 2026-08-03) — THIS MODULE IS RETIRED.
+// =====================================================================================
+// Superseded by forges/ceds/lib/cedsHubForge.js (SPEC-hubReimplementation-080326.md §1–§5);
+// the forger registry (apps/graph-builder/apps/forger/forger.js HUB_FORGE_BY_STANDARD) now
+// resolves 'ceds' to the replacement. Nothing below this comment is changed, and the module
+// REMAINS FULLY FUNCTIONAL BY DESIGN: gate G-P1 (incumbentParity, test-cedsHubForge.js)
+// imports and RUNS this module over the same base to prove signature-for-signature parity,
+// and its three suites (test-referenceSubgraph, test-hubTupleClosure,
+// test-hubReferenceCountDerived) stay in place and passing. Module and tests are DELETED
+// TOGETHER at Phase 5 (WORKORDER Phase 5), when the acceptance run is green.
+// =====================================================================================
+
 // referenceSubgraph.js — PURE, deterministic derivation of the HubReference reference subgraph
 // (Phase 3; WHITEPAPER §4.3/§4.6/§8, PLAN Phase 3). Input: the deserialized ADDRESSED CEDS hub block
 // ({nodes, edges} as returned by replay-block.deserializeBlock — properties are single-element PG-JSON

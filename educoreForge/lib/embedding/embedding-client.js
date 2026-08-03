@@ -347,7 +347,17 @@ const moduleFunction =
 						};
 
 						if (missTexts.length === 0) {
-							assemble();
+							// DEFERRED, deliberately (hubReimplementation Phase 2, 2026-08-03). With zero
+							// misses this path used to call assemble() IN-FRAME, making embedTexts complete
+							// synchronously on a warm cache while completing asynchronously on any miss (the
+							// provider HTTP call unwinds the stack). A caller running SERIAL batches through a
+							// callback pipe — the forge bundles' embedNodes pattern and the hub-card embed
+							// pass — therefore recursed one whole batch-chain deeper per fully-cached batch and
+							// blew the stack on the FIRST fully-cache-served run (observed: hub batch 320/740,
+							// RangeError, test-cedsHubBuildGates forge run 2 — unreachable before the cache was
+							// ever warm enough). setImmediate unwinds the stack between batches; the contract
+							// and result are byte-identical, only the completion tick moves.
+							setImmediate(assemble);
 							return;
 						}
 

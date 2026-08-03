@@ -65,7 +65,14 @@ const { ADDRESS_SIGNATURE_FIELD_ORDER, DME_ROLES, IN_HUB_EDGE_TYPE } = vocab;
 const CEDS_SOURCE_PATH = path.join(
 	__dirname, '..', 'assets', 'standardSourceData', '01', 'CEDS-Ontology.rdf',
 );
-const HUB_NAMESPACE = 'https://w3id.org/EDUcore/CEDStandards/hub/';
+// the namespace comes from its ONE declared home — the forger's hub registry row (Phase 2:
+// the registry is flipped and its hubNamespace field is the only place the URL lives). The
+// suite forging with the registry's value is the point: G-8's sentinel re-forge already
+// proves minting FLOWS from the factory argument, so what remains to pin is WHICH value
+// production passes — this one.
+const HUB_NAMESPACE = require(
+	path.join(__dirname, '..', '..', '..', 'apps', 'graph-builder', 'apps', 'forger', 'forger'),
+).HUB_FORGE_BY_STANDARD.ceds.hubNamespace;
 const DECLARATIONS_PATH = path.join(__dirname, '..', 'gates', 'hubGates.jsonc');
 const TEST_ARTIFACTS_DIR = path.join(__dirname, 'test-artifacts');
 const DIVERGENCE_REPORT_PATH = path.join(TEST_ARTIFACTS_DIR, 'cedsProseDivergence.json');
@@ -1523,9 +1530,20 @@ forgeCeds.forge(
 							harness.report();
 							return;
 						}
-						const declarations = loadResult.declarations;
+						// THIS SUITE JUDGES THE hub:-MEASURED DECLARATIONS ONLY (Phase 2). The
+						// declarations file also carries the BUILD-SCOPED family-B gates (G-7,
+						// G-13), whose build: measures are supplied by test-cedsHubBuildGates.js
+						// against the real forger seam — the harness reports any gate it is asked
+						// to judge without a supplied measure as UNMEASURED (a failure), so each
+						// runner evaluates exactly the declarations whose measures it computes.
+						const declarations = {
+							...loadResult.declarations,
+							gates: loadResult.declarations.gates.filter(
+								(oneGate) => oneGate.measure.indexOf('hub:') === 0,
+							),
+						};
 						harness.equal(
-							'fourteen card-local gates declared (11 spec + 3 family-P)',
+							'fourteen card-local gates declared (11 spec + 3 family-P; hub:-measured)',
 							declarations.gates.length,
 							14,
 						);
