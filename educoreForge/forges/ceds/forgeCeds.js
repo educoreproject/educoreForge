@@ -404,7 +404,7 @@ const moduleFunction =
 						isMetaVocabulary: true, // what gate D-2 selects on
 						sourceElementName: oneTerm.sourceElementName,
 						localName: oneTerm.localName,
-						// NO FALLBACK TO localName. The four FOREIGN declarations (rdf:Property,
+						// NEVER SUBSTITUTE localName. The four FOREIGN declarations (rdf:Property,
 						// rdfs:Class, owl:Class, owl:NamedIndividual) carry ONLY rdfs:isDefinedBy --
 						// the source gives them no label at all -- and synthesising one from the
 						// local name made the compiler emit 4 rdfs:label statements CEDS never

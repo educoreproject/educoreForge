@@ -1,0 +1,43 @@
+{
+  // cedsEdfiValueBlind — THE VALUE-TIER BLIND EVALUATION (hubReimplementation addendum, TQ-authorized
+  // 2026-08-03). CEDS(base + full tuple hub) + a BLINDED, 101-value Ed-Fi (snapshot 03), plus
+  // genericBridge judging the VALUE tier: bridges[].params.role = 'DmeOptionValue' — the ONE delta
+  // from cedsEdfiBlind's property-tier rig. The seam is real in both evaluation arms: recipe params
+  // spread into bridge config (build.js), genericBridge reads config.role for its role-scoped source
+  // walk; candidates are all HubReference tiers and targetKeyFor/referenceIndex resolve value-tier
+  // picks by the composite propertyKey|valueKey.
+  //
+  // WHY: the property-tier blind eval scored the rebuilt hub on the OLD system's most favorable
+  // terrain (informative names). 52% of CEDS option values carry no prose — the value tier is where
+  // meaning-bearing cards should differ most. Run once per arm: ARM A = pre-campaign worktree at
+  // 0ebd5b8; ARM B = HEAD. Same snapshot, same key, same scoring script (valueScore.js).
+  //
+  // THE BLIND IS AT THE SOURCE (snapshot 03): the 6 CEDS* descriptor columns PLUS both grading
+  // columns and Notes are EMPTY. The withheld answers live in dataStores/blindEval/valueAnswerKey.json.
+  // Requires forges/edfi/parserDescriptor.ini pinned to defaultSnapshot=03 — TEMPORARY, restore to
+  // 01 immediately after the forge, grep proof both times.
+  //
+  // DEV/TEMPORARY. Never a golden. Design of record:
+  // system/management/zNotesPlansDocs/DESIGN-valueTierBlindEval-080326.md
+  "schemaVersion": "1.0.0",
+  "recipeName": "cedsEdfiValueBlind",
+  "kind": "dev",
+  "description": "CEDS base + full-tuple hub + a BLINDED 101-value EdFi (snapshot 03) + genericBridge at role DmeOptionValue — the scored value-tier blind evaluation.",
+  "standards": [
+    { "token": "ceds", "version": "current" },
+    { "token": "edfi", "version": "current" }
+  ],
+  "hubs": [
+    { "standard": "ceds" }
+  ],
+  "bridges": [
+    {
+      "source": "edfi",
+      "hub": "ceds",
+      "bridge": "genericBridge",
+      "dependencies": ["edfi", "ceds"],
+      "cacheMode": "reuse",
+      "params": { "role": "DmeOptionValue" }
+    }
+  ]
+}

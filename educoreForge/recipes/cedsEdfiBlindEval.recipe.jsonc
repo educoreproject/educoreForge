@@ -1,0 +1,45 @@
+{
+  // cedsEdfiBlindEval — the TRUTH-SET RIG. CEDS(base + FULL tuple hub) + EdFi base, NO BRIDGE.
+  //
+  // ⟪TQ, 2026-08-02⟫ "It has fully qualified CEDS mappings built in. We could use it as a truth
+  // set to evaluate the bridge algorithm."
+  //
+  // Ed-Fi ships ~10,000 HUMAN-AUTHORED CEDS mappings with its own confidence grades:
+  //   EdFiEntityElementsToCEDS.csv     1,666 property-tier rows carrying the FULL tuple
+  //                                    (CEDSOntologyClassURI · PropertyURI · PropertyRangeIncludes)
+  //   EdFiEntityDescriptorsToCEDS.csv  8,310 value-tier rows, with OptionSetMatchConfidence and
+  //                                    ElementMatchConfidence scored SEPARATELY
+  //
+  // That is an answer key. It only became usable today: until the hub carried one card per
+  // DECLARED DOMAIN (2026-08-02, 2,324 -> 2,750 property-tier, 27,437 -> 91,825 value-tier) a
+  // full-tuple row had nowhere to land, because a property had exactly one card no matter how
+  // many contexts CEDS declared it in.
+  //
+  // WHY NO BRIDGE IN THIS RECIPE. The authored anchors are the ANSWER, not an input. Loading
+  // authoredAnchorBridge here and then testing against it would be marking our own homework in a
+  // different coat. This recipe loads the two bases and the hub and stops; the anchors are
+  // blinded in-graph afterwards, the inference bridge runs against the blinded graph, and the
+  // held-aside anchors are the score sheet.
+  //
+  // BLINDING IS NOT EDGE DELETION. Code fact (facetScan.js): the anchorMatch facet reads the
+  // SOURCE NODE'S OWN cedsId -- "source's AUTHORED cedsId == candidate's canonicalKey/cedsId" --
+  // and every match gets a slot "unconditional, exempt from the cap". Deleting mapping edges
+  // would leave that intact and hand the judge the answer with a guaranteed seat. The blinding
+  // moves the node property aside instead, and must also account for the fallback
+  // `cedsId || canonicalKey || propertyKey` -- nulling one field can move the leak one line down
+  // and look blind while it is not. VERIFY BEFORE SPENDING.
+  //
+  // DEV/TEMPORARY. ⟪TQ⟫ "it can't become permanent because we are working on a temporary graph."
+  "schemaVersion": "1.0.0",
+  "recipeName": "cedsEdfiBlindEval",
+  "kind": "dev",
+  "description": "CEDS base + full-tuple hub + EdFi base, NO bridge — the rig for a blind evaluation against Ed-Fi's authored crosswalk.",
+  "standards": [
+    { "token": "ceds", "version": "current" },
+    { "token": "edfi", "version": "current" }
+  ],
+  "hubs": [
+    { "standard": "ceds" }
+  ],
+  "bridges": []
+}
