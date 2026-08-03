@@ -11,8 +11,9 @@
 // been observed reports UNPROVEN, never PASS. An unmeasured gate is a failure, not a skip.
 //
 // THIS FILE DECLARES ONLY THE CARD-LOCAL GATES (Phase 1): G-1..G-6, G-8..G-12 plus the
-// family-P proof gates added at the Phase-1 back-gate (G-P1 incumbent parity — retires with
-// the incumbent at Phase 5; G-P2 edge targets; G-P3 forge totality) — everything runnable
+// family-P proof gates added at the Phase-1 back-gate (G-P2 edge targets; G-P3 forge
+// totality; G-P1 incumbent parity retired at Phase 5 with the module it measured —
+// see the campaign DEVLOG) — everything runnable
 // against the real parsed CEDS base with no graph, no build, no network. The
 // build-scoped gates (G-7 vectorPresent, G-13 determinism) and the bridge/evidence gates
 // (G-14, G-15, G-17) and the round-trip gate (G-16) arrive with Phases 2–3, where the
@@ -100,16 +101,10 @@
 
 		// -----------------------------------------------------------------------------
 		// FAMILY P — Phase-1 proof gates added at the supervisor's back-gate (adversarial
-		// review M-1/S-1/S-3). G-P1 exists ONLY while the incumbent referenceSubgraph.js
-		// still does: it is the ruling R-P1-1 made into a measured fact, and it RETIRES
-		// WITH THE INCUMBENT at Phase 5.
+		// review S-1/S-3). G-P1 (incumbent parity, review M-1) retired at Phase 5 together
+		// with the incumbent module it measured; its record lives in the campaign DEVLOG's
+		// Phase-1 remediation entry.
 		// -----------------------------------------------------------------------------
-		{
-			"id": "G-P1", "family": "P",
-			"contract": "incumbentParity (M-1, retires at Phase 5): the incumbent referenceSubgraph.js forged over the SAME base yields the SAME addressSignature set, the same tuple-key set, the same per-key ADDRESS fields, and the same tier counts — the only permitted deltas are the spec-mandated ones (no _id, no qualifier name suffix, URI stableIds, refusals).",
-			"measure": "hub:incumbentParityViolations", "comparator": "isEmpty", "expected": [],
-			"twin": "perturbOneSignatureVsIncumbent"
-		},
 		{
 			"id": "G-P2", "family": "P",
 			"contract": "edgeTargets (S-1): every card's HAS_CEDS_DOMAIN edge lands on the class its domainId names, PROPERTY on its property node, RANGE on its option set or range class, VALUE on its value node, QUALIFIER on each qualifier value node — and the edge total equals the per-card derivable expectation.",

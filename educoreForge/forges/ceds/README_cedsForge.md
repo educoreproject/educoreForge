@@ -22,12 +22,16 @@ filename, so the stamped version cannot drift from the file.
 ```bash
 cd .../educoreForge/system/code/educoreForge
 
-node apps/graph-builder/graphBuilder.js -build \
+node --max-old-space-size=24576 apps/graph-builder/graphBuilder.js -build \
   --recipePath=recipes/cedsHub.recipe.jsonc \
   --standardsDatabaseFilePath=<somewhere>/myTest.standardsDatabase.sqlite
 ```
 
-About four minutes. It forges, loads a fresh Docker graph, **and checks its own fidelity.**
+The heap flag is required for a vectorized hub build (94,602 embedded cards; an in-code
+heap gate refuses a load the process cannot hold and names this flag as the remedy). The
+first vectorized run embeds every card once (~7M tokens); every later run is served from
+the shared vector cache. It forges, loads a fresh Docker graph, **and checks its own
+fidelity.**
 Watch for:
 
 ```
@@ -52,6 +56,42 @@ node apps/graph-builder/graphBuilder.js -cedsGates --containerName=<name> \
 
 ---
 
+## The HubReference card (Layer 2)
+
+Forged by `lib/cedsHubForge.js` (2026-08, hubReimplementation campaign). It replaced the
+retired `referenceSubgraph.js`, which was deleted at the campaign's closeout after the new
+module proved signature-for-signature parity with it over the same base. One card = one
+addressable idea = one (domain · property [· value] [· qualifier]) tuple — **one card per
+declared domain** — and the card is self-sufficient: everything needed to embed, render,
+and judge it rides on the card. Five field groups:
+
+| group | carries |
+|---|---|
+| **ADDRESS** | ids only — hubName, hubVersion, referenceTier, domainId, propertyKey, exactly one range field (rangeDatatype \| rangeClassId \| rangeOptionSetId), valueKey (value tier), qualifierKeys[]. Prose never enters `addressSignature`: a CEDS wording fix churns zero ids |
+| **IDENTITY** | `addressSignature` · `uri` = `https://w3id.org/EDUcore/CEDStandards/hub/<version>/<addressSignature>`, minted from the HubDefinition's `namespace` (the one place the root lives) · `stableId` (= uri) · `canonicalKey` (P…/OV…) · `name` |
+| **MEANING** | every tuple slot's name AND prose: domainName/domainDefinition, propertyName/propertyDefinition (+ notation, dataType, textFormat as CEDS has them), range prose per shape, value prose, qualifierNames[] parallel to qualifierKeys[]. Absent stays absent — never `''` |
+| **PROVENANCE** | anchorUri, domainUri, propertyUri, rangeUri, valueUri — the CEDS term URIs of the slots |
+| **DERIVED** | `embedText` (the composed retrieval string, stored exactly as embedded) · `embedding` (1024-dim) · `embeddingModelVersion` |
+
+Vectors ride a **sidecar**, not the block text: the block carries an `embeddingRef` plus a
+per-node `embedSourceProperty` declaration (`embedText` on cards), and the raw vectors live
+in the per-standard store `dataStores/vectorStores/CEDS.sqlite3` (shared between producers
+by design — content-addressed, verify-on-read, first-write-wins). Materialize/replay stamps
+the vectors back onto the graph nodes, so readers see `embedding` as an ordinary property —
+and block identity is embedding-excluded by design. A deployment that transports the
+standardsDatabase must transport `CEDS.sqlite3` beside it.
+
+Exactly one `HubDefinition` card anchors the hub (namespace authority, slotProfile,
+sourceProvenance). Every card's `IN_HUB` edge targets it, and the five `HAS_CEDS_*`
+decomposition edges land on the exact base nodes the card's address names.
+
+The proof lives in `test/test-cedsHubForge.js` — 13 card-local gates declared as data in
+`gates/hubGates.jsonc`, every one with a fault-injection twin observed red in the suite's
+own output — plus the build-scoped gates (vectors present, two-forge determinism) in
+`test/test-cedsHubBuildGates.js`.
+
+---
+
 ## The other documents, and when you need them
 
 | read this | when |
@@ -70,11 +110,11 @@ node apps/graph-builder/graphBuilder.js -cedsGates --containerName=<name> \
 ignores it: emitting a HubReference into RDF would *invent* a statement CEDS never made.
 
 So "zero lost, zero invented" is a claim about the **representation**, not about the
-**matching index**. Measured 2026-08-02: CEDS declares **2,750** domain-tuples across 2,324
-properties, and there are **2,351** property-tier hub cards — roughly 400 declared contexts
-have no card, with a larger corresponding gap at the value tier. That is a known open item,
-not a defect in this bundle, and it is a projection problem: Layer 1 now carries every domain
-declaration, so the cards can be derived without re-parsing anything.
+**matching index**. The matching index carries its own proof instead: the hub gate suite
+derives the expected tuple population from the base and asserts closure — 2,750 property
+tuples + 91,825 value triples + 27 qualified tuples = **94,602 cards**, one per declared
+domain. (The 2026-08-02 measurement of "roughly 400 declared contexts have no card" was
+closed by the hubReimplementation campaign.)
 
 **The build-failure path end to end.** The fidelity gate's decision is proven 26 ways
 (`lib/ceds-fidelity-judgment/test/`), and its passing path has been observed on a real build.

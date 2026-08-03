@@ -54,10 +54,6 @@ const xLog = process.global.xLog;
 
 const forgeCeds = require('../forgeCeds')({});
 const cedsHubForgeFactory = require('../lib/cedsHubForge');
-// the INCUMBENT — G-P1's comparator (M-1): parity is proven against the module this one
-// replaces, not against a same-author mirror. The require (and the gate) retire with the
-// incumbent at Phase 5.
-const referenceSubgraphFactory = require('../lib/referenceSubgraph');
 const gatesLib = require('../lib/roundTripGates')();
 const vocab = require(path.join(__dirname, '..', '..', '..', 'lib', 'vocabulary', 'vocabulary'));
 const { ADDRESS_SIGNATURE_FIELD_ORDER, DME_ROLES, IN_HUB_EDGE_TYPE } = vocab;
@@ -750,85 +746,9 @@ const computeRangeXorViolations = ({ cards }) => {
 	return violations;
 };
 
-// =====================================================================================
-// G-P1 (M-1) — INCUMBENT PARITY. The comparator is referenceSubgraph.js itself, run over
-// the same base: signature sets, tuple-key sets, per-key ADDRESS fields, tier counts.
-// =====================================================================================
+// G-P1 (incumbent parity) retired at Phase 5 WITH the incumbent it measured — its record
+// is the campaign DEVLOG's Phase-1 remediation entry.
 const VIOLATION_HARD_CAP = 200;
-const computeIncumbentParityViolations = ({
-	myCards,
-	myCounts,
-	incumbentCards,
-	incumbentCounts,
-}) => {
-	const violations = [];
-	const capped = () => violations.length >= VIOLATION_HARD_CAP;
-	const myCardByTupleKey = {};
-	myCards.forEach((oneCard) => {
-		myCardByTupleKey[closureKeyOfCard(oneCard)] = oneCard;
-	});
-	const incumbentCardByTupleKey = {};
-	incumbentCards.forEach((oneCard) => {
-		incumbentCardByTupleKey[closureKeyOfCard(oneCard)] = oneCard;
-	});
-	Object.keys(myCardByTupleKey).forEach((oneTupleKey) => {
-		if (capped()) {
-			return;
-		}
-		if (!incumbentCardByTupleKey[oneTupleKey]) {
-			violations.push(`tuple only in the NEW hub: ${oneTupleKey}`);
-		}
-	});
-	Object.keys(incumbentCardByTupleKey).forEach((oneTupleKey) => {
-		if (capped()) {
-			return;
-		}
-		const incumbentProps = incumbentCardByTupleKey[oneTupleKey].properties;
-		const myCard = myCardByTupleKey[oneTupleKey];
-		if (!myCard) {
-			violations.push(`tuple only in the INCUMBENT hub: ${oneTupleKey}`);
-			return;
-		}
-		const myProps = myCard.properties;
-		if (myProps.addressSignature !== incumbentProps.addressSignature) {
-			violations.push(
-				`${oneTupleKey}: addressSignature differs from the incumbent's — R-P1-1 parity broken`,
-			);
-		}
-		[
-			'domainId',
-			'propertyKey',
-			'referenceTier',
-			'canonicalKey',
-			'valueKey',
-			'rangeOptionSetId',
-			'rangeClassId',
-			'rangeDatatype',
-		].forEach((oneAddressField) => {
-			if (myProps[oneAddressField] !== incumbentProps[oneAddressField]) {
-				violations.push(
-					`${oneTupleKey}: ADDRESS field '${oneAddressField}' differs — ` +
-						`new ${JSON.stringify(myProps[oneAddressField])} vs incumbent ` +
-						`${JSON.stringify(incumbentProps[oneAddressField])}`,
-				);
-			}
-		});
-		const myQualifierKeys = (myProps.qualifierKeys || []).join(',');
-		const incumbentQualifierKeys = (incumbentProps.qualifierKeys || []).join(',');
-		if (myQualifierKeys !== incumbentQualifierKeys) {
-			violations.push(`${oneTupleKey}: qualifierKeys differ from the incumbent's`);
-		}
-	});
-	['propertyTier', 'valueTier', 'qualified'].forEach((oneTierName) => {
-		if (myCounts[oneTierName] !== incumbentCounts[oneTierName]) {
-			violations.push(
-				`${oneTierName} count ${myCounts[oneTierName]} != incumbent ` +
-					`${incumbentCounts[oneTierName]}`,
-			);
-		}
-	});
-	return violations;
-};
 
 // =====================================================================================
 // G-P2 (S-1) — DECOMPOSITION-EDGE TARGETS, per card, plus the derivable edge total.
@@ -1090,15 +1010,6 @@ forgeCeds.forge(
 					classByDomainId,
 				};
 
-				// ---- G-P1 (M-1): the INCUMBENT forged over the same base, synchronously ----
-				const incumbentHub = referenceSubgraphFactory({ hubVersion }).forgeHub({
-					nodes: base.nodes,
-					edges: base.edges,
-				});
-				const incumbentCards = incumbentHub.nodes.filter(
-					(oneNode) => oneNode.role === 'HubReference',
-				);
-
 				// ---- M-2: sentinel-namespace probe results land here (filled before the
 				//      measurement bundle is built) ----
 				const SENTINEL_NAMESPACE = 'https://sentinel.example/hub/';
@@ -1184,12 +1095,6 @@ forgeCeds.forge(
 							}),
 							vestigialFieldViolations: computeVestigialViolations({ cards }),
 							rangeXorViolations: computeRangeXorViolations({ cards }),
-							incumbentParityViolations: computeIncumbentParityViolations({
-								myCards: cards,
-								myCounts: hub.counts,
-								incumbentCards,
-								incumbentCounts: incumbentHub.counts,
-							}),
 							edgeTargetViolations: computeEdgeTargetViolations({
 								cards,
 								hubEdges: hub.edges,
@@ -1409,24 +1314,6 @@ forgeCeds.forge(
 								capViolationList(computeVestigialViolations({ cards: corruptedCards })),
 							);
 						},
-						perturbOneSignatureVsIncumbent: ({ measurements: pristine }) => {
-							const corruptedCards = cardsWithReplacedFirst({
-								...cards[0].properties,
-								addressSignature: `${cards[0].properties.addressSignature}0PERTURBED`,
-							});
-							return withCorruptedHubMeasure(
-								pristine,
-								'incumbentParityViolations',
-								capViolationList(
-									computeIncumbentParityViolations({
-										myCards: corruptedCards,
-										myCounts: hub.counts,
-										incumbentCards,
-										incumbentCounts: incumbentHub.counts,
-									}),
-								),
-							);
-						},
 						retargetOneDomainEdge: ({ measurements: pristine }) => {
 							const firstDomainEdgeIndex = hub.edges.findIndex(
 								(oneEdge) => oneEdge.type === 'HAS_CEDS_DOMAIN',
@@ -1543,9 +1430,9 @@ forgeCeds.forge(
 							),
 						};
 						harness.equal(
-							'fourteen card-local gates declared (11 spec + 3 family-P; hub:-measured)',
+							'thirteen card-local gates declared (11 spec + 2 family-P; hub:-measured)',
 							declarations.gates.length,
-							14,
+							13,
 						);
 
 						gatesLib.runTwins(
