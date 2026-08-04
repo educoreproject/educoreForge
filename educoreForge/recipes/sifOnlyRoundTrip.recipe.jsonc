@@ -1,0 +1,26 @@
+{
+  // sifOnlyRoundTrip - sifOnly PLUS the RT-13 round-trip stage: forge sif alone, materialize, then
+  // run its DECLARED roundTripValidator against the product graph and land the verdict with the
+  // build outputs. This is forge-sif's CERTIFICATION recipe (Phase 3 closeout): the build that
+  // proves the ACTIVE declaration in forges/sif/parserDescriptor.ini reaches a real verdict
+  // through the ordinary builder path, with -goldEvalCheck PASS on the run directory as the
+  // campaign's one-command proof. sifOnly.recipe.jsonc remains the stage-off sibling.
+  //
+  // Expect inventedTotal 0 (the doctrine's hard line, RT-6) and lostTotal 15,458 — the ONE named
+  // enrichment-backlog label `fieldCharacteristics` (the TSV Characteristics column reaches
+  // lib/parser.js but forgeSif's scalar map omits it, so the graph cannot carry it) — so
+  // roundTripClean is honestly false until that enrichment lands.
+  //
+  // SCALE, reported not assumed (doctrine RT-7 / amendment A8, raised by this campaign): SIF is
+  // the fleet's largest corpus — 97,888 source statements including 28,615 precedence pairs across
+  // 7,279 groups — and the validator costs roughly 1.2 s of wall clock at 400 MB RSS. There is no
+  // performance argument for leaving this stage off.
+  "schemaVersion": "1.0.0",
+  "recipeName": "sifOnlyRoundTrip",
+  "kind": "dev",
+  "description": "Forge the sif standard base and round-trip-validate the materialized product (RT-13 stage, campaign certification).",
+  "roundTripStage": true,
+  "standards": [ { "token": "sif", "version": "current" } ],
+  "hubs": [],
+  "bridges": []
+}

@@ -84,54 +84,133 @@ const stageRealCensus = (done) => {
 		.map((oneEntry) => oneEntry.name)
 		.filter((oneName) => fs.existsSync(path.join(forgesDirPath, oneName, 'parserDescriptor.ini')))
 		.sort();
-	harness.equal('the tree holds 18 forge bundles (descriptor-carrying)', allBundleTokens.length, 18);
+
+	// ---------------------------------------------------------------------------------------
+	// WHY THE EXPECTATIONS BELOW ARE DERIVED AND NOT WRITTEN DOWN (forge-sif Phase 3, 2026-08-04,
+	// AMBER_TOWER-authorized as a NAMED EXCEPTION to that campaign's bundle-local scope guard).
+	//
+	// This stage used to assert a FROZEN CENSUS — "exactly TWO bundles declare: edfi + pesc",
+	// "SIXTEEN are absent" — which was true on the day forge-edfi Phase 4 wrote it and false the
+	// moment any other bundle declared. forge-sif's declaration turned it red in three places,
+	// and the campaign that caused the red was forbidden by its own scope guard from fixing it:
+	// a gate whose correct response is "edit me" without saying so. Bumping the three literals
+	// would only re-arm the trap for the next bundle, so the assertion is rewritten to state the
+	// INVARIANT instead of the snapshot.
+	//
+	// The invariant: composeValidatorRoster's classification MATCHES a second, independent read
+	// of the same descriptors, name for name, in both directions. Independence is the whole
+	// point and it is real — this reader scans the descriptor's OWN BYTES for a
+	// `roundTripValidator=` line, while the roster reaches its answer through resolveBundle and
+	// qtools-config-file-processor. Deriving the expectation from composeValidatorRoster itself
+	// would be a tautology that passes forever and proves nothing.
+	//
+	// This is the two-readers lesson stated in this file's header, finally applied to the census
+	// the header was talking about: an inherited census is a hypothesis until a second
+	// independent reader confirms it — and a census written down in a literal is inherited from
+	// the day it was typed.
+	// ---------------------------------------------------------------------------------------
+	const readDescriptorFieldFromBytes = ({ standardToken, fieldName }) => {
+		const descriptorLines = fs
+			.readFileSync(path.join(forgesDirPath, standardToken, 'parserDescriptor.ini'), 'utf8')
+			.split('\n');
+		const declaringLine = descriptorLines.find(
+			(oneLine) => oneLine.trim().indexOf(`${fieldName}=`) === 0,
+		);
+		return declaringLine === undefined
+			? undefined
+			: declaringLine.trim().slice(`${fieldName}=`.length).trim();
+	};
+
+	const independentlyDeclaredTokens = allBundleTokens
+		.filter(
+			(oneToken) =>
+				readDescriptorFieldFromBytes({
+					standardToken: oneToken,
+					fieldName: 'roundTripValidator',
+				}) !== undefined,
+		)
+		.sort();
+	const independentlyAbsentTokens = allBundleTokens
+		.filter((oneToken) => !independentlyDeclaredTokens.includes(oneToken))
+		.sort();
+
+	// The FILTER RULE is what deserves a stated expectation, not the population it currently
+	// selects: a directory without a descriptor is not a bundle, and the reference implementation
+	// is. Both stay true as the fleet declares.
+	harness.ok(
+		'forges/bridges carries no parserDescriptor.ini and is therefore NOT a bundle',
+		!allBundleTokens.includes('bridges'),
+		allBundleTokens.join(','),
+	);
+	harness.ok(
+		'the reference implementation (ceds) IS among the descriptor-carrying bundles',
+		allBundleTokens.includes('ceds'),
+		allBundleTokens.join(','),
+	);
+	harness.ok(
+		`the tree holds ${allBundleTokens.length} descriptor-carrying forge bundles (reported, not frozen)`,
+		allBundleTokens.length > 0,
+		`${allBundleTokens.length}`,
+	);
 
 	roundTripStageLib.composeValidatorRoster(
 		{ standardTokens: allBundleTokens, bundleResolver: realResolveBundle },
 		(rosterError, roster) => {
 			harness.equal('the full-corpus roster composes without refusal', rosterError, '');
 			harness.equal(
-				'exactly TWO bundles declare a roundTripValidator: edfi + pesc',
+				`the DECLARED set matches the independent descriptor read, name for name ` +
+					`(${independentlyDeclaredTokens.length} today: ${independentlyDeclaredTokens.join(', ')})`,
 				roster.declaredTokens.sort().join(','),
-				'edfi,pesc',
+				independentlyDeclaredTokens.join(','),
 			);
 			harness.equal(
-				'SIXTEEN bundles are declared-ABSENT (the big-bang backlog), each named',
-				roster.absentTokens.length,
-				16,
+				`the declared-ABSENT set is the bundle set minus the declared set, name for name ` +
+					`(${independentlyAbsentTokens.length} today — the big-bang backlog)`,
+				roster.absentTokens.sort().join(','),
+				independentlyAbsentTokens.join(','),
 			);
-			harness.ok(
-				'  the absent set is the bundle set minus the declared set, name for name',
-				roster.absentTokens.sort().join(',') ===
-					allBundleTokens.filter((oneToken) => !['edfi', 'pesc'].includes(oneToken)).join(','),
-				roster.absentTokens.join(','),
+			// The reconciliation A8 asks of every count check: state the two sides and prove the
+			// rows account for the tokens. Without this, a classifier that silently dropped a
+			// bundle would still satisfy both set comparisons above.
+			harness.equal(
+				`declared + absent + unresolvable reconciles against the tokens examined ` +
+					`(${roster.declaredTokens.length} + ${roster.absentTokens.length} + ` +
+					`${roster.unresolvableTokens.length} vs ${allBundleTokens.length})`,
+				roster.declaredTokens.length +
+					roster.absentTokens.length +
+					roster.unresolvableTokens.length,
+				allBundleTokens.length,
 			);
-			const edfiRow = roster.rosterRows.find((oneRow) => oneRow.token === 'edfi');
-			const pescRow = roster.rosterRows.find((oneRow) => oneRow.token === 'pesc');
-			harness.ok(
-				"edfi's validatorApi.validate is a function (the declaration loads)",
-				typeof edfiRow.validatorApi.validate === 'function',
+			harness.equal(
+				'every descriptor-carrying bundle resolves (unresolvableTokens is empty)',
+				roster.unresolvableTokens.join(','),
+				'',
 			);
-			harness.ok(
-				"pesc's validatorApi.validate is a function (both export styles served by ONE loader)",
-				typeof pescRow.validatorApi.validate === 'function',
-			);
-			// 04 since the forge-edfi Phase 5 closeout: this assertion read 01 while the Phase 4->5
-			// transitional window was open (entryModule pinned the incumbent forge, defaultSnapshot
-			// its snapshot, and a stage-ON edfi build refused honestly at snapshot intake). The
-			// closeout flipped both pins together and removed snapshots 01-03 with the incumbent, so
-			// the composer now resolves 04. What is asserted is unchanged: the roster row's
-			// snapshotDirPath is whatever the DESCRIPTOR pins, read from the descriptor, never guessed.
-			harness.match(
-				"edfi's snapshotPath is the PINNED version directory (04 — the post-closeout pin)",
-				edfiRow.snapshotDirPath,
-				/forges\/edfi\/assets\/standardSourceData\/04$/,
-			);
-			harness.match(
-				"pesc's snapshotPath is its pinned version directory",
-				pescRow.snapshotDirPath,
-				/forges\/pesc\/assets\/standardSourceData\/01$/,
-			);
+
+			// EVERY declared bundle is held to the contract, not a named pair. As bundles declare,
+			// this stage gets stronger without anyone editing it — which is the property the frozen
+			// census did not have. The snapshotDirPath check reads each descriptor's OWN pin from
+			// the bytes, so it also survives a pin flip (forge-edfi's 01 -> 04 at its Phase 5
+			// closeout would have needed no edit here).
+			roster.rosterRows
+				.filter((oneRow) => oneRow.disposition === 'declared')
+				.forEach((oneRow) => {
+					harness.ok(
+						`  ${oneRow.token}: validatorApi.validate is a function (the declaration loads)`,
+						typeof oneRow.validatorApi.validate === 'function',
+					);
+					const pinnedSnapshot = readDescriptorFieldFromBytes({
+						standardToken: oneRow.token,
+						fieldName: 'defaultSnapshot',
+					});
+					harness.ok(
+						`  ${oneRow.token}: snapshotPath is the version directory its OWN descriptor pins ` +
+							`(${pinnedSnapshot})`,
+						oneRow.snapshotDirPath ===
+							path.join(forgesDirPath, oneRow.token, 'assets/standardSourceData', pinnedSnapshot),
+						oneRow.snapshotDirPath,
+					);
+				});
 			done();
 		},
 	);
