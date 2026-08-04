@@ -89,6 +89,13 @@ const vectorStoreModule = require(
 // it would name a file that does not exist.
 const { resolveBundle: resolveForgeBundle } = require(path.join(__dirname, '..', 'apps', 'forger'));
 
+// ⟪RT-13, forge-edfi Phase 4⟫ the round-trip stage: roster composition from parserDescriptor
+// declarations + the post-materialization validator run (doctrine §7; R-WO-16..21). The runner
+// is a SEAM with the real one as its documented default (the R-P2-1 fidelity-gate idiom):
+// hermetic suites inject a SELF-ANNOUNCING stub so no test build writes into the canonical
+// buildLogs home — never a silent skip.
+const roundTripStageLib = require('./round-trip-stage')();
+
 // ⟪P2-review S-2⟫ resolveHeapAdequacy — refuse a vectorized load the process heap cannot
 // hold BEFORE a container is provisioned, naming the remedy. The engine-side JSON.stringify
 // in the LOAD path makes a vectorized build's heap appetite a large multiple of the raw
@@ -360,7 +367,7 @@ const runCedsFidelityGate = ({ xLog, graphName, standardTokens, commandLineParam
 let materializeCounter = 0;
 const resolvedSchemaBlocksCounter = () => (materializeCounter += 1);
 
-const materializeSchemaBlocks = ({ xLog, replay, resolvedSchemaBlocks, manifestId, memberCount, standardTokens, commandLineParameters, fidelityGateRunner, storeResolver }, callback) => {
+const materializeSchemaBlocks = ({ xLog, replay, resolvedSchemaBlocks, manifestId, memberCount, standardTokens, commandLineParameters, fidelityGateRunner, storeResolver, roundTripStageRunner, roundTripStageSpec }, callback) => {
 	// ⟪R-P2-2⟫ the vector-store RESOLVER is REQUIRED here (both in-module callers supply it;
 	// the engine consults it only for ref-carrying nodes, so legacy inline blocks restore
 	// exactly as before). An absent resolver would restore a ref-style block into a graph
@@ -387,6 +394,20 @@ const materializeSchemaBlocks = ({ xLog, replay, resolvedSchemaBlocks, manifestI
 			`materialize failed: a fidelityGateRunner is REQUIRED (the caller resolves ` +
 				`deps.cedsFidelityGateRunner with the real R-1 gate as its documented default) — ` +
 				`an unstated gate would be indistinguishable from a passed one.`,
+		);
+		return;
+	}
+	// ⟪RT-13⟫ the round-trip stage arrives INJECTED with an explicit spec, same discipline as
+	// the fidelity gate: both in-module callers supply runner + spec (-build composes a 'build'
+	// spec from the recipe and the descriptor roster; -replay passes 'replayNotApplicable', a
+	// VISIBLE non-run per R-WO-19). Absence is REFUSED, never defaulted — a skipped stage must
+	// be indistinguishable from nothing, and it is the runner that makes every disposition loud.
+	if (typeof roundTripStageRunner !== 'function' || !roundTripStageSpec) {
+		callback(
+			`materialize failed: a roundTripStageRunner AND a roundTripStageSpec are REQUIRED ` +
+				`(build composes the stage spec from the recipe; replay passes ` +
+				`'replayNotApplicable') — an unstated round-trip stage would be indistinguishable ` +
+				`from a run one (RT-13.3).`,
 		);
 		return;
 	}
@@ -422,8 +443,33 @@ const materializeSchemaBlocks = ({ xLog, replay, resolvedSchemaBlocks, manifestI
 						callback(fidelityError);
 						return;
 					}
-					// NOT deleted — this graph is the product.
-					callback('', { manifestId, boltUrl: goldEval.boltUrl, memberCount });
+					// ⟪RT-13.2⟫ the round-trip stage — the LAST act before success, against the
+					// finished product over bolt. Every schema block is already content-addressed
+					// and persisted; the stage holds no write channel to any build artifact (its
+					// writes are confined to the stage output directory). On stage failure the
+					// graph is NOT deleted — same posture as R-1: an operator needs to inspect
+					// the thing that failed.
+					roundTripStageRunner(
+						{ stageSpec: roundTripStageSpec, containerHandle: goldEval, xLog },
+						(roundTripStageError, roundTripStageReport) => {
+							if (roundTripStageError) {
+								callback(roundTripStageError);
+								return;
+							}
+							// NOT deleted — this graph is the product. roundTripSummaryPath rides
+							// the result only when the stage wrote a summary (a -replay's visible
+							// non-run writes nothing), so the -goldEvalCheck evidence is findable
+							// from the build report itself.
+							callback('', {
+								manifestId,
+								boltUrl: goldEval.boltUrl,
+								memberCount,
+								...(roundTripStageReport && roundTripStageReport.summaryFilePath
+									? { roundTripSummaryPath: roundTripStageReport.summaryFilePath }
+									: {}),
+							});
+						},
+					);
 				},
 			);
 		});
@@ -686,6 +732,33 @@ const build = (recipe, deps, callback) => {
 	// landing (92aecda) until now, so every hermetic ceds-recipe build died at materialize on a
 	// `docker inspect` of a double's fake container.
 	const cedsFidelityGateRunner = deps.cedsFidelityGateRunner || runCedsFidelityGate;
+	// ⟪RT-13.4 / R-WO-17⟫ the recipe's stage opt-in. roundTripStage is a legitimately-optional
+	// boolean with a DOCUMENTED default of false during the big-bang retrofit (stated in -help;
+	// doctrine §7.4 grants recipes the DEV choice) — and the default is never SILENT: the stage
+	// runner prints the disposition line on every build. The guard lives here as well as in the
+	// recipe schema because build() is reachable with a recipe object that never went through
+	// validateRecipe (the test seam); a supplied-but-non-boolean value is refused by name, never
+	// corrected.
+	if (recipe.roundTripStage !== undefined && typeof recipe.roundTripStage !== 'boolean') {
+		callback(
+			`graphBuilder build: recipe '${recipe.recipeName}' has roundTripStage=` +
+				`${JSON.stringify(recipe.roundTripStage)} — it must be a boolean when supplied ` +
+				`(true runs the RT-13 round-trip stage post-materialization; false/absent does ` +
+				`not). It was NOT corrected to a default.`,
+		);
+		return;
+	}
+	const roundTripStageEnabled = recipe.roundTripStage === true;
+	const roundTripStageDisabledReason =
+		recipe.roundTripStage === false
+			? 'recipe says roundTripStage: false'
+			: 'recipe default (roundTripStage absent)';
+	// the stage runner SEAM (the R-P2-1 idiom): real runner by documented default; hermetic
+	// suites inject a self-announcing stub so no test build writes into the canonical buildLogs
+	// home. The roster is composed below, before phase A, so a declared-but-missing validator
+	// refuses BEFORE any forge spend (R-WO-16: on every build, stage on or off).
+	const roundTripStageRunner = deps.roundTripStageRunner || roundTripStageLib.runRoundTripStage;
+	let roundTripValidatorRoster = null;
 	// ⟪R-P2-2⟫ ONE vector-store resolver per build invocation (deps-injectable for tests; the
 	// documented default is the real canonical-home resolver). Harvest injects the resolved
 	// store per VECTORIZED standard; materialize hands the resolver to the restore path.
@@ -1382,6 +1455,17 @@ const build = (recipe, deps, callback) => {
 					// ⟪R-P2-2⟫ the same per-build resolver the harvest used — restore stamps each
 					// ref-carrying node's vector back onto its graph node
 					storeResolver: vectorStoreResolver,
+					// ⟪RT-13⟫ the stage runner + the 'build' spec: the descriptor-composed roster,
+					// the recipe's enablement, and the build's own run directory for the verdicts
+					// and the certification summary (RT-6: the verdict lands with the build outputs).
+					roundTripStageRunner,
+					roundTripStageSpec: {
+						mode: 'build',
+						enabled: roundTripStageEnabled,
+						disabledReason: roundTripStageDisabledReason,
+						roster: roundTripValidatorRoster,
+						outputDirPath: buildReportsDirPath,
+					},
 				},
 				callback,
 			);
@@ -1409,19 +1493,40 @@ const build = (recipe, deps, callback) => {
 		});
 	};
 
-	phaseA((phaseAError) => {
-		if (phaseAError) {
-			callback(`phase A (forge) failed: ${phaseAError}`);
-			return;
-		}
-		phaseC((phaseCError) => {
-			if (phaseCError) {
-				callback(`phase C (bridge) failed: ${phaseCError}`);
+	// ⟪RT-13.1 / R-WO-16⟫ COMPOSE THE VALIDATOR ROSTER FIRST — before a single container is
+	// provisioned or a credit spent. The roster is read from the same parserDescriptor.ini
+	// authority the forge roster uses (components.forger.resolveBundle — injectable, so the
+	// hermetic suites drive it with doubles), and a DECLARED-BUT-MISSING validator refuses the
+	// build here, on every build, stage on or off: a descriptor naming a file that does not
+	// load is a broken bundle self-description regardless of whether anyone was about to run
+	// it. An UNRESOLVABLE bundle is NOT refused here — the forger's own phase-A refusal is the
+	// incumbent error for that case and keeps firing exactly as it always has.
+	roundTripStageLib.composeValidatorRoster(
+		{
+			standardTokens: standards.map((one) => one.token),
+			bundleResolver: components.forger.resolveBundle,
+		},
+		(rosterError, composedRoster) => {
+			if (rosterError) {
+				callback(`graphBuilder build: ${rosterError}`);
 				return;
 			}
-			composeAndMaterialize();
-		});
-	});
+			roundTripValidatorRoster = composedRoster;
+			phaseA((phaseAError) => {
+				if (phaseAError) {
+					callback(`phase A (forge) failed: ${phaseAError}`);
+					return;
+				}
+				phaseC((phaseCError) => {
+					if (phaseCError) {
+						callback(`phase C (bridge) failed: ${phaseCError}`);
+						return;
+					}
+					composeAndMaterialize();
+				});
+			});
+		},
+	);
 };
 
 // replay — regenerate a graph FROM A STORED MANIFEST, with NO forging and NO bridge runs. This is
@@ -1501,6 +1606,12 @@ const replay = ({ manifestRefId } = {}, deps = {}, callback) => {
 					// ⟪R-P2-2⟫ a -replay of stored ref-style blocks resolves vectors from the same
 					// canonical home (deps-injectable for tests, real resolver by default)
 					storeResolver: deps.vectorStoreResolver || makeVectorStoreResolver(),
+					// ⟪RT-13 / R-WO-19⟫ the stage is NOT APPLICABLE to -replay (the round trip
+					// belongs to the build that composed the manifest) — and that non-run is
+					// VISIBLE: the runner prints the disposition line rather than silently
+					// skipping. Same runner seam as build().
+					roundTripStageRunner: deps.roundTripStageRunner || roundTripStageLib.runRoundTripStage,
+					roundTripStageSpec: { mode: 'replayNotApplicable' },
 				},
 				callback,
 			);

@@ -39,6 +39,12 @@ const RECIPE_SCHEMA = {
 		recipeName: { type: 'string', minLength: 1 },
 		kind: { type: 'string', enum: ['golden', 'dev', 'subset'] },
 		description: { type: 'string' },
+		// roundTripStage — the RT-13 opt-in (doctrine §7.4; R-WO-17): true runs every declared
+		// roundTripValidator against the materialized product post-build; false/absent does not
+		// (documented default false during the big-bang retrofit — the disposition is LOGGED on
+		// every build, never silent, and GOLD_EVAL certification requires the stage to have run).
+		// ajv's type check refuses a non-boolean by name.
+		roundTripStage: { type: 'boolean' },
 		standards: {
 			type: 'array',
 			minItems: 1,

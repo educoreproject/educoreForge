@@ -229,6 +229,12 @@ const resolveBundle = ({ standard }) => {
 	// incumbent standard-discovery documents), so the directory name is authoritative — match
 	// numerically, use the canonical name ('01').
 	let defaultSource = null;
+	// snapshotDirPath — the pinned snapshot VERSION DIRECTORY itself (RT-13, forge-edfi Phase 4).
+	// Distinct from defaultSource: a single-file bundle's defaultSource is a FILE inside this
+	// directory, but a roundTripValidator's answer key is always the directory (both live
+	// validators demand it — pesc's header names it explicitly; edfi's intake checksum-verifies
+	// the directory's SHA256SUMS). null when the bundle pins no defaultSnapshot.
+	let snapshotDirPath = null;
 	if (descriptor.defaultSnapshot !== undefined) {
 		const snapshotsDir = path.join(bundleDir, 'assets', 'standardSourceData');
 		const snapshotDirNames = fs.existsSync(snapshotsDir)
@@ -248,6 +254,7 @@ const resolveBundle = ({ standard }) => {
 			};
 		}
 		const snapshotDir = path.join(snapshotsDir, matches[0]);
+		snapshotDirPath = snapshotDir;
 		// sourceFile is OPTIONAL. A single-file parser names its file (sourceFile=ctdlasn.json) and gets
 		// that file. A DIRECTORY-source parser (a multi-file standard: medbiquitous XSD/WSDL set, jedx
 		// CSV tables, pesc XSD set, the CSV/TSV crosswalk standards) OMITS sourceFile and gets the
@@ -262,6 +269,15 @@ const resolveBundle = ({ standard }) => {
 		standardName: `${descriptor.standardName}`.trim(),
 		entryPath: path.join(bundleDir, descriptor.entryModule),
 		defaultSource,
+		// RT-13 (forge-edfi Phase 4) — ADDITIVE facts for the round-trip stage. Existing callers
+		// destructure only the four keys above; these are read solely by the stage's roster
+		// composer (apps/graph-builder/lib/round-trip-stage.js).
+		snapshotDirPath,
+		// the roundTripValidator DECLARATION, verbatim (doctrine RT-13.1: declared, not sniffed).
+		// undefined when the bundle declares none — resolveBundle stays a pure descriptor reader;
+		// integrity enforcement (exists / loads / exports validate — the RT-13.3 refusal) belongs
+		// to the roster composer, which is where a blank declared value is also refused by name.
+		roundTripValidatorFileName: descriptor.roundTripValidator,
 	};
 };
 

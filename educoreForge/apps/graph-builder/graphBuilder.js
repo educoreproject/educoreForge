@@ -74,6 +74,8 @@ const run = () => {
 			? actions.cedsRoundTrip
 			: switches.cedsGates
 			? actions.cedsGates
+			: switches.goldEvalCheck
+			? actions.goldEvalCheck
 			: null;
 
 		// help is the default: an invocation that names no action is a question, not an error

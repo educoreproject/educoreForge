@@ -8,7 +8,7 @@
 //
 //   replayManager() -> {
 //     create(spec, callback)      -> ('', handle)   handle = { graphName, containerName,
-//                                                     boltUrl, password, boltPort, httpPort }
+//                                                     boltUrl, user, password, boltPort, httpPort }
 //        spec = { purpose?, graphName? } — graphName is minted DEV_gb_<purpose>_<pid>_<seq>
 //        when not given; a GIVEN name must be DEV_* (GNC-001 scratch tier) or create REFUSES.
 //     init(spec, callback)        -> ('', report)   THE ONE polymorphic loader, two payloads:
@@ -619,6 +619,10 @@ const moduleFunction =
 				graphName,
 				containerName: graphName,
 				boltUrl: args.boltUrl,
+				// user rides the handle (RT-13, forge-edfi Phase 4): the handle is the ONE home of
+				// a scratch graph's credentials, and the round-trip stage hands validators the full
+				// bolt triple from it — a second 'neo4j' literal anywhere else would be drift.
+				user: NEO4J_USER,
 				password,
 				boltPort: args.boltPort,
 				httpPort: args.httpPort,

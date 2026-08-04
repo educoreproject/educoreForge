@@ -280,9 +280,16 @@ const moduleFunction =
 					roundTripClean: headline.lost === 0 && headline.invented === 0,
 					reproduced: headline.matched,
 					lost: headline.lost,
+					// lostTotal / inventedTotal — the normative RT-6 builder-facing names (R-WO-21,
+					// 2026-08-04): the RT-13 stage adjudicates on {roundTripClean, inventedTotal,
+					// lostTotal} with zero per-standard knowledge. PESC has no guard-class invention
+					// channel, so both totals equal the diff counts; these lines add names, never
+					// move numbers.
+					lostTotal: headline.lost,
 					lostDeclaredContext: headline.lostDeclaredContext,
 					lostContentGap: headline.lostContentGap,
 					invented: headline.invented,
+					inventedTotal: headline.invented,
 					snapshot: {
 						snapshotPath,
 						combinedDigest: args.snapshot.combinedDigest,

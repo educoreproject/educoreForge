@@ -269,6 +269,10 @@ const moduleFunction = () => {
 				roundTripClean: headline.lost === 0 && inventedTotal === 0,
 				reproduced: headline.reproduced,
 				lost: headline.lost,
+				// lostTotal — the normative RT-6 builder-facing name (R-WO-21, 2026-08-04): the
+				// RT-13 stage adjudicates on {roundTripClean, inventedTotal, lostTotal} with zero
+				// per-standard knowledge. Same number as `lost`; adds a name, never moves a number.
+				lostTotal: headline.lost,
 				lostDeclaredContext: headline.lostDeclaredContext,
 				lostContentGap: headline.lostContentGap,
 				invented: headline.invented,

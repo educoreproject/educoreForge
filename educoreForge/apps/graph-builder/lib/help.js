@@ -29,6 +29,7 @@ SYNOPSIS
      graphBuilder   -cedsRoundTrip --containerName=<name> [--sourcePath=<path>]
                                    [--outPath=<path>] [--reportPath=<path>]
      graphBuilder   -cedsGates --containerName=<name> [--reportJsonPath=<path>]
+     graphBuilder   -goldEvalCheck --buildLogDirPath=<the build's run directory>
      graphBuilder   -help
 
      ... | graphBuilder                (JSON on stdin REPLACES command-line parameters)
@@ -59,6 +60,20 @@ INPUT
 
 COMMANDS
      -build       Build the graph described by the recipe. Returns { manifestId, boltUrl }.
+
+                  THE ROUND-TRIP STAGE (RT-13). After materialization and the R-1 fidelity
+                  gate, -build runs each recipe standard's DECLARED roundTripValidator (the
+                  bundle declares it in parserDescriptor.ini beside entryModule -- declared,
+                  not sniffed) against the finished product graph, when the recipe opts in
+                  with "roundTripStage": true. The DOCUMENTED DEFAULT is false during the
+                  big-bang retrofit -- and the default is never silent: every build prints the
+                  stage's disposition, names each declared-ABSENT bundle, and lands the stage
+                  summary (roundTrip/roundTripStageSummary.json) with the build outputs. A
+                  bundle whose descriptor declares a validator that does not exist or load
+                  REFUSES the build by name on EVERY build, stage on or off (RT-13.3). A
+                  verdict with inventedTotal > 0 FAILS the build; lostTotal > 0 is tolerated
+                  and logged (the enrichment meter). GOLD_EVAL certification requires the
+                  stage to have run: see -goldEvalCheck.
      -validate    Validate a recipe (Layer 1 JSON Schema + Layer 2 semantic/referential).
      -replay      Regenerate a graph FROM A STORED MANIFEST -- open the manifest by refId, resolve
                   its member schema blocks, and materialize them into a fresh DEV_ graph. NO forging,
@@ -264,6 +279,17 @@ OPTIONS
                            disagree about a number.
      -verbose              Emit verbose diagnostic detail on stderr.
      -quiet                Suppress progress; results and errors only.
+
+     -goldEvalCheck
+                  THE GOLD_EVAL CERTIFICATION GATE (doctrine RT-13.4), made runnable. Reads
+                  the named build run directory's round-trip stage summary and answers PASS
+                  only when the stage ran and every declared validator reported with
+                  inventedTotal=0 and its verdict artifact present on disk. REFUSES BY NAME
+                  when the stage was off, a verdict is missing, or invention is nonzero.
+                  Declared-ABSENT bundles are tolerated during the big-bang retrofit and
+                  LISTED in the output. INTENDED OPERATIONAL LAW: no DEV build is renamed
+                  GOLD_EVAL_<YYMMDD> (GNC-001) without a PASS from this check on its build
+                  run directory. READ-ONLY and FREE -- no graph, no docker, no database.
 
 OUTPUT
      -build:    JSON { manifestId, boltUrl } on stdout (progress on stderr).

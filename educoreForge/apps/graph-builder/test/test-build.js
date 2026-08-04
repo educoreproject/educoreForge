@@ -393,6 +393,70 @@ const announcedFidelityGateStub = ({ xLog, graphName }, cb) => {
 	cb('');
 };
 
+// the RT-13 stage arrives as the same kind of SELF-ANNOUNCING stub (never a silent skip): the
+// real runner writes the stage summary into the canonical dataStores/buildLogs home on every
+// build, which a hermetic suite must not touch. The real runner is proven in its own suite
+// (test-round-trip-stage.js) against tmp directories.
+const announcedRoundTripStageStub = ({ stageSpec, xLog }, cb) => {
+	xLog.status(
+		`  [roundTrip] HERMETIC STUB — stage NOT RUN (spec mode '${(stageSpec || {}).mode}'; ` +
+			`the production default is the real runner, byte-unchanged)`,
+	);
+	cb('', { stageRan: false, disposition: 'hermeticStub' });
+};
+
+// ⟪R-WO-16 red twin, supervisor-directed⟫ declared-but-missing refuses on a STAGE-OFF build —
+// the unconditional OBSERVED, not asserted. The recipe opts nothing in (lifOnly carries no
+// roundTripStage), yet a forger whose descriptor declares a validator file that does not exist
+// must fail the build at roster composition, before any forge runs.
+const stageDeclaredMissingUnconditional = (whenDone) => {
+	harness.section(
+		'R-WO-16 — declared-but-missing refuses EVEN ON A STAGE-OFF BUILD (composition is unconditional)',
+	);
+	const xLog = capturingXLog();
+	let forgeInvoked = false;
+	const lyingForger = Object.assign(
+		() => ({
+			forge: (spec, cb) => {
+				forgeInvoked = true;
+				cb('', {});
+			},
+		}),
+		{
+			resolveBundle: ({ standard }) => ({
+				bundleDir: '/definitely/not/a/real/bundle',
+				standardName: String(standard).toUpperCase(),
+				entryPath: '/definitely/not/a/real/bundle/forge.js',
+				defaultSource: null,
+				snapshotDirPath: '/definitely/not/a/real/bundle/assets/standardSourceData/01',
+				roundTripValidatorFileName: 'ghostValidator.js',
+			}),
+		},
+	);
+	buildLib.build(
+		loadOrDie(goodRecipe('lifOnly')),
+		{
+			xLog,
+			standardsDatabase: standardsDatabaseDouble(),
+			components: {
+				forger: lyingForger,
+				replayManager: workingReplayManager(),
+				bridgeMaker: workingBridgeMaker(),
+				manifestEditor: workingManifestEditor(),
+			},
+		},
+		(err) => {
+			harness.match(
+				'OBSERVED RED: the stage-OFF build refuses at composition, naming file + RT-13.3 + R-WO-16',
+				err || '',
+				/ghostValidator\.js.*does not\s+EXIST.*RT-13\.3.*R-WO-16.*stage on or off/s,
+			);
+			harness.equal('  and NO forge ever ran (refused before any spend)', forgeInvoked, false);
+			whenDone();
+		},
+	);
+};
+
 // EVERY build in this suite goes through here, so no path can accidentally reach the real forger
 // (Voyage) or the real replayManager (Docker). Overrides merge on top of the safe default set.
 // The R-1 gate arrives as the self-announcing hermetic stub (⟪R-P2-1⟫ seam).
@@ -412,7 +476,7 @@ const runBuildWith = (recipe, componentOverrides, callback) => {
 			xLog,
 			standardsDatabase: standardsDatabase,
 			components,
-			cedsFidelityGateRunner: announcedFidelityGateStub,
+			cedsFidelityGateRunner: announcedFidelityGateStub, roundTripStageRunner: announcedRoundTripStageStub,
 		},
 		(err, result) => callback({ err, result, xLog, standardsDatabase }),
 	);
@@ -826,7 +890,7 @@ const stageRebridgeWiring = () => {
 		const xLog = capturingXLog();
 		const standardsDatabase = standardsDatabaseDouble();
 		const components = { forger: workingForger(), replayManager: workingReplayManager(), bridgeMaker: captureBridgeMaker, manifestEditor: workingManifestEditor() };
-		buildLib.build(cedsCtdlRecipe, { xLog, standardsDatabase, components, cedsFidelityGateRunner: announcedFidelityGateStub, ...extraDeps }, (err, result) => cb({ err, result }));
+		buildLib.build(cedsCtdlRecipe, { xLog, standardsDatabase, components, cedsFidelityGateRunner: announcedFidelityGateStub, roundTripStageRunner: announcedRoundTripStageStub, ...extraDeps }, (err, result) => cb({ err, result }));
 	};
 
 	// scoped --rebridge WITH a stub llmClient injected: the build runs the (doubled) pre-pass path hermetically.
@@ -1023,7 +1087,7 @@ const stageRealManifestEditor = () => {
 		{
 			xLog,
 			standardsDatabase: standardsDatabase,
-			cedsFidelityGateRunner: announcedFidelityGateStub,
+			cedsFidelityGateRunner: announcedFidelityGateStub, roundTripStageRunner: announcedRoundTripStageStub,
 			components: {
 				forger: workingForger(),
 				replayManager: workingReplayManager(),
@@ -1167,7 +1231,9 @@ const syntheticCedsBaseNodeEdges = (() => {
 // hub (deriveHub), runs the REAL foldHubIntoNodeEdges over it so the returned nodeEdges carry base +
 // hub — exactly what the production forger does. This is where the fold is genuinely exercised
 // through the orchestrator (the fold LOGIC itself is unit-proven in test-forger.js).
-const hubFoldingForger = (baseNodeEdges) => () => ({
+// resolveBundle rides EVERY forger double (the component contract): build()'s RT-13 roster
+// composition consults it for every recipe standard on every build, not only the bridge phase.
+const hubFoldingForger = (baseNodeEdges) => Object.assign(() => ({
 	forge: ({ standard, version, deriveHub }, cb) => {
 		const answerWith = (nodeEdges) =>
 			cb('', {
@@ -1212,7 +1278,7 @@ const hubFoldingForger = (baseNodeEdges) => () => ({
 		}
 		answerWith(baseNodeEdges);
 	},
-});
+}), { resolveBundle: forgerRegistryDouble });
 
 // the replayManager double that mirrors the real engine's label-union on CREATION and serializes the
 // retained material on the [StandardBase] harvest. init UNIONS applyLabels into every node's labels
@@ -1301,7 +1367,7 @@ const stageHubFoldedIntoBase = () => {
 		{
 			xLog,
 			standardsDatabase,
-			cedsFidelityGateRunner: announcedFidelityGateStub,
+			cedsFidelityGateRunner: announcedFidelityGateStub, roundTripStageRunner: announcedRoundTripStageStub,
 			components: {
 				forger: hubFoldingForger(syntheticCedsBaseNodeEdges),
 				replayManager: retainingReplayManager(),
@@ -1605,25 +1671,32 @@ const buildCapturingVectorize = (vectorizeDep, done) => {
 	const captured = [];
 	const xLog = capturingXLog();
 	const standardsDatabase = standardsDatabaseDouble();
-	const capturingForger = () => ({
-		forge: ({ standard, version, vectorize }, fcb) => {
-			captured.push(vectorize);
-			fcb('', {
-				standard,
-				version,
-				snapshotKey: '01',
-				publishedVersion: version,
-				versionSource: 'spec',
-				nodeEdges: { nodes: [], edges: [], embeddingDims: null },
-				nodeCount: 0,
-				edgeCount: 0,
-				embedCallCount: 0,
-			});
-		},
-	});
+	const capturingForger = Object.assign(
+		() => ({
+			forge: ({ standard, version, vectorize }, fcb) => {
+				captured.push(vectorize);
+				fcb('', {
+					standard,
+					version,
+					snapshotKey: '01',
+					publishedVersion: version,
+					versionSource: 'spec',
+					nodeEdges: { nodes: [], edges: [], embeddingDims: null },
+					nodeCount: 0,
+					edgeCount: 0,
+					embedCallCount: 0,
+				});
+			},
+		}),
+		// the component contract: RT-13 roster composition consults resolveBundle on every build
+		{ resolveBundle: forgerRegistryDouble },
+	);
 	const deps = {
 		xLog,
 		standardsDatabase,
+		// hermetic: the real R-1 gate no-ops here (no ceds token) but the real RT-13 runner
+		// would write its stage summary into the canonical buildLogs home — stubbed, announced.
+		roundTripStageRunner: announcedRoundTripStageStub,
 		components: {
 			forger: capturingForger,
 			replayManager: workingReplayManager(),
@@ -1794,7 +1867,7 @@ const stageManifestPersistedToStore = () => {
 				{
 					xLog: capturingXLog(),
 					standardsDatabase,
-					cedsFidelityGateRunner: announcedFidelityGateStub,
+					cedsFidelityGateRunner: announcedFidelityGateStub, roundTripStageRunner: announcedRoundTripStageStub,
 					components: {
 						forger: workingForger(),
 						replayManager: workingReplayManager(),
@@ -1868,7 +1941,7 @@ const stageManifestPersistedToStore = () => {
 										memberCount,
 									);
 									fs.rmSync(scratchDir, { recursive: true, force: true });
-									harness.report();
+									stageDeclaredMissingUnconditional(() => harness.report());
 								},
 							);
 						});

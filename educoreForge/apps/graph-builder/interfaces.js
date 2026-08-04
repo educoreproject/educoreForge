@@ -23,6 +23,9 @@
  * @property {string} graphName      DEV_*-prefixed; also the docker container name
  * @property {string} containerName  same value as graphName (explicit for docker callers)
  * @property {string} boltUrl        e.g. 'bolt://localhost:7811'
+ * @property {string} user           the neo4j auth user (RT-13: the handle carries the FULL
+ *                                   bolt triple so the round-trip stage hands validators
+ *                                   credentials from one home, never a second literal)
  * @property {string} password       generated per-graph; lives only in this handle
  * @property {number} boltPort
  * @property {number} httpPort

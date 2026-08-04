@@ -1138,6 +1138,127 @@ const cedsGatesAction = (callback) => {
 	});
 };
 
+// =====================================================================
+// -goldEvalCheck — the GOLD_EVAL certification verb (RT-13.4 / R-WO-20)
+// =====================================================================
+// GNC-001 promotion (DEV build -> GOLD_EVAL_<YYMMDD>) is an operational docker rename; this
+// verb is the code-side gate that makes the doctrine's certification clause RUNNABLE instead
+// of remembered: "GOLD_EVAL certification requires every declared validator to have run and
+// reported — no golden is declared without the verdicts in hand" (doctrine §7.4). The intended
+// operational law (stated here as the verb's purpose; the skill/imperative edit is TQ's and
+// the supervisor's): no DEV build is renamed GOLD_EVAL without a PASS from this check on its
+// build run directory.
+//
+// It reads the stage summary the -build landed (roundTrip/roundTripStageSummary.json — the
+// path also rides the build result as roundTripSummaryPath) and REFUSES BY NAME when:
+//   * the stage did not run (off, or a pre-RT-13 build with no summary at all);
+//   * any DECLARED bundle did not run or its verdict artifact is missing on disk;
+//   * any inventedTotal is nonzero (the hard line — although the stage itself already fails
+//     such a build, a hand-doctored or stale summary must not certify).
+// Declared-ABSENT bundles are tolerated during the big-bang retrofit and LISTED in the
+// certification output — the reader sees exactly what was not checked.
+const goldEvalCheckAction = (callback) => {
+	const { xLog } = process.global;
+	const roundTripStageStatics = require('./round-trip-stage');
+	const buildLogDirPath = firstValue(process.global.commandLineParameters, 'buildLogDirPath');
+	if (!buildLogDirPath) {
+		callback(
+			`graphBuilder -goldEvalCheck: --buildLogDirPath=<the build's run directory under ` +
+				`dataStores/buildLogs> is REQUIRED and has no default — certification is a claim ` +
+				`about ONE build's evidence, and the build must be named.`,
+		);
+		return;
+	}
+	const summaryFilePath = path.join(
+		buildLogDirPath,
+		roundTripStageStatics.STAGE_SUBDIR_NAME,
+		roundTripStageStatics.STAGE_SUMMARY_FILE_NAME,
+	);
+	if (!fs.existsSync(summaryFilePath)) {
+		callback(
+			`graphBuilder -goldEvalCheck: no stage summary at '${summaryFilePath}'. Either the ` +
+				`path is not a build run directory, or the build predates the RT-13 stage — in ` +
+				`both cases there is no round-trip evidence and nothing can be certified.`,
+		);
+		return;
+	}
+	let summary;
+	// boundary translation of a parse fault into the callback channel — a summary that does
+	// not parse is evidence that cannot certify, named as such.
+	try {
+		summary = JSON.parse(fs.readFileSync(summaryFilePath, 'utf-8'));
+	} catch (parseError) {
+		callback(
+			`graphBuilder -goldEvalCheck: the stage summary '${summaryFilePath}' does not parse ` +
+				`(${parseError.message}) — unreadable evidence certifies nothing.`,
+		);
+		return;
+	}
+	if (summary.stageRan !== true) {
+		callback(
+			`graphBuilder -goldEvalCheck: REFUSED — the round-trip stage did not run for this ` +
+				`build (summary disposition: '${summary.disposition}'). GOLD_EVAL certification ` +
+				`requires every declared validator to have run and reported (doctrine §7.4); ` +
+				`rebuild with roundTripStage: true in the recipe.`,
+		);
+		return;
+	}
+	const declaredRows = (summary.standards || []).filter(
+		(oneRow) => oneRow.disposition === 'declared',
+	);
+	const failures = [];
+	declaredRows.forEach((oneRow) => {
+		if (oneRow.ran !== true) {
+			failures.push(`'${oneRow.token}' is declared but its validator did not run`);
+			return;
+		}
+		if (typeof oneRow.verdictPath !== 'string' || !fs.existsSync(oneRow.verdictPath)) {
+			failures.push(
+				`'${oneRow.token}' ran but its verdict artifact is missing ` +
+					`(expected: ${oneRow.verdictPath})`,
+			);
+			return;
+		}
+		if (oneRow.inventedTotal > 0) {
+			failures.push(
+				`'${oneRow.token}' reports inventedTotal=${oneRow.inventedTotal} — INVENTED must ` +
+					`be 0 (doctrine §5.3)`,
+			);
+		}
+	});
+	if (failures.length) {
+		callback(
+			`graphBuilder -goldEvalCheck: REFUSED —\n  - ${failures.join('\n  - ')}`,
+		);
+		return;
+	}
+	const absentTokens = summary.absentTokens || [];
+	xLog.status(
+		`graphBuilder: [goldEvalCheck] PASS — ${declaredRows.length} declared validator(s) ran ` +
+			`with inventedTotal=0${absentTokens.length ? `; ${absentTokens.length} bundle(s) declared-ABSENT (tolerated during the retrofit): ${absentTokens.join(', ')}` : ''}`,
+	);
+	callback('', {
+		exitCode: 0,
+		resultText: JSON.stringify(
+			{
+				certification: 'PASS',
+				summaryFilePath,
+				containerName: summary.containerName,
+				declared: declaredRows.map((oneRow) => ({
+					token: oneRow.token,
+					roundTripClean: oneRow.roundTripClean,
+					inventedTotal: oneRow.inventedTotal,
+					lostTotal: oneRow.lostTotal,
+					verdictPath: oneRow.verdictPath,
+				})),
+				declaredAbsentTolerated: absentTokens,
+			},
+			null,
+			2,
+		),
+	});
+};
+
 return {
 	build,
 	validate,
@@ -1146,6 +1267,7 @@ return {
 	retrievalMetrics: retrievalMetricsAction,
 	cedsRoundTrip: cedsRoundTripAction,
 	cedsGates: cedsGatesAction,
+	goldEvalCheck: goldEvalCheckAction,
 	scanAvailableForges,
 };
 };

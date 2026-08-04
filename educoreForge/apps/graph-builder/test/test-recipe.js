@@ -320,4 +320,33 @@ harness.ok(
 	validateFully(cedsLif, ['ceds', 'lif']).valid === true,
 );
 
+// =====================================================================
+harness.section('roundTripStage — the RT-13 opt-in is a boolean, both directions proven');
+// =====================================================================
+
+const withRoundTripStage = (value) => ({ ...loadOrDie(goodRecipe('lifOnly')), roundTripStage: value });
+
+harness.ok(
+	'roundTripStage: true validates structurally',
+	validateStructuralOnly(withRoundTripStage(true)).layers.structural.ok === true,
+);
+harness.ok(
+	'roundTripStage: false validates structurally',
+	validateStructuralOnly(withRoundTripStage(false)).layers.structural.ok === true,
+);
+const nonBooleanVerdict = validateStructuralOnly(withRoundTripStage('yes'));
+harness.ok(
+	"roundTripStage: 'yes' is REFUSED (observed RED — a non-boolean is never corrected)",
+	nonBooleanVerdict.layers.structural.ok === false,
+);
+harness.match(
+	'  naming the offending property',
+	JSON.stringify(nonBooleanVerdict.layers.structural.errors),
+	/roundTripStage/,
+);
+harness.ok(
+	'the stage-ON proof recipe (pescOnlyRoundTrip) validates end to end',
+	validateFully(loadOrDie(goodRecipe('pescOnlyRoundTrip')), ['pesc']).valid === true,
+);
+
 harness.report();
