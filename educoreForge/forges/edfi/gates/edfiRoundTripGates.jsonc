@@ -1,0 +1,137 @@
+{
+	// edfiRoundTripGates.jsonc — the forge-edfi round-trip gate suite, DECLARED AS DATA (RT-10).
+	//
+	// Why data and not code (the CEDS lesson, twice learned): a gate written as
+	// { measure, comparator, expected } cannot compute a signal and forget to assert it —
+	// the gate does not contain the check, the harness (lib/roundTripGates.js) does.
+	//
+	// EVERY gate names a twin in lib/roundTripGateTwins.js that must turn it RED. A gate whose
+	// twin has not been observed failing is UNPROVEN, never PASS. No expectFail gates.
+	// UNMEASURED is a FAILURE, never a skip.
+	//
+	// Measurement bundle (assembled by test/test-edfiRoundTrip.js):
+	//   verdict.*  — the RT-6 artifact of the CARRIABLE-vocabulary hermetic fixture (the RT-7
+	//                fixture that MUST round-trip clean)
+	//   report.*   — that verdict's embedded diff report
+	//   probe.*    — facts established by EXECUTED probes: the FULL-vocabulary fixture run
+	//                (whose losses must be exactly the ruled backlog classes), the data-level
+	//                cheating-detector/invention injections through the graph double, the
+	//                refusal battery, the adversarial/cosmetic canonicalization pairs, and the
+	//                two-independent-readers census cross-check
+	//   suite.*    — facts about this suite itself
+	"gates": [
+		{
+			"id": "G-1",
+			"title": "INVENTED is zero — an invention is an assertion about Ed-Fi that Ed-Fi never made (doctrine 5.3, hard from the first run)",
+			"measure": "report.headline.invented",
+			"comparator": "isZero",
+			"twin": "injectOneInventedStatement"
+		},
+		{
+			"id": "G-2",
+			"title": "inventedTotal (diff + crosswalk guard) is zero — the combined invention meter the verdict judges by",
+			"measure": "verdict.inventedTotal",
+			"comparator": "isZero",
+			"twin": "bumpInventedTotal"
+		},
+		{
+			"id": "G-3",
+			"title": "crosswalk invention guard: every stashed CEDS raw value appears verbatim in the CSVs (R-WO-12 set membership; no row matching)",
+			"measure": "verdict.crosswalkGuard.violationCount",
+			"comparator": "isZero",
+			"twin": "doctorOneStashRawValue"
+		},
+		{
+			"id": "G-4",
+			"title": "the carriable-vocabulary hermetic fixture round-trips CLEAN (RT-7: the instrument can report success)",
+			"measure": "verdict.roundTripClean",
+			"comparator": "isTrue",
+			"twin": "dropOneSourceStatement"
+		},
+		{
+			"id": "G-5",
+			"title": "the FULL-vocabulary fixture loses EXACTLY the ruled backlog classes (componentKind, itemMetaEdId, itemNamespace) and invents nothing",
+			"measure": "probe.fullVocabularyLossesAllNamed",
+			"comparator": "isTrue",
+			"twin": "falsifyFullVocabularyLossProbe"
+		},
+		{
+			"id": "G-6",
+			"title": "every LOST record is located (file:line) and bucketed — LOST is actionable, not a total",
+			"measure": "probe.lostAllLocatedAndBucketed",
+			"comparator": "isTrue",
+			"twin": "stripOneLostLocation"
+		},
+		{
+			"id": "G-7",
+			"title": "no anonymous loss — every contentGap LOST record carries a named backlog label",
+			"measure": "probe.fullVocabularyUnlabeledContentGapCount",
+			"comparator": "isZero",
+			"twin": "stripOneBacklogLabel"
+		},
+		{
+			"id": "G-8",
+			"title": "two independent readers agree — the reducer census equals the Phase 1 parser census over the same fixture (R-WO-14 bounding)",
+			"measure": "probe.censusCrossCheckAgreed",
+			"comparator": "isTrue",
+			"twin": "falsifyCensusProbe"
+		},
+		{
+			"id": "G-9",
+			"title": "CHEATING DETECTOR — a deleted graph fact shows up LOST by name; if it does not, the validator knew data it should not (RT-5)",
+			"measure": "probe.deletedFactShowsLost",
+			"comparator": "isTrue",
+			"twin": "falsifyCheatingDetectorProbe"
+		},
+		{
+			"id": "G-10",
+			"title": "an injected graph fact fires INVENTED by name",
+			"measure": "probe.injectedFactShowsInvented",
+			"comparator": "isTrue",
+			"twin": "falsifyInventionProbe"
+		},
+		{
+			"id": "G-11",
+			"title": "refusals are BY NAME — missing input, corrupt bytes, manifest drift, absent bolt endpoint, namespace wrapper, unclassifiable text: each named, none skipped, and intact input is NOT over-refused",
+			"measure": "probe.refusalsAllNamed",
+			"comparator": "isTrue",
+			"twin": "falsifyRefusalProbe"
+		},
+		{
+			"id": "G-12",
+			"title": "adversarial pairs stay DISTINCT — semantically different sources must not collapse (the over-forgiving instrument)",
+			"measure": "probe.adversarialPairsAllDistinct",
+			"comparator": "isTrue",
+			"twin": "collapseAdversarialPair"
+		},
+		{
+			"id": "G-13",
+			"title": "cosmetic variants COLLAPSE — whitespace/order/comment differences must not read as loss (the over-strict instrument)",
+			"measure": "probe.cosmeticVariantsCollapse",
+			"comparator": "isTrue",
+			"twin": "splitCosmeticPair"
+		},
+		{
+			"id": "G-14",
+			"title": "the verdict carries the complete RT-6 shape — counts, roundTripClean, snapshot identity (per-input digests + combined), graph identity",
+			"measure": "probe.verdictShapeComplete",
+			"comparator": "isTrue",
+			"twin": "dropVerdictField"
+		},
+		{
+			"id": "G-15",
+			"title": "size floor — two empty statement sets are identical, and identical is not success",
+			"measure": "report.headline.sourceStatements",
+			"comparator": "atLeast",
+			"expected": 120,
+			"twin": "emptyBothSides"
+		},
+		{
+			"id": "G-16",
+			"title": "no percentage participates in acceptance — counts only (fidelityPercentDisplayOnly is display only)",
+			"measure": "suite.gatesUsingPercentInAcceptance",
+			"comparator": "isZero",
+			"twin": "declarePercentGate"
+		}
+	]
+}
