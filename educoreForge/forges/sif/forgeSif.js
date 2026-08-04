@@ -64,6 +64,56 @@ const STABLE_URI_PROPERTY_NAME = 'sifStableId';
 const EMBED_BATCH_SIZE = 128; // voyage batch ceiling headroom; bounds per-call payload.
 const CEDS_ANCHOR_PROPERTY_NAME = 'CEDS ID'; // the native annotation column (origin, recorded for provenance)
 
+// ---- CHARACTERISTICS (Phase 4): SIF's own cardinality-and-obligation statement.
+//
+// The TSV's Characteristics column is a CLOSED five-value vocabulary. Phase 4 does two distinct
+// things with it, and the distinction is the whole point:
+//   1. carries the cell VERBATIM as `characteristics` — the SOURCE's statement, which is what
+//      closes the 15,458-statement fieldCharacteristics round-trip gap. That property NAME is
+//      required, not chosen: lib/roundTripSifCompiler.js reads exactly `characteristics` and
+//      lib/roundTripSifCanonical.js maps exactly that name to the fieldCharacteristics predicate.
+//   2. DERIVES two structural facts from it, below. Legitimate INTERPRETATION of a stated fact
+//      (contrast: inventing an unstated one) — permitted because the verbatim value rides
+//      alongside and the derivation is documented here, at the site.
+//
+// WHY THE 'Mandatory' COLUMN IS NOT ENOUGH (the reason this phase exists): Mandatory is a LOSSY
+// projection of Characteristics — it collapses MR->M and OR->O. Without the derivation the graph
+// cannot distinguish a single-valued element from a REPEATING COLLECTION anywhere in SIF (1,829
+// repeatable and 96 conditional fields). The published XSD renders the R suffix as
+// maxOccurs='unbounded': this is cardinality, not annotation.
+//
+// WHY A TABLE AND NOT A REGEX ON THE 'R' SUFFIX: a regex would silently accept a value the source
+// never stated. 'CR' is REAL in the published XSD (2 occurrences; README_ERRATA.md S-1) and occurs
+// ZERO times in this export. A table refuses an unlisted value BY NAME and forces a deliberate
+// ruling; a regex would quietly invent a meaning for it. No silent default, ever.
+//
+// WHY THE DERIVED PAIR CANNOT MANUFACTURE AN INVENTION: neither derived name appears in the
+// round-trip compiler's FIELD_PROPERTY_NAMES projection, and that compiler builds an explicit
+// `RETURN oneNode.<name> AS <name>` list and iterates only that same list — so these properties
+// are structurally invisible to the re-emission and can never mint a statement the source did not
+// make. Their carrier of record is `characteristics` itself; reading them would re-prove this
+// derivation rather than the source.
+//
+// THE INVENTION PATH, MEASURED RATHER THAN ASSUMED (Phase 4 experiment; both injections reverted
+// byte-identically, logs in test/test-artifacts/): leaking a derived name into that projection
+// ALONE is INERT — it reads an unused property and mints nothing. Invention needs a SECOND step: a
+// mapping in the canonicalizer's GRAPH_FIELD_PREDICATE_REGISTRY. With BOTH steps in place the
+// hermetic fixture reported INVENTED = 11, exactly one per field carrying a value, and G-1 fired.
+// So G-17 guards the FIRST step as defense in depth, and G-1 is the backstop for the consequence.
+// An earlier draft of this comment asserted the projection edit alone was the bug; the experiment
+// showed otherwise and the claim is corrected here rather than left approximately true.
+//
+// PROPERTY NAMES AWAIT RATIFICATION by the campaign supervisor (proposed, unanswered at the time
+// of writing; the supervisor was unreachable for 50 minutes and this phase proceeded under an
+// announced dead-parent deadline). A rename is confined to this one table and gate G-16/G-17.
+const FIELD_CHARACTERISTICS_DERIVATION = Object.freeze({
+	O: Object.freeze({ characteristicsRepeatable: false, characteristicsObligation: 'optional' }),
+	M: Object.freeze({ characteristicsRepeatable: false, characteristicsObligation: 'mandatory' }),
+	MR: Object.freeze({ characteristicsRepeatable: true, characteristicsObligation: 'mandatory' }),
+	OR: Object.freeze({ characteristicsRepeatable: true, characteristicsObligation: 'optional' }),
+	C: Object.freeze({ characteristicsRepeatable: false, characteristicsObligation: 'conditional' }),
+});
+
 // The mappingInstruction fields are DECLARED on the DmeStandardRoot (DECISIONS §12). SIF bridges TO
 // the CEDS hub (impliedTargets ['CEDS']); its native CEDS anchor origin is the 'CEDS ID' column.
 const sifMappingInstruction = {
@@ -411,6 +461,45 @@ const moduleFunction =
 				// this field against a CEDS candidate's range slot (e.g. the SIF evidence bridge).
 				if (props.nativeType) extraProps.scalar.nativeType = props.nativeType;
 				if (props.format) extraProps.scalar.format = props.format;
+
+				// ---- CHARACTERISTICS (Phase 4) — see FIELD_CHARACTERISTICS_DERIVATION at the top of
+				// this file for the full rationale. The verbatim carry is what closes the round trip;
+				// the derived pair is documented interpretation that rides alongside it.
+				//
+				// ABSENT IS ABSENT (RT-2), BY CONSTRUCTION: lib/parser.js trims the cell to '', so a
+				// field whose Characteristics cell is empty falls through this guard carrying NOTHING —
+				// not the verbatim value, and NOT a derived default. Emitting repeatable:false here
+				// would assert "does not repeat" where the source is SILENT, which is the silent-default
+				// class. The canonicalizer's graph-side mint skips ''/null/undefined for the same reason,
+				// so the two sides are symmetric.
+				if (props.characteristics) {
+					extraProps.scalar.characteristics = props.characteristics;
+
+					const derivedCharacteristics = FIELD_CHARACTERISTICS_DERIVATION[props.characteristics];
+					if (!derivedCharacteristics) {
+						throw new Error(
+							`forge-sif: field '${props.xpath}' states Characteristics ` +
+								`'${props.characteristics}', which is not in SIF's closed vocabulary ` +
+								`(${Object.keys(FIELD_CHARACTERISTICS_DERIVATION).join('/')}) — refusing to derive ` +
+								`repeatability or obligation from a value this forge does not understand. If the ` +
+								`snapshot legitimately introduced a new value (e.g. 'CR', recorded in ` +
+								`README_ERRATA.md S-1 as present in the published XSD and absent from this export), ` +
+								`extend FIELD_CHARACTERISTICS_DERIVATION deliberately and have the addition ruled ` +
+								`on — never defaulted.`,
+						);
+					}
+
+					// A FUNCTION OF THIS COLUMN ALONE. It never consults the Mandatory column, which is
+					// why the source's own subtlety survives instead of being flattened: the nine 'C'
+					// rows that ALSO carry a mandatory '*' (README_ERRATA.md S-2 — members of an
+					// xs:choice group that is itself required) keep obligation 'conditional' AND
+					// mandatory true, side by side, exactly as the source states both. The apparent
+					// tension is deliberately NOT reconciled here, and no choice-group concept is
+					// invented, because the flattened export does not state one — the grouping is
+					// inferable only from row adjacency, which is an inference, not a source fact.
+					extraProps.scalar.characteristicsRepeatable = derivedCharacteristics.characteristicsRepeatable;
+					extraProps.scalar.characteristicsObligation = derivedCharacteristics.characteristicsObligation;
+				}
 
 				// ---- SEQUENCE CAPTURE (Phase A) — FIELD groups. Every SifField belongs to EXACTLY ONE
 				// group: nested under its leaf xmlElement's parent-element path (props.pathSegments, when

@@ -87,14 +87,35 @@ fs.mkdirSync(ARTIFACT_DIR, { recursive: true });
 const makeTempDir = (labelText) => fs.mkdtempSync(path.join(os.tmpdir(), `sifRoundTrip-${labelText}-`));
 
 // stage the fixture as a verifiable snapshot: copy the committed .tsv files and write SHA256SUMS.
-const stageFixtureSnapshot = () => {
+/**
+ * @typedef {function(string): string} MainTsvTextTransform
+ *   Receives the main spec TSV's full text and returns the text to stage. Declared because it is an
+ *   injected-behavior seam, however small: a caller supplies code that the stager runs. Must be
+ *   pure and must return a string; returning undefined would stage the literal text 'undefined'.
+ *
+ * @param {{ transformMainTsvText?: MainTsvTextTransform }} [options]
+ * @returns {string} the staged snapshot directory path (with a SHA256SUMS over the staged bytes)
+ */
+const stageFixtureSnapshot = ({ transformMainTsvText } = {}) => {
 	const snapshotDirPath = makeTempDir('fixtureSnapshot');
 	const sumLines = [];
 	fs.readdirSync(FIXTURE_SOURCE_DIR)
 		.filter((oneName) => oneName.endsWith('.tsv'))
 		.sort()
 		.forEach((oneName) => {
-			const fileBytes = fs.readFileSync(path.join(FIXTURE_SOURCE_DIR, oneName));
+			let fileBytes = fs.readFileSync(path.join(FIXTURE_SOURCE_DIR, oneName));
+			// PHASE 4, OPTIONAL: mutate the main spec TSV before staging. Used by the G-15 refusal
+			// probe to poison one Characteristics cell. With the option absent this function behaves
+			// byte-for-byte as it always did, so every existing caller is unaffected.
+			//
+			// The checksum below is deliberately computed over the WRITTEN (mutated) bytes, so a
+			// mutation does NOT trip the snapshot-integrity refusal. That matters: if SHA256SUMS
+			// disagreed, the forge would refuse for a CHECKSUM reason and a careless probe would
+			// count that as proof of the vocabulary refusal. G-15's regex requires the vocabulary
+			// text precisely so it cannot be satisfied by the wrong refusal.
+			if (transformMainTsvText && oneName.startsWith('ImplementationSpecification')) {
+				fileBytes = Buffer.from(transformMainTsvText(fileBytes.toString('utf-8')), 'utf-8');
+			}
 			fs.writeFileSync(path.join(snapshotDirPath, oneName), fileBytes);
 			sumLines.push(`${crypto.createHash('sha256').update(fileBytes).digest('hex')}  ${oneName}`);
 		});
@@ -261,18 +282,63 @@ taskList.push((args, next) => {
 				'fieldDescription',
 				'fieldCedsId',
 				'fieldFormat',
+				'fieldCharacteristics',
 				'precedesInGroup',
 			].forEach((onePredicate) => {
 				harness.ok(`fixture exercises ${onePredicate}`, sourcePredicateSet.has(onePredicate));
 			});
-			// the deliberate exclusion, pinned so it stays deliberate: characteristics cells are
-			// empty in the fixture because the forge translation drops that column (the measured
-			// real-corpus contentGap). A fixture edit stating characteristics would break RT-7 —
-			// this assertion makes that break loud and attributable.
-			harness.ok(
-				'fieldCharacteristics is PINNED ABSENT from the fixture (see header comment)',
-				!sourcePredicateSet.has('fieldCharacteristics'),
+			// ---- fieldCharacteristics: UNPINNED IN PHASE 4 (it was PINNED ABSENT through Phase 3).
+			//
+			// Phase 2 pinned this predicate ABSENT and said exactly why: the forge dropped the
+			// Characteristics column, so a fixture that STATED characteristics could never round-trip
+			// clean, and hiding that would have faked RT-7. That reasoning was right and is now spent —
+			// Phase 4 carries the column, so the fixture states it and the RT-7 zero-loss claim covers
+			// it. The assertion is INVERTED rather than deleted: this predicate's coverage was
+			// deliberate when absent and is deliberate now that it is present.
+			//
+			// COUNTS, NOT PRESENCE, WITH BOTH SIDES NAMED (doctrine A8). The fixture has 12 field rows;
+			// 11 state a Characteristics value and ONE (LastName) deliberately leaves the cell empty.
+			// So fieldCharacteristics must mint exactly 11 source statements against fieldName's 12,
+			// and THE DIFFERENCE OF EXACTLY 1 IS THE ABSENT-IS-ABSENT PROOF: the empty cell minted no
+			// statement on either side. A forge that defaulted an empty cell would make these two
+			// counts equal and fail here — which is the only reason to assert the difference rather
+			// than just the count.
+			const perPredicateRowFor = (onePredicateName) =>
+				verdict.report.perPredicate.find((oneRow) => oneRow.predicate === onePredicateName) || {};
+			const fieldCharacteristicsRow = perPredicateRowFor('fieldCharacteristics');
+			const fieldNameRow = perPredicateRowFor('fieldName');
+			harness.equal(
+				'fixture mints exactly 11 fieldCharacteristics source statements (11 of 12 field rows state a value)',
+				fieldCharacteristicsRow.source,
+				11,
 			);
+			harness.equal(
+				'fixture loses ZERO fieldCharacteristics statements',
+				fieldCharacteristicsRow.lost,
+				0,
+			);
+			harness.equal('fixture has 12 field rows (the fieldName source count)', fieldNameRow.source, 12);
+			harness.equal(
+				'ABSENT IS ABSENT: fieldName source minus fieldCharacteristics source is exactly 1 (the one empty cell carried nothing)',
+				fieldNameRow.source - fieldCharacteristicsRow.source,
+				1,
+			);
+			// the whole CLOSED VOCABULARY is exercised, including BOTH 'C' shapes the real corpus
+			// carries: C with a mandatory '*' (the nine choice-group rows of README_ERRATA.md S-2) and
+			// C with a blank flag. A fixture exercising only one shape would leave the derivation's
+			// most delicate case unproven.
+			const fixtureCharacteristicsValueSet = new Set(
+				forgeResult.nodes
+					.filter((oneNode) => (oneNode.labels || []).includes('SifField'))
+					.map((oneNode) => (oneNode.properties || {}).characteristics)
+					.filter((oneValue) => oneValue !== undefined),
+			);
+			['O', 'M', 'MR', 'OR', 'C'].forEach((oneValue) => {
+				harness.ok(
+					`fixture exercises Characteristics value '${oneValue}'`,
+					fixtureCharacteristicsValueSet.has(oneValue),
+				);
+			});
 			probeFacts.unmodeledConstructTotal =
 				verdict.report.sourceStats.unrecognizedLineCount +
 				verdict.report.sourceStats.emptyNameRowsSkipped;
@@ -746,6 +812,164 @@ taskList.push((args, next) => {
 				);
 			},
 		);
+	});
+});
+
+// SECTION 6b — PHASE 4, the CHARACTERISTICS enrichment. Three claims, each measured for real:
+// the closed vocabulary REFUSES rather than defaults; the derivation is exactly the ratified table
+// and never touches an unstated cell; and the derived pair cannot reach the statement domain.
+taskList.push((args, next) => {
+	if (args.fixtureBroken) {
+		harness.ok('characteristics probes reachable', false, 'fixture broke upstream — probes unmeasurable');
+		next('', args);
+		return;
+	}
+	harness.section('SECTION 6b — CHARACTERISTICS: refusal by name, exact derivation, statement-domain isolation');
+
+	// The derivation table RE-STATED INDEPENDENTLY, typed from the ratified ruling rather than
+	// imported from forgeSif.js. Importing the forge's own table would only confirm the forge
+	// agrees with itself; this is an answer key, and it must be written by hand to be one.
+	const RATIFIED_DERIVATION = {
+		O: { characteristicsRepeatable: false, characteristicsObligation: 'optional' },
+		M: { characteristicsRepeatable: false, characteristicsObligation: 'mandatory' },
+		MR: { characteristicsRepeatable: true, characteristicsObligation: 'mandatory' },
+		OR: { characteristicsRepeatable: true, characteristicsObligation: 'optional' },
+		C: { characteristicsRepeatable: false, characteristicsObligation: 'conditional' },
+	};
+	const DERIVED_PROPERTY_NAMES = ['characteristicsRepeatable', 'characteristicsObligation'];
+
+	// ---- G-17: STRUCTURAL, and the one that guards against curing LOST by manufacturing INVENTED.
+	// The compiler's read projection is the statement domain's whole surface: it builds an explicit
+	// RETURN <name> AS <name> list and iterates only that same list. A derived property inside it
+	// would be re-emitted as though the source had stated it.
+	const readProjection = compilerLib.FIELD_PROPERTY_NAMES;
+	const leakedDerivedNames = DERIVED_PROPERTY_NAMES.filter((oneName) => readProjection.includes(oneName));
+	harness.equal(
+		`no DERIVED property leaked into the compiler read projection (leaked: ${JSON.stringify(leakedDerivedNames)})`,
+		leakedDerivedNames.length,
+		0,
+	);
+	harness.ok(
+		'the VERBATIM characteristics IS in the read projection — it is a source statement and must re-emit',
+		readProjection.includes('characteristics'),
+	);
+	probeFacts.derivedPropertiesOutsideStatementDomain =
+		leakedDerivedNames.length === 0 && readProjection.includes('characteristics');
+
+	// ---- G-16: forge the clean fixture and check EVERY field against the answer key.
+	const cleanSnapshotDirPath = stageFixtureSnapshot();
+	bundle.forge({ sourcePath: cleanSnapshotDirPath, skipEmbedding: true }, (cleanForgeError, cleanForgeResult) => {
+		harness.accepts('clean fixture forges for the derivation probe', [cleanForgeError].filter(Boolean));
+		if (cleanForgeError) {
+			next('', { ...args, fixtureBroken: true });
+			return;
+		}
+
+		const fieldNodeList = cleanForgeResult.nodes.filter((oneNode) => (oneNode.labels || []).includes('SifField'));
+		const derivationFaultList = [];
+		let fieldsCarryingCharacteristics = 0;
+		let fieldsCarryingNothing = 0;
+
+		fieldNodeList.forEach((oneFieldNode) => {
+			const fieldProperties = oneFieldNode.properties || {};
+			const statedValue = fieldProperties.characteristics;
+
+			if (statedValue === undefined) {
+				// ABSENT IS ABSENT for the DERIVED pair too: an unstated cell must produce NONE of the
+				// three properties. A forge that defaulted repeatable:false here would assert
+				// "does not repeat" where the source said nothing at all.
+				fieldsCarryingNothing++;
+				DERIVED_PROPERTY_NAMES.forEach((oneName) => {
+					if (fieldProperties[oneName] !== undefined) {
+						derivationFaultList.push(
+							`${fieldProperties.xpath}: cell is EMPTY yet ${oneName} = ${fieldProperties[oneName]} (silent default)`,
+						);
+					}
+				});
+				return;
+			}
+
+			fieldsCarryingCharacteristics++;
+			const expectedDerivation = RATIFIED_DERIVATION[statedValue];
+			if (!expectedDerivation) {
+				derivationFaultList.push(`${fieldProperties.xpath}: carried '${statedValue}', outside the ratified vocabulary`);
+				return;
+			}
+			DERIVED_PROPERTY_NAMES.forEach((oneName) => {
+				if (fieldProperties[oneName] !== expectedDerivation[oneName]) {
+					derivationFaultList.push(
+						`${fieldProperties.xpath}: '${statedValue}' -> ${oneName} was ${JSON.stringify(fieldProperties[oneName])}, ratified table says ${JSON.stringify(expectedDerivation[oneName])}`,
+					);
+				}
+			});
+		});
+
+		harness.equal(
+			`every fixture field derives per the ratified table (faults: ${JSON.stringify(derivationFaultList.slice(0, 3))})`,
+			derivationFaultList.length,
+			0,
+		);
+		// both sides of the census NAMED (doctrine A8), and they must sum to the field count.
+		harness.equal('fixture fields CARRYING a characteristics value', fieldsCarryingCharacteristics, 11);
+		harness.equal('fixture fields carrying NONE of the three (the empty cell)', fieldsCarryingNothing, 1);
+		harness.equal(
+			'carrying + not-carrying sums to the fixture field count',
+			fieldsCarryingCharacteristics + fieldsCarryingNothing,
+			fieldNodeList.length,
+		);
+		probeFacts.characteristicsDerivationExact =
+			derivationFaultList.length === 0 &&
+			fieldsCarryingCharacteristics === 11 &&
+			fieldsCarryingNothing === 1;
+
+		// ---- G-15: poison ONE Characteristics cell with a value outside the closed vocabulary and
+		// observe the REAL forge refuse BY NAME. 'CR' is used deliberately: README_ERRATA.md S-1
+		// records it as real in the published XSD and absent from this export, so it is exactly the
+		// value a future snapshot might introduce — and the ruling (R6-a) is that it must refuse and
+		// force a human rather than be silently pre-admitted.
+		const poisonedSnapshotDirPath = stageFixtureSnapshot({
+			transformMainTsvText: (tsvText) => {
+				const lineList = tsvText.split('\n');
+				const cellList = lineList[2].split('\t');
+				cellList[2] = 'CR';
+				lineList[2] = cellList.join('\t');
+				return lineList.join('\n');
+			},
+		});
+		bundle.forge({ sourcePath: poisonedSnapshotDirPath, skipEmbedding: true }, (poisonedForgeError) => {
+			const refusalText = String((poisonedForgeError && (poisonedForgeError.message || poisonedForgeError)) || '');
+			// the refusal must name the OFFENDING VALUE and the CLOSED VOCABULARY. Requiring both is
+			// what stops a checksum or parse refusal from being mistaken for this one.
+			const namesTheValue = /'CR'/.test(refusalText);
+			const namesTheVocabulary = /O\/M\/MR\/OR\/C/.test(refusalText);
+			harness.ok(
+				'an out-of-vocabulary Characteristics value REFUSES the forge (no silent default)',
+				Boolean(poisonedForgeError),
+				refusalText || '(the forge accepted it — a value SIF never defined was silently carried)',
+			);
+			harness.ok('the refusal NAMES the offending value', namesTheValue, refusalText);
+			harness.ok('the refusal NAMES the closed vocabulary', namesTheVocabulary, refusalText);
+			probeFacts.characteristicsRefusalNamed =
+				Boolean(poisonedForgeError) && namesTheValue && namesTheVocabulary;
+
+			fs.writeFileSync(
+				path.join(ARTIFACT_DIR, 'p4CharacteristicsProbes.json'),
+				JSON.stringify(
+					{
+						readProjection,
+						leakedDerivedNames,
+						fieldsCarryingCharacteristics,
+						fieldsCarryingNothing,
+						fixtureFieldCount: fieldNodeList.length,
+						derivationFaultList,
+						refusalText,
+					},
+					null,
+					1,
+				),
+			);
+			next('', args);
+		});
 	});
 });
 

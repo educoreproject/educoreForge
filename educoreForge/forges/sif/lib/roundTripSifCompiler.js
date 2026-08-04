@@ -25,6 +25,16 @@
 //     enumerations whose carrier of record is each field's own format scalar (stored VERBATIM —
 //     the quote-strip canonicalization feeds only the registry's fingerprints, a code fact of
 //     lib/parser.js). Reading a registry would re-prove the derivation, not the source.
+//   * DELIBERATELY NOT READ — the DERIVED characteristics pair (Phase 4):
+//     `characteristicsRepeatable` and `characteristicsObligation`. These are the forge's documented
+//     INTERPRETATION of the Characteristics column (its frozen derivation table; see forgeSif.js),
+//     and their carrier of record is each field's own `characteristics` scalar, which IS read above.
+//     Reading the derived pair would re-prove the derivation rather than the source — and worse, it
+//     would put an interpretation into the statement domain, where the re-emission would assert it
+//     as though SIF had stated it. That is invention in exchange for a smaller LOST, which the
+//     doctrine names as strictly worse than the loss it would cure. Gate G-17 asserts both names
+//     stay out of FIELD_PROPERTY_NAMES; it has been OBSERVED RED against a real leak, and with a
+//     matching canonicalizer mapping added the fixture measured INVENTED = 11.
 //   * DELIBERATELY NOT READ — REFERENCES edges: heuristic/curated refId interpretation
 //     (supervisor ruling D5: interpretation, not source statement) whose curated input
 //     (refIdResolutionMap.tsv) is in-house apparatus, out of this diff domain (declared in the

@@ -118,6 +118,32 @@
 			"measure": "probe.scaleReportWellFormed",
 			"comparator": "isTrue",
 			"twin": "blankScaleReport"
+		},
+		// ---- PHASE 4 (the CHARACTERISTICS enrichment). G-15/16/17 guard the three distinct claims
+		// the enrichment makes: that the closed vocabulary REFUSES rather than defaults, that the
+		// derivation is exactly the ratified table and never touches an unstated cell, and that the
+		// derived pair can never reach the round-trip statement domain. G-17 is the important one:
+		// it is the structural guard against curing LOST by manufacturing INVENTED.
+		{
+			"id": "G-15",
+			"title": "an unlisted Characteristics value is REFUSED BY NAME, never defaulted (the real forge observed throwing, message naming the bad value and the closed vocabulary)",
+			"measure": "probe.characteristicsRefusalNamed",
+			"comparator": "isTrue",
+			"twin": "falsifyCharacteristicsRefusalProbe"
+		},
+		{
+			"id": "G-16",
+			"title": "every carried Characteristics value derives EXACTLY per the ratified table (checked against a table re-stated independently in the test), and a field whose cell is empty carries NONE of the three properties",
+			"measure": "probe.characteristicsDerivationExact",
+			"comparator": "isTrue",
+			"twin": "falsifyCharacteristicsDerivationProbe"
+		},
+		{
+			"id": "G-17",
+			"title": "ANTI-INVENTION CONTRACT — neither derived property appears in the round-trip compiler's FIELD_PROPERTY_NAMES projection, so an interpretation can never be re-emitted as a source statement",
+			"measure": "probe.derivedPropertiesOutsideStatementDomain",
+			"comparator": "isTrue",
+			"twin": "falsifyDerivedPropertyIsolationProbe"
 		}
 	]
 }

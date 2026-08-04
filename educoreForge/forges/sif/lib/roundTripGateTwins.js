@@ -121,6 +121,26 @@ const moduleFunction =
 			// supervisor's R-SF-7 addition).
 			blankScaleReport: (measurements) =>
 				setIn(measurements, 'probe.scaleReportWellFormed', false),
+
+			// ---- PHASE 4 (the CHARACTERISTICS enrichment).
+
+			// G-15: the refusal leash. If this fact can be falsified without the gate biting, then
+			// "an unlisted value is refused by name" was a claim in a comment rather than a behavior.
+			falsifyCharacteristicsRefusalProbe: (measurements) =>
+				setIn(measurements, 'probe.characteristicsRefusalNamed', false),
+
+			// G-16: the derivation leash. The probe compares every forged field against a table
+			// re-stated independently in the test; falsifying the fact must turn the gate red or the
+			// derivation is being graded by the code that performed it.
+			falsifyCharacteristicsDerivationProbe: (measurements) =>
+				setIn(measurements, 'probe.characteristicsDerivationExact', false),
+
+			// G-17: the anti-invention leash, and the one that matters most. If the derived pair could
+			// drift into the compiler's read projection unnoticed, the enrichment would start minting
+			// graph statements the source never made — curing LOST by manufacturing INVENTED, which
+			// the doctrine names as strictly worse than the loss it would have cured.
+			falsifyDerivedPropertyIsolationProbe: (measurements) =>
+				setIn(measurements, 'probe.derivedPropertiesOutsideStatementDomain', false),
 		};
 
 		// auditRegistryAgainst — a gate can never quietly go twin-less, and a twin can never
