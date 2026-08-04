@@ -319,9 +319,18 @@ const moduleFunction =
 					roundTripClean: headline.lost === 0 && headline.invented === 0,
 					reproduced: headline.matched,
 					lost: headline.lost,
+					// lostTotal / inventedTotal — the normative RT-6 builder-facing names (R-WO-21,
+					// 2026-08-04; A6 compliance addendum applied post-sign-off): the LIVE RT-13 stage
+					// adjudicates on {roundTripClean, inventedTotal, lostTotal} with zero
+					// per-standard knowledge and REFUSES BY NAME a verdict lacking them. SIF has no
+					// guard-class invention channel (the edfi crosswalk guard has no SIF analogue —
+					// refIdResolutionMap is out of the statement domain, not guarded within it), so
+					// both totals equal the diff counts. These lines add NAMES, never move numbers.
+					lostTotal: headline.lost,
 					lostDeclaredContext: headline.lostDeclaredContext,
 					lostContentGap: headline.lostContentGap,
 					invented: headline.invented,
+					inventedTotal: headline.invented,
 					orderMismatches: headline.orderMismatches,
 					diffScope: {
 						statementSource: args.snapshot.mainTsvFilename,

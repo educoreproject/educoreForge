@@ -289,6 +289,21 @@ taskList.push((args, next) => {
 				verdict.graph.nodeCounts.SifField >= 1 &&
 				!!verdict.graph.rootProperties;
 			harness.ok('verdict names its graph (root provenance + counts)', probeFacts.graphIdentityPresent);
+			// A6 / R-WO-21 normative RT-6 fields: the LIVE RT-13 stage adjudicates on exactly
+			// {roundTripClean, inventedTotal, lostTotal} with zero per-standard knowledge and
+			// REFUSES BY NAME a verdict lacking them. Asserted as names AND as equalities, so a
+			// future edit cannot let the normative name drift away from the count it reports.
+			probeFacts.normativeVerdictFieldsPresent =
+				typeof verdict.roundTripClean === 'boolean' &&
+				typeof verdict.inventedTotal === 'number' &&
+				typeof verdict.lostTotal === 'number' &&
+				verdict.inventedTotal === verdict.invented &&
+				verdict.lostTotal === verdict.lost;
+			harness.ok(
+				'verdict carries the normative RT-6 fields (roundTripClean/inventedTotal/lostTotal) agreeing with the diff counts',
+				probeFacts.normativeVerdictFieldsPresent,
+				`inventedTotal=${verdict.inventedTotal} lostTotal=${verdict.lostTotal}`,
+			);
 			probeFacts.scaleReportWellFormed =
 				!!verdict.scaleReport &&
 				typeof verdict.scaleReport.runtimeMs === 'number' &&

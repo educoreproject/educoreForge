@@ -88,6 +88,15 @@ roundTripValidator.validate(
 		};
 
 		assertThat('INVENTED === 0 (hard)', verdict.invented === 0);
+		// A6 / R-WO-21: the LIVE RT-13 stage refuses by name a verdict lacking the normative
+		// fields, so a stage-ON SIF build would refuse if these ever went missing.
+		assertThat(
+			`normative RT-6 fields present and agreeing (inventedTotal ${verdict.inventedTotal}, lostTotal ${verdict.lostTotal})`,
+			typeof verdict.roundTripClean === 'boolean' &&
+				verdict.inventedTotal === verdict.invented &&
+				verdict.lostTotal === verdict.lost,
+		);
+		assertThat('inventedTotal === 0 (hard, normative name)', verdict.inventedTotal === 0);
 		assertThat('orderMismatches === 0 (R-SF-1)', verdict.orderMismatches === 0);
 		assertThat(
 			'every LOST record located and carrying the ruled backlog label',
