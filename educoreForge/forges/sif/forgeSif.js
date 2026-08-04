@@ -729,7 +729,10 @@ const moduleFunction =
 					nodes: args.graph.nodes,
 					edges: args.graph.edges,
 					metadata: args.parsed.metadata,
-					stats: args.graph.stats,
+					// parseAudit (Phase 1): the parser's formerly-silent paths, counted/recorded.
+					// Rides on stats — run diagnostics, digest-EXCLUDED (the block fingerprint
+					// covers nodes/edges/metadata only).
+					stats: { ...args.graph.stats, parseAudit: args.parsed.parseAudit },
 					embedCallCount: args.embedCallCount,
 					standardKey: STANDARD_KEY,
 					stableUriPropertyName: STABLE_URI_PROPERTY_NAME,

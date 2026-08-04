@@ -3,22 +3,33 @@
 // parser.js — SIF Implementation Specification TSV → standard graphForge node format
 // Ported from educore sif/tsvParser.js — adapted to graphForge parser contract.
 // The parser NEVER touches Neo4j. It only reads the source files and returns standard nodes.
+//
+// CONTRACT: module.exports = (sourcePath, options, callback) with
+// callback(errorString, { nodes, metadata, parseAudit }) — parseAudit added in the Phase 1 forge
+// audit (2026-08-03): counts/records of every formerly-silent parse path (resolution-path census,
+// unresolved refIds, reference-edge drops, leaf-link skips, format canonicalization events,
+// header verifications, empty-name row skips). parseAudit is run diagnostics — the forge threads
+// it onto stats, DIGEST-EXCLUDED (the block fingerprint covers nodes/edges/metadata only).
 
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
 const TABLE_HEADER_PATTERN = /^(.+):\s*Table\s+\d+$/;
+const LITERAL_COLUMN_HEADER = ['Name', 'Mandatory', 'Characteristics', 'Type', 'Description', 'XPath', 'CEDS ID', 'Format'].join('\t');
 
 // ============================================================
 // TSV PARSING
 // ============================================================
 
+// returns { sifObjectList, parseEvents } or { error } — never both. Phase 1 forge audit (RT-2/RT-3):
+// the parse refuses by name instead of guessing, and every formerly-silent skip is counted.
 const parseTsvFile = (tsvPath) => {
 	const content = fs.readFileSync(tsvPath, 'utf8');
 	const lines = content.split('\n');
 
 	const sifObjectList = [];
+	const parseEvents = { columnHeadersVerified: 0, emptyNameRowsSkipped: 0 };
 	let currentObject = null;
 	let expectColumnHeaders = false;
 
@@ -32,10 +43,11 @@ const parseTsvFile = (tsvPath) => {
 				sifObjectList.push(currentObject);
 			}
 			const tableName = tableMatch[1].trim();
-			const singularName = tableName.replace(/s$/, '');
+			// name is derived AFTER the section is parsed, from the xpath-stated element name —
+			// never guessed from the sheet-derived tableName (see the derivation loop below).
 			currentObject = {
 				tableName,
-				name: singularName,
+				name: '',
 				fields: [],
 				refIdFields: []
 			};
@@ -45,6 +57,18 @@ const parseTsvFile = (tsvPath) => {
 
 		if (expectColumnHeaders) {
 			expectColumnHeaders = false;
+			// RT-3: the row after every table header MUST be the literal 8-column header. The
+			// incumbent swallowed this line unexamined, so a section missing its header row would
+			// silently eat a DATA row instead.
+			if (line !== LITERAL_COLUMN_HEADER) {
+				return {
+					error:
+						`table '${currentObject.tableName}' is not followed by the required column-header row ` +
+						`(Name/Mandatory/Characteristics/Type/Description/XPath/CEDS ID/Format) — refusing to parse ` +
+						`a section whose first row cannot be verified as the header`,
+				};
+			}
+			parseEvents.columnHeadersVerified++;
 			continue;
 		}
 
@@ -52,7 +76,13 @@ const parseTsvFile = (tsvPath) => {
 
 		const columns = line.split('\t');
 		const fieldName = (columns[0] || '').trim();
-		if (!fieldName) { continue; }
+		if (!fieldName) {
+			// RT-2 visibility: a row carrying content but no Name is skipped — counted, never silent.
+			if (columns.some((oneColumn) => (oneColumn || '').trim() !== '')) {
+				parseEvents.emptyNameRowsSkipped++;
+			}
+			continue;
+		}
 
 		const xpath = (columns[5] || '').trim();
 		const xpathParts = xpath.split('/');
@@ -82,19 +112,57 @@ const parseTsvFile = (tsvPath) => {
 		sifObjectList.push(currentObject);
 	}
 
-	return sifObjectList;
+	// Phase 1 D2 — the object's element name (singular) is STATED by the source in every field
+	// xpath ('/AccountingPeriods/AccountingPeriod/…' — second non-empty segment). The incumbent
+	// GUESSED it by stripping a trailing 's' from tableName — wrong for the 4 sheet names the
+	// spreadsheet TRUNCATES at the ~31-char sheet-name limit (tableName keeps the sheet name
+	// verbatim; it is the stableId natural key and is a source statement in its own right).
+	// Absent-is-absent: no stated name, or conflicting stated names, is a refusal — never a guess.
+	for (const oneObject of sifObjectList) {
+		const statedElementNames = [
+			...new Set(
+				oneObject.fields
+					.map((oneField) => oneField.xpath.split('/').filter((onePart) => onePart)[1])
+					.filter((onePart) => onePart),
+			),
+		];
+		if (statedElementNames.length === 0) {
+			return {
+				error:
+					`table '${oneObject.tableName}' has no xpath-stated element name (no field xpath ` +
+					`carries a second segment) — refusing to guess a singular object name`,
+			};
+		}
+		if (statedElementNames.length > 1) {
+			return {
+				error:
+					`table '${oneObject.tableName}' states conflicting element names in its field xpaths ` +
+					`(${statedElementNames.join(', ')}) — refusing to choose between them`,
+			};
+		}
+		oneObject.name = statedElementNames[0];
+	}
+
+	return { sifObjectList, parseEvents };
 };
 
 // ============================================================
 // REFID RESOLUTION
 // ============================================================
 
+// returns { manualResolutions } or { error }. Phase 1 D3 (RT-3): the curated crosswalk is a
+// REQUIRED source input — the incumbent warned and continued, silently degrading every curated
+// resolution to the pluralization heuristic.
 const loadResolutionMap = (resolutionMapPath) => {
 	const manualResolutions = {};
 
 	if (!fs.existsSync(resolutionMapPath)) {
-		console.error(`Warning: Resolution map not found at ${resolutionMapPath}`);
-		return manualResolutions;
+		return {
+			error:
+				`refIdResolutionMap.tsv not found at ${resolutionMapPath} — it is a required source ` +
+				`input of the SIF forge; see README_PROVENANCE.md in the snapshot directory for the ` +
+				`acquisition recipe`,
+		};
 	}
 
 	const content = fs.readFileSync(resolutionMapPath, 'utf8');
@@ -109,10 +177,13 @@ const loadResolutionMap = (resolutionMapPath) => {
 		}
 	}
 
-	return manualResolutions;
+	return { manualResolutions };
 };
 
-const resolveRefIdTargets = (sifObjectList, manualResolutions) => {
+// resolutionAudit (Phase 1 D5): every resolution path is COUNTED and every nothing-resolution is
+// RECORDED — the heuristics themselves are the bundle's documented resolution method (supervised
+// by the curated map; supervisor-ruled KEEP 2026-08-03), but none of them acts silently anymore.
+const resolveRefIdTargets = (sifObjectList, manualResolutions, resolutionAudit) => {
 	const tableNameSet = new Set(sifObjectList.map(obj => obj.tableName));
 	const tableNameLowerMap = {};
 	for (const obj of sifObjectList) {
@@ -121,13 +192,36 @@ const resolveRefIdTargets = (sifObjectList, manualResolutions) => {
 
 	const allEdges = [];
 
+	resolutionAudit.resolutionPaths = {
+		manual: 0,
+		manualUnresolvable: 0,
+		naivePlural: 0,
+		lowercasePlural: 0,
+		suffixInfos: 0,
+		suffixPersonals: 0,
+		suffixItems: 0,
+	};
+
 	for (const sifObject of sifObjectList) {
 		for (const refField of sifObject.refIdFields) {
 			const cleanName = refField.name.replace(/^@/, '');
 
 			if (manualResolutions[cleanName]) {
 				const resolved = manualResolutions[cleanName];
-				if (resolved === 'UNRESOLVABLE_GENERIC_REF') { continue; }
+				if (resolved === 'UNRESOLVABLE_GENERIC_REF') {
+					resolutionAudit.resolutionPaths.manualUnresolvable++;
+					continue;
+				}
+				resolutionAudit.resolutionPaths.manual++;
+				if (!tableNameSet.has(resolved)) {
+					// a curated row naming a table the source does not carry would formerly vanish at
+					// block assembly — recorded here at the resolution seam.
+					resolutionAudit.manualTargetsAbsentFromSource.push({
+						sourceTable: sifObject.tableName,
+						refIdProperty: cleanName,
+						resolvedTable: resolved,
+					});
+				}
 				allEdges.push({
 					sourceTable: sifObject.tableName,
 					targetTable: resolved,
@@ -141,11 +235,13 @@ const resolveRefIdTargets = (sifObjectList, manualResolutions) => {
 			const naiveTarget = baseName + 's';
 
 			if (tableNameSet.has(naiveTarget)) {
+				resolutionAudit.resolutionPaths.naivePlural++;
 				allEdges.push({ sourceTable: sifObject.tableName, targetTable: naiveTarget, via: cleanName, mandatory: refField.mandatory });
 				continue;
 			}
 
 			if (tableNameLowerMap[naiveTarget.toLowerCase()]) {
+				resolutionAudit.resolutionPaths.lowercasePlural++;
 				allEdges.push({ sourceTable: sifObject.tableName, targetTable: tableNameLowerMap[naiveTarget.toLowerCase()], via: cleanName, mandatory: refField.mandatory });
 				continue;
 			}
@@ -154,6 +250,7 @@ const resolveRefIdTargets = (sifObjectList, manualResolutions) => {
 			for (const suffix of ['Infos', 'Personals', 'Items']) {
 				const candidate = baseName + suffix;
 				if (tableNameLowerMap[candidate.toLowerCase()]) {
+					resolutionAudit.resolutionPaths[`suffix${suffix}`]++;
 					allEdges.push({ sourceTable: sifObject.tableName, targetTable: tableNameLowerMap[candidate.toLowerCase()], via: cleanName, mandatory: refField.mandatory });
 					found = true;
 					break;
@@ -161,7 +258,11 @@ const resolveRefIdTargets = (sifObjectList, manualResolutions) => {
 			}
 			if (found) { continue; }
 
-			// Unresolved — skip silently
+			// nothing resolved — RECORDED (Phase 1 D5), never a silent skip.
+			resolutionAudit.unresolvedRefIds.push({
+				sourceTable: sifObject.tableName,
+				refIdProperty: cleanName,
+			});
 		}
 	}
 
@@ -204,7 +305,10 @@ const buildTypeRegistry = (sifObjectList) => {
 	return typeMap;
 };
 
-const buildCodesetRegistry = (sifObjectList) => {
+// canonicalization events (quote-strip, empty-after-strip) are COUNTED on the audit (Phase 1 D6) —
+// the canonicalization itself is KEPT: it is identity-bearing (codeset fingerprints, and therefore
+// stableIds, are computed over the canonicalized values; reversing it would churn ids).
+const buildCodesetRegistry = (sifObjectList, canonicalizationAudit) => {
 	const codesetMap = new Map();
 	const fieldCodesetMap = new Map();
 
@@ -212,8 +316,15 @@ const buildCodesetRegistry = (sifObjectList) => {
 		for (const field of obj.fields) {
 			let formatStr = field.format;
 			if (!formatStr) { continue; }
-			formatStr = formatStr.replace(/^"(.*)"$/, '$1');
-			if (!formatStr.trim()) { continue; }
+			const strippedFormatStr = formatStr.replace(/^"(.*)"$/, '$1');
+			if (strippedFormatStr !== formatStr) {
+				canonicalizationAudit.formatQuoteStripCount++;
+			}
+			formatStr = strippedFormatStr;
+			if (!formatStr.trim()) {
+				canonicalizationAudit.formatEmptyAfterQuoteStrip++;
+				continue;
+			}
 			const values = formatStr.split(', ').map(v => v.trim()).filter(v => v);
 			if (values.length === 0) { continue; }
 			const sorted = [...values].sort();
@@ -305,6 +416,72 @@ const buildXmlElementTree = (sifObjectList) => {
 };
 
 // ============================================================
+// SOURCE-INTEGRITY VERIFICATION AT CONSUMPTION (Phase 1 D4, RT-3)
+// ============================================================
+
+// returns '' when every listed source file verifies, else a named refusal. Scope: the snapshot
+// directory's .tsv source bytes (SHA256SUMS covers source bytes only; README_PROVENANCE.md,
+// SHA256SUMS itself, and standardSourceLocation are provenance peers, not source bytes).
+const verifySourceChecksums = (snapshotDirPath) => {
+	const checksumFilePath = path.join(snapshotDirPath, 'SHA256SUMS');
+	if (!fs.existsSync(checksumFilePath)) {
+		return (
+			`SHA256SUMS missing from ${snapshotDirPath} — source integrity cannot be verified at ` +
+			`consumption; see README_PROVENANCE.md in that directory for the acquisition recipe`
+		);
+	}
+
+	const listedChecksums = {};
+	fs.readFileSync(checksumFilePath, 'utf8')
+		.split('\n')
+		.forEach((oneLine) => {
+			const checksumMatch = oneLine.match(/^([0-9a-f]{64})\s+\*?(.+)$/);
+			if (checksumMatch) {
+				listedChecksums[checksumMatch[2].trim()] = checksumMatch[1];
+			}
+		});
+	// a malformed line leaves its file unlisted, which refuses below — never a silent pass.
+	if (Object.keys(listedChecksums).length === 0) {
+		return (
+			`SHA256SUMS at ${checksumFilePath} contains no parseable checksum lines — source ` +
+			`integrity cannot be verified; see README_PROVENANCE.md in that directory`
+		);
+	}
+
+	for (const [oneListedName, expectedChecksum] of Object.entries(listedChecksums)) {
+		const listedFilePath = path.join(snapshotDirPath, oneListedName);
+		if (!fs.existsSync(listedFilePath)) {
+			return (
+				`source file '${oneListedName}' is listed in SHA256SUMS but absent from ` +
+				`${snapshotDirPath} — refusing to forge; see README_PROVENANCE.md in that directory ` +
+				`for the acquisition recipe`
+			);
+		}
+		const computedChecksum = crypto.createHash('sha256').update(fs.readFileSync(listedFilePath)).digest('hex');
+		if (computedChecksum !== expectedChecksum) {
+			return (
+				`source file '${oneListedName}' fails SHA256 verification in ${snapshotDirPath} ` +
+				`(expected ${expectedChecksum}, computed ${computedChecksum}) — the bytes are not the ` +
+				`provenance'd snapshot; refusing to forge; see README_PROVENANCE.md in that directory`
+			);
+		}
+	}
+
+	const unlistedSourceFiles = fs
+		.readdirSync(snapshotDirPath)
+		.filter((oneName) => oneName.endsWith('.tsv') && !(oneName in listedChecksums));
+	if (unlistedSourceFiles.length) {
+		return (
+			`source file '${unlistedSourceFiles.join("', '")}' in ${snapshotDirPath} is not listed in ` +
+			`SHA256SUMS — an unprovenance'd source candidate; refusing to forge; see ` +
+			`README_PROVENANCE.md in that directory`
+		);
+	}
+
+	return '';
+};
+
+// ============================================================
 // MAIN PARSER — graphForge parser contract
 // ============================================================
 
@@ -320,6 +497,16 @@ module.exports = (sourcePath, options, callback) => {
 	let tsvPath = sourcePath;
 	let resolutionMapInDir = null;
 	if (fs.statSync(sourcePath).isDirectory()) {
+		// Phase 1 D4 (RT-3): source integrity is verified AT CONSUMPTION, before any candidate
+		// selection — mismatch, listed-but-absent, unlisted, and missing-SHA256SUMS each refuse by
+		// name. Snapshot-directory consumption is the production path (parserDescriptor.ini omits
+		// sourceFile) and is what the checksums provenance; a FILE-mode caller points at explicit
+		// bytes deliberately and is guarded by the per-input refusals below instead.
+		const checksumError = verifySourceChecksums(sourcePath);
+		if (checksumError) {
+			callback(checksumError);
+			return;
+		}
 		// L15: sorted for cross-machine determinism; EXACTLY ONE candidate required — a stray
 		// second source file would silently forge a different standard on another machine.
 		const f = fs.readdirSync(sourcePath).filter((n) => n.endsWith('.tsv') && n !== 'refIdResolutionMap.tsv').sort();
@@ -341,19 +528,43 @@ module.exports = (sourcePath, options, callback) => {
 
 	console.error(`[sif-tsv/parser] Parsing TSV: ${tsvPath}`);
 
-	// Step 1: Parse TSV
-	const sifObjectList = parseTsvFile(tsvPath);
+	// Step 1: Parse TSV (refuses by name on unverifiable header rows / object names)
+	const parsedSource = parseTsvFile(tsvPath);
+	if (parsedSource.error) {
+		callback(parsedSource.error);
+		return;
+	}
+	const sifObjectList = parsedSource.sifObjectList;
 	console.error(`[sif-tsv/parser] Parsed ${sifObjectList.length} SIF objects`);
 
-	// Step 2: Resolve RefId targets
-	const manualResolutions = loadResolutionMap(resolutionMapPath);
-	const rawEdges = resolveRefIdTargets(sifObjectList, manualResolutions);
+	// parseAudit (Phase 1 D5/D6): every formerly-silent path counted or recorded. Run diagnostics —
+	// digest-EXCLUDED (the forge's block fingerprint covers nodes/edges/metadata only; the audit
+	// rides on stats).
+	const parseAudit = {
+		columnHeadersVerified: parsedSource.parseEvents.columnHeadersVerified,
+		emptyNameRowsSkipped: parsedSource.parseEvents.emptyNameRowsSkipped,
+		resolutionPaths: null, // filled by resolveRefIdTargets
+		unresolvedRefIds: [],
+		manualTargetsAbsentFromSource: [],
+		referenceEdgeDrops: [],
+		leafLinkSkips: 0,
+		formatQuoteStripCount: 0,
+		formatEmptyAfterQuoteStrip: 0,
+	};
+
+	// Step 2: Resolve RefId targets (refuses by name on a missing curated crosswalk)
+	const resolutionMapResult = loadResolutionMap(resolutionMapPath);
+	if (resolutionMapResult.error) {
+		callback(resolutionMapResult.error);
+		return;
+	}
+	const rawEdges = resolveRefIdTargets(sifObjectList, resolutionMapResult.manualResolutions, parseAudit);
 	const referenceEdges = deduplicateEdges(rawEdges);
 	console.error(`[sif-tsv/parser] Resolved ${referenceEdges.length} REFERENCES edges`);
 
 	// Step 3: Build in-memory data structures
 	const typeRegistry = buildTypeRegistry(sifObjectList);
-	const { codesetMap, fieldCodesetMap } = buildCodesetRegistry(sifObjectList);
+	const { codesetMap, fieldCodesetMap } = buildCodesetRegistry(sifObjectList, parseAudit);
 	const { complexTypeMap, parentChildPairs, fieldComplexTypeMap, objectComplexTypesMap } = buildComplexTypeRegistry(sifObjectList);
 	const { elementMap, childElementPairs, objectRootElements, leafFieldLinks } = buildXmlElementTree(sifObjectList);
 
@@ -400,7 +611,8 @@ module.exports = (sourcePath, options, callback) => {
 			superLabel: 'SifModel',
 			properties: {
 				name: t.name,
-				description: `SIF primitive type: ${t.name}`,
+				// RT-2 (Phase 1 D1): the source states no description for a type — absent is absent.
+				description: '',
 				category: 'primitive'
 			},
 			edges: []
@@ -415,7 +627,8 @@ module.exports = (sourcePath, options, callback) => {
 			superLabel: 'SifModel',
 			properties: {
 				name: t.name,
-				description: `SIF simple type: ${t.name}`,
+				// RT-2 (Phase 1 D1): absent is absent.
+				description: '',
 				category: 'simple'
 			},
 			edges: []
@@ -425,6 +638,9 @@ module.exports = (sourcePath, options, callback) => {
 	// SifCodeset nodes
 	const codesetList = [...codesetMap.values()];
 	codesetList.forEach(cs => {
+		// the display name is APPARATUS, not fabrication (supervisor-ruled 2026-08-03): SIF codesets
+		// are UNNAMED inline enumerations keyed by value-fingerprint — the source states no name, so
+		// the bundle names them from their own source-stated values, verbatim.
 		const codesetName = cs.values.slice(0, 3).join(', ') + (cs.values.length > 3 ? '...' : '');
 		nodes.push({
 			id: `codeset-${cs.fingerprint}`,
@@ -432,7 +648,8 @@ module.exports = (sourcePath, options, callback) => {
 			superLabel: 'SifModel',
 			properties: {
 				name: codesetName,
-				description: `SIF codeset: ${cs.values.join(', ')}`,
+				// RT-2 (Phase 1 D1): the values live in the `values` property; prose is absent.
+				description: '',
 				fingerprint: cs.fingerprint,
 				valueCount: cs.valueCount,
 				values: cs.values
@@ -468,7 +685,8 @@ module.exports = (sourcePath, options, callback) => {
 			superLabel: 'SifModel',
 			properties: {
 				name: ct.name,
-				description: `SIF complex type: ${ct.name} (used in ${ct.objectCount} objects, ${ct.fieldCount} fields)`,
+				// RT-2 (Phase 1 D1): absent is absent — the usage counts live in their own properties.
+				description: '',
 				objectCount: ct.objectCount,
 				fieldCount: ct.fieldCount
 			},
@@ -511,7 +729,8 @@ module.exports = (sourcePath, options, callback) => {
 			superLabel: 'SifModel',
 			properties: {
 				name: obj.name,
-				description: `SIF object: ${obj.name} (${obj.fields.length} fields)`,
+				// RT-2 (Phase 1 D1): absent is absent — the field counts live in their own properties.
+				description: '',
 				tableName: obj.tableName,
 				fieldCount: obj.fields.length,
 				mandatoryFieldCount: obj.fields.filter(f => f.mandatory).length
@@ -524,16 +743,21 @@ module.exports = (sourcePath, options, callback) => {
 	referenceEdges.forEach(refEdge => {
 		const sourceId = tableNameToObjectId[refEdge.sourceTable];
 		const targetId = tableNameToObjectId[refEdge.targetTable];
-		if (sourceId && targetId) {
-			const sourceNode = nodes.find(n => n.id === sourceId);
-			if (sourceNode) {
-				sourceNode.edges.push({
-					type: 'REFERENCES',
-					targetId,
-					targetLabel: 'SifObject',
-					properties: { via: refEdge.via, mandatory: refEdge.mandatory }
-				});
-			}
+		const sourceNode = sourceId ? nodes.find(n => n.id === sourceId) : null;
+		if (sourceId && targetId && sourceNode) {
+			sourceNode.edges.push({
+				type: 'REFERENCES',
+				targetId,
+				targetLabel: 'SifObject',
+				properties: { via: refEdge.via, mandatory: refEdge.mandatory }
+			});
+		} else {
+			// an unmaterializable resolved edge would formerly vanish here — RECORDED (Phase 1 D5).
+			parseAudit.referenceEdgeDrops.push({
+				sourceTable: refEdge.sourceTable,
+				targetTable: refEdge.targetTable,
+				via: refEdge.via,
+			});
 		}
 	});
 
@@ -581,7 +805,9 @@ module.exports = (sourcePath, options, callback) => {
 
 			const fieldProps = {
 				name: field.name,
-				description: field.description || `SIF field: ${field.name}`,
+				// RT-2 (Phase 1 D1): the source's Description cell, verbatim — an empty cell emits ''
+				// (the || placeholder chain fabricated prose on 4,733 of 15,620 fields).
+				description: field.description,
 				xpath: field.xpath,
 				mandatory: field.mandatory,
 				characteristics: field.characteristics,
@@ -667,7 +893,8 @@ module.exports = (sourcePath, options, callback) => {
 			superLabel: 'SifModel',
 			properties: {
 				name: el.name,
-				description: `SIF XML element: ${el.name} (depth ${el.depth})`,
+				// RT-2 (Phase 1 D1): absent is absent — depth/path live in their own properties.
+				description: '',
 				path: el.path,
 				depth: el.depth,
 				isShared: el.isShared,
@@ -677,7 +904,9 @@ module.exports = (sourcePath, options, callback) => {
 		});
 	});
 
-	// REALIZED_BY edges (leaf xml elements → fields)
+	// REALIZED_BY edges (leaf xml elements → fields). Leaves-only is the documented design (a
+	// non-leaf element is structure, not a value carrier); the skipped candidates are COUNTED on
+	// the audit (Phase 1 D5) so the design's reach is measured, never silent.
 	leafFieldLinks.forEach(link => {
 		const el = elementMap.get(link.elementPath);
 		if (el && el.isLeaf) {
@@ -689,6 +918,8 @@ module.exports = (sourcePath, options, callback) => {
 					targetLabel: 'SifField'
 				});
 			}
+		} else {
+			parseAudit.leafLinkSkips++;
 		}
 	});
 
@@ -707,6 +938,7 @@ module.exports = (sourcePath, options, callback) => {
 
 	callback('', {
 		nodes,
+		parseAudit,
 		metadata: {
 			version: '1.0',
 			sourceFormat: 'tsv',
