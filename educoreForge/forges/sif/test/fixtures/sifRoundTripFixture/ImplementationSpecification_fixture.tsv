@@ -1,0 +1,16 @@
+FixtureStudents: Table 1
+Name	Mandatory	Characteristics	Type	Description	XPath	CEDS ID	Format
+@RefId	*		RefIdType	GUID identifying this fixture student.	/FixtureStudents/FixtureStudent/@RefId
+LocalId			token	Local identifier for the fixture student.	/FixtureStudents/FixtureStudent/LocalId	P000100
+StatusCode	*		token		/FixtureStudents/FixtureStudent/StatusCode		"Active, Inactive, Withdrawn"
+FixtureSchoolRefId	*		IdRefType	School this fixture student attends.	/FixtureStudents/FixtureStudent/FixtureSchoolRefId
+FirstName	*		normalizedString	Given name of the fixture student.	/FixtureStudents/FixtureStudent/Name/FirstName
+LastName	*		normalizedString	Family name of the fixture student.	/FixtureStudents/FixtureStudent/Name/LastName
+Type	*		token	Time element type marker.	/FixtureStudents/FixtureStudent/SIF_Meta/TimeElement/Type
+Code			token		/FixtureStudents/FixtureStudent/SIF_Meta/TimeElement/Code
+FixtureCustomRefId			IdRefType	Curated crosswalk exercise.	/FixtureStudents/FixtureStudent/FixtureCustomRefId
+FixtureSchools: Table 2
+Name	Mandatory	Characteristics	Type	Description	XPath	CEDS ID	Format
+@RefId	*		RefIdType	GUID identifying this fixture school.	/FixtureSchools/FixtureSchool/@RefId
+SchoolName	*		normalizedString	Name of the fixture school.	/FixtureSchools/FixtureSchool/SchoolName
+GradeLevels			token		/FixtureSchools/FixtureSchool/GradeLevels	P000200	"Primary, Secondary"
