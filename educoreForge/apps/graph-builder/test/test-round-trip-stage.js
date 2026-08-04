@@ -116,10 +116,16 @@ const stageRealCensus = (done) => {
 				"pesc's validatorApi.validate is a function (both export styles served by ONE loader)",
 				typeof pescRow.validatorApi.validate === 'function',
 			);
+			// 04 since the forge-edfi Phase 5 closeout: this assertion read 01 while the Phase 4->5
+			// transitional window was open (entryModule pinned the incumbent forge, defaultSnapshot
+			// its snapshot, and a stage-ON edfi build refused honestly at snapshot intake). The
+			// closeout flipped both pins together and removed snapshots 01-03 with the incumbent, so
+			// the composer now resolves 04. What is asserted is unchanged: the roster row's
+			// snapshotDirPath is whatever the DESCRIPTOR pins, read from the descriptor, never guessed.
 			harness.match(
-				"edfi's snapshotPath is the PINNED version directory (01 — the transitional window's honest pin)",
+				"edfi's snapshotPath is the PINNED version directory (04 — the post-closeout pin)",
 				edfiRow.snapshotDirPath,
-				/forges\/edfi\/assets\/standardSourceData\/01$/,
+				/forges\/edfi\/assets\/standardSourceData\/04$/,
 			);
 			harness.match(
 				"pesc's snapshotPath is its pinned version directory",

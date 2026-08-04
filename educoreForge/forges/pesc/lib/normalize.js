@@ -3,6 +3,9 @@
 // normalize.js — PESC anchor + stableId normalization (R3, DESIGN §E, DECISIONS §23-R3).
 // Mirrors forge-sif/lib/normalize.js and forge-edfi/lib/normalize.js; adapted for PESC's XSD element
 // kinds (the XSD-family trailblazer).
+// HISTORICAL CITATION: the forge-edfi mirror target is the PRE-CAMPAIGN CSV-crosswalk forge-edfi,
+// removed from HEAD at the round-trip closeout 2026-08-04 (git history holds it); today's
+// forge-edfi is a MetaEd reimplementation and carries no normalize.js.
 //
 // PESC has ONE canonical-form obligation that matters for this standard block:
 //

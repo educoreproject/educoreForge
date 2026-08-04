@@ -1,7 +1,0 @@
-standard: forge-edfi
-publishedVersion: unknown
-publishedVersionEvidence: Ed-Fi data standard version not recorded in the crosswalk CSVs
-upstreamUrl: unknown (publisher: Ed-Fi Alliance — https://www.ed-fi.org; crosswalk artifact URL not recorded)
-copiedFrom: /Users/tqwhite/Documents/webdev/educoreForgeOLD/system/code/cli/lib.d/forge-edfi/assets/standardSourceData/01
-copiedDate: 2026-06-23
-note: harvested into the universal-contract forge bundle on 2026-06-23 (CSV-family trailblazer). Two source CSVs: EdFiEntityElementsToCEDS.csv (entity fields -> CEDS elements) + EdFiEntityDescriptorsToCEDS.csv (descriptor values -> CEDS option codes). The CEDS target columns are BRIDGE data for a later phase, NOT emitted as cross-standard edges here.

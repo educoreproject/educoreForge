@@ -1,0 +1,24 @@
+{
+  // edfiOnlyRoundTrip - edfiOnly PLUS the RT-13 round-trip stage: forge edfi alone, materialize,
+  // then run its DECLARED roundTripValidator against the product graph and land the verdict with
+  // the build outputs. This is forge-edfi's CERTIFICATION recipe (Phase 5 closeout): the build
+  // that proves the flipped descriptor (entryModule=forgeEdfi.js, defaultSnapshot=04) reaches a
+  // real verdict through the ordinary builder path, with -goldEvalCheck PASS on the run directory
+  // as the campaign's one-command proof. edfiOnly.recipe.jsonc remains the stage-off sibling.
+  //
+  // Expect inventedTotal 0 (the doctrine's hard line, RT-6) and lostTotal 349 — the named
+  // enrichment backlog (interchangeComponentKind 205, itemMetaEdId 130, itemNamespaceQualifier 14,
+  // rulings R-WO-15(d)/(f)), so roundTripClean is honestly false until that enrichment lands.
+  //
+  // Requires the gitignored MetaEd bytes: a git-clone consumer runs the acquisition recipe in
+  // forges/edfi/assets/standardSourceData/04/README_PROVENANCE.md first, or the forge REFUSES by
+  // name (RT-3) rather than forging a partial standard.
+  "schemaVersion": "1.0.0",
+  "recipeName": "edfiOnlyRoundTrip",
+  "kind": "dev",
+  "description": "Forge the edfi standard base and round-trip-validate the materialized product (RT-13 stage, campaign certification).",
+  "roundTripStage": true,
+  "standards": [ { "token": "edfi", "version": "current" } ],
+  "hubs": [],
+  "bridges": []
+}

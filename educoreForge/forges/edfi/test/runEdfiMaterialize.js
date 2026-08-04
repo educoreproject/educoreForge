@@ -5,27 +5,31 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
 const helpText = () => `
 NAME
-     runEdfiV2Materialize.js — materialize the V2 forge into the Phase 3 scratch container
-     (forge-edfi round-trip campaign, ruling R-WO-13)
+     runEdfiMaterialize.js — materialize the forge into the round-trip scratch container
+     (forge-edfi round-trip campaign, ruling R-WO-13; renamed from runEdfiV2Materialize.js at
+     the Phase 5 closeout)
 
 DESCRIPTION
-     Forges snapshot 04 with forgeEdfiV2 (skipEmbedding — Layer 1 re-emission never reads
+     Forges snapshot 04 with forgeEdfi (skipEmbedding — Layer 1 re-emission never reads
      vectors; zero embedding spend; deterministic) and materializes the result into the scratch
      container DEV_edfiRoundTrip_080326 via replayManager.create/init — the exact seam
      integration-forge.js proves. The materialization proof: node/edge counts read back over
      bolt equal the Phase 2 block census (6,336 nodes / 8,171 edges).
 
-     WHY THIS RUNNER EXISTS (R-WO-13, recorded so nobody resurrects the alternative): the
-     builder resolves a standard's forge EXCLUSIVELY through forges/edfi/parserDescriptor.ini
-     (entryModule), which stays pinned to the incumbent forgeEdfi.js until campaign closeout
-     (RT-12/RT-13 flips are later phases). There is deliberately NO override path — not in the
-     forge spec, not in the recipe schema (additionalProperties: false). The REJECTED
-     alternative was a sibling forges/edfiv2/ bundle with its own descriptor: that would be a
-     second live registration for the same standard, discoverable by the roster scanner, and
-     closeout debt for no gain. A checked-in bundle-local runner driving the forge and
-     replayManager directly is the precedented path (the pesc campaign's
-     DEV_pescRoundTrip_080326 was built exactly this way — its runner was never committed;
-     this one is).
+     WHY THIS RUNNER EXISTS (R-WO-13). Originally (Phases 3–4) it was the ONLY way to
+     materialize this forge: the builder resolves a standard's forge EXCLUSIVELY through
+     forges/edfi/parserDescriptor.ini (entryModule), which stayed pinned to the incumbent forge
+     until campaign closeout, and there is deliberately NO override path — not in the forge
+     spec, not in the recipe schema (additionalProperties: false). The REJECTED alternative was
+     a sibling forges/edfiv2/ bundle with its own descriptor: a second live registration for the
+     same standard, discoverable by the roster scanner, and closeout debt for no gain. Recorded
+     so nobody resurrects it.
+
+     SINCE THE PHASE 5 CLOSEOUT the descriptor pins this forge and snapshot 04, so a stage-ON
+     recipe build materializes and round-trips edfi through the ordinary builder path. This
+     runner remains the fast bundle-local materializer for the scratch round-trip container —
+     forge + replayManager directly, no recipe, no bridges, no embedding spend — which is what
+     runEdfiRoundTripRealGraph.js validates against.
 
      GNC-001: the container name is DEV_* (scratch tier) and replayManager's nameRefusal
      enforces it structurally — GOLD_*/gf_* are refused in code before any docker command runs.
@@ -43,7 +47,7 @@ require('../../../test/testLib/testAppStartup')({ moduleName, helpText: helpText
 
 const path = require('path');
 
-const forgeEdfiV2 = require('../forgeEdfiV2.js')({});
+const forgeEdfi = require('../forgeEdfi.js')({});
 const roundTripEdfiCompiler = require('../lib/roundTripEdfiCompiler')();
 const replayManager = require('../../../apps/graph-builder/apps/replay-manager')();
 // the forger's OWN producer->engine translator (ref externalization + PG-JSON property arrays)
@@ -62,7 +66,7 @@ const failOut = (failureMessage) => {
 };
 
 console.error(`[${moduleName}] forging snapshot 04 (skipEmbedding) ...`);
-forgeEdfiV2.forge({ sourcePath: SNAPSHOT_PATH, skipEmbedding: true }, (forgeError, forgeResult) => {
+forgeEdfi.forge({ sourcePath: SNAPSHOT_PATH, skipEmbedding: true }, (forgeError, forgeResult) => {
 	if (forgeError) {
 		failOut(forgeError);
 		return;
@@ -101,7 +105,7 @@ forgeEdfiV2.forge({ sourcePath: SNAPSHOT_PATH, skipEmbedding: true }, (forgeErro
 				inGraph: graphHandle,
 				nodeEdges,
 				applyLabels: [BASE_GRAPH_LABEL],
-				sourceLabel: `nodeEdges from forgeEdfiV2 over snapshot 04 (Phase 3 round-trip materialization)`,
+				sourceLabel: `nodeEdges from forgeEdfi over snapshot 04 (Phase 3 round-trip materialization)`,
 			},
 			(initError, loadReport) => {
 				if (initError) {
@@ -125,9 +129,45 @@ forgeEdfiV2.forge({ sourcePath: SNAPSHOT_PATH, skipEmbedding: true }, (forgeErro
 						const session = driver.session();
 						session
 							.run(
+								// ┌─ TRAP ─────────────────────────────────────────────────────────────────┐
+								// DO NOT remove the WITH barrier below, and DO NOT clone this query without
+								// it. It is load-bearing, not style. (Doctrine amendment A8, §5.4a under
+								// RT-7.)
+								//
+								// WHAT THE NAIVE SHAPE DOES: put the node pattern and the relationship
+								// pattern in ONE match scope and the relationship match re-runs for EVERY
+								// node row, leaving DISTINCT to collapse a CARTESIAN PRODUCT — rows =
+								// nodes x relationships.
+								//
+								// OBSERVED COST, not theorized:
+								//   at SIF scale (27,069 nodes x 88,757 rels = ~2.4 BILLION rows):
+								//       naive form  — a full core at 101% CPU for OVER TEN MINUTES,
+								//                     killed before it ever returned
+								//       barriered   — 3.5 seconds
+								//   at Ed-Fi scale (6,336 x 8,171 = ~51.8M rows):
+								//       naive form  — 34.2 SECONDS
+								//       barriered   — 176 ms  (~194x)
+								//
+								// WHY THAT MATTERS MORE AT THIS SCALE, NOT LESS: 34 seconds COMPLETES. It
+								// looks fine. That is how this survived a signed-off runner until a bigger
+								// corpus made it fatal. A cost that is merely survivable is the dangerous
+								// kind, because nothing prompts anyone to question it.
+								//
+								// WHY THE BARRIER WORKS: aggregating to a single row first means each
+								// relationship is matched exactly once, which makes DISTINCT UNNECESSARY
+								// rather than merely cheaper. Same answers both forms — proven on ONE graph
+								// before this edit shipped (6,336 / 8,171 either way).
+								//
+								// PROVENANCE: found by the forge-sif Phase 2 builder, which inherited this
+								// shape FROM this runner and hit the wall first, then reported it across the
+								// fence instead of reaching across it. The reference implementation
+								// (forges/ceds/test/runCedsHubBridgeGates.js) already used the barriered
+								// idiom; this query was written fresh instead of copied from it.
+								// └────────────────────────────────────────────────────────────────────────┘
 								`MATCH (oneNode:ForgedNode {_source: 'EdFi'})
+								 WITH count(oneNode) AS nodeCount
 								 OPTIONAL MATCH (:ForgedNode {_source: 'EdFi'})-[oneEdge]->(:ForgedNode {_source: 'EdFi'})
-								 RETURN count(DISTINCT oneNode) AS nodeCount, count(DISTINCT oneEdge) AS edgeCount`,
+								 RETURN nodeCount, count(oneEdge) AS edgeCount`,
 							)
 							.then((countResult) => {
 								session.close();

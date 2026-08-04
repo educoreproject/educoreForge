@@ -5,6 +5,9 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // forgeSedm.js — the SEDM forge bundle. Parses the SEDM CEDS-Map CSV + domain-structures JSON and
 // emits the UNIVERSAL FORGE PROPERTY CONTRACT (the SAME contract forge-edfi/forge-sif emit), so SEDM
 // lands in the validation graph interoperably. Mirrors forge-edfi/forgeEdfi.js exactly.
+// HISTORICAL CITATION: the forgeEdfi.js this mirrors is the PRE-CAMPAIGN CSV-crosswalk forge,
+// removed from HEAD at the forge-edfi round-trip closeout 2026-08-04 (git history holds it). The
+// filename is now a MetaEd reimplementation; the UNIVERSAL CONTRACT cited above is unchanged.
 //
 // HARVESTED+ADAPTED from the OLD forge-sedm (lib/parser.js navigation reused; node-shaping rewritten):
 //   * the OLD tool emitted private Sedm* nodes (SedmRoot/SedmOntologyClass/SedmComplianceCategory/

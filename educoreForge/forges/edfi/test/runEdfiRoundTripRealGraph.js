@@ -9,7 +9,7 @@ NAME
 
 DESCRIPTION
      Runs roundTripValidator.validate() against the materialized scratch container
-     DEV_edfiRoundTrip_080326 (built by runEdfiV2Materialize.js) over the pinned snapshot 04,
+     DEV_edfiRoundTrip_080326 (built by runEdfiMaterialize.js) over the pinned snapshot 04,
      landing the RT-6 verdict artifact in test-artifacts/realGraphRun/. This is the run that
      audits the LOADER as well as the forge (RT-4: the graph, not the forge's memory).
 

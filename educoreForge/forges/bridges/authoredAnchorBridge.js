@@ -14,10 +14,16 @@
 //     crosswalk source (EdFi: EdFiEntityElementsToCEDS.csv / EdFiEntityDescriptorsToCEDS.csv; SEDM:
 //     the CEDS-Map CSV). This is the curated authority.
 //   * the PER-NODE ANCHOR — the scalar properties.cedsId the forge stamped as its OWN single-anchor
-//     summary (measured over the real assets 2026-07-30: EdFi collapses a multi-id crosswalk row set
-//     to the FIRST canonicalizable id, forgeEdfi.js:359-361, so 34 of 1,048 anchored fields carry
-//     fewer anchors in the scalar than the crosswalk asserts — 43 crosswalk assignments have no
-//     scalar echo; SEDM's element identity INCLUDES the Global ID, so its 230 anchors never diverge).
+//     summary (EdFi collapses a multi-id crosswalk row set to the FIRST canonicalizable id, so some
+//     anchored fields carry fewer anchors in the scalar than the crosswalk asserts; SEDM's element
+//     identity INCLUDES the Global ID, so its 230 anchors never diverge).
+//     HISTORICAL CITATION: the counts here were once stated as '34 of 1,048 anchored fields / 43
+//     crosswalk assignments with no scalar echo, forgeEdfi.js:359-361' — measured 2026-07-30 against
+//     the PRE-CAMPAIGN CSV-crosswalk forge-edfi, which was removed from HEAD at the round-trip
+//     closeout 2026-08-04. That line number points into git history, not into today's file. The
+//     COLLAPSE BEHAVIOR the paragraph describes is unchanged and still measured; the live numbers
+//     over the MetaEd forge (625 anchored nodes, 656 assignments, 31 with no scalar echo) are
+//     asserted in test-authored-anchor-bridge.js section F, which is where numbers belong.
 //   WHERE THEY AGREE (the same targetKey appears in both) -> ONE edge, DOUBLY ATTESTED: a single
 //     EXACT_MATCH whose provenance records BOTH locators (anchorAttestation/anchorLocators below).
 //   WHERE THEY DIVERGE -> BOTH edges, honestly tiered ("one exact and the other inferred" — TQ):

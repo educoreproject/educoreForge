@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 'use strict';
 
-// test-forgeEdfiV2.js — the HERMETIC suite for the forge-edfi V2 forge (Phase 2, rulings
-// R-WO-8..R-WO-11).
+// test-forgeEdfi.js — the HERMETIC suite for the forge-edfi forge (Phase 2, rulings
+// R-WO-8..R-WO-11; renamed from test-forgeEdfiV2.js at the Phase 5 closeout when the forge took
+// its RT-1 manifest name).
 //
 // NOTHING HERE TOUCHES THE REAL SNAPSHOT, DOCKER, THE NETWORK, OR ANY EMBEDDING PROVIDER.
 // Every run builds a throwaway five-input snapshot under os.tmpdir() (MetaEd sources reusing
@@ -22,7 +23,7 @@
 //     missing crosswalk, unresolvable model reference, non-Descriptor record element, empty
 //     CodeValue, duplicate stableId.
 //
-// Run: node forges/edfi/test/test-forgeEdfiV2.js [-verbose]
+// Run: node forges/edfi/test/test-forgeEdfi.js [-verbose]
 
 const fs = require('fs');
 const os = require('os');
@@ -33,13 +34,13 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
 const helpText = () => `
 NAME
-     ${moduleName} -- hermetic suite for the forge-edfi V2 forge (Phase 2)
+     ${moduleName} -- hermetic suite for the forge-edfi forge (Phase 2)
 
 SYNOPSIS
      ${moduleName} [-verbose] [-quiet] [-help]
 
 DESCRIPTION
-     Builds throwaway five-input snapshots under os.tmpdir() and exercises the V2 forge's
+     Builds throwaway five-input snapshots under os.tmpdir() and exercises the forge's
      contract shape, crosswalk carriage, determinism, and refusal doctrine. Touches no real
      snapshot bytes, no Docker, no network, no embedding provider.
 
@@ -51,8 +52,8 @@ require('../../../test/testLib/testAppStartup')({ moduleName, helpText: helpText
 
 const harness = require('../../../test/testLib/harness')(moduleName);
 
-const forgeEdfiV2 = require('../forgeEdfiV2.js')({});
-const forgeEdfiV2ContractGraph = require('../lib/forgeEdfiV2ContractGraph')();
+const forgeEdfi = require('../forgeEdfi.js')({});
+const forgeEdfiContractGraph = require('../lib/forgeEdfiContractGraph')();
 
 // =====================================================================
 // scratch snapshot builder — a VALID five-input snapshot; tests mutate copies of it
@@ -300,7 +301,7 @@ const writeScratchSha256Sums = (scratchSnapshotPath) => {
 };
 
 const runForgeOn = (snapshotPath, runCallback) => {
-	forgeEdfiV2.forge(
+	forgeEdfi.forge(
 		{ sourcePath: snapshotPath, skipEmbedding: true },
 		(forgeError, forged) => {
 			runCallback(forgeError || '', forged || null);
@@ -747,7 +748,7 @@ pushStep((done) => {
 	harness.section('PURE HELPERS — effective property name + CEDS cross-ref normalization');
 	harness.equal(
 		'role name prefixes the base name',
-		forgeEdfiV2ContractGraph.effectivePropertyNameFor({
+		forgeEdfiContractGraph.effectivePropertyNameFor({
 			propertyName: 'Address',
 			roleNameName: 'Mailing',
 		}),
@@ -755,7 +756,7 @@ pushStep((done) => {
 	);
 	harness.equal(
 		"shared 'named' override wins as the base name",
-		forgeEdfiV2ContractGraph.effectivePropertyNameFor({
+		forgeEdfiContractGraph.effectivePropertyNameFor({
 			sharedTypeName: 'FixtureUniqueId',
 			sharedPropertyName: 'FixtureStudentUniqueId',
 		}),
@@ -763,12 +764,12 @@ pushStep((done) => {
 	);
 	harness.equal(
 		'shared property without a name takes the shared type name',
-		forgeEdfiV2ContractGraph.effectivePropertyNameFor({ sharedTypeName: 'FixtureCount' }),
+		forgeEdfiContractGraph.effectivePropertyNameFor({ sharedTypeName: 'FixtureCount' }),
 		'FixtureCount',
 	);
 	harness.equal(
 		'identical role name does not double the prefix',
-		forgeEdfiV2ContractGraph.effectivePropertyNameFor({
+		forgeEdfiContractGraph.effectivePropertyNameFor({
 			propertyName: 'Mailing',
 			roleNameName: 'Mailing',
 		}),
@@ -776,16 +777,16 @@ pushStep((done) => {
 	);
 	harness.ok(
 		"CEDS sentinel '000000' is ABSENT, not data",
-		forgeEdfiV2ContractGraph.normalizeCedsCrossRef({ rawValue: '000000' }).absent === true,
+		forgeEdfiContractGraph.normalizeCedsCrossRef({ rawValue: '000000' }).absent === true,
 	);
 	harness.equal(
 		'CEDS global-id canonicalizes to P-form',
-		forgeEdfiV2ContractGraph.normalizeCedsCrossRef({ rawValue: '123' }).cedsId,
+		forgeEdfiContractGraph.normalizeCedsCrossRef({ rawValue: '123' }).cedsId,
 		'P000123',
 	);
 	harness.ok(
 		'non-numeric CEDS global-id is an ERROR, never silent',
-		Boolean(forgeEdfiV2ContractGraph.normalizeCedsCrossRef({ rawValue: 'not-a-number' }).error),
+		Boolean(forgeEdfiContractGraph.normalizeCedsCrossRef({ rawValue: 'not-a-number' }).error),
 	);
 	done();
 });

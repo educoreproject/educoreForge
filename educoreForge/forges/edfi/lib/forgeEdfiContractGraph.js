@@ -1,7 +1,9 @@
 'use strict';
 
-// forgeEdfiV2ContractGraph.js — forge-edfi Phase 2 (R-WO-8/R-WO-9): the PURE, synchronous,
-// deterministic shaping layer of the V2 forge. Consumes the Phase 1 parser's in-memory MetaEd
+// forgeEdfiContractGraph.js — forge-edfi Phase 2 (R-WO-8/R-WO-9): the PURE, synchronous,
+// deterministic shaping layer of the forge (renamed from forgeEdfiV2ContractGraph.js at the
+// Phase 5 closeout, when the campaign forge took its RT-1 manifest name and the V2 scaffolding
+// vocabulary was retired). Consumes the Phase 1 parser's in-memory MetaEd
 // model (the declared interface in metaEdParser.js), the descriptor code-value sets
 // (descriptorCodeValueLoader.js), and the authored crosswalk registries (crosswalkCarrier.js),
 // and emits the universal forge property contract: { nodes, edges, stats, crosswalkMatchReport }.
@@ -213,7 +215,7 @@ const buildConstructStableId = ({ constructType, constructName }) => {
 	const cleanName = constructName == null ? '' : `${constructName}`.trim();
 	if (cleanName === '') {
 		throw new Error(
-			`forge-edfi-v2 R3 stableId miss: empty construct name for constructType '${constructType}'`,
+			`forge-edfi R3 stableId miss: empty construct name for constructType '${constructType}'`,
 		);
 	}
 	return `edfi:${constructType}/${cleanName}`;
@@ -325,7 +327,7 @@ const moduleFunction = () => {
 		const registerStableId = ({ stableId, origin }) => {
 			if (originByStableId[stableId]) {
 				throw new Error(
-					`forge-edfi-v2 REFUSED: duplicate stableId '${stableId}' — first minted from ` +
+					`forge-edfi REFUSED: duplicate stableId '${stableId}' — first minted from ` +
 						`${originByStableId[stableId]}, minted again from ${origin}. Identity must be ` +
 						`unique; a silent overwrite is a silent merge.`,
 				);
@@ -359,7 +361,7 @@ const moduleFunction = () => {
 			origin,
 		}) => {
 			if (!isCleanStableId(stableId)) {
-				throw new Error(`forge-edfi-v2: unclean stableId '${stableId}' (from ${origin})`);
+				throw new Error(`forge-edfi: unclean stableId '${stableId}' (from ${origin})`);
 			}
 			registerStableId({ stableId, origin });
 			const searchText = buildSearchText(
@@ -468,7 +470,7 @@ const moduleFunction = () => {
 			const roleSpec = CONSTRUCT_ROLE_REGISTRY[parsedConstruct.constructType];
 			if (!roleSpec) {
 				throw new Error(
-					`forge-edfi-v2 REFUSED: unknown constructType '${parsedConstruct.constructType}' ` +
+					`forge-edfi REFUSED: unknown constructType '${parsedConstruct.constructType}' ` +
 						`(from ${originFor(parsedConstruct)}) — not in CONSTRUCT_ROLE_REGISTRY`,
 				);
 			}
@@ -511,7 +513,7 @@ const moduleFunction = () => {
 			const familyTypeList = REFERENCE_FAMILY_REGISTRY[targetFamily];
 			if (!familyTypeList) {
 				throw new Error(
-					`forge-edfi-v2 REFUSED: unknown reference family '${targetFamily}' — not in ` +
+					`forge-edfi REFUSED: unknown reference family '${targetFamily}' — not in ` +
 						`REFERENCE_FAMILY_REGISTRY`,
 				);
 			}
@@ -526,7 +528,7 @@ const moduleFunction = () => {
 
 		const refuseUnresolvedReference = ({ referenceKindLabel, targetFamily, targetLocalName, origin }) => {
 			throw new Error(
-				`forge-edfi-v2 REFUSED: ${referenceKindLabel} '${targetLocalName}' (family ` +
+				`forge-edfi REFUSED: ${referenceKindLabel} '${targetLocalName}' (family ` +
 					`'${targetFamily}') resolves to NO construct in the parsed model (from ${origin}). ` +
 					`A model-internal reference that cannot be resolved is a broken model, not a skip.`,
 			);
@@ -559,7 +561,7 @@ const moduleFunction = () => {
 				const referenceSpec = PROPERTY_REFERENCE_EDGE_REGISTRY[parsedProperty.propertyType];
 				if (referenceSpec === undefined) {
 					throw new Error(
-						`forge-edfi-v2 REFUSED: unknown propertyType '${parsedProperty.propertyType}' on ` +
+						`forge-edfi REFUSED: unknown propertyType '${parsedProperty.propertyType}' on ` +
 							`${constructName} (from ${originFor(parsedConstruct)}) — not in ` +
 							`PROPERTY_REFERENCE_EDGE_REGISTRY`,
 					);
@@ -636,7 +638,7 @@ const moduleFunction = () => {
 				const trimmedCodeValue = `${codeValueText}`.trim();
 				if (trimmedCodeValue === '') {
 					throw new Error(
-						`forge-edfi-v2 R3 stableId miss: empty (all-whitespace) code value on ` +
+						`forge-edfi R3 stableId miss: empty (all-whitespace) code value on ` +
 							`'${constructName}' (from ${origin})`,
 					);
 				}
@@ -725,7 +727,7 @@ const moduleFunction = () => {
 				const firstValueEntry =
 					descriptorCodeValues.codeValueListByDescriptorName[descriptorName][0];
 				throw new Error(
-					`forge-edfi-v2 REFUSED (R-WO-10): descriptor code-value source ` +
+					`forge-edfi REFUSED (R-WO-10): descriptor code-value source ` +
 						`'${firstValueEntry.sourceFileRelativePath}' names descriptor '${descriptorName}', ` +
 						`which does not exist in the parsed MetaEd model. Two declared inputs of one ` +
 						`snapshot contradict each other; a broken snapshot is refused, not repaired.`,
@@ -950,7 +952,7 @@ const moduleFunction = () => {
 				}
 				if (normalized.error) {
 					throw new Error(
-						`forge-edfi-v2 R3 CEDS cross-ref miss on property ` +
+						`forge-edfi R3 CEDS cross-ref miss on property ` +
 							`'${matchRefId}': ${normalized.error}`,
 					);
 				}
@@ -987,7 +989,7 @@ const moduleFunction = () => {
 			const normalized = normalizeCedsCrossRef({ rawValue: oneRegistryEntry.cedsGlobalId });
 			if (normalized.error) {
 				throw new Error(
-					`forge-edfi-v2 R3 CEDS cross-ref miss on descriptor ` +
+					`forge-edfi R3 CEDS cross-ref miss on descriptor ` +
 						`'${oneRegistryEntry.descriptorName}': ${normalized.error}`,
 				);
 			}
@@ -1040,7 +1042,7 @@ const moduleFunction = () => {
 		// =====================================================================
 		if (stats.danglingEdges.length > 0) {
 			throw new Error(
-				`forge-edfi-v2: ${stats.danglingEdges.length} edge(s) had an unresolved endpoint ` +
+				`forge-edfi: ${stats.danglingEdges.length} edge(s) had an unresolved endpoint ` +
 					`(first: ${JSON.stringify(stats.danglingEdges[0])}) — never emit a partial edge`,
 			);
 		}

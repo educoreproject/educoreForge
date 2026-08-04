@@ -7,6 +7,13 @@
   // 2026-07-30). Deterministic: no inferred/semantic judging, no vectors, no LLM.
   // Measured over the 01 snapshot (2026-07-30): 1,147 anchored nodes, 1,190 authored crosswalk
   // assignments (1,147 dual-attested + 43 crosswalk-only), 0 divergent per-node anchors.
+  // THOSE NUMBERS PREDATE THE FORGE SWAP and are retained as the historical record: snapshot 01 and
+  // the incumbent CSV-crosswalk forge that produced them were removed at the forge-edfi round-trip
+  // closeout (2026-08-04, R-WO-2). Re-measured over the MetaEd forge + snapshot 04: 625 anchored
+  // nodes, 656 assignments (625 dual-attested + 31 crosswalk-only), still 0 divergent. The
+  // shortfall is the 764 unmatched authored-crosswalk element rows named as the enrichment backlog
+  // in REPORT-edfiCensusDelta-080326.md (R-WO-11), not a regression — identity continuity was
+  // explicitly NOT a campaign goal (R-WO-1). Live assertions: test-authored-anchor-bridge.js §F.
   "schemaVersion": "1.0.0",
   "recipeName": "cedsEdfiAuthored",
   "kind": "dev",

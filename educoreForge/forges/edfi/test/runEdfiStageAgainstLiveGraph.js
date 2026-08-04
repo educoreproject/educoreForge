@@ -13,12 +13,15 @@ DESCRIPTION
      validatorPath = this bundle's roundTripValidator.js, snapshotPath = snapshot 04 — against
      the LIVE container DEV_edfiRoundTrip_080326 (left running by Phase 3 for exactly this).
 
-     WHY THE ROSTER ROW IS HAND-COMPOSED: the descriptor-composed path uses the PINNED
-     defaultSnapshot (01 — the incumbent's, until Phase 5 flips it with entryModule), and a
-     stage-on edfi build in the Phase 4->5 window refuses honestly at snapshot intake. This
-     runner exercises the SAME stage code with the snapshot the V2 validator was built for,
-     so the uniform signature is proven against BOTH campaigns' validators through one path
-     (pesc's proof is the pescOnlyRoundTrip recipe build).
+     WHY THE ROSTER ROW IS HAND-COMPOSED: when this runner was written (Phase 4) the
+     descriptor-composed path used the PINNED defaultSnapshot 01 — the incumbent's, with no
+     SHA256SUMS — so a stage-on edfi build refused honestly at snapshot intake, and a
+     hand-composed row was the only way to exercise the stage against this validator. The
+     Phase 5 closeout flipped defaultSnapshot to 04 and closed that window, so the ordinary
+     descriptor-composed build now reaches the same verdict (see
+     recipes/edfiOnlyRoundTrip.recipe.jsonc). The hand-composed row is RETAINED deliberately:
+     it exercises the stage against a live pre-materialized container without a forge+load
+     spend, and it pins the uniform signature independently of descriptor state.
 
      Bolt endpoint + credential are resolved from the RUNNING container (docker inspect) and
      handed to the stage as the containerHandle — exactly the triple a replayManager handle

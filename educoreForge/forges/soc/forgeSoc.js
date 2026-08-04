@@ -7,6 +7,9 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // forge-ceds emit), so SOC lands in the validation graph interoperably. CSV family; mirrors
 // forge-edfi/forgeEdfi.js exactly, adding the SUBCLASS_OF occupation taxonomy (as forge-ceds does
 // for its class hierarchy).
+// HISTORICAL CITATION: the forgeEdfi.js this mirrors is the PRE-CAMPAIGN CSV-crosswalk forge,
+// removed from HEAD at the forge-edfi round-trip closeout 2026-08-04 (git history holds it). The
+// filename is now a MetaEd reimplementation; the UNIVERSAL CONTRACT cited above is unchanged.
 //
 // HARVESTED+ADAPTED from the OLD forge-soc (lib/parser.js navigation reused; node-shaping rewritten):
 //   * the OLD tool used qtools-graph-forge-core/forgeRunner and emitted private Soc* nodes

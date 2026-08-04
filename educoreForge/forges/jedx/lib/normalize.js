@@ -3,6 +3,9 @@
 // normalize.js — JEDx anchor + stableId normalization (R3). Mirrors forge-edfi/lib/normalize.js,
 // adapted for JEDx's CSV element kinds (entity/field/codeset). JEDx code sets have no enumerated
 // values in the source, so there is no descriptorValue kind here.
+// HISTORICAL CITATION: that mirror target is the PRE-CAMPAIGN CSV-crosswalk forge-edfi, removed
+// from HEAD at the round-trip closeout 2026-08-04 (git history holds it); today's forge-edfi is a
+// MetaEd reimplementation and carries no normalize.js.
 //
 // JEDx stableId (its OWN identity): JEDx CSV elements have no native URI we forge against, so the
 // stableId is a DETERMINISTIC, path-based synthetic key (mirrors EdFi/SIF): jedx:<kind>/<naturalKey>,

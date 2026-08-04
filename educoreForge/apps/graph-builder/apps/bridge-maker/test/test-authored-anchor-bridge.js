@@ -23,10 +23,22 @@
 //      sequences and the identical manifest hash (the deterministic-join twin of MATERIALIZE
 //      replay).
 //   F. REAL EdFi — the EdFi forge runs in-process (skipEmbedding) and the bridge resolves its
-//      REAL stashed anchors through bridgeMaker.run (reader/writer doubles, real guard): 1,147
-//      anchored nodes -> 1,190 EXACT_MATCH edges (1,147 dual-attested + 43 crosswalk-only), 0
-//      divergent per-node anchors (measured 2026-07-30; the per-node scalar is always the FIRST
-//      crosswalk id, forgeEdfi.js:359-361).
+//      REAL stashed anchors through bridgeMaker.run (reader/writer doubles, real guard): 625
+//      anchored nodes -> 656 EXACT_MATCH edges (625 dual-attested + 31 crosswalk-only), 0
+//      divergent per-node anchors (measured 2026-08-04 over snapshot 04; the per-node scalar is
+//      always the FIRST crosswalk id).
+//      RE-MEASURED AT THE forge-edfi PHASE 5 CLOSEOUT: this section previously forged the
+//      INCUMBENT CSV-crosswalk forge over snapshot 01 and asserted 1,190 / 1,147 / 43. That forge
+//      and that snapshot were removed at closeout (R-WO-2), so the section now forges the
+//      round-trip-campaign forge over snapshot 04 and asserts what THAT population measures. The
+//      drop is a concrete R-WO-1 consequence, not a regression: identity continuity was never a
+//      goal, and the shortfall is the 764 unmatched authored-crosswalk element rows already
+//      REPORTED as the enrichment backlog (R-WO-11, REPORT-edfiCensusDelta-080326.md) — the old
+//      forge derived node identities from the crosswalk CSV's own flattened XSD paths, so its rows
+//      matched by construction; this forge derives them from MetaEd. The SHAPE is unchanged and
+//      that is what this section guards: every anchored node carries BOTH channels (0 scalar-only,
+//      0 crossRef-only, measured), hence dualAttested === anchoredNodes and nodeAnchorDivergent
+//      === 0, with 656 total assignments = 625 first-per-node + 31 beyond-first.
 //   G. REAL SEDM — same path: 230 anchored elements -> 230 dual-attested EXACT_MATCH edges, 0
 //      divergence (the SEDM element identity INCLUDES its Global ID, so the sources cannot split).
 //
@@ -195,7 +207,7 @@ const makeDecisionStoreDouble = (saves) => ({
 const makeGraphWriterDouble = (writes) => ({
 	writeRelationshipEdge: (spec, callback) => {
 		writes.push(spec);
-		// defer like real I/O would: the EdFi run queues 1,190 writes through pipeRunner's recursion,
+		// defer like real I/O would: the EdFi run queues 656 writes through pipeRunner's recursion,
 		// and a synchronous callback chain that deep overflows the stack (the real substrate never
 		// calls back synchronously, so the bridge is correct — the DOUBLE must not lie about that).
 		setImmediate(() => callback('', { edgeWritten: true }));
@@ -391,10 +403,10 @@ function runThroughBridgeMaker({ forgedNodes, sourceToken, sourceStandardName, w
 // section E reaches this before a const initializer would have run (TDZ).
 function runRealStandardSections() {
 	// -----------------------------------------------------------------
-	harness.section('F — REAL EdFi anchors through bridgeMaker.run: 1,190 EXACT (1,147 dual + 43 crosswalk-only)');
+	harness.section('F — REAL EdFi anchors through bridgeMaker.run: 656 EXACT (625 dual + 31 crosswalk-only)');
 	// -----------------------------------------------------------------
 	const edfiBundle = require('../../../../../forges/edfi/forgeEdfi')({ embedder: null });
-	const EDFI_ASSET_DIR = path.join(__dirname, '..', '..', '..', '..', '..', 'forges', 'edfi', 'assets', 'standardSourceData', '01');
+	const EDFI_ASSET_DIR = path.join(__dirname, '..', '..', '..', '..', '..', 'forges', 'edfi', 'assets', 'standardSourceData', '04');
 	edfiBundle.forge({ sourcePath: EDFI_ASSET_DIR, skipEmbedding: true }, (edfiErr, edfiResult) => {
 		if (edfiErr) {
 			harness.ok(`real EdFi forge did not error (${edfiErr})`, false, edfiErr);
@@ -405,25 +417,25 @@ function runRealStandardSections() {
 		const fSaves = [];
 		runThroughBridgeMaker({ forgedNodes: edfiResult.nodes, sourceToken: 'edfi', sourceStandardName: 'EdFi', writes: fWrites, saves: fSaves }, (fErr, fReport) => {
 			harness.ok(`EdFi bridge run did not error (${fErr || 'ok'})`, !fErr, fErr);
-			harness.equal('1,190 edges written (every crosswalk assignment resolved)', fReport && fReport.edgesWritten, 1190);
-			harness.equal('counts.anchoredNodes === 1,147', fReport && fReport.counts && fReport.counts.anchoredNodes, 1147);
-			harness.equal('counts.dualAttested === 1,147', fReport && fReport.counts && fReport.counts.dualAttested, 1147);
-			harness.equal('counts.authoredOnly === 43 (the multi-id crosswalk rows the scalar collapsed away)', fReport && fReport.counts && fReport.counts.authoredOnly, 43);
+			harness.equal('656 edges written (every crosswalk assignment resolved)', fReport && fReport.edgesWritten, 656);
+			harness.equal('counts.anchoredNodes === 625', fReport && fReport.counts && fReport.counts.anchoredNodes, 625);
+			harness.equal('counts.dualAttested === 625', fReport && fReport.counts && fReport.counts.dualAttested, 625);
+			harness.equal('counts.authoredOnly === 31 (the multi-id crosswalk rows the scalar collapsed away)', fReport && fReport.counts && fReport.counts.authoredOnly, 31);
 			harness.equal('counts.nodeAnchorDivergent === 0 (the scalar is always the first crosswalk id)', fReport && fReport.counts && fReport.counts.nodeAnchorDivergent, 0);
 			harness.equal('counts.orphans === 0 over the derived reference fixture', fReport && fReport.counts && fReport.counts.orphans, 0);
 			harness.equal('decisionBlock is null (no divergent channel, nothing frozen)', fReport && fReport.decisionBlock, null);
 			harness.equal('no manifest save without divergence', fSaves.length, 0);
-			harness.equal('1,190 writes reached the graphWriter', fWrites.length, 1190);
+			harness.equal('656 writes reached the graphWriter', fWrites.length, 656);
 			harness.ok('every EdFi write is EXACT_MATCH', fWrites.every((w) => w.relationshipType === 'EXACT_MATCH'));
 			harness.equal(
-				'1,147 writes doubly attested',
+				'625 writes doubly attested',
 				fWrites.filter((w) => w.properties.anchorAttestation === 'authoredCrossRef+nodeAnchor').length,
-				1147,
+				625,
 			);
 			harness.equal(
-				'43 writes crosswalk-attested only',
+				'31 writes crosswalk-attested only',
 				fWrites.filter((w) => w.properties.anchorAttestation === 'authoredCrossRef').length,
-				43,
+				31,
 			);
 			harness.ok(
 				'every EdFi write spec-authoritative / confidence 1.0 / manual curation',

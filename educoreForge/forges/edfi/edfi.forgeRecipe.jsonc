@@ -4,5 +4,7 @@
   "standardKey": "edfi",
   "standardName": "EdFi",
   "forgeModule": "forge-edfi",
-  "source": { "snapshotKey": "01", "publishedVersion": "unknown", "versionSource": "unknown" }
+  // snapshot 04 + the self-described 5.2.0: the round-trip campaign's MetaEd snapshot, pinned at
+  // the Phase 5 closeout when snapshots 01-03 were removed with the incumbent forge (R-WO-2).
+  "source": { "snapshotKey": "04", "publishedVersion": "5.2.0", "versionSource": "spec" }
 }

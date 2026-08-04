@@ -2,6 +2,9 @@
 
 // normalize.js — SOC anchor + stableId normalization (R3). Mirrors forge-edfi/lib/normalize.js;
 // adapted for SOC's O*NET-SOC occupation taxonomy + Job Zone option set.
+// HISTORICAL CITATION: that mirror target is the PRE-CAMPAIGN CSV-crosswalk forge-edfi, removed
+// from HEAD at the round-trip closeout 2026-08-04 (git history holds it); today's forge-edfi is a
+// MetaEd reimplementation and carries no normalize.js.
 //
 // SOC has TWO distinct canonical-form obligations, kept separate on purpose:
 //

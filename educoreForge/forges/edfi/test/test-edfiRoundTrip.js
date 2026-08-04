@@ -9,7 +9,7 @@ NAME
 
 DESCRIPTION
      RT-7 in full: builds throwaway five-input snapshots under os.tmpdir(), forges them with
-     forgeEdfiV2 (skipEmbedding), replays the forge output through the hermetic graph double,
+     forgeEdfi (skipEmbedding), replays the forge output through the hermetic graph double,
      runs the REAL validator core (validateWithReader), and proves:
        - the CARRIABLE-vocabulary fixture round-trips CLEAN (zero loss, zero invention)
        - the FULL-vocabulary fixture (interchanges, per-item metaEdIds, qualified components)
@@ -40,7 +40,7 @@ const crypto = require('crypto');
 
 const harness = require('../../../test/testLib/harness')(moduleName);
 
-const forgeEdfiV2 = require('../forgeEdfiV2.js')({});
+const forgeEdfi = require('../forgeEdfi.js')({});
 const metaEdParser = require('../lib/metaEdParser')(); // CROSS-CHECK reader only (G-8), never the answer key
 const roundTripMetaEdCanonical = require('../lib/roundTripMetaEdCanonical')();
 const roundTripEdfiCompiler = require('../lib/roundTripEdfiCompiler')();
@@ -429,7 +429,7 @@ const buildScratchSnapshot = ({ includeFullVocabulary } = {}) => {
 // forge a scratch snapshot and hand back { forgeResult, snapshotPath }
 const forgeScratchSnapshot = ({ includeFullVocabulary }, callback) => {
 	const snapshotPath = buildScratchSnapshot({ includeFullVocabulary });
-	forgeEdfiV2.forge({ sourcePath: snapshotPath, skipEmbedding: true }, (forgeError, forgeResult) => {
+	forgeEdfi.forge({ sourcePath: snapshotPath, skipEmbedding: true }, (forgeError, forgeResult) => {
 		if (forgeError) {
 			callback(forgeError);
 			return;

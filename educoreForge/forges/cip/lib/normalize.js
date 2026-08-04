@@ -2,6 +2,9 @@
 
 // normalize.js — CIP anchor + stableId normalization (R3, DESIGN §E, DECISIONS §23-R3).
 // Mirrors forge-edfi/lib/normalize.js; adapted for CIP's pure-taxonomy code kinds.
+// HISTORICAL CITATION: that mirror target is the PRE-CAMPAIGN CSV-crosswalk forge-edfi, removed
+// from HEAD at the round-trip closeout 2026-08-04 (git history holds it); today's forge-edfi is a
+// MetaEd reimplementation and carries no normalize.js.
 //
 // CIP is a 3-level NCES taxonomy (Classification of Instructional Programs 2020): a 2-digit
 // FAMILY/domain ("01"), a 4-digit SUBDOMAIN ("01.01"), and a 6-digit PROGRAM ("01.0101"). It is a

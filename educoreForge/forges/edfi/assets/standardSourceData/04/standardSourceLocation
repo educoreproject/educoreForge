@@ -1,5 +1,18 @@
 standard: forge-edfi
-publishedVersion: Ed-Fi Data Standard 5.2.0 (DS 5.2) + TPDM Community Model 1.2
+publishedVersion: 5.2.0
+publishedVersionComposite: Ed-Fi Data Standard 5.2.0 (DS 5.2) + TPDM Community Model 1.2
+publishedVersionNote: |
+  publishedVersion carries the BARE version string the core source self-describes
+  (metaEdModel/package.json metaEdProject.projectVersion = "5.2.0"), so it compares equal to the
+  version the parser reads and lib/snapshot-provenance derives the stamp from. It was previously
+  the composite phrase now preserved on publishedVersionComposite above; because the composite
+  never equalled '5.2.0', every build logged a spec-§3.3 version DISAGREEMENT warning that was
+  benign and correctly source-wins. Tidied at the forge-edfi Phase 5 closeout so the log line
+  retires. The composite is INFORMATION, not the version field: it is the honest statement that
+  this snapshot carries TWO upstream products (core DS 5.2.0 + TPDM Community Model 1.2) whose
+  versions differ; per-input versions and commits are in README_PROVENANCE.md and in the note
+  below. Nothing about the source bytes changed — the provenance peers are not covered by
+  SHA256SUMS (it checksums source inputs only), so this edit is checksum-neutral by design.
 publishedVersionEvidence: metaEdModel/package.json metaEdProject.projectVersion = "5.2.0"; descriptor XMLs from Ed-Fi-Data-Standard git tag v5.2.0; cedsAuthoredCrosswalk descriptors CSV stamps EdFiVersionNumber=DS5.2 on all 8,310 data rows (full-column sweep, 2026-08-03)
 upstreamUrl: https://pkgs.dev.azure.com/ed-fi-alliance/Ed-Fi-Alliance-OSS/_packaging/EdFi/npm/registry/ (model package) + https://github.com/Ed-Fi-Alliance-OSS/Ed-Fi-Data-Standard + https://github.com/Ed-Fi-Exchange-OSS/Ed-Fi-TPDM-Community-Model + https://github.com/Ed-Fi-Alliance-OSS/Ed-Fi-TPDM-Artifacts
 acquiredDate: 2026-08-03
