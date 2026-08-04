@@ -126,18 +126,95 @@ const standardsDatabase = () => {
 				const runSql = (statement, cb) => tableRef.runStatement(statement, RAW_OPTS, cb);
 				const getRows = (statement, cb) => tableRef.getData(statement, RAW_OPTS, cb);
 
-				buildSchema({ runSql, getRows }, (schemaErr) => {
-					if (schemaErr) {
-						callback(`standardsDatabase.open '${databaseFilePath}': ${schemaErr}`);
+				// THE GENERATION GUARD runs BEFORE buildSchema, and the order is the point: buildSchema's
+				// CREATE TABLE IF NOT EXISTS would silently NO-OP against a foreign-generation `blocks`
+				// table and hand back a working-looking api whose every INSERT then failed on unknown
+				// columns. Checking first turns that into one named refusal.
+				refuseForeignGeneration({ getRows, databaseFilePath }, (generationErr) => {
+					if (generationErr) {
+						callback(generationErr);
 						return;
 					}
-					callback('', makeApi({ esc, escJson, runSql, getRows, databaseFilePath }));
+					buildSchema({ runSql, getRows }, (schemaErr) => {
+						if (schemaErr) {
+							callback(`standardsDatabase.open '${databaseFilePath}': ${schemaErr}`);
+							return;
+						}
+						callback('', makeApi({ esc, escJson, runSql, getRows, databaseFilePath }));
+					});
 				});
 			});
 		});
 	};
 
 	return { open };
+};
+
+// -----
+// refuseForeignGeneration — REFUSE BY NAME a database whose `blocks` table belongs to the OTHER
+// schema generation. (Round-Trip Perfection Phase 1, 2026-08-04; authorized by the supervisor after
+// the collision audit, which CONFIRMED the two declarations by reading both.)
+//
+// THE COLLISION. Two generations declare THREE table names in common, with different columns:
+//   this module                               npm/qtools-graph-forge-core/lib/forge-store/forge-store.js
+//   blocks(refId, kind, ...)                  blocks(blockId, type, ...)                         :115
+//   manifests(refId, name, description, ...)  manifests(manifestKey, label, basedOn, note)       :129
+//   manifestBlocks(manifestRefId,             manifestBlocks(manifestKey, blockId, position)     :141
+//                  schemaBlockRefId, ...)
+// Both create them with CREATE TABLE IF NOT EXISTS, so whichever generation opens a file FIRST wins
+// its schema and the other's writes then fail on columns that are not there. That failure arrives far
+// from its cause — at the first INSERT, inside a build, after a container is up — which is what makes
+// it worth one cheap check at the door.
+//
+// IT REFUSES; IT DOES NOT CONVERT, MIGRATE, OR TOLERATE. The named refusal is the whole value: a
+// converter would be a second writer of somebody else's schema, and a tolerant reader would let a
+// build quietly harvest into a store shaped for different code. An operator holding an
+// incumbent-generation store knows which tool wrote it and can say what should happen to it; this
+// module does not, and must not guess.
+//
+// WHY THIS IS NOT A PREFIX RENAME. Prefixing this module's tables would have made every store in the
+// campaign's 11GB quarantine unreadable by the only code able to read it — and that quarantine is the
+// rollback. A rollback that cannot be opened is not a rollback. The guard gets the safety without
+// touching a single stored byte.
+//
+// An ABSENT blocks table is not a foreign generation — it is a new or empty database, which is the
+// ordinary case and passes straight through to buildSchema.
+const refuseForeignGeneration = ({ getRows, databaseFilePath }, callback) => {
+	getRows(`PRAGMA table_info(blocks);`, (err, rows) => {
+		if (err) {
+			callback(`standardsDatabase.open '${databaseFilePath}': reading the blocks schema: ${err}`);
+			return;
+		}
+		const columnNames = (rows || []).map((oneRow) => oneRow.name);
+		if (columnNames.length === 0) {
+			callback(''); // no blocks table yet — a fresh database, not a foreign one
+			return;
+		}
+		if (columnNames.includes('refId')) {
+			callback(''); // this generation
+			return;
+		}
+		if (columnNames.includes('blockId')) {
+			callback(
+				`standardsDatabase.open '${databaseFilePath}': REFUSING — this database's 'blocks' table ` +
+					`carries the column 'blockId', which is the INCUMBENT forge-store generation ` +
+					`(npm/qtools-graph-forge-core/lib/forge-store/forge-store.js:115). This module speaks the ` +
+					`recreation generation, whose blocks table is addressed by 'refId'. The two share table ` +
+					`NAMES but not COLUMNS, so opening it would let CREATE TABLE IF NOT EXISTS silently ` +
+					`no-op and every later write fail on a column that is not there. Nothing is converted or ` +
+					`migrated here: the store was written by a different tool, and only its operator can say ` +
+					`what should become of it.`,
+			);
+			return;
+		}
+		callback(
+			`standardsDatabase.open '${databaseFilePath}': REFUSING — this database has a 'blocks' table ` +
+				`carrying NEITHER 'refId' (this generation) NOR 'blockId' (the incumbent ` +
+				`forge-store generation). Its columns are [${columnNames.join(', ')}]. An unrecognized ` +
+				`shape is refused rather than written into: a third generation, or a corrupted schema, is ` +
+				`exactly the case where guessing is worst.`,
+		);
+	});
 };
 
 // -----

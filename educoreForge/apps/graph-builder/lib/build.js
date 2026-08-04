@@ -75,8 +75,11 @@ const BUILD_LOGS_DIR_PATH =
 // carries per-node embeddingRefs in its text — a block is never half a gigabyte of inline
 // base64 (the V8 max-string ceiling the 94,602-card hub block exceeded), and block identity
 // becomes embedding-excluded BY DESIGN.
-const VECTOR_STORES_DIR_PATH =
-	'/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/vectorStores';
+// ⟪Round-Trip Perfection Phase 1, 2026-08-04⟫ VECTOR_STORES_DIR_PATH stood here and is GONE. Frozen
+// vectors now live in the ONE configured support store, so a per-standard directory constant would be a
+// second, code-invented home that nothing consults but that the next reader would reasonably believe
+// in. The 19 existing files in that directory are untouched and stay where they are — see the M-3
+// supersession note on makeVectorStoreResolver for why they are copied from and never moved.
 const vectorStoreModule = require(
 	path.join(__dirname, '..', '..', '..', 'lib', 'vector-store', 'vector-store'),
 );
@@ -142,8 +145,33 @@ const resolveHeapAdequacy = ({
 // each ref-carrying node's vector is stamped back onto its graph node (read side). A store
 // file is only ever CREATED when something actually resolves — a build with no vectors
 // touches nothing.
-const makeVectorStoreResolver = () => {
-	const openStoresByStandardKey = {};
+// ⟪Round-Trip Perfection Phase 1, 2026-08-04⟫ COLLAPSED TO ONE STORE, per TQ's single-file ruling and
+// the supervisor's Q3 authorization. Frozen vectors now live in the ONE configured support store, so
+// the resolver opens that file for EVERY standardKey and returns the same handle. supportStoreFilePath
+// is REQUIRED — the resolver has no path of its own to fall back to.
+//
+// M-3 IS SUPERSEDED, NOT FORGOTTEN. The comment above still records the ruling this replaces: one
+// store per standard, filename derived from the forge bundle's standardName, deliberately SHARED with
+// the incumbent producer. Two parts of it outlive the per-standard filename and are kept alive here on
+// purpose:
+//
+//   * THE DERIVATION LESSON, which is not about vector stores at all. A name must come from an
+//     AUTHORITY, never from a casing literal or a lowercase token: on a case-insensitive filesystem
+//     the wrong spelling silently opened the incumbent's file while claiming a separate one, and on a
+//     case-SENSITIVE deploy target it would name a file that does not exist. The standardKey is still
+//     validated through resolveForgeBundle below for exactly that reason — an unresolvable token is a
+//     refusal naming it, even though its NAME no longer picks the file. Dropping the check because the
+//     filename no longer depends on it would discard the guard and keep only the habit.
+//
+//   * THE SHARING WITH THE INCUMBENT IS NOW ENDED, and that is a real consequence rather than a
+//     bookkeeping note. The incumbent path is still reachable (cli/lib.d/forger, cli/lib.d/edf-replay,
+//     cli/lib.d/edf-migrate-embeddings all still reference vector-store), so the 19 files under
+//     system/dataStores/vectorStores/ are LEFT EXACTLY WHERE THEY ARE — their contents were COPIED
+//     into the support store, never moved. If the incumbent is run again it must keep finding its own
+//     warm cache rather than silently re-embedding at Voyage's expense. Their disposition is TQ's call
+//     at Phase 8, not this phase's.
+const makeVectorStoreResolver = ({ supportStoreFilePath } = {}) => {
+	let openedSupportStore = null;
 	return (standardKey, callback) => {
 		if (standardKey === undefined || standardKey === null || `${standardKey}`.trim() === '') {
 			callback(
@@ -152,36 +180,43 @@ const makeVectorStoreResolver = () => {
 			);
 			return;
 		}
-		const cachedStore = openStoresByStandardKey[standardKey];
-		if (cachedStore) {
-			callback('', cachedStore);
+		if (typeof supportStoreFilePath !== 'string' || supportStoreFilePath.trim() === '') {
+			callback(
+				`vectorStoreResolver: a supportStoreFilePath is REQUIRED and has no default. Frozen ` +
+					`vectors live in the ONE configured support store ([stores] ` +
+					`graphBuilderSupportFilePath); a resolver that does not know which file it is opening ` +
+					`is a resolver that can open anywhere.`,
+			);
 			return;
 		}
-		// M-3: the filename authority. An unknown standard is a refusal naming it — a store
-		// file minted from an unresolvable token would be an inventory nobody owns.
+		// The standardKey is still resolved through the bundle authority even though it no longer
+		// picks the filename — see THE DERIVATION LESSON above. An unknown standard is a refusal
+		// naming it, because a build harvesting vectors for a standard this tree cannot forge is a
+		// caller bug wherever those vectors are being written.
 		const resolvedBundle = resolveForgeBundle({ standard: standardKey });
 		if (resolvedBundle.error) {
 			callback(
-				`vectorStoreResolver: cannot derive the store filename for '${standardKey}' — ` +
+				`vectorStoreResolver: '${standardKey}' is not a forgeable standard in this tree — ` +
 					`${resolvedBundle.error}`,
 			);
 			return;
 		}
+		if (openedSupportStore) {
+			callback('', openedSupportStore);
+			return;
+		}
 		const oneStore = vectorStoreModule({});
-		oneStore.init(
-			{ dbPath: path.join(VECTOR_STORES_DIR_PATH, `${resolvedBundle.standardName}.sqlite3`) },
-			(initError) => {
-				if (initError) {
-					callback(
-						`vectorStoreResolver: opening the '${resolvedBundle.standardName}' vector ` +
-							`store: ${initError}`,
-					);
-					return;
-				}
-				openStoresByStandardKey[standardKey] = oneStore;
-				callback('', oneStore);
-			},
-		);
+		oneStore.init({ dbPath: supportStoreFilePath }, (initError) => {
+			if (initError) {
+				callback(
+					`vectorStoreResolver: opening the support store '${supportStoreFilePath}' for frozen ` +
+						`vectors: ${initError}`,
+				);
+				return;
+			}
+			openedSupportStore = oneStore;
+			callback('', oneStore);
+		});
 	};
 };
 
@@ -513,7 +548,14 @@ const resolveVectorize = (deps) => {
 // cache. Precedence: deps.embeddingCacheFilePath (test/orchestrator injection) wins; absent, the command
 // line --embeddingCacheFilePath is read; absent entirely, undefined (no override). No throw: it is a path
 // or nothing, threaded verbatim to the forger, which threads it to the embedder as cacheFilePath.
-const resolveEmbeddingCacheFilePath = (deps) => {
+// ⟪Round-Trip Perfection Phase 1, 2026-08-04⟫ THE SUPPORT STORE IS NOW THE CACHE'S HOME. Under TQ's
+// single-file ruling the vector cache lives in the same file as the blocks, so when nothing overrides
+// it this returns the OPENED standardsDatabase's own path rather than undefined — which used to let the
+// embedder fall through to its in-code dataStores default. That fall-through is exactly what the phase
+// removes: the path is now something an operator said, not something the embedder invented.
+// supportStoreFilePath comes from the opened store handle for the same by-construction reason the
+// vector-store resolver does.
+const resolveEmbeddingCacheFilePath = (deps, { supportStoreFilePath } = {}) => {
 	if (deps.embeddingCacheFilePath !== undefined) {
 		return deps.embeddingCacheFilePath;
 	}
@@ -522,7 +564,11 @@ const resolveEmbeddingCacheFilePath = (deps) => {
 	// qtools parses every --flag=value into an ARRAY under values[name]; the first element is the
 	// value (the same `(values[name] || [])[0]` idiom actions.js reads recipePath/standardsDatabase by).
 	// Reading the array itself would hand the embedder a non-string path that vectorCache.open refuses.
-	return (commandLineParameters.values.embeddingCacheFilePath || [])[0];
+	const commandLineOverride = (commandLineParameters.values.embeddingCacheFilePath || [])[0];
+	if (commandLineOverride !== undefined) {
+		return commandLineOverride;
+	}
+	return supportStoreFilePath;
 };
 
 // resolveRebridge — the INFERENCE spend knob (design §5.5), an operator switch with the same §6 discipline
@@ -698,9 +744,12 @@ const build = (recipe, deps, callback) => {
 	}
 	const vectorizeSpend = vectorizeResolution.value;
 
-	// the vector-cache override, resolved once and threaded to every standard's forge (undefined = the
-	// shared dataStores cache, ON by default per standing policy; a path redirects it, e.g. test isolation).
-	const embeddingCacheFilePath = resolveEmbeddingCacheFilePath(deps);
+	// the vector cache, resolved once and threaded to every standard's forge. Under the single-file
+	// ruling it defaults to the OPENED support store; deps or --embeddingCacheFilePath still redirect it
+	// (test isolation), and 'false' still turns it off inside the embedder.
+	const embeddingCacheFilePath = resolveEmbeddingCacheFilePath(deps, {
+		supportStoreFilePath: standardsDatabase.databaseFilePath,
+	});
 
 	// rebridge scope is resolved alongside vectorize, same §6 discipline: a plain build MATERIALIZES frozen
 	// decisions (no spend); --rebridge (scoped) RUNS the inference pre-pass. The documented default is NONE.
@@ -764,7 +813,14 @@ const build = (recipe, deps, callback) => {
 	// store per VECTORIZED standard; materialize hands the resolver to the restore path.
 	// Hermetic builds never reach it: the harvest side asks only when the forge report declares
 	// embeddingDims, and the restore side only consults it for ref-carrying nodes.
-	const vectorStoreResolver = deps.vectorStoreResolver || makeVectorStoreResolver();
+	// The support store path is taken from the OPENED standardsDatabase rather than re-resolved from
+	// config here, and that is deliberate: it makes the frozen-vector store and the block store the
+	// same file BY CONSTRUCTION. Two independent resolutions of "the configured path" are two things
+	// that can disagree, and the failure would be silent — vectors written beside blocks that no
+	// longer reference them.
+	const vectorStoreResolver =
+		deps.vectorStoreResolver ||
+		makeVectorStoreResolver({ supportStoreFilePath: standardsDatabase.databaseFilePath });
 	// inferenceConfig carries the reranker llmClient for a real --rebridge. The real-vs-stub SELECTION lives in
 	// resolveInferenceConfig (the FACTORY seam): the suite injects a STUB via deps.inferenceConfig.llmClient; a
 	// real --rebridge with no injected client MINTS the real one, which throws BY NAME when no key resolves.
@@ -1605,7 +1661,9 @@ const replay = ({ manifestRefId } = {}, deps = {}, callback) => {
 					fidelityGateRunner: deps.cedsFidelityGateRunner || runCedsFidelityGate,
 					// ⟪R-P2-2⟫ a -replay of stored ref-style blocks resolves vectors from the same
 					// canonical home (deps-injectable for tests, real resolver by default)
-					storeResolver: deps.vectorStoreResolver || makeVectorStoreResolver(),
+					storeResolver:
+						deps.vectorStoreResolver ||
+						makeVectorStoreResolver({ supportStoreFilePath: standardsDatabase.databaseFilePath }),
 					// ⟪RT-13 / R-WO-19⟫ the stage is NOT APPLICABLE to -replay (the round trip
 					// belongs to the build that composed the manifest) — and that non-run is
 					// VISIBLE: the runner prints the disposition line rather than silently
@@ -1619,7 +1677,11 @@ const replay = ({ manifestRefId } = {}, deps = {}, callback) => {
 	});
 };
 
-return { build, replay, defaultComponents };
+// makeVectorStoreResolver is RETURNED so its refusals can be gated directly. Under the single-file
+// ruling it REQUIRES a supportStoreFilePath and still validates the standardKey through the forge-bundle
+// authority; both refusals are reachable only by holding the resolver itself, and a refusal no test can
+// reach is a refusal nobody has seen work.
+return { build, replay, defaultComponents, makeVectorStoreResolver };
 };
 
 // END OF moduleFunction() ============================================================

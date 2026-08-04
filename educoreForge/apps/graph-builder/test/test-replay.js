@@ -222,8 +222,16 @@ const partialStoreDouble = (membershipRefIds) => ({
 const scratchDir = fs.mkdtempSync(path.join(os.tmpdir(), 'edfReplay-'));
 const databaseFilePath = path.join(scratchDir, `replayGate_${process.pid}.sqlite3`);
 
-const runCli = (args) =>
-	spawnSync(process.execPath, [executable, ...args], { input: '', encoding: 'utf8', cwd: treeRoot });
+// stdinText defaults to '' (a non-TTY with nothing piped, which startup.js treats as "use the command
+// line"). It is a PARAMETER because the JSON-on-stdin channel is the only one that can carry a literal
+// empty-string parameter value: qtools-parse-command-line turns a trailing `--flag=` into the boolean
+// true, which firstValue reads as absent, so argv cannot express "the operator named a blank".
+const runCli = (args, stdinText = '') =>
+	spawnSync(process.execPath, [executable, ...args], {
+		input: stdinText,
+		encoding: 'utf8',
+		cwd: treeRoot,
+	});
 
 standardsDatabaseModule.open({ databaseFilePath }, (openErr, standardsDatabase) => {
 	if (openErr) {
@@ -443,14 +451,38 @@ standardsDatabaseModule.open({ databaseFilePath }, (openErr, standardsDatabase) 
 		harness.match('-help advertises -replay', helpRun.stdout, /-replay/);
 		harness.match('-help documents --manifestRefId', helpRun.stdout, /--manifestRefId/);
 
+		// ⟪Round-Trip Perfection Phase 1, 2026-08-04⟫ -replay resolves its store through the SAME
+		// function -build does, so omitting the flag now takes [stores] graphBuilderSupportFilePath and
+		// the run gets as far as the NEXT missing parameter, --manifestRefId. That ordering is the
+		// assertion: the store no longer refuses, the manifest still does, and a replay is still unable
+		// to guess either one.
+		//
+		// A blank store path must travel by JSON-on-stdin, not as `--standardsDatabaseFilePath=`:
+		// qtools-parse-command-line turns a trailing `--flag=` into the BOOLEAN true, which firstValue
+		// reads as ABSENT, so the argv form cannot express "the operator named a blank" at all.
 		const noStore = runCli(['-replay']);
-		harness.equal('-replay without a standards database exits 1', noStore.status, 1);
+		harness.equal('-replay with neither parameter exits 1', noStore.status, 1);
 		harness.match(
-			'  naming the missing --standardsDatabaseFilePath',
+			'  the store came from config, so the refusal moves on to --manifestRefId',
 			noStore.stderr,
-			/--standardsDatabaseFilePath/,
+			/--manifestRefId=<refId> is REQUIRED and has no default/,
 		);
 		harness.ok('  and writes nothing to stdout', noStore.stdout === '', noStore.stdout);
+
+		const blankStore = runCli(
+			[],
+			JSON.stringify({
+				switches: { replay: true },
+				values: { standardsDatabaseFilePath: [''], manifestRefId: ['deadbeef'] },
+				fileList: [],
+			}),
+		);
+		harness.equal('-replay with a BLANK store path exits 1', blankStore.status, 1);
+		harness.match(
+			'  refusing the blank BY NAME rather than falling back to the configured path',
+			blankStore.stderr,
+			/-replay: --standardsDatabaseFilePath was given but BLANK/,
+		);
 
 		const noRefId = runCli(['-replay', '--standardsDatabaseFilePath=' + databaseFilePath]);
 		harness.equal('-replay without a manifest refId exits 1', noRefId.status, 1);

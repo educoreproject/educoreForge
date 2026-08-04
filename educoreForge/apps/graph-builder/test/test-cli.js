@@ -59,6 +59,24 @@ require('../../../test/testLib/testAppStartup')({ moduleName, helpText: helpText
 
 const harness = require('../../../test/testLib/harness')(moduleName);
 
+// sqliteTableNames — the table names in a database file, read with better-sqlite3 (the same engine
+// sqlite-instance uses). Under the single-file ruling a store's CONTENTS are what proves a family was
+// wired in, where a separate file used to be; so the suite needs to look inside one.
+// A file that cannot be opened returns [], which the assertions report as the tables they did not find
+// rather than as a pass.
+const sqliteTableNames = (databaseFilePath) => {
+	if (!fs.existsSync(databaseFilePath)) {
+		return [];
+	}
+	const Database = require('better-sqlite3');
+	const oneConnection = new Database(databaseFilePath, { readonly: true });
+	const rows = oneConnection
+		.prepare(`SELECT name FROM sqlite_master WHERE type='table' ORDER BY name;`)
+		.all();
+	oneConnection.close();
+	return rows.map((oneRow) => oneRow.name);
+};
+
 const treeRoot = path.join(__dirname, '..', '..', '..');
 const executable = path.join(treeRoot, 'apps', 'graph-builder', 'graphBuilder.js');
 const fixture = (name) => path.join(__dirname, 'fixtures', `${name}.recipe.jsonc`);
@@ -257,21 +275,50 @@ const buildMissingPath = runCli(['-build']);
 harness.equal('-build without a recipe path exits 1', buildMissingPath.status, 1);
 harness.match('  and says which parameter is missing', buildMissingPath.stderr, /--recipePath/);
 
-// The store path is REQUIRED and has no default. This is the 2026-07-17 lesson as a gate: a build
-// that does not say where it writes must not be allowed to guess.
-const buildNoStore = runCli(['-build', '--recipePath=' + goodRecipe('cedsLif')]);
-harness.equal('-build without a standards database exits 1', buildNoStore.status, 1);
+// The store path is REQUIRED and has no default. This is the 2026-07-17 lesson as a gate: a build that
+// does not say where it writes must not be allowed to guess.
+//
+// ⟪Round-Trip Perfection Phase 1, 2026-08-04⟫ WHAT CHANGED, AND WHAT DID NOT. The path may now come
+// from [stores] graphBuilderSupportFilePath, so OMITTING the flag is no longer the way to observe the
+// refusal from a CLI that discovers the real graphBuilder.ini — the configured key answers, which is
+// the phase's whole point (gate 1, asserted below). The refusal itself is UNCHANGED and is observed
+// here through a BLANK flag, which is the stronger case anyway: present-but-empty operator input is
+// polyArch2 §6's worse fault, because someone tried to name a path and it did not arrive.
+// The absent-config-key refusal — the case a CLI with a populated ini cannot reach — is the red twin in
+// test-actions-supportStore.js, which drives resolveSupportStoreFilePath directly.
+// THE BLANK IS SENT ON STDIN, NOT AS A COMMAND-LINE FLAG, and that is a finding rather than a style
+// choice. qtools-parse-command-line CANNOT PRODUCE an empty-string value from `--flag=` (observed, this
+// suite's sibling probe): a trailing `--flag=` parses to the BOOLEAN true, and a `--flag=` followed by
+// anything CONSUMES THE NEXT ARGUMENT as its value — so `--alpha= --beta=bee` yields
+// alpha=['--beta=bee'] and drops --beta entirely. firstValue() reads the boolean form as ABSENT, so a
+// command-line `--standardsDatabaseFilePath=` looks like no flag at all and resolves from config.
+// The JSON-on-stdin channel carries literal strings, so it is the only channel that can express "the
+// operator named a blank", which is the case being gated. (The same is true of the pre-existing blank
+// refusals in resolvePersistencePath and decisionStorePathFrom — reachable via stdin, not via argv.)
+const buildBlankStore = runCli(
+	[],
+	JSON.stringify({
+		switches: { build: true },
+		values: { recipePath: [goodRecipe('cedsLif')], standardsDatabaseFilePath: [''] },
+		fileList: [],
+	}),
+);
+harness.equal('-build with a BLANK standards database path exits 1', buildBlankStore.status, 1);
 harness.match(
-	'  naming the missing parameter',
-	buildNoStore.stderr,
-	/--standardsDatabaseFilePath=<path> is REQUIRED and has no default/,
+	'  naming the blank parameter, and refusing rather than falling back to the configured path',
+	buildBlankStore.stderr,
+	/--standardsDatabaseFilePath was given but BLANK/,
 );
 harness.ok(
 	'  and nothing is written to stdout, so no caller reads a refusal as a result',
-	buildNoStore.stdout === '',
-	buildNoStore.stdout,
+	buildBlankStore.stdout === '',
+	buildBlankStore.stdout,
 );
 harness.match('-help documents that parameter', helpRun.stdout, /--standardsDatabaseFilePath=/);
+
+// keep the old variable name alive for the validation-verdict assertions below: they only ever needed
+// a run that printed its recipe verdict and then refused BEFORE provisioning anything.
+const buildNoStore = buildBlankStore;
 
 // The recipe is still read and summarized before the refusal, so the validation verdict for a
 // fully-resolvable recipe is observable without running the pipeline.
@@ -321,16 +368,85 @@ harness.ok(
 	fs.existsSync(scratchStore),
 	`no database at ${scratchStore}`,
 );
-// P3b-store WIRING: actions.build() also opens a REAL decisionStore and threads it into the pipeline.
-// Its path DEFAULTS to a sibling of the standardsDatabase ('<name>.decisions<ext>'), so a completed
-// build's semanticBridge reads/writes frozen decision blocks from a real store from the CLI — no more
-// null-injection refusal. The derived db existing after the run is the proof the store was opened and
-// threaded, exactly as the scratchStore existence check proves it for the standardsDatabase.
-const derivedDecisionStore = path.join(scratchDir, `cliGate_${process.pid}.decisions.sqlite3`);
+// P3b-store WIRING: actions.build() also opens a REAL decisionStore and threads it into the pipeline,
+// so a completed build's semanticBridge reads/writes frozen decision blocks from a real store from the
+// CLI — no more null-injection refusal.
+//
+// ⟪Round-Trip Perfection Phase 1, 2026-08-04⟫ Its path no longer DERIVES a sibling
+// '<name>.decisions<ext>'; under TQ's single-file ruling the decision blocks live in the SAME file as
+// everything else. So the proof changes shape: instead of a second database existing, the ONE database
+// must carry the decision-store's own table. Asserting the sibling is ABSENT matters as much as
+// asserting decisionBlocks is present — if the derivation came back, the store would silently split in
+// two and every frozen decision block would land somewhere the configured path does not describe.
+const retiredSiblingDecisionStore = path.join(scratchDir, `cliGate_${process.pid}.decisions.sqlite3`);
 harness.ok(
-	'  the DERIVED decision store was ALSO opened, so a real decisionStore reached the pipeline',
-	fs.existsSync(derivedDecisionStore),
-	`no decision store at ${derivedDecisionStore}`,
+	'  NO sibling decision database was created — the single-file ruling holds',
+	!fs.existsSync(retiredSiblingDecisionStore),
+	`a sibling decision store reappeared at ${retiredSiblingDecisionStore}`,
+);
+harness.match(
+	'  and the decision store reported the SAME path as the support store',
+	buildUnforged.stderr,
+	new RegExp(`decision store at ${scratchStore.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`),
+);
+harness.ok(
+	'  the support store carries decisionBlocks, so a real decisionStore reached the pipeline',
+	sqliteTableNames(scratchStore).includes('decisionBlocks'),
+	`tables present: ${sqliteTableNames(scratchStore).join(', ')}`,
+);
+
+// =====================================================================
+// ⟪Round-Trip Perfection Phase 1⟫ GATE 1 — A BUILD RESOLVES ITS STORE FROM CONFIG ALONE
+// =====================================================================
+// No --standardsDatabaseFilePath anywhere on the command line: the path must come from
+// [stores] graphBuilderSupportFilePath in the discovered graphBuilder.ini, and the run must SAY so, so
+// an operator can tell which of the two channels answered.
+//
+// STAYING HERMETIC WHILE RESOLVING THE REAL CONFIG — the awkward part, and worth stating plainly.
+// The configured path IS the live 2.4GB production support store, and a hermetic suite must never open
+// it, let alone write to it. But the resolution must be observed through the real discovery path or the
+// gate proves nothing about the wiring.
+//
+// The seam: actions.build resolves the support store and LOGS it (actions.js:417-428), and only opens it
+// much later (actions.js:512). Between the two sits the judgment-cache path resolution, which refuses a
+// BLANK --judgmentCacheFilePath by name (actions.js:465). So a deliberately blank judgment-cache path
+// stops the run in that gap — after the real configured path has been resolved and reported, before any
+// connection to it is made. Nothing is opened, nothing is written, and the resolution is still the
+// genuine one from the discovered graphBuilder.ini.
+//
+// It also asserts the OLD refusal is GONE. A gate that only checked the new behavior arrived would still
+// pass if the retired refusal had survived alongside it and fired first.
+// The blank judgment-cache path likewise has to travel by stdin — see the parser note above; a
+// command-line `--judgmentCacheFilePath=` would parse to the boolean true and read as absent, taking
+// the documented default instead of refusing.
+const buildFromConfig = runCli(
+	[],
+	JSON.stringify({
+		switches: { build: true },
+		values: { recipePath: [goodRecipe('cedsLif')], judgmentCacheFilePath: [''] },
+		fileList: [],
+	}),
+);
+harness.equal('GATE 1 — the config-resolving run stops in the intended gap', buildFromConfig.status, 1);
+harness.match(
+	'  with NO store flag, -build resolves the support store FROM CONFIG and says so',
+	buildFromConfig.stderr,
+	/graphBuilder: support store at \S+ \(resolved from config\)/,
+);
+harness.match(
+	'  and it stopped on the BLANK judgment cache path, before the support store was ever opened',
+	buildFromConfig.stderr,
+	/--judgmentCacheFilePath was given but blank/,
+);
+harness.ok(
+	'  the retired "REQUIRED and has no default" refusal did NOT fire',
+	!/--standardsDatabaseFilePath=<path> is REQUIRED and has no default/.test(buildFromConfig.stderr),
+	buildFromConfig.stderr.split('\n').filter((oneLine) => /REQUIRED/.test(oneLine)).join(' | '),
+);
+harness.match(
+	'  the resolved path is the one graphBuilder.ini names',
+	buildFromConfig.stderr,
+	/support store at .*graphBuilderSupport\.sqlite/,
 );
 // ⟪P9⟫ WIRING: actions.build() also opens the judgment cache (decided = persisted) and threads it
 // into the pipeline — the db existing at the OVERRIDE path is the same proof the decisionStore
@@ -502,17 +618,25 @@ const stdinBuild = runCli(
 	['-deps'],
 	JSON.stringify({
 		switches: { build: true },
-		values: { recipePath: [goodRecipe('lifOnly')] },
+		values: {
+			recipePath: [goodRecipe('lifOnly')],
+			// ⟪Round-Trip Perfection Phase 1⟫ a BLANK store path is what stops this run now. The
+			// stdin -build used to halt on the ABSENT store parameter, and that absence is no longer a
+			// refusal — the configured key answers it. Left as it was, this probe would have resolved the
+			// LIVE support store and run a real build from a hermetic suite. A blank keeps the refusal
+			// early and keeps the proof: -deps has no store parameter at all and would have exited 0 with
+			// an availableForges listing, so a store refusal can only mean the stdin action is the one
+			// that ran.
+			standardsDatabaseFilePath: [''],
+		},
 		fileList: [],
 	}),
 );
-// The stdin-supplied -build stops at the required store parameter, which is itself the proof:
-// -deps has no such parameter and would have exited 0 with an availableForges listing.
 harness.equal('stdin OVERRIDES a conflicting command-line action', stdinBuild.status, 1);
 harness.match(
 	'  the stdin action is what ran (build, not deps)',
 	stdinBuild.stderr,
-	/graphBuilder -build: --standardsDatabaseFilePath/,
+	/graphBuilder -build: --standardsDatabaseFilePath was given but BLANK/,
 );
 harness.ok(
 	'  and the command-line action did NOT run',

@@ -18,9 +18,23 @@
 
 const path = require('path');
 const fs = require('fs');
+const { pipeRunner, taskListPlus } = new (require('qtools-asynchronous-pipe-plus'))();
 
 const recipeLib = require('./recipe')();
 const buildLib = require('./build')();
+
+// timestampForFileName — a sortable, filesystem-safe stamp for a backup copy's name (YYYYMMDD-HHMMSS,
+// local time, matching the buildLogs run-directory convention already in this tree). It is a distinct
+// named function rather than an inline expression because -truncateStore's whole safety story rests on
+// never overwriting a previous backup, and a name is what makes that intent greppable.
+const timestampForFileName = () => {
+	const now = new Date();
+	const twoDigit = (oneNumber) => `${oneNumber}`.padStart(2, '0');
+	return (
+		`${now.getFullYear()}${twoDigit(now.getMonth() + 1)}${twoDigit(now.getDate())}` +
+		`-${twoDigit(now.getHours())}${twoDigit(now.getMinutes())}${twoDigit(now.getSeconds())}`
+	);
+};
 
 // standards-database is required LAZILY, inside build(), and this is not a style choice: it pulls
 // in sqlite-instance, which DESTRUCTURES process.global at REQUIRE time. graphBuilder.js requires
@@ -57,13 +71,17 @@ const requireMatchForensics = () =>
 const requireRetrievalMetrics = () =>
 	require(path.join(__dirname, '..', '..', '..', 'lib', 'retrieval-metrics', 'retrieval-metrics'));
 
-// ⟪P9, p9-judgmentPersistence 2026-07-31⟫ the canonical homes of the TWO judgment-persistence
-// stores, in dataStores — the SAME config discipline the shared vector cache uses
-// (embedding-client.js's defaultCacheFilePath): a DOCUMENTED default standing behind an optional
-// command-line parameter, ON by default because a judgment is real spent money and losing one is
-// crazy (⟪TQ RULING, 2026-07-30⟫); '--<param>=false' disables; any other value redirects.
-const JUDGMENT_CACHE_DEFAULT_FILE_PATH =
-	'/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/judgmentCache/judgmentCache.sqlite3';
+// ⟪P9, p9-judgmentPersistence 2026-07-31⟫ the canonical home of the forensic match LOG — a DOCUMENTED
+// default standing behind an optional command-line parameter, ON by default because a judgment is real
+// spent money and losing one is crazy (⟪TQ RULING, 2026-07-30⟫); '--<param>=false' disables; any other
+// value redirects.
+//
+// ⟪Round-Trip Perfection Phase 1, 2026-08-04⟫ JUDGMENT_CACHE_DEFAULT_FILE_PATH stood here beside this
+// one and is GONE, not merely unused: under TQ's single-file ruling the judgment cache lives IN the
+// configured support store, so its default is now the path an operator named in [stores]. Leaving the
+// constant in place would have left a second, code-invented home for the cache that nothing consulted
+// but that the next reader would reasonably believe in. The forensic match log is a DIRECTORY of JSON,
+// not a SQLite family, so it is not one of the five and keeps its own home.
 const MATCH_FORENSICS_DEFAULT_DIR_PATH =
 	'/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/matchForensics';
 
@@ -94,6 +112,68 @@ const resolvePersistencePath = ({ explicitValue, defaultPath, parameterName, pre
 	return { filePath: defaultPath };
 };
 
+// ---------------------------------------------------------------------
+// THE SINGLE SUPPORT STORE (Round-Trip Perfection Campaign, Phase 1)
+// ---------------------------------------------------------------------
+// resolveSupportStoreFilePath — where ALL FIVE store families live. TQ ruled ONE FILE (2026-08-04):
+// schema blocks + manifests + manifestBlocks, decisionBlocks, frozen vectors, the embedding vector
+// cache, and the AI judgment cache, all in the file named by [stores] graphBuilderSupportFilePath.
+//
+// THE NO-DEFAULT REFUSAL IS PRESERVED, NOT RELAXED, AND THAT IS THIS FUNCTION'S WHOLE POINT.
+// standardsDatabase.open:92-98 refuses an unnamed path because on 2026-07-17 a scratch-intended
+// `manifestEditor -save` silently wrote the canonical store, having no path handling and falling
+// through to one. Its comment is the doctrine: "a caller that does not say where it is writing is a
+// caller that can write anywhere." Moving the path into configuration changes WHO says it, never
+// WHETHER it is said.
+//
+// CONFIG-SUPPLIED IS NOT A CODE DEFAULT. This is the distinction the phase turns on. A code default
+// is a value the program invents when nobody spoke; a configured value is an operator speaking
+// through a file instead of through argv. So an ABSENT config key is silence, and silence is refused
+// BY NAME here exactly as an absent --standardsDatabaseFilePath always was. There is deliberately no
+// `|| SOME_PATH` anywhere in this function, and a red twin proves the absence refuses rather than
+// resolving to the campaign's own store, the tree's dataStores, or anywhere else.
+//
+// PRECEDENCE: an explicit --standardsDatabaseFilePath WINS over the configured key. An operator or a
+// hermetic test naming a path is the most specific instruction available and must not be overridden
+// by a file; this is also what keeps every existing suite's scratch-store isolation working.
+//
+// Returns { filePath } or { error }. A blank on either channel is refused rather than skipped over:
+// a present-but-empty value is operator input that failed, which polyArch2 §6 treats as the worse
+// fault than absence — it means someone tried to say something and it did not arrive.
+const resolveSupportStoreFilePath = ({ explicitValue, configuredValue, actionName }) => {
+	if (typeof explicitValue === 'string' && explicitValue.trim() !== '') {
+		return { filePath: explicitValue, resolvedFrom: 'commandLine' };
+	}
+	if (typeof explicitValue === 'string') {
+		return {
+			error:
+				`graphBuilder ${actionName}: --standardsDatabaseFilePath was given but BLANK. It names the ` +
+				`single support store every schema block, manifest, decision, vector and judgment is ` +
+				`written to. A blank is refused rather than quietly replaced by the configured path, ` +
+				`because a caller that tried to name a path and failed has not agreed to any other one.`,
+		};
+	}
+	if (typeof configuredValue === 'string' && configuredValue.trim() !== '') {
+		return { filePath: configuredValue, resolvedFrom: 'config' };
+	}
+	if (typeof configuredValue === 'string') {
+		return {
+			error:
+				`graphBuilder ${actionName}: [stores] graphBuilderSupportFilePath is present in ` +
+				`graphBuilder.ini but BLANK. Name a path or remove the key; it is not guessed at.`,
+		};
+	}
+	return {
+		error:
+			`graphBuilder ${actionName}: no support store path resolved, and there is NO DEFAULT. Set ` +
+			`[stores] graphBuilderSupportFilePath in graphBuilder.ini, or pass ` +
+			`--standardsDatabaseFilePath=<path> to override it. A configured path is an operator ` +
+			`speaking through a file; an ABSENT key is silence, and silence is refused here exactly as ` +
+			`an unnamed path always was — a caller that does not say where it is writing is a caller ` +
+			`that can write anywhere (standards-database.js:92). Config-supplied is not a code default.`,
+	};
+};
+
 // decisionStorePathFrom — where a build reads/writes FROZEN decision blocks. An explicit
 // --decisionStoreFilePath WINS (the operator names a canonical decisions db); absent, it is DERIVED
 // beside the standardsDatabase (`<name>.decisions<ext>` in the same directory). Deriving is not a
@@ -117,13 +197,17 @@ const decisionStorePathFrom = (standardsDatabaseFilePath, explicitPath) => {
 		return {
 			error:
 				`graphBuilder -build: the decision-store path is unresolvable — no --decisionStoreFilePath ` +
-				`override and no --standardsDatabaseFilePath to derive it from. There is no default.`,
+				`override and no support store path to take it from. There is no default.`,
 		};
 	}
-	const parsed = path.parse(standardsDatabaseFilePath);
-	return {
-		decisionStoreFilePath: path.join(parsed.dir, `${parsed.name}.decisions${parsed.ext || '.sqlite'}`),
-	};
+	// SINGLE FILE (TQ ruling, 2026-08-04). This used to DERIVE a sibling `<name>.decisions<ext>`
+	// beside the standards database, which was correct while the two were separate files. Under the
+	// single-store ruling the decision blocks live in the SAME file as everything else, so the
+	// answer is the support store path itself and no name is composed at all. The sibling derivation
+	// is not merely unnecessary now — keeping it would silently split the store back into two files
+	// and leave every frozen decision block somewhere the configured path does not describe.
+	// decisionBlocks does not collide with any other family's table (audit, 2026-08-04).
+	return { decisionStoreFilePath: standardsDatabaseFilePath };
 };
 
 // ---------------------------------------------------------------------
@@ -326,18 +410,24 @@ const build = (callback) => {
 	// has no default: standards-database refuses to invent one because on 2026-07-17 a
 	// scratch-intended save silently wrote the canonical standardsDatabase, and a build that must say where it
 	// writes cannot fall through to writing anywhere.
-	const standardsDatabaseFilePath = firstValue(
-		process.global.commandLineParameters,
-		'standardsDatabaseFilePath',
-	);
-	if (!standardsDatabaseFilePath) {
-		callback(
-			`graphBuilder -build: --standardsDatabaseFilePath=<path> is REQUIRED and has no default. ` +
-				`Every schema block this build harvests is written through to that standardsDatabase, and a build ` +
-				`that does not say where it writes is one edit away from writing the canonical one.`,
-		);
+	// The path now comes from [stores] graphBuilderSupportFilePath, with --standardsDatabaseFilePath
+	// still winning as an override. The REFUSAL IS UNCHANGED: resolveSupportStoreFilePath has no
+	// `|| default` in it, so an absent config key and an absent flag together are refused by name
+	// rather than resolved to anywhere.
+	const supportStoreResolution = resolveSupportStoreFilePath({
+		explicitValue: firstValue(process.global.commandLineParameters, 'standardsDatabaseFilePath'),
+		configuredValue: process.global.getConfig('stores').graphBuilderSupportFilePath,
+		actionName: '-build',
+	});
+	if (supportStoreResolution.error) {
+		callback(supportStoreResolution.error);
 		return;
 	}
+	const standardsDatabaseFilePath = supportStoreResolution.filePath;
+	xLog.status(
+		`graphBuilder: support store at ${standardsDatabaseFilePath} ` +
+			`(resolved from ${supportStoreResolution.resolvedFrom})`,
+	);
 
 	// THE DECISION STORE IS OPENED HERE ALONGSIDE THE STANDARDS DATABASE, and for the same reason: it
 	// is a stateful shared resource, so the orchestrator owns it (polyArch2 §2) and the pipeline
@@ -361,11 +451,16 @@ const build = (callback) => {
 	// disabled with an explicit '=false'. An open failure is a FAULT named through the callback,
 	// never a silent fall-through to an uncached/unlogged run (embedding-client's own ensureCache
 	// discipline: silently resuming spend without persistence is exactly what P9 exists to end).
+	// SINGLE FILE (TQ ruling 2026-08-04): the judgment cache now lives IN the support store rather
+	// than in its own dataStores home, so the "documented default" it takes when the parameter is
+	// absent is the CONFIGURED support store — a path an operator named — not the in-code constant.
+	// '--judgmentCacheFilePath=false' still disables it and an explicit path still redirects it,
+	// because a judgment is real spent money and losing one is crazy (TQ ruling, 2026-07-30).
 	const judgmentCachePathResolution = resolvePersistencePath({
 		explicitValue: firstValue(process.global.commandLineParameters, 'judgmentCacheFilePath'),
-		defaultPath: JUDGMENT_CACHE_DEFAULT_FILE_PATH,
+		defaultPath: standardsDatabaseFilePath,
 		parameterName: 'judgmentCacheFilePath',
-		prepareDir: path.dirname(JUDGMENT_CACHE_DEFAULT_FILE_PATH),
+		prepareDir: path.dirname(standardsDatabaseFilePath),
 	});
 	if (judgmentCachePathResolution.error) {
 		callback(judgmentCachePathResolution.error);
@@ -545,18 +640,20 @@ const deps = (callback) => {
 const replay = (callback) => {
 	const { xLog } = process.global;
 
-	const standardsDatabaseFilePath = firstValue(
-		process.global.commandLineParameters,
-		'standardsDatabaseFilePath',
-	);
-	if (!standardsDatabaseFilePath) {
-		callback(
-			`graphBuilder -replay: --standardsDatabaseFilePath=<path> is REQUIRED and has no default. ` +
-				`A replay reads the blocks and the manifest from that standardsDatabase; a replay that does ` +
-				`not say where it reads has nothing to reproduce.`,
-		);
+	// Same resolution as -build, and deliberately the SAME function rather than a second copy of the
+	// precedence rule: a replay that resolved its store differently from the build that wrote it is
+	// how a replay ends up reproducing the wrong graph. The refusal is likewise unchanged — an absent
+	// config key with no flag is refused by name, never resolved to a path.
+	const supportStoreResolution = resolveSupportStoreFilePath({
+		explicitValue: firstValue(process.global.commandLineParameters, 'standardsDatabaseFilePath'),
+		configuredValue: process.global.getConfig('stores').graphBuilderSupportFilePath,
+		actionName: '-replay',
+	});
+	if (supportStoreResolution.error) {
+		callback(supportStoreResolution.error);
 		return;
 	}
+	const standardsDatabaseFilePath = supportStoreResolution.filePath;
 
 	const manifestRefId = firstValue(process.global.commandLineParameters, 'manifestRefId');
 	if (!manifestRefId) {
@@ -1259,6 +1356,267 @@ const goldEvalCheckAction = (callback) => {
 	});
 };
 
+// ---------------------------------------------------------------------
+// -truncateStore — empty the support store's tables, but ONLY behind a PROVEN backup
+// ---------------------------------------------------------------------
+// TQ asked for this explicitly and said he trusts it to be done correctly, so the interesting part is
+// not the truncation — it is the refusal.
+//
+// A BACKUP THAT WAS NEVER OPENED IS NOT A BACKUP. It is a file of the right size in the right place,
+// which is exactly what a corrupt copy also looks like. So this does not copy and hope: it takes a
+// timestamped copy, OPENS the copy as a database, reads a row count out of EVERY table it is about to
+// empty, and requires those counts to equal what the live store held. If the copy cannot be opened, or
+// a table is missing from it, or a single count disagrees, it REFUSES BY NAME and the live store is
+// left exactly as it was found.
+//
+// The copy is made with sqlite's own VACUUM INTO rather than a filesystem copy, and that is
+// load-bearing rather than a preference. This store runs in WAL mode, so a cp of the main file alone
+// silently omits every uncheckpointed page — and this campaign has already met four source stores whose
+// contents were largely WAL-resident, two of them with 4,096-byte main files. VACUUM INTO writes a
+// fully checkpointed, self-contained database through the engine, so the backup cannot be a torn copy.
+//
+// TRUNCATION IS BY DELETE, NOT DROP. The tables belong to the five owning modules; emptying rows leaves
+// their schema — columns, indexes, triggers — exactly as its owner declared it. A DROP would make this
+// function a second, competing declaration of somebody else's schema the next time CREATE TABLE IF NOT
+// EXISTS ran, which is precisely the hazard the generation collision is about.
+// THE SQLITE RUNNER IS A SEAM, with the real one as its documented default (the R-P2-1 fidelity-gate
+// idiom used elsewhere in this tree). Without it the most important branch in this function — "the
+// backup's counts DISAGREE with the live store" — is unreachable by any test, because nothing can make
+// a freshly written VACUUM INTO copy disagree with the file it was copied from. A refusal no test can
+// reach is a refusal nobody has seen work, and this is the refusal TQ asked for by name.
+const truncateStoreAction = (callback, injectedDeps = {}) => {
+	const { xLog } = process.global;
+
+	const supportStoreResolution = resolveSupportStoreFilePath({
+		explicitValue: firstValue(process.global.commandLineParameters, 'standardsDatabaseFilePath'),
+		configuredValue: process.global.getConfig('stores').graphBuilderSupportFilePath,
+		actionName: '-truncateStore',
+	});
+	if (supportStoreResolution.error) {
+		callback(supportStoreResolution.error);
+		return;
+	}
+	const storeFilePath = supportStoreResolution.filePath;
+
+	if (!fs.existsSync(storeFilePath)) {
+		callback(
+			`graphBuilder -truncateStore: the support store '${storeFilePath}' does not exist. Refusing ` +
+				`— there is nothing to truncate, and reporting success would imply there was.`,
+		);
+		return;
+	}
+
+	// The tables emptied are DATA, one row per owning family, so adding a family is a row here rather
+	// than a new branch — and the backup verification therefore covers exactly the tables the
+	// truncation touches, with no chance of the two lists drifting apart. sqlite_sequence is
+	// deliberately absent: it is sqlite's own AUTOINCREMENT registry, not any family's data, and
+	// emptying it would restart the seq numbering that decision-store reads as an append order.
+	const truncatableTables = [
+		{ tableName: 'blocks', owningFamily: 'standards-database' },
+		{ tableName: 'manifests', owningFamily: 'standards-database' },
+		{ tableName: 'manifestBlocks', owningFamily: 'standards-database' },
+		{ tableName: 'decisionBlocks', owningFamily: 'decision-store' },
+		{ tableName: 'vectors', owningFamily: 'vector-store' },
+		{ tableName: 'vectorCacheEntries', owningFamily: 'vectorCache' },
+		{ tableName: 'judgmentCacheEntries', owningFamily: 'judgment-cache' },
+	];
+
+	const runSqliteCli =
+		injectedDeps.runSqliteCli ||
+		require('../apps/store-migration/migrateCachesIntoSupportStore')({ xLog }).runSqliteCli;
+
+	const countEveryTableText = truncatableTables
+		.map((oneTable) => `SELECT '${oneTable.tableName}', count(*) FROM ${oneTable.tableName};`)
+		.join(' ');
+	const countsFromCliOutput = (output) => {
+		const counts = {};
+		`${output}`
+			.split('\n')
+			.filter((oneLine) => oneLine.trim() !== '')
+			.forEach((oneLine) => {
+				const [tableName, countValue] = oneLine.split('|');
+				counts[tableName] = Number(countValue);
+			});
+		return counts;
+	};
+
+	const backupFilePath = `${storeFilePath}.beforeTruncate-${timestampForFileName()}.backup`;
+
+	const taskList = new taskListPlus();
+
+	// 1 — count every truncatable table in the LIVE store. This is the expectation the backup must
+	//     satisfy, measured now and never remembered from a previous run.
+	taskList.push((args, next) => {
+		runSqliteCli(
+			{ databaseFilePath: storeFilePath, statementText: countEveryTableText },
+			(err, output) => {
+				if (err) {
+					next(`graphBuilder -truncateStore: counting the live store: ${err}`);
+					return;
+				}
+				const liveCounts = countsFromCliOutput(output);
+				xLog.status(
+					`graphBuilder -truncateStore: live store holds ` +
+						truncatableTables
+							.map((oneTable) => `${oneTable.tableName}=${liveCounts[oneTable.tableName]}`)
+							.join(' '),
+				);
+				next('', { ...args, liveCounts });
+			},
+		);
+	});
+
+	// 2 — take the backup with VACUUM INTO (WAL-safe, self-contained, engine-written).
+	taskList.push((args, next) => {
+		if (fs.existsSync(backupFilePath)) {
+			next(
+				`graphBuilder -truncateStore: the backup path '${backupFilePath}' already exists. Refusing ` +
+					`to overwrite a backup — that is the one file this operation cannot afford to damage.`,
+			);
+			return;
+		}
+		runSqliteCli(
+			{ databaseFilePath: storeFilePath, statementText: `VACUUM INTO '${backupFilePath}';` },
+			(err) => {
+				if (err) {
+					next(`graphBuilder -truncateStore: taking the backup: ${err}`);
+					return;
+				}
+				xLog.status(`graphBuilder -truncateStore: backup written to ${backupFilePath}`);
+				next('', args);
+			},
+		);
+	});
+
+	// 3 — VERIFY THE BACKUP. Open it, read a count from every table, require exact agreement. This is
+	//     the gate; everything before it is preparation and everything after it is cleanup.
+	taskList.push((args, next) => {
+		if (!fs.existsSync(backupFilePath)) {
+			next(
+				`graphBuilder -truncateStore: the backup '${backupFilePath}' is not on disk after the copy ` +
+					`reported success. REFUSING to truncate. The live store is untouched.`,
+			);
+			return;
+		}
+		runSqliteCli(
+			{ databaseFilePath: backupFilePath, statementText: countEveryTableText },
+			(err, output) => {
+				if (err) {
+					next(
+						`graphBuilder -truncateStore: the backup '${backupFilePath}' COULD NOT BE OPENED AND ` +
+							`READ (${err}). REFUSING to truncate — a backup nobody has opened is not a backup. ` +
+							`The live store is untouched.`,
+					);
+					return;
+				}
+				const backupCounts = countsFromCliOutput(output);
+
+				const unaccountedTables = truncatableTables
+					.filter((oneTable) => backupCounts[oneTable.tableName] === undefined)
+					.map((oneTable) => oneTable.tableName);
+				if (unaccountedTables.length > 0) {
+					next(
+						`graphBuilder -truncateStore: the backup reported NO row count for ` +
+							`[${unaccountedTables.join(', ')}]. REFUSING to truncate a table whose backup cannot ` +
+							`account for it. The live store is untouched.`,
+					);
+					return;
+				}
+
+				const disagreements = truncatableTables
+					.filter(
+						(oneTable) => backupCounts[oneTable.tableName] !== args.liveCounts[oneTable.tableName],
+					)
+					.map(
+						(oneTable) =>
+							`${oneTable.tableName} (live ${args.liveCounts[oneTable.tableName]}, backup ` +
+							`${backupCounts[oneTable.tableName]})`,
+					);
+				if (disagreements.length > 0) {
+					next(
+						`graphBuilder -truncateStore: the backup's row counts DISAGREE with the live store: ` +
+							`${disagreements.join('; ')}. REFUSING to truncate. There is no tolerance for a near ` +
+							`miss — the backup either holds what the store holds or it is not a backup of it. ` +
+							`The live store is untouched.`,
+					);
+					return;
+				}
+
+				xLog.status(
+					`graphBuilder -truncateStore: backup VERIFIED — opened, and all ` +
+						`${truncatableTables.length} table counts agree exactly with the live store.`,
+				);
+				next('', { ...args, backupCounts });
+			},
+		);
+	});
+
+	// 4 — only now, empty the tables.
+	taskList.push((args, next) => {
+		runSqliteCli(
+			{
+				databaseFilePath: storeFilePath,
+				statementText: truncatableTables
+					.map((oneTable) => `DELETE FROM ${oneTable.tableName};`)
+					.join(' '),
+			},
+			(err) => {
+				if (err) {
+					next(`graphBuilder -truncateStore: emptying the tables: ${err}`);
+					return;
+				}
+				next('', args);
+			},
+		);
+	});
+
+	// 5 — confirm the store really is empty. A truncation that reported success without emptying
+	//     anything is the exact mirror of a backup nobody opened.
+	taskList.push((args, next) => {
+		runSqliteCli(
+			{ databaseFilePath: storeFilePath, statementText: countEveryTableText },
+			(err, output) => {
+				if (err) {
+					next(`graphBuilder -truncateStore: confirming the truncation: ${err}`);
+					return;
+				}
+				const stillPopulated = Object.entries(countsFromCliOutput(output))
+					.filter(([, oneCount]) => oneCount !== 0)
+					.map(([oneTableName, oneCount]) => `${oneTableName}=${oneCount}`);
+				if (stillPopulated.length > 0) {
+					next(
+						`graphBuilder -truncateStore: rows REMAIN after the delete: ` +
+							`${stillPopulated.join(' ')}. The backup at '${backupFilePath}' is verified and intact.`,
+					);
+					return;
+				}
+				next('', args);
+			},
+		);
+	});
+
+	pipeRunner(taskList.getList(), {}, (err, args) => {
+		if (err) {
+			callback(err);
+			return;
+		}
+		callback('', {
+			exitCode: 0,
+			resultText: JSON.stringify(
+				{
+					truncatedStoreFilePath: storeFilePath,
+					backupFilePath,
+					backupVerified: true,
+					rowsPreservedInBackup: args.backupCounts,
+					tablesEmptied: truncatableTables.map((oneTable) => oneTable.tableName),
+				},
+				null,
+				2,
+			),
+		});
+	});
+};
+
 return {
 	build,
 	validate,
@@ -1268,7 +1626,11 @@ return {
 	cedsRoundTrip: cedsRoundTripAction,
 	cedsGates: cedsGatesAction,
 	goldEvalCheck: goldEvalCheckAction,
+	truncateStore: truncateStoreAction,
 	scanAvailableForges,
+	// exported for the hermetic gates: the no-default refusal is the phase's headline claim, and a
+	// claim provable only by launching a whole build is a claim nobody re-checks.
+	resolveSupportStoreFilePath,
 };
 };
 
