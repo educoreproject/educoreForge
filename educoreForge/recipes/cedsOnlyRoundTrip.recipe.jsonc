@@ -1,0 +1,43 @@
+{
+  // cedsOnlyRoundTrip - forge CEDS alone, materialize, then run its DECLARED roundTripValidator
+  // against the product graph and land the RT-6 verdict with the build outputs. This is
+  // forge-ceds's CERTIFICATION recipe (Round-Trip Perfection Phase 3.5): the build that proves
+  // the declaration added to forges/ceds/parserDescriptor.ini reaches a real verdict through the
+  // ordinary builder path, with -goldEvalCheck PASS on the run directory as the one-command proof.
+  //
+  // THIS RECIPE IS NEW GROUND, NOT A COPY OF SOMETHING PROVEN. Every other *OnlyRoundTrip recipe
+  // has a stage-off sibling that has been built many times (sifOnly, edfiOnly, pescOnly). CEDS HAS
+  // NO BARE BASE-ONLY RECIPE AT ALL - cedsHub is base PLUS a folded hub, and every other ceds
+  // recipe pairs it with another standard. So this is the first base-only CEDS build in the tree.
+  // The SHAPE is proven (ceds with hubs [] is what cedsLifBases, allStandards and
+  // allStandardsNoBridges already build); the base-only-plus-stage COMBINATION is not.
+  //
+  // WHY hubs [] AND bridges [], stated because it is a decision and not a convenience. The
+  // round-trip compiler reads LAYER 1 ONLY by ruling (forges/ceds/lib/roundTripCompiler.js:22 -
+  // every query names its Layer 1 roles explicitly), and the hub is Layer 2, so the hub cannot
+  // move the diff either way. The DECISIVE reason is comparability: this is the exact shape Phase
+  // 8's fourRoundTripNoBridges will build, so THIS NUMBER IS THE NUMBER PHASE 8 SHOULD SEE. A
+  // verdict produced against a differently-configured graph is a number nobody can compare to
+  // anything, which is how the unsupported CEDS folklore figure came to exist in the first place.
+  //
+  // NO EXPECTED NUMBER IS STATED HERE, DELIBERATELY. The sibling recipes name the loss they expect
+  // (sif 15,458, edfi 349) because those bundles had produced a verdict before their recipe was
+  // written. CEDS never has. Writing an expectation into the recipe that the instrument has not
+  // yet earned would be exactly the tuning-toward-a-number this campaign exists to prevent.
+  // Whatever the first honest run reports is the number; the DEVLOG records it afterwards.
+  //
+  // HEAP. CEDS is the heaviest forge in the fleet and forges/ceds/README_cedsForge.md documents
+  // node --max-old-space-size=24576 for a CEDS build. That figure is for a VECTORIZED HUB build
+  // (94,602 embedded cards); this recipe carries no hub, so its requirement is smaller and is
+  // recorded in the Phase 3.5 DEVLOG from an actual run rather than guessed at here. The in-code
+  // heap gate refuses BY NAME before provisioning a container if the process is short, so an
+  // under-provisioned run costs a refusal, not a stranded container.
+  "schemaVersion": "1.0.0",
+  "recipeName": "cedsOnlyRoundTrip",
+  "kind": "dev",
+  "description": "Forge the ceds standard base and round-trip-validate the materialized product (RT-13 stage, campaign certification).",
+  "roundTripStage": true,
+  "standards": [ { "token": "ceds", "version": "current" } ],
+  "hubs": [],
+  "bridges": []
+}
