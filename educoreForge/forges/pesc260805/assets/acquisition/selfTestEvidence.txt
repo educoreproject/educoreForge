@@ -1,0 +1,34 @@
+=== acquirePescCorpus SELF-TEST (local fixtures, no network) ===
+scratch: /var/folders/m_/12d8yqwd28943kwt0n4nhrk80000gn/T/pescCorpusSelfTest-lvSt4r
+
+G1: retention gate refuses an HTTP error body
+  [G1 RED (gate disabled)] ASSERTION FAIL: no file was written for the {"error":"asset-not-found"} body
+
+Wrote /var/folders/m_/12d8yqwd28943kwt0n4nhrk80000gn/T/pescCorpusSelfTest-lvSt4r/g1Green/manifest.json
+Wrote /var/folders/m_/12d8yqwd28943kwt0n4nhrk80000gn/T/pescCorpusSelfTest-lvSt4r/g1Green/SHA256SUMS
+  [G1 GREEN] ASSERTION PASS: no .xsd written; error body recorded as nonSchema refusal
+
+G2: href extractor unescapes entity-encoded ampersands
+  [G2 RED (unescape disabled)] ASSERTION FAIL: no '&amp;' survives in the request URL (raw href: https://nebula.wsimg.com/abc123?AccessKeyId=KEY&amp;disposition=0&amp;alloworigin=1)
+  [G2 GREEN] ASSERTION PASS: no '&amp;' survives and the literal '&' is present (extracted: https://nebula.wsimg.com/abc123?AccessKeyId=KEY&disposition=0&alloworigin=1)
+
+G3: one namespace, different bytes -> BOTH kept under collision names
+  [G3 RED (keep-both disabled; prototype refusal behaviour)] ASSERTION FAIL: both byte-variants of the namespace are present on disk
+  ACCEPTED AcademicRecord_v9.9.9.xsd                          182 bytes  sha256 69df29760840
+  ACCEPTED AcademicRecord_v9.9.9.xsd                          190 bytes  sha256 36df5b7f6eb2
+  NAMESPACE COLLISION: urn:org:pesc:sector:AcademicRecord:v9.9.9 now has 2 distinct byte variants — keeping BOTH (R-ACQ-4)
+
+Wrote /var/folders/m_/12d8yqwd28943kwt0n4nhrk80000gn/T/pescCorpusSelfTest-lvSt4r/g3Green/manifest.json
+Wrote /var/folders/m_/12d8yqwd28943kwt0n4nhrk80000gn/T/pescCorpusSelfTest-lvSt4r/g3Green/SHA256SUMS
+  [G3 GREEN] ASSERTION PASS: both collision-named files on disk, no plain-named file, collision fact in manifest
+  ACCEPTED AcademicRecord_v9.9.9.xsd                          182 bytes  sha256 69df29760840
+
+Wrote /var/folders/m_/12d8yqwd28943kwt0n4nhrk80000gn/T/pescCorpusSelfTest-lvSt4r/g3Identical/manifest.json
+Wrote /var/folders/m_/12d8yqwd28943kwt0n4nhrk80000gn/T/pescCorpusSelfTest-lvSt4r/g3Identical/SHA256SUMS
+  [G3 GREEN (identical bytes)] ASSERTION PASS: one plain-named file only; second source recorded in alsoLinkedFrom
+
+=== SELF-TEST SUMMARY ===
+  red demonstrations observed failing : 3 (expected 3)
+  green assertions observed passing   : 4 (expected 4)
+  unexpected outcomes                 : 0 (required 0)
+  VERDICT: SELF-TEST PASS

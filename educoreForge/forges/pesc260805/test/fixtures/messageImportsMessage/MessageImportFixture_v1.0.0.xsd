@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- G-D fixture: a message-layer schema importing ANOTHER message-layer namespace. The import
+     graph's acyclicity is observed in the corpus, never guaranteed by PESC (spec §2.2); the
+     parser must ASSERT the layer order and refuse this file by name, naming both namespaces.
+     NOT part of the corpus — test fixture only. -->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:ct="urn:org:pesc:message:CollegeTranscript:v1.8.0" xmlns:fx="urn:org:pesc:message:MessageImportFixture:v1.0.0" targetNamespace="urn:org:pesc:message:MessageImportFixture:v1.0.0" elementFormDefault="unqualified" attributeFormDefault="unqualified">
+	<xs:import namespace="urn:org:pesc:message:CollegeTranscript:v1.8.0" schemaLocation="CollegeTranscript_v1.8.0.xsd"/>
+	<xs:element name="FixtureRoot" type="ct:SomethingType"/>
+</xs:schema>

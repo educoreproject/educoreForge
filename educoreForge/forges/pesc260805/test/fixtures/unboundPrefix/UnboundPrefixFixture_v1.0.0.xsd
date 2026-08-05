@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- G-D fixture: this file's ONLY defect is that element FixtureRoot's type is written with the
+     prefix 'ghost:', which the file's own prefix table does not bind. The parser must refuse
+     naming this file and that prefix. NOT part of the corpus — test fixture only. -->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:fx="urn:org:pesc:message:UnboundPrefixFixture:v1.0.0" targetNamespace="urn:org:pesc:message:UnboundPrefixFixture:v1.0.0" elementFormDefault="unqualified" attributeFormDefault="unqualified">
+	<xs:element name="FixtureRoot" type="ghost:SomethingType">
+		<xs:annotation>
+			<xs:documentation>A root whose type prefix is deliberately unbound.</xs:documentation>
+		</xs:annotation>
+	</xs:element>
+</xs:schema>
