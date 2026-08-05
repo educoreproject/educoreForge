@@ -117,7 +117,7 @@ taskList.push((args, next) => {
 		namedDefinitions: runOne.stats.namedDefinitions,
 		elementDecls: runOne.stats.elementDecls,
 		anonymousTypes: runOne.stats.anonymousTypes,
-		restrictions: runOne.stats.restrictions,
+		derivations: runOne.stats.derivations,
 		attributeDecls: runOne.stats.attributeDecls,
 		enumerationValuesCarried: runOne.stats.enumerationValuesCarried,
 		nodes: runOne.nodes.length,
@@ -373,9 +373,39 @@ taskList.push((args, next) => {
 				(oneEdge) => oneEdge.properties && oneEdge.properties.provenanceTier === 'structural' && oneEdge.properties.pescTier,
 			);
 			check('INTEGRATION every edge carries provenanceTier structural + pescTier', everyEdgeConforms);
-			const sourceTierNodes = forged.nodes.filter((oneNode) => oneNode.properties.pescTier === 'source');
-			evidence(`tier census: ${sourceTierNodes.length} source-tier nodes, ${forged.nodes.length - sourceTierNodes.length} non-source (the root, pescTier 'meta' — PROVISIONAL, see report)`);
-			check('INTEGRATION all nodes except the root are pescTier source', sourceTierNodes.length === forged.nodes.length - 1);
+			// TIER CENSUS — the THREE-TIER reality. This assertion previously read "all nodes except
+			// the root are pescTier source", which was true when forge() emitted source+meta only.
+			// forge() now emits source + derived + meta in ONE pass, so the old form was stale — and
+			// the old evidence line mis-described the 64 non-source nodes as "the root" when they are
+			// 63 derived namespaces PLUS the root. Replaced with EXACT per-tier counts (a drift in
+			// either direction fails) plus an assertion that the tier vocabulary is CLOSED: a node
+			// carrying a pescTier outside the R-P2-1 enum is a fault, not a node to quietly ignore.
+			const PESC_TIER_VALUES = ['source', 'derived', 'synthetic', 'meta'];
+			const nodeCountByTier = {};
+			PESC_TIER_VALUES.forEach((oneTierValue) => {
+				nodeCountByTier[oneTierValue] = 0;
+			});
+			const nodesWithUnratifiedTier = [];
+			forged.nodes.forEach((oneNode) => {
+				const nodeTierValue = oneNode.properties.pescTier;
+				if (PESC_TIER_VALUES.indexOf(nodeTierValue) === -1) {
+					nodesWithUnratifiedTier.push(
+						`${oneNode.stableId} (pescTier ${JSON.stringify(nodeTierValue)})`,
+					);
+					return;
+				}
+				nodeCountByTier[nodeTierValue]++;
+			});
+			evidence(`tier census: source ${nodeCountByTier.source}, derived ${nodeCountByTier.derived}, meta ${nodeCountByTier.meta}, synthetic ${nodeCountByTier.synthetic}; total ${forged.nodes.length}`);
+			if (nodesWithUnratifiedTier.length > 0) {
+				evidence(`unratified pescTier values: ${nodesWithUnratifiedTier.slice(0, 3).join('; ')}`);
+			}
+			check('INTEGRATION every node carries a ratified pescTier (source|derived|synthetic|meta, R-P2-1)', nodesWithUnratifiedTier.length === 0);
+			check('INTEGRATION source tier is EXACTLY 41,676 nodes', nodeCountByTier.source === 41676);
+			check('INTEGRATION derived tier is EXACTLY 63 nodes (the namespaces)', nodeCountByTier.derived === 63);
+			check('INTEGRATION meta tier is EXACTLY 1 node (the standard root, R-P2-1)', nodeCountByTier.meta === 1);
+			check('INTEGRATION synthetic tier is EMPTY until Phase 4 emits it', nodeCountByTier.synthetic === 0);
+			check('INTEGRATION the four tiers account for every emitted node', nodeCountByTier.source + nodeCountByTier.derived + nodeCountByTier.meta + nodeCountByTier.synthetic === forged.nodes.length);
 
 			// engine shaping — the exact translation forger.js applies before replay.
 			const { shapeForgedGraph } = require(

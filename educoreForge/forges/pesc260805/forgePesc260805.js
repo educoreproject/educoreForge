@@ -41,6 +41,7 @@ const path = require('path');
 const { pipeRunner, taskListPlus } = new require('qtools-asynchronous-pipe-plus')();
 
 const parserFactory = require('./lib/parser');
+const derivedTierFactory = require('./lib/derivedTier');
 
 const CORE_LIB = path.join(__dirname, '..', '..', 'lib');
 const buildSearchTextFactory = require(path.join(CORE_LIB, 'search-text', 'build-search-text'));
@@ -82,6 +83,7 @@ const moduleFunction =
 		};
 		const { buildSearchText } = buildSearchTextFactory();
 		const { parsePescCorpus } = parserFactory();
+		const { buildDerivedTier, applyDerivedTier } = derivedTierFactory();
 
 		// =====================================================================
 		// buildSourceTierGraph — PURE, deterministic: parsed corpus -> { nodes, edges, stats }.
@@ -96,7 +98,7 @@ const moduleFunction =
 				namedDefinitions: 0,
 				elementDecls: 0,
 				anonymousTypes: 0,
-				restrictions: 0,
+				derivations: 0,
 				attributeDecls: 0,
 				enumerationValuesCarried: 0,
 				contestedNamespaces: [],
@@ -286,7 +288,7 @@ const moduleFunction =
 				// ---- containment emission, recursive over the parsed container model ----
 				// container = a node that owns elements/attributes/derivations. Elements declared
 				// inside a derivation (extension/restriction) hang off the CONTAINER — uniform
-				// HAS_PROPERTY — while the PescRestriction child records the wrapper the emitter
+				// HAS_PROPERTY — while the PescDerivation child records the wrapper the emitter
 				// must rebuild (contentStyle + derivationVariety).
 				const emitContainerContents = ({
 					containerStableId,
@@ -379,7 +381,11 @@ const moduleFunction =
 					});
 
 					content.derivations.forEach((oneDerivation, derivationIndex) => {
-						const restrictionStableId = `${containerStableId}/restriction/${derivationIndex + 1}`;
+						// R-P2-4: node kind renamed PescRestriction -> PescDerivation (it carries
+						// xs:extension too; a Restriction label holding extensions is a lie in a graph
+						// built for comprehension). The stableId segment '/restriction/' is IDENTITY,
+						// not vocabulary, and stays — renaming keys is not a mechanical fixup.
+						const derivationStableId = `${containerStableId}/restriction/${derivationIndex + 1}`;
 						// facet scalars land under the DESIGN's names (pattern, minLength, ...,
 						// totalDigits, fractionDigits) — G-E's fidelity lives in these properties.
 						const facetScalars = {};
@@ -388,8 +394,8 @@ const moduleFunction =
 						});
 						makeNode({
 							role: DME_ROLES.SUPPORT,
-							perStandardLabel: 'PescRestriction',
-							stableId: restrictionStableId,
+							perStandardLabel: 'PescDerivation',
+							stableId: derivationStableId,
 							name: `${containerName} ${oneDerivation.variety} of ${oneDerivation.baseAsWritten}`,
 							documentation: oneDerivation.documentation,
 							searchTextElement: {
@@ -412,10 +418,12 @@ const moduleFunction =
 								...facetScalars,
 							},
 						});
-						addEdge(EDGE_TYPES.HAS_RESTRICTION, containerStableId, restrictionStableId, {
+						// edge type stays EDGE_TYPES.HAS_RESTRICTION: it is the SHARED vocabulary enum
+						// (lib/vocabulary), out of this bundle's rename authority.
+						addEdge(EDGE_TYPES.HAS_RESTRICTION, containerStableId, derivationStableId, {
 							derivationPosition: derivationIndex + 1,
 						});
-						stats.restrictions++;
+						stats.derivations++;
 						stats.enumerationValuesCarried += oneDerivation.enumerationValues.length;
 					});
 				};
@@ -628,26 +636,54 @@ const moduleFunction =
 				});
 			});
 
-			// the ONE sanctioned try/catch boundary: the pure builder throws on builder bugs and
-			// searchText validation misses; translated here to the error channel.
+			// the ONE sanctioned try/catch boundary: the pure builders (source tier, then the
+			// Phase 3 derived tier — both throw on refusals and builder bugs) are translated here
+			// to the error channel. Source, derived, and meta emit in this one pass: the derived
+			// tier is computed from the source tier just built (never from re-parsing), which is
+			// the same input the Gate 3 regeneration uses — one input, one code path.
 			taskList.push((args, next) => {
 				let graph;
 				let buildError = '';
 				try {
-					graph = buildSourceTierGraph(args.parsed);
+					const sourceGraph = buildSourceTierGraph(args.parsed);
+					const derivedOutput = buildDerivedTier({
+						nodes: sourceGraph.nodes,
+						edges: sourceGraph.edges,
+					});
+					const combinedGraph = applyDerivedTier({
+						nodes: sourceGraph.nodes,
+						edges: sourceGraph.edges,
+						derivedOutput,
+					});
+					graph = {
+						nodes: combinedGraph.nodes,
+						edges: combinedGraph.edges,
+						stats: { ...sourceGraph.stats, derived: derivedOutput.stats },
+					};
 				} catch (thrownError) {
 					buildError = thrownError.message;
 				}
 				if (buildError) {
-					next(`forge-pesc260805 buildSourceTierGraph: ${buildError}`);
+					next(`forge-pesc260805 graph build: ${buildError}`);
 					return;
 				}
 				xLog.status(
-					`[forge-pesc260805] source tier: ${graph.nodes.length} nodes, ${graph.edges.length} edges ` +
+					`[forge-pesc260805] source tier: ` +
 						`(${graph.stats.artifacts} artifacts, ${graph.stats.namedDefinitions} named definitions, ` +
 						`${graph.stats.elementDecls} element decls, ${graph.stats.anonymousTypes} anonymous types, ` +
-						`${graph.stats.restrictions} restrictions/extensions, ${graph.stats.attributeDecls} attributes; ` +
+						`${graph.stats.derivations} derivations (restrictions/extensions), ${graph.stats.attributeDecls} attributes; ` +
 						`contested namespaces: ${graph.stats.contestedNamespaces.join(', ') || 'none'})`,
+				);
+				xLog.status(
+					`[forge-pesc260805] derived tier: ${graph.stats.derived.namespaces} namespaces ` +
+						`(${graph.stats.derived.isLatestNamespaces} latest), ${graph.stats.derived.inNamespaceEdges} IN_NAMESPACE, ` +
+						`${graph.stats.derived.importsEdges} IMPORTS (+${graph.stats.derived.unresolvedImportsRecorded} unresolved recorded), ` +
+						`${graph.stats.derived.resolvesToEdges} RESOLVES_TO (+${graph.stats.derived.builtinReferenceMarkers} builtin markers, ` +
+						`+${graph.stats.derived.ambiguousPendingSynthesisRecorded} ambiguous recorded, ` +
+						`+${graph.stats.derived.unresolvedNamespaceReferencesRecorded} absent-namespace recorded), ` +
+						`${graph.stats.derived.sameDefinitionEdges} SAME_DEFINITION chain edges, ` +
+						`${graph.stats.derived.reachableFromLatestRoot}/${graph.stats.derived.definitionsTotal} reachable from latest roots; ` +
+						`total ${graph.nodes.length} nodes, ${graph.edges.length} edges`,
 				);
 				next('', { ...args, graph });
 			});
