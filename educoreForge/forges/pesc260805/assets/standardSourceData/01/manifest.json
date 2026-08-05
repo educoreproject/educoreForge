@@ -1,0 +1,487 @@
+{
+  "aggregateVersion": "01",
+  "bundleName": "pesc260805",
+  "aggregateVersionOwner": "educoreForge. THIS VERSION NUMBER IS OURS. PESC publishes no coherent whole-family release; this aggregate is our fabrication and must never be read as a PESC edition.",
+  "cutDate": "2026-08-05",
+  "compositionRule": "Every artifact linked from the PESC standards pages, plus the published Request/Response ZIP and the OCAS legacy mirror, retained if and only if it parses as XML and declares a urn:org:pesc:* targetNamespace. Filenames derive from the targetNamespace, never from anchor text.",
+  "repairPolicy": "NONE. This corpus is a faithful mirror of what PESC published, including its contradictions. All merging, aliasing and synthesis belongs to the forge and is recorded in forge output, never here.",
+  "artifactCount": 64,
+  "totalBytes": 9733713,
+  "namespaceCollisions": [
+    {
+      "targetNamespace": "urn:org:pesc:sector:AcademicRecord:v1.6.0",
+      "memberCount": 2,
+      "members": [
+        {
+          "filename": "AcademicRecord_v1.6.0.collision-948d88f32069.xsd",
+          "targetNamespace": "urn:org:pesc:sector:AcademicRecord:v1.6.0",
+          "byteCount": 61549,
+          "sha256": "948d88f320696e283a3b5a6079a13f803fce73f4b0007c54b5c623f9ba52aeca",
+          "collisionMember": true,
+          "preservedAs": "AcademicRecord_v1.6.0_variantCollegeTranscript.xsd"
+        },
+        {
+          "filename": "AcademicRecord_v1.6.0.collision-e12830fc86a3.xsd",
+          "targetNamespace": "urn:org:pesc:sector:AcademicRecord:v1.6.0",
+          "byteCount": 71232,
+          "sha256": "e12830fc86a304071ffec896e76d079e27274277d46a95218946f863a68f5527",
+          "collisionMember": true,
+          "preservedAs": "AcademicRecord_v1.6.0_variantTestScore.xsd"
+        }
+      ],
+      "statement": "PESC publishes TWO different files under this one namespace, both carrying version=\"v1.6.0\". Six substandards import it and NEITHER file satisfies all six. This is PESC's defect. Acquisition records it and chooses neither; resolution is a forge decision."
+    }
+  ],
+  "artifacts": [
+    {
+      "filename": "AcademicEportfolio_v1.0.0.xsd",
+      "targetNamespace": "urn:org:pesc:message:AcademicEportfolio:v1.0.0",
+      "byteCount": 90644,
+      "sha256": "5aeefa06cd2df8515d146a644814e59280a7d1076a727cf4a739a0dce1927f08",
+      "collisionMember": false
+    },
+    {
+      "filename": "AcademicRecord_v1.0.0.xsd",
+      "targetNamespace": "urn:org:pesc:sector:AcademicRecord:v1.0.0",
+      "byteCount": 27070,
+      "sha256": "1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc",
+      "collisionMember": false
+    },
+    {
+      "filename": "AcademicRecord_v1.1.0.xsd",
+      "targetNamespace": "urn:org:pesc:sector:AcademicRecord:v1.1.0",
+      "byteCount": 31590,
+      "sha256": "d498b9d439bd4b3352b36bd5449d1606b12dfdaa206d9d655e1095cdd4b48f79",
+      "collisionMember": false
+    },
+    {
+      "filename": "AcademicRecord_v1.10.0.xsd",
+      "targetNamespace": "urn:org:pesc:sector:AcademicRecord:v1.10.0",
+      "byteCount": 110574,
+      "sha256": "87502be504916a0fcd47495bcf9156221b0320c8aa6e05fb48e2ed598486c283",
+      "collisionMember": false
+    },
+    {
+      "filename": "AcademicRecord_v1.11.0.xsd",
+      "targetNamespace": "urn:org:pesc:sector:AcademicRecord:v1.11.0",
+      "byteCount": 232074,
+      "sha256": "76ef93896303b613c2000bb1b565c433d021bec0a2c31e9f91389af3e3ad4487",
+      "collisionMember": false
+    },
+    {
+      "filename": "AcademicRecord_v1.12.0.xsd",
+      "targetNamespace": "urn:org:pesc:sector:AcademicRecord:v1.12.0",
+      "byteCount": 243680,
+      "sha256": "92d58d21dc538699bc38ab44735063f807cf4bae7911dd0082375cdd0b439f75",
+      "collisionMember": false
+    },
+    {
+      "filename": "AcademicRecord_v1.13.0.xsd",
+      "targetNamespace": "urn:org:pesc:sector:AcademicRecord:v1.13.0",
+      "byteCount": 245292,
+      "sha256": "971970f7ff62de32fe3c1e36df32ff81f111ee703439bd4c7e4ba32a28a1dcb0",
+      "collisionMember": false
+    },
+    {
+      "filename": "AcademicRecord_v1.14.0.xsd",
+      "targetNamespace": "urn:org:pesc:sector:AcademicRecord:v1.14.0",
+      "byteCount": 258162,
+      "sha256": "592054a062bd43bda7f1fe80b754874bd8e0271f9899e44c0fe8368cad5e5299",
+      "collisionMember": false
+    },
+    {
+      "filename": "AcademicRecord_v1.3.0.xsd",
+      "targetNamespace": "urn:org:pesc:sector:AcademicRecord:v1.3.0",
+      "byteCount": 33530,
+      "sha256": "e51d14ce491167814383ffff1d179a498ec81e501305a2cd30c125158f2b80d3",
+      "collisionMember": false
+    },
+    {
+      "filename": "AcademicRecord_v1.5.0.xsd",
+      "targetNamespace": "urn:org:pesc:sector:AcademicRecord:v1.5.0",
+      "byteCount": 34490,
+      "sha256": "69ac42ccab66265fe3b061f5984f18caba61497f130b7f31c481fd52aff8da04",
+      "collisionMember": false
+    },
+    {
+      "filename": "AcademicRecord_v1.6.0.collision-948d88f32069.xsd",
+      "targetNamespace": "urn:org:pesc:sector:AcademicRecord:v1.6.0",
+      "byteCount": 61549,
+      "sha256": "948d88f320696e283a3b5a6079a13f803fce73f4b0007c54b5c623f9ba52aeca",
+      "collisionMember": true,
+      "preservedAs": "AcademicRecord_v1.6.0_variantCollegeTranscript.xsd"
+    },
+    {
+      "filename": "AcademicRecord_v1.6.0.collision-e12830fc86a3.xsd",
+      "targetNamespace": "urn:org:pesc:sector:AcademicRecord:v1.6.0",
+      "byteCount": 71232,
+      "sha256": "e12830fc86a304071ffec896e76d079e27274277d46a95218946f863a68f5527",
+      "collisionMember": true,
+      "preservedAs": "AcademicRecord_v1.6.0_variantTestScore.xsd"
+    },
+    {
+      "filename": "AcademicRecord_v1.7.0.xsd",
+      "targetNamespace": "urn:org:pesc:sector:AcademicRecord:v1.7.0",
+      "byteCount": 103808,
+      "sha256": "be959f6423608773e4303738037bab2981f5ae1416707a41f5d222d037ab1ef9",
+      "collisionMember": false
+    },
+    {
+      "filename": "AcademicRecord_v1.8.0.xsd",
+      "targetNamespace": "urn:org:pesc:sector:AcademicRecord:v1.8.0",
+      "byteCount": 110303,
+      "sha256": "b77f143b0a40a77687287daaf872f567c42c8d7c54a35cacda48620b672d2d32",
+      "collisionMember": false
+    },
+    {
+      "filename": "AcademicRecord_v1.9.0.xsd",
+      "targetNamespace": "urn:org:pesc:sector:AcademicRecord:v1.9.0",
+      "byteCount": 110464,
+      "sha256": "4e3a13516e7e4f26bade97d946349315d904af4a82e82746e4576e1cc2642e78",
+      "collisionMember": false
+    },
+    {
+      "filename": "AdmissionsApplication_v1.0.0.xsd",
+      "targetNamespace": "urn:org:pesc:message:AdmissionsApplication:v1.0.0",
+      "byteCount": 1918,
+      "sha256": "49597e9df350f3457dfc25d697fdfe373334ab0a7be929e29d42d539d3d532d7",
+      "collisionMember": false
+    },
+    {
+      "filename": "AdmissionsApplication_v1.1.0.xsd",
+      "targetNamespace": "urn:org:pesc:message:AdmissionsApplication:v1.1.0",
+      "byteCount": 2066,
+      "sha256": "05631367c1dd22eabb2282345a9c2d0f7194dd7a2ce96c0e1072bfba699d6851",
+      "collisionMember": false
+    },
+    {
+      "filename": "AdmissionsApplication_v1.2.0.xsd",
+      "targetNamespace": "urn:org:pesc:message:AdmissionsApplication:v1.2.0",
+      "byteCount": 2227,
+      "sha256": "e313f26032064e40b449ecb522aba4f9a942c2e8f9a19686395260c98b2f2e89",
+      "collisionMember": false
+    },
+    {
+      "filename": "AdmissionsApplication_v1.3.0.xsd",
+      "targetNamespace": "urn:org:pesc:message:AdmissionsApplication:v1.3.0",
+      "byteCount": 2335,
+      "sha256": "ca2436b4e1b6bd1fcdebea973cea2e3add00a27a49ac4629428e1c83f00c1c92",
+      "collisionMember": false
+    },
+    {
+      "filename": "AdmissionsRecord_v1.0.0.xsd",
+      "targetNamespace": "urn:org:pesc:sector:AdmissionsRecord:v1.0.0",
+      "byteCount": 58091,
+      "sha256": "3c37e27fdc6d65ee55d64c5fffe528c7c4ba3be1c517860454946d30328cc71d",
+      "collisionMember": false
+    },
+    {
+      "filename": "AdmissionsRecord_v1.1.0.xsd",
+      "targetNamespace": "urn:org:pesc:sector:AdmissionsRecord:v1.1.0",
+      "byteCount": 59275,
+      "sha256": "e1aeee6340bf7a510130e94163a359340cf8dff056f9d6a0b9e5ae99836e3ed3",
+      "collisionMember": false
+    },
+    {
+      "filename": "AdmissionsRecord_v1.2.0.xsd",
+      "targetNamespace": "urn:org:pesc:sector:AdmissionsRecord:v1.2.0",
+      "byteCount": 59965,
+      "sha256": "c6f8fd1860a68e3ef7af1f1e14c7c28ff090491bba10c240c07c4853f35657c7",
+      "collisionMember": false
+    },
+    {
+      "filename": "AdmissionsRecord_v1.3.0.xsd",
+      "targetNamespace": "urn:org:pesc:sector:AdmissionsRecord:v1.3.0",
+      "byteCount": 60636,
+      "sha256": "e16c56166206257b3dbc07abbd974b27bc24891310406c7013e3177c8967f895",
+      "collisionMember": false
+    },
+    {
+      "filename": "AdmissionsRecord_v1.4.0.xsd",
+      "targetNamespace": "urn:org:pesc:sector:AdmissionsRecord:v1.4.0",
+      "byteCount": 60742,
+      "sha256": "2a36221eec31eada4021717a2d16d356b9b75881efcdccfa66a02daabd696441",
+      "collisionMember": false
+    },
+    {
+      "filename": "CollegeTranscript_v1.0.0.xsd",
+      "targetNamespace": "urn:org:pesc:message:CollegeTranscript:v1.0.0",
+      "byteCount": 2323,
+      "sha256": "896e8b5126a73eb9924db1ef3511daee7711721267817aa7f966221f6331e226",
+      "collisionMember": false
+    },
+    {
+      "filename": "CollegeTranscript_v1.1.0.xsd",
+      "targetNamespace": "urn:org:pesc:message:CollegeTranscript:v1.1.0",
+      "byteCount": 2638,
+      "sha256": "d62e7cb1088a56c9df0cbfc2f7a691c8e8693f6f4fcd5473a51751d457806921",
+      "collisionMember": false
+    },
+    {
+      "filename": "CollegeTranscript_v1.2.0.xsd",
+      "targetNamespace": "urn:org:pesc:message:CollegeTranscript:v1.2.0",
+      "byteCount": 2752,
+      "sha256": "12bf836a9c23fd277064edf61a5593f0ee4c3009d1cece0985ad1d9635467872",
+      "collisionMember": false
+    },
+    {
+      "filename": "CollegeTranscript_v1.3.0.xsd",
+      "targetNamespace": "urn:org:pesc:message:CollegeTranscript:v1.3.0",
+      "byteCount": 2897,
+      "sha256": "ce46a0481141d2388f5d08be5e49d0da21f766c22fb55b45355b8d57a128db59",
+      "collisionMember": false
+    },
+    {
+      "filename": "CollegeTranscript_v1.4.0.xsd",
+      "targetNamespace": "urn:org:pesc:message:CollegeTranscript:v1.4.0",
+      "byteCount": 3135,
+      "sha256": "41a84c55f000f04bb9619aabea4c0469990fe3936c51201b3f587ce8aa5b6d68",
+      "collisionMember": false
+    },
+    {
+      "filename": "CollegeTranscript_v1.5.0.xsd",
+      "targetNamespace": "urn:org:pesc:message:CollegeTranscript:v1.5.0",
+      "byteCount": 3296,
+      "sha256": "95d39ebf4e99ae8ad4217942706c24764dd49b5cc19f897714fbd5128a6b20d1",
+      "collisionMember": false
+    },
+    {
+      "filename": "CollegeTranscript_v1.6.0.xsd",
+      "targetNamespace": "urn:org:pesc:message:CollegeTranscript:v1.6.0",
+      "byteCount": 3453,
+      "sha256": "4d86816882d94e51fa3acaf12655ac1c50ffaa1cd545d58a52a64f86cdf505f8",
+      "collisionMember": false
+    },
+    {
+      "filename": "CollegeTranscript_v1.7.0.xsd",
+      "targetNamespace": "urn:org:pesc:message:CollegeTranscript:v1.7.0",
+      "byteCount": 3621,
+      "sha256": "b92fe35d126390825ce92cc83c430fd33fadb7dd3c810dc03abd2bb1cad4ccd6",
+      "collisionMember": false
+    },
+    {
+      "filename": "CollegeTranscript_v1.8.0.xsd",
+      "targetNamespace": "urn:org:pesc:message:CollegeTranscript:v1.8.0",
+      "byteCount": 3929,
+      "sha256": "53430176920c55a0431bdc166db326d0b96b564f86d8114bfb01459b0ee15502",
+      "collisionMember": false
+    },
+    {
+      "filename": "CoreMain_v1.0.0.xsd",
+      "targetNamespace": "urn:org:pesc:core:CoreMain:v1.0.0",
+      "byteCount": 292835,
+      "sha256": "9280eaa9a618c6c93c42956d75031ed0424b3d8bd8c4c650ad3bd30fd481942a",
+      "collisionMember": false
+    },
+    {
+      "filename": "CoreMain_v1.10.0.xsd",
+      "targetNamespace": "urn:org:pesc:core:CoreMain:v1.10.0",
+      "byteCount": 457905,
+      "sha256": "1ea9f63e4b603cbf3f8da690efd7debc69f3b84e598788d922a90c8b8cbc1f14",
+      "collisionMember": false
+    },
+    {
+      "filename": "CoreMain_v1.12.0.xsd",
+      "targetNamespace": "urn:org:pesc:core:CoreMain:v1.12.0",
+      "byteCount": 462710,
+      "sha256": "ccf54c28dbb3f750fda925076c64508f53102a00c3316d265395d4bc7ae6d42e",
+      "collisionMember": false
+    },
+    {
+      "filename": "CoreMain_v1.13.0.xsd",
+      "targetNamespace": "urn:org:pesc:core:CoreMain:v1.13.0",
+      "byteCount": 469451,
+      "sha256": "2cd45fc3afd3779eebb66cd552abaa28e3a24093379b1de4bc9d1c5ebb5f848d",
+      "collisionMember": false
+    },
+    {
+      "filename": "CoreMain_v1.14.0.xsd",
+      "targetNamespace": "urn:org:pesc:core:CoreMain:v1.14.0",
+      "byteCount": 471475,
+      "sha256": "78f00a57c7faade149343179c3758e5e15d710f4ed72f6cdde7d3b693d41b1ca",
+      "collisionMember": false
+    },
+    {
+      "filename": "CoreMain_v1.16.0.xsd",
+      "targetNamespace": "urn:org:pesc:core:CoreMain:v1.16.0",
+      "byteCount": 474349,
+      "sha256": "870c35770ffd7daf68c270eef291c360a32dcc32bd952c439c175439b7bb04b6",
+      "collisionMember": false
+    },
+    {
+      "filename": "CoreMain_v1.17.0.xsd",
+      "targetNamespace": "urn:org:pesc:core:CoreMain:v1.17.0",
+      "byteCount": 837279,
+      "sha256": "f4b05efd5839528d316dc6f58c3dfd3d623767b53c82d918198c57fa25f840c7",
+      "collisionMember": false
+    },
+    {
+      "filename": "CoreMain_v1.18.0.xsd",
+      "targetNamespace": "urn:org:pesc:core:CoreMain:v1.18.0",
+      "byteCount": 848639,
+      "sha256": "a50f5029f53c7e9d06a589b1631a3f8f94e8177a984b1d554b339d092f135fe3",
+      "collisionMember": false
+    },
+    {
+      "filename": "CoreMain_v1.19.0.xsd",
+      "targetNamespace": "urn:org:pesc:core:CoreMain:v1.19.0",
+      "byteCount": 851757,
+      "sha256": "d9ded3484f893672cdb9fff07f5401231661e33870f9427489bcc02188c3d60a",
+      "collisionMember": false
+    },
+    {
+      "filename": "CoreMain_v1.19.1.xsd",
+      "targetNamespace": "urn:org:pesc:core:CoreMain:v1.19.1",
+      "byteCount": 848437,
+      "sha256": "5ade556046aabf40296db71d57ca7e8a3e633774898e7d44c256847138de34ec",
+      "collisionMember": false
+    },
+    {
+      "filename": "CoreMain_v1.2.0.xsd",
+      "targetNamespace": "urn:org:pesc:core:CoreMain:v1.2.0",
+      "byteCount": 315670,
+      "sha256": "4e04af8030a47290c636a24fe0fd0ce73cf6b7f8284b61493d188c776b6c34ef",
+      "collisionMember": false
+    },
+    {
+      "filename": "CoreMain_v1.4.0.xsd",
+      "targetNamespace": "urn:org:pesc:core:CoreMain:v1.4.0",
+      "byteCount": 338683,
+      "sha256": "6713f69d99e7c184b34e82053584fa96e18a76ad74fbd468e7ded2b10860ec13",
+      "collisionMember": false
+    },
+    {
+      "filename": "CoreMain_v1.7.0.xsd",
+      "targetNamespace": "urn:org:pesc:core:CoreMain:v1.7.0",
+      "byteCount": 439841,
+      "sha256": "24641a04fab93ad646fc7833a2426b9ca22884593867cffc492ece8e66a11e73",
+      "collisionMember": false
+    },
+    {
+      "filename": "CoreMain_v1.8.0.xsd",
+      "targetNamespace": "urn:org:pesc:core:CoreMain:v1.8.0",
+      "byteCount": 451148,
+      "sha256": "ac8d9367af6b061403e7cb971a5be3251aa968a8fd4308bcb0961628d35ded0d",
+      "collisionMember": false
+    },
+    {
+      "filename": "DocumentRequest_v1.0.0.xsd",
+      "targetNamespace": "urn:org:pesc:message:DocumentRequest:v1.0.0",
+      "byteCount": 1637,
+      "sha256": "04a1f80f6dcaa141ea9c9d1667225ad9f84bf7466a733a6ebdc5308fa338afd8",
+      "collisionMember": false
+    },
+    {
+      "filename": "DocumentResponse_v1.0.0.xsd",
+      "targetNamespace": "urn:org:pesc:message:DocumentResponse:v1.0.0",
+      "byteCount": 1815,
+      "sha256": "5fd61aadcef00e8ae9014b66726267c07722f2c6a3c246d094632ab8fa3840bd",
+      "collisionMember": false
+    },
+    {
+      "filename": "EducationCourseInventory_v1.0.0.xsd",
+      "targetNamespace": "urn:org:pesc:message:EducationCourseInventory:v1.0.0",
+      "byteCount": 1670,
+      "sha256": "da9f40bfbd3e9e7ee2805fd85024f5b58b95ae1075ba875d31a48ffce714f233",
+      "collisionMember": false
+    },
+    {
+      "filename": "HighSchoolTranscript_v1.0.0.xsd",
+      "targetNamespace": "urn:org:pesc:message:HighSchoolTranscript:v1.0.0",
+      "byteCount": 2256,
+      "sha256": "f4f0e97c68c9cdfc3b9dce167bca2c309cbfd1be84837ff3af3de1f74328c8e8",
+      "collisionMember": false
+    },
+    {
+      "filename": "HighSchoolTranscript_v1.1.0.xsd",
+      "targetNamespace": "urn:org:pesc:message:HighSchoolTranscript:v1.1.0",
+      "byteCount": 2256,
+      "sha256": "af7c29a70c25ab3e0149d6c74e6fedff5023799f197de9967077488f0ce6f9ac",
+      "collisionMember": false
+    },
+    {
+      "filename": "HighSchoolTranscript_v1.2.0.xsd",
+      "targetNamespace": "urn:org:pesc:message:HighSchoolTranscript:v1.2.0",
+      "byteCount": 2371,
+      "sha256": "bbf482f58a43d6e5c82242ac1aa3c6c3c714445abe900c9a4525b1fef89e406e",
+      "collisionMember": false
+    },
+    {
+      "filename": "HighSchoolTranscript_v1.3.0.xsd",
+      "targetNamespace": "urn:org:pesc:message:HighSchoolTranscript:v1.3.0",
+      "byteCount": 2517,
+      "sha256": "c963fb1ea4dec72e50b51a8f2a9a075af87a62792f8dab7386d51433d6fc9559",
+      "collisionMember": false
+    },
+    {
+      "filename": "HighSchoolTranscript_v1.4.0.xsd",
+      "targetNamespace": "urn:org:pesc:message:HighSchoolTranscript:v1.4.0",
+      "byteCount": 2675,
+      "sha256": "088cd9a52fa803deb30585bcb92dec3622ba3fac91464da4abd0f81e506392dd",
+      "collisionMember": false
+    },
+    {
+      "filename": "HighSchoolTranscript_v1.5.0.xsd",
+      "targetNamespace": "urn:org:pesc:message:HighSchoolTranscript:v1.5.0",
+      "byteCount": 2832,
+      "sha256": "2cab3cbb9e7962083aba7eba88dbf6b7346f4ba8d61da0735f9c619c09ca207e",
+      "collisionMember": false
+    },
+    {
+      "filename": "HighSchoolTranscript_v1.6.0.xsd",
+      "targetNamespace": "urn:org:pesc:message:HighSchoolTranscript:v1.6.0",
+      "byteCount": 3000,
+      "sha256": "2e753ab4cd7800753f4ecd23bcadc388af0a779530f7752e1b318e44a2a2fdfd",
+      "collisionMember": false
+    },
+    {
+      "filename": "LearningRecord_v1.0.0.xsd",
+      "targetNamespace": "urn:org:pesc:message:LearningRecord:v1.0.0",
+      "byteCount": 2363,
+      "sha256": "62b74c155eb8bf2435ce6a0d0cc4f69f6de286835ddc235b71add8d3d8ed33c6",
+      "collisionMember": false
+    },
+    {
+      "filename": "TestScoreReport_v1.0.0.xsd",
+      "targetNamespace": "urn:org:pesc:message:TestScoreReport:v1.0.0",
+      "byteCount": 1317,
+      "sha256": "720f5bf323accc422b8104c6906789a23cd716f1e6fc6a06459b4de259644841",
+      "collisionMember": false
+    },
+    {
+      "filename": "TestScoreReport_v1.1.0.xsd",
+      "targetNamespace": "urn:org:pesc:message:TestScoreReport:v1.1.0",
+      "byteCount": 1456,
+      "sha256": "038d796bd097d2095389f7338fa4c758c8cb6fc831f2b6775469536b8c112c49",
+      "collisionMember": false
+    },
+    {
+      "filename": "TranscriptAcknowledgment_v1.1.0.xsd",
+      "targetNamespace": "urn:org:pesc:message:TranscriptAcknowledgment:v1.1.0",
+      "byteCount": 2733,
+      "sha256": "154340f12f03ecf19e51f8aba4fd70b2b4765a52fe879c4f2c6aba3c879026b1",
+      "collisionMember": false
+    },
+    {
+      "filename": "TranscriptRequest_v1.1.0.xsd",
+      "targetNamespace": "urn:org:pesc:message:TranscriptRequest:v1.1.0",
+      "byteCount": 2568,
+      "sha256": "9d96895afde3be8d681bf94c2d3b2aa3799644967c98900293b2d0271bd4ea36",
+      "collisionMember": false
+    },
+    {
+      "filename": "TranscriptResponse_v1.1.0.xsd",
+      "targetNamespace": "urn:org:pesc:message:TranscriptResponse:v1.1.0",
+      "byteCount": 2578,
+      "sha256": "01f8eea0cb81401c4441a9f45745df0393c71d608c0da2afb5cd1fe02cf80e7e",
+      "collisionMember": false
+    },
+    {
+      "filename": "iso_3166-1_v1.0.0.xsd",
+      "targetNamespace": "urn:org:pesc:codes:iso_3166-1:v1.0.0",
+      "byteCount": 37729,
+      "sha256": "3634b533ecc9db84190abb5648840ad54967a0474941f3de6a3f638f70c29772",
+      "collisionMember": false
+    }
+  ]
+}
