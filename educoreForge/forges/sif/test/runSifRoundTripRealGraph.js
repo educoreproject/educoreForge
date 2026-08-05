@@ -94,7 +94,11 @@ roundTripValidator.validate(
 			`normative RT-6 fields present and agreeing (inventedTotal ${verdict.inventedTotal}, lostTotal ${verdict.lostTotal})`,
 			typeof verdict.roundTripClean === 'boolean' &&
 				verdict.inventedTotal === verdict.invented &&
-				verdict.lostTotal === verdict.lost,
+				verdict.lostTotal === verdict.lost &&
+				// A13: lostTotal is contentGap ALONE; the omissions are lifted out of loss.
+				verdict.lostTotal === verdict.contentGapTotal &&
+				verdict.contentGapTotal + verdict.explicitlyOmittedTotal ===
+					verdict.notReproducedTotal,
 		);
 		assertThat('inventedTotal === 0 (hard, normative name)', verdict.inventedTotal === 0);
 		assertThat('orderMismatches === 0 (R-SF-1)', verdict.orderMismatches === 0);
@@ -136,8 +140,9 @@ roundTripValidator.validate(
 					roundTripClean: verdict.roundTripClean,
 					reproduced: verdict.reproduced,
 					lost: verdict.lost,
-					lostDeclaredContext: verdict.lostDeclaredContext,
-					lostContentGap: verdict.lostContentGap,
+					explicitlyOmittedTotal: verdict.explicitlyOmittedTotal,
+					contentGapTotal: verdict.contentGapTotal,
+					notReproducedTotal: verdict.notReproducedTotal,
 					invented: verdict.invented,
 					orderMismatches: verdict.orderMismatches,
 					scaleReport: verdict.scaleReport,

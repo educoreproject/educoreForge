@@ -22,9 +22,9 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // that also audits the loader.
 //
 // THE VERDICT (RT-6): REPRODUCED / LOST / INVENTED with located detail; LOST split
-// declaredContext vs contentGap; INVENTED must be 0 always, from the first run;
+// explicitlyOmitted vs contentGap (named declaredContext until A13); INVENTED must be 0 always;
 // roundTripClean = (lost === 0 && inventedTotal === 0). The crosswalk input is adjudicated
-// declaredContext (R-WO-12) with a HARD invention guard: every CEDS raw value stashed on a
+// explicitly omitted (R-WO-12) with a HARD invention guard: every CEDS raw value stashed on a
 // graph node must appear verbatim in the crosswalk CSVs (pure set membership — deliberately NO
 // row matching, so the forge's matching logic can never cancel its own bugs here); violations
 // count INVENTED.
@@ -48,7 +48,12 @@ const roundTripEdfiCompiler = require('./lib/roundTripEdfiCompiler')();
 const roundTripSnapshotIntake = require('./lib/roundTripSnapshotIntake')();
 const roundTripDiff = require('./lib/roundTripDiff')();
 
-const VERDICT_VERSION = 'edfiRoundTripVerdict-1';
+// -2 (doctrine amendment A13, 2026-08-04): lostTotal counts contentGap ALONE now, with
+// explicitly-omitted declarations reported separately and excluded from loss. Ed-Fi's in-domain
+// explicitlyOmitted bucket is empty by design, so no Ed-Fi number moves — but the verdict must
+// still declare which arithmetic produced it, and the RT-13 stage refuses a verdict lacking the
+// two A13 fields so a stale -1 artifact cannot be read under the new meaning.
+const VERDICT_VERSION = 'edfiRoundTripVerdict-2';
 const STANDARD_SOURCE = 'EdFi';
 
 // crosswalk guard: anchorKind -> the CSV header field whose raw-value set licenses it
@@ -166,7 +171,7 @@ const moduleFunction = () => {
 					return;
 				}
 				// .csv — the crosswalk: raw-value sets for the R-WO-12 invention guard; NEVER
-				// statements (declaredContext input)
+				// statements (explicitly-omitted, out-of-domain input)
 				roundTripMetaEdCanonical.reduceCrosswalkCsvText(
 					{ csvText: oneEntry.fileText, sourceFileRelativePath: oneEntry.sourceFileRelativePath },
 					(reduceError, reduceResult) => {
@@ -266,21 +271,28 @@ const moduleFunction = () => {
 			const verdict = {
 				verdictVersion: VERDICT_VERSION,
 				standard: STANDARD_SOURCE,
-				roundTripClean: headline.lost === 0 && inventedTotal === 0,
+				// A13 RECONCILIATION (not a relaxation): doctrine §5.3's contentGap bullet has always
+				// said contentGap "is what 'clean' means when it reaches zero"; the single line
+				// defining roundTripClean as LOST === 0 contradicted it. Ed-Fi's verdict does not
+				// move — its in-domain explicitlyOmitted bucket is empty by design.
+				roundTripClean: headline.contentGap === 0 && inventedTotal === 0,
 				reproduced: headline.reproduced,
-				lost: headline.lost,
+				lost: headline.contentGap,
 				// lostTotal — the normative RT-6 builder-facing name (R-WO-21, 2026-08-04): the
-				// RT-13 stage adjudicates on {roundTripClean, inventedTotal, lostTotal} with zero
-				// per-standard knowledge. Same number as `lost`; adds a name, never moves a number.
-				lostTotal: headline.lost,
-				lostDeclaredContext: headline.lostDeclaredContext,
-				lostContentGap: headline.lostContentGap,
+				// RT-13 stage adjudicates on {roundTripClean, inventedTotal, lostTotal,
+				// contentGapTotal, explicitlyOmittedTotal} with zero per-standard knowledge.
+				// lostTotal IS contentGap ALONE as of A13; notReproducedTotal preserves the old
+				// arithmetic under a name that says what it counts, so no number is destroyed.
+				lostTotal: headline.contentGap,
+				contentGapTotal: headline.contentGap,
+				explicitlyOmittedTotal: headline.explicitlyOmitted,
+				notReproducedTotal: headline.notReproduced,
 				invented: headline.invented,
 				inventedTotal,
 				lostByBacklogLabel: args.report.lostByBacklogLabel,
 				crosswalkGuard: {
 					adjudication:
-						'crosswalk CSVs are a declaredContext input (R-WO-12): authored data stashed for the later bridge phase, never Layer 1 statements; guarded against invention by raw-value set membership',
+						'crosswalk CSVs are a declaredContext input (R-WO-12): authored data stashed for the later bridge phase, never Layer 1 statements; guarded against invention by raw-value set membership — that category renamed explicitlyOmitted by doctrine amendment A13 (2026-08-04); the R-WO-12 wording is preserved verbatim so the code can still be matched against the ruling that authorized it',
 					stashRawValueCount: args.emission.cedsStashList.length,
 					violationCount: args.crosswalkGuardViolationList.length,
 					violationList: args.crosswalkGuardViolationList,
@@ -293,7 +305,7 @@ const moduleFunction = () => {
 					reverseDirectionNote:
 						'unmatched-row detail (764 element rows and friends) is FORGE-REPORT PROVENANCE — see the Phase 2 crosswalkMatchReport artifact (test-artifacts/censusDeltaReport.json); this instrument runs no row matching by design',
 				},
-				declaredContextCensus: {
+				explicitlyOmittedOutOfDomainCensus: {
 					commentLineCount: args.commentCensusList.length,
 					commentLineList: args.commentCensusList.map(
 						(oneComment) => `${oneComment.sourceFileRelativePath}:${oneComment.lineNumber}`,
@@ -327,7 +339,7 @@ const moduleFunction = () => {
 						`\nroundTripClean: ${verdict.roundTripClean}` +
 						`\ninventedTotal (diff + crosswalk guard): ${inventedTotal}` +
 						`\ncrosswalk guard violations: ${verdict.crosswalkGuard.violationCount}` +
-						`\ncomment lines (declaredContext): ${verdict.declaredContextCensus.commentLineCount}\n`,
+						`\ncomment lines (explicitly omitted, out of statement domain): ${verdict.explicitlyOmittedOutOfDomainCensus.commentLineCount}\n`,
 				);
 			}
 			next('', { ...args, verdict });

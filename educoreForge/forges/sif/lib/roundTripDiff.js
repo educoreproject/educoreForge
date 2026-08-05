@@ -9,9 +9,10 @@
 // that SIF does not say. INVENTED must be 0 at all times (RT-6); LOST is the work-remaining
 // meter.
 //
-// EVERY LOST ROW CARRIES A CATEGORY (the pesc supervisor refinement, 2026-08-03): declaredContext
-// must be claimed by name in the canonicalizer's registry; contentGap is the DEFAULT. SIF's
-// declaredContext registry is EMPTY — every loss in this domain is enrichment work — and every
+// EVERY LOST ROW CARRIES A CATEGORY (the pesc supervisor refinement, 2026-08-03): explicitlyOmitted
+// must be claimed by name in the canonicalizer's registry; contentGap is the DEFAULT (the
+// category was named declaredContext until doctrine amendment A13, 2026-08-04). SIF's
+// explicitlyOmitted registry is EMPTY — every loss in this domain is enrichment work — and every
 // LOST detail row additionally carries a BACKLOG LABEL (the edfi R-WO-15d convention): the known
 // loss classes are named in BACKLOG_LABEL_BY_PREDICATE; an unlabeled predicate gets the
 // investigate-first label, and the real-graph runner treats any label outside the ruled set as a
@@ -72,8 +73,8 @@ const moduleFunction =
 		};
 
 		const lostCategoryOfPredicate = (predicate) =>
-			canonicalLib.DECLARED_CONTEXT_PREDICATES.includes(predicate)
-				? 'declaredContext'
+			canonicalLib.EXPLICITLY_OMITTED_PREDICATES.includes(predicate)
+				? 'explicitlyOmitted'
 				: 'contentGap';
 
 		const backlogLabelOfPredicate = (predicate) =>
@@ -147,10 +148,11 @@ const moduleFunction =
 			const lostDetailList = [];
 			const inventedDetailList = [];
 			let matchedTotal = 0;
-			let lostTotal = 0;
+			// A13 vocabulary: notReproducedTotal is the raw set difference; only contentGap is LOSS.
+			let notReproducedTotal = 0;
 			let inventedTotal = 0;
-			let lostDeclaredContext = 0;
-			let lostContentGap = 0;
+			let explicitlyOmitted = 0;
+			let contentGap = 0;
 
 			sourceStatements.forEach((oneStatement, oneStatementKey) => {
 				const row = predicateRow(oneStatement.predicate);
@@ -162,11 +164,11 @@ const moduleFunction =
 					return;
 				}
 				row.lost++;
-				lostTotal++;
-				if (row.lostCategory === 'declaredContext') {
-					lostDeclaredContext++;
+				notReproducedTotal++;
+				if (row.lostCategory === 'explicitlyOmitted') {
+					explicitlyOmitted++;
 				} else {
-					lostContentGap++;
+					contentGap++;
 				}
 				if (row.lostSamples.length < MAX_SAMPLES_PER_PREDICATE) {
 					row.lostSamples.push(sampleOf(oneStatement));
@@ -240,9 +242,11 @@ const moduleFunction =
 					sourceStatements: sourceStatements.size,
 					emittedStatements: emittedStatements.size,
 					matched: matchedTotal,
-					lost: lostTotal,
-					lostDeclaredContext,
-					lostContentGap,
+					// A13: `lost` is deliberately ABSENT — notReproduced is everything in source and not
+					// emitted, contentGap is the part that is genuine LOSS, explicitlyOmitted is chosen.
+					notReproduced: notReproducedTotal,
+					contentGap,
+					explicitlyOmitted,
 					invented: inventedTotal,
 					orderMismatches: orderMismatchList.length,
 				},
@@ -281,8 +285,8 @@ const moduleFunction =
 			lines.push('='.repeat(72));
 			lines.push(
 				`source ${headline.sourceStatements}  emitted ${headline.emittedStatements}  ` +
-					`matched ${headline.matched}  LOST ${headline.lost} ` +
-					`(declaredContext ${headline.lostDeclaredContext} / contentGap ${headline.lostContentGap})  ` +
+					`matched ${headline.matched}  NOT REPRODUCED ${headline.notReproduced} ` +
+					`(LOST/contentGap ${headline.contentGap} / explicitlyOmitted ${headline.explicitlyOmitted})  ` +
 					`INVENTED ${headline.invented}  orderMismatches ${headline.orderMismatches}`,
 			);
 			lines.push('');

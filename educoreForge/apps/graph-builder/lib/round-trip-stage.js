@@ -34,9 +34,21 @@
 // VERDICT ADJUDICATION (R-WO-18): a validator ERROR fails the build; INVENTED > 0 fails the
 // build (doctrine §5.3 — no acceptable nonzero value); LOST > 0 is tolerated and logged (the
 // enrichment meter — a bundle's known backlog must not brick its own builds). The stage reads
-// the NORMATIVE RT-6 fields { roundTripClean, inventedTotal, lostTotal } and REFUSES BY NAME
-// a verdict lacking them — never an alternative-name chain, which would quietly undercount
-// the class of invention a bundle folds into its total (the edfi crosswalk-guard precedent).
+// the NORMATIVE RT-6 fields { roundTripClean, inventedTotal, lostTotal, contentGapTotal,
+// explicitlyOmittedTotal } and REFUSES BY NAME a verdict lacking them — never an
+// alternative-name chain, which would quietly undercount the class of invention a bundle folds
+// into its total (the edfi crosswalk-guard precedent).
+//
+// WHY contentGapTotal AND explicitlyOmittedTotal ARE REQUIRED (doctrine amendment A13,
+// 2026-08-04): A13 changed what lostTotal MEANS. In a verdictVersion -1 verdict it counted
+// everything in source and not emitted; in a -2 verdict it counts genuine loss only, with
+// deliberately-omitted declarations reported separately and excluded. A -1 artifact carries
+// roundTripClean, inventedTotal AND lostTotal, so it would have passed the old three-field
+// check and the builder would have read its number under the new meaning WITHOUT ANY SIGNAL.
+// Requiring the two A13 fields makes the version difference structural: a -1 verdict cannot
+// satisfy this check, so a stale artifact is refused BY NAME instead of silently misread. This
+// reuses the refusal the stage already owned rather than inventing a second guard, and the red
+// twin for it is fixtured on a real -1 artifact on disk, not a synthetic object.
 //
 // THE STAGE SUMMARY (roundTrip/roundTripStageSummary.json) is written on EVERY -build, stage
 // on or off — it is the GOLD_EVAL certification evidence (-goldEvalCheck reads it; R-WO-20),
@@ -78,6 +90,19 @@ const eachSeries = (items, iterator, done) => {
 // against forges/edfi and forges/pesc roundTripValidator.js) — recorded in the summary so
 // -goldEvalCheck can locate every verdict without per-standard knowledge.
 const VERDICT_FILE_NAME = 'roundTripVerdict.json';
+
+// THE NORMATIVE RT-6 VERDICT INTERFACE, declared as data in one place (A6 + A13). This is the
+// formal interface every bundle's roundTripValidator must satisfy and the ONLY list the stage
+// adjudicates against; a bundle may carry any additional fields it likes. Declared here rather
+// than inline at the check so the contract is greppable from one name and so adding a field is
+// an edit to a declaration rather than to control flow.
+const NORMATIVE_VERDICT_FIELD_NAMES = [
+	'roundTripClean',
+	'inventedTotal',
+	'lostTotal',
+	'contentGapTotal',
+	'explicitlyOmittedTotal',
+];
 const STAGE_SUMMARY_FILE_NAME = 'roundTripStageSummary.json';
 const STAGE_SUBDIR_NAME = 'roundTrip';
 
@@ -243,7 +268,7 @@ const moduleFunction =
 		// Returns { error } (a named refusal or a build-failing invention) or { rowSummary }.
 		// ---------------------------------------------------------------
 		const adjudicateVerdict = ({ oneRow, verdict, verdictDirPath }) => {
-			const missingFields = ['roundTripClean', 'inventedTotal', 'lostTotal'].filter(
+			const missingFields = NORMATIVE_VERDICT_FIELD_NAMES.filter(
 				(oneFieldName) => verdict === undefined || verdict === null || verdict[oneFieldName] === undefined,
 			);
 			if (missingFields.length) {
@@ -273,6 +298,10 @@ const moduleFunction =
 					roundTripClean: verdict.roundTripClean,
 					inventedTotal: verdict.inventedTotal,
 					lostTotal: verdict.lostTotal,
+					// A13: carried into the certification evidence so a reader of the stage summary
+					// alone can tell genuine loss from deliberate omission without opening the verdict.
+					contentGapTotal: verdict.contentGapTotal,
+					explicitlyOmittedTotal: verdict.explicitlyOmittedTotal,
 					snapshotDirPath: oneRow.snapshotDirPath,
 					verdictPath: path.join(verdictDirPath, VERDICT_FILE_NAME),
 				},

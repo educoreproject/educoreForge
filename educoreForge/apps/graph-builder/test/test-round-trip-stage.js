@@ -372,7 +372,14 @@ const stageRunBehavior = (done) => {
 	const greenValidator = {
 		validate: (spec, cb) => {
 			capturedSpecList.push(spec);
-			cb('', { roundTripClean: false, inventedTotal: 0, lostTotal: 5, reproduced: 100 });
+			cb('', {
+				roundTripClean: false,
+				inventedTotal: 0,
+				lostTotal: 5,
+				contentGapTotal: 5,
+				explicitlyOmittedTotal: 2,
+				reproduced: 100,
+			});
 		},
 	};
 	const xLog = capturingXLog();
@@ -434,7 +441,14 @@ const stageRunBehavior = (done) => {
 						mode: 'build',
 						enabled: true,
 						roster: makeRoster({
-							validate: (spec2, cb) => cb('', { roundTripClean: false, inventedTotal: 3, lostTotal: 0 }),
+							validate: (spec2, cb) =>
+								cb('', {
+									roundTripClean: false,
+									inventedTotal: 3,
+									lostTotal: 0,
+									contentGapTotal: 0,
+									explicitlyOmittedTotal: 0,
+								}),
 						}),
 						outputDirPath: inventedDirPath,
 					},
@@ -478,7 +492,55 @@ const stageRunBehavior = (done) => {
 								/normative RT-6 field\(s\) inventedTotal, lostTotal/,
 							);
 
-							// ---- RED twin: a validator ERROR fails the stage naming the standard ----
+							// ---- RED twin (A13): a REAL stale verdictVersion -1 artifact is REFUSED ----
+							// Fixtured on an artifact that actually exists on disk rather than a synthetic
+							// object built to fail. This is the hazard A13 creates and must answer for:
+							// lostTotal MEANT "everything not reproduced" in a -1 verdict and MEANS
+							// "contentGap only" in a -2 one. This file carries roundTripClean,
+							// inventedTotal AND lostTotal, so the pre-A13 refusal waves it through and the
+							// builder would silently read its 349 under the new meaning. Requiring the two
+							// A13 fields converts that silent misreading into a named refusal.
+							const staleVerdictFilePath = path.join(
+								__dirname,
+								'../../../forges/edfi/test/test-artifacts/realGraphRun/roundTripVerdict.json',
+							);
+							harness.ok(
+								'the stale -1 verdict fixture exists on disk (a red twin fixtured on a real artifact)',
+								fs.existsSync(staleVerdictFilePath),
+							);
+							const staleVerdict = JSON.parse(fs.readFileSync(staleVerdictFilePath, 'utf-8'));
+							harness.equal(
+								'  and it really is a verdictVersion -1 artifact',
+								staleVerdict.verdictVersion,
+								'edfiRoundTripVerdict-1',
+							);
+							harness.ok(
+								'  and it WOULD pass the pre-A13 field check — which is exactly the hazard',
+								staleVerdict.roundTripClean !== undefined &&
+									staleVerdict.inventedTotal !== undefined &&
+									staleVerdict.lostTotal !== undefined,
+							);
+							roundTripStageLib.runRoundTripStage(
+								{
+									stageSpec: {
+										mode: 'build',
+										enabled: true,
+										roster: makeRoster({
+											validate: (spec5, cb) => cb('', staleVerdict),
+										}),
+										outputDirPath: freshTmpDir('runStaleVerdictVersion'),
+									},
+									containerHandle,
+									xLog: capturingXLog(),
+								},
+								(staleError) => {
+									harness.match(
+										'a stale -1 verdict is REFUSED BY NAME for the A13 fields, never misread under the new meaning',
+										staleError,
+										/normative RT-6 field\(s\) contentGapTotal, explicitlyOmittedTotal/,
+									);
+
+									// ---- RED twin: a validator ERROR fails the stage naming the standard ----
 							roundTripStageLib.runRoundTripStage(
 								{
 									stageSpec: {
@@ -497,6 +559,8 @@ const stageRunBehavior = (done) => {
 										/'alpha' roundTripValidator FAILED: bolt exploded/,
 									);
 									done();
+								},
+							);
 								},
 							);
 						},

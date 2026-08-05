@@ -66,7 +66,12 @@ const canonicalLib = require('./lib/roundTripSifCanonical')();
 const compilerLib = require('./lib/roundTripSifCompiler')();
 const diffLib = require('./lib/roundTripDiff')();
 
-const VERDICT_VERSION = 'sifRoundTripVerdict-1';
+// -2 (doctrine amendment A13, 2026-08-04): lostTotal counts contentGap ALONE now, with
+// explicitly-omitted declarations reported separately and excluded from loss. SIF's
+// explicitlyOmitted registry is empty, so no SIF number moves — but the verdict must still
+// declare which arithmetic produced it, and the RT-13 stage refuses a verdict lacking the two
+// A13 fields so a stale -1 artifact cannot be read under the new meaning.
+const VERDICT_VERSION = 'sifRoundTripVerdict-2';
 const RESOLUTION_MAP_FILENAME = 'refIdResolutionMap.tsv';
 
 // START OF moduleFunction() ============================================================
@@ -316,19 +321,27 @@ const moduleFunction =
 				const verdict = {
 					verdictVersion: VERDICT_VERSION,
 					standard: compilerLib.STANDARD_SOURCE,
-					roundTripClean: headline.lost === 0 && headline.invented === 0,
+					// A13 RECONCILIATION (not a relaxation): doctrine §5.3's contentGap bullet has
+					// always said contentGap "is what 'clean' means when it reaches zero"; the single
+					// line defining roundTripClean as LOST === 0 contradicted it. SIF's verdict does
+					// not move — its explicitlyOmitted registry is empty by design.
+					roundTripClean: headline.contentGap === 0 && headline.invented === 0,
 					reproduced: headline.matched,
-					lost: headline.lost,
+					lost: headline.contentGap,
 					// lostTotal / inventedTotal — the normative RT-6 builder-facing names (R-WO-21,
 					// 2026-08-04; A6 compliance addendum applied post-sign-off): the LIVE RT-13 stage
-					// adjudicates on {roundTripClean, inventedTotal, lostTotal} with zero
+					// adjudicates on {roundTripClean, inventedTotal, lostTotal, contentGapTotal,
+					// explicitlyOmittedTotal} with zero
 					// per-standard knowledge and REFUSES BY NAME a verdict lacking them. SIF has no
 					// guard-class invention channel (the edfi crosswalk guard has no SIF analogue —
 					// refIdResolutionMap is out of the statement domain, not guarded within it), so
 					// both totals equal the diff counts. These lines add NAMES, never move numbers.
-					lostTotal: headline.lost,
-					lostDeclaredContext: headline.lostDeclaredContext,
-					lostContentGap: headline.lostContentGap,
+					// lostTotal IS contentGap ALONE as of A13; notReproducedTotal preserves the old
+					// arithmetic under a name that says what it counts, so no number is destroyed.
+					lostTotal: headline.contentGap,
+					contentGapTotal: headline.contentGap,
+					explicitlyOmittedTotal: headline.explicitlyOmitted,
+					notReproducedTotal: headline.notReproduced,
 					invented: headline.invented,
 					inventedTotal: headline.invented,
 					orderMismatches: headline.orderMismatches,

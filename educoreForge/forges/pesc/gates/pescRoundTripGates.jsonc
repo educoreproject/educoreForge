@@ -38,7 +38,7 @@
 		},
 		{
 			"id": "G-4",
-			"title": "declaredContext + contentGap sums exactly to LOST — no uncategorized loss",
+			"title": "contentGap + explicitlyOmitted sum exactly to NOT REPRODUCED — no uncategorized loss (A13)",
 			"measure": "probe.lostCategorySumMatches",
 			"comparator": "isTrue",
 			"twin": "misSumLostCategories"

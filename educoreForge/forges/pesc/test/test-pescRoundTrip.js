@@ -298,10 +298,23 @@ taskList.push((args, next) => {
 				(oneRow) => oneRow.lost > 0 && oneRow.lostSamples.length === 0,
 			).length;
 			harness.equal('every lost row carries located samples', probeFacts.lostRowsWithoutSamples, 0);
+			// A13: the two categories still sum to everything NOT REPRODUCED, but only contentGap
+			// is loss. Both halves are asserted: the sum keeps its no-uncategorized-loss meaning,
+			// and the verdict's lostTotal must equal contentGap ALONE, never the sum.
 			probeFacts.lostCategorySumMatches =
-				verdict.report.headline.lostDeclaredContext + verdict.report.headline.lostContentGap ===
-				verdict.report.headline.lost;
-			harness.ok('lost categories sum exactly to LOST', probeFacts.lostCategorySumMatches);
+				verdict.report.headline.explicitlyOmitted + verdict.report.headline.contentGap ===
+				verdict.report.headline.notReproduced;
+			harness.ok(
+				'contentGap + explicitlyOmitted sum exactly to NOT REPRODUCED',
+				probeFacts.lostCategorySumMatches,
+			);
+			probeFacts.lostTotalExcludesExplicitlyOmitted =
+				verdict.lostTotal === verdict.contentGapTotal &&
+				verdict.contentGapTotal + verdict.explicitlyOmittedTotal === verdict.notReproducedTotal;
+			harness.ok(
+				'lostTotal is contentGap ALONE — deliberate omissions are lifted out of loss (A13)',
+				probeFacts.lostTotalExcludesExplicitlyOmitted,
+			);
 			fs.writeFileSync(
 				path.join(ARTIFACT_DIR, 'roundTripTwin-deletedValue.report.json'),
 				JSON.stringify(verdict.report, null, 1),

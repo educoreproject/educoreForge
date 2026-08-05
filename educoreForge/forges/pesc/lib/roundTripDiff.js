@@ -9,15 +9,18 @@
 // PESC does not say. INVENTED must be 0 at all times (RT-6); LOST is the work-remaining meter.
 //
 // EVERY LOST ROW CARRIES A CATEGORY (supervisor refinement, 2026-08-03):
-//   * declaredContext — file-level declarations the graph DELIBERATELY does not carry (imports,
+//   * explicitlyOmitted — declarations the graph DELIBERATELY does not carry (imports,
 //     targetNamespace, schema attributes). Permanently nonzero, and honest: this is
-//     we-chose-not-to-carry, the import-drift census made visible (R-PW-4).
+//     we-chose-not-to-carry, the import-drift census made visible (R-PW-4). NOT LOSS: doctrine
+//     amendment A13 (2026-08-04) lifted it out of every loss total. It was called
+//     declaredContext until A13; that name did not say WE CHOSE THIS, so it was summed into
+//     LOST and overstated PESC's real gap as 805 when the gap is 732.
 //   * contentGap — everything else: statements the source makes that the chain genuinely loses
 //     (facets, inline enumerations, the empty enumeration values, schema-level prose). This is
 //     the enrichment work order.
 // The category is decided by predicate membership in the canonicalizer's
-// DECLARED_CONTEXT_PREDICATES registry; contentGap is the DEFAULT — declaredContext must be
-// claimed by name, never assumed.
+// EXPLICITLY_OMITTED_PREDICATES registry; contentGap is the DEFAULT — explicitlyOmitted must
+// be claimed by name, never assumed.
 //
 // The report text and the JSON verdict are RENDERED FROM THE SAME OBJECT and never recompute
 // anything, so the two can never disagree about a number.
@@ -57,8 +60,8 @@ const moduleFunction =
 		};
 
 		const lostCategoryOfPredicate = (predicate) =>
-			canonicalLib.DECLARED_CONTEXT_PREDICATES.includes(predicate)
-				? 'declaredContext'
+			canonicalLib.EXPLICITLY_OMITTED_PREDICATES.includes(predicate)
+				? 'explicitlyOmitted'
 				: 'contentGap';
 
 		const sampleOf = (statement) => ({
@@ -130,9 +133,10 @@ const moduleFunction =
 			};
 
 			let matched = 0;
-			let lost = 0;
-			let lostDeclaredContext = 0;
-			let lostContentGap = 0;
+			// A13 vocabulary: notReproduced is the raw set difference; only contentGap is LOSS.
+			let notReproduced = 0;
+			let explicitlyOmitted = 0;
+			let contentGap = 0;
 
 			sourceStatements.forEach((oneStatement, oneIdentity) => {
 				const predicateAccumulator = predicateRow(oneStatement.predicate);
@@ -146,13 +150,13 @@ const moduleFunction =
 					kindAccumulator.matched += 1;
 					return;
 				}
-				lost += 1;
+				notReproduced += 1;
 				predicateAccumulator.lost += 1;
 				kindAccumulator.lost += 1;
-				if (predicateAccumulator.lostCategory === 'declaredContext') {
-					lostDeclaredContext += 1;
+				if (predicateAccumulator.lostCategory === 'explicitlyOmitted') {
+					explicitlyOmitted += 1;
 				} else {
-					lostContentGap += 1;
+					contentGap += 1;
 				}
 				if (predicateAccumulator.lostSamples.length < MAX_SAMPLES_PER_PREDICATE) {
 					predicateAccumulator.lostSamples.push(sampleOf(oneStatement));
@@ -219,9 +223,13 @@ const moduleFunction =
 					sourceStatements: sourceTotal,
 					emittedStatements: emittedStatements.size,
 					matched,
-					lost,
-					lostDeclaredContext,
-					lostContentGap,
+					// A13: notReproduced is everything in source and not emitted (the OLD meaning of
+					// `lost`); contentGap is the part that is genuine LOSS; explicitlyOmitted is the
+					// part we chose not to carry and is NOT loss. `lost` is deliberately ABSENT from
+					// this headline so no reader can pick it up still meaning the old thing.
+					notReproduced,
+					contentGap,
+					explicitlyOmitted,
 					invented,
 					fidelityPercent: sourceTotal ? Number(((matched / sourceTotal) * 100).toFixed(3)) : 0,
 					// a single number that CANNOT look clean while inventing (CEDS audit A1): display
@@ -291,13 +299,13 @@ const moduleFunction =
 			lines.push(`  statements emitted ......... ${padLeft(headline.emittedStatements, 9)}`);
 			lines.push(`  MATCHED .................... ${padLeft(headline.matched, 9)}`);
 			lines.push(
-				`  LOST ....................... ${padLeft(headline.lost, 9)}   (in source, not emitted)`,
+				`  NOT REPRODUCED ............. ${padLeft(headline.notReproduced, 9)}   (in source, not emitted)`,
 			);
 			lines.push(
-				`    of which declaredContext . ${padLeft(headline.lostDeclaredContext, 9)}   (file-level declarations the graph deliberately does not carry)`,
+				`    explicitlyOmitted ........ ${padLeft(headline.explicitlyOmitted, 9)}   (declarations the graph deliberately does not carry — CHOSEN, never lost)`,
 			);
 			lines.push(
-				`    of which contentGap ...... ${padLeft(headline.lostContentGap, 9)}   (genuine loss — the enrichment work order)`,
+				`  LOST ....................... ${padLeft(headline.contentGap, 9)}   (contentGap alone — genuine loss, the enrichment work order)`,
 			);
 			lines.push(
 				`  INVENTED ................... ${padLeft(headline.invented, 9)}   (emitted, not in source — must be 0)`,

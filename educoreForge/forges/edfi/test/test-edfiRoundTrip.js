@@ -717,12 +717,17 @@ pushStep((done) => {
 				typeof verdict.roundTripClean === 'boolean' &&
 				typeof verdict.reproduced === 'number' &&
 				typeof verdict.lost === 'number' &&
-				typeof verdict.lostDeclaredContext === 'number' &&
-				typeof verdict.lostContentGap === 'number' &&
+				typeof verdict.explicitlyOmittedTotal === 'number' &&
+				typeof verdict.notReproducedTotal === 'number' &&
+				// A13: lostTotal is contentGap ALONE, never the sum.
+				verdict.lostTotal === verdict.contentGapTotal &&
+				verdict.contentGapTotal + verdict.explicitlyOmittedTotal ===
+					verdict.notReproducedTotal &&
+				typeof verdict.contentGapTotal === 'number' &&
 				typeof verdict.inventedTotal === 'number' &&
 				Boolean(verdict.snapshot && verdict.snapshot.combinedDigest && verdict.snapshot.perInput) &&
 				Boolean(verdict.graph && verdict.graph.nodeCountByRole) &&
-				Boolean(verdict.declaredContextCensus) &&
+				Boolean(verdict.explicitlyOmittedOutOfDomainCensus) &&
 				Boolean(verdict.crosswalkGuard);
 			suiteState.probe.verdictShapeComplete = shapeComplete;
 			harness.ok('verdict carries the complete RT-6 shape', shapeComplete);

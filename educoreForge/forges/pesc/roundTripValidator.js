@@ -27,7 +27,8 @@
 //     and emitted/<label>.emitted.xsd. Created if absent.
 //
 // THE VERDICT (RT-6): REPRODUCED / LOST / INVENTED counts with located per-predicate detail, LOST
-// split into declaredContext vs contentGap (supervisor refinement 2026-08-03), the snapshot
+// split into explicitlyOmitted vs contentGap (supervisor refinement 2026-08-03; the category was
+// named declaredContext until doctrine amendment A13, 2026-08-04), the snapshot
 // identity (per-file SHA256 + combined digest), the graph identity (container, root provenance,
 // node/edge counts), and the single top-line boolean roundTripClean = (LOST===0 && INVENTED===0).
 // INVENTED must be 0 at all times; LOST is the work-remaining meter.
@@ -46,7 +47,12 @@ const canonicalLib = require('./lib/roundTripXsdCanonical')();
 const compilerLib = require('./lib/roundTripCompiler')();
 const diffLib = require('./lib/roundTripDiff')();
 
-const VERDICT_VERSION = 'pescRoundTripVerdict-1';
+// -2 (doctrine amendment A13, 2026-08-04): lostTotal changed MEANING — it counts contentGap
+// alone now, with explicitly-omitted declarations reported separately and excluded from loss.
+// The bump is load-bearing, not cosmetic: it is how a reader tells which arithmetic produced
+// a number. The RT-13 stage additionally REFUSES any verdict lacking the two A13 fields, so a
+// stale -1 artifact is refused by name rather than silently read under the new meaning.
+const VERDICT_VERSION = 'pescRoundTripVerdict-2';
 
 // START OF moduleFunction() ============================================================
 
@@ -277,17 +283,29 @@ const moduleFunction =
 				const verdict = {
 					verdictVersion: VERDICT_VERSION,
 					standard: compilerLib.STANDARD_SOURCE,
-					roundTripClean: headline.lost === 0 && headline.invented === 0,
+					// A13 RECONCILIATION, not a relaxation. Doctrine §5.3 has always said in its
+					// contentGap bullet that contentGap "is what 'clean' means when it reaches zero";
+					// the single line defining roundTripClean as LOST === 0 contradicted that, and
+					// LOST included the deliberate omissions. Under the old formula PESC was
+					// STRUCTURALLY INCAPABLE of ever reporting clean — close all 732 content gaps and
+					// the 73 chosen omissions still held it false forever. This line now agrees with
+					// the definition the doctrine already gave.
+					roundTripClean: headline.contentGap === 0 && headline.invented === 0,
 					reproduced: headline.matched,
-					lost: headline.lost,
+					lost: headline.contentGap,
 					// lostTotal / inventedTotal — the normative RT-6 builder-facing names (R-WO-21,
 					// 2026-08-04): the RT-13 stage adjudicates on {roundTripClean, inventedTotal,
-					// lostTotal} with zero per-standard knowledge. PESC has no guard-class invention
-					// channel, so both totals equal the diff counts; these lines add names, never
-					// move numbers.
-					lostTotal: headline.lost,
-					lostDeclaredContext: headline.lostDeclaredContext,
-					lostContentGap: headline.lostContentGap,
+					// lostTotal, contentGapTotal, explicitlyOmittedTotal} with zero per-standard
+					// knowledge. PESC has no guard-class invention channel, so the invention totals
+					// equal the diff counts.
+					//
+					// lostTotal IS contentGap ALONE as of A13. notReproducedTotal preserves the old
+					// arithmetic under a name that says what it actually counts, so no number is
+					// destroyed by the change — 805 stays readable, it is simply no longer called loss.
+					lostTotal: headline.contentGap,
+					contentGapTotal: headline.contentGap,
+					explicitlyOmittedTotal: headline.explicitlyOmitted,
+					notReproducedTotal: headline.notReproduced,
 					invented: headline.invented,
 					inventedTotal: headline.invented,
 					snapshot: {

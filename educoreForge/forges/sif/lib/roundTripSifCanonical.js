@@ -95,12 +95,13 @@ const GRAPH_FIELD_PREDICATE_REGISTRY = [
 	{ propertyName: 'format', predicate: 'fieldFormat' },
 ];
 
-// LOST categorization (RT-6, the pesc declaredContext/contentGap refinement): declaredContext
+// LOST categorization (RT-6, the pesc explicitlyOmitted/contentGap refinement; the category was
+// named declaredContext until doctrine amendment A13, 2026-08-04): explicitlyOmitted
 // must be CLAIMED by name, never assumed. SIF's statement domain has no we-chose-not-to-carry
 // class — the `: Table N` suffix is section-delimiter grammar (not minted), so every loss in
 // this domain is contentGap: enrichment work, named to the backlog. The registry exists, is
 // empty, and is the visible place a future ruling would claim a predicate.
-const DECLARED_CONTEXT_PREDICATES = [];
+const EXPLICITLY_OMITTED_PREDICATES = [];
 
 // START OF moduleFunction() ============================================================
 
@@ -645,7 +646,7 @@ const moduleFunction =
 			statementKeyFor,
 			parentSegmentListFromXpath,
 			groupSubjectFor,
-			DECLARED_CONTEXT_PREDICATES,
+			EXPLICITLY_OMITTED_PREDICATES,
 			LITERAL_COLUMN_HEADER,
 			TABLE_SECTION_PATTERN,
 			SUBJECT_SCHEME,

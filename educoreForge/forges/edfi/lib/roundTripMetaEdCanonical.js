@@ -34,7 +34,8 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // DECLARED EQUIVALENCE POLICY (R-WO-15, all stated, none silent):
 //   (a) `//` comment lines are NON-SEMANTIC by the publisher's own grammar (LINE_COMMENT ->
 //       skip) and are EXCLUDED from the statement domain; each one is CENSUSED with file:line
-//       (declaredContext material for the verdict — visible, never silently dropped).
+//       (explicitly-omitted material for the verdict — visible, never silently dropped;
+//       the category was named declaredContext until doctrine amendment A13, 2026-08-04).
 //   (b) domain-item and interchange-component statements carry the ITEM NAME only; the declared
 //       item KEYWORD is excluded from statement identity uniformly (the source itself uses the
 //       keyword loosely — 3 censused drift cases; an embedded exception list would be data in

@@ -356,17 +356,25 @@ taskList.push((args, next) => {
 				!!verdict.graph.rootProperties;
 			harness.ok('verdict names its graph (root provenance + counts)', probeFacts.graphIdentityPresent);
 			// A6 / R-WO-21 normative RT-6 fields: the LIVE RT-13 stage adjudicates on exactly
-			// {roundTripClean, inventedTotal, lostTotal} with zero per-standard knowledge and
+			// {roundTripClean, inventedTotal, lostTotal, contentGapTotal, explicitlyOmittedTotal}
+			// with zero per-standard knowledge and
 			// REFUSES BY NAME a verdict lacking them. Asserted as names AND as equalities, so a
 			// future edit cannot let the normative name drift away from the count it reports.
 			probeFacts.normativeVerdictFieldsPresent =
 				typeof verdict.roundTripClean === 'boolean' &&
 				typeof verdict.inventedTotal === 'number' &&
 				typeof verdict.lostTotal === 'number' &&
+				typeof verdict.contentGapTotal === 'number' &&
+				typeof verdict.explicitlyOmittedTotal === 'number' &&
+				typeof verdict.notReproducedTotal === 'number' &&
+				// A13: lostTotal is contentGap ALONE, never the sum.
+				verdict.lostTotal === verdict.contentGapTotal &&
+				verdict.contentGapTotal + verdict.explicitlyOmittedTotal ===
+					verdict.notReproducedTotal &&
 				verdict.inventedTotal === verdict.invented &&
 				verdict.lostTotal === verdict.lost;
 			harness.ok(
-				'verdict carries the normative RT-6 fields (roundTripClean/inventedTotal/lostTotal) agreeing with the diff counts',
+				'verdict carries the normative RT-6 fields (roundTripClean/inventedTotal/lostTotal/contentGapTotal/explicitlyOmittedTotal) agreeing with the diff counts',
 				probeFacts.normativeVerdictFieldsPresent,
 				`inventedTotal=${verdict.inventedTotal} lostTotal=${verdict.lostTotal}`,
 			);
@@ -449,9 +457,12 @@ taskList.push((args, next) => {
 			).length;
 			harness.equal('every lost row carries located samples', probeFacts.lostRowsWithoutSamples, 0);
 			probeFacts.lostCategorySumMatches =
-				verdict.report.headline.lostDeclaredContext + verdict.report.headline.lostContentGap ===
-				verdict.report.headline.lost;
-			harness.ok('lost categories sum exactly to LOST', probeFacts.lostCategorySumMatches);
+				verdict.report.headline.contentGap + verdict.report.headline.explicitlyOmitted ===
+				verdict.report.headline.notReproduced;
+			harness.ok(
+				'contentGap + explicitlyOmitted sum exactly to NOT REPRODUCED',
+				probeFacts.lostCategorySumMatches,
+			);
 			harness.ok(
 				'every lost detail row is LOCATED and carries a backlog label',
 				verdict.report.lostDetailList.length === verdict.lost &&

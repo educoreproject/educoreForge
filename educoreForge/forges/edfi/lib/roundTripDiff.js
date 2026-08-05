@@ -9,14 +9,15 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // VERDICT DOCTRINE:
 //   - REPRODUCED / LOST / INVENTED by statement-identity set membership (statementKey).
 //   - INVENTED must be 0 at all times, from the first run (doctrine §5.3). LOST is the
-//     work-remaining meter, split declaredContext vs contentGap (supervisor's standing
+//     work-remaining meter, split explicitlyOmitted vs contentGap (supervisor's standing
+//     interpretation; the category was named declaredContext until doctrine amendment A13,
 //     interpretation from the pesc campaign, adopted for edfi by R-WO-12/R-WO-15).
 //   - In THIS bundle the intra-diff LOST bucket registry routes the two ruled expected-loss
 //     predicates (componentKind/*, itemNamespace/*) to contentGap BY NAME — they are real
 //     content the graph does not yet carry (R-WO-15(d) + its ratified extension), enumerated as
 //     the enrichment backlog. Everything else LOST defaults to contentGap too. The
-//     declaredContext bucket inside the diff is EMPTY BY DESIGN: this bundle's declaredContext
-//     items (comment-line census, item-keyword drift census, the crosswalk input) never enter
+//     explicitlyOmitted bucket inside the diff is EMPTY BY DESIGN: this bundle's out-of-domain
+//     omissions (comment-line census, item-keyword drift census, the crosswalk input) never enter
 //     the statement domain at all and are adjudicated as named VERDICT sections instead
 //     (R-WO-12, R-WO-15(a)/(b)).
 //   - No percentage participates in ANY acceptance decision — fidelityPercent is display-only
@@ -31,7 +32,7 @@ const { statementKey } = roundTripMetaEdCanonical;
 const SAMPLE_LIMIT = 10;
 
 // predicate-pattern -> LOST bucket. Patterns are prefix matches on the predicate text.
-// (registry over switch; the bucket vocabulary is exactly ['declaredContext', 'contentGap'])
+// (registry over switch; the bucket vocabulary is exactly ['explicitlyOmitted', 'contentGap'])
 const LOST_BUCKET_PREFIX_REGISTRY = [
 	{ predicatePrefix: 'componentKind/', bucketName: 'contentGap', backlogLabel: 'interchangeComponentKind (R-WO-15d)' },
 	{ predicatePrefix: 'itemNamespace/', bucketName: 'contentGap', backlogLabel: 'itemNamespaceQualifier (R-WO-15d extension)' },
@@ -89,9 +90,10 @@ const moduleFunction = () => {
 		};
 
 		let reproducedCount = 0;
-		let lostCount = 0;
-		let lostContentGapCount = 0;
-		let lostDeclaredContextCount = 0;
+		// A13: notReproducedCount is the raw set difference; only contentGap is LOSS.
+		let notReproducedCount = 0;
+		let contentGapCount = 0;
+		let explicitlyOmittedCount = 0;
 		let inventedCount = 0;
 		const lostByBacklogLabel = {};
 		const lostDetailList = [];
@@ -105,13 +107,13 @@ const moduleFunction = () => {
 				predicateRow.reproduced += 1;
 				return;
 			}
-			lostCount += 1;
+			notReproducedCount += 1;
 			predicateRow.lost += 1;
 			const { bucketName, backlogLabel } = lostBucketFor(oneStatement.predicate);
-			if (bucketName === 'declaredContext') {
-				lostDeclaredContextCount += 1;
+			if (bucketName === 'explicitlyOmitted') {
+				explicitlyOmittedCount += 1;
 			} else {
-				lostContentGapCount += 1;
+				contentGapCount += 1;
 			}
 			if (backlogLabel) {
 				lostByBacklogLabel[backlogLabel] = (lostByBacklogLabel[backlogLabel] || 0) + 1;
@@ -159,9 +161,10 @@ const moduleFunction = () => {
 				sourceStatements: sourceStatementCount,
 				emittedStatements: emittedStatementCount,
 				reproduced: reproducedCount,
-				lost: lostCount,
-				lostDeclaredContext: lostDeclaredContextCount,
-				lostContentGap: lostContentGapCount,
+				// A13: `lost` is deliberately ABSENT so no reader keeps the old meaning.
+				notReproduced: notReproducedCount,
+				contentGap: contentGapCount,
+				explicitlyOmitted: explicitlyOmittedCount,
 				invented: inventedCount,
 				// display-only; structurally excluded from every acceptance decision (G-8 class)
 				fidelityPercentDisplayOnly:
@@ -190,8 +193,8 @@ const moduleFunction = () => {
 		lineList.push(`edfi round-trip diff — reportVersion ${report.reportVersion}`);
 		lineList.push(
 			`source ${headline.sourceStatements} | emitted ${headline.emittedStatements} | ` +
-				`REPRODUCED ${headline.reproduced} | LOST ${headline.lost} ` +
-				`(declaredContext ${headline.lostDeclaredContext} / contentGap ${headline.lostContentGap}) | ` +
+				`REPRODUCED ${headline.reproduced} | NOT REPRODUCED ${headline.notReproduced} ` +
+				`(LOST/contentGap ${headline.contentGap} / explicitlyOmitted ${headline.explicitlyOmitted}) | ` +
 				`INVENTED ${headline.invented}`,
 		);
 		if (headline.fidelityPercentDisplayOnly !== null) {

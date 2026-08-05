@@ -126,8 +126,8 @@ roundTripValidator.validate(
 				CENSUS_OF_RECORD.interchangeComponentCount,
 		);
 		assertThat(
-			`comment census equals corrected record (${verdict.declaredContextCensus.commentLineCount} vs 19)`,
-			verdict.declaredContextCensus.commentLineCount === CENSUS_OF_RECORD.commentLineCount,
+			`comment census equals corrected record (${verdict.explicitlyOmittedOutOfDomainCensus.commentLineCount} vs 19)`,
+			verdict.explicitlyOmittedOutOfDomainCensus.commentLineCount === CENSUS_OF_RECORD.commentLineCount,
 		);
 
 		console.log(

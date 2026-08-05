@@ -21,8 +21,8 @@
 //     the test suite, RT-5). Consequence, load-bearing for R-PW-4 condition 2: the re-emission
 //     can never invent an absent import version, because versions live in namespace/import
 //     declarations and type-reference statements never carry them. Version drift stays visible
-//     through the file-level import statements below, which the graph cannot emit (LOST,
-//     category declaredContext).
+//     through the file-level import statements below, which the graph cannot emit (NOT
+//     REPRODUCED, category explicitlyOmitted — deliberate, and excluded from loss by A13).
 //   * OCCURRENCE IS NORMALIZED TO XSD-EFFECTIVE VALUES on both sides: an element's absent
 //     minOccurs/maxOccurs is '1' (the XSD grammar's own default, the forge parser's reviewed
 //     stance); an attribute's use='required' is minOccurs '1', anything else '0', maxOccurs '1'.
@@ -56,8 +56,10 @@ const SUBJECT_SCHEME = 'pesc://';
 // The predicates whose LOST entries are DECLARED CONTEXT rather than content gaps: file-level
 // declarations the graph deliberately does not carry (supervisor refinement, 2026-08-03). The
 // diff consults this registry to tag each LOST row; anything NOT named here defaults to
-// contentGap — declaredContext must be claimed, never assumed.
-const DECLARED_CONTEXT_PREDICATES = [
+// contentGap — explicitlyOmitted must be claimed, never assumed. (Category renamed from
+// declaredContext by doctrine amendment A13, 2026-08-04: the old name did not say WE CHOSE
+// THIS, so its count was summed into LOST and overstated the real gap.)
+const EXPLICITLY_OMITTED_PREDICATES = [
 	'targetNamespace',
 	'schemaVersionAttribute',
 	'elementFormDefault',
@@ -774,7 +776,7 @@ const moduleFunction =
 			normalizeDocumentation,
 			statementKey,
 			sourceLabelFor,
-			DECLARED_CONTEXT_PREDICATES,
+			EXPLICITLY_OMITTED_PREDICATES,
 			SUBJECT_SCHEME,
 		};
 	};
