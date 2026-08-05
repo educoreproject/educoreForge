@@ -1,0 +1,127 @@
+
+DET — two full forge() runs identical (complete outputs)
+        RED (demonstrated): one contaminated property -> comparator detects: true
+  ok    DET RED: whole-graph comparator demonstrably able to go red
+        GREEN: run one 41740 nodes / 69514 edges; canonical forms equal: true
+  ok    DET two runs byte-identical under canonical serialization
+
+G3-A — the regeneration gate (THE definition of the tier)
+        deleted: 63 derived nodes, 27838 derived edges, all annotations on retained nodes
+        RED (observed refusal): pesc260805 derivedTier REFUSES: applyDerivedTier: annotation 'undeclaredDriftMarker' destined for 'urn:org:pesc:message:AcademicEportfolio:v1.0.0#element/AcademicEPortfolio' is not declared in DERIVED_ANNOTATION_PROPERTY_NAMES [sameDefinitionClusterId, reachableFromLatestRoot, resolvesToBuiltinXsd, ambiguousPendingSynthesis, unresolvedImportFact, unresolvedNamespaceReferences] — it would survive the Gate-3 strip and be invisible to the regeneration compare.
+        N1: applyDerivedTier returned NOTHING (refused); undeclared marker present on the RETURNED graph: false
+  ok    G3-A GAP1: applyDerivedTier REFUSES an undeclared annotation name, naming it
+  ok    G3-A GAP1/N1: the undeclared annotation reached NO node in the RETURNED graph
+        GAP7: caller's node property set UNCHANGED by applyDerivedTier; returned copy carries the annotations: true
+  ok    G3-A GAP7: applyDerivedTier does NOT mutate the caller's nodes
+  ok    G3-A GAP7: the annotations DO land on the returned graph (the clone is not a no-op)
+        RED (demonstrated): isLatest flipped on pescNamespace:urn:org:pesc:core:CoreMain:v1.19.1 -> compare fails: true
+  ok    G3-A RED: a contaminated derived property is detected by the compare
+  ok    G3-A regeneration ran without refusal
+        GREEN: regenerated derived view identical to the original: true (14600360 canonical bytes)
+  ok    G3-A regenerated derived tier IDENTICAL to the emitted one
+        annotation names actually written: ambiguousPendingSynthesis, reachableFromLatestRoot, resolvesToBuiltinXsd, sameDefinitionClusterId, unresolvedImportFact, unresolvedNamespaceReferences
+  ok    G3-A GAP1: every annotation the tier writes is DECLARED (none invisible to strip/compare)
+
+G3-B — the worked example (design §5)
+        RED (demonstrated): 'AcRec:StudentType' under AcademicEportfolio_v1.0.0.xsd's table -> urn:org:pesc:sector:AcademicRecord:v1.10.0#complexType/StudentType (exists: true) — a PLAUSIBLE and WRONG target
+  ok    G3-B RED: the wrong artifact's prefix table produces a different target
+        GREEN: 1 Student edge(s): urn:org:pesc:message:CollegeTranscript:v1.8.0#element/CollegeTranscript/anon/1/el/2:Student -> urn:org:pesc:sector:AcademicRecord:v1.13.0#complexType/StudentType
+  ok    G3-B exactly one Student RESOLVES_TO edge from the CT 1.8 root subtree
+  ok    G3-B Student resolves to AcademicRecord v1.13.0 StudentType (exact stableId)
+  ok    G3-B the edge carries the written form verbatim
+
+G3-C — sameness discipline vs Phase 0's measurement
+  ok    G3-C name census matches Phase 0: 896 names in each, all shared
+        RED lever measurements on the 1.19.0->1.19.1 boundary: strict 846/50; collapseWhitespace 846/50; noDocumentation 846/50
+        STATED PLAINLY (per the work order): neither whitespace-collapse nor documentation-participation flips ANY of the 50 — the 50 differ by facet REMOVAL, a structural change.
+        RED (demonstrated): facets stripped in harness -> ApplicationFeeAmountType 1.19.0/1.19.1 WRONGLY chains: true
+  ok    G3-C RED: a facet-blind comparison wrongly chains ApplicationFeeAmountType
+        family-wide adjacent-pair verdict flips: collapseWhitespace 23, noDocumentation 856
+  ok    G3-C the strict levers are live family-wide (collapseWhitespace flips > 0)
+  ok    G3-C documentation participation is load-bearing family-wide (flips > 0)
+        GREEN: strict split 846 stable / 50 changed — Phase 0 measured 896 names, 50 changed
+  ok    G3-C strict comparison reproduces Phase 0: 846 stable
+  ok    G3-C strict comparison reproduces Phase 0: 50 changed
+  ok    G3-C exactly 846 SAME_DEFINITION edges cross the 1.19.0->1.19.1 boundary
+  ok    G3-C ApplicationFeeAmountType among the strict-changed
+  ok    G3-C ApplicationFeeAmountType has NO chain edge across the boundary
+  ok    G3-C GAP6: familyKey and definitionName are PRESENT on every edge these filters read
+        GREEN: ClassRankType (core:CoreMain) 14 occurrences, 13 chain edges, 1 cluster (representative urn:org:pesc:core:CoreMain:v1.19.1#simpleType/ClassRankType); max out-degree 1
+        chain hops: v1.0.0->v1.2.0 v1.10.0->v1.12.0 v1.12.0->v1.13.0 v1.13.0->v1.14.0 v1.14.0->v1.16.0 v1.16.0->v1.17.0 v1.17.0->v1.18.0 v1.18.0->v1.19.0 v1.19.0->v1.19.1 v1.2.0->v1.4.0 v1.4.0->v1.7.0 v1.7.0->v1.8.0 v1.8.0->v1.10.0
+  ok    G3-C ClassRankType appears in all 14 CoreMain versions
+  ok    G3-C ClassRankType chains across every version (13 edges, one cluster)
+  ok    G3-C ClassRankType topology is a CHAIN not a clique (D-7: max out-degree 1)
+  ok    G3-C ClassRankType cluster representative is the NEWEST member
+        D-4 specimen: AdmissionsRecord declares its OWN complexType/ClassRankType — 5 members, 4 chain edges, 0 edges crossing the family boundary
+  ok    G3-C D-4: AdmissionsRecord ClassRankType chains inside its OWN family (5 members, 4 edges)
+  ok    G3-C D-4: ZERO SAME_DEFINITION edges join the CoreMain and AdmissionsRecord ClassRankTypes
+  ok    G3-C D-4: the two same-named clusters are DISJOINT
+        GAP3 global D-7 over 10400 SAME_DEFINITION edges: max out-degree 1, max in-degree 1, duplicate pairs 0, cross-family 0, non-ascending 0, property-starved 0
+  ok    G3-C GAP3/R-P3-2: EVERY SAME_DEFINITION edge carries the full declared property contract
+  ok    G3-C GAP3: D-7 chain GLOBALLY — max out-degree 1 across all 10,400 edges
+  ok    G3-C GAP3: D-7 chain GLOBALLY — max in-degree 1 (no member is two versions' successor)
+  ok    G3-C GAP3: ZERO duplicate (from,to) pairs across the whole graph
+  ok    G3-C GAP3: D-4 GLOBALLY — ZERO edges cross a library family boundary
+  ok    G3-C GAP3: D-7 GLOBALLY — every hop strictly ASCENDS in version order
+  ok    G3-C GAP3: the global measurement covered all 10,400 edges
+        AccreditationTypeType: 8 chain edges; no edge spans v1.16.0->v1.17.0 (its one change): true
+  ok    G3-C AccreditationTypeType chains within its unchanged runs (8 edges, break at its one change)
+
+G3-D — contested-namespace honesty (D-7)
+        recorded: 201 entries (183 intra-member, 18 external); RESOLVES_TO into contested: 0
+  ok    G3-D ambiguous entries exist and all name the contested namespace
+  ok    G3-D annotation entries and stats agree
+  ok    G3-D ZERO RESOLVES_TO edges target a contested-namespace definition
+        GREEN: external consumers observed: CollegeTranscript_v1.3.0.xsd, HighSchoolTranscript_v1.2.0.xsd, TestScoreReport_v1.0.0.xsd, TranscriptAcknowledgment_v1.1.0.xsd, TranscriptRequest_v1.1.0.xsd, TranscriptResponse_v1.1.0.xsd
+  ok    G3-D the consumer set is EXACTLY the six expected roots
+  ok    G3-D every entry carries candidates for Phase 4 (none empty)
+        RED-1 (demonstrated): one planted RESOLVES_TO into 'urn:org:pesc:sector:AcademicRecord:v1.6.0#complexType/PersonType@948d88f32069' -> the checker now counts 1, condition inverts: true
+  ok    G3-D RED-1: the zero-edges checker demonstrably detects a planted edge
+        RED-2 (demonstrated): remove 948d88f32069 -> quarantine lifts, resolution attempted, tier REFUSES: pesc260805 derivedTier REFUSES: file 'TranscriptRequest_v1.1.0.xsd': reference 'AcRec:RequestType' (type) resolves to namespace 'urn:org:pesc:sector:AcademicRecord:v
+        RED-2 (demonstrated): remove e12830fc86a3 -> quarantine lifts, resolution attempted, tier REFUSES: pesc260805 derivedTier REFUSES: file 'TestScoreReport_v1.0.0.xsd': reference 'AcRec:TestScoreReportType' (type) resolves to namespace 'urn:org:pesc:sector:AcademicRe
+  ok    G3-D RED-2: removing EITHER collision member lifts the quarantine and provokes an unresolved-reference refusal naming the namespace
+  ok    G3-D RED-2: the two members PARTITION the consumers' type set (each removal strands a DIFFERENT reference)
+
+G3-E — latest view
+        isLatest namespaces (16): urn:org:pesc:codes:iso_3166-1:v1.0.0, urn:org:pesc:core:CoreMain:v1.19.1, urn:org:pesc:message:AcademicEportfolio:v1.0.0, urn:org:pesc:message:AdmissionsApplication:v1.3.0, urn:org:pesc:message:CollegeTranscript:v1.8.0, urn:org:pesc:message:DocumentRequest:v1.0.0, urn:org:pesc:message:DocumentResponse:v1.0.0, urn:org:pesc:message:EducationCourseInventory:v1.0.0, urn:org:pesc:message:HighSchoolTranscript:v1.6.0, urn:org:pesc:message:LearningRecord:v1.0.0, urn:org:pesc:message:TestScoreReport:v1.1.0, urn:org:pesc:message:TranscriptAcknowledgment:v1.1.0, urn:org:pesc:message:TranscriptRequest:v1.1.0, urn:org:pesc:message:TranscriptResponse:v1.1.0, urn:org:pesc:sector:AcademicRecord:v1.14.0, urn:org:pesc:sector:AdmissionsRecord:v1.4.0
+  ok    G3-E isLatest marks EXACTLY the expected sixteen namespaces
+  ok    G3-E CoreMain v1.19.0 is NOT latest
+        GAP4 roots derived independently: 12 (production says 12); 12 latest message namespaces
+  ok    G3-E GAP4: the harness derives the SAME message-root set production used (12 roots)
+        RED (demonstrated): harness BFS with one injected edge reaches 2299 vs annotated 2282 -> mismatch detected: true
+  ok    G3-E RED: the independent BFS comparison demonstrably able to go red
+        GREEN: harness BFS reaches 2282; annotations say 2282; equal: true
+  ok    G3-E independent BFS reproduces the annotation set exactly
+  ok    G3-E GAP4: reachableFromLatestRoot is EXACTLY 2,282 of 12,909 definitions
+  ok    G3-E GAP4: production stats agree with the annotations on the nodes
+        orphan specimen: urn:org:pesc:core:CoreMain:v1.19.1#complexType/PerkinsType reachableFromLatestRoot=false
+  ok    G3-E the financial-aid orphan (PerkinsType, CoreMain 1.19.1) is NOT reachable
+
+G3-F — R-P2-5 consistency guard
+        containers checked in the production run: 3079
+  ok    G3-F every shape-carrying container was checked (3,079 measured)
+        CONTROL: the UNMUTATED fixture builds with NO refusal
+  ok    G3-F CONTROL: the unmutated fixture provokes no refusal
+        RED (observed refusal): pesc260805 derivedTier REFUSES: R-P2-5 consistency: container 'urn:org:pesc:message:AcademicEportfolio:v1.0.0#complexType/AcademicEPortfolioType' contentModelShape enumerates element positions [2,1,3,4,5,6,7,8,9,10,11,12,13,14,15,16] but its PescElementDecl children carry [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16] (children in order: TransmissionData, Profile, Events, Goals, Artifacts, Comments, Education, EmploymentHistory, Competencies, Networks, LicensesAndCredentials, MilitaryHistory, CareerAssessments, Lists, UserDefinedExtensions, NoteMessage). The dual representation has drifted.
+  ok    G3-F a drifted shape is REFUSED
+  ok    G3-F the refusal names R-P2-5
+  ok    G3-F the refusal names the container
+  ok    G3-F the refusal is the SHAPE guard itself, not another guard firing first
+
+CENSUS — derived tier
+        {"namespaces":63,"isLatestNamespaces":16,"inNamespaceEdges":64,"importsEdges":75,"unresolvedImportsRecorded":1,"resolvesToEdges":17299,"builtinReferenceMarkers":9921,"ambiguousPendingSynthesisRecorded":201,"ambiguousIntraMemberRecorded":183,"unresolvedNamespaceReferencesRecorded":205,"sameDefinitionEdges":10400,"reachableFromLatestRoot":2282,"definitionsTotal":12909}
+  ok    CENSUS 63 namespaces (the contested one is ONE node)
+  ok    CENSUS 64 IN_NAMESPACE edges (two artifacts share the contested node)
+  ok    CENSUS the CoreMain v1.6.0 gap is the ONE unresolved import
+        GAP2 accounting: source tier writes 27620 type-space references; dispositions = resolved 17299 + builtin 9921 + ambiguous 195 (of 201, less 6 import decls) + absent-ns 205 = 27620
+  ok    CENSUS GAP2: every source-tier reference has EXACTLY one derived disposition (computed, not hardcoded)
+  ok    CENSUS GAP2: the ambiguous-import subtraction is the 6 import declarations, computed from the entries
+
+LEDGER — red evidence for every shipped assertion
+        ledger: 69 shipped assertions; proven-red 32, records-gap 0, GENUINE GAP 34
+        UNLEDGERED (new assertion without red evidence): LEDGER every shipped assertion has a red-evidence entry | LEDGER carries no stale entries for assertions this suite no longer runs | LEDGER the entry count matches the assertions actually run
+  FAIL  LEDGER every shipped assertion has a red-evidence entry
+  ok    LEDGER carries no stale entries for assertions this suite no longer runs
+  FAIL  LEDGER the entry count matches the assertions actually run
+
+67 passed, 2 failed

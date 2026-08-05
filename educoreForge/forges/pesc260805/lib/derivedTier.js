@@ -537,7 +537,27 @@ const moduleFunction =
 
 			// stageAnnotation — collect derived properties destined for source nodes. One writer
 			// per property name per node; a second write to the same slot is a builder bug.
+			//
+			// R-P3-1 GAP 1: the annotation NAME is checked against DERIVED_ANNOTATION_PROPERTY_NAMES
+			// here, at the sole writer, because that list is load-bearing in three separate places —
+			// the input purity guard, the Gate-3 strip, and canonicalizeDerivedView's compare. An
+			// annotation staged under an UNDECLARED name is invisible to all three at once: the
+			// compare never looks at it, the strip never removes it, and the purity guard never
+			// objects to the residue on the next run. G3-A, the gate whose entire purpose is to
+			// prove the derived tier regenerable, therefore stayed GREEN while an undeclared
+			// annotation sat on 12,909 source nodes (demonstrated by the Phase 3 adversarial
+			// review). The declaration list is the tier's contract with itself; a writer that can
+			// silently step outside it makes the crown-jewel gate blind to its own subject matter.
+			// Refuse by name, at the only door the annotations come through.
 			const stageAnnotation = (targetStableId, annotationName, annotationValue) => {
+				if (DERIVED_ANNOTATION_PROPERTY_NAMES.indexOf(annotationName) === -1) {
+					refuse(
+						`derivedTier builder bug: annotation '${annotationName}' is not declared in ` +
+							`DERIVED_ANNOTATION_PROPERTY_NAMES [${DERIVED_ANNOTATION_PROPERTY_NAMES.join(', ')}]. ` +
+							`An undeclared annotation is invisible to the purity guard, the Gate-3 strip, and ` +
+							`the regeneration compare — declare it there or do not stage it.`,
+					);
+				}
 				const annotationSlot = (nodeAnnotations[targetStableId] =
 					nodeAnnotations[targetStableId] || {});
 				if (Object.prototype.hasOwnProperty.call(annotationSlot, annotationName)) {
@@ -1094,13 +1114,29 @@ const moduleFunction =
 		};
 
 		// =====================================================================
-		// applyDerivedTier — stamp the annotations onto the source nodes (mutates their
-		// properties — the forge builds fresh nodes each run, and the gate feeds clones) and
-		// return the combined graph. ONE application path: forge and test harness both use this.
+		// applyDerivedTier — stamp the annotations onto the source nodes and return the combined
+		// graph. ONE application path: forge and test harness both use this. The CALLER'S nodes
+		// are NOT modified — annotations land on copies (see GAP 7 below). Callers may hold and
+		// reuse the graph they passed in.
 		// =====================================================================
 		const applyDerivedTier = ({ nodes, edges, derivedOutput }) => {
+			// GAP 7 — the no-mutation contract is now ENFORCED, not merely documented. This
+			// function used to stamp annotations onto the CALLER'S node objects, with a comment
+			// asking callers to feed clones. A contract a caller can break silently is a trap,
+			// and this one sprang: the Phase 3 harness fed it a shared graph, and the resulting
+			// contamination masked FIVE gate failures — including the R-P2-5 shape guard, which
+			// went the whole campaign without once being observed firing. The caller's nodes are
+			// now untouched by construction, so no future caller can make that mistake.
+			//
+			// Cheap: one shallow copy per node, and the forge already uses only the returned
+			// graph (forgePesc260805.js:653-662), never the array it passed in.
+			const annotatedNodes = nodes.map((oneNode) => ({
+				...oneNode,
+				labels: [...oneNode.labels],
+				properties: { ...oneNode.properties },
+			}));
 			const nodeByStableId = {};
-			nodes.forEach((oneNode) => {
+			annotatedNodes.forEach((oneNode) => {
 				nodeByStableId[oneNode.stableId] = oneNode;
 			});
 			Object.keys(derivedOutput.nodeAnnotations).forEach((oneStableId) => {
@@ -1108,10 +1144,37 @@ const moduleFunction =
 				if (targetNode === undefined) {
 					refuse(`applyDerivedTier: annotation target '${oneStableId}' is not in the graph`);
 				}
+				// GAP 1, applier side. stageAnnotation guards the WRITER; this guards the thing that
+				// actually puts a property on a node. The two are separate doors and the property
+				// only becomes real here — an undeclared name written at this point would survive
+				// the Gate-3 strip and stay invisible to the regeneration compare forever. This
+				// door is also the one a gate can knock on: applyDerivedTier is exported, so the
+				// refusal is provable from outside against the real function, with no test seam.
+				Object.keys(derivedOutput.nodeAnnotations[oneStableId]).forEach((oneAnnotationName) => {
+					if (DERIVED_ANNOTATION_PROPERTY_NAMES.indexOf(oneAnnotationName) === -1) {
+						refuse(
+							`applyDerivedTier: annotation '${oneAnnotationName}' destined for ` +
+								`'${oneStableId}' is not declared in DERIVED_ANNOTATION_PROPERTY_NAMES ` +
+								`[${DERIVED_ANNOTATION_PROPERTY_NAMES.join(', ')}] — it would survive the ` +
+								`Gate-3 strip and be invisible to the regeneration compare.`,
+						);
+					}
+				});
 				Object.assign(targetNode.properties, derivedOutput.nodeAnnotations[oneStableId]);
 			});
+			// N4 — LATENT, DOCUMENTED, DELIBERATELY NOT FIXED (supervisor ruling, second review).
+			// The clone above covers NODES only. Two things are still shared by reference with the
+			// caller: (a) the EDGE objects, since edges.concat copies the array but not its
+			// elements, and (b) any object-valued PROPERTY value inside a node — today just
+			// `sourceFiles` on the standard root, because the shallow property copy duplicates the
+			// container but not the array it points at. Safe right now because nothing in this
+			// tier or in the forge mutates an edge object or an existing property value after
+			// applyDerivedTier returns. WHAT WOULD BREAK IT: any future code that edits an edge's
+			// properties, or push()es onto a shared array property, on the RETURNED graph — the
+			// caller's graph would silently change too, and the no-mutation contract asserted in
+			// G3-A would still pass because it only inspects node property NAMES.
 			return {
-				nodes: nodes.concat(derivedOutput.nodes),
+				nodes: annotatedNodes.concat(derivedOutput.nodes),
 				edges: edges.concat(derivedOutput.edges),
 			};
 		};

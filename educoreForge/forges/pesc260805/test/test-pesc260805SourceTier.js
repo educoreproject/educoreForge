@@ -45,7 +45,12 @@ const bundle = require(path.join(BUNDLE_DIR, 'forgePesc260805'))({ embedder: nul
 
 let pass = 0;
 let fail = 0;
+// every label check() is called with, in run order — the LEDGER gate at the foot of this file
+// reconciles this list against test/redEvidenceLedger.json so a new assertion cannot arrive
+// without red evidence recorded for it.
+const shippedAssertionLabels = [];
 const check = (label, condition) => {
+	shippedAssertionLabels.push(label);
 	if (condition) {
 		pass++;
 		console.log(`  ok    ${label}`);
@@ -429,6 +434,48 @@ taskList.push((args, next) => {
 			next('', args);
 		},
 	);
+});
+
+// =====================================================================
+// LEDGER — every shipped assertion must carry recorded red evidence
+// =====================================================================
+// See the twin gate in test-pesc260805DerivedTier.js for the reasoning. In THIS suite the
+// dominant bucket is records-gap rather than genuine gap: the DEVLOG records "PHASE 2: CLOSED —
+// 47/47 gates, all RED-first" and Phase 2 was independently reviewed and committed at b02168b,
+// but those red receipts were not retained. Believed, cited, unverifiable — and deliberately NOT
+// re-run, because re-proving them by hand duplicates Phase 6's mutation suite.
+taskList.push((args, next) => {
+	console.log('\nLEDGER — red evidence for every shipped assertion');
+	const ledger = require(path.join(__dirname, 'redEvidenceLedger.json'));
+	const suiteLedger = ledger.suites.source;
+	const ledgeredLabels = new Set(suiteLedger.assertions.map((oneEntry) => oneEntry.label));
+	// THE GATE MUST NOT EXEMPT ITSELF — see the twin gate in the derived suite. Declared once,
+	// used both to seed the label set and to make the calls, so the two cannot drift apart.
+	const LEDGER_GATE_LABELS = [
+		'LEDGER every shipped assertion has a red-evidence entry',
+		'LEDGER carries no stale entries for assertions this suite no longer runs',
+		'LEDGER the entry count matches the assertions actually run',
+	];
+	const uniqueShippedLabels = [...new Set([...shippedAssertionLabels, ...LEDGER_GATE_LABELS])];
+	const unledgeredLabels = uniqueShippedLabels.filter((oneLabel) => !ledgeredLabels.has(oneLabel));
+	const staleLedgerLabels = [...ledgeredLabels].filter(
+		(oneLabel) => uniqueShippedLabels.indexOf(oneLabel) === -1,
+	);
+	const statusCounts = { proven: 0, recordsGap: 0, genuineGap: 0 };
+	suiteLedger.assertions.forEach((oneEntry) => {
+		statusCounts[oneEntry.status]++;
+	});
+	evidence(`ledger: ${uniqueShippedLabels.length} shipped assertions; proven-red ${statusCounts.proven}, records-gap ${statusCounts.recordsGap}, GENUINE GAP ${statusCounts.genuineGap}`);
+	if (unledgeredLabels.length > 0) {
+		evidence(`UNLEDGERED (new assertion without red evidence): ${unledgeredLabels.join(' | ')}`);
+	}
+	if (staleLedgerLabels.length > 0) {
+		evidence(`STALE ledger entries (assertion removed or renamed): ${staleLedgerLabels.join(' | ')}`);
+	}
+	check(LEDGER_GATE_LABELS[0], unledgeredLabels.length === 0);
+	check(LEDGER_GATE_LABELS[1], staleLedgerLabels.length === 0);
+	check(LEDGER_GATE_LABELS[2], suiteLedger.assertions.length === uniqueShippedLabels.length);
+	next('', args);
 });
 
 pipeRunner(taskList.getList(), {}, (err) => {

@@ -1,0 +1,984 @@
+{
+	"purpose": "Maps every SHIPPED assertion label in the pesc260805 suites to its red evidence: the retained log that recorded it FAILING and the LEVER that produced that red. Built by VELVET_RIVER at the close of Phase 3 on VELVET_COMPASS's order, after the third adversarial review observed that 34 of 66 derived assertions had no retained red receipt. An unevidenced claim decays into an assumed one; this file makes the gap a number that can only go down.",
+	"statuses": {
+		"proven": "Observed FAILING in a retained log. redEvidence names the log, the lever, and whether the probe ran in the SHIPPED configuration.",
+		"recordsGap": "Believed proven red in a run whose log was not retained. Cited, marked unverifiable-but-believed. Do NOT re-run these — Phase 6 mutation suite owns them.",
+		"genuineGap": "Never demonstrated able to fail, by anyone. This is the real number. Phase 6 owns closing it. Do NOT close it here."
+	},
+	"shippedConfigurationNote": "A red obtained under a configuration that is not shipped proves nothing about what IS shipped. Learned the hard way: the GAP 1 assertions were originally red-proven by vr_probeB.log, which had also reverted GAP 7, making the assertion vacuous in the shipped build. vr_probeC.log supersedes it. Every entry therefore records shippedConfig.",
+	"suites": {
+		"derived": {
+			"suiteFile": "test/test-pesc260805DerivedTier.js",
+			"shippedRunLog": "vr_ledgerGate_red_derived.log",
+			"counts": {
+				"proven": 35,
+				"recordsGap": 0,
+				"genuineGap": 34
+			},
+			"assertions": [
+				{
+					"label": "CENSUS 63 namespaces (the contested one is ONE node)",
+					"status": "genuineGap",
+					"species": "predecessorClaimNotAdmissible",
+					"note": "The suite header CLAIMS \"Every gate demonstrates RED first\", but its author is the agent whose G3-F gate passed for the wrong reason and whose G3-D/G3-F RED levers were broken. That author's unwitnessed claim is not admissible evidence, so this is triaged as a GENUINE gap rather than a records gap. Several of these DO have a \"RED (demonstrated)\" evidence line in vr_baseline_derived.log showing the LEVER fired — that is partial, and is not the assertion being observed to fail."
+				},
+				{
+					"label": "CENSUS 64 IN_NAMESPACE edges (two artifacts share the contested node)",
+					"status": "genuineGap",
+					"species": "predecessorClaimNotAdmissible",
+					"note": "The suite header CLAIMS \"Every gate demonstrates RED first\", but its author is the agent whose G3-F gate passed for the wrong reason and whose G3-D/G3-F RED levers were broken. That author's unwitnessed claim is not admissible evidence, so this is triaged as a GENUINE gap rather than a records gap. Several of these DO have a \"RED (demonstrated)\" evidence line in vr_baseline_derived.log showing the LEVER fired — that is partial, and is not the assertion being observed to fail."
+				},
+				{
+					"label": "CENSUS GAP2: every source-tier reference has EXACTLY one derived disposition (computed, not hardcoded)",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "vr_probeA.log",
+							"lever": "EXPECTATION PERTURBATION (round 2): perturbed the GAP 2 accounting, GAP 3 global-topology, GAP 4 root/reachability and GAP 6 presence constants.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "CENSUS GAP2: the ambiguous-import subtraction is the 6 import declarations, computed from the entries",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "vr_probeA.log",
+							"lever": "EXPECTATION PERTURBATION (round 2): perturbed the GAP 2 accounting, GAP 3 global-topology, GAP 4 root/reachability and GAP 6 presence constants.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "CENSUS the CoreMain v1.6.0 gap is the ONE unresolved import",
+					"status": "genuineGap",
+					"species": "predecessorClaimNotAdmissible",
+					"note": "The suite header CLAIMS \"Every gate demonstrates RED first\", but its author is the agent whose G3-F gate passed for the wrong reason and whose G3-D/G3-F RED levers were broken. That author's unwitnessed claim is not admissible evidence, so this is triaged as a GENUINE gap rather than a records gap. Several of these DO have a \"RED (demonstrated)\" evidence line in vr_baseline_derived.log showing the LEVER fired — that is partial, and is not the assertion being observed to fail."
+				},
+				{
+					"label": "DET RED: whole-graph comparator demonstrably able to go red",
+					"status": "genuineGap",
+					"species": "selfDemonstratingRedCheck",
+					"note": "This assertion's content IS a red demonstration — it asserts a lever produced a detectable failure. Observing IT fail requires breaking the detector it guards, which no probe has done. Counted in bucket (b) deliberately rather than waved through."
+				},
+				{
+					"label": "DET two runs byte-identical under canonical serialization",
+					"status": "genuineGap",
+					"species": "predecessorClaimNotAdmissible",
+					"note": "The suite header CLAIMS \"Every gate demonstrates RED first\", but its author is the agent whose G3-F gate passed for the wrong reason and whose G3-D/G3-F RED levers were broken. That author's unwitnessed claim is not admissible evidence, so this is triaged as a GENUINE gap rather than a records gap. Several of these DO have a \"RED (demonstrated)\" evidence line in vr_baseline_derived.log showing the LEVER fired — that is partial, and is not the assertion being observed to fail."
+				},
+				{
+					"label": "G3-A GAP1/N1: the undeclared annotation reached NO node in the RETURNED graph",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "vr_probeC.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION (round 3): neutralised ONLY the applyDerivedTier undeclared-name refusal. The probe build script ASSERTED that GAP 7's clone and stageAnnotation's guard both remained intact, so it could not silently diverge from shipped.",
+							"shippedConfig": true
+						}
+					]
+				},
+				{
+					"label": "G3-A GAP1: applyDerivedTier REFUSES an undeclared annotation name, naming it",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "vr_probeB.log",
+							"lever": "PRODUCTION MUTATION (round 2): removed BOTH undeclared-name guards (stageAnnotation and applyDerivedTier), REVERTED GAP 7's clone, and staged undeclaredDriftMarker onto all 12,909 definition nodes through the real writer.",
+							"shippedConfig": false,
+							"caveat": "NOT the shipped configuration — this probe also reverted GAP 7. Reds obtained here do not prove behavior of the code as shipped. This is the exact defect the second adversarial review found in N1; superseded for the GAP 1 assertions by vr_probeC.log."
+						},
+						{
+							"probeLog": "vr_probeC.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION (round 3): neutralised ONLY the applyDerivedTier undeclared-name refusal. The probe build script ASSERTED that GAP 7's clone and stageAnnotation's guard both remained intact, so it could not silently diverge from shipped.",
+							"shippedConfig": true
+						}
+					]
+				},
+				{
+					"label": "G3-A GAP1: every annotation the tier writes is DECLARED (none invisible to strip/compare)",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "vr_probeB.log",
+							"lever": "PRODUCTION MUTATION (round 2): removed BOTH undeclared-name guards (stageAnnotation and applyDerivedTier), REVERTED GAP 7's clone, and staged undeclaredDriftMarker onto all 12,909 definition nodes through the real writer.",
+							"shippedConfig": false,
+							"caveat": "NOT the shipped configuration — this probe also reverted GAP 7. Reds obtained here do not prove behavior of the code as shipped. This is the exact defect the second adversarial review found in N1; superseded for the GAP 1 assertions by vr_probeC.log."
+						}
+					]
+				},
+				{
+					"label": "G3-A GAP7: applyDerivedTier does NOT mutate the caller's nodes",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "vr_probeB.log",
+							"lever": "PRODUCTION MUTATION (round 2): removed BOTH undeclared-name guards (stageAnnotation and applyDerivedTier), REVERTED GAP 7's clone, and staged undeclaredDriftMarker onto all 12,909 definition nodes through the real writer.",
+							"shippedConfig": false,
+							"caveat": "NOT the shipped configuration — this probe also reverted GAP 7. Reds obtained here do not prove behavior of the code as shipped. This is the exact defect the second adversarial review found in N1; superseded for the GAP 1 assertions by vr_probeC.log."
+						}
+					]
+				},
+				{
+					"label": "G3-A GAP7: the annotations DO land on the returned graph (the clone is not a no-op)",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "vr_probeD.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION (round 3): applyDerivedTier still computes the annotated clone but RETURNS the caller's originals — the \"clone became a no-op\" defect.",
+							"shippedConfig": true
+						}
+					]
+				},
+				{
+					"label": "G3-A RED: a contaminated derived property is detected by the compare",
+					"status": "genuineGap",
+					"species": "selfDemonstratingRedCheck",
+					"note": "This assertion's content IS a red demonstration — it asserts a lever produced a detectable failure. Observing IT fail requires breaking the detector it guards, which no probe has done. Counted in bucket (b) deliberately rather than waved through."
+				},
+				{
+					"label": "G3-A regenerated derived tier IDENTICAL to the emitted one",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "vr_probeD.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION (round 3): applyDerivedTier still computes the annotated clone but RETURNS the caller's originals — the \"clone became a no-op\" defect.",
+							"shippedConfig": true
+						}
+					]
+				},
+				{
+					"label": "G3-A regeneration ran without refusal",
+					"status": "genuineGap",
+					"species": "predecessorClaimNotAdmissible",
+					"note": "The suite header CLAIMS \"Every gate demonstrates RED first\", but its author is the agent whose G3-F gate passed for the wrong reason and whose G3-D/G3-F RED levers were broken. That author's unwitnessed claim is not admissible evidence, so this is triaged as a GENUINE gap rather than a records gap. Several of these DO have a \"RED (demonstrated)\" evidence line in vr_baseline_derived.log showing the LEVER fired — that is partial, and is not the assertion being observed to fail."
+				},
+				{
+					"label": "G3-B RED: the wrong artifact's prefix table produces a different target",
+					"status": "genuineGap",
+					"species": "selfDemonstratingRedCheck",
+					"note": "This assertion's content IS a red demonstration — it asserts a lever produced a detectable failure. Observing IT fail requires breaking the detector it guards, which no probe has done. Counted in bucket (b) deliberately rather than waved through."
+				},
+				{
+					"label": "G3-B Student resolves to AcademicRecord v1.13.0 StudentType (exact stableId)",
+					"status": "genuineGap",
+					"species": "predecessorClaimNotAdmissible",
+					"note": "The suite header CLAIMS \"Every gate demonstrates RED first\", but its author is the agent whose G3-F gate passed for the wrong reason and whose G3-D/G3-F RED levers were broken. That author's unwitnessed claim is not admissible evidence, so this is triaged as a GENUINE gap rather than a records gap. Several of these DO have a \"RED (demonstrated)\" evidence line in vr_baseline_derived.log showing the LEVER fired — that is partial, and is not the assertion being observed to fail."
+				},
+				{
+					"label": "G3-B exactly one Student RESOLVES_TO edge from the CT 1.8 root subtree",
+					"status": "genuineGap",
+					"species": "predecessorClaimNotAdmissible",
+					"note": "The suite header CLAIMS \"Every gate demonstrates RED first\", but its author is the agent whose G3-F gate passed for the wrong reason and whose G3-D/G3-F RED levers were broken. That author's unwitnessed claim is not admissible evidence, so this is triaged as a GENUINE gap rather than a records gap. Several of these DO have a \"RED (demonstrated)\" evidence line in vr_baseline_derived.log showing the LEVER fired — that is partial, and is not the assertion being observed to fail."
+				},
+				{
+					"label": "G3-B the edge carries the written form verbatim",
+					"status": "genuineGap",
+					"species": "predecessorClaimNotAdmissible",
+					"note": "The suite header CLAIMS \"Every gate demonstrates RED first\", but its author is the agent whose G3-F gate passed for the wrong reason and whose G3-D/G3-F RED levers were broken. That author's unwitnessed claim is not admissible evidence, so this is triaged as a GENUINE gap rather than a records gap. Several of these DO have a \"RED (demonstrated)\" evidence line in vr_baseline_derived.log showing the LEVER fired — that is partial, and is not the assertion being observed to fail."
+				},
+				{
+					"label": "G3-C AccreditationTypeType chains within its unchanged runs (8 edges, break at its one change)",
+					"status": "genuineGap",
+					"species": "predecessorClaimNotAdmissible",
+					"note": "The suite header CLAIMS \"Every gate demonstrates RED first\", but its author is the agent whose G3-F gate passed for the wrong reason and whose G3-D/G3-F RED levers were broken. That author's unwitnessed claim is not admissible evidence, so this is triaged as a GENUINE gap rather than a records gap. Several of these DO have a \"RED (demonstrated)\" evidence line in vr_baseline_derived.log showing the LEVER fired — that is partial, and is not the assertion being observed to fail."
+				},
+				{
+					"label": "G3-C ApplicationFeeAmountType among the strict-changed",
+					"status": "genuineGap",
+					"species": "predecessorClaimNotAdmissible",
+					"note": "The suite header CLAIMS \"Every gate demonstrates RED first\", but its author is the agent whose G3-F gate passed for the wrong reason and whose G3-D/G3-F RED levers were broken. That author's unwitnessed claim is not admissible evidence, so this is triaged as a GENUINE gap rather than a records gap. Several of these DO have a \"RED (demonstrated)\" evidence line in vr_baseline_derived.log showing the LEVER fired — that is partial, and is not the assertion being observed to fail."
+				},
+				{
+					"label": "G3-C ApplicationFeeAmountType has NO chain edge across the boundary",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "vr_probeE.log",
+							"lever": "EXPECTATION PERTURBATION (round 3): inverted the ApplicationFeeAmountType definitionName comparison and the cross-family expected count, after both expressions were rewritten.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "G3-C ClassRankType appears in all 14 CoreMain versions",
+					"status": "genuineGap",
+					"species": "predecessorClaimNotAdmissible",
+					"note": "The suite header CLAIMS \"Every gate demonstrates RED first\", but its author is the agent whose G3-F gate passed for the wrong reason and whose G3-D/G3-F RED levers were broken. That author's unwitnessed claim is not admissible evidence, so this is triaged as a GENUINE gap rather than a records gap. Several of these DO have a \"RED (demonstrated)\" evidence line in vr_baseline_derived.log showing the LEVER fired — that is partial, and is not the assertion being observed to fail."
+				},
+				{
+					"label": "G3-C ClassRankType chains across every version (13 edges, one cluster)",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "vr_baseline_derived.log",
+							"lever": "INHERITED BASELINE. The dead predecessor's uncommitted tree, run unmodified before any repair. The FAILs here are the four real defects as found.",
+							"shippedConfig": true
+						}
+					]
+				},
+				{
+					"label": "G3-C ClassRankType cluster representative is the NEWEST member",
+					"status": "genuineGap",
+					"species": "predecessorClaimNotAdmissible",
+					"note": "The suite header CLAIMS \"Every gate demonstrates RED first\", but its author is the agent whose G3-F gate passed for the wrong reason and whose G3-D/G3-F RED levers were broken. That author's unwitnessed claim is not admissible evidence, so this is triaged as a GENUINE gap rather than a records gap. Several of these DO have a \"RED (demonstrated)\" evidence line in vr_baseline_derived.log showing the LEVER fired — that is partial, and is not the assertion being observed to fail."
+				},
+				{
+					"label": "G3-C ClassRankType topology is a CHAIN not a clique (D-7: max out-degree 1)",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "vr_redProbe_derived.log",
+							"lever": "EXPECTATION PERTURBATION (round 1): inverted the ClassRankType out-degree and D-4 constants, the G3-D RED-1 planted-edge count, and the G3-F control/shape-attribution conditions.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "G3-C D-4: AdmissionsRecord ClassRankType chains inside its OWN family (5 members, 4 edges)",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "vr_redProbe_derived.log",
+							"lever": "EXPECTATION PERTURBATION (round 1): inverted the ClassRankType out-degree and D-4 constants, the G3-D RED-1 planted-edge count, and the G3-F control/shape-attribution conditions.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "G3-C D-4: ZERO SAME_DEFINITION edges join the CoreMain and AdmissionsRecord ClassRankTypes",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "vr_redProbe_derived.log",
+							"lever": "EXPECTATION PERTURBATION (round 1): inverted the ClassRankType out-degree and D-4 constants, the G3-D RED-1 planted-edge count, and the G3-F control/shape-attribution conditions.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "G3-C D-4: the two same-named clusters are DISJOINT",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "vr_redProbe_derived.log",
+							"lever": "EXPECTATION PERTURBATION (round 1): inverted the ClassRankType out-degree and D-4 constants, the G3-D RED-1 planted-edge count, and the G3-F control/shape-attribution conditions.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "G3-C GAP3/R-P3-2: EVERY SAME_DEFINITION edge carries the full declared property contract",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "vr_probeA.log",
+							"lever": "EXPECTATION PERTURBATION (round 2): perturbed the GAP 2 accounting, GAP 3 global-topology, GAP 4 root/reachability and GAP 6 presence constants.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "G3-C GAP3: D-4 GLOBALLY — ZERO edges cross a library family boundary",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "vr_probeA.log",
+							"lever": "EXPECTATION PERTURBATION (round 2): perturbed the GAP 2 accounting, GAP 3 global-topology, GAP 4 root/reachability and GAP 6 presence constants.",
+							"shippedConfig": false
+						},
+						{
+							"probeLog": "vr_probeE.log",
+							"lever": "EXPECTATION PERTURBATION (round 3): inverted the ApplicationFeeAmountType definitionName comparison and the cross-family expected count, after both expressions were rewritten.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "G3-C GAP3: D-7 GLOBALLY — every hop strictly ASCENDS in version order",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "vr_probeA.log",
+							"lever": "EXPECTATION PERTURBATION (round 2): perturbed the GAP 2 accounting, GAP 3 global-topology, GAP 4 root/reachability and GAP 6 presence constants.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "G3-C GAP3: D-7 chain GLOBALLY — max in-degree 1 (no member is two versions' successor)",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "vr_probeA.log",
+							"lever": "EXPECTATION PERTURBATION (round 2): perturbed the GAP 2 accounting, GAP 3 global-topology, GAP 4 root/reachability and GAP 6 presence constants.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "G3-C GAP3: D-7 chain GLOBALLY — max out-degree 1 across all 10,400 edges",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "vr_probeA.log",
+							"lever": "EXPECTATION PERTURBATION (round 2): perturbed the GAP 2 accounting, GAP 3 global-topology, GAP 4 root/reachability and GAP 6 presence constants.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "G3-C GAP3: ZERO duplicate (from,to) pairs across the whole graph",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "vr_probeA.log",
+							"lever": "EXPECTATION PERTURBATION (round 2): perturbed the GAP 2 accounting, GAP 3 global-topology, GAP 4 root/reachability and GAP 6 presence constants.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "G3-C GAP3: the global measurement covered all 10,400 edges",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "vr_probeA.log",
+							"lever": "EXPECTATION PERTURBATION (round 2): perturbed the GAP 2 accounting, GAP 3 global-topology, GAP 4 root/reachability and GAP 6 presence constants.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "G3-C GAP6: familyKey and definitionName are PRESENT on every edge these filters read",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "vr_probeA.log",
+							"lever": "EXPECTATION PERTURBATION (round 2): perturbed the GAP 2 accounting, GAP 3 global-topology, GAP 4 root/reachability and GAP 6 presence constants.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "G3-C RED: a facet-blind comparison wrongly chains ApplicationFeeAmountType",
+					"status": "genuineGap",
+					"species": "selfDemonstratingRedCheck",
+					"note": "This assertion's content IS a red demonstration — it asserts a lever produced a detectable failure. Observing IT fail requires breaking the detector it guards, which no probe has done. Counted in bucket (b) deliberately rather than waved through."
+				},
+				{
+					"label": "G3-C documentation participation is load-bearing family-wide (flips > 0)",
+					"status": "genuineGap",
+					"species": "predecessorClaimNotAdmissible",
+					"note": "The suite header CLAIMS \"Every gate demonstrates RED first\", but its author is the agent whose G3-F gate passed for the wrong reason and whose G3-D/G3-F RED levers were broken. That author's unwitnessed claim is not admissible evidence, so this is triaged as a GENUINE gap rather than a records gap. Several of these DO have a \"RED (demonstrated)\" evidence line in vr_baseline_derived.log showing the LEVER fired — that is partial, and is not the assertion being observed to fail."
+				},
+				{
+					"label": "G3-C exactly 846 SAME_DEFINITION edges cross the 1.19.0->1.19.1 boundary",
+					"status": "genuineGap",
+					"species": "predecessorClaimNotAdmissible",
+					"note": "The suite header CLAIMS \"Every gate demonstrates RED first\", but its author is the agent whose G3-F gate passed for the wrong reason and whose G3-D/G3-F RED levers were broken. That author's unwitnessed claim is not admissible evidence, so this is triaged as a GENUINE gap rather than a records gap. Several of these DO have a \"RED (demonstrated)\" evidence line in vr_baseline_derived.log showing the LEVER fired — that is partial, and is not the assertion being observed to fail."
+				},
+				{
+					"label": "G3-C name census matches Phase 0: 896 names in each, all shared",
+					"status": "genuineGap",
+					"species": "predecessorClaimNotAdmissible",
+					"note": "The suite header CLAIMS \"Every gate demonstrates RED first\", but its author is the agent whose G3-F gate passed for the wrong reason and whose G3-D/G3-F RED levers were broken. That author's unwitnessed claim is not admissible evidence, so this is triaged as a GENUINE gap rather than a records gap. Several of these DO have a \"RED (demonstrated)\" evidence line in vr_baseline_derived.log showing the LEVER fired — that is partial, and is not the assertion being observed to fail."
+				},
+				{
+					"label": "G3-C strict comparison reproduces Phase 0: 50 changed",
+					"status": "genuineGap",
+					"species": "predecessorClaimNotAdmissible",
+					"note": "The suite header CLAIMS \"Every gate demonstrates RED first\", but its author is the agent whose G3-F gate passed for the wrong reason and whose G3-D/G3-F RED levers were broken. That author's unwitnessed claim is not admissible evidence, so this is triaged as a GENUINE gap rather than a records gap. Several of these DO have a \"RED (demonstrated)\" evidence line in vr_baseline_derived.log showing the LEVER fired — that is partial, and is not the assertion being observed to fail."
+				},
+				{
+					"label": "G3-C strict comparison reproduces Phase 0: 846 stable",
+					"status": "genuineGap",
+					"species": "predecessorClaimNotAdmissible",
+					"note": "The suite header CLAIMS \"Every gate demonstrates RED first\", but its author is the agent whose G3-F gate passed for the wrong reason and whose G3-D/G3-F RED levers were broken. That author's unwitnessed claim is not admissible evidence, so this is triaged as a GENUINE gap rather than a records gap. Several of these DO have a \"RED (demonstrated)\" evidence line in vr_baseline_derived.log showing the LEVER fired — that is partial, and is not the assertion being observed to fail."
+				},
+				{
+					"label": "G3-C the strict levers are live family-wide (collapseWhitespace flips > 0)",
+					"status": "genuineGap",
+					"species": "predecessorClaimNotAdmissible",
+					"note": "The suite header CLAIMS \"Every gate demonstrates RED first\", but its author is the agent whose G3-F gate passed for the wrong reason and whose G3-D/G3-F RED levers were broken. That author's unwitnessed claim is not admissible evidence, so this is triaged as a GENUINE gap rather than a records gap. Several of these DO have a \"RED (demonstrated)\" evidence line in vr_baseline_derived.log showing the LEVER fired — that is partial, and is not the assertion being observed to fail."
+				},
+				{
+					"label": "G3-D RED-1: the zero-edges checker demonstrably detects a planted edge",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "vr_redProbe_derived.log",
+							"lever": "EXPECTATION PERTURBATION (round 1): inverted the ClassRankType out-degree and D-4 constants, the G3-D RED-1 planted-edge count, and the G3-F control/shape-attribution conditions.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "G3-D RED-2: removing EITHER collision member lifts the quarantine and provokes an unresolved-reference refusal naming the namespace",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "vr_redProbe_derived.log",
+							"lever": "EXPECTATION PERTURBATION (round 1): inverted the ClassRankType out-degree and D-4 constants, the G3-D RED-1 planted-edge count, and the G3-F control/shape-attribution conditions.",
+							"shippedConfig": false
+						},
+						{
+							"probeLog": "vr_redProbe_partition.log",
+							"lever": "EXPECTATION PERTURBATION (round 1): made both G3-D removal probes name the SAME unserved reference, collapsing the partition claim.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "G3-D RED-2: the two members PARTITION the consumers' type set (each removal strands a DIFFERENT reference)",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "vr_redProbe_partition.log",
+							"lever": "EXPECTATION PERTURBATION (round 1): made both G3-D removal probes name the SAME unserved reference, collapsing the partition claim.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "G3-D ZERO RESOLVES_TO edges target a contested-namespace definition",
+					"status": "genuineGap",
+					"species": "predecessorClaimNotAdmissible",
+					"note": "The suite header CLAIMS \"Every gate demonstrates RED first\", but its author is the agent whose G3-F gate passed for the wrong reason and whose G3-D/G3-F RED levers were broken. That author's unwitnessed claim is not admissible evidence, so this is triaged as a GENUINE gap rather than a records gap. Several of these DO have a \"RED (demonstrated)\" evidence line in vr_baseline_derived.log showing the LEVER fired — that is partial, and is not the assertion being observed to fail."
+				},
+				{
+					"label": "G3-D ambiguous entries exist and all name the contested namespace",
+					"status": "genuineGap",
+					"species": "predecessorClaimNotAdmissible",
+					"note": "The suite header CLAIMS \"Every gate demonstrates RED first\", but its author is the agent whose G3-F gate passed for the wrong reason and whose G3-D/G3-F RED levers were broken. That author's unwitnessed claim is not admissible evidence, so this is triaged as a GENUINE gap rather than a records gap. Several of these DO have a \"RED (demonstrated)\" evidence line in vr_baseline_derived.log showing the LEVER fired — that is partial, and is not the assertion being observed to fail."
+				},
+				{
+					"label": "G3-D annotation entries and stats agree",
+					"status": "genuineGap",
+					"species": "predecessorClaimNotAdmissible",
+					"note": "The suite header CLAIMS \"Every gate demonstrates RED first\", but its author is the agent whose G3-F gate passed for the wrong reason and whose G3-D/G3-F RED levers were broken. That author's unwitnessed claim is not admissible evidence, so this is triaged as a GENUINE gap rather than a records gap. Several of these DO have a \"RED (demonstrated)\" evidence line in vr_baseline_derived.log showing the LEVER fired — that is partial, and is not the assertion being observed to fail."
+				},
+				{
+					"label": "G3-D every entry carries candidates for Phase 4 (none empty)",
+					"status": "genuineGap",
+					"species": "predecessorClaimNotAdmissible",
+					"note": "The suite header CLAIMS \"Every gate demonstrates RED first\", but its author is the agent whose G3-F gate passed for the wrong reason and whose G3-D/G3-F RED levers were broken. That author's unwitnessed claim is not admissible evidence, so this is triaged as a GENUINE gap rather than a records gap. Several of these DO have a \"RED (demonstrated)\" evidence line in vr_baseline_derived.log showing the LEVER fired — that is partial, and is not the assertion being observed to fail."
+				},
+				{
+					"label": "G3-D the consumer set is EXACTLY the six expected roots",
+					"status": "genuineGap",
+					"species": "predecessorClaimNotAdmissible",
+					"note": "The suite header CLAIMS \"Every gate demonstrates RED first\", but its author is the agent whose G3-F gate passed for the wrong reason and whose G3-D/G3-F RED levers were broken. That author's unwitnessed claim is not admissible evidence, so this is triaged as a GENUINE gap rather than a records gap. Several of these DO have a \"RED (demonstrated)\" evidence line in vr_baseline_derived.log showing the LEVER fired — that is partial, and is not the assertion being observed to fail."
+				},
+				{
+					"label": "G3-E CoreMain v1.19.0 is NOT latest",
+					"status": "genuineGap",
+					"species": "predecessorClaimNotAdmissible",
+					"note": "The suite header CLAIMS \"Every gate demonstrates RED first\", but its author is the agent whose G3-F gate passed for the wrong reason and whose G3-D/G3-F RED levers were broken. That author's unwitnessed claim is not admissible evidence, so this is triaged as a GENUINE gap rather than a records gap. Several of these DO have a \"RED (demonstrated)\" evidence line in vr_baseline_derived.log showing the LEVER fired — that is partial, and is not the assertion being observed to fail."
+				},
+				{
+					"label": "G3-E GAP4: production stats agree with the annotations on the nodes",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "vr_probeA.log",
+							"lever": "EXPECTATION PERTURBATION (round 2): perturbed the GAP 2 accounting, GAP 3 global-topology, GAP 4 root/reachability and GAP 6 presence constants.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "G3-E GAP4: reachableFromLatestRoot is EXACTLY 2,282 of 12,909 definitions",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "vr_probeA.log",
+							"lever": "EXPECTATION PERTURBATION (round 2): perturbed the GAP 2 accounting, GAP 3 global-topology, GAP 4 root/reachability and GAP 6 presence constants.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "G3-E GAP4: the harness derives the SAME message-root set production used (12 roots)",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "vr_probeA.log",
+							"lever": "EXPECTATION PERTURBATION (round 2): perturbed the GAP 2 accounting, GAP 3 global-topology, GAP 4 root/reachability and GAP 6 presence constants.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "G3-E RED: the independent BFS comparison demonstrably able to go red",
+					"status": "genuineGap",
+					"species": "selfDemonstratingRedCheck",
+					"note": "This assertion's content IS a red demonstration — it asserts a lever produced a detectable failure. Observing IT fail requires breaking the detector it guards, which no probe has done. Counted in bucket (b) deliberately rather than waved through."
+				},
+				{
+					"label": "G3-E independent BFS reproduces the annotation set exactly",
+					"status": "genuineGap",
+					"species": "predecessorClaimNotAdmissible",
+					"note": "The suite header CLAIMS \"Every gate demonstrates RED first\", but its author is the agent whose G3-F gate passed for the wrong reason and whose G3-D/G3-F RED levers were broken. That author's unwitnessed claim is not admissible evidence, so this is triaged as a GENUINE gap rather than a records gap. Several of these DO have a \"RED (demonstrated)\" evidence line in vr_baseline_derived.log showing the LEVER fired — that is partial, and is not the assertion being observed to fail."
+				},
+				{
+					"label": "G3-E isLatest marks EXACTLY the expected sixteen namespaces",
+					"status": "genuineGap",
+					"species": "predecessorClaimNotAdmissible",
+					"note": "The suite header CLAIMS \"Every gate demonstrates RED first\", but its author is the agent whose G3-F gate passed for the wrong reason and whose G3-D/G3-F RED levers were broken. That author's unwitnessed claim is not admissible evidence, so this is triaged as a GENUINE gap rather than a records gap. Several of these DO have a \"RED (demonstrated)\" evidence line in vr_baseline_derived.log showing the LEVER fired — that is partial, and is not the assertion being observed to fail."
+				},
+				{
+					"label": "G3-E the financial-aid orphan (PerkinsType, CoreMain 1.19.1) is NOT reachable",
+					"status": "genuineGap",
+					"species": "predecessorClaimNotAdmissible",
+					"note": "The suite header CLAIMS \"Every gate demonstrates RED first\", but its author is the agent whose G3-F gate passed for the wrong reason and whose G3-D/G3-F RED levers were broken. That author's unwitnessed claim is not admissible evidence, so this is triaged as a GENUINE gap rather than a records gap. Several of these DO have a \"RED (demonstrated)\" evidence line in vr_baseline_derived.log showing the LEVER fired — that is partial, and is not the assertion being observed to fail."
+				},
+				{
+					"label": "G3-F CONTROL: the unmutated fixture provokes no refusal",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "vr_redProbe_derived.log",
+							"lever": "EXPECTATION PERTURBATION (round 1): inverted the ClassRankType out-degree and D-4 constants, the G3-D RED-1 planted-edge count, and the G3-F control/shape-attribution conditions.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "G3-F a drifted shape is REFUSED",
+					"status": "genuineGap",
+					"species": "predecessorClaimNotAdmissible",
+					"note": "The suite header CLAIMS \"Every gate demonstrates RED first\", but its author is the agent whose G3-F gate passed for the wrong reason and whose G3-D/G3-F RED levers were broken. That author's unwitnessed claim is not admissible evidence, so this is triaged as a GENUINE gap rather than a records gap. Several of these DO have a \"RED (demonstrated)\" evidence line in vr_baseline_derived.log showing the LEVER fired — that is partial, and is not the assertion being observed to fail."
+				},
+				{
+					"label": "G3-F every shape-carrying container was checked (3,079 measured)",
+					"status": "genuineGap",
+					"species": "predecessorClaimNotAdmissible",
+					"note": "The suite header CLAIMS \"Every gate demonstrates RED first\", but its author is the agent whose G3-F gate passed for the wrong reason and whose G3-D/G3-F RED levers were broken. That author's unwitnessed claim is not admissible evidence, so this is triaged as a GENUINE gap rather than a records gap. Several of these DO have a \"RED (demonstrated)\" evidence line in vr_baseline_derived.log showing the LEVER fired — that is partial, and is not the assertion being observed to fail."
+				},
+				{
+					"label": "G3-F the refusal is the SHAPE guard itself, not another guard firing first",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "vr_redProbe_derived.log",
+							"lever": "EXPECTATION PERTURBATION (round 1): inverted the ClassRankType out-degree and D-4 constants, the G3-D RED-1 planted-edge count, and the G3-F control/shape-attribution conditions.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "G3-F the refusal names R-P2-5",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "vr_baseline_derived.log",
+							"lever": "INHERITED BASELINE. The dead predecessor's uncommitted tree, run unmodified before any repair. The FAILs here are the four real defects as found.",
+							"shippedConfig": true
+						}
+					]
+				},
+				{
+					"label": "G3-F the refusal names the container",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "vr_baseline_derived.log",
+							"lever": "INHERITED BASELINE. The dead predecessor's uncommitted tree, run unmodified before any repair. The FAILs here are the four real defects as found.",
+							"shippedConfig": true
+						}
+					]
+				},
+				{
+					"label": "LEDGER carries no stale entries for assertions this suite no longer runs",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "vr_ledgerStale_red_derived.log",
+							"lever": "LEDGER STALE-ENTRY PROBE (round 4): a fabricated entry for an assertion this suite does not run was added to the ledger; the stale-entry check caught it.",
+							"shippedConfig": true
+						}
+					]
+				},
+				{
+					"label": "LEDGER every shipped assertion has a red-evidence entry",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "vr_ledgerGate_red_derived.log",
+							"lever": "LEDGER GATE SELF-DEMONSTRATION (round 4): the gate ran with its own three assertions absent from the ledger, so an assertion genuinely lacked red evidence and the gate caught it. Its own first draft had EXEMPTED itself by computing the label set before its own checks ran; that vacuity was found and fixed, and this log is the run after the fix.",
+							"shippedConfig": true
+						}
+					]
+				},
+				{
+					"label": "LEDGER the entry count matches the assertions actually run",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "vr_ledgerGate_red_derived.log",
+							"lever": "LEDGER GATE SELF-DEMONSTRATION (round 4): the gate ran with its own three assertions absent from the ledger, so an assertion genuinely lacked red evidence and the gate caught it. Its own first draft had EXEMPTED itself by computing the label set before its own checks ran; that vacuity was found and fixed, and this log is the run after the fix.",
+							"shippedConfig": true
+						},
+						{
+							"probeLog": "vr_ledgerStale_red_derived.log",
+							"lever": "LEDGER STALE-ENTRY PROBE (round 4): a fabricated entry for an assertion this suite does not run was added to the ledger; the stale-entry check caught it.",
+							"shippedConfig": true
+						}
+					]
+				}
+			]
+		},
+		"source": {
+			"suiteFile": "test/test-pesc260805SourceTier.js",
+			"shippedRunLog": "vr_ledgerGate_red_source.log",
+			"counts": {
+				"proven": 9,
+				"recordsGap": 41,
+				"genuineGap": 5
+			},
+			"assertions": [
+				{
+					"label": "G-A all 64 corpus files produced artifact nodes",
+					"status": "recordsGap",
+					"note": "UNVERIFIABLE BUT BELIEVED. DEVLOG records \"PHASE 2: CLOSED — 47/47 gates, all RED-first\", and Phase 2 was independently reviewed and committed green at b02168b. The red receipts for that run were not retained. Do NOT re-run; hand to Phase 6."
+				},
+				{
+					"label": "G-A comparator demonstrably able to go red",
+					"status": "recordsGap",
+					"note": "UNVERIFIABLE BUT BELIEVED. DEVLOG records \"PHASE 2: CLOSED — 47/47 gates, all RED-first\", and Phase 2 was independently reviewed and committed green at b02168b. The red receipts for that run were not retained. Do NOT re-run; hand to Phase 6."
+				},
+				{
+					"label": "G-A edge count nonzero",
+					"status": "recordsGap",
+					"note": "UNVERIFIABLE BUT BELIEVED. DEVLOG records \"PHASE 2: CLOSED — 47/47 gates, all RED-first\", and Phase 2 was independently reviewed and committed green at b02168b. The red receipts for that run were not retained. Do NOT re-run; hand to Phase 6."
+				},
+				{
+					"label": "G-A node count nonzero",
+					"status": "recordsGap",
+					"note": "UNVERIFIABLE BUT BELIEVED. DEVLOG records \"PHASE 2: CLOSED — 47/47 gates, all RED-first\", and Phase 2 was independently reviewed and committed green at b02168b. The red receipts for that run were not retained. Do NOT re-run; hand to Phase 6."
+				},
+				{
+					"label": "G-A stableIds unique within a run",
+					"status": "recordsGap",
+					"note": "UNVERIFIABLE BUT BELIEVED. DEVLOG records \"PHASE 2: CLOSED — 47/47 gates, all RED-first\", and Phase 2 was independently reviewed and committed green at b02168b. The red receipts for that run were not retained. Do NOT re-run; hand to Phase 6."
+				},
+				{
+					"label": "G-A two runs produce identical stableId sets",
+					"status": "recordsGap",
+					"note": "UNVERIFIABLE BUT BELIEVED. DEVLOG records \"PHASE 2: CLOSED — 47/47 gates, all RED-first\", and Phase 2 was independently reviewed and committed green at b02168b. The red receipts for that run were not retained. Do NOT re-run; hand to Phase 6."
+				},
+				{
+					"label": "G-B CoreMain 1.10.0 and 1.19.1 PersonType are distinct nodes",
+					"status": "recordsGap",
+					"note": "UNVERIFIABLE BUT BELIEVED. DEVLOG records \"PHASE 2: CLOSED — 47/47 gates, all RED-first\", and Phase 2 was independently reviewed and committed green at b02168b. The red receipts for that run were not retained. Do NOT re-run; hand to Phase 6."
+				},
+				{
+					"label": "G-B RED: bare keying WOULD fuse the three TransmissionDataTypes",
+					"status": "genuineGap",
+					"species": "selfDemonstratingRedCheck",
+					"note": "This assertion's content IS a red demonstration — it asserts a lever produced a detectable failure. Observing IT fail requires breaking the detector it guards, which no probe has done. Counted in bucket (b) deliberately rather than waved through."
+				},
+				{
+					"label": "G-B RED: bare keying WOULD fuse the two PersonTypes",
+					"status": "genuineGap",
+					"species": "selfDemonstratingRedCheck",
+					"note": "This assertion's content IS a red demonstration — it asserts a lever produced a detectable failure. Observing IT fail requires breaking the detector it guards, which no probe has done. Counted in bucket (b) deliberately rather than waved through."
+				},
+				{
+					"label": "G-B three TransmissionDataType definitions are three distinct nodes",
+					"status": "recordsGap",
+					"note": "UNVERIFIABLE BUT BELIEVED. DEVLOG records \"PHASE 2: CLOSED — 47/47 gates, all RED-first\", and Phase 2 was independently reviewed and committed green at b02168b. The red receipts for that run were not retained. Do NOT re-run; hand to Phase 6."
+				},
+				{
+					"label": "G-C RED: without @sha12 the two collision members WOULD fuse definitions",
+					"status": "genuineGap",
+					"species": "selfDemonstratingRedCheck",
+					"note": "This assertion's content IS a red demonstration — it asserts a lever produced a detectable failure. Observing IT fail requires breaking the detector it guards, which no probe has done. Counted in bucket (b) deliberately rather than waved through."
+				},
+				{
+					"label": "G-C contested-namespace definitions exist",
+					"status": "recordsGap",
+					"note": "UNVERIFIABLE BUT BELIEVED. DEVLOG records \"PHASE 2: CLOSED — 47/47 gates, all RED-first\", and Phase 2 was independently reviewed and committed green at b02168b. The red receipts for that run were not retained. Do NOT re-run; hand to Phase 6."
+				},
+				{
+					"label": "G-C every contested definition key carries @sha12",
+					"status": "recordsGap",
+					"note": "UNVERIFIABLE BUT BELIEVED. DEVLOG records \"PHASE 2: CLOSED — 47/47 gates, all RED-first\", and Phase 2 was independently reviewed and committed green at b02168b. The red receipts for that run were not retained. Do NOT re-run; hand to Phase 6."
+				},
+				{
+					"label": "G-C no plain-keyed definition exists in the contested namespace",
+					"status": "recordsGap",
+					"note": "UNVERIFIABLE BUT BELIEVED. DEVLOG records \"PHASE 2: CLOSED — 47/47 gates, all RED-first\", and Phase 2 was independently reviewed and committed green at b02168b. The red receipts for that run were not retained. Do NOT re-run; hand to Phase 6."
+				},
+				{
+					"label": "G-C the two collision artifacts produce two disjoint definition sets",
+					"status": "recordsGap",
+					"note": "UNVERIFIABLE BUT BELIEVED. DEVLOG records \"PHASE 2: CLOSED — 47/47 gates, all RED-first\", and Phase 2 was independently reviewed and committed green at b02168b. The red receipts for that run were not retained. Do NOT re-run; hand to Phase 6."
+				},
+				{
+					"label": "G-C uncontested namespaces carry NO discriminator",
+					"status": "recordsGap",
+					"note": "UNVERIFIABLE BUT BELIEVED. DEVLOG records \"PHASE 2: CLOSED — 47/47 gates, all RED-first\", and Phase 2 was independently reviewed and committed green at b02168b. The red receipts for that run were not retained. Do NOT re-run; hand to Phase 6."
+				},
+				{
+					"label": "G-D message->message import refused",
+					"status": "recordsGap",
+					"note": "UNVERIFIABLE BUT BELIEVED. DEVLOG records \"PHASE 2: CLOSED — 47/47 gates, all RED-first\", and Phase 2 was independently reviewed and committed green at b02168b. The red receipts for that run were not retained. Do NOT re-run; hand to Phase 6."
+				},
+				{
+					"label": "G-D refusal names both namespaces",
+					"status": "recordsGap",
+					"note": "UNVERIFIABLE BUT BELIEVED. DEVLOG records \"PHASE 2: CLOSED — 47/47 gates, all RED-first\", and Phase 2 was independently reviewed and committed green at b02168b. The red receipts for that run were not retained. Do NOT re-run; hand to Phase 6."
+				},
+				{
+					"label": "G-D refusal names the file",
+					"status": "recordsGap",
+					"note": "UNVERIFIABLE BUT BELIEVED. DEVLOG records \"PHASE 2: CLOSED — 47/47 gates, all RED-first\", and Phase 2 was independently reviewed and committed green at b02168b. The red receipts for that run were not retained. Do NOT re-run; hand to Phase 6."
+				},
+				{
+					"label": "G-D refusal names the prefix",
+					"status": "recordsGap",
+					"note": "UNVERIFIABLE BUT BELIEVED. DEVLOG records \"PHASE 2: CLOSED — 47/47 gates, all RED-first\", and Phase 2 was independently reviewed and committed green at b02168b. The red receipts for that run were not retained. Do NOT re-run; hand to Phase 6."
+				},
+				{
+					"label": "G-D unbound prefix refused",
+					"status": "recordsGap",
+					"note": "UNVERIFIABLE BUT BELIEVED. DEVLOG records \"PHASE 2: CLOSED — 47/47 gates, all RED-first\", and Phase 2 was independently reviewed and committed green at b02168b. The red receipts for that run were not retained. Do NOT re-run; hand to Phase 6."
+				},
+				{
+					"label": "G-E 1.19.0 carries fractionDigits 2",
+					"status": "recordsGap",
+					"note": "UNVERIFIABLE BUT BELIEVED. DEVLOG records \"PHASE 2: CLOSED — 47/47 gates, all RED-first\", and Phase 2 was independently reviewed and committed green at b02168b. The red receipts for that run were not retained. Do NOT re-run; hand to Phase 6."
+				},
+				{
+					"label": "G-E 1.19.0 carries totalDigits 12",
+					"status": "recordsGap",
+					"note": "UNVERIFIABLE BUT BELIEVED. DEVLOG records \"PHASE 2: CLOSED — 47/47 gates, all RED-first\", and Phase 2 was independently reviewed and committed green at b02168b. The red receipts for that run were not retained. Do NOT re-run; hand to Phase 6."
+				},
+				{
+					"label": "G-E 1.19.0 restriction node exists",
+					"status": "recordsGap",
+					"note": "UNVERIFIABLE BUT BELIEVED. DEVLOG records \"PHASE 2: CLOSED — 47/47 gates, all RED-first\", and Phase 2 was independently reviewed and committed green at b02168b. The red receipts for that run were not retained. Do NOT re-run; hand to Phase 6."
+				},
+				{
+					"label": "G-E 1.19.1 facets ABSENT",
+					"status": "recordsGap",
+					"note": "UNVERIFIABLE BUT BELIEVED. DEVLOG records \"PHASE 2: CLOSED — 47/47 gates, all RED-first\", and Phase 2 was independently reviewed and committed green at b02168b. The red receipts for that run were not retained. Do NOT re-run; hand to Phase 6."
+				},
+				{
+					"label": "G-E 1.19.1 restriction node exists",
+					"status": "recordsGap",
+					"note": "UNVERIFIABLE BUT BELIEVED. DEVLOG records \"PHASE 2: CLOSED — 47/47 gates, all RED-first\", and Phase 2 was independently reviewed and committed green at b02168b. The red receipts for that run were not retained. Do NOT re-run; hand to Phase 6."
+				},
+				{
+					"label": "G-E RED: the facet assertion demonstrably fails where facets are absent",
+					"status": "genuineGap",
+					"species": "selfDemonstratingRedCheck",
+					"note": "This assertion's content IS a red demonstration — it asserts a lever produced a detectable failure. Observing IT fail requires breaking the detector it guards, which no probe has done. Counted in bucket (b) deliberately rather than waved through."
+				},
+				{
+					"label": "G-E both share the written base",
+					"status": "recordsGap",
+					"note": "UNVERIFIABLE BUT BELIEVED. DEVLOG records \"PHASE 2: CLOSED — 47/47 gates, all RED-first\", and Phase 2 was independently reviewed and committed green at b02168b. The red receipts for that run were not retained. Do NOT re-run; hand to Phase 6."
+				},
+				{
+					"label": "G-F RED: whitespace collapse is detectable by the byte comparison",
+					"status": "genuineGap",
+					"species": "selfDemonstratingRedCheck",
+					"note": "This assertion's content IS a red demonstration — it asserts a lever produced a detectable failure. Observing IT fail requires breaking the detector it guards, which no probe has done. Counted in bucket (b) deliberately rather than waved through."
+				},
+				{
+					"label": "G-F a multi-line documentation specimen exists in the raw source",
+					"status": "recordsGap",
+					"note": "UNVERIFIABLE BUT BELIEVED. DEVLOG records \"PHASE 2: CLOSED — 47/47 gates, all RED-first\", and Phase 2 was independently reviewed and committed green at b02168b. The red receipts for that run were not retained. Do NOT re-run; hand to Phase 6."
+				},
+				{
+					"label": "G-F specimen is byte-identical on an emitted node",
+					"status": "recordsGap",
+					"note": "UNVERIFIABLE BUT BELIEVED. DEVLOG records \"PHASE 2: CLOSED — 47/47 gates, all RED-first\", and Phase 2 was independently reviewed and committed green at b02168b. The red receipts for that run were not retained. Do NOT re-run; hand to Phase 6."
+				},
+				{
+					"label": "INTEGRATION [parserDescriptor] section is visible to the ini reader",
+					"status": "recordsGap",
+					"note": "UNVERIFIABLE BUT BELIEVED. DEVLOG records \"PHASE 2: CLOSED — 47/47 gates, all RED-first\", and Phase 2 was independently reviewed and committed green at b02168b. The red receipts for that run were not retained. Do NOT re-run; hand to Phase 6."
+				},
+				{
+					"label": "INTEGRATION defaultSnapshot resolves to exactly the 01 directory",
+					"status": "recordsGap",
+					"note": "UNVERIFIABLE BUT BELIEVED. DEVLOG records \"PHASE 2: CLOSED — 47/47 gates, all RED-first\", and Phase 2 was independently reviewed and committed green at b02168b. The red receipts for that run were not retained. Do NOT re-run; hand to Phase 6."
+				},
+				{
+					"label": "INTEGRATION derived tier is EXACTLY 63 nodes (the namespaces)",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "vr_redProbe_source.log",
+							"lever": "EXPECTATION PERTURBATION (round 1): dropped 'meta' from PESC_TIER_VALUES and perturbed the source/derived/synthetic count constants.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "INTEGRATION embedCallCount is 0 with skipEmbedding",
+					"status": "recordsGap",
+					"note": "UNVERIFIABLE BUT BELIEVED. DEVLOG records \"PHASE 2: CLOSED — 47/47 gates, all RED-first\", and Phase 2 was independently reviewed and committed green at b02168b. The red receipts for that run were not retained. Do NOT re-run; hand to Phase 6."
+				},
+				{
+					"label": "INTEGRATION entryModule declared",
+					"status": "recordsGap",
+					"note": "UNVERIFIABLE BUT BELIEVED. DEVLOG records \"PHASE 2: CLOSED — 47/47 gates, all RED-first\", and Phase 2 was independently reviewed and committed green at b02168b. The red receipts for that run were not retained. Do NOT re-run; hand to Phase 6."
+				},
+				{
+					"label": "INTEGRATION every edge carries provenanceTier structural + pescTier",
+					"status": "recordsGap",
+					"note": "UNVERIFIABLE BUT BELIEVED. DEVLOG records \"PHASE 2: CLOSED — 47/47 gates, all RED-first\", and Phase 2 was independently reviewed and committed green at b02168b. The red receipts for that run were not retained. Do NOT re-run; hand to Phase 6."
+				},
+				{
+					"label": "INTEGRATION every node carries a ratified pescTier (source|derived|synthetic|meta, R-P2-1)",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "vr_redProbe_source.log",
+							"lever": "EXPECTATION PERTURBATION (round 1): dropped 'meta' from PESC_TIER_VALUES and perturbed the source/derived/synthetic count constants.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "INTEGRATION every node has stableId, ForgedNode label, non-empty searchText",
+					"status": "recordsGap",
+					"note": "UNVERIFIABLE BUT BELIEVED. DEVLOG records \"PHASE 2: CLOSED — 47/47 gates, all RED-first\", and Phase 2 was independently reviewed and committed green at b02168b. The red receipts for that run were not retained. Do NOT re-run; hand to Phase 6."
+				},
+				{
+					"label": "INTEGRATION forge returns nodes[] and edges[]",
+					"status": "recordsGap",
+					"note": "UNVERIFIABLE BUT BELIEVED. DEVLOG records \"PHASE 2: CLOSED — 47/47 gates, all RED-first\", and Phase 2 was independently reviewed and committed green at b02168b. The red receipts for that run were not retained. Do NOT re-run; hand to Phase 6."
+				},
+				{
+					"label": "INTEGRATION meta tier is EXACTLY 1 node (the standard root, R-P2-1)",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "vr_redProbe_source.log",
+							"lever": "EXPECTATION PERTURBATION (round 1): dropped 'meta' from PESC_TIER_VALUES and perturbed the source/derived/synthetic count constants.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "INTEGRATION metadata.version non-blank",
+					"status": "recordsGap",
+					"note": "UNVERIFIABLE BUT BELIEVED. DEVLOG records \"PHASE 2: CLOSED — 47/47 gates, all RED-first\", and Phase 2 was independently reviewed and committed green at b02168b. The red receipts for that run were not retained. Do NOT re-run; hand to Phase 6."
+				},
+				{
+					"label": "INTEGRATION roundTripValidator NOT declared yet (declared-and-broken = refusal)",
+					"status": "recordsGap",
+					"note": "UNVERIFIABLE BUT BELIEVED. DEVLOG records \"PHASE 2: CLOSED — 47/47 gates, all RED-first\", and Phase 2 was independently reviewed and committed green at b02168b. The red receipts for that run were not retained. Do NOT re-run; hand to Phase 6."
+				},
+				{
+					"label": "INTEGRATION shapeForgedGraph accepts the output (no error)",
+					"status": "recordsGap",
+					"note": "UNVERIFIABLE BUT BELIEVED. DEVLOG records \"PHASE 2: CLOSED — 47/47 gates, all RED-first\", and Phase 2 was independently reviewed and committed green at b02168b. The red receipts for that run were not retained. Do NOT re-run; hand to Phase 6."
+				},
+				{
+					"label": "INTEGRATION shaped edges carry provenanceTier (PG-JSON array form)",
+					"status": "recordsGap",
+					"note": "UNVERIFIABLE BUT BELIEVED. DEVLOG records \"PHASE 2: CLOSED — 47/47 gates, all RED-first\", and Phase 2 was independently reviewed and committed green at b02168b. The red receipts for that run were not retained. Do NOT re-run; hand to Phase 6."
+				},
+				{
+					"label": "INTEGRATION shaped embeddingDims null (nothing embedded)",
+					"status": "recordsGap",
+					"note": "UNVERIFIABLE BUT BELIEVED. DEVLOG records \"PHASE 2: CLOSED — 47/47 gates, all RED-first\", and Phase 2 was independently reviewed and committed green at b02168b. The red receipts for that run were not retained. Do NOT re-run; hand to Phase 6."
+				},
+				{
+					"label": "INTEGRATION shaped nodes carry ref{source,id} resolving the stableId",
+					"status": "recordsGap",
+					"note": "UNVERIFIABLE BUT BELIEVED. DEVLOG records \"PHASE 2: CLOSED — 47/47 gates, all RED-first\", and Phase 2 was independently reviewed and committed green at b02168b. The red receipts for that run were not retained. Do NOT re-run; hand to Phase 6."
+				},
+				{
+					"label": "INTEGRATION source tier is EXACTLY 41,676 nodes",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "vr_redProbe_source.log",
+							"lever": "EXPECTATION PERTURBATION (round 1): dropped 'meta' from PESC_TIER_VALUES and perturbed the source/derived/synthetic count constants.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "INTEGRATION standardKey + stableUriPropertyName returned",
+					"status": "recordsGap",
+					"note": "UNVERIFIABLE BUT BELIEVED. DEVLOG records \"PHASE 2: CLOSED — 47/47 gates, all RED-first\", and Phase 2 was independently reviewed and committed green at b02168b. The red receipts for that run were not retained. Do NOT re-run; hand to Phase 6."
+				},
+				{
+					"label": "INTEGRATION standardName is PESC260805 (D-6)",
+					"status": "recordsGap",
+					"note": "UNVERIFIABLE BUT BELIEVED. DEVLOG records \"PHASE 2: CLOSED — 47/47 gates, all RED-first\", and Phase 2 was independently reviewed and committed green at b02168b. The red receipts for that run were not retained. Do NOT re-run; hand to Phase 6."
+				},
+				{
+					"label": "INTEGRATION synthetic tier is EMPTY until Phase 4 emits it",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "vr_redProbe_source.log",
+							"lever": "EXPECTATION PERTURBATION (round 1): dropped 'meta' from PESC_TIER_VALUES and perturbed the source/derived/synthetic count constants.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "INTEGRATION the four tiers account for every emitted node",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "vr_redProbe_source.log",
+							"lever": "EXPECTATION PERTURBATION (round 1): dropped 'meta' from PESC_TIER_VALUES and perturbed the source/derived/synthetic count constants.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "LEDGER carries no stale entries for assertions this suite no longer runs",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "vr_ledgerStale_red_source.log",
+							"lever": "LEDGER STALE-ENTRY PROBE (round 4): as the derived twin — a fabricated ledger entry for an assertion this suite does not run was caught.",
+							"shippedConfig": true
+						}
+					]
+				},
+				{
+					"label": "LEDGER every shipped assertion has a red-evidence entry",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "vr_ledgerGate_red_source.log",
+							"lever": "LEDGER GATE SELF-DEMONSTRATION (round 4): as the derived twin — the gate ran with its own three assertions unledgered and caught them.",
+							"shippedConfig": true
+						}
+					]
+				},
+				{
+					"label": "LEDGER the entry count matches the assertions actually run",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "vr_ledgerGate_red_source.log",
+							"lever": "LEDGER GATE SELF-DEMONSTRATION (round 4): as the derived twin — the gate ran with its own three assertions unledgered and caught them.",
+							"shippedConfig": true
+						},
+						{
+							"probeLog": "vr_ledgerStale_red_source.log",
+							"lever": "LEDGER STALE-ENTRY PROBE (round 4): as the derived twin — a fabricated ledger entry for an assertion this suite does not run was caught.",
+							"shippedConfig": true
+						}
+					]
+				}
+			]
+		}
+	}
+}

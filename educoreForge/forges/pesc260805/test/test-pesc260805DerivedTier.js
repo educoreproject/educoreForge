@@ -56,7 +56,12 @@ const {
 
 let pass = 0;
 let fail = 0;
+// every label check() is called with, in run order — the LEDGER gate at the foot of this file
+// reconciles this list against test/redEvidenceLedger.json so a new assertion cannot arrive
+// without red evidence recorded for it.
+const shippedAssertionLabels = [];
 const check = (label, condition) => {
+	shippedAssertionLabels.push(label);
 	if (condition) {
 		pass++;
 		console.log(`  ok    ${label}`);
@@ -100,13 +105,18 @@ const stripDerived = (forged) => {
 
 // assertPristineSourceGraph — the HARNESS's own purity contract, enforced rather than assumed.
 //
-// applyDerivedTier stamps annotations onto its input nodes IN PLACE (documented at its
-// definition: "the gate feeds clones"). G3-A fed it the harness's shared `stripped` graph and
-// then passed that same object downstream, so every later RED lever received a graph carrying
+// HISTORICAL — applyDerivedTier USED TO stamp annotations onto its input nodes in place, with a
+// comment merely asking callers to feed clones. G3-A fed it the harness's shared `stripped` graph
+// and then passed that same object downstream, so every later RED lever received a graph carrying
 // 23,233 annotated nodes. buildDerivedTier's purity guard correctly refused it — FIRST, before
 // the guard each lever was actually testing could run. That is how G3-F came to report
 // "a drifted shape is REFUSED" on the strength of a refusal about `sameDefinitionClusterId`:
 // the shape guard it names had never once been observed firing.
+//
+// AS SHIPPED, applyDerivedTier no longer mutates its input at all (GAP 7) — annotations land on
+// copies and the caller's nodes are untouched. This helper is therefore belt-and-braces rather
+// than the sole defence, and it is kept deliberately: it guards against ANY future gate handing a
+// lever a fixture that carries derived content, from whatever source.
 //
 // A RED lever must therefore prove its fixture pristine BEFORE pulling the lever. This throws
 // rather than returning a verdict: a contaminated fixture is a fault in the test, not a finding
@@ -221,10 +231,104 @@ taskList.push((args, next) => {
 	const derivedEdgeCount = args.runOne.edges.length - stripped.edges.length;
 	evidence(`deleted: ${derivedNodeCount} derived nodes, ${derivedEdgeCount} derived edges, all annotations on retained nodes`);
 
+	// GAP 1 — G3-A's demonstrated blind spot. DERIVED_ANNOTATION_PROPERTY_NAMES drives three
+	// separate mechanisms (the input purity guard, the Gate-3 strip, the regeneration compare),
+	// and an annotation staged under an UNDECLARED name is invisible to all three at once: the
+	// compare never looks at it, the strip never removes it, the purity guard never objects to
+	// the residue. The Phase 3 adversarial review stamped one onto 12,909 source nodes and this
+	// gate STAYED GREEN. Two assertions close it, on top of the two production refusals now
+	// standing in stageAnnotation and applyDerivedTier.
+	//
+	// (1) applyDerivedTier REFUSES an undeclared annotation name. Exercised against the real
+	// exported function with a hand-built derivedOutput — no test seam, no monkey-patch.
+	const undeclaredProbeGraph = stripDerived(args.runOne);
+	const undeclaredProbeTargetNode = undeclaredProbeGraph.nodes.find(
+		(oneNode) => oneNode.labels.indexOf('PescNamedDefinition') !== -1,
+	);
+	if (undeclaredProbeTargetNode === undefined) {
+		throw new Error(
+			'HARNESS FAULT (G3-A GAP1): no PescNamedDefinition to stamp — the refusal lever is ' +
+				'unmeasurable, not passing.',
+		);
+	}
+	let undeclaredRefusal = '';
+	let undeclaredReturnedGraph = null;
+	try {
+		undeclaredReturnedGraph = applyDerivedTier({
+			nodes: undeclaredProbeGraph.nodes,
+			edges: undeclaredProbeGraph.edges,
+			derivedOutput: {
+				nodes: [],
+				edges: [],
+				nodeAnnotations: {
+					[undeclaredProbeTargetNode.stableId]: { undeclaredDriftMarker: 'planted' },
+				},
+			},
+		});
+	} catch (thrownError) {
+		undeclaredRefusal = thrownError.message;
+	}
+	// N1 — WATCH THE RETURNED GRAPH, NOT THE CALLER'S NODES.
+	//
+	// This assertion used to read undeclaredProbeTargetNode.properties, i.e. the CALLER'S node.
+	// GAP 7's clone made that vacuous: applyDerivedTier now writes only to copies, so the
+	// caller's node can never receive an annotation whether the refusal fires or not. The second
+	// adversarial review proved it by neutralising ONLY the applier refusal — the assertion kept
+	// passing while the marker landed live on the RETURNED graph. Worse, its recorded RED had
+	// been obtained against a probe that ALSO reverted GAP 7, so it had never been red in the
+	// configuration actually shipped.
+	//
+	// The lesson, and the reason this comment is long: a RED obtained under a configuration you
+	// do not ship proves nothing about what you do ship. A fix to one gate (GAP 7) silently
+	// hollowed out another (GAP 1), and only a probe built against the SHIPPED code could see it.
+	// The escape route is the returned graph, so that is what is watched.
+	const undeclaredEscapedToReturnedGraph =
+		undeclaredReturnedGraph !== null &&
+		undeclaredReturnedGraph.nodes.some(
+			(oneNode) => oneNode.properties.undeclaredDriftMarker !== undefined,
+		);
+	evidence(`RED (observed refusal): ${undeclaredRefusal || 'NO REFUSAL — the blind spot is open'}`);
+	evidence(`N1: applyDerivedTier returned ${undeclaredReturnedGraph === null ? 'NOTHING (refused)' : 'a graph'}; undeclared marker present on the RETURNED graph: ${undeclaredEscapedToReturnedGraph}`);
+	check('G3-A GAP1: applyDerivedTier REFUSES an undeclared annotation name, naming it', undeclaredRefusal.indexOf('undeclaredDriftMarker') !== -1 && undeclaredRefusal.indexOf('not declared in DERIVED_ANNOTATION_PROPERTY_NAMES') !== -1);
+	check('G3-A GAP1/N1: the undeclared annotation reached NO node in the RETURNED graph', undeclaredEscapedToReturnedGraph === false);
+
+	// GAP 7 — applyDerivedTier's no-mutation contract, asserted rather than trusted. This is the
+	// hazard that masked five gate failures for a whole phase: a documented request that callers
+	// feed clones, with nothing enforcing it. Snapshot a fixture, apply a real derivedOutput to
+	// it, and require the caller's own nodes to come back untouched.
+	const noMutationFixture = stripDerived(args.runOne);
+	const noMutationProbeNode = noMutationFixture.nodes.find(
+		(oneNode) => oneNode.labels.indexOf('PescNamedDefinition') !== -1,
+	);
+	if (noMutationProbeNode === undefined) {
+		throw new Error(
+			'HARNESS FAULT (G3-A GAP7): no PescNamedDefinition in the fixture — the no-mutation ' +
+				'contract is UNMEASURABLE, not satisfied.',
+		);
+	}
+	const noMutationPropertyNamesBefore = Object.keys(noMutationProbeNode.properties).sort().join(',');
+	const noMutationOutput = buildDerivedTier({
+		nodes: noMutationFixture.nodes,
+		edges: noMutationFixture.edges,
+	});
+	const noMutationCombined = applyDerivedTier({
+		nodes: noMutationFixture.nodes,
+		edges: noMutationFixture.edges,
+		derivedOutput: noMutationOutput,
+	});
+	const noMutationPropertyNamesAfter = Object.keys(noMutationProbeNode.properties).sort().join(',');
+	const returnedProbeNode = noMutationCombined.nodes.find(
+		(oneNode) => oneNode.stableId === noMutationProbeNode.stableId,
+	);
+	evidence(`GAP7: caller's node property set ${noMutationPropertyNamesBefore === noMutationPropertyNamesAfter ? 'UNCHANGED' : 'MUTATED'} by applyDerivedTier; returned copy carries the annotations: ${returnedProbeNode.properties.sameDefinitionClusterId !== undefined}`);
+	check('G3-A GAP7: applyDerivedTier does NOT mutate the caller\'s nodes', noMutationPropertyNamesBefore === noMutationPropertyNamesAfter);
+	check('G3-A GAP7: the annotations DO land on the returned graph (the clone is not a no-op)', returnedProbeNode !== undefined && returnedProbeNode.properties.sameDefinitionClusterId !== undefined);
+
 	let regenerationError = '';
 	let regeneratedView = '';
+	let regeneratedOutput = null;
 	try {
-		const regeneratedOutput = buildDerivedTier({ nodes: stripped.nodes, edges: stripped.edges });
+		regeneratedOutput = buildDerivedTier({ nodes: stripped.nodes, edges: stripped.edges });
 		const regeneratedGraph = applyDerivedTier({
 			nodes: stripped.nodes,
 			edges: stripped.edges,
@@ -248,10 +352,33 @@ taskList.push((args, next) => {
 	check(`G3-A regeneration ran without refusal${regenerationError ? ` (${regenerationError})` : ''}`, regenerationError === '');
 	evidence(`GREEN: regenerated derived view identical to the original: ${regeneratedView === viewOriginal} (${viewOriginal.length} canonical bytes)`);
 	check('G3-A regenerated derived tier IDENTICAL to the emitted one', regeneratedView === viewOriginal && regeneratedView !== '');
-	// Downstream gates get a FUNCTION, not a shared graph. `stripped` above has just been mutated
-	// in place by applyDerivedTier, and sharing it silently fed every later RED lever a fixture
-	// the purity guard rejects. Handing out a fresh strip per call eliminates the shared mutable
-	// state rather than merely detecting it; assertPristineSourceGraph then proves each fixture.
+
+	// GAP 1 (2) — every annotation the tier ACTUALLY writes is a declared one, measured against
+	// the real production output rather than assumed. This is what keeps the declaration list
+	// from drifting away from practice: a new stageAnnotation call under a fresh name now fails
+	// here as well as refusing at the writer.
+	if (regeneratedOutput === null) {
+		throw new Error(
+			'HARNESS FAULT (G3-A GAP1): regeneration produced no output, so the written-annotation ' +
+				'names are UNMEASURABLE. Refusing to report them as clean.',
+		);
+	}
+	const writtenAnnotationNames = new Set();
+	Object.keys(regeneratedOutput.nodeAnnotations).forEach((oneStableId) => {
+		Object.keys(regeneratedOutput.nodeAnnotations[oneStableId]).forEach((oneAnnotationName) =>
+			writtenAnnotationNames.add(oneAnnotationName),
+		);
+	});
+	const undeclaredWrittenNames = [...writtenAnnotationNames].filter(
+		(oneAnnotationName) => DERIVED_ANNOTATION_PROPERTY_NAMES.indexOf(oneAnnotationName) === -1,
+	);
+	evidence(`annotation names actually written: ${[...writtenAnnotationNames].sort().join(', ')}`);
+	check('G3-A GAP1: every annotation the tier writes is DECLARED (none invisible to strip/compare)', undeclaredWrittenNames.length === 0 && writtenAnnotationNames.size > 0);
+	// Downstream gates get a FUNCTION, not a shared graph. Historically `stripped` was mutated in
+	// place by applyDerivedTier, and sharing it silently fed every later RED lever a fixture the
+	// purity guard rejects. AS SHIPPED that mutation is gone (GAP 7), so `stripped` survives this
+	// task clean — but handing out a fresh strip per call is kept anyway: it removes the shared
+	// mutable object entirely, so no future gate can contaminate a later one by any route.
 	next('', { ...args, freshStripped: () => stripDerived(args.runOne) });
 });
 
@@ -396,7 +523,11 @@ taskList.push((args, next) => {
 	);
 	check('G3-C exactly 846 SAME_DEFINITION edges cross the 1.19.0->1.19.1 boundary', boundaryChainEdges.length === 846);
 	check('G3-C ApplicationFeeAmountType among the strict-changed', strictSplit.changedNames.indexOf('simpleType/ApplicationFeeAmountType') !== -1);
-	check('G3-C ApplicationFeeAmountType has NO chain edge across the boundary', boundaryChainEdges.every((oneEdge) => oneEdge.fromRef.id.indexOf('/ApplicationFeeAmountType') === -1));
+	// GAP 5 residual — the third and last bare-substring edge filter. Safe-DIRECTION today (a
+	// broader match makes this every(...) check stricter, not weaker) but it is the same pattern
+	// that produced the phantom 17-vs-13, so it goes the way of the other two: discriminate on the
+	// edge's own declared property rather than on a stableId substring.
+	check('G3-C ApplicationFeeAmountType has NO chain edge across the boundary', boundaryChainEdges.every((oneEdge) => oneEdge.properties.definitionName !== 'ApplicationFeeAmountType'));
 
 	// the verified-stable specimen: ClassRankType — all 14 CoreMain versions, one cluster.
 	const classRankMembers = definitionNodes.filter(
@@ -411,6 +542,20 @@ taskList.push((args, next) => {
 	// builder was correct and the assertion was comparing two different populations. Measured
 	// confirmation: zero duplicate (from,to) pairs and zero nodes with out-degree > 1 across all
 	// 10,400 SAME_DEFINITION edges. The AdmissionsRecord family becomes its own D-4 gate below.
+	// GAP 6 / R-P3-2 — assert the discriminating properties are PRESENT before filtering on them.
+	// A filter on an absent property matches nothing and reports zero, which reads identically to
+	// a clean result: the very failure mode that makes 'zero cross-family edges' able to pass
+	// vacuously. Presence first, then filter.
+	const sameDefinitionEdgesForNameFilters = args.runOne.edges.filter(
+		(oneEdge) => oneEdge.type === 'SAME_DEFINITION',
+	);
+	const nameFilterStarvedEdges = sameDefinitionEdgesForNameFilters.filter(
+		(oneEdge) =>
+			typeof oneEdge.properties.familyKey !== 'string' ||
+			typeof oneEdge.properties.definitionName !== 'string',
+	);
+	check('G3-C GAP6: familyKey and definitionName are PRESENT on every edge these filters read', nameFilterStarvedEdges.length === 0 && sameDefinitionEdgesForNameFilters.length > 0);
+
 	const classRankChainEdges = args.runOne.edges.filter(
 		(oneEdge) =>
 			oneEdge.type === 'SAME_DEFINITION' &&
@@ -478,11 +623,102 @@ taskList.push((args, next) => {
 	check('G3-C D-4: ZERO SAME_DEFINITION edges join the CoreMain and AdmissionsRecord ClassRankTypes', crossFamilyClassRankEdges.length === 0);
 	check('G3-C D-4: the two same-named clusters are DISJOINT', admissionsClusterIds.has(`${NS_CORE_1191}#simpleType/ClassRankType`) === false);
 
+	// GAP 3 — D-7 topology asserted GLOBALLY, not on one specimen. The comment above used to
+	// CLAIM cleanliness across all 10,400 edges; a comment is not an assertion, and a clique in
+	// any family other than CoreMain/ClassRankType passed unnoticed. Four properties define the
+	// D-7 chain and all four are now measured over every SAME_DEFINITION edge in the graph:
+	// out-degree <= 1 per member, in-degree <= 1 per member, no duplicate (from,to) pair, no
+	// cross-family edge (D-4), and every hop strictly ascending in version order.
+	const allSameDefinitionEdges = args.runOne.edges.filter(
+		(oneEdge) => oneEdge.type === 'SAME_DEFINITION',
+	);
+	if (allSameDefinitionEdges.length === 0) {
+		throw new Error(
+			'HARNESS FAULT (G3-C GAP3): no SAME_DEFINITION edges found, so the topology is ' +
+				'UNMEASURABLE. Refusing to report an empty graph as a clean chain.',
+		);
+	}
+	const globalOutDegree = {};
+	const globalInDegree = {};
+	const globalPairCounts = {};
+	const crossFamilyEdges = [];
+	const nonAscendingEdges = [];
+	const propertyStarvedEdges = [];
+	// version comparison, harness-local and independent of production's comparator
+	const compareVersionsForGate = (versionA, versionB) => {
+		const partsA = versionA.replace(/^v/, '').split('.').map(Number);
+		const partsB = versionB.replace(/^v/, '').split('.').map(Number);
+		for (let partIndex = 0; partIndex < Math.max(partsA.length, partsB.length); partIndex++) {
+			const valueA = partsA[partIndex] === undefined ? 0 : partsA[partIndex];
+			const valueB = partsB[partIndex] === undefined ? 0 : partsB[partIndex];
+			if (valueA !== valueB) {
+				return valueA < valueB ? -1 : 1;
+			}
+		}
+		return 0;
+	};
+	const SAME_DEFINITION_EDGE_PROPERTY_NAMES = [
+		'familyKey',
+		'definitionKind',
+		'definitionName',
+		'fromVersion',
+		'toVersion',
+	];
+	allSameDefinitionEdges.forEach((oneEdge) => {
+		// R-P3-2: the edge property contract, asserted PRESENT before anything filters on it
+		const missingProperties = SAME_DEFINITION_EDGE_PROPERTY_NAMES.filter(
+			(onePropertyName) =>
+				typeof oneEdge.properties[onePropertyName] !== 'string' ||
+				oneEdge.properties[onePropertyName] === '',
+		);
+		if (missingProperties.length > 0) {
+			propertyStarvedEdges.push(`${oneEdge.fromRef.id} (missing ${missingProperties.join(',')})`);
+			return;
+		}
+		globalOutDegree[oneEdge.fromRef.id] = (globalOutDegree[oneEdge.fromRef.id] || 0) + 1;
+		globalInDegree[oneEdge.toRef.id] = (globalInDegree[oneEdge.toRef.id] || 0) + 1;
+		const pairLabel = `${oneEdge.fromRef.id} => ${oneEdge.toRef.id}`;
+		globalPairCounts[pairLabel] = (globalPairCounts[pairLabel] || 0) + 1;
+		if (compareVersionsForGate(oneEdge.properties.fromVersion, oneEdge.properties.toVersion) >= 0) {
+			nonAscendingEdges.push(`${pairLabel} (${oneEdge.properties.fromVersion} -> ${oneEdge.properties.toVersion})`);
+		}
+		// D-4: both endpoints must sit in the family the edge declares. Compare the FULL familyKey
+		// (layer AND token). An earlier form took .split(':').pop(), discarding the layer — which
+		// is non-vacuous today only because the three family tokens happen to be unique across
+		// layers, and would go blind the day a corpus carries both core:Foo and sector:Foo.
+		if (
+			oneEdge.fromRef.id.indexOf(`:${oneEdge.properties.familyKey}:`) === -1 ||
+			oneEdge.toRef.id.indexOf(`:${oneEdge.properties.familyKey}:`) === -1
+		) {
+			crossFamilyEdges.push(`${pairLabel} declares family ${oneEdge.properties.familyKey}`);
+		}
+	});
+	const maxGlobalOutDegree = Math.max(...Object.values(globalOutDegree));
+	const maxGlobalInDegree = Math.max(...Object.values(globalInDegree));
+	const duplicateGlobalPairs = Object.keys(globalPairCounts).filter(
+		(onePair) => globalPairCounts[onePair] > 1,
+	);
+	evidence(`GAP3 global D-7 over ${allSameDefinitionEdges.length} SAME_DEFINITION edges: max out-degree ${maxGlobalOutDegree}, max in-degree ${maxGlobalInDegree}, duplicate pairs ${duplicateGlobalPairs.length}, cross-family ${crossFamilyEdges.length}, non-ascending ${nonAscendingEdges.length}, property-starved ${propertyStarvedEdges.length}`);
+	check('G3-C GAP3/R-P3-2: EVERY SAME_DEFINITION edge carries the full declared property contract', propertyStarvedEdges.length === 0);
+	check('G3-C GAP3: D-7 chain GLOBALLY — max out-degree 1 across all 10,400 edges', maxGlobalOutDegree === 1);
+	check('G3-C GAP3: D-7 chain GLOBALLY — max in-degree 1 (no member is two versions\' successor)', maxGlobalInDegree === 1);
+	check('G3-C GAP3: ZERO duplicate (from,to) pairs across the whole graph', duplicateGlobalPairs.length === 0);
+	check('G3-C GAP3: D-4 GLOBALLY — ZERO edges cross a library family boundary', crossFamilyEdges.length === 0);
+	check('G3-C GAP3: D-7 GLOBALLY — every hop strictly ASCENDS in version order', nonAscendingEdges.length === 0);
+	check('G3-C GAP3: the global measurement covered all 10,400 edges', allSameDefinitionEdges.length === 10400);
+
 	// AccreditationTypeType (the order's named specimen) is measured NOT fully stable: it
 	// changed once at v1.16.0->v1.17.0, so it chains across every version it appears UNCHANGED —
 	// two clusters, eight edges, the break exactly at the change. Asserted as found.
+	// GAP 5 — this used the same bare-substring filter ('/AccreditationTypeType') that produced
+	// the phantom 17-vs-13 ClassRankType discrepancy. Benign here only by accident of the corpus:
+	// no other family happens to declare that name today. Scoped to the edges' own declared
+	// properties, like its neighbours.
 	const accreditationChainEdges = args.runOne.edges.filter(
-		(oneEdge) => oneEdge.type === 'SAME_DEFINITION' && oneEdge.fromRef.id.indexOf('/AccreditationTypeType') !== -1,
+		(oneEdge) =>
+			oneEdge.type === 'SAME_DEFINITION' &&
+			oneEdge.properties.familyKey === 'core:CoreMain' &&
+			oneEdge.properties.definitionName === 'AccreditationTypeType',
 	);
 	const accreditationBreakSpansChange = accreditationChainEdges.every(
 		(oneEdge) => !(oneEdge.properties.fromVersion === 'v1.16.0' && oneEdge.properties.toVersion === 'v1.17.0'),
@@ -673,9 +909,65 @@ taskList.push((args, next) => {
 			(resolvesToTargetsByFrom[oneEdge.fromRef.id] = resolvesToTargetsByFrom[oneEdge.fromRef.id] || []).push(oneEdge.toRef.id);
 		}
 	});
+	// GAP 4 — the BFS was seeded from production's OWN messageRootDefinitionStableIds, so a wrong
+	// root set would reproduce in both the walk and the annotations and stay green. The roots are
+	// now derived here and production's set must MATCH.
+	//
+	// BE PRECISE ABOUT WHAT THAT BUYS, because the first version of this comment overstated it
+	// and the second adversarial review was right to say so:
+	//
+	//   INDEPENDENT: the artifact-to-root-element mapping. This walks stableId PREFIXES against
+	//   the latest message namespaces; production walks declaringArtifactSha256. Genuinely
+	//   different code over genuinely different properties — a bug in either is visible here.
+	//
+	//   NOT INDEPENDENT: the isLatest verdict itself. It is read off the derived namespace nodes,
+	//   and production computed it with familyKeyOfArtifact + compareVersionTokens. A wrong
+	//   latest-version verdict would reproduce on BOTH sides of this comparison and stay green.
+	//
+	//   WHAT ACTUALLY PINS isLatest: the hardcoded sixteen-namespace expectedLatest literal in
+	//   G3-E below — PRE-EXISTING work, not this gap's. A literal is a sufficient pin and is
+	//   cheaper than a second version comparator, which is why one was deliberately NOT built.
+	const latestMessageNamespaceUris = args.runOne.nodes
+		.filter(
+			(oneNode) =>
+				oneNode.labels.indexOf('PescNamespace') !== -1 &&
+				oneNode.properties.isLatest === true &&
+				oneNode.properties.layer === 'message',
+		)
+		.map((oneNode) => {
+			// the namespace URI lives in `name`. Read it explicitly and REFUSE if absent — an
+			// alternative-value expression here would silently seed the walk from a wrong set.
+			if (typeof oneNode.properties.name !== 'string' || oneNode.properties.name === '') {
+				throw new Error(
+					`HARNESS FAULT (G3-E GAP4): PescNamespace '${oneNode.stableId}' carries no 'name' ` +
+						'to read a namespace URI from. Refusing to substitute one.',
+				);
+			}
+			return oneNode.properties.name;
+		});
+	if (latestMessageNamespaceUris.length === 0) {
+		throw new Error(
+			'HARNESS FAULT (G3-E GAP4): no latest message-layer namespaces found, so the root set is ' +
+				'UNMEASURABLE. Refusing to treat an empty seed as agreement.',
+		);
+	}
+	const harnessDerivedRootStableIds = namedDefinitionNodes(args.runOne)
+		.filter(
+			(oneNode) =>
+				oneNode.properties.kind === 'element' &&
+				latestMessageNamespaceUris.some(
+					(oneNamespaceUri) => oneNode.stableId.indexOf(`${oneNamespaceUri}#`) === 0,
+				),
+		)
+		.map((oneNode) => oneNode.stableId)
+		.sort();
+	const productionRootStableIds = [...args.runOne.stats.derived.messageRootDefinitionStableIds].sort();
+	evidence(`GAP4 roots derived independently: ${harnessDerivedRootStableIds.length} (production says ${productionRootStableIds.length}); ${latestMessageNamespaceUris.length} latest message namespaces`);
+	check('G3-E GAP4: the harness derives the SAME message-root set production used (12 roots)', harnessDerivedRootStableIds.length === 12 && JSON.stringify(harnessDerivedRootStableIds) === JSON.stringify(productionRootStableIds));
+
 	const harnessBfs = (extraEdgesByFrom) => {
 		const reached = new Set();
-		const queue = [...args.runOne.stats.derived.messageRootDefinitionStableIds];
+		const queue = [...harnessDerivedRootStableIds];
 		while (queue.length > 0) {
 			const currentStableId = queue.shift();
 			if (reached.has(currentStableId)) {
@@ -697,7 +989,7 @@ taskList.push((args, next) => {
 	const orphanStableId = `${NS_CORE_1191}#complexType/PerkinsType`;
 	// RED first: inject a fake resolution edge root->PerkinsType in the HARNESS walk — the
 	// comparison against the annotations must then fail, proving the recomputation is live.
-	const rootStableIdForRed = args.runOne.stats.derived.messageRootDefinitionStableIds[0];
+	const rootStableIdForRed = harnessDerivedRootStableIds[0];
 	const redReached = harnessBfs({ [rootStableIdForRed]: [orphanStableId] });
 	const definitionNodes = namedDefinitionNodes(args.runOne);
 	const annotatedReachable = new Set(
@@ -711,7 +1003,10 @@ taskList.push((args, next) => {
 	const setsEqual = greenReached.size === annotatedReachable.size && [...greenReached].every((oneId) => annotatedReachable.has(oneId));
 	evidence(`GREEN: harness BFS reaches ${greenReached.size}; annotations say ${annotatedReachable.size}; equal: ${setsEqual}`);
 	check('G3-E independent BFS reproduces the annotation set exactly', setsEqual);
-	check('G3-E reachable count nonzero and less than total definitions', annotatedReachable.size > 0 && annotatedReachable.size < definitionNodes.length);
+	// GAP 4 — the count was asserted only as ">0 and <total", a band so wide that a large drift
+	// passes. Pinned exactly; 2,282 of 12,909 is the measured latest-view closure.
+	check('G3-E GAP4: reachableFromLatestRoot is EXACTLY 2,282 of 12,909 definitions', annotatedReachable.size === 2282 && definitionNodes.length === 12909);
+	check('G3-E GAP4: production stats agree with the annotations on the nodes', args.runOne.stats.derived.reachableFromLatestRoot === annotatedReachable.size);
 	const orphanNode = definitionNodes.find((oneNode) => oneNode.stableId === orphanStableId);
 	evidence(`orphan specimen: ${orphanStableId} reachableFromLatestRoot=${orphanNode && orphanNode.properties.reachableFromLatestRoot}`);
 	check('G3-E the financial-aid orphan (PerkinsType, CoreMain 1.19.1) is NOT reachable', !!orphanNode && orphanNode.properties.reachableFromLatestRoot === false && !greenReached.has(orphanStableId));
@@ -830,7 +1125,131 @@ taskList.push((args, next) => {
 	check('CENSUS 63 namespaces (the contested one is ONE node)', derivedStats.namespaces === 63);
 	check('CENSUS 64 IN_NAMESPACE edges (two artifacts share the contested node)', derivedStats.inNamespaceEdges === 64);
 	check('CENSUS the CoreMain v1.6.0 gap is the ONE unresolved import', derivedStats.unresolvedImportsRecorded === 1);
-	check('CENSUS reference accounting closes: resolved + builtin + ambiguous-refs + absent-ns = all references', derivedStats.resolvesToEdges + derivedStats.builtinReferenceMarkers + (derivedStats.ambiguousPendingSynthesisRecorded - 6) + derivedStats.unresolvedNamespaceReferencesRecorded === 17299 + 9921 + 195 + 205);
+	// GAP 2 — this assertion closed NOTHING. It compared four stats to four hardcoded constants
+	// that were simply those same four stats written down, so two compensating errors passed and
+	// the '- 6' was undocumented magic. Real accounting: count the references the SOURCE TIER
+	// actually carries, then require the four derived dispositions to account for every one.
+	//
+	// The 6: ambiguousPendingSynthesis holds entries of two different kinds. Most are TYPE-space
+	// references (a typeAsWritten/base/substitutionGroup/group-ref string on a source node). Six
+	// carry referenceVariety 'import' — they are ambiguous xs:import DECLARATIONS, not references
+	// into the type space, and they are already accounted for on the IMPORTS side. Subtracting
+	// them here is correct; leaving it as a bare '- 6' was not. It is now COMPUTED from the
+	// entries themselves, so if the corpus ever grows a seventh the arithmetic follows it.
+	const ambiguousEntriesForAccounting = [];
+	args.runOne.nodes.forEach((oneNode) => {
+		if (oneNode.properties.ambiguousPendingSynthesis) {
+			JSON.parse(oneNode.properties.ambiguousPendingSynthesis).forEach((oneEntry) =>
+				ambiguousEntriesForAccounting.push(oneEntry),
+			);
+		}
+	});
+	const ambiguousImportDeclarationCount = ambiguousEntriesForAccounting.filter(
+		(oneEntry) => oneEntry.referenceVariety === 'import',
+	).length;
+	const ambiguousTypeSpaceReferenceCount =
+		ambiguousEntriesForAccounting.length - ambiguousImportDeclarationCount;
+
+	// the independent denominator: every type-space reference written in the source tier.
+	const REFERENCE_BEARING_PROPERTY_NAMES = ['typeAsWritten', 'baseAsWritten', 'substitutionGroupAsWritten'];
+	let sourceTierReferenceCount = 0;
+	args.runOne.nodes
+		.filter((oneNode) => oneNode.properties.pescTier === 'source')
+		.forEach((oneNode) => {
+			REFERENCE_BEARING_PROPERTY_NAMES.forEach((onePropertyName) => {
+				const writtenValue = oneNode.properties[onePropertyName];
+				if (typeof writtenValue === 'string' && writtenValue !== '') {
+					sourceTierReferenceCount++;
+				}
+			});
+			// group refs are carried inside contentModelShape, not as a scalar property.
+			//
+			// N5 — LATENT, DOCUMENTED, DELIBERATELY NOT FIXED (supervisor ruling, second review).
+			// This counts every groupRef OCCURRENCE. Production DEDUPS group refs per node, so the
+			// two sides balance only because no node in this corpus currently carries the SAME
+			// group ref twice. WHAT WOULD BREAK IT: one repeated group ref inside a single
+			// container in a future corpus. This gate would then go RED on a non-bug — the
+			// denominator would exceed the dispositions by exactly the number of repeats. If that
+			// happens, dedup per node here to match production rather than doubting the tier.
+			if (oneNode.properties.contentModelShape) {
+				const countGroupRefs = (oneShape) => {
+					(oneShape.particles || []).forEach((oneParticle) => {
+						if (oneParticle.groupRef !== undefined) {
+							sourceTierReferenceCount++;
+						} else if (oneParticle.compositor !== undefined) {
+							countGroupRefs(oneParticle);
+						}
+					});
+				};
+				countGroupRefs(JSON.parse(oneNode.properties.contentModelShape));
+			}
+		});
+	const dispositionTotal =
+		derivedStats.resolvesToEdges +
+		derivedStats.builtinReferenceMarkers +
+		ambiguousTypeSpaceReferenceCount +
+		derivedStats.unresolvedNamespaceReferencesRecorded;
+	evidence(`GAP2 accounting: source tier writes ${sourceTierReferenceCount} type-space references; dispositions = resolved ${derivedStats.resolvesToEdges} + builtin ${derivedStats.builtinReferenceMarkers} + ambiguous ${ambiguousTypeSpaceReferenceCount} (of ${ambiguousEntriesForAccounting.length}, less ${ambiguousImportDeclarationCount} import decls) + absent-ns ${derivedStats.unresolvedNamespaceReferencesRecorded} = ${dispositionTotal}`);
+	if (sourceTierReferenceCount === 0) {
+		throw new Error(
+			'HARNESS FAULT (CENSUS GAP2): counted ZERO source-tier references, so the accounting is ' +
+				'UNMEASURABLE. Refusing to report a vacuous balance.',
+		);
+	}
+	check('CENSUS GAP2: every source-tier reference has EXACTLY one derived disposition (computed, not hardcoded)', dispositionTotal === sourceTierReferenceCount);
+	check('CENSUS GAP2: the ambiguous-import subtraction is the 6 import declarations, computed from the entries', ambiguousImportDeclarationCount === 6);
+	next('', args);
+});
+
+// =====================================================================
+// LEDGER — every shipped assertion must carry recorded red evidence
+// =====================================================================
+// The third adversarial review observed that 34 of this suite's 66 assertions had never appeared
+// in any retained FAIL log. Not false — "every gate observed red" was true of every gate anyone
+// had checked — but UNEVIDENCED for half the suite, and an unevidenced claim decays into an
+// assumed one. test/redEvidenceLedger.json now records, per assertion label, the log that caught
+// it failing and the LEVER that produced that red. The lever is the load-bearing half: G3-F
+// proved an assertion can go red for a reason other than the one it names, so "it failed once"
+// is not evidence unless we know WHY.
+//
+// This gate generalizes the round-2 reconciliation, which covered only NEW assertions. A new
+// assertion arriving with no ledger entry FAILS the suite. Bucket (b) — genuine gaps, never
+// demonstrated able to fail by anyone — is REPORTED, not enforced: closing it is Phase 6's
+// mutation suite, and this gate exists to keep the number visible and falling, not to block on it.
+taskList.push((args, next) => {
+	console.log('\nLEDGER — red evidence for every shipped assertion');
+	const ledger = require(path.join(__dirname, 'redEvidenceLedger.json'));
+	const suiteLedger = ledger.suites.derived;
+	const ledgeredLabels = new Set(suiteLedger.assertions.map((oneEntry) => oneEntry.label));
+	// THE GATE MUST NOT EXEMPT ITSELF. On its first run this reconciliation computed the label
+	// set BEFORE its own three check() calls had executed, so its own assertions were absent from
+	// the set and never had to be ledgered — it passed by excusing itself. Caught and fixed the
+	// same hour it was written. The labels are declared here ONCE and used both to seed the set
+	// and to make the calls, so the two can never drift apart.
+	const LEDGER_GATE_LABELS = [
+		'LEDGER every shipped assertion has a red-evidence entry',
+		'LEDGER carries no stale entries for assertions this suite no longer runs',
+		'LEDGER the entry count matches the assertions actually run',
+	];
+	const uniqueShippedLabels = [...new Set([...shippedAssertionLabels, ...LEDGER_GATE_LABELS])];
+	const unledgeredLabels = uniqueShippedLabels.filter((oneLabel) => !ledgeredLabels.has(oneLabel));
+	const staleLedgerLabels = [...ledgeredLabels].filter(
+		(oneLabel) => uniqueShippedLabels.indexOf(oneLabel) === -1,
+	);
+	const statusCounts = { proven: 0, recordsGap: 0, genuineGap: 0 };
+	suiteLedger.assertions.forEach((oneEntry) => {
+		statusCounts[oneEntry.status]++;
+	});
+	evidence(`ledger: ${uniqueShippedLabels.length} shipped assertions; proven-red ${statusCounts.proven}, records-gap ${statusCounts.recordsGap}, GENUINE GAP ${statusCounts.genuineGap}`);
+	if (unledgeredLabels.length > 0) {
+		evidence(`UNLEDGERED (new assertion without red evidence): ${unledgeredLabels.join(' | ')}`);
+	}
+	if (staleLedgerLabels.length > 0) {
+		evidence(`STALE ledger entries (assertion removed or renamed): ${staleLedgerLabels.join(' | ')}`);
+	}
+	check(LEDGER_GATE_LABELS[0], unledgeredLabels.length === 0);
+	check(LEDGER_GATE_LABELS[1], staleLedgerLabels.length === 0);
+	check(LEDGER_GATE_LABELS[2], suiteLedger.assertions.length === uniqueShippedLabels.length);
 	next('', args);
 });
 
