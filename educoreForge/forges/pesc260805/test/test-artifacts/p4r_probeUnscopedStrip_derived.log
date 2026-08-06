@@ -1,0 +1,30 @@
+
+DET — two full forge() runs identical (complete outputs)
+        RED (demonstrated): one contaminated property -> comparator detects: true
+  ok    DET RED: whole-graph comparator demonstrably able to go red
+        GREEN: run one 41850 nodes / 70063 edges; canonical forms equal: true
+  ok    DET two runs byte-identical under canonical serialization
+
+G3-A — the regeneration gate (THE definition of the tier)
+        deleted: 63 derived nodes, 28387 derived edges, all annotations on retained nodes
+        RED (observed refusal): pesc260805 derivedTier REFUSES: applyDerivedTier: annotation 'undeclaredDriftMarker' destined for 'urn:org:pesc:message:AcademicEportfolio:v1.0.0#element/AcademicEPortfolio' is not declared in DERIVED_ANNOTATION_PROPERTY_NAMES [sameDefinitionClusterId, reachableFromLatestRoot, resolvesToBuiltinXsd, ambiguousPendingSynthesis, unresolvedImportFact, unresolvedNamespaceReferences] — it would survive the Gate-3 strip and be invisible to the regeneration compare.
+        N1: applyDerivedTier returned NOTHING (refused); undeclared marker present on the RETURNED graph: false
+  ok    G3-A GAP1: applyDerivedTier REFUSES an undeclared annotation name, naming it
+  ok    G3-A GAP1/N1: the undeclared annotation reached NO node in the RETURNED graph
+/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/forges/pesc260805/lib/derivedTier.js:128
+			throw new Error(`pesc260805 derivedTier REFUSES: ${message}`);
+			^
+
+Error: pesc260805 derivedTier REFUSES: input carries synthetic-tier node 'urn:org:pesc:sector:AcademicRecord:v1.6.0#complexType/AcademicAwardType' — the derived tier is a function of the SOURCE tier alone; a decided definition must never seed a computation
+    at refuse (/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/forges/pesc260805/lib/derivedTier.js:128:10)
+    at /Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/forges/pesc260805/lib/derivedTier.js:489:6
+    at Array.forEach (<anonymous>)
+    at buildDerivedTier (/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/forges/pesc260805/lib/derivedTier.js:476:10)
+    at Array.<anonymous> (/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/forges/pesc260805/test/test-pesc260805DerivedTier.js:335:27)
+    at recursion (/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/node_modules/qtools-asynchronous-pipe-plus/qtools-asynchronous-pipe-plus.js:98:25)
+    at /Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/node_modules/qtools-asynchronous-pipe-plus/qtools-asynchronous-pipe-plus.js:99:5
+    at Array.<anonymous> (/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/forges/pesc260805/test/test-pesc260805DerivedTier.js:244:2)
+    at recursion (/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/node_modules/qtools-asynchronous-pipe-plus/qtools-asynchronous-pipe-plus.js:98:25)
+    at /Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/node_modules/qtools-asynchronous-pipe-plus/qtools-asynchronous-pipe-plus.js:99:5
+
+Node.js v24.14.1

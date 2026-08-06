@@ -704,7 +704,10 @@ const moduleFunction =
 						`${graph.stats.synthetic.testScoreOnlyDefinitions} test-score-only + ` +
 						`${graph.stats.synthetic.sharedDefinitions} shared, of which ` +
 						`${graph.stats.synthetic.conflictingSharedDefinitions} conflict and ` +
-						`${graph.stats.synthetic.lostChildElements} child elements are deliberately lost), ` +
+						`${graph.stats.synthetic.absentChildElements} child elements are genuinely ABSENT, ` +
+						`${graph.stats.synthetic.reboundChildElements} REBOUND, ` +
+						`${graph.stats.synthetic.widenedChildElements} WIDENED, and ` +
+						`${graph.stats.synthetic.addedChildElements} ADDED by the winning member), ` +
 						`${graph.stats.synthetic.mergedFromEdges} MERGED_FROM, ` +
 						`${graph.stats.synthetic.heldReferencesResolved} held references resolved; ` +
 						`S-2 alias ${graph.stats.synthetic.aliasNamespace} served by ${graph.stats.synthetic.aliasServingNamespace} ` +

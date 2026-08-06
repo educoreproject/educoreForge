@@ -19,9 +19,12 @@
 //   G4-B  the union is 109, split 42 college-only / 36 test-score-only / 31 shared, and in every
 //         one of the 14 conflicts the COLLEGE-TRANSCRIPT definition is the one whose content the
 //         merged node takes. RED by flipping the conflict winner (production probe).
-//   G4-C  the 8 lost child elements are enumerated BY NAME, and every one of them is still present
-//         under the LOSING member's own source-tier definition — the loss is queryable, not merely
-//         documented. RED by asserting a wrong count (expectation probe).
+//   G4-C  the merge delta BY SIGNATURE (name + resolved type + cardinality), classified ABSENT /
+//         REBOUND / WIDENED, and SYMMETRIC — the 33 elements the winning member ADDS are
+//         enumerated alongside what the loser lost. Rebuilt at the Phase 4 review (R-P4-5/6/7):
+//         the predecessor matched by NAME over a superset of its own haystack and could not fail.
+//         RED by planting a signature no member declares, and by pointing the finder at the
+//         WINNING member, where a name-only checker stayed green and this one goes red.
 //   G4-D  CONSUMER SATISFACTION — the point of the whole exercise. All SIX external consumers of
 //         the contested namespace now resolve; TestScoreReport 1.0.0's single reference
 //         AcRec:TestScoreReportType resolves (it was 100% unresolvable before) AND the transcript
@@ -102,7 +105,13 @@ const EXPECTED = {
 	shared: 31,
 	conflicts: 14,
 	collegeSupersetConflicts: 8,
-	lostChildElements: 8,
+	// R-P4-5 / R-P4-6: the SIGNATURE-BASED, SYMMETRIC merge delta. These four numbers REPLACE the
+	// old 'lostChildElements: 8', which was misleading in three different ways at once — it counted
+	// five type REBINDINGS and one WIDENING as losses, and it never counted the additions at all.
+	absentChildElements: 2,
+	reboundChildElements: 5,
+	widenedChildElements: 1,
+	addedChildElements: 33,
 	mergedFromEdges: 140,
 	heldReferences: 201,
 	heldTypeSpaceReferences: 195,
@@ -130,15 +139,32 @@ const EXPECTED = {
 		'TranscriptRequest_v1.1.0.xsd',
 		'TranscriptResponse_v1.1.0.xsd',
 	],
-	lostChildElementFullNames: [
-		'AcademicRecordType.AdditionalStudentAchievement',
-		'AcademicSummaryBaseType.AcademicHonors',
-		'ContactsRType.Address',
-		'ContactsType.Address',
-		'ContactsType.Email',
-		'ContactsType.Phone',
-		'SchoolType.Contacts',
-		'SponsorType.SponsorCode',
+	// The delta by SIGNATURE — name|resolvedType|minOccurs|maxOccurs — and by classification.
+	// The old name-only list of eight is retired: it named ContactsType.Address as lost while the
+	// merged ContactsType subtree CONTAINS an Address element (rebound to AcRec:AddressType), which
+	// is the precise sense in which the record actively misled (design §8f).
+	absentChildElementSignatures: [
+		'AcademicRecordType.AdditionalStudentAchievement|core:AdditionalStudentAchievementType|0|unbounded',
+		'SponsorType.SponsorCode|core:SponsorCodeType|0|null',
+	],
+	reboundChildElementSignatures: [
+		'ContactsRType.Address|core:AddressType|0|unbounded',
+		'ContactsType.Address|core:AddressType|0|unbounded',
+		'ContactsType.Email|core:EmailType|0|unbounded',
+		'ContactsType.Phone|core:PhoneType|0|unbounded',
+		'SchoolType.Contacts|core:ContactsType|0|unbounded',
+	],
+	// each rebinding's counterpart in the merged form: same name, DIFFERENT type. The presence of
+	// these in the merged subtree is what makes 'lost' the wrong word for the five above.
+	reboundMergedCounterpartSignatures: [
+		'ContactsRType.Address|AcRec:AddressType|0|unbounded',
+		'ContactsType.Address|AcRec:AddressType|0|unbounded',
+		'ContactsType.Email|AcRec:EmailType|0|unbounded',
+		'ContactsType.Phone|AcRec:PhoneType|0|unbounded',
+		'SchoolType.Contacts|AcRec:ContactsType|0|unbounded',
+	],
+	widenedChildElementSignatures: [
+		'AcademicSummaryBaseType.AcademicHonors|core:AcademicHonorsType|0|null',
 	],
 	// the prototype's own published conflict table (researchArtifacts/syntheticAlterations.md).
 	// Asserting against it is what proves the Node port of readChildElementSignature faithful.
@@ -484,8 +510,32 @@ taskList.push((args, next) => {
 				oneNode.properties.parentId === contentPointerNode.properties.contentFromStableId &&
 				/Perturbed$/.test(`${oneNode.properties.name}`),
 		);
-	evidence(`THIRD CASE (recorded, not a defect): ${probeThree.mutationDescription}; synthetic view unchanged: ${probeThree.perturbedView === shippedView}; the change is reachable from the merged node's contentFromStableId: ${contentPointerReachesTheChange}`);
-	check('G4-A the merged node carries no content of its own, and its contentFromStableId still reaches the changed source element', probeThree.perturbedView === shippedView && contentPointerReachesTheChange);
+	// RESTATED AT THE PHASE 4 REVIEW, and the restatement is a FINDING, not a repair.
+	//
+	// This assertion used to read "the merged node carries no content of its own", evidenced by the
+	// synthetic view being byte-IDENTICAL after a winning-member child was renamed. That invariance
+	// was an artifact of the one-sided, name-only loss record: it listed only what the LOSER had,
+	// so a change on the WINNER'S side happened not to move it. R-P4-6's symmetric record enumerates
+	// what the winning member ADDS, by signature — so the merged node now legitimately moves when
+	// EITHER member moves, and it SHOULD. A merge record that stayed still while its inputs changed
+	// would be a stale record, which is worse than a moving one.
+	//
+	// What survives, and is now asserted directly rather than inferred from a byte compare: the
+	// merged node holds NO CHILD NODES (R-P4-3's one-hop-to-content shape is intact — measured, not
+	// assumed), the change is reachable through contentFromStableId, and the published delta is a
+	// SUMMARY that tracks its members.
+	const mergedNodeStableIds = new Set(
+		syntheticNodesOf(args.runOne)
+			.filter((oneNode) => oneNode.labels.indexOf('PescNamedDefinition') !== -1)
+			.map((oneNode) => oneNode.stableId),
+	);
+	const childrenClaimingAMergedParent = args.runOne.nodes.filter((oneNode) =>
+		mergedNodeStableIds.has(oneNode.properties.parentId),
+	);
+	const deltaSummaryTracksItsMembers = probeThree.perturbedView !== shippedView;
+	evidence(`THIRD CASE (recorded, not a defect): ${probeThree.mutationDescription}; merged nodes claiming children: ${childrenClaimingAMergedParent.length} of ${mergedNodeStableIds.size}; the change is reachable from the merged node's contentFromStableId: ${contentPointerReachesTheChange}; the R-P4-6 delta summary moved with its member: ${deltaSummaryTracksItsMembers}`);
+	check('G4-A the merged node holds NO CHILD NODES and its contentFromStableId still reaches the changed source element', childrenClaimingAMergedParent.length === 0 && contentPointerReachesTheChange);
+	check('G4-A the symmetric delta summary TRACKS its members — a winning-member change moves the merged record (R-P4-6)', deltaSummaryTracksItsMembers);
 
 	// the purity guard: re-synthesis must refuse a graph that already carries synthesis, or a
 	// re-run would compound its own output instead of reproducing it.
@@ -575,64 +625,272 @@ taskList.push((args, next) => {
 });
 
 // =====================================================================
-// G4-C — the 8 lost child elements, by name, and QUERYABLE
+// G4-C — the merge delta, BY SIGNATURE and SYMMETRIC (R-P4-5, R-P4-6, R-P4-7)
 // =====================================================================
+// REBUILT AT THE PHASE 4 REVIEW. The predecessor of this gate COULD NOT FAIL, for two reasons that
+// compounded:
+//   1. it harvested with a walk (`gatherElementDecls`, all descendants) that is a strict SUPERSET
+//      of the walk production used to name the losses (`childElementSignatureOf`, element decls +
+//      inline types of the SAME root) — so every name it looked for was guaranteed present in its
+//      own haystack, by construction;
+//   2. it matched by NAME ONLY, so it would have passed just as green pointed at the WINNING
+//      member, where five of the eight names are present and merely rebound.
+// The rebuild fixes both by INVERTING the use of the superset walk. A superset haystack makes a
+// NEGATIVE finding strong, not weak: if an ABSENT signature cannot be found anywhere in the
+// winner's entire subtree, it is genuinely absent. So the load-bearing assertions here are the
+// negative ones, and the levers are (a) a fabricated signature planted in neither member and
+// (b) pointing the ABSENT finder at the winning member, where it must FAIL to find them.
 taskList.push((args, next) => {
-	console.log('\nG4-C — the price of the merge: 8 child element declarations, enumerated');
+	console.log('\nG4-C — the merge delta by SIGNATURE, both directions (R-P4-5, R-P4-6, R-P4-7)');
 	const mergeReport = args.runOne.syntheticMergeReport;
-	const observedFullNames = mergeReport.lostChildElements
-		.map((oneLoss) => `${oneLoss.definitionName}.${oneLoss.elementName}`)
-		.sort();
-	evidence(`lost (${observedFullNames.length}): ${observedFullNames.join(', ')}`);
-	check('G4-C exactly 8 child element declarations are lost', mergeReport.lostChildElements.length === EXPECTED.lostChildElements);
-	check('G4-C the 8 lost elements are EXACTLY the enumerated names', JSON.stringify(observedFullNames) === JSON.stringify(EXPECTED.lostChildElementFullNames));
 
-	// THE LOSS IS QUERYABLE, NOT MERELY DOCUMENTED (design §3.3). Every lost element must still be
-	// present in the graph, as a source-tier PescElementDecl under the LOSING member's own
-	// definition. A report that says a thing is gone, in a graph where it is genuinely gone, is a
-	// eulogy; this asserts it is a forwarding address.
+	// ---- the harness's OWN signature walker, independent of production's ------------------
+	// Deliberately the FULL-descendant walk (the prototype's ElementTree .iter() shape) rather than
+	// a re-implementation of production's: a gate that copied production's traversal would agree
+	// with it by construction, which is the vacuity being repaired. Matching is on the full
+	// four-part signature, never on the name.
 	const { childrenByParentId } = args.indexOne;
-	const gatherElementDecls = (containerStableId) => {
-		const found = [];
+	const signatureTextOf = (oneElementNode) => {
+		['name', 'typeAsWritten', 'minOccurs', 'maxOccurs'].forEach((onePropertyName) => {
+			if (!Object.prototype.hasOwnProperty.call(oneElementNode.properties, onePropertyName)) {
+				throw new Error(
+					`HARNESS FAULT (G4-C): PescElementDecl '${oneElementNode.stableId}' carries no ` +
+						`'${onePropertyName}'. The signature is unmeasurable, not passing.`,
+				);
+			}
+		});
+		// template-rendered, NOT Array.join: join coerces a null maxOccurs to the empty string while
+		// the delta entries render it as 'null', and the two would never match. Caught by this gate
+		// going red on SponsorType.SponsorCode (maxOccurs null) and on 19 of the 33 ADDED entries.
+		return `${oneElementNode.properties.name}|${oneElementNode.properties.typeAsWritten}|${oneElementNode.properties.minOccurs}|${oneElementNode.properties.maxOccurs}`;
+	};
+	const harvestSignatures = (containerStableId) => {
+		const found = new Set();
+		const foundNames = new Set();
 		const visit = (oneStableId) => {
 			(childrenByParentId[oneStableId] || []).forEach((oneChild) => {
-				if (labelHas(oneChild, 'PescElementDecl')) found.push(oneChild);
+				if (labelHas(oneChild, 'PescElementDecl')) {
+					found.add(signatureTextOf(oneChild));
+					foundNames.add(oneChild.properties.name);
+				}
 				visit(oneChild.stableId);
 			});
 		};
 		visit(containerStableId);
-		return found;
+		return { signatures: found, names: foundNames };
 	};
-	const unqueryableLosses = mergeReport.lostChildElements.filter((oneLoss) => {
-		const losingDefinitionNode = args.indexOne.nodeByStableId[oneLoss.survivingUnderSourceDefinitionStableId];
-		if (losingDefinitionNode === undefined) return true;
-		if (losingDefinitionNode.properties.pescTier !== 'source') return true;
-		return !gatherElementDecls(oneLoss.survivingUnderSourceDefinitionStableId).some(
-			(oneElementNode) => oneElementNode.properties.name === oneLoss.elementName,
-		);
+	const harvestCache = {};
+	const harvestOf = (definitionStableId) => {
+		if (harvestCache[definitionStableId] === undefined) {
+			const definitionNode = args.indexOne.nodeByStableId[definitionStableId];
+			if (definitionNode === undefined) {
+				throw new Error(
+					`HARNESS FAULT (G4-C): definition '${definitionStableId}' is not in the graph. ` +
+						'Unmeasurable, not passing.',
+				);
+			}
+			if (definitionNode.properties.pescTier !== 'source') {
+				throw new Error(
+					`HARNESS FAULT (G4-C): '${definitionStableId}' is not a SOURCE-tier node ` +
+						`(pescTier '${definitionNode.properties.pescTier}'). The delta's forwarding addresses ` +
+						'must point into the source tier or they are not forwarding addresses.',
+				);
+			}
+			harvestCache[definitionStableId] = harvestSignatures(definitionStableId);
+		}
+		return harvestCache[definitionStableId];
+	};
+	// the WINNING member's counterpart of a delta entry's definition — the subtree in which an
+	// ABSENT signature must NOT be found and an ADDED one must be.
+	const winningDefinitionStableIdOf = (oneEntry) => {
+		const winningStableId = mergeReport.mergedDefinitionStableIdByKey[oneEntry.definitionKey];
+		if (winningStableId === undefined) {
+			throw new Error(
+				`HARNESS FAULT (G4-C): no merged definition for key '${oneEntry.definitionKey}'.`,
+			);
+		}
+		const mergedNode = args.indexOne.nodeByStableId[winningStableId];
+		if (mergedNode === undefined || !mergedNode.properties.contentFromStableId) {
+			throw new Error(
+				`HARNESS FAULT (G4-C): merged '${winningStableId}' carries no contentFromStableId, so ` +
+					'the winning subtree cannot be reached. Unmeasurable, not passing.',
+			);
+		}
+		return mergedNode.properties.contentFromStableId;
+	};
+	const fullSignatureText = (oneEntry) =>
+		`${oneEntry.definitionName}.${oneEntry.name}|${oneEntry.typeAsWritten}|${oneEntry.minOccurs}|${oneEntry.maxOccurs}`;
+	const bareSignatureText = (oneEntry) =>
+		`${oneEntry.name}|${oneEntry.typeAsWritten}|${oneEntry.minOccurs}|${oneEntry.maxOccurs}`;
+
+	// ---- the census: four buckets, both directions ----------------------------------------
+	const observedAbsent = mergeReport.absentChildElements.map(fullSignatureText).sort();
+	const observedRebound = mergeReport.reboundChildElements.map(fullSignatureText).sort();
+	const observedWidened = mergeReport.widenedChildElements.map(fullSignatureText).sort();
+	evidence(`ABSENT (${observedAbsent.length}): ${observedAbsent.join('  ')}`);
+	evidence(`REBOUND (${observedRebound.length}): ${observedRebound.join('  ')}`);
+	evidence(`WIDENED (${observedWidened.length}): ${observedWidened.join('  ')}`);
+	evidence(`ADDED by the winning member (${mergeReport.addedChildElements.length}), spread over ${new Set(mergeReport.addedChildElements.map((oneEntry) => oneEntry.definitionName)).size} conflicting types`);
+	check('G4-C exactly 2 child elements are genuinely ABSENT from the merged definitions', mergeReport.absentChildElements.length === EXPECTED.absentChildElements);
+	check('G4-C the 2 ABSENT entries are EXACTLY the enumerated signatures', JSON.stringify(observedAbsent) === JSON.stringify(EXPECTED.absentChildElementSignatures));
+	check('G4-C exactly 5 are REBOUND (same name, different resolved type) and are NOT losses', mergeReport.reboundChildElements.length === EXPECTED.reboundChildElements && JSON.stringify(observedRebound) === JSON.stringify(EXPECTED.reboundChildElementSignatures));
+	check('G4-C exactly 1 is WIDENED (same name, same type, merged cardinality admits the loser)', mergeReport.widenedChildElements.length === EXPECTED.widenedChildElements && JSON.stringify(observedWidened) === JSON.stringify(EXPECTED.widenedChildElementSignatures));
+	check('G4-C R-P4-6 SYMMETRY: the record enumerates the 33 child elements the winning member ADDS, not only what the loser lost', mergeReport.addedChildElements.length === EXPECTED.addedChildElements);
+
+	// ---- REBOUND is a rebinding, not a loss: the counterpart is REALLY THERE ---------------
+	// This is the assertion the old name-only record could not even express. For each rebound
+	// entry: the loser's signature is NOT in the winning subtree, the NAME is, and the merged
+	// counterpart's own full signature is.
+	const observedCounterparts = mergeReport.reboundChildElements
+		.map((oneEntry) => `${oneEntry.definitionName}.${bareSignatureText(oneEntry.mergedCounterpart)}`)
+		.sort();
+	const reboundVerdicts = mergeReport.reboundChildElements.map((oneEntry) => {
+		const winningHarvest = harvestOf(winningDefinitionStableIdOf(oneEntry));
+		return {
+			label: fullSignatureText(oneEntry),
+			loserSignatureAbsentFromWinner: !winningHarvest.signatures.has(bareSignatureText(oneEntry)),
+			nameStillPresentInWinner: winningHarvest.names.has(oneEntry.name),
+			counterpartPresentInWinner: winningHarvest.signatures.has(
+				bareSignatureText(oneEntry.mergedCounterpart),
+			),
+			typeGenuinelyDiffers: oneEntry.mergedCounterpart.typeAsWritten !== oneEntry.typeAsWritten,
+		};
 	});
-	evidence(`queryability: ${mergeReport.lostChildElements.length - unqueryableLosses.length}/${mergeReport.lostChildElements.length} lost elements found alive under the LOSING member's source-tier definition`);
-	check('G4-C every lost element is still present under the losing variant SOURCE-tier node', unqueryableLosses.length === 0);
+	evidence(`rebound counterparts in the merged subtree: ${observedCounterparts.join('  ')}`);
+	check('G4-C every REBOUND names a counterpart PRESENT in the merged subtree under the same name and a different type', JSON.stringify(observedCounterparts) === JSON.stringify(EXPECTED.reboundMergedCounterpartSignatures) && reboundVerdicts.every((oneVerdict) => oneVerdict.typeGenuinelyDiffers && oneVerdict.counterpartPresentInWinner && oneVerdict.nameStillPresentInWinner && oneVerdict.loserSignatureAbsentFromWinner));
 
-	// and the merged node itself names its own loss, so a consumer holding only the merged
-	// definition can still discover what it cost.
-	const mergedNodesWithLosses = syntheticNodesOf(args.runOne).filter(
-		(oneNode) => oneNode.properties.lostChildElementCount > 0,
-	);
-	const declaredLossTotal = mergedNodesWithLosses.reduce(
-		(runningTotal, oneNode) => runningTotal + oneNode.properties.lostChildElementCount,
-		0,
-	);
-	evidence(`merged nodes declaring a loss: ${mergedNodesWithLosses.length} (${mergedNodesWithLosses.map((oneNode) => oneNode.properties.name).sort().join(', ')}); declared total ${declaredLossTotal}`);
-	check('G4-C the merged nodes themselves declare the 8 losses (report and graph agree)', declaredLossTotal === EXPECTED.lostChildElements);
+	// ---- the WIDENED entry loses nothing: the merged cardinality admits the loser's ---------
+	const widenedVerdicts = mergeReport.widenedChildElements.map((oneEntry) => ({
+		label: fullSignatureText(oneEntry),
+		sameType: oneEntry.mergedCounterpart.typeAsWritten === oneEntry.typeAsWritten,
+		// null maxOccurs is the XSD default of 1; 'unbounded' admits it, so this is a widening
+		widens:
+			(oneEntry.maxOccurs === null || oneEntry.maxOccurs === undefined) &&
+			oneEntry.mergedCounterpart.maxOccurs === 'unbounded',
+		counterpartPresentInWinner: harvestOf(winningDefinitionStableIdOf(oneEntry)).signatures.has(
+			bareSignatureText(oneEntry.mergedCounterpart),
+		),
+	}));
+	evidence(`widened: ${widenedVerdicts.map((oneVerdict) => `${oneVerdict.label} widens: ${oneVerdict.widens}, counterpart live in winner: ${oneVerdict.counterpartPresentInWinner}`).join('; ')}`);
+	check('G4-C the WIDENED entry is a widening (maxOccurs unset -> unbounded) with its counterpart live in the merged subtree', widenedVerdicts.length === EXPECTED.widenedChildElements && widenedVerdicts.every((oneVerdict) => oneVerdict.sameType && oneVerdict.widens && oneVerdict.counterpartPresentInWinner));
 
-	// RED — the enumeration checker must be able to fail. Drop one name from the observed list and
-	// require both the count and the name-set assertions to invert.
-	const shortenedNames = observedFullNames.slice(1);
-	const countInverts = shortenedNames.length !== EXPECTED.lostChildElements;
-	const namesInvert = JSON.stringify(shortenedNames) !== JSON.stringify(EXPECTED.lostChildElementFullNames);
-	evidence(`RED (demonstrated): dropping '${observedFullNames[0]}' from the observed list -> count assertion inverts: ${countInverts}, name-set assertion inverts: ${namesInvert}`);
-	check('G4-C RED: the loss enumeration checker demonstrably detects a missing name', countInverts && namesInvert);
+	// ---- ABSENT: queryable under the LOSER, and genuinely NOT under the WINNER --------------
+	// The second half is the one with teeth. The winner harvest is the FULL-descendant walk, so a
+	// signature not found in it is not merely outside some subset — it is nowhere in the winning
+	// definition at all.
+	const absentVerdicts = mergeReport.absentChildElements.map((oneEntry) => {
+		const loserHarvest = harvestOf(oneEntry.survivingUnderSourceDefinitionStableId);
+		const winnerHarvest = harvestOf(winningDefinitionStableIdOf(oneEntry));
+		return {
+			label: fullSignatureText(oneEntry),
+			queryableUnderLoser: loserHarvest.signatures.has(bareSignatureText(oneEntry)),
+			signatureAbsentFromWinner: !winnerHarvest.signatures.has(bareSignatureText(oneEntry)),
+			nameAbsentFromWinner: !winnerHarvest.names.has(oneEntry.name),
+		};
+	});
+	evidence(`ABSENT verdicts: ${absentVerdicts.map((oneVerdict) => `${oneVerdict.label} -> alive under loser: ${oneVerdict.queryableUnderLoser}, signature absent from winner: ${oneVerdict.signatureAbsentFromWinner}, name absent from winner: ${oneVerdict.nameAbsentFromWinner}`).join('; ')}`);
+	check('G4-C every ABSENT entry is still queryable by SIGNATURE under the losing member source-tier definition', absentVerdicts.every((oneVerdict) => oneVerdict.queryableUnderLoser));
+	check('G4-C and every ABSENT entry is genuinely absent from the WINNING subtree — by name AND by signature', absentVerdicts.every((oneVerdict) => oneVerdict.signatureAbsentFromWinner && oneVerdict.nameAbsentFromWinner));
+
+	// ---- ADDED: present in the winner, absent from the loser -------------------------------
+	const addedVerdicts = mergeReport.addedChildElements.map((oneEntry) => {
+		const winnerHarvest = harvestOf(oneEntry.declaredUnderSourceDefinitionStableId);
+		const loserDefinitionStableId = (
+			mergeReport.absentChildElements
+				.concat(mergeReport.reboundChildElements, mergeReport.widenedChildElements)
+				.find((oneLoserEntry) => oneLoserEntry.definitionKey === oneEntry.definitionKey) || {}
+		).survivingUnderSourceDefinitionStableId;
+		return {
+			presentInWinner: winnerHarvest.signatures.has(bareSignatureText(oneEntry)),
+			absentFromLoser:
+				loserDefinitionStableId === undefined
+					? null
+					: !harvestOf(loserDefinitionStableId).signatures.has(bareSignatureText(oneEntry)),
+		};
+	});
+	const addedCheckedAgainstLoser = addedVerdicts.filter((oneVerdict) => oneVerdict.absentFromLoser !== null);
+	evidence(`ADDED verdicts: ${addedVerdicts.filter((oneVerdict) => oneVerdict.presentInWinner).length}/${addedVerdicts.length} present in the winning subtree; ${addedCheckedAgainstLoser.filter((oneVerdict) => oneVerdict.absentFromLoser).length}/${addedCheckedAgainstLoser.length} confirmed absent from the losing subtree (the 8 types the loser-side delta also names)`);
+	check('G4-C every ADDED entry is present in the WINNING subtree, and absent from the losing one wherever the loser subtree is named', addedVerdicts.every((oneVerdict) => oneVerdict.presentInWinner) && addedCheckedAgainstLoser.length > 0 && addedCheckedAgainstLoser.every((oneVerdict) => oneVerdict.absentFromLoser));
+
+	// ---- report and graph agree, in all four buckets ---------------------------------------
+	const syntheticNodes = syntheticNodesOf(args.runOne);
+	const graphTotals = { absent: 0, rebound: 0, widened: 0, added: 0 };
+	const nodesDeclaringDelta = [];
+	syntheticNodes
+		.filter((oneNode) => oneNode.labels.indexOf('PescNamedDefinition') !== -1)
+		.forEach((oneNode) => {
+			['absent', 'rebound', 'widened', 'added'].forEach((oneBucket) => {
+				const countName = `${oneBucket}ChildElementCount`;
+				const listName = `${oneBucket}ChildElementSignatures`;
+				if (!Object.prototype.hasOwnProperty.call(oneNode.properties, countName)) {
+					throw new Error(
+						`HARNESS FAULT (G4-C): merged '${oneNode.stableId}' carries no '${countName}'. The ` +
+							'delta cannot be read off the graph, which is the whole point of publishing it.',
+					);
+				}
+				if (JSON.parse(oneNode.properties[listName]).length !== oneNode.properties[countName]) {
+					throw new Error(
+						`HARNESS FAULT (G4-C): '${oneNode.stableId}' declares ${countName} ` +
+							`${oneNode.properties[countName]} but lists ` +
+							`${JSON.parse(oneNode.properties[listName]).length}.`,
+					);
+				}
+				graphTotals[oneBucket] += oneNode.properties[countName];
+			});
+			if (oneNode.properties.absentChildElementCount > 0) nodesDeclaringDelta.push(oneNode.properties.name);
+		});
+	evidence(`graph totals: absent ${graphTotals.absent}, rebound ${graphTotals.rebound}, widened ${graphTotals.widened}, added ${graphTotals.added}; types declaring an ABSENT entry: ${nodesDeclaringDelta.sort().join(', ')}`);
+	check('G4-C the merged nodes publish the delta themselves and agree with the report in all four buckets', graphTotals.absent === EXPECTED.absentChildElements && graphTotals.rebound === EXPECTED.reboundChildElements && graphTotals.widened === EXPECTED.widenedChildElements && graphTotals.added === EXPECTED.addedChildElements);
+
+	// the misleading property is GONE, not merely superseded — no downstream reader can pick it up.
+	const nodesCarryingRetiredProperty = args.runOne.nodes.filter((oneNode) =>
+		Object.keys(oneNode.properties).some((onePropertyName) => /^lostChildElement/.test(onePropertyName)),
+	);
+	const edgesCarryingRetiredProperty = args.runOne.edges.filter((oneEdge) =>
+		Object.keys(oneEdge.properties).some((onePropertyName) => /^lostChildElement/.test(onePropertyName)),
+	);
+	evidence(`retired 'lostChildElement*' properties still in the graph: ${nodesCarryingRetiredProperty.length} node(s), ${edgesCarryingRetiredProperty.length} edge(s)`);
+	check('G4-C the misleading name-only loss property is absent from the graph entirely', nodesCarryingRetiredProperty.length === 0 && edgesCarryingRetiredProperty.length === 0);
+
+	// ---- RED LEVER 1: a signature present in NEITHER member ---------------------------------
+	// The predecessor gate could not fail because its haystack was a superset of its needles. Plant
+	// a needle that is in no haystack and require the finder to say so.
+	const plantedEntry = {
+		definitionKey: mergeReport.absentChildElements[0].definitionKey,
+		definitionName: mergeReport.absentChildElements[0].definitionName,
+		name: 'HarnessPlantedElement',
+		typeAsWritten: 'core:HarnessPlantedType',
+		minOccurs: '0',
+		maxOccurs: 'unbounded',
+		survivingUnderSourceDefinitionStableId:
+			mergeReport.absentChildElements[0].survivingUnderSourceDefinitionStableId,
+	};
+	const plantedFoundUnderLoser = harvestOf(
+		plantedEntry.survivingUnderSourceDefinitionStableId,
+	).signatures.has(bareSignatureText(plantedEntry));
+	const plantedFoundUnderWinner = harvestOf(winningDefinitionStableIdOf(plantedEntry)).signatures.has(
+		bareSignatureText(plantedEntry),
+	);
+	evidence(`RED-1 (demonstrated): planting '${fullSignatureText(plantedEntry)}', a signature no member declares -> queryability finder reports found-under-loser: ${plantedFoundUnderLoser} (the queryability assertion would go RED), found-under-winner: ${plantedFoundUnderWinner}`);
+	check('G4-C RED-1: the signature finder demonstrably FAILS to find a signature planted in neither member', plantedFoundUnderLoser === false && plantedFoundUnderWinner === false);
+
+	// ---- RED LEVER 2: point the ABSENT finder at the WINNING member --------------------------
+	// The old gate matched by NAME and searched a superset, so it would have passed pointed at
+	// either member. This one must NOT: the queryability condition, evaluated against the winner,
+	// has to go red for every ABSENT entry, and — the sharper half — must ALSO go red for the five
+	// REBOUND entries, because their loser-side SIGNATURES are not in the winner either, even
+	// though their NAMES are. A name-only checker would report 5/5 found here and stay green.
+	const absentFoundInWinner = mergeReport.absentChildElements.filter((oneEntry) =>
+		harvestOf(winningDefinitionStableIdOf(oneEntry)).signatures.has(bareSignatureText(oneEntry)),
+	).length;
+	const reboundSignaturesFoundInWinner = mergeReport.reboundChildElements.filter((oneEntry) =>
+		harvestOf(winningDefinitionStableIdOf(oneEntry)).signatures.has(bareSignatureText(oneEntry)),
+	).length;
+	const reboundNamesFoundInWinner = mergeReport.reboundChildElements.filter((oneEntry) =>
+		harvestOf(winningDefinitionStableIdOf(oneEntry)).names.has(oneEntry.name),
+	).length;
+	evidence(`RED-2 (demonstrated): the SAME queryability finder pointed at the WINNING member finds ${absentFoundInWinner}/${EXPECTED.absentChildElements} ABSENT signatures and ${reboundSignaturesFoundInWinner}/${EXPECTED.reboundChildElements} REBOUND signatures -> the queryability assertion inverts. A NAME-only checker would have found ${reboundNamesFoundInWinner}/${EXPECTED.reboundChildElements} of the rebound names there and stayed green — which is exactly how the predecessor gate could not fail.`);
+	check('G4-C RED-2: pointed at the WINNING member the finder goes red on every ABSENT and every REBOUND signature, where a name-only checker stayed green', absentFoundInWinner === 0 && reboundSignaturesFoundInWinner === 0 && reboundNamesFoundInWinner === EXPECTED.reboundChildElements);
 	next('', args);
 });
 

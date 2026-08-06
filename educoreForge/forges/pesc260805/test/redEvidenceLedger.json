@@ -5,11 +5,123 @@
 		"recordsGap": "Believed proven red in a run whose log was not retained. Cited, marked unverifiable-but-believed. Do NOT re-run these — Phase 6 mutation suite owns them.",
 		"genuineGap": "Never demonstrated able to fail, by anyone. This is the real number. Phase 6 owns closing it. Do NOT close it here."
 	},
+	"rescopedHelperNote": "[G-4], Phase 4 review. Four harness helpers were NARROWED when the synthetic tier arrived (namedDefinitionNodes and stripDerived gained a pescTier filter, assertPristineSourceGraph gained a synthetic clause, and the G3-E BFS inherited the narrowed definition set), while assertions reading through them still cited Phase 3 vr_* logs — receipts for a run of DIFFERENT CODE. Every such assertion now carries rescopedHelper and evidencePostDatesPhase4Rescoping. Two re-proof levers were pulled against the code as it now stands: p4r_probeUnscopedDefinitions_derived.log (namedDefinitionNodes un-narrowed) and p4r_probeUnscopedStrip_derived.log (stripDerived un-narrowed, which ABORTS at the production purity refusal and therefore supplies no label-level evidence). Where evidencePostDatesPhase4Rescoping is false, the receipt is retained but explicitly labelled as pre-rescoping rather than silently carried forward.",
+	"rescopedHelperProvenance": {
+		"dependentAssertions": 22,
+		"withPostRescopingEvidence": 1,
+		"preRescopingEvidenceOnly": [
+			{
+				"label": "G3-A GAP1/N1: the undeclared annotation reached NO node in the RETURNED graph",
+				"rescopedHelper": "stripDerived",
+				"status": "proven"
+			},
+			{
+				"label": "G3-A GAP1: applyDerivedTier REFUSES an undeclared annotation name, naming it",
+				"rescopedHelper": "stripDerived",
+				"status": "proven"
+			},
+			{
+				"label": "G3-A GAP1: every annotation the tier writes is DECLARED (none invisible to strip/compare)",
+				"rescopedHelper": "stripDerived",
+				"status": "proven"
+			},
+			{
+				"label": "G3-A GAP7: applyDerivedTier does NOT mutate the caller's nodes",
+				"rescopedHelper": "stripDerived",
+				"status": "proven"
+			},
+			{
+				"label": "G3-A GAP7: the annotations DO land on the returned graph (the clone is not a no-op)",
+				"rescopedHelper": "stripDerived",
+				"status": "proven"
+			},
+			{
+				"label": "G3-A RED: a contaminated derived property is detected by the compare",
+				"rescopedHelper": "stripDerived",
+				"status": "genuineGap"
+			},
+			{
+				"label": "G3-A regenerated derived tier IDENTICAL to the emitted one",
+				"rescopedHelper": "stripDerived",
+				"status": "proven"
+			},
+			{
+				"label": "G3-A regeneration ran without refusal",
+				"rescopedHelper": "stripDerived",
+				"status": "genuineGap"
+			},
+			{
+				"label": "G3-D RED-2: removing EITHER collision member lifts the quarantine and provokes an unresolved-reference refusal naming the namespace",
+				"rescopedHelper": "stripDerived + assertPristineSourceGraph",
+				"status": "proven"
+			},
+			{
+				"label": "G3-D RED-2: the two members PARTITION the consumers' type set (each removal strands a DIFFERENT reference)",
+				"rescopedHelper": "stripDerived + assertPristineSourceGraph",
+				"status": "proven"
+			},
+			{
+				"label": "G3-E GAP4: production stats agree with the annotations on the nodes",
+				"rescopedHelper": "namedDefinitionNodes",
+				"status": "proven"
+			},
+			{
+				"label": "G3-E GAP4: the harness derives the SAME message-root set production used (12 roots)",
+				"rescopedHelper": "namedDefinitionNodes",
+				"status": "proven"
+			},
+			{
+				"label": "G3-E RED: the independent BFS comparison demonstrably able to go red",
+				"rescopedHelper": "namedDefinitionNodes + the G3-E BFS",
+				"status": "genuineGap"
+			},
+			{
+				"label": "G3-E independent BFS reproduces the annotation set exactly",
+				"rescopedHelper": "namedDefinitionNodes + the G3-E BFS",
+				"status": "genuineGap"
+			},
+			{
+				"label": "G3-E the financial-aid orphan (PerkinsType, CoreMain 1.19.1) is NOT reachable",
+				"rescopedHelper": "namedDefinitionNodes",
+				"status": "genuineGap"
+			},
+			{
+				"label": "G3-F CONTROL: the unmutated fixture provokes no refusal",
+				"rescopedHelper": "assertPristineSourceGraph",
+				"status": "proven"
+			},
+			{
+				"label": "G3-F a drifted shape is REFUSED",
+				"rescopedHelper": "assertPristineSourceGraph",
+				"status": "genuineGap"
+			},
+			{
+				"label": "G3-F every shape-carrying container was checked (3,079 measured)",
+				"rescopedHelper": "assertPristineSourceGraph",
+				"status": "genuineGap"
+			},
+			{
+				"label": "G3-F the refusal is the SHAPE guard itself, not another guard firing first",
+				"rescopedHelper": "assertPristineSourceGraph",
+				"status": "proven"
+			},
+			{
+				"label": "G3-F the refusal names R-P2-5",
+				"rescopedHelper": "assertPristineSourceGraph",
+				"status": "proven"
+			},
+			{
+				"label": "G3-F the refusal names the container",
+				"rescopedHelper": "assertPristineSourceGraph",
+				"status": "proven"
+			}
+		]
+	},
 	"shippedConfigurationNote": "A red obtained under a configuration that is not shipped proves nothing about what IS shipped. Learned the hard way: the GAP 1 assertions were originally red-proven by vr_probeB.log, which had also reverted GAP 7, making the assertion vacuous in the shipped build. vr_probeC.log supersedes it. Every entry therefore records shippedConfig.",
 	"suites": {
 		"derived": {
 			"suiteFile": "test/test-pesc260805DerivedTier.js",
-			"shippedRunLog": "p4_shipped_derived.log",
+			"shippedRunLog": "p4r_shipped_derived.log",
 			"counts": {
 				"proven": 38,
 				"recordsGap": 0,
@@ -36,6 +148,11 @@
 							"probeLog": "vr_probeA.log",
 							"lever": "EXPECTATION PERTURBATION (round 2): perturbed the GAP 2 accounting, GAP 3 global-topology, GAP 4 root/reachability and GAP 6 presence constants.",
 							"shippedConfig": false
+						},
+						{
+							"probeLog": "p4r_probeComputedContested_derived.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION: the contested-namespace branch of resolveOneReference now ALSO emits the structural RESOLVES_TO edge the quarantine exists to withhold — the half-applied quarantine. The recording is left exactly as shipped, so every census of RECORDED entries stays green and only the 'resolved by COMPUTATION' assertions can notice. One branch in lib/derivedTier.js; the probe script asserts by name that the contested CHECK, the one-symbol-space refusal, the per-node ambiguity accumulation and the absent-namespace refusal all remain intact. This SUPERSEDES p4_probeContested_derived.log (expectation perturbation) as the evidence for the restated G3-D assertions: that probe proved they read the observation, this one proves they resist a real defect.",
+							"shippedConfig": true
 						}
 					]
 				},
@@ -77,7 +194,9 @@
 							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION (round 3): neutralised ONLY the applyDerivedTier undeclared-name refusal. The probe build script ASSERTED that GAP 7's clone and stageAnnotation's guard both remained intact, so it could not silently diverge from shipped.",
 							"shippedConfig": true
 						}
-					]
+					],
+					"rescopedHelper": "stripDerived",
+					"evidencePostDatesPhase4Rescoping": false
 				},
 				{
 					"label": "G3-A GAP1: applyDerivedTier REFUSES an undeclared annotation name, naming it",
@@ -94,7 +213,9 @@
 							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION (round 3): neutralised ONLY the applyDerivedTier undeclared-name refusal. The probe build script ASSERTED that GAP 7's clone and stageAnnotation's guard both remained intact, so it could not silently diverge from shipped.",
 							"shippedConfig": true
 						}
-					]
+					],
+					"rescopedHelper": "stripDerived",
+					"evidencePostDatesPhase4Rescoping": false
 				},
 				{
 					"label": "G3-A GAP1: every annotation the tier writes is DECLARED (none invisible to strip/compare)",
@@ -106,7 +227,9 @@
 							"shippedConfig": false,
 							"caveat": "NOT the shipped configuration — this probe also reverted GAP 7. Reds obtained here do not prove behavior of the code as shipped. This is the exact defect the second adversarial review found in N1; superseded for the GAP 1 assertions by vr_probeC.log."
 						}
-					]
+					],
+					"rescopedHelper": "stripDerived",
+					"evidencePostDatesPhase4Rescoping": false
 				},
 				{
 					"label": "G3-A GAP7: applyDerivedTier does NOT mutate the caller's nodes",
@@ -118,7 +241,9 @@
 							"shippedConfig": false,
 							"caveat": "NOT the shipped configuration — this probe also reverted GAP 7. Reds obtained here do not prove behavior of the code as shipped. This is the exact defect the second adversarial review found in N1; superseded for the GAP 1 assertions by vr_probeC.log."
 						}
-					]
+					],
+					"rescopedHelper": "stripDerived",
+					"evidencePostDatesPhase4Rescoping": false
 				},
 				{
 					"label": "G3-A GAP7: the annotations DO land on the returned graph (the clone is not a no-op)",
@@ -129,12 +254,16 @@
 							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION (round 3): applyDerivedTier still computes the annotated clone but RETURNS the caller's originals — the \"clone became a no-op\" defect.",
 							"shippedConfig": true
 						}
-					]
+					],
+					"rescopedHelper": "stripDerived",
+					"evidencePostDatesPhase4Rescoping": false
 				},
 				{
 					"label": "G3-A RED: a contaminated derived property is detected by the compare",
 					"status": "genuineGap",
 					"species": "selfDemonstratingRedCheck",
+					"rescopedHelper": "stripDerived",
+					"evidencePostDatesPhase4Rescoping": false,
 					"note": "This assertion's content IS a red demonstration — it asserts a lever produced a detectable failure. Observing IT fail requires breaking the detector it guards, which no probe has done. Counted in bucket (b) deliberately rather than waved through."
 				},
 				{
@@ -146,12 +275,16 @@
 							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION (round 3): applyDerivedTier still computes the annotated clone but RETURNS the caller's originals — the \"clone became a no-op\" defect.",
 							"shippedConfig": true
 						}
-					]
+					],
+					"rescopedHelper": "stripDerived",
+					"evidencePostDatesPhase4Rescoping": false
 				},
 				{
 					"label": "G3-A regeneration ran without refusal",
 					"status": "genuineGap",
 					"species": "predecessorClaimNotAdmissible",
+					"rescopedHelper": "stripDerived",
+					"evidencePostDatesPhase4Rescoping": false,
 					"note": "The suite header CLAIMS \"Every gate demonstrates RED first\", but its author is the agent whose G3-F gate passed for the wrong reason and whose G3-D/G3-F RED levers were broken. That author's unwitnessed claim is not admissible evidence, so this is triaged as a GENUINE gap rather than a records gap. Several of these DO have a \"RED (demonstrated)\" evidence line in vr_baseline_derived.log showing the LEVER fired — that is partial, and is not the assertion being observed to fail."
 				},
 				{
@@ -411,6 +544,11 @@
 							"probeLog": "p4_probeContested_derived.log",
 							"lever": "EXPECTATION PERTURBATION (Phase 4): the RESTATED G3-D constants inverted — computed-resolution count expected at 1 rather than 0, the decided-resolution total moved off 201, the 195/6 split moved off, and the planted-edge count moved off 1.",
 							"shippedConfig": false
+						},
+						{
+							"probeLog": "p4r_probeComputedContested_derived.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION: the contested-namespace branch of resolveOneReference now ALSO emits the structural RESOLVES_TO edge the quarantine exists to withhold — the half-applied quarantine. The recording is left exactly as shipped, so every census of RECORDED entries stays green and only the 'resolved by COMPUTATION' assertions can notice. One branch in lib/derivedTier.js; the probe script asserts by name that the contested CHECK, the one-symbol-space refusal, the per-node ambiguity accumulation and the absent-namespace refusal all remain intact. This SUPERSEDES p4_probeContested_derived.log (expectation perturbation) as the evidence for the restated G3-D assertions: that probe proved they read the observation, this one proves they resist a real defect.",
+							"shippedConfig": true
 						}
 					]
 				},
@@ -428,7 +566,9 @@
 							"lever": "EXPECTATION PERTURBATION (round 1): made both G3-D removal probes name the SAME unserved reference, collapsing the partition claim.",
 							"shippedConfig": false
 						}
-					]
+					],
+					"rescopedHelper": "stripDerived + assertPristineSourceGraph",
+					"evidencePostDatesPhase4Rescoping": false
 				},
 				{
 					"label": "G3-D RED-2: the two members PARTITION the consumers' type set (each removal strands a DIFFERENT reference)",
@@ -439,7 +579,9 @@
 							"lever": "EXPECTATION PERTURBATION (round 1): made both G3-D removal probes name the SAME unserved reference, collapsing the partition claim.",
 							"shippedConfig": false
 						}
-					]
+					],
+					"rescopedHelper": "stripDerived + assertPristineSourceGraph",
+					"evidencePostDatesPhase4Rescoping": false
 				},
 				{
 					"label": "G3-D ZERO references into the contested namespace are resolved by COMPUTATION",
@@ -449,6 +591,11 @@
 							"probeLog": "p4_probeContested_derived.log",
 							"lever": "EXPECTATION PERTURBATION (Phase 4): the RESTATED G3-D constants inverted — computed-resolution count expected at 1 rather than 0, the decided-resolution total moved off 201, the 195/6 split moved off, and the planted-edge count moved off 1.",
 							"shippedConfig": false
+						},
+						{
+							"probeLog": "p4r_probeComputedContested_derived.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION: the contested-namespace branch of resolveOneReference now ALSO emits the structural RESOLVES_TO edge the quarantine exists to withhold — the half-applied quarantine. The recording is left exactly as shipped, so every census of RECORDED entries stays green and only the 'resolved by COMPUTATION' assertions can notice. One branch in lib/derivedTier.js; the probe script asserts by name that the contested CHECK, the one-symbol-space refusal, the per-node ambiguity accumulation and the absent-namespace refusal all remain intact. This SUPERSEDES p4_probeContested_derived.log (expectation perturbation) as the evidence for the restated G3-D assertions: that probe proved they read the observation, this one proves they resist a real defect.",
+							"shippedConfig": true
 						}
 					]
 				},
@@ -513,7 +660,9 @@
 							"lever": "EXPECTATION PERTURBATION (round 2): perturbed the GAP 2 accounting, GAP 3 global-topology, GAP 4 root/reachability and GAP 6 presence constants.",
 							"shippedConfig": false
 						}
-					]
+					],
+					"rescopedHelper": "namedDefinitionNodes",
+					"evidencePostDatesPhase4Rescoping": false
 				},
 				{
 					"label": "G3-E GAP4: reachableFromLatestRoot is EXACTLY 2,282 of 12,909 definitions",
@@ -523,8 +672,20 @@
 							"probeLog": "vr_probeA.log",
 							"lever": "EXPECTATION PERTURBATION (round 2): perturbed the GAP 2 accounting, GAP 3 global-topology, GAP 4 root/reachability and GAP 6 presence constants.",
 							"shippedConfig": false
+						},
+						{
+							"probeLog": "p4r_probeComputedContested_derived.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION: the contested-namespace branch of resolveOneReference now ALSO emits the structural RESOLVES_TO edge the quarantine exists to withhold — the half-applied quarantine. The recording is left exactly as shipped, so every census of RECORDED entries stays green and only the 'resolved by COMPUTATION' assertions can notice. One branch in lib/derivedTier.js; the probe script asserts by name that the contested CHECK, the one-symbol-space refusal, the per-node ambiguity accumulation and the absent-namespace refusal all remain intact. This SUPERSEDES p4_probeContested_derived.log (expectation perturbation) as the evidence for the restated G3-D assertions: that probe proved they read the observation, this one proves they resist a real defect.",
+							"shippedConfig": true
+						},
+						{
+							"probeLog": "p4r_probeUnscopedDefinitions_derived.log",
+							"lever": "HARNESS MUTATION, RE-PROOF AFTER RESCOPING ([G-4]): the Phase 4 narrowing of namedDefinitionNodes is REVERTED — the helper stops excluding the 109 synthetic merged definitions, exactly as it read before Phase 4. Run against the code as it now stands, so the receipt points at THIS build rather than at a Phase 3 vr_* run of different code.",
+							"shippedConfig": true
 						}
-					]
+					],
+					"rescopedHelper": "namedDefinitionNodes",
+					"evidencePostDatesPhase4Rescoping": true
 				},
 				{
 					"label": "G3-E GAP4: the harness derives the SAME message-root set production used (12 roots)",
@@ -535,18 +696,24 @@
 							"lever": "EXPECTATION PERTURBATION (round 2): perturbed the GAP 2 accounting, GAP 3 global-topology, GAP 4 root/reachability and GAP 6 presence constants.",
 							"shippedConfig": false
 						}
-					]
+					],
+					"rescopedHelper": "namedDefinitionNodes",
+					"evidencePostDatesPhase4Rescoping": false
 				},
 				{
 					"label": "G3-E RED: the independent BFS comparison demonstrably able to go red",
 					"status": "genuineGap",
 					"species": "selfDemonstratingRedCheck",
+					"rescopedHelper": "namedDefinitionNodes + the G3-E BFS",
+					"evidencePostDatesPhase4Rescoping": false,
 					"note": "This assertion's content IS a red demonstration — it asserts a lever produced a detectable failure. Observing IT fail requires breaking the detector it guards, which no probe has done. Counted in bucket (b) deliberately rather than waved through."
 				},
 				{
 					"label": "G3-E independent BFS reproduces the annotation set exactly",
 					"status": "genuineGap",
 					"species": "predecessorClaimNotAdmissible",
+					"rescopedHelper": "namedDefinitionNodes + the G3-E BFS",
+					"evidencePostDatesPhase4Rescoping": false,
 					"note": "The suite header CLAIMS \"Every gate demonstrates RED first\", but its author is the agent whose G3-F gate passed for the wrong reason and whose G3-D/G3-F RED levers were broken. That author's unwitnessed claim is not admissible evidence, so this is triaged as a GENUINE gap rather than a records gap. Several of these DO have a \"RED (demonstrated)\" evidence line in vr_baseline_derived.log showing the LEVER fired — that is partial, and is not the assertion being observed to fail."
 				},
 				{
@@ -559,6 +726,8 @@
 					"label": "G3-E the financial-aid orphan (PerkinsType, CoreMain 1.19.1) is NOT reachable",
 					"status": "genuineGap",
 					"species": "predecessorClaimNotAdmissible",
+					"rescopedHelper": "namedDefinitionNodes",
+					"evidencePostDatesPhase4Rescoping": false,
 					"note": "The suite header CLAIMS \"Every gate demonstrates RED first\", but its author is the agent whose G3-F gate passed for the wrong reason and whose G3-D/G3-F RED levers were broken. That author's unwitnessed claim is not admissible evidence, so this is triaged as a GENUINE gap rather than a records gap. Several of these DO have a \"RED (demonstrated)\" evidence line in vr_baseline_derived.log showing the LEVER fired — that is partial, and is not the assertion being observed to fail."
 				},
 				{
@@ -570,18 +739,24 @@
 							"lever": "EXPECTATION PERTURBATION (round 1): inverted the ClassRankType out-degree and D-4 constants, the G3-D RED-1 planted-edge count, and the G3-F control/shape-attribution conditions.",
 							"shippedConfig": false
 						}
-					]
+					],
+					"rescopedHelper": "assertPristineSourceGraph",
+					"evidencePostDatesPhase4Rescoping": false
 				},
 				{
 					"label": "G3-F a drifted shape is REFUSED",
 					"status": "genuineGap",
 					"species": "predecessorClaimNotAdmissible",
+					"rescopedHelper": "assertPristineSourceGraph",
+					"evidencePostDatesPhase4Rescoping": false,
 					"note": "The suite header CLAIMS \"Every gate demonstrates RED first\", but its author is the agent whose G3-F gate passed for the wrong reason and whose G3-D/G3-F RED levers were broken. That author's unwitnessed claim is not admissible evidence, so this is triaged as a GENUINE gap rather than a records gap. Several of these DO have a \"RED (demonstrated)\" evidence line in vr_baseline_derived.log showing the LEVER fired — that is partial, and is not the assertion being observed to fail."
 				},
 				{
 					"label": "G3-F every shape-carrying container was checked (3,079 measured)",
 					"status": "genuineGap",
 					"species": "predecessorClaimNotAdmissible",
+					"rescopedHelper": "assertPristineSourceGraph",
+					"evidencePostDatesPhase4Rescoping": false,
 					"note": "The suite header CLAIMS \"Every gate demonstrates RED first\", but its author is the agent whose G3-F gate passed for the wrong reason and whose G3-D/G3-F RED levers were broken. That author's unwitnessed claim is not admissible evidence, so this is triaged as a GENUINE gap rather than a records gap. Several of these DO have a \"RED (demonstrated)\" evidence line in vr_baseline_derived.log showing the LEVER fired — that is partial, and is not the assertion being observed to fail."
 				},
 				{
@@ -593,7 +768,9 @@
 							"lever": "EXPECTATION PERTURBATION (round 1): inverted the ClassRankType out-degree and D-4 constants, the G3-D RED-1 planted-edge count, and the G3-F control/shape-attribution conditions.",
 							"shippedConfig": false
 						}
-					]
+					],
+					"rescopedHelper": "assertPristineSourceGraph",
+					"evidencePostDatesPhase4Rescoping": false
 				},
 				{
 					"label": "G3-F the refusal names R-P2-5",
@@ -604,7 +781,9 @@
 							"lever": "INHERITED BASELINE. The dead predecessor's uncommitted tree, run unmodified before any repair. The FAILs here are the four real defects as found.",
 							"shippedConfig": true
 						}
-					]
+					],
+					"rescopedHelper": "assertPristineSourceGraph",
+					"evidencePostDatesPhase4Rescoping": false
 				},
 				{
 					"label": "G3-F the refusal names the container",
@@ -615,7 +794,9 @@
 							"lever": "INHERITED BASELINE. The dead predecessor's uncommitted tree, run unmodified before any repair. The FAILs here are the four real defects as found.",
 							"shippedConfig": true
 						}
-					]
+					],
+					"rescopedHelper": "assertPristineSourceGraph",
+					"evidencePostDatesPhase4Rescoping": false
 				},
 				{
 					"label": "LEDGER carries no stale entries for assertions this suite no longer runs",
@@ -674,7 +855,7 @@
 		},
 		"source": {
 			"suiteFile": "test/test-pesc260805SourceTier.js",
-			"shippedRunLog": "p4_shipped_source.log",
+			"shippedRunLog": "p4r_shipped_source.log",
 			"counts": {
 				"proven": 9,
 				"recordsGap": 41,
@@ -1034,11 +1215,11 @@
 		},
 		"synthetic": {
 			"suiteFile": "test/test-pesc260805SyntheticTier.js",
-			"shippedRunLog": "p4_ledgerGate_red_synthetic.log",
+			"shippedRunLog": "p4r_ledgerGate_red_synthetic.log",
 			"counts": {
-				"proven": 45,
+				"proven": 48,
 				"recordsGap": 0,
-				"genuineGap": 12
+				"genuineGap": 19
 			},
 			"assertions": [
 				{
@@ -1082,20 +1263,10 @@
 					]
 				},
 				{
-					"label": "G4-A the merged node carries no content of its own, and its contentFromStableId still reaches the changed source element",
-					"status": "proven",
-					"redEvidence": [
-						{
-							"probeLog": "p4_probeWinner_synthetic.log",
-							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION: R-P3-1's conflict winner FLIPPED — the merged definition takes its content from the test-score member instead of the college-transcript member. One expression in lib/syntheticTier.js, nothing else touched.",
-							"shippedConfig": true
-						},
-						{
-							"probeLog": "p4_probeTier_synthetic.log",
-							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION: the 109 merged definition nodes stamped pescTier:'source' instead of 'synthetic' — the exact leak G4-F forbids, since the round-trip emitter reads that predicate and would re-emit a fabricated definition into a PESC file.",
-							"shippedConfig": true
-						}
-					]
+					"label": "G4-A the merged node holds NO CHILD NODES and its contentFromStableId still reaches the changed source element",
+					"status": "genuineGap",
+					"species": "phase4Unevidenced",
+					"note": "No retained log records this assertion FAILING. Phase 4 pulled six levers (expectation perturbation, winner flip, tier leak, alias repoint, and the two restatement probes in the sibling suites); this assertion went red under none of them. It is a genuine gap, counted rather than waved through, and Phase 6 owns closing it."
 				},
 				{
 					"label": "G4-A the re-run reproduces the synthetic nodes and edges EXACTLY",
@@ -1107,6 +1278,12 @@
 							"shippedConfig": true
 						}
 					]
+				},
+				{
+					"label": "G4-A the symmetric delta summary TRACKS its members — a winning-member change moves the merged record (R-P4-6)",
+					"status": "genuineGap",
+					"species": "phase4Unevidenced",
+					"note": "No retained log records this assertion FAILING. Phase 4 pulled six levers (expectation perturbation, winner flip, tier leak, alias repoint, and the two restatement probes in the sibling suites); this assertion went red under none of them. It is a genuine gap, counted rather than waved through, and Phase 6 owns closing it."
 				},
 				{
 					"label": "G4-A the tier REFUSES to synthesize from a graph that already carries synthetic content",
@@ -1294,59 +1471,153 @@
 					]
 				},
 				{
-					"label": "G4-C RED: the loss enumeration checker demonstrably detects a missing name",
+					"label": "G4-C R-P4-6 SYMMETRY: the record enumerates the 33 child elements the winning member ADDS, not only what the loser lost",
 					"status": "proven",
 					"redEvidence": [
 						{
-							"probeLog": "p4_probeExpect_synthetic.log",
-							"lever": "EXPECTATION PERTURBATION: every digit run inside the Phase 4 suite's single EXPECTED block incremented by one — which also corrupts the two collision-member sha12 prefixes, the prototype conflict table and the two alias namespace URNs — plus one entry dropped from the expected lost-element list. Perturbs ONLY the expectations; the production tier is untouched, and the RED levers read which member is which from production so they still run.",
+							"probeLog": "p4r_probeExpectDelta_synthetic.log",
+							"lever": "EXPECTATION PERTURBATION: the four new R-P4-5/R-P4-6 delta constants (absent 2, rebound 5, widened 1, added 33) each moved by one. Proves the rebuilt G4-C assertions read the observation; NOT a shipped-configuration probe.",
 							"shippedConfig": false
 						}
 					]
 				},
 				{
-					"label": "G4-C every lost element is still present under the losing variant SOURCE-tier node",
+					"label": "G4-C RED-1: the signature finder demonstrably FAILS to find a signature planted in neither member",
+					"status": "genuineGap",
+					"species": "selfDemonstratingRedCheck",
+					"note": "This assertion's content IS a red demonstration — it asserts a lever produced a detectable failure. Observing IT fail requires breaking the detector it guards, which no probe has done. Counted in bucket (b) deliberately rather than waved through."
+				},
+				{
+					"label": "G4-C RED-2: pointed at the WINNING member the finder goes red on every ABSENT and every REBOUND signature, where a name-only checker stayed green",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "p4r_probeExpectDelta_synthetic.log",
+							"lever": "EXPECTATION PERTURBATION: the four new R-P4-5/R-P4-6 delta constants (absent 2, rebound 5, widened 1, added 33) each moved by one. Proves the rebuilt G4-C assertions read the observation; NOT a shipped-configuration probe.",
+							"shippedConfig": false
+						},
+						{
+							"probeLog": "p4r_probeNameOnlyDelta_synthetic.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION — THE R-P4-7 LEVER: the merge's dropped-entry comparison reverts from SIGNATURE-based to NAME-based, which IS the pre-R-P4-5 record that misled. Under it the five REBOUND and the one WIDENED entry vanish from the record entirely, because their NAMES are present in the winning member. The PREDECESSOR gate was green under exactly this behaviour — it could not be otherwise, since this behaviour was what it measured. The rebuilt gate goes red on six assertions. This is the demonstration that G4-C can now fail.",
+							"shippedConfig": true
+						}
+					]
+				},
+				{
+					"label": "G4-C and every ABSENT entry is genuinely absent from the WINNING subtree — by name AND by signature",
 					"status": "genuineGap",
 					"species": "phase4Unevidenced",
 					"note": "No retained log records this assertion FAILING. Phase 4 pulled six levers (expectation perturbation, winner flip, tier leak, alias repoint, and the two restatement probes in the sibling suites); this assertion went red under none of them. It is a genuine gap, counted rather than waved through, and Phase 6 owns closing it."
 				},
 				{
-					"label": "G4-C exactly 8 child element declarations are lost",
-					"status": "proven",
-					"redEvidence": [
-						{
-							"probeLog": "p4_probeExpect_synthetic.log",
-							"lever": "EXPECTATION PERTURBATION: every digit run inside the Phase 4 suite's single EXPECTED block incremented by one — which also corrupts the two collision-member sha12 prefixes, the prototype conflict table and the two alias namespace URNs — plus one entry dropped from the expected lost-element list. Perturbs ONLY the expectations; the production tier is untouched, and the RED levers read which member is which from production so they still run.",
-							"shippedConfig": false
-						}
-					]
+					"label": "G4-C every ABSENT entry is still queryable by SIGNATURE under the losing member source-tier definition",
+					"status": "genuineGap",
+					"species": "phase4Unevidenced",
+					"note": "No retained log records this assertion FAILING. Phase 4 pulled six levers (expectation perturbation, winner flip, tier leak, alias repoint, and the two restatement probes in the sibling suites); this assertion went red under none of them. It is a genuine gap, counted rather than waved through, and Phase 6 owns closing it."
 				},
 				{
-					"label": "G4-C the 8 lost elements are EXACTLY the enumerated names",
-					"status": "proven",
-					"redEvidence": [
-						{
-							"probeLog": "p4_probeExpect_synthetic.log",
-							"lever": "EXPECTATION PERTURBATION: every digit run inside the Phase 4 suite's single EXPECTED block incremented by one — which also corrupts the two collision-member sha12 prefixes, the prototype conflict table and the two alias namespace URNs — plus one entry dropped from the expected lost-element list. Perturbs ONLY the expectations; the production tier is untouched, and the RED levers read which member is which from production so they still run.",
-							"shippedConfig": false
-						}
-					]
+					"label": "G4-C every ADDED entry is present in the WINNING subtree, and absent from the losing one wherever the loser subtree is named",
+					"status": "genuineGap",
+					"species": "phase4Unevidenced",
+					"note": "No retained log records this assertion FAILING. Phase 4 pulled six levers (expectation perturbation, winner flip, tier leak, alias repoint, and the two restatement probes in the sibling suites); this assertion went red under none of them. It is a genuine gap, counted rather than waved through, and Phase 6 owns closing it."
 				},
 				{
-					"label": "G4-C the merged nodes themselves declare the 8 losses (report and graph agree)",
+					"label": "G4-C every REBOUND names a counterpart PRESENT in the merged subtree under the same name and a different type",
 					"status": "proven",
 					"redEvidence": [
 						{
-							"probeLog": "p4_probeExpect_synthetic.log",
-							"lever": "EXPECTATION PERTURBATION: every digit run inside the Phase 4 suite's single EXPECTED block incremented by one — which also corrupts the two collision-member sha12 prefixes, the prototype conflict table and the two alias namespace URNs — plus one entry dropped from the expected lost-element list. Perturbs ONLY the expectations; the production tier is untouched, and the RED levers read which member is which from production so they still run.",
-							"shippedConfig": false
-						},
-						{
-							"probeLog": "p4_probeTier_synthetic.log",
-							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION: the 109 merged definition nodes stamped pescTier:'source' instead of 'synthetic' — the exact leak G4-F forbids, since the round-trip emitter reads that predicate and would re-emit a fabricated definition into a PESC file.",
+							"probeLog": "p4r_probeNameOnlyDelta_synthetic.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION — THE R-P4-7 LEVER: the merge's dropped-entry comparison reverts from SIGNATURE-based to NAME-based, which IS the pre-R-P4-5 record that misled. Under it the five REBOUND and the one WIDENED entry vanish from the record entirely, because their NAMES are present in the winning member. The PREDECESSOR gate was green under exactly this behaviour — it could not be otherwise, since this behaviour was what it measured. The rebuilt gate goes red on six assertions. This is the demonstration that G4-C can now fail.",
 							"shippedConfig": true
 						}
 					]
+				},
+				{
+					"label": "G4-C exactly 1 is WIDENED (same name, same type, merged cardinality admits the loser)",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "p4r_probeExpectDelta_synthetic.log",
+							"lever": "EXPECTATION PERTURBATION: the four new R-P4-5/R-P4-6 delta constants (absent 2, rebound 5, widened 1, added 33) each moved by one. Proves the rebuilt G4-C assertions read the observation; NOT a shipped-configuration probe.",
+							"shippedConfig": false
+						},
+						{
+							"probeLog": "p4r_probeNameOnlyDelta_synthetic.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION — THE R-P4-7 LEVER: the merge's dropped-entry comparison reverts from SIGNATURE-based to NAME-based, which IS the pre-R-P4-5 record that misled. Under it the five REBOUND and the one WIDENED entry vanish from the record entirely, because their NAMES are present in the winning member. The PREDECESSOR gate was green under exactly this behaviour — it could not be otherwise, since this behaviour was what it measured. The rebuilt gate goes red on six assertions. This is the demonstration that G4-C can now fail.",
+							"shippedConfig": true
+						}
+					]
+				},
+				{
+					"label": "G4-C exactly 2 child elements are genuinely ABSENT from the merged definitions",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "p4r_probeExpectDelta_synthetic.log",
+							"lever": "EXPECTATION PERTURBATION: the four new R-P4-5/R-P4-6 delta constants (absent 2, rebound 5, widened 1, added 33) each moved by one. Proves the rebuilt G4-C assertions read the observation; NOT a shipped-configuration probe.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "G4-C exactly 5 are REBOUND (same name, different resolved type) and are NOT losses",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "p4r_probeExpectDelta_synthetic.log",
+							"lever": "EXPECTATION PERTURBATION: the four new R-P4-5/R-P4-6 delta constants (absent 2, rebound 5, widened 1, added 33) each moved by one. Proves the rebuilt G4-C assertions read the observation; NOT a shipped-configuration probe.",
+							"shippedConfig": false
+						},
+						{
+							"probeLog": "p4r_probeNameOnlyDelta_synthetic.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION — THE R-P4-7 LEVER: the merge's dropped-entry comparison reverts from SIGNATURE-based to NAME-based, which IS the pre-R-P4-5 record that misled. Under it the five REBOUND and the one WIDENED entry vanish from the record entirely, because their NAMES are present in the winning member. The PREDECESSOR gate was green under exactly this behaviour — it could not be otherwise, since this behaviour was what it measured. The rebuilt gate goes red on six assertions. This is the demonstration that G4-C can now fail.",
+							"shippedConfig": true
+						}
+					]
+				},
+				{
+					"label": "G4-C the 2 ABSENT entries are EXACTLY the enumerated signatures",
+					"status": "genuineGap",
+					"species": "phase4Unevidenced",
+					"note": "No retained log records this assertion FAILING. Phase 4 pulled six levers (expectation perturbation, winner flip, tier leak, alias repoint, and the two restatement probes in the sibling suites); this assertion went red under none of them. It is a genuine gap, counted rather than waved through, and Phase 6 owns closing it."
+				},
+				{
+					"label": "G4-C the WIDENED entry is a widening (maxOccurs unset -> unbounded) with its counterpart live in the merged subtree",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "p4r_probeExpectDelta_synthetic.log",
+							"lever": "EXPECTATION PERTURBATION: the four new R-P4-5/R-P4-6 delta constants (absent 2, rebound 5, widened 1, added 33) each moved by one. Proves the rebuilt G4-C assertions read the observation; NOT a shipped-configuration probe.",
+							"shippedConfig": false
+						},
+						{
+							"probeLog": "p4r_probeNameOnlyDelta_synthetic.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION — THE R-P4-7 LEVER: the merge's dropped-entry comparison reverts from SIGNATURE-based to NAME-based, which IS the pre-R-P4-5 record that misled. Under it the five REBOUND and the one WIDENED entry vanish from the record entirely, because their NAMES are present in the winning member. The PREDECESSOR gate was green under exactly this behaviour — it could not be otherwise, since this behaviour was what it measured. The rebuilt gate goes red on six assertions. This is the demonstration that G4-C can now fail.",
+							"shippedConfig": true
+						}
+					]
+				},
+				{
+					"label": "G4-C the merged nodes publish the delta themselves and agree with the report in all four buckets",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "p4r_probeExpectDelta_synthetic.log",
+							"lever": "EXPECTATION PERTURBATION: the four new R-P4-5/R-P4-6 delta constants (absent 2, rebound 5, widened 1, added 33) each moved by one. Proves the rebuilt G4-C assertions read the observation; NOT a shipped-configuration probe.",
+							"shippedConfig": false
+						},
+						{
+							"probeLog": "p4r_probeNameOnlyDelta_synthetic.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION — THE R-P4-7 LEVER: the merge's dropped-entry comparison reverts from SIGNATURE-based to NAME-based, which IS the pre-R-P4-5 record that misled. Under it the five REBOUND and the one WIDENED entry vanish from the record entirely, because their NAMES are present in the winning member. The PREDECESSOR gate was green under exactly this behaviour — it could not be otherwise, since this behaviour was what it measured. The rebuilt gate goes red on six assertions. This is the demonstration that G4-C can now fail.",
+							"shippedConfig": true
+						}
+					]
+				},
+				{
+					"label": "G4-C the misleading name-only loss property is absent from the graph entirely",
+					"status": "genuineGap",
+					"species": "phase4Unevidenced",
+					"note": "No retained log records this assertion FAILING. Phase 4 pulled six levers (expectation perturbation, winner flip, tier leak, alias repoint, and the two restatement probes in the sibling suites); this assertion went red under none of them. It is a genuine gap, counted rather than waved through, and Phase 6 owns closing it."
 				},
 				{
 					"label": "G4-D NEITHER member alone could serve both populations (measured from the source tier)",
@@ -1633,6 +1904,21 @@
 							"probeLog": "p4_ledgerStale_red_synthetic.log",
 							"lever": "LEDGER STALE-ENTRY PROBE (Phase 4): a fabricated entry for an assertion this suite does not run was added to the ledger; the stale-entry check caught it. Needed separately because the self-demonstration run above leaves no stale entries and that assertion stays green there.",
 							"shippedConfig": true
+						},
+						{
+							"probeLog": "p4r_probeExpectDelta_synthetic.log",
+							"lever": "EXPECTATION PERTURBATION: the four new R-P4-5/R-P4-6 delta constants (absent 2, rebound 5, widened 1, added 33) each moved by one. Proves the rebuilt G4-C assertions read the observation; NOT a shipped-configuration probe.",
+							"shippedConfig": false
+						},
+						{
+							"probeLog": "p4r_probeNameOnlyDelta_synthetic.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION — THE R-P4-7 LEVER: the merge's dropped-entry comparison reverts from SIGNATURE-based to NAME-based, which IS the pre-R-P4-5 record that misled. Under it the five REBOUND and the one WIDENED entry vanish from the record entirely, because their NAMES are present in the winning member. The PREDECESSOR gate was green under exactly this behaviour — it could not be otherwise, since this behaviour was what it measured. The rebuilt gate goes red on six assertions. This is the demonstration that G4-C can now fail.",
+							"shippedConfig": true
+						},
+						{
+							"probeLog": "p4r_ledgerGate_red_synthetic.log",
+							"lever": "LEDGER GATE SELF-DEMONSTRATION (Phase 4 remediation): the rebuilt G4-C's fourteen new assertions and the two restated G4-A ones ran with no ledger entries at all, so assertions genuinely lacked red evidence and the gate caught it — together with the five stale entries left by the retired name-only loss assertions.",
+							"shippedConfig": true
 						}
 					]
 				},
@@ -1643,6 +1929,21 @@
 						{
 							"probeLog": "p4_ledgerGate_red_synthetic.log",
 							"lever": "LEDGER GATE SELF-DEMONSTRATION (Phase 4): the new suite's ledger gate ran with its own three assertions absent from the ledger, so an assertion genuinely lacked red evidence and the gate caught it. As in the derived and source twins, the gate adds its own labels to the shipped set BEFORE comparing, so it cannot exempt itself.",
+							"shippedConfig": true
+						},
+						{
+							"probeLog": "p4r_probeExpectDelta_synthetic.log",
+							"lever": "EXPECTATION PERTURBATION: the four new R-P4-5/R-P4-6 delta constants (absent 2, rebound 5, widened 1, added 33) each moved by one. Proves the rebuilt G4-C assertions read the observation; NOT a shipped-configuration probe.",
+							"shippedConfig": false
+						},
+						{
+							"probeLog": "p4r_probeNameOnlyDelta_synthetic.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION — THE R-P4-7 LEVER: the merge's dropped-entry comparison reverts from SIGNATURE-based to NAME-based, which IS the pre-R-P4-5 record that misled. Under it the five REBOUND and the one WIDENED entry vanish from the record entirely, because their NAMES are present in the winning member. The PREDECESSOR gate was green under exactly this behaviour — it could not be otherwise, since this behaviour was what it measured. The rebuilt gate goes red on six assertions. This is the demonstration that G4-C can now fail.",
+							"shippedConfig": true
+						},
+						{
+							"probeLog": "p4r_ledgerGate_red_synthetic.log",
+							"lever": "LEDGER GATE SELF-DEMONSTRATION (Phase 4 remediation): the rebuilt G4-C's fourteen new assertions and the two restated G4-A ones ran with no ledger entries at all, so assertions genuinely lacked red evidence and the gate caught it — together with the five stale entries left by the retired name-only loss assertions.",
 							"shippedConfig": true
 						}
 					]
@@ -1659,6 +1960,21 @@
 						{
 							"probeLog": "p4_ledgerStale_red_synthetic.log",
 							"lever": "LEDGER STALE-ENTRY PROBE (Phase 4): a fabricated entry for an assertion this suite does not run was added to the ledger; the stale-entry check caught it. Needed separately because the self-demonstration run above leaves no stale entries and that assertion stays green there.",
+							"shippedConfig": true
+						},
+						{
+							"probeLog": "p4r_probeExpectDelta_synthetic.log",
+							"lever": "EXPECTATION PERTURBATION: the four new R-P4-5/R-P4-6 delta constants (absent 2, rebound 5, widened 1, added 33) each moved by one. Proves the rebuilt G4-C assertions read the observation; NOT a shipped-configuration probe.",
+							"shippedConfig": false
+						},
+						{
+							"probeLog": "p4r_probeNameOnlyDelta_synthetic.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION — THE R-P4-7 LEVER: the merge's dropped-entry comparison reverts from SIGNATURE-based to NAME-based, which IS the pre-R-P4-5 record that misled. Under it the five REBOUND and the one WIDENED entry vanish from the record entirely, because their NAMES are present in the winning member. The PREDECESSOR gate was green under exactly this behaviour — it could not be otherwise, since this behaviour was what it measured. The rebuilt gate goes red on six assertions. This is the demonstration that G4-C can now fail.",
+							"shippedConfig": true
+						},
+						{
+							"probeLog": "p4r_ledgerGate_red_synthetic.log",
+							"lever": "LEDGER GATE SELF-DEMONSTRATION (Phase 4 remediation): the rebuilt G4-C's fourteen new assertions and the two restated G4-A ones ran with no ledger entries at all, so assertions genuinely lacked red evidence and the gate caught it — together with the five stale entries left by the retired name-only loss assertions.",
 							"shippedConfig": true
 						}
 					]

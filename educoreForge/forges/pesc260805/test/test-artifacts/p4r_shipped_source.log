@@ -1,0 +1,101 @@
+[forge-pesc260805] source tier: (64 artifacts, 12909 named definitions, 16969 element decls, 720 anonymous types, 10848 derivations (restrictions/extensions), 84 attributes; contested namespaces: urn:org:pesc:sector:AcademicRecord:v1.6.0)
+[forge-pesc260805] derived tier: 63 namespaces (16 latest), 64 IN_NAMESPACE, 75 IMPORTS (+1 unresolved recorded), 17299 RESOLVES_TO (+9921 builtin markers, +201 ambiguous recorded, +205 absent-namespace recorded), 10400 SAME_DEFINITION chain edges, 2282/12909 reachable from latest roots)
+[forge-pesc260805] synthetic tier: S-1 merged 109 definitions (42 college-only + 36 test-score-only + 31 shared, of which 14 conflict and 2 child elements are genuinely ABSENT, 5 REBOUND, 1 WIDENED, and 33 ADDED by the winning member), 140 MERGED_FROM, 201 held references resolved; S-2 alias urn:org:pesc:core:CoreMain:v1.6.0 served by urn:org:pesc:core:CoreMain:v1.8.0 (205 references over 129 distinct names, 1 import); total 41850 nodes, 70063 edges
+[forge-pesc260805] source tier: (64 artifacts, 12909 named definitions, 16969 element decls, 720 anonymous types, 10848 derivations (restrictions/extensions), 84 attributes; contested namespaces: urn:org:pesc:sector:AcademicRecord:v1.6.0)
+[forge-pesc260805] derived tier: 63 namespaces (16 latest), 64 IN_NAMESPACE, 75 IMPORTS (+1 unresolved recorded), 17299 RESOLVES_TO (+9921 builtin markers, +201 ambiguous recorded, +205 absent-namespace recorded), 10400 SAME_DEFINITION chain edges, 2282/12909 reachable from latest roots)
+[forge-pesc260805] synthetic tier: S-1 merged 109 definitions (42 college-only + 36 test-score-only + 31 shared, of which 14 conflict and 2 child elements are genuinely ABSENT, 5 REBOUND, 1 WIDENED, and 33 ADDED by the winning member), 140 MERGED_FROM, 201 held references resolved; S-2 alias urn:org:pesc:core:CoreMain:v1.6.0 served by urn:org:pesc:core:CoreMain:v1.8.0 (205 references over 129 distinct names, 1 import); total 41850 nodes, 70063 edges
+
+G-A — full parse + determinism
+        RED (demonstrated): comparator fed a set missing 'pesc260805:root…' -> mismatch detected: true
+  ok    G-A comparator demonstrably able to go red
+  ok    G-A all 64 corpus files produced artifact nodes
+  ok    G-A node count nonzero
+  ok    G-A edge count nonzero
+        census: {"artifacts":64,"importDecls":82,"namedDefinitions":12909,"elementDecls":16969,"anonymousTypes":720,"derivations":10848,"attributeDecls":84,"enumerationValuesCarried":31428,"nodes":41850,"edges":70063}
+        GREEN: run one 41850 unique stableIds (of 41850 nodes), run two identical: true
+  ok    G-A stableIds unique within a run
+  ok    G-A two runs produce identical stableId sets
+
+G-B — same-name/different-namespace identity traps
+        RED (demonstrated): bare-local-name keying fuses 3 TransmissionDataType definitions into 1 key(s): complexType/TransmissionDataType
+  ok    G-B RED: bare keying WOULD fuse the three TransmissionDataTypes
+        GREEN: real keys -> 3 distinct nodes: urn:org:pesc:sector:AcademicRecord:v1.13.0#complexType/TransmissionDataType | urn:org:pesc:sector:AdmissionsRecord:v1.4.0#complexType/TransmissionDataType | urn:org:pesc:core:CoreMain:v1.19.1#complexType/TransmissionDataType
+  ok    G-B three TransmissionDataType definitions are three distinct nodes
+        RED (demonstrated): bare keying fuses PersonType 1.10.0 + 1.19.1 into 1 key(s)
+  ok    G-B RED: bare keying WOULD fuse the two PersonTypes
+        GREEN: PersonType 1.10.0 and 1.19.1 are distinct nodes: urn:org:pesc:core:CoreMain:v1.10.0#complexType/PersonType | urn:org:pesc:core:CoreMain:v1.19.1#complexType/PersonType
+  ok    G-B CoreMain 1.10.0 and 1.19.1 PersonType are distinct nodes
+
+G-C — contested-namespace discriminator
+        RED (demonstrated): discriminator stripped -> 31 same-named definitions in the contested namespace WOULD fuse (e.g. urn:org:pesc:sector:AcademicRecord:v1.6.0#complexType/PersonType)
+  ok    G-C RED: without @sha12 the two collision members WOULD fuse definitions
+        GREEN: 140 contested-namespace definitions, all @sha12-keyed, 2 disjoint artifact groups (948d88f32069, e12830fc86a3)
+  ok    G-C contested-namespace definitions exist
+  ok    G-C every contested definition key carries @sha12
+  ok    G-C the two collision artifacts produce two disjoint definition sets
+  ok    G-C no plain-keyed definition exists in the contested namespace
+  ok    G-C uncontested namespaces carry NO discriminator
+
+G-D — refusal gates (fixtures)
+        RED (observed refusal): forge-pesc260805 parse: pesc260805 parser REFUSES: file 'UnboundPrefixFixture_v1.0.0.xsd' uses prefix 'ghost' (in 'ghost:SomethingType', top-level element 'FixtureRoot' type) but i
+  ok    G-D unbound prefix refused
+  ok    G-D refusal names the file
+  ok    G-D refusal names the prefix
+        RED (observed refusal): forge-pesc260805 parse: pesc260805 parser REFUSES: file 'MessageImportFixture_v1.0.0.xsd' (layer 'message', namespace 'urn:org:pesc:message:MessageImportFixture:v1.0.0') imports 'urn:org:pesc:message:CollegeTranscript:v1
+  ok    G-D message->message import refused
+  ok    G-D refusal names both namespaces
+        GREEN: the 64-file corpus itself parsed with zero refusals (runs one and two above)
+
+G-E — facet fidelity (ApplicationFeeAmountType)
+  ok    G-E 1.19.0 restriction node exists
+  ok    G-E 1.19.1 restriction node exists
+        RED (demonstrated): asserting totalDigits/fractionDigits on the 1.19.1 node fails as it must (totalDigits=undefined, fractionDigits=undefined)
+  ok    G-E RED: the facet assertion demonstrably fails where facets are absent
+        GREEN: 1.19.0 carries totalDigits=12, fractionDigits=2; 1.19.1 carries neither — the Phase 0 facet difference is VISIBLE in emitted nodes
+  ok    G-E 1.19.0 carries totalDigits 12
+  ok    G-E 1.19.0 carries fractionDigits 2
+  ok    G-E 1.19.1 facets ABSENT
+  ok    G-E both share the written base
+
+G-F — documentation carried verbatim
+  ok    G-F a multi-line documentation specimen exists in the raw source
+        specimen: 1175 bytes, 11 lines; collapsed form would be 984 bytes
+        RED (demonstrated): the incumbent's collapse changes the bytes (byte-identical: false) — this checker would catch it
+  ok    G-F RED: whitespace collapse is detectable by the byte comparison
+        GREEN: specimen found byte-identical on urn:org:pesc:core:CoreMain:v1.10.0#simpleType/AccreditationTypeType/restriction/1
+  ok    G-F specimen is byte-identical on an emitted node
+
+INTEGRATION — descriptor + factory + forge + shapeForgedGraph
+  ok    INTEGRATION [parserDescriptor] section is visible to the ini reader
+  ok    INTEGRATION standardName is PESC260805 (D-6)
+  ok    INTEGRATION entryModule declared
+  ok    INTEGRATION roundTripValidator NOT declared yet (declared-and-broken = refusal)
+  ok    INTEGRATION defaultSnapshot resolves to exactly the 01 directory
+[forge-pesc260805] source tier: (64 artifacts, 12909 named definitions, 16969 element decls, 720 anonymous types, 10848 derivations (restrictions/extensions), 84 attributes; contested namespaces: urn:org:pesc:sector:AcademicRecord:v1.6.0)
+[forge-pesc260805] derived tier: 63 namespaces (16 latest), 64 IN_NAMESPACE, 75 IMPORTS (+1 unresolved recorded), 17299 RESOLVES_TO (+9921 builtin markers, +201 ambiguous recorded, +205 absent-namespace recorded), 10400 SAME_DEFINITION chain edges, 2282/12909 reachable from latest roots)
+[forge-pesc260805] synthetic tier: S-1 merged 109 definitions (42 college-only + 36 test-score-only + 31 shared, of which 14 conflict and 2 child elements are genuinely ABSENT, 5 REBOUND, 1 WIDENED, and 33 ADDED by the winning member), 140 MERGED_FROM, 201 held references resolved; S-2 alias urn:org:pesc:core:CoreMain:v1.6.0 served by urn:org:pesc:core:CoreMain:v1.8.0 (205 references over 129 distinct names, 1 import); total 41850 nodes, 70063 edges
+  ok    INTEGRATION forge returns nodes[] and edges[]
+  ok    INTEGRATION metadata.version non-blank
+  ok    INTEGRATION standardKey + stableUriPropertyName returned
+  ok    INTEGRATION embedCallCount is 0 with skipEmbedding
+  ok    INTEGRATION every node has stableId, ForgedNode label, non-empty searchText
+  ok    INTEGRATION every edge carries provenanceTier structural + pescTier
+        tier census: source 41676, derived 63, meta 1, synthetic 110; total 41850
+  ok    INTEGRATION every node carries a ratified pescTier (source|derived|synthetic|meta, R-P2-1)
+  ok    INTEGRATION source tier is EXACTLY 41,676 nodes
+  ok    INTEGRATION derived tier is EXACTLY 63 nodes (the namespaces)
+  ok    INTEGRATION meta tier is EXACTLY 1 node (the standard root, R-P2-1)
+  ok    INTEGRATION synthetic tier is EXACTLY 110 nodes (109 S-1 merged definitions + 1 S-2 alias namespace)
+  ok    INTEGRATION the four tiers account for every emitted node
+  ok    INTEGRATION shapeForgedGraph accepts the output (no error)
+  ok    INTEGRATION shaped embeddingDims null (nothing embedded)
+  ok    INTEGRATION shaped nodes carry ref{source,id} resolving the stableId
+  ok    INTEGRATION shaped edges carry provenanceTier (PG-JSON array form)
+
+LEDGER — red evidence for every shipped assertion
+        ledger: 55 shipped assertions; proven-red 9, records-gap 41, GENUINE GAP 5
+  ok    LEDGER every shipped assertion has a red-evidence entry
+  ok    LEDGER carries no stale entries for assertions this suite no longer runs
+  ok    LEDGER the entry count matches the assertions actually run
+
+55 passed, 0 failed

@@ -387,6 +387,90 @@ const moduleFunction =
 				JSON.stringify([oneEntry.name, oneEntry.typeAsWritten, oneEntry.minOccurs, oneEntry.maxOccurs]);
 
 			// =============================================================
+			// S-1 — the SIGNATURE-BASED, SYMMETRIC merge delta (R-P4-5, R-P4-6)
+			// =============================================================
+			// SUPERSEDES the name-only 'lostChildElementNames' record, which was MISLEADING and is
+			// gone from the graph entirely (design §8f). A name-only record cannot express a type
+			// REBINDING: the merged ContactsType published lost names ["Address","Email","Phone"]
+			// while its own subtree CONTAINS elements of exactly those names, differently bound. A
+			// reader consulting that record was actively misled, so the property name is retired
+			// rather than repaired — nothing downstream can read the old form by accident.
+			//
+			// R-P4-5: the record is keyed on name + RESOLVED TYPE + cardinality, and every entry the
+			// losing member had that the merged form does not is CLASSIFIED:
+			//   ABSENT   no element of that name survives in the merged subtree — a real loss
+			//   REBOUND  the name survives, bound to a DIFFERENT type — present, not lost
+			//   WIDENED  same name, same type, and the merged cardinality ADMITS the loser's — a
+			//            widening loses nothing, and counting it as a loss was simply wrong
+			// A fourth shape (same name, same type, merged cardinality NARROWER) would be a genuine
+			// loss of a different species and no ruling covers it, so it REFUSES rather than being
+			// filed under the nearest label.
+			//
+			// R-P4-6: the record is SYMMETRIC. A union subtracts and ADDS, and enumerating only the
+			// subtractions is not an honest account of a merge. 'added' is what the merged form
+			// carries that the losing member never declared — not invention in the round-trip sense
+			// (every added entry is declared by the winning source member) but a real widening of
+			// what a test-score consumer now sees, and it is stated rather than left implicit.
+			const occursNumber = (occursValue) => {
+				if (occursValue === null || occursValue === undefined || occursValue === '') {
+					return 1; // XSD default for an unstated minOccurs/maxOccurs
+				}
+				if (occursValue === 'unbounded') {
+					return Infinity;
+				}
+				const parsed = Number(occursValue);
+				if (!Number.isFinite(parsed)) {
+					refuse(
+						`S-1's merge delta met the occurrence value '${occursValue}', which is neither a ` +
+							`number nor 'unbounded' — classifying it would be a guess`,
+					);
+				}
+				return parsed;
+			};
+			const mergedFormAdmits = (mergedEntry, loserEntry) =>
+				occursNumber(mergedEntry.minOccurs) <= occursNumber(loserEntry.minOccurs) &&
+				occursNumber(mergedEntry.maxOccurs) >= occursNumber(loserEntry.maxOccurs);
+
+			const classifyDroppedEntry = (loserEntry, mergedSignature, definitionKey) => {
+				const sameNameInMerged = mergedSignature.filter(
+					(oneMergedEntry) => oneMergedEntry.name === loserEntry.name,
+				);
+				if (sameNameInMerged.length === 0) {
+					return { classification: 'ABSENT', mergedCounterpart: null };
+				}
+				const sameNameSameType = sameNameInMerged.filter(
+					(oneMergedEntry) => oneMergedEntry.typeAsWritten === loserEntry.typeAsWritten,
+				);
+				if (sameNameSameType.length === 0) {
+					return { classification: 'REBOUND', mergedCounterpart: sameNameInMerged[0] };
+				}
+				const wideningCounterpart = sameNameSameType.find((oneMergedEntry) =>
+					mergedFormAdmits(oneMergedEntry, loserEntry),
+				);
+				if (wideningCounterpart !== undefined) {
+					return { classification: 'WIDENED', mergedCounterpart: wideningCounterpart };
+				}
+				refuse(
+					`S-1's merge delta cannot classify '${definitionKey}' child '${loserEntry.name}': the ` +
+						`merged form binds the same name to the same type '${loserEntry.typeAsWritten}' but with ` +
+						`a cardinality that does NOT admit the losing member's ` +
+						`(loser ${loserEntry.minOccurs}..${loserEntry.maxOccurs}, merged ` +
+						`${sameNameSameType[0].minOccurs}..${sameNameSameType[0].maxOccurs}). That is a NARROWING ` +
+						`— a real loss of a species no ruling covers, and filing it under the nearest label ` +
+						`would be exactly the dishonesty R-P4-5 was written to end`,
+				);
+				return null; // unreachable; refuse throws
+			};
+
+			const signatureRecordOf = (oneEntry, extraFields) => ({
+				name: oneEntry.name,
+				typeAsWritten: oneEntry.typeAsWritten,
+				minOccurs: oneEntry.minOccurs,
+				maxOccurs: oneEntry.maxOccurs,
+				...extraFields,
+			});
+
+			// =============================================================
 			// S-1 — the union, the conflicts, the loss
 			// =============================================================
 			const definitionMapOfMember = (oneMemberNode) => {
@@ -419,7 +503,10 @@ const moduleFunction =
 				.sort();
 
 			const conflictRecords = [];
-			const lostChildElements = [];
+			const absentChildElements = [];
+			const reboundChildElements = [];
+			const widenedChildElements = [];
+			const addedChildElements = [];
 			sharedKeys.forEach((oneKey) => {
 				const collegeSignature = childElementSignatureOf(collegeDefinitionMap[oneKey].stableId);
 				const testScoreSignature = childElementSignatureOf(testScoreDefinitionMap[oneKey].stableId);
@@ -430,11 +517,18 @@ const moduleFunction =
 				}
 				const collegeKeySet = new Set(collegeKeys);
 				const testScoreKeySet = new Set(testScoreKeys);
-				const lostEntryNames = testScoreSignature
-					.filter((oneEntry) => !collegeKeySet.has(signatureEntryKey(oneEntry)))
-					.map((oneEntry) => oneEntry.name)
-					.filter((oneName) => oneName !== null && oneName !== '')
-					.sort();
+
+				// the LOSING direction (R-P4-5): what the test-score member declared that the merged
+				// (college) form does not declare identically — each entry classified, not just named.
+				const droppedEntries = testScoreSignature.filter(
+					(oneEntry) => !collegeKeySet.has(signatureEntryKey(oneEntry)),
+				);
+				// the WINNING direction (R-P4-6): what the merged form declares that the test-score
+				// member never did. Same signature basis, same subtree walk, opposite direction.
+				const addedEntries = collegeSignature.filter(
+					(oneEntry) => !testScoreKeySet.has(signatureEntryKey(oneEntry)),
+				);
+
 				const collegeIsSuperset =
 					testScoreKeys.every((oneKeyText) => collegeKeySet.has(oneKeyText)) &&
 					collegeKeySet.size > testScoreKeySet.size;
@@ -451,6 +545,53 @@ const moduleFunction =
 							`proceed on the old ruling`,
 					);
 				}
+				// classify every dropped entry, then file it in its own bucket
+				const perDefinitionAbsent = [];
+				const perDefinitionRebound = [];
+				const perDefinitionWidened = [];
+				droppedEntries.forEach((oneEntry) => {
+					const { classification, mergedCounterpart } = classifyDroppedEntry(
+						oneEntry,
+						collegeSignature,
+						oneKey,
+					);
+					const record = {
+						definitionKey: oneKey,
+						definitionName: oneKey.split('|')[1],
+						classification,
+						...signatureRecordOf(oneEntry),
+						// the entry is QUERYABLE: the element declaration still exists in the graph, under
+						// the losing member's own source-tier definition. This is the stableId to walk to.
+						survivingUnderSourceDefinitionStableId: testScoreDefinitionMap[oneKey].stableId,
+						losingArtifactSha256: testScoreMemberNode.properties.sha256,
+						mergedCounterpart:
+							mergedCounterpart === null ? null : signatureRecordOf(mergedCounterpart),
+					};
+					if (classification === 'ABSENT') {
+						perDefinitionAbsent.push(record);
+						absentChildElements.push(record);
+						return;
+					}
+					if (classification === 'REBOUND') {
+						perDefinitionRebound.push(record);
+						reboundChildElements.push(record);
+						return;
+					}
+					perDefinitionWidened.push(record);
+					widenedChildElements.push(record);
+				});
+
+				const perDefinitionAdded = addedEntries.map((oneEntry) => ({
+					definitionKey: oneKey,
+					definitionName: oneKey.split('|')[1],
+					classification: 'ADDED',
+					...signatureRecordOf(oneEntry),
+					// the added declaration's home: the WINNING member's own source-tier definition.
+					declaredUnderSourceDefinitionStableId: collegeDefinitionMap[oneKey].stableId,
+					declaringArtifactSha256: collegeMemberNode.properties.sha256,
+				}));
+				perDefinitionAdded.forEach((oneRecord) => addedChildElements.push(oneRecord));
+
 				conflictRecords.push({
 					definitionKey: oneKey,
 					kind: oneKey.split('|')[0],
@@ -458,18 +599,10 @@ const moduleFunction =
 					collegeChildCount: collegeSignature.length,
 					testScoreChildCount: testScoreSignature.length,
 					collegeIsSuperset,
-					lostChildElementNames: lostEntryNames,
-				});
-				lostEntryNames.forEach((oneLostName) => {
-					lostChildElements.push({
-						definitionKey: oneKey,
-						definitionName: oneKey.split('|')[1],
-						elementName: oneLostName,
-						// the loss is QUERYABLE: the element still exists in the graph, under the losing
-						// member's own source-tier definition. This is the stableId to walk to.
-						survivingUnderSourceDefinitionStableId: testScoreDefinitionMap[oneKey].stableId,
-						losingArtifactSha256: testScoreMemberNode.properties.sha256,
-					});
+					absentChildElements: perDefinitionAbsent,
+					reboundChildElements: perDefinitionRebound,
+					widenedChildElements: perDefinitionWidened,
+					addedChildElements: perDefinitionAdded,
 				});
 			});
 			const conflictKeySet = new Set(conflictRecords.map((oneRecord) => oneRecord.definitionKey));
@@ -477,8 +610,13 @@ const moduleFunction =
 			// =============================================================
 			// S-1 — emit the merged definition nodes and their MERGED_FROM provenance
 			// =============================================================
-			// IDENTITY (PROVISIONAL — design §4 rules the SOURCE keys but is silent on synthetic
-			// ones): the merged definition takes the CLEAN qualified key
+			// IDENTITY — RATIFIED by design §8e R-P4-1, which rules that merged definitions take the
+			// CLEAN qualified key and that this is consistent with D-1's intent rather than an
+			// exception to it: the discriminator exists to mark a namespace DISPUTED, and the
+			// synthetic merge is the RESOLUTION of that dispute. (This comment previously read
+			// "PROVISIONAL — design §4 is silent on synthetic ones"; that was factually wrong once
+			// R-P4-1 was written, and a stale PROVISIONAL invites a re-litigation that already
+			// happened.) The merged definition takes the CLEAN qualified key
 			// '<namespace>#<kind>/<name>', which the source members cannot hold because D-1 gives
 			// every definition in a contested namespace an '@<sha12>' discriminator. So the clean key
 			// is both free and exactly right: it is what a written reference 'AcRec:PersonType'
@@ -505,6 +643,37 @@ const moduleFunction =
 				const conflictRecord = conflictRecords.find(
 					(oneRecord) => oneRecord.definitionKey === oneKey,
 				);
+				// what the merged NODE publishes about its own delta: the signature, its
+				// classification, and the forwarding address. definitionKey/definitionName are
+				// dropped because the node IS the definition — repeating them would be noise.
+				const publishedDeltaEntry = (oneRecord) => ({
+					name: oneRecord.name,
+					typeAsWritten: oneRecord.typeAsWritten,
+					minOccurs: oneRecord.minOccurs,
+					maxOccurs: oneRecord.maxOccurs,
+					classification: oneRecord.classification,
+					...(oneRecord.classification === 'ADDED'
+						? { declaredUnderSourceDefinitionStableId: oneRecord.declaredUnderSourceDefinitionStableId }
+						: {
+								survivingUnderSourceDefinitionStableId:
+									oneRecord.survivingUnderSourceDefinitionStableId,
+								mergedCounterpart: oneRecord.mergedCounterpart,
+							}),
+				});
+				const deltaSignatures = {
+					absent: (conflictRecord === undefined ? [] : conflictRecord.absentChildElements).map(
+						publishedDeltaEntry,
+					),
+					rebound: (conflictRecord === undefined ? [] : conflictRecord.reboundChildElements).map(
+						publishedDeltaEntry,
+					),
+					widened: (conflictRecord === undefined ? [] : conflictRecord.widenedChildElements).map(
+						publishedDeltaEntry,
+					),
+					added: (conflictRecord === undefined ? [] : conflictRecord.addedChildElements).map(
+						publishedDeltaEntry,
+					),
+				};
 				const definitionKind = requiredProperty(winningDefinitionNode, 'kind');
 				const definitionName = requiredProperty(winningDefinitionNode, 'name');
 				const mergedStableId = `${contestedNamespace}#${definitionKind}/${definitionName}`;
@@ -543,11 +712,17 @@ const moduleFunction =
 						// header), so a consumer that wants the definition's body walks to this node.
 						contentFromStableId: winningDefinitionNode.stableId,
 						supersededStableId: supersededDefinitionNode === null ? '' : supersededDefinitionNode.stableId,
-						lostChildElementNames: JSON.stringify(
-							conflictRecord === undefined ? [] : conflictRecord.lostChildElementNames,
-						),
-						lostChildElementCount:
-							conflictRecord === undefined ? 0 : conflictRecord.lostChildElementNames.length,
+						// the SIGNATURE-BASED, SYMMETRIC merge delta (R-P4-5, R-P4-6). The retired
+						// 'lostChildElementNames' property is deliberately NOT written under any name
+						// close to it: a name-only loss record cannot express a rebinding and misled.
+						absentChildElementSignatures: JSON.stringify(deltaSignatures.absent),
+						absentChildElementCount: deltaSignatures.absent.length,
+						reboundChildElementSignatures: JSON.stringify(deltaSignatures.rebound),
+						reboundChildElementCount: deltaSignatures.rebound.length,
+						widenedChildElementSignatures: JSON.stringify(deltaSignatures.widened),
+						widenedChildElementCount: deltaSignatures.widened.length,
+						addedChildElementSignatures: JSON.stringify(deltaSignatures.added),
+						addedChildElementCount: deltaSignatures.added.length,
 					},
 				});
 				mergedDefinitionStableIdByKey[oneKey] = mergedStableId;
@@ -579,8 +754,13 @@ const moduleFunction =
 							mergeRole: conflictKeySet.has(oneKey) ? 'superseded' : 'identical',
 							branch: 'testScore',
 							declaringArtifactSha256: requiredProperty(loserDefinitionNode, 'declaringArtifactSha256'),
-							lostChildElementCount:
-								conflictRecord === undefined ? 0 : conflictRecord.lostChildElementNames.length,
+							// SYMMETRIC on the provenance edge too: the superseded member's own edge
+							// carries both directions of the delta, so a consumer walking MERGED_FROM
+							// backwards learns what this member lost AND what the merge added to it.
+							absentChildElementCount: deltaSignatures.absent.length,
+							reboundChildElementCount: deltaSignatures.rebound.length,
+							widenedChildElementCount: deltaSignatures.widened.length,
+							addedChildElementCount: deltaSignatures.added.length,
 						},
 					);
 				}
@@ -881,7 +1061,12 @@ const moduleFunction =
 				conflictingSharedDefinitions: conflictRecords.length,
 				collegeSupersetConflicts: conflictRecords.filter((oneRecord) => oneRecord.collegeIsSuperset)
 					.length,
-				lostChildElements: lostChildElements.length,
+				// R-P4-5 / R-P4-6: the merge delta, classified and SYMMETRIC. 'lostChildElements' is
+				// gone — it counted rebindings and a widening as losses and was wrong by a factor of four.
+				absentChildElements: absentChildElements.length,
+				reboundChildElements: reboundChildElements.length,
+				widenedChildElements: widenedChildElements.length,
+				addedChildElements: addedChildElements.length,
 				mergedFromEdges: syntheticEdges.filter((oneEdge) => oneEdge.type === 'MERGED_FROM').length,
 				heldReferencesResolved: heldReferenceEntries.length,
 				heldReferenceCountsByVariety,
@@ -911,7 +1096,10 @@ const moduleFunction =
 				testScoreOnlyKeys,
 				sharedKeys,
 				conflictRecords,
-				lostChildElements,
+				absentChildElements,
+				reboundChildElements,
+				widenedChildElements,
+				addedChildElements,
 				mergedDefinitionStableIdByKey,
 			};
 
