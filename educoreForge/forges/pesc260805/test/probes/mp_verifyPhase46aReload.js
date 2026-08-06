@@ -141,13 +141,15 @@ const runVerification = ({ boltUrl, neo4jUser, neo4jPassword }) => {
 					// ---- G4.5-C PROPERTY FIDELITY, on the NEW population ------------------------
 					// The duplicated children are the nodes this phase introduced, so they are where a
 					// bolt-boundary shape change would bite first.
+					// DERIVED FROM THE DATA, NOT HAND-LISTED. This first named five properties, and was
+					// therefore BLIND to every property the phase added after it was written — 522
+					// nodes could have been missing `decidedNonSignaturePropertyNames` and it would
+					// have reported perfect fidelity. A fidelity check that enumerates what to compare
+					// can only ever verify what its author already thought of. It now returns the whole
+					// property map per node and compares against the emitted bag key by key.
 					return runQuery(`
 						MATCH (n:ForgedNode) WHERE n.syntheticRule = 'S-1c'
-						RETURN n.stableId AS stableId, n.pescTier AS pescTier,
-						       n.documentation AS documentation, n.maxOccurs AS maxOccurs,
-						       n.contributedByBranch AS contributedByBranch,
-						       n.childUnionDisposition AS childUnionDisposition,
-						       keys(n) AS propertyNames
+						RETURN n.stableId AS stableId, properties(n) AS graphProperties, keys(n) AS propertyNames
 						ORDER BY n.stableId`);
 				})
 				.then((childResult) => {
@@ -161,6 +163,8 @@ const runVerification = ({ boltUrl, neo4jUser, neo4jPassword }) => {
 					const meaningMismatches = [];
 					const nullBecameAbsent = [];
 					let longestDocumentationLength = 0;
+					let comparedPropertyCount = 0;
+					const propertyNamesSeen = new Set();
 					childResult.records.forEach((oneRecord) => {
 						const stableId = oneRecord.get('stableId');
 						const emittedNode = emittedChildByStableId[stableId];
@@ -168,38 +172,67 @@ const runVerification = ({ boltUrl, neo4jUser, neo4jPassword }) => {
 							meaningMismatches.push(`${stableId}: in graph, not emitted`);
 							return;
 						}
-						// string-versus-array across the boundary
-						if (typeof oneRecord.get('pescTier') !== 'string') {
-							meaningMismatches.push(`${stableId}: pescTier read back as ${typeof oneRecord.get('pescTier')}`);
-						}
-						// verbatim documentation, byte-identical
-						const graphDocumentation = oneRecord.get('documentation');
-						const emittedDocumentation = emittedNode.properties.documentation;
-						if (typeof graphDocumentation === 'string') {
-							longestDocumentationLength = Math.max(longestDocumentationLength, graphDocumentation.length);
-						}
-						if (emittedDocumentation !== '' && graphDocumentation !== emittedDocumentation) {
-							meaningMismatches.push(`${stableId}: documentation differs after the round trip`);
-						}
-						// null-versus-absent: Neo4j has no null property, so a deliberate null must be
-						// recognised as ABSENT rather than read as a missing value (design §8g).
+						const graphProperties = oneRecord.get('graphProperties');
 						const propertyNames = oneRecord.get('propertyNames');
-						if (
-							emittedNode.properties.maxOccurs === null &&
-							propertyNames.indexOf('maxOccurs') !== -1
-						) {
-							meaningMismatches.push(`${stableId}: emitted null maxOccurs is PRESENT in the graph`);
-						}
-						if (emittedNode.properties.maxOccurs === null) {
-							nullBecameAbsent.push(stableId);
-						}
-						['contributedByBranch', 'childUnionDisposition'].forEach((onePropertyName) => {
-							if (oneRecord.get(onePropertyName) !== emittedNode.properties[onePropertyName]) {
-								meaningMismatches.push(`${stableId}: ${onePropertyName} differs`);
+						// EVERY property, from BOTH directions. A one-directional walk would miss a
+						// property the graph carries that the forge never emitted, and vice versa.
+						// stableId lives at the NODE's top level in the forge's model and is written into
+						// the graph as an ordinary property by the loader. Comparing it against
+						// properties.stableId reports 522 phantom mismatches — which is exactly what the
+						// hand-listed predecessor avoided by never looking. The derived form found it on
+						// its first run, which is the argument for deriving.
+						const emittedValueOf = (onePropertyName) =>
+							onePropertyName === 'stableId'
+								? emittedNode.stableId
+								: emittedNode.properties[onePropertyName];
+						const allPropertyNames = [
+							...new Set([
+								...Object.keys(emittedNode.properties),
+								...Object.keys(graphProperties),
+							]),
+						];
+						allPropertyNames.forEach((onePropertyName) => {
+							propertyNamesSeen.add(onePropertyName);
+							comparedPropertyCount++;
+							const emittedValue = emittedValueOf(onePropertyName);
+							const graphHasIt = Object.prototype.hasOwnProperty.call(
+								graphProperties,
+								onePropertyName,
+							);
+							// null-versus-absent (design §8g): Neo4j has no null property, so an emitted
+							// null MUST arrive ABSENT. That is correct, not a mismatch.
+							if (emittedValue === null) {
+								if (graphHasIt) {
+									meaningMismatches.push(`${stableId}: emitted null '${onePropertyName}' is PRESENT in the graph`);
+								} else {
+									nullBecameAbsent.push(`${stableId}.${onePropertyName}`);
+								}
+								return;
+							}
+							if (!graphHasIt) {
+								meaningMismatches.push(`${stableId}: emitted '${onePropertyName}' is MISSING from the graph`);
+								return;
+							}
+							const graphValue = neo4j.isInt(graphProperties[onePropertyName])
+								? graphProperties[onePropertyName].toNumber()
+								: graphProperties[onePropertyName];
+							if (onePropertyName === 'documentation' && typeof graphValue === 'string') {
+								longestDocumentationLength = Math.max(longestDocumentationLength, graphValue.length);
+							}
+							if (JSON.stringify(graphValue) !== JSON.stringify(emittedValue)) {
+								meaningMismatches.push(
+									`${stableId}: '${onePropertyName}' differs — emitted ${JSON.stringify(emittedValue)}, graph ${JSON.stringify(graphValue)}`,
+								);
 							}
 						});
+						// string-versus-array across the bolt boundary, asserted explicitly because it is
+						// the shape change design §8g warns about rather than a value difference
+						if (typeof graphProperties.pescTier !== 'string') {
+							meaningMismatches.push(`${stableId}: pescTier read back as ${typeof graphProperties.pescTier}`);
+						}
+						void propertyNames;
 					});
-					evidence(`property fidelity over the ${readBackCount} duplicated children: mismatches ${meaningMismatches.length}; emitted-null maxOccurs correctly ABSENT in the graph: ${nullBecameAbsent.length}; longest documentation survived: ${longestDocumentationLength} chars`);
+					evidence(`property fidelity over the ${readBackCount} duplicated children: ${comparedPropertyCount} property comparisons across ${propertyNamesSeen.size} distinct property names (DERIVED from the data, not hand-listed); mismatches ${meaningMismatches.length}; emitted nulls correctly ABSENT in the graph: ${nullBecameAbsent.length}; longest documentation survived: ${longestDocumentationLength} chars`);
 					meaningMismatches.slice(0, 5).forEach((oneMismatch) => evidence(`  ${oneMismatch}`));
 					check('G4.5-C PROPERTY FIDELITY: every duplicated child reads back MEANING what was emitted (string-not-array, verbatim documentation, null-as-absent)', meaningMismatches.length === 0 && readBackCount > 0);
 

@@ -1,0 +1,24 @@
+GATE 4.6a RELOAD VERIFICATION against bolt://localhost:7817
+        nodes: emitted 42372 (42372 distinct), graph 42372 (42372 distinct); lost 0, invented 0
+  ok    G4.5-A CONSERVATION: the graph node stableId SET equals the emitted set — nothing lost, nothing invented
+        fusion: emitted duplicates 0; graph nodes 42372 vs distinct emitted 42372
+  ok    G4.5-B FUSION: the emitted stableId set carries NO duplicates and the graph node count equals the distinct emitted count
+        edges: emitted 70628 (70628 distinct triples), graph 70628 (70628 distinct); lost 0, invented 0
+  ok    G4.5-A CONSERVATION: the graph (from,type,to) triple SET equals the emitted set (G4.5-D folds in here)
+        property fidelity over the 522 duplicated children: 15138 property comparisons across 29 distinct property names (DERIVED from the data, not hand-listed); mismatches 522; emitted nulls correctly ABSENT in the graph: 2039; longest documentation survived: 119 chars
+          urn:org:pesc:sector:AcademicRecord:v1.6.0#complexType/AcademicAwardType/el/10:NoteMessage: 'stableId' differs — emitted undefined, graph "urn:org:pesc:sector:AcademicRecord:v1.6.0#complexType/AcademicAwardType/el/10:NoteMessage"
+          urn:org:pesc:sector:AcademicRecord:v1.6.0#complexType/AcademicAwardType/el/1:AcademicAwardLevel: 'stableId' differs — emitted undefined, graph "urn:org:pesc:sector:AcademicRecord:v1.6.0#complexType/AcademicAwardType/el/1:AcademicAwardLevel"
+          urn:org:pesc:sector:AcademicRecord:v1.6.0#complexType/AcademicAwardType/el/2:AcademicAwardDate: 'stableId' differs — emitted undefined, graph "urn:org:pesc:sector:AcademicRecord:v1.6.0#complexType/AcademicAwardType/el/2:AcademicAwardDate"
+          urn:org:pesc:sector:AcademicRecord:v1.6.0#complexType/AcademicAwardType/el/3:AcademicAwardTitle: 'stableId' differs — emitted undefined, graph "urn:org:pesc:sector:AcademicRecord:v1.6.0#complexType/AcademicAwardType/el/3:AcademicAwardTitle"
+          urn:org:pesc:sector:AcademicRecord:v1.6.0#complexType/AcademicAwardType/el/4:AcademicHonors: 'stableId' differs — emitted undefined, graph "urn:org:pesc:sector:AcademicRecord:v1.6.0#complexType/AcademicAwardType/el/4:AcademicHonors"
+  FAIL  G4.5-C PROPERTY FIDELITY: every duplicated child reads back MEANING what was emitted (string-not-array, verbatim documentation, null-as-absent)
+        NODE DIGEST: count 42372 (before 41850, delta 522), digest e016c876ae3bf5d322bf93d29f25c9db (before 678332dc2010edd24e3f8f5b44c9cafd)
+  ok    RELOAD: the node count moved by EXACTLY the 522 duplicated children
+  ok    RELOAD: the node content digest CHANGED (a graph carrying new nodes that hashed the same would be an instrument fault)
+        EDGE DIGEST: count 70628 (before 70063, delta 565), digest e472da9dc099e70e116ce645c36118dc (before 2e027b2e05ffc7e014fb49a7ea69b605)
+  ok    RELOAD: the edge count moved by EXACTLY 565 (522 HAS_PROPERTY + 38 HAS_RESTRICTION + 5 HAS_SUPPORT)
+  ok    RELOAD: the edge content digest CHANGED
+        EXEMPLAR from the reloaded graph — merged PersonType out-edges: {"MERGED_FROM":2,"HAS_PROPERTY":18} (before Phase 4.6a it was MERGED_FROM 2 and nothing else, and the type rendered EMPTY)
+  ok    RELOAD: the named exemplar renders 18 children in the GRAPH, with MERGED_FROM intact at 2
+
+8 passed, 1 failed
