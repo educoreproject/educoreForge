@@ -698,22 +698,55 @@ const moduleFunction =
 						`${graph.stats.derived.sameDefinitionEdges} SAME_DEFINITION chain edges, ` +
 						`${graph.stats.derived.reachableFromLatestRoot}/${graph.stats.derived.definitionsTotal} reachable from latest roots)`,
 				);
+				// requiredStat — a status line is the ONE place the absent-property discipline cannot
+				// reach on its own: `${stats.misspelled}` is a perfectly valid expression that
+				// interpolates the word "undefined" into an otherwise fluent English sentence. This
+				// is not hypothetical. Phase 4.6a renamed absentChildElements and addedChildElements
+				// when R-P4-11 replaced the one-sided 'added' record, and the FIRST build after that
+				// rename printed "…14 conflict and undefined child elements are genuinely ABSENT…
+				// and undefined ADDED by the winning member" — a confident, plausible, wrong report
+				// that no test would ever have failed on. Reading every figure through here makes a
+				// stale name refuse by name instead.
+				const requiredStat = (statsObject, statName) => {
+					if (!Object.prototype.hasOwnProperty.call(statsObject, statName)) {
+						throw new Error(
+							`forge-pesc260805 builder bug: the synthetic tier publishes no stat '${statName}', ` +
+								`so the build status line would have printed 'undefined' inside a sentence that ` +
+								`reads like a measurement. Available: ${Object.keys(statsObject).sort().join(', ')}`,
+						);
+					}
+					return statsObject[statName];
+				};
+				const syntheticStats = graph.stats.synthetic;
+				const oneStat = (statName) => requiredStat(syntheticStats, statName);
 				xLog.status(
-					`[forge-pesc260805] synthetic tier: S-1 merged ${graph.stats.synthetic.mergedDefinitions} definitions ` +
-						`(${graph.stats.synthetic.collegeTranscriptOnlyDefinitions} college-only + ` +
-						`${graph.stats.synthetic.testScoreOnlyDefinitions} test-score-only + ` +
-						`${graph.stats.synthetic.sharedDefinitions} shared, of which ` +
-						`${graph.stats.synthetic.conflictingSharedDefinitions} conflict and ` +
-						`${graph.stats.synthetic.absentChildElements} child elements are genuinely ABSENT, ` +
-						`${graph.stats.synthetic.reboundChildElements} REBOUND, ` +
-						`${graph.stats.synthetic.widenedChildElements} WIDENED, and ` +
-						`${graph.stats.synthetic.addedChildElements} ADDED by the winning member), ` +
-						`${graph.stats.synthetic.mergedFromEdges} MERGED_FROM, ` +
-						`${graph.stats.synthetic.heldReferencesResolved} held references resolved; ` +
-						`S-2 alias ${graph.stats.synthetic.aliasNamespace} served by ${graph.stats.synthetic.aliasServingNamespace} ` +
-						`(${graph.stats.synthetic.aliasReferencesResolved} references over ` +
-						`${graph.stats.synthetic.aliasDistinctLocalNames} distinct names, ` +
-						`${graph.stats.synthetic.aliasImportsResolved} import); ` +
+					`[forge-pesc260805] synthetic tier: S-1 merged ${oneStat('mergedDefinitions')} definitions ` +
+						`(${oneStat('collegeTranscriptOnlyDefinitions')} college-only + ` +
+						`${oneStat('testScoreOnlyDefinitions')} test-score-only + ` +
+						`${oneStat('sharedDefinitions')} shared, of which ` +
+						`${oneStat('conflictingSharedDefinitions')} conflict); ` +
+						// R-P4-11: ONE classification naming the contributing branch, on the MATERIALIZED
+						// basis. The signature basis is printed alongside and LABELLED, because a reader
+						// who recomputes at signature granularity gets 8 where this says 2 and would
+						// otherwise conclude one of the figures is wrong.
+						`merge delta (materialized): ${oneStat('collegeContributedChildElements')} child elements contributed by the college member, ` +
+						`${oneStat('testScoreContributedChildElements')} by the test-score member, ` +
+						`${oneStat('absentChildElementsAfterUnion')} ABSENT after the union; ` +
+						`of the college contributions ${oneStat('reboundChildElements')} are REBOUND and ` +
+						`${oneStat('widenedChildElements')} WIDENED (a SUBSET, not additional — do not sum); ` +
+						`merge delta (signature basis): ${oneStat('signatureLevelCollegeContributedChildElements')} college / ` +
+						`${oneStat('signatureLevelTestScoreDroppedChildElements')} test-score; ` +
+						// R-P4-3: the children themselves
+						`S-1c duplicated ${oneStat('mergedChildNodes')} child declarations onto the merged definitions ` +
+						`(${oneStat('mergedChildHasPropertyEdges')} HAS_PROPERTY); ` +
+						`referenced-not-duplicated residue: ${oneStat('inlineTypeReferenceEdges')} inline types, ` +
+						`${oneStat('derivationReferenceEdges')} derivation wrappers; ` +
+						`${oneStat('mergedFromEdges')} MERGED_FROM (untouched), ` +
+						`${oneStat('heldReferencesResolved')} held references resolved; ` +
+						`S-2 alias ${oneStat('aliasNamespace')} served by ${oneStat('aliasServingNamespace')} ` +
+						`(${oneStat('aliasReferencesResolved')} references over ` +
+						`${oneStat('aliasDistinctLocalNames')} distinct names, ` +
+						`${oneStat('aliasImportsResolved')} import); ` +
 						`total ${graph.nodes.length} nodes, ${graph.edges.length} edges`,
 				);
 				next('', { ...args, graph });

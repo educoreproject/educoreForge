@@ -1,0 +1,37 @@
+
+DET — two full forge() runs identical (complete outputs, all four tiers)
+        RED (demonstrated): one contaminated synthetic property ('urn:org:pesc:sector:AcademicRecord:v1.6.0#complexType/AcademicAwardType') -> comparator detects: true
+  ok    DET RED: whole-graph comparator demonstrably able to go red on synthetic content
+        GREEN: run one 41850 nodes / 70101 edges; canonical forms equal: true
+  ok    DET two full runs byte-identical under canonical serialization
+
+G4-A — reproducibility (R-VAL-5: the substitute for round-trip on decided content)
+        deleted: 110 synthetic nodes, 587 synthetic edges; 41740 source+derived+meta nodes retained
+  ok    G4-A re-run over the preserved collision members completed without refusal
+        GREEN: re-run synthetic view identical to the emitted one: true (548876 canonical bytes)
+  ok    G4-A the re-run reproduces the synthetic nodes and edges EXACTLY
+        RED P1 (demonstrated): renamed the LOSING member's ContactsType child 'Email' -> 'EmailPerturbed'; reproduction BREAKS as it must
+  ok    G4-A RED P1: perturbing ONE element declaration in the losing member breaks reproduction
+        RED P2 (demonstrated): renamed the single-member definition 'AcademicAwardsReportedType' -> 'AcademicAwardsReportedTypePerturbed' (chosen by computation from 67 candidates; marker types excluded); tier REFUSES BY NAME: pesc260805 syntheticTier REFUSES: HELD REFERENCE STILL UNRESOLVED after S-1: file 'AcademicRecord_v1.6.0.collision-948d88f32069.xsd' writes 'AcRec:Aca
+  ok    G4-A RED P2: perturbing ONE definition name leaves a consumer unserved and the tier REFUSES
+        THIRD CASE (recorded, not a defect): renamed a WINNING-member ContactsType child ('AddressPerturbed'); merged nodes claiming children: 0 of 109; the change is reachable from the merged node's contentFromStableId: true; the R-P4-6 delta summary moved with its member: true
+  ok    G4-A the merged node contentFromStableId still reaches the changed source element
+        merged nodes now hold children: 0 nodes claim a merged parent, of which 0 carry syntheticRule S-1c; not marked synthetic: 0; not claiming a merged parent: 0
+  FAIL  G4-A RE-STATED: the merged nodes hold EXACTLY their union of children, every one marked synthetic and parented to a merged definition
+/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/forges/pesc260805/test/test-pesc260805SyntheticTier.js:598
+	const reparentProbeOriginalParentId = reparentProbeChild.properties.parentId;
+	                                                         ^
+
+TypeError: Cannot read properties of undefined (reading 'properties')
+    at Array.<anonymous> (/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/forges/pesc260805/test/test-pesc260805SyntheticTier.js:598:59)
+    at recursion (/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/node_modules/qtools-asynchronous-pipe-plus/qtools-asynchronous-pipe-plus.js:98:25)
+    at /Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/node_modules/qtools-asynchronous-pipe-plus/qtools-asynchronous-pipe-plus.js:99:5
+    at Array.<anonymous> (/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/forges/pesc260805/test/test-pesc260805SyntheticTier.js:376:2)
+    at recursion (/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/node_modules/qtools-asynchronous-pipe-plus/qtools-asynchronous-pipe-plus.js:98:25)
+    at /Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/node_modules/qtools-asynchronous-pipe-plus/qtools-asynchronous-pipe-plus.js:99:5
+    at /Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/forges/pesc260805/test/test-pesc260805SyntheticTier.js:345:3
+    at /Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/forges/pesc260805/forgePesc260805.js:741:5
+    at recursion (/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/node_modules/qtools-asynchronous-pipe-plus/qtools-asynchronous-pipe-plus.js:94:6)
+    at /Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/node_modules/qtools-asynchronous-pipe-plus/qtools-asynchronous-pipe-plus.js:99:5
+
+Node.js v24.14.1

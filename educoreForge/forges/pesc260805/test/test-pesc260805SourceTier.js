@@ -420,11 +420,20 @@ taskList.push((args, next) => {
 			// RESTATED AT PHASE 4. This read "synthetic tier is EMPTY until Phase 4 emits it", which
 			// was a statement about a schedule, not an invariant — and Phase 4 has now emitted it.
 			// The claim that still matters at this altitude is that the tier is POPULATED and its
-			// size is pinned: 109 merged AcademicRecord v1.6.0 definitions (S-1) + 1 alias namespace
-			// for the absent CoreMain v1.6.0 (S-2). A drift in either direction fails here as well as
-			// in the Phase 4 suite, because a census that only one suite can see is a census one
-			// edit away from being unwatched.
-			check('INTEGRATION synthetic tier is EXACTLY 110 nodes (109 S-1 merged definitions + 1 S-2 alias namespace)', nodeCountByTier.synthetic === 110);
+			// size is pinned. A drift in either direction fails here as well as in the Phase 4 suite,
+			// because a census that only one suite can see is a census one edit away from being
+			// unwatched.
+			//
+			// RESTATED AGAIN AT PHASE 4.6a, and the restatement is the FINDING, not a repair. The
+			// pinned size was 110 (109 S-1 merged definitions + 1 S-2 alias namespace). R-P4-3
+			// ordered merged definitions to carry their children directly, so the tier legitimately
+			// gains 522 duplicated element declarations (S-1c) and the pin moves to 632. The count is
+			// re-derived from its parts here rather than written as a bare 632, so a future drift
+			// says WHICH part moved instead of only that something did.
+			check(
+				'INTEGRATION synthetic tier is EXACTLY 632 nodes (109 S-1 merged definitions + 522 S-1c duplicated children + 1 S-2 alias namespace)',
+				nodeCountByTier.synthetic === 109 + 522 + 1,
+			);
 			check('INTEGRATION the four tiers account for every emitted node', nodeCountByTier.source + nodeCountByTier.derived + nodeCountByTier.meta + nodeCountByTier.synthetic === forged.nodes.length);
 
 			// engine shaping — the exact translation forger.js applies before replay.

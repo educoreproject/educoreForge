@@ -1,0 +1,2 @@
+
+SUITE ABORTED: run one failed: forge-pesc260805 graph build: pesc260805 syntheticTier REFUSES: S-1c FAILED ITS OWN ACCEPTANCE CRITERION: 75 merged definition(s) have child declarations in at least one branch but carry NONE of their own — they would render as empty types, which is the exact defect R-P4-3 exists to end. First: 'urn:org:pesc:sector:AcademicRecord:v1.6.0#complexType/AcademicAwardType'

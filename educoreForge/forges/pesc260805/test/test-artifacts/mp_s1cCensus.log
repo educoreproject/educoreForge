@@ -1,0 +1,98 @@
+=== whole-graph census ===
+{"nodes":42372,"edges":70628}
+
+=== synthetic nodes by syntheticRule ===
+{"S-1":109,"S-1c":522,"S-2":1}
+
+=== synthetic edges by type ===
+{"MERGED_FROM":140,"HAS_PROPERTY":522,"HAS_RESTRICTION":38,"HAS_SUPPORT":5,"SERVED_BY":1,"RESOLVES_TO":407,"IMPORTS":1}
+
+=== synthetic edges by syntheticRule ===
+{"S-1":341,"S-1c":565,"S-2":208}
+
+=== S-1c figures from stats ===
+{
+  "contestedNamespace": "urn:org:pesc:sector:AcademicRecord:v1.6.0",
+  "collegeTranscriptMemberSha256": "948d88f320696e283a3b5a6079a13f803fce73f4b0007c54b5c623f9ba52aeca",
+  "collegeTranscriptMemberFilename": "AcademicRecord_v1.6.0.collision-948d88f32069.xsd",
+  "testScoreMemberSha256": "e12830fc86a304071ffec896e76d079e27274277d46a95218946f863a68f5527",
+  "testScoreMemberFilename": "AcademicRecord_v1.6.0.collision-e12830fc86a3.xsd",
+  "mergedDefinitions": 109,
+  "collegeTranscriptOnlyDefinitions": 42,
+  "testScoreOnlyDefinitions": 36,
+  "sharedDefinitions": 31,
+  "conflictingSharedDefinitions": 14,
+  "collegeSupersetConflicts": 8,
+  "signatureLevelAbsentChildElements": 2,
+  "signatureLevelTestScoreDroppedChildElements": 8,
+  "signatureLevelCollegeContributedChildElements": 33,
+  "reboundChildElements": 5,
+  "widenedChildElements": 1,
+  "contributedChildElements": 35,
+  "collegeContributedChildElements": 33,
+  "testScoreContributedChildElements": 2,
+  "absentChildElementsAfterUnion": 0,
+  "mergedChildNodes": 522,
+  "mergedChildHasPropertyEdges": 522,
+  "inlineTypeReferenceEdges": 5,
+  "derivationReferenceEdges": 38,
+  "mergedChildrenByDisposition": {
+    "bothBranchesAgree": 229,
+    "soleBranchDeclaration": 285,
+    "losingBranchContributed": 2,
+    "winnerChosenOverLoser": 6
+  },
+  "mergedFromEdges": 140,
+  "heldReferencesResolved": 201,
+  "heldReferenceCountsByVariety": {
+    "import": 6,
+    "type": 188,
+    "base": 7
+  },
+  "heldExternalConsumerFilenames": [
+    "CollegeTranscript_v1.3.0.xsd",
+    "HighSchoolTranscript_v1.2.0.xsd",
+    "TestScoreReport_v1.0.0.xsd",
+    "TranscriptAcknowledgment_v1.1.0.xsd",
+    "TranscriptRequest_v1.1.0.xsd",
+    "TranscriptResponse_v1.1.0.xsd"
+  ],
+  "aliasNamespace": "urn:org:pesc:core:CoreMain:v1.6.0",
+  "aliasServingNamespace": "urn:org:pesc:core:CoreMain:v1.8.0",
+  "aliasReferencesResolved": 205,
+  "aliasDistinctLocalNames": 129,
+  "aliasImportsResolved": 1,
+  "syntheticNodes": 632,
+  "syntheticEdges": 1114
+}
+
+=== EXEMPLAR: the merged PersonType, the type that rendered empty ===
+{
+  "stableId": "urn:org:pesc:sector:AcademicRecord:v1.6.0#complexType/PersonType",
+  "outDegree": 20,
+  "outEdgesByType": {
+    "MERGED_FROM": 2,
+    "HAS_PROPERTY": 18
+  },
+  "childElementCount": 18,
+  "collegeContributedChildElementCount": 3,
+  "testScoreContributedChildElementCount": 0,
+  "absentChildElementCount": 0,
+  "absentChildElementsZeroedAtPhase": "4.6a",
+  "reboundChildElementCount": 0,
+  "widenedChildElementCount": 0,
+  "signatureLevelCollegeContributedCount": 3,
+  "signatureLevelTestScoreDroppedCount": 0
+}
+
+=== EXEMPLAR: the two R-P4-10 losing-branch contributions, as emitted nodes ===
+{"stableId":"urn:org:pesc:sector:AcademicRecord:v1.6.0#complexType/AcademicRecordType/el/10:AdditionalStudentAchievement","name":"AdditionalStudentAchievement","typeAsWritten":"core:AdditionalStudentAchievementType","pescTier":"synthetic","syntheticRule":"S-1c","contributedByBranch":"testScore","copiedFromStableId":"urn:org:pesc:sector:AcademicRecord:v1.6.0#complexType/AcademicRecordType@e12830fc86a3/el/7:AdditionalStudentAchievement","sourceSequencePosition":7,"sequencePosition":10}
+{"stableId":"urn:org:pesc:sector:AcademicRecord:v1.6.0#complexType/SponsorType/el/5:SponsorCode","name":"SponsorCode","typeAsWritten":"core:SponsorCodeType","pescTier":"synthetic","syntheticRule":"S-1c","contributedByBranch":"testScore","copiedFromStableId":"urn:org:pesc:sector:AcademicRecord:v1.6.0#complexType/SponsorType@e12830fc86a3/el/3:SponsorCode","sourceSequencePosition":3,"sequencePosition":5}
+
+=== H1 CHECK: did the three documentation-bearing children keep their prose? ===
+{"name":"AgencyAssignedID","contributedByBranch":"collegeTranscript","documentationLength":0,"documentationHead":""}
+{"name":"AgencyAssignedID","contributedByBranch":"collegeTranscript","documentationLength":45,"documentationHead":"This is to be deprecated in a future release."}
+{"name":"AgencyAssignedID","contributedByBranch":"collegeTranscript","documentationLength":0,"documentationHead":""}
+{"name":"AgencyAssignedID","contributedByBranch":"testScore","documentationLength":0,"documentationHead":""}
+{"name":"ParentGuardianName","contributedByBranch":"collegeTranscript","documentationLength":36,"documentationHead":"To be deprecated in a future release"}
+{"name":"HighSchool","contributedByBranch":"collegeTranscript","documentationLength":119,"documentationHead":"This is the secondary school  (high school) from which the p"}

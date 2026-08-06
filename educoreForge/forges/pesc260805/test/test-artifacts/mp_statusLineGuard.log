@@ -1,0 +1,15 @@
+        RED (demonstrated), UNGUARDED interpolation of a stale stat name: "…and undefined ADDED by the winning member"
+  ok    STATUS-GUARD RED: plain interpolation of an absent stat silently yields the word "undefined" in a fluent sentence
+        GREEN: the same stale name through the guard -> forge-pesc260805 builder bug: the synthetic tier publishes no stat 'absentChildElements', so the build status line would have printed 'undefined' inside a sente
+  ok    STATUS-GUARD: the guard REFUSES a stale stat name and names it
+  ok    STATUS-GUARD: the refusal enumerates what IS available, so the fix is in the message
+
+SHIPPED STATUS LINE:
+[forge-pesc260805] synthetic tier: S-1 merged 109 definitions (42 college-only + 36 test-score-only + 31 shared, of which 14 conflict); merge delta (materialized): 33 child elements contributed by the college member, 2 by the test-score member, 0 ABSENT after the union; of the college contributions 5 are REBOUND and 1 WIDENED (a SUBSET, not additional — do not sum); merge delta (signature basis): 33 college / 8 test-score; S-1c duplicated 522 child declarations onto the merged definitions (522 HAS_PROPERTY); referenced-not-duplicated residue: 5 inline types, 38 derivation wrappers; 140 MERGED_FROM (untouched), 201 held references resolved; S-2 alias urn:org:pesc:core:CoreMain:v1.6.0 served by urn:org:pesc:core:CoreMain:v1.8.0 (205 references over 129 distinct names, 1 import); total 42372 nodes, 70628 edges
+
+        status lines emitted: 3; carrying the word "undefined": 0
+  ok    STATUS-GUARD: no build status line contains the word "undefined"
+  ok    STATUS-GUARD: the synthetic status line reports the materialized classification AND labels the signature basis
+  ok    STATUS-GUARD: the status line warns against summing the overlapping counts
+
+6 passed, 0 failed

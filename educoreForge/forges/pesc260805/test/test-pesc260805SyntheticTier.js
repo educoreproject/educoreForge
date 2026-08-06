@@ -71,6 +71,7 @@ const {
 const {
 	buildSyntheticTier,
 	canonicalizeSyntheticView,
+	verifyMergedChildrenWereDeclared,
 	S2_ABSENT_NAMESPACE,
 	S2_SERVING_NAMESPACE,
 } = syntheticTier;
@@ -118,8 +119,52 @@ const EXPECTED = {
 	heldImportDeclarations: 6,
 	aliasReferences: 205,
 	aliasDistinctLocalNames: 129,
-	syntheticNodes: 110,
-	syntheticEdges: 549,
+	// PHASE 4.6a moved these. 110 -> 632 is +522 duplicated child declarations (S-1c); 549 -> 1114
+	// is +522 HAS_PROPERTY, +38 HAS_RESTRICTION and +5 HAS_SUPPORT. Written as sums so a future
+	// drift names WHICH part moved rather than only that something did.
+	syntheticNodes: 109 + 522 + 1,
+	syntheticEdges: 549 + 522 + 38 + 5,
+	// ---- PHASE 4.6a: R-P4-3 / R-P4-10 / R-P4-11 / R-P4-12 --------------------------------
+	mergedChildNodes: 522,
+	// the union's two decompositions, both of which must close on 522. The supervisor's own
+	// independent walk produced 757 branch children and 235 both-branch names: 757 - 235 = 522.
+	winnerTakesAllChildCount: 520,
+	losingBranchContributedChildCount: 2,
+	bothBranchDeclaredNameCount: 235,
+	// bothBranchesAgree fell 229 -> 226 at the review remediation: three children matched on
+	// signature while the union CHOSE the college member's documentation over an empty string, so
+	// they moved to their own disposition rather than claiming nothing was decided (GAP 3).
+	mergedChildDispositionCounts: {
+		bothBranchesAgree: 226,
+		bothBranchesAgreeSignatureContentDecided: 3,
+		soleBranchDeclaration: 285,
+		losingBranchContributed: 2,
+		winnerChosenOverLoser: 6,
+	},
+	mergedChildrenWithContentDecided: 3,
+	// ACCEPTANCE 1, restated so it can fail: of 109 merged definitions, 75 have child declarations
+	// in at least one branch. Those 75 are the population the criterion speaks about; the other 34
+	// have nothing to render and render nothing.
+	mergedDefinitionsWithBranchChildren: 75,
+	// GAP 2 — the number a consumer actually meets. Two referrer scopes, both pinned, because they
+	// differ by one simpleType reached only by a non-element reference and an undocumented
+	// granularity difference is how a correct number becomes a contradiction later.
+	reachedTargetsAnyReferrer: 96,
+	emptyRenderAnyReferrer: 30,
+	reachedTargetsElementDeclReferrer: 94,
+	emptyRenderElementDeclReferrer: 29,
+	// R-P4-11: ONE classification naming the contributing branch, on the MATERIALIZED basis. NOT
+	// summable with rebound/widened — those describe a SUBSET of the college contributions (the 6
+	// winnerChosenOverLoser), not entries additional to them.
+	contributedChildElements: 35,
+	collegeContributedChildElements: 33,
+	testScoreContributedChildElements: 2,
+	absentChildElementsAfterUnion: 0,
+	// R-P4-12 residue: referenced by REAL EDGES, never duplicated. A named number, not a silence.
+	inlineTypeReferenceEdges: 5,
+	derivationReferenceEdges: 38,
+	// the exemplar R-P4-3 named: out-degree was 2, both MERGED_FROM, and the type rendered empty
+	personTypeChildElementCount: 18,
 	derivedNamespaces: 63,
 	// LITERALS, deliberately not the module's own constants. G4-E's first draft compared the alias
 	// against S2_SERVING_NAMESPACE imported from lib/syntheticTier.js, so repointing the alias
@@ -534,7 +579,45 @@ taskList.push((args, next) => {
 	);
 	const deltaSummaryTracksItsMembers = probeThree.perturbedView !== shippedView;
 	evidence(`THIRD CASE (recorded, not a defect): ${probeThree.mutationDescription}; merged nodes claiming children: ${childrenClaimingAMergedParent.length} of ${mergedNodeStableIds.size}; the change is reachable from the merged node's contentFromStableId: ${contentPointerReachesTheChange}; the R-P4-6 delta summary moved with its member: ${deltaSummaryTracksItsMembers}`);
-	check('G4-A the merged node holds NO CHILD NODES and its contentFromStableId still reaches the changed source element', childrenClaimingAMergedParent.length === 0 && contentPointerReachesTheChange);
+	// SPLIT AND RE-STATED AT PHASE 4.6a, on the precedent set when Phase 4 legitimately changed
+	// what G3-D asserted: RE-STATE, never delete. The retired assertion bundled two claims —
+	// "the merged node holds NO CHILD NODES" and "its contentFromStableId still reaches the changed
+	// source element". R-P4-3 ORDERED the first reversed, so it becomes its positive form below.
+	// The second is untouched by this phase and is asserted here verbatim, on its own label, so it
+	// keeps its own red evidence instead of being carried along by a neighbour.
+	check('G4-A the merged node contentFromStableId still reaches the changed source element', contentPointerReachesTheChange);
+
+	// THE POSITIVE FORM. It gets its OWN red lever below and does NOT inherit the retired
+	// assertion's receipt: the old claim's red proof demonstrated that a node could be made to
+	// HOLD children, which is now the expected state and proves nothing about this claim. An
+	// assertion carrying a predecessor's evidence is precisely how this campaign's genuine-gap
+	// residue was created; this one is demonstrated on its own terms.
+	const mergedChildNodes = args.runOne.nodes.filter(
+		(oneNode) => oneNode.properties.syntheticRule === 'S-1c',
+	);
+	const mergedChildNodesNotSynthetic = mergedChildNodes.filter(
+		(oneNode) => oneNode.properties.pescTier !== 'synthetic',
+	);
+	const mergedChildNodesNotClaimingAMergedParent = mergedChildNodes.filter(
+		(oneNode) => !mergedNodeStableIds.has(oneNode.properties.parentId),
+	);
+	evidence(`merged nodes now hold children: ${childrenClaimingAMergedParent.length} nodes claim a merged parent, of which ${mergedChildNodes.length} carry syntheticRule S-1c; not marked synthetic: ${mergedChildNodesNotSynthetic.length}; not claiming a merged parent: ${mergedChildNodesNotClaimingAMergedParent.length}`);
+	check('G4-A RE-STATED: the merged nodes hold EXACTLY their union of children, every one marked synthetic and parented to a merged definition', childrenClaimingAMergedParent.length === EXPECTED.mergedChildNodes && mergedChildNodes.length === EXPECTED.mergedChildNodes && mergedChildNodesNotSynthetic.length === 0 && mergedChildNodesNotClaimingAMergedParent.length === 0);
+
+	// RED for the re-stated assertion, on its own lever: re-parent ONE duplicated child away from
+	// its merged definition in a clone. The predicate must notice, which proves it is reading
+	// parentage rather than counting nodes that happen to exist.
+	const reparentProbeGraph = cloneGraph(args.runOne);
+	const reparentProbeChild = reparentProbeGraph.nodes.find(
+		(oneNode) => oneNode.properties.syntheticRule === 'S-1c',
+	);
+	const reparentProbeOriginalParentId = reparentProbeChild.properties.parentId;
+	reparentProbeChild.properties.parentId = 'harness:orphanedByProbe';
+	const reparentProbeClaimants = reparentProbeGraph.nodes.filter((oneNode) =>
+		mergedNodeStableIds.has(oneNode.properties.parentId),
+	);
+	evidence(`RED (demonstrated): re-parented '${reparentProbeChild.stableId}' away from '${reparentProbeOriginalParentId}' -> nodes claiming a merged parent falls ${EXPECTED.mergedChildNodes} -> ${reparentProbeClaimants.length}, condition inverts: ${reparentProbeClaimants.length !== EXPECTED.mergedChildNodes}`);
+	check('G4-A RED: the re-stated child-parentage assertion demonstrably detects one orphaned child', reparentProbeClaimants.length === EXPECTED.mergedChildNodes - 1);
 	check('G4-A the symmetric delta summary TRACKS its members — a winning-member change moves the merged record (R-P4-6)', deltaSummaryTracksItsMembers);
 
 	// the purity guard: re-synthesis must refuse a graph that already carries synthesis, or a
@@ -814,12 +897,18 @@ taskList.push((args, next) => {
 
 	// ---- report and graph agree, in all four buckets ---------------------------------------
 	const syntheticNodes = syntheticNodesOf(args.runOne);
-	const graphTotals = { absent: 0, rebound: 0, widened: 0, added: 0 };
+	// RESTATED AT PHASE 4.6a. The 'added' bucket is retired: R-P4-11 ruled that what the college
+	// member contributes and what the test-score member contributes are the same phenomenon in
+	// opposite directions, and naming them differently re-created in the vocabulary the asymmetry
+	// R-P4-6 removed from the record. 'contributed' carries both, each entry naming its branch.
+	// 'absent' is RETAINED AND ZERO rather than deleted (standing rule 4) — R-P4-10's union carries
+	// every loser-only name, so the bucket is structurally empty and says so.
+	const graphTotals = { absent: 0, rebound: 0, widened: 0, contributed: 0 };
 	const nodesDeclaringDelta = [];
 	syntheticNodes
 		.filter((oneNode) => oneNode.labels.indexOf('PescNamedDefinition') !== -1)
 		.forEach((oneNode) => {
-			['absent', 'rebound', 'widened', 'added'].forEach((oneBucket) => {
+			['absent', 'rebound', 'widened', 'contributed'].forEach((oneBucket) => {
 				const countName = `${oneBucket}ChildElementCount`;
 				const listName = `${oneBucket}ChildElementSignatures`;
 				if (!Object.prototype.hasOwnProperty.call(oneNode.properties, countName)) {
@@ -839,8 +928,122 @@ taskList.push((args, next) => {
 			});
 			if (oneNode.properties.absentChildElementCount > 0) nodesDeclaringDelta.push(oneNode.properties.name);
 		});
-	evidence(`graph totals: absent ${graphTotals.absent}, rebound ${graphTotals.rebound}, widened ${graphTotals.widened}, added ${graphTotals.added}; types declaring an ABSENT entry: ${nodesDeclaringDelta.sort().join(', ')}`);
-	check('G4-C the merged nodes publish the delta themselves and agree with the report in all four buckets', graphTotals.absent === EXPECTED.absentChildElements && graphTotals.rebound === EXPECTED.reboundChildElements && graphTotals.widened === EXPECTED.widenedChildElements && graphTotals.added === EXPECTED.addedChildElements);
+	evidence(`graph totals: absent ${graphTotals.absent}, rebound ${graphTotals.rebound}, widened ${graphTotals.widened}, contributed ${graphTotals.contributed}; types declaring an ABSENT entry: ${nodesDeclaringDelta.sort().join(', ') || '(none — R-P4-10 zeroed the bucket)'}`);
+	check('G4-C the merged nodes publish the delta themselves and agree with the report in all four buckets', graphTotals.absent === EXPECTED.absentChildElementsAfterUnion && graphTotals.rebound === EXPECTED.reboundChildElements && graphTotals.widened === EXPECTED.widenedChildElements && graphTotals.contributed === EXPECTED.contributedChildElements);
+
+	// THE OVERLAP IS ASSERTED, NOT ONLY DOCUMENTED (supervisor condition, 2026-08-06). rebound and
+	// widened describe a SUBSET of the college contributions — the 6 winnerChosenOverLoser children
+	// — so a reader summing 33 + 2 + 5 + 1 = 41 gets a false total from four true figures. This
+	// pins the relationship, so a future change that made them genuinely disjoint would fail here
+	// rather than quietly turning the published note into a lie.
+	// REBUILT AFTER THE INDEPENDENT REVIEW. This asserted CARDINALITY ONLY — 6 === 6 and 6 < 33 —
+	// which two entirely disjoint sets would satisfy. The claim was verified true in fact, so only
+	// the GATE was weak, but a gate that would pass on disjoint sets is not testing the claim it
+	// names. Asserted by SET MEMBERSHIP now: the rebound and widened entries must BE the
+	// winnerChosenOverLoser children, identified by (owning type, child name).
+	const winnerChosenOverLoserChildKeys = new Set(
+		args.runOne.nodes
+			.filter((oneNode) => oneNode.properties.childUnionDisposition === 'winnerChosenOverLoser')
+			.map((oneNode) => {
+				const owningMergedNode = args.runOne.nodes.find(
+					(oneCandidate) => oneCandidate.stableId === oneNode.properties.mergedDefinitionStableId,
+				);
+				if (owningMergedNode === undefined) {
+					throw new Error(
+						`HARNESS FAULT (G4-C): child '${oneNode.stableId}' names a merged definition that is ` +
+							'not in the graph.',
+					);
+				}
+				return `${owningMergedNode.properties.name}.${oneNode.properties.name}`;
+			}),
+	);
+	const reboundAndWidenedChildKeys = new Set();
+	syntheticNodes
+		.filter((oneNode) => oneNode.labels.indexOf('PescNamedDefinition') !== -1)
+		.forEach((oneNode) => {
+			['rebound', 'widened'].forEach((oneBucket) => {
+				JSON.parse(oneNode.properties[`${oneBucket}ChildElementSignatures`]).forEach((oneEntry) => {
+					reboundAndWidenedChildKeys.add(`${oneNode.properties.name}.${oneEntry.name}`);
+				});
+			});
+		});
+	const inReboundWidenedNotDecided = [...reboundAndWidenedChildKeys].filter(
+		(oneChildKey) => !winnerChosenOverLoserChildKeys.has(oneChildKey),
+	);
+	const inDecidedNotReboundWidened = [...winnerChosenOverLoserChildKeys].filter(
+		(oneChildKey) => !reboundAndWidenedChildKeys.has(oneChildKey),
+	);
+	evidence(`overlap BY SET: rebound+widened {${[...reboundAndWidenedChildKeys].sort().join(', ')}}; winnerChosenOverLoser {${[...winnerChosenOverLoserChildKeys].sort().join(', ')}}; symmetric difference ${inReboundWidenedNotDecided.length + inDecidedNotReboundWidened.length}. Naive sum 33+2+5+1 = ${33 + 2 + 5 + 1} is NOT a child count — these 6 are counted INSIDE the ${EXPECTED.collegeContributedChildElements} college contributions`);
+	check('G4-C the rebound+widened entries ARE the winnerChosenOverLoser children — asserted by SET MEMBERSHIP, not by cardinality', inReboundWidenedNotDecided.length === 0 && inDecidedNotReboundWidened.length === 0 && reboundAndWidenedChildKeys.size === graphTotals.rebound + graphTotals.widened && reboundAndWidenedChildKeys.size < EXPECTED.collegeContributedChildElements);
+
+	// RED for the set-membership form: swap ONE member of the decided set for a name that is not in
+	// it. Cardinality is unchanged, so the predecessor gate would still have passed; this one must not.
+	const disjointProbeKeys = new Set([...winnerChosenOverLoserChildKeys]);
+	const disjointProbeVictim = [...disjointProbeKeys][0];
+	disjointProbeKeys.delete(disjointProbeVictim);
+	disjointProbeKeys.add('HarnessType.HarnessChildNotInEitherSet');
+	const disjointProbeDifference = [...reboundAndWidenedChildKeys].filter(
+		(oneChildKey) => !disjointProbeKeys.has(oneChildKey),
+	);
+	evidence(`RED (demonstrated): swapped '${disjointProbeVictim}' for a name in neither set — cardinality UNCHANGED at ${disjointProbeKeys.size}, so a cardinality-only gate stays green; set membership finds ${disjointProbeDifference.length} mismatch(es), condition inverts: ${disjointProbeDifference.length !== 0}`);
+	check('G4-C RED: the SET form detects a swap that leaves cardinality identical (the predecessor gate could not)', disjointProbeDifference.length === 1 && disjointProbeKeys.size === winnerChosenOverLoserChildKeys.size);
+
+	// GAP 3 — THE UNDECLARED CONTENT CHOICE, NOW DECLARED. Three children match on signature (name,
+	// resolved type, cardinality) while the two branches DISAGREE about documentation: the college
+	// member carries prose, the test-score member an empty string, and the union takes the winner's.
+	// They were stamped 'bothBranchesAgree' — asserting that nothing was decided while a choice was
+	// being made silently. That is §8f's sin: a record a reader consults and is misled by.
+	const contentDecidedChildren = args.runOne.nodes.filter(
+		(oneNode) =>
+			oneNode.properties.childUnionDisposition === 'bothBranchesAgreeSignatureContentDecided',
+	);
+	const contentDecidedNamingNothing = contentDecidedChildren.filter(
+		(oneNode) => JSON.parse(oneNode.properties.decidedNonSignaturePropertyNames).length === 0,
+	);
+	const agreeingChildrenClaimingADecision = args.runOne.nodes
+		.filter((oneNode) => oneNode.properties.childUnionDisposition === 'bothBranchesAgree')
+		.filter(
+			(oneNode) => JSON.parse(oneNode.properties.decidedNonSignaturePropertyNames).length !== 0,
+		);
+	evidence(`GAP 3: ${contentDecidedChildren.length} children matched on SIGNATURE while the union chose between their CONTENT — ${contentDecidedChildren.map((oneNode) => `${oneNode.properties.name}(${JSON.parse(oneNode.properties.decidedNonSignaturePropertyNames).join('+')})`).sort().join(', ')}; declaring nothing: ${contentDecidedNamingNothing.length}; children claiming agreement while carrying a decision: ${agreeingChildrenClaimingADecision.length}`);
+	check('G4-C GAP 3: every child whose content the union chose says SO, and names which properties the choice covered', contentDecidedChildren.length === EXPECTED.mergedChildrenWithContentDecided && contentDecidedNamingNothing.length === 0 && agreeingChildrenClaimingADecision.length === 0);
+
+	// RED: strip the decided-property record from one such child and require the detector to notice
+	// a child claiming a decision it does not describe.
+	const contentDecidedProbeGraph = cloneGraph(args.runOne);
+	const contentDecidedProbeChild = contentDecidedProbeGraph.nodes.find(
+		(oneNode) =>
+			oneNode.properties.childUnionDisposition === 'bothBranchesAgreeSignatureContentDecided',
+	);
+	contentDecidedProbeChild.properties.decidedNonSignaturePropertyNames = JSON.stringify([]);
+	const contentDecidedProbeSilent = contentDecidedProbeGraph.nodes
+		.filter(
+			(oneNode) =>
+				oneNode.properties.childUnionDisposition === 'bothBranchesAgreeSignatureContentDecided',
+		)
+		.filter(
+			(oneNode) => JSON.parse(oneNode.properties.decidedNonSignaturePropertyNames).length === 0,
+		);
+	evidence(`RED (demonstrated): emptied the decided-property record on '${contentDecidedProbeChild.stableId}' -> children declaring a decision without naming it: ${contentDecidedProbeSilent.length}, condition inverts: ${contentDecidedProbeSilent.length !== 0}`);
+	check('G4-C GAP 3 RED: a child that claims a content decision without naming it IS detected', contentDecidedProbeSilent.length === 1);
+
+	// BOTH BASES ARE PUBLISHED AND LABELLED (supervisor condition). A reader who recomputes at
+	// signature granularity gets 8 where the classification says 2; without both figures on the
+	// node they would conclude one is wrong rather than that they answer different questions.
+	const nodesMissingABasis = syntheticNodes
+		.filter((oneNode) => oneNode.labels.indexOf('PescNamedDefinition') !== -1)
+		.filter(
+			(oneNode) =>
+				!Object.prototype.hasOwnProperty.call(oneNode.properties, 'signatureLevelCollegeContributedCount') ||
+				!Object.prototype.hasOwnProperty.call(oneNode.properties, 'signatureLevelTestScoreDroppedCount') ||
+				!Object.prototype.hasOwnProperty.call(oneNode.properties, 'childElementRecordBasisNote') ||
+				!Object.prototype.hasOwnProperty.call(oneNode.properties, 'contributedChildElementOverlapNote'),
+		);
+	const signatureLevelTestScoreDroppedTotal = syntheticNodes
+		.filter((oneNode) => oneNode.labels.indexOf('PescNamedDefinition') !== -1)
+		.reduce((runningTotal, oneNode) => runningTotal + oneNode.properties.signatureLevelTestScoreDroppedCount, 0);
+	evidence(`both bases on every merged node: missing ${nodesMissingABasis.length}; signature-level test-score dropped total ${signatureLevelTestScoreDroppedTotal} (materialized basis says ${EXPECTED.testScoreContributedChildElements})`);
+	check('G4-C every merged node publishes BOTH bases and states the overlap in words', nodesMissingABasis.length === 0 && signatureLevelTestScoreDroppedTotal === EXPECTED.absentChildElements + EXPECTED.reboundChildElements + EXPECTED.widenedChildElements);
 
 	// the misleading property is GONE, not merely superseded — no downstream reader can pick it up.
 	const nodesCarryingRetiredProperty = args.runOne.nodes.filter((oneNode) =>
@@ -1120,14 +1323,18 @@ taskList.push((args, next) => {
 	console.log('\nG4-F — tier hygiene (design §2: the emitter reads ONE predicate)');
 	const syntheticNodes = syntheticNodesOf(args.runOne);
 	const syntheticEdges = syntheticEdgesOf(args.runOne);
+	// RESTATED AT PHASE 4.6a: 'S-1c' joins the ratified rule set. It is a SUB-RULE of S-1 — the
+	// merge decides which branch each child publishes, S-1c materialises that decision — and it
+	// carries its own id so the census can count merged DEFINITIONS apart from merged CHILDREN.
+	const RATIFIED_SYNTHETIC_RULES = ['S-1', 'S-1c', 'S-2'];
 	const nodesWithoutRule = syntheticNodes.filter(
-		(oneNode) => oneNode.properties.syntheticRule !== 'S-1' && oneNode.properties.syntheticRule !== 'S-2',
+		(oneNode) => RATIFIED_SYNTHETIC_RULES.indexOf(oneNode.properties.syntheticRule) === -1,
 	);
 	const edgesWithoutRule = syntheticEdges.filter(
-		(oneEdge) => oneEdge.properties.syntheticRule !== 'S-1' && oneEdge.properties.syntheticRule !== 'S-2',
+		(oneEdge) => RATIFIED_SYNTHETIC_RULES.indexOf(oneEdge.properties.syntheticRule) === -1,
 	);
 	evidence(`synthetic census: ${syntheticNodes.length} nodes, ${syntheticEdges.length} edges; missing a syntheticRule: ${nodesWithoutRule.length} nodes, ${edgesWithoutRule.length} edges`);
-	check('G4-F the synthetic tier emits exactly 110 nodes and 549 edges', syntheticNodes.length === EXPECTED.syntheticNodes && syntheticEdges.length === EXPECTED.syntheticEdges);
+	check('G4-F the synthetic tier emits exactly 632 nodes and 1114 edges (RESTATED at Phase 4.6a from 110/549)', syntheticNodes.length === EXPECTED.syntheticNodes && syntheticEdges.length === EXPECTED.syntheticEdges);
 	check('G4-F every synthetic node and edge carries a syntheticRule naming the decision', nodesWithoutRule.length === 0 && edgesWithoutRule.length === 0);
 
 	// THE EMITTER'S PREDICATE. The round-trip emitter reads pescTier === 'source' and nothing else,
@@ -1240,6 +1447,699 @@ taskList.push((args, next) => {
 	}
 	evidence(`seam: derived tier handed one synthetic node -> ${seamRefusal.substring(0, 150)}`);
 	check('G4-G the derived tier REFUSES synthetic input by name (a decision may never seed a computation)', seamRefusal.indexOf('input carries synthetic-tier node') !== -1);
+	next('', args);
+});
+
+// =====================================================================
+// G4.6a — R-P4-3 DUPLICATE THE CHILDREN: the four named levers, plus R-P4-12's pointer lever
+// =====================================================================
+taskList.push((args, next) => {
+	console.log('\nG4.6a — the child union (R-P4-3 / R-P4-10 / R-P4-11 / R-P4-12)');
+
+	// the source+derived input the synthetic tier is a pure function of. Built by REMOVING synthetic
+	// content from the shipped graph rather than by re-running the forge, so every lever below
+	// perturbs exactly one thing against a fixed baseline.
+	const sourceAndDerivedInputOf = (oneGraph) => ({
+		nodes: oneGraph.nodes.filter((oneNode) => oneNode.properties.pescTier !== 'synthetic'),
+		edges: oneGraph.edges.filter((oneEdge) => oneEdge.properties.pescTier !== 'synthetic'),
+	});
+	const baselineInput = sourceAndDerivedInputOf(args.runOne);
+	const baselineOutput = buildSyntheticTier(baselineInput);
+
+	// ---- the union closes, by both decompositions -------------------------------------------
+	const dispositionCounts = baselineOutput.stats.mergedChildrenByDisposition;
+	// a name is BOTH-BRANCH DECLARED under every disposition that means "the loser declared it too":
+	// the two agreement forms plus the collision the winner won. The content-decided form was added
+	// at the review remediation and belongs here — it is agreement on signature, not sole declaration.
+	const bothBranchDeclaredFromDisposition =
+		dispositionCounts.bothBranchesAgree +
+		dispositionCounts.bothBranchesAgreeSignatureContentDecided +
+		dispositionCounts.winnerChosenOverLoser;
+	evidence(`union: ${baselineOutput.stats.mergedChildNodes} children; dispositions ${JSON.stringify(dispositionCounts)}; winner-takes-all ${EXPECTED.winnerTakesAllChildCount} + losing-branch ${dispositionCounts.losingBranchContributed} = ${EXPECTED.winnerTakesAllChildCount + dispositionCounts.losingBranchContributed}; both-branch names from dispositions ${bothBranchDeclaredFromDisposition} (supervisor's independent walk: ${EXPECTED.bothBranchDeclaredNameCount})`);
+	check('G4.6a the child union is EXACTLY 522 and closes by both decompositions independently', baselineOutput.stats.mergedChildNodes === EXPECTED.mergedChildNodes && EXPECTED.winnerTakesAllChildCount + dispositionCounts.losingBranchContributed === EXPECTED.mergedChildNodes && bothBranchDeclaredFromDisposition === EXPECTED.bothBranchDeclaredNameCount);
+
+	// compared KEY BY KEY rather than by JSON.stringify. The stringify form was order-sensitive and
+	// failed on the insertion order of a newly added disposition while every value was correct — a
+	// gate that reports a difference that is not there is as untrustworthy as one that misses one.
+	const dispositionNames = [
+		...new Set([
+			...Object.keys(dispositionCounts),
+			...Object.keys(EXPECTED.mergedChildDispositionCounts),
+		]),
+	].sort();
+	const dispositionMismatches = dispositionNames.filter(
+		(oneDispositionName) =>
+			dispositionCounts[oneDispositionName] !==
+			EXPECTED.mergedChildDispositionCounts[oneDispositionName],
+	);
+	evidence(`dispositions compared key-by-key over ${dispositionNames.length} names; mismatches: ${dispositionMismatches.map((oneName) => `${oneName} ${dispositionCounts[oneName]}!=${EXPECTED.mergedChildDispositionCounts[oneName]}`).join(', ') || 'none'}`);
+	check('G4.6a every disposition count is exactly as measured', dispositionMismatches.length === 0 && dispositionNames.length === Object.keys(EXPECTED.mergedChildDispositionCounts).length);
+
+	// ---- acceptance 1: the 187 traversals need no MERGED_FROM hop to render ------------------
+	const mergedDefinitionStableIds = new Set(
+		syntheticNodesOf(args.runOne)
+			.filter((oneNode) => oneNode.properties.syntheticRule === 'S-1')
+			.map((oneNode) => oneNode.stableId),
+	);
+	const hasPropertyChildCountByParent = {};
+	args.runOne.edges
+		.filter((oneEdge) => oneEdge.type === 'HAS_PROPERTY')
+		.forEach((oneEdge) => {
+			hasPropertyChildCountByParent[oneEdge.fromRef.id] =
+				(hasPropertyChildCountByParent[oneEdge.fromRef.id] || 0) + 1;
+		});
+	const elementDeclReferencesIntoMerged = args.runOne.edges.filter(
+		(oneEdge) => oneEdge.type === 'RESOLVES_TO' && mergedDefinitionStableIds.has(oneEdge.toRef.id),
+	);
+	const mergedTargetsReached = new Set(
+		elementDeclReferencesIntoMerged.map((oneEdge) => oneEdge.toRef.id),
+	);
+	// ================================================================================
+	// REBUILT AFTER THE INDEPENDENT REVIEW — THE PREDECESSOR WAS STRUCTURALLY VACUOUS
+	// ================================================================================
+	// What stood here filtered for targets that had ZERO HAS_PROPERTY children AND had child
+	// records. Those are mutually exclusive by construction: a target with child records HAS
+	// children. The filtered set was therefore empty for ANY input, correct or corrupt, and the
+	// gate printed "targets that carry children yet render empty: 0" while asserting nothing at
+	// all. THIRTY OF NINETY-SIX reached targets do render empty. It also used `|| 0`, the silent
+	// default this campaign forbids, in the same expression.
+	//
+	// This is R-P4-7's defect one gate over — a filter walking a set that cannot be non-empty — and
+	// it was written by the same hand that quoted R-P4-7 in the module comments. Knowing a
+	// defect's shape is not the same as having checked your own work against it.
+	//
+	// THE REAL CRITERION, stated so it can fail: no merged definition that HAS child declarations
+	// in either branch may render empty. Measured from the SHIPPED GRAPH with the harness's own
+	// walk (MERGED_FROM to each branch, then that branch's HAS_PROPERTY children) rather than from
+	// the production stats, so the gate does not read the answer off the thing it is judging.
+	const requiredChildCount = (countsByStableId, oneStableId) => {
+		if (!Object.prototype.hasOwnProperty.call(countsByStableId, oneStableId)) {
+			throw new Error(
+				`HARNESS FAULT (G4.6a): no child count was computed for '${oneStableId}'. Reading an ` +
+					'absent count as zero is how the predecessor of this gate became unable to fail.',
+			);
+		}
+		return countsByStableId[oneStableId];
+	};
+	const mergedDefinitionNodes = syntheticNodesOf(args.runOne).filter(
+		(oneNode) => oneNode.properties.syntheticRule === 'S-1',
+	);
+	const ownChildCountByMerged = {};
+	const branchChildCountByMerged = {};
+	mergedDefinitionNodes.forEach((oneMergedNode) => {
+		ownChildCountByMerged[oneMergedNode.stableId] = 0;
+		branchChildCountByMerged[oneMergedNode.stableId] = 0;
+	});
+	args.runOne.edges
+		.filter((oneEdge) => oneEdge.type === 'HAS_PROPERTY')
+		.forEach((oneEdge) => {
+			if (Object.prototype.hasOwnProperty.call(ownChildCountByMerged, oneEdge.fromRef.id)) {
+				ownChildCountByMerged[oneEdge.fromRef.id]++;
+			}
+		});
+	const hasPropertyChildCountByAnyParent = {};
+	args.runOne.edges
+		.filter((oneEdge) => oneEdge.type === 'HAS_PROPERTY')
+		.forEach((oneEdge) => {
+			hasPropertyChildCountByAnyParent[oneEdge.fromRef.id] =
+				(hasPropertyChildCountByAnyParent[oneEdge.fromRef.id] || 0) + 1;
+		});
+	args.runOne.edges
+		.filter((oneEdge) => oneEdge.type === 'MERGED_FROM')
+		.forEach((oneEdge) => {
+			branchChildCountByMerged[oneEdge.fromRef.id] +=
+				hasPropertyChildCountByAnyParent[oneEdge.toRef.id] === undefined
+					? 0
+					: hasPropertyChildCountByAnyParent[oneEdge.toRef.id];
+		});
+
+	const mergedDefinitionsWithBranchChildrenButNoOwn = mergedDefinitionNodes
+		.filter(
+			(oneMergedNode) =>
+				requiredChildCount(branchChildCountByMerged, oneMergedNode.stableId) > 0 &&
+				requiredChildCount(ownChildCountByMerged, oneMergedNode.stableId) === 0,
+		)
+		.map((oneMergedNode) => oneMergedNode.stableId);
+	const mergedDefinitionsWithBranchChildren = mergedDefinitionNodes.filter(
+		(oneMergedNode) => requiredChildCount(branchChildCountByMerged, oneMergedNode.stableId) > 0,
+	);
+	evidence(`ACCEPTANCE 1, measured over the shipped graph: ${mergedDefinitionNodes.length} merged definitions, of which ${mergedDefinitionsWithBranchChildren.length} have child declarations in at least one branch; of THOSE, rendering empty: ${mergedDefinitionsWithBranchChildrenButNoOwn.length}`);
+	check('G4.6a ACCEPTANCE 1: every merged definition with child declarations in either branch renders them directly — none renders empty', mergedDefinitionsWithBranchChildrenButNoOwn.length === 0 && mergedDefinitionsWithBranchChildren.length === EXPECTED.mergedDefinitionsWithBranchChildren);
+
+	// RED, biting on the BRANCH-CHILDREN conjunct specifically. The predecessor's receipt reddened
+	// only the PersonType pin beside it, which is how a half-proven conjunction got recorded whole.
+	const acceptanceProbeGraph = cloneGraph(args.runOne);
+	const acceptanceProbeMergedStableId = mergedDefinitionsWithBranchChildren[0].stableId;
+	acceptanceProbeGraph.edges = acceptanceProbeGraph.edges.filter(
+		(oneEdge) =>
+			!(oneEdge.type === 'HAS_PROPERTY' && oneEdge.fromRef.id === acceptanceProbeMergedStableId),
+	);
+	const acceptanceProbeOwnCount = acceptanceProbeGraph.edges.filter(
+		(oneEdge) =>
+			oneEdge.type === 'HAS_PROPERTY' && oneEdge.fromRef.id === acceptanceProbeMergedStableId,
+	).length;
+	const acceptanceProbeOffenders = mergedDefinitionNodes.filter((oneMergedNode) => {
+		const ownCount =
+			oneMergedNode.stableId === acceptanceProbeMergedStableId
+				? acceptanceProbeOwnCount
+				: requiredChildCount(ownChildCountByMerged, oneMergedNode.stableId);
+		return requiredChildCount(branchChildCountByMerged, oneMergedNode.stableId) > 0 && ownCount === 0;
+	});
+	evidence(`RED (demonstrated): stripped every HAS_PROPERTY edge from '${acceptanceProbeMergedStableId}' (which HAS ${requiredChildCount(branchChildCountByMerged, acceptanceProbeMergedStableId)} branch children) -> offenders ${mergedDefinitionsWithBranchChildrenButNoOwn.length} -> ${acceptanceProbeOffenders.length}, condition inverts: ${acceptanceProbeOffenders.length !== 0}`);
+	check('G4.6a ACCEPTANCE 1 RED: a merged definition stripped of its children IS caught, proving the branch-children conjunct bites', acceptanceProbeOffenders.length === 1);
+
+	// ================================================================================
+	// THE DATA-MUTATION LEVER FOR THE PRODUCTION ACCEPTANCE REFUSAL
+	// ================================================================================
+	// STANDING RULE, ruled 2026-08-06 after this phase produced the same vacuous gate TWICE: every
+	// gate and every production refusal must have at least one lever that MUTATES PRODUCTION DATA —
+	// the input, the corpus, or the graph — and not only a test expectation. The reason is
+	// mechanical, not moral. An expectation lever changes a pinned number and watches an assertion
+	// go red; that reddens it whether or not its predicate can ever be satisfied by real data, which
+	// is exactly how both vacuous versions of this check were certified "proven". A DATA lever
+	// cannot pass a vacuous check, because a vacuous check does not respond to data at all.
+	//
+	// This lever drops ONE HAS_PROPERTY edge from the INPUT graph. The union walks the `parentId`
+	// property and is unaffected; the refusal recomputes the expected count from the EDGES and now
+	// expects one fewer than the union produces. The two bases disagree and the tier refuses. Under
+	// the predecessor — which compared two counts from the same pass — this mutation changed nothing.
+	const dataLeverInput = cloneGraph(baselineInput);
+	const dataLeverMergedRecord = baselineOutput.mergeReport.mergedChildDeclarationRecords.find(
+		(oneRecord) => oneRecord.childUnionDisposition === 'soleBranchDeclaration',
+	);
+	const dataLeverVictimEdgeIndex = dataLeverInput.edges.findIndex(
+		(oneEdge) =>
+			oneEdge.type === 'HAS_PROPERTY' && oneEdge.toRef.id === dataLeverMergedRecord.copiedFromStableId,
+	);
+	if (dataLeverVictimEdgeIndex === -1) {
+		throw new Error(
+			`HARNESS FAULT (G4.6a): no HAS_PROPERTY edge reaches '${dataLeverMergedRecord.copiedFromStableId}', ` +
+				'so the data lever has nothing to drop and would prove nothing by staying silent.',
+		);
+	}
+	const dataLeverVictimEdge = dataLeverInput.edges[dataLeverVictimEdgeIndex];
+	dataLeverInput.edges.splice(dataLeverVictimEdgeIndex, 1);
+	let dataLeverRefusal = '';
+	try {
+		buildSyntheticTier(dataLeverInput);
+	} catch (thrownError) {
+		dataLeverRefusal = thrownError.message;
+	}
+	const dataLeverRefusesByName =
+		dataLeverRefusal.indexOf('FAILED ITS OWN ACCEPTANCE CRITERION') !== -1 &&
+		dataLeverRefusal.indexOf('HAS_PROPERTY edges') !== -1;
+	evidence(`RED (demonstrated) BY DATA MUTATION, not by expectation: dropped the HAS_PROPERTY edge '${dataLeverVictimEdge.fromRef.id}' -> '${dataLeverVictimEdge.toRef.id}' from the INPUT graph (the parentId the union walks is untouched) -> ${dataLeverRefusesByName ? 'REFUSES BY NAME' : 'DID NOT REFUSE'}: ${dataLeverRefusal.substring(0, 200)}`);
+	check('G4.6a ACCEPTANCE RED, BY DATA: the production refusal fires when the input\'s HAS_PROPERTY edges and its parentId containment disagree', dataLeverRefusesByName);
+
+	// AND THE CONTROL, which is what makes the lever mean anything: the SAME mutation leaves the
+	// PREDECESSOR form silent. Both of its counters came from the union pass, so dropping an edge
+	// the union never reads could not move either. A lever that reddens both forms would not have
+	// distinguished the vacuous version from the real one.
+	//
+	// THE FIRST DRAFT OF THIS CONTROL WAS ITSELF VACUOUS — `Object.keys(x).length === 0 ? -1 : 0`
+	// asserted against 0, which is a constant, inside the very edit demonstrating I had learned not
+	// to write vacuous checks. Third time in one phase, same shape. It is written out properly here:
+	// BOTH forms are computed in the harness over the same mutated input, and they must DISAGREE.
+	const controlMergedStableId = dataLeverMergedRecord.mergedDefinitionStableId;
+	const controlBranchStableIds = baselineOutput.mergeReport.mergedChildDeclarationRecords
+		.filter((oneRecord) => oneRecord.mergedDefinitionStableId === controlMergedStableId)
+		.map((oneRecord) => oneRecord.copiedFromStableId);
+	// PREDECESSOR FORM: branch children counted from the parentId containment the union walks —
+	// which the dropped EDGE does not touch — against the emitted count, also from the union.
+	const controlPredecessorBranchCount = dataLeverInput.nodes.filter(
+		(oneNode) =>
+			oneNode.labels.indexOf('PescElementDecl') !== -1 &&
+			controlBranchStableIds.some(
+				(oneSourceStableId) => oneNode.stableId === oneSourceStableId,
+			),
+	).length;
+	const controlPredecessorEmittedCount = controlBranchStableIds.length;
+	const controlPredecessorOffenders =
+		controlPredecessorBranchCount > 0 && controlPredecessorEmittedCount === 0 ? 1 : 0;
+	// NEW FORM: expected recomputed from the HAS_PROPERTY EDGES, which the mutation DID touch.
+	const controlEdgeDerivedCount = dataLeverInput.edges.filter(
+		(oneEdge) =>
+			oneEdge.type === 'HAS_PROPERTY' &&
+			controlBranchStableIds.some((oneSourceStableId) => oneEdge.toRef.id === oneSourceStableId),
+	).length;
+	const controlNewFormOffenders = controlEdgeDerivedCount === controlPredecessorEmittedCount ? 0 : 1;
+	evidence(`CONTROL, both forms computed over the SAME mutated input for '${controlMergedStableId}': predecessor form sees branch ${controlPredecessorBranchCount} vs emitted ${controlPredecessorEmittedCount} -> ${controlPredecessorOffenders} offenders (SILENT); new edge-derived form sees expected ${controlEdgeDerivedCount} vs emitted ${controlPredecessorEmittedCount} -> ${controlNewFormOffenders} offender(s) (FIRES). The mutation is invisible to one basis and visible to the other, which is the whole reason the lever had to be DATA`);
+	check('G4.6a ACCEPTANCE CONTROL: the same data mutation is SILENT under the predecessor form and FIRES under the edge-derived form', controlPredecessorOffenders === 0 && controlNewFormOffenders === 1 && controlEdgeDerivedCount === controlPredecessorEmittedCount - 1);
+
+	// GAP 2 — THE NUMBER A CONSUMER ACTUALLY MEETS, DECLARED. 30 of 96 reached merged targets
+	// render no child elements. That is NOT a defect and nothing was dropped: 27 are simpleTypes,
+	// which have no element children by definition, and 3 are complexTypes whose content comes from
+	// an extension BASE rather than local declarations. Published because a consumer who is not told
+	// this will read an empty merged type as a failure of this phase.
+	const emptyRenderCensus = baselineOutput.stats.emptyRenderCensus;
+	evidence(`GAP 2 DECLARED — reached merged targets rendering EMPTY: ${emptyRenderCensus.anyReferrer.rendersEmpty} of ${emptyRenderCensus.anyReferrer.reachedTargets} (any referrer) = ${JSON.stringify(emptyRenderCensus.anyReferrer.emptyCountByKind)}; ${emptyRenderCensus.elementDeclReferrer.rendersEmpty} of ${emptyRenderCensus.elementDeclReferrer.reachedTargets} (element-declaration referrers, the acceptance-1 population) = ${JSON.stringify(emptyRenderCensus.elementDeclReferrer.emptyCountByKind)}. Nothing was dropped — see the assertion above.`);
+	// SPLIT BY REFERRER SCOPE AND BY KIND. Written first as ONE assertion joining six conditions,
+	// which made it the largest conjunction in the whole suite — in the same session that reported
+	// the conjunction-evidence gap as a class. Filing that finding while adding its worst instance
+	// is hypocrisy with a footnote. Three claims, three labels, each independently reddenable.
+	check('G4.6a GAP 2: across ALL referrers, exactly 30 of 96 reached merged targets render empty', emptyRenderCensus.anyReferrer.rendersEmpty === EXPECTED.emptyRenderAnyReferrer && emptyRenderCensus.anyReferrer.reachedTargets === EXPECTED.reachedTargetsAnyReferrer);
+	check('G4.6a GAP 2: scoped to element-declaration referrers (the acceptance-1 population), exactly 29 of 94 render empty', emptyRenderCensus.elementDeclReferrer.rendersEmpty === EXPECTED.emptyRenderElementDeclReferrer && emptyRenderCensus.elementDeclReferrer.reachedTargets === EXPECTED.reachedTargetsElementDeclReferrer);
+	check('G4.6a GAP 2: the empty ones are 27 simpleTypes and 3 complexTypes — the explanation, not just the count', emptyRenderCensus.anyReferrer.emptyCountByKind.complexType === 3 && emptyRenderCensus.anyReferrer.emptyCountByKind.simpleType === 27);
+
+	// THE TWO PUBLICATIONS OF ONE FIGURE MUST AGREE. The contribution counts are published twice —
+	// on every merged NODE (read by a graph consumer) and in STATS (read by the build report) — and
+	// they are computed by two separate accumulators. They diverged: a fix applied to one and not
+	// the other made the build say 36 college contributions while the graph said 33. Nothing failed,
+	// because the only stats use of that figure was an upper bound, and a number used only as a
+	// loose bound is not being checked. Reconciled here so the two can never drift apart silently.
+	const nodePublishedCollegeContributions = mergedDefinitionNodes
+		.reduce(
+			(runningTotal, oneNode) => runningTotal + oneNode.properties.collegeContributedChildElementCount,
+			0,
+		);
+	const nodePublishedTestScoreContributions = mergedDefinitionNodes
+		.reduce(
+			(runningTotal, oneNode) =>
+				runningTotal + oneNode.properties.testScoreContributedChildElementCount,
+			0,
+		);
+	const statsCollegeContributions = args.runOne.stats.synthetic.collegeContributedChildElements;
+	const statsTestScoreContributions = args.runOne.stats.synthetic.testScoreContributedChildElements;
+	evidence(`one figure, two publications: college — nodes ${nodePublishedCollegeContributions} vs stats ${statsCollegeContributions}; test-score — nodes ${nodePublishedTestScoreContributions} vs stats ${statsTestScoreContributions}`);
+	check('G4-C the contribution counts published on the NODES and in STATS agree exactly (they are computed by separate accumulators and once diverged)', nodePublishedCollegeContributions === statsCollegeContributions && nodePublishedTestScoreContributions === statsTestScoreContributions && statsCollegeContributions === EXPECTED.collegeContributedChildElements && statsTestScoreContributions === EXPECTED.testScoreContributedChildElements);
+
+	// the named exemplar, on its OWN label so its receipt is its own (GAP 1b's lesson)
+	const personTypeNode = mergedDefinitionNodes.find(
+		(oneNode) => oneNode.properties.name === 'PersonType',
+	);
+	evidence(`the named exemplar PersonType now has ${requiredChildCount(ownChildCountByMerged, personTypeNode.stableId)} HAS_PROPERTY children (it had 0, out-degree 2, both MERGED_FROM); reached merged targets ${mergedTargetsReached.size} from ${elementDeclReferencesIntoMerged.length} element-declaration references`);
+	check('G4.6a the named exemplar PersonType renders exactly 18 children', requiredChildCount(ownChildCountByMerged, personTypeNode.stableId) === EXPECTED.personTypeChildElementCount);
+
+	// ---- acceptance 5: MERGED_FROM survives untouched ----------------------------------------
+	const mergedFromEdgeCount = syntheticEdgesOf(args.runOne).filter(
+		(oneEdge) => oneEdge.type === 'MERGED_FROM',
+	).length;
+	evidence(`MERGED_FROM edges after duplication: ${mergedFromEdgeCount} (Phase 4 emitted ${EXPECTED.mergedFromEdges}) — duplication SUPPLEMENTS provenance, it does not replace it`);
+	check('G4.6a MERGED_FROM survives untouched at 140 edges', mergedFromEdgeCount === EXPECTED.mergedFromEdges);
+
+	// ---- R-P4-12 residue, stated as a number rather than a silence --------------------------
+	const inlineTypeEdges = syntheticEdgesOf(args.runOne).filter(
+		(oneEdge) => oneEdge.type === 'HAS_SUPPORT' && oneEdge.properties.syntheticRule === 'S-1c',
+	);
+	const derivationEdges = syntheticEdgesOf(args.runOne).filter(
+		(oneEdge) => oneEdge.type === 'HAS_RESTRICTION' && oneEdge.properties.syntheticRule === 'S-1c',
+	);
+	evidence(`R-P4-12 RESIDUE, OPEN AND NUMBERED: ${inlineTypeEdges.length} element declarations whose inline anonymous type is REFERENCED not duplicated, and ${derivationEdges.length} merged definitions whose derivation wrapper is REFERENCED not duplicated. Element declarations are complete; walking INTO those ${inlineTypeEdges.length} still takes a hop into the contributing branch.`);
+	check('G4.6a the referenced-not-duplicated residue is exactly 5 inline types and 38 derivation wrappers', inlineTypeEdges.length === EXPECTED.inlineTypeReferenceEdges && derivationEdges.length === EXPECTED.derivationReferenceEdges);
+
+	// =================================================================
+	// LEVER 1 — INVENTION
+	// =================================================================
+	// The production path builds children by COPYING branch declarations, so it has no route to
+	// invention and the checker cannot fail against real data. That is exactly why the checker is
+	// exported as a pure function: the lever hands the SHIPPED checker the SHIPPED population with
+	// ONE fabricated record appended. A checker only ever run on correct-by-construction input has
+	// demonstrated nothing, however green it looks.
+	const declaredKeySet = new Set(baselineOutput.mergeReport.declaredChildDeclarationKeys);
+	let inventionGreenError = '';
+	try {
+		verifyMergedChildrenWereDeclared({
+			mergedChildDeclarationRecords: baselineOutput.mergeReport.mergedChildDeclarationRecords,
+			declaredChildDeclarationKeys: declaredKeySet,
+		});
+	} catch (thrownError) {
+		inventionGreenError = thrownError.message;
+	}
+	check('G4.6a INVENTION: the shipped population passes the shipped declaration check', inventionGreenError === '');
+
+	const fabricatedChildRecord = {
+		mergedDefinitionStableId: `${CONTESTED_NAMESPACE}#complexType/PersonType`,
+		definitionKey: 'complexType|PersonType',
+		name: 'HarnessInventedChild',
+		typeAsWritten: 'core:HarnessInventedType',
+		minOccurs: '0',
+		maxOccurs: 'unbounded',
+	};
+	let inventionRefusal = '';
+	try {
+		verifyMergedChildrenWereDeclared({
+			mergedChildDeclarationRecords: [
+				...baselineOutput.mergeReport.mergedChildDeclarationRecords,
+				fabricatedChildRecord,
+			],
+			declaredChildDeclarationKeys: declaredKeySet,
+		});
+	} catch (thrownError) {
+		inventionRefusal = thrownError.message;
+	}
+	const inventionRefusesByName =
+		inventionRefusal.indexOf('S-1c INVENTION') !== -1 &&
+		inventionRefusal.indexOf('HarnessInventedChild') !== -1;
+	evidence(`RED (demonstrated): appended one child whose signature no member declares -> ${inventionRefusesByName ? 'REFUSES BY NAME' : 'DID NOT REFUSE'}: ${inventionRefusal.substring(0, 190)}`);
+	check('G4.6a INVENTION RED: a child declared by NEITHER member is refused BY NAME', inventionRefusesByName);
+
+	// a same-name child under the WRONG owning type must also be refused — the declaration key
+	// carries the owning definition precisely so a name cannot be vouched for by a stranger.
+	const wrongOwnerRecord = {
+		mergedDefinitionStableId: `${CONTESTED_NAMESPACE}#complexType/SponsorType`,
+		definitionKey: 'complexType|SponsorType',
+		name: 'HighSchool',
+		typeAsWritten: 'AcRec:HighSchoolType',
+		minOccurs: '0',
+		maxOccurs: null,
+	};
+	let wrongOwnerRefusal = '';
+	try {
+		verifyMergedChildrenWereDeclared({
+			mergedChildDeclarationRecords: [
+				...baselineOutput.mergeReport.mergedChildDeclarationRecords,
+				wrongOwnerRecord,
+			],
+			declaredChildDeclarationKeys: declaredKeySet,
+		});
+	} catch (thrownError) {
+		wrongOwnerRefusal = thrownError.message;
+	}
+	evidence(`RED (demonstrated): a REAL child signature attached to the WRONG owning type -> ${wrongOwnerRefusal.indexOf('S-1c INVENTION') !== -1 ? 'REFUSES BY NAME' : 'DID NOT REFUSE'}: ${wrongOwnerRefusal.substring(0, 150)}`);
+	check('G4.6a INVENTION RED: a real signature under the WRONG owning type is refused (the key is not name-only)', wrongOwnerRefusal.indexOf('S-1c INVENTION') !== -1);
+
+	// =================================================================
+	// LEVER 2 — SHORTFALL
+	// =================================================================
+	// Remove ONE branch's contribution from the INPUT and require the union to come back short by
+	// an exact enumerated count. This lever bites at the input, not at a checker's argument.
+	const shortfallInput = cloneGraph(baselineInput);
+	const shortfallVictimStableId = baselineOutput.mergeReport.mergedChildDeclarationRecords.find(
+		(oneRecord) => oneRecord.childUnionDisposition === 'losingBranchContributed',
+	).copiedFromStableId;
+	shortfallInput.nodes = shortfallInput.nodes.filter(
+		(oneNode) => oneNode.stableId !== shortfallVictimStableId,
+	);
+	shortfallInput.edges = shortfallInput.edges.filter(
+		(oneEdge) => oneEdge.fromRef.id !== shortfallVictimStableId && oneEdge.toRef.id !== shortfallVictimStableId,
+	);
+	const shortfallOutput = buildSyntheticTier(shortfallInput);
+	const shortfallDelta = baselineOutput.stats.mergedChildNodes - shortfallOutput.stats.mergedChildNodes;
+	// SPLIT AFTER THE INDEPENDENT REVIEW (GAP 8). This was ONE assertion joining two claims — that
+	// the union shortens by exactly one, and that the contribution count follows it — and its
+	// retained receipt reddened only the second. A conjunction whose evidence covers one half is
+	// half-proven and was recorded whole. Each half now carries its own label and its own lever.
+	evidence(`RED (demonstrated): removed the losing-branch declaration '${shortfallVictimStableId}' -> union ${baselineOutput.stats.mergedChildNodes} -> ${shortfallOutput.stats.mergedChildNodes} (short by exactly ${shortfallDelta}); test-score contributions ${baselineOutput.stats.testScoreContributedChildElements} -> ${shortfallOutput.stats.testScoreContributedChildElements}`);
+	check('G4.6a SHORTFALL RED: removing ONE branch contribution shortens the union by EXACTLY one', shortfallDelta === 1);
+	check('G4.6a SHORTFALL RED: the R-P4-11 contribution count follows the removal', shortfallOutput.stats.testScoreContributedChildElements === EXPECTED.testScoreContributedChildElements - 1);
+
+	// GAP 8's own lever, isolating the DELTA conjunct: remove a WINNER child instead. The union
+	// still shortens by exactly one, but the test-score contribution count does NOT move — so this
+	// reddens a mutation of the delta claim while leaving the contribution claim untouched, which
+	// is what makes the two independently evidenced rather than jointly asserted.
+	const winnerShortfallInput = cloneGraph(baselineInput);
+	const winnerShortfallVictimStableId = baselineOutput.mergeReport.mergedChildDeclarationRecords.find(
+		(oneRecord) => oneRecord.childUnionDisposition === 'soleBranchDeclaration',
+	).copiedFromStableId;
+	winnerShortfallInput.nodes = winnerShortfallInput.nodes.filter(
+		(oneNode) => oneNode.stableId !== winnerShortfallVictimStableId,
+	);
+	winnerShortfallInput.edges = winnerShortfallInput.edges.filter(
+		(oneEdge) =>
+			oneEdge.fromRef.id !== winnerShortfallVictimStableId &&
+			oneEdge.toRef.id !== winnerShortfallVictimStableId,
+	);
+	const winnerShortfallOutput = buildSyntheticTier(winnerShortfallInput);
+	const winnerShortfallDelta =
+		baselineOutput.stats.mergedChildNodes - winnerShortfallOutput.stats.mergedChildNodes;
+	evidence(`RED (demonstrated), DELTA CONJUNCT ISOLATED: removed the winning-branch declaration '${winnerShortfallVictimStableId}' -> union short by exactly ${winnerShortfallDelta}, while test-score contributions stay ${winnerShortfallOutput.stats.testScoreContributedChildElements} (unchanged) — the delta claim moves and the contribution claim does not`);
+	check('G4.6a SHORTFALL RED: the delta claim is evidenced INDEPENDENTLY of the contribution claim', winnerShortfallDelta === 1 && winnerShortfallOutput.stats.testScoreContributedChildElements === EXPECTED.testScoreContributedChildElements);
+
+	// =================================================================
+	// GAP 5 — THE NAME-KEYED UNION'S WARRANT, NOW SHIPPED
+	// =================================================================
+	// The union is keyed by NAME, and that was warranted only by an untracked probe: measured once,
+	// asserted nowhere, free to stop being true unnoticed. Production now REFUSES a container that
+	// declares one child name twice. Asserted here, and demonstrated red, because a refusal nobody
+	// has seen fire is an unenforced claim.
+	const childNameCollisionsInGraph = [];
+	const childNamesByMergedParent = {};
+	args.runOne.nodes
+		.filter((oneNode) => oneNode.properties.syntheticRule === 'S-1c')
+		.forEach((oneNode) => {
+			const parentStableId = oneNode.properties.mergedDefinitionStableId;
+			(childNamesByMergedParent[parentStableId] =
+				childNamesByMergedParent[parentStableId] || []).push(oneNode.properties.name);
+		});
+	Object.keys(childNamesByMergedParent).forEach((oneParentStableId) => {
+		const childNames = childNamesByMergedParent[oneParentStableId];
+		if (childNames.length !== new Set(childNames).size) {
+			childNameCollisionsInGraph.push(oneParentStableId);
+		}
+	});
+	evidence(`GAP 5: merged definitions whose duplicated children repeat a name: ${childNameCollisionsInGraph.length} (a name-keyed union would have silently collapsed them)`);
+	check('G4.6a GAP 5: no merged definition carries two duplicated children of the same name', childNameCollisionsInGraph.length === 0);
+
+	const nameCollisionInput = cloneGraph(baselineInput);
+	const nameCollisionVictim = nameCollisionInput.nodes.find(
+		(oneNode) =>
+			oneNode.properties.pescTier === 'source' &&
+			oneNode.labels.indexOf('PescElementDecl') !== -1 &&
+			oneNode.stableId.indexOf(`${CONTESTED_NAMESPACE}#`) === 0,
+	);
+	const nameCollisionSibling = nameCollisionInput.nodes.find(
+		(oneNode) =>
+			oneNode.stableId !== nameCollisionVictim.stableId &&
+			oneNode.properties.parentId === nameCollisionVictim.properties.parentId &&
+			oneNode.labels.indexOf('PescElementDecl') !== -1,
+	);
+	nameCollisionSibling.properties.name = nameCollisionVictim.properties.name;
+	let nameCollisionRefusal = '';
+	try {
+		buildSyntheticTier(nameCollisionInput);
+	} catch (thrownError) {
+		nameCollisionRefusal = thrownError.message;
+	}
+	evidence(`RED (demonstrated): renamed '${nameCollisionSibling.stableId}' to collide with its sibling '${nameCollisionVictim.properties.name}' -> ${nameCollisionRefusal.indexOf('union the children') !== -1 ? 'REFUSES BY NAME' : 'DID NOT REFUSE'}: ${nameCollisionRefusal.substring(0, 170)}`);
+	check('G4.6a GAP 5 RED: a repeated child name in one container is REFUSED by name, so the union cannot silently collapse two declarations', nameCollisionRefusal.indexOf('union the children') !== -1 && nameCollisionRefusal.indexOf(nameCollisionVictim.properties.name) !== -1);
+
+	// =================================================================
+	// GAP 7 — PER-CHILD PROVENANCE MUST RESOLVE
+	// =================================================================
+	// copiedFromStableId is a bare stableId PROPERTY with no backing edge — the exact hazard
+	// R-P4-12 condition 1 names, and it arrived on the per-child provenance while I was busy
+	// converting the residue pointers to edges. All 522 resolve today and NOTHING asserted it.
+	// Asserted now, with a lever. (Whether it should become an edge is a supervisor question; the
+	// assertion closes the unenforced-claim half either way.)
+	const graphNodeStableIds = new Set(args.runOne.nodes.map((oneNode) => oneNode.stableId));
+	const duplicatedChildren = args.runOne.nodes.filter(
+		(oneNode) => oneNode.properties.syntheticRule === 'S-1c',
+	);
+	const unresolvableProvenance = duplicatedChildren.filter(
+		(oneNode) => !graphNodeStableIds.has(oneNode.properties.copiedFromStableId),
+	);
+	const provenanceNamingASyntheticNode = duplicatedChildren.filter((oneNode) => {
+		const sourceNode = args.runOne.nodes.find(
+			(oneCandidate) => oneCandidate.stableId === oneNode.properties.copiedFromStableId,
+		);
+		return sourceNode !== undefined && sourceNode.properties.pescTier !== 'source';
+	});
+	evidence(`GAP 7: ${duplicatedChildren.length} duplicated children; copiedFromStableId not resolving to a live node: ${unresolvableProvenance.length}; resolving to something that is not a SOURCE node: ${provenanceNamingASyntheticNode.length}`);
+	check('G4.6a GAP 7: every copiedFromStableId resolves to a live SOURCE-tier node', unresolvableProvenance.length === 0 && provenanceNamingASyntheticNode.length === 0 && duplicatedChildren.length === EXPECTED.mergedChildNodes);
+
+	const provenanceProbeGraph = cloneGraph(args.runOne);
+	const provenanceProbeChild = provenanceProbeGraph.nodes.find(
+		(oneNode) => oneNode.properties.syntheticRule === 'S-1c',
+	);
+	provenanceProbeChild.properties.copiedFromStableId = 'harness:noSuchSourceDeclaration';
+	const provenanceProbeStableIds = new Set(
+		provenanceProbeGraph.nodes.map((oneNode) => oneNode.stableId),
+	);
+	const provenanceProbeDangling = provenanceProbeGraph.nodes
+		.filter((oneNode) => oneNode.properties.syntheticRule === 'S-1c')
+		.filter((oneNode) => !provenanceProbeStableIds.has(oneNode.properties.copiedFromStableId));
+	evidence(`RED (demonstrated): repointed '${provenanceProbeChild.stableId}' provenance at a name no node carries -> dangling provenance detected: ${provenanceProbeDangling.length}, condition inverts: ${provenanceProbeDangling.length !== 0}`);
+	check('G4.6a GAP 7 RED: a dangling copiedFromStableId IS detected (a bare stableId property has no other protection)', provenanceProbeDangling.length === 1);
+
+	// and the union does NOT silently complete: the child is gone, not quietly sourced elsewhere
+	const shortfallSurvivors = shortfallOutput.nodes.filter(
+		(oneNode) => oneNode.properties.copiedFromStableId === shortfallVictimStableId,
+	);
+	evidence(`survivors copied from the removed declaration: ${shortfallSurvivors.length} (a nonzero here would mean the union found the child somewhere it was not declared)`);
+	check('G4.6a SHORTFALL RED: the union does not silently complete — no child survives the removed declaration', shortfallSurvivors.length === 0);
+
+	// =================================================================
+	// LEVER 3 — TIER LEAKAGE
+	// =================================================================
+	// Asserting "the source predicate sees zero synthetic children" against a projection that never
+	// could have contained them proves nothing. Plant a child that WOULD leak and observe the catch.
+	const sourcePredicateChildLeaks = args.runOne.nodes.filter(
+		(oneNode) => oneNode.properties.pescTier === 'source' && oneNode.properties.syntheticRule === 'S-1c',
+	);
+	const sourcePredicateChildEdgeLeaks = args.runOne.edges.filter(
+		(oneEdge) => oneEdge.properties.pescTier === 'source' && oneEdge.properties.syntheticRule === 'S-1c',
+	);
+	evidence(`source predicate over the shipped graph: ${sourcePredicateChildLeaks.length} duplicated-child node leak(s), ${sourcePredicateChildEdgeLeaks.length} edge leak(s)`);
+	check('G4.6a TIER-LEAKAGE: zero duplicated children are reachable by the source-tier predicate', sourcePredicateChildLeaks.length === 0 && sourcePredicateChildEdgeLeaks.length === 0);
+
+	const leakProbeGraph = cloneGraph(args.runOne);
+	const leakProbeChild = leakProbeGraph.nodes.find(
+		(oneNode) => oneNode.properties.syntheticRule === 'S-1c',
+	);
+	leakProbeChild.properties.pescTier = 'source';
+	const leakProbeEdge = leakProbeGraph.edges.find(
+		(oneEdge) => oneEdge.toRef.id === leakProbeChild.stableId && oneEdge.type === 'HAS_PROPERTY',
+	);
+	leakProbeEdge.properties.pescTier = 'source';
+	const leakProbeNodeHits = leakProbeGraph.nodes.filter(
+		(oneNode) => oneNode.properties.pescTier === 'source' && oneNode.properties.syntheticRule === 'S-1c',
+	);
+	const leakProbeEdgeHits = leakProbeGraph.edges.filter(
+		(oneEdge) => oneEdge.properties.pescTier === 'source' && oneEdge.properties.syntheticRule === 'S-1c',
+	);
+	evidence(`RED (demonstrated): retiered duplicated child '${leakProbeChild.stableId}' and its HAS_PROPERTY edge as pescTier:'source' -> the source predicate now finds ${leakProbeNodeHits.length} node leak(s) and ${leakProbeEdgeHits.length} edge leak(s), condition inverts: ${leakProbeNodeHits.length !== 0}`);
+	check('G4.6a TIER-LEAKAGE RED: a duplicated child retiered as source IS caught by the source predicate', leakProbeNodeHits.length === 1 && leakProbeEdgeHits.length === 1);
+
+	// the derived tier's annotations must NOT ride along on a duplicated child. This one is not
+	// hypothetical: the first build of this phase leaked 'ambiguousPendingSynthesis' onto 134
+	// children via the bulk property copy and moved Gate 3's compare by 94,051 canonical bytes.
+	const derivedAnnotationNames = [
+		'sameDefinitionClusterId',
+		'reachableFromLatestRoot',
+		'resolvesToBuiltinXsd',
+		'ambiguousPendingSynthesis',
+		'unresolvedImportFact',
+		'unresolvedNamespaceReferences',
+	];
+	const childrenCarryingADerivedAnnotation = args.runOne.nodes
+		.filter((oneNode) => oneNode.properties.syntheticRule === 'S-1c')
+		.filter((oneNode) =>
+			derivedAnnotationNames.some((oneAnnotationName) =>
+				Object.prototype.hasOwnProperty.call(oneNode.properties, oneAnnotationName),
+			),
+		);
+	evidence(`duplicated children carrying a DERIVED annotation: ${childrenCarryingADerivedAnnotation.length} (the first build of this phase produced 134 before the strip was added)`);
+	check('G4.6a TIER-LEAKAGE: no duplicated child carries a derived-tier annotation', childrenCarryingADerivedAnnotation.length === 0);
+
+	const annotationLeakProbe = cloneGraph(args.runOne);
+	const annotationLeakChild = annotationLeakProbe.nodes.find(
+		(oneNode) => oneNode.properties.syntheticRule === 'S-1c',
+	);
+	annotationLeakChild.properties.ambiguousPendingSynthesis = '[]';
+	const annotationLeakHits = annotationLeakProbe.nodes
+		.filter((oneNode) => oneNode.properties.syntheticRule === 'S-1c')
+		.filter((oneNode) =>
+			derivedAnnotationNames.some((oneAnnotationName) =>
+				Object.prototype.hasOwnProperty.call(oneNode.properties, oneAnnotationName),
+			),
+		);
+	evidence(`RED (demonstrated): staged 'ambiguousPendingSynthesis' onto one duplicated child -> detector finds ${annotationLeakHits.length}, condition inverts: ${annotationLeakHits.length !== 0}`);
+	check('G4.6a TIER-LEAKAGE RED: a derived annotation planted on a duplicated child IS detected', annotationLeakHits.length === 1);
+
+	// =================================================================
+	// LEVER 4 — REGENERATION
+	// =================================================================
+	// Synthetic content that cannot be reproduced from preserved inputs cannot satisfy R-VAL-5.
+	// Delete every duplicated child and regenerate from source+derived; the S-1c portion must come
+	// back byte-identical.
+	const s1cViewOf = (oneOutput) =>
+		JSON.stringify({
+			nodes: oneOutput.nodes
+				.filter((oneNode) => oneNode.properties.syntheticRule === 'S-1c')
+				.map((oneNode) => ({
+					stableId: oneNode.stableId,
+					labels: [...oneNode.labels].sort(),
+					properties: sortedKeyObject(oneNode.properties),
+				}))
+				.sort((viewA, viewB) => (viewA.stableId < viewB.stableId ? -1 : 1)),
+			edges: oneOutput.edges
+				.filter((oneEdge) => oneEdge.properties.syntheticRule === 'S-1c')
+				.map((oneEdge) => ({
+					type: oneEdge.type,
+					from: oneEdge.fromRef.id,
+					to: oneEdge.toRef.id,
+					properties: sortedKeyObject(oneEdge.properties),
+				}))
+				.sort((viewA, viewB) => {
+					const keyA = `${viewA.type} ${viewA.from} ${viewA.to} ${JSON.stringify(viewA.properties)}`;
+					const keyB = `${viewB.type} ${viewB.from} ${viewB.to} ${JSON.stringify(viewB.properties)}`;
+					return keyA < keyB ? -1 : 1;
+				}),
+		});
+	const shippedS1cView = s1cViewOf({
+		nodes: args.runOne.nodes,
+		edges: args.runOne.edges,
+	});
+	const regeneratedS1cView = s1cViewOf(baselineOutput);
+	evidence(`GREEN: regenerated the S-1c portion from source+derived: identical ${regeneratedS1cView === shippedS1cView} (${shippedS1cView.length} canonical bytes)`);
+	check('G4.6a REGENERATION: every duplicated child regenerates byte-identically from preserved inputs', regeneratedS1cView === shippedS1cView);
+
+	// RED — perturb ONE source child's cardinality and require the regenerated view to move. A
+	// regeneration compare that stays still when its input changes is measuring nothing.
+	const regenerationProbeInput = cloneGraph(baselineInput);
+	const regenerationProbeChild = regenerationProbeInput.nodes.find(
+		(oneNode) =>
+			oneNode.stableId ===
+			baselineOutput.mergeReport.mergedChildDeclarationRecords[0].copiedFromStableId,
+	);
+	const regenerationProbeOriginalMaxOccurs = regenerationProbeChild.properties.maxOccurs;
+	regenerationProbeChild.properties.maxOccurs = 'unbounded';
+	const regenerationProbeView = s1cViewOf(buildSyntheticTier(regenerationProbeInput));
+	evidence(`RED (demonstrated): changed '${regenerationProbeChild.stableId}' maxOccurs ${JSON.stringify(regenerationProbeOriginalMaxOccurs)} -> 'unbounded' => regenerated S-1c view differs: ${regenerationProbeView !== shippedS1cView}`);
+	check('G4.6a REGENERATION RED: perturbing ONE source declaration moves the regenerated child view', regenerationProbeView !== shippedS1cView);
+
+	// =================================================================
+	// LEVER 5 — THE REFERENCED RESIDUE (R-P4-12 condition 2)
+	// =================================================================
+	// The residue is carried by REAL EDGES rather than stableId-valued properties precisely so it
+	// cannot dangle unseen. That protection is worth nothing unless a broken reference is caught.
+	const residueEdges = [...inlineTypeEdges, ...derivationEdges];
+	const shippedNodeStableIds = new Set(args.runOne.nodes.map((oneNode) => oneNode.stableId));
+	const danglingResidueEdges = residueEdges.filter(
+		(oneEdge) =>
+			!shippedNodeStableIds.has(oneEdge.fromRef.id) || !shippedNodeStableIds.has(oneEdge.toRef.id),
+	);
+	evidence(`residue edges with both endpoints present: ${residueEdges.length - danglingResidueEdges.length}/${residueEdges.length}`);
+	check('G4.6a RESIDUE: every referenced-not-duplicated edge has both endpoints in the graph', danglingResidueEdges.length === 0);
+
+	const residueProbeGraph = cloneGraph(args.runOne);
+	const residueProbeTargetStableId = inlineTypeEdges[0].toRef.id;
+	residueProbeGraph.nodes = residueProbeGraph.nodes.filter(
+		(oneNode) => oneNode.stableId !== residueProbeTargetStableId,
+	);
+	const residueProbeNodeStableIds = new Set(
+		residueProbeGraph.nodes.map((oneNode) => oneNode.stableId),
+	);
+	const residueProbeDangling = residueProbeGraph.edges
+		.filter(
+			(oneEdge) =>
+				oneEdge.properties.syntheticRule === 'S-1c' &&
+				(oneEdge.type === 'HAS_SUPPORT' || oneEdge.type === 'HAS_RESTRICTION'),
+		)
+		.filter(
+			(oneEdge) =>
+				!residueProbeNodeStableIds.has(oneEdge.fromRef.id) ||
+				!residueProbeNodeStableIds.has(oneEdge.toRef.id),
+		);
+	evidence(`RED (demonstrated): removed the inline-type target '${residueProbeTargetStableId}' -> dangling residue edges detected: ${residueProbeDangling.length}, condition inverts: ${residueProbeDangling.length !== 0}`);
+	check('G4.6a RESIDUE RED: a broken residue reference IS detected as dangling', residueProbeDangling.length === 1);
+
+	// CORRECTED AFTER OBSERVING IT FAIL — and the correction is the finding, not the repair.
+	//
+	// This first asserted that the tier REFUSES at emission when a residue endpoint is absent. It
+	// does not, and it cannot: the inline-type reference is derived by looking the anonymous type up
+	// in the live node index, so an absent node yields NO EDGE rather than a dangling one. Absence
+	// produces a SHORTFALL, not a dangle. Shipping the original assertion would have shipped a true
+	// green whose stated reason was false.
+	//
+	// What IS true, and is asserted instead: the residue count follows its input exactly. The
+	// edge-over-property choice still stands on its own merit — a stableId STRING copied onto a node
+	// can point at nothing and no gate would see it, whereas an edge is constructed from a live
+	// reference at emission and is checked by conservation and by the dangling detector above.
+	const residueShortfallInput = cloneGraph(baselineInput);
+	residueShortfallInput.nodes = residueShortfallInput.nodes.filter(
+		(oneNode) => oneNode.stableId !== residueProbeTargetStableId,
+	);
+	const residueShortfallOutput = buildSyntheticTier(residueShortfallInput);
+	const residueShortfallEdgeCount = residueShortfallOutput.edges.filter(
+		(oneEdge) => oneEdge.type === 'HAS_SUPPORT' && oneEdge.properties.syntheticRule === 'S-1c',
+	).length;
+	const residueShortfallDangling = residueShortfallOutput.edges
+		.filter((oneEdge) => oneEdge.properties.syntheticRule === 'S-1c')
+		.filter((oneEdge) => oneEdge.toRef.id === residueProbeTargetStableId);
+	evidence(`RED (demonstrated): removing the inline-type node at BUILD time -> inline-type reference edges ${EXPECTED.inlineTypeReferenceEdges} -> ${residueShortfallEdgeCount} (exact shortfall of ${EXPECTED.inlineTypeReferenceEdges - residueShortfallEdgeCount}), and ${residueShortfallDangling.length} edges point at the removed node — absence yields a SHORTFALL, never a dangle`);
+	check('G4.6a RESIDUE RED: an absent residue endpoint produces an EXACT shortfall and never a dangling edge', residueShortfallEdgeCount === EXPECTED.inlineTypeReferenceEdges - 1 && residueShortfallDangling.length === 0);
+
 	next('', args);
 });
 

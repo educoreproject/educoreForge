@@ -1,0 +1,17 @@
+branches: college 73 definitions, testScore 67 definitions
+
+===== H2 duplicate child NAMES within one definition =====
+findings: 0
+
+===== H1 signature-equal children that differ BEYOND the signature =====
+shared definitions examined: 31
+findings: 3
+{"definitionKey":"complexType|K12PersonType","childName":"AgencyAssignedID","differingPropertyNames":["documentation"],"collegeValues":["This is to be deprecated in a future release."],"testScoreValues":[""]}
+{"definitionKey":"complexType|K12PersonType","childName":"ParentGuardianName","differingPropertyNames":["documentation"],"collegeValues":["To be deprecated in a future release"],"testScoreValues":[""]}
+{"definitionKey":"complexType|PersonType","childName":"HighSchool","differingPropertyNames":["documentation"],"collegeValues":["This is the secondary school  (high school) from which the person graduated or the last high school the party attended."],"testScoreValues":[""]}
+
+===== H3 the two candidate policies, counted =====
+{"mergedDefinitions":109,"winnerTakesAllChildCount":520,"unionChildCount":522,"differenceCount":2}
+entries the UNION adds that winner-takes-all does not:
+{"definitionKey":"complexType|AcademicRecordType","childName":"AdditionalStudentAchievement","typeAsWritten":"core:AdditionalStudentAchievementType","minOccurs":"0","maxOccurs":"unbounded"}
+{"definitionKey":"complexType|SponsorType","childName":"SponsorCode","typeAsWritten":"core:SponsorCodeType","minOccurs":"0","maxOccurs":null}

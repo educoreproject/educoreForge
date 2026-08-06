@@ -1,0 +1,15 @@
+{
+  "A_totalBranchChildNodes": 757,
+  "C_bothBranchDeclaredPairs": 235,
+  "B_distinctMergedChildNamePairs": 522,
+  "D_winnerTakesAllChildCount": 520,
+  "E_loserOnlyByNameChildCount": 2,
+  "identityOne_AminusC_equals_B": true,
+  "identityTwo_DplusE_equals_B": true
+}
+
+the loser-only entries (E), enumerated:
+{"mergedStableId":"urn:org:pesc:sector:AcademicRecord:v1.6.0#complexType/AcademicRecordType","childName":"AdditionalStudentAchievement"}
+{"mergedStableId":"urn:org:pesc:sector:AcademicRecord:v1.6.0#complexType/SponsorType","childName":"SponsorCode"}
+
+RECONCILED: both identities close.

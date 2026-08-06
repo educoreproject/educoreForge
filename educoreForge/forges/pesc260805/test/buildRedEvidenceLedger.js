@@ -16,6 +16,79 @@ const ARTIFACT_DIR = path.join(__dirname, 'test-artifacts');
 // Every retained log that recorded a FAIL, with the lever that produced it. `shippedConfig`
 // records whether the probe ran against the code we actually ship — the N1 lesson.
 const EVIDENCE_SOURCES = [
+	// ---- PHASE 4.6a REVIEW-REMEDIATION levers (session MYSTIC_PORTAL, round 2) ---------------
+	{
+		logName: 'mp_r2redProbeA_perturbedExpected.log',
+		suite: 'synthetic',
+		lever:
+			'EXPECTATION PERTURBATION (Phase 4.6a remediation): every Phase 4.6a pin incremented by one inside the single EXPECTED block, including the pins ADDED at remediation — the acceptance-1 population (75 merged definitions with branch children), the GAP 2 empty-render census in BOTH referrer scopes (96/30 and 94/29), the GAP 3 content-decided count, and the revised disposition table. Supersedes mp_redProbeA for every label the remediation renamed or re-formed. Perturbs ONLY expectations; production is untouched.',
+		shippedConfig: false,
+	},
+	{
+		logName: 'mp_r2redProbeB_annotationLeak.log',
+		suite: 'synthetic',
+		lever:
+			"PRODUCTION MUTATION, SHIPPED CONFIGURATION (Phase 4.6a remediation): the derived-annotation strip disabled again, against the REMEDIATED code, so the tier-leakage assertions carry a receipt from the suite as it now stands rather than as it stood before the rebuild. Reverts exactly one thing. Reddens the two G4-G derived-regeneration assertions as well, which is how it demonstrates the leak was load-bearing there too.",
+		shippedConfig: true,
+	},
+	{
+		logName: 'mp_r2redProbeC_noChildren.log',
+		suite: 'synthetic',
+		lever:
+			"PRODUCTION MUTATION, SHIPPED CONFIGURATION (Phase 4.6a remediation): the child union truncated to empty. Against the REMEDIATED code this no longer reaches the suite at all — the acceptance criterion is now enforced IN PRODUCTION, so the build REFUSES by name, enumerating all 75 merged definitions that would render empty. It therefore supplies NO label-level evidence and the ledger takes none from it. It is retained because it demonstrates something the suite cannot: that the criterion the vacuous gate failed to assert now stops a build rather than merely failing a test.",
+		shippedConfig: true,
+		optional: true,
+	},
+	{
+		logName: 'mp_r2redProbeH_statsNodeDivergence.log',
+		suite: 'synthetic',
+		lever:
+			"PRODUCTION MUTATION, SHIPPED CONFIGURATION (Phase 4.6a remediation): the STATS accumulator for collegeContributedChildElements offset by three, reproducing a divergence that actually shipped for one build — the contribution count is published TWICE, on every merged node and in stats, by two separate accumulators, and a fix applied to one and not the other made the build report 36 where the graph said 33. Nothing failed at the time because the only stats use of that figure was an upper bound, and a number used only as a loose bound is not being checked. Reverts exactly one thing.",
+		shippedConfig: true,
+	},
+	// ---- PHASE 4.6a levers, first round ------------------------------------------------------
+	{
+		logName: 'mp_redProbeA_perturbedExpected.log',
+		suite: 'synthetic',
+		lever:
+			"EXPECTATION PERTURBATION (Phase 4.6a): every count this phase introduced or moved, incremented by one inside the single EXPECTED block — the child union 522, winner-takes-all 520, losing-branch contributions 2, both-branch names 235, the bothBranchesAgree disposition, the contributed classification 35/33/2, absent-after-union 0, the two residue edge counts 5 and 38, the PersonType exemplar 18, and the two synthetic census sums. Perturbs ONLY expectations; the production tier is untouched.",
+		shippedConfig: false,
+	},
+	{
+		logName: 'mp_redProbeB_annotationLeak.log',
+		suite: 'synthetic',
+		lever:
+			"PRODUCTION MUTATION, SHIPPED CONFIGURATION (Phase 4.6a): the derived-annotation strip in duplicateChildOntoMergedDefinition disabled, so S-1c's bulk property copy carries derived annotations onto synthetic children. This is not a hypothetical — it is the REAL defect the first build of this phase shipped, discovered because it moved Gate 3's regeneration compare from 14,600,360 to 14,694,411 canonical bytes and pushed the held-reference census from 201 to 335. The lever reverts exactly one thing: the strip.",
+		shippedConfig: true,
+	},
+	{
+		logName: 'mp_redProbeC_noChildren.log',
+		suite: 'synthetic',
+		lever:
+			"PRODUCTION MUTATION, SHIPPED CONFIGURATION (Phase 4.6a): the child union truncated to empty immediately after it is computed, reproducing the PRE-4.6a shape in which merged definitions carry no children at all. Reverts exactly one thing. This lever ABORTS after its first FAIL — with no children the G4-A re-parent probe finds no S-1c node to orphan — so it supplies label evidence for the re-stated parentage assertion and nothing after it. That is why the expectation perturbation is retained alongside it rather than instead of it.",
+		shippedConfig: true,
+	},
+	{
+		logName: 'mp_redProbeE_perturbedDeltaPins.log',
+		suite: 'synthetic',
+		lever:
+			'EXPECTATION PERTURBATION (Phase 4.6a, round 2): the four inherited delta pins incremented by one — MERGED_FROM 140, and the signature-level absent 2 / rebound 5 / widened 1. Separated from round A deliberately: these pins are Phase 4 claims this phase must leave standing, so a lever that moves them proves they are still load-bearing after the union landed.',
+		shippedConfig: false,
+	},
+	{
+		logName: 'mp_redProbeF_childrenStampedSource.log',
+		suite: 'synthetic',
+		lever:
+			"PRODUCTION MUTATION, SHIPPED CONFIGURATION (Phase 4.6a): duplicated children stamped pescTier:'source' at emission — the tier leak that would put fabricated element declarations into the source projection Phase 5's emitter reads. Reverts exactly one thing. Aborts inside the G4.6a block, so its label evidence covers the assertions ahead of that point.",
+		shippedConfig: true,
+	},
+	{
+		logName: 'mp_redProbeG_sourcePin.log',
+		suite: 'source',
+		lever:
+			'EXPECTATION PERTURBATION (Phase 4.6a): the census pin for the synthetic tier, as held in the SOURCE suite, incremented by one (109 + 522 + 1 -> 109 + 523 + 1). The pin exists in BOTH suites on purpose — a census only one suite can see is one edit away from being unwatched — so it is red-proven in both.',
+		shippedConfig: false,
+	},
 	{
 		logName: 'vr_baseline_source.log',
 		suite: 'source',
@@ -267,9 +340,74 @@ const RESCOPED_HELPER_DEPENDENTS = [
 // would now carry five stale entries and miss sixteen.
 const SHIPPED_RUNS = {
 	derived: 'p4r_shipped_derived.log',
-	source: 'p4r_shipped_source.log',
-	synthetic: 'p4r_ledgerGate_red_synthetic.log',
+	// PHASE 4.6a: the source and synthetic suites both gained and re-stated assertions, so their
+	// shipped label sets moved. The derived suite is untouched by this phase and keeps its run.
+	// updated again at the review remediation: the synthetic suite's label set moved when the
+	// vacuous acceptance gate was rebuilt, the SUBSET gate was re-formed on set membership, the
+	// SHORTFALL conjunction was split, and GAP 2/3/5/7 assertions were added.
+	source: 'mp_r2_shipped_source.log',
+	synthetic: 'mp_r2_shipped_synthetic.log',
 };
+
+// RETIRED ASSERTIONS — recorded rather than allowed to vanish (supervisor condition, Phase 4.6a).
+// When a phase legitimately reverses what an assertion claims, the assertion is RE-STATED and its
+// predecessor's red evidence is RETIRED WITH IT. Saying so keeps the residue accounting honest in
+// both directions: the old receipt is not lost, and — crucially — it does NOT transfer to the new
+// claim. An assertion carrying a predecessor's receipt is how this campaign's genuine-gap residue
+// was created in the first place.
+const RETIRED_ASSERTIONS = [
+	{
+		label:
+			'G4.6a the merged targets render their children directly — no reached target that has children renders empty',
+		retiredAtPhase: '4.6a (independent review remediation)',
+		reason:
+			'STRUCTURALLY VACUOUS, and its ledger row LAUNDERED that. The filter demanded a target have ZERO HAS_PROPERTY children AND have child records — mutually exclusive by construction, so the set was empty for any input and the gate asserted nothing while printing a reassuring zero. Thirty of ninety-six reached targets do render empty. It also used the forbidden `|| 0` silent default in the same expression. Its receipt was mp_redProbeA, an expectation perturbation that reddened only its OTHER conjunct (the PersonType pin), so a half-proven conjunction was recorded whole. Replaced by three separately-labelled assertions — the acceptance criterion measured over branch-children versus own-children, the GAP 2 empty-render census, and the PersonType exemplar on its own label — each with its own lever. The criterion is ALSO now enforced in production, so a violation refuses the build rather than failing a test.',
+		precedent: 'R-P4-7, which found the same species: a gate walking a set that cannot be non-empty.',
+	},
+	{
+		label:
+			'G4-C the rebound+widened entries are a SUBSET of the college contributions, not additional to them',
+		retiredAtPhase: '4.6a (independent review remediation)',
+		reason:
+			'CARDINALITY-ONLY (6===6 && 6<33), which two entirely disjoint sets would satisfy. The claim was verified true in fact, so only the gate was weak. Re-formed on SET MEMBERSHIP by (owning type, child name), with a lever that swaps one member for a name in neither set — leaving cardinality identical, so the predecessor form would still have passed.',
+	},
+	{
+		label:
+			'G4.6a SHORTFALL RED: removing ONE branch contribution shortens the union by EXACTLY one, and the contribution count follows it',
+		retiredAtPhase: '4.6a (independent review remediation)',
+		reason:
+			'A conjunction of two independent claims whose retained receipt reddened only the second. Split into two labelled assertions, and given a second lever that removes a WINNING-branch child — moving the delta claim while leaving the contribution claim untouched, so each is evidenced independently rather than jointly asserted.',
+	},
+	{
+		label:
+			'G4-A the merged node holds NO CHILD NODES and its contentFromStableId still reaches the changed source element',
+		retiredAtPhase: '4.6a',
+		reason:
+			'R-P4-3 ORDERED the "holds no child nodes" half reversed: merged definitions must carry their children directly. The assertion bundled two claims, so it was SPLIT rather than deleted — the contentFromStableId half is asserted verbatim under its own label, and the no-children half becomes its positive form "the merged nodes hold EXACTLY their union of children". Neither successor inherits this receipt: the retired red proof demonstrated that a node could be made to HOLD children, which is now the expected state and proves nothing about either new claim. Both successors were demonstrated red on their own levers (mp_redProbeC_noChildren.log and mp_redProbeA_perturbedExpected.log).',
+		precedent:
+			'G3-D was RE-STATED, not deleted, when Phase 4 legitimately changed what it asserted about RESOLVES_TO into the contested namespace.',
+	},
+	{
+		label: 'G4-F the synthetic tier emits exactly 110 nodes and 549 edges',
+		retiredAtPhase: '4.6a',
+		reason:
+			'Census pin moved by R-P4-3: 110 -> 632 nodes (+522 duplicated child declarations) and 549 -> 1114 edges (+522 HAS_PROPERTY, +38 HAS_RESTRICTION, +5 HAS_SUPPORT). Re-stated with the new figures written as sums so a future drift names WHICH part moved. Red-proven afresh by mp_redProbeA_perturbedExpected.log.',
+	},
+	{
+		label:
+			'INTEGRATION synthetic tier is EXACTLY 110 nodes (109 S-1 merged definitions + 1 S-2 alias namespace)',
+		retiredAtPhase: '4.6a',
+		reason:
+			'The same census pin in the source suite, restated to 632. Red-proven afresh by mp_redProbeG_sourcePin.log. This pin had already been re-stated once, at Phase 4, from "synthetic tier is EMPTY until Phase 4 emits it".',
+	},
+	{
+		label:
+			'G4-C the merged nodes publish the delta themselves and agree with the report in all four buckets',
+		retiredAtPhase: '4.6a',
+		reason:
+			'LABEL SURVIVES, CONTENT CHANGED. R-P4-11 retired the one-sided "added" bucket in favour of "contributed", which names the contributing branch and carries both directions, and R-P4-10 zeroed "absent" because the union now carries every loser-only name. The label is unchanged, so the ledger would have carried the old receipt forward silently; it is listed here so the substitution is visible. Red-proven afresh by mp_redProbeA_perturbedExpected.log and mp_redProbeE_perturbedDeltaPins.log.',
+	},
+];
 
 const readLabels = (logName, kinds, allowMissing) => {
 	const fullPath = path.join(ARTIFACT_DIR, logName);
@@ -401,6 +539,27 @@ const ledger = {
 	rescopedHelperNote:
 		'[G-4], Phase 4 review. Four harness helpers were NARROWED when the synthetic tier arrived (namedDefinitionNodes and stripDerived gained a pescTier filter, assertPristineSourceGraph gained a synthetic clause, and the G3-E BFS inherited the narrowed definition set), while assertions reading through them still cited Phase 3 vr_* logs — receipts for a run of DIFFERENT CODE. Every such assertion now carries rescopedHelper and evidencePostDatesPhase4Rescoping. Two re-proof levers were pulled against the code as it now stands: p4r_probeUnscopedDefinitions_derived.log (namedDefinitionNodes un-narrowed) and p4r_probeUnscopedStrip_derived.log (stripDerived un-narrowed, which ABORTS at the production purity refusal and therefore supplies no label-level evidence). Where evidencePostDatesPhase4Rescoping is false, the receipt is retained but explicitly labelled as pre-rescoping rather than silently carried forward.',
 	rescopedHelperProvenance: {},
+	retiredAssertionsNote:
+		'Assertions a later phase legitimately reversed or re-stated, kept here so the residue accounting stays honest in BOTH directions. A retired assertion is not deleted and its red evidence is not lost — but it also does NOT transfer to whatever replaced it. An assertion carrying a predecessor receipt is how the genuine-gap residue was created in the first place, so each entry names the successors and the levers that proved them afresh.',
+	retiredAssertions: RETIRED_ASSERTIONS,
+	conjunctionEvidenceNote:
+		'A METHOD GAP THIS LEDGER CANNOT CURRENTLY CLOSE, recorded at the Phase 4.6a independent ' +
+		'review. Evidence is keyed to an assertion LABEL: a label appears in a retained log as FAILING ' +
+		'and the row is marked "proven". But a conjunction fails when ANY conjunct fails, so such a ' +
+		'receipt proves only that SOME conjunct can fail — never that every conjunct can. A label is ' +
+		'therefore the wrong granularity for a claim with several independent parts, and this is the ' +
+		'inherited-receipt pattern arriving through a CONJUNCTION rather than through a rename. ' +
+		'THE MEASUREMENT IS IN conjunctionEvidenceMeasurement BELOW, computed at ledger-build time by ' +
+		'test/probes/mp_auditConjunctiveAssertions.js and never transcribed into this prose. It was ' +
+		'transcribed once, and this note published 229/75/8 while the auditor already reported ' +
+		'232/78/11 — a hand-copied figure in a document is a figure that goes quietly wrong, and ' +
+		'Phase 6 would have inherited the stale one as its brief. Two instances were found and fixed at this ' +
+		'remediation (the acceptance-1 gate and the SHORTFALL assertion); the remaining rows are ' +
+		'REPORTED, NOT SILENTLY RECLASSIFIED, because deciding which are genuinely under-evidenced ' +
+		'requires reading each lever against each conjunct. Closing the class needs one assertion per ' +
+		'claim, or a lever per conjunct, or a ledger that records evidence per CONJUNCT rather than ' +
+		'per label. That is a specification change and it belongs to whoever owns the ledger, not to a ' +
+		'phase builder patching his own rows.',
 	shippedConfigurationNote:
 		'A red obtained under a configuration that is not shipped proves nothing about what IS shipped. Learned the hard way: the GAP 1 assertions were originally red-proven by vr_probeB.log, which had also reverted GAP 7, making the assertion vacuous in the shipped build. vr_probeC.log supersedes it. Every entry therefore records shippedConfig.',
 	suites: {
@@ -445,6 +604,40 @@ ledger.rescopedHelperProvenance = {
 
 const outputPath = path.join(ARTIFACT_DIR, '..', 'redEvidenceLedger.json');
 fs.writeFileSync(outputPath, `${JSON.stringify(ledger, null, '\t')}\n`);
+
+// ---- the conjunction figures are READ from the auditor, never copied ------------------------
+// The shipped ledger published 229/75/8 while the auditor already reported 232/78/11, and Phase 6
+// would have inherited the stale number as its brief. A figure transcribed by hand into a document
+// is a figure that will go quietly wrong; this one is computed.
+//
+// Run AFTER the first write and with the module cache dropped, because the audit classifies rows by
+// the STATUS this build just produced. Auditing the previous ledger would answer a question about
+// a file that no longer exists.
+delete require.cache[require.resolve(outputPath)];
+delete require.cache[require.resolve(path.join(__dirname, 'probes', 'mp_auditConjunctiveAssertions.js'))];
+const { auditConjunctiveAssertions } = require(
+	path.join(__dirname, 'probes', 'mp_auditConjunctiveAssertions.js'),
+);
+const conjunctionAudit = auditConjunctiveAssertions();
+ledger.conjunctionEvidenceMeasurement = {
+	measuredBy: 'test/probes/mp_auditConjunctiveAssertions.js',
+	shippedAssertions: conjunctionAudit.totalShipped,
+	carryingATopLevelConjunction: conjunctionAudit.totalConjunctive,
+	provenWithThreeOrMoreConjuncts: conjunctionAudit.riskRows.length,
+	labelsThatFailedToJoinTheLedger: conjunctionAudit.unjoinedLabels.length,
+	unjoinedLabels: conjunctionAudit.unjoinedLabels,
+	riskRows: conjunctionAudit.riskRows,
+	note:
+		'Computed at ledger-build time, never transcribed. labelsThatFailedToJoinTheLedger is the ' +
+		'auditor reporting its OWN incompleteness: any nonzero value means the risk list understates ' +
+		'the problem by that many rows, which is the fail-open behaviour the audit was corrected for.',
+};
+fs.writeFileSync(outputPath, `${JSON.stringify(ledger, null, '\t')}\n`);
+console.log(
+	`\nconjunction audit (computed, not copied): ${conjunctionAudit.totalShipped} shipped, ` +
+		`${conjunctionAudit.totalConjunctive} conjunctive, ${conjunctionAudit.riskRows.length} proven with 3+ conjuncts, ` +
+		`${conjunctionAudit.unjoinedLabels.length} failed to join`,
+);
 
 console.log(`wrote ${outputPath}`);
 console.log(`derived: ${JSON.stringify(ledger.suites.derived.counts)}  (total ${derivedAssertions.length})`);

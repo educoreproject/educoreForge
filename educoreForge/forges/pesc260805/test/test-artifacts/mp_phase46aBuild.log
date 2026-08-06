@@ -1,0 +1,34 @@
+recipe understood:
+  name:        pesc260805Only
+  kind:        dev
+  schemaVer:   1.0.0
+  standards:   1  [pesc260805@current]
+graphBuilder: validation -- structural PASS; referential PASS; resolvability PASS.
+graphBuilder: support store at /Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/standardsDatabases/pesc260805phase46a080626.standardsDatabase.sqlite3 (resolved from commandLine)
+graphBuilder: decision store at /Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/standardsDatabases/pesc260805phase46a080626.standardsDatabase.sqlite3
+graphBuilder: judgment cache at /Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/standardsDatabases/pesc260805phase46a080626.standardsDatabase.sqlite3
+graphBuilder: forensic match log at /Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/matchForensics
+[forger] forging PESC260805 from 01 (vectorize OFF)
+[forge-pesc260805] source tier: (64 artifacts, 12909 named definitions, 16969 element decls, 720 anonymous types, 10848 derivations (restrictions/extensions), 84 attributes; contested namespaces: urn:org:pesc:sector:AcademicRecord:v1.6.0)
+[forge-pesc260805] derived tier: 63 namespaces (16 latest), 64 IN_NAMESPACE, 75 IMPORTS (+1 unresolved recorded), 17299 RESOLVES_TO (+9921 builtin markers, +201 ambiguous recorded, +205 absent-namespace recorded), 10400 SAME_DEFINITION chain edges, 2282/12909 reachable from latest roots)
+[forge-pesc260805] synthetic tier: S-1 merged 109 definitions (42 college-only + 36 test-score-only + 31 shared, of which 14 conflict and undefined child elements are genuinely ABSENT, 5 REBOUND, 1 WIDENED, and undefined ADDED by the winning member), 140 MERGED_FROM, 201 held references resolved; S-2 alias urn:org:pesc:core:CoreMain:v1.6.0 served by urn:org:pesc:core:CoreMain:v1.8.0 (205 references over 129 distinct names, 1 import); total 42372 nodes, 70628 edges
+[forger] forged 42372 nodes, 70628 edges (0 embedding calls)
+[forger] shaped 42372 nodes, 70628 edges for loading
+[replayManager] provisioning scratch graph 'DEV_gb_forge_66665_1' (bolt 7815)...
+[replayManager] scratch graph 'DEV_gb_forge_66665_1' ready at bolt://localhost:7815
+[replayManager] loading 42372 nodes, 70628 edges into 'DEV_gb_forge_66665_1' as [StandardBase]
+[replayManager] harvested 42372 nodes, 70628 edges from 'DEV_gb_forge_66665_1' [StandardBase] -> e76dab27f921...
+  [A] forge pesc260805@aggregate_01_base -> standardBase e76dab27f9218cb4b3ac00a682894d1ad99087d22af3d0aaa4041e8d619ee3c4
+[replayManager] scratch graph 'DEV_gb_forge_66665_1' destroyed
+  [compose] manifest f2442034f66b99a7a96c44eb85203e4d2a31c376a020cfa494400461a6baf709 -- 1 members
+[replayManager] provisioning scratch graph 'DEV_gb_materialize_66665_2' (bolt 7815)...
+[replayManager] scratch graph 'DEV_gb_materialize_66665_2' ready at bolt://localhost:7815
+[replayManager] restoring 1 schema block(s) into 'DEV_gb_materialize_66665_2'
+  [materialize] -> bolt://localhost:7815
+  [roundTrip] stage OFF (recipe default (roundTripStage absent)) — GOLD_EVAL certification requires every declared validator to have run and reported (doctrine §7.4)
+{
+  "manifestId": "f2442034f66b99a7a96c44eb85203e4d2a31c376a020cfa494400461a6baf709",
+  "boltUrl": "bolt://localhost:7815",
+  "memberCount": 1,
+  "roundTripSummaryPath": "/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/buildLogs/pesc260805Only_20260806-190330/roundTrip/roundTripStageSummary.json"
+}

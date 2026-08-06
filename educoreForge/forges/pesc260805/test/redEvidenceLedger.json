@@ -117,6 +117,47 @@
 			}
 		]
 	},
+	"retiredAssertionsNote": "Assertions a later phase legitimately reversed or re-stated, kept here so the residue accounting stays honest in BOTH directions. A retired assertion is not deleted and its red evidence is not lost — but it also does NOT transfer to whatever replaced it. An assertion carrying a predecessor receipt is how the genuine-gap residue was created in the first place, so each entry names the successors and the levers that proved them afresh.",
+	"retiredAssertions": [
+		{
+			"label": "G4.6a the merged targets render their children directly — no reached target that has children renders empty",
+			"retiredAtPhase": "4.6a (independent review remediation)",
+			"reason": "STRUCTURALLY VACUOUS, and its ledger row LAUNDERED that. The filter demanded a target have ZERO HAS_PROPERTY children AND have child records — mutually exclusive by construction, so the set was empty for any input and the gate asserted nothing while printing a reassuring zero. Thirty of ninety-six reached targets do render empty. It also used the forbidden `|| 0` silent default in the same expression. Its receipt was mp_redProbeA, an expectation perturbation that reddened only its OTHER conjunct (the PersonType pin), so a half-proven conjunction was recorded whole. Replaced by three separately-labelled assertions — the acceptance criterion measured over branch-children versus own-children, the GAP 2 empty-render census, and the PersonType exemplar on its own label — each with its own lever. The criterion is ALSO now enforced in production, so a violation refuses the build rather than failing a test.",
+			"precedent": "R-P4-7, which found the same species: a gate walking a set that cannot be non-empty."
+		},
+		{
+			"label": "G4-C the rebound+widened entries are a SUBSET of the college contributions, not additional to them",
+			"retiredAtPhase": "4.6a (independent review remediation)",
+			"reason": "CARDINALITY-ONLY (6===6 && 6<33), which two entirely disjoint sets would satisfy. The claim was verified true in fact, so only the gate was weak. Re-formed on SET MEMBERSHIP by (owning type, child name), with a lever that swaps one member for a name in neither set — leaving cardinality identical, so the predecessor form would still have passed."
+		},
+		{
+			"label": "G4.6a SHORTFALL RED: removing ONE branch contribution shortens the union by EXACTLY one, and the contribution count follows it",
+			"retiredAtPhase": "4.6a (independent review remediation)",
+			"reason": "A conjunction of two independent claims whose retained receipt reddened only the second. Split into two labelled assertions, and given a second lever that removes a WINNING-branch child — moving the delta claim while leaving the contribution claim untouched, so each is evidenced independently rather than jointly asserted."
+		},
+		{
+			"label": "G4-A the merged node holds NO CHILD NODES and its contentFromStableId still reaches the changed source element",
+			"retiredAtPhase": "4.6a",
+			"reason": "R-P4-3 ORDERED the \"holds no child nodes\" half reversed: merged definitions must carry their children directly. The assertion bundled two claims, so it was SPLIT rather than deleted — the contentFromStableId half is asserted verbatim under its own label, and the no-children half becomes its positive form \"the merged nodes hold EXACTLY their union of children\". Neither successor inherits this receipt: the retired red proof demonstrated that a node could be made to HOLD children, which is now the expected state and proves nothing about either new claim. Both successors were demonstrated red on their own levers (mp_redProbeC_noChildren.log and mp_redProbeA_perturbedExpected.log).",
+			"precedent": "G3-D was RE-STATED, not deleted, when Phase 4 legitimately changed what it asserted about RESOLVES_TO into the contested namespace."
+		},
+		{
+			"label": "G4-F the synthetic tier emits exactly 110 nodes and 549 edges",
+			"retiredAtPhase": "4.6a",
+			"reason": "Census pin moved by R-P4-3: 110 -> 632 nodes (+522 duplicated child declarations) and 549 -> 1114 edges (+522 HAS_PROPERTY, +38 HAS_RESTRICTION, +5 HAS_SUPPORT). Re-stated with the new figures written as sums so a future drift names WHICH part moved. Red-proven afresh by mp_redProbeA_perturbedExpected.log."
+		},
+		{
+			"label": "INTEGRATION synthetic tier is EXACTLY 110 nodes (109 S-1 merged definitions + 1 S-2 alias namespace)",
+			"retiredAtPhase": "4.6a",
+			"reason": "The same census pin in the source suite, restated to 632. Red-proven afresh by mp_redProbeG_sourcePin.log. This pin had already been re-stated once, at Phase 4, from \"synthetic tier is EMPTY until Phase 4 emits it\"."
+		},
+		{
+			"label": "G4-C the merged nodes publish the delta themselves and agree with the report in all four buckets",
+			"retiredAtPhase": "4.6a",
+			"reason": "LABEL SURVIVES, CONTENT CHANGED. R-P4-11 retired the one-sided \"added\" bucket in favour of \"contributed\", which names the contributing branch and carries both directions, and R-P4-10 zeroed \"absent\" because the union now carries every loser-only name. The label is unchanged, so the ledger would have carried the old receipt forward silently; it is listed here so the substitution is visible. Red-proven afresh by mp_redProbeA_perturbedExpected.log and mp_redProbeE_perturbedDeltaPins.log."
+		}
+	],
+	"conjunctionEvidenceNote": "A METHOD GAP THIS LEDGER CANNOT CURRENTLY CLOSE, recorded at the Phase 4.6a independent review. Evidence is keyed to an assertion LABEL: a label appears in a retained log as FAILING and the row is marked \"proven\". But a conjunction fails when ANY conjunct fails, so such a receipt proves only that SOME conjunct can fail — never that every conjunct can. A label is therefore the wrong granularity for a claim with several independent parts, and this is the inherited-receipt pattern arriving through a CONJUNCTION rather than through a rename. THE MEASUREMENT IS IN conjunctionEvidenceMeasurement BELOW, computed at ledger-build time by test/probes/mp_auditConjunctiveAssertions.js and never transcribed into this prose. It was transcribed once, and this note published 229/75/8 while the auditor already reported 232/78/11 — a hand-copied figure in a document is a figure that goes quietly wrong, and Phase 6 would have inherited the stale one as its brief. Two instances were found and fixed at this remediation (the acceptance-1 gate and the SHORTFALL assertion); the remaining rows are REPORTED, NOT SILENTLY RECLASSIFIED, because deciding which are genuinely under-evidenced requires reading each lever against each conjunct. Closing the class needs one assertion per claim, or a lever per conjunct, or a ledger that records evidence per CONJUNCT rather than per label. That is a specification change and it belongs to whoever owns the ledger, not to a phase builder patching his own rows.",
 	"shippedConfigurationNote": "A red obtained under a configuration that is not shipped proves nothing about what IS shipped. Learned the hard way: the GAP 1 assertions were originally red-proven by vr_probeB.log, which had also reverted GAP 7, making the assertion vacuous in the shipped build. vr_probeC.log supersedes it. Every entry therefore records shippedConfig.",
 	"suites": {
 		"derived": {
@@ -855,7 +896,7 @@
 		},
 		"source": {
 			"suiteFile": "test/test-pesc260805SourceTier.js",
-			"shippedRunLog": "p4r_shipped_source.log",
+			"shippedRunLog": "mp_r2_shipped_source.log",
 			"counts": {
 				"proven": 9,
 				"recordsGap": 41,
@@ -1142,12 +1183,12 @@
 					"note": "UNVERIFIABLE BUT BELIEVED. DEVLOG records \"PHASE 2: CLOSED — 47/47 gates, all RED-first\", and Phase 2 was independently reviewed and committed green at b02168b. The red receipts for that run were not retained. Do NOT re-run; hand to Phase 6."
 				},
 				{
-					"label": "INTEGRATION synthetic tier is EXACTLY 110 nodes (109 S-1 merged definitions + 1 S-2 alias namespace)",
+					"label": "INTEGRATION synthetic tier is EXACTLY 632 nodes (109 S-1 merged definitions + 522 S-1c duplicated children + 1 S-2 alias namespace)",
 					"status": "proven",
 					"redEvidence": [
 						{
-							"probeLog": "p4_probeSyntheticCensus_source.log",
-							"lever": "EXPECTATION PERTURBATION (Phase 4): the restated synthetic-tier census constant moved off 110, so the source suite's view of Phase 4's emission is wrong by one node.",
+							"probeLog": "mp_redProbeG_sourcePin.log",
+							"lever": "EXPECTATION PERTURBATION (Phase 4.6a): the census pin for the synthetic tier, as held in the SOURCE suite, incremented by one (109 + 522 + 1 -> 109 + 523 + 1). The pin exists in BOTH suites on purpose — a census only one suite can see is one edit away from being unwatched — so it is red-proven in both.",
 							"shippedConfig": false
 						}
 					]
@@ -1168,6 +1209,11 @@
 					"status": "proven",
 					"redEvidence": [
 						{
+							"probeLog": "mp_redProbeG_sourcePin.log",
+							"lever": "EXPECTATION PERTURBATION (Phase 4.6a): the census pin for the synthetic tier, as held in the SOURCE suite, incremented by one (109 + 522 + 1 -> 109 + 523 + 1). The pin exists in BOTH suites on purpose — a census only one suite can see is one edit away from being unwatched — so it is red-proven in both.",
+							"shippedConfig": false
+						},
+						{
 							"probeLog": "vr_ledgerStale_red_source.log",
 							"lever": "LEDGER STALE-ENTRY PROBE (round 4): as the derived twin — a fabricated ledger entry for an assertion this suite does not run was caught.",
 							"shippedConfig": true
@@ -1183,6 +1229,11 @@
 					"label": "LEDGER every shipped assertion has a red-evidence entry",
 					"status": "proven",
 					"redEvidence": [
+						{
+							"probeLog": "mp_redProbeG_sourcePin.log",
+							"lever": "EXPECTATION PERTURBATION (Phase 4.6a): the census pin for the synthetic tier, as held in the SOURCE suite, incremented by one (109 + 522 + 1 -> 109 + 523 + 1). The pin exists in BOTH suites on purpose — a census only one suite can see is one edit away from being unwatched — so it is red-proven in both.",
+							"shippedConfig": false
+						},
 						{
 							"probeLog": "vr_ledgerGate_red_source.log",
 							"lever": "LEDGER GATE SELF-DEMONSTRATION (round 4): as the derived twin — the gate ran with its own three assertions unledgered and caught them.",
@@ -1215,11 +1266,11 @@
 		},
 		"synthetic": {
 			"suiteFile": "test/test-pesc260805SyntheticTier.js",
-			"shippedRunLog": "p4r_ledgerGate_red_synthetic.log",
+			"shippedRunLog": "mp_r2_shipped_synthetic.log",
 			"counts": {
-				"proven": 48,
+				"proven": 67,
 				"recordsGap": 0,
-				"genuineGap": 19
+				"genuineGap": 40
 			},
 			"assertions": [
 				{
@@ -1235,6 +1286,32 @@
 					"note": "No retained log records this assertion FAILING. Phase 4 pulled six levers (expectation perturbation, winner flip, tier leak, alias repoint, and the two restatement probes in the sibling suites); this assertion went red under none of them. It is a genuine gap, counted rather than waved through, and Phase 6 owns closing it."
 				},
 				{
+					"label": "G4-A RE-STATED: the merged nodes hold EXACTLY their union of children, every one marked synthetic and parented to a merged definition",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "mp_r2redProbeA_perturbedExpected.log",
+							"lever": "EXPECTATION PERTURBATION (Phase 4.6a remediation): every Phase 4.6a pin incremented by one inside the single EXPECTED block, including the pins ADDED at remediation — the acceptance-1 population (75 merged definitions with branch children), the GAP 2 empty-render census in BOTH referrer scopes (96/30 and 94/29), the GAP 3 content-decided count, and the revised disposition table. Supersedes mp_redProbeA for every label the remediation renamed or re-formed. Perturbs ONLY expectations; production is untouched.",
+							"shippedConfig": false
+						},
+						{
+							"probeLog": "mp_redProbeA_perturbedExpected.log",
+							"lever": "EXPECTATION PERTURBATION (Phase 4.6a): every count this phase introduced or moved, incremented by one inside the single EXPECTED block — the child union 522, winner-takes-all 520, losing-branch contributions 2, both-branch names 235, the bothBranchesAgree disposition, the contributed classification 35/33/2, absent-after-union 0, the two residue edge counts 5 and 38, the PersonType exemplar 18, and the two synthetic census sums. Perturbs ONLY expectations; the production tier is untouched.",
+							"shippedConfig": false
+						},
+						{
+							"probeLog": "mp_redProbeC_noChildren.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION (Phase 4.6a): the child union truncated to empty immediately after it is computed, reproducing the PRE-4.6a shape in which merged definitions carry no children at all. Reverts exactly one thing. This lever ABORTS after its first FAIL — with no children the G4-A re-parent probe finds no S-1c node to orphan — so it supplies label evidence for the re-stated parentage assertion and nothing after it. That is why the expectation perturbation is retained alongside it rather than instead of it.",
+							"shippedConfig": true
+						},
+						{
+							"probeLog": "mp_redProbeF_childrenStampedSource.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION (Phase 4.6a): duplicated children stamped pescTier:'source' at emission — the tier leak that would put fabricated element declarations into the source projection Phase 5's emitter reads. Reverts exactly one thing. Aborts inside the G4.6a block, so its label evidence covers the assertions ahead of that point.",
+							"shippedConfig": true
+						}
+					]
+				},
+				{
 					"label": "G4-A RED P1: perturbing ONE element declaration in the losing member breaks reproduction",
 					"status": "genuineGap",
 					"species": "selfDemonstratingRedCheck",
@@ -1245,16 +1322,10 @@
 					"status": "proven",
 					"redEvidence": [
 						{
-							"probeLog": "p4_probeTier_synthetic.log",
-							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION: the 109 merged definition nodes stamped pescTier:'source' instead of 'synthetic' — the exact leak G4-F forbids, since the round-trip emitter reads that predicate and would re-emit a fabricated definition into a PESC file.",
+							"probeLog": "mp_redProbeF_childrenStampedSource.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION (Phase 4.6a): duplicated children stamped pescTier:'source' at emission — the tier leak that would put fabricated element declarations into the source projection Phase 5's emitter reads. Reverts exactly one thing. Aborts inside the G4.6a block, so its label evidence covers the assertions ahead of that point.",
 							"shippedConfig": true
-						}
-					]
-				},
-				{
-					"label": "G4-A re-run over the preserved collision members completed without refusal",
-					"status": "proven",
-					"redEvidence": [
+						},
 						{
 							"probeLog": "p4_probeTier_synthetic.log",
 							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION: the 109 merged definition nodes stamped pescTier:'source' instead of 'synthetic' — the exact leak G4-F forbids, since the round-trip emitter reads that predicate and would re-emit a fabricated definition into a PESC file.",
@@ -1263,7 +1334,39 @@
 					]
 				},
 				{
-					"label": "G4-A the merged node holds NO CHILD NODES and its contentFromStableId still reaches the changed source element",
+					"label": "G4-A RED: the re-stated child-parentage assertion demonstrably detects one orphaned child",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "mp_r2redProbeA_perturbedExpected.log",
+							"lever": "EXPECTATION PERTURBATION (Phase 4.6a remediation): every Phase 4.6a pin incremented by one inside the single EXPECTED block, including the pins ADDED at remediation — the acceptance-1 population (75 merged definitions with branch children), the GAP 2 empty-render census in BOTH referrer scopes (96/30 and 94/29), the GAP 3 content-decided count, and the revised disposition table. Supersedes mp_redProbeA for every label the remediation renamed or re-formed. Perturbs ONLY expectations; production is untouched.",
+							"shippedConfig": false
+						},
+						{
+							"probeLog": "mp_redProbeA_perturbedExpected.log",
+							"lever": "EXPECTATION PERTURBATION (Phase 4.6a): every count this phase introduced or moved, incremented by one inside the single EXPECTED block — the child union 522, winner-takes-all 520, losing-branch contributions 2, both-branch names 235, the bothBranchesAgree disposition, the contributed classification 35/33/2, absent-after-union 0, the two residue edge counts 5 and 38, the PersonType exemplar 18, and the two synthetic census sums. Perturbs ONLY expectations; the production tier is untouched.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "G4-A re-run over the preserved collision members completed without refusal",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "mp_redProbeF_childrenStampedSource.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION (Phase 4.6a): duplicated children stamped pescTier:'source' at emission — the tier leak that would put fabricated element declarations into the source projection Phase 5's emitter reads. Reverts exactly one thing. Aborts inside the G4.6a block, so its label evidence covers the assertions ahead of that point.",
+							"shippedConfig": true
+						},
+						{
+							"probeLog": "p4_probeTier_synthetic.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION: the 109 merged definition nodes stamped pescTier:'source' instead of 'synthetic' — the exact leak G4-F forbids, since the round-trip emitter reads that predicate and would re-emit a fabricated definition into a PESC file.",
+							"shippedConfig": true
+						}
+					]
+				},
+				{
+					"label": "G4-A the merged node contentFromStableId still reaches the changed source element",
 					"status": "genuineGap",
 					"species": "phase4Unevidenced",
 					"note": "No retained log records this assertion FAILING. Phase 4 pulled six levers (expectation perturbation, winner flip, tier leak, alias repoint, and the two restatement probes in the sibling suites); this assertion went red under none of them. It is a genuine gap, counted rather than waved through, and Phase 6 owns closing it."
@@ -1272,6 +1375,11 @@
 					"label": "G4-A the re-run reproduces the synthetic nodes and edges EXACTLY",
 					"status": "proven",
 					"redEvidence": [
+						{
+							"probeLog": "mp_redProbeF_childrenStampedSource.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION (Phase 4.6a): duplicated children stamped pescTier:'source' at emission — the tier leak that would put fabricated element declarations into the source projection Phase 5's emitter reads. Reverts exactly one thing. Aborts inside the G4.6a block, so its label evidence covers the assertions ahead of that point.",
+							"shippedConfig": true
+						},
 						{
 							"probeLog": "p4_probeTier_synthetic.log",
 							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION: the 109 merged definition nodes stamped pescTier:'source' instead of 'synthetic' — the exact leak G4-F forbids, since the round-trip emitter reads that predicate and would re-emit a fabricated definition into a PESC file.",
@@ -1377,6 +1485,11 @@
 					"status": "proven",
 					"redEvidence": [
 						{
+							"probeLog": "mp_redProbeE_perturbedDeltaPins.log",
+							"lever": "EXPECTATION PERTURBATION (Phase 4.6a, round 2): the four inherited delta pins incremented by one — MERGED_FROM 140, and the signature-level absent 2 / rebound 5 / widened 1. Separated from round A deliberately: these pins are Phase 4 claims this phase must leave standing, so a lever that moves them proves they are still load-bearing after the union landed.",
+							"shippedConfig": false
+						},
+						{
 							"probeLog": "p4_probeExpect_synthetic.log",
 							"lever": "EXPECTATION PERTURBATION: every digit run inside the Phase 4 suite's single EXPECTED block incremented by one — which also corrupts the two collision-member sha12 prefixes, the prototype conflict table and the two alias namespace URNs — plus one entry dropped from the expected lost-element list. Perturbs ONLY the expectations; the production tier is untouched, and the RED levers read which member is which from production so they still run.",
 							"shippedConfig": false
@@ -1471,6 +1584,23 @@
 					]
 				},
 				{
+					"label": "G4-C GAP 3 RED: a child that claims a content decision without naming it IS detected",
+					"status": "genuineGap",
+					"species": "selfDemonstratingRedCheck",
+					"note": "This assertion's content IS a red demonstration — it asserts a lever produced a detectable failure. Observing IT fail requires breaking the detector it guards, which no probe has done. Counted in bucket (b) deliberately rather than waved through."
+				},
+				{
+					"label": "G4-C GAP 3: every child whose content the union chose says SO, and names which properties the choice covered",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "mp_r2redProbeA_perturbedExpected.log",
+							"lever": "EXPECTATION PERTURBATION (Phase 4.6a remediation): every Phase 4.6a pin incremented by one inside the single EXPECTED block, including the pins ADDED at remediation — the acceptance-1 population (75 merged definitions with branch children), the GAP 2 empty-render census in BOTH referrer scopes (96/30 and 94/29), the GAP 3 content-decided count, and the revised disposition table. Supersedes mp_redProbeA for every label the remediation renamed or re-formed. Perturbs ONLY expectations; production is untouched.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
 					"label": "G4-C R-P4-6 SYMMETRY: the record enumerates the 33 child elements the winning member ADDS, not only what the loser lost",
 					"status": "proven",
 					"redEvidence": [
@@ -1492,6 +1622,11 @@
 					"status": "proven",
 					"redEvidence": [
 						{
+							"probeLog": "mp_redProbeE_perturbedDeltaPins.log",
+							"lever": "EXPECTATION PERTURBATION (Phase 4.6a, round 2): the four inherited delta pins incremented by one — MERGED_FROM 140, and the signature-level absent 2 / rebound 5 / widened 1. Separated from round A deliberately: these pins are Phase 4 claims this phase must leave standing, so a lever that moves them proves they are still load-bearing after the union landed.",
+							"shippedConfig": false
+						},
+						{
 							"probeLog": "p4r_probeExpectDelta_synthetic.log",
 							"lever": "EXPECTATION PERTURBATION: the four new R-P4-5/R-P4-6 delta constants (absent 2, rebound 5, widened 1, added 33) each moved by one. Proves the rebuilt G4-C assertions read the observation; NOT a shipped-configuration probe.",
 							"shippedConfig": false
@@ -1502,6 +1637,12 @@
 							"shippedConfig": true
 						}
 					]
+				},
+				{
+					"label": "G4-C RED: the SET form detects a swap that leaves cardinality identical (the predecessor gate could not)",
+					"status": "genuineGap",
+					"species": "selfDemonstratingRedCheck",
+					"note": "This assertion's content IS a red demonstration — it asserts a lever produced a detectable failure. Observing IT fail requires breaking the detector it guards, which no probe has done. Counted in bucket (b) deliberately rather than waved through."
 				},
 				{
 					"label": "G4-C and every ABSENT entry is genuinely absent from the WINNING subtree — by name AND by signature",
@@ -1533,9 +1674,25 @@
 					]
 				},
 				{
+					"label": "G4-C every merged node publishes BOTH bases and states the overlap in words",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "mp_redProbeE_perturbedDeltaPins.log",
+							"lever": "EXPECTATION PERTURBATION (Phase 4.6a, round 2): the four inherited delta pins incremented by one — MERGED_FROM 140, and the signature-level absent 2 / rebound 5 / widened 1. Separated from round A deliberately: these pins are Phase 4 claims this phase must leave standing, so a lever that moves them proves they are still load-bearing after the union landed.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
 					"label": "G4-C exactly 1 is WIDENED (same name, same type, merged cardinality admits the loser)",
 					"status": "proven",
 					"redEvidence": [
+						{
+							"probeLog": "mp_redProbeE_perturbedDeltaPins.log",
+							"lever": "EXPECTATION PERTURBATION (Phase 4.6a, round 2): the four inherited delta pins incremented by one — MERGED_FROM 140, and the signature-level absent 2 / rebound 5 / widened 1. Separated from round A deliberately: these pins are Phase 4 claims this phase must leave standing, so a lever that moves them proves they are still load-bearing after the union landed.",
+							"shippedConfig": false
+						},
 						{
 							"probeLog": "p4r_probeExpectDelta_synthetic.log",
 							"lever": "EXPECTATION PERTURBATION: the four new R-P4-5/R-P4-6 delta constants (absent 2, rebound 5, widened 1, added 33) each moved by one. Proves the rebuilt G4-C assertions read the observation; NOT a shipped-configuration probe.",
@@ -1553,6 +1710,11 @@
 					"status": "proven",
 					"redEvidence": [
 						{
+							"probeLog": "mp_redProbeE_perturbedDeltaPins.log",
+							"lever": "EXPECTATION PERTURBATION (Phase 4.6a, round 2): the four inherited delta pins incremented by one — MERGED_FROM 140, and the signature-level absent 2 / rebound 5 / widened 1. Separated from round A deliberately: these pins are Phase 4 claims this phase must leave standing, so a lever that moves them proves they are still load-bearing after the union landed.",
+							"shippedConfig": false
+						},
+						{
 							"probeLog": "p4r_probeExpectDelta_synthetic.log",
 							"lever": "EXPECTATION PERTURBATION: the four new R-P4-5/R-P4-6 delta constants (absent 2, rebound 5, widened 1, added 33) each moved by one. Proves the rebuilt G4-C assertions read the observation; NOT a shipped-configuration probe.",
 							"shippedConfig": false
@@ -1563,6 +1725,11 @@
 					"label": "G4-C exactly 5 are REBOUND (same name, different resolved type) and are NOT losses",
 					"status": "proven",
 					"redEvidence": [
+						{
+							"probeLog": "mp_redProbeE_perturbedDeltaPins.log",
+							"lever": "EXPECTATION PERTURBATION (Phase 4.6a, round 2): the four inherited delta pins incremented by one — MERGED_FROM 140, and the signature-level absent 2 / rebound 5 / widened 1. Separated from round A deliberately: these pins are Phase 4 claims this phase must leave standing, so a lever that moves them proves they are still load-bearing after the union landed.",
+							"shippedConfig": false
+						},
 						{
 							"probeLog": "p4r_probeExpectDelta_synthetic.log",
 							"lever": "EXPECTATION PERTURBATION: the four new R-P4-5/R-P4-6 delta constants (absent 2, rebound 5, widened 1, added 33) each moved by one. Proves the rebuilt G4-C assertions read the observation; NOT a shipped-configuration probe.",
@@ -1586,6 +1753,11 @@
 					"status": "proven",
 					"redEvidence": [
 						{
+							"probeLog": "mp_redProbeE_perturbedDeltaPins.log",
+							"lever": "EXPECTATION PERTURBATION (Phase 4.6a, round 2): the four inherited delta pins incremented by one — MERGED_FROM 140, and the signature-level absent 2 / rebound 5 / widened 1. Separated from round A deliberately: these pins are Phase 4 claims this phase must leave standing, so a lever that moves them proves they are still load-bearing after the union landed.",
+							"shippedConfig": false
+						},
+						{
 							"probeLog": "p4r_probeExpectDelta_synthetic.log",
 							"lever": "EXPECTATION PERTURBATION: the four new R-P4-5/R-P4-6 delta constants (absent 2, rebound 5, widened 1, added 33) each moved by one. Proves the rebuilt G4-C assertions read the observation; NOT a shipped-configuration probe.",
 							"shippedConfig": false
@@ -1598,9 +1770,35 @@
 					]
 				},
 				{
+					"label": "G4-C the contribution counts published on the NODES and in STATS agree exactly (they are computed by separate accumulators and once diverged)",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "mp_r2redProbeA_perturbedExpected.log",
+							"lever": "EXPECTATION PERTURBATION (Phase 4.6a remediation): every Phase 4.6a pin incremented by one inside the single EXPECTED block, including the pins ADDED at remediation — the acceptance-1 population (75 merged definitions with branch children), the GAP 2 empty-render census in BOTH referrer scopes (96/30 and 94/29), the GAP 3 content-decided count, and the revised disposition table. Supersedes mp_redProbeA for every label the remediation renamed or re-formed. Perturbs ONLY expectations; production is untouched.",
+							"shippedConfig": false
+						},
+						{
+							"probeLog": "mp_r2redProbeH_statsNodeDivergence.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION (Phase 4.6a remediation): the STATS accumulator for collegeContributedChildElements offset by three, reproducing a divergence that actually shipped for one build — the contribution count is published TWICE, on every merged node and in stats, by two separate accumulators, and a fix applied to one and not the other made the build report 36 where the graph said 33. Nothing failed at the time because the only stats use of that figure was an upper bound, and a number used only as a loose bound is not being checked. Reverts exactly one thing.",
+							"shippedConfig": true
+						}
+					]
+				},
+				{
 					"label": "G4-C the merged nodes publish the delta themselves and agree with the report in all four buckets",
 					"status": "proven",
 					"redEvidence": [
+						{
+							"probeLog": "mp_redProbeA_perturbedExpected.log",
+							"lever": "EXPECTATION PERTURBATION (Phase 4.6a): every count this phase introduced or moved, incremented by one inside the single EXPECTED block — the child union 522, winner-takes-all 520, losing-branch contributions 2, both-branch names 235, the bothBranchesAgree disposition, the contributed classification 35/33/2, absent-after-union 0, the two residue edge counts 5 and 38, the PersonType exemplar 18, and the two synthetic census sums. Perturbs ONLY expectations; the production tier is untouched.",
+							"shippedConfig": false
+						},
+						{
+							"probeLog": "mp_redProbeE_perturbedDeltaPins.log",
+							"lever": "EXPECTATION PERTURBATION (Phase 4.6a, round 2): the four inherited delta pins incremented by one — MERGED_FROM 140, and the signature-level absent 2 / rebound 5 / widened 1. Separated from round A deliberately: these pins are Phase 4 claims this phase must leave standing, so a lever that moves them proves they are still load-bearing after the union landed.",
+							"shippedConfig": false
+						},
 						{
 							"probeLog": "p4r_probeExpectDelta_synthetic.log",
 							"lever": "EXPECTATION PERTURBATION: the four new R-P4-5/R-P4-6 delta constants (absent 2, rebound 5, widened 1, added 33) each moved by one. Proves the rebuilt G4-C assertions read the observation; NOT a shipped-configuration probe.",
@@ -1615,6 +1813,12 @@
 				},
 				{
 					"label": "G4-C the misleading name-only loss property is absent from the graph entirely",
+					"status": "genuineGap",
+					"species": "phase4Unevidenced",
+					"note": "No retained log records this assertion FAILING. Phase 4 pulled six levers (expectation perturbation, winner flip, tier leak, alias repoint, and the two restatement probes in the sibling suites); this assertion went red under none of them. It is a genuine gap, counted rather than waved through, and Phase 6 owns closing it."
+				},
+				{
+					"label": "G4-C the rebound+widened entries ARE the winnerChosenOverLoser children — asserted by SET MEMBERSHIP, not by cardinality",
 					"status": "genuineGap",
 					"species": "phase4Unevidenced",
 					"note": "No retained log records this assertion FAILING. Phase 4 pulled six levers (expectation perturbation, winner flip, tier leak, alias repoint, and the two restatement probes in the sibling suites); this assertion went red under none of them. It is a genuine gap, counted rather than waved through, and Phase 6 owns closing it."
@@ -1702,6 +1906,11 @@
 					"label": "G4-E RED: with the alias unservable the tier REFUSES BY NAME, naming both namespaces",
 					"status": "proven",
 					"redEvidence": [
+						{
+							"probeLog": "mp_redProbeF_childrenStampedSource.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION (Phase 4.6a): duplicated children stamped pescTier:'source' at emission — the tier leak that would put fabricated element declarations into the source projection Phase 5's emitter reads. Reverts exactly one thing. Aborts inside the G4.6a block, so its label evidence covers the assertions ahead of that point.",
+							"shippedConfig": true
+						},
 						{
 							"probeLog": "p4_probeTier_synthetic.log",
 							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION: the 109 merged definition nodes stamped pescTier:'source' instead of 'synthetic' — the exact leak G4-F forbids, since the round-trip emitter reads that predicate and would re-emit a fabricated definition into a PESC file.",
@@ -1796,6 +2005,11 @@
 					"status": "proven",
 					"redEvidence": [
 						{
+							"probeLog": "mp_redProbeF_childrenStampedSource.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION (Phase 4.6a): duplicated children stamped pescTier:'source' at emission — the tier leak that would put fabricated element declarations into the source projection Phase 5's emitter reads. Reverts exactly one thing. Aborts inside the G4.6a block, so its label evidence covers the assertions ahead of that point.",
+							"shippedConfig": true
+						},
+						{
 							"probeLog": "p4_probeTier_synthetic.log",
 							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION: the 109 merged definition nodes stamped pescTier:'source' instead of 'synthetic' — the exact leak G4-F forbids, since the round-trip emitter reads that predicate and would re-emit a fabricated definition into a PESC file.",
 							"shippedConfig": true
@@ -1806,6 +2020,11 @@
 					"label": "G4-F ZERO synthetic content is reachable by the emitter's source predicate",
 					"status": "proven",
 					"redEvidence": [
+						{
+							"probeLog": "mp_redProbeF_childrenStampedSource.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION (Phase 4.6a): duplicated children stamped pescTier:'source' at emission — the tier leak that would put fabricated element declarations into the source projection Phase 5's emitter reads. Reverts exactly one thing. Aborts inside the G4.6a block, so its label evidence covers the assertions ahead of that point.",
+							"shippedConfig": true
+						},
 						{
 							"probeLog": "p4_probeTier_synthetic.log",
 							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION: the 109 merged definition nodes stamped pescTier:'source' instead of 'synthetic' — the exact leak G4-F forbids, since the round-trip emitter reads that predicate and would re-emit a fabricated definition into a PESC file.",
@@ -1842,17 +2061,22 @@
 					]
 				},
 				{
-					"label": "G4-F the synthetic tier emits exactly 110 nodes and 549 edges",
+					"label": "G4-F the synthetic tier emits exactly 632 nodes and 1114 edges (RESTATED at Phase 4.6a from 110/549)",
 					"status": "proven",
 					"redEvidence": [
 						{
-							"probeLog": "p4_probeExpect_synthetic.log",
-							"lever": "EXPECTATION PERTURBATION: every digit run inside the Phase 4 suite's single EXPECTED block incremented by one — which also corrupts the two collision-member sha12 prefixes, the prototype conflict table and the two alias namespace URNs — plus one entry dropped from the expected lost-element list. Perturbs ONLY the expectations; the production tier is untouched, and the RED levers read which member is which from production so they still run.",
+							"probeLog": "mp_r2redProbeA_perturbedExpected.log",
+							"lever": "EXPECTATION PERTURBATION (Phase 4.6a remediation): every Phase 4.6a pin incremented by one inside the single EXPECTED block, including the pins ADDED at remediation — the acceptance-1 population (75 merged definitions with branch children), the GAP 2 empty-render census in BOTH referrer scopes (96/30 and 94/29), the GAP 3 content-decided count, and the revised disposition table. Supersedes mp_redProbeA for every label the remediation renamed or re-formed. Perturbs ONLY expectations; production is untouched.",
 							"shippedConfig": false
 						},
 						{
-							"probeLog": "p4_probeTier_synthetic.log",
-							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION: the 109 merged definition nodes stamped pescTier:'source' instead of 'synthetic' — the exact leak G4-F forbids, since the round-trip emitter reads that predicate and would re-emit a fabricated definition into a PESC file.",
+							"probeLog": "mp_redProbeA_perturbedExpected.log",
+							"lever": "EXPECTATION PERTURBATION (Phase 4.6a): every count this phase introduced or moved, incremented by one inside the single EXPECTED block — the child union 522, winner-takes-all 520, losing-branch contributions 2, both-branch names 235, the bothBranchesAgree disposition, the contributed classification 35/33/2, absent-after-union 0, the two residue edge counts 5 and 38, the PersonType exemplar 18, and the two synthetic census sums. Perturbs ONLY expectations; the production tier is untouched.",
+							"shippedConfig": false
+						},
+						{
+							"probeLog": "mp_redProbeF_childrenStampedSource.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION (Phase 4.6a): duplicated children stamped pescTier:'source' at emission — the tier leak that would put fabricated element declarations into the source projection Phase 5's emitter reads. Reverts exactly one thing. Aborts inside the G4.6a block, so its label evidence covers the assertions ahead of that point.",
 							"shippedConfig": true
 						}
 					]
@@ -1861,6 +2085,16 @@
 					"label": "G4-G G3-A still measures 14,600,360 canonical bytes (a change is a FINDING)",
 					"status": "proven",
 					"redEvidence": [
+						{
+							"probeLog": "mp_r2redProbeB_annotationLeak.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION (Phase 4.6a remediation): the derived-annotation strip disabled again, against the REMEDIATED code, so the tier-leakage assertions carry a receipt from the suite as it now stands rather than as it stood before the rebuild. Reverts exactly one thing. Reddens the two G4-G derived-regeneration assertions as well, which is how it demonstrates the leak was load-bearing there too.",
+							"shippedConfig": true
+						},
+						{
+							"probeLog": "mp_redProbeB_annotationLeak.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION (Phase 4.6a): the derived-annotation strip in duplicateChildOntoMergedDefinition disabled, so S-1c's bulk property copy carries derived annotations onto synthetic children. This is not a hypothetical — it is the REAL defect the first build of this phase shipped, discovered because it moved Gate 3's regeneration compare from 14,600,360 to 14,694,411 canonical bytes and pushed the held-reference census from 201 to 335. The lever reverts exactly one thing: the strip.",
+							"shippedConfig": true
+						},
 						{
 							"probeLog": "p4_probeExpect_synthetic.log",
 							"lever": "EXPECTATION PERTURBATION: every digit run inside the Phase 4 suite's single EXPECTED block incremented by one — which also corrupts the two collision-member sha12 prefixes, the prototype conflict table and the two alias namespace URNs — plus one entry dropped from the expected lost-element list. Perturbs ONLY the expectations; the production tier is untouched, and the RED levers read which member is which from production so they still run.",
@@ -1879,6 +2113,11 @@
 					"status": "proven",
 					"redEvidence": [
 						{
+							"probeLog": "mp_redProbeF_childrenStampedSource.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION (Phase 4.6a): duplicated children stamped pescTier:'source' at emission — the tier leak that would put fabricated element declarations into the source projection Phase 5's emitter reads. Reverts exactly one thing. Aborts inside the G4.6a block, so its label evidence covers the assertions ahead of that point.",
+							"shippedConfig": true
+						},
+						{
 							"probeLog": "p4_probeTier_synthetic.log",
 							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION: the 109 merged definition nodes stamped pescTier:'source' instead of 'synthetic' — the exact leak G4-F forbids, since the round-trip emitter reads that predicate and would re-emit a fabricated definition into a PESC file.",
 							"shippedConfig": true
@@ -1890,6 +2129,21 @@
 					"status": "proven",
 					"redEvidence": [
 						{
+							"probeLog": "mp_r2redProbeB_annotationLeak.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION (Phase 4.6a remediation): the derived-annotation strip disabled again, against the REMEDIATED code, so the tier-leakage assertions carry a receipt from the suite as it now stands rather than as it stood before the rebuild. Reverts exactly one thing. Reddens the two G4-G derived-regeneration assertions as well, which is how it demonstrates the leak was load-bearing there too.",
+							"shippedConfig": true
+						},
+						{
+							"probeLog": "mp_redProbeB_annotationLeak.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION (Phase 4.6a): the derived-annotation strip in duplicateChildOntoMergedDefinition disabled, so S-1c's bulk property copy carries derived annotations onto synthetic children. This is not a hypothetical — it is the REAL defect the first build of this phase shipped, discovered because it moved Gate 3's regeneration compare from 14,600,360 to 14,694,411 canonical bytes and pushed the held-reference census from 201 to 335. The lever reverts exactly one thing: the strip.",
+							"shippedConfig": true
+						},
+						{
+							"probeLog": "mp_redProbeF_childrenStampedSource.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION (Phase 4.6a): duplicated children stamped pescTier:'source' at emission — the tier leak that would put fabricated element declarations into the source projection Phase 5's emitter reads. Reverts exactly one thing. Aborts inside the G4.6a block, so its label evidence covers the assertions ahead of that point.",
+							"shippedConfig": true
+						},
+						{
 							"probeLog": "p4_probeTier_synthetic.log",
 							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION: the 109 merged definition nodes stamped pescTier:'source' instead of 'synthetic' — the exact leak G4-F forbids, since the round-trip emitter reads that predicate and would re-emit a fabricated definition into a PESC file.",
 							"shippedConfig": true
@@ -1897,9 +2151,326 @@
 					]
 				},
 				{
+					"label": "G4.6a ACCEPTANCE 1 RED: a merged definition stripped of its children IS caught, proving the branch-children conjunct bites",
+					"status": "genuineGap",
+					"species": "selfDemonstratingRedCheck",
+					"note": "This assertion's content IS a red demonstration — it asserts a lever produced a detectable failure. Observing IT fail requires breaking the detector it guards, which no probe has done. Counted in bucket (b) deliberately rather than waved through."
+				},
+				{
+					"label": "G4.6a ACCEPTANCE 1: every merged definition with child declarations in either branch renders them directly — none renders empty",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "mp_r2redProbeA_perturbedExpected.log",
+							"lever": "EXPECTATION PERTURBATION (Phase 4.6a remediation): every Phase 4.6a pin incremented by one inside the single EXPECTED block, including the pins ADDED at remediation — the acceptance-1 population (75 merged definitions with branch children), the GAP 2 empty-render census in BOTH referrer scopes (96/30 and 94/29), the GAP 3 content-decided count, and the revised disposition table. Supersedes mp_redProbeA for every label the remediation renamed or re-formed. Perturbs ONLY expectations; production is untouched.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "G4.6a ACCEPTANCE CONTROL: the same data mutation is SILENT under the predecessor form and FIRES under the edge-derived form",
+					"status": "genuineGap",
+					"species": "selfDemonstratingRedCheck",
+					"note": "This assertion's content IS a red demonstration — it asserts a lever produced a detectable failure. Observing IT fail requires breaking the detector it guards, which no probe has done. Counted in bucket (b) deliberately rather than waved through."
+				},
+				{
+					"label": "G4.6a ACCEPTANCE RED, BY DATA: the production refusal fires when the input's HAS_PROPERTY edges and its parentId containment disagree",
+					"status": "genuineGap",
+					"species": "selfDemonstratingRedCheck",
+					"note": "This assertion's content IS a red demonstration — it asserts a lever produced a detectable failure. Observing IT fail requires breaking the detector it guards, which no probe has done. Counted in bucket (b) deliberately rather than waved through."
+				},
+				{
+					"label": "G4.6a GAP 2: across ALL referrers, exactly 30 of 96 reached merged targets render empty",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "mp_r2redProbeA_perturbedExpected.log",
+							"lever": "EXPECTATION PERTURBATION (Phase 4.6a remediation): every Phase 4.6a pin incremented by one inside the single EXPECTED block, including the pins ADDED at remediation — the acceptance-1 population (75 merged definitions with branch children), the GAP 2 empty-render census in BOTH referrer scopes (96/30 and 94/29), the GAP 3 content-decided count, and the revised disposition table. Supersedes mp_redProbeA for every label the remediation renamed or re-formed. Perturbs ONLY expectations; production is untouched.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "G4.6a GAP 2: scoped to element-declaration referrers (the acceptance-1 population), exactly 29 of 94 render empty",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "mp_r2redProbeA_perturbedExpected.log",
+							"lever": "EXPECTATION PERTURBATION (Phase 4.6a remediation): every Phase 4.6a pin incremented by one inside the single EXPECTED block, including the pins ADDED at remediation — the acceptance-1 population (75 merged definitions with branch children), the GAP 2 empty-render census in BOTH referrer scopes (96/30 and 94/29), the GAP 3 content-decided count, and the revised disposition table. Supersedes mp_redProbeA for every label the remediation renamed or re-formed. Perturbs ONLY expectations; production is untouched.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "G4.6a GAP 2: the empty ones are 27 simpleTypes and 3 complexTypes — the explanation, not just the count",
+					"status": "genuineGap",
+					"species": "phase4Unevidenced",
+					"note": "No retained log records this assertion FAILING. Phase 4 pulled six levers (expectation perturbation, winner flip, tier leak, alias repoint, and the two restatement probes in the sibling suites); this assertion went red under none of them. It is a genuine gap, counted rather than waved through, and Phase 6 owns closing it."
+				},
+				{
+					"label": "G4.6a GAP 5 RED: a repeated child name in one container is REFUSED by name, so the union cannot silently collapse two declarations",
+					"status": "genuineGap",
+					"species": "selfDemonstratingRedCheck",
+					"note": "This assertion's content IS a red demonstration — it asserts a lever produced a detectable failure. Observing IT fail requires breaking the detector it guards, which no probe has done. Counted in bucket (b) deliberately rather than waved through."
+				},
+				{
+					"label": "G4.6a GAP 5: no merged definition carries two duplicated children of the same name",
+					"status": "genuineGap",
+					"species": "phase4Unevidenced",
+					"note": "No retained log records this assertion FAILING. Phase 4 pulled six levers (expectation perturbation, winner flip, tier leak, alias repoint, and the two restatement probes in the sibling suites); this assertion went red under none of them. It is a genuine gap, counted rather than waved through, and Phase 6 owns closing it."
+				},
+				{
+					"label": "G4.6a GAP 7 RED: a dangling copiedFromStableId IS detected (a bare stableId property has no other protection)",
+					"status": "genuineGap",
+					"species": "selfDemonstratingRedCheck",
+					"note": "This assertion's content IS a red demonstration — it asserts a lever produced a detectable failure. Observing IT fail requires breaking the detector it guards, which no probe has done. Counted in bucket (b) deliberately rather than waved through."
+				},
+				{
+					"label": "G4.6a GAP 7: every copiedFromStableId resolves to a live SOURCE-tier node",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "mp_r2redProbeA_perturbedExpected.log",
+							"lever": "EXPECTATION PERTURBATION (Phase 4.6a remediation): every Phase 4.6a pin incremented by one inside the single EXPECTED block, including the pins ADDED at remediation — the acceptance-1 population (75 merged definitions with branch children), the GAP 2 empty-render census in BOTH referrer scopes (96/30 and 94/29), the GAP 3 content-decided count, and the revised disposition table. Supersedes mp_redProbeA for every label the remediation renamed or re-formed. Perturbs ONLY expectations; production is untouched.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "G4.6a INVENTION RED: a child declared by NEITHER member is refused BY NAME",
+					"status": "genuineGap",
+					"species": "selfDemonstratingRedCheck",
+					"note": "This assertion's content IS a red demonstration — it asserts a lever produced a detectable failure. Observing IT fail requires breaking the detector it guards, which no probe has done. Counted in bucket (b) deliberately rather than waved through."
+				},
+				{
+					"label": "G4.6a INVENTION RED: a real signature under the WRONG owning type is refused (the key is not name-only)",
+					"status": "genuineGap",
+					"species": "selfDemonstratingRedCheck",
+					"note": "This assertion's content IS a red demonstration — it asserts a lever produced a detectable failure. Observing IT fail requires breaking the detector it guards, which no probe has done. Counted in bucket (b) deliberately rather than waved through."
+				},
+				{
+					"label": "G4.6a INVENTION: the shipped population passes the shipped declaration check",
+					"status": "genuineGap",
+					"species": "phase4Unevidenced",
+					"note": "No retained log records this assertion FAILING. Phase 4 pulled six levers (expectation perturbation, winner flip, tier leak, alias repoint, and the two restatement probes in the sibling suites); this assertion went red under none of them. It is a genuine gap, counted rather than waved through, and Phase 6 owns closing it."
+				},
+				{
+					"label": "G4.6a MERGED_FROM survives untouched at 140 edges",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "mp_redProbeE_perturbedDeltaPins.log",
+							"lever": "EXPECTATION PERTURBATION (Phase 4.6a, round 2): the four inherited delta pins incremented by one — MERGED_FROM 140, and the signature-level absent 2 / rebound 5 / widened 1. Separated from round A deliberately: these pins are Phase 4 claims this phase must leave standing, so a lever that moves them proves they are still load-bearing after the union landed.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "G4.6a REGENERATION RED: perturbing ONE source declaration moves the regenerated child view",
+					"status": "genuineGap",
+					"species": "selfDemonstratingRedCheck",
+					"note": "This assertion's content IS a red demonstration — it asserts a lever produced a detectable failure. Observing IT fail requires breaking the detector it guards, which no probe has done. Counted in bucket (b) deliberately rather than waved through."
+				},
+				{
+					"label": "G4.6a REGENERATION: every duplicated child regenerates byte-identically from preserved inputs",
+					"status": "genuineGap",
+					"species": "phase4Unevidenced",
+					"note": "No retained log records this assertion FAILING. Phase 4 pulled six levers (expectation perturbation, winner flip, tier leak, alias repoint, and the two restatement probes in the sibling suites); this assertion went red under none of them. It is a genuine gap, counted rather than waved through, and Phase 6 owns closing it."
+				},
+				{
+					"label": "G4.6a RESIDUE RED: a broken residue reference IS detected as dangling",
+					"status": "genuineGap",
+					"species": "selfDemonstratingRedCheck",
+					"note": "This assertion's content IS a red demonstration — it asserts a lever produced a detectable failure. Observing IT fail requires breaking the detector it guards, which no probe has done. Counted in bucket (b) deliberately rather than waved through."
+				},
+				{
+					"label": "G4.6a RESIDUE RED: an absent residue endpoint produces an EXACT shortfall and never a dangling edge",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "mp_r2redProbeA_perturbedExpected.log",
+							"lever": "EXPECTATION PERTURBATION (Phase 4.6a remediation): every Phase 4.6a pin incremented by one inside the single EXPECTED block, including the pins ADDED at remediation — the acceptance-1 population (75 merged definitions with branch children), the GAP 2 empty-render census in BOTH referrer scopes (96/30 and 94/29), the GAP 3 content-decided count, and the revised disposition table. Supersedes mp_redProbeA for every label the remediation renamed or re-formed. Perturbs ONLY expectations; production is untouched.",
+							"shippedConfig": false
+						},
+						{
+							"probeLog": "mp_redProbeA_perturbedExpected.log",
+							"lever": "EXPECTATION PERTURBATION (Phase 4.6a): every count this phase introduced or moved, incremented by one inside the single EXPECTED block — the child union 522, winner-takes-all 520, losing-branch contributions 2, both-branch names 235, the bothBranchesAgree disposition, the contributed classification 35/33/2, absent-after-union 0, the two residue edge counts 5 and 38, the PersonType exemplar 18, and the two synthetic census sums. Perturbs ONLY expectations; the production tier is untouched.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "G4.6a RESIDUE: every referenced-not-duplicated edge has both endpoints in the graph",
+					"status": "genuineGap",
+					"species": "phase4Unevidenced",
+					"note": "No retained log records this assertion FAILING. Phase 4 pulled six levers (expectation perturbation, winner flip, tier leak, alias repoint, and the two restatement probes in the sibling suites); this assertion went red under none of them. It is a genuine gap, counted rather than waved through, and Phase 6 owns closing it."
+				},
+				{
+					"label": "G4.6a SHORTFALL RED: removing ONE branch contribution shortens the union by EXACTLY one",
+					"status": "genuineGap",
+					"species": "selfDemonstratingRedCheck",
+					"note": "This assertion's content IS a red demonstration — it asserts a lever produced a detectable failure. Observing IT fail requires breaking the detector it guards, which no probe has done. Counted in bucket (b) deliberately rather than waved through."
+				},
+				{
+					"label": "G4.6a SHORTFALL RED: the R-P4-11 contribution count follows the removal",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "mp_r2redProbeA_perturbedExpected.log",
+							"lever": "EXPECTATION PERTURBATION (Phase 4.6a remediation): every Phase 4.6a pin incremented by one inside the single EXPECTED block, including the pins ADDED at remediation — the acceptance-1 population (75 merged definitions with branch children), the GAP 2 empty-render census in BOTH referrer scopes (96/30 and 94/29), the GAP 3 content-decided count, and the revised disposition table. Supersedes mp_redProbeA for every label the remediation renamed or re-formed. Perturbs ONLY expectations; production is untouched.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "G4.6a SHORTFALL RED: the delta claim is evidenced INDEPENDENTLY of the contribution claim",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "mp_r2redProbeA_perturbedExpected.log",
+							"lever": "EXPECTATION PERTURBATION (Phase 4.6a remediation): every Phase 4.6a pin incremented by one inside the single EXPECTED block, including the pins ADDED at remediation — the acceptance-1 population (75 merged definitions with branch children), the GAP 2 empty-render census in BOTH referrer scopes (96/30 and 94/29), the GAP 3 content-decided count, and the revised disposition table. Supersedes mp_redProbeA for every label the remediation renamed or re-formed. Perturbs ONLY expectations; production is untouched.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "G4.6a SHORTFALL RED: the union does not silently complete — no child survives the removed declaration",
+					"status": "genuineGap",
+					"species": "selfDemonstratingRedCheck",
+					"note": "This assertion's content IS a red demonstration — it asserts a lever produced a detectable failure. Observing IT fail requires breaking the detector it guards, which no probe has done. Counted in bucket (b) deliberately rather than waved through."
+				},
+				{
+					"label": "G4.6a TIER-LEAKAGE RED: a derived annotation planted on a duplicated child IS detected",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "mp_r2redProbeB_annotationLeak.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION (Phase 4.6a remediation): the derived-annotation strip disabled again, against the REMEDIATED code, so the tier-leakage assertions carry a receipt from the suite as it now stands rather than as it stood before the rebuild. Reverts exactly one thing. Reddens the two G4-G derived-regeneration assertions as well, which is how it demonstrates the leak was load-bearing there too.",
+							"shippedConfig": true
+						},
+						{
+							"probeLog": "mp_redProbeB_annotationLeak.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION (Phase 4.6a): the derived-annotation strip in duplicateChildOntoMergedDefinition disabled, so S-1c's bulk property copy carries derived annotations onto synthetic children. This is not a hypothetical — it is the REAL defect the first build of this phase shipped, discovered because it moved Gate 3's regeneration compare from 14,600,360 to 14,694,411 canonical bytes and pushed the held-reference census from 201 to 335. The lever reverts exactly one thing: the strip.",
+							"shippedConfig": true
+						}
+					]
+				},
+				{
+					"label": "G4.6a TIER-LEAKAGE RED: a duplicated child retiered as source IS caught by the source predicate",
+					"status": "genuineGap",
+					"species": "selfDemonstratingRedCheck",
+					"note": "This assertion's content IS a red demonstration — it asserts a lever produced a detectable failure. Observing IT fail requires breaking the detector it guards, which no probe has done. Counted in bucket (b) deliberately rather than waved through."
+				},
+				{
+					"label": "G4.6a TIER-LEAKAGE: no duplicated child carries a derived-tier annotation",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "mp_r2redProbeB_annotationLeak.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION (Phase 4.6a remediation): the derived-annotation strip disabled again, against the REMEDIATED code, so the tier-leakage assertions carry a receipt from the suite as it now stands rather than as it stood before the rebuild. Reverts exactly one thing. Reddens the two G4-G derived-regeneration assertions as well, which is how it demonstrates the leak was load-bearing there too.",
+							"shippedConfig": true
+						},
+						{
+							"probeLog": "mp_redProbeB_annotationLeak.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION (Phase 4.6a): the derived-annotation strip in duplicateChildOntoMergedDefinition disabled, so S-1c's bulk property copy carries derived annotations onto synthetic children. This is not a hypothetical — it is the REAL defect the first build of this phase shipped, discovered because it moved Gate 3's regeneration compare from 14,600,360 to 14,694,411 canonical bytes and pushed the held-reference census from 201 to 335. The lever reverts exactly one thing: the strip.",
+							"shippedConfig": true
+						}
+					]
+				},
+				{
+					"label": "G4.6a TIER-LEAKAGE: zero duplicated children are reachable by the source-tier predicate",
+					"status": "genuineGap",
+					"species": "phase4Unevidenced",
+					"note": "No retained log records this assertion FAILING. Phase 4 pulled six levers (expectation perturbation, winner flip, tier leak, alias repoint, and the two restatement probes in the sibling suites); this assertion went red under none of them. It is a genuine gap, counted rather than waved through, and Phase 6 owns closing it."
+				},
+				{
+					"label": "G4.6a every disposition count is exactly as measured",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "mp_r2redProbeA_perturbedExpected.log",
+							"lever": "EXPECTATION PERTURBATION (Phase 4.6a remediation): every Phase 4.6a pin incremented by one inside the single EXPECTED block, including the pins ADDED at remediation — the acceptance-1 population (75 merged definitions with branch children), the GAP 2 empty-render census in BOTH referrer scopes (96/30 and 94/29), the GAP 3 content-decided count, and the revised disposition table. Supersedes mp_redProbeA for every label the remediation renamed or re-formed. Perturbs ONLY expectations; production is untouched.",
+							"shippedConfig": false
+						},
+						{
+							"probeLog": "mp_redProbeA_perturbedExpected.log",
+							"lever": "EXPECTATION PERTURBATION (Phase 4.6a): every count this phase introduced or moved, incremented by one inside the single EXPECTED block — the child union 522, winner-takes-all 520, losing-branch contributions 2, both-branch names 235, the bothBranchesAgree disposition, the contributed classification 35/33/2, absent-after-union 0, the two residue edge counts 5 and 38, the PersonType exemplar 18, and the two synthetic census sums. Perturbs ONLY expectations; the production tier is untouched.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "G4.6a the child union is EXACTLY 522 and closes by both decompositions independently",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "mp_r2redProbeA_perturbedExpected.log",
+							"lever": "EXPECTATION PERTURBATION (Phase 4.6a remediation): every Phase 4.6a pin incremented by one inside the single EXPECTED block, including the pins ADDED at remediation — the acceptance-1 population (75 merged definitions with branch children), the GAP 2 empty-render census in BOTH referrer scopes (96/30 and 94/29), the GAP 3 content-decided count, and the revised disposition table. Supersedes mp_redProbeA for every label the remediation renamed or re-formed. Perturbs ONLY expectations; production is untouched.",
+							"shippedConfig": false
+						},
+						{
+							"probeLog": "mp_redProbeA_perturbedExpected.log",
+							"lever": "EXPECTATION PERTURBATION (Phase 4.6a): every count this phase introduced or moved, incremented by one inside the single EXPECTED block — the child union 522, winner-takes-all 520, losing-branch contributions 2, both-branch names 235, the bothBranchesAgree disposition, the contributed classification 35/33/2, absent-after-union 0, the two residue edge counts 5 and 38, the PersonType exemplar 18, and the two synthetic census sums. Perturbs ONLY expectations; the production tier is untouched.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "G4.6a the named exemplar PersonType renders exactly 18 children",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "mp_r2redProbeA_perturbedExpected.log",
+							"lever": "EXPECTATION PERTURBATION (Phase 4.6a remediation): every Phase 4.6a pin incremented by one inside the single EXPECTED block, including the pins ADDED at remediation — the acceptance-1 population (75 merged definitions with branch children), the GAP 2 empty-render census in BOTH referrer scopes (96/30 and 94/29), the GAP 3 content-decided count, and the revised disposition table. Supersedes mp_redProbeA for every label the remediation renamed or re-formed. Perturbs ONLY expectations; production is untouched.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "G4.6a the referenced-not-duplicated residue is exactly 5 inline types and 38 derivation wrappers",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "mp_r2redProbeA_perturbedExpected.log",
+							"lever": "EXPECTATION PERTURBATION (Phase 4.6a remediation): every Phase 4.6a pin incremented by one inside the single EXPECTED block, including the pins ADDED at remediation — the acceptance-1 population (75 merged definitions with branch children), the GAP 2 empty-render census in BOTH referrer scopes (96/30 and 94/29), the GAP 3 content-decided count, and the revised disposition table. Supersedes mp_redProbeA for every label the remediation renamed or re-formed. Perturbs ONLY expectations; production is untouched.",
+							"shippedConfig": false
+						},
+						{
+							"probeLog": "mp_redProbeA_perturbedExpected.log",
+							"lever": "EXPECTATION PERTURBATION (Phase 4.6a): every count this phase introduced or moved, incremented by one inside the single EXPECTED block — the child union 522, winner-takes-all 520, losing-branch contributions 2, both-branch names 235, the bothBranchesAgree disposition, the contributed classification 35/33/2, absent-after-union 0, the two residue edge counts 5 and 38, the PersonType exemplar 18, and the two synthetic census sums. Perturbs ONLY expectations; the production tier is untouched.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
 					"label": "LEDGER carries no stale entries for assertions this suite no longer runs",
 					"status": "proven",
 					"redEvidence": [
+						{
+							"probeLog": "mp_r2redProbeA_perturbedExpected.log",
+							"lever": "EXPECTATION PERTURBATION (Phase 4.6a remediation): every Phase 4.6a pin incremented by one inside the single EXPECTED block, including the pins ADDED at remediation — the acceptance-1 population (75 merged definitions with branch children), the GAP 2 empty-render census in BOTH referrer scopes (96/30 and 94/29), the GAP 3 content-decided count, and the revised disposition table. Supersedes mp_redProbeA for every label the remediation renamed or re-formed. Perturbs ONLY expectations; production is untouched.",
+							"shippedConfig": false
+						},
+						{
+							"probeLog": "mp_r2redProbeB_annotationLeak.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION (Phase 4.6a remediation): the derived-annotation strip disabled again, against the REMEDIATED code, so the tier-leakage assertions carry a receipt from the suite as it now stands rather than as it stood before the rebuild. Reverts exactly one thing. Reddens the two G4-G derived-regeneration assertions as well, which is how it demonstrates the leak was load-bearing there too.",
+							"shippedConfig": true
+						},
+						{
+							"probeLog": "mp_redProbeA_perturbedExpected.log",
+							"lever": "EXPECTATION PERTURBATION (Phase 4.6a): every count this phase introduced or moved, incremented by one inside the single EXPECTED block — the child union 522, winner-takes-all 520, losing-branch contributions 2, both-branch names 235, the bothBranchesAgree disposition, the contributed classification 35/33/2, absent-after-union 0, the two residue edge counts 5 and 38, the PersonType exemplar 18, and the two synthetic census sums. Perturbs ONLY expectations; the production tier is untouched.",
+							"shippedConfig": false
+						},
+						{
+							"probeLog": "mp_redProbeB_annotationLeak.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION (Phase 4.6a): the derived-annotation strip in duplicateChildOntoMergedDefinition disabled, so S-1c's bulk property copy carries derived annotations onto synthetic children. This is not a hypothetical — it is the REAL defect the first build of this phase shipped, discovered because it moved Gate 3's regeneration compare from 14,600,360 to 14,694,411 canonical bytes and pushed the held-reference census from 201 to 335. The lever reverts exactly one thing: the strip.",
+							"shippedConfig": true
+						},
+						{
+							"probeLog": "mp_redProbeE_perturbedDeltaPins.log",
+							"lever": "EXPECTATION PERTURBATION (Phase 4.6a, round 2): the four inherited delta pins incremented by one — MERGED_FROM 140, and the signature-level absent 2 / rebound 5 / widened 1. Separated from round A deliberately: these pins are Phase 4 claims this phase must leave standing, so a lever that moves them proves they are still load-bearing after the union landed.",
+							"shippedConfig": false
+						},
 						{
 							"probeLog": "p4_ledgerStale_red_synthetic.log",
 							"lever": "LEDGER STALE-ENTRY PROBE (Phase 4): a fabricated entry for an assertion this suite does not run was added to the ledger; the stale-entry check caught it. Needed separately because the self-demonstration run above leaves no stale entries and that assertion stays green there.",
@@ -1927,6 +2498,36 @@
 					"status": "proven",
 					"redEvidence": [
 						{
+							"probeLog": "mp_r2redProbeA_perturbedExpected.log",
+							"lever": "EXPECTATION PERTURBATION (Phase 4.6a remediation): every Phase 4.6a pin incremented by one inside the single EXPECTED block, including the pins ADDED at remediation — the acceptance-1 population (75 merged definitions with branch children), the GAP 2 empty-render census in BOTH referrer scopes (96/30 and 94/29), the GAP 3 content-decided count, and the revised disposition table. Supersedes mp_redProbeA for every label the remediation renamed or re-formed. Perturbs ONLY expectations; production is untouched.",
+							"shippedConfig": false
+						},
+						{
+							"probeLog": "mp_r2redProbeB_annotationLeak.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION (Phase 4.6a remediation): the derived-annotation strip disabled again, against the REMEDIATED code, so the tier-leakage assertions carry a receipt from the suite as it now stands rather than as it stood before the rebuild. Reverts exactly one thing. Reddens the two G4-G derived-regeneration assertions as well, which is how it demonstrates the leak was load-bearing there too.",
+							"shippedConfig": true
+						},
+						{
+							"probeLog": "mp_r2redProbeH_statsNodeDivergence.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION (Phase 4.6a remediation): the STATS accumulator for collegeContributedChildElements offset by three, reproducing a divergence that actually shipped for one build — the contribution count is published TWICE, on every merged node and in stats, by two separate accumulators, and a fix applied to one and not the other made the build report 36 where the graph said 33. Nothing failed at the time because the only stats use of that figure was an upper bound, and a number used only as a loose bound is not being checked. Reverts exactly one thing.",
+							"shippedConfig": true
+						},
+						{
+							"probeLog": "mp_redProbeA_perturbedExpected.log",
+							"lever": "EXPECTATION PERTURBATION (Phase 4.6a): every count this phase introduced or moved, incremented by one inside the single EXPECTED block — the child union 522, winner-takes-all 520, losing-branch contributions 2, both-branch names 235, the bothBranchesAgree disposition, the contributed classification 35/33/2, absent-after-union 0, the two residue edge counts 5 and 38, the PersonType exemplar 18, and the two synthetic census sums. Perturbs ONLY expectations; the production tier is untouched.",
+							"shippedConfig": false
+						},
+						{
+							"probeLog": "mp_redProbeB_annotationLeak.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION (Phase 4.6a): the derived-annotation strip in duplicateChildOntoMergedDefinition disabled, so S-1c's bulk property copy carries derived annotations onto synthetic children. This is not a hypothetical — it is the REAL defect the first build of this phase shipped, discovered because it moved Gate 3's regeneration compare from 14,600,360 to 14,694,411 canonical bytes and pushed the held-reference census from 201 to 335. The lever reverts exactly one thing: the strip.",
+							"shippedConfig": true
+						},
+						{
+							"probeLog": "mp_redProbeE_perturbedDeltaPins.log",
+							"lever": "EXPECTATION PERTURBATION (Phase 4.6a, round 2): the four inherited delta pins incremented by one — MERGED_FROM 140, and the signature-level absent 2 / rebound 5 / widened 1. Separated from round A deliberately: these pins are Phase 4 claims this phase must leave standing, so a lever that moves them proves they are still load-bearing after the union landed.",
+							"shippedConfig": false
+						},
+						{
 							"probeLog": "p4_ledgerGate_red_synthetic.log",
 							"lever": "LEDGER GATE SELF-DEMONSTRATION (Phase 4): the new suite's ledger gate ran with its own three assertions absent from the ledger, so an assertion genuinely lacked red evidence and the gate caught it. As in the derived and source twins, the gate adds its own labels to the shipped set BEFORE comparing, so it cannot exempt itself.",
 							"shippedConfig": true
@@ -1952,6 +2553,36 @@
 					"label": "LEDGER the entry count matches the assertions actually run",
 					"status": "proven",
 					"redEvidence": [
+						{
+							"probeLog": "mp_r2redProbeA_perturbedExpected.log",
+							"lever": "EXPECTATION PERTURBATION (Phase 4.6a remediation): every Phase 4.6a pin incremented by one inside the single EXPECTED block, including the pins ADDED at remediation — the acceptance-1 population (75 merged definitions with branch children), the GAP 2 empty-render census in BOTH referrer scopes (96/30 and 94/29), the GAP 3 content-decided count, and the revised disposition table. Supersedes mp_redProbeA for every label the remediation renamed or re-formed. Perturbs ONLY expectations; production is untouched.",
+							"shippedConfig": false
+						},
+						{
+							"probeLog": "mp_r2redProbeB_annotationLeak.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION (Phase 4.6a remediation): the derived-annotation strip disabled again, against the REMEDIATED code, so the tier-leakage assertions carry a receipt from the suite as it now stands rather than as it stood before the rebuild. Reverts exactly one thing. Reddens the two G4-G derived-regeneration assertions as well, which is how it demonstrates the leak was load-bearing there too.",
+							"shippedConfig": true
+						},
+						{
+							"probeLog": "mp_r2redProbeH_statsNodeDivergence.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION (Phase 4.6a remediation): the STATS accumulator for collegeContributedChildElements offset by three, reproducing a divergence that actually shipped for one build — the contribution count is published TWICE, on every merged node and in stats, by two separate accumulators, and a fix applied to one and not the other made the build report 36 where the graph said 33. Nothing failed at the time because the only stats use of that figure was an upper bound, and a number used only as a loose bound is not being checked. Reverts exactly one thing.",
+							"shippedConfig": true
+						},
+						{
+							"probeLog": "mp_redProbeA_perturbedExpected.log",
+							"lever": "EXPECTATION PERTURBATION (Phase 4.6a): every count this phase introduced or moved, incremented by one inside the single EXPECTED block — the child union 522, winner-takes-all 520, losing-branch contributions 2, both-branch names 235, the bothBranchesAgree disposition, the contributed classification 35/33/2, absent-after-union 0, the two residue edge counts 5 and 38, the PersonType exemplar 18, and the two synthetic census sums. Perturbs ONLY expectations; the production tier is untouched.",
+							"shippedConfig": false
+						},
+						{
+							"probeLog": "mp_redProbeB_annotationLeak.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION (Phase 4.6a): the derived-annotation strip in duplicateChildOntoMergedDefinition disabled, so S-1c's bulk property copy carries derived annotations onto synthetic children. This is not a hypothetical — it is the REAL defect the first build of this phase shipped, discovered because it moved Gate 3's regeneration compare from 14,600,360 to 14,694,411 canonical bytes and pushed the held-reference census from 201 to 335. The lever reverts exactly one thing: the strip.",
+							"shippedConfig": true
+						},
+						{
+							"probeLog": "mp_redProbeE_perturbedDeltaPins.log",
+							"lever": "EXPECTATION PERTURBATION (Phase 4.6a, round 2): the four inherited delta pins incremented by one — MERGED_FROM 140, and the signature-level absent 2 / rebound 5 / widened 1. Separated from round A deliberately: these pins are Phase 4 claims this phase must leave standing, so a lever that moves them proves they are still load-bearing after the union landed.",
+							"shippedConfig": false
+						},
 						{
 							"probeLog": "p4_ledgerGate_red_synthetic.log",
 							"lever": "LEDGER GATE SELF-DEMONSTRATION (Phase 4): the new suite's ledger gate ran with its own three assertions absent from the ledger, so an assertion genuinely lacked red evidence and the gate caught it. As in the derived and source twins, the gate adds its own labels to the shipped set BEFORE comparing, so it cannot exempt itself.",
@@ -1981,5 +2612,71 @@
 				}
 			]
 		}
+	},
+	"conjunctionEvidenceMeasurement": {
+		"measuredBy": "test/probes/mp_auditConjunctiveAssertions.js",
+		"shippedAssertions": 234,
+		"carryingATopLevelConjunction": 79,
+		"provenWithThreeOrMoreConjuncts": 11,
+		"labelsThatFailedToJoinTheLedger": 0,
+		"unjoinedLabels": [],
+		"riskRows": [
+			{
+				"suiteName": "synthetic",
+				"conjunctCount": 4,
+				"label": "G4-A RE-STATED: the merged nodes hold EXACTLY their union of children, every one marked synthetic and parented to a merged definition"
+			},
+			{
+				"suiteName": "synthetic",
+				"conjunctCount": 4,
+				"label": "G4-C the merged nodes publish the delta themselves and agree with the report in all four buckets"
+			},
+			{
+				"suiteName": "synthetic",
+				"conjunctCount": 3,
+				"label": "G4-C GAP 3: every child whose content the union chose says SO, and names which properties the choice covered"
+			},
+			{
+				"suiteName": "synthetic",
+				"conjunctCount": 3,
+				"label": "G4-C RED-2: pointed at the WINNING member the finder goes red on every ABSENT and every REBOUND signature, where a name-only checker stayed green"
+			},
+			{
+				"suiteName": "synthetic",
+				"conjunctCount": 3,
+				"label": "G4-D TestScoreReport 1.0.0's single reference AcRec:TestScoreReportType now resolves"
+			},
+			{
+				"suiteName": "synthetic",
+				"conjunctCount": 4,
+				"label": "G4-E a synthetic PescNamespace node stands in for the absent CoreMain v1.6.0"
+			},
+			{
+				"suiteName": "synthetic",
+				"conjunctCount": 3,
+				"label": "G4-E it carries exactly one SERVED_BY edge to the real v1.8.0 namespace"
+			},
+			{
+				"suiteName": "synthetic",
+				"conjunctCount": 3,
+				"label": "G4-F ZERO synthetic content is reachable by the emitter's source predicate"
+			},
+			{
+				"suiteName": "synthetic",
+				"conjunctCount": 3,
+				"label": "G4.6a the child union is EXACTLY 522 and closes by both decompositions independently"
+			},
+			{
+				"suiteName": "synthetic",
+				"conjunctCount": 4,
+				"label": "G4-C the contribution counts published on the NODES and in STATS agree exactly (they are computed by separate accumulators and once diverged)"
+			},
+			{
+				"suiteName": "synthetic",
+				"conjunctCount": 3,
+				"label": "G4.6a GAP 7: every copiedFromStableId resolves to a live SOURCE-tier node"
+			}
+		],
+		"note": "Computed at ledger-build time, never transcribed. labelsThatFailedToJoinTheLedger is the auditor reporting its OWN incompleteness: any nonzero value means the risk list understates the problem by that many rows, which is the fail-open behaviour the audit was corrected for."
 	}
 }
