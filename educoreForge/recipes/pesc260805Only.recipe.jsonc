@@ -1,0 +1,51 @@
+{
+  // pesc260805Only - forge the pesc260805 REBUILD bundle alone (no hubs, no bridges):
+  // resolve -> forge -> standardBase -> materialize. This is THE LOAD (work order Phase 4.5):
+  // the first time the rebuild's source + derived + synthetic + meta tiers have ever left
+  // memory and been adjudicated by a real graph.
+  //
+  // WHY THIS IS NOT pescOnly WITH A NEW TOKEN. forges/pesc (the incumbent) and
+  // forges/pesc260805 (the rebuild) carry DELIBERATELY DISTINCT standardName values
+  // ('PESC' vs 'PESC260805', ruling D-6) so both can coexist in one graph while the rebuild
+  // earns the incumbent's retirement on evidence. This recipe names ONLY the rebuild. The
+  // incumbent's pescOnly.recipe.jsonc is untouched and still builds.
+  //
+  // WHY hubs [] AND bridges []. Phase 4.5's question is whether the NODES AND EDGES THIS
+  // BUNDLE EMITS survive the bolt boundary intact - conservation, fusion, property fidelity,
+  // referential integrity, traversability. A hub or a bridge would add nodes this bundle did
+  // not emit, which is precisely the noise that makes a conservation-by-SET comparison
+  // unreadable. The gates compare the forge's returned node/edge set against the graph; any
+  // third party writing into the same graph would make a green indistinguishable from a
+  // coincidence.
+  //
+  // NO roundTripStage. forges/pesc260805/parserDescriptor.ini DELIBERATELY does not declare a
+  // roundTripValidator yet - the validator is Phase 5's deliverable, and a declared-but-absent
+  // validator refuses the build by name on EVERY build (RT-13.3). Turning the stage on here
+  // would be asking for a verdict from an instrument that does not exist. GNC-001's promotion
+  // gate therefore cannot pass for this graph, which is correct and intended: DEV_pesc260805
+  // is a SCRATCH graph and is NEVER a golden.
+  //
+  // CONTAINER NAME. graphBuilder mints its product container as DEV_gb_materialize_<pid>_<seq>
+  // (build.js:449). GNC-001 names this graph DEV_pesc260805, so the product is renamed with an
+  // operational `docker rename` after the build - the same operational rename actions.js:1241
+  // documents for DEV -> GOLD_EVAL promotion. The DEV_ prefix is preserved across the rename,
+  // so replayManager's GNC-001 refusal guard still covers the container afterwards.
+  //
+  // VECTORIZATION IS OFF, DELIBERATELY, AND IT IS A DECISION NOT A DEFAULT. The build default
+  // is --vectorize=true. Phase 4.5's five gates are conservation, fusion, property fidelity,
+  // referential integrity and traversability; not one of them reads an embedding. DESIGN §7.2
+  // query 2 ("find grade point average, get ONE hit not fourteen") is a test of the
+  // SAME_DEFINITION cluster-representative rule - a DERIVED-tier property - and collapsing a
+  // lexical hit list by cluster tests exactly that rule with no vector involved. Spending real
+  // Voyage credit to embed ~42k never-before-embedded texts on a scratch graph, for gates that
+  // cannot read the result, is spending for the appearance of completeness. Phase 5 does not
+  // need it either (the round-trip emitter reads the source tier). Flip it on when a gate
+  // actually asks a semantic question.
+  "schemaVersion": "1.0.0",
+  "recipeName": "pesc260805Only",
+  "kind": "dev",
+  "description": "Forge the pesc260805 rebuild bundle alone and materialize it - Phase 4.5 THE LOAD, the first real graph of the rebuilt PESC model.",
+  "standards": [ { "token": "pesc260805", "version": "current" } ],
+  "hubs": [],
+  "bridges": []
+}
