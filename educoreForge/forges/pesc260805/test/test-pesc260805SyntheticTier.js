@@ -1651,40 +1651,26 @@ taskList.push((args, next) => {
 	evidence(`RED (demonstrated) BY DATA MUTATION, not by expectation: dropped the HAS_PROPERTY edge '${dataLeverVictimEdge.fromRef.id}' -> '${dataLeverVictimEdge.toRef.id}' from the INPUT graph (the parentId the union walks is untouched) -> ${dataLeverRefusesByName ? 'REFUSES BY NAME' : 'DID NOT REFUSE'}: ${dataLeverRefusal.substring(0, 200)}`);
 	check('G4.6a ACCEPTANCE RED, BY DATA: the production refusal fires when the input\'s HAS_PROPERTY edges and its parentId containment disagree', dataLeverRefusesByName);
 
-	// AND THE CONTROL, which is what makes the lever mean anything: the SAME mutation leaves the
-	// PREDECESSOR form silent. Both of its counters came from the union pass, so dropping an edge
-	// the union never reads could not move either. A lever that reddens both forms would not have
-	// distinguished the vacuous version from the real one.
+	// THE CONTROL THAT STOOD HERE IS DELETED, NOT REWRITTEN — supervisor closing order, 2026-08-06.
 	//
-	// THE FIRST DRAFT OF THIS CONTROL WAS ITSELF VACUOUS — `Object.keys(x).length === 0 ? -1 : 0`
-	// asserted against 0, which is a constant, inside the very edit demonstrating I had learned not
-	// to write vacuous checks. Third time in one phase, same shape. It is written out properly here:
-	// BOTH forms are computed in the harness over the same mutated input, and they must DISAGREE.
-	const controlMergedStableId = dataLeverMergedRecord.mergedDefinitionStableId;
-	const controlBranchStableIds = baselineOutput.mergeReport.mergedChildDeclarationRecords
-		.filter((oneRecord) => oneRecord.mergedDefinitionStableId === controlMergedStableId)
-		.map((oneRecord) => oneRecord.copiedFromStableId);
-	// PREDECESSOR FORM: branch children counted from the parentId containment the union walks —
-	// which the dropped EDGE does not touch — against the emitted count, also from the union.
-	const controlPredecessorBranchCount = dataLeverInput.nodes.filter(
-		(oneNode) =>
-			oneNode.labels.indexOf('PescElementDecl') !== -1 &&
-			controlBranchStableIds.some(
-				(oneSourceStableId) => oneNode.stableId === oneSourceStableId,
-			),
-	).length;
-	const controlPredecessorEmittedCount = controlBranchStableIds.length;
-	const controlPredecessorOffenders =
-		controlPredecessorBranchCount > 0 && controlPredecessorEmittedCount === 0 ? 1 : 0;
-	// NEW FORM: expected recomputed from the HAS_PROPERTY EDGES, which the mutation DID touch.
-	const controlEdgeDerivedCount = dataLeverInput.edges.filter(
-		(oneEdge) =>
-			oneEdge.type === 'HAS_PROPERTY' &&
-			controlBranchStableIds.some((oneSourceStableId) => oneEdge.toRef.id === oneSourceStableId),
-	).length;
-	const controlNewFormOffenders = controlEdgeDerivedCount === controlPredecessorEmittedCount ? 0 : 1;
-	evidence(`CONTROL, both forms computed over the SAME mutated input for '${controlMergedStableId}': predecessor form sees branch ${controlPredecessorBranchCount} vs emitted ${controlPredecessorEmittedCount} -> ${controlPredecessorOffenders} offenders (SILENT); new edge-derived form sees expected ${controlEdgeDerivedCount} vs emitted ${controlPredecessorEmittedCount} -> ${controlNewFormOffenders} offender(s) (FIRES). The mutation is invisible to one basis and visible to the other, which is the whole reason the lever had to be DATA`);
-	check('G4.6a ACCEPTANCE CONTROL: the same data mutation is SILENT under the predecessor form and FIRES under the edge-derived form', controlPredecessorOffenders === 0 && controlNewFormOffenders === 1 && controlEdgeDerivedCount === controlPredecessorEmittedCount - 1);
+	// It was the FOURTH vacuous check this phase produced, and it was inside the fix for the third.
+	// Its 'predecessor form' compared controlPredecessorBranchCount > 0 against
+	// controlPredecessorEmittedCount === 0, where the emitted count was the LENGTH of the very array
+	// the branch count filtered against — so an empty array forces the branch count to zero and the
+	// conjunction is UNSATISFIABLE. It reported 'SILENT' because it could not report anything else.
+	// It was also a STRAW MODEL: it reimplemented a predicate the retired version never used, so it
+	// never ran the code it claimed to discriminate against.
+	//
+	// FOUR ROUNDS, FOUR INSTANCES, EACH INSIDE THE FIX FOR THE LAST. The common factor is structural
+	// rather than behavioural: every one compared a PURE FUNCTION's output against a quantity derived
+	// from the SAME computation, and in that shape "the two agree" is a THEOREM, not a measurement.
+	// A theorem dressed as an assertion always passes and always looks like diligence.
+	//
+	// A fifth attempt was NOT ordered and is not made. A deleted check that asserts nothing is
+	// HONEST; a check that makes a false claim is not. The row is recorded genuineGap in the ledger
+	// with that reason. The DATA LEVER above stands on its own and was verified by the third review
+	// firing it in BOTH directions against a mutated forge input.
+
 
 	// GAP 2 — THE NUMBER A CONSUMER ACTUALLY MEETS, DECLARED. 30 of 96 reached merged targets
 	// render no child elements. That is NOT a defect and nothing was dropped: 27 are simpleTypes,

@@ -355,7 +355,40 @@ const SHIPPED_RUNS = {
 // both directions: the old receipt is not lost, and — crucially — it does NOT transfer to the new
 // claim. An assertion carrying a predecessor's receipt is how this campaign's genuine-gap residue
 // was created in the first place.
+// FORCED CLASSIFICATIONS — rows the automatic status gets WRONG, corrected by hand with a reason.
+// The builder marks a row `proven` when its label appears on a FAIL line in a cited log. That is
+// necessary and not sufficient: it cannot see WHAT the lever moved. A row whose only receipt is an
+// expectation perturbation has been shown to redden when a pinned NUMBER changes, which says
+// nothing about whether its predicate can be satisfied by real data — the exact defect this phase
+// produced four times. Where that is known, the row is demoted here rather than left flattering.
+const FORCED_CLASSIFICATIONS = {
+	'G4.6a ACCEPTANCE 1: every merged definition with child declarations in either branch renders them directly — none renders empty':
+		{
+			status: 'genuineGap',
+			species: 'expectationLeverOnly',
+			reason:
+				'Its sole receipt is an EXPECTATION PERTURBATION — precisely the defect named in its own predecessor\'s retirement note, which is why that predecessor was retired. The real DATA lever for this claim exists and was verified by the third review firing it in both directions, but it lives three rows away under a different label ("G4.6a ACCEPTANCE RED, BY DATA"). Evidence does not transfer between labels just because the claims are related; that is the inherited-receipt pattern with extra steps. Demoted rather than re-levered: the closing order was no fifth gate.',
+		},
+	'G4.6a ACCEPTANCE CONTROL: the same data mutation is SILENT under the predecessor form and FIRES under the edge-derived form':
+		{
+			status: 'genuineGap',
+			species: 'deletedAsVacuous',
+			reason:
+				'DELETED, not rewritten. It was the FOURTH vacuous check this phase produced and it was inside the fix for the third: its "predecessor form" compared a branch count against the LENGTH of the very array that branch count filtered against, making the conjunction unsatisfiable — it reported SILENT because it could not report anything else. It was also a straw model of a predicate the retired version never used. The control was vacuous four times; a deleted check that asserts nothing is honest, a fifth attempt is not. Retained here so the row is a declared gap rather than a silent disappearance.',
+		},
+};
+
 const RETIRED_ASSERTIONS = [
+	{
+		label:
+			'G4.6a ACCEPTANCE CONTROL: the same data mutation is SILENT under the predecessor form and FIRES under the edge-derived form',
+		retiredAtPhase: '4.6a (third independent review — DELETED, not rewritten)',
+		status: 'genuineGap',
+		reason:
+			'THE FOURTH VACUOUS CHECK OF THE PHASE, and it was inside the fix for the third. Its "predecessor form" compared controlPredecessorBranchCount > 0 against controlPredecessorEmittedCount === 0, where the emitted count was the LENGTH of the very array the branch count filtered against — so an empty array forces the branch count to zero and the conjunction is UNSATISFIABLE. It reported SILENT because it could not report anything else. It was also a STRAW MODEL: it reimplemented a predicate the retired version never used, so it never ran the code it claimed to discriminate against. The control was vacuous four times; a deleted check that asserts nothing is HONEST, a fifth attempt is not. Recorded here rather than allowed to disappear from the shipped set unremarked — an assertion that quietly leaves the record reads as closure.',
+		successor:
+			'NONE, deliberately. The DATA LEVER it was written to certify stands on its own and was verified by the third review firing it in BOTH directions against a mutated forge input.',
+	},
 	{
 		label:
 			'G4.6a the merged targets render their children directly — no reached target that has children renders empty',
@@ -463,6 +496,30 @@ const buildSuiteLedger = (suiteName) => {
 							PHASE4_LOG_PREFIXES.some((onePrefix) => oneEvidence.probeLog.indexOf(onePrefix) === 0),
 						),
 					};
+		// A FORCED CLASSIFICATION OUTRANKS THE AUTOMATIC ONE, and it can only DEMOTE. The automatic
+		// rule marks a row `proven` when its label appears on a FAIL line in a cited log — necessary,
+		// not sufficient, because it cannot see WHAT the lever moved. Where that is known to be an
+		// expectation perturbation, or where the check was deleted as vacuous, the row is corrected
+		// here with its reason rather than left flattering itself.
+		const forced = FORCED_CLASSIFICATIONS[oneLabel];
+		if (forced !== undefined) {
+			if (forced.status === 'proven') {
+				throw new Error(
+					`buildRedEvidenceLedger: FORCED_CLASSIFICATIONS may only DEMOTE a row, never promote ` +
+						`one to 'proven'. '${oneLabel}' tries to. A hand-written promotion is an assertion ` +
+						`about evidence that nobody has to produce.`,
+				);
+			}
+			return {
+				label: oneLabel,
+				status: forced.status,
+				species: forced.species,
+				forcedClassificationReason: forced.reason,
+				automaticStatusWouldHaveBeen: evidence !== undefined ? 'proven' : 'residue',
+				...(evidence === undefined ? {} : { redEvidence: evidence }),
+				...rescopingProvenance,
+			};
+		}
 		if (evidence !== undefined) {
 			return { label: oneLabel, status: 'proven', redEvidence: evidence, ...rescopingProvenance };
 		}
@@ -539,6 +596,41 @@ const ledger = {
 	rescopedHelperNote:
 		'[G-4], Phase 4 review. Four harness helpers were NARROWED when the synthetic tier arrived (namedDefinitionNodes and stripDerived gained a pescTier filter, assertPristineSourceGraph gained a synthetic clause, and the G3-E BFS inherited the narrowed definition set), while assertions reading through them still cited Phase 3 vr_* logs — receipts for a run of DIFFERENT CODE. Every such assertion now carries rescopedHelper and evidencePostDatesPhase4Rescoping. Two re-proof levers were pulled against the code as it now stands: p4r_probeUnscopedDefinitions_derived.log (namedDefinitionNodes un-narrowed) and p4r_probeUnscopedStrip_derived.log (stripDerived un-narrowed, which ABORTS at the production purity refusal and therefore supplies no label-level evidence). Where evidencePostDatesPhase4Rescoping is false, the receipt is retained but explicitly labelled as pre-rescoping rather than silently carried forward.',
 	rescopedHelperProvenance: {},
+	evidenceApparatusScale: {
+		note:
+			'DECLARED, NOT CLOSED (supervisor closing order, Phase 4.6a third review). Three reviews ' +
+			'confirmed the DELIVERABLE correct three times; what failed four times running was the ' +
+			'machinery that certifies it. These two numbers are the unswept remainder, published so a ' +
+			'successor inherits a measurement rather than a silence.',
+		standingRule:
+			'Every gate AND every production refusal must have at least one red lever that MUTATES ' +
+			'PRODUCTION DATA — the input, the corpus, or the graph — and NOT only a test expectation. ' +
+			'Mechanical reason: an expectation lever reddens an assertion whether or not its predicate ' +
+			'can ever be satisfied by real data, so it certifies vacuous gates as proven; a data lever ' +
+			'cannot pass a vacuous check because a vacuous check does not respond to data at all. Where ' +
+			'a data lever is genuinely impossible, say so HERE with the reason and count the row ' +
+			'genuineGap, not proven.',
+		provenRowsRestingOnExpectationLeversAlone: 63,
+		provenRowsTotalAtMeasurement: 114,
+		productionRefusalsWithNoLedgerRow: 48,
+		measuredBy: 'the third independent adversarial review, 2026-08-06',
+		owner:
+			'PHASE 6, added to Deliverable ZERO beside the conjunction-evidence class and the inherited ' +
+			'genuine-gap residue. The rule was applied to the gates the reviews NAMED and was never ' +
+			'swept across the record; this is that sweep, and it wants a different author.',
+		whyNotClosedHere:
+			'Four rounds produced four vacuous checks, each inside the fix for the last. Every attempt ' +
+			'added surface faster than it removed it, so a fifth was not ordered and was not made.',
+	},
+	fourVacuousChecksNote:
+		'THE MOST USEFUL FINDING OF PHASE 4.6a, recorded because it outlives the phase. Four vacuous ' +
+		'checks in four rounds, the fourth inside the control written to certify the third. The common ' +
+		'factor is STRUCTURAL, not behavioural: every one compared a PURE FUNCTION\'s output against a ' +
+		'quantity derived from the SAME computation. In that shape "the two agree" is a THEOREM, not a ' +
+		'measurement — and a theorem dressed as an assertion always passes and always looks like ' +
+		'diligence. buildSyntheticTier is a pure function of one input, so any check comparing two ' +
+		'derivations of that input can only be reddened by mutating CODE. That is why every attempt ' +
+		'needed a lever the code could move and the data could not.',
 	retiredAssertionsNote:
 		'Assertions a later phase legitimately reversed or re-stated, kept here so the residue accounting stays honest in BOTH directions. A retired assertion is not deleted and its red evidence is not lost — but it also does NOT transfer to whatever replaced it. An assertion carrying a predecessor receipt is how the genuine-gap residue was created in the first place, so each entry names the successors and the levers that proved them afresh.',
 	retiredAssertions: RETIRED_ASSERTIONS,

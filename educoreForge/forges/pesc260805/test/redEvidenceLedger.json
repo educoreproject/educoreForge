@@ -117,8 +117,26 @@
 			}
 		]
 	},
+	"evidenceApparatusScale": {
+		"note": "DECLARED, NOT CLOSED (supervisor closing order, Phase 4.6a third review). Three reviews confirmed the DELIVERABLE correct three times; what failed four times running was the machinery that certifies it. These two numbers are the unswept remainder, published so a successor inherits a measurement rather than a silence.",
+		"standingRule": "Every gate AND every production refusal must have at least one red lever that MUTATES PRODUCTION DATA — the input, the corpus, or the graph — and NOT only a test expectation. Mechanical reason: an expectation lever reddens an assertion whether or not its predicate can ever be satisfied by real data, so it certifies vacuous gates as proven; a data lever cannot pass a vacuous check because a vacuous check does not respond to data at all. Where a data lever is genuinely impossible, say so HERE with the reason and count the row genuineGap, not proven.",
+		"provenRowsRestingOnExpectationLeversAlone": 63,
+		"provenRowsTotalAtMeasurement": 114,
+		"productionRefusalsWithNoLedgerRow": 48,
+		"measuredBy": "the third independent adversarial review, 2026-08-06",
+		"owner": "PHASE 6, added to Deliverable ZERO beside the conjunction-evidence class and the inherited genuine-gap residue. The rule was applied to the gates the reviews NAMED and was never swept across the record; this is that sweep, and it wants a different author.",
+		"whyNotClosedHere": "Four rounds produced four vacuous checks, each inside the fix for the last. Every attempt added surface faster than it removed it, so a fifth was not ordered and was not made."
+	},
+	"fourVacuousChecksNote": "THE MOST USEFUL FINDING OF PHASE 4.6a, recorded because it outlives the phase. Four vacuous checks in four rounds, the fourth inside the control written to certify the third. The common factor is STRUCTURAL, not behavioural: every one compared a PURE FUNCTION's output against a quantity derived from the SAME computation. In that shape \"the two agree\" is a THEOREM, not a measurement — and a theorem dressed as an assertion always passes and always looks like diligence. buildSyntheticTier is a pure function of one input, so any check comparing two derivations of that input can only be reddened by mutating CODE. That is why every attempt needed a lever the code could move and the data could not.",
 	"retiredAssertionsNote": "Assertions a later phase legitimately reversed or re-stated, kept here so the residue accounting stays honest in BOTH directions. A retired assertion is not deleted and its red evidence is not lost — but it also does NOT transfer to whatever replaced it. An assertion carrying a predecessor receipt is how the genuine-gap residue was created in the first place, so each entry names the successors and the levers that proved them afresh.",
 	"retiredAssertions": [
+		{
+			"label": "G4.6a ACCEPTANCE CONTROL: the same data mutation is SILENT under the predecessor form and FIRES under the edge-derived form",
+			"retiredAtPhase": "4.6a (third independent review — DELETED, not rewritten)",
+			"status": "genuineGap",
+			"reason": "THE FOURTH VACUOUS CHECK OF THE PHASE, and it was inside the fix for the third. Its \"predecessor form\" compared controlPredecessorBranchCount > 0 against controlPredecessorEmittedCount === 0, where the emitted count was the LENGTH of the very array the branch count filtered against — so an empty array forces the branch count to zero and the conjunction is UNSATISFIABLE. It reported SILENT because it could not report anything else. It was also a STRAW MODEL: it reimplemented a predicate the retired version never used, so it never ran the code it claimed to discriminate against. The control was vacuous four times; a deleted check that asserts nothing is HONEST, a fifth attempt is not. Recorded here rather than allowed to disappear from the shipped set unremarked — an assertion that quietly leaves the record reads as closure.",
+			"successor": "NONE, deliberately. The DATA LEVER it was written to certify stands on its own and was verified by the third review firing it in BOTH directions against a mutated forge input."
+		},
 		{
 			"label": "G4.6a the merged targets render their children directly — no reached target that has children renders empty",
 			"retiredAtPhase": "4.6a (independent review remediation)",
@@ -1268,7 +1286,7 @@
 			"suiteFile": "test/test-pesc260805SyntheticTier.js",
 			"shippedRunLog": "mp_r2_shipped_synthetic.log",
 			"counts": {
-				"proven": 67,
+				"proven": 66,
 				"recordsGap": 0,
 				"genuineGap": 40
 			},
@@ -2158,7 +2176,10 @@
 				},
 				{
 					"label": "G4.6a ACCEPTANCE 1: every merged definition with child declarations in either branch renders them directly — none renders empty",
-					"status": "proven",
+					"status": "genuineGap",
+					"species": "expectationLeverOnly",
+					"forcedClassificationReason": "Its sole receipt is an EXPECTATION PERTURBATION — precisely the defect named in its own predecessor's retirement note, which is why that predecessor was retired. The real DATA lever for this claim exists and was verified by the third review firing it in both directions, but it lives three rows away under a different label (\"G4.6a ACCEPTANCE RED, BY DATA\"). Evidence does not transfer between labels just because the claims are related; that is the inherited-receipt pattern with extra steps. Demoted rather than re-levered: the closing order was no fifth gate.",
+					"automaticStatusWouldHaveBeen": "proven",
 					"redEvidence": [
 						{
 							"probeLog": "mp_r2redProbeA_perturbedExpected.log",
@@ -2166,12 +2187,6 @@
 							"shippedConfig": false
 						}
 					]
-				},
-				{
-					"label": "G4.6a ACCEPTANCE CONTROL: the same data mutation is SILENT under the predecessor form and FIRES under the edge-derived form",
-					"status": "genuineGap",
-					"species": "selfDemonstratingRedCheck",
-					"note": "This assertion's content IS a red demonstration — it asserts a lever produced a detectable failure. Observing IT fail requires breaking the detector it guards, which no probe has done. Counted in bucket (b) deliberately rather than waved through."
 				},
 				{
 					"label": "G4.6a ACCEPTANCE RED, BY DATA: the production refusal fires when the input's HAS_PROPERTY edges and its parentId containment disagree",
@@ -2615,8 +2630,8 @@
 	},
 	"conjunctionEvidenceMeasurement": {
 		"measuredBy": "test/probes/mp_auditConjunctiveAssertions.js",
-		"shippedAssertions": 234,
-		"carryingATopLevelConjunction": 79,
+		"shippedAssertions": 233,
+		"carryingATopLevelConjunction": 78,
 		"provenWithThreeOrMoreConjuncts": 11,
 		"labelsThatFailedToJoinTheLedger": 0,
 		"unjoinedLabels": [],

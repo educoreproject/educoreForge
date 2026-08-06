@@ -200,10 +200,9 @@ G4.6a — the child union (R-P4-3 / R-P4-10 / R-P4-11 / R-P4-12)
   ok    G4.6a RESIDUE RED: an absent residue endpoint produces an EXACT shortfall and never a dangling edge
 
 LEDGER — red evidence for every shipped assertion
-        ledger: 106 shipped assertions; proven-red 67, records-gap 0, GENUINE GAP 40
-        STALE ledger entries (assertion removed or renamed): G4.6a ACCEPTANCE CONTROL: the same data mutation is SILENT under the predecessor form and FIRES under the edge-derived form
+        ledger: 106 shipped assertions; proven-red 66, records-gap 0, GENUINE GAP 40
   ok    LEDGER every shipped assertion has a red-evidence entry
-  FAIL  LEDGER carries no stale entries for assertions this suite no longer runs
-  FAIL  LEDGER the entry count matches the assertions actually run
+  ok    LEDGER carries no stale entries for assertions this suite no longer runs
+  ok    LEDGER the entry count matches the assertions actually run
 
-104 passed, 2 failed
+106 passed, 0 failed
