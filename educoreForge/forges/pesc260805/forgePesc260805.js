@@ -42,6 +42,7 @@ const { pipeRunner, taskListPlus } = new require('qtools-asynchronous-pipe-plus'
 
 const parserFactory = require('./lib/parser');
 const derivedTierFactory = require('./lib/derivedTier');
+const syntheticTierFactory = require('./lib/syntheticTier');
 
 const CORE_LIB = path.join(__dirname, '..', '..', 'lib');
 const buildSearchTextFactory = require(path.join(CORE_LIB, 'search-text', 'build-search-text'));
@@ -84,6 +85,7 @@ const moduleFunction =
 		const { buildSearchText } = buildSearchTextFactory();
 		const { parsePescCorpus } = parserFactory();
 		const { buildDerivedTier, applyDerivedTier } = derivedTierFactory();
+		const { buildSyntheticTier } = syntheticTierFactory();
 
 		// =====================================================================
 		// buildSourceTierGraph — PURE, deterministic: parsed corpus -> { nodes, edges, stats }.
@@ -655,10 +657,22 @@ const moduleFunction =
 						edges: sourceGraph.edges,
 						derivedOutput,
 					});
-					graph = {
+					// SYNTHETIC (Phase 4) reads the combined source+derived+meta graph and ADDS ONLY —
+					// it annotates nothing and mutates nothing, so the derived tier it was handed is the
+					// derived tier that ships, and Gate 3's regeneration proof is untouched by construction.
+					const syntheticOutput = buildSyntheticTier({
 						nodes: combinedGraph.nodes,
 						edges: combinedGraph.edges,
-						stats: { ...sourceGraph.stats, derived: derivedOutput.stats },
+					});
+					graph = {
+						nodes: combinedGraph.nodes.concat(syntheticOutput.nodes),
+						edges: combinedGraph.edges.concat(syntheticOutput.edges),
+						stats: {
+							...sourceGraph.stats,
+							derived: derivedOutput.stats,
+							synthetic: syntheticOutput.stats,
+						},
+						syntheticMergeReport: syntheticOutput.mergeReport,
 					};
 				} catch (thrownError) {
 					buildError = thrownError.message;
@@ -682,7 +696,21 @@ const moduleFunction =
 						`+${graph.stats.derived.ambiguousPendingSynthesisRecorded} ambiguous recorded, ` +
 						`+${graph.stats.derived.unresolvedNamespaceReferencesRecorded} absent-namespace recorded), ` +
 						`${graph.stats.derived.sameDefinitionEdges} SAME_DEFINITION chain edges, ` +
-						`${graph.stats.derived.reachableFromLatestRoot}/${graph.stats.derived.definitionsTotal} reachable from latest roots; ` +
+						`${graph.stats.derived.reachableFromLatestRoot}/${graph.stats.derived.definitionsTotal} reachable from latest roots)`,
+				);
+				xLog.status(
+					`[forge-pesc260805] synthetic tier: S-1 merged ${graph.stats.synthetic.mergedDefinitions} definitions ` +
+						`(${graph.stats.synthetic.collegeTranscriptOnlyDefinitions} college-only + ` +
+						`${graph.stats.synthetic.testScoreOnlyDefinitions} test-score-only + ` +
+						`${graph.stats.synthetic.sharedDefinitions} shared, of which ` +
+						`${graph.stats.synthetic.conflictingSharedDefinitions} conflict and ` +
+						`${graph.stats.synthetic.lostChildElements} child elements are deliberately lost), ` +
+						`${graph.stats.synthetic.mergedFromEdges} MERGED_FROM, ` +
+						`${graph.stats.synthetic.heldReferencesResolved} held references resolved; ` +
+						`S-2 alias ${graph.stats.synthetic.aliasNamespace} served by ${graph.stats.synthetic.aliasServingNamespace} ` +
+						`(${graph.stats.synthetic.aliasReferencesResolved} references over ` +
+						`${graph.stats.synthetic.aliasDistinctLocalNames} distinct names, ` +
+						`${graph.stats.synthetic.aliasImportsResolved} import); ` +
 						`total ${graph.nodes.length} nodes, ${graph.edges.length} edges`,
 				);
 				next('', { ...args, graph });
@@ -722,6 +750,10 @@ const moduleFunction =
 						sourceUrl: '',
 					},
 					stats: args.graph.stats,
+					// the S-1 merge report rides out with the graph: the 8 lost child elements, the
+					// conflict table, and the branch identification are the DEFENCE of a judgment, and a
+					// judgment whose defence is only in a log has not really been recorded.
+					syntheticMergeReport: args.graph.syntheticMergeReport,
 					embedCallCount: args.embedCallCount,
 					standardKey: STANDARD_KEY,
 					stableUriPropertyName: STABLE_URI_PROPERTY_NAME,

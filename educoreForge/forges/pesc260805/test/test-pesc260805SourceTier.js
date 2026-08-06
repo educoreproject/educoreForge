@@ -182,8 +182,16 @@ taskList.push((args, next) => {
 taskList.push((args, next) => {
 	console.log('\nG-C — contested-namespace discriminator');
 	const definitionNodes = namedDefinitionNodes(args.runOne);
+	// PHASE 4 SCOPING, and it is load-bearing rather than cosmetic. D-1's discriminator is a rule
+	// about what the FILES say — two artifacts, one namespace, so each declaration is keyed by its
+	// declarer. Phase 4's merged definitions live in the same namespace and deliberately carry the
+	// CLEAN key (that is what "the contest was decided" looks like in an identity), so an unscoped
+	// filter here swept them in and the gate crashed reading a discriminator they are right not to
+	// have. The subject of this gate is the SOURCE tier; say so.
 	const contestedDefinitions = definitionNodes.filter(
-		(oneNode) => oneNode.stableId.indexOf(`${CONTESTED_NAMESPACE}#`) === 0,
+		(oneNode) =>
+			oneNode.properties.pescTier === 'source' &&
+			oneNode.stableId.indexOf(`${CONTESTED_NAMESPACE}#`) === 0,
 	);
 
 	// RED (harness-only): strip the @sha12 discriminator and count the keys that collide.
@@ -409,7 +417,14 @@ taskList.push((args, next) => {
 			check('INTEGRATION source tier is EXACTLY 41,676 nodes', nodeCountByTier.source === 41676);
 			check('INTEGRATION derived tier is EXACTLY 63 nodes (the namespaces)', nodeCountByTier.derived === 63);
 			check('INTEGRATION meta tier is EXACTLY 1 node (the standard root, R-P2-1)', nodeCountByTier.meta === 1);
-			check('INTEGRATION synthetic tier is EMPTY until Phase 4 emits it', nodeCountByTier.synthetic === 0);
+			// RESTATED AT PHASE 4. This read "synthetic tier is EMPTY until Phase 4 emits it", which
+			// was a statement about a schedule, not an invariant — and Phase 4 has now emitted it.
+			// The claim that still matters at this altitude is that the tier is POPULATED and its
+			// size is pinned: 109 merged AcademicRecord v1.6.0 definitions (S-1) + 1 alias namespace
+			// for the absent CoreMain v1.6.0 (S-2). A drift in either direction fails here as well as
+			// in the Phase 4 suite, because a census that only one suite can see is a census one
+			// edit away from being unwatched.
+			check('INTEGRATION synthetic tier is EXACTLY 110 nodes (109 S-1 merged definitions + 1 S-2 alias namespace)', nodeCountByTier.synthetic === 110);
 			check('INTEGRATION the four tiers account for every emitted node', nodeCountByTier.source + nodeCountByTier.derived + nodeCountByTier.meta + nodeCountByTier.synthetic === forged.nodes.length);
 
 			// engine shaping — the exact translation forger.js applies before replay.

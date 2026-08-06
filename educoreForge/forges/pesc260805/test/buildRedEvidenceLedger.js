@@ -118,11 +118,74 @@ const EVIDENCE_SOURCES = [
 			'EXPECTATION PERTURBATION (round 3): inverted the ApplicationFeeAmountType definitionName comparison and the cross-family expected count, after both expressions were rewritten.',
 		shippedConfig: false,
 	},
+	// ---- PHASE 4 (the synthetic tier) --------------------------------------------------------
+	{
+		logName: 'p4_probeExpect_synthetic.log',
+		suite: 'synthetic',
+		lever:
+			"EXPECTATION PERTURBATION: every digit run inside the Phase 4 suite's single EXPECTED block incremented by one — which also corrupts the two collision-member sha12 prefixes, the prototype conflict table and the two alias namespace URNs — plus one entry dropped from the expected lost-element list. Perturbs ONLY the expectations; the production tier is untouched, and the RED levers read which member is which from production so they still run.",
+		shippedConfig: false,
+	},
+	{
+		logName: 'p4_probeWinner_synthetic.log',
+		suite: 'synthetic',
+		lever:
+			"PRODUCTION MUTATION, SHIPPED CONFIGURATION: R-P3-1's conflict winner FLIPPED — the merged definition takes its content from the test-score member instead of the college-transcript member. One expression in lib/syntheticTier.js, nothing else touched.",
+		shippedConfig: true,
+	},
+	{
+		logName: 'p4_probeTier_synthetic.log',
+		suite: 'synthetic',
+		lever:
+			"PRODUCTION MUTATION, SHIPPED CONFIGURATION: the 109 merged definition nodes stamped pescTier:'source' instead of 'synthetic' — the exact leak G4-F forbids, since the round-trip emitter reads that predicate and would re-emit a fabricated definition into a PESC file.",
+		shippedConfig: true,
+	},
+	{
+		logName: 'p4_probeAlias_synthetic.log',
+		suite: 'synthetic',
+		lever:
+			"PRODUCTION MUTATION, SHIPPED CONFIGURATION: S-2's serving namespace repointed from CoreMain v1.8.0 to v1.19.1 — a substitution that still resolves all 129 names but is NOT the one that was ruled on. This probe also exposed a vacuity: three G4-E assertions compared the alias against the module's OWN constant and moved with it, and were rewritten against literals.",
+		shippedConfig: true,
+	},
+	{
+		logName: 'p4_probeContested_derived.log',
+		suite: 'derived',
+		lever:
+			'EXPECTATION PERTURBATION (Phase 4): the RESTATED G3-D constants inverted — computed-resolution count expected at 1 rather than 0, the decided-resolution total moved off 201, the 195/6 split moved off, and the planted-edge count moved off 1.',
+		shippedConfig: false,
+	},
+	{
+		logName: 'p4_probeSyntheticCensus_source.log',
+		suite: 'source',
+		lever:
+			"EXPECTATION PERTURBATION (Phase 4): the restated synthetic-tier census constant moved off 110, so the source suite's view of Phase 4's emission is wrong by one node.",
+		shippedConfig: false,
+	},
+	{
+		logName: 'p4_ledgerGate_red_synthetic.log',
+		suite: 'synthetic',
+		lever:
+			"LEDGER GATE SELF-DEMONSTRATION (Phase 4): the new suite's ledger gate ran with its own three assertions absent from the ledger, so an assertion genuinely lacked red evidence and the gate caught it. As in the derived and source twins, the gate adds its own labels to the shipped set BEFORE comparing, so it cannot exempt itself.",
+		shippedConfig: true,
+		optional: true,
+	},
+	{
+		logName: 'p4_ledgerStale_red_synthetic.log',
+		suite: 'synthetic',
+		lever:
+			'LEDGER STALE-ENTRY PROBE (Phase 4): a fabricated entry for an assertion this suite does not run was added to the ledger; the stale-entry check caught it. Needed separately because the self-demonstration run above leaves no stale entries and that assertion stays green there.',
+		shippedConfig: true,
+		optional: true,
+	},
 ];
 
+// Phase 4 moved the shipped runs forward: the source and derived label sets CHANGED (G3-D restated
+// around the synthetic resolutions; the source tier census restated off "synthetic is empty"), so
+// a ledger built against the Phase 3 shipped logs would carry stale entries and miss new ones.
 const SHIPPED_RUNS = {
-	derived: 'vr_ledgerGate_red_derived.log',
-	source: 'vr_ledgerGate_red_source.log',
+	derived: 'p4_shipped_derived.log',
+	source: 'p4_shipped_source.log',
+	synthetic: 'p4_ledgerGate_red_synthetic.log',
 };
 
 const readLabels = (logName, kinds, allowMissing) => {
@@ -180,6 +243,18 @@ const buildSuiteLedger = (suiteName) => {
 					'This assertion\'s content IS a red demonstration — it asserts a lever produced a detectable failure. Observing IT fail requires breaking the detector it guards, which no probe has done. Counted in bucket (b) deliberately rather than waved through.',
 			};
 		}
+		if (suiteName === 'synthetic') {
+			// Phase 4 is the first suite built WITH the ledger discipline in force, so an unevidenced
+			// assertion here has no predecessor to inherit doubt from and no lost receipts to plead:
+			// it is simply a claim nobody has watched fail. Named as such.
+			return {
+				label: oneLabel,
+				status: 'genuineGap',
+				species: 'phase4Unevidenced',
+				note:
+					'No retained log records this assertion FAILING. Phase 4 pulled six levers (expectation perturbation, winner flip, tier leak, alias repoint, and the two restatement probes in the sibling suites); this assertion went red under none of them. It is a genuine gap, counted rather than waved through, and Phase 6 owns closing it.',
+			};
+		}
 		if (suiteName === 'source') {
 			return {
 				label: oneLabel,
@@ -203,6 +278,7 @@ const buildSuiteLedger = (suiteName) => {
 
 const derivedAssertions = buildSuiteLedger('derived');
 const sourceAssertions = buildSuiteLedger('source');
+const syntheticAssertions = buildSuiteLedger('synthetic');
 
 const tally = (assertions) => {
 	const counts = { proven: 0, recordsGap: 0, genuineGap: 0 };
@@ -235,6 +311,12 @@ const ledger = {
 			counts: tally(sourceAssertions),
 			assertions: sourceAssertions,
 		},
+		synthetic: {
+			suiteFile: 'test/test-pesc260805SyntheticTier.js',
+			shippedRunLog: SHIPPED_RUNS.synthetic,
+			counts: tally(syntheticAssertions),
+			assertions: syntheticAssertions,
+		},
 	},
 };
 
@@ -244,6 +326,7 @@ fs.writeFileSync(outputPath, `${JSON.stringify(ledger, null, '\t')}\n`);
 console.log(`wrote ${outputPath}`);
 console.log(`derived: ${JSON.stringify(ledger.suites.derived.counts)}  (total ${derivedAssertions.length})`);
 console.log(`source : ${JSON.stringify(ledger.suites.source.counts)}  (total ${sourceAssertions.length})`);
+console.log(`synth  : ${JSON.stringify(ledger.suites.synthetic.counts)}  (total ${syntheticAssertions.length})`);
 console.log('\ngenuineGap breakdown (derived):');
 const bySpecies = {};
 derivedAssertions

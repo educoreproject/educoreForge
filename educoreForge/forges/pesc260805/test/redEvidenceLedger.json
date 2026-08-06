@@ -9,11 +9,11 @@
 	"suites": {
 		"derived": {
 			"suiteFile": "test/test-pesc260805DerivedTier.js",
-			"shippedRunLog": "vr_ledgerGate_red_derived.log",
+			"shippedRunLog": "p4_shipped_derived.log",
 			"counts": {
-				"proven": 35,
+				"proven": 38,
 				"recordsGap": 0,
-				"genuineGap": 34
+				"genuineGap": 33
 			},
 			"assertions": [
 				{
@@ -404,12 +404,12 @@
 					"note": "The suite header CLAIMS \"Every gate demonstrates RED first\", but its author is the agent whose G3-F gate passed for the wrong reason and whose G3-D/G3-F RED levers were broken. That author's unwitnessed claim is not admissible evidence, so this is triaged as a GENUINE gap rather than a records gap. Several of these DO have a \"RED (demonstrated)\" evidence line in vr_baseline_derived.log showing the LEVER fired — that is partial, and is not the assertion being observed to fail."
 				},
 				{
-					"label": "G3-D RED-1: the zero-edges checker demonstrably detects a planted edge",
+					"label": "G3-D RED-1: the no-computed-resolution checker demonstrably detects a planted edge",
 					"status": "proven",
 					"redEvidence": [
 						{
-							"probeLog": "vr_redProbe_derived.log",
-							"lever": "EXPECTATION PERTURBATION (round 1): inverted the ClassRankType out-degree and D-4 constants, the G3-D RED-1 planted-edge count, and the G3-F control/shape-attribution conditions.",
+							"probeLog": "p4_probeContested_derived.log",
+							"lever": "EXPECTATION PERTURBATION (Phase 4): the RESTATED G3-D constants inverted — computed-resolution count expected at 1 rather than 0, the decided-resolution total moved off 201, the 195/6 split moved off, and the planted-edge count moved off 1.",
 							"shippedConfig": false
 						}
 					]
@@ -442,10 +442,15 @@
 					]
 				},
 				{
-					"label": "G3-D ZERO RESOLVES_TO edges target a contested-namespace definition",
-					"status": "genuineGap",
-					"species": "predecessorClaimNotAdmissible",
-					"note": "The suite header CLAIMS \"Every gate demonstrates RED first\", but its author is the agent whose G3-F gate passed for the wrong reason and whose G3-D/G3-F RED levers were broken. That author's unwitnessed claim is not admissible evidence, so this is triaged as a GENUINE gap rather than a records gap. Several of these DO have a \"RED (demonstrated)\" evidence line in vr_baseline_derived.log showing the LEVER fired — that is partial, and is not the assertion being observed to fail."
+					"label": "G3-D ZERO references into the contested namespace are resolved by COMPUTATION",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "p4_probeContested_derived.log",
+							"lever": "EXPECTATION PERTURBATION (Phase 4): the RESTATED G3-D constants inverted — computed-resolution count expected at 1 rather than 0, the decided-resolution total moved off 201, the 195/6 split moved off, and the planted-edge count moved off 1.",
+							"shippedConfig": false
+						}
+					]
 				},
 				{
 					"label": "G3-D ambiguous entries exist and all name the contested namespace",
@@ -464,6 +469,28 @@
 					"status": "genuineGap",
 					"species": "predecessorClaimNotAdmissible",
 					"note": "The suite header CLAIMS \"Every gate demonstrates RED first\", but its author is the agent whose G3-F gate passed for the wrong reason and whose G3-D/G3-F RED levers were broken. That author's unwitnessed claim is not admissible evidence, so this is triaged as a GENUINE gap rather than a records gap. Several of these DO have a \"RED (demonstrated)\" evidence line in vr_baseline_derived.log showing the LEVER fired — that is partial, and is not the assertion being observed to fail."
+				},
+				{
+					"label": "G3-D every resolution into the contested namespace is synthetic and rule-tagged, and they number exactly the 201 held references",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "p4_probeContested_derived.log",
+							"lever": "EXPECTATION PERTURBATION (Phase 4): the RESTATED G3-D constants inverted — computed-resolution count expected at 1 rather than 0, the decided-resolution total moved off 201, the 195/6 split moved off, and the planted-edge count moved off 1.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "G3-D the 201 decided resolutions split as 195 type-space references + 6 import declarations",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "p4_probeContested_derived.log",
+							"lever": "EXPECTATION PERTURBATION (Phase 4): the RESTATED G3-D constants inverted — computed-resolution count expected at 1 rather than 0, the decided-resolution total moved off 201, the 195/6 split moved off, and the planted-edge count moved off 1.",
+							"shippedConfig": false
+						}
+					]
 				},
 				{
 					"label": "G3-D the consumer set is EXACTLY the six expected roots",
@@ -598,6 +625,11 @@
 							"probeLog": "vr_ledgerStale_red_derived.log",
 							"lever": "LEDGER STALE-ENTRY PROBE (round 4): a fabricated entry for an assertion this suite does not run was added to the ledger; the stale-entry check caught it.",
 							"shippedConfig": true
+						},
+						{
+							"probeLog": "p4_probeContested_derived.log",
+							"lever": "EXPECTATION PERTURBATION (Phase 4): the RESTATED G3-D constants inverted — computed-resolution count expected at 1 rather than 0, the decided-resolution total moved off 201, the 195/6 split moved off, and the planted-edge count moved off 1.",
+							"shippedConfig": false
 						}
 					]
 				},
@@ -609,6 +641,11 @@
 							"probeLog": "vr_ledgerGate_red_derived.log",
 							"lever": "LEDGER GATE SELF-DEMONSTRATION (round 4): the gate ran with its own three assertions absent from the ledger, so an assertion genuinely lacked red evidence and the gate caught it. Its own first draft had EXEMPTED itself by computing the label set before its own checks ran; that vacuity was found and fixed, and this log is the run after the fix.",
 							"shippedConfig": true
+						},
+						{
+							"probeLog": "p4_probeContested_derived.log",
+							"lever": "EXPECTATION PERTURBATION (Phase 4): the RESTATED G3-D constants inverted — computed-resolution count expected at 1 rather than 0, the decided-resolution total moved off 201, the 195/6 split moved off, and the planted-edge count moved off 1.",
+							"shippedConfig": false
 						}
 					]
 				},
@@ -625,6 +662,11 @@
 							"probeLog": "vr_ledgerStale_red_derived.log",
 							"lever": "LEDGER STALE-ENTRY PROBE (round 4): a fabricated entry for an assertion this suite does not run was added to the ledger; the stale-entry check caught it.",
 							"shippedConfig": true
+						},
+						{
+							"probeLog": "p4_probeContested_derived.log",
+							"lever": "EXPECTATION PERTURBATION (Phase 4): the RESTATED G3-D constants inverted — computed-resolution count expected at 1 rather than 0, the decided-resolution total moved off 201, the 195/6 split moved off, and the planted-edge count moved off 1.",
+							"shippedConfig": false
 						}
 					]
 				}
@@ -632,7 +674,7 @@
 		},
 		"source": {
 			"suiteFile": "test/test-pesc260805SourceTier.js",
-			"shippedRunLog": "vr_ledgerGate_red_source.log",
+			"shippedRunLog": "p4_shipped_source.log",
 			"counts": {
 				"proven": 9,
 				"recordsGap": 41,
@@ -919,12 +961,12 @@
 					"note": "UNVERIFIABLE BUT BELIEVED. DEVLOG records \"PHASE 2: CLOSED — 47/47 gates, all RED-first\", and Phase 2 was independently reviewed and committed green at b02168b. The red receipts for that run were not retained. Do NOT re-run; hand to Phase 6."
 				},
 				{
-					"label": "INTEGRATION synthetic tier is EMPTY until Phase 4 emits it",
+					"label": "INTEGRATION synthetic tier is EXACTLY 110 nodes (109 S-1 merged definitions + 1 S-2 alias namespace)",
 					"status": "proven",
 					"redEvidence": [
 						{
-							"probeLog": "vr_redProbe_source.log",
-							"lever": "EXPECTATION PERTURBATION (round 1): dropped 'meta' from PESC_TIER_VALUES and perturbed the source/derived/synthetic count constants.",
+							"probeLog": "p4_probeSyntheticCensus_source.log",
+							"lever": "EXPECTATION PERTURBATION (Phase 4): the restated synthetic-tier census constant moved off 110, so the source suite's view of Phase 4's emission is wrong by one node.",
 							"shippedConfig": false
 						}
 					]
@@ -948,6 +990,11 @@
 							"probeLog": "vr_ledgerStale_red_source.log",
 							"lever": "LEDGER STALE-ENTRY PROBE (round 4): as the derived twin — a fabricated ledger entry for an assertion this suite does not run was caught.",
 							"shippedConfig": true
+						},
+						{
+							"probeLog": "p4_probeSyntheticCensus_source.log",
+							"lever": "EXPECTATION PERTURBATION (Phase 4): the restated synthetic-tier census constant moved off 110, so the source suite's view of Phase 4's emission is wrong by one node.",
+							"shippedConfig": false
 						}
 					]
 				},
@@ -959,6 +1006,11 @@
 							"probeLog": "vr_ledgerGate_red_source.log",
 							"lever": "LEDGER GATE SELF-DEMONSTRATION (round 4): as the derived twin — the gate ran with its own three assertions unledgered and caught them.",
 							"shippedConfig": true
+						},
+						{
+							"probeLog": "p4_probeSyntheticCensus_source.log",
+							"lever": "EXPECTATION PERTURBATION (Phase 4): the restated synthetic-tier census constant moved off 110, so the source suite's view of Phase 4's emission is wrong by one node.",
+							"shippedConfig": false
 						}
 					]
 				},
@@ -974,6 +1026,639 @@
 						{
 							"probeLog": "vr_ledgerStale_red_source.log",
 							"lever": "LEDGER STALE-ENTRY PROBE (round 4): as the derived twin — a fabricated ledger entry for an assertion this suite does not run was caught.",
+							"shippedConfig": true
+						}
+					]
+				}
+			]
+		},
+		"synthetic": {
+			"suiteFile": "test/test-pesc260805SyntheticTier.js",
+			"shippedRunLog": "p4_ledgerGate_red_synthetic.log",
+			"counts": {
+				"proven": 45,
+				"recordsGap": 0,
+				"genuineGap": 12
+			},
+			"assertions": [
+				{
+					"label": "DET RED: whole-graph comparator demonstrably able to go red on synthetic content",
+					"status": "genuineGap",
+					"species": "selfDemonstratingRedCheck",
+					"note": "This assertion's content IS a red demonstration — it asserts a lever produced a detectable failure. Observing IT fail requires breaking the detector it guards, which no probe has done. Counted in bucket (b) deliberately rather than waved through."
+				},
+				{
+					"label": "DET two full runs byte-identical under canonical serialization",
+					"status": "genuineGap",
+					"species": "phase4Unevidenced",
+					"note": "No retained log records this assertion FAILING. Phase 4 pulled six levers (expectation perturbation, winner flip, tier leak, alias repoint, and the two restatement probes in the sibling suites); this assertion went red under none of them. It is a genuine gap, counted rather than waved through, and Phase 6 owns closing it."
+				},
+				{
+					"label": "G4-A RED P1: perturbing ONE element declaration in the losing member breaks reproduction",
+					"status": "genuineGap",
+					"species": "selfDemonstratingRedCheck",
+					"note": "This assertion's content IS a red demonstration — it asserts a lever produced a detectable failure. Observing IT fail requires breaking the detector it guards, which no probe has done. Counted in bucket (b) deliberately rather than waved through."
+				},
+				{
+					"label": "G4-A RED P2: perturbing ONE definition name leaves a consumer unserved and the tier REFUSES",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "p4_probeTier_synthetic.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION: the 109 merged definition nodes stamped pescTier:'source' instead of 'synthetic' — the exact leak G4-F forbids, since the round-trip emitter reads that predicate and would re-emit a fabricated definition into a PESC file.",
+							"shippedConfig": true
+						}
+					]
+				},
+				{
+					"label": "G4-A re-run over the preserved collision members completed without refusal",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "p4_probeTier_synthetic.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION: the 109 merged definition nodes stamped pescTier:'source' instead of 'synthetic' — the exact leak G4-F forbids, since the round-trip emitter reads that predicate and would re-emit a fabricated definition into a PESC file.",
+							"shippedConfig": true
+						}
+					]
+				},
+				{
+					"label": "G4-A the merged node carries no content of its own, and its contentFromStableId still reaches the changed source element",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "p4_probeWinner_synthetic.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION: R-P3-1's conflict winner FLIPPED — the merged definition takes its content from the test-score member instead of the college-transcript member. One expression in lib/syntheticTier.js, nothing else touched.",
+							"shippedConfig": true
+						},
+						{
+							"probeLog": "p4_probeTier_synthetic.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION: the 109 merged definition nodes stamped pescTier:'source' instead of 'synthetic' — the exact leak G4-F forbids, since the round-trip emitter reads that predicate and would re-emit a fabricated definition into a PESC file.",
+							"shippedConfig": true
+						}
+					]
+				},
+				{
+					"label": "G4-A the re-run reproduces the synthetic nodes and edges EXACTLY",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "p4_probeTier_synthetic.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION: the 109 merged definition nodes stamped pescTier:'source' instead of 'synthetic' — the exact leak G4-F forbids, since the round-trip emitter reads that predicate and would re-emit a fabricated definition into a PESC file.",
+							"shippedConfig": true
+						}
+					]
+				},
+				{
+					"label": "G4-A the tier REFUSES to synthesize from a graph that already carries synthetic content",
+					"status": "genuineGap",
+					"species": "phase4Unevidenced",
+					"note": "No retained log records this assertion FAILING. Phase 4 pulled six levers (expectation perturbation, winner flip, tier leak, alias repoint, and the two restatement probes in the sibling suites); this assertion went red under none of them. It is a genuine gap, counted rather than waved through, and Phase 6 owns closing it."
+				},
+				{
+					"label": "G4-B 14 of the 31 shared names genuinely conflict",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "p4_probeExpect_synthetic.log",
+							"lever": "EXPECTATION PERTURBATION: every digit run inside the Phase 4 suite's single EXPECTED block incremented by one — which also corrupts the two collision-member sha12 prefixes, the prototype conflict table and the two alias namespace URNs — plus one entry dropped from the expected lost-element list. Perturbs ONLY the expectations; the production tier is untouched, and the RED levers read which member is which from production so they still run.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "G4-B 31 definitions are declared by BOTH members",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "p4_probeExpect_synthetic.log",
+							"lever": "EXPECTATION PERTURBATION: every digit run inside the Phase 4 suite's single EXPECTED block incremented by one — which also corrupts the two collision-member sha12 prefixes, the prototype conflict table and the two alias namespace URNs — plus one entry dropped from the expected lost-element list. Perturbs ONLY the expectations; the production tier is untouched, and the RED levers read which member is which from production so they still run.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "G4-B 36 definitions are unique to the test-score member",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "p4_probeExpect_synthetic.log",
+							"lever": "EXPECTATION PERTURBATION: every digit run inside the Phase 4 suite's single EXPECTED block incremented by one — which also corrupts the two collision-member sha12 prefixes, the prototype conflict table and the two alias namespace URNs — plus one entry dropped from the expected lost-element list. Perturbs ONLY the expectations; the production tier is untouched, and the RED levers read which member is which from production so they still run.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "G4-B 42 definitions are unique to the college-transcript member",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "p4_probeExpect_synthetic.log",
+							"lever": "EXPECTATION PERTURBATION: every digit run inside the Phase 4 suite's single EXPECTED block incremented by one — which also corrupts the two collision-member sha12 prefixes, the prototype conflict table and the two alias namespace URNs — plus one entry dropped from the expected lost-element list. Perturbs ONLY the expectations; the production tier is untouched, and the RED levers read which member is which from production so they still run.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "G4-B every conflicting merged definition names the superseded test-score definition",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "p4_probeExpect_synthetic.log",
+							"lever": "EXPECTATION PERTURBATION: every digit run inside the Phase 4 suite's single EXPECTED block incremented by one — which also corrupts the two collision-member sha12 prefixes, the prototype conflict table and the two alias namespace URNs — plus one entry dropped from the expected lost-element list. Perturbs ONLY the expectations; the production tier is untouched, and the RED levers read which member is which from production so they still run.",
+							"shippedConfig": false
+						},
+						{
+							"probeLog": "p4_probeTier_synthetic.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION: the 109 merged definition nodes stamped pescTier:'source' instead of 'synthetic' — the exact leak G4-F forbids, since the round-trip emitter reads that predicate and would re-emit a fabricated definition into a PESC file.",
+							"shippedConfig": true
+						}
+					]
+				},
+				{
+					"label": "G4-B every conflicting merged definition takes its content from the college-transcript member",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "p4_probeExpect_synthetic.log",
+							"lever": "EXPECTATION PERTURBATION: every digit run inside the Phase 4 suite's single EXPECTED block incremented by one — which also corrupts the two collision-member sha12 prefixes, the prototype conflict table and the two alias namespace URNs — plus one entry dropped from the expected lost-element list. Perturbs ONLY the expectations; the production tier is untouched, and the RED levers read which member is which from production so they still run.",
+							"shippedConfig": false
+						},
+						{
+							"probeLog": "p4_probeWinner_synthetic.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION: R-P3-1's conflict winner FLIPPED — the merged definition takes its content from the test-score member instead of the college-transcript member. One expression in lib/syntheticTier.js, nothing else touched.",
+							"shippedConfig": true
+						},
+						{
+							"probeLog": "p4_probeTier_synthetic.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION: the 109 merged definition nodes stamped pescTier:'source' instead of 'synthetic' — the exact leak G4-F forbids, since the round-trip emitter reads that predicate and would re-emit a fabricated definition into a PESC file.",
+							"shippedConfig": true
+						}
+					]
+				},
+				{
+					"label": "G4-B every merged definition carries MERGED_FROM provenance to its source definitions",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "p4_probeExpect_synthetic.log",
+							"lever": "EXPECTATION PERTURBATION: every digit run inside the Phase 4 suite's single EXPECTED block incremented by one — which also corrupts the two collision-member sha12 prefixes, the prototype conflict table and the two alias namespace URNs — plus one entry dropped from the expected lost-element list. Perturbs ONLY the expectations; the production tier is untouched, and the RED levers read which member is which from production so they still run.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "G4-B the 31 shared names each carry TWO MERGED_FROM edges (kept and superseded)",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "p4_probeExpect_synthetic.log",
+							"lever": "EXPECTATION PERTURBATION: every digit run inside the Phase 4 suite's single EXPECTED block incremented by one — which also corrupts the two collision-member sha12 prefixes, the prototype conflict table and the two alias namespace URNs — plus one entry dropped from the expected lost-element list. Perturbs ONLY the expectations; the production tier is untouched, and the RED levers read which member is which from production so they still run.",
+							"shippedConfig": false
+						},
+						{
+							"probeLog": "p4_probeTier_synthetic.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION: the 109 merged definition nodes stamped pescTier:'source' instead of 'synthetic' — the exact leak G4-F forbids, since the round-trip emitter reads that predicate and would re-emit a fabricated definition into a PESC file.",
+							"shippedConfig": true
+						}
+					]
+				},
+				{
+					"label": "G4-B the Node signature port reproduces the prototype conflict table exactly (14 types, child counts)",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "p4_probeExpect_synthetic.log",
+							"lever": "EXPECTATION PERTURBATION: every digit run inside the Phase 4 suite's single EXPECTED block incremented by one — which also corrupts the two collision-member sha12 prefixes, the prototype conflict table and the two alias namespace URNs — plus one entry dropped from the expected lost-element list. Perturbs ONLY the expectations; the production tier is untouched, and the RED levers read which member is which from production so they still run.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "G4-B the arithmetic closes: 42 + 36 + 31 = the emitted node count",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "p4_probeExpect_synthetic.log",
+							"lever": "EXPECTATION PERTURBATION: every digit run inside the Phase 4 suite's single EXPECTED block incremented by one — which also corrupts the two collision-member sha12 prefixes, the prototype conflict table and the two alias namespace URNs — plus one entry dropped from the expected lost-element list. Perturbs ONLY the expectations; the production tier is untouched, and the RED levers read which member is which from production so they still run.",
+							"shippedConfig": false
+						},
+						{
+							"probeLog": "p4_probeTier_synthetic.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION: the 109 merged definition nodes stamped pescTier:'source' instead of 'synthetic' — the exact leak G4-F forbids, since the round-trip emitter reads that predicate and would re-emit a fabricated definition into a PESC file.",
+							"shippedConfig": true
+						}
+					]
+				},
+				{
+					"label": "G4-B the branches were identified by MARKER TYPES and the college member is 948d88f32069",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "p4_probeExpect_synthetic.log",
+							"lever": "EXPECTATION PERTURBATION: every digit run inside the Phase 4 suite's single EXPECTED block incremented by one — which also corrupts the two collision-member sha12 prefixes, the prototype conflict table and the two alias namespace URNs — plus one entry dropped from the expected lost-element list. Perturbs ONLY the expectations; the production tier is untouched, and the RED levers read which member is which from production so they still run.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "G4-B the college definition is the superset in 8 of the 14 conflicts",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "p4_probeExpect_synthetic.log",
+							"lever": "EXPECTATION PERTURBATION: every digit run inside the Phase 4 suite's single EXPECTED block incremented by one — which also corrupts the two collision-member sha12 prefixes, the prototype conflict table and the two alias namespace URNs — plus one entry dropped from the expected lost-element list. Perturbs ONLY the expectations; the production tier is untouched, and the RED levers read which member is which from production so they still run.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "G4-B the merged set is the UNION: 109 named definitions",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "p4_probeExpect_synthetic.log",
+							"lever": "EXPECTATION PERTURBATION: every digit run inside the Phase 4 suite's single EXPECTED block incremented by one — which also corrupts the two collision-member sha12 prefixes, the prototype conflict table and the two alias namespace URNs — plus one entry dropped from the expected lost-element list. Perturbs ONLY the expectations; the production tier is untouched, and the RED levers read which member is which from production so they still run.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "G4-B the test-score member is e12830fc86a3",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "p4_probeExpect_synthetic.log",
+							"lever": "EXPECTATION PERTURBATION: every digit run inside the Phase 4 suite's single EXPECTED block incremented by one — which also corrupts the two collision-member sha12 prefixes, the prototype conflict table and the two alias namespace URNs — plus one entry dropped from the expected lost-element list. Perturbs ONLY the expectations; the production tier is untouched, and the RED levers read which member is which from production so they still run.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "G4-C RED: the loss enumeration checker demonstrably detects a missing name",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "p4_probeExpect_synthetic.log",
+							"lever": "EXPECTATION PERTURBATION: every digit run inside the Phase 4 suite's single EXPECTED block incremented by one — which also corrupts the two collision-member sha12 prefixes, the prototype conflict table and the two alias namespace URNs — plus one entry dropped from the expected lost-element list. Perturbs ONLY the expectations; the production tier is untouched, and the RED levers read which member is which from production so they still run.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "G4-C every lost element is still present under the losing variant SOURCE-tier node",
+					"status": "genuineGap",
+					"species": "phase4Unevidenced",
+					"note": "No retained log records this assertion FAILING. Phase 4 pulled six levers (expectation perturbation, winner flip, tier leak, alias repoint, and the two restatement probes in the sibling suites); this assertion went red under none of them. It is a genuine gap, counted rather than waved through, and Phase 6 owns closing it."
+				},
+				{
+					"label": "G4-C exactly 8 child element declarations are lost",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "p4_probeExpect_synthetic.log",
+							"lever": "EXPECTATION PERTURBATION: every digit run inside the Phase 4 suite's single EXPECTED block incremented by one — which also corrupts the two collision-member sha12 prefixes, the prototype conflict table and the two alias namespace URNs — plus one entry dropped from the expected lost-element list. Perturbs ONLY the expectations; the production tier is untouched, and the RED levers read which member is which from production so they still run.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "G4-C the 8 lost elements are EXACTLY the enumerated names",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "p4_probeExpect_synthetic.log",
+							"lever": "EXPECTATION PERTURBATION: every digit run inside the Phase 4 suite's single EXPECTED block incremented by one — which also corrupts the two collision-member sha12 prefixes, the prototype conflict table and the two alias namespace URNs — plus one entry dropped from the expected lost-element list. Perturbs ONLY the expectations; the production tier is untouched, and the RED levers read which member is which from production so they still run.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "G4-C the merged nodes themselves declare the 8 losses (report and graph agree)",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "p4_probeExpect_synthetic.log",
+							"lever": "EXPECTATION PERTURBATION: every digit run inside the Phase 4 suite's single EXPECTED block incremented by one — which also corrupts the two collision-member sha12 prefixes, the prototype conflict table and the two alias namespace URNs — plus one entry dropped from the expected lost-element list. Perturbs ONLY the expectations; the production tier is untouched, and the RED levers read which member is which from production so they still run.",
+							"shippedConfig": false
+						},
+						{
+							"probeLog": "p4_probeTier_synthetic.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION: the 109 merged definition nodes stamped pescTier:'source' instead of 'synthetic' — the exact leak G4-F forbids, since the round-trip emitter reads that predicate and would re-emit a fabricated definition into a PESC file.",
+							"shippedConfig": true
+						}
+					]
+				},
+				{
+					"label": "G4-D NEITHER member alone could serve both populations (measured from the source tier)",
+					"status": "genuineGap",
+					"species": "phase4Unevidenced",
+					"note": "No retained log records this assertion FAILING. Phase 4 pulled six levers (expectation perturbation, winner flip, tier leak, alias repoint, and the two restatement probes in the sibling suites); this assertion went red under none of them. It is a genuine gap, counted rather than waved through, and Phase 6 owns closing it."
+				},
+				{
+					"label": "G4-D TestScoreReport 1.0.0's single reference AcRec:TestScoreReportType now resolves",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "p4_probeTier_synthetic.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION: the 109 merged definition nodes stamped pescTier:'source' instead of 'synthetic' — the exact leak G4-F forbids, since the round-trip emitter reads that predicate and would re-emit a fabricated definition into a PESC file.",
+							"shippedConfig": true
+						}
+					]
+				},
+				{
+					"label": "G4-D all 201 held references now carry a synthetic RESOLVES_TO edge",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "p4_probeExpect_synthetic.log",
+							"lever": "EXPECTATION PERTURBATION: every digit run inside the Phase 4 suite's single EXPECTED block incremented by one — which also corrupts the two collision-member sha12 prefixes, the prototype conflict table and the two alias namespace URNs — plus one entry dropped from the expected lost-element list. Perturbs ONLY the expectations; the production tier is untouched, and the RED levers read which member is which from production so they still run.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "G4-D all SIX external consumers of the contested namespace are answered",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "p4_probeExpect_synthetic.log",
+							"lever": "EXPECTATION PERTURBATION: every digit run inside the Phase 4 suite's single EXPECTED block incremented by one — which also corrupts the two collision-member sha12 prefixes, the prototype conflict table and the two alias namespace URNs — plus one entry dropped from the expected lost-element list. Perturbs ONLY the expectations; the production tier is untouched, and the RED levers read which member is which from production so they still run.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "G4-D and it resolves to a definition the TEST-SCORE member alone contributed",
+					"status": "genuineGap",
+					"species": "phase4Unevidenced",
+					"note": "No retained log records this assertion FAILING. Phase 4 pulled six levers (expectation perturbation, winner flip, tier leak, alias repoint, and the two restatement probes in the sibling suites); this assertion went red under none of them. It is a genuine gap, counted rather than waved through, and Phase 6 owns closing it."
+				},
+				{
+					"label": "G4-D the 201 split as 195 type-space references + 6 import declarations",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "p4_probeExpect_synthetic.log",
+							"lever": "EXPECTATION PERTURBATION: every digit run inside the Phase 4 suite's single EXPECTED block incremented by one — which also corrupts the two collision-member sha12 prefixes, the prototype conflict table and the two alias namespace URNs — plus one entry dropped from the expected lost-element list. Perturbs ONLY the expectations; the production tier is untouched, and the RED levers read which member is which from production so they still run.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "G4-D the transcript consumers' RequestType and ResponseType resolve, from the COLLEGE member alone",
+					"status": "genuineGap",
+					"species": "phase4Unevidenced",
+					"note": "No retained log records this assertion FAILING. Phase 4 pulled six levers (expectation perturbation, winner flip, tier leak, alias repoint, and the two restatement probes in the sibling suites); this assertion went red under none of them. It is a genuine gap, counted rather than waved through, and Phase 6 owns closing it."
+				},
+				{
+					"label": "G4-E AcademicRecord_v1.5.0's unresolved import now resolves onto the alias namespace",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "p4_probeExpect_synthetic.log",
+							"lever": "EXPECTATION PERTURBATION: every digit run inside the Phase 4 suite's single EXPECTED block incremented by one — which also corrupts the two collision-member sha12 prefixes, the prototype conflict table and the two alias namespace URNs — plus one entry dropped from the expected lost-element list. Perturbs ONLY the expectations; the production tier is untouched, and the RED levers read which member is which from production so they still run.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "G4-E CollegeTranscript 1.2.0 and HighSchoolTranscript 1.1.0 now FULLY resolve (every recorded question answered)",
+					"status": "genuineGap",
+					"species": "phase4Unevidenced",
+					"note": "No retained log records this assertion FAILING. Phase 4 pulled six levers (expectation perturbation, winner flip, tier leak, alias repoint, and the two restatement probes in the sibling suites); this assertion went red under none of them. It is a genuine gap, counted rather than waved through, and Phase 6 owns closing it."
+				},
+				{
+					"label": "G4-E RED: with the alias unservable the tier REFUSES BY NAME, naming both namespaces",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "p4_probeTier_synthetic.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION: the 109 merged definition nodes stamped pescTier:'source' instead of 'synthetic' — the exact leak G4-F forbids, since the round-trip emitter reads that predicate and would re-emit a fabricated definition into a PESC file.",
+							"shippedConfig": true
+						}
+					]
+				},
+				{
+					"label": "G4-E a synthetic PescNamespace node stands in for the absent CoreMain v1.6.0",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "p4_probeExpect_synthetic.log",
+							"lever": "EXPECTATION PERTURBATION: every digit run inside the Phase 4 suite's single EXPECTED block incremented by one — which also corrupts the two collision-member sha12 prefixes, the prototype conflict table and the two alias namespace URNs — plus one entry dropped from the expected lost-element list. Perturbs ONLY the expectations; the production tier is untouched, and the RED levers read which member is which from production so they still run.",
+							"shippedConfig": false
+						},
+						{
+							"probeLog": "p4_probeAlias_synthetic.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION: S-2's serving namespace repointed from CoreMain v1.8.0 to v1.19.1 — a substitution that still resolves all 129 names but is NOT the one that was ruled on. This probe also exposed a vacuity: three G4-E assertions compared the alias against the module's OWN constant and moved with it, and were rewritten against literals.",
+							"shippedConfig": true
+						}
+					]
+				},
+				{
+					"label": "G4-E all 205 recorded references resolve through the alias",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "p4_probeExpect_synthetic.log",
+							"lever": "EXPECTATION PERTURBATION: every digit run inside the Phase 4 suite's single EXPECTED block incremented by one — which also corrupts the two collision-member sha12 prefixes, the prototype conflict table and the two alias namespace URNs — plus one entry dropped from the expected lost-element list. Perturbs ONLY the expectations; the production tier is untouched, and the RED levers read which member is which from production so they still run.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "G4-E and the artifact gains a synthetic IMPORTS edge to CoreMain_v1.8.0",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "p4_probeAlias_synthetic.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION: S-2's serving namespace repointed from CoreMain v1.8.0 to v1.19.1 — a substitution that still resolves all 129 names but is NOT the one that was ruled on. This probe also exposed a vacuity: three G4-E assertions compared the alias against the module's OWN constant and moved with it, and were rewritten against literals.",
+							"shippedConfig": true
+						}
+					]
+				},
+				{
+					"label": "G4-E every alias reference lands on a definition CoreMain_v1.8.0 actually declares",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "p4_probeAlias_synthetic.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION: S-2's serving namespace repointed from CoreMain v1.8.0 to v1.19.1 — a substitution that still resolves all 129 names but is NOT the one that was ruled on. This probe also exposed a vacuity: three G4-E assertions compared the alias against the module's OWN constant and moved with it, and were rewritten against literals.",
+							"shippedConfig": true
+						}
+					]
+				},
+				{
+					"label": "G4-E it carries exactly one SERVED_BY edge to the real v1.8.0 namespace",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "p4_probeExpect_synthetic.log",
+							"lever": "EXPECTATION PERTURBATION: every digit run inside the Phase 4 suite's single EXPECTED block incremented by one — which also corrupts the two collision-member sha12 prefixes, the prototype conflict table and the two alias namespace URNs — plus one entry dropped from the expected lost-element list. Perturbs ONLY the expectations; the production tier is untouched, and the RED levers read which member is which from production so they still run.",
+							"shippedConfig": false
+						},
+						{
+							"probeLog": "p4_probeAlias_synthetic.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION: S-2's serving namespace repointed from CoreMain v1.8.0 to v1.19.1 — a substitution that still resolves all 129 names but is NOT the one that was ruled on. This probe also exposed a vacuity: three G4-E assertions compared the alias against the module's OWN constant and moved with it, and were rewritten against literals.",
+							"shippedConfig": true
+						}
+					]
+				},
+				{
+					"label": "G4-E the two dependent roots actually reach AcademicRecord_v1.5.0 (the claim is not vacuous)",
+					"status": "genuineGap",
+					"species": "phase4Unevidenced",
+					"note": "No retained log records this assertion FAILING. Phase 4 pulled six levers (expectation perturbation, winner flip, tier leak, alias repoint, and the two restatement probes in the sibling suites); this assertion went red under none of them. It is a genuine gap, counted rather than waved through, and Phase 6 owns closing it."
+				},
+				{
+					"label": "G4-E they cover the prototype's 129 distinct core: names, all of them",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "p4_probeExpect_synthetic.log",
+							"lever": "EXPECTATION PERTURBATION: every digit run inside the Phase 4 suite's single EXPECTED block incremented by one — which also corrupts the two collision-member sha12 prefixes, the prototype conflict table and the two alias namespace URNs — plus one entry dropped from the expected lost-element list. Perturbs ONLY the expectations; the production tier is untouched, and the RED levers read which member is which from production so they still run.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "G4-F RED: the source-predicate leak checker demonstrably detects a retiered node",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "p4_probeTier_synthetic.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION: the 109 merged definition nodes stamped pescTier:'source' instead of 'synthetic' — the exact leak G4-F forbids, since the round-trip emitter reads that predicate and would re-emit a fabricated definition into a PESC file.",
+							"shippedConfig": true
+						}
+					]
+				},
+				{
+					"label": "G4-F ZERO synthetic content is reachable by the emitter's source predicate",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "p4_probeTier_synthetic.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION: the 109 merged definition nodes stamped pescTier:'source' instead of 'synthetic' — the exact leak G4-F forbids, since the round-trip emitter reads that predicate and would re-emit a fabricated definition into a PESC file.",
+							"shippedConfig": true
+						}
+					]
+				},
+				{
+					"label": "G4-F every synthetic node and edge carries a syntheticRule naming the decision",
+					"status": "genuineGap",
+					"species": "phase4Unevidenced",
+					"note": "No retained log records this assertion FAILING. Phase 4 pulled six levers (expectation perturbation, winner flip, tier leak, alias repoint, and the two restatement probes in the sibling suites); this assertion went red under none of them. It is a genuine gap, counted rather than waved through, and Phase 6 owns closing it."
+				},
+				{
+					"label": "G4-F resolution-by-decision is NEVER disguised as resolution-by-computation",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "p4_probeExpect_synthetic.log",
+							"lever": "EXPECTATION PERTURBATION: every digit run inside the Phase 4 suite's single EXPECTED block incremented by one — which also corrupts the two collision-member sha12 prefixes, the prototype conflict table and the two alias namespace URNs — plus one entry dropped from the expected lost-element list. Perturbs ONLY the expectations; the production tier is untouched, and the RED levers read which member is which from production so they still run.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "G4-F the derived tier is untouched by synthesis (63 namespaces, no synthetic marks)",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "p4_probeExpect_synthetic.log",
+							"lever": "EXPECTATION PERTURBATION: every digit run inside the Phase 4 suite's single EXPECTED block incremented by one — which also corrupts the two collision-member sha12 prefixes, the prototype conflict table and the two alias namespace URNs — plus one entry dropped from the expected lost-element list. Perturbs ONLY the expectations; the production tier is untouched, and the RED levers read which member is which from production so they still run.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "G4-F the synthetic tier emits exactly 110 nodes and 549 edges",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "p4_probeExpect_synthetic.log",
+							"lever": "EXPECTATION PERTURBATION: every digit run inside the Phase 4 suite's single EXPECTED block incremented by one — which also corrupts the two collision-member sha12 prefixes, the prototype conflict table and the two alias namespace URNs — plus one entry dropped from the expected lost-element list. Perturbs ONLY the expectations; the production tier is untouched, and the RED levers read which member is which from production so they still run.",
+							"shippedConfig": false
+						},
+						{
+							"probeLog": "p4_probeTier_synthetic.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION: the 109 merged definition nodes stamped pescTier:'source' instead of 'synthetic' — the exact leak G4-F forbids, since the round-trip emitter reads that predicate and would re-emit a fabricated definition into a PESC file.",
+							"shippedConfig": true
+						}
+					]
+				},
+				{
+					"label": "G4-G G3-A still measures 14,600,360 canonical bytes (a change is a FINDING)",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "p4_probeExpect_synthetic.log",
+							"lever": "EXPECTATION PERTURBATION: every digit run inside the Phase 4 suite's single EXPECTED block incremented by one — which also corrupts the two collision-member sha12 prefixes, the prototype conflict table and the two alias namespace URNs — plus one entry dropped from the expected lost-element list. Perturbs ONLY the expectations; the production tier is untouched, and the RED levers read which member is which from production so they still run.",
+							"shippedConfig": false
+						}
+					]
+				},
+				{
+					"label": "G4-G the derived tier REFUSES synthetic input by name (a decision may never seed a computation)",
+					"status": "genuineGap",
+					"species": "phase4Unevidenced",
+					"note": "No retained log records this assertion FAILING. Phase 4 pulled six levers (expectation perturbation, winner flip, tier leak, alias repoint, and the two restatement probes in the sibling suites); this assertion went red under none of them. It is a genuine gap, counted rather than waved through, and Phase 6 owns closing it."
+				},
+				{
+					"label": "G4-G the derived tier regenerates from the stripped four-tier graph without refusal",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "p4_probeTier_synthetic.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION: the 109 merged definition nodes stamped pescTier:'source' instead of 'synthetic' — the exact leak G4-F forbids, since the round-trip emitter reads that predicate and would re-emit a fabricated definition into a PESC file.",
+							"shippedConfig": true
+						}
+					]
+				},
+				{
+					"label": "G4-G the regenerated derived tier is IDENTICAL to the emitted one",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "p4_probeTier_synthetic.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION: the 109 merged definition nodes stamped pescTier:'source' instead of 'synthetic' — the exact leak G4-F forbids, since the round-trip emitter reads that predicate and would re-emit a fabricated definition into a PESC file.",
+							"shippedConfig": true
+						}
+					]
+				},
+				{
+					"label": "LEDGER carries no stale entries for assertions this suite no longer runs",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "p4_ledgerStale_red_synthetic.log",
+							"lever": "LEDGER STALE-ENTRY PROBE (Phase 4): a fabricated entry for an assertion this suite does not run was added to the ledger; the stale-entry check caught it. Needed separately because the self-demonstration run above leaves no stale entries and that assertion stays green there.",
+							"shippedConfig": true
+						}
+					]
+				},
+				{
+					"label": "LEDGER every shipped assertion has a red-evidence entry",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "p4_ledgerGate_red_synthetic.log",
+							"lever": "LEDGER GATE SELF-DEMONSTRATION (Phase 4): the new suite's ledger gate ran with its own three assertions absent from the ledger, so an assertion genuinely lacked red evidence and the gate caught it. As in the derived and source twins, the gate adds its own labels to the shipped set BEFORE comparing, so it cannot exempt itself.",
+							"shippedConfig": true
+						}
+					]
+				},
+				{
+					"label": "LEDGER the entry count matches the assertions actually run",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "p4_ledgerGate_red_synthetic.log",
+							"lever": "LEDGER GATE SELF-DEMONSTRATION (Phase 4): the new suite's ledger gate ran with its own three assertions absent from the ledger, so an assertion genuinely lacked red evidence and the gate caught it. As in the derived and source twins, the gate adds its own labels to the shipped set BEFORE comparing, so it cannot exempt itself.",
+							"shippedConfig": true
+						},
+						{
+							"probeLog": "p4_ledgerStale_red_synthetic.log",
+							"lever": "LEDGER STALE-ENTRY PROBE (Phase 4): a fabricated entry for an assertion this suite does not run was added to the ledger; the stale-entry check caught it. Needed separately because the self-demonstration run above leaves no stale entries and that assertion stays green there.",
 							"shippedConfig": true
 						}
 					]

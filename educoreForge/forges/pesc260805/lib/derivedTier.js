@@ -73,6 +73,7 @@ const { NODE_LABELS, DME_ROLES, PROVENANCE_TIER } = require(
 
 const XSD_NAMESPACE = 'http://www.w3.org/2001/XMLSchema';
 const PESC_DERIVED_TIER = 'derived';
+const PESC_SYNTHETIC_TIER = 'synthetic';
 
 // the facet scalar property names Phase 2 lands on PescDerivation nodes (parser SCALAR_FACET_TAGS
 // minus the xs: prefix). Enumerated here because facets participate in the strict comparison and
@@ -477,6 +478,17 @@ const moduleFunction =
 					refuse(
 						`input carries derived-tier node '${oneNode.stableId}' — regeneration must start ` +
 							`from source, not from a previous derivation`,
+					);
+				}
+				// PHASE 4 ADDITION. The synthetic tier emits PescNamedDefinition nodes that no artifact
+				// declares; feeding them back here would put a fabricated definition into the resolution
+				// index and let a DECIDED answer masquerade as a COMPUTED one on the next regeneration.
+				// The derived tier's law is that it is a function of the source tier alone, so synthetic
+				// input is refused for the same reason derived input is.
+				if (oneNode.properties.pescTier === PESC_SYNTHETIC_TIER) {
+					refuse(
+						`input carries synthetic-tier node '${oneNode.stableId}' — the derived tier is a ` +
+							`function of the SOURCE tier alone; a decided definition must never seed a computation`,
 					);
 				}
 				DERIVED_ANNOTATION_PROPERTY_NAMES.forEach((oneAnnotationName) => {

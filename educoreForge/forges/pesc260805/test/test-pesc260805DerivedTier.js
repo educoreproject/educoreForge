@@ -17,8 +17,9 @@
 //         prefix table.
 //   G3-C  sameness discipline: the 846/50 split vs Phase 0's measurement; ApplicationFeeAmount-
 //         Type does NOT chain 1.19.0->1.19.1; ClassRankType chains 14/14; RED levers measured.
-//   G3-D  ambiguity honesty: every contested reference RECORDED, ZERO RESOLVES_TO into the
-//         contested namespace, consumer set exactly the six roots. RED by removing one
+//   G3-D  ambiguity honesty: every contested reference RECORDED; ZERO of them resolved by
+//         COMPUTATION (RESTATED at Phase 4 — the 201 are now answered, but every answer is
+//         synthetic and rule-tagged); consumer set exactly the six roots. RED by removing one
 //         collision member (contested-ness is computed, not configured).
 //   G3-E  latest view: isLatest exact; reachableFromLatestRoot nonzero and partial; the
 //         PerkinsType orphan; harness BFS independently reproduces the annotation set.
@@ -91,15 +92,27 @@ const cloneGraph = ({ nodes, edges }) => ({
 
 // stripDerived — the Gate 3 DELETE: drop every derived node and edge, strip every derived
 // annotation off the retained nodes. What remains is exactly the source+meta tier.
+//
+// PHASE 4 AMENDMENT: the strip now removes SYNTHETIC content too. The derived tier is a function of
+// the SOURCE tier alone and refuses synthetic input by name (lib/derivedTier.js purity guard), so a
+// strip that left the merged AcademicRecord 1.6.0 definitions in place would not be feeding the
+// regeneration its own input — it would be handing a computation a set of DECIDED definitions and
+// asking it to pretend it derived them.
 const stripDerived = (forged) => {
 	const stripped = cloneGraph(forged);
-	stripped.nodes = stripped.nodes.filter((oneNode) => oneNode.properties.pescTier !== 'derived');
+	stripped.nodes = stripped.nodes.filter(
+		(oneNode) =>
+			oneNode.properties.pescTier !== 'derived' && oneNode.properties.pescTier !== 'synthetic',
+	);
 	stripped.nodes.forEach((oneNode) => {
 		DERIVED_ANNOTATION_PROPERTY_NAMES.forEach((oneAnnotationName) => {
 			delete oneNode.properties[oneAnnotationName];
 		});
 	});
-	stripped.edges = stripped.edges.filter((oneEdge) => oneEdge.properties.pescTier !== 'derived');
+	stripped.edges = stripped.edges.filter(
+		(oneEdge) =>
+			oneEdge.properties.pescTier !== 'derived' && oneEdge.properties.pescTier !== 'synthetic',
+	);
 	return stripped;
 };
 
@@ -125,6 +138,10 @@ const assertPristineSourceGraph = ({ nodes }, leverLabel) => {
 	const contaminatedNodes = nodes.filter(
 		(oneNode) =>
 			oneNode.properties.pescTier === 'derived' ||
+			// PHASE 4: synthetic content is contamination here for the same reason derived content is
+			// — buildDerivedTier refuses it FIRST, so a lever fed it would trip the purity guard
+			// rather than the guard it means to test.
+			oneNode.properties.pescTier === 'synthetic' ||
 			DERIVED_ANNOTATION_PROPERTY_NAMES.some((oneAnnotationName) =>
 				Object.prototype.hasOwnProperty.call(oneNode.properties, oneAnnotationName),
 			),
@@ -172,8 +189,17 @@ const canonicalizeWholeGraph = ({ nodes, edges }) =>
 			}),
 	});
 
+// PHASE 4 SCOPING: the SOURCE-tier named definitions, which is what this suite has always meant by
+// "the definitions" — every census, cluster and reachability number here is about what the files
+// declare. Phase 4 emits 109 merged PescNamedDefinition nodes carrying pescTier:'synthetic'; an
+// unscoped filter silently folded them into the derived tier's counts (12,909 became 13,018) and
+// into the reachability walk. The scope is stated rather than assumed.
 const namedDefinitionNodes = (forged) =>
-	forged.nodes.filter((oneNode) => oneNode.labels.indexOf('PescNamedDefinition') !== -1);
+	forged.nodes.filter(
+		(oneNode) =>
+			oneNode.labels.indexOf('PescNamedDefinition') !== -1 &&
+			oneNode.properties.pescTier === 'source',
+	);
 
 const taskList = new taskListPlus();
 
@@ -743,8 +769,27 @@ taskList.push((args, next) => {
 		}
 	});
 
+	// RESTATED AT PHASE 4 (supervisor ruling). This gate used to assert ZERO RESOLVES_TO edges into
+	// the contested namespace, which was correct while Phase 3 held all 201 references pending
+	// synthesis. Phase 4 legitimately answers them, so the world the old assertion described is
+	// gone — but the invariant it was PROTECTING is not, and deleting it would have thrown that
+	// away with it. The invariant that survives: no reference into the contested namespace is ever
+	// resolved BY COMPUTATION. Every such edge must be synthetic, carry a syntheticRule, and be
+	// traceable to the decision that authorized it; the DERIVED count must still be zero.
 	const contestedTargetEdges = args.runOne.edges.filter(
-		(oneEdge) => oneEdge.type === 'RESOLVES_TO' && oneEdge.toRef.id.indexOf(`${CONTESTED_NAMESPACE}#`) === 0,
+		(oneEdge) =>
+			oneEdge.type === 'RESOLVES_TO' &&
+			(oneEdge.toRef.id.indexOf(`${CONTESTED_NAMESPACE}#`) === 0 ||
+				oneEdge.toRef.id === `pescNamespace:${CONTESTED_NAMESPACE}`),
+	);
+	const computedContestedEdges = contestedTargetEdges.filter(
+		(oneEdge) => oneEdge.properties.pescTier !== 'synthetic',
+	);
+	const decidedContestedEdges = contestedTargetEdges.filter(
+		(oneEdge) => oneEdge.properties.pescTier === 'synthetic' && oneEdge.properties.syntheticRule,
+	);
+	const decidedImportEdges = decidedContestedEdges.filter(
+		(oneEdge) => oneEdge.properties.referenceVariety === 'import',
 	);
 	const everyEntryContested = ambiguousEntries.every((oneEntry) => oneEntry.namespace === CONTESTED_NAMESPACE);
 	const externalConsumers = [
@@ -759,10 +804,12 @@ taskList.push((args, next) => {
 		'TranscriptResponse_v1.1.0.xsd',
 	];
 
-	evidence(`recorded: ${ambiguousEntries.length} entries (${derivedStats.ambiguousIntraMemberRecorded} intra-member, ${ambiguousEntries.length - derivedStats.ambiguousIntraMemberRecorded} external); RESOLVES_TO into contested: ${contestedTargetEdges.length}`);
+	evidence(`recorded: ${ambiguousEntries.length} entries (${derivedStats.ambiguousIntraMemberRecorded} intra-member, ${ambiguousEntries.length - derivedStats.ambiguousIntraMemberRecorded} external); RESOLVES_TO into contested: ${contestedTargetEdges.length} total = ${decidedContestedEdges.length} DECIDED (synthetic, rule-tagged) + ${computedContestedEdges.length} COMPUTED`);
 	check('G3-D ambiguous entries exist and all name the contested namespace', ambiguousEntries.length > 0 && everyEntryContested);
 	check('G3-D annotation entries and stats agree', ambiguousEntries.length === derivedStats.ambiguousPendingSynthesisRecorded);
-	check('G3-D ZERO RESOLVES_TO edges target a contested-namespace definition', contestedTargetEdges.length === 0);
+	check('G3-D ZERO references into the contested namespace are resolved by COMPUTATION', computedContestedEdges.length === 0);
+	check('G3-D every resolution into the contested namespace is synthetic and rule-tagged, and they number exactly the 201 held references', decidedContestedEdges.length === ambiguousEntries.length && decidedContestedEdges.length === 201);
+	check('G3-D the 201 decided resolutions split as 195 type-space references + 6 import declarations', decidedImportEdges.length === 6 && decidedContestedEdges.length - decidedImportEdges.length === 195);
 	evidence(`GREEN: external consumers observed: ${externalConsumers.join(', ')}`);
 	check('G3-D the consumer set is EXACTLY the six expected roots', JSON.stringify(externalConsumers) === JSON.stringify(expectedConsumers));
 	check('G3-D every entry carries candidates for Phase 4 (none empty)', ambiguousEntries.every((oneEntry) => oneEntry.candidateStableIds.length > 0));
@@ -789,11 +836,18 @@ taskList.push((args, next) => {
 		toRef: { source: 'PESC260805', id: contestedDefinitionNode.stableId },
 		properties: { provenanceTier: 'structural', pescTier: 'derived' },
 	});
+	// RESTATED AT PHASE 4 with the assertion it guards: the planted edge is pescTier:'derived', so
+	// it is a COMPUTED resolution into the contested namespace — exactly what must never exist —
+	// and the checker must pick it out from among the 201 legitimate synthetic ones.
 	const plantedContestedTargetEdges = plantedGraph.edges.filter(
-		(oneEdge) => oneEdge.type === 'RESOLVES_TO' && oneEdge.toRef.id.indexOf(`${CONTESTED_NAMESPACE}#`) === 0,
+		(oneEdge) =>
+			oneEdge.type === 'RESOLVES_TO' &&
+			oneEdge.properties.pescTier !== 'synthetic' &&
+			(oneEdge.toRef.id.indexOf(`${CONTESTED_NAMESPACE}#`) === 0 ||
+				oneEdge.toRef.id === `pescNamespace:${CONTESTED_NAMESPACE}`),
 	);
-	evidence(`RED-1 (demonstrated): one planted RESOLVES_TO into '${contestedDefinitionNode.stableId}' -> the checker now counts ${plantedContestedTargetEdges.length}, condition inverts: ${plantedContestedTargetEdges.length !== 0}`);
-	check('G3-D RED-1: the zero-edges checker demonstrably detects a planted edge', plantedContestedTargetEdges.length === 1);
+	evidence(`RED-1 (demonstrated): one planted COMPUTED RESOLVES_TO into '${contestedDefinitionNode.stableId}' -> the checker now counts ${plantedContestedTargetEdges.length} computed edge(s) among ${contestedTargetEdges.length} total, condition inverts: ${plantedContestedTargetEdges.length !== 0}`);
+	check('G3-D RED-1: the no-computed-resolution checker demonstrably detects a planted edge', plantedContestedTargetEdges.length === 1);
 
 	// RED-2 — CONTESTED-NESS IS COMPUTED, NOT CONFIGURED. Remove one collision member and the
 	// namespace stops being contested, so the builder must STOP RECORDING and START RESOLVING.
@@ -903,9 +957,14 @@ taskList.push((args, next) => {
 			(childrenByParentId[parentId] = childrenByParentId[parentId] || []).push(oneNode.stableId);
 		}
 	});
+	// PHASE 4 SCOPING: DERIVED resolution edges only. reachableFromLatestRoot is a DERIVED
+	// annotation, computed by a tier that cannot see synthetic edges, so a harness walk that
+	// traverses them is not reproducing the annotation — it is measuring a different reachability
+	// and calling the difference a defect. (The synthetic-aware reachability is a real and separate
+	// question; it would be a synthetic-tier annotation, and no one has ruled on it. PROVISIONAL.)
 	const resolvesToTargetsByFrom = {};
 	args.runOne.edges.forEach((oneEdge) => {
-		if (oneEdge.type === 'RESOLVES_TO') {
+		if (oneEdge.type === 'RESOLVES_TO' && oneEdge.properties.pescTier !== 'synthetic') {
 			(resolvesToTargetsByFrom[oneEdge.fromRef.id] = resolvesToTargetsByFrom[oneEdge.fromRef.id] || []).push(oneEdge.toRef.id);
 		}
 	});

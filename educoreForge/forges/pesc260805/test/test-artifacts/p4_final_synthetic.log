@@ -1,0 +1,114 @@
+
+DET — two full forge() runs identical (complete outputs, all four tiers)
+        RED (demonstrated): one contaminated synthetic property ('urn:org:pesc:sector:AcademicRecord:v1.6.0#complexType/AcademicAwardType') -> comparator detects: true
+  ok    DET RED: whole-graph comparator demonstrably able to go red on synthetic content
+        GREEN: run one 41850 nodes / 70063 edges; canonical forms equal: true
+  ok    DET two full runs byte-identical under canonical serialization
+
+G4-A — reproducibility (R-VAL-5: the substitute for round-trip on decided content)
+        deleted: 110 synthetic nodes, 549 synthetic edges; 41740 source+derived+meta nodes retained
+  ok    G4-A re-run over the preserved collision members completed without refusal
+        GREEN: re-run synthetic view identical to the emitted one: true (374395 canonical bytes)
+  ok    G4-A the re-run reproduces the synthetic nodes and edges EXACTLY
+        RED P1 (demonstrated): renamed the LOSING member's ContactsType child 'Email' -> 'EmailPerturbed'; reproduction BREAKS as it must
+  ok    G4-A RED P1: perturbing ONE element declaration in the losing member breaks reproduction
+        RED P2 (demonstrated): renamed the single-member definition 'AcademicAwardsReportedType' -> 'AcademicAwardsReportedTypePerturbed' (chosen by computation from 67 candidates; marker types excluded); tier REFUSES BY NAME: pesc260805 syntheticTier REFUSES: HELD REFERENCE STILL UNRESOLVED after S-1: file 'AcademicRecord_v1.6.0.collision-948d88f32069.xsd' writes 'AcRec:Aca
+  ok    G4-A RED P2: perturbing ONE definition name leaves a consumer unserved and the tier REFUSES
+        THIRD CASE (recorded, not a defect): renamed a WINNING-member ContactsType child ('AddressPerturbed'); synthetic view unchanged: true; the change is reachable from the merged node's contentFromStableId: true
+  ok    G4-A the merged node carries no content of its own, and its contentFromStableId still reaches the changed source element
+        purity guard: re-synthesis over an already-synthesized graph -> pesc260805 syntheticTier REFUSES: input carries synthetic node 'urn:org:pesc:sector:AcademicRecord:v1.6.0#complexType/AcademicAwar
+  ok    G4-A the tier REFUSES to synthesize from a graph that already carries synthetic content
+
+G4-B — the union (R-P3-1: 42 unique + 36 unique + 31 shared = 109)
+        split: 42 college-only + 36 test-score-only + 31 shared = 109 merged definition nodes (109 emitted)
+  ok    G4-B the merged set is the UNION: 109 named definitions
+  ok    G4-B 42 definitions are unique to the college-transcript member
+  ok    G4-B 36 definitions are unique to the test-score member
+  ok    G4-B 31 definitions are declared by BOTH members
+  ok    G4-B the arithmetic closes: 42 + 36 + 31 = the emitted node count
+  ok    G4-B the branches were identified by MARKER TYPES and the college member is 948d88f32069
+  ok    G4-B the test-score member is e12830fc86a3
+        conflicts: 14 of the 31 shared names; college is the superset in 8 and the subset in 0 (a subset REFUSES in production)
+  ok    G4-B 14 of the 31 shared names genuinely conflict
+  ok    G4-B the college definition is the superset in 8 of the 14 conflicts
+        winner rule: 14/14 conflicting merged definitions take content from the COLLEGE member; 14 name the test-score definition as superseded
+  ok    G4-B every conflicting merged definition takes its content from the college-transcript member
+  ok    G4-B every conflicting merged definition names the superseded test-score definition
+        prototype conflict table: 14 conflicts compared, 0 mismatched
+  ok    G4-B the Node signature port reproduces the prototype conflict table exactly (14 types, child counts)
+        MERGED_FROM: 140 edges; every merged definition has provenance: true; 31 carry two (the shared names)
+  ok    G4-B every merged definition carries MERGED_FROM provenance to its source definitions
+  ok    G4-B the 31 shared names each carry TWO MERGED_FROM edges (kept and superseded)
+
+G4-C — the price of the merge: 8 child element declarations, enumerated
+        lost (8): AcademicRecordType.AdditionalStudentAchievement, AcademicSummaryBaseType.AcademicHonors, ContactsRType.Address, ContactsType.Address, ContactsType.Email, ContactsType.Phone, SchoolType.Contacts, SponsorType.SponsorCode
+  ok    G4-C exactly 8 child element declarations are lost
+  ok    G4-C the 8 lost elements are EXACTLY the enumerated names
+        queryability: 8/8 lost elements found alive under the LOSING member's source-tier definition
+  ok    G4-C every lost element is still present under the losing variant SOURCE-tier node
+        merged nodes declaring a loss: 6 (AcademicRecordType, AcademicSummaryBaseType, ContactsRType, ContactsType, SchoolType, SponsorType); declared total 8
+  ok    G4-C the merged nodes themselves declare the 8 losses (report and graph agree)
+        RED (demonstrated): dropping 'AcademicRecordType.AdditionalStudentAchievement' from the observed list -> count assertion inverts: true, name-set assertion inverts: true
+  ok    G4-C RED: the loss enumeration checker demonstrably detects a missing name
+
+G4-D — consumer satisfaction (the point of the whole exercise)
+        held references answered: 201 ({"import":6,"type":188,"base":7}) against 201 recorded by Phase 3
+  ok    G4-D all 201 held references now carry a synthetic RESOLVES_TO edge
+  ok    G4-D the 201 split as 195 type-space references + 6 import declarations
+        external consumers answered: CollegeTranscript_v1.3.0.xsd, HighSchoolTranscript_v1.2.0.xsd, TestScoreReport_v1.0.0.xsd, TranscriptAcknowledgment_v1.1.0.xsd, TranscriptRequest_v1.1.0.xsd, TranscriptResponse_v1.1.0.xsd
+  ok    G4-D all SIX external consumers of the contested namespace are answered
+        TestScoreReport 1.0.0: 1 edge for 'AcRec:TestScoreReportType' -> urn:org:pesc:sector:AcademicRecord:v1.6.0#complexType/TestScoreReportType (pescTier synthetic, rule S-1, from testScoreOnly)
+  ok    G4-D TestScoreReport 1.0.0's single reference AcRec:TestScoreReportType now resolves
+  ok    G4-D and it resolves to a definition the TEST-SCORE member alone contributed
+        transcript consumers: AcRec:RequestType -> collegeTranscriptOnly (1 edge); AcRec:ResponseType -> collegeTranscriptOnly (1 edge)
+  ok    G4-D the transcript consumers' RequestType and ResponseType resolve, from the COLLEGE member alone
+        partition proof: college member declares TestScoreReportType: false; test-score member declares RequestType/ResponseType: false/false
+  ok    G4-D NEITHER member alone could serve both populations (measured from the source tier)
+
+G4-E — S-2: the CoreMain v1.6.0 alias and the 129 references that travel it
+        alias node: pescNamespace:urn:org:pesc:core:CoreMain:v1.6.0 (pescTier synthetic, rule S-2, servedBy urn:org:pesc:core:CoreMain:v1.8.0); SERVED_BY edges: 1
+  ok    G4-E a synthetic PescNamespace node stands in for the absent CoreMain v1.6.0
+  ok    G4-E it carries exactly one SERVED_BY edge to the real v1.8.0 namespace
+        alias traffic: 205 reference edges over 129 distinct local names; targets NOT declared by CoreMain_v1.8.0: 0
+  ok    G4-E all 205 recorded references resolve through the alias
+  ok    G4-E they cover the prototype's 129 distinct core: names, all of them
+  ok    G4-E every alias reference lands on a definition CoreMain_v1.8.0 actually declares
+        import: 1 RESOLVES_TO onto the alias namespace, 1 synthetic IMPORTS edge to CoreMain_v1.8.0.xsd
+  ok    G4-E AcademicRecord_v1.5.0's unresolved import now resolves onto the alias namespace
+  ok    G4-E and the artifact gains a synthetic IMPORTS edge to CoreMain_v1.8.0
+        CollegeTranscript_v1.2.0.xsd: import closure 3 files (AcademicRecord_v1.5.0.xsd, CollegeTranscript_v1.2.0.xsd, CoreMain_v1.8.0.xsd); recorded questions 205, answered 205
+        HighSchoolTranscript_v1.1.0.xsd: import closure 3 files (AcademicRecord_v1.5.0.xsd, CoreMain_v1.8.0.xsd, HighSchoolTranscript_v1.1.0.xsd); recorded questions 205, answered 205
+  ok    G4-E the two dependent roots actually reach AcademicRecord_v1.5.0 (the claim is not vacuous)
+  ok    G4-E CollegeTranscript 1.2.0 and HighSchoolTranscript 1.1.0 now FULLY resolve (every recorded question answered)
+        RED (demonstrated): removed the serving artifact CoreMain_v1.8.0 -> pesc260805 syntheticTier REFUSES: S-2 substitutes 'urn:org:pesc:core:CoreMain:v1.8.0' for the absent 'urn:org:pesc:core:CoreMain:v1.6.0', but no namespace node for the substitute exists in t
+  ok    G4-E RED: with the alias unservable the tier REFUSES BY NAME, naming both namespaces
+
+G4-F — tier hygiene (design §2: the emitter reads ONE predicate)
+        synthetic census: 110 nodes, 549 edges; missing a syntheticRule: 0 nodes, 0 edges
+  ok    G4-F the synthetic tier emits exactly 110 nodes and 549 edges
+  ok    G4-F every synthetic node and edge carries a syntheticRule naming the decision
+        source predicate: 41676 nodes / 41612 edges, of which synthetic-bearing: 0 nodes, 0 edges
+  ok    G4-F ZERO synthetic content is reachable by the emitter's source predicate
+        decided resolutions: 407 edges into the contested or aliased namespaces; marked anything other than synthetic: 0
+  ok    G4-F resolution-by-decision is NEVER disguised as resolution-by-computation
+        derived tier: 63 nodes (63 namespaces per Phase 3 stats); carrying a syntheticRule: 0
+  ok    G4-F the derived tier is untouched by synthesis (63 namespaces, no synthetic marks)
+        RED (demonstrated): retiering 'urn:org:pesc:sector:AcademicRecord:v1.6.0#complexType/AcademicAwardType' as pescTier:'source' -> the predicate check now finds 1 leak(s), condition inverts: true
+  ok    G4-F RED: the source-predicate leak checker demonstrably detects a retiered node
+
+G4-G — the Phase 3 regeneration gate, re-run against the four-tier graph
+        deleted: 173 derived+synthetic nodes, 28387 derived+synthetic edges
+  ok    G4-G the derived tier regenerates from the stripped four-tier graph without refusal
+        GREEN: regenerated derived view identical: true (14600360 canonical bytes, Phase 3 recorded 14600360)
+  ok    G4-G the regenerated derived tier is IDENTICAL to the emitted one
+  ok    G4-G G3-A still measures 14,600,360 canonical bytes (a change is a FINDING)
+        seam: derived tier handed one synthetic node -> pesc260805 derivedTier REFUSES: input carries synthetic-tier node 'urn:org:pesc:sector:AcademicRecord:v1.6.0#complexType/AcademicAwardType' — the deri
+  ok    G4-G the derived tier REFUSES synthetic input by name (a decision may never seed a computation)
+
+LEDGER — red evidence for every shipped assertion
+        ledger: 57 shipped assertions; proven-red 45, records-gap 0, GENUINE GAP 12
+  ok    LEDGER every shipped assertion has a red-evidence entry
+  ok    LEDGER carries no stale entries for assertions this suite no longer runs
+  ok    LEDGER the entry count matches the assertions actually run
+
+57 passed, 0 failed
