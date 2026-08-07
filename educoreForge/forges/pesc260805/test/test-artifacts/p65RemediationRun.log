@@ -1,0 +1,60 @@
+########## R1. CONSERVATION CENSUS — comment-stripped, with self-test lever
+p65_conservationCensus
+  source .......... /Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/forges/pesc260805/assets/standardSourceData/01 (64 files)
+  pre-6.5 ......... /Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/forges/pesc260805/test/test-artifacts/p5RoundTripRun4/emitted (64 files)
+  phase 6.5 ....... test/test-artifacts/p65RoundTripRun1/emitted (64 files)
+
+  comment-stripping self-test: 16 constructs, each scoring 1 outside a comment and 0 inside — PASSED
+
+  construct             srcRaw  inCmt   source   pre-6.5      6.5   delta  short
+  xs:sequence             3042      5     3037         0     3037   +3037      0  (intended addition)
+  xs:choice                211      0      211         0      211    +211      0  (intended addition)
+  xs:all                     0      0        0         0        0       0      0  (intended addition)
+  xs:group[ref]            283      1      282         0      282    +282      0  (intended addition)
+  xs:any                    25      0       25         0       25     +25      0  (intended addition)
+  xs:element             17164     24    17140     17140    17140       0      0
+  xs:attribute              84      0       84        84       84       0      0
+  xs:complexType          3216      5     3211      3211     3211       0      0
+  xs:simpleType          10126      0    10126     10126    10126       0      0
+  xs:extension             708      0      708       708      708       0      0
+  xs:restriction         10140      0    10140     10140    10140       0      0
+  xs:enumeration         31428      0    31428     31428    31428       0      0
+  xs:documentation       26652      0    26652     26624    26624       0     28
+  xs:complexContent        694      0      694       694      694       0      0
+  xs:simpleContent          28      0       28        28       28       0      0
+  xmlns declaration        217      0      217        64      217    +153      0  (intended addition)
+
+  CONSERVATION HOLDS — 0 construct(s) moved that Phase 6.5 did not intend to touch
+  STILL SHORT OF SOURCE: xs:documentation 28
+  written: test/test-artifacts/p65ConservationCensus.json
+CENSUS_EXIT=0
+
+########## R2. REMEDIATION WITNESS — documentation, swap expectation, attribute placement
+p65_remediationWitness
+
+WITNESS 1 — documentation attribution
+  source 26652   reconstructed 26624   shortfall 28
+  self-closing (empty) ......... 26
+  extra literals in 5 multi-doc annotations ... 5
+  attributed 31   UNATTRIBUTED -3   NOT fully attributed
+
+WITNESS 2 — the committed swap expectation, tested against the code
+  swapped sequencePosition of siblings ThesisDissertationTitle <-> ThesisDissertationAdvisor under urn:org:pesc:core:CoreMain:v1.0.0#complexType/AcademicDegreeRequirementType
+  observed: removed 2 added 2 -> 'caught'
+  expectation committed at HEAD 'blind' HOLDS: false
+  expectation in the working tree 'caught' HOLDS: true
+  ordering claim: UNEVIDENCED. The run that printed the mismatch banner predates artifact persistence and its log was not retained. This witness establishes that the COMMITTED expectation is falsified by the code, which is checkable by anyone and does not rest on the builder account of what was seen or when.
+
+WITNESS 3 — attribute placement (xs:attribute outside a derivation wrapper)
+  source ................. 0
+  pre-6.5 reconstruction . 14
+  6.5 reconstruction ..... 0
+  defect present before repair: true   absent from source: true   absent after repair: true
+
+  written: test/test-artifacts/p65RemediationWitness.json
+WITNESS_EXIT=1
+
+########## R3. GIT RECEIPT — the expectation committed at HEAD 75bd6a7
+	swapTwoSiblingElements: {
+		expectation: 'blind',
+########## DONE

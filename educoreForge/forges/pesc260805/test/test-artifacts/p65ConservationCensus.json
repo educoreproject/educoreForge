@@ -1,0 +1,294 @@
+{
+	"instrument": "p65_conservationCensus",
+	"countingBasis": "XML COMMENTS ARE STRIPPED BEFORE COUNTING. A construct inside a comment is not a declaration. sourceRawCount and sourceCommentedOutCount are published per row so the volume of commented-out schema is visible rather than asserted.",
+	"commentStrippingSelfTest": [
+		{
+			"constructName": "xs:sequence",
+			"acceptControlCount": 1,
+			"commentedOutCount": 0,
+			"leverHolds": true
+		},
+		{
+			"constructName": "xs:choice",
+			"acceptControlCount": 1,
+			"commentedOutCount": 0,
+			"leverHolds": true
+		},
+		{
+			"constructName": "xs:all",
+			"acceptControlCount": 1,
+			"commentedOutCount": 0,
+			"leverHolds": true
+		},
+		{
+			"constructName": "xs:group[ref]",
+			"acceptControlCount": 1,
+			"commentedOutCount": 0,
+			"leverHolds": true
+		},
+		{
+			"constructName": "xs:any",
+			"acceptControlCount": 1,
+			"commentedOutCount": 0,
+			"leverHolds": true
+		},
+		{
+			"constructName": "xs:element",
+			"acceptControlCount": 1,
+			"commentedOutCount": 0,
+			"leverHolds": true
+		},
+		{
+			"constructName": "xs:attribute",
+			"acceptControlCount": 1,
+			"commentedOutCount": 0,
+			"leverHolds": true
+		},
+		{
+			"constructName": "xs:complexType",
+			"acceptControlCount": 1,
+			"commentedOutCount": 0,
+			"leverHolds": true
+		},
+		{
+			"constructName": "xs:simpleType",
+			"acceptControlCount": 1,
+			"commentedOutCount": 0,
+			"leverHolds": true
+		},
+		{
+			"constructName": "xs:extension",
+			"acceptControlCount": 1,
+			"commentedOutCount": 0,
+			"leverHolds": true
+		},
+		{
+			"constructName": "xs:restriction",
+			"acceptControlCount": 1,
+			"commentedOutCount": 0,
+			"leverHolds": true
+		},
+		{
+			"constructName": "xs:enumeration",
+			"acceptControlCount": 1,
+			"commentedOutCount": 0,
+			"leverHolds": true
+		},
+		{
+			"constructName": "xs:documentation",
+			"acceptControlCount": 1,
+			"commentedOutCount": 0,
+			"leverHolds": true
+		},
+		{
+			"constructName": "xs:complexContent",
+			"acceptControlCount": 1,
+			"commentedOutCount": 0,
+			"leverHolds": true
+		},
+		{
+			"constructName": "xs:simpleContent",
+			"acceptControlCount": 1,
+			"commentedOutCount": 0,
+			"leverHolds": true
+		},
+		{
+			"constructName": "xmlns declaration",
+			"acceptControlCount": 1,
+			"commentedOutCount": 0,
+			"leverHolds": true
+		}
+	],
+	"sourceCorpusDirectory": "/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/forges/pesc260805/assets/standardSourceData/01",
+	"prePhase65ReconstructionDirectory": "/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/forges/pesc260805/test/test-artifacts/p5RoundTripRun4/emitted",
+	"phase65ReconstructionDirectory": "test/test-artifacts/p65RoundTripRun1/emitted",
+	"fileTotals": {
+		"source": 64,
+		"prePhase65": 64,
+		"phase65": 64
+	},
+	"intendedAdditionNameList": [
+		"xs:sequence",
+		"xs:choice",
+		"xs:all",
+		"xs:group[ref]",
+		"xs:any",
+		"xmlns declaration"
+	],
+	"conservationHolds": true,
+	"unintendedMovementList": [],
+	"stillShortOfSourceList": [
+		{
+			"constructName": "xs:documentation",
+			"sourceDeclaredCount": 26652,
+			"sourceRawCount": 26652,
+			"sourceCommentedOutCount": 0,
+			"prePhase65ReconstructionCount": 26624,
+			"phase65ReconstructionCount": 26624,
+			"phase65Delta": 0,
+			"stillShortOfSource": 28
+		}
+	],
+	"rowList": [
+		{
+			"constructName": "xs:sequence",
+			"sourceDeclaredCount": 3037,
+			"sourceRawCount": 3042,
+			"sourceCommentedOutCount": 5,
+			"prePhase65ReconstructionCount": 0,
+			"phase65ReconstructionCount": 3037,
+			"phase65Delta": 3037,
+			"stillShortOfSource": 0
+		},
+		{
+			"constructName": "xs:choice",
+			"sourceDeclaredCount": 211,
+			"sourceRawCount": 211,
+			"sourceCommentedOutCount": 0,
+			"prePhase65ReconstructionCount": 0,
+			"phase65ReconstructionCount": 211,
+			"phase65Delta": 211,
+			"stillShortOfSource": 0
+		},
+		{
+			"constructName": "xs:all",
+			"sourceDeclaredCount": 0,
+			"sourceRawCount": 0,
+			"sourceCommentedOutCount": 0,
+			"prePhase65ReconstructionCount": 0,
+			"phase65ReconstructionCount": 0,
+			"phase65Delta": 0,
+			"stillShortOfSource": 0
+		},
+		{
+			"constructName": "xs:group[ref]",
+			"sourceDeclaredCount": 282,
+			"sourceRawCount": 283,
+			"sourceCommentedOutCount": 1,
+			"prePhase65ReconstructionCount": 0,
+			"phase65ReconstructionCount": 282,
+			"phase65Delta": 282,
+			"stillShortOfSource": 0
+		},
+		{
+			"constructName": "xs:any",
+			"sourceDeclaredCount": 25,
+			"sourceRawCount": 25,
+			"sourceCommentedOutCount": 0,
+			"prePhase65ReconstructionCount": 0,
+			"phase65ReconstructionCount": 25,
+			"phase65Delta": 25,
+			"stillShortOfSource": 0
+		},
+		{
+			"constructName": "xs:element",
+			"sourceDeclaredCount": 17140,
+			"sourceRawCount": 17164,
+			"sourceCommentedOutCount": 24,
+			"prePhase65ReconstructionCount": 17140,
+			"phase65ReconstructionCount": 17140,
+			"phase65Delta": 0,
+			"stillShortOfSource": 0
+		},
+		{
+			"constructName": "xs:attribute",
+			"sourceDeclaredCount": 84,
+			"sourceRawCount": 84,
+			"sourceCommentedOutCount": 0,
+			"prePhase65ReconstructionCount": 84,
+			"phase65ReconstructionCount": 84,
+			"phase65Delta": 0,
+			"stillShortOfSource": 0
+		},
+		{
+			"constructName": "xs:complexType",
+			"sourceDeclaredCount": 3211,
+			"sourceRawCount": 3216,
+			"sourceCommentedOutCount": 5,
+			"prePhase65ReconstructionCount": 3211,
+			"phase65ReconstructionCount": 3211,
+			"phase65Delta": 0,
+			"stillShortOfSource": 0
+		},
+		{
+			"constructName": "xs:simpleType",
+			"sourceDeclaredCount": 10126,
+			"sourceRawCount": 10126,
+			"sourceCommentedOutCount": 0,
+			"prePhase65ReconstructionCount": 10126,
+			"phase65ReconstructionCount": 10126,
+			"phase65Delta": 0,
+			"stillShortOfSource": 0
+		},
+		{
+			"constructName": "xs:extension",
+			"sourceDeclaredCount": 708,
+			"sourceRawCount": 708,
+			"sourceCommentedOutCount": 0,
+			"prePhase65ReconstructionCount": 708,
+			"phase65ReconstructionCount": 708,
+			"phase65Delta": 0,
+			"stillShortOfSource": 0
+		},
+		{
+			"constructName": "xs:restriction",
+			"sourceDeclaredCount": 10140,
+			"sourceRawCount": 10140,
+			"sourceCommentedOutCount": 0,
+			"prePhase65ReconstructionCount": 10140,
+			"phase65ReconstructionCount": 10140,
+			"phase65Delta": 0,
+			"stillShortOfSource": 0
+		},
+		{
+			"constructName": "xs:enumeration",
+			"sourceDeclaredCount": 31428,
+			"sourceRawCount": 31428,
+			"sourceCommentedOutCount": 0,
+			"prePhase65ReconstructionCount": 31428,
+			"phase65ReconstructionCount": 31428,
+			"phase65Delta": 0,
+			"stillShortOfSource": 0
+		},
+		{
+			"constructName": "xs:documentation",
+			"sourceDeclaredCount": 26652,
+			"sourceRawCount": 26652,
+			"sourceCommentedOutCount": 0,
+			"prePhase65ReconstructionCount": 26624,
+			"phase65ReconstructionCount": 26624,
+			"phase65Delta": 0,
+			"stillShortOfSource": 28
+		},
+		{
+			"constructName": "xs:complexContent",
+			"sourceDeclaredCount": 694,
+			"sourceRawCount": 694,
+			"sourceCommentedOutCount": 0,
+			"prePhase65ReconstructionCount": 694,
+			"phase65ReconstructionCount": 694,
+			"phase65Delta": 0,
+			"stillShortOfSource": 0
+		},
+		{
+			"constructName": "xs:simpleContent",
+			"sourceDeclaredCount": 28,
+			"sourceRawCount": 28,
+			"sourceCommentedOutCount": 0,
+			"prePhase65ReconstructionCount": 28,
+			"phase65ReconstructionCount": 28,
+			"phase65Delta": 0,
+			"stillShortOfSource": 0
+		},
+		{
+			"constructName": "xmlns declaration",
+			"sourceDeclaredCount": 217,
+			"sourceRawCount": 217,
+			"sourceCommentedOutCount": 0,
+			"prePhase65ReconstructionCount": 64,
+			"phase65ReconstructionCount": 217,
+			"phase65Delta": 153,
+			"stillShortOfSource": 0
+		}
+	]
+}

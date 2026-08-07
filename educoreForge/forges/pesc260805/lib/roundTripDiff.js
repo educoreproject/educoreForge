@@ -339,35 +339,41 @@ const moduleFunction =
 				'The criterion is SEMANTIC round-trip — statement-set equality over the XSD semantic',
 			);
 			lines.push(
-				'domain (roundTripXsdCanonical.js defines it). Whitespace, element order, attribute order,',
+				'domain (roundTripXsdCanonical.js defines it). Whitespace, attribute order and prefix',
 			);
 			lines.push(
-				'prefix choice, compositor and member order do NOT count; a missing or extra',
+				'CHOICE do NOT count; a missing or extra STATEMENT does. This measures what the GRAPH',
 			);
-			lines.push('STATEMENT does. This measures what the GRAPH can support, not what the forge saw.');
-			// PHASE 6 CORRECTION, and this text ships on EVERY RUN, which is why it is fixed HERE
-			// and not only in the verdict. The line above used to say "compositor KIND", which a
-			// reader takes as "we might mislabel a sequence as a choice". The measurement says
-			// otherwise: the source corpus carries 3,021 xs:sequence and 211 xs:choice and the
-			// emitted corpus carries ZERO of either, so what is uncounted is compositor EXISTENCE.
-			// A claim repaired in the verdict while still shipping from the report is not repaired.
+			lines.push('can support, not what the forge saw.');
+			// PHASE 6.5 CORRECTION, and this text ships on EVERY RUN, which is why it is fixed HERE
+			// and not only in the verdict. Phase 6 rewrote this passage to say compositor ABSENCE was
+			// uncounted; Phase 6.5 made it counted, so leaving the Phase 6 wording would ship a
+			// retracted limitation from the report a human actually reads — the exact defect the
+			// independent review raised against Phase 6, in reverse. THE LINE ABOVE ALSO DROPPED
+			// "element order", which is now measured.
 			lines.push('');
 			lines.push(
-				'MEASURED LIMIT, NOT A NUANCE: "compositor does not count" means compositor ABSENCE is',
+				'MODELLED SINCE PHASE 6.5, ON BOTH SIDES: the COMPOSITOR (kind, effective occurrence,',
 			);
 			lines.push(
-				'uncounted, not merely sequence-versus-choice. The emitted corpus carries NO compositor',
+				'nesting and the ORDERED particle list), the PREFIX BINDINGS each document declares, and',
 			);
 			lines.push(
-				'at all and a conforming XSD processor refuses 63 of 64 emitted documents. Prefix',
+				'therefore ELEMENT ORDER inside a content model — which Phase 6 had declared undetectable',
 			);
 			lines.push(
-				'BINDINGS are likewise unmodelled, so an emitted document can reference a prefix it',
+				'and which is retracted on driven evidence. STILL UNMODELLED, and so invisible as loss:',
 			);
 			lines.push(
-				'never declares. A fidelity percentage here means "of the statements MODELLED" and',
+				'the NAMESPACE of a type reference (canonicalTypeRef strips the prefix, so a repoint to a',
 			);
-			lines.push('nothing wider. See the verdict independentCheck block.');
+			lines.push(
+				'same-named type in another namespace canonicalizes identically), attribute order, and',
+			);
+			lines.push(
+				'the 2nd..nth xs:documentation of one xs:annotation. A fidelity percentage here means',
+			);
+			lines.push('"of the statements MODELLED". See the verdict independentCheck block.');
 			lines.push('');
 			Object.keys(report.context || {}).forEach((oneContextName) => {
 				lines.push(`  ${padRight(`${oneContextName}:`, 22)}${report.context[oneContextName]}`);

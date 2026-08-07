@@ -1,0 +1,28 @@
+------------------------------------------------------------------------------------------------
+INDEPENDENT XSD COMPONENT COMPARISON — xmlschema 4.3.2, processor XMLSchema11
+------------------------------------------------------------------------------------------------
+  This shares NO CODE with the emitter or the canonicalizer. It exists because a
+  tool cannot audit the assumption it is built on.
+
+  SOURCE corpus:   attempted 64   clean 55   refused 9   emptyCompile 0
+  EMITTED corpus:  attempted 64   clean 55   refused 9   emptyCompile 0
+
+  compiled clean on BOTH sides: 55 of 64
+  source clean but emitted NOT: 0   <-- emitted output a conforming processor refuses
+
+  EMITTED REFUSALS, in the processor's own words:
+       6  reference into an unresolvable namespace (unknown type)
+       3  reference into an unresolvable namespace (missing group)
+
+  COMPONENT-LEVEL DIFFERENCES, over files clean on both sides:
+    content models compared .... 25540   (RECURSIVE: global types, global elements, and every nested anonymous type)
+    type only in source ........ 0
+    type only in emitted ....... 0
+    particle ORDER differences . 0   (the primary comparator carries no ordinal and cannot see these)
+    RESOLVED type differences .. 0   (the primary comparator strips the prefix and cannot see these)
+    enumeration differences .... 0
+    element type-pointer diffs . 0
+    traversal UNAVAILABLE ...... 28   <-- EXCLUDED from the counts above; NONZERO MEANS INCOMPLETE, NOT AGREEMENT
+
+  NOTE: agreement here is NOT a fidelity claim. This instrument answers "is the emitted
+  document a valid schema saying the same thing", not "is every statement reproduced".

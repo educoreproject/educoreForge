@@ -1,0 +1,1390 @@
+{
+ "verdictVersion": "pesc260805RoundTripVerdict-1",
+ "standard": "PESC260805",
+ "roundTripClean": true,
+ "reproduced": 173216,
+ "inventedTotal": 0,
+ "lostTotal": 0,
+ "contentGapTotal": 0,
+ "explicitlyOmittedTotal": 0,
+ "syntheticReproducible": true,
+ "syntheticReproducibilityTotal": 109,
+ "syntheticReproducibility": {
+  "rule": "S-1",
+  "coverage": {
+   "checkedRuleList": [
+    "S-1"
+   ],
+   "uncheckedRuleList": [
+    "S-1c",
+    "S-2"
+   ],
+   "checkedNodeCount": 109,
+   "syntheticNodeTotalInGraph": 632,
+   "comparisonBasis": "kind/name identity only — CONTENT IS NOT COMPARED",
+   "statement": "reproducible=true means S-1 IDENTITY reproduces. It does NOT mean the synthetic tier reproduces: S-1c (522 children) and S-2 are UNCHECKED, and no synthetic node CONTENT is compared."
+  },
+  "description": "Merged AcademicRecord v1.6.0: union of named definitions from the two preserved collision members, college-transcript winning on name conflict (SPEC 6.2). Recomputed here by an INDEPENDENT xml2js parse and an independent union; compared against the graph synthetic tier over bolt. Shares no code with lib/syntheticTier.js.",
+  "contestedNamespace": "urn:org:pesc:sector:AcademicRecord:v1.6.0",
+  "collegeBranchFilename": "AcademicRecord_v1.6.0.collision-948d88f32069.xsd",
+  "testScoreBranchFilename": "AcademicRecord_v1.6.0.collision-e12830fc86a3.xsd",
+  "collegeBranchDefinitionCount": 73,
+  "testScoreBranchDefinitionCount": 67,
+  "expectedUnionTotal": 109,
+  "graphSyntheticTotal": 109,
+  "comparedTotal": 109,
+  "missingFromGraphTotal": 0,
+  "unexpectedInGraphTotal": 0,
+  "missingFromGraphList": [],
+  "unexpectedInGraphList": [],
+  "reproducible": true
+ },
+ "notReproducedTotal": 0,
+ "whitespaceOnlyDifferenceTotal": 0,
+ "semanticValidationLimit": "SEMANTIC round-trip: statement-set equality, not byte equality, and the statement set is the one THIS INSTRUMENT CHOOSES TO MODEL. WHAT IS MODELLED AS OF PHASE 6.5, each on BOTH sides: (1) THE COMPOSITOR — kind, effective occurrence, nesting, and the ORDERED particle list, as declaresContentModel / compositorKind / compositorMinOccurs / compositorMaxOccurs / particleAt:N statements; (2) PREFIX BINDINGS — declaresNamespacePrefix and boundNamespace per xmlns declaration; (3) ELEMENT ORDER within a content model, which the ordinal in particleAt:N makes visible. THE PHASE 6 DECLARATION THAT ELEMENT ORDER IS UNDETECTABLE IS RETRACTED ON EVIDENCE: a driven sibling swap in a graph row moves 2 statements and moved 0 under the previous form (test/probes/p65_contentModelLevers.js). WHAT REMAINS UNMODELLED, and is therefore invisible as loss rather than merely hard to see: (a) THE NAMESPACE OF A TYPE REFERENCE — canonicalTypeRef strips the prefix, so a reference repointed to a same-named type in a DIFFERENT namespace canonicalizes identically; this is R-ID-1 fusion surviving in the object space and it is the more serious of the residue; (b) ATTRIBUTE ORDER; (c) SEVERAL xs:documentation children of one xs:annotation, of which the forge keeps the first (see knownResidue). ALSO DECLARED, a measured boundary of the emitter rather than of this comparison: a container whose content model holds ONLY group references or wildcards declares no element children, so a missing contentModelShape there cannot be refused by name and shows up as ordinary loss in this diff instead. \"Semantically clean\" MUST NEVER be reported as \"identical\".",
+ "namedDefectList": [
+  {
+   "defectId": "P6-D1",
+   "title": "explicitlyOmitted is assigned BY PREDICATE, so a genuine defect can be laundered into the \"not loss\" bucket and lostTotal under-reports it",
+   "severity": "affects a NORMATIVE R-VAL-6 field",
+   "mechanism": "A statement is filed as explicitlyOmitted when its PREDICATE appears in the canonicalizer EXPLICITLY_OMITTED_PREDICATES registry — targetNamespace, importsNamespace, importsSchemaLocation, elementFormDefault, attributeFormDefault. Nothing tests whether the omission was actually DELIBERATE. The report calls that bucket \"declarations the graph deliberately does not carry - CHOSEN, never lost\". Since lostTotal carries contentGap ONLY, every statement laundered this way is subtracted from the headline loss figure.",
+   "demonstration": "OBSERVED 2026-08-06. One character altered inside one xs:documentation string in TestScoreReport_v1.1.0.xsd of a scratch corpus copy (exactly one differing byte by cmp; SHA256SUMS regenerated so the checksum gate was deliberately satisfied and the comparator actually reached). Because fileLabel is content-addressed the whole file decoupled: all EIGHT of its statements went unmatched. THREE were filed contentGap and FIVE were filed explicitlyOmitted. notReproduced rose 293 -> 301 while the normative lostTotal rose only 293 -> 296. Reproduce with test/probes/p6_explicitlyOmittedLaundering.js.",
+   "standingToday": "explicitlyOmittedTotal is 0 in the current build, so nothing is masked today. That is luck rather than safety: the path is live and was demonstrated, not inferred.",
+   "severityCaveat": "IN THE DEMONSTRATION ABOVE inventedTotal ALSO moved 0 -> 8, and inventedTotal > 0 FAILS A BUILD, so that particular defect does not escape — it is caught loudly by a different gate. What is proven is that the LAUNDERING PATH IS LIVE. The dangerous case is a defect that launders WITHOUT moving inventedTotal; that case is NOT demonstrated and is NOT claimed.",
+   "ownedBy": "NOT repaired in Phase 6. Phase 6 is anti-cheat; it finds and reports."
+  }
+ ],
+ "independentCheck": {
+  "status": "ran",
+  "processorClass": "XMLSchema11",
+  "xmlschemaVersion": "4.3.2",
+  "sourceCompile": {
+   "attempted": 64,
+   "clean": 55,
+   "refused": 9,
+   "emptyCompile": 0,
+   "traversalUnavailableTypes": 28
+  },
+  "emittedCompile": {
+   "attempted": 64,
+   "clean": 55,
+   "refused": 9,
+   "emptyCompile": 0,
+   "traversalUnavailableTypes": 28
+  },
+  "compileAgreement": {
+   "sharedFilenames": 64,
+   "bothClean": 55,
+   "sourceCleanEmittedNotClean": 0,
+   "emittedCleanSourceNotClean": 0
+  },
+  "emittedRefusalCauseTally": {
+   "reference into an unresolvable namespace (missing group)": 3,
+   "reference into an unresolvable namespace (unknown type)": 6
+  },
+  "componentComparison": {
+   "comparedTypeTotal": 25540,
+   "typeOnlyInSourceTotal": 0,
+   "typeOnlyInEmittedTotal": 0,
+   "particleOrderDifferenceTotal": 0,
+   "resolvedTypeDifferenceTotal": 0,
+   "enumerationDifferenceTotal": 0,
+   "pointerDifferenceTotal": 0,
+   "traversalUnavailableTotal": 28
+  },
+  "comparisonScopeStatement": "component-level differences are computed over the 55 of 64 filenames that compiled clean on BOTH sides, covering 25540 content models reached RECURSIVELY (global types, global elements, and every nested anonymous type). A zero over a small set means there was little to compare; it is NOT a fidelity claim. 28 content model(s) could not be walked on one or both sides and are EXCLUDED from every difference count — that exclusion is a measured incompleteness, never an agreement."
+ },
+ "knownResidue": {
+  "multiDocumentationAnnotations": 5,
+  "multiDocumentationLiteralsDiscarded": 5,
+  "multiDocumentationNonEmptyLiteralsLost": 2,
+  "note": "XSD permits several xs:documentation children in one xs:annotation; the forge parser keeps only the FIRST. 3 of the 5 discarded literals are empty, so the real content loss is 2 (DocumentCategory and DocumentFormat, AcademicRecord_v1.14.0.xsd). FORGE finding, not a validator finding; enumerated in test/test-artifacts/p5ParserDocumentationResidue.json. Subtract it by name before reading a nonzero lostTotal as a regression."
+ },
+ "snapshot": {
+  "snapshotPath": "/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/forges/pesc260805/assets/standardSourceData/01",
+  "combinedDigest": "92e9a6326ff1edda465db3d704632491a7b5bb39469edfee883f366840688984",
+  "files": [
+   {
+    "filename": "AcademicEportfolio_v1.0.0.xsd",
+    "sha256": "5aeefa06cd2df8515d146a644814e59280a7d1076a727cf4a739a0dce1927f08"
+   },
+   {
+    "filename": "AcademicRecord_v1.0.0.xsd",
+    "sha256": "1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc"
+   },
+   {
+    "filename": "AcademicRecord_v1.1.0.xsd",
+    "sha256": "d498b9d439bd4b3352b36bd5449d1606b12dfdaa206d9d655e1095cdd4b48f79"
+   },
+   {
+    "filename": "AcademicRecord_v1.10.0.xsd",
+    "sha256": "87502be504916a0fcd47495bcf9156221b0320c8aa6e05fb48e2ed598486c283"
+   },
+   {
+    "filename": "AcademicRecord_v1.11.0.xsd",
+    "sha256": "76ef93896303b613c2000bb1b565c433d021bec0a2c31e9f91389af3e3ad4487"
+   },
+   {
+    "filename": "AcademicRecord_v1.12.0.xsd",
+    "sha256": "92d58d21dc538699bc38ab44735063f807cf4bae7911dd0082375cdd0b439f75"
+   },
+   {
+    "filename": "AcademicRecord_v1.13.0.xsd",
+    "sha256": "971970f7ff62de32fe3c1e36df32ff81f111ee703439bd4c7e4ba32a28a1dcb0"
+   },
+   {
+    "filename": "AcademicRecord_v1.14.0.xsd",
+    "sha256": "592054a062bd43bda7f1fe80b754874bd8e0271f9899e44c0fe8368cad5e5299"
+   },
+   {
+    "filename": "AcademicRecord_v1.3.0.xsd",
+    "sha256": "e51d14ce491167814383ffff1d179a498ec81e501305a2cd30c125158f2b80d3"
+   },
+   {
+    "filename": "AcademicRecord_v1.5.0.xsd",
+    "sha256": "69ac42ccab66265fe3b061f5984f18caba61497f130b7f31c481fd52aff8da04"
+   },
+   {
+    "filename": "AcademicRecord_v1.6.0.collision-948d88f32069.xsd",
+    "sha256": "948d88f320696e283a3b5a6079a13f803fce73f4b0007c54b5c623f9ba52aeca"
+   },
+   {
+    "filename": "AcademicRecord_v1.6.0.collision-e12830fc86a3.xsd",
+    "sha256": "e12830fc86a304071ffec896e76d079e27274277d46a95218946f863a68f5527"
+   },
+   {
+    "filename": "AcademicRecord_v1.7.0.xsd",
+    "sha256": "be959f6423608773e4303738037bab2981f5ae1416707a41f5d222d037ab1ef9"
+   },
+   {
+    "filename": "AcademicRecord_v1.8.0.xsd",
+    "sha256": "b77f143b0a40a77687287daaf872f567c42c8d7c54a35cacda48620b672d2d32"
+   },
+   {
+    "filename": "AcademicRecord_v1.9.0.xsd",
+    "sha256": "4e3a13516e7e4f26bade97d946349315d904af4a82e82746e4576e1cc2642e78"
+   },
+   {
+    "filename": "AdmissionsApplication_v1.0.0.xsd",
+    "sha256": "49597e9df350f3457dfc25d697fdfe373334ab0a7be929e29d42d539d3d532d7"
+   },
+   {
+    "filename": "AdmissionsApplication_v1.1.0.xsd",
+    "sha256": "05631367c1dd22eabb2282345a9c2d0f7194dd7a2ce96c0e1072bfba699d6851"
+   },
+   {
+    "filename": "AdmissionsApplication_v1.2.0.xsd",
+    "sha256": "e313f26032064e40b449ecb522aba4f9a942c2e8f9a19686395260c98b2f2e89"
+   },
+   {
+    "filename": "AdmissionsApplication_v1.3.0.xsd",
+    "sha256": "ca2436b4e1b6bd1fcdebea973cea2e3add00a27a49ac4629428e1c83f00c1c92"
+   },
+   {
+    "filename": "AdmissionsRecord_v1.0.0.xsd",
+    "sha256": "3c37e27fdc6d65ee55d64c5fffe528c7c4ba3be1c517860454946d30328cc71d"
+   },
+   {
+    "filename": "AdmissionsRecord_v1.1.0.xsd",
+    "sha256": "e1aeee6340bf7a510130e94163a359340cf8dff056f9d6a0b9e5ae99836e3ed3"
+   },
+   {
+    "filename": "AdmissionsRecord_v1.2.0.xsd",
+    "sha256": "c6f8fd1860a68e3ef7af1f1e14c7c28ff090491bba10c240c07c4853f35657c7"
+   },
+   {
+    "filename": "AdmissionsRecord_v1.3.0.xsd",
+    "sha256": "e16c56166206257b3dbc07abbd974b27bc24891310406c7013e3177c8967f895"
+   },
+   {
+    "filename": "AdmissionsRecord_v1.4.0.xsd",
+    "sha256": "2a36221eec31eada4021717a2d16d356b9b75881efcdccfa66a02daabd696441"
+   },
+   {
+    "filename": "CollegeTranscript_v1.0.0.xsd",
+    "sha256": "896e8b5126a73eb9924db1ef3511daee7711721267817aa7f966221f6331e226"
+   },
+   {
+    "filename": "CollegeTranscript_v1.1.0.xsd",
+    "sha256": "d62e7cb1088a56c9df0cbfc2f7a691c8e8693f6f4fcd5473a51751d457806921"
+   },
+   {
+    "filename": "CollegeTranscript_v1.2.0.xsd",
+    "sha256": "12bf836a9c23fd277064edf61a5593f0ee4c3009d1cece0985ad1d9635467872"
+   },
+   {
+    "filename": "CollegeTranscript_v1.3.0.xsd",
+    "sha256": "ce46a0481141d2388f5d08be5e49d0da21f766c22fb55b45355b8d57a128db59"
+   },
+   {
+    "filename": "CollegeTranscript_v1.4.0.xsd",
+    "sha256": "41a84c55f000f04bb9619aabea4c0469990fe3936c51201b3f587ce8aa5b6d68"
+   },
+   {
+    "filename": "CollegeTranscript_v1.5.0.xsd",
+    "sha256": "95d39ebf4e99ae8ad4217942706c24764dd49b5cc19f897714fbd5128a6b20d1"
+   },
+   {
+    "filename": "CollegeTranscript_v1.6.0.xsd",
+    "sha256": "4d86816882d94e51fa3acaf12655ac1c50ffaa1cd545d58a52a64f86cdf505f8"
+   },
+   {
+    "filename": "CollegeTranscript_v1.7.0.xsd",
+    "sha256": "b92fe35d126390825ce92cc83c430fd33fadb7dd3c810dc03abd2bb1cad4ccd6"
+   },
+   {
+    "filename": "CollegeTranscript_v1.8.0.xsd",
+    "sha256": "53430176920c55a0431bdc166db326d0b96b564f86d8114bfb01459b0ee15502"
+   },
+   {
+    "filename": "CoreMain_v1.0.0.xsd",
+    "sha256": "9280eaa9a618c6c93c42956d75031ed0424b3d8bd8c4c650ad3bd30fd481942a"
+   },
+   {
+    "filename": "CoreMain_v1.10.0.xsd",
+    "sha256": "1ea9f63e4b603cbf3f8da690efd7debc69f3b84e598788d922a90c8b8cbc1f14"
+   },
+   {
+    "filename": "CoreMain_v1.12.0.xsd",
+    "sha256": "ccf54c28dbb3f750fda925076c64508f53102a00c3316d265395d4bc7ae6d42e"
+   },
+   {
+    "filename": "CoreMain_v1.13.0.xsd",
+    "sha256": "2cd45fc3afd3779eebb66cd552abaa28e3a24093379b1de4bc9d1c5ebb5f848d"
+   },
+   {
+    "filename": "CoreMain_v1.14.0.xsd",
+    "sha256": "78f00a57c7faade149343179c3758e5e15d710f4ed72f6cdde7d3b693d41b1ca"
+   },
+   {
+    "filename": "CoreMain_v1.16.0.xsd",
+    "sha256": "870c35770ffd7daf68c270eef291c360a32dcc32bd952c439c175439b7bb04b6"
+   },
+   {
+    "filename": "CoreMain_v1.17.0.xsd",
+    "sha256": "f4b05efd5839528d316dc6f58c3dfd3d623767b53c82d918198c57fa25f840c7"
+   },
+   {
+    "filename": "CoreMain_v1.18.0.xsd",
+    "sha256": "a50f5029f53c7e9d06a589b1631a3f8f94e8177a984b1d554b339d092f135fe3"
+   },
+   {
+    "filename": "CoreMain_v1.19.0.xsd",
+    "sha256": "d9ded3484f893672cdb9fff07f5401231661e33870f9427489bcc02188c3d60a"
+   },
+   {
+    "filename": "CoreMain_v1.19.1.xsd",
+    "sha256": "5ade556046aabf40296db71d57ca7e8a3e633774898e7d44c256847138de34ec"
+   },
+   {
+    "filename": "CoreMain_v1.2.0.xsd",
+    "sha256": "4e04af8030a47290c636a24fe0fd0ce73cf6b7f8284b61493d188c776b6c34ef"
+   },
+   {
+    "filename": "CoreMain_v1.4.0.xsd",
+    "sha256": "6713f69d99e7c184b34e82053584fa96e18a76ad74fbd468e7ded2b10860ec13"
+   },
+   {
+    "filename": "CoreMain_v1.7.0.xsd",
+    "sha256": "24641a04fab93ad646fc7833a2426b9ca22884593867cffc492ece8e66a11e73"
+   },
+   {
+    "filename": "CoreMain_v1.8.0.xsd",
+    "sha256": "ac8d9367af6b061403e7cb971a5be3251aa968a8fd4308bcb0961628d35ded0d"
+   },
+   {
+    "filename": "DocumentRequest_v1.0.0.xsd",
+    "sha256": "04a1f80f6dcaa141ea9c9d1667225ad9f84bf7466a733a6ebdc5308fa338afd8"
+   },
+   {
+    "filename": "DocumentResponse_v1.0.0.xsd",
+    "sha256": "5fd61aadcef00e8ae9014b66726267c07722f2c6a3c246d094632ab8fa3840bd"
+   },
+   {
+    "filename": "EducationCourseInventory_v1.0.0.xsd",
+    "sha256": "da9f40bfbd3e9e7ee2805fd85024f5b58b95ae1075ba875d31a48ffce714f233"
+   },
+   {
+    "filename": "HighSchoolTranscript_v1.0.0.xsd",
+    "sha256": "f4f0e97c68c9cdfc3b9dce167bca2c309cbfd1be84837ff3af3de1f74328c8e8"
+   },
+   {
+    "filename": "HighSchoolTranscript_v1.1.0.xsd",
+    "sha256": "af7c29a70c25ab3e0149d6c74e6fedff5023799f197de9967077488f0ce6f9ac"
+   },
+   {
+    "filename": "HighSchoolTranscript_v1.2.0.xsd",
+    "sha256": "bbf482f58a43d6e5c82242ac1aa3c6c3c714445abe900c9a4525b1fef89e406e"
+   },
+   {
+    "filename": "HighSchoolTranscript_v1.3.0.xsd",
+    "sha256": "c963fb1ea4dec72e50b51a8f2a9a075af87a62792f8dab7386d51433d6fc9559"
+   },
+   {
+    "filename": "HighSchoolTranscript_v1.4.0.xsd",
+    "sha256": "088cd9a52fa803deb30585bcb92dec3622ba3fac91464da4abd0f81e506392dd"
+   },
+   {
+    "filename": "HighSchoolTranscript_v1.5.0.xsd",
+    "sha256": "2cab3cbb9e7962083aba7eba88dbf6b7346f4ba8d61da0735f9c619c09ca207e"
+   },
+   {
+    "filename": "HighSchoolTranscript_v1.6.0.xsd",
+    "sha256": "2e753ab4cd7800753f4ecd23bcadc388af0a779530f7752e1b318e44a2a2fdfd"
+   },
+   {
+    "filename": "LearningRecord_v1.0.0.xsd",
+    "sha256": "62b74c155eb8bf2435ce6a0d0cc4f69f6de286835ddc235b71add8d3d8ed33c6"
+   },
+   {
+    "filename": "TestScoreReport_v1.0.0.xsd",
+    "sha256": "720f5bf323accc422b8104c6906789a23cd716f1e6fc6a06459b4de259644841"
+   },
+   {
+    "filename": "TestScoreReport_v1.1.0.xsd",
+    "sha256": "038d796bd097d2095389f7338fa4c758c8cb6fc831f2b6775469536b8c112c49"
+   },
+   {
+    "filename": "TranscriptAcknowledgment_v1.1.0.xsd",
+    "sha256": "154340f12f03ecf19e51f8aba4fd70b2b4765a52fe879c4f2c6aba3c879026b1"
+   },
+   {
+    "filename": "TranscriptRequest_v1.1.0.xsd",
+    "sha256": "9d96895afde3be8d681bf94c2d3b2aa3799644967c98900293b2d0271bd4ea36"
+   },
+   {
+    "filename": "TranscriptResponse_v1.1.0.xsd",
+    "sha256": "01f8eea0cb81401c4441a9f45745df0393c71d608c0da2afb5cd1fe02cf80e7e"
+   },
+   {
+    "filename": "iso_3166-1_v1.0.0.xsd",
+    "sha256": "3634b533ecc9db84190abb5648840ad54967a0474941f3de6a3f638f70c29772"
+   }
+  ]
+ },
+ "graph": {
+  "containerName": "DEV_pesc260805",
+  "boltUrl": "bolt://localhost:7821",
+  "sourceTierNodeTotal": 41676,
+  "nodeCountByLabel": {
+   "PescArtifact": 64,
+   "PescImportDecl": 82,
+   "PescNamedDefinition": 12909,
+   "PescElementDecl": 16969,
+   "PescAnonymousType": 720,
+   "PescDerivation": 10848,
+   "PescAttributeDecl": 84
+  },
+  "artifactCount": 64
+ },
+ "report": {
+  "reportVersion": "pescRoundTrip-1",
+  "context": {
+   "snapshotPath": "/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/forges/pesc260805/assets/standardSourceData/01",
+   "snapshotDigest": "92e9a6326ff1edda465db3d704632491a7b5bb39469edfee883f366840688984",
+   "containerName": "DEV_pesc260805",
+   "boltUrl": "bolt://localhost:7821"
+  },
+  "headline": {
+   "sourceStatements": 173216,
+   "emittedStatements": 173216,
+   "matched": 173216,
+   "notReproduced": 0,
+   "contentGap": 0,
+   "explicitlyOmitted": 0,
+   "invented": 0,
+   "fidelityPercent": 100,
+   "cleanFidelityPercent": 100,
+   "sourceDuplicatesCollapsed": 295,
+   "emittedDuplicatesCollapsed": 295,
+   "sourceSubjects": 44951,
+   "emittedSubjects": 44951,
+   "whitespaceOnlyDifference": 0
+  },
+  "whitespaceOnlyDifferenceSamples": [],
+  "perPredicate": [
+   {
+    "predicate": "allowsAnyElement",
+    "lostCategory": "contentGap",
+    "source": 25,
+    "emitted": 25,
+    "matched": 25,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "attributeFormDefault",
+    "lostCategory": "explicitlyOmitted",
+    "source": 60,
+    "emitted": 60,
+    "matched": 60,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "boundNamespace",
+    "lostCategory": "contentGap",
+    "source": 217,
+    "emitted": 217,
+    "matched": 217,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "compositorKind",
+    "lostCategory": "contentGap",
+    "source": 3248,
+    "emitted": 3248,
+    "matched": 3248,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "compositorMaxOccurs",
+    "lostCategory": "contentGap",
+    "source": 3248,
+    "emitted": 3248,
+    "matched": 3248,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "compositorMinOccurs",
+    "lostCategory": "contentGap",
+    "source": 3248,
+    "emitted": 3248,
+    "matched": 3248,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "contentTypeRef",
+    "lostCategory": "contentGap",
+    "source": 145,
+    "emitted": 145,
+    "matched": 145,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "declaresComplexType",
+    "lostCategory": "contentGap",
+    "source": 3021,
+    "emitted": 3021,
+    "matched": 3021,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "declaresContentModel",
+    "lostCategory": "contentGap",
+    "source": 3248,
+    "emitted": 3248,
+    "matched": 3248,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "declaresGroup",
+    "lostCategory": "contentGap",
+    "source": 121,
+    "emitted": 121,
+    "matched": 121,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "declaresNamespacePrefix",
+    "lostCategory": "contentGap",
+    "source": 217,
+    "emitted": 217,
+    "matched": 217,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "declaresRootElement",
+    "lostCategory": "contentGap",
+    "source": 171,
+    "emitted": 171,
+    "matched": 171,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "declaresSimpleType",
+    "lostCategory": "contentGap",
+    "source": 9596,
+    "emitted": 9596,
+    "matched": 9596,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "derivationMethod",
+    "lostCategory": "contentGap",
+    "source": 600,
+    "emitted": 600,
+    "matched": 600,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "derivesFrom",
+    "lostCategory": "contentGap",
+    "source": 600,
+    "emitted": 600,
+    "matched": 600,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "documentation",
+    "lostCategory": "contentGap",
+    "source": 26591,
+    "emitted": 26591,
+    "matched": 26591,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "elementFixed",
+    "lostCategory": "contentGap",
+    "source": 2,
+    "emitted": 2,
+    "matched": 2,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "elementFormDefault",
+    "lostCategory": "explicitlyOmitted",
+    "source": 64,
+    "emitted": 64,
+    "matched": 64,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "enumerationValue",
+    "lostCategory": "contentGap",
+    "source": 30519,
+    "emitted": 30519,
+    "matched": 30519,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "facet:fractionDigits",
+    "lostCategory": "contentGap",
+    "source": 815,
+    "emitted": 815,
+    "matched": 815,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "facet:length",
+    "lostCategory": "contentGap",
+    "source": 33,
+    "emitted": 33,
+    "matched": 33,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "facet:maxInclusive",
+    "lostCategory": "contentGap",
+    "source": 542,
+    "emitted": 542,
+    "matched": 542,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "facet:maxLength",
+    "lostCategory": "contentGap",
+    "source": 2749,
+    "emitted": 2749,
+    "matched": 2749,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "facet:minInclusive",
+    "lostCategory": "contentGap",
+    "source": 546,
+    "emitted": 546,
+    "matched": 546,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "facet:minLength",
+    "lostCategory": "contentGap",
+    "source": 2676,
+    "emitted": 2676,
+    "matched": 2676,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "facet:pattern",
+    "lostCategory": "contentGap",
+    "source": 75,
+    "emitted": 75,
+    "matched": 75,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "facet:totalDigits",
+    "lostCategory": "contentGap",
+    "source": 879,
+    "emitted": 879,
+    "matched": 879,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "facet:whiteSpace",
+    "lostCategory": "contentGap",
+    "source": 45,
+    "emitted": 45,
+    "matched": 45,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "fieldType",
+    "lostCategory": "contentGap",
+    "source": 16762,
+    "emitted": 16762,
+    "matched": 16762,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "importsNamespace",
+    "lostCategory": "explicitlyOmitted",
+    "source": 82,
+    "emitted": 82,
+    "matched": 82,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "importsSchemaLocation",
+    "lostCategory": "explicitlyOmitted",
+    "source": 82,
+    "emitted": 82,
+    "matched": 82,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "inlineEnumerationValue",
+    "lostCategory": "contentGap",
+    "source": 814,
+    "emitted": 814,
+    "matched": 814,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "maxOccurs",
+    "lostCategory": "contentGap",
+    "source": 16983,
+    "emitted": 16983,
+    "matched": 16983,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "minOccurs",
+    "lostCategory": "contentGap",
+    "source": 16983,
+    "emitted": 16983,
+    "matched": 16983,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "nillable",
+    "lostCategory": "contentGap",
+    "source": 775,
+    "emitted": 775,
+    "matched": 775,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "particleAt/0",
+    "lostCategory": "contentGap",
+    "source": 3248,
+    "emitted": 3248,
+    "matched": 3248,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "particleAt/1",
+    "lostCategory": "contentGap",
+    "source": 2951,
+    "emitted": 2951,
+    "matched": 2951,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "particleAt/10",
+    "lostCategory": "contentGap",
+    "source": 323,
+    "emitted": 323,
+    "matched": 323,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "particleAt/11",
+    "lostCategory": "contentGap",
+    "source": 277,
+    "emitted": 277,
+    "matched": 277,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "particleAt/12",
+    "lostCategory": "contentGap",
+    "source": 250,
+    "emitted": 250,
+    "matched": 250,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "particleAt/13",
+    "lostCategory": "contentGap",
+    "source": 213,
+    "emitted": 213,
+    "matched": 213,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "particleAt/14",
+    "lostCategory": "contentGap",
+    "source": 180,
+    "emitted": 180,
+    "matched": 180,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "particleAt/15",
+    "lostCategory": "contentGap",
+    "source": 144,
+    "emitted": 144,
+    "matched": 144,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "particleAt/16",
+    "lostCategory": "contentGap",
+    "source": 93,
+    "emitted": 93,
+    "matched": 93,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "particleAt/17",
+    "lostCategory": "contentGap",
+    "source": 79,
+    "emitted": 79,
+    "matched": 79,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "particleAt/18",
+    "lostCategory": "contentGap",
+    "source": 69,
+    "emitted": 69,
+    "matched": 69,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "particleAt/19",
+    "lostCategory": "contentGap",
+    "source": 44,
+    "emitted": 44,
+    "matched": 44,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "particleAt/2",
+    "lostCategory": "contentGap",
+    "source": 2290,
+    "emitted": 2290,
+    "matched": 2290,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "particleAt/20",
+    "lostCategory": "contentGap",
+    "source": 44,
+    "emitted": 44,
+    "matched": 44,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "particleAt/21",
+    "lostCategory": "contentGap",
+    "source": 42,
+    "emitted": 42,
+    "matched": 42,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "particleAt/22",
+    "lostCategory": "contentGap",
+    "source": 37,
+    "emitted": 37,
+    "matched": 37,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "particleAt/23",
+    "lostCategory": "contentGap",
+    "source": 37,
+    "emitted": 37,
+    "matched": 37,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "particleAt/24",
+    "lostCategory": "contentGap",
+    "source": 36,
+    "emitted": 36,
+    "matched": 36,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "particleAt/25",
+    "lostCategory": "contentGap",
+    "source": 36,
+    "emitted": 36,
+    "matched": 36,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "particleAt/26",
+    "lostCategory": "contentGap",
+    "source": 25,
+    "emitted": 25,
+    "matched": 25,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "particleAt/27",
+    "lostCategory": "contentGap",
+    "source": 25,
+    "emitted": 25,
+    "matched": 25,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "particleAt/28",
+    "lostCategory": "contentGap",
+    "source": 25,
+    "emitted": 25,
+    "matched": 25,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "particleAt/29",
+    "lostCategory": "contentGap",
+    "source": 21,
+    "emitted": 21,
+    "matched": 21,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "particleAt/3",
+    "lostCategory": "contentGap",
+    "source": 1829,
+    "emitted": 1829,
+    "matched": 1829,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "particleAt/30",
+    "lostCategory": "contentGap",
+    "source": 19,
+    "emitted": 19,
+    "matched": 19,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "particleAt/31",
+    "lostCategory": "contentGap",
+    "source": 19,
+    "emitted": 19,
+    "matched": 19,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "particleAt/32",
+    "lostCategory": "contentGap",
+    "source": 19,
+    "emitted": 19,
+    "matched": 19,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "particleAt/33",
+    "lostCategory": "contentGap",
+    "source": 18,
+    "emitted": 18,
+    "matched": 18,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "particleAt/34",
+    "lostCategory": "contentGap",
+    "source": 18,
+    "emitted": 18,
+    "matched": 18,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "particleAt/35",
+    "lostCategory": "contentGap",
+    "source": 18,
+    "emitted": 18,
+    "matched": 18,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "particleAt/36",
+    "lostCategory": "contentGap",
+    "source": 9,
+    "emitted": 9,
+    "matched": 9,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "particleAt/37",
+    "lostCategory": "contentGap",
+    "source": 3,
+    "emitted": 3,
+    "matched": 3,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "particleAt/38",
+    "lostCategory": "contentGap",
+    "source": 3,
+    "emitted": 3,
+    "matched": 3,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "particleAt/39",
+    "lostCategory": "contentGap",
+    "source": 3,
+    "emitted": 3,
+    "matched": 3,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "particleAt/4",
+    "lostCategory": "contentGap",
+    "source": 1404,
+    "emitted": 1404,
+    "matched": 1404,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "particleAt/40",
+    "lostCategory": "contentGap",
+    "source": 3,
+    "emitted": 3,
+    "matched": 3,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "particleAt/41",
+    "lostCategory": "contentGap",
+    "source": 3,
+    "emitted": 3,
+    "matched": 3,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "particleAt/42",
+    "lostCategory": "contentGap",
+    "source": 2,
+    "emitted": 2,
+    "matched": 2,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "particleAt/43",
+    "lostCategory": "contentGap",
+    "source": 2,
+    "emitted": 2,
+    "matched": 2,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "particleAt/44",
+    "lostCategory": "contentGap",
+    "source": 2,
+    "emitted": 2,
+    "matched": 2,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "particleAt/5",
+    "lostCategory": "contentGap",
+    "source": 1099,
+    "emitted": 1099,
+    "matched": 1099,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "particleAt/6",
+    "lostCategory": "contentGap",
+    "source": 879,
+    "emitted": 879,
+    "matched": 879,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "particleAt/7",
+    "lostCategory": "contentGap",
+    "source": 650,
+    "emitted": 650,
+    "matched": 650,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "particleAt/8",
+    "lostCategory": "contentGap",
+    "source": 523,
+    "emitted": 523,
+    "matched": 523,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "particleAt/9",
+    "lostCategory": "contentGap",
+    "source": 431,
+    "emitted": 431,
+    "matched": 431,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "restrictionBase",
+    "lostCategory": "contentGap",
+    "source": 9596,
+    "emitted": 9596,
+    "matched": 9596,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "schemaVersionAttribute",
+    "lostCategory": "explicitlyOmitted",
+    "source": 61,
+    "emitted": 61,
+    "matched": 61,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "targetNamespace",
+    "lostCategory": "explicitlyOmitted",
+    "source": 64,
+    "emitted": 64,
+    "matched": 64,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "usesGroup",
+    "lostCategory": "contentGap",
+    "source": 268,
+    "emitted": 268,
+    "matched": 268,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   }
+  ],
+  "perEntityKind": [
+   {
+    "kind": "complexType",
+    "sourceSubjectCount": 3021,
+    "emittedSubjectCount": 3021,
+    "source": 88249,
+    "emitted": 88249,
+    "matched": 88249,
+    "lost": 0,
+    "invented": 0
+   },
+   {
+    "kind": "group",
+    "sourceSubjectCount": 121,
+    "emittedSubjectCount": 121,
+    "source": 3218,
+    "emitted": 3218,
+    "matched": 3218,
+    "lost": 0,
+    "invented": 0
+   },
+   {
+    "kind": "rootElement",
+    "sourceSubjectCount": 171,
+    "emittedSubjectCount": 171,
+    "source": 728,
+    "emitted": 728,
+    "matched": 728,
+    "lost": 0,
+    "invented": 0
+   },
+   {
+    "kind": "schemaFile",
+    "sourceSubjectCount": 64,
+    "emittedSubjectCount": 64,
+    "source": 13761,
+    "emitted": 13761,
+    "matched": 13761,
+    "lost": 0,
+    "invented": 0
+   },
+   {
+    "kind": "simpleType",
+    "sourceSubjectCount": 9596,
+    "emittedSubjectCount": 9596,
+    "source": 67260,
+    "emitted": 67260,
+    "matched": 67260,
+    "lost": 0,
+    "invented": 0
+   }
+  ],
+  "invented": {
+   "total": 0,
+   "perPredicate": []
+  },
+  "unmodeledConstructCounts": {},
+  "canonicalizationFaults": []
+ }
+}

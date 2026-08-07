@@ -42,15 +42,15 @@
 //   field. `explicitlyOmitted` is claimed BY NAME through the canonicalizer's registry, never
 //   assumed.
 //
-//   R-VAL-7 — stated in the verdict itself: semantic validation cannot detect a change that is
-//   semantically null but byte-visible. "Semantically clean" is never reported as "identical".
-//   PHASE 6 CORRECTION: that sentence is too weak and the weakness was shipping from three files
-//   at once. FOUR constructs are modelled on NEITHER side, so their absence reads as fidelity
-//   rather than as loss — the COMPOSITOR (the emitted corpus carries zero xs:sequence and zero
-//   xs:choice against the source corpus's 3,021 and 211, and a conforming processor refuses 63 of
-//   64 emitted documents), PREFIX BINDINGS, ELEMENT ORDER, and the NAMESPACE of a type reference.
-//   None of those is "semantically null". A fidelity percentage from this instrument means "of the
-//   statements it MODELS" and nothing wider.
+//   R-VAL-7 — stated in the verdict itself. "Semantically clean" is never reported as "identical".
+//   PHASE 6 named FOUR constructs modelled on NEITHER side, whose absence therefore read as
+//   fidelity: the COMPOSITOR, PREFIX BINDINGS, ELEMENT ORDER, and the NAMESPACE of a type
+//   reference. PHASE 6.5 CLOSED THE FIRST THREE — the emitter writes the compositor and the xmlns
+//   map from graph properties it had never read, and the canonicalizer models both on both sides,
+//   which makes element order visible through the particle ordinal. ONE REMAINS: the namespace of a
+//   type reference, since canonicalTypeRef strips the prefix, so a repoint to a same-named type in
+//   a different namespace still canonicalizes identically. See semanticValidationLimit in the
+//   verdict for the current statement; it is the authority and this comment is the summary.
 //
 // KNOWN RESIDUE THE VERDICT WILL SURFACE, enumerated so a successor can subtract it BY NAME rather
 // than re-investigate it (test/test-artifacts/p5ParserDocumentationResidue.json): XSD permits an
@@ -626,30 +626,37 @@ const moduleFunction =
 					// the incumbent's collapse would have reported clean regardless.
 					whitespaceOnlyDifferenceTotal: headline.whitespaceOnlyDifference,
 					// R-VAL-7, stated in the artifact rather than in a document nobody opens.
-					// R-VAL-7. REWRITTEN IN PHASE 6 ON MEASUREMENT, at the supervisor's direction
-					// (JADE_PORTAL, 2026-08-06). The previous wording listed "compositor kind", which
-					// a reader takes as "we might mislabel a sequence as a choice" — a nuance. What
-					// was actually measured is compositor ABSENCE, and that is not a nuance and is not
-					// semantically null: without a compositor the emitted document is not a schema.
-					// The field is rewritten rather than footnoted because a claim is not repaired by
-					// appending a correction underneath it.
+					// R-VAL-7. REWRITTEN AGAIN IN PHASE 6.5, BECAUSE THREE OF ITS FOUR CLAUSES BECAME
+					// FALSE. Phase 6 correctly named compositor ABSENCE, prefix bindings and element
+					// order as unmodelled; Phase 6.5 made the emitter write all three and the
+					// canonicalizer model them on BOTH sides, so a declaration that still listed them
+					// would be the same defect Phase 6 was penalised for, running in the opposite
+					// direction. A LIMITATION THAT QUIETLY BECOMES FALSE IS ITS OWN DEFECT, and it is
+					// the one nobody goes back to check. Rewritten rather than footnoted.
 					semanticValidationLimit:
 						'SEMANTIC round-trip: statement-set equality, not byte equality, and the ' +
-						'statement set is the one THIS INSTRUMENT CHOOSES TO MODEL. A fidelity ' +
-						'percentage therefore means "of the statements modelled" and NOTHING WIDER. ' +
-						'FOUR CONSTRUCTS ARE MODELLED ON NEITHER SIDE and are consequently invisible ' +
-						'as loss rather than merely hard to see: (1) THE COMPOSITOR — measured ' +
-						'2026-08-06, the source corpus carries 3,021 xs:sequence and 211 xs:choice and ' +
-						'the emitted corpus carries ZERO of either, so this is compositor ABSENCE, not ' +
-						'compositor kind, and a conforming XSD processor refuses 63 of 64 emitted ' +
-						'documents; (2) PREFIX BINDINGS — the graph carries prefixBindings and the ' +
-						'emitter does not write them, so an emitted document can reference a namespace ' +
-						'prefix it never declares; (3) ELEMENT ORDER within a block — no statement ' +
-						'subject carries an ordinal; (4) THE NAMESPACE OF A TYPE REFERENCE — ' +
-						'canonicalTypeRef strips the prefix, so a reference repointed to a same-named ' +
-						'type in a DIFFERENT namespace canonicalizes identically. Also undetectable: ' +
-						'attribute order. "Semantically clean" MUST NEVER be reported as "identical", ' +
-						'and on this corpus it must not be reported as "valid" either.',
+						'statement set is the one THIS INSTRUMENT CHOOSES TO MODEL. WHAT IS MODELLED ' +
+						'AS OF PHASE 6.5, each on BOTH sides: (1) THE COMPOSITOR — kind, effective ' +
+						'occurrence, nesting, and the ORDERED particle list, as declaresContentModel / ' +
+						'compositorKind / compositorMinOccurs / compositorMaxOccurs / particleAt:N ' +
+						'statements; (2) PREFIX BINDINGS — declaresNamespacePrefix and boundNamespace ' +
+						'per xmlns declaration; (3) ELEMENT ORDER within a content model, which the ' +
+						'ordinal in particleAt:N makes visible. THE PHASE 6 DECLARATION THAT ELEMENT ' +
+						'ORDER IS UNDETECTABLE IS RETRACTED ON EVIDENCE: a driven sibling swap in a ' +
+						'graph row moves 2 statements and moved 0 under the previous form ' +
+						'(test/probes/p65_contentModelLevers.js). WHAT REMAINS UNMODELLED, and is ' +
+						'therefore invisible as loss rather than merely hard to see: (a) THE NAMESPACE ' +
+						'OF A TYPE REFERENCE — canonicalTypeRef strips the prefix, so a reference ' +
+						'repointed to a same-named type in a DIFFERENT namespace canonicalizes ' +
+						'identically; this is R-ID-1 fusion surviving in the object space and it is the ' +
+						'more serious of the residue; (b) ATTRIBUTE ORDER; (c) SEVERAL xs:documentation ' +
+						'children of one xs:annotation, of which the forge keeps the first (see ' +
+						'knownResidue). ALSO DECLARED, a measured boundary of the emitter rather than ' +
+						'of this comparison: a container whose content model holds ONLY group ' +
+						'references or wildcards declares no element children, so a missing ' +
+						'contentModelShape there cannot be refused by name and shows up as ordinary ' +
+						'loss in this diff instead. "Semantically clean" MUST NEVER be reported as ' +
+						'"identical".',
 					// =====================================================================
 					// NAMED DEFECTS OF THIS INSTRUMENT, published in the verdict rather than in a
 					// document nobody opens. These are defects in the VALIDATOR, not in the forge.

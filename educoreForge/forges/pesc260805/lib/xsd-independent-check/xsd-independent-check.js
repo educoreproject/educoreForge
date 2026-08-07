@@ -19,9 +19,14 @@
 // canonicalizes both sides with the same code. Anything it does not model is absent from BOTH
 // sides of its comparison and therefore reads as FIDELITY rather than as loss — the mutual blind
 // spot Phase 5 declared. On its first run against this bundle's own emitted output this
-// instrument found the source corpus carries 3,021 `xs:sequence` and 211 `xs:choice` and the
-// emitted corpus carries ZERO of either, while the primary comparator scored that same output
-// 99.79% faithful. The compositor was never a statement, so its absence could not be a loss.
+// instrument found that the emitted corpus carried ZERO `xs:sequence` and ZERO `xs:choice` while
+// the primary comparator scored that same output 99.79% faithful. The compositor was never a
+// statement, so its absence could not be a loss. THAT FINDING IS WHAT CHARTERED PHASE 6.5, WHICH
+// REPAIRED IT: the emitter now writes the compositor and the comparator models it on both sides,
+// and this instrument reports the emitted corpus compiling 55 clean / 9 refused against the source
+// corpus's identical 55 / 9, the same nine files failing for the same nine reasons. The historical
+// record is kept because it is why this module exists — a tool cannot audit the assumption it is
+// built on, and nothing in OUR comparator could have found this.
 //
 // A tool cannot audit the assumption it is built on.
 //

@@ -1,0 +1,73 @@
+{
+ "suite": "p6_mutationSuite",
+ "containerName": "DEV_pesc260805",
+ "boltUrl": "bolt://localhost:7821",
+ "controlStatementTotal": 173216,
+ "caughtCount": 5,
+ "blindSpotCount": 1,
+ "expectationMismatchCount": 0,
+ "resultRowList": [
+  {
+   "mutationName": "NO_MUTATION_CONTROL",
+   "expectation": "control",
+   "outcome": "control",
+   "matchesExpectation": true,
+   "statementTotal": 173216,
+   "description": "CONTROL: no mutation applied — this run is the answer key"
+  },
+  {
+   "mutationName": "dropOneEnumerationValue",
+   "expectation": "caught",
+   "outcome": "CAUGHT",
+   "matchesExpectation": true,
+   "removedCount": 2,
+   "addedCount": 0,
+   "description": "dropped enumeration value \"AD\" from urn:org:pesc:codes:iso_3166-1:v1.0.0#simpleType/CountryAlpha2CodeSimpleType/restriction/1"
+  },
+  {
+   "mutationName": "swapTwoSiblingElements",
+   "expectation": "caught",
+   "outcome": "CAUGHT",
+   "matchesExpectation": true,
+   "removedCount": 2,
+   "addedCount": 2,
+   "description": "swapped sequencePosition of siblings ThesisDissertationTitle <-> ThesisDissertationAdvisor under urn:org:pesc:core:CoreMain:v1.0.0#complexType/AcademicDegreeRequirementType"
+  },
+  {
+   "mutationName": "changeOneMinOccurs",
+   "expectation": "caught",
+   "outcome": "CAUGHT",
+   "matchesExpectation": true,
+   "removedCount": 1,
+   "addedCount": 1,
+   "description": "minOccurs \"0\" -> \"1\" on urn:org:pesc:core:CoreMain:v1.0.0#complexType/AcademicDegreeRequirementType/el/1:ThesisDissertationTitle"
+  },
+  {
+   "mutationName": "alterOneDocumentationCharacter",
+   "expectation": "caught",
+   "outcome": "CAUGHT",
+   "matchesExpectation": true,
+   "removedCount": 1,
+   "addedCount": 1,
+   "description": "one character of documentation altered on urn:org:pesc:codes:iso_3166-1:v1.0.0#simpleType/CountryAlpha2CodeSimpleType (\"A data type for country,\" -> \"Z data type for country,\")"
+  },
+  {
+   "mutationName": "repointReferenceToOtherNamespace",
+   "expectation": "blind",
+   "outcome": "BLIND SPOT",
+   "matchesExpectation": true,
+   "removedCount": 0,
+   "addedCount": 0,
+   "description": "repointed core:ThesisDissertationTitleType -> AcRec:ThesisDissertationTitleType (SAME local name, DIFFERENT namespace) on urn:org:pesc:core:CoreMain:v1.0.0#complexType/AcademicDegreeRequirementType/el/1:ThesisDissertationTitle"
+  },
+  {
+   "mutationName": "deleteOneType",
+   "expectation": "caught",
+   "outcome": "CAUGHT",
+   "matchesExpectation": true,
+   "removedCount": 17,
+   "addedCount": 0,
+   "description": "deleted named definition urn:org:pesc:core:CoreMain:v1.0.0#complexType/AcademicDegreeRequirementType"
+  }
+ ]
+}

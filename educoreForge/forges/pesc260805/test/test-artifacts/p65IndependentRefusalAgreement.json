@@ -1,0 +1,87 @@
+{
+	"instrument": "derived from independentXsdCheck.json",
+	"derivationCommand": "see test-artifacts/p65PersistRun.log section 2",
+	"processorClass": "XMLSchema11",
+	"xmlschemaVersion": "4.3.2",
+	"sourceCompile": {
+		"attempted": 64,
+		"clean": 55,
+		"refused": 9,
+		"emptyCompile": 0,
+		"traversalUnavailableTypes": 28
+	},
+	"reconstructedCompile": {
+		"attempted": 64,
+		"clean": 55,
+		"refused": 9,
+		"emptyCompile": 0,
+		"traversalUnavailableTypes": 28
+	},
+	"sourceRefusalCauseTally": {
+		"reference into an unresolvable namespace (missing group)": 3,
+		"reference into an unresolvable namespace (unknown type)": 6
+	},
+	"reconstructedRefusalCauseTally": {
+		"reference into an unresolvable namespace (missing group)": 3,
+		"reference into an unresolvable namespace (unknown type)": 6
+	},
+	"sameRefusedFilenameSet": true,
+	"refusedFilenameTotal": 9,
+	"perFile": [
+		{
+			"filename": "AcademicRecord_v1.5.0.xsd",
+			"sourceFirstLine": "missing group 'core:OrganizationIDGroup':",
+			"reconstructedFirstLine": "missing group 'core:OrganizationIDGroup':",
+			"identical": true
+		},
+		{
+			"filename": "CollegeTranscript_v1.2.0.xsd",
+			"sourceFirstLine": "missing group 'core:OrganizationIDGroup':",
+			"reconstructedFirstLine": "missing group 'core:OrganizationIDGroup':",
+			"identical": true
+		},
+		{
+			"filename": "CollegeTranscript_v1.3.0.xsd",
+			"sourceFirstLine": "unknown type 'AcRec:TransmissionDataType':",
+			"reconstructedFirstLine": "unknown type 'AcRec:TransmissionDataType':",
+			"identical": true
+		},
+		{
+			"filename": "HighSchoolTranscript_v1.1.0.xsd",
+			"sourceFirstLine": "missing group 'core:OrganizationIDGroup':",
+			"reconstructedFirstLine": "missing group 'core:OrganizationIDGroup':",
+			"identical": true
+		},
+		{
+			"filename": "HighSchoolTranscript_v1.2.0.xsd",
+			"sourceFirstLine": "unknown type 'AcRec:TransmissionDataType':",
+			"reconstructedFirstLine": "unknown type 'AcRec:TransmissionDataType':",
+			"identical": true
+		},
+		{
+			"filename": "TestScoreReport_v1.0.0.xsd",
+			"sourceFirstLine": "unknown type 'AcRec:TestScoreReportType':",
+			"reconstructedFirstLine": "unknown type 'AcRec:TestScoreReportType':",
+			"identical": true
+		},
+		{
+			"filename": "TranscriptAcknowledgment_v1.1.0.xsd",
+			"sourceFirstLine": "unknown type 'AcRec:TransmissionDataType':",
+			"reconstructedFirstLine": "unknown type 'AcRec:TransmissionDataType':",
+			"identical": true
+		},
+		{
+			"filename": "TranscriptRequest_v1.1.0.xsd",
+			"sourceFirstLine": "unknown type 'AcRec:TransmissionDataType':",
+			"reconstructedFirstLine": "unknown type 'AcRec:TransmissionDataType':",
+			"identical": true
+		},
+		{
+			"filename": "TranscriptResponse_v1.1.0.xsd",
+			"sourceFirstLine": "unknown type 'AcRec:TransmissionDataType':",
+			"reconstructedFirstLine": "unknown type 'AcRec:TransmissionDataType':",
+			"identical": true
+		}
+	],
+	"allCausesIdentical": true
+}

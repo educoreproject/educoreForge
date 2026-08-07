@@ -12,8 +12,9 @@
 // can never register as a one-sided difference.
 //
 // THE CRITERION IS SEMANTIC ROUND-TRIP — statement-set equality — not byte equality. Whitespace,
-// element order, attribute order and prefix choice are not statements; a missing or extra
-// STATEMENT is. The PESC-specific canonicalization rules, each deliberate and each visible here:
+// attribute order and prefix CHOICE are not statements; a missing or extra STATEMENT is. ELEMENT
+// ORDER WAS ON THAT LIST UNTIL PHASE 6.5 AND IS NOT ANY MORE — the particle ordinal makes it a
+// statement. The PESC-specific canonicalization rules, each deliberate and each visible here:
 //
 //   * TYPE REFERENCES ARE COMPARED AT LOCAL-NAME PRECISION. A non-xs: prefix is stripped on BOTH
 //     sides ('core:NameType' and 'NameType' assert the same reference). The 'xs:' prefix is KEPT —
@@ -26,17 +27,20 @@
 //   * OCCURRENCE IS NORMALIZED TO XSD-EFFECTIVE VALUES on both sides: an element's absent
 //     minOccurs/maxOccurs is '1' (the XSD grammar's own default, the forge parser's reviewed
 //     stance); an attribute's use='required' is minOccurs '1', anything else '0', maxOccurs '1'.
-//   * THE COMPOSITOR AND MEMBER ORDER ARE NOT MEASURED — AND "COMPOSITOR KIND" UNDERSTATED THIS,
-//     which Phase 6 measured and corrected here rather than only in the verdict. xs:sequence /
-//     xs:choice / xs:all are walked through transparently and member statements are flattened onto
-//     the owning block (mirroring the forge parser's flat field extraction). Because the compositor
-//     is not a statement on EITHER side, its total ABSENCE from the emitted document is invisible
-//     here and reads as fidelity: measured 2026-08-06, the source corpus carries 3,021 xs:sequence
-//     and 211 xs:choice, the emitted corpus carries ZERO, and a conforming XSD processor refuses 63
-//     of 64 emitted documents. That is not sequence-versus-choice; it is "the emitted document is
-//     not a schema". This is a stated instrument limit —
-//     the tradeoff is recorded here rather than discovered later, exactly as the CEDS
-//     canonicalizer records its collection-plumbing tradeoff.
+//   * THE COMPOSITOR IS MEASURED AS OF PHASE 6.5, AND THE PREVIOUS TEXT HERE IS RETRACTED. This
+//     header used to say the compositor and member order were not measured, and Phase 6 sharpened
+//     that to "compositor ABSENCE is uncounted, and the emitted corpus carries ZERO compositors".
+//     Both were true when written and are now false. FIELD statements are still flattened onto the
+//     owning block (mirroring the forge parser's flat field extraction) — that is unchanged — but
+//     the compositor tree is ADDITIONALLY emitted as its own statements: declaresContentModel,
+//     compositorKind, compositorMinOccurs/MaxOccurs, and particleAt:N carrying the ordinal. The
+//     ordinal is what makes ELEMENT ORDER measurable, which Phase 6 had declared undetectable
+//     because no statement subject carried one.
+//   * PREFIX BINDINGS ARE MEASURED AS OF PHASE 6.5 — declaresNamespacePrefix / boundNamespace, per
+//     xmlns declaration. This does NOT make prefix CHOICE significant: type references still
+//     canonicalize at local-name precision below, so 'core:NameType' and 'NameType' remain the same
+//     reference. What is now visible is whether a document DECLARES the bindings it uses, which is
+//     the difference between a schema and a document that resembles one.
 //   * ENUMERATION VALUES ARE TRIMMED (leading/trailing whitespace only — the D6 identity ruling:
 //     'NoCredit ' and 'NoCredit' are one option). Values that are EMPTY after trimming REMAIN
 //     STATEMENTS on the source side — the graph deliberately does not carry them, so they appear
@@ -64,6 +68,31 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
 const XS_PREFIX = 'xs:';
 const SUBJECT_SCHEME = 'pesc://';
+
+// PHASE 6.5 — THE PARSE OPTIONS, AND WHY THEY CHANGED.
+//
+// With xml2js defaults, children are grouped BY ELEMENT NAME, so a sequence holding
+// [element, element, choice, element] parses to {'xs:element':[…3…], 'xs:choice':[…1…]} and the
+// POSITION of the choice among the elements is destroyed at parse time. An ordered particle list
+// cannot be recovered from that structure at all — which is part of why compositor order was
+// declared undetectable rather than merely unmeasured.
+//
+// explicitChildren + preserveChildrenOrder add a '$$' array holding the children in document order,
+// each stamped with '#name', WITHOUT disturbing the name-keyed access every existing walk uses
+// (verified empirically before adopting: identical name-keyed contents, plus the ordered view).
+// The cost is that '$$' and '#name' must be excluded from elementChildKeys or every walk
+// double-counts; see the note there.
+const PARSE_OPTIONS = { explicitChildren: true, preserveChildrenOrder: true };
+
+// The ordered-children key and per-child name key those options introduce.
+const ORDERED_CHILD_LIST_PROPERTY_NAME = '$$';
+const ORDERED_CHILD_ELEMENT_NAME_PROPERTY = '#name';
+
+// The particle containers and the derivation route to them. Registries, so a construct is added by
+// a row rather than by another branch in a walk that already forgot one.
+const COMPOSITOR_ELEMENT_NAME_LIST = ['xs:sequence', 'xs:choice', 'xs:all'];
+const DERIVATION_WRAPPER_ELEMENT_NAME_LIST = ['xs:complexContent', 'xs:simpleContent'];
+const DERIVATION_ELEMENT_NAME_LIST = ['xs:extension', 'xs:restriction'];
 
 // The predicates whose LOST entries are DECLARED CONTEXT rather than content gaps: file-level
 // declarations the graph deliberately does not carry (supervisor refinement, 2026-08-03). The
@@ -166,9 +195,20 @@ const moduleFunction =
 		// -----
 		// elementChildKeys — the child-element names of an xml2js node ('$' = attributes,
 		// '_' = text; everything else is a child element name).
+		//
+		// '$$' AND '#name' ARE EXCLUDED AT PHASE 6.5 AND THE EXCLUSION IS LOAD-BEARING. The parse
+		// now runs with explicitChildren + preserveChildrenOrder so the ORDERED particle list is
+		// recoverable (see PARSE_OPTIONS). Those options add a '$$' array of the children in
+		// document order and a '#name' string to each child. The '$$' entries are DISTINCT OBJECTS
+		// from the ones in the name-keyed arrays — verified, not assumed — so without this exclusion
+		// every walk in this file would traverse each subtree TWICE and silently double the entire
+		// corpus's statement count. It would not error; it would simply report a different number.
+		const NON_ELEMENT_CHILD_PROPERTY_NAME_LIST = ['$', '_', '$$', '#name'];
 		const elementChildKeys = (element) =>
 			element && typeof element === 'object'
-				? Object.keys(element).filter((oneName) => oneName !== '$' && oneName !== '_')
+				? Object.keys(element).filter(
+						(oneName) => !NON_ELEMENT_CHILD_PROPERTY_NAME_LIST.includes(oneName),
+					)
 				: [];
 
 		const attributesOf = (element) => (element && element['$']) || {};
@@ -281,7 +321,7 @@ const moduleFunction =
 				return;
 			}
 
-			xml2js.parseString(xsdText, (parseError, parsed) => {
+			xml2js.parseString(xsdText, PARSE_OPTIONS, (parseError, parsed) => {
 				if (parseError) {
 					callback(
 						`${moduleName}.canonicalizeXsdText: XML parse of '${fileLabel}' failed: ` +
@@ -454,8 +494,254 @@ const moduleFunction =
 					});
 				};
 
+				// =============================================================
+				// THE CONTENT MODEL AS STATEMENTS — PHASE 6.5 (deliverable 3)
+				//
+				// WHY THIS EXISTS. Until now no compositor was a statement on EITHER side, so the
+				// emitted corpus carrying ZERO xs:sequence was invisible to this instrument and read
+				// as fidelity. That is the mutual blind spot in its most load-bearing form: without a
+				// compositor the emitted document is not a schema, and the comparison said 99.79%.
+				//
+				// WHY THIS IS NOT A THEOREM WEARING AN ASSERTION'S CLOTHES. The obvious and WRONG
+				// shape would be to model the expected compositor by reading the graph's
+				// `contentModelShape` — the same property the emitter reads — which would hold two
+				// derivations of ONE input against each other and could only be reddened by mutating
+				// code. This module never touches the graph. BOTH of its inputs are BYTES: the
+				// committed source documents and the documents the emitter wrote. The graph sits
+				// upstream of the emitted side ALONE, so corrupting a graph row moves one side and
+				// not the other, and a DATA mutation can genuinely make them disagree.
+				//
+				// GRANULARITY IS PER-POSITION, DELIBERATELY. One opaque statement per content model
+				// would make any difference a single lost/invented pair and say nothing about where.
+				// A statement per ordinal makes a sibling swap show up as two specific positions.
+				// That is also what makes element ORDER measurable here for the first time.
+				// =============================================================
+
+				// orderedParticleChildList — the children of a compositor IN DOCUMENT ORDER.
+				//
+				// REFUSES RATHER THAN RETURNING A PLAUSIBLE ZERO. xml2js omits the ordered-children
+				// key entirely for a childless element, so its absence legitimately means "no
+				// particles". But if the element HAS element children by the name-keyed view and the
+				// ordered key is missing, the parse options did not take effect and every content
+				// model in the corpus would silently measure as empty — a confident zero of exactly
+				// the kind this campaign has produced twice from misspelled property reads.
+				const orderedParticleChildList = (compositorElement, contextLabel) => {
+					const hasOrderedChildList = Object.prototype.hasOwnProperty.call(
+						compositorElement,
+						ORDERED_CHILD_LIST_PROPERTY_NAME,
+					);
+					if (hasOrderedChildList) {
+						return compositorElement[ORDERED_CHILD_LIST_PROPERTY_NAME];
+					}
+					if (elementChildKeys(compositorElement).length) {
+						throw new Error(
+							`${moduleName}: '${contextLabel}' has element children but no ` +
+								`'${ORDERED_CHILD_LIST_PROPERTY_NAME}' ordered-children key. The parse options that ` +
+								`produce it (${JSON.stringify(PARSE_OPTIONS)}) are not in effect, so particle ` +
+								`ORDER cannot be read. Refused BY NAME rather than measured as an empty ` +
+								`content model, which would report as agreement on both sides.`,
+						);
+					}
+					return [];
+				};
+
+				// contentModelHostOf — the element that actually CARRIES the compositor. For a plain
+				// complexType that is the type itself; for a derived one the compositor lives inside
+				// xs:complexContent/xs:simpleContent -> xs:extension/xs:restriction. Both routes are
+				// walked because the emitted corpus now uses the same two routes the source does.
+				const contentModelHostOf = (blockElement) => {
+					const carriesCompositor = (oneElement) =>
+						COMPOSITOR_ELEMENT_NAME_LIST.some(
+							(oneCompositorName) => (oneElement[oneCompositorName] || []).length > 0,
+						);
+					if (carriesCompositor(blockElement)) {
+						return blockElement;
+					}
+					for (const oneWrapperName of DERIVATION_WRAPPER_ELEMENT_NAME_LIST) {
+						for (const oneWrapper of blockElement[oneWrapperName] || []) {
+							for (const oneDerivationName of DERIVATION_ELEMENT_NAME_LIST) {
+								for (const oneDerivation of oneWrapper[oneDerivationName] || []) {
+									if (carriesCompositor(oneDerivation)) {
+										return oneDerivation;
+									}
+								}
+							}
+						}
+					}
+					return null;
+				};
+
+				// particleDescriptorOf — the object side of a particleAt statement.
+				//
+				// A REGISTRY RATHER THAN AN IF-CHAIN, corrected in self-audit: the first draft
+				// dispatched on the element name through a run of ifs, which is a switch wearing a
+				// different hat and adds a construct by adding a branch instead of a row.
+				//
+				// FORMAL INTERFACE — ParticleDescriptorBuilder (this is a polymorphic seam):
+				//   @typedef {function} ParticleDescriptorBuilder
+				//   @param   {object} particleAttributes  the xml2js '$' attribute map
+				//   @param   {string} particleElementName the xs: element name, for kinds that
+				//                                         encode it in the descriptor
+				//   @returns {string} the statement OBJECT for this particle. Never null and never
+				//                     empty: a registered kind that cannot describe itself would put
+				//                     an unreadable statement on both sides, where it would compare
+				//                     equal and read as agreement.
+				//
+				// Element and group references run through canonicalTypeRef so a prefix CHOICE is not
+				// a difference, matching every other reference statement in this file.
+				const PARTICLE_DESCRIPTOR_BUILDER_BY_ELEMENT_NAME = COMPOSITOR_ELEMENT_NAME_LIST.reduce(
+					(oneRegistry, oneCompositorName) => ({
+						...oneRegistry,
+						[oneCompositorName]: (unusedAttributes, particleElementName) =>
+							`compositor:${particleElementName.replace(XS_PREFIX, '')}`,
+					}),
+					{
+						'xs:element': (particleAttributes) =>
+							particleAttributes.name
+								? `element:${particleAttributes.name}`
+								: `elementRef:${canonicalTypeRef(particleAttributes.ref)}`,
+						'xs:group': (particleAttributes) => `group:${canonicalTypeRef(particleAttributes.ref)}`,
+						// processContents defaults to 'strict' in the XSD grammar itself; that is
+						// grammar knowledge applied to BOTH sides, the same standing as the occurrence
+						// normalization above and as the existing allowsAnyElement statement.
+						'xs:any': (particleAttributes) =>
+							`any:${particleAttributes.processContents || 'strict'}`,
+					},
+				);
+
+				const particleDescriptorOf = (particleElementName, particleElement) => {
+					const buildParticleDescriptor =
+						PARTICLE_DESCRIPTOR_BUILDER_BY_ELEMENT_NAME[particleElementName];
+					if (!buildParticleDescriptor) {
+						return null; // caller records it by name in unmodeledConstructCounts
+					}
+					return buildParticleDescriptor(attributesOf(particleElement), particleElementName);
+				};
+
+				// emitCompositorStatements — one compositor node -> its statements, RECURSING into
+				// nested compositors AND into an element particle's own inline complexType.
+				//
+				// IT RECURSES RATHER THAN ENUMERATING PARENTS. The review that chartered this phase
+				// was written about a traversal that handled global types, then added global
+				// elements, and still could not see inside a local element's anonymous type — 274
+				// locations returning a confident zero. Adding one more parent is the move that made
+				// that gap, so this walk follows the structure wherever it goes.
+				const emitCompositorStatements = ({
+					compositorElementName,
+					compositorElement,
+					ownerSubject,
+					contentModelPath,
+				}) => {
+					const compositorSubject = `${ownerSubject}#contentModel${contentModelPath}`;
+					emit({
+						subject: ownerSubject,
+						predicate: 'declaresContentModel',
+						object: contentModelPath === '' ? '(root)' : contentModelPath,
+						subjectRoot: ownerSubject,
+					});
+					emit({
+						subject: compositorSubject,
+						predicate: 'compositorKind',
+						object: compositorElementName.replace(XS_PREFIX, ''),
+						subjectRoot: ownerSubject,
+					});
+					const compositorAttributes = attributesOf(compositorElement);
+					// occurrence normalized to XSD-effective values, the same ruling the field
+					// statements above already apply.
+					emit({
+						subject: compositorSubject,
+						predicate: 'compositorMinOccurs',
+						object: compositorAttributes.minOccurs || '1',
+						subjectRoot: ownerSubject,
+					});
+					emit({
+						subject: compositorSubject,
+						predicate: 'compositorMaxOccurs',
+						object: compositorAttributes.maxOccurs || '1',
+						subjectRoot: ownerSubject,
+					});
+
+					let particleOrdinal = 0;
+					orderedParticleChildList(compositorElement, compositorSubject).forEach(
+						(oneOrderedChild) => {
+							const particleElementName = oneOrderedChild[ORDERED_CHILD_ELEMENT_NAME_PROPERTY];
+							if (particleElementName === 'xs:annotation') {
+								return; // documentation, not a particle
+							}
+							const particleDescriptor = particleDescriptorOf(
+								particleElementName,
+								oneOrderedChild,
+							);
+							if (particleDescriptor === null) {
+								countUnmodeled(`${particleElementName}[particle]`);
+								return;
+							}
+							const thisParticlePath = `${contentModelPath}/p${particleOrdinal}`;
+							emit({
+								subject: compositorSubject,
+								predicate: `particleAt/${particleOrdinal}`,
+								object: particleDescriptor,
+								subjectRoot: ownerSubject,
+							});
+							particleOrdinal += 1;
+
+							if (COMPOSITOR_ELEMENT_NAME_LIST.includes(particleElementName)) {
+								emitCompositorStatements({
+									compositorElementName: particleElementName,
+									compositorElement: oneOrderedChild,
+									ownerSubject,
+									contentModelPath: thisParticlePath,
+								});
+								return;
+							}
+							if (particleElementName === 'xs:element') {
+								(oneOrderedChild['xs:complexType'] || []).forEach((oneInlineComplexType) => {
+									emitContentModelStatements({
+										blockElement: oneInlineComplexType,
+										ownerSubject,
+										contentModelPath: thisParticlePath,
+									});
+								});
+							}
+						},
+					);
+				};
+
+				// emitContentModelStatements — a block's content model, if it has one.
+				function emitContentModelStatements({
+					blockElement,
+					ownerSubject,
+					contentModelPath = '',
+				}) {
+					const hostElement = contentModelHostOf(blockElement);
+					if (hostElement === null) {
+						return;
+					}
+					const orderedHostChildList = orderedParticleChildList(hostElement, ownerSubject);
+					let compositorOrdinal = 0;
+					orderedHostChildList.forEach((oneHostChild) => {
+						const hostChildName = oneHostChild[ORDERED_CHILD_ELEMENT_NAME_PROPERTY];
+						if (!COMPOSITOR_ELEMENT_NAME_LIST.includes(hostChildName)) {
+							return;
+						}
+						// XSD permits ONE particle child, but the path stays ordinal-qualified so a
+						// corpus that carried two would be measured rather than silently merged.
+						emitCompositorStatements({
+							compositorElementName: hostChildName,
+							compositorElement: oneHostChild,
+							ownerSubject,
+							contentModelPath:
+								compositorOrdinal === 0
+									? contentModelPath
+									: `${contentModelPath}/c${compositorOrdinal}`,
+						});
+						compositorOrdinal += 1;
+					});
+				}
+
 				// ---- shared block content: fields, group refs, wildcards ----
 				const emitBlockMemberStatements = ({ blockElement, ownerSubject }) => {
+					emitContentModelStatements({ blockElement, ownerSubject });
 					collectDescendants(
 						blockElement,
 						['xs:element', 'xs:attribute'],
@@ -686,6 +972,41 @@ const moduleFunction =
 				if (schemaAttributes.attributeFormDefault !== undefined) {
 					emit({ subject: fileSubject, predicate: 'attributeFormDefault', object: schemaAttributes.attributeFormDefault });
 				}
+
+				// ---- PHASE 6.5: the namespace prefix bindings, on BOTH sides ----
+				//
+				// The emitted corpus previously declared xmlns:xs and nothing else, so every
+				// reference written through a corpus prefix pointed at a namespace the document
+				// never bound — the 63rd of Phase 6's 63 refusals. That was invisible here because
+				// a binding was not a statement on either side.
+				//
+				// This does NOT make prefix CHOICE significant: type references still canonicalize
+				// at local-name precision through canonicalTypeRef, so 'core:NameType' and
+				// 'NameType' remain the same reference. What becomes visible is whether the
+				// document DECLARES the bindings it uses, which is the difference between a schema
+				// and a document that resembles one.
+				Object.keys(schemaAttributes)
+					.filter(
+						(oneAttributeName) =>
+							oneAttributeName === 'xmlns' || oneAttributeName.startsWith('xmlns:'),
+					)
+					.forEach((oneAttributeName) => {
+						const prefixLabel =
+							oneAttributeName === 'xmlns'
+								? '(default)'
+								: oneAttributeName.substring('xmlns:'.length);
+						emit({
+							subject: fileSubject,
+							predicate: 'declaresNamespacePrefix',
+							object: prefixLabel,
+						});
+						emit({
+							subject: `${fileSubject}#namespacePrefix/${prefixLabel}`,
+							predicate: 'boundNamespace',
+							object: schemaAttributes[oneAttributeName],
+							subjectRoot: fileSubject,
+						});
+					});
 
 				const schemaLevelDocumentation = firstDocumentationOf(schemaElement);
 				if (schemaLevelDocumentation !== '') {

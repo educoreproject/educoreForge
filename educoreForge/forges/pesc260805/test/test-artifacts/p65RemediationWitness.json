@@ -1,0 +1,41 @@
+{
+	"instrument": "p65_remediationWitness",
+	"documentationWitness": {
+		"witnessName": "documentationAttribution",
+		"sourceDocumentationTotal": 26652,
+		"reconstructedDocumentationTotal": 26624,
+		"shortfall": 28,
+		"selfClosingEmptyTotal": 26,
+		"annotationsCarryingExtraDocumentation": 5,
+		"extraDocumentationTotal": 5,
+		"extraDocumentationThatIsSelfClosingTotal": 3,
+		"extraDocumentationCarryingContentTotal": 2,
+		"attributedTotal": 28,
+		"unattributedTotal": 0,
+		"fullyAttributed": true,
+		"realContentLossBeyondEmptyLiterals": 2,
+		"note": "A self-closing xs:documentation carries no text, so the graph stores nothing and the emission writes nothing: those are EMPTY literals, not lost content. The only literals carrying content that the reconstruction does not reproduce are the non-self-closing 2nd..nth children of a multi-documentation annotation, which is the RULED forge residue."
+	},
+	"swapWitness": {
+		"witnessName": "swapExpectationFalsified",
+		"mutationDescription": "swapped sequencePosition of siblings ThesisDissertationTitle <-> ThesisDissertationAdvisor under urn:org:pesc:core:CoreMain:v1.0.0#complexType/AcademicDegreeRequirementType",
+		"controlStatementTotal": 173216,
+		"removedTotal": 2,
+		"addedTotal": 2,
+		"observedOutcome": "caught",
+		"phase6CommittedExpectation": "blind",
+		"committedExpectationHolds": false,
+		"currentExpectation": "caught",
+		"currentExpectationHolds": true,
+		"orderingClaimStatus": "UNEVIDENCED. The run that printed the mismatch banner predates artifact persistence and its log was not retained. This witness establishes that the COMMITTED expectation is falsified by the code, which is checkable by anyone and does not rest on the builder account of what was seen or when."
+	},
+	"attributeWitness": {
+		"witnessName": "attributePlacement",
+		"sourceMisplacedTotal": 0,
+		"prePhase65ReconstructionMisplacedTotal": 14,
+		"phase65ReconstructionMisplacedTotal": 0,
+		"defectWasPresentBeforeRepair": true,
+		"defectAbsentFromSource": true,
+		"defectAbsentAfterRepair": true
+	}
+}

@@ -138,8 +138,25 @@ const MUTATION_REGISTRY = {
 		},
 	},
 
+	// EXPECTATION CHANGED IN PHASE 6.5, AFTER THE MISMATCH WAS OBSERVED — 'blind' -> 'caught'.
+	//
+	// Phase 6 pre-registered this as a blind spot for a stated reason: a field's statement subject
+	// was `ownerSubject/element/fieldName` with no ordinal anywhere, so a pure reordering emitted an
+	// identical statement set. That reason is no longer true. Phase 6.5 makes the canonicalizer emit
+	// `particleAt:N` per content-model position, so a swap now moves two statements.
+	//
+	// THE MISMATCH WAS SEEN BEFORE THE NUMBER WAS EDITED, which is the only order that makes this
+	// legitimate. Running this suite unmodified against the Phase 6.5 code printed "expected blind,
+	// observed CAUGHT" and exited non-zero; that run is the evidence, and this suite — which Phase
+	// 6.5 did not otherwise touch — is an INDEPENDENT confirmation of the closure, since it was
+	// written by another phase to measure the primary comparator rather than to flatter it.
+	//
+	// The pre-registration discipline is not weakened by this edit: an expectation may be revised
+	// when the capability it describes demonstrably changes, never to make a disagreeing run quiet.
+	// `repointReferenceToOtherNamespace` below remains 'blind' and is UNCHANGED, because Phase 6.5
+	// did not touch canonicalTypeRef and that blind spot is genuinely still open.
 	swapTwoSiblingElements: {
-		expectation: 'blind',
+		expectation: 'caught',
 		apply: (rows) => {
 			const rowListByParentId = new Map();
 			rows.PescElementDecl.forEach((oneRow) => {

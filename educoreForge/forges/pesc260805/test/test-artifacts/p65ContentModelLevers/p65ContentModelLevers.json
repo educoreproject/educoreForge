@@ -1,0 +1,126 @@
+{
+	"instrument": "p65_contentModelLevers",
+	"containerName": "DEV_pesc260805",
+	"sourceStatementTotal": 173216,
+	"sourceOldFormStatementTotal": 142345,
+	"prePhase65PublishedTotal": 142345,
+	"oldFormReconstructionExact": true,
+	"controlStatementTotal": 173216,
+	"redObservedTotal": 8,
+	"leverTotal": 8,
+	"mismatchTotal": 0,
+	"observationList": [
+		{
+			"leverName": "stripContentModelShapeFromOneType",
+			"expectation": "refusedByName",
+			"mutationDescription": "stripped contentModelShape from 'urn:org:pesc:core:CoreMain:v1.0.0#complexType/AcademicDegreeRequirementType'",
+			"refusalMessage": "roundTripSourceEmitter: PescNamedDefinition 'urn:org:pesc:core:CoreMain:v1.0.0#complexType/AcademicDegreeRequirementType' declares 3 element child/children but carries no 'contentModelShape'. REQUIRED whenever element children exist and refused BY NAME — element particles emitted without a compositor are not valid XSD, and inferring a sequence from child order would be a guess dressed as a read.",
+			"outcome": "refusedByName",
+			"refusalNamesRequiredTerms": true,
+			"expectationMet": true
+		},
+		{
+			"leverName": "flattenNestedCompositorToGuessersSequence",
+			"expectation": "statementDifference",
+			"mutationDescription": "flattened the nested compositor of 'urn:org:pesc:core:CoreMain:v1.0.0#complexType/TestsType' into the plain sequence a child-order guesser would produce (8 particles)",
+			"refusalMessage": "",
+			"fullFormDifference": {
+				"removedTotal": 11,
+				"addedTotal": 6
+			},
+			"oldFormDifference": {
+				"removedTotal": 0,
+				"addedTotal": 0
+			},
+			"outcome": "statementDifference",
+			"oldFormWasSilent": true,
+			"expectationMet": true
+		},
+		{
+			"leverName": "swapTwoSiblingElementParticles",
+			"expectation": "statementDifference",
+			"mutationDescription": "swapped sibling element particles at ordinals 0 and 1 of 'urn:org:pesc:core:CoreMain:v1.0.0#complexType/AcademicDegreeRequirementType'",
+			"refusalMessage": "",
+			"fullFormDifference": {
+				"removedTotal": 2,
+				"addedTotal": 2
+			},
+			"oldFormDifference": {
+				"removedTotal": 0,
+				"addedTotal": 0
+			},
+			"outcome": "statementDifference",
+			"oldFormWasSilent": true,
+			"expectationMet": true
+		},
+		{
+			"leverName": "changeOneCompositorKindToChoice",
+			"expectation": "statementDifference",
+			"mutationDescription": "changed the top-level compositor of 'urn:org:pesc:core:CoreMain:v1.0.0#complexType/AcademicDegreeRequirementType' from sequence to choice",
+			"refusalMessage": "",
+			"fullFormDifference": {
+				"removedTotal": 1,
+				"addedTotal": 1
+			},
+			"oldFormDifference": {
+				"removedTotal": 0,
+				"addedTotal": 0
+			},
+			"outcome": "statementDifference",
+			"oldFormWasSilent": true,
+			"expectationMet": true
+		},
+		{
+			"leverName": "dropOneParticleLeavingItsChildUnplaced",
+			"expectation": "refusedByName",
+			"mutationDescription": "removed the element particle at ordinal 0 of 'urn:org:pesc:core:CoreMain:v1.0.0#complexType/AcademicDegreeRequirementType', leaving its child unplaced",
+			"refusalMessage": "roundTripSourceEmitter: PescNamedDefinition 'urn:org:pesc:core:CoreMain:v1.0.0#complexType/AcademicDegreeRequirementType' declares 3 element children but its contentModelShape names only 2; sequencePosition(s) 1 are unplaced. Refused BY NAME — emitting an unplaced child outside the compositor is invalid XSD and omitting it is silent loss reported as a forge defect.",
+			"outcome": "refusedByName",
+			"refusalNamesRequiredTerms": true,
+			"expectationMet": true
+		},
+		{
+			"leverName": "stripPrefixBindingsFromOneArtifact",
+			"expectation": "refusedByName",
+			"mutationDescription": "stripped prefixBindings from artifact 'TranscriptResponse_v1.1.0.xsd'",
+			"refusalMessage": "roundTripSourceEmitter: node 'pescArtifact:01f8eea0cb81401c4441a9f45745df0393c71d608c0da2afb5cd1fe02cf80e7e' (PescArtifact) has no 'prefixBindings'. A required property that is absent is refused BY NAME — it is never read as an empty string, a zero, or a default.",
+			"outcome": "refusedByName",
+			"refusalNamesRequiredTerms": true,
+			"expectationMet": true
+		},
+		{
+			"leverName": "stripShapeFromAGroupRefOnlyType",
+			"expectation": "statementDifference",
+			"mutationDescription": "stripped contentModelShape from 'urn:org:pesc:core:CoreMain:v1.0.0#complexType/AddressType', which declares NO element children, so the emitter's refusal guard cannot fire",
+			"refusalMessage": "",
+			"fullFormDifference": {
+				"removedTotal": 6,
+				"addedTotal": 0
+			},
+			"oldFormDifference": {
+				"removedTotal": 1,
+				"addedTotal": 0
+			},
+			"outcome": "statementDifference",
+			"oldFormWasSilent": false,
+			"expectationMet": true
+		},
+		{
+			"leverName": "rebindOnePrefixNamespace",
+			"expectation": "statementDifference",
+			"mutationDescription": "rebound prefix '(default)' in artifact 'AcademicEportfolio_v1.0.0.xsd' away from 'urn:org:pesc:message:AcademicEportfolio:v1.0.0'",
+			"refusalMessage": "",
+			"fullFormDifference": {
+				"removedTotal": 1,
+				"addedTotal": 1
+			},
+			"oldFormDifference": {
+				"removedTotal": 0,
+				"addedTotal": 0
+			},
+			"outcome": "statementDifference",
+			"oldFormWasSilent": true,
+			"expectationMet": true
+		}
+	]
+}

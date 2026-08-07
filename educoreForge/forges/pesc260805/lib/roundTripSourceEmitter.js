@@ -51,7 +51,11 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
 const STANDARD_SOURCE = 'PESC260805';
 const SOURCE_TIER = 'source';
-const XSD_NAMESPACE_DECLARATION = 'xmlns:xs="http://www.w3.org/2001/XMLSchema"';
+// PHASE 6.5: was XSD_NAMESPACE_DECLARATION, a hard-coded `xmlns:xs="…"` that WAS THE ONLY
+// namespace the emission declared. The declaration text is now built from the artifact's own
+// prefixBindings; what survives here is the URI, because this module writes xs:-prefixed grammar
+// unconditionally and therefore asserts that binding rather than assuming it.
+const XSD_NAMESPACE_URI = 'http://www.w3.org/2001/XMLSchema';
 const DEFAULT_PAGE_SIZE = 4000;
 
 // Every property the emitter reads, named once. A property absent from this list is a property the
@@ -98,6 +102,14 @@ const NODE_PROPERTY_NAMES = [
 	'maxExclusive',
 	'namespaceAsWritten',
 	'schemaLocationAsWritten',
+	// ADDED AT PHASE 6.5. The two properties Phase 6's independent instrument proved the emission
+	// could not do without. `contentModelShape` carries the compositor kind and the ORDERED particle
+	// list (3,079 nodes); `prefixBindings` carries the artifact's full xmlns map (64 nodes). Both
+	// were present and correct in the graph and read ZERO times here, which is why 62 of 64 emitted
+	// documents placed element particles as direct children of xs:complexType and the 63rd
+	// referenced a prefix it never declared.
+	'contentModelShape',
+	'prefixBindings',
 	'filename',
 	'targetNamespace',
 	'elementFormDefault',
@@ -151,6 +163,25 @@ const DERIVATION_WRAPPER_ELEMENT_NAME_BY_CONTENT_STYLE = {
 	complexContent: 'xs:complexContent',
 	simpleContent: 'xs:simpleContent',
 };
+
+// ADDED AT PHASE 6.5 — the compositor vocabulary, as a registry with refusal.
+//
+// ONLY sequence AND choice ARE REGISTERED, DELIBERATELY. lib/parser.js accepts exactly these two
+// (its walkContainer and walkCompositor refuse every other particle container BY NAME), so the graph
+// cannot hold an `all` and registering one here would advertise a capability no data can exercise.
+// Measured on the canonical graph 2026-08-07: 3,030 shapes carry a sequence, 201 carry a choice,
+// ZERO carry an all. An unregistered kind is refused BY NAME rather than rendered as a sequence,
+// because rendering an unknown compositor as the common one is precisely the silent substitution
+// that turned 530 inline simpleTypes into complexTypes in the predecessor.
+const COMPOSITOR_ELEMENT_NAME_BY_KIND = {
+	sequence: 'xs:sequence',
+	choice: 'xs:choice',
+};
+
+// The particle vocabulary of contentModelShape, as a registry keyed on the DISCRIMINATOR PROPERTY
+// each particle variety carries. A particle must carry EXACTLY ONE of these; zero or several is a
+// malformed shape and is refused by name rather than resolved by precedence.
+const PARTICLE_DISCRIMINATOR_PROPERTY_NAME_LIST = ['element', 'compositor', 'groupRef', 'any'];
 
 // START OF moduleFunction() ============================================================
 
@@ -492,7 +523,25 @@ const moduleFunction =
 			};
 
 			// ---- the renderer registry: one entry per emitted label, no switch statement ----
-			const renderNode = (oneNode, indent) => {
+			//
+			// FORMAL INTERFACE — NodeRenderer (declared because Phase 6.5 makes this seam
+			// polymorphic in a second argument, and an undeclared polymorphic seam is a polyArch2
+			// violation):
+			//
+			//   @typedef  {function} NodeRenderer
+			//   @param    {object}   oneNode        the graph row, {label, properties}
+			//   @param    {string}   indent         the leading tab run for this node's own line
+			//   @param    {object}   [renderContext]
+			//   @param    {function} [renderContext.renderInjectedDerivationBody]
+			//              (indent: string) => string[] — supplied ONLY by a container whose
+			//              content-model compositor and attribute declarations must be emitted
+			//              INSIDE this node rather than beside it. The receiver chooses the indent
+			//              because only it knows how deeply its own wrappers nest. A renderer that
+			//              is handed this and ignores it would silently drop the whole content
+			//              model, so the one renderer that can receive it (PescDerivation) refuses
+			//              BY NAME if it is handed one it cannot place.
+			//   @returns  {string[]} the emitted lines
+			const renderNode = (oneNode, indent, renderContext) => {
 				const renderer = RENDERER_BY_LABEL[oneNode.label];
 				if (!renderer) {
 					throw new Error(
@@ -502,7 +551,7 @@ const moduleFunction =
 							`forge defect.`,
 					);
 				}
-				return renderer(oneNode, indent);
+				return renderer(oneNode, indent, renderContext);
 			};
 
 			const renderChildren = (oneNode, indent) =>
@@ -511,10 +560,361 @@ const moduleFunction =
 					[],
 				);
 
+			// =====================================================================
+			// THE CONTENT MODEL — PHASE 6.5 (deliverable 1)
+			//
+			// WHAT WAS WRONG. Element particles were emitted as DIRECT CHILDREN of xs:complexType,
+			// which is not valid XSD. Phase 6's independent instrument (python xmlschema, XSD 1.1)
+			// compiled 1 of 64 emitted documents against 55 of 64 source documents, and 62 of the
+			// 63 refusals were exactly this. The information to fix it was in the graph the whole
+			// time: `contentModelShape` on 3,079 nodes, read ZERO times by this file.
+			//
+			// WHY THE OBVIOUS FIX IS STILL INVALID, MEASURED BEFORE IT WAS WRITTEN. Wrapping the
+			// flat child run in an xs:sequence at the TYPE level repairs 2,517 types and leaves 478
+			// broken, because those 478 carry a complexContent/extension derivation AND 2,105
+			// element declarations parented to the TYPE rather than to the derivation (the forge
+			// parser attributes members to the container). In the source those elements sit INSIDE
+			// the extension; a type carrying both an xs:sequence and an xs:complexContent is
+			// refused by any conforming processor. The compositor therefore goes inside the
+			// derivation when one is present. Enumerating the easy case and calling it done is the
+			// move that produced the gap being repaired here.
+			//
+			// THE SHAPE INDEXES, IT DOES NOT DUPLICATE. A leaf particle is {element: N} where N is
+			// the child's sequencePosition; a nested compositor recurses. Rendering therefore
+			// RESOLVES each particle against the child rows, and a shape that names a position with
+			// no child — or names one twice, or leaves one unnamed — is a coherence fault refused
+			// BY NAME. That refusal is what makes this a read rather than a guess: a renderer that
+			// inferred a plausible sequence from the order children happen to arrive in would have
+			// nothing to be incoherent with.
+			// =====================================================================
+
+			// discriminatorPropertyNameOfParticle — which of the four particle varieties this is.
+			// EXACTLY ONE discriminator is required. Zero means an untaught particle shape; several
+			// means an ambiguous one. Both are refused by name rather than settled by precedence,
+			// because a precedence rule here would silently pick a reading of data nobody checked.
+			const discriminatorPropertyNameOfParticle = (oneParticle, ownerNode, particlePath) => {
+				if (!oneParticle || typeof oneParticle !== 'object') {
+					throw new Error(
+						`${moduleName}: contentModelShape on '${ownerNode.properties.stableId}' carries a ` +
+							`non-object particle at ${particlePath}. Refused BY NAME.`,
+					);
+				}
+				const presentDiscriminatorList = PARTICLE_DISCRIMINATOR_PROPERTY_NAME_LIST.filter(
+					(oneDiscriminatorPropertyName) =>
+						Object.prototype.hasOwnProperty.call(oneParticle, oneDiscriminatorPropertyName),
+				);
+				if (presentDiscriminatorList.length !== 1) {
+					throw new Error(
+						`${moduleName}: contentModelShape on '${ownerNode.properties.stableId}' carries a ` +
+							`particle at ${particlePath} with ${presentDiscriminatorList.length} discriminator ` +
+							`properties (${presentDiscriminatorList.join(', ') || 'none'}). Exactly one of ` +
+							`${PARTICLE_DISCRIMINATOR_PROPERTY_NAME_LIST.join(', ')} is REQUIRED. Refused BY ` +
+							`NAME rather than resolved by precedence.`,
+					);
+				}
+				return presentDiscriminatorList[0];
+			};
+
+			// renderElementParticle — resolve {element: sequencePosition} against the container's
+			// own element children and render that child in place.
+			const renderElementParticle = ({ oneParticle, indent, walkState, particlePath }) => {
+				const sequencePosition = Number(oneParticle.element);
+				if (!Number.isFinite(sequencePosition)) {
+					throw new Error(
+						`${moduleName}: contentModelShape on '${walkState.ownerNode.properties.stableId}' ` +
+							`names a non-numeric element position '${oneParticle.element}' at ${particlePath}. ` +
+							`Refused BY NAME.`,
+					);
+				}
+				const elementNode = walkState.elementNodeBySequencePosition.get(sequencePosition);
+				if (elementNode === undefined) {
+					throw new Error(
+						`${moduleName}: contentModelShape on '${walkState.ownerNode.properties.stableId}' ` +
+							`names element sequencePosition ${sequencePosition} at ${particlePath}, but the ` +
+							`container declares no element child at that position (it declares ` +
+							`${[...walkState.elementNodeBySequencePosition.keys()].sort((leftPosition, rightPosition) => leftPosition - rightPosition).join(', ') || 'none'}). ` +
+							`Refused BY NAME — emitting the compositor without the particle would ship a ` +
+							`content model the graph does not assert.`,
+					);
+				}
+				if (walkState.consumedSequencePositionSet.has(sequencePosition)) {
+					throw new Error(
+						`${moduleName}: contentModelShape on '${walkState.ownerNode.properties.stableId}' ` +
+							`names element sequencePosition ${sequencePosition} more than once (again at ` +
+							`${particlePath}). Refused BY NAME — emitting the child twice would INVENT a ` +
+							`declaration the source never made.`,
+					);
+				}
+				walkState.consumedSequencePositionSet.add(sequencePosition);
+				return renderNode(elementNode, indent);
+			};
+
+			// renderGroupRefParticle — <xs:group ref="…"/>. The forge does not build a node for a
+			// group reference (the ruled 268-statement omission), but the REFERENCE itself rides
+			// inside contentModelShape, so the emission can carry it faithfully without the parser
+			// changing at all.
+			const renderGroupRefParticle = ({ oneParticle, indent, walkState, particlePath }) => {
+				// THE DISCRIMINATOR PROVES THE PROPERTY IS PRESENT, NOT THAT IT HAS A VALUE. Caught
+				// in self-audit: a groupRef present-but-null passed the discriminator and would have
+				// rendered ref="null" — a well-formed document asserting a reference nobody wrote,
+				// which is the silent substitution this campaign exists to eliminate.
+				if (typeof oneParticle.groupRef !== 'string' || oneParticle.groupRef.trim() === '') {
+					throw new Error(
+						`${moduleName}: contentModelShape on '${walkState.ownerNode.properties.stableId}' ` +
+							`carries a group-reference particle at ${particlePath} whose 'groupRef' is ` +
+							`${JSON.stringify(oneParticle.groupRef)} rather than a reference. Refused BY NAME.`,
+					);
+				}
+				return [
+					`${indent}<xs:group ref="${escapeXmlAttributeValue(oneParticle.groupRef)}"` +
+						attributeIfPresent('minOccurs', oneParticle.minOccursAsWritten) +
+						attributeIfPresent('maxOccurs', oneParticle.maxOccursAsWritten) +
+						'/>',
+				];
+			};
+
+			// renderAnyParticle — <xs:any/>. Same standing as the group reference above (the ruled
+			// 25-statement omission); the wildcard's own attributes ride inside the shape.
+			const renderAnyParticle = ({ oneParticle, indent, walkState, particlePath }) => {
+				const anyRecord = oneParticle.any;
+				if (!anyRecord || typeof anyRecord !== 'object') {
+					throw new Error(
+						`${moduleName}: contentModelShape on '${walkState.ownerNode.properties.stableId}' ` +
+							`carries an xs:any particle at ${particlePath} whose payload is not an object. ` +
+							`Refused BY NAME.`,
+					);
+				}
+				return [
+					`${indent}<xs:any` +
+						attributeIfPresent('namespace', anyRecord.namespaceAsWritten) +
+						attributeIfPresent('processContents', anyRecord.processContents) +
+						attributeIfPresent('minOccurs', anyRecord.minOccursAsWritten) +
+						attributeIfPresent('maxOccurs', anyRecord.maxOccursAsWritten) +
+						'/>',
+				];
+			};
+
+			// renderNestedCompositorParticle — a compositor nested inside a compositor. RECURSES.
+			// It does not enumerate a second level and stop; the corpus nests arbitrarily and the
+			// review that produced this phase was written about exactly that mistake.
+			const renderNestedCompositorParticle = ({ oneParticle, indent, walkState, particlePath }) =>
+				renderCompositorRecord({
+					compositorRecord: oneParticle,
+					indent,
+					walkState,
+					particlePath,
+				});
+
+			// FORMAL INTERFACE — ParticleRenderer. Declared because this is a polymorphic seam with
+			// four implementations and one of them recurses back through the dispatcher; an
+			// undeclared seam is where the next implementer guesses the contract wrong.
+			//
+			//   @typedef {function} ParticleRenderer
+			//   @param   {object} arguments0
+			//   @param   {object} arguments0.oneParticle   the particle record from contentModelShape
+			//   @param   {string} arguments0.indent        leading tabs for this particle's own line
+			//   @param   {object} arguments0.walkState     { ownerNode, elementNodeBySequencePosition,
+			//                                               consumedSequencePositionSet } — SHARED and
+			//                                               MUTATED: consuming an element position is
+			//                                               how the coherence check later proves every
+			//                                               declared child was placed exactly once.
+			//   @param   {string} arguments0.particlePath  dotted path for refusal messages, so a
+			//                                               refusal names a position and not a category
+			//   @returns {string[]} emitted lines
+			//   THROWS by name on any incoherence. It must never return a plausible rendering of a
+			//   particle it could not resolve.
+			const PARTICLE_RENDERER_BY_DISCRIMINATOR = {
+				element: renderElementParticle,
+				compositor: renderNestedCompositorParticle,
+				groupRef: renderGroupRefParticle,
+				any: renderAnyParticle,
+			};
+
+			// renderCompositorRecord — one compositor node of the shape tree -> its emitted lines.
+			function renderCompositorRecord({ compositorRecord, indent, walkState, particlePath }) {
+				const compositorKind = compositorRecord.compositor;
+				if (
+					!Object.prototype.hasOwnProperty.call(COMPOSITOR_ELEMENT_NAME_BY_KIND, compositorKind)
+				) {
+					throw new Error(
+						`${moduleName}: contentModelShape on '${walkState.ownerNode.properties.stableId}' ` +
+							`carries compositor kind '${compositorKind}' at ${particlePath}, which names no ` +
+							`emitted element. Known kinds: ` +
+							`${Object.keys(COMPOSITOR_ELEMENT_NAME_BY_KIND).join(', ')}. Refused BY NAME — an ` +
+							`unrecognised compositor rendered as the common one would change the content ` +
+							`model's meaning silently.`,
+					);
+				}
+				const compositorElementName = COMPOSITOR_ELEMENT_NAME_BY_KIND[compositorKind];
+				if (!Array.isArray(compositorRecord.particles)) {
+					throw new Error(
+						`${moduleName}: contentModelShape on '${walkState.ownerNode.properties.stableId}' ` +
+							`carries a compositor at ${particlePath} whose 'particles' is not an array. ` +
+							`REQUIRED shape is {compositor, particles:[…]}. Refused BY NAME.`,
+					);
+				}
+				const openTag =
+					`${indent}<${compositorElementName}` +
+					attributeIfPresent('minOccurs', compositorRecord.minOccursAsWritten) +
+					attributeIfPresent('maxOccurs', compositorRecord.maxOccursAsWritten);
+				const particleLines = compositorRecord.particles.reduce(
+					(lineList, oneParticle, particleOrdinal) => {
+						const childParticlePath = `${particlePath}/${particleOrdinal}`;
+						const discriminatorPropertyName = discriminatorPropertyNameOfParticle(
+							oneParticle,
+							walkState.ownerNode,
+							childParticlePath,
+						);
+						return lineList.concat(
+							PARTICLE_RENDERER_BY_DISCRIMINATOR[discriminatorPropertyName]({
+								oneParticle,
+								indent: `${indent}\t`,
+								walkState,
+								particlePath: childParticlePath,
+							}),
+						);
+					},
+					[],
+				);
+				return particleLines.length
+					? [`${openTag}>`, ...particleLines, `${indent}</${compositorElementName}>`]
+					: [`${openTag}/>`];
+			}
+
+			// renderContainerBody — the shared body of every node that can own a content model:
+			// named definitions and anonymous types. Returns the lines that go between the
+			// container's own open and close tags, documentation excluded (the caller owns that).
+			//
+			// THE ABSENCE RULE IS SEEDED, NOT GUESSED. A container that declares element children
+			// REQUIRES a contentModelShape; its absence is a recorded fault refused by name, not a
+			// missing key read as "emit them flat". A container with no element children and no
+			// shape is the ordinary case (a simpleType, or a complexType carrying only attributes)
+			// and is not an error. That pairing is what lets the red lever prove a READ.
+			const renderContainerBody = (oneNode, indent, containerLabel) => {
+				const childNodeList = orderedChildrenOf(oneNode.properties.stableId);
+				const elementChildNodeList = childNodeList.filter(
+					(oneChild) => oneChild.label === 'PescElementDecl',
+				);
+				// ATTRIBUTES TRAVEL WITH THE CONTENT MODEL — FOUND BY RUNNING THE INSTRUMENT, NOT BY
+				// READING THE CHARTER. The parser attributes an xs:attribute to the CONTAINER by the
+				// same rule it applies to an element, so the 14 attributes declared inside a
+				// simpleContent extension were emitted OUTSIDE it, before the wrapper. XSD permits a
+				// complexType carrying simpleContent/complexContent NO other children but annotation,
+				// and orders an extension's own children compositor-then-attributes; the old emission
+				// violated both. This was invisible while the element defect existed because a schema
+				// processor reports the FIRST fault per component and stopped earlier — which is why
+				// Phase 6's cause tally attributes 62 of 63 refusals to the compositor alone. Pre-
+				// existing and identical in Phase 5's committed emission; verified, not assumed.
+				const attributeChildNodeList = childNodeList.filter(
+					(oneChild) => oneChild.label === 'PescAttributeDecl',
+				);
+				const derivationChildNodeList = childNodeList.filter(
+					(oneChild) => oneChild.label === 'PescDerivation',
+				);
+				const remainingChildNodeList = childNodeList.filter(
+					(oneChild) =>
+						oneChild.label !== 'PescElementDecl' &&
+						oneChild.label !== 'PescAttributeDecl' &&
+						oneChild.label !== 'PescDerivation',
+				);
+
+				const contentModelShapeJson = optionalProperty(oneNode, 'contentModelShape');
+				if (contentModelShapeJson === null && elementChildNodeList.length) {
+					throw new Error(
+						`${moduleName}: ${containerLabel} '${oneNode.properties.stableId}' declares ` +
+							`${elementChildNodeList.length} element child/children but carries no ` +
+							`'contentModelShape'. REQUIRED whenever element children exist and refused BY ` +
+							`NAME — element particles emitted without a compositor are not valid XSD, and ` +
+							`inferring a sequence from child order would be a guess dressed as a read.`,
+					);
+				}
+
+				if (derivationChildNodeList.length > 1) {
+					throw new Error(
+						`${moduleName}: ${containerLabel} '${oneNode.properties.stableId}' carries ` +
+							`${derivationChildNodeList.length} PescDerivation children. XSD permits one ` +
+							`content derivation per type, so there is no defensible place to put the content ` +
+							`model. Refused BY NAME.`,
+					);
+				}
+
+				const walkState = {
+					ownerNode: oneNode,
+					elementNodeBySequencePosition: new Map(),
+					consumedSequencePositionSet: new Set(),
+				};
+				if (contentModelShapeJson !== null) {
+					elementChildNodeList.forEach((oneElementChild) => {
+						walkState.elementNodeBySequencePosition.set(
+							Number(requiredProperty(oneElementChild, 'sequencePosition', 'PescElementDecl')),
+							oneElementChild,
+						);
+					});
+				}
+
+				// renderContainerMemberLines is A FUNCTION OF THE INDENT because only the receiving
+				// node knows how deep its own wrappers go. Calling it is what consumes the element
+				// children, so the coherence check below runs after the placement decision.
+				//
+				// ORDER IS THE XSD GRAMMAR'S, NOT THE GRAPH'S: compositor first, then attributes.
+				// The graph's own child ordering puts attributes at attributePosition+1000000, which
+				// happens to agree, but agreeing by accident is not the same as being right, and the
+				// derivation route below reorders anyway.
+				const renderContainerMemberLines = (memberIndent) =>
+					(contentModelShapeJson === null
+						? []
+						: renderCompositorRecord({
+								compositorRecord: JSON.parse(contentModelShapeJson),
+								indent: memberIndent,
+								walkState,
+								particlePath: 'contentModelShape',
+							})
+					).concat(
+						attributeChildNodeList.reduce(
+							(lineList, oneChild) => lineList.concat(renderNode(oneChild, memberIndent)),
+							[],
+						),
+					);
+
+				const renderRemainingChildLines = () =>
+					remainingChildNodeList.reduce(
+						(lineList, oneChild) => lineList.concat(renderNode(oneChild, indent)),
+						[],
+					);
+
+				const bodyLines = derivationChildNodeList.length
+					? renderNode(derivationChildNodeList[0], indent, {
+							renderInjectedDerivationBody: renderContainerMemberLines,
+						}).concat(renderRemainingChildLines())
+					: renderContainerMemberLines(indent).concat(renderRemainingChildLines());
+
+				if (walkState.consumedSequencePositionSet.size !== elementChildNodeList.length) {
+					const unconsumedPositionList = elementChildNodeList
+						.map((oneElementChild) => Number(oneElementChild.properties.sequencePosition))
+						.filter(
+							(oneSequencePosition) =>
+								!walkState.consumedSequencePositionSet.has(oneSequencePosition),
+						);
+					throw new Error(
+						`${moduleName}: ${containerLabel} '${oneNode.properties.stableId}' declares ` +
+							`${elementChildNodeList.length} element children but its contentModelShape names ` +
+							`only ${walkState.consumedSequencePositionSet.size}; sequencePosition(s) ` +
+							`${unconsumedPositionList.join(', ')} are unplaced. Refused BY NAME — emitting an ` +
+							`unplaced child outside the compositor is invalid XSD and omitting it is silent ` +
+							`loss reported as a forge defect.`,
+					);
+				}
+
+				return bodyLines;
+			};
+
 			const renderNamedDefinition = (oneNode, indent) => {
 				const kind = requiredProperty(oneNode, 'kind', 'PescNamedDefinition');
 				const name = requiredProperty(oneNode, 'name', 'PescNamedDefinition');
-				const childLines = renderChildren(oneNode, `${indent}\t`);
+				// PHASE 6.5: children now route through renderContainerBody, which places the
+				// element children INSIDE the compositor named by contentModelShape rather than
+				// beside it.
+				const childLines = renderContainerBody(oneNode, `${indent}\t`, 'PescNamedDefinition');
 				const documentation = documentationLines(oneNode, `${indent}\t`);
 				// ADDED AT REMEDIATION (review item 3). A top-level xs:element may name its type by
 				// reference; the graph carries typeAsWritten on exactly the 145 kind='element'
@@ -572,13 +972,17 @@ const moduleFunction =
 							`recognise, which is how 530 simpleTypes became complexTypes without a word.`,
 					);
 				}
+				// PHASE 6.5: an anonymous type owns a content model exactly as a named one does —
+				// 162 of them carry contentModelShape. Routing it through the same body builder is
+				// the whole point: the review that chartered this phase was written about a fix
+				// that handled one parent and left the others.
 				const inner = documentationLines(oneNode, `${indent}\t`).concat(
-					renderChildren(oneNode, `${indent}\t`),
+					renderContainerBody(oneNode, `${indent}\t`, 'PescAnonymousType'),
 				);
 				return [`${indent}<${elementName}>`, ...inner, `${indent}</${elementName}>`];
 			};
 
-			const renderDerivation = (oneNode, indent) => {
+			const renderDerivation = (oneNode, indent, renderContext) => {
 				const derivationVariety = requiredProperty(
 					oneNode,
 					'derivationVariety',
@@ -664,9 +1068,32 @@ const moduleFunction =
 					DERIVATION_WRAPPER_ELEMENT_NAME_BY_CONTENT_STYLE[contentStyle];
 
 				const derivationIndent = wrapperElementName ? `${indent}\t` : indent;
+
+				// PHASE 6.5 — THE PLACEMENT THAT 478 TYPES DEPEND ON. The forge parser attributes a
+				// derivation's member elements to the CONTAINING TYPE, not to the derivation node,
+				// so the type owns the contentModelShape while the members physically belong inside
+				// this extension. Emitting the compositor beside the wrapper (the shape of the
+				// obvious fix) leaves a complexType carrying BOTH an xs:sequence and an
+				// xs:complexContent, which every conforming processor refuses. The owner therefore
+				// hands the content model down and this renderer places it, choosing the indent
+				// because only it knows how deep its own wrapper goes.
+				const injectedDerivationBodyLines =
+					renderContext && renderContext.renderInjectedDerivationBody
+						? renderContext.renderInjectedDerivationBody(`${derivationIndent}\t`)
+						: [];
+				if (injectedDerivationBodyLines.length && wrapperElementName === null) {
+					throw new Error(
+						`${moduleName}: PescDerivation '${oneNode.properties.stableId}' carries ` +
+							`contentStyle '${contentStyle}', which places it directly inside a simpleType, ` +
+							`yet its owner handed down content-model or attribute members to place. A ` +
+							`simpleType has neither, so there is no valid position for them. Refused BY NAME ` +
+							`rather than emitted somewhere plausible.`,
+					);
+				}
+				const derivationBodyLines = inner.concat(injectedDerivationBodyLines);
 				const openTag = `${derivationIndent}<${elementName}${attributeIfPresent('base', baseAsWritten)}`;
-				const derivationLines = inner.length
-					? [`${openTag}>`, ...inner, `${derivationIndent}</${elementName}>`]
+				const derivationLines = derivationBodyLines.length
+					? [`${openTag}>`, ...derivationBodyLines, `${derivationIndent}</${elementName}>`]
 					: [`${openTag}/>`];
 				return wrapperElementName
 					? [
@@ -705,8 +1132,52 @@ const moduleFunction =
 				)
 				.map((oneArtifactNode) => {
 					const filename = requiredProperty(oneArtifactNode, 'filename', 'PescArtifact');
+
+					// PHASE 6.5 (deliverable 2) — THE PREFIX DECLARATIONS. The emission previously
+					// declared xmlns:xs and nothing else, so every reference written through a
+					// corpus prefix — core:, AcRec:, tsr: — pointed at a namespace the document
+					// never bound. That is the 63rd of Phase 6's 63 refusals, and the map to fix it
+					// has been on the artifact node all along: prefixBindings, present on all 64
+					// source artifacts (measured, not assumed).
+					//
+					// REQUIRED, never defaulted. Emitting the xs: vocabulary into a document whose
+					// own binding table we could not read would produce a document that only looks
+					// like a schema. The 'xs' binding is additionally asserted rather than trusted:
+					// this module writes xs:-prefixed grammar on every line, so a corpus that bound
+					// the XML Schema namespace to some other prefix would silently invalidate every
+					// emitted document, and it must stop the run instead.
+					const prefixBindingMap = JSON.parse(
+						requiredProperty(oneArtifactNode, 'prefixBindings', 'PescArtifact'),
+					);
+					if (prefixBindingMap === null || typeof prefixBindingMap !== 'object') {
+						throw new Error(
+							`${moduleName}: prefixBindings on PescArtifact '${filename}' parsed to a ` +
+								`non-object. The shape is REQUIRED to be a {prefix: namespace} map; refused BY NAME.`,
+						);
+					}
+					if (prefixBindingMap.xs !== XSD_NAMESPACE_URI) {
+						throw new Error(
+							`${moduleName}: PescArtifact '${filename}' binds prefix 'xs' to ` +
+								`'${prefixBindingMap.xs === undefined ? 'nothing' : prefixBindingMap.xs}', not to ` +
+								`'${XSD_NAMESPACE_URI}'. This module emits xs:-prefixed XSD grammar unconditionally, ` +
+								`so that binding is load-bearing. Refused BY NAME rather than emitting a document ` +
+								`whose own grammar is unbound.`,
+						);
+					}
+					// Deterministic order: the DEFAULT namespace ('') sorts first, then prefixes
+					// alphabetically. Attribute order is not a statement on either side, but a
+					// stable emission keeps byte diffs readable for a human.
+					const namespaceDeclarationText = Object.keys(prefixBindingMap)
+						.sort()
+						.map((onePrefix) =>
+							onePrefix === ''
+								? `xmlns="${escapeXmlAttributeValue(prefixBindingMap[onePrefix])}"`
+								: `xmlns:${onePrefix}="${escapeXmlAttributeValue(prefixBindingMap[onePrefix])}"`,
+						)
+						.join(' ');
+
 					const schemaOpenTag =
-						`<xs:schema ${XSD_NAMESPACE_DECLARATION}` +
+						`<xs:schema ${namespaceDeclarationText}` +
 						attributeIfPresent(
 							'targetNamespace',
 							optionalProperty(oneArtifactNode, 'targetNamespace'),

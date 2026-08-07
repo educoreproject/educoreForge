@@ -1,0 +1,28 @@
+########## FULL RE-VERIFY AFTER REMEDIATION
+--- test/test-pesc260805SourceTier.js
+54 passed, 1 failed
+--- test/test-pesc260805DerivedTier.js
+71 passed, 0 failed
+--- test/test-pesc260805SyntheticTier.js
+106 passed, 0 failed
+--- levers
+         6.5 view: -1 +1   OLD view: -0 +0  (OLD FORM SILENT — the new gate sees what the old could not)
+
+  RED OBSERVED 8 / 8   MISMATCHES 0
+--- p6 mutation suite
+
+  CAUGHT 5   DOCUMENTED BLIND SPOTS 1
+  written: test/test-artifacts/p65MutationSuiteRerun/p6MutationSuite.json
+--- census
+
+  CONSERVATION HOLDS — 0 construct(s) moved that Phase 6.5 did not intend to touch
+  STILL SHORT OF SOURCE: xs:documentation 28
+  written: test/test-artifacts/p65ConservationCensus.json
+--- witness
+  source ................. 0
+  pre-6.5 reconstruction . 14
+  6.5 reconstruction ..... 0
+  defect present before repair: true   absent from source: true   absent after repair: true
+
+  written: test/test-artifacts/p65RemediationWitness.json
+########## DONE

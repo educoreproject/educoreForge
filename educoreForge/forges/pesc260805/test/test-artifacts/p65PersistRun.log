@@ -1,0 +1,116 @@
+########## 1. VALIDATOR (full round trip + independent instrument)
+roundTripClean true reproduced 173216 lostTotal 0 inventedTotal 0
+########## 2. INDEPENDENT REFUSAL AGREEMENT TABLE (derived from p65RoundTripRun1/independentXsdCheck.json)
+source {"attempted":64,"clean":55,"refused":9,"emptyCompile":0,"traversalUnavailableTypes":28}
+reconstructed {"attempted":64,"clean":55,"refused":9,"emptyCompile":0,"traversalUnavailableTypes":28}
+sameRefusedFilenameSet true allCausesIdentical true refusedTotal 9
+   AcademicRecord_v1.5.0.xsd | missing group 'core:OrganizationIDGroup': |identical: true
+   CollegeTranscript_v1.2.0.xsd | missing group 'core:OrganizationIDGroup': |identical: true
+   CollegeTranscript_v1.3.0.xsd | unknown type 'AcRec:TransmissionDataType': |identical: true
+   HighSchoolTranscript_v1.1.0.xsd | missing group 'core:OrganizationIDGroup': |identical: true
+   HighSchoolTranscript_v1.2.0.xsd | unknown type 'AcRec:TransmissionDataType': |identical: true
+   TestScoreReport_v1.0.0.xsd | unknown type 'AcRec:TestScoreReportType': |identical: true
+   TranscriptAcknowledgment_v1.1.0.xsd | unknown type 'AcRec:TransmissionDataType': |identical: true
+   TranscriptRequest_v1.1.0.xsd | unknown type 'AcRec:TransmissionDataType': |identical: true
+   TranscriptResponse_v1.1.0.xsd | unknown type 'AcRec:TransmissionDataType': |identical: true
+########## 3. CONTENT MODEL LEVERS
+p65_contentModelLevers
+  source statements (6.5 view) ... 173216
+  source statements (old view) ... 142345 (published pre-6.5: 142345) EXACT
+  control emission statements .... 173216
+
+  RED   stripContentModelShapeFromOneType
+         expected refusedByName, observed refusedByName
+         stripped contentModelShape from 'urn:org:pesc:core:CoreMain:v1.0.0#complexType/AcademicDegreeRequirementType'
+         refusal: roundTripSourceEmitter: PescNamedDefinition 'urn:org:pesc:core:CoreMain:v1.0.0#complexType/AcademicDegreeRequirementType' declares 3 element child/children but carries no 'contentModelShape'. REQUIRED
+  RED   flattenNestedCompositorToGuessersSequence
+         expected statementDifference, observed statementDifference
+         flattened the nested compositor of 'urn:org:pesc:core:CoreMain:v1.0.0#complexType/TestsType' into the plain sequence a child-order guesser would produce (8 particles)
+         6.5 view: -11 +6   OLD view: -0 +0  (OLD FORM SILENT — the new gate sees what the old could not)
+  RED   swapTwoSiblingElementParticles
+         expected statementDifference, observed statementDifference
+         swapped sibling element particles at ordinals 0 and 1 of 'urn:org:pesc:core:CoreMain:v1.0.0#complexType/AcademicDegreeRequirementType'
+         6.5 view: -2 +2   OLD view: -0 +0  (OLD FORM SILENT — the new gate sees what the old could not)
+  RED   changeOneCompositorKindToChoice
+         expected statementDifference, observed statementDifference
+         changed the top-level compositor of 'urn:org:pesc:core:CoreMain:v1.0.0#complexType/AcademicDegreeRequirementType' from sequence to choice
+         6.5 view: -1 +1   OLD view: -0 +0  (OLD FORM SILENT — the new gate sees what the old could not)
+  RED   dropOneParticleLeavingItsChildUnplaced
+         expected refusedByName, observed refusedByName
+         removed the element particle at ordinal 0 of 'urn:org:pesc:core:CoreMain:v1.0.0#complexType/AcademicDegreeRequirementType', leaving its child unplaced
+         refusal: roundTripSourceEmitter: PescNamedDefinition 'urn:org:pesc:core:CoreMain:v1.0.0#complexType/AcademicDegreeRequirementType' declares 3 element children but its contentModelShape names only 2; sequencePo
+  RED   stripPrefixBindingsFromOneArtifact
+         expected refusedByName, observed refusedByName
+         stripped prefixBindings from artifact 'TranscriptResponse_v1.1.0.xsd'
+         refusal: roundTripSourceEmitter: node 'pescArtifact:01f8eea0cb81401c4441a9f45745df0393c71d608c0da2afb5cd1fe02cf80e7e' (PescArtifact) has no 'prefixBindings'. A required property that is absent is refused BY NA
+  RED   stripShapeFromAGroupRefOnlyType
+         expected statementDifference, observed statementDifference
+         stripped contentModelShape from 'urn:org:pesc:core:CoreMain:v1.0.0#complexType/AddressType', which declares NO element children, so the emitter's refusal guard cannot fire
+         6.5 view: -6 +0   OLD view: -1 +0
+  RED   rebindOnePrefixNamespace
+         expected statementDifference, observed statementDifference
+         rebound prefix '(default)' in artifact 'AcademicEportfolio_v1.0.0.xsd' away from 'urn:org:pesc:message:AcademicEportfolio:v1.0.0'
+         6.5 view: -1 +1   OLD view: -0 +0  (OLD FORM SILENT — the new gate sees what the old could not)
+
+  RED OBSERVED 8 / 8   MISMATCHES 0
+LEVER_EXIT=0
+########## 4. P6 MUTATION SUITE (rerun under 6.5)
+  every lever MUTATES GRAPH ROWS; nothing is written to graph, corpus or container
+
+  CONTROL      statements=173216   (the answer key; without it a harness that called everything different would look like a perfect detector)
+  CAUGHT       dropOneEnumerationValue            removed=  2 added=  0
+               dropped enumeration value "AD" from urn:org:pesc:codes:iso_3166-1:v1.0.0#simpleType/CountryAlpha2CodeSimpleType/restriction/1
+  CAUGHT       swapTwoSiblingElements             removed=  2 added=  2
+               swapped sequencePosition of siblings ThesisDissertationTitle <-> ThesisDissertationAdvisor under urn:org:pesc:core:CoreMain:v1.0.0#complexType/AcademicDegreeRequirementType
+  CAUGHT       changeOneMinOccurs                 removed=  1 added=  1
+               minOccurs "0" -> "1" on urn:org:pesc:core:CoreMain:v1.0.0#complexType/AcademicDegreeRequirementType/el/1:ThesisDissertationTitle
+  CAUGHT       alterOneDocumentationCharacter     removed=  1 added=  1
+               one character of documentation altered on urn:org:pesc:codes:iso_3166-1:v1.0.0#simpleType/CountryAlpha2CodeSimpleType ("A data type for country," -> "Z data type for country,")
+  BLIND SPOT   repointReferenceToOtherNamespace   removed=  0 added=  0
+               repointed core:ThesisDissertationTitleType -> AcRec:ThesisDissertationTitleType (SAME local name, DIFFERENT namespace) on urn:org:pesc:core:CoreMain:v1.0.0#complexType/AcademicDegreeRequirementType/el/1:ThesisDissertationTitle
+  CAUGHT       deleteOneType                      removed= 17 added=  0
+               deleted named definition urn:org:pesc:core:CoreMain:v1.0.0#complexType/AcademicDegreeRequirementType
+
+  CAUGHT 5   DOCUMENTED BLIND SPOTS 1
+  written: test/test-artifacts/p65MutationSuiteRerun/p6MutationSuite.json
+MUTATION_EXIT=0
+########## 5. CONSERVATION CENSUS
+p65_conservationCensus
+  source .......... /Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/forges/pesc260805/assets/standardSourceData/01 (64 files)
+  pre-6.5 ......... /Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/forges/pesc260805/test/test-artifacts/p5RoundTripRun4/emitted (64 files)
+  phase 6.5 ....... test/test-artifacts/p65RoundTripRun1/emitted (64 files)
+
+  construct              source   pre-6.5      6.5    delta
+  xs:sequence              3042         0     3037    +3037  (intended addition)
+  xs:choice                 211         0      211     +211  (intended addition)
+  xs:all                      0         0        0        0  (intended addition)
+  xs:group[ref]             283         0      282     +282  (intended addition)
+  xs:any                     25         0       25      +25  (intended addition)
+  xs:element              17164     17140    17140        0
+  xs:attribute               84        84       84        0
+  xs:complexType           3216      3211     3211        0
+  xs:simpleType           10126     10126    10126        0
+  xs:extension              708       708      708        0
+  xs:restriction          10140     10140    10140        0
+  xs:enumeration          31428     31428    31428        0
+  xs:documentation        26652     26624    26624        0
+  xs:complexContent         694       694      694        0
+  xs:simpleContent           28        28       28        0
+  xmlns declaration         217        64      217     +153  (intended addition)
+
+  CONSERVATION HOLDS — 0 construct(s) moved that Phase 6.5 did not intend to touch
+  written: test/test-artifacts/p65ConservationCensus.json
+CENSUS_EXIT=0
+########## 6. P6 RED EVIDENCE LEVERS (regression)
+  RED OBSERVED   a summary NAMING NO PROCESSOR AT ALL is REFUSED, never assumed to be 1.1
+                 xsd-independent-check.refuseUnlessProcessorIsXsd11: the comparison reported processorClass undefined rather than 'XMLSchema11'. R-P5-1 pins XSD 1.1: u
+
+  RED OBSERVED 14   NOT RED 0
+########## 7. SUITES
+--- test/test-pesc260805SourceTier.js
+54 passed, 1 failed
+--- test/test-pesc260805DerivedTier.js
+71 passed, 0 failed
+--- test/test-pesc260805SyntheticTier.js
+106 passed, 0 failed
+########## DONE
