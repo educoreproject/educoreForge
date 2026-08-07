@@ -1,0 +1,46 @@
+PHASE 7 REMEDIATION — SINGLE-RUN FIGURE PUBLICATION
+pairRunStamp=20260807-173607   stageOnBuildDir=pesc260805OnlyRoundTrip_20260807-223703   generatedAt=2026-08-07 17:40:52
+
+---- SUITES ----
+Source exit=0 :: 58 passed, 0 failed
+Derived exit=0 :: 72 passed, 0 failed
+Synthetic exit=0 :: 107 passed, 0 failed
+
+---- LEDGER STATUS DISTRIBUTION ----
+{"expectationLeverOnly":65,"genuineGap":78,"proven":54,"recordsGap":40}
+
+---- CONJUNCTION AUDIT ----
+exit=0
+classifier self-test: 7/7 specimens scored as declared (one accept, one benign-mention, one REFUSE control).
+shipped check() calls: 238; carrying a top-level conjunction: 77
+recorded "proven" AND carrying 3+ conjuncts (the highest-risk rows — one lever, three claims): 8
+auditor join integrity: 0 shipped label(s) failed to join the ledger — the risk list above is COMPLETE.
+auditor parse integrity: 0 check() call site(s) carried arguments this parser could not split — no parser defect.
+check() calls resident in COMMENTS (stripped before parsing): 6
+DENOMINATOR CLOSES: 238 shipped rows + 0 zero-argument + 0 unparsed + 0 identifier-prefixed = 238, against 238 occurrences actually present in the stripped text.
+
+---- EXPECTATION-LEVER SWEEP ----
+exit=0
+classifier self-test: 5/5 specimens scored as declared (including one longest-token-wins control and one REFUSE control).
+    68  DATA        productionMutationShippedConfiguration
+     3  DATA        productionMutation
+     1  expectation  harnessMutation
+    46  expectation  expectationPerturbation
+    12  DATA        ledgerGateSelfDemonstration
+     6  DATA        ledgerStaleEntryProbe
+     0  expectation  inheritedBaseline
+  census pass counted ................ 54 proven rows
+  classification pass reached ........ 54 rows
+  of those, landed in a bucket ....... 54 (54 data + 0 expectation-only)
+  in census but never classified ..... 0
+  classified but absent from census .. 0
+
+---- DESCRIPTOR LEVERS ----
+exit=0  descriptor clean in git: yes
+
+---- THE VERDICT (from the stage-ON build above) ----
+{"roundTripClean":true,"inventedTotal":0,"lostTotal":0,"contentGapTotal":0,"explicitlyOmittedTotal":0,"whitespaceOnlyDifferenceTotal":0,"syntheticReproducible":true}
+
+---- INDEPENDENT XSD INSTRUMENT (real key names) ----
+{"source":{"attempted":64,"clean":55,"refused":9,"emptyCompile":0,"traversalUnavailableTypes":28},"emitted":{"attempted":64,"clean":55,"refused":9,"emptyCompile":0,"traversalUnavailableTypes":28},"sourceRefusalCauseTally":{"reference into an unresolvable namespace (missing group)":3,"reference into an unresolvable namespace (unknown type)":6},"emittedRefusalCauseTally":{"reference into an unresolvable namespace (missing group)":3,"reference into an unresolvable namespace (unknown type)":6},"compileAgreement":{"sharedFilenames":64,"bothClean":55,"sourceCleanEmittedNotClean":0,"emittedCleanSourceNotClean":0}}
+{"comparedTypeTotal":25540,"typeOnlyInSourceTotal":0,"typeOnlyInEmittedTotal":0,"particleOrderDifferenceTotal":0,"resolvedTypeDifferenceTotal":0,"enumerationDifferenceTotal":0,"pointerDifferenceTotal":0,"traversalUnavailableTotal":28}

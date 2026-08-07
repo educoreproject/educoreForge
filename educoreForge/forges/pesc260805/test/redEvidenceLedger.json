@@ -3,7 +3,8 @@
 	"statuses": {
 		"proven": "Observed FAILING in a retained log. redEvidence names the log, the lever, and whether the probe ran in the SHIPPED configuration.",
 		"recordsGap": "Believed proven red in a run whose log was not retained. Cited, marked unverifiable-but-believed. Do NOT re-run these — Phase 6 mutation suite owns them.",
-		"genuineGap": "Never demonstrated able to fail, by anyone. This is the real number. Phase 6 owns closing it. Do NOT close it here."
+		"genuineGap": "Never demonstrated able to fail, by anyone. This is the real number. Phase 6 owns closing it. Do NOT close it here.",
+		"expectationLeverOnly": "Observed FAILING in a retained log, but ONLY under a lever that moved a test EXPECTATION (or the harness) rather than production data. The standing rule is NOT satisfied and this row DOES NOT count as proven. It is deliberately NOT genuineGap: that status means \"never demonstrated able to fail, by anyone\", and these rows HAVE failed — re-labelling them would make this very block false for every one of them. Mechanically an expectation lever reddens an assertion whether or not its predicate can ever be satisfied by real data, so it certifies a VACUOUS gate as proven; a data lever cannot, because a vacuous check does not respond to data at all. Closing one of these rows means building a lever that mutates the input, the corpus or the graph — or, where that is genuinely impossible, saying so on the row and moving it to genuineGap with the reason."
 	},
 	"rescopedHelperNote": "[G-4], Phase 4 review. Four harness helpers were NARROWED when the synthetic tier arrived (namedDefinitionNodes and stripDerived gained a pescTier filter, assertPristineSourceGraph gained a synthetic clause, and the G3-E BFS inherited the narrowed definition set), while assertions reading through them still cited Phase 3 vr_* logs — receipts for a run of DIFFERENT CODE. Every such assertion now carries rescopedHelper and evidencePostDatesPhase4Rescoping. Two re-proof levers were pulled against the code as it now stands: p4r_probeUnscopedDefinitions_derived.log (namedDefinitionNodes un-narrowed) and p4r_probeUnscopedStrip_derived.log (stripDerived un-narrowed, which ABORTS at the production purity refusal and therefore supplies no label-level evidence). Where evidencePostDatesPhase4Rescoping is false, the receipt is retained but explicitly labelled as pre-rescoping rather than silently carried forward.",
 	"rescopedHelperProvenance": {
@@ -125,7 +126,8 @@
 		"productionRefusalsWithNoLedgerRow": 48,
 		"measuredBy": "the third independent adversarial review, 2026-08-06",
 		"owner": "PHASE 6, added to Deliverable ZERO beside the conjunction-evidence class and the inherited genuine-gap residue. The rule was applied to the gates the reviews NAMED and was never swept across the record; this is that sweep, and it wants a different author.",
-		"whyNotClosedHere": "Four rounds produced four vacuous checks, each inside the fix for the last. Every attempt added surface faster than it removed it, so a fifth was not ordered and was not made."
+		"whyNotClosedHere": "Four rounds produced four vacuous checks, each inside the fix for the last. Every attempt added surface faster than it removed it, so a fifth was not ordered and was not made.",
+		"supersededByPhase7": "The recorded figures provenRowsRestingOnExpectationLeversAlone 63 / provenRowsTotalAtMeasurement 114 were HANDED DOWN by the third adversarial review and never recomputed, so they could not notice the ledger moving underneath them. They are superseded by test/probes/p7_expectationLeverSweep.js, which recomputes on every run from two INDEPENDENT passes that are compared rather than partitioned, and by the standing gate in all three suites. No figure is stored here, deliberately: a stored figure is exactly what went stale."
 	},
 	"fourVacuousChecksNote": "THE MOST USEFUL FINDING OF PHASE 4.6a, recorded because it outlives the phase. Four vacuous checks in four rounds, the fourth inside the control written to certify the third. The common factor is STRUCTURAL, not behavioural: every one compared a PURE FUNCTION's output against a quantity derived from the SAME computation. In that shape \"the two agree\" is a THEOREM, not a measurement — and a theorem dressed as an assertion always passes and always looks like diligence. buildSyntheticTier is a pure function of one input, so any check comparing two derivations of that input can only be reddened by mutating CODE. That is why every attempt needed a lever the code could move and the data could not.",
 	"retiredAssertionsNote": "Assertions a later phase legitimately reversed or re-stated, kept here so the residue accounting stays honest in BOTH directions. A retired assertion is not deleted and its red evidence is not lost — but it also does NOT transfer to whatever replaced it. An assertion carrying a predecessor receipt is how the genuine-gap residue was created in the first place, so each entry names the successors and the levers that proved them afresh.",
@@ -173,6 +175,23 @@
 			"label": "G4-C the merged nodes publish the delta themselves and agree with the report in all four buckets",
 			"retiredAtPhase": "4.6a",
 			"reason": "LABEL SURVIVES, CONTENT CHANGED. R-P4-11 retired the one-sided \"added\" bucket in favour of \"contributed\", which names the contributing branch and carries both directions, and R-P4-10 zeroed \"absent\" because the union now carries every loser-only name. The label is unchanged, so the ledger would have carried the old receipt forward silently; it is listed here so the substitution is visible. Red-proven afresh by mp_redProbeA_perturbedExpected.log and mp_redProbeE_perturbedDeltaPins.log."
+		},
+		{
+			"label": "INTEGRATION roundTripValidator NOT declared yet (declared-and-broken = refusal)",
+			"retiredAtPhase": "7 (re-pinned, not deleted — the original entry and its evidence are preserved here)",
+			"status": "recordsGap",
+			"originalEntry": {
+				"label": "INTEGRATION roundTripValidator NOT declared yet (declared-and-broken = refusal)",
+				"status": "recordsGap",
+				"note": "UNVERIFIABLE BUT BELIEVED. DEVLOG records \"PHASE 2: CLOSED — 47/47 gates, all RED-first\", and Phase 2 was independently reviewed and committed green at b02168b. The red receipts for that run were not retained. Do NOT re-run; hand to Phase 6."
+			},
+			"reason": "PHASE 5 FALSIFIED THIS ASSERTION and it was the suite's single standing FAIL (54 passed / 1 failed) across Phases 5, 6 and 6.5, carried as a DECLARED debt so that a red suite could not be mistaken for a clean one. It asserted descriptor.roundTripValidator === undefined; Phase 5 declared roundTripValidator=roundTripValidator.js. The REQUIREMENT behind it (RT-13.3) is unchanged — only the state of the world moved — so it is re-pinned to the condition RT-13.3 actually cares about rather than dropped.",
+			"successors": [
+				"INTEGRATION roundTripValidator IS declared (Phase 5; re-pinned in Phase 7)",
+				"INTEGRATION the declared roundTripValidator file EXISTS (RT-13.3: declared-and-missing refuses every build)",
+				"INTEGRATION the declared roundTripValidator exports validate() (RT-13.3: declared-and-broken is a refusal, never a downgrade to absent)"
+			],
+			"evidenceDoesNotTransfer": "Per this ledger's own retiredAssertionsNote, the retired entry's evidence does NOT transfer to the successors. All three were proven afresh by levers that mutate production data."
 		}
 	],
 	"conjunctionEvidenceNote": "A METHOD GAP THIS LEDGER CANNOT CURRENTLY CLOSE, recorded at the Phase 4.6a independent review. Evidence is keyed to an assertion LABEL: a label appears in a retained log as FAILING and the row is marked \"proven\". But a conjunction fails when ANY conjunct fails, so such a receipt proves only that SOME conjunct can fail — never that every conjunct can. A label is therefore the wrong granularity for a claim with several independent parts, and this is the inherited-receipt pattern arriving through a CONJUNCTION rather than through a rename. THE MEASUREMENT IS IN conjunctionEvidenceMeasurement BELOW, computed at ledger-build time by test/probes/mp_auditConjunctiveAssertions.js and never transcribed into this prose. It was transcribed once, and this note published 229/75/8 while the auditor already reported 232/78/11 — a hand-copied figure in a document is a figure that goes quietly wrong, and Phase 6 would have inherited the stale one as its brief. Two instances were found and fixed at this remediation (the acceptance-1 gate and the SHORTFALL assertion); the remaining rows are REPORTED, NOT SILENTLY RECLASSIFIED, because deciding which are genuinely under-evidenced requires reading each lever against each conjunct. Closing the class needs one assertion per claim, or a lever per conjunct, or a ledger that records evidence per CONJUNCT rather than per label. That is a specification change and it belongs to whoever owns the ledger, not to a phase builder patching his own rows.",
@@ -217,14 +236,16 @@
 				},
 				{
 					"label": "CENSUS GAP2: the ambiguous-import subtraction is the 6 import declarations, computed from the entries",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "vr_probeA.log",
 							"lever": "EXPECTATION PERTURBATION (round 2): perturbed the GAP 2 accounting, GAP 3 global-topology, GAP 4 root/reachability and GAP 6 presence constants.",
 							"shippedConfig": false
 						}
-					]
+					],
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "CENSUS the CoreMain v1.6.0 gap is the ONE unresolved import",
@@ -384,14 +405,16 @@
 				},
 				{
 					"label": "G3-C ApplicationFeeAmountType has NO chain edge across the boundary",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "vr_probeE.log",
 							"lever": "EXPECTATION PERTURBATION (round 3): inverted the ApplicationFeeAmountType definitionName comparison and the cross-family expected count, after both expressions were rewritten.",
 							"shippedConfig": false
 						}
-					]
+					],
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "G3-C ClassRankType appears in all 14 CoreMain versions",
@@ -401,14 +424,16 @@
 				},
 				{
 					"label": "G3-C ClassRankType chains across every version (13 edges, one cluster)",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "vr_baseline_derived.log",
 							"lever": "INHERITED BASELINE. The dead predecessor's uncommitted tree, run unmodified before any repair. The FAILs here are the four real defects as found.",
 							"shippedConfig": true
 						}
-					]
+					],
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "G3-C ClassRankType cluster representative is the NEWEST member",
@@ -418,62 +443,72 @@
 				},
 				{
 					"label": "G3-C ClassRankType topology is a CHAIN not a clique (D-7: max out-degree 1)",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "vr_redProbe_derived.log",
 							"lever": "EXPECTATION PERTURBATION (round 1): inverted the ClassRankType out-degree and D-4 constants, the G3-D RED-1 planted-edge count, and the G3-F control/shape-attribution conditions.",
 							"shippedConfig": false
 						}
-					]
+					],
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "G3-C D-4: AdmissionsRecord ClassRankType chains inside its OWN family (5 members, 4 edges)",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "vr_redProbe_derived.log",
 							"lever": "EXPECTATION PERTURBATION (round 1): inverted the ClassRankType out-degree and D-4 constants, the G3-D RED-1 planted-edge count, and the G3-F control/shape-attribution conditions.",
 							"shippedConfig": false
 						}
-					]
+					],
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "G3-C D-4: ZERO SAME_DEFINITION edges join the CoreMain and AdmissionsRecord ClassRankTypes",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "vr_redProbe_derived.log",
 							"lever": "EXPECTATION PERTURBATION (round 1): inverted the ClassRankType out-degree and D-4 constants, the G3-D RED-1 planted-edge count, and the G3-F control/shape-attribution conditions.",
 							"shippedConfig": false
 						}
-					]
+					],
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "G3-C D-4: the two same-named clusters are DISJOINT",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "vr_redProbe_derived.log",
 							"lever": "EXPECTATION PERTURBATION (round 1): inverted the ClassRankType out-degree and D-4 constants, the G3-D RED-1 planted-edge count, and the G3-F control/shape-attribution conditions.",
 							"shippedConfig": false
 						}
-					]
+					],
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "G3-C GAP3/R-P3-2: EVERY SAME_DEFINITION edge carries the full declared property contract",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "vr_probeA.log",
 							"lever": "EXPECTATION PERTURBATION (round 2): perturbed the GAP 2 accounting, GAP 3 global-topology, GAP 4 root/reachability and GAP 6 presence constants.",
 							"shippedConfig": false
 						}
-					]
+					],
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "G3-C GAP3: D-4 GLOBALLY — ZERO edges cross a library family boundary",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "vr_probeA.log",
@@ -485,73 +520,87 @@
 							"lever": "EXPECTATION PERTURBATION (round 3): inverted the ApplicationFeeAmountType definitionName comparison and the cross-family expected count, after both expressions were rewritten.",
 							"shippedConfig": false
 						}
-					]
+					],
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "G3-C GAP3: D-7 GLOBALLY — every hop strictly ASCENDS in version order",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "vr_probeA.log",
 							"lever": "EXPECTATION PERTURBATION (round 2): perturbed the GAP 2 accounting, GAP 3 global-topology, GAP 4 root/reachability and GAP 6 presence constants.",
 							"shippedConfig": false
 						}
-					]
+					],
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "G3-C GAP3: D-7 chain GLOBALLY — max in-degree 1 (no member is two versions' successor)",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "vr_probeA.log",
 							"lever": "EXPECTATION PERTURBATION (round 2): perturbed the GAP 2 accounting, GAP 3 global-topology, GAP 4 root/reachability and GAP 6 presence constants.",
 							"shippedConfig": false
 						}
-					]
+					],
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "G3-C GAP3: D-7 chain GLOBALLY — max out-degree 1 across all 10,400 edges",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "vr_probeA.log",
 							"lever": "EXPECTATION PERTURBATION (round 2): perturbed the GAP 2 accounting, GAP 3 global-topology, GAP 4 root/reachability and GAP 6 presence constants.",
 							"shippedConfig": false
 						}
-					]
+					],
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "G3-C GAP3: ZERO duplicate (from,to) pairs across the whole graph",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "vr_probeA.log",
 							"lever": "EXPECTATION PERTURBATION (round 2): perturbed the GAP 2 accounting, GAP 3 global-topology, GAP 4 root/reachability and GAP 6 presence constants.",
 							"shippedConfig": false
 						}
-					]
+					],
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "G3-C GAP3: the global measurement covered all 10,400 edges",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "vr_probeA.log",
 							"lever": "EXPECTATION PERTURBATION (round 2): perturbed the GAP 2 accounting, GAP 3 global-topology, GAP 4 root/reachability and GAP 6 presence constants.",
 							"shippedConfig": false
 						}
-					]
+					],
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "G3-C GAP6: familyKey and definitionName are PRESENT on every edge these filters read",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "vr_probeA.log",
 							"lever": "EXPECTATION PERTURBATION (round 2): perturbed the GAP 2 accounting, GAP 3 global-topology, GAP 4 root/reachability and GAP 6 presence constants.",
 							"shippedConfig": false
 						}
-					]
+					],
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "G3-C RED: a facet-blind comparison wrongly chains ApplicationFeeAmountType",
@@ -613,7 +662,7 @@
 				},
 				{
 					"label": "G3-D RED-2: removing EITHER collision member lifts the quarantine and provokes an unresolved-reference refusal naming the namespace",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "vr_redProbe_derived.log",
@@ -627,11 +676,13 @@
 						}
 					],
 					"rescopedHelper": "stripDerived + assertPristineSourceGraph",
-					"evidencePostDatesPhase4Rescoping": false
+					"evidencePostDatesPhase4Rescoping": false,
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "G3-D RED-2: the two members PARTITION the consumers' type set (each removal strands a DIFFERENT reference)",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "vr_redProbe_partition.log",
@@ -640,7 +691,9 @@
 						}
 					],
 					"rescopedHelper": "stripDerived + assertPristineSourceGraph",
-					"evidencePostDatesPhase4Rescoping": false
+					"evidencePostDatesPhase4Rescoping": false,
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "G3-D ZERO references into the contested namespace are resolved by COMPUTATION",
@@ -678,25 +731,29 @@
 				},
 				{
 					"label": "G3-D every resolution into the contested namespace is synthetic and rule-tagged, and they number exactly the 201 held references",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "p4_probeContested_derived.log",
 							"lever": "EXPECTATION PERTURBATION (Phase 4): the RESTATED G3-D constants inverted — computed-resolution count expected at 1 rather than 0, the decided-resolution total moved off 201, the 195/6 split moved off, and the planted-edge count moved off 1.",
 							"shippedConfig": false
 						}
-					]
+					],
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "G3-D the 201 decided resolutions split as 195 type-space references + 6 import declarations",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "p4_probeContested_derived.log",
 							"lever": "EXPECTATION PERTURBATION (Phase 4): the RESTATED G3-D constants inverted — computed-resolution count expected at 1 rather than 0, the decided-resolution total moved off 201, the 195/6 split moved off, and the planted-edge count moved off 1.",
 							"shippedConfig": false
 						}
-					]
+					],
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "G3-D the consumer set is EXACTLY the six expected roots",
@@ -712,7 +769,7 @@
 				},
 				{
 					"label": "G3-E GAP4: production stats agree with the annotations on the nodes",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "vr_probeA.log",
@@ -721,7 +778,9 @@
 						}
 					],
 					"rescopedHelper": "namedDefinitionNodes",
-					"evidencePostDatesPhase4Rescoping": false
+					"evidencePostDatesPhase4Rescoping": false,
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "G3-E GAP4: reachableFromLatestRoot is EXACTLY 2,282 of 12,909 definitions",
@@ -748,7 +807,7 @@
 				},
 				{
 					"label": "G3-E GAP4: the harness derives the SAME message-root set production used (12 roots)",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "vr_probeA.log",
@@ -757,7 +816,9 @@
 						}
 					],
 					"rescopedHelper": "namedDefinitionNodes",
-					"evidencePostDatesPhase4Rescoping": false
+					"evidencePostDatesPhase4Rescoping": false,
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "G3-E RED: the independent BFS comparison demonstrably able to go red",
@@ -791,7 +852,7 @@
 				},
 				{
 					"label": "G3-F CONTROL: the unmutated fixture provokes no refusal",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "vr_redProbe_derived.log",
@@ -800,7 +861,9 @@
 						}
 					],
 					"rescopedHelper": "assertPristineSourceGraph",
-					"evidencePostDatesPhase4Rescoping": false
+					"evidencePostDatesPhase4Rescoping": false,
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "G3-F a drifted shape is REFUSED",
@@ -820,7 +883,7 @@
 				},
 				{
 					"label": "G3-F the refusal is the SHAPE guard itself, not another guard firing first",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "vr_redProbe_derived.log",
@@ -829,11 +892,13 @@
 						}
 					],
 					"rescopedHelper": "assertPristineSourceGraph",
-					"evidencePostDatesPhase4Rescoping": false
+					"evidencePostDatesPhase4Rescoping": false,
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "G3-F the refusal names R-P2-5",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "vr_baseline_derived.log",
@@ -842,11 +907,13 @@
 						}
 					],
 					"rescopedHelper": "assertPristineSourceGraph",
-					"evidencePostDatesPhase4Rescoping": false
+					"evidencePostDatesPhase4Rescoping": false,
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "G3-F the refusal names the container",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "vr_baseline_derived.log",
@@ -855,7 +922,9 @@
 						}
 					],
 					"rescopedHelper": "assertPristineSourceGraph",
-					"evidencePostDatesPhase4Rescoping": false
+					"evidencePostDatesPhase4Rescoping": false,
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "LEDGER carries no stale entries for assertions this suite no longer runs",
@@ -909,6 +978,18 @@
 							"shippedConfig": false
 						}
 					]
+				},
+				{
+					"label": "LEDGER every proven row carries at least one lever that MUTATES PRODUCTION DATA",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "test/test-artifacts/p7/p7RED_provenImpliesDataLever.log",
+							"lever": "LEDGER GATE SELF-DEMONSTRATION (Phase 7): the gate was shipped BEFORE the re-statement it motivates, and its FIRST RUN was observed RED against the SHIPPED ledger in all three suites simultaneously — 25 source + 6 derived + 34 synthetic = 65 rows named by label in the evidence line. No mutation was needed because the real ledger content was already the defect; the ledger IS this gate's production data. The 65 independently matches the figure p7_expectationLeverSweep.js computes by a different enumeration.",
+							"shippedConfig": true
+						}
+					],
+					"note": "A NEW GATE WHOSE FIRST ACT WAS TO FAIL AGAINST THE EXACT POPULATION THAT MOTIVATED IT. Ordered that way deliberately by the supervisor: had the re-statement landed first, the gate would have been green on its first run and would have been a gate nobody had ever seen fail."
 				}
 			]
 		},
@@ -1093,14 +1174,16 @@
 				},
 				{
 					"label": "INTEGRATION derived tier is EXACTLY 63 nodes (the namespaces)",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "vr_redProbe_source.log",
 							"lever": "EXPECTATION PERTURBATION (round 1): dropped 'meta' from PESC_TIER_VALUES and perturbed the source/derived/synthetic count constants.",
 							"shippedConfig": false
 						}
-					]
+					],
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "INTEGRATION embedCallCount is 0 with skipEmbedding",
@@ -1119,14 +1202,16 @@
 				},
 				{
 					"label": "INTEGRATION every node carries a ratified pescTier (source|derived|synthetic|meta, R-P2-1)",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "vr_redProbe_source.log",
 							"lever": "EXPECTATION PERTURBATION (round 1): dropped 'meta' from PESC_TIER_VALUES and perturbed the source/derived/synthetic count constants.",
 							"shippedConfig": false
 						}
-					]
+					],
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "INTEGRATION every node has stableId, ForgedNode label, non-empty searchText",
@@ -1140,14 +1225,16 @@
 				},
 				{
 					"label": "INTEGRATION meta tier is EXACTLY 1 node (the standard root, R-P2-1)",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "vr_redProbe_source.log",
 							"lever": "EXPECTATION PERTURBATION (round 1): dropped 'meta' from PESC_TIER_VALUES and perturbed the source/derived/synthetic count constants.",
 							"shippedConfig": false
 						}
-					]
+					],
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "INTEGRATION metadata.version non-blank",
@@ -1155,9 +1242,50 @@
 					"note": "UNVERIFIABLE BUT BELIEVED. DEVLOG records \"PHASE 2: CLOSED — 47/47 gates, all RED-first\", and Phase 2 was independently reviewed and committed green at b02168b. The red receipts for that run were not retained. Do NOT re-run; hand to Phase 6."
 				},
 				{
-					"label": "INTEGRATION roundTripValidator NOT declared yet (declared-and-broken = refusal)",
-					"status": "recordsGap",
-					"note": "UNVERIFIABLE BUT BELIEVED. DEVLOG records \"PHASE 2: CLOSED — 47/47 gates, all RED-first\", and Phase 2 was independently reviewed and committed green at b02168b. The red receipts for that run were not retained. Do NOT re-run; hand to Phase 6."
+					"label": "INTEGRATION roundTripValidator IS declared (Phase 5; re-pinned in Phase 7)",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "test/test-artifacts/p7/p7RepinnedDescriptorLevers.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION (Phase 7): the roundTripValidator line was deleted from the bundle's own parserDescriptor.ini — the pre-Phase-5 state — and the assertion was OBSERVED RED. The file is restored byte-for-byte and the restore is verified by comparison, not assumed.",
+							"shippedConfig": true
+						},
+						{
+							"probeLog": "test/test-artifacts/p7/p7RepinnedDescriptorLevers.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION (Phase 7): the declaration was repointed at a filename that does not exist (RT-13.3 declared-and-missing) and the assertion was OBSERVED RED.",
+							"shippedConfig": true
+						}
+					],
+					"note": "Replaces the stale pin that asserted the OPPOSITE. Carries an ACCEPT-CONTROL: a no-op lever rewriting the ORIGINAL bytes leaves all three successors GREEN, which is what makes the reds interpretable — without it, a harness that broke the descriptor unconditionally, or a reader serving a stale cached parse, would produce an identical all-red table."
+				},
+				{
+					"label": "INTEGRATION the declared roundTripValidator file EXISTS (RT-13.3: declared-and-missing refuses every build)",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "test/test-artifacts/p7/p7RepinnedDescriptorLevers.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION (Phase 7): the declaration was repointed at a filename that does not exist and the assertion was OBSERVED RED.",
+							"shippedConfig": true
+						}
+					],
+					"note": "Deliberately a SEPARATE assertion rather than a conjunct, on the day this phase measured the conjunction class (78 of 233 shipped assertions carry a top-level &&). The separation is not cosmetic and it was MEASURED: the lever that declares a file which exists but exports no validate() reddens the declaration and exports assertions and leaves THIS one green, so a single conjunction would have hidden a case its own receipt could not distinguish."
+				},
+				{
+					"label": "INTEGRATION the declared roundTripValidator exports validate() (RT-13.3: declared-and-broken is a refusal, never a downgrade to absent)",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "test/test-artifacts/p7/p7RepinnedDescriptorLevers.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION (Phase 7): the declaration was repointed at a module that EXISTS and LOADS but exports no validate(). The assertion was OBSERVED RED while the file-existence assertion stayed GREEN — the discriminating lever for this row.",
+							"shippedConfig": true
+						},
+						{
+							"probeLog": "test/test-artifacts/p7/p7RepinnedDescriptorLevers.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION (Phase 7): the roundTripValidator line was deleted from parserDescriptor.ini and the assertion was OBSERVED RED.",
+							"shippedConfig": true
+						}
+					],
+					"note": "RT-13.3 is the requirement behind all three: a declared validator that does not exist or does not load REFUSES EVERY BUILD by name, stage on or off, and is never downgraded to absent."
 				},
 				{
 					"label": "INTEGRATION shapeForgedGraph accepts the output (no error)",
@@ -1181,14 +1309,16 @@
 				},
 				{
 					"label": "INTEGRATION source tier is EXACTLY 41,676 nodes",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "vr_redProbe_source.log",
 							"lever": "EXPECTATION PERTURBATION (round 1): dropped 'meta' from PESC_TIER_VALUES and perturbed the source/derived/synthetic count constants.",
 							"shippedConfig": false
 						}
-					]
+					],
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "INTEGRATION standardKey + stableUriPropertyName returned",
@@ -1202,25 +1332,29 @@
 				},
 				{
 					"label": "INTEGRATION synthetic tier is EXACTLY 632 nodes (109 S-1 merged definitions + 522 S-1c duplicated children + 1 S-2 alias namespace)",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "mp_redProbeG_sourcePin.log",
 							"lever": "EXPECTATION PERTURBATION (Phase 4.6a): the census pin for the synthetic tier, as held in the SOURCE suite, incremented by one (109 + 522 + 1 -> 109 + 523 + 1). The pin exists in BOTH suites on purpose — a census only one suite can see is one edit away from being unwatched — so it is red-proven in both.",
 							"shippedConfig": false
 						}
-					]
+					],
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "INTEGRATION the four tiers account for every emitted node",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "vr_redProbe_source.log",
 							"lever": "EXPECTATION PERTURBATION (round 1): dropped 'meta' from PESC_TIER_VALUES and perturbed the source/derived/synthetic count constants.",
 							"shippedConfig": false
 						}
-					]
+					],
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "LEDGER carries no stale entries for assertions this suite no longer runs",
@@ -1279,6 +1413,18 @@
 							"shippedConfig": true
 						}
 					]
+				},
+				{
+					"label": "LEDGER every proven row carries at least one lever that MUTATES PRODUCTION DATA",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "test/test-artifacts/p7/p7RED_provenImpliesDataLever.log",
+							"lever": "LEDGER GATE SELF-DEMONSTRATION (Phase 7): the gate was shipped BEFORE the re-statement it motivates, and its FIRST RUN was observed RED against the SHIPPED ledger in all three suites simultaneously — 25 source + 6 derived + 34 synthetic = 65 rows named by label in the evidence line. No mutation was needed because the real ledger content was already the defect; the ledger IS this gate's production data. The 65 independently matches the figure p7_expectationLeverSweep.js computes by a different enumeration.",
+							"shippedConfig": true
+						}
+					],
+					"note": "A NEW GATE WHOSE FIRST ACT WAS TO FAIL AGAINST THE EXACT POPULATION THAT MOTIVATED IT. Ordered that way deliberately by the supervisor: had the re-statement landed first, the gate would have been green on its first run and would have been a gate nobody had ever seen fail."
 				}
 			]
 		},
@@ -1353,7 +1499,7 @@
 				},
 				{
 					"label": "G4-A RED: the re-stated child-parentage assertion demonstrably detects one orphaned child",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "mp_r2redProbeA_perturbedExpected.log",
@@ -1365,7 +1511,9 @@
 							"lever": "EXPECTATION PERTURBATION (Phase 4.6a): every count this phase introduced or moved, incremented by one inside the single EXPECTED block — the child union 522, winner-takes-all 520, losing-branch contributions 2, both-branch names 235, the bothBranchesAgree disposition, the contributed classification 35/33/2, absent-after-union 0, the two residue edge counts 5 and 38, the PersonType exemplar 18, and the two synthetic census sums. Perturbs ONLY expectations; the production tier is untouched.",
 							"shippedConfig": false
 						}
-					]
+					],
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "G4-A re-run over the preserved collision members completed without refusal",
@@ -1419,47 +1567,55 @@
 				},
 				{
 					"label": "G4-B 14 of the 31 shared names genuinely conflict",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "p4_probeExpect_synthetic.log",
 							"lever": "EXPECTATION PERTURBATION: every digit run inside the Phase 4 suite's single EXPECTED block incremented by one — which also corrupts the two collision-member sha12 prefixes, the prototype conflict table and the two alias namespace URNs — plus one entry dropped from the expected lost-element list. Perturbs ONLY the expectations; the production tier is untouched, and the RED levers read which member is which from production so they still run.",
 							"shippedConfig": false
 						}
-					]
+					],
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "G4-B 31 definitions are declared by BOTH members",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "p4_probeExpect_synthetic.log",
 							"lever": "EXPECTATION PERTURBATION: every digit run inside the Phase 4 suite's single EXPECTED block incremented by one — which also corrupts the two collision-member sha12 prefixes, the prototype conflict table and the two alias namespace URNs — plus one entry dropped from the expected lost-element list. Perturbs ONLY the expectations; the production tier is untouched, and the RED levers read which member is which from production so they still run.",
 							"shippedConfig": false
 						}
-					]
+					],
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "G4-B 36 definitions are unique to the test-score member",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "p4_probeExpect_synthetic.log",
 							"lever": "EXPECTATION PERTURBATION: every digit run inside the Phase 4 suite's single EXPECTED block incremented by one — which also corrupts the two collision-member sha12 prefixes, the prototype conflict table and the two alias namespace URNs — plus one entry dropped from the expected lost-element list. Perturbs ONLY the expectations; the production tier is untouched, and the RED levers read which member is which from production so they still run.",
 							"shippedConfig": false
 						}
-					]
+					],
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "G4-B 42 definitions are unique to the college-transcript member",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "p4_probeExpect_synthetic.log",
 							"lever": "EXPECTATION PERTURBATION: every digit run inside the Phase 4 suite's single EXPECTED block incremented by one — which also corrupts the two collision-member sha12 prefixes, the prototype conflict table and the two alias namespace URNs — plus one entry dropped from the expected lost-element list. Perturbs ONLY the expectations; the production tier is untouched, and the RED levers read which member is which from production so they still run.",
 							"shippedConfig": false
 						}
-					]
+					],
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "G4-B every conflicting merged definition names the superseded test-score definition",
@@ -1500,7 +1656,7 @@
 				},
 				{
 					"label": "G4-B every merged definition carries MERGED_FROM provenance to its source definitions",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "mp_redProbeE_perturbedDeltaPins.log",
@@ -1512,7 +1668,9 @@
 							"lever": "EXPECTATION PERTURBATION: every digit run inside the Phase 4 suite's single EXPECTED block incremented by one — which also corrupts the two collision-member sha12 prefixes, the prototype conflict table and the two alias namespace URNs — plus one entry dropped from the expected lost-element list. Perturbs ONLY the expectations; the production tier is untouched, and the RED levers read which member is which from production so they still run.",
 							"shippedConfig": false
 						}
-					]
+					],
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "G4-B the 31 shared names each carry TWO MERGED_FROM edges (kept and superseded)",
@@ -1532,14 +1690,16 @@
 				},
 				{
 					"label": "G4-B the Node signature port reproduces the prototype conflict table exactly (14 types, child counts)",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "p4_probeExpect_synthetic.log",
 							"lever": "EXPECTATION PERTURBATION: every digit run inside the Phase 4 suite's single EXPECTED block incremented by one — which also corrupts the two collision-member sha12 prefixes, the prototype conflict table and the two alias namespace URNs — plus one entry dropped from the expected lost-element list. Perturbs ONLY the expectations; the production tier is untouched, and the RED levers read which member is which from production so they still run.",
 							"shippedConfig": false
 						}
-					]
+					],
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "G4-B the arithmetic closes: 42 + 36 + 31 = the emitted node count",
@@ -1559,47 +1719,55 @@
 				},
 				{
 					"label": "G4-B the branches were identified by MARKER TYPES and the college member is 948d88f32069",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "p4_probeExpect_synthetic.log",
 							"lever": "EXPECTATION PERTURBATION: every digit run inside the Phase 4 suite's single EXPECTED block incremented by one — which also corrupts the two collision-member sha12 prefixes, the prototype conflict table and the two alias namespace URNs — plus one entry dropped from the expected lost-element list. Perturbs ONLY the expectations; the production tier is untouched, and the RED levers read which member is which from production so they still run.",
 							"shippedConfig": false
 						}
-					]
+					],
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "G4-B the college definition is the superset in 8 of the 14 conflicts",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "p4_probeExpect_synthetic.log",
 							"lever": "EXPECTATION PERTURBATION: every digit run inside the Phase 4 suite's single EXPECTED block incremented by one — which also corrupts the two collision-member sha12 prefixes, the prototype conflict table and the two alias namespace URNs — plus one entry dropped from the expected lost-element list. Perturbs ONLY the expectations; the production tier is untouched, and the RED levers read which member is which from production so they still run.",
 							"shippedConfig": false
 						}
-					]
+					],
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "G4-B the merged set is the UNION: 109 named definitions",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "p4_probeExpect_synthetic.log",
 							"lever": "EXPECTATION PERTURBATION: every digit run inside the Phase 4 suite's single EXPECTED block incremented by one — which also corrupts the two collision-member sha12 prefixes, the prototype conflict table and the two alias namespace URNs — plus one entry dropped from the expected lost-element list. Perturbs ONLY the expectations; the production tier is untouched, and the RED levers read which member is which from production so they still run.",
 							"shippedConfig": false
 						}
-					]
+					],
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "G4-B the test-score member is e12830fc86a3",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "p4_probeExpect_synthetic.log",
 							"lever": "EXPECTATION PERTURBATION: every digit run inside the Phase 4 suite's single EXPECTED block incremented by one — which also corrupts the two collision-member sha12 prefixes, the prototype conflict table and the two alias namespace URNs — plus one entry dropped from the expected lost-element list. Perturbs ONLY the expectations; the production tier is untouched, and the RED levers read which member is which from production so they still run.",
 							"shippedConfig": false
 						}
-					]
+					],
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "G4-C GAP 3 RED: a child that claims a content decision without naming it IS detected",
@@ -1609,25 +1777,29 @@
 				},
 				{
 					"label": "G4-C GAP 3: every child whose content the union chose says SO, and names which properties the choice covered",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "mp_r2redProbeA_perturbedExpected.log",
 							"lever": "EXPECTATION PERTURBATION (Phase 4.6a remediation): every Phase 4.6a pin incremented by one inside the single EXPECTED block, including the pins ADDED at remediation — the acceptance-1 population (75 merged definitions with branch children), the GAP 2 empty-render census in BOTH referrer scopes (96/30 and 94/29), the GAP 3 content-decided count, and the revised disposition table. Supersedes mp_redProbeA for every label the remediation renamed or re-formed. Perturbs ONLY expectations; production is untouched.",
 							"shippedConfig": false
 						}
-					]
+					],
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "G4-C R-P4-6 SYMMETRY: the record enumerates the 33 child elements the winning member ADDS, not only what the loser lost",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "p4r_probeExpectDelta_synthetic.log",
 							"lever": "EXPECTATION PERTURBATION: the four new R-P4-5/R-P4-6 delta constants (absent 2, rebound 5, widened 1, added 33) each moved by one. Proves the rebuilt G4-C assertions read the observation; NOT a shipped-configuration probe.",
 							"shippedConfig": false
 						}
-					]
+					],
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "G4-C RED-1: the signature finder demonstrably FAILS to find a signature planted in neither member",
@@ -1693,14 +1865,16 @@
 				},
 				{
 					"label": "G4-C every merged node publishes BOTH bases and states the overlap in words",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "mp_redProbeE_perturbedDeltaPins.log",
 							"lever": "EXPECTATION PERTURBATION (Phase 4.6a, round 2): the four inherited delta pins incremented by one — MERGED_FROM 140, and the signature-level absent 2 / rebound 5 / widened 1. Separated from round A deliberately: these pins are Phase 4 claims this phase must leave standing, so a lever that moves them proves they are still load-bearing after the union landed.",
 							"shippedConfig": false
 						}
-					]
+					],
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "G4-C exactly 1 is WIDENED (same name, same type, merged cardinality admits the loser)",
@@ -1725,7 +1899,7 @@
 				},
 				{
 					"label": "G4-C exactly 2 child elements are genuinely ABSENT from the merged definitions",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "mp_redProbeE_perturbedDeltaPins.log",
@@ -1737,7 +1911,9 @@
 							"lever": "EXPECTATION PERTURBATION: the four new R-P4-5/R-P4-6 delta constants (absent 2, rebound 5, widened 1, added 33) each moved by one. Proves the rebuilt G4-C assertions read the observation; NOT a shipped-configuration probe.",
 							"shippedConfig": false
 						}
-					]
+					],
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "G4-C exactly 5 are REBOUND (same name, different resolved type) and are NOT losses",
@@ -1860,25 +2036,29 @@
 				},
 				{
 					"label": "G4-D all 201 held references now carry a synthetic RESOLVES_TO edge",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "p4_probeExpect_synthetic.log",
 							"lever": "EXPECTATION PERTURBATION: every digit run inside the Phase 4 suite's single EXPECTED block incremented by one — which also corrupts the two collision-member sha12 prefixes, the prototype conflict table and the two alias namespace URNs — plus one entry dropped from the expected lost-element list. Perturbs ONLY the expectations; the production tier is untouched, and the RED levers read which member is which from production so they still run.",
 							"shippedConfig": false
 						}
-					]
+					],
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "G4-D all SIX external consumers of the contested namespace are answered",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "p4_probeExpect_synthetic.log",
 							"lever": "EXPECTATION PERTURBATION: every digit run inside the Phase 4 suite's single EXPECTED block incremented by one — which also corrupts the two collision-member sha12 prefixes, the prototype conflict table and the two alias namespace URNs — plus one entry dropped from the expected lost-element list. Perturbs ONLY the expectations; the production tier is untouched, and the RED levers read which member is which from production so they still run.",
 							"shippedConfig": false
 						}
-					]
+					],
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "G4-D and it resolves to a definition the TEST-SCORE member alone contributed",
@@ -1888,14 +2068,16 @@
 				},
 				{
 					"label": "G4-D the 201 split as 195 type-space references + 6 import declarations",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "p4_probeExpect_synthetic.log",
 							"lever": "EXPECTATION PERTURBATION: every digit run inside the Phase 4 suite's single EXPECTED block incremented by one — which also corrupts the two collision-member sha12 prefixes, the prototype conflict table and the two alias namespace URNs — plus one entry dropped from the expected lost-element list. Perturbs ONLY the expectations; the production tier is untouched, and the RED levers read which member is which from production so they still run.",
 							"shippedConfig": false
 						}
-					]
+					],
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "G4-D the transcript consumers' RequestType and ResponseType resolve, from the COLLEGE member alone",
@@ -1905,14 +2087,16 @@
 				},
 				{
 					"label": "G4-E AcademicRecord_v1.5.0's unresolved import now resolves onto the alias namespace",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "p4_probeExpect_synthetic.log",
 							"lever": "EXPECTATION PERTURBATION: every digit run inside the Phase 4 suite's single EXPECTED block incremented by one — which also corrupts the two collision-member sha12 prefixes, the prototype conflict table and the two alias namespace URNs — plus one entry dropped from the expected lost-element list. Perturbs ONLY the expectations; the production tier is untouched, and the RED levers read which member is which from production so they still run.",
 							"shippedConfig": false
 						}
-					]
+					],
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "G4-E CollegeTranscript 1.2.0 and HighSchoolTranscript 1.1.0 now FULLY resolve (every recorded question answered)",
@@ -1954,14 +2138,16 @@
 				},
 				{
 					"label": "G4-E all 205 recorded references resolve through the alias",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "p4_probeExpect_synthetic.log",
 							"lever": "EXPECTATION PERTURBATION: every digit run inside the Phase 4 suite's single EXPECTED block incremented by one — which also corrupts the two collision-member sha12 prefixes, the prototype conflict table and the two alias namespace URNs — plus one entry dropped from the expected lost-element list. Perturbs ONLY the expectations; the production tier is untouched, and the RED levers read which member is which from production so they still run.",
 							"shippedConfig": false
 						}
-					]
+					],
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "G4-E and the artifact gains a synthetic IMPORTS edge to CoreMain_v1.8.0",
@@ -2009,14 +2195,16 @@
 				},
 				{
 					"label": "G4-E they cover the prototype's 129 distinct core: names, all of them",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "p4_probeExpect_synthetic.log",
 							"lever": "EXPECTATION PERTURBATION: every digit run inside the Phase 4 suite's single EXPECTED block incremented by one — which also corrupts the two collision-member sha12 prefixes, the prototype conflict table and the two alias namespace URNs — plus one entry dropped from the expected lost-element list. Perturbs ONLY the expectations; the production tier is untouched, and the RED levers read which member is which from production so they still run.",
 							"shippedConfig": false
 						}
-					]
+					],
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "G4-F RED: the source-predicate leak checker demonstrably detects a retiered node",
@@ -2058,25 +2246,29 @@
 				},
 				{
 					"label": "G4-F resolution-by-decision is NEVER disguised as resolution-by-computation",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "p4_probeExpect_synthetic.log",
 							"lever": "EXPECTATION PERTURBATION: every digit run inside the Phase 4 suite's single EXPECTED block incremented by one — which also corrupts the two collision-member sha12 prefixes, the prototype conflict table and the two alias namespace URNs — plus one entry dropped from the expected lost-element list. Perturbs ONLY the expectations; the production tier is untouched, and the RED levers read which member is which from production so they still run.",
 							"shippedConfig": false
 						}
-					]
+					],
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "G4-F the derived tier is untouched by synthesis (63 namespaces, no synthetic marks)",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "p4_probeExpect_synthetic.log",
 							"lever": "EXPECTATION PERTURBATION: every digit run inside the Phase 4 suite's single EXPECTED block incremented by one — which also corrupts the two collision-member sha12 prefixes, the prototype conflict table and the two alias namespace URNs — plus one entry dropped from the expected lost-element list. Perturbs ONLY the expectations; the production tier is untouched, and the RED levers read which member is which from production so they still run.",
 							"shippedConfig": false
 						}
-					]
+					],
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "G4-F the synthetic tier emits exactly 632 nodes and 1114 edges (RESTATED at Phase 4.6a from 110/549)",
@@ -2196,25 +2388,29 @@
 				},
 				{
 					"label": "G4.6a GAP 2: across ALL referrers, exactly 30 of 96 reached merged targets render empty",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "mp_r2redProbeA_perturbedExpected.log",
 							"lever": "EXPECTATION PERTURBATION (Phase 4.6a remediation): every Phase 4.6a pin incremented by one inside the single EXPECTED block, including the pins ADDED at remediation — the acceptance-1 population (75 merged definitions with branch children), the GAP 2 empty-render census in BOTH referrer scopes (96/30 and 94/29), the GAP 3 content-decided count, and the revised disposition table. Supersedes mp_redProbeA for every label the remediation renamed or re-formed. Perturbs ONLY expectations; production is untouched.",
 							"shippedConfig": false
 						}
-					]
+					],
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "G4.6a GAP 2: scoped to element-declaration referrers (the acceptance-1 population), exactly 29 of 94 render empty",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "mp_r2redProbeA_perturbedExpected.log",
 							"lever": "EXPECTATION PERTURBATION (Phase 4.6a remediation): every Phase 4.6a pin incremented by one inside the single EXPECTED block, including the pins ADDED at remediation — the acceptance-1 population (75 merged definitions with branch children), the GAP 2 empty-render census in BOTH referrer scopes (96/30 and 94/29), the GAP 3 content-decided count, and the revised disposition table. Supersedes mp_redProbeA for every label the remediation renamed or re-formed. Perturbs ONLY expectations; production is untouched.",
 							"shippedConfig": false
 						}
-					]
+					],
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "G4.6a GAP 2: the empty ones are 27 simpleTypes and 3 complexTypes — the explanation, not just the count",
@@ -2242,14 +2438,16 @@
 				},
 				{
 					"label": "G4.6a GAP 7: every copiedFromStableId resolves to a live SOURCE-tier node",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "mp_r2redProbeA_perturbedExpected.log",
 							"lever": "EXPECTATION PERTURBATION (Phase 4.6a remediation): every Phase 4.6a pin incremented by one inside the single EXPECTED block, including the pins ADDED at remediation — the acceptance-1 population (75 merged definitions with branch children), the GAP 2 empty-render census in BOTH referrer scopes (96/30 and 94/29), the GAP 3 content-decided count, and the revised disposition table. Supersedes mp_redProbeA for every label the remediation renamed or re-formed. Perturbs ONLY expectations; production is untouched.",
 							"shippedConfig": false
 						}
-					]
+					],
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "G4.6a INVENTION RED: a child declared by NEITHER member is refused BY NAME",
@@ -2271,14 +2469,16 @@
 				},
 				{
 					"label": "G4.6a MERGED_FROM survives untouched at 140 edges",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "mp_redProbeE_perturbedDeltaPins.log",
 							"lever": "EXPECTATION PERTURBATION (Phase 4.6a, round 2): the four inherited delta pins incremented by one — MERGED_FROM 140, and the signature-level absent 2 / rebound 5 / widened 1. Separated from round A deliberately: these pins are Phase 4 claims this phase must leave standing, so a lever that moves them proves they are still load-bearing after the union landed.",
 							"shippedConfig": false
 						}
-					]
+					],
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "G4.6a REGENERATION RED: perturbing ONE source declaration moves the regenerated child view",
@@ -2300,7 +2500,7 @@
 				},
 				{
 					"label": "G4.6a RESIDUE RED: an absent residue endpoint produces an EXACT shortfall and never a dangling edge",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "mp_r2redProbeA_perturbedExpected.log",
@@ -2312,7 +2512,9 @@
 							"lever": "EXPECTATION PERTURBATION (Phase 4.6a): every count this phase introduced or moved, incremented by one inside the single EXPECTED block — the child union 522, winner-takes-all 520, losing-branch contributions 2, both-branch names 235, the bothBranchesAgree disposition, the contributed classification 35/33/2, absent-after-union 0, the two residue edge counts 5 and 38, the PersonType exemplar 18, and the two synthetic census sums. Perturbs ONLY expectations; the production tier is untouched.",
 							"shippedConfig": false
 						}
-					]
+					],
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "G4.6a RESIDUE: every referenced-not-duplicated edge has both endpoints in the graph",
@@ -2328,25 +2530,29 @@
 				},
 				{
 					"label": "G4.6a SHORTFALL RED: the R-P4-11 contribution count follows the removal",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "mp_r2redProbeA_perturbedExpected.log",
 							"lever": "EXPECTATION PERTURBATION (Phase 4.6a remediation): every Phase 4.6a pin incremented by one inside the single EXPECTED block, including the pins ADDED at remediation — the acceptance-1 population (75 merged definitions with branch children), the GAP 2 empty-render census in BOTH referrer scopes (96/30 and 94/29), the GAP 3 content-decided count, and the revised disposition table. Supersedes mp_redProbeA for every label the remediation renamed or re-formed. Perturbs ONLY expectations; production is untouched.",
 							"shippedConfig": false
 						}
-					]
+					],
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "G4.6a SHORTFALL RED: the delta claim is evidenced INDEPENDENTLY of the contribution claim",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "mp_r2redProbeA_perturbedExpected.log",
 							"lever": "EXPECTATION PERTURBATION (Phase 4.6a remediation): every Phase 4.6a pin incremented by one inside the single EXPECTED block, including the pins ADDED at remediation — the acceptance-1 population (75 merged definitions with branch children), the GAP 2 empty-render census in BOTH referrer scopes (96/30 and 94/29), the GAP 3 content-decided count, and the revised disposition table. Supersedes mp_redProbeA for every label the remediation renamed or re-formed. Perturbs ONLY expectations; production is untouched.",
 							"shippedConfig": false
 						}
-					]
+					],
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "G4.6a SHORTFALL RED: the union does not silently complete — no child survives the removed declaration",
@@ -2400,7 +2606,7 @@
 				},
 				{
 					"label": "G4.6a every disposition count is exactly as measured",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "mp_r2redProbeA_perturbedExpected.log",
@@ -2412,11 +2618,13 @@
 							"lever": "EXPECTATION PERTURBATION (Phase 4.6a): every count this phase introduced or moved, incremented by one inside the single EXPECTED block — the child union 522, winner-takes-all 520, losing-branch contributions 2, both-branch names 235, the bothBranchesAgree disposition, the contributed classification 35/33/2, absent-after-union 0, the two residue edge counts 5 and 38, the PersonType exemplar 18, and the two synthetic census sums. Perturbs ONLY expectations; the production tier is untouched.",
 							"shippedConfig": false
 						}
-					]
+					],
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "G4.6a the child union is EXACTLY 522 and closes by both decompositions independently",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "mp_r2redProbeA_perturbedExpected.log",
@@ -2428,22 +2636,26 @@
 							"lever": "EXPECTATION PERTURBATION (Phase 4.6a): every count this phase introduced or moved, incremented by one inside the single EXPECTED block — the child union 522, winner-takes-all 520, losing-branch contributions 2, both-branch names 235, the bothBranchesAgree disposition, the contributed classification 35/33/2, absent-after-union 0, the two residue edge counts 5 and 38, the PersonType exemplar 18, and the two synthetic census sums. Perturbs ONLY expectations; the production tier is untouched.",
 							"shippedConfig": false
 						}
-					]
+					],
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "G4.6a the named exemplar PersonType renders exactly 18 children",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "mp_r2redProbeA_perturbedExpected.log",
 							"lever": "EXPECTATION PERTURBATION (Phase 4.6a remediation): every Phase 4.6a pin incremented by one inside the single EXPECTED block, including the pins ADDED at remediation — the acceptance-1 population (75 merged definitions with branch children), the GAP 2 empty-render census in BOTH referrer scopes (96/30 and 94/29), the GAP 3 content-decided count, and the revised disposition table. Supersedes mp_redProbeA for every label the remediation renamed or re-formed. Perturbs ONLY expectations; production is untouched.",
 							"shippedConfig": false
 						}
-					]
+					],
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "G4.6a the referenced-not-duplicated residue is exactly 5 inline types and 38 derivation wrappers",
-					"status": "proven",
+					"status": "expectationLeverOnly",
 					"redEvidence": [
 						{
 							"probeLog": "mp_r2redProbeA_perturbedExpected.log",
@@ -2455,7 +2667,9 @@
 							"lever": "EXPECTATION PERTURBATION (Phase 4.6a): every count this phase introduced or moved, incremented by one inside the single EXPECTED block — the child union 522, winner-takes-all 520, losing-branch contributions 2, both-branch names 235, the bothBranchesAgree disposition, the contributed classification 35/33/2, absent-after-union 0, the two residue edge counts 5 and 38, the PersonType exemplar 18, and the two synthetic census sums. Perturbs ONLY expectations; the production tier is untouched.",
 							"shippedConfig": false
 						}
-					]
+					],
+					"restatedAtPhase": "7",
+					"restatementReason": "Re-stated from `proven` by the standing rule that every proven row must carry at least one lever mutating PRODUCTION DATA. Its recorded levers move only a test expectation, the harness, or record an inherited observation. Its red evidence is UNCHANGED and preserved — what changed is the claim made about what that evidence proves."
 				},
 				{
 					"label": "LEDGER carries no stale entries for assertions this suite no longer runs",
@@ -2624,6 +2838,18 @@
 							"shippedConfig": true
 						}
 					]
+				},
+				{
+					"label": "LEDGER every proven row carries at least one lever that MUTATES PRODUCTION DATA",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "test/test-artifacts/p7/p7RED_provenImpliesDataLever.log",
+							"lever": "LEDGER GATE SELF-DEMONSTRATION (Phase 7): the gate was shipped BEFORE the re-statement it motivates, and its FIRST RUN was observed RED against the SHIPPED ledger in all three suites simultaneously — 25 source + 6 derived + 34 synthetic = 65 rows named by label in the evidence line. No mutation was needed because the real ledger content was already the defect; the ledger IS this gate's production data. The 65 independently matches the figure p7_expectationLeverSweep.js computes by a different enumeration.",
+							"shippedConfig": true
+						}
+					],
+					"note": "A NEW GATE WHOSE FIRST ACT WAS TO FAIL AGAINST THE EXACT POPULATION THAT MOTIVATED IT. Ordered that way deliberately by the supervisor: had the re-statement landed first, the gate would have been green on its first run and would have been a gate nobody had ever seen fail."
 				}
 			]
 		}
@@ -2693,5 +2919,62 @@
 			}
 		],
 		"note": "Computed at ledger-build time, never transcribed. labelsThatFailedToJoinTheLedger is the auditor reporting its OWN incompleteness: any nonzero value means the risk list understates the problem by that many rows, which is the fail-open behaviour the audit was corrected for."
+	},
+	"interpolatedLabelClass": {
+		"note": "A STRUCTURAL LIMIT OF A LABEL-KEYED LEDGER, recorded here because it CANNOT be recorded as a row inside the label-keyed suites map — the key does not exist as a constant. Measured 2026-08-07 (SCARLET_GARDEN) by sweeping all three suites for check() calls whose label is a template literal carrying an interpolation. Two members, with DIFFERENT failure modes; the second is the more serious and was not the one the sweep was ordered for.",
+		"standingRule": "AN ASSERTION LABEL MUST BE A CONSTANT. A label assembled at runtime cannot be joined to a ledger row, so the assertion is either permanently unledgerable or ledgerable only in one of its states. This is the conjunction class one step further out: there the label was the wrong GRANULARITY for the claim; here it is not even the same string twice.",
+		"members": [
+			{
+				"site": "test/test-pesc260805SourceTier.js:403",
+				"callText": "check(`INTEGRATION forge run (${err})`, false)",
+				"status": "genuineGap",
+				"failureMode": "PERMANENTLY UNLEDGERABLE",
+				"reason": "The label interpolates the forge error text, so it has no value until the failure happens and a different value for every distinct failure. It can never be joined to a ledger row by label, and no lever can produce a receipt keyed to a key that does not exist. It is also UNREACHABLE on a healthy build (it sits in the forge error branch and its condition is the literal false), which is why it appears in a static parse of the suite but never in the executed set — the 233-versus-232 difference this phase reconciled."
+			},
+			{
+				"site": "test/test-pesc260805DerivedTier.js:378",
+				"callText": "check(`G3-A regeneration ran without refusal${regenerationError ? ` (${regenerationError})` : ''}`, regenerationError === '')",
+				"status": "genuineGap",
+				"failureMode": "LEDGERED ONLY IN ITS GREEN STATE",
+				"reason": "THE MORE SERIOUS OF THE TWO AND IT RUNS ON EVERY BUILD. On success the ternary collapses to the empty string and the label is the constant 'G3-A regeneration ran without refusal', which is the form carried in this ledger. On FAILURE the label MUTATES to carry the error text. So at the exact moment the evidence matters, the ledger row for the green-path label goes STALE and the mutated label reports UNLEDGERED — the ledger gate would fail with two findings that are both artifacts of the label, and neither of which is the real defect. Its row is genuineGap for the ordinary reason (never demonstrated able to fail) AND for this additional structural one, which is why it is named here as well."
+			}
+		],
+		"recommendedRepair": "Give each such assertion a CONSTANT label and move the interpolated detail into the evidence() line beside it, which is free-form and is not a ledger key. Cheap per site; the sweep that finds them is one regular expression over the suites and is worth running whenever an assertion is added.",
+		"siteCitationNote": "SITE LINE NUMBERS ARE RECOMPUTED FROM THE FILES by test/probes/p7_applyRemediationLedgerEdits.js, never retyped. The first publication of this block cited source:367; a +38-line edit to that same file in the same phase moved the call to source:403 and the citation went stale within the hour. A line number in a published finding is a promise that someone can open it, and a promise nothing recomputes is one that decays silently."
+	},
+	"phase7ProbeDispositions": {
+		"note": "F-7 (independent review, 2026-08-07): a one-shot script cannot regress-detect, so a finding it produced can silently come untrue. Every Phase 7 probe is declared here with its disposition. \"wiredIntoSuite\" means the suites import and run it on every pass; \"oneShot\" means it is run by hand and the REASON it must not run in the suite is stated — an unexplained one-shot is the silence this declaration exists to prevent.",
+		"probes": [
+			{
+				"probe": "test/probes/p7_expectationLeverSweep.js",
+				"disposition": "wiredIntoSuite",
+				"detail": "All three suites import classifyOneLever from it for the standing gate \"every proven row carries at least one lever that MUTATES PRODUCTION DATA\", so its classification runs on every suite pass and the 65-row finding cannot come untrue unnoticed. The standalone CLI additionally reports the reconciliation between its two independent passes."
+			},
+			{
+				"probe": "test/probes/mp_auditConjunctiveAssertions.js",
+				"disposition": "oneShot",
+				"detail": "Inherited from Phase 6 as a one-shot and left one-shot. It is a MEASUREMENT of the conjunction class rather than a gate: there is no threshold it could assert against without inventing a policy nobody has set, and the class is deliberately open pending a specification decision. Its figures ARE consumed on every ledger rebuild by buildRedEvidenceLedger.js, which is what keeps them from going stale."
+			},
+			{
+				"probe": "test/probes/p7_repinnedDescriptorLevers.js",
+				"disposition": "oneShot",
+				"detail": "DELIBERATELY one-shot and it must stay that way. It MUTATES parserDescriptor.ini — the bundle's own self-description, read by forger.js on every build — and restores it. The restore is verified by byte comparison, but a suite that crashed or was interrupted mid-probe would leave the descriptor mutated and every subsequent build reading it. Running a descriptor-mutating probe on every suite pass trades a real hazard for a regression check the suite already provides: the three assertions it proves are shipped in the source suite and run every pass."
+			},
+			{
+				"probe": "test/probes/p7_applyLedgerRepin.js",
+				"disposition": "oneShotMigration",
+				"detail": "A one-time ledger migration, not a check. Idempotent and refuses on a state it did not create; a second run reports no-op. Retained rather than deleted so the edit is reviewable as intent rather than as a diff of 195 KB of JSON."
+			},
+			{
+				"probe": "test/probes/p7_applyExpectationLeverOnly.js",
+				"disposition": "oneShotMigration",
+				"detail": "As above, for the expectationLeverOnly re-statement. It selects its rows by running the SAME imported classifier the standing gate runs, so it cannot disagree with the gate about which rows are affected."
+			},
+			{
+				"probe": "test/probes/p7_applyRemediationLedgerEdits.js",
+				"disposition": "oneShotMigration",
+				"detail": "This file. The F-3 site recomputation and this declaration block."
+			}
+		]
 	}
 }

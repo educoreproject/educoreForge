@@ -355,7 +355,43 @@ taskList.push((args, next) => {
 	check('INTEGRATION [parserDescriptor] section is visible to the ini reader', !!descriptor);
 	check('INTEGRATION standardName is PESC260805 (D-6)', descriptor && descriptor.standardName === 'PESC260805');
 	check('INTEGRATION entryModule declared', descriptor && descriptor.entryModule === 'forgePesc260805.js');
-	check('INTEGRATION roundTripValidator NOT declared yet (declared-and-broken = refusal)', descriptor && descriptor.roundTripValidator === undefined);
+	// PHASE 7 RE-PIN (SCARLET_GARDEN, 2026-08-07). The assertion here read, from Phase 2 until now:
+	//   check('INTEGRATION roundTripValidator NOT declared yet (declared-and-broken = refusal)',
+	//         descriptor && descriptor.roundTripValidator === undefined);
+	// PHASE 5 FALSIFIED IT by declaring roundTripValidator=roundTripValidator.js, and it has been the
+	// suite's single standing FAIL (54 passed / 1 failed) ever since — carried across Phases 5, 6 and
+	// 6.5 as a DECLARED debt rather than repaired, so that a red suite could not be mistaken for a
+	// clean one. This is its re-pinning, which the Phase 6.5 closing handoff assigned to Phase 7.
+	//
+	// IT IS RE-PINNED TO THE OPPOSITE FACT, NOT DELETED. The original assertion's PURPOSE was RT-13.3:
+	// a declared roundTripValidator that does not exist or does not load REFUSES EVERY BUILD by name,
+	// stage on or off, so the declaration must never be speculative. That purpose is unchanged; only
+	// the state of the world moved. The honest pin is therefore not "it is absent" but "it is declared
+	// AND the file it names is really there", which is the condition RT-13.3 actually cares about.
+	//
+	// DELIBERATELY THREE SEPARATE ASSERTIONS, NOT ONE CONJUNCTION. This phase measured the conjunction
+	// class — 78 of 233 shipped assertions carry a top-level `&&`, and a receipt keyed to a LABEL
+	// proves only that SOME conjunct can fail. Writing the replacement as one three-part conjunction
+	// would have added a 79th on the very day the class was measured.
+	// THE GUARD LOGIC IS LIFTED INTO NAMED INTERMEDIATES SO EACH check() CARRIES ZERO TOP-LEVEL
+	// CONJUNCTIONS. The first draft of this re-pin wrote each successor as
+	// `typeof name === 'string' AND name !== '' AND fs.existsSync(...)` — three conjuncts apiece —
+	// and mp_auditConjunctiveAssertions.js immediately reported conjunctive rows 78 -> 80 and
+	// 3-plus-conjunct proven rows 11 -> 13. THE AUTHOR OF THE CONJUNCTION MEASUREMENT ADDED TWO
+	// MEMBERS TO THE CLASS ON THE DAY HE MEASURED IT, and did not notice until the instrument said
+	// so. Recorded here rather than quietly corrected: knowing about a trap does not disarm it, and
+	// an instrument that runs is worth more than an intention that does not.
+	const declaredValidatorFileName = descriptor && descriptor.roundTripValidator;
+	const declaredValidatorPath =
+		typeof declaredValidatorFileName === 'string' && declaredValidatorFileName !== ''
+			? path.join(BUNDLE_DIR, declaredValidatorFileName)
+			: '';
+	const declaredValidatorFileExists = declaredValidatorPath !== '' && fs.existsSync(declaredValidatorPath);
+	const declaredValidatorExportsValidate =
+		declaredValidatorFileExists && typeof require(declaredValidatorPath)().validate === 'function';
+	check('INTEGRATION roundTripValidator IS declared (Phase 5; re-pinned in Phase 7)', declaredValidatorFileName === 'roundTripValidator.js');
+	check('INTEGRATION the declared roundTripValidator file EXISTS (RT-13.3: declared-and-missing refuses every build)', declaredValidatorFileExists);
+	check('INTEGRATION the declared roundTripValidator exports validate() (RT-13.3: declared-and-broken is a refusal, never a downgrade to absent)', declaredValidatorExportsValidate);
 	check('INTEGRATION defaultSnapshot resolves to exactly the 01 directory', descriptor && Number(descriptor.defaultSnapshot) === 1 && fs.existsSync(SNAPSHOT_DIR));
 
 	// invoke the way forger.js does: require(entryPath)({ embedder }), then bundle.forge(...)
@@ -479,6 +515,7 @@ taskList.push((args, next) => {
 		'LEDGER every shipped assertion has a red-evidence entry',
 		'LEDGER carries no stale entries for assertions this suite no longer runs',
 		'LEDGER the entry count matches the assertions actually run',
+		'LEDGER every proven row carries at least one lever that MUTATES PRODUCTION DATA',
 	];
 	const uniqueShippedLabels = [...new Set([...shippedAssertionLabels, ...LEDGER_GATE_LABELS])];
 	const unledgeredLabels = uniqueShippedLabels.filter((oneLabel) => !ledgeredLabels.has(oneLabel));
@@ -499,6 +536,44 @@ taskList.push((args, next) => {
 	check(LEDGER_GATE_LABELS[0], unledgeredLabels.length === 0);
 	check(LEDGER_GATE_LABELS[1], staleLedgerLabels.length === 0);
 	check(LEDGER_GATE_LABELS[2], suiteLedger.assertions.length === uniqueShippedLabels.length);
+
+	// ==========================================================================================
+	// THE STANDING RULE, NOW ENFORCED (JADE_PORTAL ruling, 2026-08-07, on SCARLET_GARDEN's sweep):
+	// EVERY `proven` ROW MUST CARRY AT LEAST ONE LEVER THAT MUTATES PRODUCTION DATA.
+	//
+	// Mechanically: an expectation lever reddens an assertion whether or not its predicate can ever
+	// be satisfied by real data, so it certifies a VACUOUS gate as proven. A data lever cannot,
+	// because a vacuous check does not respond to data at all. A row whose only receipt is an
+	// expectation perturbation proves the assertion is WIRED UP, not that it can catch a defect.
+	//
+	// THE CLASSIFIER IS IMPORTED, NOT REIMPLEMENTED. p7_expectationLeverSweep.js owns the declared
+	// LEVER_CLASS_REGISTRY and refuses by name on an undeclared opening token; a second copy here
+	// would be two derivations of one judgment held against each other, which is DESIGN 8h's failure.
+	//
+	// THIS GATE'S FIRST RUN WAS RED AGAINST 65 SHIPPED ROWS and that red is retained at
+	// test/test-artifacts/p7/p7RED_provenImpliesDataLever.log. Those rows were then re-stated
+	// `expectationLeverOnly` — a status added for them, because the ledger DEFINES `genuineGap` as
+	// "never demonstrated able to fail, by anyone" and these rows HAVE failed, just not under a data
+	// lever. Re-labelling them genuineGap would have bought an honest number with a dishonest
+	// vocabulary.
+	// ==========================================================================================
+	const { classifyOneLever } = require(path.join(__dirname, 'probes', 'p7_expectationLeverSweep.js'));
+	const provenRowsWithoutADataLever = suiteLedger.assertions
+		.filter((oneEntry) => oneEntry.status === 'proven')
+		.filter(
+			(oneEntry) =>
+				!(Array.isArray(oneEntry.redEvidence) ? oneEntry.redEvidence : []).some((oneLever) => {
+					const classified = classifyOneLever(oneLever.lever);
+					return classified !== null && classified.mutatesProductionData;
+				}),
+		);
+	if (provenRowsWithoutADataLever.length > 0) {
+		evidence(
+			`PROVEN WITHOUT A DATA LEVER (${provenRowsWithoutADataLever.length}): ` +
+				provenRowsWithoutADataLever.map((oneEntry) => oneEntry.label).join(' | '),
+		);
+	}
+	check(LEDGER_GATE_LABELS[3], provenRowsWithoutADataLever.length === 0);
 	next('', args);
 });
 

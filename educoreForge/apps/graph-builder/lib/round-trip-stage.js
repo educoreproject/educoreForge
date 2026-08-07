@@ -302,6 +302,26 @@ const moduleFunction =
 					// alone can tell genuine loss from deliberate omission without opening the verdict.
 					contentGapTotal: verdict.contentGapTotal,
 					explicitlyOmittedTotal: verdict.explicitlyOmittedTotal,
+					// ⟪PHASE 7, F-6⟫ THE MODELLING QUALIFICATION TRAVELS WITH THE ZERO. `lostTotal: 0`
+					// means zero loss IN THE DIMENSIONS THE COMPARATOR MODELS — a dimension unread by
+					// the emitter AND unmeasured by the canonicalizer reports zero on BOTH sides and
+					// reads as fidelity. Until now that qualification lived ONLY in roundTripVerdict.json
+					// while this summary and the -goldEvalCheck payload stated `lostTotal: 0` bare, AND
+					// THOSE TWO ARE WHAT A PROMOTER READS. A qualification that lives only in the
+					// artifact nobody opens is not a qualification.
+					//
+					// THE ABSENT CASE IS MARKED, NEVER SILENTLY OMITTED. A bundle need not declare a
+					// limit — semanticValidationLimit is not one of the five NORMATIVE RT-6 fields — but
+					// dropping the key would make "this bundle declares no limit" indistinguishable from
+					// "the builder failed to carry it". This is a documented default on a legitimately
+					// optional input, which is the only kind permitted.
+					semanticValidationLimit:
+						typeof verdict.semanticValidationLimit === 'string' &&
+						verdict.semanticValidationLimit.trim() !== ''
+							? verdict.semanticValidationLimit
+							: 'NONE DECLARED BY THIS BUNDLE. Its verdict carries no semanticValidationLimit, ' +
+								'so what this round-trip does and does not model is UNSTATED — read the ' +
+								'validator before treating lostTotal as a measure of fidelity.',
 					snapshotDirPath: oneRow.snapshotDirPath,
 					verdictPath: path.join(verdictDirPath, VERDICT_FILE_NAME),
 				},

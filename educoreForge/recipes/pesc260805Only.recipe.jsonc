@@ -18,12 +18,29 @@
   // third party writing into the same graph would make a green indistinguishable from a
   // coincidence.
   //
-  // NO roundTripStage. forges/pesc260805/parserDescriptor.ini DELIBERATELY does not declare a
-  // roundTripValidator yet - the validator is Phase 5's deliverable, and a declared-but-absent
-  // validator refuses the build by name on EVERY build (RT-13.3). Turning the stage on here
-  // would be asking for a verdict from an instrument that does not exist. GNC-001's promotion
-  // gate therefore cannot pass for this graph, which is correct and intended: DEV_pesc260805
-  // is a SCRATCH graph and is NEVER a golden.
+  // NO roundTripStage - AND THE REASON CHANGED IN PHASE 5. THIS IS NOW THE STAGE-OFF SIBLING OF
+  // pesc260805OnlyRoundTrip.recipe.jsonc, KEPT DELIBERATELY, not a recipe waiting for a validator.
+  //
+  // SUPERSEDED RATIONALE, PRESERVED BECAUSE NOTHING IS DELETED (work order standing rule 4). This
+  // block read, from Phase 4.5 until 2026-08-07:
+  //   "forges/pesc260805/parserDescriptor.ini DELIBERATELY does not declare a roundTripValidator
+  //    yet - the validator is Phase 5's deliverable, and a declared-but-absent validator refuses
+  //    the build by name on EVERY build (RT-13.3). Turning the stage on here would be asking for a
+  //    verdict from an instrument that does not exist."
+  // PHASE 5 FALSIFIED IT by declaring roundTripValidator=roundTripValidator.js. Left standing, the
+  // text read as a CURRENT prohibition on turning the stage on, which is the opposite of the truth
+  // and exactly the sort of stale rationale that outlives the condition it described.
+  //
+  // THE CURRENT REASON THIS RECIPE STAYS STAGE-OFF. It is the control half of an A/B pair. A
+  // declared-but-never-invoked stage emits no error and fails no test, so the ONLY way to show the
+  // opt-in does anything is to run both and compare: this recipe logs
+  // "[roundTrip] stage OFF (recipe default (roundTripStage absent))" and writes a stage summary
+  // carrying stageRan false, and -goldEvalCheck REFUSES its run directory BY NAME. Its sibling
+  // runs the validator and passes that check. Deleting this recipe would destroy the control.
+  //
+  // GNC-001 is unchanged and still applies to both: DEV_pesc260805 is a SCRATCH graph and is NEVER
+  // a golden. A DEV build is never renamed to GOLD_EVAL_ without a round-trip PASS, and creating
+  // scratch graphs is never gated by that check.
   //
   // CONTAINER NAME. graphBuilder mints its product container as DEV_gb_materialize_<pid>_<seq>
   // (build.js:449). GNC-001 names this graph DEV_pesc260805, so the product is renamed with an

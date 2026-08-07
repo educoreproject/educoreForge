@@ -2149,6 +2149,7 @@ taskList.push((args, next) => {
 		'LEDGER every shipped assertion has a red-evidence entry',
 		'LEDGER carries no stale entries for assertions this suite no longer runs',
 		'LEDGER the entry count matches the assertions actually run',
+		'LEDGER every proven row carries at least one lever that MUTATES PRODUCTION DATA',
 	];
 	const ledgeredLabels = new Set(suiteLedger.assertions.map((oneEntry) => oneEntry.label));
 	const uniqueShippedLabels = [...new Set([...shippedAssertionLabels, ...LEDGER_GATE_LABELS])];
@@ -2170,6 +2171,44 @@ taskList.push((args, next) => {
 	check(LEDGER_GATE_LABELS[0], unledgeredLabels.length === 0);
 	check(LEDGER_GATE_LABELS[1], staleLedgerLabels.length === 0);
 	check(LEDGER_GATE_LABELS[2], suiteLedger.assertions.length === uniqueShippedLabels.length);
+
+	// ==========================================================================================
+	// THE STANDING RULE, NOW ENFORCED (JADE_PORTAL ruling, 2026-08-07, on SCARLET_GARDEN's sweep):
+	// EVERY `proven` ROW MUST CARRY AT LEAST ONE LEVER THAT MUTATES PRODUCTION DATA.
+	//
+	// Mechanically: an expectation lever reddens an assertion whether or not its predicate can ever
+	// be satisfied by real data, so it certifies a VACUOUS gate as proven. A data lever cannot,
+	// because a vacuous check does not respond to data at all. A row whose only receipt is an
+	// expectation perturbation proves the assertion is WIRED UP, not that it can catch a defect.
+	//
+	// THE CLASSIFIER IS IMPORTED, NOT REIMPLEMENTED. p7_expectationLeverSweep.js owns the declared
+	// LEVER_CLASS_REGISTRY and refuses by name on an undeclared opening token; a second copy here
+	// would be two derivations of one judgment held against each other, which is DESIGN 8h's failure.
+	//
+	// THIS GATE'S FIRST RUN WAS RED AGAINST 65 SHIPPED ROWS and that red is retained at
+	// test/test-artifacts/p7/p7RED_provenImpliesDataLever.log. Those rows were then re-stated
+	// `expectationLeverOnly` — a status added for them, because the ledger DEFINES `genuineGap` as
+	// "never demonstrated able to fail, by anyone" and these rows HAVE failed, just not under a data
+	// lever. Re-labelling them genuineGap would have bought an honest number with a dishonest
+	// vocabulary.
+	// ==========================================================================================
+	const { classifyOneLever } = require(path.join(__dirname, 'probes', 'p7_expectationLeverSweep.js'));
+	const provenRowsWithoutADataLever = suiteLedger.assertions
+		.filter((oneEntry) => oneEntry.status === 'proven')
+		.filter(
+			(oneEntry) =>
+				!(Array.isArray(oneEntry.redEvidence) ? oneEntry.redEvidence : []).some((oneLever) => {
+					const classified = classifyOneLever(oneLever.lever);
+					return classified !== null && classified.mutatesProductionData;
+				}),
+		);
+	if (provenRowsWithoutADataLever.length > 0) {
+		evidence(
+			`PROVEN WITHOUT A DATA LEVER (${provenRowsWithoutADataLever.length}): ` +
+				provenRowsWithoutADataLever.map((oneEntry) => oneEntry.label).join(' | '),
+		);
+	}
+	check(LEDGER_GATE_LABELS[3], provenRowsWithoutADataLever.length === 0);
 	next('', args);
 });
 

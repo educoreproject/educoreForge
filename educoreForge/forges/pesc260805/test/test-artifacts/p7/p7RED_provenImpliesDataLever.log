@@ -1,0 +1,448 @@
+
+DET — two full forge() runs identical (complete outputs)
+        RED (demonstrated): one contaminated property -> comparator detects: true
+  ok    DET RED: whole-graph comparator demonstrably able to go red
+        GREEN: run one 42372 nodes / 70628 edges; canonical forms equal: true
+  ok    DET two runs byte-identical under canonical serialization
+
+G3-A — the regeneration gate (THE definition of the tier)
+        deleted: 695 derived nodes, 28952 derived edges, all annotations on retained nodes
+        RED (observed refusal): pesc260805 derivedTier REFUSES: applyDerivedTier: annotation 'undeclaredDriftMarker' destined for 'urn:org:pesc:message:AcademicEportfolio:v1.0.0#element/AcademicEPortfolio' is not declared in DERIVED_ANNOTATION_PROPERTY_NAMES [sameDefinitionClusterId, reachableFromLatestRoot, resolvesToBuiltinXsd, ambiguousPendingSynthesis, unresolvedImportFact, unresolvedNamespaceReferences] — it would survive the Gate-3 strip and be invisible to the regeneration compare.
+        N1: applyDerivedTier returned NOTHING (refused); undeclared marker present on the RETURNED graph: false
+  ok    G3-A GAP1: applyDerivedTier REFUSES an undeclared annotation name, naming it
+  ok    G3-A GAP1/N1: the undeclared annotation reached NO node in the RETURNED graph
+        GAP7: caller's node property set UNCHANGED by applyDerivedTier; returned copy carries the annotations: true
+  ok    G3-A GAP7: applyDerivedTier does NOT mutate the caller's nodes
+  ok    G3-A GAP7: the annotations DO land on the returned graph (the clone is not a no-op)
+        RED (demonstrated): isLatest flipped on pescNamespace:urn:org:pesc:core:CoreMain:v1.19.1 -> compare fails: true
+  ok    G3-A RED: a contaminated derived property is detected by the compare
+  ok    G3-A regeneration ran without refusal
+        GREEN: regenerated derived view identical to the original: true (14600360 canonical bytes)
+  ok    G3-A regenerated derived tier IDENTICAL to the emitted one
+        annotation names actually written: ambiguousPendingSynthesis, reachableFromLatestRoot, resolvesToBuiltinXsd, sameDefinitionClusterId, unresolvedImportFact, unresolvedNamespaceReferences
+  ok    G3-A GAP1: every annotation the tier writes is DECLARED (none invisible to strip/compare)
+
+G3-B — the worked example (design §5)
+        RED (demonstrated): 'AcRec:StudentType' under AcademicEportfolio_v1.0.0.xsd's table -> urn:org:pesc:sector:AcademicRecord:v1.10.0#complexType/StudentType (exists: true) — a PLAUSIBLE and WRONG target
+  ok    G3-B RED: the wrong artifact's prefix table produces a different target
+        GREEN: 1 Student edge(s): urn:org:pesc:message:CollegeTranscript:v1.8.0#element/CollegeTranscript/anon/1/el/2:Student -> urn:org:pesc:sector:AcademicRecord:v1.13.0#complexType/StudentType
+  ok    G3-B exactly one Student RESOLVES_TO edge from the CT 1.8 root subtree
+  ok    G3-B Student resolves to AcademicRecord v1.13.0 StudentType (exact stableId)
+  ok    G3-B the edge carries the written form verbatim
+
+G3-C — sameness discipline vs Phase 0's measurement
+  ok    G3-C name census matches Phase 0: 896 names in each, all shared
+        RED lever measurements on the 1.19.0->1.19.1 boundary: strict 846/50; collapseWhitespace 846/50; noDocumentation 846/50
+        STATED PLAINLY (per the work order): neither whitespace-collapse nor documentation-participation flips ANY of the 50 — the 50 differ by facet REMOVAL, a structural change.
+        RED (demonstrated): facets stripped in harness -> ApplicationFeeAmountType 1.19.0/1.19.1 WRONGLY chains: true
+  ok    G3-C RED: a facet-blind comparison wrongly chains ApplicationFeeAmountType
+        family-wide adjacent-pair verdict flips: collapseWhitespace 23, noDocumentation 856
+  ok    G3-C the strict levers are live family-wide (collapseWhitespace flips > 0)
+  ok    G3-C documentation participation is load-bearing family-wide (flips > 0)
+        GREEN: strict split 846 stable / 50 changed — Phase 0 measured 896 names, 50 changed
+  ok    G3-C strict comparison reproduces Phase 0: 846 stable
+  ok    G3-C strict comparison reproduces Phase 0: 50 changed
+  ok    G3-C exactly 846 SAME_DEFINITION edges cross the 1.19.0->1.19.1 boundary
+  ok    G3-C ApplicationFeeAmountType among the strict-changed
+  ok    G3-C ApplicationFeeAmountType has NO chain edge across the boundary
+  ok    G3-C GAP6: familyKey and definitionName are PRESENT on every edge these filters read
+        GREEN: ClassRankType (core:CoreMain) 14 occurrences, 13 chain edges, 1 cluster (representative urn:org:pesc:core:CoreMain:v1.19.1#simpleType/ClassRankType); max out-degree 1
+        chain hops: v1.0.0->v1.2.0 v1.10.0->v1.12.0 v1.12.0->v1.13.0 v1.13.0->v1.14.0 v1.14.0->v1.16.0 v1.16.0->v1.17.0 v1.17.0->v1.18.0 v1.18.0->v1.19.0 v1.19.0->v1.19.1 v1.2.0->v1.4.0 v1.4.0->v1.7.0 v1.7.0->v1.8.0 v1.8.0->v1.10.0
+  ok    G3-C ClassRankType appears in all 14 CoreMain versions
+  ok    G3-C ClassRankType chains across every version (13 edges, one cluster)
+  ok    G3-C ClassRankType topology is a CHAIN not a clique (D-7: max out-degree 1)
+  ok    G3-C ClassRankType cluster representative is the NEWEST member
+        D-4 specimen: AdmissionsRecord declares its OWN complexType/ClassRankType — 5 members, 4 chain edges, 0 edges crossing the family boundary
+  ok    G3-C D-4: AdmissionsRecord ClassRankType chains inside its OWN family (5 members, 4 edges)
+  ok    G3-C D-4: ZERO SAME_DEFINITION edges join the CoreMain and AdmissionsRecord ClassRankTypes
+  ok    G3-C D-4: the two same-named clusters are DISJOINT
+        GAP3 global D-7 over 10400 SAME_DEFINITION edges: max out-degree 1, max in-degree 1, duplicate pairs 0, cross-family 0, non-ascending 0, property-starved 0
+  ok    G3-C GAP3/R-P3-2: EVERY SAME_DEFINITION edge carries the full declared property contract
+  ok    G3-C GAP3: D-7 chain GLOBALLY — max out-degree 1 across all 10,400 edges
+  ok    G3-C GAP3: D-7 chain GLOBALLY — max in-degree 1 (no member is two versions' successor)
+  ok    G3-C GAP3: ZERO duplicate (from,to) pairs across the whole graph
+  ok    G3-C GAP3: D-4 GLOBALLY — ZERO edges cross a library family boundary
+  ok    G3-C GAP3: D-7 GLOBALLY — every hop strictly ASCENDS in version order
+  ok    G3-C GAP3: the global measurement covered all 10,400 edges
+        AccreditationTypeType: 8 chain edges; no edge spans v1.16.0->v1.17.0 (its one change): true
+  ok    G3-C AccreditationTypeType chains within its unchanged runs (8 edges, break at its one change)
+
+G3-D — contested-namespace honesty (D-7)
+        recorded: 201 entries (183 intra-member, 18 external); RESOLVES_TO into contested: 201 total = 201 DECIDED (synthetic, rule-tagged) + 0 COMPUTED
+  ok    G3-D ambiguous entries exist and all name the contested namespace
+  ok    G3-D annotation entries and stats agree
+  ok    G3-D ZERO references into the contested namespace are resolved by COMPUTATION
+  ok    G3-D every resolution into the contested namespace is synthetic and rule-tagged, and they number exactly the 201 held references
+  ok    G3-D the 201 decided resolutions split as 195 type-space references + 6 import declarations
+        GREEN: external consumers observed: CollegeTranscript_v1.3.0.xsd, HighSchoolTranscript_v1.2.0.xsd, TestScoreReport_v1.0.0.xsd, TranscriptAcknowledgment_v1.1.0.xsd, TranscriptRequest_v1.1.0.xsd, TranscriptResponse_v1.1.0.xsd
+  ok    G3-D the consumer set is EXACTLY the six expected roots
+  ok    G3-D every entry carries candidates for Phase 4 (none empty)
+        RED-1 (demonstrated): one planted COMPUTED RESOLVES_TO into 'urn:org:pesc:sector:AcademicRecord:v1.6.0#complexType/PersonType@948d88f32069' -> the checker now counts 1 computed edge(s) among 201 total, condition inverts: true
+  ok    G3-D RED-1: the no-computed-resolution checker demonstrably detects a planted edge
+        RED-2 (demonstrated): remove 948d88f32069 -> quarantine lifts, resolution attempted, tier REFUSES: pesc260805 derivedTier REFUSES: file 'TranscriptRequest_v1.1.0.xsd': reference 'AcRec:RequestType' (type) resolves to namespace 'urn:org:pesc:sector:AcademicRecord:v
+        RED-2 (demonstrated): remove e12830fc86a3 -> quarantine lifts, resolution attempted, tier REFUSES: pesc260805 derivedTier REFUSES: file 'TestScoreReport_v1.0.0.xsd': reference 'AcRec:TestScoreReportType' (type) resolves to namespace 'urn:org:pesc:sector:AcademicRe
+  ok    G3-D RED-2: removing EITHER collision member lifts the quarantine and provokes an unresolved-reference refusal naming the namespace
+  ok    G3-D RED-2: the two members PARTITION the consumers' type set (each removal strands a DIFFERENT reference)
+
+G3-E — latest view
+        isLatest namespaces (16): urn:org:pesc:codes:iso_3166-1:v1.0.0, urn:org:pesc:core:CoreMain:v1.19.1, urn:org:pesc:message:AcademicEportfolio:v1.0.0, urn:org:pesc:message:AdmissionsApplication:v1.3.0, urn:org:pesc:message:CollegeTranscript:v1.8.0, urn:org:pesc:message:DocumentRequest:v1.0.0, urn:org:pesc:message:DocumentResponse:v1.0.0, urn:org:pesc:message:EducationCourseInventory:v1.0.0, urn:org:pesc:message:HighSchoolTranscript:v1.6.0, urn:org:pesc:message:LearningRecord:v1.0.0, urn:org:pesc:message:TestScoreReport:v1.1.0, urn:org:pesc:message:TranscriptAcknowledgment:v1.1.0, urn:org:pesc:message:TranscriptRequest:v1.1.0, urn:org:pesc:message:TranscriptResponse:v1.1.0, urn:org:pesc:sector:AcademicRecord:v1.14.0, urn:org:pesc:sector:AdmissionsRecord:v1.4.0
+  ok    G3-E isLatest marks EXACTLY the expected sixteen namespaces
+  ok    G3-E CoreMain v1.19.0 is NOT latest
+        GAP4 roots derived independently: 12 (production says 12); 12 latest message namespaces
+  ok    G3-E GAP4: the harness derives the SAME message-root set production used (12 roots)
+        RED (demonstrated): harness BFS with one injected edge reaches 2299 vs annotated 2282 -> mismatch detected: true
+  ok    G3-E RED: the independent BFS comparison demonstrably able to go red
+        GREEN: harness BFS reaches 2282; annotations say 2282; equal: true
+  ok    G3-E independent BFS reproduces the annotation set exactly
+  ok    G3-E GAP4: reachableFromLatestRoot is EXACTLY 2,282 of 12,909 definitions
+  ok    G3-E GAP4: production stats agree with the annotations on the nodes
+        orphan specimen: urn:org:pesc:core:CoreMain:v1.19.1#complexType/PerkinsType reachableFromLatestRoot=false
+  ok    G3-E the financial-aid orphan (PerkinsType, CoreMain 1.19.1) is NOT reachable
+
+G3-F — R-P2-5 consistency guard
+        containers checked in the production run: 3079
+  ok    G3-F every shape-carrying container was checked (3,079 measured)
+        CONTROL: the UNMUTATED fixture builds with NO refusal
+  ok    G3-F CONTROL: the unmutated fixture provokes no refusal
+        RED (observed refusal): pesc260805 derivedTier REFUSES: R-P2-5 consistency: container 'urn:org:pesc:message:AcademicEportfolio:v1.0.0#complexType/AcademicEPortfolioType' contentModelShape enumerates element positions [2,1,3,4,5,6,7,8,9,10,11,12,13,14,15,16] but its PescElementDecl children carry [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16] (children in order: TransmissionData, Profile, Events, Goals, Artifacts, Comments, Education, EmploymentHistory, Competencies, Networks, LicensesAndCredentials, MilitaryHistory, CareerAssessments, Lists, UserDefinedExtensions, NoteMessage). The dual representation has drifted.
+  ok    G3-F a drifted shape is REFUSED
+  ok    G3-F the refusal names R-P2-5
+  ok    G3-F the refusal names the container
+  ok    G3-F the refusal is the SHAPE guard itself, not another guard firing first
+
+CENSUS — derived tier
+        {"namespaces":63,"isLatestNamespaces":16,"inNamespaceEdges":64,"importsEdges":75,"unresolvedImportsRecorded":1,"resolvesToEdges":17299,"builtinReferenceMarkers":9921,"ambiguousPendingSynthesisRecorded":201,"ambiguousIntraMemberRecorded":183,"unresolvedNamespaceReferencesRecorded":205,"sameDefinitionEdges":10400,"reachableFromLatestRoot":2282,"definitionsTotal":12909}
+  ok    CENSUS 63 namespaces (the contested one is ONE node)
+  ok    CENSUS 64 IN_NAMESPACE edges (two artifacts share the contested node)
+  ok    CENSUS the CoreMain v1.6.0 gap is the ONE unresolved import
+        GAP2 accounting: source tier writes 27620 type-space references; dispositions = resolved 17299 + builtin 9921 + ambiguous 195 (of 201, less 6 import decls) + absent-ns 205 = 27620
+  ok    CENSUS GAP2: every source-tier reference has EXACTLY one derived disposition (computed, not hardcoded)
+  ok    CENSUS GAP2: the ambiguous-import subtraction is the 6 import declarations, computed from the entries
+
+LEDGER — red evidence for every shipped assertion
+        ledger: 72 shipped assertions; proven-red 38, records-gap 0, GENUINE GAP 33
+        UNLEDGERED (new assertion without red evidence): LEDGER every proven row carries at least one lever that MUTATES PRODUCTION DATA
+  FAIL  LEDGER every shipped assertion has a red-evidence entry
+  ok    LEDGER carries no stale entries for assertions this suite no longer runs
+  FAIL  LEDGER the entry count matches the assertions actually run
+        PROVEN WITHOUT A DATA LEVER (25): CENSUS GAP2: the ambiguous-import subtraction is the 6 import declarations, computed from the entries | G3-C ApplicationFeeAmountType has NO chain edge across the boundary | G3-C ClassRankType chains across every version (13 edges, one cluster) | G3-C ClassRankType topology is a CHAIN not a clique (D-7: max out-degree 1) | G3-C D-4: AdmissionsRecord ClassRankType chains inside its OWN family (5 members, 4 edges) | G3-C D-4: ZERO SAME_DEFINITION edges join the CoreMain and AdmissionsRecord ClassRankTypes | G3-C D-4: the two same-named clusters are DISJOINT | G3-C GAP3/R-P3-2: EVERY SAME_DEFINITION edge carries the full declared property contract | G3-C GAP3: D-4 GLOBALLY — ZERO edges cross a library family boundary | G3-C GAP3: D-7 GLOBALLY — every hop strictly ASCENDS in version order | G3-C GAP3: D-7 chain GLOBALLY — max in-degree 1 (no member is two versions' successor) | G3-C GAP3: D-7 chain GLOBALLY — max out-degree 1 across all 10,400 edges | G3-C GAP3: ZERO duplicate (from,to) pairs across the whole graph | G3-C GAP3: the global measurement covered all 10,400 edges | G3-C GAP6: familyKey and definitionName are PRESENT on every edge these filters read | G3-D RED-2: removing EITHER collision member lifts the quarantine and provokes an unresolved-reference refusal naming the namespace | G3-D RED-2: the two members PARTITION the consumers' type set (each removal strands a DIFFERENT reference) | G3-D every resolution into the contested namespace is synthetic and rule-tagged, and they number exactly the 201 held references | G3-D the 201 decided resolutions split as 195 type-space references + 6 import declarations | G3-E GAP4: production stats agree with the annotations on the nodes | G3-E GAP4: the harness derives the SAME message-root set production used (12 roots) | G3-F CONTROL: the unmutated fixture provokes no refusal | G3-F the refusal is the SHAPE guard itself, not another guard firing first | G3-F the refusal names R-P2-5 | G3-F the refusal names the container
+  FAIL  LEDGER every proven row carries at least one lever that MUTATES PRODUCTION DATA
+
+69 passed, 3 failed
+[forge-pesc260805] source tier: (64 artifacts, 12909 named definitions, 16969 element decls, 720 anonymous types, 10848 derivations (restrictions/extensions), 84 attributes; contested namespaces: urn:org:pesc:sector:AcademicRecord:v1.6.0)
+[forge-pesc260805] derived tier: 63 namespaces (16 latest), 64 IN_NAMESPACE, 75 IMPORTS (+1 unresolved recorded), 17299 RESOLVES_TO (+9921 builtin markers, +201 ambiguous recorded, +205 absent-namespace recorded), 10400 SAME_DEFINITION chain edges, 2282/12909 reachable from latest roots)
+[forge-pesc260805] synthetic tier: S-1 merged 109 definitions (42 college-only + 36 test-score-only + 31 shared, of which 14 conflict); merge delta (materialized): 33 child elements contributed by the college member, 2 by the test-score member, 0 ABSENT after the union; of the college contributions 5 are REBOUND and 1 WIDENED (a SUBSET, not additional — do not sum); merge delta (signature basis): 33 college / 8 test-score; S-1c duplicated 522 child declarations onto the merged definitions (522 HAS_PROPERTY); referenced-not-duplicated residue: 5 inline types, 38 derivation wrappers; 140 MERGED_FROM (untouched), 201 held references resolved; S-2 alias urn:org:pesc:core:CoreMain:v1.6.0 served by urn:org:pesc:core:CoreMain:v1.8.0 (205 references over 129 distinct names, 1 import); total 42372 nodes, 70628 edges
+[forge-pesc260805] source tier: (64 artifacts, 12909 named definitions, 16969 element decls, 720 anonymous types, 10848 derivations (restrictions/extensions), 84 attributes; contested namespaces: urn:org:pesc:sector:AcademicRecord:v1.6.0)
+[forge-pesc260805] derived tier: 63 namespaces (16 latest), 64 IN_NAMESPACE, 75 IMPORTS (+1 unresolved recorded), 17299 RESOLVES_TO (+9921 builtin markers, +201 ambiguous recorded, +205 absent-namespace recorded), 10400 SAME_DEFINITION chain edges, 2282/12909 reachable from latest roots)
+[forge-pesc260805] synthetic tier: S-1 merged 109 definitions (42 college-only + 36 test-score-only + 31 shared, of which 14 conflict); merge delta (materialized): 33 child elements contributed by the college member, 2 by the test-score member, 0 ABSENT after the union; of the college contributions 5 are REBOUND and 1 WIDENED (a SUBSET, not additional — do not sum); merge delta (signature basis): 33 college / 8 test-score; S-1c duplicated 522 child declarations onto the merged definitions (522 HAS_PROPERTY); referenced-not-duplicated residue: 5 inline types, 38 derivation wrappers; 140 MERGED_FROM (untouched), 201 held references resolved; S-2 alias urn:org:pesc:core:CoreMain:v1.6.0 served by urn:org:pesc:core:CoreMain:v1.8.0 (205 references over 129 distinct names, 1 import); total 42372 nodes, 70628 edges
+
+G-A — full parse + determinism
+        RED (demonstrated): comparator fed a set missing 'pesc260805:root…' -> mismatch detected: true
+  ok    G-A comparator demonstrably able to go red
+  ok    G-A all 64 corpus files produced artifact nodes
+  ok    G-A node count nonzero
+  ok    G-A edge count nonzero
+        census: {"artifacts":64,"importDecls":82,"namedDefinitions":12909,"elementDecls":16969,"anonymousTypes":720,"derivations":10848,"attributeDecls":84,"enumerationValuesCarried":31428,"nodes":42372,"edges":70628}
+        GREEN: run one 42372 unique stableIds (of 42372 nodes), run two identical: true
+  ok    G-A stableIds unique within a run
+  ok    G-A two runs produce identical stableId sets
+
+G-B — same-name/different-namespace identity traps
+        RED (demonstrated): bare-local-name keying fuses 3 TransmissionDataType definitions into 1 key(s): complexType/TransmissionDataType
+  ok    G-B RED: bare keying WOULD fuse the three TransmissionDataTypes
+        GREEN: real keys -> 3 distinct nodes: urn:org:pesc:sector:AcademicRecord:v1.13.0#complexType/TransmissionDataType | urn:org:pesc:sector:AdmissionsRecord:v1.4.0#complexType/TransmissionDataType | urn:org:pesc:core:CoreMain:v1.19.1#complexType/TransmissionDataType
+  ok    G-B three TransmissionDataType definitions are three distinct nodes
+        RED (demonstrated): bare keying fuses PersonType 1.10.0 + 1.19.1 into 1 key(s)
+  ok    G-B RED: bare keying WOULD fuse the two PersonTypes
+        GREEN: PersonType 1.10.0 and 1.19.1 are distinct nodes: urn:org:pesc:core:CoreMain:v1.10.0#complexType/PersonType | urn:org:pesc:core:CoreMain:v1.19.1#complexType/PersonType
+  ok    G-B CoreMain 1.10.0 and 1.19.1 PersonType are distinct nodes
+
+G-C — contested-namespace discriminator
+        RED (demonstrated): discriminator stripped -> 31 same-named definitions in the contested namespace WOULD fuse (e.g. urn:org:pesc:sector:AcademicRecord:v1.6.0#complexType/PersonType)
+  ok    G-C RED: without @sha12 the two collision members WOULD fuse definitions
+        GREEN: 140 contested-namespace definitions, all @sha12-keyed, 2 disjoint artifact groups (948d88f32069, e12830fc86a3)
+  ok    G-C contested-namespace definitions exist
+  ok    G-C every contested definition key carries @sha12
+  ok    G-C the two collision artifacts produce two disjoint definition sets
+  ok    G-C no plain-keyed definition exists in the contested namespace
+  ok    G-C uncontested namespaces carry NO discriminator
+
+G-D — refusal gates (fixtures)
+        RED (observed refusal): forge-pesc260805 parse: pesc260805 parser REFUSES: file 'UnboundPrefixFixture_v1.0.0.xsd' uses prefix 'ghost' (in 'ghost:SomethingType', top-level element 'FixtureRoot' type) but i
+  ok    G-D unbound prefix refused
+  ok    G-D refusal names the file
+  ok    G-D refusal names the prefix
+        RED (observed refusal): forge-pesc260805 parse: pesc260805 parser REFUSES: file 'MessageImportFixture_v1.0.0.xsd' (layer 'message', namespace 'urn:org:pesc:message:MessageImportFixture:v1.0.0') imports 'urn:org:pesc:message:CollegeTranscript:v1
+  ok    G-D message->message import refused
+  ok    G-D refusal names both namespaces
+        GREEN: the 64-file corpus itself parsed with zero refusals (runs one and two above)
+
+G-E — facet fidelity (ApplicationFeeAmountType)
+  ok    G-E 1.19.0 restriction node exists
+  ok    G-E 1.19.1 restriction node exists
+        RED (demonstrated): asserting totalDigits/fractionDigits on the 1.19.1 node fails as it must (totalDigits=undefined, fractionDigits=undefined)
+  ok    G-E RED: the facet assertion demonstrably fails where facets are absent
+        GREEN: 1.19.0 carries totalDigits=12, fractionDigits=2; 1.19.1 carries neither — the Phase 0 facet difference is VISIBLE in emitted nodes
+  ok    G-E 1.19.0 carries totalDigits 12
+  ok    G-E 1.19.0 carries fractionDigits 2
+  ok    G-E 1.19.1 facets ABSENT
+  ok    G-E both share the written base
+
+G-F — documentation carried verbatim
+  ok    G-F a multi-line documentation specimen exists in the raw source
+        specimen: 1175 bytes, 11 lines; collapsed form would be 984 bytes
+        RED (demonstrated): the incumbent's collapse changes the bytes (byte-identical: false) — this checker would catch it
+  ok    G-F RED: whitespace collapse is detectable by the byte comparison
+        GREEN: specimen found byte-identical on urn:org:pesc:core:CoreMain:v1.10.0#simpleType/AccreditationTypeType/restriction/1
+  ok    G-F specimen is byte-identical on an emitted node
+
+INTEGRATION — descriptor + factory + forge + shapeForgedGraph
+  ok    INTEGRATION [parserDescriptor] section is visible to the ini reader
+  ok    INTEGRATION standardName is PESC260805 (D-6)
+  ok    INTEGRATION entryModule declared
+  ok    INTEGRATION roundTripValidator IS declared (Phase 5; re-pinned in Phase 7)
+  ok    INTEGRATION the declared roundTripValidator file EXISTS (RT-13.3: declared-and-missing refuses every build)
+  ok    INTEGRATION the declared roundTripValidator exports validate() (RT-13.3: declared-and-broken is a refusal, never a downgrade to absent)
+  ok    INTEGRATION defaultSnapshot resolves to exactly the 01 directory
+[forge-pesc260805] source tier: (64 artifacts, 12909 named definitions, 16969 element decls, 720 anonymous types, 10848 derivations (restrictions/extensions), 84 attributes; contested namespaces: urn:org:pesc:sector:AcademicRecord:v1.6.0)
+[forge-pesc260805] derived tier: 63 namespaces (16 latest), 64 IN_NAMESPACE, 75 IMPORTS (+1 unresolved recorded), 17299 RESOLVES_TO (+9921 builtin markers, +201 ambiguous recorded, +205 absent-namespace recorded), 10400 SAME_DEFINITION chain edges, 2282/12909 reachable from latest roots)
+[forge-pesc260805] synthetic tier: S-1 merged 109 definitions (42 college-only + 36 test-score-only + 31 shared, of which 14 conflict); merge delta (materialized): 33 child elements contributed by the college member, 2 by the test-score member, 0 ABSENT after the union; of the college contributions 5 are REBOUND and 1 WIDENED (a SUBSET, not additional — do not sum); merge delta (signature basis): 33 college / 8 test-score; S-1c duplicated 522 child declarations onto the merged definitions (522 HAS_PROPERTY); referenced-not-duplicated residue: 5 inline types, 38 derivation wrappers; 140 MERGED_FROM (untouched), 201 held references resolved; S-2 alias urn:org:pesc:core:CoreMain:v1.6.0 served by urn:org:pesc:core:CoreMain:v1.8.0 (205 references over 129 distinct names, 1 import); total 42372 nodes, 70628 edges
+  ok    INTEGRATION forge returns nodes[] and edges[]
+  ok    INTEGRATION metadata.version non-blank
+  ok    INTEGRATION standardKey + stableUriPropertyName returned
+  ok    INTEGRATION embedCallCount is 0 with skipEmbedding
+  ok    INTEGRATION every node has stableId, ForgedNode label, non-empty searchText
+  ok    INTEGRATION every edge carries provenanceTier structural + pescTier
+        tier census: source 41676, derived 63, meta 1, synthetic 632; total 42372
+  ok    INTEGRATION every node carries a ratified pescTier (source|derived|synthetic|meta, R-P2-1)
+  ok    INTEGRATION source tier is EXACTLY 41,676 nodes
+  ok    INTEGRATION derived tier is EXACTLY 63 nodes (the namespaces)
+  ok    INTEGRATION meta tier is EXACTLY 1 node (the standard root, R-P2-1)
+  ok    INTEGRATION synthetic tier is EXACTLY 632 nodes (109 S-1 merged definitions + 522 S-1c duplicated children + 1 S-2 alias namespace)
+  ok    INTEGRATION the four tiers account for every emitted node
+  ok    INTEGRATION shapeForgedGraph accepts the output (no error)
+  ok    INTEGRATION shaped embeddingDims null (nothing embedded)
+  ok    INTEGRATION shaped nodes carry ref{source,id} resolving the stableId
+  ok    INTEGRATION shaped edges carry provenanceTier (PG-JSON array form)
+
+LEDGER — red evidence for every shipped assertion
+        ledger: 58 shipped assertions; proven-red 12, records-gap 40, GENUINE GAP 5
+        UNLEDGERED (new assertion without red evidence): LEDGER every proven row carries at least one lever that MUTATES PRODUCTION DATA
+  FAIL  LEDGER every shipped assertion has a red-evidence entry
+  ok    LEDGER carries no stale entries for assertions this suite no longer runs
+  FAIL  LEDGER the entry count matches the assertions actually run
+        PROVEN WITHOUT A DATA LEVER (6): INTEGRATION derived tier is EXACTLY 63 nodes (the namespaces) | INTEGRATION every node carries a ratified pescTier (source|derived|synthetic|meta, R-P2-1) | INTEGRATION meta tier is EXACTLY 1 node (the standard root, R-P2-1) | INTEGRATION source tier is EXACTLY 41,676 nodes | INTEGRATION synthetic tier is EXACTLY 632 nodes (109 S-1 merged definitions + 522 S-1c duplicated children + 1 S-2 alias namespace) | INTEGRATION the four tiers account for every emitted node
+  FAIL  LEDGER every proven row carries at least one lever that MUTATES PRODUCTION DATA
+
+55 passed, 3 failed
+
+DET — two full forge() runs identical (complete outputs, all four tiers)
+        RED (demonstrated): one contaminated synthetic property ('urn:org:pesc:sector:AcademicRecord:v1.6.0#complexType/AcademicAwardType') -> comparator detects: true
+  ok    DET RED: whole-graph comparator demonstrably able to go red on synthetic content
+        GREEN: run one 42372 nodes / 70628 edges; canonical forms equal: true
+  ok    DET two full runs byte-identical under canonical serialization
+
+G4-A — reproducibility (R-VAL-5: the substitute for round-trip on decided content)
+        deleted: 632 synthetic nodes, 1114 synthetic edges; 41740 source+derived+meta nodes retained
+  ok    G4-A re-run over the preserved collision members completed without refusal
+        GREEN: re-run synthetic view identical to the emitted one: true (1596678 canonical bytes)
+  ok    G4-A the re-run reproduces the synthetic nodes and edges EXACTLY
+        RED P1 (demonstrated): renamed the LOSING member's ContactsType child 'Email' -> 'EmailPerturbed'; reproduction BREAKS as it must
+  ok    G4-A RED P1: perturbing ONE element declaration in the losing member breaks reproduction
+        RED P2 (demonstrated): renamed the single-member definition 'AcademicAwardsReportedType' -> 'AcademicAwardsReportedTypePerturbed' (chosen by computation from 67 candidates; marker types excluded); tier REFUSES BY NAME: pesc260805 syntheticTier REFUSES: HELD REFERENCE STILL UNRESOLVED after S-1: file 'AcademicRecord_v1.6.0.collision-948d88f32069.xsd' writes 'AcRec:Aca
+  ok    G4-A RED P2: perturbing ONE definition name leaves a consumer unserved and the tier REFUSES
+        THIRD CASE (recorded, not a defect): renamed a WINNING-member ContactsType child ('AddressPerturbed'); merged nodes claiming children: 522 of 109; the change is reachable from the merged node's contentFromStableId: true; the R-P4-6 delta summary moved with its member: true
+  ok    G4-A the merged node contentFromStableId still reaches the changed source element
+        merged nodes now hold children: 522 nodes claim a merged parent, of which 522 carry syntheticRule S-1c; not marked synthetic: 0; not claiming a merged parent: 0
+  ok    G4-A RE-STATED: the merged nodes hold EXACTLY their union of children, every one marked synthetic and parented to a merged definition
+        RED (demonstrated): re-parented 'urn:org:pesc:sector:AcademicRecord:v1.6.0#complexType/AcademicAwardType/el/1:AcademicAwardLevel' away from 'urn:org:pesc:sector:AcademicRecord:v1.6.0#complexType/AcademicAwardType' -> nodes claiming a merged parent falls 522 -> 521, condition inverts: true
+  ok    G4-A RED: the re-stated child-parentage assertion demonstrably detects one orphaned child
+  ok    G4-A the symmetric delta summary TRACKS its members — a winning-member change moves the merged record (R-P4-6)
+        purity guard: re-synthesis over an already-synthesized graph -> pesc260805 syntheticTier REFUSES: input carries synthetic node 'urn:org:pesc:sector:AcademicRecord:v1.6.0#complexType/AcademicAwar
+  ok    G4-A the tier REFUSES to synthesize from a graph that already carries synthetic content
+
+G4-B — the union (R-P3-1: 42 unique + 36 unique + 31 shared = 109)
+        split: 42 college-only + 36 test-score-only + 31 shared = 109 merged definition nodes (109 emitted)
+  ok    G4-B the merged set is the UNION: 109 named definitions
+  ok    G4-B 42 definitions are unique to the college-transcript member
+  ok    G4-B 36 definitions are unique to the test-score member
+  ok    G4-B 31 definitions are declared by BOTH members
+  ok    G4-B the arithmetic closes: 42 + 36 + 31 = the emitted node count
+  ok    G4-B the branches were identified by MARKER TYPES and the college member is 948d88f32069
+  ok    G4-B the test-score member is e12830fc86a3
+        conflicts: 14 of the 31 shared names; college is the superset in 8 and the subset in 0 (a subset REFUSES in production)
+  ok    G4-B 14 of the 31 shared names genuinely conflict
+  ok    G4-B the college definition is the superset in 8 of the 14 conflicts
+        winner rule: 14/14 conflicting merged definitions take content from the COLLEGE member; 14 name the test-score definition as superseded
+  ok    G4-B every conflicting merged definition takes its content from the college-transcript member
+  ok    G4-B every conflicting merged definition names the superseded test-score definition
+        prototype conflict table: 14 conflicts compared, 0 mismatched
+  ok    G4-B the Node signature port reproduces the prototype conflict table exactly (14 types, child counts)
+        MERGED_FROM: 140 edges; every merged definition has provenance: true; 31 carry two (the shared names)
+  ok    G4-B every merged definition carries MERGED_FROM provenance to its source definitions
+  ok    G4-B the 31 shared names each carry TWO MERGED_FROM edges (kept and superseded)
+
+G4-C — the merge delta by SIGNATURE, both directions (R-P4-5, R-P4-6, R-P4-7)
+        ABSENT (2): AcademicRecordType.AdditionalStudentAchievement|core:AdditionalStudentAchievementType|0|unbounded  SponsorType.SponsorCode|core:SponsorCodeType|0|null
+        REBOUND (5): ContactsRType.Address|core:AddressType|0|unbounded  ContactsType.Address|core:AddressType|0|unbounded  ContactsType.Email|core:EmailType|0|unbounded  ContactsType.Phone|core:PhoneType|0|unbounded  SchoolType.Contacts|core:ContactsType|0|unbounded
+        WIDENED (1): AcademicSummaryBaseType.AcademicHonors|core:AcademicHonorsType|0|null
+        ADDED by the winning member (33), spread over 14 conflicting types
+  ok    G4-C exactly 2 child elements are genuinely ABSENT from the merged definitions
+  ok    G4-C the 2 ABSENT entries are EXACTLY the enumerated signatures
+  ok    G4-C exactly 5 are REBOUND (same name, different resolved type) and are NOT losses
+  ok    G4-C exactly 1 is WIDENED (same name, same type, merged cardinality admits the loser)
+  ok    G4-C R-P4-6 SYMMETRY: the record enumerates the 33 child elements the winning member ADDS, not only what the loser lost
+        rebound counterparts in the merged subtree: ContactsRType.Address|AcRec:AddressType|0|unbounded  ContactsType.Address|AcRec:AddressType|0|unbounded  ContactsType.Email|AcRec:EmailType|0|unbounded  ContactsType.Phone|AcRec:PhoneType|0|unbounded  SchoolType.Contacts|AcRec:ContactsType|0|unbounded
+  ok    G4-C every REBOUND names a counterpart PRESENT in the merged subtree under the same name and a different type
+        widened: AcademicSummaryBaseType.AcademicHonors|core:AcademicHonorsType|0|null widens: true, counterpart live in winner: true
+  ok    G4-C the WIDENED entry is a widening (maxOccurs unset -> unbounded) with its counterpart live in the merged subtree
+        ABSENT verdicts: AcademicRecordType.AdditionalStudentAchievement|core:AdditionalStudentAchievementType|0|unbounded -> alive under loser: true, signature absent from winner: true, name absent from winner: true; SponsorType.SponsorCode|core:SponsorCodeType|0|null -> alive under loser: true, signature absent from winner: true, name absent from winner: true
+  ok    G4-C every ABSENT entry is still queryable by SIGNATURE under the losing member source-tier definition
+  ok    G4-C and every ABSENT entry is genuinely absent from the WINNING subtree — by name AND by signature
+        ADDED verdicts: 33/33 present in the winning subtree; 11/11 confirmed absent from the losing subtree (the 8 types the loser-side delta also names)
+  ok    G4-C every ADDED entry is present in the WINNING subtree, and absent from the losing one wherever the loser subtree is named
+        graph totals: absent 0, rebound 5, widened 1, contributed 35; types declaring an ABSENT entry: (none — R-P4-10 zeroed the bucket)
+  ok    G4-C the merged nodes publish the delta themselves and agree with the report in all four buckets
+        overlap BY SET: rebound+widened {AcademicSummaryBaseType.AcademicHonors, ContactsRType.Address, ContactsType.Address, ContactsType.Email, ContactsType.Phone, SchoolType.Contacts}; winnerChosenOverLoser {AcademicSummaryBaseType.AcademicHonors, ContactsRType.Address, ContactsType.Address, ContactsType.Email, ContactsType.Phone, SchoolType.Contacts}; symmetric difference 0. Naive sum 33+2+5+1 = 41 is NOT a child count — these 6 are counted INSIDE the 33 college contributions
+  ok    G4-C the rebound+widened entries ARE the winnerChosenOverLoser children — asserted by SET MEMBERSHIP, not by cardinality
+        RED (demonstrated): swapped 'AcademicSummaryBaseType.AcademicHonors' for a name in neither set — cardinality UNCHANGED at 6, so a cardinality-only gate stays green; set membership finds 1 mismatch(es), condition inverts: true
+  ok    G4-C RED: the SET form detects a swap that leaves cardinality identical (the predecessor gate could not)
+        GAP 3: 3 children matched on SIGNATURE while the union chose between their CONTENT — AgencyAssignedID(description+documentation), HighSchool(description+documentation), ParentGuardianName(description+documentation); declaring nothing: 0; children claiming agreement while carrying a decision: 0
+  ok    G4-C GAP 3: every child whose content the union chose says SO, and names which properties the choice covered
+        RED (demonstrated): emptied the decided-property record on 'urn:org:pesc:sector:AcademicRecord:v1.6.0#complexType/K12PersonType/el/4:AgencyAssignedID' -> children declaring a decision without naming it: 1, condition inverts: true
+  ok    G4-C GAP 3 RED: a child that claims a content decision without naming it IS detected
+        both bases on every merged node: missing 0; signature-level test-score dropped total 8 (materialized basis says 2)
+  ok    G4-C every merged node publishes BOTH bases and states the overlap in words
+        retired 'lostChildElement*' properties still in the graph: 0 node(s), 0 edge(s)
+  ok    G4-C the misleading name-only loss property is absent from the graph entirely
+        RED-1 (demonstrated): planting 'AcademicRecordType.HarnessPlantedElement|core:HarnessPlantedType|0|unbounded', a signature no member declares -> queryability finder reports found-under-loser: false (the queryability assertion would go RED), found-under-winner: false
+  ok    G4-C RED-1: the signature finder demonstrably FAILS to find a signature planted in neither member
+        RED-2 (demonstrated): the SAME queryability finder pointed at the WINNING member finds 0/2 ABSENT signatures and 0/5 REBOUND signatures -> the queryability assertion inverts. A NAME-only checker would have found 5/5 of the rebound names there and stayed green — which is exactly how the predecessor gate could not fail.
+  ok    G4-C RED-2: pointed at the WINNING member the finder goes red on every ABSENT and every REBOUND signature, where a name-only checker stayed green
+
+G4-D — consumer satisfaction (the point of the whole exercise)
+        held references answered: 201 ({"import":6,"type":188,"base":7}) against 201 recorded by Phase 3
+  ok    G4-D all 201 held references now carry a synthetic RESOLVES_TO edge
+  ok    G4-D the 201 split as 195 type-space references + 6 import declarations
+        external consumers answered: CollegeTranscript_v1.3.0.xsd, HighSchoolTranscript_v1.2.0.xsd, TestScoreReport_v1.0.0.xsd, TranscriptAcknowledgment_v1.1.0.xsd, TranscriptRequest_v1.1.0.xsd, TranscriptResponse_v1.1.0.xsd
+  ok    G4-D all SIX external consumers of the contested namespace are answered
+        TestScoreReport 1.0.0: 1 edge for 'AcRec:TestScoreReportType' -> urn:org:pesc:sector:AcademicRecord:v1.6.0#complexType/TestScoreReportType (pescTier synthetic, rule S-1, from testScoreOnly)
+  ok    G4-D TestScoreReport 1.0.0's single reference AcRec:TestScoreReportType now resolves
+  ok    G4-D and it resolves to a definition the TEST-SCORE member alone contributed
+        transcript consumers: AcRec:RequestType -> collegeTranscriptOnly (1 edge); AcRec:ResponseType -> collegeTranscriptOnly (1 edge)
+  ok    G4-D the transcript consumers' RequestType and ResponseType resolve, from the COLLEGE member alone
+        partition proof: college member declares TestScoreReportType: false; test-score member declares RequestType/ResponseType: false/false
+  ok    G4-D NEITHER member alone could serve both populations (measured from the source tier)
+
+G4-E — S-2: the CoreMain v1.6.0 alias and the 129 references that travel it
+        alias node: pescNamespace:urn:org:pesc:core:CoreMain:v1.6.0 (pescTier synthetic, rule S-2, servedBy urn:org:pesc:core:CoreMain:v1.8.0); SERVED_BY edges: 1
+  ok    G4-E a synthetic PescNamespace node stands in for the absent CoreMain v1.6.0
+  ok    G4-E it carries exactly one SERVED_BY edge to the real v1.8.0 namespace
+        alias traffic: 205 reference edges over 129 distinct local names; targets NOT declared by CoreMain_v1.8.0: 0
+  ok    G4-E all 205 recorded references resolve through the alias
+  ok    G4-E they cover the prototype's 129 distinct core: names, all of them
+  ok    G4-E every alias reference lands on a definition CoreMain_v1.8.0 actually declares
+        import: 1 RESOLVES_TO onto the alias namespace, 1 synthetic IMPORTS edge to CoreMain_v1.8.0.xsd
+  ok    G4-E AcademicRecord_v1.5.0's unresolved import now resolves onto the alias namespace
+  ok    G4-E and the artifact gains a synthetic IMPORTS edge to CoreMain_v1.8.0
+        CollegeTranscript_v1.2.0.xsd: import closure 3 files (AcademicRecord_v1.5.0.xsd, CollegeTranscript_v1.2.0.xsd, CoreMain_v1.8.0.xsd); recorded questions 205, answered 205
+        HighSchoolTranscript_v1.1.0.xsd: import closure 3 files (AcademicRecord_v1.5.0.xsd, CoreMain_v1.8.0.xsd, HighSchoolTranscript_v1.1.0.xsd); recorded questions 205, answered 205
+  ok    G4-E the two dependent roots actually reach AcademicRecord_v1.5.0 (the claim is not vacuous)
+  ok    G4-E CollegeTranscript 1.2.0 and HighSchoolTranscript 1.1.0 now FULLY resolve (every recorded question answered)
+        RED (demonstrated): removed the serving artifact CoreMain_v1.8.0 -> pesc260805 syntheticTier REFUSES: S-2 substitutes 'urn:org:pesc:core:CoreMain:v1.8.0' for the absent 'urn:org:pesc:core:CoreMain:v1.6.0', but no namespace node for the substitute exists in t
+  ok    G4-E RED: with the alias unservable the tier REFUSES BY NAME, naming both namespaces
+
+G4-F — tier hygiene (design §2: the emitter reads ONE predicate)
+        synthetic census: 632 nodes, 1114 edges; missing a syntheticRule: 0 nodes, 0 edges
+  ok    G4-F the synthetic tier emits exactly 632 nodes and 1114 edges (RESTATED at Phase 4.6a from 110/549)
+  ok    G4-F every synthetic node and edge carries a syntheticRule naming the decision
+        source predicate: 41676 nodes / 41612 edges, of which synthetic-bearing: 0 nodes, 0 edges
+  ok    G4-F ZERO synthetic content is reachable by the emitter's source predicate
+        decided resolutions: 407 edges into the contested or aliased namespaces; marked anything other than synthetic: 0
+  ok    G4-F resolution-by-decision is NEVER disguised as resolution-by-computation
+        derived tier: 63 nodes (63 namespaces per Phase 3 stats); carrying a syntheticRule: 0
+  ok    G4-F the derived tier is untouched by synthesis (63 namespaces, no synthetic marks)
+        RED (demonstrated): retiering 'urn:org:pesc:sector:AcademicRecord:v1.6.0#complexType/AcademicAwardType' as pescTier:'source' -> the predicate check now finds 1 leak(s), condition inverts: true
+  ok    G4-F RED: the source-predicate leak checker demonstrably detects a retiered node
+
+G4-G — the Phase 3 regeneration gate, re-run against the four-tier graph
+        deleted: 695 derived+synthetic nodes, 28952 derived+synthetic edges
+  ok    G4-G the derived tier regenerates from the stripped four-tier graph without refusal
+        GREEN: regenerated derived view identical: true (14600360 canonical bytes, Phase 3 recorded 14600360)
+  ok    G4-G the regenerated derived tier is IDENTICAL to the emitted one
+  ok    G4-G G3-A still measures 14,600,360 canonical bytes (a change is a FINDING)
+        seam: derived tier handed one synthetic node -> pesc260805 derivedTier REFUSES: input carries synthetic-tier node 'urn:org:pesc:sector:AcademicRecord:v1.6.0#complexType/AcademicAwardType' — the deri
+  ok    G4-G the derived tier REFUSES synthetic input by name (a decision may never seed a computation)
+
+G4.6a — the child union (R-P4-3 / R-P4-10 / R-P4-11 / R-P4-12)
+        union: 522 children; dispositions {"bothBranchesAgree":226,"soleBranchDeclaration":285,"losingBranchContributed":2,"winnerChosenOverLoser":6,"bothBranchesAgreeSignatureContentDecided":3}; winner-takes-all 520 + losing-branch 2 = 522; both-branch names from dispositions 235 (supervisor's independent walk: 235)
+  ok    G4.6a the child union is EXACTLY 522 and closes by both decompositions independently
+        dispositions compared key-by-key over 5 names; mismatches: none
+  ok    G4.6a every disposition count is exactly as measured
+        ACCEPTANCE 1, measured over the shipped graph: 109 merged definitions, of which 75 have child declarations in at least one branch; of THOSE, rendering empty: 0
+  ok    G4.6a ACCEPTANCE 1: every merged definition with child declarations in either branch renders them directly — none renders empty
+        RED (demonstrated): stripped every HAS_PROPERTY edge from 'urn:org:pesc:sector:AcademicRecord:v1.6.0#complexType/AcademicAwardType' (which HAS 20 branch children) -> offenders 0 -> 1, condition inverts: true
+  ok    G4.6a ACCEPTANCE 1 RED: a merged definition stripped of its children IS caught, proving the branch-children conjunct bites
+        RED (demonstrated) BY DATA MUTATION, not by expectation: dropped the HAS_PROPERTY edge 'urn:org:pesc:sector:AcademicRecord:v1.6.0#complexType/AcademicAwardsReportedType@948d88f32069' -> 'urn:org:pesc:sector:AcademicRecord:v1.6.0#complexType/AcademicAwardsReportedType@948d88f32069/el/1:AcademicAwardTitle' from the INPUT graph (the parentId the union walks is untouched) -> REFUSES BY NAME: pesc260805 syntheticTier REFUSES: S-1c FAILED ITS OWN ACCEPTANCE CRITERION: 1 merged definition(s) do not carry the number of children their branches declare, recomputed INDEPENDENTLY from the source 
+  ok    G4.6a ACCEPTANCE RED, BY DATA: the production refusal fires when the input's HAS_PROPERTY edges and its parentId containment disagree
+        GAP 2 DECLARED — reached merged targets rendering EMPTY: 30 of 96 (any referrer) = {"complexType":3,"simpleType":27}; 29 of 94 (element-declaration referrers, the acceptance-1 population) = {"complexType":3,"simpleType":26}. Nothing was dropped — see the assertion above.
+  ok    G4.6a GAP 2: across ALL referrers, exactly 30 of 96 reached merged targets render empty
+  ok    G4.6a GAP 2: scoped to element-declaration referrers (the acceptance-1 population), exactly 29 of 94 render empty
+  ok    G4.6a GAP 2: the empty ones are 27 simpleTypes and 3 complexTypes — the explanation, not just the count
+        one figure, two publications: college — nodes 33 vs stats 33; test-score — nodes 2 vs stats 2
+  ok    G4-C the contribution counts published on the NODES and in STATS agree exactly (they are computed by separate accumulators and once diverged)
+        the named exemplar PersonType now has 18 HAS_PROPERTY children (it had 0, out-degree 2, both MERGED_FROM); reached merged targets 96 from 195 element-declaration references
+  ok    G4.6a the named exemplar PersonType renders exactly 18 children
+        MERGED_FROM edges after duplication: 140 (Phase 4 emitted 140) — duplication SUPPLEMENTS provenance, it does not replace it
+  ok    G4.6a MERGED_FROM survives untouched at 140 edges
+        R-P4-12 RESIDUE, OPEN AND NUMBERED: 5 element declarations whose inline anonymous type is REFERENCED not duplicated, and 38 merged definitions whose derivation wrapper is REFERENCED not duplicated. Element declarations are complete; walking INTO those 5 still takes a hop into the contributing branch.
+  ok    G4.6a the referenced-not-duplicated residue is exactly 5 inline types and 38 derivation wrappers
+  ok    G4.6a INVENTION: the shipped population passes the shipped declaration check
+        RED (demonstrated): appended one child whose signature no member declares -> REFUSES BY NAME: pesc260805 syntheticTier REFUSES: S-1c INVENTION: 1 duplicated child declaration(s) carry a signature NO collision member declares for their owning type. First: 'complexType|PersonType' chil
+  ok    G4.6a INVENTION RED: a child declared by NEITHER member is refused BY NAME
+        RED (demonstrated): a REAL child signature attached to the WRONG owning type -> REFUSES BY NAME: pesc260805 syntheticTier REFUSES: S-1c INVENTION: 1 duplicated child declaration(s) carry a signature NO collision member declares for their owning ty
+  ok    G4.6a INVENTION RED: a real signature under the WRONG owning type is refused (the key is not name-only)
+        RED (demonstrated): removed the losing-branch declaration 'urn:org:pesc:sector:AcademicRecord:v1.6.0#complexType/AcademicRecordType@e12830fc86a3/el/7:AdditionalStudentAchievement' -> union 522 -> 521 (short by exactly 1); test-score contributions 2 -> 1
+  ok    G4.6a SHORTFALL RED: removing ONE branch contribution shortens the union by EXACTLY one
+  ok    G4.6a SHORTFALL RED: the R-P4-11 contribution count follows the removal
+        RED (demonstrated), DELTA CONJUNCT ISOLATED: removed the winning-branch declaration 'urn:org:pesc:sector:AcademicRecord:v1.6.0#complexType/AcademicAwardsReportedType@948d88f32069/el/1:AcademicAwardTitle' -> union short by exactly 1, while test-score contributions stay 2 (unchanged) — the delta claim moves and the contribution claim does not
+  ok    G4.6a SHORTFALL RED: the delta claim is evidenced INDEPENDENTLY of the contribution claim
+        GAP 5: merged definitions whose duplicated children repeat a name: 0 (a name-keyed union would have silently collapsed them)
+  ok    G4.6a GAP 5: no merged definition carries two duplicated children of the same name
+        RED (demonstrated): renamed 'urn:org:pesc:sector:AcademicRecord:v1.6.0#complexType/PersonType@948d88f32069/el/2:SIN' to collide with its sibling 'SchoolAssignedPersonID' -> REFUSES BY NAME: pesc260805 syntheticTier REFUSES: S-1c cannot union the children of the collegeTranscript declaration of 'complexType|PersonType' by NAME: it declares 'SchoolAssignedPers
+  ok    G4.6a GAP 5 RED: a repeated child name in one container is REFUSED by name, so the union cannot silently collapse two declarations
+        GAP 7: 522 duplicated children; copiedFromStableId not resolving to a live node: 0; resolving to something that is not a SOURCE node: 0
+  ok    G4.6a GAP 7: every copiedFromStableId resolves to a live SOURCE-tier node
+        RED (demonstrated): repointed 'urn:org:pesc:sector:AcademicRecord:v1.6.0#complexType/AcademicAwardType/el/1:AcademicAwardLevel' provenance at a name no node carries -> dangling provenance detected: 1, condition inverts: true
+  ok    G4.6a GAP 7 RED: a dangling copiedFromStableId IS detected (a bare stableId property has no other protection)
+        survivors copied from the removed declaration: 0 (a nonzero here would mean the union found the child somewhere it was not declared)
+  ok    G4.6a SHORTFALL RED: the union does not silently complete — no child survives the removed declaration
+        source predicate over the shipped graph: 0 duplicated-child node leak(s), 0 edge leak(s)
+  ok    G4.6a TIER-LEAKAGE: zero duplicated children are reachable by the source-tier predicate
+        RED (demonstrated): retiered duplicated child 'urn:org:pesc:sector:AcademicRecord:v1.6.0#complexType/AcademicAwardType/el/1:AcademicAwardLevel' and its HAS_PROPERTY edge as pescTier:'source' -> the source predicate now finds 1 node leak(s) and 1 edge leak(s), condition inverts: true
+  ok    G4.6a TIER-LEAKAGE RED: a duplicated child retiered as source IS caught by the source predicate
+        duplicated children carrying a DERIVED annotation: 0 (the first build of this phase produced 134 before the strip was added)
+  ok    G4.6a TIER-LEAKAGE: no duplicated child carries a derived-tier annotation
+        RED (demonstrated): staged 'ambiguousPendingSynthesis' onto one duplicated child -> detector finds 1, condition inverts: true
+  ok    G4.6a TIER-LEAKAGE RED: a derived annotation planted on a duplicated child IS detected
+        GREEN: regenerated the S-1c portion from source+derived: identical true (1056323 canonical bytes)
+  ok    G4.6a REGENERATION: every duplicated child regenerates byte-identically from preserved inputs
+        RED (demonstrated): changed 'urn:org:pesc:sector:AcademicRecord:v1.6.0#complexType/AcademicAwardType@948d88f32069/el/1:AcademicAwardLevel' maxOccurs null -> 'unbounded' => regenerated S-1c view differs: true
+  ok    G4.6a REGENERATION RED: perturbing ONE source declaration moves the regenerated child view
+        residue edges with both endpoints present: 43/43
+  ok    G4.6a RESIDUE: every referenced-not-duplicated edge has both endpoints in the graph
+        RED (demonstrated): removed the inline-type target 'urn:org:pesc:sector:AcademicRecord:v1.6.0#complexType/AdditionalStudentAchievementsType@e12830fc86a3/el/2:AchievementTitle/anon/1' -> dangling residue edges detected: 1, condition inverts: true
+  ok    G4.6a RESIDUE RED: a broken residue reference IS detected as dangling
+        RED (demonstrated): removing the inline-type node at BUILD time -> inline-type reference edges 5 -> 4 (exact shortfall of 1), and 0 edges point at the removed node — absence yields a SHORTFALL, never a dangle
+  ok    G4.6a RESIDUE RED: an absent residue endpoint produces an EXACT shortfall and never a dangling edge
+
+LEDGER — red evidence for every shipped assertion
+        ledger: 107 shipped assertions; proven-red 66, records-gap 0, GENUINE GAP 40
+        UNLEDGERED (new assertion without red evidence): LEDGER every proven row carries at least one lever that MUTATES PRODUCTION DATA
+  FAIL  LEDGER every shipped assertion has a red-evidence entry
+  ok    LEDGER carries no stale entries for assertions this suite no longer runs
+  FAIL  LEDGER the entry count matches the assertions actually run
+        PROVEN WITHOUT A DATA LEVER (34): G4-A RED: the re-stated child-parentage assertion demonstrably detects one orphaned child | G4-B 14 of the 31 shared names genuinely conflict | G4-B 31 definitions are declared by BOTH members | G4-B 36 definitions are unique to the test-score member | G4-B 42 definitions are unique to the college-transcript member | G4-B every merged definition carries MERGED_FROM provenance to its source definitions | G4-B the Node signature port reproduces the prototype conflict table exactly (14 types, child counts) | G4-B the branches were identified by MARKER TYPES and the college member is 948d88f32069 | G4-B the college definition is the superset in 8 of the 14 conflicts | G4-B the merged set is the UNION: 109 named definitions | G4-B the test-score member is e12830fc86a3 | G4-C GAP 3: every child whose content the union chose says SO, and names which properties the choice covered | G4-C R-P4-6 SYMMETRY: the record enumerates the 33 child elements the winning member ADDS, not only what the loser lost | G4-C every merged node publishes BOTH bases and states the overlap in words | G4-C exactly 2 child elements are genuinely ABSENT from the merged definitions | G4-D all 201 held references now carry a synthetic RESOLVES_TO edge | G4-D all SIX external consumers of the contested namespace are answered | G4-D the 201 split as 195 type-space references + 6 import declarations | G4-E AcademicRecord_v1.5.0's unresolved import now resolves onto the alias namespace | G4-E all 205 recorded references resolve through the alias | G4-E they cover the prototype's 129 distinct core: names, all of them | G4-F resolution-by-decision is NEVER disguised as resolution-by-computation | G4-F the derived tier is untouched by synthesis (63 namespaces, no synthetic marks) | G4.6a GAP 2: across ALL referrers, exactly 30 of 96 reached merged targets render empty | G4.6a GAP 2: scoped to element-declaration referrers (the acceptance-1 population), exactly 29 of 94 render empty | G4.6a GAP 7: every copiedFromStableId resolves to a live SOURCE-tier node | G4.6a MERGED_FROM survives untouched at 140 edges | G4.6a RESIDUE RED: an absent residue endpoint produces an EXACT shortfall and never a dangling edge | G4.6a SHORTFALL RED: the R-P4-11 contribution count follows the removal | G4.6a SHORTFALL RED: the delta claim is evidenced INDEPENDENTLY of the contribution claim | G4.6a every disposition count is exactly as measured | G4.6a the child union is EXACTLY 522 and closes by both decompositions independently | G4.6a the named exemplar PersonType renders exactly 18 children | G4.6a the referenced-not-duplicated residue is exactly 5 inline types and 38 derivation wrappers
+  FAIL  LEDGER every proven row carries at least one lever that MUTATES PRODUCTION DATA
+
+104 passed, 3 failed

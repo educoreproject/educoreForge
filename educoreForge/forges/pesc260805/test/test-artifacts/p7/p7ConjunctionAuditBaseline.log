@@ -1,0 +1,103 @@
+
+=== synthetic: 106 check() calls, 46 with top-level && ===
+   4 conjuncts  [proven]  G4-A RE-STATED: the merged nodes hold EXACTLY their union of children, every one marked synthetic and par
+   4 conjuncts  [proven]  G4-C the merged nodes publish the delta themselves and agree with the report in all four buckets
+   4 conjuncts  [genuineGap]  G4-C the rebound+widened entries ARE the winnerChosenOverLoser children — asserted by SET MEMBERSHIP, not
+   4 conjuncts  [proven]  G4-E a synthetic PescNamespace node stands in for the absent CoreMain v1.6.0
+   4 conjuncts  [proven]  G4-C the contribution counts published on the NODES and in STATS agree exactly (they are computed by sepa
+   3 conjuncts  [genuineGap]  G4-C every ADDED entry is present in the WINNING subtree, and absent from the losing one wherever the los
+   3 conjuncts  [proven]  G4-C GAP 3: every child whose content the union chose says SO, and names which properties the choice cove
+   3 conjuncts  [proven]  G4-C RED-2: pointed at the WINNING member the finder goes red on every ABSENT and every REBOUND signature
+   3 conjuncts  [proven]  G4-D TestScoreReport 1.0.0's single reference AcRec:TestScoreReportType now resolves
+   3 conjuncts  [proven]  G4-E it carries exactly one SERVED_BY edge to the real v1.8.0 namespace
+   3 conjuncts  [proven]  G4-F ZERO synthetic content is reachable by the emitter's source predicate
+   3 conjuncts  [proven]  G4.6a the child union is EXACTLY 522 and closes by both decompositions independently
+   3 conjuncts  [proven]  G4.6a GAP 7: every copiedFromStableId resolves to a live SOURCE-tier node
+   2 conjuncts  [proven]  G4-B every conflicting merged definition takes its content from the college-transcript member
+   2 conjuncts  [proven]  G4-B the Node signature port reproduces the prototype conflict table exactly (14 types, child counts)
+   2 conjuncts  [proven]  G4-B every merged definition carries MERGED_FROM provenance to its source definitions
+   2 conjuncts  [proven]  G4-C exactly 5 are REBOUND (same name, different resolved type) and are NOT losses
+   2 conjuncts  [proven]  G4-C exactly 1 is WIDENED (same name, same type, merged cardinality admits the loser)
+   2 conjuncts  [proven]  G4-C every REBOUND names a counterpart PRESENT in the merged subtree under the same name and a different 
+   2 conjuncts  [proven]  G4-C the WIDENED entry is a widening (maxOccurs unset -> unbounded) with its counterpart live in the merg
+   2 conjuncts  [genuineGap]  G4-C RED: the SET form detects a swap that leaves cardinality identical (the predecessor gate could not)
+   2 conjuncts  [proven]  G4-C every merged node publishes BOTH bases and states the overlap in words
+   2 conjuncts  [genuineGap]  G4-C the misleading name-only loss property is absent from the graph entirely
+   2 conjuncts  [genuineGap]  G4-C RED-1: the signature finder demonstrably FAILS to find a signature planted in neither member
+   2 conjuncts  [proven]  G4-D the 201 split as 195 type-space references + 6 import declarations
+   2 conjuncts  [genuineGap]  G4-D and it resolves to a definition the TEST-SCORE member alone contributed
+   2 conjuncts  [genuineGap]  G4-D NEITHER member alone could serve both populations (measured from the source tier)
+   2 conjuncts  [proven]  G4-E all 205 recorded references resolve through the alias
+   2 conjuncts  [proven]  G4-E they cover the prototype's 129 distinct core: names, all of them
+   2 conjuncts  [proven]  G4-E AcademicRecord_v1.5.0's unresolved import now resolves onto the alias namespace
+   2 conjuncts  [proven]  G4-E and the artifact gains a synthetic IMPORTS edge to CoreMain_v1.8.0
+   2 conjuncts  [proven]  G4-F the synthetic tier emits exactly 632 nodes and 1114 edges (RESTATED at Phase 4.6a from 110/549)
+   2 conjuncts  [genuineGap]  G4-F every synthetic node and edge carries a syntheticRule naming the decision
+   2 conjuncts  [proven]  G4-F resolution-by-decision is NEVER disguised as resolution-by-computation
+   2 conjuncts  [proven]  G4-F the derived tier is untouched by synthesis (63 namespaces, no synthetic marks)
+   2 conjuncts  [proven]  G4.6a every disposition count is exactly as measured
+   2 conjuncts  [genuineGap]  G4.6a ACCEPTANCE 1: every merged definition with child declarations in either branch renders them directl
+   2 conjuncts  [proven]  G4.6a GAP 2: across ALL referrers, exactly 30 of 96 reached merged targets render empty
+   2 conjuncts  [proven]  G4.6a GAP 2: scoped to element-declaration referrers (the acceptance-1 population), exactly 29 of 94 rend
+   2 conjuncts  [genuineGap]  G4.6a GAP 2: the empty ones are 27 simpleTypes and 3 complexTypes — the explanation, not just the count
+   2 conjuncts  [proven]  G4.6a the referenced-not-duplicated residue is exactly 5 inline types and 38 derivation wrappers
+   2 conjuncts  [proven]  G4.6a SHORTFALL RED: the delta claim is evidenced INDEPENDENTLY of the contribution claim
+   2 conjuncts  [genuineGap]  G4.6a GAP 5 RED: a repeated child name in one container is REFUSED by name, so the union cannot silently 
+   2 conjuncts  [genuineGap]  G4.6a TIER-LEAKAGE: zero duplicated children are reachable by the source-tier predicate
+   2 conjuncts  [genuineGap]  G4.6a TIER-LEAKAGE RED: a duplicated child retiered as source IS caught by the source predicate
+   2 conjuncts  [proven]  G4.6a RESIDUE RED: an absent residue endpoint produces an EXACT shortfall and never a dangling edge
+
+=== source: 56 check() calls, 12 with top-level && ===
+   3 conjuncts  [recordsGap]  INTEGRATION defaultSnapshot resolves to exactly the 01 directory
+   2 conjuncts  [recordsGap]  G-A two runs produce identical stableId sets
+   2 conjuncts  [genuineGap]  G-B RED: bare keying WOULD fuse the three TransmissionDataTypes
+   2 conjuncts  [genuineGap]  G-B RED: bare keying WOULD fuse the two PersonTypes
+   2 conjuncts  [recordsGap]  G-E 1.19.1 facets ABSENT
+   2 conjuncts  [recordsGap]  G-E both share the written base
+   2 conjuncts  [recordsGap]  INTEGRATION standardName is PESC260805 (D-6)
+   2 conjuncts  [recordsGap]  INTEGRATION entryModule declared
+   2 conjuncts  [recordsGap]  INTEGRATION roundTripValidator NOT declared yet (declared-and-broken = refusal)
+   2 conjuncts  [recordsGap]  INTEGRATION forge returns nodes[] and edges[]
+   2 conjuncts  [recordsGap]  INTEGRATION metadata.version non-blank
+   2 conjuncts  [recordsGap]  INTEGRATION standardKey + stableUriPropertyName returned
+
+=== derived: 71 check() calls, 20 with top-level && ===
+   3 conjuncts  [genuineGap]  G3-C name census matches Phase 0: 896 names in each, all shared
+   3 conjuncts  [genuineGap]  G3-E the financial-aid orphan (PerkinsType, CoreMain 1.19.1) is NOT reachable
+   2 conjuncts  [proven]  G3-A GAP1: applyDerivedTier REFUSES an undeclared annotation name, naming it
+   2 conjuncts  [proven]  G3-A GAP7: the annotations DO land on the returned graph (the clone is not a no-op)
+   2 conjuncts  [proven]  G3-A regenerated derived tier IDENTICAL to the emitted one
+   2 conjuncts  [proven]  G3-A GAP1: every annotation the tier writes is DECLARED (none invisible to strip/compare)
+   2 conjuncts  [genuineGap]  G3-B RED: the wrong artifact's prefix table produces a different target
+   2 conjuncts  [genuineGap]  G3-B Student resolves to AcademicRecord v1.13.0 StudentType (exact stableId)
+   2 conjuncts  [genuineGap]  G3-B the edge carries the written form verbatim
+   2 conjuncts  [proven]  G3-C GAP6: familyKey and definitionName are PRESENT on every edge these filters read
+   2 conjuncts  [proven]  G3-C ClassRankType chains across every version (13 edges, one cluster)
+   2 conjuncts  [proven]  G3-C D-4: AdmissionsRecord ClassRankType chains inside its OWN family (5 members, 4 edges)
+   2 conjuncts  [genuineGap]  G3-C AccreditationTypeType chains within its unchanged runs (8 edges, break at its one change)
+   2 conjuncts  [genuineGap]  G3-D ambiguous entries exist and all name the contested namespace
+   2 conjuncts  [proven]  G3-D every resolution into the contested namespace is synthetic and rule-tagged, and they number exactly 
+   2 conjuncts  [proven]  G3-D the 201 decided resolutions split as 195 type-space references + 6 import declarations
+   2 conjuncts  [proven]  G3-D RED-2: removing EITHER collision member lifts the quarantine and provokes an unresolved-reference re
+   2 conjuncts  [proven]  G3-E GAP4: the harness derives the SAME message-root set production used (12 roots)
+   2 conjuncts  [proven]  G3-E GAP4: reachableFromLatestRoot is EXACTLY 2,282 of 12,909 definitions
+   2 conjuncts  [proven]  G3-F the refusal is the SHAPE guard itself, not another guard firing first
+
+=== SUMMARY ===
+shipped check() calls: 233; carrying a top-level conjunction: 78
+recorded "proven" AND carrying 3+ conjuncts (the highest-risk rows — one lever, three claims): 11
+  [synthetic] 4 conjuncts — G4-A RE-STATED: the merged nodes hold EXACTLY their union of children, every one marked synthetic and parented to a merged definition
+  [synthetic] 4 conjuncts — G4-C the merged nodes publish the delta themselves and agree with the report in all four buckets
+  [synthetic] 4 conjuncts — G4-E a synthetic PescNamespace node stands in for the absent CoreMain v1.6.0
+  [synthetic] 4 conjuncts — G4-C the contribution counts published on the NODES and in STATS agree exactly (they are computed by separate accumulators and once diverged)
+  [synthetic] 3 conjuncts — G4-C GAP 3: every child whose content the union chose says SO, and names which properties the choice covered
+  [synthetic] 3 conjuncts — G4-C RED-2: pointed at the WINNING member the finder goes red on every ABSENT and every REBOUND signature, where a name-only checker stayed green
+  [synthetic] 3 conjuncts — G4-D TestScoreReport 1.0.0's single reference AcRec:TestScoreReportType now resolves
+  [synthetic] 3 conjuncts — G4-E it carries exactly one SERVED_BY edge to the real v1.8.0 namespace
+  [synthetic] 3 conjuncts — G4-F ZERO synthetic content is reachable by the emitter's source predicate
+  [synthetic] 3 conjuncts — G4.6a the child union is EXACTLY 522 and closes by both decompositions independently
+  [synthetic] 3 conjuncts — G4.6a GAP 7: every copiedFromStableId resolves to a live SOURCE-tier node
+
+auditor join integrity: 0 shipped label(s) failed to join the ledger — the risk list above is COMPLETE.
+
+A "proven" status on any row above means SOME conjunct was observed failing. It does not mean every conjunct was. Closing that gap needs either one assertion per claim, or a lever per conjunct — it cannot be closed by the ledger as currently specified, which is the method answer the supervisor asked for.

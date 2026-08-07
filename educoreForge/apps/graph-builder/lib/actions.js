@@ -1346,6 +1346,24 @@ const goldEvalCheckAction = (callback) => {
 					roundTripClean: oneRow.roundTripClean,
 					inventedTotal: oneRow.inventedTotal,
 					lostTotal: oneRow.lostTotal,
+					// ⟪PHASE 7, F-6⟫ THIS PAYLOAD IS WHAT A PROMOTER READS, and it stated `lostTotal: 0`
+					// bare. The qualification must travel with the zero: lostTotal counts loss only in
+					// the dimensions the comparator MODELS, and a dimension unread by the emitter AND
+					// unmeasured by the canonicalizer reports zero on both sides and reads as fidelity.
+					//
+					// A MISSING KEY HERE MEANS EXACTLY ONE THING, because round-trip-stage.js now always
+					// writes it (either the bundle's declaration or an explicit NONE DECLARED marker):
+					// the stage summary was written by a builder that predates this field. Said by name
+					// rather than left as an absence, so a stale artifact cannot read as an unqualified
+					// clean bill of health.
+					semanticValidationLimit:
+						typeof oneRow.semanticValidationLimit === 'string' &&
+						oneRow.semanticValidationLimit.trim() !== ''
+							? oneRow.semanticValidationLimit
+							: 'ABSENT FROM THIS STAGE SUMMARY — it was written before the builder carried ' +
+								'this field. What this round-trip does and does not model is therefore ' +
+								'UNSTATED in the certification evidence; open the verdict at verdictPath, ' +
+								'or re-run the build to regenerate the summary.',
 					verdictPath: oneRow.verdictPath,
 				})),
 				declaredAbsentTolerated: absentTokens,

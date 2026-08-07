@@ -1,0 +1,17 @@
+graphBuilder: [goldEvalCheck] PASS — 1 declared validator(s) ran with inventedTotal=0
+{
+  "certification": "PASS",
+  "summaryFilePath": "/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/buildLogs/pesc260805OnlyRoundTrip_20260807-223703/roundTrip/roundTripStageSummary.json",
+  "containerName": "DEV_gb_materialize_32921_2",
+  "declared": [
+    {
+      "token": "pesc260805",
+      "roundTripClean": true,
+      "inventedTotal": 0,
+      "lostTotal": 0,
+      "semanticValidationLimit": "SEMANTIC round-trip: statement-set equality, not byte equality, and the statement set is the one THIS INSTRUMENT CHOOSES TO MODEL. WHAT IS MODELLED AS OF PHASE 6.5, each on BOTH sides: (1) THE COMPOSITOR — kind, effective occurrence, nesting, and the ORDERED particle list, as declaresContentModel / compositorKind / compositorMinOccurs / compositorMaxOccurs / particleAt:N statements; (2) PREFIX BINDINGS — declaresNamespacePrefix and boundNamespace per xmlns declaration; (3) ELEMENT ORDER within a content model, which the ordinal in particleAt:N makes visible. THE PHASE 6 DECLARATION THAT ELEMENT ORDER IS UNDETECTABLE IS RETRACTED ON EVIDENCE: a driven sibling swap in a graph row moves 2 statements and moved 0 under the previous form (test/probes/p65_contentModelLevers.js). WHAT REMAINS UNMODELLED, and is therefore invisible as loss rather than merely hard to see: (a) THE NAMESPACE OF A TYPE REFERENCE — canonicalTypeRef strips the prefix, so a reference repointed to a same-named type in a DIFFERENT namespace canonicalizes identically; this is R-ID-1 fusion surviving in the object space and it is the more serious of the residue; (b) ATTRIBUTE ORDER; (c) SEVERAL xs:documentation children of one xs:annotation, of which the forge keeps the first (see knownResidue). ALSO DECLARED, a measured boundary of the emitter rather than of this comparison: a container whose content model holds ONLY group references or wildcards declares no element children, so a missing contentModelShape there cannot be refused by name and shows up as ordinary loss in this diff instead. \"Semantically clean\" MUST NEVER be reported as \"identical\".",
+      "verdictPath": "/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/buildLogs/pesc260805OnlyRoundTrip_20260807-223703/roundTrip/pesc260805/roundTripVerdict.json"
+    }
+  ],
+  "declaredAbsentTolerated": []
+}

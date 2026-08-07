@@ -1,0 +1,60 @@
+{
+  "leverRows": [
+    {
+      "leverName": "noOpControl",
+      "isAcceptControl": true,
+      "description": "ACCEPT-CONTROL: rewrite the ORIGINAL bytes unchanged. All three predicates must stay GREEN, proving the harness can observe a passing state and that the reader is not serving a stale cached parse.",
+      "expectedToRedden": [],
+      "observedRed": [],
+      "agrees": true
+    },
+    {
+      "leverName": "removeTheDeclarationEntirely",
+      "isAcceptControl": false,
+      "description": "PRODUCTION MUTATION, SHIPPED CONFIGURATION: delete the roundTripValidator line from the bundle's self-description — the pre-Phase-5 state the stale assertion used to pin. RT-13.3 treats absent as tolerated-but-logged, so this is the state in which the rebuild silently stops being certifiable.",
+      "expectedToRedden": [
+        0,
+        1,
+        2
+      ],
+      "observedRed": [
+        0,
+        1,
+        2
+      ],
+      "agrees": true
+    },
+    {
+      "leverName": "pointTheDeclarationAtAMissingFile",
+      "isAcceptControl": false,
+      "description": "PRODUCTION MUTATION, SHIPPED CONFIGURATION: declare a validator filename that does not exist. This is RT-13.3's declared-and-missing case, which must REFUSE every build by name rather than degrade to absent.",
+      "expectedToRedden": [
+        0,
+        1,
+        2
+      ],
+      "observedRed": [
+        0,
+        1,
+        2
+      ],
+      "agrees": true
+    },
+    {
+      "leverName": "pointTheDeclarationAtAModuleExportingNoValidate",
+      "isAcceptControl": false,
+      "description": "PRODUCTION MUTATION, SHIPPED CONFIGURATION: declare a validator file that EXISTS and LOADS but exports no validate(). This is the lever that separates the third assertion from the second — a file-existence check alone cannot see it, which is exactly why the re-pin is three assertions and not one conjunction.",
+      "expectedToRedden": [
+        0,
+        2
+      ],
+      "observedRed": [
+        0,
+        2
+      ],
+      "agrees": true
+    }
+  ],
+  "mismatches": [],
+  "restoreVerified": true
+}

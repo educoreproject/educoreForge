@@ -1,0 +1,20 @@
+classifier self-test: 5/5 specimens scored as declared (including one longest-token-wins control and one REFUSE control).
+
+=== LEVER CLASS COUNTS (every red-evidence entry on a `proven` row) ===
+    63  DATA        productionMutationShippedConfiguration
+     3  DATA        productionMutation
+     1  expectation  harnessMutation
+   117  expectation  expectationPerturbation
+     9  DATA        ledgerGateSelfDemonstration
+     6  DATA        ledgerStaleEntryProbe
+     3  expectation  inheritedBaseline
+
+=== THE SWEEP ===
+  proven rows total .......................... 113
+  carrying at least one DATA lever ........... 48
+  resting on expectation levers ALONE ........ 65
+  of those, carrying no redEvidence at all ... 0
+
+CLOSES: 48 + 65 = 113 (proven rows total 113)
+
+wrote /Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/forges/pesc260805/test/test-artifacts/p7/p7ExpectationLeverSweep.json

@@ -1,0 +1,7 @@
+RETIRED: INTEGRATION roundTripValidator NOT declared yet (declared-and-broken = refusal)
+ADDED:   INTEGRATION roundTripValidator IS declared (Phase 5; re-pinned in Phase 7)
+ADDED:   INTEGRATION the declared roundTripValidator file EXISTS (RT-13.3: declared-and-missing refuses every build)
+ADDED:   INTEGRATION the declared roundTripValidator exports validate() (RT-13.3: declared-and-broken is a refusal, never a downgrade to absent)
+
+source suite ledger entries now: 57
+ADDED top-level block: interpolatedLabelClass (2 members)

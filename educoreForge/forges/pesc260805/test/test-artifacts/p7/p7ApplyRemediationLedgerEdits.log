@@ -1,0 +1,3 @@
+interpolated-label sites: test/test-pesc260805SourceTier.js:367, test/test-pesc260805DerivedTier.js:378
+                      ->  test/test-pesc260805SourceTier.js:403, test/test-pesc260805DerivedTier.js:378   (recomputed from the files)
+declared probe dispositions: 6

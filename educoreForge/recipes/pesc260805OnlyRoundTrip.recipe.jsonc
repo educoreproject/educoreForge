@@ -1,0 +1,65 @@
+{
+  // pesc260805OnlyRoundTrip - pesc260805Only PLUS the RT-13 round-trip stage: forge the pesc260805
+  // REBUILD bundle alone, materialize, then run its DECLARED roundTripValidator against the
+  // product graph and land the verdict with the build outputs. This is the rebuild's
+  // CERTIFICATION recipe (work order Phase 7), and pesc260805Only.recipe.jsonc remains the
+  // stage-off sibling.
+  //
+  // WHY THIS FILE EXISTS AT ALL - THE GAP IT CLOSES. Phase 5 DECLARED the validator in
+  // forges/pesc260805/parserDescriptor.ini and a build was observed completing normally. That
+  // proved only that DECLARING it breaks nothing. No recipe opted the stage in, so the validator
+  // had never run INSIDE a build: "it works" meant "it works when invoked by hand". The
+  // Phase 5 build log records the proof of the gap in its own words -
+  // forges/pesc260805/test/test-artifacts/p5DeclaredBuild.log:28 reads
+  //   [roundTrip] stage OFF (recipe default (roundTripStage absent))
+  // A declared-but-never-invoked stage emits no error and fails no test; it looks EXACTLY like a
+  // working one. This recipe is the difference between the two, and -goldEvalCheck run against a
+  // stage-off run directory REFUSES BY NAME while the same check against a stage-on directory
+  // passes - which is the observable proof that the switch does something.
+  //
+  // NAMING (SCARLET_GARDEN, 2026-08-07). The work order names this deliverable
+  // 'pescV2OnlyRoundTrip.recipe.jsonc'. That name is not used, deliberately: the bundle's token is
+  // pesc260805 and its standardName is PESC260805 (ruling D-6), the stage-off sibling already
+  // shipped as pesc260805Only.recipe.jsonc in Phase 4.5, and the house idiom is
+  // <token>Only / <token>OnlyRoundTrip without exception (edfiOnly/edfiOnlyRoundTrip,
+  // pescOnly/pescOnlyRoundTrip, cedsOnly*/cedsOnlyRoundTrip). A pescV2* pair would introduce a
+  // THIRD name for one bundle alongside 'pesc' (the incumbent) and 'pesc260805' (the rebuild) -
+  // precisely the confusion ruling D-6 exists to prevent. The work order's INTENT is satisfied:
+  // one stage-off recipe and one stage-on recipe for this bundle.
+  //
+  // THE STAGE OPT-IN IS SAFE HERE ONLY BECAUSE THE VALIDATOR NOW EXISTS. RT-13.3: a declared
+  // validator that does not exist or does not load REFUSES EVERY BUILD by name, stage on or off.
+  // Phase 5 shipped roundTripValidator.js and Phase 6.5 completed the emitter behind it, so the
+  // opt-in below asks for a verdict from an instrument that is real.
+  //
+  // WHAT THE VERDICT IS EXPECTED TO CARRY, AND THE QUALIFICATION THAT TRAVELS WITH IT. Phase 6.5
+  // closed with inventedTotal 0 and lostTotal 0. inventedTotal above zero FAILS a build
+  // (doctrine 5.3); lostTotal above zero is TOLERATED and logged. lostTotal 0 means zero loss IN
+  // THE DIMENSIONS THE COMPARATOR MODELS - type-reference NAMESPACE, ATTRIBUTE ORDER and the
+  // 2nd..nth xs:documentation literal of one xs:annotation remain unmodelled, so they cannot
+  // register as loss. That qualification is REQUIRED wherever the zero is restated; a dimension
+  // unread by the emitter AND unmeasured by the canonicalizer reports zero on both sides and
+  // reads as fidelity.
+  //
+  // WHY hubs [] AND bridges []. Unchanged from the stage-off sibling's reasoning: a hub or bridge
+  // would add nodes this bundle did not emit, and the round-trip verdict is a statement about
+  // THIS bundle's fidelity to its own ingested snapshot. A third party writing into the same
+  // graph would make the verdict unreadable as evidence about the rebuild.
+  //
+  // VECTORIZATION IS OFF BY THE SAME DELIBERATE DECISION the stage-off sibling records: the
+  // round-trip emitter reads the SOURCE tier, and no round-trip assertion reads an embedding.
+  // Pass --vectorize=false explicitly on the command line; the build default is true.
+  //
+  // CONTAINER NAME. graphBuilder mints its product container as DEV_gb_materialize_<pid>_<seq>.
+  // This is a SCRATCH graph and stays a DEV_ (GNC-001): a DEV build is never renamed to GOLD_EVAL_
+  // without a round-trip PASS, and the promotion gate is graphBuilder -goldEvalCheck against this
+  // build's run directory. Creating scratch graphs is never gated by that check.
+  "schemaVersion": "1.0.0",
+  "recipeName": "pesc260805OnlyRoundTrip",
+  "kind": "dev",
+  "description": "Forge the pesc260805 rebuild bundle alone and round-trip-validate the materialized product (RT-13 stage ON, work order Phase 7 certification).",
+  "roundTripStage": true,
+  "standards": [ { "token": "pesc260805", "version": "current" } ],
+  "hubs": [],
+  "bridges": []
+}

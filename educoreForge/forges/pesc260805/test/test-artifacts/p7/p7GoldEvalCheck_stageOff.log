@@ -1,0 +1,1 @@
+graphBuilder -goldEvalCheck: REFUSED — the round-trip stage did not run for this build (summary disposition: 'off: recipe default (roundTripStage absent)'). GOLD_EVAL certification requires every declared validator to have run and reported (doctrine §7.4); rebuild with roundTripStage: true in the recipe.

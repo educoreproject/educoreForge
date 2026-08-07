@@ -1,0 +1,49 @@
+G-A all 64 corpus files produced artifact nodes
+G-A comparator demonstrably able to go red
+G-A edge count nonzero
+G-A node count nonzero
+G-A stableIds unique within a run
+G-A two runs produce identical stableId sets
+G-B CoreMain 1.10.0 and 1.19.1 PersonType are distinct nodes
+G-B RED: bare keying WOULD fuse the three TransmissionDataTypes
+G-B RED: bare keying WOULD fuse the two PersonTypes
+G-B three TransmissionDataType definitions are three distinct nodes
+G-C contested-namespace definitions exist
+G-C every contested definition key carries @sha12
+G-C no plain-keyed definition exists in the contested namespace
+G-C RED: without @sha12 the two collision members WOULD fuse definitions
+G-C the two collision artifacts produce two disjoint definition sets
+G-C uncontested namespaces carry NO discriminator
+G-D message->message import refused
+G-D refusal names both namespaces
+G-D refusal names the file
+G-D refusal names the prefix
+G-D unbound prefix refused
+G-E 1.19.0 carries fractionDigits 2
+G-E 1.19.0 carries totalDigits 12
+G-E 1.19.0 restriction node exists
+G-E 1.19.1 facets ABSENT
+G-E 1.19.1 restriction node exists
+G-E both share the written base
+G-E RED: the facet assertion demonstrably fails where facets are absent
+G-F a multi-line documentation specimen exists in the raw source
+G-F RED: whitespace collapse is detectable by the byte comparison
+G-F specimen is byte-identical on an emitted node
+INTEGRATION [parserDescriptor] section is visible to the ini reader
+INTEGRATION defaultSnapshot resolves to exactly the 01 directory
+INTEGRATION derived tier is EXACTLY 63 nodes (the namespaces)
+INTEGRATION embedCallCount is 0 with skipEmbedding
+INTEGRATION entryModule declared
+INTEGRATION every edge carries provenanceTier structural + pescTier
+INTEGRATION every node carries a ratified pescTier (source|derived|synthetic|meta, R-P2-1)
+INTEGRATION every node has stableId, ForgedNode label, non-empty searchText
+INTEGRATION forge returns nodes[] and edges[]
+INTEGRATION meta tier is EXACTLY 1 node (the standard root, R-P2-1)
+INTEGRATION metadata.version non-blank
+INTEGRATION roundTripValidator NOT declared yet (declared-and-broken = refusal)
+INTEGRATION shaped embeddingDims null (nothing embedded)
+INTEGRATION shapeForgedGraph accepts the output (no error)
+INTEGRATION source tier is EXACTLY 41,676 nodes
+INTEGRATION standardKey + stableUriPropertyName returned
+INTEGRATION standardName is PESC260805 (D-6)
+INTEGRATION the four tiers account for every emitted node

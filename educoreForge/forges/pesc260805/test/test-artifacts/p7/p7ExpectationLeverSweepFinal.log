@@ -1,0 +1,27 @@
+classifier self-test: 5/5 specimens scored as declared (including one longest-token-wins control and one REFUSE control).
+
+=== LEVER CLASS COUNTS (every red-evidence entry on a `proven` row) ===
+    68  DATA        productionMutationShippedConfiguration
+     3  DATA        productionMutation
+     1  expectation  harnessMutation
+    46  expectation  expectationPerturbation
+    12  DATA        ledgerGateSelfDemonstration
+     6  DATA        ledgerStaleEntryProbe
+     0  expectation  inheritedBaseline
+
+=== THE SWEEP ===
+  re-stated expectationLeverOnly (NOT proven) 65  <- the population this sweep found; published here so it cannot vanish into a rename
+  proven rows total .......................... 54
+  carrying at least one DATA lever ........... 54
+  resting on expectation levers ALONE ........ 0
+  of those, carrying no redEvidence at all ... 0
+
+RECONCILIATION (two INDEPENDENT passes, compared — not a partition):
+  census pass counted ................ 54 proven rows
+  classification pass reached ........ 54 rows
+  of those, landed in a bucket ....... 54 (54 data + 0 expectation-only)
+  in census but never classified ..... 0
+  classified but absent from census .. 0
+Each of those last three CAN be nonzero; the earlier form of this probe summed a partition and could not.
+
+wrote /Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/forges/pesc260805/test/test-artifacts/p7/p7ExpectationLeverSweep.json

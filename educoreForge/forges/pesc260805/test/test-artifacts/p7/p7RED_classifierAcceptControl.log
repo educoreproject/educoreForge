@@ -1,0 +1,2 @@
+
+mp_auditConjunctiveAssertions self-test FAILED — the call-site classifier does not behave as declared, so every figure it produces is unproven. REFUSE a call site carrying arguments it cannot split: unparsed 0 (expected 1), zeroArgument 1 (expected 0)

@@ -1,0 +1,19 @@
+=== RED EVIDENCE — the three re-pinned descriptor assertions ===
+
+  [0] INTEGRATION roundTripValidator IS declared (Phase 5; re-pinned in Phase 7)
+  [1] INTEGRATION the declared roundTripValidator file EXISTS (RT-13.3: declared-and-missing refuses every build)
+  [2] INTEGRATION the declared roundTripValidator exports validate() (RT-13.3: declared-and-broken is a refusal, never a downgrade to absent)
+
+  OK    CONTROL  noOpControl
+            reddened [] (expected [])
+  OK    LEVER    removeTheDeclarationEntirely
+            reddened [0,1,2] (expected [0,1,2])
+  OK    LEVER    pointTheDeclarationAtAMissingFile
+            reddened [0,1,2] (expected [0,1,2])
+  OK    LEVER    pointTheDeclarationAtAModuleExportingNoValidate
+            reddened [0,2] (expected [0,2])
+
+parserDescriptor.ini restored byte-for-byte: true
+wrote /Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/forges/pesc260805/test/test-artifacts/p7/p7RepinnedDescriptorLevers.json
+
+Every assertion was OBSERVED RED under at least one lever that MUTATES PRODUCTION DATA.
