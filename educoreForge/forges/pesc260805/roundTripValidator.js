@@ -44,6 +44,13 @@
 //
 //   R-VAL-7 — stated in the verdict itself: semantic validation cannot detect a change that is
 //   semantically null but byte-visible. "Semantically clean" is never reported as "identical".
+//   PHASE 6 CORRECTION: that sentence is too weak and the weakness was shipping from three files
+//   at once. FOUR constructs are modelled on NEITHER side, so their absence reads as fidelity
+//   rather than as loss — the COMPOSITOR (the emitted corpus carries zero xs:sequence and zero
+//   xs:choice against the source corpus's 3,021 and 211, and a conforming processor refuses 63 of
+//   64 emitted documents), PREFIX BINDINGS, ELEMENT ORDER, and the NAMESPACE of a type reference.
+//   None of those is "semantically null". A fidelity percentage from this instrument means "of the
+//   statements it MODELS" and nothing wider.
 //
 // KNOWN RESIDUE THE VERDICT WILL SURFACE, enumerated so a successor can subtract it BY NAME rather
 // than re-investigate it (test/test-artifacts/p5ParserDocumentationResidue.json): XSD permits an
@@ -65,6 +72,12 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 const canonicalLib = require('./lib/roundTripXsdCanonical')();
 const emitterLib = require('./lib/roundTripSourceEmitter')();
 const diffLib = require('./lib/roundTripDiff')();
+
+// PHASE 6, R-VAL-4 — THE INDEPENDENT INSTRUMENT, invoked from HERE on TQ's ruling of 2026-08-06:
+// it lives INSIDE the validator rather than beside it, because "the independence that matters is
+// the ENGINE, not the caller. What must never happen is the third-party processor being replaced
+// by more of our own code."
+const independentCheckLib = require('./lib/xsd-independent-check/xsd-independent-check')();
 
 // -1: the FIRST verdict of the rebuilt bundle. Deliberately NOT continuing the incumbent's
 // numbering — the two measure different corpora and a shared version line would invite the
@@ -304,11 +317,34 @@ const moduleFunction =
 		// validateWithReader — the whole instrument against an already-constructed reader.
 		// =====================================================================
 		const validateWithReader = (
-			{ reader, snapshotPath, outputPath, graphIdentity, syntheticReproducibility } = {},
+			{
+				reader,
+				snapshotPath,
+				outputPath,
+				graphIdentity,
+				syntheticReproducibility,
+				// R-VAL-4. Absent means RUN IT — the default is documented here and in the stage
+				// below rather than being silent, and an undocumented default is indistinguishable
+				// from a defect. Only the literal `false` switches it off, and the verdict records
+				// that it was switched off so an absent check can never read as a passing one.
+				independentCheck: independentCheckRequested,
+			} = {},
 			callback,
 		) => {
 			if (typeof outputPath !== 'string' || outputPath.trim() === '') {
 				callback(`${moduleName}.validateWithReader: outputPath is REQUIRED and has no default.`);
+				return;
+			}
+			if (
+				independentCheckRequested !== undefined &&
+				typeof independentCheckRequested !== 'boolean'
+			) {
+				callback(
+					`${moduleName}.validateWithReader: independentCheck must be a boolean when supplied; ` +
+						`got ${typeof independentCheckRequested} (${JSON.stringify(independentCheckRequested)}). ` +
+						`A non-boolean is REFUSED rather than coerced, because a truthy string would switch ` +
+						`the second opinion on or off by accident.`,
+				);
 				return;
 			}
 
@@ -345,7 +381,118 @@ const moduleFunction =
 						oneFile.xsdText,
 					);
 				});
-				next('', args);
+				next('', { ...args, emittedDirPath });
+			});
+
+			// =====================================================================
+			// R-VAL-4 — THE INDEPENDENT INSTRUMENT. A conforming third-party XSD processor reads
+			// the emitted documents and the source corpus and answers a question this validator
+			// cannot ask itself: IS THE EMITTED DOCUMENT A SCHEMA AT ALL?
+			//
+			// WHY IT IS NOT FATAL. RT-13.3 makes a declared-but-broken validator refuse EVERY
+			// build, stage on or off. A second opinion that can take a python environment down
+			// with it must never be able to fail a build on its own. It REPORTS.
+			//
+			// WHY ITS ABSENCE IS STILL RECORDED, LOUDLY. An unavailable check must never read as
+			// a passing one — that is the exact failure the whole gate suite exists to prevent.
+			// Every path below writes an `independentCheck` block carrying an explicit status and
+			// a statement saying in words what that status does and does not license.
+			//
+			// DEFAULT ON; opt out with `independentCheck: false`. MEASURED cost: a validation that takes
+			// 3.3 seconds with the check off takes 26.9 seconds with it on, against this corpus of 64
+			// files compiled twice. Documented here rather than hidden.
+			// =====================================================================
+			taskList.push((args, next) => {
+				if (independentCheckRequested === false) {
+					next('', {
+						...args,
+						independentCheck: {
+							status: 'notRequested',
+							statement:
+								'The independent XSD instrument was explicitly switched off for this run. ' +
+								'This is NOT a passing result and licenses no claim about whether the emitted ' +
+								'documents are valid schemas.',
+						},
+					});
+					return;
+				}
+				independentCheckLib.compareXsdCorpora(
+					{
+						sourceCorpusDirectory: snapshotPath,
+						emittedCorpusDirectory: args.emittedDirPath,
+						outputJsonPath: path.join(outputPath, 'independentXsdCheck.json'),
+					},
+					(independentError, independentOutcome) => {
+						if (independentError) {
+							next('', {
+								...args,
+								independentCheck: {
+									status: 'unavailable',
+									reason: independentError,
+									statement:
+										'The independent XSD instrument could not run. UNAVAILABLE IS NOT A ' +
+										'PASS: nothing here licenses any claim about whether the emitted ' +
+										'documents are valid schemas.',
+								},
+							});
+							return;
+						}
+						const oneComparison = independentOutcome.comparison;
+						independentCheckLib.renderComparisonText(
+							{ comparison: oneComparison },
+							(renderError, rendered) => {
+								if (renderError) {
+									next('', {
+										...args,
+										independentCheck: {
+											status: 'unavailable',
+											reason: renderError,
+											statement:
+												'The independent XSD comparison ran but could not be rendered. ' +
+												'UNAVAILABLE IS NOT A PASS.',
+										},
+									});
+									return;
+								}
+								fs.writeFileSync(
+									path.join(outputPath, 'independentXsdCheck.report.txt'),
+									rendered.text,
+								);
+								next('', {
+									...args,
+									independentCheck: {
+										status: 'ran',
+										processorClass: oneComparison.processorClass,
+										xmlschemaVersion: oneComparison.xmlschemaVersion,
+										sourceCompile: oneComparison.source,
+										emittedCompile: oneComparison.emitted,
+										compileAgreement: oneComparison.compileAgreement,
+										emittedRefusalCauseTally: oneComparison.emittedRefusalCauseTally,
+										componentComparison: oneComparison.componentComparison,
+										// THE QUALIFIER TRAVELS WITH THE NUMBERS AND IS NOT OPTIONAL. The
+										// component-level totals are computed ONLY over filenames that compiled
+										// clean on BOTH sides. When that set is small a zero means THERE WAS
+										// ALMOST NOTHING TO COMPARE — it does not mean agreement, and a reader
+										// who is not told so will read it as fidelity.
+										comparisonScopeStatement:
+											`component-level differences are computed over the ` +
+											`${oneComparison.compileAgreement.bothClean} of ` +
+											`${oneComparison.compileAgreement.sharedFilenames} filenames that ` +
+											`compiled clean on BOTH sides, covering ` +
+											`${oneComparison.componentComparison.comparedTypeTotal} content models ` +
+											`reached RECURSIVELY (global types, global elements, and every nested ` +
+											`anonymous type). A zero over a small set means there was little to ` +
+											`compare; it is NOT a fidelity claim. ` +
+											`${oneComparison.componentComparison.traversalUnavailableTotal} content ` +
+											`model(s) could not be walked on one or both sides and are EXCLUDED from ` +
+											`every difference count — that exclusion is a measured incompleteness, ` +
+											`never an agreement.`,
+									},
+								});
+							},
+						);
+					},
+				);
 			});
 
 			taskList.push((args, next) => {
@@ -479,11 +626,86 @@ const moduleFunction =
 					// the incumbent's collapse would have reported clean regardless.
 					whitespaceOnlyDifferenceTotal: headline.whitespaceOnlyDifference,
 					// R-VAL-7, stated in the artifact rather than in a document nobody opens.
+					// R-VAL-7. REWRITTEN IN PHASE 6 ON MEASUREMENT, at the supervisor's direction
+					// (JADE_PORTAL, 2026-08-06). The previous wording listed "compositor kind", which
+					// a reader takes as "we might mislabel a sequence as a choice" — a nuance. What
+					// was actually measured is compositor ABSENCE, and that is not a nuance and is not
+					// semantically null: without a compositor the emitted document is not a schema.
+					// The field is rewritten rather than footnoted because a claim is not repaired by
+					// appending a correction underneath it.
 					semanticValidationLimit:
-						'SEMANTIC round-trip: statement-set equality, not byte equality. This instrument ' +
-						'CANNOT detect a change that is semantically null but byte-visible (attribute ' +
-						'order, prefix choice, compositor kind, element order within a block). ' +
-						'"Semantically clean" MUST NEVER be reported as "identical".',
+						'SEMANTIC round-trip: statement-set equality, not byte equality, and the ' +
+						'statement set is the one THIS INSTRUMENT CHOOSES TO MODEL. A fidelity ' +
+						'percentage therefore means "of the statements modelled" and NOTHING WIDER. ' +
+						'FOUR CONSTRUCTS ARE MODELLED ON NEITHER SIDE and are consequently invisible ' +
+						'as loss rather than merely hard to see: (1) THE COMPOSITOR — measured ' +
+						'2026-08-06, the source corpus carries 3,021 xs:sequence and 211 xs:choice and ' +
+						'the emitted corpus carries ZERO of either, so this is compositor ABSENCE, not ' +
+						'compositor kind, and a conforming XSD processor refuses 63 of 64 emitted ' +
+						'documents; (2) PREFIX BINDINGS — the graph carries prefixBindings and the ' +
+						'emitter does not write them, so an emitted document can reference a namespace ' +
+						'prefix it never declares; (3) ELEMENT ORDER within a block — no statement ' +
+						'subject carries an ordinal; (4) THE NAMESPACE OF A TYPE REFERENCE — ' +
+						'canonicalTypeRef strips the prefix, so a reference repointed to a same-named ' +
+						'type in a DIFFERENT namespace canonicalizes identically. Also undetectable: ' +
+						'attribute order. "Semantically clean" MUST NEVER be reported as "identical", ' +
+						'and on this corpus it must not be reported as "valid" either.',
+					// =====================================================================
+					// NAMED DEFECTS OF THIS INSTRUMENT, published in the verdict rather than in a
+					// document nobody opens. These are defects in the VALIDATOR, not in the forge.
+					// Elevated here on the supervisor's direction (JADE_PORTAL, 2026-08-06): "a
+					// normative field that can silently under-report is worth more attention than a
+					// missing feature."
+					// =====================================================================
+					namedDefectList: [
+						{
+							defectId: 'P6-D1',
+							title:
+								'explicitlyOmitted is assigned BY PREDICATE, so a genuine defect can be ' +
+								'laundered into the "not loss" bucket and lostTotal under-reports it',
+							severity: 'affects a NORMATIVE R-VAL-6 field',
+							mechanism:
+								'A statement is filed as explicitlyOmitted when its PREDICATE appears in ' +
+								'the canonicalizer EXPLICITLY_OMITTED_PREDICATES registry — targetNamespace, ' +
+								'importsNamespace, importsSchemaLocation, elementFormDefault, ' +
+								'attributeFormDefault. Nothing tests whether the omission was actually ' +
+								'DELIBERATE. The report calls that bucket "declarations the graph ' +
+								'deliberately does not carry - CHOSEN, never lost". Since lostTotal carries ' +
+								'contentGap ONLY, every statement laundered this way is subtracted from the ' +
+								'headline loss figure.',
+							demonstration:
+								'OBSERVED 2026-08-06. One character altered inside one xs:documentation ' +
+								'string in TestScoreReport_v1.1.0.xsd of a scratch corpus copy (exactly one ' +
+								'differing byte by cmp; SHA256SUMS regenerated so the checksum gate was ' +
+								'deliberately satisfied and the comparator actually reached). Because ' +
+								'fileLabel is content-addressed the whole file decoupled: all EIGHT of its ' +
+								'statements went unmatched. THREE were filed contentGap and FIVE were filed ' +
+								'explicitlyOmitted. notReproduced rose 293 -> 301 while the normative ' +
+								'lostTotal rose only 293 -> 296. Reproduce with ' +
+								'test/probes/p6_explicitlyOmittedLaundering.js.',
+							standingToday:
+								'explicitlyOmittedTotal is 0 in the current build, so nothing is masked ' +
+								'today. That is luck rather than safety: the path is live and was ' +
+								'demonstrated, not inferred.',
+							// SEVERITY BOUNDED HONESTLY, at the independent review's direction. The first
+							// framing let this read as an escape route and in the demonstrated case it
+							// is not one.
+							severityCaveat:
+								'IN THE DEMONSTRATION ABOVE inventedTotal ALSO moved 0 -> 8, and ' +
+								'inventedTotal > 0 FAILS A BUILD, so that particular defect does not escape ' +
+								'— it is caught loudly by a different gate. What is proven is that the ' +
+								'LAUNDERING PATH IS LIVE. The dangerous case is a defect that launders ' +
+								'WITHOUT moving inventedTotal; that case is NOT demonstrated and is NOT ' +
+								'claimed.',
+							ownedBy: 'NOT repaired in Phase 6. Phase 6 is anti-cheat; it finds and reports.',
+						},
+					],
+					// R-VAL-4. ALWAYS PRESENT, in every one of its states — ran, unavailable or
+					// notRequested — so that a reader can never mistake a missing block for a clean
+					// one. `|| 0` and friends are deliberately absent here: the stage above sets this
+					// on every path, so an undefined value means the stage did not run and that is a
+					// defect to surface rather than a zero to invent.
+					independentCheck: args.independentCheck,
 					knownResidue: {
 						multiDocumentationAnnotations: 5,
 						multiDocumentationLiteralsDiscarded: 5,
@@ -548,7 +770,19 @@ const moduleFunction =
 		// validate — THE UNIFORM ENTRY POINT.
 		// =====================================================================
 		const validate = (
-			{ containerName, boltUrl, user, password, snapshotPath, outputPath } = {},
+			{
+				containerName,
+				boltUrl,
+				user,
+				password,
+				snapshotPath,
+				outputPath,
+				// R-VAL-4 (Phase 6). Omit to RUN the independent instrument; pass the literal
+				// `false` to switch it off. Either way the verdict carries an `independentCheck`
+				// block saying which happened, because an absent second opinion must never be
+				// readable as a passing one.
+				independentCheck,
+			} = {},
 			callback,
 		) => {
 			const haveHandedBolt = Boolean(
@@ -619,6 +853,11 @@ const moduleFunction =
 							boltUrl: args.resolvedBolt.boltUrl,
 						},
 						syntheticReproducibility: args.syntheticReproducibility,
+						// R-VAL-4, carried through from the caller. Passing `undefined` when the
+						// caller said nothing is deliberate: validateWithReader reads absence as
+						// RUN IT, and coercing it to a boolean here would bury that decision in
+						// two places instead of one.
+						independentCheck,
 					},
 					(validateError, verdict) => {
 						reader.close((closeError) => {

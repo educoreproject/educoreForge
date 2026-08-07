@@ -26,9 +26,15 @@
 //   * OCCURRENCE IS NORMALIZED TO XSD-EFFECTIVE VALUES on both sides: an element's absent
 //     minOccurs/maxOccurs is '1' (the XSD grammar's own default, the forge parser's reviewed
 //     stance); an attribute's use='required' is minOccurs '1', anything else '0', maxOccurs '1'.
-//   * COMPOSITOR KIND AND MEMBER ORDER ARE NOT MEASURED. xs:sequence / xs:choice / xs:all are
-//     walked through transparently and member statements are flattened onto the owning block
-//     (mirroring the forge parser's flat field extraction). This is a stated instrument limit —
+//   * THE COMPOSITOR AND MEMBER ORDER ARE NOT MEASURED — AND "COMPOSITOR KIND" UNDERSTATED THIS,
+//     which Phase 6 measured and corrected here rather than only in the verdict. xs:sequence /
+//     xs:choice / xs:all are walked through transparently and member statements are flattened onto
+//     the owning block (mirroring the forge parser's flat field extraction). Because the compositor
+//     is not a statement on EITHER side, its total ABSENCE from the emitted document is invisible
+//     here and reads as fidelity: measured 2026-08-06, the source corpus carries 3,021 xs:sequence
+//     and 211 xs:choice, the emitted corpus carries ZERO, and a conforming XSD processor refuses 63
+//     of 64 emitted documents. That is not sequence-versus-choice; it is "the emitted document is
+//     not a schema". This is a stated instrument limit —
 //     the tradeoff is recorded here rather than discovered later, exactly as the CEDS
 //     canonicalizer records its collection-plumbing tradeoff.
 //   * ENUMERATION VALUES ARE TRIMMED (leading/trailing whitespace only — the D6 identity ruling:

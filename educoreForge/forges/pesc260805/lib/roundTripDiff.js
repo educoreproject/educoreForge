@@ -342,9 +342,32 @@ const moduleFunction =
 				'domain (roundTripXsdCanonical.js defines it). Whitespace, element order, attribute order,',
 			);
 			lines.push(
-				'prefix choice, compositor kind and member order do NOT count; a missing or extra',
+				'prefix choice, compositor and member order do NOT count; a missing or extra',
 			);
 			lines.push('STATEMENT does. This measures what the GRAPH can support, not what the forge saw.');
+			// PHASE 6 CORRECTION, and this text ships on EVERY RUN, which is why it is fixed HERE
+			// and not only in the verdict. The line above used to say "compositor KIND", which a
+			// reader takes as "we might mislabel a sequence as a choice". The measurement says
+			// otherwise: the source corpus carries 3,021 xs:sequence and 211 xs:choice and the
+			// emitted corpus carries ZERO of either, so what is uncounted is compositor EXISTENCE.
+			// A claim repaired in the verdict while still shipping from the report is not repaired.
+			lines.push('');
+			lines.push(
+				'MEASURED LIMIT, NOT A NUANCE: "compositor does not count" means compositor ABSENCE is',
+			);
+			lines.push(
+				'uncounted, not merely sequence-versus-choice. The emitted corpus carries NO compositor',
+			);
+			lines.push(
+				'at all and a conforming XSD processor refuses 63 of 64 emitted documents. Prefix',
+			);
+			lines.push(
+				'BINDINGS are likewise unmodelled, so an emitted document can reference a prefix it',
+			);
+			lines.push(
+				'never declares. A fidelity percentage here means "of the statements MODELLED" and',
+			);
+			lines.push('nothing wider. See the verdict independentCheck block.');
 			lines.push('');
 			Object.keys(report.context || {}).forEach((oneContextName) => {
 				lines.push(`  ${padRight(`${oneContextName}:`, 22)}${report.context[oneContextName]}`);
