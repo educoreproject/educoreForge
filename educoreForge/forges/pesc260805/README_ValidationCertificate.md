@@ -379,7 +379,17 @@ nobody goes back to check.** Rewritten rather than footnoted."*
 
 **APPENDIX A and the P6-D1 subsection in §3 added 2026-08-08 by session JADE_PORTAL**, on TQ's
 question, after the certificate was committed at `d7cae21`. Nothing else in this document was
-changed. **The gap was real and worth recording as one:** P6-D1 was elevated into the verdict in the
-first place on the reasoning that a defect belongs *"in the verdict rather than in a document nobody
-opens"* — and it then failed to reach the document written expressly to be opened. Publishing a fact
-where it cannot be missed does not put it where it is needed.
+changed.
+
+**THE GAP WAS REAL AND IS WORTH RECORDING AS ONE.** P6-D1 was put into the validator's VERDICT — the
+JSON every build emits — on the reasoning that a defect belongs *"in the verdict rather than in a
+document nobody opens."* When this certificate was written months later, **whoever wrote it did not
+copy P6-D1 across.** Nothing blocked it and nothing lost it; it was simply not carried over.
+
+So the defect was sitting in the machine-readable output the whole time, and absent from the
+human-readable document a person consults **precisely because they do not already know what to look
+for.** The verdict is where you find something if you know it exists. The certificate is where you go
+when you don't.
+
+**Putting a fact in the output is not the same as putting it in front of a reader**, and the first one
+feels enough like the second that nobody checks.
