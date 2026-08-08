@@ -180,11 +180,29 @@ retiring that residue.
 
 ## What a PASS from this contract does NOT establish
 
-**That the graph is complete with respect to PESC.** It establishes that the graph reproduces **the
-ingested snapshot**. A round-trip verdict cannot see what was never ingested — which is exactly the
-criticism that retired the incumbent's `contentGap 732`, and it applies here with equal force. The
-snapshot is pinned in the verdict by combined digest and per-file sha256 so that "which snapshot" is
-never a question.
+**That the CORPUS is complete with respect to PESC** — that the 64 files are all of PESC. The contract
+is bounded by the snapshot: a PESC document never downloaded carries no statements on the source side,
+so nothing goes unmatched and the verdict is **silent rather than wrong**. The snapshot is pinned in
+the verdict by combined digest and per-file sha256 so that "which snapshot" is never a question.
+
+**CORRECTED 2026-08-08 by JADE_PORTAL on TQ's challenge.** This entry previously read *"A round-trip
+verdict cannot see what was never ingested."* **FALSE, and it understated the contract.** The
+canonicalizer reads the **raw source XSD bytes** off the snapshot directory, so anything in the 64 files
+is visible to the source side **whether the forge understood it or not**: forge ignores a construct →
+source side still carries it → graph side does not → reported as loss. **Proof: the forge does not
+ingest `xs:group ref` (268) or `xs:any` (25), and the round trip counted all 293 anyway — that IS the
+Phase 5 `lostTotal 293`.**
+
+**So this contract DOES establish ingestion completeness** — that the graph carries what the files say.
+It does not establish corpus completeness. The criticism that retired the incumbent's `contentGap 732`
+was about ingestion, and this contract measures exactly that; the 732 was only ever measurable because
+it does.
+
+> **This was the THIRD copy of the false sentence**, found by a sweep after the other two were fixed
+> and committed. Worth recording: the campaign's own lesson is that **a fix feels like it discharges
+> the class, and the class is a PATTERN, not a location.** Two documents were corrected, the correction
+> felt complete, and a third instance sat in a file nobody had thought to grep. **Repairing an instance
+> and sweeping for the shape are different acts.**
 
 **That the numbers came from this build.** `-goldEvalCheck` exists to answer that, and it REFUSES a
 run directory whose stage did not run. **A verdict handed to you without its run directory is a
