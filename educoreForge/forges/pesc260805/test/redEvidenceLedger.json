@@ -2855,6 +2855,8 @@
 		}
 	},
 	"conjunctionEvidenceMeasurement": {
+		"supersededFigures": "THE FOUR COUNTS IN THIS BLOCK ARE SUPERSEDED AND ARE LEFT IN PLACE DELIBERATELY. The live instrument (test/probes/mp_auditConjunctiveAssertions.js) computes 238 shipped / 77 conjunctive / 8 proven-with-3-or-more; this block records the PRE-Phase-7-remediation 233 / 78 / 11, and riskRows below still lists the eleven. The three surplus rows are exactly the three that moved from 'proven' to 'expectationLeverOnly'. THE 11 -> 8 IS NOT PROGRESS: no conjunction was repaired and the underlying risk is unchanged. RUN THE PROBE for the current figures; do not quote this block.",
+		"doNotRegenerate": "DO NOT FIX THIS BY RE-RUNNING test/buildRedEvidenceLedger.js. THE GENERATOR ALONE SILENTLY DESTROYS THIS LEDGER. It knows nothing of the three post-generation migrations in phase7ProbeDispositions, so regenerating deletes conjunctionEvidenceMeasurement, interpolatedLabelClass and phase7ProbeDispositions outright and reverts 65 rows from 'expectationLeverOnly' back to 'proven' — exiting 0, with well-formed JSON and a confident printout. OBSERVED 2026-08-07 (VIOLET_STONE), halted and restored; the diff and the pre-rebuild copy are retained beside this file. See README_KnownIssues.md, 'THE LEDGER IS GENERATED AND THEN POST-PROCESSED'.",
 		"measuredBy": "test/probes/mp_auditConjunctiveAssertions.js",
 		"shippedAssertions": 233,
 		"carryingATopLevelConjunction": 78,

@@ -110,21 +110,19 @@ or a ledger that records evidence per conjunct — a ledger-schema change plus 7
 larger than a closeout should absorb. **The cheap half is already adopted: write new assertions with
 zero top-level conjunctions.** That costs nothing and stops the class growing.
 
-### A FINDING FROM THIS PASS — the ledger's stored measurement is STALE
+### The ledger's stored measurement is SUPERSEDED — and it must stay that way
 
 `test/redEvidenceLedger.json` carries a `conjunctionEvidenceMeasurement` block reading
 **`shippedAssertions 233`, `carryingATopLevelConjunction 78`, `provenWithThreeOrMoreConjuncts 11`**,
-with an 11-row `riskRows` list. **The live instrument computes 238 / 77 / 8.**
-
-The block's own note says *"Computed at ledger-build time, never transcribed"* — and that is true, but
-**the ledger was not rebuilt after the Phase 7 remediation**, so the committed artifact carries
-pre-remediation figures while the campaign publishes post-remediation ones. The three surplus
+with an 11-row `riskRows` list. **The live instrument computes 238 / 77 / 8.** The three surplus
 `riskRows` are precisely the three that moved to `expectationLeverOnly`.
 
-**Nothing here is wrong about the world; the artifact is simply behind the instrument.** But a reader
-who opens the ledger — the natural thing to do — gets superseded numbers with no marking that they
-are superseded. **Rebuilding the ledger closes it.** Reported rather than fixed: the ledger is
-re-keyed material and this is a documentation pass.
+**The block is now annotated in place** with `supersededFigures` and `doNotRegenerate` fields naming
+the live figures and forbidding the obvious repair. **Run the probe for current numbers; do not quote
+the block.**
+
+**DO NOT "FIX" THIS BY REGENERATING THE LEDGER.** The reason is §10, and it is the more important
+finding.
 
 ---
 
@@ -296,6 +294,79 @@ S-2 are unchecked**, and that qualification travels with the boolean.
 
 **That the emitter handles every shape.** The refusal guard's measured boundary is 84
 group-reference/wildcard-only shapes (§1).
+
+---
+
+## 10. THE LEDGER IS GENERATED AND THEN POST-PROCESSED, AND THE GENERATOR IS A LOADED GUN
+
+**`test/buildRedEvidenceLedger.js` will silently destroy `test/redEvidenceLedger.json` if you run it
+on its own. It exits 0.**
+
+### The mechanism
+
+The ledger is **generated** by `buildRedEvidenceLedger.js`. The Phase 7 remediation then applied its
+changes **after** generation, through the three one-shot migrations declared in the ledger's own
+`phase7ProbeDispositions` block — `p7_applyLedgerRepin.js`, `p7_applyExpectationLeverOnly.js` and
+`p7_applyRemediationLedgerEdits.js`.
+
+**The generator does not know those migrations exist, and there is no reassembly step.** So the
+shipped ledger is a generated file that has been post-processed, and regenerating it throws the
+post-processing away.
+
+### The consequence — measured, not reasoned
+
+Running the generator alone against the shipped tree produces:
+
+| | shipped | after regeneration |
+|---|---|---|
+| top-level blocks | 14 | **11** |
+| `conjunctionEvidenceMeasurement` | present | **DELETED** |
+| `interpolatedLabelClass` | present | **DELETED** |
+| `phase7ProbeDispositions` | present | **DELETED** |
+| status distribution | `proven 54 · expectationLeverOnly 65 · genuineGap 78 · recordsGap 40` | **`proven 113 · genuineGap 78 · recordsGap 41`** |
+
+**Sixty-five rows silently return to `proven`** — rows whose entire purpose is to record that they
+are NOT proven. Three analysis blocks vanish. **Exit code 0. No error, no warning.** The result is
+well-formed JSON, and the builder prints a confident risk-row list while doing it.
+
+**AND THE FAILURE IS INVISIBLE TO THE OBVIOUS CHECK.** `jq` on a deleted block returns `null` — the
+absent-property read this campaign has been burned by repeatedly, arriving here in a new costume. Not
+a misspelled property; **a generated artifact quietly missing a section**, indistinguishable from one
+where the section is legitimately empty. A regenerated ledger looks *freshly correct*, which is worse
+than looking stale.
+
+### The evidence
+
+Observed 2026-08-07 (session VIOLET_STONE) under an explicit instruction to diff before shipping.
+Retained beside the ledger:
+
+- `test/test-artifacts/vsLedgerPreRebuild_20260807-191131.json` — the pre-rebuild copy, written to a
+  stamped path *before* the generator ran, because **a fixed output path turns a retry into a
+  deletion.**
+- The shipped ledger was restored and verified two ways: sha256 back to `23861e65…`, and
+  `git status` reporting it byte-identical to committed.
+
+**A NOTE ON HOW THIS WAS FOUND, because the method is the transferable part.** The rebuild was
+authorized as a fix for a stale figure. It was authorized **with a constraint**: diff old against
+new, prove nothing but the measurement block changed, and STOP if anything else did. **Without that
+constraint this would have been committed** — well-formed, exit 0, nothing anywhere failing.
+
+**And the original diagnosis was wrong in its cause, which is worth more than the finding.** The
+stale block was reported as stale *because nobody had rebuilt the ledger*. **The truth is the
+opposite: rebuilding is destructive, and whoever last touched that ledger was right not to re-run the
+generator.** What looked like neglect was discipline.
+
+### The real fix, for whoever takes it up
+
+**A reassembly step** — run the generator, then the three migrations in order — **with the result
+REQUIRED to reproduce the committed status distribution
+`proven 54 · expectationLeverOnly 65 · genuineGap 78 · recordsGap 40`, refusing by name if it does
+not.**
+
+**Without that assertion the reassembly is just a longer way to lose the same receipts.** The
+migrations are idempotent and refuse on a state they did not create, which helps — but nothing
+currently checks that the reassembled whole matches what shipped, and an unchecked pipeline that
+happens to work is the shape this whole campaign exists to distrust.
 
 ---
 

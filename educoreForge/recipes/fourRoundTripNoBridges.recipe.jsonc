@@ -1,0 +1,45 @@
+{
+  // fourRoundTripNoBridges — THE REFERENCE GRAPH. All four round-trip-declaring standards forged
+  // into ONE graph, materialized, with the RT-13 stage running each bundle's DECLARED
+  // roundTripValidator against that combined product. Commissioned by TQ 2026-08-05: he wanted the
+  // work done so far visible end to end, as a baseline, BEFORE the Ed-Fi and PESC enrichment repairs.
+  //
+  // NO HUBS, NO BRIDGES, DELIBERATELY. This graph carries four independent standard bases and NO
+  // cross-standard mapping content whatsoever. TQ named that limitation himself when he asked for it:
+  // "I know it doesn't do any mapping goodness." A DME reader will see four islands. That is the
+  // point of a baseline, not a defect of it.
+  //
+  // WHY ALL FOUR VALIDATORS CAN RUN AGAINST ONE GRAPH: every bundle's compiler is _source-scoped by
+  // design — pesc/lib/roundTripCompiler.js:19 and sif/lib/roundTripSifCompiler.js:12 both state that
+  // the graph they read "holds seventeen other standards." The combined-graph case is the
+  // designed-for case, not an experiment. It is nonetheless the FIRST time the ceds, pesc and sif
+  // validators run against a multi-standard graph; only R-1 has done so before.
+  //
+  // EXPECTED, and these are baselines to be reported honestly rather than targets to be hit:
+  //   ceds  239,761 reproduced, contentGap 0, invented 0   (clean — verified Phase 3.5, commit 50746cc)
+  //   sif    97,888 reproduced, contentGap 0, invented 0   (clean — verified Phase 3,   commit 4b6254d)
+  //   edfi   25,374 reproduced, contentGap 349             (backlog: interchangeComponentKind 205,
+  //                                                         itemMetaEdId 130, itemNamespaceQualifier 14)
+  //   pesc   14,979 reproduced, contentGap 732, explicitlyOmitted 73
+  //                                                        (backlog: facets 575, inlineEnumerationValue 62,
+  //                                                         nillable 57, allowsAnyElement 2, residuals ~36)
+  // INVENTED MUST BE 0 FOR ALL FOUR. That is the doctrine's hard line and the only acceptance
+  // criterion here; the contentGap figures are the measured state of unfinished enrichment work.
+  //
+  // HEAP: SIF is the fleet's largest corpus and its build refused by name at default heap, naming
+  // 5510 as the remedy. CEDS base needs NO flag (probed deliberately in Phase 3.5 — the documented
+  // 24576 is for a VECTORIZED HUB build, not a base build). Budget for SIF, not for CEDS.
+  "schemaVersion": "1.0.0",
+  "recipeName": "fourRoundTripNoBridges",
+  "kind": "dev",
+  "description": "Forge ceds, edfi, pesc and sif bases into ONE graph and round-trip-validate all four against that combined product (RT-13 stage). The reference baseline, before the Ed-Fi and PESC enrichment repairs.",
+  "roundTripStage": true,
+  "standards": [
+    { "token": "ceds", "version": "current" },
+    { "token": "edfi", "version": "current" },
+    { "token": "pesc", "version": "current" },
+    { "token": "sif", "version": "current" }
+  ],
+  "hubs": [],
+  "bridges": []
+}

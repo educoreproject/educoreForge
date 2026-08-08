@@ -1,0 +1,99 @@
+{
+  // fourWithNewPescRoundTripNoBridges — THE REFERENCE GRAPH, WITH THE REBUILT PESC. All four
+  // round-trip-declaring standards forged into ONE graph, materialized, with the RT-13 stage running
+  // each bundle's DECLARED roundTripValidator against that combined product.
+  //
+  // Commissioned by TQ 2026-08-07: "make a manifest for all the new standards, CEDS, Ed-Fi, SIF and
+  // PESC. Replay it into a graph, DEV_FourWithNewPesc, and attach it to the local DME as gold."
+  //
+  // WHAT THIS CHANGES FROM fourRoundTripNoBridges.recipe.jsonc, WHICH IS ITS PARENT AND STAYS. That
+  // recipe names the INCUMBENT token 'pesc'. This one names 'pesc260805' — the rebuild. Both bundles
+  // ship, both build, and they carry DELIBERATELY DISTINCT standardName values ('PESC' vs
+  // 'PESC260805', ruling D-6) precisely so they can coexist. The parent recipe is NOT superseded and
+  // NOT deleted: it remains the only way to measure the incumbent, which stays measurable until it
+  // is retired on evidence.
+  //
+  // THE PARENT'S STATED PESC EXPECTATIONS ARE THE INCUMBENT'S AND DO NOT TRANSFER. It predicts
+  // pesc 14,979 reproduced with contentGap 732 and explicitlyOmitted 73. NONE of that describes this
+  // recipe's PESC. TQ has ruled twice that the incumbent's 732 is "not even slightly relevant" — it
+  // was measured against a curated working assembly of 11 files that is not PESC, and a round-trip
+  // verdict measures fidelity to the ingested snapshot rather than to the standard. Carrying those
+  // numbers forward would be publishing a figure about a different corpus.
+  //
+  // WHY ALL FOUR VALIDATORS CAN RUN AGAINST ONE GRAPH: every bundle's compiler is _source-scoped by
+  // design — forges/pesc/lib/roundTripCompiler.js:19 and forges/sif/lib/roundTripSifCompiler.js:12
+  // both state that the graph they read "holds seventeen other standards", and ceds and edfi carry
+  // the same scoping in roundTripCompiler.js / roundTripEdfiCompiler.js. VERIFIED FOR THE NEW BUNDLE
+  // SPECIFICALLY, because the parent's argument was made about the incumbent and does not
+  // automatically transfer: forges/pesc260805/lib/roundTripSourceEmitter.js:52 declares
+  // STANDARD_SOURCE = 'PESC260805' and line 351 scopes every label read with
+  // WHERE oneNode.`_source` = 'PESC260805'. A census of DEV_pesc260805 returns exactly one distinct
+  // _source value across all 42,372 nodes. The combined-graph case is the DESIGNED-FOR case, not an
+  // experiment.
+  //
+  // NO HUBS, NO BRIDGES, DELIBERATELY. This graph carries four independent standard bases and NO
+  // cross-standard mapping content whatsoever. TQ named that limitation himself when he commissioned
+  // the parent: "I know it doesn't do any mapping goodness." A DME reader will see FOUR ISLANDS.
+  // That is the point of a baseline, not a defect of it.
+  //
+  // EXPECTATIONS — AND THE DISTINCTION BETWEEN A MEASUREMENT AND A LEAD IS THE WHOLE POINT HERE.
+  //
+  //   pesc260805 — GROUNDED. 173,216 reproduced, invented 0, lost 0, contentGap 0,
+  //                explicitlyOmitted 0, whitespaceOnlyDifference 0, syntheticReproducible true.
+  //                Measured from a stage-ON build of the pesc260805OnlyRoundTrip recipe and
+  //                independently reproduced 2026-08-07 (VIOLET_STONE), goldEvalCheck PASS exit 0.
+  //                THE ZERO CARRIES A QUALIFICATION THAT MUST TRAVEL WITH IT: lost 0 means zero loss
+  //                IN THE DIMENSIONS THE COMPARATOR MODELS. Type-reference NAMESPACE, attribute
+  //                order and the 2nd..nth xs:documentation literal are unmodelled and cannot
+  //                register as loss. See forges/pesc260805/README_KnownIssues.md.
+  //
+  //   ceds  —— LEAD, NOT A MEASUREMENT ——  the parent recipe states 239,761 reproduced,
+  //   sif   ——  contentGap 0, invented 0 for ceds; 97,888 / 0 / 0 for sif; and 25,374 with
+  //   edfi  ——  contentGap 349 for edfi (interchangeComponentKind 205, itemMetaEdId 130,
+  //             itemNamespaceQualifier 14). THOSE FIGURES ARE INHERITED AND UNVERIFIED BY THIS
+  //             RECIPE. The parent's PESC figures turned out to be superseded; assume the other
+  //             three may be stale in the same way until this build measures them. WHATEVER THIS
+  //             BUILD PRODUCES IS WHAT GETS PUBLISHED — a disagreement with the numbers above is a
+  //             FINDING and outranks the expectation.
+  //
+  // INVENTED MUST BE 0 FOR ALL FOUR. That is the doctrine's hard line and the ONLY acceptance
+  // criterion here. An invented statement is an assertion about a standard that the standard never
+  // made — a lie the graph tells — and inventedTotal above zero FAILS a build unconditionally. The
+  // contentGap figures are the measured state of unfinished enrichment work: they are to be REPORTED
+  // HONESTLY, never hit as targets. lostTotal above zero is TOLERATED and logged.
+  //
+  // HEAP: SIF is the fleet's largest corpus and its build REFUSES BY NAME at default heap, naming
+  // 5510 as the remedy. Pass --max-old-space-size=5510 to node. CEDS base needs NO flag (probed
+  // deliberately in Phase 3.5 — the documented 24576 is for a VECTORIZED HUB build, and this recipe
+  // declares no hubs). Budget for SIF, not for CEDS.
+  //
+  // CONTAINER NAME. graphBuilder mints its product as DEV_gb_materialize_<pid>_<seq>; the product is
+  // renamed with an operational `docker rename` to DEV_FourWithNewPesc, exactly as TQ named it.
+  // THAT NAME IS CORRECT UNDER GNC-001 AND MUST NEVER BE CHANGED TO GOLD_ OR GOLD_EVAL_. A
+  // few-standard assembly is ALWAYS a DEV_; only an all-standards graph earns a GOLD_ prefix, and
+  // promotion is a rename of the exact evaluated bytes gated on `graphBuilder -goldEvalCheck`.
+  // "Attach to the local DME as gold" means POINT THE DME AT THIS CONTAINER as its active graph. It
+  // does not mean renaming the container, and the two must not be confused.
+  //
+  // VECTORIZATION IS OFF, AND THIS IS A DECISION WITH A CONSEQUENCE THE READER MUST KNOW. The build
+  // default is --vectorize=true. It is off here because no round-trip assertion reads an embedding —
+  // every validator reads the SOURCE tier — so vectorizing buys the acceptance criterion nothing.
+  // THE CONSEQUENCE: pesc260805's ~42,000 texts have NEVER been embedded, so a vectorized build
+  // would spend real Voyage credit on them, and WITHOUT vectors the DME's semantic search will not
+  // find PESC content in this graph. Structural queries and traversal work normally. If the DME is
+  // wanted for semantic discovery over this baseline, rebuild with --vectorize=true; that is a
+  // spending decision and it belongs to TQ, not to this recipe.
+  "schemaVersion": "1.0.0",
+  "recipeName": "fourWithNewPescRoundTripNoBridges",
+  "kind": "dev",
+  "description": "Forge ceds, edfi, sif and the REBUILT pesc260805 bases into ONE graph and round-trip-validate all four against that combined product (RT-13 stage). The reference baseline carrying the PESC rebuild rather than the incumbent.",
+  "roundTripStage": true,
+  "standards": [
+    { "token": "ceds", "version": "current" },
+    { "token": "edfi", "version": "current" },
+    { "token": "pesc260805", "version": "current" },
+    { "token": "sif", "version": "current" }
+  ],
+  "hubs": [],
+  "bridges": []
+}

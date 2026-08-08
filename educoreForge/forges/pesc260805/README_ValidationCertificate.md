@@ -199,12 +199,20 @@ split, and the underlying risk is exactly what it was.** The population the metr
 the thing the metric measures did not. Anyone skimming a falling number will read it as improvement,
 which is why it is spelled out here.
 
-### And one defect found in this pass
+### And one defect found in this pass, whose cause turned out to be the opposite of its symptom
 
-**`test/redEvidenceLedger.json`'s stored `conjunctionEvidenceMeasurement` block is STALE** — it reads
-233 / 78 / 11 where the live instrument computes **238 / 77 / 8**. The ledger was not rebuilt after
-the Phase 7 remediation. Nothing about the world is wrong; the committed artifact is simply behind the
-instrument, with no marking that it is superseded. **Rebuilding the ledger closes it.**
+**`test/redEvidenceLedger.json`'s stored `conjunctionEvidenceMeasurement` block is SUPERSEDED** — it
+reads 233 / 78 / 11 where the live instrument computes **238 / 77 / 8**.
+
+**The obvious repair — regenerate the ledger — DESTROYS IT.** `buildRedEvidenceLedger.js` is a
+generator; the Phase 7 remediation was applied by three migrations that run *after* generation; there
+is no reassembly step. Running the generator alone deletes three top-level blocks and **silently
+reverts 65 rows from `expectationLeverOnly` back to `proven`**, exiting 0 with well-formed JSON.
+Observed in this pass, halted, restored, and verified byte-identical to committed.
+
+**So the block is not stale through neglect — it is stale because refreshing it is unsafe, and
+whoever last touched it was right not to.** It now carries `supersededFigures` and `doNotRegenerate`
+annotations in place. Full detail and the real fix in `README_KnownIssues.md` §10.
 
 ---
 
