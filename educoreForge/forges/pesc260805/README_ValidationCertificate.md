@@ -205,43 +205,88 @@ They come from a fail-fast processor that reports the FIRST fault per component.
 the two sides refuse the same files for the same causes — not that nine is the number of defects in
 PESC's bytes.**
 
-### P6-D1 — A DEFECT IN THE VALIDATOR ITSELF, published in its own verdict
+### P6-D1 — a blind spot in the loss counter, covering six kinds of schema housekeeping
 
-Everything above this heading is about SCOPE. **This one is not.** It is a route by which a statement
-that ought to count as loss can be subtracted from the headline figure — a way `lostTotal` can be too
-low **inside** the boundary the instrument claims to measure. It is declared in the verdict's
-`namedDefectList` at `roundTripValidator.js:669`, and it is reproduced here because a section headed
-*what it does not prove* that omits the instrument's own published way of under-reporting is
-incomplete in the direction a reader actually cares about.
+**THE SHORT VERSION, BEFORE ANY DETAIL.** The number `lostTotal 0` could, in principle, be too low —
+but only for **six specific kinds of statement, all of them file-level schema housekeeping.** Not
+types. Not elements. Not documentation. Not enumeration values. **Nothing that describes the data
+model itself.** Today the count of statements that could hide there is **zero**, so nothing is
+actually hidden. This does not mean "the round trip doesn't work"; it means one narrow drawer in the
+filing cabinet is unlocked, and the drawer is currently empty.
 
-**Severity, in the field's own words:** *affects a NORMATIVE R-VAL-6 field.*
+**HOW THE COUNTING WORKS.** The round trip compares the source schemas against the schemas rebuilt
+from the graph. Statements that fail to match are sorted into two piles:
 
-**The mechanism.** A statement is filed as `explicitlyOmitted` when its PREDICATE appears in the
-canonicalizer's `EXPLICITLY_OMITTED_PREDICATES` registry — `targetNamespace`, `importsNamespace`,
-`importsSchemaLocation`, `elementFormDefault`, `attributeFormDefault`. **Nothing tests whether the
-omission was actually deliberate.** The report nonetheless calls that bucket *"declarations the graph
-deliberately does not carry — CHOSEN, never lost"*. Because `lostTotal` carries `contentGap` ONLY,
-every statement routed this way is subtracted from the headline loss figure.
+| pile | meaning | counted in `lostTotal`? |
+|---|---|---|
+| `contentGap` | **real loss** — the graph should carry this and does not | **YES** |
+| `explicitlyOmitted` | **deliberate** — the graph is designed not to carry this | **no** |
 
-**It was demonstrated, not reasoned.** On 2026-08-06 a single character was altered inside one
-`xs:documentation` string in `TestScoreReport_v1.1.0.xsd` of a scratch corpus copy — exactly one
-differing byte by `cmp`, with `SHA256SUMS` regenerated so the checksum gate was deliberately satisfied
-and the comparator actually reached. Because `fileLabel` is content-addressed, the whole file
-decoupled and all EIGHT of its statements went unmatched: **three filed `contentGap`, five filed
-`explicitlyOmitted`.** `notReproduced` rose 293 → 301 while the normative `lostTotal` rose only
-293 → 296. Reproduce with `test/probes/p6_explicitlyOmittedLaundering.js`.
+`lostTotal` counts only the first pile. That is correct behaviour: you do not want a design decision
+inflating a loss figure.
 
-**WHAT IS AND IS NOT CLAIMED — read this before quoting the defect.** In that demonstration
-`inventedTotal` ALSO moved 0 → 8, and **`inventedTotal > 0` fails a build**, so that particular defect
-does not escape; it is caught loudly by a different gate. **What is proven is that the laundering path
-is LIVE.** The dangerous case — a defect that launders WITHOUT moving `inventedTotal` — **is not
-demonstrated and is not claimed.**
+**THE DEFECT IS HOW A STATEMENT GETS SORTED.** The sort looks at **the statement's field name and
+nothing else.** Six field names are on a hard-coded "deliberate" list:
 
-**Standing today.** `explicitlyOmittedTotal` is **0** in the current build, so nothing is masked. The
-verdict is blunt about what that is worth: *"luck rather than safety: the path is live and was
-demonstrated, not inferred."*
+    targetNamespace           which namespace this schema file declares itself to be
+    schemaVersionAttribute    the version attribute on the schema element
+    elementFormDefault        whether local elements are namespace-qualified
+    attributeFormDefault      whether local attributes are namespace-qualified
+    importsNamespace          which other namespaces this file imports
+    importsSchemaLocation     where those imported files live
 
-**Ownership.** NOT repaired. Phase 6 was anti-cheat — it finds and reports.
+**Nothing checks whether the omission actually was deliberate.** If the forge genuinely BROKE and
+dropped one of those six, it would be filed as "we meant to do that" and would not appear in
+`lostTotal`. The report would call it *"declarations the graph deliberately does not carry — CHOSEN,
+never lost"*, and that sentence would be false.
+
+**CONCRETELY, THE BEFORE AND AFTER.** Suppose a future forge change accidentally stops recording which
+files a schema imports:
+
+- **What should happen:** 40 `importsNamespace` statements go missing → `lostTotal` rises by 40 → the
+  build reports real loss and somebody investigates.
+- **What would happen:** those 40 land in the `explicitlyOmitted` pile because their field name is on
+  the list → **`lostTotal` stays 0** → the build looks clean.
+
+**HOW BIG IS THE BLIND SPOT.** The comparison handles **27 kinds of statement. Six are on the list.**
+The other 21 — including `declaresComplexType`, `declaresSimpleType`, `declaresRootElement`,
+`documentation`, `enumerationValue`, `derivesFrom`, `restrictionBase`, the compositor statements and
+the type references — **cannot be routed this way at all.** Everything that carries the actual content
+of the standard is outside the blind spot.
+
+**IT WAS DEMONSTRATED, NOT REASONED.** On 2026-08-06 a single character was altered inside one
+`xs:documentation` string in `TestScoreReport_v1.1.0.xsd` of a scratch corpus copy — one differing
+byte by `cmp`, with `SHA256SUMS` regenerated so the checksum gate was satisfied and the comparator
+actually reached. Because the file label is content-addressed, the whole file decoupled and all EIGHT
+of its statements went unmatched: **three filed `contentGap`, five filed `explicitlyOmitted`.** The
+raw unmatched count rose 293 → 301 while `lostTotal` rose only 293 → 296. **Five real losses became
+invisible.** Reproduce with `test/probes/p6_explicitlyOmittedLaundering.js`.
+
+**WHAT IS AND IS NOT CLAIMED — read this before quoting the defect anywhere.** In that same
+demonstration `inventedTotal` ALSO moved 0 → 8, and **`inventedTotal > 0` fails a build**, so that
+particular breakage does **not** escape; a different gate catches it loudly. **What is proven is that
+the mis-sorting path is real and reachable.** The genuinely dangerous case — a breakage that hides in
+that pile WITHOUT also creating invented statements — **has not been demonstrated and is not claimed
+to exist.**
+
+**WHERE IT STANDS TODAY.** `explicitlyOmittedTotal` is **0** in the current build. Nothing is hidden,
+because nothing is in the pile. The verdict is blunt about what that is worth: *"luck rather than
+safety: the path is live and was demonstrated, not inferred."*
+
+**THE FIX, IF SOMEONE TAKES IT UP.** Sorting a statement into the deliberate pile should require
+evidence that the omission was designed — the design ruling that authorises it — rather than the field
+name alone. Until then, a reader who cares about those six housekeeping fields should read
+`explicitlyOmittedTotal` alongside `lostTotal` rather than trusting `lostTotal` by itself.
+
+**OWNERSHIP.** NOT repaired. Phase 6 was anti-cheat work: it finds and reports rather than fixes.
+
+> **A CORRECTION TO THE VERDICT'S OWN DESCRIPTION, found 2026-08-08 while writing the plain-language
+> version above.** The `namedDefectList` entry lists **five** field names. The registry
+> (`lib/roundTripXsdCanonical.js:103`) holds **six** — the entry omits **`schemaVersionAttribute`**,
+> which appears nowhere in `roundTripValidator.js`. The list above is the registry's, read from the
+> code. **The defect's own description understated the defect**, which is a small instance of exactly
+> the thing this section is about: a hand-maintained list that drifts from the thing it describes, with
+> nothing to notice. Reported and not repaired — the fix belongs with the defect.
 
 ---
 
