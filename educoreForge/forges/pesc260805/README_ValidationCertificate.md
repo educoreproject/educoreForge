@@ -4,7 +4,26 @@
 limits below carry the same weight as the results above them.**
 
 Four of these certificates exist, one per round-trip-declaring standard, written to the same five
-headings so they can be read side by side.
+headings so they can be read side by side:
+`forges/{ceds,edfi,sif,pesc260805}/README_ValidationCertificate.md`.
+
+> **CONFIRMED A THIRD TIME, IN A FOUR-STANDARD GRAPH (2026-08-07, run
+> `fourWithNewPescRoundTripNoBridges_20260808-001444`).** Built alongside ceds, edfi and sif into one
+> graph with all four validators running against that combined product, PESC260805 reported
+> **173,216 reproduced · invented 0 · lost 0 · contentGap 0 · explicitlyOmitted 0** — **identical to
+> the figures below in every field.** `goldEvalCheck` PASS, *"4 declared validator(s) ran with
+> inventedTotal=0"*. A difference would have been a finding outranking this document; there was none.
+>
+> **AND THAT RUN SURFACED SOMETHING ABOUT THE OTHER THREE THAT BELONGS HERE.** The gate's payload
+> reports, for **ceds, edfi AND sif**: *"NONE DECLARED BY THIS BUNDLE. Its verdict carries no
+> semanticValidationLimit, so what this round-trip does and does not model is UNSTATED."*
+> **`pesc260805` is the only one of the four that declares what its round trip models** — the F-6
+> remediation was applied to this bundle alone. So the qualification in §3 below, which reads like an
+> admission of weakness, is in fact the thing this bundle has and its siblings do not. **Their
+> certificates carry a DERIVED qualification, read out of their validators' source and labelled as
+> derived. This one carries a DECLARED one.** The difference matters: a declared limit travels with
+> the number into every payload that restates it; a derived one drifts the moment someone edits the
+> module.
 
 ---
 
