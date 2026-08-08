@@ -1,0 +1,257 @@
+# Validation certificate — PESC260805
+
+**This is not a victory lap. Its job is to let you decide how far to trust this graph, which means the
+limits below carry the same weight as the results above them.**
+
+Four of these certificates exist, one per round-trip-declaring standard, written to the same five
+headings so they can be read side by side.
+
+---
+
+## 1. WHAT WAS VALIDATED
+
+| | |
+|---|---|
+| **standard** | `PESC260805` (bundle `forges/pesc260805/`) |
+| **corpus** | `assets/standardSourceData/01/` — 64 XSD artifacts, 9,733,713 bytes |
+| **corpus digest** | `92e9a6326ff1edda465db3d704632491a7b5bb39469edfee883f366840688984` (combined; the verdict also pins all 64 per-file sha256 sums) |
+| **commit** | `dfe97d3`, branch `architecture-improvement` |
+| **recipe** | `recipes/pesc260805OnlyRoundTrip.recipe.jsonc` (`roundTripStage: true`, `hubs: []`, `bridges: []`) |
+| **run** | `system/dataStores/buildLogs/pesc260805OnlyRoundTrip_20260807-235125/` |
+| **date** | 2026-08-07, session VIOLET_STONE |
+| **product container** | `DEV_gb_materialize_68855_2` — **removed after certification** (scratch hygiene) |
+| **canonical graph** | `DEV_pesc260805`, bolt port resolved from the container as **7821** |
+
+**The aggregate version `01` is OURS, not PESC's.** PESC publishes no coherent whole-family release.
+The manifest says so in its own words: *"THIS VERSION NUMBER IS OURS… this aggregate is our
+fabrication and must never be read as a PESC edition."*
+
+**This run reproduces Phase 7's certification figures exactly, from an independent invocation.** The
+manifest it composed — `f17896a4a89c70a3034fd33f097833f69398bdbebcdf71e0f666d58512dd8acf` — is
+byte-identical to the one the canonical graph was built from.
+
+**Resolve the bolt port from the container, never from this table.** Names are stable; ports are
+minted per build.
+
+```bash
+docker inspect DEV_pesc260805 --format \
+  '{{range $p,$c := .NetworkSettings.Ports}}{{if eq $p "7687/tcp"}}{{(index $c 0).HostPort}}{{end}}{{end}}'
+```
+
+---
+
+## 2. WHAT THE VALIDATOR PROVES
+
+```
+roundTripClean ................. true
+reproduced ..................... 173,216
+INVENTED ....................... 0
+LOST ........................... 0
+contentGap ..................... 0
+explicitlyOmitted .............. 0
+whitespaceOnlyDifference ....... 0
+syntheticReproducible .......... true   (109 definitions — S-1 IDENTITY ONLY)
+```
+
+**The mechanism.** The validator re-emits XSD from the materialized graph, canonicalizes both the
+emission and the ingested corpus into statement sets, and compares by set membership. It reads the
+**SOURCE tier only** — the derived and synthetic tiers are excluded by a stated predicate, because
+emitting them would fabricate statements PESC never made.
+
+**The graph it read**, from the verdict's own `graph` block: 41,676 source-tier nodes —
+`PescNamedDefinition` 12,909 · `PescElementDecl` 16,969 · `PescDerivation` 10,848 ·
+`PescAnonymousType` 720 · `PescImportDecl` 82 · `PescAttributeDecl` 84 · `PescArtifact` 64.
+
+### INVENTED > 0 FAILS A BUILD. LOST > 0 IS TOLERATED.
+
+**An invented statement is a lie the graph tells. A lost statement is a truth it fails to tell.**
+
+That asymmetry is the doctrine, not a convenience. No amount of coverage elsewhere excuses a
+fabrication, so invention fails unconditionally; a gap is a work order, so loss is logged and carried
+as the enrichment meter. **No percentage participates in acceptance** — this project has watched a
+tampered emission carrying four fabricated statements report 71.9% fidelity.
+
+### The gate that certifies the run actually happened
+
+```
+graphBuilder: [goldEvalCheck] PASS — 1 declared validator(s) ran with inventedTotal=0     exit 0
+```
+
+**And its negative control, run against the stage-OFF sibling's directory:**
+
+```
+graphBuilder -goldEvalCheck: REFUSED — the round-trip stage did not run for this build
+(summary disposition: 'off: recipe default (roundTripStage absent)')                      exit 1
+```
+
+**This matters more than it looks.** Before Phase 7 the validator was DECLARED and never INVOKED — and
+a declared-but-uninvoked stage emits no error, no log line and no failing test. It is
+indistinguishable from a working one by inspection. **The refusal is what makes the PASS mean
+something.**
+
+### The independent instrument
+
+A third-party Python XSD component-model implementation (`xmlschema`, `XMLSchema11`) reading both
+sides, sharing no code with our emitter or canonicalizer.
+
+| | source | emitted |
+|---|---:|---:|
+| attempted | 64 | 64 |
+| compiled clean | 55 | 55 |
+| refused | 9 | 9 |
+| traversalUnavailableTypes | 28 | 28 |
+
+`compileAgreement`: `sharedFilenames 64`, `bothClean 55`, `sourceCleanEmittedNotClean 0`,
+`emittedCleanSourceNotClean 0`. Refusal cause tallies are **identical objects** on both sides —
+3 × missing group, 6 × unknown type.
+
+### The suites
+
+**58 / 72 / 107 = 237 passed, 0 failed.** Re-run in this pass, not read from a log. The campaign's
+first all-green state, and it holds.
+
+---
+
+## 3. WHAT IT DOES NOT PROVE
+
+**Read this section before quoting anything from §2.**
+
+### `lostTotal 0` means zero loss IN THE DIMENSIONS THE COMPARATOR MODELS
+
+Three dimensions are unmodelled. They cannot register as loss, because nothing on either side looks
+at them.
+
+- **TYPE-REFERENCE NAMESPACE — the most serious.** `canonicalTypeRef` strips the prefix, so a
+  reference repointed to a same-named type in a *different namespace* canonicalizes identically.
+  **This is the exact defect class the bundle was commissioned to eliminate, surviving in the object
+  space.** It is fixed in the subject space — the graph carries 33 distinct `TransmissionDataType`
+  nodes — and the comparator has not followed.
+- **ATTRIBUTE ORDER.** Not modelled.
+- **THE 2nd..nth `xs:documentation` LITERAL.** The forge keeps the first.
+
+**Any restatement of `lostTotal 0` that omits this qualification is a defect.** The qualification is
+carried in `roundTripVerdict.json`, `roundTripStageSummary.json` AND the `-goldEvalCheck` payload,
+because a qualification that lives only in the artifact nobody opens is not a qualification.
+
+### THE MUTUAL BLIND SPOT — 141 facts nothing has ever looked at
+
+**Measured in this pass, not inherited:**
+
+| property | nodes carrying it | read by the emitter | read by the canonicalizer |
+|---|---:|---:|---:|
+| `substitutionGroupAsWritten` | 113 | **0** | **0** |
+| `abstract` | 28 | **0** | **0** |
+
+The parser captured them faithfully. **Neither the emitter nor the comparator reads them, so they
+report ZERO LOSS ON BOTH SIDES.** A one-sided omission shows as loss and gets investigated; one shared
+by both sides is invisible by construction and reads as fidelity.
+
+### `syntheticReproducible: true` is narrower than the boolean suggests
+
+It covers **S-1 identity only** — 109 merged definitions checked by kind and name. **S-1c's 522
+children and S-2 are unchecked.** The qualification travels with the boolean.
+
+### `roundTripClean` is not "identical"
+
+Semantic validation cannot detect a change that is semantically null but byte-visible. **"Semantically
+clean" must never be reported as "identical."**
+
+### Nothing here speaks to completeness with respect to PESC
+
+The verdict measures fidelity **to the ingested snapshot**. It cannot see what was never ingested.
+That is precisely the criticism that retired the incumbent's `contentGap 732`, and it applies here
+too.
+
+### The 9 refusals are a LOWER BOUND
+
+They come from a fail-fast processor that reports the FIRST fault per component. **The claim is that
+the two sides refuse the same files for the same causes — not that nine is the number of defects in
+PESC's bytes.**
+
+---
+
+## 4. KNOWN GAPS AND BACKLOGS
+
+Full detail in `README_KnownIssues.md`. Enumerated here so a reader of this certificate alone is not
+misled by omission.
+
+| gap | count | status |
+|---|---:|---|
+| unmodelled comparator dimensions | 3 | open; type-reference namespace is the serious one |
+| mutually-blind properties | 141 nodes (113 + 28) | open; invisible to the verdict by construction |
+| assertions carrying a top-level conjunction | 77 of 238 | open; recommended as its own phase |
+| …of those, `proven` with 3+ conjuncts | **8** | **the fall from 11 is NOT progress — see below** |
+| rows re-stated `expectationLeverOnly` | 65 | open; each needs a data lever or a reasoned move to `genuineGap` |
+| ledger rows never demonstrated able to fail (`genuineGap`) | 78 | open |
+| ledger rows red in an unretained log (`recordsGap`) | 40 | open; not to be re-run here |
+| interpolated assertion labels | 2 | repair deferred — it re-keys the ledger |
+| real enumerated content loss (documentation literals) | **2** | `DocumentCategory`, `DocumentFormat` in `AcademicRecord_v1.14.0.xsd` |
+| emitter refusal-guard boundary | 84 shapes | declared: group-reference/wildcard-only content models |
+| CONCEPT COLLAPSE (Phase 8) | 217 → 15 → 7 hits | **chartered, not started, deliberately deferred by TQ** |
+
+**Ledger status distribution: `proven 54 · expectationLeverOnly 65 · genuineGap 78 · recordsGap 40`
+(237 rows).**
+
+### THE 11 → 8 IS NOT PROGRESS
+
+**Three rows LEFT the proven population by re-statement. No conjunction was repaired, no assertion was
+split, and the underlying risk is exactly what it was.** The population the metric counts got smaller;
+the thing the metric measures did not. Anyone skimming a falling number will read it as improvement,
+which is why it is spelled out here.
+
+### And one defect found in this pass
+
+**`test/redEvidenceLedger.json`'s stored `conjunctionEvidenceMeasurement` block is STALE** — it reads
+233 / 78 / 11 where the live instrument computes **238 / 77 / 8**. The ledger was not rebuilt after
+the Phase 7 remediation. Nothing about the world is wrong; the committed artifact is simply behind the
+instrument, with no marking that it is superseded. **Rebuilding the ledger closes it.**
+
+---
+
+## 5. HOW TO REPRODUCE IT
+
+**Every command below was run in this pass, from
+`/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge`.**
+
+```bash
+# 1. the corpus is what it claims to be
+cd forges/pesc260805/assets/standardSourceData/01 && shasum -a 256 -c SHA256SUMS
+#    observed: 64 files OK, 0 failures
+
+# 2. the acquisition gates, no network
+cd forges/pesc260805/assets/acquisition && node acquirePescCorpus.js -selfTest
+#    observed: 3 red / 4 green / 0 unexpected, VERDICT: SELF-TEST PASS
+
+# 3. build with the stage ON  (run nohup-detached; ~2 min)
+jq -nc --arg recipePath "$PWD/recipes/pesc260805OnlyRoundTrip.recipe.jsonc" \
+       --arg storePath  "<a throwaway>.standardsDatabase.sqlite3" \
+  '{switches:{build:true},values:{recipePath:[$recipePath],standardsDatabaseFilePath:[$storePath],vectorize:["false"]}}' \
+  | node apps/graph-builder/graphBuilder.js
+
+# 4. the promotion gate, and its negative control
+jq -nc '{switches:{goldEvalCheck:true},values:{buildLogDirPath:["<the stage-ON run dir>"]}}' \
+  | node apps/graph-builder/graphBuilder.js      # PASS, exit 0
+jq -nc '{switches:{goldEvalCheck:true},values:{buildLogDirPath:["<a stage-OFF run dir>"]}}' \
+  | node apps/graph-builder/graphBuilder.js      # REFUSED, exit 1
+
+# 5. the suites
+cd forges/pesc260805
+node test/test-pesc260805SourceTier.js       # 58 passed, 0 failed
+node test/test-pesc260805DerivedTier.js      # 72 passed, 0 failed
+node test/test-pesc260805SyntheticTier.js    # 107 passed, 0 failed
+
+# 6. the evidence instruments
+node test/probes/mp_auditConjunctiveAssertions.js    # 238 / 77 / 8; denominator closes 238 = 238
+node test/probes/p7_expectationLeverSweep.js         # 54 proven, 54 data-levered; reconciliation 0/0/0
+node test/probes/p7_repinnedDescriptorLevers.js      # ONE-SHOT: mutates parserDescriptor.ini, restores it
+git status --short forges/pesc260805/parserDescriptor.ini   # must be EMPTY afterwards
+```
+
+**Do not add `< /dev/null` to any invocation receiving JSON on the pipe.** It overrides the pipe,
+graphBuilder gets no input, prints its help page and **exits 0** — which looks exactly like success. I
+did it once in this pass.
+
+---
+
+**Certificate written 2026-08-07 by session VIOLET_STONE, from a build it ran, against artifacts it
+opened. Where a figure is inherited rather than measured here, the surrounding text says so.**
