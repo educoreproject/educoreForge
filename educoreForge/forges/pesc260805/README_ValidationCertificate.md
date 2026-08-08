@@ -135,6 +135,24 @@ first all-green state, and it holds.
 
 **Read this section before quoting anything from §2.**
 
+> **THE AUTHORITY FOR THIS SECTION IS THE VERDICT, NOT THIS DOCUMENT.** The normative statement is the
+> `semanticValidationLimit` field shipped in every verdict, declared at
+> `roundTripValidator.js:636`; **Appendix A** below reproduces it verbatim. This section is a reading
+> of it. **If the two ever disagree, the verdict wins and this document is stale** — which is the same
+> rule the validator's own header comment applies to itself (*"the verdict … is the authority and this
+> comment is the summary"*).
+>
+> That ordering exists for a reason recorded in the code: Phase 6 declared four constructs unmodelled,
+> Phase 6.5 closed three of them, and the declaration was **rewritten rather than footnoted** because
+> *"a limitation that quietly becomes false is its own defect, and it is the one nobody goes back to
+> check."* A stale limitation understates the instrument exactly as badly as a missing one overstates
+> it.
+>
+> **This section covers two different kinds of limit and they should not be conflated.** The
+> unmodelled dimensions below are a statement about SCOPE — outside the boundary, nothing is claimed.
+> The named defect at the end of this section is different and worse: it is a way the number can be
+> wrong **inside** the boundary, in the instrument's own favour.
+
 ### `lostTotal 0` means zero loss IN THE DIMENSIONS THE COMPARATOR MODELS
 
 Three dimensions are unmodelled. They cannot register as loss, because nothing on either side looks
@@ -186,6 +204,44 @@ too.
 They come from a fail-fast processor that reports the FIRST fault per component. **The claim is that
 the two sides refuse the same files for the same causes — not that nine is the number of defects in
 PESC's bytes.**
+
+### P6-D1 — A DEFECT IN THE VALIDATOR ITSELF, published in its own verdict
+
+Everything above this heading is about SCOPE. **This one is not.** It is a route by which a statement
+that ought to count as loss can be subtracted from the headline figure — a way `lostTotal` can be too
+low **inside** the boundary the instrument claims to measure. It is declared in the verdict's
+`namedDefectList` at `roundTripValidator.js:669`, and it is reproduced here because a section headed
+*what it does not prove* that omits the instrument's own published way of under-reporting is
+incomplete in the direction a reader actually cares about.
+
+**Severity, in the field's own words:** *affects a NORMATIVE R-VAL-6 field.*
+
+**The mechanism.** A statement is filed as `explicitlyOmitted` when its PREDICATE appears in the
+canonicalizer's `EXPLICITLY_OMITTED_PREDICATES` registry — `targetNamespace`, `importsNamespace`,
+`importsSchemaLocation`, `elementFormDefault`, `attributeFormDefault`. **Nothing tests whether the
+omission was actually deliberate.** The report nonetheless calls that bucket *"declarations the graph
+deliberately does not carry — CHOSEN, never lost"*. Because `lostTotal` carries `contentGap` ONLY,
+every statement routed this way is subtracted from the headline loss figure.
+
+**It was demonstrated, not reasoned.** On 2026-08-06 a single character was altered inside one
+`xs:documentation` string in `TestScoreReport_v1.1.0.xsd` of a scratch corpus copy — exactly one
+differing byte by `cmp`, with `SHA256SUMS` regenerated so the checksum gate was deliberately satisfied
+and the comparator actually reached. Because `fileLabel` is content-addressed, the whole file
+decoupled and all EIGHT of its statements went unmatched: **three filed `contentGap`, five filed
+`explicitlyOmitted`.** `notReproduced` rose 293 → 301 while the normative `lostTotal` rose only
+293 → 296. Reproduce with `test/probes/p6_explicitlyOmittedLaundering.js`.
+
+**WHAT IS AND IS NOT CLAIMED — read this before quoting the defect.** In that demonstration
+`inventedTotal` ALSO moved 0 → 8, and **`inventedTotal > 0` fails a build**, so that particular defect
+does not escape; it is caught loudly by a different gate. **What is proven is that the laundering path
+is LIVE.** The dangerous case — a defect that launders WITHOUT moving `inventedTotal` — **is not
+demonstrated and is not claimed.**
+
+**Standing today.** `explicitlyOmittedTotal` is **0** in the current build, so nothing is masked. The
+verdict is blunt about what that is worth: *"luck rather than safety: the path is live and was
+demonstrated, not inferred."*
+
+**Ownership.** NOT repaired. Phase 6 was anti-cheat — it finds and reports.
 
 ---
 
@@ -282,3 +338,48 @@ did it once in this pass.
 
 **Certificate written 2026-08-07 by session VIOLET_STONE, from a build it ran, against artifacts it
 opened. Where a figure is inherited rather than measured here, the surrounding text says so.**
+
+---
+
+## APPENDIX A — the `semanticValidationLimit`, verbatim
+
+This is the normative statement, shipped in **every** verdict this bundle produces. It is reproduced
+here so a reader of the certificate need not open a source file to see it, and so that any drift
+between the two is visible. **It is the authority; §3 is the reading.** Source:
+`forges/pesc260805/roundTripValidator.js:636` (line-wrapped here from the emitted single string;
+otherwise unaltered).
+
+> SEMANTIC round-trip: statement-set equality, not byte equality, and the statement set is the one
+> THIS INSTRUMENT CHOOSES TO MODEL. WHAT IS MODELLED AS OF PHASE 6.5, each on BOTH sides: (1) THE
+> COMPOSITOR — kind, effective occurrence, nesting, and the ORDERED particle list, as
+> `declaresContentModel` / `compositorKind` / `compositorMinOccurs` / `compositorMaxOccurs` /
+> `particleAt:N` statements; (2) PREFIX BINDINGS — `declaresNamespacePrefix` and `boundNamespace` per
+> xmlns declaration; (3) ELEMENT ORDER within a content model, which the ordinal in `particleAt:N`
+> makes visible. THE PHASE 6 DECLARATION THAT ELEMENT ORDER IS UNDETECTABLE IS RETRACTED ON EVIDENCE:
+> a driven sibling swap in a graph row moves 2 statements and moved 0 under the previous form
+> (`test/probes/p65_contentModelLevers.js`). WHAT REMAINS UNMODELLED, and is therefore invisible as
+> loss rather than merely hard to see: (a) THE NAMESPACE OF A TYPE REFERENCE — `canonicalTypeRef`
+> strips the prefix, so a reference repointed to a same-named type in a DIFFERENT namespace
+> canonicalizes identically; this is R-ID-1 fusion surviving in the object space and it is the more
+> serious of the residue; (b) ATTRIBUTE ORDER; (c) SEVERAL `xs:documentation` children of one
+> `xs:annotation`, of which the forge keeps the first (see `knownResidue`). ALSO DECLARED, a measured
+> boundary of the emitter rather than of this comparison: a container whose content model holds ONLY
+> group references or wildcards declares no element children, so a missing `contentModelShape` there
+> cannot be refused by name and shows up as ordinary loss in this diff instead. **"Semantically clean"
+> MUST NEVER be reported as "identical".**
+
+**Why it reads as a rewrite rather than an amended list**, from the comment immediately above it in
+the source: Phase 6 correctly named the compositor, prefix bindings and element order as unmodelled;
+Phase 6.5 made the emitter write all three and the canonicalizer model them on both sides, so a
+declaration that still listed them *"would be the same defect Phase 6 was penalised for, running in
+the opposite direction. **A LIMITATION THAT QUIETLY BECOMES FALSE IS ITS OWN DEFECT, and it is the one
+nobody goes back to check.** Rewritten rather than footnoted."*
+
+---
+
+**APPENDIX A and the P6-D1 subsection in §3 added 2026-08-08 by session JADE_PORTAL**, on TQ's
+question, after the certificate was committed at `d7cae21`. Nothing else in this document was
+changed. **The gap was real and worth recording as one:** P6-D1 was elevated into the verdict in the
+first place on the reasoning that a defect belongs *"in the verdict rather than in a document nobody
+opens"* — and it then failed to reach the document written expressly to be opened. Publishing a fact
+where it cannot be missed does not put it where it is needed.
