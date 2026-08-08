@@ -193,11 +193,35 @@ children and S-2 are unchecked.** The qualification travels with the boolean.
 Semantic validation cannot detect a change that is semantically null but byte-visible. **"Semantically
 clean" must never be reported as "identical."**
 
-### Nothing here speaks to completeness with respect to PESC
+### Nothing here speaks to completeness with respect to PESC — but be precise about which completeness
 
-The verdict measures fidelity **to the ingested snapshot**. It cannot see what was never ingested.
-That is precisely the criticism that retired the incumbent's `contentGap 732`, and it applies here
-too.
+**CORRECTED 2026-08-08 by JADE_PORTAL, on TQ's challenge. The previous wording was WRONG and is worth
+recording as wrong**, because it understated the instrument in a way that would have let a real defect
+go unquestioned. It read: *"The verdict measures fidelity to the ingested snapshot. It cannot see what
+was never ingested."* TQ's objection: **the round trip has the input corpus in hand, so it absolutely
+can see what was never ingested.** He is right, and this document's own most-cited number proves it.
+
+**WHAT THE ROUND TRIP CAN SEE — including things the forge never ingested.** The canonicalizer reads
+**the raw source XSD bytes** off the snapshot directory, not some parsed intermediate. So anything
+present in the 64 files is visible to the source side of the comparison **whether the forge understood
+it or not.** If the forge ignores a construct, the source side still carries it, the graph side does
+not, and it is reported as loss.
+
+**THE PROOF IS THE 293.** The forge does not ingest `xs:group ref` (268) or `xs:any` (25) — the corpus
+declares them and the graph carries no node for either. **The round trip counted all 293 anyway.** That
+is exactly where the Phase 5 `lostTotal 293` came from. **An instrument that cannot see what was never
+ingested could not have produced that number.**
+
+**WHAT IT GENUINELY CANNOT SEE** is a different question that the old sentence blurred into the first:
+**whether the 64 files are all of PESC.** The comparison is bounded by the corpus, not by the forge. A
+PESC document that was never downloaded is invisible to it — nothing in the source side would carry
+those statements, so nothing would go unmatched, and the verdict would be silent rather than wrong.
+**Corpus completeness is out of scope; ingestion completeness is not.**
+
+So the honest statement is: **this verdict proves the graph carries what the 64 files say, and proves
+nothing about whether the 64 files are all of PESC.** The criticism that retired the incumbent's
+`contentGap 732` was about ingestion, and this instrument does measure that — which is the whole reason
+the 732 was measurable in the first place.
 
 ### The 9 refusals are a LOWER BOUND
 

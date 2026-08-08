@@ -284,9 +284,22 @@ separation was measured, not preferred.
 
 ## What this bundle does NOT prove
 
-**That the graph is complete with respect to PESC.** It proves the graph reproduces **the ingested
-snapshot**. A round-trip verdict cannot see what was never ingested — which is precisely the criticism
-that retired the incumbent's `contentGap 732`, and it applies here too.
+**That the CORPUS is complete with respect to PESC** — i.e. that the 64 files are all of PESC. The
+comparison is bounded by the corpus: a PESC document never downloaded carries no statements on the
+source side, so nothing goes unmatched and the verdict is silent rather than wrong.
+
+**CORRECTED 2026-08-08 by JADE_PORTAL on TQ's challenge.** This entry previously read *"A round-trip
+verdict cannot see what was never ingested."* **That is FALSE and it understated the instrument.** The
+canonicalizer reads the raw source XSD bytes off the snapshot directory, so anything in the 64 files is
+visible to the source side **whether the forge understood it or not** — if the forge ignores a
+construct, the source side still carries it, the graph side does not, and it is reported as loss.
+**Proof from this campaign's own record: the forge does not ingest `xs:group ref` (268) or `xs:any`
+(25), and the round trip counted all 293 anyway — that is where the Phase 5 `lostTotal 293` came from.**
+An instrument blind to un-ingested content could not have produced that number.
+
+Two different completeness questions were being blurred into one. **Ingestion completeness — does the
+graph carry what the files say — IS measured.** Corpus completeness — are these the right files — is
+not.
 
 **That synthetic content is right.** `syntheticReproducible: true` covers **S-1 identity only** — 109
 of the merged AcademicRecord v1.6.0's named definitions, by kind and name. **S-1c's 522 children and
