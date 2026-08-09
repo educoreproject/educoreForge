@@ -1,0 +1,43 @@
+[runSifRoundTripRealGraph] validating container 'DEV_sifCharacteristics_080426' against snapshot 01 ...
+  ok   INVENTED === 0 (hard)
+  ok   normative RT-6 fields present and agreeing (inventedTotal 0, lostTotal 0)
+  ok   inventedTotal === 0 (hard, normative name)
+  ok   orderMismatches === 0 (R-SF-1)
+  ok   every LOST record located and carrying the ruled backlog label
+  ok   source table census equals record (159 vs 159)
+  ok   source field-row census equals record (15620 vs 15620)
+  ok   SCALE report present with the largest group stated (member + pair counts)
+{
+ "containerName": "DEV_sifCharacteristics_080426",
+ "roundTripClean": true,
+ "reproduced": 97888,
+ "lost": 0,
+ "lostDeclaredContext": 0,
+ "lostContentGap": 0,
+ "invented": 0,
+ "orderMismatches": 0,
+ "scaleReport": {
+  "runtimeMs": 1057,
+  "rssBytes": 407810048,
+  "heapUsedBytes": 248099096,
+  "sourceStatements": 97888,
+  "emittedStatements": 97888,
+  "sourcePrecedencePairs": 28615,
+  "emittedPrecedencePairs": 28615,
+  "sourceGroupCount": 7279,
+  "largestSourceGroup": {
+   "groupSubject": "sif:group/StudentParticipation/(root)",
+   "memberCount": 44,
+   "pairCount": 946
+  },
+  "largestEmittedGroup": {
+   "groupSubject": "sif:group/StudentParticipation/(root)",
+   "memberCount": 44,
+   "pairCount": 946
+  }
+ },
+ "snapshotCombinedDigest": "a9908c614aa83109e6756a9b73d57c99fd4e1137b9c716b59a34b43307e49d4a",
+ "verdictPath": "/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/forges/sif/test/test-artifacts/realGraphRun/roundTripVerdict.json",
+ "assertionFailures": []
+}
+[runSifRoundTripRealGraph] VERDICT LANDED AND ASSERTED

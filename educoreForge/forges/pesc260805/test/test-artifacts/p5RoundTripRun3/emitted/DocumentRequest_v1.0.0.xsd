@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="urn:org:pesc:message:DocumentRequest:v1.0.0" elementFormDefault="unqualified" version="v1.0.0">
+	<xs:annotation>
+		<xs:documentation>PESC XML Message Schema for Document Order Request</xs:documentation>
+	</xs:annotation>
+	<xs:import namespace="urn:org:pesc:core:CoreMain:v1.19.1" schemaLocation="CoreMain_v1.19.1.xsd"/>
+	<xs:import namespace="urn:org:pesc:sector:AcademicRecord:v1.14.0" schemaLocation="AcademicRecord_v1.14.0.xsd"/>
+	<xs:element name="DocumentRequest">
+		<xs:complexType>
+			<xs:element name="TransmissionData" type="AcRec:TransmissionDataType"/>
+			<xs:element name="RequestDetails" type="AcRec:RequestDetailsType" maxOccurs="unbounded"/>
+			<xs:element name="NoteMessage" type="core:NoteMessageType" minOccurs="0" maxOccurs="unbounded"/>
+			<xs:element name="UserDefinedExtensions" type="core:UserDefinedExtensionsType" minOccurs="0"/>
+		</xs:complexType>
+	</xs:element>
+</xs:schema>

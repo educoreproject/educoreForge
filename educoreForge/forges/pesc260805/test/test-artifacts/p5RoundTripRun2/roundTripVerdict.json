@@ -1,0 +1,1204 @@
+{
+ "verdictVersion": "pesc260805RoundTripVerdict-1",
+ "standard": "PESC260805",
+ "roundTripClean": false,
+ "reproduced": 140128,
+ "inventedTotal": 0,
+ "lostTotal": 2217,
+ "contentGapTotal": 2217,
+ "explicitlyOmittedTotal": 0,
+ "syntheticReproducible": true,
+ "syntheticReproducibilityTotal": 109,
+ "syntheticReproducibility": {
+  "rule": "S-1",
+  "description": "Merged AcademicRecord v1.6.0: union of named definitions from the two preserved collision members, college-transcript winning on name conflict (SPEC 6.2). Recomputed here by an INDEPENDENT xml2js parse and an independent union; compared against the graph synthetic tier over bolt. Shares no code with lib/syntheticTier.js.",
+  "contestedNamespace": "urn:org:pesc:sector:AcademicRecord:v1.6.0",
+  "collegeBranchFilename": "AcademicRecord_v1.6.0.collision-948d88f32069.xsd",
+  "testScoreBranchFilename": "AcademicRecord_v1.6.0.collision-e12830fc86a3.xsd",
+  "collegeBranchDefinitionCount": 73,
+  "testScoreBranchDefinitionCount": 67,
+  "expectedUnionTotal": 109,
+  "graphSyntheticTotal": 109,
+  "comparedTotal": 109,
+  "missingFromGraphTotal": 0,
+  "unexpectedInGraphTotal": 0,
+  "missingFromGraphList": [],
+  "unexpectedInGraphList": [],
+  "reproducible": true
+ },
+ "notReproducedTotal": 2217,
+ "whitespaceOnlyDifferenceTotal": 0,
+ "semanticValidationLimit": "SEMANTIC round-trip: statement-set equality, not byte equality. This instrument CANNOT detect a change that is semantically null but byte-visible (attribute order, prefix choice, compositor kind, element order within a block). \"Semantically clean\" MUST NEVER be reported as \"identical\".",
+ "knownResidue": {
+  "multiDocumentationAnnotations": 5,
+  "multiDocumentationLiteralsDiscarded": 5,
+  "multiDocumentationNonEmptyLiteralsLost": 2,
+  "note": "XSD permits several xs:documentation children in one xs:annotation; the forge parser keeps only the FIRST. 3 of the 5 discarded literals are empty, so the real content loss is 2 (DocumentCategory and DocumentFormat, AcademicRecord_v1.14.0.xsd). FORGE finding, not a validator finding; enumerated in test/test-artifacts/p5ParserDocumentationResidue.json. Subtract it by name before reading a nonzero lostTotal as a regression."
+ },
+ "snapshot": {
+  "snapshotPath": "assets/standardSourceData/01",
+  "combinedDigest": "92e9a6326ff1edda465db3d704632491a7b5bb39469edfee883f366840688984",
+  "files": [
+   {
+    "filename": "AcademicEportfolio_v1.0.0.xsd",
+    "sha256": "5aeefa06cd2df8515d146a644814e59280a7d1076a727cf4a739a0dce1927f08"
+   },
+   {
+    "filename": "AcademicRecord_v1.0.0.xsd",
+    "sha256": "1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc"
+   },
+   {
+    "filename": "AcademicRecord_v1.1.0.xsd",
+    "sha256": "d498b9d439bd4b3352b36bd5449d1606b12dfdaa206d9d655e1095cdd4b48f79"
+   },
+   {
+    "filename": "AcademicRecord_v1.10.0.xsd",
+    "sha256": "87502be504916a0fcd47495bcf9156221b0320c8aa6e05fb48e2ed598486c283"
+   },
+   {
+    "filename": "AcademicRecord_v1.11.0.xsd",
+    "sha256": "76ef93896303b613c2000bb1b565c433d021bec0a2c31e9f91389af3e3ad4487"
+   },
+   {
+    "filename": "AcademicRecord_v1.12.0.xsd",
+    "sha256": "92d58d21dc538699bc38ab44735063f807cf4bae7911dd0082375cdd0b439f75"
+   },
+   {
+    "filename": "AcademicRecord_v1.13.0.xsd",
+    "sha256": "971970f7ff62de32fe3c1e36df32ff81f111ee703439bd4c7e4ba32a28a1dcb0"
+   },
+   {
+    "filename": "AcademicRecord_v1.14.0.xsd",
+    "sha256": "592054a062bd43bda7f1fe80b754874bd8e0271f9899e44c0fe8368cad5e5299"
+   },
+   {
+    "filename": "AcademicRecord_v1.3.0.xsd",
+    "sha256": "e51d14ce491167814383ffff1d179a498ec81e501305a2cd30c125158f2b80d3"
+   },
+   {
+    "filename": "AcademicRecord_v1.5.0.xsd",
+    "sha256": "69ac42ccab66265fe3b061f5984f18caba61497f130b7f31c481fd52aff8da04"
+   },
+   {
+    "filename": "AcademicRecord_v1.6.0.collision-948d88f32069.xsd",
+    "sha256": "948d88f320696e283a3b5a6079a13f803fce73f4b0007c54b5c623f9ba52aeca"
+   },
+   {
+    "filename": "AcademicRecord_v1.6.0.collision-e12830fc86a3.xsd",
+    "sha256": "e12830fc86a304071ffec896e76d079e27274277d46a95218946f863a68f5527"
+   },
+   {
+    "filename": "AcademicRecord_v1.7.0.xsd",
+    "sha256": "be959f6423608773e4303738037bab2981f5ae1416707a41f5d222d037ab1ef9"
+   },
+   {
+    "filename": "AcademicRecord_v1.8.0.xsd",
+    "sha256": "b77f143b0a40a77687287daaf872f567c42c8d7c54a35cacda48620b672d2d32"
+   },
+   {
+    "filename": "AcademicRecord_v1.9.0.xsd",
+    "sha256": "4e3a13516e7e4f26bade97d946349315d904af4a82e82746e4576e1cc2642e78"
+   },
+   {
+    "filename": "AdmissionsApplication_v1.0.0.xsd",
+    "sha256": "49597e9df350f3457dfc25d697fdfe373334ab0a7be929e29d42d539d3d532d7"
+   },
+   {
+    "filename": "AdmissionsApplication_v1.1.0.xsd",
+    "sha256": "05631367c1dd22eabb2282345a9c2d0f7194dd7a2ce96c0e1072bfba699d6851"
+   },
+   {
+    "filename": "AdmissionsApplication_v1.2.0.xsd",
+    "sha256": "e313f26032064e40b449ecb522aba4f9a942c2e8f9a19686395260c98b2f2e89"
+   },
+   {
+    "filename": "AdmissionsApplication_v1.3.0.xsd",
+    "sha256": "ca2436b4e1b6bd1fcdebea973cea2e3add00a27a49ac4629428e1c83f00c1c92"
+   },
+   {
+    "filename": "AdmissionsRecord_v1.0.0.xsd",
+    "sha256": "3c37e27fdc6d65ee55d64c5fffe528c7c4ba3be1c517860454946d30328cc71d"
+   },
+   {
+    "filename": "AdmissionsRecord_v1.1.0.xsd",
+    "sha256": "e1aeee6340bf7a510130e94163a359340cf8dff056f9d6a0b9e5ae99836e3ed3"
+   },
+   {
+    "filename": "AdmissionsRecord_v1.2.0.xsd",
+    "sha256": "c6f8fd1860a68e3ef7af1f1e14c7c28ff090491bba10c240c07c4853f35657c7"
+   },
+   {
+    "filename": "AdmissionsRecord_v1.3.0.xsd",
+    "sha256": "e16c56166206257b3dbc07abbd974b27bc24891310406c7013e3177c8967f895"
+   },
+   {
+    "filename": "AdmissionsRecord_v1.4.0.xsd",
+    "sha256": "2a36221eec31eada4021717a2d16d356b9b75881efcdccfa66a02daabd696441"
+   },
+   {
+    "filename": "CollegeTranscript_v1.0.0.xsd",
+    "sha256": "896e8b5126a73eb9924db1ef3511daee7711721267817aa7f966221f6331e226"
+   },
+   {
+    "filename": "CollegeTranscript_v1.1.0.xsd",
+    "sha256": "d62e7cb1088a56c9df0cbfc2f7a691c8e8693f6f4fcd5473a51751d457806921"
+   },
+   {
+    "filename": "CollegeTranscript_v1.2.0.xsd",
+    "sha256": "12bf836a9c23fd277064edf61a5593f0ee4c3009d1cece0985ad1d9635467872"
+   },
+   {
+    "filename": "CollegeTranscript_v1.3.0.xsd",
+    "sha256": "ce46a0481141d2388f5d08be5e49d0da21f766c22fb55b45355b8d57a128db59"
+   },
+   {
+    "filename": "CollegeTranscript_v1.4.0.xsd",
+    "sha256": "41a84c55f000f04bb9619aabea4c0469990fe3936c51201b3f587ce8aa5b6d68"
+   },
+   {
+    "filename": "CollegeTranscript_v1.5.0.xsd",
+    "sha256": "95d39ebf4e99ae8ad4217942706c24764dd49b5cc19f897714fbd5128a6b20d1"
+   },
+   {
+    "filename": "CollegeTranscript_v1.6.0.xsd",
+    "sha256": "4d86816882d94e51fa3acaf12655ac1c50ffaa1cd545d58a52a64f86cdf505f8"
+   },
+   {
+    "filename": "CollegeTranscript_v1.7.0.xsd",
+    "sha256": "b92fe35d126390825ce92cc83c430fd33fadb7dd3c810dc03abd2bb1cad4ccd6"
+   },
+   {
+    "filename": "CollegeTranscript_v1.8.0.xsd",
+    "sha256": "53430176920c55a0431bdc166db326d0b96b564f86d8114bfb01459b0ee15502"
+   },
+   {
+    "filename": "CoreMain_v1.0.0.xsd",
+    "sha256": "9280eaa9a618c6c93c42956d75031ed0424b3d8bd8c4c650ad3bd30fd481942a"
+   },
+   {
+    "filename": "CoreMain_v1.10.0.xsd",
+    "sha256": "1ea9f63e4b603cbf3f8da690efd7debc69f3b84e598788d922a90c8b8cbc1f14"
+   },
+   {
+    "filename": "CoreMain_v1.12.0.xsd",
+    "sha256": "ccf54c28dbb3f750fda925076c64508f53102a00c3316d265395d4bc7ae6d42e"
+   },
+   {
+    "filename": "CoreMain_v1.13.0.xsd",
+    "sha256": "2cd45fc3afd3779eebb66cd552abaa28e3a24093379b1de4bc9d1c5ebb5f848d"
+   },
+   {
+    "filename": "CoreMain_v1.14.0.xsd",
+    "sha256": "78f00a57c7faade149343179c3758e5e15d710f4ed72f6cdde7d3b693d41b1ca"
+   },
+   {
+    "filename": "CoreMain_v1.16.0.xsd",
+    "sha256": "870c35770ffd7daf68c270eef291c360a32dcc32bd952c439c175439b7bb04b6"
+   },
+   {
+    "filename": "CoreMain_v1.17.0.xsd",
+    "sha256": "f4b05efd5839528d316dc6f58c3dfd3d623767b53c82d918198c57fa25f840c7"
+   },
+   {
+    "filename": "CoreMain_v1.18.0.xsd",
+    "sha256": "a50f5029f53c7e9d06a589b1631a3f8f94e8177a984b1d554b339d092f135fe3"
+   },
+   {
+    "filename": "CoreMain_v1.19.0.xsd",
+    "sha256": "d9ded3484f893672cdb9fff07f5401231661e33870f9427489bcc02188c3d60a"
+   },
+   {
+    "filename": "CoreMain_v1.19.1.xsd",
+    "sha256": "5ade556046aabf40296db71d57ca7e8a3e633774898e7d44c256847138de34ec"
+   },
+   {
+    "filename": "CoreMain_v1.2.0.xsd",
+    "sha256": "4e04af8030a47290c636a24fe0fd0ce73cf6b7f8284b61493d188c776b6c34ef"
+   },
+   {
+    "filename": "CoreMain_v1.4.0.xsd",
+    "sha256": "6713f69d99e7c184b34e82053584fa96e18a76ad74fbd468e7ded2b10860ec13"
+   },
+   {
+    "filename": "CoreMain_v1.7.0.xsd",
+    "sha256": "24641a04fab93ad646fc7833a2426b9ca22884593867cffc492ece8e66a11e73"
+   },
+   {
+    "filename": "CoreMain_v1.8.0.xsd",
+    "sha256": "ac8d9367af6b061403e7cb971a5be3251aa968a8fd4308bcb0961628d35ded0d"
+   },
+   {
+    "filename": "DocumentRequest_v1.0.0.xsd",
+    "sha256": "04a1f80f6dcaa141ea9c9d1667225ad9f84bf7466a733a6ebdc5308fa338afd8"
+   },
+   {
+    "filename": "DocumentResponse_v1.0.0.xsd",
+    "sha256": "5fd61aadcef00e8ae9014b66726267c07722f2c6a3c246d094632ab8fa3840bd"
+   },
+   {
+    "filename": "EducationCourseInventory_v1.0.0.xsd",
+    "sha256": "da9f40bfbd3e9e7ee2805fd85024f5b58b95ae1075ba875d31a48ffce714f233"
+   },
+   {
+    "filename": "HighSchoolTranscript_v1.0.0.xsd",
+    "sha256": "f4f0e97c68c9cdfc3b9dce167bca2c309cbfd1be84837ff3af3de1f74328c8e8"
+   },
+   {
+    "filename": "HighSchoolTranscript_v1.1.0.xsd",
+    "sha256": "af7c29a70c25ab3e0149d6c74e6fedff5023799f197de9967077488f0ce6f9ac"
+   },
+   {
+    "filename": "HighSchoolTranscript_v1.2.0.xsd",
+    "sha256": "bbf482f58a43d6e5c82242ac1aa3c6c3c714445abe900c9a4525b1fef89e406e"
+   },
+   {
+    "filename": "HighSchoolTranscript_v1.3.0.xsd",
+    "sha256": "c963fb1ea4dec72e50b51a8f2a9a075af87a62792f8dab7386d51433d6fc9559"
+   },
+   {
+    "filename": "HighSchoolTranscript_v1.4.0.xsd",
+    "sha256": "088cd9a52fa803deb30585bcb92dec3622ba3fac91464da4abd0f81e506392dd"
+   },
+   {
+    "filename": "HighSchoolTranscript_v1.5.0.xsd",
+    "sha256": "2cab3cbb9e7962083aba7eba88dbf6b7346f4ba8d61da0735f9c619c09ca207e"
+   },
+   {
+    "filename": "HighSchoolTranscript_v1.6.0.xsd",
+    "sha256": "2e753ab4cd7800753f4ecd23bcadc388af0a779530f7752e1b318e44a2a2fdfd"
+   },
+   {
+    "filename": "LearningRecord_v1.0.0.xsd",
+    "sha256": "62b74c155eb8bf2435ce6a0d0cc4f69f6de286835ddc235b71add8d3d8ed33c6"
+   },
+   {
+    "filename": "TestScoreReport_v1.0.0.xsd",
+    "sha256": "720f5bf323accc422b8104c6906789a23cd716f1e6fc6a06459b4de259644841"
+   },
+   {
+    "filename": "TestScoreReport_v1.1.0.xsd",
+    "sha256": "038d796bd097d2095389f7338fa4c758c8cb6fc831f2b6775469536b8c112c49"
+   },
+   {
+    "filename": "TranscriptAcknowledgment_v1.1.0.xsd",
+    "sha256": "154340f12f03ecf19e51f8aba4fd70b2b4765a52fe879c4f2c6aba3c879026b1"
+   },
+   {
+    "filename": "TranscriptRequest_v1.1.0.xsd",
+    "sha256": "9d96895afde3be8d681bf94c2d3b2aa3799644967c98900293b2d0271bd4ea36"
+   },
+   {
+    "filename": "TranscriptResponse_v1.1.0.xsd",
+    "sha256": "01f8eea0cb81401c4441a9f45745df0393c71d608c0da2afb5cd1fe02cf80e7e"
+   },
+   {
+    "filename": "iso_3166-1_v1.0.0.xsd",
+    "sha256": "3634b533ecc9db84190abb5648840ad54967a0474941f3de6a3f638f70c29772"
+   }
+  ]
+ },
+ "graph": {
+  "containerName": "DEV_pesc260805",
+  "boltUrl": "bolt://localhost:7821",
+  "sourceTierNodeTotal": 41676,
+  "nodeCountByLabel": {
+   "PescArtifact": 64,
+   "PescImportDecl": 82,
+   "PescNamedDefinition": 12909,
+   "PescElementDecl": 16969,
+   "PescAnonymousType": 720,
+   "PescDerivation": 10848,
+   "PescAttributeDecl": 84
+  },
+  "artifactCount": 64
+ },
+ "report": {
+  "reportVersion": "pescRoundTrip-1",
+  "context": {
+   "snapshotPath": "assets/standardSourceData/01",
+   "snapshotDigest": "92e9a6326ff1edda465db3d704632491a7b5bb39469edfee883f366840688984",
+   "containerName": "DEV_pesc260805",
+   "boltUrl": "bolt://localhost:7821"
+  },
+  "headline": {
+   "sourceStatements": 142345,
+   "emittedStatements": 140128,
+   "matched": 140128,
+   "notReproduced": 2217,
+   "contentGap": 2217,
+   "explicitlyOmitted": 0,
+   "invented": 0,
+   "fidelityPercent": 98.443,
+   "cleanFidelityPercent": 98.443,
+   "sourceDuplicatesCollapsed": 295,
+   "emittedDuplicatesCollapsed": 281,
+   "sourceSubjects": 40410,
+   "emittedSubjects": 39856,
+   "whitespaceOnlyDifference": 0
+  },
+  "whitespaceOnlyDifferenceSamples": [],
+  "perPredicate": [
+   {
+    "predicate": "derivationMethod",
+    "lostCategory": "contentGap",
+    "source": 600,
+    "emitted": 0,
+    "matched": 0,
+    "lost": 600,
+    "invented": 0,
+    "lostSamples": [
+     {
+      "subject": "pesc://pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc#complexType/AcademicSummaryE1Type",
+      "predicate": "derivationMethod",
+      "object": "extension",
+      "fileLabel": "pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc"
+     },
+     {
+      "subject": "pesc://pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc#complexType/AcademicSummaryE2Type",
+      "predicate": "derivationMethod",
+      "object": "extension",
+      "fileLabel": "pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc"
+     },
+     {
+      "subject": "pesc://pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc#complexType/AcademicSummaryFType",
+      "predicate": "derivationMethod",
+      "object": "extension",
+      "fileLabel": "pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc"
+     },
+     {
+      "subject": "pesc://pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc#complexType/CitizenshipType",
+      "predicate": "derivationMethod",
+      "object": "extension",
+      "fileLabel": "pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc"
+     },
+     {
+      "subject": "pesc://pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc#complexType/ResidencyType",
+      "predicate": "derivationMethod",
+      "object": "extension",
+      "fileLabel": "pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc"
+     },
+     {
+      "subject": "pesc://pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc#complexType/AddressType",
+      "predicate": "derivationMethod",
+      "object": "extension",
+      "fileLabel": "pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc"
+     },
+     {
+      "subject": "pesc://pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc#complexType/EmailType",
+      "predicate": "derivationMethod",
+      "object": "extension",
+      "fileLabel": "pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc"
+     },
+     {
+      "subject": "pesc://pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc#complexType/PhoneType",
+      "predicate": "derivationMethod",
+      "object": "extension",
+      "fileLabel": "pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc"
+     },
+     {
+      "subject": "pesc://pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc#complexType/AcademicProgramType",
+      "predicate": "derivationMethod",
+      "object": "extension",
+      "fileLabel": "pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc"
+     },
+     {
+      "subject": "pesc://pescArtifact:d498b9d439bd4b3352b36bd5449d1606b12dfdaa206d9d655e1095cdd4b48f79#complexType/AcademicSummaryE1Type",
+      "predicate": "derivationMethod",
+      "object": "extension",
+      "fileLabel": "pescArtifact:d498b9d439bd4b3352b36bd5449d1606b12dfdaa206d9d655e1095cdd4b48f79"
+     }
+    ],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "derivesFrom",
+    "lostCategory": "contentGap",
+    "source": 600,
+    "emitted": 0,
+    "matched": 0,
+    "lost": 600,
+    "invented": 0,
+    "lostSamples": [
+     {
+      "subject": "pesc://pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc#complexType/AcademicSummaryE1Type",
+      "predicate": "derivesFrom",
+      "object": "AcademicSummaryBaseType",
+      "fileLabel": "pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc"
+     },
+     {
+      "subject": "pesc://pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc#complexType/AcademicSummaryE2Type",
+      "predicate": "derivesFrom",
+      "object": "AcademicSummaryBaseType",
+      "fileLabel": "pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc"
+     },
+     {
+      "subject": "pesc://pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc#complexType/AcademicSummaryFType",
+      "predicate": "derivesFrom",
+      "object": "AcademicSummaryBaseType",
+      "fileLabel": "pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc"
+     },
+     {
+      "subject": "pesc://pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc#complexType/CitizenshipType",
+      "predicate": "derivesFrom",
+      "object": "CitizenshipType",
+      "fileLabel": "pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc"
+     },
+     {
+      "subject": "pesc://pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc#complexType/ResidencyType",
+      "predicate": "derivesFrom",
+      "object": "ResidencyType",
+      "fileLabel": "pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc"
+     },
+     {
+      "subject": "pesc://pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc#complexType/AddressType",
+      "predicate": "derivesFrom",
+      "object": "AddressType",
+      "fileLabel": "pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc"
+     },
+     {
+      "subject": "pesc://pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc#complexType/EmailType",
+      "predicate": "derivesFrom",
+      "object": "EmailType",
+      "fileLabel": "pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc"
+     },
+     {
+      "subject": "pesc://pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc#complexType/PhoneType",
+      "predicate": "derivesFrom",
+      "object": "PhoneType",
+      "fileLabel": "pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc"
+     },
+     {
+      "subject": "pesc://pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc#complexType/AcademicProgramType",
+      "predicate": "derivesFrom",
+      "object": "AcademicProgramType",
+      "fileLabel": "pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc"
+     },
+     {
+      "subject": "pesc://pescArtifact:d498b9d439bd4b3352b36bd5449d1606b12dfdaa206d9d655e1095cdd4b48f79#complexType/AcademicSummaryE1Type",
+      "predicate": "derivesFrom",
+      "object": "AcademicSummaryBaseType",
+      "fileLabel": "pescArtifact:d498b9d439bd4b3352b36bd5449d1606b12dfdaa206d9d655e1095cdd4b48f79"
+     }
+    ],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "fieldType",
+    "lostCategory": "contentGap",
+    "source": 16762,
+    "emitted": 16218,
+    "matched": 16218,
+    "lost": 544,
+    "invented": 0,
+    "lostSamples": [
+     {
+      "subject": "pesc://pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc#complexType/OrganizationType/element/OrganizationName",
+      "predicate": "fieldType",
+      "object": "OrganizationNameType",
+      "fileLabel": "pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc"
+     },
+     {
+      "subject": "pesc://pescArtifact:d498b9d439bd4b3352b36bd5449d1606b12dfdaa206d9d655e1095cdd4b48f79#complexType/OrganizationType/element/OrganizationName",
+      "predicate": "fieldType",
+      "object": "OrganizationNameType",
+      "fileLabel": "pescArtifact:d498b9d439bd4b3352b36bd5449d1606b12dfdaa206d9d655e1095cdd4b48f79"
+     },
+     {
+      "subject": "pesc://pescArtifact:87502be504916a0fcd47495bcf9156221b0320c8aa6e05fb48e2ed598486c283#complexType/OrganizationType/element/OrganizationName",
+      "predicate": "fieldType",
+      "object": "OrganizationNameType",
+      "fileLabel": "pescArtifact:87502be504916a0fcd47495bcf9156221b0320c8aa6e05fb48e2ed598486c283"
+     },
+     {
+      "subject": "pesc://pescArtifact:87502be504916a0fcd47495bcf9156221b0320c8aa6e05fb48e2ed598486c283#complexType/RequestorReceiverOrganizationType/element/OrganizationName",
+      "predicate": "fieldType",
+      "object": "OrganizationNameType",
+      "fileLabel": "pescArtifact:87502be504916a0fcd47495bcf9156221b0320c8aa6e05fb48e2ed598486c283"
+     },
+     {
+      "subject": "pesc://pescArtifact:87502be504916a0fcd47495bcf9156221b0320c8aa6e05fb48e2ed598486c283#complexType/CourseInventoryType/element/CourseNumber",
+      "predicate": "fieldType",
+      "object": "CourseNumberType",
+      "fileLabel": "pescArtifact:87502be504916a0fcd47495bcf9156221b0320c8aa6e05fb48e2ed598486c283"
+     },
+     {
+      "subject": "pesc://pescArtifact:87502be504916a0fcd47495bcf9156221b0320c8aa6e05fb48e2ed598486c283#complexType/CourseInventoryType/element/CourseDescription",
+      "predicate": "fieldType",
+      "object": "CourseDescriptionType",
+      "fileLabel": "pescArtifact:87502be504916a0fcd47495bcf9156221b0320c8aa6e05fb48e2ed598486c283"
+     },
+     {
+      "subject": "pesc://pescArtifact:87502be504916a0fcd47495bcf9156221b0320c8aa6e05fb48e2ed598486c283#complexType/CourseRepeatabilityType/element/CourseRepeatabilityIndicator",
+      "predicate": "fieldType",
+      "object": "CourseRepeatabilityCodeType",
+      "fileLabel": "pescArtifact:87502be504916a0fcd47495bcf9156221b0320c8aa6e05fb48e2ed598486c283"
+     },
+     {
+      "subject": "pesc://pescArtifact:87502be504916a0fcd47495bcf9156221b0320c8aa6e05fb48e2ed598486c283#complexType/CoursePrerequisiteType/element/PrerequisiteCourseCondiition",
+      "predicate": "fieldType",
+      "object": "PrerequisiteCourseConditionType",
+      "fileLabel": "pescArtifact:87502be504916a0fcd47495bcf9156221b0320c8aa6e05fb48e2ed598486c283"
+     },
+     {
+      "subject": "pesc://pescArtifact:87502be504916a0fcd47495bcf9156221b0320c8aa6e05fb48e2ed598486c283#complexType/SchoolCharacteristicsType/element/SchoolLevel",
+      "predicate": "fieldType",
+      "object": "SchoolLevelType",
+      "fileLabel": "pescArtifact:87502be504916a0fcd47495bcf9156221b0320c8aa6e05fb48e2ed598486c283"
+     },
+     {
+      "subject": "pesc://pescArtifact:87502be504916a0fcd47495bcf9156221b0320c8aa6e05fb48e2ed598486c283#complexType/AdditionalStudentAchievementsType/element/AchievementTitle",
+      "predicate": "fieldType",
+      "object": "xs:string",
+      "fileLabel": "pescArtifact:87502be504916a0fcd47495bcf9156221b0320c8aa6e05fb48e2ed598486c283"
+     }
+    ],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "usesGroup",
+    "lostCategory": "contentGap",
+    "source": 268,
+    "emitted": 0,
+    "matched": 0,
+    "lost": 268,
+    "invented": 0,
+    "lostSamples": [
+     {
+      "subject": "pesc://pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc#complexType/OrganizationType",
+      "predicate": "usesGroup",
+      "object": "OrganizationIDGroup",
+      "fileLabel": "pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc"
+     },
+     {
+      "subject": "pesc://pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc#complexType/HighSchoolType",
+      "predicate": "usesGroup",
+      "object": "OrganizationIDGroup",
+      "fileLabel": "pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc"
+     },
+     {
+      "subject": "pesc://pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc#complexType/SchoolType",
+      "predicate": "usesGroup",
+      "object": "OrganizationIDGroup",
+      "fileLabel": "pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc"
+     },
+     {
+      "subject": "pesc://pescArtifact:d498b9d439bd4b3352b36bd5449d1606b12dfdaa206d9d655e1095cdd4b48f79#complexType/OrganizationType",
+      "predicate": "usesGroup",
+      "object": "OrganizationIDGroup",
+      "fileLabel": "pescArtifact:d498b9d439bd4b3352b36bd5449d1606b12dfdaa206d9d655e1095cdd4b48f79"
+     },
+     {
+      "subject": "pesc://pescArtifact:d498b9d439bd4b3352b36bd5449d1606b12dfdaa206d9d655e1095cdd4b48f79#complexType/HighSchoolType",
+      "predicate": "usesGroup",
+      "object": "OrganizationIDGroup",
+      "fileLabel": "pescArtifact:d498b9d439bd4b3352b36bd5449d1606b12dfdaa206d9d655e1095cdd4b48f79"
+     },
+     {
+      "subject": "pesc://pescArtifact:d498b9d439bd4b3352b36bd5449d1606b12dfdaa206d9d655e1095cdd4b48f79#complexType/SchoolType",
+      "predicate": "usesGroup",
+      "object": "OrganizationIDGroup",
+      "fileLabel": "pescArtifact:d498b9d439bd4b3352b36bd5449d1606b12dfdaa206d9d655e1095cdd4b48f79"
+     },
+     {
+      "subject": "pesc://pescArtifact:87502be504916a0fcd47495bcf9156221b0320c8aa6e05fb48e2ed598486c283#complexType/OrganizationType",
+      "predicate": "usesGroup",
+      "object": "OrganizationIDMultiChoiceGroup",
+      "fileLabel": "pescArtifact:87502be504916a0fcd47495bcf9156221b0320c8aa6e05fb48e2ed598486c283"
+     },
+     {
+      "subject": "pesc://pescArtifact:87502be504916a0fcd47495bcf9156221b0320c8aa6e05fb48e2ed598486c283#complexType/HighSchoolType",
+      "predicate": "usesGroup",
+      "object": "OrganizationIDMultiChoiceGroup",
+      "fileLabel": "pescArtifact:87502be504916a0fcd47495bcf9156221b0320c8aa6e05fb48e2ed598486c283"
+     },
+     {
+      "subject": "pesc://pescArtifact:87502be504916a0fcd47495bcf9156221b0320c8aa6e05fb48e2ed598486c283#complexType/SchoolType",
+      "predicate": "usesGroup",
+      "object": "OrganizationIDMultiChoiceGroup",
+      "fileLabel": "pescArtifact:87502be504916a0fcd47495bcf9156221b0320c8aa6e05fb48e2ed598486c283"
+     },
+     {
+      "subject": "pesc://pescArtifact:87502be504916a0fcd47495bcf9156221b0320c8aa6e05fb48e2ed598486c283#complexType/RequestorReceiverOrganizationType",
+      "predicate": "usesGroup",
+      "object": "OrganizationIDMultiChoiceGroup",
+      "fileLabel": "pescArtifact:87502be504916a0fcd47495bcf9156221b0320c8aa6e05fb48e2ed598486c283"
+     }
+    ],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "contentTypeRef",
+    "lostCategory": "contentGap",
+    "source": 145,
+    "emitted": 0,
+    "matched": 0,
+    "lost": 145,
+    "invented": 0,
+    "lostSamples": [
+     {
+      "subject": "pesc://pescArtifact:5aeefa06cd2df8515d146a644814e59280a7d1076a727cf4a739a0dce1927f08#rootElement/AcademicEPortfolio",
+      "predicate": "contentTypeRef",
+      "object": "AcademicEPortfolioType",
+      "fileLabel": "pescArtifact:5aeefa06cd2df8515d146a644814e59280a7d1076a727cf4a739a0dce1927f08"
+     },
+     {
+      "subject": "pesc://pescArtifact:9280eaa9a618c6c93c42956d75031ed0424b3d8bd8c4c650ad3bd30fd481942a#rootElement/LoanInformation",
+      "predicate": "contentTypeRef",
+      "object": "LoanInformationType",
+      "fileLabel": "pescArtifact:9280eaa9a618c6c93c42956d75031ed0424b3d8bd8c4c650ad3bd30fd481942a"
+     },
+     {
+      "subject": "pesc://pescArtifact:9280eaa9a618c6c93c42956d75031ed0424b3d8bd8c4c650ad3bd30fd481942a#rootElement/DLLoanInformation",
+      "predicate": "contentTypeRef",
+      "object": "DLLoanInformationType",
+      "fileLabel": "pescArtifact:9280eaa9a618c6c93c42956d75031ed0424b3d8bd8c4c650ad3bd30fd481942a"
+     },
+     {
+      "subject": "pesc://pescArtifact:9280eaa9a618c6c93c42956d75031ed0424b3d8bd8c4c650ad3bd30fd481942a#rootElement/FFELPLoanInformation",
+      "predicate": "contentTypeRef",
+      "object": "FFELPLoanInformationType",
+      "fileLabel": "pescArtifact:9280eaa9a618c6c93c42956d75031ed0424b3d8bd8c4c650ad3bd30fd481942a"
+     },
+     {
+      "subject": "pesc://pescArtifact:9280eaa9a618c6c93c42956d75031ed0424b3d8bd8c4c650ad3bd30fd481942a#rootElement/FinancialAward",
+      "predicate": "contentTypeRef",
+      "object": "FinancialAwardType",
+      "fileLabel": "pescArtifact:9280eaa9a618c6c93c42956d75031ed0424b3d8bd8c4c650ad3bd30fd481942a"
+     },
+     {
+      "subject": "pesc://pescArtifact:9280eaa9a618c6c93c42956d75031ed0424b3d8bd8c4c650ad3bd30fd481942a#rootElement/Pell",
+      "predicate": "contentTypeRef",
+      "object": "PellType",
+      "fileLabel": "pescArtifact:9280eaa9a618c6c93c42956d75031ed0424b3d8bd8c4c650ad3bd30fd481942a"
+     },
+     {
+      "subject": "pesc://pescArtifact:9280eaa9a618c6c93c42956d75031ed0424b3d8bd8c4c650ad3bd30fd481942a#rootElement/DLSubsidized",
+      "predicate": "contentTypeRef",
+      "object": "DLSubsidizedType",
+      "fileLabel": "pescArtifact:9280eaa9a618c6c93c42956d75031ed0424b3d8bd8c4c650ad3bd30fd481942a"
+     },
+     {
+      "subject": "pesc://pescArtifact:9280eaa9a618c6c93c42956d75031ed0424b3d8bd8c4c650ad3bd30fd481942a#rootElement/DLUnsubsidized",
+      "predicate": "contentTypeRef",
+      "object": "DLUnsubsidizedType",
+      "fileLabel": "pescArtifact:9280eaa9a618c6c93c42956d75031ed0424b3d8bd8c4c650ad3bd30fd481942a"
+     },
+     {
+      "subject": "pesc://pescArtifact:9280eaa9a618c6c93c42956d75031ed0424b3d8bd8c4c650ad3bd30fd481942a#rootElement/DLPLUS",
+      "predicate": "contentTypeRef",
+      "object": "DLPLUSType",
+      "fileLabel": "pescArtifact:9280eaa9a618c6c93c42956d75031ed0424b3d8bd8c4c650ad3bd30fd481942a"
+     },
+     {
+      "subject": "pesc://pescArtifact:9280eaa9a618c6c93c42956d75031ed0424b3d8bd8c4c650ad3bd30fd481942a#rootElement/Perkins",
+      "predicate": "contentTypeRef",
+      "object": "PerkinsType",
+      "fileLabel": "pescArtifact:9280eaa9a618c6c93c42956d75031ed0424b3d8bd8c4c650ad3bd30fd481942a"
+     }
+    ],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "facet:length",
+    "lostCategory": "contentGap",
+    "source": 33,
+    "emitted": 0,
+    "matched": 0,
+    "lost": 33,
+    "invented": 0,
+    "lostSamples": [
+     {
+      "subject": "pesc://pescArtifact:87502be504916a0fcd47495bcf9156221b0320c8aa6e05fb48e2ed598486c283#simpleType/FIPSCountyCodeType",
+      "predicate": "facet:length",
+      "object": "5",
+      "fileLabel": "pescArtifact:87502be504916a0fcd47495bcf9156221b0320c8aa6e05fb48e2ed598486c283"
+     },
+     {
+      "subject": "pesc://pescArtifact:76ef93896303b613c2000bb1b565c433d021bec0a2c31e9f91389af3e3ad4487#simpleType/FIPSCountyCodeType",
+      "predicate": "facet:length",
+      "object": "5",
+      "fileLabel": "pescArtifact:76ef93896303b613c2000bb1b565c433d021bec0a2c31e9f91389af3e3ad4487"
+     },
+     {
+      "subject": "pesc://pescArtifact:92d58d21dc538699bc38ab44735063f807cf4bae7911dd0082375cdd0b439f75#simpleType/FIPSCountyCodeType",
+      "predicate": "facet:length",
+      "object": "5",
+      "fileLabel": "pescArtifact:92d58d21dc538699bc38ab44735063f807cf4bae7911dd0082375cdd0b439f75"
+     },
+     {
+      "subject": "pesc://pescArtifact:971970f7ff62de32fe3c1e36df32ff81f111ee703439bd4c7e4ba32a28a1dcb0#simpleType/FIPSCountyCodeType",
+      "predicate": "facet:length",
+      "object": "5",
+      "fileLabel": "pescArtifact:971970f7ff62de32fe3c1e36df32ff81f111ee703439bd4c7e4ba32a28a1dcb0"
+     },
+     {
+      "subject": "pesc://pescArtifact:592054a062bd43bda7f1fe80b754874bd8e0271f9899e44c0fe8368cad5e5299#simpleType/FIPSCountyCodeType",
+      "predicate": "facet:length",
+      "object": "5",
+      "fileLabel": "pescArtifact:592054a062bd43bda7f1fe80b754874bd8e0271f9899e44c0fe8368cad5e5299"
+     },
+     {
+      "subject": "pesc://pescArtifact:e12830fc86a304071ffec896e76d079e27274277d46a95218946f863a68f5527#simpleType/FIPSCountyCodeType",
+      "predicate": "facet:length",
+      "object": "5",
+      "fileLabel": "pescArtifact:e12830fc86a304071ffec896e76d079e27274277d46a95218946f863a68f5527"
+     },
+     {
+      "subject": "pesc://pescArtifact:be959f6423608773e4303738037bab2981f5ae1416707a41f5d222d037ab1ef9#simpleType/FIPSCountyCodeType",
+      "predicate": "facet:length",
+      "object": "5",
+      "fileLabel": "pescArtifact:be959f6423608773e4303738037bab2981f5ae1416707a41f5d222d037ab1ef9"
+     },
+     {
+      "subject": "pesc://pescArtifact:b77f143b0a40a77687287daaf872f567c42c8d7c54a35cacda48620b672d2d32#simpleType/FIPSCountyCodeType",
+      "predicate": "facet:length",
+      "object": "5",
+      "fileLabel": "pescArtifact:b77f143b0a40a77687287daaf872f567c42c8d7c54a35cacda48620b672d2d32"
+     },
+     {
+      "subject": "pesc://pescArtifact:4e3a13516e7e4f26bade97d946349315d904af4a82e82746e4576e1cc2642e78#simpleType/FIPSCountyCodeType",
+      "predicate": "facet:length",
+      "object": "5",
+      "fileLabel": "pescArtifact:4e3a13516e7e4f26bade97d946349315d904af4a82e82746e4576e1cc2642e78"
+     },
+     {
+      "subject": "pesc://pescArtifact:1ea9f63e4b603cbf3f8da690efd7debc69f3b84e598788d922a90c8b8cbc1f14#simpleType/InstantMessageAddressType",
+      "predicate": "facet:length",
+      "object": "128",
+      "fileLabel": "pescArtifact:1ea9f63e4b603cbf3f8da690efd7debc69f3b84e598788d922a90c8b8cbc1f14"
+     }
+    ],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "allowsAnyElement",
+    "lostCategory": "contentGap",
+    "source": 25,
+    "emitted": 0,
+    "matched": 0,
+    "lost": 25,
+    "invented": 0,
+    "lostSamples": [
+     {
+      "subject": "pesc://pescArtifact:9280eaa9a618c6c93c42956d75031ed0424b3d8bd8c4c650ad3bd30fd481942a#complexType/UserDefinedExtensionsType",
+      "predicate": "allowsAnyElement",
+      "object": "lax",
+      "fileLabel": "pescArtifact:9280eaa9a618c6c93c42956d75031ed0424b3d8bd8c4c650ad3bd30fd481942a"
+     },
+     {
+      "subject": "pesc://pescArtifact:1ea9f63e4b603cbf3f8da690efd7debc69f3b84e598788d922a90c8b8cbc1f14#complexType/UserDefinedExtensionsType",
+      "predicate": "allowsAnyElement",
+      "object": "lax",
+      "fileLabel": "pescArtifact:1ea9f63e4b603cbf3f8da690efd7debc69f3b84e598788d922a90c8b8cbc1f14"
+     },
+     {
+      "subject": "pesc://pescArtifact:1ea9f63e4b603cbf3f8da690efd7debc69f3b84e598788d922a90c8b8cbc1f14#complexType/AcademicRecordBatchType",
+      "predicate": "allowsAnyElement",
+      "object": "strict",
+      "fileLabel": "pescArtifact:1ea9f63e4b603cbf3f8da690efd7debc69f3b84e598788d922a90c8b8cbc1f14"
+     },
+     {
+      "subject": "pesc://pescArtifact:ccf54c28dbb3f750fda925076c64508f53102a00c3316d265395d4bc7ae6d42e#complexType/UserDefinedExtensionsType",
+      "predicate": "allowsAnyElement",
+      "object": "lax",
+      "fileLabel": "pescArtifact:ccf54c28dbb3f750fda925076c64508f53102a00c3316d265395d4bc7ae6d42e"
+     },
+     {
+      "subject": "pesc://pescArtifact:ccf54c28dbb3f750fda925076c64508f53102a00c3316d265395d4bc7ae6d42e#complexType/AcademicRecordBatchType",
+      "predicate": "allowsAnyElement",
+      "object": "strict",
+      "fileLabel": "pescArtifact:ccf54c28dbb3f750fda925076c64508f53102a00c3316d265395d4bc7ae6d42e"
+     },
+     {
+      "subject": "pesc://pescArtifact:2cd45fc3afd3779eebb66cd552abaa28e3a24093379b1de4bc9d1c5ebb5f848d#complexType/UserDefinedExtensionsType",
+      "predicate": "allowsAnyElement",
+      "object": "lax",
+      "fileLabel": "pescArtifact:2cd45fc3afd3779eebb66cd552abaa28e3a24093379b1de4bc9d1c5ebb5f848d"
+     },
+     {
+      "subject": "pesc://pescArtifact:2cd45fc3afd3779eebb66cd552abaa28e3a24093379b1de4bc9d1c5ebb5f848d#complexType/AcademicRecordBatchType",
+      "predicate": "allowsAnyElement",
+      "object": "strict",
+      "fileLabel": "pescArtifact:2cd45fc3afd3779eebb66cd552abaa28e3a24093379b1de4bc9d1c5ebb5f848d"
+     },
+     {
+      "subject": "pesc://pescArtifact:78f00a57c7faade149343179c3758e5e15d710f4ed72f6cdde7d3b693d41b1ca#complexType/UserDefinedExtensionsType",
+      "predicate": "allowsAnyElement",
+      "object": "lax",
+      "fileLabel": "pescArtifact:78f00a57c7faade149343179c3758e5e15d710f4ed72f6cdde7d3b693d41b1ca"
+     },
+     {
+      "subject": "pesc://pescArtifact:78f00a57c7faade149343179c3758e5e15d710f4ed72f6cdde7d3b693d41b1ca#complexType/AcademicRecordBatchType",
+      "predicate": "allowsAnyElement",
+      "object": "strict",
+      "fileLabel": "pescArtifact:78f00a57c7faade149343179c3758e5e15d710f4ed72f6cdde7d3b693d41b1ca"
+     },
+     {
+      "subject": "pesc://pescArtifact:870c35770ffd7daf68c270eef291c360a32dcc32bd952c439c175439b7bb04b6#complexType/UserDefinedExtensionsType",
+      "predicate": "allowsAnyElement",
+      "object": "lax",
+      "fileLabel": "pescArtifact:870c35770ffd7daf68c270eef291c360a32dcc32bd952c439c175439b7bb04b6"
+     }
+    ],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "elementFixed",
+    "lostCategory": "contentGap",
+    "source": 2,
+    "emitted": 0,
+    "matched": 0,
+    "lost": 2,
+    "invented": 0,
+    "lostSamples": [
+     {
+      "subject": "pesc://pescArtifact:24641a04fab93ad646fc7833a2426b9ca22884593867cffc492ece8e66a11e73#complexType/ContactsType/element/ContactName",
+      "predicate": "elementFixed",
+      "object": "xs:string",
+      "fileLabel": "pescArtifact:24641a04fab93ad646fc7833a2426b9ca22884593867cffc492ece8e66a11e73"
+     },
+     {
+      "subject": "pesc://pescArtifact:ac8d9367af6b061403e7cb971a5be3251aa968a8fd4308bcb0961628d35ded0d#complexType/ContactsType/element/ContactName",
+      "predicate": "elementFixed",
+      "object": "xs:string",
+      "fileLabel": "pescArtifact:ac8d9367af6b061403e7cb971a5be3251aa968a8fd4308bcb0961628d35ded0d"
+     }
+    ],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "attributeFormDefault",
+    "lostCategory": "explicitlyOmitted",
+    "source": 60,
+    "emitted": 60,
+    "matched": 60,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "declaresComplexType",
+    "lostCategory": "contentGap",
+    "source": 3021,
+    "emitted": 3021,
+    "matched": 3021,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "declaresGroup",
+    "lostCategory": "contentGap",
+    "source": 121,
+    "emitted": 121,
+    "matched": 121,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "declaresRootElement",
+    "lostCategory": "contentGap",
+    "source": 171,
+    "emitted": 171,
+    "matched": 171,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "declaresSimpleType",
+    "lostCategory": "contentGap",
+    "source": 9596,
+    "emitted": 9596,
+    "matched": 9596,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "documentation",
+    "lostCategory": "contentGap",
+    "source": 26591,
+    "emitted": 26591,
+    "matched": 26591,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "elementFormDefault",
+    "lostCategory": "explicitlyOmitted",
+    "source": 64,
+    "emitted": 64,
+    "matched": 64,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "enumerationValue",
+    "lostCategory": "contentGap",
+    "source": 30519,
+    "emitted": 30519,
+    "matched": 30519,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "facet:fractionDigits",
+    "lostCategory": "contentGap",
+    "source": 815,
+    "emitted": 815,
+    "matched": 815,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "facet:maxInclusive",
+    "lostCategory": "contentGap",
+    "source": 542,
+    "emitted": 542,
+    "matched": 542,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "facet:maxLength",
+    "lostCategory": "contentGap",
+    "source": 2749,
+    "emitted": 2749,
+    "matched": 2749,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "facet:minInclusive",
+    "lostCategory": "contentGap",
+    "source": 546,
+    "emitted": 546,
+    "matched": 546,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "facet:minLength",
+    "lostCategory": "contentGap",
+    "source": 2676,
+    "emitted": 2676,
+    "matched": 2676,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "facet:pattern",
+    "lostCategory": "contentGap",
+    "source": 75,
+    "emitted": 75,
+    "matched": 75,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "facet:totalDigits",
+    "lostCategory": "contentGap",
+    "source": 879,
+    "emitted": 879,
+    "matched": 879,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "facet:whiteSpace",
+    "lostCategory": "contentGap",
+    "source": 45,
+    "emitted": 45,
+    "matched": 45,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "importsNamespace",
+    "lostCategory": "explicitlyOmitted",
+    "source": 82,
+    "emitted": 82,
+    "matched": 82,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "importsSchemaLocation",
+    "lostCategory": "explicitlyOmitted",
+    "source": 82,
+    "emitted": 82,
+    "matched": 82,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "inlineEnumerationValue",
+    "lostCategory": "contentGap",
+    "source": 814,
+    "emitted": 814,
+    "matched": 814,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "maxOccurs",
+    "lostCategory": "contentGap",
+    "source": 16983,
+    "emitted": 16983,
+    "matched": 16983,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "minOccurs",
+    "lostCategory": "contentGap",
+    "source": 16983,
+    "emitted": 16983,
+    "matched": 16983,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "nillable",
+    "lostCategory": "contentGap",
+    "source": 775,
+    "emitted": 775,
+    "matched": 775,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "restrictionBase",
+    "lostCategory": "contentGap",
+    "source": 9596,
+    "emitted": 9596,
+    "matched": 9596,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "schemaVersionAttribute",
+    "lostCategory": "explicitlyOmitted",
+    "source": 61,
+    "emitted": 61,
+    "matched": 61,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "targetNamespace",
+    "lostCategory": "explicitlyOmitted",
+    "source": 64,
+    "emitted": 64,
+    "matched": 64,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   }
+  ],
+  "perEntityKind": [
+   {
+    "kind": "complexType",
+    "sourceSubjectCount": 3021,
+    "emittedSubjectCount": 2880,
+    "source": 59215,
+    "emitted": 57274,
+    "matched": 57274,
+    "lost": 1941,
+    "invented": 0
+   },
+   {
+    "kind": "rootElement",
+    "sourceSubjectCount": 171,
+    "emittedSubjectCount": 81,
+    "source": 518,
+    "emitted": 373,
+    "matched": 373,
+    "lost": 145,
+    "invented": 0
+   },
+   {
+    "kind": "group",
+    "sourceSubjectCount": 121,
+    "emittedSubjectCount": 121,
+    "source": 2025,
+    "emitted": 1927,
+    "matched": 1927,
+    "lost": 98,
+    "invented": 0
+   },
+   {
+    "kind": "simpleType",
+    "sourceSubjectCount": 9596,
+    "emittedSubjectCount": 9596,
+    "source": 67260,
+    "emitted": 67227,
+    "matched": 67227,
+    "lost": 33,
+    "invented": 0
+   },
+   {
+    "kind": "schemaFile",
+    "sourceSubjectCount": 64,
+    "emittedSubjectCount": 64,
+    "source": 13327,
+    "emitted": 13327,
+    "matched": 13327,
+    "lost": 0,
+    "invented": 0
+   }
+  ],
+  "invented": {
+   "total": 0,
+   "perPredicate": []
+  },
+  "unmodeledConstructCounts": {},
+  "canonicalizationFaults": []
+ }
+}

@@ -1,0 +1,31 @@
+[runSifMaterialize] forging snapshot 01 (skipEmbedding) ...
+[sif-tsv/parser] Parsing TSV: /Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/forges/sif/assets/standardSourceData/01/ImplementationSpecification_031326.tsv
+[sif-tsv/parser] Parsed 159 SIF objects
+[sif-tsv/parser] Resolved 427 REFERENCES edges
+[sif-tsv/parser] Types: 15 primitive, 301 simple
+[sif-tsv/parser] Codesets: 140
+[sif-tsv/parser] ComplexTypes: 897
+[sif-tsv/parser] XmlElements: 5872
+[sif-tsv/parser] Total nodes: 23005
+[sif-tsv/parser] Total edges (declared): 61838
+[sif-tsv/parser] Parent edges (HAS_FIELD): 15620
+[sif-tsv/parser] Fields with cedsId: 2231
+snapshot-provenance: no publishedVersion available — the source does not self-describe and /Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/forges/sif/assets/standardSourceData/01/standardSourceLocation supplies none; stamping 'unknown' honestly (spec §3.2 warning)
+[forge-sif] contract graph: 27069 nodes, 88766 edges (2231 CEDS-annotated fields, 4064 option values, 172 field-less complex types; codesets 140 unique from 1745 field assignments = 1605 merged)
+[runSifMaterialize] forged 27069 nodes / 88766 edges
+[runSifMaterialize] provisioning scratch container 'DEV_sifRoundTrip_080326' ...
+[replayManager] provisioning scratch graph 'DEV_sifRoundTrip_080326' (bolt 7827)...
+runSifMaterialize FAILED: replayManager.create 'DEV_sifRoundTrip_080326': docker run failed for 'DEV_sifRoundTrip_080326': Command failed: docker run -d --name DEV_sifRoundTrip_080326 -p 7827:7687 -p 7828:7474 -e NEO4J_AUTH=neo4j/eHvk9WGuKdR5qCOtx7j80MCj -e NEO4J_PLUGINS=["apoc"] -e NEO4J_dbms_security_procedures_unrestricted=apo{
+ "containerName": "DEV_sifRoundTrip_080326",
+ "boltUrl": "bolt://localhost:7825",
+ "materializedNodeCount": 27069,
+ "materializedEdgeCount": 88757,
+ "expectedNodeCount": 27069,
+ "expectedEdgeCount": 88766,
+ "countsMatch": false
+}
+runSifMaterialize FAILED: materialized counts 27069/88757 do not equal the block census 27069/88766 — the loader dropped or added something; container left in place for diagnosis
+on: Conflict. The container name "/DEV_sifRoundTrip_080326" is already in use by container "c8cc22de11929a89c7bd225ec63c8ffbd3b069afe2a4be94d4e62ecd7a039946". You have to remove (or rename) that container to be able to reuse that name.
+
+Run 'docker run --help' for more information
+

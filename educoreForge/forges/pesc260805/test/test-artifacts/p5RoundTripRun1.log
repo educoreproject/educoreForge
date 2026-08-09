@@ -1,0 +1,15 @@
+roundTripClean            false
+reproduced                21319
+inventedTotal             0
+lostTotal (contentGap)    233
+explicitlyOmittedTotal    0
+notReproducedTotal        233
+whitespaceOnlyDifference  0
+syntheticReproducible     true
+syntheticComparedTotal    109
+  S-1 expected union      109
+  S-1 graph synthetic     109
+  S-1 missing from graph  0
+  S-1 unexpected in graph 0
+  college branch          AcademicRecord_v1.6.0.collision-948d88f32069.xsd
+  testScore branch        AcademicRecord_v1.6.0.collision-e12830fc86a3.xsd

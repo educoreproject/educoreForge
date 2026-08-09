@@ -1,0 +1,7 @@
+blocks                 1
+manifests              1
+manifestBlocks         1
+decisionBlocks         0
+vectors                156667
+vectorCacheEntries     270181
+judgmentCacheEntries   4719

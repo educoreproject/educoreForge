@@ -64,6 +64,26 @@ and that `CR` occurs nowhere in the export.
 also unrepresented. We checked this one because `CR` made it visible. A systematic comparison of
 XSD element inventory against export rows would settle it and we have not run one.
 
+> **CORRECTIONS (2026-08-09, QUIET_LOOM). Both VERIFIED. Nothing above is retracted.**
+>
+> **The export carries FOUR ValidMark child rows, not three.** `Description` is at TSV line 7772,
+> beside the `@SIF_Action` / `Code` / `NumericEquivalent` rows at 7769–7771. Immaterial to the
+> finding; recorded because this file's own discipline is that its citations be checkable in
+> minutes, and a miscount defeats that whether or not it changes a conclusion.
+>
+> **The two `CR` sites are two different paths, not one element in two type flavors.** The entry
+> above discusses only the `MarkValueInfos` occurrence. The second is
+> `/StudentAcademicRecords/StudentAcademicRecord/SchoolAttendanceHistory/SchoolAttended/MarkingSystems/MarkValueInfoData/Letter/ValidMark`,
+> type `ValidMarkCleanType`, three child rows, XSD line 49,224. Both lack a row of their own.
+>
+> **DISPOSITION — the systematic comparison has now been run.** It ran 2026-08-09 and S-1
+> generalizes: 6,586 intermediate containers have no row, 1,887 of them carrying
+> `maxOccurs="unbounded"`, with zero exceptions in either direction. `ValidMark` is not special.
+> The probe is `test/probes/s1SourceCompletenessAudit/`; the finding is
+> `system/management/zNotesPlansDocs/FINDING-sifExportOmitsContainerElements-080926.md`. The
+> "we have not run one" sentence above is preserved as written, per this file's rule that it
+> records what we thought and when. Still **not reported to A4L**; no contact made.
+
 ### S-2 — The export cannot express choice-group membership; `C` + mandatory-flag is the only trace
 
 **Status: OPEN as an OBSERVATION (not a defect). Verified.**
@@ -118,6 +138,15 @@ spreadsheet.
   morning. Full distribution: M/`*` 6,072 · O/blank 7,461 · MR/`*` 1,194 · OR/blank 635 ·
   C/blank 87 · C/`*` 9 · **blank/`*` 119** · blank/blank 364.
 
+  > **CORRECTION TO THIS CORRECTION (2026-08-09, QUIET_LOOM). VERIFIED.** The final cell is wrong:
+  > **blank/blank is 43, not 364.** Seven of the eight cells above reproduce exactly — M/`*` 6,072,
+  > O/blank 7,461, MR/`*` 1,194, OR/blank 635, C/blank 87, C/`*` 9 and blank/`*` 119 are all
+  > confirmed. **The arithmetic is what decides it rather than a difference of opinion:** with 43 the
+  > cells total **15,620**, which is exactly the data-row count; with 364 they total 15,941, which is
+  > 321 too many. Counted two ways that agree exactly — the audit probe's parser and an independent
+  > `awk` pass that also reproduced the 119 on the nose. **The cause is not established and is
+  > deliberately not guessed at.**
+
 ### Q-1 — OPEN QUESTION (not a finding): what do the 119 mandatory-but-uncharacterized rows mean?
 
 **Status: OPEN QUESTION. Deliberately NOT an errata finding.** 119 export rows assert mandatory
@@ -129,5 +158,46 @@ Settling it means re-acquiring the published 8-zip schema corpus and checking th
 `sifChar` annotations. Logged for a successor rather than chased; raised by the Phase 4 builder,
 which applied the S-2 discipline to its own discovery without being asked.
 
+> **RESOLVED 2026-08-09 (QUIET_LOOM). VERIFIED. The XSD has now been opened for those rows.**
+> The suspicion was correct: it IS the S-1 class. Of the 119 rows asserting mandatory with a blank
+> `Characteristics` cell, **89 carry a value in the XSD** — 77 `M` and **12 `MR`** — and on the
+> remaining 30 the XSD is silent too.
+>
+> **The 12 `MR` cases are consequential**: they are 12 further repeatability declarations absent from
+> the export, and unlike the 1,887 carried by containers, these sit on rows that DO exist. A consumer
+> reading those rows sees a mandatory field and cannot tell that it repeats.
+>
+> Settled without re-acquiring the 8-zip corpus — the annotated `SIF_Message.xsd` already located for
+> the S-1 investigation was sufficient. Evidence and method:
+> `test/probes/s1SourceCompletenessAudit/` and its cross-artifact sibling probe.
+
 - S-1 means the XSD is a strictly RICHER artifact than the export for container elements — worth
   remembering if we ever want cardinality for containers rather than leaf fields.
+
+### S-3 — The two artifacts never CONTRADICT each other; the spreadsheet is simply less expressive
+
+**Status: VERIFIED 2026-08-09 (QUIET_LOOM). Not yet reported.** Recorded because the natural
+misreading of S-1 and Q-1 together is *"SIF's spreadsheet and SIF's XSD disagree,"* and that reading
+is false.
+
+Across **all 15,620 export rows**, comparing the spreadsheet's `Characteristics` cell against the
+XSD's `<sifChar>` annotation:
+
+| | count |
+|---|---|
+| resolved in the XSD | 15,620 (zero unresolvable) |
+| identical value | 15,489 |
+| spreadsheet blank, XSD populated | 131 |
+| **different values stated** | **0** |
+
+Value pairs: `O|O` 7,461 · `M|M` 6,072 · `MR|MR` 1,194 · `OR|OR` 635 · `C|C` 96 · `blank|M` 77 ·
+`blank|O` 32 · `blank|MR` 12 · `blank|OR` 6 · `blank|C` 4 · `blank|blank` 31.
+
+**Not one contradiction.** Every divergence has the same shape — the spreadsheet silent where the XSD
+speaks, never the reverse. The XSD is strictly richer and never in conflict.
+
+**Why this belongs in an errata rather than only in our own notes:** anything we eventually say to
+A4L must not describe the two artifacts as disagreeing. That characterization would be inaccurate and
+accusatory at once, and it is the easy thing to say when holding a number like 6,586. The accurate
+statement is that the spreadsheet's row format cannot express a container, and is additionally silent
+on 131 further rows where the XSD carries a value.

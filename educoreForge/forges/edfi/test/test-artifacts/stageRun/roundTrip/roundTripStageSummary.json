@@ -1,0 +1,22 @@
+{
+	"stageRan": true,
+	"disposition": "ran",
+	"containerName": "DEV_edfiRoundTrip_080326",
+	"declaredTokens": [
+		"edfi"
+	],
+	"absentTokens": [],
+	"standards": [
+		{
+			"token": "edfi",
+			"standardName": "EdFi",
+			"disposition": "declared",
+			"ran": true,
+			"roundTripClean": false,
+			"inventedTotal": 0,
+			"lostTotal": 349,
+			"snapshotDirPath": "/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/forges/edfi/assets/standardSourceData/04",
+			"verdictPath": "/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/forges/edfi/test/test-artifacts/stageRun/roundTrip/edfi/roundTripVerdict.json"
+		}
+	]
+}

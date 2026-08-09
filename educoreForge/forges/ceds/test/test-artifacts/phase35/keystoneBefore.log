@@ -1,0 +1,403 @@
+recipe understood:
+  name:        cedsOnlyRoundTrip
+  kind:        dev
+  schemaVer:   1.0.0
+  standards:   1  [ceds@current]
+  (other sections present, not summarized: roundTripStage)
+graphBuilder: validation -- structural PASS; referential PASS; resolvability PASS.
+graphBuilder: support store at /Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/graphBuilder/graphBuilderSupport.sqlite (resolved from config)
+graphBuilder: decision store at /Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/graphBuilder/graphBuilderSupport.sqlite
+graphBuilder: judgment cache at /Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/graphBuilder/graphBuilderSupport.sqlite
+graphBuilder: forensic match log at /Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/matchForensics
+EMBEDDING CACHE OVERRIDE ACTIVE: cacheFilePath = /Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/graphBuilder/graphBuilderSupport.sqlite (embeddingCacheFilePath)
+[forger] forging CEDS from CEDS-Ontology.rdf
+[forge-ceds/parser] parsing XML (19.3 MB)...
+[forge-ceds/parser] ontology version: 14.0.0.0
+[forge-ceds/parser] entities — classes=402, properties=2324, optionSets=965, optionValues=19546, skipped(no dc:identifier)=14
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 1/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 2/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 3/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 4/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 5/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 6/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 7/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 8/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 9/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 10/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 11/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 12/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 13/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 14/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 15/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 16/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 17/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 18/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 19/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 20/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 21/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 22/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 23/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 24/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 25/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 26/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 27/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 28/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 29/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 30/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 31/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 32/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 33/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 34/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 35/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 36/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 37/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 38/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 39/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 40/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 41/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 42/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 43/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 44/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 45/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 46/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 47/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 48/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 49/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 50/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 51/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 52/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 53/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 54/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 55/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 56/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 57/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 58/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 59/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 60/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 61/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 62/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 63/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 64/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 65/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 66/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 67/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 68/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 69/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 70/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 71/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 72/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 73/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 74/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 75/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 76/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 77/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 78/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 79/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 80/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 81/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 82/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 83/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 84/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 85/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 86/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 87/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 88/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 89/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 90/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 91/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 92/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 93/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 94/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 95/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 96/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 97/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 98/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 99/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 100/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 101/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 102/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 103/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 104/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 105/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 106/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 107/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 108/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 109/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 110/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 111/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 112/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 113/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 114/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 115/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 116/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 117/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 118/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 119/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 120/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 121/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 122/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 123/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 124/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 125/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 126/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 127/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 128/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 129/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 130/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 131/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 132/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 133/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 134/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 135/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 136/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 137/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 138/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 139/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 140/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 141/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 142/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 143/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 144/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 145/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 146/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 147/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 148/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 149/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 150/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 151/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 152/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 153/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 154/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 155/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 156/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 157/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 158/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 159/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 160/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 161/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 162/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 163/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 164/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 165/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 166/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 167/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 168/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 169/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 170/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 171/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 172/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 173/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 174/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 175/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 176/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 177/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 178/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 179/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 180/182 (128 nodes)
+[embedding-client] vector cache: 128 text(s), 0 distinct miss to embed, 128 served from cache
+[forge-ceds] embedded batch 181/182 (128 nodes)
+[embedding-client] vector cache: 70 text(s), 0 distinct miss to embed, 70 served from cache
+[forge-ceds] embedded batch 182/182 (70 nodes)
+[forger] forged 25202 nodes, 26944 edges (182 embedding calls)
+[forger] shaped 25202 nodes, 26944 edges for loading
+[replayManager] provisioning scratch graph 'DEV_gb_forge_27088_1' (bolt 7813)...
+[replayManager] scratch graph 'DEV_gb_forge_27088_1' ready at bolt://localhost:7813
+[replayManager] loading 25202 nodes, 26944 edges into 'DEV_gb_forge_27088_1' as [StandardBase]
+[replayManager] harvested 25202 nodes, 26944 edges from 'DEV_gb_forge_27088_1' [StandardBase] -> 41cc54cd2ea1...
+  [A] forge ceds@14_0_0_0_base -> standardBase 41cc54cd2ea1d6add148636327a2db4dd6cc7b4e175b03592b921ff26def0197
+[replayManager] scratch graph 'DEV_gb_forge_27088_1' destroyed
+  [compose] manifest 6d6df8a7ce5c8a3b607d9ae352abf6e6915b488a10f3640d325b412a33819746 -- 1 members
+[replayManager] provisioning scratch graph 'DEV_gb_materialize_27088_2' (bolt 7813)...
+[replayManager] scratch graph 'DEV_gb_materialize_27088_2' ready at bolt://localhost:7813
+[replayManager] restoring 1 schema block(s) into 'DEV_gb_materialize_27088_2'
+  [materialize] -> bolt://localhost:7813
+  [fidelity] round-tripping CEDS out of 'DEV_gb_materialize_27088_2' (R-1)
+  [fidelity] source 239761, matched 239761, LOST 0, INVENTED 0
+  [fidelity] PASSED -- zero lost, zero invented
+  [roundTrip] declared-ABSENT: 'ceds' (CEDS) — no roundTripValidator in parserDescriptor.ini (tolerated during the big-bang retrofit; logged, never silent)
+{
+  "manifestId": "6d6df8a7ce5c8a3b607d9ae352abf6e6915b488a10f3640d325b412a33819746",
+  "boltUrl": "bolt://localhost:7813",
+  "memberCount": 1,
+  "roundTripSummaryPath": "/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/buildLogs/cedsOnlyRoundTrip_20260805-024056/roundTrip/roundTripStageSummary.json"
+}

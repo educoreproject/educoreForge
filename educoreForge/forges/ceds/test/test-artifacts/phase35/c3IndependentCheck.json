@@ -1,0 +1,20 @@
+{
+ "sourceTripleCount": 243601,
+ "emittedTripleCount": 243601,
+ "sourcePath": "/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/forges/ceds/assets/standardSourceData/01/CEDS-Ontology.rdf",
+ "emittedPath": "/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/zArchive_roundTripProof_080426/cedsOnlyRoundTrip_20260805-025124/roundTrip/ceds/emitted/cedsOntology.emitted.rdf",
+ "rdflibVersion": "7.6.0",
+ "strict": {
+  "inSourceNotEmitted": 0,
+  "inEmittedNotSource": 0,
+  "sourceSamples": [],
+  "emittedSamples": []
+ },
+ "whitespaceNormalized": {
+  "inSourceNotEmitted": 0,
+  "inEmittedNotSource": 0,
+  "sourceSamples": [],
+  "emittedSamples": []
+ },
+ "identical": true
+}

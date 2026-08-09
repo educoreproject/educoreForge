@@ -1,0 +1,47 @@
+{
+ "probe": "p5_measureDocumentationWhitespaceCollapse",
+ "phase": "Phase 5 — O-2, ordered measured before decided",
+ "corpusDirPath": "/private/tmp/claude-501/-Users-tqwhite-Documents-webdev/2c6976be-9302-4492-9136-4465fa642e4b/scratchpad/p5LeverCorpus",
+ "usingCorpusOverride": true,
+ "sha256Verified": false,
+ "xsdFileCount": 64,
+ "boltUrl": "bolt://localhost:7821",
+ "measurementByModeName": {
+  "collapse": {
+   "modeName": "collapse",
+   "description": "decode character references, collapse whitespace runs to one space, trim — WHAT SHIPS TODAY (roundTripXsdCanonical.js:99-104)",
+   "sourceLiteralTotal": 26621,
+   "graphLiteralTotal": 26619,
+   "matchedTotal": 26619,
+   "sourceNotReproducedTotal": 2,
+   "graphNotInSourceTotal": 0,
+   "sourceEmptyAfterNormalizationCount": 31,
+   "graphEmptyAfterNormalizationCount": 46485,
+   "distinctSourceLiteralCount": 4362,
+   "distinctGraphLiteralCount": 4360
+  },
+  "verbatim": {
+   "modeName": "verbatim",
+   "description": "decode character references, trim — R-VAL-2 verbatim discipline, internal whitespace PRESERVED",
+   "sourceLiteralTotal": 26621,
+   "graphLiteralTotal": 26619,
+   "matchedTotal": 26618,
+   "sourceNotReproducedTotal": 3,
+   "graphNotInSourceTotal": 1,
+   "sourceEmptyAfterNormalizationCount": 31,
+   "graphEmptyAfterNormalizationCount": 46485,
+   "distinctSourceLiteralCount": 4370,
+   "distinctGraphLiteralCount": 4368
+  }
+ },
+ "hiddenByWhitespaceCollapseTotal": 1,
+ "distinctHiddenLiteralCount": 1,
+ "specimenList": [
+  {
+   "sourceVerbatim": "Code indicaticating Country. Use ISO 3166-1   alpha-2 standard. The codes are available at http://www.iso.org\r\nAF - Afghanistan\r\nAX - Åland Islands\r\nAL - Albania\r\nDZ - Algeria\r\nAS - American Samoa\r\nAD - Andorra\r\nAO - Ang",
+   "collapsedForm": "Code indicaticating Country. Use ISO 3166-1 alpha-2 standard. The codes are available at http://www.iso.org AF - Afghanistan AX - Åland Islands AL - Albania DZ - Algeria AS - American Samoa AD - Andorra AO - Angola AI - ",
+   "sourceVerbatimLength": 4557,
+   "collapsedFormLength": 4310
+  }
+ ]
+}

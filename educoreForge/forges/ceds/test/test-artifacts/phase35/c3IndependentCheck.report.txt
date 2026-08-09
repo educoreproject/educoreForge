@@ -1,0 +1,11 @@
+------------------------------------------------------------------------------------------------
+INDEPENDENT RDF TRIPLE COMPARISON — rdflib 7.6.0
+------------------------------------------------------------------------------------------------
+  This shares NO CODE with the round-trip comparator. It exists because a tool
+  cannot audit the assumption it is built on.
+
+  triples:  source 243601   emitted 243601
+  STRICT:   in source not emitted 0, in emitted not source 0
+  (diagnostic) whitespace-normalized: 0 / 0
+
+  VERDICT: IDENTICAL RDF GRAPHS

@@ -1,0 +1,40 @@
+{
+ "probe": "p5_measureDocumentationWhitespaceCollapse",
+ "phase": "Phase 5 — O-2, ordered measured before decided",
+ "corpusDirPath": "/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/forges/pesc260805/assets/standardSourceData/01",
+ "usingCorpusOverride": false,
+ "sha256Verified": true,
+ "xsdFileCount": 64,
+ "boltUrl": "bolt://localhost:7821",
+ "measurementByModeName": {
+  "collapse": {
+   "modeName": "collapse",
+   "description": "decode character references, collapse whitespace runs to one space, trim — WHAT SHIPS TODAY (roundTripXsdCanonical.js:99-104)",
+   "sourceLiteralTotal": 26621,
+   "graphLiteralTotal": 26619,
+   "matchedTotal": 26619,
+   "sourceNotReproducedTotal": 2,
+   "graphNotInSourceTotal": 0,
+   "sourceEmptyAfterNormalizationCount": 31,
+   "graphEmptyAfterNormalizationCount": 46485,
+   "distinctSourceLiteralCount": 4362,
+   "distinctGraphLiteralCount": 4360
+  },
+  "verbatim": {
+   "modeName": "verbatim",
+   "description": "decode character references, trim — R-VAL-2 verbatim discipline, internal whitespace PRESERVED",
+   "sourceLiteralTotal": 26621,
+   "graphLiteralTotal": 26619,
+   "matchedTotal": 26619,
+   "sourceNotReproducedTotal": 2,
+   "graphNotInSourceTotal": 0,
+   "sourceEmptyAfterNormalizationCount": 31,
+   "graphEmptyAfterNormalizationCount": 46485,
+   "distinctSourceLiteralCount": 4370,
+   "distinctGraphLiteralCount": 4368
+  }
+ },
+ "hiddenByWhitespaceCollapseTotal": 0,
+ "distinctHiddenLiteralCount": 0,
+ "specimenList": []
+}

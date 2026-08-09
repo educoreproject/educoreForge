@@ -1,0 +1,223 @@
+================================================================================================
+PESC ROUND-TRIP FIDELITY REPORT
+================================================================================================
+
+The criterion is SEMANTIC round-trip — statement-set equality over the XSD semantic
+domain (roundTripXsdCanonical.js defines it). Whitespace, element order, attribute order,
+prefix choice, compositor kind and member order do NOT count; a missing or extra
+STATEMENT does. This measures what the GRAPH can support, not what the forge saw.
+
+  snapshotPath:         assets/standardSourceData/01
+  snapshotDigest:       92e9a6326ff1edda465db3d704632491a7b5bb39469edfee883f366840688984
+  containerName:        DEV_pesc260805
+  boltUrl:              bolt://localhost:7821
+
+------------------------------------------------------------------------------------------------
+HEADLINE
+------------------------------------------------------------------------------------------------
+  statements in source .......     21552
+  statements emitted .........     21319
+  MATCHED ....................     21319
+  NOT REPRODUCED .............       233   (in source, not emitted)
+    explicitlyOmitted ........         0   (declarations the graph deliberately does not carry — CHOSEN, never lost)
+  LOST .......................       233   (contentGap alone — genuine loss, the enrichment work order)
+  INVENTED ...................         0   (emitted, not in source — must be 0)
+  fidelity ...................   98.919%
+  clean fidelity .............   98.919%   (matched / (source + invented) — falls when anything is fabricated)
+
+  NOTE: no percentage above is an acceptance criterion. Acceptance is INVENTED == 0
+  (always) and LOST == 0 (round-trip clean). Read the counts, not the percent.
+
+  subjects: source 40410, emitted 39856   |   duplicate statements collapsed: source 295, emitted 281
+
+  unmodeled constructs: none — every xs:* element on both sides was measured
+
+------------------------------------------------------------------------------------------------
+INVENTED STATEMENTS — read this first. Invention is worse than loss.
+------------------------------------------------------------------------------------------------
+  NONE. Every statement emitted is a statement the source makes.
+
+------------------------------------------------------------------------------------------------
+PER-PREDICATE LOSS — sorted by loss. contentGap rows ARE the enrichment work order.
+------------------------------------------------------------------------------------------------
+      LOST    source   emitted   matched  invented  category        predicate
+        60        60         0         0         0  contentGap      derivesFrom
+        59        59         0         0         0  contentGap      derivationMethod
+        54      2858      2804      2804         0  contentGap      fieldType
+        38        38         0         0         0  contentGap      usesGroup
+        14        14         0         0         0  contentGap      contentTypeRef
+         5         5         0         0         0  contentGap      facet:length
+         2         2         0         0         0  contentGap      allowsAnyElement
+         1         1         0         0         0  contentGap      elementFixed
+         0        14        14        14         0  —               attributeFormDefault
+         0       455       455       455         0  —               declaresComplexType
+         0         9         9         9         0  —               declaresGroup
+         0        23        23        23         0  —               declaresRootElement
+         0       824       824       824         0  —               declaresSimpleType
+         0      6256      6256      6256         0  —               documentation
+         0        18        18        18         0  —               elementFormDefault
+         0      3241      3241      3241         0  —               enumerationValue
+         0        68        68        68         0  —               facet:fractionDigits
+         0        45        45        45         0  —               facet:maxInclusive
+         0       244       244       244         0  —               facet:maxLength
+         0        45        45        45         0  —               facet:minInclusive
+         0       216       216       216         0  —               facet:minLength
+         0        12        12        12         0  —               facet:pattern
+         0        75        75        75         0  —               facet:totalDigits
+         0         5         5         5         0  —               facet:whiteSpace
+         0        79        79        79         0  —               importsNamespace
+         0        79        79        79         0  —               importsSchemaLocation
+         0        62        62        62         0  —               inlineEnumerationValue
+         0      2867      2867      2867         0  —               maxOccurs
+         0      2864      2864      2864         0  —               minOccurs
+         0        60        60        60         0  —               nillable
+         0       829       829       829         0  —               restrictionBase
+         0        61        61        61         0  —               schemaVersionAttribute
+         0        64        64        64         0  —               targetNamespace
+
+------------------------------------------------------------------------------------------------
+PER-ENTITY-KIND
+------------------------------------------------------------------------------------------------
+  kind                  subjects    source   matched      lost  invented
+  complexType                455     10608     10401       207         0
+  rootElement                 23       143       129        14         0
+  group                        9       216       209         7         0
+  simpleType                 824      8954      8949         5         0
+  schemaFile                  18      1631      1631         0         0
+
+------------------------------------------------------------------------------------------------
+LOST STATEMENT SAMPLES — up to 10 per predicate
+------------------------------------------------------------------------------------------------
+
+  derivesFrom  (60 lost of 60; category contentGap)
+    pesc://AcademicRecord#complexType/AcademicSummaryE1Type
+      = AcademicSummaryBaseType
+    pesc://AcademicRecord#complexType/AcademicSummaryE2Type
+      = AcademicSummaryBaseType
+    pesc://AcademicRecord#complexType/AcademicSummaryFType
+      = AcademicSummaryBaseType
+    pesc://AcademicRecord#complexType/CitizenshipType
+      = CitizenshipType
+    pesc://AcademicRecord#complexType/ResidencyType
+      = ResidencyType
+    pesc://AcademicRecord#complexType/AddressType
+      = AddressType
+    pesc://AcademicRecord#complexType/EmailType
+      = EmailType
+    pesc://AcademicRecord#complexType/PhoneType
+      = PhoneType
+    pesc://AcademicRecord#complexType/AcademicProgramType
+      = AcademicProgramType
+    pesc://AcademicRecord#complexType/LearningProgramType
+      = AcademicProgramType
+
+  derivationMethod  (59 lost of 59; category contentGap)
+    pesc://AcademicRecord#complexType/AcademicSummaryE1Type
+      = extension
+    pesc://AcademicRecord#complexType/AcademicSummaryE2Type
+      = extension
+    pesc://AcademicRecord#complexType/AcademicSummaryFType
+      = extension
+    pesc://AcademicRecord#complexType/CitizenshipType
+      = extension
+    pesc://AcademicRecord#complexType/ResidencyType
+      = extension
+    pesc://AcademicRecord#complexType/AddressType
+      = extension
+    pesc://AcademicRecord#complexType/EmailType
+      = extension
+    pesc://AcademicRecord#complexType/PhoneType
+      = extension
+    pesc://AcademicRecord#complexType/AcademicProgramType
+      = extension
+    pesc://AcademicRecord#complexType/LearningProgramType
+      = extension
+
+  fieldType  (54 lost of 2858; category contentGap)
+    pesc://AcademicRecord#complexType/OrganizationType/element/OrganizationName
+      = OrganizationNameType
+    pesc://AcademicRecord#complexType/RequestorReceiverOrganizationType/element/OrganizationName
+      = OrganizationNameType
+    pesc://AcademicRecord#complexType/CourseInventoryType/element/CourseNumber
+      = CourseNumberType
+    pesc://AcademicRecord#complexType/CourseInventoryType/element/CourseDescription
+      = CourseDescriptionType
+    pesc://AcademicRecord#complexType/CourseRepeatabilityType/element/CourseRepeatabilityIndicator
+      = CourseRepeatabilityCodeType
+    pesc://AcademicRecord#complexType/CoursePrerequisiteType/element/PrerequisiteCourseCondiition
+      = PrerequisiteCourseConditionType
+    pesc://AcademicRecord#complexType/SchoolCharacteristicsType/element/SchoolLevel
+      = SchoolLevelType
+    pesc://AcademicRecord#complexType/AdditionalStudentAchievementsType/element/AchievementTitle
+      = xs:string
+    pesc://AcademicRecord#complexType/AdditionalStudentAchievementsType/element/Sponsor
+      = xs:string
+    pesc://AcademicRecord#complexType/CourseType/element/CourseDescription
+      = CourseDescriptionType
+
+  usesGroup  (38 lost of 38; category contentGap)
+    pesc://AcademicRecord#complexType/OrganizationType
+      = OrganizationIDGroup
+    pesc://AcademicRecord#complexType/HighSchoolType
+      = OrganizationIDGroup
+    pesc://AcademicRecord#complexType/SchoolType
+      = OrganizationIDGroup
+    pesc://AcademicRecord#complexType/OrganizationType
+      = OrganizationIDMultiChoiceGroup
+    pesc://AcademicRecord#complexType/HighSchoolType
+      = OrganizationIDMultiChoiceGroup
+    pesc://AcademicRecord#complexType/SchoolType
+      = OrganizationIDMultiChoiceGroup
+    pesc://AcademicRecord#complexType/RequestorReceiverOrganizationType
+      = OrganizationIDMultiChoiceGroup
+    pesc://AcademicRecord#complexType/SchoolIdentificationType
+      = OrganizationIDGroup
+    pesc://AcademicRecord#complexType/AcademicMajorType
+      = AcademicProgramCodeGroup
+    pesc://AcademicRecord_v1.6.0.collision-948d88f32069#complexType/OrganizationType
+      = OrganizationIDMultiChoiceGroup
+
+  contentTypeRef  (14 lost of 14; category contentGap)
+    pesc://AcademicEportfolio#rootElement/AcademicEPortfolio
+      = AcademicEPortfolioType
+    pesc://CoreMain#rootElement/LoanInformation
+      = LoanInformationType
+    pesc://CoreMain#rootElement/DLLoanInformation
+      = DLLoanInformationType
+    pesc://CoreMain#rootElement/FFELPLoanInformation
+      = FFELPLoanInformationType
+    pesc://CoreMain#rootElement/FinancialAward
+      = FinancialAwardType
+    pesc://CoreMain#rootElement/Pell
+      = PellType
+    pesc://CoreMain#rootElement/DLSubsidized
+      = DLSubsidizedType
+    pesc://CoreMain#rootElement/DLUnsubsidized
+      = DLUnsubsidizedType
+    pesc://CoreMain#rootElement/DLPLUS
+      = DLPLUSType
+    pesc://CoreMain#rootElement/Perkins
+      = PerkinsType
+
+  facet:length  (5 lost of 5; category contentGap)
+    pesc://AcademicRecord#simpleType/FIPSCountyCodeType
+      = 5
+    pesc://AcademicRecord_v1.6.0.collision-e12830fc86a3#simpleType/FIPSCountyCodeType
+      = 5
+    pesc://CoreMain#simpleType/InstantMessageAddressType
+      = 128
+    pesc://CoreMain#simpleType/InstantMessageProviderNameType
+      = 60
+    pesc://CoreMain#simpleType/GEOCodeSimpleType
+      = 7
+
+  allowsAnyElement  (2 lost of 2; category contentGap)
+    pesc://CoreMain#complexType/UserDefinedExtensionsType
+      = lax
+    pesc://CoreMain#complexType/AcademicRecordBatchType
+      = strict
+
+  elementFixed  (1 lost of 1; category contentGap)
+    pesc://CoreMain#complexType/ContactsType/element/ContactName
+      = xs:string
+

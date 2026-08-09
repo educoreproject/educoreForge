@@ -10,3 +10,6 @@ output/
 # (TQ snapshot-handling ruling 2026-08-03; RT-11). ONLY this subfolder — no negation patterns.
 # Git-clone consumers: acquisition recipe in the peer README_PROVENANCE.md one directory up.
 educoreForge/forges/edfi/assets/standardSourceData/04/metaEdModel/
+
+# Claude Code agent scratch worktrees — embedded git repos, never project content
+.claude/

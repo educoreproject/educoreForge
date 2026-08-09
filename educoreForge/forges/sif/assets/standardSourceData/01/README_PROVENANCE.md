@@ -94,9 +94,22 @@ There is no public URL for the TSV form — the canonical acquisition path is:
 The published 4.3 artifacts generated from the canonical spreadsheet (R-SF-6) were located and
 checksummed 2026-08-03 (all under `https://files.a4l.org/Implementation/NA/4.3/`;
 also mirrored at `http://specification.sifassociation.org/Implementation/NA/4.3/`).
-They are NOT committed here (supervisor fence: scratch acquisition until TQ rules on their
-disposition); they are a candidate independent answer key for round-trip/order work, since the
-XSDs carry the `xs:sequence`/`xs:choice` compositor information the flattened TSV does not:
+They are NOT committed **in this snapshot directory**, and must not be — see the warning below.
+They are a candidate independent answer key for round-trip/order work, since the XSDs carry the
+`xs:sequence`/`xs:choice` compositor information the flattened TSV does not:
+
+> **DISPOSITION RULED 2026-08-09 (TQ, direct instruction). The fence is lifted.** The sentence here
+> previously read *"NOT committed here (supervisor fence: scratch acquisition until TQ rules on their
+> disposition)."* TQ has ruled: the XSDs are now committed with the project, at
+> **`../../publishedXsdCrossCheck/01/`** — a SIBLING of this directory, with its own `SHA256SUMS` and
+> a `README_source.md` recording where the bytes came from and where the chain of custody thins.
+>
+> **THEY ARE DELIBERATELY NOT IN THIS DIRECTORY, AND MUST NOT BE ADDED TO THIS `SHA256SUMS`.**
+> `roundTripValidator.js` filters this directory to `.tsv` and then refuses by name for any
+> `SHA256SUMS` entry missing from that list — so listing an `.xsd` here breaks **every** SIF round
+> trip immediately. `lib/parser.js` filters the same way. Nothing scans `assets/` recursively, so the
+> sibling directory is inert to every build. This is the trap a conscientious maintainer would walk
+> into, which is why it is written down in both places.
 
 | artifact | sha256 (fetched 2026-08-03) |
 |---|---|

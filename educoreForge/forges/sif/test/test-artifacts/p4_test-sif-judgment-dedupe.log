@@ -1,0 +1,31 @@
+test-sif-judgment-dedupe
+
+SECTION 1 — sifJudgmentKey: owner-stripped identity, negative control, honest nulls
+
+SECTION 2 — the full flow: judge once, fan out honestly, byte-stable rerun, MATERIALIZE replay
+[sifEvidenceBridge] judging 2 of 3 source elements (concurrency 8; 1 source(s) share 1 structural judgment group(s) and fan out)
+[sifEvidenceBridge] judged 2/2 (0 served from the judgment cache, 2 live)
+[sifEvidenceBridge] judging 2 of 3 source elements (concurrency 8; 1 source(s) share 1 structural judgment group(s) and fan out)
+[sifEvidenceBridge] judged 2/2 (0 served from the judgment cache, 2 live)
+  --   SIF dedupe decisionBlockHash: e46b5162e5cc1bd9c135326ff13c9cc4b41063a1abf4ecdf67b509f37dc232f4
+
+SECTION 3 — real-asset measurement: unique judgment keys vs total fields
+[sif-tsv/parser] Parsing TSV: /Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/forges/sif/assets/standardSourceData/01/ImplementationSpecification_031326.tsv
+[sif-tsv/parser] Parsed 159 SIF objects
+[sif-tsv/parser] Resolved 427 REFERENCES edges
+[sif-tsv/parser] Types: 15 primitive, 301 simple
+[sif-tsv/parser] Codesets: 140
+[sif-tsv/parser] ComplexTypes: 897
+[sif-tsv/parser] XmlElements: 5872
+[sif-tsv/parser] Total nodes: 23005
+[sif-tsv/parser] Total edges (declared): 61838
+[sif-tsv/parser] Parent edges (HAS_FIELD): 15620
+[sif-tsv/parser] Fields with cedsId: 2231
+snapshot-provenance: no publishedVersion available — the source does not self-describe and /Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/forges/sif/assets/standardSourceData/01/standardSourceLocation supplies none; stamping 'unknown' honestly (spec §3.2 warning)
+[forge-sif] contract graph: 27069 nodes, 88766 edges (2231 CEDS-annotated fields, 4064 option values, 172 field-less complex types; codesets 140 unique from 1745 field assignments = 1605 merged)
+  --   total fields: 15620
+  --   fields with no structural key (judged individually): 0
+  --   unique judgment keys: 4716 (584 shared by 2+ fields)
+  --   JUDGMENTS NEEDED: 4716  |  JUDGMENTS AVOIDED: 10904 (70%)
+  --   largest shared group: 137 fields share 'sif:judgeKey:root:@RefId:RefIdType:(none)'
+test-sif-judgment-dedupe: 40/40 passed, 0 failed.

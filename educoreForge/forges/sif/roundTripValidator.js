@@ -345,6 +345,51 @@ const moduleFunction =
 					invented: headline.invented,
 					inventedTotal: headline.invented,
 					orderMismatches: headline.orderMismatches,
+					// ⟪R-VAL-7 for SIF⟫ THE MODELLING QUALIFICATION TRAVELS WITH THE ZERO.
+					//
+					// Declared here rather than derived by a reader of this file. Until 2026-08-09 this
+					// bundle declared nothing, so the builder substituted "NONE DECLARED BY THIS BUNDLE"
+					// and the SIF certificate had to qualify the numbers by READING THIS MODULE — accurate
+					// the day it was written and silently wrong the moment anyone edits below. pesc260805
+					// paid for that lesson: three of its four clauses became FALSE when Phase 6.5 made the
+					// emitter model what they said was unmodelled. A LIMITATION THAT QUIETLY BECOMES FALSE
+					// IS ITS OWN DEFECT, and it is the one nobody goes back to check.
+					//
+					// SO: IF YOU CHANGE WHAT IS MODELLED, REWRITE THIS STRING IN THE SAME COMMIT. Never as
+					// a follow-up. A stale limit is worse than an absent one, because absence is marked.
+					semanticValidationLimit:
+						'SEMANTIC round-trip against the INGESTED SNAPSHOT: statement-set equality over ' +
+						'the statement set THIS INSTRUMENT CHOOSES TO MODEL, not byte equality and not ' +
+						'completeness of the SIF model. WHAT IS MODELLED, on BOTH sides and from ' +
+						'independent minters (statementsFromTsvText never sees the graph; ' +
+						'statementsFromSifGraph never opens a file; NEITHER touches the forge\'s own ' +
+						'lib/parser.js, so the validator cannot merely prove the forge agrees with ' +
+						'itself): (1) ONE PREDICATE PER SOURCE COLUMN — fieldName, fieldMandatory, ' +
+						'fieldCharacteristics, fieldType, fieldDescription, fieldCedsId, fieldFormat — so ' +
+						'ANYTHING THE SPREADSHEET HAS NO COLUMN FOR IS NOT MODELLED AT ALL; (2) ELEMENT ' +
+						'ORDER as all-pairs precedesInGroup statements, DOCUMENT-ORDER-ONLY (R-SF-8): the ' +
+						'instrument never consults the published XSD for compositor facts, so xs:sequence ' +
+						'versus xs:choice is invisible to it and normativity is never claimed. WHAT IS ' +
+						'NOT MODELLED, and is therefore invisible as loss rather than merely hard to ' +
+						'see: (a) ABSENT IS ABSENT (RT-2 symmetry) — an empty cell mints NO statement, so ' +
+						'"this field has no description" and "this field\'s description was lost" are ' +
+						'indistinguishable by statement presence; (b) LEADING AND TRAILING WHITESPACE in a ' +
+						'cell is trimmed and is not a statement; (c) CHOICE-GROUP MEMBERSHIP, which the ' +
+						'export cannot express at all (errata S-2). ' +
+						'AND THE ONE THAT SIZES EVERYTHING ABOVE — THE SOURCE ITSELF IS INCOMPLETE, ' +
+						'MEASURED 2026-08-09 (errata S-1, S-3, Q-1; probes test/probes/): the flattened ' +
+						'export gives a row to every leaf field and every attribute and NO ROW TO ANY ' +
+						'ELEMENT THAT HAS ELEMENT CHILDREN — 6,586 container paths across 153 of the 159 ' +
+						'objects, of which 1,887 are declared maxOccurs="unbounded" in the generated XSD, ' +
+						'plus 12 further repeatability declarations absent on rows that DO exist. ' +
+						'THEREFORE lostTotal 0 MEANS FIDELITY TO THE INGESTED SNAPSHOT AND NEVER ' +
+						'COMPLETENESS OF THE SIF MODEL: this graph cannot distinguish a single-valued ' +
+						'element from a repeating collection anywhere those 1,899 declarations apply, ' +
+						'because the source never stated it. The two published artifacts do NOT ' +
+						'contradict each other — across all 15,620 export rows the spreadsheet\'s ' +
+						'Characteristics column and the XSD\'s sifChar annotation state different values ' +
+						'ZERO times; the spreadsheet is simply less expressive. ' +
+						'"Semantically clean" MUST NEVER be reported as "complete".',
 					diffScope: {
 						statementSource: args.snapshot.mainTsvFilename,
 						outOfScopeInputs: [

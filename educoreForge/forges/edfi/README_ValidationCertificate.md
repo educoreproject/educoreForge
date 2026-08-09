@@ -1,264 +1,226 @@
 # Validation certificate — Ed-Fi
 
-**This is not a victory lap. Its job is to let you decide how far to trust this graph, which means the
-limits below carry the same weight as the results above them.**
+## Summary
 
-One of four, written to the same five headings so the four can be read side by side:
-`forges/{ceds,edfi,sif,pesc260805}/README_ValidationCertificate.md`.
+**Everything this graph says, Ed-Fi says. It does not say everything Ed-Fi says.** Nothing was
+invented. 349 statements the source makes are missing, every one of them enumerated by name.
 
-**Ed-Fi is the only one of the four that is NOT clean, and that is the honest state of unfinished
-enrichment work — not a failure.** It also carries a defect that was found, named, and **deliberately
-left unfixed**. Both are below.
-
----
-
-## 1. WHAT WAS VALIDATED
+**This round trip validation supports the judgement that this graph is trustworthy but not complete.**
+Trustworthy, because the hard line held: a reader can rely on any statement the graph carries. Not
+complete, because 205 of the missing statements carry real model content and are not recoverable from
+what is there. **Ed-Fi is the only one of the four bundles that cannot claim completeness**, and that
+is the honest state of unfinished enrichment work rather than a failure — the build passed, correctly.
 
 | | |
 |---|---|
-| **standard** | Ed-Fi Data Standard **5.2.0** — 849 MetaEd constructs, 1,904 properties, 3,522 descriptor code values |
-| **corpus** | the committed MetaEd package snapshot under `forges/edfi/assets/standardSourceData/`, plus descriptor code-value XML and authored-crosswalk CSV |
-| **recipe** | `recipes/fourWithNewPescRoundTripNoBridges.recipe.jsonc` — `roundTripStage: true`, `hubs: []`, `bridges: []` |
-| **run** | `system/dataStores/buildLogs/fourWithNewPescRoundTripNoBridges_20260808-001444/` |
-| **date** | 2026-08-07, session VIOLET_STONE |
-| **commit** | branch `architecture-improvement`; the recipe is committed at `a0a4a90` |
-| **graph** | `DEV_FourWithNewPesc` (built as `DEV_gb_materialize_82136_5`, renamed) |
+| standard | Ed-Fi Data Standard 5.2.0 — 849 MetaEd constructs, 1,904 properties, 3,522 descriptor code values — plus TPDM Community Model 1.2 |
+| corpus | `forges/edfi/assets/standardSourceData/04/` — five declared inputs, see Provenance |
+| recipe | `recipes/fourWithNewPescRoundTripNoBridges.recipe.jsonc` — `roundTripStage: true`, `hubs: []`, `bridges: []` |
+| run | `fourWithNewPescRoundTripNoBridges_20260808-001444`, 2026-08-07 |
+| commit | branch `architecture-improvement`; the recipe is committed at `a0a4a90` |
+| graph | `DEV_FourWithNewPesc` — resolve the bolt port from the container, never from a document |
 
-```bash
-docker inspect DEV_FourWithNewPesc --format \
-  '{{range $p,$c := .NetworkSettings.Ports}}{{if eq $p "7687/tcp"}}{{(index $c 0).HostPort}}{{end}}{{end}}'
-```
+**Resolving the port from the container is load-bearing, not decorative.** This graph is the
+configured DME golden, so ordinary DME use provisions from it: on 2026-08-09 it was stopped and
+restarted inside two seconds by a user-graph provisioning event. Nothing in this campaign owns it
+exclusively and a restart can move a port mapping.
 
-**Resolve the port from the container, never from this document.** On the evening this ran, one bolt
-port served three different graphs in a few hours.
-
-**THIS IS A FOUR-STANDARD GRAPH AND Ed-Fi IS ONE ISLAND IN IT.** 100,979 nodes total — **EdFi 6,336**,
-CEDS 25,202, SIF 27,069, PESC260805 42,372 — with **zero cross-standard edges** by design.
+Ed-Fi is one island in a four-standard graph — 100,979 nodes total, Ed-Fi 6,336, CEDS 25,202,
+SIF 27,069, PESC260805 42,372 — with zero cross-standard edges by design. Nothing here speaks to how
+Ed-Fi maps to anything.
 
 ---
 
-## 2. WHAT THE VALIDATOR PROVES
+## The counts
 
 ```
-roundTripClean ..... FALSE
-reproduced ......... 25,374
-INVENTED ........... 0
-LOST ............... 349
-contentGap ......... 349
-explicitlyOmitted .. 0
+statements reproduced .......... 25,374
+invented ....................... 0
+missed ......................... 349
+  contentGap ................... 349      real loss — counted in missed
+  explicitlyOmitted ............ 0        see known issue 3
+roundTripClean ................. false
 ```
 
-**`roundTripClean: false` is the correct and expected state.** The build passed.
+**The 349 is not one backlog. It is 205 statements of model content and 144 of bookkeeping**, and the
+distinction decides how much of it matters:
 
-### INVENTED > 0 FAILS A BUILD. LOST > 0 IS TOLERATED. THIS IS WHY Ed-Fi PASSES.
+```
+interchangeComponentKind ........ 205     MODEL CONTENT — whether an interchange carries an
+                                          entity in full (element) or only as an identity
+                                          reference (identityTemplate). 199 / 6 split.
+itemMetaEdId .................... 130     bookkeeping — the publisher's hierarchical tracking
+                                          id for an item inside a construct, e.g. Assessment
+                                          [2516-002] inside Interchange [2516].
+itemNamespaceQualifier ........... 14     bookkeeping — the `EdFi.` prefix on TPDM
+                                          cross-namespace references. All 14 carry the
+                                          identical value and the graph already resolves to
+                                          the right node.
+```
 
-**An invented statement is a lie the graph tells. A lost statement is a truth it fails to tell.**
+**Reading 349 as one undifferentiated figure overstates the model-fidelity cost by about forty per
+cent of the count.** But **bookkeeping here means lower stakes, not no stakes.** `itemMetaEdId` is a
+reader's only thread from a statement in the graph back to the exact line of the published document it
+came from, so losing all 130 costs **traceability to source** — a real cost to anyone later auditing
+this graph against Ed-Fi, even though it constrains nothing in the model. Genuinely lower priority
+than the 205, and genuinely not zero.
 
-A fabrication is an assertion about Ed-Fi that Ed-Fi never made, and no amount of coverage elsewhere
-excuses one — so invention fails a build unconditionally. A gap is a coverage problem, so it is
-**tolerated, logged, and enumerated** as the enrichment meter. **Ed-Fi's 349 is a measured backlog,
-reported honestly. It is not a target to hit and it is not a build failure.**
+**`explicitlyOmitted` is zero, and structurally so** — nothing can ever land in that pile. See known
+issue 3; it is deliberate and it fails in the safe direction.
+
+**Invention fails a build. Loss does not, and this is why Ed-Fi passed.** An invented statement is a
+claim Ed-Fi never made, and no amount of coverage excuses one, so invention fails unconditionally. A
+gap is a coverage problem, so it is tolerated, logged and enumerated as the enrichment meter. The gate
+certifies on `inventedTotal = 0`, not on `roundTripClean`, and that is deliberate.
 
 ```
 graphBuilder: [goldEvalCheck] PASS — 4 declared validator(s) ran with inventedTotal=0     exit 0
 ```
 
-**The gate certifies on `inventedTotal = 0`, not on `roundTripClean`.** That is deliberate and it is
-the doctrine's whole shape.
+---
 
-### The mechanism, and the independence claim it rests on
+## Round Trip Validation
 
-`lib/roundTripMetaEdCanonical.js` reduces MetaEd source text, descriptor XML and crosswalk CSV to a
-canonical statement set — the **answer-key** side — while the graph side is emitted from the
-materialized graph scoped to Ed-Fi.
+**One validation process ran, and its independence is real but bounded.** Unlike CEDS and PESC260805,
+this bundle has no second instrument written by anyone else.
 
-**It shares ZERO code with the Phase 1 parser** (`metaEdLexer.js` / `metaEdSyntaxParser.js` /
-`metaEdParser.js`) and the Phase 2 loaders. The strategy differs on purpose — a masking scanner plus a
-flat keyword-phrase extractor, no token-type registry, no recursive descent, no resolved model.
+`lib/roundTripMetaEdCanonical.js` reduces the MetaEd source text, the descriptor XML and the crosswalk
+CSV to a canonical statement set — the answer-key side — while the graph side is emitted from the
+materialized graph scoped to Ed-Fi, and the two are compared by set membership.
 
-**Because if the instrument reused the forge's parser, a parser bug would cancel on both sides of the
-diff and a dropped statement would read as REPRODUCED.**
+**It shares zero code with the forge's own parser** (`metaEdLexer.js`, `metaEdSyntaxParser.js`,
+`metaEdParser.js`) and loaders, and the strategy differs on purpose: a masking scanner plus a flat
+keyword-phrase extractor, with no token-type registry, no recursive descent and no resolved model.
+That matters because **if the instrument reused the forge's parser, a parser bug would cancel on both
+sides of the diff and a dropped statement would read as reproduced.**
+
+**The module states its own limit and states it correctly:** *the independence is of code path and
+failure mode, not of mind — same author, same reference grammar.* What bounds it instead are the
+adversarial-pair fixtures, where cosmetic variants must collapse and semantic variants must not, and a
+two-independent-readers census cross-check against the Phase 1 census of record, with disagreement
+counting as a finding either way.
+
+**Refusal boundaries, so that measuring less is never silent.** The reducer accepts the published
+packages' bare `topLevelEntity` file form across all 849 corpus files; an explicit `Begin Namespace`
+wrapper is a **refusal by name, not a skip**, so a future snapshot shipping wrapped files surfaces for
+adjudication instead of quietly measuring less. Any text the reducer cannot classify is a
+canonicalization fault — fatal, never advisory — because a half-reduced document must not produce a
+verdict someone might believe.
 
 ---
 
-## 3. WHAT IT DOES NOT PROVE
+## Known issues
 
-> ⚠️ **THE QUALIFICATIONS IN THIS SECTION ARE MINE, NOT THE BUNDLE'S.**
->
-> **This bundle declares no `semanticValidationLimit`.** The builder's `-goldEvalCheck` payload says
-> so: *"NONE DECLARED BY THIS BUNDLE… what this round-trip does and does not model is UNSTATED — read
-> the validator before treating lostTotal as a measure of fidelity."*
->
-> **So I read the validator.** Everything below was derived from
-> `forges/edfi/lib/roundTripMetaEdCanonical.js` on **2026-08-07**, cited to line. **A derived
-> qualification is far more useful than a bare number and far less trustworthy than a declared one** —
-> it drifts silently the moment someone edits the module.
->
-> **RECOMMENDED (not implemented — outside this pass's authorization): this bundle should declare a
-> `semanticValidationLimit` in its verdict, the way `pesc260805` now does.**
+Ordered by consequence. Full treatment in `README_ValidationDetail.md` and in
+`system/management/zNotesPlansDocs/FINDINGS-edfi349AndRWO15d-080926.md`.
 
-**Ed-Fi is better placed than most here**, because the canonicalizer states a **DECLARED EQUIVALENCE
-POLICY** in its own header — *all stated, none silent.*
+1. **The 205 lost `interchangeComponentKind` statements are total, not partial, and not recoverable.**
+   Every interchange component in the standard, across all 32 interchanges. The value reaches the
+   emission and dies there — it is already formatted into an `edgeContext` argument that `addEdge`
+   discards. **It cannot be derived back from the graph:** five entities (Assessment, AssessmentItem,
+   LearningStandard, ObjectiveAssessment, Section) appear with *both* kinds in different interchanges,
+   because the kind is a property of the relationship rather than of the target. Any target-keyed
+   reconstruction would emit the wrong kind in eleven specific places — that is, would manufacture
+   invented statements. **The gap is real and carrying it is the only honest fix.**
 
-### The declared equivalences (R-WO-15)
+2. **All three losses share one architectural cause: they are edge attributes, and Ed-Fi edges carry
+   none.** The graph keeps `metaEdId` faithfully wherever the item is a node and loses it wherever the
+   item is an edge. Four sibling forges already carry arbitrary extra edge properties and the replay
+   engine already persists them, so closing this is no contract change.
 
-- **(a) `//` COMMENT LINES ARE EXCLUDED** from the statement domain — non-semantic by the publisher's
-  own grammar (`LINE_COMMENT -> skip`). **Each one is censused with file:line**, so the material is
-  visible rather than silently dropped. **19 comment lines** in this run.
-- **(b) THE DECLARED ITEM KEYWORD IS EXCLUDED FROM STATEMENT IDENTITY**, uniformly, for domain-item
-  and interchange-component statements — which carry the item NAME only. The source itself uses the
-  keyword loosely (**3 censused drift cases**). An embedded exception list would be data inside the
-  serializer, an RT-5 violation.
-- **(c) OPTION-VALUE SUBJECTS USE THE TRIMMED VALUE TEXT** while the statement OBJECT carries the
-  source-verbatim string — *trimmed identity, verbatim value.*
-- **(e) DECLARATION ORDER WITHIN A CONSTRUCT IS NOT MEASURED.** Set semantics. **A reordering of
-  declarations inside a construct cannot register as a difference.** *(Contrast SIF, where order IS
-  part of statement identity — the four bundles do not agree on this and a reader comparing them
-  should not assume they do.)*
-- **DOCUMENTATION PROSE IS WHITESPACE-COLLAPSED** on both sides identically
-  (`roundTripMetaEdCanonical.js:72`).
+3. **`explicitlyOmitted` is structurally unreachable, by design, and it fails safe.** The bucket
+   selector returns `contentGap` for every registry entry *and* for the default, so the counting
+   branch is dead code and the pile is declared empty by design. The consequence is that this bundle
+   can only ever **over**-report loss, never hide it. **Note that the fork was one boolean wide:**
+   `roundTripClean` is defined as `contentGap === 0 && invented === 0`, `explicitlyOmitted` does not
+   participate, and had those 349 been sorted into the other pile Ed-Fi would have reported clean.
+   The current classification is the correct one.
 
-**A DOCUMENTATION GAP I FOUND WHILE READING, REPORTED NOT FIXED: there is no policy (d) in that
-lettered list** — it runs (a), (b), (c), (e) — **yet `R-WO-15(d)` is referenced in the code at
-`roundTripMetaEdCanonical.js:799`, and all 349 lost statements are labelled against it** (§4). The
-policy is load-bearing and its statement is missing from the block that enumerates the policies.
+4. **Fixing issue 1 requires a prerequisite, and the order is not optional.** The replay engine MERGEs
+   edges on `(fromRef, type, toRef)` with last-write-wins, and gate 1 checks only the count of the
+   edges array, never its uniqueness. Today a collapse is harmless *because* the properties are
+   identical — which is exactly what makes the defect latent rather than absent. **Persist
+   `componentKind` and a collapse becomes lossy:** two components of one interchange pointing at the
+   same entity with different kinds would silently lose a statement. Measured exposure is currently
+   zero — 8,171 declared edges, 8,171 distinct triples — so nothing is wrong today. **The uniqueness
+   gate must land before the edge properties do.**
 
-### The honest limit the module states about ITSELF
+5. **Gate 2's failure message names one cause as though it were the only one.** On a mismatch it says
+   the loader dropped or added something; a block-side duplicate collapsing under MERGE would produce
+   the same mismatch. The gate would still correctly fail — **its stated diagnosis would send the next
+   person to the wrong file.** Found, named, and deliberately left unfixed.
 
-> **the independence is of CODE PATH and FAILURE MODE, not of MIND — same author, same reference
-> grammar.**
+6. **This bundle declares no `semanticValidationLimit`**, so what the round trip does and does not
+   model does not travel with the number. The qualifications here are *derived* by reading the
+   canonicalizer, and a derived qualification drifts the moment someone edits the module. The run's own
+   stage summary carries the explicit "none declared" marker, so the absence is recorded rather than
+   merely missing.
 
-That is the module's own sentence, and it is the right one. The bounding instruments are the
-adversarial-pair fixtures (cosmetic variants MUST collapse; semantic variants MUST NOT) and a
-two-independent-readers census cross-check against the Phase 1 census of record — **disagreement being
-a finding either way.**
+7. **The declared-equivalence policy list is a filtered subset and does not say so.** `R-WO-15` runs
+   (a) through (f), but the canonicalizer's header block enumerates only the *equivalences* — (a), (b),
+   (c) — plus the instrument limit (e), because (d) and (f) are expected-**loss** rulings and belong to
+   a different category. The lettering is preserved through the filter, leaving a hole that reads as an
+   omission. **Do not renumber:** the letters are cited in code, recipe, verdict artifacts and DEVLOG.
+   Separately, the code labels `itemMetaEdId` and `itemNamespaceQualifier` as "R-WO-15d extension" when
+   it is (f) that authorizes them — a misattribution, not a missing policy.
 
-### Scope and refusal boundaries
+8. **Declaration order within a construct is not measured.** Set semantics, so a reordering of
+   declarations inside a construct cannot register as a difference. *(Contrast SIF, where order is part
+   of statement identity. The four bundles do not agree on this and a reader comparing them should not
+   assume they do.)* Comment lines are excluded by the publisher's own grammar — 19 in this run, each
+   censused with file and line rather than silently dropped.
 
-- **The reducer accepts the published packages' bare `topLevelEntity` file form** (all 849 corpus
-  files). **An explicit `Begin Namespace` wrapper is a REFUSAL BY NAME, not a skip** — if a future
-  snapshot ships wrapped files, the refusal surfaces for adjudication instead of quietly measuring
-  less.
-- **Any text the reducer cannot classify is a CANONICALIZATION FAULT — fatal, never advisory**,
-  because a half-reduced document must not produce a verdict someone might believe.
-
-### Out of scope entirely
-
-**Mapping and cross-standard content.** Ed-Fi is base-only in this graph — **zero cross-standard
-edges by design.** The authored crosswalk is stashed, not mapped (§4).
+9. **Whether carrying the three edge properties disturbs anything downstream is not established.** The
+   investigation read the forge, the instrument and the replay engine — not the DME, not search, not
+   any consumer walking `REFERENCES` edges. Treat that as unexamined rather than clear.
 
 ---
 
-## 4. KNOWN GAPS AND BACKLOGS
+## Provenance
 
-### The 349, enumerated by name from this run's verdict
+Snapshot `04`, acquired 2026-08-03. **Five declared source inputs, each with its acquisition class
+stated separately**, because they are not all of the same kind.
 
-```
-interchangeComponentKind (R-WO-15d) ............. 205
-itemMetaEdId (R-WO-15d extension) ............... 130
-itemNamespaceQualifier (R-WO-15d extension) ..... 14
-                                                 ---
-                                                 349
-```
+| input | what it is | class | in git? |
+|---|---|---|---|
+| `metaEdModel/` | `@edfi/ed-fi-model-5.2` v3.0.1 — 653 `.metaed` files, THE canonical source; the standard is authored in MetaEd | machine-canonical | **no — gitignored under the Ed-Fi Alliance License** |
+| `descriptorCodeValues/` | 203 descriptor code-value XMLs, the only machine-readable home of the default code sets | machine-canonical | yes |
+| `tpdmCommunityModel/` | TPDM Community Model v1.2, 196 `.metaed` | machine-canonical | yes |
+| `tpdmDescriptorCodeValues/` | 27 TPDM descriptor XMLs | machine-canonical | yes |
+| `cedsAuthoredCrosswalk/` | the authored Ed-Fi→CEDS crosswalk, 2 CSVs | **human-artifact-snapshot** | yes |
 
-Read from `lostByBacklogLabel` in `<runDir>/roundTrip/edfi/roundTripVerdict.json`, **not** from the
-recipe header — the recipe's PESC figures turned out to be superseded, so none of its numbers were
-taken on trust. **These three reproduce the header's decomposition exactly.**
+Upstream: `https://pkgs.dev.azure.com/ed-fi-alliance/.../@edfi/ed-fi-model-5.2/-/ed-fi-model-5.2-3.0.1.tgz`
+for the model package, and the Ed-Fi Alliance GitHub organisations for the rest —
+`Ed-Fi-Data-Standard` at tag `v5.2.0` (`bb65fc2e`), `Ed-Fi-TPDM-Community-Model` at tag `v1.2`
+(`a43d2a1d`), and `Ed-Fi-TPDM-Artifacts` (`de6f7c27`).
 
-### Explicitly omitted, censused rather than dropped
+**The mixed classes matter.** The round trip against the four machine-canonical inputs proves fidelity
+to the publisher's own artifacts. For the crosswalk it proves losslessness against *this snapshot
+only* — the original harvest recorded no upstream URL or version, so fidelity to the publisher's
+intent is exactly as good as the snapshot is. Version evidence for it is circumstantial but real: all
+8,310 descriptor-CSV data rows stamp `EdFiVersionNumber=DS5.2`.
 
-| item | count | policy |
-|---|---:|---|
-| `//` comment lines | **19** | R-WO-15(a) — lexer-skipped by the publisher's grammar |
-| item-keyword drift cases | **3** | R-WO-15(b) — forge-report provenance, not re-measured by the instrument |
+**A clone does not have the whole corpus.** `metaEdModel/` is gitignored because the licensed bytes are
+never committed, so a git-clone consumer must run the acquisition recipe in the provenance README
+before forging. `SHA256SUMS` covers every source file in all five subfolders including the gitignored
+bytes, so "same bytes" is provable on any machine: `cd 04 && shasum -c SHA256SUMS --quiet`.
 
-### The crosswalk guard
+**The crosswalk is stashed, not mapped, and that is a deliberate refusal.** 1,147 Ed-Fi nodes carry an
+authored `cedsId`. **That is the answer key, not an input** — loading the authored bridge and then
+scoring against it would be marking our own homework. It is guarded against invention by raw-value set
+membership, with `violationCount 0` in this run.
 
-The authored-crosswalk CSVs are a **declaredContext** input (R-WO-12) — authored data stashed for a
-later bridge phase, **never Layer 1 statements** — and are guarded against invention by raw-value set
-membership. From this run: `stashRawValueCount 3,076`, **`violationCount 0`**, `csvRowCountTotal
-9,976`, `csvDistinctGlobalIdCount 452`, `csvDistinctOptionCodeCount 2,129`.
+---
 
-**Why it is stashed rather than mapped:** 1,147 Ed-Fi nodes carry an authored `cedsId`. **That is the
-answer key, not an input.** Loading the authored bridge and then scoring against it would be marking
-our own homework.
+## For more information
 
-### THE GATE-2 ATTRIBUTION DEFECT — FOUND, NAMED, AND DELIBERATELY LEFT UNFIXED
-
-**A certificate that reported the 349 and hid this would be the wrong document.**
-
-Gate 2 compares **materialized graph entities** against **block-derived literals** and, on a mismatch,
-its message says the mismatch means *"the loader dropped or added something."*
-
-**That is one of at least two possible causes, stated as if it were the only one.** The replay engine
-MERGEs edges (`lib/replay/replay-engine.js:288`), so two identical `(fromRef, type, toRef)` triples in
-a block collapse into ONE graph relationship — and **gate 1 checks only the COUNT of the edges array,
-never its uniqueness.** So a block carrying 8,171 edges of which two were identical would PASS gate 1,
-materialize 8,170, and trip gate 2 **with a message blaming the loader for what is actually a
-block-side duplicate.** The gate would still correctly FAIL; **its stated diagnosis would send the
-next person to the wrong file.**
-
-**IS IT REACHABLE OR THEORETICAL? MEASURED, NOT REASONED.** The forge emits **8,171 declared edges and
-8,171 distinct `(fromRef, type, toRef)` triples — zero duplicates, collapse exposure 0.**
-
-**So the hazard is LATENT, NOT FIRING — and it is recorded as latent rather than asserted safe.** The
-two sides agree *by circumstance in this corpus*, which is exactly why a cross-measurable comparison
-can sit unnoticed. Nothing is currently wrong with the numbers.
-
-**The recommended remedy, not applied** (it is a gate-semantics change): have **gate 1 assert triple
-UNIQUENESS as well as count**, so a block-side duplicate is caught on the block side where it belongs,
-and **narrow gate 2's message to the causes it can actually distinguish.**
-
-> **A LINE-NUMBER CORRECTION, BECAUSE A CITATION IS A PROMISE SOMEONE CAN OPEN IT.**
-> `DEVLOG-edfiRoundTripForge-080326.md` cites this gate at `test/runEdfiMaterialize.js:155`.
-> **Measured 2026-08-07 with `/usr/bin/grep -a`, the `"the loader dropped or added"` message is at
-> `test/runEdfiMaterialize.js:199`.** The file has grown since the finding was written and the
-> citation drifted. **A hand-typed line number in a published finding decays silently** — the same
-> class the PESC campaign repaired by recomputing site citations from the files rather than retyping
-> them.
-
-### Summary of what is open
-
-| item | status |
+| document | what it holds |
 |---|---|
-| 349 lost statements | **open**, enumerated by name above |
-| no declared `semanticValidationLimit` | **open** — §3 is derived by reading code |
-| missing policy **(d)** in the lettered header list | **open** — referenced at `:799` and carrying all 349 labels |
-| gate-2 attribution defect | **open, LATENT, deliberately unfixed**, remedy recommended |
-| stale DEVLOG citation `:155` → `:199` | **reported here**; the DEVLOG is outside the git repo |
-| mapping / bridge content | **absent by design in this graph** |
+| `README_ValidationDetail.md` | the evidence behind every figure above, the declared equivalence policy in full, the gate-2 attribution defect, and the commands to reproduce this run |
+| `system/management/zNotesPlansDocs/FINDINGS-edfi349AndRWO15d-080926.md` | the investigation that decomposed the 349, established non-derivability, and found the sequencing constraint in known issue 4 |
+| `assets/standardSourceData/04/README_PROVENANCE.md` | the corpus record — five inputs, licences, and the exact rerunnable acquisition recipe |
+| `forges/README_ValidationCertificateStandard.md` | how this document is meant to be written |
 
----
-
-## 5. HOW TO REPRODUCE IT
-
-**Every command below was run from
-`/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge` on 2026-08-07.**
-
-```bash
-# the build that produced this certificate (nohup-detached; SIF in the same recipe needs the heap)
-jq -nc --arg recipePath "$PWD/recipes/fourWithNewPescRoundTripNoBridges.recipe.jsonc" \
-       --arg storePath  "<a throwaway>.standardsDatabase.sqlite3" \
-  '{switches:{build:true},values:{recipePath:[$recipePath],standardsDatabaseFilePath:[$storePath],vectorize:["false"]}}' \
-  | node --max-old-space-size=5510 apps/graph-builder/graphBuilder.js
-
-# the certification gate — PASSES despite roundTripClean false, because invented is 0
-jq -nc '{switches:{goldEvalCheck:true},values:{buildLogDirPath:["<the run dir>"]}}' \
-  | node apps/graph-builder/graphBuilder.js       # PASS, exit 0
-
-# this standard's verdict and its named backlog
-jq '{roundTripClean,reproduced,lostTotal,contentGapTotal,inventedTotal}' \
-  <runDir>/roundTrip/edfi/roundTripVerdict.json
-jq '.lostByBacklogLabel' <runDir>/roundTrip/edfi/roundTripVerdict.json
-jq '.crosswalkGuard'     <runDir>/roundTrip/edfi/roundTripVerdict.json
-```
-
-**The Ed-Fi gate suite and its fault-injection twins were NOT run in this pass** — named rather than
-omitted. They live in `forges/edfi/test/`.
-
----
-
-**Written 2026-08-07 by session VIOLET_STONE, from a build it ran and artifacts it opened. Section 3
-is derived from the validator's source and is labelled as such throughout. The gate-2 defect and the
-line-number correction are reported, not fixed — this pass's authorization was additive documentation
-only.**
+Certificate written 2026-08-07 by session VIOLET_STONE from a build it ran; restructured 2026-08-09 by
+session CRYSTAL_ORBIT, incorporating findings from session OCEAN_DELTA. Build figures unchanged.
+Revision history lives in `README_ValidationDetail.md`, not here.

@@ -1,0 +1,30 @@
+test-sifEvidenceBridge
+
+SECTION 1 — the pure helpers
+
+SECTION 2 — sifNominate in isolation
+
+SECTION 3 — sifWalk in isolation
+
+SECTION 4 — THE HEADLINE PROOF: token AND crossref recovery, through the REAL evidenceComposer
+
+SECTION 5 — THE SMUGGLING GATE (⟪A3⟫) TWIN: a candidate-naming segment is RED; SIF_GLOBAL_SEGMENT is GREEN
+
+SECTION 6 — the bridge's own wiring-fault twins (RED then GREEN), direct calls, no bridgeMaker
+
+SECTION 7 — THE FULL EVIDENCE FLOW through the REAL bridgeMaker.run(): REBRIDGE then MATERIALIZE
+[sifEvidenceBridge] judging 1 of 1 source elements (concurrency 8)
+[sifEvidenceBridge] judged 1/1 (0 served from the judgment cache, 1 live)
+
+SECTION 7 (cont.) — MATERIALIZE: the SAME frozen block replayed, ZERO llm calls
+
+SECTION 8 — RESOLVER CHECK: sifEvidenceBridge resolves uniquely via the standard-local search (source: sif)
+
+SECTION 8.5 — ⟪hubReimplementation P3⟫ OBSERVED-RED refusal twins: a card lacking embedding or embedText is refused BY NAME, never re-embedded/recomposed
+
+SECTION 9 — DETERMINISM UNDER CONCURRENCY: staggered-delay concurrent run vs concurrency-1 run, SAME frozen bytes
+[sifEvidenceBridge] judging 6 of 6 source elements (concurrency 8)
+[sifEvidenceBridge] judged 6/6 (0 served from the judgment cache, 6 live)
+[sifEvidenceBridge] judging 6 of 6 source elements (concurrency 1)
+[sifEvidenceBridge] judged 6/6 (0 served from the judgment cache, 6 live)
+test-sifEvidenceBridge: 118/118 passed, 0 failed.

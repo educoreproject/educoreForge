@@ -1,0 +1,288 @@
+{
+ "reportVersion": "sifRoundTrip-1",
+ "headline": {
+  "sourceStatements": 75,
+  "emittedStatements": 75,
+  "matched": 72,
+  "notReproduced": 3,
+  "contentGap": 3,
+  "explicitlyOmitted": 0,
+  "invented": 3,
+  "orderMismatches": 3
+ },
+ "perPredicate": [
+  {
+   "predicate": "fieldCedsId",
+   "lostCategory": "contentGap",
+   "source": 2,
+   "emitted": 2,
+   "matched": 2,
+   "lost": 0,
+   "invented": 0,
+   "lostSamples": [],
+   "inventedSamples": []
+  },
+  {
+   "predicate": "fieldCharacteristics",
+   "lostCategory": "contentGap",
+   "source": 11,
+   "emitted": 11,
+   "matched": 11,
+   "lost": 0,
+   "invented": 0,
+   "lostSamples": [],
+   "inventedSamples": []
+  },
+  {
+   "predicate": "fieldDescription",
+   "lostCategory": "contentGap",
+   "source": 9,
+   "emitted": 9,
+   "matched": 9,
+   "lost": 0,
+   "invented": 0,
+   "lostSamples": [],
+   "inventedSamples": []
+  },
+  {
+   "predicate": "fieldFormat",
+   "lostCategory": "contentGap",
+   "source": 2,
+   "emitted": 2,
+   "matched": 2,
+   "lost": 0,
+   "invented": 0,
+   "lostSamples": [],
+   "inventedSamples": []
+  },
+  {
+   "predicate": "fieldMandatory",
+   "lostCategory": "contentGap",
+   "source": 8,
+   "emitted": 8,
+   "matched": 8,
+   "lost": 0,
+   "invented": 0,
+   "lostSamples": [],
+   "inventedSamples": []
+  },
+  {
+   "predicate": "fieldName",
+   "lostCategory": "contentGap",
+   "source": 12,
+   "emitted": 12,
+   "matched": 12,
+   "lost": 0,
+   "invented": 0,
+   "lostSamples": [],
+   "inventedSamples": []
+  },
+  {
+   "predicate": "fieldType",
+   "lostCategory": "contentGap",
+   "source": 12,
+   "emitted": 12,
+   "matched": 12,
+   "lost": 0,
+   "invented": 0,
+   "lostSamples": [],
+   "inventedSamples": []
+  },
+  {
+   "predicate": "objectElementName",
+   "lostCategory": "contentGap",
+   "source": 2,
+   "emitted": 2,
+   "matched": 2,
+   "lost": 0,
+   "invented": 0,
+   "lostSamples": [],
+   "inventedSamples": []
+  },
+  {
+   "predicate": "objectTableName",
+   "lostCategory": "contentGap",
+   "source": 2,
+   "emitted": 2,
+   "matched": 2,
+   "lost": 0,
+   "invented": 0,
+   "lostSamples": [],
+   "inventedSamples": []
+  },
+  {
+   "predicate": "precedesInGroup",
+   "lostCategory": "contentGap",
+   "source": 15,
+   "emitted": 15,
+   "matched": 12,
+   "lost": 3,
+   "invented": 3,
+   "lostSamples": [
+    {
+     "subject": "sif:group/FixtureStudent/(root)",
+     "predicate": "precedesInGroup",
+     "object": "/FixtureStudents/FixtureStudent/@RefId precedes /FixtureStudents/FixtureStudent/LocalId",
+     "location": "line 3 -> line 4"
+    },
+    {
+     "subject": "sif:group/FixtureStudent/(root)",
+     "predicate": "precedesInGroup",
+     "object": "/FixtureStudents/FixtureStudent/@RefId precedes /FixtureStudents/FixtureStudent/StatusCode",
+     "location": "line 3 -> line 5"
+    },
+    {
+     "subject": "sif:group/FixtureStudent/(root)",
+     "predicate": "precedesInGroup",
+     "object": "/FixtureStudents/FixtureStudent/LocalId precedes /FixtureStudents/FixtureStudent/StatusCode",
+     "location": "line 4 -> line 5"
+    }
+   ],
+   "inventedSamples": [
+    {
+     "subject": "sif:group/FixtureStudent/(root)",
+     "predicate": "precedesInGroup",
+     "object": "/FixtureStudents/FixtureStudent/StatusCode precedes /FixtureStudents/FixtureStudent/LocalId",
+     "location": "node sif:field//FixtureStudents/FixtureStudent/StatusCode -> node sif:field//FixtureStudents/FixtureStudent/LocalId"
+    },
+    {
+     "subject": "sif:group/FixtureStudent/(root)",
+     "predicate": "precedesInGroup",
+     "object": "/FixtureStudents/FixtureStudent/StatusCode precedes /FixtureStudents/FixtureStudent/@RefId",
+     "location": "node sif:field//FixtureStudents/FixtureStudent/StatusCode -> node sif:field//FixtureStudents/FixtureStudent/@RefId"
+    },
+    {
+     "subject": "sif:group/FixtureStudent/(root)",
+     "predicate": "precedesInGroup",
+     "object": "/FixtureStudents/FixtureStudent/LocalId precedes /FixtureStudents/FixtureStudent/@RefId",
+     "location": "node sif:field//FixtureStudents/FixtureStudent/LocalId -> node sif:field//FixtureStudents/FixtureStudent/@RefId"
+    }
+   ]
+  }
+ ],
+ "perKind": [
+  {
+   "kind": "object",
+   "sourceSubjects": 2,
+   "emittedSubjects": 2
+  },
+  {
+   "kind": "field",
+   "sourceSubjects": 12,
+   "emittedSubjects": 12
+  },
+  {
+   "kind": "group",
+   "sourceSubjects": 4,
+   "emittedSubjects": 4
+  }
+ ],
+ "orderMismatchList": [
+  {
+   "groupSubject": "sif:group/FixtureStudent/(root)",
+   "sourceOrder": "/FixtureStudents/FixtureStudent/@RefId precedes /FixtureStudents/FixtureStudent/LocalId",
+   "emittedOrder": "/FixtureStudents/FixtureStudent/LocalId precedes /FixtureStudents/FixtureStudent/@RefId",
+   "sourceLocation": "line 3 -> line 4"
+  },
+  {
+   "groupSubject": "sif:group/FixtureStudent/(root)",
+   "sourceOrder": "/FixtureStudents/FixtureStudent/@RefId precedes /FixtureStudents/FixtureStudent/StatusCode",
+   "emittedOrder": "/FixtureStudents/FixtureStudent/StatusCode precedes /FixtureStudents/FixtureStudent/@RefId",
+   "sourceLocation": "line 3 -> line 5"
+  },
+  {
+   "groupSubject": "sif:group/FixtureStudent/(root)",
+   "sourceOrder": "/FixtureStudents/FixtureStudent/LocalId precedes /FixtureStudents/FixtureStudent/StatusCode",
+   "emittedOrder": "/FixtureStudents/FixtureStudent/StatusCode precedes /FixtureStudents/FixtureStudent/LocalId",
+   "sourceLocation": "line 4 -> line 5"
+  }
+ ],
+ "lostDetailList": [
+  {
+   "subject": "sif:group/FixtureStudent/(root)",
+   "predicate": "precedesInGroup",
+   "object": "/FixtureStudents/FixtureStudent/@RefId precedes /FixtureStudents/FixtureStudent/LocalId",
+   "location": "line 3 -> line 4",
+   "located": true,
+   "lostCategory": "contentGap",
+   "backlogLabel": "precedesInGroup (uncategorized loss — investigate before accepting)"
+  },
+  {
+   "subject": "sif:group/FixtureStudent/(root)",
+   "predicate": "precedesInGroup",
+   "object": "/FixtureStudents/FixtureStudent/@RefId precedes /FixtureStudents/FixtureStudent/StatusCode",
+   "location": "line 3 -> line 5",
+   "located": true,
+   "lostCategory": "contentGap",
+   "backlogLabel": "precedesInGroup (uncategorized loss — investigate before accepting)"
+  },
+  {
+   "subject": "sif:group/FixtureStudent/(root)",
+   "predicate": "precedesInGroup",
+   "object": "/FixtureStudents/FixtureStudent/LocalId precedes /FixtureStudents/FixtureStudent/StatusCode",
+   "location": "line 4 -> line 5",
+   "located": true,
+   "lostCategory": "contentGap",
+   "backlogLabel": "precedesInGroup (uncategorized loss — investigate before accepting)"
+  }
+ ],
+ "inventedDetailList": [
+  {
+   "subject": "sif:group/FixtureStudent/(root)",
+   "predicate": "precedesInGroup",
+   "object": "/FixtureStudents/FixtureStudent/StatusCode precedes /FixtureStudents/FixtureStudent/LocalId",
+   "location": "node sif:field//FixtureStudents/FixtureStudent/StatusCode -> node sif:field//FixtureStudents/FixtureStudent/LocalId"
+  },
+  {
+   "subject": "sif:group/FixtureStudent/(root)",
+   "predicate": "precedesInGroup",
+   "object": "/FixtureStudents/FixtureStudent/StatusCode precedes /FixtureStudents/FixtureStudent/@RefId",
+   "location": "node sif:field//FixtureStudents/FixtureStudent/StatusCode -> node sif:field//FixtureStudents/FixtureStudent/@RefId"
+  },
+  {
+   "subject": "sif:group/FixtureStudent/(root)",
+   "predicate": "precedesInGroup",
+   "object": "/FixtureStudents/FixtureStudent/LocalId precedes /FixtureStudents/FixtureStudent/@RefId",
+   "location": "node sif:field//FixtureStudents/FixtureStudent/LocalId -> node sif:field//FixtureStudents/FixtureStudent/@RefId"
+  }
+ ],
+ "canonicalizationFaults": [],
+ "sourceStats": {
+  "tableCount": 2,
+  "fieldRowCount": 12,
+  "statementCount": 75,
+  "groupCount": 4,
+  "precedencePairCount": 15,
+  "largestGroup": {
+   "groupSubject": "sif:group/FixtureStudent/(root)",
+   "memberCount": 5,
+   "pairCount": 10
+  },
+  "emptyNameRowsSkipped": 0,
+  "unrecognizedLineCount": 0,
+  "columnHeadersVerified": 2,
+  "nonAsteriskMandatoryCellCount": 0
+ },
+ "emittedStats": {
+  "tableCount": 2,
+  "fieldRowCount": 12,
+  "statementCount": 75,
+  "groupCount": 4,
+  "precedencePairCount": 15,
+  "largestGroup": {
+   "groupSubject": "sif:group/FixtureStudent/(root)",
+   "memberCount": 5,
+   "pairCount": 10
+  },
+  "emptyNameRowsSkipped": 0,
+  "unrecognizedLineCount": 0,
+  "columnHeadersVerified": 0,
+  "nonAsteriskMandatoryCellCount": 0
+ },
+ "context": {
+  "snapshotPath": "/var/folders/m_/12d8yqwd28943kwt0n4nhrk80000gn/T/sifRoundTrip-fixtureSnapshot-tX2XeQ",
+  "snapshotDigest": "3b59ce43ca9208cac4583b26311bdaf0fcd59a80fbd54cd9491709080475cea4",
+  "containerName": "graphDouble:orderSwap",
+  "boltUrl": "none (reader double)"
+ }
+}

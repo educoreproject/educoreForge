@@ -1,0 +1,138 @@
+================================================================================================
+PESC ROUND-TRIP FIDELITY REPORT
+================================================================================================
+
+The criterion is SEMANTIC round-trip — statement-set equality over the XSD semantic
+domain (roundTripXsdCanonical.js defines it). Whitespace, element order, attribute order,
+prefix choice, compositor kind and member order do NOT count; a missing or extra
+STATEMENT does. This measures what the GRAPH can support, not what the forge saw.
+
+  snapshotPath:         assets/standardSourceData/01
+  snapshotDigest:       92e9a6326ff1edda465db3d704632491a7b5bb39469edfee883f366840688984
+  containerName:        DEV_pesc260805
+  boltUrl:              bolt://localhost:7821
+
+------------------------------------------------------------------------------------------------
+HEADLINE
+------------------------------------------------------------------------------------------------
+  statements in source .......    142345
+  statements emitted .........    142052
+  MATCHED ....................    142052
+  NOT REPRODUCED .............       293   (in source, not emitted)
+    explicitlyOmitted ........         0   (declarations the graph deliberately does not carry — CHOSEN, never lost)
+  LOST .......................       293   (contentGap alone — genuine loss, the enrichment work order)
+  INVENTED ...................         0   (emitted, not in source — must be 0)
+  fidelity ...................   99.794%
+  clean fidelity .............   99.794%   (matched / (source + invented) — falls when anything is fabricated)
+
+  NOTE: no percentage above is an acceptance criterion. Acceptance is INVENTED == 0
+  (always) and LOST == 0 (round-trip clean). Read the counts, not the percent.
+
+  subjects: source 40410, emitted 40310   |   duplicate statements collapsed: source 295, emitted 281
+
+  unmodeled constructs: none RECORDED — and this is NOT a completeness claim.
+    countUnmodeled is not reached inside a complexType, so constructs nested there
+    are NOT counted on either side. An empty tally means "nothing was recorded",
+    never "everything was measured".
+
+------------------------------------------------------------------------------------------------
+INVENTED STATEMENTS — read this first. Invention is worse than loss.
+------------------------------------------------------------------------------------------------
+  NONE. Every statement emitted is a statement the source makes.
+
+------------------------------------------------------------------------------------------------
+PER-PREDICATE LOSS — sorted by loss. contentGap rows ARE the enrichment work order.
+------------------------------------------------------------------------------------------------
+      LOST    source   emitted   matched  invented  category        predicate
+       268       268         0         0         0  contentGap      usesGroup
+        25        25         0         0         0  contentGap      allowsAnyElement
+         0        60        60        60         0  —               attributeFormDefault
+         0       145       145       145         0  —               contentTypeRef
+         0      3021      3021      3021         0  —               declaresComplexType
+         0       121       121       121         0  —               declaresGroup
+         0       171       171       171         0  —               declaresRootElement
+         0      9596      9596      9596         0  —               declaresSimpleType
+         0       600       600       600         0  —               derivationMethod
+         0       600       600       600         0  —               derivesFrom
+         0     26591     26591     26591         0  —               documentation
+         0         2         2         2         0  —               elementFixed
+         0        64        64        64         0  —               elementFormDefault
+         0     30519     30519     30519         0  —               enumerationValue
+         0       815       815       815         0  —               facet:fractionDigits
+         0        33        33        33         0  —               facet:length
+         0       542       542       542         0  —               facet:maxInclusive
+         0      2749      2749      2749         0  —               facet:maxLength
+         0       546       546       546         0  —               facet:minInclusive
+         0      2676      2676      2676         0  —               facet:minLength
+         0        75        75        75         0  —               facet:pattern
+         0       879       879       879         0  —               facet:totalDigits
+         0        45        45        45         0  —               facet:whiteSpace
+         0     16762     16762     16762         0  —               fieldType
+         0        82        82        82         0  —               importsNamespace
+         0        82        82        82         0  —               importsSchemaLocation
+         0       814       814       814         0  —               inlineEnumerationValue
+         0     16983     16983     16983         0  —               maxOccurs
+         0     16983     16983     16983         0  —               minOccurs
+         0       775       775       775         0  —               nillable
+         0      9596      9596      9596         0  —               restrictionBase
+         0        61        61        61         0  —               schemaVersionAttribute
+         0        64        64        64         0  —               targetNamespace
+
+------------------------------------------------------------------------------------------------
+PER-ENTITY-KIND
+------------------------------------------------------------------------------------------------
+  kind                  subjects    source   matched      lost  invented
+  complexType               3021     59215     59020       195         0
+  group                      121      2025      1927        98         0
+  rootElement                171       518       518         0         0
+  schemaFile                  64     13327     13327         0         0
+  simpleType                9596     67260     67260         0         0
+
+------------------------------------------------------------------------------------------------
+LOST STATEMENT SAMPLES — up to 10 per predicate
+------------------------------------------------------------------------------------------------
+
+  usesGroup  (268 lost of 268; category contentGap)
+    pesc://pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc#complexType/OrganizationType
+      = OrganizationIDGroup
+    pesc://pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc#complexType/HighSchoolType
+      = OrganizationIDGroup
+    pesc://pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc#complexType/SchoolType
+      = OrganizationIDGroup
+    pesc://pescArtifact:d498b9d439bd4b3352b36bd5449d1606b12dfdaa206d9d655e1095cdd4b48f79#complexType/OrganizationType
+      = OrganizationIDGroup
+    pesc://pescArtifact:d498b9d439bd4b3352b36bd5449d1606b12dfdaa206d9d655e1095cdd4b48f79#complexType/HighSchoolType
+      = OrganizationIDGroup
+    pesc://pescArtifact:d498b9d439bd4b3352b36bd5449d1606b12dfdaa206d9d655e1095cdd4b48f79#complexType/SchoolType
+      = OrganizationIDGroup
+    pesc://pescArtifact:87502be504916a0fcd47495bcf9156221b0320c8aa6e05fb48e2ed598486c283#complexType/OrganizationType
+      = OrganizationIDMultiChoiceGroup
+    pesc://pescArtifact:87502be504916a0fcd47495bcf9156221b0320c8aa6e05fb48e2ed598486c283#complexType/HighSchoolType
+      = OrganizationIDMultiChoiceGroup
+    pesc://pescArtifact:87502be504916a0fcd47495bcf9156221b0320c8aa6e05fb48e2ed598486c283#complexType/SchoolType
+      = OrganizationIDMultiChoiceGroup
+    pesc://pescArtifact:87502be504916a0fcd47495bcf9156221b0320c8aa6e05fb48e2ed598486c283#complexType/RequestorReceiverOrganizationType
+      = OrganizationIDMultiChoiceGroup
+
+  allowsAnyElement  (25 lost of 25; category contentGap)
+    pesc://pescArtifact:9280eaa9a618c6c93c42956d75031ed0424b3d8bd8c4c650ad3bd30fd481942a#complexType/UserDefinedExtensionsType
+      = lax
+    pesc://pescArtifact:1ea9f63e4b603cbf3f8da690efd7debc69f3b84e598788d922a90c8b8cbc1f14#complexType/UserDefinedExtensionsType
+      = lax
+    pesc://pescArtifact:1ea9f63e4b603cbf3f8da690efd7debc69f3b84e598788d922a90c8b8cbc1f14#complexType/AcademicRecordBatchType
+      = strict
+    pesc://pescArtifact:ccf54c28dbb3f750fda925076c64508f53102a00c3316d265395d4bc7ae6d42e#complexType/UserDefinedExtensionsType
+      = lax
+    pesc://pescArtifact:ccf54c28dbb3f750fda925076c64508f53102a00c3316d265395d4bc7ae6d42e#complexType/AcademicRecordBatchType
+      = strict
+    pesc://pescArtifact:2cd45fc3afd3779eebb66cd552abaa28e3a24093379b1de4bc9d1c5ebb5f848d#complexType/UserDefinedExtensionsType
+      = lax
+    pesc://pescArtifact:2cd45fc3afd3779eebb66cd552abaa28e3a24093379b1de4bc9d1c5ebb5f848d#complexType/AcademicRecordBatchType
+      = strict
+    pesc://pescArtifact:78f00a57c7faade149343179c3758e5e15d710f4ed72f6cdde7d3b693d41b1ca#complexType/UserDefinedExtensionsType
+      = lax
+    pesc://pescArtifact:78f00a57c7faade149343179c3758e5e15d710f4ed72f6cdde7d3b693d41b1ca#complexType/AcademicRecordBatchType
+      = strict
+    pesc://pescArtifact:870c35770ffd7daf68c270eef291c360a32dcc32bd952c439c175439b7bb04b6#complexType/UserDefinedExtensionsType
+      = lax
+

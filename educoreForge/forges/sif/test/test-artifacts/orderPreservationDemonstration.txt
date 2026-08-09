@@ -1,0 +1,52 @@
+R-SF-1 ORDER-PRESERVATION DEMONSTRATION — forge-sif Phase 1 (CRIMSON_CHORUS, 2026-08-03)
+
+Chosen table: StudentPersonals (object stableId sif:object/StudentPersonals)
+Source rows in table: 242; forged DmeProperty nodes owned: 242
+
+CLAIM (R-SF-1): element sequence is part of SIF statement identity. The TSV's row order
+within each sibling group must reappear VERBATIM as sequenceOrdinal (0-based) on the
+forged nodes — a NODE property, carried by the loader byte-for-byte into the graph.
+
+RESULT: 112 of 112 sibling groups have sequenceOrdinal order
+IDENTICAL to TSV row order. Violations: NONE
+
+--- ROOT GROUP — direct children of StudentPersonal (sif:fieldGroup:root:StudentPersonal) — 21 members ---
+  TSV row | src pos | ordinal | siblingCount | orderSemantics | field (xpath)
+    12585 |       0 |       0 |           21 |       document | @RefId (/StudentPersonals/StudentPersonal/@RefId)
+    12592 |       7 |       1 |           21 |       document | LocalId (/StudentPersonals/StudentPersonal/LocalId)
+    12593 |       8 |       2 |           21 |       document | StateProvinceId (/StudentPersonals/StudentPersonal/StateProvinceId)
+    12721 |     136 |       3 |           21 |       document | CohortYear (/StudentPersonals/StudentPersonal/CohortYear)
+    12722 |     137 |       4 |           21 |       document | ProjectedGraduationYear (/StudentPersonals/StudentPersonal/ProjectedGraduationYear)
+    12723 |     138 |       5 |           21 |       document | OnTimeGraduationYear (/StudentPersonals/StudentPersonal/OnTimeGraduationYear)
+    12724 |     139 |       6 |           21 |       document | GraduationDate (/StudentPersonals/StudentPersonal/GraduationDate)
+    12732 |     147 |       7 |           21 |       document | AcceptableUsePolicy (/StudentPersonals/StudentPersonal/AcceptableUsePolicy)
+    12734 |     149 |       8 |           21 |       document | IDEA (/StudentPersonals/StudentPersonal/IDEA)
+    12736 |     151 |       9 |           21 |       document | Migrant (/StudentPersonals/StudentPersonal/Migrant)
+    12738 |     153 |      10 |           21 |       document | Title1 (/StudentPersonals/StudentPersonal/Title1)
+    12740 |     155 |      11 |           21 |       document | GiftedTalented (/StudentPersonals/StudentPersonal/GiftedTalented)
+    12742 |     157 |      12 |           21 |       document | EconomicDisadvantage (/StudentPersonals/StudentPersonal/EconomicDisadvantage)
+    12744 |     159 |      13 |           21 |       document | ELL (/StudentPersonals/StudentPersonal/ELL)
+    12746 |     161 |      14 |           21 |       document | Homeless (/StudentPersonals/StudentPersonal/Homeless)
+    12748 |     163 |      15 |           21 |       document | HomelessServicedIndicator (/StudentPersonals/StudentPersonal/HomelessServicedIndicator)
+    12750 |     165 |      16 |           21 |       document | Section504 (/StudentPersonals/StudentPersonal/Section504)
+    12752 |     167 |      17 |           21 |       document | VocationalConcentrator (/StudentPersonals/StudentPersonal/VocationalConcentrator)
+    12754 |     169 |      18 |           21 |       document | Immigrant (/StudentPersonals/StudentPersonal/Immigrant)
+    12756 |     171 |      19 |           21 |       document | NeglectedDelinquent (/StudentPersonals/StudentPersonal/NeglectedDelinquent)
+    12757 |     172 |      20 |           21 |       document | FirstUSEnrollment (/StudentPersonals/StudentPersonal/FirstUSEnrollment)
+
+--- NESTED GROUP — the Name element's children (sif:fieldGroup:StudentPersonal:Name) — 10 members ---
+  TSV row | src pos | ordinal | siblingCount | orderSemantics | field (xpath)
+    12600 |      15 |       0 |           10 |       document | @Type (/StudentPersonals/StudentPersonal/Name/@Type)
+    12601 |      16 |       1 |           10 |       document | @TypeCodeset (/StudentPersonals/StudentPersonal/Name/@TypeCodeset)
+    12602 |      17 |       2 |           10 |       document | Prefix (/StudentPersonals/StudentPersonal/Name/Prefix)
+    12603 |      18 |       3 |           10 |       document | LastName (/StudentPersonals/StudentPersonal/Name/LastName)
+    12604 |      19 |       4 |           10 |       document | FirstName (/StudentPersonals/StudentPersonal/Name/FirstName)
+    12605 |      20 |       5 |           10 |       document | MiddleName (/StudentPersonals/StudentPersonal/Name/MiddleName)
+    12606 |      21 |       6 |           10 |       document | Suffix (/StudentPersonals/StudentPersonal/Name/Suffix)
+    12607 |      22 |       7 |           10 |       document | PreferredName (/StudentPersonals/StudentPersonal/Name/PreferredName)
+    12608 |      23 |       8 |           10 |       document | SortName (/StudentPersonals/StudentPersonal/Name/SortName)
+    12609 |      24 |       9 |           10 |       document | FullName (/StudentPersonals/StudentPersonal/Name/FullName)
+
+Source-side positions derive ONLY from raw TSV line numbers (this script's own read of the
+committed snapshot bytes); graph-side ordinals ONLY from forged node properties. The two
+orders are compared as permutations — identity across every group is the demonstration.

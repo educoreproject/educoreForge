@@ -1,0 +1,23 @@
+[runEdfiV2Materialize] forging snapshot 04 (skipEmbedding) ...
+[forge-edfi metaEdParser] loaded metaEdModel: 653 files, tpdmCommunityModel: 196 files
+[forge-edfi-v2] code values: 3522 records across 230 XMLs (0 identical duplicates collapsed)
+[forge-edfi-v2] authored crosswalk: 1666 element rows, 8310 descriptor rows loaded
+snapshot-provenance: version DISAGREEMENT — the source declares '5.2.0' but the provenance file declares 'Ed-Fi Data Standard 5.2.0 (DS 5.2) + TPDM Community Model 1.2' (/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/forges/edfi/assets/standardSourceData/04/standardSourceLocation); the source wins (versionSource 'spec'); the disagreement is logged, never silently resolved
+[forge-edfi-v2] contract graph: 6336 nodes, 8171 edges; crosswalk matches — properties 686 matched / 764 unmatched / 0 ambiguous; descriptors 130/0; values 2420/0 (unmatched rows are REPORTED, never invented — R-WO-11)
+[runEdfiV2Materialize] forged 6336 nodes / 8171 edges
+[runEdfiV2Materialize] provisioning scratch container 'DEV_edfiRoundTrip_080326' ...
+[replayManager] provisioning scratch graph 'DEV_edfiRoundTrip_080326' (bolt 7821)...
+[replayManager] scratch graph 'DEV_edfiRoundTrip_080326' ready at bolt://localhost:7821
+[runEdfiV2Materialize] container ready at bolt://localhost:7821
+[replayManager] loading 6336 nodes, 8171 edges into 'DEV_edfiRoundTrip_080326' as [StandardBase]
+[runEdfiV2Materialize] init complete; verifying counts over bolt via docker inspect ...
+{
+ "containerName": "DEV_edfiRoundTrip_080326",
+ "boltUrl": "bolt://localhost:7821",
+ "materializedNodeCount": 6336,
+ "materializedEdgeCount": 8171,
+ "expectedNodeCount": 6336,
+ "expectedEdgeCount": 8171,
+ "countsMatch": true
+}
+[runEdfiV2Materialize] MATERIALIZED AND COUNT-VERIFIED

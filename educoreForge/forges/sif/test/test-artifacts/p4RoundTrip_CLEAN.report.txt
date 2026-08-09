@@ -1,0 +1,24 @@
+SIF ROUND-TRIP REPORT (sifRoundTrip-1)
+========================================================================
+source 97888  emitted 97888  matched 97888  LOST 0 (declaredContext 0 / contentGap 0)  INVENTED 0  orderMismatches 0
+
+per predicate:
+  predicate                 source  emitted  matched     lost  invented  category
+  fieldCedsId                 2231     2231     2231        0         0  contentGap
+  fieldCharacteristics       15458    15458    15458        0         0  contentGap
+  fieldDescription           10887    10887    10887        0         0  contentGap
+  fieldFormat                 1745     1745     1745        0         0  contentGap
+  fieldMandatory              7394     7394     7394        0         0  contentGap
+  fieldName                  15620    15620    15620        0         0  contentGap
+  fieldType                  15620    15620    15620        0         0  contentGap
+  objectElementName            159      159      159        0         0  contentGap
+  objectTableName              159      159      159        0         0  contentGap
+  precedesInGroup            28615    28615    28615        0         0  contentGap
+
+per kind (distinct subjects):
+  object                  source 159  emitted 159
+  field                   source 15620  emitted 15620
+  group                   source 2453  emitted 2453
+
+samples (up to 10 per predicate):
+

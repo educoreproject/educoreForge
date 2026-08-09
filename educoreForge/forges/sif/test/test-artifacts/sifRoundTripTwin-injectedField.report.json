@@ -1,0 +1,235 @@
+{
+ "reportVersion": "sifRoundTrip-1",
+ "headline": {
+  "sourceStatements": 75,
+  "emittedStatements": 79,
+  "matched": 75,
+  "notReproduced": 0,
+  "contentGap": 0,
+  "explicitlyOmitted": 0,
+  "invented": 4,
+  "orderMismatches": 0
+ },
+ "perPredicate": [
+  {
+   "predicate": "fieldCedsId",
+   "lostCategory": "contentGap",
+   "source": 2,
+   "emitted": 2,
+   "matched": 2,
+   "lost": 0,
+   "invented": 0,
+   "lostSamples": [],
+   "inventedSamples": []
+  },
+  {
+   "predicate": "fieldCharacteristics",
+   "lostCategory": "contentGap",
+   "source": 11,
+   "emitted": 11,
+   "matched": 11,
+   "lost": 0,
+   "invented": 0,
+   "lostSamples": [],
+   "inventedSamples": []
+  },
+  {
+   "predicate": "fieldDescription",
+   "lostCategory": "contentGap",
+   "source": 9,
+   "emitted": 9,
+   "matched": 9,
+   "lost": 0,
+   "invented": 0,
+   "lostSamples": [],
+   "inventedSamples": []
+  },
+  {
+   "predicate": "fieldFormat",
+   "lostCategory": "contentGap",
+   "source": 2,
+   "emitted": 2,
+   "matched": 2,
+   "lost": 0,
+   "invented": 0,
+   "lostSamples": [],
+   "inventedSamples": []
+  },
+  {
+   "predicate": "fieldMandatory",
+   "lostCategory": "contentGap",
+   "source": 8,
+   "emitted": 8,
+   "matched": 8,
+   "lost": 0,
+   "invented": 0,
+   "lostSamples": [],
+   "inventedSamples": []
+  },
+  {
+   "predicate": "fieldName",
+   "lostCategory": "contentGap",
+   "source": 12,
+   "emitted": 13,
+   "matched": 12,
+   "lost": 0,
+   "invented": 1,
+   "lostSamples": [],
+   "inventedSamples": [
+    {
+     "subject": "sif:field//FixtureSchools/FixtureSchool/BogusInjected",
+     "predicate": "fieldName",
+     "object": "BogusInjected",
+     "location": "node sif:field//FixtureSchools/FixtureSchool/BogusInjected"
+    }
+   ]
+  },
+  {
+   "predicate": "fieldType",
+   "lostCategory": "contentGap",
+   "source": 12,
+   "emitted": 12,
+   "matched": 12,
+   "lost": 0,
+   "invented": 0,
+   "lostSamples": [],
+   "inventedSamples": []
+  },
+  {
+   "predicate": "objectElementName",
+   "lostCategory": "contentGap",
+   "source": 2,
+   "emitted": 2,
+   "matched": 2,
+   "lost": 0,
+   "invented": 0,
+   "lostSamples": [],
+   "inventedSamples": []
+  },
+  {
+   "predicate": "objectTableName",
+   "lostCategory": "contentGap",
+   "source": 2,
+   "emitted": 2,
+   "matched": 2,
+   "lost": 0,
+   "invented": 0,
+   "lostSamples": [],
+   "inventedSamples": []
+  },
+  {
+   "predicate": "precedesInGroup",
+   "lostCategory": "contentGap",
+   "source": 15,
+   "emitted": 18,
+   "matched": 15,
+   "lost": 0,
+   "invented": 3,
+   "lostSamples": [],
+   "inventedSamples": [
+    {
+     "subject": "sif:group/FixtureSchool/(root)",
+     "predicate": "precedesInGroup",
+     "object": "/FixtureSchools/FixtureSchool/@RefId precedes /FixtureSchools/FixtureSchool/BogusInjected",
+     "location": "node sif:field//FixtureSchools/FixtureSchool/@RefId -> node sif:field//FixtureSchools/FixtureSchool/BogusInjected"
+    },
+    {
+     "subject": "sif:group/FixtureSchool/(root)",
+     "predicate": "precedesInGroup",
+     "object": "/FixtureSchools/FixtureSchool/SchoolName precedes /FixtureSchools/FixtureSchool/BogusInjected",
+     "location": "node sif:field//FixtureSchools/FixtureSchool/SchoolName -> node sif:field//FixtureSchools/FixtureSchool/BogusInjected"
+    },
+    {
+     "subject": "sif:group/FixtureSchool/(root)",
+     "predicate": "precedesInGroup",
+     "object": "/FixtureSchools/FixtureSchool/GradeLevels precedes /FixtureSchools/FixtureSchool/BogusInjected",
+     "location": "node sif:field//FixtureSchools/FixtureSchool/GradeLevels -> node sif:field//FixtureSchools/FixtureSchool/BogusInjected"
+    }
+   ]
+  }
+ ],
+ "perKind": [
+  {
+   "kind": "object",
+   "sourceSubjects": 2,
+   "emittedSubjects": 2
+  },
+  {
+   "kind": "field",
+   "sourceSubjects": 12,
+   "emittedSubjects": 13
+  },
+  {
+   "kind": "group",
+   "sourceSubjects": 4,
+   "emittedSubjects": 4
+  }
+ ],
+ "orderMismatchList": [],
+ "lostDetailList": [],
+ "inventedDetailList": [
+  {
+   "subject": "sif:field//FixtureSchools/FixtureSchool/BogusInjected",
+   "predicate": "fieldName",
+   "object": "BogusInjected",
+   "location": "node sif:field//FixtureSchools/FixtureSchool/BogusInjected"
+  },
+  {
+   "subject": "sif:group/FixtureSchool/(root)",
+   "predicate": "precedesInGroup",
+   "object": "/FixtureSchools/FixtureSchool/@RefId precedes /FixtureSchools/FixtureSchool/BogusInjected",
+   "location": "node sif:field//FixtureSchools/FixtureSchool/@RefId -> node sif:field//FixtureSchools/FixtureSchool/BogusInjected"
+  },
+  {
+   "subject": "sif:group/FixtureSchool/(root)",
+   "predicate": "precedesInGroup",
+   "object": "/FixtureSchools/FixtureSchool/SchoolName precedes /FixtureSchools/FixtureSchool/BogusInjected",
+   "location": "node sif:field//FixtureSchools/FixtureSchool/SchoolName -> node sif:field//FixtureSchools/FixtureSchool/BogusInjected"
+  },
+  {
+   "subject": "sif:group/FixtureSchool/(root)",
+   "predicate": "precedesInGroup",
+   "object": "/FixtureSchools/FixtureSchool/GradeLevels precedes /FixtureSchools/FixtureSchool/BogusInjected",
+   "location": "node sif:field//FixtureSchools/FixtureSchool/GradeLevels -> node sif:field//FixtureSchools/FixtureSchool/BogusInjected"
+  }
+ ],
+ "canonicalizationFaults": [],
+ "sourceStats": {
+  "tableCount": 2,
+  "fieldRowCount": 12,
+  "statementCount": 75,
+  "groupCount": 4,
+  "precedencePairCount": 15,
+  "largestGroup": {
+   "groupSubject": "sif:group/FixtureStudent/(root)",
+   "memberCount": 5,
+   "pairCount": 10
+  },
+  "emptyNameRowsSkipped": 0,
+  "unrecognizedLineCount": 0,
+  "columnHeadersVerified": 2,
+  "nonAsteriskMandatoryCellCount": 0
+ },
+ "emittedStats": {
+  "tableCount": 2,
+  "fieldRowCount": 13,
+  "statementCount": 79,
+  "groupCount": 4,
+  "precedencePairCount": 18,
+  "largestGroup": {
+   "groupSubject": "sif:group/FixtureStudent/(root)",
+   "memberCount": 5,
+   "pairCount": 10
+  },
+  "emptyNameRowsSkipped": 0,
+  "unrecognizedLineCount": 0,
+  "columnHeadersVerified": 0,
+  "nonAsteriskMandatoryCellCount": 0
+ },
+ "context": {
+  "snapshotPath": "/var/folders/m_/12d8yqwd28943kwt0n4nhrk80000gn/T/sifRoundTrip-fixtureSnapshot-tX2XeQ",
+  "snapshotDigest": "3b59ce43ca9208cac4583b26311bdaf0fcd59a80fbd54cd9491709080475cea4",
+  "containerName": "graphDouble:injectedField",
+  "boltUrl": "none (reader double)"
+ }
+}

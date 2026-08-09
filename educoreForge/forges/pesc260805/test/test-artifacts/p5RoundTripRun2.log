@@ -1,0 +1,19 @@
+roundTripClean            false
+sourceStatements          142345
+emittedStatements         140128
+reproduced (matched)      140128
+inventedTotal             0
+lostTotal (contentGap)    2217
+explicitlyOmittedTotal    0
+whitespaceOnlyDifference  0
+syntheticReproducible     true  (109)
+
+PER-PREDICATE, any loss:
+  lost    600 of    600   derivationMethod   [contentGap]
+  lost    600 of    600   derivesFrom   [contentGap]
+  lost    544 of  16762   fieldType   [contentGap]
+  lost    268 of    268   usesGroup   [contentGap]
+  lost    145 of    145   contentTypeRef   [contentGap]
+  lost     33 of     33   facet:length   [contentGap]
+  lost     25 of     25   allowsAnyElement   [contentGap]
+  lost      2 of      2   elementFixed   [contentGap]

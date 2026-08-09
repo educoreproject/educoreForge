@@ -1,0 +1,17 @@
+G-1 twin 'injectOneInventedStatement' -> FAIL
+G-2 twin 'dropOneSourceStatement' -> FAIL
+G-3 twin 'stripOneLostSampleList' -> FAIL
+G-4 twin 'misSumLostCategories' -> FAIL
+G-5 twin 'blankSnapshotDigest' -> FAIL
+G-6 twin 'dropGraphIdentity' -> FAIL
+G-7 twin 'emptyBothSides' -> FAIL
+G-8 twin 'declarePercentGate' -> FAIL
+G-9 twin 'falsifyCheatingDetectorProbe' -> FAIL
+G-10 twin 'falsifyInventionProbe' -> FAIL
+G-11 twin 'falsifyRefusalProbe' -> FAIL
+G-12 twin 'smuggleUnmodeledConstruct' -> FAIL
+G-13 twin 'falsifyOrderSwapProbe' -> FAIL
+G-14 twin 'blankScaleReport' -> FAIL
+G-15 twin 'falsifyCharacteristicsRefusalProbe' -> FAIL
+G-16 twin 'falsifyCharacteristicsDerivationProbe' -> FAIL
+G-17 twin 'falsifyDerivedPropertyIsolationProbe' -> FAIL

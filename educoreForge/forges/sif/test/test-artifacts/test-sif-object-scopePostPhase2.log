@@ -1,0 +1,8 @@
+test-sif-object-scope
+
+passthrough — no scope configured judges everything
+
+filter — owner-exact (xpath second segment), the StudentPersonal trial shape
+
+RED — refusals by name
+test-sif-object-scope: 11/11 passed, 0 failed.

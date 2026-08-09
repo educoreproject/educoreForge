@@ -1,0 +1,16 @@
+graphBuilder: [goldEvalCheck] PASS — 1 declared validator(s) ran with inventedTotal=0
+{
+  "certification": "PASS",
+  "summaryFilePath": "/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/buildLogs/cedsOnlyRoundTrip_20260805-025124/roundTrip/roundTripStageSummary.json",
+  "containerName": "DEV_gb_materialize_32656_2",
+  "declared": [
+    {
+      "token": "ceds",
+      "roundTripClean": true,
+      "inventedTotal": 0,
+      "lostTotal": 0,
+      "verdictPath": "/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/buildLogs/cedsOnlyRoundTrip_20260805-025124/roundTrip/ceds/roundTripVerdict.json"
+    }
+  ],
+  "declaredAbsentTolerated": []
+}

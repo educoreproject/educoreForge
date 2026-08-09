@@ -1,0 +1,14 @@
+sourceStatements          142345
+matched                   142052
+inventedTotal             0
+lostTotal (contentGap)    293
+whitespaceOnlyDifference  0
+roundTripClean            false
+syntheticReproducible     true
+  coverage checked        ["S-1"]  unchecked ["S-1c","S-2"]
+
+PER-PREDICATE, any loss:
+  lost    268 of    268   usesGroup
+  lost     25 of     25   allowsAnyElement
+
+UNMODELED TALLY: {}

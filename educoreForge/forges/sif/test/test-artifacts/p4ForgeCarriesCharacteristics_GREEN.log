@@ -1,0 +1,33 @@
+test-sifRoundTrip
+
+SECTION 1 — RT-5: section-delimiter + column-header uniformity across the real snapshot
+
+SECTION 2 — invariance (whitespace/line endings) vs sensitivity (words AND ORDER, R-SF-1)
+
+SECTION 3 — THE ZERO-LOSS GATE (hermetic fixture, real forgeSif, graph double)
+[sif-tsv/parser] Parsing TSV: /var/folders/m_/12d8yqwd28943kwt0n4nhrk80000gn/T/sifRoundTrip-fixtureSnapshot-Ip9Ai8/ImplementationSpecification_fixture.tsv
+[sif-tsv/parser] Parsed 2 SIF objects
+[sif-tsv/parser] Resolved 2 REFERENCES edges
+[sif-tsv/parser] Types: 2 primitive, 2 simple
+[sif-tsv/parser] Codesets: 2
+[sif-tsv/parser] ComplexTypes: 3
+[sif-tsv/parser] XmlElements: 14
+[sif-tsv/parser] Total nodes: 38
+[sif-tsv/parser] Total edges (declared): 54
+[sif-tsv/parser] Parent edges (HAS_FIELD): 12
+[sif-tsv/parser] Fields with cedsId: 2
+snapshot-provenance: sourcePath '/var/folders/m_/12d8yqwd28943kwt0n4nhrk80000gn/T/sifRoundTrip-fixtureSnapshot-Ip9Ai8' is not inside an standardSourceData/ snapshot directory — snapshotKey stamped 'unknown'
+snapshot-provenance: no publishedVersion available — the source does not self-describe and the provenance file supplies none; stamping 'unknown' honestly (spec §3.2 warning)
+[forge-sif] contract graph: 43 nodes, 94 edges (2 CEDS-annotated fields, 5 option values, 1 field-less complex types; codesets 2 unique from 2 field assignments = 0 merged)
+
+SECTION 4 — CHEATING DETECTOR: a deleted graph fact must surface as LOST, by name
+
+SECTION 5 — INVENTION: an injected graph fact must fire INVENTED, by name
+
+SECTION 5b — ORDER-SWAP TWIN: a sequence change goes RED naming the group and both members
+
+SECTION 6 — REFUSALS BY NAME, and the intact control
+
+SECTION 7 — GATES: declared as data, twins observed RED, registry closed
+test-sifRoundTrip: 120/120 passed, 0 failed.
+

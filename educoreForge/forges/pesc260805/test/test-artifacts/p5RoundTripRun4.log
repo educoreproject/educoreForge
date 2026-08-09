@@ -1,0 +1,6 @@
+sourceStatements 142345  matched 142052
+invented 0  lost 293  whitespaceOnly 0
+roundTripClean false  syntheticReproducible true
+coverage checked ["S-1"] unchecked ["S-1c","S-2"]
+  lost 268 of 268  usesGroup
+  lost 25 of 25  allowsAnyElement

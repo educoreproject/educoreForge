@@ -1,0 +1,22 @@
+{
+ "readProjection": [
+  "_id",
+  "name",
+  "xpath",
+  "mandatory",
+  "characteristics",
+  "description",
+  "nativeType",
+  "format",
+  "crossRefs",
+  "sequenceOrdinal",
+  "siblingCount",
+  "orderSemantics"
+ ],
+ "leakedDerivedNames": [],
+ "fieldsCarryingCharacteristics": 11,
+ "fieldsCarryingNothing": 1,
+ "fixtureFieldCount": 12,
+ "derivationFaultList": [],
+ "refusalText": "forge-sif buildContractGraph: forge-sif: field '/FixtureStudents/FixtureStudent/@RefId' states Characteristics 'CR', which is not in SIF's closed vocabulary (O/M/MR/OR/C) — refusing to derive repeatability or obligation from a value this forge does not understand. If the snapshot legitimately introduced a new value (e.g. 'CR', recorded in README_ERRATA.md S-1 as present in the published XSD and absent from this export), extend FIELD_CHARACTERISTICS_DERIVATION deliberately and have the addition ruled on — never defaulted."
+}

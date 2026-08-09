@@ -1,0 +1,33 @@
+test-cedsRoundTripValidator
+
+THE REGISTRY IS EMPTY BY RULING — and the emptiness must be load bearing, not decorative
+
+THE A13 PARTITION IS PERFORMED ARITHMETIC — driven with a NONZERO omitted count, the state no CEDS fixture reaches
+
+THE PARTITION INVARIANT REFUSES BY NAME — a partition that does not close is not a verdict
+
+RT-3 AT THE DOOR — five separate wrongs, five separate refusals, each by name
+
+THE UNIFORM ENTRY POINT REFUSES BY NAME — no default graph, no default output
+  FAIL validate with neither containerName nor a bolt triple is refused — a graph is never guessed at
+       expected to match /containerName OR the full bolt triple/
+       actual: roundTripCompiler.resolveContainerBolt: containerName is REQUIRED and has no default.
+node:internal/errors:542
+      throw error;
+      ^
+
+TypeError [ERR_INVALID_ARG_TYPE]: The "path" argument must be of type string. Received undefined
+    at Object.join (node:path:1339:7)
+    at Array.<anonymous> (/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/forges/ceds/roundTripValidator.js:352:33)
+    at recursion (/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/node_modules/qtools-asynchronous-pipe-plus/qtools-asynchronous-pipe-plus.js:98:25)
+    at /Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/node_modules/qtools-asynchronous-pipe-plus/qtools-asynchronous-pipe-plus.js:99:5
+    at /Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/forges/ceds/roundTripValidator.js:345:6
+    at verifySnapshotDir (/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/forges/ceds/roundTripValidator.js:214:4)
+    at Array.<anonymous> (/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/forges/ceds/roundTripValidator.js:340:5)
+    at recursion (/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/node_modules/qtools-asynchronous-pipe-plus/qtools-asynchronous-pipe-plus.js:98:25)
+    at asynchronousPipe (/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/node_modules/qtools-asynchronous-pipe-plus/qtools-asynchronous-pipe-plus.js:102:3)
+    at Object.validateWithReader (/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/forges/ceds/roundTripValidator.js:493:4) {
+  code: 'ERR_INVALID_ARG_TYPE'
+}
+
+Node.js v24.14.1

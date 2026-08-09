@@ -1,0 +1,63 @@
+{
+ "probe": "p5_enumerateMultiDocumentationResidue",
+ "phase": "Phase 5 — named residue, supervisor requirement ONE at the O-2 ruling",
+ "mechanism": "XSD permits several xs:documentation children in one xs:annotation. The forge parser keeps only the FIRST; every subsequent literal is discarded at PARSE time. These appear in the validator lostTotal and are a KNOWN LIMITATION, not a regression.",
+ "scope": "FORGE finding (lib/parser.js documentation extraction), not a validator finding.",
+ "disposition": "NOT FIXED IN PHASE 5 — repairing the parser is a later order. Enumerated so a successor can subtract it by name instead of re-investigating it.",
+ "snapshotDirPath": "/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/forges/pesc260805/assets/standardSourceData/01",
+ "xsdFileCount": 64,
+ "multiDocumentationAnnotationCount": 5,
+ "discardedLiteralTotal": 5,
+ "residueList": [
+  {
+   "filename": "AcademicRecord_v1.14.0.xsd",
+   "annotates": "xs:schema > xs:complexType[name=\"DocumentDescriptionType\"] > xs:element[name=\"DocumentCategory\"]",
+   "documentationChildCount": 2,
+   "discardedLiteralCount": 1,
+   "keptLiteral": "The category of the document being requested.",
+   "discardedLiteralList": [
+    "Some possible document categories include:\n\t\t\t\t\t\t\tApostille Certificate\n\t\t\t\t\t\t\tCLA+Score Report\n\t\t\t\t\t\t\tCompetency Based Transcript\n\t\t\t\t\t\t\tCounselor Recommendation\n\t\t\t\t\t\t\tDegree Certificate\n\t\t\t\t\t\t\tDiploma\n\t\t\t\t\t\t\tEnrollment Certificate\n\t\t\t\t\t\t\tExperiential Transcript\n\t\t\t\t\t\t\tFee Waiver\n\t\t\t\t\t\t\tImmunization Record\n\t\t\t\t\t\t\tLetter of Recommendation\n\t\t\t\t\t\t\tNon-Degree Professional Certificate\n\t\t\t\t\t\t\tOther\n\t\t\t\t\t\t\tProfessional Certificate\n\t\t\t\t\t\t\tSchool Profile\n\t\t\t\t\t\t\tSchool Report\n\t\t\t\t\t\t\tTeacher Evaluation\n\t\t\t\t\t\t\tTranscript\n\t\t\t\t\t\t\tUnofficial Test Scores"
+   ]
+  },
+  {
+   "filename": "AcademicRecord_v1.14.0.xsd",
+   "annotates": "xs:schema > xs:complexType[name=\"DocumentDescriptionType\"] > xs:element[name=\"DocumentFormat\"]",
+   "documentationChildCount": 2,
+   "discardedLiteralCount": 1,
+   "keptLiteral": "The format of the information in the document.  For example, a Transcript could be XML, JSON or PDF.",
+   "discardedLiteralList": [
+    "Examples of formats:\n\t\t\t\t\t\tXML\n\t\t\t\t\t\tJSON\n\t\t\t\t\t\tJSON-LD\n\t\t\t\t\t\tPDF\n\t\t\t\t\t\tText\n\t\t\t\t\t\tMSWord\n\t\t\t\t\t\tMSExcel"
+   ]
+  },
+  {
+   "filename": "CoreMain_v1.13.0.xsd",
+   "annotates": "xs:schema > xs:simpleType[name=\"CourseRepeatabilityCodeType\"]",
+   "documentationChildCount": 2,
+   "discardedLiteralCount": 1,
+   "keptLiteral": "Code indicating whether the course may be repeated for credit.",
+   "discardedLiteralList": [
+    ""
+   ]
+  },
+  {
+   "filename": "CoreMain_v1.14.0.xsd",
+   "annotates": "xs:schema > xs:simpleType[name=\"CourseRepeatabilityCodeType\"]",
+   "documentationChildCount": 2,
+   "discardedLiteralCount": 1,
+   "keptLiteral": "Code indicating whether the course may be repeated for credit.",
+   "discardedLiteralList": [
+    ""
+   ]
+  },
+  {
+   "filename": "CoreMain_v1.16.0.xsd",
+   "annotates": "xs:schema > xs:simpleType[name=\"CourseRepeatabilityCodeType\"]",
+   "documentationChildCount": 2,
+   "discardedLiteralCount": 1,
+   "keptLiteral": "Code indicating whether the course may be repeated for credit.",
+   "discardedLiteralList": [
+    ""
+   ]
+  }
+ ]
+}

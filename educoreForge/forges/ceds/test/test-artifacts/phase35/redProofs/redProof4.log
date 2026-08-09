@@ -1,0 +1,44 @@
+test-cedsRoundTripValidator
+
+THE REGISTRY IS EMPTY BY RULING — and the emptiness must be load bearing, not decorative
+
+THE A13 PARTITION IS PERFORMED ARITHMETIC — driven with a NONZERO omitted count, the state no CEDS fixture reaches
+
+THE PARTITION INVARIANT REFUSES BY NAME — a partition that does not close is not a verdict
+
+RT-3 AT THE DOOR — five separate wrongs, five separate refusals, each by name
+
+THE UNIFORM ENTRY POINT REFUSES BY NAME — no default graph, no default output
+
+THE ANSWER KEY — the full graph writes its own checksummed snapshot
+
+END TO END — a REAL verdict from the real code path, adjudicated by the LIVE RT-13 stage
+  FAIL contentGapTotal is 0
+       expected 0, got undefined
+  FAIL THE SEAM HOLDS — the live RT-13 stage ACCEPTS the undamaged verdict
+       expected "", got "round-trip-stage: the 'ceds' verdict lacks the normative RT-6 field(s) contentGapTotal — the builder adjudicates on these with zero per-standard knowledge, and a verdict it cannot adjudicate is a nonconforming instrument, refused by name (never read through an alternative-name chain)."
+  FAIL …and reports the stage as having run
+  FAIL TWIN — inventedTotal above zero FAILS the build through the live stage
+       expected to match /inventedTotal=3.*INVENTED must be 0/s
+       actual: round-trip-stage: the 'ceds' verdict lacks the normative RT-6 field(s) contentGapTotal — the builder adjudicates on these with zero per-standard knowledge, and a verdict it cannot adjudicate is a nonconforming instrument, refused by name (never read through an alternative-name chain).
+
+LOSS IS DETECTED — the clean reading above is a result, not a property of the rig
+  FAIL a graph missing one class reports NONZERO contentGap
+       contentGapTotal=undefined
+  FAIL …and lostTotal equals contentGapTotal, the registry being empty
+       expected undefined, got 4
+  FAIL …and notReproducedTotal equals it too, which is what an empty registry MEANS
+       expected undefined, got 4
+  FAIL the two verdicts genuinely differ — the clean one was not a rig artifact
+       clean=undefined lossy=undefined
+
+test-cedsRoundTripValidator: FAILURES
+  - contentGapTotal is 0
+  - THE SEAM HOLDS — the live RT-13 stage ACCEPTS the undamaged verdict
+  - …and reports the stage as having run
+  - TWIN — inventedTotal above zero FAILS the build through the live stage
+  - a graph missing one class reports NONZERO contentGap
+  - …and lostTotal equals contentGapTotal, the registry being empty
+  - …and notReproducedTotal equals it too, which is what an empty registry MEANS
+  - the two verdicts genuinely differ — the clean one was not a rig artifact
+test-cedsRoundTripValidator: 67/75 passed, 8 failed.

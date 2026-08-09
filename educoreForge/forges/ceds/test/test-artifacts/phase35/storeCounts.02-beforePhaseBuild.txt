@@ -1,0 +1,8 @@
+=== STORE COUNTS before the PHASE build, Tue Aug  4 21:51:22 CDT 2026 ===
+blocks                 2
+manifests              2
+manifestBlocks         2
+decisionBlocks         0
+vectors                156667
+vectorCacheEntries     270181
+judgmentCacheEntries   4719

@@ -1,0 +1,22 @@
+C-3 source : /Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/forges/ceds/assets/standardSourceData/01/CEDS-Ontology.rdf
+C-3 emitted: /Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/zArchive_roundTripProof_080426/cedsOnlyRoundTrip_20260805-025124/roundTrip/ceds/emitted/cedsOntology.emitted.rdf  (THE ARCHIVED COPY)
+C-3 venvCreated: false
+C-3 runtimeMs:   10475
+node:internal/errors:542
+      throw error;
+      ^
+
+TypeError [ERR_INVALID_ARG_TYPE]: The "data" argument must be of type string or an instance of Buffer, TypedArray, or DataView. Received an instance of Object
+    at Object.writeFileSync (node:fs:2422:5)
+    at /Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/forges/ceds/test/test-artifacts/phase35/runC3IndependentCheck.js:64:8
+    at Object.renderComparisonText (/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/lib/rdf-independent-check/rdf-independent-check.js:207:3)
+    at /Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/forges/ceds/test/test-artifacts/phase35/runC3IndependentCheck.js:57:23
+    at /Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/lib/rdf-independent-check/rdf-independent-check.js:147:6
+    at ChildProcess.exithandler (node:child_process:410:7)
+    at ChildProcess.emit (node:events:508:28)
+    at maybeClose (node:internal/child_process:1100:16)
+    at ChildProcess._handle.onexit (node:internal/child_process:305:5) {
+  code: 'ERR_INVALID_ARG_TYPE'
+}
+
+Node.js v24.14.1

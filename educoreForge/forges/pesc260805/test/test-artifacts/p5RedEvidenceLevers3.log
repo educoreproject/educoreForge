@@ -1,0 +1,35 @@
+
+  LEVER 1 — GATE 5, malformed verdict (mutates the VERDICT OBJECT)
+  RED OBSERVED   CONTROL: a well-formed verdict is ACCEPTED (so the refusals below are about malformation, not about refusing everything)
+                 accepted
+  RED OBSERVED   GATE 5: inventedTotal ABSENT
+                 refused:   'inventedTotal' is ABSENT (required, number)
+  RED OBSERVED   GATE 5: inventedTotal is the STRING '0' (falsy-looking to a naive consumer)
+                 refused:   'inventedTotal' is string '0', required number
+  RED OBSERVED   GATE 5: lostTotal is NaN (typeof number; defeats every comparison)
+                 refused:   'lostTotal' is a non-finite number (NaN) — NaN and Infinity satisfy a typeof check and then make every comparison against them false
+  RED OBSERVED   GATE 5: roundTripClean is the STRING "true"
+                 refused:   'roundTripClean' is string 'true', required boolean
+  RED OBSERVED   GATE 5: syntheticReproducible ABSENT (R-VAL-5 never claimed)
+                 refused:   'syntheticReproducible' is ABSENT (required, boolean)
+  RED OBSERVED   GATE 5: the verdict is an ARRAY, not an object
+                 refused:
+
+  LEVER 2 — R-VAL-5, mutates a PRESERVED SYNTHESIS INPUT (a copy of a collision member)
+  RED OBSERVED   CONTROL: unmutated copy reproduces (union 109 = graph 109)
+  RED OBSERVED   R-VAL-5: removing simpleType 'CurrentEnrollmentIndicatorType' from the PRESERVED college-branch input breaks reproducibility
+                 union 109 -> 108, unexpectedInGraph 0 -> 1, reproducible true -> false
+
+  LEVERS 3 & 4 — mutate the GRAPH ROWS the emitter reads
+  genuineGap     R-VAL-1 tier refusal — NO LEVER CLAIMED. The production refusal is unreachable by data (the query filters the tier it then checks), and the previous probe-local re-implementation certified only itself. Withdrawn per review items 5 and 6.
+
+    target literal occurs on 81 components; removed from ONE: urn:org:pesc:core:CoreMain:v1.17.0#complexType/UserDefinedExtensionsType
+    literal: "Additional structured information. Requires mutually defined XML schema."
+
+    MULTISET view  (the probe's method): literal still present after removal = true  -> MASKED
+    VALIDATOR view (subjected statements): lostTotal 293 -> 294
+  RED OBSERVED   SUPERVISOR REQUIREMENT 2: the validator CATCHES a removed literal that the probe's multiset comparison MASKS
+                 multiset masks it (text survives on 80 other components); validator lostTotal rose by 1
+
+  RED OBSERVED: 10    NOT RED: 0    genuineGap (no lever claimed): 1
+

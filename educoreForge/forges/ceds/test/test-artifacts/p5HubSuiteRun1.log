@@ -1,0 +1,223 @@
+test-cedsHubForge
+[forge-ceds/parser] parsing XML (19.3 MB)...
+[forge-ceds/parser] ontology version: 14.0.0.0
+[forge-ceds/parser] entities — classes=402, properties=2324, optionSets=965, optionValues=19546, skipped(no dc:identifier)=14
+
+REFUSALS — required input is refused BY NAME, never defaulted
+
+THE FORGE — the real base, the real derivation, no I/O
+
+TWIN PRECONDITIONS — the faults the registry needs really exist
+
+GATE DECLARATIONS — data, loaded through the existing harness
+
+THE TWIN SWEEP — every gate OBSERVED going RED under its own injected fault
+  --   G-1: twin 'dropOneDeclaredDomainFromEnumeration' injected -> gate observed RED (pristine bundle re-MEASURED after the sweep — see N-3 assertion)
+  --   G-2: twin 'feedDefinitionIntoHash' injected -> gate observed RED (pristine bundle re-MEASURED after the sweep — see N-3 assertion)
+  --   G-3: twin 'stampEmptyDescription' injected -> gate observed RED (pristine bundle re-MEASURED after the sweep — see N-3 assertion)
+  --   G-4: twin 'skipProseCopyForOneRole' injected -> gate observed RED (pristine bundle re-MEASURED after the sweep — see N-3 assertion)
+  --   G-5: twin 'suppressOneDivergenceRow' injected -> gate observed RED (pristine bundle re-MEASURED after the sweep — see N-3 assertion)
+  --   G-6: twin 'tamperOneStoredEmbedText' injected -> gate observed RED (pristine bundle re-MEASURED after the sweep — see N-3 assertion)
+  --   G-8: twin 'mintOneUriFromLiteral' injected -> gate observed RED (pristine bundle re-MEASURED after the sweep — see N-3 assertion)
+  --   G-9: twin 'blankTheNamespace' injected -> gate observed RED (pristine bundle re-MEASURED after the sweep — see N-3 assertion)
+  --   G-10: twin 'removeOneQualifiedCard' injected -> gate observed RED (pristine bundle re-MEASURED after the sweep — see N-3 assertion)
+  --   G-11: twin 'stampOneVestigialField' injected -> gate observed RED (pristine bundle re-MEASURED after the sweep — see N-3 assertion)
+  --   G-12: twin 'stampTwoRangeFields' injected -> gate observed RED (pristine bundle re-MEASURED after the sweep — see N-3 assertion)
+  --   G-P2: twin 'retargetOneDomainEdge' injected -> gate observed RED (pristine bundle re-MEASURED after the sweep — see N-3 assertion)
+  --   G-P3: twin 'dropOnePropertysCardsWithoutSkipEntry' injected -> gate observed RED (pristine bundle re-MEASURED after the sweep — see N-3 assertion)
+
+THE VERDICT — pristine measurements, twins observed
+================================================================================================
+CEDS FIDELITY GATES — cedsHubForge v1.0.0
+================================================================================================
+  acceptance: every gate PASS and every twin observed RED. No percentage participates.
+
+  13 gates: 13 PASS, 0 FAIL, 0 UNMEASURED, 0 UNPROVEN
+
+  VERDICT: ACCEPTED
+
+------------------------------------------------------------------------------------------------
+  GATE   STATUS      TWIN     CONTRACT
+------------------------------------------------------------------------------------------------
+  G-1    PASS        observed countDerived: card count equals the count RE-DERIVED from the base by tuple enumeration — both sides computed, no literal.
+  G-2    PASS        observed addressPurity: recomputing every addressSignature from ADDRESS fields alone reproduces the stored value; editing a MEANING field changes NO signature; editing an ADDRESS field (canonicalKey) changes it. (R-P1-1: incumbent hash inputs, both directions proven.)
+  G-3    PASS        observed absentIsAbsent: zero ''-valued properties on any card — 'CEDS has no prose' and 'we failed to copy it' stay distinguishable.
+  G-4    PASS        observed meaningCoverage: the FULL SPEC §1.3 stack, two-sided against source presence — domainName+domainDefinition+propertyName on 100% of cards; propertyDefinition, propertyNotation, propertyDataType, propertyTextFormat exactly where the property has them; rangeClassName/rangeClassDefinition on class-ranged cards; value tier adds valueName plus valueDefinition, valueNotation, valuePrefLabel and the option-set name/definition; qualifierNames parallel to qualifierKeys.
+  G-5    PASS        observed divergenceReport: the report exists (explicit-empty acceptable); 'both exist' means both carry PROSE (hasProse — null/'' are not prose); every row's two texts really differ; row count matches an independent recount from the base.
+  G-6    PASS        observed embedTextReproducible: every card's embedText equals the SPEC §4 composition recomputed from the card's own fields, byte-for-byte, and is never empty.
+  G-8    PASS        observed uriMinting: every uri = <the FORGED HubDefinition's namespace property> + hubVersion + '/' + addressSignature (the expected prefix is READ from the forged card, never from a suite literal); the forged namespace equals the factory argument; a sentinel-namespace re-forge carries the sentinel into every card uri AND HubDefinition.namespace; stableId === uri; zero collisions.
+  G-9    PASS        observed hubDefinition: exactly one; namespace non-empty; uri === stableId === namespace + 'hubDefinition/CEDS'; version equals the base-derived hubVersion; displayName correct; slotProfile parses and covers EVERY address slot (hubName, hubVersion, referenceTier, domainId, propertyKey, all three range shapes, valueKey, qualifierKeys) plus the per-tier meaning fields; sourceProvenance populated; IN_HUB degree equals the card count and every IN_HUB targets the HubDefinition.
+  G-10   PASS        observed tupleClosure: every (domain·property[·value][·qualifier]) tuple derivable from the base has exactly one card — qualified refs INCLUDED in the enumeration key (closes the 2026-08-02 qualified-tuple blind spot).
+  G-11   PASS        observed vestigialAbsent: allDomainIds, allDomainNames, domainsComplete, description on ZERO cards — the multi-domain machinery and the ambiguous prose field do not ride the new card.
+  G-12   PASS        observed rangeXor: exactly one of rangeDatatype | rangeClassId | rangeOptionSetId per card.
+  G-P2   PASS        observed edgeTargets (S-1): every card's HAS_CEDS_DOMAIN edge lands on the class its domainId names, PROPERTY on its property node, RANGE on its option set or range class, VALUE on its value node, QUALIFIER on each qualifier value node — and the edge total equals the per-card derivable expectation.
+  G-P3   PASS        observed forgeTotality (S-3): every base DmeProperty either produced at least one card or appears BY NAME in the skip report (reason zeroDeclaredDomains, verified against the base); the skip report exists (explicit-empty acceptable) and contains nothing else.
+
+
+THE CENSUS — both sides computed, no literal
+  --   derived from base:  property pairs 2750, value triples 91825, qualified tuples 27, total 94602
+  --   forged by module:   property tier 2750, value tier 91825, qualified 27, total 94602
+
+THE DIVERGENCE REPORT — written, explicit-empty if none
+  --   71 divergence row(s): {"DmeOptionSet":8,"DmeOptionValue":26,"DmeProperty":37} -> /Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/forges/ceds/test/test-artifacts/cedsProseDivergence.json
+  --   0 skip-report row(s) (S-3, explicit-empty when none) -> /Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/forges/ceds/test/test-artifacts/cedsHubSkipReport.json
+
+SAMPLE DUMP — four complete cards for the supervisor back-gate
+
+---- PROPERTY-TIER SAMPLE ----
+{
+  "labels": [
+    "ForgedNode",
+    "HubReference"
+  ],
+  "stableId": "https://w3id.org/EDUcore/CEDStandards/hub/14.0.0.0/963bdff4a78b72a2ebc63d5dd0317be6aca37837f959c584696dbffe1c81917d",
+  "role": "HubReference",
+  "properties": {
+    "_source": "CEDS",
+    "role": "HubReference",
+    "name": "Rubric Criterion Description",
+    "hubName": "CEDS",
+    "hubVersion": "14.0.0.0",
+    "referenceTier": "property",
+    "domainId": "C200354",
+    "propertyKey": "P001470",
+    "qualifierKeys": [],
+    "addressSignature": "963bdff4a78b72a2ebc63d5dd0317be6aca37837f959c584696dbffe1c81917d",
+    "uri": "https://w3id.org/EDUcore/CEDStandards/hub/14.0.0.0/963bdff4a78b72a2ebc63d5dd0317be6aca37837f959c584696dbffe1c81917d",
+    "canonicalKey": "P001470",
+    "rangeDatatype": "string",
+    "domainName": "Rubric Criterion",
+    "domainDefinition": "A single criterion by which one aspect of an entity's competence may be evaluated.",
+    "propertyName": "Rubric Criterion Description",
+    "propertyDefinition": "Text describing a criterion that must be met to demonstrate quality for a product, process, or performance task.",
+    "propertyNotation": "RubricCriterionDescription",
+    "propertyDataType": "string",
+    "propertyTextFormat": "Alphanumeric",
+    "anchorUri": "https://w3id.org/CEDStandards/terms/P001470",
+    "domainUri": "https://w3id.org/CEDStandards/terms/C200354",
+    "propertyUri": "https://w3id.org/CEDStandards/terms/P001470",
+    "embedText": "Rubric Criterion · Rubric Criterion Description · Text describing a criterion that must be met to demonstrate quality for a product, process, or performance task. · A single criterion by which one aspect of an entity's competence may be evaluated."
+  }
+}
+
+---- VALUE-TIER SAMPLE (full prose stack) ----
+{
+  "labels": [
+    "ForgedNode",
+    "HubReference"
+  ],
+  "stableId": "https://w3id.org/EDUcore/CEDStandards/hub/14.0.0.0/00029890982a59ea80e5b31a690d02ebf38a85c72279d23af59e9dee1db19d2e",
+  "role": "HubReference",
+  "properties": {
+    "_source": "CEDS",
+    "role": "HubReference",
+    "name": "Business and Marketing",
+    "hubName": "CEDS",
+    "hubVersion": "14.0.0.0",
+    "referenceTier": "value",
+    "domainId": "C200160",
+    "propertyKey": "P001518",
+    "qualifierKeys": [],
+    "addressSignature": "00029890982a59ea80e5b31a690d02ebf38a85c72279d23af59e9dee1db19d2e",
+    "uri": "https://w3id.org/EDUcore/CEDStandards/hub/14.0.0.0/00029890982a59ea80e5b31a690d02ebf38a85c72279d23af59e9dee1db19d2e",
+    "canonicalKey": "OV001518118415",
+    "rangeOptionSetId": "OS001518",
+    "valueKey": "OV001518118415",
+    "domainName": "Individualized Program Accessibility Feature Subject",
+    "domainDefinition": "Specifies an academic subject for which an individualized program accessibility feature applies.",
+    "propertyName": "Has School Courses for the Exchange of Data Course Subject Area",
+    "propertyDefinition": "The intended major subject area of the education course.",
+    "propertyNotation": "hasSCEDCourseSubjectArea",
+    "rangeOptionSetName": "School Courses for the Exchange of Data Course Subject Area",
+    "rangeOptionSetDefinition": "The intended major subject area of the education course.",
+    "valueName": "Business and Marketing",
+    "valueDefinition": "Business and Marketing is the intended major subject area of the education course.",
+    "valueNotation": "12",
+    "valuePrefLabel": "Business and Marketing",
+    "anchorUri": "https://w3id.org/CEDStandards/terms/NI001518118415",
+    "domainUri": "https://w3id.org/CEDStandards/terms/C200160",
+    "propertyUri": "https://w3id.org/CEDStandards/terms/P001518",
+    "rangeUri": "https://w3id.org/CEDStandards/terms/C001518",
+    "valueUri": "https://w3id.org/CEDStandards/terms/NI001518118415",
+    "embedText": "Individualized Program Accessibility Feature Subject · Has School Courses for the Exchange of Data Course Subject Area · School Courses for the Exchange of Data Course Subject Area · Business and Marketing · Business and Marketing is the intended major subject area of the education course. · The intended major subject area of the education course."
+  }
+}
+
+---- QUALIFIED SAMPLE ----
+{
+  "labels": [
+    "ForgedNode",
+    "HubReference"
+  ],
+  "stableId": "https://w3id.org/EDUcore/CEDStandards/hub/14.0.0.0/07a0c9732df121b6fb52caaea6ed573bd611baaeaecc08af8160766a370b5858",
+  "role": "HubReference",
+  "properties": {
+    "_source": "CEDS",
+    "role": "HubReference",
+    "name": "Assessment Asset Identifier",
+    "hubName": "CEDS",
+    "hubVersion": "14.0.0.0",
+    "referenceTier": "property",
+    "domainId": "C200015",
+    "propertyKey": "P001198",
+    "qualifierKeys": [
+      "OV001199115956"
+    ],
+    "addressSignature": "07a0c9732df121b6fb52caaea6ed573bd611baaeaecc08af8160766a370b5858",
+    "uri": "https://w3id.org/EDUcore/CEDStandards/hub/14.0.0.0/07a0c9732df121b6fb52caaea6ed573bd611baaeaecc08af8160766a370b5858",
+    "canonicalKey": "P001198",
+    "rangeDatatype": "string",
+    "domainName": "Assessment Asset",
+    "domainDefinition": "Information about content used to compose an Assessment Item, is referenced by an item but not part of the item content itself, or is content that is included as part of a section within an assessment form. Assets can be static content such as artwork or dynamic assets such as calculators or other tools.",
+    "propertyName": "Assessment Asset Identifier",
+    "propertyDefinition": "A unique code identifying the Assessment Asset provided by the authoring system.",
+    "propertyNotation": "AssessmentAssetIdentifier",
+    "propertyDataType": "string",
+    "propertyTextFormat": "Alphanumeric",
+    "qualifierNames": [
+      "Provided by an internal assessment service"
+    ],
+    "anchorUri": "https://w3id.org/CEDStandards/terms/P001198",
+    "domainUri": "https://w3id.org/CEDStandards/terms/C200015",
+    "propertyUri": "https://w3id.org/CEDStandards/terms/P001198",
+    "embedText": "Assessment Asset · Assessment Asset Identifier · A unique code identifying the Assessment Asset provided by the authoring system. · Information about content used to compose an Assessment Item, is referenced by an item but not part of the item content itself, or is content that is included as part of a section within an assessment form. Assets can be static content such as artwork or dynamic assets such as calculators or other tools. · Provided by an internal assessment service"
+  }
+}
+
+---- CLASS-RANGE SAMPLE (rangeClassName/rangeClassDefinition) ----
+{
+  "labels": [
+    "ForgedNode",
+    "HubReference"
+  ],
+  "stableId": "https://w3id.org/EDUcore/CEDStandards/hub/14.0.0.0/004daf4abdb52c30215303919635ca2efd2656bf3f5168584de6d7ee721341df",
+  "role": "HubReference",
+  "properties": {
+    "_source": "CEDS",
+    "role": "HubReference",
+    "name": "Has Credential Definition Agent",
+    "hubName": "CEDS",
+    "hubVersion": "14.0.0.0",
+    "referenceTier": "property",
+    "domainId": "C200275",
+    "propertyKey": "P600371",
+    "qualifierKeys": [],
+    "addressSignature": "004daf4abdb52c30215303919635ca2efd2656bf3f5168584de6d7ee721341df",
+    "uri": "https://w3id.org/EDUcore/CEDStandards/hub/14.0.0.0/004daf4abdb52c30215303919635ca2efd2656bf3f5168584de6d7ee721341df",
+    "canonicalKey": "P600371",
+    "rangeClassId": "C200083",
+    "domainName": "Person",
+    "domainDefinition": "A human being, alive or deceased, as recognized by each jurisdiction’s legal definitions.",
+    "propertyName": "Has Credential Definition Agent",
+    "propertyDefinition": "References information linking a person or organization to a credential definition with the applicable role such as the author, publisher, or issuer or the credential.",
+    "propertyNotation": "hasCredentialDefinitionAgent",
+    "rangeClassName": "Credential Definition Agent",
+    "rangeClassDefinition": "Information linking a person or organization to a credential definition with the applicable role such as the author, publisher, or issuer or the credential.",
+    "anchorUri": "https://w3id.org/CEDStandards/terms/P600371",
+    "domainUri": "https://w3id.org/CEDStandards/terms/C200275",
+    "propertyUri": "https://w3id.org/CEDStandards/terms/P600371",
+    "rangeUri": "https://w3id.org/CEDStandards/terms/C200083",
+    "embedText": "Person · Has Credential Definition Agent · References information linking a person or organization to a credential definition with the applicable role such as the author, publisher, or issuer or the credential. · A human being, alive or deceased, as recognized by each jurisdiction’s legal definitions."
+  }
+}
+test-cedsHubForge: 55/55 passed, 0 failed.

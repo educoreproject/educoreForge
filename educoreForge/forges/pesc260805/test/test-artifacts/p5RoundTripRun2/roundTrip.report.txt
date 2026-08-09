@@ -1,0 +1,251 @@
+================================================================================================
+PESC ROUND-TRIP FIDELITY REPORT
+================================================================================================
+
+The criterion is SEMANTIC round-trip — statement-set equality over the XSD semantic
+domain (roundTripXsdCanonical.js defines it). Whitespace, element order, attribute order,
+prefix choice, compositor kind and member order do NOT count; a missing or extra
+STATEMENT does. This measures what the GRAPH can support, not what the forge saw.
+
+  snapshotPath:         assets/standardSourceData/01
+  snapshotDigest:       92e9a6326ff1edda465db3d704632491a7b5bb39469edfee883f366840688984
+  containerName:        DEV_pesc260805
+  boltUrl:              bolt://localhost:7821
+
+------------------------------------------------------------------------------------------------
+HEADLINE
+------------------------------------------------------------------------------------------------
+  statements in source .......    142345
+  statements emitted .........    140128
+  MATCHED ....................    140128
+  NOT REPRODUCED .............      2217   (in source, not emitted)
+    explicitlyOmitted ........         0   (declarations the graph deliberately does not carry — CHOSEN, never lost)
+  LOST .......................      2217   (contentGap alone — genuine loss, the enrichment work order)
+  INVENTED ...................         0   (emitted, not in source — must be 0)
+  fidelity ...................   98.443%
+  clean fidelity .............   98.443%   (matched / (source + invented) — falls when anything is fabricated)
+
+  NOTE: no percentage above is an acceptance criterion. Acceptance is INVENTED == 0
+  (always) and LOST == 0 (round-trip clean). Read the counts, not the percent.
+
+  subjects: source 40410, emitted 39856   |   duplicate statements collapsed: source 295, emitted 281
+
+  unmodeled constructs: none — every xs:* element on both sides was measured
+
+------------------------------------------------------------------------------------------------
+INVENTED STATEMENTS — read this first. Invention is worse than loss.
+------------------------------------------------------------------------------------------------
+  NONE. Every statement emitted is a statement the source makes.
+
+------------------------------------------------------------------------------------------------
+PER-PREDICATE LOSS — sorted by loss. contentGap rows ARE the enrichment work order.
+------------------------------------------------------------------------------------------------
+      LOST    source   emitted   matched  invented  category        predicate
+       600       600         0         0         0  contentGap      derivationMethod
+       600       600         0         0         0  contentGap      derivesFrom
+       544     16762     16218     16218         0  contentGap      fieldType
+       268       268         0         0         0  contentGap      usesGroup
+       145       145         0         0         0  contentGap      contentTypeRef
+        33        33         0         0         0  contentGap      facet:length
+        25        25         0         0         0  contentGap      allowsAnyElement
+         2         2         0         0         0  contentGap      elementFixed
+         0        60        60        60         0  —               attributeFormDefault
+         0      3021      3021      3021         0  —               declaresComplexType
+         0       121       121       121         0  —               declaresGroup
+         0       171       171       171         0  —               declaresRootElement
+         0      9596      9596      9596         0  —               declaresSimpleType
+         0     26591     26591     26591         0  —               documentation
+         0        64        64        64         0  —               elementFormDefault
+         0     30519     30519     30519         0  —               enumerationValue
+         0       815       815       815         0  —               facet:fractionDigits
+         0       542       542       542         0  —               facet:maxInclusive
+         0      2749      2749      2749         0  —               facet:maxLength
+         0       546       546       546         0  —               facet:minInclusive
+         0      2676      2676      2676         0  —               facet:minLength
+         0        75        75        75         0  —               facet:pattern
+         0       879       879       879         0  —               facet:totalDigits
+         0        45        45        45         0  —               facet:whiteSpace
+         0        82        82        82         0  —               importsNamespace
+         0        82        82        82         0  —               importsSchemaLocation
+         0       814       814       814         0  —               inlineEnumerationValue
+         0     16983     16983     16983         0  —               maxOccurs
+         0     16983     16983     16983         0  —               minOccurs
+         0       775       775       775         0  —               nillable
+         0      9596      9596      9596         0  —               restrictionBase
+         0        61        61        61         0  —               schemaVersionAttribute
+         0        64        64        64         0  —               targetNamespace
+
+------------------------------------------------------------------------------------------------
+PER-ENTITY-KIND
+------------------------------------------------------------------------------------------------
+  kind                  subjects    source   matched      lost  invented
+  complexType               3021     59215     57274      1941         0
+  rootElement                171       518       373       145         0
+  group                      121      2025      1927        98         0
+  simpleType                9596     67260     67227        33         0
+  schemaFile                  64     13327     13327         0         0
+
+------------------------------------------------------------------------------------------------
+LOST STATEMENT SAMPLES — up to 10 per predicate
+------------------------------------------------------------------------------------------------
+
+  derivationMethod  (600 lost of 600; category contentGap)
+    pesc://pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc#complexType/AcademicSummaryE1Type
+      = extension
+    pesc://pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc#complexType/AcademicSummaryE2Type
+      = extension
+    pesc://pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc#complexType/AcademicSummaryFType
+      = extension
+    pesc://pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc#complexType/CitizenshipType
+      = extension
+    pesc://pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc#complexType/ResidencyType
+      = extension
+    pesc://pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc#complexType/AddressType
+      = extension
+    pesc://pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc#complexType/EmailType
+      = extension
+    pesc://pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc#complexType/PhoneType
+      = extension
+    pesc://pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc#complexType/AcademicProgramType
+      = extension
+    pesc://pescArtifact:d498b9d439bd4b3352b36bd5449d1606b12dfdaa206d9d655e1095cdd4b48f79#complexType/AcademicSummaryE1Type
+      = extension
+
+  derivesFrom  (600 lost of 600; category contentGap)
+    pesc://pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc#complexType/AcademicSummaryE1Type
+      = AcademicSummaryBaseType
+    pesc://pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc#complexType/AcademicSummaryE2Type
+      = AcademicSummaryBaseType
+    pesc://pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc#complexType/AcademicSummaryFType
+      = AcademicSummaryBaseType
+    pesc://pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc#complexType/CitizenshipType
+      = CitizenshipType
+    pesc://pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc#complexType/ResidencyType
+      = ResidencyType
+    pesc://pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc#complexType/AddressType
+      = AddressType
+    pesc://pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc#complexType/EmailType
+      = EmailType
+    pesc://pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc#complexType/PhoneType
+      = PhoneType
+    pesc://pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc#complexType/AcademicProgramType
+      = AcademicProgramType
+    pesc://pescArtifact:d498b9d439bd4b3352b36bd5449d1606b12dfdaa206d9d655e1095cdd4b48f79#complexType/AcademicSummaryE1Type
+      = AcademicSummaryBaseType
+
+  fieldType  (544 lost of 16762; category contentGap)
+    pesc://pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc#complexType/OrganizationType/element/OrganizationName
+      = OrganizationNameType
+    pesc://pescArtifact:d498b9d439bd4b3352b36bd5449d1606b12dfdaa206d9d655e1095cdd4b48f79#complexType/OrganizationType/element/OrganizationName
+      = OrganizationNameType
+    pesc://pescArtifact:87502be504916a0fcd47495bcf9156221b0320c8aa6e05fb48e2ed598486c283#complexType/OrganizationType/element/OrganizationName
+      = OrganizationNameType
+    pesc://pescArtifact:87502be504916a0fcd47495bcf9156221b0320c8aa6e05fb48e2ed598486c283#complexType/RequestorReceiverOrganizationType/element/OrganizationName
+      = OrganizationNameType
+    pesc://pescArtifact:87502be504916a0fcd47495bcf9156221b0320c8aa6e05fb48e2ed598486c283#complexType/CourseInventoryType/element/CourseNumber
+      = CourseNumberType
+    pesc://pescArtifact:87502be504916a0fcd47495bcf9156221b0320c8aa6e05fb48e2ed598486c283#complexType/CourseInventoryType/element/CourseDescription
+      = CourseDescriptionType
+    pesc://pescArtifact:87502be504916a0fcd47495bcf9156221b0320c8aa6e05fb48e2ed598486c283#complexType/CourseRepeatabilityType/element/CourseRepeatabilityIndicator
+      = CourseRepeatabilityCodeType
+    pesc://pescArtifact:87502be504916a0fcd47495bcf9156221b0320c8aa6e05fb48e2ed598486c283#complexType/CoursePrerequisiteType/element/PrerequisiteCourseCondiition
+      = PrerequisiteCourseConditionType
+    pesc://pescArtifact:87502be504916a0fcd47495bcf9156221b0320c8aa6e05fb48e2ed598486c283#complexType/SchoolCharacteristicsType/element/SchoolLevel
+      = SchoolLevelType
+    pesc://pescArtifact:87502be504916a0fcd47495bcf9156221b0320c8aa6e05fb48e2ed598486c283#complexType/AdditionalStudentAchievementsType/element/AchievementTitle
+      = xs:string
+
+  usesGroup  (268 lost of 268; category contentGap)
+    pesc://pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc#complexType/OrganizationType
+      = OrganizationIDGroup
+    pesc://pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc#complexType/HighSchoolType
+      = OrganizationIDGroup
+    pesc://pescArtifact:1b499e2285fe583c2c2a4478c2b655b05f8f7b863872af6f62ca78a07ea975bc#complexType/SchoolType
+      = OrganizationIDGroup
+    pesc://pescArtifact:d498b9d439bd4b3352b36bd5449d1606b12dfdaa206d9d655e1095cdd4b48f79#complexType/OrganizationType
+      = OrganizationIDGroup
+    pesc://pescArtifact:d498b9d439bd4b3352b36bd5449d1606b12dfdaa206d9d655e1095cdd4b48f79#complexType/HighSchoolType
+      = OrganizationIDGroup
+    pesc://pescArtifact:d498b9d439bd4b3352b36bd5449d1606b12dfdaa206d9d655e1095cdd4b48f79#complexType/SchoolType
+      = OrganizationIDGroup
+    pesc://pescArtifact:87502be504916a0fcd47495bcf9156221b0320c8aa6e05fb48e2ed598486c283#complexType/OrganizationType
+      = OrganizationIDMultiChoiceGroup
+    pesc://pescArtifact:87502be504916a0fcd47495bcf9156221b0320c8aa6e05fb48e2ed598486c283#complexType/HighSchoolType
+      = OrganizationIDMultiChoiceGroup
+    pesc://pescArtifact:87502be504916a0fcd47495bcf9156221b0320c8aa6e05fb48e2ed598486c283#complexType/SchoolType
+      = OrganizationIDMultiChoiceGroup
+    pesc://pescArtifact:87502be504916a0fcd47495bcf9156221b0320c8aa6e05fb48e2ed598486c283#complexType/RequestorReceiverOrganizationType
+      = OrganizationIDMultiChoiceGroup
+
+  contentTypeRef  (145 lost of 145; category contentGap)
+    pesc://pescArtifact:5aeefa06cd2df8515d146a644814e59280a7d1076a727cf4a739a0dce1927f08#rootElement/AcademicEPortfolio
+      = AcademicEPortfolioType
+    pesc://pescArtifact:9280eaa9a618c6c93c42956d75031ed0424b3d8bd8c4c650ad3bd30fd481942a#rootElement/LoanInformation
+      = LoanInformationType
+    pesc://pescArtifact:9280eaa9a618c6c93c42956d75031ed0424b3d8bd8c4c650ad3bd30fd481942a#rootElement/DLLoanInformation
+      = DLLoanInformationType
+    pesc://pescArtifact:9280eaa9a618c6c93c42956d75031ed0424b3d8bd8c4c650ad3bd30fd481942a#rootElement/FFELPLoanInformation
+      = FFELPLoanInformationType
+    pesc://pescArtifact:9280eaa9a618c6c93c42956d75031ed0424b3d8bd8c4c650ad3bd30fd481942a#rootElement/FinancialAward
+      = FinancialAwardType
+    pesc://pescArtifact:9280eaa9a618c6c93c42956d75031ed0424b3d8bd8c4c650ad3bd30fd481942a#rootElement/Pell
+      = PellType
+    pesc://pescArtifact:9280eaa9a618c6c93c42956d75031ed0424b3d8bd8c4c650ad3bd30fd481942a#rootElement/DLSubsidized
+      = DLSubsidizedType
+    pesc://pescArtifact:9280eaa9a618c6c93c42956d75031ed0424b3d8bd8c4c650ad3bd30fd481942a#rootElement/DLUnsubsidized
+      = DLUnsubsidizedType
+    pesc://pescArtifact:9280eaa9a618c6c93c42956d75031ed0424b3d8bd8c4c650ad3bd30fd481942a#rootElement/DLPLUS
+      = DLPLUSType
+    pesc://pescArtifact:9280eaa9a618c6c93c42956d75031ed0424b3d8bd8c4c650ad3bd30fd481942a#rootElement/Perkins
+      = PerkinsType
+
+  facet:length  (33 lost of 33; category contentGap)
+    pesc://pescArtifact:87502be504916a0fcd47495bcf9156221b0320c8aa6e05fb48e2ed598486c283#simpleType/FIPSCountyCodeType
+      = 5
+    pesc://pescArtifact:76ef93896303b613c2000bb1b565c433d021bec0a2c31e9f91389af3e3ad4487#simpleType/FIPSCountyCodeType
+      = 5
+    pesc://pescArtifact:92d58d21dc538699bc38ab44735063f807cf4bae7911dd0082375cdd0b439f75#simpleType/FIPSCountyCodeType
+      = 5
+    pesc://pescArtifact:971970f7ff62de32fe3c1e36df32ff81f111ee703439bd4c7e4ba32a28a1dcb0#simpleType/FIPSCountyCodeType
+      = 5
+    pesc://pescArtifact:592054a062bd43bda7f1fe80b754874bd8e0271f9899e44c0fe8368cad5e5299#simpleType/FIPSCountyCodeType
+      = 5
+    pesc://pescArtifact:e12830fc86a304071ffec896e76d079e27274277d46a95218946f863a68f5527#simpleType/FIPSCountyCodeType
+      = 5
+    pesc://pescArtifact:be959f6423608773e4303738037bab2981f5ae1416707a41f5d222d037ab1ef9#simpleType/FIPSCountyCodeType
+      = 5
+    pesc://pescArtifact:b77f143b0a40a77687287daaf872f567c42c8d7c54a35cacda48620b672d2d32#simpleType/FIPSCountyCodeType
+      = 5
+    pesc://pescArtifact:4e3a13516e7e4f26bade97d946349315d904af4a82e82746e4576e1cc2642e78#simpleType/FIPSCountyCodeType
+      = 5
+    pesc://pescArtifact:1ea9f63e4b603cbf3f8da690efd7debc69f3b84e598788d922a90c8b8cbc1f14#simpleType/InstantMessageAddressType
+      = 128
+
+  allowsAnyElement  (25 lost of 25; category contentGap)
+    pesc://pescArtifact:9280eaa9a618c6c93c42956d75031ed0424b3d8bd8c4c650ad3bd30fd481942a#complexType/UserDefinedExtensionsType
+      = lax
+    pesc://pescArtifact:1ea9f63e4b603cbf3f8da690efd7debc69f3b84e598788d922a90c8b8cbc1f14#complexType/UserDefinedExtensionsType
+      = lax
+    pesc://pescArtifact:1ea9f63e4b603cbf3f8da690efd7debc69f3b84e598788d922a90c8b8cbc1f14#complexType/AcademicRecordBatchType
+      = strict
+    pesc://pescArtifact:ccf54c28dbb3f750fda925076c64508f53102a00c3316d265395d4bc7ae6d42e#complexType/UserDefinedExtensionsType
+      = lax
+    pesc://pescArtifact:ccf54c28dbb3f750fda925076c64508f53102a00c3316d265395d4bc7ae6d42e#complexType/AcademicRecordBatchType
+      = strict
+    pesc://pescArtifact:2cd45fc3afd3779eebb66cd552abaa28e3a24093379b1de4bc9d1c5ebb5f848d#complexType/UserDefinedExtensionsType
+      = lax
+    pesc://pescArtifact:2cd45fc3afd3779eebb66cd552abaa28e3a24093379b1de4bc9d1c5ebb5f848d#complexType/AcademicRecordBatchType
+      = strict
+    pesc://pescArtifact:78f00a57c7faade149343179c3758e5e15d710f4ed72f6cdde7d3b693d41b1ca#complexType/UserDefinedExtensionsType
+      = lax
+    pesc://pescArtifact:78f00a57c7faade149343179c3758e5e15d710f4ed72f6cdde7d3b693d41b1ca#complexType/AcademicRecordBatchType
+      = strict
+    pesc://pescArtifact:870c35770ffd7daf68c270eef291c360a32dcc32bd952c439c175439b7bb04b6#complexType/UserDefinedExtensionsType
+      = lax
+
+  elementFixed  (2 lost of 2; category contentGap)
+    pesc://pescArtifact:24641a04fab93ad646fc7833a2426b9ca22884593867cffc492ece8e66a11e73#complexType/ContactsType/element/ContactName
+      = xs:string
+    pesc://pescArtifact:ac8d9367af6b061403e7cb971a5be3251aa968a8fd4308bcb0961628d35ded0d#complexType/ContactsType/element/ContactName
+      = xs:string
+

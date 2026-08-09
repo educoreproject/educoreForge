@@ -1,0 +1,256 @@
+{
+ "verdictVersion": "sifRoundTripVerdict-1",
+ "standard": "SIF",
+ "roundTripClean": true,
+ "reproduced": 97888,
+ "lost": 0,
+ "lostTotal": 0,
+ "lostDeclaredContext": 0,
+ "lostContentGap": 0,
+ "invented": 0,
+ "inventedTotal": 0,
+ "orderMismatches": 0,
+ "diffScope": {
+  "statementSource": "ImplementationSpecification_031326.tsv",
+  "outOfScopeInputs": [
+   "refIdResolutionMap.tsv (in-house curated crosswalk — checksum-verified, states no SIF facts; its graph effect is the D5-ruled REFERENCES interpretation)"
+  ]
+ },
+ "scaleReport": {
+  "runtimeMs": 1251,
+  "rssBytes": 411156480,
+  "heapUsedBytes": 219860400,
+  "sourceStatements": 97888,
+  "emittedStatements": 97888,
+  "sourcePrecedencePairs": 28615,
+  "emittedPrecedencePairs": 28615,
+  "sourceGroupCount": 7279,
+  "largestSourceGroup": {
+   "groupSubject": "sif:group/StudentParticipation/(root)",
+   "memberCount": 44,
+   "pairCount": 946
+  },
+  "largestEmittedGroup": {
+   "groupSubject": "sif:group/StudentParticipation/(root)",
+   "memberCount": 44,
+   "pairCount": 946
+  }
+ },
+ "snapshot": {
+  "snapshotPath": "/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/forges/sif/assets/standardSourceData/01",
+  "combinedDigest": "a9908c614aa83109e6756a9b73d57c99fd4e1137b9c716b59a34b43307e49d4a",
+  "files": [
+   {
+    "filename": "ImplementationSpecification_031326.tsv",
+    "sha256": "6814727786bd767a23b3f6eabdf1862d30c126a0e82146cd3e622107174ae706"
+   },
+   {
+    "filename": "refIdResolutionMap.tsv",
+    "sha256": "7ca182bc442128ef69fef1dfa0902d150d73b3383b1db03c3751bab682dac2b3"
+   }
+  ]
+ },
+ "graph": {
+  "containerName": "DEV_sifCharacteristics_080426",
+  "boltUrl": "bolt://localhost:7811",
+  "rootProperties": {
+   "rootId": "sif:root",
+   "snapshotKey": "01",
+   "version": "1.0",
+   "publishedVersion": "unknown",
+   "versionSource": "unknown",
+   "standardName": "SIF Implementation Specification"
+  },
+  "nodeCounts": {
+   "SifObject": 159,
+   "SifField": 15620
+  },
+  "edgeCounts": {
+   "hasProperty": 15620
+  }
+ },
+ "report": {
+  "reportVersion": "sifRoundTrip-1",
+  "headline": {
+   "sourceStatements": 97888,
+   "emittedStatements": 97888,
+   "matched": 97888,
+   "lost": 0,
+   "lostDeclaredContext": 0,
+   "lostContentGap": 0,
+   "invented": 0,
+   "orderMismatches": 0
+  },
+  "perPredicate": [
+   {
+    "predicate": "fieldCedsId",
+    "lostCategory": "contentGap",
+    "source": 2231,
+    "emitted": 2231,
+    "matched": 2231,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "fieldCharacteristics",
+    "lostCategory": "contentGap",
+    "source": 15458,
+    "emitted": 15458,
+    "matched": 15458,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "fieldDescription",
+    "lostCategory": "contentGap",
+    "source": 10887,
+    "emitted": 10887,
+    "matched": 10887,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "fieldFormat",
+    "lostCategory": "contentGap",
+    "source": 1745,
+    "emitted": 1745,
+    "matched": 1745,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "fieldMandatory",
+    "lostCategory": "contentGap",
+    "source": 7394,
+    "emitted": 7394,
+    "matched": 7394,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "fieldName",
+    "lostCategory": "contentGap",
+    "source": 15620,
+    "emitted": 15620,
+    "matched": 15620,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "fieldType",
+    "lostCategory": "contentGap",
+    "source": 15620,
+    "emitted": 15620,
+    "matched": 15620,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "objectElementName",
+    "lostCategory": "contentGap",
+    "source": 159,
+    "emitted": 159,
+    "matched": 159,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "objectTableName",
+    "lostCategory": "contentGap",
+    "source": 159,
+    "emitted": 159,
+    "matched": 159,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   },
+   {
+    "predicate": "precedesInGroup",
+    "lostCategory": "contentGap",
+    "source": 28615,
+    "emitted": 28615,
+    "matched": 28615,
+    "lost": 0,
+    "invented": 0,
+    "lostSamples": [],
+    "inventedSamples": []
+   }
+  ],
+  "perKind": [
+   {
+    "kind": "object",
+    "sourceSubjects": 159,
+    "emittedSubjects": 159
+   },
+   {
+    "kind": "field",
+    "sourceSubjects": 15620,
+    "emittedSubjects": 15620
+   },
+   {
+    "kind": "group",
+    "sourceSubjects": 2453,
+    "emittedSubjects": 2453
+   }
+  ],
+  "orderMismatchList": [],
+  "lostDetailList": [],
+  "inventedDetailList": [],
+  "canonicalizationFaults": [],
+  "sourceStats": {
+   "tableCount": 159,
+   "fieldRowCount": 15620,
+   "statementCount": 97888,
+   "groupCount": 7279,
+   "precedencePairCount": 28615,
+   "largestGroup": {
+    "groupSubject": "sif:group/StudentParticipation/(root)",
+    "memberCount": 44,
+    "pairCount": 946
+   },
+   "emptyNameRowsSkipped": 0,
+   "unrecognizedLineCount": 0,
+   "columnHeadersVerified": 159,
+   "nonAsteriskMandatoryCellCount": 0
+  },
+  "emittedStats": {
+   "tableCount": 159,
+   "fieldRowCount": 15620,
+   "statementCount": 97888,
+   "groupCount": 7279,
+   "precedencePairCount": 28615,
+   "largestGroup": {
+    "groupSubject": "sif:group/StudentParticipation/(root)",
+    "memberCount": 44,
+    "pairCount": 946
+   },
+   "emptyNameRowsSkipped": 0,
+   "unrecognizedLineCount": 0,
+   "columnHeadersVerified": 0,
+   "nonAsteriskMandatoryCellCount": 0
+  },
+  "context": {
+   "snapshotPath": "/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/forges/sif/assets/standardSourceData/01",
+   "snapshotDigest": "a9908c614aa83109e6756a9b73d57c99fd4e1137b9c716b59a34b43307e49d4a",
+   "containerName": "DEV_sifCharacteristics_080426",
+   "boltUrl": "bolt://localhost:7811"
+  }
+ }
+}
