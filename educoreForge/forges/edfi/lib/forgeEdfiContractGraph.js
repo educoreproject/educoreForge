@@ -200,6 +200,15 @@ const PROPERTY_SCALAR_CARRY_LIST = [
 	'decimalPlaces', 'sourceLineNumber',
 ];
 
+// the interchange component KIND vocabulary, closed and shared. These are EXACTLY the two values
+// the parser mints (metaEdSyntaxParser.js:1219) and EXACTLY the two the round-trip answer key
+// emits (roundTripMetaEdCanonical.js:258-266). There is deliberately NO translation layer: a
+// mapping table between two identical vocabularies is a pure drift seam, refused in the plan and
+// refused in IMPL D-3. An unrecognised kind is REFUSED BY NAME rather than carried, defaulted or
+// coerced — a kind that reached the graph unrecognised would round-trip as simultaneous LOSS and
+// INVENTION, which is a far more expensive way to learn the same thing.
+const INTERCHANGE_COMPONENT_KIND_REGISTRY = ['element', 'identityTemplate'];
+
 // =====================================================================
 // normalization (self-contained; no dependency on the closeout-scheduled incumbent lib)
 // =====================================================================
@@ -335,7 +344,24 @@ const moduleFunction = () => {
 			originByStableId[stableId] = origin;
 		};
 
-		const addEdge = (edgeType, fromStableId, toStableId, edgeContext) => {
+		// edgeProperties — OPTIONAL declared edge content, merged onto the universal provenanceTier.
+		// This is the idiom already in service at forges/case/forgeCase.js:210 and three other
+		// forges. Most call sites pass none and that is a legitimate state, not a missing value:
+		// only the two item-carrier loops below declare edge content. A DEFINED value that is not a
+		// plain object is a different matter entirely — it would spread to nothing and lose the
+		// caller's data in silence — so it is refused by name.
+		const addEdge = (edgeType, fromStableId, toStableId, edgeContext, edgeProperties) => {
+			if (
+				edgeProperties !== undefined &&
+				(typeof edgeProperties !== 'object' || edgeProperties === null || Array.isArray(edgeProperties))
+			) {
+				throw new Error(
+					`forge-edfi REFUSED: addEdge('${edgeType}', ..., '${edgeContext}') received ` +
+						`edgeProperties of type '${Array.isArray(edgeProperties) ? 'array' : typeof edgeProperties}'. ` +
+						`Edge properties must be a plain object or omitted entirely; anything else spreads ` +
+						`to nothing and would discard declared edge content silently.`,
+				);
+			}
 			if (!fromStableId || !toStableId) {
 				stats.danglingEdges.push({ edgeType, fromStableId, toStableId, edgeContext });
 				return;
@@ -344,7 +370,13 @@ const moduleFunction = () => {
 				type: edgeType,
 				fromRef: { source: STANDARD_SOURCE, id: fromStableId },
 				toRef: { source: STANDARD_SOURCE, id: toStableId },
-				properties: { provenanceTier: PROVENANCE_TIER.STRUCTURAL },
+				// tested for ABSENCE, not truthiness: every non-object value was already refused
+				// above, so the only two states reaching here are "omitted" and "a plain object",
+				// and `=== undefined` says exactly that where `||` would merely imply it
+				properties: {
+					provenanceTier: PROVENANCE_TIER.STRUCTURAL,
+					...(edgeProperties === undefined ? {} : edgeProperties),
+				},
 			});
 			stats.edgeCountByType[edgeType] = (stats.edgeCountByType[edgeType] || 0) + 1;
 		};
@@ -816,7 +848,18 @@ const moduleFunction = () => {
 					itemNode,
 					itemName: oneDomainItem.localDomainItemName,
 				});
-				addEdge(EDGE_TYPES.REFERENCES, constructStableId, itemNode.stableId, `${constructName} domain item ${oneDomainItem.localDomainItemName}`);
+				// R-WO-15(d)/(f) carriage: the per-item metaEdId and the namespace qualifier are
+				// EDGE content — they belong to this construct's use of the item, not to the item
+				// node, which many constructs share. Presence is the test, mirroring the parser's
+				// own construction (metaEdSyntaxParser.js:998-1004): the field exists iff the
+				// source declared it, so an absent declaration carries NOTHING and the compiler
+				// emits nothing for it.
+				addEdge(EDGE_TYPES.REFERENCES, constructStableId, itemNode.stableId, `${constructName} domain item ${oneDomainItem.localDomainItemName}`, {
+					...(oneDomainItem.metaEdId !== undefined ? { itemMetaEdId: oneDomainItem.metaEdId } : {}),
+					...(oneDomainItem.baseNamespace !== undefined
+						? { itemNamespaceQualifier: oneDomainItem.baseNamespace }
+						: {}),
+				});
 			});
 
 			(parsedConstruct.interchangeComponentList || []).forEach((oneComponent) => {
@@ -838,7 +881,29 @@ const moduleFunction = () => {
 					itemNode: componentNode,
 					itemName: oneComponent.localInterchangeItemName,
 				});
-				addEdge(EDGE_TYPES.REFERENCES, constructStableId, componentNode.stableId, `${constructName} interchange ${oneComponent.componentKind} ${oneComponent.localInterchangeItemName}`);
+				// componentKind is ALWAYS present — the parser refuses a component whose lead token
+				// is neither an element nor an identity token (metaEdSyntaxParser.js:1206-1208), so
+				// there is no absent case to model here, only an invalid one.
+				if (!INTERCHANGE_COMPONENT_KIND_REGISTRY.includes(oneComponent.componentKind)) {
+					throw new Error(
+						`forge-edfi REFUSED: interchange component '${oneComponent.localInterchangeItemName}' ` +
+							`of '${constructName}' (${constructOrigin}) carries componentKind ` +
+							`'${oneComponent.componentKind}', which is not one of: ` +
+							`${INTERCHANGE_COMPONENT_KIND_REGISTRY.join(', ')}. The forge and the round-trip ` +
+							`answer key share ONE vocabulary with no translation layer between them; an ` +
+							`unrecognised kind means the parser and the answer key have diverged and it is ` +
+							`never carried, defaulted or coerced.`,
+					);
+				}
+				// R-WO-15(d)/(f) carriage — see the domain-item note above. componentKind is
+				// unconditional; the other two are present iff declared.
+				addEdge(EDGE_TYPES.REFERENCES, constructStableId, componentNode.stableId, `${constructName} interchange ${oneComponent.componentKind} ${oneComponent.localInterchangeItemName}`, {
+					componentKind: oneComponent.componentKind,
+					...(oneComponent.metaEdId !== undefined ? { itemMetaEdId: oneComponent.metaEdId } : {}),
+					...(oneComponent.baseNamespace !== undefined
+						? { itemNamespaceQualifier: oneComponent.baseNamespace }
+						: {}),
+				});
 			});
 
 			if (parsedConstruct.constructType === 'subdomain') {

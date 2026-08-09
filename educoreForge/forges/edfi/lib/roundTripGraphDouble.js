@@ -21,8 +21,16 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
 const roundTripEdfiCompiler = require('./roundTripEdfiCompiler')();
 
-const ITEM_CARRIER_CONSTRUCT_TYPES = ['domain', 'subdomain', 'interchange', 'interchangeExtension'];
-const CONSTRUCT_ROLES = ['DmeClass', 'DmeOptionSet', 'DmeSupport'];
+// EVERY list that decides what this double reads comes FROM the compiler. Until Phase 4 the two
+// below were locally re-typed copies, which is exactly the drift the "one list, two readers"
+// discipline exists to prevent — the node families were shared, the edge scoping was not, and a
+// change to either registry would have silently desynchronized the hermetic reader from the real
+// one. There is no local edge vocabulary here any more, by design.
+const {
+	ITEM_CARRIER_CONSTRUCT_TYPES,
+	CONSTRUCT_ROLES,
+	ITEM_EDGE_READ_PROPERTY_LIST,
+} = roundTripEdfiCompiler;
 
 const projectRow = ({ nodeProperties, projectionList }) => {
 	const row = {};
@@ -112,15 +120,27 @@ const moduleFunction = () => {
 				if (
 					fromNode.role === 'DmeSupport' &&
 					ITEM_CARRIER_CONSTRUCT_TYPES.includes(fromNode.properties.constructType) &&
-					['DmeClass', 'DmeOptionSet', 'DmeSupport'].includes(toNode.role)
+					CONSTRUCT_ROLES.includes(toNode.role)
 				) {
-					rowsByFamily.itemEdgeRowList.push({
+					const itemEdgeRow = {
 						fromStableId: fromNode.stableId,
 						fromConstructType: fromNode.properties.constructType,
 						fromName: fromNode.properties.name,
 						toName: toNode.properties.name,
 						toConstructType: toNode.properties.constructType,
+					};
+					// the R-WO-15(d)/(f) edge content, projected with the SAME list the bolt reader
+					// projects. Forge output properties are scalars PRE-shaper — the PG-JSON array
+					// wrapping and its unwrapping both happen downstream of here — so there is
+					// nothing to unwrap, and an absent property is absent rather than null. That is
+					// the same shape the bolt reader normalizes its NULLs into, which is what makes
+					// emit-if-present mean one thing in both readers.
+					ITEM_EDGE_READ_PROPERTY_LIST.forEach((onePropertyName) => {
+						if (oneEdge.properties && oneEdge.properties[onePropertyName] !== undefined) {
+							itemEdgeRow[onePropertyName] = oneEdge.properties[onePropertyName];
+						}
 					});
+					rowsByFamily.itemEdgeRowList.push(itemEdgeRow);
 				}
 			});
 

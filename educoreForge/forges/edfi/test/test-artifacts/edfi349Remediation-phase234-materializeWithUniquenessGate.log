@@ -1,0 +1,23 @@
+[runEdfiMaterialize] forging snapshot 04 (skipEmbedding) ...
+[forge-edfi metaEdParser] loaded metaEdModel: 653 files, tpdmCommunityModel: 196 files
+[forge-edfi] code values: 3522 records across 230 XMLs (0 identical duplicates collapsed)
+[forge-edfi] authored crosswalk: 1666 element rows, 8310 descriptor rows loaded
+[forge-edfi] contract graph: 6336 nodes, 8171 edges; crosswalk matches — properties 686 matched / 764 unmatched / 0 ambiguous; descriptors 130/0; values 2420/0 (unmatched rows are REPORTED, never invented — R-WO-11)
+[runEdfiMaterialize] forged 6336 nodes / 8171 edges
+[runEdfiMaterialize] edge-triple uniqueness: 8171 edges / 8171 distinct (from, type, to) triples
+[runEdfiMaterialize] provisioning scratch container 'DEV_edfiRoundTrip_080326' ...
+[replayManager] provisioning scratch graph 'DEV_edfiRoundTrip_080326' (bolt 7813)...
+[replayManager] scratch graph 'DEV_edfiRoundTrip_080326' ready at bolt://localhost:7813
+[runEdfiMaterialize] container ready at bolt://localhost:7813
+[replayManager] loading 6336 nodes, 8171 edges into 'DEV_edfiRoundTrip_080326' as [StandardBase]
+[runEdfiMaterialize] init complete; verifying counts over bolt via docker inspect ...
+{
+ "containerName": "DEV_edfiRoundTrip_080326",
+ "boltUrl": "bolt://localhost:7813",
+ "materializedNodeCount": 6336,
+ "materializedEdgeCount": 8171,
+ "expectedNodeCount": 6336,
+ "expectedEdgeCount": 8171,
+ "countsMatch": true
+}
+[runEdfiMaterialize] MATERIALIZED AND COUNT-VERIFIED

@@ -1,0 +1,156 @@
+found -verbose flag
+test-edfiRoundTrip: starting
+test-edfiRoundTrip
+
+UNIT — canonical primitives and mechanical inversions
+  ok   statementKey joins with NUL (space-bearing objects cannot alias)
+  ok   collapseWhitespace collapses runs and trims
+  ok   roleName prefix inversion recovers the base name
+  ok   roleName === base name inverts to itself (no prefix was applied)
+  ok   no roleName passes the name through
+  ok   an uninvertible effective name is undefined (a fault upstream, never a guess)
+  ok   construct stableId parses to type and name
+  ok   a non-scheme parentId refuses to parse
+
+REDUCER — scope refusals observed BY NAME
+  ok   Begin Namespace wrapper refuses by name (stated scope limit)
+  ok   unclassifiable text is a canonicalization FAULT naming file:line
+  ok   an unterminated string is a scanner FAULT
+
+CANONICALIZER BOUNDS — cosmetic variants collapse; adversarial pairs stay distinct
+  ok   cosmetic pair reduces without fault
+  ok   cosmetic variants (whitespace, comments, blank lines) collapse to ONE statement set
+  ok   pair 'annotation differs (required vs optional)' reduces without fault
+  ok   adversarial pair DISTINCT — annotation differs (required vs optional)
+  ok   pair 'documentation differs by one word' reduces without fault
+  ok   adversarial pair DISTINCT — documentation differs by one word
+  ok   pair 'enumeration item text trailing space is semantic (verbatim value)' reduces without fault
+  ok   adversarial pair DISTINCT — enumeration item text trailing space is semantic (verbatim value)
+  ok   pair 'role name present vs absent' reduces without fault
+  ok   adversarial pair DISTINCT — role name present vs absent
+  ok   pair 'bound sign is semantic' reduces without fault
+  ok   adversarial pair DISTINCT — bound sign is semantic
+  ok   every adversarial pair stays DISTINCT
+
+RT-7 — the CARRIABLE-vocabulary fixture round-trips CLEAN
+[forge-edfi metaEdParser] loaded metaEdModel: 2 files, tpdmCommunityModel: 1 files
+[forge-edfi] code values: 3 records across 2 XMLs (0 identical duplicates collapsed)
+[forge-edfi] authored crosswalk: 2 element rows, 1 descriptor rows loaded
+snapshot-provenance: sourcePath '/var/folders/m_/12d8yqwd28943kwt0n4nhrk80000gn/T/edfiRoundTripFixture-ikTAyE' is not inside an standardSourceData/ snapshot directory — snapshotKey stamped 'unknown'
+[forge-edfi] contract graph: 71 nodes, 96 edges; crosswalk matches — properties 1 matched / 1 unmatched / 0 ambiguous; descriptors 1/0; values 1/0 (unmatched rows are REPORTED, never invented — R-WO-11)
+  ok   carriable fixture forges without refusal
+  ok   carriable fixture validates without fault
+  ok   carriable fixture roundTripClean === true (reproduced 311, lost 0, inventedTotal 0)
+  ok   carriable fixture LOST is zero
+  ok   carriable fixture inventedTotal is zero
+  ok   crosswalk guard sees stash and zero violations
+  ok   crosswalk stash is nonempty (the guard guarded something real)
+  ok   the verbatim trailing-space code value REPRODUCED (house line: trimmed identity, verbatim value)
+  ok   verdict carries the complete RT-6 shape
+
+FULL-vocabulary fixture — CARRIES the R-WO-15(d)/(f) classes and round-trips CLEAN
+[forge-edfi metaEdParser] loaded metaEdModel: 3 files, tpdmCommunityModel: 2 files
+[forge-edfi] code values: 3 records across 2 XMLs (0 identical duplicates collapsed)
+[forge-edfi] authored crosswalk: 2 element rows, 1 descriptor rows loaded
+snapshot-provenance: sourcePath '/var/folders/m_/12d8yqwd28943kwt0n4nhrk80000gn/T/edfiRoundTripFixture-1oE2uB' is not inside an standardSourceData/ snapshot directory — snapshotKey stamped 'unknown'
+[forge-edfi] contract graph: 73 nodes, 104 edges; crosswalk matches — properties 1 matched / 1 unmatched / 0 ambiguous; descriptors 1/0; values 1/0 (unmatched rows are REPORTED, never invented — R-WO-11)
+  ok   full-vocabulary fixture forges without refusal
+  ok   the interchange fixture texts reduce without fault
+  ok   the ruled-carriage domain is NON-EMPTY and exactly sized — {"componentKind/":5,"itemMetaEdId/":3,"itemNamespace/":1}, total 9
+  ok   full-vocabulary fixture validates without fault
+  ok   full fixture roundTripClean === true (reproduced 334, lost 0, inventedTotal 0)
+  ok   full fixture LOST is zero
+  ok   full fixture inventedTotal is zero
+  ok   every ruled-carriage statement REPRODUCED (9 statements across 7 predicates)
+  ok   class 'componentKind/' fully carried (5 statements)
+  ok   class 'itemMetaEdId/' fully carried (3 statements)
+  ok   class 'itemNamespace/' fully carried (1 statements)
+  ok   the carriage measure REFUSES the carriable run, whose verdict is clean but whose ruled vocabulary is absent (anti-vacuity control)
+  ok   every componentKind value REPRODUCED — element (4 stmt) AND identityTemplate (1 stmt)
+  ok   items declared with NO metaEdId emit no itemMetaEdId statement (FixtureEnrollment, FixtureCandidate), inventedTotal stays 0, and itemMetaEdId emission is actually happening (2 predicate(s) reproduced)
+  ok   non-emission detector REFUSES a doctored emission for an id-less item (data-level RED)
+  ok   non-emission detector ACCEPTS an itemMetaEdId for an item that DOES declare one (not over-broad)
+  ok   non-emission detector REFUSES when NOTHING is emitted — the presence floor bites, so this gate cannot go vacuously green on an empty domain
+  ok   no anonymous contentGap loss
+  ok   every LOST record is located (file:line) and bucketed
+  --   G-6 and G-7 are conditional-universal guards — "IF a loss exists, it is located and labelled". Their domain here is 0 record(s). Once carriage is complete that domain is EXPECTED TO BE EMPTY and both measures are then vacuously satisfied. They are kept as REGRESSION detectors — a future forge change that drops a property repopulates them under its ruled backlog name — and must never be read as coverage.
+
+EDGE-TRIPLE UNIQUENESS — the Phase 1 prerequisite, proven at the DATA level
+  ok   findDuplicateEdgeTriples REFUSES a missing edgeList BY NAME
+  ok   findDuplicateEdgeTriples REFUSES an edge missing its endpoints BY NAME
+  ok   a duplicated (from, type, to) triple is REFUSED and NAMED — 1 duplicate(s), 1 distinct of 2 edges
+  ok   both real fixture blocks are triple-distinct — carriable 96/96, full 104/104
+  ok   a REORDERED edge array is still accepted — the check is order-independent
+  ok   near-miss triples sharing TWO of the three components are still accepted — the check keys on all THREE
+
+CHEATING DETECTOR + INVENTION ALARM — data-level injections through the double
+  ok   deleted-fact run validates
+  ok   a deleted graph fact is named LOST — the validator did not know data it should not (RT-5)
+  ok   injected-fact run validates
+  ok   an injected graph fact fires INVENTED by name
+  ok   doctored-stash run validates
+  ok   a stash raw value absent from the CSVs is a guard VIOLATION (counts INVENTED)
+  ok   a non-boolean in a boolean field is a named FAULT, never coerced
+
+REFUSAL BATTERY — every refusal BY NAME; intact input not over-refused
+  ok   missing input directory refuses naming README_PROVENANCE.md
+  ok   corrupt bytes refuse with checksum MISMATCH naming the file
+  ok   manifest drift refuses (file on disk, absent from SHA256SUMS)
+  ok   no bolt triple and no containerName refuses by name
+  ok   container without a published 7687 port refuses (nothing guessed)
+  ok   container without NEO4J_AUTH refuses (credential never assumed)
+  ok   an intact container inspection is NOT over-refused
+  ok   bolt triple parsed from the container record
+
+G-8 — two independent readers agree (reducer census vs Phase 1 parser census)
+  ok   Phase 1 parser reads the full fixture (cross-check reader)
+  ok   the two independent readers agree — constructs/properties/items ({"abstractEntity":1,"domainEntity":3,"domainEntitySubclass":1,"interchange":1,"association":1,"associationSubclass":1,"choice":1,"common":1,"commonSubclass":1,"inlineCommon":1,"enumeration":1,"descriptor":3,"sharedString":1,"sharedInteger":1,"sharedShort":1,"sharedDecimal":1,"domain":1,"subdomain":1,"associationExtension":1,"commonExtension":1,"domainEntityExtension":1,"interchangeExtension":1} vs parser)
+
+RT-10 — gate suite: all 19 green AND every twin observed RED
+  ok   gate declarations load
+  ok   every declared twin exists in the registry
+  ok   no orphan twins (dead proof-code)
+  ok   gate evaluation runs
+  ok   G-1 PASS — INVENTED is zero — an invention is an assertion about Ed-Fi that Ed-Fi
+  ok   G-2 PASS — inventedTotal (diff + crosswalk guard) is zero — the combined inventio
+  ok   G-3 PASS — crosswalk invention guard: every stashed CEDS raw value appears verbat
+  ok   G-4 PASS — the carriable-vocabulary hermetic fixture round-trips CLEAN (RT-7: the
+  ok   G-5 PASS — the FULL-vocabulary fixture round-trips CLEAN — the formerly-ruled R-W
+  ok   G-6 PASS — every LOST record is located (file:line) and bucketed — LOST is action
+  ok   G-7 PASS — no anonymous loss — every contentGap LOST record carries a named backl
+  ok   G-8 PASS — two independent readers agree — the reducer census equals the Phase 1 
+  ok   G-9 PASS — CHEATING DETECTOR — a deleted graph fact shows up LOST by name; if it 
+  ok   G-10 PASS — an injected graph fact fires INVENTED by name
+  ok   G-11 PASS — refusals are BY NAME — missing input, corrupt bytes, manifest drift, a
+  ok   G-12 PASS — adversarial pairs stay DISTINCT — semantically different sources must 
+  ok   G-13 PASS — cosmetic variants COLLAPSE — whitespace/order/comment differences must
+  ok   G-14 PASS — the verdict carries the complete RT-6 shape — counts, roundTripClean, 
+  ok   G-15 PASS — size floor — two empty statement sets are identical, and identical is 
+  ok   G-16 PASS — no percentage participates in acceptance — counts only (fidelityPercen
+  ok   G-17 PASS — BOTH componentKind values are carried — element AND identityTemplate r
+  ok   G-18 PASS — NON-EMISSION: an item declared with no metaEdId emits no itemMetaEdId 
+  ok   G-19 PASS — forge edge triples are DISTINCT — the replay engine MERGEs on (from, t
+  ok   G-1 twin 'injectOneInventedStatement' observed RED
+  ok   G-2 twin 'bumpInventedTotal' observed RED
+  ok   G-3 twin 'doctorOneStashRawValue' observed RED
+  ok   G-4 twin 'dropOneSourceStatement' observed RED
+  ok   G-5 twin 'falsifyFullVocabularyCleanProbe' observed RED
+  ok   G-6 twin 'stripOneLostLocation' observed RED
+  ok   G-7 twin 'stripOneBacklogLabel' observed RED
+  ok   G-8 twin 'falsifyCensusProbe' observed RED
+  ok   G-9 twin 'falsifyCheatingDetectorProbe' observed RED
+  ok   G-10 twin 'falsifyInventionProbe' observed RED
+  ok   G-11 twin 'falsifyRefusalProbe' observed RED
+  ok   G-12 twin 'collapseAdversarialPair' observed RED
+  ok   G-13 twin 'splitCosmeticPair' observed RED
+  ok   G-14 twin 'dropVerdictField' observed RED
+  ok   G-15 twin 'emptyBothSides' observed RED
+  ok   G-16 twin 'declarePercentGate' observed RED
+  ok   G-17 twin 'falsifyComponentKindCarriageProbe' observed RED
+  ok   G-18 twin 'falsifyNonEmissionProbe' observed RED
+  ok   G-19 twin 'falsifyEdgeUniquenessProbe' observed RED
+  ok   twin observations logged to test/test-artifacts/roundTripGateTwinObservations.log
+  ok   suite judgment runs
+  ok   suite ACCEPTED (fail 0, unproven 0)
+test-edfiRoundTrip: 120/120 passed, 0 failed.
+EXIT_CODE=0

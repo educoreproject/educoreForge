@@ -1,0 +1,80 @@
+test-edfiRoundTrip
+
+UNIT — canonical primitives and mechanical inversions
+
+REDUCER — scope refusals observed BY NAME
+
+CANONICALIZER BOUNDS — cosmetic variants collapse; adversarial pairs stay distinct
+
+RT-7 — the CARRIABLE-vocabulary fixture round-trips CLEAN
+[forge-edfi metaEdParser] loaded metaEdModel: 2 files, tpdmCommunityModel: 1 files
+[forge-edfi] code values: 3 records across 2 XMLs (0 identical duplicates collapsed)
+[forge-edfi] authored crosswalk: 2 element rows, 1 descriptor rows loaded
+snapshot-provenance: sourcePath '/var/folders/m_/12d8yqwd28943kwt0n4nhrk80000gn/T/edfiRoundTripFixture-6LjFxI' is not inside an standardSourceData/ snapshot directory — snapshotKey stamped 'unknown'
+[forge-edfi] contract graph: 71 nodes, 96 edges; crosswalk matches — properties 1 matched / 1 unmatched / 0 ambiguous; descriptors 1/0; values 1/0 (unmatched rows are REPORTED, never invented — R-WO-11)
+
+FULL-vocabulary fixture — CARRIES the R-WO-15(d)/(f) classes and round-trips CLEAN
+[forge-edfi metaEdParser] loaded metaEdModel: 3 files, tpdmCommunityModel: 2 files
+[forge-edfi] code values: 3 records across 2 XMLs (0 identical duplicates collapsed)
+[forge-edfi] authored crosswalk: 2 element rows, 1 descriptor rows loaded
+snapshot-provenance: sourcePath '/var/folders/m_/12d8yqwd28943kwt0n4nhrk80000gn/T/edfiRoundTripFixture-hZPGaz' is not inside an standardSourceData/ snapshot directory — snapshotKey stamped 'unknown'
+[forge-edfi] contract graph: 73 nodes, 104 edges; crosswalk matches — properties 1 matched / 1 unmatched / 0 ambiguous; descriptors 1/0; values 1/0 (unmatched rows are REPORTED, never invented — R-WO-11)
+  FAIL full fixture roundTripClean === true (reproduced 325, lost 9, inventedTotal 0)
+  FAIL full fixture LOST is zero
+       expected 0, got 9
+  FAIL every ruled-carriage statement REPRODUCED (9 statements across 7 predicates)
+       componentKind/FixtureStudent: reproduced 0/2, lost 2
+       itemMetaEdId/FixtureStudent: reproduced 0/2, lost 2
+       componentKind/FixtureSchool: reproduced 0/1, lost 1
+       itemMetaEdId/FixtureSchool: reproduced 0/1, lost 1
+       componentKind/FixtureEnrollment: reproduced 0/1, lost 1
+       componentKind/FixtureCandidate: reproduced 0/1, lost 1
+       itemNamespace/FixtureStudent: reproduced 0/1, lost 1
+  FAIL class 'componentKind/' fully carried (5 statements)
+       componentKind/FixtureStudent: reproduced 0/2, lost 2
+       componentKind/FixtureSchool: reproduced 0/1, lost 1
+       componentKind/FixtureEnrollment: reproduced 0/1, lost 1
+       componentKind/FixtureCandidate: reproduced 0/1, lost 1
+  FAIL class 'itemMetaEdId/' fully carried (3 statements)
+       itemMetaEdId/FixtureStudent: reproduced 0/2, lost 2
+       itemMetaEdId/FixtureSchool: reproduced 0/1, lost 1
+  FAIL class 'itemNamespace/' fully carried (1 statements)
+       itemNamespace/FixtureStudent: reproduced 0/1, lost 1
+  FAIL every componentKind value REPRODUCED — element (4 stmt) AND identityTemplate (1 stmt)
+       componentKind/FixtureStudent: reproduced 0/2, lost 2
+       componentKind/FixtureEnrollment: reproduced 0/1, lost 1
+       componentKind/FixtureCandidate: reproduced 0/1, lost 1
+       componentKind/FixtureSchool: reproduced 0/1, lost 1
+  FAIL items declared with NO metaEdId emit no itemMetaEdId statement (FixtureEnrollment, FixtureCandidate), inventedTotal stays 0, and itemMetaEdId emission is actually happening (0 predicate(s) reproduced)
+       no offending predicate; the presence floor is unmet — 0 itemMetaEdId predicates reproduced, so non-emission cannot yet be claimed
+  --   G-6 and G-7 are conditional-universal guards — "IF a loss exists, it is located and labelled". Their domain here is 9 record(s). Once carriage is complete that domain is EXPECTED TO BE EMPTY and both measures are then vacuously satisfied. They are kept as REGRESSION detectors — a future forge change that drops a property repopulates them under its ruled backlog name — and must never be read as coverage.
+
+EDGE-TRIPLE UNIQUENESS — the Phase 1 prerequisite, proven at the DATA level
+
+CHEATING DETECTOR + INVENTION ALARM — data-level injections through the double
+
+REFUSAL BATTERY — every refusal BY NAME; intact input not over-refused
+
+G-8 — two independent readers agree (reducer census vs Phase 1 parser census)
+
+RT-10 — gate suite: all 19 green AND every twin observed RED
+  FAIL G-5 FAIL — the FULL-vocabulary fixture round-trips CLEAN — the formerly-ruled R-W (measure 'probe.fullVocabularyClean' = false, comparator isTrue)
+  FAIL G-17 FAIL — BOTH componentKind values are carried — element AND identityTemplate r (measure 'probe.componentKindBothKindsCarried' = false, comparator isTrue)
+  FAIL G-18 FAIL — NON-EMISSION: an item declared with no metaEdId emits no itemMetaEdId  (measure 'probe.idlessItemsEmitNothing' = false, comparator isTrue)
+  FAIL suite ACCEPTED (fail 3, unproven 0)
+
+test-edfiRoundTrip: FAILURES
+  - full fixture roundTripClean === true (reproduced 325, lost 9, inventedTotal 0)
+  - full fixture LOST is zero
+  - every ruled-carriage statement REPRODUCED (9 statements across 7 predicates)
+  - class 'componentKind/' fully carried (5 statements)
+  - class 'itemMetaEdId/' fully carried (3 statements)
+  - class 'itemNamespace/' fully carried (1 statements)
+  - every componentKind value REPRODUCED — element (4 stmt) AND identityTemplate (1 stmt)
+  - items declared with NO metaEdId emit no itemMetaEdId statement (FixtureEnrollment, FixtureCandidate), inventedTotal stays 0, and itemMetaEdId emission is actually happening (0 predicate(s) reproduced)
+  - G-5 FAIL — the FULL-vocabulary fixture round-trips CLEAN — the formerly-ruled R-W (measure 'probe.fullVocabularyClean' = false, comparator isTrue)
+  - G-17 FAIL — BOTH componentKind values are carried — element AND identityTemplate r (measure 'probe.componentKindBothKindsCarried' = false, comparator isTrue)
+  - G-18 FAIL — NON-EMISSION: an item declared with no metaEdId emits no itemMetaEdId  (measure 'probe.idlessItemsEmitNothing' = false, comparator isTrue)
+  - suite ACCEPTED (fail 3, unproven 0)
+test-edfiRoundTrip: 108/120 passed, 12 failed.
+EXIT_CODE=1

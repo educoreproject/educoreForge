@@ -142,6 +142,15 @@ const EXTENSION_CONSTRUCT_TYPES = [
 const SHARED_PROPERTY_TYPES = ['sharedString', 'sharedInteger', 'sharedShort', 'sharedDecimal'];
 const ITEM_CARRIER_CONSTRUCT_TYPES = ['domain', 'subdomain', 'interchange', 'interchangeExtension'];
 
+// the declared EDGE properties a domain item / interchange component edge can carry — the
+// R-WO-15(d)/(f) classes the forge began carrying in Phase 2. ONE list, THREE consumers: it
+// builds the bolt RETURN clause, it normalizes the bolt rows, and roundTripGraphDouble reads the
+// identical fields off the pre-materialization edge. The node families already work this way
+// (ROOT_/CONSTRUCT_/PROPERTY_/OPTION_VALUE_READ_PROPERTY_LIST); edges did not, and that missing
+// list was the drift seam IMPL §1.5 named. Nothing here is optional-with-a-default: a property
+// absent from the edge is absent from the row, and absent from the row emits no statement.
+const ITEM_EDGE_READ_PROPERTY_LIST = ['componentKind', 'itemMetaEdId', 'itemNamespaceQualifier'];
+
 const applyTransform = (transformKind, rawValue) => {
 	if (transformKind === 'collapse') {
 		return collapseWhitespace(rawValue);
@@ -341,6 +350,15 @@ const moduleFunction = () => {
 	//   readAll -> callback(errString, graphRows) where graphRows =
 	//     { rootRow, constructRowList, propertyRowList, optionValueRowList, itemEdgeRowList,
 	//       nodeCountByRole, edgeCountByType }
+	//
+	// THE itemEdgeRowList ROW CONTRACT — declared here because it is the one row family BOTH
+	// readers hand-build rather than project from a node, so it is the seam where they can drift:
+	//     { fromStableId, fromConstructType, fromName, toName, toConstructType }   always present
+	//     + any of ITEM_EDGE_READ_PROPERTY_LIST that the EDGE declared                  when present
+	// A declared property is ABSENT from the row when the source did not declare it — never null,
+	// never empty string. The bolt reader normalizes NULL to absent for exactly this reason; the
+	// hermetic double never sees a null at all. Both readers therefore mean ONE thing by absence,
+	// which is what lets the emitter's emit-if-present rule be the same rule on both sides.
 	// --------------------------------------------------------
 	const makeNeo4jEdfiReader = ({ boltUrl, user, password, pageSize }) => {
 		const neo4j = require('neo4j-driver');
@@ -439,31 +457,66 @@ const moduleFunction = () => {
 
 			// domain items + interchange components exist ONLY as REFERENCES edges leaving
 			// item-carrier constructs — both endpoint roles named explicitly (RT-4)
+			//
+			// THE RELATIONSHIP IS BOUND (`oneEdge`). It was anonymous until Phase 3, which made
+			// every edge property structurally unreachable no matter what the forge wrote — the
+			// reader could not have seen the R-WO-15(d)/(f) classes even after Phase 2 carried
+			// them. The projection is generated from ITEM_EDGE_READ_PROPERTY_LIST so the RETURN
+			// clause and the row build cannot drift apart.
 			taskList.push((args, next) => {
 				const session = driver.session();
+				const itemEdgeProjectionText = ITEM_EDGE_READ_PROPERTY_LIST.map(
+					(onePropertyName) => `oneEdge.${onePropertyName} AS ${onePropertyName}`,
+				).join(', ');
 				session
 					.run(
-						`MATCH (fromNode:ForgedNode {_source: $standardSource})-[:REFERENCES]->(toNode:ForgedNode {_source: $standardSource})
+						`MATCH (fromNode:ForgedNode {_source: $standardSource})-[oneEdge:REFERENCES]->(toNode:ForgedNode {_source: $standardSource})
 						 WHERE fromNode.role = 'DmeSupport'
 						   AND fromNode.constructType IN $itemCarrierList
-						   AND toNode.role IN ['DmeClass', 'DmeOptionSet', 'DmeSupport']
+						   AND toNode.role IN $constructRoleList
 						 RETURN fromNode.stableId AS fromStableId, fromNode.constructType AS fromConstructType,
 						        fromNode.name AS fromName, toNode.name AS toName,
-						        toNode.constructType AS toConstructType
+						        toNode.constructType AS toConstructType,
+						        ${itemEdgeProjectionText}
 						 ORDER BY fromStableId, toName`,
-						{ standardSource: STANDARD_SOURCE, itemCarrierList: ITEM_CARRIER_CONSTRUCT_TYPES },
+						// the target-role list is PARAMETERIZED from CONSTRUCT_ROLES rather than
+						// written inline. It was an inline literal until Phase 4, which was harmless
+						// only because the double kept its own private copy — the two were wrong
+						// together. Now that the double reads CONSTRUCT_ROLES from here, an inline
+						// literal would mean editing that one list silently re-scoped the hermetic
+						// reader and NOT the real one, leaving them to disagree about which edges
+						// are item edges at all. Found in the Phase 4 self-audit.
+						{
+							standardSource: STANDARD_SOURCE,
+							itemCarrierList: ITEM_CARRIER_CONSTRUCT_TYPES,
+							constructRoleList: CONSTRUCT_ROLES,
+						},
 					)
 					.then((queryResult) => {
 						session.close();
 						next('', {
 							...args,
-							itemEdgeRowList: queryResult.records.map((oneRecord) => ({
-								fromStableId: oneRecord.get('fromStableId'),
-								fromConstructType: oneRecord.get('fromConstructType'),
-								fromName: oneRecord.get('fromName'),
-								toName: oneRecord.get('toName'),
-								toConstructType: oneRecord.get('toConstructType'),
-							})),
+							itemEdgeRowList: queryResult.records.map((oneRecord) => {
+								const oneRow = {
+									fromStableId: oneRecord.get('fromStableId'),
+									fromConstructType: oneRecord.get('fromConstructType'),
+									fromName: oneRecord.get('fromName'),
+									toName: oneRecord.get('toName'),
+									toConstructType: oneRecord.get('toConstructType'),
+								};
+								// bolt returns NULL for an absent edge property; the emitter's
+								// contract is ABSENT. Normalizing here gives emit-if-present ONE
+								// meaning across both readers — the double never sees a null at all,
+								// so without this the two readers would disagree about a property
+								// nobody declared.
+								ITEM_EDGE_READ_PROPERTY_LIST.forEach((onePropertyName) => {
+									const readValue = oneRecord.get(onePropertyName);
+									if (readValue !== null && readValue !== undefined) {
+										oneRow[onePropertyName] = readValue;
+									}
+								});
+								return oneRow;
+							}),
 						});
 					})
 					.catch((queryError) => {
@@ -549,6 +602,11 @@ const moduleFunction = () => {
 			propertyStatementCount: 0,
 			optionValueStatementCount: 0,
 			itemStatementCount: 0,
+			// the R-WO-15(d)/(f) carriage, counted separately so a Phase 7 verdict SHOWS the
+			// carriage rather than burying it inside itemStatementCount
+			componentKindStatementCount: 0,
+			itemMetaEdIdStatementCount: 0,
+			itemNamespaceStatementCount: 0,
 			skippedParentEdgeCount: 0,
 			skippedExtendeeEdgeCount: 0,
 		};
@@ -798,6 +856,30 @@ const moduleFunction = () => {
 		});
 
 		// ---- domain items + interchange components (edge-carried content) ----
+		//
+		// EMIT-IF-PRESENT, NEVER FAULT-ON-ABSENT (IMPL D-1), and this is the ONE seam in the whole
+		// remediation where carrying more content could turn a LOSS into a LIE. An item declared
+		// with no metaEdId must emit NO statement — not an empty-object one, not a null-object one.
+		// An empty-string object here would be an INVENTED statement, and invention fails a build
+		// unconditionally. Absence is therefore modelled as absence, exactly as RT-2 requires of
+		// node scalars, and a pre-Phase-2 graph read by this post-Phase-3 instrument reports its
+		// missing classes honestly as LOST under their existing backlog labels rather than faulting.
+		const emitItemEdgeAttributeStatements = ({ fromSubject, oneEdgeRow }) => {
+			if (oneEdgeRow.itemNamespaceQualifier !== undefined) {
+				emit(
+					fromSubject,
+					`itemNamespace/${oneEdgeRow.toName}`,
+					oneEdgeRow.itemNamespaceQualifier,
+					undefined,
+				);
+				emissionCensus.itemNamespaceStatementCount += 1;
+			}
+			if (oneEdgeRow.itemMetaEdId !== undefined) {
+				emit(fromSubject, `itemMetaEdId/${oneEdgeRow.toName}`, oneEdgeRow.itemMetaEdId, undefined);
+				emissionCensus.itemMetaEdIdStatementCount += 1;
+			}
+		};
+
 		(graphRows.itemEdgeRowList || []).forEach((oneEdgeRow) => {
 			if (faultMessage) {
 				return;
@@ -811,6 +893,7 @@ const moduleFunction = () => {
 				}
 				emit(fromSubject, 'hasItem', oneEdgeRow.toName, undefined);
 				emissionCensus.itemStatementCount += 1;
+				emitItemEdgeAttributeStatements({ fromSubject, oneEdgeRow });
 				return;
 			}
 			// interchange / interchangeExtension
@@ -821,6 +904,15 @@ const moduleFunction = () => {
 			}
 			emit(fromSubject, 'hasComponent', oneEdgeRow.toName, undefined);
 			emissionCensus.itemStatementCount += 1;
+			// componentKind is interchange-family content ONLY; the answer key emits it for every
+			// component and for nothing else (roundTripMetaEdCanonical.js:811-816). It is still
+			// emit-if-present: a graph forged BEFORE Phase 2 carries no kind, and that must read as
+			// LOST rather than as a fault.
+			if (oneEdgeRow.componentKind !== undefined) {
+				emit(fromSubject, `componentKind/${oneEdgeRow.toName}`, oneEdgeRow.componentKind, undefined);
+				emissionCensus.componentKindStatementCount += 1;
+			}
+			emitItemEdgeAttributeStatements({ fromSubject, oneEdgeRow });
 		});
 
 		if (faultMessage) {
@@ -842,6 +934,12 @@ const moduleFunction = () => {
 		PROPERTY_READ_PROPERTY_LIST,
 		OPTION_VALUE_READ_PROPERTY_LIST,
 		ROOT_READ_PROPERTY_LIST,
+		// the edge-side projection, and the two role/type registries that scope which edges are
+		// item edges at all. Exported so roundTripGraphDouble consumes the SAME lists the real
+		// reader does instead of keeping private copies — the drift seam IMPL §1.5 named.
+		ITEM_EDGE_READ_PROPERTY_LIST,
+		ITEM_CARRIER_CONSTRUCT_TYPES,
+		CONSTRUCT_ROLES,
 		STANDARD_SOURCE,
 		DEFAULT_PAGE_SIZE,
 	};

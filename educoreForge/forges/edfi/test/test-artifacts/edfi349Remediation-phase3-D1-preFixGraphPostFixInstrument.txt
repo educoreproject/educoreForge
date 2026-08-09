@@ -1,0 +1,27 @@
+[runEdfiRoundTripRealGraph] validating container 'DEV_edfiRoundTrip_080326' against snapshot 04 ...
+  ok   inventedTotal === 0 (hard)
+  ok   diff INVENTED === 0
+  ok   crosswalk guard violations === 0
+  ok   every LOST record located and carrying a ruled backlog label
+  ok   reducer construct census equals record (849 vs 849)
+  ok   reducer property census equals record (1904)
+  ok   enumeration item census equals record (60)
+  ok   domain item census equals record (367)
+  ok   interchange component census equals record (205)
+  ok   comment census equals corrected record (19 vs 19)
+{
+ "containerName": "DEV_edfiRoundTrip_080326",
+ "roundTripClean": false,
+ "reproduced": 25374,
+ "lost": 349,
+ "lostByBacklogLabel": {
+  "interchangeComponentKind (R-WO-15d)": 205,
+  "itemMetaEdId (R-WO-15d extension)": 130,
+  "itemNamespaceQualifier (R-WO-15d extension)": 14
+ },
+ "inventedTotal": 0,
+ "snapshotCombinedDigest": "15d30bf9da4ae116489e55f43ccd7f88c3a2faeaf979409e6a2e560f59abd55a",
+ "verdictPath": "/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/forges/edfi/test/test-artifacts/realGraphRun/roundTripVerdict.json",
+ "assertionFailures": []
+}
+[runEdfiRoundTripRealGraph] VERDICT LANDED AND ASSERTED

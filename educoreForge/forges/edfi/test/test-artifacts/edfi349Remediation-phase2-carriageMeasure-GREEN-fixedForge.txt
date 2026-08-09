@@ -1,0 +1,16 @@
+[measureEdfiEdgeCarriage] forging snapshot 04 (skipEmbedding) ...
+[forge-edfi metaEdParser] loaded metaEdModel: 653 files, tpdmCommunityModel: 196 files
+[forge-edfi] code values: 3522 records across 230 XMLs (0 identical duplicates collapsed)
+[forge-edfi] authored crosswalk: 1666 element rows, 8310 descriptor rows loaded
+[forge-edfi] contract graph: 6336 nodes, 8171 edges; crosswalk matches — properties 686 matched / 764 unmatched / 0 ambiguous; descriptors 130/0; values 2420/0 (unmatched rows are REPORTED, never invented — R-WO-11)
+[measureEdfiEdgeCarriage] node count: 6336 (expected 6336)
+[measureEdfiEdgeCarriage] edge count: 8171 (expected 8171)
+[measureEdfiEdgeCarriage] REFERENCES edges examined: 1166
+[measureEdfiEdgeCarriage] edges carrying componentKind: 205 (expected 205)
+[measureEdfiEdgeCarriage] edges carrying itemMetaEdId: 130 (expected 130)
+[measureEdfiEdgeCarriage] edges carrying itemNamespaceQualifier: 14 (expected 14)
+[measureEdfiEdgeCarriage] componentKind === 'element': 199 (expected 199)
+[measureEdfiEdgeCarriage] componentKind === 'identityTemplate': 6 (expected 6)
+[measureEdfiEdgeCarriage] componentKind off-scope edges (expected 0): 0
+
+measureEdfiEdgeCarriage: every measure matches. Phase 2 carriage verified on the real block.

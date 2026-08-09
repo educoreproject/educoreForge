@@ -290,6 +290,64 @@ const moduleFunction = () => {
 				invented: headline.invented,
 				inventedTotal,
 				lostByBacklogLabel: args.report.lostByBacklogLabel,
+				// PHASE 6 — the DECLARED semantic limit. Until this commit Ed-Fi shipped none at
+				// all, so what its round trip does and does not model was derived by reading code.
+				// A declared limit travels with the number into every payload; a derived one drifts
+				// the moment someone edits the module
+				// (forges/README_ValidationCertificateStandard.md:157).
+				//
+				// THIS SHIPS IN THE SAME COMMIT AS THE CARRIAGE IT DESCRIBES, and the pesc bundle's
+				// own comment records exactly why: three of its four Phase 6 clauses went silently
+				// FALSE when a later phase made the emitter model what an earlier one had declared
+				// unmodelled. A LIMITATION THAT QUIETLY BECOMES FALSE IS ITS OWN DEFECT, and it is
+				// the one nobody goes back to check — nothing fails, no gate reddens, the sentence
+				// simply stops being true while everyone keeps citing it.
+				//
+				// SO: IF YOU CHANGE WHAT IS MODELLED, REWRITE THIS STRING IN THE SAME COMMIT. Never
+				// as a follow-up. A stale limit is worse than an absent one, because absence is at
+				// least marked as absence.
+				semanticValidationLimit:
+					'SEMANTIC round-trip: statement-set equality over the statement domain THIS ' +
+					'INSTRUMENT MODELS — not byte equality, and not completeness of the Ed-Fi model. ' +
+					'WHAT IS MODELLED, each on BOTH sides and from INDEPENDENT MINTERS (the ' +
+					'canonicalizer reduces the published .metaed text and never opens the graph; the ' +
+					'compiler reads the graph and never opens a source file, so the instrument cannot ' +
+					'merely prove the forge agrees with itself): (1) CONSTRUCT, PROPERTY and ' +
+					'OPTION-VALUE declarations and their clauses, scalar by NAMED scalar — anything ' +
+					'with no named scalar is not modelled at all; (2) DOCUMENTATION prose, ' +
+					'whitespace-collapsed identically on both sides; (3) DOMAIN ITEMS and INTERCHANGE ' +
+					'COMPONENTS at LOCAL-NAME precision; (4) AS OF 2026-08 the three formerly-ruled ' +
+					'loss classes — interchange componentKind, per-item metaEdIds, and item namespace ' +
+					'qualifiers — are CARRIED as REFERENCES edge properties and modelled on both ' +
+					'sides, closing R-WO-15(d) and its ratified extension (f). THE EARLIER ' +
+					'DECLARATION THAT THESE THREE ARE UNMODELLED IS RETRACTED ON EVIDENCE: the ' +
+					'full-vocabulary hermetic fixture moved from lost 9 to lost 0 with inventedTotal ' +
+					'unchanged at 0, and the real corpus carries 205 componentKind (199 element / 6 ' +
+					'identityTemplate), 130 itemMetaEdId and 14 itemNamespaceQualifier edge ' +
+					'properties at UNCHANGED 6,336-node / 8,171-edge cardinality. Their LOST buckets ' +
+					'are RETAINED as regression detectors — a future change that drops one ' +
+					'resurfaces it under its ruled backlog name instead of letting it vanish; ' +
+					'(5) PROPERTY BASE NAMES, mechanically inverted from the roleName prefix, where ' +
+					'an uninvertible name is a canonicalization FAULT and never a guess. ' +
+					'WHAT IS NOT MODELLED, and is therefore invisible as loss rather than merely hard ' +
+					'to see: (a) DECLARATION ORDER within a construct — statement-SET semantics, the ' +
+					'stated instrument limit R-WO-15(e); (b) the `//` COMMENT LINES the publisher ' +
+					'grammar itself lexer-skips, excluded from the domain by R-WO-15(a) and CENSUSED ' +
+					'with file:line so they are visible rather than dropped; (c) the declared item ' +
+					'KEYWORD, excluded from statement identity uniformly by R-WO-15(b), so an item ' +
+					'whose declared keyword drifts from its referent\'s actual construct type still ' +
+					'round-trips clean — the forge censuses that drift separately and this instrument ' +
+					'does not re-measure it; (d) WHITESPACE SURROUNDING AN OPTION VALUE, since ' +
+					'R-WO-15(c) takes the TRIMMED text as subject identity while the object carries ' +
+					'the source-verbatim string, so two values differing only in surrounding ' +
+					'whitespace share one identity. ALSO DECLARED, a property of the COMPARISON ' +
+					'rather than of either side: ABSENT IS ABSENT (RT-2 symmetry) — an undeclared ' +
+					'attribute mints NO statement, so "this item declares no metaEdId" and "this ' +
+					'item\'s metaEdId was lost" are indistinguishable by statement presence alone. ' +
+					'That is precisely why the non-emission gate G-18 requires itemMetaEdId emission ' +
+					'to be demonstrably HAPPENING before it concludes that the id-less items were ' +
+					'correctly skipped, rather than reading their silence as proof. ' +
+					'"Semantically clean" must never be reported as "identical".',
 				crosswalkGuard: {
 					adjudication:
 						'crosswalk CSVs are a declaredContext input (R-WO-12): authored data stashed for the later bridge phase, never Layer 1 statements; guarded against invention by raw-value set membership — that category renamed explicitlyOmitted by doctrine amendment A13 (2026-08-04); the R-WO-12 wording is preserved verbatim so the code can still be matched against the ruling that authorized it',
