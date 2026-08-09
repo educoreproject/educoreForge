@@ -48,23 +48,55 @@
 			"comparator": "isTrue",
 			"twin": "dropOneSourceStatement"
 		},
+		// G-5 was REDEFINED by the 2026-08 R-WO-15(d)/(f) remediation. It used to assert that the
+		// FULL-vocabulary fixture lost exactly the three ruled backlog classes. Its measure was
+		// `0 === 0 && [].every(...)`, which is TRUE ON AN EMPTY LOSS SET — so the moment the classes
+		// were actually carried, the gate would have gone VACUOUSLY GREEN, passing for a reason with
+		// no relation to its claim. The replacement asserts CARRIAGE, over a measure with two
+		// distinct guards, and it is worth being precise about WHICH ONE DOES WHICH JOB, because a
+		// later reader who confuses them will delete the half that matters.
+		//
+		//   FIXTURE-SHAPE guard (domainSizedAsExpected): the ruled-carriage domain reduces to
+		//   exactly 9 statements — 5 componentKind, 3 itemMetaEdId, 1 itemNamespace. This is a
+		//   comparison of module-level fixture text against declared constants and is therefore
+		//   TRUE OR FALSE REGARDLESS OF THE RUN. It catches a fixture edited out from under the
+		//   gate. It does NOT establish that the vocabulary reached this run.
+		//
+		//   RUN-PRESENCE guard (source === expectedCount, inside measureRuledCarriage): every
+		//   expected predicate must have a per-predicate ROW PRESENT in this run's report carrying
+		//   its expected source count, with lost zero. THIS is the conjunct that makes the gate
+		//   unfakeable, because a run that never contained the vocabulary has no such rows and is
+		//   refused by name ("NO per-predicate row at all") rather than passing for having lost
+		//   nothing.
+		//
+		// The distinction is load-bearing: "nothing was lost" is TRUE ON AN EMPTY DOMAIN, and
+		// measuring absence-from-a-loss-list reproduces that same vacuity one level down, since a
+		// loss list only ever contains statements that were IN the source. See
+		// test-edfiRoundTrip.js, the FULL-vocabulary step, where the carriable run — clean,
+		// lossless and vocabulary-free — is fed to this measure as a live anti-vacuity control.
 		{
 			"id": "G-5",
-			"title": "the FULL-vocabulary fixture loses EXACTLY the ruled backlog classes (componentKind, itemMetaEdId, itemNamespace) and invents nothing",
-			"measure": "probe.fullVocabularyLossesAllNamed",
+			"title": "the FULL-vocabulary fixture round-trips CLEAN — the formerly-ruled R-WO-15(d)/(f) classes (componentKind, itemMetaEdId, itemNamespaceQualifier) are CARRIED, over a non-empty domain of declared size",
+			"measure": "probe.fullVocabularyClean",
 			"comparator": "isTrue",
-			"twin": "falsifyFullVocabularyLossProbe"
+			"twin": "falsifyFullVocabularyCleanProbe"
 		},
+		// G-6 and G-7 are CONDITIONAL-UNIVERSAL guards: "IF a loss exists, it is located and it is
+		// labelled." With carriage complete their domain is EXPECTED TO BE EMPTY, which makes both
+		// vacuously satisfied. They are deliberately kept, as REGRESSION detectors — a future forge
+		// change that drops one of the carried properties repopulates them under its ruled backlog
+		// name (roundTripDiff.js LOST_BUCKET_PREFIX_REGISTRY). Their green must never be read as
+		// coverage; the suite says so out loud with harness.note() on every run.
 		{
 			"id": "G-6",
-			"title": "every LOST record is located (file:line) and bucketed — LOST is actionable, not a total",
+			"title": "every LOST record is located (file:line) and bucketed — LOST is actionable, not a total (domain expected EMPTY after carriage; regression detector)",
 			"measure": "probe.lostAllLocatedAndBucketed",
 			"comparator": "isTrue",
 			"twin": "stripOneLostLocation"
 		},
 		{
 			"id": "G-7",
-			"title": "no anonymous loss — every contentGap LOST record carries a named backlog label",
+			"title": "no anonymous loss — every contentGap LOST record carries a named backlog label (domain expected EMPTY after carriage; regression detector)",
 			"measure": "probe.fullVocabularyUnlabeledContentGapCount",
 			"comparator": "isZero",
 			"twin": "stripOneBacklogLabel"
@@ -132,6 +164,31 @@
 			"measure": "suite.gatesUsingPercentInAcceptance",
 			"comparator": "isZero",
 			"twin": "declarePercentGate"
+		},
+		// ---- added by the 2026-08 R-WO-15(d)/(f) remediation ----
+		// Each of the three has a measure-boundary twin below AND a DATA-LEVEL red observation in
+		// the suite, because a twin proves only that a comparison bites, never that the measure was
+		// computed correctly (roundTripGateTwins.js:9-16).
+		{
+			"id": "G-17",
+			"title": "BOTH componentKind values are carried — element AND identityTemplate reproduced, not merely the common one",
+			"measure": "probe.componentKindBothKindsCarried",
+			"comparator": "isTrue",
+			"twin": "falsifyComponentKindCarriageProbe"
+		},
+		{
+			"id": "G-18",
+			"title": "NON-EMISSION: an item declared with no metaEdId emits no itemMetaEdId statement, and invented stays zero — carrying more content must not manufacture any",
+			"measure": "probe.idlessItemsEmitNothing",
+			"comparator": "isTrue",
+			"twin": "falsifyNonEmissionProbe"
+		},
+		{
+			"id": "G-19",
+			"title": "forge edge triples are DISTINCT — the replay engine MERGEs on (from, type, to), so duplicates collapse silently and become last-write-wins data loss once edges carry properties",
+			"measure": "probe.forgeEdgeTriplesDistinct",
+			"comparator": "isTrue",
+			"twin": "falsifyEdgeUniquenessProbe"
 		}
 	]
 }

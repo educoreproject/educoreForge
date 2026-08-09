@@ -1,0 +1,130 @@
+found -verbose flag
+test-edfiRoundTrip: starting
+test-edfiRoundTrip
+
+UNIT — canonical primitives and mechanical inversions
+  ok   statementKey joins with NUL (space-bearing objects cannot alias)
+  ok   collapseWhitespace collapses runs and trims
+  ok   roleName prefix inversion recovers the base name
+  ok   roleName === base name inverts to itself (no prefix was applied)
+  ok   no roleName passes the name through
+  ok   an uninvertible effective name is undefined (a fault upstream, never a guess)
+  ok   construct stableId parses to type and name
+  ok   a non-scheme parentId refuses to parse
+
+REDUCER — scope refusals observed BY NAME
+  ok   Begin Namespace wrapper refuses by name (stated scope limit)
+  ok   unclassifiable text is a canonicalization FAULT naming file:line
+  ok   an unterminated string is a scanner FAULT
+
+CANONICALIZER BOUNDS — cosmetic variants collapse; adversarial pairs stay distinct
+  ok   cosmetic pair reduces without fault
+  ok   cosmetic variants (whitespace, comments, blank lines) collapse to ONE statement set
+  ok   pair 'annotation differs (required vs optional)' reduces without fault
+  ok   adversarial pair DISTINCT — annotation differs (required vs optional)
+  ok   pair 'documentation differs by one word' reduces without fault
+  ok   adversarial pair DISTINCT — documentation differs by one word
+  ok   pair 'enumeration item text trailing space is semantic (verbatim value)' reduces without fault
+  ok   adversarial pair DISTINCT — enumeration item text trailing space is semantic (verbatim value)
+  ok   pair 'role name present vs absent' reduces without fault
+  ok   adversarial pair DISTINCT — role name present vs absent
+  ok   pair 'bound sign is semantic' reduces without fault
+  ok   adversarial pair DISTINCT — bound sign is semantic
+  ok   every adversarial pair stays DISTINCT
+
+RT-7 — the CARRIABLE-vocabulary fixture round-trips CLEAN
+[forge-edfi metaEdParser] loaded metaEdModel: 2 files, tpdmCommunityModel: 1 files
+[forge-edfi] code values: 3 records across 2 XMLs (0 identical duplicates collapsed)
+[forge-edfi] authored crosswalk: 2 element rows, 1 descriptor rows loaded
+snapshot-provenance: sourcePath '/var/folders/m_/12d8yqwd28943kwt0n4nhrk80000gn/T/edfiRoundTripFixture-QvPtmo' is not inside an standardSourceData/ snapshot directory — snapshotKey stamped 'unknown'
+[forge-edfi] contract graph: 71 nodes, 96 edges; crosswalk matches — properties 1 matched / 1 unmatched / 0 ambiguous; descriptors 1/0; values 1/0 (unmatched rows are REPORTED, never invented — R-WO-11)
+  ok   carriable fixture forges without refusal
+  ok   carriable fixture validates without fault
+  ok   carriable fixture roundTripClean === true (reproduced 311, lost 0, inventedTotal 0)
+  ok   carriable fixture LOST is zero
+  ok   carriable fixture inventedTotal is zero
+  ok   crosswalk guard sees stash and zero violations
+  ok   crosswalk stash is nonempty (the guard guarded something real)
+  ok   the verbatim trailing-space code value REPRODUCED (house line: trimmed identity, verbatim value)
+  ok   verdict carries the complete RT-6 shape
+
+FULL-vocabulary fixture — loses EXACTLY the ruled backlog classes, invents nothing
+[forge-edfi metaEdParser] loaded metaEdModel: 3 files, tpdmCommunityModel: 2 files
+[forge-edfi] code values: 3 records across 2 XMLs (0 identical duplicates collapsed)
+[forge-edfi] authored crosswalk: 2 element rows, 1 descriptor rows loaded
+snapshot-provenance: sourcePath '/var/folders/m_/12d8yqwd28943kwt0n4nhrk80000gn/T/edfiRoundTripFixture-jWb97d' is not inside an standardSourceData/ snapshot directory — snapshotKey stamped 'unknown'
+[forge-edfi] contract graph: 73 nodes, 104 edges; crosswalk matches — properties 1 matched / 1 unmatched / 0 ambiguous; descriptors 1/0; values 1/0 (unmatched rows are REPORTED, never invented — R-WO-11)
+  ok   full-vocabulary fixture forges without refusal
+  ok   full-vocabulary fixture validates without fault
+  ok   full fixture inventedTotal is zero
+  ok   full fixture HAS loss (the ruled classes exist in it)
+  ok   every full-fixture loss carries one of the three ruled backlog labels
+  ok   no anonymous contentGap loss
+  ok   every LOST record is located (file:line) and bucketed
+  ok   componentKind loss includes the identityTemplate kind (both kinds exercised)
+  ok   itemNamespace loss names the qualified component (EdFi.FixtureStudent)
+
+CHEATING DETECTOR + INVENTION ALARM — data-level injections through the double
+  ok   deleted-fact run validates
+  ok   a deleted graph fact is named LOST — the validator did not know data it should not (RT-5)
+  ok   injected-fact run validates
+  ok   an injected graph fact fires INVENTED by name
+  ok   doctored-stash run validates
+  ok   a stash raw value absent from the CSVs is a guard VIOLATION (counts INVENTED)
+  ok   a non-boolean in a boolean field is a named FAULT, never coerced
+
+REFUSAL BATTERY — every refusal BY NAME; intact input not over-refused
+  ok   missing input directory refuses naming README_PROVENANCE.md
+  ok   corrupt bytes refuse with checksum MISMATCH naming the file
+  ok   manifest drift refuses (file on disk, absent from SHA256SUMS)
+  ok   no bolt triple and no containerName refuses by name
+  ok   container without a published 7687 port refuses (nothing guessed)
+  ok   container without NEO4J_AUTH refuses (credential never assumed)
+  ok   an intact container inspection is NOT over-refused
+  ok   bolt triple parsed from the container record
+
+G-8 — two independent readers agree (reducer census vs Phase 1 parser census)
+  ok   Phase 1 parser reads the full fixture (cross-check reader)
+  ok   the two independent readers agree — constructs/properties/items ({"abstractEntity":1,"domainEntity":3,"domainEntitySubclass":1,"interchange":1,"association":1,"associationSubclass":1,"choice":1,"common":1,"commonSubclass":1,"inlineCommon":1,"enumeration":1,"descriptor":3,"sharedString":1,"sharedInteger":1,"sharedShort":1,"sharedDecimal":1,"domain":1,"subdomain":1,"associationExtension":1,"commonExtension":1,"domainEntityExtension":1,"interchangeExtension":1} vs parser)
+
+RT-10 — gate suite: all 16 green AND every twin observed RED
+  ok   gate declarations load
+  ok   every declared twin exists in the registry
+  ok   no orphan twins (dead proof-code)
+  ok   gate evaluation runs
+  ok   G-1 PASS — INVENTED is zero — an invention is an assertion about Ed-Fi that Ed-Fi
+  ok   G-2 PASS — inventedTotal (diff + crosswalk guard) is zero — the combined inventio
+  ok   G-3 PASS — crosswalk invention guard: every stashed CEDS raw value appears verbat
+  ok   G-4 PASS — the carriable-vocabulary hermetic fixture round-trips CLEAN (RT-7: the
+  ok   G-5 PASS — the FULL-vocabulary fixture loses EXACTLY the ruled backlog classes (c
+  ok   G-6 PASS — every LOST record is located (file:line) and bucketed — LOST is action
+  ok   G-7 PASS — no anonymous loss — every contentGap LOST record carries a named backl
+  ok   G-8 PASS — two independent readers agree — the reducer census equals the Phase 1 
+  ok   G-9 PASS — CHEATING DETECTOR — a deleted graph fact shows up LOST by name; if it 
+  ok   G-10 PASS — an injected graph fact fires INVENTED by name
+  ok   G-11 PASS — refusals are BY NAME — missing input, corrupt bytes, manifest drift, a
+  ok   G-12 PASS — adversarial pairs stay DISTINCT — semantically different sources must 
+  ok   G-13 PASS — cosmetic variants COLLAPSE — whitespace/order/comment differences must
+  ok   G-14 PASS — the verdict carries the complete RT-6 shape — counts, roundTripClean, 
+  ok   G-15 PASS — size floor — two empty statement sets are identical, and identical is 
+  ok   G-16 PASS — no percentage participates in acceptance — counts only (fidelityPercen
+  ok   G-1 twin 'injectOneInventedStatement' observed RED
+  ok   G-2 twin 'bumpInventedTotal' observed RED
+  ok   G-3 twin 'doctorOneStashRawValue' observed RED
+  ok   G-4 twin 'dropOneSourceStatement' observed RED
+  ok   G-5 twin 'falsifyFullVocabularyLossProbe' observed RED
+  ok   G-6 twin 'stripOneLostLocation' observed RED
+  ok   G-7 twin 'stripOneBacklogLabel' observed RED
+  ok   G-8 twin 'falsifyCensusProbe' observed RED
+  ok   G-9 twin 'falsifyCheatingDetectorProbe' observed RED
+  ok   G-10 twin 'falsifyInventionProbe' observed RED
+  ok   G-11 twin 'falsifyRefusalProbe' observed RED
+  ok   G-12 twin 'collapseAdversarialPair' observed RED
+  ok   G-13 twin 'splitCosmeticPair' observed RED
+  ok   G-14 twin 'dropVerdictField' observed RED
+  ok   G-15 twin 'emptyBothSides' observed RED
+  ok   G-16 twin 'declarePercentGate' observed RED
+  ok   twin observations logged to test/test-artifacts/roundTripGateTwinObservations.log
+  ok   suite judgment runs
+  ok   suite ACCEPTED (fail 0, unproven 0)
+test-edfiRoundTrip: 98/98 passed, 0 failed.

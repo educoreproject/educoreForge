@@ -38,9 +38,18 @@ DESCRIPTION
      later resolves them via docker inspect (roundTripEdfiCompiler.resolveContainerBolt) — the
      same single-source pattern the ceds/pesc validators use.
 
+     EDGE-TRIPLE UNIQUENESS (the R-WO-15(d)/(f) remediation, Phase 1). Between the census check
+     and materialization the runner refuses any block carrying two edges with the same
+     (from, type, to) triple, naming every offender. The replay engine MERGEs on that triple, so
+     duplicates collapse into one relationship silently; today the collapse is harmless because
+     every REFERENCES edge carries only provenanceTier, but the moment edges carry per-edge data
+     it becomes last-write-wins data loss with no error raised anywhere. The check is ORTHOGONAL
+     to the census check above, not a refinement of it: a duplicated triple leaves the forge-side
+     edge COUNT unchanged, so counting cannot see it.
+
 EXIT
-     0 materialized and count-verified;  1 refusal or count mismatch (the container is left
-     in place for diagnosis when init succeeded but verification failed).
+     0 materialized and count-verified;  1 refusal, count mismatch, or duplicate edge triples
+     (the container is left in place for diagnosis when init succeeded but verification failed).
 `;
 
 require('../../../test/testLib/testAppStartup')({ moduleName, helpText: helpText() });
@@ -79,6 +88,37 @@ forgeEdfi.forge({ sourcePath: SNAPSHOT_PATH, skipEmbedding: true }, (forgeError,
 			`forge output ${forgeResult.nodes.length}/${forgeResult.edges.length} does not match the ` +
 				`Phase 2 census of record ${EXPECTED_NODE_COUNT}/${EXPECTED_EDGE_COUNT} — refusing to ` +
 				`materialize an unexpected block`,
+		);
+		return;
+	}
+
+	// ── PHASE 1 GATE — edge-triple uniqueness ────────────────────────────────────────────────
+	// Runs on the FORGED BLOCK, before materialization, because the failure it guards against
+	// happens inside replayManager.init and leaves no trace: the engine's `MERGE ... SET r +=
+	// e.props` folds two edges sharing (from, type, to) into ONE relationship and reports success.
+	//
+	// THIS IS NOT A REFINEMENT OF THE COUNT ASSERTION ABOVE — it is orthogonal to it. A duplicated
+	// triple does not change the forge-side edge count at all, so cardinality is structurally
+	// unable to see it. Both checks are needed and neither implies the other.
+	const edgeTripleAudit = roundTripEdfiCompiler.findDuplicateEdgeTriples({
+		edgeList: forgeResult.edges,
+	});
+	console.error(
+		`[${moduleName}] edge-triple uniqueness: ${forgeResult.edges.length} edges / ` +
+			`${edgeTripleAudit.distinctCount} distinct (from, type, to) triples`,
+	);
+	if (edgeTripleAudit.duplicateList.length) {
+		edgeTripleAudit.duplicateList.forEach((oneDuplicate) => {
+			console.error(
+				`  DUPLICATE x${oneDuplicate.occurrenceCount}  ${oneDuplicate.fromStableId} ` +
+					`-[${oneDuplicate.edgeType}]-> ${oneDuplicate.toStableId}`,
+			);
+		});
+		failOut(
+			`${edgeTripleAudit.duplicateList.length} duplicate (from, type, to) edge triple(s) in a block ` +
+				`of ${forgeResult.edges.length} edges — every offending triple is listed above. Duplicate ` +
+				`triples collapse under the replay engine's MERGE; with edge properties, collapse is ` +
+				`last-write-wins data loss. Refusing to materialize`,
 		);
 		return;
 	}
@@ -196,8 +236,11 @@ forgeEdfi.forge({ sourcePath: SNAPSHOT_PATH, skipEmbedding: true }, (forgeError,
 								if (!countsMatch) {
 									failOut(
 										`materialized counts ${nodeCount}/${edgeCount} do not equal the block census ` +
-											`${EXPECTED_NODE_COUNT}/${EXPECTED_EDGE_COUNT} — the loader dropped or added ` +
-											`something; container left in place for diagnosis`,
+											`${EXPECTED_NODE_COUNT}/${EXPECTED_EDGE_COUNT} — either the loader dropped or ` +
+											`added rows, or the graph was touched between init and verification. ` +
+											`Block-side duplicate (from, type, to) triples are EXCLUDED as a cause: the ` +
+											`uniqueness check above passed on this exact block. Container left in place ` +
+											`for diagnosis`,
 									);
 									return;
 								}

@@ -1,0 +1,47 @@
+[proveEdgeUniquenessRealBlock] forging snapshot 04 (skipEmbedding) ...
+[forge-edfi metaEdParser] loaded metaEdModel: 653 files, tpdmCommunityModel: 196 files
+[forge-edfi] code values: 3522 records across 230 XMLs (0 identical duplicates collapsed)
+[forge-edfi] authored crosswalk: 1666 element rows, 8310 descriptor rows loaded
+[forge-edfi] contract graph: 6336 nodes, 8171 edges; crosswalk matches — properties 686 matched / 764 unmatched / 0 ambiguous; descriptors 130/0; values 2420/0 (unmatched rows are REPORTED, never invented — R-WO-11)
+
+=== PHASE 1 UNIQUENESS — FOUR OBSERVATIONS AGAINST THE REAL FORGED BLOCK ===
+forged 6336 nodes / 8171 edges
+
+OBS-1 GREEN (real block): 8171 edges / 8171 distinct triples / 0 duplicate triple(s)
+OBS-1 verdict: PASS — check accepts the real block
+
+OBS-2 setup: doctored block length 8171 — the runner's count assertion (=== 8171) STILL PASSES
+OBS-2 RED (duplicate injected, total held at 8,171): 8171 edges / 8170 distinct triples / 1 duplicate triple(s) -> x2 edfi:root -[HAS_CLASS]-> edfi:association/EducationOrganizationInterventionPrescriptionAssociation
+OBS-2 verdict: PASS — uniqueness REFUSES a block the count check accepts
+
+OBS-3 GREEN (edge array reversed): 8171 edges / 8171 distinct triples / 0 duplicate triple(s)
+OBS-3 verdict: PASS — reordering is not a duplicate
+
+OBS-4 GREEN (near-miss triples appended): 8173 edges / 8173 distinct triples / 0 duplicate triple(s)
+OBS-4 verdict: PASS — the check keys on all THREE components, not two
+
+=== PHASE 1 REAL-BLOCK PROOF: ALL FOUR OBSERVATIONS AS EXPECTED ===
+
+=== HOW TO REPRODUCE THIS ONE-OFF ===
+This transcript is CORROBORATION against the REAL 8,171-edge block. The DURABLE proof of
+the same four observations is forges/edfi/test/test-edfiRoundTrip.js, section
+'EDGE-TRIPLE UNIQUENESS', which runs them hermetically on the fixture blocks on EVERY
+suite execution and feeds gate G-19.
+
+To reproduce against the real block: forge assets/standardSourceData/04 with forgeEdfi
+(skipEmbedding: true), then call roundTripEdfiCompiler.findDuplicateEdgeTriples({edgeList})
+four times —
+  1. on forgeResult.edges verbatim                       -> expect 8171/8171, 0 duplicates
+  2. on a copy with edges[0] appended AND a DIFFERENT edge spliced out, so length stays
+     8171 and the runner's count assertion still PASSES  -> expect 8170 distinct, 1 duplicate
+  3. on forgeResult.edges reversed                       -> expect 8171/8171, 0 duplicates
+  4. on forgeResult.edges plus two near-miss edges (same from+type with a different to;
+     same from+to with a different type)                 -> expect 8173/8173, 0 duplicates
+
+Observation 2's construction is load-bearing and was sharpened from the IMPL spec's
+original wording. An 8,172-edge block would be refused by the COUNT assertion at
+runEdfiMaterialize.js:77-84 BEFORE the uniqueness check was ever consulted, so a red
+observed that way would prove nothing about uniqueness — the older gate would have eaten
+the test. Holding the total at exactly 8,171 forces the count check to PASS and leaves the
+uniqueness check as the only thing that can fail. That is the difference between watching
+a gate go red and watching THE RIGHT gate go red.

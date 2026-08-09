@@ -179,6 +179,74 @@ const invertEffectivePropertyName = ({ effectiveName, roleNameName }) => {
 	return undefined; // uninvertible — a canonicalization fault, surfaced by the caller
 };
 
+// ============================================================
+// edge-triple uniqueness (the Phase 1 prerequisite of the R-WO-15(d)/(f) remediation)
+// ============================================================
+//
+// WHY THIS EXISTS, AND WHY IT LANDS BEFORE THE FORGE CARRIES ANYTHING. The replay engine writes
+// edges with `MERGE ... SET r += e.props` (lib/replay/replay-engine.js:288), so two forge edges
+// sharing a (from, type, to) triple COLLAPSE into a single relationship in Neo4j. Today that
+// collapse is harmless: every REFERENCES edge carries the same single property, provenanceTier,
+// so folding two identical payloads together loses nothing. The moment edges carry PER-EDGE
+// data, the identical collapse becomes LAST-WRITE-WINS DATA LOSS with no error anywhere — the
+// loader reports success and the node/edge counts still reconcile, because a duplicate triple
+// does not change the forge-side cardinality at all. That is precisely why this check is
+// SEPARATE FROM, AND ADDITIONAL TO, the count assertion at the call site: counting is
+// structurally unable to see it.
+//
+// TRIPLE IDENTITY is the NUL-joined (fromRef.id, type, toRef.id) — the same idiom as
+// statementKey, chosen for the same reason: a separator that cannot occur inside an identifier
+// can neither manufacture a collision nor mask one.
+//
+// Pure, synchronous, no I/O. Absent or malformed input is REFUSED BY NAME, never defaulted — a
+// check that quietly accepts a block it could not read is worse than no check at all, because it
+// reports the reassuring answer.
+//
+//   findDuplicateEdgeTriples({ edgeList }) ->
+//     { distinctCount, duplicateList: [{ fromStableId, edgeType, toStableId, occurrenceCount }] }
+
+const EDGE_TRIPLE_SEPARATOR = '\u0000';
+
+const findDuplicateEdgeTriples = ({ edgeList } = {}) => {
+	if (!Array.isArray(edgeList)) {
+		throw new Error(
+			`${moduleName}.findDuplicateEdgeTriples: edgeList (array) is REQUIRED and has no default — ` +
+				`received ${edgeList === undefined ? 'nothing' : JSON.stringify(edgeList)}.`,
+		);
+	}
+	const occurrenceByTripleText = new Map();
+	edgeList.forEach((oneEdge, edgeIndex) => {
+		const fromStableId = oneEdge && oneEdge.fromRef && oneEdge.fromRef.id;
+		const edgeType = oneEdge && oneEdge.type;
+		const toStableId = oneEdge && oneEdge.toRef && oneEdge.toRef.id;
+		if (!fromStableId || !edgeType || !toStableId) {
+			throw new Error(
+				`${moduleName}.findDuplicateEdgeTriples: edge at index ${edgeIndex} is missing fromRef.id, ` +
+					`type or toRef.id (${JSON.stringify({ fromStableId, edgeType, toStableId })}). An edge ` +
+					`this check cannot read is a refusal, never an edge dropped from the tally.`,
+			);
+		}
+		const tripleText = [fromStableId, edgeType, toStableId].join(EDGE_TRIPLE_SEPARATOR);
+		const priorOccurrence = occurrenceByTripleText.get(tripleText);
+		if (priorOccurrence) {
+			priorOccurrence.occurrenceCount += 1;
+			return;
+		}
+		occurrenceByTripleText.set(tripleText, {
+			fromStableId,
+			edgeType,
+			toStableId,
+			occurrenceCount: 1,
+		});
+	});
+	return {
+		distinctCount: occurrenceByTripleText.size,
+		duplicateList: Array.from(occurrenceByTripleText.values()).filter(
+			(oneOccurrence) => oneOccurrence.occurrenceCount > 1,
+		),
+	};
+};
+
 // invert the forge's construct stableId: edfi:<constructType>/<name>
 const parseConstructStableId = (stableIdText) => {
 	const schemeMatch = `${stableIdText}`.match(/^edfi:([A-Za-z]+)\/(.+)$/);
@@ -765,6 +833,9 @@ const moduleFunction = () => {
 		resolveContainerBolt,
 		makeNeo4jEdfiReader,
 		emitGraphStatements,
+		// the Phase 1 uniqueness check — ONE implementation, TWO callers: the materialize runner
+		// proves it against the real 8,171-edge block, the hermetic suite proves it without Docker
+		findDuplicateEdgeTriples,
 		invertEffectivePropertyName, // exported for the hermetic suite
 		parseConstructStableId, // exported for the hermetic suite
 		CONSTRUCT_READ_PROPERTY_LIST,

@@ -13,16 +13,24 @@ DESCRIPTION
      runs the REAL validator core (validateWithReader), and proves:
        - the CARRIABLE-vocabulary fixture round-trips CLEAN (zero loss, zero invention)
        - the FULL-vocabulary fixture (interchanges, per-item metaEdIds, qualified components)
-         invents NOTHING and loses EXACTLY the ruled backlog classes (R-WO-15d + extension)
+         invents NOTHING and CARRIES the three formerly-ruled loss classes — componentKind,
+         itemMetaEdId, itemNamespaceQualifier — so it too round-trips CLEAN (R-WO-15(d)/(f),
+         closed by the 2026-08 remediation). Carriage is asserted statement by statement against
+         an answer key reduced from the fixture bytes, over a domain of a DECLARED EXACT SIZE:
+         a "nothing was lost" measure is true on an empty domain and proves nothing.
+       - items declared with NO metaEdId emit no itemMetaEdId statement — the invention seam
+         that carrying more content opens, asserted by name rather than trusted
+       - edge triples are DISTINCT: the replay engine MERGEs on (from, type, to), so duplicates
+         collapse silently and become last-write-wins data loss once edges carry properties
        - the cheating detector: deleting a REAL graph fact names it LOST; injecting one fires
          INVENTED — both through the double's adjustGraphRows seam, at the DATA level
        - the crosswalk invention guard bites at the DATA level (a doctored stash raw value)
-       - refusals are BY NAME (intake, bolt resolution, reducer scope limits)
+       - refusals are BY NAME (intake, bolt resolution, reducer scope limits, edge uniqueness)
        - the canonicalizer is bounded BOTH directions (cosmetic variants collapse; adversarial
          pairs stay distinct)
        - the two independent readers agree (reducer census vs Phase 1 parser census — the
          parser is used HERE as the cross-check reader, never as the answer key)
-       - the RT-10 gate suite: 16 gates evaluated green AND every twin observed RED
+       - the RT-10 gate suite: 19 gates evaluated green AND every twin observed RED
          (observations logged to test-artifacts/roundTripGateTwinObservations.log)
 
      Touches no real snapshot bytes, no Docker, no network, no embedding provider.
@@ -383,6 +391,47 @@ const FULL_VOCABULARY_EXTRA_FILE_MAP = {
 	'tpdmCommunityModel/Interchange/FixtureInterchangeExtension.metaed': TPDM_INTERCHANGE_METAED,
 };
 
+// =====================================================================
+// the R-WO-15(d)/(f) carriage vocabulary — what the FULL fixture must now CARRY, not lose
+// =====================================================================
+//
+// The three predicate families the interchange fixture files exercise. They were the ruled
+// backlog classes; as of the 2026-08 remediation they are edge properties the graph carries, so
+// this suite asserts their REPRODUCTION where it previously asserted their LOSS.
+
+const RULED_CARRIAGE_PREDICATE_PREFIX_LIST = ['componentKind/', 'itemMetaEdId/', 'itemNamespace/'];
+
+// the componentKind vocabulary, spoken identically by the parser (metaEdSyntaxParser.js:1219) and
+// the canonicalizer (roundTripMetaEdCanonical.js:258-266) — no translation table exists between
+// them by design (IMPL D-3), so this list is the whole domain, named here to stay greppable
+const COMPONENT_KIND_VALUE_LIST = ['element', 'identityTemplate'];
+
+// THE NON-VACUITY FLOOR. Derived by reducing the two interchange fixture texts with the real
+// canonicalizer, never counted by hand:
+//   componentKind/  5   (FixtureStudent, FixtureSchool, FixtureEnrollment on the core interchange;
+//                        FixtureCandidate, FixtureStudent on the TPDM extension)
+//   itemMetaEdId/   3   (9300-001, 9300-002, 9310-001)
+//   itemNamespace/  1   (EdFi.FixtureStudent on the extension)
+//
+// These counts are load-bearing, not decoration. A carriage gate that says only "nothing was
+// lost" is TRUE ON AN EMPTY DOMAIN — if the interchange files silently stopped reaching the
+// forge, or the reducer stopped emitting these families, every loss-based measure would go green
+// while proving nothing whatsoever. Requiring the domain to be exactly this size is what makes
+// the claim unfakeable. (This suite has previously repaired a vacuous gate by building a
+// differently-vacuous one; the floor exists so that cannot happen again here.)
+const EXPECTED_RULED_CARRIAGE_COUNT_BY_PREFIX = {
+	'componentKind/': 5,
+	'itemMetaEdId/': 3,
+	'itemNamespace/': 1,
+};
+const EXPECTED_RULED_CARRIAGE_TOTAL = 9;
+
+// the two fixture items declared with NO bracketed metaEdId — `association FixtureEnrollment`
+// (core interchange) and `domain entity FixtureCandidate` (TPDM extension). Carrying MORE content
+// is exactly where an emitter can start manufacturing content; these two names are the
+// invention seam and get their own named assertion rather than a comment.
+const IDLESS_FIXTURE_ITEM_NAME_LIST = ['FixtureEnrollment', 'FixtureCandidate'];
+
 const writeScratchSha256Sums = (scratchSnapshotPath) => {
 	const sumLineList = [];
 	const walkForSums = (relativeDirectory) => {
@@ -451,6 +500,154 @@ const validateDouble = ({ forgeResult, snapshotPath, adjustGraphRows }, callback
 	);
 };
 
+// reduce the two interchange fixture texts with the REAL canonicalizer and hand back every
+// statement belonging to the three ruled carriage families. This is the ANSWER KEY for carriage:
+// the exact (subject, predicate, object) triples that must now be reproduced, derived from the
+// fixture bytes rather than restated by hand.
+const reduceRuledCarriageStatements = (callback) => {
+	const sourceTextList = [
+		{
+			sourceText: CORE_INTERCHANGE_METAED,
+			sourceFileRelativePath: 'metaEdModel/Interchange/FixtureInterchange.metaed',
+		},
+		{
+			sourceText: TPDM_INTERCHANGE_METAED,
+			sourceFileRelativePath: 'tpdmCommunityModel/Interchange/FixtureInterchangeExtension.metaed',
+		},
+	];
+	const ruledStatementList = [];
+	let sourceTextIndex = 0;
+	const reduceNext = () => {
+		if (sourceTextIndex >= sourceTextList.length) {
+			callback('', { ruledStatementList });
+			return;
+		}
+		const oneSourceText = sourceTextList[sourceTextIndex++];
+		roundTripMetaEdCanonical.reduceMetaEdSourceText(oneSourceText, (reduceError, reduceResult) => {
+			if (reduceError) {
+				callback(reduceError);
+				return;
+			}
+			reduceResult.statementList
+				.filter((oneStatement) =>
+					RULED_CARRIAGE_PREDICATE_PREFIX_LIST.some((onePrefix) =>
+						oneStatement.predicate.startsWith(onePrefix),
+					),
+				)
+				.forEach((oneStatement) => ruledStatementList.push(oneStatement));
+			setImmediate(reduceNext);
+		});
+	};
+	reduceNext();
+};
+
+// measureRuledCarriage — carriage measured from the diff's PER-PREDICATE rows
+// (roundTripDiff.js:75-90, 176-178), NEVER from "this statement is absent from lostDetailList".
+//
+// THE DIFFERENCE IS THE ENTIRE POINT, and it is the second-order form of the vacuity this
+// remediation exists to repair. lostDetailList contains only statements that WERE IN THE SOURCE
+// and went unreproduced. A statement that never entered the run at all is therefore ALSO absent
+// from it — so an absent-from-lost test reports success on a run that does not contain the
+// vocabulary in the first place. Requiring each expected predicate to have a per-predicate row
+// PRESENT, with its expected `source` count and `lost` of zero, makes presence-in-source part of
+// the measurement instead of an assumption standing beside it. The suite proves this
+// discrimination on real data by feeding this function the CARRIABLE run, which has no
+// interchange vocabulary at all, and watching it refuse.
+// restrictToObjectValue narrows WHICH predicates are in scope to those carrying that object. It
+// deliberately does NOT narrow the expected COUNT: report.perPredicate rows are object-AGNOSTIC
+// (roundTripDiff.js keys them on predicate text alone), so comparing an object-filtered count
+// against an object-agnostic row would produce a FALSE RED the moment a fixture gave one local
+// name two different kinds — source 2, expected 1, with no carriage defect anywhere. Counts are
+// therefore taken over every statement bearing an in-scope predicate, and the assumption that
+// makes an object-restricted question answerable at all is asserted below rather than assumed.
+const measureRuledCarriage = ({ report, ruledStatementList, restrictToObjectValue }) => {
+	const statementIsInScope = (oneStatement) =>
+		restrictToObjectValue === undefined || oneStatement.object === restrictToObjectValue;
+	const inScopePredicateNameList = Array.from(
+		new Set(ruledStatementList.filter(statementIsInScope).map((oneStatement) => oneStatement.predicate)),
+	);
+	const shortfallList = [];
+	const expectedCountByPredicate = {};
+	inScopePredicateNameList.forEach((onePredicate) => {
+		const predicateStatementList = ruledStatementList.filter(
+			(oneStatement) => oneStatement.predicate === onePredicate,
+		);
+		expectedCountByPredicate[onePredicate] = predicateStatementList.length;
+		if (restrictToObjectValue === undefined) {
+			return;
+		}
+		const distinctObjectList = Array.from(
+			new Set(predicateStatementList.map((oneStatement) => oneStatement.object)),
+		);
+		if (distinctObjectList.length > 1) {
+			shortfallList.push(
+				`${onePredicate}: carries ${distinctObjectList.length} distinct object values (${distinctObjectList.join(', ')}) — a per-predicate row cannot answer an object-restricted question about it, so this measure refuses rather than guessing`,
+			);
+		}
+	});
+	Object.entries(expectedCountByPredicate).forEach(([onePredicate, expectedCount]) => {
+		const predicateRow = report.perPredicate.find((oneRow) => oneRow.predicate === onePredicate);
+		if (!predicateRow) {
+			shortfallList.push(
+				`${onePredicate}: NO per-predicate row at all — this vocabulary is ABSENT from the run, not merely lost`,
+			);
+			return;
+		}
+		if (predicateRow.source !== expectedCount) {
+			shortfallList.push(
+				`${onePredicate}: source ${predicateRow.source}, expected ${expectedCount}`,
+			);
+			return;
+		}
+		if (predicateRow.lost !== 0 || predicateRow.reproduced !== expectedCount) {
+			shortfallList.push(
+				`${onePredicate}: reproduced ${predicateRow.reproduced}/${expectedCount}, lost ${predicateRow.lost}`,
+			);
+		}
+	});
+	const inScopeStatementCount = ruledStatementList.filter(statementIsInScope).length;
+	return {
+		distinctPredicateCount: inScopePredicateNameList.length,
+		statementCount: inScopeStatementCount,
+		everyRuledStatementReproduced: inScopeStatementCount > 0 && shortfallList.length === 0,
+		shortfallList,
+	};
+};
+
+// NAMED DETECTOR, deliberately separate from the run that uses it, so the SAME function can be
+// shown refusing a doctored emission (data-level RED) and accepting an honest one
+// (data-level NOT-OVER-BROAD). A detector only ever fed the healthy path is unproven.
+const detectIdlessItemsEmitNothing = ({ report, inventedTotal }) => {
+	const offendingPredicateList = IDLESS_FIXTURE_ITEM_NAME_LIST.map(
+		(oneItemName) => `itemMetaEdId/${oneItemName}`,
+	).filter((onePredicate) =>
+		report.perPredicate.some((oneRow) => oneRow.predicate === onePredicate),
+	);
+	// THE PRESENCE FLOOR — the same medicine G-5 got, applied here, because this gate had exactly
+	// the defect G-5 was redefined to cure and I did not notice until the independent review said
+	// so. "No itemMetaEdId row exists for an id-less item" is TRUE ON AN EMPTY DOMAIN: while the
+	// forge emits no itemMetaEdId statements AT ALL, that absence says nothing whatever about
+	// non-emission, and the gate's green means nothing. Worse, a future regression that removed
+	// itemMetaEdId emission entirely would leave this gate GREEN while G-5 went red.
+	//
+	// So require that emission is actually HAPPENING before concluding that id-less items were
+	// correctly skipped. This is deliberately UNSATISFIED until the forge carries the class: the
+	// gate then reports honestly that it cannot yet make its claim, rather than making it
+	// vacuously. It self-resolves at state 3, which is precisely why it would never be fixed
+	// later if it were allowed to pass now.
+	const emittedItemMetaEdIdRowList = report.perPredicate.filter(
+		(oneRow) => oneRow.predicate.startsWith('itemMetaEdId/') && oneRow.reproduced > 0,
+	);
+	return {
+		idlessItemsEmitNothing:
+			offendingPredicateList.length === 0 &&
+			inventedTotal === 0 &&
+			emittedItemMetaEdIdRowList.length > 0,
+		offendingPredicateList,
+		emittedItemMetaEdIdPredicateCount: emittedItemMetaEdIdRowList.length,
+	};
+};
+
 // =====================================================================
 // the suite — explicit async step chain ending in harness.report()
 // =====================================================================
@@ -472,6 +669,7 @@ const suiteState = {
 	carriableVerdict: undefined,
 	fullVerdict: undefined,
 	carriableForge: undefined,
+	fullForge: undefined,
 };
 
 // ---------------------------------------------------------------------
@@ -738,63 +936,352 @@ pushStep((done) => {
 
 // ---------------------------------------------------------------------
 pushStep((done) => {
-	harness.section('FULL-vocabulary fixture — loses EXACTLY the ruled backlog classes, invents nothing');
+	harness.section('FULL-vocabulary fixture — CARRIES the R-WO-15(d)/(f) classes and round-trips CLEAN');
 	forgeScratchSnapshot({ includeFullVocabulary: true }, (forgeError, forged) => {
 		harness.accepts('full-vocabulary fixture forges without refusal', [forgeError].filter(Boolean));
 		if (forgeError) {
 			done();
 			return;
 		}
-		validateDouble(forged, (validateError, verdict) => {
-			harness.accepts('full-vocabulary fixture validates without fault', [validateError].filter(Boolean));
-			if (validateError) {
+		suiteState.fullForge = forged;
+		reduceRuledCarriageStatements((reduceError, reduced) => {
+			harness.accepts(
+				'the interchange fixture texts reduce without fault',
+				[reduceError].filter(Boolean),
+			);
+			if (reduceError) {
 				done();
 				return;
 			}
-			suiteState.fullVerdict = verdict;
-			harness.equal('full fixture inventedTotal is zero', verdict.inventedTotal, 0);
-			harness.ok('full fixture HAS loss (the ruled classes exist in it)', verdict.lost > 0);
+			const { ruledStatementList } = reduced;
 
-			const ruledLabelList = [
-				'interchangeComponentKind (R-WO-15d)',
-				'itemMetaEdId (R-WO-15d extension)',
-				'itemNamespaceQualifier (R-WO-15d extension)',
-			];
-			const lossesAllNamed =
-				verdict.report.lostDetailList.length === verdict.lost &&
-				verdict.report.lostDetailList.every(
-					(oneLost) => oneLost.backlogLabel && ruledLabelList.includes(oneLost.backlogLabel),
+			// ---- THE NON-VACUITY FLOOR, established BEFORE any carriage claim is made ----
+			const ruledCountByPrefix = {};
+			RULED_CARRIAGE_PREDICATE_PREFIX_LIST.forEach((onePrefix) => {
+				ruledCountByPrefix[onePrefix] = ruledStatementList.filter((oneStatement) =>
+					oneStatement.predicate.startsWith(onePrefix),
+				).length;
+			});
+			const domainSizedAsExpected =
+				ruledStatementList.length === EXPECTED_RULED_CARRIAGE_TOTAL &&
+				RULED_CARRIAGE_PREDICATE_PREFIX_LIST.every(
+					(onePrefix) =>
+						ruledCountByPrefix[onePrefix] === EXPECTED_RULED_CARRIAGE_COUNT_BY_PREFIX[onePrefix],
 				);
-			suiteState.probe.fullVocabularyLossesAllNamed = lossesAllNamed && verdict.invented === 0;
-			harness.ok('every full-fixture loss carries one of the three ruled backlog labels', lossesAllNamed);
-
-			const unlabeledContentGapCount = verdict.report.lostDetailList.filter(
-				(oneLost) => oneLost.bucketName === 'contentGap' && !oneLost.backlogLabel,
-			).length;
-			suiteState.probe.fullVocabularyUnlabeledContentGapCount = unlabeledContentGapCount;
-			harness.equal('no anonymous contentGap loss', unlabeledContentGapCount, 0);
-
-			const allLocatedAndBucketed = verdict.report.lostDetailList.every(
-				(oneLost) => oneLost.located && oneLost.bucketName,
-			);
-			suiteState.probe.lostAllLocatedAndBucketed = allLocatedAndBucketed;
-			harness.ok('every LOST record is located (file:line) and bucketed', allLocatedAndBucketed);
-
 			harness.ok(
-				'componentKind loss includes the identityTemplate kind (both kinds exercised)',
-				verdict.report.lostDetailList.some(
-					(oneLost) => oneLost.predicate.startsWith('componentKind/') && oneLost.object === 'identityTemplate',
-				),
+				`the ruled-carriage domain is NON-EMPTY and exactly sized — ${JSON.stringify(ruledCountByPrefix)}, total ${ruledStatementList.length}`,
+				domainSizedAsExpected,
+				`expected ${JSON.stringify(EXPECTED_RULED_CARRIAGE_COUNT_BY_PREFIX)}, total ${EXPECTED_RULED_CARRIAGE_TOTAL}`,
 			);
-			harness.ok(
-				'itemNamespace loss names the qualified component (EdFi.FixtureStudent)',
-				verdict.report.lostDetailList.some(
-					(oneLost) => oneLost.predicate === 'itemNamespace/FixtureStudent' && oneLost.object === 'EdFi',
-				),
-			);
-			done();
+
+			validateDouble(forged, (validateError, verdict) => {
+				harness.accepts(
+					'full-vocabulary fixture validates without fault',
+					[validateError].filter(Boolean),
+				);
+				if (validateError) {
+					done();
+					return;
+				}
+				suiteState.fullVerdict = verdict;
+
+				// ---- the fixture now round-trips CLEAN (this replaces the old `lost > 0`) ----
+				harness.ok(
+					`full fixture roundTripClean === true (reproduced ${verdict.reproduced}, lost ${verdict.lost}, inventedTotal ${verdict.inventedTotal})`,
+					verdict.roundTripClean === true,
+				);
+				harness.equal('full fixture LOST is zero', verdict.lost, 0);
+				harness.equal('full fixture inventedTotal is zero', verdict.inventedTotal, 0);
+
+				// ---- carriage, measured against the reduced answer key ----
+				const overallCarriage = measureRuledCarriage({
+					report: verdict.report,
+					ruledStatementList,
+				});
+				harness.ok(
+					`every ruled-carriage statement REPRODUCED (${ruledStatementList.length} statements across ${overallCarriage.distinctPredicateCount} predicates)`,
+					overallCarriage.everyRuledStatementReproduced,
+					overallCarriage.shortfallList.join('\n'),
+				);
+
+				// per class, so partial carriage names WHICH class fell short
+				RULED_CARRIAGE_PREDICATE_PREFIX_LIST.forEach((onePrefix) => {
+					const classCarriage = measureRuledCarriage({
+						report: verdict.report,
+						ruledStatementList: ruledStatementList.filter((oneStatement) =>
+							oneStatement.predicate.startsWith(onePrefix),
+						),
+					});
+					harness.ok(
+						`class '${onePrefix}' fully carried (${classCarriage.statementCount} statements)`,
+						classCarriage.everyRuledStatementReproduced,
+						classCarriage.shortfallList.join('\n'),
+					);
+				});
+
+				// ---- THE ANTI-VACUITY CONTROL, on real data ----
+				// The CARRIABLE fixture ships no interchange files whatsoever, so its run is clean,
+				// lossless and invention-free — precisely the shape that a vacuously-green carriage
+				// gate accepts, and precisely what the OLD G-5 measure would have called success.
+				// Feeding the same carriage measure that run must REFUSE, and refuse for the stated
+				// reason: the predicate rows are absent, not merely lossless. This is what makes
+				// G-5's green mean "carriage happened" rather than "nothing went wrong".
+				const vacuityControlCarriage = measureRuledCarriage({
+					report: suiteState.carriableVerdict.report,
+					ruledStatementList,
+				});
+				harness.ok(
+					'the carriage measure REFUSES the carriable run, whose verdict is clean but whose ruled vocabulary is absent (anti-vacuity control)',
+					vacuityControlCarriage.everyRuledStatementReproduced === false &&
+						vacuityControlCarriage.shortfallList.length ===
+							overallCarriage.distinctPredicateCount &&
+						vacuityControlCarriage.shortfallList.every((oneShortfall) =>
+							/NO per-predicate row at all/.test(oneShortfall),
+						),
+					vacuityControlCarriage.shortfallList.join('\n'),
+				);
+
+				// ---- both componentKind object values, not merely the common one ----
+				const carriageByComponentKind = {};
+				COMPONENT_KIND_VALUE_LIST.forEach((oneComponentKind) => {
+					carriageByComponentKind[oneComponentKind] = measureRuledCarriage({
+						report: verdict.report,
+						ruledStatementList: ruledStatementList.filter((oneStatement) =>
+							oneStatement.predicate.startsWith('componentKind/'),
+						),
+						restrictToObjectValue: oneComponentKind,
+					});
+				});
+				const bothComponentKindsCarried = COMPONENT_KIND_VALUE_LIST.every(
+					(oneComponentKind) =>
+						carriageByComponentKind[oneComponentKind].everyRuledStatementReproduced,
+				);
+				suiteState.probe.componentKindBothKindsCarried = bothComponentKindsCarried;
+				harness.ok(
+					`every componentKind value REPRODUCED — ${COMPONENT_KIND_VALUE_LIST.map((oneComponentKind) => `${oneComponentKind} (${carriageByComponentKind[oneComponentKind].statementCount} stmt)`).join(' AND ')}`,
+					bothComponentKindsCarried,
+					COMPONENT_KIND_VALUE_LIST.flatMap(
+						(oneComponentKind) => carriageByComponentKind[oneComponentKind].shortfallList,
+					).join('\n'),
+				);
+
+				// ---- the invention seam: items declared without an id must emit NOTHING ----
+				const nonEmissionResult = detectIdlessItemsEmitNothing({
+					report: verdict.report,
+					inventedTotal: verdict.inventedTotal,
+				});
+				suiteState.probe.idlessItemsEmitNothing = nonEmissionResult.idlessItemsEmitNothing;
+				harness.ok(
+					`items declared with NO metaEdId emit no itemMetaEdId statement (${IDLESS_FIXTURE_ITEM_NAME_LIST.join(', ')}), inventedTotal stays 0, and itemMetaEdId emission is actually happening (${nonEmissionResult.emittedItemMetaEdIdPredicateCount} predicate(s) reproduced)`,
+					nonEmissionResult.idlessItemsEmitNothing,
+					nonEmissionResult.offendingPredicateList.length
+						? `offending: ${nonEmissionResult.offendingPredicateList.join(', ')}`
+						: `no offending predicate; the presence floor is unmet — 0 itemMetaEdId predicates reproduced, so non-emission cannot yet be claimed`,
+				);
+
+				// DATA-LEVEL proof that the detector BITES, and bites on the RIGHT thing. Three
+				// controls, each isolating ONE variable, with the presence floor SATISFIED in the
+				// first two so that only the offending-predicate logic can move them.
+				harness.ok(
+					'non-emission detector REFUSES a doctored emission for an id-less item (data-level RED)',
+					detectIdlessItemsEmitNothing({
+						report: {
+							perPredicate: [
+								{ predicate: 'itemMetaEdId/FixtureStudent', reproduced: 1 },
+								{ predicate: 'itemMetaEdId/FixtureEnrollment', reproduced: 1 },
+							],
+						},
+						inventedTotal: 0,
+					}).idlessItemsEmitNothing === false,
+				);
+				harness.ok(
+					'non-emission detector ACCEPTS an itemMetaEdId for an item that DOES declare one (not over-broad)',
+					detectIdlessItemsEmitNothing({
+						report: { perPredicate: [{ predicate: 'itemMetaEdId/FixtureStudent', reproduced: 1 }] },
+						inventedTotal: 0,
+					}).idlessItemsEmitNothing === true,
+				);
+				harness.ok(
+					'non-emission detector REFUSES when NOTHING is emitted — the presence floor bites, so this gate cannot go vacuously green on an empty domain',
+					detectIdlessItemsEmitNothing({
+						report: { perPredicate: [{ predicate: 'itemMetaEdId/FixtureStudent', reproduced: 0 }] },
+						inventedTotal: 0,
+					}).idlessItemsEmitNothing === false,
+				);
+
+				// ---- G-5, redefined. The domain-size term is INSIDE the measure, not merely an
+				// assertion standing beside it: a clean-and-lossless measure alone is TRUE ON AN
+				// EMPTY DOMAIN, which is the exact vacuity this redefinition exists to repair.
+				suiteState.probe.fullVocabularyClean =
+					verdict.roundTripClean === true &&
+					verdict.lost === 0 &&
+					verdict.inventedTotal === 0 &&
+					domainSizedAsExpected &&
+					overallCarriage.everyRuledStatementReproduced;
+
+				// ---- G-6 / G-7 keep their conditional-universal form (D-5) ----
+				const unlabeledContentGapCount = verdict.report.lostDetailList.filter(
+					(oneLost) => oneLost.bucketName === 'contentGap' && !oneLost.backlogLabel,
+				).length;
+				suiteState.probe.fullVocabularyUnlabeledContentGapCount = unlabeledContentGapCount;
+				harness.equal('no anonymous contentGap loss', unlabeledContentGapCount, 0);
+
+				const allLocatedAndBucketed = verdict.report.lostDetailList.every(
+					(oneLost) => oneLost.located && oneLost.bucketName,
+				);
+				suiteState.probe.lostAllLocatedAndBucketed = allLocatedAndBucketed;
+				harness.ok('every LOST record is located (file:line) and bucketed', allLocatedAndBucketed);
+				harness.note(
+					`G-6 and G-7 are conditional-universal guards — "IF a loss exists, it is located and ` +
+						`labelled". Their domain here is ${verdict.report.lostDetailList.length} record(s). ` +
+						`Once carriage is complete that domain is EXPECTED TO BE EMPTY and both measures ` +
+						`are then vacuously satisfied. They are kept as REGRESSION detectors — a future ` +
+						`forge change that drops a property repopulates them under its ruled backlog name ` +
+						`— and must never be read as coverage.`,
+				);
+				done();
+			});
 		});
 	});
+});
+
+// ---------------------------------------------------------------------
+pushStep((done) => {
+	harness.section('EDGE-TRIPLE UNIQUENESS — the Phase 1 prerequisite, proven at the DATA level');
+
+	// WHY THIS LIVES IN THE SUITE AND NOT ONLY IN THE MATERIALIZE RUNNER: the runner needs Docker,
+	// so it cannot run on every suite execution, and the twin registry can only prove a gate's
+	// COMPARISON bites (twins inject at the measure boundary — roundTripGateTwins.js:9-16). The
+	// proof that the CHECK ITSELF bites has to be data-level, run against real forge blocks, which
+	// is exactly what this step does. Same shape as the cheating-detector and invention probes.
+	//
+	// WHAT THE REPLAY ENGINE DOES, restated because it is the whole reason: it writes edges with
+	// `MERGE ... SET r += e.props`, so two edges sharing (from, type, to) become ONE relationship.
+	// Harmless today; last-write-wins data loss the moment edges carry per-edge attributes.
+
+	const carriableForged = suiteState.carriableForge;
+	const fullForged = suiteState.fullForge;
+	if (!carriableForged || !fullForged) {
+		harness.ok('both fixture forge results available for the uniqueness probe', false);
+		done();
+		return;
+	}
+
+	// throw-to-error adapter at a DECLARED refusal seam — the same idiom the compiler uses for its
+	// one JSON.parse (roundTripEdfiCompiler.js:290-294). This is not try/catch as control flow;
+	// the refusal IS the thing under test and has to be captured to be asserted.
+	const captureRefusalMessageList = (riskyFunction) => {
+		let refusalMessage = '';
+		try {
+			riskyFunction();
+		} catch (thrownError) {
+			refusalMessage = thrownError.message;
+		}
+		return refusalMessage ? [refusalMessage] : [];
+	};
+
+	// ---- refusal by name: an unreadable input is refused, never quietly accepted ----
+	harness.rejects(
+		'findDuplicateEdgeTriples REFUSES a missing edgeList BY NAME',
+		captureRefusalMessageList(() => roundTripEdfiCompiler.findDuplicateEdgeTriples({})),
+		/edgeList \(array\) is REQUIRED and has no default/,
+	);
+	harness.rejects(
+		'findDuplicateEdgeTriples REFUSES an edge missing its endpoints BY NAME',
+		captureRefusalMessageList(() =>
+			roundTripEdfiCompiler.findDuplicateEdgeTriples({
+				edgeList: [{ type: 'REFERENCES', fromRef: { id: 'edfi:domain/A' } }],
+			}),
+		),
+		/is missing fromRef\.id, type or toRef\.id/,
+	);
+
+	// ---- OBSERVATION 1 — RED on a synthetic block carrying one duplicated triple ----
+	const syntheticEdge = {
+		type: 'REFERENCES',
+		fromRef: { source: 'EdFi', id: 'edfi:interchange/FixtureInterchange' },
+		toRef: { source: 'EdFi', id: 'edfi:domainEntity/FixtureStudent' },
+		properties: { provenanceTier: 'STRUCTURAL' },
+	};
+	const duplicateBearingAudit = roundTripEdfiCompiler.findDuplicateEdgeTriples({
+		edgeList: [syntheticEdge, JSON.parse(JSON.stringify(syntheticEdge))],
+	});
+	harness.ok(
+		`a duplicated (from, type, to) triple is REFUSED and NAMED — ${duplicateBearingAudit.duplicateList.length} duplicate(s), ${duplicateBearingAudit.distinctCount} distinct of 2 edges`,
+		duplicateBearingAudit.duplicateList.length === 1 &&
+			duplicateBearingAudit.distinctCount === 1 &&
+			duplicateBearingAudit.duplicateList[0].occurrenceCount === 2 &&
+			duplicateBearingAudit.duplicateList[0].fromStableId === syntheticEdge.fromRef.id &&
+			duplicateBearingAudit.duplicateList[0].edgeType === syntheticEdge.type &&
+			duplicateBearingAudit.duplicateList[0].toStableId === syntheticEdge.toRef.id,
+	);
+
+	// ---- OBSERVATION 2 — GREEN on both real fixture blocks ----
+	const carriableAudit = roundTripEdfiCompiler.findDuplicateEdgeTriples({
+		edgeList: carriableForged.forgeResult.edges,
+	});
+	const fullAudit = roundTripEdfiCompiler.findDuplicateEdgeTriples({
+		edgeList: fullForged.forgeResult.edges,
+	});
+	const bothRealBlocksDistinct =
+		carriableAudit.duplicateList.length === 0 &&
+		carriableAudit.distinctCount === carriableForged.forgeResult.edges.length &&
+		fullAudit.duplicateList.length === 0 &&
+		fullAudit.distinctCount === fullForged.forgeResult.edges.length;
+	harness.ok(
+		`both real fixture blocks are triple-distinct — carriable ${carriableAudit.distinctCount}/${carriableForged.forgeResult.edges.length}, full ${fullAudit.distinctCount}/${fullForged.forgeResult.edges.length}`,
+		bothRealBlocksDistinct,
+	);
+
+	// ---- OBSERVATION 3 — NOT-OVER-BROAD: reordering is not a duplicate ----
+	const reorderedAudit = roundTripEdfiCompiler.findDuplicateEdgeTriples({
+		edgeList: fullForged.forgeResult.edges.slice().reverse(),
+	});
+	const reorderStillAccepted =
+		reorderedAudit.duplicateList.length === 0 &&
+		reorderedAudit.distinctCount === fullAudit.distinctCount;
+	harness.ok(
+		'a REORDERED edge array is still accepted — the check is order-independent',
+		reorderStillAccepted,
+	);
+
+	// ---- OBSERVATION 4 — NOT-OVER-BROAD, sharper: near-miss triples sharing TWO of three ----
+	// A check keyed on any two components (from+to, or from+type) would wrongly refuse these. That
+	// is a failure mode reordering cannot expose, and it is the one an implementation is most
+	// likely to have: the reorder control proves order-independence, this proves the KEY is right.
+	const sampleFixtureEdge = fullForged.forgeResult.edges[0];
+	const nearMissAudit = roundTripEdfiCompiler.findDuplicateEdgeTriples({
+		edgeList: fullForged.forgeResult.edges.concat([
+			{
+				// same from, same type, DIFFERENT to
+				type: sampleFixtureEdge.type,
+				fromRef: { ...sampleFixtureEdge.fromRef },
+				toRef: { ...sampleFixtureEdge.toRef, id: `${sampleFixtureEdge.toRef.id}__nearMissTarget` },
+				properties: { ...sampleFixtureEdge.properties },
+			},
+			{
+				// same from, same to, DIFFERENT type
+				type: `${sampleFixtureEdge.type}_NEAR_MISS`,
+				fromRef: { ...sampleFixtureEdge.fromRef },
+				toRef: { ...sampleFixtureEdge.toRef },
+				properties: { ...sampleFixtureEdge.properties },
+			},
+		]),
+	});
+	const nearMissStillAccepted =
+		nearMissAudit.duplicateList.length === 0 &&
+		nearMissAudit.distinctCount === fullAudit.distinctCount + 2;
+	harness.ok(
+		'near-miss triples sharing TWO of the three components are still accepted — the check keys on all THREE',
+		nearMissStillAccepted,
+	);
+
+	suiteState.probe.forgeEdgeTriplesDistinct =
+		duplicateBearingAudit.duplicateList.length === 1 &&
+		bothRealBlocksDistinct &&
+		reorderStillAccepted &&
+		nearMissStillAccepted;
+	done();
 });
 
 // ---------------------------------------------------------------------
@@ -1139,7 +1626,7 @@ pushStep((done) => {
 
 // ---------------------------------------------------------------------
 pushStep((done) => {
-	harness.section('RT-10 — gate suite: all 16 green AND every twin observed RED');
+	harness.section('RT-10 — gate suite: all 19 green AND every twin observed RED');
 
 	roundTripGates.loadGateDeclarations({ gatesFilePath: GATES_FILE_PATH }, (loadError, loaded) => {
 		harness.accepts('gate declarations load', [loadError].filter(Boolean));

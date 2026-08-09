@@ -71,9 +71,10 @@ const moduleFunction = () => {
 		dropOneSourceStatement: (measurements) =>
 			setDottedValue(measurements, 'verdict.roundTripClean', false),
 
-		// G-5: the full-vocabulary fixture sprouts an unruled loss class.
-		falsifyFullVocabularyLossProbe: (measurements) =>
-			setDottedValue(measurements, 'probe.fullVocabularyLossesAllNamed', false),
+		// G-5: the full-vocabulary fixture stops round-tripping clean — a carried class falls back
+		// out of the graph, or the carriage domain itself goes missing.
+		falsifyFullVocabularyCleanProbe: (measurements) =>
+			setDottedValue(measurements, 'probe.fullVocabularyClean', false),
 
 		// G-6: a lost record loses its located detail.
 		stripOneLostLocation: (measurements) =>
@@ -120,6 +121,20 @@ const moduleFunction = () => {
 		// G-16: a percentage sneaks into acceptance.
 		declarePercentGate: (measurements) =>
 			bumpDottedValue(measurements, 'suite.gatesUsingPercentInAcceptance', 1),
+
+		// G-17: only one componentKind value survives — the common kind carried, the rare one
+		// dropped, which is the shape a partial carriage actually takes.
+		falsifyComponentKindCarriageProbe: (measurements) =>
+			setDottedValue(measurements, 'probe.componentKindBothKindsCarried', false),
+
+		// G-18: an item that declared no metaEdId acquires one anyway — content manufactured by
+		// the act of carrying more content.
+		falsifyNonEmissionProbe: (measurements) =>
+			setDottedValue(measurements, 'probe.idlessItemsEmitNothing', false),
+
+		// G-19: two forge edges share a (from, type, to) triple and would collapse under MERGE.
+		falsifyEdgeUniquenessProbe: (measurements) =>
+			setDottedValue(measurements, 'probe.forgeEdgeTriplesDistinct', false),
 	};
 
 	// auditRegistryAgainst — every declared twin must exist here; every twin here must be
