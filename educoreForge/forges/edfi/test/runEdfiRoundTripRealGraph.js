@@ -90,8 +90,24 @@ roundTripValidator.validate(
 		assertThat('inventedTotal === 0 (hard)', verdict.inventedTotal === 0);
 		assertThat('diff INVENTED === 0', verdict.invented === 0);
 		assertThat('crosswalk guard violations === 0', verdict.crosswalkGuard.violationCount === 0);
+		// LOSS IS NOW ZERO, AND THAT MADE THE OLD ASSERTION VACUOUS. It read "every LOST record is
+		// located and carries a ruled backlog label", which on an empty list evaluates
+		// `0 === 0 && [].every(...)` -> TRUE. It therefore went green the instant the R-WO-15(d)/(f)
+		// remediation succeeded, and would have stayed green if the carriage silently regressed to
+		// PARTIAL loss with unlabelled records. Fixing a defect disarms every test phrased as
+		// "all X have property P", because the fix empties X. Fourth occurrence of this shape on the
+		// 2026-08-09 campaign; the others were gates G-5 and G-18 and one builder's own replacement
+		// for G-5.
+		//
+		// The primary assertion is now the FACT, not a property of an empty set.
+		assertThat('LOST is zero — the ruled classes are CARRIED (R-WO-15(d)/(f) closed)', verdict.lost === 0);
+
+		// Retained as a REGRESSION DETECTOR with its domain expected empty. If loss ever returns,
+		// this says whether it returned NAMED — an unlabelled loss is an unenumerable gap. It is
+		// deliberately NOT the primary check: it cannot fail while the list is empty, and a check
+		// that cannot fail is not enforcement.
 		assertThat(
-			'every LOST record located and carrying a ruled backlog label',
+			'if LOST ever returns it is located and carries a ruled backlog label (domain expected EMPTY)',
 			verdict.report.lostDetailList.length === verdict.lost &&
 				verdict.report.lostDetailList.every(
 					(oneLost) =>
