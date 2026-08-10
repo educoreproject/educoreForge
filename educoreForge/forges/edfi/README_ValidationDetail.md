@@ -8,10 +8,21 @@ equivalence policy in full, the gate-2 attribution defect, and the commands to r
 Nothing in this file is a summary. It is deliberately exhaustive and deliberately not the first thing
 a reader opens.
 
-**Two places later evidence has overtaken this text.** Section 3 reports that policy R-WO-15(d) is
-missing from the lettered list; it is not missing, it is filtered — see the certificate. And the 349
-are described as one backlog; they decompose into 205 statements of model content and 144 of
-bookkeeping. Both corrections come from
+> ## ⚠️ EVERY LOSS FIGURE BELOW IS SUPERSEDED. THE 349 WERE CARRIED ON 2026-08-09.
+>
+> **Ed-Fi now round-trips CLEAN** — `reproduced 25,723`, `lost 0`, `invented 0`, certified at commit
+> `c2c8c01` against container `DEV_FourWithNewEdFi`. Every occurrence below of `lost 349`,
+> `contentGap 349` or `roundTripClean false` describes the run of **2026-08-07** and is retained as a
+> record of that run, not as a current claim. **The certificate is the current statement.**
+>
+> One sentence below is not merely superseded but was FALSIFIED by the remediation: that the 205 lost
+> `interchangeComponentKind` statements were *"not recoverable."* They were recovered. What was true
+> was that they could not be DERIVED from the graph — the fix carried them from the source instead.
+
+**Two further places later evidence has overtaken this text.** Section 3 reports that policy
+R-WO-15(d) is missing from the lettered list; it is not missing, it is filtered — see the
+certificate. And the 349 are described as one backlog; they decompose into 205 statements of model
+content and 144 of bookkeeping. Both corrections come from
 `system/management/zNotesPlansDocs/FINDINGS-edfi349AndRWO15d-080926.md`.
 
 **Ed-Fi is the only one of the four that is NOT clean, and that is the honest state of unfinished

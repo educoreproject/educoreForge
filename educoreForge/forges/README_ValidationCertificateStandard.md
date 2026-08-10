@@ -31,114 +31,98 @@ The long argument goes to `README_ValidationDetail.md` beside it. Nothing is del
 
 ---
 
+## The one rule everything else serves
+
+**A certificate is read by someone deciding whether to use the data.** Not by an auditor of our
+process, not by a reviewer of our methods, not by us. Every paragraph must answer one of three
+questions for that person:
+
+1. **What is in the graph?**
+2. **How accurate is it?**
+3. **What problems will I hit?**
+
+**If a paragraph answers none of those, cut it — however true it is.** That test alone removed about
+half of every certificate in the 2026-08-09 rewrite.
+
+---
+
 ## Rules
 
-### Verdict
+### The opening
 
-**1. Lead with what the reader may now believe.** The counts do not tell anyone what conclusion they
-license. State it in a sentence — *"This round trip validation supports the judgement that this graph
-is complete and usable"* — and only if it is true. If it is not true, say what IS supported and name
-what would have to change. **Never write the sentence because the other certificates have it.**
+**1. Say what it is, then that it works, in that order, in the first four sentences.** What standard,
+what it was built from, how many nodes; then the verdict; then one sentence saying what the check
+actually did. Nothing else.
 
-**2. Say what an observation means for the verdict.** *"Files that fail on both sides, corpus and
-extracted, count as success in the validation"* is the sentence the reader needs. An observation left
-without its bearing is work handed to someone with less context than you.
+**2. NEVER open with a caveat.** A first paragraph that leads with what is missing reads as a document
+written by someone anticipating blame. Problems have their own section — they do not get the doorway.
+*(TQ, on a draft that led with the SIF container gap: "It BEGS them to start asking.")*
 
-### Structure
+**3. Explain the term you are about to lean on.** "Round trip validation" means nothing to a reader
+until you say that data was converted back from the graph and compared against the source. Say it
+once, in the opening, in a clause.
 
-**3. The corpus's origin belongs in Summary, not in a later section.** A reader asking *what is this*
-needs *where did it come from* in the same breath. Provenance keeps the acquisition rule, what is
-open, and gaps in the record itself.
+### Known problems
 
-**4. Name a section for the process it documents.** *Round Trip Validation*, not *How it was checked*.
+**4. Problems are facts about the data. Opinions and worries are not problems.** *"Repeatability marks
+present in the XSD are not in the graph"* is a problem. *"Only one instrument examined the graph"* is
+an anxiety about our confidence and belongs nowhere in this document.
 
-**5. One issue per issue.** A limitation and the measured instance of that limitation are one item.
-Two items make a reader meet the same fact twice with no signal they are connected.
+**5. Write each one as what a consumer will not find, or will find wrong.** Lead with the effect on
+them, not with the mechanism that caused it.
 
-**6. Order known issues by consequence**, and say so at the top of the list.
+**6. Relevance decides inclusion. If it is relevant, it is in.** Do not include something because it
+was hard-won, interesting, or recently on your mind.
 
-### Compression
+**7. A defect in someone else's published standard is not our business** beyond stating what it means
+for this graph. Describe the consequence; do not diagnose the publisher.
 
-**7. Cut the epistemology.** Which instrument answers which question, what a certificate is for,
-whether "semantically clean" equals "identical" — all true, none of it helps a reader decide
-anything. It belongs in the detail document.
+### What never belongs
 
-**8. Cut the meta-justification.** Describe the two passes. Do not explain why there are two; the
-reader works that out.
+**8. No self-explanation.** Why we chose a method, what we considered and rejected, how careful we
+were, what our instrument cannot see about itself. All of it belongs in the detail document.
 
-**9. The counts get a note, not an essay.** State what is omitted. Do not argue the doctrine behind
-the omission on this page.
+**9. No document history.** No session names, no "this used to say," no changelog in the body.
+**History earns its place only when it changes what a reader should believe** — CEDS's
+character-reference defect survives because it is why a second instrument exists; everything else went.
 
-**10. One sentence for the gate.** *"`goldEvalCheck` reports PASS for this build."* The negative
-control and why it matters go to detail.
+**10. No operational instructions.** How to connect to a container is not part of how far to trust it.
 
-**11. A known issue states its fact and stops.** Resist appending the reasoning that made you
-comfortable with it.
-
-**12. No filler labels.** If a paragraph needs to be announced with *Note:*, it is not earning its
-place.
+**11. Watch for subordinate clauses that open a door.** *"…, which this certificate does not cover"*,
+*"…, and that matching layer"* — nearly every one introduces an explanation nobody asked for. Prefer
+two flat statements and a pointer.
 
 ### Language
 
-**13. Do not shout, and measure rather than judge by eye.** No all-caps runs. **Measure before you
-ship:** `grep -o '\*\*[^*]*\*\*' <file> | wc -l` against `wc -w <file>`.
+**12. Every sentence needs a concrete noun.** *"What the round trip models is declared by the bundle
+rather than derived by a reader"* is grammatical and means nothing, because the thing it is about — a
+paragraph of text in an output file — is never named. This failure is more common than jargon and
+harder to see in your own prose.
 
-**Target one bold span per 60–80 words.** That range is calibrated from the four certificates written
-under this standard on 2026-08-09 — pesc260805 at 1 per 79, ceds 1 per 69, edfi 1 per 62, sif 1 per
-55 — rather than chosen in advance. **The number in the first draft of this document was one per
-hundred, and all four documents written under it missed that by a wide margin**, which is a fact
-about the number rather than about the documents: much of the emphasis is structural (numbered-issue
-lead phrases, table cells, section-opening claims) and does not read as shouting. Recalibrated
-2026-08-09.
+**13. No superlatives without a stated comparison.** "The most consequential finding" is a comparison
+with the comparison left out.
 
-**Below 1 per 50, take it seriously.** That is where emphasis stops marking the important sentence
-and starts hiding it. For reference, the document that prompted this whole standard ran **1 per 42**
-with 36 all-caps runs, and was judged incomprehensible.
-
-**14. A headline states the finding, not its epistemic status.** *"The nine XSD files would not
-compile"*, not *"the nine compile refusals are a lower bound, not a defect total."*
+**14. Say "missed," not "lost."**
 
 **15. Gloss numbers inline** — `173,216 / 0 / 0 (reproduced / missed / invented)`.
 
-**16. Say "missed," not "lost."**
+**16. Name the two concrete things being compared**, not a symmetry.
 
-**17. Name the two concrete things being compared**, not a symmetry. *"Compiles the source corpus and
-the extracted XSD data"*, not *"compiles both sets of files."* Likewise *"extracts XSD from the
-working graph"*, not *"re-emits from the materialized graph."*
+**17. Do not shout, and measure rather than judge by eye.** No all-caps runs. Target one bold span per
+60–80 words; below 1 per 50, take it seriously. **Measure before you ship:**
+`grep -o '\*\*[^*]*\*\*' <file> | wc -l` against `wc -w <file>`. The document that prompted this
+standard ran 1 per 42 with 36 all-caps runs and was judged incomprehensible.
 
-**18. Every pronoun needs an unmistakable antecedent.** *"None of those five"* broke because the
-nearest list was not the intended one.
+### Scope and framing
 
-**19. Explain what a version designation denotes. Do not admonish about it.** *"The version, 01, was
-generated here and refers to this specific interconnected set"* tells a reader what the number means.
-*"It is OURS and must never be read as a published edition"* only warns them off a misreading they
-had not yet made.
+**18. Name the scope in the opening when the standard has more than one role.** CEDS is both a
+standard and a hub; the certificate says which one it covers before it says anything else.
 
-### Content
+**19. State an absence as a fact, not as an apology.** *"The hub is not in this graph and is certified
+separately"* — not *"not present… returns nothing, by design."* The phrase "by design" is what you
+reach for when you expect to be doubted.
 
-**20. Define every term of art on the page.** Tiers, source-tier-only, compile refusals. **If the
-reader must already know the project's vocabulary, the certificate has failed at its one job.** A
-short table beats a paragraph.
-
-**21. A known issue must say why it does not invalidate the result** — or say that it does. A
-limitation stated without its consequence leaves the reader to assume the worst, and a certificate
-whose caveats cannot be sized is indistinguishable from one saying the whole thing is broken.
-
-**22. An open item says what was done about it.** *"Substitution is a forge decision, not an
-acquisition one"* is a jurisdictional dodge. Say what the forge actually did, and what that does and
-does not prove.
-
-**23. Check whether a limitation is a limitation at all.** Attribute order was filed as a gap through
-two drafts. It is not one — XML attribute order carries no meaning, so there is nothing to lose. **A
-true statement filed under the wrong heading acquires a meaning nobody wrote.**
-
-**24. Distinguish the two completeness questions and answer both.** *Ingestion* completeness — does
-the graph carry what the source says — is what the round trip measures. *Corpus* completeness — is
-this the right source — is answered by the acquisition record, not by silence. Reporting the second
-as unknown because the first cannot see it understates the work.
-
-**25. Say which figures you measured and which you carried forward.** Where a number came from
-another document or an earlier run, name the source in the same breath.
+**20. Say which figures were measured here and which were carried forward.**
 
 ---
 
@@ -161,9 +145,9 @@ fails, the certificate says something narrower and names the fix.**
 | bundle | passes | fails |
 |---|---|---|
 | `pesc260805` | six of six | — |
-| `ceds` | six of six | — *(independent rdflib check run 2026-08-09; no declared limit, so §3 is derived — see its certificate)* |
+| `ceds` | five of six | no declared `semanticValidationLimit`, so its limits section is derived by reading code. Independent rdflib check run 2026-08-09 and it agreed |
+| `edfi` | five of six | only one instrument examines the graph — no second implementation by another author. **Certified clean 2026-08-09**: the 349 carried, limit now declared |
 | `sif` | five of six | the source itself is known to be missing content — 6,586 containers, 1,887 repeatability declarations. **Nothing on our side can fix it**, so this row may never close |
-| `edfi` | four of six | 349 statements missed and enumerated; no declared limit |
 
 See each certificate's Summary for what it claims instead. **A bundle that fails a row is not thereby
 disqualified from claiming anything** — SIF still claims a complete and usable rendering *of its
