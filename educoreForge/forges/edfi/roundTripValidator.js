@@ -334,10 +334,17 @@ const moduleFunction = () => {
 					'stated instrument limit R-WO-15(e); (b) the `//` COMMENT LINES the publisher ' +
 					'grammar itself lexer-skips, excluded from the domain by R-WO-15(a) and CENSUSED ' +
 					'with file:line so they are visible rather than dropped; (c) the declared item ' +
-					'KEYWORD, excluded from statement identity uniformly by R-WO-15(b), so an item ' +
-					'whose declared keyword drifts from its referent\'s actual construct type still ' +
-					'round-trips clean — the forge censuses that drift separately and this instrument ' +
-					'does not re-measure it; (d) WHITESPACE SURROUNDING AN OPTION VALUE, since ' +
+					'keyword\'s REFERENCE-TYPE half — the `domain entity` / `association` / ' +
+					'`descriptor` / `common` word — excluded from statement identity uniformly by ' +
+					'R-WO-15(b), so an item whose declared keyword drifts from its referent\'s actual ' +
+					'construct type still round-trips clean; the forge censuses that drift separately ' +
+					'and this instrument does not re-measure it. ITS OTHER HALF IS MODELLED, AND THAT ' +
+					'IS NOT A CONTRADICTION: on an interchange component the keyword also says ELEMENT ' +
+					'versus IDENTITY, and that half IS carried and modelled on both sides per (4) ' +
+					'above as componentKind. The keyword is excluded from statement IDENTITY, never ' +
+					'from the statement DOMAIN — an exclusion from identity says two items with ' +
+					'different keywords are the same SUBJECT, not that nothing about the keyword is ' +
+					'measured; (d) WHITESPACE SURROUNDING AN OPTION VALUE, since ' +
 					'R-WO-15(c) takes the TRIMMED text as subject identity while the object carries ' +
 					'the source-verbatim string, so two values differing only in surrounding ' +
 					'whitespace share one identity. ALSO DECLARED, a property of the COMPARISON ' +
