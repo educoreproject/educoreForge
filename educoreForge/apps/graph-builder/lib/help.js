@@ -231,6 +231,28 @@ OPTIONS
                            IT DOES NOT AFFECT VECTORIZATION. Embedding still happens per --vectorize
                            (default true), so a debug run over never-embedded text still spends Voyage
                            credit; over already-embedded text the shared cache makes it free.
+     --limit=<N>  |  --offset=<N>
+                           THE DEBUG WINDOW over each bridge's SOURCE ELEMENTS. Both OPTIONAL and
+                           both default to ABSENT (an ordinary full run). --limit=10 judges only ten
+                           source elements; --offset=50 starts at the fifty-first, so a debugging
+                           session can skip around a large standard. They compose: --limit=10
+                           --offset=50 judges elements 51-60.
+                           APPLIED AFTER any standard-specific scope, so with the SIF bridge's
+                           sifObjectScope=StudentPersonal a --limit=10 means ten of THAT object's
+                           fields, not ten of all 15,620.
+                           THE ORDER IS SORTED BY stableId FIRST. A graph read returns no guaranteed
+                           order, and an offset over an unstable order would land on different
+                           elements every run — which would make the flag useless for the debugging
+                           it exists for. Sorting makes a given window reproducible.
+                           ⚠ THE RESULTING DECISION BLOCK IS PARTIAL, and its generation SAYS SO
+                           (…-PARTIAL_WINDOW_limit10_offset50). This matters: a block frozen from ten
+                           of 214 elements is otherwise indistinguishable from a complete one, and a
+                           later plain -build would MATERIALIZE those ten forever and report success —
+                           silent under-coverage wearing the appearance of a finished pairing.
+                           A malformed value, or a window that selects ZERO elements (an offset at or
+                           past the end), is REFUSED BY NAME — never silently corrected, never judged
+                           as silence. The refusal happens BEFORE forging, not after.
+                           Affects BRIDGING ONLY. It does not limit forging or materialization.
      --vectorize=true|false
                            Whether -build spends real Voyage embedding credit. OPTIONAL, and it
                            DEFAULTS TO true -- the normal gold build vectorizes. Pass

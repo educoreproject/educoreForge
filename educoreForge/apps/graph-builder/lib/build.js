@@ -252,6 +252,11 @@ const realLlmClientFactory = require(path.join(__dirname, '..', 'apps', 'bridge-
 // so adding a rule to its register needs no edit in this file.
 const debugJudgeFactory = require(path.join(__dirname, '..', 'apps', 'bridge-maker', 'lib', 'debugJudge'));
 
+// parsePositiveInteger — the SAME reader lib/sourceWindow.js applies at slice time, required here so
+// a malformed --limit/--offset is refused identically whether it is caught eagerly (before forging)
+// or at the moment the window is applied. Two readers would be two chances to disagree.
+const { parsePositiveInteger } = require(path.join(__dirname, '..', 'apps', 'bridge-maker', 'lib', 'sourceWindow'));
+
 // canonical [anthropicAi] config home (the twin of embedding-client's [voyageEmbedding] path). The real
 // llmClient reads the key from here OR from ANTHROPIC_API_KEY, and THROWS BY NAME at construction if neither
 // resolves (§6 no-silent-default). Absolute, so both trees name the one file that holds the secret.
@@ -701,6 +706,44 @@ const resolveDebugJudge = (deps, injectedCommandLineParameters) => {
 	return nameOrRefusal(firstValue === undefined ? '' : firstValue);
 };
 
+// resolveSourceWindow — the DEBUG WINDOW over each bridge's source elements (tqii, 2026-08-10:
+// "if I ask for SIF.StudentPersonals and say limit=10, I want only 10 of 214 elements processed...
+// lets add --offset as well so we can skip around"). --limit=N / --offset=N, both OPTIONAL and both
+// defaulting to ABSENT, which is an ordinary full run. Precedence matches the other operator knobs:
+// an explicit deps value wins; absent, the command line is read; a second argument may supply the
+// command line (the test seam — production passes nothing).
+//
+// PARSING AND REFUSAL LIVE IN lib/sourceWindow.js, not here, so the CLI and any programmatic caller
+// refuse identically. This resolver only decides WHERE the values come from.
+//
+// THE WINDOW APPLIES TO BRIDGING ONLY. It narrows which SOURCE ELEMENTS a bridge judges; it does not
+// limit forging, materialization, or anything else. A windowed run's frozen block is PARTIAL and its
+// generation says so.
+const resolveSourceWindow = (deps, injectedCommandLineParameters) => {
+	const commandLineParameters =
+		injectedCommandLineParameters ||
+		(process.global && process.global.commandLineParameters) || { values: {}, switches: {} };
+	const readOne = (name) => {
+		if (deps[name] !== undefined) {
+			return deps[name];
+		}
+		return ((commandLineParameters.values && commandLineParameters.values[name]) || [])[0];
+	};
+	const limit = readOne('limit');
+	const offset = readOne('offset');
+	// Validate HERE as well as at apply time, so a malformed window fails BEFORE a container is
+	// provisioned and a forge runs — the same eager-gate discipline a keyless --rebridge gets.
+	const limitCheck = parsePositiveInteger({ value: limit, name: '--limit', minimum: 1 });
+	if (limitCheck.error) {
+		return { error: `graphBuilder build: ${limitCheck.error}` };
+	}
+	const offsetCheck = parsePositiveInteger({ value: offset, name: '--offset', minimum: 0 });
+	if (offsetCheck.error) {
+		return { error: `graphBuilder build: ${offsetCheck.error}` };
+	}
+	return { value: { limit: limitCheck.value, offset: offsetCheck.value } };
+};
+
 // resolveInferenceConfig — assemble the inferred producer's run config, SELECTING the reranker llmClient with
 // the same §6 discipline as vectorize/rebridge. This is the real-vs-stub seam (the FACTORY):
 //   1. deps.inferenceConfig.llmClient present -> used AS-IS. The hermetic suite injects a deterministic STUB
@@ -941,6 +984,13 @@ const build = (recipe, deps, callback) => {
 	// real --rebridge with no injected client MINTS the real one, which throws BY NAME when no key resolves.
 	// ⟪skipAI⟫ WHICH judge answers, resolved before the config that carries it. A refusal here must
 	// reach the operator before any judging begins, exactly as a keyless --rebridge does.
+	const sourceWindowResolution = resolveSourceWindow(deps, deps.commandLineParameters);
+	if (sourceWindowResolution.error) {
+		callback(sourceWindowResolution.error);
+		return;
+	}
+	const sourceWindow = sourceWindowResolution.value;
+
 	const debugJudgeResolution = resolveDebugJudge(deps, deps.commandLineParameters);
 	if (debugJudgeResolution.error) {
 		callback(debugJudgeResolution.error);
@@ -1441,6 +1491,11 @@ const build = (recipe, deps, callback) => {
 						// bridge's sifObjectScope) and they reach the producer as config keys. Spread FIRST
 						// so the orchestrator-owned keys below always win over a recipe collision.
 						...(bridge.params || {}),
+						// ⟪skipAI WINDOW⟫ --limit/--offset reach every bridge as config, AFTER the recipe's own
+						// params spread so an operator's window always wins over a recipe's. Undefined on an
+						// ordinary run, which the bridges pass through untouched.
+						limit: sourceWindow.limit,
+						offset: sourceWindow.offset,
 						sourceStandard: bridge.source,
 						sourceStandardName: sourceBundle.standardName,
 						sourceVersion: resolvedVersionByToken[bridge.source],
@@ -1832,6 +1887,7 @@ module.exports.resolveInferenceConfig = resolveInferenceConfig;
 // ⟪skipAI⟫ exported for its hermetic gate — the rule resolution is refuse-by-name logic worth
 // exercising directly rather than only through a full build.
 module.exports.resolveDebugJudge = resolveDebugJudge;
+module.exports.resolveSourceWindow = resolveSourceWindow;
 // ⟪P2-review S-2⟫ the heap gate, exported as a static so its refusal is provable with an
 // injected limit — never by shrinking a real process's heap.
 module.exports.resolveHeapAdequacy = resolveHeapAdequacy;

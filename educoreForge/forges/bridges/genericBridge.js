@@ -188,6 +188,15 @@ const { debugMarkFromLlmClient, debugMarkFromGeneration, generationWithDebugMark
 	path.join(__dirname, '..', '..', 'apps', 'graph-builder', 'apps', 'bridge-maker', 'lib', 'debugJudge'),
 );
 
+// ⟪skipAI WINDOW, 2026-08-10⟫ --limit / --offset over this bridge's source elements, shared so the
+// window means the same thing for every standard. It SORTS by stableId before slicing (an offset over
+// an unstable graph-read order would land somewhere different every run) and marks the frozen block's
+// generation, because a block built from 10 of 214 elements is otherwise indistinguishable from a
+// complete one and MATERIALIZE would replay the ten forever as if that were the pairing.
+const { applySourceWindow, windowMarkFor, generationWithWindowMark, describeWindow } = require(
+	path.join(__dirname, '..', '..', 'apps', 'graph-builder', 'apps', 'bridge-maker', 'lib', 'sourceWindow'),
+);
+
 // EVIDENCE_GENERATION — the ⟪A6⟫ generation tag every frozen block self-describes (R4: new evidence +
 // prompt => new picks by design => the inferred edges are a NEW generation). A FIXED pipeline-version
 // string, not a timestamp — replay stays byte-exact within one generation (R4). Bump this string
@@ -580,7 +589,14 @@ module.exports = (injectedTools = {}) =>
 			// edges. Computed once here rather than at each use, so the block, the judgment-cache key, the
 			// forensics and the returned report can never disagree about which generation ran.
 			const debugMark = debugMarkFromLlmClient(kit);
-			const runGeneration = generationWithDebugMark(EVIDENCE_GENERATION, debugMark);
+			// the window mark keys on the REQUESTED limit/offset, so the generation is fixed before any
+			// data is read — it stamps the frozen block and keys the judgment cache, both of which must
+			// be decided up front.
+			const windowMark = windowMarkFor({ limit: config.limit, offset: config.offset });
+			const runGeneration = generationWithWindowMark(
+				generationWithDebugMark(EVIDENCE_GENERATION, debugMark),
+				windowMark,
+			);
 			const llmClient = kit.inferenceConfig.llmClient;
 
 			const taskList = new taskListPlus();
@@ -610,6 +626,21 @@ module.exports = (injectedTools = {}) =>
 					next('', { ...args, sourceNodes });
 				}),
 			);
+			// ⟪skipAI WINDOW⟫ apply --limit/--offset AFTER the walk (and after any standard-specific scope,
+			// so a limit means "10 of the scoped set", not 10 of everything). A window is refused BY NAME
+			// when malformed or when it selects nothing; an ordinary run passes through untouched.
+			taskList.push((args, next) => {
+				const windowed = applySourceWindow(args.sourceNodes, { limit: config.limit, offset: config.offset });
+				if (windowed.error) {
+					next(`${MAPPING_TOOL}: ${windowed.error}`, args);
+					return;
+				}
+				if (windowed.window) {
+					const { xLog } = process.global;
+					xLog.status(`[${MAPPING_TOOL}] ${describeWindow(windowed.window)}`);
+				}
+				next('', { ...args, sourceNodes: windowed.sourceNodes, sourceWindow: windowed.window });
+			});
 			// the FULL CEDS HubReference candidate elements (R5's base evidence source, all tiers).
 			taskList.push((args, next) =>
 				readReferenceNodes((err, nodes) =>
