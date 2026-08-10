@@ -245,6 +245,13 @@ const defaultComponents = {
 // --rebridge (resolveInferenceConfig's eager gate below).
 const realLlmClientFactory = require(path.join(__dirname, '..', 'apps', 'bridge-maker', 'lib', 'llmClient'));
 
+// debugJudgeFactory — the FREE, FLAGGED stand-in for the reranker (skipAI, 2026-08-10). The other
+// module in this tree that answers `rerank`; --useDebugJudge selects it INSTEAD of the real client,
+// so the whole bridging chain can be exercised without spending Opus credit. Its own header carries
+// the full rationale. REGISTERED_RULE_NAMES/DEFAULT_RULE are read from it rather than restated here,
+// so adding a rule to its register needs no edit in this file.
+const debugJudgeFactory = require(path.join(__dirname, '..', 'apps', 'bridge-maker', 'lib', 'debugJudge'));
+
 // canonical [anthropicAi] config home (the twin of embedding-client's [voyageEmbedding] path). The real
 // llmClient reads the key from here OR from ANTHROPIC_API_KEY, and THROWS BY NAME at construction if neither
 // resolves (§6 no-silent-default). Absolute, so both trees name the one file that holds the secret.
@@ -626,6 +633,74 @@ const pairInRebridgeScope = (rebridgeScope, bridge) => {
 const rebridgeScopeIsActive = (rebridgeScope) =>
 	rebridgeScope === 'all' || (Array.isArray(rebridgeScope) && rebridgeScope.length > 0);
 
+// resolveDebugJudge — WHICH judge answers this run, an operator switch with the same §6 discipline as
+// resolveVectorize/resolveRebridge. --useDebugJudge names a RULE from debugJudge's register (tqii,
+// 2026-08-10), NOT a list of standards: SCOPING REMAINS --rebridge's job, and one judge serves the
+// whole run ("I have no intention of allowing different standards to use different debugging
+// judges"). Precedence: an explicit deps.useDebugJudge (orchestrator/test injection) wins; absent,
+// the command line is read; absent entirely -> null, meaning the REAL reranker. A second argument
+// may supply the command line explicitly (the test seam; production passes nothing).
+//   --useDebugJudge            (bare, no value) -> the register's documented DEFAULT_RULE
+//   --useDebugJudge=abstain    -> that rule, matched CASE-INSENSITIVELY
+//   --useDebugJudge=nonsense   -> REFUSED BY NAME, listing the registered rules. Never a fallback.
+// Returns { value } (a rule name or null) or { error }; no throw, so build() routes a refusal
+// through its callback.
+const resolveDebugJudge = (deps, injectedCommandLineParameters) => {
+	const registeredNames = debugJudgeFactory.REGISTERED_RULE_NAMES;
+	const nameOrRefusal = (rawValue) => {
+		const wanted = `${rawValue}`.trim();
+		if (wanted === '') {
+			return { value: debugJudgeFactory.DEFAULT_RULE };
+		}
+		const matched = registeredNames.find(
+			(oneName) => oneName.toLowerCase() === wanted.toLowerCase(),
+		);
+		if (!matched) {
+			return {
+				error:
+					`graphBuilder build: --useDebugJudge='${wanted}' names no registered debug judge rule. ` +
+					`Registered rules are: ${registeredNames.join(', ')}. It was NOT corrected to a default — ` +
+					`a misspelled rule must refuse rather than silently become another rule.`,
+			};
+		}
+		return { value: matched };
+	};
+
+	if (deps.useDebugJudge !== undefined) {
+		if (deps.useDebugJudge === null || deps.useDebugJudge === false) {
+			return { value: null };
+		}
+		if (typeof deps.useDebugJudge !== 'string') {
+			return {
+				error:
+					`graphBuilder build: deps.useDebugJudge must be a rule-name string (or null) when supplied, ` +
+					`got ${typeof deps.useDebugJudge} (${JSON.stringify(deps.useDebugJudge)}). It was NOT ` +
+					`corrected to a default.`,
+			};
+		}
+		return nameOrRefusal(deps.useDebugJudge);
+	}
+
+	// injectedCommandLineParameters — the TEST seam, and the same componentOverrides idiom llmClient
+	// uses for postOnce. process.global.commandLineParameters is sealed NON-WRITABLE on purpose (the
+	// real command line must not be mutable at run time), so a hermetic gate is given its own object
+	// here rather than swapping process.global out from under the process — which would mutate shared
+	// state and leave it clobbered if an assertion threw. PRODUCTION PASSES NOTHING and reads exactly
+	// what it always read.
+	const commandLineParameters =
+		injectedCommandLineParameters ||
+		(process.global && process.global.commandLineParameters) || { values: {}, switches: {} };
+	const values = (commandLineParameters.values && commandLineParameters.values.useDebugJudge) || undefined;
+	const switched = !!(commandLineParameters.switches && commandLineParameters.switches.useDebugJudge);
+	if (values === undefined && !switched) {
+		return { value: null };
+	}
+	// Present with no value (bare --useDebugJudge, which qtools parses to an empty array, or a bare
+	// switch) means "the default rule" rather than a guess about which rule was meant.
+	const firstValue = (values || [])[0];
+	return nameOrRefusal(firstValue === undefined ? '' : firstValue);
+};
+
 // resolveInferenceConfig — assemble the inferred producer's run config, SELECTING the reranker llmClient with
 // the same §6 discipline as vectorize/rebridge. This is the real-vs-stub seam (the FACTORY):
 //   1. deps.inferenceConfig.llmClient present -> used AS-IS. The hermetic suite injects a deterministic STUB
@@ -637,12 +712,52 @@ const rebridgeScopeIsActive = (rebridgeScope) =>
 //      no key resolves (llmClient's own §6 refusal), surfaced here through the build's callback so a keyless
 //      --rebridge fails LOUDLY before any Voyage/Opus credit is spent, never a silent no-op.
 //   3. else (plain build, inactive scope) -> the config as given; the materialize path needs no llmClient.
+// ⟪skipAI, 2026-08-10⟫ a resolved debugJudgeRule DIVERTS step 2: the register's judge is constructed
+// instead of the Anthropic client, so a real --rebridge runs end to end with no key and no spend. Two
+// refusals guard it, both BY NAME:
+//   - --useDebugJudge with NO ACTIVE --rebridge SCOPE. Nothing would be judged, so the flag would sit
+//     idle and the run would LOOK like it worked — the silent-no-op shape this tree refuses. It does
+//     NOT imply --rebridge=all: a flag that quietly enables another flag is exactly what §6 forbids.
+//   - --useDebugJudge TOGETHER WITH an injected deps.inferenceConfig.llmClient. Two judges were named
+//     for one run; picking either silently would make the run's own report unreliable.
 // Answers { value } or { error } — the error-object idiom, so build() routes a refusal through its callback
 // rather than throwing past it.
-const resolveInferenceConfig = (deps, rebridgeScope) => {
+const resolveInferenceConfig = (deps, rebridgeScope, debugJudgeRule) => {
 	const base = deps.inferenceConfig || {};
-	if (base.llmClient || !rebridgeScopeIsActive(rebridgeScope)) {
+	const scopeIsActive = rebridgeScopeIsActive(rebridgeScope);
+
+	if (debugJudgeRule && !scopeIsActive) {
+		return {
+			error:
+				`graphBuilder build: --useDebugJudge='${debugJudgeRule}' was given but no --rebridge scope is ` +
+				`active, so NOTHING WOULD BE JUDGED and the debug judge would never be called. A plain build ` +
+				`MATERIALIZES frozen decision blocks and asks no judge at all. Name what to rebridge ` +
+				`(--rebridge=all or --rebridge=<token>[,<token>...]); --useDebugJudge does not imply it.`,
+		};
+	}
+	if (base.llmClient && debugJudgeRule) {
+		return {
+			error:
+				`graphBuilder build: --useDebugJudge='${debugJudgeRule}' was given AND an llmClient was injected ` +
+				`through deps.inferenceConfig. Two judges are named for one run and there is no precedence rule ` +
+				`— pass one or the other.`,
+		};
+	}
+	if (base.llmClient || !scopeIsActive) {
 		return { value: base };
+	}
+	if (debugJudgeRule) {
+		// Construction refuses BY NAME on an unregistered rule (already validated in resolveDebugJudge,
+		// so this is defense in depth), translated into the callback channel like the real client below.
+		let debugJudge;
+		try {
+			debugJudge = debugJudgeFactory({ ruleName: debugJudgeRule });
+		} catch (constructError) {
+			return {
+				error: `graphBuilder build: the debug judge could not be constructed: ${constructError.message}`,
+			};
+		}
+		return { value: { ...base, llmClient: debugJudge } };
 	}
 	const llmClientFactory = deps.llmClientFactory || realLlmClientFactory;
 	let mintedClient;
@@ -824,7 +939,23 @@ const build = (recipe, deps, callback) => {
 	// inferenceConfig carries the reranker llmClient for a real --rebridge. The real-vs-stub SELECTION lives in
 	// resolveInferenceConfig (the FACTORY seam): the suite injects a STUB via deps.inferenceConfig.llmClient; a
 	// real --rebridge with no injected client MINTS the real one, which throws BY NAME when no key resolves.
-	const inferenceConfigResolution = resolveInferenceConfig(deps, rebridgeScope);
+	// ⟪skipAI⟫ WHICH judge answers, resolved before the config that carries it. A refusal here must
+	// reach the operator before any judging begins, exactly as a keyless --rebridge does.
+	const debugJudgeResolution = resolveDebugJudge(deps, deps.commandLineParameters);
+	if (debugJudgeResolution.error) {
+		callback(debugJudgeResolution.error);
+		return;
+	}
+	const debugJudgeRule = debugJudgeResolution.value;
+	if (debugJudgeRule) {
+		xLog.status(
+			`graphBuilder build: --useDebugJudge='${debugJudgeRule}' — THE REAL RERANKER IS NOT BEING USED. ` +
+				`Judgments this run are mechanical and every resulting node and edge is flagged ` +
+				`${debugJudgeFactory.DEBUG_MARK}. No Opus credit will be spent on inference.`,
+		);
+	}
+
+	const inferenceConfigResolution = resolveInferenceConfig(deps, rebridgeScope, debugJudgeRule);
 	if (inferenceConfigResolution.error) {
 		callback(inferenceConfigResolution.error);
 		return;
@@ -1698,6 +1829,9 @@ module.exports.rebridgeScopeIsActive = rebridgeScopeIsActive;
 // the real-vs-stub reranker SELECTION seam (P3b), exported so the factory choice is gated directly: a stub is
 // used when injected, a real client is minted (via the injected/default factory) for an active --rebridge.
 module.exports.resolveInferenceConfig = resolveInferenceConfig;
+// ⟪skipAI⟫ exported for its hermetic gate — the rule resolution is refuse-by-name logic worth
+// exercising directly rather than only through a full build.
+module.exports.resolveDebugJudge = resolveDebugJudge;
 // ⟪P2-review S-2⟫ the heap gate, exported as a static so its refusal is provable with an
 // injected limit — never by shrinking a real process's heap.
 module.exports.resolveHeapAdequacy = resolveHeapAdequacy;

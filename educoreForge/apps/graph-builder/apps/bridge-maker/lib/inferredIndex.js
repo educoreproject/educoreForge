@@ -76,8 +76,34 @@ const moduleFunction =
 		mappingTool = 'semanticBridge',
 		method = 'definitionEmbedding-opusRerank-v1',
 		decisionBlockHash = '',
+		// ⟪skipAI FLAGGING, 2026-08-10⟫ decisionAlgorithm — set ONLY when a DEBUG JUDGE answered this
+		// run (--useDebugJudge). It stamps every edge this materializer composes so a contaminated
+		// graph is DETECTABLE rather than merely documented: askMilo can be told to accept
+		// INVALID_DEBUG deliberately and will otherwise raise an alarm. Absent on every real run, so a
+		// genuine edge carries no such property at all and the flag can never be a false positive.
+		//
+		// EDGES ONLY, AND THAT IS DELIBERATE. A bridge composes NO nodes on the ordinary path
+		// (buildReifiedNodes fires only on curationInputs), so the nodes in a bridged graph are FORGED
+		// standard elements and CEDS hub references — correct content that a debug run did not produce.
+		// Flagging them would mark honest work invalid. The reified MappingAssertion nodes ARE this
+		// materializer's own output and are flagged with the edges.
+		decisionAlgorithm = undefined,
 	} = {}) => {
 		const edgeType = SKOS_EDGE_TYPES[predicate];
+
+		// Spread into every composed edge/node. Empty on a real run — an absent property, not a
+		// property whose value says 'not debug', so nothing has to be read to know an edge is genuine.
+		const isDebugRun = typeof decisionAlgorithm === 'string' && decisionAlgorithm !== '';
+		const debugFlagProperties = isDebugRun ? { decisionAlgorithm } : {};
+
+		// ⟪skipAI, 2026-08-10⟫ THE TIER FLIPS TOO, and this is the more important half of the flagging.
+		// A debug edge used to be stamped provenanceTier 'embedding-inferred' — a FALSE CLAIM: no
+		// embedding informed the choice, rule 'first' takes candidate 1 unconditionally. provenanceTier
+		// is the field a consumer trusts most, so it was the worst place in the edge for a lie, and
+		// askMilo duly described these mappings as calibrated-confidence equivalents (tqii observed it
+		// live, 2026-08-10). A reader who checks only the tier now learns the truth without being told
+		// what to look for.
+		const effectiveProvenanceTier = isDebugRun ? PROVENANCE_TIER.INVALID_DEBUG : provenanceTier;
 
 		// the authored-track factory, used ONLY for its pure buildReferenceIndex(referenceNodes) ->
 		// { basePropertyRef, baseValueRef }. The chosen CEDS target resolves DIRECTLY by canonicalKey.
@@ -105,7 +131,7 @@ const moduleFunction =
 						role: 'MappingAssertion',
 						[MP.PREDICATE]: predicate,
 						[MP.MAPPING_JUSTIFICATION]: mappingJustification,
-						[MP.PROVENANCE_TIER]: provenanceTier,
+						[MP.PROVENANCE_TIER]: effectiveProvenanceTier,
 						[MP.SUBJECT_SOURCE]: subjectSource,
 						[MP.OBJECT_SOURCE]: objectSource,
 						[MP.MAPPING_TOOL]: mappingTool,
@@ -113,6 +139,7 @@ const moduleFunction =
 						curationAnnotation: oneInput.annotation || 'CURATED_BY',
 						curationNote: oneInput.note || '',
 						decisionBlockHash,
+						...debugFlagProperties,
 					},
 				});
 				reifyEdges.push({
@@ -184,7 +211,7 @@ const moduleFunction =
 						[MP.PREDICATE]: predicate,
 						[MP.CONFIDENCE]: confidence,
 						[MP.MAPPING_JUSTIFICATION]: mappingJustification,
-						[MP.PROVENANCE_TIER]: provenanceTier,
+						[MP.PROVENANCE_TIER]: effectiveProvenanceTier,
 						[MP.SUBJECT_SOURCE]: subjectSource,
 						[MP.SUBJECT_VERSION]: subjectVersion,
 						[MP.OBJECT_SOURCE]: objectSource,
@@ -204,6 +231,7 @@ const moduleFunction =
 						cedsAnchorKey: targetKey,
 						decisionBlockHash,
 						resolution: 'direct',
+						...debugFlagProperties,
 					},
 				});
 			});

@@ -140,6 +140,14 @@ const SOURCE_STANDARD = 'CASE';
 const DEFAULT_ROLE = 'DmeProperty';
 const MATERIALIZER_CONFIG = { predicate: 'closeMatch', mappingJustification: 'semapv:SemanticSimilarity' };
 
+// ⟪skipAI FLAGGING, 2026-08-10⟫ the debug mark and its two travel paths, required from the module
+// that owns them (lib/debugJudge.js) rather than restated here — one convention, one spelling, no
+// chance of three bridges drifting apart. See that module's own header for why the mark must survive
+// into the frozen block's generation.
+const { debugMarkFromLlmClient, debugMarkFromGeneration, generationWithDebugMark } = require(
+	path.join(__dirname, '..', '..', '..', 'apps', 'graph-builder', 'apps', 'bridge-maker', 'lib', 'debugJudge'),
+);
+
 // EVIDENCE_GENERATION — this bridge's OWN generation tag (⟪A6⟫, R4), distinct from genericBridge's —
 // a CASE-nominating, CASE-considering pipeline produces a different generation of picks even over the
 // identical graph state, and must be legible as such.
@@ -507,7 +515,7 @@ module.exports = (injectedTools = {}) =>
 		};
 
 		// buildAndWrite — the SHARED tail of both modes, IDENTICAL to genericBridge.js's own.
-		const buildAndWrite = ({ inferredDecisions, sourceNodes, referenceNodes, decisionBlockHash }, done) => {
+		const buildAndWrite = ({ inferredDecisions, sourceNodes, referenceNodes, decisionBlockHash, decisionAlgorithm }, done) => {
 			const builder = kit.materializer({
 				...MATERIALIZER_CONFIG,
 				subjectSource: sourceStandardKey,
@@ -516,6 +524,7 @@ module.exports = (injectedTools = {}) =>
 				objectVersion,
 				mappingTool: MAPPING_TOOL,
 				decisionBlockHash,
+				decisionAlgorithm,
 			});
 			const subgraph = builder.buildInferredSubgraph({ inferredDecisions, sourceNodes, referenceNodes });
 			let edgesWritten = 0;
@@ -588,7 +597,14 @@ module.exports = (injectedTools = {}) =>
 				taskList.push((args, next) => readReferenceNodes((err, nodes) => next(err, { ...args, referenceNodes: nodes })));
 				taskList.push((args, next) => {
 					buildAndWrite(
-						{ inferredDecisions: enrichedInferredDecisions, sourceNodes: args.sourceNodes, referenceNodes: args.referenceNodes, decisionBlockHash },
+						{
+							inferredDecisions: enrichedInferredDecisions,
+							sourceNodes: args.sourceNodes,
+							referenceNodes: args.referenceNodes,
+							decisionBlockHash,
+							// the block self-describes: a debug-frozen block keeps flagging its edges forever.
+							decisionAlgorithm: debugMarkFromGeneration(parsed.generation),
+						},
 						(err, out) => next(err, { ...args, ...out }),
 					);
 				});
@@ -620,6 +636,12 @@ module.exports = (injectedTools = {}) =>
 		// ================= genericBridge.js's own runRebridge, with ONE difference: the composer is
 		// ================= constructed with THIS bridge's nominate/walk hooks + declared dependencies.
 		const runRebridge = () => {
+			// ⟪skipAI FLAGGING⟫ this run's generation, SUFFIXED when a debug judge answered, so the frozen
+			// block SELF-DESCRIBES as debug (⟪A6⟫) and every later plain-build replay keeps flagging its
+			// edges. Computed once here rather than at each use, so the block, the judgment-cache key, the
+			// forensics and the returned report can never disagree about which generation ran.
+			const debugMark = debugMarkFromLlmClient(kit);
+			const runGeneration = generationWithDebugMark(EVIDENCE_GENERATION, debugMark);
 			// ⟪P12⟫ the composer is now built INSIDE the pipeline (the ARM step below) rather than here,
 			// because its facetScanner's once-per-run precomputation needs the candidate VECTORS, which do
 			// not exist until the vectorize step has run. Declared here, assigned there, read by the
@@ -631,7 +653,7 @@ module.exports = (injectedTools = {}) =>
 				judgmentCache: kit.judgmentCache || null,
 				matchForensics: kit.matchForensics || null,
 				pairKey,
-				generation: EVIDENCE_GENERATION,
+				generation: runGeneration,
 				rendererVersion: kit.evidenceRenderer.RENDERER_VERSION,
 				evidenceSelect: kit.evidenceSelect,
 				llmClient,
@@ -824,7 +846,7 @@ module.exports = (injectedTools = {}) =>
 				const frozen = kit.evidenceFreezer.freeze({
 					pairStamp: { subjectSource: sourceStandardKey, subjectVersion, objectSource: HUB_STANDARD, objectVersion },
 					decisions: args.decisions,
-					generation: EVIDENCE_GENERATION,
+					generation: runGeneration,
 					rendererVersion: kit.evidenceRenderer.RENDERER_VERSION,
 					evidencePackages: args.frozenEvidencePayload,
 				});
@@ -840,6 +862,7 @@ module.exports = (injectedTools = {}) =>
 				buildAndWrite(
 					{
 						inferredDecisions: enrichedInferredDecisions,
+						decisionAlgorithm: debugMark,
 						sourceNodes: args.sourceNodes,
 						referenceNodes: args.referenceNodes,
 						decisionBlockHash: args.frozen.decisionBlockHash,
@@ -858,7 +881,7 @@ module.exports = (injectedTools = {}) =>
 					edgesWritten: args.edgesWritten,
 					decisionBlock: args.frozen.decisionBlockHash,
 					producer: 'inferred',
-					generation: EVIDENCE_GENERATION,
+					generation: runGeneration,
 					rendererVersion: kit.evidenceRenderer.RENDERER_VERSION,
 					counts: {
 						inferred: args.edgesWritten,

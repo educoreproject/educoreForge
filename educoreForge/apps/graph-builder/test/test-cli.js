@@ -358,10 +358,19 @@ harness.match(
 	buildUnforged.stderr,
 	/phase A \(forge\) failed: forge zorg: forger: no forge bundle for standard 'zorg'/,
 );
-harness.match(
-	'  and lists what this tree can actually forge',
-	buildUnforged.stderr,
-	/Known forges: case, ceds, cip, clr, ctdl, ctdlasn, ctdlqdata, dctap, edfi, eduapi, jedx, lif, medbiquitous, openbadges, pesc, sedm, sif, soc/,
+// DERIVED FROM THE TREE, NEVER RESTATED. This assertion used to carry a hardcoded list of eighteen
+// forge tokens, so adding the pesc260805 forge — a correct and routine act — broke an assertion about
+// ERROR-MESSAGE FORMATTING, which is the only thing it is actually here to prove. The list now comes
+// from the same forge scan the forger itself consults, so a new forge can never break it again while
+// the assertion keeps proving that the refusal names what IS available. (Fixed 2026-08-10; the
+// hardcoded form had been failing at 18-vs-19 tokens.)
+const knownForgeTokens = (scanOf(path.join(treeRoot, 'forges')).availableForges || []).join(', ');
+harness.ok(
+	`  and lists what this tree can actually forge (derived: ${
+		(scanOf(path.join(treeRoot, 'forges')).availableForges || []).length
+	} forges)`,
+	knownForgeTokens.length > 0 && buildUnforged.stderr.indexOf(`Known forges: ${knownForgeTokens}`) !== -1,
+	`expected 'Known forges: ${knownForgeTokens}' in stderr:\n${buildUnforged.stderr}`,
 );
 harness.ok(
 	'  the store was opened, so the injection reached the pipeline',

@@ -369,12 +369,21 @@ const PROVENANCE_TIERS = [
 	'embedding-inferred',
 	'structural',
 	'user-asserted',
+	// ⟪skipAI, 2026-08-10⟫ INVALID_DEBUG — the tier an edge carries when a DEBUG JUDGE produced it
+	// (--useDebugJudge). It exists because the alternative was a LIE: a debug edge used to be stamped
+	// 'embedding-inferred', which asserts that an embedding informed the choice. Nothing did — rule
+	// 'first' takes candidate 1 unconditionally. provenanceTier is the field a consumer is most
+	// likely to TRUST, so it was the worst possible place for a false claim, and a graph consumer
+	// reading it would have been told the edge was inferred when it was arithmetic.
+	// tqii, 2026-08-10, on seeing askMilo describe fake mappings as calibrated-confidence equivalents.
+	'invalid-debug',
 ];
 const PROVENANCE_TIER = {
 	SPEC_AUTHORITATIVE: 'spec-authoritative',
 	EMBEDDING_INFERRED: 'embedding-inferred',
 	STRUCTURAL: 'structural',
 	USER_ASSERTED: 'user-asserted',
+	INVALID_DEBUG: 'invalid-debug',
 };
 const isValidProvenanceTier = (oneTier) => PROVENANCE_TIERS.indexOf(oneTier) !== -1;
 

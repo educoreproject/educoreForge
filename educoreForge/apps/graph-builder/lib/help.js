@@ -202,6 +202,35 @@ OPTIONS
                            (or every pair with 'all'), FREEZES the result to the decision store, and
                            materializes it. This is the only mode that spends reranker/embedding credit
                            for inference.
+     --useDebugJudge[=<rule>]
+                           Answer this run's judgments MECHANICALLY instead of asking the real
+                           reranker, so the whole bridging chain can be exercised at ZERO Opus cost.
+                           OPTIONAL, DEFAULTS TO OFF (the real reranker). Bare --useDebugJudge takes
+                           the register's default rule. Rules: 'first' (always candidate 1, the top of
+                           the retrieval ranking -- DEGENERATE BY DESIGN, so any distribution or
+                           convergence measured on the result is an artifact of the rule, not of the
+                           pipeline); 'abstain' (never picks -- exercises the abstention and
+                           empty-decision paths); 'digest' (a deterministic sha256 of the prompt --
+                           varied and reproducible, use it when a non-degenerate spread is wanted).
+                           Matched case-insensitively; an unregistered rule is REFUSED BY NAME with
+                           the registered rules listed, never corrected to a default.
+
+                           IT NAMES A RULE, NOT STANDARDS. Scoping stays with --rebridge, and one
+                           judge serves the whole run. --useDebugJudge WITHOUT an active --rebridge
+                           scope is REFUSED: nothing would be judged, so the flag would sit idle while
+                           the run looked successful. It does NOT imply --rebridge=all.
+
+                           EVERYTHING IT PRODUCES IS FLAGGED. Every node and edge carries
+                           decisionAlgorithm 'INVALID_DEBUG' and every rationale announces itself, so
+                           a debug graph is detectable rather than merely documented -- askMilo can be
+                           told to accept INVALID_DEBUG deliberately, and will otherwise raise an
+                           alarm. NOTHING is read from or written to the judgment cache: a debug
+                           judgment banked there would later be served to a genuine --rebridge as a
+                           free fake answer.
+
+                           IT DOES NOT AFFECT VECTORIZATION. Embedding still happens per --vectorize
+                           (default true), so a debug run over never-embedded text still spends Voyage
+                           credit; over already-embedded text the shared cache makes it free.
      --vectorize=true|false
                            Whether -build spends real Voyage embedding credit. OPTIONAL, and it
                            DEFAULTS TO true -- the normal gold build vectorizes. Pass
