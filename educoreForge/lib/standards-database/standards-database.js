@@ -474,6 +474,40 @@ const makeApi = ({ esc, escJson, runSql, getRows, databaseFilePath }) => {
 	// getBlockMeta — the row WITHOUT the text BLOB, for callers that need what a block IS rather
 	// than what it contains. No content-address recompute, because there is no content to check —
 	// and no multi-hundred-megabyte read to pay for.
+	// findBlockBySubject — LOOK UP a stored block by the name a build would give it, rather than by
+	// its content address. ⟪Item 4, 2026-08-11⟫ this is what lets graphBuilder RETRIEVE an already-forged
+	// base block instead of forging it again: the caller derives the subject the same way phase A
+	// composes it, asks here, and on a hit hands the refId to replayManager.init.
+	//
+	// ⚠ THIS IS DELIBERATELY A LOOKUP BY NAME, WHICH BYPASSES CONTENT ADDRESSING, and that is the whole
+	// hazard of the feature. A subject names a SLOT; refId names CONTENT. Change a forge's code and the
+	// slot still resolves — to the OLD block. Nothing here can detect that, so the caller must make
+	// reuse an explicit operator choice and announce which block it took. Never make this the silent
+	// default path.
+	//
+	// Returns { value: {refId, kind, subject, version, createdAt} } on a hit, { value: null } on a
+	// clean miss (a miss is a STATE, not an error — the caller forges), or { error } on a fault.
+	const findBlockBySubject = ({ kind, subject, version }, callback) => {
+		if (!kind || !subject) {
+			callback(
+				`standardsDatabase.findBlockBySubject: kind and subject are both required (got kind ` +
+					`'${kind}', subject '${subject}') — there is no default.`,
+			);
+			return;
+		}
+		const versionClause = version === undefined ? '' : ` AND version=${esc(version)}`;
+		getRows(
+			`SELECT refId, kind, subject, version, createdAt FROM blocks WHERE kind=${esc(kind)} AND subject=${esc(subject)}${versionClause} ORDER BY createdAt DESC;`,
+			(err, rows) => {
+				if (err) {
+					callback(`standardsDatabase.findBlockBySubject: ${err}`);
+					return;
+				}
+				callback('', (rows || [])[0] || null);
+			},
+		);
+	};
+
 	const getBlockMeta = ({ refId }, callback) => {
 		getRows(
 			`SELECT refId, kind, subject, version, producedBy, createdAt
@@ -612,6 +646,7 @@ const makeApi = ({ esc, escJson, runSql, getRows, databaseFilePath }) => {
 		saveBlock,
 		getBlock,
 		getBlockMeta,
+		findBlockBySubject,
 		saveManifest,
 		getManifest,
 	};

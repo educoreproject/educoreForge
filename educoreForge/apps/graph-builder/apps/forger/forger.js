@@ -85,6 +85,10 @@ const FORGES_DIR = path.join(TREE_ROOT, 'forges');
 // the vocabulary's declared label names — the hub embed pass selects HubReference cards by the
 // SAME registry every producer stamps from, never a re-typed string.
 const { EQUIVALENCE_NODE_LABELS } = require(path.join(TREE_LIB, 'vocabulary', 'vocabulary'));
+// deriveVersionStamp — the SAME arithmetic the forge stamps with, reused by getVersionStamp so a
+// version answered WITHOUT forging can never drift from the version answered BY forging. Placed
+// here rather than with the other requires because TREE_LIB is declared above and not before them.
+const { deriveVersionStamp } = require(path.join(TREE_LIB, 'snapshot-provenance', 'snapshot-provenance'));
 
 const CONFIG_SECTION = 'forger';
 const CONFIG_FILE = 'graphBuilder.ini';
@@ -296,6 +300,65 @@ const resolveBundle = ({ standard }) => {
 //
 // 'unknown' is NOT the same thing as absent: it is the snapshot-provenance layer's deliberate,
 // warned, honest-gap marker, and it passes through as the bundle's own word.
+// getVersionStamp — ANSWER "what does this recipe's version token resolve to?" WITHOUT FORGING.
+// ⟪tqii, 2026-08-11⟫ "revise the control system in graphBuilder so it retrieves and instantiates the
+// base schema block for a standard instead of forging it" — and, when the recipe says 'current',
+// "use the same arithmetic that calculated its identity when it was forged."
+//
+// THE ARITHMETIC IS THE SAME FUNCTION, deriveVersionStamp, called with the same snapshot directory
+// the forge would use. What it does NOT have is the parse: deriveVersionStamp takes an optional
+// sourceVersion, which a forge supplies from its parsed metadata when the SOURCE SELF-DESCRIBES its
+// version, and a self-described version OUTRANKS the provenance file. So this function can answer
+// honestly only when the answer comes from the provenance file — which it verifies rather than
+// assumes, and REFUSES BY NAME otherwise rather than returning a version it cannot stand behind.
+//
+// Measured 2026-08-11: ceds -> 14.0.0.0 and lif -> 2.0, both versionSource 'provenance-file', both
+// byte-identical to what the forge stamped. The snapshot itself is not guessed either — the
+// descriptor PINS it (defaultSnapshot), so "dropping a new snapshot changes NOTHING until this line
+// says so" holds here exactly as it holds for forging.
+//
+// EXTENSION POINT, NOT YET NEEDED: a bundle whose version genuinely comes from its source document
+// would need to parse to answer, and should then declare its own stamp resolver in
+// parserDescriptor.ini (the same declared-not-sniffed idiom as roundTripValidator). Until such a
+// bundle exists this refuses for it, which costs a forge and never a wrong answer.
+const getVersionStamp = ({ standard } = {}) => {
+	const bundle = resolveBundle({ standard });
+	if (bundle.error) {
+		return { error: bundle.error };
+	}
+	if (!bundle.snapshotDirPath) {
+		return {
+			error:
+				`forger.getVersionStamp: bundle '${standard}' resolved no snapshot directory, so its ` +
+				`version cannot be derived without forging.`,
+		};
+	}
+	const warnings = [];
+	let stamp;
+	// deriveVersionStamp THROWS on a missing warn (its contract), and warn is how it reports a
+	// missing provenance file — collected rather than discarded so the caller can show them.
+	try {
+		stamp = deriveVersionStamp({
+			sourcePath: bundle.snapshotDirPath,
+			sourceVersion: null,
+			warn: (message) => warnings.push(message),
+		});
+	} catch (deriveError) {
+		return { error: `forger.getVersionStamp: ${deriveError.message}` };
+	}
+	if (stamp.versionSource !== 'provenance-file') {
+		return {
+			error:
+				`forger.getVersionStamp: bundle '${standard}' derives versionSource ` +
+				`'${stamp.versionSource}' from its snapshot alone. Only 'provenance-file' can be ` +
+				`answered without parsing the source, so this version is NOT offered — the caller must ` +
+				`forge. Refusing rather than reporting a version that a parse might contradict.` +
+				(warnings.length ? ` (${warnings.join('; ')})` : ''),
+		};
+	}
+	return { value: { ...stamp, warnings } };
+};
+
 const resolveReportedVersion = ({ bundleVersion, requestedVersion } = {}) => {
 	if (bundleVersion === undefined || bundleVersion === null || `${bundleVersion}`.trim() === '') {
 		return {
@@ -905,6 +968,7 @@ module.exports = moduleFunction({ moduleName });
 module.exports.resolveBundle = resolveBundle;
 module.exports.resolveVoyageConfigPath = resolveVoyageConfigPath;
 module.exports.resolveReportedVersion = resolveReportedVersion;
+module.exports.getVersionStamp = getVersionStamp;
 // the hub-fold seam and its registry, exported so the fold logic is provable WITHOUT running a
 // whole forge (test-forger drives foldHubIntoNodeEdges over a synthetic engine-shape base).
 module.exports.foldHubIntoNodeEdges = foldHubIntoNodeEdges;

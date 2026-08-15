@@ -117,12 +117,28 @@ const RECIPE_SCHEMA = {
 						items: { type: 'string', minLength: 1 },
 					},
 					bridge: { type: 'string', minLength: 1 },
-					// extractor and params (below) are VESTIGIAL (P5 teardown, 2026-07-30, re-verified by grep
-					// before this edit): neither is read anywhere at runtime — no bridge or forge module ever
-					// does `.extractor` or reads a bridge's `.params`. Already optional (never in `required`
-					// above), so this changes nothing structurally; the comment exists so no new recipe copies
-					// the ceremony from an old example. Left declared, not removed, so OLD recipes still
-					// populating them keep validating.
+					// extractor is VESTIGIAL (P5 teardown, 2026-07-30; re-verified by grep 2026-08-14):
+					// nothing reads `.extractor` at runtime. Left declared, not removed, so OLD recipes still
+					// populating it keep validating. Do not copy it into a new recipe.
+					//
+					// ⚠ `params` (below) is NOT vestigial — that claim was made here on 2026-07-30 and was
+					// FALSIFIED THE NEXT DAY. build.js:1650 records "bridges[].params — DE-VESTIGIALIZED
+					// (2026-07-31, the SIF StudentPersonal trial)" and spreads `...(bridge.params || {})`
+					// into the bridge's config. genericBridge and sourceWalker now REQUIRE
+					// params.specifiedMatchPropertyNames and refuse by name without it.
+					//
+					// The stale claim survived two weeks because it asserted a NEGATIVE — "nothing reads
+					// this" — which was grep-verified and true when written. A negative about the rest of
+					// the codebase has an expiry date and does not announce its own. The change that
+					// falsified it was documented in build.js, the file being edited, and never reached the
+					// file asserting the opposite.
+					//
+					// NOTE THE ENFORCEMENT GAP: `params` is typed `{ type: 'object' }` and is never in
+					// `required`, so this schema checks NOTHING about a parameter the bridge cannot run
+					// without. A missing or misspelled declaration passes structural validation and fails
+					// mid-run, after the forge is spent. Closing that is TODO Item 9 (-validateRecipe),
+					// whose own text names this exact case: "reach into the bridge algorithm to validate
+					// its passthrough, which is completely unchecked today."
 					extractor: { type: 'string', minLength: 1 },
 					dependencies: {
 						type: 'array',

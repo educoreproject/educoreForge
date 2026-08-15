@@ -101,10 +101,20 @@ const flattenCandidateRecord = (oneNode) => {
 	const props = oneNode.properties || {};
 	return {
 		...flattenNodeRecord(oneNode),
-		// the CEDS Global ID the pipeline emits as targetKey. In the golden the CEDS DmeProperty's cedsId
-		// equals the HubReference canonicalKey ('P######'); both keys are read here so the fixture and the
-		// real reforge resolve identically. (A value candidate carries its OV canonicalKey too, read above.)
-		cedsId: v1(props.cedsId) || v1(props.canonicalKey) || v1(props.propertyKey),
+		// ⟪THE FALLBACK CHAIN IS GONE, tqii 2026-08-12⟫ this read was
+		// `v1(props.cedsId) || v1(props.canonicalKey) || v1(props.propertyKey)` — the same chain the kit's
+		// lib.d/sourceWalker.js carried, retired there for the same reason and retired here so no copy of
+		// it survives anywhere: it MANUFACTURED an anchor for every node that declared none, handing back
+		// the node's own canonicalKey under the name of an author-given CEDS id. The old comment defended
+		// reading both keys so "the fixture and the real reforge resolve identically" — that is a fixture
+		// accommodation, not a fact about the data, and it is exactly what made an invented value
+		// indistinguishable from a declared one.
+		//
+		// ⚠ THIS BRIDGE IS NOT YET PARAMETERIZED. The kit reads the property name from the recipe
+		// (bridges[].params.specifiedMatchPropertyName); semanticBridge — the VALUE-TIER RELIC — has no
+		// such config threaded, so the name is still written here literally. That is a KNOWN gap to close
+		// when this bridge is adapted, NOT a defensible constant: it assumes the hub is CEDS.
+		cedsId: v1(props.cedsId),
 	};
 };
 

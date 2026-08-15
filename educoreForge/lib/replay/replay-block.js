@@ -64,6 +64,22 @@ const encodeEmbedding = (floatList) => {
 	return buf.toString('base64');
 };
 
+// ⟪MIXED VECTOR WIDTHS, tqii ruling 2026-08-13⟫ THE VECTOR CARRIES ITS OWN WIDTH. A float32
+// little-endian buffer is self-describing: its byte length divided by four IS the dimension count.
+// The block header's `embeddingDims` was previously the sole authority here, which made a single
+// per-block number decide whether a node's own vector could be read at all — and a block assembled
+// from more than one standard has no single right answer to put there.
+//
+// TQ's ruling: differing vector lengths are LEGITIMATE, not corruption. Voyage supports lengths that
+// are compatible and comparable, so a block holding a 1024-wide vector beside a 512-wide one is a
+// real condition to handle rather than a fault to refuse. Refuse-by-name remains right for invented
+// values and silent substitutions; it is wrong for a variation the underlying technology supports.
+//
+// SO THE HEADER IS NOW CORROBORATION, NOT SOURCE. When the caller supplies a positive expectedDims,
+// a mismatch is still a hard refusal — that check catches genuine corruption and is kept verbatim.
+// When the caller supplies nothing (a block whose header declares no single width), the width is
+// DERIVED from the buffer. What is never tolerated is a byte length that is not a whole number of
+// float32s: that is not a different width, it is a damaged vector, and it refuses by name.
 const decodeEmbedding = (base64Scalar, expectedDims) => {
 	if (typeof base64Scalar !== 'string') {
 		throw new Error(
@@ -71,14 +87,23 @@ const decodeEmbedding = (base64Scalar, expectedDims) => {
 		);
 	}
 	const buf = Buffer.from(base64Scalar, 'base64');
-	if (buf.length !== expectedDims * 4) {
+	if (buf.length === 0 || buf.length % 4 !== 0) {
 		throw new Error(
-			`replay-block.decodeEmbedding: byte length ${buf.length} != expected ${expectedDims * 4} ` +
-				`(${expectedDims} dims x 4-byte float32) — block corruption or wrong embeddingDims`,
+			`replay-block.decodeEmbedding: byte length ${buf.length} is not a positive multiple of 4 ` +
+				`— a float32 vector cannot have a partial value. This is a damaged vector, not a ` +
+				`different width.`,
 		);
 	}
-	const out = new Array(expectedDims);
-	for (let i = 0; i < expectedDims; i++) {
+	const declaredDims = typeof expectedDims === 'number' && expectedDims > 0 ? expectedDims : null;
+	if (declaredDims !== null && buf.length !== declaredDims * 4) {
+		throw new Error(
+			`replay-block.decodeEmbedding: byte length ${buf.length} != expected ${declaredDims * 4} ` +
+				`(${declaredDims} dims x 4-byte float32) — block corruption or wrong embeddingDims`,
+		);
+	}
+	const dims = declaredDims === null ? buf.length / 4 : declaredDims;
+	const out = new Array(dims);
+	for (let i = 0; i < dims; i++) {
 		out[i] = buf.readFloatLE(i * 4);
 	}
 	return out;
@@ -232,8 +257,20 @@ const deserializeBlock = (blockText) => {
 	}
 	// L13 contract (Phase R, authorized AZURE_PEAK 2026-07-02): edge-only blocks
 	// (mapping/inferredMapping) carry NO embedding header fields, so embeddingDims is
-	// validated ONLY when an embedded node line actually needs it. A block that carries an
-	// embedding without a valid dims still refuses loudly, per-line, below.
+	// validated ONLY when an embedded node line actually needs it.
+	//
+	// ⟪MIXED VECTOR WIDTHS, tqii ruling 2026-08-13⟫ A block whose header declares no width no longer
+	// refuses its embedded nodes — see decodeEmbedding's header for the ruling. THE FAILURE THIS
+	// REMOVES, so nobody restores the old gate believing it was load-bearing: a relationship block
+	// harvested from a run that reused two bases got its header width from whichever base loaded
+	// LAST. EdFi's stored base carries no vectors and declares none, CEDS declares 1024, EdFi came
+	// second — so the header said 'no vectors' while the harvested CEDS hub card in the body carried
+	// a 1024-wide one, and every materialize refused. The header and the body disagreed because the
+	// header was decided by load order; the body was right both times.
+	//
+	// A DECLARED WIDTH IS STILL ENFORCED. When the header names one, decodeEmbedding refuses any
+	// vector that does not match it, exactly as before. Only the ABSENCE of a declaration is now
+	// tolerated, and it resolves to the width the vector itself carries.
 	const dims = header.embeddingDims;
 	const dimsValid = typeof dims === 'number' && dims > 0;
 
@@ -253,16 +290,14 @@ const deserializeBlock = (blockText) => {
 				embeddingModelVersion: rec.embeddingModelVersion || null,
 			};
 			// DUAL-READ (PLAN §3.5, §5): legacy inline base64 `embedding` OR new `embeddingRef` — mutually
-			// exclusive. Legacy path UNCHANGED, including the dims-invalid loud throw. A ref is carried as a
-			// string (engine resolves it); embedding stays null. Neither present -> embedding null (as today).
+			// exclusive. A ref is carried as a string (engine resolves it); embedding stays null.
+			// Neither present -> embedding null (as today).
+			//
+			// ⟪MIXED VECTOR WIDTHS⟫ dimsValid decides whether the header gets a vote, not whether the
+			// line is readable: a declared width is passed through and enforced, an undeclared one
+			// leaves decodeEmbedding to read the width off the vector.
 			if (rec.embedding !== undefined && rec.embedding !== null) {
-				if (!dimsValid) {
-					throw new Error(
-						`replay-block.deserializeBlock: line ${i + 1} carries an embedding but ` +
-							`header.embeddingDims '${dims}' is invalid`,
-					);
-				}
-				node.embedding = decodeEmbedding(rec.embedding, dims);
+				node.embedding = decodeEmbedding(rec.embedding, dimsValid ? dims : null);
 			} else if (rec.embeddingRef !== undefined && rec.embeddingRef !== null) {
 				node.embeddingRef = rec.embeddingRef;
 			}

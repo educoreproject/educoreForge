@@ -699,7 +699,27 @@ module.exports = (injectedTools = {}) =>
 			});
 			taskList.push((args, next) =>
 				readReferenceNodes((err, nodes) =>
-					next(err, { ...args, referenceNodes: nodes, candidateElements: nodes.map(flattenFullRecord) }),
+					// ⟪ZERO HUB CARDS IS A REFUSAL, 2026-08-11⟫ the missing twin of the ZERO-SOURCES guard
+					// above. That one exists because the bronze build froze empty blocks as green; the
+					// hub side could do exactly the same and nothing caught it. The two candidate guards
+					// below use .find(), which returns undefined on an EMPTY array, so a zero-card pool
+					// sailed through both — the run would judge every source against nothing, abstain on
+					// all of them, freeze a block of pure abstention and EXIT 0. Nothing could produce an
+					// empty hub until block reuse arrived (a base block forged without deriveHub carries
+					// no cards under the same name), so this is a guard that was never needed rather than
+					// a bug that was missed. Refuse BY NAME, never materialize silence.
+					err
+						? next(err, args)
+						: (nodes || []).length === 0
+							? next(
+									`${MAPPING_TOOL}: found ZERO ${HUB_REFERENCE_LABEL} nodes for hub ` +
+										`'${HUB_STANDARD}' in the dependency graph — there is nothing to judge against. ` +
+										`The hub standard's base block is absent or was forged without its hub folded in ` +
+										`(deriveHub). An empty candidate pool is refused, never judged as universal ` +
+										`abstention.`,
+									args,
+								)
+							: next('', { ...args, referenceNodes: nodes, candidateElements: nodes.map(flattenFullRecord) }),
 				),
 			);
 

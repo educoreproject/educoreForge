@@ -45,14 +45,48 @@ const flattenNodeRecord = (oneNode) => {
 	};
 };
 
-// flattenCandidateRecord — flattenNodeRecord + the CEDS Global ID the pipeline emits as targetKey.
-// Byte-for-byte semanticBridge's helper.
-const flattenCandidateRecord = (oneNode) => {
-	const props = oneNode.properties || {};
-	return {
-		...flattenNodeRecord(oneNode),
-		cedsId: v1(props.cedsId) || v1(props.canonicalKey) || v1(props.propertyKey),
-	};
+// specifiedMatchPropertyNamesOrThrow — validate the recipe's declaration of WHICH properties on a
+// source element carry a mapping the standard's OWN SPECIFICATION declares.
+//
+// ⟪THE FALLBACK CHAIN IS GONE, tqii 2026-08-12⟫ flattenCandidateRecord used to compute
+// `cedsId: v1(props.cedsId) || v1(props.canonicalKey) || v1(props.propertyKey)`. That chain
+// MANUFACTURED an anchor for every record that never declared one: a node with no author-given CEDS
+// id came out carrying its own canonicalKey under the name of an anchor, and nothing downstream
+// could tell the manufactured value from a declared one. It is a value nobody typed wearing the name
+// of a value someone did, and it is gone — not parameterized, not defaulted, REMOVED.
+//
+// THE NAMES ARE A PARAMETER, NOT A CONSTANT, AND THERE IS MORE THAN ONE. Measured on the forged
+// bases 2026-08-12: an anchored EdFi element carries the SAME CEDS anchor under THREE property
+// names — `cedsId` (P001156), `crossRefs` (a JSON string restating it), and
+// `cedsOriginalAnchorPropertyName` (the source column it was read from). SIF is identical in shape.
+// None of the three is derivable from the others by code; only the recipe knows what a given forge
+// stamps, so the recipe names them all at bridges[].params.specifiedMatchPropertyNames. The hub need
+// not be CEDS and no standard can be assumed to use CEDS vocabulary.
+//
+// AN EMPTY LIST IS AN ANSWER, NOT AN ABSENCE. A standard that declares no specification-given
+// mapping says so with `"specifiedMatchPropertyNames": []`. An undefined value, a non-array, or a
+// blank entry is an UNANSWERED QUESTION and is refused.
+const specifiedMatchPropertyNamesOrThrow = (specifiedMatchPropertyNames, who) => {
+	if (!Array.isArray(specifiedMatchPropertyNames)) {
+		throw new Error(
+			`sourceWalker.${who}: specifiedMatchPropertyNames is ` +
+				`${specifiedMatchPropertyNames === undefined ? 'not given' : JSON.stringify(specifiedMatchPropertyNames)} — ` +
+				`the properties carrying a specification-declared mapping must be NAMED by the recipe as an ` +
+				`ARRAY (bridges[].params.specifiedMatchPropertyNames), or declared empty with []. They are ` +
+				`not assumed to be ['cedsId'] and there is no default.`,
+		);
+	}
+	const blankEntry = specifiedMatchPropertyNames.find(
+		(oneName) => typeof oneName !== 'string' || oneName.trim() === '',
+	);
+	if (blankEntry !== undefined) {
+		throw new Error(
+			`sourceWalker.${who}: specifiedMatchPropertyNames carries ${JSON.stringify(blankEntry)} — ` +
+				`every entry must be a non-empty property name. A blank entry names nothing and would ` +
+				`silently strip nothing.`,
+		);
+	}
+	return specifiedMatchPropertyNames;
 };
 
 // flattenFullRecord — bridgeEvidenceRefactor-spec.md §5 retrieval-enrichment reversal. NEW, ADDITIVE:
@@ -90,15 +124,47 @@ const flattenCandidateRecord = (oneNode) => {
 // add its name HERE, with a test proving both its array and its PG-collapsed arrival shapes.
 const LIST_VALUED_PROPERTY_NAMES = Object.freeze(['embedding', 'qualifierKeys', 'qualifierNames']);
 
-const flattenFullRecord = (oneNode) => {
-	const props = oneNode.properties || {};
-	const rawScalars = {};
-	Object.keys(props).forEach((oneKey) => {
-		rawScalars[oneKey] = LIST_VALUED_PROPERTY_NAMES.includes(oneKey) ? props[oneKey] : v1(props[oneKey]);
-	});
-	return {
-		...rawScalars,
-		...flattenCandidateRecord(oneNode),
+// flattenFullRecordFor — ⟪tqii 2026-08-12⟫ THE flatten for the INFERRED path: the full element with
+// every specification-declared mapping property REMOVED. There is no unparameterized variant.
+//
+// WHY IT STRIPS RATHER THAN CARRIES. Where an exact specified match already exists, the only
+// remaining purpose of inferring one is to TEST the inference — to ask what a judge would have said
+// had it not been told the answer. That comparison is worthless if the declared anchor reaches the
+// judge, and it reached it three ways at once: printed verbatim in the prompt's SOURCE ELEMENT block
+// (the renderer prints every non-skipped scalar the record carries), used by facetScan to award the
+// anchored candidate an UNCONDITIONAL, cap-exempt seat in the candidate pool, and restated on every
+// other candidate as "the source declares CEDS id X, which is NOT this candidate's key".
+//
+// REMOVING THE DATA ONCE, HERE, CLOSES ALL THREE. Every one of them reads the anchor off THIS
+// record, so a record that does not carry it cannot leak it — including through consumers nobody has
+// written yet. The alternative, suppressing it separately at each consumer, is three edits that must
+// all stay correct forever and cannot be proven by one test.
+//
+// WHAT IS NOT REMOVED, deliberately: the CANDIDATE cards' own identities. A CEDS hub card carries
+// its own P-number because that is what it IS, not because anyone declared a mapping to it. With the
+// source side blind there is nothing for the judge to match those numbers against.
+const flattenFullRecordFor = ({ specifiedMatchPropertyNames } = {}) => {
+	const strippedNames = specifiedMatchPropertyNamesOrThrow(
+		specifiedMatchPropertyNames,
+		'flattenFullRecordFor',
+	);
+	return (oneNode) => {
+		const props = oneNode.properties || {};
+		const rawScalars = {};
+		Object.keys(props).forEach((oneKey) => {
+			if (strippedNames.includes(oneKey)) {
+				return;
+			}
+			rawScalars[oneKey] = LIST_VALUED_PROPERTY_NAMES.includes(oneKey) ? props[oneKey] : v1(props[oneKey]);
+		});
+		const flatFields = flattenNodeRecord(oneNode);
+		strippedNames.forEach((oneName) => {
+			delete flatFields[oneName];
+		});
+		return {
+			...rawScalars,
+			...flatFields,
+		};
 	};
 };
 
@@ -153,6 +219,10 @@ const moduleFunction =
 
 module.exports = moduleFunction({ moduleName });
 module.exports.flattenNodeRecord = flattenNodeRecord;
-module.exports.flattenCandidateRecord = flattenCandidateRecord;
-module.exports.flattenFullRecord = flattenFullRecord;
+// ⟪tqii 2026-08-12⟫ the unparameterized flattenCandidateRecord / flattenFullRecord are GONE, not
+// deprecated. Leaving them would leave the manufactured anchor reachable, and a caller that kept
+// naming them would keep getting the invented value with no signal. Every caller now supplies the
+// property name; a caller that has not been adapted fails by name at require/construction time
+// rather than quietly producing the old records.
+module.exports.flattenFullRecordFor = flattenFullRecordFor;
 module.exports.LIST_VALUED_PROPERTY_NAMES = LIST_VALUED_PROPERTY_NAMES;

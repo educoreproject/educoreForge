@@ -104,7 +104,19 @@ const BASE_ABSTAIN_FIRST_INSTRUCTION =
 	'When you choose a candidate, you MUST ALSO report a discrete confidence category (strong, ' +
 	'moderate, or weakButReal) and a one-sentence rationale for that specific choice — never omit ' +
 	'them for a pick. When you abstain (NONE), give a short rationale for why nothing is genuinely ' +
-	'supported.';
+	'supported. ' +
+	// ⟪RATIONALE IS WRITTEN FOR THE EDGE, tqii 2026-08-13⟫ the rationale is now carried onto the
+	// materialized relationship, so it is read by someone looking at ONE mapping with no candidate
+	// list in front of them — not by someone reading this evaluation. Before this instruction,
+	// rationales named their choice by POOL POSITION ("candidate 24 is the Has Organization
+	// Identifier property"), a coordinate that exists only during judging: three of eleven rationales
+	// in the 2026-08-13 run did it, and copied onto an edge each would have pointed at nothing a
+	// reader could recover, since the pool is not reconstructible without re-running the scan.
+	'WRITE THE RATIONALE FOR SOMEONE READING THIS ONE MAPPING ALONE, with no candidate list in ' +
+	'front of them. Identify what you chose by its CEDS key and name (for example "P600502 Has ' +
+	'Organization Identifier"), NEVER by its position in the list — do not write "candidate 3" or ' +
+	'"the fourth option", because those numbers mean nothing outside this prompt. If a close ' +
+	'runner-up mattered to the decision, name it the same way and say briefly why it lost.';
 
 // SOURCE_SCALAR_VALUE_MAX_CHARS — a single source scalar's rendered value cap (deterministic; an
 // over-long value is cut with an explicit marker, never silently).

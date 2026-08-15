@@ -1,0 +1,54 @@
+{
+  // cedsEdfiGeneric — CEDS(base+hub) + EdFi, mapped by the GENERIC INFERRED bridge.
+  //
+  // Commissioned by tqii 2026-08-12 as the working subject for separating SPECIFIED mappings from
+  // the INFERRED path. Its sibling cedsEdfiAuthored.recipe.jsonc STAYS and is unchanged: that one
+  // resolves EdFi's specified anchors deterministically. This one asks the inferred bridge to reach
+  // the same pairing WITHOUT being told the answer.
+  //
+  // WHY EDFI IS THE SUBJECT, AND NOT PESC260805. EdFi is the standard in this tree that actually
+  // CARRIES specified anchors (forge-edfi stashes a per-node cedsId from the EdFi->CEDS crosswalk),
+  // and it needs no bespoke inferred bridge the way SIF does. Both facts are required here: a
+  // standard with no specified data cannot demonstrate that blinding works, and a standard with a
+  // bespoke bridge would be testing that bridge rather than the generic one.
+  //
+  // WHAT THIS RECIPE IS FOR. Where a specified match already exists, the only remaining purpose of
+  // inferring one is to TEST the inference — to ask what the judge would have said had it not been
+  // told. That comparison is worthless if the specified anchor reaches the judge, which is why the
+  // pairing declares the anchor property BY NAME below so the inferred bridge can remove it.
+  //
+  // specifiedMatchPropertyNames — the source-element properties carrying a mapping the standard's own
+  // specification declares. genericBridge STRIPS them before anything downstream sees them: no line in
+  // the prompt's SOURCE ELEMENT block, no reserved candidate seat, no anchor verdict on any candidate.
+  // The names are a PARAMETER and not a constant because a future hub need not be CEDS and no standard
+  // can be assumed to use CEDS vocabulary.
+  //
+  // WHY THREE AND NOT ONE. Measured on the forged EdFi base 2026-08-12: an anchored element carries the
+  // SAME anchor three times — cedsId ('P001156'), crossRefs (a JSON string restating it), and
+  // cedsOriginalAnchorPropertyName (the source column it came from, 'CEDSGlobalId'). None is derivable
+  // from the others by code, so the recipe names them all. SIF has the identical shape.
+  //
+  // ⚠ RUN THIS WITH --useDebugJudge UNLESS A REAL INFERENCE RUN IS INTENDED. Judging EdFi's source
+  // elements against the CEDS hub is a real spend against claude-opus-4-8. The recipe cannot enforce
+  // this — spending is an operator switch (--rebridge scope plus the absence of --useDebugJudge).
+  "schemaVersion": "1.0.0",
+  "recipeName": "cedsEdfiGeneric",
+  "kind": "dev",
+  "description": "CEDS+hub + EdFi with an EdFi->CEDS mapping bridge, using genericBridge, blinded to EdFi's specified CEDS anchors.",
+  "standards": [
+    { "token": "ceds", "version": "current" },
+    { "token": "edfi", "version": "current" }
+  ],
+  "hubs": [
+    { "standard": "ceds" }
+  ],
+  "bridges": [
+    {
+      "source": "edfi", "hub": "ceds", "bridge": "genericBridge",
+      "dependencies": ["edfi", "ceds"], "cacheMode": "reuse",
+      "params": {
+        "specifiedMatchPropertyNames": ["cedsId", "crossRefs", "cedsOriginalAnchorPropertyName"]
+      }
+    }
+  ]
+}

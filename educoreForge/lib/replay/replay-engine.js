@@ -591,8 +591,10 @@ const resolveNodeVectors = ({ nodes, storeResolver, header }, callback) => {
 		return;
 	}
 
-	const headerDims =
-		header && typeof header.embeddingDims === 'number' ? header.embeddingDims : null;
+	// ⟪MIXED VECTOR WIDTHS, tqii 2026-08-13⟫ the block header's embeddingDims was read here for the
+	// store/header equality check below. That check is gone (see its site for why), and nothing else
+	// on this path consulted the header — a resolved vector's own `record.dims` is authoritative —
+	// so the read is gone with it rather than left as a variable nobody uses.
 
 	// DISTINCT (standardKey, embeddingRef) over ref-carrying nodes without an inline embedding.
 	const distinctByKey = new Map();
@@ -642,15 +644,18 @@ const resolveNodeVectors = ({ nodes, storeResolver, header }, callback) => {
 							);
 							return;
 						}
-						if (headerDims !== null && record.dims !== headerDims) {
-							entryDone(
-								`resolveNodeVectors: embeddingRef ${oneEntry.embeddingRef} (standard ` +
-									`'${oneEntry.standardKey}') resolved to ${record.dims} dims but the block ` +
-									`header declares embeddingDims=${headerDims} — store/header mismatch. ` +
-									`No graph written.`,
-							);
-							return;
-						}
+						// ⟪MIXED VECTOR WIDTHS, tqii ruling 2026-08-13⟫ A stored vector whose width differs
+						// from the block header's declaration is NO LONGER REFUSED. The header is one
+						// number for a block that may hold nodes from several standards, and Voyage
+						// supports lengths that are compatible and comparable — so a difference here is a
+						// legitimate condition, not a store/header corruption. `record.dims` is the width
+						// of the vector actually retrieved and is authoritative for that vector.
+						//
+						// WHAT WAS GIVEN UP, stated plainly: this check also used to catch a genuinely
+						// mismatched sidecar (right ref, wrong store). That case now passes through and
+						// would surface later as a bad vector rather than a named refusal here. The
+						// per-vector integrity checks in the store and decodeEmbedding's
+						// not-a-multiple-of-four refusal remain.
 						resolvedByKey.set(
 							compositeKey(oneEntry.standardKey, oneEntry.embeddingRef),
 							record.vector,

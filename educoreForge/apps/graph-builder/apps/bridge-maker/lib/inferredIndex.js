@@ -169,7 +169,29 @@ const moduleFunction =
 			referenceNodes,
 			curationInputs,
 		} = {}) => {
-			const { basePropertyRef, baseValueRef } = referenceResolver.buildReferenceIndex(referenceNodes);
+			// ⟪QUALIFIED REFERENCES NOW RESOLVE, tqii 2026-08-13⟫ qualifiedRef is the THIRD map
+			// buildReferenceIndex has always returned, and this function used to destructure only two of
+			// them — so a chosen QUALIFIED property-tier reference could never resolve and every such
+			// judgment was silently discarded as an orphan.
+			//
+			// The three maps and their key shapes:
+			//   basePropertyRef[canonicalKey]                  unqualified property tier
+			//   qualifiedRef[propertyKey '|' qualifierKey]     qualified property tier   ← was unread
+			//   baseValueRef[propertyKey '|' valueKey]         value tier
+			//
+			// genericBridge's targetKeyFor already emits exactly `propertyKey|qualifierKey` for a
+			// qualified pick, and its own header documents the consequence of this map being unread:
+			// "resolves in NEITHER map and becomes a counted ORPHAN — SAFE (no edge materializes) rather
+			// than DANGEROUS". Reading the map is what that comment was waiting for.
+			//
+			// ⚠ WHY THE ORDER OF THE LOOKUP BELOW MATTERS. A qualified key contains a pipe and a base
+			// property key never does, so the three key spaces cannot collide — but do NOT "simplify" the
+			// chain by falling back to the bare canonicalKey when a qualified key misses. That fallback is
+			// precisely the DANGEROUS behavior the bridge refused to implement: the bare key resolves to
+			// the UNQUALIFIED base HubReference, a DIFFERENT node, and would produce a healthy-looking
+			// edge pointing at the wrong thing. An unresolvable key must stay an orphan.
+			const { basePropertyRef, qualifiedRef, baseValueRef } =
+				referenceResolver.buildReferenceIndex(referenceNodes);
 			const sourceStableIds = new Set((sourceNodes || []).map((oneNode) => oneNode.stableId));
 
 			const edgeByPair = new Map(); // `${fromStableId}|${refStableId}` -> edge (dedup; MERGE semantics)
@@ -182,12 +204,15 @@ const moduleFunction =
 					fromGaps.push({ fromStableId, targetKey, reason: 'source element not materialized as a node' });
 					return;
 				}
-				const refStableId = basePropertyRef[targetKey] || baseValueRef[targetKey];
+				const refStableId =
+					basePropertyRef[targetKey] || qualifiedRef[targetKey] || baseValueRef[targetKey];
 				if (!refStableId) {
 					orphans.push({
 						fromStableId,
 						targetKey,
-						reason: 'no property-tier or value-tier HubReference with this canonicalKey (chosen CEDS target unresolvable)',
+						reason:
+							'no unqualified-property, qualified-property, or value-tier HubReference with this ' +
+							'key (chosen CEDS target unresolvable)',
 					});
 					return;
 				}
@@ -231,6 +256,19 @@ const moduleFunction =
 						cedsAnchorKey: targetKey,
 						decisionBlockHash,
 						resolution: 'direct',
+						// ⟪JUDGMENT ON THE EDGE, tqii 2026-08-13⟫ the judge's own confidence category and its
+						// sentence of reasoning, carried here so a reader holding ONE mapping can see why it
+						// exists without unpacking the frozen block named by decisionBlockHash. Previously
+						// omitted by the R-b disposition, whose stated reason — keep this shared module
+						// byte-untouched for caseStructuralBridge — expired when that bridge was retired.
+						//
+						// SPREAD, NOT ASSIGNED, so a decision row that carries neither (an older frozen block
+						// replayed after this change, or a producer that never supplied them) yields an edge
+						// with the keys ABSENT rather than present-and-null. An absent property reads as
+						// "this block predates the change"; a null one reads as "the judge gave no reason",
+						// and those are different facts.
+						...(typeof oneDecision.category === 'string' ? { category: oneDecision.category } : {}),
+						...(typeof oneDecision.rationale === 'string' ? { rationale: oneDecision.rationale } : {}),
 						...debugFlagProperties,
 					},
 				});

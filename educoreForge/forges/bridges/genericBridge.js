@@ -129,7 +129,12 @@ const contentAddress = require(path.join(__dirname, '..', '..', 'lib', 'content-
 const sourceWalkerModule = require(
 	path.join(__dirname, '..', '..', 'apps', 'graph-builder', 'apps', 'bridge-maker', 'lib.d', 'sourceWalker'),
 );
-const flattenFullRecord = sourceWalkerModule.flattenFullRecord;
+// ⟪tqii 2026-08-12⟫ flattenFullRecordFor REPLACES the retired unparameterized flattenFullRecord. The
+// manufactured-anchor fallback chain is gone from the kit entirely — there is no variant that still
+// invents one — and the specified-match property is named by the recipe. See the factory's own
+// header in lib.d/sourceWalker.js for what the chain was inventing and why it had to go everywhere
+// rather than only here.
+const flattenFullRecordFor = sourceWalkerModule.flattenFullRecordFor;
 
 // boundedRunner — the bounded-concurrency per-source dispatcher (p8-judgeConcurrency; same two-level
 // climb as the sourceWalker require above). Pure orchestration: results are collected BY INDEX so the
@@ -292,6 +297,31 @@ const confidenceLookupFromFrozenEvidence = (frozenEvidenceArray) => {
 	return lookup;
 };
 
+// judgmentLookupFromFrozenEvidence — sourceStableId -> { category, rationale }. Same source and same
+// both-modes discipline as the confidence lookup above: REBRIDGE builds it from the results just
+// computed, MATERIALIZE rebuilds it verbatim from the frozen block, so an edge carries the same words
+// whether it was judged a moment ago or replayed from a year-old block.
+//
+// ⟪RATIONALE ON THE EDGE, tqii 2026-08-13⟫ category and rationale were previously left OFF the
+// relationship on purpose — see the R-b disposition in this file's header — because the shared
+// materializer was under orders to stay byte-untouched while caseStructuralBridge also composed it.
+// BOTH halves of that constraint have since expired: caseStructuralBridge was retired in the P5
+// teardown, and inferredIndex.js is edited again today. The reader who most needs the reasoning is
+// the one holding a single mapping and asking why it exists, and sending them to unpack a frozen
+// block by hash to find a sentence is a tax with no remaining justification.
+const judgmentLookupFromFrozenEvidence = (frozenEvidenceArray) => {
+	const lookup = {};
+	(frozenEvidenceArray || []).forEach((oneEntry) => {
+		if (oneEntry && oneEntry.sourceStableId && oneEntry.judgment) {
+			lookup[oneEntry.sourceStableId] = {
+				category: oneEntry.judgment.category,
+				rationale: oneEntry.judgment.rationale,
+			};
+		}
+	});
+	return lookup;
+};
+
 // enrichInferredDecisionsWithConfidence — R-b disposition (see file header): lib/inferredIndex.js reads
 // `confidence` off each inferredDecisions row but evidenceFreezer.js's own nonAbstainRow (a DIFFERENT,
 // byte-untouched module — see the header) never carries one. This bridge closes that gap itself,
@@ -299,11 +329,16 @@ const confidenceLookupFromFrozenEvidence = (frozenEvidenceArray) => {
 // row before handing it to the materializer. A row with no matching lookup entry (should not happen —
 // every non-abstain decision has a judgment) is left with confidence undefined, and inferredIndex.js's
 // own `typeof ... === 'number' ? ... : 0` fallback stamps an honest 0 rather than crashing.
-const enrichInferredDecisionsWithConfidence = (inferredDecisions, confidenceLookup) =>
-	(inferredDecisions || []).map((oneRow) => ({
-		...oneRow,
-		confidence: confidenceLookup[oneRow.fromStableId],
-	}));
+const enrichInferredDecisionsWithConfidence = (inferredDecisions, confidenceLookup, judgmentLookup) =>
+	(inferredDecisions || []).map((oneRow) => {
+		const judgment = (judgmentLookup || {})[oneRow.fromStableId] || {};
+		return {
+			...oneRow,
+			confidence: confidenceLookup[oneRow.fromStableId],
+			category: judgment.category,
+			rationale: judgment.rationale,
+		};
+	});
 
 // requiredKitMembersFor — the kit members THIS bridge needs, given rebridge vs. materialize (mirrors
 // bridgeSkeleton.js's own requiredKitMembersFor discipline, restated here since this file no longer
@@ -439,6 +474,55 @@ module.exports = (injectedTools = {}) =>
 			);
 			return;
 		}
+		// ⟪SPECIFIED-MATCH BLINDING, tqii 2026-08-12⟫ config.specifiedMatchPropertyNames — the LIST of
+		// properties carrying a mapping the source standard's OWN SPECIFICATION declares. EdFi stamps the
+		// same CEDS anchor under three of them, so this is a list and not a name.
+		//
+		// REQUIRED, refuse-by-name, exactly like sourceStandardName above. It is required rather than
+		// optional because this bridge is the INFERRED producer: it must be able to say which data is
+		// spec-declared in order to keep that data out of what it infers from, and a bridge that cannot
+		// name it cannot make that separation at all. A standard that declares none says so with an
+		// explicit [] — an absent key is an unanswered question, not a 'none'.
+		const specifiedMatchPropertyNames = config.specifiedMatchPropertyNames;
+		if (!Array.isArray(specifiedMatchPropertyNames)) {
+			callback(
+				`${MAPPING_TOOL}: config.specifiedMatchPropertyNames is ${
+					specifiedMatchPropertyNames === undefined ? 'not set' : JSON.stringify(specifiedMatchPropertyNames)
+				} — the recipe must NAME, as an array, the properties that carry a specification-declared ` +
+					`mapping (bridges[].params.specifiedMatchPropertyNames), or declare [] to state that this ` +
+					`standard has none. They are not assumed to be ['cedsId'] and there is no default.`,
+			);
+			return;
+		}
+		// The flatten this run reads its elements with, on BOTH sides. It REMOVES the named properties,
+		// so the specified answer never reaches the prompt, the candidate pool, or anything downstream.
+		let flattenElementRecord;
+		try {
+			flattenElementRecord = flattenFullRecordFor({ specifiedMatchPropertyNames });
+		} catch (flattenConstructionError) {
+			callback(`${MAPPING_TOOL}: ${flattenConstructionError.message}`);
+			return;
+		}
+
+		// SAY IT OUT LOUD, WITH THE VARIABLE NAME. ⟪tqii 2026-08-12: "I was looking for the variable
+		// name. In the future, please include that."⟫ The recipe's params block is easy to get wrong and,
+		// once wrong, silent — nothing else in a run's output would tell an operator which properties this
+		// bridge is treating as specification-declared, or that it read the recipe at all.
+		{
+			const { xLog } = process.global;
+			xLog.status(
+				`[${MAPPING_TOOL}] specifiedMatchPropertyNames = ${JSON.stringify(specifiedMatchPropertyNames)} ` +
+					`(read from the recipe's bridges[].params for ${sourceStandard}->${HUB_STANDARD}). ` +
+					`${
+						specifiedMatchPropertyNames.length === 0
+							? 'THE RECIPE DECLARES NONE — nothing is stripped and no property is treated as a ' +
+								'specification-declared mapping.'
+							: 'These are STRIPPED from every element this bridge reads: they do not reach the ' +
+								'prompt, the candidate pool, or the frozen decisions.'
+					}`,
+			);
+		}
+
 		const subjectVersion = config.sourceVersion || '';
 		const objectVersion = config.hubVersion || '';
 		const role = config.role || DEFAULT_ROLE;
@@ -472,6 +556,43 @@ module.exports = (injectedTools = {}) =>
 				decisionAlgorithm,
 			});
 			const subgraph = builder.buildInferredSubgraph({ inferredDecisions, sourceNodes, referenceNodes });
+
+			// SAY WHEN A PAID DECISION PRODUCES NOTHING. ⟪tqii 2026-08-13⟫ orphans and source gaps were
+			// already collected here and returned in `counts`, but nothing ever printed them — so a run
+			// that judged eleven elements, recorded seven picks and wrote six edges looked like a
+			// discrepancy, and finding out it was not one meant reading the frozen decision block, the
+			// harvested relationship block and the live graph by hand. Every judgment costs real money;
+			// one that resolves to no edge must announce itself rather than being inferred from a
+			// subtraction the reader has to notice.
+			{
+				const { xLog } = process.global;
+				// fromGaps lives under `diagnostics`, NOT at the top level beside `orphans` — reading
+				// subgraph.fromGaps returns undefined and silently reports zero source gaps forever.
+				const orphanList = subgraph.orphans || [];
+				const fromGapList = (subgraph.diagnostics || {}).fromGaps || [];
+				const orphanCount = orphanList.length;
+				const fromGapCount = fromGapList.length;
+				if (orphanCount > 0 || fromGapCount > 0) {
+					xLog.status(
+						`[${MAPPING_TOOL}] ${inferredDecisions.length} decision(s) -> ${subgraph.edges.length} ` +
+							`edge(s); ${orphanCount} UNRESOLVABLE TARGET(S), ${fromGapCount} missing source ` +
+							`node(s). These judgments were made and paid for and produced no edge:`,
+					);
+					orphanList.forEach((oneOrphan) => {
+						xLog.status(
+							`[${MAPPING_TOOL}]   orphan: ${oneOrphan.fromStableId} -> targetKey ` +
+								`'${oneOrphan.targetKey}' — ${oneOrphan.reason}`,
+						);
+					});
+					fromGapList.forEach((oneGap) => {
+						xLog.status(
+							`[${MAPPING_TOOL}]   source gap: ${oneGap.fromStableId} -> targetKey ` +
+								`'${oneGap.targetKey}' — ${oneGap.reason}`,
+						);
+					});
+				}
+			}
+
 			let edgesWritten = 0;
 			const writeList = new taskListPlus();
 			subgraph.edges.forEach((oneEdge) => {
@@ -534,11 +655,12 @@ module.exports = (injectedTools = {}) =>
 				}
 				const decisionBlockHash = contentAddress.blockIdForText(frozenText);
 				const confidenceLookup = confidenceLookupFromFrozenEvidence(parsed.frozenEvidence);
-				const enrichedInferredDecisions = enrichInferredDecisionsWithConfidence(parsed.inferredDecisions, confidenceLookup);
+				const judgmentLookup = judgmentLookupFromFrozenEvidence(parsed.frozenEvidence);
+				const enrichedInferredDecisions = enrichInferredDecisionsWithConfidence(parsed.inferredDecisions, confidenceLookup, judgmentLookup);
 
 				const taskList = new taskListPlus();
 				taskList.push((args, next) =>
-					kit.sourceWalker.walk({ standard: sourceStandardKey, role, flatten: flattenFullRecord }, (err, out) =>
+					kit.sourceWalker.walk({ standard: sourceStandardKey, role, flatten: flattenElementRecord }, (err, out) =>
 						next(err, { ...args, sourceNodes: out && out.sourceNodes }),
 					),
 				);
@@ -607,7 +729,7 @@ module.exports = (injectedTools = {}) =>
 			// harvest means the name is wrong or the dependency graph is; refuse BY NAME, never
 			// materialize silence.
 			taskList.push((args, next) =>
-				kit.sourceWalker.walk({ standard: sourceStandardKey, role, flatten: flattenFullRecord }, (err, out) => {
+				kit.sourceWalker.walk({ standard: sourceStandardKey, role, flatten: flattenElementRecord }, (err, out) => {
 					if (err) {
 						next(err, args);
 						return;
@@ -644,7 +766,27 @@ module.exports = (injectedTools = {}) =>
 			// the FULL CEDS HubReference candidate elements (R5's base evidence source, all tiers).
 			taskList.push((args, next) =>
 				readReferenceNodes((err, nodes) =>
-					next(err, { ...args, referenceNodes: nodes, candidateElements: nodes.map(flattenFullRecord) }),
+					// ⟪ZERO HUB CARDS IS A REFUSAL, 2026-08-11⟫ the missing twin of the ZERO-SOURCES guard
+					// above. That one exists because the bronze build froze empty blocks as green; the
+					// hub side could do exactly the same and nothing caught it. The two candidate guards
+					// below use .find(), which returns undefined on an EMPTY array, so a zero-card pool
+					// sailed through both — the run would judge every source against nothing, abstain on
+					// all of them, freeze a block of pure abstention and EXIT 0. Nothing could produce an
+					// empty hub until block reuse arrived (a base block forged without deriveHub carries
+					// no cards under the same name), so this is a guard that was never needed rather than
+					// a bug that was missed. Refuse BY NAME, never materialize silence.
+					err
+						? next(err, args)
+						: (nodes || []).length === 0
+							? next(
+									`${MAPPING_TOOL}: found ZERO ${HUB_REFERENCE_LABEL} nodes for hub ` +
+										`'${HUB_STANDARD}' in the dependency graph — there is nothing to judge against. ` +
+										`The hub standard's base block is absent or was forged without its hub folded in ` +
+										`(deriveHub). An empty candidate pool is refused, never judged as universal ` +
+										`abstention.`,
+									args,
+								)
+							: next('', { ...args, referenceNodes: nodes, candidateElements: nodes.map(flattenElementRecord) }),
 				),
 			);
 
@@ -663,7 +805,7 @@ module.exports = (injectedTools = {}) =>
 							next(`${MAPPING_TOOL}: reading ${sourceStandardKey} ${CLASS_ROLE} nodes for the owning-class map: ${err}`, args);
 							return;
 						}
-						const classNodes = ((out || {}).nodes || []).map(flattenFullRecord);
+						const classNodes = ((out || {}).nodes || []).map(flattenElementRecord);
 						next('', { ...args, classMap: buildClassMap(classNodes), classCount: classNodes.length });
 					},
 				);
@@ -935,7 +1077,8 @@ module.exports = (injectedTools = {}) =>
 			// MATERIALIZE the frozen picks (confidence-enriched) + WRITE.
 			taskList.push((args, next) => {
 				const confidenceLookup = confidenceLookupFromFrozenEvidence(args.frozenEvidencePayload);
-				const enrichedInferredDecisions = enrichInferredDecisionsWithConfidence(args.frozen.inferredDecisions, confidenceLookup);
+				const judgmentLookup = judgmentLookupFromFrozenEvidence(args.frozenEvidencePayload);
+				const enrichedInferredDecisions = enrichInferredDecisionsWithConfidence(args.frozen.inferredDecisions, confidenceLookup, judgmentLookup);
 				buildAndWrite(
 					{
 						inferredDecisions: enrichedInferredDecisions,

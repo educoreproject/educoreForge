@@ -706,6 +706,41 @@ const resolveDebugJudge = (deps, injectedCommandLineParameters) => {
 	return nameOrRefusal(firstValue === undefined ? '' : firstValue);
 };
 
+// resolveReuseForgedBlocks — the OPT-IN for retrieving an already-forged base block instead of
+// forging it again. ⟪Item 4, tqii 2026-08-11⟫ "revise the control system in graphBuilder so it
+// retrieves and instantiates the base schema block for a standard instead of forging it. Then it
+// passes to the bridgeMaker as normal."
+//
+// ⚠ WHY THIS IS OPT-IN AND WILL STAY OPT-IN. Reuse resolves a block by SUBJECT — a name, a slot —
+// which deliberately bypasses the content addressing that protects every other identity in this
+// system. Change a forge's code, rebuild, and a reusing run hands you YESTERDAY'S BLOCK with no
+// signal that anything was skipped. That is a correctness trap wearing a performance improvement's
+// clothes, and the only honest place for it is behind a switch an operator typed. Measured cost of
+// what it skips, on cedsLifGeneric 2026-08-11: parse+embed ~25s, the Docker load+harvest ~100s.
+const resolveReuseForgedBlocks = (deps, injectedCommandLineParameters) => {
+	if (deps.reuseForgedBlocks !== undefined) {
+		if (typeof deps.reuseForgedBlocks !== 'boolean') {
+			return {
+				error:
+					`graphBuilder build: deps.reuseForgedBlocks must be a boolean when supplied, got ` +
+					`${typeof deps.reuseForgedBlocks}. It was NOT corrected to a default.`,
+			};
+		}
+		return { value: deps.reuseForgedBlocks };
+	}
+	const commandLineParameters =
+		injectedCommandLineParameters ||
+		(process.global && process.global.commandLineParameters) || { values: {}, switches: {} };
+	return readOptionalBooleanValue({
+		name: 'reuseForgedBlocks',
+		commandLineParameters,
+		moduleName: 'graphBuilder -build',
+		whatItControls:
+			'whether -build RETRIEVES an already-forged standardBase block from the store instead of forging it again',
+		defaultValue: false,
+	});
+};
+
 // resolveSourceWindow — the DEBUG WINDOW over each bridge's source elements (tqii, 2026-08-10:
 // "if I ask for SIF.StudentPersonals and say limit=10, I want only 10 of 214 elements processed...
 // lets add --offset as well so we can skip around"). --limit=N / --offset=N, both OPTIONAL and both
@@ -984,6 +1019,13 @@ const build = (recipe, deps, callback) => {
 	// real --rebridge with no injected client MINTS the real one, which throws BY NAME when no key resolves.
 	// ⟪skipAI⟫ WHICH judge answers, resolved before the config that carries it. A refusal here must
 	// reach the operator before any judging begins, exactly as a keyless --rebridge does.
+	const reuseResolution = resolveReuseForgedBlocks(deps, deps.commandLineParameters);
+	if (reuseResolution.error) {
+		callback(reuseResolution.error);
+		return;
+	}
+	const reuseForgedBlocks = reuseResolution.value;
+
 	const sourceWindowResolution = resolveSourceWindow(deps, deps.commandLineParameters);
 	if (sourceWindowResolution.error) {
 		callback(sourceWindowResolution.error);
@@ -1067,7 +1109,126 @@ const build = (recipe, deps, callback) => {
 	// bundle never sees, needs or wants a graph, so provisioning one first would spend a container
 	// on material that may not exist — and a standard with no forge bundle now fails before any
 	// docker command is attempted.
+	// ⟪ITEM 4, 2026-08-11⟫ attemptBaseBlockReuse — RETRIEVE an already-forged standardBase instead of
+	// forging it. Answers callback('', true) when it reused, ('', false) on a clean miss (the caller
+	// forges), or (error) on a fault.
+	//
+	// HOW THE NAME IS KNOWN WITHOUT FORGING. The recipe usually says version 'current', and phase A
+	// normally composes the subject AFTER the forge from its snapshot-provenance triple. forger
+	// .getVersionStamp answers that triple from the descriptor's PINNED snapshot and its provenance
+	// file — the SAME deriveVersionStamp arithmetic the forge uses — and REFUSES BY NAME when the
+	// answer would need a parse. The subject is then composed HERE with the very same functions phase
+	// A uses (explicitVersionFrom, slugifyVersion, suffixMarkerForKind), so the reused name and the
+	// forged name cannot drift.
+	//
+	// WHAT REUSE MUST STILL SUPPLY, because phase C reads all of it: the block itself
+	// (baseBlockByToken), the resolved version (resolvedVersionByToken, which keys phase C's
+	// relationship subjects), and the run's EMBEDDING IDENTITY — recovered from the stored block's own
+	// header line, since phase C's relationship harvest must declare the same embeddingDims/model as
+	// the bases or the materialize restore gate refuses it.
+	//
+	// A MISS IS A STATE, NOT AN ERROR. Nothing stored means forge normally.
+	const attemptBaseBlockReuse = (std, callback) => {
+		if (!reuseForgedBlocks) {
+			callback('', false);
+			return;
+		}
+		const stamp = components.forger.getVersionStamp({ standard: std.token });
+		if (stamp.error) {
+			xLog.status(`  [A] ${std.token}: cannot name a stored block without forging — ${stamp.error}`);
+			callback('', false);
+			return;
+		}
+		const reuseVersion = explicitVersionFrom(stamp.value);
+		const reuseSubject = `${std.token}@${slugifyVersion(reuseVersion)}${vocabulary.suffixMarkerForKind(
+			vocabulary.SCHEMA_BLOCK_KIND.STANDARD_BASE,
+		)}`;
+		standardsDatabase.findBlockBySubject(
+			{ kind: 'standardBase', subject: reuseSubject, version: reuseVersion },
+			(findError, found) => {
+				if (findError) {
+					callback(findError);
+					return;
+				}
+				if (!found) {
+					xLog.status(`  [A] ${std.token}: no stored block for '${reuseSubject}' — forging`);
+					callback('', false);
+					return;
+				}
+				// getBlock returns the whole ROW and VERIFIES the content address before handing it back,
+				// so reuse inherits corruption detection for free: a tampered or truncated block is
+				// refused by name here rather than materializing into a graph.
+				standardsDatabase.getBlock({ refId: found.refId }, (getError, blockRow) => {
+					if (getError) {
+						callback(`reuse ${reuseSubject}: ${getError}`);
+						return;
+					}
+					if (!blockRow || blockRow.text === undefined || blockRow.text === null) {
+						callback(
+							`reuse ${reuseSubject}: the store found block ${found.refId} by subject but ` +
+								`returned no text for it.`,
+						);
+						return;
+					}
+					const text = typeof blockRow.text === 'string' ? blockRow.text : `${blockRow.text}`;
+					// the block's FIRST LINE is its header; the embedding identity is declared there.
+					let header = {};
+					const parseHeader = () => {
+						header = JSON.parse(text.slice(0, text.indexOf('\n')));
+					};
+					try {
+						parseHeader();
+					} catch (headerError) {
+						callback(
+							`reuse ${reuseSubject}: the stored block's header line is not parseable JSON ` +
+								`(${headerError.message}) — refusing to reuse a block whose embedding identity ` +
+								`cannot be read.`,
+						);
+						return;
+					}
+					resolvedVersionByToken[std.token] = reuseVersion;
+					baseBlockByToken[std.token] = { blockText: text, refId: found.refId };
+					buildEmbeddingModelVersion = header.embeddingModelVersion;
+					buildEmbeddingDims = header.embeddingDims;
+					xLog.status(
+						`  [A] REUSED ${reuseSubject} -> standardBase ${found.refId} (forged ${found.createdAt}) ` +
+							`— NOT FORGED. --reuseForgedBlocks resolves by NAME, so this is only correct if the ` +
+							`forge that made it is the forge you mean.`,
+					);
+					manifest.add(
+						{
+							subject: reuseSubject,
+							kind: 'standardBase',
+							version: reuseVersion,
+							description: `standardBase schema block for ${reuseSubject}, REUSED (not forged) by recipe '${recipe.recipeName}'`,
+							// refId MUST ride along: manifestEditor re-derives the content address from the
+							// text and refuses a block claiming an address that does not describe it. A
+							// reused block already HAS its address — omitting it claimed '' and was rightly
+							// refused.
+							schemaBlock: { blockText: text, refId: found.refId },
+						},
+						(addError) => callback(addError ? `reuse add ${reuseSubject}: ${addError}` : '', !addError),
+					);
+				});
+			},
+		);
+	};
+
 	const forgeOneStandard = (std, done) => {
+		attemptBaseBlockReuse(std, (reuseError, reused) => {
+			if (reuseError) {
+				done(reuseError);
+				return;
+			}
+			if (reused) {
+				done('');
+				return;
+			}
+			forgeOneStandardByForging(std, done);
+		});
+	};
+
+	const forgeOneStandardByForging = (std, done) => {
 		// The base block's subject and version are the RESOLVED EXPLICIT version, never the recipe's
 		// floating 'current' — so they are composed AFTER the forge, from its snapshot-provenance triple
 		// (in the forge task below). explicitVersion is the pretty resolved version (blocks.version and
@@ -1888,6 +2049,7 @@ module.exports.resolveInferenceConfig = resolveInferenceConfig;
 // exercising directly rather than only through a full build.
 module.exports.resolveDebugJudge = resolveDebugJudge;
 module.exports.resolveSourceWindow = resolveSourceWindow;
+module.exports.resolveReuseForgedBlocks = resolveReuseForgedBlocks;
 // ⟪P2-review S-2⟫ the heap gate, exported as a static so its refusal is provable with an
 // injected limit — never by shrinking a real process's heap.
 module.exports.resolveHeapAdequacy = resolveHeapAdequacy;
