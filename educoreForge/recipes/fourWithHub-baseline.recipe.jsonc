@@ -1,0 +1,55 @@
+{
+  // fourWithHub-baseline — PHASE 1 BASELINE RECIPE for the root-and-branch reset (2026-08-15).
+  //
+  // A verbatim copy of fourWithHub.recipe.jsonc (which STAYS and is unchanged) with ONE addition:
+  // "roundTripStage": true, so that -build runs every declared roundTripValidator against the
+  // finished graph and -goldEvalCheck can certify the run (RT-13.4). Built FROM SCRATCH into a
+  // fresh standardsDatabase (rootAndBranchBaseline_081526) — no --reuseForgedBlocks — because the
+  // point of the baseline is to prove the survival set builds clean before anything is cut.
+  // See system/management/zNotesPlansDocs/forgeDefinitionV2/BRIEF-phase1-baseline.md (G1).
+  //
+  // ---- the parent recipe's own commentary follows unchanged ----
+
+  // fourWithHub — THE FOUR CERTIFIED STANDARDS, WITH THE CEDS HUB, STILL NO BRIDGES.
+  //
+  // Commissioned by tqii 2026-08-11 as the step before a debug-judge bridged build: "make a good
+  // CEDS with deriveHub first", then replay it and the other three into a graph.
+  //
+  // WHAT THIS CHANGES FROM fourWithNewPescRoundTripNoBridges.recipe.jsonc, WHICH IS ITS PARENT AND
+  // STAYS. The parent declares "hubs": [] — four independent bases, no hub, deliberately ("I know it
+  // doesn't do any mapping goodness"). This one declares CEDS as a hub, which makes the forger FOLD
+  // the hub into the CEDS standardBase. The difference is not cosmetic: the parent's
+  // ceds@14_0_0_0_base is 38 MB with ZERO HubReference nodes; this one's is 419 MB with 189,204.
+  // Same subject, same version, same kind — the hub is what separates them.
+  //
+  // STILL NO BRIDGES. This is a hub-bearing BASELINE, not a mapped graph. Every cross-standard view
+  // will be empty BY DESIGN, exactly as in the parent. The difference is that the hub cards are now
+  // present and browsable, and a bridge run has something to judge against.
+  //
+  // BUILT BY REUSE, NOT BY FORGING. Run with --reuseForgedBlocks=true against a store already
+  // holding all four bases (dataStores/graphBuilder/fourWithHub_081126.standardsDatabase.sqlite3,
+  // a COPY of the certified fourWithNewPesc_20260807-191443 store with a hub-bearing CEDS forged
+  // into it). edfi@5.2.0, sif@unknown_01 and pesc260805@aggregate-01 are the CERTIFIED blocks —
+  // goldEvalCheck PASS, inventedTotal 0 on all four — retrieved verbatim, not re-derived.
+  //
+  // ⚠ THE CEDS BLOCK IS CHOSEN BY RECENCY, NOT BY FITNESS. Reuse resolves a block by SUBJECT, and
+  // that store holds TWO blocks named ceds@14_0_0_0_base — the parent's hubless one and this one's
+  // hub-bearing one. findBlockBySubject orders by createdAt DESC, so the hub-bearing block wins
+  // because it was forged later, NOT because anything checked it carries a hub. Verify the
+  // materialized graph has HubReference nodes rather than assuming it.
+  "schemaVersion": "1.0.0",
+  "recipeName": "fourWithHub-baseline",
+  "roundTripStage": true,
+  "kind": "dev",
+  "description": "The four certified standards (ceds, edfi, sif, pesc260805) with the CEDS hub folded into the CEDS base. No bridges — a hub-bearing baseline.",
+  "standards": [
+    { "token": "ceds", "version": "current" },
+    { "token": "edfi", "version": "current" },
+    { "token": "pesc260805", "version": "current" },
+    { "token": "sif", "version": "current" }
+  ],
+  "hubs": [
+    { "standard": "ceds" }
+  ],
+  "bridges": []
+}

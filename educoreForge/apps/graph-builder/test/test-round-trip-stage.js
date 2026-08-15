@@ -493,16 +493,25 @@ const stageRunBehavior = (done) => {
 							);
 
 							// ---- RED twin (A13): a REAL stale verdictVersion -1 artifact is REFUSED ----
-							// Fixtured on an artifact that actually exists on disk rather than a synthetic
-							// object built to fail. This is the hazard A13 creates and must answer for:
-							// lostTotal MEANT "everything not reproduced" in a -1 verdict and MEANS
+							// Fixtured on a genuine -1 artifact PRESERVED under test/fixtures rather than a
+							// synthetic object built to fail. This is the hazard A13 creates and must answer
+							// for: lostTotal MEANT "everything not reproduced" in a -1 verdict and MEANS
 							// "contentGap only" in a -2 one. This file carries roundTripClean,
 							// inventedTotal AND lostTotal, so the pre-A13 refusal waves it through and the
 							// builder would silently read its 349 under the new meaning. Requiring the two
 							// A13 fields converts that silent misreading into a named refusal.
+							//
+							// WHY A PRESERVED COPY AND NOT THE LIVE ARTIFACT (2026-08-15): this twin
+							// originally pointed at forges/edfi/test/test-artifacts/realGraphRun/
+							// roundTripVerdict.json — a LIVE output path that runEdfiRoundTripRealGraph.js
+							// rewrites on every real-graph run. Commit edd583f (2026-08-10) refreshed it to a
+							// -2 verdict, and the twin silently lost its subject (the -2 file carries the A13
+							// fields, so the stage correctly ACCEPTS it and the refusal never fires). A red
+							// twin's fixture must be immutable; a live artifact is not. The preserved copy is
+							// the -1 verdict as committed at 469cc3b.
 							const staleVerdictFilePath = path.join(
 								__dirname,
-								'../../../forges/edfi/test/test-artifacts/realGraphRun/roundTripVerdict.json',
+								'fixtures/staleEdfiRoundTripVerdict-1.json',
 							);
 							harness.ok(
 								'the stale -1 verdict fixture exists on disk (a red twin fixtured on a real artifact)',
