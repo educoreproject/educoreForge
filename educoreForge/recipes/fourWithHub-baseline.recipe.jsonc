@@ -19,7 +19,9 @@
   // STAYS. The parent declares "hubs": [] — four independent bases, no hub, deliberately ("I know it
   // doesn't do any mapping goodness"). This one declares CEDS as a hub, which makes the forger FOLD
   // the hub into the CEDS standardBase. The difference is not cosmetic: the parent's
-  // ceds@14_0_0_0_base is 38 MB with ZERO HubReference nodes; this one's is 419 MB with 189,204.
+  // ceds@14_0_0_0_base is 38 MB with ZERO HubReference nodes; this one's is 419 MB with 94,602 HubReference
+  // nodes (block 09a5d658807b…; the parent recipe's comment says 189,204, which is wrong — the graph and
+  // forges/ceds/README_cedsForge.md agree on 94,602; corrected here 2026-08-15, parent left as-is).
   // Same subject, same version, same kind — the hub is what separates them.
   //
   // STILL NO BRIDGES. This is a hub-bearing BASELINE, not a mapped graph. Every cross-standard view
