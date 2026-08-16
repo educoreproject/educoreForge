@@ -224,7 +224,9 @@ WHAT A FORGE SUPPLIES
 
         sourceLoaderList    one or more { loaderName, load({ sourcePath,
                             additionalSourceInputPathByName, xLog }, cb) }
-                            -- reading the source (Ed-Fi has three loaders)
+                            -- reading the source (Ed-Fi has three loaders); loaderName is the forge's own
+                            logical name for that input, lowerCamelCase and unique (refused by
+                            name otherwise)
         describeSource      ({ parsed }) => { version, selfDescribedVersion, sourceFormat,
                             sourceUrl, sourceFiles }
                             -- what the source says about itself

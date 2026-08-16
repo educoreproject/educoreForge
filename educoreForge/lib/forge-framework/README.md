@@ -67,9 +67,14 @@ finalizer's `crossRefs: '[]'` are BYTE MANDATES that reproduce today's blocks, n
 (one of `MIGRATING_BUNDLE_LIST`: ceds, edfi, sif, pesc260805) declares rows so the framework
 reproduces its pre-migration bytes at ONE named step; declared-but-unneeded and needed-but-undeclared
 are both refused; every active allowance is reported and census-counted; retirement is one commit per
-allowance with a deliberately new block id. F3a ships ONLY the rows F3b/F3c need — the `sourceUrl ''`
+allowance with a deliberately new block id. Retire PROMPTLY: the session that bumps a snapshot or changes a
+loader retires every row it obsoletes; the active registry is expected to shrink (spec §7.1). F3a ships ONLY the rows F3b/F3c need — the `sourceUrl ''`
 row keyed three ways (E6 / S4 / P16), S2, S3, S6, S7; PESC and CEDS rows arrive as data with their own
 migrations.
+
+Loader names (`sourceLoaderList[].loaderName`) are each forge's own logical names for its inputs; the
+CONVENTION is uniform and enforced by `standardHookContract.js`: lowerCamelCase, letters and digits,
+unique within the bundle, `metadata` reserved — refused by name otherwise (G-HOOK).
 
 ## Running the suite
 
