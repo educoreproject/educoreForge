@@ -1,7 +1,0 @@
-standard: forge-cip
-publishedVersion: 2020
-publishedVersionEvidence: NCES CIP 2020 taxonomy, per CIPCode2020.csv
-upstreamUrl: unknown (publisher: NCES — https://nces.ed.gov/ipeds/cipcode; exact download URL not recorded at harvest)
-copiedFrom: /Users/tqwhite/Documents/webdev/educoreForgeOLD/system/code/cli/lib.d/forge-cip/assets/standardSourceData/01
-copiedDate: 2026-06-23
-note: harvested into the universal-contract forge bundle on 2026-06-23 (CSV family). One source CSV: CIPCode2020.csv — the NCES CIP 2020 taxonomy. CIP is a pure 3-level taxonomy (2-digit domain -> 4-digit subdomain -> 6-digit program); every code is a DmeClass, the hierarchy is SUBCLASS_OF, intra-CIP cross-references are REFERENCES. The CSV carries NO CEDS columns: this is a standard-pure CIP block with no cross-standard edges and nothing stashed for bridging.

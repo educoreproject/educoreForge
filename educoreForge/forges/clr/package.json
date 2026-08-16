@@ -1,9 +1,0 @@
-{
-  "name": "forge-clr",
-  "version": "1.0.0",
-  "private": true,
-  "description": "CLR forge bundle for edf-forge: parses the IMS Global / 1EdTech CLR (Comprehensive Learner Record) v2.0 OpenAPI 3.0 JSON schema into the universal forge property contract (DmeStandardRoot + the six roles, canonical ownership edges, polymorphic REFERENCES, crossRefs carrying harvested CEDS element ids normalized to canonical cedsId, 1EdTech persistentId, searchText, embeddings). Harvested-and-adapted from trackA forge-clr. JSON source (no js-yaml).",
-  "main": "forgeClr.js",
-  "author": "tqii",
-  "license": "ISC"
-}

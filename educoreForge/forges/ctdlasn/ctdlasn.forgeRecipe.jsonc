@@ -1,9 +1,0 @@
-{
-  // forgeRecipe (standard-version kind) — version-pure: ONE standard @ ONE version.
-  "recipeKind": "standardVersion",
-  "standardKey": "ctdlasn",
-  "standardName": "CTDLASN",
-  "forgeModule": "forge-ctdlasn",
-  "source": { "snapshotKey": "01", "publishedVersion": "20230929", "versionSource": "provenance-file" },
-  "notes": "SOURCE STALENESS: a 2025-12-19 CTDL-ASN release exists; refresh = re-harvest to assets/standardSourceData/02/ + bump defaultSnapshot (a NEW recipe, per version-purity)."
-}

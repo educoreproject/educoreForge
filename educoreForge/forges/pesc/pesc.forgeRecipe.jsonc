@@ -1,8 +1,0 @@
-{
-  // forgeRecipe (standard-version kind) — version-pure: ONE standard @ ONE version.
-  "recipeKind": "standardVersion",
-  "standardKey": "pesc",
-  "standardName": "PESC",
-  "forgeModule": "forge-pesc",
-  "source": { "snapshotKey": "01", "publishedVersion": "unknown", "versionSource": "unknown" }
-}
