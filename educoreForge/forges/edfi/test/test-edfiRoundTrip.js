@@ -48,7 +48,7 @@ const crypto = require('crypto');
 
 const harness = require('../../../test/testLib/harness')(moduleName);
 
-const forgeEdfi = require('../forgeEdfi.js')({});
+const forgeEdfi = require('../forgeEdfi.js')({ embedder: null }); // the framework refuses an ABSENT embedder key by name (F3b)
 const metaEdParser = require('../lib/metaEdParser')(); // CROSS-CHECK reader only (G-8), never the answer key
 const roundTripMetaEdCanonical = require('../lib/roundTripMetaEdCanonical')();
 const roundTripEdfiCompiler = require('../lib/roundTripEdfiCompiler')();

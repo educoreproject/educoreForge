@@ -44,11 +44,14 @@ const stripComments = (text) => text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^
 // renamed directory turns them red instead of passing green over an empty list
 const FROZEN_FORGE_TIME_FILE_COUNT = 13; // lib/forge-framework/*.js (SPEC §12.1 tree)
 const FROZEN_HARNESS_FILE_COUNT = 5; // roundTripHarness/*.js
-const FROZEN_HOOK_ENTRY_FILE_COUNT = 4; // toy forgeToy.js + lib/{toyHooks,toyForgeDeclaration,toyRoundTripPair}.js
+const FROZEN_HOOK_ENTRY_FILE_COUNT = 8; // toy forgeToy.js + lib/{toyHooks,toyForgeDeclaration,toyRoundTripPair}.js (4) + the migrated Ed-Fi's forgeEdfi.js + lib/{edfiForgeDeclaration,edfiHooks,forgeEdfiContractGraph}.js (4, F3b) — F3c/F3d raise it by their rows in testSupport/migratedForgeRoster.js
 const frameworkDirFor = (scenario) => scenario.frameworkDirOverride || toyScenario.FRAMEWORK_DIR;
 const forgeTimeSourceList = () => fs.readdirSync(toyScenario.FRAMEWORK_DIR).filter((oneName) => /\.js$/.test(oneName)).map((oneName) => ({ fileName: `lib/forge-framework/${oneName}`, text: stripComments(fs.readFileSync(path.join(toyScenario.FRAMEWORK_DIR, oneName), 'utf8')) }));
 const harnessSourceList = () => fs.readdirSync(HARNESS_DIR).filter((oneName) => /\.js$/.test(oneName)).map((oneName) => ({ fileName: `lib/forge-framework/roundTripHarness/${oneName}`, text: stripComments(fs.readFileSync(path.join(HARNESS_DIR, oneName), 'utf8')) }));
-const hookAndEntrySourceList = () => ['forgeToy.js', 'lib/toyHooks.js', 'lib/toyForgeDeclaration.js', 'lib/toyRoundTripPair.js'].map((oneRelative) => ({ fileName: `toyForge/${oneRelative}`, text: stripComments(fs.readFileSync(path.join(toyScenario.TOY_DIR, oneRelative), 'utf8')) }));
+const { migratedForgeHookSourceList } = require('./testSupport/migratedForgeRoster');
+// the toy fixture's hook/entry/declaration files + every MIGRATED forge's H1/H2/H3 files (one roster, F3b)
+const hookAndEntrySourceList = () => ['forgeToy.js', 'lib/toyHooks.js', 'lib/toyForgeDeclaration.js', 'lib/toyRoundTripPair.js'].map((oneRelative) => ({ fileName: `toyForge/${oneRelative}`, text: stripComments(fs.readFileSync(path.join(toyScenario.TOY_DIR, oneRelative), 'utf8')) }))
+	.concat(migratedForgeHookSourceList().map((oneFile) => ({ fileName: oneFile.fileName, text: stripComments(oneFile.text) })));
 
 const staticConjunct = ({ conjunctId, title, twinName, sourceList, regex, allowFileName, frozenFileCount }) => ({
 	conjunctId,

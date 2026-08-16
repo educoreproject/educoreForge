@@ -1,8 +1,17 @@
 {
-  "_comment": "G-SHARE frozen share ratios (SPEC §10.1, FR20): per MIGRATED forge, hook lines / original lines, frozen by the F3 builder from the MEASURED migrated file, ceiling 0.5. F3a migrates no forge: every migrating entry is null (unmeasured by design) and the gate's report line says so; F3b freezes edfi in its migration commit, F3c sif, F3d pesc260805/ceds. The `toy` entry is a MEASURED fixture value: toyHooks.js lines over the sum of the fixture's five .js files — the toy has no 'original', so the ceiling rule is not applied to it; it is frozen so a change to the fixture is deliberate.",
+  "_comment": "G-SHARE frozen share ratios (SPEC §10.1, FR20): per MIGRATED forge, hook lines / original lines, frozen by the F3 builder from the MEASURED migrated file, ceiling 0.5. F3a migrates no forge: every migrating entry is null (unmeasured by design) and the gate's report line says so; F3b freezes edfi in its migration commit, F3c sif, F3d pesc260805/ceds. The `toy` entry is a MEASURED fixture value: toyHooks.js lines over the sum of the fixture's five .js files — the toy has no 'original', so the ceiling rule is not applied to it; it is frozen so a change to the fixture is deliberate. MEASURE (F3b definition, SPEC §10.1 'hook lines / original lines … from the MEASURED migrated file' = the ENTRY MODULE): migratedEntryModuleLineCount / originalEntryModuleLineCount, line counts as `wc -l` (newline characters); the gate re-measures the migrated entry module LIVE on every run and asserts measured ≤ frozen ≤ ceiling, so a fattening entry module turns it red. The original count is the entry module at the pre-migration tag.",
   "ratioCeiling": 0.5,
   "byStandardKey": {
-    "edfi": null,
+    "edfi": {
+      "entryModuleRelativePath": "forges/edfi/forgeEdfi.js",
+      "originalEntryModuleLineCount": 280,
+      "originalEntryModuleRef": "preEdfiMigration-081626 (428ca06)",
+      "migratedEntryModuleLineCount": 33,
+      "frozenRatio": 0.1179,
+      "measuredRatio": 0.1179,
+      "measuredBy": "AMBER_TRAIL F3b 2026-08-16",
+      "bundleNote": "whole-bundle context (not the gate's ratio): H1+H2+H3+entry = 33+71+146+932 = 1182 lines vs the original entry+contract graph 280+1130 = 1410; the 932-line walk is Ed-Fi's own (SPEC §8.2 '~800 lines of walk remain, all Ed-Fi')"
+    },
     "sif": null,
     "pesc260805": null,
     "ceds": null

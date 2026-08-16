@@ -48,7 +48,12 @@ const frameworkSourceList = () =>
 	fs.readdirSync(toyScenario.FRAMEWORK_DIR).filter((oneName) => /\.js$/.test(oneName)).map((oneName) => ({ fileName: `lib/forge-framework/${oneName}`, text: fs.readFileSync(path.join(toyScenario.FRAMEWORK_DIR, oneName), 'utf8') }))
 		.concat(fs.readdirSync(HARNESS_DIR).filter((oneName) => /\.js$/.test(oneName)).map((oneName) => ({ fileName: `lib/forge-framework/roundTripHarness/${oneName}`, text: fs.readFileSync(path.join(HARNESS_DIR, oneName), 'utf8') })))
 		.concat([{ fileName: 'lib/forge-framework/README.md', text: fs.existsSync(path.join(toyScenario.FRAMEWORK_DIR, 'README.md')) ? fs.readFileSync(path.join(toyScenario.FRAMEWORK_DIR, 'README.md'), 'utf8') : '' }]);
-const hookSourceList = () => ['forgeToy.js', 'roundTripValidator.js', 'lib/toyHooks.js', 'lib/toyRoundTripPair.js', 'lib/toyForgeDeclaration.js'].map((oneRelative) => ({ fileName: `toyForge/${oneRelative}`, text: fs.readFileSync(path.join(toyScenario.TOY_DIR, oneRelative), 'utf8') }));
+const { migratedForgeHookSourceList } = require('./testSupport/migratedForgeRoster');
+// the toy fixture's hook/entry/validator files + every MIGRATED forge's H1/H2/H3 files (one roster, F3b);
+// a migrated forge's LOADER modules are not hook files (FR14: C7/E5 live there, not discharged by
+// migration — Ed-Fi's metaEdParser.js:100 stub logger is E5's own later commit)
+const hookSourceList = () => ['forgeToy.js', 'roundTripValidator.js', 'lib/toyHooks.js', 'lib/toyRoundTripPair.js', 'lib/toyForgeDeclaration.js'].map((oneRelative) => ({ fileName: `toyForge/${oneRelative}`, text: fs.readFileSync(path.join(toyScenario.TOY_DIR, oneRelative), 'utf8') }))
+	.concat(migratedForgeHookSourceList());
 const testSourceList = () => fs.readdirSync(__dirname).filter((oneName) => /\.js$/.test(oneName)).map((oneName) => ({ fileName: `test/${oneName}`, text: fs.readFileSync(path.join(__dirname, oneName), 'utf8') }))
 	.concat(fs.readdirSync(path.join(__dirname, 'testSupport')).map((oneName) => ({ fileName: `test/testSupport/${oneName}`, text: fs.readFileSync(path.join(__dirname, 'testSupport', oneName), 'utf8') })));
 

@@ -52,8 +52,13 @@ require('../../../test/testLib/testAppStartup')({ moduleName, helpText: helpText
 
 const harness = require('../../../test/testLib/harness')(moduleName);
 
-const forgeEdfi = require('../forgeEdfi.js')({});
+// the framework refuses an ABSENT embedder key by name; null = the spend knob is off (SPEC §3.2)
+const forgeEdfi = require('../forgeEdfi.js')({ embedder: null });
 const forgeEdfiContractGraph = require('../lib/forgeEdfiContractGraph')();
+const edfiForgeDeclaration = require('../lib/edfiForgeDeclaration');
+// the SAME kit the walk is handed, built from Ed-Fi's declaration (its cedsAnchorAbsentSentinelList) —
+// the CEDS anchor normalizer moved into it at the F3b migration (kit.cedsAnchorValue, D14)
+const { contractGraphKit } = require('../../../lib/forge-framework/contractGraphKit');
 
 // =====================================================================
 // scratch snapshot builder — a VALID five-input snapshot; tests mutate copies of it
@@ -600,7 +605,11 @@ pushRefusalStep({
 		// and the manifest still names the folder's files — either way the refusal names the
 		// provenance README; the folder-missing arm fires first
 	},
-	expectedRegex: /'descriptorCodeValues' is MISSING[\s\S]*README_PROVENANCE\.md/,
+	// since the F3b migration the FRAMEWORK verifies every SHA256SUMS-listed file BEFORE any loader
+	// runs (forge() step 2; P11/C5 discharged) — the refusal names the first listed file missing
+	// on disk and the acquisition recipe (README_PROVENANCE.md); the loader's own folder refusal
+	// (F3) still stands behind it and fires when the manifest itself lists no such file
+	expectedRegex: /listed file 'descriptorCodeValues\/[^']+' is missing on disk[\s\S]*README_PROVENANCE\.md/,
 });
 
 pushRefusalStep({
@@ -611,7 +620,8 @@ pushRefusalStep({
 			' ',
 		);
 	},
-	expectedRegex: /checksum MISMATCH for 'descriptorCodeValues\/FixtureLevelDescriptor\.xml' — SHA256SUMS says [0-9a-f]{64}, the bytes on disk hash to [0-9a-f]{64}/,
+	// the framework's forge-time verification (step 2) names BOTH hashes, as the loader did
+	expectedRegex: /'descriptorCodeValues\/FixtureLevelDescriptor\.xml' sha256 MISMATCH — SHA256SUMS says [0-9a-f]{64}, disk has [0-9a-f]{64}/,
 });
 
 pushRefusalStep({
@@ -669,7 +679,8 @@ pushRefusalStep({
 	mutateSnapshot: (snapshotPath) => {
 		fs.rmSync(path.join(snapshotPath, 'cedsAuthoredCrosswalk'), { recursive: true });
 	},
-	expectedRegex: /'cedsAuthoredCrosswalk' is MISSING[\s\S]*README_PROVENANCE\.md/,
+	// framework step 2 again (see the descriptorCodeValues folder case above)
+	expectedRegex: /listed file 'cedsAuthoredCrosswalk\/[^']+' is missing on disk[\s\S]*README_PROVENANCE\.md/,
 });
 
 pushRefusalStep({
@@ -775,18 +786,26 @@ pushStep((done) => {
 		}),
 		'Mailing',
 	);
+	const { kit } = contractGraphKit({ forgeDeclaration: edfiForgeDeclaration, metadata: {} });
 	harness.ok(
-		"CEDS sentinel '000000' is ABSENT, not data",
-		forgeEdfiContractGraph.normalizeCedsCrossRef({ rawValue: '000000' }).absent === true,
+		"CEDS sentinel '000000' (the declaration's cedsAnchorAbsentSentinelList) is ABSENT, not data",
+		kit.cedsAnchorValue({ rawValue: '000000', kind: 'property' }).absent === true,
 	);
 	harness.equal(
 		'CEDS global-id canonicalizes to P-form',
-		forgeEdfiContractGraph.normalizeCedsCrossRef({ rawValue: '123' }).cedsId,
+		kit.cedsAnchorValue({ rawValue: '123', kind: 'property' }).cedsAnchorValue,
 		'P000123',
 	);
-	harness.ok(
-		'non-numeric CEDS global-id is an ERROR, never silent',
-		Boolean(forgeEdfiContractGraph.normalizeCedsCrossRef({ rawValue: 'not-a-number' }).error),
+	let nonNumericRefusal = '';
+	try {
+		kit.cedsAnchorValue({ rawValue: 'not-a-number', kind: 'property' });
+	} catch (thrownError) {
+		nonNumericRefusal = thrownError.message; // the kit THROWS inside the pure layer (SPEC §3.3) — this is the observation, not control flow
+	}
+	harness.match(
+		'non-numeric CEDS global-id is REFUSED by name, never silent (R3)',
+		nonNumericRefusal,
+		/could not extract a numeric CEDS anchor from 'not-a-number'/,
 	);
 	done();
 });

@@ -8,9 +8,29 @@
     "fourForgeManifest": "97c618c20e07c0c612957def69164402d364a98d5dfee865faacae1deace6382"
   },
   "measuredPreMigration": {
-    "edfi": null,
+    "edfi": "aea6d8dfe7899adef57c5ac3adb6b0df2bfc7e4a4ae859c4fa3893c132c8b304",
     "sif": null,
     "pesc260805": null,
     "ceds": null
+  },
+  "measuredPreMigrationRecord": {
+    "_comment": "provenance of each measuredPreMigration id: date, builder, unmigrated HEAD, recipe, run dir, log, verdict, goldEvalCheck",
+    "edfi": {
+      "measuredOn": "2026-08-16",
+      "measuredBy": "AMBER_TRAIL (F3b)",
+      "unmigratedHead": "428ca06 (tag preEdfiMigration-081626)",
+      "recipe": "recipes/edfiOnlyRoundTrip.recipe.jsonc",
+      "runDir": "system/dataStores/buildLogs/edfiOnlyRoundTrip_20260816-065155",
+      "buildLog": "system/dataStores/buildLogs/forgeFramework/edfi-preMigration/build.log",
+      "singleForgeManifestId": "da574bf184877bfb971e88d988f374bd13a25b027b13439d785b53bb05a910a8",
+      "roundTrip": {
+        "inventedTotal": 0,
+        "lostTotal": 0,
+        "roundTripClean": true
+      },
+      "goldEvalCheck": "PASS",
+      "equalsReferenceUnderFourWithHubBaseline": true,
+      "container": "DEV_forgeFramework_edfiPre (renamed from DEV_gb_materialize_91827_2)"
+    }
   }
 }

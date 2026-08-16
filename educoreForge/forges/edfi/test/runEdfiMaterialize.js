@@ -56,7 +56,7 @@ require('../../../test/testLib/testAppStartup')({ moduleName, helpText: helpText
 
 const path = require('path');
 
-const forgeEdfi = require('../forgeEdfi.js')({});
+const forgeEdfi = require('../forgeEdfi.js')({ embedder: null }); // the framework refuses an ABSENT embedder key by name (F3b)
 const roundTripEdfiCompiler = require('../lib/roundTripEdfiCompiler')();
 const replayManager = require('../../../apps/graph-builder/apps/replay-manager')();
 // the forger's OWN producer->engine translator (ref externalization + PG-JSON property arrays)

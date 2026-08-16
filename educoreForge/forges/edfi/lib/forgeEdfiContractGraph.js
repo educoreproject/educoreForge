@@ -1,12 +1,22 @@
 'use strict';
 
-// forgeEdfiContractGraph.js — forge-edfi Phase 2 (R-WO-8/R-WO-9): the PURE, synchronous,
-// deterministic shaping layer of the forge (renamed from forgeEdfiV2ContractGraph.js at the
-// Phase 5 closeout, when the campaign forge took its RT-1 manifest name and the V2 scaffolding
-// vocabulary was retired). Consumes the Phase 1 parser's in-memory MetaEd
+// forgeEdfiContractGraph.js — forge-edfi's WALK (H3) on the Forge Framework (SPEC-forgeFramework-v1.md
+// §5.1 emitContractGraph, §8.2; migrated F3b 2026-08-16 from the Phase 2 pure shaping layer,
+// R-WO-8/R-WO-9). PURE, synchronous, deterministic. Consumes the Phase 1 parser's in-memory MetaEd
 // model (the declared interface in metaEdParser.js), the descriptor code-value sets
-// (descriptorCodeValueLoader.js), and the authored crosswalk registries (crosswalkCarrier.js),
-// and emits the universal forge property contract: { nodes, edges, stats, crosswalkMatchReport }.
+// (descriptorCodeValueLoader.js), the authored crosswalk registries (crosswalkCarrier.js) and the
+// framework's KIT, and returns { nodes, edges, stats, crosswalkMatchReport } — the kit's collected
+// arrays in emission order plus this standard's report.
+//
+// WHAT MOVED TO THE FRAMEWORK (SPEC §8.2, byte-identical — block aea6d8dfe789…): the constants
+// (→ lib/edfiForgeDeclaration.js), makeNode / addEdge / registerStableId / isCleanStableId /
+// searchTextElementFor / normalizeCedsCrossRef / carriedScalars' scalar copy (→ kit.makeNode,
+// kit.addEdge, kit.isCleanStableId, kit.searchTextElementFor, kit.cedsAnchorValue,
+// kit.carriedProperties, kit.crossRefsJson, kit.emitOptionValue), the ROOT (→ rootNode.js from the
+// declaration + describeRoot), the dangling-endpoint terminal check and the structural finalizer
+// (→ buildContractGraph's integrity pass). What remains is Ed-Fi: the registries, the identity rule,
+// the passes over constructs / properties / descriptors / option values / crosswalk annotation, and
+// the per-standard refusals of malformed STANDARD content (Profile §7.2 keeps those in the hook).
 //
 // ROLE MAPPING (ruling R-WO-9, AMBER_TOWER 2026-08-03):
 //   DmeClass      abstractEntity, association(+Extension/+Subclass), choice,
@@ -30,13 +40,13 @@
 // ABSENT IS ABSENT (RT-2): a field the source does not state is a field the node does not
 // carry. No ''-as-value, no || defaults, no placeholder descriptions.
 //
-// REFUSALS (thrown; the forge orchestrator surfaces them as forge errors, mirroring the
-// incumbent buildContractGraph seam):
+// REFUSALS (thrown; the framework's ONE adapter in forge() step 5 surfaces them as forge errors):
 //   - a code-value XML naming a descriptor absent from the model (R-WO-10: a contradiction
 //     between two declared inputs of one snapshot)
 //   - an unresolvable model-internal reference (property target, subclass base, extension
 //     extendee, domain item, interchange component, subdomain parent)
-//   - a duplicate stableId; a dangling edge endpoint; an unnormalizable CEDS cross-ref (R3)
+//   - an unnormalizable CEDS cross-ref (R3, kit.cedsAnchorValue); a duplicate stableId and a
+//     dangling edge endpoint are the KIT's refusals now (same wording class, same three-state twins)
 // UNMATCHED CROSSWALK ROWS ARE NOT REFUSALS (R-WO-11): they are reported, per row, in
 // crosswalkMatchReport — the honest partial match IS the census-delta evidence.
 //
@@ -46,33 +56,26 @@
 const path = require('path');
 
 const CORE_LIB = path.join(__dirname, '..', '..', '..', 'lib');
-const buildSearchTextFactory = require(path.join(CORE_LIB, 'search-text', 'build-search-text'));
-const { NODE_LABELS, DME_ROLES, EDGE_TYPES, PROVENANCE_TIER } = require(
-	path.join(CORE_LIB, 'vocabulary', 'vocabulary'),
-);
-const { finalizeStructuralContract } = require(
-	path.join(CORE_LIB, 'structural-contract', 'structural-contract'),
-);
+// the vocabulary registry, required by path exactly as every forge does today (a tree lib; G-NOGRAPH permits it)
+const { DME_ROLES, EDGE_TYPES } = require(path.join(CORE_LIB, 'vocabulary', 'vocabulary'));
+const forgeDeclaration = require('./edfiForgeDeclaration'); // H1 — the constants live there, once
 
-const STANDARD_KEY = 'edfi';
-const STANDARD_SOURCE = 'EdFi'; // === the registry standardName, EXACT
-const STANDARD_DISPLAY = 'Ed-Fi Data Standard';
-const STABLE_URI_PROPERTY_NAME = 'edfiStableId';
-const ROOT_STABLE_ID = 'edfi:root';
-const CEDS_ANCHOR_PROPERTY_NAME = 'CEDSGlobalId';
-const CEDS_OPTION_ANCHOR_PROPERTY_NAME = 'CEDSOptionCode';
-const CEDS_NO_MAPPING_SENTINEL = '000000';
+const { standardSource: STANDARD_SOURCE, mappingInstruction } = forgeDeclaration;
 
-// The mappingInstruction contract is UNCHANGED from the incumbent (the bridge resolves
-// EdFi.cedsId == CedsProperty.cedsId in a later phase; same anchors, same resolver property).
-const edfiMappingInstruction = {
-	cedsOriginalAnchorPropertyName: [CEDS_ANCHOR_PROPERTY_NAME],
-	cedsOptionOriginalAnchorPropertyName: [CEDS_OPTION_ANCHOR_PROPERTY_NAME],
-	crosswalkPrefix: [],
-	crosswalkResolveProperty: STABLE_URI_PROPERTY_NAME,
-	includeInImplied: true,
-	impliedTargets: ['CEDS'],
+// the authored-crosswalk anchor names the walk stashes as `locator` and as the nodes'
+// cedsOriginalAnchorPropertyName / cedsOptionOriginalAnchorPropertyName lists ARE the declaration's
+// original anchor property names (one source, no second literal); Ed-Fi declares exactly ONE of each
+const anchorNameFrom = (anchorNameList, anchorKindLabel) => {
+	if (!Array.isArray(anchorNameList) || anchorNameList.length !== 1 || typeof anchorNameList[0] !== 'string') {
+		throw new Error(
+			`forge-edfi REFUSED: mappingInstruction.${anchorKindLabel} must name exactly ONE anchor property ` +
+				`(got ${JSON.stringify(anchorNameList)}) — the walk stashes that name as the crossRefs locator`,
+		);
+	}
+	return anchorNameList[0];
 };
+const CEDS_ANCHOR_PROPERTY_NAME = anchorNameFrom(mappingInstruction.cedsOriginalAnchorPropertyName, 'cedsOriginalAnchorPropertyName');
+const CEDS_OPTION_ANCHOR_PROPERTY_NAME = anchorNameFrom(mappingInstruction.cedsOptionOriginalAnchorPropertyName, 'cedsOptionOriginalAnchorPropertyName');
 
 // =====================================================================
 // REGISTRIES (house law: registry over switch, everywhere)
@@ -213,12 +216,7 @@ const INTERCHANGE_COMPONENT_KIND_REGISTRY = ['element', 'identityTemplate'];
 // normalization (self-contained; no dependency on the closeout-scheduled incumbent lib)
 // =====================================================================
 
-const EDFI_STABLE_ID_RE = /^edfi:[A-Za-z]+(\/.+)?$/;
-const isCleanStableId = (candidateValue) =>
-	typeof candidateValue === 'string' &&
-	candidateValue.length > 0 &&
-	candidateValue === candidateValue.trim() &&
-	EDFI_STABLE_ID_RE.test(candidateValue);
+// the stableId predicate is the declaration's stableIdPattern, applied by kit.isCleanStableId at mint
 
 const buildConstructStableId = ({ constructType, constructName }) => {
 	const cleanName = constructName == null ? '' : `${constructName}`.trim();
@@ -230,21 +228,10 @@ const buildConstructStableId = ({ constructType, constructName }) => {
 	return `edfi:${constructType}/${cleanName}`;
 };
 
-// canonical CEDS property anchor (P<6-digit zero-padded>) — same rule the incumbent applied,
-// restated here (R3: a present-but-unnormalizable annotation is a refusal, never data)
-const normalizeCedsCrossRef = ({ rawValue }) => {
-	const trimmedValue = rawValue == null ? '' : `${rawValue}`.trim();
-	if (trimmedValue === '' || trimmedValue === CEDS_NO_MAPPING_SENTINEL) {
-		return { absent: true };
-	}
-	const digitMatch = trimmedValue.match(/(\d+)(?!.*\d)/);
-	if (!digitMatch) {
-		return {
-			error: `normalizeCedsCrossRef: could not extract a numeric CEDS anchor from '${rawValue}'`,
-		};
-	}
-	return { cedsId: `P${digitMatch[1].padStart(6, '0')}` };
-};
+// the canonical CEDS property anchor (P<6-digit zero-padded>) is kit.cedsAnchorValue({ rawValue, kind:
+// 'property' }) — the ONE normalizer (D14), the declaration's cedsAnchorAbsentSentinelList ('000000'),
+// a present-but-unnormalizable annotation REFUSED by the kit (R3), never data
+const CEDS_ANCHOR_KIND = 'property';
 
 // the effective property name: MetaEd role-name context prefixes the base name (Ed-Fi naming
 // semantics); 'named' overrides for shared properties; shared properties without 'named' take
@@ -265,66 +252,30 @@ const effectivePropertyNameFor = (parsedProperty) => {
 // =====================================================================
 
 const moduleFunction = () => {
-	const { buildSearchText } = buildSearchTextFactory();
-
-	// the searchText element for a role, built from structural context only (1C, R4) —
-	// mirrors the incumbent's searchTextElementFor including the SUPPORT branch
-	const searchTextElementFor = ({ role, name, owningName }) => {
-		if (role === DME_ROLES.CLASS) {
-			return { role, name, standardName: STANDARD_SOURCE, owningName: STANDARD_SOURCE };
-		}
-		if (role === DME_ROLES.PROPERTY) {
-			return {
-				role,
-				name,
-				owningClassName: owningName || STANDARD_SOURCE,
-				owningName: owningName || STANDARD_SOURCE,
-			};
-		}
-		if (role === DME_ROLES.OPTION_SET) {
-			return { role, name, owningClassName: STANDARD_SOURCE, owningName: STANDARD_SOURCE };
-		}
-		if (role === DME_ROLES.OPTION_VALUE) {
-			return {
-				role,
-				name,
-				optionSetName: owningName,
-				owningName,
-				owningClassName: STANDARD_SOURCE,
-			};
-		}
-		return { role, name, owningName: STANDARD_SOURCE, standardName: STANDARD_SOURCE };
-	};
-
 	// =====================================================================
-	// buildContractGraph — PURE, deterministic.
-	//   { metaEdModel, descriptorCodeValues, authoredCrosswalk, metadata }
+	// emitContractGraph — the WALK (H3). PURE, deterministic.
+	//   { metaEdModel, descriptorCodeValues, authoredCrosswalk, kit }
 	//     -> { nodes, edges, stats, crosswalkMatchReport }
+	//   nodes / edges are the KIT's collected arrays (every creation went through kit.makeNode /
+	//   kit.addEdge / kit.emitOptionValue); the ROOT is already minted when the walk starts
+	//   (kit.rootStableId) and is the first member of kit.nodes.
 	// =====================================================================
-	const buildContractGraph = ({
-		metaEdModel,
-		descriptorCodeValues,
-		authoredCrosswalk,
-		metadata,
-	}) => {
-		const nodes = [];
-		const edges = [];
-		const stats = {
-			nodeCountByRole: {},
+	const emitContractGraph = ({ metaEdModel, descriptorCodeValues, authoredCrosswalk, kit }) => {
+		const { nodes, edges, stats } = kit;
+		// this standard's own counters, added onto the kit's (nodeCountByRole / edgeCountByType /
+		// danglingEdges are the kit's)
+		Object.assign(stats, {
 			constructCountByType: {},
 			optionValueCountByOrigin: {},
-			edgeCountByType: {},
 			crossRefsAnnotatedProperties: 0,
 			crossRefsAnnotatedDescriptors: 0,
 			crossRefsAnnotatedOptionValues: 0,
 			orphanAnchoredOptionSets: 0,
 			itemKeywordMismatchList: [],
-			danglingEdges: [],
-		};
+		});
+		const rootStableId = kit.rootStableId;
 
 		// ---- indexes ----
-		const nodeByStableId = {};
-		const originByStableId = {}; // stableId -> human-locatable origin (duplicate refusals)
 		const constructNodeByTypeAndName = {}; // `${constructType}/${name}` -> node
 		const propertyNodeListByOwnerAndName = {}; // `${ownerName}.${effectiveName}` -> [node]
 		const optionValueNodeBySetAndCode = {}; // `${optionSetName}.${codeValue}` -> node
@@ -333,109 +284,15 @@ const moduleFunction = () => {
 		const originFor = (parsedConstruct) =>
 			`${parsedConstruct.sourceFileRelativePath || 'synthetic'}:${parsedConstruct.sourceLineNumber || '?'}`;
 
-		const registerStableId = ({ stableId, origin }) => {
-			if (originByStableId[stableId]) {
-				throw new Error(
-					`forge-edfi REFUSED: duplicate stableId '${stableId}' — first minted from ` +
-						`${originByStableId[stableId]}, minted again from ${origin}. Identity must be ` +
-						`unique; a silent overwrite is a silent merge.`,
-				);
-			}
-			originByStableId[stableId] = origin;
-		};
-
-		// edgeProperties — OPTIONAL declared edge content, merged onto the universal provenanceTier.
-		// This is the idiom already in service at forges/case/forgeCase.js:210 and three other
-		// forges. Most call sites pass none and that is a legitimate state, not a missing value:
-		// only the two item-carrier loops below declare edge content. A DEFINED value that is not a
-		// plain object is a different matter entirely — it would spread to nothing and lose the
-		// caller's data in silence — so it is refused by name.
-		const addEdge = (edgeType, fromStableId, toStableId, edgeContext, edgeProperties) => {
-			if (
-				edgeProperties !== undefined &&
-				(typeof edgeProperties !== 'object' || edgeProperties === null || Array.isArray(edgeProperties))
-			) {
-				throw new Error(
-					`forge-edfi REFUSED: addEdge('${edgeType}', ..., '${edgeContext}') received ` +
-						`edgeProperties of type '${Array.isArray(edgeProperties) ? 'array' : typeof edgeProperties}'. ` +
-						`Edge properties must be a plain object or omitted entirely; anything else spreads ` +
-						`to nothing and would discard declared edge content silently.`,
-				);
-			}
-			if (!fromStableId || !toStableId) {
-				stats.danglingEdges.push({ edgeType, fromStableId, toStableId, edgeContext });
-				return;
-			}
-			edges.push({
-				type: edgeType,
-				fromRef: { source: STANDARD_SOURCE, id: fromStableId },
-				toRef: { source: STANDARD_SOURCE, id: toStableId },
-				// tested for ABSENCE, not truthiness: every non-object value was already refused
-				// above, so the only two states reaching here are "omitted" and "a plain object",
-				// and `=== undefined` says exactly that where `||` would merely imply it
-				properties: {
-					provenanceTier: PROVENANCE_TIER.STRUCTURAL,
-					...(edgeProperties === undefined ? {} : edgeProperties),
-				},
-			});
-			stats.edgeCountByType[edgeType] = (stats.edgeCountByType[edgeType] || 0) + 1;
-		};
-
-		// makeNode — stamp the universal contract onto one node (1C searchText; RT-2 scalars)
-		const makeNode = ({
-			role,
-			perStandardLabel,
-			stableId,
-			name,
-			description,
-			structural,
-			scalarProps,
-			origin,
-		}) => {
-			if (!isCleanStableId(stableId)) {
-				throw new Error(`forge-edfi: unclean stableId '${stableId}' (from ${origin})`);
-			}
-			registerStableId({ stableId, origin });
-			const searchText = buildSearchText(
-				searchTextElementFor({ role, name, owningName: structural.owningName }),
-			);
-			const node = {
-				labels: [NODE_LABELS.FORGED_NODE, perStandardLabel, role],
-				stableId,
-				role,
-				properties: {
-					_id: stableId,
-					_source: STANDARD_SOURCE,
-					name: `${name}`,
-					role,
-					[STABLE_URI_PROPERTY_NAME]: stableId,
-					searchText,
-					parentId: structural.parentId,
-					depth: structural.depth,
-					path: structural.path,
-					...(description !== undefined ? { description } : {}),
-					...(scalarProps || {}),
-				},
-			};
-			nodes.push(node);
-			nodeByStableId[stableId] = node;
-			stats.nodeCountByRole[role] = (stats.nodeCountByRole[role] || 0) + 1;
-			return node;
-		};
-
-		// carry whitelisted native scalars that are PRESENT (RT-2)
-		const carriedScalars = ({ parsedObject, carryList }) => {
-			const scalarProps = {};
-			carryList.forEach((fieldName) => {
-				if (parsedObject[fieldName] !== undefined) {
-					scalarProps[fieldName] = parsedObject[fieldName];
-				}
-			});
-			if (parsedObject.mergeDirectiveList !== undefined) {
-				scalarProps.mergeDirectives = JSON.stringify(parsedObject.mergeDirectiveList);
-			}
-			return scalarProps;
-		};
+		// carry whitelisted native scalars that are PRESENT (RT-2) — kit.carriedProperties (the
+		// `!== undefined` filter, SPEC §3.4) plus Ed-Fi's mergeDirectives: the walk composes that JSON
+		// string itself and passes it in the carry object (its key order is the parser's — G-JSONKEYS)
+		const carriedScalars = ({ parsedObject, carryList }) => ({
+			...kit.carriedProperties({ parsedObject, carryList }),
+			...(parsedObject.mergeDirectiveList !== undefined
+				? { mergeDirectives: JSON.stringify(parsedObject.mergeDirectiveList) }
+				: {}),
+		});
 
 		// per-standard label: Edfi + capitalized constructType (new inventory, R-WO-1)
 		const perStandardLabelFor = (constructType) =>
@@ -449,51 +306,9 @@ const moduleFunction = () => {
 			});
 		});
 
-		// =====================================================================
-		// DmeStandardRoot (provenance block + stableUriPropertyName + mappingInstruction)
-		// =====================================================================
-		const rootSearchText = buildSearchText({
-			role: DME_ROLES.STANDARD_ROOT,
-			name: STANDARD_SOURCE,
-			standardName: STANDARD_DISPLAY,
-		});
-		registerStableId({ stableId: ROOT_STABLE_ID, origin: 'root' });
-		const totalCodeValueCount = Object.values(
-			descriptorCodeValues.codeValueListByDescriptorName,
-		).reduce((runningSum, oneList) => runningSum + oneList.length, 0);
-		nodes.push({
-			labels: [NODE_LABELS.FORGED_NODE, 'EdfiRoot', DME_ROLES.STANDARD_ROOT],
-			stableId: ROOT_STABLE_ID,
-			role: DME_ROLES.STANDARD_ROOT,
-			properties: {
-				_id: ROOT_STABLE_ID,
-				_source: STANDARD_SOURCE,
-				name: STANDARD_SOURCE,
-				description:
-					`${STANDARD_DISPLAY} — ${metaEdModel.census.totalConstructCount} MetaEd constructs, ` +
-					`${metaEdModel.census.totalPropertyCount} properties, ` +
-					`${totalCodeValueCount} descriptor code values`,
-				role: DME_ROLES.STANDARD_ROOT,
-				[STABLE_URI_PROPERTY_NAME]: ROOT_STABLE_ID,
-				searchText: rootSearchText,
-				standardKey: STANDARD_KEY,
-				standardName: STANDARD_DISPLAY,
-				version: metadata.version,
-				snapshotKey: metadata.snapshotKey,
-				publishedVersion: metadata.publishedVersion,
-				versionSource: metadata.versionSource,
-				sourceFormat: metadata.sourceFormat,
-				sourceFiles: metadata.sourceFiles || [],
-				sourceUrl: metadata.sourceUrl || '',
-				parserVersion: '2',
-				// ingestedAt deliberately NOT stamped (H5 determinism ruling, kept from incumbent)
-				coreVersion: '2.0.0',
-				stableUriPropertyName: STABLE_URI_PROPERTY_NAME,
-				mappingInstruction: JSON.stringify(edfiMappingInstruction),
-			},
-		});
-		nodeByStableId[ROOT_STABLE_ID] = nodes[nodes.length - 1];
-		stats.nodeCountByRole[DME_ROLES.STANDARD_ROOT] = 1;
+		// the DmeStandardRoot is FRAMEWORK-built from the declaration + describeRoot (rootNode.js) and
+		// already minted: kit.rootStableId; the walk parents constructs on it and anchors orphan option
+		// sets from it
 
 		// =====================================================================
 		// PASS 1 — construct nodes (all types), indexed for reference resolution
@@ -511,24 +326,23 @@ const moduleFunction = () => {
 				constructType: parsedConstruct.constructType,
 				constructName,
 			});
-			const scalarProps = {
+			const constructCarriedProperties = {
 				constructType: parsedConstruct.constructType,
 				sourceInputName: inputName,
 				...carriedScalars({ parsedObject: parsedConstruct, carryList: CONSTRUCT_SCALAR_CARRY_LIST }),
 			};
-			const constructNode = makeNode({
+			const constructNode = kit.makeNode({
 				role: roleSpec.role,
 				perStandardLabel: perStandardLabelFor(parsedConstruct.constructType),
 				stableId,
 				name: constructName,
 				description: parsedConstruct.documentationText,
 				structural: {
-					parentId: ROOT_STABLE_ID,
-					depth: 1,
+					parentId: rootStableId,
 					path: constructName,
 					owningName: STANDARD_SOURCE,
 				},
-				scalarProps,
+				carriedProperties: constructCarriedProperties,
 				origin: originFor(parsedConstruct),
 			});
 			constructNodeByTypeAndName[`${parsedConstruct.constructType}/${constructName}`] =
@@ -536,7 +350,7 @@ const moduleFunction = () => {
 			stats.constructCountByType[parsedConstruct.constructType] =
 				(stats.constructCountByType[parsedConstruct.constructType] || 0) + 1;
 			if (roleSpec.ownershipEdgeType) {
-				addEdge(roleSpec.ownershipEdgeType, ROOT_STABLE_ID, stableId, `root->${constructName}`);
+				kit.addEdge({ edgeType: roleSpec.ownershipEdgeType, fromStableId: rootStableId, toStableId: stableId, edgeContext: `root->${constructName}` });
 			}
 		});
 
@@ -605,7 +419,7 @@ const moduleFunction = () => {
 					parsedProperty.documentationText !== undefined
 						? parsedProperty.documentationText
 						: undefined;
-				const propertyNode = makeNode({
+				const propertyNode = kit.makeNode({
 					role: DME_ROLES.PROPERTY,
 					perStandardLabel: 'EdfiProperty',
 					stableId: propertyStableId,
@@ -613,11 +427,10 @@ const moduleFunction = () => {
 					description: propertyDescription,
 					structural: {
 						parentId: constructStableId,
-						depth: 2,
 						path: `${constructName}.${effectiveName}`,
 						owningName: constructName,
 					},
-					scalarProps: {
+					carriedProperties: {
 						owningConstructName: constructName,
 						owningConstructType: parsedConstruct.constructType,
 						sourceInputName: inputName,
@@ -631,7 +444,7 @@ const moduleFunction = () => {
 					propertyNode,
 				);
 
-				addEdge(EDGE_TYPES.HAS_PROPERTY, constructStableId, propertyStableId, `${constructName}->${effectiveName}`);
+				kit.addEdge({ edgeType: EDGE_TYPES.HAS_PROPERTY, fromStableId: constructStableId, toStableId: propertyStableId, edgeContext: `${constructName}->${effectiveName}` });
 
 				if (referenceSpec !== null) {
 					const targetLocalName =
@@ -648,12 +461,12 @@ const moduleFunction = () => {
 							origin: propertyOrigin,
 						});
 					}
-					addEdge(
-						referenceSpec.edgeType,
-						propertyStableId,
-						targetNode.stableId,
-						`${constructName}.${effectiveName}->${targetLocalName}`,
-					);
+					kit.addEdge({
+						edgeType: referenceSpec.edgeType,
+						fromStableId: propertyStableId,
+						toStableId: targetNode.stableId,
+						edgeContext: `${constructName}.${effectiveName}->${targetLocalName}`,
+					});
 					if (referenceSpec.edgeType === EDGE_TYPES.HAS_OPTION_SET) {
 						optionSetConstrainedStableIds.add(targetNode.stableId);
 					}
@@ -675,23 +488,20 @@ const moduleFunction = () => {
 					);
 				}
 				const optionValueStableId = `edfi:value/${constructName}.${trimmedCodeValue}`;
-				const optionValueNode = makeNode({
-					role: DME_ROLES.OPTION_VALUE,
+				// the kit's helper mints the DmeOptionValue parented on its set and adds HAS_VALUE (set → value)
+				const optionValueNode = kit.emitOptionValue({
+					optionSetStableId: constructStableId,
+					optionValueStableId,
 					perStandardLabel: 'EdfiOptionValue',
-					stableId: optionValueStableId,
 					name: codeValueText,
 					description: valueDescription,
-					structural: {
-						parentId: constructStableId,
-						depth: 2,
-						path: `${constructName}.${trimmedCodeValue}`,
-						owningName: constructName,
-					},
-					scalarProps: { valueOrigin, ...valueScalars },
+					path: `${constructName}.${trimmedCodeValue}`,
+					owningName: constructName,
+					carriedProperties: { valueOrigin, ...valueScalars },
+					edgeContext: `${constructName}->${codeValueText}`,
 					origin,
 				});
 				optionValueNodeBySetAndCode[`${constructName}.${trimmedCodeValue}`] = optionValueNode;
-				addEdge(EDGE_TYPES.HAS_VALUE, constructStableId, optionValueStableId, `${constructName}->${codeValueText}`);
 				stats.optionValueCountByOrigin[valueOrigin] =
 					(stats.optionValueCountByOrigin[valueOrigin] || 0) + 1;
 			};
@@ -793,7 +603,7 @@ const moduleFunction = () => {
 						origin: constructOrigin,
 					});
 				}
-				addEdge(EDGE_TYPES.SUBCLASS_OF, constructStableId, baseNode.stableId, `${constructName} based on ${parsedConstruct.baseName}`);
+				kit.addEdge({ edgeType: EDGE_TYPES.SUBCLASS_OF, fromStableId: constructStableId, toStableId: baseNode.stableId, edgeContext: `${constructName} based on ${parsedConstruct.baseName}` });
 			}
 
 			const extendeeFamily = EXTENSION_EXTENDEE_FAMILY_REGISTRY[parsedConstruct.constructType];
@@ -810,7 +620,7 @@ const moduleFunction = () => {
 						origin: constructOrigin,
 					});
 				}
-				addEdge(EDGE_TYPES.REFERENCES, constructStableId, extendeeNode.stableId, `${constructName} additions -> ${parsedConstruct.extendeeName}`);
+				kit.addEdge({ edgeType: EDGE_TYPES.REFERENCES, fromStableId: constructStableId, toStableId: extendeeNode.stableId, edgeContext: `${constructName} additions -> ${parsedConstruct.extendeeName}` });
 			}
 
 			// item resolution is BY NAME across the item-capable families (see the
@@ -854,11 +664,17 @@ const moduleFunction = () => {
 				// own construction (metaEdSyntaxParser.js:998-1004): the field exists iff the
 				// source declared it, so an absent declaration carries NOTHING and the compiler
 				// emits nothing for it.
-				addEdge(EDGE_TYPES.REFERENCES, constructStableId, itemNode.stableId, `${constructName} domain item ${oneDomainItem.localDomainItemName}`, {
-					...(oneDomainItem.metaEdId !== undefined ? { itemMetaEdId: oneDomainItem.metaEdId } : {}),
-					...(oneDomainItem.baseNamespace !== undefined
-						? { itemNamespaceQualifier: oneDomainItem.baseNamespace }
-						: {}),
+				kit.addEdge({
+					edgeType: EDGE_TYPES.REFERENCES,
+					fromStableId: constructStableId,
+					toStableId: itemNode.stableId,
+					edgeContext: `${constructName} domain item ${oneDomainItem.localDomainItemName}`,
+					edgeProperties: {
+						...(oneDomainItem.metaEdId !== undefined ? { itemMetaEdId: oneDomainItem.metaEdId } : {}),
+						...(oneDomainItem.baseNamespace !== undefined
+							? { itemNamespaceQualifier: oneDomainItem.baseNamespace }
+							: {}),
+					},
 				});
 			});
 
@@ -897,12 +713,18 @@ const moduleFunction = () => {
 				}
 				// R-WO-15(d)/(f) carriage — see the domain-item note above. componentKind is
 				// unconditional; the other two are present iff declared.
-				addEdge(EDGE_TYPES.REFERENCES, constructStableId, componentNode.stableId, `${constructName} interchange ${oneComponent.componentKind} ${oneComponent.localInterchangeItemName}`, {
-					componentKind: oneComponent.componentKind,
-					...(oneComponent.metaEdId !== undefined ? { itemMetaEdId: oneComponent.metaEdId } : {}),
-					...(oneComponent.baseNamespace !== undefined
-						? { itemNamespaceQualifier: oneComponent.baseNamespace }
-						: {}),
+				kit.addEdge({
+					edgeType: EDGE_TYPES.REFERENCES,
+					fromStableId: constructStableId,
+					toStableId: componentNode.stableId,
+					edgeContext: `${constructName} interchange ${oneComponent.componentKind} ${oneComponent.localInterchangeItemName}`,
+					edgeProperties: {
+						componentKind: oneComponent.componentKind,
+						...(oneComponent.metaEdId !== undefined ? { itemMetaEdId: oneComponent.metaEdId } : {}),
+						...(oneComponent.baseNamespace !== undefined
+							? { itemNamespaceQualifier: oneComponent.baseNamespace }
+							: {}),
+					},
 				});
 			});
 
@@ -919,7 +741,7 @@ const moduleFunction = () => {
 						origin: constructOrigin,
 					});
 				}
-				addEdge(EDGE_TYPES.REFERENCES, constructStableId, parentDomainNode.stableId, `${constructName} subdomain of ${parsedConstruct.parentDomainName}`);
+				kit.addEdge({ edgeType: EDGE_TYPES.REFERENCES, fromStableId: constructStableId, toStableId: parentDomainNode.stableId, edgeContext: `${constructName} subdomain of ${parsedConstruct.parentDomainName}` });
 			}
 		});
 
@@ -932,7 +754,7 @@ const moduleFunction = () => {
 				return;
 			}
 			if (!optionSetConstrainedStableIds.has(oneNode.stableId)) {
-				addEdge(EDGE_TYPES.HAS_OPTION_SET, ROOT_STABLE_ID, oneNode.stableId, 'root->orphanOptionSet');
+				kit.addEdge({ edgeType: EDGE_TYPES.HAS_OPTION_SET, fromStableId: rootStableId, toStableId: oneNode.stableId, edgeContext: 'root->orphanOptionSet' });
 				stats.orphanAnchoredOptionSets += 1;
 			}
 		});
@@ -955,7 +777,8 @@ const moduleFunction = () => {
 		const stashCrossRefsOnNode = ({ targetNode, crossRefList, canonicalCedsId }) => {
 			targetNode.properties.cedsId = canonicalCedsId;
 			targetNode.properties.cedsOriginalAnchorPropertyName = [CEDS_ANCHOR_PROPERTY_NAME];
-			targetNode.properties.crossRefs = JSON.stringify(crossRefList);
+			// D22 shape [{ system, id, raw, locator }] in exactly that key order — kit.crossRefsJson
+			targetNode.properties.crossRefs = kit.crossRefsJson(crossRefList);
 		};
 
 		// property-row matching, TWO mechanical tiers (both censused separately):
@@ -1011,22 +834,17 @@ const moduleFunction = () => {
 			const crossRefList = [];
 			let canonicalCedsId = null;
 			oneRegistryEntry.cedsGlobalIdList.forEach((rawGlobalId) => {
-				const normalized = normalizeCedsCrossRef({ rawValue: rawGlobalId });
+				// an unnormalizable anchor is REFUSED by the kit (R3), never data
+				const normalized = kit.cedsAnchorValue({ rawValue: rawGlobalId, kind: CEDS_ANCHOR_KIND });
 				if (normalized.absent) {
 					return;
 				}
-				if (normalized.error) {
-					throw new Error(
-						`forge-edfi R3 CEDS cross-ref miss on property ` +
-							`'${matchRefId}': ${normalized.error}`,
-					);
-				}
 				if (!canonicalCedsId) {
-					canonicalCedsId = normalized.cedsId;
+					canonicalCedsId = normalized.cedsAnchorValue;
 				}
 				crossRefList.push({
 					system: 'ceds',
-					id: normalized.cedsId,
+					id: normalized.cedsAnchorValue,
 					raw: `${rawGlobalId}`,
 					locator: CEDS_ANCHOR_PROPERTY_NAME,
 				});
@@ -1051,25 +869,20 @@ const moduleFunction = () => {
 				return;
 			}
 			crosswalkMatchReport.descriptorRows.matchedCount += 1;
-			const normalized = normalizeCedsCrossRef({ rawValue: oneRegistryEntry.cedsGlobalId });
-			if (normalized.error) {
-				throw new Error(
-					`forge-edfi R3 CEDS cross-ref miss on descriptor ` +
-						`'${oneRegistryEntry.descriptorName}': ${normalized.error}`,
-				);
-			}
+			// an unnormalizable anchor is REFUSED by the kit (R3), never data
+			const normalized = kit.cedsAnchorValue({ rawValue: oneRegistryEntry.cedsGlobalId, kind: CEDS_ANCHOR_KIND });
 			if (!normalized.absent) {
 				stashCrossRefsOnNode({
 					targetNode: descriptorNode,
 					crossRefList: [
 						{
 							system: 'ceds',
-							id: normalized.cedsId,
+							id: normalized.cedsAnchorValue,
 							raw: `${oneRegistryEntry.cedsGlobalId}`,
 							locator: CEDS_ANCHOR_PROPERTY_NAME,
 						},
 					],
-					canonicalCedsId: normalized.cedsId,
+					canonicalCedsId: normalized.cedsAnchorValue,
 				});
 				stats.crossRefsAnnotatedDescriptors += 1;
 			}
@@ -1092,6 +905,8 @@ const moduleFunction = () => {
 			optionValueNode.properties.cedsOptionOriginalAnchorPropertyName = [
 				CEDS_OPTION_ANCHOR_PROPERTY_NAME,
 			];
+			// Ed-Fi's OWN option-value cross-ref shape { system, optionCode, locator } — not the D22
+			// { system, id, raw, locator } shape kit.crossRefsJson serialises, so the walk composes it
 			optionValueNode.properties.crossRefs = JSON.stringify([
 				{
 					system: 'ceds',
@@ -1102,28 +917,15 @@ const moduleFunction = () => {
 			stats.crossRefsAnnotatedOptionValues += 1;
 		});
 
-		// =====================================================================
-		// integrity + the shared contract finalizer
-		// =====================================================================
-		if (stats.danglingEdges.length > 0) {
-			throw new Error(
-				`forge-edfi: ${stats.danglingEdges.length} edge(s) had an unresolved endpoint ` +
-					`(first: ${JSON.stringify(stats.danglingEdges[0])}) — never emit a partial edge`,
-			);
-		}
-
-		finalizeStructuralContract({ nodes, edges });
+		// the dangling-endpoint terminal check and finalizeStructuralContract are the FRAMEWORK's
+		// (buildContractGraph integrity pass, then the finalizer LAST over structure); the walk returns
+		// the kit's collected arrays whole, in emission order, plus its own report
 		return { nodes, edges, stats, crosswalkMatchReport };
 	};
 
 	return {
-		buildContractGraph,
+		emitContractGraph,
 		effectivePropertyNameFor, // exported for the hermetic suite
-		normalizeCedsCrossRef, // exported for the hermetic suite
-		STANDARD_KEY,
-		STANDARD_SOURCE,
-		STANDARD_DISPLAY,
-		STABLE_URI_PROPERTY_NAME,
 	};
 };
 

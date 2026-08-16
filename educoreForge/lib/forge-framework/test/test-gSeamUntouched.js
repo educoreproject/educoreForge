@@ -36,7 +36,7 @@ const { makeTwinRegistry } = require('../roundTripHarness/twinRegistry');
 const GATE_ID = 'G-SEAM-UNTOUCHED';
 const twinRegistry = makeTwinRegistry();
 const TREE_ROOT = path.resolve(toyScenario.FRAMEWORK_DIR, '..', '..');
-const PRE_MIGRATION_REF = 'ae41a89b20a529ff3a36cc9db07f9c96cd4d43c7'; // HEAD when the Forge Framework order began (F3a start)
+const PRE_MIGRATION_REF = 'preEdfiMigration-081626'; // the tag AMBER_TRAIL cut at 428ca06 (F3a CLEARED HEAD) before the Ed-Fi migration (F3b, ruling 03:20 #5); before F3b: ae41a89 (F3a start)
 const SEAM_FILE_LIST = Object.freeze([
 	'apps/graph-builder/apps/forger/forger.js',
 	'apps/graph-builder/lib/build.js',

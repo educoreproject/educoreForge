@@ -42,7 +42,7 @@ require('../../../test/testLib/testAppStartup')({ moduleName, helpText: helpText
 
 const path = require('path');
 
-const forgeEdfi = require('../forgeEdfi.js')({});
+const forgeEdfi = require('../forgeEdfi.js')({ embedder: null }); // the framework refuses an ABSENT embedder key by name (F3b)
 
 const SNAPSHOT_PATH = path.join(__dirname, '..', 'assets', 'standardSourceData', '04');
 

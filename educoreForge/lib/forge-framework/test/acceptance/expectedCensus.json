@@ -1,8 +1,16 @@
 {
-  "_comment": "G-ORDER / G-CENSUS frozen collision census per forge (SPEC §8.4 #1, §10.1 G-ORDER, §10.2 G-CENSUS): census.collisionCensus over the forge's pure output — duplicateStableIdCount / duplicateEdgeTripleCount / danglingEndpointCount. The toy is MEASURED and frozen (0/0/0). The four are MEASURED by the F3 builder as the FIRST act of each migration (STANDDOWN-F2-panel ruling 4) — null until then; the census decides whether C1/C2 (and S6's parent-edge count) may be declared.",
+  "_comment": "G-ORDER / G-CENSUS frozen collision census per forge (SPEC §8.4 #1, §10.1 G-ORDER, §10.2 G-CENSUS): census.collisionCensus over the forge's pure output — duplicateStableIdCount / duplicateEdgeTripleCount / danglingEndpointCount. The toy is MEASURED and frozen (0/0/0). The four are MEASURED by the F3 builder as the FIRST act of each migration (STANDDOWN-F2-panel ruling 4) — null until then; the census decides whether C1/C2 (and S6's parent-edge count) may be declared. edfi MEASURED: AMBER_TRAIL F3b probes 2026-08-16, forges/edfi/test/runEdfiPreMigrationProbes.js over snapshot 04 (unmigrated forgeEdfi.js, HEAD 428ca06); 6336 nodes / 8171 edges.",
   "byStandardKey": {
-    "toy": { "duplicateStableIdCount": 0, "duplicateEdgeTripleCount": 0, "danglingEndpointCount": 0 },
-    "edfi": null,
+    "toy": {
+      "duplicateStableIdCount": 0,
+      "duplicateEdgeTripleCount": 0,
+      "danglingEndpointCount": 0
+    },
+    "edfi": {
+      "duplicateStableIdCount": 0,
+      "duplicateEdgeTripleCount": 0,
+      "danglingEndpointCount": 0
+    },
     "sif": null,
     "pesc260805": null,
     "ceds": null

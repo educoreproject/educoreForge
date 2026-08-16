@@ -1,8 +1,8 @@
 {
-  "_comment": "G-ID-CHEAP (PROXY) frozen pure-layer fingerprints (SPEC §9.3, §10.1): sha256 over the pure output canonicalised as shape-forged-graph + harvest shapeNode + replay-block would (fingerprint.js). PROXY: it cannot see MERGE collapse, the header, the hub fold or embeddingRef lines; a green proxy is not a green G-ID. The toy value is MEASURED on the toy fixture (snapshot 01, skipEmbedding) and frozen 2026-08-16 by SHADOW_GATE. Per-forge values are MEASURED by the F3 builder on each UNMIGRATED forge before its migration (FR9) — null until then.",
+  "_comment": "G-ID-CHEAP (PROXY) frozen pure-layer fingerprints (SPEC §9.3, §10.1): sha256 over the pure output canonicalised as shape-forged-graph + harvest shapeNode + replay-block would (fingerprint.js). PROXY: it cannot see MERGE collapse, the header, the hub fold or embeddingRef lines; a green proxy is not a green G-ID. The toy value is MEASURED on the toy fixture (snapshot 01, skipEmbedding) and frozen 2026-08-16 by SHADOW_GATE. Per-forge values are MEASURED by the F3 builder on each UNMIGRATED forge before its migration (FR9) — null until then. edfi MEASURED 2026-08-16 by AMBER_TRAIL (F3b probes, unmigrated forgeEdfi.js at 428ca06, snapshot 04, skipEmbedding; identical under LC_ALL=C and en_US.UTF-8).",
   "byStandardKey": {
     "toy": "3a3130eb420e0e74122446d575a1c46841c465f755ee91111f23158552e04cb8",
-    "edfi": null,
+    "edfi": "682f71f343a2bf4d2cbba4603550aa8f77358607227ccb365173176923bf000f",
     "sif": null,
     "pesc260805": null,
     "ceds": null
