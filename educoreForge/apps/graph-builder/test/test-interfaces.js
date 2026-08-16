@@ -329,6 +329,20 @@ harness.note('nowhere else. interfaces.js says so in the same words.');
 		constructionRefusal,
 		/bridgePluginResolver.*not honoured.*no bridge implementation is registered/,
 	);
+	// The DECLARATION must name what the stub CAN produce (Phase 4, Phase 3 stand-down item 7): a
+	// refusal-only run hands back NO result object, so the contract declares no result shape (null).
+	// A declared key set the stub can never meet is a lie the arity/argKeys sweep cannot see — this
+	// probe compares the declaration to the OBSERVED callback. (Observed red with the pre-reset
+	// resultKeys array in place — DEVLOG Phase 4 K3b.)
+	harness.ok(
+		'the stub hands back NO result object on its refusal (callback result is undefined)',
+		observed.result === undefined,
+	);
+	harness.equal(
+		'COMPONENT_SHAPES.bridgeMaker.run.resultKeys declares NO result shape (null), matching what the stub produces',
+		COMPONENT_SHAPES.bridgeMaker.run.resultKeys,
+		null,
+	);
 })();
 
 // manifestEditor — both doors and the handle they hand back, against the standardsDatabase double.

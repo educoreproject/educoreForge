@@ -445,6 +445,55 @@ const moduleFunction =
 							'empty, zero loss means zero, with nothing argued at the margin.',
 						matchedRows: numbers.explicitlyOmittedRowList,
 					},
+					// THE DECLARED LIMIT (root-and-branch Phase 4, K3; RULINGS-supervisor-phase2.md §5
+					// item 11). Until 2026-08-15 this bundle declared NO semanticValidationLimit — the only one
+					// of the four survivors without one — so the RT-13 stage substituted "NONE DECLARED BY
+					// THIS BUNDLE" and a reader of the certificate had to open this module to learn what
+					// lostTotal=0 covers. Stated here FROM THE CODE (lib/roundTripCanonical.js — the
+					// statement key at :197-205, the walk at :211-251, the nested-structure rule in its
+					// header; lib/roundTripDiff.js compareRdfFiles :499-; lib/roundTripCompiler.js header
+					// LAYER RULING + its require list; EXPLICITLY_OMITTED_PREDICATES above), and every
+					// clause names its line so it can be re-checked. Same discipline as edfi/sif/pesc:
+					// IF YOU CHANGE WHAT IS MODELLED, REWRITE THIS STRING IN THE SAME COMMIT.
+					semanticValidationLimit:
+						'SEMANTIC round-trip: canonical STATEMENT-SET equality between the pinned ' +
+						'CEDS-Ontology.rdf and an RDF/XML emission compiled FROM THE GRAPH — not byte ' +
+						'equality, and not completeness of CEDS beyond that snapshot. HOW THE TWO SIDES ' +
+						'ARE MADE: the source side is the snapshot file; the emitted side is written by ' +
+						'lib/roundTripCompiler.js, which reads the graph over bolt and never opens a ' +
+						'source file (its requires are neo4j-driver and node built-ins; it does not ' +
+						'touch the forge parser). BOTH files are then reduced by ONE canonicalizer ' +
+						'(lib/roundTripCanonical.js), which never touches the graph — so the instrument ' +
+						'cannot merely prove the forge agrees with itself, but the two sides do share ' +
+						'the reducer. WHAT A STATEMENT IS (roundTripCanonical.js:197-205): the key ' +
+						'(subject, predicate, objectKind, object, datatype, lang) with element names ' +
+						'expanded through the document\'s own xmlns declarations, literal whitespace ' +
+						'trimmed and collapsed, ORDER DISCARDED, and duplicates on each side COLLAPSED ' +
+						'and counted; a node element\'s own name is a (subject, rdf:type, X) statement ' +
+						'(rdf:Description asserts nothing). NESTED elements with no rdf:about of their ' +
+						'own (the editHistory Collection) are addressed by a CONTENT-HASHED structural ' +
+						'subject, NOT by position and NOT as rdf:first/rdf:rest lists. LAYER SCOPE: the ' +
+						'compiler emits LAYER 1 ONLY (DmeStandardRoot/DmeClass/DmeProperty/DmeOptionSet/' +
+						'DmeOptionValue and SUBCLASS_OF/HAS_OPTION_SET/REFERENCES/HAS_VALUE); Layer 2 — ' +
+						'HubReference/HubDefinition, addressSignature, embeddings, HAS_CEDS_*/IN_HUB — is ' +
+						'never emitted, so lostTotal says NOTHING about the matching index. THE ' +
+						'ARITHMETIC (A13): lostTotal IS contentGapTotal; the explicitly-omitted registry ' +
+						'is EMPTY BY RULING, so lostTotal=0 means LITERALLY every source statement, as ' +
+						'reduced above, was re-emitted from Layer 1, with no margin claimed anywhere; ' +
+						'inventedTotal=0 means no emitted statement is absent from the source. WHAT IS ' +
+						'NOT MODELLED, and is therefore INVISIBLE as loss rather than merely hard to see: ' +
+						'(a) ORDER of anything — element order, editHistory entry order, and RDF list ' +
+						'semantics; (b) a statement repeated in the source but present once in the graph ' +
+						'(duplicates collapse to one on each side); (c) any RDF/XML written with ' +
+						'attributes other than rdf:about / rdf:resource / rdf:datatype / xml:lang — ' +
+						'property-attribute shorthand, rdf:ID, rdf:nodeID, xml:base-relative resolution — ' +
+						'is not read by the walk (roundTripCanonical.js:211-251) and so mints no ' +
+						'statement on EITHER side; (d) a top-level element with NO rdf:about mints no ' +
+						'statement — it is COUNTED and rendered loudly (sourceTopLevelWithoutSubject, ' +
+						'0 in today\'s snapshot) but its content cannot be reported lost; (e) ' +
+						'serialization: prefix choice, attribute order, indentation, the namespace ' +
+						'block. A clean verdict is therefore a claim about the CANONICAL STATEMENT ' +
+						'DOMAIN this reducer sees in the pinned snapshot, and about nothing else.',
 					diffScope: {
 						statementSource: args.snapshot.ontologyFilename,
 						layerScope:

@@ -69,6 +69,34 @@ const vocabulary = require(path.join(__dirname, '..', '..', '..', 'lib', 'vocabu
 const BUILD_LOGS_DIR_PATH =
 	'/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/buildLogs';
 
+// resolveBuildLogsDirPath — WHERE THIS BUILD'S RUN DIRECTORY GOES (root-and-branch Phase 4, K3b:
+// the suite was writing run dirs into the canonical home on every run — the embedded end-to-end
+// gate and any build that reaches the CEDS report fold or the round-trip stage — re-littering
+// dataStores/buildLogs/ and, once, riding into a commit). Same precedence idiom as
+// resolveEmbeddingCacheFilePath: deps.buildLogsDirPath (test/orchestrator injection) wins; absent,
+// the command line --buildLogsDirPath is read; absent entirely, the DOCUMENTED default is the
+// canonical home above (help.js says so). A supplied-but-empty value is refused BY NAME, never
+// silently corrected to the default — an operator who typed it believes it took effect. Returns
+// { value } or { error }; no throw, so build() routes a refusal through its callback.
+const resolveBuildLogsDirPath = (deps) => {
+	const commandLineParameters =
+		(process.global && process.global.commandLineParameters) || { values: {} };
+	const commandLineValue = (commandLineParameters.values.buildLogsDirPath || [])[0];
+	const supplied = deps.buildLogsDirPath !== undefined ? deps.buildLogsDirPath : commandLineValue;
+	if (supplied === undefined) {
+		return { value: BUILD_LOGS_DIR_PATH };
+	}
+	if (typeof supplied !== 'string' || supplied.trim() === '') {
+		return {
+			error:
+				`build: buildLogsDirPath is ${JSON.stringify(supplied)}. When supplied (deps.buildLogsDirPath ` +
+				`or --buildLogsDirPath) it must be a non-empty directory path; omit it to use the documented ` +
+				`default ${BUILD_LOGS_DIR_PATH}. It is not corrected silently.`,
+		};
+	}
+	return { value: supplied };
+};
+
 // ⟪R-P2-2, 2026-08-03⟫ the embedding SIDECAR stores' canonical home (same documented-default
 // convention): one content-addressed SQLite per standard, named by the block header's
 // standardKey verbatim. A VECTORIZED standardBase block persists its raw vectors here and
@@ -1084,8 +1112,13 @@ const build = (recipe, deps, callback) => {
 		.replace(/[-:]/g, '')
 		.replace(/\..+$/, '')
 		.replace('T', '-');
+	const buildLogsDirPathResolution = resolveBuildLogsDirPath(deps);
+	if (buildLogsDirPathResolution.error) {
+		callback(buildLogsDirPathResolution.error);
+		return;
+	}
 	const buildReportsDirPath = path.join(
-		BUILD_LOGS_DIR_PATH,
+		buildLogsDirPathResolution.value,
 		`${recipe.recipeName}_${buildRunStamp}`,
 	);
 
@@ -2053,3 +2086,8 @@ module.exports.resolveReuseForgedBlocks = resolveReuseForgedBlocks;
 // ⟪P2-review S-2⟫ the heap gate, exported as a static so its refusal is provable with an
 // injected limit — never by shrinking a real process's heap.
 module.exports.resolveHeapAdequacy = resolveHeapAdequacy;
+// ⟪Phase 4 K3b⟫ the build-log root resolver, exported as a static so its precedence and its
+// refusal of an empty value are gated directly (test-build) — and so the suite can point every
+// real build at a scratch root instead of the canonical dataStores/buildLogs home.
+module.exports.resolveBuildLogsDirPath = resolveBuildLogsDirPath;
+module.exports.BUILD_LOGS_DIR_PATH = BUILD_LOGS_DIR_PATH;

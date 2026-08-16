@@ -6,7 +6,12 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // =====================================================================
 // runStoreMigration — the executable front for migrateCachesIntoSupportStore.
 // =====================================================================
-//   node runStoreMigration.js --targetFilePath=<path> --dataStoresDirPath=<path> [--schemaOnly]
+//   node runStoreMigration.js --targetFilePath=<path> --dataStoresDirPath=<path> [-schemaOnly]
+//
+// -schemaOnly is a SWITCH (single hyphen, qtools-parse-command-line convention). Until 2026-08-15 this
+// line said `--schemaOnly`, which qtools parses as a VALUE parameter the runner never read — so an
+// operator who typed it got the FULL 2.6GB carry, silently (root-and-branch Phase 4 K3b probe). A
+// double-hyphen --schemaOnly is now REFUSED BY NAME rather than ignored.
 //
 // Both paths are REQUIRED and have no default, for the same reason standardsDatabase.open refuses an
 // unnamed path: a migration that does not say where it is reading and writing is a migration that can
@@ -31,6 +36,16 @@ const firstValue = (name) => ((cliParameters.values || {})[name] || [])[0];
 const targetFilePath = firstValue('targetFilePath');
 const dataStoresDirPath = firstValue('dataStoresDirPath');
 const schemaOnly = !!(cliParameters.switches || {}).schemaOnly;
+// --schemaOnly (double hyphen) parses as values.schemaOnly, not as a switch: an input the operator
+// believes took effect and that would otherwise be IGNORED. Refused by name (polyArch2 §6).
+if ((cliParameters.values || {}).schemaOnly !== undefined) {
+	console.error(
+		`${moduleName}: '--schemaOnly' (double hyphen) is not read by this tool — it parses as a value ` +
+			`parameter, not a switch, and would be silently ignored while the FULL carry ran. The switch ` +
+			`is single-hyphen: -schemaOnly. Refusing rather than guessing.`,
+	);
+	process.exit(1);
+}
 
 if (!targetFilePath) {
 	console.error(
@@ -150,7 +165,7 @@ taskList.push((args, next) => {
 
 taskList.push((args, next) => {
 	if (schemaOnly) {
-		xLog.status(`\n--schemaOnly given: stopping before the carry.`);
+		xLog.status(`\n-schemaOnly given: stopping before the carry.`);
 		next('skipRestOfPipe', args);
 		return;
 	}

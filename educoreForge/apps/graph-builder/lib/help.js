@@ -179,14 +179,26 @@ OPTIONS
                            them) and written (--rebridge FREEZES a new one). OPTIONAL: it DEFAULTS to a
                            sibling of --standardsDatabaseFilePath ('<name>.decisions<ext>' in the same
                            directory). Pass it to point a build at a canonical decisions database.
+     --buildLogsDirPath=<dir>
+                           The ROOT under which this build's RUN DIRECTORY (<recipeName>_<stamp>/,
+                           holding the CEDS hub reports and the round-trip stage verdicts +
+                           certification summary) is created. OPTIONAL, DEFAULTS TO the canonical
+                           home system/dataStores/buildLogs. Name a scratch root to keep a test or
+                           probe build out of the canonical home (the suite does). An empty value
+                           is refused by name, never corrected to the default.
      --judgmentCacheFilePath=<path> | --judgmentCacheFilePath=false
-                           Where the shared JUDGMENT CACHE lives — every per-source LLM judgment a
+                           Where the JUDGMENT CACHE lives — every per-source LLM judgment a
                            --rebridge buys is written there THE MOMENT IT IS DECIDED (decided =
                            persisted), keyed (promptHash, model, rendererVersion), so a killed run
                            resumes free and a decided judgment can never be lost with the process.
-                           OPTIONAL, ON BY DEFAULT at the canonical dataStores home
-                           (system/dataStores/judgmentCache/judgmentCache.sqlite3). Pass a path to
-                           redirect it (e.g. a throwaway for a spend test), or 'false' to disable.
+                           OPTIONAL. WHEN OMITTED it DEFAULTS TO THE OPENED standardsDatabase FILE
+                           ITSELF (--standardsDatabaseFilePath) — the single-file ruling of 2026-08-04:
+                           the judgment cache lives IN the support store beside the blocks, so a FRESH
+                           standardsDatabase is a COLD judgment cache. It does NOT default to
+                           system/dataStores/judgmentCache/. To share the warm canonical cache, NAME
+                           it: --judgmentCacheFilePath=system/dataStores/judgmentCache/judgmentCache.sqlite3.
+                           Pass any other path to redirect (e.g. a throwaway for a spend test), or
+                           'false' to disable.
      --matchForensicsDirPath=<path> | --matchForensicsDirPath=false
                            Where the FORENSIC MATCH LOG lives — one JSONL record per judgment
                            (live, cache-hit, and dedupe fan-out alike), organized by standard as
@@ -261,13 +273,18 @@ OPTIONS
                            'true' and 'false' are accepted; 'yes'/'no'/'1'/'0' are NOT synonyms
                            and are refused by name rather than guessed at.
      --embeddingCacheFilePath=<path>
-                           REDIRECT the shared vector cache for this build. OPTIONAL. The standing
-                           policy is that forging uses the ONE content-addressed vector cache in
-                           dataStores, ON by default -- so a build that omits this shares that cache
-                           and pays Voyage only for texts never embedded before (under this model).
-                           Name a path to point the build at a DIFFERENT cache, e.g. a throwaway one
-                           so a test keeps spending real credit instead of being served free from the
-                           warm production cache.
+                           Where the content-addressed VECTOR CACHE (textHash x model -> embedding)
+                           is read and written for this build. OPTIONAL. WHEN OMITTED it DEFAULTS TO
+                           THE OPENED standardsDatabase FILE ITSELF (--standardsDatabaseFilePath) —
+                           the single-file ruling of 2026-08-04: the vector cache lives IN the support
+                           store beside the blocks, so a FRESH standardsDatabase is a COLD cache and a
+                           from-scratch build PAYS VOYAGE for every text. It does NOT default to
+                           system/dataStores/vectorCache/. To share the warm canonical cache (the one
+                           every prior forge run has fed), NAME it:
+                           --embeddingCacheFilePath=system/dataStores/vectorCache/vectorCache.sqlite3.
+                           Name any other path to point the build at a DIFFERENT cache, e.g. a
+                           throwaway so a spend test keeps paying real credit instead of being served
+                           free from the warm cache.
      --pairKey=<pairKey>   Which standard pairing to measure, e.g. --pairKey=CEDS::CASE. REQUIRED
                            for -retrievalMetrics; there is NO default -- a measurement is always
                            ABOUT one pairing, and there is no meaningful aggregate across pairings

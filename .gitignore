@@ -13,3 +13,14 @@ educoreForge/forges/edfi/assets/standardSourceData/04/metaEdModel/
 
 # Claude Code agent scratch worktrees — embedded git repos, never project content
 .claude/
+
+# root-and-branch Phase 4 (2026-08-15, K3b): REGENERATED test artifacts. These five files are rewritten by
+# every run of test-edfiRoundTrip.js / test-sifRoundTrip.js (the last run's twin observations and verdicts).
+# They are evidence of the last run, not fixtures — nothing reads them back — so they are untracked: a
+# regenerated artifact must never double as a fixture (Phase 1 lesson) and must never ride into a commit
+# (Phase 3 W3/W4). The suites keep writing them in place; the cited paths in the DEVLOGs stay valid.
+educoreForge/forges/edfi/test/test-artifacts/roundTripGateTwinObservations.log
+educoreForge/forges/sif/test/test-artifacts/sifRoundTripFixtureClean.verdict.json
+educoreForge/forges/sif/test/test-artifacts/sifRoundTripTwin-deletedField.report.json
+educoreForge/forges/sif/test/test-artifacts/sifRoundTripTwin-injectedField.report.json
+educoreForge/forges/sif/test/test-artifacts/sifRoundTripTwin-orderSwap.report.json

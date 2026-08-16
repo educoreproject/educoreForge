@@ -856,6 +856,17 @@ const stageMultiBlockFamily = () => {
 const buildStatics = require('../lib/build');
 
 const stageRebridgeWiring = () => {
+	// ⟪Phase 4 K3b⟫ the build-log ROOT resolver: deps wins, then --buildLogsDirPath, then the DOCUMENTED
+	// default (the canonical dataStores/buildLogs home); an empty value is refused by name. This is
+	// what lets the suite keep every real build OUT of the canonical home. (Observed red by inverting
+	// the default expectation — DEVLOG Phase 4 K3b.)
+	harness.section('BUILD-LOG ROOT — deps > --buildLogsDirPath > documented default; empty refused by name');
+	harness.equal('resolveBuildLogsDirPath: nothing supplied -> the documented canonical home', buildStatics.resolveBuildLogsDirPath({}).value, buildStatics.BUILD_LOGS_DIR_PATH);
+	harness.match('  and that home is dataStores/buildLogs (the help text names it)', buildStatics.BUILD_LOGS_DIR_PATH, /\/system\/dataStores\/buildLogs$/);
+	harness.equal('resolveBuildLogsDirPath: deps.buildLogsDirPath wins', buildStatics.resolveBuildLogsDirPath({ buildLogsDirPath: '/scratch/root' }).value, '/scratch/root');
+	harness.match('resolveBuildLogsDirPath: an EMPTY deps value is REFUSED by name (not corrected to the default)', buildStatics.resolveBuildLogsDirPath({ buildLogsDirPath: '' }).error, /buildLogsDirPath is ""[\s\S]*not corrected silently/);
+	harness.match('resolveBuildLogsDirPath: a non-string deps value is REFUSED by name', buildStatics.resolveBuildLogsDirPath({ buildLogsDirPath: 7 }).error, /buildLogsDirPath is 7/);
+
 	harness.section('REBRIDGE WIRING — --rebridge scope resolution + per-pair threading (§6 no-silent-default)');
 
 	// the PURE helpers (resolveRebridge / pairInRebridgeScope) — no build pipeline needed.

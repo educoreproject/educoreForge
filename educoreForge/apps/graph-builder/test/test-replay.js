@@ -252,6 +252,12 @@ standardsDatabaseModule.open({ databaseFilePath }, (openErr, standardsDatabase) 
 		{
 			xLog: capturingXLog(),
 			standardsDatabase,
+			// ⟪Phase 4 K3b⟫ this seed build runs the REAL round-trip stage runner (stage OFF for cedsLif,
+			// but the runner still writes its off-summary into the build's run directory), and until
+			// 2026-08-15 that run directory landed in the canonical dataStores/buildLogs home on every
+			// suite run — the `cedsLif_<stamp>/` litter Phase 3 W2 wiped. The build-log root is now a
+			// deps seam; point it at this suite's scratch dir, disposed with the store below.
+			buildLogsDirPath: path.join(scratchDir, 'buildLogs'),
 			cedsFidelityGateRunner: ({ xLog, graphName }, gateDone) => {
 				xLog.status(
 					`  [fidelity] HERMETIC STUB — R-1 NOT RUN for '${graphName}' (no live graph ` +

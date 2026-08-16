@@ -90,10 +90,15 @@ const TERM_DEFINITIONS = {
 		relatedMatch: 'SKOS: the concepts are associatively related, neither broader nor narrower.',
 	},
 	sssomJustification: {
-		'semapv:ManualMappingCuration': 'SSSOM/SEMAPV: a human curator authored or reviewed the mapping.',
-		'semapv:LexicalMatching': 'SSSOM/SEMAPV: the mapping was derived by lexical/string matching.',
-		'semapv:SemanticSimilarity': 'SSSOM/SEMAPV: the mapping was derived from semantic similarity (e.g. embedding distance).',
-		'semapv:LogicalReasoning': 'SSSOM/SEMAPV: the mapping was derived by logical inference over the source models.',
+		// the EDUcore Bridge Profile's three active terms (SPEC-educoreBridgeProfile-v1.0.md §4.2); the
+		// registry (vocabulary.js SSSOM_JUSTIFICATIONS) carries exactly these. semapv:UnspecifiedMatching is
+		// BANNED there by name and so has no definition here — it must never become a schema-view member.
+		'semapv:ManualMappingCuration':
+			'SSSOM/SEMAPV: resolution SPECIFIED — a person named the mapping (a standard\'s own anchor or an authored crosswalk) and it resolves to exactly one target.',
+		'semapv:CompositeMatching':
+			'SSSOM/SEMAPV: resolution JUDGED — an algorithm chose among candidates, at any matchBasis (standard, crosswalk, or derived); the judge is named in mapping_tool.',
+		'semapv:MappingReview':
+			'SSSOM/SEMAPV: a human reviewed and confirmed a previously judged mapping (including a human-resolved CONFLICT survivor).',
 	},
 	dmeRole: {
 		DmeStandardRoot: 'The single per-standard root node carrying the standard’s provenance block (name, version, source format/files/url) and its mapping instruction.',

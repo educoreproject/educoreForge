@@ -550,6 +550,19 @@ harness.equal(
 	typeof (verdictOf().snapshot || {}).combinedDigest,
 	'string',
 );
+// Phase 4 (root-and-branch, K3): CEDS was the one survivor whose verdict declared NO
+// semanticValidationLimit, so the RT-13 stage substituted "NONE DECLARED BY THIS BUNDLE". The limit is
+// now stated FROM THE CODE in roundTripValidator.js; this locks that it travels in the verdict and names
+// the load-bearing clauses. (Observed red with the declaration absent — DEVLOG Phase 4 K3.)
+harness.ok(
+	'the verdict DECLARES its semanticValidationLimit (a non-empty string; the stage no longer substitutes NONE DECLARED)',
+	typeof verdictOf().semanticValidationLimit === 'string' && verdictOf().semanticValidationLimit.trim() !== '',
+);
+harness.match(
+	'the declared limit names the statement domain, the Layer-1 scope and the A13 arithmetic',
+	verdictOf().semanticValidationLimit,
+	/STATEMENT-SET equality[\s\S]*LAYER 1 ONLY[\s\S]*lostTotal IS contentGapTotal[\s\S]*NOT MODELLED/,
+);
 
 harness.ok(
 	'the verdict artifact is on disk',

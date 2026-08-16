@@ -21,7 +21,7 @@
 //   - PROVENANCE_TIERS / validators .... replay-block.js (the canonical set + isValid*)
 //   - SKOS_PREDICATES .................. schema-validator.js (live predicate validation) + schema-view-finisher.js
 //                                        (2026-07-04: original edf-bridge consumers retired; vocabulary is LIVE)
-//   - SSSOM_JUSTIFICATIONS ............. NEW (not yet in code) — defined here for the mapping phases
+//   - SSSOM_JUSTIFICATIONS ............. the Profile's three terms (SPEC-educoreBridgeProfile-v1.0.md §4.2)
 //   - UNIQUENESS_KEYS / REQUIRED_* ..... replay-engine.js (stableId MERGE key) + forge-ceds.js root props
 //
 // @concept: [[VocabularyRegistry]]
@@ -425,20 +425,48 @@ const SKOS_EDGE_TYPES = {
 const skosEdgeType = (onePredicate) => SKOS_EDGE_TYPES[onePredicate];
 
 // =====================================================================
-// SSSOM JUSTIFICATIONS — NEW vocabulary (not present in code today). Defined here so the mapping
-// phases (4/5) and curation can stamp justifications from one source. No consumer wired yet.
+// SSSOM JUSTIFICATIONS — the closed mapping_justification enum. AUTHORITY: the EDUcore Bridge Profile,
+// SPEC-educoreBridgeProfile-v1.0.md §4.2 (system/management/zNotesPlansDocs/forgeDefinitionV2/). The
+// Profile binds mapping_justification to the SEMAPV vocabulary and names THREE terms in active use;
+// this registry carries exactly those three and nothing else. Adopting a reserved term (LexicalMatching,
+// LogicalReasoning, …) is a Profile change (§4.2), not an edit here.
 // =====================================================================
-// SSSOM mapping_justification values are CURIEs from the SEMAPV vocabulary (RESEARCH-skos-sssom.md §:
-// "Value is a CURIE from the SEMAPV vocabulary, e.g. semapv:ManualMappingCuration"). Stored in canonical
-// CURIE form so a Phase-4/5 SSSOM exporter emits CONFORMANT values directly (bare names would be
-// non-conformant). The 'semapv:' prefix is intrinsic to the value, not applied later.
+// Values are CURIEs from the SEMAPV vocabulary, stored in canonical CURIE form so an SSSOM exporter emits
+// CONFORMANT values directly (bare names would be non-conformant). The 'semapv:' prefix is intrinsic.
+// HISTORY (root-and-branch Phase 4, 2026-08-15): the pre-reset list carried a fourth "semantic similarity"
+// term that is NOT an SSSOM/SEMAPV term at all — and the validator blessed it for weeks because it sat in
+// the project's own allowlist (HARVEST-bridgeKnowledge.md §1.13). Under the Profile the inferred-path
+// justification is semapv:CompositeMatching. The test beside this file holds the removed literal so the
+// gate can be watched going red if it is ever re-added.
 const SSSOM_JUSTIFICATIONS = [
-	'semapv:ManualMappingCuration',
-	'semapv:LexicalMatching',
-	'semapv:SemanticSimilarity',
-	'semapv:LogicalReasoning',
+	'semapv:ManualMappingCuration', // resolution: specified — a person named it and it resolves to one card
+	'semapv:CompositeMatching', // resolution: judged — an algorithm chose, at any matchBasis
+	'semapv:MappingReview', // a human reviewed and confirmed a previously judged mapping
 ];
-const isValidSssomJustification = (oneJ) => SSSOM_JUSTIFICATIONS.indexOf(oneJ) !== -1;
+// BANNED BY NAME (Profile §4.2): 'semapv:UnspecifiedMatching' means "the reason was not recorded" and a
+// forge MUST NOT emit it. It is listed here, separately, so the ban is VISIBLE in the refusal a caller
+// receives — not implicit in an omission from the allowlist that a later editor could "fix".
+const SSSOM_JUSTIFICATIONS_BANNED = ['semapv:UnspecifiedMatching'];
+
+// sssomJustificationRefusal — '' when the term is one of the three; otherwise the REASON, by name. Two
+// distinct refusals: a BANNED term names the ban and the Profile section; anything else names the
+// allowlist. Callers that need only a boolean use isValidSssomJustification, which is defined by this.
+const sssomJustificationRefusal = (oneJustification) => {
+	if (SSSOM_JUSTIFICATIONS_BANNED.indexOf(oneJustification) !== -1) {
+		return (
+			`mapping_justification '${oneJustification}' is BANNED by the EDUcore Bridge Profile §4.2: it ` +
+			`means the reason was not recorded, and a forge MUST NOT emit it. Nothing is substituted for it.`
+		);
+	}
+	if (SSSOM_JUSTIFICATIONS.indexOf(oneJustification) === -1) {
+		return (
+			`mapping_justification ${JSON.stringify(oneJustification)} is not in the SSSOM_JUSTIFICATIONS ` +
+			`allowlist (${SSSOM_JUSTIFICATIONS.join(', ')}); Profile §4.2 names those three and no other.`
+		);
+	}
+	return '';
+};
+const isValidSssomJustification = (oneJustification) => sssomJustificationRefusal(oneJustification) === '';
 
 // SSSOM metadata property NAMES carried on a mapping edge (and on a reified MappingAssertion). camelCase
 // per the project's property-naming convention; a future SSSOM exporter maps these to the SSSOM canonical
@@ -794,6 +822,8 @@ const vocabulary = {
 	SKOS_EDGE_TYPES,
 	skosEdgeType,
 	SSSOM_JUSTIFICATIONS,
+	SSSOM_JUSTIFICATIONS_BANNED,
+	sssomJustificationRefusal,
 	isValidSssomJustification,
 	MAPPING_PROPERTIES,
 	UNIQUENESS_KEYS,

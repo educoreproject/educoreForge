@@ -127,15 +127,25 @@
  * was a stub: the real create returns a HANDLE, and a handle is not a string. Calling the
  * parameter what it is removes the trap rather than documenting it.
  *
- * CONSTRUCTION (all legitimately optional, documented defaults): bridgeMaker({ bridgePluginResolver,
- * graphWriterFactory }). bridgePluginResolver defaults to the module's directory search-path
- * resolver (resolveBridgePlugin); graphWriterFactory defaults to the real neo4j-backed writer and
- * is injected as a DOUBLE by the suite, which is how the write-into-graph path is proven without Docker.
- * @property {function({inGraph: GraphHandle, bridge: string, source: string, applyLabel: string},
+ * ⟪ROOT-AND-BRANCH RESET, Phase 3/4 (2026-08-15; RULINGS-supervisor-phase2.md §2 option A)⟫ The
+ * paragraph above describes the PRE-RESET component. Every bridge implementation, the resolver, the
+ * three-directory search path and the graph writer/reader were set aside (system/codeAttic, tag
+ * preDemolition-081526); what remains at this seam is apps/bridge-maker/bridgeMaker.js, THE STUB, and
+ * this is its actual contract until the bridge system is rebuilt under the EDUcore Bridge Profile v1.0:
+ *
+ * CONSTRUCTION: bridgeMaker() takes NO arguments. It honours NO injection — a construction argument of
+ * ANY name (bridgePluginResolver, graphWriterFactory, graphReaderFactory, bridgeSearchPath, …) is
+ * REFUSED BY NAME (thrown), never silently ignored: there is no resolver, writer or reader to inject
+ * into, and a suite whose double never ran would believe it had proven something.
+ * @property {function({inGraph: GraphHandle, bridge: string, applyLabel: string},
  *           function(string, Object=): void): void} run
- *           result: { inGraph, bridge, applyLabel, edgesWritten, note } (also carries decisionBlock
- *           and counts). The edges stay in the graph; harvesting them by label is
- *           replayManager.harvest's job, not this one's.
+ *           ALWAYS calls back a REFUSAL (err string), never a result: a malformed call (inGraph /
+ *           bridge / applyLabel not given) is refused for its own reason first; a well-formed call
+ *           naming any bridge is refused BY NAME because no implementation is registered. With
+ *           `bridges: []` in the recipe, run is never called at all. Accordingly
+ *           COMPONENT_SHAPES.bridgeMaker.run.resultKeys is null — the stub can produce NO result
+ *           object, and a declared result shape it can never meet would be a lie waiting for a
+ *           reader (Phase 3 stand-down item 7).
  */
 
 /**
@@ -378,10 +388,16 @@ const COMPONENT_SHAPES = {
 		delete: { arity: 2, argKeys: null, resultKeys: null },
 	},
 	bridgeMaker: {
+		// THE SEAM STUB (root-and-branch reset). run() ALWAYS refuses through its callback and hands
+		// back no result object, so there is NO result shape to declare: null, by the same rule
+		// replayManager.delete uses ("the contract names no result shape"). The pre-reset declaration
+		// ['inGraph', 'bridge', 'applyLabel', 'edgesWritten', 'note'] named a result the stub can never
+		// produce, and the static sweep (arity/argKeys only) could not tell (Phase 3 stand-down item 7).
+		// When Phase 6 registers a real producer, its result keys are declared HERE, in the same commit.
 		run: {
 			arity: 2,
 			argKeys: ['inGraph', 'bridge', 'applyLabel'],
-			resultKeys: ['inGraph', 'bridge', 'applyLabel', 'edgesWritten', 'note'],
+			resultKeys: null,
 		},
 	},
 	manifestEditor: {
