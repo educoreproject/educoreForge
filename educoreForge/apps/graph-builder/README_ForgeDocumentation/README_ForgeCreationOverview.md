@@ -33,7 +33,130 @@ utensils — it cannot slip a raw node onto the plate — so the kitchen can gua
 identifiers, no cross-standard edges, no made-up names. And if a forge needs an exception, it declares
 it on the card; the kitchen refuses undeclared exceptions and declared-but-unused ones alike.
 
-## 2. What the terms mean
+## 2. The flow, in prose
+
+Same skeleton as the pseudo-code in §3, one line per element, so the two can be read side by side.
+
+**The forge's side — three files**
+
+1. **The recipe card** (`forgeDeclaration`). A frozen object of plain facts: which standard this is,
+   what its identifiers must look like, what its root node is called, which version of the parser
+   this is, the six-key mapping instruction, and the list of declared quirks (Ed-Fi: E6 and E8). No
+   logic anywhere in it.
+
+2. **The cook** (`hooks`). Four entries:
+   - `sourceLoaderList` — one reader per input file or directory. Ed-Fi has three; a simpler standard
+     has one. This is the "method or methods."
+   - `describeSource` — given what was read, say the version the source claims for itself, its
+     format, its URL, its files.
+   - `emitContractGraph` — the walk. Given the parsed source and the framework's kit, go through every
+     class, property and code value and ask the kit to make each node and edge. Return the kit's
+     collected nodes and edges plus any reports.
+   - `describeRoot` — the sentence that goes on the root node.
+
+3. **The entry module.** One line: hand the card and the cook to the framework, return what it gives
+   back. The graph builder calls this file exactly as it always did.
+
+**The kitchen's side — what the framework does with them**
+
+- `forgeFramework({ embedder })` — take the embedder (or none); refuse any other dependency.
+- `.injectStandardHooks({ forgeDeclaration, hooks })` — check the card (unknown key, unknown quirk
+  id → refuse) and check the cook (missing or misshapen hook → refuse by name), before touching any
+  file. Return the bundle the graph builder expects.
+
+Then, when the graph builder calls `bundle.forge(...)`:
+
+1. **Cheap refusals** — no source path, or "embed" requested with no embedder → refuse. The `owner`
+   argument is accepted and never read.
+2. **Verify** — every file the readers will touch is checked against the snapshot's checksums first.
+3. **Read** — run the loaders; the results are folded into one `parsed` object keyed by loader name.
+4. **Describe and stamp** — call `describeSource`, derive the version stamp; a fake version like
+   `'current'` is refused.
+5. **The pure layer** — inside the framework's single try/catch: build a fresh kit; build the root
+   node first from the card; hand the kit to the cook and let it walk; then check every returned node
+   and edge came from the kit and none was dropped; check the declared quirks against what actually
+   happened (needed-but-undeclared refused, declared-but-unneeded refused); run the sequence
+   finalizer, then the structural finalizer.
+6. **Embed** — keep the embeddable roles, take the first N, batch them, count the calls.
+7. **Return** — the nodes and edges in the cook's order, untouched, plus the metadata, the counts, and
+   a compliance report naming which quirks were live.
+
+The only place the forge's own code runs is inside step 5, and even there it holds utensils it did
+not make.
+
+## 3. The flow, as pseudo-code
+
+Faithful to the real shapes, stripped to the flow. The numbered items match §2.
+
+```js
+// ─── the forge's side: three files ────────────────────────────────────────
+
+// 1. the recipe card — data only
+forgeDeclaration = {
+  standardKey: 'edfi',  standardSource: 'EdFi',  standardDisplayName: 'Ed-Fi Data Standard',
+  stableIdPattern: { pattern: '^edfi:[A-Za-z]+(/.+)?$', trimmed: true },
+  rootStableId: 'edfi:root',  rootLabel: 'EdfiRoot',  parserVersion: '2',
+  mappingInstruction: { ...six keys, fixed order... },
+  compatibilityDeclarationList: [ {E6}, {E8, logicalSourceFileNameList:[...]} ],
+}
+
+// 2. the cook — the hooks
+hooks = {
+  sourceLoaderList: [                       // "method or methods": one per input
+    { loaderName:'metaEdModel',           load({sourcePath}, cb) },
+    { loaderName:'descriptorCodeValues',  load({sourcePath}, cb) },
+    { loaderName:'authoredCrosswalk',     load({sourcePath}, cb) },
+  ],
+  describeSource: ({ parsed }) => ({ version, selfDescribedVersion, sourceFormat, sourceUrl, sourceFiles }),
+  emitContractGraph: ({ parsed, metadata, kit }) => {      // THE WALK — the standard's own knowledge
+    for each class in parsed.metaEdModel:
+      kit.makeNode({ role:'class', stableId, name, description, structural:{parentId, path}, ... })
+    for each property:
+      kit.makeNode({...});  kit.addEdge({ type:'HAS_PROPERTY', from, to })
+    for each descriptor value:
+      kit.emitOptionValue({...})
+    return { nodes: kit.nodes, edges: kit.edges, stats, crosswalkMatchReport }
+  },
+  describeRoot: ({ parsed, metadata }) => ({ description: 'Ed-Fi Data Standard — 849 constructs...' }),
+}
+
+// 3. the entry module — one line of wiring; the seam is unchanged
+module.exports = ({ embedder }) =>
+  forgeFramework({ embedder }).injectStandardHooks({ forgeDeclaration, hooks })
+//   ↑ graphBuilder still calls require(entry)({embedder}) → bundle.forge(args, cb)
+
+
+// ─── the kitchen's side: what injectStandardHooks + forge() do ────────────
+
+forgeFramework({ embedder })                 // refuses undeclared deps; embedder may be null
+  .injectStandardHooks({ forgeDeclaration, hooks })
+     validate declaration keys/values (unknown key → refuse; unknown allowance id → refuse)
+     validate hooks (missing/misshapen/wrong arity → refuse by name, before any I/O)
+     return bundle = { forge, buildContractGraph, STANDARD_KEY, ... }
+
+bundle.forge({ sourcePath, owner, embedNodeLimit, skipEmbedding }, callback):
+  1  cheap refusals          (no sourcePath → refuse; skipEmbedding:false + null embedder → refuse; owner never read)
+  2  verify SHA256SUMS       every file the loaders will read
+  3  run loaders             parsed = { metaEdModel:…, descriptorCodeValues:…, authoredCrosswalk:… }
+  4  describe + stamp        metadata = deriveVersionStamp(describeSource(parsed))  ('current' → refuse)
+  5  PURE LAYER (one try/catch adapter → callback(err))
+       kit  = contractGraphKit({ forgeDeclaration, metadata })   // the utensils
+       root = kit.makeRoot(declared data + describeRoot(...))    // root FIRST
+       { nodes, edges } = hooks.emitContractGraph({ parsed, metadata, kit })
+       integrity: every node/edge kit-minted AND returned exactly once; universal props re-checked
+       allowances: needed-but-undeclared → refuse; declared-but-unneeded → refuse
+       finalizeSequence(...); finalizeStructuralContract(...)
+  6  embed                   filter by role → slice embedNodeLimit → batch → embedCallCount
+  7  return                  callback('', { nodes, edges (walk's order, untouched), metadata,
+                                            embedCallCount, standardKey, stableUriPropertyName,
+                                            complianceReport, ...reports })
+```
+
+Read top to bottom: the forge writes the card, the cook, and one line; the kitchen runs the same seven
+steps for every forge, and the only place a forge's code executes is inside step 5, holding utensils
+it did not make.
+
+## 4. What the terms mean
 
 - **Forge** — a bundle under `forges/<standardKey>/` that the graph builder loads by the entry module
   named in its `parserDescriptor.ini`.
@@ -55,7 +178,7 @@ it on the card; the kitchen refuses undeclared exceptions and declared-but-unuse
   and diffs them against the source. `inventedTotal` must be 0; `-goldEvalCheck` answers PASS only
   when every declared validator ran and reported that.
 
-## 3. What a forge supplies
+## 5. What a forge supplies
 
 **The declaration** (`lib/<std>ForgeDeclaration.js`) is a frozen object: `standardKey`,
 `standardSource` (equal to the descriptor's `standardName`), `standardDisplayName`,
@@ -80,7 +203,7 @@ including its header comment; it was 280 before the migration.
 
 **The validator** (`roundTripValidator.js`) is unchanged by the framework.
 
-## 4. What the framework does
+## 6. What the framework does
 
 `forge()` runs the same seven steps for every forge:
 
@@ -103,7 +226,7 @@ The framework has no per-standard branch. Every difference between forges is dec
 hook, or a compatibility declaration. A gate greps for the four standard keys in framework code and
 turns red if one appears.
 
-## 5. What the framework refuses to offer
+## 7. What the framework refuses to offer
 
 No graph access at forge time. No cross-standard edge (`kit.addEdge` refuses an endpoint from another
 source). No hub hook (the CEDS hub is the forger's, outside the seam). No join-key addressing. No
@@ -111,7 +234,7 @@ default for an absent declaration key, hook, or seam argument. No clock, no rand
 state in the pure layer. No sorting or deduplication of the walk's output. No round-trip diff engine
 (the harness ships the contract; each forge's validator keeps its own diff for now).
 
-## 6. How a forge is proven
+## 8. How a forge is proven
 
 A forge on the framework is accepted when, built through the unchanged graph builder under a frozen
 command line, it produces the same block id as the forge produced before migration, its round trip
@@ -124,13 +247,13 @@ independent review compared every distinct property-key set per role between the
 baseline graph — 98 signatures, identical. The block-id gate was observed red: changing
 `parserVersion` from `'2'` to `'2a'` moved exactly the root line and the id.
 
-## 7. Where things stand
+## 9. Where things stand
 
 Ed-Fi is on the framework. SIF, PESC and CEDS are not yet; each has a declared allowance set in the
 framework specification (§7.3) and SIF's migration brief is written. Ed-Fi's two compatibility
 declarations are still in force; retiring each is its own commit with a deliberately new block id.
 
-## 8. Where to go next
+## 10. Where to go next
 
 - To write or migrate a forge: `README_HOWTO_ForgeCreationInstructions.md` (this directory), then
   `README_ForgeFrameworkSpecification.md` §8 (the migration recipe) and `forges/edfi/` as the worked example.
