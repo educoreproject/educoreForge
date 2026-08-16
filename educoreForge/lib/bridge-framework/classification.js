@@ -54,10 +54,12 @@ const makeCardListByCanonicalKey = ({ cardList } = {}) => {
 
 const asSortedList = (value) => (Array.isArray(value) ? value.map(String).sort() : value === undefined || value === null || value === '' ? [] : [String(value)]);
 
-// tupleFieldEquals — list fields compare as sorted lists; scalars compare as strings
+// tupleFieldEquals — list fields compare as sorted lists; scalars compare as strings. The CARD side of a list field
+// must already BE a list: the read boundary (graphSeamRules.reWidenListSlots) is the ONE list-widening point (SPEC
+// §15.14) — a scalar that reached here was not widened and never equals (BG-QUALIFIER-WIDEN bites there, not here)
 const tupleFieldEquals = ({ fieldName, suppliedValue, cardValue }) =>
 	TUPLE_LIST_FIELD_LIST.indexOf(fieldName) !== -1
-		? JSON.stringify(asSortedList(suppliedValue)) === JSON.stringify(asSortedList(cardValue))
+		? Array.isArray(cardValue) && JSON.stringify(asSortedList(suppliedValue)) === JSON.stringify(cardValue.map(String).slice().sort())
 		: String(suppliedValue) === String(cardValue === undefined || cardValue === null ? '' : cardValue);
 
 // filterPoolByTuple → { filteredPool, filterFieldList, mismatchByField } — mismatchByField names, per supplied
