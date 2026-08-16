@@ -1,4 +1,8 @@
 {
+  // TEST FIXTURE (Phase 3 root-and-branch reset, 2026-08-15): moved here from recipes/. It names a
+  // REMOVED forge (lif) and/or a REMOVED bridge (semanticBridge) and is NOT BUILDABLE — it exists
+  // only as DATA for test-build / test-recipe / test-replay (structural validation, summarize,
+  // doubles-only build). Do not -build it; do not move it back to recipes/.
   // cedsLif — NEW-FORMAT recipe exercising hubs + bridges: CEDS as hub, LIF mapped into it.
   // Referentially coherent: hub.standard and bridge endpoints all resolve within standards[].
   "schemaVersion": "1.0.0",
