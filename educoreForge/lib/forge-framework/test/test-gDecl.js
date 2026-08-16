@@ -183,6 +183,14 @@ conjunctList.push(
 		twinName: 'disableKindCheck', fileName: CONTRACT_FILE, find: KIND_CHECK_FIND, replace: KIND_CHECK_REPLACE,
 	}),
 	refusalCase({
+		registry: twinRegistry, gateId: GATE_ID, conjunctId: 'e8DeclarableOnlyByEdfi',
+		title: "E8 (root sourceFiles may name logical loader names) is declarable by edfi ONLY — sif declaring it is refused naming both",
+		mode: 'inject',
+		shape: (scenario) => { scenario.forgeDeclaration.standardKey = 'sif'; scenario.forgeDeclaration.compatibilityDeclarationList = [{ allowanceId: 'E8' }]; },
+		regex: /allowanceId 'E8' is declarable only by edfi, not by 'sif'/,
+		twinName: 'disableKindCheck', fileName: CONTRACT_FILE, find: KIND_CHECK_FIND, replace: KIND_CHECK_REPLACE,
+	}),
+	refusalCase({
 		registry: twinRegistry, gateId: GATE_ID, conjunctId: 'nonEmptyAllowanceOutsideTheFour',
 		title: "a non-empty allowance list on a standardKey outside MIGRATING_BUNDLE_LIST ('toy' declaring E6) is refused",
 		mode: 'inject',
@@ -229,8 +237,8 @@ runGateFamily(
 		twinRegistry,
 		makeSubject: toyScenario.makeScenario,
 		cloneSubject: toyScenario.cloneScenario,
-		expectedConjunctCount: requiredKeyList.length + 16,
-		expectedTwinCount: requiredKeyList.length + 16,
+		expectedConjunctCount: requiredKeyList.length + 17,
+		expectedTwinCount: requiredKeyList.length + 17,
 	},
 	() => harness.report(),
 );

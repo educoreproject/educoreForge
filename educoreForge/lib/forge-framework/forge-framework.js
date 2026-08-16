@@ -470,17 +470,19 @@ const moduleFunction =
 						next(refuse.byName({ moduleName, what: `${forgePrefix} describeSource returned sourceFiles ${JSON.stringify(describedSource.sourceFiles)}`, where: 'sourceFiles is an array of strings in the ORDER the standard states' }).message);
 						return;
 					}
-					// FA5: the root's provenance claim may name only bytes the framework VERIFIED (step 2)
-					const unverifiedSourceFile = describedSource.sourceFiles.find((oneName) => args.verifiedFileList.indexOf(oneName) === -1);
+					// FA5: the root's provenance claim may name only bytes the framework VERIFIED (step 2) —
+					// unless an active row licenses logical names (E8, Ed-Fi; row DATA, not a per-id branch)
+					const unverifiedNamesPermitted = activeAllowanceRowList.some((oneRow) => oneRow.permitsUnverifiedSourceFileNames === true);
+					const unverifiedSourceFile = unverifiedNamesPermitted ? undefined : describedSource.sourceFiles.find((oneName) => args.verifiedFileList.indexOf(oneName) === -1);
 					if (unverifiedSourceFile !== undefined) {
-						next(refuse.byName({ moduleName, what: `${forgePrefix} describeSource names sourceFiles entry '${unverifiedSourceFile}' that was not verified against SHA256SUMS (verified: ${args.verifiedFileList.join(', ')})`, where: 'sourceFiles is the list of provenanced files the loaders consumed; a name the snapshot never verified cannot be claimed on the root' }).message);
+						next(refuse.byName({ moduleName, what: `${forgePrefix} describeSource names sourceFiles entry '${unverifiedSourceFile}' that was not verified against SHA256SUMS (verified: ${args.verifiedFileList.join(', ')})`, where: 'sourceFiles is the list of provenanced files the loaders consumed; a name the snapshot never verified cannot be claimed on the root (allowance E8 licenses declared logical names for edfi only)' }).message);
 						return;
 					}
 					if (describedSource.sourceUrl !== null && typeof describedSource.sourceUrl !== 'string') {
 						next(refuse.byName({ moduleName, what: `${forgePrefix} describeSource returned sourceUrl of type ${typeof describedSource.sourceUrl}`, where: 'sourceUrl is a string, or null when the standard has no source URL (then the root OMITS it)' }).message);
 						return;
 					}
-					const allowanceError = evaluateAllowancesAtStep({ forgeDeclaration, evaluatedAt: EVALUATED_AT.DESCRIBE_SOURCE, context: { describedSource }, activeAllowanceRowList });
+					const allowanceError = evaluateAllowancesAtStep({ forgeDeclaration, evaluatedAt: EVALUATED_AT.DESCRIBE_SOURCE, context: { describedSource, verifiedFileList: args.verifiedFileList }, activeAllowanceRowList });
 					if (allowanceError) {
 						next(allowanceError.message);
 						return;

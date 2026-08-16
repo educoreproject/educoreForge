@@ -20,7 +20,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //
 // F3a SHIPS ONLY THE ROWS F3b/F3c NEED (STANDDOWN-F2-panel ruling 1; BRIEF-F3a): the sourceUrl
 // row keyed three ways (E6 / S4 / P16 — one behaviour, per-forge ids so each forge retires its
-// own in its own commit, SPEC §14 D12), S2, S3, S6 (proposed), S7. PESC and CEDS rows (P1–P10,
+// own in its own commit, SPEC §14 D12), E8 (ruled 06:33 after the F3a review), S2, S3, S6 (proposed), S7. PESC and CEDS rows (P1–P10,
 // C1/C2/C9/C10) are added as DATA in their own migration commits — no unused policy machinery
 // ships ahead of its forge.
 //
@@ -71,6 +71,25 @@ const MIGRATION_ALLOWANCE_REGISTRY = Object.freeze({
 		allowanceId: 'P16',
 		declarableBy: 'pesc260805',
 		retiredBy: 'omit sourceUrl (Profile §10.4) → new PESC id, its own commit',
+	}),
+
+	// E8 (SABLE_RIVER ruling 2026-08-16 06:33, Profile v1.0.2 §13.1): Ed-Fi's root sourceFiles are LOGICAL
+	// loader/input names (forgeEdfi.js:183-185), not verified files; while declared, step 4's FA5
+	// cross-check is not applied to this bundle. `permitsUnverifiedSourceFileNames` is the row DATA the
+	// framework reads — no per-id branch. Retirement = sourceFiles becomes the verified list (a byte change).
+	E8: Object.freeze({
+		allowanceId: 'E8',
+		rowRefId: 'E8',
+		declarableBy: Object.freeze(['edfi']),
+		kind: ALLOWANCE_KIND.FORGE_TIME,
+		evaluatedAt: EVALUATED_AT.DESCRIBE_SOURCE,
+		whileDeclared: 'root sourceFiles may name declared loader/input names instead of verified files (forgeEdfi.js:183-185); reproduced while declared',
+		allowanceDataContract: Object.freeze({}),
+		permitsUnverifiedSourceFileNames: true,
+		preconditionText: 'describeSource returns at least one sourceFiles entry that is not a verified file',
+		preconditionMet: ({ describedSource, verifiedFileList }) =>
+			Array.isArray(describedSource.sourceFiles) && describedSource.sourceFiles.some((oneName) => verifiedFileList.indexOf(oneName) === -1),
+		retiredBy: 'sourceFiles becomes the verified file list — a deliberate byte change in its own commit (E8)',
 	}),
 
 	S2: Object.freeze({
