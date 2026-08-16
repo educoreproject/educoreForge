@@ -42,6 +42,9 @@ The non-test source files that interface the driver:
   (the pair-scoped label on both endpoints, MERGE on (from, type, to), the §6 refusals). Same dispensation.
 - `lib/forge-framework/roundTripHarness/graphReader.js` — the round-trip harness's reader (F3a). Same
   dispensation (listed by RULING BR11, 2026-08-16: a bolt-touching file list must be complete).
+- `apps/graph-builder/test/test-bgBoltLive.js` — BG-BOLT-LIVE, the containerised gate that drives `neo4j-driver`
+  DIRECTLY to read the live edge/node back (exactly graphWriter's case: the driver is the leaf). Same dispensation,
+  GRANTED by name (RULING BR3-7, SABLE_RIVER 2026-08-17): `.then().catch()`-to-callback at the leaf, no conversion.
 
 ## How the dispensation is actually taken today (accurate as of this commit)
 

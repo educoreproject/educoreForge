@@ -32,12 +32,25 @@
 //   (e) WRITE — writeMappingEdge (the real writer, edge properties from materialiser.edgePropertiesFor) writes ONE
 //       edge, stamps the pair-scoped label on BOTH endpoints (the harvest MATCH (a:L)-[r]->(b:L) finds it), and the
 //       driver's Integer edge count is unwrapped; twin: the object stamp dropped → the harvest finds 0 → red
-//   (f) ONE-ELEMENT LIST ROUND TRIP — `SET r = $map` stores attestationChannelList ['elements:5'] as a LIST of one on
-//       the live edge (read back over bolt: an Array of length 1); twin: a writer that unwraps one-element lists
-//       before the SET → the read-back is a string → red
+//   (f) ONE-ELEMENT LIST ROUND TRIP — THE WRITER'S OWN BOLT PATH: graphWriter's `SET r = $map` stores
+//       attestationChannelList ['elements:5'] as a LIST of one on the live edge (read back over bolt: an Array of
+//       length 1). This proves graphWriter's path ONLY — NOT the replay path that materialises a certified block
+//       (see (h)); twin: a writer that unwraps one-element lists before the SET → the read-back is a string → red
 //   (g) HARVEST BY LABEL — replayManager.harvest by the pair-scoped label yields a block whose EDGE count EQUALS the
-//       edges written and whose harvested attestationChannelList is the one-element list (BG-HARVEST live);
-//       twin = (e)'s (the object stamp dropped → 0 harvested)
+//       edges written and whose harvested attestationChannelList is the one-element list — harvested from the edge
+//       THE WRITER wrote in (e)/(f) (BG-HARVEST live); twin = (e)'s (the object stamp dropped → 0 harvested)
+//   (h) THE PG-JSON CONTRACT ON THE REPLAY PATH (RULING BR3-2, SABLE_RIVER 2026-08-17): a REPLAYED one-element list
+//       property reads back as a SCALAR — the Ed-Fi base block stores the subject node's `role` as ["DmeProperty"]
+//       (a list of one, measured off the block); replay-engine's pgToStored collapses it and the live node carries
+//       the STRING "DmeProperty". DECLARED THE CONTRACT: the certified artifact holds the list, the graph is its
+//       replay under the PG-JSON convention for EVERY list property (attestationChannelList on 575/666 mapping edges,
+//       qualifierKeys, crossRefs), and consumers RE-WIDEN at the read boundary — as the framework's own reader does
+//       for qualifierKeys (c). twin: the block-side value (an Array of one) fails the graph-side predicate → red;
+//       an in-memory pgToStored that keeps one-element lists is NOT the twin (it would re-replay the base: minutes)
+//
+// DISPENSATION (RULING BR3-7, apps/graph-builder/DOCTRINE.md): this file drives `neo4j-driver` DIRECTLY to read the
+// live edge/node back — exactly graphWriter's leaf case — so its `.then().catch()`-to-callback chains at the leaf are
+// the named leaf dispensation, GRANTED for this file by name; no conversion, no `async`/`await`.
 //
 // Run: node apps/graph-builder/test/test-bgBoltLive.js   (from system/code/educoreForge; </dev/null in the fleet)
 
@@ -53,8 +66,10 @@ SYNOPSIS
 DESCRIPTION
      Provisions ONE DEV_ Neo4j container, restores the CEDS hub-bearing base + the Ed-Fi base from the pinned B3
      acceptance store (read-only), proves paging past 5,000 nodes, neo4j Integer unwrapping, hub-card re-widening,
-     blinding on the wire, the writer's both-endpoint stamp, the one-element-list round trip and the harvest by
-     label — every conjunct observed RED under an in-memory production mutation — then destroys the container.
+     blinding on the wire, the writer's both-endpoint stamp, the one-element-list round trip ON THE WRITER'S OWN
+     PATH, the harvest by label, and (h) the PG-JSON contract on the REPLAY path (a replayed one-element list reads
+     back as a scalar — RULING BR3-2) — every conjunct observed RED under an in-memory production mutation or an
+     input fault — then destroys the container.
      ONE-MACHINE and BUILD-CLASS: refuses by name without Docker or the pinned store. No LLM, no Voyage.
 
 EXIT STATUS
@@ -123,6 +138,7 @@ if (!dockerPresent || !fs.existsSync(PINNED_STORE_PATH)) {
 // ---------------------------------------------------------------------
 const replayManager = replayManagerModule();
 let graphHandle = null;
+let edfiBaseBlockText = null; // the pinned Ed-Fi base block's text — (h) reads the block-side value off it
 const disposeAndReport = () => {
 	if (!graphHandle) {
 		harness.report();
@@ -163,6 +179,7 @@ standardsDatabaseModule().open({ databaseFilePath: PINNED_STORE_PATH }, (openErr
 				graphHandle = handle;
 				harness.note(`live graph ${handle.containerName} at ${handle.boltUrl} — restoring the two bases (minutes)`);
 				const storeResolver = buildLib.makeVectorStoreResolver({ supportStoreFilePath: PINNED_STORE_PATH });
+				edfiBaseBlockText = edfiRow.text;
 				replayManager.init({ inGraph: handle, schemaBlocks: [cedsRow.text, edfiRow.text], storeResolver }, (initError, initReport) => {
 					harness.ok('both bases restored into the live graph', !initError, initError);
 					if (initError) {
@@ -294,7 +311,7 @@ const edgePropertiesFor = ({ subjectStableId, objectStableId, attestationChannel
 	});
 
 const writeConjuncts = ({ handle, realReader, subjectStableId }) => {
-	harness.section('(e) WRITE + both endpoints stamped; (f) ONE-ELEMENT LIST round trip; (g) HARVEST by the pair-scoped label');
+	harness.section('(e) WRITE + both endpoints stamped; (f) ONE-ELEMENT LIST round trip on the WRITER\'S OWN path; (h) the PG-JSON contract on the REPLAY path; (g) HARVEST by the pair-scoped label');
 	const subjectId = subjectStableId ? subjectStableId.stableId : null;
 	harness.ok(`the write's subject is a real Ed-Fi property node read off the wire (${subjectId})`, typeof subjectId === 'string' && /^edfi:property\//.test(subjectId));
 	realReader.readHubCards({ referenceTier: 'property' }, (cardError, cardList) => {
@@ -314,14 +331,23 @@ const writeConjuncts = ({ handle, realReader, subjectStableId }) => {
 			const driver = neo4j.driver(handle.boltUrl, neo4j.auth.basic(handle.user, handle.password), { encrypted: false });
 			const session = driver.session();
 			session
-				.run(`MATCH (s {stableId: $subjectId})-[r:EXACT_MATCH]->(o {stableId: $objectId}) RETURN labels(s) AS sLabels, labels(o) AS oLabels, r.attestationChannelList AS acl, r.provenanceTier AS tier`, { subjectId, objectId: bareP001572.stableId })
+				.run(`MATCH (s {stableId: $subjectId})-[r:EXACT_MATCH]->(o {stableId: $objectId}) RETURN labels(s) AS sLabels, labels(o) AS oLabels, r.attestationChannelList AS acl, r.provenanceTier AS tier, s.role AS replayedRole`, { subjectId, objectId: bareP001572.stableId })
 				.then((result) => {
 					const row = result.records[0];
 					harness.ok('    the edge exists on the live graph', !!row);
 					harness.ok(`(e) the pair-scoped label is stamped on BOTH endpoints (${APPLY_LABEL})`, row && row.get('sLabels').indexOf(APPLY_LABEL) !== -1 && row.get('oLabels').indexOf(APPLY_LABEL) !== -1, row ? `${row.get('sLabels')} / ${row.get('oLabels')}` : 'no row');
 					const acl = row && row.get('acl');
-					harness.ok(`(f) attestationChannelList round-trips as a LIST of one on the live edge (got ${JSON.stringify(acl)})`, Array.isArray(acl) && acl.length === 1 && acl[0] === 'elements:5', JSON.stringify(acl));
+					harness.ok(`(f) attestationChannelList round-trips as a LIST of one on the live edge — THE WRITER'S OWN BOLT PATH (graphWriter \`SET r = $map\`), NOT the replay path (see (h)) (got ${JSON.stringify(acl)})`, Array.isArray(acl) && acl.length === 1 && acl[0] === 'elements:5', JSON.stringify(acl));
 					harness.equal('    provenanceTier is the engine-level authored value', row && row.get('tier'), 'spec-authoritative');
+					// (h) RULING BR3-2 — the PG-JSON contract on the REPLAY path: the block stores the subject's `role` as a
+					// one-element LIST; the replayed node carries the SCALAR. Block-side value read off the pinned block itself.
+					const blockSideNode = replayBlockLib.deserializeBlock(typeof edfiBaseBlockText === 'string' ? edfiBaseBlockText : edfiBaseBlockText.toString('utf8')).nodes.find((oneNode) => oneNode.stableId === subjectId);
+					const blockSideRole = blockSideNode ? blockSideNode.properties.role : undefined;
+					const replayedRole = row && row.get('replayedRole');
+					const readsBackAsScalar = (value) => typeof value === 'string';
+					harness.ok(`(h) the block stores the subject's role as a ONE-ELEMENT LIST (got ${JSON.stringify(blockSideRole)}) — the input to the replay path`, Array.isArray(blockSideRole) && blockSideRole.length === 1, JSON.stringify(blockSideRole));
+					harness.ok(`(h) the REPLAYED node reads that property back as a SCALAR — replay-engine's pgToStored, the PG-JSON contract DECLARED by RULING BR3-2 (got ${JSON.stringify(replayedRole)}); consumers re-widen at the read boundary`, readsBackAsScalar(replayedRole) && Array.isArray(blockSideRole) && replayedRole === blockSideRole[0], JSON.stringify(replayedRole));
+					harness.ok('(h) RED-OBSERVED — the block-side value (an Array of one) FAILS the graph-side scalar predicate: the divergence is real and the predicate discriminates', !readsBackAsScalar(blockSideRole));
 					return session.close();
 				})
 				.then(() => {
@@ -379,7 +405,7 @@ const harvestConjunct = ({ handle, realReader, realWriter, driver, subjectId, ba
 		const mappingEdgeList = deserialised ? deserialised.edges.filter((oneEdge) => oneEdge.type === 'EXACT_MATCH') : [];
 		harness.equal('(g) the harvested block carries EXACTLY the ONE edge the real writer wrote under this label (BG-HARVEST live: edgeCount === edgesWritten)', mappingEdgeList.length, 1);
 		const harvestedAcl = mappingEdgeList[0] && mappingEdgeList[0].properties.attestationChannelList;
-		harness.ok(`(g) the harvested attestationChannelList is the one-element list (got ${JSON.stringify(harvestedAcl)})`, Array.isArray(harvestedAcl) && harvestedAcl.length === 1 && harvestedAcl[0] === 'elements:5', JSON.stringify(harvestedAcl));
+		harness.ok(`(g) the harvested attestationChannelList is the one-element list — harvested from the edge THE WRITER wrote in (f) (a REPLAYED edge would carry the scalar: (h)) (got ${JSON.stringify(harvestedAcl)})`, Array.isArray(harvestedAcl) && harvestedAcl.length === 1 && harvestedAcl[0] === 'elements:5', JSON.stringify(harvestedAcl));
 		harness.equal('    both endpoint NODES ride in the harvested block (RULING BF3)', deserialised ? deserialised.nodes.length : -1, 2);
 
 		// (e)/(g) RED: a writer that stamps ONLY the subject endpoint → the harvest MATCH (a:L)-[r]->(b:L) finds nothing
