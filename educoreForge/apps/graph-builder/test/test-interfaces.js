@@ -47,8 +47,7 @@ const path = require('path');
 
 const harness = require('../../../test/testLib/harness')(moduleName);
 
-const { COMPONENT_SHAPES, MANIFEST_HANDLE_SHAPE, BRIDGE_MODULE_SHAPE } = require('../interfaces');
-const bridgeMakerModule = require('../apps/bridge-maker');
+const { COMPONENT_SHAPES, MANIFEST_HANDLE_SHAPE } = require('../interfaces');
 
 const TREE_LIB = path.join(__dirname, '..', '..', '..', 'lib');
 const contentAddress = require(path.join(TREE_LIB, 'content-address', 'content-address'))();
@@ -286,16 +285,16 @@ harness.note(
 );
 harness.note('nowhere else. interfaces.js says so in the same words.');
 
-// bridgeMaker — THE SEAM STUB (root-and-branch reset Phase 3, 2026-08-15; RULINGS-supervisor-phase2
-// §2 option A). Every bridge implementation left the tree; the component that remains satisfies the
-// declared shape and REFUSES BY NAME any bridge a recipe declares, because with zero registered
-// producers a bridge name names nothing and nothing may be substituted for it. The two pre-reset
-// probes here ran the DEFAULT generic plugin end to end (`err === ''` + every result key); they are
-// RETIRED with that plugin (SEAM-bridgeMakerStub.md §4) — a probe against a throw-away stub plugin
-// would test the stub, not the seam. What replaces them is the seam's actual contract while no
-// producer exists: a well-formed run naming a bridge is refused, naming the bridge and the reason.
-// This turns RED the moment someone re-adds a silent default (observed red by inverting the stub
-// before it was made to pass — DEVLOG Phase 3 C2).
+// bridgeMaker — THE BRIDGE FRAMEWORK SEAM (B2 interfaces commit, 2026-08-16; SPEC-bridgeFramework-v1.md
+// §5.0, §5.9, §14.4 step 2; RULING BF10 / BR-140). The two Phase-3 stub probes (`observed.result ===
+// undefined`; `resultKeys === null`) are RE-POINTED here: (a) the seam's standing refusal — a well-formed
+// run naming a bridge that NO registered plugin declares is refused BY NAME, naming the bridge (the
+// framework's refusal additionally LISTS the registered names; with an empty forges/*/bridges/ set that
+// list is empty and says so) — this turns RED the moment someone re-adds a silent default; (b) the
+// declaration EQUALITY — COMPONENT_SHAPES.bridgeMaker.run.resultKeys is the framework's
+// RUN_REPORT_RESULT_KEYS as data (a non-null list carrying `blocks` and `producer`); the framework's own
+// suite (BG-REG f) asserts the same list against a REAL run's result. A refusal-only run still hands back
+// NO result object (a refusal is not a result).
 (() => {
 	let observed = null;
 	realComponents.bridgeMaker().run(
@@ -310,14 +309,15 @@ harness.note('nowhere else. interfaces.js says so in the same words.');
 		},
 	);
 	harness.match(
-		'bridgeMaker.run REFUSES BY NAME a declared bridge while no implementation is registered',
+		"bridgeMaker.run REFUSES BY NAME a bridge no registered plugin declares (naming the bridge)",
 		String(observed.err),
-		/bridge 'genericBridge' is REFUSED — no bridge implementation is registered; the bridge system is being rebuilt under the EDUcore Bridge Profile v1\.0/,
+		/bridge 'genericBridge' is REFUSED/,
 	);
-	// The stub honours NO construction-time injection: a resolver or writer double handed to it would
-	// never run, and a suite that injected one would believe it had proven something. So injection is
-	// REFUSED at construction, naming the argument — never silently ignored. (Observed red by removing
-	// the throw — Phase 3 self-audit.)
+	harness.ok('a refusal-only run hands back NO result object (a refusal is not a result)', observed.result === undefined);
+	// The seam face honours NO construction-time injection (SPEC §3.1, D-S1): a resolver or writer double
+	// handed to it would never run, and a suite that injected one would believe it had proven something.
+	// Injection is REFUSED at construction, naming the argument. (Observed red by removing the throw —
+	// Phase 3 self-audit; re-observed in the framework suite BG-REG.)
 	let constructionRefusal = '';
 	try {
 		realComponents.bridgeMaker({ bridgePluginResolver: () => ({}) });
@@ -327,21 +327,18 @@ harness.note('nowhere else. interfaces.js says so in the same words.');
 	harness.match(
 		'bridgeMaker() REFUSES BY NAME a construction-time injection it cannot honour',
 		constructionRefusal,
-		/bridgePluginResolver.*not honoured.*no bridge implementation is registered/,
+		/bridgePluginResolver.*not honoured/,
 	);
-	// The DECLARATION must name what the stub CAN produce (Phase 4, Phase 3 stand-down item 7): a
-	// refusal-only run hands back NO result object, so the contract declares no result shape (null).
-	// A declared key set the stub can never meet is a lie the arity/argKeys sweep cannot see — this
-	// probe compares the declaration to the OBSERVED callback. (Observed red with the pre-reset
-	// resultKeys array in place — DEVLOG Phase 4 K3b.)
-	harness.ok(
-		'the stub hands back NO result object on its refusal (callback result is undefined)',
-		observed.result === undefined,
-	);
+	// The DECLARATION names what the framework produces (BR-140): the runReport's REQUIRED keys, `blocks`
+	// and `producer` among them (SPEC §5.9 — one pair-scoped block, producer ALWAYS explicit).
+	const RUN_REPORT_RESULT_KEYS_DECLARED = [
+		'inGraph', 'bridge', 'applyLabel', 'producer', 'decisionBlock', 'blocks', 'edgesWritten', 'counts',
+		'generation', 'rendererVersion', 'mode', 'sssomExportPath', 'note',
+	];
 	harness.equal(
-		'COMPONENT_SHAPES.bridgeMaker.run.resultKeys declares NO result shape (null), matching what the stub produces',
-		COMPONENT_SHAPES.bridgeMaker.run.resultKeys,
-		null,
+		'COMPONENT_SHAPES.bridgeMaker.run.resultKeys EQUALS the framework runReport key list (BR-140; null is history)',
+		JSON.stringify(COMPONENT_SHAPES.bridgeMaker.run.resultKeys),
+		JSON.stringify(RUN_REPORT_RESULT_KEYS_DECLARED),
 	);
 })();
 
@@ -418,40 +415,6 @@ harness.note('nowhere else. interfaces.js says so in the same words.');
 		'',
 	);
 })();
-
-// =====================================================================
-harness.section('BRIDGE MODULE — the mapper contract (@interface BridgeModule) and its gate');
-// =====================================================================
-
-harness.equal(
-	'BRIDGE_MODULE_SHAPE declares arity, argKeys and resultKeys',
-	String(
-		BRIDGE_MODULE_SHAPE.arity === 2 &&
-			Array.isArray(BRIDGE_MODULE_SHAPE.argKeys) &&
-			Array.isArray(BRIDGE_MODULE_SHAPE.resultKeys),
-	),
-	'true',
-);
-
-// bridgeMaker holds a resolved plugin to BRIDGE_MODULE_SHAPE at RUNTIME; the checker is exported
-// so the gate can be observed in both directions here too (a gate never seen failing is not one).
-const { bridgeModuleShapeViolation } = bridgeMakerModule;
-
-harness.equal(
-	'a CONFORMING bridge-module callable ({inGraph,hub,applyLabel}, cb) passes the gate',
-	bridgeModuleShapeViolation(({ inGraph, hub, applyLabel }, callback) => callback(''), 'conformingMapper'),
-	'',
-);
-harness.match(
-	'a POSITIONAL (arity-3) bridge-module callable is caught, naming the mapper',
-	bridgeModuleShapeViolation((inGraph, hub, applyLabel) => {}, 'positionalMapper'),
-	/positionalMapper.*takes 3 argument/,
-);
-harness.match(
-	'a bridge-module callable that never reads a declared key is caught, naming it',
-	bridgeModuleShapeViolation(({ inGraph, applyLabel }, callback) => callback(''), 'renamedMapper'),
-	/renamedMapper.*never reads.*hub/,
-);
 
 // =====================================================================
 harness.section('THE GATE BITES — drifted shapes are caught (failure side proven)');

@@ -113,78 +113,38 @@
 
 /**
  * @interface BridgeMakerComponent
- * Runs a bridge module over a materialized dependency graph, writing new LABELED relationship
- * edges INTO the graph (label-based delta harvest, §4 Phase C). Real-bodied as of 2026-07-24
- * (P0 of the bridge): it RESOLVES `bridge` (the recipe's bridge NAME) through a three-directory
- * search path to a BridgeModule plugin (refusing an unresolvable name by name — no silent default;
- * an ambiguous name throws), mints a graph writer from the handle,
- * composes the component library over it, runs the plugin, and returns a STATUS report. The P0
- * default generic plugin writes ZERO edges, so `run` still travels its whole path in-process
- * without a container; the producers that write real edges land in P2/P3.
+ * Runs a bridge PLUGIN over a materialized dependency graph through the EDUcore Bridge Framework
+ * (lib/bridge-framework, SPEC-bridgeFramework-v1.md), writing labeled SKOS mapping edges INTO the graph
+ * (label-based delta harvest, §4 Phase C). apps/bridge-maker/bridgeMaker.js is the SEAM FACE: it builds
+ * the discovery registry over forges/<standardKey>/bridges/*.js at construction (SPEC §9), constructs
+ * the framework with the real graph reader/writer factories, and forwards run(spec, callback) to
+ * bridgeFramework.run unchanged (SPEC §3.1). The pre-reset component (three-directory search path,
+ * component library, P0 default generic plugin) and the Phase-3 refuse-only stub are HISTORY
+ * (system/codeAttic, tags preDemolition-081526 / preBridgeFramework-081626).
  *
- * It takes a GraphHandle, not a URL. The scaffolded orchestrator named replayManager.create's
- * result `boltUrl` and passed it as `graphBoltUrl`, which was harmless only while every component
- * was a stub: the real create returns a HANDLE, and a handle is not a string. Calling the
- * parameter what it is removes the trap rather than documenting it.
+ * It takes a GraphHandle, not a URL (the handle is what replayManager.create returns).
  *
- * ⟪ROOT-AND-BRANCH RESET, Phase 3/4 (2026-08-15; RULINGS-supervisor-phase2.md §2 option A)⟫ The
- * paragraph above describes the PRE-RESET component. Every bridge implementation, the resolver, the
- * three-directory search path and the graph writer/reader were set aside (system/codeAttic, tag
- * preDemolition-081526); what remains at this seam is apps/bridge-maker/bridgeMaker.js, THE STUB, and
- * this is its actual contract until the bridge system is rebuilt under the EDUcore Bridge Profile v1.0:
- *
- * CONSTRUCTION: bridgeMaker() takes NO arguments. It honours NO injection — a construction argument of
- * ANY name (bridgePluginResolver, graphWriterFactory, graphReaderFactory, bridgeSearchPath, …) is
- * REFUSED BY NAME (thrown), never silently ignored: there is no resolver, writer or reader to inject
- * into, and a suite whose double never ran would believe it had proven something.
- * @property {function({inGraph: GraphHandle, bridge: string, applyLabel: string},
+ * CONSTRUCTION: bridgeMaker() takes NO arguments and honours NO injection — a construction argument
+ * of ANY name is REFUSED BY NAME (thrown), never silently ignored (SPEC §3.1, D-S1): test injection
+ * goes through the FRAMEWORK factory (fixture registry, reader/writer doubles), never the seam face.
+ * @property {function({inGraph: GraphHandle, bridge: string, applyLabel: string,
+ *           source: string, hub: string, rebridge: boolean, decisionStore: Object, judgmentCache: Object,
+ *           matchForensics: Object, inferenceConfig: Object, config: Object},
  *           function(string, Object=): void): void} run
- *           ALWAYS calls back a REFUSAL (err string), never a result: a malformed call (inGraph /
- *           bridge / applyLabel not given) is refused for its own reason first; a well-formed call
- *           naming any bridge is refused BY NAME because no implementation is registered. With
- *           `bridges: []` in the recipe, run is never called at all. Accordingly
- *           COMPONENT_SHAPES.bridgeMaker.run.resultKeys is null — the stub can produce NO result
- *           object, and a declared result shape it can never meet would be a lie waiting for a
- *           reader (Phase 3 stand-down item 7).
+ *           spec is EXACTLY what build.js Phase C composes (build.js bridgeOnePairing); the framework
+ *           refuses by name an unregistered `bridge` (LISTING the registered names), a `source` that is
+ *           not the plugin's standardKey, an absent hub/decisionStore/version, and any `config` key
+ *           outside the framework's RUN_CONFIG_KEY_LIST (the recipe's params channel is CLOSED). On
+ *           success it calls back the runReport carrying EVERY key in
+ *           COMPONENT_SHAPES.bridgeMaker.run.resultKeys — including `blocks` (exactly ONE block under a
+ *           PAIR-SCOPED applyLabel `<applyLabel>_<SOURCE>_<HUB>`) and an ALWAYS-explicit `producer`
+ *           (`authored` for every v1 plugin), so build.js never infers a producer from decisionBlock.
  */
 
 /**
- * @interface BridgeModule
- * The BRIDGE CONTRACT — what a bridge plugin file must expose (design_bridgeComponentLibrary §3.11).
- * The recipe's `bridge` NAME resolves through bridgeMaker's directory search path to one of these;
- * the generic default is just a library file, a standard supplies a standard-local file for bespoke logic.
- *
- * It is a CURRIED factory: the injected library tools first, then a single callable over the graph.
- *
- *   bridgeModule({ vectorizer, semanticMatcher, evidenceGatherer, selector, decisionFreezer,
- *                  relationshipWriter, referenceIndex, sourceWalker, authoredCrosswalkLoader,
- *                  hubCandidateModule, config, xLog })
- *       -> ({ inGraph: GraphHandle, hub: string|null, applyLabel: string },
- *           function(string, {edgesWritten: number, decisionBlock: Object|null,
- *                             counts: Object}=): void): void
- *
- * The callable takes ONE named-argument object plus the callback (arity 2 — a positional
- * signature is drift). It reads inGraph/hub/applyLabel off that object, writes labeled edges via
- * the injected relationshipWriter, and calls back a status carrying edgesWritten and counts
- * (decisionBlock is null for a deterministic bridge, a content-addressed block for a frozen
- * inferred one). bridgeMaker holds a resolved plugin to BRIDGE_MODULE_SHAPE and refuses drift by
- * name before running it. `hub` is null in P0 until build.js threads the recipe's hub token
- * through bridgeMaker.run.
- *
- * BLOCK-OR-BLOCKS (multi-block emit, contract change 2026-07-26). A bridge invocation may emit
- * EITHER one relationship block (the single-block mapping bridges — ctdlAuthoredBridge,
- * semanticBridge — write all edges under the ONE applyLabel build.js handed and return NO `blocks`
- * key) OR SEVERAL pair-scoped blocks (a COORDINATING producer — ctdlFamilyStructure — reads the
- * whole family once, writes each pairing's edges under its OWN distinct per-pair applyLabel, and
- * returns them in an OPTIONAL `blocks[]` array). Each blocks[] entry carries { applyLabel,
- * firstStandard, secondStandard, producer, decisionBlock, emptyPairing, counts }: applyLabel is the
- * label THAT pairing's edges were written under (so build.js harvests each on its own),
- * firstStandard/secondStandard are the pair's endpoint TOKENS root-first (so build.js version-keys
- * each block independently). `blocks` is DELIBERATELY NOT a required resultKey — one block is the
- * degenerate "list of one", synthesized by build.js from the top-level status when `blocks` is
- * absent, which is exactly what keeps the single-block bridges working unchanged.
- * @property {function(Object): function({inGraph: GraphHandle, hub: string, applyLabel: string},
- *           function(string, Object=): void): void} (the curried callable; see above)
+ * @interface BridgeModule — RETIRED (B2 interfaces commit, 2026-08-16; RULING BF10 / BR-140). The bridge
+ * PLUGIN contract is now `{ bridgeDeclaration, bridgeHooks }` validated by a table walk over
+ * BRIDGE_DECLARATION_CONTRACT + BRIDGE_HOOK_CONTRACT in lib/bridge-framework/bridgePluginContract.js.
  */
 
 /**
@@ -322,27 +282,8 @@ const MANIFEST_HANDLE_SHAPE = {
 	recipeFileName: { arity: 0, argKeys: null, resultKeys: null },
 };
 
-// The BRIDGE MODULE contract, as DATA — the bridge plugin @interface BridgeModule, in
-// the same three fields the top-level components use. It is NOT a member of COMPONENT_SHAPES (that
-// map is exactly the four components build.js wires); a bridge module is not a build.js component
-// but a plugin bridgeMaker resolves and runs, so its shape lives beside MANIFEST_HANDLE_SHAPE and
-// is enforced at RUNTIME by bridgeMaker (bridgeModuleShapeViolation) rather than by the static
-// component sweep. A bridge module's produced callable is arity 2 (one named-argument object plus
-// the callback), reads inGraph/hub/applyLabel off that object, and calls back a status carrying
-// edgesWritten and counts. What is CHECKED is exactly that — arity and argKeys statically (a
-// source-text argKeys check that can pass for the wrong reason but never a signature that omits a
-// key), resultKeys only after the callable runs. Types are not checked.
-//
-// `blocks` is an OPTIONAL result key (the block-or-blocks contract in @interface BridgeModule): a
-// coordinating producer emits SEVERAL pair-scoped blocks in it, a single-block bridge omits it. It
-// is deliberately NOT in resultKeys — requiring it would break every single-block bridge, and the
-// degenerate one-block case is synthesized downstream. So the enforced result shape is unchanged;
-// the multi-block capability rides on an optional key, exactly as a backward-compatible extension must.
-const BRIDGE_MODULE_SHAPE = {
-	arity: 2,
-	argKeys: ['inGraph', 'hub', 'applyLabel'],
-	resultKeys: ['edgesWritten', 'counts'],
-};
+// The BRIDGE MODULE contract as DATA (BRIDGE_MODULE_SHAPE) — RETIRED into
+// lib/bridge-framework/bridgePluginContract.js (B2 interfaces commit, RULING BF10 / BR-140).
 
 const COMPONENT_SHAPES = {
 	forger: {
@@ -388,16 +329,31 @@ const COMPONENT_SHAPES = {
 		delete: { arity: 2, argKeys: null, resultKeys: null },
 	},
 	bridgeMaker: {
-		// THE SEAM STUB (root-and-branch reset). run() ALWAYS refuses through its callback and hands
-		// back no result object, so there is NO result shape to declare: null, by the same rule
-		// replayManager.delete uses ("the contract names no result shape"). The pre-reset declaration
-		// ['inGraph', 'bridge', 'applyLabel', 'edgesWritten', 'note'] named a result the stub can never
-		// produce, and the static sweep (arity/argKeys only) could not tell (Phase 3 stand-down item 7).
-		// When Phase 6 registers a real producer, its result keys are declared HERE, in the same commit.
+		// THE BRIDGE FRAMEWORK SEAM (B2 interfaces commit, 2026-08-16; SPEC-bridgeFramework-v1.md §5.9,
+		// §14.4 step 2; RULING A8/BF10; BR-140). resultKeys is the framework's RUN_REPORT_RESULT_KEYS —
+		// the SAME list, declared here as data; BG-REG(f) in lib/bridge-framework/test asserts the two are
+		// EQUAL and that a real run returns every one of them. `blocks` is REQUIRED (exactly one block,
+		// pair-scoped applyLabel, explicit producer); `sssomExportPath` is null on a materialise run
+		// (no export happened) and a path on a re-judge — present either way. The Phase-3 stub's null
+		// ("no result shape") is history.
 		run: {
 			arity: 2,
 			argKeys: ['inGraph', 'bridge', 'applyLabel'],
-			resultKeys: null,
+			resultKeys: [
+				'inGraph',
+				'bridge',
+				'applyLabel',
+				'producer',
+				'decisionBlock',
+				'blocks',
+				'edgesWritten',
+				'counts',
+				'generation',
+				'rendererVersion',
+				'mode',
+				'sssomExportPath',
+				'note',
+			],
 		},
 	},
 	manifestEditor: {
@@ -415,4 +371,4 @@ const COMPONENT_SHAPES = {
 	},
 };
 
-module.exports = { COMPONENT_SHAPES, MANIFEST_HANDLE_SHAPE, BRIDGE_MODULE_SHAPE };
+module.exports = { COMPONENT_SHAPES, MANIFEST_HANDLE_SHAPE };

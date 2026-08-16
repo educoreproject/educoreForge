@@ -41,56 +41,14 @@
 //
 // Control flow: err-string-first callbacks, no async/await, no try/catch (server/CLI rule).
 
-const path = require('path');
-
-const { BRIDGE_MODULE_SHAPE } = require(path.join(__dirname, '..', '..', 'interfaces'));
-
 // -----
-// THE REGISTRY REFUSAL — the supervisor's words (RULINGS §2). Named once, as data, so the run-time
-// refusal and any test that asserts it read the same bytes.
+// THE REGISTRY REFUSAL — the supervisor's words (RULINGS §2). Named once, as data.
+// (B2 interfaces commit, 2026-08-16, RULING BF10: `bridgeModuleShapeViolation` and the export of this
+// constant MIGRATED out with their test-interfaces consumers — the plugin contract is now the table walk
+// in lib/bridge-framework/bridgePluginContract.js; this stub is replaced by the framework seam face in
+// the next commit.)
 const NO_BRIDGE_IMPLEMENTATION_REGISTERED =
 	'no bridge implementation is registered; the bridge system is being rebuilt under the EDUcore Bridge Profile v1.0';
-
-// -----
-// bridgeModuleShapeViolation — the runtime shape gate for a resolved plugin, against @interface
-// BridgeModule (BRIDGE_MODULE_SHAPE). KEPT through the reset: it is the declared PLUGIN CONTRACT
-// Phase 6's producers must meet, it depends on nothing that left, and test-interfaces observes it in
-// both directions (a gate never seen failing is not one). Two static checks:
-//   ARITY   — the callable takes ONE named-argument object plus the callback (arity 2). A positional
-//             (inGraph, hub, applyLabel) callable has arity 3 and is caught here.
-//   argKeys — the callable's own source visibly READS inGraph/hub/applyLabel off its argument object
-//             (destructured or accessed). A source-text check: it cannot pass a signature that never
-//             mentions a key, which is what drift looks like. It CAN pass for the wrong reason (a
-//             named-but-unused key), and this comment does not pretend otherwise.
-// The pre-reset third check — the FORBIDDEN_SUBSTRATE scan of the plugin's module file for a raw
-// neo4j-driver / graph-writer / credential reference — left with the write substrate it guarded; when
-// Phase 6 re-introduces a writer, the scan comes back with it (HARVEST-bridgeKnowledge.md).
-// Types are not checked; result keys are a post-run check and there is no run.
-const READS_ARG_KEY = (functionSource, oneArgKey) =>
-	new RegExp(`[{,]\\s*${oneArgKey}\\s*[,:=}]`).test(functionSource) ||
-	new RegExp(`\\.${oneArgKey}\\b`).test(functionSource);
-
-const bridgeModuleShapeViolation = (pluginCallable, bridge) => {
-	if (typeof pluginCallable !== 'function') {
-		return `bridge '${bridge}' produced ${typeof pluginCallable}, not a bridge-module callable`;
-	}
-	if (pluginCallable.length !== BRIDGE_MODULE_SHAPE.arity) {
-		return (
-			`bridge '${bridge}' has a drifted SHAPE: its callable takes ${pluginCallable.length} ` +
-			`argument(s); @interface BridgeModule declares ${BRIDGE_MODULE_SHAPE.arity} (one ` +
-			`named-argument object plus the callback). A positional signature looks exactly like this.`
-		);
-	}
-	const functionSource = pluginCallable.toString();
-	const unread = BRIDGE_MODULE_SHAPE.argKeys.filter((oneArgKey) => !READS_ARG_KEY(functionSource, oneArgKey));
-	if (unread.length) {
-		return (
-			`bridge '${bridge}' has a drifted SHAPE: its callable never reads declared argument ` +
-			`key(s) off its argument object: ${unread.join(', ')}`
-		);
-	}
-	return '';
-};
 
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
@@ -154,5 +112,3 @@ const moduleFunction =
 // END OF moduleFunction() ============================================================
 
 module.exports = moduleFunction({ moduleName });
-module.exports.bridgeModuleShapeViolation = bridgeModuleShapeViolation;
-module.exports.NO_BRIDGE_IMPLEMENTATION_REGISTERED = NO_BRIDGE_IMPLEMENTATION_REGISTERED;
