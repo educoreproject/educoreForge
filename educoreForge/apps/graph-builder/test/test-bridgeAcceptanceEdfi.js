@@ -162,7 +162,11 @@ const perSubjectBuckets = (oneBlock) => {
 	return { tally, subjectCount: allKeys.size };
 };
 const CONJUNCT_REGISTRY = [
-	{ id: 'BG-CENSUS a census EQUAL', check: (b) => ({ pass: JSON.stringify(b.header.cardinalityCensus) === JSON.stringify(fixture.cardinalityCensus), detail: JSON.stringify(b.header.cardinalityCensus.perSubject) }) },
+	// RULING SABLE_RIVER (B3 checkpoint 2 (1)): BG-CENSUS (a) EQUAL on the CLASSIFIER members; the JUDGE-DEPENDENT trio
+	// (abstainedCount / edgeCount / distinctTripleCount) is recorded PER FROZEN BLOCK in expectedDecisionBlockIds.json and
+	// asserted THERE — the debug judge abstains pseudo-randomly, the real judge picks, so those three differ by construction
+	{ id: 'BG-CENSUS a census EQUAL on the classifier members (both tables minus the judge-dependent trio)', check: (b) => { const strip = (census) => ({ perSubject: census.perSubject, perTarget: Object.keys(census.perTarget).filter((oneName) => JUDGE_DEPENDENT_MEMBER_LIST.indexOf(oneName) === -1).sort().reduce((soFar, oneName) => ({ ...soFar, [oneName]: census.perTarget[oneName] }), {}) }); return { pass: JSON.stringify(strip(b.header.cardinalityCensus)) === JSON.stringify(strip(fixture.cardinalityCensus)), detail: JSON.stringify(b.header.cardinalityCensus.perSubject) }; } },
+	{ id: 'BG-CENSUS a judge-dependent trio EQUALS the record for THIS block (abstained / edgeCount / distinctTripleCount)', check: (b) => { const t = b.header.cardinalityCensus.perTarget; const which = realRow && b.header.judgeKind !== 'debug:digest' ? 'real' : 'debug'; const expectedTrio = (expectedIds.judgeDependentCensusByBlock || {})[which]; const pass = Boolean(expectedTrio) && JUDGE_DEPENDENT_MEMBER_LIST.every((oneName) => t[oneName] === expectedTrio[oneName]); return { pass, detail: `${which}: ${JUDGE_DEPENDENT_MEMBER_LIST.map((oneName) => `${oneName} ${t[oneName]}`).join(', ')} vs recorded ${JSON.stringify(expectedTrio)}` }; } },
 	{ id: 'BG-CENSUS a digests EQUAL (label / remodel / declaration)', check: (b) => ({ pass: b.header.labelTableDigest === fixture.labelTableDigest && b.header.remodelTableDigest === fixture.remodelTableDigest && b.header.declarationDigest === fixture.declarationDigest, detail: `${b.header.labelTableDigest.slice(0, 8)} ${b.header.remodelTableDigest.slice(0, 8)} ${b.header.declarationDigest.slice(0, 8)} vs fixture ${fixture.labelTableDigest.slice(0, 8)} ${fixture.remodelTableDigest.slice(0, 8)} ${fixture.declarationDigest.slice(0, 8)}` }) },
 	{ id: 'BG-CENSUS c per-subject sum invariant', check: (b) => { const s = b.header.cardinalityCensus.perSubject; const sum = s.specifiedSubjectCount + s.judgedSubjectCount + s.orphanSubjectCount + s.subjectCollisionCount + s.sourceGapCount; return { pass: sum === s.subjectCount, detail: `${sum} vs ${s.subjectCount}` }; } },
 	{ id: 'BG-CENSUS e every subject in EXACTLY ONE bucket (recomputed)', check: (b) => { const { tally, subjectCount } = perSubjectBuckets(b); const s = b.header.cardinalityCensus.perSubject; const pass = subjectCount === s.subjectCount && tally.specified === s.specifiedSubjectCount && tally.judged === s.judgedSubjectCount && tally.orphan === s.orphanSubjectCount && tally.subjectCollision === s.subjectCollisionCount && tally.sourceGap === s.sourceGapCount; return { pass, detail: JSON.stringify(tally) }; } },
@@ -183,8 +187,10 @@ const CONJUNCT_REGISTRY = [
 	{ id: 'BG-P6 a/c predicate ∈ SKOS on every mapping record and asserted by the label table', check: (b) => { const mapping = b.decisionRecordList.filter((r) => r.objectStableId !== null); return { pass: mapping.length > 0 && mapping.every((r) => SKOS_PREDICATES.indexOf(r.predicate) !== -1 && PREDICATE_ASSERTED_BY_LIST.indexOf(r.predicateAssertedBy) !== -1 && r.predicateAssertedBy === 'labelTable'), detail: `${mapping.length} mapping records` }; } },
 	{ id: "BG-P6 b no `predicate` key inside record.judge (the judge's return never carries one)", check: (b) => ({ pass: b.decisionRecordList.filter((r) => r.judge && Object.prototype.hasOwnProperty.call(r.judge, 'predicate')).length === 0, detail: '' }) },
 ];
+const JUDGE_DEPENDENT_MEMBER_LIST = ['abstainedCount', 'edgeCount', 'distinctTripleCount'];
 const twinFor = {
-	'BG-CENSUS a census EQUAL': (b) => { b.header.cardinalityCensus.perSubject.specifiedSubjectCount -= 1; },
+	'BG-CENSUS a census EQUAL on the classifier members (both tables minus the judge-dependent trio)': (b) => { b.header.cardinalityCensus.perSubject.specifiedSubjectCount -= 1; },
+	'BG-CENSUS a judge-dependent trio EQUALS the record for THIS block (abstained / edgeCount / distinctTripleCount)': (b) => { b.header.cardinalityCensus.perTarget.edgeCount += 1; },
 	'BG-CENSUS a digests EQUAL (label / remodel / declaration)': (b) => { b.header.labelTableDigest = '0'.repeat(64); },
 	'BG-CENSUS c per-subject sum invariant': (b) => { b.header.cardinalityCensus.perSubject.judgedSubjectCount += 1; },
 	'BG-CENSUS e every subject in EXACTLY ONE bucket (recomputed)': (b) => { b.decisionRecordList.pop(); },
@@ -235,7 +241,8 @@ if (sssomPath && fs.existsSync(sssomPath)) {
 		harness.equal(`BG-P7 h every subject_id is ONE declared prefix ('${SUBJECT_PREFIX}') + a colon-free reference (${parsed.rowList.length} rows)`, badSubject.length, 0);
 		harness.ok('    the curie map declares the subject prefix', parsed.headerLineList.some((oneLine) => /curie_map/.test(oneLine)) && parsed.headerLineList.some((oneLine) => new RegExp(`\\b${SUBJECT_PREFIX}:`).test(oneLine)));
 		harness.ok('    UnspecifiedMatching appears nowhere in the TSV', text.indexOf('UnspecifiedMatching') === -1);
-		harness.ok('    mapping_provider is the verified provider', parsed.headerLineList.some((oneLine) => /mapping_provider: https:\/\/ceds\.ed\.gov\//.test(oneLine)));
+		harness.ok('    mapping_provider is the verified provider (a QUOTED YAML scalar since the exporter conformance commit)', parsed.headerScalarOf('mapping_provider') === 'https://ceds.ed.gov/');
+		harness.match('    mapping_set_id is the URI over the frozen real block id', parsed.headerScalarOf('mapping_set_id') || '', new RegExp(`^urn:educore:decisionBlock:${expectedIds.decisionBlockId}$`));
 		// RED twin (input fault): a doubled prefix on one row
 		const doubled = parsed.rowList.map((oneRow) => ({ ...oneRow }));
 		doubled[0].subject_id = `${SUBJECT_PREFIX}:${doubled[0].subject_id}`;
