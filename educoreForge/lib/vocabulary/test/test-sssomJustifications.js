@@ -48,7 +48,7 @@ const PROFILE_TERMS = ['semapv:ManualMappingCuration', 'semapv:CompositeMatching
 harness.section('(a) each of the Profile §4.2 active terms is VALID');
 // =====================================================================
 PROFILE_TERMS.forEach((oneTerm) => {
-	harness.ok(`${oneTerm} is valid`, vocabulary.isValidSssomJustification(oneTerm));
+	harness.ok(`${oneTerm} is valid`, vocabulary.sssomJustificationRefusal(oneTerm) === '');
 	harness.equal(`${oneTerm} carries no refusal`, vocabulary.sssomJustificationRefusal(oneTerm), '');
 	harness.ok(`${oneTerm} has a human definition (schema-view readability bar)`, typeof TERM_DEFINITIONS.sssomJustification[oneTerm] === 'string' && TERM_DEFINITIONS.sssomJustification[oneTerm].trim() !== '');
 });
@@ -56,7 +56,7 @@ PROFILE_TERMS.forEach((oneTerm) => {
 // =====================================================================
 harness.section('(b) the pre-reset invalid term is INVALID (not in the allowlist)');
 // =====================================================================
-harness.ok(`${PRE_RESET_INVALID_TERM} is NOT valid`, !vocabulary.isValidSssomJustification(PRE_RESET_INVALID_TERM));
+harness.ok(`${PRE_RESET_INVALID_TERM} is NOT valid`, vocabulary.sssomJustificationRefusal(PRE_RESET_INVALID_TERM) !== '');
 harness.ok(`${PRE_RESET_INVALID_TERM} is NOT in SSSOM_JUSTIFICATIONS`, vocabulary.SSSOM_JUSTIFICATIONS.indexOf(PRE_RESET_INVALID_TERM) === -1);
 harness.match(`${PRE_RESET_INVALID_TERM} is refused as not-in-allowlist`, vocabulary.sssomJustificationRefusal(PRE_RESET_INVALID_TERM), /is not in the SSSOM_JUSTIFICATIONS allowlist/);
 harness.ok(`${PRE_RESET_INVALID_TERM} is NOT refused with the BANNED message (that message is reserved for the ban)`, !/BANNED/.test(vocabulary.sssomJustificationRefusal(PRE_RESET_INVALID_TERM)));
@@ -65,7 +65,7 @@ harness.ok(`${PRE_RESET_INVALID_TERM} has NO definition (it must never become a 
 // =====================================================================
 harness.section('(c) semapv:UnspecifiedMatching is REFUSED BY NAME — the BANNED message, distinct from (b)');
 // =====================================================================
-harness.ok(`${BANNED_TERM} is NOT valid`, !vocabulary.isValidSssomJustification(BANNED_TERM));
+harness.ok(`${BANNED_TERM} is NOT valid`, vocabulary.sssomJustificationRefusal(BANNED_TERM) !== '');
 harness.equal('SSSOM_JUSTIFICATIONS_BANNED names exactly the one banned term', JSON.stringify(vocabulary.SSSOM_JUSTIFICATIONS_BANNED), JSON.stringify([BANNED_TERM]));
 harness.match(`${BANNED_TERM} refusal names the term`, vocabulary.sssomJustificationRefusal(BANNED_TERM), new RegExp(BANNED_TERM.replace(':', '\\:')));
 harness.match(`${BANNED_TERM} refusal says BANNED and cites Profile §4.2`, vocabulary.sssomJustificationRefusal(BANNED_TERM), /BANNED by the EDUcore Bridge Profile §4\.2/);
@@ -73,12 +73,13 @@ harness.ok(`${BANNED_TERM} refusal is NOT the not-in-allowlist message`, !/is no
 harness.ok('the two refusal messages differ (the ban is visible, not an omission)', vocabulary.sssomJustificationRefusal(BANNED_TERM) !== vocabulary.sssomJustificationRefusal(PRE_RESET_INVALID_TERM));
 
 // =====================================================================
-harness.section('(d) the allowlist is EXACTLY the three, in the Profile\'s order; boolean is defined by the refusal');
+harness.section('(d) the allowlist is EXACTLY the three, in the Profile\'s order; the boolean form is REMOVED (BR-145)');
 // =====================================================================
 harness.equal('SSSOM_JUSTIFICATIONS === the Profile\'s three', JSON.stringify(vocabulary.SSSOM_JUSTIFICATIONS), JSON.stringify(PROFILE_TERMS));
 harness.equal('the definitions map carries exactly the three (no orphan definition, no missing one)', JSON.stringify(Object.keys(TERM_DEFINITIONS.sssomJustification).sort()), JSON.stringify(PROFILE_TERMS.slice().sort()));
-harness.ok('a bare (unprefixed) name is refused — the semapv: prefix is intrinsic', !vocabulary.isValidSssomJustification('CompositeMatching'));
-harness.ok('undefined is refused, not defaulted', !vocabulary.isValidSssomJustification(undefined));
+harness.ok('a bare (unprefixed) name is refused — the semapv: prefix is intrinsic', vocabulary.sssomJustificationRefusal('CompositeMatching') !== '');
+harness.ok('undefined is refused, not defaulted', vocabulary.sssomJustificationRefusal(undefined) !== '');
+harness.ok('isValidSssomJustification is NOT exported (BR-145 RULED: the boolean invited callers to discard the ban\'s name)', vocabulary.isValidSssomJustification === undefined);
 harness.ok('the registry is frozen (no runtime widening of the allowlist)', Object.isFrozen(vocabulary.SSSOM_JUSTIFICATIONS) && Object.isFrozen(vocabulary.SSSOM_JUSTIFICATIONS_BANNED));
 
 harness.report();

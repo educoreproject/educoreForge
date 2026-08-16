@@ -450,7 +450,7 @@ const SSSOM_JUSTIFICATIONS_BANNED = ['semapv:UnspecifiedMatching'];
 
 // sssomJustificationRefusal — '' when the term is one of the three; otherwise the REASON, by name. Two
 // distinct refusals: a BANNED term names the ban and the Profile section; anything else names the
-// allowlist. Callers that need only a boolean use isValidSssomJustification, which is defined by this.
+// allowlist. There is NO boolean form (BR-145): a caller that wants a yes/no compares the refusal to ''.
 const sssomJustificationRefusal = (oneJustification) => {
 	if (SSSOM_JUSTIFICATIONS_BANNED.indexOf(oneJustification) !== -1) {
 		return (
@@ -466,7 +466,8 @@ const sssomJustificationRefusal = (oneJustification) => {
 	}
 	return '';
 };
-const isValidSssomJustification = (oneJustification) => sssomJustificationRefusal(oneJustification) === '';
+// isValidSssomJustification — REMOVED (BR-145 RULED, B2 vocabulary commit 2026-08-16): a boolean invited a
+// caller to discard the ban's NAME. Every caller receives the reason through sssomJustificationRefusal.
 
 // SSSOM metadata property NAMES carried on a mapping edge (and on a reified MappingAssertion). camelCase
 // per the project's property-naming convention; a future SSSOM exporter maps these to the SSSOM canonical
@@ -474,6 +475,21 @@ const isValidSssomJustification = (oneJustification) => sssomJustificationRefusa
 // semapv CURIE (SSSOM_JUSTIFICATIONS). NOTE: there is deliberately NO mappingDate — a runtime timestamp
 // would break deterministic replay; a fixed provenance date, if ever required, is supplied as data, never
 // minted at produce time. Added with the bridge phases (Phase 4 authored track is the first consumer).
+//
+// ⟪BRIDGE FRAMEWORK, B2 vocabulary commit — 2026-08-16 (SPEC-bridgeFramework-v1.md §5.7, §14.4 step 1;
+// RULINGS A7/R7/BF12; BR-143; C6)⟫ This registry is the CLOSED SET of property names a mapping edge may
+// carry: `lib/bridge-framework/graphWriter.js` refuses by name any edge property outside it (the closed-set
+// check is NEW there — before B2 this registry had zero consumers and nothing enforced it). Rows added
+// here for the Bridge Profile's edge shape: matchBasis, resolution, mappingProvider, mappingToolVersion,
+// subjectMatchField, objectMatchField, sourceLabel, predicateAssertedBy, attestationChannelList,
+// decisionBlockHash. Two rows are ANNOTATED rather than added:
+//   MATCH_ID        — INTERNAL (C6): a forensic key, never exported by the SSSOM exporter.
+//   PROVENANCE_TIER — RETIRED from authored/judged mapping edges (C6: its job is done by matchBasis ×
+//                     resolution). The NAME stays in the closed set for exactly ONE lawful value: a
+//                     DEBUG-JUDGE block's edges carry `provenanceTier: 'invalid-debug'` (Profile v1.0.5
+//                     §4.6 carve-out, RULING BF16/R5) so a debug block is detectable by one cypher and can
+//                     never reach a certified graph. Any other tier on a mapping edge is refused by the
+//                     writer.
 const MAPPING_PROPERTIES = {
 	PREDICATE: 'predicate',
 	CONFIDENCE: 'confidence',
@@ -483,9 +499,24 @@ const MAPPING_PROPERTIES = {
 	OBJECT_SOURCE: 'objectSource',
 	OBJECT_VERSION: 'objectVersion',
 	MAPPING_TOOL: 'mappingTool',
-	MATCH_ID: 'matchId',
-	PROVENANCE_TIER: 'provenanceTier',
+	MATCH_ID: 'matchId', // INTERNAL — never exported (C6)
+	PROVENANCE_TIER: 'provenanceTier', // RETIRED from mapping edges except the 'invalid-debug' carve-out (see above)
+	// --- B2 additions (Bridge Profile edge shape) ---
+	MATCH_BASIS: 'matchBasis',
+	RESOLUTION: 'resolution',
+	MAPPING_PROVIDER: 'mappingProvider',
+	MAPPING_TOOL_VERSION: 'mappingToolVersion',
+	SUBJECT_MATCH_FIELD: 'subjectMatchField',
+	OBJECT_MATCH_FIELD: 'objectMatchField',
+	SOURCE_LABEL: 'sourceLabel',
+	PREDICATE_ASSERTED_BY: 'predicateAssertedBy',
+	ATTESTATION_CHANNEL_LIST: 'attestationChannelList',
+	DECISION_BLOCK_HASH: 'decisionBlockHash',
 };
+// the property NAMES a mapping edge may carry — derived from the registry above; the writer's closed set
+const MAPPING_PROPERTY_NAME_LIST = Object.freeze(Object.keys(MAPPING_PROPERTIES).map((oneMember) => MAPPING_PROPERTIES[oneMember]));
+// the ONE provenanceTier value a mapping edge may carry, and only on a debug-judge block (Profile v1.0.5 §4.6)
+const MAPPING_EDGE_PERMITTED_PROVENANCE_TIER_LIST = Object.freeze([PROVENANCE_TIER.INVALID_DEBUG]);
 
 // =====================================================================
 // UNIQUENESS KEYS (replay-engine.js MERGE key; addressSignature reserved for the HubReference phases)
@@ -824,8 +855,9 @@ const vocabulary = {
 	SSSOM_JUSTIFICATIONS,
 	SSSOM_JUSTIFICATIONS_BANNED,
 	sssomJustificationRefusal,
-	isValidSssomJustification,
 	MAPPING_PROPERTIES,
+	MAPPING_PROPERTY_NAME_LIST,
+	MAPPING_EDGE_PERMITTED_PROVENANCE_TIER_LIST,
 	UNIQUENESS_KEYS,
 	REQUIRED_PROPERTIES,
 	// equivalence vocabulary (Phase 3)
