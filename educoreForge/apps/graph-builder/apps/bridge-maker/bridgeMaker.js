@@ -1,54 +1,44 @@
 'use strict';
 
-/** @implements {BridgeMakerComponent} — formal contract declared in
- *  apps/graph-builder/interfaces.js; enforced by test-interfaces. The bridge/plugin contract this
- *  component WILL resolve and run again is @interface BridgeModule (BRIDGE_MODULE_SHAPE) in the
- *  same file; its runtime gate (bridgeModuleShapeViolation) is kept here so Phase 6's plugins are
- *  held to a contract that already exists. */
+/** @implements {BridgeMakerComponent} — formal contract declared in apps/graph-builder/interfaces.js;
+ *  enforced by test-interfaces (arity / argKeys statically, resultKeys against the framework's own suite,
+ *  BG-REG f). The PLUGIN contract lives in lib/bridge-framework/bridgePluginContract.js. */
 
-// bridgeMaker — THE SEAM STUB (root-and-branch reset, Phase 3, 2026-08-15; RULINGS-supervisor-phase2
-// §2 option A; SEAM-bridgeMakerStub.md §5). The bridge system is being REBUILT under the EDUcore
-// Bridge Profile v1.0; every bridge implementation, the lib.d evidence kit, the component library,
-// the graph writer/reader and the three-directory plugin search path were set aside (system/codeAttic,
-// tag preDemolition-081526). What remains is the CONTRACT and its refusal:
+// bridgeMaker — THE SEAM FACE of the EDUcore Bridge Framework (SPEC-bridgeFramework-v1.md §3.1, §9, §5.5;
+// RULINGS A2, A11, BF8, D-S1, SABLE_RIVER 12:05 #1). It replaces the root-and-branch Phase-3 refuse-only stub
+// (tags preDemolition-081526 / preBridgeFramework-081626).
 //
-//   bridgeMaker() -> { run(spec, callback) }
+//   bridgeMaker() -> { run(spec, callback) }        zero-arg for build.js (build.js `components.bridgeMaker()`)
 //
-//     spec = { inGraph, bridge, applyLabel, ... }   — same argument keys as the declared shape
-//     callback(errString)                            — ALWAYS a refusal (see below)
+// CONSTRUCTION: builds the discovery registry over forges/<standardKey>/bridges/*.js and validates every plugin
+// THEN — BEFORE any forge is spent (build.js constructs the bridgeMaker before Phase A): a stray file, a
+// duplicate bridgeName, a standardKey that is not its directory, any declaration/hook drift or a forbidden
+// require REFUSES construction by name. Constructs the framework with the REAL reader/writer factories (the two
+// bolt files, lib/bridge-framework/graphReader.js + graphWriter.js — named in DOCTRINE.md) and the store-side
+// sibling-lookup CONFLICT DETECTOR the seam face HOSTS (conflictDetector.js — the ONE thing that spans two runs).
+// A construction argument of ANY name is REFUSED by name (thrown): test injection goes through the FRAMEWORK
+// factory only (fixture registry, reader/writer doubles), never the seam face (D-S1).
 //
-// WHAT THIS STUB DOES.
-//   1. It satisfies interfaces.js: `require('.../apps/bridge-maker')` is a FACTORY whose `()` returns
-//      `{ run }`, `run` has arity 2 and reads inGraph / bridge / applyLabel off its first argument
-//      (COMPONENT_SHAPES.bridgeMaker.run — the static sweep in test-interfaces checks exactly that).
-//   2. With `bridges: []` in the recipe — the only buildable shape while no producer is registered —
-//      build.js's Phase C is `eachSeries([], …)`, a no-op: run() is NEVER CALLED and the build's
-//      relationship-block result is simply empty. Nothing here has to (or does) fabricate a result.
-//   3. With ANY declared bridge, run() REFUSES BY NAME (polyArch2 §6): the recipe names a producer
-//      that does not exist, and NOTHING is substituted for it — no zero-edge default plugin, no
-//      silent success. The refusal text is the supervisor's ruling, verbatim.
-//   4. Argument refusals (inGraph / bridge / applyLabel not given) are kept exactly as before, so a
-//      malformed call is still refused for the RIGHT reason before the registry refusal fires.
+// run(spec, callback): forwards to bridgeFramework.run UNCHANGED (the seam contract build.js Phase C composes —
+// { inGraph, bridge, source, hub, applyLabel, rebridge, decisionStore, judgmentCache, matchForensics,
+// inferenceConfig, config }) and stringifies the framework's error at the seam (refuse.byName returns an Error;
+// every module stringifies at its callback boundary, the seam face once more — RULING BF12). The runReport
+// carries EVERY key of interfaces.js resultKeys, INCLUDING blocks[] (ONE block under the PAIR-SCOPED
+// applyLabel `<applyLabel>_<SOURCE>_<HUB>`, producer ALWAYS explicit) so build.js never infers a producer.
 //
-// WHAT THIS STUB DOES NOT DO — and refuses to pretend to.
-//   - It registers NO plugin resolver, NO graph writer, NO graph reader. The construction-time
-//     injection points the pre-reset component accepted (`bridgePluginResolver`, `graphWriterFactory`,
-//     `graphReaderFactory`, `bridgeSearchPath` …) are NOT honoured: a caller that hands one in is
-//     REFUSED at construction (thrown, named), never silently ignored — an injected double that
-//     never runs would make a suite look like it proved something.
-//   - It does not export DEFAULT_GENERIC_BRIDGE: a constant naming a bridge that no longer exists is
-//     a lie waiting for a caller.
-//
-// Control flow: err-string-first callbacks, no async/await, no try/catch (server/CLI rule).
+// Control flow: err-string-first callbacks; no async/await; no try/catch (server/CLI rule). No per-standard
+// token anywhere in this file (BG-NOSUB / BG-COMPOSE c).
 
-// -----
-// THE REGISTRY REFUSAL — the supervisor's words (RULINGS §2). Named once, as data.
-// (B2 interfaces commit, 2026-08-16, RULING BF10: `bridgeModuleShapeViolation` and the export of this
-// constant MIGRATED out with their test-interfaces consumers — the plugin contract is now the table walk
-// in lib/bridge-framework/bridgePluginContract.js; this stub is replaced by the framework seam face in
-// the next commit.)
-const NO_BRIDGE_IMPLEMENTATION_REGISTERED =
-	'no bridge implementation is registered; the bridge system is being rebuilt under the EDUcore Bridge Profile v1.0';
+const path = require('path');
+
+const TREE_ROOT = path.join(__dirname, '..', '..', '..', '..');
+const bridgeFrameworkLib = require(path.join(TREE_ROOT, 'lib', 'bridge-framework', 'bridge-framework'));
+const pluginRegistryLib = require(path.join(TREE_ROOT, 'lib', 'bridge-framework', 'pluginRegistry'));
+const conflictDetectorLib = require(path.join(TREE_ROOT, 'lib', 'bridge-framework', 'conflictDetector'));
+const { graphReaderFactory } = require(path.join(TREE_ROOT, 'lib', 'bridge-framework', 'graphReader'));
+const { graphWriterFactory } = require(path.join(TREE_ROOT, 'lib', 'bridge-framework', 'graphWriter'));
+
+const FORGES_DIR_PATH = path.join(TREE_ROOT, 'forges');
 
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
@@ -57,53 +47,37 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 const moduleFunction =
 	({ moduleName } = {}) =>
 	(constructionArgs = {}) => {
-		// CONSTRUCTION REFUSAL — the stub honours no injection. Naming what was handed in is the whole
-		// point: a suite that injects a resolver or writer double and gets a component that quietly
+		// CONSTRUCTION REFUSAL — the seam face honours no injection (D-S1). Naming what was handed in is the
+		// whole point: a suite that injects a resolver or writer double here and gets a component that quietly
 		// never uses it has proven nothing, and would not know.
 		const injectedNames = Object.keys(constructionArgs || {});
 		if (injectedNames.length) {
 			throw new Error(
-				`${moduleName}: construction argument(s) ${injectedNames.join(', ')} are not honoured — ` +
-					`${NO_BRIDGE_IMPLEMENTATION_REGISTERED}. There is no resolver, writer or reader to inject into.`,
+				`${moduleName}: construction argument(s) ${injectedNames.join(', ')} are not honoured — the seam face takes NO ` +
+					`arguments; test injection goes through the framework factory (lib/bridge-framework/bridge-framework.js deps: ` +
+					`graphReaderFactory, graphWriterFactory, pluginRegistry), never the seam face (SPEC §3.1, D-S1).`,
 			);
 		}
 
-		const run = ({ inGraph, bridge, applyLabel }, callback) => {
-			// ARGUMENT REFUSALS — every required argument is stated or the run does not start
-			// (polyArch2 §6). None is guessed. Kept byte-for-byte in spirit from the pre-reset
-			// component so a malformed call is refused for its own reason first.
-			if (!inGraph) {
-				callback(
-					`${moduleName}: inGraph is not given. It is the materialized dependency GraphHandle the ` +
-						`bridge writes into; there is no default.`,
-				);
-				return;
-			}
-			if (typeof bridge !== 'string' || bridge.trim() === '') {
-				callback(
-					`${moduleName}: bridge is ${
-						bridge === undefined ? 'not named' : JSON.stringify(bridge)
-					}. It is the name that resolves the bridge implementation; there is no default.`,
-				);
-				return;
-			}
-			if (typeof applyLabel !== 'string' || applyLabel.trim() === '') {
-				callback(
-					`${moduleName}: applyLabel is ${
-						applyLabel === undefined ? 'not given' : JSON.stringify(applyLabel)
-					}. It is the label harvest selects the written edges by; there is no default.`,
-				);
-				return;
-			}
+		// the discovery registry — validated at construction, before any forge is spent (SPEC §9)
+		const pluginRegistry = pluginRegistryLib.buildRegistryFromDirectory({ forgesDirPath: FORGES_DIR_PATH });
 
-			// THE REGISTRY REFUSAL — a well-formed call naming a bridge. There is nothing to resolve it
-			// to, and nothing is substituted for it (RULINGS §2). This is the seam's actual contract
-			// while no producer exists; the probe in test-interfaces turns red the moment someone
-			// re-adds a silent default here.
-			callback(
-				`${moduleName}: bridge '${bridge}' is REFUSED — ${NO_BRIDGE_IMPLEMENTATION_REGISTERED}. ` +
-					`Nothing was substituted for it.`,
-			);
+		const bridgeFramework = bridgeFrameworkLib({
+			graphReaderFactory,
+			graphWriterFactory,
+			pluginRegistry,
+			conflictDetector: conflictDetectorLib.detectSiblingConflicts,
+		});
+
+		const run = ({ inGraph, bridge, applyLabel, ...restOfSpec }, callback) => {
+			// forwarded UNCHANGED; the framework refuses inGraph / bridge / applyLabel by name for its own reasons
+			bridgeFramework.run({ inGraph, bridge, applyLabel, ...restOfSpec }, (runError, runReport) => {
+				if (runError) {
+					callback(`${moduleName}: ${String(runError)}`);
+					return;
+				}
+				callback('', runReport);
+			});
 		};
 
 		return { run };

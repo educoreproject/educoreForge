@@ -1,0 +1,18 @@
+ToyEntity,ToyPath,ToyElementName,HubGlobalId,HubClassURI,MappingConfidence,MappingNotes,ElementDescription,HubPropertyURI,LegacyColumn
+Student,Student,FirstName,000001,http://toy.example/hub#C1,Yes,exact by definition,The given name of the student,http://toy.example/prop#P000001,z1
+Student,Student,BirthDate,000002,http://toy.example/hub#C1,Yes,,The birth date of the student,http://toy.example/prop#P000002,z2
+Student,Student,Gender,000002,,Yes,domain unknown to the author,The gender of the student,http://toy.example/prop#P000002,z3
+Student,Student,Ethnicity,000003,http://toy.example/hub#C1,Maybe,"tentative, see notes",The ethnicity of the student,,z4
+Student,Student,Missing,000004,,Yes,,An element the hub does not carry,,z5
+School,School,Name,000009,,Yes,,The name of the school,,z6
+School,School,Address,000008,http://toy.example/hub#C9,Yes,,The address of the school,,z7
+Course,Course,Title,000001;000006,,Yes,lossy echo of two ids,The title of the course,,z8
+Course,Course,Credits,000001,,Yes,,Credits for the course,,z9
+Course,CourseOffering,Credits,000006,,Yes,,Credits for the offering,,z10
+Course,Course,Level,000001,,Skip,,The level of the course,,z11
+Student,Student,Extra,000001,,Yes,first attestation,An extra element,,z12
+Student,Student,Extra,000001,,Yes,second attestation,An extra element,,z13
+Ghost,Ghost,Thing,000001,,Yes,,A subject the standard does not forge,,z14
+Student,Student,Nothing,000000,,Not in Hub,,Nothing here,,z15
+Student,Student,Nothing2,000000,,Maybe,,Nothing here either,,z16
+Student,Student,BadUri,000001,,Yes,,A row whose property URI disagrees,http://toy.example/prop#P000002,z17

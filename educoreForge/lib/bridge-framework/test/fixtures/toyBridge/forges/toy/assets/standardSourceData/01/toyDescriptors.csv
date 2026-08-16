@@ -1,0 +1,4 @@
+ToyEntity,ToyDescriptor,HubOptionId,Confidence
+Student,SexDescriptor,OV000001,Yes
+Student,SexDescriptor,OV000002,Yes
+School,TypeDescriptor,OV000010,Maybe

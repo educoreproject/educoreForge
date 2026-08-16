@@ -1,0 +1,8 @@
+{
+  "name": "bridge-framework",
+  "version": "1.0.0",
+  "private": true,
+  "description": "The EDUcore Bridge Framework — ONE shared library that satisfies the EDUcore Bridge Profile for every mapping bridge plugin (SPEC-bridgeFramework-v1.md v1.1.2). This version is the FRAMEWORK's own and never reaches a block; the block's self-reference is the content-derived frameworkFingerprint (decisionBlock.js). This file does NOT drive test discovery: test/runAllTests.js finds lib/ modules by the recursive .js-presence rule.",
+  "main": "bridge-framework.js",
+  "license": "UNLICENSED"
+}
