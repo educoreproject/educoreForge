@@ -1,0 +1,106 @@
+{
+	"graphId": "GOLD_EVAL_260816@manifest:97c618c20e07c0c612957def69164402d364a98d5dfee865faacae1deace6382",
+	"note": "FROZEN by the supervisor (SABLE_RIVER, RULINGS-supervisor-bridgeFramework.md \"B3 checkpoint 1 — the FREEZE\", 2026-08-16 19:06 CDT) from the FIRST ACCEPTED classifier run under the digest debug rule (SPEC-bridgeFramework-v1.md §10.4; RULINGS P3, P12, BF4) — B3 run 2 (edfiBridgeOnly) block 1ce6cbd96f483b169b03c6ec4743696c7841a1f69887255168d633f13ffa3918, REPRODUCED EXACTLY by run 3 (fourWithHubEdfiBridge = the named graph; \"already present — idempotent\"). Keyed by the graph id (the four-forge MANIFEST id 97c618c2… — GOLD_EVAL_260816 carries exactly those bytes; content, not a container name) + labelTableDigest + remodelTableDigest + declarationDigest per plugin. Tolerance is EQUAL against this named graph (RULING P12); a re-forged hub, a ruling, a data-table row RE-MEASURES and the reviewer freezes a NEW fixture. The projection 992/151/3 is reproduced within the NAMED movers M1–M5 (system/dataStores/bridgeAcceptance/edfi/buildLogs/checkpoint1-censusReport.md); the FINDING's 1,085/58/3 is the SANITY row.",
+	"byBridgeName": {
+		"edfiCedsCrosswalkPlugin": {
+			"labelTableDigest": "0016610073c0ab06a767a09bb249b3cb4c7ad182d868b93ea405bd0da70f7435",
+			"remodelTableDigest": "5048486a38d1fab646dd5020bb5e2e6c5c0981b13e9900f5e6d9e2b82d78c71b",
+			"declarationDigest": "1a924aa6dd7b43657ab7d3fa73c6d12bf554462bf40c20ea4640d9e4779c21a8",
+			"rendererVersion": "bridgeEvidenceRenderer-v1",
+			"judgeKind": "debug:digest",
+			"cardinalityCensus": {
+				"perSubject": {
+					"judgedSubjectCount": 216,
+					"orphanSubjectCount": 3,
+					"sourceGapCount": 2,
+					"specifiedSubjectCount": 894,
+					"subjectCollisionCount": 31,
+					"subjectCount": 1146
+				},
+				"perTarget": {
+					"abstainedCount": 91,
+					"contentionCensus": {
+						"cardCount": 2777,
+						"contendedKeyCount": 260,
+						"distinctKeyCount": 2324,
+						"tier": "property",
+						"worstContention": 13
+					},
+					"distinctTripleCount": 611,
+					"edgeCount": 611,
+					"indexCollisionCount": 260,
+					"judgedCount": 152,
+					"labelRefusedCount": 0,
+					"manyToOneSubjectCount": 532,
+					"orphanCount": 4,
+					"refusedValueTierAssertionCount": 5970,
+					"remodelAppliedCount": {
+						"classSide": 0,
+						"propertySide": 4
+					},
+					"sentinelDroppedCount": 487,
+					"sentinelLabelledRowCount": 14,
+					"sourceSideMismatchCount": 62,
+					"specifiedCount": 550,
+					"targetCount": 706,
+					"tentativeCount": 78,
+					"valueTierRefusedCount": 0
+				}
+			},
+			"contentionCensus": {
+				"cardCount": 2777,
+				"contendedKeyCount": 260,
+				"distinctKeyCount": 2324,
+				"tier": "property",
+				"worstContention": 13
+			},
+			"sourceChannelDigestByKey": {
+				"descriptors": "d0ad8159305521f9127241843b8982c31033fb379700b215d24d0d3f0fed474f",
+				"elements": "ab8e14eee2d784f77265d545dd8680477bb801e253a166d60738bea160e2241e"
+			},
+			"subjectNodeReport": {
+				"subjectCount": 1146,
+				"resolved": 1144,
+				"refused": 2,
+				"leaves": 701,
+				"leafRecords": 694,
+				"collisionLeaves": 7,
+				"manyToOneSubjectCount": 532,
+				"ownedByEntity": 522,
+				"underReferencedConstruct": 622
+			},
+			"namedMoverList": [
+				{
+					"mover": "M1",
+					"kind": "subjectCollision",
+					"subjectCount": 31,
+					"note": "§10.3: 7 leaves — Credits.Credits 9, MeetingTime.StartTime/EndTime 4, ContentStandard.Author 2, PublicationDateChoice.PublicationDate/Year 6, EducationOrganizationIdentificationCode.IdentificationCode 10"
+				},
+				{
+					"mover": "M2",
+					"kind": "sourceGap",
+					"subjectCount": 2,
+					"note": "CurriculumUsed | CurriculumUsed | CurriculumUsedDescriptor (entityUnresolved); Assessment | AssessedGradeLevels | GradeLevelDescriptor (segmentUnresolved)"
+				},
+				{
+					"mover": "M3",
+					"kind": "sourceSideMismatchOnSingleCardPool",
+					"subjectCount": 72,
+					"note": "the sole card under the key carries a domainId ≠ the crosswalk class URI (Profile §5.1 / BR-061-062 / BG-MISMATCH: judged, not promoted on the key alone); 20 keys — the class-side remodel CANDIDATE table (BR-036); v1 classSideRemodelTable []"
+				},
+				{
+					"mover": "M4",
+					"kind": "mergedLeafMixedLabels",
+					"subjectCount": 2,
+					"note": "common.ContentStandard.Title shared by Assessment (Maybe) + LearningStandard (Yes) → judged over the union (BG-TENTATIVE d)"
+				},
+				{
+					"mover": "M5",
+					"kind": "remodelTableDomainId",
+					"subjectCount": 4,
+					"note": "the six hub-owned entries carry domainId (C200291 / C200252) so the crosswalk's stale C200399/C200400 is superseded → specified/remodel"
+				}
+			]
+		}
+	}
+}

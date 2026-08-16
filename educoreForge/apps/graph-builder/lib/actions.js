@@ -1348,10 +1348,30 @@ const goldEvalCheckAction = (callback) => {
 	// build cannot be promoted on a forge-only PASS without the promoter reading that it was forge-only.
 	// A manifest with ZERO relationship members is REPORTED (mappingBlockList []), never a refusal.
 	const manifestRefId = firstValue(process.global.commandLineParameters, 'manifestRefId');
+	// ⟪B3 tightening, SABLE_RIVER freeze ruling 2026-08-16⟫ when the RECIPE DECLARES bridges[] and the sibling did
+	// not run, goldEvalCheck must NOT answer PASS — a bridged build is refused by name until its mapping edges are
+	// audited. The recipe is located from the run directory's own name (<recipeName>_<stamp> under buildLogs →
+	// recipes/<recipeName>.recipe.jsonc in this tree), or named explicitly with --recipePath; a run directory whose
+	// recipe cannot be located leaves the bridge declaration UNKNOWN, and the verdict says so by name (a synthetic
+	// or foreign run directory certifies its forge round trip only — the promoter reads that it was forge-only).
+	const explicitRecipePath = firstValue(process.global.commandLineParameters, 'recipePath');
+	const recipeNameFromRunDir = path.basename(buildLogDirPath).replace(/_\d{8}-\d{6}$/, '');
+	const derivedRecipePath = path.join(__dirname, '..', '..', '..', 'recipes', `${recipeNameFromRunDir}.recipe.jsonc`);
+	const recipePathForBridges = explicitRecipePath || (fs.existsSync(derivedRecipePath) ? derivedRecipePath : null);
+	const loadedRecipe = recipePathForBridges ? recipeLib.loadRecipe(recipePathForBridges) : null;
+	if (loadedRecipe && loadedRecipe.error) {
+		callback(`graphBuilder -goldEvalCheck: REFUSED — the recipe named for the bridge declaration (${recipePathForBridges}) does not load: ${loadedRecipe.error}`);
+		return;
+	}
+	const bridgeDeclaration = loadedRecipe ? { known: true, recipePath: recipePathForBridges, bridgeCount: Array.isArray(loadedRecipe.recipe.bridges) ? loadedRecipe.recipe.bridges.length : 0 } : { known: false, recipePath: null, bridgeCount: null, note: `recipe not located (run dir '${path.basename(buildLogDirPath)}' → ${derivedRecipePath} absent; pass --recipePath to name it) — bridge declaration UNKNOWN` };
+	if (!manifestRefId && bridgeDeclaration.known && bridgeDeclaration.bridgeCount > 0) {
+		callback(`graphBuilder -goldEvalCheck: REFUSED — the recipe ${recipePathForBridges} DECLARES ${bridgeDeclaration.bridgeCount} bridge(s); mapping edges UNCERTIFIED — pass --manifestRefId=<the manifest -build printed> (and --standardsDatabaseFilePath=<its store>) so the bridge sibling audits the manifest's relationship blocks; a bridged build never certifies on the forge round trip alone`);
+		return;
+	}
 	const emitVerdict = (bridgeSibling) => {
 		const scopeText = bridgeSibling.ran
 			? `bridge sibling: ${bridgeSibling.mappingBlockList.length} relationship block(s) audited, ${bridgeSibling.mappingBlockList.reduce((soFar, oneBlock) => soFar + oneBlock.edgeCount, 0)} mapping edge(s), 0 invalid-debug`
-			: `FORGE ROUND TRIP ONLY — bridge sibling NOT RUN (${bridgeSibling.notRunReason}); MAPPING EDGES UNCERTIFIED`;
+			: `FORGE ROUND TRIP ONLY — bridge sibling NOT RUN (${bridgeSibling.notRunReason}); ${bridgeDeclaration.known ? `recipe declares ${bridgeDeclaration.bridgeCount} bridge(s)` : bridgeDeclaration.note}; MAPPING EDGES UNCERTIFIED`;
 		xLog.status(
 			`graphBuilder: [goldEvalCheck] PASS — ${declaredRows.length} declared validator(s) ran ` +
 				`with inventedTotal=0${absentTokens.length ? `; ${absentTokens.length} bundle(s) declared-ABSENT (tolerated during the retrofit): ${absentTokens.join(', ')}` : ''}; ${scopeText}`,
@@ -1363,6 +1383,7 @@ const goldEvalCheckAction = (callback) => {
 					certification: 'PASS',
 					scope: bridgeSibling.ran ? 'forgeRoundTripAndMappingEdges' : 'forgeRoundTripOnly',
 					mappingEdgesCertified: bridgeSibling.ran,
+					bridgeDeclaration,
 					bridgeSibling,
 					summaryFilePath,
 					containerName: summary.containerName,

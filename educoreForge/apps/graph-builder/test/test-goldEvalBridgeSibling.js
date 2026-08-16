@@ -16,7 +16,14 @@
 //       manifest certifies as before;
 //   (d) an ABSENT manifest, an ABSENT member block, and a block that does not deserialise are each REFUSED BY NAME.
 //   (e) the PURE half maps a block edge's { source, id } ref to the endpoint stableId (the rule names offenders
-//       by stableId, never "[object Object]").
+//       by stableId, never "[object Object]");
+//   (f) THE VERB — -goldEvalCheck itself (actions.js, in-process with a replaced process.global): a run directory
+//       whose RECIPE DECLARES bridges[] and no --manifestRefId → REFUSED BY NAME (SABLE_RIVER's tightening at the B3
+//       freeze: a bridged build never certifies on the forge round trip alone); the same directory WITH
+//       --manifestRefId naming a manifest whose relationship block is clean → PASS with scope
+//       forgeRoundTripAndMappingEdges; naming the DEBUG manifest → REFUSED naming the block; a forge-only recipe →
+//       PASS with scope forgeRoundTripOnly and the bridge declaration stated; three-state: a module double of
+//       actions.js with the declared-bridges check disconnected answers PASS on the bridged directory → RED.
 //
 // Runs against a THROWAWAY standardsDatabase under os.tmpdir(); never opens the configured support store; no
 // container, no LLM, no Voyage. Run: node apps/graph-builder/test/test-goldEvalBridgeSibling.js
@@ -56,6 +63,7 @@ const sibling = require(siblingModulePath);
 const replayBlockLib = require(path.join(treeRoot, 'lib', 'replay', 'replay-block'))();
 const standardsDatabaseModule = require(path.join(treeRoot, 'lib', 'standards-database', 'standards-database'));
 const moduleDouble = require(path.join(treeRoot, 'lib', 'forge-framework', 'test', 'testSupport', 'moduleDouble'));
+const bridgeTwinFactories = require(path.join(treeRoot, 'lib', 'bridge-framework', 'test', 'testSupport', 'bridgeTwinFactories'));
 const vocabularyLib = require(path.join(treeRoot, 'lib', 'vocabulary', 'vocabulary'));
 
 const { PROVENANCE_TIER } = vocabularyLib;
@@ -119,6 +127,73 @@ const finish = () => {
 	harness.report();
 };
 
+// ---------------------------------------------------------------------
+// SECTION 4 — (f) the VERB: -goldEvalCheck through actions.js in-process (process.global replaced per drive)
+// ---------------------------------------------------------------------
+const actionsModulePath = path.join(__dirname, '..', 'lib', 'actions.js');
+const roundTripStageStatics = require(path.join(__dirname, '..', 'lib', 'round-trip-stage'));
+// a synthetic run directory named for a recipe: <recipeName>_<stamp>, carrying a clean stage summary (one declared
+// validator, ran, inventedTotal 0, verdict present) — the forge half PASSES so the bridge half is what decides
+const runDirFor = ({ recipeName }) => {
+	const runDirPath = path.join(scratchDir, `${recipeName}_20260816-140000`);
+	const stageDirPath = path.join(runDirPath, roundTripStageStatics.STAGE_SUBDIR_NAME);
+	const verdictDirPath = path.join(stageDirPath, 'toy');
+	fs.mkdirSync(verdictDirPath, { recursive: true });
+	const verdictPath = path.join(verdictDirPath, roundTripStageStatics.VERDICT_FILE_NAME);
+	fs.writeFileSync(verdictPath, JSON.stringify({ roundTripClean: true, inventedTotal: 0, lostTotal: 0 }));
+	fs.writeFileSync(path.join(stageDirPath, roundTripStageStatics.STAGE_SUMMARY_FILE_NAME), JSON.stringify({ stageRan: true, disposition: 'ran', containerName: 'DEV_fixture', declaredTokens: ['toy'], absentTokens: [], standards: [{ token: 'toy', standardName: 'Toy', disposition: 'declared', ran: true, roundTripClean: true, inventedTotal: 0, lostTotal: 0, contentGapTotal: 0, explicitlyOmittedTotal: 0, semanticValidationLimit: 'fixture', snapshotDirPath: scratchDir, verdictPath }] }));
+	return runDirPath;
+};
+const driveGoldEvalCheck = ({ actionsFactory, values }, callback) => {
+	const originalGlobal = process.global;
+	const replacement = { xLog: originalGlobal.xLog, getConfig: () => ({}), commandLineParameters: { switches: {}, values, fileList: [] }, rawConfig: {} };
+	delete process.global;
+	process.global = replacement;
+	actionsFactory().goldEvalCheck((verdictError, verdict) => {
+		delete process.global;
+		process.global = originalGlobal;
+		callback(verdictError, verdict);
+	});
+};
+const goldEvalCheckGates = ({ cleanManifestRefId, debugManifestRefId, forgeOnlyManifestRefId, finish }) => {
+	harness.section('SECTION 4 — (f) the VERB -goldEvalCheck: a bridged recipe without the sibling REFUSES BY NAME; with it, PASS/REFUSED by the audit');
+	const bridgedRunDirPath = runDirFor({ recipeName: 'fourWithHubEdfiBridge' }); // recipes/fourWithHubEdfiBridge.recipe.jsonc declares ONE bridge
+	const forgeOnlyRunDirPath = runDirFor({ recipeName: 'fourWithHub' }); // recipes/fourWithHub.recipe.jsonc declares bridges: []
+	const realActions = () => require(actionsModulePath)();
+	driveGoldEvalCheck({ actionsFactory: realActions, values: { buildLogDirPath: [bridgedRunDirPath] } }, (bridgedError) => {
+		harness.match('(f) a run dir whose recipe DECLARES bridges[] and no --manifestRefId → REFUSED BY NAME (bridges declared; mapping edges uncertified)', bridgedError || '', /DECLARES 1 bridge\(s\); mapping edges UNCERTIFIED/);
+		driveGoldEvalCheck({ actionsFactory: realActions, values: { buildLogDirPath: [forgeOnlyRunDirPath] } }, (forgeOnlyError, forgeOnlyVerdict) => {
+			harness.ok('    a forge-only recipe (bridges: []) without --manifestRefId → PASS', !forgeOnlyError && forgeOnlyVerdict && forgeOnlyVerdict.exitCode === 0, forgeOnlyError);
+			const forgeOnlyPayload = forgeOnlyVerdict ? JSON.parse(forgeOnlyVerdict.resultText) : {};
+			harness.equal('    … with scope forgeRoundTripOnly', forgeOnlyPayload.scope, 'forgeRoundTripOnly');
+			harness.equal('    … and the bridge declaration stated (0 bridges, recipe known)', forgeOnlyPayload.bridgeDeclaration && forgeOnlyPayload.bridgeDeclaration.bridgeCount, 0);
+			driveGoldEvalCheck({ actionsFactory: realActions, values: { buildLogDirPath: [bridgedRunDirPath], manifestRefId: [cleanManifestRefId], standardsDatabaseFilePath: [databaseFilePath] } }, (cleanError, cleanVerdict) => {
+				harness.ok('    the bridged run dir WITH --manifestRefId naming a CLEAN manifest → PASS', !cleanError && cleanVerdict && cleanVerdict.exitCode === 0, cleanError);
+				const cleanPayload = cleanVerdict ? JSON.parse(cleanVerdict.resultText) : {};
+				harness.equal('    … with scope forgeRoundTripAndMappingEdges', cleanPayload.scope, 'forgeRoundTripAndMappingEdges');
+				harness.equal('    … one relationship block audited, 2 edges', cleanPayload.bridgeSibling && cleanPayload.bridgeSibling.mappingBlockList[0] && cleanPayload.bridgeSibling.mappingBlockList[0].edgeCount, 2);
+				driveGoldEvalCheck({ actionsFactory: realActions, values: { buildLogDirPath: [bridgedRunDirPath], manifestRefId: [debugManifestRefId], standardsDatabaseFilePath: [databaseFilePath] } }, (debugError) => {
+					harness.match('    the bridged run dir naming the DEBUG manifest → REFUSED naming the block and the tier', debugError || '', /invalid-debug/);
+					driveGoldEvalCheck({ actionsFactory: realActions, values: { buildLogDirPath: [forgeOnlyRunDirPath], manifestRefId: [forgeOnlyManifestRefId], standardsDatabaseFilePath: [databaseFilePath] } }, (zeroError, zeroVerdict) => {
+						const zeroPayload = zeroVerdict ? JSON.parse(zeroVerdict.resultText) : {};
+						harness.ok('    a manifest with ZERO relationship blocks → PASS, mappingBlockList [] REPORTED', !zeroError && zeroPayload.bridgeSibling && zeroPayload.bridgeSibling.mappingBlockList.length === 0, zeroError);
+						// THREE-STATE: the declared-bridges check disconnected in an in-memory double of actions.js → the bridged
+						// directory without the sibling answers PASS → the conjunct is observed RED
+						// actions.js writes `new require(...)`, which moduleDouble's arrow require cannot serve — the bridge suite's
+						// loadBuildJsDouble (a CONSTRUCTIBLE require; only the named file is mutated, every require loads for real) is
+						// the idiom for exactly this shape (BG-DEBUG (d) uses it on build.js)
+						const disconnectedActions = () => bridgeTwinFactories.loadBuildJsDouble({ buildJsPath: actionsModulePath, mutationList: [{ find: 'if (!manifestRefId && bridgeDeclaration.known && bridgeDeclaration.bridgeCount > 0) {', replace: 'if (!manifestRefId && bridgeDeclaration.known && bridgeDeclaration.bridgeCount > 1e9) {' }] })();
+						driveGoldEvalCheck({ actionsFactory: disconnectedActions, values: { buildLogDirPath: [bridgedRunDirPath] } }, (redError, redVerdict) => {
+							harness.ok('(f) RED-OBSERVED — with the declared-bridges check disconnected the bridged directory answers PASS on the forge round trip alone', !redError && redVerdict && redVerdict.exitCode === 0, redError);
+							finish();
+						});
+					});
+				});
+			});
+		});
+	});
+};
+
 // runGates is declared BEFORE open() is called: the store's callbacks fire synchronously (better-sqlite3), so a
 // gate function declared after the call would still be in its temporal dead zone when the callback reaches it
 const runGates = ({ standardsDatabase, cleanManifestRefId, debugManifestRefId, forgeOnlyManifestRefId }) => {
@@ -160,7 +235,7 @@ const runGates = ({ standardsDatabase, cleanManifestRefId, debugManifestRefId, f
 							harness.match('a BLANK manifestRefId is refused by name', blankError || '', /manifestRefId is REQUIRED/);
 							sibling.auditManifestMappingBlocks({ standardsDatabase: null, manifestRefId: cleanManifestRefId }, (noStoreError) => {
 								harness.match('a missing store is refused by name', noStoreError || '', /OPEN standardsDatabase/);
-								finish();
+								goldEvalCheckGates({ cleanManifestRefId, debugManifestRefId, forgeOnlyManifestRefId, finish });
 							});
 						});
 					});
