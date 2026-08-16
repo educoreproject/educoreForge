@@ -18,16 +18,31 @@ source subfolders, per TQ's snapshot-handling ruling (2026-08-03).
 | `descriptorCodeValues/` | 203 descriptor code-value XMLs + LICENSE | machine-canonical | Apache-2.0 | yes |
 | `tpdmCommunityModel/` | 196 `.metaed` + LICENSE + package.json | machine-canonical | Apache-2.0 | yes |
 | `tpdmDescriptorCodeValues/` | 27 TPDM descriptor XMLs + LICENSE | machine-canonical | Apache-2.0 | yes |
-| `cedsAuthoredCrosswalk/` | 2 CSVs, byte-identical to old snapshot 01 | **human-artifact-snapshot** | (in-repo since 2026-06-23; upstream unrecorded) | yes |
+| `cedsAuthoredCrosswalk/` | 2 CSVs, byte-identical to old snapshot 01 | **human-artifact-snapshot** | (in-repo since 2026-06-23; ORIGIN SETTLED 2026-08-16 — see "Crosswalk provenance" below) | yes |
 
 **Mixed acquisition classes, stated per input (RT-9):** the round trip against the four
 machine-canonical inputs proves fidelity to the publisher's own artifacts. For
 `cedsAuthoredCrosswalk/` the class is `human-artifact-snapshot`: the original harvest did not
 record the upstream URL or artifact version, so the round trip proves losslessness against
 THIS snapshot; fidelity to the publisher's intent is only as good as the snapshot, and this
-README says so. Version evidence for the crosswalk: every one of the 8,310 descriptor-CSV data
+README says so. (The artifact's ORIGIN was settled on 2026-08-16 — see "Crosswalk provenance"
+below; there is still no public URL, so the class stays `human-artifact-snapshot`.) Version evidence for the crosswalk: every one of the 8,310 descriptor-CSV data
 rows stamps `EdFiVersionNumber=DS5.2` (full-column sweep, 2026-08-03) — consistent with the
 DS 5.2 model package beside it.
+
+## Crosswalk provenance — SETTLED 2026-08-16 (SABLE_RIVER, RULINGS-supervisor-bridgeFramework.md "Ed-Fi crosswalk PROVENANCE — settled")
+
+Both CSVs arrived as attachments on an email from **Nathan Clinton <nathan.clinton@aemcorp.com>** (AEM Corp,
+the CEDS contractor), subject **"EdFi to CEDS Mapping"**, received **2026-03-25 11:59:07**, message-id
+`DS5PR15MB7006050B2125F9034B27D4A09D49A@DS5PR15MB7006.namprd15.prod.outlook.com`, body verbatim:
+*"Here is our mapping, both at the element level and enumeration level. This covers ALL of EdFi and maps to
+CEDS Ontology V13."* Evidence: the oldest copy's mtimes 2026-03-25 11:59, macOS quarantine xattr = Mail, the
+repo copy byte-identical (elements file md5 `79b5f0eb4df954b0977facab69eac3e9`). It is NOT part of any Ed-Fi
+distribution and has NO public URL. Consequences recorded as data in the bridge plugin
+(`forges/edfi/bridges/edfiCedsCrosswalkPlugin.js`): SSSOM `mapping_provider` = **CEDS** (`https://ceds.ed.gov/`
+— the PROVIDER, "our mapping"; SSSOM names the provider, not the artifact), `verifiedBy` = this record; the
+crosswalk is authored against **CEDS Ontology V13** while the hub is **CEDS 14**, so the class-URI drift the
+bridge classifier reports (20 keys / 72 subjects `sourceSideMismatch`, B3 mover M3) is the V13→V14 remodel.
 
 ## Acquisition recipe (exact, pinned, rerunnable)
 

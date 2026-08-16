@@ -111,12 +111,19 @@ const bridgeDeclaration = Object.freeze({
 	pluginVersion: '1.0.0',
 	producerKind: 'authored',
 	matchBasis: 'crosswalk',
-	// the crosswalk's PUBLISHED URL is UNKNOWN in the tree (snapshot 04 README_PROVENANCE: acquisition class
-	// human-artifact-snapshot, upstream unrecorded; no public copy found 2026-08-16); the value below is the CEDS
-	// standard's own home — the PROVIDER — recorded UNVERIFIED (verifiedBy null): the export REFUSES by name until
-	// the B3 builder verifies a URL and records { sessionName, date, note } (RULING P7; SABLE_RIVER ruling
-	// 2026-08-16 18:39 CDT: checkpoint 1 runs with verifiedBy null; BG-ACCEPT (e) UNMEASURED-pending-URL)
-	mappingProvider: { url: 'https://ceds.ed.gov/', verifiedBy: null },
+	// the PROVIDER (SSSOM mapping_provider names the provider, not the artifact): CEDS. The crosswalk has NO public URL —
+	// it arrived by email from CEDS staff (Nathan Clinton, AEM Corp — the CEDS contractor), subject "EdFi to CEDS
+	// Mapping", 2026-03-25 11:59:07, and is recorded as such in snapshot 04's README_PROVENANCE.md (RULING SABLE_RIVER
+	// 2026-08-16 19:21 CDT, "Ed-Fi crosswalk PROVENANCE — settled"). It maps to CEDS Ontology V13 (the sender's own
+	// words); the hub is CEDS 14 — the class-URI drift the classifier reports (M3, 20 keys) is the V13→V14 remodel.
+	mappingProvider: {
+		url: 'https://ceds.ed.gov/',
+		verifiedBy: {
+			sessionName: 'SABLE_RIVER',
+			date: '2026-08-16',
+			note: 'artifact received by email from CEDS staff (Nathan Clinton, AEM Corp), 2026-03-25 11:59:07, subject "EdFi to CEDS Mapping", message-id DS5PR15MB7006050B2125F9034B27D4A09D49A@DS5PR15MB7006.namprd15.prod.outlook.com, body verbatim: "Here is our mapping, both at the element level and enumeration level. This covers ALL of EdFi and maps to CEDS Ontology V13." — repo copy byte-identical (elements file md5 79b5f0eb4df954b0977facab69eac3e9); not part of any Ed-Fi distribution; CEDS is the PROVIDER',
+		},
+	},
 	// the crosswalk DOCUMENT's IRI: the snapshot we actually read (a URN naming the forge's own snapshot 04 input),
 	// never a guessed publisher URL — this is what `subject_match_field` prefixes name (Profile §4.5, amendment 13)
 	sourceCuriePrefix: { prefix: 'edfiCedsCrosswalk', iri: 'urn:educore:edfi:standardSourceData:04:cedsAuthoredCrosswalk#' },
