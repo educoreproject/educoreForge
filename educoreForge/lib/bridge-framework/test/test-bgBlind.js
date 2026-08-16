@@ -1,0 +1,153 @@
+#!/usr/bin/env node
+'use strict';
+
+// test-bgBlind.js — BG-BLIND (BR-090/091, BR-109; RULINGS A6, BF7) + BG-CONTAIN (BR-018..021, BR-111) + BG-INPUT (RULING
+// BF6): the one reader with two views, the closed shapes a plugin sees, and the input discipline.
+//   BG-BLIND (a) blindingDeclaration REQUIRED at registration — absent refused BEFORE any forge; [] accepted; (b) echoed
+//   BY NAME in the run output; (c) forEvidence() records carry NONE of the declared names; (d) the rendered prompt for a
+//   judged subject contains NONE of the blinded VALUES; (e) candidate cards' own keys are NOT blinded; (f) forWalk()
+//   exposes ONLY the channel's channelPropertyList unblinded — a walk reading an undeclared blinded property is REFUSED by
+//   name, and an evidence hook over forEvidence() cannot read the anchor at all.
+//   BG-CONTAIN static: no forbidden require / token in a plugin file (a scratch plugin with require('neo4j-driver'), one
+//   with a MERGE token, one defining rerank — each refused at registration); dynamic: the hook argument object is a CLOSED
+//   shape (a Proxy throws on any other read); the sourceReader view's member set is closed (readHubCards on the view
+//   throws by name).
+//   BG-INPUT (a) every document channel verified against SHA256SUMS before a byte is read (a flipped byte in a scratch copy
+//   refuses); (b) an unclassified header column / a classified column absent from the header refused at load; (b') a
+//   duplicated header refused unless headerOverrideByIndex resolves it — applied BEFORE coverage; (c) an empty cell in a
+//   tuple-field column is ABSENT (a plugin writing domainId: '' is refused); (d) sentinel rows are COUNTED sentinelDropped,
+//   never orphans (drop the sentinel list → orphans → census red); (e) reconciliation at zero per channel (a walk skipping
+//   a malformed row silently is refused); (f) a declared encoding the bytes fail to decode is refused.
+//
+// Run: node lib/bridge-framework/test/test-bgBlind.js [-verbose]
+
+const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
+const helpText = () => `
+NAME
+     ${moduleName} -- BG-BLIND + BG-CONTAIN + BG-INPUT
+
+SYNOPSIS
+     ${moduleName} [-verbose] [-quiet] [-help]
+
+EXIT STATUS
+     0 all conjuncts PASS and every conjunct was observed RED under its twin;  1 otherwise.
+`;
+require('../../../test/testLib/testAppStartup')({ moduleName, helpText: helpText() });
+const harness = require('../../../test/testLib/harness')(moduleName);
+
+const path = require('path');
+const fs = require('fs');
+const scenarioLib = require('./testSupport/toyBridgeScenario');
+const { runConjunct, succeeded, nameInRefusal, refusalCase, frameworkMutationTwin, scenarioTwin, edgesOf, blockOf, forensicsOf } = require('./testSupport/bridgeTwinFactories');
+const { runGateFamily } = require(path.join(__dirname, '..', '..', 'forge-framework', 'test', 'testSupport', 'gateSuiteRunner'));
+const { makeTwinRegistry } = require(path.join(__dirname, '..', '..', 'forge-framework', 'roundTripHarness', 'twinRegistry'));
+
+const twinRegistry = makeTwinRegistry();
+const FRAMEWORK_FILE = 'bridge-framework.js';
+const RULES_FILE = 'graphSeamRules.js';
+const CONTRACT_FILE = 'bridgePluginContract.js';
+const REGISTRY_FILE = 'pluginRegistry.js';
+const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');
+const STANDARD_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyStandardPlugin.js');
+const BLINDED_NAME_LIST = ['hubAnchorId', 'crossRefs', 'hubAnchorOriginalPropertyName', 'hubOptionCode', 'hubOptionOriginalPropertyName'];
+const cloneJson = scenarioLib.cloneJson;
+const overrideDeclaration = (scenario, pluginName, mutate) => {
+	const loaded = require(pluginName === 'toyCrosswalkPlugin' ? CROSSWALK_PLUGIN_PATH : STANDARD_PLUGIN_PATH);
+	const bridgeDeclaration = cloneJson(loaded.bridgeDeclaration);
+	mutate(bridgeDeclaration);
+	scenario.pluginModuleOverrides[pluginName] = { ...(scenario.pluginModuleOverrides[pluginName] || {}), bridgeDeclaration };
+};
+const overrideHooks = (scenario, pluginName, mutateHooks) => {
+	const loaded = require(pluginName === 'toyCrosswalkPlugin' ? CROSSWALK_PLUGIN_PATH : STANDARD_PLUGIN_PATH);
+	const bridgeHooks = { ...loaded.bridgeHooks };
+	mutateHooks(bridgeHooks, loaded);
+	scenario.pluginModuleOverrides[pluginName] = { ...(scenario.pluginModuleOverrides[pluginName] || {}), bridgeHooks };
+};
+const withScratchSnapshot = (scenario, mutateSnapshotDir) => {
+	const scratchForgesDir = scenarioLib.makeScratchForgesCopy();
+	mutateSnapshotDir(path.join(scratchForgesDir, 'toy', 'assets', 'standardSourceData', '01'), scratchForgesDir);
+	scenario.forgesDirOverride = scratchForgesDir;
+};
+const resignCsv = (snapshotDir) => {
+	const csvPath = path.join(snapshotDir, 'toyCrosswalk.csv');
+	const sumsPath = path.join(snapshotDir, 'SHA256SUMS');
+	fs.writeFileSync(sumsPath, fs.readFileSync(sumsPath, 'utf8').replace(/^[0-9a-f]{64}(  toyCrosswalk\.csv)$/m, `${require('crypto').createHash('sha256').update(fs.readFileSync(csvPath)).digest('hex')}$1`));
+};
+const captureLog = (scenario) => { scenario.reportLineList = []; scenario.deps.xLog = { status: (text) => { scenario.reportLineList.push(text); }, error: (text) => { scenario.reportLineList.push(`ERR ${text}`); } }; };
+
+// ---------------------------------------------------------------------
+// BG-BLIND
+// ---------------------------------------------------------------------
+const blindConjunctList = [
+	refusalCase({ registry: twinRegistry, gateId: 'BG-BLIND', conjunctId: 'a_blindingDeclarationRequired', title: 'blindingDeclaration is REQUIRED at registration — absent is refused before any run; [] is accepted', shape: (scenario) => overrideDeclaration(scenario, 'toyCrosswalkPlugin', (declaration) => { delete declaration.blindingDeclaration; }), regex: /missing required key 'blindingDeclaration'/, twinName: 'defaultEmptyBlindingList', fileName: CONTRACT_FILE, find: "\t\tif (value === undefined) {\n\t\t\treturn refuseWith(`bridgeDeclaration is missing required key '${propertyName}'`", replace: "\t\tif (value === undefined && propertyName !== 'blindingDeclaration') {\n\t\t\treturn refuseWith(`bridgeDeclaration is missing required key '${propertyName}'`" }),
+	runConjunct({ conjunctId: 'a_emptyBlindingListAccepted', title: 'blindingDeclaration [] is accepted (a run proceeds; the echo says [])', twinNameList: ['refuseEmptyList'], shape: (scenario) => { overrideDeclaration(scenario, 'toyCrosswalkPlugin', (declaration) => { declaration.blindingDeclaration = []; }); captureLog(scenario); }, judge: succeeded((runReport, outcome, scenario) => ({ pass: scenario.reportLineList.some((oneLine) => /blinding declaration echoed by name before the first read: \[\]/.test(oneLine)), detail: 'echo line present' })) }),
+	runConjunct({ conjunctId: 'b_echoedByNameInOutput', title: 'the blinding declaration is echoed BY NAME in the run output before the first read', twinNameList: ['silenceTheEcho'], shape: (scenario) => captureLog(scenario), judge: succeeded((runReport, outcome, scenario) => ({ pass: scenario.reportLineList.some((oneLine) => oneLine.indexOf(`blinding declaration echoed by name before the first read: [${BLINDED_NAME_LIST.join(', ')}]`) !== -1), detail: scenario.reportLineList.filter((oneLine) => /blinding/.test(oneLine)).length + ' blinding lines' })) }),
+	runConjunct({ conjunctId: 'c_forEvidenceRecordsCarryNoBlindedName', title: 'forEvidence() records carry NONE of the declared names (an evidence hook sees the blinded view)', twinNameList: ['secondUnblindedReaderForEvidence'], shape: (scenario) => {
+		overrideDeclaration(scenario, 'toyCrosswalkPlugin', (declaration) => { declaration.evidenceHooksDeclared.walkEvidence = true; });
+		overrideHooks(scenario, 'toyCrosswalkPlugin', (bridgeHooks) => { bridgeHooks.walkEvidence = ({ sourceReader }, callback) => sourceReader.readSourceNodes({ roleList: ['property'] }, (readError, nodeList) => { scenario.evidenceSeenNameList = Array.from(new Set(nodeList.reduce((soFar, oneNode) => soFar.concat(Object.keys(oneNode.properties)), []))); callback('', { perCandidateNoteByStableId: {}, promptSegmentList: [] }); }); });
+	}, judge: succeeded((runReport, outcome, scenario) => { const leaked = (scenario.evidenceSeenNameList || []).filter((oneName) => BLINDED_NAME_LIST.indexOf(oneName) !== -1); return { pass: Array.isArray(scenario.evidenceSeenNameList) && scenario.evidenceSeenNameList.length > 0 && leaked.length === 0, detail: `seen ${(scenario.evidenceSeenNameList || []).length} names, leaked ${leaked.join(',')}` }; }) }),
+	runConjunct({ conjunctId: 'd_promptContainsNoBlindedValue', title: "the rendered prompt for a judged subject contains NONE of the blinded VALUES (the crossRefs JSON '\"hub\":\"ToyHub\"' never appears)", twinNameList: ['secondUnblindedReaderForEvidence'], shape: (scenario) => { scenario.spec.bridge = 'toyStandardPlugin'; overrideDeclaration(scenario, 'toyStandardPlugin', (declaration) => { declaration.evidenceHooksDeclared.walkEvidence = true; }); overrideHooks(scenario, 'toyStandardPlugin', (bridgeHooks) => { bridgeHooks.walkEvidence = ({ sourceElement, sourceReader }, callback) => sourceReader.readNodesByStableId({ stableIdList: [sourceElement.stableId] }, (readError, nodeList) => callback('', { perCandidateNoteByStableId: {}, promptSegmentList: nodeList.length && nodeList[0].properties.crossRefs !== undefined ? [`anchor: ${nodeList[0].properties.crossRefs}`] : [] })); }); }, judge: succeeded((runReport, outcome) => { const promptList = forensicsOf(outcome).filter((oneRecord) => oneRecord.record.userPrompt !== undefined).map((oneRecord) => oneRecord.record.userPrompt); const leaked = promptList.filter((onePrompt) => onePrompt.indexOf('"hub":"ToyHub"') !== -1 || onePrompt.indexOf('Hub Global Id') !== -1); return { pass: promptList.length > 0 && leaked.length === 0, detail: `${leaked.length} of ${promptList.length} prompts leak the anchor` }; }) }),
+	runConjunct({ conjunctId: 'e_candidateKeysNotBlinded', title: "candidate cards' own keys (canonicalKey) are NOT blinded — every rendered candidate line names its key", twinNameList: ['blinderStripsCanonicalKey'], judge: succeeded((runReport, outcome) => { const promptList = forensicsOf(outcome).filter((oneRecord) => oneRecord.record.userPrompt !== undefined).map((oneRecord) => oneRecord.record.userPrompt); const bad = promptList.filter((onePrompt) => !/\[1\] P\d{6} — /.test(onePrompt)); return { pass: promptList.length > 0 && bad.length === 0, detail: `${bad.length} prompts without a keyed candidate line` }; }) }),
+	refusalCase({ registry: twinRegistry, gateId: 'BG-BLIND', conjunctId: 'f_walkReadingUndeclaredBlindedPropertyRefused', title: "forWalk() exposes ONLY the channel's channelPropertyList unblinded: a fixture walk reading hubOptionCode (undeclared) is REFUSED by name", shape: (scenario) => { scenario.spec.bridge = 'toyStandardPlugin'; overrideHooks(scenario, 'toyStandardPlugin', (bridgeHooks, loaded) => { bridgeHooks.walkSourceAssertions = (hookArgs, callback) => { hookArgs.sourceReader.readSourceNodes({}, (readError, nodeList) => { const optionNode = nodeList.find((oneNode) => oneNode.properties.role === 'optionValue'); const seen = optionNode.properties.hubOptionCode; void seen; loaded.bridgeHooks.walkSourceAssertions(hookArgs, callback); }); }; }); }, regex: /the walk read blinded property 'hubOptionCode' on toy:optionValue\/Student\.Gender\.F, which the channel did not declare in channelPropertyList \(crossRefs, hubAnchorId\)/, twinName: 'walkViewUnblinded', fileName: RULES_FILE, find: "\t\t\t\tif (typeof propertyName === 'string' && refusedNameSet.has(propertyName)) {\n\t\t\t\t\tthrow refuse.byName", replace: "\t\t\t\tif (false && typeof propertyName === 'string' && refusedNameSet.has(propertyName)) {\n\t\t\t\t\tthrow refuse.byName" }),
+	runConjunct({ conjunctId: 'f_evidenceHookCannotReadAnchor', title: 'an EVIDENCE hook (walkEvidence over forEvidence()) cannot read hubAnchorId at all — the property is absent from its records', twinNameList: ['secondUnblindedReaderForEvidence'], shape: (scenario) => { overrideDeclaration(scenario, 'toyCrosswalkPlugin', (declaration) => { declaration.evidenceHooksDeclared.walkEvidence = true; }); overrideHooks(scenario, 'toyCrosswalkPlugin', (bridgeHooks) => { bridgeHooks.walkEvidence = ({ sourceElement, sourceReader }, callback) => sourceReader.readNodesByStableId({ stableIdList: [sourceElement.stableId] }, (readError, nodeList) => { scenario.anchorSeen = nodeList.length ? nodeList[0].properties.hubAnchorId : 'noNode'; callback('', { perCandidateNoteByStableId: {}, promptSegmentList: [] }); }); }); }, judge: succeeded((runReport, outcome, scenario) => ({ pass: scenario.anchorSeen === undefined, detail: `hubAnchorId seen by the evidence hook: ${JSON.stringify(scenario.anchorSeen)}` })) }),
+];
+scenarioTwin({ registry: twinRegistry, gateId: 'BG-BLIND', conjunctId: 'a_emptyBlindingListAccepted', twinName: 'refuseEmptyList', leverKind: 'productionMutation', mutate: (scenario) => { scenario.frameworkMutationList.push({ modulePath: path.join(scenarioLib.FRAMEWORK_DIR, CONTRACT_FILE), find: "\tstringList: (value) => (isStringList(value) ? '' : `must be a list of strings (got ${JSON.stringify(value)}); [] means \"none\", absence is refused`),", replace: "\tstringList: (value) => (isStringList(value) && value.length > 0 ? '' : `must be a NON-EMPTY list of strings (got ${JSON.stringify(value)})`)," }); } });
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-BLIND', conjunctId: 'b_echoedByNameInOutput', twinName: 'silenceTheEcho', fileName: FRAMEWORK_FILE, find: "\t\t\t\t\tsay(`blinding declaration echoed by name before the first read: [${bridgeDeclaration.blindingDeclaration.join(', ')}]`);", replace: "\t\t\t\t\tvoid 0;" });
+['c_forEvidenceRecordsCarryNoBlindedName', 'd_promptContainsNoBlindedValue', 'f_evidenceHookCannotReadAnchor'].forEach((oneConjunctId) => {
+	// the SECOND reader: an evidence view built UNBLINDED (the framework double hands forEvidence() the raw records)
+	frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-BLIND', conjunctId: oneConjunctId, twinName: 'secondUnblindedReaderForEvidence', fileName: 'graphDouble.js', find: '\t\tconst forEvidence = () => graphSeamRulesLib.closedView(makeView({ shapeRecord: (oneRecord) => graphSeamRulesLib.blindedRecordFor({ record: graphSeamRulesLib.withoutEmbedding(oneRecord), blindingDeclaration }) }));', replace: '\t\tconst forEvidence = () => graphSeamRulesLib.closedView(makeView({ shapeRecord: (oneRecord) => graphSeamRulesLib.withoutEmbedding(oneRecord) }));' });
+});
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-BLIND', conjunctId: 'e_candidateKeysNotBlinded', twinName: 'blinderStripsCanonicalKey', fileName: 'evidenceRenderer.js', find: '\t\tlineList.push(`  [${seatIndex + 1}] ${oneCard.canonicalKey} — ${oneCard.name}`);', replace: '\t\tlineList.push(`  [${seatIndex + 1}] (key withheld) — ${oneCard.name}`);' });
+
+// ---------------------------------------------------------------------
+// BG-CONTAIN
+// ---------------------------------------------------------------------
+// the substrate scan runs TWICE (pre-load in discovery, and in registerPlugin's pure surface): the twin disables both
+const disableBothSubstrateScans = (scenario) => {
+	scenario.frameworkMutationList.push({ modulePath: path.join(scenarioLib.FRAMEWORK_DIR, REGISTRY_FILE), find: '\t\t\tif (substrateReason) {\n\t\t\t\tthrow refuse.byName', replace: '\t\t\tif (false && substrateReason) {\n\t\t\t\tthrow refuse.byName' });
+	scenario.frameworkMutationList.push({ modulePath: path.join(scenarioLib.FRAMEWORK_DIR, REGISTRY_FILE), find: '\tif (substrateReason) {\n\t\treturn { error: refuse.byName', replace: '\tif (false && substrateReason) {\n\t\treturn { error: refuse.byName' });
+};
+const scratchPluginWith = (scenario, injectText) => withScratchSnapshot(scenario, (unusedSnapshotDir, scratchForgesDir) => { const filePath = path.join(scratchForgesDir, 'toy', 'bridges', 'toyStandardPlugin.js'); fs.writeFileSync(filePath, fs.readFileSync(filePath, 'utf8').replace("'use strict';", `'use strict';\n${injectText}`)); });
+const containConjunctList = [
+	refusalCase({ registry: twinRegistry, gateId: 'BG-CONTAIN', conjunctId: 'static_forbiddenRequireNeo4jDriver', title: "a plugin file requiring 'neo4j-driver' is refused at registration by name", shape: (scenario) => scratchPluginWith(scenario, "const neo4jDriver = require('neo4j-driver'); void neo4jDriver;"), regex: /requires forbidden substrate 'neo4j-driver'/, twinName: 'disableSubstrateScan', mutate: disableBothSubstrateScans }),
+	refusalCase({ registry: twinRegistry, gateId: 'BG-CONTAIN', conjunctId: 'static_forbiddenRequireDecisionStore', title: "a plugin file requiring lib/decision-store is refused at registration by name", shape: (scenario) => scratchPluginWith(scenario, "const store = require('../../lib/decision-store/decision-store'); void store;"), regex: /requires forbidden substrate 'lib\/decision-store'/, twinName: 'disableSubstrateScan', mutate: disableBothSubstrateScans }),
+	refusalCase({ registry: twinRegistry, gateId: 'BG-CONTAIN', conjunctId: 'static_forbiddenTokenMerge', title: "a plugin file carrying a 'MERGE ' cypher token is refused at registration by name", shape: (scenario) => scratchPluginWith(scenario, "const cypherText = 'MERGE (a)-[r:X]->(b)'; void cypherText;"), regex: /source carries forbidden token 'MERGE'/, twinName: 'disableSubstrateScan', mutate: disableBothSubstrateScans }),
+	refusalCase({ registry: twinRegistry, gateId: 'BG-CONTAIN', conjunctId: 'static_forbiddenFunctionRerank', title: "a plugin file DEFINING a function named rerank is refused at registration by name", shape: (scenario) => scratchPluginWith(scenario, 'const rerank = (question, callback) => { callback(\'\'); }; void rerank;'), regex: /defines forbidden function 'rerank'/, twinName: 'disableSubstrateScan', mutate: disableBothSubstrateScans }),
+	refusalCase({ registry: twinRegistry, gateId: 'BG-CONTAIN', conjunctId: 'dynamic_hookArgsClosedShape', title: "the argument object handed to a hook is a CLOSED shape: a walk reading hookArgs.judge throws by name (a Proxy)", shape: (scenario) => overrideHooks(scenario, 'toyCrosswalkPlugin', (bridgeHooks, loaded) => { bridgeHooks.walkSourceAssertions = (hookArgs, callback) => { const judge = hookArgs.judge; void judge; loaded.bridgeHooks.walkSourceAssertions(hookArgs, callback); }; }), regex: /hook argument object has no member 'judge'/, twinName: 'openHookArgs', fileName: RULES_FILE, find: 'const closedHookArgs = (hookArgs) => closedShape({ target: hookArgs, memberList: Object.keys(hookArgs), shapeName: \'hook argument object\' });', replace: 'const closedHookArgs = (hookArgs) => hookArgs;' }),
+	refusalCase({ registry: twinRegistry, gateId: 'BG-CONTAIN', conjunctId: 'dynamic_readerViewClosed', title: "the sourceReader view's member set is CLOSED: a hook calling sourceReader.readHubCards throws by name", shape: (scenario) => overrideHooks(scenario, 'toyCrosswalkPlugin', (bridgeHooks, loaded) => { bridgeHooks.subjectStableIdFor = (hookArgs, callback) => { hookArgs.sourceReader.readHubCards({ referenceTier: 'property' }, () => {}); loaded.bridgeHooks.subjectStableIdFor(hookArgs, callback); }; }), regex: /sourceReader view has no member 'readHubCards'/, twinName: 'openView', fileName: RULES_FILE, find: "const closedView = (view) => closedShape({ target: view, memberList: VIEW_MEMBER_LIST, shapeName: 'sourceReader view' });", replace: "const closedView = (view) => ({ ...view, readHubCards: (unusedArgs, callback) => callback('', []) });" }),
+];
+
+// ---------------------------------------------------------------------
+// BG-INPUT
+// ---------------------------------------------------------------------
+const inputConjunctList = [
+	refusalCase({ registry: twinRegistry, gateId: 'BG-INPUT', conjunctId: 'a_checksumVerifiedBeforeRead', title: 'every document channel is verified against SHA256SUMS BEFORE a byte is read: a flipped byte in a scratch copy refuses by name', shape: (scenario) => withScratchSnapshot(scenario, (snapshotDir) => { const csvPath = path.join(snapshotDir, 'toyCrosswalk.csv'); fs.writeFileSync(csvPath, fs.readFileSync(csvPath, 'utf8').replace('The given name of the student', 'The GIVEN name of the student')); }), regex: /channel 'crosswalk': .*toyCrosswalk\.csv/, twinName: 'skipChecksumVerification', fileName: FRAMEWORK_FILE, find: '\t\t\t\t\tsourceVerificationLib.verifySnapshotChecksums({ snapshotDirPath: resolution.snapshotDirPath, relativePathList: [resolution.relativePathFromSnapshotDir] }, (verifyError) => {\n\t\t\t\t\t\tif (verifyError) {', replace: '\t\t\t\t\tsourceVerificationLib.verifySnapshotChecksums({ snapshotDirPath: resolution.snapshotDirPath, relativePathList: [resolution.relativePathFromSnapshotDir] }, (verifyError) => {\n\t\t\t\t\t\tif (false && verifyError) {' }),
+	refusalCase({ registry: twinRegistry, gateId: 'BG-INPUT', conjunctId: 'b_headerColumnRenamedRefusedAtLoad', title: "a header column renamed in the fixture (HubClassURI → HubClassUri) is refused at load — unclassified header column AND classified column absent", shape: (scenario) => withScratchSnapshot(scenario, (snapshotDir) => { const csvPath = path.join(snapshotDir, 'toyCrosswalk.csv'); fs.writeFileSync(csvPath, fs.readFileSync(csvPath, 'utf8').replace('HubClassURI,', 'HubClassUri,')); resignCsv(snapshotDir); }), regex: /header column 'HubClassUri' is UNCLASSIFIED/, twinName: 'disableCoverageCheck', fileName: CONTRACT_FILE, find: "\tif (resolved.error) {\n\t\treturn refuseWith(resolved.error, 'declared-but-broken", replace: "\tif (resolved.error && false) {\n\t\treturn refuseWith(resolved.error, 'declared-but-broken" }),
+	refusalCase({ registry: twinRegistry, gateId: 'BG-INPUT', conjunctId: 'bPrime_duplicateHeaderRefusedUnlessOverride', title: 'a DUPLICATED header name (LegacyColumn twice) is refused unless headerOverrideByIndex resolves it; the override is applied BEFORE coverage', shape: (scenario) => withScratchSnapshot(scenario, (snapshotDir) => { const csvPath = path.join(snapshotDir, 'toyCrosswalk.csv'); fs.writeFileSync(csvPath, fs.readFileSync(csvPath, 'utf8').replace('MappingNotes,', 'LegacyColumn,')); resignCsv(snapshotDir); }), regex: /header name 'LegacyColumn' is DUPLICATED at indexes 6 and 9 and no headerOverrideByIndex resolves it/, twinName: 'ignoreDuplicateHeader', fileName: CONTRACT_FILE, find: '\t\tif (seen[oneName] !== undefined) {\n\t\t\treturn { error: `document channel', replace: '\t\tif (false && seen[oneName] !== undefined) {\n\t\t\treturn { error: `document channel' }),
+	runConjunct({ conjunctId: 'bPrime_overrideResolvesDuplicate', title: 'with headerOverrideByIndex { 6: MappingNotes } the duplicated header IS resolved (applied before coverage) and the run proceeds', twinNameList: ['overrideAppliedAfterCoverage'], shape: (scenario) => { withScratchSnapshot(scenario, (snapshotDir) => { const csvPath = path.join(snapshotDir, 'toyCrosswalk.csv'); fs.writeFileSync(csvPath, fs.readFileSync(csvPath, 'utf8').replace('MappingNotes,', 'LegacyColumn,')); resignCsv(snapshotDir); }); overrideDeclaration(scenario, 'toyCrosswalkPlugin', (declaration) => { declaration.sourceChannelList[0].headerOverrideByIndex = { 6: 'MappingNotes' }; }); }, judge: succeeded((runReport) => ({ pass: runReport.edgesWritten > 0, detail: `${runReport.edgesWritten} edges` })) }),
+	refusalCase({ registry: twinRegistry, gateId: 'BG-INPUT', conjunctId: 'c_emptyCellIsAbsentNeverEmptyString', title: "an empty tuple-field cell is ABSENT: a plugin writing domainId: '' is refused by name", shape: (scenario) => overrideHooks(scenario, 'toyCrosswalkPlugin', (bridgeHooks, loaded) => { bridgeHooks.walkSourceAssertions = (hookArgs, callback) => loaded.bridgeHooks.walkSourceAssertions(hookArgs, (walkError, walked) => (walkError ? callback(walkError) : callback('', { ...walked, assertionList: walked.assertionList.map((oneAssertion) => (oneAssertion.tupleFieldValues.domainId === undefined ? { ...oneAssertion, tupleFieldValues: { ...oneAssertion.tupleFieldValues, domainId: '' } } : oneAssertion)) }))); }), regex: /carries tuple field 'domainId' as '' \(empty string\)/, twinName: 'treatEmptyStringAsAbsent', fileName: FRAMEWORK_FILE, find: "\t\t\t\t\t\t\t\tif (rawValue === '') {\n\t\t\t\t\t\t\t\t\tfieldFault = refuse.byName", replace: "\t\t\t\t\t\t\t\tif (rawValue === '') {\n\t\t\t\t\t\t\t\t\treturn;\n\t\t\t\t\t\t\t\t\tfieldFault = refuse.byName" }),
+	runConjunct({ conjunctId: 'd_sentinelRowsCountedNeverOrphans', title: 'sentinel rows are COUNTED sentinelDropped (2), never orphans — drop the sentinel list and they become orphans → census red', twinNameList: ['dropSentinelList'], judge: succeeded((runReport, outcome) => { const perTarget = blockOf(outcome).header.cardinalityCensus.perTarget; return { pass: perTarget.sentinelDroppedCount === 2 && perTarget.orphanCount === 2, detail: `sentinelDropped ${perTarget.sentinelDroppedCount}, orphan ${perTarget.orphanCount}` }; }) }),
+	refusalCase({ registry: twinRegistry, gateId: 'BG-INPUT', conjunctId: 'e_reconciliationAtZero', title: 'reconciliation at zero per channel: a walk that skips a row silently (rowsRead one short) is refused naming every term', shape: (scenario) => overrideHooks(scenario, 'toyCrosswalkPlugin', (bridgeHooks, loaded) => { bridgeHooks.walkSourceAssertions = (hookArgs, callback) => loaded.bridgeHooks.walkSourceAssertions(hookArgs, (walkError, walked) => (walkError ? callback(walkError) : callback('', { ...walked, channelReport: { ...walked.channelReport, crosswalk: { ...walked.channelReport.crosswalk, rowsRead: walked.channelReport.crosswalk.rowsRead + 1 } } }))); }), regex: /channel 'crosswalk' does not reconcile: rowsRead 24 ≠ assertionsYielded 23 \+ sentinelDropped 0 \+ malformedRows 0 \+ valueTierRows 0/, twinName: 'skipReconciliation', fileName: FRAMEWORK_FILE, find: '\t\t\t\t\t\t\tif (oneReport.rowsRead !== oneReport.assertionsYielded + oneReport.sentinelDropped + oneReport.malformedRows + oneReport.valueTierRows) {', replace: '\t\t\t\t\t\t\tif (false && oneReport.rowsRead !== oneReport.assertionsYielded + oneReport.sentinelDropped + oneReport.malformedRows + oneReport.valueTierRows) {' }),
+	refusalCase({ registry: twinRegistry, gateId: 'BG-INPUT', conjunctId: 'f_encodingFailsToDecodeRefused', title: "a declared 'utf-8' whose bytes fail to decode (a latin1 byte in a scratch copy) is refused by name", shape: (scenario) => withScratchSnapshot(scenario, (snapshotDir) => { const csvPath = path.join(snapshotDir, 'toyCrosswalk.csv'); const bytes = fs.readFileSync(csvPath); fs.writeFileSync(csvPath, Buffer.concat([bytes, Buffer.from([0xe9, 0x0a])])); resignCsv(snapshotDir); }), regex: /bytes do not decode as declared encoding 'utf-8'/, twinName: 'lenientDecoder', fileName: CONTRACT_FILE, find: "\tconst decoder = new TextDecoder(encoding, { fatal: true });", replace: "\tconst decoder = new TextDecoder(encoding, { fatal: false });" }),
+];
+// (e): the reconciliation twin — the walk's channelReport still says assertionsYielded 23; the FRAMEWORK's second check
+// (assertionsYielded vs assertions carrying the channelKey) also catches it — the twin disables BOTH
+inputConjunctList[6].twinNameList = ['skipReconciliation', 'skipBothReconciliationChecks'];
+scenarioTwin({ registry: twinRegistry, gateId: 'BG-INPUT', conjunctId: 'e_reconciliationAtZero', twinName: 'skipBothReconciliationChecks', leverKind: 'productionMutation', mutate: (scenario) => {
+	scenario.frameworkMutationList.push({ modulePath: path.join(scenarioLib.FRAMEWORK_DIR, FRAMEWORK_FILE), find: '\t\t\t\t\t\t\tif (oneReport.rowsRead !== oneReport.assertionsYielded + oneReport.sentinelDropped + oneReport.malformedRows + oneReport.valueTierRows) {', replace: '\t\t\t\t\t\t\tif (false && oneReport.rowsRead !== oneReport.assertionsYielded + oneReport.sentinelDropped + oneReport.malformedRows + oneReport.valueTierRows) {' });
+	scenario.frameworkMutationList.push({ modulePath: path.join(scenarioLib.FRAMEWORK_DIR, FRAMEWORK_FILE), find: "\t\t\t\t\t\tconst drift = report.refusalList.find((oneRefusal) => oneRefusal.kind === 'channelReportDrift');\n\t\t\t\t\t\tif (drift) {", replace: "\t\t\t\t\t\tconst drift = undefined;\n\t\t\t\t\t\tif (drift) {" });
+} });
+scenarioTwin({ registry: twinRegistry, gateId: 'BG-INPUT', conjunctId: 'bPrime_overrideResolvesDuplicate', twinName: 'overrideAppliedAfterCoverage', leverKind: 'productionMutation', mutate: (scenario) => { scenario.frameworkMutationList.push({ modulePath: path.join(scenarioLib.FRAMEWORK_DIR, CONTRACT_FILE), find: "\tconst headerColumnList = rawHeaderList.map((oneName, oneIndex) => (override[String(oneIndex)] !== undefined ? override[String(oneIndex)] : oneName));", replace: "\tconst headerColumnList = rawHeaderList.slice();" }); } });
+scenarioTwin({ registry: twinRegistry, gateId: 'BG-INPUT', conjunctId: 'd_sentinelRowsCountedNeverOrphans', twinName: 'dropSentinelList', leverKind: 'inputFault', mutate: (scenario) => overrideDeclaration(scenario, 'toyCrosswalkPlugin', (declaration) => { declaration.sourceChannelList[0].absentTargetSentinelList = []; }) });
+// under dropSentinelList the two 000000 rows become P000000 targets → the label census then sees 'Not in Hub' on a REAL-target row → the RUN is refused (BG-LABEL-RUN e) → this conjunct is red under it either way (a refusal is not a pass).
+
+const gateDeclarationList = [
+	{ gateId: 'BG-BLIND', title: 'one reader, two views, blinding at the consumer boundary', conjunctList: blindConjunctList },
+	{ gateId: 'BG-CONTAIN', title: 'a plugin sees closed shapes and no substrate', conjunctList: containConjunctList },
+	{ gateId: 'BG-INPUT', title: 'the input discipline', conjunctList: inputConjunctList },
+];
+
+runGateFamily(
+	{ harness, familyName: 'BG-BLIND+BG-CONTAIN+BG-INPUT', gateDeclarationList, twinRegistry, makeSubject: scenarioLib.makeScenario, cloneSubject: scenarioLib.cloneScenario, expectedConjunctCount: 8 + 6 + 8 },
+	() => harness.report(),
+);

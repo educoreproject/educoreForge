@@ -90,6 +90,12 @@ const buildRegistryFromDirectory = ({ forgesDirPath, requireModule } = {}) => {
 		fileNameList.forEach((oneFileName) => {
 			const pluginFilePath = path.join(bridgesDirPath, oneFileName);
 			pluginFilePathList.push(pluginFilePath);
+			// the forbidden-substrate scan runs on the FILE TEXT before the file is loaded: a plugin that requires a
+			// driver is refused by name, never executed (its require would otherwise run — or throw for its own reason)
+			const substrateReason = bridgePluginContractLib.forbiddenSubstrateReason({ pluginFilePath });
+			if (substrateReason) {
+				throw refuse.byName({ moduleName, what: substrateReason, where: 'a plugin declares assertions; it never reaches a driver, a store, a judge or an embedder' });
+			}
 			const registered = registerPlugin({ pluginModule: loadModule(pluginFilePath), pluginFilePath, bundleDirPath });
 			if (registered.error) {
 				throw registered.error;
