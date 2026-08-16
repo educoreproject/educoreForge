@@ -1,6 +1,0 @@
-{
-	"name": "edf-gate",
-	"version": "1.0.0",
-	"description": "Phase-0 proving apparatus: order-independent graph fingerprint, structured diff, determinism proof, immutable baseline freeze, and the cumulative gate-suite runner for the educoreForge cross-standard-equivalence build.",
-	"main": "edfGate.js"
-}

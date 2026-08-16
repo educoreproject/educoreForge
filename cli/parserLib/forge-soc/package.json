@@ -1,7 +1,0 @@
-{
-	"name": "forge-soc",
-	"version": "1.0.0",
-	"main": "forgeSoc.js",
-	"description": "SOC / O*NET forge bundle — parses the O*NET-SOC 2019 occupation taxonomy plus O*NET Job Zones and emits the universal forge property contract (DmeStandardRoot/DmeClass/DmeProperty/DmeOptionSet/DmeOptionValue roles, synthetic soc:<kind>/<key> stableIds, SUBCLASS_OF occupation hierarchy, jobZone HAS_OPTION_SET, alternate titles + CIP crosswalk stashed as bridge properties, voyage embeddings). The NCES CIP↔SOC crosswalk is CROSS-STANDARD bridge data stashed as node properties — NO cross-standard edges in this standard-pure SOC block.",
-	"private": true
-}

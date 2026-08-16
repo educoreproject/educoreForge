@@ -1,9 +1,0 @@
-{
-  // forgeRecipe (standard-version kind) — version-pure: ONE standard @ ONE version.
-  "recipeKind": "standardVersion",
-  "standardKey": "ctdl",
-  "standardName": "CTDL",
-  "forgeModule": "forge-ctdl",
-  "source": { "snapshotKey": "01", "publishedVersion": "Release 20260327", "versionSource": "provenance-file" },
-  "notes": "MODERN filter-and-reference kit (Leg A, commit 556ee9e): native = ceterms + 34 vocab prefixes; ceasn/asn->crossRef ctdlasn, qdata + shared schema: classes->crossRef qdata; honest-empty status. Forge WITH embeddings for shipping goldens (sidecar cache warm)."
-}

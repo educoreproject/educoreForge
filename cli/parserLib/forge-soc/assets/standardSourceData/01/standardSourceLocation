@@ -1,5 +1,0 @@
-standard: forge-soc
-publishedVersion: O*NET-SOC 2019
-publishedVersionEvidence: per 2019_Occupations.csv headers; with O*NET database 30.2 supplements
-upstreamUrl: unknown (publisher: O*NET Resource Center — https://www.onetcenter.org/database.html; exact file URLs not recorded)
-SOC source data: O*NET-SOC 2019 occupations (2019_Occupations.csv), O*NET DB 30.2 Job Zones + Alternate Titles (db_30_2_text/), NCES CIP2020-SOC2018 crosswalk (CIP2020_SOC2018_Crosswalk.csv). Copied from educoreForgeOLD/.../forge-soc/assets/standardSourceData/01/ on 2026-06-23.

@@ -1,6 +1,0 @@
-{
-  "name": "forge-p6hub",
-  "version": "1.0.0",
-  "description": "Synthetic Phase-6 hub forge bundle (forgeManager test gate only; not a real standard)",
-  "main": "forgeP6hub.js"
-}

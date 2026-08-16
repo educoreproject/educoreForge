@@ -1,9 +1,0 @@
-standard: Open Badges 3.0
-publishedVersion: 3.0
-publishedVersionEvidence: openapi info.version, x-status Final
-upstreamUrl: https://purl.imsglobal.org/spec/ob/v3p0/schema/openapi/ob_v3p0_oas.json
-publisher: 1EdTech
-retrieved: 2026-05-28
-sources:
-  - https://purl.imsglobal.org/spec/ob/v3p0/schema/openapi/ob_v3p0_oas.json
-note: OpenAPI; data model parsed from components.schemas. JSON-LD context (not parsed here): https://purl.imsglobal.org/spec/ob/v3p0/context-3.0.3.json

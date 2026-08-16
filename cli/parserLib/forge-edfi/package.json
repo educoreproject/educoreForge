@@ -1,7 +1,0 @@
-{
-	"name": "forge-edfi",
-	"version": "1.0.0",
-	"main": "forgeEdfi.js",
-	"description": "Ed-Fi Data Standard forge bundle — parses the Ed-Fi→CEDS crosswalk CSVs and emits the universal forge property contract (DmeClass/DmeProperty/DmeOptionSet/DmeOptionValue roles, synthetic edfi:<kind>/<key> stableIds, P###### CEDS cross-refs stashed for later bridging, voyage-4-large embeddings)",
-	"private": true
-}

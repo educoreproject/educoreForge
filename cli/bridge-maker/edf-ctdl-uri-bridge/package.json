@@ -1,6 +1,0 @@
-{
-	"name": "edf-ctdl-uri-bridge",
-	"version": "1.0.0",
-	"description": "edfCtdlUriBridge — Phase 3.5 CTDL-family structural URI bridge; authors the genuinely-unbridged ASN/QData->CTDL structural relationships (correctly-typed, raw-CURIE->uri identity) as an additive marked type='bridge' block. Additive/verification-only; never EXACT_MATCH, never fabricates.",
-	"main": "edfCtdlUriBridge.js"
-}

@@ -1,8 +1,0 @@
-{
-  // forgeRecipe (standard-version kind) — version-pure: ONE standard @ ONE version.
-  "recipeKind": "standardVersion",
-  "standardKey": "openbadges",
-  "standardName": "OpenBadges",
-  "forgeModule": "forge-openbadges",
-  "source": { "snapshotKey": "01", "publishedVersion": "3.0", "versionSource": "spec" }
-}

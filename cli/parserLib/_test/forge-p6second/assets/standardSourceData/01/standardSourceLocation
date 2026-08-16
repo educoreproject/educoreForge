@@ -1,6 +1,0 @@
-standard: forge-p6second
-sourceFile: source.json
-publishedVersion: synthetic-01
-upstreamUrl: none (synthetic test fixture, no upstream)
-copiedDate: 2026-07-10
-note: Phase-6 SYNTHETIC second-standard fixture for the forgeManager test gate — not a real standard. Restructured to snapshot layout (assets/standardSourceData/01/) in pairwiseVersionSwitching Phase A so one validation rule holds everywhere (spec §3.5); source content unchanged, moved from assets/source.json.

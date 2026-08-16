@@ -1,6 +1,0 @@
-{
-  "name": "edf-forge-manager",
-  "version": "1.0.0",
-  "description": "forgeManager — the orchestrator CLI; runs the multistep forge workflows by shelling out to the component CLIs (forger, replayManager, bridgeMaker, manifestEditor)",
-  "main": "edfForgeManager.js"
-}

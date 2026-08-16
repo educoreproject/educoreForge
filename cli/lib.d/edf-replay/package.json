@@ -1,9 +1,0 @@
-{
-  "name": "edf-replay",
-  "version": "1.0.0",
-  "private": true,
-  "description": "edf-replay (replayManager) — the single block<->graph boundary, both directions. -buildGraph computes a graph from a manifest by replaying its ordered blocks into a provisioned instance, stamping every node/edge with --owner; -extractSchema serializes exactly one PG-JSONL schemaBlock out of a live graph. Reads the manifest->blocks order via forge-store; holds no SQL and no credentials on the command line.",
-  "main": "edfReplay.js",
-  "author": "tqii",
-  "license": "ISC"
-}

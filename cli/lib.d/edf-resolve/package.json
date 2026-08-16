@@ -1,6 +1,0 @@
-{
-	"name": "edf-resolve",
-	"version": "1.0.0",
-	"description": "Phase-8 RESOLVE VERB: read-only term -> ranked HubReference addresses + confidence + suggested predicate + abstain. Shared resolve-core exposed as a CLI verb (and as MCP-tool / askMilo-tool adapters).",
-	"main": "edfResolve.js"
-}

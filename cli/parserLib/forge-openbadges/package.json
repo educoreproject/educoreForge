@@ -1,9 +1,0 @@
-{
-  "name": "forge-openbadges",
-  "version": "1.0.0",
-  "private": true,
-  "description": "OpenBadges forge bundle for edf-forge: parses the 1EdTech Open Badges 3.0 OpenAPI 3.0 JSON schema (JSON-LD aligned to the W3C Verifiable Credentials data model) into the universal forge property contract (DmeStandardRoot + the six roles, canonical ownership edges, polymorphic REFERENCES, crossRefs carrying any harvested CEDS element ids normalized to canonical cedsId, 1EdTech persistentId, searchText, embeddings). Harvested-and-adapted from trackA forge-openbadges. JSON source — no js-yaml needed.",
-  "main": "forgeOpenbadges.js",
-  "author": "tqii",
-  "license": "ISC"
-}

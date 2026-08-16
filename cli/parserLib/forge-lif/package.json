@@ -1,9 +1,0 @@
-{
-  "name": "forge-lif",
-  "version": "1.0.0",
-  "private": true,
-  "description": "LIF forge bundle for edf-forge: parses the LIF (Learner Information Framework) OpenAPI 3.0 schema into the universal forge property contract (DmeStandardRoot + the six roles, canonical ownership edges, crossRefs carrying harvested CEDS element ids normalized to canonical cedsId, searchText, embeddings). Harvested-and-adapted from trackA forge-lif. Pure JSON parse — no extra runtime deps.",
-  "main": "forgeLif.js",
-  "author": "tqii",
-  "license": "ISC"
-}
