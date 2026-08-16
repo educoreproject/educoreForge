@@ -19,8 +19,10 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //     reproduced VERBATIM during migration (punch row E7 — a review-enforced row, not a registry
 //     row; its retirement is a byte change in its own commit).
 //
-// PURE hooks read only their arguments; the loaders speak through the xLog the framework hands
-// them (Profile §5.3 — no logger is manufactured here).
+// describeSource / describeRoot are PURE (they read only their arguments); the loaders speak through
+// the xLog the framework hands them; emitContractGraph prints the R-WO-11 crosswalk-match status line
+// through process.global.xLog after the walk (ruling FB6 — a hook MAY log; it stamps no byte).
+// No logger is manufactured anywhere here (Profile §5.3).
 
 const forgeDeclaration = require('./edfiForgeDeclaration'); // H1 — data
 const metaEdParser = require('./metaEdParser')();
@@ -105,13 +107,30 @@ const moduleFunction =
 		// -----------------------------------------------------------------
 		// H3 — the walk
 		// -----------------------------------------------------------------
-		const emitContractGraph = ({ parsed, metadata, kit }) =>
-			forgeEdfiContractGraph.emitContractGraph({
+		const emitContractGraph = ({ parsed, metadata, kit }) => {
+			const walkResult = forgeEdfiContractGraph.emitContractGraph({
 				metaEdModel: parsed[LOADER_NAME.META_ED_MODEL],
 				descriptorCodeValues: parsed[LOADER_NAME.DESCRIPTOR_CODE_VALUES],
 				authoredCrosswalk: parsed[LOADER_NAME.AUTHORED_CROSSWALK],
 				kit,
 			});
+			// the R-WO-11 crosswalk-match status line forgeEdfi.js:220-229 printed (restored by ruling FB6
+			// 2026-08-16: a hook MAY log, no bytes) — through the house channel process.global.xLog (D2, the
+			// four forges' own pattern; the framework already refused an absent xLog at factory time, so no
+			// stand-in logger is ever manufactured here). unmatched rows are REPORTED, never invented.
+			const { xLog } = process.global;
+			const report = walkResult.crosswalkMatchReport;
+			xLog.status(
+				`[forge-edfi] crosswalk matches — properties ` +
+					`${report.propertyRows.matchedCount} matched / ` +
+					`${report.propertyRows.unmatchedList.length} unmatched / ` +
+					`${report.propertyRows.ambiguousList.length} ambiguous; descriptors ` +
+					`${report.descriptorRows.matchedCount}/${report.descriptorRows.unmatchedList.length}; ` +
+					`values ${report.optionValueRows.matchedCount}/${report.optionValueRows.unmatchedList.length} ` +
+					`(unmatched rows are REPORTED, never invented — R-WO-11)`,
+			);
+			return walkResult;
+		};
 
 		// -----------------------------------------------------------------
 		// describeRoot — PURE; the template-built description (cg:472-475), verbatim (E7)

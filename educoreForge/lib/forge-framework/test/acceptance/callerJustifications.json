@@ -1,5 +1,5 @@
 {
-  "_comment": "G-SHARE everyExportHasACaller (SPEC §10.1, FR20, FA6): every framework surface export has ≥1 caller across the MIGRATED forges' bundles (entry, lib, tests — testSupport/migratedForgeRoster.js) OR a WRITTEN JUSTIFICATION here. F3b (edfi migrated): the corpus is Ed-Fi's bundle; a member no migrated forge calls carries its justification below, each citing the SPEC §3.3 surface row that says why the export exists. F3c/F3d REMOVE a row when the migrating forge's bundle calls the member (a stale justification for a member that HAS a caller is refused by the gate).",
+  "_comment": "G-SHARE everyExportHasACaller (SPEC §10.1, FR20, FA6): every framework surface export has ≥1 caller across the MIGRATED forges' bundles (entry, lib, tests — testSupport/migratedForgeRoster.js) OR a WRITTEN JUSTIFICATION here. F3b (edfi migrated): the corpus is Ed-Fi's bundle; a member no migrated forge calls carries its justification below, each citing the SPEC §3.3 surface row that says why the export exists. F3c/F3d REMOVE a row when the migrating forge's bundle calls the member (a stale justification for a member that HAS a caller is refused by the gate). FB2 (2026-08-16): the caller test comment-strips the corpus and anchors on framework-surface access (`<x>.<group>.<member>` / a destructure from `<x>.<group>`), never a bare word.",
   "justificationByMember": {
     "contracts.FORGE_DECLARATION_CONTRACT": "frozen DATA read by injectStandardHooks' validator (SPEC §3.3 'contracts.*'); a forge declares against it, never calls it — G-DECL exercises it",
     "contracts.STANDARD_HOOK_CONTRACT": "frozen DATA read by injectStandardHooks' validator (SPEC §3.3); G-HOOK exercises it",
@@ -18,9 +18,9 @@
     "sequence.finalizeSequence": "re-export called BY THE FRAMEWORK when a walk returns sequenceGroups (SPEC §6.2 step 5) — SIF's (F3c); Ed-Fi returns none — G-FINALIZERS exercises it",
     "searchText.buildSearchText": "re-export 'so a validator or test composes the same text the forge did' (SPEC §3.3); Ed-Fi's validator predates the framework and is not migrated in F3b (ruling 03:20 #4); a hook MUST NOT call it (G-SHARE)",
     "refuse.byName": "the house refusal shape (SPEC §3.3) every framework refusal is built with; exported for hook authors — Ed-Fi's walk keeps its own `throw new Error('forge-edfi REFUSED: …')` texts byte-for-byte for its pinned test regexes",
-    "refuse.requiredKeys": "pure helper exported for hook authors (SPEC §3.3); Ed-Fi's walk has no polymorphic input to apply it to",
-    "refuse.closedValue": "pure helper exported for hook authors (SPEC §3.3); Ed-Fi's registries refuse an unknown constructType/propertyType with their own named messages, pinned by its tests",
     "census.complianceReport": "called BY THE FRAMEWORK at buildContractGraph step 7 (SPEC §6.2); returned to the seam as complianceReport — G-COMPAT exercises it",
-    "roster.assertUniqueStandardNames": "the G-UNIQUE gate helper (SPEC §3.3, RULING 00:15 gate 9) — a gate reads the roster; no forge does"
+    "roster.assertUniqueStandardNames": "the G-UNIQUE gate helper (SPEC §3.3, RULING 00:15 gate 9) — a gate reads the roster; no forge does",
+    "structural.finalizeStructuralContract": "re-export 'CALLED BY THE FRAMEWORK at the end of the pure layer; exported for fixture tests' (SPEC §3.3 verbatim; forge-framework.js buildContractGraph step 6) — a hook MUST NOT call it (G-SHARE noFrameworkOwnedCallsInHooks); Ed-Fi's walk names it only in a comment, which FB2's comment-stripped, surface-anchored caller test correctly does not count",
+    "fingerprint.canonicalText": "the PROXY's canonical text (fingerprint.js), exported for TESTS and diff tooling — G-ID-CHEAP's test-gIdCheap.js and the §8.6 diff procedure read it; no forge calls it (a forge produces the output the proxy fingerprints); test-forgeEdfi.js's local `canonicalText` variable is unrelated and, after FB2, no longer counts as a caller"
   }
 }

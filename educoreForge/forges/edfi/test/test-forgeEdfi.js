@@ -606,7 +606,9 @@ pushRefusalStep({
 		// provenance README; the folder-missing arm fires first
 	},
 	// since the F3b migration the FRAMEWORK verifies every SHA256SUMS-listed file BEFORE any loader
-	// runs (forge() step 2; P11/C5 discharged) — the refusal names the first listed file missing
+	// runs (forge() step 2 — the framework now performs P11/C5's verification by construction; those
+	// PESC/CEDS punch rows discharge with the PESC/CEDS migration commits, ruling FB1) — the refusal
+	// names the first listed file missing
 	// on disk and the acquisition recipe (README_PROVENANCE.md); the loader's own folder refusal
 	// (F3) still stands behind it and fires when the manifest itself lists no such file
 	expectedRegex: /listed file 'descriptorCodeValues\/[^']+' is missing on disk[\s\S]*README_PROVENANCE\.md/,

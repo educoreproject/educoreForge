@@ -11,44 +11,11 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // throw it (inside the pure layer, under the framework's ONE adapter) or to hand its message to a
 // callback (on the orchestration side). No I/O, no channel, no clock.
 //
-// The three helpers cover the three refusal shapes the framework performs everywhere:
-//   byName        — a fully composed refusal naming WHAT and WHERE
-//   requiredKeys  — the FIRST missing required property of an object, named
-//   closedValue   — a value outside a closed enumeration, naming the value and the allowed list
+// ONE helper: byName — a fully composed refusal naming WHAT and WHERE. (requiredKeys / closedValue
+// were DELETED in the F3b amendment, ruling FB8 2026-08-16: zero callers in the tree — the declaration
+// contract composes its own messages; a surface member nobody calls is dead surface, not a convenience.)
 
 const byName = ({ moduleName: refusingModuleName, what, where }) =>
 	new Error(`${refusingModuleName} REFUSED: ${what} — ${where}`);
 
-const requiredKeys = ({ moduleName: refusingModuleName, objectName, object, requiredKeyList }) => {
-	if (object === null || typeof object !== 'object') {
-		return byName({
-			moduleName: refusingModuleName,
-			what: `${objectName} is ${object === null ? 'null' : `a ${typeof object}`}, not an object`,
-			where: `pass ${objectName} as an object carrying ${requiredKeyList.join(', ')}`,
-		});
-	}
-	const firstMissingName = requiredKeyList.find(
-		(oneRequiredName) => object[oneRequiredName] === undefined,
-	);
-	if (firstMissingName === undefined) {
-		return null;
-	}
-	return byName({
-		moduleName: refusingModuleName,
-		what: `${objectName} is missing required property '${firstMissingName}'`,
-		where: `${objectName} must carry ${requiredKeyList.join(', ')}; absent is absent, never defaulted`,
-	});
-};
-
-const closedValue = ({ moduleName: refusingModuleName, name, value, allowedValueList }) => {
-	if (allowedValueList.indexOf(value) !== -1) {
-		return null;
-	}
-	return byName({
-		moduleName: refusingModuleName,
-		what: `${name} '${value}' is not one of: ${allowedValueList.join(', ')}`,
-		where: `${name} is a closed enumeration; declare one of the listed values`,
-	});
-};
-
-module.exports = { byName, requiredKeys, closedValue, moduleName };
+module.exports = { byName, moduleName };

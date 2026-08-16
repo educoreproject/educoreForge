@@ -67,8 +67,23 @@ const surfaceMemberList = () => {
 	});
 	return memberList;
 };
-// the caller corpus (FR20/FA6, re-pointed in F3b): the MIGRATED forges' bundles — entry, lib, tests
-const callerCorpusText = () => migratedForgeCallerCorpusPathList().map((onePath) => fs.readFileSync(onePath, 'utf8')).join('\n');
+// the caller corpus (FR20/FA6, re-pointed in F3b): the MIGRATED forges' bundles — entry, lib, tests —
+// COMMENT-STRIPPED (FB2: a member named in a comment is not called)
+const callerCorpusText = () => migratedForgeCallerCorpusPathList().map((onePath) => stripComments(fs.readFileSync(onePath, 'utf8'))).join('\n');
+// "has a caller" = the corpus ACCESSES the member THROUGH THE FRAMEWORK SURFACE (FB2): `<x>.<group>.<member>`,
+// `<group>.<member>` on a destructured group, or a destructure `{ …member… } = <x>.<group>` — never a bare word
+// (a local variable, a comment or a same-named lib symbol is not a caller). injectStandardHooks (no group) is
+// called as `.injectStandardHooks(`.
+const surfaceAccessRegexListFor = (oneMember) => {
+	const [groupName, memberName] = oneMember.split('.');
+	if (memberName === undefined) {
+		return [new RegExp(`\\.${groupName}\\s*\\(`)];
+	}
+	return [
+		new RegExp(`\\b${groupName}\\.${memberName}\\b`),
+		new RegExp(`\\{[^{}]*\\b${memberName}\\b[^{}]*\\}\\s*=\\s*(?:[A-Za-z_$][\\w$]*\\.)*${groupName}\\b`),
+	];
+};
 
 const conjunctList = [
 	staticConjunct({ conjunctId: 'noMakeNodeAddEdgeEmbedNodesInHooks', title: 'static: no function named makeNode / addEdge / embedNodes is DEFINED in a hook file', twinName: 'embedNodesCopiedIntoHook', regex: /(const|function)\s+(makeNode|addEdge|embedNodes)\s*[=(]/ }),
@@ -110,7 +125,7 @@ const conjunctList = [
 			const corpusText = callerCorpusText();
 			const justificationByMember = scenario.callerJustificationOverride || JSON.parse(fs.readFileSync(CALLER_JUSTIFICATION_FILE, 'utf8')).justificationByMember;
 			const memberList = surfaceMemberList().concat(scenario.extraSurfaceMemberList || []);
-			const hasCaller = (oneMember) => new RegExp(`\\b${oneMember.split('.').pop()}\\b`).test(corpusText);
+			const hasCaller = (oneMember) => surfaceAccessRegexListFor(oneMember).some((oneRegex) => oneRegex.test(corpusText));
 			const calledList = memberList.filter(hasCaller);
 			const justifiedList = memberList.filter((oneMember) => !hasCaller(oneMember) && typeof justificationByMember[oneMember] === 'string' && justificationByMember[oneMember].length > 0);
 			const uncalledUnjustifiedList = memberList.filter((oneMember) => !hasCaller(oneMember) && justifiedList.indexOf(oneMember) === -1);

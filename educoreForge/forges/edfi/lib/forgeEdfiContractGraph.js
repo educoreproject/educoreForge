@@ -56,8 +56,11 @@
 const path = require('path');
 
 const CORE_LIB = path.join(__dirname, '..', '..', '..', 'lib');
-// the vocabulary registry, required by path exactly as every forge does today (a tree lib; G-NOGRAPH permits it)
-const { DME_ROLES, EDGE_TYPES } = require(path.join(CORE_LIB, 'vocabulary', 'vocabulary'));
+// the vocabulary registry through the FRAMEWORK's re-export (SPEC §3.3 — the SAME frozen objects
+// lib/vocabulary exports, identity not copies; ruling FB2 2026-08-16): a walk requires ONE module for
+// its registries. The null-embedder instance is used for its frozen re-exports only.
+const forgeFramework = require(path.join(CORE_LIB, 'forge-framework', 'forge-framework'))({ embedder: null });
+const { DME_ROLES, EDGE_TYPES } = forgeFramework.vocabulary;
 const forgeDeclaration = require('./edfiForgeDeclaration'); // H1 — the constants live there, once
 
 const { standardSource: STANDARD_SOURCE, mappingInstruction } = forgeDeclaration;

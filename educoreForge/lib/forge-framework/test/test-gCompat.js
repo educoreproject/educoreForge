@@ -43,6 +43,9 @@ const CENSUS_FILE = 'census.js';
 const FROZEN_TOY_ALLOWANCE_COUNT = 0;
 const REAL_FORGES_DIR = path.resolve(toyScenario.FRAMEWORK_DIR, '..', '..', 'forges');
 
+const { MIGRATED_FORGE_ROSTER, migratedForgeDeclarationFor } = require('./testSupport/migratedForgeRoster');
+const ALLOWANCE_COUNT_FILE = path.join(__dirname, 'acceptance', 'expectedAllowanceCounts.json');
+const censusLib = require('../census');
 const asStandard = (scenario, standardKey) => { scenario.forgeDeclaration.standardKey = standardKey; };
 const withDescribeSource = (scenario, transform) => { const baseHooks = toyScenario.toyHooksFactory(); scenario.hookOverrides.describeSource = ({ parsed }) => transform(baseHooks.describeSource({ parsed })); };
 const withWalkExtra = (scenario, extra) => { const baseHooks = toyScenario.toyHooksFactory(); scenario.hookOverrides.emitContractGraph = (context) => { const walkResult = baseHooks.emitContractGraph(context); extra(context); return walkResult; }; };
@@ -99,6 +102,24 @@ const conjunctList = [
 		twinName: 'putToyInsideTheFour', leverKind: 'inputFault', shippedConfig: false,
 		mutate: (scenario) => { scenario.deps = { ...scenario.deps, migratingBundleListOverride: ['toy'] }; },
 	}),
+	{
+		conjunctId: 'migratedForgeCountsEqualFrozen',
+		title: `G-CENSUS compliance half (SPEC §10.2, FB3): for each MIGRATED forge (${MIGRATED_FORGE_ROSTER.map((oneForge) => oneForge.standardKey).join(', ')}) the LIVE complianceReport.activeAllowanceCount computed by the framework's census over the forge's REAL declaration EQUALS expectedAllowanceCounts.json's frozen count, and the id list EQUALS the frozen list`,
+		twinNameList: ['migratedForgeDeclaresThirdAllowance'],
+		evaluate: (scenario, callback) => {
+			const frozenData = JSON.parse(fs.readFileSync(ALLOWANCE_COUNT_FILE, 'utf8')).byStandardKey;
+			const detailList = [];
+			const offenderList = MIGRATED_FORGE_ROSTER.filter((oneForge) => {
+				const frozen = frozenData[oneForge.standardKey];
+				const declaration = (scenario.migratedDeclarationOverrideByStandardKey || {})[oneForge.standardKey] || migratedForgeDeclarationFor(oneForge.standardKey);
+				const report = censusLib.complianceReport({ forgeDeclaration: declaration, nodes: [], kitStats: {} });
+				const pass = frozen !== undefined && report.activeAllowanceCount === frozen.frozenCount && report.activeAllowanceList.join(',') === frozen.frozenList.join(',');
+				detailList.push(`${oneForge.standardKey} live ${report.activeAllowanceCount} [${report.activeAllowanceList.join(',')}] ${pass ? '==' : '!='} frozen ${frozen ? `${frozen.frozenCount} [${frozen.frozenList.join(',')}]` : 'ABSENT'}`);
+				return !pass;
+			});
+			callback('', { pass: offenderList.length === 0, detail: detailList.join('; ') });
+		},
+	},
 	shapedConjunct({
 		conjunctId: 'e8LiveLogicalSourceFileNames',
 		title: "E8 declared (as edfi) with logicalSourceFileNameList ['descriptorCodeValues'] and sourceFiles naming that LOGICAL name beside the verified file → the run succeeds, the root carries the names verbatim, activeAllowanceList EQUALS ['E8'] (ruling 06:33, tightened 03:40)",
@@ -178,6 +199,7 @@ const conjunctList = [
 	},
 ];
 
+scenarioTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'migratedForgeCountsEqualFrozen', twinName: 'migratedForgeDeclaresThirdAllowance', leverKind: 'inputFault', mutate: (scenario) => { const edfiDeclaration = migratedForgeDeclarationFor('edfi'); scenario.migratedDeclarationOverrideByStandardKey = { edfi: { ...edfiDeclaration, compatibilityDeclarationList: edfiDeclaration.compatibilityDeclarationList.concat([{ allowanceId: 'S4' }]) } }; } });
 scenarioTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'countEqualsFrozen', twinName: 'declareE6UnderOverride', leverKind: 'inputFault', shippedConfig: false, mutate: (scenario) => { asStandard(scenario, 'edfi'); scenario.forgeDeclaration.compatibilityDeclarationList = [{ allowanceId: 'E6' }]; withDescribeSource(scenario, (described) => ({ ...described, sourceUrl: '' })); scenario.deps = { ...scenario.deps, migratingBundleListOverride: ['toy', 'edfi'] }; } });
 frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'e6LiveReportedAndByteReproduced', twinName: 'censusHidesActiveAllowances', fileName: CENSUS_FILE, find: '\tconst activeAllowanceList = forgeDeclaration.compatibilityDeclarationList.map((oneEntry) => oneEntry.allowanceId);', replace: '\tconst activeAllowanceList = [];' });
 frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'e8LiveLogicalSourceFileNames', twinName: 'frameworkIgnoresE8', fileName: FRAMEWORK_FILE, find: '\t\t\t\t\t\t.filter((oneRow) => oneRow.permitsUnverifiedSourceFileNames === true)', replace: '\t\t\t\t\t\t.filter((oneRow) => false)' });
@@ -187,4 +209,4 @@ frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 's6
 scenarioTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'overrideAbsentFromShippedConfig', twinName: 'shippedEntryPassesOverride', leverKind: 'productionMutation', mutate: (scenario) => { scenario.staticExtraSourceList = (scenario.staticExtraSourceList || []).concat([{ fileName: 'forges/toy/forgeToy.js (in-memory shipped double)', text: "forgeFramework({ embedder, migratingBundleListOverride: ['toy'] })" }]); } });
 
 const gateDeclarationList = [{ gateId: GATE_ID, title: 'the compatibility-declaration mechanism', conjunctList }];
-runGateFamily({ harness, familyName: GATE_ID, gateDeclarationList, twinRegistry, makeSubject: toyScenario.makeScenario, cloneSubject: (scenario) => ({ ...toyScenario.cloneScenario(scenario), staticExtraSourceList: (scenario.staticExtraSourceList || []).slice() }), expectedConjunctCount: 15, expectedTwinCount: 15 }, () => harness.report());
+runGateFamily({ harness, familyName: GATE_ID, gateDeclarationList, twinRegistry, makeSubject: toyScenario.makeScenario, cloneSubject: (scenario) => ({ ...toyScenario.cloneScenario(scenario), staticExtraSourceList: (scenario.staticExtraSourceList || []).slice(), migratedDeclarationOverrideByStandardKey: scenario.migratedDeclarationOverrideByStandardKey }), expectedConjunctCount: 16, expectedTwinCount: 16 }, () => harness.report());

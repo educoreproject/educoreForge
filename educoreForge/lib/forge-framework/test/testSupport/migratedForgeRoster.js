@@ -23,6 +23,7 @@ const MIGRATED_FORGE_ROSTER = Object.freeze([
 	Object.freeze({
 		standardKey: 'edfi',
 		migratedBy: 'F3b AMBER_TRAIL 2026-08-16',
+		declarationRelativePath: 'lib/edfiForgeDeclaration.js', // H1 — G-COMPAT's live count reader (FB3)
 		hookFileRelativePathList: Object.freeze([
 			'forgeEdfi.js', // the one-line entry
 			'lib/edfiForgeDeclaration.js', // H1
@@ -66,4 +67,13 @@ const migratedForgeCallerCorpusPathList = () => {
 	return pathList;
 };
 
-module.exports = { MIGRATED_FORGE_ROSTER, FORGES_DIR, migratedForgeHookSourceList, migratedForgeCallerCorpusPathList, moduleName };
+// migratedForgeDeclarationFor(standardKey) → the REAL H1 declaration object of a migrated forge (required fresh from the tree)
+const migratedForgeDeclarationFor = (standardKey) => {
+	const oneForge = MIGRATED_FORGE_ROSTER.find((candidate) => candidate.standardKey === standardKey);
+	if (!oneForge) {
+		throw new Error(`${moduleName} REFUSED: '${standardKey}' is not a migrated forge in the roster (${MIGRATED_FORGE_ROSTER.map((candidate) => candidate.standardKey).join(', ')})`);
+	}
+	return require(path.join(FORGES_DIR, standardKey, oneForge.declarationRelativePath));
+};
+
+module.exports = { MIGRATED_FORGE_ROSTER, FORGES_DIR, migratedForgeHookSourceList, migratedForgeCallerCorpusPathList, migratedForgeDeclarationFor, moduleName };

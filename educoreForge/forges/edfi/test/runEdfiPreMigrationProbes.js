@@ -61,6 +61,7 @@ const moduleDouble = require('../../../lib/forge-framework/test/testSupport/modu
 const forgeFramework = require('../../../lib/forge-framework/forge-framework')({ embedder: null });
 const expectedCensus = require('../../../lib/forge-framework/test/acceptance/expectedCensus.json');
 const expectedFingerprints = require('../../../lib/forge-framework/test/acceptance/expectedFingerprints.json');
+const expectedAllowanceCounts = require('../../../lib/forge-framework/test/acceptance/expectedAllowanceCounts.json');
 
 const BUNDLE_DIR_PATH = path.join(__dirname, '..');
 const SNAPSHOT_PATH = path.join(BUNDLE_DIR_PATH, 'assets', 'standardSourceData', '04');
@@ -362,8 +363,16 @@ const measureAndWrite = ({ nodes, edges, metadata, forgeResult, doubledFingerpri
 				? `PROXY EQUAL to expectedFingerprints.json edfi (${frozenFingerprint.slice(0, 12)}…)`
 				: `PROXY DIFFERS from expectedFingerprints.json edfi ${frozenFingerprint}`,
 	};
+	// the LIVE compliance count from forge() itself vs the frozen count (G-CENSUS compliance half, FB3) —
+	// pre-migration the seam carries no complianceReport (declared NOT APPLICABLE by name)
+	const frozenAllowance = expectedAllowanceCounts.byStandardKey.edfi;
+	frozenComparison.allowanceCount = forgeResult.complianceReport === undefined
+		? 'not applicable (the seam result carries no complianceReport — unmigrated forge)'
+		: forgeResult.complianceReport.activeAllowanceCount === frozenAllowance.frozenCount && forgeResult.complianceReport.activeAllowanceList.join(',') === frozenAllowance.frozenList.join(',')
+			? `EQUAL to expectedAllowanceCounts.json edfi (${frozenAllowance.frozenCount}: ${frozenAllowance.frozenList.join(',')})`
+			: `DIFFERS from expectedAllowanceCounts.json edfi: live ${forgeResult.complianceReport.activeAllowanceCount} [${forgeResult.complianceReport.activeAllowanceList.join(',')}] vs frozen ${frozenAllowance.frozenCount} [${frozenAllowance.frozenList.join(',')}]`;
 	probeResults.frozenComparison = frozenComparison;
-	const frozenDiffers = /DIFFERS/.test(frozenComparison.census) || /DIFFERS/.test(frozenComparison.fingerprint);
+	const frozenDiffers = /DIFFERS/.test(frozenComparison.census) || /DIFFERS/.test(frozenComparison.fingerprint) || /DIFFERS/.test(frozenComparison.allowanceCount);
 
 	fs.mkdirSync(outputDirPath, { recursive: true });
 	const outputFilePath = path.join(outputDirPath, 'probeResults.json');

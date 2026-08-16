@@ -8,7 +8,7 @@
 // proxy hashes both copies; MERGE collapses them) — recorded, not counted; and the declared surface
 // contracts are the truth a hook author and a test read: CONTRACT_GRAPH_KIT_SURFACE names exactly the
 // kit's members, STANDARD_HOOK_CONTRACT exactly the four hooks, the vocabulary re-exports are the SAME
-// objects as lib/vocabulary's, refuse.requiredKeys/closedValue behave as declared.
+// objects as lib/vocabulary's. (refuse.requiredKeys/closedValue were deleted in the F3b amendment, FB8.)
 //
 // Run: node lib/forge-framework/test/test-gIdCheap.js [-verbose]
 
@@ -112,29 +112,13 @@ const surfaceConjunctList = [
 		twinNameList: ['reExportACopy'],
 		evaluate: (scenario, callback) => { const outcome = toyScenario.injectOnly(scenario); const offender = ['DME_ROLES', 'EDGE_TYPES', 'NODE_LABELS', 'PROVENANCE_TIER', 'STRUCTURAL_PROPERTIES'].find((oneName) => outcome.forgeFramework.vocabulary[oneName] !== vocabularyLib[oneName]); callback('', { pass: offender === undefined, detail: offender ? `${offender} is a copy` : 'five identities hold' }); },
 	},
-	{
-		conjunctId: 'refuseHelpersBehave',
-		title: 'refuse.requiredKeys refuses the FIRST missing key by name; refuse.closedValue names value and allowed list; both return null on clean input',
-		twinNameList: ['requiredKeysNeverRefuses'],
-		evaluate: (scenario, callback) => {
-			const outcome = toyScenario.injectOnly(scenario);
-			const { requiredKeys, closedValue } = outcome.forgeFramework.refuse;
-			const missing = requiredKeys({ moduleName: 'probe', objectName: 'thing', object: { alpha: 1 }, requiredKeyList: ['alpha', 'beta', 'gamma'] });
-			const clean = requiredKeys({ moduleName: 'probe', objectName: 'thing', object: { alpha: 1, beta: 2 }, requiredKeyList: ['alpha', 'beta'] });
-			const closed = closedValue({ moduleName: 'probe', name: 'mode', value: 'newest', allowedValueList: ['declared', 'sourceUrl'] });
-			const closedClean = closedValue({ moduleName: 'probe', name: 'mode', value: 'declared', allowedValueList: ['declared', 'sourceUrl'] });
-			const pass = missing !== null && /missing required property 'beta'/.test(missing.message) && clean === null && closed !== null && /mode 'newest' is not one of: declared, sourceUrl/.test(closed.message) && closedClean === null;
-			callback('', { pass, detail: pass ? 'requiredKeys/closedValue behave as declared' : `missing=${missing && missing.message} clean=${clean} closed=${closed && closed.message} closedClean=${closedClean}` });
-		},
-	},
 ];
 frameworkMutationTwin({ registry: twinRegistry, gateId: SURFACE_GATE_ID, conjunctId: 'kitSurfaceEqualsKitMembers', twinName: 'kitGainsUndeclaredMember', fileName: 'contractGraphKit.js', find: '\t\temitOptionValue,\n\t};', replace: '\t\temitOptionValue,\n\t\tundeclaredHelper: () => {},\n\t};' });
 frameworkMutationTwin({ registry: twinRegistry, gateId: SURFACE_GATE_ID, conjunctId: 'hookContractNamesFourHooks', twinName: 'hookContractGainsFifth', fileName: 'standardHookContract.js', find: "\tdescribeRoot: Object.freeze({\n\t\trequired: true,", replace: "\tsummarizeForgeStatus: Object.freeze({ required: false, kind: 'function', arity: 1, calledFrom: 'x', signature: 'x', returns: 'x' }),\n\tdescribeRoot: Object.freeze({\n\t\trequired: true," });
 frameworkMutationTwin({ registry: twinRegistry, gateId: SURFACE_GATE_ID, conjunctId: 'vocabularyReExportsAreTheSameObjects', twinName: 'reExportACopy', fileName: 'forge-framework.js', find: '\t\t\tvocabulary: Object.freeze({\n\t\t\t\tDME_ROLES,', replace: '\t\t\tvocabulary: Object.freeze({\n\t\t\t\tDME_ROLES: { ...DME_ROLES },' });
-frameworkMutationTwin({ registry: twinRegistry, gateId: SURFACE_GATE_ID, conjunctId: 'refuseHelpersBehave', twinName: 'requiredKeysNeverRefuses', fileName: 'refuse.js', find: '\tif (firstMissingName === undefined) {\n\t\treturn null;\n\t}', replace: '\tif (firstMissingName === undefined || true) {\n\t\treturn null;\n\t}' });
 
 const gateDeclarationList = [
 	{ gateId: PROXY_GATE_ID, title: 'the PROXY', conjunctList: proxyConjunctList },
 	{ gateId: SURFACE_GATE_ID, title: 'the declared surface contracts', conjunctList: surfaceConjunctList },
 ];
-runGateFamily({ harness, familyName: 'G-ID-CHEAP (PROXY) + G-SURFACE', gateDeclarationList, twinRegistry, makeSubject: toyScenario.makeScenario, cloneSubject: toyScenario.cloneScenario, expectedConjunctCount: 7, expectedTwinCount: 8 }, () => harness.report());
+runGateFamily({ harness, familyName: 'G-ID-CHEAP (PROXY) + G-SURFACE', gateDeclarationList, twinRegistry, makeSubject: toyScenario.makeScenario, cloneSubject: toyScenario.cloneScenario, expectedConjunctCount: 6, expectedTwinCount: 7 }, () => harness.report());

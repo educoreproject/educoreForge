@@ -619,9 +619,7 @@ const moduleFunction =
 			sequence: Object.freeze({ finalizeSequence: sequenceContractLib.finalizeSequence }),
 			searchText: Object.freeze({ buildSearchText }),
 			refuse: Object.freeze({
-				byName: refuse.byName,
-				requiredKeys: refuse.requiredKeys,
-				closedValue: refuse.closedValue,
+				byName: refuse.byName, // the ONE helper (requiredKeys / closedValue deleted, FB8: zero callers)
 			}),
 			census: Object.freeze({
 				collisionCensus: censusLib.collisionCensus,
