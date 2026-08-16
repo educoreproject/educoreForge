@@ -483,10 +483,41 @@ const judgeConjunctList = [
 		shape: (scenario) => useRealClientDouble(scenario, { pickOrdinal: '1', rationaleMode: 'ordinal' }),
 		judge: nameInRefusal(/the judge's rationale names the pick by ORDINAL/),
 	}),
+	// ⟪B2 DEFECT found by the FIRST REAL JUDGMENT — RULING SABLE_RIVER 2026-08-16 (B3)⟫ the real client's evidence schema
+	// FORCES a picking category onto an abstention (llmClient.js:88-99); the component normalises it and preserves the raw value
+	runConjunct({
+		conjunctId: 'h_abstentionWithSchemaForcedCategoryAccepted',
+		title: "a REAL client returning (NONE, weakButReal) is ACCEPTED as an abstention: category 'none', the raw value PRESERVED as reportedCategoryOnAbstain on the frozen record AND in forensics, no edge",
+		twinNameList: ['abstentionNormalisationRemoved'],
+		shape: (scenario) => useRealClientDouble(scenario, { pickOrdinal: 'NONE', abstainCategory: 'weakButReal' }),
+		judge: succeeded((runReport, outcome) => {
+			const block = blockOf(outcome);
+			const judged = block.decisionRecordList.filter((oneRecord) => oneRecord.classification === 'judged');
+			const preservedOnRecord = judged.filter((oneRecord) => oneRecord.abstained === true && oneRecord.judge.category === 'none' && oneRecord.judge.reportedCategoryOnAbstain === 'weakButReal' && oneRecord.objectStableId === null);
+			const forensic = forensicsOf(outcome).filter((oneRecord) => oneRecord.record.choice === 'NONE');
+			const preservedInForensics = forensic.filter((oneRecord) => oneRecord.record.category === 'none' && oneRecord.record.reportedCategoryOnAbstain === 'weakButReal');
+			return { pass: judged.length > 0 && preservedOnRecord.length === judged.length && forensic.length > 0 && preservedInForensics.length === forensic.length, detail: `${judged.length} judged / ${preservedOnRecord.length} preserved on record; ${forensic.length} forensic abstentions / ${preservedInForensics.length} preserved` };
+		}),
+	}),
+	pureConjunct({
+		conjunctId: 'i_clientCategoryEnumContract',
+		title: "the seam contract DERIVED from llmClient's OWN CATEGORY_ENUM (read from the client): NONE + EVERY enum member is accepted as an abstention with the raw value preserved; NONE + a token outside the enum stays refused; a PICK with 'none' stays refused",
+		twinNameList: ['abstentionNormalisationRemoved'],
+		judge: (scenario) => {
+			const clientCategoryEnum = require(path.join(scenarioLib.FRAMEWORK_DIR, '..', '..', 'apps', 'graph-builder', 'apps', 'bridge-maker', 'lib', 'llmClient')).CATEGORY_ENUM;
+			const lib = scenario.frameworkMutationList.length ? moduleDouble.loadWithMutations({ modulePath: path.join(scenarioLib.FRAMEWORK_DIR, JUDGE_FILE), mutationList: scenario.frameworkMutationList }) : require(path.join(scenarioLib.FRAMEWORK_DIR, JUDGE_FILE));
+			const question = { choiceEnum: ['1', 'NONE'], renderedPoolStableIdList: ['urn:toy:card1'], promptHash: 'x' };
+			const forEach = clientCategoryEnum.map((oneCategory) => lib.judgmentFromReturn({ clientReturn: { choice: 'NONE', category: oneCategory, rationale: 'nothing fits' }, question, isDebugClient: false }));
+			const allAccepted = clientCategoryEnum.length > 0 && forEach.every((oneJudged, oneIndex) => !oneJudged.error && oneJudged.category === 'none' && oneJudged.reportedCategoryOnAbstain === clientCategoryEnum[oneIndex] && oneJudged.chosenCardStableId === null);
+			const outsideRefused = Boolean(lib.judgmentFromReturn({ clientReturn: { choice: 'NONE', category: 'perhaps', rationale: 'nothing fits' }, question, isDebugClient: false }).error);
+			const pickWithNoneRefused = Boolean(lib.judgmentFromReturn({ clientReturn: { choice: '1', category: 'none', rationale: 'card1 (Card One) means the same thing' }, question, isDebugClient: false }).error);
+			return { pass: allAccepted && outsideRefused && pickWithNoneRefused, detail: `enum [${clientCategoryEnum.join(', ')}] accepted ${allAccepted}; outside refused ${outsideRefused}; pick+none refused ${pickWithNoneRefused}` };
+		},
+	}),
 ];
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'a_outOfRangeChoiceRefused', twinName: 'clampOrdinal', fileName: JUDGE_FILE, find: "\tif (typeof choice !== 'string' || choiceEnum.indexOf(choice) === -1) {\n\t\treturn { error:", replace: "\tif (typeof choice !== 'string' || choiceEnum.indexOf(choice) === -1) {\n\t\treturn { chosenCardStableId: renderedPoolStableIdList[Math.min(renderedPoolStableIdList.length, Number(choice)) - 1] };\n\t\treturn { error:" });
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'a_pickMappedThroughRenderedOrder', twinName: 'mapThroughReversedList', fileName: JUDGE_FILE, find: '\tconst chosenCardStableId = renderedPoolStableIdList[ordinal - 1];', replace: '\tconst chosenCardStableId = renderedPoolStableIdList.slice().reverse()[ordinal - 1];' });
-frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'aPrime_putJudgmentPayloadExactlyFourKeys', twinName: 'payloadLacksChosenStableId', fileName: JUDGE_FILE, find: "\t\t\t\t{ ...cacheKey, generation, judgment: { choice: judged.choice, category: judged.category, rationale: judged.rationale, chosenStableId: judged.chosenCardStableId } },", replace: "\t\t\t\t{ ...cacheKey, generation, judgment: { choice: judged.choice, category: judged.category, rationale: judged.rationale, chosenStableId: judged.chosenCardStableId, model: judgeClient.model } }," });
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'aPrime_putJudgmentPayloadExactlyFourKeys', twinName: 'payloadLacksChosenStableId', fileName: JUDGE_FILE, find: "\t\t\t\t{ ...cacheKey, generation, judgment: { choice: judged.choice, category: judged.reportedCategoryOnAbstain === undefined || judged.reportedCategoryOnAbstain === null ? judged.category : judged.reportedCategoryOnAbstain, rationale: judged.rationale, chosenStableId: judged.chosenCardStableId } },", replace: "\t\t\t\t{ ...cacheKey, generation, judgment: { choice: judged.choice, category: judged.reportedCategoryOnAbstain === undefined || judged.reportedCategoryOnAbstain === null ? judged.category : judged.reportedCategoryOnAbstain, rationale: judged.rationale, chosenStableId: judged.chosenCardStableId, model: judgeClient.model } }," });
 scenarioTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'b_abstentionNoEdgeCountedSeparately', twinName: 'abstainYieldsEdgeToFirstCandidate', leverKind: 'productionMutation', mutate: (scenario) => {
 	// an abstention that yields an edge to the first candidate (three coordinated faults in the judge component)
 	scenario.frameworkMutationList.push({ modulePath: path.join(scenarioLib.FRAMEWORK_DIR, JUDGE_FILE), find: "\tif (choice === ABSTAIN_TOKEN) {\n\t\treturn { chosenCardStableId: null };\n\t}", replace: "\tif (choice === ABSTAIN_TOKEN) {\n\t\treturn { chosenCardStableId: renderedPoolStableIdList[0] };\n\t}" });
@@ -497,6 +528,9 @@ frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'd_promptContainsSourceElementName', twinName: 'rendererOmitsSourceBlock', fileName: RENDERER_FILE, find: "\tlineList.push('SOURCE ELEMENT (what you are matching FROM):');\n\tlineList.push(`  name: ${sourceElement.name}`);", replace: "\tlineList.push('SOURCE ELEMENT (what you are matching FROM):');" });
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'e_perCandidateMaterialRidesWithCandidate', twinName: 'noteHoistedToGlobalSegment', fileName: RENDERER_FILE, find: "\t\tif (typeof noteByStableId[oneCard.stableId] === 'string' && noteByStableId[oneCard.stableId] !== '') {\n\t\t\tlineList.push(`      note: ${noteByStableId[oneCard.stableId]}`);\n\t\t}", replace: "\t\tif (typeof noteByStableId[oneCard.stableId] === 'string' && noteByStableId[oneCard.stableId] !== '') {\n\t\t\tlineList.push(`GUIDANCE: ${noteByStableId[oneCard.stableId]}`);\n\t\t}" });
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'f_globalGuidanceNamingCandidateRefused', twinName: 'smugglingGateDisabled', fileName: RENDERER_FILE, find: '\t\t\tconst leaked = globalSegmentList.find((oneSegment) => oneSegment.indexOf(tokenList[tokenIndex]) !== -1);', replace: '\t\t\tconst leaked = undefined;' });
+// the production mutation: the normalisation REMOVED (the pre-ruling strict refusal restored) — (h) and (i) both go red
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'h_abstentionWithSchemaForcedCategoryAccepted', twinName: 'abstentionNormalisationRemoved', fileName: JUDGE_FILE, find: "\t\tif (clientReturn.category !== ABSTAIN_CATEGORY && PICK_CATEGORY_LIST.indexOf(clientReturn.category) === -1) {", replace: "\t\tif (clientReturn.category !== ABSTAIN_CATEGORY) {" });
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'i_clientCategoryEnumContract', twinName: 'abstentionNormalisationRemoved', fileName: JUDGE_FILE, find: "\t\tif (clientReturn.category !== ABSTAIN_CATEGORY && PICK_CATEGORY_LIST.indexOf(clientReturn.category) === -1) {", replace: "\t\tif (clientReturn.category !== ABSTAIN_CATEGORY) {" });
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'g_ordinalRationaleFromRealClientRefused', twinName: 'ordinalRationaleAccepted', fileName: JUDGE_FILE, find: '\tif (!isDebugClient && ORDINAL_RATIONALE_RE.test(clientReturn.rationale)) {', replace: '\tif (false && !isDebugClient && ORDINAL_RATIONALE_RE.test(clientReturn.rationale)) {' });
 
 // ---------------------------------------------------------------------
@@ -683,6 +717,6 @@ const gateDeclarationList = [
 ];
 
 runGateFamily(
-	{ harness, familyName: 'BG-REPLAY+BG-CACHE+BG-JUDGE+BG-POOL-ORDER+BG-DET', gateDeclarationList, twinRegistry, makeSubject: scenarioLib.makeScenario, cloneSubject: scenarioLib.cloneScenario, expectedConjunctCount: 9 + 7 + 9 + 3 + 4, expectedTwinCount: 9 + 7 + 9 + 3 + 4 },
+	{ harness, familyName: 'BG-REPLAY+BG-CACHE+BG-JUDGE+BG-POOL-ORDER+BG-DET', gateDeclarationList, twinRegistry, makeSubject: scenarioLib.makeScenario, cloneSubject: scenarioLib.cloneScenario, expectedConjunctCount: 9 + 7 + 11 + 3 + 4, expectedTwinCount: 9 + 7 + 11 + 3 + 4 },
 	() => harness.report(),
 );

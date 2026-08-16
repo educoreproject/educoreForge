@@ -365,7 +365,8 @@ module.exports = {
 //   rationaleMode 'keyAndName' (default) | 'ordinal' (the BR-067 fault) | 'blank'
 //   extraReturnKeys  e.g. { predicate: 'relatedMatch' } (the BG-P6 (b) fault)
 //   throwOnCall   the replay spy: a plain build must never call the judge
-const makeFakeRealClient = ({ pickOrdinal = '1', category = 'strong', rationaleMode = 'keyAndName', extraReturnKeys = {}, throwOnCall = false, model = 'fake-anthropic-judge-v1' } = {}) => {
+//   abstainCategory  'none' (default) | a picking category — the REAL client's evidence schema FORCES one on NONE (llmClient.js:88-99)
+const makeFakeRealClient = ({ pickOrdinal = '1', category = 'strong', abstainCategory = 'none', rationaleMode = 'keyAndName', extraReturnKeys = {}, throwOnCall = false, model = 'fake-anthropic-judge-v1' } = {}) => {
 	const client = { callCount: 0, questionList: [], model, keySource: 'test' };
 	client.rerank = ({ systemPrompt, userPrompt, choiceEnum, requireJudgment } = {}, callback) => {
 		void systemPrompt;
@@ -385,7 +386,7 @@ const makeFakeRealClient = ({ pickOrdinal = '1', category = 'strong', rationaleM
 		} else {
 			rationale = 'none of the candidates means the same thing as the source element';
 		}
-		callback('', { choice, model, attempts: 1, category: choice === 'NONE' ? 'none' : category, rationale, usage: { inputTokens: 10, outputTokens: 5 }, stopReason: 'end_turn', retryReasons: [], ...extraReturnKeys });
+		callback('', { choice, model, attempts: 1, category: choice === 'NONE' ? abstainCategory : category, rationale, usage: { inputTokens: 10, outputTokens: 5 }, stopReason: 'end_turn', retryReasons: [], ...extraReturnKeys });
 	};
 	return client;
 };

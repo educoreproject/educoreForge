@@ -29,7 +29,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 const path = require('path');
 const refuse = require(path.join(__dirname, '..', 'forge-framework', 'refuse'));
 const { RENDERER_VERSION, ABSTAIN_TOKEN } = require('./evidenceRenderer');
-const { confidenceForCategory, ABSTAIN_CATEGORY } = require('./confidenceBandTable');
+const { confidenceForCategory, ABSTAIN_CATEGORY, PICK_CATEGORY_LIST } = require('./confidenceBandTable');
 
 const ORDINAL_RATIONALE_RE = /\b(candidate|option|choice)\s+#?\d+\b/i;
 
@@ -66,10 +66,20 @@ const judgmentFromReturn = ({ clientReturn, question, isDebugClient }) => {
 	}
 	const discardedPredicateKeyCount = Object.prototype.hasOwnProperty.call(clientReturn, 'predicate') ? 1 : 0;
 	if (mapped.chosenCardStableId === null) {
-		if (clientReturn.category !== ABSTAIN_CATEGORY) {
-			return { error: refuse.byName({ moduleName, what: `the judge abstained (${ABSTAIN_TOKEN}) but reported category '${clientReturn.category}'`, where: `an abstention carries category '${ABSTAIN_CATEGORY}'` }) };
+		// ⟪B2 DEFECT found by the FIRST REAL JUDGMENT — RULING SABLE_RIVER 2026-08-16 (B3, "B2 DEFECT found by the first REAL
+		// judgment")⟫ The real client's EVIDENCE tool schema (apps/graph-builder/apps/bridge-maker/lib/llmClient.js:88-99,
+		// requireJudgment: true) makes `category` REQUIRED with CATEGORY_ENUM = SELECT_CATEGORY_ENUM minus 'none' — llmClient's
+		// own contract reads "a model reports a category only when it IS making a pick — abstain is expressed through
+		// choice='NONE', never through a category value". So a real abstention can NEVER arrive as (NONE, none): the schema
+		// FORCES a picking category onto it. The judge component takes the client at its stated contract: on NONE the reported
+		// category is SCHEMA-FORCED, not a claim — the abstention is recorded as ABSTAIN_CATEGORY and the raw value is
+		// PRESERVED (reportedCategoryOnAbstain: on the returned judgment, the frozen record and the forensic record — nothing
+		// discarded). A category OUTSIDE the picking set stays refused by name (an unknown token is not schema-forced noise);
+		// a PICK carrying ABSTAIN_CATEGORY stays refused below. llmClient.js is byte-untouched (RULING BF1).
+		if (clientReturn.category !== ABSTAIN_CATEGORY && PICK_CATEGORY_LIST.indexOf(clientReturn.category) === -1) {
+			return { error: refuse.byName({ moduleName, what: `the judge abstained (${ABSTAIN_TOKEN}) but reported category '${clientReturn.category}', which is neither '${ABSTAIN_CATEGORY}' nor a picking category (${PICK_CATEGORY_LIST.join(', ')})`, where: `an abstention carries category '${ABSTAIN_CATEGORY}' — or, from the real client's evidence schema, a schema-forced picking category, preserved as reportedCategoryOnAbstain` }) };
 		}
-		return { chosenCardStableId: null, choice: clientReturn.choice, category: clientReturn.category, rationale: clientReturn.rationale, confidence: null, discardedPredicateKeyCount };
+		return { chosenCardStableId: null, choice: clientReturn.choice, category: ABSTAIN_CATEGORY, reportedCategoryOnAbstain: clientReturn.category === ABSTAIN_CATEGORY ? null : clientReturn.category, rationale: clientReturn.rationale, confidence: null, discardedPredicateKeyCount };
 	}
 	if (clientReturn.category === ABSTAIN_CATEGORY) {
 		return { error: refuse.byName({ moduleName, what: `the judge picked ordinal ${clientReturn.choice} but reported category '${ABSTAIN_CATEGORY}'`, where: 'a pick carries a picking category' }) };
@@ -127,6 +137,7 @@ const judgeOne = ({ question, judgeClient, judgmentCache, matchForensics, budget
 					choice: judgment.choice,
 					chosenCardStableId: judgment.chosenCardStableId,
 					category: judgment.category,
+					reportedCategoryOnAbstain: judgment.reportedCategoryOnAbstain === undefined ? null : judgment.reportedCategoryOnAbstain,
 					rationale: judgment.rationale,
 					confidence: judgment.confidence,
 					cacheHit,
@@ -167,7 +178,7 @@ const judgeOne = ({ question, judgeClient, judgmentCache, matchForensics, budget
 			}
 			// decided = persisted: putJudgment BEFORE delivery, exactly the payload the cache requires
 			judgmentCache.putJudgment(
-				{ ...cacheKey, generation, judgment: { choice: judged.choice, category: judged.category, rationale: judged.rationale, chosenStableId: judged.chosenCardStableId } },
+				{ ...cacheKey, generation, judgment: { choice: judged.choice, category: judged.reportedCategoryOnAbstain === undefined || judged.reportedCategoryOnAbstain === null ? judged.category : judged.reportedCategoryOnAbstain, rationale: judged.rationale, chosenStableId: judged.chosenCardStableId } },
 				(putError) => {
 					if (putError) {
 						callback(`${moduleName}: putJudgment FAILED for promptHash ${question.promptHash} (FATAL, never a warning): ${putError}`);

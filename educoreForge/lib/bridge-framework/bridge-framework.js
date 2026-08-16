@@ -1102,6 +1102,10 @@ const moduleFunction =
 								// the FROZEN judge record: evidence BY REFERENCE (promptHash, rendererVersion, judgeModel) + the ordinal and
 								// category — never cacheHit / usage / attempts (run-variable; they live in the report and forensics)
 								const judgeRecord = { promptHash: judged.promptHash, rendererVersion: evidenceRendererLib.RENDERER_VERSION, judgeModel: judged.judgeModel, choice: judged.choice, category: judged.category };
+								// a real abstention's SCHEMA-FORCED category rides in the frozen record only when present (RULING 2026-08-16, judgeComponent)
+								if (judged.reportedCategoryOnAbstain !== undefined && judged.reportedCategoryOnAbstain !== null) {
+									judgeRecord.reportedCategoryOnAbstain = judged.reportedCategoryOnAbstain;
+								}
 								if (judged.chosenCardStableId === null) {
 									report.judgeSpend.abstained += 1;
 									taskDone('', { ...oneTask.baseRecord, objectStableId: null, predicate: null, predicateAssertedBy: null, sourceLabel: null, confidence: null, abstained: true, judge: judgeRecord, renderedPoolStableIdList: question.renderedPoolStableIdList });
