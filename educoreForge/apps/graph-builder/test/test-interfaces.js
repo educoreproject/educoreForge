@@ -314,6 +314,21 @@ harness.note('nowhere else. interfaces.js says so in the same words.');
 		String(observed.err),
 		/bridge 'genericBridge' is REFUSED — no bridge implementation is registered; the bridge system is being rebuilt under the EDUcore Bridge Profile v1\.0/,
 	);
+	// The stub honours NO construction-time injection: a resolver or writer double handed to it would
+	// never run, and a suite that injected one would believe it had proven something. So injection is
+	// REFUSED at construction, naming the argument — never silently ignored. (Observed red by removing
+	// the throw — Phase 3 self-audit.)
+	let constructionRefusal = '';
+	try {
+		realComponents.bridgeMaker({ bridgePluginResolver: () => ({}) });
+	} catch (refusal) {
+		constructionRefusal = refusal.message;
+	}
+	harness.match(
+		'bridgeMaker() REFUSES BY NAME a construction-time injection it cannot honour',
+		constructionRefusal,
+		/bridgePluginResolver.*not honoured.*no bridge implementation is registered/,
+	);
 })();
 
 // manifestEditor — both doors and the handle they hand back, against the standardsDatabase double.
