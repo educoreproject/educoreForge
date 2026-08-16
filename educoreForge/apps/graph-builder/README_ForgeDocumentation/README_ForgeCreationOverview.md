@@ -19,7 +19,12 @@ SYNOPSIS
          node apps/graph-builder/graphBuilder.js -goldEvalCheck \
            --buildLogDirPath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/buildLogs/edfiOnlyRoundTrip_<stamp> </dev/null
 
-     Substitute <run> with any label. About two minutes with the warm cache. Look for
+     <run> is a label YOU choose to name this run -- it appears in two places, the scratch
+     standards database the build writes into and the directory its log lands in -- so that runs
+     do not overwrite each other and you can tell them apart afterward (the F3b builder used
+     preMigration and migrated; tq1 or 260816a would do). Any string that is safe in a filename.
+     The scratch database is created if absent and is not the golden's. About two minutes with
+     the warm cache. Look for
      "standardBase aea6d8dfe789..." in the log; that is the block id. This is the FROZEN per-forge
      command (README_ForgeFrameworkSpecification.md s9.2); the committed copy for every forge is
      lib/forge-framework/test/acceptance/acceptanceCommands.jsonc.
