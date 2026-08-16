@@ -3,22 +3,31 @@
 	"byBridgeName": {
 		"edfiCedsCrosswalkPlugin": {
 			"graphId": "GOLD_EVAL_260816@manifest:97c618c20e07c0c612957def69164402d364a98d5dfee865faacae1deace6382",
-			"debugDecisionBlockId": "ed6e63f7d6136ccef04b8f78db7bec8fa403b9c151afa3dd7f2479ce893ffc68",
-			"decisionBlockId": null,
-			"relationshipBlockId": null,
+			"debugDecisionBlockId": "93ef0f694933a86a9aff83134927292ed4231eb8cc8b758acc563e2d5767fd94",
+			"decisionBlockId": "81c9248d2e2bc712e3c55e5ac19c7b2c3fa0c53f022a19eb8aa5bb0214470ffb",
+			"relationshipBlockId": "87ca0943ee9af9d2ffa69bb3f7b6c1d6d3c20cf4cc81ee260599f0c04b9a5faa",
 			"standardBaseBlockId": "aea6d8dfe7899adef57c5ac3adb6b0df2bfc7e4a4ae859c4fa3893c132c8b304",
 			"hubBaseBlockId": "09a5d658807b9c22b44b28289d9ad4b47df15e45f44c9eacec765962fe487c33",
 			"frozenBy": {
 				"sessionName": "SABLE_RIVER (freeze ruling) / SCARLET_BRIDGE (recorded)",
 				"date": "2026-08-16",
-				"note": "debugDecisionBlockId FROZEN from the first accepted classifier run (rejudgeDebug: digest rule), reproduced by run 2 (edfiBridgeOnly) and run 3 (fourWithHubEdfiBridge) IDENTICALLY. decisionBlockId (the REAL-judge block, materialiseReal) and relationshipBlockId (the harvested block under BridgedRelation_EDFI_CEDS on the four-forge assembly) are NULL-AND-HONEST until the supervisor authorises the real-judge run — the debug runs end at the SSSOM export refusal (mappingProvider verifiedBy null, ruling 2026-08-16 18:39) before Phase C harvests, so no debug relationship block id exists to freeze, and a debug block never reaches a certified graph anyway (RULING R5). RE-FROZEN ~19:50 CDT: debugDecisionBlockId ed6e63f7… from rejudgeDebug cp2debug after the provenance (2e6a3ac) and judgeComponent (777cb18) commits moved declarationDigest + frameworkFingerprint; census EQUAL. previousDebugDecisionBlockIdList records the superseded ids (1ce6cbd9… = the freeze ruling's id; 22d1ab49… = run 1 without domainId). debugRelationshipBlockId / debugManifestId: the harvested DEBUG relationship block and the debug-bridged manifest of that run (a debug block never certifies; recorded for the replay-provenance trail only)."
+				"note": "debugDecisionBlockId FROZEN from the first accepted classifier run (rejudgeDebug: digest rule), reproduced by run 2 (edfiBridgeOnly) and run 3 (fourWithHubEdfiBridge) IDENTICALLY. decisionBlockId (the REAL-judge block, materialiseReal) and relationshipBlockId (the harvested block under BridgedRelation_EDFI_CEDS on the four-forge assembly) are NULL-AND-HONEST until the supervisor authorises the real-judge run — the debug runs end at the SSSOM export refusal (mappingProvider verifiedBy null, ruling 2026-08-16 18:39) before Phase C harvests, so no debug relationship block id exists to freeze, and a debug block never reaches a certified graph anyway (RULING R5). RE-FROZEN ~19:50 CDT: debugDecisionBlockId ed6e63f7… from rejudgeDebug cp2debug after the provenance (2e6a3ac) and judgeComponent (777cb18) commits moved declarationDigest + frameworkFingerprint; census EQUAL. previousDebugDecisionBlockIdList records the superseded ids (1ce6cbd9… = the freeze ruling's id; 22d1ab49… = run 1 without domainId). debugRelationshipBlockId / debugManifestId: the harvested DEBUG relationship block and the debug-bridged manifest of that run (a debug block never certifies; recorded for the replay-provenance trail only). RE-FROZEN AGAIN ~20:15 CDT: debugDecisionBlockId 93ef0f69… from rejudgeDebug cp2debug2 after 2a1c526 (bounded re-ask) moved the frameworkFingerprint again; census EQUAL; that run completed end to end with the round-trip stage ON (4 validators clean) — debug relationship block 8667abf7…, debug manifest 8abe3487…. previousDebugDecisionBlockIdList now leads with ed6e63f7… REAL BLOCK frozen ~20:20 CDT from materialiseReal cp2real3 (spend authorised by SABLE_RIVER): decision block 81c9248d…, judged 152 records (asked 137 live, cache 15, abstained 36; claude-opus-4-8), census EQUAL to the fixture; 666 edges materialised; SSSOM 666 rows / 655 subjects; relationship block 87ca0943… harvested under BridgedRelation_EDFI_CEDS; manifest 519267da… (5 members); round-trip stage 4/4 clean; container DEV_gb_materialize_63896_4 bolt 7817 (kept for the supervisor: the GOLD_EVAL_ rename is the supervisor act after PASS)."
 			},
-			"debugRelationshipBlockId": "0c74c35e2f1ba65c7a03b1e11a12b35613e971e9962ed4a36645b41199a1fd97",
-			"debugManifestId": "55628835e4c22b150e36591b820e9839e47b7bc55cbc9f61a97a71ccdcf3ef85",
+			"debugRelationshipBlockId": "8667abf7d49b1426f62e036c781642a051963997229a9462b29edefcc171844e",
+			"debugManifestId": "8abe348751e70b5f3d78ecdcfc4b94a2cfc9ef9537be7325d6ac42101570c9f9",
 			"previousDebugDecisionBlockIdList": [
+				"ed6e63f7d6136ccef04b8f78db7bec8fa403b9c151afa3dd7f2479ce893ffc68",
 				"1ce6cbd96f483b169b03c6ec4743696c7841a1f69887255168d633f13ffa3918",
 				"22d1ab498da58eba5ce117aa3803708af11e3cbb174746d00b33c21ec412c6cd"
-			]
+			],
+			"manifestId": "519267da32b7b59932e82fd88117467269d623fce29fddeb4bdfeca714b6b58a",
+			"judgeModel": "claude-opus-4-8",
+			"realJudgeSpend": {
+				"asked": 137,
+				"servedFromCache": 15,
+				"abstained": 36,
+				"judgedRecords": 152
+			}
 		},
 		"sifCedsStandardPlugin": {
 			"graphId": null,
