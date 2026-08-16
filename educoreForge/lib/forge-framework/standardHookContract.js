@@ -18,6 +18,9 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 const refuse = require('./refuse');
 
 const RESERVED_LOADER_NAME_LIST = Object.freeze(['metadata']);
+// the loader-name CONVENTION (uniform across bundles; the NAMES are each forge's own): lowerCamelCase,
+// letters and digits only. Refused by name below.
+const LOADER_NAME_RE = /^[a-z][A-Za-z0-9]*$/;
 
 const STANDARD_HOOK_CONTRACT = Object.freeze({
 	sourceLoaderList: Object.freeze({
@@ -78,6 +81,9 @@ const KIND_CHECKER_REGISTRY = Object.freeze({
 			}
 			if (typeof oneEntry.loaderName !== 'string' || oneEntry.loaderName.length === 0) {
 				return `entry ${entryIndex} is missing loaderName`;
+			}
+			if (!LOADER_NAME_RE.test(oneEntry.loaderName)) {
+				return `loaderName '${oneEntry.loaderName}' is not lowerCamelCase (the convention across every bundle: letters and digits, first letter lower — e.g. metaEdModel)`;
 			}
 			if (RESERVED_LOADER_NAME_LIST.indexOf(oneEntry.loaderName) !== -1) {
 				return `loaderName '${oneEntry.loaderName}' is reserved (it would shadow the framework's ${oneEntry.loaderName})`;

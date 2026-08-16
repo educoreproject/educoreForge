@@ -573,6 +573,14 @@ precondition's KIND; the retirement commit; the twin that proves it is live. The
   ⟨RULING 23:12 #10⟩ ⟨Profile §13⟩; the punch row reads "retire declaration X".
 - **No escape hatch.** Every allowance is a CLOSED enumeration over a NAMED step; there is no
   "skip the pipeline" allowance and no allowance a NEW forge may declare ⟨RISK §5 "The escape hatch"⟩.
+- **When to retire (v1.1.3, 2026-08-16).** A snapshot update, a loader change, or a source that
+  starts stating what it once omitted is the natural moment to retire the rows it makes unnecessary:
+  the commit that bumps the snapshot or changes the loader is FOLLOWED, in the same working session,
+  by one retirement commit per row it obsoletes (e.g. a snapshot whose `sourceFiles` become verified
+  paths retires E8; a source that starts stating its URL retires E6/S4/P16). The registry already
+  refuses a declared-but-unneeded row, so a stale row cannot sit silently — but refusing at build
+  time is the safety net, not the plan; the plan is to retire on the day the precondition dies. The
+  active registry is expected to SHRINK over time; a growing one is a smell.
 
 ### 7.2 The rows
 

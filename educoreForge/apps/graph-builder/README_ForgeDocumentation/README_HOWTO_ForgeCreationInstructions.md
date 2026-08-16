@@ -170,6 +170,14 @@ The forger reads exactly: `standardName`, `entryModule`, `defaultSnapshot`, `sou
 
 `lib/parser.js` (or several loaders — Ed-Fi has three). Contract:
 
+> **On the framework** the parser(s) become `sourceLoaderList` entries — `{ loaderName, load({ sourcePath,
+> additionalSourceInputPathByName, xLog }, cb) }`. `loaderName` is YOUR logical name for that input (there
+> is no shared vocabulary across forges), but the convention is uniform and enforced: lowerCamelCase,
+> letters and digits, unique within the bundle, declared once in the hooks file (Ed-Fi:
+> `metaEdModel`, `descriptorCodeValues`, `authoredCrosswalk`), and — if the names appear in the root's
+> `sourceFiles` — declared on the card too (compatibility row E8 is the Ed-Fi instance). A non-camelCase
+> or duplicate `loaderName` is refused by name (G-HOOK).
+
 ```
 parse<Standard>({ sourcePath, xLog }, callback(errString, parsed))
 ```

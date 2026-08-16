@@ -79,6 +79,12 @@ defect. Do not skip it because the suite is green.
   Undeclared-but-needed → refused. Declared-but-unneeded → refused. Outside its forge → refused.
 - Retiring a row is its own commit with a deliberately new block id, after migration.
 - Rows for a forge are added in that forge's migration commit, not ahead of it.
+- Retire promptly: when a snapshot updates or a loader changes, the same session retires every row
+  that change makes unnecessary, one commit each. The registry should shrink; if it grows, ask why.
+- Loader names (`sourceLoaderList[].loaderName`) are the forge's own logical names for its inputs —
+  not a shared vocabulary — but the CONVENTION is uniform: lowerCamelCase, letters and digits, unique
+  within the bundle, declared once in the hooks file, and (if they appear in `sourceFiles`) declared
+  on the card. The framework refuses a non-camelCase or duplicate loaderName by name.
 
 ## 6. When you are the supervisor
 

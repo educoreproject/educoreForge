@@ -81,6 +81,16 @@ const conjunctList = [
 		twinName: 'disableHookKindCheck', fileName: HOOK_CONTRACT_FILE, find: HOOK_KIND_CHECK_FIND, replace: HOOK_KIND_CHECK_REPLACE,
 	}),
 	refusalCase({
+		registry: twinRegistry, gateId: GATE_ID, conjunctId: 'loaderNameNotCamelCase',
+		title: 'a loaderName that is not lowerCamelCase is refused naming it', mode: 'inject',
+		shape: (scenario) => {
+			const [oneLoader] = toyScenario.toyHooksFactory().sourceLoaderList;
+			scenario.hookOverrides.sourceLoaderList = [{ loaderName: 'Toy_Model', load: oneLoader.load }];
+		},
+		regex: /loaderName 'Toy_Model' is not lowerCamelCase/,
+		twinName: 'disableHookKindCheck', fileName: HOOK_CONTRACT_FILE, find: HOOK_KIND_CHECK_FIND, replace: HOOK_KIND_CHECK_REPLACE,
+	}),
+	refusalCase({
 		registry: twinRegistry, gateId: GATE_ID, conjunctId: 'loaderNameMetadata',
 		title: "loaderName 'metadata' is refused as reserved", mode: 'inject',
 		shape: (scenario) => {
@@ -195,6 +205,6 @@ const conjunctList = [
 const gateDeclarationList = [{ gateId: GATE_ID, title: 'the hook set, validated by name', conjunctList }];
 
 runGateFamily(
-	{ harness, familyName: GATE_ID, gateDeclarationList, twinRegistry, makeSubject: toyScenario.makeScenario, cloneSubject: toyScenario.cloneScenario, expectedConjunctCount: 17, expectedTwinCount: 17 },
+	{ harness, familyName: GATE_ID, gateDeclarationList, twinRegistry, makeSubject: toyScenario.makeScenario, cloneSubject: toyScenario.cloneScenario, expectedConjunctCount: 18, expectedTwinCount: 18 },
 	() => harness.report(),
 );
