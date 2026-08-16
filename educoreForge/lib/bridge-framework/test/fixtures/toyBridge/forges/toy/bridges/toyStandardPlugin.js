@@ -51,7 +51,6 @@ const bridgeDeclaration = Object.freeze({
 	classSideRemodelTable: [],
 	blindingDeclaration: ['hubAnchorId', 'crossRefs', 'hubAnchorOriginalPropertyName', 'hubOptionCode', 'hubOptionOriginalPropertyName'],
 	evidenceHooksDeclared: { nominate: false, walkEvidence: false, globalGuidance: false },
-	globalGuidanceList: [],
 	compatibilityDeclarationList: [],
 });
 

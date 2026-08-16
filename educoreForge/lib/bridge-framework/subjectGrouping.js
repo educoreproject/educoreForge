@@ -60,7 +60,7 @@ const groupBySubject = ({ assertionList, subjectIdentity } = {}) => {
 // targetSetTextFor — the DISTINCT target set of a subject group as canonical text (for collision detection)
 const targetSetTextFor = (subjectGroup) =>
 	JSON.stringify(
-		Array.from(new Set(subjectGroup.assertionList.reduce((soFar, oneAssertion) => soFar.concat(oneAssertion.targetKeyList || []), []))).sort(),
+		Array.from(new Set(subjectGroup.assertionList.reduce((soFar, oneAssertion) => soFar.concat(oneAssertion.targetKeyList), []))).sort(),
 	);
 
 // verifyResolutionAndMerge — every subject's resolution verified against the declared subject nodes (else

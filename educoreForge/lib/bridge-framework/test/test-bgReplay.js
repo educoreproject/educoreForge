@@ -359,7 +359,17 @@ cacheConjunctList.push(
 		twinNameList: ['countsDroppedFromReport'],
 		judge: succeeded((runReport) => ({ pass: Boolean(runReport.counts.judgeSpend) && runReport.counts.judgeSpend.asked === runReport.counts.cardinalityCensus.perTarget.judgedCount && runReport.counts.judgeSpend.servedFromCache === 0 && Number.isInteger(runReport.counts.judgeSpend.abstained), detail: JSON.stringify(runReport.counts.judgeSpend) })),
 	}),
+	runConjunct({
+		conjunctId: 'f_declaredBudgetValuePinned',
+		title: 'the DECLARED per-run judgment ceiling is PINNED: the constructed framework\'s constants.MAX_JUDGMENT_COUNT_PER_RUN === 20000 AND the run\'s effective budget equals it when no override is passed (RULING BR10 — the halt mechanism is gated by (e); the declared value is gated here)',
+		twinNameList: ['budgetRaisedTwentyFold'],
+		judge: succeeded((runReport, outcome) => {
+			const declared = outcome.framework.constants.MAX_JUDGMENT_COUNT_PER_RUN;
+			return { pass: declared === 20000, detail: `declared ${declared}` };
+		}),
+	}),
 );
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-CACHE', conjunctId: 'f_declaredBudgetValuePinned', twinName: 'budgetRaisedTwentyFold', fileName: FRAMEWORK_FILE, find: 'const MAX_JUDGMENT_COUNT_PER_RUN = 20000;', replace: 'const MAX_JUDGMENT_COUNT_PER_RUN = 400000;' });
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-CACHE', conjunctId: 'b_staleHitRefused', twinName: 'serveStaleHit', fileName: JUDGE_FILE, find: '\t\tif (!stillValid) {', replace: '\t\tif (false && !stillValid) {' });
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-CACHE', conjunctId: 'c_debugRunWritesNoRow', twinName: 'debugDoubleWrites', fileName: JUDGE_FILE, find: '\t\t\tif (isDebugClient) {\n\t\t\t\tdeliver({ judgment: judged, cacheHit: false, attempts: clientReturn.attempts, usage: clientReturn.usage });\n\t\t\t\treturn;\n\t\t\t}', replace: '\t\t\tif (false && isDebugClient) {\n\t\t\t\tdeliver({ judgment: judged, cacheHit: false, attempts: clientReturn.attempts, usage: clientReturn.usage });\n\t\t\t\treturn;\n\t\t\t}' });
 // under the debug-writes twin judgmentCache is present in the scenario stores (the framework requires it on rebridge), so the write lands
@@ -673,6 +683,6 @@ const gateDeclarationList = [
 ];
 
 runGateFamily(
-	{ harness, familyName: 'BG-REPLAY+BG-CACHE+BG-JUDGE+BG-POOL-ORDER+BG-DET', gateDeclarationList, twinRegistry, makeSubject: scenarioLib.makeScenario, cloneSubject: scenarioLib.cloneScenario, expectedConjunctCount: 9 + 6 + 9 + 3 + 4, expectedTwinCount: 9 + 6 + 9 + 3 + 4 },
+	{ harness, familyName: 'BG-REPLAY+BG-CACHE+BG-JUDGE+BG-POOL-ORDER+BG-DET', gateDeclarationList, twinRegistry, makeSubject: scenarioLib.makeScenario, cloneSubject: scenarioLib.cloneScenario, expectedConjunctCount: 9 + 7 + 9 + 3 + 4, expectedTwinCount: 9 + 7 + 9 + 3 + 4 },
 	() => harness.report(),
 );

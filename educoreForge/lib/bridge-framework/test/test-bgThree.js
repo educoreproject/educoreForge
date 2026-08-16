@@ -58,6 +58,7 @@ const FRAMEWORK_FILE = 'bridge-framework.js';
 const MATERIALISER_FILE = 'materialiser.js';
 const RULES_FILE = 'graphSeamRules.js';
 const DOUBLE_FILE = 'graphDouble.js';
+const SEAM_RULES_FILE = 'graphSeamRules.js';
 const CLASSIFICATION_FILE = 'classification.js';
 const JUDGE_FILE = 'judgeComponent.js';
 const PAIR_LABEL = 'BridgedRelation_TOY_TOYHUB';
@@ -116,6 +117,7 @@ const threeConjunctList = [
 	runConjunct({ conjunctId: 'd_matchBasisConsistentWithProviderTool', title: 'matchBasis is CONSISTENT with mappingProvider / mappingTool (forward table walk: standard/crosswalk ⇒ provider present, tool present iff judged)', twinNameList: ['crosswalkWithoutProvider'], judge: succeeded((runReport, outcome) => { const bad = edgesOf(outcome).filter((oneEdge) => !oneEdge.properties.mappingProvider || (oneEdge.properties.resolution === 'judged') !== (oneEdge.properties.mappingTool !== undefined)); return { pass: bad.length === 0, detail: `${bad.length} bad` }; }) }),
 	runConjunct({ conjunctId: 'e_decisionBlockHashOnEveryEdgeEqualsBlockId', title: 'decisionBlockHash on EVERY edge and EQUAL to the block id', twinNameList: ['dropHashOnOneEdge'], judge: succeeded((runReport, outcome) => { const bad = edgesOf(outcome).filter((oneEdge) => oneEdge.properties.decisionBlockHash !== runReport.decisionBlock.decisionBlockHash); return { pass: bad.length === 0, detail: `${bad.length} bad` }; }) }),
 	runConjunct({ conjunctId: 'f_provenanceTierEqualsFixedValue', title: "provenanceTier EQUALS the FIXED producer-derived value on every edge (invalid-debug under the debug judge; spec-authoritative for an authored block under a real client)", twinNameList: ['specAuthoritativeStampedOnDebugBlock'], judge: succeeded((runReport, outcome) => { const expected = producerTierExpected(outcome); const bad = edgesOf(outcome).filter((oneEdge) => oneEdge.properties.provenanceTier !== expected); return { pass: bad.length === 0, detail: `expected ${expected}; ${bad.length} bad` }; }) }),
+	runConjunct({ conjunctId: 'g_matchIdDistinctPerEdge', title: 'matchId (INTERNAL, written to every edge) is DISTINCT per edge — a content address over (block, subject, predicate, object), never a constant (RULING BR10)', twinNameList: ['matchIdConstant'], judge: succeeded((runReport, outcome) => { const idList = edgesOf(outcome).map((oneEdge) => oneEdge.properties.matchId); const distinct = new Set(idList).size; return { pass: idList.length > 1 && idList.every((oneId) => /^[0-9a-f]{64}$/.test(String(oneId))) && distinct === idList.length, detail: `${distinct} distinct of ${idList.length}` }; }) }),
 	runConjunct({ conjunctId: 'f_specAuthoritativeUnderRealClient', title: "under a REAL-client double every authored edge carries provenanceTier 'spec-authoritative' (RULING 12:20)", twinNameList: ['tierAbsentUnderRealClient'], shape: (scenario) => { scenario.judgeClientOverride = scenarioLib.makeFakeRealClient({}); }, judge: succeeded((runReport, outcome) => { const bad = edgesOf(outcome).filter((oneEdge) => oneEdge.properties.provenanceTier !== 'spec-authoritative'); return { pass: edgesOf(outcome).length > 0 && bad.length === 0, detail: `${bad.length} bad of ${edgesOf(outcome).length}` }; }) }),
 ];
 writerPropertyTwin({ conjunctGateId: 'BG-THREE', conjunctId: 'a_matchBasisOnEveryEdge', twinName: 'stripMatchBasis', mutateProperties: (properties) => { delete properties.matchBasis; return properties; } });
@@ -124,6 +126,7 @@ writerPropertyTwin({ conjunctGateId: 'BG-THREE', conjunctId: 'c_predicateSkosAnd
 writerPropertyTwin({ conjunctGateId: 'BG-THREE', conjunctId: 'd_matchBasisConsistentWithProviderTool', twinName: 'crosswalkWithoutProvider', mutateProperties: (properties) => { delete properties.mappingProvider; return properties; } });
 writerPropertyTwin({ conjunctGateId: 'BG-THREE', conjunctId: 'e_decisionBlockHashOnEveryEdgeEqualsBlockId', twinName: 'dropHashOnOneEdge', mutateProperties: (properties, { subjectStableId }) => (subjectStableId === 'toy:property/Student.FirstName' ? { ...properties, decisionBlockHash: 'a'.repeat(64) } : properties) });
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-THREE', conjunctId: 'f_provenanceTierEqualsFixedValue', twinName: 'specAuthoritativeStampedOnDebugBlock', fileName: MATERIALISER_FILE, find: '\tif (debugMark) {\n\t\treturn PROVENANCE_TIER.INVALID_DEBUG;\n\t}', replace: '\tif (false && debugMark) {\n\t\treturn PROVENANCE_TIER.INVALID_DEBUG;\n\t}' });
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-THREE', conjunctId: 'g_matchIdDistinctPerEdge', twinName: 'matchIdConstant', fileName: MATERIALISER_FILE, find: "\t\t[MAPPING_PROPERTIES.MATCH_ID]: sha256Hex(`${decisionBlockHash}\\n${record.subjectStableId}\\n${record.predicate}\\n${record.objectStableId}`),", replace: "\t\t[MAPPING_PROPERTIES.MATCH_ID]: sha256Hex('constant')," });
 writerPropertyTwin({ conjunctGateId: 'BG-THREE', conjunctId: 'f_specAuthoritativeUnderRealClient', twinName: 'tierAbsentUnderRealClient', mutateProperties: (properties) => { delete properties.provenanceTier; return properties; } });
 
 // ---------------------------------------------------------------------
@@ -146,6 +149,13 @@ const conservConjunctList = [
 	runConjunct({ conjunctId: 'c_noStructuralTierOnMappingEdge', title: "no mapping edge carries provenanceTier 'structural'", twinNameList: ['structuralTier'], judge: succeeded((runReport, outcome) => { const bad = edgesOf(outcome).filter((oneEdge) => oneEdge.properties.provenanceTier === 'structural'); return { pass: bad.length === 0, detail: `${bad.length} bad` }; }) }),
 	runConjunct({ conjunctId: 'd_noNonMappingEdgeUnderLabel', title: 'NO non-mapping edge under the pair-scoped label: every harvested edge type ∈ SKOS_EDGE_TYPES', twinNameList: ['hasPropertyUnderLabel'], judge: succeeded((runReport, outcome) => { const harvest = outcome.graphDouble.harvestByLabel({ applyLabel: PAIR_LABEL }); const bad = harvest.edgeList.filter((oneEdge) => PREDICATE_BY_TYPE[oneEdge.type] === undefined); return { pass: harvest.edgeList.length > 0 && bad.length === 0, detail: `${bad.length} non-mapping of ${harvest.edgeList.length} harvested` }; }) }),
 	runConjunct({ conjunctId: 'e_sourceNodePropertiesUnchanged', title: 'source node PROPERTIES are byte-unchanged by materialise (labels aside)', twinNameList: ['writerStampsParentId'], judge: succeeded((runReport, outcome, scenario) => { const before = scenario.graph.nodeList.filter((oneNode) => oneNode.properties._source === 'Toy').map((oneNode) => JSON.stringify(oneNode.properties)).join('\n'); const after = outcome.graphDouble.state.nodeList.filter((oneNode) => oneNode.properties._source === 'Toy').map((oneNode) => JSON.stringify(oneNode.properties)).join('\n'); return { pass: before === after, detail: before === after ? 'byte-equal' : 'CHANGED' }; }) }),
+	refusalCase({ registry: twinRegistry, gateId: 'BG-CONSERV', conjunctId: 'f_strayPropertyRefusedAtSeam', title: "an edge carrying a property OUTSIDE vocabulary.MAPPING_PROPERTIES is REFUSED at the write seam by name (the CLOSED-SET check, RULING BF12 / BR3 — the run fails; nothing is written)", shape: (scenario) => {
+		// a writer wrapper that lays ONE stray property over every edge BEFORE the rule-checked writer sees it (no bypass past the seam)
+		scenario.graphWriterFactoryOverride = (graphDouble) => (writerArgs) => {
+			const inner = graphDouble.graphWriterFactory(writerArgs);
+			return { writeMappingEdge: ({ subjectStableId, objectStableId, edgeType, edgeProperties }, callback) => inner.writeMappingEdge({ subjectStableId, objectStableId, edgeType, edgeProperties: { ...edgeProperties, smuggledNote: 'not a vocabulary row' } }, callback), close: inner.close };
+		};
+	}, regex: /edge property 'smuggledNote' is outside vocabulary\.MAPPING_PROPERTIES/, twinName: 'closedSetCheckDeleted', fileName: SEAM_RULES_FILE, find: "\tconst outside = Object.keys(edgeProperties).find((oneName) => MAPPING_PROPERTY_NAME_LIST.indexOf(oneName) === -1);\n\tif (outside !== undefined) {", replace: "\tconst outside = undefined;\n\tif (outside !== undefined) {" }),
 ];
 conservConjunctList[0].twinNameList = ['cardToCardEdgePastTheSeam'];
 scenarioTwin({ registry: twinRegistry, gateId: 'BG-CONSERV', conjunctId: 'a_objectHubReferenceSubjectSourceEqualsPairing', twinName: 'cardToCardEdgePastTheSeam', leverKind: 'productionMutation', mutate: (scenario) => {
@@ -253,6 +263,6 @@ const gateDeclarationList = [
 ];
 
 runGateFamily(
-	{ harness, familyName: 'BG-THREE+BG-EDGE-UNIQUE+BG-CONSERV+BG-HARVEST+BG-P1/P2/P4/P5/P6', gateDeclarationList, twinRegistry, makeSubject: scenarioLib.makeScenario, cloneSubject: scenarioLib.cloneScenario, expectedConjunctCount: 7 + 3 + 5 + 3 + 3 + 2 + 4 + 3 + 3 },
+	{ harness, familyName: 'BG-THREE+BG-EDGE-UNIQUE+BG-CONSERV+BG-HARVEST+BG-P1/P2/P4/P5/P6', gateDeclarationList, twinRegistry, makeSubject: scenarioLib.makeScenario, cloneSubject: scenarioLib.cloneScenario, expectedConjunctCount: 8 + 3 + 6 + 3 + 3 + 2 + 4 + 3 + 3 },
 	() => harness.report(),
 );

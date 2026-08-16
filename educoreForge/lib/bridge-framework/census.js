@@ -135,8 +135,7 @@ const cardinalityCensus = ({
 	return { perTarget, perSubject };
 };
 
-// sumInvariantHolds(perSubject) → boolean (BG-CENSUS c)
-const sumInvariantHolds = (perSubject) =>
-	perSubject.specifiedSubjectCount + perSubject.judgedSubjectCount + perSubject.orphanSubjectCount + perSubject.subjectCollisionCount + perSubject.sourceGapCount === perSubject.subjectCount;
+// (a `sumInvariantHolds` helper once lived here; it restated the definition of subjectCount and was RETIRED by
+// RULING BR10 — BG-CENSUS (c) now checks subjectCount against the WALK, an independent source)
 
-module.exports = { cardinalityCensus, contentionCensus, sumInvariantHolds, SUBJECT_BUCKET_LIST, moduleName };
+module.exports = { cardinalityCensus, contentionCensus, SUBJECT_BUCKET_LIST, moduleName };

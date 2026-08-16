@@ -23,7 +23,8 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // headerOverrideByIndex / a top-level reference naming a column no walk channel classified; a forgedGraph
 // channel without channelPropertyList; a hook missing / unknown / wrong arity; a hook declared false but
 // present; a forbidden require or function name; a non-empty compatibilityDeclarationList; a
-// mappingProvider.url that is not a URL; a non-empty globalGuidanceList with globalGuidance undeclared.
+// mappingProvider.url that is not a URL; globalGuidanceList present while globalGuidance is undeclared, or absent while it
+// is declared (BR4: the key is REQUIRED iff the hook is true, FORBIDDEN otherwise).
 
 const fs = require('fs');
 const path = require('path');
@@ -159,7 +160,9 @@ const BRIDGE_DECLARATION_CONTRACT = Object.freeze({
 	classSideRemodelTable: Object.freeze({ required: true, kind: 'classSideRemodelTable' }),
 	blindingDeclaration: Object.freeze({ required: true, kind: 'stringList' }),
 	evidenceHooksDeclared: Object.freeze({ required: true, kind: 'evidenceHooksDeclared' }),
-	globalGuidanceList: Object.freeze({ required: true, kind: 'stringList' }),
+	// CONDITIONAL presence (RULING BR4): REQUIRED iff evidenceHooksDeclared.globalGuidance === true, FORBIDDEN (refused
+	// by name) when it is false — not a default, a conditional requirement; SPEC §10.1 as printed (hook false, no key) validates
+	globalGuidanceList: Object.freeze({ required: false, kind: 'stringList', presentIff: Object.freeze({ key: 'evidenceHooksDeclared', member: 'globalGuidance', value: true }) }),
 	compatibilityDeclarationList: Object.freeze({ required: true, kind: 'compatibilityDeclarationList' }),
 });
 
@@ -723,7 +726,20 @@ const validateBridgeDeclaration = ({ bridgeDeclaration, bundleDirPath } = {}) =>
 		const propertyName = contractNameList[nameIndex];
 		const contractEntry = BRIDGE_DECLARATION_CONTRACT[propertyName];
 		const value = bridgeDeclaration[propertyName];
-		if (value === undefined) {
+		if (contractEntry.presentIff !== undefined) {
+			// a conditionally-present key: its governing key was walked (and validated) EARLIER in contract order
+			const governing = bridgeDeclaration[contractEntry.presentIff.key];
+			const expectedPresent = isPlainObject(governing) && governing[contractEntry.presentIff.member] === contractEntry.presentIff.value;
+			if (expectedPresent && value === undefined) {
+				return refuseWith(`bridgeDeclaration is missing key '${propertyName}' (REQUIRED because ${contractEntry.presentIff.key}.${contractEntry.presentIff.member} is ${JSON.stringify(contractEntry.presentIff.value)})`, `declare ${propertyName} (${contractEntry.kind}); absent is absent, never defaulted (RULING BR4)`);
+			}
+			if (!expectedPresent && value !== undefined) {
+				return refuseWith(`bridgeDeclaration carries key '${propertyName}' which is FORBIDDEN while ${contractEntry.presentIff.key}.${contractEntry.presentIff.member} is not ${JSON.stringify(contractEntry.presentIff.value)}`, `remove ${propertyName} (an empty list is not "absent"; the key must not be declared) or declare the hook (RULING BR4)`);
+			}
+			if (!expectedPresent) {
+				continue;
+			}
+		} else if (value === undefined) {
 			return refuseWith(`bridgeDeclaration is missing required key '${propertyName}'`, `declare ${propertyName} (${contractEntry.kind}); absent is absent, never defaulted (SPEC §4.1)`);
 		}
 		const reason = KIND_CHECKER_REGISTRY[contractEntry.kind](value, { propertyName, contractEntry, bridgeDeclaration });
@@ -734,9 +750,6 @@ const validateBridgeDeclaration = ({ bridgeDeclaration, bundleDirPath } = {}) =>
 	// cross-key rules
 	if (PRODUCER_KIND_BY_MATCH_BASIS[bridgeDeclaration.matchBasis] !== bridgeDeclaration.producerKind) {
 		return refuseWith(`bridgeDeclaration producerKind '${bridgeDeclaration.producerKind}' disagrees with matchBasis '${bridgeDeclaration.matchBasis}' (which is '${PRODUCER_KIND_BY_MATCH_BASIS[bridgeDeclaration.matchBasis]}')`, 'declared AND checked so build.js can never infer the block suffix (RULING A1)');
-	}
-	if (bridgeDeclaration.globalGuidanceList.length > 0 && bridgeDeclaration.evidenceHooksDeclared.globalGuidance !== true) {
-		return refuseWith(`bridgeDeclaration globalGuidanceList is non-empty (${bridgeDeclaration.globalGuidanceList.length}) while evidenceHooksDeclared.globalGuidance is false`, 'declare the hook true or empty the list (RULING BF18)');
 	}
 	const resolved = resolveChannels({ bridgeDeclaration, bundleDirPath });
 	if (resolved.error) {

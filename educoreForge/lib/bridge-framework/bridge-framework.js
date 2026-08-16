@@ -20,8 +20,9 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //
 // The pipeline is orchestration-side end to end: taskListPlus + pipeRunner, callback error-first, every
 // refusal a NAMED string; refuse.byName RETURNS an Error and each module stringifies at its callback boundary
-// (RULING BF12); no async/await; no try/catch as control flow (the two sanctioned adapters live in
-// decisionBlock.js — canonicalText's throw and JSON.parse). A cheap refusal precedes a costly step.
+// (RULING BF12); no async/await; no try/catch as control flow (the THREE sanctioned throw-to-value adapters:
+// decisionBlock.js — canonicalText's throw and JSON.parse; bridgePluginContract.js — TextDecoder's fatal decode).
+// A cheap refusal precedes a costly step.
 
 const path = require('path');
 const crypto = require('crypto');
@@ -992,6 +993,7 @@ const moduleFunction =
 					const judgeKind = debugMark ? `debug:${judgeClient.ruleName}` : `anthropic:${judgeClient.model}`;
 					const budget = { maxJudgmentCount, judgmentCountSoFar: 0 };
 					const evidenceView = args.reader.forEvidence();
+					// the key is PRESENT iff the hook is declared (contract, RULING BR4); with the hook off there is no guidance to render
 					const globalGuidanceList = bridgeDeclaration.evidenceHooksDeclared.globalGuidance ? bridgeDeclaration.globalGuidanceList.slice() : [];
 					const judgeOneTask = (oneTask, taskIndex, taskDone) => {
 						const subjectNode = args.subjectNodeByStableId[oneTask.baseRecord.subjectStableId];
@@ -1245,7 +1247,7 @@ const moduleFunction =
 				MAX_JUDGMENT_COUNT_PER_RUN,
 				PROPERTY_TIER,
 			}),
-			census: Object.freeze({ cardinalityCensus: censusLib.cardinalityCensus, contentionCensus: censusLib.contentionCensus, sumInvariantHolds: censusLib.sumInvariantHolds }),
+			census: Object.freeze({ cardinalityCensus: censusLib.cardinalityCensus, contentionCensus: censusLib.contentionCensus }),
 			decisionBlock: Object.freeze({ frozenTextFor: decisionBlockLib.frozenTextFor, blockIdFor: decisionBlockLib.blockIdFor, parseFrozenText: decisionBlockLib.parseFrozenText, canonicalText: decisionBlockLib.canonicalText, HEADER_KEY_ORDER: decisionBlockLib.HEADER_KEY_ORDER }),
 			frameworkFingerprint: decisionBlockLib.frameworkFingerprint,
 			refuse: Object.freeze({ byName: refuse.byName }),

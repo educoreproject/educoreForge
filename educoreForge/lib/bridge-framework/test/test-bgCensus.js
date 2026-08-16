@@ -49,6 +49,7 @@ const { runGateFamily } = require(path.join(__dirname, '..', '..', 'forge-framew
 const { makeTwinRegistry } = require(path.join(__dirname, '..', '..', 'forge-framework', 'roundTripHarness', 'twinRegistry'));
 const censusLib = require('../census');
 const classificationLib = require('../classification');
+const subjectGroupingLib = require('../subjectGrouping');
 
 const twinRegistry = makeTwinRegistry();
 const FRAMEWORK_FILE = 'bridge-framework.js';
@@ -112,12 +113,24 @@ const censusConjunctList = [
 		}),
 	}),
 	runConjunct({
-		conjunctId: 'c_perSubjectSumInvariant',
-		title: 'the per-SUBJECT sum invariant holds: specified + judged + orphan + subjectCollision + sourceGap === subjectCount',
-		twinNameList: ['countCollisionAlsoAsOrphan'],
-		judge: succeeded((runReport, outcome) => {
-			const perSubject = blockOf(outcome).header.cardinalityCensus.perSubject;
-			return { pass: censusLib.sumInvariantHolds(perSubject) && perSubject.subjectCount === 16, detail: JSON.stringify(perSubject) };
+		conjunctId: 'c_subjectCountEqualsWalkSubjects',
+		title: "subjectCount EQUALS the distinct subject count seen by the WALK (an INDEPENDENT source, RULING BR10): the walk's distinct subject keys minus the subjects whose every row is a sentinel-only row (declared sentinel list) or a row the block names refused (labelRefused / consistencyRefused by sourceLocator) — 20 walked, 4 excluded, 16",
+		twinNameList: ['sourceGapDroppedFromSubjectCount'],
+		shape: (scenario) => {
+			scenario.walkCapture = { walked: null };
+			wrapWalk(scenario, (walked) => { scenario.walkCapture.walked = walked; return walked; });
+		},
+		judge: succeeded((runReport, outcome, scenario) => {
+			const block = blockOf(outcome);
+			const walked = scenario.walkCapture.walked;
+			const declaration = require(CROSSWALK_PLUGIN_PATH).bridgeDeclaration;
+			const sentinelList = declaration.sourceChannelList.find((oneChannel) => oneChannel.channelKey === 'crosswalk').absentTargetSentinelList;
+			const refusedLocatorSet = new Set(block.refusalList.filter((oneRefusal) => oneRefusal.kind === 'labelRefused' || oneRefusal.kind === 'consistencyRefused').map((oneRefusal) => JSON.stringify(oneRefusal.sourceLocator)));
+			const isSentinelRow = (oneAssertion) => oneAssertion.rawTargetList.length > 0 && oneAssertion.rawTargetList.every((oneTarget) => sentinelList.indexOf(oneTarget.rawValue) !== -1);
+			const survivingKeySet = new Set(walked.assertionList.filter((oneAssertion) => !isSentinelRow(oneAssertion) && !refusedLocatorSet.has(JSON.stringify(oneAssertion.sourceLocator))).map((oneAssertion) => subjectGroupingLib.subjectKeyFor({ subjectIdentity: declaration.subjectIdentity, assertion: oneAssertion })));
+			const walkedKeyCount = new Set(walked.assertionList.map((oneAssertion) => subjectGroupingLib.subjectKeyFor({ subjectIdentity: declaration.subjectIdentity, assertion: oneAssertion }))).size;
+			const perSubject = block.header.cardinalityCensus.perSubject;
+			return { pass: walkedKeyCount === 20 && survivingKeySet.size === 16 && perSubject.subjectCount === survivingKeySet.size, detail: `walk ${walkedKeyCount} distinct, ${survivingKeySet.size} surviving vs subjectCount ${perSubject.subjectCount}` };
 		}),
 	}),
 	runConjunct({
@@ -138,7 +151,7 @@ const censusConjunctList = [
 		judge: succeeded((runReport, outcome) => {
 			const codeRecordList = recordFor(outcome, 'toy:property/School.Code');
 			const perSubject = blockOf(outcome).header.cardinalityCensus.perSubject;
-			return { pass: codeRecordList.length === 2 && codeRecordList.every((oneRecord) => oneRecord.classification === 'specified') && perSubject.specifiedSubjectCount === 6 && censusLib.sumInvariantHolds(perSubject), detail: `School.Code records ${codeRecordList.length}; specifiedSubjectCount ${perSubject.specifiedSubjectCount}` };
+			return { pass: codeRecordList.length === 2 && codeRecordList.every((oneRecord) => oneRecord.classification === 'specified') && perSubject.specifiedSubjectCount === 6, detail: `School.Code records ${codeRecordList.length}; specifiedSubjectCount ${perSubject.specifiedSubjectCount}` };
 		}),
 	}),
 	runConjunct({
@@ -173,7 +186,7 @@ censusConjunctList[1].evaluate = ((innerEvaluate) => (scenario, callback) => inn
 	}
 	callback('', verdict);
 }))(censusConjunctList[1].evaluate);
-frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-CENSUS', conjunctId: 'c_perSubjectSumInvariant', twinName: 'countCollisionAlsoAsOrphan', fileName: CENSUS_FILE, find: '\tperSubject.subjectCount = perSubject.specifiedSubjectCount + perSubject.judgedSubjectCount + perSubject.orphanSubjectCount + perSubject.subjectCollisionCount + perSubject.sourceGapCount;', replace: '\tperSubject.orphanSubjectCount += perSubject.subjectCollisionCount;\n\tperSubject.subjectCount = perSubject.specifiedSubjectCount + perSubject.judgedSubjectCount + perSubject.orphanSubjectCount + perSubject.sourceGapCount;' });
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-CENSUS', conjunctId: 'c_subjectCountEqualsWalkSubjects', twinName: 'sourceGapDroppedFromSubjectCount', fileName: CENSUS_FILE, find: '\tperSubject.subjectCount = perSubject.specifiedSubjectCount + perSubject.judgedSubjectCount + perSubject.orphanSubjectCount + perSubject.subjectCollisionCount + perSubject.sourceGapCount;', replace: '\tperSubject.subjectCount = perSubject.specifiedSubjectCount + perSubject.judgedSubjectCount + perSubject.orphanSubjectCount + perSubject.subjectCollisionCount;' });
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-CENSUS', conjunctId: 'd_contentionRecomputedPerRun', twinName: 'contentionFromConstant', fileName: FRAMEWORK_FILE, find: '\t\t\t\t\t\tconst contention = censusLib.contentionCensus({ cardListByCanonicalKey, tier: PROPERTY_TIER });', replace: "\t\t\t\t\t\tconst contention = { cardCount: 2777, distinctKeyCount: 2324, contendedKeyCount: 260, worstContention: 13, tier: PROPERTY_TIER };" });
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-CENSUS', conjunctId: 'e_everySubjectInExactlyOneBucket', twinName: 'countMixedSubjectTwice', fileName: CENSUS_FILE, find: '\t\tif (soFar === undefined || thisRank > soFar.rank) {\n\t\t\tbucketBySubjectStableId[oneRecord.subjectStableId] = { rank: thisRank, subjectWeight };\n\t\t}', replace: "\t\tif (soFar === undefined || thisRank > soFar.rank) {\n\t\t\tbucketBySubjectStableId[oneRecord.subjectStableId] = { rank: thisRank, subjectWeight };\n\t\t} else if (thisRank === soFar.rank) {\n\t\t\tbucketBySubjectStableId[oneRecord.subjectStableId] = { rank: thisRank, subjectWeight: soFar.subjectWeight + subjectWeight };\n\t\t}" });
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-CENSUS', conjunctId: 'f_mismatchSubCountReconciles', twinName: 'mismatchStampedSpecified', fileName: FRAMEWORK_FILE, find: "\t\t\t\t\t\t\t\t\tresolution: 'judged',\n\t\t\t\t\t\t\t\t\tmappingJustification: 'semapv:CompositeMatching',\n\t\t\t\t\t\t\t\t\tsourceSideMismatch:", replace: "\t\t\t\t\t\t\t\t\tresolution: classified.reason === 'sourceSideMismatch' ? 'specified' : 'judged',\n\t\t\t\t\t\t\t\t\tmappingJustification: 'semapv:CompositeMatching',\n\t\t\t\t\t\t\t\t\tsourceSideMismatch:" });

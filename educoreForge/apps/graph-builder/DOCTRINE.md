@@ -40,7 +40,8 @@ The non-test source files that interface the driver:
   `forEvidence()` views. Driver required LAZILY inside the factory; `.then().catch()`-to-callback at the leaf.
 - `lib/bridge-framework/graphWriter.js` — the Bridge Framework's ONE bolt-facing WRITE file: `writeMappingEdge`
   (the pair-scoped label on both endpoints, MERGE on (from, type, to), the §6 refusals). Same dispensation.
-  Also `lib/forge-framework/roundTripHarness/graphReader.js` (the round-trip harness's reader, F3a).
+- `lib/forge-framework/roundTripHarness/graphReader.js` — the round-trip harness's reader (F3a). Same
+  dispensation (listed by RULING BR11, 2026-08-16: a bolt-touching file list must be complete).
 
 ## How the dispensation is actually taken today (accurate as of this commit)
 

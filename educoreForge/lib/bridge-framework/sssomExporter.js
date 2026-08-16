@@ -12,7 +12,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //                     objectSourceVersion, subjectMatchField, objectMatchField, subjectCuriePrefix,
 //                     labelTableProvenance | channelAssertionProvenance, authorId?, creatorId? }
 //
-// Rows: subject_id (subjectCuriePrefix:<forged id>), object_id (the card uri), predicate_id (skos:…),
+// Rows: subject_id (the forged stableId VERBATIM — it already begins with subjectCuriePrefix:, RULING BR2), object_id (the card uri), predicate_id (skos:…),
 // mapping_justification, object_label, confidence (judged only), subject_source/_version, object_source/
 // _version, subject_match_field, object_match_field, mapping_tool (+version, judged only), predicate_asserted_by,
 // source_label. mapping_date ONLY when a declared source column supplied it (none in v1 — a mapping_date is
@@ -123,9 +123,16 @@ const toSssomTsv = ({ decisionBlock, decisionBlockHash, cardByStableId, curieMap
 			refuseWith(`objectStableId ${oneRecord.objectStableId} has no card with uri and name`, 'object_id is the card uri and object_label its name (MUST)');
 			return;
 		}
+		// subject_id IS the forged stableId VERBATIM — a forged id already carries its standard's prefix
+		// (`toy:property/…`, `<standard>:property/…`); prepending would double it (RULING BR2). A stableId that does NOT
+		// begin with the declared subjectCuriePrefix is a contract violation and is REFUSED by name, never repaired.
+		if (oneRecord.subjectStableId.indexOf(`${setLevelSlots.subjectCuriePrefix}:`) !== 0) {
+			refuseWith(`subjectStableId '${oneRecord.subjectStableId}' does not begin with the declared subjectCuriePrefix '${setLevelSlots.subjectCuriePrefix}:'`, 'subject_id is the forged stableId verbatim (RULING BR2); the prefix is never prepended and never repaired');
+			return;
+		}
 		subjectSet.add(oneRecord.subjectStableId);
 		rowList.push({
-			subject_id: `${setLevelSlots.subjectCuriePrefix}:${oneRecord.subjectStableId}`,
+			subject_id: oneRecord.subjectStableId,
 			predicate_id: `skos:${oneRecord.predicate}`,
 			object_id: card.uri,
 			mapping_justification: justification,

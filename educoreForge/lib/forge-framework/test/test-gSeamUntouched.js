@@ -47,7 +47,7 @@ const SEAM_FILE_LIST = Object.freeze([
 	// apps/graph-builder/interfaces.js — REMOVED from this list 2026-08-16 (RULING SABLE_RIVER 17:10, B2 order): the Bridge
 	// Framework's B2 interfaces commit (a NAMED exception, RULING BF10 / BR-140) changed exactly the two bridge declaration
 	// blocks (bridgeMaker.run resultKeys; BRIDGE_MODULE_SHAPE retired), call contract byte-identical. That conjunct is now
-	// OWNED by lib/bridge-framework/test/test-bgSeamUntouched.js (BG-SEAM-UNTOUCHED (i)), which asserts interfaces.js against
+	// OWNED by lib/bridge-framework/test/test-bgNosub.js (family BG-SEAM-UNTOUCHED, conjunct (i)), which asserts interfaces.js against
 	// preBridgeFramework-081626 modulo those two blocks; keeping it here would make the forge gate red on an authorized change.
 	'apps/graph-builder/lib/round-trip-stage.js', // extended: the stage that invokes every validator (harness seam)
 ]);

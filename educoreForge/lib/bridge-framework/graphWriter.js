@@ -10,7 +10,9 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //     writeMappingEdge({ subjectStableId, objectStableId, edgeType, edgeProperties }, cb(err, { edgeWritten: true }))
 //       — the §6 refusals (mappingEdgeRefusal): edgeType ∉ SKOS_EDGE_TYPES; predicate ≠ type; a property outside
 //         the CLOSED MAPPING_PROPERTIES set (NEW enforcement); judged without confidence / hash; specified with
-//         confidence; justification outside the three; provenanceTier ≠ the producer-derived value; a missing
+//         confidence; justification outside the three; provenanceTier outside the 3-tier permitted list (the
+//         EQUALITY to the producer-derived value lives in materialiser.provenanceTierFor — the writer never sees
+//         producerKind); a missing
 //         endpoint; an object that is not a HubReference; a subject whose _source ≠ the pairing's source
 //       — stamps the PAIR-SCOPED applyLabel on BOTH endpoints (harvest matches (a:L)-[r]->(b:L)) and MERGEs the
 //         edge on (from, type, to); a one-element attestationChannelList is stored as a real list (the writer's own

@@ -41,16 +41,14 @@ const CONTRACT_FILE = 'bridgePluginContract.js';
 const PLUGIN_NAME = 'toyCrosswalkPlugin';
 
 // the check-disabling mutations (each find matches exactly once in bridgePluginContract.js)
-const REQUIRED_CHECK_FIND = "\t\tif (value === undefined) {\n\t\t\treturn refuseWith(`bridgeDeclaration is missing required key '${propertyName}'`";
-const REQUIRED_CHECK_REPLACE = "\t\tif (value === undefined) {\n\t\t\tcontinue;\n\t\t\treturn refuseWith(`bridgeDeclaration is missing required key '${propertyName}'`";
+const REQUIRED_CHECK_FIND = "\t\t} else if (value === undefined) {\n\t\t\treturn refuseWith(`bridgeDeclaration is missing required key '${propertyName}'`";
+const REQUIRED_CHECK_REPLACE = "\t\t} else if (value === undefined) {\n\t\t\tcontinue;\n\t\t\treturn refuseWith(`bridgeDeclaration is missing required key '${propertyName}'`";
 const KIND_CHECK_FIND = "\t\tif (reason !== '') {\n\t\t\treturn refuseWith(`bridgeDeclaration '${propertyName}' ${reason}`";
 const KIND_CHECK_REPLACE = "\t\tif (reason !== '' && false) {\n\t\t\treturn refuseWith(`bridgeDeclaration '${propertyName}' ${reason}`";
 const UNKNOWN_KEY_FIND = '\tif (unknownName !== undefined) {\n\t\treturn refuseWith(`bridgeDeclaration carries unknown key';
 const UNKNOWN_KEY_REPLACE = '\tif (unknownName !== undefined && false) {\n\t\treturn refuseWith(`bridgeDeclaration carries unknown key';
 const PRODUCER_MATCH_FIND = '\tif (PRODUCER_KIND_BY_MATCH_BASIS[bridgeDeclaration.matchBasis] !== bridgeDeclaration.producerKind) {';
 const PRODUCER_MATCH_REPLACE = '\tif (false && PRODUCER_KIND_BY_MATCH_BASIS[bridgeDeclaration.matchBasis] !== bridgeDeclaration.producerKind) {';
-const GUIDANCE_FIND = '\tif (bridgeDeclaration.globalGuidanceList.length > 0 && bridgeDeclaration.evidenceHooksDeclared.globalGuidance !== true) {';
-const GUIDANCE_REPLACE = '\tif (false && bridgeDeclaration.globalGuidanceList.length > 0 && bridgeDeclaration.evidenceHooksDeclared.globalGuidance !== true) {';
 const COVERAGE_FIND = "\tif (resolved.error) {\n\t\treturn refuseWith(resolved.error, 'declared-but-broken";
 const COVERAGE_REPLACE = "\tif (resolved.error && false) {\n\t\treturn refuseWith(resolved.error, 'declared-but-broken";
 
@@ -86,6 +84,20 @@ conjunctList.push(
 		shape: (scenario) => overrideDeclaration(scenario, (declaration) => { declaration.subjectCuriePrefx = 'toy'; }),
 		regex: /unknown key 'subjectCuriePrefx'/,
 		twinName: 'disableUnknownKeyCheck', fileName: CONTRACT_FILE, find: UNKNOWN_KEY_FIND, replace: UNKNOWN_KEY_REPLACE,
+	}),
+	refusalCase({
+		registry: twinRegistry, gateId: GATE_ID, conjunctId: 'globalGuidanceList_missingWhenHookTrue',
+		title: "globalGuidanceList ABSENT while evidenceHooksDeclared.globalGuidance is true is refused naming it (REQUIRED iff the hook is declared — RULING BR4)",
+		shape: (scenario) => overrideDeclaration(scenario, (declaration) => { declaration.evidenceHooksDeclared = { ...declaration.evidenceHooksDeclared, globalGuidance: true }; delete declaration.globalGuidanceList; }),
+		regex: /missing key 'globalGuidanceList' \(REQUIRED because evidenceHooksDeclared\.globalGuidance is true\)/,
+		twinName: 'disableConditionalRequiredCheck', fileName: CONTRACT_FILE, find: '\t\t\tif (expectedPresent && value === undefined) {', replace: '\t\t\tif (false && expectedPresent && value === undefined) {',
+	}),
+	refusalCase({
+		registry: twinRegistry, gateId: GATE_ID, conjunctId: 'globalGuidanceList_presentWhenHookFalse',
+		title: "globalGuidanceList PRESENT (even []) while evidenceHooksDeclared.globalGuidance is false is refused naming it (FORBIDDEN — an empty list is not absence — RULING BR4)",
+		shape: (scenario) => overrideDeclaration(scenario, (declaration) => { declaration.globalGuidanceList = []; }),
+		regex: /carries key 'globalGuidanceList' which is FORBIDDEN while evidenceHooksDeclared\.globalGuidance is not true/,
+		twinName: 'disableConditionalForbiddenCheck', fileName: CONTRACT_FILE, find: '\t\t\tif (!expectedPresent && value !== undefined) {', replace: '\t\t\tif (false && !expectedPresent && value !== undefined) {',
 	}),
 	refusalCase({
 		registry: twinRegistry, gateId: GATE_ID, conjunctId: 'closedValue_matchBasisDerived',
@@ -193,13 +205,6 @@ conjunctList.push(
 		twinName: 'disableKindCheck', fileName: CONTRACT_FILE, find: KIND_CHECK_FIND, replace: KIND_CHECK_REPLACE,
 	}),
 	refusalCase({
-		registry: twinRegistry, gateId: GATE_ID, conjunctId: 'globalGuidanceListUndeclared',
-		title: 'a non-empty globalGuidanceList with evidenceHooksDeclared.globalGuidance false is refused (RULING BF18)',
-		shape: (scenario) => overrideDeclaration(scenario, (declaration) => { declaration.globalGuidanceList = ['prefer the narrower property']; }),
-		regex: /globalGuidanceList is non-empty \(1\) while evidenceHooksDeclared\.globalGuidance is false/,
-		twinName: 'disableGuidanceCheck', fileName: CONTRACT_FILE, find: GUIDANCE_FIND, replace: GUIDANCE_REPLACE,
-	}),
-	refusalCase({
 		registry: twinRegistry, gateId: GATE_ID, conjunctId: 'mappingProviderUrlNotUrl',
 		title: 'a mappingProvider.url that is not a URL is refused',
 		shape: (scenario) => overrideDeclaration(scenario, (declaration) => { declaration.mappingProvider.url = 'the crosswalk'; }),
@@ -237,8 +242,8 @@ runGateFamily(
 		twinRegistry,
 		makeSubject: scenarioLib.makeScenario,
 		cloneSubject: scenarioLib.cloneScenario,
-		expectedConjunctCount: requiredKeyList.length + 17,
-		expectedTwinCount: requiredKeyList.length + 17,
+		expectedConjunctCount: requiredKeyList.length + 18,
+		expectedTwinCount: requiredKeyList.length + 18,
 	},
 	() => harness.report(),
 );
