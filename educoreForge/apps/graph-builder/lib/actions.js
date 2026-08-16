@@ -1363,6 +1363,13 @@ const goldEvalCheckAction = (callback) => {
 		callback(`graphBuilder -goldEvalCheck: REFUSED — the recipe named for the bridge declaration (${recipePathForBridges}) does not load: ${loadedRecipe.error}`);
 		return;
 	}
+	// RULING BR3-5: a `bridges` key that is PRESENT and not an array is REFUSED by name — it must never read as "0 bridges"
+	// and silently disarm the bridged-recipe refusal below (validateRecipe refuses it at -build; -goldEvalCheck reads
+	// the run dir's recipe AFTER the fact and must refuse it too)
+	if (loadedRecipe && Object.prototype.hasOwnProperty.call(loadedRecipe.recipe, 'bridges') && !Array.isArray(loadedRecipe.recipe.bridges)) {
+		callback(`graphBuilder -goldEvalCheck: REFUSED — the recipe ${recipePathForBridges} carries a 'bridges' key that is not an array (${typeof loadedRecipe.recipe.bridges}); the bridge declaration is unreadable, so mapping-edge certification cannot be decided — fix the recipe (bridges: [] or a list of { source, hub, bridge, dependencies })`);
+		return;
+	}
 	const bridgeDeclaration = loadedRecipe ? { known: true, recipePath: recipePathForBridges, bridgeCount: Array.isArray(loadedRecipe.recipe.bridges) ? loadedRecipe.recipe.bridges.length : 0 } : { known: false, recipePath: null, bridgeCount: null, note: `recipe not located (run dir '${path.basename(buildLogDirPath)}' → ${derivedRecipePath} absent; pass --recipePath to name it) — bridge declaration UNKNOWN` };
 	if (!manifestRefId && bridgeDeclaration.known && bridgeDeclaration.bridgeCount > 0) {
 		callback(`graphBuilder -goldEvalCheck: REFUSED — the recipe ${recipePathForBridges} DECLARES ${bridgeDeclaration.bridgeCount} bridge(s); mapping edges UNCERTIFIED — pass --manifestRefId=<the manifest -build printed> (and --standardsDatabaseFilePath=<its store>) so the bridge sibling audits the manifest's relationship blocks; a bridged build never certifies on the forge round trip alone`);

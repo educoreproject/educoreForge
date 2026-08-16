@@ -24,6 +24,7 @@
 //       forgeRoundTripAndMappingEdges; naming the DEBUG manifest → REFUSED naming the block; a forge-only recipe →
 //       PASS with scope forgeRoundTripOnly and the bridge declaration stated; three-state: a module double of
 //       actions.js with the declared-bridges check disconnected answers PASS on the bridged directory → RED.
+//   (g) RULING BR3-5: a recipe whose `bridges` key is present and NOT an array → REFUSED by name; disconnected → PASS/0 → RED.
 //
 // Runs against a THROWAWAY standardsDatabase under os.tmpdir(); never opens the configured support store; no
 // container, no LLM, no Voyage. Run: node apps/graph-builder/test/test-goldEvalBridgeSibling.js
@@ -185,7 +186,20 @@ const goldEvalCheckGates = ({ cleanManifestRefId, debugManifestRefId, forgeOnlyM
 						const disconnectedActions = () => bridgeTwinFactories.loadBuildJsDouble({ buildJsPath: actionsModulePath, mutationList: [{ find: 'if (!manifestRefId && bridgeDeclaration.known && bridgeDeclaration.bridgeCount > 0) {', replace: 'if (!manifestRefId && bridgeDeclaration.known && bridgeDeclaration.bridgeCount > 1e9) {' }] })();
 						driveGoldEvalCheck({ actionsFactory: disconnectedActions, values: { buildLogDirPath: [bridgedRunDirPath] } }, (redError, redVerdict) => {
 							harness.ok('(f) RED-OBSERVED — with the declared-bridges check disconnected the bridged directory answers PASS on the forge round trip alone', !redError && redVerdict && redVerdict.exitCode === 0, redError);
-							finish();
+							// (g) RULING BR3-5: a recipe whose `bridges` key is PRESENT and NOT AN ARRAY is REFUSED by name — it must never
+							// read as "0 bridges" and disarm (f) (REVIEW-B3 §I B3-5: loadRecipe LOADS such a recipe; only validateRecipe
+							// at -build refuses it, and -goldEvalCheck reads the run dir's recipe after the fact)
+							const nonArrayRecipePath = path.join(scratchDir, 'fourWithHubNonArrayBridges.recipe.jsonc');
+							fs.writeFileSync(nonArrayRecipePath, fs.readFileSync(path.join(__dirname, '..', '..', '..', 'recipes', 'fourWithHub.recipe.jsonc'), 'utf8').replace('"bridges": []', '"bridges": { "a": { "source": "edfi", "hub": "ceds", "bridge": "edfiCedsCrosswalkPlugin", "dependencies": ["edfi", "ceds"] } }'));
+							driveGoldEvalCheck({ actionsFactory: realActions, values: { buildLogDirPath: [forgeOnlyRunDirPath], recipePath: [nonArrayRecipePath] } }, (nonArrayError) => {
+								harness.match("(g) a recipe whose `bridges` is PRESENT and NOT AN ARRAY → REFUSED BY NAME (never '0 bridges')", nonArrayError || '', /'bridges' key that is not an array/);
+								const nonArrayDisarmedActions = () => bridgeTwinFactories.loadBuildJsDouble({ buildJsPath: actionsModulePath, mutationList: [{ find: "if (loadedRecipe && Object.prototype.hasOwnProperty.call(loadedRecipe.recipe, 'bridges') && !Array.isArray(loadedRecipe.recipe.bridges)) {", replace: "if (loadedRecipe && Object.prototype.hasOwnProperty.call(loadedRecipe.recipe, 'bridges') && !Array.isArray(loadedRecipe.recipe.bridges) && false) {" }] })();
+								driveGoldEvalCheck({ actionsFactory: nonArrayDisarmedActions, values: { buildLogDirPath: [forgeOnlyRunDirPath], recipePath: [nonArrayRecipePath] } }, (disarmedError, disarmedVerdict) => {
+									const disarmedPayload = disarmedVerdict ? JSON.parse(disarmedVerdict.resultText) : {};
+									harness.ok('(g) RED-OBSERVED — with the non-array check disconnected the same recipe answers PASS forgeRoundTripOnly with bridgeCount 0 (the silent disarm the ruling closes)', !disarmedError && disarmedVerdict && disarmedVerdict.exitCode === 0 && disarmedPayload.bridgeDeclaration && disarmedPayload.bridgeDeclaration.bridgeCount === 0, disarmedError);
+									finish();
+								});
+							});
 						});
 					});
 				});
