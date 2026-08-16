@@ -85,6 +85,7 @@ const isNonBlank = (value) => typeof value === 'string' && value.trim() !== '';
 const sha256Hex = (text) => crypto.createHash('sha256').update(text, 'utf8').digest('hex');
 const compareStrings = (leftValue, rightValue) => (leftValue < rightValue ? -1 : leftValue > rightValue ? 1 : 0);
 const canonicalJson = bridgePluginContractLib.canonicalJsonText;
+const locatorTextFor = (oneAssertion) => `${oneAssertion.sourceLocator.channelKey}:${oneAssertion.sourceLocator.rowNumber !== undefined ? String(oneAssertion.sourceLocator.rowNumber).padStart(9, '0') : oneAssertion.sourceLocator.stableId}`;
 
 // producer suffix sanity (BG-PRODUCER d): every PRODUCER_KIND_LIST entry has a NON-EMPTY suffix — asserted at
 // framework construction, because build.js guards on the suffix's TRUTHINESS
@@ -948,7 +949,7 @@ const moduleFunction =
 									buildFault = refuse.byName({ moduleName, what: `subject ${oneLeaf.subjectStableId} → ${filteredCardList[0].stableId} is asserted with TWO predicates (${Array.from(predicateSet).sort().join(', ')}) by rows ${attestationChannelList.join(', ')}`, where: 'ONE edge per (subject, predicate, object); a pair with two predicates is refused at freeze (BG-EDGE-UNIQUE b)' });
 									return;
 								}
-								const oneRow = groupAssertionList[0].labelRow;
+								const oneRow = groupAssertionList.slice().sort((leftAssertion, rightAssertion) => compareStrings(locatorTextFor(leftAssertion), locatorTextFor(rightAssertion)))[0].labelRow;
 								decisionRecordList.push({ ...baseRecord, resolution: 'specified', objectStableId: filteredCardList[0].stableId, predicate: oneRow.predicate, predicateAssertedBy: oneRow.predicateAssertedBy, sourceLabel: oneRow.sourceLabel, mappingJustification: 'semapv:ManualMappingCuration' });
 								return;
 							}
@@ -994,16 +995,32 @@ const moduleFunction =
 					const globalGuidanceList = bridgeDeclaration.evidenceHooksDeclared.globalGuidance ? bridgeDeclaration.globalGuidanceList.slice() : [];
 					const judgeOneTask = (oneTask, taskIndex, taskDone) => {
 						const subjectNode = args.subjectNodeByStableId[oneTask.baseRecord.subjectStableId];
-						const firstAssertion = oneTask.groupAssertionList[0];
+						// the source's own material is MERGED over every row of the group in LOCATOR order (never walk order —
+						// BG-DET c): per column, the distinct values sorted and joined, so the rendered question is order-free
+						const orderedAssertionList = oneTask.groupAssertionList.slice().sort((leftAssertion, rightAssertion) => compareStrings(locatorTextFor(leftAssertion), locatorTextFor(rightAssertion)));
+						const mergedByColumn = (pick) => {
+							const valueListByColumn = {};
+							orderedAssertionList.forEach((oneAssertion) => {
+								const valueByColumn = pick(oneAssertion);
+								Object.keys(valueByColumn === undefined || valueByColumn === null ? {} : valueByColumn).forEach((oneColumn) => {
+									const oneValue = valueByColumn[oneColumn];
+									if (oneValue === undefined || oneValue === null || String(oneValue) === '') {
+										return;
+									}
+									(valueListByColumn[oneColumn] = valueListByColumn[oneColumn] || []).push(String(oneValue));
+								});
+							});
+							return Object.keys(valueListByColumn).reduce((soFar, oneColumn) => ({ ...soFar, [oneColumn]: Array.from(new Set(valueListByColumn[oneColumn])).sort().join(' | ') }), {});
+						};
 						const sourceElement = {
 							name: typeof subjectNode.properties.name === 'string' && subjectNode.properties.name.trim() !== '' ? subjectNode.properties.name : subjectNode.stableId,
 							stableId: subjectNode.stableId,
 							material: Object.keys(subjectNode.properties)
 								.filter((oneName) => ['description', 'definition', 'path', 'xpath', 'characteristics', 'role', 'perStandardLabel'].indexOf(oneName) !== -1)
 								.reduce((soFar, oneName) => ({ ...soFar, [oneName]: subjectNode.properties[oneName] }), {}),
-							evidence: { subject: firstAssertion.evidence && firstAssertion.evidence.subject ? firstAssertion.evidence.subject : {}, assertion: firstAssertion.evidence && firstAssertion.evidence.assertion ? firstAssertion.evidence.assertion : {} },
-							sourceLabelByColumn: firstAssertion.sourceLabelByColumn === undefined ? {} : firstAssertion.sourceLabelByColumn,
-							sourceNoteByColumn: firstAssertion.sourceNoteByColumn === undefined ? {} : firstAssertion.sourceNoteByColumn,
+							evidence: { subject: mergedByColumn((oneAssertion) => (oneAssertion.evidence ? oneAssertion.evidence.subject : {})), assertion: mergedByColumn((oneAssertion) => (oneAssertion.evidence ? oneAssertion.evidence.assertion : {})) },
+							sourceLabelByColumn: mergedByColumn((oneAssertion) => oneAssertion.sourceLabelByColumn),
+							sourceNoteByColumn: mergedByColumn((oneAssertion) => oneAssertion.sourceNoteByColumn),
 						};
 						const candidatePool = oneTask.pool.map((oneCard) => ({ card: oneCard, seatReason: oneTask.seatReason === null ? oneTask.seatReasonByStableId[oneCard.stableId] : oneTask.seatReason }));
 						const withEvidenceHooks = (hooksDone) => {
@@ -1077,7 +1094,9 @@ const moduleFunction =
 								} else {
 									report.judgeSpend.asked += 1;
 								}
-								const judgeRecord = { promptHash: judged.promptHash, rendererVersion: evidenceRendererLib.RENDERER_VERSION, judgeModel: judged.judgeModel, choice: judged.choice, category: judged.category, cacheHit: judged.cacheHit };
+								// the FROZEN judge record: evidence BY REFERENCE (promptHash, rendererVersion, judgeModel) + the ordinal and
+								// category — never cacheHit / usage / attempts (run-variable; they live in the report and forensics)
+								const judgeRecord = { promptHash: judged.promptHash, rendererVersion: evidenceRendererLib.RENDERER_VERSION, judgeModel: judged.judgeModel, choice: judged.choice, category: judged.category };
 								if (judged.chosenCardStableId === null) {
 									report.judgeSpend.abstained += 1;
 									taskDone('', { ...oneTask.baseRecord, objectStableId: null, predicate: null, predicateAssertedBy: null, sourceLabel: null, confidence: null, abstained: true, judge: judgeRecord, renderedPoolStableIdList: question.renderedPoolStableIdList });
@@ -1086,7 +1105,7 @@ const moduleFunction =
 								// the predicate of a judged pick: from the SOURCE row that named the picked card — a tentative
 								// row's predicateIfPicked, a predicate row's predicate; never the judge
 								const pickedCard = oneTask.pool.find((oneCard) => oneCard.stableId === judged.chosenCardStableId);
-								const namingAssertion = oneTask.groupAssertionList.find((oneAssertion) => oneAssertion.targetKeyList.indexOf(pickedCard.canonicalKey) !== -1 || Object.keys(oneTask.baseRecord.suppliedTupleByTarget).some((oneRawKey) => oneTask.baseRecord.suppliedTupleByTarget[oneRawKey].canonicalKey === pickedCard.canonicalKey && oneAssertion.targetKeyList.indexOf(oneRawKey) !== -1)) || oneTask.groupAssertionList[0];
+								const namingAssertion = orderedAssertionList.find((oneAssertion) => oneAssertion.targetKeyList.indexOf(pickedCard.canonicalKey) !== -1 || Object.keys(oneTask.baseRecord.suppliedTupleByTarget).some((oneRawKey) => oneTask.baseRecord.suppliedTupleByTarget[oneRawKey].canonicalKey === pickedCard.canonicalKey && oneAssertion.targetKeyList.indexOf(oneRawKey) !== -1)) || oneTask.groupAssertionList[0];
 								const labelRow = namingAssertion.labelRow;
 								const predicate = labelRow.disposition === 'tentative' ? labelRow.predicateIfPicked : labelRow.predicate;
 								taskDone('', { ...oneTask.baseRecord, objectStableId: judged.chosenCardStableId, predicate, predicateAssertedBy: labelRow.predicateAssertedBy, sourceLabel: labelRow.sourceLabel, confidence: judged.confidence, abstained: false, judge: judgeRecord, renderedPoolStableIdList: question.renderedPoolStableIdList });

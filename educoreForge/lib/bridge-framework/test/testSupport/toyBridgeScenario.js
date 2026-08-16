@@ -255,7 +255,10 @@ const runScenario = (scenario, callback) => {
 	let graphDouble;
 	const buildEverything = () => {
 		registry = buildRegistry(scenario);
-		graphDouble = graphDoubleLib.graphDoubleFrom(scenario.graph);
+		// the graph double is compiled through the SAME framework double when mutations exist, so a mutation in
+		// graphSeamRules.js (a disabled write-seam rule) or graphDouble.js reaches the reader/writer double too
+		const graphDoubleLibForRun = scenario.frameworkMutationList.length ? moduleDouble.loadWithMutations({ modulePath: path.join(FRAMEWORK_DIR, 'graphDouble.js'), mutationList: scenario.frameworkMutationList }) : graphDoubleLib;
+		graphDouble = graphDoubleLibForRun.graphDoubleFrom(scenario.graph);
 		const factoryDeps = {
 			graphReaderFactory: scenario.graphReaderFactoryOverride === undefined ? graphDouble.graphReaderFactory : scenario.graphReaderFactoryOverride(graphDouble),
 			graphWriterFactory: scenario.graphWriterFactoryOverride === undefined ? graphDouble.graphWriterFactory : scenario.graphWriterFactoryOverride(graphDouble),
@@ -353,3 +356,38 @@ module.exports = {
 	sha256Hex,
 	moduleName,
 };
+
+// makeFakeRealClient — a REAL-client double (NOT the debug judge): answers rerank with a fixed ordinal (or a per-call
+// list), a picking category and a rationale that names the choice by hub key + name (parsed from the rendered
+// prompt), counting its calls; it PARTICIPATES in the judgment cache like the real client. Options:
+//   pickOrdinal   '1' (default) | 'NONE' | a function (question) → choice
+//   category      'strong' (default)
+//   rationaleMode 'keyAndName' (default) | 'ordinal' (the BR-067 fault) | 'blank'
+//   extraReturnKeys  e.g. { predicate: 'relatedMatch' } (the BG-P6 (b) fault)
+//   throwOnCall   the replay spy: a plain build must never call the judge
+const makeFakeRealClient = ({ pickOrdinal = '1', category = 'strong', rationaleMode = 'keyAndName', extraReturnKeys = {}, throwOnCall = false, model = 'fake-anthropic-judge-v1' } = {}) => {
+	const client = { callCount: 0, questionList: [], model, keySource: 'test' };
+	client.rerank = ({ systemPrompt, userPrompt, choiceEnum, requireJudgment } = {}, callback) => {
+		void systemPrompt;
+		void requireJudgment;
+		client.callCount += 1;
+		client.questionList.push({ userPrompt, choiceEnum });
+		if (throwOnCall) {
+			throw new Error('spy judge client was called on a plain build');
+		}
+		const choice = typeof pickOrdinal === 'function' ? pickOrdinal({ userPrompt, choiceEnum }) : pickOrdinal;
+		let rationale = '';
+		if (choice !== 'NONE') {
+			const lineMatch = new RegExp(`\\[${choice}\\] (\\S+) — ([^\\n]+)`).exec(userPrompt);
+			const keyText = lineMatch ? lineMatch[1] : 'unknownKey';
+			const nameText = lineMatch ? lineMatch[2] : 'unknown name';
+			rationale = rationaleMode === 'ordinal' ? `picked candidate ${choice} because it looked right` : rationaleMode === 'blank' ? '' : `${keyText} (${nameText}) means the same thing as the source element`;
+		} else {
+			rationale = 'none of the candidates means the same thing as the source element';
+		}
+		callback('', { choice, model, attempts: 1, category: choice === 'NONE' ? 'none' : category, rationale, usage: { inputTokens: 10, outputTokens: 5 }, stopReason: 'end_turn', retryReasons: [], ...extraReturnKeys });
+	};
+	return client;
+};
+
+module.exports.makeFakeRealClient = makeFakeRealClient;
