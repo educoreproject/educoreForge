@@ -91,13 +91,13 @@ harness.match(
 
 harness.ok(
 	'a good recipe loads with no error',
-	!recipeLib.loadRecipe(goodRecipe('cedsLif')).error,
-	recipeLib.loadRecipe(goodRecipe('cedsLif')).error,
+	!recipeLib.loadRecipe(fixture('cedsLif')).error,
+	recipeLib.loadRecipe(fixture('cedsLif')).error,
 );
 
 harness.ok(
 	'JSONC comments are tolerated (the good recipes are commented)',
-	loadOrDie(goodRecipe('lifOnly')).recipeName === 'lifOnly',
+	loadOrDie(fixture('lifOnly')).recipeName === 'lifOnly',
 );
 
 // =====================================================================
@@ -127,7 +127,7 @@ harness.doesNotThrow('summarize survives bare-string standards', () =>
 
 harness.match(
 	'summarize reports standards with their versions',
-	recipeLib.summarizeRecipe(loadOrDie(goodRecipe('cedsLif'))),
+	recipeLib.summarizeRecipe(loadOrDie(fixture('cedsLif'))),
 	/ceds@current, lif@current/,
 );
 
@@ -166,12 +166,12 @@ structuralCases.forEach(([label, name, pattern]) => {
 
 harness.accepts(
 	'ACCEPTS the minimal good recipe (lifOnly)',
-	validateStructuralOnly(loadOrDie(goodRecipe('lifOnly'))).layers.structural.errors,
+	validateStructuralOnly(loadOrDie(fixture('lifOnly'))).layers.structural.errors,
 );
 
 harness.accepts(
 	'ACCEPTS the hub+bridge good recipe (cedsLif)',
-	validateStructuralOnly(loadOrDie(goodRecipe('cedsLif'))).layers.structural.errors,
+	validateStructuralOnly(loadOrDie(fixture('cedsLif'))).layers.structural.errors,
 );
 
 // =====================================================================
@@ -203,7 +203,7 @@ referentialCases.forEach(([label, name, pattern]) => {
 
 harness.accepts(
 	'ACCEPTS a referentially coherent recipe (cedsLif)',
-	validateFully(loadOrDie(goodRecipe('cedsLif'))).layers.referential.errors,
+	validateFully(loadOrDie(fixture('cedsLif'))).layers.referential.errors,
 );
 
 // The two-producer case the old source::hub key wrongly refused (design §3a): two DIFFERENT
@@ -220,7 +220,7 @@ harness.accepts(
 
 harness.accepts(
 	'ACCEPTS a recipe with no hubs or bridges at all (lifOnly)',
-	validateFully(loadOrDie(goodRecipe('lifOnly'))).layers.referential.errors,
+	validateFully(loadOrDie(fixture('lifOnly'))).layers.referential.errors,
 );
 
 // =====================================================================
@@ -229,7 +229,7 @@ harness.section('LAYER 2b RESOLVABILITY — environment, proven RED and GREEN');
 // The gate that will stay red for the whole stub era. It must be shown capable of BOTH
 // verdicts, or a permanently-red gate is indistinguishable from a broken one.
 
-const cedsLif = loadOrDie(goodRecipe('cedsLif'));
+const cedsLif = loadOrDie(fixture('cedsLif'));
 
 harness.rejects(
 	'REJECTS when no forge is available (the stub-era state)',
@@ -324,7 +324,7 @@ harness.ok(
 harness.section('roundTripStage — the RT-13 opt-in is a boolean, both directions proven');
 // =====================================================================
 
-const withRoundTripStage = (value) => ({ ...loadOrDie(goodRecipe('lifOnly')), roundTripStage: value });
+const withRoundTripStage = (value) => ({ ...loadOrDie(fixture('lifOnly')), roundTripStage: value });
 
 harness.ok(
 	'roundTripStage: true validates structurally',
@@ -345,8 +345,8 @@ harness.match(
 	/roundTripStage/,
 );
 harness.ok(
-	'the stage-ON proof recipe (pescOnlyRoundTrip) validates end to end',
-	validateFully(loadOrDie(goodRecipe('pescOnlyRoundTrip')), ['pesc']).valid === true,
+	'the stage-ON proof recipe (pesc260805OnlyRoundTrip) validates end to end',
+	validateFully(loadOrDie(goodRecipe('pesc260805OnlyRoundTrip')), ['pesc260805']).valid === true,
 );
 
 harness.report();

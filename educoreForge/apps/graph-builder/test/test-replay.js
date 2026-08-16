@@ -65,7 +65,9 @@ const realManifestEditor = require('../apps/manifest-editor');
 const contentAddress = require('../../../lib/content-address/content-address')();
 const standardsDatabaseModule = require('../../../lib/standards-database/standards-database')();
 
-const goodRecipe = (name) => path.join(__dirname, '..', '..', '..', 'recipes', `${name}.recipe.jsonc`);
+// fixture — a recipe held under test/fixtures/ as DATA (Phase 3 root-and-branch reset, 2026-08-15:
+// cedsLif names a removed forge/bridge and is not buildable; this suite seeds from it with doubles).
+const fixture = (name) => path.join(__dirname, 'fixtures', `${name}.recipe.jsonc`);
 
 const treeRoot = path.join(__dirname, '..', '..', '..');
 const executable = path.join(treeRoot, 'apps', 'graph-builder', 'graphBuilder.js');
@@ -246,7 +248,7 @@ standardsDatabaseModule.open({ databaseFilePath }, (openErr, standardsDatabase) 
 	// (the production default) reaches a live graph over bolt via docker inspect, which this
 	// suite's doubles do not provide. Announced, never silently skipped.
 	buildLib.build(
-		loadOrDie(goodRecipe('cedsLif')),
+		loadOrDie(fixture('cedsLif')),
 		{
 			xLog: capturingXLog(),
 			standardsDatabase,

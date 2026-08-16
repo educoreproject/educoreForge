@@ -227,7 +227,7 @@
   "nonAsteriskMandatoryCellCount": 0
  },
  "context": {
-  "snapshotPath": "/var/folders/m_/12d8yqwd28943kwt0n4nhrk80000gn/T/sifRoundTrip-fixtureSnapshot-tX2XeQ",
+  "snapshotPath": "/var/folders/m_/12d8yqwd28943kwt0n4nhrk80000gn/T/sifRoundTrip-fixtureSnapshot-QdPKWc",
   "snapshotDigest": "3b59ce43ca9208cac4583b26311bdaf0fcd59a80fbd54cd9491709080475cea4",
   "containerName": "graphDouble:injectedField",
   "boltUrl": "none (reader double)"

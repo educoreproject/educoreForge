@@ -11,6 +11,7 @@
  "invented": 0,
  "inventedTotal": 0,
  "orderMismatches": 0,
+ "semanticValidationLimit": "SEMANTIC round-trip against the INGESTED SNAPSHOT: statement-set equality over the statement set THIS INSTRUMENT CHOOSES TO MODEL, not byte equality and not completeness of the SIF model. WHAT IS MODELLED, on BOTH sides and from independent minters (statementsFromTsvText never sees the graph; statementsFromSifGraph never opens a file; NEITHER touches the forge's own lib/parser.js, so the validator cannot merely prove the forge agrees with itself): (1) ONE PREDICATE PER SOURCE COLUMN — fieldName, fieldMandatory, fieldCharacteristics, fieldType, fieldDescription, fieldCedsId, fieldFormat — so ANYTHING THE SPREADSHEET HAS NO COLUMN FOR IS NOT MODELLED AT ALL; (2) ELEMENT ORDER as all-pairs precedesInGroup statements, DOCUMENT-ORDER-ONLY (R-SF-8): the instrument never consults the published XSD for compositor facts, so xs:sequence versus xs:choice is invisible to it and normativity is never claimed. WHAT IS NOT MODELLED, and is therefore invisible as loss rather than merely hard to see: (a) ABSENT IS ABSENT (RT-2 symmetry) — an empty cell mints NO statement, so \"this field has no description\" and \"this field's description was lost\" are indistinguishable by statement presence; (b) LEADING AND TRAILING WHITESPACE in a cell is trimmed and is not a statement; (c) CHOICE-GROUP MEMBERSHIP, which the export cannot express at all (errata S-2). AND THE ONE THAT SIZES EVERYTHING ABOVE — THE SOURCE ITSELF IS INCOMPLETE, MEASURED 2026-08-09 (errata S-1, S-3, Q-1; probes test/probes/): the flattened export gives a row to every leaf field and every attribute and NO ROW TO ANY ELEMENT THAT HAS ELEMENT CHILDREN — 6,586 container paths across 153 of the 159 objects, of which 1,887 are declared maxOccurs=\"unbounded\" in the generated XSD, plus 12 further repeatability declarations absent on rows that DO exist. THEREFORE lostTotal 0 MEANS FIDELITY TO THE INGESTED SNAPSHOT AND NEVER COMPLETENESS OF THE SIF MODEL: this graph cannot distinguish a single-valued element from a repeating collection anywhere those 1,899 declarations apply, because the source never stated it. The two published artifacts do NOT contradict each other — across all 15,620 export rows the spreadsheet's Characteristics column and the XSD's sifChar annotation state different values ZERO times; the spreadsheet is simply less expressive. \"Semantically clean\" MUST NEVER be reported as \"complete\".",
  "diffScope": {
   "statementSource": "ImplementationSpecification_fixture.tsv",
   "outOfScopeInputs": [
@@ -18,9 +19,9 @@
   ]
  },
  "scaleReport": {
-  "runtimeMs": 23,
-  "rssBytes": 78323712,
-  "heapUsedBytes": 13908856,
+  "runtimeMs": 16,
+  "rssBytes": 77008896,
+  "heapUsedBytes": 13890864,
   "sourceStatements": 75,
   "emittedStatements": 75,
   "sourcePrecedencePairs": 15,
@@ -38,7 +39,7 @@
   }
  },
  "snapshot": {
-  "snapshotPath": "/var/folders/m_/12d8yqwd28943kwt0n4nhrk80000gn/T/sifRoundTrip-fixtureSnapshot-tX2XeQ",
+  "snapshotPath": "/var/folders/m_/12d8yqwd28943kwt0n4nhrk80000gn/T/sifRoundTrip-fixtureSnapshot-QdPKWc",
   "combinedDigest": "3b59ce43ca9208cac4583b26311bdaf0fcd59a80fbd54cd9491709080475cea4",
   "files": [
    {
@@ -248,7 +249,7 @@
    "nonAsteriskMandatoryCellCount": 0
   },
   "context": {
-   "snapshotPath": "/var/folders/m_/12d8yqwd28943kwt0n4nhrk80000gn/T/sifRoundTrip-fixtureSnapshot-tX2XeQ",
+   "snapshotPath": "/var/folders/m_/12d8yqwd28943kwt0n4nhrk80000gn/T/sifRoundTrip-fixtureSnapshot-QdPKWc",
    "snapshotDigest": "3b59ce43ca9208cac4583b26311bdaf0fcd59a80fbd54cd9491709080475cea4",
    "containerName": "graphDouble:clean",
    "boltUrl": "none (reader double)"

@@ -108,20 +108,23 @@ harness.ok(
 harness.section('BUNDLE RESOLUTION — the real forges/ tree');
 // =====================================================================
 
-const lif = resolveBundle({ standard: 'lif' });
-harness.equal('lif resolves without error', lif.error || '', '');
-harness.equal('  with the descriptor standardName', lif.standardName, 'LIF');
-harness.match('  entry path points at forgeLif.js', lif.entryPath, /forges[\/\\]lif[\/\\]forgeLif\.js$/);
+// Phase 3 root-and-branch reset (2026-08-15): the REAL-bundle probes moved from lif (removed) to
+// edfi, a survival forge. The synthetic `lif:` fixtures further down are hand-built bundles that
+// touch no forge on disk and are unchanged.
+const edfi = resolveBundle({ standard: 'edfi' });
+harness.equal('edfi resolves without error', edfi.error || '', '');
+harness.equal('  with the descriptor standardName', edfi.standardName, 'EdFi');
+harness.match('  entry path points at forgeEdfi.js', edfi.entryPath, /forges[\/\\]edfi[\/\\]forgeEdfi\.js$/);
 harness.ok(
 	'  the default source file exists on disk',
-	require('fs').existsSync(lif.defaultSource),
-	lif.defaultSource,
+	require('fs').existsSync(edfi.defaultSource),
+	edfi.defaultSource,
 );
-harness.equal('token case is normalized (LIF -> forges/lif)', (resolveBundle({ standard: 'LIF' }).error || ''), '');
+harness.equal('token case is normalized (EDFI -> forges/edfi)', (resolveBundle({ standard: 'EDFI' }).error || ''), '');
 
 const unknown = resolveBundle({ standard: 'noSuchStandard' });
 harness.match('an unknown standard errors', unknown.error, /no forge bundle for standard 'noSuchStandard'/);
-harness.match('  and names the known roster so the caller can self-correct', unknown.error, /Known forges: .*lif/);
+harness.match('  and names the known roster so the caller can self-correct', unknown.error, /Known forges: .*edfi/);
 
 // =====================================================================
 harness.section('BUNDLE REGISTRATION — a bundle that registers nothing is refused BY NAME');
@@ -235,8 +238,8 @@ harness.equal(
 harness.equal('  and carries its declared standardName', goodSection.standardName, 'ZZ');
 harness.match('  and its declared entryModule', goodSection.entryPath, /forgeZz\.js$/);
 harness.equal(
-	'  while the REAL lif bundle still resolves — the second positive control',
-	resolveBundle({ standard: 'lif' }).error || '',
+	'  while the REAL edfi bundle still resolves — the second positive control',
+	resolveBundle({ standard: 'edfi' }).error || '',
 	'',
 );
 
@@ -271,9 +274,9 @@ harness.rejects(
 );
 
 harness.equal(
-	'the REAL lif bundle still answers its DECLARED name, not its directory token',
-	resolveBundle({ standard: 'lif' }).standardName,
-	'LIF',
+	'the REAL edfi bundle still answers its DECLARED name, not its directory token',
+	resolveBundle({ standard: 'edfi' }).standardName,
+	'EdFi',
 );
 harness.equal(
 	'  and the real ceds bundle likewise — the positive controls',
@@ -1173,7 +1176,7 @@ harness.match(
 );
 harness.ok(
 	'  and nothing was forged on that path either',
-	!/=== (CEDS|LIF) ===/.test(evaluatorBlankStandard.text),
+	!/=== (CEDS|EDFI) ===/.test(evaluatorBlankStandard.text),
 	evaluatorBlankStandard.text.slice(0, 300),
 );
 
@@ -1215,7 +1218,7 @@ harness.match(
 );
 
 const evaluatorWithVectorize = runEvaluator([
-	'--standard=lif',
+	'--standard=edfi',
 	'--vectorize=true',
 	'--goldenPort=1',
 	'--goldenPassword=x',
@@ -1227,12 +1230,12 @@ harness.match(
 );
 harness.ok(
 	'  and it stops rather than running a comparison the operator misunderstands',
-	!/=== LIF ===/.test(evaluatorWithVectorize.text),
+	!/=== EDFI ===/.test(evaluatorWithVectorize.text),
 	evaluatorWithVectorize.text.slice(0, 400),
 );
 
 const evaluatorWithVectorizeFalse = runEvaluator([
-	'--standard=lif',
+	'--standard=edfi',
 	'--vectorize=false',
 	'--goldenPort=1',
 	'--goldenPassword=x',
@@ -1244,13 +1247,13 @@ harness.match(
 );
 
 const evaluatorNoVectorize = runEvaluator([
-	'--standard=lif',
+	'--standard=edfi',
 	'--goldenPort=1',
 	'--goldenPassword=x',
 ]);
 harness.ok(
 	'a run that does NOT offer --vectorize proceeds past the gate — the positive control',
-	/=== LIF ===/.test(evaluatorNoVectorize.text),
+	/=== EDFI ===/.test(evaluatorNoVectorize.text),
 	evaluatorNoVectorize.text.slice(0, 400),
 );
 harness.match(

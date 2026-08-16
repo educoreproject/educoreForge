@@ -29,7 +29,9 @@ SYNOPSIS
      ${moduleName} [-verbose] [-quiet] [-help]
 
 DESCRIPTION
-     Runs graphBuilder -build on ctdlasnOnly with --vectorize=true, cold, and proves the embedded
+     Runs graphBuilder -build on edfiOnly (the SMALLEST survival forge, ~6.3k nodes — pesc260805's
+     42k vectorized nodes trip graphBuilder's own 4 GB heap gate in this spawned process; observed
+     Phase 3 2026-08-15) with --vectorize=true, cold, and proves the embedded
      forge -> embed -> harvest -> compose -> materialize spine completes. This is the gate that
      would have caught the missing-embedding-header defect (2026-07-26): a standardBase block that
      carries vectors but whose header omits embeddingDims is refused on restore. It costs Docker +
@@ -50,7 +52,7 @@ const { spawnSync } = require('child_process');
 
 const treeRoot = path.join(__dirname, '..', '..', '..');
 const graphBuilderPath = path.join(treeRoot, 'apps', 'graph-builder', 'graphBuilder.js');
-const recipePath = path.join(treeRoot, 'recipes', 'ctdlasnOnly.recipe.jsonc');
+const recipePath = path.join(treeRoot, 'recipes', 'edfiOnly.recipe.jsonc');
 
 // hermetic: a throwaway standardsDatabase in a temp dir, never a project database (the -build guard
 // that refuses a default path exists because a scratch save once wrote the canonical store).
@@ -62,7 +64,7 @@ const standardsDatabaseFilePath = path.join(scratchDir, 'embeddedGate.standardsD
 // embedding, real credit, BY DESIGN) and keeps the suite from writing into the production cache.
 const isolatedCacheFilePath = path.join(scratchDir, 'isolatedGate.vectorCache.sqlite3');
 
-harness.section('REAL embedded end-to-end — ctdlasnOnly, --vectorize=true, cold');
+harness.section('REAL embedded end-to-end — edfiOnly, --vectorize=true, cold');
 harness.note('provisions a DEV_* Docker graph and spends Voyage embedding credit BY DESIGN (isolated cache)');
 
 const run = spawnSync(

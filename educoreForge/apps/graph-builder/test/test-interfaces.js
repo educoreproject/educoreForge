@@ -49,7 +49,6 @@ const harness = require('../../../test/testLib/harness')(moduleName);
 
 const { COMPONENT_SHAPES, MANIFEST_HANDLE_SHAPE, BRIDGE_MODULE_SHAPE } = require('../interfaces');
 const bridgeMakerModule = require('../apps/bridge-maker');
-const { DEFAULT_GENERIC_BRIDGE } = bridgeMakerModule;
 
 const TREE_LIB = path.join(__dirname, '..', '..', '..', 'lib');
 const contentAddress = require(path.join(TREE_LIB, 'content-address', 'content-address'))();
@@ -287,37 +286,33 @@ harness.note(
 );
 harness.note('nowhere else. interfaces.js says so in the same words.');
 
-// bridgeMaker's DEFAULT generic plugin (bridgeKitRefactor_072726 Phase 2: the REAL genericBridge,
-// forges/bridges/, composing the kit) writes no edges and opens no graph connection on a MATERIALIZE
-// run with no frozen decision block for the pair (design §5.5 — never a silent spend), so its whole
-// contract still runs in-process without Docker. It DOES need a decisionStore + config.sourceStandard
-// now (it is a real producer, not the old zero-argument P0 stub) — supplied here as the minimal
-// no-block fixture; the deeper resolution/refusal, write-path and equivalence proofs live in
-// bridge-maker/test/test-bridge-maker.js and test-generic-bridge-equivalence.js.
+// bridgeMaker — THE SEAM STUB (root-and-branch reset Phase 3, 2026-08-15; RULINGS-supervisor-phase2
+// §2 option A). Every bridge implementation left the tree; the component that remains satisfies the
+// declared shape and REFUSES BY NAME any bridge a recipe declares, because with zero registered
+// producers a bridge name names nothing and nothing may be substituted for it. The two pre-reset
+// probes here ran the DEFAULT generic plugin end to end (`err === ''` + every result key); they are
+// RETIRED with that plugin (SEAM-bridgeMakerStub.md §4) — a probe against a throw-away stub plugin
+// would test the stub, not the seam. What replaces them is the seam's actual contract while no
+// producer exists: a well-formed run naming a bridge is refused, naming the bridge and the reason.
+// This turns RED the moment someone re-adds a silent default (observed red by inverting the stub
+// before it was made to pass — DEVLOG Phase 3 C2).
 (() => {
 	let observed = null;
-	const noBlockDecisionStore = {
-		getDecisionBlock: ({ pairKey }, cb) => { void pairKey; cb('', { frozenText: null }); },
-		saveDecisionBlock: (a, cb) => cb(''),
-	};
 	realComponents.bridgeMaker().run(
 		{
 			inGraph: { graphName: 'DEV_shapeProbe' },
-			bridge: DEFAULT_GENERIC_BRIDGE,
+			bridge: 'genericBridge',
 			hub: 'ceds',
 			applyLabel: 'ProbeEdge',
-			decisionStore: noBlockDecisionStore,
-			config: { sourceStandard: 'lif', sourceStandardName: 'LIF' },
 		},
 		(err, result) => {
 			observed = { err, result };
 		},
 	);
-	harness.equal('bridgeMaker.run calls back with no error', observed.err, '');
-	harness.equal(
-		'bridgeMaker.run result carries every declared key',
-		resultShapeViolation(observed.result, COMPONENT_SHAPES.bridgeMaker.run, 'bridgeMaker.run'),
-		'',
+	harness.match(
+		'bridgeMaker.run REFUSES BY NAME a declared bridge while no implementation is registered',
+		String(observed.err),
+		/bridge 'genericBridge' is REFUSED — no bridge implementation is registered; the bridge system is being rebuilt under the EDUcore Bridge Profile v1\.0/,
 	);
 })();
 

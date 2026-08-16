@@ -211,9 +211,11 @@ harness.ok(
 harness.section('-validate — STRICT about all three layers');
 // =====================================================================
 
-// Since 2026-07-22 the ceds and lif forges are PORTED, so cedsLif resolves fully — strict
-// validate passes all three layers. The failure direction moved to bad-unforgedStandard.
-const validateGood = runCli(['-validate', '--recipePath=' + goodRecipe('cedsLif')]);
+// Since Phase 3 of the root-and-branch reset (2026-08-15) the survival set is ceds/edfi/sif/pesc260805
+// with the CEDS hub and NO bridge, so fourWithHub-baseline (hub, no bridge; validated PASS in
+// Phase 1) is the fully-resolvable recipe — strict validate passes all three layers. The failure
+// direction is bad-unforgedStandard.
+const validateGood = runCli(['-validate', '--recipePath=' + goodRecipe('fourWithHub-baseline')]);
 harness.equal('a fully-resolvable recipe passes strict validate (exit 0)', validateGood.status, 0);
 harness.ok(
 	'  with all three layers reporting PASS',
@@ -299,7 +301,7 @@ const buildBlankStore = runCli(
 	[],
 	JSON.stringify({
 		switches: { build: true },
-		values: { recipePath: [goodRecipe('cedsLif')], standardsDatabaseFilePath: [''] },
+		values: { recipePath: [goodRecipe('edfiOnly')], standardsDatabaseFilePath: [''] },
 		fileList: [],
 	}),
 );
@@ -432,7 +434,7 @@ const buildFromConfig = runCli(
 	[],
 	JSON.stringify({
 		switches: { build: true },
-		values: { recipePath: [goodRecipe('cedsLif')], judgmentCacheFilePath: [''] },
+		values: { recipePath: [goodRecipe('edfiOnly')], judgmentCacheFilePath: [''] },
 		fileList: [],
 	}),
 );
@@ -628,7 +630,7 @@ const stdinBuild = runCli(
 	JSON.stringify({
 		switches: { build: true },
 		values: {
-			recipePath: [goodRecipe('lifOnly')],
+			recipePath: [goodRecipe('edfiOnly')],
 			// ⟪Round-Trip Perfection Phase 1⟫ a BLANK store path is what stops this run now. The
 			// stdin -build used to halt on the ABSENT store parameter, and that absence is no longer a
 			// refusal — the configured key answers it. Left as it was, this probe would have resolved the
@@ -674,7 +676,7 @@ harness.section('INPUT CHANNELS — a parseable-but-wrong-shaped stdin JSON is R
 // believed a graph was built when stdout was help prose. polyArch2 §6: operator-supplied input
 // that is present-but-invalid is the WORSE fault, refused by name, never guessed at.
 
-const stdinFlatShape = runCli([], JSON.stringify({ build: true, recipePath: [goodRecipe('lifOnly')] }));
+const stdinFlatShape = runCli([], JSON.stringify({ build: true, recipePath: [goodRecipe('edfiOnly')] }));
 harness.ok(
 	'a FLAT JSON lacking the switches envelope exits NONZERO (never help-with-0)',
 	stdinFlatShape.status !== 0,

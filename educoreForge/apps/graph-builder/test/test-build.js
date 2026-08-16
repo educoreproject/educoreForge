@@ -86,8 +86,11 @@ const fs = require('fs');
 const standardsDatabaseModule = require('../../../lib/standards-database/standards-database')();
 const sqliteInstance = require('../../../lib/sqlite-instance/sqlite-instance')({});
 
-const goodRecipe = (name) =>
-	path.join(__dirname, '..', '..', '..', 'recipes', `${name}.recipe.jsonc`);
+// fixture — a recipe held under test/fixtures/ as DATA. Since Phase 3 of the root-and-branch reset
+// (2026-08-15) the two recipes this suite builds from — cedsLif and lifOnly — live here: they name
+// a removed forge/bridge and are NOT buildable, but every build in this suite runs against DOUBLES
+// (workingForger, workingBridgeMaker …), so a recipe is only ever read, never forged.
+const fixture = (name) => path.join(__dirname, 'fixtures', `${name}.recipe.jsonc`);
 
 // sourceOf — a file's source with whole-line comments stripped, so a scan for a surviving in-code
 // constant is not fooled by prose in the header (and is not defeated by it either).
@@ -434,7 +437,7 @@ const stageDeclaredMissingUnconditional = (whenDone) => {
 		},
 	);
 	buildLib.build(
-		loadOrDie(goodRecipe('lifOnly')),
+		loadOrDie(fixture('lifOnly')),
 		{
 			xLog,
 			standardsDatabase: standardsDatabaseDouble(),
@@ -552,7 +555,7 @@ const stagePreflight = () => {
 	// production, and a build that has not said where its schema blocks go must never reach them.
 	const xLog = capturingXLog();
 	buildLib.build(
-		loadOrDie(goodRecipe('lifOnly')),
+		loadOrDie(fixture('lifOnly')),
 		{ xLog, components: { forger: workingForger(), replayManager: workingReplayManager() } },
 		(err, result) => {
 			harness.match(
@@ -599,7 +602,7 @@ const stagePreflight = () => {
 };
 
 const stageLifOnly = () => {
-	runBuild(loadOrDie(goodRecipe('lifOnly')), ({ err, result, xLog }) => {
+	runBuild(loadOrDie(fixture('lifOnly')), ({ err, result, xLog }) => {
 		harness.section('lifOnly — one standard, no hubs, no bridges');
 
 		harness.equal('build succeeds (no error)', err, '');
@@ -635,7 +638,7 @@ const stageLifOnly = () => {
 };
 
 const stageCedsLif = () => {
-	runBuild(loadOrDie(goodRecipe('cedsLif')), ({ err, result, xLog }) => {
+	runBuild(loadOrDie(fixture('cedsLif')), ({ err, result, xLog }) => {
 		harness.section('cedsLif — two standards, one hub, one bridge');
 
 		harness.equal('build succeeds (no error)', err, '');
@@ -1083,7 +1086,7 @@ const stageRealManifestEditor = () => {
 	const xLog = capturingXLog();
 	const standardsDatabase = standardsDatabaseDouble();
 	buildLib.build(
-		loadOrDie(goodRecipe('lifOnly')),
+		loadOrDie(fixture('lifOnly')),
 		{
 			xLog,
 			standardsDatabase: standardsDatabase,
@@ -1583,7 +1586,7 @@ const stageFaultInjection = () => {
 	// still produces 4 members. Without this, a later red could mean "the fault fired" or merely
 	// "injection breaks everything", and those are not the same discovery.
 	runBuildWith(
-		loadOrDie(goodRecipe('cedsLif')),
+		loadOrDie(fixture('cedsLif')),
 		{
 			forger: workingForger(),
 			replayManager: workingReplayManager(),
@@ -1603,7 +1606,7 @@ const stageFaultInjection = () => {
 				}
 				const testCase = faultCases[index];
 				runBuildWith(
-					loadOrDie(goodRecipe('cedsLif')),
+					loadOrDie(fixture('cedsLif')),
 					testCase.components,
 					({ err: caseErr, result: caseResult }) => {
 						harness.match(testCase.label, caseErr, testCase.pattern);
@@ -1707,7 +1710,7 @@ const buildCapturingVectorize = (vectorizeDep, done) => {
 	if (vectorizeDep !== 'OMIT') {
 		deps.vectorize = vectorizeDep;
 	}
-	buildLib.build(loadOrDie(goodRecipe('lifOnly')), deps, (err, result) => done({ err, result, captured }));
+	buildLib.build(loadOrDie(fixture('lifOnly')), deps, (err, result) => done({ err, result, captured }));
 };
 
 const stageVectorize = () => {
@@ -1790,7 +1793,7 @@ const stageDisposeOnFailure = () => {
 		});
 	};
 
-	runBuildWith(loadOrDie(goodRecipe('lifOnly')), { replayManager: recordingReplay }, ({ err, result }) => {
+	runBuildWith(loadOrDie(fixture('lifOnly')), { replayManager: recordingReplay }, ({ err, result }) => {
 		harness.match('the build fails at the mid-pipeline harvest', err, /phase A \(forge\) failed: harvest standardBase/);
 		harness.ok('  and hands back no result', result === undefined, JSON.stringify(result));
 		harness.equal('  a scratch graph WAS created', created.length, 1);
@@ -1863,7 +1866,7 @@ const stageManifestPersistedToStore = () => {
 		// membership, so positions 0..2 and a multi-member round trip are exercised, not a trivial one.
 		const runBuild = (whenDone) =>
 			buildLib.build(
-				loadOrDie(goodRecipe('cedsLif')),
+				loadOrDie(fixture('cedsLif')),
 				{
 					xLog: capturingXLog(),
 					standardsDatabase,
@@ -1993,7 +1996,7 @@ const stageP2ReviewGuards = () => {
 	// S-1: a forge report carrying ONE hub report without its pair is refused by name —
 	// never a JSON.stringify(undefined) crash inside the write callback.
 	runBuildWith(
-		loadOrDie(goodRecipe('cedsLif')),
+		loadOrDie(fixture('cedsLif')),
 		{
 			forger: workingForger({
 				forge: ({ standard, version }, cb) =>
