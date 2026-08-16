@@ -58,8 +58,10 @@ subject composition in the framework; no CSV library in the framework; no escape
 ## Running the suite
 
 ```
-node lib/bridge-framework/test/test-<family>.js [-verbose]     # one file per family; every conjunct observed red by the sweep
+node lib/bridge-framework/test/test-<family>.js [-verbose]     # one file per family (12, BG-BOLT included); every conjunct observed red by the sweep
 node test/runAllTests.js                                       # the fleet discovers lib/bridge-framework by the .js-presence rule
 ```
 Nothing a test runs writes into the tree: scratch copies, worktrees and forensics live in `os.tmpdir()`; framework
-doubles are compiled in memory (`lib/forge-framework/test/testSupport/moduleDouble.js`); the fixture is immutable.
+doubles are compiled in memory (`lib/forge-framework/test/testSupport/moduleDouble.js`); the fixture is immutable. The two
+bolt files are exercised hermetically by BG-BOLT through `test/testSupport/boltDriverDouble.js` (their one `require('neo4j-driver')`
+swapped in memory; the Cypher they emit runs against the toy state) — the containerised smoke gate BG-BOLT-LIVE is B3's.
