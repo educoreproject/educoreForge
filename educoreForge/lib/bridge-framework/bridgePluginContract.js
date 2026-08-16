@@ -167,7 +167,10 @@ const isNonEmptyString = (value) => typeof value === 'string' && value.length > 
 // walkChannelListOf — the declared WALK channels that carry a classification (the table walk validates
 // sourceChannelList BEFORE every key that references it, so an unlisted/invalid list here is already refused;
 // this reads the validated list — no default is manufactured, an invalid list yields no channels)
-const walkChannelListOf = (bridgeDeclaration) => (Array.isArray(bridgeDeclaration.sourceChannelList) ? bridgeDeclaration.sourceChannelList : []).filter((oneChannel) => isPlainObject(oneChannel) && oneChannel.disposition === 'walk' && isPlainObject(oneChannel.columnClassification));
+// walkChannelListOf — the walk channels whose columnClassification is COMPLETE (all seven lists present and
+// well-formed); a channel that is not yet valid is invisible to the cross-key checks and is refused by the
+// sourceChannelList checker itself, so no consumer below needs an `|| []` for an absent list (BG-NOSUB)
+const walkChannelListOf = (bridgeDeclaration) => (Array.isArray(bridgeDeclaration.sourceChannelList) ? bridgeDeclaration.sourceChannelList : []).filter((oneChannel) => isPlainObject(oneChannel) && oneChannel.disposition === 'walk' && isPlainObject(oneChannel.columnClassification) && columnClassificationReason(oneChannel.columnClassification, String(oneChannel.channelKey)) === '');
 const isStringList = (value) => Array.isArray(value) && value.every((oneEntry) => typeof oneEntry === 'string');
 const isUrl = (value) => typeof value === 'string' && /^https?:\/\/[^\s]+$/.test(value);
 const listAsText = (list) => list.join(', ');
@@ -249,7 +252,7 @@ const columnClassificationReason = (columnClassification, channelKey) => {
 const classifiedColumnSetFor = (columnClassification) => {
 	const columnSet = new Set();
 	COLUMN_CLASSIFICATION_LIST_NAME_LIST.forEach((oneListName) => {
-		(columnClassification[oneListName] || []).forEach((oneColumn) => columnSet.add(oneColumn));
+		columnClassification[oneListName].forEach((oneColumn) => columnSet.add(oneColumn));
 	});
 	return columnSet;
 };
@@ -259,7 +262,7 @@ const tableKindValidator = (value, { walkChannelList }) => {
 	if (!isNonEmptyString(value.column)) {
 		return `kind '${value.kind}' needs a column`;
 	}
-	if (!walkChannelList.some((oneChannel) => (oneChannel.columnClassification.sourceLabelColumnList || []).indexOf(value.column) !== -1)) {
+	if (!walkChannelList.some((oneChannel) => oneChannel.columnClassification.sourceLabelColumnList.indexOf(value.column) !== -1)) {
 		return `predicateSource.column '${value.column}' is not classified in any walk channel's sourceLabelColumnList`;
 	}
 	if (value.table === undefined) {
@@ -291,7 +294,7 @@ const SUBJECT_IDENTITY_KIND_VALIDATOR_REGISTRY = Object.freeze({
 			return `columnTuple needs a non-empty columnList`;
 		}
 		const walkChannelList = walkChannelListOf(bridgeDeclaration);
-		const outside = value.columnList.find((oneColumn) => !walkChannelList.some((oneChannel) => (oneChannel.columnClassification.subjectIdentityColumnList || []).indexOf(oneColumn) !== -1));
+		const outside = value.columnList.find((oneColumn) => !walkChannelList.some((oneChannel) => oneChannel.columnClassification.subjectIdentityColumnList.indexOf(oneColumn) !== -1));
 		return outside !== undefined ? `columnList names '${outside}', which no walk channel classifies in subjectIdentityColumnList` : '';
 	},
 	forgedNode: (value) => (value.property === 'stableId' ? '' : `forgedNode subject identity property must be 'stableId' (got ${JSON.stringify(value.property)})`),
@@ -444,7 +447,7 @@ const KIND_CHECKER_REGISTRY = Object.freeze({
 			if (transformRegistryLib.TRANSFORM_NAME_LIST.indexOf(oneEntry.transform) === -1) {
 				return `${oneField}.transform '${oneEntry.transform}' is not in TRANSFORM_REGISTRY (${listAsText(transformRegistryLib.TRANSFORM_NAME_LIST)})`;
 			}
-			if (!walkChannelList.some((oneChannel) => (oneChannel.columnClassification.tupleFieldColumnList || []).indexOf(oneEntry.column) !== -1)) {
+			if (!walkChannelList.some((oneChannel) => oneChannel.columnClassification.tupleFieldColumnList.indexOf(oneEntry.column) !== -1)) {
 				return `${oneField}.column '${oneEntry.column}' is not classified in any walk channel's tupleFieldColumnList`;
 			}
 		}
@@ -470,7 +473,7 @@ const KIND_CHECKER_REGISTRY = Object.freeze({
 			return `carries unknown key '${extra[0]}'`;
 		}
 		const walkChannelList = walkChannelListOf(bridgeDeclaration);
-		const isReferenceable = (oneColumn) => walkChannelList.some((oneChannel) => EVIDENCE_REFERENCE_LIST_NAME_LIST.some((oneListName) => (oneChannel.columnClassification[oneListName] || []).indexOf(oneColumn) !== -1));
+		const isReferenceable = (oneColumn) => walkChannelList.some((oneChannel) => EVIDENCE_REFERENCE_LIST_NAME_LIST.some((oneListName) => oneChannel.columnClassification[oneListName].indexOf(oneColumn) !== -1));
 		// a forgedGraph walk channel's evidence columns are the source NODE's own properties read through
 		// forEvidence(); they are referenceable when the channel classifies them OR when the channel is a
 		// forgedGraph channel (its record's remaining properties come from the node itself, SPEC §11)
@@ -498,7 +501,7 @@ const KIND_CHECKER_REGISTRY = Object.freeze({
 			if (dispositionReason) {
 				return dispositionReason;
 			}
-			if (!walkChannelList.some((oneChannel) => (oneChannel.columnClassification.consistencyCheckColumnList || []).indexOf(oneEntry.column) !== -1)) {
+			if (!walkChannelList.some((oneChannel) => oneChannel.columnClassification.consistencyCheckColumnList.indexOf(oneEntry.column) !== -1)) {
 				return `entry column '${oneEntry.column}' is not classified in any walk channel's consistencyCheckColumnList`;
 			}
 		}
@@ -625,7 +628,8 @@ const documentChannelHeaderFor = ({ oneChannel, bundleDirPath }) => {
 	}
 	const firstLine = decoded.text.split(/\r?\n/)[0];
 	const rawHeaderList = parseCsvHeaderLine(firstLine).map((oneName) => oneName.trim());
-	const override = oneChannel.headerOverrideByIndex || {};
+	// headerOverrideByIndex is an OPTIONAL channel key (validated above when present): absent means no override
+	const override = oneChannel.headerOverrideByIndex === undefined ? {} : oneChannel.headerOverrideByIndex;
 	const headerColumnList = rawHeaderList.map((oneName, oneIndex) => (override[String(oneIndex)] !== undefined ? override[String(oneIndex)] : oneName));
 	const badOverrideIndex = Object.keys(override).find((oneIndex) => Number(oneIndex) >= rawHeaderList.length);
 	if (badOverrideIndex !== undefined) {

@@ -127,7 +127,8 @@ const frozenTextFor = ({ header, decisionRecordList, refusalList } = {}) => {
 			.join(',')}]`;
 		frozenText = `{"header":${headerText},"decisionRecordList":${recordText},"refusalList":${refusalText}}`;
 	};
-	// the ONE try in this module: canonicalText THROWS a named refusal (undefined/NaN/Infinity) and this is
+	// one of the TWO throw-to-value adapters in this module (the other wraps JSON.parse in parseJsonText):
+	// canonicalText THROWS a named refusal (undefined/NaN/Infinity) and this is
 	// the throw-to-value adapter — a freeze fault is a VALUE to the orchestration side, not control flow
 	try {
 		attempt();
