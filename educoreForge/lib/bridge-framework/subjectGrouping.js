@@ -18,17 +18,20 @@ const refuse = require(path.join(__dirname, '..', 'forge-framework', 'refuse'));
 
 const SUBJECT_KEY_SEPARATOR = '\u001f'; // the unit separator — never inside a cell value
 
-const subjectKeyFor = ({ subjectIdentity, assertion } = {}) => {
-	if (subjectIdentity.kind === 'forgedNode') {
-		return String(assertion.subjectIdentity[subjectIdentity.property]);
-	}
-	return subjectIdentity.columnList.map((oneColumn) => String(assertion.subjectIdentity[oneColumn])).join(SUBJECT_KEY_SEPARATOR);
-};
+// SUBJECT_IDENTITY_KIND_REGISTRY — the identity value names per kind (a registry, never a branch on kind — BG-COMPOSE c)
+const SUBJECT_IDENTITY_KIND_REGISTRY = Object.freeze({
+	columnTuple: Object.freeze({ identityNameListOf: (subjectIdentity) => subjectIdentity.columnList }),
+	forgedNode: Object.freeze({ identityNameListOf: (subjectIdentity) => [subjectIdentity.property] }),
+});
+const identityNameListFor = (subjectIdentity) => SUBJECT_IDENTITY_KIND_REGISTRY[subjectIdentity.kind].identityNameListOf(subjectIdentity);
+
+const subjectKeyFor = ({ subjectIdentity, assertion } = {}) =>
+	identityNameListFor(subjectIdentity).map((oneName) => String(assertion.subjectIdentity[oneName])).join(SUBJECT_KEY_SEPARATOR);
 
 // groupBySubject — REFUSES a walk yielding two assertions with equal subject key and unequal identity
 // values (a path-blind key, BR-136); assertions keep walk order inside a group (the freeze sorts later)
 const groupBySubject = ({ assertionList, subjectIdentity } = {}) => {
-	const identityNameList = subjectIdentity.kind === 'forgedNode' ? [subjectIdentity.property] : subjectIdentity.columnList;
+	const identityNameList = identityNameListFor(subjectIdentity);
 	const groupByKey = {};
 	const subjectGroupList = [];
 	for (let assertionIndex = 0; assertionIndex < assertionList.length; assertionIndex++) {
@@ -148,4 +151,4 @@ const applyRemodel = ({ target, remodelTable, hubName, hubVersion, classSideRemo
 	return { target: rewritten, remodelApplied, sourceDomainSuperseded };
 };
 
-module.exports = { subjectKeyFor, groupBySubject, verifyResolutionAndMerge, applyRemodel, targetSetTextFor, SUBJECT_KEY_SEPARATOR, moduleName };
+module.exports = { subjectKeyFor, identityNameListFor, SUBJECT_IDENTITY_KIND_REGISTRY, groupBySubject, verifyResolutionAndMerge, applyRemodel, targetSetTextFor, SUBJECT_KEY_SEPARATOR, moduleName };

@@ -20,9 +20,23 @@ const refuse = require(path.join(__dirname, '..', 'forge-framework', 'refuse'));
 //   { disposition: 'tentative', predicateIfPicked, predicateAssertedBy, sourceLabel }
 //   { disposition: 'refused', reason, sourceLabel } | { disposition: 'sentinelOnly', sourceLabel }
 //   { disposition: 'unmapped', sourceLabel }   — no table row (blank included)
+// PREDICATE_SOURCE_KIND_REGISTRY — one row per kind (SPEC §4.1 predicateSource): how a row's label is read and what the
+// kind exports as set-level provenance. A registry, never a branch on predicateSource.kind (BG-COMPOSE c).
+const tableRowFor = ({ predicateSource, assertion }) => {
+	const rawLabel = assertion.sourceLabelByColumn === undefined ? undefined : assertion.sourceLabelByColumn[predicateSource.column];
+	const sourceLabel = rawLabel === undefined || rawLabel === null ? '' : String(rawLabel);
+	return { sourceLabel, tableRow: Object.prototype.hasOwnProperty.call(predicateSource.table, sourceLabel) ? predicateSource.table[sourceLabel] : undefined };
+};
+const PREDICATE_SOURCE_KIND_REGISTRY = Object.freeze({
+	column: Object.freeze({ readsTable: true, rowFor: tableRowFor, provenanceOf: (predicateSource) => predicateSource.table, provenanceSlotName: 'labelTableProvenance' }),
+	labelTable: Object.freeze({ readsTable: true, rowFor: tableRowFor, provenanceOf: (predicateSource) => predicateSource.table, provenanceSlotName: 'labelTableProvenance' }),
+	channelAssertion: Object.freeze({ readsTable: false, rowFor: () => null, provenanceOf: (predicateSource) => predicateSource, provenanceSlotName: 'channelAssertionProvenance' }),
+});
+
 const labelRowFor = ({ predicateSource, assertion } = {}) => {
 	const predicateAssertedBy = PREDICATE_ASSERTED_BY_BY_SOURCE_KIND[predicateSource.kind];
-	if (predicateSource.kind === 'channelAssertion') {
+	const kindRow = PREDICATE_SOURCE_KIND_REGISTRY[predicateSource.kind];
+	if (!kindRow.readsTable) {
 		return { disposition: 'predicate', predicate: predicateSource.predicate, predicateAssertedBy, sourceLabel: null };
 	}
 	const rawLabel = assertion.sourceLabelByColumn === undefined ? undefined : assertion.sourceLabelByColumn[predicateSource.column];
@@ -103,4 +117,4 @@ const labelCensus = ({ predicateSource, assertionList, isSentinelAssertion, subj
 	return { sentinelLabelledRowCount, labelRefusedCount, labelCountByLabel, refusedRowIndexSet };
 };
 
-module.exports = { labelRowFor, labelCensus, moduleName };
+module.exports = { labelRowFor, labelCensus, PREDICATE_SOURCE_KIND_REGISTRY, moduleName };

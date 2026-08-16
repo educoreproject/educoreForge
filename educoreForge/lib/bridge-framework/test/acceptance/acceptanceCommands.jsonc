@@ -1,0 +1,23 @@
+// acceptanceCommands.jsonc — ONE frozen -build line per plugin (materialise) and one --rebridge line (debug judge)
+// (SPEC-bridgeFramework-v1.md §7.4, §14.1; RULINGS R1, 12:05 #3): the three-run replay protocol holds ONLY under the
+// frozen command, because the relationship block carries nodes with embeddings (--vectorize, the embedding cache and
+// the hub build are inputs to R1). Every command PINS --decisionStoreFilePath explicitly (RULING 12:05 #3): the store is
+// otherwise derived beside the standardsDatabase and a fresh scratch DB per run reads as "no decision block" and mimics
+// a replay defect. null-and-honest in B2 — the B3 / B4 builders freeze the lines from their first accepted runs.
+// A frozen id compared against a run with a different flag set is a broken test, not a failed gate.
+{
+	"edfiCedsCrosswalkPlugin": {
+		"recipePath": null,
+		"materialise": null,
+		"rejudgeDebug": null,
+		"pinnedFlagList": ["--vectorize=true", "--embeddingCacheFilePath=<the warm cache>", "--standardsDatabaseFilePath=<ABSOLUTE scratch>", "--decisionStoreFilePath=<ABSOLUTE, pinned>", "--judgmentCacheFilePath=<ABSOLUTE scratch>", "--matchForensicsDirPath=<ABSOLUTE scratch>", "--rebridge=edfi", "--useDebugJudge=digest", "</dev/null", "--max-old-space-size=20000"],
+		"frozenBy": null
+	},
+	"sifCedsStandardPlugin": {
+		"recipePath": null,
+		"materialise": null,
+		"rejudgeDebug": null,
+		"pinnedFlagList": ["--vectorize=true", "--embeddingCacheFilePath=<the warm cache>", "--standardsDatabaseFilePath=<ABSOLUTE scratch>", "--decisionStoreFilePath=<ABSOLUTE, pinned>", "--judgmentCacheFilePath=<ABSOLUTE scratch>", "--matchForensicsDirPath=<ABSOLUTE scratch>", "--rebridge=sif", "--useDebugJudge=digest", "</dev/null", "--max-old-space-size=20000"],
+		"frozenBy": null
+	}
+}

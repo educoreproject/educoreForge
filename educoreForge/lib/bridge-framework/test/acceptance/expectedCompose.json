@@ -1,0 +1,6 @@
+{
+	"note": "BG-COMPOSE (a) data (SPEC-bridgeFramework-v1.md §12.1; RULING BF9): the two accepted-plugin commit ids between which `git diff --numstat -- lib/bridge-framework/ ':!lib/bridge-framework/test/acceptance/' apps/graph-builder/apps/bridge-maker/ apps/graph-builder/lib/build.js apps/graph-builder/interfaces.js lib/vocabulary/` MUST be EMPTY. null-and-honest in B2 (no plugin exists yet); B3 records edfiPluginAcceptedCommit, B4 records sifPluginAcceptedCommit. The base tag of BG-SEAM-UNTOUCHED is preBridgeFramework-081626 (cut at 9c693bb).",
+	"edfiPluginAcceptedCommit": null,
+	"sifPluginAcceptedCommit": null,
+	"diffedPathList": ["lib/bridge-framework/", ":!lib/bridge-framework/test/acceptance/", "apps/graph-builder/apps/bridge-maker/", "apps/graph-builder/lib/build.js", "apps/graph-builder/interfaces.js", "lib/vocabulary/"]
+}

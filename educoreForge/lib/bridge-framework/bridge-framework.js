@@ -140,7 +140,7 @@ const moduleFunction =
 		// -----------------------------------------------------------------
 		// helpers over the declaration (pure)
 		// -----------------------------------------------------------------
-		const labelTableOf = (bridgeDeclaration) => (bridgeDeclaration.predicateSource.kind === 'channelAssertion' ? { channelAssertion: bridgeDeclaration.predicateSource } : bridgeDeclaration.predicateSource.table);
+		const labelTableOf = (bridgeDeclaration) => predicateSourceLib.PREDICATE_SOURCE_KIND_REGISTRY[bridgeDeclaration.predicateSource.kind].provenanceOf(bridgeDeclaration.predicateSource);
 		const walkChannelPropertyList = (bridgeDeclaration) => Array.from(new Set(bridgeDeclaration.sourceChannelList.filter((oneChannel) => oneChannel.sourceKind === 'forgedGraph').reduce((soFar, oneChannel) => soFar.concat(oneChannel.channelPropertyList), []))).sort();
 		const subjectMatchFieldFor = (bridgeDeclaration) => {
 			const prefix = bridgeDeclaration.sourceCuriePrefix.prefix;
@@ -469,7 +469,7 @@ const moduleFunction =
 										subjectMatchField,
 										objectMatchField,
 										subjectCuriePrefix: bridgeDeclaration.subjectCuriePrefix,
-										...(bridgeDeclaration.predicateSource.kind === 'channelAssertion' ? { channelAssertionProvenance: bridgeDeclaration.predicateSource } : { labelTableProvenance: bridgeDeclaration.predicateSource.table }),
+										[predicateSourceLib.PREDICATE_SOURCE_KIND_REGISTRY[bridgeDeclaration.predicateSource.kind].provenanceSlotName]: labelTableOf(bridgeDeclaration),
 									};
 									const curieMap = { [bridgeDeclaration.subjectCuriePrefix]: `urn:educore:${bridgeDeclaration.standardKey}:`, [bridgeDeclaration.sourceCuriePrefix.prefix]: bridgeDeclaration.sourceCuriePrefix.iri, [OBJECT_MATCH_FIELD_HUB_PREFIX]: `urn:educore:hub:${block.header.hubName}:` };
 									sssomExporterLib.toSssomTsv({ decisionBlock: block, decisionBlockHash, cardByStableId, curieMap, setLevelSlots, outputPath }, (exportError, exported) => {

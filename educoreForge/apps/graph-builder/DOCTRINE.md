@@ -31,10 +31,16 @@ driver is therefore permitted to consume those Promises. **This is TQ's blessed
 dispensation** (2026-07-23): the driver is the single sanctioned interface point where
 promise-based control flow is allowed to exist.
 
-The two non-test source files that interface the driver:
+The non-test source files that interface the driver:
 
 - `lib/replay/replay-engine.js`
 - `apps/graph-builder/apps/replay-manager/replayManager.js`
+- `lib/bridge-framework/graphReader.js` — the Bridge Framework's ONE bolt-facing READ file (B2, 2026-08-16;
+  SPEC-bridgeFramework-v1.md §14.1, RULING A9): `readHubCards`, `readSubjectNodes`, the `forWalk()` /
+  `forEvidence()` views. Driver required LAZILY inside the factory; `.then().catch()`-to-callback at the leaf.
+- `lib/bridge-framework/graphWriter.js` — the Bridge Framework's ONE bolt-facing WRITE file: `writeMappingEdge`
+  (the pair-scoped label on both endpoints, MERGE on (from, type, to), the §6 refusals). Same dispensation.
+  Also `lib/forge-framework/roundTripHarness/graphReader.js` (the round-trip harness's reader, F3a).
 
 ## How the dispensation is actually taken today (accurate as of this commit)
 

@@ -6,7 +6,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // tupleFieldColumnMap; RULINGS BF13, BF14). A plugin NAMES a transform; it never supplies a function.
 // Every transform is PURE (raw string → { value } | { error }) and REFUSES a raw value it cannot shape —
 // never a coerced answer:
-//   identity                the raw cell as-is (SIF's cedsId is already `P` + six digits)
+//   identity                the raw cell as-is (a standard whose anchor is already `P` + six digits)
 //   globalIdToPrefixedKey   'P' + six digits from a six-digit id (renamed from the standard-named
 //                           form so the framework tree passes its own token ban, RULING BF14)
 //   uriFragment             the fragment after '#' (a URI without '#' is refused)

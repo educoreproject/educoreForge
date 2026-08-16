@@ -44,6 +44,8 @@ const MATCH_BASIS_LIST = Object.freeze(['standard', 'crosswalk']);
 const PRODUCER_KIND_LIST = Object.freeze(['authored']);
 // producerKind is DECLARED and CHECKED against matchBasis (RULING A1): both v1 bases are authored
 const PRODUCER_KIND_BY_MATCH_BASIS = Object.freeze({ standard: 'authored', crosswalk: 'authored' });
+// the walk-channel kind a matchBasis needs at least one of (crosswalk: the document; standard: the forged graph) — DATA
+const WALK_CHANNEL_SOURCE_KIND_BY_MATCH_BASIS = Object.freeze({ crosswalk: 'document', standard: 'forgedGraph' });
 const RESOLUTION_LIST = Object.freeze(['specified', 'judged']);
 const PREDICATE_SOURCE_KIND_LIST = Object.freeze(['column', 'labelTable', 'channelAssertion']);
 const PREDICATE_ASSERTED_BY_LIST = Object.freeze(['source', 'labelTable', 'channelAssertion']);
@@ -162,6 +164,10 @@ const BRIDGE_DECLARATION_CONTRACT = Object.freeze({
 });
 
 const isNonEmptyString = (value) => typeof value === 'string' && value.length > 0;
+// walkChannelListOf — the declared WALK channels that carry a classification (the table walk validates
+// sourceChannelList BEFORE every key that references it, so an unlisted/invalid list here is already refused;
+// this reads the validated list — no default is manufactured, an invalid list yields no channels)
+const walkChannelListOf = (bridgeDeclaration) => (Array.isArray(bridgeDeclaration.sourceChannelList) ? bridgeDeclaration.sourceChannelList : []).filter((oneChannel) => isPlainObject(oneChannel) && oneChannel.disposition === 'walk' && isPlainObject(oneChannel.columnClassification));
 const isStringList = (value) => Array.isArray(value) && value.every((oneEntry) => typeof oneEntry === 'string');
 const isUrl = (value) => typeof value === 'string' && /^https?:\/\/[^\s]+$/.test(value);
 const listAsText = (list) => list.join(', ');
@@ -247,6 +253,49 @@ const classifiedColumnSetFor = (columnClassification) => {
 	});
 	return columnSet;
 };
+
+// the per-kind predicateSource validators — a registry, never a branch on kind (BG-COMPOSE c)
+const tableKindValidator = (value, { walkChannelList }) => {
+	if (!isNonEmptyString(value.column)) {
+		return `kind '${value.kind}' needs a column`;
+	}
+	if (!walkChannelList.some((oneChannel) => (oneChannel.columnClassification.sourceLabelColumnList || []).indexOf(value.column) !== -1)) {
+		return `predicateSource.column '${value.column}' is not classified in any walk channel's sourceLabelColumnList`;
+	}
+	if (value.table === undefined) {
+		return `kind '${value.kind}' needs a table`;
+	}
+	return labelTableReason(value.table);
+};
+const PREDICATE_SOURCE_KIND_VALIDATOR_REGISTRY = Object.freeze({
+	column: tableKindValidator,
+	labelTable: tableKindValidator,
+	channelAssertion: (value) => {
+		if (SKOS_PREDICATES.indexOf(value.predicate) === -1) {
+			return `channelAssertion predicate '${value.predicate}' is not a SKOS_PREDICATES member`;
+		}
+		if (!isPlainObject(value.assertedBy) || !isNonEmptyString(value.assertedBy.documentName) || !isNonEmptyString(value.assertedBy.citation)) {
+			return `channelAssertion needs assertedBy: { documentName, citation } — a source-attributed claim with a citation, not a producer constant`;
+		}
+		if (value.table !== undefined || value.column !== undefined) {
+			return `channelAssertion carries no table and no column`;
+		}
+		return '';
+	},
+});
+
+// the per-kind subjectIdentity validators — a registry, never a branch on kind (BG-COMPOSE c)
+const SUBJECT_IDENTITY_KIND_VALIDATOR_REGISTRY = Object.freeze({
+	columnTuple: (value, { bridgeDeclaration }) => {
+		if (!isStringList(value.columnList) || value.columnList.length === 0) {
+			return `columnTuple needs a non-empty columnList`;
+		}
+		const walkChannelList = walkChannelListOf(bridgeDeclaration);
+		const outside = value.columnList.find((oneColumn) => !walkChannelList.some((oneChannel) => (oneChannel.columnClassification.subjectIdentityColumnList || []).indexOf(oneColumn) !== -1));
+		return outside !== undefined ? `columnList names '${outside}', which no walk channel classifies in subjectIdentityColumnList` : '';
+	},
+	forgedNode: (value) => (value.property === 'stableId' ? '' : `forgedNode subject identity property must be 'stableId' (got ${JSON.stringify(value.property)})`),
+});
 
 // ONE registry of kind checkers: (value, { propertyName, contractEntry, bridgeDeclaration }) → '' or a reason
 const KIND_CHECKER_REGISTRY = Object.freeze({
@@ -358,8 +407,9 @@ const KIND_CHECKER_REGISTRY = Object.freeze({
 				return `channel '${channelKey}' carries unknown key '${unknownChannelKey}'`;
 			}
 		}
-		if (bridgeDeclaration.matchBasis === 'crosswalk' && !value.some((oneChannel) => oneChannel.sourceKind === 'document' && oneChannel.disposition === 'walk')) {
-			return `matchBasis 'crosswalk' needs at least one document walk channel (the crosswalk)`;
+		const requiredWalkKind = WALK_CHANNEL_SOURCE_KIND_BY_MATCH_BASIS[bridgeDeclaration.matchBasis];
+		if (requiredWalkKind !== undefined && !value.some((oneChannel) => oneChannel.sourceKind === requiredWalkKind && oneChannel.disposition === 'walk')) {
+			return `matchBasis '${bridgeDeclaration.matchBasis}' needs at least one '${requiredWalkKind}' walk channel`;
 		}
 		return '';
 	},
@@ -371,15 +421,7 @@ const KIND_CHECKER_REGISTRY = Object.freeze({
 		if (kindReason) {
 			return kindReason;
 		}
-		if (value.kind === 'columnTuple') {
-			if (!isStringList(value.columnList) || value.columnList.length === 0) {
-				return `columnTuple needs a non-empty columnList`;
-			}
-			const walkChannelList = (bridgeDeclaration.sourceChannelList || []).filter((oneChannel) => isPlainObject(oneChannel) && oneChannel.disposition === 'walk' && isPlainObject(oneChannel.columnClassification));
-			const outside = value.columnList.find((oneColumn) => !walkChannelList.some((oneChannel) => (oneChannel.columnClassification.subjectIdentityColumnList || []).indexOf(oneColumn) !== -1));
-			return outside !== undefined ? `columnList names '${outside}', which no walk channel classifies in subjectIdentityColumnList` : '';
-		}
-		return value.property === 'stableId' ? '' : `forgedNode subject identity property must be 'stableId' (got ${JSON.stringify(value.property)})`;
+		return SUBJECT_IDENTITY_KIND_VALIDATOR_REGISTRY[value.kind](value, { bridgeDeclaration });
 	},
 	tupleFieldColumnMap: (value, { bridgeDeclaration }) => {
 		if (!isPlainObject(value)) {
@@ -389,7 +431,7 @@ const KIND_CHECKER_REGISTRY = Object.freeze({
 			return `MUST name canonicalKey (the join key); nothing is inferred`;
 		}
 		const fieldList = Object.keys(value);
-		const walkChannelList = (bridgeDeclaration.sourceChannelList || []).filter((oneChannel) => isPlainObject(oneChannel) && oneChannel.disposition === 'walk' && isPlainObject(oneChannel.columnClassification));
+		const walkChannelList = walkChannelListOf(bridgeDeclaration);
 		for (let fieldIndex = 0; fieldIndex < fieldList.length; fieldIndex++) {
 			const oneField = fieldList[fieldIndex];
 			if (TUPLE_FIELD_LIST.indexOf(oneField) === -1) {
@@ -416,33 +458,8 @@ const KIND_CHECKER_REGISTRY = Object.freeze({
 		if (kindReason) {
 			return kindReason;
 		}
-		const walkChannelList = (bridgeDeclaration.sourceChannelList || []).filter((oneChannel) => isPlainObject(oneChannel) && oneChannel.disposition === 'walk' && isPlainObject(oneChannel.columnClassification));
-		if (value.kind === 'channelAssertion') {
-			if (SKOS_PREDICATES.indexOf(value.predicate) === -1) {
-				return `channelAssertion predicate '${value.predicate}' is not a SKOS_PREDICATES member`;
-			}
-			if (!isPlainObject(value.assertedBy) || !isNonEmptyString(value.assertedBy.documentName) || !isNonEmptyString(value.assertedBy.citation)) {
-				return `channelAssertion needs assertedBy: { documentName, citation } — a source-attributed claim with a citation, not a producer constant`;
-			}
-			if (value.table !== undefined || value.column !== undefined) {
-				return `channelAssertion carries no table and no column`;
-			}
-			return '';
-		}
-		if (!isNonEmptyString(value.column)) {
-			return `kind '${value.kind}' needs a column`;
-		}
-		if (!walkChannelList.some((oneChannel) => (oneChannel.columnClassification.sourceLabelColumnList || []).indexOf(value.column) !== -1)) {
-			return `predicateSource.column '${value.column}' is not classified in any walk channel's sourceLabelColumnList`;
-		}
-		if (value.table === undefined) {
-			return `kind '${value.kind}' needs a table`;
-		}
-		const tableReason = labelTableReason(value.table);
-		if (tableReason) {
-			return tableReason;
-		}
-		return '';
+		const walkChannelList = walkChannelListOf(bridgeDeclaration);
+		return PREDICATE_SOURCE_KIND_VALIDATOR_REGISTRY[value.kind](value, { walkChannelList });
 	},
 	evidenceColumnMap: (value, { bridgeDeclaration }) => {
 		if (!isPlainObject(value) || !isStringList(value.subject) || !isStringList(value.assertion)) {
@@ -452,7 +469,7 @@ const KIND_CHECKER_REGISTRY = Object.freeze({
 		if (extra.length) {
 			return `carries unknown key '${extra[0]}'`;
 		}
-		const walkChannelList = (bridgeDeclaration.sourceChannelList || []).filter((oneChannel) => isPlainObject(oneChannel) && oneChannel.disposition === 'walk' && isPlainObject(oneChannel.columnClassification));
+		const walkChannelList = walkChannelListOf(bridgeDeclaration);
 		const isReferenceable = (oneColumn) => walkChannelList.some((oneChannel) => EVIDENCE_REFERENCE_LIST_NAME_LIST.some((oneListName) => (oneChannel.columnClassification[oneListName] || []).indexOf(oneColumn) !== -1));
 		// a forgedGraph walk channel's evidence columns are the source NODE's own properties read through
 		// forEvidence(); they are referenceable when the channel classifies them OR when the channel is a
@@ -465,7 +482,7 @@ const KIND_CHECKER_REGISTRY = Object.freeze({
 		if (!Array.isArray(value)) {
 			return `must be a list (may be []) of { column, transform, against, disposition }`;
 		}
-		const walkChannelList = (bridgeDeclaration.sourceChannelList || []).filter((oneChannel) => isPlainObject(oneChannel) && oneChannel.disposition === 'walk' && isPlainObject(oneChannel.columnClassification));
+		const walkChannelList = walkChannelListOf(bridgeDeclaration);
 		for (let entryIndex = 0; entryIndex < value.length; entryIndex++) {
 			const oneEntry = value[entryIndex];
 			if (!isPlainObject(oneEntry) || !isNonEmptyString(oneEntry.column) || !isNonEmptyString(oneEntry.transform) || !isNonEmptyString(oneEntry.against)) {
@@ -816,6 +833,8 @@ module.exports = {
 	MATCH_BASIS_LIST,
 	PRODUCER_KIND_LIST,
 	PRODUCER_KIND_BY_MATCH_BASIS,
+	WALK_CHANNEL_SOURCE_KIND_BY_MATCH_BASIS,
+	PREDICATE_SOURCE_KIND_VALIDATOR_REGISTRY,
 	RESOLUTION_LIST,
 	PREDICATE_SOURCE_KIND_LIST,
 	PREDICATE_ASSERTED_BY_LIST,

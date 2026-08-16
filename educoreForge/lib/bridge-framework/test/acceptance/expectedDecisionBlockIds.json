@@ -1,0 +1,7 @@
+{
+	"note": "BG-ACCEPT (a)/(b) data (SPEC-bridgeFramework-v1.md §12; RULINGS R1, BF4, 12:05 #3, #5): per plugin, the decision block id and the relationship block id EQUAL under the frozen command, FROZEN from the first accepted classifier run (B3 for the Ed-Fi plugin, B4 for SIF) — never from prose arithmetic. null-and-honest in B2: no real plugin, no build, no container. The relationship block id is coupled to the source standardBase id (BF3): expected ids are frozen per (decision block, standardBase) pair. The toy plugins' block ids are NOT frozen here — the toy census is (expectedCensus.toyBridge.toyGraphDouble.json); a toy block id would move on any framework byte (frameworkFingerprint is a header member) and is proven by BG-REPLAY (A' === A) instead.",
+	"byBridgeName": {
+		"edfiCedsCrosswalkPlugin": { "graphId": null, "decisionBlockId": null, "relationshipBlockId": null, "standardBaseBlockId": null, "frozenBy": null },
+		"sifCedsStandardPlugin": { "graphId": null, "decisionBlockId": null, "relationshipBlockId": null, "standardBaseBlockId": null, "frozenBy": null }
+	}
+}
