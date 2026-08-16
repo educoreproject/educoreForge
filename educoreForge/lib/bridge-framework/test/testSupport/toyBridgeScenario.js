@@ -37,6 +37,7 @@ const contentAddress = require(path.join(FRAMEWORK_DIR, '..', 'content-address',
 const debugJudgeLib = require(path.join(BRIDGE_MAKER_LIB_DIR, 'debugJudge'));
 
 const cloneJson = (value) => JSON.parse(JSON.stringify(value));
+const HANG_GUARD_MS = 4000;
 
 // ---------------------------------------------------------------------
 // store doubles — the SAME API and the SAME refusals as the tree libs, in memory (scratch to os.tmpdir() where a file is needed)
@@ -189,7 +190,7 @@ const cloneScenario = (scenario) => ({
 	deps: { ...scenario.deps },
 	judgeRule: scenario.judgeRule,
 	judgeClientOverride: scenario.judgeClientOverride,
-	stores: scenario.stores, // stores are SHARED across the clones of one scenario on purpose (materialise after re-judge)
+	stores: makeStores(), // every clone starts with FRESH stores; runRejudgeThenMaterialise carries them across its two runs explicitly
 	conflictDetectorOverride: scenario.conflictDetectorOverride,
 });
 
@@ -234,7 +235,10 @@ const buildRegistry = (scenario) => {
 		}
 		return loaded;
 	};
-	return pluginRegistryLib.buildRegistryFromDirectory({ forgesDirPath, requireModule });
+	// the registry is built through the SAME framework double as the run, so a mutation in bridgePluginContract.js
+	// (a disabled registration check) reaches registration too
+	const registryLib = scenario.frameworkMutationList.length ? moduleDouble.loadWithMutations({ modulePath: path.join(FRAMEWORK_DIR, 'pluginRegistry.js'), mutationList: scenario.frameworkMutationList }) : pluginRegistryLib;
+	return registryLib.buildRegistryFromDirectory({ forgesDirPath, requireModule });
 };
 
 const makeJudgeClient = (scenario) => {
@@ -281,13 +285,27 @@ const runScenario = (scenario, callback) => {
 		spec.inferenceConfig = scenario.specInferenceConfigOverride;
 	}
 	let calledBack = false;
+	// a run that NEVER calls back (an arity-1 hook under a disabled check, a swallowed callback) is an outcome too:
+	// the hang guard reports it as { hungForMs } so a gate can go red instead of the whole suite going silent
+	const hangGuard = setTimeout(() => {
+		if (!calledBack) {
+			calledBack = true;
+			callback('', { hungForMs: HANG_GUARD_MS, runError: `${moduleName}: the run never called back within ${HANG_GUARD_MS}ms (HUNG)`, graphDouble, stores: scenario.stores, framework, registry });
+		}
+	}, HANG_GUARD_MS);
 	try {
 		framework.run(spec, (runError, runReport) => {
+			if (calledBack) {
+				return;
+			}
 			calledBack = true;
+			clearTimeout(hangGuard);
 			callback('', { runError, runReport, graphDouble, stores: scenario.stores, framework, registry });
 		});
 	} catch (runThrow) {
 		if (!calledBack) {
+			calledBack = true;
+			clearTimeout(hangGuard);
 			callback('', { thrownFromRun: runThrow.message, graphDouble, stores: scenario.stores, framework, registry });
 		}
 	}
@@ -301,6 +319,7 @@ const runRejudgeThenMaterialise = (scenario, callback) => {
 			return;
 		}
 		const second = cloneScenario(scenario);
+		second.stores = scenario.stores; // the SAME stores (the replay protocol's "same store")
 		second.spec.rebridge = false;
 		second.graph = cloneJson(scenario.graph); // a FRESH dependency graph, as build.js gives every pairing
 		runScenario(second, (unusedSecondError, secondOutcome) => callback('', { first, second: secondOutcome }));

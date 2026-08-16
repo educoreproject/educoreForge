@@ -43,11 +43,11 @@ const graphWriterFactory = ({ inGraph, applyLabel, sourceStandardName } = {}) =>
 		}
 		const session = driver.session();
 		session
-			.run('OPTIONAL MATCH (s {stableId: $subjectStableId}) WITH s OPTIONAL MATCH (o {stableId: $objectStableId}) RETURN s._source AS subjectSource, labels(s) AS subjectLabels, s IS NOT NULL AS subjectPresent, labels(o) AS objectLabels, o IS NOT NULL AS objectPresent', { subjectStableId, objectStableId })
+			.run('OPTIONAL MATCH (s {stableId: $subjectStableId}) WITH s OPTIONAL MATCH (o {stableId: $objectStableId}) RETURN s._source AS subjectSource, labels(s) AS subjectLabels, s IS NOT NULL AS subjectPresent, labels(o) AS objectLabels, o.referenceTier AS objectReferenceTier, o IS NOT NULL AS objectPresent', { subjectStableId, objectStableId })
 			.then((lookup) => {
 				const row = lookup.records[0];
 				const subjectEndpoint = row && row.get('subjectPresent') ? { labels: row.get('subjectLabels'), sourceStandardName: row.get('subjectSource') } : null;
-				const objectEndpoint = row && row.get('objectPresent') ? { labels: row.get('objectLabels') } : null;
+				const objectEndpoint = row && row.get('objectPresent') ? { labels: row.get('objectLabels'), referenceTier: row.get('objectReferenceTier') } : null;
 				const endpointRefusal = graphSeamRulesLib.mappingEdgeRefusal({ subjectStableId, objectStableId, edgeType, edgeProperties, sourceStandardName, subjectEndpoint, objectEndpoint });
 				if (endpointRefusal) {
 					return session.close().then(() => callback(endpointRefusal.message));

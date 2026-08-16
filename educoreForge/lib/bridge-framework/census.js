@@ -102,11 +102,13 @@ const cardinalityCensus = ({
 		if (oneRecord.objectStableId) {
 			tripleSet.add([oneRecord.subjectStableId, oneRecord.predicate, oneRecord.objectStableId].join(TRIPLE_SEPARATOR));
 		}
-		// per-subject bucket under precedence: specified beats judged beats orphan (collision/gap are separate lists)
+		// per-subject bucket under precedence: specified beats judged beats orphan (collision/gap are separate lists);
+		// the UNIT is the source SUBJECT — a merged leaf carries every asserting subject into its bucket (SPEC §5.3, §10.4)
 		const soFar = bucketBySubjectStableId[oneRecord.subjectStableId];
 		const thisRank = rankByClassification[oneRecord.classification] === undefined ? 0 : rankByClassification[oneRecord.classification];
-		if (soFar === undefined || thisRank > soFar) {
-			bucketBySubjectStableId[oneRecord.subjectStableId] = thisRank;
+		const subjectWeight = Array.isArray(oneRecord.assertingSubjectList) && oneRecord.assertingSubjectList.length ? oneRecord.assertingSubjectList.length : 1;
+		if (soFar === undefined || thisRank > soFar.rank) {
+			bucketBySubjectStableId[oneRecord.subjectStableId] = { rank: thisRank, subjectWeight };
 		}
 	});
 	perTarget.distinctTripleCount = tripleSet.size;
@@ -120,13 +122,13 @@ const cardinalityCensus = ({
 		sourceGapCount: sourceGapList.length,
 	};
 	Object.keys(bucketBySubjectStableId).forEach((oneStableId) => {
-		const bucketRank = bucketBySubjectStableId[oneStableId];
-		if (bucketRank === 3) {
-			perSubject.specifiedSubjectCount += 1;
-		} else if (bucketRank === 2) {
-			perSubject.judgedSubjectCount += 1;
+		const bucket = bucketBySubjectStableId[oneStableId];
+		if (bucket.rank === 3) {
+			perSubject.specifiedSubjectCount += bucket.subjectWeight;
+		} else if (bucket.rank === 2) {
+			perSubject.judgedSubjectCount += bucket.subjectWeight;
 		} else {
-			perSubject.orphanSubjectCount += 1;
+			perSubject.orphanSubjectCount += bucket.subjectWeight;
 		}
 	});
 	perSubject.subjectCount = perSubject.specifiedSubjectCount + perSubject.judgedSubjectCount + perSubject.orphanSubjectCount + perSubject.subjectCollisionCount + perSubject.sourceGapCount;

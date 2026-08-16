@@ -118,7 +118,7 @@ const graphDoubleFrom = ({ nodeList, edgeList } = {}) => {
 				edgeProperties,
 				sourceStandardName,
 				subjectEndpoint: subjectNode === undefined ? null : { labels: subjectNode.labels, sourceStandardName: subjectNode.properties._source },
-				objectEndpoint: objectNode === undefined ? null : { labels: objectNode.labels },
+				objectEndpoint: objectNode === undefined ? null : { labels: objectNode.labels, referenceTier: objectNode.properties.referenceTier },
 			});
 			if (refusal) {
 				callback(refusal.message);

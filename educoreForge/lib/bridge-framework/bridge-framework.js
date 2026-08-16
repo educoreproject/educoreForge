@@ -582,7 +582,8 @@ const moduleFunction =
 				// STEP 3 — the WALK (once per run) + assertion validation + channelReport reconciliation
 				taskList.push((args, next) => {
 					const walkView = args.reader.forWalk({ channelPropertyList: walkChannelPropertyList(bridgeDeclaration) });
-					const hookArgs = { sourceChannelPathByKey: { ...args.sourceChannelPathByKey }, sourceReader: walkView, xLog };
+					// the argument object handed to a hook is a CLOSED shape: a Proxy throws by name on any other read (BG-CONTAIN)
+					const hookArgs = graphSeamRulesLib.closedHookArgs({ sourceChannelPathByKey: { ...args.sourceChannelPathByKey }, sourceReader: walkView, xLog });
 					bridgeHooks.walkSourceAssertions(hookArgs, (walkError, walked) => {
 						if (walkError) {
 							next(`${moduleName}: walkSourceAssertions: ${walkError}`);
@@ -786,7 +787,7 @@ const moduleFunction =
 					let hookCallCount = 0;
 					const subjectIdentityList = subjectGroupList.map((oneGroup) => ({ subjectKey: oneGroup.subjectKey, subjectIdentity: { ...oneGroup.subjectIdentity } }));
 					hookCallCount += 1;
-					bridgeHooks.subjectStableIdFor({ subjectIdentityList, sourceReader: walkView, xLog }, (resolveError, resolved) => {
+					bridgeHooks.subjectStableIdFor(graphSeamRulesLib.closedHookArgs({ subjectIdentityList, sourceReader: walkView, xLog }), (resolveError, resolved) => {
 						if (resolveError) {
 							next(`${moduleName}: subjectStableIdFor: ${resolveError}`);
 							return;

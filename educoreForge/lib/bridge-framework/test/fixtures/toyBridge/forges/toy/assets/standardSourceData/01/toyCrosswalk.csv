@@ -16,3 +16,9 @@ Ghost,Ghost,Thing,000001,,Yes,,A subject the standard does not forge,,z14
 Student,Student,Nothing,000000,,Not in Hub,,Nothing here,,z15
 Student,Student,Nothing2,000000,,Maybe,,Nothing here either,,z16
 Student,Student,BadUri,000001,,Yes,,A row whose property URI disagrees,http://toy.example/prop#P000002,z17
+Student,StudentAlias,Extra,000001,,Yes,alias attestation,An extra element,,z18
+Student,Student,Weight,000010,,Yes,weight by name,The weight of the student,,z19
+Student,Student,Weight,000006,,Maybe,weight maybe,The weight of the student,,z20
+School,School,Code,000006,,Yes,,The code of the school,,z21
+School,School,Code,000010,,Yes,,The code of the school,,z22
+School,School,Ghost,000011,,Yes,,Remodelled to an absent target,,z23

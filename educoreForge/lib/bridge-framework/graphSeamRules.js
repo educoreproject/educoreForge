@@ -28,6 +28,7 @@ const { TUPLE_LIST_FIELD_LIST } = require('./bridgePluginContract');
 const { SKOS_EDGE_TYPES, SKOS_PREDICATES, MAPPING_PROPERTIES, MAPPING_PROPERTY_NAME_LIST, MAPPING_EDGE_PERMITTED_PROVENANCE_TIER_LIST, SSSOM_JUSTIFICATIONS, sssomJustificationRefusal } = vocabularyLib;
 
 const HUB_REFERENCE_LABEL = 'HubReference';
+const PROPERTY_TIER = 'property';
 const CARD_LIST_SLOT_LIST = Object.freeze(TUPLE_LIST_FIELD_LIST.concat(['qualifierNames']));
 const CARD_REQUIRED_PROPERTY_LIST = Object.freeze(['stableId', 'canonicalKey', 'referenceTier', 'hubName', 'hubVersion', 'name']);
 const READER_MEMBER_LIST = Object.freeze(['readHubCards', 'readSubjectNodes', 'forWalk', 'forEvidence', 'close']);
@@ -175,6 +176,8 @@ const closedShape = ({ target, memberList, shapeName }) =>
 		},
 	});
 const closedView = (view) => closedShape({ target: view, memberList: VIEW_MEMBER_LIST, shapeName: 'sourceReader view' });
+// closedHookArgs — the argument object handed to a plugin hook: exactly its own keys, nothing else (no judge, no store, no writer)
+const closedHookArgs = (hookArgs) => closedShape({ target: hookArgs, memberList: Object.keys(hookArgs), shapeName: 'hook argument object' });
 const closedReader = (reader) => closedShape({ target: reader, memberList: READER_MEMBER_LIST, shapeName: 'graphReader' });
 const closedWriter = (writer) => closedShape({ target: writer, memberList: WRITER_MEMBER_LIST, shapeName: 'graphWriter' });
 
@@ -238,6 +241,9 @@ const mappingEdgeRefusal = ({ subjectStableId, objectStableId, edgeType, edgePro
 	if (!Array.isArray(objectEndpoint.labels) || objectEndpoint.labels.indexOf(HUB_REFERENCE_LABEL) === -1) {
 		return refuse.byName({ moduleName, what: `writeMappingEdge: object endpoint '${objectStableId}' is not a ${HUB_REFERENCE_LABEL}`, where: 'conservativity: a mapping edge points at a hub card (BG-CONSERV a)' });
 	}
+	if (objectEndpoint.referenceTier !== undefined && objectEndpoint.referenceTier !== PROPERTY_TIER) {
+		return refuse.byName({ moduleName, what: `writeMappingEdge: object endpoint '${objectStableId}' is a '${objectEndpoint.referenceTier}'-tier card`, where: 'NO edge to a value-tier card exists in v1 (BR-080, BG-VALUE c)' });
+	}
 	if (subjectEndpoint.sourceStandardName !== sourceStandardName) {
 		return refuse.byName({ moduleName, what: `writeMappingEdge: subject endpoint '${subjectStableId}' has _source ${JSON.stringify(subjectEndpoint.sourceStandardName)}, not the pairing's source '${sourceStandardName}'`, where: 'conservativity (BG-CONSERV a)' });
 	}
@@ -263,6 +269,7 @@ module.exports = {
 	walkRecordFor,
 	walkViewRefusal,
 	closedView,
+	closedHookArgs,
 	closedReader,
 	closedWriter,
 	mappingEdgeRefusal,
