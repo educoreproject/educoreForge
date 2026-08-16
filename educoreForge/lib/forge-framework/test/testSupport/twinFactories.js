@@ -14,6 +14,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
 const path = require('path');
 const toyScenario = require('./toyScenario');
+const moduleDouble = require('./moduleDouble');
 
 const FRAMEWORK_DIR = toyScenario.FRAMEWORK_DIR;
 const frameworkFile = (fileName) => path.join(FRAMEWORK_DIR, fileName);
@@ -26,6 +27,10 @@ const frameworkMutationTwin = ({ registry, gateId, conjunctId, twinName, fileNam
 		leverKind,
 		shippedConfig,
 		run: (scenario) => {
+			// FA1: the mutation is validated EAGERLY here — a `find` that no longer matches exactly once
+			// throws NOW, so the sweep scores "twin could not be applied → proved nothing (UNPROVEN)",
+			// never an observed red earned by a refusal the twin never caused
+			moduleDouble.assertMutationApplies({ modulePath: frameworkFile(fileName), find });
 			scenario.frameworkMutationList.push({ modulePath: frameworkFile(fileName), find, replace });
 			return scenario;
 		},

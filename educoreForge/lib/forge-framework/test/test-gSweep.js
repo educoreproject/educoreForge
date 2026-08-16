@@ -107,6 +107,12 @@ const conjunctList = [
 		},
 	},
 	{
+		conjunctId: 'staleFindReportsUnproven',
+		title: 'FA1: a twin whose framework mutation cannot be applied (a STALE find — the run throws MODULE_DOUBLE_MUTATION_REFUSED) proves NOTHING → the conjunct is UNPROVEN, never observedRed',
+		twinNameList: ['countUnappliedTwinAsRan'],
+		evaluate: (scenario, callback) => sweepWith({ scenario, registerTwins: (registry) => registry.register({ gateId: 'G-SYN', conjunctId: 'valueIsOne', twinName: 'staleFind', leverKind: 'productionMutation', shippedConfig: true, run: (subject) => { moduleDouble.assertMutationApplies({ modulePath: EVALUATOR_PATH, find: 'this text is not in gateEvaluator.js at all' }); return { ...subject, value: 2 }; } }) }, (sweepError, sweep) => callback('', { pass: !sweepError && sweep.unprovenCount === 1 && sweep.observedRedCount === 0 && /could not be applied and proved nothing/.test(sweep.conjunctReportList[0].note), detail: sweepError || `unproven ${sweep.unprovenCount}, observedRed ${sweep.observedRedCount}, note ${sweep.conjunctReportList[0].note.slice(0, 120)}` })),
+	},
+	{
 		conjunctId: 'unmeasuredUnderTwinIsNotRed',
 		title: 'a twin that makes the conjunct UNMEASURED (evaluate throws) is NOT counted as red — the conjunct is DEFECTIVE',
 		twinNameList: ['countUnmeasuredAsRed'],
@@ -125,7 +131,8 @@ engineTwin({ conjunctId: 'expectationLeverOnlyIsUnproven', twinName: 'countExpec
 engineTwin({ conjunctId: 'shippedConfigFalseReported', twinName: 'hideShippedConfigFalse', modulePath: EVALUATOR_PATH, find: '\t\t\t\t\t.filter((oneTwinReport) => oneTwinReport.shippedConfig === false)', replace: '\t\t\t\t\t.filter((oneTwinReport) => oneTwinReport.shippedConfig === null)' });
 engineTwin({ conjunctId: 'redBaselineIsFailing', twinName: 'countFailingAsRed', modulePath: EVALUATOR_PATH, find: '\t\t\tif (baselineResult.status !== CONJUNCT_STATUS.PASS) {', replace: '\t\t\tif (false && baselineResult.status !== CONJUNCT_STATUS.PASS) {' });
 engineTwin({ conjunctId: 'auditReportsMissingAndOrphaned', twinName: 'auditNeverReports', modulePath: REGISTRY_PATH, find: '\t\treturn { missingList, orphanList };', replace: '\t\treturn { missingList: [], orphanList: [] };' });
+engineTwin({ conjunctId: 'staleFindReportsUnproven', twinName: 'countUnappliedTwinAsRan', modulePath: EVALUATOR_PATH, find: '\t\t\t\t\ttwinReportList.push({ gateId: gate.gateId, conjunctId: conjunct.conjunctId, twinName: oneTwin.twinName, leverKind: oneTwin.leverKind, shippedConfig: oneTwin.shippedConfig, ran: false, gateWentRed: false, detail: `twin run THREW: ${runError}` });', replace: '\t\t\t\t\ttwinReportList.push({ gateId: gate.gateId, conjunctId: conjunct.conjunctId, twinName: oneTwin.twinName, leverKind: oneTwin.leverKind, shippedConfig: oneTwin.shippedConfig, ran: true, gateWentRed: true, detail: `twin run THREW: ${runError}` });' });
 engineTwin({ conjunctId: 'unmeasuredUnderTwinIsNotRed', twinName: 'countUnmeasuredAsRed', modulePath: EVALUATOR_PATH, find: '\t\t\t\t\tconst gateWentRed = twinResult.status === CONJUNCT_STATUS.FAIL;', replace: '\t\t\t\t\tconst gateWentRed = twinResult.status !== CONJUNCT_STATUS.PASS;' });
 
 const gateDeclarationList = [{ gateId: GATE_ID, title: 'the sweep itself', conjunctList }];
-runGateFamily({ harness, familyName: GATE_ID, gateDeclarationList, twinRegistry: outerRegistry, makeSubject: () => ({ engineMutationList: [] }), cloneSubject: (scenario) => ({ engineMutationList: (scenario.engineMutationList || []).slice() }), expectedConjunctCount: 8, expectedTwinCount: 8 }, () => harness.report());
+runGateFamily({ harness, familyName: GATE_ID, gateDeclarationList, twinRegistry: outerRegistry, makeSubject: () => ({ engineMutationList: [] }), cloneSubject: (scenario) => ({ engineMutationList: (scenario.engineMutationList || []).slice() }), expectedConjunctCount: 9, expectedTwinCount: 9 }, () => harness.report());

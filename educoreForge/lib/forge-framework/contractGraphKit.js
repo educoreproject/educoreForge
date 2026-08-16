@@ -218,6 +218,12 @@ const contractGraphKit = ({ forgeDeclaration, metadata, activeAllowanceById = {}
 				throw refuse.byName({ moduleName, what: `makeNode: carriedProperties name '${collidingName}' collides with a universal property (from ${originText})`, where: `the universal set (${universalMintPropertyNameList.join(', ')}) is the framework's; carry it under another name or through the makeNode input` });
 			}
 		}
+		if (description === '') {
+			if (emptyStringCoercionPropertyList.indexOf('description') === -1) {
+				throw refuse.byName({ moduleName, what: `makeNode: description is '' on '${stableId}' (from ${originText})`, where: "an empty string never passes silently: omit the description or declare the coercion allowance (P9; S2-adjacent for SIF) that names 'description'" });
+			}
+			stats.emptyStringCoercionCount += 1;
+		}
 		if (searchTextElement !== undefined && structural.owningName !== undefined) {
 			throw refuse.byName({ moduleName, what: `makeNode: searchTextElement and structural.owningName are both given (from ${originText})`, where: 'the two forms are exclusive per call: a literal element OR the ladder via owningName' });
 		}
@@ -233,6 +239,13 @@ const contractGraphKit = ({ forgeDeclaration, metadata, activeAllowanceById = {}
 				stats.namelessNodeCountByRole[role] = (stats.namelessNodeCountByRole[role] || 0) + 1;
 			}
 		} else if (typeof name === 'string') {
+			// FA4: an EMPTY string is bytes — refused unless a coercion allowance (S2/P9) names 'name', then COUNTED
+			if (name === '') {
+				if (emptyStringCoercionPropertyList.indexOf('name') === -1) {
+					throw refuse.byName({ moduleName, what: `makeNode: name is '' on '${stableId}' (from ${originText})`, where: "an empty string never passes silently: omit the name (absent is absent) or declare the coercion allowance (S2/P9) that reproduces the '' byte" });
+				}
+				stats.emptyStringCoercionCount += 1;
+			}
 			nameProperty = { name };
 		} else {
 			throw refuse.byName({ moduleName, what: `makeNode: name is a ${typeof name} on '${stableId}' (from ${originText})`, where: 'name is a string, or absent; the framework never coerces (probe #10 → an allowance row before migration)' });

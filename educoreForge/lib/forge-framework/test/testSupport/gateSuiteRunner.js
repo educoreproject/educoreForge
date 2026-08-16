@@ -16,7 +16,10 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 const path = require('path');
 const gateEvaluator = require(path.join(__dirname, '..', '..', 'roundTripHarness', 'gateEvaluator'));
 
-const runGateFamily = ({ harness, familyName, gateDeclarationList, twinRegistry, makeSubject, cloneSubject, expectedConjunctCount, expectedTwinCount }, whenDone) => {
+//   expectedUnprovenConjunctList — conjuncts RED-BY-DESIGN in this phase (FA6: G-SHARE's ≥1-caller until
+//   F3b re-points it): named here, asserted to be EXACTLY the UNPROVEN set, and printed as such — never a
+//   silent skip
+const runGateFamily = ({ harness, familyName, gateDeclarationList, twinRegistry, makeSubject, cloneSubject, expectedConjunctCount, expectedTwinCount, expectedUnprovenConjunctList = [] }, whenDone) => {
 	const xLog = process.global.xLog;
 
 	harness.section(`${familyName} — REGISTRY AUDIT: every declared twin implemented, no orphan`);
@@ -54,11 +57,17 @@ const runGateFamily = ({ harness, familyName, gateDeclarationList, twinRegistry,
 				return;
 			}
 			sweep.conjunctReportList.forEach((oneReport) => {
-				harness.ok(
-					`${oneReport.gateId}/${oneReport.conjunctId} observed RED`,
-					oneReport.status === 'observedRed',
-					`${oneReport.status}: ${oneReport.note}`,
-				);
+				const conjunctRefId = `${oneReport.gateId}/${oneReport.conjunctId}`;
+				if (expectedUnprovenConjunctList.indexOf(conjunctRefId) !== -1) {
+					harness.ok(`${conjunctRefId} is RED-BY-DESIGN in this phase (UNPROVEN, expectationLever recorded)`, oneReport.status === 'UNPROVEN', `${oneReport.status}: ${oneReport.note}`);
+					xLog.status(`  RED-BY-DESIGN ${conjunctRefId}: not counted toward observed-red in this phase — ${oneReport.note}`);
+				} else {
+					harness.ok(
+						`${conjunctRefId} observed RED`,
+						oneReport.status === 'observedRed',
+						`${oneReport.status}: ${oneReport.note}`,
+					);
+				}
 				oneReport.twinReportList.forEach((oneTwin) => {
 					// the DEVLOG's red-observation line: gate/conjunct, twin, leverKind, what the gate said under the twin
 					xLog.status(
@@ -67,9 +76,9 @@ const runGateFamily = ({ harness, familyName, gateDeclarationList, twinRegistry,
 				});
 			});
 			harness.equal('DEFECTIVE conjunct count', sweep.defectiveCount, 0);
-			harness.equal('UNPROVEN conjunct count', sweep.unprovenCount, 0);
+			harness.equal(`UNPROVEN conjunct count EQUALS the named RED-BY-DESIGN count (${expectedUnprovenConjunctList.length})`, sweep.unprovenCount, expectedUnprovenConjunctList.length);
 			harness.equal('FAILING-baseline conjunct count', sweep.failingCount, 0);
-			harness.ok(`${familyName}: EVERY conjunct is now an observed twin`, sweep.everyConjunctObservedRed);
+			harness.ok(`${familyName}: EVERY conjunct is now an observed twin${expectedUnprovenConjunctList.length ? ` (except the ${expectedUnprovenConjunctList.length} named RED-BY-DESIGN)` : ''}`, sweep.defectiveCount === 0 && sweep.failingCount === 0 && sweep.unprovenCount === expectedUnprovenConjunctList.length);
 			xLog.status(`  ${familyName}: ${sweep.observedRedCount}/${sweep.conjunctCount} conjuncts observed red, ${sweep.twinRunCount} twin runs${sweep.expectationLeverList.length ? `, expectationLever (recorded only): ${sweep.expectationLeverList.join('; ')}` : ''}${sweep.shippedConfigFalseList.length ? `, shippedConfig:false twins: ${sweep.shippedConfigFalseList.join('; ')}` : ''}`);
 			whenDone({ evaluation, sweep });
 		});

@@ -138,6 +138,14 @@ const conjunctList = [
 		find: "\t\t\t\t\tif (typeof describedSource.version !== 'string' || describedSource.version.length === 0) {", replace: "\t\t\t\t\tif (false && (typeof describedSource.version !== 'string' || describedSource.version.length === 0)) {",
 	}),
 	refusalCase({
+		registry: twinRegistry, gateId: GATE_ID, conjunctId: 'sourceFilesUnverifiedRefused',
+		title: 'describeSource.sourceFiles naming a file the framework did NOT verify against SHA256SUMS is refused by name (FA5)',
+		shape: (scenario) => withDescribeSource(scenario, (described) => ({ ...described, sourceFiles: described.sourceFiles.concat(['neverExisted.json']) })),
+		regex: /describeSource names sourceFiles entry 'neverExisted.json' that was not verified against SHA256SUMS \(verified: toyModel.json\)/,
+		twinName: 'disableSourceFilesCrossCheck', fileName: FRAMEWORK_FILE,
+		find: '\t\t\t\t\tif (unverifiedSourceFile !== undefined) {', replace: '\t\t\t\t\tif (unverifiedSourceFile !== undefined && false) {',
+	}),
+	refusalCase({
 		registry: twinRegistry, gateId: GATE_ID, conjunctId: 'additionalInputAbsentOnDisk',
 		title: 'a declared additionalSourceInputList entry absent on disk / unlisted is refused naming it',
 		shape: (scenario) => { scenario.forgeDeclaration.additionalSourceInputList = [{ inputName: 'refIdResolutionMap', relativePathFromSourcePath: 'refIdResolutionMap.tsv' }]; },
@@ -187,6 +195,6 @@ const conjunctList = [
 const gateDeclarationList = [{ gateId: GATE_ID, title: 'the hook set, validated by name', conjunctList }];
 
 runGateFamily(
-	{ harness, familyName: GATE_ID, gateDeclarationList, twinRegistry, makeSubject: toyScenario.makeScenario, cloneSubject: toyScenario.cloneScenario, expectedConjunctCount: 16, expectedTwinCount: 16 },
+	{ harness, familyName: GATE_ID, gateDeclarationList, twinRegistry, makeSubject: toyScenario.makeScenario, cloneSubject: toyScenario.cloneScenario, expectedConjunctCount: 17, expectedTwinCount: 17 },
 	() => harness.report(),
 );

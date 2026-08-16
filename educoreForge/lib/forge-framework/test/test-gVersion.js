@@ -48,11 +48,13 @@ const conjunctList = [
 			return { pass, detail: JSON.stringify({ version, publishedVersion, versionSource, snapshotKey }) };
 		}),
 	}),
-	forgeConjunct({
-		conjunctId: 'neverEmptyNeverRecipeToken',
-		title: "metadata.version is never '' and never the recipe token 'current'",
-		twinNameList: ['hookReturnsRecipeToken'],
-		judge: succeeded((result) => ({ pass: result.metadata.version !== '' && result.metadata.version !== 'current', detail: `version ${JSON.stringify(result.metadata.version)}` })),
+	refusalCase({
+		registry: twinRegistry, gateId: GATE_ID, conjunctId: 'recipeTokenRefused',
+		title: "describeSource returning the recipe token 'current' as version is REFUSED by name (FA2) — the framework, not the gate, holds the line",
+		shape: (scenario) => withDescribeSource(scenario, (described) => ({ ...described, version: 'current', selfDescribedVersion: 'current' })),
+		regex: /describeSource returned the recipe token 'current' as a version/,
+		twinName: 'disableRecipeTokenCheck', fileName: 'forge-framework.js',
+		find: '\t\t\t\t\tif (RECIPE_VERSION_TOKEN_LIST.indexOf(describedSource.version) !== -1 || RECIPE_VERSION_TOKEN_LIST.indexOf(describedSource.selfDescribedVersion) !== -1) {', replace: '\t\t\t\t\tif (false) {',
 	}),
 	forgeConjunct({
 		conjunctId: 'versionSourceClosed',
@@ -75,10 +77,6 @@ scenarioTwin({
 	// the fixture provenance says 1.2.3; the hook now says the source does NOT self-describe → the
 	// stamp comes from the provenance file, root version '1.2.3' disagrees with (null ?? 'unknown') → S3 needed → refused
 	mutate: (scenario) => withDescribeSource(scenario, (described) => ({ ...described, selfDescribedVersion: null })),
-});
-scenarioTwin({
-	registry: twinRegistry, gateId: GATE_ID, conjunctId: 'neverEmptyNeverRecipeToken', twinName: 'hookReturnsRecipeToken', leverKind: 'inputFault',
-	mutate: (scenario) => withDescribeSource(scenario, (described) => ({ ...described, version: 'current', selfDescribedVersion: 'current' })),
 });
 frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'versionSourceClosed', twinName: 'stampAggregateManifest', fileName: 'forge-framework.js', find: '\t\t\t\t\t\t\tversionSource: stamp.versionSource,', replace: "\t\t\t\t\t\t\tversionSource: 'aggregate-manifest'," });
 

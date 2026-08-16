@@ -20,6 +20,21 @@ const path = require('path');
 const Module = require('module');
 const vm = require('vm');
 
+// the tag every mutation refusal carries, so a caller can tell "the fault could not be applied" from
+// "the framework refused" (FA1)
+const MUTATION_REFUSAL_TAG = 'MODULE_DOUBLE_MUTATION_REFUSED';
+
+// assertMutationApplies — EAGER check: the find-text must match exactly once in the file NOW
+const assertMutationApplies = ({ modulePath, find } = {}) => {
+	if (typeof modulePath !== 'string' || !fs.existsSync(modulePath)) {
+		throw new Error(`${MUTATION_REFUSAL_TAG}: modulePath '${modulePath}' is not on disk`);
+	}
+	const matchCount = fs.readFileSync(modulePath, 'utf8').split(find).length - 1;
+	if (matchCount !== 1) {
+		throw new Error(`${MUTATION_REFUSAL_TAG}: mutation find-text matched ${matchCount} times in ${path.basename(modulePath)} (must match exactly once): ${JSON.stringify(find).slice(0, 160)}`);
+	}
+};
+
 const loadWithMutations = ({ modulePath, mutationList } = {}) => {
 	if (typeof modulePath !== 'string' || !fs.existsSync(modulePath)) {
 		throw new Error(`${moduleName} REFUSED: modulePath '${modulePath}' is not on disk`);
@@ -42,7 +57,7 @@ const loadWithMutations = ({ modulePath, mutationList } = {}) => {
 		(mutationsByPath[absolutePath] || []).forEach((oneMutation) => {
 			const matchCount = sourceText.split(oneMutation.find).length - 1;
 			if (matchCount !== 1) {
-				throw new Error(`${moduleName} REFUSED: mutation find-text matched ${matchCount} times in ${path.basename(absolutePath)} (must match exactly once): ${JSON.stringify(oneMutation.find).slice(0, 160)}`);
+				throw new Error(`${MUTATION_REFUSAL_TAG}: mutation find-text matched ${matchCount} times in ${path.basename(absolutePath)} (must match exactly once): ${JSON.stringify(oneMutation.find).slice(0, 160)}`);
 			}
 			sourceText = sourceText.replace(oneMutation.find, () => oneMutation.replace);
 		});
@@ -76,4 +91,4 @@ const loadWithMutations = ({ modulePath, mutationList } = {}) => {
 	return compileMutated(rootPath);
 };
 
-module.exports = { loadWithMutations, moduleName };
+module.exports = { loadWithMutations, assertMutationApplies, MUTATION_REFUSAL_TAG, moduleName };

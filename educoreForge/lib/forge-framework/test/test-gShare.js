@@ -90,7 +90,7 @@ const conjunctList = [
 	},
 	{
 		conjunctId: 'everyExportHasACaller',
-		title: "every framework surface export has ≥1 caller in the F3a corpus (the toy fixture + the framework's own suite + harness) — F3b re-points this at the four migrated forges' tests",
+		title: "RED-BY-DESIGN until F3b re-points (FA6): every framework surface export has ≥1 caller across the four MIGRATED forges' tests — no forge is migrated in F3a, so this conjunct is measured over a substitute corpus (toy + suite + harness) and its twin is recorded as expectationLever, NOT counted toward observed-red",
 		twinNameList: ['surfaceGainsUncalledExport'],
 		evaluate: (scenario, callback) => {
 			const corpusText = callerCorpusText();
@@ -109,7 +109,10 @@ extraSourceTwin({ conjunctId: 'noMakeNodeAddEdgeEmbedNodesInHooks', twinName: 'e
 extraSourceTwin({ conjunctId: 'noFrameworkOwnedCallsInHooks', twinName: 'finalizerCalledInHook', text: 'finalizeStructuralContract({ nodes, edges });\n' });
 extraSourceTwin({ conjunctId: 'noSiblingLibOrPipeRequireInHooks', twinName: 'hookRequiresPipePlus', text: "const { pipeRunner } = new (require('qtools-asynchronous-pipe-plus'))();\n" });
 scenarioTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'shareRatiosWithinCeiling', twinName: 'frozenRatioZeroForMeasuredForge', leverKind: 'productionMutation', mutate: (scenario) => { scenario.ratioDataOverride = { ratioCeiling: 0.5, byStandardKey: { edfi: { frozenRatio: 0.0, measuredRatio: 0.31 }, sif: null, pesc260805: null, ceds: null } }; } });
-scenarioTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'everyExportHasACaller', twinName: 'surfaceGainsUncalledExport', leverKind: 'productionMutation', mutate: (scenario) => { scenario.extraSurfaceMemberList = ['census.' + ['orphaned', 'Export', 'Nobody', 'Calls'].join('')]; } }); // the name is built at run time so this file is not its own caller
+// FA6: recorded as expectationLever — the substitute corpus is not the corpus FR20 names, so a red
+// here proves the mechanism, not the F3b obligation; the sweep reports the conjunct UNPROVEN and the
+// runner names it RED-BY-DESIGN
+scenarioTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'everyExportHasACaller', twinName: 'surfaceGainsUncalledExport', leverKind: 'expectationLever', mutate: (scenario) => { scenario.extraSurfaceMemberList = ['census.' + ['orphaned', 'Export', 'Nobody', 'Calls'].join('')]; } }); // the name is built at run time so this file is not its own caller
 
 const gateDeclarationList = [{ gateId: GATE_ID, title: 'shared code is not a lie', conjunctList }];
-runGateFamily({ harness, familyName: GATE_ID, gateDeclarationList, twinRegistry, makeSubject: toyScenario.makeScenario, cloneSubject: (scenario) => ({ ...toyScenario.cloneScenario(scenario), staticExtraSourceList: (scenario.staticExtraSourceList || []).slice(), ratioDataOverride: scenario.ratioDataOverride, extraSurfaceMemberList: scenario.extraSurfaceMemberList }), expectedConjunctCount: 5, expectedTwinCount: 5 }, () => harness.report());
+runGateFamily({ harness, familyName: GATE_ID, gateDeclarationList, twinRegistry, makeSubject: toyScenario.makeScenario, cloneSubject: (scenario) => ({ ...toyScenario.cloneScenario(scenario), staticExtraSourceList: (scenario.staticExtraSourceList || []).slice(), ratioDataOverride: scenario.ratioDataOverride, extraSurfaceMemberList: scenario.extraSurfaceMemberList }), expectedConjunctCount: 5, expectedTwinCount: 5, expectedUnprovenConjunctList: ['G-SHARE/everyExportHasACaller'] }, () => harness.report());

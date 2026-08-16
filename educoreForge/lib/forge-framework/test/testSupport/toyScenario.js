@@ -74,6 +74,9 @@ const runScenario = (scenario, callback) => {
 		forgeFramework = loadFrameworkFactory(scenario)(scenario.deps);
 		bundle = forgeFramework.injectStandardHooks({ forgeDeclaration: scenario.forgeDeclaration, hooks: buildHooks(scenario) });
 	} catch (injectionThrow) {
+		if (String(injectionThrow.message).startsWith(moduleDouble.MUTATION_REFUSAL_TAG)) {
+			throw injectionThrow; // FA1: a fault that could not be applied is NOT a framework refusal — surface it as UNMEASURED
+		}
 		callback('', { injectionError: injectionThrow.message });
 		return;
 	}
@@ -98,6 +101,9 @@ const injectOnly = (scenario) => {
 		const bundle = forgeFramework.injectStandardHooks({ forgeDeclaration: scenario.forgeDeclaration, hooks: buildHooks(scenario) });
 		return { bundle, forgeFramework };
 	} catch (injectionThrow) {
+		if (String(injectionThrow.message).startsWith(moduleDouble.MUTATION_REFUSAL_TAG)) {
+			throw injectionThrow; // FA1
+		}
 		return { injectionError: injectionThrow.message };
 	}
 };

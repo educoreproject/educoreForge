@@ -156,7 +156,7 @@ const kitConjunctList = [
 	refusalCase({
 		registry: twinRegistry, gateId: KIT_GATE_ID, conjunctId: 'emptySearchText',
 		title: 'an element that composes to an EMPTY searchText is refused at mint (build-search-text names the element)',
-		shape: (scenario) => withWalkExtra(scenario, ({ kit }) => { mintClass(kit, 'toy:class/Extra', { name: '', searchTextElement: { role: DME_ROLES.CLASS, name: '', standardName: '', owningName: '' } }); }),
+		shape: (scenario) => withWalkExtra(scenario, ({ kit }) => { mintClass(kit, 'toy:class/Extra', { searchTextElement: { role: DME_ROLES.CLASS, name: '', standardName: '', owningName: '' } }); }),
 		regex: /cannot build a non-empty searchText/,
 		twinName: 'swallowSearchTextThrow', fileName: KIT_FILE,
 		find: '\t\t\tsearchTextProperty = { searchText: buildSearchText(element) };', replace: "\t\t\tlet composedSearchText = ''; try { composedSearchText = buildSearchText(element); } catch (ignoredError) { composedSearchText = ''; } searchTextProperty = { searchText: composedSearchText };",
@@ -167,7 +167,23 @@ const kitConjunctList = [
 		shape: (scenario) => withWalkExtra(scenario, ({ kit }) => { mintClass(kit, 'toy:class/Extra', { name: 42 }); }),
 		regex: /name is a number on 'toy:class\/Extra'/,
 		twinName: 'coerceNonStringName', fileName: KIT_FILE,
-		find: "\t\t} else if (typeof name === 'string') {\n\t\t\tnameProperty = { name };\n\t\t} else {", replace: "\t\t} else if (typeof name === 'string') {\n\t\t\tnameProperty = { name };\n\t\t} else if (true) {\n\t\t\tnameProperty = { name: `${name}` };\n\t\t} else {",
+		find: "\t\t\tnameProperty = { name };\n\t\t} else {\n\t\t\tthrow refuse.byName({ moduleName, what: `makeNode: name is a ${typeof name}", replace: "\t\t\tnameProperty = { name };\n\t\t} else if (true) {\n\t\t\tnameProperty = { name: `${name}` };\n\t\t} else {\n\t\t\tthrow refuse.byName({ moduleName, what: `makeNode: name is a ${typeof name}",
+	}),
+	refusalCase({
+		registry: twinRegistry, gateId: KIT_GATE_ID, conjunctId: 'emptyStringNameRefused',
+		title: "name '' from a hook without an active coercion allowance is REFUSED by name (FA4: an empty string never passes silently)",
+		shape: (scenario) => withWalkExtra(scenario, ({ kit }) => { mintClass(kit, 'toy:class/Extra', { name: '' }); }),
+		regex: /makeNode: name is '' on 'toy:class\/Extra'/,
+		twinName: 'passEmptyNameSilently', fileName: KIT_FILE,
+		find: "\t\t\tif (name === '') {\n\t\t\t\tif (emptyStringCoercionPropertyList.indexOf('name') === -1) {", replace: "\t\t\tif (name === '') {\n\t\t\t\tif (false && emptyStringCoercionPropertyList.indexOf('name') === -1) {",
+	}),
+	refusalCase({
+		registry: twinRegistry, gateId: KIT_GATE_ID, conjunctId: 'emptyStringDescriptionRefused',
+		title: "description '' from a hook without an active coercion allowance is REFUSED by name (FA4)",
+		shape: (scenario) => withWalkExtra(scenario, ({ kit }) => { mintClass(kit, 'toy:class/Extra', { description: '' }); }),
+		regex: /makeNode: description is '' on 'toy:class\/Extra'/,
+		twinName: 'passEmptyDescriptionSilently', fileName: KIT_FILE,
+		find: "\t\tif (description === '') {\n\t\t\tif (emptyStringCoercionPropertyList.indexOf('description') === -1) {", replace: "\t\tif (description === '') {\n\t\t\tif (false && emptyStringCoercionPropertyList.indexOf('description') === -1) {",
 	}),
 	shapedConjunct({
 		conjunctId: 'namelessNodeCounted',
@@ -248,6 +264,6 @@ const gateDeclarationList = [
 ];
 
 runGateFamily(
-	{ harness, familyName: 'G-KIT + G-REFERENT', gateDeclarationList, twinRegistry, makeSubject: toyScenario.makeScenario, cloneSubject: toyScenario.cloneScenario, expectedConjunctCount: 22, expectedTwinCount: 22 },
+	{ harness, familyName: 'G-KIT + G-REFERENT', gateDeclarationList, twinRegistry, makeSubject: toyScenario.makeScenario, cloneSubject: toyScenario.cloneScenario, expectedConjunctCount: 24, expectedTwinCount: 24 },
 	() => harness.report(),
 );

@@ -128,6 +128,17 @@ const detConjunctList = [
 		evaluate: (scenario, callback) => runForgeTwice(scenario, (verdict) => callback('', verdict)),
 	},
 	{
+		conjunctId: 'staticListCountFrozen',
+		title: 'static (FA3): the no-clock grep scans a FROZEN 18 files (13 framework + 5 fixture) — equality, so a moved directory goes red',
+		twinNameList: ['frameworkDirMovedToEmpty'],
+		evaluate: (scenario, callback) => {
+			const frameworkDir = scenario.frameworkDirOverride || toyScenario.FRAMEWORK_DIR;
+			const frameworkCount = fs.readdirSync(frameworkDir).filter((oneName) => /\.js$/.test(oneName)).length;
+			const total = frameworkCount + 5;
+			callback('', { pass: frameworkCount === 13 && total === 18, detail: `framework ${frameworkCount}/13, total ${total}/18` });
+		},
+	},
+	{
 		conjunctId: 'noClockInFrameworkOrHooks',
 		title: 'static: no Date.now / new Date / Math.random / process.hrtime / crypto.randomBytes in the framework tree (code, comments stripped) or the fixture hooks',
 		twinNameList: ['dateNowInFixtureHook'],
@@ -159,6 +170,7 @@ scenarioTwin({
 		};
 	},
 });
+scenarioTwin({ registry: twinRegistry, gateId: DET_GATE_ID, conjunctId: 'staticListCountFrozen', twinName: 'frameworkDirMovedToEmpty', leverKind: 'productionMutation', mutate: (scenario) => { scenario.frameworkDirOverride = fs.mkdtempSync(path.join(require('os').tmpdir(), 'emptyFramework-')); } });
 scenarioTwin({
 	registry: twinRegistry, gateId: DET_GATE_ID, conjunctId: 'noClockInFrameworkOrHooks', twinName: 'dateNowInFixtureHook', leverKind: 'productionMutation',
 	mutate: (scenario) => {
@@ -243,6 +255,6 @@ const gateDeclarationList = [
 })();
 
 runGateFamily(
-	{ harness, familyName: 'G-DET + G-ENV', gateDeclarationList, twinRegistry, makeSubject: toyScenario.makeScenario, cloneSubject: (scenario) => ({ ...toyScenario.cloneScenario(scenario), staticExtraSourceList: (scenario.staticExtraSourceList || []).slice(), localeRunnerTwinArg: scenario.localeRunnerTwinArg, verifySnapshotChecksumsOverride: scenario.verifySnapshotChecksumsOverride }), expectedConjunctCount: 5, expectedTwinCount: 5 },
+	{ harness, familyName: 'G-DET + G-ENV', gateDeclarationList, twinRegistry, makeSubject: toyScenario.makeScenario, cloneSubject: (scenario) => ({ ...toyScenario.cloneScenario(scenario), staticExtraSourceList: (scenario.staticExtraSourceList || []).slice(), localeRunnerTwinArg: scenario.localeRunnerTwinArg, verifySnapshotChecksumsOverride: scenario.verifySnapshotChecksumsOverride, frameworkDirOverride: scenario.frameworkDirOverride }), expectedConjunctCount: 6, expectedTwinCount: 6 },
 	() => harness.report(),
 );

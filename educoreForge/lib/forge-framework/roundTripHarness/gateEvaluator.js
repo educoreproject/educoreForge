@@ -6,7 +6,9 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // Profile §11.1, §11.3). Conventions it enforces: every gate ASSERTS (a conjunct that cannot be
 // evaluated is UNMEASURED, a failure, never a skip); no standing expectFail; the sweep counts
 // observed-red PER CONJUNCT — a gate with four conjuncts and one twin reports three UNPROVEN, not
-// "observed red"; a twin registered expectationLever does not count; a no-op twin reports DEFECTIVE.
+// "observed red"; a twin registered expectationLever does not count; a no-op twin reports DEFECTIVE;
+// a twin that cannot be APPLIED (its run throws — e.g. a stale mutation find) proves nothing and the
+// conjunct is UNPROVEN, never red (FA1, adversarial review 2026-08-16).
 //
 // Shapes (DATA):
 //   gateDeclarationList  [{ gateId, title, conjunctList: [{ conjunctId, title, twinNameList?, evaluate }] }]
@@ -222,7 +224,10 @@ const sweepTwins = ({ gateDeclarationList, twinRegistry, subject, cloneSubject }
 			let twinIndex = 0;
 			const nextTwin = () => {
 				if (twinIndex >= twinEntryList.length) {
-					const countingReports = twinReportList.filter((oneReport) => COUNTING_LEVER_KIND_LIST.indexOf(oneReport.leverKind) !== -1);
+					// a twin that could not be APPLIED (its run threw — a stale mutation find, a broken fault)
+					// has proven NOTHING (FA1): it is neither a counting observation nor a defect of the gate
+					const countingReports = twinReportList.filter((oneReport) => COUNTING_LEVER_KIND_LIST.indexOf(oneReport.leverKind) !== -1 && oneReport.ran);
+					const unappliedReports = twinReportList.filter((oneReport) => !oneReport.ran);
 					const status =
 						countingReports.length === 0
 							? SWEEP_STATUS.UNPROVEN
@@ -231,9 +236,11 @@ const sweepTwins = ({ gateDeclarationList, twinRegistry, subject, cloneSubject }
 								: SWEEP_STATUS.OBSERVED_RED;
 					const note =
 						status === SWEEP_STATUS.UNPROVEN
-							? twinReportList.length
-								? 'only expectationLever twins registered — recorded, not counted'
-								: 'no twin registered for this conjunct'
+							? unappliedReports.length
+								? `twin(s) could not be applied and proved nothing: ${unappliedReports.map((oneReport) => `${oneReport.twinName} (${oneReport.detail})`).join('; ')}`
+								: twinReportList.length
+									? 'only expectationLever twins registered — recorded, not counted'
+									: 'no twin registered for this conjunct'
 							: status === SWEEP_STATUS.DEFECTIVE
 								? `twin(s) did not turn the gate red: ${countingReports.filter((oneReport) => !oneReport.gateWentRed).map((oneReport) => oneReport.twinName).join(', ')}`
 								: '';

@@ -18,6 +18,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // harness, from a roundTripValidator.js) never loads the driver, and the hermetic
 // validateWithReader path runs with the driver absent or stubbed (G-NOGRAPH's dynamic conjunct).
 // Node-integer scalars are unwrapped to JS numbers; every other value passes through untouched.
+// A session/driver close error is REPORTED in the callback text, never swallowed (FA8).
 
 const NODE_PAGE_SIZE = 5000;
 
@@ -99,13 +100,17 @@ const openGraphReader = ({ boltUrl, user, password, standardSource } = {}, callb
 								.catch((closeError) => readCallback(`${moduleName} session close failed: ${closeError.message}`));
 						})
 						.catch((edgeError) => {
-							session.close().catch(() => {});
-							readCallback(`${moduleName} edge read failed: ${edgeError.message}`);
+							session
+								.close()
+								.then(() => readCallback(`${moduleName} edge read failed: ${edgeError.message}`))
+								.catch((closeError) => readCallback(`${moduleName} edge read failed: ${edgeError.message}; and session close failed: ${closeError.message}`));
 						});
 				})
 				.catch((nodeError) => {
-					session.close().catch(() => {});
-					readCallback(`${moduleName} node read failed: ${nodeError.message}`);
+					session
+						.close()
+						.then(() => readCallback(`${moduleName} node read failed: ${nodeError.message}`))
+						.catch((closeError) => readCallback(`${moduleName} node read failed: ${nodeError.message}; and session close failed: ${closeError.message}`));
 				});
 		};
 		readNodePage(0);

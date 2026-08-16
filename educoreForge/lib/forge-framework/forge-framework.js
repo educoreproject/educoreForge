@@ -60,6 +60,8 @@ const EDGE_TYPE_VALUE_LIST = Object.freeze(Object.values(EDGE_TYPES));
 const SEAM_ARGUMENT_NAME_LIST = Object.freeze(['sourcePath', 'owner', 'embedNodeLimit', 'skipEmbedding']);
 const DEP_NAME_LIST = Object.freeze(['embedder', 'xLog', 'migratingBundleListOverride']);
 const DESCRIBE_SOURCE_KEY_LIST = Object.freeze(['version', 'selfDescribedVersion', 'sourceFormat', 'sourceFiles', 'sourceUrl']);
+// the recipe's floating version token(s) — never a bundle's own claim (FA2; forger.js "no floating 'current'")
+const RECIPE_VERSION_TOKEN_LIST = Object.freeze(['current']);
 
 const isPlainObject = (candidate) =>
 	candidate !== null && typeof candidate === 'object' && !Array.isArray(candidate);
@@ -451,6 +453,11 @@ const moduleFunction =
 						next(refuse.byName({ moduleName, what: `${forgePrefix} describeSource returned version ${JSON.stringify(describedSource.version)}`, where: "version is what the bundle READ or 'unknown', never '' and never the recipe token" }).message);
 						return;
 					}
+					// FA2: the recipe's floating token is never a bundle's version claim (forger.js: "no floating 'current'")
+					if (RECIPE_VERSION_TOKEN_LIST.indexOf(describedSource.version) !== -1 || RECIPE_VERSION_TOKEN_LIST.indexOf(describedSource.selfDescribedVersion) !== -1) {
+						next(refuse.byName({ moduleName, what: `${forgePrefix} describeSource returned the recipe token '${describedSource.version === describedSource.selfDescribedVersion ? describedSource.version : `${describedSource.version}/${describedSource.selfDescribedVersion}`}' as a version`, where: "version is what the bundle READ from the source or 'unknown' — the recipe's floating token never stands in for a bundle's own claim (Profile §2.4, §10.2)" }).message);
+						return;
+					}
 					if (describedSource.selfDescribedVersion !== null && typeof describedSource.selfDescribedVersion !== 'string') {
 						next(refuse.byName({ moduleName, what: `${forgePrefix} describeSource returned selfDescribedVersion of type ${typeof describedSource.selfDescribedVersion}`, where: 'selfDescribedVersion is the standard\'s OWN version string, or null' }).message);
 						return;
@@ -461,6 +468,12 @@ const moduleFunction =
 					}
 					if (!Array.isArray(describedSource.sourceFiles) || describedSource.sourceFiles.some((oneName) => typeof oneName !== 'string')) {
 						next(refuse.byName({ moduleName, what: `${forgePrefix} describeSource returned sourceFiles ${JSON.stringify(describedSource.sourceFiles)}`, where: 'sourceFiles is an array of strings in the ORDER the standard states' }).message);
+						return;
+					}
+					// FA5: the root's provenance claim may name only bytes the framework VERIFIED (step 2)
+					const unverifiedSourceFile = describedSource.sourceFiles.find((oneName) => args.verifiedFileList.indexOf(oneName) === -1);
+					if (unverifiedSourceFile !== undefined) {
+						next(refuse.byName({ moduleName, what: `${forgePrefix} describeSource names sourceFiles entry '${unverifiedSourceFile}' that was not verified against SHA256SUMS (verified: ${args.verifiedFileList.join(', ')})`, where: 'sourceFiles is the list of provenanced files the loaders consumed; a name the snapshot never verified cannot be claimed on the root' }).message);
 						return;
 					}
 					if (describedSource.sourceUrl !== null && typeof describedSource.sourceUrl !== 'string') {
