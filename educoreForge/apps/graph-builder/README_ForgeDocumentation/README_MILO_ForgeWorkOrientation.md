@@ -86,6 +86,14 @@ defect. Do not skip it because the suite is green.
   within the bundle, declared once in the hooks file, and (if they appear in `sourceFiles`) declared
   on the card. The framework refuses a non-camelCase or duplicate loaderName by name.
 
+## 5a. Before you say "done" on any rule change
+
+Grep every README and spec in the tree for the words the rule touches — `lib/forge-framework/README.md`,
+this directory's six files, the DEVLOG handoff — and update each one that still states the old rule.
+A repair that lands in some artifacts and not the others that assert the old state is half a repair,
+and it is the half that propagates. (Learned 2026-08-16: a loader-name rule reached three documents
+and declared itself finished; TQ asked "did you update the READMEs?" and two more were still wrong.)
+
 ## 6. When you are the supervisor
 
 Spawn one fresh Programmer Milo per phase (`spawn-milo-programmer`), brief it from a `BRIEF-*.md`,
