@@ -30,6 +30,7 @@ SYNOPSIS
                                    [--outPath=<path>] [--reportPath=<path>]
      graphBuilder   -cedsGates --containerName=<name> [--reportJsonPath=<path>]
      graphBuilder   -goldEvalCheck --buildLogDirPath=<the build's run directory>
+                                   [--manifestRefId=<the manifest -build printed> [--standardsDatabaseFilePath=<its store>]]
      graphBuilder   -help
 
      ... | graphBuilder                (JSON on stdin REPLACES command-line parameters)
@@ -384,10 +385,19 @@ OPTIONS
                   LISTED in the output. INTENDED OPERATIONAL LAW: no DEV build is renamed
                   GOLD_EVAL_<YYMMDD> (GNC-001) without a PASS from this check on its build
                   run directory. READ-ONLY and FREE -- no graph, no docker, no database.
-                  The bridge framework supplies this gate's SIBLING rule for mapping edges
-                  (lib/bridge-framework/certificationCheck.js: a relationship block carrying
-                  any edge with provenanceTier 'invalid-debug' refuses certification by name);
-                  wiring it into this command is later bridge work, not yet done.
+                  THE BRIDGE SIBLING (wired 2026-08-16, B3): the bridge framework supplies this
+                  gate's sibling rule for mapping edges (lib/bridge-framework/certificationCheck.js:
+                  a relationship block carrying any edge with provenanceTier 'invalid-debug' — a
+                  DEBUG-JUDGE block — refuses certification by name). Pass
+                  --manifestRefId=<the manifest -build printed> to run it: the manifest's
+                  RELATIONSHIP member blocks are read out of the standardsDatabase (the artifact,
+                  no container; the store resolves as -replay resolves it — an explicit
+                  --standardsDatabaseFilePath wins over the configured support store) and every
+                  edge audited. WITHOUT --manifestRefId the sibling does NOT run and the verdict
+                  says so BY NAME (status line "FORGE ROUND TRIP ONLY ... MAPPING EDGES
+                  UNCERTIFIED"; payload scope 'forgeRoundTripOnly', mappingEdgesCertified false)
+                  — a bridged build is not promotable on a forge-only PASS. A manifest with zero
+                  relationship blocks is REPORTED (mappingBlockList []), never refused.
 
 OUTPUT
      -build:    JSON { manifestId, boltUrl } on stdout (progress on stderr).

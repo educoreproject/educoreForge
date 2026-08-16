@@ -1330,47 +1330,103 @@ const goldEvalCheckAction = (callback) => {
 		return;
 	}
 	const absentTokens = summary.absentTokens || [];
-	xLog.status(
-		`graphBuilder: [goldEvalCheck] PASS — ${declaredRows.length} declared validator(s) ran ` +
-			`with inventedTotal=0${absentTokens.length ? `; ${absentTokens.length} bundle(s) declared-ABSENT (tolerated during the retrofit): ${absentTokens.join(', ')}` : ''}`,
-	);
-	callback('', {
-		exitCode: 0,
-		resultText: JSON.stringify(
-			{
-				certification: 'PASS',
-				summaryFilePath,
-				containerName: summary.containerName,
-				declared: declaredRows.map((oneRow) => ({
-					token: oneRow.token,
-					roundTripClean: oneRow.roundTripClean,
-					inventedTotal: oneRow.inventedTotal,
-					lostTotal: oneRow.lostTotal,
-					// ⟪PHASE 7, F-6⟫ THIS PAYLOAD IS WHAT A PROMOTER READS, and it stated `lostTotal: 0`
-					// bare. The qualification must travel with the zero: lostTotal counts loss only in
-					// the dimensions the comparator MODELS, and a dimension unread by the emitter AND
-					// unmeasured by the canonicalizer reports zero on both sides and reads as fidelity.
-					//
-					// A MISSING KEY HERE MEANS EXACTLY ONE THING, because round-trip-stage.js now always
-					// writes it (either the bundle's declaration or an explicit NONE DECLARED marker):
-					// the stage summary was written by a builder that predates this field. Said by name
-					// rather than left as an absence, so a stale artifact cannot read as an unqualified
-					// clean bill of health.
-					semanticValidationLimit:
-						typeof oneRow.semanticValidationLimit === 'string' &&
-						oneRow.semanticValidationLimit.trim() !== ''
-							? oneRow.semanticValidationLimit
-							: 'ABSENT FROM THIS STAGE SUMMARY — it was written before the builder carried ' +
-								'this field. What this round-trip does and does not model is therefore ' +
-								'UNSTATED in the certification evidence; open the verdict at verdictPath, ' +
-								'or re-run the build to regenerate the summary.',
-					verdictPath: oneRow.verdictPath,
-				})),
-				declaredAbsentTolerated: absentTokens,
-			},
-			null,
-			2,
-		),
+
+	// ⟪B3, 2026-08-16⟫ THE BRIDGE SIBLING (SPEC-bridgeFramework-v1 §12 item 7, BG-DEBUG (c); RULING R5;
+	// B2 review ruling for B3): a relationship block carrying ANY edge with provenanceTier 'invalid-debug'
+	// (a debug-judge block) MUST NOT reach a certified graph. The RULE is the framework's
+	// (lib/bridge-framework/certificationCheck.js); the WIRING here reads the run's MANIFEST out of the
+	// standardsDatabase (the artifact — no container) and audits every relationship member block's edge
+	// list (apps/graph-builder/lib/gold-eval-bridge-sibling.js).
+	//
+	// HOW IT IS INVOKED, and why this is not a silent default: the run directory records no manifest id
+	// (build.js writes only the round-trip stage summary there, and build.js is a seam file), so the
+	// sibling is driven by --manifestRefId=<the manifest -build printed>, with the store resolved exactly
+	// as -replay resolves it (an explicit --standardsDatabaseFilePath wins over the configured support
+	// store; neither → refused by name). WITHOUT --manifestRefId the sibling DOES NOT RUN and the verdict
+	// SAYS SO BY NAME on the status line and in the payload (scope 'forgeRoundTripOnly',
+	// mappingEdgesCertified false): a forge-only build certifies exactly as before B3, and a bridged
+	// build cannot be promoted on a forge-only PASS without the promoter reading that it was forge-only.
+	// A manifest with ZERO relationship members is REPORTED (mappingBlockList []), never a refusal.
+	const manifestRefId = firstValue(process.global.commandLineParameters, 'manifestRefId');
+	const emitVerdict = (bridgeSibling) => {
+		const scopeText = bridgeSibling.ran
+			? `bridge sibling: ${bridgeSibling.mappingBlockList.length} relationship block(s) audited, ${bridgeSibling.mappingBlockList.reduce((soFar, oneBlock) => soFar + oneBlock.edgeCount, 0)} mapping edge(s), 0 invalid-debug`
+			: `FORGE ROUND TRIP ONLY — bridge sibling NOT RUN (${bridgeSibling.notRunReason}); MAPPING EDGES UNCERTIFIED`;
+		xLog.status(
+			`graphBuilder: [goldEvalCheck] PASS — ${declaredRows.length} declared validator(s) ran ` +
+				`with inventedTotal=0${absentTokens.length ? `; ${absentTokens.length} bundle(s) declared-ABSENT (tolerated during the retrofit): ${absentTokens.join(', ')}` : ''}; ${scopeText}`,
+		);
+		callback('', {
+			exitCode: 0,
+			resultText: JSON.stringify(
+				{
+					certification: 'PASS',
+					scope: bridgeSibling.ran ? 'forgeRoundTripAndMappingEdges' : 'forgeRoundTripOnly',
+					mappingEdgesCertified: bridgeSibling.ran,
+					bridgeSibling,
+					summaryFilePath,
+					containerName: summary.containerName,
+					declared: declaredRows.map((oneRow) => ({
+						token: oneRow.token,
+						roundTripClean: oneRow.roundTripClean,
+						inventedTotal: oneRow.inventedTotal,
+						lostTotal: oneRow.lostTotal,
+						// ⟪PHASE 7, F-6⟫ THIS PAYLOAD IS WHAT A PROMOTER READS, and it stated `lostTotal: 0`
+						// bare. The qualification must travel with the zero: lostTotal counts loss only in
+						// the dimensions the comparator MODELS, and a dimension unread by the emitter AND
+						// unmeasured by the canonicalizer reports zero on both sides and reads as fidelity.
+						//
+						// A MISSING KEY HERE MEANS EXACTLY ONE THING, because round-trip-stage.js now always
+						// writes it (either the bundle's declaration or an explicit NONE DECLARED marker):
+						// the stage summary was written by a builder that predates this field. Said by name
+						// rather than left as an absence, so a stale artifact cannot read as an unqualified
+						// clean bill of health.
+						semanticValidationLimit:
+							typeof oneRow.semanticValidationLimit === 'string' &&
+							oneRow.semanticValidationLimit.trim() !== ''
+								? oneRow.semanticValidationLimit
+								: 'ABSENT FROM THIS STAGE SUMMARY — it was written before the builder carried ' +
+									'this field. What this round-trip does and does not model is therefore ' +
+									'UNSTATED in the certification evidence; open the verdict at verdictPath, ' +
+									'or re-run the build to regenerate the summary.',
+						verdictPath: oneRow.verdictPath,
+					})),
+					declaredAbsentTolerated: absentTokens,
+				},
+				null,
+				2,
+			),
+		});
+	};
+	if (!manifestRefId) {
+		emitVerdict({ ran: false, notRunReason: 'no --manifestRefId given; pass --manifestRefId=<the manifest -build printed> (and --standardsDatabaseFilePath=<its store>) to audit the manifest\'s relationship blocks', mappingBlockList: [] });
+		return;
+	}
+	const supportStoreResolution = resolveSupportStoreFilePath({
+		explicitValue: firstValue(process.global.commandLineParameters, 'standardsDatabaseFilePath'),
+		configuredValue: process.global.getConfig('stores').graphBuilderSupportFilePath,
+		actionName: '-goldEvalCheck',
+	});
+	if (supportStoreResolution.error) {
+		callback(supportStoreResolution.error);
+		return;
+	}
+	requireStandardsDatabase()().open({ databaseFilePath: supportStoreResolution.filePath }, (openError, standardsDatabase) => {
+		if (openError) {
+			callback(`graphBuilder -goldEvalCheck: ${openError}`);
+			return;
+		}
+		require('./gold-eval-bridge-sibling').auditManifestMappingBlocks({ standardsDatabase, manifestRefId }, (auditError, audit) => {
+			if (auditError) {
+				callback(`graphBuilder -goldEvalCheck: REFUSED —\n  - ${auditError}`);
+				return;
+			}
+			if (audit.refusalMessageList.length) {
+				callback(`graphBuilder -goldEvalCheck: REFUSED —\n  - ${audit.refusalMessageList.join('\n  - ')}`);
+				return;
+			}
+			emitVerdict({ ran: true, manifestRefId: audit.manifestRefId, standardsDatabaseFilePath: supportStoreResolution.filePath, memberCount: audit.memberCount, mappingBlockList: audit.mappingBlockList });
+		});
 	});
 };
 

@@ -1,0 +1,10 @@
+{
+  "CEDS@14.0.0.0": {
+    "P001070": { "canonicalKey": "P001572", "domainId": "C200291", "qualifierKeys": ["OV002114100003"] },
+    "P001071": { "canonicalKey": "P001572", "domainId": "C200291", "qualifierKeys": ["OV002114100002"] },
+    "P001072": { "canonicalKey": "P000827", "domainId": "C200252" },
+    "P001073": { "canonicalKey": "P000827", "domainId": "C200252" },
+    "P001074": { "canonicalKey": "P001571", "domainId": "C200291" },
+    "P001075": { "canonicalKey": "P001571", "domainId": "C200291" }
+  }
+}

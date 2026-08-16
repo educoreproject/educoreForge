@@ -1,0 +1,22 @@
+{
+  // edfiBridgeOnly — the FAST ITERATION LOOP for the Ed-Fi bridge plugin: Ed-Fi + the CEDS hub only, one
+  // bridge. DEV_ builds only; NEVER an acceptance run — the acceptance census (SPEC §10.4) and the frozen
+  // decision block are keyed to the four-forge assembly (fourWithHubEdfiBridge.recipe.jsonc, manifest
+  // 97c618c2…), and a relationship block id here differs from the four-forge one by construction (the
+  // block is coupled to the source standardBase). Same plugin, same hub, same crosswalk bytes: the DECISION
+  // block's census over Ed-Fi × CEDS is the same either way, which is what makes this loop useful.
+  "schemaVersion": "1.0.0",
+  "recipeName": "edfiBridgeOnly",
+  "kind": "dev",
+  "description": "Ed-Fi + the CEDS hub + the Ed-Fi → CEDS crosswalk bridge plugin — the fast DEV_ iteration loop for the plugin; not an acceptance recipe.",
+  "standards": [
+    { "token": "ceds", "version": "current" },
+    { "token": "edfi", "version": "current" }
+  ],
+  "hubs": [
+    { "standard": "ceds" }
+  ],
+  "bridges": [
+    { "source": "edfi", "hub": "ceds", "bridge": "edfiCedsCrosswalkPlugin", "dependencies": ["edfi", "ceds"] }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  // fourWithHubEdfiBridge — fourWithHub.recipe.jsonc (the four certified standards + the CEDS hub folded
+  // into the CEDS base; manifest 97c618c2… = GOLD_EVAL_260816's bytes) PLUS ONE bridge: the Ed-Fi → CEDS
+  // crosswalk plugin on the Bridge Framework (forges/edfi/bridges/edfiCedsCrosswalkPlugin.js;
+  // SPEC-bridgeFramework-v1.md §10; B3 order, 2026-08-16).
+  //
+  // The bridge entry names the PLUGIN by its declared bridgeName; the framework's discovery registry over
+  // forges/<std>/bridges/ resolves it (an unregistered name is refused LISTING the registered ones). The
+  // producer is EXPLICIT in the plugin's declaration (producerKind 'authored', matchBasis 'crosswalk') and
+  // returned by the framework on every run — build.js never infers it. The recipe schema carries no producer
+  // key (additionalProperties: false); source::hub::bridgeName is the pairing's uniqueness key.
+  //
+  // Which decision block the pair materialises is NOT a recipe choice: a plain -build REPLAYS the pair's
+  // frozen block from --decisionStoreFilePath (zero judge calls); --rebridge=edfi FREEZES a new one
+  // (--useDebugJudge=digest for every gate run; the real judge ONLY on the supervisor's go). The frozen
+  // command lines live in lib/bridge-framework/test/acceptance/acceptanceCommands.jsonc.
+  //
+  // Builds from this recipe go to NEW DEV_ containers only (GNC-001); the GOLD_EVAL_ rename is the
+  // supervisor's act after -goldEvalCheck PASS on the run dir.
+  "schemaVersion": "1.0.0",
+  "recipeName": "fourWithHubEdfiBridge",
+  "kind": "dev",
+  "description": "The four certified standards with the CEDS hub, PLUS the Ed-Fi → CEDS crosswalk bridge plugin (edfiCedsCrosswalkPlugin) on the Bridge Framework.",
+  "standards": [
+    { "token": "ceds", "version": "current" },
+    { "token": "edfi", "version": "current" },
+    { "token": "pesc260805", "version": "current" },
+    { "token": "sif", "version": "current" }
+  ],
+  "hubs": [
+    { "standard": "ceds" }
+  ],
+  "bridges": [
+    { "source": "edfi", "hub": "ceds", "bridge": "edfiCedsCrosswalkPlugin", "dependencies": ["edfi", "ceds"] }
+  ]
+}
