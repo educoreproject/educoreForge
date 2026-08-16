@@ -7,13 +7,15 @@
 //   (a) every Bridge-Profile edge property NAME the framework writes is a registry row (the ten B2 rows
 //       plus the ten pre-existing ones — the writer's CLOSED SET; a name outside it is refused there);
 //   (b) MAPPING_PROPERTY_NAME_LIST is EXACTLY the registry's values (the derived list the writer reads);
-//   (c) the ONE provenanceTier a mapping edge may carry is 'invalid-debug' (Profile v1.0.5 §4.6 carve-out)
-//       — the tier is otherwise RETIRED from mapping edges (C6);
+//   (c) the provenanceTier a mapping edge carries is the ENGINE-LEVEL value derived from producerKind
+//       (RULING 2026-08-16 12:20, SPEC v1.1.2): authored → spec-authoritative, inferred → embedding-inferred,
+//       plus the 'invalid-debug' carve-out on a debug block — the permitted list is EXACTLY those three and
+//       the by-producer table is EXACTLY those two rows;
 //   (d) isValidSssomJustification is GONE (BR-145 RULED: the boolean invited a caller to discard the
 //       ban's name) — sssomJustificationRefusal is the only door.
 // RED TWINS (observed by the sweep below on every run, three-state): a vocabulary DOUBLE compiled in
 // memory (lib/forge-framework/test/testSupport/moduleDouble.js — no file is written) with (a) the
-// DECISION_BLOCK_HASH row removed → (a) and (b) red; (c) 'spec-authoritative' added to the permitted
+// DECISION_BLOCK_HASH row removed → (a) and (b) red; (c) 'structural' added to the permitted
 // tier list → (c) red; (d) the boolean re-added → (d) red. Pure; no docker/db.
 //
 // Run: node lib/vocabulary/test/test-mappingProperties.js
@@ -27,7 +29,7 @@ SYNOPSIS
      ${moduleName} [-verbose] [-quiet] [-help]
 DESCRIPTION
      Locks the ten B2 mapping-edge property names, the derived MAPPING_PROPERTY_NAME_LIST, the
-     'invalid-debug'-only provenanceTier carve-out, and the removal of isValidSssomJustification.
+     producer-derived provenanceTier table (+ 'invalid-debug'), and the removal of isValidSssomJustification.
      Every conjunct is observed RED under an in-memory vocabulary double. Pure.
 EXIT STATUS
      0 all assertions passed;  1 at least one failed.
@@ -80,9 +82,11 @@ const conjunctJudgeByRefId = {
 		const equal = JSON.stringify(subject.MAPPING_PROPERTY_NAME_LIST) === JSON.stringify(valueList) && subject.MAPPING_PROPERTY_NAME_LIST.length === 20;
 		return { pass: equal, detail: `list ${JSON.stringify(subject.MAPPING_PROPERTY_NAME_LIST)}` };
 	},
-	'c_onlyInvalidDebugTierPermitted': (subject) => ({
-		pass: JSON.stringify(subject.MAPPING_EDGE_PERMITTED_PROVENANCE_TIER_LIST) === JSON.stringify(['invalid-debug']),
-		detail: JSON.stringify(subject.MAPPING_EDGE_PERMITTED_PROVENANCE_TIER_LIST),
+	'c_producerDerivedTiersOnly': (subject) => ({
+		pass:
+			JSON.stringify(subject.MAPPING_EDGE_PERMITTED_PROVENANCE_TIER_LIST) === JSON.stringify(['spec-authoritative', 'embedding-inferred', 'invalid-debug']) &&
+			JSON.stringify(subject.MAPPING_EDGE_PROVENANCE_TIER_BY_PRODUCER_KIND) === JSON.stringify({ authored: 'spec-authoritative', inferred: 'embedding-inferred' }),
+		detail: `${JSON.stringify(subject.MAPPING_EDGE_PERMITTED_PROVENANCE_TIER_LIST)} / ${JSON.stringify(subject.MAPPING_EDGE_PROVENANCE_TIER_BY_PRODUCER_KIND)}`,
 	}),
 	'd_booleanJustificationGateRemoved': (subject) => ({
 		pass: subject.isValidSssomJustification === undefined && typeof subject.sssomJustificationRefusal === 'function',
@@ -112,11 +116,11 @@ const twinList = [
 		replace: '',
 	},
 	{
-		conjunctRefIdList: ['c_onlyInvalidDebugTierPermitted'],
-		twinName: 'permitSpecAuthoritativeTier',
+		conjunctRefIdList: ['c_producerDerivedTiersOnly'],
+		twinName: 'permitStructuralTier',
 		leverKind: 'productionMutation',
-		find: 'const MAPPING_EDGE_PERMITTED_PROVENANCE_TIER_LIST = Object.freeze([PROVENANCE_TIER.INVALID_DEBUG]);',
-		replace: 'const MAPPING_EDGE_PERMITTED_PROVENANCE_TIER_LIST = Object.freeze([PROVENANCE_TIER.INVALID_DEBUG, PROVENANCE_TIER.SPEC_AUTHORITATIVE]);',
+		find: '\tPROVENANCE_TIER.EMBEDDING_INFERRED,\n\tPROVENANCE_TIER.INVALID_DEBUG,\n]);',
+		replace: '\tPROVENANCE_TIER.EMBEDDING_INFERRED,\n\tPROVENANCE_TIER.INVALID_DEBUG,\n\tPROVENANCE_TIER.STRUCTURAL,\n]);',
 	},
 	{
 		conjunctRefIdList: ['d_booleanJustificationGateRemoved'],

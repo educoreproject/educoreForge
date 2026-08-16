@@ -484,12 +484,14 @@ const sssomJustificationRefusal = (oneJustification) => {
 // subjectMatchField, objectMatchField, sourceLabel, predicateAssertedBy, attestationChannelList,
 // decisionBlockHash. Two rows are ANNOTATED rather than added:
 //   MATCH_ID        — INTERNAL (C6): a forensic key, never exported by the SSSOM exporter.
-//   PROVENANCE_TIER — RETIRED from authored/judged mapping edges (C6: its job is done by matchBasis ×
-//                     resolution). The NAME stays in the closed set for exactly ONE lawful value: a
-//                     DEBUG-JUDGE block's edges carry `provenanceTier: 'invalid-debug'` (Profile v1.0.5
-//                     §4.6 carve-out, RULING BF16/R5) so a debug block is detectable by one cypher and can
-//                     never reach a certified graph. Any other tier on a mapping edge is refused by the
-//                     writer.
+//   PROVENANCE_TIER — an ENGINE-LEVEL value on every mapping edge, DERIVED FROM producerKind (RULING
+//                     SABLE_RIVER 2026-08-16 12:20, SPEC v1.1.2 / Profile v1.0.6, on the finding that
+//                     lib/replay/replay-engine.js GUARD 3 refuses any edge without a valid tier):
+//                     authored → 'spec-authoritative'; inferred (not in v1) → 'embedding-inferred'; a
+//                     DEBUG-JUDGE block's edges → 'invalid-debug' (Profile §4.6 carve-out, RULING BF16/R5).
+//                     It carries NO mapping semantics — those are matchBasis × resolution × predicate (C6)
+//                     — and is NEVER exported to SSSOM. The writer stamps exactly the value
+//                     MAPPING_EDGE_PROVENANCE_TIER_BY_PRODUCER_KIND names; any other tier is refused.
 const MAPPING_PROPERTIES = {
 	PREDICATE: 'predicate',
 	CONFIDENCE: 'confidence',
@@ -515,8 +517,18 @@ const MAPPING_PROPERTIES = {
 };
 // the property NAMES a mapping edge may carry — derived from the registry above; the writer's closed set
 const MAPPING_PROPERTY_NAME_LIST = Object.freeze(Object.keys(MAPPING_PROPERTIES).map((oneMember) => MAPPING_PROPERTIES[oneMember]));
-// the ONE provenanceTier value a mapping edge may carry, and only on a debug-judge block (Profile v1.0.5 §4.6)
-const MAPPING_EDGE_PERMITTED_PROVENANCE_TIER_LIST = Object.freeze([PROVENANCE_TIER.INVALID_DEBUG]);
+// the ENGINE-LEVEL provenanceTier a mapping edge carries, keyed by the block's producerKind (RULING 12:20);
+// a debug-judge block overrides with 'invalid-debug' on every edge (Profile v1.0.6 §4.6). DATA, no branch.
+const MAPPING_EDGE_PROVENANCE_TIER_BY_PRODUCER_KIND = Object.freeze({
+	authored: PROVENANCE_TIER.SPEC_AUTHORITATIVE,
+	inferred: PROVENANCE_TIER.EMBEDDING_INFERRED,
+});
+// the tiers a mapping edge may carry — the two producer-derived values plus the debug carve-out
+const MAPPING_EDGE_PERMITTED_PROVENANCE_TIER_LIST = Object.freeze([
+	PROVENANCE_TIER.SPEC_AUTHORITATIVE,
+	PROVENANCE_TIER.EMBEDDING_INFERRED,
+	PROVENANCE_TIER.INVALID_DEBUG,
+]);
 
 // =====================================================================
 // UNIQUENESS KEYS (replay-engine.js MERGE key; addressSignature reserved for the HubReference phases)
@@ -857,6 +869,7 @@ const vocabulary = {
 	sssomJustificationRefusal,
 	MAPPING_PROPERTIES,
 	MAPPING_PROPERTY_NAME_LIST,
+	MAPPING_EDGE_PROVENANCE_TIER_BY_PRODUCER_KIND,
 	MAPPING_EDGE_PERMITTED_PROVENANCE_TIER_LIST,
 	UNIQUENESS_KEYS,
 	REQUIRED_PROPERTIES,
