@@ -1,0 +1,16 @@
+{
+  "_comment": "G-ID frozen ids (SPEC §9.1, §9.3, FR9): MEASURED by the F3 builder on each UNMIGRATED forge under acceptanceCommands.jsonc's frozen command (`preMigration`), with the run directory and date; the migrated forge must EQUAL it. F3a measures nothing (no builds in F3a — BRIEF hard line): every entry null. The reference ids under fourWithHub-baseline (G1 golden, DEVLOG-rootAndBranch.md:167-172) are recorded separately as the manifest proof's members; whether a single-forge build reproduces the four-forge id for that member is exactly what the pre-migration measurement answers.",
+  "referenceUnderFourWithHubBaseline": {
+    "edfi": "aea6d8dfe7899adef57c5ac3adb6b0df2bfc7e4a4ae859c4fa3893c132c8b304",
+    "sif": "d393b0406d08f613f3142711fca5a9f2b0c580e84c4bef3ffd6b18d4eaa2330a",
+    "pesc260805": "db885ac42b284135a37135a0fb95baf376547fe401530506cc321f36686a9e61",
+    "ceds": "09a5d658807b9c22b44b28289d9ad4b47df15e45f44c9eacec765962fe487c33",
+    "fourForgeManifest": "97c618c20e07c0c612957def69164402d364a98d5dfee865faacae1deace6382"
+  },
+  "measuredPreMigration": {
+    "edfi": null,
+    "sif": null,
+    "pesc260805": null,
+    "ceds": null
+  }
+}

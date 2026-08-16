@@ -1,0 +1,37 @@
+// acceptanceCommands.jsonc — the FROZEN per-forge command (SPEC-forgeFramework-v1.md §9.2, RULING 23:12 #7, FR9),
+// ONE committed line per forge, run TWICE by the F3 builder: once over the UNMIGRATED forge (`preMigration`)
+// and once over the migrated forge (`migrated`). G-ID (§10.2) runs EXACTLY this from system/code/educoreForge,
+// nohup-detached with PID and log; the two <phase> tokens are the ONLY variation. Pinned: --vectorize=true stated
+// explicitly (build.js:555-559 defaults it true, but a stage-off/vectorize-off run mints a different id
+// trivially); the WARM cache by absolute path; the round-trip stage inside the recipe; </dev/null (graphBuilder
+// blocks on non-TTY stdin); heap 20000; a SCRATCH standardsDatabase under system/dataStores/graphBuilder/, never
+// the golden's. Containers are DEV_<label> and disposed (GNC-001). ONE-MACHINE-ONLY, licence-gated (Ed-Fi's
+// MetaEd bytes are gitignored). DATA ONLY in F3a — the build-driven gates are F3b/F3c/F3d's proofs.
+{
+	"treeRoot": "/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge",
+	"phaseTokenList": ["preMigration", "migrated"],
+	"goldEvalCheckCommand": "node apps/graph-builder/graphBuilder.js -goldEvalCheck --buildLogDirPath=<run dir> </dev/null",
+	"byStandardKey": {
+		"edfi": {
+			"recipePath": "recipes/edfiOnlyRoundTrip.recipe.jsonc",
+			"command": "node --max-old-space-size=20000 apps/graph-builder/graphBuilder.js -build --recipePath=recipes/edfiOnlyRoundTrip.recipe.jsonc --vectorize=true --standardsDatabaseFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/graphBuilder/forgeFramework_edfi_<phase>.standardsDatabase.sqlite3 --embeddingCacheFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/vectorCache/vectorCache.sqlite3 </dev/null > /Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/buildLogs/forgeFramework/edfi-<phase>/build.log 2>&1 &"
+		},
+		"sif": {
+			"recipePath": "recipes/sifOnlyRoundTrip.recipe.jsonc",
+			"command": "node --max-old-space-size=20000 apps/graph-builder/graphBuilder.js -build --recipePath=recipes/sifOnlyRoundTrip.recipe.jsonc --vectorize=true --standardsDatabaseFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/graphBuilder/forgeFramework_sif_<phase>.standardsDatabase.sqlite3 --embeddingCacheFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/vectorCache/vectorCache.sqlite3 </dev/null > /Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/buildLogs/forgeFramework/sif-<phase>/build.log 2>&1 &"
+		},
+		"pesc260805": {
+			"recipePath": "recipes/pesc260805OnlyRoundTrip.recipe.jsonc",
+			"command": "node --max-old-space-size=20000 apps/graph-builder/graphBuilder.js -build --recipePath=recipes/pesc260805OnlyRoundTrip.recipe.jsonc --vectorize=true --standardsDatabaseFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/graphBuilder/forgeFramework_pesc260805_<phase>.standardsDatabase.sqlite3 --embeddingCacheFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/vectorCache/vectorCache.sqlite3 </dev/null > /Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/buildLogs/forgeFramework/pesc260805-<phase>/build.log 2>&1 &"
+		},
+		"ceds": {
+			"recipePath": "recipes/cedsOnlyRoundTrip.recipe.jsonc",
+			"command": "node --max-old-space-size=20000 apps/graph-builder/graphBuilder.js -build --recipePath=recipes/cedsOnlyRoundTrip.recipe.jsonc --vectorize=true --standardsDatabaseFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/graphBuilder/forgeFramework_ceds_<phase>.standardsDatabase.sqlite3 --embeddingCacheFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/vectorCache/vectorCache.sqlite3 </dev/null > /Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/buildLogs/forgeFramework/ceds-<phase>/build.log 2>&1 &"
+		}
+	},
+	"finalProof": {
+		"recipePath": "recipes/fourWithHub-baseline.recipe.jsonc",
+		"expectedManifest": "97c618c20e07c0c612957def69164402d364a98d5dfee865faacae1deace6382",
+		"note": "the four-forge manifest is the FINAL proof — after Ed-Fi alone (the other three unchanged) and again after all four (SPEC §9)"
+	}
+}

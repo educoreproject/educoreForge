@@ -1,0 +1,8 @@
+{
+  "name": "forge-framework",
+  "version": "1.0.0",
+  "private": true,
+  "description": "The EDUcore Forge Framework — ONE shared library that satisfies the EDUcore Forge Profile for every forge bundle (SPEC-forgeFramework-v1.md v1.1). This version is the FRAMEWORK's own and never reaches a block; the root's coreVersion is the separate constant CORE_VERSION (see README.md). This file does NOT drive test discovery: test/runAllTests.js finds lib/ modules by the recursive .js-presence rule.",
+  "main": "forge-framework.js",
+  "license": "UNLICENSED"
+}

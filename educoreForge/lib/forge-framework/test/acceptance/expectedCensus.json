@@ -1,0 +1,10 @@
+{
+  "_comment": "G-ORDER / G-CENSUS frozen collision census per forge (SPEC §8.4 #1, §10.1 G-ORDER, §10.2 G-CENSUS): census.collisionCensus over the forge's pure output — duplicateStableIdCount / duplicateEdgeTripleCount / danglingEndpointCount. The toy is MEASURED and frozen (0/0/0). The four are MEASURED by the F3 builder as the FIRST act of each migration (STANDDOWN-F2-panel ruling 4) — null until then; the census decides whether C1/C2 (and S6's parent-edge count) may be declared.",
+  "byStandardKey": {
+    "toy": { "duplicateStableIdCount": 0, "duplicateEdgeTripleCount": 0, "danglingEndpointCount": 0 },
+    "edfi": null,
+    "sif": null,
+    "pesc260805": null,
+    "ceds": null
+  }
+}

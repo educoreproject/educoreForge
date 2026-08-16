@@ -1,0 +1,7 @@
+{
+  "name": "toy-forge-fixture",
+  "version": "1.0.0",
+  "private": true,
+  "description": "The Toy Standard fixture forge for the Forge Framework's hermetic unit-gate suite (not discovered by test/runAllTests.js: it lives under a test/ directory, which the lib discovery rule does not descend).",
+  "license": "UNLICENSED"
+}

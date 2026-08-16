@@ -1,0 +1,46 @@
+{
+  "standard": "Toy",
+  "version": "1.2.3",
+  "sourceUrl": "https://toy.example.invalid/spec/1.2.3",
+  "description": "The Toy Standard, a four-role fixture model: two classes, five properties, two option sets, five option values, one support note.",
+  "classes": [
+    {
+      "name": "Person",
+      "description": "A human being known to the toy system.",
+      "properties": [
+        { "name": "givenName", "dataType": "string", "description": "The person's given name." },
+        { "name": "gender", "dataType": "GenderCode", "optionSet": "GenderCode" },
+        { "name": "birthDate", "dataType": "date" }
+      ]
+    },
+    {
+      "name": "School",
+      "description": "An institution that teaches.",
+      "properties": [
+        { "name": "schoolName", "dataType": "string" },
+        { "name": "schoolType", "dataType": "SchoolTypeCode", "optionSet": "SchoolTypeCode", "description": "The kind of school." }
+      ]
+    }
+  ],
+  "optionSets": [
+    {
+      "name": "GenderCode",
+      "description": "Toy gender codes.",
+      "values": [
+        { "code": "F", "label": "Female" },
+        { "code": "M", "label": "Male" },
+        { "code": "X", "label": "Nonbinary" }
+      ]
+    },
+    {
+      "name": "SchoolTypeCode",
+      "values": [
+        { "code": "ES", "label": "Elementary school" },
+        { "code": "HS", "label": "High school" }
+      ]
+    }
+  ],
+  "supports": [
+    { "name": "Glossary", "text": "Terms used across the Toy Standard." }
+  ]
+}

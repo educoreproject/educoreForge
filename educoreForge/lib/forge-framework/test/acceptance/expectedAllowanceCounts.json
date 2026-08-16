@@ -1,0 +1,10 @@
+{
+  "_comment": "G-COMPAT frozen per-forge allowance counts (SPEC §7.3): what complianceReport.activeAllowanceCount must EQUAL. The toy is a NEW forge: 0. The four's frozen numbers are the SPEC §7.3 table (edfi 1 = E6; sif 4 = S2,S3,S4,S7; pesc260805 7 = P2,P4,P5,P6,P9,P10,P16; ceds 0) with the conditional rows listed separately — a conditional row a probe/census turns ON raises the frozen number by one BEFORE the migration commit and this file is updated in that commit. F3a ships the registry rows E6/S4/P16, S2, S3, S6, S7 only; PESC/CEDS rows are added by their own migrations.",
+  "byStandardKey": {
+    "toy": { "frozenCount": 0, "frozenList": [], "conditionalList": [] },
+    "edfi": { "frozenCount": 1, "frozenList": ["E6"], "conditionalList": [] },
+    "sif": { "frozenCount": 4, "frozenList": ["S2", "S3", "S4", "S7"], "conditionalList": ["S6 (census #1)", "C1/C2 (census #1)"] },
+    "pesc260805": { "frozenCount": 7, "frozenList": ["P2", "P4", "P5", "P6", "P9", "P10", "P16"], "conditionalList": ["P1 (probe #2)", "P3 (present by construction today)", "C1/C2 (census #1)"] },
+    "ceds": { "frozenCount": 0, "frozenList": [], "conditionalList": ["C1", "C2 (census #1)", "C9 (probe #3)", "C10 (probe #12)"] }
+  }
+}

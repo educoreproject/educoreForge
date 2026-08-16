@@ -1,0 +1,10 @@
+{
+  "_comment": "G-SHARE frozen share ratios (SPEC §10.1, FR20): per MIGRATED forge, hook lines / original lines, frozen by the F3 builder from the MEASURED migrated file, ceiling 0.5. F3a migrates no forge: every migrating entry is null (unmeasured by design) and the gate's report line says so; F3b freezes edfi in its migration commit, F3c sif, F3d pesc260805/ceds. The `toy` entry is a MEASURED fixture value: toyHooks.js lines over the sum of the fixture's five .js files — the toy has no 'original', so the ceiling rule is not applied to it; it is frozen so a change to the fixture is deliberate.",
+  "ratioCeiling": 0.5,
+  "byStandardKey": {
+    "edfi": null,
+    "sif": null,
+    "pesc260805": null,
+    "ceds": null
+  }
+}
