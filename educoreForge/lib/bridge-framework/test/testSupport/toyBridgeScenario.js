@@ -362,7 +362,7 @@ module.exports = {
 // prompt), counting its calls; it PARTICIPATES in the judgment cache like the real client. Options:
 //   pickOrdinal   '1' (default) | 'NONE' | a function (question) → choice
 //   category      'strong' (default)
-//   rationaleMode 'keyAndName' (default) | 'ordinal' (the BR-067 fault) | 'blank'
+//   rationaleMode 'keyAndName' (default) | 'ordinal' (the BR-067 fault) | 'ordinalThenKeyAndName' (ordinal on the FIRST call for a prompt, key+name on the re-ask) | 'blank'
 //   extraReturnKeys  e.g. { predicate: 'relatedMatch' } (the BG-P6 (b) fault)
 //   throwOnCall   the replay spy: a plain build must never call the judge
 //   abstainCategory  'none' (default) | a picking category — the REAL client's evidence schema FORCES one on NONE (llmClient.js:88-99)
@@ -382,7 +382,8 @@ const makeFakeRealClient = ({ pickOrdinal = '1', category = 'strong', abstainCat
 			const lineMatch = new RegExp(`\\[${choice}\\] (\\S+) — ([^\\n]+)`).exec(userPrompt);
 			const keyText = lineMatch ? lineMatch[1] : 'unknownKey';
 			const nameText = lineMatch ? lineMatch[2] : 'unknown name';
-			rationale = rationaleMode === 'ordinal' ? `picked candidate ${choice} because it looked right` : rationaleMode === 'blank' ? '' : `${keyText} (${nameText}) means the same thing as the source element`;
+			const isReask = /RESTATE YOUR RATIONALE/.test(userPrompt);
+			rationale = rationaleMode === 'ordinal' || (rationaleMode === 'ordinalThenKeyAndName' && !isReask) ? `picked candidate ${choice} because it looked right` : rationaleMode === 'blank' ? '' : `${keyText} (${nameText}) means the same thing as the source element`;
 		} else {
 			rationale = 'none of the candidates means the same thing as the source element';
 		}

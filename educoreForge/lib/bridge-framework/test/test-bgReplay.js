@@ -47,7 +47,7 @@ const harness = require('../../../test/testLib/harness')(moduleName);
 const path = require('path');
 const fs = require('fs');
 const scenarioLib = require('./testSupport/toyBridgeScenario');
-const { runConjunct, twiceConjunct, pureConjunct, succeeded, nameInRefusal, refusalCase, frameworkMutationTwin, scenarioTwin, edgesOf, blockOf, forensicsOf } = require('./testSupport/bridgeTwinFactories');
+const { runConjunct, twiceConjunct, pureConjunct, succeeded, nameInRefusal, refusalCase, refusalTextOf, frameworkMutationTwin, scenarioTwin, edgesOf, blockOf, forensicsOf } = require('./testSupport/bridgeTwinFactories');
 const { runGateFamily } = require(path.join(__dirname, '..', '..', 'forge-framework', 'test', 'testSupport', 'gateSuiteRunner'));
 const { makeTwinRegistry } = require(path.join(__dirname, '..', '..', 'forge-framework', 'roundTripHarness', 'twinRegistry'));
 const moduleDouble = require(path.join(__dirname, '..', '..', 'forge-framework', 'test', 'testSupport', 'moduleDouble'));
@@ -514,6 +514,33 @@ const judgeConjunctList = [
 			return { pass: allAccepted && outsideRefused && pickWithNoneRefused, detail: `enum [${clientCategoryEnum.join(', ')}] accepted ${allAccepted}; outside refused ${outsideRefused}; pick+none refused ${pickWithNoneRefused}` };
 		},
 	}),
+	// ⟪B2 DEFECT #2 found by the FIRST REAL JUDGMENTS — RULING SABLE_RIVER 2026-08-16 (B3, "bounded rationale re-ask")⟫
+	runConjunct({
+		conjunctId: 'j_ordinalRationaleReaskedOnceAccepted',
+		title: "a REAL client answering ordinal-then-key is ACCEPTED after ONE re-ask: the refused first attempt is in forensics (reaskFollows) BEFORE the accepted answer (reaskCount 1), and the report counts rationaleReaskCount",
+		twinNameList: ['reaskRemoved'],
+		shape: (scenario) => useRealClientDouble(scenario, { pickOrdinal: '1', rationaleMode: 'ordinalThenKeyAndName' }),
+		judge: succeeded((runReport, outcome) => {
+			const forensic = forensicsOf(outcome).map((oneRecord) => oneRecord.record);
+			const refusedFirst = forensic.filter((oneRecord) => oneRecord.reaskFollows === true && typeof oneRecord.refusedAttempt === 'string' && /ORDINAL/.test(oneRecord.refusedAttempt) && /picked candidate/.test(oneRecord.rationale));
+			const accepted = forensic.filter((oneRecord) => oneRecord.reaskCount === 1 && oneRecord.chosenCardStableId !== null && !/picked candidate/.test(oneRecord.rationale));
+			const judgedCount = runReport.counts.cardinalityCensus.perTarget.judgedCount;
+			const abstained = runReport.counts.judgeSpend.abstained;
+			return { pass: judgedCount > 0 && refusedFirst.length === judgedCount && accepted.length === judgedCount - abstained && runReport.counts.judgeSpend.rationaleReaskCount === judgedCount, detail: `judged ${judgedCount}; refused-first records ${refusedFirst.length}; accepted-after-reask ${accepted.length}; rationaleReaskCount ${runReport.counts.judgeSpend.rationaleReaskCount}` };
+		}),
+	}),
+	runConjunct({
+		conjunctId: 'k_secondOrdinalRationaleRefusedByName',
+		title: 'a REAL client answering by ORDINAL twice is REFUSED by name after ONE re-ask (BR-067 stands), the first attempt in forensics',
+		twinNameList: ['reaskRemoved'],
+		shape: (scenario) => useRealClientDouble(scenario, { pickOrdinal: '1', rationaleMode: 'ordinal' }),
+		judge: (outcome) => {
+			const refusalText = refusalTextOf(outcome);
+			const refused = /names the pick by ORDINAL/.test(String(refusalText)) && /after ONE re-ask/.test(String(refusalText));
+			const forensicRefused = forensicsOf(outcome).map((oneRecord) => oneRecord.record).filter((oneRecord) => oneRecord.reaskFollows === true);
+			return { pass: Boolean(refused) && forensicRefused.length >= 1, detail: `${refused ? 'refused after one re-ask' : `NOT the expected refusal: ${String(refusalText).slice(0, 200)}`}; refused-first forensic records ${forensicRefused.length}` };
+		},
+	}),
 ];
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'a_outOfRangeChoiceRefused', twinName: 'clampOrdinal', fileName: JUDGE_FILE, find: "\tif (typeof choice !== 'string' || choiceEnum.indexOf(choice) === -1) {\n\t\treturn { error:", replace: "\tif (typeof choice !== 'string' || choiceEnum.indexOf(choice) === -1) {\n\t\treturn { chosenCardStableId: renderedPoolStableIdList[Math.min(renderedPoolStableIdList.length, Number(choice)) - 1] };\n\t\treturn { error:" });
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'a_pickMappedThroughRenderedOrder', twinName: 'mapThroughReversedList', fileName: JUDGE_FILE, find: '\tconst chosenCardStableId = renderedPoolStableIdList[ordinal - 1];', replace: '\tconst chosenCardStableId = renderedPoolStableIdList.slice().reverse()[ordinal - 1];' });
@@ -531,6 +558,9 @@ frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 
 // the production mutation: the normalisation REMOVED (the pre-ruling strict refusal restored) — (h) and (i) both go red
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'h_abstentionWithSchemaForcedCategoryAccepted', twinName: 'abstentionNormalisationRemoved', fileName: JUDGE_FILE, find: "\t\tif (clientReturn.category !== ABSTAIN_CATEGORY && PICK_CATEGORY_LIST.indexOf(clientReturn.category) === -1) {", replace: "\t\tif (clientReturn.category !== ABSTAIN_CATEGORY) {" });
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'i_clientCategoryEnumContract', twinName: 'abstentionNormalisationRemoved', fileName: JUDGE_FILE, find: "\t\tif (clientReturn.category !== ABSTAIN_CATEGORY && PICK_CATEGORY_LIST.indexOf(clientReturn.category) === -1) {", replace: "\t\tif (clientReturn.category !== ABSTAIN_CATEGORY) {" });
+// the production mutation: the bounded re-ask REMOVED (the pre-ruling refuse-on-first-sight restored) — (j) and (k) both go red
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'j_ordinalRationaleReaskedOnceAccepted', twinName: 'reaskRemoved', fileName: JUDGE_FILE, find: '\t\t\t\tif (judged.error && judged.ordinalRationale === true && reaskCount === 0) {', replace: '\t\t\t\tif (false && judged.error && judged.ordinalRationale === true && reaskCount === 0) {' });
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'k_secondOrdinalRationaleRefusedByName', twinName: 'reaskRemoved', fileName: JUDGE_FILE, find: '\t\t\t\tif (judged.error && judged.ordinalRationale === true && reaskCount === 0) {', replace: '\t\t\t\tif (false && judged.error && judged.ordinalRationale === true && reaskCount === 0) {' });
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'g_ordinalRationaleFromRealClientRefused', twinName: 'ordinalRationaleAccepted', fileName: JUDGE_FILE, find: '\tif (!isDebugClient && ORDINAL_RATIONALE_RE.test(clientReturn.rationale)) {', replace: '\tif (false && !isDebugClient && ORDINAL_RATIONALE_RE.test(clientReturn.rationale)) {' });
 
 // ---------------------------------------------------------------------
@@ -717,6 +747,6 @@ const gateDeclarationList = [
 ];
 
 runGateFamily(
-	{ harness, familyName: 'BG-REPLAY+BG-CACHE+BG-JUDGE+BG-POOL-ORDER+BG-DET', gateDeclarationList, twinRegistry, makeSubject: scenarioLib.makeScenario, cloneSubject: scenarioLib.cloneScenario, expectedConjunctCount: 9 + 7 + 11 + 3 + 4, expectedTwinCount: 9 + 7 + 11 + 3 + 4 },
+	{ harness, familyName: 'BG-REPLAY+BG-CACHE+BG-JUDGE+BG-POOL-ORDER+BG-DET', gateDeclarationList, twinRegistry, makeSubject: scenarioLib.makeScenario, cloneSubject: scenarioLib.cloneScenario, expectedConjunctCount: 9 + 7 + 13 + 3 + 4, expectedTwinCount: 9 + 7 + 13 + 3 + 4 },
 	() => harness.report(),
 );

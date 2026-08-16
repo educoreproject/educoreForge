@@ -277,7 +277,7 @@ const moduleFunction =
 			const baseGeneration = `${decisionBlockLib.FRAMEWORK_GENERATION}:${bridgeDeclaration.bridgeName}@${bridgeDeclaration.pluginVersion}:${evidenceRendererLib.RENDERER_VERSION}`;
 			const generation = debugJudgeLib.generationWithDebugMark(sourceWindowLib.generationWithWindowMark(baseGeneration, windowMark), debugMark);
 			const runPrefix = `[bridge ${bridgeDeclaration.bridgeName} ${sourceToken}→${hubToken}]`;
-			const report = { refusalList: [], conflictCount: 0, conflictList: [], judgeSpend: { asked: 0, servedFromCache: 0, abstained: 0, usd: null }, blindingDeclarationEcho: bridgeDeclaration.blindingDeclaration.slice(), consistencyReport: [], subjectNodeReport: null, labelTableDigest, discardedPredicateKeyCount: 0, note: '' };
+			const report = { refusalList: [], conflictCount: 0, conflictList: [], judgeSpend: { asked: 0, servedFromCache: 0, abstained: 0, rationaleReaskCount: 0, usd: null }, blindingDeclarationEcho: bridgeDeclaration.blindingDeclaration.slice(), consistencyReport: [], subjectNodeReport: null, labelTableDigest, discardedPredicateKeyCount: 0, note: '' };
 			const say = (text) => xLog.status(`${runPrefix} ${text}`);
 			say(`mode ${mode}; pairKey ${pairKey}; pair-scoped label ${pairScopedLabel}; blindingDeclaration [${bridgeDeclaration.blindingDeclaration.join(', ')}]`);
 
@@ -1098,6 +1098,9 @@ const moduleFunction =
 									report.judgeSpend.servedFromCache += 1;
 								} else {
 									report.judgeSpend.asked += 1;
+									if (Number.isInteger(judged.reaskCount) && judged.reaskCount > 0) {
+										report.judgeSpend.rationaleReaskCount += judged.reaskCount;
+									}
 								}
 								// the FROZEN judge record: evidence BY REFERENCE (promptHash, rendererVersion, judgeModel) + the ordinal and
 								// category — never cacheHit / usage / attempts (run-variable; they live in the report and forensics)

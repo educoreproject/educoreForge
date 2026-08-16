@@ -92,7 +92,7 @@ const judgmentFromReturn = ({ clientReturn, question, isDebugClient }) => {
 	// judge; the DEBUG double's rationale self-announces INVALID_DEBUG and names ordinals BY DESIGN
 	// (debugJudge.js is UNCHANGED, RULING BF1) — exempt, and every debug edge is flagged anyway
 	if (!isDebugClient && ORDINAL_RATIONALE_RE.test(clientReturn.rationale)) {
-		return { error: refuse.byName({ moduleName, what: `the judge's rationale names the pick by ORDINAL (${JSON.stringify(clientReturn.rationale.slice(0, 120))})`, where: 'a rationale names the choice by hub key + name (BR-067)' }) };
+		return { error: refuse.byName({ moduleName, what: `the judge's rationale names the pick by ORDINAL (${JSON.stringify(clientReturn.rationale.slice(0, 120))})`, where: 'a rationale names the choice by hub key + name (BR-067)' }), ordinalRationale: true };
 	}
 	return { chosenCardStableId: mapped.chosenCardStableId, choice: clientReturn.choice, category: clientReturn.category, rationale: clientReturn.rationale, confidence: band.confidence, discardedPredicateKeyCount };
 };
@@ -144,6 +144,7 @@ const judgeOne = ({ question, judgeClient, judgmentCache, matchForensics, budget
 					attempts,
 					usage: usage === undefined ? null : usage,
 					discardedPredicateKeyCount: judgment.discardedPredicateKeyCount,
+					reaskCount: judgment.reaskCount === undefined ? 0 : judgment.reaskCount,
 				},
 			},
 			(forensicsError) => {
@@ -162,16 +163,54 @@ const judgeOne = ({ question, judgeClient, judgmentCache, matchForensics, budget
 			return;
 		}
 		budget.judgmentCountSoFar += 1;
-		judgeClient.rerank({ systemPrompt: question.systemPrompt, userPrompt: question.userPrompt, choiceEnum: question.choiceEnum, requireJudgment: true }, (rerankError, clientReturn) => {
-			if (rerankError) {
-				callback(`${moduleName}: the judge refused promptHash ${question.promptHash}: ${rerankError}`);
+		// ⟪B2 DEFECT #2 found by the FIRST REAL JUDGMENTS — RULING SABLE_RIVER 2026-08-16 (B3, "bounded rationale re-ask")⟫ a real
+		// model, despite the system prompt, sometimes names its pick by ORDINAL in the rationale (BR-067 refuses that — the
+		// rationale must name the hub key + name so it survives any re-rendering). Refusing the whole RUN for prose was
+		// disproportionate: the PICK is authoritative through renderedPoolStableIdList + choice. So: on an ordinal-rationale answer
+		// the component (1) writes the REFUSED attempt to forensics FIRST (a refusal we cannot read is not evidence — before this
+		// ruling the text was lost), (2) RE-ASKS ONCE with the refusal appended to the user prompt, (3) accepts the restated answer
+		// (attempts 2 — the ACCEPTED answer is what the cache stores under the ORIGINAL promptHash, so replay stays deterministic),
+		// (4) refuses BY NAME a second violation. BR-067 stands; the re-ask is counted (rationaleReaskCount) in the run report.
+		const askOnce = ({ userPrompt, reaskCount }, askCallback) => {
+			judgeClient.rerank({ systemPrompt: question.systemPrompt, userPrompt, choiceEnum: question.choiceEnum, requireJudgment: true }, (rerankError, clientReturn) => {
+				if (rerankError) {
+					askCallback(`${moduleName}: the judge refused promptHash ${question.promptHash}: ${rerankError}`);
+					return;
+				}
+				const judged = judgmentFromReturn({ clientReturn, question, isDebugClient });
+				if (judged.error && judged.ordinalRationale === true && reaskCount === 0) {
+					// the refused first attempt lands in forensics BEFORE the re-ask, marked as such
+					matchForensics.appendRecord(
+						{
+							pairKey,
+							generation,
+							record: { promptHash: question.promptHash, rendererVersion: RENDERER_VERSION, judgeModel: judgeClient.model, decisionAlgorithm: judgeClient.decisionAlgorithm === undefined ? null : judgeClient.decisionAlgorithm, systemPrompt: question.systemPrompt, userPrompt, renderedPoolStableIdList: question.renderedPoolStableIdList, choice: clientReturn.choice, chosenCardStableId: null, category: clientReturn.category, rationale: clientReturn.rationale, confidence: null, cacheHit: false, attempts: clientReturn.attempts, usage: clientReturn.usage === undefined ? null : clientReturn.usage, refusedAttempt: judged.error.message, reaskFollows: true },
+						},
+						(forensicsError) => {
+							if (forensicsError) {
+								askCallback(`${moduleName}: forensic record of the refused attempt failed for promptHash ${question.promptHash}: ${forensicsError}`);
+								return;
+							}
+							budget.judgmentCountSoFar += 1;
+							askOnce({ userPrompt: `${question.userPrompt}\n\nRESTATE YOUR RATIONALE: your previous rationale (${JSON.stringify(clientReturn.rationale.slice(0, 200))}) referred to a candidate by NUMBER. Restate the rationale naming the chosen candidate by its hub key and name, never by its number. Keep the same choice unless you have a reason to change it.`, reaskCount: 1 }, askCallback);
+						},
+					);
+					return;
+				}
+				if (judged.error) {
+					askCallback(reaskCount === 0 ? judged.error.message : `${judged.error.message} — after ONE re-ask (BR-067; the first attempt is in forensics)`);
+					return;
+				}
+				askCallback('', { judged, clientReturn, reaskCount });
+			});
+		};
+		askOnce({ userPrompt: question.userPrompt, reaskCount: 0 }, (askError, asked) => {
+			if (askError) {
+				callback(askError);
 				return;
 			}
-			const judged = judgmentFromReturn({ clientReturn, question, isDebugClient });
-			if (judged.error) {
-				callback(judged.error.message);
-				return;
-			}
+			const { clientReturn, reaskCount } = asked;
+			const judged = { ...asked.judged, reaskCount };
 			if (isDebugClient) {
 				deliver({ judgment: judged, cacheHit: false, attempts: clientReturn.attempts, usage: clientReturn.usage });
 				return;
