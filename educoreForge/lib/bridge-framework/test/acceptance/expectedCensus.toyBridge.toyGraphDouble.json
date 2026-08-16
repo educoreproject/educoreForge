@@ -1,0 +1,108 @@
+{
+	"graphId": "toyGraphDouble@sha256:38db29c05671d98b",
+	"note": "FROZEN from the first observed run under the digest debug rule (RULING SABLE_RIVER 2026-08-16 12:05 #4); a renderer bump is an expected-file bump, named. Keyed by graph id + labelTableDigest per plugin.",
+	"byBridgeName": {
+		"toyCrosswalkPlugin": {
+			"labelTableDigest": "f2f9502cd4e7b4a1b55fe64c0288a2de84684762e84f649e9d8291b927031334",
+			"rendererVersion": "bridgeEvidenceRenderer-v1",
+			"judgeKind": "debug:digest",
+			"cardinalityCensus": {
+				"perSubject": {
+					"judgedSubjectCount": 5,
+					"orphanSubjectCount": 2,
+					"sourceGapCount": 1,
+					"specifiedSubjectCount": 6,
+					"subjectCollisionCount": 2,
+					"subjectCount": 16
+				},
+				"perTarget": {
+					"abstainedCount": 3,
+					"contentionCensus": {
+						"cardCount": 9,
+						"contendedKeyCount": 2,
+						"distinctKeyCount": 7,
+						"tier": "property",
+						"worstContention": 2
+					},
+					"distinctTripleCount": 8,
+					"edgeCount": 8,
+					"indexCollisionCount": 2,
+					"judgedCount": 5,
+					"labelRefusedCount": 1,
+					"manyToOneSubjectCount": 4,
+					"orphanCount": 2,
+					"refusedValueTierAssertionCount": 3,
+					"remodelAppliedCount": {
+						"classSide": 0,
+						"propertySide": 2
+					},
+					"sentinelDroppedCount": 2,
+					"sentinelLabelledRowCount": 1,
+					"sourceSideMismatchCount": 1,
+					"specifiedCount": 6,
+					"targetCount": 13,
+					"tentativeCount": 1,
+					"valueTierRefusedCount": 0
+				}
+			},
+			"contentionCensus": {
+				"cardCount": 9,
+				"contendedKeyCount": 2,
+				"distinctKeyCount": 7,
+				"tier": "property",
+				"worstContention": 2
+			}
+		},
+		"toyStandardPlugin": {
+			"labelTableDigest": "f28df501c3a37396a2a1a79dffc6a38527a0994e8c45acde45d7073b15aeb426",
+			"rendererVersion": "bridgeEvidenceRenderer-v1",
+			"judgeKind": "debug:digest",
+			"cardinalityCensus": {
+				"perSubject": {
+					"judgedSubjectCount": 2,
+					"orphanSubjectCount": 0,
+					"sourceGapCount": 0,
+					"specifiedSubjectCount": 3,
+					"subjectCollisionCount": 0,
+					"subjectCount": 5
+				},
+				"perTarget": {
+					"abstainedCount": 0,
+					"contentionCensus": {
+						"cardCount": 9,
+						"contendedKeyCount": 2,
+						"distinctKeyCount": 7,
+						"tier": "property",
+						"worstContention": 2
+					},
+					"distinctTripleCount": 5,
+					"edgeCount": 5,
+					"indexCollisionCount": 2,
+					"judgedCount": 2,
+					"labelRefusedCount": 0,
+					"manyToOneSubjectCount": 0,
+					"orphanCount": 0,
+					"refusedValueTierAssertionCount": 0,
+					"remodelAppliedCount": {
+						"classSide": 0,
+						"propertySide": 0
+					},
+					"sentinelDroppedCount": 12,
+					"sentinelLabelledRowCount": 12,
+					"sourceSideMismatchCount": 0,
+					"specifiedCount": 3,
+					"targetCount": 5,
+					"tentativeCount": 0,
+					"valueTierRefusedCount": 0
+				}
+			},
+			"contentionCensus": {
+				"cardCount": 9,
+				"contendedKeyCount": 2,
+				"distinctKeyCount": 7,
+				"tier": "property",
+				"worstContention": 2
+			}
+		}
+	}
+}
