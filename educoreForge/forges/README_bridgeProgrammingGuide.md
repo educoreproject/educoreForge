@@ -1,5 +1,16 @@
 # A Programmer's Guide to Bridging a Standard into the CEDS Hub
 
+> ⚠️ **SUPERSEDED (root-and-branch reset, Phase 3/4, 2026-08-15).** This guide documents the PRE-RESET
+> mapping side: `genericBridge`, `sifEvidenceBridge`, `caseEvidenceBridge`, `MATERIALIZER_CONFIG`, the
+> evidence kit, MATERIALIZE vs REBRIDGE and the three-directory bridge search path. All of that was REMOVED
+> from `system/code` in Phase 3 (RULINGS-supervisor-phase2.md §2; recoverable from `system/codeAttic/` and
+> tag `preDemolition-081526`); `bridgeMaker` survives only as a seam stub that refuses any declared bridge
+> by name, and a recipe declaring a bridge does not build. The bridge system is being rebuilt under
+> **`system/management/zNotesPlansDocs/forgeDefinitionV2/SPEC-educoreBridgeProfile-v1.0.md`** (the EDUcore
+> Bridge Profile), which is the authority on predicates, `mapping_justification`, `matchBasis`/`resolution`
+> and provenance — read it, not this, before writing a bridge. This file is kept as HISTORY; one in-place
+> correction was made to the `MATERIALIZER_CONFIG` justification line (Phase 4 K2), nothing else was rewritten.
+
 *The MAPPING-side guide: how a forged standard gets evidence-judged against CEDS — from the
 zero-code default to a custom evidence bridge.*
 
@@ -183,9 +194,12 @@ before you go looking for `category`/`rationale` on an edge and don't find them.
 The edge's mapping stamp is `predicate` (the `SKOS_PREDICATES` enum in
 `lib/vocabulary/vocabulary.js`: `exactMatch`, `closeMatch`, `broadMatch`, `narrowMatch`,
 `relatedMatch`); every evidence bridge stamps
-`MATERIALIZER_CONFIG = { predicate: 'closeMatch', mappingJustification: 'semapv:SemanticSimilarity' }`
+`MATERIALIZER_CONFIG = { predicate: 'closeMatch', mappingJustification: <justification> }`
 because an inferred (LLM-judged) mapping is never `exactMatch` (reserved for deterministic,
-identity-joined mappings). **There is no `matchType` field anywhere in this codebase** — if you
+identity-joined mappings). **CORRECTED (Phase 4, 2026-08-15):** the `<justification>` the old bridges
+stamped here was a `semapv:` "semantic similarity" term that is NOT an SSSOM/SEMAPV term at all; the
+vocabulary (`lib/vocabulary/vocabulary.js`) now carries only the Profile's three, and the inferred/judged
+justification under Profile §4.2 is **`semapv:CompositeMatching`**. **There is no `matchType` field anywhere in this codebase** — if you
 have seen that name in older notes, it is a documented phantom; `predicate` is the real, verified
 name.
 
