@@ -413,10 +413,13 @@ const moduleFunction =
 					const conflictedSubjectSet = new Set(conflicts.conflictList.map((oneConflict) => oneConflict.subjectStableId));
 					report.conflictCount = conflicts.conflictList.length;
 					report.conflictList = conflicts.conflictList;
-					if (siblingPairKeyList.length === 0) {
-						say('0 conflicts (one plugin on this pairing — detector exercised by fixture only)');
+					// BR7: the sibling list spans every (bridge × producerKind) key on the pairing, so it is never empty; "one plugin
+					// on this pairing" means no OTHER registered bridgeName — the same bridge under another producerKind is still looked up
+					const otherBridgeNameList = Array.from(new Set(siblingPairKeyList.map((oneSibling) => oneSibling.siblingBridgeName).filter((oneName) => oneName !== bridgeDeclaration.bridgeName))).sort();
+					if (otherBridgeNameList.length === 0) {
+						say(`0 conflicts (one plugin on this pairing — detector exercised by fixture only; ${siblingPairKeyList.length} sibling key(s) looked up under other producerKinds, ${conflicts.siblingBlockCount} found)`);
 					} else {
-						say(`${conflicts.conflictList.length} conflict(s) against ${conflicts.siblingBlockCount} sibling block(s) (${siblingPairKeyList.map((oneSibling) => oneSibling.siblingBridgeName).join(', ')})`);
+						say(`${conflicts.conflictList.length} conflict(s) against ${conflicts.siblingBlockCount} sibling block(s) (${siblingPairKeyList.map((oneSibling) => `${oneSibling.siblingBridgeName}::${oneSibling.siblingProducerKind}`).join(', ')})`);
 					}
 					const materialisableBlock = { ...block, decisionRecordList: block.decisionRecordList.filter((oneRecord) => !conflictedSubjectSet.has(oneRecord.subjectStableId)) };
 					const writerArgs = { inGraph, applyLabel: pairScopedLabel, sourceStandardName };

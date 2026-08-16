@@ -114,6 +114,36 @@ const conflictConjunctList = [
 			return { pass: firstEdge !== undefined && firstEdge.toStableId === 'toyhub:card/P000001.C1' && secondEdge === undefined && secondBlockHasSubject && outcome.second.runReport.counts.conflictCount === 1 && review !== undefined && review.record.conflictList[0].subjectStableId === 'toy:property/Student.FirstName' && censusFree, detail: `first edge ${firstEdge ? firstEdge.toStableId : 'ABSENT'}; second edge ${secondEdge ? 'WRITTEN' : 'refused'}; recorded ${secondBlockHasSubject}; conflictCount ${outcome.second.runReport.counts.conflictCount}; review ${review !== undefined}; census free ${censusFree}` };
 		},
 	}),
+	{
+		conjunctId: 'f_siblingLookupSpansPairingAnyProducerKind',
+		title: "the sibling lookup SPANS THE PAIRING — any bridge, ANY producerKind (RULING BR7): with the first plugin's block re-keyed in the store under '::inferred' (a block another producer wrote for the same hub@v::src@v), the second plugin STILL finds the Student.FirstName conflict; and the composed sibling list names every (bridge × producerKind) key on the pairing minus this block's own",
+		twinNameList: ['siblingsOnlyUnderOwnProducerKind'],
+		evaluate: (scenario, callback) => {
+			scenario.spec.bridge = 'toyCrosswalkPlugin';
+			scenarioLib.runScenario(scenario, (unusedError, first) => {
+				if (first.runError || first.constructionError) {
+					callback('', { pass: false, detail: String(first.runError || first.constructionError).slice(0, 200) });
+					return;
+				}
+				// re-key the stored block to another producerKind (the store double's rows are data): '…::toyCrosswalkPlugin::authored' → '::inferred'
+				scenario.stores.decisionStore.rowList.forEach((oneRow) => { oneRow.pairKey = oneRow.pairKey.replace(/::authored$/, '::inferred'); });
+				const second = scenarioLib.cloneScenario(scenario);
+				second.stores = scenario.stores;
+				second.graph = cloneJson(scenario.graph);
+				second.spec.bridge = 'toyStandardPlugin';
+				scenarioLib.runScenario(second, (unusedSecondError, secondOutcome) => {
+					if (secondOutcome.runError) {
+						callback('', { pass: false, detail: String(secondOutcome.runError).slice(0, 200) });
+						return;
+					}
+					const review = forensicsOf(secondOutcome).find((oneRecord) => oneRecord.record.kind === 'MappingReview');
+					const conflictCount = secondOutcome.runReport.counts.conflictCount;
+					const siblingKeyList = review ? review.record.conflictList.map((oneConflict) => oneConflict.siblingPairKey) : [];
+					callback('', { pass: conflictCount === 1 && review !== undefined && /::toyCrosswalkPlugin::inferred$/.test(siblingKeyList[0] || ''), detail: `conflictCount ${conflictCount}; sibling keys ${siblingKeyList.join(', ')}` });
+				});
+			});
+		},
+	},
 	runConjunct({
 		conjunctId: 'b_lossyEchoIsJudgedNotConflict',
 		title: 'the C4 lossy-echo shape (Course.Title: one row naming 000001;000006) is judged over the union — NOT a conflict',
@@ -150,15 +180,16 @@ const conflictConjunctList = [
 			fs.unlinkSync(path.join(scratchForgesDir, 'toy', 'bridges', 'toyStandardPlugin.js'));
 			scenario.forgesDirOverride = scratchForgesDir;
 		},
-		judge: succeeded((runReport, outcome, scenario) => { const line = scenario.reportLineList.find((oneLine) => /0 conflicts \(one plugin on this pairing — detector exercised by fixture only\)/.test(oneLine)); const bare = scenario.reportLineList.find((oneLine) => /^\[bridge [^\]]*\] 0 conflicts$/.test(oneLine)); return { pass: line !== undefined && bare === undefined && runReport.counts.conflictCount === 0, detail: line || 'no fixture-exercised line' }; }),
+		judge: succeeded((runReport, outcome, scenario) => { const line = scenario.reportLineList.find((oneLine) => /0 conflicts \(one plugin on this pairing — detector exercised by fixture only; \d+ sibling key\(s\) looked up under other producerKinds, \d+ found\)/.test(oneLine)); const bare = scenario.reportLineList.find((oneLine) => /^\[bridge [^\]]*\] 0 conflicts$/.test(oneLine)); return { pass: line !== undefined && bare === undefined && runReport.counts.conflictCount === 0, detail: line || 'no fixture-exercised line' }; }),
 	}),
 ];
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-CONFLICT', conjunctId: 'a_secondPluginConflictRefusedFirstStands', twinName: 'secondPluginWritesAnyway', fileName: FRAMEWORK_FILE, find: '\t\t\t\t\tconst materialisableBlock = { ...block, decisionRecordList: block.decisionRecordList.filter((oneRecord) => !conflictedSubjectSet.has(oneRecord.subjectStableId)) };', replace: '\t\t\t\t\tconst materialisableBlock = { ...block, decisionRecordList: block.decisionRecordList.slice() };' });
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-CONFLICT', conjunctId: 'a_secondPluginConflictRefusedFirstStands', twinName: 'conflictCountFrozenIntoText', fileName: FRAMEWORK_FILE, find: '\t\t\t\t\t\tcardinalityCensus: provisionalCensus,\n\t\t\t\t\t\tgeneration,', replace: '\t\t\t\t\t\tcardinalityCensus: { ...provisionalCensus, conflictCount: 0 },\n\t\t\t\t\t\tgeneration,' });
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-CONFLICT', conjunctId: 'f_siblingLookupSpansPairingAnyProducerKind', twinName: 'siblingsOnlyUnderOwnProducerKind', fileName: CONFLICT_FILE, find: '\tconst producerKindList = Object.keys(MAPPING_EDGE_PROVENANCE_TIER_BY_PRODUCER_KIND).sort();', replace: '\tconst producerKindList = [producerKind];' });
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-CONFLICT', conjunctId: 'b_lossyEchoIsJudgedNotConflict', twinName: 'echoRaisesConflict', fileName: FRAMEWORK_FILE, find: '\t\t\t\t\treport.conflictCount = conflicts.conflictList.length;', replace: '\t\t\t\t\treport.conflictCount = conflicts.conflictList.length + block.decisionRecordList.filter((oneRecord) => oneRecord.lossyEcho === true).length;' });
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-CONFLICT', conjunctId: 'c_allYesCombinationIsNSpecifiedNotConflict', twinName: 'combinationReadAsAlternatives', fileName: FRAMEWORK_FILE, find: '\t\t\t\t\t\tconst unionAll = nonValueTargetKeyList.length > 1 && (!allPredicate || anyLossyEcho);', replace: '\t\t\t\t\t\tconst unionAll = nonValueTargetKeyList.length > 1;' });
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-CONFLICT', conjunctId: 'd_conflictRecordCarriesMappingReview', twinName: 'manualCurationOnConflict', fileName: CONFLICT_FILE, find: "\t\t\t\t\t\tmappingJustification: 'semapv:MappingReview',", replace: "\t\t\t\t\t\tmappingJustification: 'semapv:ManualMappingCuration'," });
-frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-CONFLICT', conjunctId: 'e_onePluginReportNamesFixtureExercised', twinName: 'bareZeroConflicts', fileName: FRAMEWORK_FILE, find: "\t\t\t\t\t\tsay('0 conflicts (one plugin on this pairing — detector exercised by fixture only)');", replace: "\t\t\t\t\t\tsay('0 conflicts');" });
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-CONFLICT', conjunctId: 'e_onePluginReportNamesFixtureExercised', twinName: 'bareZeroConflicts', fileName: FRAMEWORK_FILE, find: "\t\t\t\t\t\tsay(`0 conflicts (one plugin on this pairing — detector exercised by fixture only; ${siblingPairKeyList.length} sibling key(s) looked up under other producerKinds, ${conflicts.siblingBlockCount} found)`);", replace: "\t\t\t\t\t\tsay('0 conflicts');" });
 
 // ---------------------------------------------------------------------
 // BG-VALUE
@@ -237,6 +268,6 @@ const gateDeclarationList = [
 ];
 
 runGateFamily(
-	{ harness, familyName: 'BG-CONFLICT+BG-VALUE+BG-REMODEL+BG-QUALIFIER-WIDEN', gateDeclarationList, twinRegistry, makeSubject: scenarioLib.makeScenario, cloneSubject: scenarioLib.cloneScenario, expectedConjunctCount: 5 + 3 + 5 + 3 },
+	{ harness, familyName: 'BG-CONFLICT+BG-VALUE+BG-REMODEL+BG-QUALIFIER-WIDEN', gateDeclarationList, twinRegistry, makeSubject: scenarioLib.makeScenario, cloneSubject: scenarioLib.cloneScenario, expectedConjunctCount: 6 + 3 + 5 + 3 },
 	() => harness.report(),
 );

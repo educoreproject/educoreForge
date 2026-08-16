@@ -10,7 +10,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //     readHubCards({ referenceTier }, cb)   HubReference cards of the hub, ONE flatten, list slots re-widened, embedding required
 //     readSubjectNodes(cb)                  the source standard's forged nodes (_source EXACT), WITHOUT the embedding, blinded
 //     forWalk({ channelPropertyList })      the walk view — declared channel properties unblinded, other blinded names refused
-//     forEvidence()                         the blinded view (the renderer / judge / forensics view)
+//     forEvidence()                         the blinded view (the renderer / judge / forensics view) — nodes AND edges (BR6)
 //     close(cb)
 //
 // neo4j-driver v6 is promise-native; the dispensation (DOCTRINE.md) is taken as .then().catch()-to-callback at
@@ -120,7 +120,7 @@ const graphReaderFactory = ({ inGraph, dependencyStandardNameList, sourceStandar
 			});
 	};
 
-	const makeView = ({ shapeRecord }) => ({
+	const makeView = ({ shapeRecord, shapeEdge }) => ({
 		readSourceNodes: ({ roleList } = {}, callback) => {
 			readSourceRecords((readError, recordList) => {
 				if (readError) {
@@ -141,16 +141,17 @@ const graphReaderFactory = ({ inGraph, dependencyStandardNameList, sourceStandar
 				callback('', recordList.filter((oneRecord) => wanted.has(oneRecord.stableId)).map(shapeRecord));
 			});
 		},
-		readEdgesAmongSource: ({ edgeTypeList } = {}, callback) => readEdgesAmongSourceRaw({ edgeTypeList }, callback),
+		readEdgesAmongSource: ({ edgeTypeList } = {}, callback) =>
+			readEdgesAmongSourceRaw({ edgeTypeList }, (readError, edgeList) => (readError ? callback(readError) : callback('', edgeList.map(shapeEdge)))),
 	});
 	const forWalk = ({ channelPropertyList } = {}) => {
 		const walkError = graphSeamRulesLib.walkViewRefusal({ channelPropertyList, blindingDeclaration });
 		if (walkError) {
 			throw walkError;
 		}
-		return graphSeamRulesLib.closedView(makeView({ shapeRecord: (oneRecord) => graphSeamRulesLib.walkRecordFor({ record: oneRecord, blindingDeclaration, channelPropertyList }) }));
+		return graphSeamRulesLib.closedView(makeView({ shapeRecord: (oneRecord) => graphSeamRulesLib.walkRecordFor({ record: oneRecord, blindingDeclaration, channelPropertyList }), shapeEdge: (oneEdge) => graphSeamRulesLib.walkEdgeFor({ edge: oneEdge, blindingDeclaration, channelPropertyList }) }));
 	};
-	const forEvidence = () => graphSeamRulesLib.closedView(makeView({ shapeRecord: (oneRecord) => graphSeamRulesLib.blindedRecordFor({ record: oneRecord, blindingDeclaration }) }));
+	const forEvidence = () => graphSeamRulesLib.closedView(makeView({ shapeRecord: (oneRecord) => graphSeamRulesLib.blindedRecordFor({ record: oneRecord, blindingDeclaration }), shapeEdge: (oneEdge) => graphSeamRulesLib.blindedEdgeFor({ edge: oneEdge, blindingDeclaration }) }));
 	const close = (callback) => {
 		driver.close().then(() => callback('')).catch((closeError) => callback(`${moduleName}: driver close: ${closeError.message}`));
 	};

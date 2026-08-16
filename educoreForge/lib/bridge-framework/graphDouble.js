@@ -20,7 +20,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //     reader.readSubjectNodes(cb(err, nodeList))                          WITHOUT embedding (RULING 12:05 #2), blinded view
 //     reader.forWalk({ channelPropertyList }) → view                      declared channel properties UNBLINDED, other
 //                                                                          blinded names REFUSED on read (Proxy)
-//     reader.forEvidence() → view                                          every record BLINDED (names removed)
+//     reader.forEvidence() → view                                          every record BLINDED (names removed) — nodes AND edges (BR6)
 //     view.readSourceNodes({ roleList }, cb) / view.readNodesByStableId({ stableIdList }, cb) / view.readEdgesAmongSource({ edgeTypeList }, cb)
 //     reader.close(cb)
 //   graphWriterFactory({ inGraph, applyLabel, sourceStandardName }) → writer
@@ -72,7 +72,7 @@ const graphDoubleFrom = ({ nodeList, edgeList } = {}) => {
 			state.readSubjectNodesCallCount += 1;
 			callback('', sourceRecordList().map((oneRecord) => graphSeamRulesLib.blindedRecordFor({ record: graphSeamRulesLib.withoutEmbedding(oneRecord), blindingDeclaration })));
 		};
-		const makeView = ({ shapeRecord }) => ({
+		const makeView = ({ shapeRecord, shapeEdge }) => ({
 			readSourceNodes: ({ roleList } = {}, callback) => {
 				const roleFilter = Array.isArray(roleList) && roleList.length ? (oneRecord) => roleList.indexOf(oneRecord.properties.role) !== -1 : () => true;
 				callback('', sourceRecordList().filter(roleFilter).map(shapeRecord));
@@ -84,7 +84,7 @@ const graphDoubleFrom = ({ nodeList, edgeList } = {}) => {
 			readEdgesAmongSource: ({ edgeTypeList } = {}, callback) => {
 				const sourceStableIdSet = new Set(sourceRecordList().map((oneRecord) => oneRecord.stableId));
 				const typeFilter = Array.isArray(edgeTypeList) && edgeTypeList.length ? (oneEdge) => edgeTypeList.indexOf(oneEdge.type) !== -1 : () => true;
-				callback('', state.edgeList.filter((oneEdge) => sourceStableIdSet.has(oneEdge.fromStableId) && sourceStableIdSet.has(oneEdge.toStableId) && typeFilter(oneEdge)).map((oneEdge) => ({ fromStableId: oneEdge.fromStableId, toStableId: oneEdge.toStableId, type: oneEdge.type, properties: { ...oneEdge.properties } })));
+				callback('', state.edgeList.filter((oneEdge) => sourceStableIdSet.has(oneEdge.fromStableId) && sourceStableIdSet.has(oneEdge.toStableId) && typeFilter(oneEdge)).map((oneEdge) => shapeEdge({ fromStableId: oneEdge.fromStableId, toStableId: oneEdge.toStableId, type: oneEdge.type, properties: { ...oneEdge.properties } })));
 			},
 		});
 		const forWalk = ({ channelPropertyList } = {}) => {
@@ -92,9 +92,9 @@ const graphDoubleFrom = ({ nodeList, edgeList } = {}) => {
 			if (walkError) {
 				throw walkError;
 			}
-			return graphSeamRulesLib.closedView(makeView({ shapeRecord: (oneRecord) => graphSeamRulesLib.walkRecordFor({ record: graphSeamRulesLib.withoutEmbedding(oneRecord), blindingDeclaration, channelPropertyList }) }));
+			return graphSeamRulesLib.closedView(makeView({ shapeRecord: (oneRecord) => graphSeamRulesLib.walkRecordFor({ record: graphSeamRulesLib.withoutEmbedding(oneRecord), blindingDeclaration, channelPropertyList }), shapeEdge: (oneEdge) => graphSeamRulesLib.walkEdgeFor({ edge: oneEdge, blindingDeclaration, channelPropertyList }) }));
 		};
-		const forEvidence = () => graphSeamRulesLib.closedView(makeView({ shapeRecord: (oneRecord) => graphSeamRulesLib.blindedRecordFor({ record: graphSeamRulesLib.withoutEmbedding(oneRecord), blindingDeclaration }) }));
+		const forEvidence = () => graphSeamRulesLib.closedView(makeView({ shapeRecord: (oneRecord) => graphSeamRulesLib.blindedRecordFor({ record: graphSeamRulesLib.withoutEmbedding(oneRecord), blindingDeclaration }), shapeEdge: (oneEdge) => graphSeamRulesLib.blindedEdgeFor({ edge: oneEdge, blindingDeclaration }) }));
 		const close = (callback) => {
 			state.readerCloseCount += 1;
 			callback('');

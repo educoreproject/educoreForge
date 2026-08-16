@@ -101,6 +101,9 @@ const SOURCE_EDGE_LIST = Object.freeze([
 	{ fromStableId: 'toy:construct/Student', toStableId: 'toy:property/Student.BirthDate', type: 'HAS_PROPERTY', properties: { provenanceTier: 'structural' } },
 	{ fromStableId: 'toy:construct/Course', toStableId: 'toy:property/Course.Credits', type: 'HAS_PROPERTY', properties: { provenanceTier: 'structural' } },
 	{ fromStableId: 'toy:construct/Course', toStableId: 'toy:construct/School', type: 'REFERENCES', properties: { provenanceTier: 'structural' } },
+	// an edge carrying a BLINDED name (a forger that annotated an edge with the hub anchor): forEvidence() must strip
+	// it from edge properties exactly as from node properties (RULING BR6); forWalk() exposes it only when declared
+	{ fromStableId: 'toy:construct/Student', toStableId: 'toy:property/Student.Gender', type: 'HAS_PROPERTY', properties: { provenanceTier: 'structural', hubAnchorOriginalPropertyName: 'Gender' } },
 ]);
 
 const toyGraph = () => ({ nodeList: HUB_CARD_LIST.concat(SOURCE_NODE_LIST).map((oneNode) => JSON.parse(JSON.stringify(oneNode))), edgeList: SOURCE_EDGE_LIST.map((oneEdge) => JSON.parse(JSON.stringify(oneEdge))) });

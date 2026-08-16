@@ -1,6 +1,6 @@
 {
-	"graphId": "toyGraphDouble@sha256:38db29c05671d98b",
-	"note": "FROZEN from the first observed run under the digest debug rule (RULING SABLE_RIVER 2026-08-16 12:05 #4); a renderer bump is an expected-file bump, named. Keyed by graph id + labelTableDigest per plugin.",
+	"graphId": "toyGraphDouble@sha256:ecc2a5a687676877",
+	"note": "FROZEN from the first observed run under the digest debug rule (RULING SABLE_RIVER 2026-08-16 12:05 #4); a renderer bump is an expected-file bump, named. Keyed by graph id (sha256 of JSON.stringify(toyGraph()), first 16 hex — asserted EQUAL by BG-CENSUS a) + labelTableDigest per plugin. graphId bumped 38db29c05671d98b -> ecc2a5a687676877 on 2026-08-16 (RULING BR6: one toy edge gained a blinded property; the census itself is unchanged).",
 	"byBridgeName": {
 		"toyCrosswalkPlugin": {
 			"labelTableDigest": "f2f9502cd4e7b4a1b55fe64c0288a2de84684762e84f649e9d8291b927031334",

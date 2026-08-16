@@ -99,8 +99,9 @@ const censusConjunctList = [
 		judge: succeeded((runReport, outcome) => {
 			const block = blockOf(outcome);
 			const expected = EXPECTED_CENSUS.byBridgeName.toyCrosswalkPlugin;
-			const equal = JSON.stringify(block.header.cardinalityCensus) === JSON.stringify(expected.cardinalityCensus) && block.header.labelTableDigest === expected.labelTableDigest;
-			return { pass: equal, detail: equal ? `EQUAL (${JSON.stringify(block.header.cardinalityCensus.perSubject)})` : `got ${JSON.stringify(block.header.cardinalityCensus.perSubject)} vs expected ${JSON.stringify(expected.cardinalityCensus.perSubject)}` };
+			const graphIdNow = `toyGraphDouble@sha256:${require('crypto').createHash('sha256').update(JSON.stringify(scenarioLib.toyGraphLib.toyGraph())).digest('hex').slice(0, 16)}`;
+			const equal = JSON.stringify(block.header.cardinalityCensus) === JSON.stringify(expected.cardinalityCensus) && block.header.labelTableDigest === expected.labelTableDigest && EXPECTED_CENSUS.graphId === graphIdNow;
+			return { pass: equal, detail: equal ? `EQUAL (${JSON.stringify(block.header.cardinalityCensus.perSubject)}; graphId ${graphIdNow})` : `got ${JSON.stringify(block.header.cardinalityCensus.perSubject)} vs expected ${JSON.stringify(expected.cardinalityCensus.perSubject)}; graphId now ${graphIdNow} vs fixture ${EXPECTED_CENSUS.graphId}` };
 		}),
 	}),
 	runConjunct({

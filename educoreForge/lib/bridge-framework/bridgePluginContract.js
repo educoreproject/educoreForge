@@ -689,6 +689,18 @@ const resolveChannels = ({ bridgeDeclaration, bundleDirPath }) => {
 			if (reason) {
 				return { error: reason };
 			}
+		} else {
+			// a refuseByNameAndCount channel (value tier included) DECLARES its header; the declaration is VERIFIED against
+			// the file — count AND names, in order — exactly as a walk channel's classification is (RULING BR5): a declared
+			// header that does not match the file is a lie about what is being counted
+			const declaredList = oneChannel.headerColumnList;
+			if (declaredList.length !== headerColumnList.length) {
+				return { error: `channel '${oneChannel.channelKey}' declares headerColumnList of ${declaredList.length} column(s) but the file's header has ${headerColumnList.length} (${listAsText(headerColumnList)}) — declare the header as it is (RULING BR5)` };
+			}
+			const mismatchIndex = headerColumnList.findIndex((oneName, oneIndex) => declaredList[oneIndex] !== oneName);
+			if (mismatchIndex !== -1) {
+				return { error: `channel '${oneChannel.channelKey}' declares headerColumnList[${mismatchIndex}] = '${declaredList[mismatchIndex]}' but the file's header has '${headerColumnList[mismatchIndex]}' there — declare the header as it is (RULING BR5)` };
+			}
 		}
 		channelResolutionByKey[oneChannel.channelKey] = Object.freeze({
 			channelKey: oneChannel.channelKey,

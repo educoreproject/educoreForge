@@ -13,6 +13,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //                                                            embedding present-or-refused (BR-123)
 //   withoutEmbedding(record)                                 subject nodes never carry the vector
 //   blindedRecordFor({ record, blindingDeclaration })        forEvidence(): every declared name REMOVED
+//   blindedEdgeFor / walkEdgeFor                             the same two rules over an EDGE's properties (BR6)
 //   walkRecordFor({ record, blindingDeclaration, channelPropertyList })  forWalk(): declared channel properties
 //                                                            readable, any OTHER blinded name REFUSED on read
 //   closedView / closedReader / closedWriter                 Proxies asserting the CLOSED member sets (BG-CONTAIN)
@@ -157,6 +158,20 @@ const walkRecordFor = ({ record, blindingDeclaration, channelPropertyList }) => 
 	return { stableId: record.stableId, labels: record.labels.slice(), properties };
 };
 
+// blindedEdgeFor / walkEdgeFor — the SAME two rules applied to an EDGE's properties (RULING BR6): forEvidence()
+// removes every declared blinded name from edge properties too; forWalk() exposes only the declared channel
+// properties and refuses any other blinded name on read. An edge is shaped through the node rule with a synthetic
+// locator ('from -> to') so the two views can never diverge between nodes and edges.
+const edgeLocatorOf = (edge) => `${edge.fromStableId} -[${edge.type}]-> ${edge.toStableId}`;
+const blindedEdgeFor = ({ edge, blindingDeclaration }) => {
+	const shaped = blindedRecordFor({ record: { stableId: edgeLocatorOf(edge), labels: [], properties: edge.properties }, blindingDeclaration });
+	return { fromStableId: edge.fromStableId, toStableId: edge.toStableId, type: edge.type, properties: shaped.properties };
+};
+const walkEdgeFor = ({ edge, blindingDeclaration, channelPropertyList }) => {
+	const shaped = walkRecordFor({ record: { stableId: edgeLocatorOf(edge), labels: [], properties: edge.properties }, blindingDeclaration, channelPropertyList });
+	return { fromStableId: edge.fromStableId, toStableId: edge.toStableId, type: edge.type, properties: shaped.properties };
+};
+
 const walkViewRefusal = ({ channelPropertyList, blindingDeclaration } = {}) => {
 	if (!Array.isArray(channelPropertyList) || channelPropertyList.some((oneName) => !isNonEmptyString(oneName))) {
 		return refuse.byName({ moduleName, what: 'forWalk needs channelPropertyList (a list of property names; [] for a document-only walk)', where: 'the declared channel properties are the ONLY unblinded reads' });
@@ -267,6 +282,8 @@ module.exports = {
 	withoutEmbedding,
 	blindedRecordFor,
 	walkRecordFor,
+	blindedEdgeFor,
+	walkEdgeFor,
 	walkViewRefusal,
 	closedView,
 	closedHookArgs,
