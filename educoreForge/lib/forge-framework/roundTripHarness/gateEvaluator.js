@@ -21,9 +21,12 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //   sweepTwins({ gateDeclarationList, twinRegistry, subject, cloneSubject }, cb) → the per-conjunct
 //     sweep report: observedRed | DEFECTIVE | UNPROVEN | FAILING(baseline red) per conjunct.
 //
-// Callback error-first throughout; serial recursion, no async/await. The ONE try/catch here is a
-// boundary translation of a conjunct's THROW into UNMEASURED (a gate that throws instead of
-// asserting is unmeasured, not passing) — an error VALUE, not control flow.
+// Callback error-first throughout; serial recursion, no async/await. The TWO try/catch blocks here
+// (evaluateConjunct, and the twin `run` in sweepTwins) translate a CALLER-SUPPLIED gate function's
+// THROW into a status VALUE — UNMEASURED for a conjunct, "twin proved nothing" for a twin — so a
+// throwing gate cannot crash the sweep. This is the DOCTRINE's sanctioned boundary translation into an
+// error value, not control flow; ruled ACCEPTED by the supervisor (SABLE_RIVER, 2026-08-16 06:04, F3a
+// review) alongside the framework's ONE adapter in forge-framework.js.
 
 const { COUNTING_LEVER_KIND_LIST } = require('./twinRegistry');
 
