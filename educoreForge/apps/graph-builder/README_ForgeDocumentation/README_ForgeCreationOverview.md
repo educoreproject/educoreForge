@@ -308,6 +308,111 @@ FILES
      apps/graph-builder/DOCTRINE.md
                     graphBuilder-wide control-flow doctrine (not forge-specific)
 
+EXAMPLES
+     All commands run from /Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge.
+     Every path is absolute; every graphBuilder call ends in </dev/null. Where a command spends
+     Voyage credit or provisions a Docker container it says so.
+
+     1. The real Ed-Fi run, fully qualified (forge + materialize + round trip; ~2 min warm cache;
+        provisions one DEV_ container; free when the cache is warm). Label: tq1.
+
+         mkdir -p /Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/buildLogs/forgeFramework/edfi-tq1
+         node --max-old-space-size=20000 /Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/apps/graph-builder/graphBuilder.js -build \
+           --recipePath=/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/recipes/edfiOnlyRoundTrip.recipe.jsonc \
+           --vectorize=true \
+           --standardsDatabaseFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/graphBuilder/forgeFramework_edfi_tq1.standardsDatabase.sqlite3 \
+           --embeddingCacheFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/vectorCache/vectorCache.sqlite3 \
+           </dev/null 2>&1 | tee /Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/buildLogs/forgeFramework/edfi-tq1/build.log
+
+        The same run through the framework's acceptance runner (writes provenance.json beside the
+        log, refuses to overwrite a recorded phase):
+
+         node lib/forge-framework/test/acceptance/runAcceptanceCommand.js --standardKey=edfi --phaseToken=tq1
+
+     2. Certify that run (READ-ONLY, free): the run directory is the buildLogs/edfiOnlyRoundTrip_<stamp>
+        the build printed.
+
+         node apps/graph-builder/graphBuilder.js -goldEvalCheck \
+           --buildLogDirPath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/buildLogs/edfiOnlyRoundTrip_20260816-070445 </dev/null
+
+     3. Build the graph ONLY -- reproduce a graph from a manifest already in the store. No forging,
+        no bridge runs, no Voyage or LLM; provisions one DEV_ container. --manifestRefId is the
+        manifest id -build printed (here the single-forge Ed-Fi manifest from the F3b run).
+
+         node apps/graph-builder/graphBuilder.js -replay \
+           --standardsDatabaseFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/graphBuilder/forgeFramework_edfi_migrated.standardsDatabase.sqlite3 \
+           --manifestRefId=da574bf184877bfb971e88d988f374bd13a25b027b13439d785b53bb05a910a8 </dev/null
+
+     4. Forge ONLY, without spending -- there is no forge-only verb (the forger is an in-process
+        module of graphBuilder), so the closest is a build with embedding switched off: forge +
+        materialize, no Voyage credit; the block id will DIFFER from the vectorized one (no
+        embeddingRef lines), so this is a rehearsal, never an acceptance run.
+
+         node --max-old-space-size=20000 apps/graph-builder/graphBuilder.js -build \
+           --recipePath=/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/recipes/edfiOnly.recipe.jsonc \
+           --vectorize=false \
+           --standardsDatabaseFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/graphBuilder/rehearsal_edfi.standardsDatabase.sqlite3 </dev/null
+
+        To run the forge in-process with no container at all, use the bundle's own hermetic suite
+        (embedder null; the framework's step 5 runs end to end):
+
+         node forges/edfi/test/test-forgeEdfi.js </dev/null
+
+     5. Bridging with the DEBUG JUDGE over a WINDOW of source elements -- exercises the whole
+        bridging chain at ZERO Opus cost; --limit/--offset window the source elements (sorted by
+        stableId, so the window is reproducible); the decision block is marked PARTIAL_WINDOW; every
+        node and edge carries decisionAlgorithm 'INVALID_DEBUG'. --useDebugJudge REQUIRES a
+        --rebridge scope. (STATUS 2026-08-16: bridge-maker is a stub that refuses by name; these
+        flags are the graphBuilder contract and will drive the new bridge system when it lands.)
+
+         node --max-old-space-size=20000 apps/graph-builder/graphBuilder.js -build \
+           --recipePath=/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/recipes/fourWithHub.recipe.jsonc \
+           --rebridge=edfi --useDebugJudge=digest --limit=10 --offset=50 \
+           --standardsDatabaseFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/graphBuilder/debugJudge_edfi.standardsDatabase.sqlite3 \
+           --embeddingCacheFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/vectorCache/vectorCache.sqlite3 </dev/null
+
+     6. Validate a recipe before building it (free):
+
+         node apps/graph-builder/graphBuilder.js -validate \
+           --recipePath=/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/recipes/edfiOnlyRoundTrip.recipe.jsonc </dev/null
+
+     7. List the standard tokens and versions the builder can resolve (free):
+
+         node apps/graph-builder/graphBuilder.js -deps </dev/null
+
+     8. The four-forge proof (the manifest that must reproduce 97c618c2...; ~10 min warm cache;
+        one DEV_ container; stop other scratch containers first, Docker memory is tight):
+
+         mkdir -p /Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/buildLogs/forgeFramework/fourWithHub-tq1
+         node --max-old-space-size=20000 apps/graph-builder/graphBuilder.js -build \
+           --recipePath=/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/recipes/fourWithHub-baseline.recipe.jsonc \
+           --vectorize=true \
+           --standardsDatabaseFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/graphBuilder/forgeFramework_fourWithHub_tq1.standardsDatabase.sqlite3 \
+           --embeddingCacheFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/vectorCache/vectorCache.sqlite3 \
+           </dev/null 2>&1 | tee /Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/buildLogs/forgeFramework/fourWithHub-tq1/build.log
+
+        Or through the acceptance runner:  node lib/forge-framework/test/acceptance/runAcceptanceCommand.js -finalProof --phaseToken=tq1
+
+     9. Read the ids out of a build log:
+
+         grep -a "standardBase\|manifestId" /Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/buildLogs/forgeFramework/edfi-tq1/build.log
+
+    10. Find and rename the container a build minted (GNC-001: DEV_ names for scratch; never rm -v):
+
+         docker ps --format '{{.Names}}\t{{.Ports}}' | grep DEV_gb_
+         docker rename DEV_gb_materialize_<pid>_1 DEV_edfi_tq1
+         docker stop DEV_edfi_tq1        # when done; the volume stays
+
+    11. The framework's own gates (hermetic, no container, no credit; every gate has a twin):
+
+         node lib/forge-framework/test/test-gKit.js </dev/null          # one family
+         node test/runAllTests.js </dev/null                             # the whole fleet, all forges
+
+    12. The Ed-Fi pre-migration probes (census, PROXY fingerprint, name types, whitespace, key
+        orders; free, no container) -- what a migration runs BEFORE writing its thin file:
+
+         node forges/edfi/test/runEdfiPreMigrationProbes.js </dev/null
+
 SEE ALSO
      graphBuilder -help            the builder's own manpage (-build, -replay, -goldEvalCheck)
      README_HOWTO_ForgeCreationInstructions.md, README_ForgeProfile.md,
