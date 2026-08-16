@@ -84,7 +84,10 @@ const buildLogPath = path.join(entry.buildLogsDirPath, `${lineName}-${phaseToken
 const treeRoot = path.join(__dirname, '..', '..', '..', '..');
 
 // the runner's own composition of the line, asserted EQUAL to the committed text (data over drift)
-const lineSpecificArgumentList = { rejudgeDebug: [`--rebridge=${bridgeName === 'edfiCedsCrosswalkPlugin' ? 'edfi' : '<standardKey>'}`, '--useDebugJudge=digest'], materialise: [], materialiseReal: [`--rebridge=${bridgeName === 'edfiCedsCrosswalkPlugin' ? 'edfi' : '<standardKey>'}`] };
+if (typeof entry.standardKey !== 'string' || entry.standardKey.length === 0) {
+	refuse(`acceptanceCommands.jsonc entry for ${bridgeName} carries no standardKey (the --rebridge scope token) — declare it as data`);
+}
+const lineSpecificArgumentList = { rejudgeDebug: [`--rebridge=${entry.standardKey}`, '--useDebugJudge=digest'], materialise: [], materialiseReal: [`--rebridge=${entry.standardKey}`] };
 const nodeArgumentList = [
 	'--max-old-space-size=20000',
 	path.join(treeRoot, 'apps', 'graph-builder', 'graphBuilder.js'),

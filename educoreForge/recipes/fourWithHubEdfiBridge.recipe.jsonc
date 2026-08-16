@@ -32,5 +32,8 @@
   ],
   "bridges": [
     { "source": "edfi", "hub": "ceds", "bridge": "edfiCedsCrosswalkPlugin", "dependencies": ["edfi", "ceds"] }
-  ]
+  ],
+  // the round-trip stage runs every declared roundTripValidator against the materialised graph — -goldEvalCheck REFUSES a
+  // run whose stage did not run (doctrine §7.4); an ACCEPTANCE recipe declares it (fourWithHub-baseline precedent)
+  "roundTripStage": true
 }

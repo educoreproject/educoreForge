@@ -14,6 +14,7 @@
 		// asserts it from the log: pesc260805 and sif cannot name a version without forging and ARE re-forged every run; ceds and
 		// edfi are reused). <line> ∈ rejudgeDebug | materialise | materialiseReal; <phase> a run token. The runner
 		// apps/graph-builder/test/bridgeAcceptance/runBridgeAcceptanceCommand.js reproduces the line token for token.
+		"standardKey": "edfi",
 		"recipePath": "/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/recipes/fourWithHubEdfiBridge.recipe.jsonc",
 		"storeFilePath": "/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/edfi/edfiBridge.standardsDatabase.sqlite3",
 		"decisionStoreFilePath": "/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/edfi/edfiBridge.decisions.sqlite3",
