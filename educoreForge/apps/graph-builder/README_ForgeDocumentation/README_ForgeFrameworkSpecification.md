@@ -189,8 +189,7 @@ reach nothing that opens a bolt session.
 | `structural.finalizeStructuralContract`, `structural.classifyParentReferent`, `sequence.finalizeSequence` | re-exports of `lib/structural-contract`, `lib/sequence-contract` | CALLED BY THE FRAMEWORK at the end of the pure layer (§6.2); exported for fixture tests ⟨ARCH §2.8⟩ | (as the libs) |
 | `searchText.buildSearchText(element)` | re-export of `lib/search-text/build-search-text` | so a validator or test composes the same text the forge did ⟨ARCH §2.3⟩ | (as the lib: unknown role, empty result) |
 | `refuse.byName({ moduleName, what, where })` → `Error` | pure | message `<moduleName> REFUSED: <what> — <where it belongs / which line to fix>` — the house shape `[code fact]` `forger.js:106-108,186-195`; every framework refusal is built with it ⟨ARCH §2.6⟩ ⟨Profile §7.1⟩ | — |
-| `refuse.requiredKeys({ objectName, object, requiredKeyList })` → `Error \| null` | pure | refuses the FIRST missing key by name | — |
-| `refuse.closedValue({ name, value, allowedValueList })` → `Error \| null` | pure | "`<name>` '<value>' is not one of: …" | — |
+| *(v1.1.3: `refuse.requiredKeys` and `refuse.closedValue` were DELETED under ruling FB8 — zero callers; the contract validators carry their own checks)* | | | |
 | `census.collisionCensus({ nodes, edges })` → `{ duplicateStableIdCount, duplicateEdgeTripleCount, danglingEndpointCount, firstDuplicateStableId?, firstDuplicateEdgeTriple?, firstDanglingEdge? }` | pure | the pre-migration probe and the G-ORDER gate's instrument ⟨RISK §1.4, §4.3.1⟩ ⟨RULING 23:12 #5⟩ | non-array input |
 | `census.complianceReport({ forgeDeclaration, nodes })` → `{ activeAllowanceList, activeAllowanceCount, namelessNodeCountByRole, substitutionCount }` | pure | the compat-census instrument ⟨RULINGS 23:00⟩; counts nodes minted without `name` per role ⟨FR4⟩ and S6 edge-type substitutions ⟨FR20⟩ | — |
 | `roster.assertUniqueStandardNames({ forgesDirPath })` → `Error \| null` | pure (reads the descriptors) | reads every `forges/*/parserDescriptor.ini` and refuses a duplicate `standardName` naming both directories (G-UNIQUE) ⟨RULING 00:15 gate 9⟩ | duplicate `standardName` |
@@ -1050,7 +1049,7 @@ lib/forge-framework/
   provenanceStamp.js               provenance.deriveVersionStamp adapter with the real warn channel
   census.js                        census.collisionCensus, census.complianceReport
   fingerprint.js                   fingerprint.pureLayerFingerprint (PROXY)
-  refuse.js                        refuse.byName, refuse.requiredKeys, refuse.closedValue
+  refuse.js                        refuse.byName (requiredKeys/closedValue deleted under FB8)
   roster.js                        roster.assertUniqueStandardNames (G-UNIQUE)
   README.md                        the header prose the four forges each carried (D23), once; CORE_VERSION's meaning (§4.3)
   package.json                     the framework's own version (never in the block); does NOT drive discovery
