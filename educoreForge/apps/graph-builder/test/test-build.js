@@ -866,6 +866,26 @@ const stageRebridgeWiring = () => {
 	harness.equal('resolveBuildLogsDirPath: deps.buildLogsDirPath wins', buildStatics.resolveBuildLogsDirPath({ buildLogsDirPath: '/scratch/root' }).value, '/scratch/root');
 	harness.match('resolveBuildLogsDirPath: an EMPTY deps value is REFUSED by name (not corrected to the default)', buildStatics.resolveBuildLogsDirPath({ buildLogsDirPath: '' }).error, /buildLogsDirPath is ""[\s\S]*not corrected silently/);
 	harness.match('resolveBuildLogsDirPath: a non-string deps value is REFUSED by name', buildStatics.resolveBuildLogsDirPath({ buildLogsDirPath: 7 }).error, /buildLogsDirPath is 7/);
+	// THE CLI BRANCH (Phase 4 review V2): --buildLogsDirPath is read off process.global.commandLineParameters,
+	// which the resolver reads live (the resolveEmbeddingCacheFilePath idiom). process.global is frozen but its
+	// commandLineParameters.values object is not, so the probe stages the flag there, asserts, and RESTORES —
+	// no build, no spend. Order of precedence under test: deps > CLI > documented default.
+	(() => {
+		const cliValues = process.global.commandLineParameters.values;
+		const hadFlag = Object.prototype.hasOwnProperty.call(cliValues, 'buildLogsDirPath');
+		const priorFlag = cliValues.buildLogsDirPath;
+		cliValues.buildLogsDirPath = ['/cli/root'];
+		harness.equal('resolveBuildLogsDirPath: --buildLogsDirPath WINS over the documented default', buildStatics.resolveBuildLogsDirPath({}).value, '/cli/root');
+		harness.equal('resolveBuildLogsDirPath: deps.buildLogsDirPath WINS over --buildLogsDirPath', buildStatics.resolveBuildLogsDirPath({ buildLogsDirPath: '/deps/root' }).value, '/deps/root');
+		cliValues.buildLogsDirPath = [''];
+		harness.match('resolveBuildLogsDirPath: an EMPTY --buildLogsDirPath is REFUSED by name (not corrected)', buildStatics.resolveBuildLogsDirPath({}).error, /buildLogsDirPath is ""/);
+		if (hadFlag) {
+			cliValues.buildLogsDirPath = priorFlag;
+		} else {
+			delete cliValues.buildLogsDirPath;
+		}
+		harness.equal('  and after restoring the CLI, the documented default is back', buildStatics.resolveBuildLogsDirPath({}).value, buildStatics.BUILD_LOGS_DIR_PATH);
+	})();
 
 	harness.section('REBRIDGE WIRING — --rebridge scope resolution + per-pair threading (§6 no-silent-default)');
 

@@ -24,3 +24,10 @@ educoreForge/forges/sif/test/test-artifacts/sifRoundTripFixtureClean.verdict.jso
 educoreForge/forges/sif/test/test-artifacts/sifRoundTripTwin-deletedField.report.json
 educoreForge/forges/sif/test/test-artifacts/sifRoundTripTwin-injectedField.report.json
 educoreForge/forges/sif/test/test-artifacts/sifRoundTripTwin-orderSwap.report.json
+# Phase 4 review V1 (2026-08-15): four MORE files rewritten by every suite run, found by mtime after the fleet
+# (their bytes happened to match, so the tree looked clean): sifRoundTrip's twin log + probes; cedsHubForge's
+# two reports (written, parsed back in the same run, never a cross-run fixture). Same rule, same treatment.
+educoreForge/forges/sif/test/test-artifacts/sifRoundTripGateTwinObservations.log
+educoreForge/forges/sif/test/test-artifacts/p4CharacteristicsProbes.json
+educoreForge/forges/ceds/test/test-artifacts/cedsHubSkipReport.json
+educoreForge/forges/ceds/test/test-artifacts/cedsProseDivergence.json
