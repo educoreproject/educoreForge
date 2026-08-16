@@ -247,8 +247,22 @@ const parseCsvText = (text) => {
 };
 
 // decodeBytes — the declared encoding, FATAL on a byte that does not decode (the framework refused the channel
-// earlier if the header failed to decode; the plugin holds the same line for the body: no U+FFFD substitution)
-const decodeBytes = ({ filePath, encoding }) => new TextDecoder(encoding, { fatal: true }).decode(fs.readFileSync(filePath));
+// earlier if the header failed to decode; the plugin holds the same line for the BODY: no U+FFFD substitution). The
+// TextDecoder THROWS on a bad byte; that throw is translated ONCE, here, into { error } for the callback channel — the
+// same boundary dispensation the contract's own decodeBytes takes (no try/catch as control flow anywhere else)
+const decodeBytes = ({ filePath, encoding, channelKey }) => {
+	let text = null;
+	let decodeFault = null;
+	const attempt = () => {
+		text = new TextDecoder(encoding, { fatal: true }).decode(fs.readFileSync(filePath));
+	};
+	try {
+		attempt();
+	} catch (decodeError) {
+		decodeFault = decodeError.message;
+	}
+	return decodeFault === null ? { text } : { error: `edfiCedsCrosswalkPlugin: channel '${channelKey}' bytes do not decode as the declared encoding '${encoding}' (${decodeFault}) — refused, never substituted` };
+};
 
 // rowRecordsFrom — header (with the channel's index override applied) + row objects; a row whose cell count
 // differs from the header's is MALFORMED (counted, never guessed at)
@@ -278,8 +292,18 @@ const walkSourceAssertions = ({ sourceChannelPathByKey, sourceReader, xLog }, ca
 	void sourceReader; // a document walk opens nothing on the graph (the descriptor channel is counted, not resolved)
 	const elementsChannel = channelByKey[CHANNEL_ELEMENTS];
 	const descriptorsChannel = channelByKey[CHANNEL_DESCRIPTORS];
-	const elements = rowRecordsFrom({ text: decodeBytes({ filePath: sourceChannelPathByKey[CHANNEL_ELEMENTS], encoding: elementsChannel.encoding }), headerOverrideByIndex: {} });
-	const descriptors = rowRecordsFrom({ text: decodeBytes({ filePath: sourceChannelPathByKey[CHANNEL_DESCRIPTORS], encoding: descriptorsChannel.encoding }), headerOverrideByIndex: descriptorsChannel.headerOverrideByIndex });
+	const elementsDecoded = decodeBytes({ filePath: sourceChannelPathByKey[CHANNEL_ELEMENTS], encoding: elementsChannel.encoding, channelKey: CHANNEL_ELEMENTS });
+	if (elementsDecoded.error) {
+		callback(elementsDecoded.error);
+		return;
+	}
+	const descriptorsDecoded = decodeBytes({ filePath: sourceChannelPathByKey[CHANNEL_DESCRIPTORS], encoding: descriptorsChannel.encoding, channelKey: CHANNEL_DESCRIPTORS });
+	if (descriptorsDecoded.error) {
+		callback(descriptorsDecoded.error);
+		return;
+	}
+	const elements = rowRecordsFrom({ text: elementsDecoded.text, headerOverrideByIndex: {} });
+	const descriptors = rowRecordsFrom({ text: descriptorsDecoded.text, headerOverrideByIndex: descriptorsChannel.headerOverrideByIndex });
 
 	const assertionList = elements.recordList.map(({ rowNumber, cellByColumnName }) => {
 		const tupleFieldValues = { canonicalKey: cellByColumnName[COLUMN.cedsGlobalId] };
