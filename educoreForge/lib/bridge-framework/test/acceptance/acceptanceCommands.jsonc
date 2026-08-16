@@ -33,7 +33,7 @@
 		},
 		"fourBaseManifestId": "97c618c20e07c0c612957def69164402d364a98d5dfee865faacae1deace6382",
 		"pinnedFlagList": ["--vectorize=true", "--reuseForgedBlocks=true", "--standardsDatabaseFilePath=<the pinned store, ABSOLUTE>", "--decisionStoreFilePath=<ABSOLUTE, pinned>", "--judgmentCacheFilePath=<ABSOLUTE, pinned>", "--matchForensicsDirPath=<ABSOLUTE, pinned>", "--embeddingCacheFilePath=<the warm cache>", "--rebridge=edfi (rejudge lines only)", "--useDebugJudge=digest (rejudgeDebug only)", "</dev/null", "--max-old-space-size=20000"],
-		"frozenBy": { "sessionName": "SCARLET_BRIDGE", "date": "2026-08-16", "note": "lines frozen at checkpoint 1 under SABLE_RIVER's freeze ruling; the debug block 1ce6cbd9… reproduced by runs 2 and 3; materialiseReal awaits the supervisor's spend authorisation (materialiseRealSpendAuthorisedBy null until then)" }
+		"frozenBy": { "sessionName": "SCARLET_BRIDGE", "date": "2026-08-16", "note": "lines frozen at checkpoint 1 under SABLE_RIVER's freeze ruling; the debug block 1ce6cbd9… reproduced by runs 2 and 3; materialiseReal awaits the supervisor's spend authorisation (materialiseRealSpendAuthorisedBy was null until the supervisor's GO of 2026-08-16 19:21 CDT and is POPULATED below since 2e6a3ac — BR3-8)" }
 	},
 	"sifCedsStandardPlugin": {
 		"recipePath": null,

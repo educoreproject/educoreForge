@@ -2,8 +2,9 @@
 'use strict';
 
 // test-bgP7.js — BG-P7 (Profile 7.7, BR-106; RULINGS P7, BF13, BF17, 12:05 #6, #9): SSSOM validity of the exporter's TSV.
-//   (a) the TSV parses — sssom-py is NOT on this machine (checked 2026-08-16: no `sssom` CLI, no importable module), so
-//   the validator is the framework's OWN header/row/curie_map validator, LABELLED PROXY (RULING 12:05 #6); (b) every
+//   (a) the TSV parses — the framework's OWN header/row/curie_map validator, LABELLED PROXY (RULING 12:05 #6), runs always;
+//   sssom-py was absent at B2 (checked 2026-08-16) and is PRESENT since B3 cp2 in the ONE-MACHINE venv (SSSOM_PY_BIN_PATH
+//   below) — the REAL validator runs beside the proxy when present and says so by name (BR3-8); (b) every
 //   non-built-in prefix is in curie_map; (c) object_match_field is the Profile §4.5 tuple string on every row; (d)
 //   subject_match_field names the DOCUMENT prefix for crosswalk (toyCrosswalk:HubGlobalId|toyCrosswalk:HubClassURI) and the
 //   standard's own prefix + property NAME for standard (toy:hubAnchorId — CURIE-safe, never a header text); (e)
@@ -16,7 +17,7 @@
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 const helpText = () => `
 NAME
-     ${moduleName} -- BG-P7: SSSOM/TSV validity (PROXY validator — sssom-py absent on this machine)
+     ${moduleName} -- BG-P7: SSSOM/TSV validity (PROXY validator always; the REAL sssom-py beside it when its venv is present — it IS, under system/dataStores/bridgeAcceptance/sssomVenv since B3 cp2)
 
 SYNOPSIS
      ${moduleName} [-verbose] [-quiet] [-help]

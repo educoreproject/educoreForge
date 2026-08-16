@@ -42,7 +42,7 @@ distribution and has NO public URL. Consequences recorded as data in the bridge 
 (`forges/edfi/bridges/edfiCedsCrosswalkPlugin.js`): SSSOM `mapping_provider` = **CEDS** (`https://ceds.ed.gov/`
 — the PROVIDER, "our mapping"; SSSOM names the provider, not the artifact), `verifiedBy` = this record; the
 crosswalk is authored against **CEDS Ontology V13** while the hub is **CEDS 14**, so the class-URI drift the
-bridge classifier reports (20 keys / 72 subjects `sourceSideMismatch`, B3 mover M3) is the V13→V14 remodel.
+bridge classifier reports (21 keys / 72 subjects `sourceSideMismatch`, B3 mover M3) is the V13→V14 remodel.
 
 ## Acquisition recipe (exact, pinned, rerunnable)
 
