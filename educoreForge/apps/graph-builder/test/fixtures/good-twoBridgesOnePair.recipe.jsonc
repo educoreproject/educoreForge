@@ -13,7 +13,7 @@
   ],
   "hubs": [{ "standard": "ceds", "candidateFinder": "semanticDefText" }],
   "bridges": [
-    { "source": "lif", "bridge": "ctdlAuthoredBridge", "hub": "ceds", "dependencies": ["lif", "ceds"], "cacheMode": "reuse" },
-    { "source": "lif", "bridge": "semanticBridge", "hub": "ceds", "dependencies": ["lif", "ceds"], "cacheMode": "reuse" }
+    { "source": "lif", "bridge": "ctdlAuthoredBridge", "hub": "ceds", "dependencies": ["lif", "ceds"] },
+    { "source": "lif", "bridge": "semanticBridge", "hub": "ceds", "dependencies": ["lif", "ceds"] }
   ]
 }

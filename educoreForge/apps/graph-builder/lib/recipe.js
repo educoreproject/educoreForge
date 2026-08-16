@@ -92,7 +92,7 @@ const RECIPE_SCHEMA = {
 				// it is the whole description of what the bridge DOES. (Was `mapper`; it names a
 				// mapping OR a structural producer, so 'mapper' was a misnomer — renamed per
 				// design_bridgeResolution_072526 §5.)
-				required: ['source', 'dependencies', 'cacheMode', 'bridge'],
+				required: ['source', 'dependencies', 'bridge'],
 				properties: {
 					source: { type: 'string', minLength: 1 },
 					hub: { type: 'string', minLength: 1 },
@@ -145,16 +145,13 @@ const RECIPE_SCHEMA = {
 						minItems: 1,
 						items: { type: 'string', minLength: 1 },
 					},
-					cacheMode: { type: 'string', enum: ['reuse', 'fresh', 'pin'] },
-					pinBlockId: { type: 'string', minLength: 1 },
+					// cacheMode / pinBlockId are RETIRED (SPEC-bridgeFramework-v1 BR-073, 2026-08-16). Which decision
+					// block a pair materialises is not a recipe choice: a plain build replays the pair's frozen
+					// block from the decision store; --rebridge=<token> is the only thing that freezes a new one;
+					// there is no pin. additionalProperties:false makes a recipe still carrying either key REFUSE
+					// by name here rather than be silently ignored.
 					params: { type: 'object' },
 				},
-				allOf: [
-					{
-						if: { properties: { cacheMode: { const: 'pin' } }, required: ['cacheMode'] },
-						then: { required: ['pinBlockId'] },
-					},
-				],
 			},
 		},
 		output: {

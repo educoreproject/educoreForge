@@ -10,6 +10,6 @@
   ],
   "hubs": [],
   "bridges": [
-    { "source": "lif", "bridge": "semanticBridge", "hub": "ceds", "dependencies": ["lif", "ceds"], "cacheMode": "reuse" }
+    { "source": "lif", "bridge": "semanticBridge", "hub": "ceds", "dependencies": ["lif", "ceds"] }
   ]
 }

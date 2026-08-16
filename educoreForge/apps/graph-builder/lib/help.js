@@ -84,7 +84,11 @@ COMMANDS
      -retrievalMetrics
                   MEASURE how well candidate selection is working, from the forensic match log
                   a --rebridge already wrote. READ-ONLY and FREE -- no graph, no standards
-                  database, no decision store, no LLM, no Voyage. Per pair+generation it reports:
+                  database, no decision store, no LLM, no Voyage. It reads the record shape the
+                  RETIRED semantic bridge wrote (cosine ranks, nominations); a bridge-framework
+                  judgment (2026-08-16 onward) is a plain choice among a small qualified pool and
+                  carries no retrieval rank, so this command does not measure it. Per
+                  pair+generation it reports:
                   the WINNER RANK DISTRIBUTION (where the chosen candidate sat once the pool is
                   re-sorted by retrieval cosine -- display order is NOT rank, because the composer
                   appends nominated candidates after the cosine top-K); COSINE TOP-1 ACCURACY;
@@ -175,10 +179,19 @@ OPTIONS
                            manifests table, or a member block absent from the blocks table, is
                            refused BY NAME rather than materialized as a partial graph.
      --decisionStoreFilePath=<path>
-                           Where FROZEN inferred-decision blocks are read (a plain build MATERIALIZES
-                           them) and written (--rebridge FREEZES a new one). OPTIONAL: it DEFAULTS to a
-                           sibling of --standardsDatabaseFilePath ('<name>.decisions<ext>' in the same
-                           directory). Pass it to point a build at a canonical decisions database.
+                           Where FROZEN decision blocks are read (a plain build MATERIALIZES them
+                           VERBATIM -- zero judge calls) and written (--rebridge FREEZES a new one).
+                           Since 2026-08-16 every mapping bridge is a PLUGIN run by the shared bridge
+                           framework (lib/bridge-framework, SPEC-bridgeFramework-v1): the block is
+                           content-addressed, records the plugin's declared basis (a published
+                           crosswalk or the standard's own text) and, per source subject, whether the
+                           mapping was SPECIFIED by the source or JUDGED among candidate cards; a plain
+                           build re-verifies the block's input digests, versions and plugin declaration
+                           against the run before replaying it. Which block a pair uses is NOT a recipe
+                           choice (the retired cacheMode/pinBlockId keys are refused by the schema).
+                           OPTIONAL: it DEFAULTS to a sibling of --standardsDatabaseFilePath
+                           ('<name>.decisions<ext>' in the same directory). Pass it to point a build at
+                           a canonical decisions database.
      --buildLogsDirPath=<dir>
                            The ROOT under which this build's RUN DIRECTORY (<recipeName>_<stamp>/,
                            holding the CEDS hub reports and the round-trip stage verdicts +
@@ -187,10 +200,12 @@ OPTIONS
                            probe build out of the canonical home (the suite does). An empty value
                            is refused by name, never corrected to the default.
      --judgmentCacheFilePath=<path> | --judgmentCacheFilePath=false
-                           Where the JUDGMENT CACHE lives — every per-source LLM judgment a
-                           --rebridge buys is written there THE MOMENT IT IS DECIDED (decided =
-                           persisted), keyed (promptHash, model, rendererVersion), so a killed run
-                           resumes free and a decided judgment can never be lost with the process.
+                           Where the JUDGMENT CACHE lives — every LLM judgment a --rebridge buys
+                           (the judge is asked ONLY when a source subject's assertion admits MORE THAN
+                           ONE candidate card; specified one-card mappings cost nothing) is written
+                           there THE MOMENT IT IS DECIDED (decided = persisted), keyed (promptHash,
+                           model, rendererVersion) and RE-VERIFIED on a hit, so a killed run resumes
+                           free and a decided judgment can never be lost with the process.
                            OPTIONAL. WHEN OMITTED it DEFAULTS TO THE OPENED standardsDatabase FILE
                            ITSELF (--standardsDatabaseFilePath) — the single-file ruling of 2026-08-04:
                            the judgment cache lives IN the support store beside the blocks, so a FRESH
@@ -201,19 +216,26 @@ OPTIONS
                            'false' to disable.
      --matchForensicsDirPath=<path> | --matchForensicsDirPath=false
                            Where the FORENSIC MATCH LOG lives — one JSONL record per judgment
-                           (live, cache-hit, and dedupe fan-out alike), organized by standard as
-                           <dir>/<pairKey>/<generation>.jsonl. OPTIONAL, ON BY DEFAULT at
+                           (live and cache-hit alike, the prompt inline), organized by pair as
+                           <dir>/<pairKey>/<generation>.jsonl; the bridge framework ALSO lands there
+                           a MappingReview record when two plugins on one pairing disagree about a
+                           source subject, and each frozen block's SSSOM/TSV export at
+                           <dir>/<pairKey>/<blockId>.sssom.tsv. OPTIONAL, ON BY DEFAULT at
                            system/dataStores/matchForensics. Pass a path to redirect, or 'false'
-                           to disable. A forensics write failure never kills a build (logged loudly
-                           and the run continues); the judgment cache is the gate, this is the
-                           testimony.
+                           to disable — a --rebridge REFUSES to run without it (every judgment lands
+                           in the trail); a plain build needs it only for the export. A forensics
+                           write failure never kills a build (logged loudly and the run continues);
+                           the judgment cache is the gate, this is the testimony.
      --rebridge=all | --rebridge=<token>[,<token>...]
-                           SCOPE the semantic re-inference. OPTIONAL, DEFAULTS TO NONE: a plain build
-                           MATERIALIZES whatever frozen decision blocks already exist (zero LLM, zero
-                           Voyage). --rebridge RUNS the inference pre-pass for the named source tokens
-                           (or every pair with 'all'), FREEZES the result to the decision store, and
-                           materializes it. This is the only mode that spends reranker/embedding credit
-                           for inference.
+                           SCOPE the re-judging. OPTIONAL, DEFAULTS TO NONE: a plain build MATERIALIZES
+                           whatever frozen decision blocks already exist (zero LLM, zero Voyage) and
+                           reports a zero-edge block with a note where none exists. --rebridge RUNS the
+                           named source tokens' bridge plugins through the framework (or every pair with
+                           'all'): the plugin walks its source assertions, the framework resolves each
+                           against the hub's cards, asks the judge ONLY where more than one card
+                           qualifies, FREEZES the result to the decision store, and materializes it.
+                           This is the only mode that spends LLM credit; the framework never embeds
+                           (no Voyage) and there is no reranking pre-pass.
      --useDebugJudge[=<rule>]
                            Answer this run's judgments MECHANICALLY instead of asking the real
                            reranker, so the whole bridging chain can be exercised at ZERO Opus cost.
@@ -232,11 +254,14 @@ OPTIONS
                            scope is REFUSED: nothing would be judged, so the flag would sit idle while
                            the run looked successful. It does NOT imply --rebridge=all.
 
-                           EVERYTHING IT PRODUCES IS FLAGGED. Every node and edge carries
-                           decisionAlgorithm 'INVALID_DEBUG' and every rationale announces itself, so
-                           a debug graph is detectable rather than merely documented -- askMilo can be
-                           told to accept INVALID_DEBUG deliberately, and will otherwise raise an
-                           alarm. NOTHING is read from or written to the judgment cache: a debug
+                           EVERYTHING IT PRODUCES IS FLAGGED. The frozen block's generation carries the
+                           INVALID_DEBUG suffix, every mapping edge it materializes carries
+                           provenanceTier 'invalid-debug', every forensic record names the debug rule
+                           as its decisionAlgorithm, and every rationale announces itself, so a debug
+                           graph is detectable rather than merely documented -- askMilo can be told to
+                           accept INVALID_DEBUG deliberately, and will otherwise raise an alarm; the
+                           bridge framework's certification check refuses any relationship block that
+                           carries such an edge. NOTHING is read from or written to the judgment cache: a debug
                            judgment banked there would later be served to a genuine --rebridge as a
                            free fake answer.
 
@@ -244,18 +269,19 @@ OPTIONS
                            (default true), so a debug run over never-embedded text still spends Voyage
                            credit; over already-embedded text the shared cache makes it free.
      --limit=<N>  |  --offset=<N>
-                           THE DEBUG WINDOW over each bridge's SOURCE ELEMENTS. Both OPTIONAL and
-                           both default to ABSENT (an ordinary full run). --limit=10 judges only ten
-                           source elements; --offset=50 starts at the fifty-first, so a debugging
-                           session can skip around a large standard. They compose: --limit=10
-                           --offset=50 judges elements 51-60.
+                           THE DEBUG WINDOW over each bridge's SOURCE SUBJECTS (the plugin's own
+                           subject identity -- a source element, or a crosswalk row's subject). Both
+                           OPTIONAL and both default to ABSENT (an ordinary full run). --limit=10
+                           resolves only ten source subjects; --offset=50 starts at the fifty-first,
+                           so a debugging session can skip around a large standard. They compose:
+                           --limit=10 --offset=50 resolves subjects 51-60.
                            APPLIED AFTER any standard-specific scope, so with the SIF bridge's
                            sifObjectScope=StudentPersonal a --limit=10 means ten of THAT object's
                            fields, not ten of all 15,620.
-                           THE ORDER IS SORTED BY stableId FIRST. A graph read returns no guaranteed
-                           order, and an offset over an unstable order would land on different
-                           elements every run — which would make the flag useless for the debugging
-                           it exists for. Sorting makes a given window reproducible.
+                           THE ORDER IS SORTED BY SUBJECT KEY FIRST. A graph read (or a walk) returns
+                           no guaranteed order, and an offset over an unstable order would land on
+                           different subjects every run — which would make the flag useless for the
+                           debugging it exists for. Sorting makes a given window reproducible.
                            ⚠ THE RESULTING DECISION BLOCK IS PARTIAL, and its generation SAYS SO
                            (…-PARTIAL_WINDOW_limit10_offset50). This matters: a block frozen from ten
                            of 214 elements is otherwise indistinguishable from a complete one, and a
@@ -358,6 +384,10 @@ OPTIONS
                   LISTED in the output. INTENDED OPERATIONAL LAW: no DEV build is renamed
                   GOLD_EVAL_<YYMMDD> (GNC-001) without a PASS from this check on its build
                   run directory. READ-ONLY and FREE -- no graph, no docker, no database.
+                  The bridge framework supplies this gate's SIBLING rule for mapping edges
+                  (lib/bridge-framework/certificationCheck.js: a relationship block carrying
+                  any edge with provenanceTier 'invalid-debug' refuses certification by name);
+                  wiring it into this command is later bridge work, not yet done.
 
 OUTPUT
      -build:    JSON { manifestId, boltUrl } on stdout (progress on stderr).

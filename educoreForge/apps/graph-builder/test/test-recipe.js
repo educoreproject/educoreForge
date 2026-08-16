@@ -147,7 +147,7 @@ const structuralCases = [
 	['bare-string standards', 'bad-bareStringStandards', /standards\/0.*must be object/],
 	['incumbent legacy format', 'bad-incumbentFormat', /must NOT have additional properties|recipeName/],
 	['malformed schemaVersion', 'bad-schemaVersion', /schemaVersion.*pattern/],
-	['cacheMode pin without pinBlockId', 'bad-pinNoBlockId', /pinBlockId/],
+	['bridge entry carrying the RETIRED cacheMode key (BR-073)', 'bad-cacheModeRetired', /cacheMode|must NOT have additional properties/],
 	['structural bridge without a bridge name', 'bad-structuralBridgeNoMapper', /bridge/],
 	// EVERY bridge entry names its bridge — the hub case used to be accepted here and silently
 	// handed 'defaultSemantic' by build.js, so a recipe author who never chose a bridge got one

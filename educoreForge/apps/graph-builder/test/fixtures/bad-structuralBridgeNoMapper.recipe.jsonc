@@ -8,6 +8,6 @@
     { "token": "lif", "version": "current" }
   ],
   "bridges": [
-    { "source": "lif", "dependencies": ["lif", "ceds"], "cacheMode": "reuse" }
+    { "source": "lif", "dependencies": ["lif", "ceds"] }
   ]
 }

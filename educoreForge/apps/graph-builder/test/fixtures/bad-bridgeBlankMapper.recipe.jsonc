@@ -12,6 +12,6 @@
     { "standard": "ceds", "candidateFinder": "semanticDefText" }
   ],
   "bridges": [
-    { "source": "lif", "hub": "ceds", "bridge": "", "dependencies": ["lif", "ceds"], "cacheMode": "reuse" }
+    { "source": "lif", "hub": "ceds", "bridge": "", "dependencies": ["lif", "ceds"] }
   ]
 }

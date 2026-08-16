@@ -12,7 +12,7 @@
   ],
   "hubs": [{ "standard": "ceds", "candidateFinder": "semanticDefText" }],
   "bridges": [
-    { "source": "lif", "bridge": "semanticBridge", "hub": "ceds", "dependencies": ["lif", "ceds"], "cacheMode": "reuse" },
-    { "source": "lif", "bridge": "semanticBridge", "hub": "ceds", "dependencies": ["lif", "ceds"], "cacheMode": "fresh" }
+    { "source": "lif", "bridge": "semanticBridge", "hub": "ceds", "dependencies": ["lif", "ceds"] },
+    { "source": "lif", "bridge": "semanticBridge", "hub": "ceds", "dependencies": ["lif", "ceds"] }
   ]
 }

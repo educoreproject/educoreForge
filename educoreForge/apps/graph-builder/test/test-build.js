@@ -775,7 +775,7 @@ const stageRelationshipBlockNaming = () => {
 					description: 'CTDL family intra-family structural pairing ctdl::ctdlasn',
 					standards: [{ token: 'ctdl', version: 'current' }, { token: 'ctdlasn', version: 'current' }],
 					hubs: [],
-					bridges: [{ source: 'ctdl', pairWith: 'ctdlasn', bridge: 'ctdlFamilyStructure', dependencies: ['ctdl', 'ctdlasn'], cacheMode: 'reuse' }],
+					bridges: [{ source: 'ctdl', pairWith: 'ctdlasn', bridge: 'ctdlFamilyStructure', dependencies: ['ctdl', 'ctdlasn'] }],
 				};
 				const structuralBridgeMaker = () => ({ run: (spec, cb) => cb('', { ...spec, edgesWritten: 4, decisionBlock: null, producer: 'structural', counts: { structural: 4 } }) });
 				runBuildWith(ctdlFamilyRecipe, { bridgeMaker: structuralBridgeMaker }, ({ err: structErr, result: structResult, xLog: structLog }) => {
@@ -818,7 +818,6 @@ const stageMultiBlockFamily = () => {
 				bridge: 'ctdlFamilyStructure',
 				familyStandards: ['ctdl', 'ctdlasn', 'ctdlqdata'],
 				dependencies: ['ctdl', 'ctdlasn', 'ctdlqdata'],
-				cacheMode: 'reuse',
 			},
 		],
 	};
@@ -1014,7 +1013,7 @@ const stageEdgeCases = () => {
 		description: 'one bridge, whatever bridge name it was given',
 		standards: [{ token: 'lif', version: 'current' }, { token: 'ceds', version: 'current' }],
 		hubs: [{ standard: 'ceds' }],
-		bridges: [{ source: 'lif', hub: 'ceds', dependencies: ['lif'], cacheMode: 'reuse', ...bridgeEntry }],
+		bridges: [{ source: 'lif', hub: 'ceds', dependencies: ['lif'], ...bridgeEntry }],
 	});
 
 	runBuild(bridgeRecipe({}), ({ err }) => {

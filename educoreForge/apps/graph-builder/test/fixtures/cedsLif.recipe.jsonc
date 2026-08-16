@@ -19,7 +19,7 @@
   "bridges": [
     {
       "source": "lif", "hub": "ceds", "bridge": "semanticBridge",
-      "dependencies": ["lif", "ceds"], "cacheMode": "reuse"
+      "dependencies": ["lif", "ceds"]
     }
   ]
 }
