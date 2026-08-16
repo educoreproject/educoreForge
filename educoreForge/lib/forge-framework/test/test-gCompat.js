@@ -101,18 +101,34 @@ const conjunctList = [
 	}),
 	shapedConjunct({
 		conjunctId: 'e8LiveLogicalSourceFileNames',
-		title: "E8 declared (as edfi) with sourceFiles naming a LOGICAL loader name beside the verified file → the run succeeds, the root carries the names verbatim, activeAllowanceList EQUALS ['E8'] (ruling 06:33)",
+		title: "E8 declared (as edfi) with logicalSourceFileNameList ['descriptorCodeValues'] and sourceFiles naming that LOGICAL name beside the verified file → the run succeeds, the root carries the names verbatim, activeAllowanceList EQUALS ['E8'] (ruling 06:33, tightened 03:40)",
 		twinNameList: ['frameworkIgnoresE8'],
-		shape: (scenario) => { asStandard(scenario, 'edfi'); scenario.forgeDeclaration.compatibilityDeclarationList = [{ allowanceId: 'E8' }]; withDescribeSource(scenario, (described) => ({ ...described, sourceFiles: described.sourceFiles.concat(['descriptorCodeValues']) })); },
+		shape: (scenario) => { asStandard(scenario, 'edfi'); scenario.forgeDeclaration.compatibilityDeclarationList = [{ allowanceId: 'E8', logicalSourceFileNameList: ['descriptorCodeValues'] }]; withDescribeSource(scenario, (described) => ({ ...described, sourceFiles: described.sourceFiles.concat(['descriptorCodeValues']) })); },
 		judge: succeeded((result) => { const rootNode = result.nodes.find((oneNode) => oneNode.role === DME_ROLES.STANDARD_ROOT); return { pass: rootNode.properties.sourceFiles.join(',') === 'toyModel.json,descriptorCodeValues' && result.complianceReport.activeAllowanceList.join(',') === 'E8', detail: `root sourceFiles ${JSON.stringify(rootNode.properties.sourceFiles)}; report ${JSON.stringify(result.complianceReport.activeAllowanceList)}` }; }),
 	}),
 	refusalCase({
 		registry: twinRegistry, gateId: GATE_ID, conjunctId: 'e8DeclaredButUnneededRefused',
-		title: "E8 declared (as edfi) while every sourceFiles entry IS verified → refused 'allowance E8 active but its condition is not met'",
-		shape: (scenario) => { asStandard(scenario, 'edfi'); scenario.forgeDeclaration.compatibilityDeclarationList = [{ allowanceId: 'E8' }]; },
+		title: "E8 declared (as edfi, logicalSourceFileNameList []) while every sourceFiles entry IS verified → refused 'allowance E8 active but its condition is not met'",
+		shape: (scenario) => { asStandard(scenario, 'edfi'); scenario.forgeDeclaration.compatibilityDeclarationList = [{ allowanceId: 'E8', logicalSourceFileNameList: [] }]; },
 		regex: /allowance E8 active but its condition is not met/,
 		twinName: 'disableDeclaredButUnneededCheck', fileName: FRAMEWORK_FILE,
 		find: '\t\t\t\tif (!oneRow.preconditionMet(context)) {', replace: '\t\t\t\tif (!oneRow.preconditionMet(context) && false) {',
+	}),
+	refusalCase({
+		registry: twinRegistry, gateId: GATE_ID, conjunctId: 'e8UndeclaredUnverifiedEntryRefused',
+		title: "E8 declared (as edfi) with logicalSourceFileNameList ['descriptorCodeValues'] while sourceFiles ALSO names 'strayLogicalName' (neither verified nor declared) → refused naming the entry and the declared list (E8 tightened, ruling 03:40)",
+		shape: (scenario) => { asStandard(scenario, 'edfi'); scenario.forgeDeclaration.compatibilityDeclarationList = [{ allowanceId: 'E8', logicalSourceFileNameList: ['descriptorCodeValues'] }]; withDescribeSource(scenario, (described) => ({ ...described, sourceFiles: described.sourceFiles.concat(['descriptorCodeValues', 'strayLogicalName']) })); },
+		regex: /sourceFiles entry 'strayLogicalName' that is neither verified against SHA256SUMS .* nor a declared logical name \(declared: descriptorCodeValues\)/,
+		twinName: 'disableUndeclaredEntryCheck', fileName: FRAMEWORK_FILE,
+		find: '\t\t\t\t\tif (unverifiedSourceFile !== undefined) {', replace: '\t\t\t\t\tif (unverifiedSourceFile !== undefined && false) {',
+	}),
+	refusalCase({
+		registry: twinRegistry, gateId: GATE_ID, conjunctId: 'e8StaleDeclaredNameRefused',
+		title: "E8 declared (as edfi) with logicalSourceFileNameList ['descriptorCodeValues', 'neverUsedName'] while sourceFiles uses only the first → refused naming 'neverUsedName' as stale declaration data (E8 tightened, ruling 03:40)",
+		shape: (scenario) => { asStandard(scenario, 'edfi'); scenario.forgeDeclaration.compatibilityDeclarationList = [{ allowanceId: 'E8', logicalSourceFileNameList: ['descriptorCodeValues', 'neverUsedName'] }]; withDescribeSource(scenario, (described) => ({ ...described, sourceFiles: described.sourceFiles.concat(['descriptorCodeValues']) })); },
+		regex: /declares logical sourceFiles name 'neverUsedName' \(allowance E8\) that describeSource.sourceFiles does not use/,
+		twinName: 'disableStaleLogicalNameCheck', fileName: FRAMEWORK_FILE,
+		find: '\t\t\t\t\tif (staleLogicalSourceFileName !== undefined) {', replace: '\t\t\t\t\tif (staleLogicalSourceFileName !== undefined && false) {',
 	}),
 	shapedConjunct({
 		conjunctId: 's2LiveInKit',
@@ -164,11 +180,11 @@ const conjunctList = [
 
 scenarioTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'countEqualsFrozen', twinName: 'declareE6UnderOverride', leverKind: 'inputFault', shippedConfig: false, mutate: (scenario) => { asStandard(scenario, 'edfi'); scenario.forgeDeclaration.compatibilityDeclarationList = [{ allowanceId: 'E6' }]; withDescribeSource(scenario, (described) => ({ ...described, sourceUrl: '' })); scenario.deps = { ...scenario.deps, migratingBundleListOverride: ['toy', 'edfi'] }; } });
 frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'e6LiveReportedAndByteReproduced', twinName: 'censusHidesActiveAllowances', fileName: CENSUS_FILE, find: '\tconst activeAllowanceList = forgeDeclaration.compatibilityDeclarationList.map((oneEntry) => oneEntry.allowanceId);', replace: '\tconst activeAllowanceList = [];' });
-frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'e8LiveLogicalSourceFileNames', twinName: 'frameworkIgnoresE8', fileName: FRAMEWORK_FILE, find: '\t\t\t\t\tconst unverifiedNamesPermitted = activeAllowanceRowList.some((oneRow) => oneRow.permitsUnverifiedSourceFileNames === true);', replace: '\t\t\t\t\tconst unverifiedNamesPermitted = false;' });
+frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'e8LiveLogicalSourceFileNames', twinName: 'frameworkIgnoresE8', fileName: FRAMEWORK_FILE, find: '\t\t\t\t\t\t.filter((oneRow) => oneRow.permitsUnverifiedSourceFileNames === true)', replace: '\t\t\t\t\t\t.filter((oneRow) => false)' });
 frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 's2LiveInKit', twinName: 'kitIgnoresCoercionAllowance', fileName: KIT_FILE, find: "\t\t\tif (emptyStringCoercionPropertyList.indexOf('name') !== -1) {", replace: "\t\t\tif (false && emptyStringCoercionPropertyList.indexOf('name') !== -1) {" });
 frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 's2CountsCallerEmptyName', twinName: 'kitDoesNotCountEmptyName', fileName: KIT_FILE, find: "\t\t\t\tstats.emptyStringCoercionCount += 1;\n\t\t\t}\n\t\t\tnameProperty = { name };", replace: "\t\t\t}\n\t\t\tnameProperty = { name };" });
 frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 's6LiveInKit', twinName: 'kitIgnoresSubstitutionTable', fileName: KIT_FILE, find: '\t\t\tif (parentEdgeSubstitutionTable[edgeType] !== undefined) {', replace: '\t\t\tif (false && parentEdgeSubstitutionTable[edgeType] !== undefined) {' });
 scenarioTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'overrideAbsentFromShippedConfig', twinName: 'shippedEntryPassesOverride', leverKind: 'productionMutation', mutate: (scenario) => { scenario.staticExtraSourceList = (scenario.staticExtraSourceList || []).concat([{ fileName: 'forges/toy/forgeToy.js (in-memory shipped double)', text: "forgeFramework({ embedder, migratingBundleListOverride: ['toy'] })" }]); } });
 
 const gateDeclarationList = [{ gateId: GATE_ID, title: 'the compatibility-declaration mechanism', conjunctList }];
-runGateFamily({ harness, familyName: GATE_ID, gateDeclarationList, twinRegistry, makeSubject: toyScenario.makeScenario, cloneSubject: (scenario) => ({ ...toyScenario.cloneScenario(scenario), staticExtraSourceList: (scenario.staticExtraSourceList || []).slice() }), expectedConjunctCount: 13, expectedTwinCount: 13 }, () => harness.report());
+runGateFamily({ harness, familyName: GATE_ID, gateDeclarationList, twinRegistry, makeSubject: toyScenario.makeScenario, cloneSubject: (scenario) => ({ ...toyScenario.cloneScenario(scenario), staticExtraSourceList: (scenario.staticExtraSourceList || []).slice() }), expectedConjunctCount: 15, expectedTwinCount: 15 }, () => harness.report());

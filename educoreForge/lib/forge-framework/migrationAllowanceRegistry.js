@@ -73,18 +73,23 @@ const MIGRATION_ALLOWANCE_REGISTRY = Object.freeze({
 		retiredBy: 'omit sourceUrl (Profile §10.4) → new PESC id, its own commit',
 	}),
 
-	// E8 (SABLE_RIVER ruling 2026-08-16 06:33, Profile v1.0.2 §13.1): Ed-Fi's root sourceFiles are LOGICAL
-	// loader/input names (forgeEdfi.js:183-185), not verified files; while declared, step 4's FA5
-	// cross-check is not applied to this bundle. `permitsUnverifiedSourceFileNames` is the row DATA the
-	// framework reads — no per-id branch. Retirement = sourceFiles becomes the verified list (a byte change).
+	// E8 (SABLE_RIVER ruling 2026-08-16 06:33, TIGHTENED 03:40 F3b, Profile v1.0.2 §13.1): Ed-Fi's root
+	// sourceFiles are LOGICAL input names (forgeEdfi.js:183-185 — five names over three loaders, measured by
+	// the F3b probes), not verified files. While declared, step 4's FA5 cross-check admits an entry that is
+	// EITHER a verified file OR one of the names the declaration lists in `logicalSourceFileNameList`;
+	// anything else is refused by name even under E8, and a declared logical name that sourceFiles does not
+	// use is refused as stale data. `permitsUnverifiedSourceFileNames` is the row DATA the framework reads
+	// — no per-id branch. Retirement = sourceFiles becomes the verified list (a byte change).
 	E8: Object.freeze({
 		allowanceId: 'E8',
 		rowRefId: 'E8',
 		declarableBy: Object.freeze(['edfi']),
 		kind: ALLOWANCE_KIND.FORGE_TIME,
 		evaluatedAt: EVALUATED_AT.DESCRIBE_SOURCE,
-		whileDeclared: 'root sourceFiles may name declared loader/input names instead of verified files (forgeEdfi.js:183-185); reproduced while declared',
-		allowanceDataContract: Object.freeze({}),
+		whileDeclared: 'root sourceFiles may name the DECLARED logical input names (logicalSourceFileNameList) beside verified files (forgeEdfi.js:183-185); reproduced while declared',
+		allowanceDataContract: Object.freeze({
+			logicalSourceFileNameList: Object.freeze({ kind: 'stringList' }),
+		}),
 		permitsUnverifiedSourceFileNames: true,
 		preconditionText: 'describeSource returns at least one sourceFiles entry that is not a verified file',
 		preconditionMet: ({ describedSource, verifiedFileList }) =>

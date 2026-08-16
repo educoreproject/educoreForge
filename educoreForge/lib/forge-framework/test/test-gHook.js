@@ -141,7 +141,7 @@ const conjunctList = [
 		registry: twinRegistry, gateId: GATE_ID, conjunctId: 'sourceFilesUnverifiedRefused',
 		title: 'describeSource.sourceFiles naming a file the framework did NOT verify against SHA256SUMS is refused by name (FA5)',
 		shape: (scenario) => withDescribeSource(scenario, (described) => ({ ...described, sourceFiles: described.sourceFiles.concat(['neverExisted.json']) })),
-		regex: /describeSource names sourceFiles entry 'neverExisted.json' that was not verified against SHA256SUMS \(verified: toyModel.json\)/,
+		regex: /describeSource names sourceFiles entry 'neverExisted.json' that is neither verified against SHA256SUMS \(verified: toyModel.json\) nor a declared logical name \(declared: none — no logical-name allowance active\)/,
 		twinName: 'disableSourceFilesCrossCheck', fileName: FRAMEWORK_FILE,
 		find: '\t\t\t\t\tif (unverifiedSourceFile !== undefined) {', replace: '\t\t\t\t\tif (unverifiedSourceFile !== undefined && false) {',
 	}),

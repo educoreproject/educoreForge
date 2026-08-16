@@ -433,7 +433,7 @@ const moduleFunction =
 				// STEP 4 — describe + stamp
 				taskList.push((args, next) => {
 					const describedSource = hooks.describeSource({ parsed: args.parsed });
-					const { activeAllowanceRowList } = activeAllowancesFor({ forgeDeclaration });
+					const { activeAllowanceById, activeAllowanceRowList } = activeAllowancesFor({ forgeDeclaration });
 					if (!isPlainObject(describedSource)) {
 						next(refuse.byName({ moduleName, what: `${forgePrefix} describeSource returned ${describedSource === null ? 'null' : `a ${typeof describedSource}`}`, where: `describeSource({ parsed }) returns { ${DESCRIBE_SOURCE_KEY_LIST.join(', ')} }` }).message);
 						return;
@@ -471,11 +471,23 @@ const moduleFunction =
 						return;
 					}
 					// FA5: the root's provenance claim may name only bytes the framework VERIFIED (step 2) —
-					// unless an active row licenses logical names (E8, Ed-Fi; row DATA, not a per-id branch)
-					const unverifiedNamesPermitted = activeAllowanceRowList.some((oneRow) => oneRow.permitsUnverifiedSourceFileNames === true);
-					const unverifiedSourceFile = unverifiedNamesPermitted ? undefined : describedSource.sourceFiles.find((oneName) => args.verifiedFileList.indexOf(oneName) === -1);
+					// or, under an active row that licenses logical names (E8, Ed-Fi; row DATA, not a per-id
+					// branch), a name the declaration LISTS in that row's logicalSourceFileNameList (E8 tightened,
+					// ruling 03:40): an entry that is neither is refused by name even under E8, and a declared
+					// logical name that sourceFiles does not use is refused as stale declaration data
+					const declaredLogicalSourceFileNameList = activeAllowanceRowList
+						.filter((oneRow) => oneRow.permitsUnverifiedSourceFileNames === true)
+						.reduce((soFar, oneRow) => soFar.concat(activeAllowanceById[oneRow.allowanceId].logicalSourceFileNameList || []), []);
+					const unverifiedSourceFile = describedSource.sourceFiles.find(
+						(oneName) => args.verifiedFileList.indexOf(oneName) === -1 && declaredLogicalSourceFileNameList.indexOf(oneName) === -1,
+					);
 					if (unverifiedSourceFile !== undefined) {
-						next(refuse.byName({ moduleName, what: `${forgePrefix} describeSource names sourceFiles entry '${unverifiedSourceFile}' that was not verified against SHA256SUMS (verified: ${args.verifiedFileList.join(', ')})`, where: 'sourceFiles is the list of provenanced files the loaders consumed; a name the snapshot never verified cannot be claimed on the root (allowance E8 licenses declared logical names for edfi only)' }).message);
+						next(refuse.byName({ moduleName, what: `${forgePrefix} describeSource names sourceFiles entry '${unverifiedSourceFile}' that is neither verified against SHA256SUMS (verified: ${args.verifiedFileList.join(', ')}) nor a declared logical name (declared: ${declaredLogicalSourceFileNameList.length ? declaredLogicalSourceFileNameList.join(', ') : 'none — no logical-name allowance active'})`, where: 'sourceFiles is the list of provenanced files the loaders consumed; a name the snapshot never verified cannot be claimed on the root unless allowance E8 (edfi only) declares it in logicalSourceFileNameList' }).message);
+						return;
+					}
+					const staleLogicalSourceFileName = declaredLogicalSourceFileNameList.find((oneName) => describedSource.sourceFiles.indexOf(oneName) === -1);
+					if (staleLogicalSourceFileName !== undefined) {
+						next(refuse.byName({ moduleName, what: `${forgePrefix} declares logical sourceFiles name '${staleLogicalSourceFileName}' (allowance E8) that describeSource.sourceFiles does not use (sourceFiles: ${describedSource.sourceFiles.join(', ')})`, where: 'logicalSourceFileNameList is the exact set of logical names the root claims; a declared name nothing uses is stale declaration data — remove it' }).message);
 						return;
 					}
 					if (describedSource.sourceUrl !== null && typeof describedSource.sourceUrl !== 'string') {
