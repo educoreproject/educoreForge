@@ -46,8 +46,16 @@ SYNOPSIS
 DESCRIPTION
      Reads the pinned B3 decision store + standardsDatabase and the committed fixtures; asserts the frozen block ids,
      the census EQUALITY (both tables, every member), the per-subject invariants, Profile §7's seven gates over the REAL
-     block's records, and the SSSOM export's validity (PROXY + sssom-py when its venv is present). Every conjunct has an
-     in-memory input-fault twin observed red. ONE-MACHINE (pinned store); no container, no LLM, no Voyage.
+     block's records, the SSSOM export's validity (PROXY + sssom-py when its venv is present), and — SECTION 3, BG-PLUGIN
+     (RULING BR3-1) — the REAL plugin under gate: the framework's own validators over the real bundle, the three digests
+     RECOMPUTED through the framework's digest functions and asserted EQUAL to the fixture, and the real subjectStableIdFor
+     hook exercised over the pinned Ed-Fi base block (through the framework's graphDouble, shaped by the seam's own
+     buildNodeRow) against the frozen block's subject resolution, member for member. Every conjunct has an in-memory
+     input-fault twin observed red. ONE-MACHINE (pinned store); no container, no LLM, no Voyage.
+     SECTION 4, BG-VERIFY (RULING BR3-3): the runner's -verify contract (verifyLogContract, pure) over the real
+     end-to-end replay log — buildFailed is a FAULT; an absent/empty pin table is REFUSED by name; twins observed red.
+     STABLE CONJUNCT COUNT (RULING BR3-6): the suite declares EXPECTED_ASSERTION_COUNT; a conjunct that cannot run is
+     UNMEASURED and FAILS BY NAME — the count never shrinks silently.
 
 EXIT STATUS
      0 all assertions passed;  1 at least one failed.
@@ -55,7 +63,32 @@ EXIT STATUS
 
 require('../../../test/testLib/testAppStartup')({ moduleName, helpText: helpText() });
 
-const harness = require('../../../test/testLib/harness')(moduleName);
+const harnessRaw = require('../../../test/testLib/harness')(moduleName);
+
+// RULING BR3-6 — the assertion LEDGER: every assertion goes through it; report() pads the count to the DECLARED total
+// with UNMEASURED failures by name, so a missing artifact / an unrunnable section can never read as a smaller green.
+const EXPECTED_ASSERTION_COUNT = 80; // 60 (SECTIONS 0-2) + 14 (SECTION 3 BG-PLUGIN: 6 conjuncts + the pinned-block read + the twin precondition + 6 twins) + 6 (SECTION 4 BG-VERIFY: 2 + 4 twins)
+const ledger = { count: 0 };
+const harness = {
+	section: harnessRaw.section,
+	note: harnessRaw.note,
+	ok: (label, condition, detail) => { ledger.count += 1; harnessRaw.ok(label, condition, detail); },
+	equal: (label, actual, expected) => { ledger.count += 1; harnessRaw.equal(label, actual, expected); },
+	match: (label, text, regex) => { ledger.count += 1; harnessRaw.match(label, text, regex); },
+	report: () => {
+		const missing = EXPECTED_ASSERTION_COUNT - ledger.count;
+		if (missing > 0) {
+			harnessRaw.note(`${missing} of ${EXPECTED_ASSERTION_COUNT} declared assertions did not run — each is UNMEASURED and fails by name (RULING BR3-6)`);
+		}
+		for (let i = 0; i < missing; i += 1) {
+			harnessRaw.ok(`UNMEASURED — declared assertion ${ledger.count + i + 1} of ${EXPECTED_ASSERTION_COUNT} did not run (an artifact or a precondition was absent; see the notes above)`, false, 'a conjunct that cannot run is a failure by name, never a smaller green');
+		}
+		if (missing < 0) {
+			harnessRaw.ok(`the ledger ran ${ledger.count} assertions but EXPECTED_ASSERTION_COUNT declares ${EXPECTED_ASSERTION_COUNT} — update the declaration with the suite`, false);
+		}
+		harnessRaw.report();
+	},
+};
 
 const fs = require('fs');
 const path = require('path');
@@ -75,6 +108,19 @@ const contentAddress = require(path.join(treeRoot, 'lib', 'content-address', 'co
 const vocabularyLib = require(path.join(treeRoot, 'lib', 'vocabulary', 'vocabulary'));
 const sssomExporterLib = require(path.join(treeRoot, 'lib', 'bridge-framework', 'sssomExporter'));
 const confidenceBandTable = require(path.join(treeRoot, 'lib', 'bridge-framework', 'confidenceBandTable'));
+const bridgePluginContractLib = require(path.join(treeRoot, 'lib', 'bridge-framework', 'bridgePluginContract'));
+const predicateSourceLib = require(path.join(treeRoot, 'lib', 'bridge-framework', 'predicateSource'));
+const graphDoubleLib = require(path.join(treeRoot, 'lib', 'bridge-framework', 'graphDouble'));
+const replayBlockLib = require(path.join(treeRoot, 'lib', 'replay', 'replay-block'))();
+const replayEngineLib = require(path.join(treeRoot, 'lib', 'replay', 'replay-engine'))();
+const crypto = require('crypto');
+const verifyLogContractLib = require(path.join(__dirname, 'bridgeAcceptance', 'verifyLogContract'));
+const VERIFIED_REPLAY_PHASE_TOKEN = 'cp2replay6'; // the clean-HEAD end-to-end replay of the FINAL block (DEVLOG B3, cp2)
+const sha256Hex = (text) => crypto.createHash('sha256').update(text, 'utf8').digest('hex');
+const EDFI_BASE_REF_ID = 'aea6d8dfe7899adef57c5ac3adb6b0df2bfc7e4a4ae859c4fa3893c132c8b304';
+const SOURCE_STANDARD_NAME = 'EdFi';
+const pluginFilePath = path.join(treeRoot, 'forges', 'edfi', 'bridges', `${BRIDGE_NAME}.js`);
+const bundleDirPath = path.join(treeRoot, 'forges', 'edfi');
 
 const { SKOS_PREDICATES } = vocabularyLib;
 const JUSTIFICATION_LIST = ['semapv:ManualMappingCuration', 'semapv:CompositeMatching', 'semapv:MappingReview'];
@@ -256,6 +302,119 @@ if (sssomPath && fs.existsSync(sssomPath)) {
 	}
 }
 
-decisionDb.close();
-standardsDb.close();
-harness.report();
+// ---------------------------------------------------------------------
+// SECTION 3 — BG-PLUGIN (RULING BR3-1): the REAL plugin under gate
+// ---------------------------------------------------------------------
+harness.section('SECTION 3 — BG-PLUGIN (RULING BR3-1): the REAL plugin validates, its digests RECOMPUTE to the fixture, its hook reproduces the frozen resolution');
+const pluginModule = require(pluginFilePath);
+const declaration = pluginModule.bridgeDeclaration;
+const declarationDigestOf = (oneDeclaration) => sha256Hex(bridgePluginContractLib.canonicalJsonText(oneDeclaration));
+const labelTableDigestOf = (oneDeclaration) => sha256Hex(bridgePluginContractLib.canonicalJsonText(predicateSourceLib.PREDICATE_SOURCE_KIND_REGISTRY[oneDeclaration.predicateSource.kind].provenanceOf(oneDeclaration.predicateSource)));
+const remodelTableDigestOf = (tableBytes) => crypto.createHash('sha256').update(tableBytes).digest('hex');
+const remodelTablePath = path.join(treeRoot, 'forges', 'ceds', 'bridgeData', `${declaration.remodelTableRef}.json`);
+const remodelTableBytes = fs.readFileSync(remodelTablePath);
+
+// (a) the framework's own validators over the real bundle
+const validated = bridgePluginContractLib.validateBridgeDeclaration({ bridgeDeclaration: declaration, bundleDirPath });
+harness.ok(`BG-PLUGIN a validateBridgeDeclaration accepts the real declaration against the real bundle (${path.relative(treeRoot, pluginFilePath)})`, !validated.error, validated.error && validated.error.message);
+const hookError = bridgePluginContractLib.validateBridgeHooks({ bridgeHooks: pluginModule.bridgeHooks, bridgeDeclaration: declaration });
+harness.ok('BG-PLUGIN a validateBridgeHooks accepts the real hooks', hookError === null, hookError && hookError.message);
+// (b)(c)(d) the digests RECOMPUTED through the framework's digest functions EQUAL the fixture (the fixture is what the frozen block carries — BG-CENSUS a)
+harness.equal('BG-PLUGIN b declarationDigest RECOMPUTED from the plugin as loaded === fixture', declarationDigestOf(declaration), fixture.declarationDigest);
+harness.equal('BG-PLUGIN c labelTableDigest RECOMPUTED from the plugin as loaded === fixture', labelTableDigestOf(declaration), fixture.labelTableDigest);
+harness.equal(`BG-PLUGIN d remodelTableDigest RECOMPUTED from ${path.relative(treeRoot, remodelTablePath)} === fixture`, remodelTableDigestOf(remodelTableBytes), fixture.remodelTableDigest);
+
+// (e) the REAL subjectStableIdFor over the pinned Ed-Fi base block, through the framework's graphDouble, shaped by the
+// seam's own buildNodeRow (PG-JSON collapse + _source stamp — the graph the live walk saw): every subject key in the
+// frozen block (records + collision leaves + sourceGaps) resolves EXACTLY as the block recorded it
+const edfiBlockRow = standardsDb.prepare('SELECT text FROM blocks WHERE refId = ?').get(EDFI_BASE_REF_ID);
+const expectedStableIdBySubjectKey = {};
+block.decisionRecordList.forEach((oneRecord) => oneRecord.assertingSubjectList.forEach((oneKey) => { expectedStableIdBySubjectKey[oneKey] = oneRecord.subjectStableId; }));
+block.refusalList.forEach((oneRefusal) => {
+	if (oneRefusal.kind === 'subjectCollision') {
+		oneRefusal.assertingSubjectList.forEach((oneKey) => { expectedStableIdBySubjectKey[oneKey] = oneRefusal.subjectStableId; });
+	} else if (oneRefusal.kind === 'sourceGap') {
+		expectedStableIdBySubjectKey[oneRefusal.subjectKey] = null; // unresolvable, by the block's own record
+	}
+});
+const subjectKeyList = Object.keys(expectedStableIdBySubjectKey);
+const identityColumnList = declaration.subjectIdentity.columnList;
+const subjectIdentityList = subjectKeyList.map((oneKey) => {
+	const valueList = oneKey.split(SEP);
+	const subjectIdentity = {};
+	identityColumnList.forEach((oneColumn, index) => { subjectIdentity[oneColumn] = valueList[index]; });
+	return { subjectKey: oneKey, subjectIdentity };
+});
+const walkViewOverPinnedEdfiBase = () => {
+	const parsedBlock = replayBlockLib.deserializeBlock(typeof edfiBlockRow.text === 'string' ? edfiBlockRow.text : edfiBlockRow.text.toString('utf8'));
+	const nodeList = parsedBlock.nodes.map((oneNode) => { const shaped = replayEngineLib.buildNodeRow(oneNode).props; delete shaped.embedding; return { stableId: oneNode.stableId, labels: oneNode.labels, properties: shaped }; });
+	const edgeList = parsedBlock.edges.map((oneEdge) => ({ fromStableId: oneEdge.fromRef.id, toStableId: oneEdge.toRef.id, type: oneEdge.type, properties: oneEdge.properties }));
+	const double = graphDoubleLib.graphDoubleFrom({ nodeList, edgeList });
+	const reader = double.graphReaderFactory({ inGraph: { double: 'pinnedEdfiBase' }, dependencyStandardNameList: [SOURCE_STANDARD_NAME, 'CEDS'], sourceStandardName: SOURCE_STANDARD_NAME, blindingDeclaration: declaration.blindingDeclaration });
+	return { view: reader.forWalk({ channelPropertyList: [] }), nodeCount: nodeList.length, edgeCount: edgeList.length };
+};
+const quietLog = { status: () => {}, verbose: () => {}, error: () => {} };
+const resolutionMismatchCount = ({ hooks, sourceReader }, callback) => {
+	hooks.subjectStableIdFor({ subjectIdentityList: JSON.parse(JSON.stringify(subjectIdentityList)), sourceReader, xLog: quietLog }, (resolveError, resolved) => {
+		if (resolveError) {
+			callback('', { mismatchCount: subjectKeyList.length, detail: `hook refused: ${resolveError}` });
+			return;
+		}
+		const mismatchList = subjectKeyList.filter((oneKey) => { const oneResolution = resolved.resolutionBySubjectKey[oneKey]; const got = oneResolution && oneResolution.subjectStableId !== undefined ? oneResolution.subjectStableId : null; return got !== expectedStableIdBySubjectKey[oneKey]; });
+		callback('', { mismatchCount: mismatchList.length, detail: `${subjectKeyList.length - mismatchList.length}/${subjectKeyList.length} subject keys resolve as the frozen block recorded${mismatchList.length ? `; first mismatch ${JSON.stringify(mismatchList[0])}` : ''}` });
+	});
+};
+harness.ok('the pinned Ed-Fi base block reads from the pinned store (the hook walks it through the framework\'s graphDouble)', !!edfiBlockRow);
+if (!edfiBlockRow) {
+	decisionDb.close();
+	standardsDb.close();
+	harness.report();
+	return;
+}
+const pinnedBase = walkViewOverPinnedEdfiBase();
+resolutionMismatchCount({ hooks: pluginModule.bridgeHooks, sourceReader: pinnedBase.view }, (unusedError, realVerdict) => {
+	harness.ok(`BG-PLUGIN e the REAL subjectStableIdFor over the pinned Ed-Fi base (${pinnedBase.nodeCount} nodes, ${pinnedBase.edgeCount} edges) reproduces the frozen block's resolution for EVERY subject key — ${realVerdict.detail}`, realVerdict.mismatchCount === 0, realVerdict.detail);
+
+	// THE TWINS — the reviewer's two injected faults (REVIEW-B3 §G faults 1 and 2) + one per validator + the table bytes
+	harness.section('    BG-PLUGIN twins — the reviewer\'s two plugin faults and the validator/table faults, observed RED');
+	const faultedLabelTable = clone(declaration);
+	harness.ok('    (twin precondition) a JSON clone of the declaration digests as the declaration itself — the twins below fault a faithful copy', declarationDigestOf(faultedLabelTable) === declarationDigestOf(declaration), 'the clone is not the declaration — the twins below would be meaningless');
+	faultedLabelTable.predicateSource.table.Maybe = { disposition: 'predicate', predicate: 'exactMatch' }; // REVIEW fault 1: every Maybe becomes a specified exactMatch
+	harness.ok('RED-OBSERVED BG-PLUGIN b — label table Maybe → exactMatch (REVIEW fault 1) moves declarationDigest off the fixture', declarationDigestOf(faultedLabelTable) !== fixture.declarationDigest);
+	harness.ok('RED-OBSERVED BG-PLUGIN c — label table Maybe → exactMatch (REVIEW fault 1) moves labelTableDigest off the fixture', labelTableDigestOf(faultedLabelTable) !== fixture.labelTableDigest);
+	const faultedDeclaration = clone(declaration);
+	faultedDeclaration.predicateSource.table.Maybe = { disposition: 'notADisposition' };
+	const faultedValidation = bridgePluginContractLib.validateBridgeDeclaration({ bridgeDeclaration: faultedDeclaration, bundleDirPath });
+	harness.ok('RED-OBSERVED BG-PLUGIN a — an off-list label disposition is REFUSED by validateBridgeDeclaration', !!faultedValidation.error, 'the validator accepted an off-list disposition');
+	const faultedHooks = { ...pluginModule.bridgeHooks, subjectStableIdFor: 'not a function' };
+	harness.ok('RED-OBSERVED BG-PLUGIN a — a non-function subjectStableIdFor is REFUSED by validateBridgeHooks', bridgePluginContractLib.validateBridgeHooks({ bridgeHooks: faultedHooks, bridgeDeclaration: declaration }) !== null, 'the hook validator accepted a non-function');
+	const faultedTableBytes = Buffer.concat([remodelTableBytes, Buffer.from('\n')]);
+	harness.ok('RED-OBSERVED BG-PLUGIN d — one appended byte moves remodelTableDigest off the fixture', remodelTableDigestOf(faultedTableBytes) !== fixture.remodelTableDigest);
+	const constantHooks = { ...pluginModule.bridgeHooks, subjectStableIdFor: ({ subjectIdentityList: identityList }, cb) => cb('', { resolutionBySubjectKey: identityList.reduce((soFar, oneIdentity) => ({ ...soFar, [oneIdentity.subjectKey]: { subjectStableId: 'edfi:property/common.Address.City' } }), {}) }) }; // REVIEW fault 2: every subject collapses onto one node
+	resolutionMismatchCount({ hooks: constantHooks, sourceReader: pinnedBase.view }, (unusedError2, faultVerdict) => {
+		harness.ok(`RED-OBSERVED BG-PLUGIN e — a CONSTANT subjectStableIdFor (REVIEW fault 2) mismatches the frozen resolution (${faultVerdict.mismatchCount} of ${subjectKeyList.length})`, faultVerdict.mismatchCount > 0);
+
+		// ---------------------------------------------------------------------
+		// SECTION 4 — BG-VERIFY (RULING BR3-3): the runner's -verify contract over the REAL replay log, then its twins
+		// ---------------------------------------------------------------------
+		harness.section('SECTION 4 — BG-VERIFY (RULING BR3-3): verifyLogContract over the real end-to-end replay log; buildFailed is a FAULT; an empty pin table is REFUSED');
+		const replayLogPath = path.join(acceptanceCommands.buildLogsDirPath, `materialise-${VERIFIED_REPLAY_PHASE_TOKEN}.log`);
+		harness.ok(`the end-to-end replay log is on disk (${replayLogPath})`, fs.existsSync(replayLogPath));
+		if (fs.existsSync(replayLogPath)) {
+			const replayLogText = fs.readFileSync(replayLogPath, 'utf8');
+			const checked = verifyLogContractLib.verifyLogContract({ logText: replayLogText, entry: acceptanceCommands, lineName: 'materialise', expectedIds });
+			harness.ok(`BG-VERIFY a the real replay log VERIFIES: no refusal, 0 faults, ${checked.verdict && checked.verdict.pinnedSubjectCount} pinned bases, materialised ${checked.verdict && checked.verdict.materialisedEdgeCount} edges from block ${checked.verdict && checked.verdict.decisionBlockIdPrefix}…, buildFailed null`, !checked.refusal && checked.faultList.length === 0 && checked.verdict.buildFailed === null && checked.verdict.decisionBlockIdPrefix === expectedIds.decisionBlockId.slice(0, 12), `${checked.refusal}\n${checked.faultList.join('\n')}`);
+			const failedLog = verifyLogContractLib.verifyLogContract({ logText: `${replayLogText}\ngraphBuilder -build failed: materialize failed: the container died after the blocks froze\n`, entry: acceptanceCommands, lineName: 'materialise', expectedIds });
+			const wrongBlock = verifyLogContractLib.verifyLogContract({ logText: replayLogText.replace(/from block [0-9a-f]{12}…/, 'from block 000000000000…'), entry: acceptanceCommands, lineName: 'materialise', expectedIds });
+			harness.ok('RED-OBSERVED BG-VERIFY a — a materialise log naming a DIFFERENT block prefix is a FAULT', wrongBlock.faultList.some((oneFault) => /≠ the frozen decisionBlockId/.test(oneFault)));
+			harness.ok('RED-OBSERVED BG-VERIFY a — a `graphBuilder -build failed:` line in an otherwise-verifying log is a FAULT (the REVIEW\'s B3-3: a crashed build can no longer report VERIFIED)', failedLog.faultList.some((oneFault) => /REPORTED A FAILURE/.test(oneFault)));
+			const emptyPins = verifyLogContractLib.verifyLogContract({ logText: replayLogText, entry: { ...acceptanceCommands, expectedBaseBlockIdBySubject: {} }, lineName: 'materialise', expectedIds });
+			harness.ok('RED-OBSERVED BG-VERIFY a — an EMPTY expectedBaseBlockIdBySubject is REFUSED by name (never VERIFIED over 0 subjects)', /expectedBaseBlockIdBySubject/.test(emptyPins.refusal) && emptyPins.verdict === null);
+			const absentPins = verifyLogContractLib.verifyLogContract({ logText: replayLogText, entry: { ...acceptanceCommands, expectedBaseBlockIdBySubject: undefined }, lineName: 'materialise', expectedIds });
+			harness.ok('RED-OBSERVED BG-VERIFY a — an ABSENT expectedBaseBlockIdBySubject is REFUSED by name', /expectedBaseBlockIdBySubject/.test(absentPins.refusal) && absentPins.verdict === null);
+		}
+		decisionDb.close();
+		standardsDb.close();
+		harness.report();
+	});
+});

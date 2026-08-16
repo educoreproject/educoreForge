@@ -45,6 +45,7 @@ EXIT
 
 const commandLineParameters = require('../../../../test/testLib/testAppStartup')({ moduleName, helpText: helpText() });
 const { xLog } = process.global;
+const verifyLogContractLib = require('./verifyLogContract');
 
 const ACCEPTANCE_FILE_PATH = path.join(__dirname, '..', '..', '..', '..', 'lib', 'bridge-framework', 'test', 'acceptance', 'acceptanceCommands.jsonc');
 const EXPECTED_IDS_FILE_PATH = path.join(__dirname, '..', '..', '..', '..', 'lib', 'bridge-framework', 'test', 'acceptance', 'expectedDecisionBlockIds.json');
@@ -114,65 +115,19 @@ if (commandLineParameters.switches.verify === true) {
 		refuse(`no log at ${buildLogPath} — nothing to verify`);
 	}
 	const logText = fs.readFileSync(buildLogPath, 'utf8');
-	const baseLinePattern = /\[A\] (REUSED|forge) (\S+) -> standardBase ([0-9a-f]{64})/g;
-	const observedBySubject = {};
-	let match = baseLinePattern.exec(logText);
-	while (match !== null) {
-		observedBySubject[match[2]] = { how: match[1], refId: match[3] };
-		match = baseLinePattern.exec(logText);
-	}
-	const expectedBySubject = entry.expectedBaseBlockIdBySubject || {};
-	const faultList = [];
-	Object.keys(expectedBySubject).forEach((oneSubject) => {
-		const observed = observedBySubject[oneSubject];
-		if (!observed) {
-			faultList.push(`base ${oneSubject}: NOT SEEN in the log (expected ${expectedBySubject[oneSubject]})`);
-		} else if (observed.refId !== expectedBySubject[oneSubject]) {
-			faultList.push(`base ${oneSubject}: ${observed.how} ${observed.refId} ≠ pinned ${expectedBySubject[oneSubject]} — the pinned store's bytes are NOT what this run built on`);
-		}
-	});
-	Object.keys(observedBySubject).forEach((oneSubject) => {
-		if (expectedBySubject[oneSubject] === undefined) {
-			faultList.push(`base ${oneSubject}: ${observedBySubject[oneSubject].refId} is not among the pinned subjects (${Object.keys(expectedBySubject).join(', ')})`);
-		}
-	});
-	const decisionMatch = logText.match(/froze decision block ([0-9a-f]{64}) \((saved|already present — idempotent)\)/);
-	const replayMatch = logText.match(/replay(?:ed|ing) frozen block ([0-9a-f]{64})/);
-	const manifestMatch = logText.match(/\[compose\] manifest ([0-9a-f]{64}) -- (\d+) members/);
-	const materializeMatch = logText.match(/scratch graph '(DEV_gb_materialize_\d+_\d+)' ready at (bolt:\/\/localhost:\d+)/);
-	const failedMatch = logText.match(/graphBuilder -build failed: (.*)/);
-	const goldEvalMatch = logText.match(/\[goldEvalCheck\] (PASS|REFUSED)/);
-	const censusMatch = logText.match(/census per subject (\{[^\n]*\})/);
 	const expectedIds = JSON.parse(fs.readFileSync(EXPECTED_IDS_FILE_PATH, 'utf8')).byBridgeName[bridgeName] || {};
-	const decisionBlockId = decisionMatch ? decisionMatch[1] : replayMatch ? replayMatch[1] : null;
-	if (lineName === 'rejudgeDebug' && decisionBlockId && expectedIds.debugDecisionBlockId && decisionBlockId !== expectedIds.debugDecisionBlockId) {
-		faultList.push(`debug decision block ${decisionBlockId} ≠ the frozen debugDecisionBlockId ${expectedIds.debugDecisionBlockId}`);
+	// RULING BR3-3 — the contract check is the PURE verifyLogContract (gated by test-bridgeAcceptanceEdfi SECTION 4):
+	// buildFailed is a FAULT; an absent/empty pin table is a REFUSAL by name; the runner only reads and prints
+	const checked = verifyLogContractLib.verifyLogContract({ logText, entry, lineName, expectedIds });
+	if (checked.refusal) {
+		refuse(checked.refusal);
 	}
-	if (lineName !== 'rejudgeDebug' && decisionBlockId && expectedIds.decisionBlockId && decisionBlockId !== expectedIds.decisionBlockId) {
-		faultList.push(`decision block ${decisionBlockId} ≠ the frozen decisionBlockId ${expectedIds.decisionBlockId}`);
-	}
-	const verdict = {
-		bridgeName,
-		lineName,
-		phaseToken,
-		buildLogPath,
-		baseBlockIdBySubject: observedBySubject,
-		decisionBlockId,
-		decisionBlockDisposition: decisionMatch ? decisionMatch[2] : replayMatch ? 'replayed' : null,
-		censusPerSubject: censusMatch ? JSON.parse(censusMatch[1]) : null,
-		manifestId: manifestMatch ? manifestMatch[1] : null,
-		manifestMemberCount: manifestMatch ? Number(manifestMatch[2]) : null,
-		materializeContainer: materializeMatch ? materializeMatch[1] : null,
-		boltUrl: materializeMatch ? materializeMatch[2] : null,
-		buildFailed: failedMatch ? failedMatch[1] : null,
-		goldEvalCheckInLog: goldEvalMatch ? goldEvalMatch[1] : null,
-		faultList,
-	};
+	const verdict = { bridgeName, lineName, phaseToken, buildLogPath, ...checked.verdict, faultList: checked.faultList };
 	xLog.result(JSON.stringify(verdict, null, 2));
-	if (faultList.length) {
-		refuse(`${faultList.length} contract fault(s):\n  - ${faultList.join('\n  - ')}`);
+	if (checked.faultList.length) {
+		refuse(`${checked.faultList.length} contract fault(s):\n  - ${checked.faultList.join('\n  - ')}`);
 	}
-	xLog.status(`${moduleName}: VERIFIED — every pinned base id reproduced (${Object.keys(expectedBySubject).length} subjects)${decisionBlockId ? `; decision block ${decisionBlockId.slice(0, 12)}…` : ''}${verdict.buildFailed ? `; NOTE the build reported a failure: ${verdict.buildFailed.slice(0, 160)}` : ''}`);
+	xLog.status(`${moduleName}: VERIFIED — every pinned base id reproduced (${verdict.pinnedSubjectCount} subjects); the build reported no failure${verdict.decisionBlockId ? `; decision block ${verdict.decisionBlockId.slice(0, 12)}…` : ''}`);
 	process.exit(0);
 }
 
