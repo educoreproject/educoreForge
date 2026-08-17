@@ -77,6 +77,87 @@ const readPromptRecordList = ({ forensicsDirPath, pairKey, generation }) => {
 	return { recordList };
 };
 
+// ⟪RENDERING TIE — RULING SABLE_RIVER 2026-08-17⟫ Recover, from the prompt BYTES the judge actually received,
+// the rendered text of each candidate keyed by its stableId.
+//
+// WHY IT IS PARSED FROM THE PROMPT AND NOT RE-RENDERED. Re-rendering from the graph would answer "what would
+// the renderer produce today", which is a different question and drifts the moment anything is re-embedded or
+// re-forged. The forensic trail holds the exact bytes that were sent, and the tie class is a claim about what
+// the judge could distinguish — so the bytes are the only admissible source.
+//
+// THE ORDINAL IS STRIPPED ON PURPOSE, and this is the load-bearing decision. Each candidate is introduced by
+// its position marker "[7]", which is unique by construction. Compare the blocks WITH the marker and no two
+// candidates are ever byte-identical, so the tie count would be structurally pinned at zero — a gate that
+// cannot fire, reporting a clean bill of health it never measured. The ordinal is presentation; the material
+// lines under it are what the judge had to choose between, so the material lines are what is compared.
+//
+// A candidate count that disagrees with renderedPoolStableIdList is REFUSED BY NAME rather than zipped as far
+// as it goes: a short parse would silently key one candidate's text to another candidate's id and manufacture
+// ties that were never on the page.
+const CANDIDATE_HEADING_REGEX = /^CANDIDATES \((\d+)\), in hub order:$/;
+const CANDIDATE_ORDINAL_REGEX = /^ {2}\[(\d+)\]$/;
+
+const renderedCandidateTextListFromPrompt = ({ userPrompt }) => {
+	const lineList = String(userPrompt).split('\n');
+	const headingIndex = lineList.findIndex((oneLine) => CANDIDATE_HEADING_REGEX.test(oneLine));
+	if (headingIndex === -1) {
+		return { fault: 'the prompt carries no "CANDIDATES (n), in hub order:" heading' };
+	}
+	const declaredCount = Number(lineList[headingIndex].match(CANDIDATE_HEADING_REGEX)[1]);
+	const textList = [];
+	let currentLineList = null;
+	for (let lineIndex = headingIndex + 1; lineIndex < lineList.length; lineIndex++) {
+		if (CANDIDATE_ORDINAL_REGEX.test(lineList[lineIndex])) {
+			if (currentLineList !== null) {
+				textList.push(currentLineList.join('\n'));
+			}
+			currentLineList = [];
+			continue;
+		}
+		if (currentLineList !== null) {
+			currentLineList.push(lineList[lineIndex]);
+		}
+	}
+	if (currentLineList !== null) {
+		textList.push(currentLineList.join('\n'));
+	}
+	if (textList.length !== declaredCount) {
+		return { fault: `the heading declares ${declaredCount} candidate(s) but ${textList.length} block(s) parsed` };
+	}
+	return { textList };
+};
+
+const renderedCandidateTextIndexFrom = ({ recordList }) => {
+	if (!Array.isArray(recordList)) {
+		return { error: refuse.byName({ moduleName, what: 'renderedCandidateTextIndexFrom needs a recordList', where: 'the tie index is built from the forensic trail; there is no default' }) };
+	}
+	const textByStableId = {};
+	const faultList = [];
+	let measuredPromptCount = 0;
+	recordList.forEach((oneRecord) => {
+		if (!Array.isArray(oneRecord.renderedPoolStableIdList) || oneRecord.renderedPoolStableIdList.length === 0) {
+			return;
+		}
+		const parsed = renderedCandidateTextListFromPrompt({ userPrompt: oneRecord.userPrompt });
+		if (parsed.fault) {
+			faultList.push(`${String(oneRecord.promptHash).slice(0, 12)}: ${parsed.fault}`);
+			return;
+		}
+		if (parsed.textList.length !== oneRecord.renderedPoolStableIdList.length) {
+			faultList.push(`${String(oneRecord.promptHash).slice(0, 12)}: ${parsed.textList.length} rendered block(s) against ${oneRecord.renderedPoolStableIdList.length} pool id(s)`);
+			return;
+		}
+		measuredPromptCount += 1;
+		oneRecord.renderedPoolStableIdList.forEach((oneStableId, seatIndex) => {
+			textByStableId[oneStableId] = parsed.textList[seatIndex];
+		});
+	});
+	if (faultList.length > 0) {
+		return { error: refuse.byName({ moduleName, what: `${faultList.length} prompt(s) could not be parsed into candidate blocks: ${faultList.slice(0, 3).join('; ')}`, where: 'a partially parsed trail would key one candidate\'s text to another candidate\'s id and manufacture ties that were never on the page' }) };
+	}
+	return { textByStableId, measuredPromptCount, distinctCandidateCount: Object.keys(textByStableId).length };
+};
+
 const buildRenderingAudit = ({ forensicsDirPath, pairKey, generation, blockId, renderingAllowList, judgePromptVariant, sampleCount } = {}) => {
 	if (!isNonEmptyString(forensicsDirPath) || !isNonEmptyString(pairKey) || !isNonEmptyString(generation) || !isNonEmptyString(blockId)) {
 		return { error: refuse.byName({ moduleName, what: 'buildRenderingAudit needs { forensicsDirPath, pairKey, generation, blockId }', where: 'the audit names the exact block it audits; there is no default' }) };
@@ -196,4 +277,4 @@ const buildRenderingAudit = ({ forensicsDirPath, pairKey, generation, blockId, r
 	return { markdownText: lineList.join('\n'), promptCount: recordList.length, distinctPromptCount: distinctPromptHashSet.size, hitList, advisoryUrlCount, sampleCount: sampleList.length };
 };
 
-module.exports = { buildRenderingAudit, readPromptRecordList, ID_GATE_PATTERN_LIST, ADVISORY_URL_REGEX, DEFAULT_SAMPLE_COUNT, moduleName };
+module.exports = { buildRenderingAudit, readPromptRecordList, renderedCandidateTextIndexFrom, renderedCandidateTextListFromPrompt, ID_GATE_PATTERN_LIST, ADVISORY_URL_REGEX, DEFAULT_SAMPLE_COUNT, moduleName };

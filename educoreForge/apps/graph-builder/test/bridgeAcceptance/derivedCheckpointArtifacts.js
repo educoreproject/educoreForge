@@ -76,12 +76,33 @@ const ceilingRecallAt25 = firstValue('ceilingRecallAt25') === undefined ? undefi
 if (ceilingRecallAt25 !== undefined && (!Number.isFinite(ceilingRecallAt25) || ceilingRecallAt25 < 0 || ceilingRecallAt25 > 1)) {
 	refuse(`--ceilingRecallAt25 ${JSON.stringify(firstValue('ceilingRecallAt25'))} is not a recall fraction in [0, 1]`);
 }
+// the RENDERING-TIE index must be built BEFORE scoring, because the score needs it — so the block is resolved
+// first, its generation read, and the trail parsed. Supplying it is what turns renderingTieMeasured true; a
+// score written without it says so in words rather than reporting a zero it never measured.
+const preRead = derivedEvalLib.readFrozenBlock({ storeFilePath: entry.decisionStoreFilePath, blockId: derivedBlockId, roleName: 'derived' });
+if (preRead.error) {
+	refuse(preRead.error.message);
+}
+const preHeader = preRead.block.header;
+const trailRead = renderingAuditLib.readPromptRecordList({
+	forensicsDirPath: entry.matchForensicsDirPath,
+	pairKey: `${preHeader.hubName.toLowerCase()}@${preHeader.hubVersion}::${preHeader.sourceStandardName.toLowerCase()}@${preHeader.sourceVersion}::${preHeader.bridgeName}::${preHeader.producerKind}`,
+	generation: preHeader.generation,
+});
+if (trailRead.error) {
+	refuse(trailRead.error.message);
+}
+const textIndex = renderingAuditLib.renderedCandidateTextIndexFrom({ recordList: trailRead.recordList });
+if (textIndex.error) {
+	refuse(textIndex.error.message);
+}
 const scored = derivedEvalLib.scoreDerivedRun({
 	truthStoreFilePath: TRUTH_STORE_FILE_PATH,
 	truthBlockId: TRUTH_BLOCK_ID,
 	derivedStoreFilePath: entry.decisionStoreFilePath,
 	derivedBlockId,
 	ceilingRecallByK: ceilingRecallAt25 === undefined ? undefined : { 25: ceilingRecallAt25 },
+	renderedCandidateTextByStableId: textIndex.textByStableId,
 });
 if (scored.error) {
 	refuse(scored.error.message);

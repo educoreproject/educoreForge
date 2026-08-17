@@ -103,7 +103,24 @@ const truthViewOf = (truthBlock) => {
 	};
 };
 
-const scoreDerivedRun = ({ truthStoreFilePath, truthBlockId, derivedStoreFilePath, derivedBlockId, ceilingRecallByK } = {}) => {
+// ⟪THE RULED RENDERING-TIE PREDICATE — ONE DEFINITION⟫ Exported so the batch document and the score cannot
+// drift apart on what the class means. Two copies of a ruled definition is two rulings.
+//
+// TRUE when the record differs from truth AND at least one truth card sitting in this record's OWN pool was
+// rendered byte-identically to another candidate in that same pool. Scoped to the pool because a choice the
+// judge was never offered is not a choice it can have got wrong.
+const isRenderingTieRecord = ({ decisionRecord, truthObjectSet, renderedTextByStableId }) => {
+	if (renderedTextByStableId === null || renderedTextByStableId === undefined || truthObjectSet === undefined || !Array.isArray(decisionRecord.renderedPoolStableIdList)) {
+		return false;
+	}
+	const poolStableIdList = decisionRecord.renderedPoolStableIdList;
+	return poolStableIdList.filter((oneStableId) => truthObjectSet.has(oneStableId)).some((oneTruthId) => {
+		const truthText = renderedTextByStableId[oneTruthId];
+		return truthText !== undefined && poolStableIdList.some((oneOtherId) => oneOtherId !== oneTruthId && renderedTextByStableId[oneOtherId] === truthText);
+	});
+};
+
+const scoreDerivedRun = ({ truthStoreFilePath, truthBlockId, derivedStoreFilePath, derivedBlockId, ceilingRecallByK, renderedCandidateTextByStableId } = {}) => {
 	const truthRead = readFrozenBlock({ storeFilePath: truthStoreFilePath, blockId: truthBlockId, roleName: 'truth' });
 	if (truthRead.error) {
 		return { error: truthRead.error };
@@ -147,7 +164,25 @@ const scoreDerivedRun = ({ truthStoreFilePath, truthBlockId, derivedStoreFilePat
 	});
 	const isAbstained = (oneRecord) => oneRecord.abstained === true || !isNonEmptyString(oneRecord.objectStableId);
 	const correctList = inPoolRecordList.filter((oneRecord) => !isAbstained(oneRecord) && truth.objectSetBySubject[oneRecord.subjectStableId].has(oneRecord.objectStableId));
-	const wrongList = inPoolRecordList.filter((oneRecord) => !isAbstained(oneRecord) && !truth.objectSetBySubject[oneRecord.subjectStableId].has(oneRecord.objectStableId));
+	const allWrongList = inPoolRecordList.filter((oneRecord) => !isAbstained(oneRecord) && !truth.objectSetBySubject[oneRecord.subjectStableId].has(oneRecord.objectStableId));
+
+	// ⟪RENDERING TIE — RULING SABLE_RIVER 2026-08-17, found by reading batch 0⟫ A "wrong" pick whose TRUTH card
+	// was rendered BYTE-IDENTICALLY to at least one other candidate in the same pool is not a judge failure. The
+	// judge was shown two or more indistinguishable options and asked to choose; picking the wrong one is luck,
+	// not error, and scoring it as error measures the ALLOW-LIST and blames the model.
+	//
+	// Batch 0, subject EducationOrganizationId: FOUR candidates rendered as the same text ("Has Organization
+	// Identifier / Organization"), differing only by qualifier and range — both of which the allow-list hides
+	// BY DESIGN, because both are identifiers. So this class is the measured COST of the blinding, and it is
+	// reported as its own number rather than folded into either the wins or the losses.
+	//
+	// v1 changes NO whitelist. Widening it to break the ties would put qualifier keys in front of the judge,
+	// which is the one thing the whole bias audit exists to prevent. The number is the input to that decision,
+	// not the decision.
+	const renderedTextByStableId = renderedCandidateTextByStableId === undefined ? null : renderedCandidateTextByStableId;
+	const isRenderingTie = (oneRecord) => isRenderingTieRecord({ decisionRecord: oneRecord, truthObjectSet: truth.objectSetBySubject[oneRecord.subjectStableId], renderedTextByStableId });
+	const renderingTieList = allWrongList.filter(isRenderingTie);
+	const wrongList = allWrongList.filter((oneRecord) => !isRenderingTie(oneRecord));
 	const abstainedInPoolList = inPoolRecordList.filter(isAbstained);
 
 	// ---- ABSTENTION QUALITY: does derived abstain where the truth set also had nothing? ----
@@ -231,6 +266,9 @@ const scoreDerivedRun = ({ truthStoreFilePath, truthBlockId, derivedStoreFilePat
 		judgment: {
 			correctCount: correctList.length,
 			wrongCount: wrongList.length,
+			// separated by ruling: a pick the judge could not have made correctly except by luck
+			renderingTieCount: renderingTieList.length,
+			renderingTieMeasured: renderedTextByStableId !== null,
 			abstainedCount: abstainedInPoolList.length,
 			precisionOnNonAbstain: correctList.length + wrongList.length === 0 ? null : correctList.length / (correctList.length + wrongList.length),
 			recallOnInPool: inPoolRecordList.length === 0 ? null : correctList.length / inPoolRecordList.length,
@@ -289,7 +327,14 @@ const scoreDerivedRun = ({ truthStoreFilePath, truthBlockId, derivedStoreFilePat
 	lineList.push('');
 	lineList.push('## Judgment — over the subjects retrieval actually reached');
 	lineList.push('');
-	lineList.push(`- correct: **${score.judgment.correctCount}** · wrong: **${score.judgment.wrongCount}** · abstained: **${score.judgment.abstainedCount}**`);
+	lineList.push(`- correct: **${score.judgment.correctCount}** · wrong: **${score.judgment.wrongCount}** · abstained: **${score.judgment.abstainedCount}**${score.judgment.renderingTieMeasured ? ` · **renderingTie: ${score.judgment.renderingTieCount}**` : ' · renderingTie: not measured (no rendered text supplied)'}`);
+	if (score.judgment.renderingTieMeasured && score.judgment.renderingTieCount > 0) {
+		lineList.push('');
+		lineList.push(`**${score.judgment.renderingTieCount} RENDERING TIE(S).** In these the truth card was rendered BYTE-IDENTICALLY to at least one other`);
+		lineList.push('candidate in the same pool, because the properties that distinguish them are on the NEVER list. The judge was');
+		lineList.push('shown indistinguishable options and asked to choose; picking the wrong one is luck, not error. This number');
+		lineList.push('measures the ALLOW-LIST\'s cost, not the judge, and is deliberately not counted as a wrong pick.');
+	}
 	lineList.push(`- precision on non-abstain: **${score.judgment.precisionOnNonAbstain === null ? '—' : asPercent(score.judgment.correctCount, score.judgment.correctCount + score.judgment.wrongCount)}**`);
 	lineList.push(`- recall over in-pool subjects: **${score.judgment.recallOnInPool === null ? '—' : asPercent(score.judgment.correctCount, score.population.truthCardInPoolCount)}**`);
 	lineList.push(`- **end-to-end accuracy over ALL scorable subjects: ${score.judgment.endToEndAccuracy === null ? '—' : asPercent(score.judgment.correctCount, score.population.scorableCount)}** — the honest headline; it includes the subjects retrieval never reached.`);
@@ -327,4 +372,4 @@ const scoreDerivedRun = ({ truthStoreFilePath, truthBlockId, derivedStoreFilePat
 	return { score, markdownText: lineList.join('\n') };
 };
 
-module.exports = { scoreDerivedRun, readFrozenBlock, truthViewOf, entityOf, RECALL_K_LIST, MAX_RECALL_K, moduleName };
+module.exports = { scoreDerivedRun, isRenderingTieRecord, readFrozenBlock, truthViewOf, entityOf, RECALL_K_LIST, MAX_RECALL_K, moduleName };
