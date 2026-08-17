@@ -38,6 +38,7 @@ const { xLog } = process.global;
 
 const derivedEvalLib = require('./derivedEval');
 const renderingAuditLib = require('./renderingAudit');
+const recordDispositionLib = require(path.join(__dirname, 'recordDisposition'));
 
 const ACCEPTANCE_FILE_PATH = path.join(__dirname, '..', '..', '..', '..', 'lib', 'bridge-framework', 'test', 'acceptance', 'acceptanceCommands.jsonc');
 // THE REFERENCE BLOCK IS DECLARED DATA, NOT A MODULE CONSTANT (RULING BS-8, SABLE_RIVER 2026-08-17). It used
@@ -62,6 +63,7 @@ const REFERENCE_VOCABULARY_BY_ROLE = Object.freeze({
 		agreesText: '**MATCHES TRUTH**',
 		differsText: '**DIFFERS FROM TRUTH**',
 		abstainedText: 'the judge abstained where truth names an object',
+		orphanText: 'NO CANDIDATE CARD EXISTED for this subject — the judge was never asked, so this is a coverage gap and not reticence (RULING BS-13)',
 		tieCardName: 'TRUTH card',
 		tieAbsentText: ' — the truth card is NOT among them, so this did not cost the pick',
 		tiePresentText: ' — **the TRUTH card is among them**; this pick could not have been made on the merits',
@@ -76,6 +78,7 @@ const REFERENCE_VOCABULARY_BY_ROLE = Object.freeze({
 		agreesText: '**AGREES WITH THE CROSSWALK**',
 		differsText: '**DIFFERS FROM THE CROSSWALK** (a disagreement, NOT an error — see the note at the head of this document)',
 		abstainedText: 'the judge abstained where the crosswalk names an object',
+		orphanText: 'NO CANDIDATE CARD EXISTED for this subject — the judge was never asked, so this is a coverage gap and not reticence (RULING BS-13)',
 		tieCardName: "the crosswalk's card",
 		tieAbsentText: " — the crosswalk's card is NOT among them, so this did not cost the pick",
 		tiePresentText: " — **the crosswalk's card is among them**; this pick could not have been made on the merits",
@@ -187,7 +190,12 @@ if (renderedTextIndex.error) {
 const renderedTextByStableId = renderedTextIndex.textByStableId;
 
 const recordList = block.decisionRecordList.slice().sort((leftRecord, rightRecord) => (leftRecord.subjectStableId < rightRecord.subjectStableId ? -1 : 1));
-const isAbstained = (oneRecord) => oneRecord.abstained === true || typeof oneRecord.objectStableId !== 'string' || oneRecord.objectStableId === '';
+// RULING BS-13: the rule lives in recordDisposition.js so the suite tests THIS rule rather than a copy of it.
+// isAbstained no longer absorbs orphans, and `hasObjectPick` — NOT `!isAbstained` — guards every pick-analysis
+// site, because the two stopped being complements the moment orphan became its own outcome.
+const isAbstained = (oneRecord) => recordDispositionLib.isAbstained(oneRecord);
+const isOrphan = (oneRecord) => recordDispositionLib.isOrphan(oneRecord);
+const hasObjectPick = (oneRecord) => recordDispositionLib.hasObjectPick(oneRecord);
 
 const poolTextCountFor = (oneRecord) => {
 	const countByText = {};
@@ -205,7 +213,7 @@ const hasPoolTie = (oneRecord) => {
 };
 const poolsWithTieList = recordList.filter(hasPoolTie);
 const tiedPickList = recordList.filter((oneRecord) => {
-	if (isAbstained(oneRecord)) {
+	if (!hasObjectPick(oneRecord)) {
 		return false;
 	}
 	const countByText = poolTextCountFor(oneRecord);
@@ -214,7 +222,7 @@ const tiedPickList = recordList.filter((oneRecord) => {
 });
 const renderingTieList = recordList.filter((oneRecord) => {
 	const truthSet = truth.objectSetBySubject[oneRecord.subjectStableId];
-	if (isAbstained(oneRecord) || truthSet === undefined || truthSet.has(oneRecord.objectStableId)) {
+	if (!hasObjectPick(oneRecord) || truthSet === undefined || truthSet.has(oneRecord.objectStableId)) {
 		return false;
 	}
 	// the predicate itself is derivedEval's, so the batch document and the score can never disagree on the class
@@ -284,7 +292,7 @@ const firstReaskCount = forensicsRead.recordList.filter((oneRecord) => oneRecord
 const attemptCountByPromptHash = forensicsRead.recordList.reduce((soFar, oneRecord) => ({ ...soFar, [String(oneRecord.promptHash)]: (soFar[String(oneRecord.promptHash)] || 0) + 1 }), {});
 const secondViolationList = Object.keys(attemptCountByPromptHash).filter((oneHash) => attemptCountByPromptHash[oneHash] > 2);
 const reaskCount = secondViolationList.length;
-const unmappedPickList = recordList.filter((oneRecord) => !isAbstained(oneRecord) && Array.isArray(oneRecord.renderedPoolStableIdList) && oneRecord.renderedPoolStableIdList.indexOf(oneRecord.objectStableId) === -1);
+const unmappedPickList = recordList.filter((oneRecord) => hasObjectPick(oneRecord) && Array.isArray(oneRecord.renderedPoolStableIdList) && oneRecord.renderedPoolStableIdList.indexOf(oneRecord.objectStableId) === -1);
 const forensicsMissingList = recordList.filter((oneRecord) => oneRecord.judge === undefined || forensicByPromptHash[String(oneRecord.judge.promptHash)] === undefined);
 // ⟪TRAIL CONTAMINATION — found by batch 1's own checklist, GRANITE_VALLEY 2026-08-17⟫ The forensic trail is
 // APPEND-ONLY per generation, and the generation name is a function of (framework, plugin, renderer, window)
@@ -366,8 +374,8 @@ if (trailIsContaminated) {
 	lineList.push('an assumption about append order, not a fact, so it is not used. The row is UNMEASURED.');
 }
 lineList.push('');
-const correctList = recordList.filter((oneRecord) => !isAbstained(oneRecord) && truth.objectSetBySubject[oneRecord.subjectStableId] !== undefined && truth.objectSetBySubject[oneRecord.subjectStableId].has(oneRecord.objectStableId));
-const wrongList = recordList.filter((oneRecord) => !isAbstained(oneRecord) && truth.objectSetBySubject[oneRecord.subjectStableId] !== undefined && !truth.objectSetBySubject[oneRecord.subjectStableId].has(oneRecord.objectStableId));
+const correctList = recordList.filter((oneRecord) => hasObjectPick(oneRecord) && truth.objectSetBySubject[oneRecord.subjectStableId] !== undefined && truth.objectSetBySubject[oneRecord.subjectStableId].has(oneRecord.objectStableId));
+const wrongList = recordList.filter((oneRecord) => hasObjectPick(oneRecord) && truth.objectSetBySubject[oneRecord.subjectStableId] !== undefined && !truth.objectSetBySubject[oneRecord.subjectStableId].has(oneRecord.objectStableId));
 // the FIRST-re-ask count is drawn from the same contaminated trail as the second-violation count, so on a
 // re-judged window it is an UPPER BOUND, not this block's cost. Reported as a bound rather than silently — a
 // projection of D4's bill is a decision input, and an inflated one argues for a ceiling nobody needs.
@@ -386,7 +394,10 @@ lineList.push('The whitelist hides qualifier and range BY DESIGN — they are th
 lineList.push('away from the judge. This number is the price of that, measured rather than assumed. It is an input to any');
 lineList.push('future decision about the allow-list, not a reason to widen it now.');
 lineList.push('');
-lineList.push(`${referenceVocabulary.summaryLead}: **${correctList.length} ${referenceVocabulary.agreeWord} · ${wrongList.length} ${referenceVocabulary.differWord} · ${recordList.filter(isAbstained).length} abstained**. These are ${recordList.length} subjects; nothing here is a rate.`);
+// RULING BS-13: orphan is REPORTED SEPARATELY, never folded into abstained. The two look identical from the
+// objectStableId field and mean opposite things about coverage: an abstention is the judge declining among
+// candidates, an orphan is a subject that never reached a judge at all.
+lineList.push(`${referenceVocabulary.summaryLead}: **${correctList.length} ${referenceVocabulary.agreeWord} · ${wrongList.length} ${referenceVocabulary.differWord} · ${recordList.filter(isAbstained).length} abstained · ${recordList.filter(isOrphan).length} orphan (no candidate card existed)**. These are ${recordList.length} subjects; nothing here is a rate.`);
 lineList.push('');
 lineList.push('---');
 lineList.push('');
@@ -396,13 +407,13 @@ recordList.forEach((oneRecord, recordIndex) => {
 	const truthSet = truth.objectSetBySubject[oneRecord.subjectStableId];
 	lineList.push(`## ${recordIndex + 1}. \`${oneRecord.subjectStableId}\``);
 	lineList.push('');
-	lineList.push(`- **the judge answered:** ${isAbstained(oneRecord) ? '**ABSTAINED**' : `picked \`${oneRecord.objectStableId}\``}`);
-	if (!isAbstained(oneRecord)) {
+	lineList.push(`- **the judge answered:** ${isOrphan(oneRecord) ? '**NO CANDIDATE CARD EXISTED** — the judge was never asked (ORPHAN, not an abstention)' : isAbstained(oneRecord) ? '**ABSTAINED**' : `picked \`${oneRecord.objectStableId}\``}`);
+	if (hasObjectPick(oneRecord)) {
 		lineList.push(`- predicate \`${oneRecord.predicate}\` · confidence \`${oneRecord.confidence}\` · category \`${oneRecord.judge === undefined ? '—' : oneRecord.judge.category}\``);
 	}
 	lineList.push(`- **${referenceVocabulary.columnHeading}:** ${truthSet === undefined ? referenceVocabulary.absentText : Array.from(truthSet).map((oneId) => `\`${oneId}\``).join(', ')}`);
 	if (truthSet !== undefined) {
-		lineList.push(`- **agreement:** ${isAbstained(oneRecord) ? referenceVocabulary.abstainedText : truthSet.has(oneRecord.objectStableId) ? referenceVocabulary.agreesText : referenceVocabulary.differsText}`);
+		lineList.push(`- **agreement:** ${isOrphan(oneRecord) ? referenceVocabulary.orphanText : isAbstained(oneRecord) ? referenceVocabulary.abstainedText : truthSet.has(oneRecord.objectStableId) ? referenceVocabulary.agreesText : referenceVocabulary.differsText}`);
 	}
 	const rowTextCount = poolTextCountFor(oneRecord);
 	const rowTieSizeList = Object.keys(rowTextCount).filter((oneText) => rowTextCount[oneText] > 1).map((oneText) => rowTextCount[oneText]);
@@ -453,4 +464,4 @@ fs.writeFileSync(outPath, `${lineList.join('\n')}\n`);
 xLog.status(`${moduleName}: ${outPath}`);
 xLog.status(`  block ${blockRead.blockId} — MECHANICALLY ${mechanicallyClean ? 'CLEAN' : 'NOT CLEAN'}`);
 checklist.forEach((oneRow) => xLog.status(`    ${oneRow.pass ? 'PASS' : 'FAIL'}  ${oneRow.name} (${oneRow.detail})`));
-xLog.result(JSON.stringify({ blockId: blockRead.blockId, offset: Number(offsetValue), recordCount: recordList.length, mechanicallyClean, matchingTruth: correctList.length, differing: wrongList.length, abstained: recordList.filter(isAbstained).length }, null, '\t'));
+xLog.result(JSON.stringify({ blockId: blockRead.blockId, offset: Number(offsetValue), recordCount: recordList.length, mechanicallyClean, matchingTruth: correctList.length, differing: wrongList.length, abstained: recordList.filter(isAbstained).length, orphan: recordList.filter(isOrphan).length }, null, '\t'));

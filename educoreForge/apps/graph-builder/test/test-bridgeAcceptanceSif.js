@@ -68,9 +68,10 @@ const harnessRaw = require('../../../test/testLib/harness')(moduleName);
 // + 6 (SECTION 5 BG-GENESIS, RULING BS-5: 3 conjuncts + 3 twins)
 // + 6 (SECTION 6 BG-RENDER-VARIANT, RULING BS-10: 4 conjuncts + 2 twins)
 // + 5 (SECTION 7 BG-BATCH-SIZE, RULING BS-9: 4 conjuncts + 1 red observation)
+// + 7 (SECTION 8 BG-DISPOSITION, RULING BS-13: 4 conjuncts + 3 twins)
 // + 1 (SECTIONS 0-2: the frozen-block census conjunct — MEASURED since the CP2 freeze of 2026-08-17)
-// = 58. Raised as a LITERAL, at this call site, in the same commit as the section it counts.
-const EXPECTED_ASSERTION_COUNT = 58;
+// = 65. Raised as a LITERAL, at this call site, in the same commit as the section it counts.
+const EXPECTED_ASSERTION_COUNT = 65;
 const ledger = { count: 0 };
 const harness = {
 	section: harnessRaw.section,
@@ -310,6 +311,7 @@ const runComposeSection = () => {
 			// rulings and the registry's whole value is that each row justifies itself to a reviewer by name. A
 			// pattern that quietly grew to cover a second file would have retired that.
 			{ pattern: /^apps\/graph-builder\/test\/bridgeAcceptance\/renderingAudit\.js$/, why: 'RULING BS-10: the rendering audit is generalised by rendererVersion so it parses the crosswalk layout as well as the derived one, CAPTURING the card key and name that live on the crosswalk ordinal line. Its own row, its own ruling — the tempting one-character anchor loosening is refused by name in the module because it would discard that name and manufacture ties that were never on the page' },
+			{ pattern: /^apps\/graph-builder\/test\/bridgeAcceptance\/recordDisposition\.js$/, why: "RULING BS-13: an ORPHAN is not an ABSTENTION, and the rule that tells them apart is extracted here so its twins exercise the rule itself rather than a copy — batchCheckpoint.js is a CLI that runs on require. The old predicate was correct for the DERIVED order, whose six blocks are 100 percent classification 'judged' with zero orphans, and wrong the moment a standard-declared plugin brought orphans and channel-asserted rows through the same instrument" },
 			{ pattern: /^apps\/graph-builder\/test\/bridgeAcceptance\/batchCheckpoint\.js$/, why: 'RULING BS-8: the batch document generator is GENERALISED rather than forked — its two hardcoded truth constants become declared data (referenceStoreFilePath / referenceBlockId / referenceRole) and the ROLE selects the vocabulary, so a SIF document says COMPARISON where a derived document says TRUTH. SIF has no answer key; a document that called a disagreement an error would be claiming more than its evidence supports' },
 		];
 		const isPermitted = (onePath) => PERMITTED_PATH_REGISTRY.some((oneRow) => oneRow.pattern.test(onePath));
@@ -441,6 +443,51 @@ const runReleasedBatchSizeSection = () => {
 	// said --limit=70 and its independent reconstruction still said 10, and that refusal is why BS-9 needed a
 	// runner change at all. Recorded here so the guard's bite is documented where the guard is tested.
 	harness.ok('RED-OBSERVED BG-BATCH-SIZE — the equality check REFUSED this phase\'s own batch-1 launch when the committed line and the runner\'s reconstruction disagreed about --limit (committed 70, reconstructed 10), which is exactly the "quietly running a bigger batch than the supervisor released" case; observed live 2026-08-17, not simulated', /the runner's command line differs from the committed frozen/.test(runnerText));
+
+	runRecordDispositionSection();
+};
+
+// ---------------------------------------------------------------------
+// SECTION 8 — BG-DISPOSITION (RULING BS-13): an ORPHAN is not an ABSTENTION. These call the SAME function
+// batchCheckpoint.js calls; the rule lives in recordDisposition.js precisely so this suite tests the rule
+// itself rather than a copy of it (batchCheckpoint.js is a CLI that runs on require).
+// ---------------------------------------------------------------------
+const runRecordDispositionSection = () => {
+	harness.section('SECTION 8 — BG-DISPOSITION (RULING BS-13): orphan is its own outcome, not a quiet addition to the abstention count');
+	const dispositionLib = require(path.join(__dirname, 'bridgeAcceptance', 'recordDisposition'));
+	const dispositionFor = (decisionRecord) => {
+		const read = dispositionLib.dispositionOf({ decisionRecord });
+		return read.error === undefined ? read.disposition : `ERROR:${read.error.message}`;
+	};
+
+	// THE RULED DISTINCTION. Both records lack an objectStableId, and that is the whole trap: the absence looks
+	// identical from the field, and only the classification says whether a judge was ever asked.
+	harness.ok('BG-DISPOSITION a a record classified ORPHAN with no objectStableId is ORPHAN — no candidate card existed, so no judge declined anything and counting it as reticence states something that did not happen', dispositionFor({ classification: 'orphan', subjectStableId: 'sif:orphanSubject' }) === dispositionLib.DISPOSITION_ORPHAN, dispositionFor({ classification: 'orphan', subjectStableId: 'sif:orphanSubject' }));
+	harness.ok('BG-DISPOSITION b a record classified JUDGED with no objectStableId is ABSTAINED — the judge saw candidates and declined, which is the only thing "abstained" should ever mean', dispositionFor({ classification: 'judged', subjectStableId: 'sif:abstainedSubject', abstained: true }) === dispositionLib.DISPOSITION_ABSTAINED);
+	harness.ok('BG-DISPOSITION c a JUDGED record carrying an objectStableId is PICKED, so the pick-analysis sites keep exactly the population they had', dispositionFor({ classification: 'judged', subjectStableId: 'sif:pickedSubject', objectStableId: 'ceds:000123' }) === dispositionLib.DISPOSITION_PICKED);
+	harness.ok('BG-DISPOSITION d an UNKNOWN classification is REFUSED BY NAME listing the known ones — a new classification must be given its disposition deliberately, never defaulted into whichever branch happens to be last', /is not one of specified, judged, orphan/.test(dispositionFor({ classification: 'inventedBySomeFutureBridge', subjectStableId: 'x' })));
+
+	// TWIN 1 — the exact defect, on the exact numbers. If the rule ever collapses orphan into abstained again,
+	// this counts it: batch-1's true 8 abstentions were reported as 9, and the census block's 132 as 161.
+	const batchOneShapedRecordList = [
+		{ classification: 'judged', subjectStableId: 's1', abstained: true },
+		{ classification: 'orphan', subjectStableId: 's2' },
+		{ classification: 'judged', subjectStableId: 's3', objectStableId: 'ceds:000001' },
+		{ classification: 'specified', subjectStableId: 's4', objectStableId: 'ceds:000002' },
+	];
+	const countOf = (wantedDisposition) => batchOneShapedRecordList.filter((oneRecord) => dispositionFor(oneRecord) === wantedDisposition).length;
+	harness.ok('BG-DISPOSITION TWIN the abstention count does NOT absorb the orphan: over a batch-1-shaped list the abstained count is 1 and the orphan count is 1, where the old predicate reported 2 abstained and 0 orphans — the +1 that made CP3 batch-1.md disagree with its own block', countOf(dispositionLib.DISPOSITION_ABSTAINED) === 1 && countOf(dispositionLib.DISPOSITION_ORPHAN) === 1, `abstained=${countOf(dispositionLib.DISPOSITION_ABSTAINED)} orphan=${countOf(dispositionLib.DISPOSITION_ORPHAN)}`);
+
+	// TWIN 2 — the danger introduced BY the fix, and the reason hasObjectPick is a separate predicate. Once an
+	// orphan stops being "abstained", every site guarded by `!isAbstained` would start treating it as a record
+	// with a pick to analyse — and `renderedPoolStableIdList.indexOf(undefined) === -1` is TRUE, so the orphan
+	// would have been silently reported as an UNMAPPED PICK: a coverage gap re-labelled as a judge error.
+	harness.ok('BG-DISPOSITION TWIN an ORPHAN is not PICKED either — the fix must not convert the orphan into a pick-analysis subject, which is how "no card existed" would have been re-reported as "the judge picked something outside its pool"', dispositionFor({ classification: 'orphan', subjectStableId: 's2' }) !== dispositionLib.DISPOSITION_PICKED);
+
+	// TWIN 3 — a SPECIFIED row is channel-asserted and no judge ever saw it. BS-13 does not change how these
+	// are counted (that is BS-12's ruling, deliberately left to its own commit); this asserts only that the
+	// disposition vocabulary can SAY 'specified', so BS-12 has a name to work with rather than an inference.
+	harness.ok('BG-DISPOSITION TWIN the vocabulary can name a SPECIFIED row distinctly, so BS-12 can separate channel-asserted rows from judged ones by NAME rather than by inferring it from a missing field', dispositionLib.DISPOSITION_SPECIFIED === 'specified' && dispositionLib.KNOWN_CLASSIFICATION_LIST.indexOf('specified') !== -1);
 
 	runFrozenArtifactSection();
 };
