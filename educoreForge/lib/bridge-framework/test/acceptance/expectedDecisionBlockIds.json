@@ -1,5 +1,5 @@
 {
-	"note": "BG-ACCEPT (a)/(b) data (SPEC-bridgeFramework-v1.md \u00a712; RULINGS R1, BF4, 12:05 #3, #5): per plugin, the decision block id and the relationship block id EQUAL under the frozen command, FROZEN from the first accepted classifier run (B3 for the Ed-Fi plugin, B4 for SIF) \u2014 never from prose arithmetic. null-and-honest in B2: no real plugin, no build, no container. The relationship block id is coupled to the source standardBase id (BF3): expected ids are frozen per (decision block, standardBase) pair. The toy plugins' block ids are NOT frozen here \u2014 the toy census is (expectedCensus.toyBridge.toyGraphDouble.json); a toy block id would move on any framework byte (frameworkFingerprint is a header member) and is proven by BG-REPLAY (A' === A) instead.",
+	"note": "BG-ACCEPT (a)/(b) data (SPEC-bridgeFramework-v1.md §12; RULINGS R1, BF4, 12:05 #3, #5): per plugin, the decision block id and the relationship block id EQUAL under the frozen command, FROZEN from the first accepted classifier run (B3 for the Ed-Fi plugin, B4 for SIF) — never from prose arithmetic. null-and-honest in B2: no real plugin, no build, no container. The relationship block id is coupled to the source standardBase id (BF3): expected ids are frozen per (decision block, standardBase) pair. The toy plugins' block ids are NOT frozen here — the toy census is (expectedCensus.toyBridge.toyGraphDouble.json); a toy block id would move on any framework byte (frameworkFingerprint is a header member) and is proven by BG-REPLAY (A' === A) instead.",
 	"byBridgeName": {
 		"edfiCedsCrosswalkPlugin": {
 			"graphId": "GOLD_EVAL_260816@manifest:97c618c20e07c0c612957def69164402d364a98d5dfee865faacae1deace6382",
@@ -29,7 +29,7 @@
 				"servedFromCache": 152,
 				"abstained": 36,
 				"judgedRecords": 152,
-				"note": "cp2real4: the whole judged share served from the warm cache (the 137 live + 15 earlier answers) \u2014 zero spend; the first freeze (cp2real3) asked 137 live"
+				"note": "cp2real4: the whole judged share served from the warm cache (the 137 live + 15 earlier answers) — zero spend; the first freeze (cp2real3) asked 137 live"
 			},
 			"judgeDependentCensusByBlock": {
 				"debug": {
@@ -42,7 +42,7 @@
 					"edgeCount": 666,
 					"distinctTripleCount": 666
 				},
-				"note": "RULING B3 checkpoint 2 (1): the judge-dependent per-target trio recorded PER FROZEN BLOCK \u2014 the classifier members are EQUAL across debug and real; the debug judge (digest) abstains pseudo-randomly, the real judge picks"
+				"note": "RULING B3 checkpoint 2 (1): the judge-dependent per-target trio recorded PER FROZEN BLOCK — the classifier members are EQUAL across debug and real; the debug judge (digest) abstains pseudo-randomly, the real judge picks"
 			},
 			"previousDecisionBlockIdList": [
 				"81c9248d2e2bc712e3c55e5ac19c7b2c3fa0c53f022a19eb8aa5bb0214470ffb"
@@ -60,18 +60,18 @@
 			}
 		},
 		"sifCedsStandardPlugin": {
-			"graphId": "a3e1768ada649a16@manifest:a3e1768ada649a16401085c767b20e0b58faa01fd49b044b3ca125af3d8fbbaf",
+			"graphId": "e29eb8fa980a1c6e@manifest:e29eb8fa980a1c6eca98fbef15018cdc3a06317e0a8a11f3a02da1875e9b5f02",
 			"decisionBlockId": null,
-			"relationshipBlockId": "7c400c39a148da5330bf86773c064a0c1c9094773a67040e7defc5e1bab69545",
+			"relationshipBlockId": "b1d1c367083f73ad0ad5cfb934bb9590814d9cafb0fda4c4c637f4c7c9c94e7d",
 			"standardBaseBlockId": "d393b0406d08f613f3142711fca5a9f2b0c580e84c4bef3ffd6b18d4eaa2330a",
 			"frozenBy": {
 				"sessionName": "SABLE_RIVER",
-				"builder": "TWILIGHT_VALLEY",
+				"builder": "ONYX_BEACON",
 				"date": "2026-08-17",
-				"runPhaseToken": "cp2debug4",
-				"note": "frozen from the POST-REBASE CP2 run at base 55357b5"
+				"runPhaseToken": "b4bReKey1",
+				"note": "RE-FROZEN under RULING B4R-3 (B4b). Superseded ids: decision 31030a16..., relationship 7c400c39..., manifest a3e1768a..."
 			},
-			"debugDecisionBlockId": "31030a164f49925d25b79f825ed10d49f373412adc6f114bd1afd6927fa38cac",
+			"debugDecisionBlockId": "3bca9ee3d7f6d160fcb1cabd43ee2b0bcd524a5b07ceb126f8685de9a7e6c8f7",
 			"judgeDependentCensusByBlock": {
 				"debug": {
 					"abstainedCount": 132,
@@ -80,7 +80,7 @@
 				}
 			},
 			"provisional": false,
-			"namedMover": "THE IDS MOVED, AND THE CAUSE IS SINGULAR AND NAMED: the BS-7 rebase of b4-sif-plugin from base 3e5357f to 55357b5, taken so B4 would INHERIT 1393f82 (BR-067 purpose-satisfied + symmetric-contrast re-ask + named refusal net \u2014 the fix without which the Ed-Fi D4 real run died at subject 50 of 701) and c64d6d3 (DR-2, the SSSOM exporter emitting subject_match_field by disposition). frameworkFingerprint moved 45e93f4cf430\u2026 -> ad3cc4c77532\u2026, and the decision block, the relationship block and the manifest moved with it because each is content-addressed over a text that carries the fingerprint. WHAT DID NOT MOVE, asserted BEFORE the re-run rather than observed after it: the cardinalityCensus (2,231 / 1,875 / 327 / 29 / 0 / 0, member for member), the contentionCensus, the three digests, the source channel digest, the walk (15,620 / 2,231 / 13,389 / 0) and the edge and SSSOM row counts (2,070 each). The classifier reads the source walk, the hub cards and the declared tables; the judge contract touches none of them, so a judge-side fix cannot legitimately shift a classifier count \u2014 and a census that HAD moved would have been a DEFECT rather than a re-key. Both halves had to happen in opposite directions for this to be a good result: if the ids had NOT moved, the fingerprint would not actually cover the files that changed and \"zero framework change\" would be unprovable by content address. PREVIOUS ids, superseded: decision 53d85c7d\u2026, relationship af4524cd\u2026, manifest cbcdc87d\u2026, fingerprint 45e93f4c\u2026."
+			"namedMover": "THE IDS MOVED, AND THE CAUSE IS SINGULAR AND NAMED: the predicateSource CITATION TEXT was corrected to its measured evidence basis under RULING B4R-3, closing DEFECT D-3 of the B4 adversarial review. The citation had given 5,265 as the count of cedsId/cedsURL PAIRS; 5,265 is the count of <xs:appinfo> BLOCKS and the pair count is 590, with 4,675 blocks carrying an empty self-closing <cedsId /> — an overstatement of roughly ninefold, inside a string that ships in declarationDigest and as channel_assertion on every SSSOM row. It also called the 159 CEDS-ID header hits the only occurrences of CEDS in the source file and then quoted the 160th, the hedged sentence at ImplementationSpecification_031326.tsv line 9849, from that same file. The citation lives inside canonicalJsonText(bridgeDeclaration), so declarationDigest moved ec814dbc... -> 307bfa27..., labelTableDigest moved 5eae3f9e... -> bab11981... (the channel-assertion provenance contains the citation), and the decision block, the relationship block and the manifest moved with them. WHAT DID NOT MOVE, asserted BEFORE the re-run rather than observed after it, and then measured member for member: the cardinalityCensus (2,231 / 1,875 / 327 / 29 / 0 / 0), the contentionCensus (2,777 / 2,324 / 260 / 13), the sourceChannelDigestByKey, the remodelTableDigest, the four pinned base ids, rendererVersion, judgeKind, and — the one that matters most for this phase — the frameworkFingerprint, still ad3cc4c77532..., BYTE-UNCHANGED. A citation is prose the classifier never reads and the judge never sees, so a census that had moved would have been a DEFECT rather than a re-key. THE PROMPT DID NOT MOVE EITHER, and that was verified BEFORE any spending line ran rather than inferred from a call count afterwards: evidenceRenderer.js reads exactly one field off the declaration, renderingAllowList.subject, and promptHash = sha256(rendererVersion + systemPrompt + userPrompt) — the citation cannot reach a prompt, which is why the CP3 window re-ran from cache at zero real calls. PREVIOUS ids, superseded: decision 31030a164f49925d..., relationship 7c400c39a148da53..., manifest a3e1768ada649a16..., declarationDigest ec814dbcf4d736b2..., labelTableDigest 5eae3f9ec0076676...."
 		}
 	}
 }

@@ -1,0 +1,81 @@
+{
+	"graphId": "e29eb8fa980a1c6e@manifest:e29eb8fa980a1c6eca98fbef15018cdc3a06317e0a8a11f3a02da1875e9b5f02",
+	"note": "RE-FROZEN under RULING B4R-3 (B4b, builder ONYX_BEACON, supervisor SABLE_RIVER, 2026-08-17), superseding the CP2/post-rebase freeze. Every value is READ FROM THE BLOCK, never written by hand: a census computed by hand is a fixture that proves the arithmetic rather than the classifier. THE CAUSE OF THE RE-KEY IS SINGULAR AND NAMED: the predicateSource citation text was corrected to its measured evidence basis (DEFECT D-3 — the citation gave 5,265 as the count of cedsId/cedsURL PAIRS when 5,265 is the count of <xs:appinfo> BLOCKS and the pair count is 590, with 4,675 blocks carrying an empty self-closing <cedsId />). The citation is inside canonicalJsonText(bridgeDeclaration) and therefore inside declarationDigest, so the decision block, the relationship block and the manifest all move with it. THE CENSUS MUST NOT MOVE and did not: the classifier reads the source walk, the hub cards and the declared tables, and a citation string is none of those.",
+	"byBridgeName": {
+		"sifCedsStandardPlugin": {
+			"labelTableDigest": "bab1198141ff64a0a7c782a08192586aca1f671297bdcf19e43808e1308ba77f",
+			"remodelTableDigest": "5048486a38d1fab646dd5020bb5e2e6c5c0981b13e9900f5e6d9e2b82d78c71b",
+			"declarationDigest": "307bfa27aafe3293d15762fa793ee23725683faee9162f22adae7f7ebcb9fecc",
+			"rendererVersion": "bridgeEvidenceRenderer-v1",
+			"judgeKind": "debug:digest",
+			"cardinalityCensus": {
+				"perSubject": {
+					"judgedSubjectCount": 327,
+					"orphanSubjectCount": 29,
+					"sourceGapCount": 0,
+					"specifiedSubjectCount": 1875,
+					"subjectCollisionCount": 0,
+					"subjectCount": 2231
+				},
+				"perTarget": {
+					"abstainedCount": 132,
+					"contentionCensus": {
+						"cardCount": 2777,
+						"contendedKeyCount": 260,
+						"distinctKeyCount": 2324,
+						"tier": "property",
+						"worstContention": 13
+					},
+					"distinctTripleCount": 2070,
+					"edgeCount": 2070,
+					"indexCollisionCount": 260,
+					"judgedCount": 327,
+					"labelRefusedCount": 0,
+					"manyToOneSubjectCount": 0,
+					"orphanCount": 29,
+					"refusedValueTierAssertionCount": 0,
+					"remodelAppliedCount": {
+						"classSide": 0,
+						"propertySide": 34
+					},
+					"sentinelDroppedCount": 13389,
+					"sentinelLabelledRowCount": 13389,
+					"sourceSideMismatchCount": 0,
+					"specifiedCount": 1875,
+					"targetCount": 2231,
+					"tentativeCount": 0,
+					"valueTierRefusedCount": 0
+				}
+			},
+			"contentionCensus": {
+				"cardCount": 2777,
+				"contendedKeyCount": 260,
+				"distinctKeyCount": 2324,
+				"tier": "property",
+				"worstContention": 13
+			},
+			"sourceChannelDigestByKey": {
+				"cedsIdColumn": "forgedGraph:788b74ad6b38211fc69acad9883ae96e37a9eaac98c828ae05c908972444fb16"
+			},
+			"namedMoverList": [],
+			"namedMoverNote": "EMPTY, and that is the finding rather than an omission: the SIF census reproduces SPEC §11 member for member with no named movers, across the CP2 freeze, the BS-7 rebase re-key and now the B4R-3 citation re-key. Three re-keys of the block ids, three identical censuses. That is the classifier being genuinely independent of the framework fingerprint and of the declaration prose, which is the property the whole content-addressing scheme rests on.",
+			"frameworkFingerprint": "ad3cc4c77532afefda472befad6cbef748b35a4a5edd520cb65025e577913908",
+			"previousFrameworkFingerprint": "45e93f4cf430be5eb50faae8fad08934557a3da4ffcaba9ded447c15e5f25869",
+			"expectedBaseBlockIdBySubject": {
+				"ceds@14_0_0_0_base": "09a5d658807b9c22b44b28289d9ad4b47df15e45f44c9eacec765962fe487c33",
+				"edfi@5_2_0_base": "aea6d8dfe7899adef57c5ac3adb6b0df2bfc7e4a4ae859c4fa3893c132c8b304",
+				"pesc260805@aggregate_01_base": "db885ac42b284135a37135a0fb95baf376547fe401530506cc321f36686a9e61",
+				"sif@unknown_01_base": "d393b0406d08f613f3142711fca5a9f2b0c580e84c4bef3ffd6b18d4eaa2330a"
+			},
+			"frozenBy": {
+				"sessionName": "SABLE_RIVER",
+				"builder": "ONYX_BEACON",
+				"runPhaseToken": "b4bReKey1",
+				"decisionBlockId": "3bca9ee3d7f6d160fcb1cabd43ee2b0bcd524a5b07ceb126f8685de9a7e6c8f7",
+				"relationshipBlockId": "b1d1c367083f73ad0ad5cfb934bb9590814d9cafb0fda4c4c637f4c7c9c94e7d",
+				"manifestId": "e29eb8fa980a1c6eca98fbef15018cdc3a06317e0a8a11f3a02da1875e9b5f02",
+				"supersedesManifestId": "a3e1768ada649a16401085c767b20e0b58faa01fd49b044b3ca125af3d8fbbaf"
+			}
+		}
+	}
+}
