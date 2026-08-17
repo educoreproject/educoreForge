@@ -93,10 +93,54 @@
 		"frozenBy": { "sessionName": "SABLE_RIVER", "note": "SABLE_RIVER (GO as data, D3 2026-08-16; D4 released 14:40 CDT)" }
 	},
 	"sifCedsStandardPlugin": {
-		"recipePath": null,
-		"materialise": null,
-		"rejudgeDebug": null,
-		"pinnedFlagList": ["--vectorize=true", "--embeddingCacheFilePath=<the warm cache>", "--standardsDatabaseFilePath=<ABSOLUTE scratch>", "--decisionStoreFilePath=<ABSOLUTE, pinned>", "--judgmentCacheFilePath=<ABSOLUTE scratch>", "--matchForensicsDirPath=<ABSOLUTE scratch>", "--rebridge=sif", "--useDebugJudge=digest", "</dev/null", "--max-old-space-size=20000"],
-		"frozenBy": { "sessionName": "SABLE_RIVER", "note": "SABLE_RIVER (GO as data, D3 2026-08-16; D4 released 14:40 CDT)" }
+		// THE SIF LINES (B4, TWILIGHT_VALLEY, 2026-08-17). Same four-line shape as the crosswalk's, over the
+		// SIF plugin's OWN store under system/dataStores/bridgeAcceptance/sif/ — the SIF producer never opens
+		// the Ed-Fi decision store, and the surest way to guarantee that is for it not to know the path
+		// (the same reasoning ruling 11.5 applied to the derived producer).
+		//
+		// THE FOUR LINES: rejudgeDebug FREEZES a block under the digest debug judge (free, no Opus, and the
+		// line every gate run uses); rejudgeRealLimit is the REAL-CLIENT CONFORMANCE BATCH of ten subjects
+		// (the named step the B3 DEVLOG's real-client lesson requires BEFORE any full spend — two real judge
+		// contract defects were found that way and no hermetic gate could have shown either); materialiseReal
+		// is the full real freeze; materialise REPLAYS the pair's latest frozen block with ZERO judge calls.
+		//
+		// PER-LINE JUDGMENT CEILINGS (RULING §11.12), enforced by the runner at the boundary. The projected
+		// judged share is ~327 subjects (SPEC §11's measured 1,875 / 327 / 29), so 800 leaves room for a
+		// re-ask on well over half of them and still halts long before a storm; the batch line's 30 leaves a
+		// re-ask on every one of its ten and its second violation. As the derived block's comment says at
+		// length: these are a contract the RUNNER enforces, not yet a ceiling inside the run, because the
+		// only per-line channel is the command line and build.js owns flag parsing — and build.js is a seam
+		// file this order may not touch. The framework's own MAX_JUDGMENT_COUNT_PER_RUN remains the
+		// last-resort halt. Saying so is the point; a cap everyone believes in and nothing enforces is worse
+		// than no cap at all.
+		//
+		// TQ'S STANDING WORD, carried through SABLE_RIVER 2026-08-17: no FULL real-judge run on SIF until the
+		// limited batch has run AND TQ has seen the numbers. materialiseRealSpendAuthorisedBy stays NULL
+		// until then, and the runner refuses every spending line while it is null — that refusal is the only
+		// thing standing between a typo and roughly 327 Opus calls.
+		//
+		// NULL-AND-HONEST UNTIL CP2: storeFilePath names the store the first four-forge run will create;
+		// expectedBaseBlockIdBySubject and fourBaseManifestId are FROZEN from that run, not written from
+		// prose. Until they are, the runner's -verify REFUSES this line BY NAME (RULING BR3-3: an absent or
+		// empty pin table is a refusal, never a VERIFIED over zero subjects) — which is the correct reading
+		// of an unfrozen line, and is why they are absent rather than guessed.
+		"standardKey": "sif",
+		"recipePath": "/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/recipes/fourWithHubSifBridge.recipe.jsonc",
+		"storeFilePath": "/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/sif/sifBridge.standardsDatabase.sqlite3",
+		"decisionStoreFilePath": "/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/sif/sifBridge.decisions.sqlite3",
+		"judgmentCacheFilePath": "/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/sif/sifBridge.judgmentCache.sqlite3",
+		"matchForensicsDirPath": "/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/sif/matchForensics",
+		"buildLogsDirPath": "/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/sif/buildLogs",
+		"rejudgeDebug": "node --max-old-space-size=20000 /Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/apps/graph-builder/graphBuilder.js -build --recipePath=/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/recipes/fourWithHubSifBridge.recipe.jsonc --vectorize=true --reuseForgedBlocks=true --standardsDatabaseFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/sif/sifBridge.standardsDatabase.sqlite3 --decisionStoreFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/sif/sifBridge.decisions.sqlite3 --judgmentCacheFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/sif/sifBridge.judgmentCache.sqlite3 --matchForensicsDirPath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/sif/matchForensics --embeddingCacheFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/vectorCache/vectorCache.sqlite3 --rebridge=sif --useDebugJudge=digest </dev/null > /Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/sif/buildLogs/<line>-<phase>.log 2>&1 &",
+		"rejudgeDebugMaxJudgmentCount": 800,
+		"rejudgeRealLimit": "node --max-old-space-size=20000 /Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/apps/graph-builder/graphBuilder.js -build --recipePath=/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/recipes/fourWithHubSifBridge.recipe.jsonc --vectorize=true --reuseForgedBlocks=true --standardsDatabaseFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/sif/sifBridge.standardsDatabase.sqlite3 --decisionStoreFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/sif/sifBridge.decisions.sqlite3 --judgmentCacheFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/sif/sifBridge.judgmentCache.sqlite3 --matchForensicsDirPath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/sif/matchForensics --embeddingCacheFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/vectorCache/vectorCache.sqlite3 --rebridge=sif --limit=10 --offset=<n> </dev/null > /Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/sif/buildLogs/<line>-<phase>.log 2>&1 &",
+		"rejudgeRealLimitMaxJudgmentCount": 30,
+		"materialiseReal": "node --max-old-space-size=20000 /Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/apps/graph-builder/graphBuilder.js -build --recipePath=/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/recipes/fourWithHubSifBridge.recipe.jsonc --vectorize=true --reuseForgedBlocks=true --standardsDatabaseFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/sif/sifBridge.standardsDatabase.sqlite3 --decisionStoreFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/sif/sifBridge.decisions.sqlite3 --judgmentCacheFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/sif/sifBridge.judgmentCache.sqlite3 --matchForensicsDirPath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/sif/matchForensics --embeddingCacheFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/vectorCache/vectorCache.sqlite3 --rebridge=sif </dev/null > /Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/sif/buildLogs/<line>-<phase>.log 2>&1 &",
+		"materialiseRealMaxJudgmentCount": 800,
+		"materialise": "node --max-old-space-size=20000 /Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/apps/graph-builder/graphBuilder.js -build --recipePath=/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/recipes/fourWithHubSifBridge.recipe.jsonc --vectorize=true --reuseForgedBlocks=true --standardsDatabaseFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/sif/sifBridge.standardsDatabase.sqlite3 --decisionStoreFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/sif/sifBridge.decisions.sqlite3 --judgmentCacheFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/sif/sifBridge.judgmentCache.sqlite3 --matchForensicsDirPath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/sif/matchForensics --embeddingCacheFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/vectorCache/vectorCache.sqlite3 </dev/null > /Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/sif/buildLogs/<line>-<phase>.log 2>&1 &",
+		"materialiseMaxJudgmentCount": 0,
+		"materialiseRealSpendAuthorisedBy": null,
+		"pinnedFlagList": ["--vectorize=true", "--reuseForgedBlocks=true", "--standardsDatabaseFilePath=<the pinned store, ABSOLUTE>", "--decisionStoreFilePath=<ABSOLUTE, pinned, SIF-only>", "--judgmentCacheFilePath=<ABSOLUTE, pinned, SIF-only>", "--matchForensicsDirPath=<ABSOLUTE, pinned, SIF-only>", "--embeddingCacheFilePath=<the warm cache>", "--rebridge=sif (rejudge lines only)", "--useDebugJudge=digest (rejudgeDebug only)", "--limit=10 --offset=<n> (rejudgeRealLimit only)", "</dev/null", "--max-old-space-size=20000"],
+		"frozenBy": null
 	}
 }

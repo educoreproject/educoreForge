@@ -1,0 +1,49 @@
+{
+  // fourWithHubSifBridge — fourWithHub.recipe.jsonc (the four certified standards + the CEDS hub folded into
+  // the CEDS base; manifest 97c618c2… = GOLD_EVAL_260816's bytes) PLUS ONE bridge: the SIF → CEDS
+  // STANDARD-DECLARED plugin on the Bridge Framework (forges/sif/bridges/sifCedsStandardPlugin.js;
+  // SPEC-bridgeFramework-v1.md §11; B4 order, 2026-08-17).
+  //
+  // THIS RECIPE IS THE COMPOSABILITY PROOF'S OTHER HALF. It is the Ed-Fi bridge recipe with two strings
+  // changed — the source standard and the bridge name. Nothing else about the shape of a bridged build
+  // differs between a crosswalk plugin and a standard-declared one, which is the claim B4 exists to test.
+  //
+  // The bridge entry names the PLUGIN by its declared bridgeName; the framework's discovery registry over
+  // forges/<std>/bridges/ resolves it (an unregistered name is refused LISTING the registered ones). The
+  // producer is EXPLICIT in the plugin's declaration (producerKind 'authored', matchBasis 'standard') and
+  // returned by the framework on every run — build.js never infers it. The recipe schema carries no producer
+  // key (additionalProperties: false); source::hub::bridgeName is the pairing's uniqueness key.
+  //
+  // WHY 'standard' NEEDS NO RECIPE CHANGE: the framework consults SOURCE_ACQUISITION_REGISTRY['standard'],
+  // which declares walkChannelSourceKind 'forgedGraph' — so the plugin's ONE channel reads SIF's own forged
+  // nodes rather than a document under the bundle, and the recipe's `dependencies` are what put those nodes
+  // in the graph the run reads. The recipe does not know or say which of the two it is.
+  //
+  // Which decision block the pair materialises is NOT a recipe choice: a plain -build REPLAYS the pair's
+  // frozen block from --decisionStoreFilePath (zero judge calls); --rebridge=sif FREEZES a new one
+  // (--useDebugJudge=digest for every gate run; the real judge ONLY on the supervisor's go, and for SIF only
+  // in limited batches until TQ has seen the numbers). The frozen command lines live in
+  // lib/bridge-framework/test/acceptance/acceptanceCommands.jsonc under sifCedsStandardPlugin.
+  //
+  // Builds from this recipe go to NEW DEV_ containers only (GNC-001); any GOLD_EVAL_ rename is the
+  // supervisor's act after -goldEvalCheck PASS on the run dir.
+  "schemaVersion": "1.0.0",
+  "recipeName": "fourWithHubSifBridge",
+  "kind": "dev",
+  "description": "The four certified standards with the CEDS hub, PLUS the SIF → CEDS standard-declared bridge plugin (sifCedsStandardPlugin) on the Bridge Framework.",
+  "standards": [
+    { "token": "ceds", "version": "current" },
+    { "token": "edfi", "version": "current" },
+    { "token": "pesc260805", "version": "current" },
+    { "token": "sif", "version": "current" }
+  ],
+  "hubs": [
+    { "standard": "ceds" }
+  ],
+  "bridges": [
+    { "source": "sif", "hub": "ceds", "bridge": "sifCedsStandardPlugin", "dependencies": ["sif", "ceds"] }
+  ],
+  // the round-trip stage runs every declared roundTripValidator against the materialised graph — -goldEvalCheck REFUSES a
+  // run whose stage did not run (doctrine §7.4); an ACCEPTANCE recipe declares it (fourWithHub-baseline precedent)
+  "roundTripStage": true
+}
