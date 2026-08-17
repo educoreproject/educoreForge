@@ -273,5 +273,108 @@
 		// had to be TRUE before they were written — an attestation that predates the thing it attests is worth less
 		// than no attestation, and it is the kind of small untruth that a later reader has no way to detect.
 		"frozenBy": { "sessionName": "SABLE_RIVER", "builder": "ONYX_BEACON", "date": "2026-08-17", "note": "SABLE_RIVER (CP2 freeze 2026-08-17 01:35 CDT; re-frozen after B4R-3)" }
+	},
+
+	// =============================================================================================
+	// PESC — TWO PLUGINS, ONE SEAM, ONE STORE. LUNAR_PRISM (P1), 2026-08-17.
+	// ADDED, NEVER EDITED: the pinned historical literals above (pesc260805@aggregate_01_base
+	// db885ac4…, fourBaseManifestId 97c618c2…) are UNTOUCHED. RULING P1-R4: "new frozen command lines
+	// go in that file; the pinned historical literal stays; if you find yourself wanting to modify ANY
+	// existing line rather than add a new one, stop and ask." I did not need to.
+	// Adding here cannot redden BG-COMPOSE-PESC: expectedCompose.json's diffedPathList carries the git
+	// exclude pathspec ':!lib/bridge-framework/test/acceptance/', so this directory is OUTSIDE the
+	// zero-diff measurement by design since BF9.
+	//
+	// ⚠️ NO REAL-JUDGE LINE IS AUTHORISED. Both spend authorisations are NULL. P3 needs a GO WRITTEN AS
+	// DATA in this file; P4 IS HELD BY TQ. maxJudgmentCount is present on EVERY line including the free
+	// ones, because a line without one is refused by the runner and a free line that could silently
+	// become expensive is exactly what the per-line scheme exists to prevent.
+	//
+	// ONE STORE FOR BOTH PLUGINS, deliberately. They ride in ONE recipe (pescDerivedEval) because they
+	// are two SUBJECT LABELS through one seam and running them together is the phase's claim rather
+	// than a convenience. They cannot collide in the store: a conflict is two producers claiming the
+	// same (subject, object) pair, and their subject populations are DISJOINT BY LABEL —
+	// PescElementDecl against PescNamedDefinition. RULING §11.5's own-store requirement is satisfied
+	// against the CROSSWALK stores, which is what it was written about.
+	// =============================================================================================
+	"pescCedsDerivedPlugin": {
+		"standardKey": "pesc260805",
+		"recipePath": "/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/recipes/pescDerivedEval.recipe.jsonc",
+		"storeFilePath": "/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/pescDerived/pescDerived.standardsDatabase.sqlite3",
+		"decisionStoreFilePath": "/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/pescDerived/pescDerived.decisions.sqlite3",
+		"judgmentCacheFilePath": "/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/pescDerived/pescDerived.judgmentCache.sqlite3",
+		"matchForensicsDirPath": "/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/pescDerived/matchForensics",
+		"buildLogsDirPath": "/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/pescDerived/buildLogs",
+
+		// THE ONLY LINE RELEASED BY P1/P2. The DEBUG judge is free, so this is where P2's census runs.
+		"rejudgeDebug": "node --max-old-space-size=20000 /Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/apps/graph-builder/graphBuilder.js -build --recipePath=/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/recipes/pescDerivedEval.recipe.jsonc --vectorize=true --reuseForgedBlocks=true --standardsDatabaseFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/pescDerived/pescDerived.standardsDatabase.sqlite3 --decisionStoreFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/pescDerived/pescDerived.decisions.sqlite3 --judgmentCacheFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/pescDerived/pescDerived.judgmentCache.sqlite3 --matchForensicsDirPath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/pescDerived/matchForensics --embeddingCacheFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/vectorCache/vectorCache.sqlite3 --rebridge=pesc260805 --useDebugJudge=digest </dev/null > /Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/pescDerived/buildLogs/<line>-<phase>.log 2>&1 &",
+		// 2,213 element concepts + the option-set concepts, with headroom for the ONE re-ask the runner
+		// permits. A debug judge spends nothing; the count is here because the runner REFUSES a line
+		// without one, and because a free line that quietly becomes expensive is the failure the
+		// per-line scheme exists to prevent.
+		"rejudgeDebugMaxJudgmentCount": 3000,
+		// GENESIS ON THE FIRST REJUDGE LINE ONLY — it creates the decision store and is INERT once the
+		// store exists (genesisGuard.js). A second genesis line would be a standing bypass.
+		"rejudgeDebugGenesis": true,
+
+		"materialise": "node --max-old-space-size=20000 /Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/apps/graph-builder/graphBuilder.js -build --recipePath=/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/recipes/pescDerivedEval.recipe.jsonc --vectorize=true --reuseForgedBlocks=true --standardsDatabaseFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/pescDerived/pescDerived.standardsDatabase.sqlite3 --decisionStoreFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/pescDerived/pescDerived.decisions.sqlite3 --judgmentCacheFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/pescDerived/pescDerived.judgmentCache.sqlite3 --matchForensicsDirPath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/pescDerived/matchForensics --embeddingCacheFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/vectorCache/vectorCache.sqlite3 </dev/null > /Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/pescDerived/buildLogs/<line>-<phase>.log 2>&1 &",
+		// ZERO: materialising a FROZEN block asks the judge nothing. A non-zero value here would mean the
+		// materialise line could judge, which is precisely what it must never do.
+		"materialiseMaxJudgmentCount": 0,
+
+		// ⚠️ THE TWO REAL-JUDGE LINES ARE ABSENT, NOT MERELY UNAUTHORISED. Their commands are not written
+		// at all, so there is nothing to run by accident — the authorisation below is the SECOND lock,
+		// not the only one. P3 writes the command AND the GO together, as data, in one reviewable edit.
+		"spendAuthorisationByLine": {
+			"rejudgeRealLimit": null,
+			"materialiseReal": null
+		},
+		"rejudgeRealLimitMaxJudgmentCount": 0,
+		"materialiseRealMaxJudgmentCount": 0,
+
+		// THE NAMED MOVER, ADDITIVE. The historical values above are a record of a run that really
+		// happened and a gate legitimately compares against them; these are what THIS phase produces.
+		// Cause: RULING P1-R8 — the forge stamps the rendering seat, new properties participate in the
+		// fingerprint, so the PESC block re-keys and the manifest follows. Computed by REFERENCE
+		// COMPOSITION (test/probes/p1_composeManifestFromReferences.js), which reproduces TWO historical
+		// manifest ids before reporting a new one and needs no build at all.
+		"expectedBaseBlockIdBySubject": {
+			"ceds@14_0_0_0_base": "09a5d658807b9c22b44b28289d9ad4b47df15e45f44c9eacec765962fe487c33",
+			"edfi@5_2_0_base": "aea6d8dfe7899adef57c5ac3adb6b0df2bfc7e4a4ae859c4fa3893c132c8b304",
+			"pesc260805@aggregate_01_base": "c46991d127a3f36bd9bed9708c5701a12b0340497a90235372ef962913566d3f",
+			"sif@unknown_01_base": "d393b0406d08f613f3142711fca5a9f2b0c580e84c4bef3ffd6b18d4eaa2330a"
+		},
+		"pesc260805BaseBlockIdHistory": [
+			{ "blockId": "db885ac42b284135a37135a0fb95baf376547fe401530506cc321f36686a9e61", "cause": "pre-re-embed (the pinned historical literal above; DO NOT EDIT IT)" },
+			{ "blockId": "045523dc197f4649712b74d3d6b995522106d44fa5c17c17d900205c4ee4a992", "cause": "P0b — TQ-authorised searchText re-embed to the ruled HYBRID composition" },
+			{ "blockId": "c46991d127a3f36bd9bed9708c5701a12b0340497a90235372ef962913566d3f", "cause": "P1 — RULING P1-R8, the forge stamps effectiveDescription / owningTypeName / proseSource so the MANDATORY rendering seat is reachable by a declaration at all" }
+		],
+		"fourBaseManifestId": "96815028622ea722a5473fc1203654c2c8d9ac630755f08520319263300771e4",
+		"fourBaseManifestIdHistory": [
+			{ "manifestId": "97c618c20e07c0c612957def69164402d364a98d5dfee865faacae1deace6382", "cause": "the FROZEN historical value (unchanged above)" },
+			{ "manifestId": "7e8372a2f342dffd5999e2e50e00bf69aa83f698ea980849f96ab568e42ab00a", "cause": "P0b's re-embed" },
+			{ "manifestId": "96815028622ea722a5473fc1203654c2c8d9ac630755f08520319263300771e4", "cause": "P1's seat stamp" }
+		],
+		"pinnedFlagList": ["--vectorize=true", "--reuseForgedBlocks=true", "--standardsDatabaseFilePath=<the pinned store, ABSOLUTE>", "--decisionStoreFilePath=<ABSOLUTE, pinned, PESC-only>", "--judgmentCacheFilePath=<ABSOLUTE, pinned, PESC-only>", "--matchForensicsDirPath=<ABSOLUTE, pinned, PESC-only>", "--embeddingCacheFilePath=<the warm cache>", "--rebridge=pesc260805 (rejudge lines only)", "--useDebugJudge=digest (rejudgeDebug only)", "</dev/null", "--max-old-space-size=20000"],
+		"frozenBy": null
+	},
+
+	// THE SIBLING. It shares the store, the recipe and the ids above BY DESIGN — one build runs both —
+	// so this entry carries only what DIFFERS, and says so rather than duplicating values that would
+	// then be free to drift apart.
+	"pescOptionSetCedsDerivedPlugin": {
+		"standardKey": "pesc260805",
+		"sharesEverythingWith": "pescCedsDerivedPlugin",
+		"whatDiffers": "subjectSource label PescNamedDefinition (the option-set concepts) rather than PescElementDecl; predicateByCategory is relatedMatch on all three judge categories, which is a RECORDED UNDERSTATEMENT rather than a measured judgement — see bridgeData/pescOptionSetUnderstatementRecord.json.",
+		"⚠️ scopeNotYetWritten": "bridgeData/pescOptionSetConceptScope.json is NOT WRITTEN. The concept key was measured — (family, kind, name) with family = the artifact family reproduces the ruled 156 exactly, by two independent derivations, with the cluster count 236 reproducing as a control — but the key is the SUPERVISOR'S TO RULE and I will not ship a scope on my own measurement. Until it is written the framework REFUSES this plugin's build by name (bridge-framework.js:916, declared-but-broken refuses every build), which is the correct behaviour and not a defect.",
+		"spendAuthorisationByLine": {
+			"rejudgeRealLimit": null,
+			"materialiseReal": null
+		},
+		"rejudgeDebugMaxJudgmentCount": 3000,
+		"materialiseMaxJudgmentCount": 0,
+		"rejudgeRealLimitMaxJudgmentCount": 0,
+		"materialiseRealMaxJudgmentCount": 0,
+		"frozenBy": null
 	}
 }

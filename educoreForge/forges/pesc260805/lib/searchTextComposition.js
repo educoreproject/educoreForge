@@ -237,6 +237,102 @@ const joinSegments = (segmentList) =>
 		.filter((oneSegment) => oneSegment != null)
 		.join(SEGMENT_SEPARATOR);
 
+// =================================================================================================
+// THE RENDERING SEAT — three properties PERSISTED, never newly computed.
+// LUNAR_PRISM (P1), ruled by SABLE_RIVER as P1-R8, 2026-08-17.
+//
+// WHY IT HAD TO EXIST. The bridge's `renderingAllowList` names NODE PROPERTIES, and the framework's
+// evidence path is a PURE FILTER over one flat property bag — [code fact] evidenceRenderer.js:134
+// calls graphSeamRules.allowListedPropertiesFor({ properties: sourceElement.material, ... }) — with
+// NO edge traversal anywhere on that path. So the RESOLVES_TO description, which REPORT-P0 §5.2
+// measures as lifting judge-visible prose from 31.6% to 71.5% of declarations and which the P1
+// brief makes MANDATORY, was not reachable by any declaration at all: it lives ACROSS AN EDGE, on
+// another node. A bridge cannot ask for it. Only the forge can put it where a bridge can see it.
+//
+// THE DECISIVE FACT, AND THE REASON THIS COSTS NOTHING: THIS PASS ALREADY COMPUTES THE VALUE AND
+// THEN THROWS IT AWAY INTO A STRING. resolveEffectiveDescription already walks the REAL RESOLVES_TO
+// edges, at the one point in the pipeline where they exist (the ordering trap this module was built
+// around). Nothing is derived here that the forge did not already derive. A DERIVATION THE FORGE
+// ALREADY MAKES AND DISCARDS IS SIMPLY PERSISTED. Zero framework bytes; zero embedding spend,
+// because searchText is untouched and every text remains a cache hit.
+//
+// ⚠️ THE SILENCE THAT MADE THIS DANGEROUS TO GET WRONG, recorded so the next person adding a seat
+// does not rediscover it: the framework's OWN guard against an allow-listed name that describes
+// nothing — graphSeamRules.js allowListRefusal, whose comment reasons the hazard correctly and in
+// full — IS DEAD CODE. Written, documented, exported, and NEVER CALLED: three references in the
+// entire repository, all three inside its own file, and every consumer requires the module whole
+// with no destructuring, so a call could only appear as that literal string. Its sibling
+// allowListedRecordFor is dead the same way. CONSEQUENCE: a declaration naming a property no node
+// carries renders NOTHING, SILENTLY, and every gate stays green forever. A GATE NEVER CALLED IS NOT
+// A GATE, and in source it reads exactly like one that works. Recorded as a framework defect on the
+// docket by SABLE_RIVER (P1-R9); NOT repaired here, because lib/bridge-framework/ is this order's
+// hard line and repairing it would forfeit the zero-framework-diff proof this phase exists to make.
+// The bridge's own acceptance suite carries a conjunct that closes the hazard FOR THIS PLUGIN. That
+// conjunct does not fix the framework and must never be described as though it does.
+// =================================================================================================
+const SEAT_PROPERTY_REGISTRY = {
+	// THE SEAT ITSELF. Allow-listed by the bridge and rendered to the judge.
+	effectiveDescription: {
+		judgeVisible: true,
+		valueSource: 'resolveEffectiveDescription — the node\'s own description, or its RESOLVES_TO type\'s',
+		absentIs: "'' — and the renderer OMITS an empty value rather than printing a blank line (allowListedPropertiesFor drops '' as well as null)",
+		why: 'REPORT-P0 §5.2: 6,646 otherwise-mute declarations are rescued by their type\'s prose; 31.6% -> 71.5% coverage. The P1 brief calls this seat MANDATORY.',
+	},
+	// THE OWNING TYPE. Judge-visible, and it REPAIRS A RECIPE THAT SILENTLY STOPPED WORKING.
+	owningTypeName: {
+		judgeVisible: true,
+		valueSource:
+			'searchTextElement.owningClassName || searchTextElement.owningName — the IDENTICAL expression the shared composer uses for its first segment ([code fact] lib/search-text/build-search-text.js:59-60), so the stamped value cannot disagree with the C0 arm\'s prefix BY CONSTRUCTION rather than by test',
+		absentIs: "'' — an element with no owning context (a top-level declaration) omits the line",
+		why:
+			'REPORT-P0 §5.4 recommends rendering the owning type and tells a reader to PARSE IT FROM searchText. ' +
+			'THAT RECIPE IS NOW BROKEN AND NOBODY HAD WRITTEN IT DOWN: after the C2 hybrid a prose-bearing ' +
+			'declaration\'s searchText is `ElementName | effectiveDescription` and NO LONGER CONTAINS THE OWNING ' +
+			'TYPE — 11,907 of 16,969 declarations at the P0b measurement. Stamping the value makes the recipe ' +
+			'UNNECESSARY instead of leaving a documented instruction that quietly no longer works.',
+	},
+	// PROVENANCE. NOT for the judge — for the CENSUS and the rendering audit.
+	proseSource: {
+		judgeVisible: false,
+		valueSource: "resolveEffectiveDescription — one of 'own' | 'resolvedType' | 'none'",
+		absentIs: 'never absent; the resolver always names one of the three',
+		why:
+			'IT MAKES THE 71.5% CLAIM MEASURABLE ON THE SHIPPED ARTIFACT INSTEAD OF QUOTED FROM A REPORT. ' +
+			'P2\'s census can then report evidence coverage BY SOURCE rather than asserting it, and any reader ' +
+			'can re-derive the figure from the graph at any later date. Every expensive hour of this order has ' +
+			'come from a number that was true when measured and unverifiable afterwards.',
+	},
+};
+
+// seatPropertiesFor — the ONE producer of the seat bag, from values this pass already holds.
+//
+// SELF-GUARDING BY DESIGN: the produced key set is checked against SEAT_PROPERTY_REGISTRY's key set
+// and DISAGREEMENT REFUSES BY NAME. Adding a registry entry without producing it — or producing a
+// property the registry does not document — is the drift that turns declared data back into
+// undocumented code, and it is exactly the failure this module avoids elsewhere by exporting its
+// registries to the gates instead of restating them. A registry nobody checks is a comment.
+const seatPropertiesFor = ({ searchTextElement, effectiveDescription, proseSource, describedBy, refuse }) => {
+	const produced = {
+		effectiveDescription: cleanOneSegment(effectiveDescription) === null ? '' : `${effectiveDescription}`.trim(),
+		owningTypeName:
+			cleanOneSegment(searchTextElement.owningClassName || searchTextElement.owningName) === null
+				? ''
+				: `${searchTextElement.owningClassName || searchTextElement.owningName}`.trim(),
+		proseSource,
+	};
+	const registryNameList = Object.keys(SEAT_PROPERTY_REGISTRY).sort();
+	const producedNameList = Object.keys(produced).sort();
+	if (registryNameList.join(',') !== producedNameList.join(',')) {
+		refuse(
+			`seatPropertiesFor (${describedBy || 'caller unnamed'}): the produced seat properties ` +
+				`[${producedNameList.join(', ')}] do not match SEAT_PROPERTY_REGISTRY [${registryNameList.join(', ')}]. ` +
+				`A registry that has drifted from its producer documents a property nobody stamps, or stamps a ` +
+				`property nobody documents — refused by name rather than allowed to disagree quietly`,
+		);
+	}
+	return produced;
+};
+
 // START OF moduleFunction() ============================================================
 
 const moduleFunction =
@@ -510,6 +606,13 @@ const moduleFunction =
 				// measured 16,969 element declarations — SABLE_RIVER's condition on admitting them.
 				byLabel: {},
 				nonSourceTierSkipped: 0,
+				// THE RENDERING SEAT's own coverage (P1-R8), reported so the 71.5% evidence figure is a
+				// measurement OF THE SHIPPED ARTIFACT rather than a number quoted from REPORT-P0. These
+				// three are deliberately NOT folded into any existing tally: nodesStamped must equal the
+				// composed node count, and withEffectiveDescription must equal proseSource.own +
+				// proseSource.resolvedType, so a disagreement between two independently-incremented
+				// counters is visible instead of arithmetic.
+				seat: { nodesStamped: 0, withEffectiveDescription: 0, withOwningTypeName: 0 },
 			};
 			Object.keys(COMPOSED_LABEL_REGISTRY).forEach((oneLabel) => {
 				stats.byLabel[oneLabel] = {
@@ -613,6 +716,31 @@ const moduleFunction =
 						: Math.max(armStats.characterMaximum, composedSearchText.length);
 
 				oneNode.properties.searchText = composedSearchText;
+
+				// THE RENDERING SEAT (P1-R8). Stamped from values this pass ALREADY holds — nothing is
+				// recomputed and no edge is walked a second time. See SEAT_PROPERTY_REGISTRY for what each
+				// name is for and why a bridge cannot reach it any other way.
+				const seatProperties = seatPropertiesFor({
+					searchTextElement,
+					effectiveDescription,
+					proseSource,
+					describedBy: `source tier, node '${oneNode.stableId}'`,
+					refuse,
+				});
+				Object.keys(seatProperties).forEach((oneSeatName) => {
+					oneNode.properties[oneSeatName] = seatProperties[oneSeatName];
+				});
+
+				// COUNTED, because the seat's whole value is that its coverage is MEASURABLE on the shipped
+				// artifact rather than quoted from a report. A count nobody can reproduce from the graph is
+				// the thing this seat exists to replace.
+				stats.seat.nodesStamped++;
+				if (seatProperties.effectiveDescription !== '') {
+					stats.seat.withEffectiveDescription++;
+				}
+				if (seatProperties.owningTypeName !== '') {
+					stats.seat.withOwningTypeName++;
+				}
 			});
 
 			// per-arm character statistics, reported SEPARATELY (binding constraint 2). Median is
@@ -656,12 +784,18 @@ const moduleFunction =
 			composeOneSearchText,
 			buildResolvesToIndex,
 			resolveEffectiveDescription,
+			// THE RENDERING SEAT (P1-R8). Exported for the SAME reason as the composer above: the
+			// synthetic tier's merged-child assembly site must stamp the seat from the ONE producer
+			// rather than from a second expression that can drift from this one. syntheticTier.js
+			// already calls resolveEffectiveDescription there, so it holds every input this needs.
+			seatPropertiesFor,
 			// exported for the gate suites: the registry and the scope are DATA, so a test reads them
 			// rather than restating them — two derivations of one judgment held against each other is
 			// the failure this avoids.
 			COMPOSITION_REGISTRY,
 			COMPOSED_LABEL_REGISTRY,
 			RULED_SCOPE_RECORD,
+			SEAT_PROPERTY_REGISTRY,
 			SEGMENT_SEPARATOR,
 			joinSegments,
 			selectCondition,

@@ -1,0 +1,25 @@
+{
+	"note": "THE UNDERSTATEMENT, RECORDED AS ONE — the condition SABLE_RIVER attached to RULING P1-R5 (2026-08-17) when he adopted relatedMatch: 'An understated edge is recoverable ONLY IF SOMEONE LATER KNOWS IT WAS UNDERSTATED. Without that record, a future reader sees \"associatively related\" and has no way to recover that we knew something more specific — and the information the vocabulary cannot carry dies silently.'",
+
+	"appliesTo": "pescOptionSetCedsDerivedPlugin — every EXACT_MATCH/CLOSE_MATCH-family edge it produces, all of which are emitted as relatedMatch",
+
+	"a_theRelationWeActUALLYKnow": "THE PESC CODE LIST IS THE VALUE DOMAIN OF THIS CEDS PROPERTY. Ruled by SABLE_RIVER (P1-R2 condition 2): 'That is a real and useful assertion. It is NOT an assertion that the code list IS the property — those are different things and the edge must not say the second.'",
+
+	"b_whyTheVocabularyCannotSayIt": {
+		"fact": "SKOS_PREDICATES is a CLOSED FIVE-VALUE SET: exactMatch, closeMatch, broadMatch, narrowMatch, relatedMatch.",
+		"codeFact": "lib/vocabulary/vocabulary.js:405-409 defines the set; lib/bridge-framework/bridgePluginContract.js:769 refuses any predicateByCategory value outside it BY NAME.",
+		"observed": "NOT merely read from source — DRIVEN. forges/pesc260805/test/probes/p1_pluginDeclarationValidation.js NEGATIVE 4 plants the predicate 'valueDomainOf' and the shipped validator refuses it by name, naming the five members. The refusal is observed, not inferred.",
+		"why": "SKOS models relations between CONCEPTS — equivalence, hierarchy, association. 'Is the value domain of' is a relation between a concept and a property's RANGE. This is a limit of the interchange standard the framework conforms to, NOT a gap in this codebase.",
+		"corroboration": "A separate TQ-confirmed record states that cross-standard mapping edges carry exactly TWO axes — the SKOS precision predicate and a 0-1 confidence. There is no third axis where a value-domain relation could live. Two independent routes, one answer."
+	},
+
+	"c_soRelatedMatchIsTheHONESTFLOOR": "relatedMatch is 'associatively related, neither broader nor narrower' (vocabulary-definitions.js:90). A PESC code list and the CEDS property that ranges over it ARE associatively related, and neither is broader nor narrower than the other. SO THE EDGE IS TRUE — AND WEAKER THAN WHAT WE KNOW. IT IS THE FLOOR IMPOSED BY THE INTERCHANGE STANDARD, NOT THE STRONGEST TRUE STATEMENT AVAILABLE.",
+
+	"whyNotExactMatchOrCloseMatch": "They would assert that the code list IS, or is nearly, the property. THAT WOULD BE FALSE. And the two failure modes are NOT symmetric, which is the distinction the ruling turned on: AN OVERSTATED EDGE IS INDISTINGUISHABLE FROM A CORRECT ONE DOWNSTREAM; AN UNDERSTATED ONE IS NOT — it under-claims visibly, and a later predicate slot or curation layer can strengthen it. Precedent: the CTDL order authored 229 CORRECTLY-TYPED STRUCTURAL edges rather than mislabelled EXACT_MATCH where no resolvable equivalence existed.",
+
+	"whyAllThreeJudgeCategoriesMapToOnePredicate": "THE RELATION DOES NOT VARY WITH THE JUDGE'S CONFIDENCE. Confidence rides separately on every judged row (§11.7 (d)). Declaring three different predicates would make the relation appear to change with certainty, which would be its own quiet falsehood. Ruled correct by SABLE_RIVER, P1-R5.",
+
+	"whatWasCONSIDEREDandREJECTED": "A named refusal — declining to emit the 156 edges at all because SKOS lacks the word. SABLE_RIVER rejected it: 'refusing 156 real relations because SKOS lacks a word for them would discard true information to protect a vocabulary's feelings. Understatement plus an explicit record is strictly better.'",
+
+	"forWhoeverStrengthensThisLater": "If a future predicate vocabulary gains a value-domain term, EVERY edge this plugin produced is a candidate for strengthening, and this file is the record that says so. Do NOT read the shipped relatedMatch as a measured judgement that the relation is merely associative — it is a vocabulary limit, recorded here precisely so it is not mistaken for one."
+}

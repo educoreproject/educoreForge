@@ -1,0 +1,42 @@
+{
+	"note": "THE DEDUP RULE, DECLARED AS DATA — ordered by RULING P0b-R2 (SABLE_RIVER, 2026-08-17): 'Declare the dedup rule as DATA in the plugin, in the exact terms of the table below — never inherit one by accident.' It lives HERE rather than inside bridgeDeclaration because the declaration's key set is CLOSED and refuses any unknown top-level key by name ([code fact] lib/bridge-framework/bridgePluginContract.js:954). Keeping it outside the declaration also keeps it OUT of declarationDigest ([code fact] pluginRegistry.js:51), so recording provenance can never re-key a block.",
+
+	"ruledScope": "a-prime",
+	"ruledConceptCount": 2213,
+	"ruledBy": "TQ in person, 2026-08-17, verbatim: 'Use your recommendations. I agree with them.' Applied to the two questions put to him and to NOTHING WIDER.",
+	"conceptKey": ["name", "typeAsWritten", "effectiveDescription"],
+	"effectiveDescriptionRule": "the element's own description, or — where it has none — the description of the type it resolves to via the EXISTING RESOLVES_TO edge",
+	"representativeRule": "lowest stableId",
+	"syntheticTier": "EXCLUDED from JUDGMENT scope, on two independent grounds: the supervisor's round-trip scope limit, and CARDINAL_MEADOW's measurement that the 522 synthetic declarations add ZERO distinct concepts in this key space.",
+
+	"THE_SEAM_P0b_FOUND": "Which effective description a concept gets DEPENDS ON WHICH EDGES YOU COUNT, and four defensible rules over one corpus give four different populations. A bridge dedupping over the FINAL graph sees 2,213 groups whose members were EMBEDDED at a grain that would have counted 2,347. Neither is wrong; they answer different questions. 2,213 STANDS — a builder does not re-rule a TQ scope decision because a better-fitting grain appeared downstream. All four figures are recorded here so THE NEXT BUILDER CHOOSES RATHER THAN DISCOVERS.",
+
+	"measuredAlternatives": [
+		{
+			"rule": "ALL RESOLVES_TO edges (incl. synthetic) + prose non-empty",
+			"concepts": 2213,
+			"status": "TQ'S RULED SCOPE — THIS PLUGIN BUILDS TO THIS"
+		},
+		{
+			"rule": "ALL edges (incl. synthetic) + prose non-empty-after-trim",
+			"concepts": 2197,
+			"status": "not chosen"
+		},
+		{
+			"rule": "DERIVED-ONLY edges + trim",
+			"concepts": 2347,
+			"status": "not chosen — but this is WHAT THE FORGE'S searchText COMPOSITION ACTUALLY DID, so the text these concepts are retrieved by was composed at THIS grain"
+		},
+		{
+			"rule": "derived-only edges + prose non-empty",
+			"concepts": 2363,
+			"status": "not chosen"
+		}
+	],
+
+	"THE_CAVEAT_THAT_MUST_TRAVEL": "Recording the pool with the fan-out makes it AUDITABLE; it does not make it CORRECT. A dedup group can contain MORE THAN ONE DISTINCT EMBEDDED TEXT, and the lowest-stableId representative SILENTLY DECIDES WHICH VECTOR THE WHOLE GROUP RETRIEVES ON. P0b measured that within-group variation as SYSTEMATIC rather than incidental (369 of 2,222 groups carry more than one distinct searchText). THE REPRESENTATIVE'S POOL IS A CHOICE THE DATA MADE FOR US, NOT A PROPERTY OF THE GROUP.",
+
+	"whereThePoolIsRecorded": "The framework ALREADY records it: decisionBlock.js:65 ships renderedPoolStableIdList / filteredPoolStableIdList / keyPoolStableIdList as decision-record fields. So P0b-R2's pool requirement costs ZERO and needs no new mechanism. Only the GROUP ENUMERATION needed a home, and that is pescDerivedConceptFanOut.json.",
+
+	"whyTheGraphCarries2213EdgesAndNot16969": "RULING P1-R3 (SABLE_RIVER, 2026-08-17), on principle rather than cost: 16,969 edges derived from 2,213 judgments would put 16,969 assertions in the graph backed by 2,213 acts of judgment, and a consumer counting edges would read that as 16,969 pieces of evidence. THE GRAPH SHOULD CARRY WHAT WAS ACTUALLY JUDGED, AND EXPANSION SHOULD BE AN EXPLICIT, AUDITABLE OPERATION RATHER THAN A SILENT MULTIPLICATION BAKED INTO THE ARTIFACT. Whether the DELIVERED graph should eventually carry an edge per occurrence is on the after-PESC docket WITH its price stated (a materialiser change, therefore a framework change), and it is TQ's."
+}

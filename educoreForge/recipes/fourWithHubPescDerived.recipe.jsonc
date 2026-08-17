@@ -1,0 +1,49 @@
+// fourWithHubPescDerived.recipe.jsonc — LUNAR_PRISM (P1), 2026-08-17.
+//
+// THE EYE GRAPH: the four certified standards with the CEDS hub, plus BOTH PESC -> CEDS derived
+// bridge plugins. The sibling of fourWithHubEdfiDerived (D4) and fourWithHubSifBridge (B4), and the
+// build a container named DEV_pescDerived_<YYMMDD> would be mounted from.
+//
+// GNC-001: it is a DEV_, and it stays one. A DEV build is never renamed to GOLD_EVAL_ without a
+// round-trip PASS via `graphBuilder -goldEvalCheck --buildLogDirPath=<this build's run dir>`. That
+// gate governs PROMOTION and never CREATION — any builder may make as many DEV_ scratch graphs as
+// the work needs without consulting it.
+//
+// ⚠️ THIS RECIPE IS NOT RELEASED BY P1 OR P2 AND IS COMMITTED AHEAD OF ITS RUN DELIBERATELY, so the
+// declaration is reviewable before anything is spent against it. P3 (the real-judge conformance
+// batch) needs a GO WRITTEN AS DATA; P4 (the full run) IS HELD BY TQ. Judge spend is authorised PER
+// LINE in acceptanceCommands.jsonc, never by the existence of a recipe.
+//
+// WHAT MUST NOT MOVE WHEN THIS RUNS, and it is an ASSERTION rather than an expectation: the Ed-Fi,
+// SIF and CEDS base block ids. Their forges are untouched by this order. A moved Ed-Fi, SIF or CEDS
+// id is a DEFECT, not a re-key, and the run stops. The PESC base block and the four-forge manifest
+// DID move, once, as the named mover of RULING P1-R8:
+//   pesc260805 base   045523dc197f4649712b74d3d6b995522106d44fa5c17c17d900205c4ee4a992
+//                  -> c46991d127a3f36bd9bed9708c5701a12b0340497a90235372ef962913566d3f
+//   four-forge manifest 7e8372a2f342dffd5999e2e50e00bf69aa83f698ea980849f96ab568e42ab00a
+//                    -> 96815028622ea722a5473fc1203654c2c8d9ac630755f08520319263300771e4
+// Both computed by REFERENCE COMPOSITION (test/probes/p1_composeManifestFromReferences.js), which
+// reproduces two historical manifest ids before reporting a new one and needs no build at all.
+//
+// THE TWO POPULATIONS' STATISTICS ARE REPORTED SEPARATELY AND NEVER POOLED — see the eval sibling's
+// header for why. That rule survives into every artifact this recipe produces.
+{
+	"schemaVersion": "1.0.0",
+	"recipeName": "fourWithHubPescDerived",
+	"kind": "dev",
+	"description": "The four certified standards with the CEDS hub, PLUS both PESC -> CEDS DERIVED bridge plugins (pescCedsDerivedPlugin over PescElementDecl, pescOptionSetCedsDerivedPlugin over PescNamedDefinition) — the eye graph for P4.",
+	"standards": [
+		{ "token": "ceds", "version": "current" },
+		{ "token": "edfi", "version": "current" },
+		{ "token": "pesc260805", "version": "current" },
+		{ "token": "sif", "version": "current" }
+	],
+	"hubs": [
+		{ "standard": "ceds" }
+	],
+	"bridges": [
+		{ "source": "pesc260805", "hub": "ceds", "bridge": "pescCedsDerivedPlugin", "dependencies": ["pesc260805", "ceds"] },
+		{ "source": "pesc260805", "hub": "ceds", "bridge": "pescOptionSetCedsDerivedPlugin", "dependencies": ["pesc260805", "ceds"] }
+	],
+	"roundTripStage": true
+}

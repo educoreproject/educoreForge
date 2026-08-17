@@ -1,0 +1,44 @@
+// pescDerivedEval.recipe.jsonc — LUNAR_PRISM (P1), 2026-08-17.
+//
+// PESC and the CEDS hub ONLY, plus BOTH PESC -> CEDS derived bridge plugins. This is the cheap
+// evaluation build: P2's debug census runs here, not on the four-forge eye graph, because a census
+// is a statement about the PESC/CEDS pairing and the other two standards contribute nothing to it
+// while costing a forge each.
+//
+// WHY BOTH PLUGINS IN ONE RECIPE. They are two SUBJECT LABELS through one unchanged seam —
+// PescElementDecl (2,213 concepts) and PescNamedDefinition (the option-set concepts). Running them
+// together is the point rather than a convenience: it is what demonstrates that the seam admits a
+// second subject SHAPE, and it puts both populations' pool statistics in one run so they can be
+// reported SEPARATELY from one another with no possibility of a stale comparison between runs.
+//
+// ⚠️ AND THEY MUST NEVER BE POOLED INTO ONE FIGURE. Standing reporting rule, and it has now bitten
+// this order in three different forms: two populations embedded on differently-shaped strings are
+// not mutually comparable. The element-tier subjects carry the ruled HYBRID composition; the
+// option-set subjects carry `Artifact vN | TypeName`, which REPORT-P0 §4.1 called pure noise and
+// which the composition test measured as the losing arm. Any pooled mean across the two is a
+// meaningless number that will read as a measurement.
+//
+// ROUND-TRIP STAGE ON. A bridge writes edges, never nodes, so the PESC round trip must remain
+// numerically identical to its pin with the bridges present. It is cheap and it is the assertion
+// that the bridge did not disturb the standard's own bytes.
+//
+// SPEND: the DEBUG judge costs nothing. A REAL-judge line is authorised PER LINE, as data, in
+// acceptanceCommands.jsonc — never by editing this file.
+{
+	"schemaVersion": "1.0.0",
+	"recipeName": "pescDerivedEval",
+	"kind": "dev",
+	"description": "PESC and the CEDS hub only, PLUS both PESC -> CEDS DERIVED bridge plugins (pescCedsDerivedPlugin over PescElementDecl, pescOptionSetCedsDerivedPlugin over PescNamedDefinition) — the cheap evaluation build for P2.",
+	"standards": [
+		{ "token": "ceds", "version": "current" },
+		{ "token": "pesc260805", "version": "current" }
+	],
+	"hubs": [
+		{ "standard": "ceds" }
+	],
+	"bridges": [
+		{ "source": "pesc260805", "hub": "ceds", "bridge": "pescCedsDerivedPlugin", "dependencies": ["pesc260805", "ceds"] },
+		{ "source": "pesc260805", "hub": "ceds", "bridge": "pescOptionSetCedsDerivedPlugin", "dependencies": ["pesc260805", "ceds"] }
+	],
+	"roundTripStage": true
+}

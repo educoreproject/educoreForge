@@ -1,0 +1,38 @@
+recipe understood:
+  name:        pesc260805OnlyRoundTrip
+  kind:        dev
+  schemaVer:   1.0.0
+  standards:   1  [pesc260805@current]
+  (other sections present, not summarized: roundTripStage)
+graphBuilder: validation -- structural PASS; referential PASS; resolvability PASS.
+graphBuilder: support store at /Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/graphBuilder/p1_pesc260805_seat.standardsDatabase.sqlite3 (resolved from commandLine)
+graphBuilder: decision store at /Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/graphBuilder/p1_pesc260805_seat.standardsDatabase.sqlite3
+graphBuilder: judgment cache at /Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/graphBuilder/p1_pesc260805_seat.standardsDatabase.sqlite3
+graphBuilder: forensic match log at /Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/matchForensics
+[forger] forging PESC260805 from 01 (vectorize OFF)
+[forge-pesc260805] source tier: (64 artifacts, 12909 named definitions, 16969 element decls, 720 anonymous types, 10848 derivations (restrictions/extensions), 84 attributes; contested namespaces: urn:org:pesc:sector:AcademicRecord:v1.6.0)
+[forge-pesc260805] derived tier: 63 namespaces (16 latest), 64 IN_NAMESPACE, 75 IMPORTS (+1 unresolved recorded), 17299 RESOLVES_TO (+9921 builtin markers, +201 ambiguous recorded, +205 absent-namespace recorded), 10400 SAME_DEFINITION chain edges, 2282/12909 reachable from latest roots)
+[forge-pesc260805] synthetic tier: S-1 merged 109 definitions (42 college-only + 36 test-score-only + 31 shared, of which 14 conflict); merge delta (materialized): 33 child elements contributed by the college member, 2 by the test-score member, 0 ABSENT after the union; of the college contributions 5 are REBOUND and 1 WIDENED (a SUBSET, not additional — do not sum); merge delta (signature basis): 33 college / 8 test-score; S-1c duplicated 522 child declarations onto the merged definitions (522 HAS_PROPERTY); referenced-not-duplicated residue: 5 inline types, 38 derivation wrappers; 140 MERGED_FROM (untouched), 201 held references resolved; S-2 alias urn:org:pesc:core:CoreMain:v1.6.0 served by urn:org:pesc:core:CoreMain:v1.8.0 (205 references over 129 distinct names, 1 import); total 42372 nodes, 70628 edges
+[forge-pesc260805] searchText composition (HYBRID, ran BEFORE the synthetic tier): C2 'ElementName | effectiveDescription' on 11939 declarations (mean 165.52 chars, median 94, max 4820, 7333 at/above the hub's 81); C0 'OwningType | ElementName (unchanged — the shared composer)' on 5114 declarations (mean 37.99 chars, median 37, max 75); prose source: 5481 own, 6458 via RESOLVES_TO, 5114 none; text changed on 11939, unchanged on 5114; C1-SHAPED EMISSIONS 0 (MUST be 0 — a bare element name is the DISQUALIFIED arm); non-source-tier skipped 0
+[forge-pesc260805] searchText composition by label: PescAttributeDecl 84 (C2 32 / C0 52) [OUTSIDE the measured evidence]; PescElementDecl 16969 (C2 11907 / C0 5062)
+[forger] forged 42372 nodes, 70628 edges (0 embedding calls)
+[forger] shaped 42372 nodes, 70628 edges for loading
+[replayManager] provisioning scratch graph 'DEV_gb_forge_94765_1' (bolt 7811)...
+[replayManager] scratch graph 'DEV_gb_forge_94765_1' ready at bolt://localhost:7811
+[replayManager] loading 42372 nodes, 70628 edges into 'DEV_gb_forge_94765_1' as [StandardBase]
+[replayManager] harvested 42372 nodes, 70628 edges from 'DEV_gb_forge_94765_1' [StandardBase] -> c46991d127a3...
+  [A] forge pesc260805@aggregate_01_base -> standardBase c46991d127a3f36bd9bed9708c5701a12b0340497a90235372ef962913566d3f
+[replayManager] scratch graph 'DEV_gb_forge_94765_1' destroyed
+  [compose] manifest 384160f66e71b0d35e6daf182cfa2b81a8e8166f01bd07b2f8cf6d8eed9dd383 -- 1 members
+[replayManager] provisioning scratch graph 'DEV_gb_materialize_94765_2' (bolt 7811)...
+[replayManager] scratch graph 'DEV_gb_materialize_94765_2' ready at bolt://localhost:7811
+[replayManager] restoring 1 schema block(s) into 'DEV_gb_materialize_94765_2'
+  [materialize] -> bolt://localhost:7811
+  [roundTrip] validating PESC260805 against 'DEV_gb_materialize_94765_2' (snapshot: /Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/forges/pesc260805/assets/standardSourceData/01)
+  [roundTrip] PESC260805: reproduced with inventedTotal=0, lostTotal=0, roundTripClean=true -> /Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/buildLogs/pesc260805OnlyRoundTrip_20260817-180205/roundTrip/pesc260805/roundTripVerdict.json
+{
+  "manifestId": "384160f66e71b0d35e6daf182cfa2b81a8e8166f01bd07b2f8cf6d8eed9dd383",
+  "boltUrl": "bolt://localhost:7811",
+  "memberCount": 1,
+  "roundTripSummaryPath": "/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/buildLogs/pesc260805OnlyRoundTrip_20260817-180205/roundTrip/roundTripStageSummary.json"
+}

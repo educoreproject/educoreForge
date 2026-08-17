@@ -147,6 +147,31 @@ const DUPLICATED_CHILD_OVERRIDDEN_PROPERTY_NAMES = [
 	'pescTier',
 	'searchText',
 	'sequencePosition',
+	// THE RENDERING SEAT (P1-R8, LUNAR_PRISM 2026-08-17). These three belong HERE, with searchText,
+	// and NOT in DERIVED_ANNOTATION_PROPERTY_NAMES — i.e. RECOMPOSED FRESH for the merged child
+	// rather than stripped from it. SABLE_RIVER ruled the reason decisive and it is a CORRECTNESS
+	// argument, not a mechanical one:
+	//
+	//   A BULK-COPIED owningTypeName WOULD BE A FALSE STATEMENT ABOUT THE GRAPH. The merged child's
+	//   owner IS the merged definition, not the source child's container — this file already says so
+	//   in its own comment at the composition site, which is precisely why the element is assembled
+	//   here instead of reused from the source tier. STRIPPING LEAVES A HOLE; COPYING STATES A
+	//   FALSEHOOD; RECOMPOSING IS THE ONLY OPTION THAT IS CORRECT.
+	//
+	// The supporting reason is SABLE_RIVER's own Q2 ruling, which turns out to have a second edge
+	// nobody noticed: two nodes sharing name, type and description must not carry differently-shaped
+	// emitted text for a reason no reader could reconstruct. A merged child carrying searchText but
+	// NOT effectiveDescription is that same split, one field over.
+	//
+	// ⚠️ AND THE OMISSION HERE WOULD HAVE BEEN SILENT. Unregistered, these three would enter
+	// inheritedPropertyNamesOf below (GAP 3) and could change decidedNonSignaturePropertyNames, which
+	// is STAMPED ONTO THE NODE — census content moving quietly through a path with nothing to do with
+	// the evidence seat they were added for, and NO EXISTING INSTRUMENT WOULD HAVE SAID A WORD.
+	// A COMPANION EDIT WHOSE OMISSION IS SILENT NEEDS A LEVER THAT MAKES THE OMISSION LOUD, so one
+	// ships with it.
+	'effectiveDescription',
+	'owningTypeName',
+	'proseSource',
 ];
 
 // the properties a duplicated child ADDS. Each MUST NOT already exist on the source child, or the
@@ -198,7 +223,7 @@ const moduleFunction =
 	({ moduleName } = {}) =>
 	(unusedDeps = {}) => {
 		const { buildSearchText } = buildSearchTextFactory();
-		const { composeOneSearchText, buildResolvesToIndex, resolveEffectiveDescription } =
+		const { composeOneSearchText, buildResolvesToIndex, resolveEffectiveDescription, seatPropertiesFor } =
 			searchTextCompositionFactory();
 
 		const refuse = (message) => {
@@ -729,23 +754,37 @@ const moduleFunction =
 				// the child itself would silently find nothing and hand it the DISQUALIFIED bare-name
 				// arm. That is the same ordering trap the source-tier pass exists to avoid, arriving here
 				// by a different route.
-				const { effectiveDescription: childEffectiveDescription } = resolveEffectiveDescription({
+				const { effectiveDescription: childEffectiveDescription, proseSource: childProseSource } = resolveEffectiveDescription({
 					oneNode: sourceChildNode,
 					resolvesToTargetsByFromStableId,
 					nodeByStableId,
 				});
+				// the merged child's owning class is the MERGED definition, not the source child's
+				// container — which is why this element is assembled here and not reused from the
+				// source tier. Built ONCE and handed to BOTH the composer and the seat producer, so the
+				// stamped owningTypeName and the composed text cannot disagree about who the owner is.
+				const mergedChildSearchTextElement = {
+					role: sourceChildNode.role,
+					name: childName,
+					owningClassName: mergedDefinitionName,
+				};
 				const { composedSearchText: childSearchText } = composeOneSearchText({
-					// the merged child's owning class is the MERGED definition, not the source child's
-					// container — which is why this element is assembled here and not reused from the
-					// source tier.
-					searchTextElement: {
-						role: sourceChildNode.role,
-						name: childName,
-						owningClassName: mergedDefinitionName,
-					},
+					searchTextElement: mergedChildSearchTextElement,
 					elementName: childName,
 					effectiveDescription: childEffectiveDescription,
 					describedBy: `synthetic S-1c merged child '${childStableId}'`,
+				});
+				// THE RENDERING SEAT, SECOND ASSEMBLY SITE (P1-R8). The ONE producer is called here
+				// rather than a second expression written to match it — the same reason composeOneSearchText
+				// is exported rather than duplicated. Because the element above names the MERGED definition
+				// as the owner, the stamped owningTypeName is the merged owner BY CONSTRUCTION, which is the
+				// whole point of recomposing instead of inheriting.
+				const mergedChildSeatProperties = seatPropertiesFor({
+					searchTextElement: mergedChildSearchTextElement,
+					effectiveDescription: childEffectiveDescription,
+					proseSource: childProseSource,
+					describedBy: `synthetic S-1c merged child '${childStableId}'`,
+					refuse,
 				});
 				return addSyntheticNode({
 					labels: [...sourceChildNode.labels],
@@ -760,6 +799,11 @@ const moduleFunction =
 						path: `${mergedDefinitionPath}.${childName}`,
 						pescTier: PESC_SYNTHETIC_TIER,
 						searchText: childSearchText,
+						// THE RENDERING SEAT, spread AFTER the bulk copy so the recomposed values
+						// OVERRIDE the source child's inherited ones. Their names are registered in
+						// DUPLICATED_CHILD_OVERRIDDEN_PROPERTY_NAMES above; the registry and this
+						// spread are the two halves of one decision and must move together.
+						...mergedChildSeatProperties,
 						sequencePosition: mergedSequencePosition,
 						syntheticRule: SYNTHETIC_RULE.MERGED_CHILD,
 						copiedFromStableId: sourceChildNode.stableId,

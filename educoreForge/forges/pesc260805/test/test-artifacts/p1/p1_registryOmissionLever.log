@@ -1,0 +1,68 @@
+{
+  "probe": "p1_registryOmissionLever",
+  "assertionsReached": 5,
+  "failedCount": 0,
+  "verdict": "ALL GREEN",
+  "note": "A failure count without the assertion count reached cannot distinguish a clean pass from a suite that aborted before asserting anything.",
+  "THE_ANSWER": {
+    "decidedNonSignaturePropertyNamesMovedOnChildren": 7,
+    "seatValuesMovedOnChildren": 0,
+    "reading": "LOAD-BEARING: omitting the registry entry CHANGES a stamped property. Companion edit 2 prevented a silent census change.",
+    "seatValueReading": "the seat VALUES are identical either way on this corpus, consistent with the vacuity already reported for the S-1c owner gate"
+  },
+  "decidedNamesMovedExamples": [
+    {
+      "stableId": "urn:org:pesc:sector:AcademicRecord:v1.6.0#complexType/AcademicAwardType/el/1:AcademicAwardLevel",
+      "shipped": "[]",
+      "mutated": "[\"effectiveDescription\"]"
+    },
+    {
+      "stableId": "urn:org:pesc:sector:AcademicRecord:v1.6.0#complexType/CourseType/el/19:CourseLevel",
+      "shipped": "[]",
+      "mutated": "[\"effectiveDescription\"]"
+    },
+    {
+      "stableId": "urn:org:pesc:sector:AcademicRecord:v1.6.0#complexType/CourseType/el/1:CourseCreditBasis",
+      "shipped": "[]",
+      "mutated": "[\"effectiveDescription\"]"
+    },
+    {
+      "stableId": "urn:org:pesc:sector:AcademicRecord:v1.6.0#complexType/K12PersonType/el/12:ParentGuardianName",
+      "shipped": "[\"description\",\"documentation\"]",
+      "mutated": "[\"description\",\"documentation\",\"effectiveDescription\",\"proseSource\"]"
+    },
+    {
+      "stableId": "urn:org:pesc:sector:AcademicRecord:v1.6.0#complexType/K12PersonType/el/4:AgencyAssignedID",
+      "shipped": "[\"description\",\"documentation\"]",
+      "mutated": "[\"description\",\"documentation\",\"effectiveDescription\",\"proseSource\"]"
+    }
+  ],
+  "seatValueMovedExamples": [],
+  "resultList": [
+    {
+      "name": "BASELINE the shipped forge produces S-1c merged children (a zero would make every comparison below vacuous)",
+      "verdict": "PASS",
+      "detail": "522 merged children, 42372 nodes"
+    },
+    {
+      "name": "LEVER the production bytes ACTUALLY changed (sha256 differs) — a mutation that did not land proves nothing",
+      "verdict": "PASS",
+      "detail": "pristine f09ff83ac57c80e2… mutated 01e8efebed8fd80f…"
+    },
+    {
+      "name": "RESTORE the shipped bytes are restored, VERIFIED BY SHA256 (never assumed)",
+      "verdict": "PASS",
+      "detail": "now f09ff83ac57c80e2… expected f09ff83ac57c80e2…"
+    },
+    {
+      "name": "MUTATED the forge still COMPLETES under the lever (so any difference below is a CONTENT change, not a crash)",
+      "verdict": "PASS",
+      "detail": "shipped 522 vs mutated 522 merged children"
+    },
+    {
+      "name": "MEASUREMENT the comparison was actually performed over the full merged-child population",
+      "verdict": "PASS",
+      "detail": "522 children compared"
+    }
+  ]
+}
