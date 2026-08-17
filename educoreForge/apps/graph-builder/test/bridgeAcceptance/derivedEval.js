@@ -120,7 +120,36 @@ const isRenderingTieRecord = ({ decisionRecord, truthObjectSet, renderedTextBySt
 	});
 };
 
-const scoreDerivedRun = ({ truthStoreFilePath, truthBlockId, derivedStoreFilePath, derivedBlockId, ceilingRecallByK, renderedCandidateTextByStableId } = {}) => {
+// ⟪THE RULED SAME-NAME-DIFFERENT-DOMAIN PREDICATE — ONE DEFINITION⟫ Exported for the same reason the tie
+// predicate is: the batch document and the score must not drift on what the class means.
+//
+// TRUE when a differing pick and a truth card sitting in the SAME pool were rendered with an IDENTICAL `name`
+// and a DIFFERENT `domainName`. That is the shape the supervisor read in batch 2's five differs: the judge
+// found the right CEDS property CONCEPT and placed it in a different class than the crosswalk chose — Staff
+// Full Time Equivalency under Employment rather than K12 Staff Assignment. Plausible, not nonsense, and a
+// different kind of wrong from picking an unrelated card.
+//
+// It is NOT scored as correct and NOT scored as a tie. It is counted and reported, because whether a
+// domain variant is an error at all is TQ's call about what the mapping is for, not the harness's.
+const sameNameDifferentDomainRecord = ({ decisionRecord, truthObjectSet, renderedFieldsByStableId }) => {
+	if (renderedFieldsByStableId === null || renderedFieldsByStableId === undefined || truthObjectSet === undefined || !Array.isArray(decisionRecord.renderedPoolStableIdList)) {
+		return null;
+	}
+	const pickFields = renderedFieldsByStableId[decisionRecord.objectStableId];
+	if (pickFields === undefined || !isNonEmptyString(pickFields.name)) {
+		return null;
+	}
+	const matchedTruthId = decisionRecord.renderedPoolStableIdList.filter((oneStableId) => truthObjectSet.has(oneStableId)).find((oneTruthId) => {
+		const truthFields = renderedFieldsByStableId[oneTruthId];
+		return truthFields !== undefined && truthFields.name === pickFields.name && truthFields.domainName !== pickFields.domainName;
+	});
+	if (matchedTruthId === undefined) {
+		return null;
+	}
+	return { subjectStableId: decisionRecord.subjectStableId, sharedName: pickFields.name, pickDomainName: pickFields.domainName === undefined ? null : pickFields.domainName, truthDomainName: renderedFieldsByStableId[matchedTruthId].domainName === undefined ? null : renderedFieldsByStableId[matchedTruthId].domainName };
+};
+
+const scoreDerivedRun = ({ truthStoreFilePath, truthBlockId, derivedStoreFilePath, derivedBlockId, ceilingRecallByK, renderedCandidateTextByStableId, renderedFieldsByStableId } = {}) => {
 	const truthRead = readFrozenBlock({ storeFilePath: truthStoreFilePath, blockId: truthBlockId, roleName: 'truth' });
 	if (truthRead.error) {
 		return { error: truthRead.error };
@@ -183,6 +212,9 @@ const scoreDerivedRun = ({ truthStoreFilePath, truthBlockId, derivedStoreFilePat
 	const isRenderingTie = (oneRecord) => isRenderingTieRecord({ decisionRecord: oneRecord, truthObjectSet: truth.objectSetBySubject[oneRecord.subjectStableId], renderedTextByStableId });
 	const renderingTieList = allWrongList.filter(isRenderingTie);
 	const wrongList = allWrongList.filter((oneRecord) => !isRenderingTie(oneRecord));
+	// counted among the wrong picks, NOT removed from them: a domain variant is still a disagreement with the
+	// crosswalk. Whether it is an ERROR is TQ's call, so it is reported beside the number, never folded into it.
+	const sameNameDifferentDomainList = wrongList.map((oneRecord) => sameNameDifferentDomainRecord({ decisionRecord: oneRecord, truthObjectSet: truth.objectSetBySubject[oneRecord.subjectStableId], renderedFieldsByStableId: renderedFieldsByStableId === undefined ? null : renderedFieldsByStableId })).filter((oneEntry) => oneEntry !== null);
 	const abstainedInPoolList = inPoolRecordList.filter(isAbstained);
 
 	// ---- ABSTENTION QUALITY: does derived abstain where the truth set also had nothing? ----
@@ -269,6 +301,9 @@ const scoreDerivedRun = ({ truthStoreFilePath, truthBlockId, derivedStoreFilePat
 			// separated by ruling: a pick the judge could not have made correctly except by luck
 			renderingTieCount: renderingTieList.length,
 			renderingTieMeasured: renderedTextByStableId !== null,
+			sameNameDifferentDomainCount: sameNameDifferentDomainList.length,
+			sameNameDifferentDomainMeasured: renderedFieldsByStableId !== undefined && renderedFieldsByStableId !== null,
+			sameNameDifferentDomainList: sameNameDifferentDomainList.slice(0, 40),
 			abstainedCount: abstainedInPoolList.length,
 			precisionOnNonAbstain: correctList.length + wrongList.length === 0 ? null : correctList.length / (correctList.length + wrongList.length),
 			recallOnInPool: inPoolRecordList.length === 0 ? null : correctList.length / inPoolRecordList.length,
@@ -328,6 +363,11 @@ const scoreDerivedRun = ({ truthStoreFilePath, truthBlockId, derivedStoreFilePat
 	lineList.push('## Judgment — over the subjects retrieval actually reached');
 	lineList.push('');
 	lineList.push(`- correct: **${score.judgment.correctCount}** · wrong: **${score.judgment.wrongCount}** · abstained: **${score.judgment.abstainedCount}**${score.judgment.renderingTieMeasured ? ` · **renderingTie: ${score.judgment.renderingTieCount}**` : ' · renderingTie: not measured (no rendered text supplied)'}`);
+	if (score.judgment.sameNameDifferentDomainMeasured) {
+		lineList.push('');
+		lineList.push(`**sameNameDifferentDomain: ${score.judgment.sameNameDifferentDomainCount}** of ${score.judgment.wrongCount} wrong pick(s) — the judge chose a card with the SAME rendered \`name\` as the truth card but a DIFFERENT \`domainName\`: the right property concept placed in a different class than the crosswalk chose. Counted among the wrong picks, not removed from them; whether a domain variant is an ERROR is a question about what the mapping is FOR, and that is TQ's to answer.`);
+		score.judgment.sameNameDifferentDomainList.forEach((oneEntry) => lineList.push(`  - \`${oneEntry.sharedName}\` — judge put it in **${oneEntry.pickDomainName}**, truth says **${oneEntry.truthDomainName}**`));
+	}
 	if (score.judgment.renderingTieMeasured && score.judgment.renderingTieCount > 0) {
 		lineList.push('');
 		lineList.push(`**${score.judgment.renderingTieCount} RENDERING TIE(S).** In these the truth card was rendered BYTE-IDENTICALLY to at least one other`);
@@ -372,4 +412,4 @@ const scoreDerivedRun = ({ truthStoreFilePath, truthBlockId, derivedStoreFilePat
 	return { score, markdownText: lineList.join('\n') };
 };
 
-module.exports = { scoreDerivedRun, isRenderingTieRecord, readFrozenBlock, truthViewOf, entityOf, RECALL_K_LIST, MAX_RECALL_K, moduleName };
+module.exports = { scoreDerivedRun, isRenderingTieRecord, sameNameDifferentDomainRecord, readFrozenBlock, truthViewOf, entityOf, RECALL_K_LIST, MAX_RECALL_K, moduleName };

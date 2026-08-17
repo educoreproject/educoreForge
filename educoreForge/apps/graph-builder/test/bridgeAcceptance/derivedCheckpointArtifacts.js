@@ -96,6 +96,9 @@ const textIndex = renderingAuditLib.renderedCandidateTextIndexFrom({ recordList:
 if (textIndex.error) {
 	refuse(textIndex.error.message);
 }
+// the per-field view of the SAME rendered bytes — the sameNameDifferentDomain class asks what distinguished
+// two cards ON THE PAGE, so it reads the page, not the graph
+const renderedFieldsByStableId = Object.keys(textIndex.textByStableId).reduce((soFar, oneStableId) => ({ ...soFar, [oneStableId]: renderingAuditLib.renderedFieldsFrom({ renderedText: textIndex.textByStableId[oneStableId] }) }), {});
 const scored = derivedEvalLib.scoreDerivedRun({
 	truthStoreFilePath: TRUTH_STORE_FILE_PATH,
 	truthBlockId: TRUTH_BLOCK_ID,
@@ -103,6 +106,7 @@ const scored = derivedEvalLib.scoreDerivedRun({
 	derivedBlockId,
 	ceilingRecallByK: ceilingRecallAt25 === undefined ? undefined : { 25: ceilingRecallAt25 },
 	renderedCandidateTextByStableId: textIndex.textByStableId,
+	renderedFieldsByStableId,
 });
 if (scored.error) {
 	refuse(scored.error.message);

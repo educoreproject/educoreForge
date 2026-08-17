@@ -127,6 +127,23 @@ const renderedCandidateTextListFromPrompt = ({ userPrompt }) => {
 	return { textList };
 };
 
+// ⟪SAME-NAME-DIFFERENT-DOMAIN — RULING SABLE_RIVER 2026-08-17⟫ The rendered block is `field: value` lines, one
+// per allow-listed property, so the fields the judge actually SAW can be recovered from the same bytes the tie
+// index is built from. Read from the RENDERED TEXT rather than the graph on purpose: the class is a statement
+// about what distinguished two cards ON THE PAGE, and a property the allow-list hides did not distinguish
+// anything no matter what the graph holds.
+const RENDERED_FIELD_LINE_REGEX = /^\s*([A-Za-z][A-Za-z0-9]*): ([\s\S]*)$/;
+
+const renderedFieldsFrom = ({ renderedText }) => {
+	if (typeof renderedText !== 'string') {
+		return {};
+	}
+	return renderedText.split('\n').reduce((soFar, oneLine) => {
+		const matched = oneLine.match(RENDERED_FIELD_LINE_REGEX);
+		return matched === null ? soFar : { ...soFar, [matched[1]]: matched[2].trim() };
+	}, {});
+};
+
 const renderedCandidateTextIndexFrom = ({ recordList }) => {
 	if (!Array.isArray(recordList)) {
 		return { error: refuse.byName({ moduleName, what: 'renderedCandidateTextIndexFrom needs a recordList', where: 'the tie index is built from the forensic trail; there is no default' }) };
@@ -277,4 +294,4 @@ const buildRenderingAudit = ({ forensicsDirPath, pairKey, generation, blockId, r
 	return { markdownText: lineList.join('\n'), promptCount: recordList.length, distinctPromptCount: distinctPromptHashSet.size, hitList, advisoryUrlCount, sampleCount: sampleList.length };
 };
 
-module.exports = { buildRenderingAudit, readPromptRecordList, renderedCandidateTextIndexFrom, renderedCandidateTextListFromPrompt, ID_GATE_PATTERN_LIST, ADVISORY_URL_REGEX, DEFAULT_SAMPLE_COUNT, moduleName };
+module.exports = { buildRenderingAudit, readPromptRecordList, renderedCandidateTextIndexFrom, renderedFieldsFrom, renderedCandidateTextListFromPrompt, ID_GATE_PATTERN_LIST, ADVISORY_URL_REGEX, DEFAULT_SAMPLE_COUNT, moduleName };
