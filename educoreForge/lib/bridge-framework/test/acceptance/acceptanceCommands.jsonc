@@ -329,14 +329,45 @@
 		// materialise line could judge, which is precisely what it must never do.
 		"materialiseMaxJudgmentCount": 0,
 
-		// ⚠️ THE TWO REAL-JUDGE LINES ARE ABSENT, NOT MERELY UNAUTHORISED. Their commands are not written
-		// at all, so there is nothing to run by accident — the authorisation below is the SECOND lock,
-		// not the only one. P3 writes the command AND the GO together, as data, in one reviewable edit.
+		// ⚠️ ONE REAL-JUDGE LINE IS NOW WRITTEN; THE OTHER REMAINS ABSENT. `materialiseReal` has no command
+		// at all, so there is nothing to run by accident and its null authorisation is the SECOND lock
+		// rather than the only one. `rejudgeRealLimit` is written HERE, TOGETHER WITH ITS GO, in one
+		// reviewable edit — which is the shape P3 was designed to take: the command and the authorisation
+		// arrive together or not at all.
+		//
+		// ============================ THE SIZING ARITHMETIC, STATED BEFORE THE SPEND ============================
+		// GO condition 2: size it from the MEASURED judged share, not from a guess. Retained and
+		// re-derivable: forges/pesc260805/test/probes/p3_batchSizingArithmetic.js.
+		//
+		// [code fact] --limit windows the bridge's SOURCE SUBJECTS and is APPLIED AFTER the
+		// standard-specific scope (help.js, --limit/--offset, with the SIF sifObjectScope worked example).
+		// This plugin declares a scopeStableIdListPath of 2,213 subjects, so --limit=10 selects TEN OF
+		// THOSE 2,213 — not ten of the 17,491 nodes carrying the label.
+		//
+		// ⚠️ THE ERROR THIS AVOIDS, because it is the careful-looking one: dividing by the scope share
+		// (2,213/17,491 = 0.1265) gives --limit ≈ 79 and WOULD HAVE OVERSIZED THE BATCH BY ROUGHLY EIGHT
+		// TIMES. It is the B4 lesson applied in the right spirit to the wrong quantity. The B4 note on the
+		// SIF entry above says why both are true at once: SIF's plugin has NO scope list, so its --limit
+		// counts source elements BEFORE the judged subset ("ten source elements bought about one and a
+		// half judged subjects, where the same flag on the derived plugin bought ten"). That sentence is
+		// an INDEPENDENT corroboration of the number below, written by another phase for another purpose.
+		//
+		// MEASURED PREDICTION, from the debug census block over the exact windowed subjects (sorted by
+		// subject key, so the window is deterministic and its members are named in the probe's output):
+		//   10 windowed subjects · 10 reach a judge · 0 orphans · PREDICTED REAL JUDGE CALLS: 10
+		//   (2 of the 10 abstained under the debug judge — an abstention is still a real call.)
+		"rejudgeRealLimit": "node --max-old-space-size=20000 /Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/apps/graph-builder/graphBuilder.js -build --recipePath=/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/recipes/pescDerivedEval.recipe.jsonc --vectorize=true --reuseForgedBlocks=true --standardsDatabaseFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/pescDerived/pescDerived.standardsDatabase.sqlite3 --decisionStoreFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/pescDerived/pescDerived.decisions.sqlite3 --judgmentCacheFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/pescDerived/pescDerived.judgmentCache.sqlite3 --matchForensicsDirPath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/pescDerived/matchForensics --embeddingCacheFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/vectorCache/vectorCache.sqlite3 --rebridge=pesc260805 --limit=10 --offset=0 </dev/null > /Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/pescDerived/buildLogs/<line>-<phase>.log 2>&1 &",
 		"spendAuthorisationByLine": {
-			"rejudgeRealLimit": null,
+			"rejudgeRealLimit": { "sessionName": "SABLE_RIVER", "date": "2026-08-17", "note": "SABLE_RIVER, CP-P3 conformance batch, 2026-08-17. PROPERTY TIER ONLY. Sized to yield approximately 10 judged subjects. maxJudgmentCount MANDATORY on the line. GO issued by IMCS after CP-P2 was FROZEN. CONDITIONS, none optional: (1) property tier only — the option-set tier does NOT go to a real judge in P3; (2) size from the MEASURED judged share, arithmetic stated before the run (p3_batchSizingArithmetic.js: --limit is applied AFTER scope, so 10 windows 10 of 2,213 and predicts exactly 10 real calls); (3) the batch document uses the COMPARISON column and NEVER the word 'truth' (BS-8) — PESC has no answer key and P4's scoring question is still open; (4) report the REAL CALL COUNT beside the judged-subject count; (5) STOP AND REPORT if the run would exceed the stated size, if any prompt differs from the debug run's, or if anything asks to materialise. materialiseReal STAYS NULL: P3 does not materialise, and P4 remains HELD BY TQ." },
 			"materialiseReal": null
 		},
-		"rejudgeRealLimitMaxJudgmentCount": 0,
+		// SET EQUAL TO THE PREDICTION, NOT ABOVE IT. --limit SIZES the window; only this bounds SPEND if
+		// the window resolves differently than predicted. Any upward deviation REFUSES rather than quietly
+		// costing more — GO condition 5 expressed as DATA instead of as vigilance, which is the whole
+		// lesson of this order: five instrument defects, every one caught by a guard, none by being careful.
+		"rejudgeRealLimitMaxJudgmentCount": 10,
+		// STAYS ZERO. P3 does not materialise; materialiseReal has no command and no authorisation, and
+		// CP4 is HELD BY TQ.
 		"materialiseRealMaxJudgmentCount": 0,
 
 		// THE NAMED MOVER, ADDITIVE. The historical values above are a record of a run that really
