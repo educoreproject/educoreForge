@@ -97,8 +97,13 @@ if (SPENDING_LINE_NAME_LIST.indexOf(lineName) !== -1 && !(entry.materialiseRealS
 // HONEST LIMIT, and it is written here rather than in a report nobody reads: this refusal enforces that the
 // number was DECLARED, not that it is OBEYED inside the run. Injecting it would need a --maxJudgmentCount
 // flag, build.js owns flag parsing, and build.js is a seam file this order may not touch. Raised to the
-// supervisor 2026-08-17; until ruled, treat these numbers as a declaration and a boundary check, and do not
-// tell yourself the run is capped.
+// supervisor 2026-08-17. RULED (DR-6, 2026-08-17): maxJudgmentCount IS A BOUNDARY CHECK, NOT A CEILING. It
+// asserts that a human chose a number and wrote it down before a line could run; it does NOT cap the run, and
+// nothing here can make it cap the run while build.js owns flag parsing. D4's actual protection was the
+// spend-authorisation gate and the run's natural size, not this number. Read it as an attestation.
+//
+// It also bounds JUDGMENTS, NOT DOLLARS — rejudgeDebug declares 500 and 4000 because it really does make that
+// many judgments, against a free judge. A line that asks no judge at all declares 0 (test-runnerContract (c)).
 const declaredMaxJudgmentCount = entry[`${lineName}MaxJudgmentCount`];
 if (!Number.isInteger(declaredMaxJudgmentCount) || declaredMaxJudgmentCount < 0) {
 	refuse(`the ${lineName} line for ${bridgeName} declares no ${lineName}MaxJudgmentCount (got ${JSON.stringify(declaredMaxJudgmentCount)}) — every line declares its own judgment ceiling as data; there is no default (RULING §11.12)`);

@@ -291,6 +291,14 @@ lineList.push('');
 lineList.push(`### MECHANICALLY ${mechanicallyClean ? 'CLEAN' : unmeasuredRowList.length > 0 && checklist.every((oneRow) => oneRow.pass !== false) ? 'CLEAN EXCEPT ' + unmeasuredRowList.length + ' UNMEASURED ROW(S) — NOT a clean verdict' : 'NOT CLEAN'}`);
 if (trailIsContaminated) {
 	lineList.push('');
+	// ⟪DR-5, ratified 2026-08-17 in the review's words⟫ The release condition was "three consecutive clean
+	// batches", and this document declares itself NOT clean. Both facts stand, and the reconciliation is the
+	// supervisor's, recorded here rather than left for a reader to infer from two documents that disagree.
+	lineList.push('> **SUPERVISOR-RATIFIED (SABLE_RIVER, 2026-08-17):** this window\'s FIRST attempt was not clean; the');
+	lineList.push('> RE-RUN was clean, and the re-run is what the supervisor counted toward the three-consecutive-clean-batch');
+	lineList.push('> release condition. The UNMEASURED row below is contamination from the dead first attempt sharing this');
+	lineList.push('> generation, not a defect of the block this document describes.');
+	lineList.push('');
 	lineList.push('**TRAIL CONTAMINATION.** This window was judged more than once — a run that died and the re-run that froze');
 	lineList.push(`this block — and the forensic trail is append-only per GENERATION, which is a function of (framework, plugin,`);
 	lineList.push('renderer, window) and **not of the run**. Both runs\' records therefore sit in one file under identical');
