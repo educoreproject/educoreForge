@@ -339,7 +339,7 @@ const runFrozenArtifactSection = () => {
 	const storePinned = fs.existsSync(decisionStorePath);
 	const idsCarrySif = fs.existsSync(idsFixturePath) && Object.prototype.hasOwnProperty.call(readJson(idsFixturePath).byBridgeName || {}, BRIDGE_NAME);
 	harness.note(`census fixture ${censusFrozen ? 'PRESENT' : 'ABSENT'} (${path.relative(treeRoot, censusFixturePath)}); pinned decision store ${storePinned ? 'PRESENT' : 'ABSENT'} (${decisionStorePath}); ids fixture ${idsCarrySif ? 'carries a SIF entry' : 'carries NO SIF entry'}.`);
-	harness.note('acceptanceCommands declares the four SIF lines with expectedBaseBlockIdBySubject deliberately ABSENT, so -verify REFUSES the line BY NAME rather than reporting VERIFIED over zero pinned subjects (RULING BR3-3). Absent is absent; nothing here is guessed.');
+	harness.note(`acceptanceCommands declares the four SIF lines. expectedBaseBlockIdBySubject is PINNED to the four ruled literals (${Object.keys(acceptanceCommands.expectedBaseBlockIdBySubject || {}).length} subjects) — the store is forged FRESH (RULED (c)) and those ids MUST come out equal, which is what proves the same four-forge content without importing any Ed-Fi mapping block; -verify refuses by name otherwise. fourBaseManifestId and this fixture's NAME stay ABSENT until the CP2 run produces its manifest — absent rather than guessed.`);
 	// ONE named conjunct rather than a wall of anonymous UNMEASURED lines. The Ed-Fi harness uses the same
 	// convention on its own real-block line ("null-and-honest = UNMEASURED = red until frozen"): the suite is RED
 	// today, for exactly one stated reason — the plugin is proven, the acceptance data is not yet measured. When
