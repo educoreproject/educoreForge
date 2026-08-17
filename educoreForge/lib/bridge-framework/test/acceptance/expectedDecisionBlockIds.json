@@ -1,5 +1,5 @@
 {
-	"note": "BG-ACCEPT (a)/(b) data (SPEC-bridgeFramework-v1.md §12; RULINGS R1, BF4, 12:05 #3, #5): per plugin, the decision block id and the relationship block id EQUAL under the frozen command, FROZEN from the first accepted classifier run (B3 for the Ed-Fi plugin, B4 for SIF) — never from prose arithmetic. null-and-honest in B2: no real plugin, no build, no container. The relationship block id is coupled to the source standardBase id (BF3): expected ids are frozen per (decision block, standardBase) pair. The toy plugins' block ids are NOT frozen here — the toy census is (expectedCensus.toyBridge.toyGraphDouble.json); a toy block id would move on any framework byte (frameworkFingerprint is a header member) and is proven by BG-REPLAY (A' === A) instead.",
+	"note": "BG-ACCEPT (a)/(b) data (SPEC-bridgeFramework-v1.md \u00a712; RULINGS R1, BF4, 12:05 #3, #5): per plugin, the decision block id and the relationship block id EQUAL under the frozen command, FROZEN from the first accepted classifier run (B3 for the Ed-Fi plugin, B4 for SIF) \u2014 never from prose arithmetic. null-and-honest in B2: no real plugin, no build, no container. The relationship block id is coupled to the source standardBase id (BF3): expected ids are frozen per (decision block, standardBase) pair. The toy plugins' block ids are NOT frozen here \u2014 the toy census is (expectedCensus.toyBridge.toyGraphDouble.json); a toy block id would move on any framework byte (frameworkFingerprint is a header member) and is proven by BG-REPLAY (A' === A) instead.",
 	"byBridgeName": {
 		"edfiCedsCrosswalkPlugin": {
 			"graphId": "GOLD_EVAL_260816@manifest:97c618c20e07c0c612957def69164402d364a98d5dfee865faacae1deace6382",
@@ -29,7 +29,7 @@
 				"servedFromCache": 152,
 				"abstained": 36,
 				"judgedRecords": 152,
-				"note": "cp2real4: the whole judged share served from the warm cache (the 137 live + 15 earlier answers) — zero spend; the first freeze (cp2real3) asked 137 live"
+				"note": "cp2real4: the whole judged share served from the warm cache (the 137 live + 15 earlier answers) \u2014 zero spend; the first freeze (cp2real3) asked 137 live"
 			},
 			"judgeDependentCensusByBlock": {
 				"debug": {
@@ -42,7 +42,7 @@
 					"edgeCount": 666,
 					"distinctTripleCount": 666
 				},
-				"note": "RULING B3 checkpoint 2 (1): the judge-dependent per-target trio recorded PER FROZEN BLOCK — the classifier members are EQUAL across debug and real; the debug judge (digest) abstains pseudo-randomly, the real judge picks"
+				"note": "RULING B3 checkpoint 2 (1): the judge-dependent per-target trio recorded PER FROZEN BLOCK \u2014 the classifier members are EQUAL across debug and real; the debug judge (digest) abstains pseudo-randomly, the real judge picks"
 			},
 			"previousDecisionBlockIdList": [
 				"81c9248d2e2bc712e3c55e5ac19c7b2c3fa0c53f022a19eb8aa5bb0214470ffb"
@@ -60,11 +60,21 @@
 			}
 		},
 		"sifCedsStandardPlugin": {
-			"graphId": null,
+			"graphId": "cbcdc87d18f1b648@manifest:cbcdc87d18f1b648dbae0fd71385a9acba78876e81c04bd62e9ac8f94cf254bf",
 			"decisionBlockId": null,
-			"relationshipBlockId": null,
-			"standardBaseBlockId": null,
-			"frozenBy": null
+			"relationshipBlockId": "af4524cd14908ce2aa72669cef85a4661d6abee37239507d434c79973331ecb4",
+			"standardBaseBlockId": "d393b0406d08f613f3142711fca5a9f2b0c580e84c4bef3ffd6b18d4eaa2330a",
+			"frozenBy": null,
+			"debugDecisionBlockId": "53d85c7d8b8724a2a64ba281bff4962215304f8ba9e34dd2a310f33f2254afd4",
+			"judgeDependentCensusByBlock": {
+				"debug": {
+					"abstainedCount": 132,
+					"edgeCount": 2070,
+					"distinctTripleCount": 2070
+				}
+			},
+			"provisional": true,
+			"provisionalReason": "PROVISIONAL under RULING BS-7 (SABLE_RIVER, 2026-08-17). These ids are REAL \u2014 reproduced by the runner's -verify and by the frozen block itself \u2014 but they are keyed to frameworkFingerprint 45e93f4cf430\u2026, which is the framework as it stood at this branch's base 3e5357f. Code fact, verified by the builder with `git log 3e5357f..e32e633 -- lib/bridge-framework`: THREE commits have moved the framework since \u2014 1393f82 (BR-067 purpose-satisfied + symmetric-contrast re-ask + named refusal net), d548d41 and e32e633 \u2014 and GRANITE_VALLEY's D4 remediation will move it once more. 1393f82 is the fix without which the Ed-Fi D4 real run died at subject 50, so B4 MUST inherit it rather than freeze ahead of it. The supervisor therefore rebases b4-sif-plugin onto the post-D-CLEAR HEAD and B4 RE-RUNS CP2 (debug, zero spend) under the new fingerprint. AT THAT RE-RUN THE CENSUS MUST BE EQUAL to the frozen values in expectedCensus.sifCedsStandardPlugin.cbcdc87d18f1b648.json \u2014 the classifier does not depend on the judge contract \u2014 while THE BLOCK IDS MOVE, as a NAMED MOVER whose named cause is the fingerprint change. Two re-keys are worse than one, which is why CP3 is held until after the rebase rather than run against ids that are about to be superseded. decisionBlockId stays null: the REAL-judge block does not exist yet."
 		}
 	}
 }

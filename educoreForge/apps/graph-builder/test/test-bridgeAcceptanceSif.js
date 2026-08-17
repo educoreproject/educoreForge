@@ -4,10 +4,13 @@
 // test-bridgeAcceptanceSif.js — the SIF plugin's ACCEPTANCE gates (SPEC-bridgeFramework-v1.md §11, §12, §12.1, §13.1;
 // the B4 order), MIRRORING test-bridgeAcceptanceEdfi.js. Two halves, and the split is the point of this phase:
 //
-//   THE HALVES THAT NEED THE FROZEN ARTIFACTS (SECTIONS 0-2) read the pinned B4 acceptance store under
-//   system/dataStores/bridgeAcceptance/sif/ and the committed fixtures, and assert EQUALITIES over the frozen
-//   block. Until CP2 freezes them they are UNMEASURED — which under RULING BR3-6 is a FAILURE BY NAME, never a
-//   smaller green: EXPECTED_ASSERTION_COUNT is a LITERAL and the ledger pads the difference with named failures.
+//   THE HALF THAT NEEDS THE FROZEN ARTIFACTS (SECTIONS 0-2) reads the pinned B4 acceptance store under
+//   system/dataStores/bridgeAcceptance/sif/ and the committed fixtures, and asserts EQUALITY over the frozen
+//   block — census member for member, the three digests, the judge-dependent trio against its per-block record,
+//   and the per-subject sum invariant. FROZEN at CP2 (2026-08-17) from the first accepted classifier run, so it
+//   MEASURES rather than merely finding a file. Before that freeze it was UNMEASURED, which under RULING BR3-6
+//   is a FAILURE BY NAME, never a smaller green: EXPECTED_ASSERTION_COUNT is a LITERAL and the ledger pads any
+//   difference with named failures.
 //
 //   THE HALVES THAT ARE HERMETIC (SECTIONS 3-4) run today, with no container, no store, no LLM and no Voyage:
 //   BG-PLUGIN puts the REAL plugin under gate (the framework's own validators over the real bundle, the digests
@@ -63,8 +66,8 @@ const harnessRaw = require('../../../test/testLib/harness')(moduleName);
 // + 8 (SECTION 3b BG-PLUGIN e: the real hooks over the double, 6 conjuncts + 2 twins)
 // + 7 (SECTION 4 BG-COMPOSE-SIF: 3 conjuncts + 4 twins)
 // + 6 (SECTION 5 BG-GENESIS, RULING BS-5: 3 conjuncts + 3 twins)
-// + 1 (SECTIONS 0-2: the frozen-artifact conjunct, UNMEASURED and RED until CP2)
-// = 47. RAISED as a LITERAL, in the same commit, when CP2 wires SECTIONS 0-2 in full.
+// + 1 (SECTIONS 0-2: the frozen-block census conjunct — MEASURED since the CP2 freeze of 2026-08-17)
+// = 47. Raised as a LITERAL, at this call site, in the same commit as the section it counts.
 const EXPECTED_ASSERTION_COUNT = 47;
 const ledger = { count: 0 };
 const harness = {
@@ -378,20 +381,43 @@ const runGenesisGuardSection = () => {
 // ---------------------------------------------------------------------
 const runFrozenArtifactSection = () => {
 	harness.section('SECTIONS 0-2 — the frozen SIF block, its census EQUALITY, Profile §7 over its records, and its SSSOM export');
-	const censusFixturePath = path.join(acceptanceDir, `expectedCensus.${BRIDGE_NAME}.GOLD_EVAL_260816.json`);
+	// THE FIXTURE NAME IS DATA-DERIVED, not a literal: it comes from the ids fixture's graphId, so the census
+	// fixture and the ids fixture cannot drift apart silently. A wrong or missing name yields an ABSENT file,
+	// which is RED — this can never pass for the wrong reason.
 	const idsFixturePath = path.join(acceptanceDir, 'expectedDecisionBlockIds.json');
+	const idsEntry = (readJson(idsFixturePath).byBridgeName || {})[BRIDGE_NAME] || {};
+	const graphIdPrefix = typeof idsEntry.graphId === 'string' ? idsEntry.graphId.split('@manifest:')[0] : '(noGraphId)';
+	const censusFixturePath = path.join(acceptanceDir, `expectedCensus.${BRIDGE_NAME}.${graphIdPrefix}.json`);
 	const decisionStorePath = acceptanceCommands.decisionStoreFilePath;
-	const censusFrozen = fs.existsSync(censusFixturePath);
-	const storePinned = fs.existsSync(decisionStorePath);
-	const idsCarrySif = fs.existsSync(idsFixturePath) && Object.prototype.hasOwnProperty.call(readJson(idsFixturePath).byBridgeName || {}, BRIDGE_NAME);
-	harness.note(`census fixture ${censusFrozen ? 'PRESENT' : 'ABSENT'} (${path.relative(treeRoot, censusFixturePath)}); pinned decision store ${storePinned ? 'PRESENT' : 'ABSENT'} (${decisionStorePath}); ids fixture ${idsCarrySif ? 'carries a SIF entry' : 'carries NO SIF entry'}.`);
-	harness.note(`acceptanceCommands declares the four SIF lines. expectedBaseBlockIdBySubject is PINNED to the four ruled literals (${Object.keys(acceptanceCommands.expectedBaseBlockIdBySubject || {}).length} subjects) — the store is forged FRESH (RULED (c)) and those ids MUST come out equal, which is what proves the same four-forge content without importing any Ed-Fi mapping block; -verify refuses by name otherwise. fourBaseManifestId and this fixture's NAME stay ABSENT until the CP2 run produces its manifest — absent rather than guessed.`);
-	// ONE named conjunct rather than a wall of anonymous UNMEASURED lines. The Ed-Fi harness uses the same
-	// convention on its own real-block line ("null-and-honest = UNMEASURED = red until frozen"): the suite is RED
-	// today, for exactly one stated reason — the plugin is proven, the acceptance data is not yet measured. When
-	// CP2 freezes census + ids, SECTIONS 0-2 are wired in the shape test-bridgeAcceptanceEdfi.js already carries
-	// and EXPECTED_ASSERTION_COUNT is raised with them, as a literal, in the same commit.
-	harness.ok('BG-CENSUS a / BG-ACCEPT a — the SIF census fixture and decision block ids are FROZEN and the pinned store holds them (UNMEASURED until CP2 freezes them from the first ACCEPTED debug classifier run; SPEC §10.4 freezing order — a census written from prose arithmetic would be a fixture that proves the arithmetic, not the classifier)', censusFrozen && storePinned && idsCarrySif, `census fixture ${censusFrozen}, pinned store ${storePinned}, ids entry ${idsCarrySif} — CP2 has not run`);
+	harness.note(`census fixture ${path.relative(treeRoot, censusFixturePath)} — its NAME is derived from the ids fixture's graphId, so the two cannot drift apart unnoticed.`);
+	harness.note(idsEntry.provisional === true ? 'the ids entry is PROVISIONAL (RULING BS-7): the ids are REAL and reproduced, but keyed to the framework at this branch’s base. Three commits have moved lib/bridge-framework since — 1393f82, d548d41, e32e633 — and 1393f82 is the BR-067 fix without which the Ed-Fi D4 real run died at subject 50. After the rebase the CENSUS MUST BE EQUAL and THE IDS MOVE, as a NAMED mover whose cause is the fingerprint.' : 'the ids entry is final.');
+	harness.note('expectedBaseBlockIdBySubject is PINNED to the four ruled literals; the store was FORGED FRESH (RULED (c)) and three of the four re-forged BYTE-IDENTICAL — which is what proves the same four-forge content without importing any Ed-Fi mapping block.');
+	// ONE conjunct, and it MEASURES rather than merely finding the file: the frozen block's census must EQUAL
+	// the committed fixture member for member. The judge-dependent trio (abstained / edgeCount /
+	// distinctTripleCount) is asserted against the PER-BLOCK record instead, per the B3 checkpoint-2 ruling —
+	// the debug judge abstains pseudo-randomly and the real judge picks, so those three differ by construction.
+	const censusVerdict = (() => {
+		if (!fs.existsSync(censusFixturePath)) { return { pass: false, detail: `census fixture ABSENT at ${path.relative(treeRoot, censusFixturePath)}` }; }
+		if (!fs.existsSync(decisionStorePath)) { return { pass: false, detail: `pinned decision store ABSENT at ${decisionStorePath}` }; }
+		if (!idsEntry.debugDecisionBlockId) { return { pass: false, detail: 'the ids fixture records no debugDecisionBlockId' }; }
+		const fixture = readJson(censusFixturePath).byBridgeName[BRIDGE_NAME];
+		const Database = require('better-sqlite3');
+		const db = new Database(decisionStorePath, { readonly: true });
+		const storeRow = db.prepare('SELECT frozenText FROM decisionBlocks WHERE decisionBlockHash = ?').get(idsEntry.debugDecisionBlockId);
+		db.close();
+		if (!storeRow) { return { pass: false, detail: `the pinned store holds no block ${String(idsEntry.debugDecisionBlockId).slice(0, 12)}…` }; }
+		const header = JSON.parse(typeof storeRow.frozenText === 'string' ? storeRow.frozenText : storeRow.frozenText.toString('utf8')).header;
+		const JUDGE_DEPENDENT_MEMBER_LIST = ['abstainedCount', 'edgeCount', 'distinctTripleCount'];
+		const classifierOnly = (census) => ({ perSubject: census.perSubject, perTarget: Object.keys(census.perTarget).filter((oneName) => JUDGE_DEPENDENT_MEMBER_LIST.indexOf(oneName) === -1).sort().reduce((soFar, oneName) => ({ ...soFar, [oneName]: census.perTarget[oneName] }), {}) });
+		const censusEqual = JSON.stringify(classifierOnly(header.cardinalityCensus)) === JSON.stringify(classifierOnly(fixture.cardinalityCensus));
+		const digestsEqual = header.declarationDigest === fixture.declarationDigest && header.labelTableDigest === fixture.labelTableDigest && header.remodelTableDigest === fixture.remodelTableDigest;
+		const recordedTrio = (idsEntry.judgeDependentCensusByBlock || {}).debug || {};
+		const trioEqual = JUDGE_DEPENDENT_MEMBER_LIST.every((oneName) => header.cardinalityCensus.perTarget[oneName] === recordedTrio[oneName]);
+		const s = header.cardinalityCensus.perSubject;
+		const sumHolds = s.specifiedSubjectCount + s.judgedSubjectCount + s.orphanSubjectCount + s.subjectCollisionCount + s.sourceGapCount === s.subjectCount;
+		return { pass: censusEqual && digestsEqual && trioEqual && sumHolds, detail: `census ${censusEqual}, digests ${digestsEqual}, judge-trio ${trioEqual}, sum ${sumHolds} — ${s.specifiedSubjectCount} specified / ${s.judgedSubjectCount} judged / ${s.orphanSubjectCount} orphan of ${s.subjectCount}` };
+	})();
+	harness.ok(`BG-CENSUS a / BG-ACCEPT a — the frozen block's census EQUALS the committed fixture member for member (classifier members), the three digests EQUAL, the judge-dependent trio equals its per-block record, and the per-subject sum invariant holds — ${censusVerdict.detail}`, censusVerdict.pass === true, censusVerdict.detail);
 	harness.report();
 };
 
