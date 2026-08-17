@@ -48,6 +48,12 @@ const UNIT_SEPARATOR = '\u0001';
 
 const RULED_CONCEPT_COUNT = 2213;
 const RULED_DECLARATION_COUNT = 16969;
+// RULING P1-R13: the option-set key is (family, kind, name, description) and the population is 223.
+// 156 — the figure in PLAN §1-A, which this tool originally reproduced — was MEASURED, TESTED AND
+// SUPERSEDED, not overlooked: 67 of its 156 groups (43%) differed internally in `description`, the
+// field the judge is shown, so the key did not contain its own rendering allow-list.
+const RULED_OPTION_SET_CONCEPT_COUNT = 223;
+const SUPERSEDED_OPTION_SET_COUNT = 156;
 
 const driver = neo4j.driver(BOLT_URL, neo4j.auth.basic('neo4j', NEO4J_PASSWORD), { encrypted: false });
 
@@ -100,9 +106,16 @@ const ELEMENT_CYPHER = [
 const OPTION_SET_CYPHER = [
 	'MATCH (n:PescNamedDefinition)',
 	"WHERE n.pescTier = 'source' AND n.role = 'DmeOptionSet' AND n.reachableFromLatestRoot = true",
-	"RETURN n.stableId AS stableId, n.name AS name, coalesce(n.kind,'') AS kind, coalesce(n.description,'') AS description",
+	"RETURN n.stableId AS stableId, n.name AS name, coalesce(n.kind,'') AS kind,",
+	"       coalesce(n.declaringFilename,'') AS declaringFilename, coalesce(n.description,'') AS description",
 	'ORDER BY n.stableId',
 ].join('\n');
+
+// the ARTIFACT FAMILY, derived from the declaring filename. `family` is not a node property; two
+// independent derivations (this one and splitting `path` at its version token) agree, and the
+// supersession below turns on their agreeing to within one concept.
+const familyFromFilename = (oneName) =>
+	String(oneName || '').replace(/\.xsd$/, '').replace(/\.collision-[0-9a-f]+$/, '').replace(/[_-]?v?\d+(\.\d+)*$/, '').replace(/_$/, '');
 
 runCypher({ cypher: ELEMENT_CYPHER }, (elementError, elementRecords) => {
 	if (elementError) {
@@ -132,7 +145,10 @@ runCypher({ cypher: ELEMENT_CYPHER }, (elementError, elementRecords) => {
 		}
 		const optionMemberListByKey = {};
 		optionRecords.forEach((oneRecord) => {
-			const oneKey = [oneRecord.get('name'), oneRecord.get('kind'), oneRecord.get('description')].join(UNIT_SEPARATOR);
+			// RULING P1-R13's key, in full: (family, kind, name, description). It CONTAINS the option-set
+			// plugin's whole subject rendering allow-list, so the constraint holds BY CONSTRUCTION rather
+			// than by luck — which is the entire reason 156 was rejected.
+			const oneKey = [familyFromFilename(oneRecord.get('declaringFilename')), oneRecord.get('kind'), oneRecord.get('name'), oneRecord.get('description')].join(UNIT_SEPARATOR);
 			if (optionMemberListByKey[oneKey] === undefined) {
 				optionMemberListByKey[oneKey] = [];
 			}
@@ -155,6 +171,15 @@ runCypher({ cypher: ELEMENT_CYPHER }, (elementError, elementRecords) => {
 			finish(
 				`${moduleName} REFUSED: the fan-out covers ${declarationsCovered} declarations, not ${RULED_DECLARATION_COUNT}. ` +
 					'Every source-tier declaration must belong to EXACTLY ONE concept; a partition that does not cover the population is not a fan-out.',
+			);
+			return;
+		}
+
+		if (optionRepresentativeList.length !== RULED_OPTION_SET_CONCEPT_COUNT) {
+			finish(
+				`${moduleName} REFUSED: the option-set key produced ${optionRepresentativeList.length} representatives, not RULING P1-R13's ${RULED_OPTION_SET_CONCEPT_COUNT}. ` +
+					`A scope that disagrees with the ruling is NOT WRITTEN. If the figure is ${SUPERSEDED_OPTION_SET_COUNT}, the key has silently reverted to (family, kind, name) — ` +
+					'the SUPERSEDED form, whose groups differ internally in `description`, the field the judge is shown.',
 			);
 			return;
 		}

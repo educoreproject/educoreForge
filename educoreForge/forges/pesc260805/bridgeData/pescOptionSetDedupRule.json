@@ -1,0 +1,38 @@
+{
+	"note": "THE OPTION-SET DEDUP RULE, DECLARED AS DATA — RULING P1-R13 (SABLE_RIVER, 2026-08-17), in the same four-row form P0b-R2 requires of the property tier. It lives here rather than inside bridgeDeclaration because the declaration's key set is CLOSED and refuses unknown top-level keys by name ([code fact] lib/bridge-framework/bridgePluginContract.js:954, OBSERVED refusing in test-bridgeAcceptancePesc.js). Keeping it out also keeps it out of declarationDigest ([code fact] pluginRegistry.js:51), so recording provenance can never re-key a block.",
+
+	"ruledConceptCount": 223,
+	"conceptKey": ["family", "kind", "name", "description"],
+	"representativeRule": "lowest stableId",
+	"population": "PescNamedDefinition, pescTier 'source', role 'DmeOptionSet', reachableFromLatestRoot true — 452 nodes",
+	"familyDerivation": "the ARTIFACT FAMILY. `family` is NOT a node property; it is derived from declaringFilename by stripping the version token and extension (CoreMain_v1.13.0.xsd -> CoreMain). An independent second derivation — splitting `path` at its version token — agrees exactly, and the four families present are AcademicEportfolio, AcademicRecord, CoreMain, iso_3166-1.",
+
+	"⚠️ WHY 156 WAS REJECTED — IT WAS MEASURED, TESTED AND SUPERSEDED, NOT OVERLOOKED": {
+		"theSupersededFigure": 156,
+		"whereAReaderWillFindIt": "PLAN-pescDerivedBridge-v1.md §1-A and REPORT-P0-pescMeasurement.md §2.2 (e2) both record 156, and both are CORRECT about the key they used: (family, kind, name).",
+		"whyItLookedRight": "It reproduced the published figure EXACTLY, by TWO independent family derivations, with a separate control — sameDefinitionClusterId at 236 — also landing exactly on the record. Every one of those is true.",
+		"whyItIsUNSOUND": "THE DEDUP KEY MUST EQUAL OR CONTAIN THE RENDERING ALLOW-LIST. (family, kind, name) does NOT contain `description`, and the option-set plugin's declared subject allow-list is ['name', 'kind', 'description']. MEASURED: 67 of the 156 groups — 43% — differ INTERNALLY in `description`, the field the judge is shown. At 156, one representative is judged and the fan-out asserts that judgment over members it was NOT MADE ABOUT.",
+		"thisIsTheSameCorrectionAsTheScopeFigure": "PLAN §1's original 1,201 was unsound in exactly this way — 715 of its groups differed internally in judge-visible fields — and the sound figure was 2,213. Same rule, same failure, a different label.",
+		"THE_TELL": "THE COUNT WAS TIDY. A count that reproduces a published figure is evidence that your key matches SOMEONE ELSE'S KEY. It is not evidence that the key is SOUND.",
+		"measuredExamplesOfTheImpurity": [
+			"ConditionsMetCodeType (CoreMain, 6 members): 'conditions for CERTIFICATION' against 'conditions for THE REQUIREMENT' — a different statement about what the code list means, not a formatting difference.",
+			"CourseCreditBasisType (6 members): one definition carries its INLINE CODE ENUMERATION and the other does not — a difference in HOW MUCH THE JUDGE CAN SEE.",
+			"AccreditationTypeType (6 members): one description EMPTY, the other reading 'Need Definition' — PESC's own authoring note (the §5.1 finding arriving on the option-set side), a subject we would have judged on a PLACEHOLDER while believing it had prose."
+		]
+	},
+
+	"measuredAlternatives": [
+		{ "rule": "(family, kind, name) — the forge's own search key, PLAN §1-A", "concepts": 156, "status": "SUPERSEDED — 67 groups internally impure in `description`" },
+		{ "rule": "(family, kind, name, description) — contains the whole rendering allow-list", "concepts": 223, "status": "RULED P1-R13. THIS PLUGIN BUILDS TO THIS." },
+		{ "rule": "(name, kind, description) — family dropped", "concepts": 222, "status": "not chosen — see the cross-check below" },
+		{ "rule": "sameDefinitionClusterId — the forge's CHURN key", "concepts": 236, "status": "not a concept key; the forge's README says so itself. Used here only as a CONTROL, and it reproduced the record exactly." }
+	],
+
+	"THE_CROSS_CHECK_THAT_SETTLED_IT": "222 against 223. THE DIFFERENCE OF EXACTLY ONE IS A CONCEPT WHOSE IDENTICAL NAME, KIND AND DESCRIPTION OCCURS IN TWO FAMILIES — so `family` is still doing work at the widened grain and dropping it would SILENTLY MERGE THAT PAIR. Two independent derivations agreeing on ~223 and disagreeing by exactly the amount ONE FIELD EXPLAINS is worth more than either number alone: A DISCREPANCY YOU CAN ACCOUNT FOR IS STRONGER EVIDENCE THAN AN AGREEMENT YOU CANNOT.",
+
+	"⚠️ TWO DIVERGENCES, BOTH ON `description`, IN ONE POPULATION": "FIRST: these subjects' searchText is `Artifact vN | TypeName` and does NOT contain the description, so RENDERING and RETRIEVAL diverge for this population — the same shape as P0b-R2's 2,213-versus-2,347 on the property tier. SECOND, and it sharpens the first rather than merely coexisting with it: the 67 impure groups differ in EXACTLY THE FIELD THAT IS RENDERED AND NOT EMBEDDED. So the representative's choice changes WHAT THE JUDGE READS while changing NOTHING about what was RETRIEVED. Widening the key to 223 fixes the second and leaves the first untouched — the first is a forge-composition question and a NEW authorisation, and it is TQ's.",
+
+	"whatWasREJECTEDandWhy": "Narrowing the rendering allow-list so `description` is not shown would also have satisfied the rule, at 156. REJECTED by SABLE_RIVER: the description is the RICHEST PROSE IN THE STANDARD (non-empty on 346 of 452, mean 183 characters) and THE ONLY REAL EVIDENCE THESE SUBJECTS HAVE — their searchText is an artifact-and-version prefix plus a type name. Take it away and the judge is asked to map a bare type name to a CEDS card. 'We would be buying key purity by removing the evidence, which is not a trade, it is a loss wearing a rule's clothing.'",
+
+	"howThisWasChecked": "forges/pesc260805/test/probes/p1_optionSetKeyPurity.js, retained. It READS THE ALLOW-LIST FROM THE SHIPPED DECLARATION rather than restating it, so the check and the thing checked cannot drift apart; and it REFUSES TO RUN AT ALL if the declaration names a field it does not read, because A PURITY CHECK OVER A SUBSET OF THE ALLOW-LIST WOULD REPORT PURITY IT NEVER MEASURED — a green answer to a smaller question than the one asked."
+}
