@@ -529,6 +529,52 @@ const judgeConjunctList = [
 			return { pass: judgedCount > 0 && refusedFirst.length === judgedCount && accepted.length === judgedCount - abstained && runReport.counts.judgeSpend.rationaleReaskCount === judgedCount, detail: `judged ${judgedCount}; refused-first records ${refusedFirst.length}; accepted-after-reask ${accepted.length}; rationaleReaskCount ${runReport.counts.judgeSpend.rationaleReaskCount}` };
 		}),
 	}),
+	// ⟪B2 DEFECT #4 found by the FIRST REAL BATCH-1 JUDGMENTS — RULING SABLE_RIVER 2026-08-17 13:15⟫ llmClient's
+	// select_candidate tool declares `required: ['choice']`. Category and rationale are OPTIONAL BY SCHEMA, so a
+	// real model omits them on some answers — and did, on an honest abstention, killing D3 batch 1 after eight
+	// judgments. These three conjuncts hold the ruled seam permanently.
+	pureConjunct({
+		conjunctId: 'l_abstentionWithAbsentCategoryAccepted',
+		title: "an abstention with NO category is ACCEPTED (category 'none', reportedCategoryOnAbstain 'absent' — the ABSENCE is the record, nothing invented); the mark ROUND-TRIPS back in as it must from the judgment cache; a PICK with no category stays REFUSED",
+		twinNameList: ['absentCategoryRefusedAgain'],
+		judge: (scenario) => {
+			const lib = scenario.frameworkMutationList.length ? moduleDouble.loadWithMutations({ modulePath: path.join(scenarioLib.FRAMEWORK_DIR, JUDGE_FILE), mutationList: scenario.frameworkMutationList }) : require(path.join(scenarioLib.FRAMEWORK_DIR, JUDGE_FILE));
+			const question = { choiceEnum: ['1', 'NONE'], renderedPoolStableIdList: ['urn:toy:card1'], promptHash: 'x' };
+			const absentCategory = lib.judgmentFromReturn({ clientReturn: { choice: 'NONE', rationale: 'nothing fits' }, question, isDebugClient: false });
+			const acceptedWithMark = !absentCategory.error && absentCategory.category === 'none' && absentCategory.reportedCategoryOnAbstain === lib.ABSENT_CATEGORY_MARK && absentCategory.chosenCardStableId === null;
+			// THE CACHE ROUND-TRIP: putJudgment stores reportedCategoryOnAbstain in the category slot, and a hit
+			// re-enters judgmentFromReturn with it. If the mark were not accepted on the way back, a cached
+			// abstention would be refused by the code that wrote it and a cached run's block would differ.
+			const fromCache = lib.judgmentFromReturn({ clientReturn: { choice: 'NONE', category: lib.ABSENT_CATEGORY_MARK, rationale: 'nothing fits' }, question, isDebugClient: false });
+			const roundTrips = !fromCache.error && fromCache.category === 'none' && fromCache.reportedCategoryOnAbstain === lib.ABSENT_CATEGORY_MARK;
+			const pickWithoutCategoryRefused = Boolean(lib.judgmentFromReturn({ clientReturn: { choice: '1', rationale: 'card1 (Card One) means the same thing' }, question, isDebugClient: false }).error);
+			return { pass: acceptedWithMark && roundTrips && pickWithoutCategoryRefused, detail: `absent-category accepted ${acceptedWithMark}; mark round-trips ${roundTrips}; pick without category refused ${pickWithoutCategoryRefused}` };
+		},
+	}),
+	runConjunct({
+		conjunctId: 'm_absentAbstainRationaleReaskedOnceAccepted',
+		title: 'an abstention with NO rationale earns the SAME single bounded re-ask as the ordinal case and is ACCEPTED on the second answer, the refused first attempt in forensics (reaskFollows)',
+		twinNameList: ['absentAbstainRationaleNotReaskable'],
+		shape: (scenario) => useRealClientDouble(scenario, { pickOrdinal: 'NONE', abstainRationaleMode: 'absentThenStated' }),
+		judge: succeeded((runReport, outcome) => {
+			const forensic = forensicsOf(outcome).map((oneRecord) => oneRecord.record);
+			const refusedFirst = forensic.filter((oneRecord) => oneRecord.reaskFollows === true && typeof oneRecord.refusedAttempt === 'string' && /abstained.*rationale absent/.test(oneRecord.refusedAttempt));
+			const accepted = forensic.filter((oneRecord) => oneRecord.reaskCount === 1 && oneRecord.choice === 'NONE' && typeof oneRecord.rationale === 'string' && oneRecord.rationale !== '');
+			return { pass: refusedFirst.length > 0 && accepted.length === refusedFirst.length, detail: `refused-first ${refusedFirst.length}; accepted-after-reask ${accepted.length}; rationaleReaskCount ${runReport.counts.judgeSpend.rationaleReaskCount}` };
+		}),
+	}),
+	runConjunct({
+		conjunctId: 'n_secondAbsentAbstainRationaleRefusedByName',
+		title: 'an abstention with NO rationale TWICE is REFUSED by name after ONE re-ask — the re-ask is bounded exactly as BR-067 is, never a loop',
+		twinNameList: ['absentAbstainRationaleNotReaskable'],
+		shape: (scenario) => useRealClientDouble(scenario, { pickOrdinal: 'NONE', abstainRationaleMode: 'absent' }),
+		judge: (outcome) => {
+			const refusalText = String(refusalTextOf(outcome));
+			const refused = /rationale absent/.test(refusalText) && /after ONE re-ask/.test(refusalText);
+			const forensicRefused = forensicsOf(outcome).map((oneRecord) => oneRecord.record).filter((oneRecord) => oneRecord.reaskFollows === true);
+			return { pass: refused && forensicRefused.length >= 1, detail: `${refused ? 'refused after one re-ask' : `NOT the expected refusal: ${refusalText.slice(0, 200)}`}; refused-first forensic records ${forensicRefused.length}` };
+		},
+	}),
 	runConjunct({
 		conjunctId: 'k_secondOrdinalRationaleRefusedByName',
 		title: 'a REAL client answering by ORDINAL twice is REFUSED by name after ONE re-ask (BR-067 stands), the first attempt in forensics',
@@ -556,11 +602,14 @@ frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'e_perCandidateMaterialRidesWithCandidate', twinName: 'noteHoistedToGlobalSegment', fileName: RENDERER_FILE, find: "\tif (typeof noteByStableId[oneCard.stableId] === 'string' && noteByStableId[oneCard.stableId] !== '') {\n\t\tlineList.push(`      note: ${noteByStableId[oneCard.stableId]}`);\n\t}", replace: "\tif (typeof noteByStableId[oneCard.stableId] === 'string' && noteByStableId[oneCard.stableId] !== '') {\n\t\tlineList.push(`GUIDANCE: ${noteByStableId[oneCard.stableId]}`);\n\t}" });
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'f_globalGuidanceNamingCandidateRefused', twinName: 'smugglingGateDisabled', fileName: RENDERER_FILE, find: '\t\t\tconst leaked = globalSegmentList.find((oneSegment) => oneSegment.indexOf(tokenList[tokenIndex]) !== -1);', replace: '\t\t\tconst leaked = undefined;' });
 // the production mutation: the normalisation REMOVED (the pre-ruling strict refusal restored) — (h) and (i) both go red
-frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'h_abstentionWithSchemaForcedCategoryAccepted', twinName: 'abstentionNormalisationRemoved', fileName: JUDGE_FILE, find: "\t\tif (clientReturn.category !== ABSTAIN_CATEGORY && PICK_CATEGORY_LIST.indexOf(clientReturn.category) === -1) {", replace: "\t\tif (clientReturn.category !== ABSTAIN_CATEGORY) {" });
-frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'i_clientCategoryEnumContract', twinName: 'abstentionNormalisationRemoved', fileName: JUDGE_FILE, find: "\t\tif (clientReturn.category !== ABSTAIN_CATEGORY && PICK_CATEGORY_LIST.indexOf(clientReturn.category) === -1) {", replace: "\t\tif (clientReturn.category !== ABSTAIN_CATEGORY) {" });
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'h_abstentionWithSchemaForcedCategoryAccepted', twinName: 'abstentionNormalisationRemoved', fileName: JUDGE_FILE, find: "\t\tif (!categoryIsAbsent && clientReturn.category !== ABSTAIN_CATEGORY && PICK_CATEGORY_LIST.indexOf(clientReturn.category) === -1) {", replace: "\t\tif (clientReturn.category !== ABSTAIN_CATEGORY) {" });
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'i_clientCategoryEnumContract', twinName: 'abstentionNormalisationRemoved', fileName: JUDGE_FILE, find: "\t\tif (!categoryIsAbsent && clientReturn.category !== ABSTAIN_CATEGORY && PICK_CATEGORY_LIST.indexOf(clientReturn.category) === -1) {", replace: "\t\tif (clientReturn.category !== ABSTAIN_CATEGORY) {" });
 // the production mutation: the bounded re-ask REMOVED (the pre-ruling refuse-on-first-sight restored) — (j) and (k) both go red
-frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'j_ordinalRationaleReaskedOnceAccepted', twinName: 'reaskRemoved', fileName: JUDGE_FILE, find: '\t\t\t\tif (judged.error && judged.ordinalRationale === true && reaskCount === 0) {', replace: '\t\t\t\tif (false && judged.error && judged.ordinalRationale === true && reaskCount === 0) {' });
-frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'k_secondOrdinalRationaleRefusedByName', twinName: 'reaskRemoved', fileName: JUDGE_FILE, find: '\t\t\t\tif (judged.error && judged.ordinalRationale === true && reaskCount === 0) {', replace: '\t\t\t\tif (false && judged.error && judged.ordinalRationale === true && reaskCount === 0) {' });
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'l_abstentionWithAbsentCategoryAccepted', twinName: 'absentCategoryRefusedAgain', fileName: JUDGE_FILE, find: "\t\tconst categoryIsAbsent = !isNonBlank(clientReturn.category) || clientReturn.category === ABSENT_CATEGORY_MARK;", replace: "\t\tconst categoryIsAbsent = false;" });
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'm_absentAbstainRationaleReaskedOnceAccepted', twinName: 'absentAbstainRationaleNotReaskable', fileName: JUDGE_FILE, find: "}), absentAbstainRationale: true };", replace: "}) };" });
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'n_secondAbsentAbstainRationaleRefusedByName', twinName: 'absentAbstainRationaleNotReaskable', fileName: JUDGE_FILE, find: "}), absentAbstainRationale: true };", replace: "}) };" });
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'j_ordinalRationaleReaskedOnceAccepted', twinName: 'reaskRemoved', fileName: JUDGE_FILE, find: '\t\t\t\tif (judged.error && reaskableFaultName !== undefined && reaskCount === 0) {', replace: '\t\t\t\tif (false && judged.error && reaskableFaultName !== undefined && reaskCount === 0) {' });
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'k_secondOrdinalRationaleRefusedByName', twinName: 'reaskRemoved', fileName: JUDGE_FILE, find: '\t\t\t\tif (judged.error && reaskableFaultName !== undefined && reaskCount === 0) {', replace: '\t\t\t\tif (false && judged.error && reaskableFaultName !== undefined && reaskCount === 0) {' });
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'g_ordinalRationaleFromRealClientRefused', twinName: 'ordinalRationaleAccepted', fileName: JUDGE_FILE, find: '\tif (!isDebugClient && ORDINAL_RATIONALE_RE.test(clientReturn.rationale)) {', replace: '\tif (false && !isDebugClient && ORDINAL_RATIONALE_RE.test(clientReturn.rationale)) {' });
 
 // ---------------------------------------------------------------------
@@ -747,6 +796,6 @@ const gateDeclarationList = [
 ];
 
 runGateFamily(
-	{ harness, familyName: 'BG-REPLAY+BG-CACHE+BG-JUDGE+BG-POOL-ORDER+BG-DET', gateDeclarationList, twinRegistry, makeSubject: scenarioLib.makeScenario, cloneSubject: scenarioLib.cloneScenario, expectedConjunctCount: 9 + 7 + 13 + 3 + 4, expectedTwinCount: 9 + 7 + 13 + 3 + 4 },
+	{ harness, familyName: 'BG-REPLAY+BG-CACHE+BG-JUDGE+BG-POOL-ORDER+BG-DET', gateDeclarationList, twinRegistry, makeSubject: scenarioLib.makeScenario, cloneSubject: scenarioLib.cloneScenario, expectedConjunctCount: 9 + 7 + 16 + 3 + 4, expectedTwinCount: 9 + 7 + 16 + 3 + 4 },
 	() => harness.report(),
 );

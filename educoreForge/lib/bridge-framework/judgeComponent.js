@@ -33,6 +33,11 @@ const { confidenceForCategory, ABSTAIN_CATEGORY, PICK_CATEGORY_LIST } = require(
 
 const ORDINAL_RATIONALE_RE = /\b(candidate|option|choice)\s+#?\d+\b/i;
 
+// ⟪RULING 13:15⟫ ABSENT_CATEGORY_MARK — recorded in reportedCategoryOnAbstain when the model omitted the
+// category on an abstention. It is a RECORD OF AN ABSENCE, not a category: it never reaches the band table
+// (an abstention has confidence null) and it is never a value a model can supply.
+const ABSENT_CATEGORY_MARK = 'absent';
+
 const isPlainObject = (candidate) => candidate !== null && typeof candidate === 'object' && !Array.isArray(candidate);
 const isNonBlank = (value) => typeof value === 'string' && value.trim() !== '';
 
@@ -61,9 +66,6 @@ const judgmentFromReturn = ({ clientReturn, question, isDebugClient }) => {
 	if (mapped.error) {
 		return { error: mapped.error };
 	}
-	if (!isNonBlank(clientReturn.category) || !isNonBlank(clientReturn.rationale)) {
-		return { error: refuse.byName({ moduleName, what: `the judge returned choice '${clientReturn.choice}' with category ${JSON.stringify(clientReturn.category)} / rationale ${clientReturn.rationale === undefined ? 'undefined' : 'blank'}`, where: 'a pick or abstention without category and rationale is refused (BR-066)' }) };
-	}
 	const discardedPredicateKeyCount = Object.prototype.hasOwnProperty.call(clientReturn, 'predicate') ? 1 : 0;
 	if (mapped.chosenCardStableId === null) {
 		// ⟪B2 DEFECT found by the FIRST REAL JUDGMENT — RULING SABLE_RIVER 2026-08-16 (B3, "B2 DEFECT found by the first REAL
@@ -76,10 +78,42 @@ const judgmentFromReturn = ({ clientReturn, question, isDebugClient }) => {
 		// PRESERVED (reportedCategoryOnAbstain: on the returned judgment, the frozen record and the forensic record — nothing
 		// discarded). A category OUTSIDE the picking set stays refused by name (an unknown token is not schema-forced noise);
 		// a PICK carrying ABSTAIN_CATEGORY stays refused below. llmClient.js is byte-untouched (RULING BF1).
-		if (clientReturn.category !== ABSTAIN_CATEGORY && PICK_CATEGORY_LIST.indexOf(clientReturn.category) === -1) {
+		// ⟪B2 DEFECT #4 found by the FIRST REAL BATCH-1 JUDGMENTS — RULING SABLE_RIVER 2026-08-17 13:15⟫ The
+		// SAME seam, one step further out. llmClient's select_candidate tool declares `required: ['choice']` —
+		// category and rationale are OPTIONAL BY THE SCHEMA'S OWN CONTRACT — and its CATEGORY_ENUM is the
+		// picking set with 'none' removed, so the schema offers a model NO WAY to say "none". A model that
+		// abstains honestly and omits the category it has nothing to assert therefore arrives here as
+		// category: undefined, and the old blanket BR-066 check refused it and killed the build with no
+		// re-ask. Batch 0's three abstentions survived only because those returns happened to carry a
+		// schema-forced picking category; the omission is permitted on every call, so it fires at random.
+		//
+		// RULED: on an abstention an ABSENT category is NOT a defect. It normalises to ABSTAIN_CATEGORY and
+		// the ABSENCE ITSELF IS THE RECORD — reportedCategoryOnAbstain carries ABSENT_CATEGORY_MARK, never a
+		// fabricated category and never a silent null that would be indistinguishable from the model having
+		// answered 'none' outright. Three states stay three states.
+		//
+		// The mark must SURVIVE THE JUDGMENT CACHE. putJudgment stores reportedCategoryOnAbstain in the
+		// category slot so a cache hit reconstructs the identical judgment, and a hit re-enters this same
+		// function — so ABSENT_CATEGORY_MARK has to be ACCEPTED on the way back in or a cached abstention
+		// would be refused by the very code that wrote it, and the frozen block from a cached run would
+		// differ from the block from a fresh one. A model can never supply this token itself: llmClient's
+		// extractor returns undefined for anything outside CATEGORY_ENUM, so it can only arrive from our own
+		// cache.
+		const categoryIsAbsent = !isNonBlank(clientReturn.category) || clientReturn.category === ABSENT_CATEGORY_MARK;
+		if (!isNonBlank(clientReturn.rationale)) {
+			// RULED: an abstention with NO rationale earns the SAME single bounded re-ask as the ordinal case.
+			// The flag is what askOnce reads; a second malformed return still refuses by name.
+			return { error: refuse.byName({ moduleName, what: `the judge abstained (${ABSTAIN_TOKEN}) with rationale ${clientReturn.rationale === undefined ? 'absent' : 'blank'}`, where: 'an abstention states why nothing matched; it earns ONE bounded re-ask, then is refused (BR-066, RULING 13:15)' }), absentAbstainRationale: true };
+		}
+		if (!categoryIsAbsent && clientReturn.category !== ABSTAIN_CATEGORY && PICK_CATEGORY_LIST.indexOf(clientReturn.category) === -1) {
 			return { error: refuse.byName({ moduleName, what: `the judge abstained (${ABSTAIN_TOKEN}) but reported category '${clientReturn.category}', which is neither '${ABSTAIN_CATEGORY}' nor a picking category (${PICK_CATEGORY_LIST.join(', ')})`, where: `an abstention carries category '${ABSTAIN_CATEGORY}' — or, from the real client's evidence schema, a schema-forced picking category, preserved as reportedCategoryOnAbstain` }) };
 		}
-		return { chosenCardStableId: null, choice: clientReturn.choice, category: ABSTAIN_CATEGORY, reportedCategoryOnAbstain: clientReturn.category === ABSTAIN_CATEGORY ? null : clientReturn.category, rationale: clientReturn.rationale, confidence: null, discardedPredicateKeyCount };
+		return { chosenCardStableId: null, choice: clientReturn.choice, category: ABSTAIN_CATEGORY, reportedCategoryOnAbstain: categoryIsAbsent ? ABSENT_CATEGORY_MARK : clientReturn.category === ABSTAIN_CATEGORY ? null : clientReturn.category, rationale: clientReturn.rationale, confidence: null, discardedPredicateKeyCount };
+	}
+	// A PICK is unchanged: it asserts something about a candidate, so it carries both a category and a
+	// rationale or it is refused. Only the abstention arm was ever the defect.
+	if (!isNonBlank(clientReturn.category) || !isNonBlank(clientReturn.rationale)) {
+		return { error: refuse.byName({ moduleName, what: `the judge returned choice '${clientReturn.choice}' with category ${JSON.stringify(clientReturn.category)} / rationale ${clientReturn.rationale === undefined ? 'undefined' : 'blank'}`, where: 'a pick or abstention without category and rationale is refused (BR-066)' }) };
 	}
 	if (clientReturn.category === ABSTAIN_CATEGORY) {
 		return { error: refuse.byName({ moduleName, what: `the judge picked ordinal ${clientReturn.choice} but reported category '${ABSTAIN_CATEGORY}'`, where: 'a pick carries a picking category' }) };
@@ -96,6 +130,18 @@ const judgmentFromReturn = ({ clientReturn, question, isDebugClient }) => {
 	}
 	return { chosenCardStableId: mapped.chosenCardStableId, choice: clientReturn.choice, category: clientReturn.category, rationale: clientReturn.rationale, confidence: band.confidence, discardedPredicateKeyCount };
 };
+
+// ⟪RULING 13:15⟫ REASK_INSTRUCTION_BY_FAULT — the bounded re-ask is now TWO faults, so the instruction is a
+// registry keyed by fault name rather than a branch. Each builds the whole re-ask prompt from the ORIGINAL
+// userPrompt, never from the re-asked one, so a second re-ask could not compound instructions even if the
+// budget allowed it (it does not). The absent-rationale text must not touch clientReturn.rationale — it is
+// undefined in exactly that case, and the ordinal text's .slice would throw.
+const REASK_INSTRUCTION_BY_FAULT = Object.freeze({
+	ordinalRationale: ({ question, clientReturn }) => `${question.userPrompt}\n\nRESTATE YOUR RATIONALE: your previous rationale (${JSON.stringify(clientReturn.rationale.slice(0, 200))}) referred to a candidate by NUMBER. Restate the rationale naming the chosen candidate by its hub key and name, never by its number. Keep the same choice unless you have a reason to change it.`,
+	absentAbstainRationale: ({ question }) => `${question.userPrompt}\n\nSTATE YOUR REASON: you answered ${ABSTAIN_TOKEN} — none of the candidates — but gave no rationale. State briefly why none of the candidates means the same thing as the source element. Keep the same answer unless you have a reason to change it.`,
+});
+const REASKABLE_FAULT_NAME_LIST = Object.freeze(Object.keys(REASK_INSTRUCTION_BY_FAULT));
+const reaskableFaultNameOf = (judged) => REASKABLE_FAULT_NAME_LIST.find((oneFaultName) => judged[oneFaultName] === true);
 
 const judgeOne = ({ question, judgeClient, judgmentCache, matchForensics, budget, pairKey, generation, debugMark } = {}, callback) => {
 	if (!isPlainObject(question) || !Array.isArray(question.renderedPoolStableIdList) || !Array.isArray(question.choiceEnum) || typeof question.promptHash !== 'string') {
@@ -188,7 +234,8 @@ const judgeOne = ({ question, judgeClient, judgmentCache, matchForensics, budget
 					return;
 				}
 				const judged = judgmentFromReturn({ clientReturn, question, isDebugClient });
-				if (judged.error && judged.ordinalRationale === true && reaskCount === 0) {
+				const reaskableFaultName = judged.error ? reaskableFaultNameOf(judged) : undefined;
+				if (judged.error && reaskableFaultName !== undefined && reaskCount === 0) {
 					// the refused first attempt lands in forensics BEFORE the re-ask, marked as such
 					matchForensics.appendRecord(
 						{
@@ -202,7 +249,7 @@ const judgeOne = ({ question, judgeClient, judgmentCache, matchForensics, budget
 								return;
 							}
 							budget.judgmentCountSoFar += 1;
-							askOnce({ userPrompt: `${question.userPrompt}\n\nRESTATE YOUR RATIONALE: your previous rationale (${JSON.stringify(clientReturn.rationale.slice(0, 200))}) referred to a candidate by NUMBER. Restate the rationale naming the chosen candidate by its hub key and name, never by its number. Keep the same choice unless you have a reason to change it.`, reaskCount: 1 }, askCallback);
+							askOnce({ userPrompt: REASK_INSTRUCTION_BY_FAULT[reaskableFaultName]({ question, clientReturn }), reaskCount: 1 }, askCallback);
 						},
 					);
 					return;
@@ -270,4 +317,4 @@ const judgeOne = ({ question, judgeClient, judgmentCache, matchForensics, budget
 	});
 };
 
-module.exports = { judgeOne, mapChoiceToStableId, judgmentFromReturn, ORDINAL_RATIONALE_RE, moduleName };
+module.exports = { judgeOne, mapChoiceToStableId, judgmentFromReturn, ORDINAL_RATIONALE_RE, ABSENT_CATEGORY_MARK, REASK_INSTRUCTION_BY_FAULT, moduleName };

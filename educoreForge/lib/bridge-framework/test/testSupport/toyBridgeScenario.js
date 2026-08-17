@@ -366,7 +366,17 @@ module.exports = {
 //   extraReturnKeys  e.g. { predicate: 'relatedMatch' } (the BG-P6 (b) fault)
 //   throwOnCall   the replay spy: a plain build must never call the judge
 //   abstainCategory  'none' (default) | a picking category — the REAL client's evidence schema FORCES one on NONE (llmClient.js:88-99)
-const makeFakeRealClient = ({ pickOrdinal = '1', category = 'strong', abstainCategory = 'none', rationaleMode = 'keyAndName', extraReturnKeys = {}, throwOnCall = false, model = 'fake-anthropic-judge-v1' } = {}) => {
+//   omitCategoryOnAbstain  false (default) | true — return NO category key at all on a NONE
+//   abstainRationaleMode   'stated' (default) | 'absent' | 'absentThenStated'
+//
+// ⟪RULING SABLE_RIVER 2026-08-17 13:15, the LESSON⟫ The last two options exist because llmClient's
+// select_candidate tool declares `required: ['choice']` — category and rationale are OPTIONAL BY SCHEMA, and
+// ANYTHING A SCHEMA DOES NOT REQUIRE WILL BE OMITTED BY A REAL MODEL ON SOME ANSWER. A double derived from
+// what the model USUALLY sends is not a double of the client; it is a double of the lucky case. Batch 1 of the
+// Ed-Fi derived order died on exactly this: eight subjects judged, then an honest abstention with no category,
+// permitted by the schema, refused by the framework, build dead. These options make the omitted-field returns
+// PERMANENTLY exercised, so the seam can never again be proven only against the fields a model happened to fill.
+const makeFakeRealClient = ({ pickOrdinal = '1', category = 'strong', abstainCategory = 'none', omitCategoryOnAbstain = false, abstainRationaleMode = 'stated', rationaleMode = 'keyAndName', extraReturnKeys = {}, throwOnCall = false, model = 'fake-anthropic-judge-v1' } = {}) => {
 	const client = { callCount: 0, questionList: [], model, keySource: 'test' };
 	client.rerank = ({ systemPrompt, userPrompt, choiceEnum, requireJudgment } = {}, callback) => {
 		void systemPrompt;
@@ -385,9 +395,25 @@ const makeFakeRealClient = ({ pickOrdinal = '1', category = 'strong', abstainCat
 			const isReask = /RESTATE YOUR RATIONALE/.test(userPrompt);
 			rationale = rationaleMode === 'ordinal' || (rationaleMode === 'ordinalThenKeyAndName' && !isReask) ? `picked candidate ${choice} because it looked right` : rationaleMode === 'blank' ? '' : `${keyText} (${nameText}) means the same thing as the source element`;
 		} else {
-			rationale = 'none of the candidates means the same thing as the source element';
+			// the re-ask for an absent abstention rationale is recognised by the instruction the component sends
+			const isAbstainReask = /STATE YOUR REASON/.test(userPrompt);
+			const statedText = 'none of the candidates means the same thing as the source element';
+			const abstainRationaleByMode = { stated: statedText, absent: undefined, absentThenStated: isAbstainReask ? statedText : undefined };
+			if (!Object.prototype.hasOwnProperty.call(abstainRationaleByMode, abstainRationaleMode)) {
+				throw new Error(`makeFakeRealClient REFUSED: abstainRationaleMode '${abstainRationaleMode}' is not one of [${Object.keys(abstainRationaleByMode).join(', ')}] — an unknown mode is refused by name, never treated as the default`);
+			}
+			rationale = abstainRationaleByMode[abstainRationaleMode];
 		}
-		callback('', { choice, model, attempts: 1, category: choice === 'NONE' ? abstainCategory : category, rationale, usage: { inputTokens: 10, outputTokens: 5 }, stopReason: 'end_turn', retryReasons: [], ...extraReturnKeys });
+		const clientReturn = { choice, model, attempts: 1, category: choice === 'NONE' ? abstainCategory : category, rationale, usage: { inputTokens: 10, outputTokens: 5 }, stopReason: 'end_turn', retryReasons: [], ...extraReturnKeys };
+		// a schema-permitted OMISSION is the KEY ABSENT, not the key present holding undefined — the framework
+		// reads it with hasOwnProperty-free checks either way, but the double must model the wire shape honestly
+		if (choice === 'NONE' && omitCategoryOnAbstain) {
+			delete clientReturn.category;
+		}
+		if (clientReturn.rationale === undefined) {
+			delete clientReturn.rationale;
+		}
+		callback('', clientReturn);
 	};
 	return client;
 };
