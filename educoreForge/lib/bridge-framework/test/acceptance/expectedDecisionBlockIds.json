@@ -60,12 +60,18 @@
 			}
 		},
 		"sifCedsStandardPlugin": {
-			"graphId": "cbcdc87d18f1b648@manifest:cbcdc87d18f1b648dbae0fd71385a9acba78876e81c04bd62e9ac8f94cf254bf",
+			"graphId": "a3e1768ada649a16@manifest:a3e1768ada649a16401085c767b20e0b58faa01fd49b044b3ca125af3d8fbbaf",
 			"decisionBlockId": null,
-			"relationshipBlockId": "af4524cd14908ce2aa72669cef85a4661d6abee37239507d434c79973331ecb4",
+			"relationshipBlockId": "7c400c39a148da5330bf86773c064a0c1c9094773a67040e7defc5e1bab69545",
 			"standardBaseBlockId": "d393b0406d08f613f3142711fca5a9f2b0c580e84c4bef3ffd6b18d4eaa2330a",
-			"frozenBy": null,
-			"debugDecisionBlockId": "53d85c7d8b8724a2a64ba281bff4962215304f8ba9e34dd2a310f33f2254afd4",
+			"frozenBy": {
+				"sessionName": "SABLE_RIVER",
+				"builder": "TWILIGHT_VALLEY",
+				"date": "2026-08-17",
+				"runPhaseToken": "cp2debug4",
+				"note": "frozen from the POST-REBASE CP2 run at base 55357b5"
+			},
+			"debugDecisionBlockId": "31030a164f49925d25b79f825ed10d49f373412adc6f114bd1afd6927fa38cac",
 			"judgeDependentCensusByBlock": {
 				"debug": {
 					"abstainedCount": 132,
@@ -73,8 +79,8 @@
 					"distinctTripleCount": 2070
 				}
 			},
-			"provisional": true,
-			"provisionalReason": "PROVISIONAL under RULING BS-7 (SABLE_RIVER, 2026-08-17). These ids are REAL \u2014 reproduced by the runner's -verify and by the frozen block itself \u2014 but they are keyed to frameworkFingerprint 45e93f4cf430\u2026, which is the framework as it stood at this branch's base 3e5357f. Code fact, verified by the builder with `git log 3e5357f..e32e633 -- lib/bridge-framework`: THREE commits have moved the framework since \u2014 1393f82 (BR-067 purpose-satisfied + symmetric-contrast re-ask + named refusal net), d548d41 and e32e633 \u2014 and GRANITE_VALLEY's D4 remediation will move it once more. 1393f82 is the fix without which the Ed-Fi D4 real run died at subject 50, so B4 MUST inherit it rather than freeze ahead of it. The supervisor therefore rebases b4-sif-plugin onto the post-D-CLEAR HEAD and B4 RE-RUNS CP2 (debug, zero spend) under the new fingerprint. AT THAT RE-RUN THE CENSUS MUST BE EQUAL to the frozen values in expectedCensus.sifCedsStandardPlugin.cbcdc87d18f1b648.json \u2014 the classifier does not depend on the judge contract \u2014 while THE BLOCK IDS MOVE, as a NAMED MOVER whose named cause is the fingerprint change. Two re-keys are worse than one, which is why CP3 is held until after the rebase rather than run against ids that are about to be superseded. decisionBlockId stays null: the REAL-judge block does not exist yet."
+			"provisional": false,
+			"namedMover": "THE IDS MOVED, AND THE CAUSE IS SINGULAR AND NAMED: the BS-7 rebase of b4-sif-plugin from base 3e5357f to 55357b5, taken so B4 would INHERIT 1393f82 (BR-067 purpose-satisfied + symmetric-contrast re-ask + named refusal net \u2014 the fix without which the Ed-Fi D4 real run died at subject 50 of 701) and c64d6d3 (DR-2, the SSSOM exporter emitting subject_match_field by disposition). frameworkFingerprint moved 45e93f4cf430\u2026 -> ad3cc4c77532\u2026, and the decision block, the relationship block and the manifest moved with it because each is content-addressed over a text that carries the fingerprint. WHAT DID NOT MOVE, asserted BEFORE the re-run rather than observed after it: the cardinalityCensus (2,231 / 1,875 / 327 / 29 / 0 / 0, member for member), the contentionCensus, the three digests, the source channel digest, the walk (15,620 / 2,231 / 13,389 / 0) and the edge and SSSOM row counts (2,070 each). The classifier reads the source walk, the hub cards and the declared tables; the judge contract touches none of them, so a judge-side fix cannot legitimately shift a classifier count \u2014 and a census that HAD moved would have been a DEFECT rather than a re-key. Both halves had to happen in opposite directions for this to be a good result: if the ids had NOT moved, the fingerprint would not actually cover the files that changed and \"zero framework change\" would be unprovable by content address. PREVIOUS ids, superseded: decision 53d85c7d\u2026, relationship af4524cd\u2026, manifest cbcdc87d\u2026, fingerprint 45e93f4c\u2026."
 		}
 	}
 }
