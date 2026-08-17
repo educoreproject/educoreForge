@@ -11,8 +11,9 @@
 // reports the decision block id, the manifest id, the container and the bolt url the log names. Mirrors
 // lib/forge-framework/test/acceptance/runAcceptanceCommand.js.
 //
-// The materialiseReal line SPENDS (the real judge over the judged share): the runner REFUSES it by name unless the
-// acceptance file records materialiseRealSpendAuthorisedBy (the supervisor's authorisation, as data).
+// The spending lines (materialiseReal, rejudgeRealLimit) put the REAL judge to work: the runner REFUSES a spending
+// line by name unless the acceptance file records an authorisation FOR THAT LINE under spendAuthorisationByLine
+// (the supervisor's authorisation, as data, per line — RULING B4R-2). The rule itself is spendAuthorisationGuard.js.
 //
 // Run (from anywhere):
 //   node apps/graph-builder/test/bridgeAcceptance/runBridgeAcceptanceCommand.js --bridgeName=edfiCedsCrosswalkPlugin --line=rejudgeDebug --phaseToken=cp2a
@@ -21,6 +22,7 @@
 const fs = require('fs');
 const path = require('path');
 const genesisGuardLib = require(path.join(__dirname, 'genesisGuard'));
+const spendAuthorisationGuardLib = require(path.join(__dirname, 'spendAuthorisationGuard'));
 const { spawn, spawnSync } = require('child_process');
 
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
@@ -38,7 +40,10 @@ DESCRIPTION
      runner's line EQUALS the committed one, writes <buildLogsDirPath>/<line>-<phase>.provenance.json (git HEAD, dirty
      list, the exact command line, start time, PID), launches the build nohup-detached and returns. -verify reads the
      finished log and asserts the pinned base block ids (the command's contract), then prints the run's ids.
-     materialiseReal is REFUSED unless the acceptance file records materialiseRealSpendAuthorisedBy.
+     A SPENDING line (materialiseReal, rejudgeRealLimit) is REFUSED unless spendAuthorisationByLine records an
+     authorisation object under THAT LINE'S OWN NAME. A line whose name is null is refused as WITHHELD; a line
+     whose name is absent is refused as UNDECLARED; the retired flat materialiseRealSpendAuthorisedBy field is
+     itself refused by name, because a field that reads as authorisation and grants nothing is worse than none.
 
 EXIT
      0 launched / verified;  1 refused by name / verification failed.
@@ -50,11 +55,15 @@ const verifyLogContractLib = require('./verifyLogContract');
 
 const ACCEPTANCE_FILE_PATH = path.join(__dirname, '..', '..', '..', '..', 'lib', 'bridge-framework', 'test', 'acceptance', 'acceptanceCommands.jsonc');
 const EXPECTED_IDS_FILE_PATH = path.join(__dirname, '..', '..', '..', '..', 'lib', 'bridge-framework', 'test', 'acceptance', 'expectedDecisionBlockIds.json');
-// rejudgeRealLimit added for D3 (RULING §11.12): the real judge, TEN SUBJECTS AT A TIME, released one batch
-// at a time by the supervisor. It is a SPENDING line like materialiseReal and carries the same spend gate —
-// see the authorisation check below, which now covers both rather than naming materialiseReal alone. A
-// spending line that slipped past the gate because the gate knew only one line's name is precisely the kind
-// of omission that costs money once and is obvious afterwards.
+// rejudgeRealLimit added for D3 (RULING §11.12): the real judge over a WINDOW of source elements, released one
+// batch at a time by the supervisor. It is a SPENDING line like materialiseReal, and BOTH are listed here so the
+// gate knows both names — a spending line that slipped past the gate because the gate knew only one line's name is
+// precisely the kind of omission that costs money once and is obvious afterwards.
+//
+// BUT MEMBERSHIP OF THIS LIST IS NOT AUTHORISATION, and conflating the two was DEFECT D-2. This list answers "does
+// this line spend?"; spendAuthorisationByLine on the entry answers "has THIS line been released?" — separately, per
+// line, as data (RULING B4R-2). The two questions have different answers for the same bridge at the same moment:
+// SIF's rejudgeRealLimit is released and its materialiseReal is HELD by TQ.
 // eyeGraph — the FULL four-standard + hub graph carrying the derived bridge, built for a human to look at.
 // It carries NO --rebridge, so it REPLAYS the frozen block and calls the judge ZERO times; that is why it is
 // deliberately absent from SPENDING_LINE_NAME_LIST and declares no maxJudgmentCount.
@@ -86,9 +95,27 @@ const phaseToken = firstValue('phaseToken');
 if (typeof phaseToken !== 'string' || !/^[A-Za-z0-9_-]+$/.test(phaseToken)) {
 	refuse(`--phaseToken must be a token of [A-Za-z0-9_-] (got ${JSON.stringify(phaseToken)})`);
 }
-if (SPENDING_LINE_NAME_LIST.indexOf(lineName) !== -1 && !(entry.materialiseRealSpendAuthorisedBy && typeof entry.materialiseRealSpendAuthorisedBy === 'object' && typeof entry.materialiseRealSpendAuthorisedBy.sessionName === 'string')) {
-	refuse(`the ${lineName} line SPENDS on the real judge and acceptanceCommands.jsonc records no materialiseRealSpendAuthorisedBy for ${bridgeName} — the supervisor authorises the spend as data before this line runs`);
+// THE SPEND GATE, PER LINE (RULING B4R-2, SABLE_RIVER 2026-08-17, on DEFECT D-2 of the B4 adversarial review).
+//
+// What stood here gated BOTH spending lines on the presence of ONE field, `materialiseRealSpendAuthorisedBy`. The
+// comment above SPENDING_LINE_NAME_LIST names the hazard exactly — "a spending line that slipped past the gate
+// because the gate knew only one line's name is precisely the kind of omission that costs money once" — and then
+// fixed the wrong half of it: it widened the LINES covered and left the AUTHORISATION undifferentiated. So SIF's
+// authorisation, written by the supervisor to release a ten-subject conformance batch and saying so in its own
+// prose, also opened `materialiseReal` — the full real run over all 327 judged subjects — because the runner reads
+// fields, not prose. TQ's standing directive of 00:46 CDT was enforced by a note.
+//
+// Now the authorisation is DECLARED PER LINE and the rule lives in spendAuthorisationGuard.js, so the twins in
+// test-runnerContract.js exercise the very function called here rather than a copy of it: this file is a CLI that
+// exits on refusal, so a suite requiring it would run it (the BS-5 / genesisGuard.js precedent).
+const spendRefusal = spendAuthorisationGuardLib.spendRefusalFor({ entry, lineName, spendingLineNameList: SPENDING_LINE_NAME_LIST, bridgeName });
+if (spendRefusal) {
+	refuse(spendRefusal);
 }
+// the authorisation that PERMITTED this line, carried to the launch line and the provenance sidecar below, so a run
+// that spent real money records WHO released THAT LINE beside the command — rather than leaving a later reader to
+// infer it from whatever state the acceptance file happens to be in by then
+const spendAuthorisation = spendAuthorisationGuardLib.authorisationFor({ entry, lineName });
 
 // EVERY LINE DECLARES ITS OWN JUDGMENT CEILING (RULING §11.12). The runner refuses a line that declares none:
 // the framework's own default ceiling is 20,000, which for a run whose true size is ~700 is not a cap in any
@@ -265,6 +292,13 @@ const startedAt = new Date().toISOString();
 const child = spawn('node', nodeArgumentList, { cwd: treeRoot, detached: true, stdio: ['ignore', fs.openSync(buildLogPath, 'a'), fs.openSync(buildLogPath, 'a')] });
 child.unref();
 fs.writeFileSync(path.join(entry.buildLogsDirPath, `${lineName}-${phaseToken}.pid`), `${child.pid}\n`);
-fs.writeFileSync(path.join(entry.buildLogsDirPath, `${lineName}-${phaseToken}.provenance.json`), JSON.stringify({ bridgeName, lineName, phaseToken, gitHead, gitDirty: gitDirtyFileList.length > 0, gitDirtyFileList, commandLine: committedLine, startedAt, pid: child.pid, buildLogPath }, null, 2) + '\n');
+// spendAuthorisation is recorded in the sidecar for the SPENDING lines only, and it is recorded as the OBJECT the
+// guard actually read rather than as a boolean: a run that cost real money should carry, beside its command line,
+// the name of whoever released THAT LINE and the note they released it under. `null` for a non-spending line is the
+// honest value — it asked no real judge and needed no release (RULING B4R-2).
+fs.writeFileSync(path.join(entry.buildLogsDirPath, `${lineName}-${phaseToken}.provenance.json`), JSON.stringify({ bridgeName, lineName, phaseToken, gitHead, gitDirty: gitDirtyFileList.length > 0, gitDirtyFileList, commandLine: committedLine, startedAt, pid: child.pid, buildLogPath, spendsOnTheRealJudge: SPENDING_LINE_NAME_LIST.indexOf(lineName) !== -1, spendAuthorisation: spendAuthorisation === undefined ? null : spendAuthorisation }, null, 2) + '\n');
+if (spendAuthorisation !== undefined) {
+	xLog.status(`${moduleName}: this is a SPENDING line, released for '${lineName}' specifically by ${spendAuthorisation.sessionName}${spendAuthorisation.date ? ` on ${spendAuthorisation.date}` : ''} (RULING B4R-2 — per-line authorisation; the release for one spending line is not a release for the other)`);
+}
 xLog.status(`${moduleName}: launched ${bridgeName} ${lineName} (${phaseToken}) pid ${child.pid} at HEAD ${gitHead.slice(0, 7)}${gitDirtyFileList.length ? ` (DIRTY: ${gitDirtyFileList.length} file(s))` : ''} → ${buildLogPath}`);
 process.exit(0);

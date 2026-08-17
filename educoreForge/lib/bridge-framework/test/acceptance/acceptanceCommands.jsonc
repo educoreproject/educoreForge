@@ -24,7 +24,17 @@
 		"rejudgeDebug": "node --max-old-space-size=20000 /Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/apps/graph-builder/graphBuilder.js -build --recipePath=/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/recipes/fourWithHubEdfiBridge.recipe.jsonc --vectorize=true --reuseForgedBlocks=true --standardsDatabaseFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/edfi/edfiBridge.standardsDatabase.sqlite3 --decisionStoreFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/edfi/edfiBridge.decisions.sqlite3 --judgmentCacheFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/edfi/edfiBridge.judgmentCache.sqlite3 --matchForensicsDirPath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/edfi/matchForensics --embeddingCacheFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/vectorCache/vectorCache.sqlite3 --rebridge=edfi --useDebugJudge=digest </dev/null > /Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/edfi/buildLogs/<line>-<phase>.log 2>&1 &",
 		"materialise": "node --max-old-space-size=20000 /Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/apps/graph-builder/graphBuilder.js -build --recipePath=/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/recipes/fourWithHubEdfiBridge.recipe.jsonc --vectorize=true --reuseForgedBlocks=true --standardsDatabaseFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/edfi/edfiBridge.standardsDatabase.sqlite3 --decisionStoreFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/edfi/edfiBridge.decisions.sqlite3 --judgmentCacheFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/edfi/edfiBridge.judgmentCache.sqlite3 --matchForensicsDirPath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/edfi/matchForensics --embeddingCacheFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/vectorCache/vectorCache.sqlite3 </dev/null > /Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/edfi/buildLogs/<line>-<phase>.log 2>&1 &",
 		"materialiseReal": "node --max-old-space-size=20000 /Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/apps/graph-builder/graphBuilder.js -build --recipePath=/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/recipes/fourWithHubEdfiBridge.recipe.jsonc --vectorize=true --reuseForgedBlocks=true --standardsDatabaseFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/edfi/edfiBridge.standardsDatabase.sqlite3 --decisionStoreFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/edfi/edfiBridge.decisions.sqlite3 --judgmentCacheFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/edfi/edfiBridge.judgmentCache.sqlite3 --matchForensicsDirPath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/edfi/matchForensics --embeddingCacheFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/vectorCache/vectorCache.sqlite3 --rebridge=edfi </dev/null > /Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/edfi/buildLogs/<line>-<phase>.log 2>&1 &",
-		"materialiseRealSpendAuthorisedBy": { "sessionName": "SABLE_RIVER", "date": "2026-08-16", "note": "RULINGS-supervisor-bridgeFramework.md, block 'Ed-Fi crosswalk PROVENANCE — settled' (3); 216 judged subjects; GO by IMCS 2026-08-16 19:21 CDT" },
+		// MIGRATED TO PER-LINE AUTHORISATION (RULING B4R-2, SABLE_RIVER 2026-08-17) — "as its data says": this GO
+		// was given for materialiseReal over 216 judged subjects, so materialiseReal carries it verbatim.
+		// rejudgeRealLimit is null because this bridge was never released for a windowed real batch AND offers no
+		// such line at all. Declaring it null rather than omitting it is deliberate: the guard tells WITHHELD (a
+		// decision was taken) apart from UNDECLARED (nobody looked), and every bridge entry stating both spending
+		// lines is what makes that distinction a completeness check a suite can hold the file to, rather than an
+		// accident of which fields somebody remembered to write.
+		"spendAuthorisationByLine": {
+			"rejudgeRealLimit": null,
+			"materialiseReal": { "sessionName": "SABLE_RIVER", "date": "2026-08-16", "note": "RULINGS-supervisor-bridgeFramework.md, block 'Ed-Fi crosswalk PROVENANCE — settled' (3); 216 judged subjects; GO by IMCS 2026-08-16 19:21 CDT" }
+		},
 		// PER-LINE JUDGMENT CEILINGS (RULING §11.12), added 2026-08-17 with the derived lines. The runner now
 		// REFUSES any line that declares none, so the crosswalk lines declare theirs too. Measured from the
 		// frozen block rather than guessed: it judged 152 TARGETS (116 picks + 36 abstentions) across 216 judged
@@ -41,7 +51,7 @@
 		},
 		"fourBaseManifestId": "97c618c20e07c0c612957def69164402d364a98d5dfee865faacae1deace6382",
 		"pinnedFlagList": ["--vectorize=true", "--reuseForgedBlocks=true", "--standardsDatabaseFilePath=<the pinned store, ABSOLUTE>", "--decisionStoreFilePath=<ABSOLUTE, pinned>", "--judgmentCacheFilePath=<ABSOLUTE, pinned>", "--matchForensicsDirPath=<ABSOLUTE, pinned>", "--embeddingCacheFilePath=<the warm cache>", "--rebridge=edfi (rejudge lines only)", "--useDebugJudge=digest (rejudgeDebug only)", "</dev/null", "--max-old-space-size=20000"],
-		"frozenBy": { "sessionName": "SCARLET_BRIDGE", "date": "2026-08-16", "note": "lines frozen at checkpoint 1 under SABLE_RIVER's freeze ruling; the debug block 1ce6cbd9… reproduced by runs 2 and 3; materialiseReal awaits the supervisor's spend authorisation (materialiseRealSpendAuthorisedBy was null until the supervisor's GO of 2026-08-16 19:21 CDT and is POPULATED below since 2e6a3ac — BR3-8)" }
+		"frozenBy": { "sessionName": "SCARLET_BRIDGE", "date": "2026-08-16", "note": "lines frozen at checkpoint 1 under SABLE_RIVER's freeze ruling; the debug block 1ce6cbd9… reproduced by runs 2 and 3; materialiseReal awaited the supervisor's spend authorisation, which was withheld until the GO of 2026-08-16 19:21 CDT and recorded from 2e6a3ac — BR3-8. That GO now lives under spendAuthorisationByLine.materialiseReal; the flat materialiseRealSpendAuthorisedBy field it was first written to is RETIRED (RULING B4R-2, 2026-08-17), so this sentence is history and not a description of the file" }
 	},
 	"edfiCedsDerivedPlugin": {
 		// THE DERIVED LINES. Every one PINS its own store: the derived producer must never open the crosswalk's
@@ -80,15 +90,23 @@
 		"referenceBlockId": "e15acd6b5a43df3ce11b4e3f3bb55d97441c14658908d3518a55494cf24a322c",
 		"referenceRole": "truth",
 		"materialiseRealMaxJudgmentCount": 1600,
-		// NULL until the supervisor writes the GO. The runner REFUSES materialiseReal while this is null - that
-		// refusal is the only thing standing between a typo and roughly 670 Opus calls.
 		// THE GO, AS DATA. Written verbatim from SABLE_RIVER's IMCS of 2026-08-17 02:23 after they read
-		// renderingAudit-c4d06ce2....md themselves and SIGNED it. This single key is the door to real Opus
-		// spend: the runner refuses every spending line while it is null, and that refusal was verified live
-		// immediately before this edit. It authorises D3 BATCHES released ONE AT A TIME by the supervisor —
-		// it is NOT a blanket authorisation for materialiseReal, which waits on three consecutive
+		// renderingAudit-c4d06ce2....md themselves and SIGNED it. Each entry below is the door to real Opus
+		// spend for THE LINE THAT NAMES IT: the runner refuses a spending line whose own name is null or absent,
+		// and that refusal was verified live immediately before this edit. It authorises D3 BATCHES released ONE
+		// AT A TIME by the supervisor —
+		// it was NOT a blanket authorisation for materialiseReal, which waited on three consecutive
 		// mechanically-clean batches.
-		"materialiseRealSpendAuthorisedBy": { "sessionName": "SABLE_RIVER", "date": "2026-08-17", "note": "CP1 signed 12:20; D3 rejudgeRealLimit batches of 10 released one at a time by the supervisor; D4 materialiseReal released only after three consecutive mechanically-clean batches; PLAN-derivedBridge section 11.12" },
+		// MIGRATED TO PER-LINE AUTHORISATION (RULING B4R-2, SABLE_RIVER 2026-08-17). BOTH lines carry the historical
+		// GO text unchanged, because this GO genuinely covered both by ruling: D3 released the rejudgeRealLimit
+		// batches one at a time, and DR-7 records materialiseReal as released 14:40 CDT after three consecutive
+		// mechanically-clean batches — the condition the note itself names. So the migration is a change of SHAPE
+		// and not of substance here, and nothing this entry could already do has been taken away. It is the SIF
+		// entry where the flat field was granting more than its author meant (DEFECT D-2).
+		"spendAuthorisationByLine": {
+			"rejudgeRealLimit": { "sessionName": "SABLE_RIVER", "date": "2026-08-17", "note": "CP1 signed 12:20; D3 rejudgeRealLimit batches of 10 released one at a time by the supervisor; D4 materialiseReal released only after three consecutive mechanically-clean batches; PLAN-derivedBridge section 11.12" },
+			"materialiseReal": { "sessionName": "SABLE_RIVER", "date": "2026-08-17", "note": "CP1 signed 12:20; D3 rejudgeRealLimit batches of 10 released one at a time by the supervisor; D4 materialiseReal released only after three consecutive mechanically-clean batches; PLAN-derivedBridge section 11.12" }
+		},
 		// replay: a plain -build REPLAYS the pair's latest frozen block with ZERO judge calls
 		"eyeGraphRecipePath": "/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/recipes/fourWithHubEdfiDerived.recipe.jsonc",
 		"eyeGraphMaxJudgmentCount": 0,
@@ -121,9 +139,11 @@
 		// than no cap at all.
 		//
 		// TQ'S STANDING WORD, carried through SABLE_RIVER 2026-08-17: no FULL real-judge run on SIF until the
-		// limited batch has run AND TQ has seen the numbers. materialiseRealSpendAuthorisedBy stays NULL
-		// until then, and the runner refuses every spending line while it is null — that refusal is the only
-		// thing standing between a typo and roughly 327 Opus calls.
+		// limited batch has run AND TQ has seen the numbers. So spendAuthorisationByLine.materialiseReal stays
+		// NULL until then, while spendAuthorisationByLine.rejudgeRealLimit carries the CP3 release — and the
+		// runner refuses a spending line whose OWN name is null. That per-line refusal is the only thing standing
+		// between a typo and roughly 327 Opus calls, and under the retired one-field gate it was not standing
+		// there at all: the CP3 release opened materialiseReal too (DEFECT D-2, RULING B4R-2).
 		//
 		// THE STORE IS FORGED FRESH — RULED SABLE_RIVER 2026-08-17, option (c). NOT a copy of the Ed-Fi
 		// pinned store. That store was inspected read-only before the ruling and holds TEN blocks, not four:
@@ -194,15 +214,32 @@
 		"materialiseRealMaxJudgmentCount": 800,
 		"materialise": "node --max-old-space-size=20000 /Users/tqwhite/Documents/webdev/educoreForge/system/codeWorktrees/b4sif/educoreForge/apps/graph-builder/graphBuilder.js -build --recipePath=/Users/tqwhite/Documents/webdev/educoreForge/system/codeWorktrees/b4sif/educoreForge/recipes/fourWithHubSifBridge.recipe.jsonc --vectorize=true --reuseForgedBlocks=true --standardsDatabaseFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/sif/sifBridge.standardsDatabase.sqlite3 --decisionStoreFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/sif/sifBridge.decisions.sqlite3 --judgmentCacheFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/sif/sifBridge.judgmentCache.sqlite3 --matchForensicsDirPath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/sif/matchForensics --embeddingCacheFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/vectorCache/vectorCache.sqlite3 </dev/null > /Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/sif/buildLogs/<line>-<phase>.log 2>&1 &",
 		"materialiseMaxJudgmentCount": 0,
-		// THE GO, AS DATA, WRITTEN VERBATIM FROM SABLE_RIVER'S IMCS OF 2026-08-17. This single key is the door
-		// to real Opus spend: the runner REFUSES every spending line while it is null, and that refusal is the
-		// only thing standing between a typo and a bill. It authorises the CP3 CONFORMANCE BATCH ONLY — ten
-		// subjects, ceiling 30 — and it is NOT authorisation for materialiseReal, which TQ has HELD regardless
-		// until he and the supervisor have spoken. The condition it names was MEASURED before this was written,
-		// not assumed: BG-CENSUS a / BG-ACCEPT a reports census/digests/judge-trio/sum all true against
+		// THE GO, AS DATA, WRITTEN VERBATIM FROM SABLE_RIVER'S IMCS OF 2026-08-17. It authorises the CP3
+		// CONFORMANCE BATCH ONLY — a 70-source-element window yielding about ten judged subjects, ceiling 30
+		// (RULING BS-9; the original --limit=10 bought exactly ONE judgment) — and it is NOT authorisation for
+		// materialiseReal, which TQ has HELD regardless until he and the supervisor have spoken. That restriction
+		// is now MECHANICAL rather than a sentence in a note: it lives in which line name carries the object
+		// below. The condition the note names was MEASURED before it was written, not assumed: BG-CENSUS a /
+		// BG-ACCEPT a reports census/digests/judge-trio/sum all true against
 		// expectedCensus.sifCedsStandardPlugin.a3e1768ada649a16.json, confirmed a second way by reading the
 		// block out of the store and comparing it to the fixture directly.
-		"materialiseRealSpendAuthorisedBy": { "sessionName": "SABLE_RIVER", "date": "2026-08-17", "note": "CP3 conformance batch ONLY. EXTENDED under RULING BS-9 to rejudgeRealLimit --limit=70 --offset=0, maxJudgmentCount 30 UNCHANGED. The original --limit=10 window yielded exactly ONE judgment, because the window counts SOURCE ELEMENTS and SIF judges only 327 of 2,231 (14.7 percent) - ten source elements bought about one and a half judged subjects, where the same flag on the derived plugin bought ten. A conformance batch exists to exercise the real client contract (bounded re-ask, rationale form, category on picks) and one abstention exercises almost none of it. 70 source elements yield about ten judged. STILL NOT materialiseReal: CP4 and any full run remain HELD by TQ (text 00:46 CDT). Written after the post-rebase CP2 census measured EQUAL." },
+		// AUTHORISATION IS PER LINE (RULING B4R-2, SABLE_RIVER 2026-08-17, on DEFECT D-2 of the B4 adversarial
+		// review). The retired flat `materialiseRealSpendAuthorisedBy` gated BOTH spending lines on ONE field, so
+		// THIS authorisation — written to release a ten-subject conformance batch — also opened `materialiseReal`,
+		// the full real run over all 327 judged subjects. The restriction existed only in the note's prose, which
+		// the runner never read; the DEVLOG had to tell a human "read the note, not the key", which is an
+		// instruction standing where a guard belonged. Now each line carries its OWN decision and the runner
+		// refuses a spending line whose own name is null (WITHHELD) or absent (UNDECLARED) — see
+		// apps/graph-builder/test/bridgeAcceptance/spendAuthorisationGuard.js, which holds the rule so its twins
+		// exercise the very function the runner calls.
+		//
+		// The rejudgeRealLimit note below is the supervisor's CP3 authorisation copied VERBATIM from the retired
+		// field: the text is unchanged, only its scope is now mechanical. materialiseReal is null, and that null
+		// is how TQ's standing directive of 2026-08-17 00:46 CDT stops being a comment.
+		"spendAuthorisationByLine": {
+			"rejudgeRealLimit": { "sessionName": "SABLE_RIVER", "date": "2026-08-17", "note": "CP3 conformance batch ONLY. EXTENDED under RULING BS-9 to rejudgeRealLimit --limit=70 --offset=0, maxJudgmentCount 30 UNCHANGED. The original --limit=10 window yielded exactly ONE judgment, because the window counts SOURCE ELEMENTS and SIF judges only 327 of 2,231 (14.7 percent) - ten source elements bought about one and a half judged subjects, where the same flag on the derived plugin bought ten. A conformance batch exists to exercise the real client contract (bounded re-ask, rationale form, category on picks) and one abstention exercises almost none of it. 70 source elements yield about ten judged. STILL NOT materialiseReal: CP4 and any full run remain HELD by TQ (text 00:46 CDT). Written after the post-rebase CP2 census measured EQUAL." },
+			"materialiseReal": null
+		},
 		"expectedBaseBlockIdBySubject": {
 			"ceds@14_0_0_0_base": "09a5d658807b9c22b44b28289d9ad4b47df15e45f44c9eacec765962fe487c33",
 			"edfi@5_2_0_base": "aea6d8dfe7899adef57c5ac3adb6b0df2bfc7e4a4ae859c4fa3893c132c8b304",
