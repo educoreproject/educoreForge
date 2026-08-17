@@ -481,7 +481,12 @@ const judgeConjunctList = [
 		title: "a REAL client's rationale naming the pick by ORDINAL ('picked candidate 2') is refused by name (BR-067)",
 		twinNameList: ['ordinalRationaleAccepted'],
 		shape: (scenario) => useRealClientDouble(scenario, { pickOrdinal: '1', rationaleMode: 'ordinal' }),
-		judge: nameInRefusal(/the judge's rationale names ITS OWN pick by ORDINAL/),
+		// ⟪RULING 14:55⟫ retargeted from a RUN-level refusal to a JUDGMENT-level one: under the net the run no
+		// longer dies, so the evidence that the gate bit is the refused attempt in the forensic trail.
+		judge: succeeded((runReport, outcome) => {
+			const refused = forensicsOf(outcome).map((oneRecord) => oneRecord.record).filter((oneRecord) => typeof oneRecord.refusedAttempt === 'string' && /identifies its pick ONLY by ORDINAL/.test(oneRecord.refusedAttempt));
+			return { pass: refused.length > 0, detail: `${refused.length} forensic record(s) carrying the ordinal-only refusal` };
+		}),
 	}),
 	// ⟪B2 DEFECT found by the FIRST REAL JUDGMENT — RULING SABLE_RIVER 2026-08-16 (B3)⟫ the real client's evidence schema
 	// FORCES a picking category onto an abstention (llmClient.js:88-99); the component normalises it and preserves the raw value
@@ -622,17 +627,36 @@ const judgeConjunctList = [
 			return { pass: allReaskable && pickUnaffected, detail: `${judgedList.filter((oneJudged) => oneJudged.result.absentAbstainRationale === true).length}/4 shapes re-askable [${judgedList.map((oneJudged) => oneJudged.label).join(', ')}]; pick with blank rationale unaffected ${pickUnaffected}` };
 		},
 	}),
+	// ⟪RULING 14:55 (a) THE NET⟫ this conjunct REPLACES the old "the run dies" expectation. D4's arithmetic
+	// killed that policy: ~14 second violations projected over 701 subjects, each discarding the whole run.
 	runConjunct({
-		conjunctId: 'k_secondOrdinalRationaleRefusedByName',
-		title: 'a REAL client answering by ORDINAL twice is REFUSED by name after ONE re-ask (BR-067 stands), the first attempt in forensics',
-		twinNameList: ['reaskRemoved'],
+		conjunctId: 'k_secondOrdinalRationaleNamesTheSubjectAndTheRunCONTINUES',
+		title: 'a rationale identifying its pick ONLY by ordinal TWICE does NOT kill the run: the SUBJECT is named in the block\'s refusalList as rationaleFormRefusedTwice, the block still freezes, no edge and NO abstention is recorded for it, and the refused attempts are in forensics',
+		twinNameList: ['refusalNetRemoved'],
 		shape: (scenario) => useRealClientDouble(scenario, { pickOrdinal: '1', rationaleMode: 'ordinal' }),
-		judge: (outcome) => {
-			const refusalText = refusalTextOf(outcome);
-			const refused = /names ITS OWN pick by ORDINAL/.test(String(refusalText)) && /after ONE re-ask/.test(String(refusalText));
+		judge: succeeded((runReport, outcome) => {
+			const block = blockOf(outcome);
+			const named = (Array.isArray(block.refusalList) ? block.refusalList : []).filter((oneRefusal) => oneRefusal.kind === 'rationaleFormRefusedTwice' && typeof oneRefusal.subjectStableId === 'string' && oneRefusal.subjectStableId !== '');
+			// NOT an abstention: the judge had an opinion, and recording "no opinion" would be a falsehood
+			const abstainedRecords = block.decisionRecordList.filter((oneRecord) => oneRecord.abstained === true);
+			// and no judged record for a refused subject
+			const refusedSubjectSet = new Set(named.map((oneRefusal) => oneRefusal.subjectStableId));
+			const leakedRecords = block.decisionRecordList.filter((oneRecord) => refusedSubjectSet.has(oneRecord.subjectStableId) && oneRecord.classification === 'judged');
 			const forensicRefused = forensicsOf(outcome).map((oneRecord) => oneRecord.record).filter((oneRecord) => oneRecord.reaskFollows === true);
-			return { pass: Boolean(refused) && forensicRefused.length >= 1, detail: `${refused ? 'refused after one re-ask' : `NOT the expected refusal: ${String(refusalText).slice(0, 200)}`}; refused-first forensic records ${forensicRefused.length}` };
-		},
+			return { pass: named.length > 0 && abstainedRecords.length === 0 && leakedRecords.length === 0 && forensicRefused.length >= 1, detail: `${named.length} subject(s) named in refusalList; ${abstainedRecords.length} abstention(s) recorded (must be 0); ${leakedRecords.length} judged record(s) leaked for a refused subject (must be 0); ${forensicRefused.length} refused-first forensic record(s)` };
+		}),
+	}),
+	runConjunct({
+		conjunctId: 'r_pickNamedByNameAndOrdinalIsAccepted',
+		title: 'RULING (e): a rationale that names its pick BY ITS RENDERED NAME is ACCEPTED ON THE FIRST ATTEMPT even when it ALSO names it by ordinal — BR-067 is satisfied by legibility without the pool, not by the absence of numbers',
+		twinNameList: ['purposeTestReplacedByOrdinalPolicing'],
+		shape: (scenario) => useRealClientDouble(scenario, { pickOrdinal: '1', rationaleMode: 'keyAndNameWithOwnOrdinal' }),
+		judge: succeeded((runReport, outcome) => {
+			const forensic = forensicsOf(outcome).map((oneRecord) => oneRecord.record);
+			const refusedAny = forensic.filter((oneRecord) => typeof oneRecord.refusedAttempt === 'string');
+			const acceptedFirstTime = forensic.filter((oneRecord) => oneRecord.reaskCount === 0 && /candidate \d/i.test(String(oneRecord.rationale)));
+			return { pass: forensic.length > 0 && refusedAny.length === 0 && acceptedFirstTime.length === forensic.length && (Array.isArray(blockOf(outcome).refusalList) ? blockOf(outcome).refusalList : []).filter((oneRefusal) => oneRefusal.kind === 'rationaleFormRefusedTwice').length === 0, detail: `${forensic.length} record(s); refused ${refusedAny.length}; accepted first time carrying its own ordinal ${acceptedFirstTime.length}` };
+		}),
 	}),
 ];
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'a_outOfRangeChoiceRefused', twinName: 'clampOrdinal', fileName: JUDGE_FILE, find: "\tif (typeof choice !== 'string' || choiceEnum.indexOf(choice) === -1) {\n\t\treturn { error:", replace: "\tif (typeof choice !== 'string' || choiceEnum.indexOf(choice) === -1) {\n\t\treturn { chosenCardStableId: renderedPoolStableIdList[Math.min(renderedPoolStableIdList.length, Number(choice)) - 1] };\n\t\treturn { error:" });
@@ -652,15 +676,22 @@ frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'h_abstentionWithSchemaForcedCategoryAccepted', twinName: 'abstentionNormalisationRemoved', fileName: JUDGE_FILE, find: "\t\tif (!categoryIsAbsent && clientReturn.category !== ABSTAIN_CATEGORY && PICK_CATEGORY_LIST.indexOf(clientReturn.category) === -1) {", replace: "\t\tif (clientReturn.category !== ABSTAIN_CATEGORY) {" });
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'i_clientCategoryEnumContract', twinName: 'abstentionNormalisationRemoved', fileName: JUDGE_FILE, find: "\t\tif (!categoryIsAbsent && clientReturn.category !== ABSTAIN_CATEGORY && PICK_CATEGORY_LIST.indexOf(clientReturn.category) === -1) {", replace: "\t\tif (clientReturn.category !== ABSTAIN_CATEGORY) {" });
 // the production mutation: the bounded re-ask REMOVED (the pre-ruling refuse-on-first-sight restored) — (j) and (k) both go red
-frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'p_rejectedCandidateByOrdinalIsLawful', twinName: 'ordinalCheckIgnoresWhichCandidate', fileName: JUDGE_FILE, find: "\t\tif (oneMatch[2] === choice) {", replace: "\t\tif (oneMatch[2] === choice || true) {" });
+scenarioTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'p_rejectedCandidateByOrdinalIsLawful', twinName: 'ordinalCheckIgnoresWhichCandidate', leverKind: 'productionMutation', mutate: (scenario) => {
+	// PRE-RULING whole-text policing restored, which takes TWO mutations because the 14:55 ruling changed two
+	// things: WHICH ordinal counts, and whether the pick's NAME excuses one. Breaking either alone leaves the
+	// conjunct green — that is the proof the two halves are independent, not redundant.
+	scenario.frameworkMutationList.push({ modulePath: path.join(scenarioLib.FRAMEWORK_DIR, JUDGE_FILE), find: '\t\tif (oneMatch[2] === choice) {', replace: '\t\tif (true) {' });
+	scenario.frameworkMutationList.push({ modulePath: path.join(scenarioLib.FRAMEWORK_DIR, JUDGE_FILE), find: '\treturn String(rationale).toLowerCase().indexOf(String(pickName).toLowerCase()) === -1;', replace: '\treturn true;' });
+} });
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'q_acceptedRecordCarriesTheReaskPromptItAnswered', twinName: 'reaskPromptNotRecorded', fileName: JUDGE_FILE, find: "\t\t\t\t\treaskUserPrompt: reaskUserPrompt === undefined ? null : reaskUserPrompt,", replace: "\t\t\t\t\treaskUserPrompt: null," });
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'o_blankAbstainRationaleTreatedAsAbsent', twinName: 'blankRationaleNotAbsent', fileName: JUDGE_FILE, find: "\t\tif (!isNonBlank(clientReturn.rationale)) {", replace: "\t\tif (clientReturn.rationale === undefined) {" });
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'l_abstentionWithAbsentCategoryAccepted', twinName: 'absentCategoryRefusedAgain', fileName: JUDGE_FILE, find: "\t\tconst categoryIsAbsent = !isNonBlank(clientReturn.category) || clientReturn.category === ABSENT_CATEGORY_MARK;", replace: "\t\tconst categoryIsAbsent = false;" });
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'm_absentAbstainRationaleReaskedOnceAccepted', twinName: 'absentAbstainRationaleNotReaskable', fileName: JUDGE_FILE, find: "}), absentAbstainRationale: true };", replace: "}) };" });
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'n_secondAbsentAbstainRationaleRefusedByName', twinName: 'absentAbstainRationaleNotReaskable', fileName: JUDGE_FILE, find: "}), absentAbstainRationale: true };", replace: "}) };" });
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'j_ordinalRationaleReaskedOnceAccepted', twinName: 'reaskRemoved', fileName: JUDGE_FILE, find: '\t\t\t\tif (judged.error && reaskableFaultName !== undefined && reaskCount === 0) {', replace: '\t\t\t\tif (false && judged.error && reaskableFaultName !== undefined && reaskCount === 0) {' });
-frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'k_secondOrdinalRationaleRefusedByName', twinName: 'reaskRemoved', fileName: JUDGE_FILE, find: '\t\t\t\tif (judged.error && reaskableFaultName !== undefined && reaskCount === 0) {', replace: '\t\t\t\tif (false && judged.error && reaskableFaultName !== undefined && reaskCount === 0) {' });
-frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'g_ordinalRationaleFromRealClientRefused', twinName: 'ordinalRationaleAccepted', fileName: JUDGE_FILE, find: '\tif (!isDebugClient && rationaleNamesOwnChoiceByOrdinal({ rationale: clientReturn.rationale, choice: clientReturn.choice })) {', replace: '\tif (false && !isDebugClient && rationaleNamesOwnChoiceByOrdinal({ rationale: clientReturn.rationale, choice: clientReturn.choice })) {' });
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'k_secondOrdinalRationaleNamesTheSubjectAndTheRunCONTINUES', twinName: 'refusalNetRemoved', fileName: 'bridge-framework.js', find: "\t\t\t\t\t\t\t\t\tif (isPlainObject(judgeFault) && judgeFault.kind === 'rationaleFormRefusedTwice') {", replace: "\t\t\t\t\t\t\t\t\tif (false && isPlainObject(judgeFault) && judgeFault.kind === 'rationaleFormRefusedTwice') {" });
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'r_pickNamedByNameAndOrdinalIsAccepted', twinName: 'purposeTestReplacedByOrdinalPolicing', fileName: JUDGE_FILE, find: "\tif (!isNonBlank(pickName)) {", replace: "\tif (true) {" });
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'g_ordinalRationaleFromRealClientRefused', twinName: 'ordinalRationaleAccepted', fileName: JUDGE_FILE, find: '\tif (!isDebugClient && rationaleNamesPickOnlyByOrdinal({ rationale: clientReturn.rationale, choice: clientReturn.choice, pickName })) {', replace: '\tif (false && !isDebugClient && rationaleNamesPickOnlyByOrdinal({ rationale: clientReturn.rationale, choice: clientReturn.choice, pickName })) {' });
 
 // ---------------------------------------------------------------------
 // BG-POOL-ORDER
@@ -846,6 +877,6 @@ const gateDeclarationList = [
 ];
 
 runGateFamily(
-	{ harness, familyName: 'BG-REPLAY+BG-CACHE+BG-JUDGE+BG-POOL-ORDER+BG-DET', gateDeclarationList, twinRegistry, makeSubject: scenarioLib.makeScenario, cloneSubject: scenarioLib.cloneScenario, expectedConjunctCount: 9 + 7 + 19 + 3 + 4, expectedTwinCount: 9 + 7 + 19 + 3 + 4 },
+	{ harness, familyName: 'BG-REPLAY+BG-CACHE+BG-JUDGE+BG-POOL-ORDER+BG-DET', gateDeclarationList, twinRegistry, makeSubject: scenarioLib.makeScenario, cloneSubject: scenarioLib.cloneScenario, expectedConjunctCount: 9 + 7 + 20 + 3 + 4, expectedTwinCount: 9 + 7 + 20 + 3 + 4 },
 	() => harness.report(),
 );

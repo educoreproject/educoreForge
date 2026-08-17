@@ -397,9 +397,12 @@ const makeFakeRealClient = ({ pickOrdinal = '1', category = 'strong', abstainCat
 			const nameText = lineMatch ? lineMatch[2] : 'unknown name';
 			const isReask = /RESTATE YOUR RATIONALE/.test(userPrompt);
 			const keyAndNameText = `${keyText} (${nameText}) means the same thing as the source element`;
+			// ⟪RULING 14:55 (e)⟫ names the pick BY NAME and ALSO by its own ordinal — the symmetric-contrast
+			// shape that killed D4 at subject 50, now lawful because the rationale is legible without the pool
+			const nameAndOwnOrdinalText = `${keyText} (${nameText}) means the same thing as the source element, making candidate ${choice} the better match`;
 			// a number that is deliberately NOT the pick: the contrastive mention a good rationale makes
 			const rejectedOrdinal = String(Number(choice) === 1 ? 2 : 1);
-			rationale = rationaleMode === 'ordinal' || (rationaleMode === 'ordinalThenKeyAndName' && !isReask) ? `picked candidate ${choice} because it looked right` : rationaleMode === 'blank' ? '' : rationaleMode === 'keyAndNameWithRejectedOrdinal' ? `${keyAndNameText}. Candidate ${rejectedOrdinal} is about something else, so it was ruled out.` : keyAndNameText;
+			rationale = rationaleMode === 'ordinal' || (rationaleMode === 'ordinalThenKeyAndName' && !isReask) ? `picked candidate ${choice} because it looked right` : rationaleMode === 'blank' ? '' : rationaleMode === 'keyAndNameWithRejectedOrdinal' ? `${keyAndNameText}. Candidate ${rejectedOrdinal} is about something else, so it was ruled out.` : rationaleMode === 'keyAndNameWithOwnOrdinal' ? nameAndOwnOrdinalText : keyAndNameText;
 		} else {
 			// the re-ask for an absent abstention rationale is recognised by the instruction the component sends
 			const isAbstainReask = /STATE YOUR REASON/.test(userPrompt);

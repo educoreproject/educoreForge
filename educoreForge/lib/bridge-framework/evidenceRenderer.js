@@ -40,6 +40,11 @@ const graphSeamRulesLib = require('./graphSeamRules');
 const { JUDGE_PROMPT_VARIANT_LIST, RENDERING_NEVER_NAME_LIST } = require('./bridgePluginContract');
 
 const RENDERER_VERSION = 'bridgeEvidenceRenderer-v1';
+// ⟪RULING 14:55 AS AMENDED (seq 32/33)⟫ the version and the DERIVED SYSTEM PROMPT stay BYTE-UNCHANGED. The
+// contrast instruction lives in the RE-ASK text ONLY, which is appended at ask time and never reaches
+// promptHash = sha256(rendererVersion + systemPrompt + userPrompt) — so every paid answer in the judgment
+// cache survives. Putting the same sentence here instead would have re-keyed all 701 prompts to change one
+// line, which is the cost I priced in my seq 30 and the supervisor amended on.
 const DERIVED_RENDERER_VERSION = 'bridgeEvidenceRenderer-derived-v1';
 const ABSTAIN_TOKEN = 'NONE';
 const MIN_IDENTIFYING_TOKEN_LENGTH = 4;
@@ -247,6 +252,10 @@ const renderQuestion = ({ sourceElement, candidatePool, globalGuidanceList, perC
 		userPrompt,
 		promptHash: sha256Hex(`${variantRow.rendererVersion}\n${variantRow.systemPrompt}\n${userPrompt}`),
 		renderedPoolStableIdList,
+		// ⟪RULING 14:55 (e)⟫ the rendered NAMES ride out beside the stableIds, exactly as the stableId list
+		// does, so the judge component can ask whether a rationale named its pick by NAME — which is what
+		// BR-067 is actually for — instead of policing ordinals it was never about.
+		renderedPoolNameList: candidatePool.map((oneSeat) => (typeof oneSeat.card.name === 'string' ? oneSeat.card.name : null)),
 		choiceEnum,
 		rendererVersion: variantRow.rendererVersion,
 	};

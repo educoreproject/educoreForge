@@ -1337,8 +1337,17 @@ const moduleFunction =
 								taskDone(question.error.message);
 								return;
 							}
-							judgeComponentLib.judgeOne({ question, judgeClient, judgmentCache: spec.judgmentCache, matchForensics: spec.matchForensics, budget, pairKey, generation, debugMark }, (judgeError, judged) => {
+							judgeComponentLib.judgeOne({ question, judgeClient, judgmentCache: spec.judgmentCache, matchForensics: spec.matchForensics, budget, pairKey, generation, debugMark }, (judgeError, judged, judgeFault) => {
 								if (judgeError) {
+									// ⟪RULING 14:55 (a) THE NET⟫ a rationale-FORM refusal after its one re-ask names the SUBJECT in
+									// refusalList and the run CARRIES ON. No edge, no default, and explicitly NOT recorded as an
+									// abstention — the judge HAD an opinion and it is preserved in forensics; filing it as "no
+									// opinion" would put a falsehood in the graph. Every other judge error still stops the run.
+									if (isPlainObject(judgeFault) && judgeFault.kind === 'rationaleFormRefusedTwice') {
+										report.refusalList.push({ kind: 'rationaleFormRefusedTwice', subjectStableId: oneTask.baseRecord.subjectStableId, promptHash: question.promptHash, detail: judgeError });
+										taskDone('');
+										return;
+									}
 									taskDone(judgeError);
 									return;
 								}
@@ -1386,8 +1395,19 @@ const moduleFunction =
 							next(runnerError);
 							return;
 						}
-						say(`judged: ${judgedRecordList.length} (asked ${report.judgeSpend.asked}, cache ${report.judgeSpend.servedFromCache}, abstained ${report.judgeSpend.abstained}; judge ${judgeKind})`);
-						next('', { ...args, judgedRecordList, judgeKind });
+						// ⟪RULING 14:55 (a)⟫ a subject refused for rationale FORM yields NO decision record — it is named in
+						// refusalList instead — so the runner's slot for it is empty. Drop the empty slots BY NAME here
+						// rather than letting an undefined ride into decisionRecordList, where it reaches the freeze and
+						// the materialiser as a record with no fields. The count is reconciled against refusalList so a
+						// hole from any OTHER cause cannot hide in this filter.
+						const yieldedRecordList = judgedRecordList.filter((oneRecord) => oneRecord !== undefined && oneRecord !== null);
+						const namedRefusalCount = report.refusalList.filter((oneRefusal) => oneRefusal.kind === 'rationaleFormRefusedTwice').length;
+						if (judgedRecordList.length - yieldedRecordList.length !== namedRefusalCount) {
+							next(refuse.byName({ moduleName, what: `${judgedRecordList.length - yieldedRecordList.length} judged task(s) yielded no record but only ${namedRefusalCount} subject(s) are named in refusalList`, where: 'every missing decision record must be accounted for by a NAMED refusal; an unexplained hole is refused, never filtered away' }).message);
+							return;
+						}
+						say(`judged: ${yieldedRecordList.length} (asked ${report.judgeSpend.asked}, cache ${report.judgeSpend.servedFromCache}, abstained ${report.judgeSpend.abstained}, rationaleForm refused ${namedRefusalCount}; judge ${judgeKind})`);
+						next('', { ...args, judgedRecordList: yieldedRecordList, judgeKind });
 					});
 				});
 

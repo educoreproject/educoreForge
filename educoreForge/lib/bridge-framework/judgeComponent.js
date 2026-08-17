@@ -70,6 +70,30 @@ const rationaleNamesOwnChoiceByOrdinal = ({ rationale, choice }) => {
 	return false;
 };
 
+// ⟪RULING 14:55 (e)⟫ BR-067's PURPOSE is a rationale that is LEGIBLE INDEPENDENT OF POOL ORDER — a reader
+// holding the frozen block, where the pool has been canonicalised and the ordinals are gone, must still be
+// able to tell which card was chosen and why. Policing the ordinal was a proxy for that, and D4 showed the
+// proxy failing on the natural English construction for a comparison: "candidate 12 is X, making candidate
+// 5's context the better match" names BOTH sides the same way, which is how people write contrasts.
+//
+// So the test is now the purpose itself: does the rationale name the pick BY ITS RENDERED NAME? If yes it is
+// legible without the pool, and an ordinal alongside is harmless surplus. Only a rationale that identifies
+// its pick ONLY by number is refused — which still catches the bare "picked candidate 10 because it looked
+// right" the gate exists for.
+//
+// Whole-name and case-insensitive: a name is matched as a contiguous run, not word-by-word, so "Organization
+// Identifier" is not satisfied by a rationale that merely says "organization" somewhere.
+const rationaleNamesPickOnlyByOrdinal = ({ rationale, choice, pickName }) => {
+	if (!rationaleNamesOwnChoiceByOrdinal({ rationale, choice })) {
+		return false;
+	}
+	if (!isNonBlank(pickName)) {
+		// no rendered name to look for: the old, stricter rule stands rather than a silent pass
+		return true;
+	}
+	return String(rationale).toLowerCase().indexOf(String(pickName).toLowerCase()) === -1;
+};
+
 // ⟪RULING 13:15⟫ ABSENT_CATEGORY_MARK — recorded in reportedCategoryOnAbstain when the model omitted the
 // category on an abstention. It is a RECORD OF AN ABSENCE, not a category: it never reaches the band table
 // (an abstention has confidence null) and it is never a value a model can supply.
@@ -162,8 +186,9 @@ const judgmentFromReturn = ({ clientReturn, question, isDebugClient }) => {
 	// the rationale must name the choice by hub key + name, never by ordinal — checked lexically for a REAL
 	// judge; the DEBUG double's rationale self-announces INVALID_DEBUG and names ordinals BY DESIGN
 	// (debugJudge.js is UNCHANGED, RULING BF1) — exempt, and every debug edge is flagged anyway
-	if (!isDebugClient && rationaleNamesOwnChoiceByOrdinal({ rationale: clientReturn.rationale, choice: clientReturn.choice })) {
-		return { error: refuse.byName({ moduleName, what: `the judge's rationale names ITS OWN pick by ORDINAL (candidate ${clientReturn.choice}) (${JSON.stringify(clientReturn.rationale.slice(0, 120))})`, where: 'a rationale names the choice by hub key + name; naming a REJECTED candidate by number to contrast it is lawful (BR-067, RULING 14:10)' }), ordinalRationale: true };
+	const pickName = Array.isArray(question.renderedPoolNameList) ? question.renderedPoolNameList[Number(clientReturn.choice) - 1] : undefined;
+	if (!isDebugClient && rationaleNamesPickOnlyByOrdinal({ rationale: clientReturn.rationale, choice: clientReturn.choice, pickName })) {
+		return { error: refuse.byName({ moduleName, what: `the judge's rationale identifies its pick ONLY by ORDINAL (candidate ${clientReturn.choice}); the rendered name ${JSON.stringify(pickName === undefined ? null : pickName)} appears nowhere in it (${JSON.stringify(clientReturn.rationale.slice(0, 120))})`, where: 'a rationale must be legible without the pool: name the pick. An ordinal ALONGSIDE the name is lawful, and naming a REJECTED candidate by number to contrast it is lawful (BR-067, RULING 14:55)' }), ordinalRationale: true };
 	}
 	return { chosenCardStableId: mapped.chosenCardStableId, choice: clientReturn.choice, category: clientReturn.category, rationale: clientReturn.rationale, confidence: band.confidence, discardedPredicateKeyCount };
 };
@@ -176,7 +201,7 @@ const judgmentFromReturn = ({ clientReturn, question, isDebugClient }) => {
 const REASK_INSTRUCTION_BY_FAULT = Object.freeze({
 	// the instruction now matches the predicate EXACTLY — it names the pick's own ordinal and says plainly that
 	// referring to OTHER candidates by number is fine. An instruction narrower than its check cannot converge.
-	ordinalRationale: ({ question, clientReturn }) => `${question.userPrompt}\n\nRESTATE YOUR RATIONALE: your previous rationale (${JSON.stringify(clientReturn.rationale.slice(0, 200))}) referred to YOUR OWN CHOICE, candidate ${clientReturn.choice}, by NUMBER. Restate the rationale naming the candidate you chose by its hub key and name, never by its number. You may still refer to OTHER candidates by number when explaining why you ruled them out. Keep the same choice unless you have a reason to change it.`,
+	ordinalRationale: ({ question, clientReturn }) => `${question.userPrompt}\n\nRESTATE YOUR RATIONALE: your previous rationale (${JSON.stringify(clientReturn.rationale.slice(0, 200))}) identified your choice ONLY by its number, candidate ${clientReturn.choice}. Restate it naming the candidate you chose by its NAME, so the reason is readable without the numbered list. When you CONTRAST two candidates, name BOTH of them by their names, never by number. Keep the same choice unless you have a reason to change it.`,
 	absentAbstainRationale: ({ question }) => `${question.userPrompt}\n\nSTATE YOUR REASON: you answered ${ABSTAIN_TOKEN} — none of the candidates — but gave no rationale. State briefly why none of the candidates means the same thing as the source element. Keep the same answer unless you have a reason to change it.`,
 });
 const REASKABLE_FAULT_NAME_LIST = Object.freeze(Object.keys(REASK_INSTRUCTION_BY_FAULT));
@@ -301,15 +326,18 @@ const judgeOne = ({ question, judgeClient, judgmentCache, matchForensics, budget
 					return;
 				}
 				if (judged.error) {
-					askCallback(reaskCount === 0 ? judged.error.message : `${judged.error.message} — after ONE re-ask (BR-067; the first attempt is in forensics)`);
+					// ⟪RULING 14:55 (a) THE NET⟫ a rationale-FORM fault refused twice is signalled as its own kind so
+					// the caller can name the subject in the block's refusalList and CARRY ON. One stubborn rationale
+					// must not discard the other 700 subjects. Everything else still stops the run.
+					askCallback(reaskCount === 0 ? judged.error.message : `${judged.error.message} — after ONE re-ask (BR-067; the first attempt is in forensics)`, undefined, reaskCount > 0 && judged.ordinalRationale === true ? { kind: 'rationaleFormRefusedTwice' } : undefined);
 					return;
 				}
 				askCallback('', { judged, clientReturn, reaskCount, answeredUserPrompt: userPrompt });
 			});
 		};
-		askOnce({ userPrompt: question.userPrompt, reaskCount: 0 }, (askError, asked) => {
+		askOnce({ userPrompt: question.userPrompt, reaskCount: 0 }, (askError, asked, askFault) => {
 			if (askError) {
-				callback(askError);
+				callback(askError, undefined, askFault);
 				return;
 			}
 			const { clientReturn, reaskCount } = asked;
@@ -366,4 +394,4 @@ const judgeOne = ({ question, judgeClient, judgmentCache, matchForensics, budget
 	});
 };
 
-module.exports = { judgeOne, mapChoiceToStableId, judgmentFromReturn, ORDINAL_RATIONALE_RE, rationaleNamesOwnChoiceByOrdinal, ABSENT_CATEGORY_MARK, REASK_INSTRUCTION_BY_FAULT, moduleName };
+module.exports = { judgeOne, mapChoiceToStableId, judgmentFromReturn, ORDINAL_RATIONALE_RE, rationaleNamesOwnChoiceByOrdinal, rationaleNamesPickOnlyByOrdinal, ABSENT_CATEGORY_MARK, REASK_INSTRUCTION_BY_FAULT, moduleName };
