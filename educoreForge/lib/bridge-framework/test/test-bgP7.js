@@ -55,8 +55,14 @@ const FRAMEWORK_FILE = 'bridge-framework.js';
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');
 const VALIDATOR_LABEL = 'PROXY (framework header/row/curie_map validator; sssom-py runs beside it when its venv is present — RULING 12:05 #6, B3 cp2)';
 // sssom-py (ONE-MACHINE): the B3 venv under system/dataStores/bridgeAcceptance/sssomVenv — the REAL validator runs when present, the PROXY otherwise, and says which
-const SSSOM_PY_BIN_PATH = path.join(scenarioLib.FRAMEWORK_DIR, '..', '..', '..', '..', 'dataStores', 'bridgeAcceptance', 'sssomVenv', 'bin', 'sssom');
-const SSSOM_PY_PRESENT = fs.existsSync(SSSOM_PY_BIN_PATH);
+// RULING B4R-4 (supervisor wiring at the B4 merge, 2026-08-17): the venv path is DECLARED absolute data
+// (acceptanceCommands.jsonc sharedToolPaths.sssomPyBinPath), never a tree-relative guess — from a git worktree the
+// relative form resolved to a non-existent path and this suite ran the PROXY silently (REVIEW-B4 F9). The
+// ran-real / ran-proxy verdict comes from the pure rule module (its twins are observed red in test-runnerContract).
+const sssomValidatorProvenanceLib = require('../../../apps/graph-builder/test/bridgeAcceptance/sssomValidatorProvenance.js');
+const SHARED_TOOL_PATHS = (JSON.parse(fs.readFileSync(path.join(__dirname, 'acceptance', 'acceptanceCommands.jsonc'), 'utf8').replace(/^\s*\/\/.*$/gm, '')).sharedToolPaths) || {};
+const SSSOM_PY_BIN_PATH = SHARED_TOOL_PATHS.sssomPyBinPath || null;
+const SSSOM_PY_PRESENT = typeof SSSOM_PY_BIN_PATH === 'string' && fs.existsSync(SSSOM_PY_BIN_PATH);
 const SSSOM_PY_LABEL = SSSOM_PY_PRESENT ? `sssom-py present at ${SSSOM_PY_BIN_PATH} — ONE-MACHINE` : 'sssom-py ABSENT — PROXY only';
 const cloneJson = scenarioLib.cloneJson;
 const tsvOf = (outcome) => fs.readFileSync(outcome.runReport.sssomExportPath, 'utf8');
@@ -109,7 +115,10 @@ const conjunctList = [
 			const carriesUndefined = /^#subject_match_field:/m.test(text);
 			const justificationWrong = /semapv:CompositeMatching/.test(text);
 			if (!SSSOM_PY_PRESENT) {
-				return { pass: !carriesUndefined && !justificationWrong, detail: `PROXY only — sssom-py absent; subject_match_field present ${carriesUndefined}, CompositeMatching present ${justificationWrong}` };
+				// B4R-4: a DECLARED-but-absent validator is UNMEASURED BY NAME; only an UNDECLARED one may run the proxy
+				const provenance = sssomValidatorProvenanceLib.sssomValidatorProvenanceFor({ declaredBinPath: SSSOM_PY_BIN_PATH, binPathPresent: false, ranValidatorName: sssomValidatorProvenanceLib.PROXY_VALIDATOR_NAME });
+				if (provenance.unmeasuredReason !== '') { return { pass: false, detail: `UNMEASURED — ${provenance.unmeasuredReason}` }; }
+				return { pass: !carriesUndefined && !justificationWrong, detail: `${provenance.label}; subject_match_field present ${carriesUndefined}, CompositeMatching present ${justificationWrong}` };
 			}
 			const validated = require('child_process').spawnSync(SSSOM_PY_BIN_PATH, ['validate', exportPath], { encoding: 'utf8' });
 			const clean = validated.status === 0 && !carriesUndefined && !justificationWrong;

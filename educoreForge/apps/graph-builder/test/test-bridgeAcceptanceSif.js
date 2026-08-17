@@ -335,7 +335,13 @@ const runComposeSection = () => {
 	// the SINGLE-COMMIT form: base vs the WORKING TREE, so uncommitted framework edits are caught too — plus the
 	// untracked scan, because git diff never reports a brand-new file and a new file under lib/bridge-framework/
 	// is exactly as much of a framework change as an edited one
-	const real = gitNumstatOver(baselineCommit);
+	// POST-MERGE FORM (supervisor, B4 merge 2026-08-17): once expectedCompose.sifPluginAcceptedCommit records the
+	// accepted B4 commit, the proof is about THAT range of bytes (base..accepted) — the branch as it was cleared —
+	// and no longer about the working tree, which the supervisor may legitimately edit under lib/bridge-framework/test/
+	// after the merge (B4R-4 wiring, BG-COMPOSE (a) mechanism fix). Before the record exists, the single-commit form
+	// against the working tree stays, so uncommitted framework edits are caught during the phase.
+	const acceptedCommit = expectedCompose.sifPluginAcceptedCommit;
+	const real = gitNumstatOver(typeof acceptedCommit === 'string' && acceptedCommit.length > 0 ? `${baselineCommit}..${acceptedCommit}` : baselineCommit);
 	const realUntracked = gitUntrackedUnderFrameworkPaths();
 	const realVerdict = composeVerdictOf(real, realUntracked);
 	harness.ok(`BG-COMPOSE-SIF a the framework diff from ${String(baselineCommit).slice(0, 7)} to the working tree over ${expectedCompose.diffedPathList.length} declared paths is EMPTY, modified AND untracked — SIF is a second plugin through the SAME seam with ZERO framework change`, realVerdict.empty === true, `${realVerdict.reason}\n${real.commandText}\n${realUntracked.commandText}`);
@@ -392,7 +398,9 @@ const runComposeSection = () => {
 		// so `git diff --name-only` reports REPO-ROOT-relative paths ('educoreForge/lib/…') while `git ls-files --others`
 		// reports CWD-relative ones ('lib/…'). Comparing the two against one set of patterns without normalising is how a
 		// path gate passes for the wrong reason. --relative puts both in the tree's own frame.
-		const changed = spawnSync('git', ['-C', treeRoot, 'diff', '--name-only', '--relative', baselineCommit], { encoding: 'utf8' });
+		// POST-MERGE FORM (supervisor, B4 merge 2026-08-17): the same base..accepted range as conjunct (a) once the
+		// accepted commit is recorded; the working-tree form before that (see the note above conjunct (a))
+		const changed = spawnSync('git', ['-C', treeRoot, 'diff', '--name-only', '--relative', typeof acceptedCommit === 'string' && acceptedCommit.length > 0 ? `${baselineCommit}..${acceptedCommit}` : baselineCommit], { encoding: 'utf8' });
 		const added = spawnSync('git', ['-C', treeRoot, 'ls-files', '--others', '--exclude-standard'], { encoding: 'utf8' });
 		if (changed.status !== 0 || added.status !== 0) {
 			return false;

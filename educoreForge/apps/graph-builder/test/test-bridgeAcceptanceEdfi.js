@@ -98,7 +98,11 @@ const Database = require('better-sqlite3');
 const treeRoot = path.join(__dirname, '..', '..', '..');
 const acceptanceDir = path.join(treeRoot, 'lib', 'bridge-framework', 'test', 'acceptance');
 const pinnedDir = path.join(treeRoot, '..', '..', 'dataStores', 'bridgeAcceptance', 'edfi');
-const sssomVenvBinPath = path.join(treeRoot, '..', '..', 'dataStores', 'bridgeAcceptance', 'sssomVenv', 'bin', 'sssom');
+// sssom-py: DECLARED absolute data (acceptanceCommands.jsonc sharedToolPaths.sssomPyBinPath — RULING B4R-4), never a
+// tree-relative guess: from a git worktree the relative form resolved to a path that does not exist and the suite
+// degraded to the PROXY validator silently (REVIEW-B4 F9). Read early; the entry-scoped read below stays as it was.
+const sharedToolPathsEarly = JSON.parse(fs.readFileSync(path.join(acceptanceDir, 'acceptanceCommands.jsonc'), 'utf8').replace(/^\s*\/\/.*$/gm, '')).sharedToolPaths || {};
+const sssomVenvBinPath = sharedToolPathsEarly.sssomPyBinPath || path.join(treeRoot, '..', '..', 'dataStores', 'bridgeAcceptance', 'sssomVenv', 'bin', 'sssom');
 const BRIDGE_NAME = 'edfiCedsCrosswalkPlugin';
 const PAIR_KEY = 'ceds@14.0.0.0::edfi@5.2.0::edfiCedsCrosswalkPlugin::authored';
 const CEDS_BASE_REF_ID = '09a5d658807b9c22b44b28289d9ad4b47df15e45f44c9eacec765962fe487c33';
