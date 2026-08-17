@@ -376,16 +376,42 @@
 		// fingerprint, so the PESC block re-keys and the manifest follows. Computed by REFERENCE
 		// COMPOSITION (test/probes/p1_composeManifestFromReferences.js), which reproduces TWO historical
 		// manifest ids before reporting a new one and needs no build at all.
+		// ⚠️ NARROWED 2026-08-17 (RULING P3-R1) FROM FOUR BASES TO TWO — AND THIS IS A NARROWING FOR TRUTH,
+		// NOT A NARROWING FOR GREEN. A future reader must be able to tell the difference, so:
+		//
+		// THE REMOVED ASSERTIONS WERE UNSATISFIABLE BY CONSTRUCTION, not merely inconvenient. This entry
+		// pinned edfi@5_2_0_base and sif@unknown_01_base, but EVERY line on this entry (rejudgeDebug,
+		// materialise, rejudgeRealLimit) builds `pescDerivedEval`, which declares TWO standards — ceds and
+		// pesc260805. There is no eyeGraph line and no per-line recipe override. So no run of any line
+		// could ever put an Ed-Fi or SIF base block in the log, and verifyLogContract refused on
+		// "NOT SEEN in the log" every time, forever.
+		//
+		// A GATE THAT CAN NEVER PASS IS NOT UNDER-ENFORCEMENT — IT IS A PERMANENT FALSE ALARM, AND THAT IS
+		// WORSE THAN NO CHECK, BECAUSE IT TRAINS A READER TO SKIP -verify AND SO TO IGNORE THE GATE THAT
+		// CAN PASS. That is the whole reason for this edit; it removes nothing that was ever enforcing.
+		//
+		// MEASURED ACROSS ALL FOUR ENTRIES before the change, and counted independently by the supervisor:
+		//   edfiCedsCrosswalkPlugin  recipe fourWithHubEdfiBridge (4 standards)  pinned 4  CONSISTENT
+		//   sifCedsStandardPlugin    recipe fourWithHubSifBridge  (4 standards)  pinned 4  CONSISTENT
+		//   edfiCedsDerivedPlugin    recipe edfiDerivedEval       (2 standards)  pinned 0  CONSISTENT
+		//   pescCedsDerivedPlugin    recipe pescDerivedEval       (2 standards)  pinned 4  ← the only mismatch
+		// The four-base pin was copied from the four-forge pattern onto a two-standard eval entry in P1.
+		//
+		// WHY NOT ZERO PINS, following the other derived plugin: that would remove the base-id assertion
+		// ENTIRELY. An assertion that holds on EVERY run this entry can actually perform is worth more than
+		// no assertion, and RULING Q3 accepts reuse against the pinned store ONLY on this assertion.
+		//
+		// The Ed-Fi and SIF ids are NOT lost — they live in the four-forge reference-composition record
+		// (forges/pesc260805/test/probes/p2_composeManifestCorrected.js,
+		// MUST_NOT_MOVE_AND_DO_NOT_BY_CONSTRUCTION), which is where a four-standard claim belongs.
 		"expectedBaseBlockIdBySubject": {
 			"ceds@14_0_0_0_base": "09a5d658807b9c22b44b28289d9ad4b47df15e45f44c9eacec765962fe487c33",
-			"edfi@5_2_0_base": "aea6d8dfe7899adef57c5ac3adb6b0df2bfc7e4a4ae859c4fa3893c132c8b304",
-			// CORRECTED 2026-08-17 (RULING P2-R3). The value here until this edit was
+			// CORRECTED 2026-08-17 (RULING P2-R3). The value here until that edit was
 			// c46991d127a3f36bd9bed9708c5701a12b0340497a90235372ef962913566d3f, which is the id of a
 			// VECTORLESS artifact and NOT a member of this vectorized lineage. See the history below and
 			// forges/pesc260805/bridgeData/buildModeIdentityRecord.json. The wrong value is left VISIBLE
 			// throughout rather than tidied out, per the supervisor's instruction.
-			"pesc260805@aggregate_01_base": "f139654a98cd0ef238759e6dc2bda2e532f13d5a7db00bfea94d89c3317b149d",
-			"sif@unknown_01_base": "d393b0406d08f613f3142711fca5a9f2b0c580e84c4bef3ffd6b18d4eaa2330a"
+			"pesc260805@aggregate_01_base": "f139654a98cd0ef238759e6dc2bda2e532f13d5a7db00bfea94d89c3317b149d"
 		},
 		// EVERY ENTRY CARRIES buildMode AS A FIELD BESIDE THE ID — RULING P2-R4, and it is here because its
 		// ABSENCE is what let a vectorless id be published as a lineage successor for an entire phase.
