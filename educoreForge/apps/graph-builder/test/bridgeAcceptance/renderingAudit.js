@@ -106,7 +106,22 @@ const buildRenderingAudit = ({ forensicsDirPath, pairKey, generation, blockId, r
 			}
 		});
 	});
-	const sortedRecordList = recordList.slice().sort((leftRecord, rightRecord) => compareStrings(String(leftRecord.promptHash), String(rightRecord.promptHash)));
+	// THE TRAIL IS APPEND-ONLY AND A GENERATION CAN HOLD SEVERAL RUNS. Reporting the raw record count as "the
+	// prompts" would imply N subjects produced N records, which is false the moment a block is re-frozen. The
+	// audit therefore reports DISTINCT prompts (by promptHash) as its population and the record count beside it.
+	//
+	// The gap between the two is not noise — it is a DETERMINISM PROOF. If two runs over the same subjects
+	// rendered even one byte differently, the distinct count would exceed the per-run subject count. Equal
+	// counts mean the renderer reproduced itself exactly.
+	const distinctPromptHashSet = new Set(recordList.map((oneRecord) => String(oneRecord.promptHash)));
+	const distinctByPromptHash = {};
+	recordList.forEach((oneRecord) => {
+		if (distinctByPromptHash[String(oneRecord.promptHash)] === undefined) {
+			distinctByPromptHash[String(oneRecord.promptHash)] = oneRecord;
+		}
+	});
+	const distinctRecordList = Object.keys(distinctByPromptHash).sort(compareStrings).map((oneHash) => distinctByPromptHash[oneHash]);
+	const sortedRecordList = distinctRecordList;
 	const wantedSampleCount = sampleCount === undefined ? DEFAULT_SAMPLE_COUNT : sampleCount;
 	const sampleList = sortedRecordList.slice(0, wantedSampleCount);
 	const lineList = [];
@@ -120,7 +135,10 @@ const buildRenderingAudit = ({ forensicsDirPath, pairKey, generation, blockId, r
 	lineList.push(`- pairKey: \`${pairKey}\``);
 	lineList.push(`- generation: \`${generation}\``);
 	lineList.push(`- rendering variant: \`${judgePromptVariant}\``);
-	lineList.push(`- prompts in this generation: **${recordList.length}**`);
+	lineList.push(`- DISTINCT prompts in this generation: **${distinctPromptHashSet.size}**, from **${recordList.length}** forensic records`);
+	if (recordList.length !== distinctPromptHashSet.size) {
+		lineList.push(`- the trail is APPEND-ONLY and holds ${(recordList.length / distinctPromptHashSet.size).toFixed(2)} run(s) of the same subjects. That the ${recordList.length} records collapse to exactly ${distinctPromptHashSet.size} distinct hashes is a DETERMINISM PROOF: a second run rendered every prompt byte-identically, or the distinct count would be higher.`);
+	}
 	lineList.push(`- prompts printed in full below: **${sampleList.length}** (chosen by sorting on promptHash, so the sample is the same for any two runs of the same block and this document can be diffed against itself)`);
 	lineList.push('');
 	lineList.push('## The allow-list, as DECLARED by the plugin');
@@ -132,7 +150,7 @@ const buildRenderingAudit = ({ forensicsDirPath, pairKey, generation, blockId, r
 	lineList.push(`- **subject** (${renderingAllowList.subject.length}): ${renderingAllowList.subject.map((oneName) => `\`${oneName}\``).join(', ')}`);
 	lineList.push(`- **candidate** (${renderingAllowList.candidate.length}): ${renderingAllowList.candidate.map((oneName) => `\`${oneName}\``).join(', ')}`);
 	lineList.push('');
-	lineList.push('## The id-gate sweep — over ALL ' + recordList.length + ' prompts, not over the sample');
+	lineList.push('## The id-gate sweep — over ALL ' + recordList.length + ' forensic records, not over the sample');
 	lineList.push('');
 	lineList.push(`**${hitList.length === 0 ? 'ZERO HITS' : `${hitList.length} HIT(S) — THIS IS A FAILURE`}**`);
 	lineList.push('');
@@ -175,7 +193,7 @@ const buildRenderingAudit = ({ forensicsDirPath, pairKey, generation, blockId, r
 		lineList.push('```');
 		lineList.push('');
 	});
-	return { markdownText: lineList.join('\n'), promptCount: recordList.length, hitList, advisoryUrlCount, sampleCount: sampleList.length };
+	return { markdownText: lineList.join('\n'), promptCount: recordList.length, distinctPromptCount: distinctPromptHashSet.size, hitList, advisoryUrlCount, sampleCount: sampleList.length };
 };
 
 module.exports = { buildRenderingAudit, readPromptRecordList, ID_GATE_PATTERN_LIST, ADVISORY_URL_REGEX, DEFAULT_SAMPLE_COUNT, moduleName };

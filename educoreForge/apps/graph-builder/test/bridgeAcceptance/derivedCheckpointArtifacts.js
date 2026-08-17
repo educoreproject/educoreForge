@@ -67,11 +67,21 @@ const askedBlockId = firstValue('derivedBlockId');
 const derivedBlockId = askedBlockId === undefined || askedBlockId === 'latest' ? undefined : askedBlockId;
 const outDirPath = firstValue('outDirPath') === undefined ? path.dirname(entry.decisionStoreFilePath) : firstValue('outDirPath');
 
+// the CEILING is measured by a DIFFERENT tool against a live graph (retrievalCeiling.js) and is passed in
+// as a number rather than recomputed here. Two reasons: this driver must stay read-only on stores and touch
+// no graph, and a ceiling silently recomputed by the same code that computes recall would stop being an
+// independent check. Omit it and the retrieval-loss block reports the recoverable count as null rather than
+// guessing one.
+const ceilingRecallAt25 = firstValue('ceilingRecallAt25') === undefined ? undefined : Number(firstValue('ceilingRecallAt25'));
+if (ceilingRecallAt25 !== undefined && (!Number.isFinite(ceilingRecallAt25) || ceilingRecallAt25 < 0 || ceilingRecallAt25 > 1)) {
+	refuse(`--ceilingRecallAt25 ${JSON.stringify(firstValue('ceilingRecallAt25'))} is not a recall fraction in [0, 1]`);
+}
 const scored = derivedEvalLib.scoreDerivedRun({
 	truthStoreFilePath: TRUTH_STORE_FILE_PATH,
 	truthBlockId: TRUTH_BLOCK_ID,
 	derivedStoreFilePath: entry.decisionStoreFilePath,
 	derivedBlockId,
+	ceilingRecallByK: ceilingRecallAt25 === undefined ? undefined : { 25: ceilingRecallAt25 },
 });
 if (scored.error) {
 	refuse(scored.error.message);
