@@ -575,6 +575,25 @@ const judgeConjunctList = [
 			return { pass: refused && forensicRefused.length >= 1, detail: `${refused ? 'refused after one re-ask' : `NOT the expected refusal: ${refusalText.slice(0, 200)}`}; refused-first forensic records ${forensicRefused.length}` };
 		},
 	}),
+	pureConjunct({
+		conjunctId: 'o_blankAbstainRationaleTreatedAsAbsent',
+		title: "RULED: 'blank' is 'absent' for the re-ask — an abstention whose rationale is OMITTED, empty, whitespace-only or null ALL earn the same single bounded re-ask, and a PICK is unaffected by the equivalence",
+		twinNameList: ['blankRationaleNotAbsent'],
+		judge: (scenario) => {
+			const lib = scenario.frameworkMutationList.length ? moduleDouble.loadWithMutations({ modulePath: path.join(scenarioLib.FRAMEWORK_DIR, JUDGE_FILE), mutationList: scenario.frameworkMutationList }) : require(path.join(scenarioLib.FRAMEWORK_DIR, JUDGE_FILE));
+			const question = { choiceEnum: ['1', 'NONE'], renderedPoolStableIdList: ['urn:toy:card1'], promptHash: 'x' };
+			// the four shapes a missing rationale actually arrives in: the key omitted (llmClient's extractor),
+			// the empty string, whitespace only, and null (a SQLite NULL surfacing through the judgment cache).
+			// The supervisor's ruling names blank and absent as ONE case; nothing here may distinguish them.
+			const shapeList = [{ label: 'omitted', clientReturn: { choice: 'NONE', category: 'strong' } }, { label: 'empty', clientReturn: { choice: 'NONE', category: 'strong', rationale: '' } }, { label: 'whitespace', clientReturn: { choice: 'NONE', category: 'strong', rationale: '   ' } }, { label: 'null', clientReturn: { choice: 'NONE', category: 'strong', rationale: null } }];
+			const judgedList = shapeList.map((oneShape) => ({ label: oneShape.label, result: lib.judgmentFromReturn({ clientReturn: oneShape.clientReturn, question, isDebugClient: false }) }));
+			const allReaskable = judgedList.every((oneJudged) => Boolean(oneJudged.result.error) && oneJudged.result.absentAbstainRationale === true);
+			// a PICK with a blank rationale is still a flat refusal and is NOT re-askable on this fault
+			const pickBlank = lib.judgmentFromReturn({ clientReturn: { choice: '1', category: 'strong', rationale: '   ' }, question, isDebugClient: false });
+			const pickUnaffected = Boolean(pickBlank.error) && pickBlank.absentAbstainRationale !== true;
+			return { pass: allReaskable && pickUnaffected, detail: `${judgedList.filter((oneJudged) => oneJudged.result.absentAbstainRationale === true).length}/4 shapes re-askable [${judgedList.map((oneJudged) => oneJudged.label).join(', ')}]; pick with blank rationale unaffected ${pickUnaffected}` };
+		},
+	}),
 	runConjunct({
 		conjunctId: 'k_secondOrdinalRationaleRefusedByName',
 		title: 'a REAL client answering by ORDINAL twice is REFUSED by name after ONE re-ask (BR-067 stands), the first attempt in forensics',
@@ -605,6 +624,7 @@ frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'h_abstentionWithSchemaForcedCategoryAccepted', twinName: 'abstentionNormalisationRemoved', fileName: JUDGE_FILE, find: "\t\tif (!categoryIsAbsent && clientReturn.category !== ABSTAIN_CATEGORY && PICK_CATEGORY_LIST.indexOf(clientReturn.category) === -1) {", replace: "\t\tif (clientReturn.category !== ABSTAIN_CATEGORY) {" });
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'i_clientCategoryEnumContract', twinName: 'abstentionNormalisationRemoved', fileName: JUDGE_FILE, find: "\t\tif (!categoryIsAbsent && clientReturn.category !== ABSTAIN_CATEGORY && PICK_CATEGORY_LIST.indexOf(clientReturn.category) === -1) {", replace: "\t\tif (clientReturn.category !== ABSTAIN_CATEGORY) {" });
 // the production mutation: the bounded re-ask REMOVED (the pre-ruling refuse-on-first-sight restored) — (j) and (k) both go red
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'o_blankAbstainRationaleTreatedAsAbsent', twinName: 'blankRationaleNotAbsent', fileName: JUDGE_FILE, find: "\t\tif (!isNonBlank(clientReturn.rationale)) {", replace: "\t\tif (clientReturn.rationale === undefined) {" });
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'l_abstentionWithAbsentCategoryAccepted', twinName: 'absentCategoryRefusedAgain', fileName: JUDGE_FILE, find: "\t\tconst categoryIsAbsent = !isNonBlank(clientReturn.category) || clientReturn.category === ABSENT_CATEGORY_MARK;", replace: "\t\tconst categoryIsAbsent = false;" });
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'm_absentAbstainRationaleReaskedOnceAccepted', twinName: 'absentAbstainRationaleNotReaskable', fileName: JUDGE_FILE, find: "}), absentAbstainRationale: true };", replace: "}) };" });
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'n_secondAbsentAbstainRationaleRefusedByName', twinName: 'absentAbstainRationaleNotReaskable', fileName: JUDGE_FILE, find: "}), absentAbstainRationale: true };", replace: "}) };" });
@@ -796,6 +816,6 @@ const gateDeclarationList = [
 ];
 
 runGateFamily(
-	{ harness, familyName: 'BG-REPLAY+BG-CACHE+BG-JUDGE+BG-POOL-ORDER+BG-DET', gateDeclarationList, twinRegistry, makeSubject: scenarioLib.makeScenario, cloneSubject: scenarioLib.cloneScenario, expectedConjunctCount: 9 + 7 + 16 + 3 + 4, expectedTwinCount: 9 + 7 + 16 + 3 + 4 },
+	{ harness, familyName: 'BG-REPLAY+BG-CACHE+BG-JUDGE+BG-POOL-ORDER+BG-DET', gateDeclarationList, twinRegistry, makeSubject: scenarioLib.makeScenario, cloneSubject: scenarioLib.cloneScenario, expectedConjunctCount: 9 + 7 + 17 + 3 + 4, expectedTwinCount: 9 + 7 + 17 + 3 + 4 },
 	() => harness.report(),
 );
