@@ -1,0 +1,32 @@
+source-tier PescElementDecl: 16969
+  with exactly one RESOLVES_TO target: 15662
+  with none: 1307
+
+EFFECTIVE-DESCRIPTION POPULATION, TWO RULES OVER THE IDENTICAL CORPUS
+  composerRuleNonEmptyAfterTrim      present 12122  (own 5481 + viaResolvesTo 6641)  absent 4847
+  reportRuleNonEmpty                 present 12127  (own 5481 + viaResolvesTo 6646)  absent 4842
+
+PREDICTED (report rule):  C2 12127 / C0 4842
+report rule reproduces:   C2 12127 / C0 4842
+composer rule reproduces: C2 12122 / C0 4847
+
+declarations whose OWN description is whitespace-only:           0
+declarations whose RESOLVED TYPE description is whitespace-only: 5
+declarations the two rules DISAGREE about:                       5
+
+DISAGREEMENT EXAMPLES (the whitespace made visible by JSON escaping):
+  SupplementalGradeCode
+     own      = ""
+     resolved = " "
+  SupplementalGradeCode
+     own      = ""
+     resolved = " "
+  SupplementalGradeCode
+     own      = ""
+     resolved = " "
+  SupplementalGradeCode
+     own      = ""
+     resolved = " "
+  SupplementalGradeCode
+     own      = ""
+     resolved = " "

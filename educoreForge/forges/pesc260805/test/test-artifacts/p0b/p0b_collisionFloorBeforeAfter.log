@@ -1,0 +1,38 @@
+=== RECONSTRUCTION OF THE PRE-CHANGE TEXT, validated where the answer is known ===
+  checked on the 4847 no-prose declarations (their text did NOT change): 4847 match, 0 mismatch
+  reconstruction SOUND: true
+
+=== CONCEPT POPULATION (scope a') ===
+  concepts: 2197   (the ruling fixes this at 2,213)
+  by arm at CONCEPT grain: C2 1661 / C0 536
+  vectors resolved from the cache: 2197 of 2197 (missing NEW 0, missing OLD 0) — ZERO embedding calls
+
+=== CANDIDATE POOL ===
+  property-tier hub cards with an embedding: 2777 (expected 2,777)
+  unit-normalisation check (card, new subject, old subject): 0.99999998, 0.99999989, 0.99999997
+  all unit-normalised within 1e-4: true (a dot product IS the cosine)
+
+=== SCORING 2197 concepts against 2777 cards, both sides ===
+  ...500/2197
+  ...1000/2197
+  ...1500/2197
+  ...2000/2197
+
+================ BEFORE / AFTER, IDENTICAL POPULATION ================
+  OLD (all-C0 'OwningType | ElementName'): scored 2197, distinct top-1 456, collision floor 0.7924, median top-1 cosine 0.6222
+  NEW (the ruled HYBRID):                  scored 2197, distinct top-1 597, collision floor 0.7283, median top-1 cosine 0.6526
+  FLOOR GAIN: 0.0641  (§13's C0->C2 gain on its own population was 0.1105)
+  MEDIAN COSINE MOVE: 0.0304  (the §12.7 guard DISQUALIFIES a fall of more than 0.03)
+
+================ THE TWO ARMS, SEPARATELY — NEVER POOLED ================
+  C2 (prose):
+     OLD: scored 1661, distinct top-1 425, floor 0.7441, median cosine 0.6244
+     NEW: scored 1661, distinct top-1 527, floor 0.6827, median cosine 0.6701
+  C0 (no prose):
+     OLD: scored 536, distinct top-1 201, floor 0.625, median cosine 0.6164
+     NEW: scored 536, distinct top-1 201, floor 0.625, median cosine 0.6164
+
+  NOTE: the C0 arm's text did not change, so its OLD and NEW rows MUST be identical. They are a control: a difference there would mean the reconstruction or the cache lookup is wrong.
+
+  concepts whose TOP-1 CARD CHANGED: 1144 of 2197 (52.1%)
+  NOT A CORRECTNESS CLAIM: both floors bound error from BELOW and neither identifies a correct card. No truth set exists. A floor of 0.55 is still a floor of 0.55.
