@@ -62,9 +62,10 @@ const harnessRaw = require('../../../test/testLib/harness')(moduleName);
 // 25 (SECTION 3 BG-PLUGIN declaration: 12 conjuncts + 13 twins-and-precondition)
 // + 8 (SECTION 3b BG-PLUGIN e: the real hooks over the double, 6 conjuncts + 2 twins)
 // + 7 (SECTION 4 BG-COMPOSE-SIF: 3 conjuncts + 4 twins)
+// + 6 (SECTION 5 BG-GENESIS, RULING BS-5: 3 conjuncts + 3 twins)
 // + 1 (SECTIONS 0-2: the frozen-artifact conjunct, UNMEASURED and RED until CP2)
-// = 41. RAISED as a LITERAL, in the same commit, when CP2 wires SECTIONS 0-2 in full.
-const EXPECTED_ASSERTION_COUNT = 41;
+// = 47. RAISED as a LITERAL, in the same commit, when CP2 wires SECTIONS 0-2 in full.
+const EXPECTED_ASSERTION_COUNT = 47;
 const ledger = { count: 0 };
 const harness = {
 	section: harnessRaw.section,
@@ -293,6 +294,13 @@ const runComposeSection = () => {
 			{ pattern: /^recipes\/(fourWithHubSifBridge|sifBridgeOnly)\.recipe\.jsonc$/, why: 'the two declared recipes, named individually so a third cannot arrive unremarked' },
 			{ pattern: /^lib\/bridge-framework\/test\/acceptance\//, why: 'acceptance DATA — excluded from the diffed framework set by RULING BF9 because per-plugin fixtures change between phases BY DESIGN' },
 			{ pattern: /^apps\/graph-builder\/test\/test-bridgeAcceptanceSif\.js$/, why: 'this suite' },
+			// ADDED under RULING BS-5, and the addition is the point of the registry being a list: the genesis
+			// path is a SHARED-INSTRUMENT change (the acceptance runner and the pure rule it now calls), not
+			// plugin work. It sits outside BG-COMPOSE-SIF's measured framework scope — apps/graph-builder/test/
+			// is not in diffedPathList — so the zero-framework-diff proof is untouched. It is named here rather
+			// than quietly permitted by a looser pattern, so a reviewer sees exactly what this phase added
+			// beyond its plugin and can hold it to the ruling that authorised it.
+			{ pattern: /^apps\/graph-builder\/test\/bridgeAcceptance\/(runBridgeAcceptanceCommand|genesisGuard)\.js$/, why: 'RULING BS-5: the runner gains a NAMED genesis path, with the rule extracted to genesisGuard.js so its twins exercise the rule itself rather than a copy — the runner is a CLI that exits on refusal and cannot be required from a suite' },
 		];
 		const isPermitted = (onePath) => PERMITTED_PATH_REGISTRY.some((oneRow) => oneRow.pattern.test(onePath));
 		// --relative is REQUIRED, not cosmetic: the repository root is system/code and this tree is system/code/educoreForge,
@@ -323,6 +331,44 @@ const runComposeSection = () => {
 	harness.ok('RED-OBSERVED BG-COMPOSE-SIF a — a numstat line naming ONE modified framework file turns the verdict red', composeVerdictOf({ status: 0, text: '1\t0\tlib/bridge-framework/classification.js', stderr: '' }, { status: 0, text: '', stderr: '' }).empty === false);
 	harness.ok('RED-OBSERVED BG-COMPOSE-SIF a — an UNTRACKED new file under a framework path turns the verdict red even though git diff reports nothing (the hole this scan exists to close)', composeVerdictOf({ status: 0, text: '', stderr: '' }, { status: 0, text: 'lib/bridge-framework/sifSpecialCase.js', stderr: '' }).empty === false);
 	harness.ok('RED-OBSERVED BG-COMPOSE-SIF a — a FAILED diff command is red, never silently EMPTY (an unreadable gate is not a passing gate)', composeVerdictOf({ status: 128, text: '', stderr: 'fatal: bad revision' }, { status: 0, text: '', stderr: '' }).empty === false);
+
+	runGenesisGuardSection();
+};
+
+// ---------------------------------------------------------------------
+// SECTION 5 — BG-GENESIS (RULING BS-5): the pinned-store guard's ONE named exception.
+// These call the SAME function runBridgeAcceptanceCommand.js calls. The rule lives in genesisGuard.js
+// precisely so a twin can exercise the rule itself rather than a copy of it — the runner is a CLI that exits
+// on refusal, so requiring IT from here would execute it and the twins would be theatre.
+// ---------------------------------------------------------------------
+const runGenesisGuardSection = () => {
+	harness.section('SECTION 5 — BG-GENESIS (RULING BS-5): genesis is DECLARED, narrow, and INERT once the store exists');
+	const genesisGuardLib = require(path.join(__dirname, 'bridgeAcceptance', 'genesisGuard'));
+	const STORE_PATH = '/absolute/sif/sifBridge.standardsDatabase.sqlite3';
+	const STORE_DIR = '/absolute/sif';
+	// the entry is built FROM THE OVERRIDE ALONE, never spread over the real SIF entry. Spreading the real one
+	// was the first thing tried and it silently broke the most important twin: the live entry now carries
+	// rejudgeDebugGenesis: true, so "no declaration" inherited a declaration and the refusal never fired. A twin
+	// whose world is contaminated by production data tests nothing — it just agrees with production.
+	const verdictFor = ({ entryOverride, lineName, storeExists, storeDirPathExists }) =>
+		genesisGuardLib.genesisRefusalFor({ entry: { ...entryOverride }, lineName, storeExists, storeDirPathExists, storeFilePath: STORE_PATH, storeDirPath: STORE_DIR });
+
+	// the POSITIVE case — this is the launch the ruling exists to permit
+	harness.equal('BG-GENESIS a a declared genesis on a rejudge line, store directory present and store file absent, is PERMITTED', verdictFor({ entryOverride: { rejudgeDebugGenesis: true }, lineName: 'rejudgeDebug', storeExists: false, storeDirPathExists: true }), '');
+	harness.ok('BG-GENESIS a and the runner SAYS SO — isGenesisLaunch is true, so the run that creates the store never looks like any other run in the log', genesisGuardLib.isGenesisLaunch({ entry: { rejudgeDebugGenesis: true }, lineName: 'rejudgeDebug', storeExists: false }) === true);
+	// INERTNESS — the declaration cannot be left switched on as a standing bypass
+	harness.ok('BG-GENESIS d once the store EXISTS the declaration is INERT: the ordinary guard governs and isGenesisLaunch is false', verdictFor({ entryOverride: { rejudgeDebugGenesis: true }, lineName: 'rejudgeDebug', storeExists: true, storeDirPathExists: true }) === '' && genesisGuardLib.isGenesisLaunch({ entry: { rejudgeDebugGenesis: true }, lineName: 'rejudgeDebug', storeExists: true }) === false);
+
+	harness.section('    BG-GENESIS twins — the two the ruling requires, plus the path-typo case, observed RED');
+	// TWIN 1 (required): an absent store WITHOUT the declaration still refuses — the original guard is intact
+	const undeclaredRefusal = verdictFor({ entryOverride: {}, lineName: 'rejudgeDebug', storeExists: false, storeDirPathExists: true });
+	harness.ok(`RED-OBSERVED BG-GENESIS b — an absent store with NO genesis declaration still REFUSES BY NAME, naming the store and how to declare genesis (the exception did not widen the guard): ${undeclaredRefusal.slice(0, 90)}…`, undeclaredRefusal.indexOf(STORE_PATH) !== -1 && /rejudgeDebugGenesis/.test(undeclaredRefusal));
+	// TWIN 2 (required): the declaration on a NON-rejudge line refuses
+	const wrongLineRefusal = verdictFor({ entryOverride: { materialiseGenesis: true }, lineName: 'materialise', storeExists: false, storeDirPathExists: true });
+	harness.ok(`RED-OBSERVED BG-GENESIS c — genesis declared on a MATERIALISE line REFUSES BY NAME: a materialise line replays a frozen block and has nothing to replay from on a store that does not exist: ${wrongLineRefusal.slice(0, 90)}…`, /permitted only on a rejudge\* line/.test(wrongLineRefusal));
+	// TWIN 3: the case the original guard was really protecting against — a path typo wearing genesis as a disguise
+	const typoRefusal = verdictFor({ entryOverride: { rejudgeDebugGenesis: true }, lineName: 'rejudgeDebug', storeExists: false, storeDirPathExists: false });
+	harness.ok(`RED-OBSERVED BG-GENESIS c — genesis with an ABSENT store DIRECTORY REFUSES BY NAME: genesis creates the STORE, never its location, and an absent directory is a path typo rather than a first run: ${typoRefusal.slice(0, 90)}…`, typoRefusal.indexOf(STORE_DIR) !== -1);
 
 	runFrozenArtifactSection();
 };

@@ -20,6 +20,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const genesisGuardLib = require(path.join(__dirname, 'genesisGuard'));
 const { spawn, spawnSync } = require('child_process');
 
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
@@ -201,8 +202,30 @@ if (commandLineParameters.switches.verify === true) {
 // ---------------------------------------------------------------------
 // launch — nohup-detached, PID + provenance sidecar beside the log
 // ---------------------------------------------------------------------
-if (!fs.existsSync(entry.storeFilePath)) {
-	refuse(`the pinned store '${entry.storeFilePath}' is not on disk — the frozen line runs against the pinned store only`);
+// THE PINNED-STORE GUARD, and its ONE named exception — the GENESIS path (RULING BS-5, SABLE_RIVER
+// 2026-08-17). The guard is right for every run after the first and IMPOSSIBLE for the first: a plugin phase
+// ruled to FORGE FRESH has no store until its first run creates one, so the runner as written could not launch
+// the most consequential run of the phase — the one that makes the store everything later is compared against.
+//
+// The exception is DECLARED AS DATA on the line (`<lineName>Genesis: true`, the same per-line convention as
+// `<lineName>MaxJudgmentCount`), never inferred, and it is permitted ONLY when all of these hold:
+//   - the line is a `rejudge*` line — a materialise line REPLAYS a frozen block and can have nothing to replay
+//     from on a store that does not exist, so genesis there is a contradiction and is refused BY NAME;
+//   - the directory that will hold the pinned store EXISTS — this is what separates "the first run of a real,
+//     prepared location" from "a typo in an absolute path", which is the failure the original guard exists to
+//     catch (a scratch DB read as 'no decision block', mimicking a replay defect);
+//   - the store file itself does NOT exist. Once it does, THE DECLARATION IS INERT and the ordinary guard
+//     governs every subsequent run — genesis cannot be left switched on as a standing bypass.
+// the RULE ITSELF lives in genesisGuard.js so a twin can exercise the very function this line calls, rather
+// than a copy of it — this file is a CLI that exits on refusal, so requiring it from a suite would run it
+const storeDirPath = path.dirname(entry.decisionStoreFilePath);
+const storeExists = fs.existsSync(entry.storeFilePath);
+const genesisRefusal = genesisGuardLib.genesisRefusalFor({ entry, lineName, storeExists, storeDirPathExists: fs.existsSync(storeDirPath), storeFilePath: entry.storeFilePath, storeDirPath });
+if (genesisRefusal) {
+	refuse(genesisRefusal);
+}
+if (genesisGuardLib.isGenesisLaunch({ entry, lineName, storeExists })) {
+	xLog.status(`${moduleName}: GENESIS run — the pinned store '${entry.storeFilePath}' does not exist yet and '${lineName}Genesis' declares this the run that CREATES it (RULING BS-5). Every later run is governed by the ordinary pinned-store guard, and the declaration is inert once the store is there.`);
 }
 if (fs.existsSync(buildLogPath)) {
 	refuse(`'${buildLogPath}' already exists — a frozen run never overwrites a recorded log; choose another phaseToken`);
