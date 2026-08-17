@@ -40,8 +40,51 @@ const derivedEvalLib = require('./derivedEval');
 const renderingAuditLib = require('./renderingAudit');
 
 const ACCEPTANCE_FILE_PATH = path.join(__dirname, '..', '..', '..', '..', 'lib', 'bridge-framework', 'test', 'acceptance', 'acceptanceCommands.jsonc');
-const TRUTH_STORE_FILE_PATH = '/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/edfi/edfiBridge.decisions.sqlite3';
-const TRUTH_BLOCK_ID = 'e15acd6b5a43df3ce11b4e3f3bb55d97441c14658908d3518a55494cf24a322c';
+// THE REFERENCE BLOCK IS DECLARED DATA, NOT A MODULE CONSTANT (RULING BS-8, SABLE_RIVER 2026-08-17). It used
+// to be two hardcoded paths, which made this document generator serve exactly one plugin. The acceptance entry
+// now declares `referenceStoreFilePath`, `referenceBlockId` and `referenceRole`, and the module REFUSES BY NAME
+// for a plugin that declares none — one instrument for every plugin instead of two instruments drifting apart
+// about what "clean" means.
+//
+// THE ROLE IS THE POINT, and it is not cosmetic. For the DERIVED plugin the crosswalk is an ANSWER KEY: a human
+// decided, and a differing pick is a disagreement with a decision. For the SIF standard-declared plugin THERE IS
+// NO ANSWER KEY AT ALL — its judged cases are exactly where the standard names a CEDS property by id and several
+// hub cards carry that property in different DOMAINS, so the standard names the property and not the class.
+// Pointing this generator at the same block under the word "truth" would produce a document with the same
+// columns and the same confident layout whose central claim had quietly changed meaning. So the role selects the
+// VOCABULARY, from a table: `truth` says MATCHES/DIFFERS FROM TRUTH; `comparison` says AGREES WITH / DIFFERS
+// FROM THE CROSSWALK and never once calls a differing pick wrong.
+const REFERENCE_ROLE_LIST = Object.freeze(['truth', 'comparison']);
+const REFERENCE_VOCABULARY_BY_ROLE = Object.freeze({
+	truth: Object.freeze({
+		columnHeading: 'truth says',
+		absentText: '_no truth object — this subject is a NEW CLAIM, not a right or wrong answer_',
+		agreesText: '**MATCHES TRUTH**',
+		differsText: '**DIFFERS FROM TRUTH**',
+		abstainedText: 'the judge abstained where truth names an object',
+		tieCardName: 'TRUTH card',
+		tieAbsentText: ' — the truth card is NOT among them, so this did not cost the pick',
+		tiePresentText: ' — **the TRUTH card is among them**; this pick could not have been made on the merits',
+		summaryLead: "Against truth, for the supervisor's read only",
+		agreeWord: 'matching truth',
+		differWord: 'differing',
+		tieSentence: "differing pick(s) whose TRUTH card was rendered byte-identically to another candidate in the same pool. These are not judge errors; the right answer was on the page wearing someone else's face.",
+	}),
+	comparison: Object.freeze({
+		columnHeading: 'COMPARISON — the Ed-Fi crosswalk chose',
+		absentText: '_no crosswalk row for this key — there is nothing to compare against, and that is NOT a mark against the pick_',
+		agreesText: '**AGREES WITH THE CROSSWALK**',
+		differsText: '**DIFFERS FROM THE CROSSWALK** (a disagreement, NOT an error — see the note at the head of this document)',
+		abstainedText: 'the judge abstained where the crosswalk names an object',
+		tieCardName: "the crosswalk's card",
+		tieAbsentText: " — the crosswalk's card is NOT among them, so this did not cost the pick",
+		tiePresentText: " — **the crosswalk's card is among them**; this pick could not have been made on the merits",
+		summaryLead: "Against the Ed-Fi crosswalk, for the supervisor's read only — THIS STANDARD HAS NO ANSWER KEY, so these are agreements and disagreements, never right and wrong",
+		agreeWord: 'agreeing with the crosswalk',
+		differWord: 'differing from it',
+		tieSentence: "differing pick(s) whose CROSSWALK card was rendered byte-identically to another candidate in the same pool. These are not judge errors; the card it disagreed with was on the page wearing someone else's face.",
+	}),
+});
 const DEFAULT_BATCH_SIZE = 10;
 
 const firstValue = (name) => (Array.isArray(commandLineParameters.values[name]) ? commandLineParameters.values[name][0] : commandLineParameters.values[name]);
@@ -61,6 +104,14 @@ const entry = acceptanceCommands[bridgeName];
 if (entry === undefined) {
 	refuse(`acceptanceCommands.jsonc names no bridge '${bridgeName}'`);
 }
+// THE REFERENCE DECLARATION IS CHECKED HERE, before ANY block is read, for two reasons. It is a
+// CONFIGURATION fault and configuration faults belong before I/O. And it is the only position from which the
+// refusal is REACHABLE: checked later, the downstream "block is not a partial window" guard fires first and
+// this one can never be observed red — an unproven gate wearing the appearance of a proven one.
+if (typeof entry.referenceStoreFilePath !== 'string' || typeof entry.referenceBlockId !== 'string' || REFERENCE_ROLE_LIST.indexOf(entry.referenceRole) === -1) {
+	refuse(`'${bridgeName}' declares no reference block for its batch document — acceptanceCommands.jsonc must carry referenceStoreFilePath, referenceBlockId and referenceRole (one of ${REFERENCE_ROLE_LIST.join(', ')}). A batch document without a reference column is not a shorter document, it is a document that stopped asking the question (RULING BS-8)`);
+}
+const referenceVocabulary = REFERENCE_VOCABULARY_BY_ROLE[entry.referenceRole];
 const bridgeDeclaration = require(path.join(__dirname, '..', '..', '..', '..', 'forges', entry.standardKey, 'bridges', `${bridgeName}.js`)).bridgeDeclaration;
 
 const askedBlockId = firstValue('blockId');
@@ -96,7 +147,7 @@ if (typeof header.sourceWindow !== 'string' || header.sourceWindow.indexOf('PART
 	refuse(`block ${blockRead.blockId} carries sourceWindow ${JSON.stringify(header.sourceWindow)} — a batch checkpoint documents a WINDOWED (PARTIAL) block; this one is a full freeze`);
 }
 
-const truthRead = derivedEvalLib.readFrozenBlock({ storeFilePath: TRUTH_STORE_FILE_PATH, blockId: TRUTH_BLOCK_ID, roleName: 'truth' });
+const truthRead = derivedEvalLib.readFrozenBlock({ storeFilePath: entry.referenceStoreFilePath, blockId: entry.referenceBlockId, roleName: entry.referenceRole });
 if (truthRead.error) {
 	refuse(truthRead.error.message);
 }
@@ -318,7 +369,7 @@ lineList.push(`**Re-ask cost, cumulative:** across ${cumulativeReask.windowCount
 lineList.push('');
 lineList.push('### Rendering ties — what the allow-list cost this batch');
 lineList.push('');
-lineList.push(`- **renderingTie: ${renderingTieList.length}** — differing pick(s) whose TRUTH card was rendered byte-identically to another candidate in the same pool. These are not judge errors; the right answer was on the page wearing someone else's face.`);
+lineList.push(`- **renderingTie: ${renderingTieList.length}** — ${referenceVocabulary.tieSentence}`);
 lineList.push(`- pools containing any identical pair: **${poolsWithTieList.length}** of ${recordList.length}`);
 lineList.push(`- picks that were themselves one of >= 2 identical cards: **${tiedPickList.length}**`);
 lineList.push(`- across every candidate rendered in this generation, ${Object.keys(renderedTextByStableId).length} distinct card(s) produced only ${Object.keys(corpusTextCount).length} distinct rendered text(s) — **${collapsedCardCount} card(s) carry a text that is not theirs alone**, and the largest identical group holds **${largestIdenticalGroupSize}** cards.`);
@@ -327,7 +378,7 @@ lineList.push('The whitelist hides qualifier and range BY DESIGN — they are th
 lineList.push('away from the judge. This number is the price of that, measured rather than assumed. It is an input to any');
 lineList.push('future decision about the allow-list, not a reason to widen it now.');
 lineList.push('');
-lineList.push(`Against truth, for the supervisor's read only: **${correctList.length} matching truth · ${wrongList.length} differing · ${recordList.filter(isAbstained).length} abstained**. These are ${recordList.length} subjects; nothing here is a rate.`);
+lineList.push(`${referenceVocabulary.summaryLead}: **${correctList.length} ${referenceVocabulary.agreeWord} · ${wrongList.length} ${referenceVocabulary.differWord} · ${recordList.filter(isAbstained).length} abstained**. These are ${recordList.length} subjects; nothing here is a rate.`);
 lineList.push('');
 lineList.push('---');
 lineList.push('');
@@ -341,14 +392,14 @@ recordList.forEach((oneRecord, recordIndex) => {
 	if (!isAbstained(oneRecord)) {
 		lineList.push(`- predicate \`${oneRecord.predicate}\` · confidence \`${oneRecord.confidence}\` · category \`${oneRecord.judge === undefined ? '—' : oneRecord.judge.category}\``);
 	}
-	lineList.push(`- **truth says:** ${truthSet === undefined ? '_no truth object — this subject is a NEW CLAIM, not a right or wrong answer_' : Array.from(truthSet).map((oneId) => `\`${oneId}\``).join(', ')}`);
+	lineList.push(`- **${referenceVocabulary.columnHeading}:** ${truthSet === undefined ? referenceVocabulary.absentText : Array.from(truthSet).map((oneId) => `\`${oneId}\``).join(', ')}`);
 	if (truthSet !== undefined) {
-		lineList.push(`- **agreement:** ${isAbstained(oneRecord) ? 'the judge abstained where truth names an object' : truthSet.has(oneRecord.objectStableId) ? '**MATCHES TRUTH**' : '**DIFFERS FROM TRUTH**'}`);
+		lineList.push(`- **agreement:** ${isAbstained(oneRecord) ? referenceVocabulary.abstainedText : truthSet.has(oneRecord.objectStableId) ? referenceVocabulary.agreesText : referenceVocabulary.differsText}`);
 	}
 	const rowTextCount = poolTextCountFor(oneRecord);
 	const rowTieSizeList = Object.keys(rowTextCount).filter((oneText) => rowTextCount[oneText] > 1).map((oneText) => rowTextCount[oneText]);
 	if (rowTieSizeList.length > 0) {
-		lineList.push(`- **rendering tie in this pool:** ${rowTieSizeList.map((oneSize) => `${oneSize} candidates rendered identically`).join('; ')}${renderingTieList.indexOf(oneRecord) === -1 ? ' — the truth card is NOT among them, so this did not cost the pick' : ' — **the TRUTH card is among them**; this pick could not have been made on the merits'}`);
+		lineList.push(`- **rendering tie in this pool:** ${rowTieSizeList.map((oneSize) => `${oneSize} candidates rendered identically`).join('; ')}${renderingTieList.indexOf(oneRecord) === -1 ? referenceVocabulary.tieAbsentText : referenceVocabulary.tiePresentText}`);
 	}
 	lineList.push('');
 	lineList.push('**The judge\'s own rationale**');
