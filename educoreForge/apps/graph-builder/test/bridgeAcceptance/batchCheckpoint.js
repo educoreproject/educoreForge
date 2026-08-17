@@ -40,6 +40,11 @@ const derivedEvalLib = require('./derivedEval');
 const renderingAuditLib = require('./renderingAudit');
 const recordDispositionLib = require(path.join(__dirname, 'recordDisposition'));
 const batchWindowVerdictLib = require(path.join(__dirname, 'batchWindowVerdict'));
+// for the superseded-declaration measurement below: the framework's OWN canonicaliser, so the digest this file
+// recomputes is the same one the block froze and the same one test-bridgeAcceptanceSif.js's b2 conjunct asserts —
+// three places computing a digest three ways would be three chances to disagree
+const crypto = require('crypto');
+const bridgePluginContractLib = require(path.join(__dirname, '..', '..', '..', '..', 'lib', 'bridge-framework', 'bridgePluginContract'));
 
 const ACCEPTANCE_FILE_PATH = path.join(__dirname, '..', '..', '..', '..', 'lib', 'bridge-framework', 'test', 'acceptance', 'acceptanceCommands.jsonc');
 // THE REFERENCE BLOCK IS DECLARED DATA, NOT A MODULE CONSTANT (RULING BS-8, SABLE_RIVER 2026-08-17). It used
@@ -71,6 +76,9 @@ const REFERENCE_VOCABULARY_BY_ROLE = Object.freeze({
 		summaryLead: "Against truth, for the supervisor's read only",
 		agreeWord: 'matching truth',
 		differWord: 'differing',
+		// RULING B4R-5 / FINDING B4-F6: the fourth bucket. Even against a truth block a pick can have no truth row
+		// for its subject, and such picks used to disappear from the tally between "matching" and "differing".
+		pickedNoComparisonWord: 'picked where truth names no object for the subject (neither matching nor differing)',
 		tieSentence: "differing pick(s) whose TRUTH card was rendered byte-identically to another candidate in the same pool. These are not judge errors; the right answer was on the page wearing someone else's face.",
 	}),
 	comparison: Object.freeze({
@@ -86,7 +94,13 @@ const REFERENCE_VOCABULARY_BY_ROLE = Object.freeze({
 		summaryLead: "Against the Ed-Fi crosswalk, for the supervisor's read only — THIS STANDARD HAS NO ANSWER KEY, so these are agreements and disagreements, never right and wrong",
 		agreeWord: 'agreeing with the crosswalk',
 		differWord: 'differing from it',
-		tieSentence: "differing pick(s) whose CROSSWALK card was rendered byte-identically to another candidate in the same pool. These are not judge errors; the card it disagreed with was on the page wearing someone else's face.",
+		// RULING B4R-5 / FINDING B4-F6: the fourth bucket, and for a STANDARD basis it is the COMMON case rather
+		// than an edge one — every one of batch-1's 11 judged subjects had no crosswalk row, so all three picks
+		// landed here and vanished from the old tally.
+		pickedNoComparisonWord: 'picked where NO crosswalk row exists for the key (neither agreeing nor differing — there is nothing to compare against, and that is not a mark against the pick)',
+		// FINDING B4-F7: this said "CROSSWALK card" in a standard-basis document. The role word is COMPARISON — the
+		// crosswalk is named once, as what the comparison happens to be, and not used as though it were the answer.
+		tieSentence: "differing pick(s) whose COMPARISON card (the Ed-Fi crosswalk's) was rendered byte-identically to another candidate in the same pool. These are not judge errors, and against a comparison they are not errors at all; the card it disagreed with was on the page wearing someone else's face.",
 	}),
 });
 const DEFAULT_BATCH_SIZE = 10;
@@ -129,6 +143,24 @@ if (blockRead.error) {
 }
 const block = blockRead.block;
 const header = block.header;
+
+// ⟪DOES THIS DOCUMENT DESCRIBE A BLOCK FROZEN UNDER A SUPERSEDED DECLARATION?⟫ RULING B4R-3 as amended by the
+// supervisor: batch-0 documents block 9a33bc88, frozen BEFORE the citation was corrected, and the document must SAY
+// SO plainly. DETECTED, not passed in as caller prose — a note a caller types is one a caller can forget, mistype,
+// or leave behind on the next regeneration, and it would be a provenance claim resting on nothing.
+//
+// The measurement is the one B4R-1's own conjunct makes and it needs nothing new: this file already loads the LIVE
+// bridgeDeclaration from the plugin on disk, so recomputing its digest through the framework's OWN canonicalJsonText
+// and comparing it to the digest the BLOCK froze answers the question directly. If they differ, the declaration
+// changed after this window was judged — that is what a content address means. General by construction: it keeps
+// working for whatever the next re-key turns out to be, with no note for anyone to maintain.
+const supersededDeclarationNote = (() => {
+	const liveDeclarationDigest = crypto.createHash('sha256').update(bridgePluginContractLib.canonicalJsonText(bridgeDeclaration)).digest('hex');
+	if (liveDeclarationDigest === header.declarationDigest) {
+		return null;
+	}
+	return `> **THIS DOCUMENT DESCRIBES A BLOCK FROZEN UNDER A SUPERSEDED DECLARATION.** The block carries \`declarationDigest ${String(header.declarationDigest).slice(0, 12)}…\`; the plugin ON DISK NOW digests to \`${liveDeclarationDigest.slice(0, 12)}…\`. Measured here rather than asserted — the two content addresses differ, so the declaration changed after this window was judged. Under RULING B4R-3 that change was a CORRECTION TO THE CITATION's stated evidence basis (5,265 was the count of XSD appinfo BLOCKS, not of populated cedsId/cedsURL PAIRS, of which there are 590): prose the classifier never reads and the judge never sees, which is why re-running this window produced ZERO new judge calls and why its judgments stand unaltered. What moved is the text that ships beside them. Read this document as the historical record of the window it names.`;
+})();
 
 // ⟪SILENT WRONG ARTIFACT — caught in the act, GRANITE_VALLEY 2026-08-17⟫ --blockId defaults to LATEST, so
 // `--offset=0` run after a later window had been frozen cheerfully documented the LATEST block and wrote it
@@ -420,6 +452,13 @@ const lineList = [];
 lineList.push(`# ${documentNameValue === undefined ? `D3 batch ${offsetValue}` : documentNameValue} — window ${blockWindowLimit} at offset ${offsetValue}, ${recordList.length} subjects, REAL judge`);
 lineList.push('');
 lineList.push(`**Of these ${recordList.length} subjects, ${judgedRecordList.length} went to the judge.** ${specifiedRecordList.length} are CHANNEL-ASSERTED — the plugin's own declared channel supplied the match and no judge was ever involved — and ${orphanRecordList.length} ${orphanRecordList.length === 1 ? 'is an orphan' : 'are orphans'}, for which no candidate card existed. Read every judge-facing number below as being about the ${judgedRecordList.length}, not the ${recordList.length}.`);
+// the superseded-declaration notice goes HIGH, immediately under the lead, because it changes how the whole
+// document should be read (RULING B4R-3). Absent when the block's declaration is the live one — a document that
+// carried the notice unconditionally would train readers to skip it.
+if (supersededDeclarationNote !== null) {
+	lineList.push('');
+	lineList.push(supersededDeclarationNote);
+}
 lineList.push('');
 lineList.push(`- block: \`${blockRead.blockId}\` (**PARTIAL** — \`${header.sourceWindow}\`)`);
 lineList.push(`- window: \`--limit=${batchSize} --offset=${offsetValue}\`, subjects sorted by stableId so the window is reproducible`);
@@ -462,12 +501,31 @@ if (trailIsContaminated) {
 	lineList.push('an assumption about append order, not a fact, so it is not used. The row is UNMEASURED.');
 }
 lineList.push('');
-const correctList = recordList.filter((oneRecord) => hasObjectPick(oneRecord) && truth.objectSetBySubject[oneRecord.subjectStableId] !== undefined && truth.objectSetBySubject[oneRecord.subjectStableId].has(oneRecord.objectStableId));
-const wrongList = recordList.filter((oneRecord) => hasObjectPick(oneRecord) && truth.objectSetBySubject[oneRecord.subjectStableId] !== undefined && !truth.objectSetBySubject[oneRecord.subjectStableId].has(oneRecord.objectStableId));
+// ⟪OVER THE JUDGED SUBSET, AND I GOT THIS WRONG ONCE BEFORE READING THE OUTPUT⟫ These three lists used to filter
+// recordList, and `hasObjectPick` is TRUE FOR A CHANNEL-ASSERTED ROW as well — a specified row carries an
+// objectStableId too. That is the exact trap BS-12 records in this file ("any field-based split would silently
+// re-absorb all 58"), and adding the B4R-5 bucket over recordList walked straight back into it: batch-0, a window
+// with ONE judged subject, reported NINE picks, which were its nine channel-asserted rows. Nothing errored; the
+// document simply lied in a new place. The population is judgedRecordList, derived from the CLASSIFICATION, and it
+// is the only population any of these four buckets may be computed over.
+const correctList = judgedRecordList.filter((oneRecord) => hasObjectPick(oneRecord) && truth.objectSetBySubject[oneRecord.subjectStableId] !== undefined && truth.objectSetBySubject[oneRecord.subjectStableId].has(oneRecord.objectStableId));
+const wrongList = judgedRecordList.filter((oneRecord) => hasObjectPick(oneRecord) && truth.objectSetBySubject[oneRecord.subjectStableId] !== undefined && !truth.objectSetBySubject[oneRecord.subjectStableId].has(oneRecord.objectStableId));
 // the FIRST-re-ask count is drawn from the same contaminated trail as the second-violation count, so on a
 // re-judged window it is an UPPER BOUND, not this block's cost. Reported as a bound rather than silently — a
-// projection of D4's bill is a decision input, and an inflated one argues for a ceiling nobody needs.
-lineList.push(`**Re-ask cost:** ${trailIsContaminated ? `AT MOST ${firstReaskCount}` : `${firstReaskCount}`} of ${recordList.length} subjects needed one re-ask because the judge named ITS OWN pick by ORDINAL — the hazard the D0 review flagged as most likely to inflate the bill. Each is one extra Opus call. Lawful (the framework allows exactly one) and recovered.${trailIsContaminated ? ` **This window was judged more than once, so ${firstReaskCount} counts BOTH runs' re-asks and is an UPPER BOUND on this block's cost, not its cost.**` : ''} At ${trailIsContaminated ? 'that bound' : 'this rate'} D4's 701 subjects would incur at most roughly ${Math.round((firstReaskCount / recordList.length) * 701)} extra calls; the declared ceiling of 1,600 covers it.`);
+// projection of the bill is a decision input, and an inflated one argues for a ceiling nobody needs.
+//
+// FINDING B4-F7, RULING B4R-5: THIS LINE USED TO PROJECT ONTO "D4's 701 subjects" AND "the declared ceiling of
+// 1,600". Both are Ed-Fi DERIVED quantities with no meaning for a standard-basis plugin, hardcoded into a document
+// generator that BS-8 had already generalised. Worse than untidy: it printed a cost projection for another
+// plugin's population inside SIF's document, where 701 is not the population and 1,600 is not the ceiling.
+//
+// The projection now uses only THIS bridge's own declared data — its own materialiseRealMaxJudgmentCount, read
+// from the acceptance entry — and it projects over the JUDGED share of the window rather than over the window,
+// because that is what a re-ask can happen to. The full-run population is deliberately NOT restated here: it lives
+// in this bridge's census fixture, and a document that retyped it would be a second place for it to go stale.
+const declaredFullRunCeiling = entry.materialiseRealMaxJudgmentCount;
+const reaskRateOverJudged = judgedRecordList.length === 0 ? null : firstReaskCount / judgedRecordList.length;
+lineList.push(`**Re-ask cost:** ${trailIsContaminated ? `AT MOST ${firstReaskCount}` : `${firstReaskCount}`} of ${recordList.length} subjects needed one re-ask because the judge named ITS OWN pick by ORDINAL — the hazard the D0 review flagged as most likely to inflate the bill. Each is one extra Opus call. Lawful (the framework allows exactly one) and recovered.${trailIsContaminated ? ` **This window was judged more than once, so ${firstReaskCount} counts BOTH runs' re-asks and is an UPPER BOUND on this block's cost, not its cost.**` : ''} ${reaskRateOverJudged === null ? 'No subject in this window reached a judge, so there is no rate to project.' : `Over the ${judgedRecordList.length} JUDGED subject(s) — the only ones a re-ask can happen to — that is ${trailIsContaminated ? 'a bound of ' : ''}${(reaskRateOverJudged * 100).toFixed(1)}% extra calls. Projecting it onto a full run means multiplying by THIS bridge's judged population, which is recorded in its census fixture rather than retyped here; the ceiling this bridge declares for a full real run is ${declaredFullRunCeiling === undefined ? 'NOT DECLARED — which the runner refuses, so this document should not exist' : declaredFullRunCeiling}.`}`);
 lineList.push('');
 lineList.push(`**Re-ask cost, cumulative:** across ${cumulativeReask.windowCount} judged window(s) — ${cumulativeReask.firstReaskCount} lawful first re-ask(s) over ${cumulativeReask.promptCount} prompt(s), ${cumulativeReask.secondViolationCount} second violation(s)${cumulativeReask.contaminatedWindowCount > 0 ? `, with ${cumulativeReask.contaminatedWindowCount} window(s) EXCLUDED from the second-violation total because their trail was written by more than one run and the count is not attributable` : ''}. Counted from the forensic trails on disk, not a running total, so re-running a batch cannot drift it.`);
 lineList.push('');
@@ -485,7 +543,28 @@ lineList.push('');
 // RULING BS-13: orphan is REPORTED SEPARATELY, never folded into abstained. The two look identical from the
 // objectStableId field and mean opposite things about coverage: an abstention is the judge declining among
 // candidates, an orphan is a subject that never reached a judge at all.
-lineList.push(`${referenceVocabulary.summaryLead}: **${correctList.length} ${referenceVocabulary.agreeWord} · ${wrongList.length} ${referenceVocabulary.differWord} · ${recordList.filter(isAbstained).length} abstained · ${recordList.filter(isOrphan).length} orphan (no candidate card existed)**. These are ${recordList.length} subjects; nothing here is a rate.`);
+// FINDING B4-F6, RULING B4R-5: THE PICKS WITH NO COMPARISON AVAILABLE GET THEIR OWN BUCKET.
+//
+// The line read "0 agreeing · 0 differing · 8 abstained · 1 orphan" on a window of 70 subjects with 11 JUDGED.
+// 0 + 0 + 8 = 8, and the THREE PICKS VANISHED: they were neither agreeing nor differing, because no reference row
+// exists for their key, and the sentence had no bucket for them. 8 + 1 = 9 reconciled with neither 11 judged nor
+// 70 subjects, so a reader could not recover the picks from the tally at all. batch-0 was accidentally consistent
+// (1 judged, 1 abstained), which is exactly how a presentation defect survives its first outing.
+//
+// The bucket is derived, not counted separately: a pick is comparable only when the reference names an object for
+// its subject, so "picked with no comparison available" is every pick that is in neither of the first two lists.
+// The four buckets plus the window total now reconcile by construction, and the line SAYS they do.
+// the four JUDGE buckets are over judgedRecordList, for the reason recorded at correctList above. Orphans and
+// channel-asserted rows are NOT judge outcomes and are reported as their own populations rather than folded in.
+const pickedNoComparisonList = judgedRecordList.filter((oneRecord) => hasObjectPick(oneRecord) && truth.objectSetBySubject[oneRecord.subjectStableId] === undefined);
+const abstainedJudgedCount = judgedRecordList.filter(isAbstained).length;
+const orphanCountInWindow = recordList.filter(isOrphan).length;
+// TWO reconciliations, both stated, because one alone hides the other's failure: the four judge buckets must sum to
+// the JUDGED count, and judged + channel-asserted + orphan must sum to the WINDOW. The old line stated neither and
+// dropped the picks between "agreeing" and "differing", so 0 + 0 + 8 = 8 stood in for 11 judged of 70 subjects.
+const judgeBucketTotal = correctList.length + wrongList.length + pickedNoComparisonList.length + abstainedJudgedCount;
+const windowTotal = judgedRecordList.length + specifiedRecordList.length + orphanCountInWindow;
+lineList.push(`${referenceVocabulary.summaryLead}: **${correctList.length} ${referenceVocabulary.agreeWord} · ${wrongList.length} ${referenceVocabulary.differWord} · ${pickedNoComparisonList.length} ${referenceVocabulary.pickedNoComparisonWord} · ${abstainedJudgedCount} abstained**. Those four are the JUDGE's outcomes and they sum to ${judgeBucketTotal}${judgeBucketTotal === judgedRecordList.length ? ` = the ${judgedRecordList.length} JUDGED subject(s)` : ` but there were ${judgedRecordList.length} JUDGED subject(s) — A DEFECT IN THIS DOCUMENT rather than in the run`}. Beside them, not among them: **${specifiedRecordList.length} channel-asserted** (no judge was involved) and **${orphanCountInWindow} orphan** (no candidate card existed, so the judge was never asked — RULING BS-13). Those three populations sum to ${windowTotal}${windowTotal === recordList.length ? ` = the ${recordList.length} subject(s) in the window` : ` but the window holds ${recordList.length} — A DEFECT IN THIS DOCUMENT`}. Nothing here is a rate.`);
 lineList.push('');
 lineList.push('---');
 lineList.push('');

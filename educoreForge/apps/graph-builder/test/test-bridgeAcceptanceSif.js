@@ -74,8 +74,10 @@ const harnessRaw = require('../../../test/testLib/harness')(moduleName);
 // + 10 (SECTION 9 BG-IDGATE-BASIS, RULING BS-11: 5 conjuncts + 5 twins)
 // + 7 (SECTION 10 BG-JUDGED-SUBSET, RULING BS-12: 4 source conjuncts + 3 document conjuncts)
 // + 1 (SECTIONS 0-2: the frozen-block census conjunct — MEASURED since the CP2 freeze of 2026-08-17)
-// = 88. Raised as a LITERAL, at this call site, in the same commit as the section it counts.
-const EXPECTED_ASSERTION_COUNT = 88;
+// + 7 (SECTION 11 BG-BATCH-TALLY, RULING B4R-5 / findings B4-F6 + B4-F7: 2 reconciliation conjuncts + 3 purge
+//     conjuncts + 1 judged-subset-population conjunct + 1 superseded-notice-discriminates conjunct)
+// = 95. Raised as a LITERAL, at this call site, in the same commit as the section it counts.
+const EXPECTED_ASSERTION_COUNT = 95;
 const ledger = { count: 0 };
 const harness = {
 	section: harnessRaw.section,
@@ -637,6 +639,30 @@ const runJudgedSubsetSection = () => {
 	harness.ok('BG-JUDGED-SUBSET f no subject is printed with an INVENTED confidence — the 58 channel-asserted rows have no judgment, and "confidence undefined" was the document stating a judge fact about a row no judge produced', occurrenceCount(documentText, 'confidence `undefined`') === 0);
 	harness.ok('BG-JUDGED-SUBSET g the channel-asserted and orphan rows are still fully ACCOUNTED FOR, under headings that say what they are — dropping them would trade one wrong claim for a silently incomplete window', /## SPECIFIED \(channel-asserted; no judge\)/.test(documentText) && /## ORPHAN \(no candidate card existed\)/.test(documentText) && /## THE JUDGED SUBJECTS \(11\)/.test(documentText));
 
+	// ---------------------------------------------------------------------
+	// SECTION 11 — BG-BATCH-TALLY (RULING B4R-5, findings B4-F6 and B4-F7): the aggregate line ACCOUNTS FOR EVERY
+	// SUBJECT, and a standard-basis document carries no derived-order quantities.
+	// ---------------------------------------------------------------------
+	harness.section('SECTION 11 — BG-BATCH-TALLY (RULING B4R-5): the aggregate line reconciles twice, and derived vocabulary and constants are gone from a standard-basis document');
+	// B4-F6: the line read "0 agreeing · 0 differing · 8 abstained · 1 orphan" on a window of 70 with 11 judged.
+	// 0 + 0 + 8 = 8 and THE THREE PICKS VANISHED — they were neither agreeing nor differing, because no crosswalk row
+	// exists for their key, and the sentence had no bucket for them. It now states BOTH reconciliations explicitly,
+	// which is what makes the claim checkable by a reader rather than only by this suite.
+	harness.ok('BG-BATCH-TALLY a the FOUR judge buckets are named and sum to the JUDGED count, stated in the document itself (the 3 picks are visible where they used to vanish between "agreeing" and "differing")', /·\s*3 picked where NO crosswalk row exists/.test(documentText) && /sum to 11 = the 11 JUDGED subject\(s\)/.test(documentText), documentText.slice(documentText.indexOf('Against the Ed-Fi crosswalk'), documentText.indexOf('Against the Ed-Fi crosswalk') + 420));
+	harness.ok('BG-BATCH-TALLY b the THREE populations (judged · channel-asserted · orphan) are stated to sum to the WINDOW, so a reader can check the document against itself without recomputing anything', /58 channel-asserted/.test(documentText) && /1 orphan/.test(documentText) && /sum to 70 = the 70 subject\(s\) in the window/.test(documentText));
+	// B4-F7: derived-order vocabulary and CONSTANTS. The two constants are the dangerous half — a cost projection for
+	// another plugin's population, printed inside this one's document.
+	harness.equal("BG-BATCH-TALLY c no derived-order CONSTANT survives in a standard-basis document — \"D4's 701\" and \"the declared ceiling of 1,600\" were Ed-Fi quantities with no meaning for SIF, hardcoded into a generator BS-8 had already generalised", [/D4's 701/, /ceiling of 1,600/, /\b701 subjects\b/].filter((onePattern) => onePattern.test(documentText)).length, 0);
+	harness.equal('BG-BATCH-TALLY c the re-ask projection now uses THIS bridge\'s own declared ceiling and its own JUDGED share, read from data', [/Over the 11 JUDGED subject\(s\)/, /the ceiling this bridge declares for a full real run is 800/].filter((onePattern) => !onePattern.test(documentText)).length, 0);
+	harness.equal('BG-BATCH-TALLY d the rendering-ties sentence uses the ROLE word (COMPARISON) rather than asserting a CROSSWALK card as though it were the answer, in a document whose whole premise is that there is no answer key', /whose CROSSWALK card/.test(documentText), false);
+	// THE FOUR-BUCKET SPLIT MUST BE OVER THE JUDGED SUBSET, and this is the conjunct I most want present, because I
+	// got it wrong and the document told me: computed over recordList, `hasObjectPick` is TRUE for a channel-asserted
+	// row too, so batch-0 — ONE judged subject — reported NINE picks. Nothing errored. That is BS-12's trap
+	// ("any field-based split would silently re-absorb all 58") reappearing in a new place one ruling later.
+	harness.ok('BG-BATCH-TALLY e RED-OBSERVED IN THE ARTIFACT — the four buckets are computed over judgedRecordList, NOT recordList: a channel-asserted row carries an objectStableId too, and over recordList batch-0 (1 judged) reported 9 picks, which were its 9 channel-asserted rows', (() => { const generatorText = fs.readFileSync(path.join(treeRoot, 'apps', 'graph-builder', 'test', 'bridgeAcceptance', 'batchCheckpoint.js'), 'utf8'); return /const pickedNoComparisonList = judgedRecordList\.filter\(/.test(generatorText) && /const correctList = judgedRecordList\.filter\(/.test(generatorText) && /const wrongList = judgedRecordList\.filter\(/.test(generatorText) && !/const correctList = recordList\.filter\(/.test(generatorText); })());
+	// the SUPERSEDED-DECLARATION notice, and that it DISCRIMINATES rather than always printing
+	harness.ok('BG-BATCH-TALLY f the superseded-declaration notice is MEASURED from content addresses, not passed in as caller prose — batch-1 documents the LIVE declaration and carries no notice, while batch-0 documents a pre-B4R-3 block and does', /SUPERSEDED DECLARATION/.test(documentText) === false && /SUPERSEDED DECLARATION/.test(fs.readFileSync(path.join(path.dirname(acceptanceCommands.decisionStoreFilePath), 'batches', 'batch-0.md'), 'utf8')) === true, 'either batch-1 wrongly carries the notice, or batch-0 has lost it — a notice that always prints trains readers to skip it, and one that never prints is not a notice');
+
 	runFrozenArtifactSection();
 };
 
@@ -644,7 +670,21 @@ const runJudgedSubsetSection = () => {
 // SECTIONS 0-2 — the frozen artifacts. UNMEASURED (and failing by name) until CP2 freezes them.
 // ---------------------------------------------------------------------
 const runFrozenArtifactSection = () => {
-	harness.section('SECTIONS 0-2 — the frozen SIF block, its census EQUALITY, Profile §7 over its records, and its SSSOM export');
+	// FINDING B4-F10, RULING B4R-5: THE HEADING NOW SAYS WHAT IS ACTUALLY COVERED. It used to promise "Profile §7
+	// over its records, and its SSSOM export", and this section runs exactly ONE composite conjunct — census, the
+	// three digests, the judge-dependent trio and the per-subject sum. There is no Profile §7 conjunct and no SSSOM
+	// conjunct for the SIF block, so SPEC §12 items 3, 4 and 5 are UNGATED for SIF (test-bridgeAcceptanceEdfi.js has
+	// a real SECTION 2 for them; SIF has none). The supervisor ruled the HEADING is corrected rather than the
+	// conjuncts added, so the gap is now stated instead of papered over — and stated where a reader of the output
+	// will see it, not only in a review nobody re-opens.
+	//
+	// THE ARTIFACT ITSELF PASSES those gates; the reviewer measured it by hand over 31030a16….sssom.tsv (2,070 rows,
+	// every predicate_id skos:exactMatch, 1,875 ManualMappingCuration + 195 CompositeMatching, zero
+	// UnspecifiedMatching, every subject_id splitting on exactly one colon, and `sssom validate` exit 0 on both SIF
+	// exports). So this is a MISSING INSTRUMENT, not a failing artifact — which is the more dangerous of the two,
+	// because a heading naming two gates it does not run is exactly the silence this phase's own BG-COMPOSE twin
+	// doctrine exists to refuse.
+	harness.section('SECTIONS 0-2 — the frozen SIF block and its census EQUALITY (ONE composite conjunct: census member-for-member, the three digests, the judge-dependent trio, the per-subject sum). NOT covered here and named rather than implied: Profile §7 over the records, and the SSSOM export — SPEC §12 items 3/4/5 are UNGATED for SIF (B4-F10, open for the spec editorial pass; the artifact was measured to pass them by hand in the B4 review)');
 	// THE FIXTURE NAME IS DATA-DERIVED, not a literal — see censusFixtureResolution at the top of this file, which
 	// is now the ONE place that derivation happens. It was local here until RULING B4R-1 needed the same fixture in
 	// the hermetic SECTION 3; hoisting it rather than copying it means the two sections cannot come to disagree

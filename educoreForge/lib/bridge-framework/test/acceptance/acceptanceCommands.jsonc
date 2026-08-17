@@ -268,6 +268,10 @@
 		},
 		"fourBaseManifestId": null,
 		"pinnedFlagList": ["--vectorize=true", "--reuseForgedBlocks=true", "--standardsDatabaseFilePath=<the pinned store, ABSOLUTE>", "--decisionStoreFilePath=<ABSOLUTE, pinned, SIF-only>", "--judgmentCacheFilePath=<ABSOLUTE, pinned, SIF-only>", "--matchForensicsDirPath=<ABSOLUTE, pinned, SIF-only>", "--embeddingCacheFilePath=<the warm cache>", "--rebridge=sif (rejudge lines only)", "--useDebugJudge=digest (rejudgeDebug only)", "--limit=70 --offset=<n> (rejudgeRealLimit only)", "</dev/null", "--max-old-space-size=20000"],
-		"frozenBy": null
+		// RULING B4R-6 (FINDING B4-F8): this was null where DR-7 required the derived entry to carry a real
+		// attribution. Written only now, at the end of the B4b sitting, because the words "re-frozen after B4R-3"
+		// had to be TRUE before they were written — an attestation that predates the thing it attests is worth less
+		// than no attestation, and it is the kind of small untruth that a later reader has no way to detect.
+		"frozenBy": { "sessionName": "SABLE_RIVER", "builder": "ONYX_BEACON", "date": "2026-08-17", "note": "SABLE_RIVER (CP2 freeze 2026-08-17 01:35 CDT; re-frozen after B4R-3)" }
 	}
 }
