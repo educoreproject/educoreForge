@@ -304,6 +304,10 @@ const runComposeSection = () => {
 			// than quietly permitted by a looser pattern, so a reviewer sees exactly what this phase added
 			// beyond its plugin and can hold it to the ruling that authorised it.
 			{ pattern: /^apps\/graph-builder\/test\/bridgeAcceptance\/(runBridgeAcceptanceCommand|genesisGuard)\.js$/, why: 'RULING BS-5: the runner gains a NAMED genesis path, with the rule extracted to genesisGuard.js so its twins exercise the rule itself rather than a copy — the runner is a CLI that exits on refusal and cannot be required from a suite' },
+			// its OWN row rather than a widening of the row above, because the two changes answer to DIFFERENT
+			// rulings and the registry's whole value is that each row justifies itself to a reviewer by name. A
+			// pattern that quietly grew to cover a second file would have retired that.
+			{ pattern: /^apps\/graph-builder\/test\/bridgeAcceptance\/batchCheckpoint\.js$/, why: 'RULING BS-8: the batch document generator is GENERALISED rather than forked — its two hardcoded truth constants become declared data (referenceStoreFilePath / referenceBlockId / referenceRole) and the ROLE selects the vocabulary, so a SIF document says COMPARISON where a derived document says TRUTH. SIF has no answer key; a document that called a disagreement an error would be claiming more than its evidence supports' },
 		];
 		const isPermitted = (onePath) => PERMITTED_PATH_REGISTRY.some((oneRow) => oneRow.pattern.test(onePath));
 		// --relative is REQUIRED, not cosmetic: the repository root is system/code and this tree is system/code/educoreForge,
