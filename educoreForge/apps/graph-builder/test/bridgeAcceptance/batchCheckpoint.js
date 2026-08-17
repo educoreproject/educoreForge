@@ -267,14 +267,34 @@ const cumulativeReask = (() => {
 })();
 
 // ---- THE MECHANICAL CLEAN-CHECKLIST (§11.12) ----
+// THE ID GATE IS BASIS-CONDITIONAL (RULING BS-11). The red set comes from the plugin's OWN matchBasis and
+// blindingDeclaration, so a key-filtered pool is not audited by a rule written for a vector-retrieved one.
+const idGateSpec = renderingAuditLib.idGateSpecFor({ matchBasis: bridgeDeclaration.matchBasis, blindingDeclaration: bridgeDeclaration.blindingDeclaration });
+if (idGateSpec.error) {
+	refuse(idGateSpec.error.message);
+}
 const idGateHitList = [];
 forensicsRead.recordList.forEach((oneRecord) => {
-	renderingAuditLib.ID_GATE_PATTERN_LIST.forEach((onePattern) => {
+	idGateSpec.patternList.forEach((onePattern) => {
 		if (onePattern.regex.test(oneRecord.userPrompt)) {
 			idGateHitList.push(`${onePattern.patternName} in ${String(oneRecord.promptHash).slice(0, 12)}`);
 		}
 	});
 });
+// For a key-filtered basis the shared-key assertion REPLACES hub-identifier-as-answer, and it is reported as
+// its own checklist row rather than folded into the hit list: they answer different questions, and a reader
+// must be able to see that the extractor saw keys at all before reading "they agree" as evidence.
+const sharedKeyRefusalList = [];
+let sharedKeyOccurrenceCount = 0;
+if (idGateSpec.assertsSingleSharedKey) {
+	forensicsRead.recordList.forEach((oneRecord) => {
+		sharedKeyOccurrenceCount += renderingAuditLib.sharedKeyReadFor({ userPrompt: oneRecord.userPrompt, keyFieldName: idGateSpec.sharedKeyFieldName }).occurrenceCount;
+		const refusalText = renderingAuditLib.sharedKeyRefusalFor({ userPrompt: oneRecord.userPrompt, keyFieldName: idGateSpec.sharedKeyFieldName });
+		if (refusalText !== '') {
+			sharedKeyRefusalList.push(`${String(oneRecord.promptHash).slice(0, 12)}: ${refusalText}`);
+		}
+	});
+}
 const judgedOrAbstainedCount = recordList.filter((oneRecord) => oneRecord.classification === 'judged' || oneRecord.classification === 'orphan').length;
 // RE-ASKS: THE RULING COUNTS SECOND VIOLATIONS, NOT FIRST ONES, and the difference is the whole point.
 // judgeComponent permits EXACTLY ONE re-ask when a rationale names its pick by ordinal (BR-067); the run dies
@@ -320,7 +340,8 @@ const checklist = [
 	{ name: `all ${recordList.length} subjects judged-or-abstained`, pass: judgedOrAbstainedCount === recordList.length, detail: `${judgedOrAbstainedCount}/${recordList.length}` },
 	{ name: 'batch size equals the released window', pass: recordList.length === batchSize, detail: `${recordList.length} records, window ${batchSize}` },
 	{ name: '0 framework refusals', pass: Array.isArray(block.refusalList) && block.refusalList.length === 0, detail: `${Array.isArray(block.refusalList) ? block.refusalList.length : '?'} refusal(s)` },
-	{ name: '0 id-gate hits over every prompt in this generation', pass: idGateHitList.length === 0, detail: idGateHitList.length ? idGateHitList.slice(0, 3).join('; ') : 'zero' },
+	{ name: `0 id-gate hits over every prompt in this generation (matchBasis '${bridgeDeclaration.matchBasis}')`, pass: idGateHitList.length === 0, detail: idGateHitList.length ? idGateHitList.slice(0, 3).join('; ') : 'zero' },
+	...(idGateSpec.assertsSingleSharedKey ? [{ name: `every rendered pool carries ONE shared '${idGateSpec.sharedKeyFieldName}' (the key-filtered basis assertion that replaces hub-identifier-as-answer)`, pass: sharedKeyRefusalList.length === 0 && sharedKeyOccurrenceCount > 0, detail: sharedKeyRefusalList.length ? sharedKeyRefusalList.slice(0, 2).join('; ') : sharedKeyOccurrenceCount === 0 ? 'UNMEASURED: the extractor found NO hub identifier in any prompt, so "the keys agree" would be a statement about silence' : `zero disagreements over ${sharedKeyOccurrenceCount} rendered '${idGateSpec.sharedKeyFieldName}' occurrence(s)` }] : []),
 	{ name: '0 SECOND-violation re-asks (a first re-ask is lawful; a second kills the run)', pass: reaskVerdictIsMeasurable ? reaskCount === 0 : null, detail: reaskVerdictIsMeasurable ? `${reaskCount} second violation(s); ${firstReaskCount} lawful first re-ask(s) recovered` : `UNMEASURED — the trail holds ${forensicsRead.recordList.length} record(s) for this generation against ${recordList.length} block record(s) + ${firstReaskCount} re-ask(s), so more than one run wrote to it and the count is not attributable to this block` },
 	{ name: "every pick's ordinal maps to a rendered candidate", pass: unmappedPickList.length === 0, detail: `${unmappedPickList.length} unmapped` },
 	{ name: 'forensics complete for every record', pass: forensicsMissingList.length === 0, detail: `${forensicsMissingList.length} record(s) without a forensic prompt` },

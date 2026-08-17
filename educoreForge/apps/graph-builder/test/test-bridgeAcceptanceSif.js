@@ -69,9 +69,10 @@ const harnessRaw = require('../../../test/testLib/harness')(moduleName);
 // + 6 (SECTION 6 BG-RENDER-VARIANT, RULING BS-10: 4 conjuncts + 2 twins)
 // + 5 (SECTION 7 BG-BATCH-SIZE, RULING BS-9: 4 conjuncts + 1 red observation)
 // + 7 (SECTION 8 BG-DISPOSITION, RULING BS-13: 4 conjuncts + 3 twins)
+// + 10 (SECTION 9 BG-IDGATE-BASIS, RULING BS-11: 5 conjuncts + 5 twins)
 // + 1 (SECTIONS 0-2: the frozen-block census conjunct — MEASURED since the CP2 freeze of 2026-08-17)
-// = 65. Raised as a LITERAL, at this call site, in the same commit as the section it counts.
-const EXPECTED_ASSERTION_COUNT = 65;
+// = 75. Raised as a LITERAL, at this call site, in the same commit as the section it counts.
+const EXPECTED_ASSERTION_COUNT = 75;
 const ledger = { count: 0 };
 const harness = {
 	section: harnessRaw.section,
@@ -488,6 +489,46 @@ const runRecordDispositionSection = () => {
 	// are counted (that is BS-12's ruling, deliberately left to its own commit); this asserts only that the
 	// disposition vocabulary can SAY 'specified', so BS-12 has a name to work with rather than an inference.
 	harness.ok('BG-DISPOSITION TWIN the vocabulary can name a SPECIFIED row distinctly, so BS-12 can separate channel-asserted rows from judged ones by NAME rather than by inferring it from a missing field', dispositionLib.DISPOSITION_SPECIFIED === 'specified' && dispositionLib.KNOWN_CLASSIFICATION_LIST.indexOf('specified') !== -1);
+
+	runIdGateBasisSection();
+};
+
+// ---------------------------------------------------------------------
+// SECTION 9 — BG-IDGATE-BASIS (RULING BS-11): the id gate is basis-conditional. A key-filtered pool's shared
+// identifier distinguishes nothing, so for matchBasis 'standard' the gate asserts the SHARED KEY and the
+// plugin's DECLARED blinded names instead of hub-identifier-as-answer.
+// ---------------------------------------------------------------------
+const runIdGateBasisSection = () => {
+	harness.section("SECTION 9 — BG-IDGATE-BASIS (RULING BS-11): hub-identifier-as-answer is a DERIVED rule; a key-filtered pool is gated on its shared key");
+	const auditLib = require(path.join(__dirname, 'bridgeAcceptance', 'renderingAudit'));
+	const sifDeclaration = require(path.join(__dirname, '..', '..', '..', 'forges', 'sif', 'bridges', 'sifCedsStandardPlugin')).bridgeDeclaration;
+	const specFor = (matchBasis) => auditLib.idGateSpecFor({ matchBasis, blindingDeclaration: sifDeclaration.blindingDeclaration });
+	const patternNameListFor = (matchBasis) => (specFor(matchBasis).patternList || []).map((onePattern) => onePattern.patternName);
+
+	harness.ok("BG-IDGATE-BASIS a the DERIVED gate is UNCHANGED — it still carries hubIdentifier, because in a vector-retrieved pool of unrelated hub cards the identifier really is the answer", patternNameListFor('derived').indexOf('hubIdentifier') !== -1 && specFor('derived').assertsSingleSharedKey === false);
+	harness.ok("BG-IDGATE-BASIS b the STANDARD gate drops hubIdentifier and asserts the shared key instead — a pattern that fires on every card of a key-filtered pool measures the filter, not a leak", patternNameListFor('standard').indexOf('hubIdentifier') === -1 && specFor('standard').assertsSingleSharedKey === true);
+	harness.ok("BG-IDGATE-BASIS c the STANDARD red set is built FROM the plugin's own blindingDeclaration, so all five declared names are armed rather than the two the static list happens to carry — a declaration the audit does not enforce is a comment", sifDeclaration.blindingDeclaration.every((oneName) => patternNameListFor('standard').indexOf(`blinded:${oneName}`) !== -1) && sifDeclaration.blindingDeclaration.length === 5, patternNameListFor('standard').join(' '));
+	harness.ok('BG-IDGATE-BASIS d the basis-independent patterns SURVIVE the narrowing — a hub uri or a content hash is an identity leak whatever the pool is made of, and BS-11 narrows the gate for one named reason only', patternNameListFor('standard').indexOf('educoreW3id') !== -1 && patternNameListFor('standard').indexOf('contentHash') !== -1);
+	harness.ok('BG-IDGATE-BASIS e an UNKNOWN matchBasis is REFUSED BY NAME listing the known ones — inheriting another basis\'s gate is how a pool gets audited by rules written for a pool it is not', specFor('someBasisNobodyHasWrittenYet').error !== undefined && /known bases are/.test(String(specFor('someBasisNobodyHasWrittenYet').error.message)));
+
+	const cardPairText = (leftKey, rightKey) => `  [1] ${leftKey} — Operational Status Effective Date\n      seat: filteredOnKey\n      domainId: C200398\n      propertyKey: ${leftKey}\n  [2] ${rightKey} — Operational Status Effective Date\n      seat: filteredOnKey\n      domainId: C200396\n      propertyKey: ${rightKey}\n`;
+	const refusalFor = (leftKey, rightKey) => auditLib.sharedKeyRefusalFor({ userPrompt: cardPairText(leftKey, rightKey), keyFieldName: specFor('standard').sharedKeyFieldName });
+
+	// THE RED TWIN THE RULING NAMED. A 'standard' pool carrying a DIFFERENT key is not key-filtered in fact,
+	// and in that pool the identifier DOES pick out the answer — so the assertion that replaced hubIdentifier
+	// must refuse. Without this twin the replacement would be strictly weaker than what it replaced.
+	harness.ok('BG-IDGATE-BASIS TWIN a standard pool whose candidates carry TWO DIFFERENT propertyKey values REFUSES, naming both — the pool is then not key-filtered in fact and the key really would pick out the answer; the shared-key assertion is only as good as its bite', /P000534/.test(refusalFor('P000534', 'P999999')) && /P999999/.test(refusalFor('P000534', 'P999999')));
+	harness.ok('BG-IDGATE-BASIS TWIN a pool whose candidates all carry the SAME propertyKey passes — the live CP3 shape, and what makes the derived gate\'s hit on SIF an artifact rather than a finding', refusalFor('P000534', 'P000534') === '');
+	// THE FIELD IS NAMED FOR A REASON, and this twin is the one the real data forced. Every card in the live
+	// prompts carries a DIFFERENT domainId (C200398 vs C200396 — Organization vs Local Education Agency), and
+	// that difference is the SUBSTANCE of the judgment, not a leak: it is exactly what the judge must weigh,
+	// and it is why 73 per cent of these subjects abstain. A rule that swept up every identifier-shaped token
+	// called those four ids a leak and refused a sound pool.
+	harness.ok('BG-IDGATE-BASIS TWIN differing domainIds do NOT refuse — they distinguish Organization from Local Education Agency, which is the decision the judge is being asked to make; a gate that blinded them would leave nothing to reason with', refusalFor('P000534', 'P000534') === '' && /domainId: C200398/.test(cardPairText('P000534', 'P000534')) && /domainId: C200396/.test(cardPairText('P000534', 'P000534')));
+	harness.ok('BG-IDGATE-BASIS TWIN a prompt carrying NO such field reads as ZERO occurrences rather than as agreement — the caller reports UNMEASURED, because "every candidate agrees" over an empty extraction is a statement about silence', auditLib.sharedKeyReadFor({ userPrompt: 'a prompt with no key field at all', keyFieldName: 'propertyKey' }).occurrenceCount === 0);
+	// UNMEASURED-GUARD. "They all match" is satisfied trivially by a pool of one and satisfied FOREVER by an
+	// extractor that silently returns nothing. The occurrence count is what separates agreement from silence.
+	harness.ok('BG-IDGATE-BASIS TWIN the extractor is proven to SEE something — occurrenceCount is 2 on the two-card pool above, so "all keys agree" can never be reported by an extractor that simply found nothing', auditLib.sharedKeyReadFor({ userPrompt: cardPairText('P000534', 'P000534'), keyFieldName: 'propertyKey' }).occurrenceCount === 2);
 
 	runFrozenArtifactSection();
 };

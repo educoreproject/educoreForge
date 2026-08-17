@@ -47,6 +47,100 @@ const ID_GATE_PATTERN_LIST = Object.freeze([
 ]);
 const ADVISORY_URL_REGEX = /https?:\/\//;
 
+// ---------------------------------------------------------------------
+// THE ID GATE IS BASIS-CONDITIONAL (RULING BS-11, SABLE_RIVER 2026-08-17). Same shape as
+// CANDIDATE_ORDINAL_SPEC_BY_RENDERER_VERSION: declared data, one row per basis, unknown basis refused by name.
+//
+// WHY. `hubIdentifier` is "the answer itself" only when the pool is VECTOR-RETRIEVED — there the cards are
+// unrelated hub properties and the identifier picks one out. A matchBasis 'standard' pool is KEY-FILTERED: its
+// candidates are selected BY the CEDS id the standard names, so EVERY candidate carries the SAME key and the
+// identifier distinguishes nothing. Measured on a real SIF pool before this was written: all three rendered
+// keys identical. Nor is the source stableId a blinded property for 'standard' — the standard names its own
+// target openly, which is what makes it a standard-declared bridge rather than a crosswalk.
+//
+// So for 'standard' the gate asserts something STRONGER instead of something vacuous: that all rendered
+// candidates share ONE key (a DIFFERENT key in the pool means the filter leaked an unrelated card and the
+// identifier really would distinguish), and that no name the plugin DECLARED blind appears anywhere.
+//
+// THE RED SET FOR 'standard' IS BUILT FROM THE PLUGIN'S OWN blindingDeclaration, not from a second hand-kept
+// list. A hand-kept list is a copy, and a copy drifts: the plugin blinds five names and the static list below
+// happens to carry patterns for two of them. Building from the declaration means adding a blinded name to a
+// plugin arms the gate for it in the same edit.
+const BASIS_INDEPENDENT_PATTERN_NAME_LIST = Object.freeze(['educoreW3id', 'contentHash']);
+const ID_GATE_SPEC_BY_MATCH_BASIS = Object.freeze({
+	derived: Object.freeze({
+		usesStaticPatternList: true,
+		assertsSingleSharedKey: false,
+		why: 'a vector-retrieved pool holds unrelated hub cards, so a rendered hub identifier IS the answer and every pattern in ID_GATE_PATTERN_LIST is red',
+	}),
+	standard: Object.freeze({
+		usesStaticPatternList: false,
+		assertsSingleSharedKey: true,
+		// THE KEY IS A NAMED FIELD, NOT "ANY TOKEN THAT LOOKS LIKE AN IDENTIFIER" (refined 2026-08-17 by running
+		// this gate over the real CP3 prompts, which REFUSED). A rendered candidate card carries BOTH the
+		// filtered-on key and its domain id, and only the first is shared:
+		//     [1] P000534 ... seat: filteredOnKey ... propertyKey: P000534 ... domainId: C200398
+		//     [2] P000534 ... seat: filteredOnKey ... propertyKey: P000534 ... domainId: C200396
+		// The domainIds DIFFER BY DESIGN and are the substance of the judgment, not a leak: they are what
+		// separates "Organization Operational Detail" from "Local Education Agency Operational Detail", which
+		// IS the SIF judged case. Blinding them would leave the judge nothing to reason with. So the assertion
+		// names the field it means. Absent field is REFUSED, never read as agreement.
+		sharedKeyFieldName: 'propertyKey',
+		why: "a key-filtered pool's candidates all carry the same filtered-on key by construction, so that key distinguishes nothing; the gate asserts the shared key instead, plus the plugin's DECLARED blinded names",
+	}),
+});
+
+// idGateSpecFor — the red patterns for one basis. { patternList, assertsSingleSharedKey } or { error }.
+const idGateSpecFor = ({ matchBasis, blindingDeclaration } = {}) => {
+	const spec = ID_GATE_SPEC_BY_MATCH_BASIS[matchBasis];
+	if (spec === undefined) {
+		return { error: refuse.byName({ moduleName, what: `matchBasis '${matchBasis}' has no id-gate spec`, where: `known bases are ${Object.keys(ID_GATE_SPEC_BY_MATCH_BASIS).join(', ')} — a new basis must be given its gate DELIBERATELY, because inheriting another basis's gate is how a pool gets audited by rules written for a pool it is not` }) };
+	}
+	if (spec.usesStaticPatternList) {
+		return { patternList: ID_GATE_PATTERN_LIST, assertsSingleSharedKey: spec.assertsSingleSharedKey, sharedKeyFieldName: spec.sharedKeyFieldName };
+	}
+	if (!Array.isArray(blindingDeclaration) || blindingDeclaration.length === 0) {
+		return { error: refuse.byName({ moduleName, what: `matchBasis '${matchBasis}' builds its red set from the plugin's blindingDeclaration, which is absent or empty`, where: 'a gate with an empty red set reports zero hits and reads exactly like a pass — refused by name rather than run' }) };
+	}
+	const declaredPatternList = blindingDeclaration.map((oneName) => Object.freeze({
+		patternName: `blinded:${oneName}`,
+		regex: new RegExp(oneName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')),
+		why: `the plugin DECLARED '${oneName}' blind; a declaration the audit does not enforce is a comment`,
+	}));
+	const basisIndependentPatternList = ID_GATE_PATTERN_LIST.filter((onePattern) => BASIS_INDEPENDENT_PATTERN_NAME_LIST.indexOf(onePattern.patternName) !== -1);
+	return { patternList: Object.freeze(declaredPatternList.concat(basisIndependentPatternList)), assertsSingleSharedKey: spec.assertsSingleSharedKey, sharedKeyFieldName: spec.sharedKeyFieldName };
+};
+
+// sharedKeyReadFor — the hub identifiers ACTUALLY found in one rendered prompt. The occurrence count is
+// returned alongside the distinct list on purpose: "they all match" is satisfied trivially by a pool of one
+// and satisfied forever by an extractor that silently returns nothing, so the caller must be able to state
+// that the extractor saw something before treating agreement as evidence.
+const sharedKeyReadFor = ({ userPrompt, keyFieldName } = {}) => {
+	if (typeof userPrompt !== 'string' || typeof keyFieldName !== 'string' || keyFieldName === '') {
+		return { distinctKeyList: [], occurrenceCount: 0 };
+	}
+	const fieldRegex = new RegExp(`^\\s*${keyFieldName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}:\\s*(\\S+)\\s*$`, 'gm');
+	const matchList = [];
+	let oneMatch = fieldRegex.exec(userPrompt);
+	while (oneMatch !== null) {
+		matchList.push(oneMatch[1]);
+		oneMatch = fieldRegex.exec(userPrompt);
+	}
+	const distinctKeyList = matchList.filter((oneKey, oneIndex) => matchList.indexOf(oneKey) === oneIndex).sort(compareStrings);
+	return { distinctKeyList, occurrenceCount: matchList.length };
+};
+
+// sharedKeyRefusalFor — '' when the pool's rendered keys are consistent; otherwise the refusal, NAMING the
+// keys that disagree. More than one distinct key in a key-filtered pool means the filter admitted a card the
+// standard did not name, and in THAT pool the identifier does distinguish the answer.
+const sharedKeyRefusalFor = ({ userPrompt, keyFieldName } = {}) => {
+	const read = sharedKeyReadFor({ userPrompt, keyFieldName });
+	if (read.distinctKeyList.length > 1) {
+		return `a key-filtered (matchBasis 'standard') pool rendered ${read.distinctKeyList.length} DIFFERENT '${keyFieldName}' values — ${read.distinctKeyList.join(', ')} — so the pool is not key-filtered in fact and the identifier DOES pick out the answer; the shared-key assertion that replaces the hub-identifier pattern for this basis is void here (RULING BS-11)`;
+	}
+	return '';
+};
+
 const isNonEmptyString = (value) => typeof value === 'string' && value.length > 0;
 const compareStrings = (leftValue, rightValue) => (leftValue < rightValue ? -1 : leftValue > rightValue ? 1 : 0);
 
@@ -320,4 +414,4 @@ const buildRenderingAudit = ({ forensicsDirPath, pairKey, generation, blockId, r
 	return { markdownText: lineList.join('\n'), promptCount: recordList.length, distinctPromptCount: distinctPromptHashSet.size, hitList, advisoryUrlCount, sampleCount: sampleList.length };
 };
 
-module.exports = { CANDIDATE_ORDINAL_SPEC_BY_RENDERER_VERSION, buildRenderingAudit, readPromptRecordList, renderedCandidateTextIndexFrom, renderedFieldsFrom, renderedCandidateTextListFromPrompt, ID_GATE_PATTERN_LIST, ADVISORY_URL_REGEX, DEFAULT_SAMPLE_COUNT, moduleName };
+module.exports = { CANDIDATE_ORDINAL_SPEC_BY_RENDERER_VERSION, ID_GATE_SPEC_BY_MATCH_BASIS, idGateSpecFor, sharedKeyReadFor, sharedKeyRefusalFor, buildRenderingAudit, readPromptRecordList, renderedCandidateTextIndexFrom, renderedFieldsFrom, renderedCandidateTextListFromPrompt, ID_GATE_PATTERN_LIST, ADVISORY_URL_REGEX, DEFAULT_SAMPLE_COUNT, moduleName };
