@@ -1,0 +1,70 @@
+
+ACCEPT-CONTROL (run FIRST, deliberately) — the shipped bytes, unmutated. Every COMPOSITION
+  assertion must be PRESENT and GREEN. A suite that was already failing would otherwise make
+  every lever below look effective.
+  ok    ACCEPT-CONTROL both production files are pristine before the run
+    | shipped suite tally: 63 passed, 0 failed; assertions REACHED 63; aborted false; exited non-zero false
+  ok    ACCEPT-CONTROL the suite actually REACHED its assertions (a zero-assertion run is not a pass)
+  ok    ACCEPT-CONTROL all five COMPOSITION assertions are actually emitted by the shipped suite
+  ok    ACCEPT-CONTROL GREEN: no COMPOSITION assertion fails in the shipped configuration
+  ok    ACCEPT-CONTROL GREEN: the shipped suite has zero failures overall
+
+LEVER 1 — PRODUCTION MUTATION, SHIPPED CONFIGURATION: the composition pass is fed the SOURCE
+  graph, which predates the derived tier, instead of the COMBINED graph. This is the naive
+  placement — the same condition as composing inside makeNode.
+  ok    LEVER 1 the mutation actually changed the production bytes
+  ok    LEVER 1 the shipped bytes are restored, verified by sha256
+    | suite under LEVER 1: aborted true, exited non-zero true, assertions REACHED 0, failures 0
+    | refusal names ORDERING TRAP: true; names ZERO RESOLVES_TO: true
+  ok    LEVER 1 RED: the suite ABORTS rather than completing
+  ok    LEVER 1 RED: the suite exits NON-ZERO
+  ok    LEVER 1 RED: the abort message names the ORDERING TRAP by name
+  ok    LEVER 1 RED: the abort message says ZERO RESOLVES_TO edges
+  ok    LEVER 1 the "0 failures" here is ZERO ASSERTIONS REACHED, not a pass — the count is only meaningful with the reach
+    | COMPOSITION assertions reddened by LEVER 1: none — the forge refused before ANY assertion could run, which is the point
+
+LEVER 2 — PRODUCTION MUTATION, SHIPPED CONFIGURATION: the C0 arm is mutated to return the
+  bare element name. That is C1, DISQUALIFIED by the cosine guard for a 0.169 fall in median
+  top-1 cosine, more than five times the 0.03 threshold.
+  ok    LEVER 2 the mutation actually changed the production bytes
+  ok    LEVER 2 the shipped bytes are restored, verified by sha256
+    | COMPOSITION assertions reddened by LEVER 2: c1Shape, shapeEnvelope
+    | counter evidence in the suite output: C1-SHAPED EMISSIONS 5114 ; C1-SHAPED EMISSIONS 5114 ; C1-SHAPED EMISSIONS 5114
+  ok    LEVER 2 RED: the C1-shape assertion fails when an arm emits a bare name
+  ok    LEVER 2 RED: the shape-envelope assertion also fails (a bare name is neither ruled shape)
+  ok    LEVER 2 the borrowed-prose assertion stays GREEN (so this is NOT lever 1 in disguise)
+
+LEVER 3 — PRODUCTION MUTATION, SHIPPED CONFIGURATION: resolveEffectiveDescription stops after
+  the node's OWN prose and never follows RESOLVES_TO. Unlike lever 1 the forge COMPLETES, so
+  this is the SILENT form of the same damage — and only the borrowed-prose assertion notices.
+  ok    LEVER 3 the mutation actually changed the production bytes
+  ok    LEVER 3 the shipped bytes are restored, verified by sha256
+    | COMPOSITION assertions reddened by LEVER 3: borrowedProse
+  ok    LEVER 3 RED: the borrowed-prose assertion fails when RESOLVES_TO is never followed
+  ok    LEVER 3 the C1-shape assertion stays GREEN (the arm still delegates, so no bare names)
+
+LEVER 4 — PRODUCTION MUTATION, SHIPPED CONFIGURATION: the C2 arm is reversed to
+  `effectiveDescription | ElementName`. It ENDS with the element name, so it satisfies the
+  shape ENVELOPE by masquerading as a valid C0. Only the own-prose name-first assertion can
+  catch it — which is the whole reason that assertion exists.
+  ok    LEVER 4 the mutation actually changed the production bytes
+  ok    LEVER 4 the shipped bytes are restored, verified by sha256
+    | COMPOSITION assertions reddened by LEVER 4: nameFirstDirection
+  ok    LEVER 4 RED: the own-prose name-first assertion fails when the C2 arm is reversed
+  ok    LEVER 4 THE MASQUERADE IS REAL: the shape ENVELOPE stays green, proving it could not have caught this alone
+
+DISCRIMINATION — the four levers must redden DIFFERENT assertion sets
+    | leverFour: [nameFirstDirection]
+    | leverOne: []
+    | leverThree: [borrowedProse]
+    | leverTwo: [c1Shape, shapeEnvelope]
+    | distinct red signatures: 4 of 4 levers
+  ok    DISCRIMINATION lever 2 and lever 3 redden DIFFERENT assertions (shape vs ordering are distinct failures)
+  ok    DISCRIMINATION lever 4 and lever 2 redden DIFFERENT assertions (a reversed arm is not a bare name)
+  ok    DISCRIMINATION at least three distinct red signatures across four levers
+
+FINAL RESTORE VERIFICATION
+  ok    forgePesc260805.js restored to its shipped bytes
+  ok    lib/searchTextComposition.js restored to its shipped bytes
+
+p0b_compositionOrderingLevers: 30 passed, 0 failed

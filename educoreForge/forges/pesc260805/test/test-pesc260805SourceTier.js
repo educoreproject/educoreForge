@@ -422,6 +422,146 @@ taskList.push((args, next) => {
 				(oneEdge) => oneEdge.properties && oneEdge.properties.provenanceTier === 'structural' && oneEdge.properties.pescTier,
 			);
 			check('INTEGRATION every edge carries provenanceTier structural + pescTier', everyEdgeConforms);
+
+			// =====================================================================================
+			// COMPOSITION — the HYBRID searchText composition (TQ 2026-08-17 "re-embed authorized").
+			//
+			// WHY THESE ARE SHIPPED ASSERTIONS AND NOT ONLY A PROBE: the ordering guard is a REFUSAL
+			// in production code and therefore runs on every build, but the SHAPE of what each arm
+			// emits is checked nowhere unless it is checked here. The composition's failure mode is a
+			// silently WRONG STRING, which forges clean, round-trips clean and passes every other
+			// gate in this suite.
+			//
+			// The arm statistics are read from the DECLARED registry rather than restated, so a
+			// registry change cannot leave a stale expectation behind in this file.
+			//
+			// THE TWO POPULATIONS ARE NEVER POOLED (binding constraint 2 of the ruling): they are
+			// embedded on differently-shaped strings and are not mutually comparable. Every figure
+			// below is per arm.
+			// =====================================================================================
+			const compositionStats = forged.stats.searchTextComposition;
+			const composedNodesByArm = compositionStats.byArm;
+			evidence(
+				`composition C2 ${composedNodesByArm.hasEffectiveDescription.nodesComposed} ` +
+					`(mean ${composedNodesByArm.hasEffectiveDescription.characterMean} chars, ` +
+					`${composedNodesByArm.hasEffectiveDescription.atOrAboveHubMinimum} at/above the hub's 81); ` +
+					`C0 ${composedNodesByArm.noProseAnywhere.nodesComposed} ` +
+					`(mean ${composedNodesByArm.noProseAnywhere.characterMean} chars); ` +
+					`prose own ${compositionStats.proseSource.own} / ` +
+					`viaResolvesTo ${compositionStats.proseSource.resolvedType} / ` +
+					`none ${compositionStats.proseSource.none}`,
+			);
+			evidence(
+				`composition by label: ` +
+					Object.keys(compositionStats.byLabel)
+						.sort()
+						.map(
+							(oneLabel) =>
+								`${oneLabel} ${compositionStats.byLabel[oneLabel].nodesComposed}` +
+								`${compositionStats.byLabel[oneLabel].insideMeasuredEvidence ? '' : ' [outside the measured evidence]'}`,
+						)
+						.join('; '),
+			);
+
+			// (1) a bare element name is C1 — the arm the cosine guard DISQUALIFIED for a 0.169 fall
+			// in median top-1 cosine, more than five times the 0.03 threshold. Shipping it silently
+			// to any subject is the defect this whole pass exists to avoid.
+			check(
+				'COMPOSITION zero C1-shaped emissions (a bare element name is the DISQUALIFIED arm)',
+				compositionStats.c1ShapedEmissions === 0,
+			);
+
+			// (2) THE ORDERING, asserted on OUTPUT rather than trusted from the call site. If the
+			// composition ever runs before the derived tier, no element can borrow its type's prose
+			// and this figure is exactly zero. §5.2 measured the rescue at 6,646 declarations, so a
+			// zero here is not a corpus property, it is a wiring fault.
+			check(
+				'COMPOSITION prose IS borrowed over RESOLVES_TO, so the composition ran AFTER the derived tier',
+				compositionStats.proseSource.resolvedType > 0,
+			);
+
+			// (3) and (4) — the SHAPES the ruling names, checked over every composed node rather than
+			// sampled. TWO assertions, because one would have been unfalsifiable in a way worth
+			// recording: a REVERSED C2 arm emitting `effectiveDescription | ElementName` ends with the
+			// element's name and would therefore satisfy a permissive "name-first OR name-last" test
+			// by masquerading as a valid C0. The envelope test alone cannot tell those apart.
+			//
+			// So (4) carries a SOUND IMPLICATION that pins the direction: a node with prose OF ITS OWN
+			// has a non-empty effective description whatever RESOLVES_TO says, so it is on the C2 arm
+			// necessarily, and the C2 arm puts the NAME FIRST. That is derivable from the node alone,
+			// it needs no second copy of the selection rule, and a reversed arm fails it immediately.
+			// It deliberately says nothing about nodes that reached C2 via RESOLVES_TO — asserting
+			// about those would require recomputing the resolution here, which is the duplicate
+			// derivation this suite avoids elsewhere.
+			const composedLabelNames = Object.keys(compositionStats.byLabel);
+			const composedSourceNodes = forged.nodes.filter(
+				(oneNode) =>
+					oneNode.properties.pescTier === 'source' &&
+					composedLabelNames.some((oneLabel) => oneNode.labels.indexOf(oneLabel) !== -1),
+			);
+			const outsideBothShapes = [];
+			const ownProseNotNameFirst = [];
+			composedSourceNodes.forEach((oneNode) => {
+				const oneSearchText = oneNode.properties.searchText;
+				const oneName = `${oneNode.properties.name}`;
+				const isNameFirst = oneSearchText.indexOf(`${oneName} | `) === 0;
+				const isNameLast =
+					oneSearchText.length > oneName.length + 3 &&
+					oneSearchText.lastIndexOf(` | ${oneName}`) === oneSearchText.length - oneName.length - 3;
+				if (!isNameFirst && !isNameLast) {
+					outsideBothShapes.push(
+						`${oneNode.stableId} -> ${JSON.stringify(oneSearchText.substring(0, 80))}`,
+					);
+				}
+				if (`${oneNode.properties.description || ''}`.trim() !== '' && !isNameFirst) {
+					ownProseNotNameFirst.push(
+						`${oneNode.stableId} -> ${JSON.stringify(oneSearchText.substring(0, 80))}`,
+					);
+				}
+			});
+			if (outsideBothShapes.length > 0) {
+				evidence(
+					`outside both ruled shapes (${outsideBothShapes.length}): ${outsideBothShapes.slice(0, 3).join(' ; ')}`,
+				);
+			}
+			if (ownProseNotNameFirst.length > 0) {
+				evidence(
+					`own-prose nodes NOT name-first (${ownProseNotNameFirst.length}): ${ownProseNotNameFirst.slice(0, 3).join(' ; ')}`,
+				);
+			}
+			check(
+				'COMPOSITION every composed node emits one of the two RULED shapes (name-first or name-last)',
+				outsideBothShapes.length === 0,
+			);
+			check(
+				'COMPOSITION a node with its OWN prose emits the NAME FIRST (the C2 direction, so a reversed arm cannot pass as C0)',
+				ownProseNotNameFirst.length === 0,
+			);
+
+			// (5) the accounting closes. The arms must partition the composed population exactly —
+			// no node counted twice, none uncounted. An arm that silently skipped a node would leave
+			// that node carrying its PRE-CHANGE text with nothing to say so.
+			const armTotal =
+				composedNodesByArm.hasEffectiveDescription.nodesComposed +
+				composedNodesByArm.noProseAnywhere.nodesComposed;
+			const labelTotal = Object.keys(compositionStats.byLabel).reduce(
+				(runningTotal, oneLabel) => runningTotal + compositionStats.byLabel[oneLabel].nodesComposed,
+				0,
+			);
+			const proseSourceTotal =
+				compositionStats.proseSource.own +
+				compositionStats.proseSource.resolvedType +
+				compositionStats.proseSource.none;
+			evidence(
+				`composition accounting: byArm ${armTotal}, byLabel ${labelTotal}, ` +
+					`proseSource ${proseSourceTotal}, composed source nodes ${composedSourceNodes.length}`,
+			);
+			check(
+				'COMPOSITION the arms PARTITION the composed population (byArm = byLabel = proseSource = nodes seen)',
+				armTotal === labelTotal &&
+					armTotal === proseSourceTotal &&
+					armTotal === composedSourceNodes.length,
+			);
 			// TIER CENSUS — the THREE-TIER reality. This assertion previously read "all nodes except
 			// the root are pescTier source", which was true when forge() emitted source+meta only.
 			// forge() now emits source + derived + meta in ONE pass, so the old form was stale — and

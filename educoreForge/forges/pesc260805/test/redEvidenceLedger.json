@@ -1425,6 +1425,70 @@
 						}
 					],
 					"note": "A NEW GATE WHOSE FIRST ACT WAS TO FAIL AGAINST THE EXACT POPULATION THAT MOTIVATED IT. Ordered that way deliberately by the supervisor: had the re-statement landed first, the gate would have been green on its first run and would have been a gate nobody had ever seen fail."
+				},
+				{
+					"label": "COMPOSITION zero C1-shaped emissions (a bare element name is the DISQUALIFIED arm)",
+					"status": "proven",
+					"species": "hybridCompositionGuard",
+					"note": "The hybrid searchText composition (TQ 2026-08-17 're-embed authorized'). A bare element name is C1, the arm DISQUALIFIED by the cosine guard for a 0.169 fall in median top-1 cosine, more than five times the 0.03 threshold (REPORT §13.1). IMPORTANT LIMIT ON WHAT THIS ASSERTION IS FOR, recorded because the builder originally believed otherwise and the supervisor originally required it as the ordering twin: THIS ASSERTION CANNOT CATCH THE ORDERING TRAP. The C0 arm delegates to the shared composer, which for a PROPERTY role always emits 'OwningType | ElementName', so the naive placement produces no C1-shaped text at all and the failure lives in the arm SELECTION. The ordering is guarded by a REFUSAL in production code and by the borrowedProse assertion instead.",
+					"redEvidence": [
+						{
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION (LEVER 2, P0b): the C0 arm of COMPOSITION_REGISTRY in lib/searchTextComposition.js was mutated to return the bare element name, and this shipped assertion was OBSERVED RED. The counter read 5,114 against a shipped 0 — EXACTLY the C0 arm population, which is what proves the counter is not vacuous. Emitted examples: 'Birth', 'Name', 'AlternateName'. The lever refuses to apply unless its target literal occurs exactly once, so a drifted lever cannot report a meaningless green; the file is restored and the restore is VERIFIED BY SHA256, not assumed.",
+							"probeLog": "test/test-artifacts/p0b/p0bRED_compositionOrderingLevers.log",
+							"shippedConfig": true
+						}
+					]
+				},
+				{
+					"label": "COMPOSITION prose IS borrowed over RESOLVES_TO, so the composition ran AFTER the derived tier",
+					"status": "proven",
+					"species": "hybridCompositionOrdering",
+					"note": "THE ORDERING ASSERTION, and the reason the composition is a separate pass at all. effectiveDescription is the element's own prose OR its RESOLVES_TO type's; those edges are built by the DERIVED tier, which runs after source emission, so composing in makeNode would resolve to the own description only (non-empty on 31.6%, §5.1) and hand roughly 68% of declarations the bare element name. §5.2 measured the rescue at 6,646 declarations, so a zero here is a WIRING FAULT and not a corpus property. Asserted on OUTPUT rather than trusted from the call site.",
+					"redEvidence": [
+						{
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION (LEVER 3, P0b): resolveEffectiveDescription in lib/searchTextComposition.js was mutated to stop after the node's OWN prose and never follow RESOLVES_TO, and this shipped assertion was OBSERVED RED. Deliberately distinct from LEVER 1: under LEVER 3 the forge COMPLETES, so this is the SILENT form of the damage. The C1-shape assertion stays GREEN under it, which is how the probe proves the two failures are distinct rather than one condition seen twice.",
+							"probeLog": "test/test-artifacts/p0b/p0bRED_compositionOrderingLevers.log",
+							"shippedConfig": true
+						},
+						{
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION (LEVER 1, P0b): the composition pass was fed the SOURCE graph, which predates the derived tier — the naive placement's exact condition. The production pass REFUSED BY NAME ('ORDERING TRAP', 'ZERO RESOLVES_TO edges') and the suite reported the forge run failing, so no graph was produced. Recorded as SECONDARY evidence and labelled honestly: the refusal fires BEFORE this assertion can run, so LEVER 1 demonstrates the production guard rather than this assertion. LEVER 3 is this row's primary evidence.",
+							"probeLog": "test/test-artifacts/p0b/p0bRED_compositionOrderingLevers.log",
+							"shippedConfig": true
+						}
+					]
+				},
+				{
+					"label": "COMPOSITION every composed node emits one of the two RULED shapes (name-first or name-last)",
+					"status": "proven",
+					"species": "hybridCompositionShape",
+					"note": "The shape ENVELOPE, over every composed node rather than a sample. Deliberately WEAKER than it looks and paired with the name-first assertion for that reason: a REVERSED C2 arm emitting 'effectiveDescription | ElementName' ends with the element's name and therefore SATISFIES this envelope by masquerading as a valid C0. That masquerade is measured, not theorised — see LEVER 4 on the name-first row, under which this assertion stays GREEN.",
+					"redEvidence": [
+						{
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION (LEVER 2, P0b): the C0 arm was mutated to return the bare element name, which is neither ruled shape, and this shipped assertion was OBSERVED RED alongside the C1-shape counter.",
+							"probeLog": "test/test-artifacts/p0b/p0bRED_compositionOrderingLevers.log",
+							"shippedConfig": true
+						}
+					]
+				},
+				{
+					"label": "COMPOSITION a node with its OWN prose emits the NAME FIRST (the C2 direction, so a reversed arm cannot pass as C0)",
+					"status": "proven",
+					"species": "hybridCompositionDirection",
+					"note": "THE ASSERTION THAT EXISTS BECAUSE THE ENVELOPE IS NOT ENOUGH. It carries a SOUND IMPLICATION rather than a second copy of the selection rule: a node with prose OF ITS OWN has a non-empty effective description whatever RESOLVES_TO says, so it is necessarily on the C2 arm, and the C2 arm puts the NAME FIRST. Derivable from the node alone. It deliberately says NOTHING about nodes that reached C2 via RESOLVES_TO — asserting about those would mean recomputing the resolution inside the suite, which is the duplicate derivation this project avoids.",
+					"redEvidence": [
+						{
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION (LEVER 4, P0b): the C2 arm was reversed to 'effectiveDescription | ElementName' and this shipped assertion was OBSERVED RED. THE LOAD-BEARING PART: the shape-envelope assertion stayed GREEN under the same lever, which MEASURES the masquerade rather than asserting it and is the whole justification for this row existing separately.",
+							"probeLog": "test/test-artifacts/p0b/p0bRED_compositionOrderingLevers.log",
+							"shippedConfig": true
+						}
+					]
+				},
+				{
+					"label": "COMPOSITION the arms PARTITION the composed population (byArm = byLabel = proseSource = nodes seen)",
+					"status": "expectationLeverOnly",
+					"species": "hybridCompositionAccounting",
+					"note": "AN ACCOUNTING IDENTITY, and it is NOT claimed as proven — stated plainly rather than banked. The three tallies and the node count are all computed by the same pass over the same nodes, so any lever that moves one moves the others together and the identity holds vacuously. It was OBSERVED RED only under levers that redden it as a side effect of reddening something else (LEVER 2 changes the arm populations), which is not evidence that this assertion resists a defect of its OWN kind. HOW TO CLOSE IT: a lever that makes the pass skip a node WITHOUT updating its counters — i.e. mutate the emission and the tally out of step. That lever is not built. Recorded as expectationLeverOnly rather than genuineGap because the assertion HAS been seen to fail; recorded as not-proven because the standing rule wants a data lever that could only redden THIS row, and it has none.",
+					"redEvidence": []
 				}
 			]
 		},

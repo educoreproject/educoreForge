@@ -69,6 +69,15 @@ const buildSearchTextFactory = require(path.join(CORE_LIB, 'search-text', 'build
 const { NODE_LABELS, DME_ROLES, PROVENANCE_TIER, EDGE_TYPES } = require(
 	path.join(CORE_LIB, 'vocabulary', 'vocabulary'),
 );
+// searchTextComposition — the HYBRID composition's ONE DECISION SITE, imported rather than
+// reimplemented. S-1c's merged children REBUILD their searchText (searchText is in
+// DUPLICATED_CHILD_OVERRIDDEN_PROPERTY_NAMES below) rather than inheriting it, so this tier is a
+// second ASSEMBLY site for the same decision. SABLE_RIVER ruled 2026-08-17 that the merged children
+// take the hybrid: §6.1's synthetic exclusion governs the SCOPE OF JUDGMENT — what gets mapped —
+// not how the forge composes its own node text, and two nodes with the same name, type and
+// description carrying differently-shaped embedded text is the worse outcome. Calling the shared
+// composer here instead would leave them on C0 and produce exactly that split.
+const searchTextCompositionFactory = require('./searchTextComposition');
 
 // IMPORTED, NOT DUPLICATED — and the contrast with ADMISSIBLE_TARGET_KINDS below is deliberate.
 // That table is a JUDGMENT about XSD symbol spaces, so the two tiers holding it separately lets
@@ -189,6 +198,8 @@ const moduleFunction =
 	({ moduleName } = {}) =>
 	(unusedDeps = {}) => {
 		const { buildSearchText } = buildSearchTextFactory();
+		const { composeOneSearchText, buildResolvesToIndex, resolveEffectiveDescription } =
+			searchTextCompositionFactory();
 
 		const refuse = (message) => {
 			throw new Error(`pesc260805 syntheticTier REFUSES: ${message}`);
@@ -308,6 +319,14 @@ const moduleFunction =
 					(childrenByParentId[parentId] = childrenByParentId[parentId] || []).push(oneNode);
 				}
 			});
+
+			// RESOLVES_TO index, for the hybrid composition of S-1c's merged children. Built ONCE from
+			// the edges this tier was handed — which INCLUDE the derived tier's RESOLVES_TO, because
+			// buildSyntheticTier reads the combined source+derived+meta graph. A merged child's
+			// effective description is resolved through its SOURCE child's edge, not its own: the
+			// synthetic child's RESOLVES_TO is emitted later in this same pass and does not exist yet
+			// when the child node is built.
+			const resolvesToTargetsByFromStableId = buildResolvesToIndex(edges);
 
 			const rootNode = nodes.find((oneNode) => oneNode.role === DME_ROLES.STANDARD_ROOT);
 			if (rootNode === undefined) {
@@ -702,6 +721,32 @@ const moduleFunction =
 
 				const childName = requiredProperty(sourceChildNode, 'name');
 				const childStableId = `${mergedDefinitionStableId}/el/${mergedSequencePosition}:${childName}`;
+
+				// THE HYBRID COMPOSITION, second assembly site (ruled by SABLE_RIVER 2026-08-17).
+				// The effective description is resolved through the SOURCE child — same name, same
+				// typeAsWritten, same description, and it is the node the derived tier gave a RESOLVES_TO
+				// edge. The merged child's own edge is emitted later in this pass, so resolving through
+				// the child itself would silently find nothing and hand it the DISQUALIFIED bare-name
+				// arm. That is the same ordering trap the source-tier pass exists to avoid, arriving here
+				// by a different route.
+				const { effectiveDescription: childEffectiveDescription } = resolveEffectiveDescription({
+					oneNode: sourceChildNode,
+					resolvesToTargetsByFromStableId,
+					nodeByStableId,
+				});
+				const { composedSearchText: childSearchText } = composeOneSearchText({
+					// the merged child's owning class is the MERGED definition, not the source child's
+					// container — which is why this element is assembled here and not reused from the
+					// source tier.
+					searchTextElement: {
+						role: sourceChildNode.role,
+						name: childName,
+						owningClassName: mergedDefinitionName,
+					},
+					elementName: childName,
+					effectiveDescription: childEffectiveDescription,
+					describedBy: `synthetic S-1c merged child '${childStableId}'`,
+				});
 				return addSyntheticNode({
 					labels: [...sourceChildNode.labels],
 					stableId: childStableId,
@@ -714,11 +759,7 @@ const moduleFunction =
 						depth: 3,
 						path: `${mergedDefinitionPath}.${childName}`,
 						pescTier: PESC_SYNTHETIC_TIER,
-						searchText: buildSearchText({
-							role: sourceChildNode.role,
-							name: childName,
-							owningClassName: mergedDefinitionName,
-						}),
+						searchText: childSearchText,
 						sequencePosition: mergedSequencePosition,
 						syntheticRule: SYNTHETIC_RULE.MERGED_CHILD,
 						copiedFromStableId: sourceChildNode.stableId,

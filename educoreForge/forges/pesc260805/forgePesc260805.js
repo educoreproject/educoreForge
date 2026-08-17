@@ -43,6 +43,11 @@ const { pipeRunner, taskListPlus } = new require('qtools-asynchronous-pipe-plus'
 const parserFactory = require('./lib/parser');
 const derivedTierFactory = require('./lib/derivedTier');
 const syntheticTierFactory = require('./lib/syntheticTier');
+// searchTextComposition — the HYBRID composition (TQ 2026-08-17 "re-embed authorized"). It runs as
+// its OWN PASS, after the derived tier, because the composition reads the element's EFFECTIVE
+// description — its own prose or its RESOLVES_TO type's — and RESOLVES_TO does not exist until the
+// derived tier builds it. See that module's header for the silent failure this ordering prevents.
+const searchTextCompositionFactory = require('./lib/searchTextComposition');
 
 const CORE_LIB = path.join(__dirname, '..', '..', 'lib');
 const buildSearchTextFactory = require(path.join(CORE_LIB, 'search-text', 'build-search-text'));
@@ -86,6 +91,7 @@ const moduleFunction =
 		const { parsePescCorpus } = parserFactory();
 		const { buildDerivedTier, applyDerivedTier } = derivedTierFactory();
 		const { buildSyntheticTier } = syntheticTierFactory();
+		const { applySearchTextComposition } = searchTextCompositionFactory();
 
 		// =====================================================================
 		// buildSourceTierGraph — PURE, deterministic: parsed corpus -> { nodes, edges, stats }.
@@ -151,6 +157,14 @@ const moduleFunction =
 						pescTier: PESC_TIER.SOURCE,
 						...(scalar || {}),
 					},
+					// sourceSearchTextElement — the EXACT element handed to the shared composer above,
+					// carried forward (OUTSIDE properties, so it reaches neither the graph nor the
+					// fingerprint) for the hybrid composition pass to re-delegate the C0 arm
+					// byte-identically. Reconstructing it later from parentId would GUESS at
+					// anonymous-type owners, whose container name is a composite (`Owner.element`) that no
+					// single node property carries. The pass DELETES this key when it is done, so nothing
+					// downstream can recompose text from it.
+					sourceSearchTextElement: searchTextElement,
 				};
 				nodes.push(node);
 				return node;
@@ -657,6 +671,23 @@ const moduleFunction =
 						edges: sourceGraph.edges,
 						derivedOutput,
 					});
+					// HYBRID searchText COMPOSITION (TQ 2026-08-17 "re-embed authorized") — HERE, and the
+					// position is the whole point. The composition reads each declaration's EFFECTIVE
+					// description: its own prose, or its type's reached over RESOLVES_TO. Those edges do
+					// not exist until buildDerivedTier has run, so composing in makeNode would resolve to
+					// the element's own description ONLY (non-empty on 31.6%) and hand ~68% of
+					// declarations the bare element name — C1, the arm the cosine guard DISQUALIFIED.
+					// That failure PARSES, FORGES AND ROUND-TRIPS CLEAN, which is why the pass is placed
+					// rather than inlined and why its gate is a counter rather than a comment.
+					//
+					// BEFORE buildSyntheticTier: synthetic merged children compose at their own seat
+					// inside syntheticTier (ruled), and they do not exist yet at this point.
+					// derivedTier.js is UNTOUCHED, so Gate 3's derived-regeneration proof is unaffected
+					// by construction rather than by argument.
+					const compositionOutput = applySearchTextComposition({
+						nodes: combinedGraph.nodes,
+						edges: combinedGraph.edges,
+					});
 					// SYNTHETIC (Phase 4) reads the combined source+derived+meta graph and ADDS ONLY —
 					// it annotates nothing and mutates nothing, so the derived tier it was handed is the
 					// derived tier that ships, and Gate 3's regeneration proof is untouched by construction.
@@ -671,6 +702,7 @@ const moduleFunction =
 							...sourceGraph.stats,
 							derived: derivedOutput.stats,
 							synthetic: syntheticOutput.stats,
+							searchTextComposition: compositionOutput.stats,
 						},
 						syntheticMergeReport: syntheticOutput.mergeReport,
 					};
@@ -707,10 +739,15 @@ const moduleFunction =
 				// and undefined ADDED by the winning member" — a confident, plausible, wrong report
 				// that no test would ever have failed on. Reading every figure through here makes a
 				// stale name refuse by name instead.
-				const requiredStat = (statsObject, statName) => {
+				//
+				// publisherName is a PARAMETER because this guard now reads two publishers (the
+				// synthetic tier and the searchText composition). Hardcoding "the synthetic tier" into
+				// the message would make the refusal itself a confident, plausible, wrong sentence —
+				// the exact failure the guard exists to prevent, one level up.
+				const requiredStat = (statsObject, statName, publisherName) => {
 					if (!Object.prototype.hasOwnProperty.call(statsObject, statName)) {
 						throw new Error(
-							`forge-pesc260805 builder bug: the synthetic tier publishes no stat '${statName}', ` +
+							`forge-pesc260805 builder bug: ${publisherName} publishes no stat '${statName}', ` +
 								`so the build status line would have printed 'undefined' inside a sentence that ` +
 								`reads like a measurement. Available: ${Object.keys(statsObject).sort().join(', ')}`,
 						);
@@ -718,7 +755,7 @@ const moduleFunction =
 					return statsObject[statName];
 				};
 				const syntheticStats = graph.stats.synthetic;
-				const oneStat = (statName) => requiredStat(syntheticStats, statName);
+				const oneStat = (statName) => requiredStat(syntheticStats, statName, 'the synthetic tier');
 				xLog.status(
 					`[forge-pesc260805] synthetic tier: S-1 merged ${oneStat('mergedDefinitions')} definitions ` +
 						`(${oneStat('collegeTranscriptOnlyDefinitions')} college-only + ` +
@@ -749,6 +786,64 @@ const moduleFunction =
 						`${oneStat('aliasImportsResolved')} import); ` +
 						`total ${graph.nodes.length} nodes, ${graph.edges.length} edges`,
 				);
+
+				// searchText composition. Printed AFTER the synthetic line but it RAN BEFORE the
+				// synthetic tier — labelled, because a reader who assumes log order is execution order
+				// would conclude the composition saw synthetic nodes, which it cannot have.
+				//
+				// THE TWO ARMS ARE REPORTED SEPARATELY AND NEVER POOLED (binding constraint 2 of the
+				// ruling): the two populations are embedded on differently-shaped strings and are not
+				// mutually comparable. There is deliberately NO combined mean on this line.
+				const compositionStats = graph.stats.searchTextComposition;
+				const oneCompositionStat = (statName) =>
+					requiredStat(compositionStats, statName, 'the searchText composition');
+				const proseArm = requiredStat(
+					oneCompositionStat('byArm'),
+					'hasEffectiveDescription',
+					'the searchText composition byArm',
+				);
+				const muteArm = requiredStat(
+					oneCompositionStat('byArm'),
+					'noProseAnywhere',
+					'the searchText composition byArm',
+				);
+				const proseSourceCounts = oneCompositionStat('proseSource');
+				xLog.status(
+					`[forge-pesc260805] searchText composition (HYBRID, ran BEFORE the synthetic tier): ` +
+						`C2 '${proseArm.compositionShape}' on ${proseArm.nodesComposed} declarations ` +
+						`(mean ${proseArm.characterMean} chars, median ${proseArm.characterMedian}, ` +
+						`max ${proseArm.characterMaximum}, ${proseArm.atOrAboveHubMinimum} at/above the hub's 81); ` +
+						`C0 '${muteArm.compositionShape}' on ${muteArm.nodesComposed} declarations ` +
+						`(mean ${muteArm.characterMean} chars, median ${muteArm.characterMedian}, ` +
+						`max ${muteArm.characterMaximum}); ` +
+						`prose source: ${requiredStat(proseSourceCounts, 'own', 'proseSource')} own, ` +
+						`${requiredStat(proseSourceCounts, 'resolvedType', 'proseSource')} via RESOLVES_TO, ` +
+						`${requiredStat(proseSourceCounts, 'none', 'proseSource')} none; ` +
+						`text changed on ${oneCompositionStat('textChangedFromPreviousComposition')}, ` +
+						`unchanged on ${oneCompositionStat('textUnchangedFromPreviousComposition')}; ` +
+						`C1-SHAPED EMISSIONS ${oneCompositionStat('c1ShapedEmissions')} (MUST be 0 — a bare ` +
+						`element name is the DISQUALIFIED arm); ` +
+						`non-source-tier skipped ${oneCompositionStat('nonSourceTierSkipped')}`,
+				);
+				// per-label, so the 84 attribute declarations stay traceable apart from the measured
+				// 16,969 element declarations — the condition on which they were admitted to scope.
+				const labelStats = oneCompositionStat('byLabel');
+				xLog.status(
+					`[forge-pesc260805] searchText composition by label: ` +
+						Object.keys(labelStats)
+							.sort()
+							.map((oneLabel) => {
+								const oneLabelStats = labelStats[oneLabel];
+								return (
+									`${oneLabel} ${oneLabelStats.nodesComposed} ` +
+									`(C2 ${oneLabelStats.byArm.hasEffectiveDescription} / ` +
+									`C0 ${oneLabelStats.byArm.noProseAnywhere})` +
+									`${oneLabelStats.insideMeasuredEvidence ? '' : ' [OUTSIDE the measured evidence]'}`
+								);
+							})
+							.join('; '),
+				);
+
 				next('', { ...args, graph });
 			});
 

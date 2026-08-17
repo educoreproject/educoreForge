@@ -1,0 +1,45 @@
+
+PRECEDENCE MATRIX — which refusal speaks, identified by its own message text
+    | A. zero RESOLVES_TO alone (edges present but none of the right type)
+    |    expected: orderingTrap   observed: orderingTrap
+    |    said: pesc260805 searchTextComposition REFUSES: the graph handed to the composition carries ZERO RESOLVES_TO edges, so no mute element can borrow its type's
+  ok    REACHABILITY A. zero RESOLVES_TO alone (edges present but none of the right type) -> orderingTrap
+    | B. zero RESOLVES_TO with an EMPTY edges array
+    |    expected: orderingTrap   observed: orderingTrap
+    |    said: pesc260805 searchTextComposition REFUSES: the graph handed to the composition carries ZERO RESOLVES_TO edges, so no mute element can borrow its type's
+  ok    REACHABILITY B. zero RESOLVES_TO with an EMPTY edges array -> orderingTrap
+    | C. zero RESOLVES_TO + a node with NO pescTier property
+    |    expected: orderingTrap   observed: orderingTrap
+    |    said: pesc260805 searchTextComposition REFUSES: the graph handed to the composition carries ZERO RESOLVES_TO edges, so no mute element can borrow its type's
+  ok    REACHABILITY C. zero RESOLVES_TO + a node with NO pescTier property -> orderingTrap
+    | D. zero RESOLVES_TO + a node MISSING its carried composer input
+    |    expected: orderingTrap   observed: orderingTrap
+    |    said: pesc260805 searchTextComposition REFUSES: the graph handed to the composition carries ZERO RESOLVES_TO edges, so no mute element can borrow its type's
+  ok    REACHABILITY D. zero RESOLVES_TO + a node MISSING its carried composer input -> orderingTrap
+    | E. zero RESOLVES_TO + edges is NOT an array
+    |    expected: arraysRequired   observed: arraysRequired
+    |    said: pesc260805 searchTextComposition REFUSES: applySearchTextComposition needs both nodes and edges arrays — pass the COMBINED source+derived graph
+  ok    REACHABILITY E. zero RESOLVES_TO + edges is NOT an array -> arraysRequired
+    | F. zero RESOLVES_TO + no nodes at all
+    |    expected: orderingTrap   observed: orderingTrap
+    |    said: pesc260805 searchTextComposition REFUSES: the graph handed to the composition carries ZERO RESOLVES_TO edges, so no mute element can borrow its type's
+  ok    REACHABILITY F. zero RESOLVES_TO + no nodes at all -> orderingTrap
+    | G. CONTROL — RESOLVES_TO present and everything well formed
+    |    expected: NONE   observed: NONE
+  ok    REACHABILITY G. CONTROL — RESOLVES_TO present and everything well formed -> NONE
+
+DISCRIMINATION — the matrix must distinguish speakers, not report one for everything
+    | distinct speakers observed: NONE, arraysRequired, orderingTrap
+  ok    DISCRIMINATION the matrix elicited MORE THAN ONE distinct speaker
+  ok    DISCRIMINATION at least one row was NOT the ordering guard (so it is not refusing unconditionally)
+  ok    DISCRIMINATION no row produced an UNRECOGNISED or AMBIGUOUS refusal
+
+CALLER PATH — the composition is reached, and reached in the right place
+    | call offsets — buildDerivedTier 27039, applyDerivedTier 27158, applySearchTextComposition 28341, buildSyntheticTier 28727
+  ok    CALLER the composition is called exactly once
+  ok    CALLER the composition runs AFTER applyDerivedTier (so RESOLVES_TO exists)
+  ok    CALLER the composition runs BEFORE buildSyntheticTier (the ruled placement)
+  ok    CALLER the composition is handed the COMBINED graph, not the source graph
+  ok    CALLER nothing can short-circuit between applyDerivedTier and the composition (no return/next/if between them)
+
+p0b_orderingGuardReachability: 15 passed, 0 failed
