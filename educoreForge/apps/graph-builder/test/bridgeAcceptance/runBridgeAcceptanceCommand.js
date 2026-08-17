@@ -54,7 +54,10 @@ const EXPECTED_IDS_FILE_PATH = path.join(__dirname, '..', '..', '..', '..', 'lib
 // see the authorisation check below, which now covers both rather than naming materialiseReal alone. A
 // spending line that slipped past the gate because the gate knew only one line's name is precisely the kind
 // of omission that costs money once and is obvious afterwards.
-const LINE_NAME_LIST = Object.freeze(['rejudgeDebug', 'materialise', 'materialiseReal', 'rejudgeRealLimit']);
+// eyeGraph — the FULL four-standard + hub graph carrying the derived bridge, built for a human to look at.
+// It carries NO --rebridge, so it REPLAYS the frozen block and calls the judge ZERO times; that is why it is
+// deliberately absent from SPENDING_LINE_NAME_LIST and declares no maxJudgmentCount.
+const LINE_NAME_LIST = Object.freeze(['rejudgeDebug', 'materialise', 'materialiseReal', 'rejudgeRealLimit', 'eyeGraph']);
 const SPENDING_LINE_NAME_LIST = Object.freeze(['materialiseReal', 'rejudgeRealLimit']);
 
 const stripJsoncComments = (text) => text.replace(/^\s*\/\/.*$/gm, '');
