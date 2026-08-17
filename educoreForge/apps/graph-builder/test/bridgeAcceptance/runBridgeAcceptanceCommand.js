@@ -132,6 +132,9 @@ const lineSpecificArgumentList = {
 	materialise: [],
 	materialiseReal: [`--rebridge=${entry.standardKey}`],
 	rejudgeRealLimit: [`--rebridge=${entry.standardKey}`, `--limit=${D3_BATCH_SIZE}`, `--offset=${offsetValue}`],
+	// eyeGraph adds NOTHING beyond the pinned set: no --rebridge, no --useDebugJudge. It replays the frozen
+	// block, which is exactly why its declared ceiling is 0.
+	eyeGraph: [],
 };
 // A line name with no reconstruction row would `.concat(undefined)` and append the literal string "undefined"
 // to the command — producing a malformed line that the equality check would reject for the WRONG reason, or
@@ -139,11 +142,20 @@ const lineSpecificArgumentList = {
 if (!Array.isArray(lineSpecificArgumentList[lineName])) {
 	refuse(`the runner has no argument reconstruction for line '${lineName}' — every runnable line must be independently reconstructible, because that reconstruction IS the check that the committed line was not tampered with`);
 }
+// A line may build a DIFFERENT recipe from the bridge's default — the eye graph is the four-standard + hub
+// assembly, not the two-standard eval. The override is DECLARED DATA in the same committed file, so the
+// reconstruction still proves the committed line was not tampered with: it checks the line against the
+// declared recipe rather than against whatever recipe the line happens to name.
+const perLineRecipePath = entry[`${lineName}RecipePath`];
+if (perLineRecipePath !== undefined && (typeof perLineRecipePath !== 'string' || perLineRecipePath === '')) {
+	refuse(`${lineName}RecipePath is declared but is not a path (${JSON.stringify(perLineRecipePath)}) — a per-line recipe override is data or it is absent; there is no default`);
+}
+const lineRecipePath = perLineRecipePath === undefined ? entry.recipePath : perLineRecipePath;
 const nodeArgumentList = [
 	'--max-old-space-size=20000',
 	path.join(treeRoot, 'apps', 'graph-builder', 'graphBuilder.js'),
 	'-build',
-	`--recipePath=${entry.recipePath}`,
+	`--recipePath=${lineRecipePath}`,
 	'--vectorize=true',
 	'--reuseForgedBlocks=true',
 	`--standardsDatabaseFilePath=${entry.storeFilePath}`,
