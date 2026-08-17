@@ -67,9 +67,10 @@ const harnessRaw = require('../../../test/testLib/harness')(moduleName);
 // + 7 (SECTION 4 BG-COMPOSE-SIF: 3 conjuncts + 4 twins)
 // + 6 (SECTION 5 BG-GENESIS, RULING BS-5: 3 conjuncts + 3 twins)
 // + 6 (SECTION 6 BG-RENDER-VARIANT, RULING BS-10: 4 conjuncts + 2 twins)
+// + 5 (SECTION 7 BG-BATCH-SIZE, RULING BS-9: 4 conjuncts + 1 red observation)
 // + 1 (SECTIONS 0-2: the frozen-block census conjunct — MEASURED since the CP2 freeze of 2026-08-17)
-// = 53. Raised as a LITERAL, at this call site, in the same commit as the section it counts.
-const EXPECTED_ASSERTION_COUNT = 53;
+// = 58. Raised as a LITERAL, at this call site, in the same commit as the section it counts.
+const EXPECTED_ASSERTION_COUNT = 58;
 const ledger = { count: 0 };
 const harness = {
 	section: harnessRaw.section,
@@ -417,6 +418,29 @@ const runRenderingAuditSection = () => {
 	})();
 	harness.ok(`RED-OBSERVED BG-RENDER-VARIANT b — the loosened-anchor repair PARSES but DISCARDS the name, collapsing two name-distinct cards into byte-identical text (${loosenedAnchorTextList.length} blocks, identical: ${loosenedAnchorTextList[0] === loosenedAnchorTextList[1]}). That is a RENDERING TIE THAT WAS NEVER ON THE PAGE — the harm the refusal exists to prevent, reintroduced by the fix for it`, loosenedAnchorTextList.length === 2 && loosenedAnchorTextList[0] === loosenedAnchorTextList[1]);
 	harness.ok('RED-OBSERVED BG-RENDER-VARIANT a — the OLD end-anchored pattern finds ZERO blocks in a crosswalk prompt, which is the refusal that started this (a short parse is refused, never half-used)', crosswalkPrompt.split('\n').filter((oneLine) => /^ {2}\[(\d+)\]$/.test(oneLine)).length === 0);
+
+	runReleasedBatchSizeSection();
+};
+
+// ---------------------------------------------------------------------
+// SECTION 7 — BG-BATCH-SIZE (RULING BS-9): the released window is reconstructed IN THE RUNNER, per bridge,
+// independently of the acceptance file — so a committed line cannot enlarge a batch the supervisor released.
+// ---------------------------------------------------------------------
+const runReleasedBatchSizeSection = () => {
+	harness.section('SECTION 7 — BG-BATCH-SIZE (RULING BS-9): the released window is per bridge and lives in the RUNNER, not in the file it checks');
+	const runnerText = fs.readFileSync(path.join(__dirname, 'bridgeAcceptance', 'runBridgeAcceptanceCommand.js'), 'utf8');
+	// read the runner's own table out of its source: the point of the conjunct is that this number is NOT in
+	// acceptanceCommands.jsonc, so the suite must not read it from there either
+	const tableMatch = runnerText.match(/D3_BATCH_SIZE_BY_BRIDGE_NAME = Object\.freeze\(\{([\s\S]*?)\}\)/);
+	const rowText = tableMatch === null ? '' : tableMatch[1];
+	harness.ok('BG-BATCH-SIZE a the runner declares a PER-BRIDGE released window, not one shared constant — the number is a different QUANTITY per plugin (derived: judged subjects; SIF: source elements) and one constant would silently mis-state one of them', tableMatch !== null && /edfiCedsDerivedPlugin:\s*10/.test(rowText) && /sifCedsStandardPlugin:\s*70/.test(rowText), rowText.trim());
+	harness.ok("BG-BATCH-SIZE b the DERIVED order's released window is UNCHANGED at 10 — widening SIF's window must not widen anyone else's", /edfiCedsDerivedPlugin:\s*10\s*,/.test(rowText));
+	harness.ok('BG-BATCH-SIZE c a bridge with NO row is REFUSED BY NAME rather than defaulted — a batch size nobody chose is what this guard exists to prevent', /has no released batch size in this runner/.test(runnerText));
+	harness.ok("BG-BATCH-SIZE d the window is NOT read from acceptanceCommands.jsonc — reading it from the file being checked would destroy the independence that makes the equality check meaningful", runnerText.indexOf('entry.rejudgeRealLimitBatchSize') === -1 && runnerText.indexOf('entry.batchSize') === -1);
+	// the RED observation is not synthetic: the runner REFUSED this phase's own launch when the committed line
+	// said --limit=70 and its independent reconstruction still said 10, and that refusal is why BS-9 needed a
+	// runner change at all. Recorded here so the guard's bite is documented where the guard is tested.
+	harness.ok('RED-OBSERVED BG-BATCH-SIZE — the equality check REFUSED this phase\'s own batch-1 launch when the committed line and the runner\'s reconstruction disagreed about --limit (committed 70, reconstructed 10), which is exactly the "quietly running a bigger batch than the supervisor released" case; observed live 2026-08-17, not simulated', /the runner's command line differs from the committed frozen/.test(runnerText));
 
 	runFrozenArtifactSection();
 };

@@ -129,15 +129,36 @@ const treeRoot = path.join(__dirname, '..', '..', '..', '..');
 if (typeof entry.standardKey !== 'string' || entry.standardKey.length === 0) {
 	refuse(`acceptanceCommands.jsonc entry for ${bridgeName} carries no standardKey (the --rebridge scope token) — declare it as data`);
 }
-// THE BATCH SIZE IS RULED, not a knob: D3 releases TEN subjects at a time (RULING §11.12). It lives here, in
-// the runner's independent reconstruction of the line, so a committed line claiming a different --limit fails
-// the equality check below rather than quietly running a bigger batch than the supervisor released.
-const D3_BATCH_SIZE = 10;
+// THE BATCH SIZE IS RULED, not a knob, and it STAYS IN THE RUNNER for the reason it was put here: this is the
+// runner's INDEPENDENT reconstruction of the line, so a committed line claiming a different --limit fails the
+// equality check below rather than quietly running a bigger batch than the supervisor released. Reading it out
+// of acceptanceCommands.jsonc would destroy exactly that independence — the file being checked would supply
+// the number it is checked against — so it is NOT declared data, unlike almost everything else in this order.
+//
+// IT IS NOW PER BRIDGE (RULING BS-9, SABLE_RIVER 2026-08-17), because the number is not the same QUANTITY for
+// every plugin and a single constant silently mis-states one of them:
+//   edfiCedsDerivedPlugin — 10 means TEN JUDGED SUBJECTS. That plugin judges nearly everything it walks, so
+//                           the window size and the judgment count are the same number (RULING §11.12).
+//   sifCedsStandardPlugin — 70 means SEVENTY SOURCE ELEMENTS, which yield about TEN JUDGED. SIF judges only
+//                           327 of 2,231 (14.7%); the rest resolve as specified without a judge. The window
+//                           counts source elements, so --limit=10 here bought ONE judgment and no conformance
+//                           evidence at all.
+// Enlarging a released batch therefore still requires editing THIS FILE — a visible, reviewable act — and a
+// plugin with no row is REFUSED BY NAME rather than defaulted, because a batch size nobody chose is precisely
+// what this guard exists to prevent.
+const D3_BATCH_SIZE_BY_BRIDGE_NAME = Object.freeze({
+	edfiCedsDerivedPlugin: 10,
+	sifCedsStandardPlugin: 70,
+});
+const releasedBatchSize = D3_BATCH_SIZE_BY_BRIDGE_NAME[bridgeName];
+if (lineName === 'rejudgeRealLimit' && !Number.isInteger(releasedBatchSize)) {
+	refuse(`'${bridgeName}' has no released batch size in this runner's D3_BATCH_SIZE_BY_BRIDGE_NAME — the window a supervisor released is reconstructed HERE, independently of the acceptance file, and is never defaulted; add the row deliberately (RULING BS-9)`);
+}
 const lineSpecificArgumentList = {
 	rejudgeDebug: [`--rebridge=${entry.standardKey}`, '--useDebugJudge=digest'],
 	materialise: [],
 	materialiseReal: [`--rebridge=${entry.standardKey}`],
-	rejudgeRealLimit: [`--rebridge=${entry.standardKey}`, `--limit=${D3_BATCH_SIZE}`, `--offset=${offsetValue}`],
+	rejudgeRealLimit: [`--rebridge=${entry.standardKey}`, `--limit=${releasedBatchSize}`, `--offset=${offsetValue}`],
 	// eyeGraph adds NOTHING beyond the pinned set: no --rebridge, no --useDebugJudge. It replays the frozen
 	// block, which is exactly why its declared ceiling is 0.
 	eyeGraph: [],
