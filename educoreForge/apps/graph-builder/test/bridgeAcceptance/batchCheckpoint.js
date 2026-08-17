@@ -75,6 +75,20 @@ if (blockRead.error) {
 const block = blockRead.block;
 const header = block.header;
 
+// ⟪SILENT WRONG ARTIFACT — caught in the act, GRANITE_VALLEY 2026-08-17⟫ --blockId defaults to LATEST, so
+// `--offset=0` run after a later window had been frozen cheerfully documented the LATEST block and wrote it
+// over batch-0.md. Nothing errored; the file simply became a document about a different window wearing the
+// old window's name. The offset the caller asked for is a CLAIM about which window this document describes,
+// and it is now CHECKED against the block's own sourceWindow rather than trusted.
+const declaredWindowText = String(header.sourceWindow === undefined ? '' : header.sourceWindow);
+const offsetMatch = declaredWindowText.match(/offset[=_]?(\d+)/i);
+if (offsetMatch === null) {
+	refuse(`the block's sourceWindow ${JSON.stringify(declaredWindowText)} names no offset — a batch document may only be written for a PARTIAL windowed block`);
+}
+if (Number(offsetMatch[1]) !== Number(offsetValue)) {
+	refuse(`--offset=${offsetValue} was asked for but block ${blockRead.blockId} is the window at offset ${offsetMatch[1]} (${declaredWindowText}); pass --blockId=<the block for offset ${offsetValue}> explicitly — the default resolves to the LATEST block, never to the offset`);
+}
+
 // A BATCH DOCUMENT MUST DOCUMENT A PARTIAL BLOCK. If the block carries no window mark it is a FULL freeze and
 // documenting it as "batch n" would misdescribe what was judged — the exact confusion §11.12's PARTIAL guard
 // exists to prevent one layer down.
@@ -169,7 +183,7 @@ const largestIdenticalGroupSize = Object.keys(corpusTextCount).reduce((soFar, on
 const cumulativeReask = (() => {
 	const pairDirPath = path.join(entry.matchForensicsDirPath, `${header.hubName.toLowerCase()}@${header.hubVersion}::${header.sourceStandardName.toLowerCase()}@${header.sourceVersion}::${header.bridgeName}::${header.producerKind}`);
 	if (!fs.existsSync(pairDirPath)) {
-		return { windowCount: 0, firstReaskCount: 0, secondViolationCount: 0, promptCount: 0 };
+		return { windowCount: 0, firstReaskCount: 0, secondViolationCount: 0, contaminatedWindowCount: 0, promptCount: 0 };
 	}
 	const windowFileList = fs.readdirSync(pairDirPath).filter((oneName) => oneName.indexOf('PARTIAL_WINDOW') !== -1 && oneName.endsWith('.jsonl'));
 	return windowFileList.reduce((soFar, oneName) => {
@@ -178,13 +192,19 @@ const cumulativeReask = (() => {
 			refuse(oneRead.error.message);
 		}
 		const countByHash = oneRead.recordList.reduce((innerSoFar, oneRecord) => ({ ...innerSoFar, [String(oneRecord.promptHash)]: (innerSoFar[String(oneRecord.promptHash)] || 0) + 1 }), {});
+		// a window whose trail holds more records than distinct prompts + its own re-asks was written by more
+		// than one run; its second-violation count is not attributable and is reported as such, never summed in
+		const distinctPromptCount = Object.keys(countByHash).length;
+		const oneFirstReaskCount = oneRead.recordList.filter((oneRecord) => oneRecord.reaskFollows === true).length;
+		const oneIsContaminated = oneRead.recordList.length > distinctPromptCount + oneFirstReaskCount;
 		return {
 			windowCount: soFar.windowCount + 1,
-			firstReaskCount: soFar.firstReaskCount + oneRead.recordList.filter((oneRecord) => oneRecord.reaskFollows === true).length,
-			secondViolationCount: soFar.secondViolationCount + Object.keys(countByHash).filter((oneHash) => countByHash[oneHash] > 2).length,
+			firstReaskCount: soFar.firstReaskCount + oneFirstReaskCount,
+			secondViolationCount: soFar.secondViolationCount + (oneIsContaminated ? 0 : Object.keys(countByHash).filter((oneHash) => countByHash[oneHash] > 2).length),
+			contaminatedWindowCount: soFar.contaminatedWindowCount + (oneIsContaminated ? 1 : 0),
 			promptCount: soFar.promptCount + oneRead.recordList.length,
 		};
-	}, { windowCount: 0, firstReaskCount: 0, secondViolationCount: 0, promptCount: 0 });
+	}, { windowCount: 0, firstReaskCount: 0, secondViolationCount: 0, contaminatedWindowCount: 0, promptCount: 0 });
 })();
 
 // ---- THE MECHANICAL CLEAN-CHECKLIST (§11.12) ----
@@ -215,16 +235,41 @@ const secondViolationList = Object.keys(attemptCountByPromptHash).filter((oneHas
 const reaskCount = secondViolationList.length;
 const unmappedPickList = recordList.filter((oneRecord) => !isAbstained(oneRecord) && Array.isArray(oneRecord.renderedPoolStableIdList) && oneRecord.renderedPoolStableIdList.indexOf(oneRecord.objectStableId) === -1);
 const forensicsMissingList = recordList.filter((oneRecord) => oneRecord.judge === undefined || forensicByPromptHash[String(oneRecord.judge.promptHash)] === undefined);
+// ⟪TRAIL CONTAMINATION — found by batch 1's own checklist, GRANITE_VALLEY 2026-08-17⟫ The forensic trail is
+// APPEND-ONLY per generation, and the generation name is a function of (framework, plugin, renderer, window)
+// — NOT of the run. So a window that was judged twice (a run that DIED and the re-run that froze the block)
+// leaves BOTH runs' records in one file, under identical promptHashes.
+//
+// That silently BREAKS the second-violation detector, which counts a promptHash appearing more than twice.
+// Batch 1 measured it exactly: whole trail 2 "second violations"; the run that froze the block had ZERO
+// (10 records, 10 distinct prompts, 0 first re-asks), and the 2 came from the dead run's records colliding
+// with the live run's on the same hashes.
+//
+// NO NON-ORDER-BASED DISCRIMINATOR EXISTS ON DISK. The forensic record carries no run id and no framework
+// fingerprint (the fingerprint DID change between those two runs and is on the BLOCK, but not on the record),
+// so "the last N records" is the only separator available and that is an ASSUMPTION about append order, not
+// a fact. This harness will not make it.
+//
+// What IS a fact: the trail holds more records for this generation than the block holds decision records,
+// therefore more than one run wrote to it, therefore the re-ask numbers are NOT ATTRIBUTABLE to this block.
+// The verdict is UNMEASURED — never PASS (which would claim a check that did not happen) and never FAIL
+// (which would report a violation this block did not commit). Both errors are worse than saying so.
+const trailIsContaminated = forensicsRead.recordList.length > recordList.length + firstReaskCount;
+const reaskVerdictIsMeasurable = !trailIsContaminated;
+
 const checklist = [
 	{ name: `all ${recordList.length} subjects judged-or-abstained`, pass: judgedOrAbstainedCount === recordList.length, detail: `${judgedOrAbstainedCount}/${recordList.length}` },
 	{ name: 'batch size equals the released window', pass: recordList.length === batchSize, detail: `${recordList.length} records, window ${batchSize}` },
 	{ name: '0 framework refusals', pass: Array.isArray(block.refusalList) && block.refusalList.length === 0, detail: `${Array.isArray(block.refusalList) ? block.refusalList.length : '?'} refusal(s)` },
 	{ name: '0 id-gate hits over every prompt in this generation', pass: idGateHitList.length === 0, detail: idGateHitList.length ? idGateHitList.slice(0, 3).join('; ') : 'zero' },
-	{ name: '0 SECOND-violation re-asks (a first re-ask is lawful; a second kills the run)', pass: reaskCount === 0, detail: `${reaskCount} second violation(s); ${firstReaskCount} lawful first re-ask(s) recovered` },
+	{ name: '0 SECOND-violation re-asks (a first re-ask is lawful; a second kills the run)', pass: reaskVerdictIsMeasurable ? reaskCount === 0 : null, detail: reaskVerdictIsMeasurable ? `${reaskCount} second violation(s); ${firstReaskCount} lawful first re-ask(s) recovered` : `UNMEASURED — the trail holds ${forensicsRead.recordList.length} record(s) for this generation against ${recordList.length} block record(s) + ${firstReaskCount} re-ask(s), so more than one run wrote to it and the count is not attributable to this block` },
 	{ name: "every pick's ordinal maps to a rendered candidate", pass: unmappedPickList.length === 0, detail: `${unmappedPickList.length} unmapped` },
 	{ name: 'forensics complete for every record', pass: forensicsMissingList.length === 0, detail: `${forensicsMissingList.length} record(s) without a forensic prompt` },
 ];
-const mechanicallyClean = checklist.every((oneRow) => oneRow.pass);
+// an UNMEASURED row (pass === null) is NOT a pass. A checklist that treated "could not tell" as "fine" is the
+// under-enforcement pattern this project has recorded three times; it is reported as its own state.
+const unmeasuredRowList = checklist.filter((oneRow) => oneRow.pass === null);
+const mechanicallyClean = checklist.every((oneRow) => oneRow.pass === true);
 
 const lineList = [];
 lineList.push(`# D3 batch ${offsetValue} — ${recordList.length} subjects, REAL judge`);
@@ -241,15 +286,24 @@ lineList.push('the supervisor\'s and is deliberately not computed here.');
 lineList.push('');
 lineList.push('| check | verdict | detail |');
 lineList.push('|---|---|---|');
-checklist.forEach((oneRow) => lineList.push(`| ${oneRow.name} | ${oneRow.pass ? '**PASS**' : '**FAIL**'} | ${oneRow.detail} |`));
+checklist.forEach((oneRow) => lineList.push(`| ${oneRow.name} | ${oneRow.pass === null ? '**UNMEASURED**' : oneRow.pass ? '**PASS**' : '**FAIL**'} | ${oneRow.detail} |`));
 lineList.push('');
-lineList.push(`### MECHANICALLY ${mechanicallyClean ? 'CLEAN' : 'NOT CLEAN'}`);
+lineList.push(`### MECHANICALLY ${mechanicallyClean ? 'CLEAN' : unmeasuredRowList.length > 0 && checklist.every((oneRow) => oneRow.pass !== false) ? 'CLEAN EXCEPT ' + unmeasuredRowList.length + ' UNMEASURED ROW(S) — NOT a clean verdict' : 'NOT CLEAN'}`);
+if (trailIsContaminated) {
+	lineList.push('');
+	lineList.push('**TRAIL CONTAMINATION.** This window was judged more than once — a run that died and the re-run that froze');
+	lineList.push(`this block — and the forensic trail is append-only per GENERATION, which is a function of (framework, plugin,`);
+	lineList.push('renderer, window) and **not of the run**. Both runs\' records therefore sit in one file under identical');
+	lineList.push('promptHashes, and the second-violation detector cannot tell them apart. No non-order-based discriminator');
+	lineList.push('exists on disk: the forensic record carries no run id and no framework fingerprint. "The last N records" is');
+	lineList.push('an assumption about append order, not a fact, so it is not used. The row is UNMEASURED.');
+}
 lineList.push('');
 const correctList = recordList.filter((oneRecord) => !isAbstained(oneRecord) && truth.objectSetBySubject[oneRecord.subjectStableId] !== undefined && truth.objectSetBySubject[oneRecord.subjectStableId].has(oneRecord.objectStableId));
 const wrongList = recordList.filter((oneRecord) => !isAbstained(oneRecord) && truth.objectSetBySubject[oneRecord.subjectStableId] !== undefined && !truth.objectSetBySubject[oneRecord.subjectStableId].has(oneRecord.objectStableId));
 lineList.push(`**Re-ask cost:** ${firstReaskCount} of ${recordList.length} subjects needed one re-ask because the judge named its pick by ORDINAL — the hazard the D0 review flagged as most likely to inflate the bill. Each is one extra Opus call. Lawful (the framework allows exactly one) and recovered, but at this rate D4's 701 subjects would incur roughly ${Math.round((firstReaskCount / recordList.length) * 701)} extra calls; the declared ceiling of 1,600 covers it.`);
 lineList.push('');
-lineList.push(`**Re-ask cost, cumulative:** across ${cumulativeReask.windowCount} judged window(s) — ${cumulativeReask.firstReaskCount} lawful first re-ask(s) over ${cumulativeReask.promptCount} prompt(s), ${cumulativeReask.secondViolationCount} second violation(s). Counted from the forensic trails on disk, not a running total, so re-running a batch cannot drift it.`);
+lineList.push(`**Re-ask cost, cumulative:** across ${cumulativeReask.windowCount} judged window(s) — ${cumulativeReask.firstReaskCount} lawful first re-ask(s) over ${cumulativeReask.promptCount} prompt(s), ${cumulativeReask.secondViolationCount} second violation(s)${cumulativeReask.contaminatedWindowCount > 0 ? `, with ${cumulativeReask.contaminatedWindowCount} window(s) EXCLUDED from the second-violation total because their trail was written by more than one run and the count is not attributable` : ''}. Counted from the forensic trails on disk, not a running total, so re-running a batch cannot drift it.`);
 lineList.push('');
 lineList.push('### Rendering ties — what the allow-list cost this batch');
 lineList.push('');
