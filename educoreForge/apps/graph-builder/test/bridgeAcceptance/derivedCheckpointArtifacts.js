@@ -12,7 +12,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // transcript. An artifact a reviewer cannot regenerate is a claim, not evidence.
 //
 //   node apps/graph-builder/test/bridgeAcceptance/derivedCheckpointArtifacts.js \
-//     --bridgeName=edfiCedsDerivedPlugin --derivedBlockId=<id|latest> [--sampleCount=5]
+//     --bridgeName=edfiCedsDerivedPlugin --derivedBlockId=<64-hex, REQUIRED> [--sampleCount=5]
 //
 // READ-ONLY on both stores. It never builds, never judges, never writes to a decision store.
 
@@ -24,7 +24,7 @@ NAME
      ${moduleName} -- write the derived checkpoint artifacts (score + rendering audit) for a frozen block
 
 SYNOPSIS
-     ${moduleName} --bridgeName=<plugin> [--derivedBlockId=<64-hex|latest>] [--sampleCount=N] [--outDirPath=<dir>]
+     ${moduleName} --bridgeName=<plugin> --derivedBlockId=<64-hex> [--sampleCount=N] [--outDirPath=<dir>]
 
 EXIT STATUS
      0 written;  1 refused by name.
@@ -34,6 +34,10 @@ const { xLog } = process.global;
 
 const derivedEvalLib = require('./derivedEval');
 const renderingAuditLib = require('./renderingAudit');
+
+// measured 2026-08-17, retrievalCeiling.js against DEV_edfiDerived_260817 (bolt 7817), 655 subjects with a
+// picked truth object; reproduces the D0-era curve exactly. 30 of 655 are never retrieved at ANY K to 200.
+const MEASURED_CEILING_CURVE = Object.freeze({ 1: 0.4153, 5: 0.6916, 10: 0.7679, 15: 0.8153, 25: 0.858, 50: 0.8901, 100: 0.9237, 200: 0.9542 });
 
 const ACCEPTANCE_FILE_PATH = path.join(__dirname, '..', '..', '..', '..', 'lib', 'bridge-framework', 'test', 'acceptance', 'acceptanceCommands.jsonc');
 const TRUTH_STORE_FILE_PATH = '/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/edfi/edfiBridge.decisions.sqlite3';
@@ -63,8 +67,17 @@ if (!fs.existsSync(pluginFilePath)) {
 }
 const bridgeDeclaration = require(pluginFilePath).bridgeDeclaration;
 
+// ⟪DR-11⟫ 'latest' is gone with the fallback it depended on. Resolving a block by store order is how a score
+// silently lands on a debug block or a PARTIAL window (F-C2 measured exactly that in the crosswalk store), so
+// the id is REQUIRED and named. The old spelling is refused BY NAME rather than quietly treated as absent.
 const askedBlockId = firstValue('derivedBlockId');
-const derivedBlockId = askedBlockId === undefined || askedBlockId === 'latest' ? undefined : askedBlockId;
+if (askedBlockId === 'latest') {
+	refuse("--derivedBlockId=latest is no longer accepted: the newest row in a store can be a debug block, a PARTIAL window, or another run entirely (F-C2). Name the 64-hex block id.");
+}
+if (typeof askedBlockId !== 'string' || !/^[0-9a-f]{64}$/.test(askedBlockId)) {
+	refuse(`--derivedBlockId must be the 64-hex id of the block to score (got ${JSON.stringify(askedBlockId)}); there is no default and no 'latest'`);
+}
+const derivedBlockId = askedBlockId;
 const outDirPath = firstValue('outDirPath') === undefined ? path.dirname(entry.decisionStoreFilePath) : firstValue('outDirPath');
 
 // the CEILING is measured by a DIFFERENT tool against a live graph (retrievalCeiling.js) and is passed in
@@ -107,6 +120,10 @@ const scored = derivedEvalLib.scoreDerivedRun({
 	ceilingRecallByK: ceilingRecallAt25 === undefined ? undefined : { 25: ceilingRecallAt25 },
 	renderedCandidateTextByStableId: textIndex.textByStableId,
 	renderedFieldsByStableId,
+	// ⟪DR-4⟫ the UNBOUNDED curve measured by retrievalCeiling.js against DEV_edfiDerived_260817 on 2026-08-17.
+	// Carried as DATA so the score document can print the answer to the K question beside the capped rows that
+	// cannot answer it. Re-measure and replace these if the graph or the embedding model changes.
+	measuredCeilingCurve: MEASURED_CEILING_CURVE,
 });
 if (scored.error) {
 	refuse(scored.error.message);

@@ -52,14 +52,21 @@ const readFrozenBlock = ({ storeFilePath, blockId, roleName }) => {
 	if (!isNonEmptyString(storeFilePath) || !fs.existsSync(storeFilePath)) {
 		return { error: refuse.byName({ moduleName, what: `the ${roleName} decision store is absent at ${storeFilePath}`, where: 'the harness reads BOTH blocks by path, read-only; it never builds and never re-judges' }) };
 	}
+	// ⟪F-C2 / DR-11, adversarial review D4 2026-08-17⟫ THE LATEST-BY-SEQ FALLBACK IS REMOVED. It was a SILENT
+	// FALLBACK of exactly the kind this project refuses by name: an unpinned call scored whatever block happened
+	// to be newest, and the reviewer measured what that means in practice — the CROSSWALK store's latest is a
+	// DEBUG block (7850b439…, 600 picked subjects against the truth block's 655), so an unpinned read would have
+	// scored against debug judgments and reported a number. The shipped driver pins, so this was latent; latent
+	// is not absent. A score names its block or it does not run.
+	if (!isNonEmptyString(blockId)) {
+		return { error: refuse.byName({ moduleName, what: `no ${roleName} blockId was named`, where: 'the block being scored is NAMED, never inferred from store order — the newest row in a store can be a debug block, a PARTIAL window, or another run entirely (F-C2)' }) };
+	}
 	const Database = require('better-sqlite3');
 	const db = new Database(storeFilePath, { readonly: true });
-	const row = isNonEmptyString(blockId)
-		? db.prepare('SELECT decisionBlockHash, frozenText FROM decisionBlocks WHERE decisionBlockHash = ?').get(blockId)
-		: db.prepare('SELECT decisionBlockHash, frozenText FROM decisionBlocks ORDER BY seq DESC LIMIT 1').get();
+	const row = db.prepare('SELECT decisionBlockHash, frozenText FROM decisionBlocks WHERE decisionBlockHash = ?').get(blockId);
 	db.close();
 	if (row === undefined) {
-		return { error: refuse.byName({ moduleName, what: `the ${roleName} store ${storeFilePath} holds no block ${blockId === undefined ? '(latest)' : blockId}`, where: 'a score over a block that is not there would be a score over nothing; the id is named, never guessed' }) };
+		return { error: refuse.byName({ moduleName, what: `the ${roleName} store ${storeFilePath} holds no block ${blockId}`, where: 'a score over a block that is not there would be a score over nothing; the id is named, never guessed' }) };
 	}
 	let parsed = null;
 	let parseFault = '';
@@ -149,7 +156,7 @@ const sameNameDifferentDomainRecord = ({ decisionRecord, truthObjectSet, rendere
 	return { subjectStableId: decisionRecord.subjectStableId, sharedName: pickFields.name, pickDomainName: pickFields.domainName === undefined ? null : pickFields.domainName, truthDomainName: renderedFieldsByStableId[matchedTruthId].domainName === undefined ? null : renderedFieldsByStableId[matchedTruthId].domainName };
 };
 
-const scoreDerivedRun = ({ truthStoreFilePath, truthBlockId, derivedStoreFilePath, derivedBlockId, ceilingRecallByK, renderedCandidateTextByStableId, renderedFieldsByStableId } = {}) => {
+const scoreDerivedRun = ({ truthStoreFilePath, truthBlockId, derivedStoreFilePath, derivedBlockId, ceilingRecallByK, renderedCandidateTextByStableId, renderedFieldsByStableId, measuredCeilingCurve } = {}) => {
 	const truthRead = readFrozenBlock({ storeFilePath: truthStoreFilePath, blockId: truthBlockId, roleName: 'truth' });
 	if (truthRead.error) {
 		return { error: truthRead.error };
@@ -239,7 +246,11 @@ const scoreDerivedRun = ({ truthStoreFilePath, truthBlockId, derivedStoreFilePat
 	const calibrationRowList = CONFIDENCE_BAND_LIST.map((oneBand) => {
 		const atBand = inPoolRecordList.filter((oneRecord) => !isAbstained(oneRecord) && oneRecord.confidence === oneBand);
 		const rightCount = atBand.filter((oneRecord) => truth.objectSetBySubject[oneRecord.subjectStableId].has(oneRecord.objectStableId)).length;
-		return { confidence: oneBand, pickCount: atBand.length, correctCount: rightCount, wrongCount: atBand.length - rightCount };
+		// ⟪F-F1, review D4⟫ rendering ties are NOT wrong picks in the headline, so they must not be wrong picks
+		// here. The old expression summed to 91 against a headline of 89 — a table that silently disagreed with
+		// the number above it, on the same page.
+		const tieCount = atBand.filter((oneRecord) => renderingTieList.indexOf(oneRecord) !== -1).length;
+		return { confidence: oneBand, pickCount: atBand.length, correctCount: rightCount, renderingTieCount: tieCount, wrongCount: atBand.length - rightCount - tieCount };
 	});
 
 	// ---- PER ENTITY ----
@@ -294,7 +305,7 @@ const scoreDerivedRun = ({ truthStoreFilePath, truthBlockId, derivedStoreFilePat
 			scorableCount: scorableRecordList.length,
 			truthCardInPoolCount: inPoolRecordList.length,
 		},
-		retrieval: { recallByK, fullRecallCurve },
+		retrieval: { recallByK, fullRecallCurve, declaredK: declaredK === undefined ? null : declaredK, measuredCeilingCurve: measuredCeilingCurve === undefined ? null : measuredCeilingCurve },
 		judgment: {
 			correctCount: correctList.length,
 			wrongCount: wrongList.length,
@@ -343,10 +354,26 @@ const scoreDerivedRun = ({ truthStoreFilePath, truthBlockId, derivedStoreFilePat
 	lineList.push('');
 	lineList.push('| K | truth card in pool | recall |');
 	lineList.push('|---:|---:|---:|');
+	// ⟪D-1, review D4⟫ Seat lists are capped at the DECLARED K, so a row above it cannot exceed recall@K BY
+	// CONSTRUCTION — it is an artifact of the cap, not a measurement, and it sat unlabelled in the one table
+	// meant to inform the K decision. A reader concluded K=25 buys nothing. It buys 28 subjects.
 	RECALL_K_LIST.forEach((oneK) => {
 		const row = score.retrieval.fullRecallCurve[oneK - 1];
-		lineList.push(`| ${oneK} | ${row.hitCount} / ${row.subjectCount} | ${asPercent(row.hitCount, row.subjectCount)} |`);
+		const aboveDeclaredK = typeof score.retrieval.declaredK === 'number' && oneK > score.retrieval.declaredK;
+		lineList.push(`| ${oneK}${aboveDeclaredK ? ' ⚠︎' : ''} | ${row.hitCount} / ${row.subjectCount} | ${asPercent(row.hitCount, row.subjectCount)}${aboveDeclaredK ? ' — **CEILING ARTIFACT, not a measurement**' : ''} |`);
 	});
+	if (typeof score.retrieval.declaredK === 'number') {
+		lineList.push('');
+		lineList.push(`⚠︎ **Rows above K=${score.retrieval.declaredK} cannot exceed recall@${score.retrieval.declaredK}.** The recorded pools hold at most ${score.retrieval.declaredK} seats, so those rows are pinned by the cap and say NOTHING about whether a larger K would help. To answer that, run \`retrievalCeiling.js\` against the graph — it re-measures with no K and no floor.`);
+	}
+	if (score.retrieval.measuredCeilingCurve) {
+		lineList.push('');
+		lineList.push('**The UNBOUNDED ceiling, measured independently** (`retrievalCeiling.js`, no K, no floor):');
+		lineList.push('');
+		lineList.push('| K | recall |');
+		lineList.push('|---:|---:|');
+		Object.keys(score.retrieval.measuredCeilingCurve).sort((leftK, rightK) => Number(leftK) - Number(rightK)).forEach((oneK) => lineList.push(`| ${oneK} | ${(score.retrieval.measuredCeilingCurve[oneK] * 100).toFixed(2)}% |`));
+	}
 	lineList.push('');
 	lineList.push('### Retrieval LOSS — the subjects the judge was never given a chance on');
 	lineList.push('');
