@@ -39,6 +39,7 @@ const { xLog } = process.global;
 const derivedEvalLib = require('./derivedEval');
 const renderingAuditLib = require('./renderingAudit');
 const recordDispositionLib = require(path.join(__dirname, 'recordDisposition'));
+const batchWindowVerdictLib = require(path.join(__dirname, 'batchWindowVerdict'));
 
 const ACCEPTANCE_FILE_PATH = path.join(__dirname, '..', '..', '..', '..', 'lib', 'bridge-framework', 'test', 'acceptance', 'acceptanceCommands.jsonc');
 // THE REFERENCE BLOCK IS DECLARED DATA, NOT A MODULE CONSTANT (RULING BS-8, SABLE_RIVER 2026-08-17). It used
@@ -308,8 +309,25 @@ const judgedResolvedCount = judgedRecordList.filter((oneRecord) => hasObjectPick
 
 // THE RELEASED WINDOW, FROM THREE INDEPENDENT SOURCES (RULING BS-12). The block's own header says what was
 // actually run; the runner's per-bridge table says what the supervisor released; --batchSize says what the
-// caller believes. A document is only trustworthy when all three agree, and a disagreement is a REFUSAL rather
-// than a preference for whichever number happens to be nearest to hand.
+// caller believes. All three are still READ, and a caller who disagrees with the block is still a refusal.
+//
+// ⟪WHAT THE THIRD SOURCE MEANS — AMENDED, SABLE_RIVER's STAND-DOWN DISPOSITION (b), 2026-08-17 04:45 CDT⟫
+// TWILIGHT_VALLEY raised the defect in its own instrument rather than weakening it, and it is a good one: as
+// first written, this row demanded that the block's window equal the RUNNER'S CURRENT released window. That makes
+// every SUPERSEDED batch document permanently NOT CLEAN — not because anything is wrong with it, but because the
+// supervisor later released a different size, and nothing on disk records which window was in force when a given
+// block was frozen. batch-0 ran at limit 10 and was clean; BS-9 then released 70; batch-0 became unclean
+// retroactively, by an edit to a file it has no relationship with.
+//
+// RULED: "clean" for a superseded document means THE WINDOW IN FORCE WHEN THE BLOCK WAS FROZEN. The BLOCK HEADER
+// is the authority for a DOCUMENT; the runner's per-bridge row governs FUTURE LAUNCHES ONLY. So the falsifiable
+// claim this row makes is that the CALLER describes the window the BLOCK ACTUALLY RAN, and the runner's released
+// size is reported as CONTEXT — named as SUPERSEDED when it differs, which is a fact about the release history
+// and not a defect in the document.
+//
+// The row is NOT weakened where it bites: a --batchSize that misdescribes the block still FAILS, which is the
+// case that would let a document claim a window its block never ran. What is removed is a comparison that made a
+// document's cleanliness depend on a number that can change after it was written.
 const declaredWindowLimitMatch = declaredWindowText.match(/PARTIAL_WINDOW_limit(\d+)_offset(\d+)/);
 if (declaredWindowLimitMatch === null) {
 	refuse(`the block's sourceWindow ${JSON.stringify(declaredWindowText)} does not parse as PARTIAL_WINDOW_limit<n>_offset<n> — the window is READ from the block, never inferred from the record count (a short last page would make that inference wrong exactly when it mattered)`);
@@ -322,6 +340,7 @@ if (runnerRowMatch === null) {
 	refuse(`runBridgeAcceptanceCommand.js declares no released batch size for '${bridgeName}' — the released window is reconstructed from the RUNNER, independently of the acceptance file and of this caller (RULING BS-9); a document cannot certify a batch size nobody released`);
 }
 const releasedWindowLimit = Number(runnerRowMatch[1]);
+const windowVerdict = batchWindowVerdictLib.batchWindowVerdictFor({ blockWindowLimit, callerWindowLimit: batchSize, releasedWindowLimit });
 
 // --documentName is validated HERE, with the other configuration, because the document's TITLE uses it and a
 // configuration fault belongs before any of the document is built.
@@ -378,7 +397,10 @@ const checklist = [
 	// SUPERSEDED (batch-0 ran at limit 10 before BS-9 released 70); a caller whose --batchSize disagrees with
 	// the block is documenting a window it has mis-stated. Reporting both as one undifferentiated FAIL would
 	// make an obsolete document look like a defective batch.
-	{ name: 'the window agrees across all three independent sources (block header · runner row · --batchSize)', pass: blockWindowLimit === releasedWindowLimit && blockWindowLimit === batchSize, detail: `block header ${blockWindowLimit} · runner released ${releasedWindowLimit} · --batchSize ${batchSize}${blockWindowLimit === batchSize && blockWindowLimit !== releasedWindowLimit ? ' — SUPERSEDED WINDOW: this block ran under a window the supervisor has since replaced; the block and the caller agree, and it is the RELEASED size that has moved' : blockWindowLimit !== batchSize ? ' — CALLER DISAGREES WITH THE BLOCK: --batchSize does not describe the window this block actually ran' : ''}` },
+	// the VERDICT comes from batchWindowVerdict.js so the twins in test-runnerContract.js exercise the very
+	// function this row calls — this file is a CLI that runs on require and cannot be required from a suite
+	// (the BS-13 / recordDisposition.js precedent)
+	{ name: 'the caller describes the window THIS BLOCK ACTUALLY RAN (block header · --batchSize), with the runner\'s released row reported as context governing future launches', pass: windowVerdict.pass, detail: windowVerdict.detail },
 	{ name: '0 framework refusals', pass: Array.isArray(block.refusalList) && block.refusalList.length === 0, detail: `${Array.isArray(block.refusalList) ? block.refusalList.length : '?'} refusal(s)` },
 	{ name: `0 id-gate hits over every prompt in this generation (matchBasis '${bridgeDeclaration.matchBasis}')`, pass: idGateHitList.length === 0, detail: idGateHitList.length ? idGateHitList.slice(0, 3).join('; ') : 'zero' },
 	...(idGateSpec.assertsSingleSharedKey ? [{ name: `every rendered pool carries ONE shared '${idGateSpec.sharedKeyFieldName}' (the key-filtered basis assertion that replaces hub-identifier-as-answer)`, pass: sharedKeyRefusalList.length === 0 && sharedKeyOccurrenceCount > 0, detail: sharedKeyRefusalList.length ? sharedKeyRefusalList.slice(0, 2).join('; ') : sharedKeyOccurrenceCount === 0 ? 'UNMEASURED: the extractor found NO hub identifier in any prompt, so "the keys agree" would be a statement about silence' : `zero disagreements over ${sharedKeyOccurrenceCount} rendered '${idGateSpec.sharedKeyFieldName}' occurrence(s)` }] : []),

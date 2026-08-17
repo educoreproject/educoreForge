@@ -287,4 +287,41 @@ const livePresent = typeof liveDeclaredPath === 'string' && fs.existsSync(liveDe
 harness.note(`(g) live: the declared ${REAL} path is ${livePresent ? 'PRESENT' : 'ABSENT'} on this machine — ${provenanceFor({ declaredBinPath: liveDeclaredPath, binPathPresent: livePresent, ranValidatorName: livePresent ? REAL : PROXY }).label}`);
 harness.ok('(g) the rule returns a coherent verdict about the LIVE declared path (asserting "present" instead would fail on any machine without the venv, which is an environment fact and not a defect)', (() => { const verdict = provenanceFor({ declaredBinPath: liveDeclaredPath, binPathPresent: livePresent, ranValidatorName: livePresent ? REAL : PROXY }); return livePresent ? verdict.measured === true && verdict.unmeasuredReason === '' : /UNMEASURED/.test(verdict.unmeasuredReason); })());
 
+// ---------------------------------------------------------------------
+// (h) WHICH WINDOW A BATCH DOCUMENT MAY CLAIM — STAND-DOWN-B4 disposition (b), ratified as code under B4R-3
+// ---------------------------------------------------------------------
+//
+// The rule is batchWindowVerdict.js, extracted for the BS-13 / recordDisposition.js reason: batchCheckpoint.js is
+// a CLI that RUNS ON REQUIRE, so a suite requiring it would write a document, and a twin could only test a copy.
+//
+// The amendment in one sentence: a document's cleanliness must not depend on a number that can move AFTER the
+// document was written. batch-0 ran at limit 10 and was clean; BS-9 released 70; batch-0 went unclean
+// retroactively, by an edit to a file it has no relationship with. Its own author raised that rather than
+// weakening the check, which is why this is an amendment and not a loosening — and the inequality where the row
+// always did its real work, caller-disagrees-with-block, still fails.
+const batchWindowVerdictLib = require('./batchWindowVerdict');
+const windowVerdictFor = (world) => batchWindowVerdictLib.batchWindowVerdictFor(world);
+
+// THE batch-0 CASE ITSELF: block ran 10, caller says 10, runner has since released 70 => CLEAN, and SUPERSEDED
+const batchZeroVerdict = windowVerdictFor({ blockWindowLimit: 10, callerWindowLimit: 10, releasedWindowLimit: 70 });
+harness.ok('(h) block 10 · caller 10 · released 70 => CLEAN and flagged SUPERSEDED. This is batch-0 exactly: it ran at the window in force when it was frozen, and a later release cannot make an already-frozen document unclean (SABLE_RIVER stand-down disposition (b))', batchZeroVerdict.pass === true && batchZeroVerdict.superseded === true && batchZeroVerdict.detail.indexOf(batchWindowVerdictLib.SUPERSEDED_LABEL) !== -1, JSON.stringify(batchZeroVerdict));
+
+// THE batch-1 CASE: block ran the currently-released window => CLEAN, not superseded
+const batchOneVerdict = windowVerdictFor({ blockWindowLimit: 70, callerWindowLimit: 70, releasedWindowLimit: 70 });
+harness.ok('(h) block 70 · caller 70 · released 70 => CLEAN and NOT superseded — the ordinary case still reads as ordinary', batchOneVerdict.pass === true && batchOneVerdict.superseded === false, JSON.stringify(batchOneVerdict));
+
+// RED, AND THIS IS THE HALF THAT MUST NOT SOFTEN: a caller who misdescribes the block still FAILS. Without this
+// the amendment would be a loosening, because a document could then assert a window its block never ran.
+[{ blockWindowLimit: 70, callerWindowLimit: 10, releasedWindowLimit: 70 }, { blockWindowLimit: 10, callerWindowLimit: 70, releasedWindowLimit: 70 }, { blockWindowLimit: 10, callerWindowLimit: 70, releasedWindowLimit: 10 }].forEach((oneWorld) => {
+	const verdict = windowVerdictFor(oneWorld);
+	harness.ok(`(h) RED-OBSERVED — block ${oneWorld.blockWindowLimit} · caller ${oneWorld.callerWindowLimit} · released ${oneWorld.releasedWindowLimit} => FAILS by name (CALLER DISAGREES WITH THE BLOCK). The amendment relaxes the released-row comparison and NOT this one, because this is the inequality that would let a document claim a window its block never ran`, verdict.pass === false && /CALLER DISAGREES WITH THE BLOCK/.test(verdict.detail), JSON.stringify(verdict));
+});
+// a window nobody can state is not a window a document may claim
+[{ blockWindowLimit: 0, callerWindowLimit: 10, releasedWindowLimit: 70 }, { blockWindowLimit: 10, callerWindowLimit: undefined, releasedWindowLimit: 70 }, { blockWindowLimit: 10, callerWindowLimit: 10, releasedWindowLimit: NaN }, { blockWindowLimit: '10', callerWindowLimit: 10, releasedWindowLimit: 70 }].forEach((oneWorld, oneIndex) => {
+	const verdict = windowVerdictFor(oneWorld);
+	harness.ok(`(h) RED-OBSERVED — a non-positive-integer window (#${oneIndex + 1}) FAILS by name rather than being coerced into a number and quietly compared`, verdict.pass === false && /not a window this document may claim/.test(verdict.detail), JSON.stringify(verdict));
+});
+// and the generator reads the rule rather than carrying its own copy
+harness.ok('(h) batchCheckpoint.js calls batchWindowVerdict.js rather than comparing the three numbers inline — one rule, one place, and the twins above exercise the function the generator actually calls', (() => { const generatorText = fs.readFileSync(path.join(__dirname, 'batchCheckpoint.js'), 'utf8'); return /batchWindowVerdictLib\.batchWindowVerdictFor\(/.test(generatorText) && !/blockWindowLimit === releasedWindowLimit/.test(generatorText); })());
+
 harness.report();
