@@ -324,4 +324,47 @@ harness.ok('(h) block 70 · caller 70 · released 70 => CLEAN and NOT superseded
 // and the generator reads the rule rather than carrying its own copy
 harness.ok('(h) batchCheckpoint.js calls batchWindowVerdict.js rather than comparing the three numbers inline — one rule, one place, and the twins above exercise the function the generator actually calls', (() => { const generatorText = fs.readFileSync(path.join(__dirname, 'batchCheckpoint.js'), 'utf8'); return /batchWindowVerdictLib\.batchWindowVerdictFor\(/.test(generatorText) && !/blockWindowLimit === releasedWindowLimit/.test(generatorText); })());
 
+// ---------------------------------------------------------------------
+// (i) THE REFERENCE-ROLE VOCABULARY IS A POLYMORPHIC SEAM AND NOW HAS AN INTERFACE CHECK
+// ---------------------------------------------------------------------
+//
+// FOUND BY MY OWN polyArch2 SELF-AUDIT, not by a failing test, and it is the audit item "a formally declared
+// interface for every polymorphic seam you touched".
+//
+// BS-8 made batchCheckpoint.js's vocabulary a two-role registry — `truth` for the derived plugin, `comparison` for
+// a standard-declared one — and the ROLE selects the words. B4R-5 then added a fourteenth member
+// (pickedNoComparisonWord) to both roles. Nothing anywhere asserted the two roles carry the SAME MEMBERS. Add a
+// member to one role only and the document prints the literal string "undefined" for the other, in a
+// judge-facing sentence, with no error and no red gate.
+//
+// That is not hypothetical: it is precisely the defect BS-12 was called in to fix — 58 rows rendered with
+// "confidence undefined" — arriving by a different door. A registry whose members must line up across roles has an
+// interface whether or not anyone wrote it down, so it is written down here.
+const referenceVocabularyByRole = (() => {
+	const generatorText = fs.readFileSync(path.join(__dirname, 'batchCheckpoint.js'), 'utf8');
+	const matched = /const REFERENCE_VOCABULARY_BY_ROLE = Object\.freeze\(\{([\s\S]*?)\n\}\);/.exec(generatorText);
+	if (matched === null) {
+		return null;
+	}
+	return matched[1].split(/\n\t(?=[a-zA-Z]+: Object\.freeze)/).reduce((soFar, oneBlock) => {
+		const roleNameMatch = /^\s*([a-zA-Z]+): Object\.freeze/.exec(oneBlock);
+		return roleNameMatch === null ? soFar : { ...soFar, [roleNameMatch[1]]: [...oneBlock.matchAll(/^\t\t([a-zA-Z]+):/gm)].map((oneMatch) => oneMatch[1]) };
+	}, {});
+})();
+harness.ok('(i) REFERENCE_VOCABULARY_BY_ROLE is readable from the generator, and declares at least the two ruled roles', referenceVocabularyByRole !== null && Object.keys(referenceVocabularyByRole).length >= 2, JSON.stringify(referenceVocabularyByRole === null ? null : Object.keys(referenceVocabularyByRole)));
+const roleNameList = referenceVocabularyByRole === null ? [] : Object.keys(referenceVocabularyByRole);
+// the runner's own list of lawful roles, read from the generator rather than restated
+const declaredRoleNameList = (() => {
+	const generatorText = fs.readFileSync(path.join(__dirname, 'batchCheckpoint.js'), 'utf8');
+	const matched = /const REFERENCE_ROLE_LIST = Object\.freeze\(\[([^\]]*)\]\)/.exec(generatorText);
+	return matched === null ? null : matched[1].split(',').map((oneEntry) => oneEntry.trim().replace(/^'|'$/g, '')).filter((oneEntry) => oneEntry !== '');
+})();
+harness.equal('(i) every role in REFERENCE_ROLE_LIST has a vocabulary, and every vocabulary has a role — a role the runner accepts with no words to print would refuse at document time, which is the wrong end of the run to discover it', JSON.stringify((declaredRoleNameList || []).slice().sort()), JSON.stringify(roleNameList.slice().sort()));
+// THE INTERFACE ITSELF: identical member sets across every role.
+const memberSetSignature = (oneRoleName) => referenceVocabularyByRole[oneRoleName].slice().sort().join(',');
+const signatureList = roleNameList.map(memberSetSignature);
+harness.ok(`(i) EVERY role vocabulary declares the IDENTICAL member set (${roleNameList.length} roles, ${referenceVocabularyByRole === null ? 0 : (referenceVocabularyByRole[roleNameList[0]] || []).length} members each) — a member present in one role and absent in another prints the literal "undefined" into a judge-facing sentence, which is BS-12's own defect arriving by a different door`, signatureList.length > 1 && signatureList.every((oneSignature) => oneSignature === signatureList[0]), roleNameList.map((oneRoleName) => `${oneRoleName}: ${memberSetSignature(oneRoleName)}`).join('\n'));
+// and the member B4R-5 added is actually there, in both, by name — so this conjunct cannot pass on an empty parse
+harness.ok('(i) the B4R-5 member pickedNoComparisonWord is present in EVERY role, by name (a parity check over two empty lists would also be "identical")', roleNameList.length > 1 && roleNameList.every((oneRoleName) => referenceVocabularyByRole[oneRoleName].indexOf('pickedNoComparisonWord') !== -1));
+
 harness.report();
