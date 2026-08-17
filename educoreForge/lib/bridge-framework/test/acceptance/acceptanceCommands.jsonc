@@ -76,7 +76,13 @@
 		"materialiseRealMaxJudgmentCount": 1600,
 		// NULL until the supervisor writes the GO. The runner REFUSES materialiseReal while this is null - that
 		// refusal is the only thing standing between a typo and roughly 670 Opus calls.
-		"materialiseRealSpendAuthorisedBy": null,
+		// THE GO, AS DATA. Written verbatim from SABLE_RIVER's IMCS of 2026-08-17 02:23 after they read
+		// renderingAudit-c4d06ce2....md themselves and SIGNED it. This single key is the door to real Opus
+		// spend: the runner refuses every spending line while it is null, and that refusal was verified live
+		// immediately before this edit. It authorises D3 BATCHES released ONE AT A TIME by the supervisor —
+		// it is NOT a blanket authorisation for materialiseReal, which waits on three consecutive
+		// mechanically-clean batches.
+		"materialiseRealSpendAuthorisedBy": { "sessionName": "SABLE_RIVER", "date": "2026-08-17", "note": "CP1 signed 12:20; D3 rejudgeRealLimit batches of 10 released one at a time by the supervisor; D4 materialiseReal released only after three consecutive mechanically-clean batches; PLAN-derivedBridge section 11.12" },
 		// replay: a plain -build REPLAYS the pair's latest frozen block with ZERO judge calls
 		"materialise": "node --max-old-space-size=20000 /Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/apps/graph-builder/graphBuilder.js -build --recipePath=/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/recipes/edfiDerivedEval.recipe.jsonc --vectorize=true --reuseForgedBlocks=true --standardsDatabaseFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/edfiDerived/edfiDerived.standardsDatabase.sqlite3 --decisionStoreFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/edfiDerived/edfiDerived.decisions.sqlite3 --judgmentCacheFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/edfiDerived/edfiDerived.judgmentCache.sqlite3 --matchForensicsDirPath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/edfiDerived/matchForensics --embeddingCacheFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/vectorCache/vectorCache.sqlite3 </dev/null > /Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/edfiDerived/buildLogs/<line>-<phase>.log 2>&1 &",
 		"materialiseMaxJudgmentCount": 0,

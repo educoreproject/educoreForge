@@ -101,7 +101,18 @@ if (!Number.isInteger(declaredMaxJudgmentCount) || declaredMaxJudgmentCount < 0)
 	refuse(`the ${lineName} line for ${bridgeName} declares no ${lineName}MaxJudgmentCount (got ${JSON.stringify(declaredMaxJudgmentCount)}) — every line declares its own judgment ceiling as data; there is no default (RULING §11.12)`);
 }
 
-const committedLine = entry[lineName].replace(/<line>/g, lineName).replace(/<phase>/g, phaseToken);
+// <n> is the BATCH OFFSET for the windowed real-judge line. It is substituted from --offset and the line is
+// REFUSED if the placeholder survives: running `--offset=<n>` literally would either fail obscurely or, worse,
+// be silently parsed as something else — and this is the one line in the system that spends real money.
+const offsetValue = firstValue('offset');
+const committedLineRaw = entry[lineName].replace(/<line>/g, lineName).replace(/<phase>/g, phaseToken);
+if (committedLineRaw.indexOf('<n>') !== -1 && (offsetValue === undefined || !/^\d+$/.test(String(offsetValue)))) {
+	refuse(`the ${lineName} line for ${bridgeName} carries the batch placeholder <n> and --offset=<non-negative integer> was not supplied (got ${JSON.stringify(offsetValue)}) — a windowed spending line names its window explicitly; there is no default batch`);
+}
+const committedLine = committedLineRaw.replace(/<n>/g, String(offsetValue));
+if (committedLine.indexOf('<') !== -1 && /<[a-z]+>/.test(committedLine)) {
+	refuse(`the composed ${lineName} line still carries an unsubstituted placeholder: ${committedLine.match(/<[a-z]+>/)[0]} — a spending line runs only when every token is resolved`);
+}
 const buildLogPath = path.join(entry.buildLogsDirPath, `${lineName}-${phaseToken}.log`);
 const treeRoot = path.join(__dirname, '..', '..', '..', '..');
 
@@ -109,7 +120,22 @@ const treeRoot = path.join(__dirname, '..', '..', '..', '..');
 if (typeof entry.standardKey !== 'string' || entry.standardKey.length === 0) {
 	refuse(`acceptanceCommands.jsonc entry for ${bridgeName} carries no standardKey (the --rebridge scope token) — declare it as data`);
 }
-const lineSpecificArgumentList = { rejudgeDebug: [`--rebridge=${entry.standardKey}`, '--useDebugJudge=digest'], materialise: [], materialiseReal: [`--rebridge=${entry.standardKey}`] };
+// THE BATCH SIZE IS RULED, not a knob: D3 releases TEN subjects at a time (RULING §11.12). It lives here, in
+// the runner's independent reconstruction of the line, so a committed line claiming a different --limit fails
+// the equality check below rather than quietly running a bigger batch than the supervisor released.
+const D3_BATCH_SIZE = 10;
+const lineSpecificArgumentList = {
+	rejudgeDebug: [`--rebridge=${entry.standardKey}`, '--useDebugJudge=digest'],
+	materialise: [],
+	materialiseReal: [`--rebridge=${entry.standardKey}`],
+	rejudgeRealLimit: [`--rebridge=${entry.standardKey}`, `--limit=${D3_BATCH_SIZE}`, `--offset=${offsetValue}`],
+};
+// A line name with no reconstruction row would `.concat(undefined)` and append the literal string "undefined"
+// to the command — producing a malformed line that the equality check would reject for the WRONG reason, or
+// worse, that a future edit to the check might let through. Refuse by name instead.
+if (!Array.isArray(lineSpecificArgumentList[lineName])) {
+	refuse(`the runner has no argument reconstruction for line '${lineName}' — every runnable line must be independently reconstructible, because that reconstruction IS the check that the committed line was not tampered with`);
+}
 const nodeArgumentList = [
 	'--max-old-space-size=20000',
 	path.join(treeRoot, 'apps', 'graph-builder', 'graphBuilder.js'),

@@ -52,8 +52,8 @@ const bridgeDeclaration = Object.freeze({
 	// The two runs have different declarationDigests and therefore different block ids. That is correct and is
 	// the point: they ARE different runs over different populations, and a scheme that gave them one id would be
 	// hiding that. Both digests and both block ids are recorded in the DEVLOG at the phase boundary.
-	// CURRENT PHASE: D2.
-	subjectSource: { kind: 'graphLabel', label: 'EdfiProperty', scopeStableIdListPath: null },
+	// CURRENT PHASE: D3/D4 — switched from null at the CP1 boundary, 2026-08-17, on the supervisor's GO.
+	subjectSource: { kind: 'graphLabel', label: 'EdfiProperty', scopeStableIdListPath: 'bridgeData/edfiDerivedScorableScope.json' },
 	// K AND THE FLOOR, RULED ON THE MEASURED CURVE (§11.3). The D0 review computed recall@K over the 655
 	// subjects with a picked truth object: @10 = 0.768, @15 = 0.815, @25 = 0.858, rank-1 = 0.415.
 	//   K = 15 — the July-tuned value. K = 10 would cap the judge at 0.768 before Opus is asked anything;
