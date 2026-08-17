@@ -103,7 +103,7 @@ const truthViewOf = (truthBlock) => {
 	};
 };
 
-const scoreDerivedRun = ({ truthStoreFilePath, truthBlockId, derivedStoreFilePath, derivedBlockId } = {}) => {
+const scoreDerivedRun = ({ truthStoreFilePath, truthBlockId, derivedStoreFilePath, derivedBlockId, ceilingRecallByK } = {}) => {
 	const truthRead = readFrozenBlock({ storeFilePath: truthStoreFilePath, blockId: truthBlockId, roleName: 'truth' });
 	if (truthRead.error) {
 		return { error: truthRead.error };
@@ -190,8 +190,31 @@ const scoreDerivedRun = ({ truthStoreFilePath, truthBlockId, derivedStoreFilePat
 		}
 	});
 
+	// RETRIEVAL LOSS, REPORTED EXPLICITLY (RULING SABLE_RIVER 2026-08-17). Subjects whose truth card was never
+	// in the pool cannot be got right by ANY judge, so counting them against the judge measures the retriever
+	// and blames the model. They are named here as their own quantity, and the CEILING GAP beside them says how
+	// many of them a larger K would have recovered — so "the judge missed it" and "retrieval never offered it"
+	// can never be read as the same number. ceilingRecallByK is optional: pass the curve from
+	// retrievalCeiling.js and the gap is computed; omit it and the gap is reported as null rather than guessed.
+	const retrievalLossCount = scorableRecordList.length - inPoolRecordList.length;
+	const declaredK = derivedRead.block.header.candidateRetrieval === null || derivedRead.block.header.candidateRetrieval === undefined ? null : derivedRead.block.header.candidateRetrieval.k;
+	const ceilingAtMaxK = ceilingRecallByK === undefined || ceilingRecallByK === null ? null : ceilingRecallByK[MAX_RECALL_K];
+	const retrievalLoss = {
+		scorableSubjectCount: scorableRecordList.length,
+		truthCardInPoolCount: inPoolRecordList.length,
+		// the honest headline of the retrieval half: subjects the judge was never given a chance on
+		neverOfferedCount: retrievalLossCount,
+		neverOfferedShare: scorableRecordList.length === 0 ? null : retrievalLossCount / scorableRecordList.length,
+		declaredK,
+		// how many of the never-offered a LARGER K would have reached, measured without K and without the floor
+		recoverableByLargerKCount: ceilingAtMaxK === null || scorableRecordList.length === 0 ? null : Math.round(ceilingAtMaxK * scorableRecordList.length) - inPoolRecordList.length,
+		ceilingK: ceilingAtMaxK === null ? null : MAX_RECALL_K,
+		note: 'a subject whose truth card was never in the pool cannot be got right by any judge; this is retrieval loss, never judgment loss',
+	};
+
 	const score = {
 		truthBlockId: truthRead.blockId,
+		retrievalLoss,
 		derivedBlockId: derivedRead.blockId,
 		retrievalParameters: derivedRead.block.header.candidateRetrieval,
 		predicateRule: derivedRead.block.header.predicateRule,
@@ -251,6 +274,18 @@ const scoreDerivedRun = ({ truthStoreFilePath, truthBlockId, derivedStoreFilePat
 		const row = score.retrieval.fullRecallCurve[oneK - 1];
 		lineList.push(`| ${oneK} | ${row.hitCount} / ${row.subjectCount} | ${asPercent(row.hitCount, row.subjectCount)} |`);
 	});
+	lineList.push('');
+	lineList.push('### Retrieval LOSS — the subjects the judge was never given a chance on');
+	lineList.push('');
+	lineList.push(`**${score.retrievalLoss.neverOfferedCount} of ${score.retrievalLoss.scorableSubjectCount}** scorable subjects (${asPercent(score.retrievalLoss.neverOfferedCount, score.retrievalLoss.scorableSubjectCount)}) had their truth card`);
+	lineList.push(`OUTSIDE the pool at the declared K = ${score.retrievalLoss.declaredK}. No judge, however good, could have got these right.`);
+	lineList.push('They are counted here and NOT against the judge below — counting them against the judge would measure the');
+	lineList.push('retriever and blame the model.');
+	if (score.retrievalLoss.recoverableByLargerKCount !== null) {
+		lineList.push('');
+		lineList.push(`Of those, **${score.retrievalLoss.recoverableByLargerKCount}** would have been reached at K = ${score.retrievalLoss.ceilingK} (measured with no K and no floor).`);
+		lineList.push('That is the price of the declared ceiling, stated as a number rather than left implicit.');
+	}
 	lineList.push('');
 	lineList.push('## Judgment — over the subjects retrieval actually reached');
 	lineList.push('');
