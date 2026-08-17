@@ -49,7 +49,13 @@ const verifyLogContractLib = require('./verifyLogContract');
 
 const ACCEPTANCE_FILE_PATH = path.join(__dirname, '..', '..', '..', '..', 'lib', 'bridge-framework', 'test', 'acceptance', 'acceptanceCommands.jsonc');
 const EXPECTED_IDS_FILE_PATH = path.join(__dirname, '..', '..', '..', '..', 'lib', 'bridge-framework', 'test', 'acceptance', 'expectedDecisionBlockIds.json');
-const LINE_NAME_LIST = Object.freeze(['rejudgeDebug', 'materialise', 'materialiseReal']);
+// rejudgeRealLimit added for D3 (RULING §11.12): the real judge, TEN SUBJECTS AT A TIME, released one batch
+// at a time by the supervisor. It is a SPENDING line like materialiseReal and carries the same spend gate —
+// see the authorisation check below, which now covers both rather than naming materialiseReal alone. A
+// spending line that slipped past the gate because the gate knew only one line's name is precisely the kind
+// of omission that costs money once and is obvious afterwards.
+const LINE_NAME_LIST = Object.freeze(['rejudgeDebug', 'materialise', 'materialiseReal', 'rejudgeRealLimit']);
+const SPENDING_LINE_NAME_LIST = Object.freeze(['materialiseReal', 'rejudgeRealLimit']);
 
 const stripJsoncComments = (text) => text.replace(/^\s*\/\/.*$/gm, '');
 const acceptanceCommands = JSON.parse(stripJsoncComments(fs.readFileSync(ACCEPTANCE_FILE_PATH, 'utf8')));
@@ -76,8 +82,8 @@ const phaseToken = firstValue('phaseToken');
 if (typeof phaseToken !== 'string' || !/^[A-Za-z0-9_-]+$/.test(phaseToken)) {
 	refuse(`--phaseToken must be a token of [A-Za-z0-9_-] (got ${JSON.stringify(phaseToken)})`);
 }
-if (lineName === 'materialiseReal' && !(entry.materialiseRealSpendAuthorisedBy && typeof entry.materialiseRealSpendAuthorisedBy === 'object' && typeof entry.materialiseRealSpendAuthorisedBy.sessionName === 'string')) {
-	refuse(`the materialiseReal line SPENDS on the real judge and acceptanceCommands.jsonc records no materialiseRealSpendAuthorisedBy for ${bridgeName} — the supervisor authorises the spend as data before this line runs`);
+if (SPENDING_LINE_NAME_LIST.indexOf(lineName) !== -1 && !(entry.materialiseRealSpendAuthorisedBy && typeof entry.materialiseRealSpendAuthorisedBy === 'object' && typeof entry.materialiseRealSpendAuthorisedBy.sessionName === 'string')) {
+	refuse(`the ${lineName} line SPENDS on the real judge and acceptanceCommands.jsonc records no materialiseRealSpendAuthorisedBy for ${bridgeName} — the supervisor authorises the spend as data before this line runs`);
 }
 
 // EVERY LINE DECLARES ITS OWN JUDGMENT CEILING (RULING §11.12). The runner refuses a line that declares none:

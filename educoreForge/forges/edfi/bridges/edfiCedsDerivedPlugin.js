@@ -42,7 +42,18 @@ const bridgeDeclaration = Object.freeze({
 	//
 	// D2 (debug, free) runs over ALL 1,904 by pointing this at null; D3/D4 (real judge) run over the 701 only.
 	// Spending on the 1,203 the crosswalk never mentions is TQ's decision AFTER the score (§11.2).
-	subjectSource: { kind: 'graphLabel', label: 'EdfiProperty', scopeStableIdListPath: 'bridgeData/edfiDerivedScorableScope.json' },
+	// ⟪PHASE-SWITCHED, DELIBERATELY, AT A COMMITTED BOUNDARY⟫ RULING §11.2 splits the population by phase:
+	//   D2 (debug, FREE)      — scopeStableIdListPath: null   → ALL 1,904 EdfiProperty nodes. Free, so there is
+	//                           no reason not to see the whole population, and the pool statistics for the 1,203
+	//                           subjects the crosswalk never mentions are the only evidence anyone has about the
+	//                           63% of Ed-Fi that has no crosswalk at all.
+	//   D3/D4 (REAL judge)    — 'bridgeData/edfiDerivedScorableScope.json' → the 701 SCORABLE only. Spending on
+	//                           the 1,203 unscorable is TQ's decision AFTER the score.
+	// The two runs have different declarationDigests and therefore different block ids. That is correct and is
+	// the point: they ARE different runs over different populations, and a scheme that gave them one id would be
+	// hiding that. Both digests and both block ids are recorded in the DEVLOG at the phase boundary.
+	// CURRENT PHASE: D2.
+	subjectSource: { kind: 'graphLabel', label: 'EdfiProperty', scopeStableIdListPath: null },
 	// K AND THE FLOOR, RULED ON THE MEASURED CURVE (§11.3). The D0 review computed recall@K over the 655
 	// subjects with a picked truth object: @10 = 0.768, @15 = 0.815, @25 = 0.858, rank-1 = 0.415.
 	//   K = 15 — the July-tuned value. K = 10 would cap the judge at 0.768 before Opus is asked anything;
