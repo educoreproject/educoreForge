@@ -1,0 +1,31 @@
+{
+  // fourWithHubEdfiDerived — THE EYE GRAPH. The same four certified standards and CEDS hub as
+  // fourWithHubEdfiBridge, but carrying the DERIVED bridge instead of the authored crosswalk one, so a person
+  // can open the graph and look at what a machine proposed from meaning alone.
+  //
+  // IT CARRIES THE DERIVED PLUGIN INSTEAD OF, NOT BESIDE, THE CROSSWALK ONE. Running both on one pairing
+  // would put the conflict detector between them: siblingPairKeyListFor spans every registered bridge on the
+  // standardKey by producerKind, and on every subject where derived DISAGREES with the crosswalk the derived
+  // edge would be refused materialisation and the authored one would stand. The graph would then show derived
+  // edges only where derived AGREED — precisely the opposite of what an eyeball review is for (D0 review §G).
+  //
+  // Container naming: DEV_edfiDerived_<YYMMDD>, per GNC-001. NEVER GOLD_EVAL_ — a single-standard-pair
+  // assembly is always a DEV_, and mounting derived edges anywhere is TQ's decision after the score.
+  "schemaVersion": "1.0.0",
+  "recipeName": "fourWithHubEdfiDerived",
+  "kind": "dev",
+  "description": "The four certified standards with the CEDS hub, PLUS the Ed-Fi -> CEDS DERIVED bridge plugin (edfiCedsDerivedPlugin) — the eye graph for D4.",
+  "standards": [
+    { "token": "ceds", "version": "current" },
+    { "token": "edfi", "version": "current" },
+    { "token": "pesc260805", "version": "current" },
+    { "token": "sif", "version": "current" }
+  ],
+  "hubs": [
+    { "standard": "ceds" }
+  ],
+  "bridges": [
+    { "source": "edfi", "hub": "ceds", "bridge": "edfiCedsDerivedPlugin", "dependencies": ["edfi", "ceds"] }
+  ],
+  "roundTripStage": true
+}

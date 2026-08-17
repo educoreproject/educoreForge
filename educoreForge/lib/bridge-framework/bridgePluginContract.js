@@ -41,16 +41,104 @@ const isPlainObject = (candidate) =>
 // ---------------------------------------------------------------------
 // THE CLOSED VOCABULARIES (SPEC §3.3 contracts.*) — data the record carries
 // ---------------------------------------------------------------------
-const MATCH_BASIS_LIST = Object.freeze(['standard', 'crosswalk']);
-const PRODUCER_KIND_LIST = Object.freeze(['authored']);
-// producerKind is DECLARED and CHECKED against matchBasis (RULING A1): both v1 bases are authored
-const PRODUCER_KIND_BY_MATCH_BASIS = Object.freeze({ standard: 'authored', crosswalk: 'authored' });
-// the walk-channel kind a matchBasis needs at least one of (crosswalk: the document; standard: the forged graph) — DATA
-const WALK_CHANNEL_SOURCE_KIND_BY_MATCH_BASIS = Object.freeze({ crosswalk: 'document', standard: 'forgedGraph' });
+const MATCH_BASIS_LIST = Object.freeze(['standard', 'crosswalk', 'derived']);
+const PRODUCER_KIND_LIST = Object.freeze(['authored', 'inferred']);
+// producerKind is DECLARED and CHECKED against matchBasis (RULING A1): the two documentary bases are authored;
+// a derived basis is inferred 1:1 (RULING §11.6 — the R6 reversal, owned)
+const PRODUCER_KIND_BY_MATCH_BASIS = Object.freeze({ standard: 'authored', crosswalk: 'authored', derived: 'inferred' });
+
+// ---------------------------------------------------------------------
+// SOURCE_ACQUISITION_REGISTRY — ONE frozen row per matchBasis saying HOW a run acquires its subjects and its
+// candidate pools, and which declaration keys that acquisition requires and forbids (RULINGS §11.3, §11.9,
+// §11.11; approved SABLE_RIVER 2026-08-17). It ABSORBS the former WALK_CHANNEL_SOURCE_KIND_BY_MATCH_BASIS.
+//
+// The orchestrator and the validators consult THE ROW. Neither ever tests the basis NAME — adding a basis is a
+// row here plus a producer row in the two producer registries, never an edit to bridge-framework.js (BG-NOSUB
+// (h) proves it: a twin that reintroduces a basis-name comparison in the orchestrator goes red by name).
+//
+//   walkChannelSourceKind      the sourceKind at least one WALK channel must carry; null = this basis walks
+//                              NOTHING, and sourceChannelList must therefore be EMPTY (refused by name if not)
+//   subjectGroupProducerKind   which registered producer builds subject groups (subjectGroupProducer.js)
+//   poolProducerKind           which registered producer builds the candidate pool (poolProducer.js)
+//   requiredDeclarationKeyList  declaration keys this basis REQUIRES (absent → refused by name)
+//   forbiddenDeclarationKeyList declaration keys this basis FORBIDS (present → refused by name)
+// ---------------------------------------------------------------------
+const EMPTY_NAME_LIST = Object.freeze([]);
+const DOCUMENTARY_REQUIRED_HOOK_NAME_LIST = Object.freeze(['walkSourceAssertions', 'subjectStableIdFor']);
+const DOCUMENTARY_REQUIRED_KEY_LIST = Object.freeze(['tupleFieldColumnMap', 'mappingProvider', 'predicateSource']);
+const DERIVED_ONLY_KEY_LIST = Object.freeze(['subjectSource', 'candidateRetrieval', 'renderingAllowList', 'judgePromptVariant', 'predicateByCategory', 'mappingTool']);
+const SOURCE_ACQUISITION_REGISTRY = Object.freeze({
+	standard: Object.freeze({
+		walkChannelSourceKind: 'forgedGraph',
+		subjectGroupProducerKind: 'walkAssertion',
+		poolProducerKind: 'canonicalKeyIndex',
+		judgePromptVariant: 'crosswalk',
+		requiredHookNameList: DOCUMENTARY_REQUIRED_HOOK_NAME_LIST,
+		forbiddenHookNameList: EMPTY_NAME_LIST,
+		requiredDeclarationKeyList: DOCUMENTARY_REQUIRED_KEY_LIST,
+		forbiddenDeclarationKeyList: DERIVED_ONLY_KEY_LIST,
+	}),
+	crosswalk: Object.freeze({
+		walkChannelSourceKind: 'document',
+		subjectGroupProducerKind: 'walkAssertion',
+		poolProducerKind: 'canonicalKeyIndex',
+		judgePromptVariant: 'crosswalk',
+		requiredHookNameList: DOCUMENTARY_REQUIRED_HOOK_NAME_LIST,
+		forbiddenHookNameList: EMPTY_NAME_LIST,
+		requiredDeclarationKeyList: DOCUMENTARY_REQUIRED_KEY_LIST,
+		forbiddenDeclarationKeyList: DERIVED_ONLY_KEY_LIST,
+	}),
+	derived: Object.freeze({
+		walkChannelSourceKind: null,
+		subjectGroupProducerKind: 'graphLabel',
+		poolProducerKind: 'vectorRetrieval',
+		judgePromptVariant: 'derived',
+		// A derived plugin has NO hooks at all. There is no document to walk, and a graph-sourced subject IS its
+		// own stableId, so a subjectStableIdFor that returned anything but identity would be resolving a question
+		// nobody asked. Both mandatory hooks are therefore FORBIDDEN here, which makes a derived plugin pure
+		// DATA — a declaration and nothing else. That is the sharpest available answer to the design note's own
+		// test ("was this a plugin on the framework, or a second system?").
+		requiredHookNameList: EMPTY_NAME_LIST,
+		forbiddenHookNameList: DOCUMENTARY_REQUIRED_HOOK_NAME_LIST,
+		requiredDeclarationKeyList: Object.freeze(DERIVED_ONLY_KEY_LIST.concat(['predicateSource'])),
+		// a derived producer names no join key and no mapping PROVIDER — the tool is the producer (Profile
+		// §4.3 as amended, RULING §11.7 (c)): mapping_provider is ABSENT, mapping_tool is REQUIRED
+		forbiddenDeclarationKeyList: Object.freeze(['tupleFieldColumnMap', 'mappingProvider']),
+	}),
+});
+const SOURCE_ACQUISITION_ROW_KEY_LIST = Object.freeze(['walkChannelSourceKind', 'subjectGroupProducerKind', 'poolProducerKind', 'judgePromptVariant', 'requiredHookNameList', 'forbiddenHookNameList', 'requiredDeclarationKeyList', 'forbiddenDeclarationKeyList']);
+const SUBJECT_GROUP_PRODUCER_KIND_LIST = Object.freeze(['walkAssertion', 'graphLabel']);
+const POOL_PRODUCER_KIND_LIST = Object.freeze(['canonicalKeyIndex', 'vectorRetrieval']);
+const SUBJECT_SOURCE_KIND_LIST = Object.freeze(['graphLabel']);
+
 const RESOLUTION_LIST = Object.freeze(['specified', 'judged']);
-const PREDICATE_SOURCE_KIND_LIST = Object.freeze(['column', 'labelTable', 'channelAssertion']);
-const PREDICATE_ASSERTED_BY_LIST = Object.freeze(['source', 'labelTable', 'channelAssertion']);
-const PREDICATE_ASSERTED_BY_BY_SOURCE_KIND = Object.freeze({ column: 'source', labelTable: 'labelTable', channelAssertion: 'channelAssertion' });
+// 'judge' is a NAMED, TIME-BOXED non-conformance under RULING §11.7 (a): the v1 judge's return shape carries no
+// predicate slot, so the plugin declares a predicateByCategory TABLE over the judge's category and the block
+// header stamps predicateRule 'categoryTable-v1'. It is stamped, not hidden, so a later judge re-measures.
+const PREDICATE_SOURCE_KIND_LIST = Object.freeze(['column', 'labelTable', 'channelAssertion', 'judge']);
+const PREDICATE_ASSERTED_BY_LIST = Object.freeze(['source', 'labelTable', 'channelAssertion', 'judge']);
+const PREDICATE_ASSERTED_BY_BY_SOURCE_KIND = Object.freeze({ column: 'source', labelTable: 'labelTable', channelAssertion: 'channelAssertion', judge: 'judge' });
+const PREDICATE_RULE_CATEGORY_TABLE_V1 = 'categoryTable-v1';
+// the declared system-prompt / rendering variants (RULING §11.1). 'crosswalk' is the shipped text, BYTE-frozen
+// so its judgment cache keeps hitting; 'derived' is the retrieval-pool text with its OWN renderer version.
+const JUDGE_PROMPT_VARIANT_LIST = Object.freeze(['crosswalk', 'derived']);
+// RENDERING_NEVER_NAME_LIST — property names that may never appear in a renderingAllowList on EITHER side,
+// refused at declaration time. Measured on the live schema (D0 review §C1/§C2 re-verified by GRANITE_VALLEY
+// against GOLD_EVAL_260816): every one is an identifier, contains one, or is the vector itself. TQ's
+// instruction was literally "no cedsId properties", so cedsId and its siblings are named here BY NAME rather
+// than left to the plugin's own blindingDeclaration to remember.
+const RENDERING_NEVER_NAME_LIST = Object.freeze([
+	'stableId', 'canonicalKey', 'addressSignature', '_id', '_source', 'parentId',
+	'uri', 'propertyUri', 'domainUri', 'anchorUri', 'valueUri', 'rangeUri',
+	'propertyKey', 'valueKey', 'domainId', 'propertyNotation', 'valueNotation', 'rangeOptionSetId',
+	'rangeClassId', 'qualifierKeys', 'hubName', 'hubVersion', 'role',
+	'embedding', 'embedText', 'embedSourceProperty', 'embeddingModelVersion',
+	'crossRefs', 'cedsId', 'cedsOriginalAnchorPropertyName', 'cedsOptionCode', 'cedsOptionOriginalAnchorPropertyName',
+	'metaEdId', 'edfiStableId', 'sourceFileRelativePath', 'sourceLineNumber', 'sourceInputName', 'annotationKind',
+]);
+// the judge's category enum (llmClient CATEGORY_ENUM, MIRRORED as data — llmClient.js is UNTOUCHED in this
+// order per TQ); predicateByCategory must name EVERY member and nothing else
+const JUDGE_CATEGORY_LIST = Object.freeze(['strong', 'moderate', 'weakButReal']);
 const LABEL_DISPOSITION_LIST = Object.freeze(['predicate', 'tentative', 'refused', 'sentinelOnly']);
 const TUPLE_FIELD_LIST = Object.freeze(['canonicalKey', 'domainId', 'propertyKey', 'range', 'valueKey', 'qualifierKeys']);
 const TUPLE_LIST_FIELD_LIST = Object.freeze(['qualifierKeys']); // compared as sorted lists; re-widened at the read boundary
@@ -146,13 +234,22 @@ const BRIDGE_DECLARATION_CONTRACT = Object.freeze({
 	pluginVersion: Object.freeze({ required: true, kind: 'nonEmptyString' }),
 	producerKind: Object.freeze({ required: true, kind: 'closedValue', allowedValueList: PRODUCER_KIND_LIST }),
 	matchBasis: Object.freeze({ required: true, kind: 'closedValue', allowedValueList: MATCH_BASIS_LIST }),
-	mappingProvider: Object.freeze({ required: true, kind: 'mappingProvider' }),
+	// basisConditional: presence is ruled by SOURCE_ACQUISITION_REGISTRY[matchBasis]'s required/forbidden lists,
+	// checked in one pass BEFORE the kind walk. matchBasis is validated earlier in contract order, so the row is
+	// known by the time these are reached.
+	mappingProvider: Object.freeze({ required: false, basisConditional: true, kind: 'mappingProvider' }),
 	sourceCuriePrefix: Object.freeze({ required: true, kind: 'curiePrefix' }),
 	subjectCuriePrefix: Object.freeze({ required: true, kind: 'nonEmptyString' }),
 	sourceChannelList: Object.freeze({ required: true, kind: 'sourceChannelList' }),
 	subjectIdentity: Object.freeze({ required: true, kind: 'subjectIdentity' }),
-	tupleFieldColumnMap: Object.freeze({ required: true, kind: 'tupleFieldColumnMap' }),
+	tupleFieldColumnMap: Object.freeze({ required: false, basisConditional: true, kind: 'tupleFieldColumnMap' }),
 	predicateSource: Object.freeze({ required: true, kind: 'predicateSource' }),
+	subjectSource: Object.freeze({ required: false, basisConditional: true, kind: 'subjectSource' }),
+	candidateRetrieval: Object.freeze({ required: false, basisConditional: true, kind: 'candidateRetrieval' }),
+	renderingAllowList: Object.freeze({ required: false, basisConditional: true, kind: 'renderingAllowList' }),
+	judgePromptVariant: Object.freeze({ required: false, basisConditional: true, kind: 'judgePromptVariant' }),
+	predicateByCategory: Object.freeze({ required: false, basisConditional: true, kind: 'predicateByCategory' }),
+	mappingTool: Object.freeze({ required: false, basisConditional: true, kind: 'mappingTool' }),
 	evidenceColumnMap: Object.freeze({ required: true, kind: 'evidenceColumnMap' }),
 	consistencyCheckColumnList: Object.freeze({ required: true, kind: 'consistencyCheckColumnList' }),
 	segmentNormalisationRuleList: Object.freeze({ required: true, kind: 'segmentNormalisationRuleList' }),
@@ -288,6 +385,20 @@ const PREDICATE_SOURCE_KIND_VALIDATOR_REGISTRY = Object.freeze({
 		}
 		return '';
 	},
+	// judge — the JUDGE names the relation, through the plugin's declared predicateByCategory table over the
+	// judge's category (RULING §11.7 (a)). The kind carries NO column and NO table of its own: the table is the
+	// separate declaration key predicateByCategory, validated by its own kind checker, so the SSSOM comment and
+	// the block header can stamp the rule by name.
+	judge: (value) => {
+		if (value.table !== undefined || value.column !== undefined || value.predicate !== undefined) {
+			return `kind 'judge' carries no column, no table and no predicate — the relation comes from the judge through the declaration's predicateByCategory table (predicateRule '${PREDICATE_RULE_CATEGORY_TABLE_V1}')`;
+		}
+		if (value.predicateRule !== PREDICATE_RULE_CATEGORY_TABLE_V1) {
+			return `kind 'judge' must declare predicateRule '${PREDICATE_RULE_CATEGORY_TABLE_V1}' by name (got ${JSON.stringify(value.predicateRule)}) — a v1 approximation is NAMED in the block header so a later judge with a real predicate slot re-measures rather than silently differs (RULING §11.7 (a))`;
+		}
+		const extra = Object.keys(value).filter((oneName) => oneName !== 'kind' && oneName !== 'predicateRule');
+		return extra.length ? `kind 'judge' carries unknown key '${extra[0]}'; the shape is exactly { kind, predicateRule }` : '';
+	},
 });
 
 // the per-kind subjectIdentity validators — a registry, never a branch on kind (BG-COMPOSE c)
@@ -333,8 +444,18 @@ const KIND_CHECKER_REGISTRY = Object.freeze({
 		return /^[A-Za-z][A-Za-z0-9]*$/.test(value.prefix) ? '' : `prefix '${value.prefix}' is not CURIE-safe (letters and digits only)`;
 	},
 	sourceChannelList: (value, { bridgeDeclaration }) => {
-		if (!Array.isArray(value) || value.length === 0) {
-			return `must be a NON-EMPTY list of channel objects (got ${JSON.stringify(value)})`;
+		if (!Array.isArray(value)) {
+			return `must be a list of channel objects (got ${JSON.stringify(value)})`;
+		}
+		// EMPTINESS IS ROW-CONDITIONAL (RULING §11.9, approved 2026-08-17): a basis whose acquisition row names a
+		// walkChannelSourceKind must declare at least one channel; a basis whose row names null walks NOTHING and
+		// must declare EXACTLY zero. Both directions refuse by name — an empty list is never silently tolerated.
+		const acquisitionRow = SOURCE_ACQUISITION_REGISTRY[bridgeDeclaration.matchBasis];
+		if (acquisitionRow !== undefined && acquisitionRow.walkChannelSourceKind === null) {
+			return value.length === 0 ? '' : `matchBasis '${bridgeDeclaration.matchBasis}' walks NOTHING (its acquisition row names no walkChannelSourceKind) and must declare an EMPTY sourceChannelList; it declares ${value.length} channel(s) (${value.map((oneChannel) => (isPlainObject(oneChannel) ? oneChannel.channelKey : '?')).join(', ')})`;
+		}
+		if (value.length === 0) {
+			return `must be a NON-EMPTY list of channel objects for matchBasis '${bridgeDeclaration.matchBasis}' (its acquisition row names walkChannelSourceKind '${acquisitionRow === undefined ? '?' : acquisitionRow.walkChannelSourceKind}')`;
 		}
 		const seenChannelKeys = {};
 		for (let channelIndex = 0; channelIndex < value.length; channelIndex++) {
@@ -413,8 +534,8 @@ const KIND_CHECKER_REGISTRY = Object.freeze({
 				return `channel '${channelKey}' carries unknown key '${unknownChannelKey}'`;
 			}
 		}
-		const requiredWalkKind = WALK_CHANNEL_SOURCE_KIND_BY_MATCH_BASIS[bridgeDeclaration.matchBasis];
-		if (requiredWalkKind !== undefined && !value.some((oneChannel) => oneChannel.sourceKind === requiredWalkKind && oneChannel.disposition === 'walk')) {
+		const requiredWalkKind = acquisitionRow === undefined ? undefined : acquisitionRow.walkChannelSourceKind;
+		if (requiredWalkKind !== undefined && requiredWalkKind !== null && !value.some((oneChannel) => oneChannel.sourceKind === requiredWalkKind && oneChannel.disposition === 'walk')) {
 			return `matchBasis '${bridgeDeclaration.matchBasis}' needs at least one '${requiredWalkKind}' walk channel`;
 		}
 		return '';
@@ -558,6 +679,104 @@ const KIND_CHECKER_REGISTRY = Object.freeze({
 			return `must be a list (got ${JSON.stringify(value)})`;
 		}
 		return bridgeAllowanceRegistryLib.allowanceListReason(value);
+	},
+	// subjectSource — the NON-walk entry into subject grouping (RULING §11.11): subjects are the graph's own
+	// nodes carrying `label`, narrowed to the stableId list at `scopeStableIdListPath` (evaluation scope as
+	// DATA, an absolute path read as JSON). `label` is DATA — the framework names no standard.
+	subjectSource: (value) => {
+		if (!isPlainObject(value)) {
+			return `must be { kind, label, scopeStableIdListPath } (got ${JSON.stringify(value)})`;
+		}
+		const kindReason = closedValueReason(value.kind, SUBJECT_SOURCE_KIND_LIST, 'subjectSource.kind');
+		if (kindReason) {
+			return kindReason;
+		}
+		if (!isNonEmptyString(value.label) || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(value.label)) {
+			return `subjectSource.label ${JSON.stringify(value.label)} is not a graph label`;
+		}
+		if (value.scopeStableIdListPath !== null && !isNonEmptyString(value.scopeStableIdListPath)) {
+			return `subjectSource.scopeStableIdListPath must be a path to a JSON list of stableIds, or null to mean "every node carrying the label" — absent is refused`;
+		}
+		const extra = Object.keys(value).filter((oneName) => ['kind', 'label', 'scopeStableIdListPath'].indexOf(oneName) === -1);
+		return extra.length ? `subjectSource carries unknown key '${extra[0]}'` : '';
+	},
+	// candidateRetrieval — K, the cosine floor and the embedding model the STORED vectors must carry. All three
+	// are members of the census-fixture key (RULING §11.3/§11.10): changing one re-keys the fixture rather than
+	// silently invalidating it. The framework READS vectors and never makes them (BG-CONTAIN stands).
+	candidateRetrieval: (value) => {
+		if (!isPlainObject(value)) {
+			return `must be { k, floor, embeddingModelVersion } (got ${JSON.stringify(value)})`;
+		}
+		if (!Number.isInteger(value.k) || value.k < 1) {
+			return `candidateRetrieval.k ${JSON.stringify(value.k)} must be a positive integer (the pool ceiling); there is no default`;
+		}
+		if (typeof value.floor !== 'number' || !Number.isFinite(value.floor) || value.floor < -1 || value.floor > 1) {
+			return `candidateRetrieval.floor ${JSON.stringify(value.floor)} must be a finite cosine in [-1, 1]; there is no default — choose it against the measured distribution and declare it`;
+		}
+		if (!isNonEmptyString(value.embeddingModelVersion)) {
+			return `candidateRetrieval.embeddingModelVersion is required — a vector of another model is refused by name, never compared anyway`;
+		}
+		const extra = Object.keys(value).filter((oneName) => ['k', 'floor', 'embeddingModelVersion'].indexOf(oneName) === -1);
+		return extra.length ? `candidateRetrieval carries unknown key '${extra[0]}'` : '';
+	},
+	// renderingAllowList — the POSITIVE blinding mechanism (RULING §11.4). The rendered subject block and the
+	// rendered candidate block carry ONLY these property names. Two refusals here, both at DECLARATION time:
+	// an empty side (a rendering of nothing is not a judgement), and any name on RENDERING_NEVER_NAME_LIST —
+	// so a plugin cannot allow-list an identifier even by accident. The renderer enforces the list itself; this
+	// is the earlier of the two nets.
+	renderingAllowList: (value) => {
+		if (!isPlainObject(value) || !isStringList(value.subject) || !isStringList(value.candidate)) {
+			return `must be { subject: [propertyNames], candidate: [propertyNames] } (got ${JSON.stringify(value)})`;
+		}
+		const extra = Object.keys(value).filter((oneName) => oneName !== 'subject' && oneName !== 'candidate');
+		if (extra.length) {
+			return `renderingAllowList carries unknown key '${extra[0]}'; the shape is exactly { subject, candidate }`;
+		}
+		const emptySide = ['subject', 'candidate'].find((oneSide) => value[oneSide].length === 0);
+		if (emptySide !== undefined) {
+			return `renderingAllowList.${emptySide} is EMPTY — a side that renders nothing cannot be judged`;
+		}
+		for (let sideIndex = 0; sideIndex < 2; sideIndex++) {
+			const oneSide = ['subject', 'candidate'][sideIndex];
+			const forbidden = value[oneSide].find((oneName) => RENDERING_NEVER_NAME_LIST.indexOf(oneName) !== -1);
+			if (forbidden !== undefined) {
+				return `renderingAllowList.${oneSide} names '${forbidden}', which is on RENDERING_NEVER_NAME_LIST (${listAsText(RENDERING_NEVER_NAME_LIST)}) — an identifier is never rendered to the judge (§4 the bias audit; TQ named cedsId by name)`;
+			}
+			const duplicate = value[oneSide].find((oneName, oneIndex) => value[oneSide].indexOf(oneName) !== oneIndex);
+			if (duplicate !== undefined) {
+				return `renderingAllowList.${oneSide} names '${duplicate}' twice`;
+			}
+		}
+		return '';
+	},
+	judgePromptVariant: (value, { propertyName }) => closedValueReason(value, JUDGE_PROMPT_VARIANT_LIST, propertyName),
+	// predicateByCategory — the v1 category→predicate table (RULING §11.7 (a)). EVERY judge category must be
+	// named and nothing else: a category the table forgets would otherwise reach the edge builder with no
+	// relation and be defaulted, which is the failure this whole contract exists to prevent.
+	predicateByCategory: (value) => {
+		if (!isPlainObject(value)) {
+			return `must be an object judgeCategory → SKOS predicate covering exactly ${listAsText(JUDGE_CATEGORY_LIST)} (got ${JSON.stringify(value)})`;
+		}
+		const missing = JUDGE_CATEGORY_LIST.find((oneCategory) => value[oneCategory] === undefined);
+		if (missing !== undefined) {
+			return `predicateByCategory names no predicate for judge category '${missing}' (the judge can return it; an unnamed category would be defaulted at the edge)`;
+		}
+		const extra = Object.keys(value).find((oneName) => JUDGE_CATEGORY_LIST.indexOf(oneName) === -1);
+		if (extra !== undefined) {
+			return `predicateByCategory names '${extra}', which is not a judge category (${listAsText(JUDGE_CATEGORY_LIST)})`;
+		}
+		const notSkos = JUDGE_CATEGORY_LIST.find((oneCategory) => SKOS_PREDICATES.indexOf(value[oneCategory]) === -1);
+		return notSkos !== undefined ? `predicateByCategory['${notSkos}'] = ${JSON.stringify(value[notSkos])} is not a SKOS_PREDICATES member (${listAsText(SKOS_PREDICATES)})` : '';
+	},
+	// mappingTool — what PRODUCED a derived mapping, in place of the mapping PROVIDER a documentary basis names
+	// (Profile §4.3 as amended, RULING §11.7 (c)): SSSOM mapping_provider absent, mapping_tool + version on
+	// every row.
+	mappingTool: (value) => {
+		if (!isPlainObject(value) || !isNonEmptyString(value.name) || !isNonEmptyString(value.version)) {
+			return `must be { name, version } — the tool that produced the mapping, on every SSSOM row (got ${JSON.stringify(value)})`;
+		}
+		const extra = Object.keys(value).filter((oneName) => oneName !== 'name' && oneName !== 'version');
+		return extra.length ? `mappingTool carries unknown key '${extra[0]}'; the shape is exactly { name, version }` : '';
 	},
 });
 
@@ -751,6 +970,27 @@ const validateBridgeDeclaration = ({ bridgeDeclaration, bundleDirPath } = {}) =>
 			if (!expectedPresent) {
 				continue;
 			}
+		} else if (contractEntry.basisConditional === true) {
+			// presence ruled by the acquisition ROW, never by the basis NAME. matchBasis is validated earlier in
+			// contract order, so the row is resolvable here; an unknown basis was already refused at its own row.
+			const acquisitionRow = SOURCE_ACQUISITION_REGISTRY[bridgeDeclaration.matchBasis];
+			if (acquisitionRow === undefined) {
+				return refuseWith(`matchBasis '${bridgeDeclaration.matchBasis}' names no SOURCE_ACQUISITION_REGISTRY row`, `every matchBasis declares HOW it acquires subjects and pools; add the row (${listAsText(Object.keys(SOURCE_ACQUISITION_REGISTRY))} are registered)`);
+			}
+			const requiredByRow = acquisitionRow.requiredDeclarationKeyList.indexOf(propertyName) !== -1;
+			const forbiddenByRow = acquisitionRow.forbiddenDeclarationKeyList.indexOf(propertyName) !== -1;
+			if (requiredByRow && value === undefined) {
+				return refuseWith(`bridgeDeclaration is missing key '${propertyName}', which matchBasis '${bridgeDeclaration.matchBasis}' REQUIRES`, `declare ${propertyName} (${contractEntry.kind}); absent is absent, never defaulted (SOURCE_ACQUISITION_REGISTRY.${bridgeDeclaration.matchBasis}.requiredDeclarationKeyList)`);
+			}
+			if (forbiddenByRow && value !== undefined) {
+				return refuseWith(`bridgeDeclaration carries key '${propertyName}', which matchBasis '${bridgeDeclaration.matchBasis}' FORBIDS`, `remove ${propertyName} (SOURCE_ACQUISITION_REGISTRY.${bridgeDeclaration.matchBasis}.forbiddenDeclarationKeyList); a key that this acquisition cannot honour must not be declared, not even as null`);
+			}
+			if (!requiredByRow && !forbiddenByRow && value === undefined) {
+				return refuseWith(`bridgeDeclaration key '${propertyName}' is neither required nor forbidden by matchBasis '${bridgeDeclaration.matchBasis}' and is absent`, `every basisConditional key is named in exactly ONE of the acquisition row's two lists; this one is in neither, which is a registry hole, not a permission`);
+			}
+			if (value === undefined) {
+				continue;
+			}
 		} else if (value === undefined) {
 			return refuseWith(`bridgeDeclaration is missing required key '${propertyName}'`, `declare ${propertyName} (${contractEntry.kind}); absent is absent, never defaulted (SPEC §4.1)`);
 		}
@@ -760,6 +1000,14 @@ const validateBridgeDeclaration = ({ bridgeDeclaration, bundleDirPath } = {}) =>
 		}
 	}
 	// cross-key rules
+	// The rendering VARIANT is named by the acquisition row for EVERY basis, so no run ever falls back on an
+	// implied renderer. A basis whose row also REQUIRES the declaration key (derived) must declare the same
+	// value: the plugin restating what the row says is redundant on purpose — the redundancy is what makes a
+	// disagreement visible instead of letting one of the two silently win (RULING §11.1).
+	const acquisitionRow = SOURCE_ACQUISITION_REGISTRY[bridgeDeclaration.matchBasis];
+	if (acquisitionRow !== undefined && bridgeDeclaration.judgePromptVariant !== undefined && bridgeDeclaration.judgePromptVariant !== acquisitionRow.judgePromptVariant) {
+		return refuseWith(`bridgeDeclaration judgePromptVariant '${bridgeDeclaration.judgePromptVariant}' disagrees with the acquisition row for matchBasis '${bridgeDeclaration.matchBasis}' (which names '${acquisitionRow.judgePromptVariant}')`, 'the row is the authority; declare the same variant or change the basis — a run never chooses between two answers');
+	}
 	if (PRODUCER_KIND_BY_MATCH_BASIS[bridgeDeclaration.matchBasis] !== bridgeDeclaration.producerKind) {
 		return refuseWith(`bridgeDeclaration producerKind '${bridgeDeclaration.producerKind}' disagrees with matchBasis '${bridgeDeclaration.matchBasis}' (which is '${PRODUCER_KIND_BY_MATCH_BASIS[bridgeDeclaration.matchBasis]}')`, 'declared AND checked so build.js can never infer the block suffix (RULING A1)');
 	}
@@ -774,14 +1022,18 @@ const validateBridgeDeclaration = ({ bridgeDeclaration, bundleDirPath } = {}) =>
 // BRIDGE_HOOK_CONTRACT + validateBridgeHooks({ bridgeHooks, bridgeDeclaration }) → Error | null
 // ---------------------------------------------------------------------
 const BRIDGE_HOOK_CONTRACT = Object.freeze({
-	walkSourceAssertions: Object.freeze({ required: true, arity: 2 }),
-	subjectStableIdFor: Object.freeze({ required: true, arity: 2 }),
+	// `required` is now ROW-DRIVEN: the acquisition row for the declaration's matchBasis names which hooks it
+	// requires and which it forbids (RULING §11.9/§11.11). A documentary basis requires both; a derived basis
+	// forbids both. basisConditional marks the rows that read the registry instead of a fixed boolean.
+	walkSourceAssertions: Object.freeze({ basisConditional: true, arity: 2 }),
+	subjectStableIdFor: Object.freeze({ basisConditional: true, arity: 2 }),
 	nominateCandidates: Object.freeze({ required: false, arity: 2, declaredBy: 'nominate' }),
 	walkEvidence: Object.freeze({ required: false, arity: 2, declaredBy: 'walkEvidence' }),
 });
 const HOOK_NAME_LIST = Object.freeze(Object.keys(BRIDGE_HOOK_CONTRACT));
 
 const validateBridgeHooks = ({ bridgeHooks, bridgeDeclaration } = {}) => {
+	const acquisitionRow = isPlainObject(bridgeDeclaration) ? SOURCE_ACQUISITION_REGISTRY[bridgeDeclaration.matchBasis] : undefined;
 	if (!isPlainObject(bridgeHooks)) {
 		return refuse.byName({ moduleName, what: `bridgeHooks is ${bridgeHooks === null ? 'null' : `a ${typeof bridgeHooks}`}`, where: 'a plugin file exports { bridgeDeclaration, bridgeHooks }; bridgeHooks is { walkSourceAssertions, subjectStableIdFor, …optional evidence hooks }' });
 	}
@@ -794,16 +1046,29 @@ const validateBridgeHooks = ({ bridgeHooks, bridgeDeclaration } = {}) => {
 		const contractEntry = BRIDGE_HOOK_CONTRACT[hookName];
 		const hook = bridgeHooks[hookName];
 		const declaredTrue = contractEntry.declaredBy !== undefined && isPlainObject(bridgeDeclaration) && isPlainObject(bridgeDeclaration.evidenceHooksDeclared) && bridgeDeclaration.evidenceHooksDeclared[contractEntry.declaredBy] === true;
+		const requiredByRow = contractEntry.basisConditional === true && acquisitionRow !== undefined && acquisitionRow.requiredHookNameList.indexOf(hookName) !== -1;
+		const forbiddenByRow = contractEntry.basisConditional === true && acquisitionRow !== undefined && acquisitionRow.forbiddenHookNameList.indexOf(hookName) !== -1;
+		if (forbiddenByRow && hook !== undefined) {
+			return refuse.byName({ moduleName, what: `bridgeHooks carries hook '${hookName}', which matchBasis '${isPlainObject(bridgeDeclaration) ? bridgeDeclaration.matchBasis : '?'}' FORBIDS`, where: 'this acquisition never calls that hook; a hook that is never called is dead code pretending to be a contract — remove it' });
+		}
 		if (hook === undefined) {
-			if (contractEntry.required) {
-				return refuse.byName({ moduleName, what: `bridgeHooks is missing required hook '${hookName}'`, where: `every plugin supplies ${hookName}(args, callback) — arity 2` });
+			if (requiredByRow) {
+				// the `what` wording is deliberately UNCHANGED from when this was an unconditional `required: true`.
+				// The hook genuinely is required — the acquisition row only decides FOR WHICH BASIS — so changing the
+				// refusal text would have churned 21 gate conjuncts to say the same thing. The basis rides in `where`.
+				return refuse.byName({ moduleName, what: `bridgeHooks is missing required hook '${hookName}'`, where: `matchBasis '${isPlainObject(bridgeDeclaration) ? bridgeDeclaration.matchBasis : '?'}' requires it: every plugin on this basis supplies ${hookName}(args, callback) — arity 2` });
 			}
 			if (declaredTrue) {
 				return refuse.byName({ moduleName, what: `evidenceHooksDeclared.${contractEntry.declaredBy} is true but hook '${hookName}' is absent`, where: 'declare it false or supply the hook (BR-016)' });
 			}
 			continue;
 		}
-		if (!contractEntry.required && !declaredTrue) {
+		// this refusal is about EVIDENCE hooks specifically — the ones gated by evidenceHooksDeclared — so it keys
+		// on `declaredBy`, the thing that actually makes a hook an evidence hook. It used to key on
+		// `!contractEntry.required`, which was the same set only by coincidence; the moment the two mandatory
+		// hooks became row-driven rather than `required: true`, that coincidence broke and they started being
+		// refused for needing an evidenceHooksDeclared entry that does not exist for them.
+		if (contractEntry.declaredBy !== undefined && !declaredTrue) {
 			return refuse.byName({ moduleName, what: `hook '${hookName}' is present but evidenceHooksDeclared.${contractEntry.declaredBy} is not true`, where: 'an undeclared hook is refused (BR-016); declare it true' });
 		}
 		if (typeof hook !== 'function') {
@@ -862,7 +1127,15 @@ module.exports = {
 	MATCH_BASIS_LIST,
 	PRODUCER_KIND_LIST,
 	PRODUCER_KIND_BY_MATCH_BASIS,
-	WALK_CHANNEL_SOURCE_KIND_BY_MATCH_BASIS,
+	SOURCE_ACQUISITION_REGISTRY,
+	SOURCE_ACQUISITION_ROW_KEY_LIST,
+	SUBJECT_GROUP_PRODUCER_KIND_LIST,
+	POOL_PRODUCER_KIND_LIST,
+	SUBJECT_SOURCE_KIND_LIST,
+	JUDGE_PROMPT_VARIANT_LIST,
+	JUDGE_CATEGORY_LIST,
+	PREDICATE_RULE_CATEGORY_TABLE_V1,
+	RENDERING_NEVER_NAME_LIST,
 	PREDICATE_SOURCE_KIND_VALIDATOR_REGISTRY,
 	RESOLUTION_LIST,
 	PREDICATE_SOURCE_KIND_LIST,

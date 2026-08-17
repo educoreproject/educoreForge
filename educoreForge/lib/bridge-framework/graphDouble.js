@@ -44,6 +44,8 @@ const graphDoubleFrom = ({ nodeList, edgeList } = {}) => {
 		writtenEdgeList: [],
 		labelStampList: [],
 		readHubCardsCallCount: 0,
+		readHubVectorsCallCount: 0,
+		readSubjectVectorsCallCount: 0,
 		readSubjectNodesCallCount: 0,
 		sessionsOpenedFromPluginFrames: 0,
 		writerCloseCount: 0,
@@ -95,11 +97,29 @@ const graphDoubleFrom = ({ nodeList, edgeList } = {}) => {
 			return graphSeamRulesLib.closedView(makeView({ shapeRecord: (oneRecord) => graphSeamRulesLib.walkRecordFor({ record: graphSeamRulesLib.withoutEmbedding(oneRecord), blindingDeclaration, channelPropertyList }), shapeEdge: (oneEdge) => graphSeamRulesLib.walkEdgeFor({ edge: oneEdge, blindingDeclaration, channelPropertyList }) }));
 		};
 		const forEvidence = () => graphSeamRulesLib.closedView(makeView({ shapeRecord: (oneRecord) => graphSeamRulesLib.blindedRecordFor({ record: graphSeamRulesLib.withoutEmbedding(oneRecord), blindingDeclaration }), shapeEdge: (oneEdge) => graphSeamRulesLib.blindedEdgeFor({ edge: oneEdge, blindingDeclaration }) }));
+		// forRetrieval — the double's vector view, shaped by THE SAME graphSeamRules.retrievalRecordFor the bolt
+		// reader uses, so a hermetic retrieval gate proves the shape the live walk will actually see (RULING
+		// §11.4; the B3 lesson that a double must run the framework's own rules, not a parallel imitation).
+		const forRetrieval = () =>
+			graphSeamRulesLib.closedRetrievalView({
+				readHubVectors: ({ referenceTier } = {}, callback) => {
+					state.readHubVectorsCallCount += 1;
+					callback('', rawNodeRecordList().filter((oneRecord) => oneRecord.labels.indexOf('HubReference') !== -1 && oneRecord.properties.referenceTier === referenceTier).map(graphSeamRulesLib.retrievalRecordFor));
+				},
+				readSubjectVectors: ({ label } = {}, callback) => {
+					state.readSubjectVectorsCallCount += 1;
+					if (typeof label !== 'string' || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(label)) {
+						callback(`${moduleName}: readSubjectVectors label ${JSON.stringify(label)} is not a graph label`);
+						return;
+					}
+					callback('', sourceRecordList().filter((oneRecord) => oneRecord.labels.indexOf(label) !== -1).map(graphSeamRulesLib.retrievalRecordFor));
+				},
+			});
 		const close = (callback) => {
 			state.readerCloseCount += 1;
 			callback('');
 		};
-		return graphSeamRulesLib.closedReader({ readHubCards, readSubjectNodes, forWalk, forEvidence, close });
+		return graphSeamRulesLib.closedReader({ readHubCards, readSubjectNodes, forWalk, forEvidence, forRetrieval, close });
 	};
 
 	const graphWriterFactory = ({ inGraph, applyLabel, sourceStandardName } = {}) => {

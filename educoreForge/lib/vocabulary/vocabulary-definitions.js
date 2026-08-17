@@ -99,6 +99,8 @@ const TERM_DEFINITIONS = {
 			'SSSOM/SEMAPV: resolution JUDGED — an algorithm chose among candidates, at any matchBasis (standard, crosswalk, or derived); the judge is named in mapping_tool.',
 		'semapv:MappingReview':
 			'SSSOM/SEMAPV: a human reviewed and confirmed a previously judged mapping (including a human-resolved CONFLICT survivor).',
+		'semapv:SemanticSimilarityThresholdMatching':
+			'SSSOM/SEMAPV: resolution JUDGED on a DERIVED basis — the candidates were proposed by semantic similarity (cosine over stored embeddings) above a declared threshold, with no shared key and no authoring document, and a judge then chose one or abstained. Adopted 2026-08-17 by RULING §11.7 (b); the retrieval parameters (K, floor, embedding model) are declared data and travel in the decision block header.',
 	},
 	dmeRole: {
 		DmeStandardRoot: 'The single per-standard root node carrying the standard’s provenance block (name, version, source format/files/url) and its mapping instruction.',

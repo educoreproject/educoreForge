@@ -37,6 +37,20 @@ const HEADER_KEY_ORDER = Object.freeze([
 	'matchBasis',
 	'producerKind',
 	'judgeKind',
+	// predicateRule — NAMES the rule that turned a judgment into a relation. null for the three documentary
+	// predicate sources (the SOURCE ROW names the relation there). 'categoryTable-v1' for a judge-sourced
+	// predicate: a NAMED, TIME-BOXED v1 approximation (RULING §11.7 (a)) stamped INSIDE the content address, so
+	// a later judge with a real predicate slot produces a visibly different block rather than silently
+	// different edges under the same story.
+	'predicateRule',
+	// candidateRetrieval — K, the cosine floor and the embedding model, or null for a key-filtered pool. These
+	// are the parameters that DECIDE WHICH CANDIDATES THE JUDGE EVER SAW, so they belong inside the content
+	// address and inside the census-fixture key (RULING §11.3/§11.10): changing K must re-key the block, not
+	// quietly invalidate a fixture that still compares equal.
+	'candidateRetrieval',
+	// subjectScopeDigest — sha256 over the sorted evaluation-scope stableId list, or null when the subject
+	// population is not narrowed. Two runs over DIFFERENT subject sets must not be able to produce the same id.
+	'subjectScopeDigest',
 	'sourceWindow',
 	'blindingDeclaration',
 	'sourceStandardName',

@@ -86,6 +86,14 @@ const filterPoolByTuple = ({ keyPool, suppliedTupleFields } = {}) => {
 //     keyPoolSize, filteredPoolSize }
 // ---------------------------------------------------------------------
 const CLASSIFICATION_REGISTRY = Object.freeze([
+	// Rows R1/R2 — a RETRIEVED pool (RULING §11.9). They are FIRST because a retrieved pool must never be read
+	// through the key-filtered rows: an empty retrieval pool would otherwise match row 5 (filteredPoolSize 0 AND
+	// keyPoolSize 0) and be classified `orphan` with no reason, which is true but silent. A subject with no
+	// candidate above the floor is a DIFFERENT fact from a subject whose join key named no card, and the census
+	// has to be able to tell them apart. `poolOrigin` is absent on every key-filtered context, so these two rows
+	// are unreachable for the documentary bases and the eight rows below are byte-unchanged.
+	Object.freeze({ row: 'R1', classification: 'judged', scope: 'target', reason: 'retrieval', condition: (context) => context.poolOrigin === 'retrieval' && context.filteredPoolSize >= 1 }),
+	Object.freeze({ row: 'R2', classification: 'orphan', scope: 'target', reason: 'noCandidate', condition: (context) => context.poolOrigin === 'retrieval' && context.filteredPoolSize === 0 }),
 	Object.freeze({ row: 1, classification: 'sourceGap', scope: 'subject', condition: (context) => context.subjectUnresolvable === true }),
 	Object.freeze({ row: 2, classification: 'subjectCollision', scope: 'subject', condition: (context) => context.subjectCollision === true }),
 	Object.freeze({ row: 3, classification: 'valueTierRefused', scope: 'target', condition: (context) => context.valueTier === true }),
@@ -99,7 +107,10 @@ const CLASSIFICATION_REGISTRY = Object.freeze([
 	Object.freeze({ row: 8, classification: 'specified', scope: 'target', condition: (context) => context.filteredPoolSize === 1 && context.allLabelsPredicate === true }),
 ]);
 const CLASSIFICATION_LIST = Object.freeze(['specified', 'judged', 'orphan', 'sourceGap', 'subjectCollision', 'valueTierRefused']);
-const JUDGED_REASON_LIST = Object.freeze(['tentative', 'sourceSideMismatch', 'many', 'mixedLabels']);
+const JUDGED_REASON_LIST = Object.freeze(['tentative', 'sourceSideMismatch', 'many', 'mixedLabels', 'retrieval']);
+// the reason an ORPHAN carries, per origin: a key-filtered orphan found no card under its key; a retrieved
+// orphan found no card above its declared floor. Distinct facts, distinct names (RULING §11.9).
+const ORPHAN_REASON_LIST = Object.freeze(['noCardUnderKey', 'remodelTargetAbsent', 'noCandidate']);
 
 // classifyTarget(context) → { row, classification, reason } | { error } — row 9 is unreachable; reaching it is a refusal
 const classifyTarget = (context) => {
@@ -123,6 +134,7 @@ module.exports = {
 	CLASSIFICATION_REGISTRY,
 	CLASSIFICATION_LIST,
 	JUDGED_REASON_LIST,
+	ORPHAN_REASON_LIST,
 	classifyTarget,
 	moduleName,
 };

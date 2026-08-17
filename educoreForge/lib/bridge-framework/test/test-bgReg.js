@@ -72,7 +72,7 @@ const regConjunctList = [
 		registry: twinRegistry, gateId: 'BG-REG', conjunctId: 'b_unregisteredNameListsRegistered',
 		title: 'an unregistered bridge name is refused BY NAME, LISTING the registered names',
 		shape: (scenario) => { scenario.spec.bridge = 'sifCedsStandardPluginX'; },
-		regex: /bridge 'sifCedsStandardPluginX' is REFUSED — no registered plugin declares it; registered names: toyCrosswalkPlugin, toyStandardPlugin/,
+		regex: /bridge 'sifCedsStandardPluginX' is REFUSED — no registered plugin declares it; registered names: toyCrosswalkPlugin, toyDerivedPlugin, toyStandardPlugin/,
 		twinName: 'registryBypassedByAdHocResolution', leverKind: 'productionMutation', mutate: adHocResolutionMutation,
 	}),
 ];
@@ -231,9 +231,12 @@ const modesConjunctList = [];
 modesConjunctList.push(
 	runConjunct({
 		conjunctId: 'everyRegisteredPluginIsSmoked',
-		title: 'the registry holds EXACTLY the two toy plugins — the smoke count is frozen (remove one → red)',
+		// FROZEN POPULATION, moved 2 -> 3 on 2026-08-17 when toyDerivedPlugin joined the toy forge. The list is
+		// spelled out rather than counted so that adding a plugin must be an EDIT HERE with a reason, which is
+		// the whole point of freezing it — this conjunct is what noticed the fixture had grown.
+		title: 'the registry holds EXACTLY the three toy plugins — the smoke count is frozen (remove one → red)',
 		twinNameList: ['removeOnePluginFile'],
-		judge: succeeded((runReport, outcome) => ({ pass: JSON.stringify(Object.keys(outcome.registry.entryByBridgeName).sort()) === JSON.stringify(['toyCrosswalkPlugin', 'toyStandardPlugin']), detail: Object.keys(outcome.registry.entryByBridgeName).join(', ') })),
+		judge: succeeded((runReport, outcome) => ({ pass: JSON.stringify(Object.keys(outcome.registry.entryByBridgeName).sort()) === JSON.stringify(['toyCrosswalkPlugin', 'toyDerivedPlugin', 'toyStandardPlugin']), detail: Object.keys(outcome.registry.entryByBridgeName).join(', ') })),
 	}),
 );
 scenarioTwin({ registry: twinRegistry, gateId: 'BG-MODES', conjunctId: 'everyRegisteredPluginIsSmoked', twinName: 'removeOnePluginFile', leverKind: 'inputFault', mutate: (scenario) => withScratchForges(scenario, (scratchForgesDir) => { fs.unlinkSync(path.join(scratchForgesDir, 'toy', 'bridges', 'toyStandardPlugin.js')); }) });

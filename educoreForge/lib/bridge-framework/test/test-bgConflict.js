@@ -175,9 +175,13 @@ const conflictConjunctList = [
 		shape: (scenario) => {
 			scenario.reportLineList = [];
 			scenario.deps.xLog = { status: (text) => { scenario.reportLineList.push(text); }, error: (text) => { scenario.reportLineList.push(`ERR ${text}`); } };
-			// a registry with the crosswalk plugin ALONE: the standard plugin's file removed in a scratch copy
+			// a registry with the crosswalk plugin ALONE: the OTHER TWO plugin files removed in a scratch copy.
+			// The derived plugin joined the toy forge on 2026-08-17 and pluginRegistry discovers by DIRECTORY,
+			// so "alone" had silently become "one of three" — this conjunct is about the report line the
+			// framework emits when there is genuinely no sibling, and it can only test that with none present.
 			const scratchForgesDir = scenarioLib.makeScratchForgesCopy();
 			fs.unlinkSync(path.join(scratchForgesDir, 'toy', 'bridges', 'toyStandardPlugin.js'));
+			fs.unlinkSync(path.join(scratchForgesDir, 'toy', 'bridges', 'toyDerivedPlugin.js'));
 			scenario.forgesDirOverride = scratchForgesDir;
 		},
 		judge: succeeded((runReport, outcome, scenario) => { const line = scenario.reportLineList.find((oneLine) => /0 conflicts \(one plugin on this pairing — detector exercised by fixture only; \d+ sibling key\(s\) looked up under other producerKinds, \d+ found\)/.test(oneLine)); const bare = scenario.reportLineList.find((oneLine) => /^\[bridge [^\]]*\] 0 conflicts$/.test(oneLine)); return { pass: line !== undefined && bare === undefined && runReport.counts.conflictCount === 0, detail: line || 'no fixture-exercised line' }; }),

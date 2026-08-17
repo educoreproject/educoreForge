@@ -50,6 +50,7 @@ const evidenceRendererLib = require('./evidenceRenderer');
 const representationPolicyLib = require('./representationPolicy');
 const confidenceBandTableLib = require('./confidenceBandTable');
 const decisionBlockLib = require('./decisionBlock');
+const candidateRetrievalLib = require('./candidateRetrieval');
 const materialiserLib = require('./materialiser');
 const sssomExporterLib = require('./sssomExporter');
 const boundedRunnerLib = require('./boundedRunner');
@@ -75,6 +76,10 @@ const {
 const DEP_NAME_LIST = Object.freeze(['graphReaderFactory', 'graphWriterFactory', 'pluginRegistry', 'xLog', 'conflictDetector', 'judgeBudgetOverride']);
 const SEAM_SPEC_KEY_LIST = Object.freeze(['inGraph', 'bridge', 'source', 'hub', 'applyLabel', 'rebridge', 'decisionStore', 'judgmentCache', 'matchForensics', 'inferenceConfig', 'config']);
 const PROPERTY_TIER = 'property';
+// the justification a RETRIEVED mapping carries (RULING §11.7 (b), adopted into vocabulary.SSSOM_JUSTIFICATIONS
+// as a recorded specification change). Named here rather than inlined so the exporter and the edge builder
+// cannot drift apart.
+const SEMANTIC_SIMILARITY_JUSTIFICATION = 'semapv:SemanticSimilarityThresholdMatching';
 const JUDGE_CONCURRENCY = 4; // bounded, index-collecting (BR-072)
 const MAX_JUDGMENT_COUNT_PER_RUN = 20000; // the DECLARED per-run ceiling (BR-069, BR-120); the budget guard halts by name
 const MODE_MATERIALISE = 'materialise';
@@ -143,14 +148,23 @@ const moduleFunction =
 		// -----------------------------------------------------------------
 		const labelTableOf = (bridgeDeclaration) => predicateSourceLib.PREDICATE_SOURCE_KIND_REGISTRY[bridgeDeclaration.predicateSource.kind].provenanceOf(bridgeDeclaration.predicateSource);
 		const walkChannelPropertyList = (bridgeDeclaration) => Array.from(new Set(bridgeDeclaration.sourceChannelList.filter((oneChannel) => oneChannel.sourceKind === 'forgedGraph').reduce((soFar, oneChannel) => soFar.concat(oneChannel.channelPropertyList), []))).sort();
+		// A match FIELD is the field the two sides were matched ON. A derived mapping was matched on no field at
+		// all — it was matched on MEANING — so subject_match_field is NULL and is OMITTED from the export
+		// entirely (RULING §11.7 (d); Profile §4.5 never defines the slot for derived). object_match_field is
+		// still emitted because the exporter derives object_source from its CURIE prefix, and it names the
+		// mechanism honestly rather than borrowing a key that was never consulted.
+		const SEMANTIC_MATCH_FIELD_NAME = 'semanticSimilarity';
 		const subjectMatchFieldFor = (bridgeDeclaration) => {
+			if (bridgeDeclaration.tupleFieldColumnMap === undefined) {
+				return null;
+			}
 			const prefix = bridgeDeclaration.sourceCuriePrefix.prefix;
 			return TUPLE_FIELD_LIST.filter((oneField) => bridgeDeclaration.tupleFieldColumnMap[oneField] !== undefined)
 				.map((oneField) => `${prefix}:${bridgeDeclaration.tupleFieldColumnMap[oneField].column}`)
 				.join('|');
 		};
 		const OBJECT_MATCH_FIELD_HUB_PREFIX = 'EDUcoreHub'; // the hub's CURIE prefix for object_match_field (Profile §4.5); the hub NAME rides in object_source
-		const objectMatchFieldFor = (bridgeDeclaration) => TUPLE_FIELD_LIST.filter((oneField) => bridgeDeclaration.tupleFieldColumnMap[oneField] !== undefined).map((oneField) => `${OBJECT_MATCH_FIELD_HUB_PREFIX}:${oneField}`).join('|');
+		const objectMatchFieldFor = (bridgeDeclaration) => (bridgeDeclaration.tupleFieldColumnMap === undefined ? `${OBJECT_MATCH_FIELD_HUB_PREFIX}:${SEMANTIC_MATCH_FIELD_NAME}` : TUPLE_FIELD_LIST.filter((oneField) => bridgeDeclaration.tupleFieldColumnMap[oneField] !== undefined).map((oneField) => `${OBJECT_MATCH_FIELD_HUB_PREFIX}:${oneField}`).join('|'));
 		const isSentinelRawValue = ({ channel, rawValue }) => channel.absentTargetSentinelList.indexOf(rawValue === undefined || rawValue === null ? '' : String(rawValue)) !== -1;
 
 		// -----------------------------------------------------------------
@@ -274,12 +288,50 @@ const moduleFunction =
 			const labelTableDigest = sha256Hex(canonicalJson(labelTableOf(bridgeDeclaration)));
 			const subjectMatchField = subjectMatchFieldFor(bridgeDeclaration);
 			const objectMatchField = objectMatchFieldFor(bridgeDeclaration);
-			const baseGeneration = `${decisionBlockLib.FRAMEWORK_GENERATION}:${bridgeDeclaration.bridgeName}@${bridgeDeclaration.pluginVersion}:${evidenceRendererLib.RENDERER_VERSION}`;
+			// THE ACQUISITION ROW — resolved ONCE per run and consulted everywhere below. Nothing in this file
+			// tests the basis NAME; every behaviour that differs between a documentary basis and a retrieved one
+			// reads a member of this row (RULING §11.9/§11.11, approved SABLE_RIVER 2026-08-17; BG-NOSUB (h)
+			// proves the orchestrator carries no basis-name comparison).
+			const acquisitionRow = bridgePluginContractLib.SOURCE_ACQUISITION_REGISTRY[bridgeDeclaration.matchBasis];
+			if (acquisitionRow === undefined) {
+				callback(refuse.byName({ moduleName, what: `matchBasis '${bridgeDeclaration.matchBasis}' names no SOURCE_ACQUISITION_REGISTRY row`, where: 'the row declares how a basis acquires subjects and pools; a basis without one cannot be run' }).message);
+				return;
+			}
+			const judgePromptVariant = acquisitionRow.judgePromptVariant;
+			const runRendererVersion = evidenceRendererLib.JUDGE_PROMPT_VARIANT_REGISTRY[judgePromptVariant].rendererVersion;
+			// WHICH subject-node properties become rendered material is a member of the VARIANT row, not a constant
+			// in this file: the crosswalk variant names its seven by name (byte-frozen), the derived variant takes
+			// the plugin's declared renderingAllowList.subject. A constant here would silently overrule a declared
+			// allow-list, which is the bias audit failing in the quiet direction (RULING §11.1/§11.4).
+			const subjectMaterialNameList = evidenceRendererLib.JUDGE_PROMPT_VARIANT_REGISTRY[judgePromptVariant].subjectMaterialNameListFor({ bridgeDeclaration });
+			const baseGeneration = `${decisionBlockLib.FRAMEWORK_GENERATION}:${bridgeDeclaration.bridgeName}@${bridgeDeclaration.pluginVersion}:${runRendererVersion}`;
 			const generation = debugJudgeLib.generationWithDebugMark(sourceWindowLib.generationWithWindowMark(baseGeneration, windowMark), debugMark);
 			const runPrefix = `[bridge ${bridgeDeclaration.bridgeName} ${sourceToken}→${hubToken}]`;
 			const report = { refusalList: [], conflictCount: 0, conflictList: [], judgeSpend: { asked: 0, servedFromCache: 0, abstained: 0, rationaleReaskCount: 0, usd: null }, blindingDeclarationEcho: bridgeDeclaration.blindingDeclaration.slice(), consistencyReport: [], subjectNodeReport: null, labelTableDigest, discardedPredicateKeyCount: 0, note: '' };
 			const say = (text) => xLog.status(`${runPrefix} ${text}`);
 			say(`mode ${mode}; pairKey ${pairKey}; pair-scoped label ${pairScopedLabel}; blindingDeclaration [${bridgeDeclaration.blindingDeclaration.join(', ')}]`);
+
+			// PICK_PREDICATE_RESOLVER_BY_SOURCE_KIND — one row per predicateSource kind (RULING §11.7 (a)). The
+			// three documentary kinds share the source-row resolver they have always used; 'judge' reads the
+			// declared table. Adding a future predicate source is a row here, not an edit inside STEP 7.
+			const sourceRowPickPredicate = ({ judged, oneTask, orderedAssertionList }) => {
+				const pickedCard = oneTask.pool.find((oneCard) => oneCard.stableId === judged.chosenCardStableId);
+				const namingAssertion = orderedAssertionList.find((oneAssertion) => oneAssertion.targetKeyList.indexOf(pickedCard.canonicalKey) !== -1 || Object.keys(oneTask.baseRecord.suppliedTupleByTarget).some((oneRawKey) => oneTask.baseRecord.suppliedTupleByTarget[oneRawKey].canonicalKey === pickedCard.canonicalKey && oneAssertion.targetKeyList.indexOf(oneRawKey) !== -1)) || oneTask.groupAssertionList[0];
+				const labelRow = namingAssertion.labelRow;
+				return { predicate: labelRow.disposition === 'tentative' ? labelRow.predicateIfPicked : labelRow.predicate, predicateAssertedBy: labelRow.predicateAssertedBy, sourceLabel: labelRow.sourceLabel };
+			};
+			const PICK_PREDICATE_RESOLVER_BY_SOURCE_KIND = Object.freeze({
+				column: sourceRowPickPredicate,
+				labelTable: sourceRowPickPredicate,
+				channelAssertion: sourceRowPickPredicate,
+				judge: ({ judged }) => {
+					const predicate = bridgeDeclaration.predicateByCategory[judged.category];
+					if (predicate === undefined) {
+						return { error: refuse.byName({ moduleName, what: `the judge returned category '${judged.category}' and predicateByCategory names no predicate for it`, where: 'the declaration validator refuses a table that does not cover every judge category, so reaching this names a framework defect, not a declaration one' }) };
+					}
+					return { predicate, predicateAssertedBy: bridgePluginContractLib.PREDICATE_ASSERTED_BY_BY_SOURCE_KIND.judge, sourceLabel: null };
+				},
+			});
 
 			const runReportFor = ({ decisionBlockHash, blocksDecisionBlock, edgesWritten, counts, sssomExportPath, note }) => ({
 				inGraph,
@@ -291,7 +343,7 @@ const moduleFunction =
 				edgesWritten,
 				counts,
 				generation,
-				rendererVersion: evidenceRendererLib.RENDERER_VERSION,
+				rendererVersion: runRendererVersion,
 				mode,
 				sssomExportPath,
 				note,
@@ -430,7 +482,7 @@ const moduleFunction =
 					}
 					const writer = graphWriterFactory(writerArgs);
 					materialiserLib.materialiseBlock(
-						{ block: materialisableBlock, decisionBlockHash, writer, sourceStandardName, sourceVersion: String(sourceVersion), hubName: block.header.hubName, hubVersion: String(hubVersion), mappingProviderUrl: bridgeDeclaration.mappingProvider.url, subjectMatchField, objectMatchField, debugMark: blockDebugMark },
+						{ block: materialisableBlock, decisionBlockHash, writer, sourceStandardName, sourceVersion: String(sourceVersion), hubName: block.header.hubName, hubVersion: String(hubVersion), mappingProviderUrl: bridgeDeclaration.mappingProvider === undefined ? null : bridgeDeclaration.mappingProvider.url, subjectMatchField, objectMatchField, debugMark: blockDebugMark, runWindowMark: windowMark },
 						(materialiseError, materialised) => {
 							writer.close((closeError) => {
 								if (materialiseError) {
@@ -464,13 +516,18 @@ const moduleFunction =
 										return;
 									}
 									const outputPath = path.join(spec.matchForensics.baseDirPath, pairKey, `${decisionBlockHash}.sssom.tsv`);
+									// mappingProvider and mappingTool are mutually exclusive at set level, by producerKind: the
+									// exporter refuses a provider on an inferred set and refuses a missing tool on one
+									// (RULING §11.7 (c), amended 2026-08-17). Neither is defaulted — an undeclared key is
+									// simply not put in the object.
 									const setLevelSlots = {
-										mappingProvider: bridgeDeclaration.mappingProvider,
+										...(bridgeDeclaration.mappingProvider === undefined ? {} : { mappingProvider: bridgeDeclaration.mappingProvider }),
+										...(bridgeDeclaration.mappingTool === undefined ? {} : { mappingTool: `${bridgeDeclaration.mappingTool.name} ${bridgeDeclaration.mappingTool.version}` }),
 										subjectSource: sourceStandardName,
 										subjectSourceVersion: String(sourceVersion),
 										objectSource: block.header.hubName,
 										objectSourceVersion: String(hubVersion),
-										subjectMatchField,
+										...(subjectMatchField === null ? {} : { subjectMatchField }),
 										objectMatchField,
 										subjectCuriePrefix: bridgeDeclaration.subjectCuriePrefix,
 										[predicateSourceLib.PREDICATE_SOURCE_KIND_REGISTRY[bridgeDeclaration.predicateSource.kind].provenanceSlotName]: labelTableOf(bridgeDeclaration),
@@ -585,7 +642,15 @@ const moduleFunction =
 				});
 
 				// STEP 3 — the WALK (once per run) + assertion validation + channelReport reconciliation
+				// A basis whose acquisition row names NO walkChannelSourceKind walks nothing: there is no document and
+				// no forged-graph channel to read, so there are no assertions and the walk hook is FORBIDDEN for it
+				// (RULING §11.9/§11.11). The step yields the empty walk explicitly rather than being deleted, so the
+				// reconciliation members downstream exist and read honestly as zero instead of undefined.
 				taskList.push((args, next) => {
+					if (acquisitionRow.walkChannelSourceKind === null) {
+						next('', { ...args, assertionList: [], channelReport: {}, refusedValueTierAssertionCount: 0 });
+						return;
+					}
 					const walkView = args.reader.forWalk({ channelPropertyList: walkChannelPropertyList(bridgeDeclaration) });
 					// the argument object handed to a hook is a CLOSED shape: a Proxy throws by name on any other read (BG-CONTAIN)
 					const hookArgs = graphSeamRulesLib.closedHookArgs({ sourceChannelPathByKey: { ...args.sourceChannelPathByKey }, sourceReader: walkView, xLog });
@@ -669,7 +734,13 @@ const moduleFunction =
 				});
 
 				// STEP 4 — targets: sentinel drop, transforms (empty cell = ABSENT), consistency checks, label census, refused rows
+				// Every one of these operates on WALK ASSERTIONS (sentinels, tuple transforms, the label table). With no
+				// assertions there is nothing to prepare; the counters are yielded at zero by name.
 				taskList.push((args, next) => {
+					if (acquisitionRow.walkChannelSourceKind === null) {
+						next('', { ...args, preparedList: [], sentinelDroppedCount: 0, sentinelLabelledRowCount: 0, labelRefusedCount: 0 });
+						return;
+					}
 					const channelByKey = bridgeDeclaration.sourceChannelList.reduce((soFar, oneChannel) => ({ ...soFar, [oneChannel.channelKey]: oneChannel }), {});
 					const preparedList = [];
 					let sentinelDroppedCount = 0;
@@ -771,8 +842,13 @@ const moduleFunction =
 					next('', { ...args, preparedList, sentinelDroppedCount, sentinelLabelledRowCount: census.sentinelLabelledRowCount, labelRefusedCount: census.labelRefusedCount });
 				});
 
-				// STEP 5 — group by subject; window; subjectStableIdFor ONCE; verify + merge; collisions
-				taskList.push((args, next) => {
+				// STEP 5 — SUBJECT GROUPS. Which producer builds them is a member of the acquisition row (RULING
+				// §11.11, approved SABLE_RIVER 2026-08-17). The two rows below are the whole difference between a
+				// documentary bridge and a retrieved one at this step; nothing here tests a matchBasis NAME.
+				const subjectGroupProducerByKind = Object.freeze({
+					// walkAssertion — subjects come from the WALK: group assertions, window, resolve identity through the
+					// plugin's subjectStableIdFor hook, merge, collide. Byte-unchanged from before the registry existed.
+					walkAssertion: (args, next) => {
 					const grouped = subjectGroupingLib.groupBySubject({ assertionList: args.preparedList, subjectIdentity: bridgeDeclaration.subjectIdentity });
 					if (grouped.error) {
 						next(grouped.error.message);
@@ -808,7 +884,99 @@ const moduleFunction =
 						say(`subjects: ${subjectGroupList.length} distinct; leaves ${merged.leafList.length}; sourceGap ${merged.sourceGapList.length}; subjectCollision ${merged.subjectCollisionList.length} (subjectStableIdFor called ${hookCallCount}×)`);
 						next('', { ...args, subjectGroupList, leafList: merged.leafList, sourceGapList: merged.sourceGapList, subjectCollisionList: merged.subjectCollisionList, manyToOneSubjectCount: merged.manyToOneSubjectCount, windowMark });
 					});
+					},
+					// graphLabel — subjects ARE graph nodes carrying the declared label, narrowed to a declared evaluation
+					// scope. There is no walk, so there are no assertions, no identity resolution (a node IS its stableId —
+					// this is what "subjectStableIdFor = identity" means, and it is why the hook is FORBIDDEN on this
+					// basis), no merge and no collision: two distinct nodes are two distinct subjects by construction.
+					// The retrieval vectors are read HERE, through the purpose-scoped forRetrieval() view, and the hub
+					// index is built ONCE for the whole run.
+					graphLabel: (args, next) => {
+						const subjectSource = bridgeDeclaration.subjectSource;
+						const labelledNodeList = args.subjectNodeList.filter((oneNode) => oneNode.labels.indexOf(subjectSource.label) !== -1);
+						if (labelledNodeList.length === 0) {
+							next(refuse.byName({ moduleName, what: `subjectSource names label '${subjectSource.label}' and the source standard '${sourceStandardName}' carries ZERO nodes with it`, where: 'an empty subject population is refused by name, never frozen green (BG-EMPTY)' }).message);
+							return;
+						}
+						const labelledByStableId = labelledNodeList.reduce((soFar, oneNode) => ({ ...soFar, [oneNode.stableId]: oneNode }), {});
+						let inScopeNodeList = labelledNodeList;
+						let scopeDigest = null;
+						if (subjectSource.scopeStableIdListPath !== null) {
+							// RESOLVED RELATIVE TO THE PLUGIN'S OWN FORGE BUNDLE when the declared path is relative,
+							// exactly as remodelTableRef is (STEP 5b). A committed declaration must not carry an
+							// absolute path: the evaluation scope travels WITH the plugin, and a machine-specific
+							// string in a content-addressed declaration would make the block id machine-specific too.
+							// An absolute path is still honoured, for a scope that genuinely lives outside the bundle.
+							if (typeof registry.forgesDirPath !== 'string') {
+								next(refuse.byName({ moduleName, what: `plugin declares scopeStableIdListPath '${subjectSource.scopeStableIdListPath}' but the registry names no forgesDirPath`, where: 'a relative scope path is resolved under the registry\'s forges directory, beside the plugin that declares it' }).message);
+								return;
+							}
+							const scopeFilePath = path.isAbsolute(subjectSource.scopeStableIdListPath) ? subjectSource.scopeStableIdListPath : path.join(registry.forgesDirPath, bridgeDeclaration.standardKey, subjectSource.scopeStableIdListPath);
+							if (!fs.existsSync(scopeFilePath)) {
+								next(refuse.byName({ moduleName, what: `subjectSource.scopeStableIdListPath names no file at ${scopeFilePath}`, where: 'the evaluation scope is DATA on disk; declared-but-broken refuses every build (FF §5.4)' }).message);
+								return;
+							}
+							const scopeBytes = fs.readFileSync(scopeFilePath);
+							const parsedScope = decisionBlockLib.parseJsonText(scopeBytes.toString('utf8'));
+							if (parsedScope.error || !Array.isArray(parsedScope.value) || parsedScope.value.length === 0 || parsedScope.value.some((oneId) => typeof oneId !== 'string' || oneId === '')) {
+								next(refuse.byName({ moduleName, what: `the scope list at ${scopeFilePath} is not a non-empty JSON array of stableId strings (${parsedScope.error || 'wrong shape'})`, where: 'the evaluation scope is an explicit list, never a filter expression' }).message);
+								return;
+							}
+							// EVERY named id must be a node carrying the label. A scope naming something that is not there is a
+							// scope that has drifted from its graph, and silently running the intersection would report a smaller
+							// population as a complete one — the same shape of lie as a gate that shrinks (RULING BR3-6).
+							const absentList = parsedScope.value.filter((oneId) => labelledByStableId[oneId] === undefined);
+							if (absentList.length > 0) {
+								next(refuse.byName({ moduleName, what: `the scope list names ${absentList.length} stableId(s) that are not '${subjectSource.label}' nodes in this graph (sample: ${absentList.slice(0, 3).join(' | ')})`, where: 'the scope and the graph disagree; re-derive the scope against THIS graph or fix the forge — never silently intersect' }).message);
+								return;
+							}
+							const scopeSet = new Set(parsedScope.value);
+							inScopeNodeList = labelledNodeList.filter((oneNode) => scopeSet.has(oneNode.stableId));
+							scopeDigest = sha256Hex(canonicalJson(parsedScope.value.slice().sort(compareStrings)));
+						}
+						const sortedNodeList = inScopeNodeList.slice().sort((leftNode, rightNode) => compareStrings(leftNode.stableId, rightNode.stableId));
+						const windowed = sourceWindowLib.applySourceWindow(sortedNodeList.map((oneNode) => ({ stableId: oneNode.stableId, node: oneNode })), { limit: spec.config.limit, offset: spec.config.offset });
+						if (windowed.error) {
+							next(`${moduleName}: ${windowed.error}`);
+							return;
+						}
+						if (windowed.window) {
+							say(sourceWindowLib.describeWindow(windowed.window));
+						}
+						const windowedNodeList = windowed.sourceNodes.map((oneEntry) => oneEntry.node);
+						// one node = one subject = one leaf, with NO asserting subject: nothing asserted it, which is exactly
+						// what a derived mapping means. The census weights an empty assertingSubjectList as 1 (census.js).
+						const leafList = windowedNodeList.map((oneNode) => ({ subjectKey: oneNode.stableId, subjectStableId: oneNode.stableId, assertingSubjectList: [], assertionList: [] }));
+						const retrievalView = args.reader.forRetrieval();
+						retrievalView.readHubVectors({ referenceTier: PROPERTY_TIER }, (hubVectorError, hubVectorRecordList) => {
+							if (hubVectorError) {
+								next(`${moduleName}: readHubVectors: ${hubVectorError}`);
+								return;
+							}
+							const built = candidateRetrievalLib.buildHubVectorIndex({ vectorRecordList: hubVectorRecordList, embeddingModelVersion: bridgeDeclaration.candidateRetrieval.embeddingModelVersion });
+							if (built.error) {
+								next(built.error.message);
+								return;
+							}
+							retrievalView.readSubjectVectors({ label: subjectSource.label }, (subjectVectorError, subjectVectorRecordList) => {
+								if (subjectVectorError) {
+									next(`${moduleName}: readSubjectVectors: ${subjectVectorError}`);
+									return;
+								}
+								const subjectVectorByStableId = subjectVectorRecordList.reduce((soFar, oneRecord) => ({ ...soFar, [oneRecord.stableId]: oneRecord }), {});
+								const vectorlessSubject = windowedNodeList.find((oneNode) => subjectVectorByStableId[oneNode.stableId] === undefined);
+								if (vectorlessSubject !== undefined) {
+									next(refuse.byName({ moduleName, what: `subject ${vectorlessSubject.stableId} carries no embedding`, where: 'a vectorless subject cannot be retrieved for; the framework never re-embeds (BR-123)' }).message);
+									return;
+								}
+								report.subjectNodeReport = { subjectCount: leafList.length, resolved: leafList.length, refused: 0, leaves: leafList.length, manyToOneSubjectCount: 0, collisions: 0, hookCallCount: 0 };
+								say(`subjects: ${leafList.length} '${subjectSource.label}' node(s) in scope (of ${labelledNodeList.length} labelled); retrieval index ${built.hubVectorIndex.recordCount} card(s) × ${built.hubVectorIndex.dimension}d (${built.hubVectorIndex.embeddingModelVersion}); K ${bridgeDeclaration.candidateRetrieval.k} floor ${bridgeDeclaration.candidateRetrieval.floor}`);
+								next('', { ...args, subjectGroupList: leafList, leafList, sourceGapList: [], subjectCollisionList: [], manyToOneSubjectCount: 0, windowMark, hubVectorIndex: built.hubVectorIndex, subjectVectorByStableId, scopeDigest });
+							});
+						});
+					},
 				});
+				taskList.push((args, next) => subjectGroupProducerByKind[acquisitionRow.subjectGroupProducerKind](args, next));
 
 				// STEP 5b — the HUB-owned remodel table, by REFERENCE (RULING P11, D-S5): forges/<hubToken>/bridgeData/
 				// <remodelTableRef>.json keyed hubName@hubVersion, read as data (never required as code), digested into
@@ -842,8 +1010,13 @@ const moduleFunction =
 					next('', { ...args, remodelTable, remodelTableDigest: crypto.createHash('sha256').update(tableBytes).digest('hex') });
 				});
 
-				// STEP 6 — remodel + filter + classify per (leaf, target group) → decision records (pure)
-				taskList.push((args, next) => {
+				// STEP 6 — CANDIDATE POOLS + classification → decision records. Which producer builds the pool is a
+				// member of the acquisition row, exactly as the subject producer is. A key-filtered pool is assembled
+				// from the canonicalKey multimap; a retrieved pool is assembled by cosine over stored vectors. Both
+				// hand STEP 7 the SAME two outputs, so the judge, the freeze, the materialiser and the census below are
+				// shared byte-for-byte between the two bases.
+				const poolProducerByKind = Object.freeze({
+					canonicalKeyIndex: (args, next) => {
 					const remodelTable = args.remodelTable;
 					const decisionRecordList = [];
 					const judgedTaskList = [];
@@ -980,7 +1153,83 @@ const moduleFunction =
 					}
 					say(`classified: ${decisionRecordList.length} settled record(s) (specified/orphan/valueTier), ${judgedTaskList.length} to judge`);
 					next('', { ...args, decisionRecordList, judgedTaskList });
+					},
+					// vectorRetrieval — one subject, one pool, one judged task. There is no target grouping, no union and
+					// no remodel: those exist to reconcile several document rows naming one subject, and a derived subject
+					// has no rows. The retrieval RANK and COSINE are recorded on the record as forensics and are never
+					// rendered — the pool reaches the judge sorted by stableId, which is what makes the order neutral.
+					vectorRetrieval: (args, next) => {
+						const { k, floor } = bridgeDeclaration.candidateRetrieval;
+						const attestationChannelList = [`retrieval:${bridgeDeclaration.subjectSource.label}`];
+						const decisionRecordList = [];
+						const judgedTaskList = [];
+						let buildFault = null;
+						args.leafList.forEach((oneLeaf) => {
+							if (buildFault) {
+								return;
+							}
+							const retrieved = candidateRetrievalLib.retrieveCandidatePool({
+								hubVectorIndex: args.hubVectorIndex,
+								subjectStableId: oneLeaf.subjectStableId,
+								subjectVector: args.subjectVectorByStableId[oneLeaf.subjectStableId].embedding,
+								k,
+								floor,
+							});
+							if (retrieved.error) {
+								buildFault = retrieved.error;
+								return;
+							}
+							const poolCardList = classificationLib.sortByStableId(retrieved.seatList.map((oneSeat) => args.cardByStableId[oneSeat.stableId]));
+							const missingCard = retrieved.seatList.find((oneSeat) => args.cardByStableId[oneSeat.stableId] === undefined);
+							if (missingCard !== undefined) {
+								buildFault = refuse.byName({ moduleName, what: `retrieval named card ${missingCard.stableId}, which is not in the card index read this run`, where: 'the vector view and the card view must describe the SAME population; a card with a vector and no card row is a forge defect' });
+								return;
+							}
+							const classified = classificationLib.classifyTarget({ poolOrigin: 'retrieval', filteredPoolSize: poolCardList.length, keyPoolSize: 0, subjectUnresolvable: false, subjectCollision: false, valueTier: false, allLabelsTentative: false, allLabelsPredicate: false, labelsMixed: false });
+							if (classified.error) {
+								buildFault = classified.error;
+								return;
+							}
+							const baseRecord = {
+								subjectStableId: oneLeaf.subjectStableId,
+								assertingSubjectList: [],
+								targetKey: `retrieval:${oneLeaf.subjectStableId}`,
+								targetCanonicalKeyList: [],
+								suppliedTupleByTarget: {},
+								remodelApplied: null,
+								sourceDomainSuperseded: null,
+								sourceLabelList: [],
+								attestationChannelList,
+								keyPoolStableIdList: [],
+								filteredPoolStableIdList: poolCardList.map((oneCard) => oneCard.stableId),
+								// the retrieval trace: rank and cosine per seat, in RANK order. Forensics inside the frozen text —
+								// it is what makes recall@K measurable from the block alone, with no judge and no re-run.
+								retrievalSeatList: retrieved.seatList.map((oneSeat) => ({ stableId: oneSeat.stableId, rank: oneSeat.rank, cosine: oneSeat.cosine })),
+								classification: classified.classification,
+								judgedReason: classified.reason,
+								lossyEcho: false,
+							};
+							if (classified.classification === 'orphan') {
+								decisionRecordList.push({ ...baseRecord, resolution: null, objectStableId: null, predicate: null, reason: classified.reason });
+								return;
+							}
+							judgedTaskList.push({
+								baseRecord: { ...baseRecord, resolution: 'judged', mappingJustification: SEMANTIC_SIMILARITY_JUSTIFICATION, sourceSideMismatch: null },
+								pool: poolCardList,
+								seatReason: 'retrieval',
+								seatReasonByStableId: {},
+								groupAssertionList: [],
+							});
+						});
+						if (buildFault) {
+							next(buildFault.message);
+							return;
+						}
+						say(`retrieved: ${judgedTaskList.length} subject(s) with a pool, ${decisionRecordList.length} with none (noCandidate) — K ${k}, floor ${floor}`);
+						next('', { ...args, decisionRecordList, judgedTaskList });
+					},
 				});
+				taskList.push((args, next) => poolProducerByKind[acquisitionRow.poolProducerKind](args, next));
 
 				// STEP 7 — the JUDGE (bounded runner, index-collecting); the debug double is the only judge in B2
 				taskList.push((args, next) => {
@@ -1021,7 +1270,7 @@ const moduleFunction =
 							name: typeof subjectNode.properties.name === 'string' && subjectNode.properties.name.trim() !== '' ? subjectNode.properties.name : subjectNode.stableId,
 							stableId: subjectNode.stableId,
 							material: Object.keys(subjectNode.properties)
-								.filter((oneName) => ['description', 'definition', 'path', 'xpath', 'characteristics', 'role', 'perStandardLabel'].indexOf(oneName) !== -1)
+								.filter((oneName) => subjectMaterialNameList.indexOf(oneName) !== -1)
 								.reduce((soFar, oneName) => ({ ...soFar, [oneName]: subjectNode.properties[oneName] }), {}),
 							evidence: { subject: mergedByColumn((oneAssertion) => (oneAssertion.evidence ? oneAssertion.evidence.subject : {})), assertion: mergedByColumn((oneAssertion) => (oneAssertion.evidence ? oneAssertion.evidence.assertion : {})) },
 							sourceLabelByColumn: mergedByColumn((oneAssertion) => oneAssertion.sourceLabelByColumn),
@@ -1083,7 +1332,7 @@ const moduleFunction =
 								return;
 							}
 							const decoratedPool = candidatePool.map((oneSeat) => (hookState.nominatedByStableId[oneSeat.card.stableId] !== undefined ? { ...oneSeat, nominatedBy: bridgeDeclaration.bridgeName, nominationRationale: hookState.nominatedByStableId[oneSeat.card.stableId] } : oneSeat));
-							const question = evidenceRendererLib.renderQuestion({ sourceElement, candidatePool: decoratedPool, globalGuidanceList, perCandidateNoteByStableId: hookState.perCandidateNoteByStableId, promptSegmentList: hookState.promptSegmentList });
+							const question = evidenceRendererLib.renderQuestion({ sourceElement, candidatePool: decoratedPool, globalGuidanceList, perCandidateNoteByStableId: hookState.perCandidateNoteByStableId, promptSegmentList: hookState.promptSegmentList, judgePromptVariant, renderingAllowList: bridgeDeclaration.renderingAllowList });
 							if (question.error) {
 								taskDone(question.error.message);
 								return;
@@ -1104,7 +1353,7 @@ const moduleFunction =
 								}
 								// the FROZEN judge record: evidence BY REFERENCE (promptHash, rendererVersion, judgeModel) + the ordinal and
 								// category — never cacheHit / usage / attempts (run-variable; they live in the report and forensics)
-								const judgeRecord = { promptHash: judged.promptHash, rendererVersion: evidenceRendererLib.RENDERER_VERSION, judgeModel: judged.judgeModel, choice: judged.choice, category: judged.category };
+								const judgeRecord = { promptHash: judged.promptHash, rendererVersion: runRendererVersion, judgeModel: judged.judgeModel, choice: judged.choice, category: judged.category };
 								// a real abstention's SCHEMA-FORCED category rides in the frozen record only when present (RULING 2026-08-16, judgeComponent)
 								if (judged.reportedCategoryOnAbstain !== undefined && judged.reportedCategoryOnAbstain !== null) {
 									judgeRecord.reportedCategoryOnAbstain = judged.reportedCategoryOnAbstain;
@@ -1114,13 +1363,21 @@ const moduleFunction =
 									taskDone('', { ...oneTask.baseRecord, objectStableId: null, predicate: null, predicateAssertedBy: null, sourceLabel: null, confidence: null, abstained: true, judge: judgeRecord, renderedPoolStableIdList: question.renderedPoolStableIdList });
 									return;
 								}
-								// the predicate of a judged pick: from the SOURCE row that named the picked card — a tentative
-								// row's predicateIfPicked, a predicate row's predicate; never the judge
-								const pickedCard = oneTask.pool.find((oneCard) => oneCard.stableId === judged.chosenCardStableId);
-								const namingAssertion = orderedAssertionList.find((oneAssertion) => oneAssertion.targetKeyList.indexOf(pickedCard.canonicalKey) !== -1 || Object.keys(oneTask.baseRecord.suppliedTupleByTarget).some((oneRawKey) => oneTask.baseRecord.suppliedTupleByTarget[oneRawKey].canonicalKey === pickedCard.canonicalKey && oneAssertion.targetKeyList.indexOf(oneRawKey) !== -1)) || oneTask.groupAssertionList[0];
-								const labelRow = namingAssertion.labelRow;
-								const predicate = labelRow.disposition === 'tentative' ? labelRow.predicateIfPicked : labelRow.predicate;
-								taskDone('', { ...oneTask.baseRecord, objectStableId: judged.chosenCardStableId, predicate, predicateAssertedBy: labelRow.predicateAssertedBy, sourceLabel: labelRow.sourceLabel, confidence: judged.confidence, abstained: false, judge: judgeRecord, renderedPoolStableIdList: question.renderedPoolStableIdList });
+								// WHERE A PICK'S PREDICATE COMES FROM is a registry keyed by the declared predicateSource.kind —
+								// never a branch on matchBasis. For the three documentary kinds it comes from the SOURCE ROW
+								// that named the picked card (a tentative row's predicateIfPicked, a predicate row's
+								// predicate); the judge never names the relation. For kind 'judge' there IS no source row,
+								// so the plugin's declared predicateByCategory table maps the judge's CATEGORY to a relation
+								// — a v1 approximation, NAMED as such in the block header (predicateRule 'categoryTable-v1',
+								// RULING §11.7 (a)) so a later judge with a real predicate slot re-measures rather than
+								// silently differing. The mapping is total by construction: predicateByCategory is refused
+								// at declaration time unless it names every judge category.
+								const pickPredicateResolved = PICK_PREDICATE_RESOLVER_BY_SOURCE_KIND[bridgeDeclaration.predicateSource.kind]({ judged, oneTask, orderedAssertionList });
+								if (pickPredicateResolved.error) {
+									taskDone(pickPredicateResolved.error.message);
+									return;
+								}
+								taskDone('', { ...oneTask.baseRecord, objectStableId: judged.chosenCardStableId, predicate: pickPredicateResolved.predicate, predicateAssertedBy: pickPredicateResolved.predicateAssertedBy, sourceLabel: pickPredicateResolved.sourceLabel, confidence: judged.confidence, abstained: false, judge: judgeRecord, renderedPoolStableIdList: question.renderedPoolStableIdList });
 							});
 						});
 					};
@@ -1158,7 +1415,7 @@ const moduleFunction =
 					const header = {
 						frameworkGeneration: decisionBlockLib.FRAMEWORK_GENERATION,
 						frameworkFingerprint: decisionBlockLib.frameworkFingerprint(),
-						rendererVersion: evidenceRendererLib.RENDERER_VERSION,
+						rendererVersion: runRendererVersion,
 						bridgeName: bridgeDeclaration.bridgeName,
 						pluginVersion: bridgeDeclaration.pluginVersion,
 						declarationDigest,
@@ -1167,6 +1424,10 @@ const moduleFunction =
 						matchBasis: bridgeDeclaration.matchBasis,
 						producerKind: bridgeDeclaration.producerKind,
 						judgeKind: args.judgeKind,
+						// absent is absent: a documentary run stamps null rather than inventing a rule or a K
+						predicateRule: bridgeDeclaration.predicateSource.predicateRule === undefined ? null : bridgeDeclaration.predicateSource.predicateRule,
+						candidateRetrieval: bridgeDeclaration.candidateRetrieval === undefined ? null : { k: bridgeDeclaration.candidateRetrieval.k, floor: bridgeDeclaration.candidateRetrieval.floor, embeddingModelVersion: bridgeDeclaration.candidateRetrieval.embeddingModelVersion },
+						subjectScopeDigest: args.scopeDigest === undefined ? null : args.scopeDigest,
 						sourceWindow: args.windowMark === undefined ? null : args.windowMark,
 						blindingDeclaration: bridgeDeclaration.blindingDeclaration.slice(),
 						sourceStandardName,

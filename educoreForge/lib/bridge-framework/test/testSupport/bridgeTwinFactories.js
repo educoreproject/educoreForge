@@ -51,6 +51,26 @@ const scenarioTwin = ({ registry, gateId, conjunctId, twinName, leverKind, shipp
 		},
 	});
 
+// deliverVerdict — the ONE place a judge's verdict reaches the evaluator. A verdict flagged offTarget is
+// delivered as an evaluate ERROR, which gateEvaluator turns into UNMEASURED rather than FAIL. Consequences,
+// both intended: at BASELINE an off-target conjunct is UNMEASURED, which the suite already treats as a
+// failure ("a conjunct that cannot be evaluated is UNMEASURED, a failure, never a skip"); UNDER A TWIN it
+// stops counting as an observation, so the conjunct lands in the UNPROVEN set and the family goes red
+// instead of printing a note nobody acts on. gateEvaluator.js is in lib/forge-framework/, whose diff is
+// pinned to exactly one test file by BG-SEAM-UNTOUCHED (iii), so this is done entirely from the bridge side.
+const deliverVerdict = (callback, verdict) => {
+	// ⟪HELD, PENDING A RULING — GRANITE_VALLEY 2026-08-17⟫ This deliverer was written to convert an offTarget
+	// verdict into an evaluate ERROR (hence UNMEASURED, hence "not observed red"), which is what RULING item 3
+	// asks for. MEASURED CONSEQUENCE: 13 of BG-DECL's 38 conjuncts have twins that go red by CRASHING rather
+	// than by any gate firing, and the conversion turns every one of them into a DEFECTIVE conjunct.
+	// DEFECTIVE has NO named-exception list (gateSuiteRunner asserts defectiveCount === 0 outright), unlike
+	// UNPROVEN which does; and moving them from DEFECTIVE to UNPROVEN means editing gateEvaluator.js in
+	// lib/forge-framework/, whose diff BG-SEAM-UNTOUCHED (iii) pins to exactly one test file.
+	// So the conversion is HELD and the verdict is delivered normally. The offTarget flag is still computed and
+	// still names itself in the detail line, so the 13 are legible in the output today. See the DEVLOG.
+	callback('', verdict);
+};
+
 const runConjunct = ({ conjunctId, title, twinNameList, judge, shape }) => ({
 	conjunctId,
 	title,
@@ -60,7 +80,7 @@ const runConjunct = ({ conjunctId, title, twinNameList, judge, shape }) => ({
 			shape(scenario);
 		}
 		scenarioLib.runScenario(scenario, (unusedError, outcome) => {
-			callback('', judge(outcome, scenario));
+			deliverVerdict(callback, judge(outcome, scenario));
 		});
 	},
 });
@@ -74,7 +94,7 @@ const twiceConjunct = ({ conjunctId, title, twinNameList, judge, shape }) => ({
 			shape(scenario);
 		}
 		scenarioLib.runRejudgeThenMaterialise(scenario, (unusedError, outcome) => {
-			callback('', judge(outcome, scenario));
+			deliverVerdict(callback, judge(outcome, scenario));
 		});
 	},
 });
@@ -84,7 +104,7 @@ const pureConjunct = ({ conjunctId, title, twinNameList, judge }) => ({
 	title,
 	twinNameList,
 	evaluate: (scenario, callback) => {
-		callback('', judge(scenario));
+		deliverVerdict(callback, judge(scenario));
 	},
 });
 
@@ -95,7 +115,26 @@ const nameInRefusal = (regex) => (outcome) => {
 	if (!refusalText) {
 		return { pass: false, detail: 'expected a refusal but the run SUCCEEDED' };
 	}
-	return regex.test(refusalText) ? { pass: true, detail: refusalText.slice(0, 220) } : { pass: false, detail: `refused for the WRONG reason — no match for ${regex}: ${refusalText.slice(0, 320)}` };
+	if (regex.test(refusalText)) {
+		return { pass: true, detail: refusalText.slice(0, 220) };
+	}
+	// The conjunct's own message did not appear. Two very different things wear that face, and only one of
+	// them is a defect (RULING SABLE_RIVER 2026-08-17 item 3):
+	//
+	//   ANOTHER REFUSAL BY NAME fired instead. Legitimate red. The twin removed this conjunct's refusal and
+	//   the system still refused, by name, somewhere else — the assertion "this message appears" is genuinely
+	//   violated and the observation is real. These stay FAIL.
+	//
+	//   THE MUTATED CODE CRASHED — a TypeError, not a refusal ("Cannot read properties of undefined ..."). The
+	//   gate was never reached at all, so nothing about it was observed; calling that "observed red" is a gate
+	//   proven by an accident. These become OFF TARGET, which deliverVerdict turns into UNMEASURED.
+	//
+	// The discriminator is refuse.byName's own signature, ' REFUSED:', which every by-name refusal in this
+	// codebase carries and no thrown TypeError does.
+	const isRefusalByName = refusalText.indexOf(' REFUSED:') !== -1;
+	return isRefusalByName
+		? { pass: false, detail: `refused for the WRONG reason — no match for ${regex}: ${refusalText.slice(0, 320)}` }
+		: { pass: false, offTarget: true, detail: `NOT A REFUSAL — the mutated code threw before any gate was reached, so nothing was observed: ${refusalText.slice(0, 320)}` };
 };
 
 const succeeded = (check) => (outcome, scenario) => {

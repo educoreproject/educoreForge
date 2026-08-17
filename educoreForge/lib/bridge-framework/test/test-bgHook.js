@@ -72,7 +72,7 @@ const conjunctList = [
 		shape: (scenario) => overrideHooks(scenario, (bridgeHooks) => { delete bridgeHooks.walkSourceAssertions; }),
 		regex: /missing required hook 'walkSourceAssertions'/,
 		twinName: 'disableRequiredHookCheck', fileName: CONTRACT_FILE,
-		find: "\t\t\tif (contractEntry.required) {\n\t\t\t\treturn refuse.byName({ moduleName, what: `bridgeHooks is missing required hook '${hookName}'`",
+		find: "\t\t\tif (requiredByRow) {",
 		replace: "\t\t\tif (contractEntry.required && false) {\n\t\t\t\treturn refuse.byName({ moduleName, what: `bridgeHooks is missing required hook '${hookName}'`",
 	}),
 	refusalCase({
@@ -81,7 +81,7 @@ const conjunctList = [
 		shape: (scenario) => overrideHooks(scenario, (bridgeHooks) => { delete bridgeHooks.subjectStableIdFor; }),
 		regex: /missing required hook 'subjectStableIdFor'/,
 		twinName: 'disableRequiredHookCheck', fileName: CONTRACT_FILE,
-		find: "\t\t\tif (contractEntry.required) {\n\t\t\t\treturn refuse.byName({ moduleName, what: `bridgeHooks is missing required hook '${hookName}'`",
+		find: "\t\t\tif (requiredByRow) {",
 		replace: "\t\t\tif (contractEntry.required && false) {\n\t\t\t\treturn refuse.byName({ moduleName, what: `bridgeHooks is missing required hook '${hookName}'`",
 	}),
 	refusalCase({
@@ -106,7 +106,7 @@ const conjunctList = [
 		shape: (scenario) => overrideHooks(scenario, (bridgeHooks) => { bridgeHooks.nominateCandidates = (hookArgs, callback) => callback('', []); }),
 		regex: /hook 'nominateCandidates' is present but evidenceHooksDeclared\.nominate is not true/,
 		twinName: 'disableUndeclaredPresentCheck', fileName: CONTRACT_FILE,
-		find: '\t\tif (!contractEntry.required && !declaredTrue) {', replace: '\t\tif (false && !contractEntry.required && !declaredTrue) {',
+		find: '\t\tif (contractEntry.declaredBy !== undefined && !declaredTrue) {', replace: '\t\tif (false && !contractEntry.required && !declaredTrue) {',
 	}),
 	refusalCase({
 		registry: twinRegistry, gateId: GATE_ID, conjunctId: 'declaredTrueHookMissing',

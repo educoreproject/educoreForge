@@ -296,6 +296,15 @@ const gateDeclarationList = [
 ];
 
 runGateFamily(
-	{ harness, familyName: 'BG-PRODUCER+BG-GEN+BG-DEBUG', gateDeclarationList, twinRegistry, makeSubject: scenarioLib.makeScenario, cloneSubject: scenarioLib.cloneScenario, expectedConjunctCount: 6 + HEADER_KEY_ORDER.length + 1 + 6, expectedTwinCount: 6 + HEADER_KEY_ORDER.length + 1 + 6 },
+	{ harness, familyName: 'BG-PRODUCER+BG-GEN+BG-DEBUG', gateDeclarationList, twinRegistry, makeSubject: scenarioLib.makeScenario, cloneSubject: scenarioLib.cloneScenario, // ⟪LITERAL, NOT DERIVED — RULING SABLE_RIVER 2026-08-17, from the BG-DECL finding⟫ These were
+		// `6 + HEADER_KEY_ORDER.length + 1 + 6`. HEADER_KEY_ORDER lives in decisionBlock.js and this family emits
+		// one conjunct PER header key, so the expectation moved with the very list it was guarding: adding or
+		// losing a header key changed both sides and the count matched either way. That is the same tautology
+		// BG-DECL had. 34 = 6 + 21 header keys + 1 + 6, frozen; adding a header key must come HERE and be
+		// justified. This was the ONLY .length-derived expected count in the twelve families (audited 2026-08-17).
+		// 37 = 6 + 24 header keys + 1 + 6. Was 34 at 21 keys; RULING §11.7 (a)/§11.3/§11.10 add predicateRule,
+		// candidateRetrieval and subjectScopeDigest to HEADER_KEY_ORDER, so the frozen number moves BY THREE and
+		// says why — which is the entire benefit of it being a literal.
+		expectedConjunctCount: 37, expectedTwinCount: 37 },
 	() => harness.report(),
 );

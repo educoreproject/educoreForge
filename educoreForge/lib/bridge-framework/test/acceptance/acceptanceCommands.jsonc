@@ -25,6 +25,14 @@
 		"materialise": "node --max-old-space-size=20000 /Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/apps/graph-builder/graphBuilder.js -build --recipePath=/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/recipes/fourWithHubEdfiBridge.recipe.jsonc --vectorize=true --reuseForgedBlocks=true --standardsDatabaseFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/edfi/edfiBridge.standardsDatabase.sqlite3 --decisionStoreFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/edfi/edfiBridge.decisions.sqlite3 --judgmentCacheFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/edfi/edfiBridge.judgmentCache.sqlite3 --matchForensicsDirPath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/edfi/matchForensics --embeddingCacheFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/vectorCache/vectorCache.sqlite3 </dev/null > /Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/edfi/buildLogs/<line>-<phase>.log 2>&1 &",
 		"materialiseReal": "node --max-old-space-size=20000 /Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/apps/graph-builder/graphBuilder.js -build --recipePath=/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/recipes/fourWithHubEdfiBridge.recipe.jsonc --vectorize=true --reuseForgedBlocks=true --standardsDatabaseFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/edfi/edfiBridge.standardsDatabase.sqlite3 --decisionStoreFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/edfi/edfiBridge.decisions.sqlite3 --judgmentCacheFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/edfi/edfiBridge.judgmentCache.sqlite3 --matchForensicsDirPath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/edfi/matchForensics --embeddingCacheFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/vectorCache/vectorCache.sqlite3 --rebridge=edfi </dev/null > /Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/edfi/buildLogs/<line>-<phase>.log 2>&1 &",
 		"materialiseRealSpendAuthorisedBy": { "sessionName": "SABLE_RIVER", "date": "2026-08-16", "note": "RULINGS-supervisor-bridgeFramework.md, block 'Ed-Fi crosswalk PROVENANCE — settled' (3); 216 judged subjects; GO by IMCS 2026-08-16 19:21 CDT" },
+		// PER-LINE JUDGMENT CEILINGS (RULING §11.12), added 2026-08-17 with the derived lines. The runner now
+		// REFUSES any line that declares none, so the crosswalk lines declare theirs too. Measured from the
+		// frozen block rather than guessed: it judged 152 TARGETS (116 picks + 36 abstentions) across 216 judged
+		// subjects, so 500 leaves room for a re-ask on every one of them and still halts long before a storm.
+		// materialise replays with ZERO judge calls, and 0 says so.
+		"rejudgeDebugMaxJudgmentCount": 500,
+		"materialiseMaxJudgmentCount": 0,
+		"materialiseRealMaxJudgmentCount": 500,
 		"expectedBaseBlockIdBySubject": {
 			"ceds@14_0_0_0_base": "09a5d658807b9c22b44b28289d9ad4b47df15e45f44c9eacec765962fe487c33",
 			"edfi@5_2_0_base": "aea6d8dfe7899adef57c5ac3adb6b0df2bfc7e4a4ae859c4fa3893c132c8b304",
@@ -34,6 +42,46 @@
 		"fourBaseManifestId": "97c618c20e07c0c612957def69164402d364a98d5dfee865faacae1deace6382",
 		"pinnedFlagList": ["--vectorize=true", "--reuseForgedBlocks=true", "--standardsDatabaseFilePath=<the pinned store, ABSOLUTE>", "--decisionStoreFilePath=<ABSOLUTE, pinned>", "--judgmentCacheFilePath=<ABSOLUTE, pinned>", "--matchForensicsDirPath=<ABSOLUTE, pinned>", "--embeddingCacheFilePath=<the warm cache>", "--rebridge=edfi (rejudge lines only)", "--useDebugJudge=digest (rejudgeDebug only)", "</dev/null", "--max-old-space-size=20000"],
 		"frozenBy": { "sessionName": "SCARLET_BRIDGE", "date": "2026-08-16", "note": "lines frozen at checkpoint 1 under SABLE_RIVER's freeze ruling; the debug block 1ce6cbd9… reproduced by runs 2 and 3; materialiseReal awaits the supervisor's spend authorisation (materialiseRealSpendAuthorisedBy was null until the supervisor's GO of 2026-08-16 19:21 CDT and is POPULATED below since 2e6a3ac — BR3-8)" }
+	},
+	"edfiCedsDerivedPlugin": {
+		// THE DERIVED LINES. Every one PINS its own store: the derived producer must never open the crosswalk's
+		// decision store, and the surest way to guarantee that is for it not to know the path (RULING 11.5).
+		// The scoring harness is the ONLY reader of the crosswalk store in this order, and it reads by path,
+		// read-only, after the fact.
+		//
+		// maxJudgmentCount IS DECLARED HERE AND IS NOT YET INJECTABLE (GRANITE_VALLEY 2026-08-17, raised to the
+		// supervisor). RULING 11.12 requires a per-LINE maxJudgmentCount and says "the runner refuses a line
+		// without it". The declaration and the runner's refusal are implemented. What is NOT implemented is the
+		// cap actually reaching the framework: the only per-line channel is the command line, build.js owns flag
+		// parsing, and build.js is a SEAM FILE this order may not touch. So the framework's ceiling remains its
+		// data default (MAX_JUDGMENT_COUNT_PER_RUN = 20,000) until that is ruled. The numbers below are a
+		// CONTRACT THE RUNNER ENFORCES AT THE BOUNDARY, not yet a ceiling inside the run - and saying so here is
+		// the point, because a cap everyone believes in and nothing enforces is worse than no cap at all.
+		"standardKey": "edfi",
+		"recipePath": "/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/recipes/edfiDerivedEval.recipe.jsonc",
+		"storeFilePath": "/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/edfiDerived/edfiDerived.standardsDatabase.sqlite3",
+		"decisionStoreFilePath": "/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/edfiDerived/edfiDerived.decisions.sqlite3",
+		"judgmentCacheFilePath": "/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/edfiDerived/edfiDerived.judgmentCache.sqlite3",
+		"matchForensicsDirPath": "/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/edfiDerived/matchForensics",
+		"buildLogsDirPath": "/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/edfiDerived/buildLogs",
+		// D2 - the DEBUG run over the whole population. Free, no Opus, no spend.
+		"rejudgeDebug": "node --max-old-space-size=20000 /Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/apps/graph-builder/graphBuilder.js -build --recipePath=/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/recipes/edfiDerivedEval.recipe.jsonc --vectorize=true --reuseForgedBlocks=true --standardsDatabaseFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/edfiDerived/edfiDerived.standardsDatabase.sqlite3 --decisionStoreFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/edfiDerived/edfiDerived.decisions.sqlite3 --judgmentCacheFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/edfiDerived/edfiDerived.judgmentCache.sqlite3 --matchForensicsDirPath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/edfiDerived/matchForensics --embeddingCacheFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/vectorCache/vectorCache.sqlite3 --rebridge=edfi --useDebugJudge=digest",
+		"rejudgeDebugMaxJudgmentCount": 4000,
+		// D3 - the REAL judge, TEN SUBJECTS AT A TIME. <n> is substituted per batch by the supervisor's release.
+		"rejudgeRealLimit": "node --max-old-space-size=20000 /Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/apps/graph-builder/graphBuilder.js -build --recipePath=/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/recipes/edfiDerivedEval.recipe.jsonc --vectorize=true --reuseForgedBlocks=true --standardsDatabaseFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/edfiDerived/edfiDerived.standardsDatabase.sqlite3 --decisionStoreFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/edfiDerived/edfiDerived.decisions.sqlite3 --judgmentCacheFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/edfiDerived/edfiDerived.judgmentCache.sqlite3 --matchForensicsDirPath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/edfiDerived/matchForensics --embeddingCacheFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/vectorCache/vectorCache.sqlite3 --rebridge=edfi --limit=10 --offset=<n>",
+		"rejudgeRealLimitMaxJudgmentCount": 30,
+		// D4 - the full real run over the 701. The judgment cache carries D3's paid judgments into it, so this
+		// pays only for what D3 did not (the cache key excludes generation; verified against the live schema).
+		"materialiseReal": "node --max-old-space-size=20000 /Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/apps/graph-builder/graphBuilder.js -build --recipePath=/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/recipes/edfiDerivedEval.recipe.jsonc --vectorize=true --reuseForgedBlocks=true --standardsDatabaseFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/edfiDerived/edfiDerived.standardsDatabase.sqlite3 --decisionStoreFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/edfiDerived/edfiDerived.decisions.sqlite3 --judgmentCacheFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/edfiDerived/edfiDerived.judgmentCache.sqlite3 --matchForensicsDirPath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/edfiDerived/matchForensics --embeddingCacheFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/vectorCache/vectorCache.sqlite3 --rebridge=edfi",
+		"materialiseRealMaxJudgmentCount": 1600,
+		// NULL until the supervisor writes the GO. The runner REFUSES materialiseReal while this is null - that
+		// refusal is the only thing standing between a typo and roughly 670 Opus calls.
+		"materialiseRealSpendAuthorisedBy": null,
+		// replay: a plain -build REPLAYS the pair's latest frozen block with ZERO judge calls
+		"materialise": "node --max-old-space-size=20000 /Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/apps/graph-builder/graphBuilder.js -build --recipePath=/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/recipes/edfiDerivedEval.recipe.jsonc --vectorize=true --reuseForgedBlocks=true --standardsDatabaseFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/edfiDerived/edfiDerived.standardsDatabase.sqlite3 --decisionStoreFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/edfiDerived/edfiDerived.decisions.sqlite3 --judgmentCacheFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/edfiDerived/edfiDerived.judgmentCache.sqlite3 --matchForensicsDirPath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/edfiDerived/matchForensics --embeddingCacheFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/vectorCache/vectorCache.sqlite3",
+		"materialiseMaxJudgmentCount": 0,
+		"pinnedFlagList": ["--vectorize=true", "--reuseForgedBlocks=true", "--standardsDatabaseFilePath=<ABSOLUTE, derived-only>", "--decisionStoreFilePath=<ABSOLUTE, derived-only - NEVER the crosswalk store>", "--judgmentCacheFilePath=<ABSOLUTE, derived-only>", "--matchForensicsDirPath=<ABSOLUTE, derived-only>", "--embeddingCacheFilePath=<the warm cache - READ only; the framework never re-embeds>"],
+		"frozenBy": null
 	},
 	"sifCedsStandardPlugin": {
 		"recipePath": null,

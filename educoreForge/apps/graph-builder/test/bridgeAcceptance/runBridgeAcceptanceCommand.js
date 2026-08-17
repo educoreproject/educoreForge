@@ -80,6 +80,21 @@ if (lineName === 'materialiseReal' && !(entry.materialiseRealSpendAuthorisedBy &
 	refuse(`the materialiseReal line SPENDS on the real judge and acceptanceCommands.jsonc records no materialiseRealSpendAuthorisedBy for ${bridgeName} — the supervisor authorises the spend as data before this line runs`);
 }
 
+// EVERY LINE DECLARES ITS OWN JUDGMENT CEILING (RULING §11.12). The runner refuses a line that declares none:
+// the framework's own default ceiling is 20,000, which for a run whose true size is ~700 is not a cap in any
+// meaningful sense, and the re-ask hazard can double a call count silently. An UNDECLARED ceiling is the
+// failure mode this refusal exists for — a number nobody chose.
+//
+// HONEST LIMIT, and it is written here rather than in a report nobody reads: this refusal enforces that the
+// number was DECLARED, not that it is OBEYED inside the run. Injecting it would need a --maxJudgmentCount
+// flag, build.js owns flag parsing, and build.js is a seam file this order may not touch. Raised to the
+// supervisor 2026-08-17; until ruled, treat these numbers as a declaration and a boundary check, and do not
+// tell yourself the run is capped.
+const declaredMaxJudgmentCount = entry[`${lineName}MaxJudgmentCount`];
+if (!Number.isInteger(declaredMaxJudgmentCount) || declaredMaxJudgmentCount < 0) {
+	refuse(`the ${lineName} line for ${bridgeName} declares no ${lineName}MaxJudgmentCount (got ${JSON.stringify(declaredMaxJudgmentCount)}) — every line declares its own judgment ceiling as data; there is no default (RULING §11.12)`);
+}
+
 const committedLine = entry[lineName].replace(/<line>/g, lineName).replace(/<phase>/g, phaseToken);
 const buildLogPath = path.join(entry.buildLogsDirPath, `${lineName}-${phaseToken}.log`);
 const treeRoot = path.join(__dirname, '..', '..', '..', '..');

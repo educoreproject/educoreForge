@@ -33,7 +33,7 @@ const scenarioLib = require('./testSupport/toyBridgeScenario');
 const { refusalCase } = require('./testSupport/bridgeTwinFactories');
 const { runGateFamily } = require(path.join(__dirname, '..', '..', 'forge-framework', 'test', 'testSupport', 'gateSuiteRunner'));
 const { makeTwinRegistry } = require(path.join(__dirname, '..', '..', 'forge-framework', 'roundTripHarness', 'twinRegistry'));
-const { BRIDGE_DECLARATION_CONTRACT } = require('../bridgePluginContract');
+const { BRIDGE_DECLARATION_CONTRACT, SOURCE_ACQUISITION_REGISTRY } = require('../bridgePluginContract');
 
 const GATE_ID = 'BG-DECL';
 const twinRegistry = makeTwinRegistry();
@@ -45,6 +45,8 @@ const REQUIRED_CHECK_FIND = "\t\t} else if (value === undefined) {\n\t\t\treturn
 const REQUIRED_CHECK_REPLACE = "\t\t} else if (value === undefined) {\n\t\t\tcontinue;\n\t\t\treturn refuseWith(`bridgeDeclaration is missing required key '${propertyName}'`";
 const KIND_CHECK_FIND = "\t\tif (reason !== '') {\n\t\t\treturn refuseWith(`bridgeDeclaration '${propertyName}' ${reason}`";
 const KIND_CHECK_REPLACE = "\t\tif (reason !== '' && false) {\n\t\t\treturn refuseWith(`bridgeDeclaration '${propertyName}' ${reason}`";
+const BASIS_REQUIRED_CHECK_FIND = '\t\t\tif (requiredByRow && value === undefined) {';
+const BASIS_REQUIRED_CHECK_REPLACE = '\t\t\tif (false && requiredByRow && value === undefined) {';
 const UNKNOWN_KEY_FIND = '\tif (unknownName !== undefined) {\n\t\treturn refuseWith(`bridgeDeclaration carries unknown key';
 const UNKNOWN_KEY_REPLACE = '\tif (unknownName !== undefined && false) {\n\t\treturn refuseWith(`bridgeDeclaration carries unknown key';
 const PRODUCER_MATCH_FIND = '\tif (PRODUCER_KIND_BY_MATCH_BASIS[bridgeDeclaration.matchBasis] !== bridgeDeclaration.producerKind) {';
@@ -61,11 +63,25 @@ const overrideDeclaration = (scenario, mutate) => {
 	scenario.pluginModuleOverrides[PLUGIN_NAME] = { bridgeDeclaration };
 };
 
-const requiredKeyList = Object.keys(BRIDGE_DECLARATION_CONTRACT).filter((oneName) => BRIDGE_DECLARATION_CONTRACT[oneName].required);
+// The fixture plugin is a CROSSWALK plugin, so "required" for it means BOTH:
+//   (1) contract rows marked required: true          — refused by the unconditional branch
+//   (2) rows marked basisConditional whose acquisition ROW requires them (RULING §11.9) — refused by the
+//       basis-conditional branch, with a different message and therefore a different twin
+// ⟪WHY THIS IS SPELLED OUT⟫ When tupleFieldColumnMap and mappingProvider became basisConditional, this
+// generator — which filtered on `.required` alone — silently stopped emitting drop_tupleFieldColumnMap and
+// drop_mappingProvider. The family still reported ALL GREEN on a smaller suite, which is precisely the
+// failure RULING BR3-6 names: a gate that shrinks reads exactly like a gate that passes. The family's
+// expectedConjunctCount at the foot of this file is now a LITERAL rather than a derivation, so the next
+// person to move a key gets a RED instead of a quiet subtraction.
+const FIXTURE_MATCH_BASIS = 'crosswalk';
+const FIXTURE_ACQUISITION_ROW = SOURCE_ACQUISITION_REGISTRY[FIXTURE_MATCH_BASIS];
+const unconditionalRequiredKeyList = Object.keys(BRIDGE_DECLARATION_CONTRACT).filter((oneName) => BRIDGE_DECLARATION_CONTRACT[oneName].required);
+const rowRequiredKeyList = Object.keys(BRIDGE_DECLARATION_CONTRACT).filter((oneName) => BRIDGE_DECLARATION_CONTRACT[oneName].basisConditional === true && FIXTURE_ACQUISITION_ROW.requiredDeclarationKeyList.indexOf(oneName) !== -1);
+const requiredKeyList = unconditionalRequiredKeyList.concat(rowRequiredKeyList);
 const conjunctList = [];
 
 // one conjunct PER required key: drop it → refused naming it
-requiredKeyList.forEach((oneKeyName) => {
+unconditionalRequiredKeyList.forEach((oneKeyName) => {
 	conjunctList.push(
 		refusalCase({
 			registry: twinRegistry, gateId: GATE_ID, conjunctId: `drop_${oneKeyName}`,
@@ -73,6 +89,18 @@ requiredKeyList.forEach((oneKeyName) => {
 			shape: (scenario) => overrideDeclaration(scenario, (declaration) => { delete declaration[oneKeyName]; }),
 			regex: new RegExp(`missing required key '${oneKeyName}'`),
 			twinName: 'disableRequiredKeyCheck', fileName: CONTRACT_FILE, find: REQUIRED_CHECK_FIND, replace: REQUIRED_CHECK_REPLACE,
+		}),
+	);
+});
+// one conjunct PER key the fixture's acquisition ROW requires: drop it → refused naming it AND naming the basis
+rowRequiredKeyList.forEach((oneKeyName) => {
+	conjunctList.push(
+		refusalCase({
+			registry: twinRegistry, gateId: GATE_ID, conjunctId: `drop_${oneKeyName}`,
+			title: `dropping '${oneKeyName}', which matchBasis '${FIXTURE_MATCH_BASIS}' requires, is refused naming both`,
+			shape: (scenario) => overrideDeclaration(scenario, (declaration) => { delete declaration[oneKeyName]; }),
+			regex: new RegExp(`missing key '${oneKeyName}', which matchBasis '${FIXTURE_MATCH_BASIS}' REQUIRES`),
+			twinName: 'disableBasisRequiredKeyCheck', fileName: CONTRACT_FILE, find: BASIS_REQUIRED_CHECK_FIND, replace: BASIS_REQUIRED_CHECK_REPLACE,
 		}),
 	);
 });
@@ -99,25 +127,32 @@ conjunctList.push(
 		regex: /carries key 'globalGuidanceList' which is FORBIDDEN while evidenceHooksDeclared\.globalGuidance is not true/,
 		twinName: 'disableConditionalForbiddenCheck', fileName: CONTRACT_FILE, find: '\t\t\tif (!expectedPresent && value !== undefined) {', replace: '\t\t\tif (false && !expectedPresent && value !== undefined) {',
 	}),
+	// ⟪RETIRED BY NAME — RULING §11.6 (the R6 reversal, owned), SABLE_RIVER 2026-08-17⟫ Three conjuncts here
+	// asserted that `derived`, `inferred` and predicateSource kind `judge` are REFUSED. TQ's correction of
+	// 2026-08-17 ("derived mappings are going to be the vast majority") reverses R6, so all three are now
+	// ADMITTED and those conjuncts would assert the opposite of the ruling. They are retired, NOT deleted
+	// quietly: the three replacements below keep the family's conjunct count and keep proving what the closed
+	// lists are FOR — that an UNREGISTERED value still refuses by name, and that admitting `judge` admitted a
+	// closed SHAPE rather than an open door.
 	refusalCase({
-		registry: twinRegistry, gateId: GATE_ID, conjunctId: 'closedValue_matchBasisDerived',
-		title: "matchBasis 'derived' is refused by name (OUT of v1, RULING R6)",
-		shape: (scenario) => overrideDeclaration(scenario, (declaration) => { declaration.matchBasis = 'derived'; }),
-		regex: /'matchBasis' matchBasis 'derived' is not one of: standard, crosswalk/,
+		registry: twinRegistry, gateId: GATE_ID, conjunctId: 'closedValue_matchBasisUnregistered',
+		title: "an UNREGISTERED matchBasis is refused by name, and the refusal names every registered basis (replaces the retired closedValue_matchBasisDerived, RULING §11.6)",
+		shape: (scenario) => overrideDeclaration(scenario, (declaration) => { declaration.matchBasis = 'inventedBasis'; }),
+		regex: /'matchBasis' matchBasis 'inventedBasis' is not one of: standard, crosswalk, derived/,
 		twinName: 'disableKindCheck', fileName: CONTRACT_FILE, find: KIND_CHECK_FIND, replace: KIND_CHECK_REPLACE,
 	}),
 	refusalCase({
-		registry: twinRegistry, gateId: GATE_ID, conjunctId: 'closedValue_producerKindInferred',
-		title: "producerKind 'inferred' is refused by name (v1 admits only authored)",
-		shape: (scenario) => overrideDeclaration(scenario, (declaration) => { declaration.producerKind = 'inferred'; }),
-		regex: /'producerKind' producerKind 'inferred' is not one of: authored/,
+		registry: twinRegistry, gateId: GATE_ID, conjunctId: 'closedValue_producerKindUnregistered',
+		title: "an UNREGISTERED producerKind is refused by name (replaces the retired closedValue_producerKindInferred, RULING §11.6)",
+		shape: (scenario) => overrideDeclaration(scenario, (declaration) => { declaration.producerKind = 'guessed'; }),
+		regex: /'producerKind' producerKind 'guessed' is not one of: authored, inferred/,
 		twinName: 'disableKindCheck', fileName: CONTRACT_FILE, find: KIND_CHECK_FIND, replace: KIND_CHECK_REPLACE,
 	}),
 	refusalCase({
-		registry: twinRegistry, gateId: GATE_ID, conjunctId: 'closedValue_predicateSourceKindJudge',
-		title: "predicateSource.kind 'judge' is refused (REMOVED for v1 with derived)",
+		registry: twinRegistry, gateId: GATE_ID, conjunctId: 'predicateSourceKindJudgeShapeIsClosed',
+		title: "predicateSource.kind 'judge' is ADMITTED but its shape is CLOSED — a judge kind carrying a column/table is refused by name (replaces the retired closedValue_predicateSourceKindJudge, RULING §11.6/§11.7)",
 		shape: (scenario) => overrideDeclaration(scenario, (declaration) => { declaration.predicateSource = { kind: 'judge', column: 'MappingConfidence', table: {} }; }),
-		regex: /predicateSource\.kind 'judge' is not one of: column, labelTable, channelAssertion/,
+		regex: /kind 'judge' carries no column, no table and no predicate/,
 		twinName: 'disableKindCheck', fileName: CONTRACT_FILE, find: KIND_CHECK_FIND, replace: KIND_CHECK_REPLACE,
 	}),
 	refusalCase({
@@ -141,7 +176,7 @@ conjunctList.push(
 // closed-value check would refuse 'structural' first; so this conjunct's shape mutates the closed list too (a
 // registry double: PRODUCER_KIND_LIST gains 'structural' for the run) — a scenario mutation on the framework
 conjunctList[conjunctList.length - 1].evaluate = ((innerEvaluate) => (scenario, callback) => {
-	scenario.frameworkMutationList.push({ modulePath: path.join(scenarioLib.FRAMEWORK_DIR, CONTRACT_FILE), find: "const PRODUCER_KIND_LIST = Object.freeze(['authored']);", replace: "const PRODUCER_KIND_LIST = Object.freeze(['authored', 'structural']);" });
+	scenario.frameworkMutationList.push({ modulePath: path.join(scenarioLib.FRAMEWORK_DIR, CONTRACT_FILE), find: "const PRODUCER_KIND_LIST = Object.freeze(['authored', 'inferred']);", replace: "const PRODUCER_KIND_LIST = Object.freeze(['authored', 'inferred', 'structural']);" });
 	scenario.pluginModuleOverrides = scenario.pluginModuleOverrides || {};
 	const loaded = require(path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyStandardPlugin.js'));
 	const bridgeDeclaration = cloneJson(loaded.bridgeDeclaration);
@@ -242,8 +277,14 @@ runGateFamily(
 		twinRegistry,
 		makeSubject: scenarioLib.makeScenario,
 		cloneSubject: scenarioLib.cloneScenario,
-		expectedConjunctCount: requiredKeyList.length + 18,
-		expectedTwinCount: requiredKeyList.length + 18,
+		// ⟪LITERAL, NOT DERIVED — RULING BR3-6 applied properly, GRANITE_VALLEY 2026-08-17⟫ These were
+		// `requiredKeyList.length + 18`, which is a count DERIVED FROM THE SAME QUANTITY THE GENERATOR USES.
+		// When two keys stopped being `required: true`, requiredKeyList shrank, the EXPECTATION shrank with it,
+		// and a family that had quietly lost two conjuncts still reported 36/36 ALL GREEN. A guard that moves
+		// with the thing it guards is not a guard. The number is now a LITERAL: any change to the contract's
+		// key set must come here and be justified, which is the whole point of declaring a count.
+		expectedConjunctCount: 38,
+		expectedTwinCount: 38,
 	},
 	() => harness.report(),
 );

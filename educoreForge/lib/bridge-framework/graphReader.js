@@ -152,10 +152,37 @@ const graphReaderFactory = ({ inGraph, dependencyStandardNameList, sourceStandar
 		return graphSeamRulesLib.closedView(makeView({ shapeRecord: (oneRecord) => graphSeamRulesLib.walkRecordFor({ record: oneRecord, blindingDeclaration, channelPropertyList }), shapeEdge: (oneEdge) => graphSeamRulesLib.walkEdgeFor({ edge: oneEdge, blindingDeclaration, channelPropertyList }) }));
 	};
 	const forEvidence = () => graphSeamRulesLib.closedView(makeView({ shapeRecord: (oneRecord) => graphSeamRulesLib.blindedRecordFor({ record: oneRecord, blindingDeclaration }), shapeEdge: (oneEdge) => graphSeamRulesLib.blindedEdgeFor({ edge: oneEdge, blindingDeclaration }) }));
+
+	// forRetrieval — the PURPOSE-SCOPED vector view (RULING §11.4). It is the ONLY path in the framework that
+	// yields an embedding, it yields NOTHING but { stableId, embedding, embeddingModelVersion }, and it is a
+	// different closed shape from the evidence view, so the renderer cannot reach a vector and retrieval cannot
+	// reach a definition. These are the reader's own reads and deliberately do NOT go through readSourceRecords
+	// (which strips the vector by design, RULING 12:05 #2) or readHubCards (which now drops it, §11.4).
+	const forRetrieval = () =>
+		graphSeamRulesLib.closedRetrievalView({
+			readHubVectors: ({ referenceTier } = {}, callback) => {
+				pagedNodeRead(
+					{ cypher: `MATCH (n:${graphSeamRulesLib.HUB_REFERENCE_LABEL}) WHERE n.referenceTier = $referenceTier RETURN n ORDER BY n.stableId SKIP $skip LIMIT $limit`, parameters: { referenceTier } },
+					(readError, rawRecordList) => (readError ? callback(readError) : callback('', rawRecordList.map(graphSeamRulesLib.retrievalRecordFor))),
+				);
+			},
+			readSubjectVectors: ({ label } = {}, callback) => {
+				// the label is DATA from the declaration and is re-validated HERE, at the I/O boundary, because a
+				// label reaches cypher by interpolation and cannot be a bound parameter
+				if (typeof label !== 'string' || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(label)) {
+					callback(`${moduleName}: readSubjectVectors label ${JSON.stringify(label)} is not a graph label`);
+					return;
+				}
+				pagedNodeRead(
+					{ cypher: `MATCH (n:${label}) WHERE n._source = $sourceStandardName RETURN n ORDER BY n.stableId SKIP $skip LIMIT $limit`, parameters: { sourceStandardName } },
+					(readError, rawRecordList) => (readError ? callback(readError) : callback('', rawRecordList.map(graphSeamRulesLib.retrievalRecordFor))),
+				);
+			},
+		});
 	const close = (callback) => {
 		driver.close().then(() => callback('')).catch((closeError) => callback(`${moduleName}: driver close: ${closeError.message}`));
 	};
-	return graphSeamRulesLib.closedReader({ readHubCards, readSubjectNodes, forWalk, forEvidence, close });
+	return graphSeamRulesLib.closedReader({ readHubCards, readSubjectNodes, forWalk, forEvidence, forRetrieval, close });
 };
 
 module.exports = { graphReaderFactory, moduleName };

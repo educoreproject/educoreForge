@@ -442,6 +442,12 @@ const SSSOM_JUSTIFICATIONS = [
 	'semapv:ManualMappingCuration', // resolution: specified — a person named it and it resolves to one card
 	'semapv:CompositeMatching', // resolution: judged — an algorithm chose, at any matchBasis
 	'semapv:MappingReview', // a human reviewed and confirmed a previously judged mapping
+	// ADOPTED 2026-08-17 by RULING §11.7 (b). Profile §4.2 carried this term as "Reserved and currently
+	// unused" and stated that adopting one is "a SPECIFICATION CHANGE, not an implementation choice" — so it
+	// is recorded here as a change, with its authority, rather than quietly appended. It is the justification
+	// for a mapping whose candidates were proposed by SEMANTIC SIMILARITY above a declared threshold, which
+	// is precisely what a derived producer does and what none of the three above describes.
+	'semapv:SemanticSimilarityThresholdMatching',
 ];
 // BANNED BY NAME (Profile §4.2): 'semapv:UnspecifiedMatching' means "the reason was not recorded" and a
 // forge MUST NOT emit it. It is listed here, separately, so the ban is VISIBLE in the refusal a caller
@@ -461,7 +467,7 @@ const sssomJustificationRefusal = (oneJustification) => {
 	if (SSSOM_JUSTIFICATIONS.indexOf(oneJustification) === -1) {
 		return (
 			`mapping_justification ${JSON.stringify(oneJustification)} is not in the SSSOM_JUSTIFICATIONS ` +
-			`allowlist (${SSSOM_JUSTIFICATIONS.join(', ')}); Profile §4.2 names those three and no other.`
+			`allowlist (${SSSOM_JUSTIFICATIONS.join(', ')}); Profile §4.2 as amended names those and no other.`
 		);
 	}
 	return '';

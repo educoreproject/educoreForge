@@ -64,6 +64,14 @@ const COLUMN_LIST = Object.freeze([
 ]);
 const isPlainObject = (candidate) => candidate !== null && typeof candidate === 'object' && !Array.isArray(candidate);
 const isNonEmptyString = (value) => typeof value === 'string' && value.length > 0;
+// SSSOM_SET_SLOT_DISPOSITION_BY_PRODUCER_KIND — which set-level slots each producer carries, as data. Same
+// idiom as the write seam's EDGE_PROVIDER_DISPOSITION_BY_PRODUCER_KIND, so the graph edge and the SSSOM row
+// cannot drift into disagreeing about whether a mapping had a provider (RULING §11.7 (c)(d), amended 2026-08-17).
+const SSSOM_SET_SLOT_DISPOSITION_BY_PRODUCER_KIND = Object.freeze({
+	authored: Object.freeze({ mappingProvider: 'required', mappingTool: 'absent', subjectMatchField: 'required' }),
+	inferred: Object.freeze({ mappingProvider: 'forbidden', mappingTool: 'required', subjectMatchField: 'omitted' }),
+});
+
 const prefixOf = (curie) => (typeof curie === 'string' && curie.indexOf(':') > 0 ? curie.slice(0, curie.indexOf(':')) : null);
 const tsvCell = (value) => (value === undefined || value === null ? '' : String(value).replace(/[\t\r\n]/g, ' '));
 
@@ -81,20 +89,47 @@ const toSssomTsv = ({ decisionBlock, decisionBlockHash, cardByStableId, curieMap
 		refuseWith('curieMap, setLevelSlots and cardByStableId must be objects', 'declare every non-built-in prefix and the set-level slots');
 		return;
 	}
-	const provider = setLevelSlots.mappingProvider;
-	if (!isPlainObject(provider) || !isNonEmptyString(provider.url)) {
-		refuseWith('setLevelSlots.mappingProvider.url is absent', 'mapping_provider is a set-level slot (BR-041)');
+	// SET-LEVEL SLOTS ARE CONDITIONAL BY producerKind (RULING §11.7 (c)(d), as amended 2026-08-17). An AUTHORED
+	// set names its mapping_provider — who asserted these mappings — and the export refuses until that URL has
+	// been verified to resolve. An INFERRED set has no provider at all (nobody asserted them) and names its
+	// mapping_tool instead: the PRODUCER at set level. subject_match_field is OMITTED for an inferred set —
+	// Profile §4.5 never defines it for derived, and a derived subject matched on no field, it matched on
+	// meaning. Row-level mapping_tool remains the JUDGE for both producers and OVERRIDES the set-level value,
+	// which is legal SSSOM and is exactly the distinction wanted: the set says what produced the mappings, the
+	// row says what decided this one.
+	const exportProducerKind = decisionBlock.header.producerKind;
+	const setSlotDisposition = SSSOM_SET_SLOT_DISPOSITION_BY_PRODUCER_KIND[exportProducerKind];
+	if (setSlotDisposition === undefined) {
+		refuseWith(`the block's producerKind '${exportProducerKind}' names no SSSOM set-slot disposition`, `every producerKind declares which set-level slots it carries (${Object.keys(SSSOM_SET_SLOT_DISPOSITION_BY_PRODUCER_KIND).join(', ')})`);
 		return;
 	}
-	if (provider.verifiedBy === null || provider.verifiedBy === undefined) {
-		refuseWith(`mappingProvider ${provider.url} is not recorded as verified-to-resolve (verifiedBy null)`, 'the builder verifies the URL and records { sessionName, date, note }; the export refuses until then — never a placeholder (RULING P7)');
+	const provider = setLevelSlots.mappingProvider;
+	if (setSlotDisposition.mappingProvider === 'required') {
+		if (!isPlainObject(provider) || !isNonEmptyString(provider.url)) {
+			refuseWith('setLevelSlots.mappingProvider.url is absent', 'mapping_provider is a set-level slot (BR-041)');
+			return;
+		}
+		if (provider.verifiedBy === null || provider.verifiedBy === undefined) {
+			refuseWith(`mappingProvider ${provider.url} is not recorded as verified-to-resolve (verifiedBy null)`, 'the builder verifies the URL and records { sessionName, date, note }; the export refuses until then — never a placeholder (RULING P7)');
+			return;
+		}
+	} else if (provider !== undefined && provider !== null) {
+		refuseWith(`an '${exportProducerKind}' mapping set carries a mappingProvider (${JSON.stringify(provider)})`, 'nobody AUTHORED an inferred mapping; mapping_provider is ABSENT and mapping_tool names the producer (RULING §11.7 (c))');
+		return;
+	}
+	if (setSlotDisposition.mappingTool === 'required' && !isNonEmptyString(setLevelSlots.mappingTool)) {
+		refuseWith(`an '${exportProducerKind}' mapping set needs setLevelSlots.mappingTool`, 'the tool that produced the mappings, named once at set level (RULING §11.7 (c)); the per-row mapping_tool is the JUDGE and overrides it');
 		return;
 	}
 	if (setLevelSlots.mappingDate !== undefined && setLevelSlots.mappingDate !== null) {
 		refuseWith('a mapping_date was supplied but no source column supplies one in v1', 'mapping_date is DATA from the source only, never minted (BR-053, Profile §4.6)');
 		return;
 	}
-	const requiredSlotList = ['subjectSource', 'subjectSourceVersion', 'objectSource', 'objectSourceVersion', 'subjectMatchField', 'objectMatchField', 'subjectCuriePrefix'];
+	const requiredSlotList = ['subjectSource', 'subjectSourceVersion', 'objectSource', 'objectSourceVersion', 'objectMatchField', 'subjectCuriePrefix'].concat(setSlotDisposition.subjectMatchField === 'required' ? ['subjectMatchField'] : []);
+	if (setSlotDisposition.subjectMatchField !== 'required' && isNonEmptyString(setLevelSlots.subjectMatchField)) {
+		refuseWith(`an '${exportProducerKind}' mapping set carries subject_match_field '${setLevelSlots.subjectMatchField}'`, 'a derived subject matched on MEANING, not on a field; Profile §4.5 does not define the slot for it, so it is OMITTED (RULING §11.7 (d))');
+		return;
+	}
 	const missingSlot = requiredSlotList.find((oneName) => !isNonEmptyString(setLevelSlots[oneName]));
 	if (missingSlot !== undefined) {
 		refuseWith(`setLevelSlots.${missingSlot} is absent`, 'every propagatable slot is stated once at set level');
@@ -113,7 +148,7 @@ const toSssomTsv = ({ decisionBlock, decisionBlockHash, cardByStableId, curieMap
 		refuseWith(subjectPrefixRefusal, 'curie_map declares every non-built-in prefix (Profile §4.6)');
 		return;
 	}
-	const matchFieldPrefixList = String(setLevelSlots.subjectMatchField).split('|').concat(String(setLevelSlots.objectMatchField).split('|'));
+	const matchFieldPrefixList = (setSlotDisposition.subjectMatchField === 'required' ? String(setLevelSlots.subjectMatchField).split('|') : []).concat(String(setLevelSlots.objectMatchField).split('|'));
 	const undeclaredMatchField = matchFieldPrefixList.map((oneField) => prefixRefusal(oneField, 'match_field')).find((oneReason) => oneReason !== '');
 	if (undeclaredMatchField !== undefined) {
 		refuseWith(undeclaredMatchField, 'subject_match_field / object_match_field prefixes are declared in curie_map');
@@ -189,8 +224,16 @@ const toSssomTsv = ({ decisionBlock, decisionBlockHash, cardByStableId, curieMap
 		...Object.keys(effectiveCurieMap)
 			.sort()
 			.map((onePrefix) => `#  ${onePrefix}: ${yamlScalar(effectiveCurieMap[onePrefix])}`),
-		`#mapping_provider: ${yamlScalar(provider.url)}`,
-		`#mapping_provider_verified_by: ${yamlScalar(`${provider.verifiedBy.sessionName} ${provider.verifiedBy.date} — ${provider.verifiedBy.note}`)}`,
+		// the provider lines appear ONLY for a producer whose row requires a provider; an inferred set names its
+		// mapping_tool in their place. Spread-in rather than emitted-empty: an omitted SSSOM slot is omitted,
+		// never present-and-blank (RULING §11.7 (c), amended 2026-08-17).
+		...(setSlotDisposition.mappingProvider === 'required'
+			? [
+					`#mapping_provider: ${yamlScalar(provider.url)}`,
+					`#mapping_provider_verified_by: ${yamlScalar(`${provider.verifiedBy.sessionName} ${provider.verifiedBy.date} — ${provider.verifiedBy.note}`)}`,
+				]
+			: []),
+		...(setSlotDisposition.mappingTool === 'required' ? [`#mapping_tool: ${yamlScalar(setLevelSlots.mappingTool)}`] : []),
 		`#mapping_set_id: ${yamlScalar(mappingSetId)}`,
 		'#extension_definitions:',
 		...extensionDefinitionList.reduce((soFar, oneDefinition) => soFar.concat([`#  - slot_name: ${yamlScalar(oneDefinition.slot_name)}`, `#    property: ${yamlScalar(oneDefinition.property)}`, `#    type_hint: ${yamlScalar(oneDefinition.type_hint)}`]), []),

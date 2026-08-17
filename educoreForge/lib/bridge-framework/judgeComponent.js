@@ -28,7 +28,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
 const path = require('path');
 const refuse = require(path.join(__dirname, '..', 'forge-framework', 'refuse'));
-const { RENDERER_VERSION, ABSTAIN_TOKEN } = require('./evidenceRenderer');
+const { ABSTAIN_TOKEN } = require('./evidenceRenderer');
 const { confidenceForCategory, ABSTAIN_CATEGORY, PICK_CATEGORY_LIST } = require('./confidenceBandTable');
 
 const ORDINAL_RATIONALE_RE = /\b(candidate|option|choice)\s+#?\d+\b/i;
@@ -102,6 +102,16 @@ const judgeOne = ({ question, judgeClient, judgmentCache, matchForensics, budget
 		callback(refuse.byName({ moduleName, what: 'question is not a renderQuestion result', where: 'judgeOne takes { question, judgeClient, judgmentCache, matchForensics, budget, pairKey, generation, debugMark }' }).message);
 		return;
 	}
+	// The renderer version comes FROM THE QUESTION, not from a module constant (RULING §11.1: each rendering
+	// variant carries its own version). It is half of the judgment-cache key and it is stamped on every
+	// forensic record, so a run whose question could not name its renderer would silently file its judgments
+	// under another variant's version. NAMED DEVIATION from PLAN §0's "judgeComponent.js is UNCHANGED": no
+	// judging behaviour moves — not the ordinal mapping, not ORDINAL_RATIONALE_RE, not the one re-ask, not the
+	// abstention normalisation, not the band table. Only the provenance stamp stops being a constant.
+	if (typeof question.rendererVersion !== 'string' || question.rendererVersion === '') {
+		callback(refuse.byName({ moduleName, what: 'the question carries no rendererVersion', where: 'renderQuestion returns the version of the variant that rendered it; it is the cache key half and the forensic stamp — there is no default' }).message);
+		return;
+	}
 	if (!judgeClient || typeof judgeClient.rerank !== 'function' || typeof judgeClient.model !== 'string') {
 		callback(refuse.byName({ moduleName, what: 'judgeClient is absent or does not answer rerank / carry model', where: 'spec.inferenceConfig.llmClient — the real Anthropic client or the debug judge (build.js resolveInferenceConfig)' }).message);
 		return;
@@ -119,7 +129,7 @@ const judgeOne = ({ question, judgeClient, judgmentCache, matchForensics, budget
 		callback(refuse.byName({ moduleName, what: 'matchForensics is absent or lacks appendRecord', where: 'every judgment lands in the forensic trail (BR-122)' }).message);
 		return;
 	}
-	const cacheKey = { promptHash: question.promptHash, model: judgeClient.model, rendererVersion: RENDERER_VERSION };
+	const cacheKey = { promptHash: question.promptHash, model: judgeClient.model, rendererVersion: question.rendererVersion };
 
 	const deliver = ({ judgment, cacheHit, attempts, usage }) => {
 		matchForensics.appendRecord(
@@ -128,7 +138,7 @@ const judgeOne = ({ question, judgeClient, judgmentCache, matchForensics, budget
 				generation,
 				record: {
 					promptHash: question.promptHash,
-					rendererVersion: RENDERER_VERSION,
+					rendererVersion: question.rendererVersion,
 					judgeModel: judgeClient.model,
 					decisionAlgorithm: judgeClient.decisionAlgorithm === undefined ? null : judgeClient.decisionAlgorithm,
 					systemPrompt: question.systemPrompt,
@@ -184,7 +194,7 @@ const judgeOne = ({ question, judgeClient, judgmentCache, matchForensics, budget
 						{
 							pairKey,
 							generation,
-							record: { promptHash: question.promptHash, rendererVersion: RENDERER_VERSION, judgeModel: judgeClient.model, decisionAlgorithm: judgeClient.decisionAlgorithm === undefined ? null : judgeClient.decisionAlgorithm, systemPrompt: question.systemPrompt, userPrompt, renderedPoolStableIdList: question.renderedPoolStableIdList, choice: clientReturn.choice, chosenCardStableId: null, category: clientReturn.category, rationale: clientReturn.rationale, confidence: null, cacheHit: false, attempts: clientReturn.attempts, usage: clientReturn.usage === undefined ? null : clientReturn.usage, refusedAttempt: judged.error.message, reaskFollows: true },
+							record: { promptHash: question.promptHash, rendererVersion: question.rendererVersion, judgeModel: judgeClient.model, decisionAlgorithm: judgeClient.decisionAlgorithm === undefined ? null : judgeClient.decisionAlgorithm, systemPrompt: question.systemPrompt, userPrompt, renderedPoolStableIdList: question.renderedPoolStableIdList, choice: clientReturn.choice, chosenCardStableId: null, category: clientReturn.category, rationale: clientReturn.rationale, confidence: null, cacheHit: false, attempts: clientReturn.attempts, usage: clientReturn.usage === undefined ? null : clientReturn.usage, refusedAttempt: judged.error.message, reaskFollows: true },
 						},
 						(forensicsError) => {
 							if (forensicsError) {

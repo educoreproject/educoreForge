@@ -1,0 +1,36 @@
+{
+  // edfiDerivedEval — the EVALUATION recipe for the DERIVED producer: Ed-Fi and the CEDS hub ONLY, no PESC,
+  // no SIF. Two standards instead of four because this recipe is BUILT REPEATEDLY during D2/D3 and the other
+  // two contribute nothing a retrieval run can use: the pool is drawn from CEDS hub cards and the subjects
+  // are Ed-Fi nodes. Keeping it small is what makes iterating on K, the floor and the prompts affordable.
+  //
+  // THE EYE GRAPH IS A DIFFERENT RECIPE (fourWithHubEdfiDerived) — this one is for measuring, that one is for
+  // looking at.
+  //
+  // IT NAMES THE DERIVED PLUGIN ONLY. The crosswalk plugin is absent BY DESIGN and that absence is
+  // load-bearing: it is half of why the truth set is unreachable (RULING §11.5). The other half is the store
+  // — this recipe's runs use their OWN decision store under system/dataStores/bridgeAcceptance/edfiDerived/,
+  // so the framework's sibling-conflict lookup finds no authored block to read and every derived edge
+  // materialises instead of being suppressed on disagreement (D0 review §G).
+  //
+  // A plain -build REPLAYS the pair's frozen block (zero judge calls); --rebridge=edfi FREEZES a new one.
+  // --useDebugJudge=digest for every gate and for the whole of D2; the REAL judge only on the supervisor's
+  // written GO, carried as DATA in the frozen command line.
+  //
+  // Builds go to NEW DEV_ containers only (GNC-001). Derived edges are never mounted anywhere without TQ.
+  "schemaVersion": "1.0.0",
+  "recipeName": "edfiDerivedEval",
+  "kind": "dev",
+  "description": "Ed-Fi and the CEDS hub only, PLUS the Ed-Fi -> CEDS DERIVED bridge plugin (edfiCedsDerivedPlugin) — the cheap evaluation build for D2/D3.",
+  "standards": [
+    { "token": "ceds", "version": "current" },
+    { "token": "edfi", "version": "current" }
+  ],
+  "hubs": [
+    { "standard": "ceds" }
+  ],
+  "bridges": [
+    { "source": "edfi", "hub": "ceds", "bridge": "edfiCedsDerivedPlugin", "dependencies": ["edfi", "ceds"] }
+  ],
+  "roundTripStage": true
+}

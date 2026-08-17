@@ -24,7 +24,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 const path = require('path');
 const vocabularyLib = require(path.join(__dirname, '..', 'vocabulary', 'vocabulary'));
 const refuse = require(path.join(__dirname, '..', 'forge-framework', 'refuse'));
-const { TUPLE_LIST_FIELD_LIST } = require('./bridgePluginContract');
+const { TUPLE_LIST_FIELD_LIST, PRODUCER_KIND_BY_MATCH_BASIS } = require('./bridgePluginContract');
 
 const { SKOS_EDGE_TYPES, SKOS_PREDICATES, MAPPING_PROPERTIES, MAPPING_PROPERTY_NAME_LIST, MAPPING_EDGE_PERMITTED_PROVENANCE_TIER_LIST, SSSOM_JUSTIFICATIONS, sssomJustificationRefusal } = vocabularyLib;
 
@@ -32,8 +32,14 @@ const HUB_REFERENCE_LABEL = 'HubReference';
 const PROPERTY_TIER = 'property';
 const CARD_LIST_SLOT_LIST = Object.freeze(TUPLE_LIST_FIELD_LIST.concat(['qualifierNames']));
 const CARD_REQUIRED_PROPERTY_LIST = Object.freeze(['stableId', 'canonicalKey', 'referenceTier', 'hubName', 'hubVersion', 'name']);
-const READER_MEMBER_LIST = Object.freeze(['readHubCards', 'readSubjectNodes', 'forWalk', 'forEvidence', 'close']);
+const READER_MEMBER_LIST = Object.freeze(['readHubCards', 'readSubjectNodes', 'forWalk', 'forEvidence', 'forRetrieval', 'close']);
 const VIEW_MEMBER_LIST = Object.freeze(['readSourceNodes', 'readNodesByStableId', 'readEdgesAmongSource']);
+// the RETRIEVAL view is PURPOSE-SCOPED and closed to exactly two reads, each returning { stableId, embedding,
+// embeddingModelVersion } and NOTHING else (RULING §11.4). It is a separate member set from VIEW_MEMBER_LIST
+// precisely so the renderer's view and the vector view can never be the same object: the renderer cannot
+// reach a vector, and retrieval cannot reach a definition.
+const RETRIEVAL_VIEW_MEMBER_LIST = Object.freeze(['readHubVectors', 'readSubjectVectors']);
+const RETRIEVAL_RECORD_KEY_LIST = Object.freeze(['stableId', 'embedding', 'embeddingModelVersion']);
 const WRITER_MEMBER_LIST = Object.freeze(['writeMappingEdge', 'close']);
 const EDGE_TYPE_BY_PREDICATE = SKOS_EDGE_TYPES;
 const PREDICATE_BY_EDGE_TYPE = Object.freeze(Object.keys(SKOS_EDGE_TYPES).reduce((soFar, onePredicate) => ({ ...soFar, [SKOS_EDGE_TYPES[onePredicate]]: onePredicate }), {}));
@@ -43,8 +49,6 @@ const EVERY_EDGE_REQUIRED_PROPERTY_LIST = Object.freeze([
 	MAPPING_PROPERTIES.MAPPING_JUSTIFICATION,
 	MAPPING_PROPERTIES.MATCH_BASIS,
 	MAPPING_PROPERTIES.RESOLUTION,
-	MAPPING_PROPERTIES.MAPPING_PROVIDER,
-	MAPPING_PROPERTIES.SUBJECT_MATCH_FIELD,
 	MAPPING_PROPERTIES.OBJECT_MATCH_FIELD,
 	MAPPING_PROPERTIES.SUBJECT_SOURCE,
 	MAPPING_PROPERTIES.SUBJECT_VERSION,
@@ -55,6 +59,33 @@ const EVERY_EDGE_REQUIRED_PROPERTY_LIST = Object.freeze([
 	MAPPING_PROPERTIES.DECISION_BLOCK_HASH,
 	MAPPING_PROPERTIES.PROVENANCE_TIER,
 ]);
+
+// EDGE_PROVIDER_DISPOSITION_BY_PRODUCER_KIND — mappingProvider is CONDITIONAL, by producerKind (RULING
+// SABLE_RIVER 2026-08-17, amending §11.7 (c)). An AUTHORED mapping has a provider: a person or an institution
+// asserted it, and naming them is the point. An INFERRED mapping has none — nobody asserted it; a machine
+// proposed candidates by meaning and a judge chose. Putting the tool's URL in the provider slot would answer
+// "who authored this?" with "nothing did", which is worse than silence, and would make the graph edge
+// disagree with its own SSSOM row (where §11.7 (c) omits mapping_provider).
+//
+// This is the SAME idiom the seam already uses one field down: confidence / mappingTool / mappingToolVersion
+// are required when `resolution` is judged and refused BY NAME when it is specified ("the key must be ABSENT,
+// not null, not 1.0"). This adds a second discriminator beside that one; both are data, neither is a branch.
+// producerKind is read off the edge's OWN matchBasis (1:1, PRODUCER_KIND_BY_MATCH_BASIS) rather than threaded
+// in, so no caller changes and the edge is judged by what it actually carries.
+// EXTENDED from a provider-only table to the full set of producer-conditional edge properties. subjectMatchField
+// is the SAME fact as mappingProvider one field over: a match FIELD is the field the two sides were matched ON,
+// and a derived mapping was matched on no field — it was matched on MEANING. RULING §11.7 (d) omits
+// subject_match_field from the SSSOM row for exactly that reason, and the 2026-08-17 ruling on mappingProvider
+// says in terms that the edge and the SSSOM row must then AGREE. Emitting it on the edge while omitting it from
+// the export would recreate the disagreement that ruling exists to prevent.
+// objectMatchField is NOT here: it stays required on every edge, because the exporter derives object_source from
+// its CURIE prefix, and for a derived run it names the mechanism (EDUcoreHub:semanticSimilarity) rather than
+// borrowing a key that was never consulted.
+const EDGE_PROPERTY_DISPOSITION_BY_PRODUCER_KIND = Object.freeze({
+	authored: Object.freeze({ mappingProvider: 'required', subjectMatchField: 'required' }),
+	inferred: Object.freeze({ mappingProvider: 'forbidden', subjectMatchField: 'forbidden' }),
+});
+const PRODUCER_CONDITIONAL_EDGE_PROPERTY_NAME_LIST = Object.freeze(['mappingProvider', 'subjectMatchField']);
 
 const isPlainObject = (candidate) => candidate !== null && typeof candidate === 'object' && !Array.isArray(candidate);
 const isNonEmptyString = (value) => typeof value === 'string' && value.length > 0;
@@ -118,6 +149,14 @@ const shapeHubCardList = ({ rawRecordList, referenceTier } = {}) => {
 		if (!Array.isArray(card.embedding) && !(typeof card.embedding === 'string' && card.embedding.length > 0)) {
 			return { error: refuse.byName({ moduleName, what: `hub card ${card.stableId} (${card.canonicalKey}) carries no embedding`, where: 'a vectorless candidate is refused; the framework never re-embeds (BR-123)' }) };
 		}
+		// The vector is CHECKED here and then DROPPED from the card object on EVERY path (RULING §11.4). The
+		// present-or-refused contract (BR-123) is unchanged — what changes is that no consumer downstream of this
+		// point can carry a vector, or the ~320-character embedText, into a prompt by accident. Retrieval reads
+		// vectors through the purpose-scoped forRetrieval() view instead, which returns nothing else.
+		// This is a CARD SHAPE change and NOT a rendered-text change: evidenceRenderer never printed either name,
+		// so the crosswalk variant's prompts stay byte-identical and its judgment cache keeps hitting (§11.8).
+		delete card.embedding;
+		delete card.embedText;
 		cardList.push(card);
 	}
 	return { cardList };
@@ -136,6 +175,53 @@ const blindedRecordFor = ({ record, blindingDeclaration }) => {
 		delete properties[oneName];
 	});
 	return { stableId: record.stableId, labels: record.labels.slice(), properties };
+};
+
+// allowListedPropertiesFor — the POSITIVE shaping (RULING §11.4). A deny-list can only exclude what somebody
+// thought of; an allow-list excludes what nobody thought of, which is the only form that can honestly be
+// called a bias audit. Given a property bag and the declared names for that side, it returns a bag carrying
+// ONLY those names. A name that is allow-listed and ABSENT is simply absent — omitted, never rendered as ''
+// and never defaulted (the Profile convention, ruled explicitly for the 3 cards lacking propertyDefinition).
+//
+// stableId is NOT a property here: it rides beside the bag as the record's identity so the framework can map a
+// pick back to a card, and the RENDERER is what refuses to print it. Keeping identity out of the rendered bag
+// is exactly why the allow-list can be complete without also being useless.
+const allowListedPropertiesFor = ({ properties, allowNameList }) => {
+	const shaped = {};
+	for (let nameIndex = 0; nameIndex < allowNameList.length; nameIndex++) {
+		const oneName = allowNameList[nameIndex];
+		const oneValue = properties[oneName];
+		if (oneValue !== undefined && oneValue !== null && oneValue !== '') {
+			shaped[oneName] = oneValue;
+		}
+	}
+	return shaped;
+};
+
+// allowListedRecordFor — forEvidence() under a declared renderingAllowList: the record keeps its stableId and
+// labels (framework identity, never rendered) and carries ONLY the allow-listed properties.
+const allowListedRecordFor = ({ record, allowNameList }) => ({
+	stableId: record.stableId,
+	labels: record.labels.slice(),
+	properties: allowListedPropertiesFor({ properties: record.properties, allowNameList }),
+});
+
+// allowListRefusal — the declared list is checked against what the element ACTUALLY carries, at read time.
+// An allow-listed name that exists on NO element of a non-empty population is a declaration that has quietly
+// stopped describing its graph — the same failure the label table's census refuses (RULING P4) — and it is
+// reported by name rather than silently rendering nothing.
+const allowListRefusal = ({ allowNameList, propertyBagList, sideName }) => {
+	if (!Array.isArray(allowNameList) || allowNameList.length === 0) {
+		return refuse.byName({ moduleName, what: `renderingAllowList.${sideName} is absent or empty at the seam`, where: 'a side that renders nothing cannot be judged; the declaration requires a non-empty list per side' });
+	}
+	if (propertyBagList.length === 0) {
+		return null;
+	}
+	const neverPresent = allowNameList.find((oneName) => !propertyBagList.some((oneBag) => oneBag[oneName] !== undefined && oneBag[oneName] !== null && oneBag[oneName] !== ''));
+	if (neverPresent !== undefined) {
+		return refuse.byName({ moduleName, what: `renderingAllowList.${sideName} names '${neverPresent}', which is present on NONE of the ${propertyBagList.length} element(s) read`, where: 'an allow-list that has stopped describing its graph must not stay green; remove the name or fix the forge' });
+	}
+	return null;
 };
 
 // walkRecordFor — forWalk(): the channel's declared properties readable UNBLINDED; any OTHER blinded name refused on read
@@ -191,6 +277,14 @@ const closedShape = ({ target, memberList, shapeName }) =>
 		},
 	});
 const closedView = (view) => closedShape({ target: view, memberList: VIEW_MEMBER_LIST, shapeName: 'sourceReader view' });
+const closedRetrievalView = (view) => closedShape({ target: view, memberList: RETRIEVAL_VIEW_MEMBER_LIST, shapeName: 'retrieval view' });
+// retrievalRecordFor — the ONLY shape the retrieval view ever yields. Built by NAMING the three keys rather
+// than by deleting the rest, so a property added to the graph tomorrow cannot appear here by omission.
+const retrievalRecordFor = (record) => ({
+	stableId: record.stableId,
+	embedding: record.properties.embedding,
+	embeddingModelVersion: record.properties.embeddingModelVersion,
+});
 // closedHookArgs — the argument object handed to a plugin hook: exactly its own keys, nothing else (no judge, no store, no writer)
 const closedHookArgs = (hookArgs) => closedShape({ target: hookArgs, memberList: Object.keys(hookArgs), shapeName: 'hook argument object' });
 const closedReader = (reader) => closedShape({ target: reader, memberList: READER_MEMBER_LIST, shapeName: 'graphReader' });
@@ -214,6 +308,22 @@ const mappingEdgeRefusal = ({ subjectStableId, objectStableId, edgeType, edgePro
 	const missing = EVERY_EDGE_REQUIRED_PROPERTY_LIST.find((oneName) => edgeProperties[oneName] === undefined || edgeProperties[oneName] === null || edgeProperties[oneName] === '');
 	if (missing !== undefined) {
 		return refuse.byName({ moduleName, what: `writeMappingEdge: edge property '${missing}' is absent`, where: 'every mapping edge carries the three properties, the hash, the sources/versions and the provenance (§5.7, BG-THREE)' });
+	}
+	const edgeProducerKind = PRODUCER_KIND_BY_MATCH_BASIS[edgeProperties.matchBasis];
+	const dispositionRow = EDGE_PROPERTY_DISPOSITION_BY_PRODUCER_KIND[edgeProducerKind];
+	if (dispositionRow === undefined) {
+		return refuse.byName({ moduleName, what: `writeMappingEdge: matchBasis '${edgeProperties.matchBasis}' names no producerKind, so the producer-conditional edge properties have no disposition`, where: 'PRODUCER_KIND_BY_MATCH_BASIS and EDGE_PROPERTY_DISPOSITION_BY_PRODUCER_KIND must both carry a row for every basis' });
+	}
+	for (let nameIndex = 0; nameIndex < PRODUCER_CONDITIONAL_EDGE_PROPERTY_NAME_LIST.length; nameIndex++) {
+		const oneName = PRODUCER_CONDITIONAL_EDGE_PROPERTY_NAME_LIST[nameIndex];
+		const disposition = dispositionRow[oneName];
+		const oneValue = edgeProperties[oneName];
+		if (disposition === 'required' && (oneValue === undefined || oneValue === null || oneValue === '')) {
+			return refuse.byName({ moduleName, what: `writeMappingEdge: an '${edgeProducerKind}' edge lacks '${oneName}'`, where: 'an authored mapping names WHO asserted it and WHAT FIELD it matched on; both are required on every authored edge (§5.7, BG-THREE)' });
+		}
+		if (disposition === 'forbidden' && Object.prototype.hasOwnProperty.call(edgeProperties, oneName)) {
+			return refuse.byName({ moduleName, what: `writeMappingEdge: an '${edgeProducerKind}' edge carries '${oneName}' (${JSON.stringify(oneValue)})`, where: 'nobody AUTHORED an inferred mapping and it matched on no FIELD — the key must be ABSENT, not null, not a borrowed one; the producer is named by producerKind and provenanceTier (RULING 2026-08-17 amending §11.7 (c)(d))' });
+		}
 	}
 	if (SKOS_PREDICATES.indexOf(edgeProperties.predicate) === -1) {
 		return refuse.byName({ moduleName, what: `writeMappingEdge: predicate '${edgeProperties.predicate}' is not SKOS`, where: 'SKOS_PREDICATES' });
@@ -271,8 +381,12 @@ module.exports = {
 	CARD_REQUIRED_PROPERTY_LIST,
 	READER_MEMBER_LIST,
 	VIEW_MEMBER_LIST,
+	RETRIEVAL_VIEW_MEMBER_LIST,
+	RETRIEVAL_RECORD_KEY_LIST,
 	WRITER_MEMBER_LIST,
 	EVERY_EDGE_REQUIRED_PROPERTY_LIST,
+	EDGE_PROPERTY_DISPOSITION_BY_PRODUCER_KIND,
+	PRODUCER_CONDITIONAL_EDGE_PROPERTY_NAME_LIST,
 	JUDGED_ONLY_PROPERTY_LIST,
 	PREDICATE_BY_EDGE_TYPE,
 	readerConstructionRefusal,
@@ -281,6 +395,11 @@ module.exports = {
 	shapeHubCardList,
 	withoutEmbedding,
 	blindedRecordFor,
+	allowListedPropertiesFor,
+	allowListedRecordFor,
+	allowListRefusal,
+	retrievalRecordFor,
+	closedRetrievalView,
 	walkRecordFor,
 	blindedEdgeFor,
 	walkEdgeFor,

@@ -31,13 +31,27 @@ const PREDICATE_SOURCE_KIND_REGISTRY = Object.freeze({
 	column: Object.freeze({ readsTable: true, rowFor: tableRowFor, provenanceOf: (predicateSource) => predicateSource.table, provenanceSlotName: 'labelTableProvenance' }),
 	labelTable: Object.freeze({ readsTable: true, rowFor: tableRowFor, provenanceOf: (predicateSource) => predicateSource.table, provenanceSlotName: 'labelTableProvenance' }),
 	channelAssertion: Object.freeze({ readsTable: false, rowFor: () => null, provenanceOf: (predicateSource) => predicateSource, provenanceSlotName: 'channelAssertionProvenance' }),
+	// judge — the relation comes from the JUDGE, through the plugin's declared predicateByCategory table
+	// (RULING §11.7 (a)). readsTable is FALSE in this registry's sense: there is no per-ROW label to look up,
+	// because a derived subject has no source row. The set-level provenance it exports is the RULE ITSELF —
+	// the category→predicate table plus the name of the rule — so a reader of the SSSOM can see exactly what
+	// turned a confidence category into a relation, and see that it was an approximation.
+	judge: Object.freeze({
+		readsTable: false,
+		rowFor: () => null,
+		provenanceOf: (predicateSource) => predicateSource,
+		provenanceSlotName: 'predicateRuleProvenance',
+	}),
 });
 
 const labelRowFor = ({ predicateSource, assertion } = {}) => {
 	const predicateAssertedBy = PREDICATE_ASSERTED_BY_BY_SOURCE_KIND[predicateSource.kind];
 	const kindRow = PREDICATE_SOURCE_KIND_REGISTRY[predicateSource.kind];
 	if (!kindRow.readsTable) {
-		return { disposition: 'predicate', predicate: predicateSource.predicate, predicateAssertedBy, sourceLabel: null };
+		// channelAssertion names ONE predicate for every row. The judge kind names none here BY DESIGN — its
+		// relation is resolved after the judgment, from the category, in the framework's pick-predicate
+		// resolver — so it yields a null predicate rather than a wrong one.
+		return { disposition: 'predicate', predicate: predicateSource.predicate === undefined ? null : predicateSource.predicate, predicateAssertedBy, sourceLabel: null };
 	}
 	const rawLabel = assertion.sourceLabelByColumn === undefined ? undefined : assertion.sourceLabelByColumn[predicateSource.column];
 	const sourceLabel = rawLabel === undefined || rawLabel === null ? '' : String(rawLabel);

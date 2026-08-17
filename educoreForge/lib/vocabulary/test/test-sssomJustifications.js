@@ -4,7 +4,7 @@
 // test-sssomJustifications.js — the gate for the SSSOM mapping_justification enum (root-and-branch
 // reset Phase 4, K1; RULINGS-supervisor-phase2.md §5 item 7). AUTHORITY: SPEC-educoreBridgeProfile-v1.0.md
 // §4.2 — three active terms, one banned by name. This locks:
-//   (a) each of the Profile's three terms is VALID;
+//   (a) each of the Profile's four terms is VALID;
 //   (b) the pre-reset invalid term (not an SSSOM/SEMAPV term at all) is INVALID — refused as
 //       "not in the allowlist"; the literal lives HERE, and only here, so the whole tree greps clean;
 //   (c) semapv:UnspecifiedMatching is REFUSED BY NAME with the BANNED message, which is a DIFFERENT
@@ -25,7 +25,7 @@ NAME
 SYNOPSIS
      ${moduleName} [-verbose] [-quiet] [-help]
 DESCRIPTION
-     Locks SSSOM_JUSTIFICATIONS to the Profile's three active terms, refuses the pre-reset invalid
+     Locks SSSOM_JUSTIFICATIONS to the Profile's four active terms, refuses the pre-reset invalid
      term as not-in-allowlist, and refuses semapv:UnspecifiedMatching BY NAME (a distinct message).
      Pure.
 EXIT STATUS
@@ -42,7 +42,11 @@ const { TERM_DEFINITIONS } = require('../vocabulary-definitions');
 // (the supervisor's tree-wide zero-count check excludes exactly this test's own literal).
 const PRE_RESET_INVALID_TERM = 'semapv:SemanticSimilarity';
 const BANNED_TERM = 'semapv:UnspecifiedMatching';
-const PROFILE_TERMS = ['semapv:ManualMappingCuration', 'semapv:CompositeMatching', 'semapv:MappingReview'];
+// AMENDED 2026-08-17 by RULING §11.7 (b): semapv:SemanticSimilarityThresholdMatching is ADOPTED for a derived
+// (retrieval-proposed) mapping. The Profile itself called adopting a reserved term "a specification change,
+// not an implementation choice", so this list moves ONLY with a ruling — which is why the count is asserted
+// below by a literal and this comment names the authority. It was three; it is four.
+const PROFILE_TERMS = ['semapv:ManualMappingCuration', 'semapv:CompositeMatching', 'semapv:MappingReview', 'semapv:SemanticSimilarityThresholdMatching'];
 
 // =====================================================================
 harness.section('(a) each of the Profile §4.2 active terms is VALID');
