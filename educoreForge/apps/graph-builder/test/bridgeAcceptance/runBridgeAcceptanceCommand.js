@@ -178,9 +178,22 @@ if (typeof entry.standardKey !== 'string' || entry.standardKey.length === 0) {
 // Enlarging a released batch therefore still requires editing THIS FILE — a visible, reviewable act — and a
 // plugin with no row is REFUSED BY NAME rather than defaulted, because a batch size nobody chose is precisely
 // what this guard exists to prevent.
+//   pescCedsDerivedPlugin — 10 means TEN JUDGED SUBJECTS, the same quantity as edfiCedsDerivedPlugin and NOT
+//                           the SIF quantity. The reason is mechanical rather than incidental: this plugin
+//                           declares a `scopeStableIdListPath` of 2,213 subjects, and [code fact] --limit is
+//                           APPLIED AFTER the standard-specific scope (help.js --limit/--offset, with the SIF
+//                           sifObjectScope worked example). So the window selects ten of the 2,213 SCOPED
+//                           subjects, not ten of the 17,491 nodes carrying the label.
+//                           MEASURED, not reasoned: over the exact ten subjects this window selects (sorted by
+//                           subject key, so the window is deterministic), the debug census block records TEN
+//                           reaching a judge and ZERO orphans — predicted real judge calls, 10.
+//                           forges/pesc260805/test/probes/p3_batchSizingArithmetic.js states and retains the
+//                           arithmetic. The careful-looking error it avoids: dividing by the scope share
+//                           (2,213/17,491) gives ~79 and would have oversized the batch roughly EIGHTFOLD.
 const D3_BATCH_SIZE_BY_BRIDGE_NAME = Object.freeze({
 	edfiCedsDerivedPlugin: 10,
 	sifCedsStandardPlugin: 70,
+	pescCedsDerivedPlugin: 10,
 });
 const releasedBatchSize = D3_BATCH_SIZE_BY_BRIDGE_NAME[bridgeName];
 if (lineName === 'rejudgeRealLimit' && !Number.isInteger(releasedBatchSize)) {
