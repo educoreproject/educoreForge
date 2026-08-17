@@ -328,7 +328,15 @@ lineList.push('');
 lineList.push(`- block: \`${blockRead.blockId}\` (**PARTIAL** — \`${header.sourceWindow}\`)`);
 lineList.push(`- window: \`--limit=${batchSize} --offset=${offsetValue}\`, subjects sorted by stableId so the window is reproducible`);
 lineList.push(`- judge: \`${header.judgeKind}\` · renderer \`${header.rendererVersion}\` · predicate rule \`${header.predicateRule}\``);
-lineList.push(`- retrieval: K ${header.candidateRetrieval.k}, floor ${header.candidateRetrieval.floor}, \`${header.candidateRetrieval.embeddingModelVersion}\``);
+// candidateRetrieval is NULL FOR A KEY-FILTERED POOL and that is not a defect — it is the declared shape for
+// a plugin whose candidates come from the canonicalKey index rather than from vector retrieval (SIF's pool
+// producer is canonicalKeyIndex; the derived plugin's is vectorRetrieval). This line used to read
+// header.candidateRetrieval.k unconditionally and CRASHED on the first standard-declared plugin to reach it.
+// The absence is STATED rather than skipped: a missing "retrieval:" line would read as an omission, whereas
+// naming the key-filtered pool tells the reader there is no K, no floor and no embedding model BY DESIGN.
+lineList.push(header.candidateRetrieval === null || header.candidateRetrieval === undefined
+	? '- retrieval: NONE — this plugin\'s candidate pool is KEY-FILTERED (pool producer `canonicalKeyIndex`), so there is no K, no cosine floor and no embedding model to report. The pool is every hub card carrying the declared canonicalKey, which is why a "retrieval miss" is not a possible outcome here and a rendering tie is the only way the page can mislead the judge.'
+	: `- retrieval: K ${header.candidateRetrieval.k}, floor ${header.candidateRetrieval.floor}, \`${header.candidateRetrieval.embeddingModelVersion}\``);
 lineList.push('');
 lineList.push('## Mechanical clean-checklist');
 lineList.push('');
@@ -416,7 +424,30 @@ recordList.forEach((oneRecord, recordIndex) => {
 	lineList.push('');
 });
 
-const outPath = path.join(path.dirname(entry.decisionStoreFilePath), 'batches', `batch-${offsetValue}.md`);
+// ⟪THE SAME SILENT-WRONG-ARTIFACT HAZARD, ON A SECOND AXIS — TWILIGHT_VALLEY 2026-08-17⟫ The guard above
+// checks the OFFSET the caller claimed against the block's own sourceWindow, which is right and caught a real
+// defect. It does NOT catch two windows at the SAME offset that differ by LIMIT — and B4 has exactly that:
+// PARTIAL_WINDOW_limit10_offset0 and PARTIAL_WINDOW_limit70_offset0 are different windows, different blocks,
+// different judgments, and both name themselves "offset 0". Writing the second over the first would leave a
+// file that "simply became a document about a different window wearing the old window's name", which is the
+// hazard this file already records in its own words one screen above.
+//
+// So: --documentName lets the caller NAME the document (the supervisor asked for batch-0.md and batch-1.md,
+// which are two windows at one offset), and an existing file that documents a DIFFERENT block is REFUSED BY
+// NAME rather than overwritten. Re-running the same block over its own document is still allowed — that is a
+// regeneration, not a collision.
+const documentNameValue = firstValue('documentName');
+if (documentNameValue !== undefined && !/^[A-Za-z0-9_-]+$/.test(documentNameValue)) {
+	refuse(`--documentName must be a token of [A-Za-z0-9_-] (got ${JSON.stringify(documentNameValue)})`);
+}
+const outPath = path.join(path.dirname(entry.decisionStoreFilePath), 'batches', `${documentNameValue === undefined ? `batch-${offsetValue}` : documentNameValue}.md`);
+if (fs.existsSync(outPath)) {
+	const existingText = fs.readFileSync(outPath, 'utf8');
+	const existingBlockMatch = existingText.match(/block: `([0-9a-f]{64})`/);
+	if (existingBlockMatch !== null && existingBlockMatch[1] !== blockRead.blockId) {
+		refuse(`'${outPath}' already documents block ${existingBlockMatch[1].slice(0, 12)}… and this run documents ${String(blockRead.blockId).slice(0, 12)}… — two different windows must not share one document name; pass --documentName=<something else>. Overwriting would leave a document about one window wearing another window's name (the hazard recorded above, on the LIMIT axis rather than the offset axis)`);
+	}
+}
 fs.mkdirSync(path.dirname(outPath), { recursive: true });
 fs.writeFileSync(outPath, `${lineList.join('\n')}\n`);
 xLog.status(`${moduleName}: ${outPath}`);
