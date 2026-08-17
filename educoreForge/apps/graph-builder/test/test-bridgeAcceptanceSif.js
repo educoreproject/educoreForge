@@ -70,9 +70,10 @@ const harnessRaw = require('../../../test/testLib/harness')(moduleName);
 // + 5 (SECTION 7 BG-BATCH-SIZE, RULING BS-9: 4 conjuncts + 1 red observation)
 // + 7 (SECTION 8 BG-DISPOSITION, RULING BS-13: 4 conjuncts + 3 twins)
 // + 10 (SECTION 9 BG-IDGATE-BASIS, RULING BS-11: 5 conjuncts + 5 twins)
+// + 7 (SECTION 10 BG-JUDGED-SUBSET, RULING BS-12: 4 source conjuncts + 3 document conjuncts)
 // + 1 (SECTIONS 0-2: the frozen-block census conjunct — MEASURED since the CP2 freeze of 2026-08-17)
-// = 75. Raised as a LITERAL, at this call site, in the same commit as the section it counts.
-const EXPECTED_ASSERTION_COUNT = 75;
+// = 82. Raised as a LITERAL, at this call site, in the same commit as the section it counts.
+const EXPECTED_ASSERTION_COUNT = 82;
 const ledger = { count: 0 };
 const harness = {
 	section: harnessRaw.section,
@@ -529,6 +530,35 @@ const runIdGateBasisSection = () => {
 	// UNMEASURED-GUARD. "They all match" is satisfied trivially by a pool of one and satisfied FOREVER by an
 	// extractor that silently returns nothing. The occurrence count is what separates agreement from silence.
 	harness.ok('BG-IDGATE-BASIS TWIN the extractor is proven to SEE something — occurrenceCount is 2 on the two-card pool above, so "all keys agree" can never be reported by an extractor that simply found nothing', auditLib.sharedKeyReadFor({ userPrompt: cardPairText('P000534', 'P000534'), keyFieldName: 'propertyKey' }).occurrenceCount === 2);
+
+	runJudgedSubsetSection();
+};
+
+// ---------------------------------------------------------------------
+// SECTION 10 — BG-JUDGED-SUBSET (RULING BS-12): the instruments run over the JUDGED subset, and the document
+// says which population each number is about. Conjuncts a-d read batchCheckpoint.js's SOURCE, the same idiom
+// SECTION 7 uses on the runner and for the same reason — it is a CLI that runs on require. Conjuncts e-g
+// measure the DOCUMENT it actually produced, which is the claim a reader relies on.
+// ---------------------------------------------------------------------
+const runJudgedSubsetSection = () => {
+	harness.section('SECTION 10 — BG-JUDGED-SUBSET (RULING BS-12): judge-facing numbers are about the subjects a judge actually saw');
+	const generatorText = fs.readFileSync(path.join(__dirname, 'bridgeAcceptance', 'batchCheckpoint.js'), 'utf8');
+
+	harness.ok("BG-JUDGED-SUBSET a the judged population is derived from the CLASSIFICATION, not from the presence of a field — a specified row also carries an objectStableId, so any field-based split would silently re-absorb all 58 of them", /judgedRecordList = recordList\.filter\(\(oneRecord\) => oneRecord\.classification === 'judged'\)/.test(generatorText));
+	harness.ok('BG-JUDGED-SUBSET b forensics are demanded of JUDGED records only — a channel-asserted row has no judge event, so the old row reported 59 defects in batch-1 where the design says there is nothing to record', /forensicsMissingList = judgedRecordList\.filter/.test(generatorText) && generatorText.indexOf('forensicsMissingList = recordList.filter') === -1);
+	harness.ok('BG-JUDGED-SUBSET c the window is checked against THREE independent sources — the block header (what ran), the runner row (what was released) and --batchSize (what the caller believes) — and the block header is PARSED, never inferred from the record count, which a short last page would make wrong exactly when it mattered', /blockWindowLimit === releasedWindowLimit && blockWindowLimit === batchSize/.test(generatorText) && /PARTIAL_WINDOW_limit\(\\d\+\)_offset\(\\d\+\)/.test(generatorText));
+	harness.ok('BG-JUDGED-SUBSET d the per-subject loop runs over judgedRecordList, so "the judge answered" cannot be printed for a subject no judge saw', /judgedRecordList\.forEach\(\(oneRecord, recordIndex\)/.test(generatorText));
+
+	// THE DOCUMENT ITSELF. These read the artifact produced by the real generator over the real CP3 window —
+	// the thing a supervisor actually reads before releasing the next batch.
+	// the document sits beside the decision store the acceptance entry declares — the same resolution the
+	// generator itself uses, so the suite reads the document the generator actually wrote
+	const documentPath = path.join(path.dirname(acceptanceCommands.decisionStoreFilePath), 'batches', 'batch-1.md');
+	const documentText = fs.existsSync(documentPath) ? fs.readFileSync(documentPath, 'utf8') : '';
+	const occurrenceCount = (text, needle) => text.split(needle).length - 1;
+	harness.ok(`BG-JUDGED-SUBSET e the CP3 batch-1 document carries exactly 11 "the judge answered" lines — one per judged subject, not one per row in the window. It previously carried 70, so a reader would have concluded the judge answered 69 subjects when it answered 11`, occurrenceCount(documentText, 'the judge answered') === 11, `${occurrenceCount(documentText, 'the judge answered')} line(s)`);
+	harness.ok('BG-JUDGED-SUBSET f no subject is printed with an INVENTED confidence — the 58 channel-asserted rows have no judgment, and "confidence undefined" was the document stating a judge fact about a row no judge produced', occurrenceCount(documentText, 'confidence `undefined`') === 0);
+	harness.ok('BG-JUDGED-SUBSET g the channel-asserted and orphan rows are still fully ACCOUNTED FOR, under headings that say what they are — dropping them would trade one wrong claim for a silently incomplete window', /## SPECIFIED \(channel-asserted; no judge\)/.test(documentText) && /## ORPHAN \(no candidate card existed\)/.test(documentText) && /## THE JUDGED SUBJECTS \(11\)/.test(documentText));
 
 	runFrozenArtifactSection();
 };

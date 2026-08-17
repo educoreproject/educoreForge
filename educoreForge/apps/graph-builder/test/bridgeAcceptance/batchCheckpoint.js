@@ -295,7 +295,40 @@ if (idGateSpec.assertsSingleSharedKey) {
 		}
 	});
 }
-const judgedOrAbstainedCount = recordList.filter((oneRecord) => oneRecord.classification === 'judged' || oneRecord.classification === 'orphan').length;
+// RULING BS-12: the clean-checklist runs over the JUDGED SUBSET. Written for the derived order, whose blocks
+// are 100 per cent classification 'judged', it silently assumed every record had been through a judge. A
+// standard-declared plugin's block is mostly channel-asserted: SIF's CP3 batch-1 is 58 specified / 11 judged /
+// 1 orphan, so "all 70 subjects judged-or-abstained" asked a question about 59 rows that no judge ever saw.
+const judgedRecordList = recordList.filter((oneRecord) => oneRecord.classification === 'judged');
+const specifiedRecordList = recordList.filter((oneRecord) => oneRecord.classification === 'specified');
+const orphanRecordList = recordList.filter((oneRecord) => isOrphan(oneRecord));
+// every JUDGED record reached a verdict — a pick or an abstention. A judged record in neither state is a
+// record the judge was asked about and no answer was recorded for, which is the thing this row exists to find.
+const judgedResolvedCount = judgedRecordList.filter((oneRecord) => hasObjectPick(oneRecord) || isAbstained(oneRecord)).length;
+
+// THE RELEASED WINDOW, FROM THREE INDEPENDENT SOURCES (RULING BS-12). The block's own header says what was
+// actually run; the runner's per-bridge table says what the supervisor released; --batchSize says what the
+// caller believes. A document is only trustworthy when all three agree, and a disagreement is a REFUSAL rather
+// than a preference for whichever number happens to be nearest to hand.
+const declaredWindowLimitMatch = declaredWindowText.match(/PARTIAL_WINDOW_limit(\d+)_offset(\d+)/);
+if (declaredWindowLimitMatch === null) {
+	refuse(`the block's sourceWindow ${JSON.stringify(declaredWindowText)} does not parse as PARTIAL_WINDOW_limit<n>_offset<n> — the window is READ from the block, never inferred from the record count (a short last page would make that inference wrong exactly when it mattered)`);
+}
+const blockWindowLimit = Number(declaredWindowLimitMatch[1]);
+const RUNNER_FILE_PATH = path.join(__dirname, 'runBridgeAcceptanceCommand.js');
+const runnerTableMatch = fs.readFileSync(RUNNER_FILE_PATH, 'utf8').match(/D3_BATCH_SIZE_BY_BRIDGE_NAME = Object\.freeze\(\{([\s\S]*?)\}\)/);
+const runnerRowMatch = runnerTableMatch === null ? null : runnerTableMatch[1].match(new RegExp(`${bridgeName}:\\s*(\\d+)`));
+if (runnerRowMatch === null) {
+	refuse(`runBridgeAcceptanceCommand.js declares no released batch size for '${bridgeName}' — the released window is reconstructed from the RUNNER, independently of the acceptance file and of this caller (RULING BS-9); a document cannot certify a batch size nobody released`);
+}
+const releasedWindowLimit = Number(runnerRowMatch[1]);
+
+// --documentName is validated HERE, with the other configuration, because the document's TITLE uses it and a
+// configuration fault belongs before any of the document is built.
+const documentNameValue = firstValue('documentName');
+if (documentNameValue !== undefined && !/^[A-Za-z0-9_-]+$/.test(documentNameValue)) {
+	refuse(`--documentName must be a token of [A-Za-z0-9_-] (got ${JSON.stringify(documentNameValue)})`);
+}
 // RE-ASKS: THE RULING COUNTS SECOND VIOLATIONS, NOT FIRST ONES, and the difference is the whole point.
 // judgeComponent permits EXACTLY ONE re-ask when a rationale names its pick by ordinal (BR-067); the run dies
 // on a SECOND violation. So a first re-ask that recovers is LAWFUL and expected — §11.12's clean-checklist
@@ -313,7 +346,9 @@ const attemptCountByPromptHash = forensicsRead.recordList.reduce((soFar, oneReco
 const secondViolationList = Object.keys(attemptCountByPromptHash).filter((oneHash) => attemptCountByPromptHash[oneHash] > 2);
 const reaskCount = secondViolationList.length;
 const unmappedPickList = recordList.filter((oneRecord) => hasObjectPick(oneRecord) && Array.isArray(oneRecord.renderedPoolStableIdList) && oneRecord.renderedPoolStableIdList.indexOf(oneRecord.objectStableId) === -1);
-const forensicsMissingList = recordList.filter((oneRecord) => oneRecord.judge === undefined || forensicByPromptHash[String(oneRecord.judge.promptHash)] === undefined);
+// RULING BS-12: forensics are expected for JUDGED records only. A channel-asserted row has no judge event, so
+// demanding a forensic prompt for it reports a defect where the design says there is nothing to record.
+const forensicsMissingList = judgedRecordList.filter((oneRecord) => oneRecord.judge === undefined || forensicByPromptHash[String(oneRecord.judge.promptHash)] === undefined);
 // ⟪TRAIL CONTAMINATION — found by batch 1's own checklist, GRANITE_VALLEY 2026-08-17⟫ The forensic trail is
 // APPEND-ONLY per generation, and the generation name is a function of (framework, plugin, renderer, window)
 // — NOT of the run. So a window that was judged twice (a run that DIED and the re-run that froze the block)
@@ -337,14 +372,19 @@ const trailIsContaminated = forensicsRead.recordList.length > recordList.length 
 const reaskVerdictIsMeasurable = !trailIsContaminated;
 
 const checklist = [
-	{ name: `all ${recordList.length} subjects judged-or-abstained`, pass: judgedOrAbstainedCount === recordList.length, detail: `${judgedOrAbstainedCount}/${recordList.length}` },
-	{ name: 'batch size equals the released window', pass: recordList.length === batchSize, detail: `${recordList.length} records, window ${batchSize}` },
+	{ name: `all ${judgedRecordList.length} JUDGED subjects reached a verdict (pick or abstention)`, pass: judgedResolvedCount === judgedRecordList.length, detail: `${judgedResolvedCount}/${judgedRecordList.length} judged · ${specifiedRecordList.length} channel-asserted (no judge) · ${orphanRecordList.length} orphan (no candidate card) · ${recordList.length} subjects in the window` },
+	// The row stays FAIL in every disagreement — it is not relaxed — but it NAMES which disagreement, because
+	// the two mean different things to a reader. A block whose window no longer matches the released one is
+	// SUPERSEDED (batch-0 ran at limit 10 before BS-9 released 70); a caller whose --batchSize disagrees with
+	// the block is documenting a window it has mis-stated. Reporting both as one undifferentiated FAIL would
+	// make an obsolete document look like a defective batch.
+	{ name: 'the window agrees across all three independent sources (block header · runner row · --batchSize)', pass: blockWindowLimit === releasedWindowLimit && blockWindowLimit === batchSize, detail: `block header ${blockWindowLimit} · runner released ${releasedWindowLimit} · --batchSize ${batchSize}${blockWindowLimit === batchSize && blockWindowLimit !== releasedWindowLimit ? ' — SUPERSEDED WINDOW: this block ran under a window the supervisor has since replaced; the block and the caller agree, and it is the RELEASED size that has moved' : blockWindowLimit !== batchSize ? ' — CALLER DISAGREES WITH THE BLOCK: --batchSize does not describe the window this block actually ran' : ''}` },
 	{ name: '0 framework refusals', pass: Array.isArray(block.refusalList) && block.refusalList.length === 0, detail: `${Array.isArray(block.refusalList) ? block.refusalList.length : '?'} refusal(s)` },
 	{ name: `0 id-gate hits over every prompt in this generation (matchBasis '${bridgeDeclaration.matchBasis}')`, pass: idGateHitList.length === 0, detail: idGateHitList.length ? idGateHitList.slice(0, 3).join('; ') : 'zero' },
 	...(idGateSpec.assertsSingleSharedKey ? [{ name: `every rendered pool carries ONE shared '${idGateSpec.sharedKeyFieldName}' (the key-filtered basis assertion that replaces hub-identifier-as-answer)`, pass: sharedKeyRefusalList.length === 0 && sharedKeyOccurrenceCount > 0, detail: sharedKeyRefusalList.length ? sharedKeyRefusalList.slice(0, 2).join('; ') : sharedKeyOccurrenceCount === 0 ? 'UNMEASURED: the extractor found NO hub identifier in any prompt, so "the keys agree" would be a statement about silence' : `zero disagreements over ${sharedKeyOccurrenceCount} rendered '${idGateSpec.sharedKeyFieldName}' occurrence(s)` }] : []),
 	{ name: '0 SECOND-violation re-asks (a first re-ask is lawful; a second kills the run)', pass: reaskVerdictIsMeasurable ? reaskCount === 0 : null, detail: reaskVerdictIsMeasurable ? `${reaskCount} second violation(s); ${firstReaskCount} lawful first re-ask(s) recovered` : `UNMEASURED — the trail holds ${forensicsRead.recordList.length} record(s) for this generation against ${recordList.length} block record(s) + ${firstReaskCount} re-ask(s), so more than one run wrote to it and the count is not attributable to this block` },
 	{ name: "every pick's ordinal maps to a rendered candidate", pass: unmappedPickList.length === 0, detail: `${unmappedPickList.length} unmapped` },
-	{ name: 'forensics complete for every record', pass: forensicsMissingList.length === 0, detail: `${forensicsMissingList.length} record(s) without a forensic prompt` },
+	{ name: `forensics complete for every JUDGED record (${judgedRecordList.length} of ${recordList.length} subjects; a channel-asserted row has no judge event to record)`, pass: forensicsMissingList.length === 0, detail: `${forensicsMissingList.length} judged record(s) without a forensic prompt` },
 ];
 // an UNMEASURED row (pass === null) is NOT a pass. A checklist that treated "could not tell" as "fine" is the
 // under-enforcement pattern this project has recorded three times; it is reported as its own state.
@@ -352,7 +392,12 @@ const unmeasuredRowList = checklist.filter((oneRow) => oneRow.pass === null);
 const mechanicallyClean = checklist.every((oneRow) => oneRow.pass === true);
 
 const lineList = [];
-lineList.push(`# D3 batch ${offsetValue} — ${recordList.length} subjects, REAL judge`);
+// RULING BS-12: the document is TITLED by the name it was asked for and states its window from the BLOCK's own
+// header. Titling it "batch <offset>" made two different windows at the same offset indistinguishable — which
+// is exactly the CP3 case: batch-0 and batch-1 are both offset 0 and differ only in limit.
+lineList.push(`# ${documentNameValue === undefined ? `D3 batch ${offsetValue}` : documentNameValue} — window ${blockWindowLimit} at offset ${offsetValue}, ${recordList.length} subjects, REAL judge`);
+lineList.push('');
+lineList.push(`**Of these ${recordList.length} subjects, ${judgedRecordList.length} went to the judge.** ${specifiedRecordList.length} are CHANNEL-ASSERTED — the plugin's own declared channel supplied the match and no judge was ever involved — and ${orphanRecordList.length} ${orphanRecordList.length === 1 ? 'is an orphan' : 'are orphans'}, for which no candidate card existed. Read every judge-facing number below as being about the ${judgedRecordList.length}, not the ${recordList.length}.`);
 lineList.push('');
 lineList.push(`- block: \`${blockRead.blockId}\` (**PARTIAL** — \`${header.sourceWindow}\`)`);
 lineList.push(`- window: \`--limit=${batchSize} --offset=${offsetValue}\`, subjects sorted by stableId so the window is reproducible`);
@@ -423,7 +468,37 @@ lineList.push('');
 lineList.push('---');
 lineList.push('');
 
-recordList.forEach((oneRecord, recordIndex) => {
+// RULING BS-12: the SPECIFIED rows are listed as what they are — a count and a list — rather than rendered as
+// judge picks. The previous document printed all 58 of batch-1's channel-asserted rows under "the judge
+// answered: picked …" with `confidence undefined`, so a reader would conclude the judge answered 69 subjects.
+// It answered 11. That is not a formatting complaint: it is the document's central claim being wrong.
+if (specifiedRecordList.length > 0) {
+	lineList.push('## SPECIFIED (channel-asserted; no judge)');
+	lineList.push('');
+	lineList.push(`**${specifiedRecordList.length} subject(s).** The plugin's declared channel asserted these matches directly from the source standard. No prompt was rendered, no judgment was made, and no confidence or category exists for them — a "confidence" printed here would be an invention. They are listed so the window is fully accounted for.`);
+	lineList.push('');
+	specifiedRecordList.forEach((oneRecord) => {
+		lineList.push(`- \`${oneRecord.subjectStableId}\` → \`${oneRecord.objectStableId}\``);
+	});
+	lineList.push('');
+	lineList.push('---');
+	lineList.push('');
+}
+if (orphanRecordList.length > 0) {
+	lineList.push('## ORPHAN (no candidate card existed)');
+	lineList.push('');
+	lineList.push(`**${orphanRecordList.length} subject(s).** No candidate was available to judge, so the judge was never asked. This is a COVERAGE gap, not reticence, and it is counted separately from abstention for that reason (RULING BS-13).`);
+	lineList.push('');
+	orphanRecordList.forEach((oneRecord) => {
+		lineList.push(`- \`${oneRecord.subjectStableId}\``);
+	});
+	lineList.push('');
+	lineList.push('---');
+	lineList.push('');
+}
+lineList.push(`## THE JUDGED SUBJECTS (${judgedRecordList.length})`);
+lineList.push('');
+judgedRecordList.forEach((oneRecord, recordIndex) => {
 	const forensic = oneRecord.judge === undefined ? undefined : forensicByPromptHash[String(oneRecord.judge.promptHash)];
 	const truthSet = truth.objectSetBySubject[oneRecord.subjectStableId];
 	lineList.push(`## ${recordIndex + 1}. \`${oneRecord.subjectStableId}\``);
@@ -468,10 +543,6 @@ recordList.forEach((oneRecord, recordIndex) => {
 // which are two windows at one offset), and an existing file that documents a DIFFERENT block is REFUSED BY
 // NAME rather than overwritten. Re-running the same block over its own document is still allowed — that is a
 // regeneration, not a collision.
-const documentNameValue = firstValue('documentName');
-if (documentNameValue !== undefined && !/^[A-Za-z0-9_-]+$/.test(documentNameValue)) {
-	refuse(`--documentName must be a token of [A-Za-z0-9_-] (got ${JSON.stringify(documentNameValue)})`);
-}
 const outPath = path.join(path.dirname(entry.decisionStoreFilePath), 'batches', `${documentNameValue === undefined ? `batch-${offsetValue}` : documentNameValue}.md`);
 if (fs.existsSync(outPath)) {
 	const existingText = fs.readFileSync(outPath, 'utf8');
