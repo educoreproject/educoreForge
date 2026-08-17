@@ -79,9 +79,14 @@ const refuse = (what) => {
 };
 const firstValue = (name) => (commandLineParameters.values[name] && commandLineParameters.values[name][0]) || undefined;
 
+// A BRIDGE ENTRY IS ONE CARRYING standardKey. acceptanceCommands.jsonc also holds shared, non-bridge declarations
+// (sharedToolPaths, added under RULING B4R-4), so listing every top-level name as a valid --bridgeName would offer
+// the caller something that is not a bridge and then fail further down for an unrelated-looking reason. The filter
+// is the same one test-runnerContract.js uses, deliberately: one definition of "is a bridge entry", not two.
+const bridgeNameList = Object.keys(acceptanceCommands).filter((oneName) => acceptanceCommands[oneName] && typeof acceptanceCommands[oneName] === 'object' && typeof acceptanceCommands[oneName].standardKey === 'string');
 const bridgeName = firstValue('bridgeName');
-if (!acceptanceCommands[bridgeName] || typeof acceptanceCommands[bridgeName] !== 'object') {
-	refuse(`--bridgeName must be one of ${Object.keys(acceptanceCommands).join(', ')} (got ${JSON.stringify(bridgeName)})`);
+if (bridgeNameList.indexOf(bridgeName) === -1) {
+	refuse(`--bridgeName must be one of ${bridgeNameList.join(', ')} (got ${JSON.stringify(bridgeName)})`);
 }
 const entry = acceptanceCommands[bridgeName];
 const lineName = firstValue('line');

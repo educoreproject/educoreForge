@@ -211,4 +211,80 @@ harness.ok('(f) the runner still reconstructs the released batch window from its
 harness.ok('(f) the runner still asserts its own composed line EQUALS the committed one, and refuses on drift', /if \(runnerLine !== committedLine\) \{/.test(runnerText));
 harness.ok('(f) a bridge with no released-window row is still REFUSED by name rather than defaulted', /has no released batch size in this runner's D3_BATCH_SIZE_BY_BRIDGE_NAME/.test(runnerText) || /has no released batch size in this runner/.test(runnerText));
 
+// ---------------------------------------------------------------------
+// (g) WHICH SSSOM VALIDATOR RAN — RULING B4R-4 (option (c)), on FINDING B4-F9
+// ---------------------------------------------------------------------
+//
+// The rule and its rationale live in sssomValidatorProvenance.js. The twins live HERE, and the choice is worth
+// stating: BG-P7's own suite is test-bgP7.js, which sits inside expectedCompose.diffedPathList — a byte written
+// there by this phase would turn BG-COMPOSE-SIF (a), the zero-framework-diff proof, RED. So the supervisor takes
+// that two-line require+call at merge (ruled), and the twins go where they will actually BE RUN by anyone
+// exercising the acceptance instruments. This file's own subject is "the runner's declarations are complete and
+// honest", and a declared absolute tool path is exactly that kind of declaration.
+//
+// FINDING B4-F9 in one sentence: test-bgP7.js computed the venv path by climbing four directories, which resolves
+// from the main tree and misses from a worktree, and it had NO UNMEASURED accounting — so it silently ran the proxy
+// and reported 44/44 green, telling a reviewer the real validator passed when it never ran.
+const sssomValidatorProvenanceLib = require('./sssomValidatorProvenance');
+const provenanceFor = (world) => sssomValidatorProvenanceLib.sssomValidatorProvenanceFor(world);
+const REAL = sssomValidatorProvenanceLib.REAL_VALIDATOR_NAME;
+const PROXY = sssomValidatorProvenanceLib.PROXY_VALIDATOR_NAME;
+const DECLARED_PATH = '/declared/absolute/path/to/sssom';
+
+// THE MEASURED CASE — the only combination that entitles the conjunct to claim anything
+const measuredVerdict = provenanceFor({ declaredBinPath: DECLARED_PATH, binPathPresent: true, ranValidatorName: REAL });
+harness.ok(`(g) declared + on disk + the REAL ${REAL} ran => MEASURED, with no unmeasured reason`, measuredVerdict.measured === true && measuredVerdict.unmeasuredReason === '', JSON.stringify(measuredVerdict));
+
+// THE B4-F9 CASE ITSELF — declared and absent. This is the world the worktree was in while reporting green.
+const trapVerdict = provenanceFor({ declaredBinPath: DECLARED_PATH, binPathPresent: false, ranValidatorName: PROXY });
+// ⟪THIS ASSERTION WAS STRENGTHENED AFTER WATCHING IT FAIL TO BITE, and the reason is worth keeping⟫ It first read
+// `/UNMEASURED/ && contains the declared path`. Disabling the absent-path branch outright then left this twin GREEN:
+// execution fell through to the present-but-unused branch, whose text ALSO says UNMEASURED and ALSO names the path.
+// The suite still caught the mutation — the distinct-texts twin below went red — but a twin that survives the
+// deletion of the branch it is named for is testing the family, not the branch. Each of the three now pins its own
+// branch by a marker unique to it.
+harness.ok('(g) RED-OBSERVED — declared + NOT on disk + proxy ran => UNMEASURED BY NAME, naming the absent DECLARED path AND saying NOT ON DISK. This is FINDING B4-F9 exactly: the state in which test-bgP7 reported 44/44 green from a worktree', trapVerdict.measured === false && /NOT ON DISK/.test(trapVerdict.unmeasuredReason) && trapVerdict.unmeasuredReason.indexOf(DECLARED_PATH) !== -1, JSON.stringify(trapVerdict));
+
+// PRESENT-BUT-UNUSED is a DIFFERENT fault and must not be collapsed into the one above — otherwise the next reader
+// is sent to inspect a venv that is perfectly healthy while the real bug is in the wiring.
+const unusedVerdict = provenanceFor({ declaredBinPath: DECLARED_PATH, binPathPresent: true, ranValidatorName: PROXY });
+harness.ok('(g) RED-OBSERVED — declared + ON DISK + only the proxy ran => UNMEASURED BY NAME for a WIRING reason (its own marker: "present but not used"), and the two unmeasured reasons are DISTINCT texts — an environment fault and a wiring fault send a reader to different places', unusedVerdict.measured === false && /present but not used/.test(unusedVerdict.label) && /WIRING/.test(unusedVerdict.unmeasuredReason) && unusedVerdict.unmeasuredReason !== trapVerdict.unmeasuredReason, `${JSON.stringify(unusedVerdict)}\nvs\n${JSON.stringify(trapVerdict)}`);
+
+// NOT DECLARED + PROXY => PERMITTED. No declaration, no promise. A machine without the venv is not a failing machine.
+const permittedVerdict = provenanceFor({ declaredBinPath: undefined, binPathPresent: false, ranValidatorName: PROXY });
+harness.equal('(g) NOT declared + proxy ran => PERMITTED (unmeasuredReason empty), because nothing promised the real validator — but the label still SAYS proxy-only rather than implying a measurement', permittedVerdict.unmeasuredReason, '');
+harness.ok(`(g) …and that permitted verdict is honest about itself: measured is false and the label names the ${PROXY}`, permittedVerdict.measured === false && new RegExp(PROXY, 'i').test(permittedVerdict.label), JSON.stringify(permittedVerdict));
+
+// NOT DECLARED + REAL => REFUSED as DISCOVERY. The ruling's words are "declared, not discovered": a run whose
+// validator depends on what happened to be on the box is unreproducible even when it passes.
+const discoveredVerdict = provenanceFor({ declaredBinPath: undefined, binPathPresent: false, ranValidatorName: REAL });
+harness.ok(`(g) RED-OBSERVED — NOT declared + the REAL ${REAL} ran => UNMEASURED BY NAME as DISCOVERED, because a validator nobody declared makes the run unreproducible even when it passes`, discoveredVerdict.measured === false && /DISCOVERED|discovered/.test(discoveredVerdict.unmeasuredReason), JSON.stringify(discoveredVerdict));
+
+// a rule that cannot say which validator ran cannot claim a measurement
+[undefined, null, '', 'real', 'sssom', 'SSSOM-PY'].forEach((oneBadName) => {
+	const verdict = provenanceFor({ declaredBinPath: DECLARED_PATH, binPathPresent: true, ranValidatorName: oneBadName });
+	harness.ok(`(g) RED-OBSERVED — an unrecognised validator name (${JSON.stringify(oneBadName)}) is UNMEASURED by name rather than assumed to be one of the two`, verdict.measured === false && verdict.unmeasuredReason.length > 0, JSON.stringify(verdict));
+});
+// declared, but the caller did not say whether it is on disk — the whole question, never assumed
+harness.ok('(g) RED-OBSERVED — a declared path with no boolean binPathPresent is UNMEASURED by name (whether the declared tool is actually there is the whole question and is never assumed)', provenanceFor({ declaredBinPath: DECLARED_PATH, ranValidatorName: REAL }).unmeasuredReason.length > 0);
+
+// --- THE COMMITTED DECLARATION ---
+// The path must be DECLARED, and ABSOLUTE. A relative path would reintroduce the defect in a new costume: it would
+// resolve against whatever cwd the suite happened to run under.
+const sharedToolPaths = acceptanceCommands.sharedToolPaths;
+harness.ok('(g) acceptanceCommands.jsonc declares sharedToolPaths, and it is NOT mistakable for a bridge entry (no standardKey, so every reader that filters on standardKey skips it)', sharedToolPaths !== null && typeof sharedToolPaths === 'object' && typeof sharedToolPaths.standardKey !== 'string');
+harness.ok(`(g) sharedToolPaths.sssomPyBinPath is declared and ABSOLUTE (${sharedToolPaths && sharedToolPaths.sssomPyBinPath}) — a relative path would resolve against whatever cwd the suite ran under, which is the same class of bug as the four-level climb it replaces`, !!sharedToolPaths && typeof sharedToolPaths.sssomPyBinPath === 'string' && path.isAbsolute(sharedToolPaths.sssomPyBinPath));
+// and the runner's bridge list excludes it, so a caller is never offered a non-bridge as a --bridgeName
+harness.ok('(g) the runner derives its --bridgeName list by filtering on standardKey, so sharedToolPaths is never offered as a bridge', /typeof acceptanceCommands\[oneName\]\.standardKey === 'string'/.test(runnerText));
+harness.ok('(g) sharedToolPaths is not in the bridge list this file iterates either — one definition of "is a bridge entry", not two', bridgeNameList.indexOf('sharedToolPaths') === -1);
+
+// THE LIVE STATE, RECORDED RATHER THAN ASSERTED EITHER WAY. On TQ's box the venv is present, so this prints
+// MEASURED; on a machine without it the declaration is still there and the verdict would be UNMEASURED-by-name,
+// which is the point. Asserting "present" would make this suite fail on any other machine for a reason that is not
+// a defect, so what is asserted is that the RULE returns a coherent verdict about whatever is actually there.
+const liveDeclaredPath = sharedToolPaths && sharedToolPaths.sssomPyBinPath;
+const livePresent = typeof liveDeclaredPath === 'string' && fs.existsSync(liveDeclaredPath);
+harness.note(`(g) live: the declared ${REAL} path is ${livePresent ? 'PRESENT' : 'ABSENT'} on this machine — ${provenanceFor({ declaredBinPath: liveDeclaredPath, binPathPresent: livePresent, ranValidatorName: livePresent ? REAL : PROXY }).label}`);
+harness.ok('(g) the rule returns a coherent verdict about the LIVE declared path (asserting "present" instead would fail on any machine without the venv, which is an environment fact and not a defect)', (() => { const verdict = provenanceFor({ declaredBinPath: liveDeclaredPath, binPathPresent: livePresent, ranValidatorName: livePresent ? REAL : PROXY }); return livePresent ? verdict.measured === true && verdict.unmeasuredReason === '' : /UNMEASURED/.test(verdict.unmeasuredReason); })());
+
 harness.report();

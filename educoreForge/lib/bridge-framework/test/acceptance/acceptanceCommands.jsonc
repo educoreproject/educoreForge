@@ -6,6 +6,26 @@
 // a replay defect. null-and-honest in B2 — the B3 / B4 builders freeze the lines from their first accepted runs.
 // A frozen id compared against a run with a different flag set is a broken test, not a failed gate.
 {
+	// SHARED TOOL PATHS — not a bridge entry, and every reader of this file distinguishes them by the absence of
+	// `standardKey` (the runner and test-runnerContract.js both filter on it).
+	//
+	// RULING B4R-4 (as amended to option (c), SABLE_RIVER 2026-08-17), on FINDING B4-F9: the sssom-py venv path is
+	// DECLARED HERE, ABSOLUTELY, rather than computed by climbing directories from the framework dir. That climb
+	// (`path.join(FRAMEWORK_DIR, '..','..','..','..', 'dataStores', …)`) resolves correctly from the main tree and
+	// lands on `codeWorktrees/dataStores/…` from a worktree, where nothing exists. test-bgP7.js then took its PROXY
+	// branch and reported 44/44 GREEN, telling a reviewer the real validator had passed when it never ran; the
+	// sibling suite has the same bug and fails loudly, which is what the difference in accounting looks like.
+	//
+	// A DECLARED path is what makes the real validator EXPECTED, and that is the whole point: presence-sniffing
+	// cannot tell "this machine has no sssom-py" from "my path arithmetic is wrong", and those two want opposite
+	// verdicts. With the path declared, an absent binary is UNMEASURED BY NAME instead of a silent downgrade — see
+	// apps/graph-builder/test/bridgeAcceptance/sssomValidatorProvenance.js for the rule and its twins.
+	//
+	// ONE-MACHINE, and said out loud: this is TQ's box. A machine without this venv declares nothing here, and its
+	// proxy-only runs are then PERMITTED and labelled rather than pretending to a measurement.
+	"sharedToolPaths": {
+		"sssomPyBinPath": "/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/sssomVenv/bin/sssom"
+	},
 	"edfiCedsCrosswalkPlugin": {
 		// FROZEN by B3 (SCARLET_BRIDGE) under the supervisor's freeze ruling (RULINGS "B3 checkpoint 1 — the FREEZE", 2026-08-16):
 		// THREE lines over the ONE pinned store (a COPY of the four-base postEdfi store — GOLD_EVAL_260816's bytes; the four base
