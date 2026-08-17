@@ -62,7 +62,9 @@ const harnessRaw = require('../../../test/testLib/harness')(moduleName);
 
 // RULING BR3-6 + the D1 count-guard ruling: EXPECTED_ASSERTION_COUNT is a LITERAL frozen at this call site, never
 // computed from a contract-derived list (a guard that shrinks in lockstep with the thing it guards is no guard).
-// 25 (SECTION 3 BG-PLUGIN declaration: 12 conjuncts + 13 twins-and-precondition)
+// 31 (SECTION 3 BG-PLUGIN declaration: 16 conjuncts + 15 twins-and-precondition — RULING B4R-1 raised this by 6:
+//     the b2 group is 1 fixture-resolution conjunct + 3 digests RECOMPUTED-from-the-plugin-as-loaded equalities
+//     + 2 RED-OBSERVED twins, the first of which is the review's fault 1, which produced no red before B4R-1)
 // + 8 (SECTION 3b BG-PLUGIN e: the real hooks over the double, 6 conjuncts + 2 twins)
 // + 7 (SECTION 4 BG-COMPOSE-SIF: 3 conjuncts + 4 twins)
 // + 6 (SECTION 5 BG-GENESIS, RULING BS-5: 3 conjuncts + 3 twins)
@@ -72,8 +74,8 @@ const harnessRaw = require('../../../test/testLib/harness')(moduleName);
 // + 10 (SECTION 9 BG-IDGATE-BASIS, RULING BS-11: 5 conjuncts + 5 twins)
 // + 7 (SECTION 10 BG-JUDGED-SUBSET, RULING BS-12: 4 source conjuncts + 3 document conjuncts)
 // + 1 (SECTIONS 0-2: the frozen-block census conjunct — MEASURED since the CP2 freeze of 2026-08-17)
-// = 82. Raised as a LITERAL, at this call site, in the same commit as the section it counts.
-const EXPECTED_ASSERTION_COUNT = 82;
+// = 88. Raised as a LITERAL, at this call site, in the same commit as the section it counts.
+const EXPECTED_ASSERTION_COUNT = 88;
 const ledger = { count: 0 };
 const harness = {
 	section: harnessRaw.section,
@@ -125,6 +127,27 @@ const expectedCompose = readJson(path.join(acceptanceDir, 'expectedCompose.json'
 const acceptanceCommands = JSON.parse(stripJsoncComments(fs.readFileSync(path.join(acceptanceDir, 'acceptanceCommands.jsonc'), 'utf8')))[BRIDGE_NAME];
 
 // ---------------------------------------------------------------------
+// THE CENSUS FIXTURE, RESOLVED ONCE — RULING B4R-1 (DEFECT D-1)
+// ---------------------------------------------------------------------
+// Resolution was previously local to SECTIONS 0-2, which run only when the pinned store is on disk. But the
+// fixture itself is a COMMITTED FILE and its name is derived from another COMMITTED FILE, so reading it needs no
+// store, no container and no run — it is available to the hermetic SECTION 3, which is where BR3-1 says the
+// plugin's digests must be pinned. Hoisted here and used by BOTH sections, deliberately as ONE derivation: two
+// copies of "the fixture is the one the ids fixture's graphId names" is two things to drift.
+//
+// THE NAME IS DATA-DERIVED, not a literal: it comes from the ids fixture's graphId, so the census fixture and the
+// ids fixture cannot silently disagree about which block is frozen. A wrong or missing name yields an ABSENT file,
+// which is RED — this can never pass for the wrong reason.
+const censusFixtureResolution = (() => {
+	const idsFixturePath = path.join(acceptanceDir, 'expectedDecisionBlockIds.json');
+	const idsEntry = (readJson(idsFixturePath).byBridgeName || {})[BRIDGE_NAME] || {};
+	const graphIdPrefix = typeof idsEntry.graphId === 'string' ? idsEntry.graphId.split('@manifest:')[0] : '(noGraphId)';
+	const censusFixturePath = path.join(acceptanceDir, `expectedCensus.${BRIDGE_NAME}.${graphIdPrefix}.json`);
+	const present = fs.existsSync(censusFixturePath);
+	return { idsFixturePath, idsEntry, graphIdPrefix, censusFixturePath, present, fixture: present ? readJson(censusFixturePath).byBridgeName[BRIDGE_NAME] : undefined };
+})();
+
+// ---------------------------------------------------------------------
 // SECTION 3 — BG-PLUGIN (RULING BR3-1): the REAL plugin under gate. Hermetic; runs today.
 // ---------------------------------------------------------------------
 harness.section('SECTION 3 — BG-PLUGIN: the REAL SIF plugin validates, its digests recompute, its REAL hooks run over a graph double');
@@ -154,6 +177,28 @@ harness.ok(`BG-PLUGIN b mappingProvider carries a URL and a RECORDED verificatio
 harness.equal('BG-PLUGIN b the remodel table is REFERENCED, never copied — the same hub-owned table the Ed-Fi plugin names', declaration.remodelTableRef, 'ceds14PropertyRemodel');
 harness.ok(`BG-PLUGIN b the referenced remodel table is on disk and digests (${path.relative(treeRoot, remodelTablePath)})`, fs.existsSync(remodelTablePath) && remodelTableDigestOf(fs.readFileSync(remodelTablePath)).length === 64);
 
+// (b2) THE PLUGIN IS PINNED TO ITS FROZEN ARTIFACT — RULING B4R-1, closing DEFECT D-1.
+//
+// BR3-1 said "BEFORE B4 (SIF inherits it)" and SIF did not inherit it. What the suite already had was the
+// comparison at SECTIONS 0-2: `header.declarationDigest === fixture.declarationDigest`. Both sides of that are
+// FROZEN — the block header was written at the freeze and the fixture was copied from it — so the two agree with
+// each other no matter what the plugin on disk says today. Nothing recomputed the digest from the LIVE plugin.
+//
+// The reviewer measured the consequence and it is the reason this is a blocking defect rather than a tidiness
+// point: changing `predicateSource.predicate` from exactMatch to closeMatch — a change to the very claim the
+// supervisor ruled on, the difference between "SIF asserts this mapping" and "SIF says it is close" — left the
+// whole suite at its baseline 82/82. NO RED. The artifact would have shipped certifying a predicate the plugin no
+// longer declared.
+//
+// So the three digests are recomputed HERE, from the plugin AS LOADED, through the framework's OWN digest
+// functions, and asserted EQUAL to the committed fixture. This is a hermetic conjunct: it needs no store, no
+// container and no run, which is precisely why there was no excuse for its absence.
+harness.ok(`BG-PLUGIN b2 the census fixture RESOLVES from the ids fixture's graphId and is on disk (${path.relative(treeRoot, censusFixtureResolution.censusFixturePath)}) — an absent fixture is RED here, never a skipped assertion`, censusFixtureResolution.present === true && !!censusFixtureResolution.fixture, `graphIdPrefix ${censusFixtureResolution.graphIdPrefix}; present ${censusFixtureResolution.present}`);
+const frozenDigests = censusFixtureResolution.fixture || {};
+harness.equal('BG-PLUGIN b2 declarationDigest RECOMPUTED from the plugin AS LOADED === the frozen fixture (RULING B4R-1: the artifact is pinned to the code that produced it, not merely to itself)', declarationDigestOf(declaration), frozenDigests.declarationDigest);
+harness.equal('BG-PLUGIN b2 labelTableDigest RECOMPUTED from the plugin AS LOADED === the frozen fixture (for a standard basis this slot carries the CHANNEL-ASSERTION provenance — the same fixture member, the polymorphic seam doing its job)', channelAssertionDigestOf(declaration), frozenDigests.labelTableDigest);
+harness.equal(`BG-PLUGIN b2 remodelTableDigest RECOMPUTED from ${path.relative(treeRoot, remodelTablePath)} === the frozen fixture`, remodelTableDigestOf(fs.readFileSync(remodelTablePath)), frozenDigests.remodelTableDigest);
+
 // (c) the ONE channel is a forgedGraph walk whose declared properties are covered EXACTLY by the classification
 const channelList = declaration.sourceChannelList;
 const walkChannel = channelList[0];
@@ -169,6 +214,21 @@ const refusedFor = (mutate) => {
 harness.ok('    (twin precondition) a JSON clone of the declaration digests as the declaration itself — the twins below fault a faithful copy', declarationDigestOf(clone(declaration)) === declarationDigestOf(declaration), 'the clone is not the declaration — every twin below would be meaningless');
 harness.ok('RED-OBSERVED BG-PLUGIN a — matchBasis derived is REFUSED by name (v1 admits standard | crosswalk)', !!refusedFor((d) => { d.matchBasis = 'derived'; }));
 harness.ok('RED-OBSERVED BG-PLUGIN a — the transform swapped to globalIdToPrefixedKey is accepted by the CONTRACT but moves the declarationDigest off the frozen one (the census-moving edit a shape check alone would miss)', declarationDigestOf((() => { const d = clone(declaration); d.tupleFieldColumnMap.canonicalKey.transform = 'globalIdToPrefixedKey'; return d; })()) !== declarationDigestOf(declaration));
+// THE TWIN RULING B4R-1 NAMES, and it is the reviewer's fault 1 exactly. exactMatch -> closeMatch is a LAWFUL
+// declaration: the contract accepts it, both are SKOS predicates, every shape check passes. It is precisely the
+// mutation that a shape gate cannot see and that the supervisor's whole ruling turned on. Before B4R-1 it moved
+// nothing red; now it moves the recomputed declarationDigest OFF the frozen fixture, which is the assertion the
+// artifact's integrity actually rests on.
+// MEASURED while writing this twin, and recorded because it is a trap for the next person: SKOS_PREDICATES holds
+// the predicates as BARE names ('exactMatch'), not CURIEs. A first attempt using 'skos:closeMatch' went red for
+// entirely the wrong reason — the contract refused it as "not a SKOS_PREDICATES member", so the assertion would
+// have been exercising the shape check it is meant to look PAST. The mutation has to be LAWFUL for this twin to
+// mean anything, which is why the contract-accepts half is asserted alongside the digest half rather than assumed.
+harness.ok('RED-OBSERVED BG-PLUGIN b2 — predicateSource.predicate exactMatch → closeMatch (the REVIEW\'s fault 1, which produced NO RED before RULING B4R-1) is ACCEPTED by the contract — both are lawful SKOS predicates — and yet moves BOTH the recomputed declarationDigest AND the recomputed labelTableDigest OFF the frozen fixture', (() => { const d = clone(declaration); d.predicateSource.predicate = 'closeMatch'; const lawful = !refusedFor((one) => { one.predicateSource.predicate = 'closeMatch'; }); return lawful && declarationDigestOf(d) !== frozenDigests.declarationDigest && channelAssertionDigestOf(d) !== frozenDigests.labelTableDigest; })(), 'either a digest did not move, or the contract refused the mutation — in which case this twin is testing the shape check rather than the pin, which is the failure mode it exists to avoid');
+// THE CITATION IS INSIDE THE DIGEST, and this twin says so mechanically. It matters for the next item of this
+// remediation: B4R-3 corrects the citation's overstated evidence basis, and this is the assertion that makes the
+// re-key MANDATORY rather than a courtesy — edit the citation and the frozen ids must move with it.
+harness.ok('RED-OBSERVED BG-PLUGIN b2 — editing the CITATION TEXT moves the recomputed declarationDigest OFF the frozen fixture, so a correction to it cannot be made without re-keying the block (the mechanism RULING B4R-3 rests on)', (() => { const d = clone(declaration); d.predicateSource.assertedBy.citation = `${d.predicateSource.assertedBy.citation} [one character of provenance, changed]`; return declarationDigestOf(d) !== frozenDigests.declarationDigest; })());
 harness.ok('RED-OBSERVED BG-PLUGIN a — a predicate outside SKOS on the channel assertion is REFUSED by name', !!refusedFor((d) => { d.predicateSource.predicate = 'owl:equivalentProperty'; }));
 harness.ok('RED-OBSERVED BG-PLUGIN a — a channelPropertyList member left UNCLASSIFIED is REFUSED by name (coverage, RULING BF6)', !!refusedFor((d) => { d.sourceChannelList[0].channelPropertyList.push('characteristics'); }));
 harness.ok('RED-OBSERVED BG-PLUGIN a — a classified column ABSENT from channelPropertyList is REFUSED by name', !!refusedFor((d) => { d.sourceChannelList[0].columnClassification.evidenceOnlyColumnList.push('notAChannelProperty'); }));
@@ -575,13 +635,12 @@ const runJudgedSubsetSection = () => {
 // ---------------------------------------------------------------------
 const runFrozenArtifactSection = () => {
 	harness.section('SECTIONS 0-2 — the frozen SIF block, its census EQUALITY, Profile §7 over its records, and its SSSOM export');
-	// THE FIXTURE NAME IS DATA-DERIVED, not a literal: it comes from the ids fixture's graphId, so the census
-	// fixture and the ids fixture cannot drift apart silently. A wrong or missing name yields an ABSENT file,
-	// which is RED — this can never pass for the wrong reason.
-	const idsFixturePath = path.join(acceptanceDir, 'expectedDecisionBlockIds.json');
-	const idsEntry = (readJson(idsFixturePath).byBridgeName || {})[BRIDGE_NAME] || {};
-	const graphIdPrefix = typeof idsEntry.graphId === 'string' ? idsEntry.graphId.split('@manifest:')[0] : '(noGraphId)';
-	const censusFixturePath = path.join(acceptanceDir, `expectedCensus.${BRIDGE_NAME}.${graphIdPrefix}.json`);
+	// THE FIXTURE NAME IS DATA-DERIVED, not a literal — see censusFixtureResolution at the top of this file, which
+	// is now the ONE place that derivation happens. It was local here until RULING B4R-1 needed the same fixture in
+	// the hermetic SECTION 3; hoisting it rather than copying it means the two sections cannot come to disagree
+	// about which frozen block this suite is measuring against.
+	const { idsEntry, graphIdPrefix, censusFixturePath } = censusFixtureResolution;
+	void graphIdPrefix;
 	const decisionStorePath = acceptanceCommands.decisionStoreFilePath;
 	harness.note(`census fixture ${path.relative(treeRoot, censusFixturePath)} — its NAME is derived from the ids fixture's graphId, so the two cannot drift apart unnoticed.`);
 	harness.note(idsEntry.provisional === true ? 'the ids entry is PROVISIONAL (RULING BS-7): the ids are REAL and reproduced, but keyed to the framework at this branch’s base. Three commits have moved lib/bridge-framework since — 1393f82, d548d41, e32e633 — and 1393f82 is the BR-067 fix without which the Ed-Fi D4 real run died at subject 50. After the rebase the CENSUS MUST BE EQUAL and THE IDS MOVE, as a NAMED mover whose cause is the fingerprint.' : 'the ids entry is final.');
