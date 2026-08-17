@@ -1,0 +1,63 @@
+{
+  "recordName": "pescVectorlessBlockRecord",
+  "recordedBy": "LUNAR_PRISM (P1/P2)",
+  "recordedOn": "2026-08-17",
+  "ruling": "SABLE_RIVER RULING P2-R3 item 4 — LABEL IT, DO NOT DISCARD IT",
+
+  "status": "SUPERSEDED AND DELIBERATELY RETAINED",
+
+  "WHY_THIS_ARTIFACT_STILL_EXISTS": "I proposed discarding it. The supervisor OVERRULED that, and the reason is the whole point: THIS ARTIFACT IS THE EVIDENCE FOR THE FINDING. Its byte count and its zero embeddingRef rows are what make the mechanism checkable by someone who trusts neither of us. Deleting it would leave the finding resting on two people's say-so.",
+
+  "DO_NOT_USE_THIS_ID_AS_A_LINEAGE_MEMBER": "c46991d127a3f36bd9bed9708c5701a12b0340497a90235372ef962913566d3f is the id of a VECTORLESS artifact. It is not a generation of the vectorized PESC lineage and cannot be compared to one. See bridgeData/buildModeIdentityRecord.json.",
+
+  "theTwoArtifacts": {
+    "vectorless": {
+      "blockId": "c46991d127a3f36bd9bed9708c5701a12b0340497a90235372ef962913566d3f",
+      "buildMode": "vectorize=false",
+      "storePath": "system/dataStores/graphBuilder/p1_pesc260805_seat.standardsDatabase.sqlite3",
+      "subject": "pesc260805@aggregate_01_base",
+      "blockTextBytes": 81517933,
+      "embeddingRefOccurrences": 0
+    },
+    "vectorized": {
+      "blockId": "f139654a98cd0ef238759e6dc2bda2e532f13d5a7db00bfea94d89c3317b149d",
+      "buildMode": "vectorize=true",
+      "storePath": "system/dataStores/bridgeAcceptance/pescDerived/pescDerived.standardsDatabase.sqlite3",
+      "subject": "pesc260805@aggregate_01_base",
+      "blockTextBytes": 88551726,
+      "embeddingRefOccurrences": 42372
+    },
+    "delta": {
+      "blockTextBytes": 7033793,
+      "rowCount": 42372,
+      "bytesPerRow": "approximately 166",
+      "embeddingRefPerRow": "exactly one on the vectorized side, none on the vectorless side"
+    },
+    "measuredNotRecited": "Every figure above was re-read directly from the two sqlite stores on 2026-08-17 at the time this record was written, not copied from an earlier report."
+  },
+
+  "HOW_TO_CHECK_THIS_YOURSELF_WITHOUT_TRUSTING_US": {
+    "step1": "sqlite3 'file:<storePath>?mode=ro' \"SELECT refId, length(text) FROM blocks WHERE subject='pesc260805@aggregate_01_base';\"",
+    "step2": "Count embeddingRef occurrences in the block text on each side. The vectorless side must be ZERO and the vectorized side must equal the row count.",
+    "whatThisProves": "The two blocks are the same forge over the same snapshot in the same tree, differing only by vectorisation — and their content addresses differ. That is the mechanism, demonstrated rather than asserted."
+  },
+
+  "WHERE_THE_WRONG_VALUE_WAS_PUBLISHED": [
+    "commit 2f51a56339af6fc504c23825fbf430d6953ae10a",
+    "commit 27fa1ed",
+    "lib/bridge-framework/test/acceptance/acceptanceCommands.jsonc",
+    "recipes/fourWithHubPescDerived.recipe.jsonc (header comment)",
+    "system/management/zNotesPlansDocs/forgeDefinitionV2/DEVLOG-P-pescBridge.md",
+    "LUNAR_PRISM's CP-P1 report to SABLE_RIVER"
+  ],
+
+  "WHY_IT_WAS_NOT_CAUGHT_AT_CP_P1": "Nothing available at that checkpoint could have caught it, and the supervisor asked directly and was told so rather than offered a comforting invented check. The id was CORRECT FOR THE ARTIFACT IT DESCRIBED. It was read from the store rather than from a log. Every cross-check that existed agreed with it. There was no vectorized P1 build to compare against. The check nobody was asking for is the one now made standing: under what flags was this artifact produced, and are they the same flags as the artifact it claims to succeed?",
+
+  "whyTheFlagWasChosen": "--vectorize=false was chosen DELIBERATELY to make embedding spend zero BY CONSTRUCTION rather than by cache hit — the stronger safety guarantee, stated as such at the time and accepted. THE SAFETY MEASURE CHANGED THE IDENTITY OF THE THING IT WAS PROTECTING. That is the shape worth remembering; the flag itself was not a mistake.",
+
+  "seeAlso": [
+    "forges/pesc260805/bridgeData/buildModeIdentityRecord.json",
+    "forges/pesc260805/test/probes/p2_blockContentDiffVectorised.js",
+    "forges/pesc260805/test/probes/p2_composeManifestCorrected.js"
+  ]
+}

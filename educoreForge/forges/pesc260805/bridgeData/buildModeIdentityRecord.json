@@ -1,0 +1,80 @@
+{
+  "recordName": "buildModeIdentityRecord",
+  "recordedBy": "LUNAR_PRISM (P1/P2)",
+  "recordedOn": "2026-08-17",
+  "ruling": "SABLE_RIVER RULING P2-R3 item 3 and RULING P2-R4",
+
+  "THE_ONE_SENTENCE": "A --vectorize=false BUILD PRODUCES A BLOCK ID THAT IS NOT COMPARABLE TO THE VECTORIZED LINEAGE, because a block refId is a content address over block TEXT and the block text CONTAINS THE EMBEDDINGS.",
+
+  "readThisBeforeYouPassTheFlag": {
+    "whyThisRecordExists": "Two people who both knew this system well spent an entire phase holding the opposite belief, cited a real code artifact as proof of it, and were wrong. Nothing in the tree said otherwise. This record is the sentence that was missing.",
+    "ifYouAreAboutToRunVectorizeFalse": "Do it — it is a legitimate and sometimes superior choice, and it is how you make embedding spend zero BY CONSTRUCTION rather than by cache hit. But DO NOT compare, publish, commit, or succeed any block id it produces against an id from a vectorized build. Label every id it produces with its build mode at the moment you write it down."
+  },
+
+  "theTwoHashesThatAnswerDifferentQuestions": [
+    {
+      "name": "block refId",
+      "computedBy": "contentAddress.blockIdForText(blockText)",
+      "provenance": "[code fact] lib/replay/replayManager.js:297, :894",
+      "coversEmbeddings": true,
+      "consequence": "Vectorisation MOVES this value. Two ids computed under different --vectorize flags are addresses of two different kinds of content, not two generations of one lineage."
+    },
+    {
+      "name": "pureLayerFingerprint",
+      "computedBy": "fingerprint.js, over an un-embedded pure output (its own header says so)",
+      "provenance": "[code fact] fingerprint.js:25 DROPPED_PROPERTY_NAME_LIST = ['_id','_source','embedding','embeddingModelVersion','stableId']",
+      "coversEmbeddings": false,
+      "consequence": "A CHANGE-DETECTION PROXY. Its dropped-property list is NOT evidence about the block refId and must never be cited as such."
+    }
+  ],
+
+  "THE_ERROR_THIS_RECORD_PREVENTS": {
+    "whatWasBelieved": "That DROPPED_PROPERTY_NAME_LIST proves vectors cannot move a block id.",
+    "whyItSurvived": "The two hashes had NEVER DISAGREED, because nobody had ever run --vectorize=false in this order. The belief was untested rather than tested-and-passed.",
+    "whoHeldIt": "Both the P1 programmer and the supervisor, independently, and it was cited in a cleared checkpoint.",
+    "howItWasCaught": "A later --vectorize=true run produced a DIFFERENT standardBase id for the same forge over the same snapshot in the same tree. Two of the builder's own measurements disagreeing is what forced the question.",
+    "whatWasNotAtFault": "P0b was never wrong. Its reasoning holds WITHIN vectorized builds, where identical text yields identical cached vectors so the vector contribution is constant."
+  },
+
+  "A_SCOPE_GAP_BETWEEN_TWO_MECHANISMS_NOT_AN_OMISSION_FROM_ONE": {
+    "theFieldThatDiffers": "embeddingRef",
+    "whereItLives": "ROW level, beside `properties`, NOT inside it",
+    "whatItIs": "[code fact] lib/replay/replay-block.js:188-194 — the content-hash of the vector, a 64-hex vectorId, present only when vectorised, ~166 bytes/row",
+    "measuredAcross": "42,372 rows; explains the 7,033,793-byte delta between the two blocks",
+    "isThisADefectInTheDroppedPropertyList": "NO. That list governs PROPERTIES and cannot structurally reach a row-level key. 'Add it to the list' is a fix that cannot work.",
+    "whatItActuallyIs": "A documentation gap. Docketed by the supervisor as framework item 15 — a MISSING STATEMENT, not a code defect. This record partly discharges it."
+  },
+
+  "THE_STANDING_RULE_THIS_ESTABLISHES": {
+    "rule": "A NAMED MOVER RECORDS THE BUILD MODE BESIDE THE ID — as a FIELD, in the same structure that carries the id, never as prose in a narrative.",
+    "theQuestionItAnswers": "Under what flags was this artifact produced, and are they the same flags as the artifact it claims to succeed?",
+    "why": "A content address is only comparable to another computed over the same kind of content. The lineage carried no field that could have told anyone the two were different kinds.",
+    "enforcedBy": "forges/pesc260805/test/probes/p2_composeManifestCorrected.js — comparabilityRefusal() REFUSES a successor claim spanning two build modes, and is observed refusing, passing, and refusing an unknown generation."
+  },
+
+  "theCorrectedLineage": {
+    "beforeReembed": { "blockId": "db885ac42b284135a37135a0fb95baf376547fe401530506cc321f36686a9e61", "buildMode": "vectorize=true" },
+    "afterReembed": { "blockId": "045523dc197f4649712b74d3d6b995522106d44fa5c17c17d900205c4ee4a992", "buildMode": "vectorize=true" },
+    "afterSeatStamp": { "blockId": "f139654a98cd0ef238759e6dc2bda2e532f13d5a7db00bfea94d89c3317b149d", "buildMode": "vectorize=true", "reproducedIndependentlyBy": 3 },
+    "fourForgeManifest": { "before": "7e8372a2f342dffd5999e2e50e00bf69aa83f698ea980849f96ab568e42ab00a", "after": "09cb194a7313e184fbff9bc3f6a5e21265c9dcea8bb2f8068ad0ec6b1664d24b" }
+  },
+
+  "THREE_RETAINED_P1_PROBES_NAME_THE_SUPERSEDED_ID_AND_THEIR_MEASUREMENTS_NEVERTHELESS_HOLD": {
+    "theProbes": [
+      "forges/pesc260805/test/probes/p1_conceptGrainSeam.js:60",
+      "forges/pesc260805/test/probes/p1_optionSetKeyPurity.js:148",
+      "forges/pesc260805/test/probes/p1_buildScopeAndFanOut.js:197"
+    ],
+    "whatTheyNameInTheirProvenanceLines": "c46991d127a3f36bd9bed9708c5701a12b0340497a90235372ef962913566d3f, and the graph DEV_gb_materialize_94765_2 built from it — i.e. a VECTORLESS artifact, with the build mode unstated.",
+    "DO_THEIR_MEASUREMENTS_STILL_HOLD": "YES, AND THIS IS ESTABLISHED BY MEASUREMENT RATHER THAN ASSUMED. p2_blockContentDiffVectorised.js compared the two blocks property-by-property over matched stableIds across all 42,372 rows and found EXACTLY THREE differing keys: embeddingModelVersion (in properties), ROWKEY:embeddingModelVersion, and ROWKEY:embeddingRef. All three are embedding-related. EVERY NON-EMBEDDING PROPERTY IS IDENTICAL between the two blocks. Concept grain, option-set key purity, and build scope / fan-out are all measurements over non-embedding properties, so they transfer to the vectorized block unchanged.",
+    "WHAT_IS_NEVERTHELESS_WRONG_WITH_THEM": "Their provenance lines name an id without naming its build mode, which is the precise omission RULING P2-R4 exists to end. A reader meeting 'c46991d1…' in those files has no way to know it addresses a vectorless artifact.",
+    "whyTheyWereNotEdited": "They are RETAINED EVIDENCE and their measurements are CORRECT. Editing a retained probe risks the same harm as editing the composition tool would have: making the record it supports unreproducible. The incompleteness is recorded here, additively, and the placement question is referred to the supervisor rather than decided unilaterally.",
+    "status": "REFERRED — awaiting supervisor ruling on whether retained probe provenance lines should be labelled in place."
+  },
+
+  "seeAlso": [
+    "forges/pesc260805/bridgeData/pescVectorlessBlockRecord.json — the labelled superseded artifact, retained as the EVIDENCE for this record",
+    "forges/pesc260805/test/probes/p2_blockContentDiffVectorised.js — the decomposition that named the differing fields",
+    "forges/pesc260805/test/probes/p2_composeManifestCorrected.js — the correction, with the guard"
+  ]
+}

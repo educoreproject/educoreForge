@@ -17,13 +17,26 @@
 // WHAT MUST NOT MOVE WHEN THIS RUNS, and it is an ASSERTION rather than an expectation: the Ed-Fi,
 // SIF and CEDS base block ids. Their forges are untouched by this order. A moved Ed-Fi, SIF or CEDS
 // id is a DEFECT, not a re-key, and the run stops. The PESC base block and the four-forge manifest
-// DID move, once, as the named mover of RULING P1-R8:
-//   pesc260805 base   045523dc197f4649712b74d3d6b995522106d44fa5c17c17d900205c4ee4a992
-//                  -> c46991d127a3f36bd9bed9708c5701a12b0340497a90235372ef962913566d3f
+// DID move, once, as the named mover of RULING P1-R8. BOTH ENDPOINTS ARE STATED WITH THEIR BUILD MODE
+// (RULING P2-R4) because a block refId is a content address over block TEXT and the text CONTAINS the
+// embeddings — so an id is only comparable to another computed under the SAME vectorisation flag:
+//   pesc260805 base   045523dc197f4649712b74d3d6b995522106d44fa5c17c17d900205c4ee4a992  [vectorize=true]
+//                  -> f139654a98cd0ef238759e6dc2bda2e532f13d5a7db00bfea94d89c3317b149d  [vectorize=true]
 //   four-forge manifest 7e8372a2f342dffd5999e2e50e00bf69aa83f698ea980849f96ab568e42ab00a
-//                    -> 96815028622ea722a5473fc1203654c2c8d9ac630755f08520319263300771e4
-// Both computed by REFERENCE COMPOSITION (test/probes/p1_composeManifestFromReferences.js), which
-// reproduces two historical manifest ids before reporting a new one and needs no build at all.
+//                    -> 09cb194a7313e184fbff9bc3f6a5e21265c9dcea8bb2f8068ad0ec6b1664d24b
+//
+// ⚠️ CORRECTED 2026-08-17, AND THE SUPERSEDED VALUES ARE NAMED HERE RATHER THAN ERASED. This header
+// previously read `-> c46991d1…` and `-> 96815028…`. Those were computed from a `--vectorize=false`
+// re-forge — a VECTORLESS artifact, not a member of this lineage. The flag had been chosen deliberately
+// to make embedding spend zero BY CONSTRUCTION rather than by cache hit, which was the stronger safety
+// guarantee; THE SAFETY MEASURE CHANGED THE IDENTITY OF THE THING IT WAS PROTECTING. Nothing in the
+// record could have revealed it, because the lineage carried no field naming the build mode — which is
+// precisely the field RULING P2-R4 now requires. See forges/pesc260805/bridgeData/buildModeIdentityRecord.json.
+//
+// Both current values computed by REFERENCE COMPOSITION (test/probes/p2_composeManifestCorrected.js),
+// which reproduces THREE historical manifest ids — including the superseded one, which is what proves
+// the tool was never at fault, only its input — and needs no build at all. Its predecessor
+// p1_composeManifestFromReferences.js is left UNEDITED as the retained evidence behind the wrong figure.
 //
 // THE TWO POPULATIONS' STATISTICS ARE REPORTED SEPARATELY AND NEVER POOLED — see the eval sibling's
 // header for why. That rule survives into every artifact this recipe produces.

@@ -33,9 +33,11 @@
 // THE VALUE TIER IS IN SCOPE FOR THIS ORDER AND IS SERVED BY A SIBLING PLUGIN — NOT ABSENT.
 // Stated here IN WORDS because an omission that is not declared is indistinguishable from an
 // oversight, and the next builder would read silence as "not in scope". TQ ruled the value tier IN
-// ("map everything — all the juice squeezed from the orange"). Its 156 latest-reachable option-set
-// concepts are subjects of pescOptionSetCedsDerivedPlugin.js, which retrieves against the SAME
-// property-tier hub cards this plugin does.
+// ("map everything — all the juice squeezed from the orange"). Its **223** latest-reachable
+// option-set concepts (RULING P1-R13 — NOT the 156 of PLAN §1-A, whose key omitted the rendered
+// `description` and left 43% of its groups internally impure) are subjects of
+// pescOptionSetCedsDerivedPlugin.js, which retrieves against the SAME property-tier hub cards this
+// plugin does.
 //
 // WHY A SIBLING RATHER THAN A SECOND subjectSource HERE: `subjectSource` takes ONE label, singular
 // ([code fact] bridgePluginContract.js:695; bridge-framework.js:896 filters on that one label). The
@@ -66,7 +68,31 @@ const bridgeDeclaration = Object.freeze({
 	// (Contrast edfiCedsDerivedPlugin, which mints `urn:educore:edfi:` because Ed-Fi publishes no
 	// URN scheme of its own.)
 	sourceCuriePrefix: { prefix: 'pesc', iri: 'urn:org:pesc:' },
-	subjectCuriePrefix: 'pesc',
+	// ⚠️ THIS PREFIX IS A SHAPE-FITTING DEVICE SATISFYING A startsWith CHECK. IT IS NOT A NAMESPACE
+	// CLAIM, AND A READER MUST NOT TAKE IT AS ONE. Recorded as data by RULING P2-R1 because without
+	// this note a future reader takes the declaration at face value, which is precisely the harm.
+	//
+	// (1) PESC'S stableIds ARE URNs; Ed-Fi's AND SIF's ARE CURIEs. The whole proof is one query:
+	//         sif:field//AccountingPeriods/AccountingPeriod/@RefId          <- CURIE
+	//         edfi:property/abstractEntity.EducationOrganization.Address    <- CURIE
+	//         urn:org:pesc:core:CoreMain:v1.0.0#complexType/...             <- A URN
+	//     PESC mints URNs CORRECTLY: urn:org:pesc:* is its OWN published namespace, enforced by its
+	//     parser's refusal ([code fact] forges/pesc260805/lib/parser.js:40, :547).
+	// (2) THE EXPORTER ASSUMES THE CURIE SHAPE and says so in its own comment ([code fact]
+	//     lib/bridge-framework/sssomExporter.js:194-198): "a forged id already carries its standard's
+	//     prefix (`toy:property/...`, `<standard>:property/...`); prepending would double it". Its rule
+	//     is a literal indexOf(prefix + ':') !== 0 -> REFUSE. The assumption held for three standards
+	//     and is wrong in general; PESC is simply the first to prove it. Docketed as framework defect
+	//     item 14 — NOT repairable here, and lib/bridge-framework/ is this order's hard line.
+	// (3) SO THE VALUE BELOW IS CHOSEN TO SATISFY THAT startsWith, NOT TO DECLARE A CURIE PREFIX.
+	//     MEASURED against the exporter's own predicate with four real stableIds
+	//     (test/probes/p2_curiePrefixCandidates.js): 'pesc' passes 0 of 4 — the defect this replaces;
+	//     'urn' passes 4 of 4 but asserts the namespace is THE URN SCHEME, which is false of every URN
+	//     ever minted; 'urn:org:pesc' passes 4 of 4 AND names PESC's actual org namespace.
+	//     THE SUBJECT ID ITSELF IS VERBATIM AND HONEST — urn:org:pesc:... is a valid IRI and SSSOM
+	//     permits a full IRI as subject_id. Only the PREFIX LABEL is a fitting device, which is a far
+	//     narrower thing than the choice first appeared to be.
+	subjectCuriePrefix: 'urn:org:pesc',
 	// EMPTY, and required to be. Nothing is walked. This one line is the whole of BG-NOCROSSWALK's
 	// mechanism: a producer that opens no file cannot have read the answer out of one. It is also
 	// why no `mappingProvider` appears below — FORBIDDEN when matchBasis is derived (§11.7 (c)),

@@ -60,12 +60,44 @@ const bridgeDeclaration = Object.freeze({
 	// PESC's own published namespace, enforced by its parser's refusal (parser.js:40, :547) rather
 	// than assumed — identical to the sibling, because the standard is the same standard.
 	sourceCuriePrefix: { prefix: 'pesc', iri: 'urn:org:pesc:' },
-	subjectCuriePrefix: 'pesc',
+	// ⚠️ THIS PREFIX IS A SHAPE-FITTING DEVICE SATISFYING A startsWith CHECK. IT IS NOT A NAMESPACE
+	// CLAIM, AND A READER MUST NOT TAKE IT AS ONE. Recorded as data by RULING P2-R1 because without
+	// this note a future reader takes the declaration at face value, which is precisely the harm.
+	//
+	// (1) PESC'S stableIds ARE URNs; Ed-Fi's AND SIF's ARE CURIEs. The whole proof is one query:
+	//         sif:field//AccountingPeriods/AccountingPeriod/@RefId          <- CURIE
+	//         edfi:property/abstractEntity.EducationOrganization.Address    <- CURIE
+	//         urn:org:pesc:core:CoreMain:v1.0.0#complexType/...             <- A URN
+	//     PESC mints URNs CORRECTLY: urn:org:pesc:* is its OWN published namespace, enforced by its
+	//     parser's refusal ([code fact] forges/pesc260805/lib/parser.js:40, :547).
+	// (2) THE EXPORTER ASSUMES THE CURIE SHAPE and says so in its own comment ([code fact]
+	//     lib/bridge-framework/sssomExporter.js:194-198): "a forged id already carries its standard's
+	//     prefix (`toy:property/...`, `<standard>:property/...`); prepending would double it". Its rule
+	//     is a literal indexOf(prefix + ':') !== 0 -> REFUSE. The assumption held for three standards
+	//     and is wrong in general; PESC is simply the first to prove it. Docketed as framework defect
+	//     item 14 — NOT repairable here, and lib/bridge-framework/ is this order's hard line.
+	// (3) SO THE VALUE BELOW IS CHOSEN TO SATISFY THAT startsWith, NOT TO DECLARE A CURIE PREFIX.
+	//     MEASURED against the exporter's own predicate with four real stableIds
+	//     (test/probes/p2_curiePrefixCandidates.js): 'pesc' passes 0 of 4 — the defect this replaces;
+	//     'urn' passes 4 of 4 but asserts the namespace is THE URN SCHEME, which is false of every URN
+	//     ever minted; 'urn:org:pesc' passes 4 of 4 AND names PESC's actual org namespace.
+	//     THE SUBJECT ID ITSELF IS VERBATIM AND HONEST — urn:org:pesc:... is a valid IRI and SSSOM
+	//     permits a full IRI as subject_id. Only the PREFIX LABEL is a fitting device, which is a far
+	//     narrower thing than the choice first appeared to be.
+	subjectCuriePrefix: 'urn:org:pesc',
 	sourceChannelList: [],
 	subjectIdentity: { kind: 'forgedNode', property: 'stableId' },
-	// THE SECOND SUBJECT LABEL. Scoped to the 156 latest-reachable option-set CONCEPTS — the forge's
-	// own `reachableFromLatestRoot` marker intersected with its concept key, then one representative
-	// per concept. A `false` on that marker must NOT be read as "obsolete": it conflates genuinely
+	// THE SECOND SUBJECT LABEL. Scoped to the **223** latest-reachable option-set CONCEPTS (RULING
+	// P1-R13) — the forge's own `reachableFromLatestRoot` marker intersected with the concept key
+	// (family, kind, name, description), then one representative per concept.
+	//
+	// ⚠️ NOT 156, AND THE DIFFERENCE IS A DEFECT THAT WAS CAUGHT: (family, kind, name) gives 156 and
+	// reproduces PLAN §1-A exactly, by two independent family derivations, with the cluster count 236
+	// as a control. AND 67 OF THOSE 156 GROUPS — 43% — DIFFER INTERNALLY IN `description`, which this
+	// plugin RENDERS. The dedup key must EQUAL OR CONTAIN the rendering allow-list, so 156 is unsound
+	// in exactly the way PLAN §1's 1,201 was unsound. See bridgeData/pescOptionSetDedupRule.json for
+	// the four measured alternatives and the three impurity examples.
+	// THE TELL WAS THAT THE COUNT WAS TIDY. A `false` on that marker must NOT be read as "obsolete": it conflates genuinely
 	// orphaned, quarantined-contested, older-message-version and substitution-group-only, and
 	// "latest" is the FORGE's numeric inference, not something PESC asserts. The scope file records
 	// that it excluded on an inferred marker rather than an asserted one.
