@@ -194,6 +194,14 @@ runCypher({ cypher: ELEMENT_CYPHER }, (elementError, elementRecords) => {
 			measuredAgainst: {
 				boltUrl: BOLT_URL,
 				container: 'DEV_gb_materialize_94765_2',
+				// ADDITIVE LABEL (RULING P2-R8), 2026-08-17 — the id below is UNCHANGED because the scope and
+				// fan-out figures computed against it are correct. It addresses a VECTORLESS artifact
+				// (--vectorize=false); the shipped lineage is vectorized, id f139654a…. The two blocks differ
+				// in EXACTLY THREE embedding-related keys across all 42,372 matched rows, so scope membership
+				// and fan-out — neither embedding-related — transfer unchanged. AN ID WITHOUT ITS BUILD MODE
+				// CANNOT BE CHECKED; that omission, not these figures, is what is being repaired here.
+				// Full account: bridgeData/buildModeIdentityRecord.json
+				pescBaseBlockBuildMode: 'vectorize=false — NOT the shipped vectorized lineage',
 				pescBaseBlock: 'c46991d127a3f36bd9bed9708c5701a12b0340497a90235372ef962913566d3f',
 				note: 'a LIVE graph built from THIS phase\'s re-forged block — figures about the artifact that will ship, not about the pre-re-embed graph P0 measured',
 			},

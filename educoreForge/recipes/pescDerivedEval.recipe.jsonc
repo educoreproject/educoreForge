@@ -1,26 +1,53 @@
-// pescDerivedEval.recipe.jsonc — LUNAR_PRISM (P1), 2026-08-17.
+// pescDerivedEval.recipe.jsonc — LUNAR_PRISM, 2026-08-17.
 //
-// PESC and the CEDS hub ONLY, plus BOTH PESC -> CEDS derived bridge plugins. This is the cheap
-// evaluation build: P2's debug census runs here, not on the four-forge eye graph, because a census
-// is a statement about the PESC/CEDS pairing and the other two standards contribute nothing to it
-// while costing a forge each.
+// PESC and the CEDS hub ONLY, plus the PESC -> CEDS derived bridge over the PROPERTY TIER. This is the
+// cheap evaluation build: P2's debug census runs here, not on the four-forge eye graph, because a census
+// is a statement about the PESC/CEDS pairing and the other two standards contribute nothing to it while
+// costing a forge each.
 //
-// WHY BOTH PLUGINS IN ONE RECIPE. They are two SUBJECT LABELS through one unchanged seam —
-// PescElementDecl (2,213 concepts) and PescNamedDefinition (the option-set concepts). Running them
-// together is the point rather than a convenience: it is what demonstrates that the seam admits a
-// second subject SHAPE, and it puts both populations' pool statistics in one run so they can be
-// reported SEPARATELY from one another with no possibility of a stale comparison between runs.
+// ============================ ONE BRIDGE PER RECIPE — RULING P2-R5 ============================
+// ⚠️ THIS RECIPE PREVIOUSLY DECLARED BOTH PESC PLUGINS AND COULD NOT BE BUILT. The option-set tier now
+// lives in its own sibling recipe, `pescOptionSetDerivedEval.recipe.jsonc`. THIS IS NOT A RETREAT FROM
+// THE TWO-PLUGIN DESIGN — both plugins are shipped, validated and censused; they simply cannot share a
+// MANIFEST.
 //
-// ⚠️ AND THEY MUST NEVER BE POOLED INTO ONE FIGURE. Standing reporting rule, and it has now bitten
-// this order in three different forms: two populations embedded on differently-shaped strings are
-// not mutually comparable. The element-tier subjects carry the ruled HYBRID composition; the
-// option-set subjects carry `Artifact vN | TypeName`, which REPORT-P0 §4.1 called pure noise and
-// which the composition test measured as the losing arm. Any pooled mean across the two is a
-// meaningless number that will read as a measurement.
+// THE CODE FACT, so nobody re-attempts it. [code fact] vocabulary.js:183-198 composes a relationship
+// subject from exactly five inputs — hubStandard, hubVersion, sourceStandard, sourceVersion, producer.
+// THE PLUGIN IS NOT AMONG THEM. [code fact] build.js:1740-1745 derives producer 'inferred' for any block
+// carrying a decisionBlock, and both plugins are frozen-judge derived plugins. Both therefore compose
+// the IDENTICAL subject `ceds@<ver>_rel_pesc260805@<ver>_close`, and manifestEditor refuses the second:
+// "One subject contributes one schema block of one kind." THE FRAMEWORK IS RIGHT. A manifest keyed on
+// schemaBlockRefId + position cannot hold two blocks claiming one subject without the second being
+// ambiguous. This is arithmetic over the composer's inputs, not a defect in either declaration.
+//
+// WHY NOBODY MET THIS BEFORE: every other recipe in this repository declares exactly ONE bridge. The two
+// PESC recipes were the first two-bridge recipes that had ever existed here.
+//
+// ⚠️ A REFUSAL THAT ARRIVES TOO LATE — docketed as framework item 16, NOT repaired here. The two-bridge
+// form VALIDATED CLEAN and was refused only in phase C, AFTER both censuses had run, both SSSOM exports
+// were written and both blocks were frozen. On a real-judge run that ordering would spend the entire
+// batch and THEN refuse. Single-bridge recipes cannot trip a two-bridge refusal, so the hazard is
+// DISARMED for this order — docketed, not live.
+//
+// A PATH CONSIDERED AND REFUSED, recorded so it reads as seen rather than missed: declaring the
+// option-set plugin's producer as 'structural' would compose a distinct subject (`_struct`) and would
+// work mechanically. It would also be a lie — that plugin is an inferred judge, not a same-URI
+// structural join — and the producer suffix exists precisely so a block cannot misdescribe its own
+// provenance. Using it as a name-uniquifier defeats the mechanism it borrows.
+//
+// ============================ THE TWO POPULATIONS ARE NEVER POOLED ============================
+// Standing reporting rule, and it has bitten this order in three different forms. Two populations
+// embedded on differently-shaped strings are not mutually comparable: the element-tier subjects carry
+// the ruled HYBRID composition; the option-set subjects carry `Artifact vN | TypeName`, which
+// REPORT-P0 §4.1 called pure noise and which the composition test measured as the losing arm. Any
+// pooled mean across the two is a meaningless number that will read as a measurement.
+// THE SPLIT MAKES THIS STRUCTURAL RATHER THAN DISCIPLINARY — two runs cannot produce a pooled figure by
+// accident. What is LOST is the single-run guarantee against a stale cross-run comparison, so any report
+// citing both tiers MUST name the run each figure came from.
 //
 // ROUND-TRIP STAGE ON. A bridge writes edges, never nodes, so the PESC round trip must remain
-// numerically identical to its pin with the bridges present. It is cheap and it is the assertion
-// that the bridge did not disturb the standard's own bytes.
+// numerically identical to its pin with the bridge present. It is cheap and it is the assertion that
+// the bridge did not disturb the standard's own bytes.
 //
 // SPEND: the DEBUG judge costs nothing. A REAL-judge line is authorised PER LINE, as data, in
 // acceptanceCommands.jsonc — never by editing this file.
@@ -28,7 +55,7 @@
 	"schemaVersion": "1.0.0",
 	"recipeName": "pescDerivedEval",
 	"kind": "dev",
-	"description": "PESC and the CEDS hub only, PLUS both PESC -> CEDS DERIVED bridge plugins (pescCedsDerivedPlugin over PescElementDecl, pescOptionSetCedsDerivedPlugin over PescNamedDefinition) — the cheap evaluation build for P2.",
+	"description": "PESC and the CEDS hub only, PLUS the PESC -> CEDS DERIVED bridge over the PROPERTY TIER (pescCedsDerivedPlugin over PescElementDecl) — the cheap evaluation build for P2. The option-set tier is a SEPARATE recipe, pescOptionSetDerivedEval, per RULING P2-R5: two derived plugins over one standard pair compose an identical manifest subject and cannot share a manifest.",
 	"standards": [
 		{ "token": "ceds", "version": "current" },
 		{ "token": "pesc260805", "version": "current" }
@@ -37,8 +64,7 @@
 		{ "standard": "ceds" }
 	],
 	"bridges": [
-		{ "source": "pesc260805", "hub": "ceds", "bridge": "pescCedsDerivedPlugin", "dependencies": ["pesc260805", "ceds"] },
-		{ "source": "pesc260805", "hub": "ceds", "bridge": "pescOptionSetCedsDerivedPlugin", "dependencies": ["pesc260805", "ceds"] }
+		{ "source": "pesc260805", "hub": "ceds", "bridge": "pescCedsDerivedPlugin", "dependencies": ["pesc260805", "ceds"] }
 	],
 	"roundTripStage": true
 }

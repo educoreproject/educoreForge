@@ -145,6 +145,14 @@ session
 
 		session.close().then(() =>
 			finish('', {
+				// ADDITIVE LABEL (RULING P2-R8), 2026-08-17 — the original line below is UNCHANGED because its
+				// figures are correct. The block it names is a VECTORLESS artifact (--vectorize=false); the
+				// shipped lineage is vectorized, id f139654a98cd0ef238759e6dc2bda2e532f13d5a7db00bfea94d89c3317b149d.
+				// KEY-PURITY FIGURES ARE UNAFFECTED: the two blocks differ in exactly three embedding-related
+				// keys across all 42,372 matched rows, and purity is measured over name/kind/description —
+				// none of them embedding-related. Labelled, not corrected, because what it says is TRUE and
+				// merely incomplete. Full account: bridgeData/buildModeIdentityRecord.json
+				measuredAgainstBuildMode: 'vectorize=false — see the label above; NOT the shipped vectorized lineage',
 				measuredAgainst: { boltUrl: BOLT_URL, container: 'DEV_gb_materialize_94765_2', pescBaseBlock: 'c46991d127a3f36bd9bed9708c5701a12b0340497a90235372ef962913566d3f' },
 				subjectAllowListReadFromTheShippedDeclaration: SUBJECT_ALLOW_LIST,
 				nodeCount: rowList.length,

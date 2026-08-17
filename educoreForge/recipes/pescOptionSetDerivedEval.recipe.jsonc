@@ -1,0 +1,59 @@
+// pescOptionSetDerivedEval.recipe.jsonc — LUNAR_PRISM, 2026-08-17. Created under RULING P2-R5.
+//
+// THE SIBLING OF pescDerivedEval. PESC and the CEDS hub, plus the PESC -> CEDS derived bridge over the
+// OPTION-SET TIER — pescOptionSetCedsDerivedPlugin over `PescNamedDefinition`, 223 concepts.
+//
+// ============================ WHY THIS FILE EXISTS AT ALL ============================
+// NOT because the option-set tier is a lesser thing, and NOT because the two-plugin design was wrong.
+// Both plugins are shipped, validated, and censused. They cannot share a MANIFEST, and that is a
+// property of the manifest subject composer rather than of either declaration.
+//
+// [code fact] vocabulary.js:183-198 composes a relationship subject from exactly five inputs —
+// hubStandard, hubVersion, sourceStandard, sourceVersion, producer. THE PLUGIN IS NOT AMONG THEM.
+// [code fact] build.js:1740-1745 derives producer 'inferred' for any block carrying a decisionBlock,
+// and both PESC plugins are frozen-judge derived plugins. Both therefore compose the identical subject
+// and manifestEditor refuses the second by name. The full account is in pescDerivedEval's header.
+//
+// WHAT THIS SPLIT COSTS, STATED RATHER THAN GLOSSED. Running both plugins in one build was not a
+// convenience — it put both populations' pool statistics in ONE run, so they could be reported
+// separately with no possibility of a stale comparison between runs. That guarantee is gone. THE
+// POPULATIONS STILL MUST NEVER BE POOLED, and now any report citing both tiers MUST NAME THE RUN each
+// figure came from, because two runs is exactly the condition under which a stale figure can be quoted
+// beside a fresh one and look like a comparison.
+//
+// ============================ WHAT DIFFERS FROM THE SIBLING ============================
+// Only the bridge line. The standards, the hub, and the round-trip stage are identical BY DESIGN — this
+// is the same PESC/CEDS pairing seen through a second SUBJECT SHAPE, which is the whole point the two
+// plugins were built to demonstrate: the seam admits a second subject shape with ZERO framework change.
+//
+//   subjectSource label    PescNamedDefinition (223 option-set concepts), not PescElementDecl (2,213)
+//   predicateByCategory    relatedMatch on ALL THREE judge categories — a RECORDED UNDERSTATEMENT
+//                          rather than a measured judgement. See bridgeData/pescOptionSetUnderstatementRecord.json.
+//   dedup key              (family, kind, name, description) -> 223. The narrower (family, kind, name)
+//                          key of PLAN §1-A yields 156 and is UNSOUND: 67 of its 156 groups (43%) differ
+//                          internally in the RENDERED `description`. Superseded by RULING P1-R13, not
+//                          overlooked. Cross-check: (name, kind, description) gives 222, differing by
+//                          exactly one concept that appears in two families.
+//
+// ROUND-TRIP STAGE ON, for the same reason as the sibling: a bridge writes edges, never nodes, so the
+// PESC round trip must remain numerically identical to its pin with the bridge present.
+//
+// SPEND: the DEBUG judge costs nothing. A REAL-judge line is authorised PER LINE, as data, in
+// acceptanceCommands.jsonc — never by editing this file.
+{
+	"schemaVersion": "1.0.0",
+	"recipeName": "pescOptionSetDerivedEval",
+	"kind": "dev",
+	"description": "PESC and the CEDS hub only, PLUS the PESC -> CEDS DERIVED bridge over the OPTION-SET TIER (pescOptionSetCedsDerivedPlugin over PescNamedDefinition, 223 concepts). The sibling of pescDerivedEval, split from it under RULING P2-R5 because two derived plugins over one standard pair compose an identical manifest subject and cannot share a manifest.",
+	"standards": [
+		{ "token": "ceds", "version": "current" },
+		{ "token": "pesc260805", "version": "current" }
+	],
+	"hubs": [
+		{ "standard": "ceds" }
+	],
+	"bridges": [
+		{ "source": "pesc260805", "hub": "ceds", "bridge": "pescOptionSetCedsDerivedPlugin", "dependencies": ["pesc260805", "ceds"] }
+	],
+	"roundTripStage": true
+}

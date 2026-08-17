@@ -54,9 +54,23 @@
 	"hubs": [
 		{ "standard": "ceds" }
 	],
+	// ⚠️ THE PROPERTY TIER ONLY, AND THE OPTION-SET TIER'S ABSENCE IS DECLARED RATHER THAN SILENT.
+	// RULING P2-R5. This recipe previously declared BOTH PESC plugins and could not be built: two derived
+	// plugins over one standard pair compose an IDENTICAL manifest subject, and a four-forge graph is ONE
+	// MANIFEST by definition, so a single four-standard graph CANNOT contain both PESC tiers. See
+	// pescDerivedEval.recipe.jsonc's header for the composer code facts.
+	//
+	// WHY THE PROPERTY TIER IS THE ONE NAMED HERE: it is the tier the entire P0/P0b measurement chain
+	// describes. That is a reason, not a ranking.
+	//
+	// THE OPTION-SET TIER'S EYE GRAPH IS A SEPARATE GRAPH PENDING A DELIVERABLE RULING — it is NOT
+	// dropped, NOT deferred for convenience, and NOT out of scope. The supervisor is ruling it separately
+	// and informing TQ, because it changes what he RECEIVES rather than how it is built. AN OMISSION THAT
+	// IS NOT DECLARED IS INDISTINGUISHABLE FROM AN OVERSIGHT, which is the only reason this paragraph
+	// exists. The option-set bridge itself is shipped, validated, and censused (223/223 judged, zero
+	// orphans, zero collisions, block c8dbb1f9) — nothing about it is unfinished.
 	"bridges": [
-		{ "source": "pesc260805", "hub": "ceds", "bridge": "pescCedsDerivedPlugin", "dependencies": ["pesc260805", "ceds"] },
-		{ "source": "pesc260805", "hub": "ceds", "bridge": "pescOptionSetCedsDerivedPlugin", "dependencies": ["pesc260805", "ceds"] }
+		{ "source": "pesc260805", "hub": "ceds", "bridge": "pescCedsDerivedPlugin", "dependencies": ["pesc260805", "ceds"] }
 	],
 	"roundTripStage": true
 }

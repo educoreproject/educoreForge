@@ -1,0 +1,45 @@
+{
+  "recordName": "syntheticResolvedProseSecondOpinion",
+  "recordedBy": "LUNAR_PRISM (P2)",
+  "recordedOn": "2026-08-17",
+  "obligation": "O-8 — P0b asked for a second opinion on Reading A rather than offering a defence. This is it.",
+
+  "THE_QUESTION": "215 synthetic-resolved declarations stay on the C0 composition ('OwningType | ElementName') rather than being given C2 with prose borrowed across the synthetic tier's edges. Reading A keeps them on C0; Reading B moves the composition pass after the synthetic tier so they can reach prose.",
+
+  "MY_CONCLUSION": "I AGREE WITH READING A — and NOT for the reason that was given for it. I think the stated principle is wrong, the conclusion is right, and the difference matters because a right answer resting on a bad reason will not survive the next case.",
+
+  "WHY_THE_STATED_PRINCIPLE_DOES_NOT_HOLD": {
+    "theStatedPrinciple": "'Our judgment must not feed a source node's retrieval text.'",
+    "whyItFails": "IT HAS ALREADY BEEN CROSSED 6,458 TIMES, and not marginally. The forge's own composition report for this build reads: prose source 5,481 own, 6,458 VIA RESOLVES_TO, 5,114 none. Every one of those 6,458 declarations has prose borrowed over an edge rather than carried on the node itself. If borrowed prose were disqualifying as such, the principle would condemn the MAJORITY of the C2 population, not 1.3% of it.",
+    "whatThisMeans": "The principle as phrased cannot be the real reason for the ruling, because the ruling does not apply it consistently. A principle invoked only where it is cheap to honour is not doing the work it appears to do — which is precisely the kind of thing P0b was auditing itself for, and it did not catch this instance."
+  },
+
+  "THE_DISTINCTION_THAT_ACTUALLY_HOLDS": {
+    "claim": "It is not borrowed-versus-owned. It is the WARRANT OF THE EDGE the prose is borrowed across, and the two edges are not the same kind of thing.",
+    "resolvesTo": "A deterministic name-to-definition resolution that THE SCHEMA ITSELF STATES. Following it asserts nothing the source document does not already assert. Reading a type's documentation for an element declared to be of that type is reading what the author wrote.",
+    "syntheticMerge": "A JUDGMENT THAT TWO DEFINITIONS FROM DIFFERENT ARTIFACTS ARE THE SAME THING. S-1 merged 109 definitions, and 14 of those 109 CONFLICT internally. Prose borrowed across a merge that had a conflict is prose CHOSEN AMONG COMPETING CANDIDATES BY US.",
+    "consequence": "A retrieval hit on such text would be partly a match against our own choice, and the judge could not tell that from a match against the standard. That is a narrower claim than the stated principle and it is defensible on the numbers rather than on taste."
+  },
+
+  "AN_ARGUMENT_FOR_READING_A_THAT_NOBODY_HAS_MADE_AND_I_THINK_IS_THE_STRONGEST": {
+    "claim": "READING B WOULD MAKE searchText A FUNCTION OF THE SYNTHETIC TIER'S OUTPUT, and searchText is an INPUT TO IDENTITY.",
+    "theMechanism": "searchText is embedded; the embeddings ride in the block text; the block text is what the block refId is a content address over. So under Reading B, ANY future change to merge policy — a new artifact family, a revised conflict rule, one more alias served — would silently re-embed some declarations and MOVE THE BLOCK ID. A semantic decision about merging would have a spend consequence and an identity consequence in a different subsystem, with no field recording the connection.",
+    "whyIAmConfidentAboutThisShape": "THIS ORDER HAS ALREADY PAID FOR EXACTLY THIS GENUS ONCE. A --vectorize=false flag chosen for safety moved a block id, and nothing in the record connected the choice to the consequence because no field carried the build mode. Reading B installs a second, permanent instance of that same coupling — and unlike the flag, this one would fire on ordinary future maintenance rather than on a deliberate rehearsal.",
+    "status": "This is my own reasoning, offered as the load-bearing argument. It is independent of convenience: it would hold even if Reading B were free."
+  },
+
+  "WHAT_I_CONCEDE_AND_WHAT_I_WOULD_CHANGE": {
+    "theCostIsRealAndConcentrated": "215 declarations, about 1.3%, sit on the arm the composition test MEASURED AS WORSE. That is not nothing, and the 215 are not a random 1.3% — they are precisely the synthetic-resolved ones, which is a population with a reason to be obscure.",
+    "theLanguageIWouldRetire": "'A missed opportunity, not a defect.' P0b was right to notice that phrase doing work. A measured deficit with a known count is not an opportunity; calling it one makes an accepted cost sound optional. I would record it as a KNOWN LIMITATION WITH ITS COUNT, which is what this record does.",
+    "whatWouldChangeMyMind": "Evidence that the synthetic merges carrying prose are the NON-CONFLICTING ones. My argument rests on 14 of 109 merges conflicting; if the prose-bearing merges are disjoint from the conflicting merges, the warrant objection weakens considerably and only the identity-coupling argument remains. THAT IS A MEASUREMENT NOBODY HAS TAKEN, and I am naming it rather than assuming it favours me."
+  },
+
+  "THE_STANDING_BAR_I_DID_NOT_CROSS": {
+    "bar": "Measurement C's result MAY NOT be recruited for the enrichment/composition decision in either direction.",
+    "disclosure": "I NOTICED MYSELF REACHING FOR IT. The natural next sentence in my cost argument was 'and if the mute subjects are also the hard subjects, the 215 are doubly disadvantaged' — which is Measurement C's question exactly. I stopped, and I am recording that I stopped rather than silently omitting it, because a bar that is only honoured when it is not tempting has not been tested. The conclusion above stands WITHOUT C."
+  },
+
+  "seeAlso": [
+    "forges/pesc260805/bridgeData/buildModeIdentityRecord.json — the identity-coupling precedent this reasoning leans on"
+  ]
+}

@@ -57,6 +57,15 @@ runCypher({ cypher: ALL_EDGES_CYPHER }, (allError, allRecords) => {
 		const allEdges = { concepts: num(allRecords[0].get('conceptCount')), declarations: num(allRecords[0].get('declarationCount')) };
 		const stamped = { concepts: num(stampedRecords[0].get('conceptCount')), declarations: num(stampedRecords[0].get('declarationCount')) };
 		finish('', {
+			// ADDITIVE LABEL (RULING P2-R8), 2026-08-17 — the original line below is UNCHANGED because its
+			// figures are correct. The block id it names, c46991d1…, addresses a VECTORLESS artifact
+			// (--vectorize=false); the shipped lineage is vectorized and its id is f139654a…. THE FIGURES
+			// ARE UNAFFECTED AND ARE NOT CORRECTED: the two blocks were compared property-by-property over
+			// all 42,372 matched rows and differ in EXACTLY THREE embedding-related keys, so every
+			// non-embedding property is identical and concept-grain figures transfer unchanged. This label
+			// exists because AN ID WITHOUT ITS BUILD MODE CANNOT BE CHECKED, which is the omission RULING
+			// P2-R4 ends. Full account: bridgeData/buildModeIdentityRecord.json
+			measuredAgainstBuildMode: 'vectorize=false — see the label above; NOT the shipped vectorized lineage',
 			measuredAgainst: { boltUrl: BOLT_URL, container: 'DEV_gb_materialize_94765_2', note: 'a LIVE graph built from THIS phase\'s re-forged block c46991d1…, so these are figures about the artifact that will ship — not about the pre-re-embed graph P0 measured' },
 			ALL_EDGES_GRAIN_TQ_RULED_SCOPE: allEdges,
 			STAMPED_GRAIN_WHAT_THE_FORGE_COMPOSED_ON: stamped,

@@ -290,12 +290,19 @@
 	// ones, because a line without one is refused by the runner and a free line that could silently
 	// become expensive is exactly what the per-line scheme exists to prevent.
 	//
-	// ONE STORE FOR BOTH PLUGINS, deliberately. They ride in ONE recipe (pescDerivedEval) because they
-	// are two SUBJECT LABELS through one seam and running them together is the phase's claim rather
-	// than a convenience. They cannot collide in the store: a conflict is two producers claiming the
-	// same (subject, object) pair, and their subject populations are DISJOINT BY LABEL —
-	// PescElementDecl against PescNamedDefinition. RULING §11.5's own-store requirement is satisfied
-	// against the CROSSWALK stores, which is what it was written about.
+	// ONE STORE FOR BOTH PLUGINS, deliberately — AND, SINCE RULING P2-R5, TWO RECIPES AND TWO RUNS.
+	// They are two SUBJECT LABELS through one seam, and that they pass through it with ZERO framework
+	// change is the phase's claim. What they CANNOT do is share a MANIFEST: [code fact]
+	// vocabulary.js:183-198 composes a relationship subject with no plugin input, and
+	// build.js:1740-1745 derives 'inferred' for both, so both compose the identical subject and
+	// manifestEditor refuses the second. Hence pescDerivedEval (property tier) and
+	// pescOptionSetDerivedEval (option-set tier).
+	//
+	// THE SHARED STORE IS UNAFFECTED BY THE SPLIT and is still correct. They cannot collide in it: a
+	// conflict is two producers claiming the same (subject, object) pair, and their subject populations
+	// are DISJOINT BY LABEL — PescElementDecl against PescNamedDefinition. THAT IS NOW MEASURED RATHER
+	// THAN ARGUED: the option-set census reported 0 conflicts against 1 sibling block. RULING §11.5's
+	// own-store requirement is satisfied against the CROSSWALK stores, which is what it was written about.
 	// =============================================================================================
 	"pescCedsDerivedPlugin": {
 		"standardKey": "pesc260805",
@@ -370,14 +377,39 @@
 		"frozenBy": null
 	},
 
-	// THE SIBLING. It shares the store, the recipe and the ids above BY DESIGN — one build runs both —
-	// so this entry carries only what DIFFERS, and says so rather than duplicating values that would
-	// then be free to drift apart.
+	// THE SIBLING. It shares the store and the base-block ids above BY DESIGN, so this entry carries only
+	// what DIFFERS rather than duplicating values that would then be free to drift apart.
+	//
+	// ⚠️ CORRECTED 2026-08-17 (RULING P2-R5). This comment previously read "it shares the store, the
+	// RECIPE and the ids above BY DESIGN — ONE BUILD RUNS BOTH". THAT IS NO LONGER TRUE and it is
+	// corrected here rather than left standing. Two derived plugins over one standard pair compose an
+	// IDENTICAL manifest subject ([code fact] vocabulary.js:183-198 takes no plugin input;
+	// build.js:1740-1745 derives 'inferred' for both), so manifestEditor refuses the second and ONE BUILD
+	// CANNOT RUN BOTH. The option-set tier now has its own recipe, `pescOptionSetDerivedEval`. The store
+	// and the base-block ids are still shared; the RECIPE and the RUN are not.
 	"pescOptionSetCedsDerivedPlugin": {
 		"standardKey": "pesc260805",
-		"sharesEverythingWith": "pescCedsDerivedPlugin",
+		"sharesWithPescCedsDerivedPlugin": "the standards store and the base-block ids — NOT the recipe and NOT the run",
+		"recipePath": "/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/recipes/pescOptionSetDerivedEval.recipe.jsonc",
+		// ⚠️ THIS ENTRY CARRIES NO COMMAND LINES, AND THAT IS DECLARED RATHER THAN LEFT TO BE NOTICED.
+		// It never had any: it was written to ride the sibling's build, which RULING P2-R5 has just made
+		// impossible. So the option-set tier is NOT RUNNABLE THROUGH THE ACCEPTANCE RUNNER — it is run
+		// directly against the recipe above. [code fact] runBridgeAcceptanceCommand.js:212 resolves
+		// `entry.recipePath` when a line declares none, so the path above is the field the runner would
+		// read; what is missing is the lines, not the address.
+		// This is a GAP MADE VISIBLE BY THE SPLIT, not one the split created, and it is reported rather
+		// than filled because adding real-judge-capable command lines is a spend surface and P2 carries
+		// no embedding or judge authorisation. test-runnerContract passes 112/112 either way, because it
+		// checks entries that HAVE lines — which is precisely why this note exists and a green test does
+		// not discharge it.
 		"whatDiffers": "subjectSource label PescNamedDefinition (the option-set concepts) rather than PescElementDecl; predicateByCategory is relatedMatch on all three judge categories, which is a RECORDED UNDERSTATEMENT rather than a measured judgement — see bridgeData/pescOptionSetUnderstatementRecord.json.",
-		"⚠️ scopeNotYetWritten": "bridgeData/pescOptionSetConceptScope.json is NOT WRITTEN. The concept key was measured — (family, kind, name) with family = the artifact family reproduces the ruled 156 exactly, by two independent derivations, with the cluster count 236 reproducing as a control — but the key is the SUPERVISOR'S TO RULE and I will not ship a scope on my own measurement. Until it is written the framework REFUSES this plugin's build by name (bridge-framework.js:916, declared-but-broken refuses every build), which is the correct behaviour and not a defect.",
+		// ⚠️ THE FIELD THAT STOOD HERE WAS STALE AND SAID THE OPPOSITE OF THE TRUTH. It read
+		// "scopeNotYetWritten: bridgeData/pescOptionSetConceptScope.json is NOT WRITTEN" and cited the
+		// ruled count as 156. BOTH were superseded by RULING P1-R13 and neither was updated: the scope IS
+		// written, with 223 entries, sha256 ecc8e7eb. The 156 key is UNSOUND — 67 of its 156 groups (43%)
+		// differ internally in the rendered `description`. A stale warning is worse than no warning,
+		// because it reads as current and sends a reader looking for a file that is sitting right there.
+		"scopeWritten": "bridgeData/pescOptionSetConceptScope.json — 223 entries, sha256 ecc8e7eb, a BARE ARRAY of non-empty stableId strings, which is the only shape the framework accepts. Ruled by RULING P1-R13; the 156 of PLAN §1-A is SUPERSEDED, not overlooked.",
 		"spendAuthorisationByLine": {
 			"rejudgeRealLimit": null,
 			"materialiseReal": null

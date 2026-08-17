@@ -38,7 +38,16 @@ const report = (value) => {
 };
 
 // ---- 1. the FROZEN BLOCK from the store, never the log
-const ran = spawnSync('sqlite3', [`file:${DECISION_STORE}?mode=ro`, 'SELECT frozenText FROM decisionBlocks LIMIT 1;'], {
+// ⚠️ CORRECTED. This read was `SELECT frozenText FROM decisionBlocks LIMIT 1`, and the store holds
+// THREE blocks — TWO of which share the property-tier pairKey and differ ONLY in declarationDigest.
+// LIMIT 1 with no ORDER BY silently selected one of two, so the probe's answer depended on row order
+// rather than on which block the census actually reported. IT HAPPENED TO BE HARMLESS HERE — the two
+// blocks' decisionRecordList and refusalList are BYTE-IDENTICAL and both carry exactly one orphan,
+// which I MEASURED rather than assumed before making this edit — but "harmless this time" is not a
+// property of the query, it is a property of the data it met. SELECT BY HASH IS THE ONLY UNAMBIGUOUS
+// ADDRESS, and a probe whose answer can be changed by row order is not an instrument.
+const CENSUS_BLOCK_HASH = '6e5a6aa0539a563101ceb7d408f484851feefc62a71193edce6964dfee5ffabf';
+const ran = spawnSync('sqlite3', [`file:${DECISION_STORE}?mode=ro`, `SELECT frozenText FROM decisionBlocks WHERE decisionBlockHash = '${CENSUS_BLOCK_HASH}';`], {
 	encoding: 'utf8',
 	maxBuffer: 512 * 1024 * 1024,
 });
