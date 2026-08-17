@@ -194,7 +194,15 @@
 		"materialiseRealMaxJudgmentCount": 800,
 		"materialise": "node --max-old-space-size=20000 /Users/tqwhite/Documents/webdev/educoreForge/system/codeWorktrees/b4sif/educoreForge/apps/graph-builder/graphBuilder.js -build --recipePath=/Users/tqwhite/Documents/webdev/educoreForge/system/codeWorktrees/b4sif/educoreForge/recipes/fourWithHubSifBridge.recipe.jsonc --vectorize=true --reuseForgedBlocks=true --standardsDatabaseFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/sif/sifBridge.standardsDatabase.sqlite3 --decisionStoreFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/sif/sifBridge.decisions.sqlite3 --judgmentCacheFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/sif/sifBridge.judgmentCache.sqlite3 --matchForensicsDirPath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/sif/matchForensics --embeddingCacheFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/vectorCache/vectorCache.sqlite3 </dev/null > /Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/sif/buildLogs/<line>-<phase>.log 2>&1 &",
 		"materialiseMaxJudgmentCount": 0,
-		"materialiseRealSpendAuthorisedBy": null,
+		// THE GO, AS DATA, WRITTEN VERBATIM FROM SABLE_RIVER'S IMCS OF 2026-08-17. This single key is the door
+		// to real Opus spend: the runner REFUSES every spending line while it is null, and that refusal is the
+		// only thing standing between a typo and a bill. It authorises the CP3 CONFORMANCE BATCH ONLY — ten
+		// subjects, ceiling 30 — and it is NOT authorisation for materialiseReal, which TQ has HELD regardless
+		// until he and the supervisor have spoken. The condition it names was MEASURED before this was written,
+		// not assumed: BG-CENSUS a / BG-ACCEPT a reports census/digests/judge-trio/sum all true against
+		// expectedCensus.sifCedsStandardPlugin.a3e1768ada649a16.json, confirmed a second way by reading the
+		// block out of the store and comparing it to the fixture directly.
+		"materialiseRealSpendAuthorisedBy": { "sessionName": "SABLE_RIVER", "date": "2026-08-17", "note": "CP3 conformance batch ONLY: rejudgeRealLimit --limit=10 --offset=0, maxJudgmentCount 30; written after the post-rebase CP2 census measured EQUAL; CP4/full HELD by TQ (text 00:46 CDT)" },
 		"expectedBaseBlockIdBySubject": {
 			"ceds@14_0_0_0_base": "09a5d658807b9c22b44b28289d9ad4b47df15e45f44c9eacec765962fe487c33",
 			"edfi@5_2_0_base": "aea6d8dfe7899adef57c5ac3adb6b0df2bfc7e4a4ae859c4fa3893c132c8b304",
