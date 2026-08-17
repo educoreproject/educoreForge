@@ -66,9 +66,10 @@ const harnessRaw = require('../../../test/testLib/harness')(moduleName);
 // + 8 (SECTION 3b BG-PLUGIN e: the real hooks over the double, 6 conjuncts + 2 twins)
 // + 7 (SECTION 4 BG-COMPOSE-SIF: 3 conjuncts + 4 twins)
 // + 6 (SECTION 5 BG-GENESIS, RULING BS-5: 3 conjuncts + 3 twins)
+// + 6 (SECTION 6 BG-RENDER-VARIANT, RULING BS-10: 4 conjuncts + 2 twins)
 // + 1 (SECTIONS 0-2: the frozen-block census conjunct — MEASURED since the CP2 freeze of 2026-08-17)
-// = 47. Raised as a LITERAL, at this call site, in the same commit as the section it counts.
-const EXPECTED_ASSERTION_COUNT = 47;
+// = 53. Raised as a LITERAL, at this call site, in the same commit as the section it counts.
+const EXPECTED_ASSERTION_COUNT = 53;
 const ledger = { count: 0 };
 const harness = {
 	section: harnessRaw.section,
@@ -307,6 +308,7 @@ const runComposeSection = () => {
 			// its OWN row rather than a widening of the row above, because the two changes answer to DIFFERENT
 			// rulings and the registry's whole value is that each row justifies itself to a reviewer by name. A
 			// pattern that quietly grew to cover a second file would have retired that.
+			{ pattern: /^apps\/graph-builder\/test\/bridgeAcceptance\/renderingAudit\.js$/, why: 'RULING BS-10: the rendering audit is generalised by rendererVersion so it parses the crosswalk layout as well as the derived one, CAPTURING the card key and name that live on the crosswalk ordinal line. Its own row, its own ruling — the tempting one-character anchor loosening is refused by name in the module because it would discard that name and manufacture ties that were never on the page' },
 			{ pattern: /^apps\/graph-builder\/test\/bridgeAcceptance\/batchCheckpoint\.js$/, why: 'RULING BS-8: the batch document generator is GENERALISED rather than forked — its two hardcoded truth constants become declared data (referenceStoreFilePath / referenceBlockId / referenceRole) and the ROLE selects the vocabulary, so a SIF document says COMPARISON where a derived document says TRUTH. SIF has no answer key; a document that called a disagreement an error would be claiming more than its evidence supports' },
 		];
 		const isPermitted = (onePath) => PERMITTED_PATH_REGISTRY.some((oneRow) => oneRow.pattern.test(onePath));
@@ -376,6 +378,45 @@ const runGenesisGuardSection = () => {
 	// TWIN 3: the case the original guard was really protecting against — a path typo wearing genesis as a disguise
 	const typoRefusal = verdictFor({ entryOverride: { rejudgeDebugGenesis: true }, lineName: 'rejudgeDebug', storeExists: false, storeDirPathExists: false });
 	harness.ok(`RED-OBSERVED BG-GENESIS c — genesis with an ABSENT store DIRECTORY REFUSES BY NAME: genesis creates the STORE, never its location, and an absent directory is a path typo rather than a first run: ${typoRefusal.slice(0, 90)}…`, typoRefusal.indexOf(STORE_DIR) !== -1);
+
+	runRenderingAuditSection();
+};
+
+// ---------------------------------------------------------------------
+// SECTION 6 — BG-RENDER-VARIANT (RULING BS-10): the rendering audit parses BOTH renderer variants, and the
+// crosswalk renderer's ordinal line — which carries the card's KEY AND NAME — is CAPTURED, never discarded.
+// ---------------------------------------------------------------------
+const runRenderingAuditSection = () => {
+	harness.section('SECTION 6 — BG-RENDER-VARIANT (RULING BS-10): both renderer layouts parse, and the crosswalk ordinal line is CAPTURED');
+	const renderingAuditLib = require(path.join(__dirname, 'bridgeAcceptance', 'renderingAudit'));
+	// two cards that differ ONLY by name — the case the discarded-ordinal-line bug would have collapsed
+	const crosswalkPrompt = ['CANDIDATES (2), in hub order:', '  [1] P000534 — Operational Status Effective Date', '      seat: filteredOnKey', '      domainId: C200398', '  [2] P000534 — Local Education Agency Operational Status Effective Date', '      seat: filteredOnKey', '      domainId: C200398'].join('\n');
+	const derivedPrompt = ['CANDIDATES (2), in hub order:', '  [1]', '      name: Alpha', '  [2]', '      name: Beta'].join('\n');
+
+	const crosswalkParsed = renderingAuditLib.renderedCandidateTextListFromPrompt({ userPrompt: crosswalkPrompt, rendererVersion: 'bridgeEvidenceRenderer-v1' });
+	harness.equal('BG-RENDER-VARIANT a the CROSSWALK layout parses — the ordinal line carries the key and name, and the block count matches the heading', `${crosswalkParsed.fault === undefined}|${crosswalkParsed.textList && crosswalkParsed.textList.length}`, 'true|2');
+	harness.ok('BG-RENDER-VARIANT b the card NAME is CAPTURED INTO the candidate text (not consumed with the delimiter) — the two blocks are DIFFERENT although every field line below them is identical', crosswalkParsed.textList !== undefined && crosswalkParsed.textList[0] !== crosswalkParsed.textList[1] && crosswalkParsed.textList[0].indexOf('Operational Status Effective Date') !== -1, JSON.stringify(crosswalkParsed.textList));
+	const derivedParsed = renderingAuditLib.renderedCandidateTextListFromPrompt({ userPrompt: derivedPrompt, rendererVersion: 'bridgeEvidenceRenderer-derived-v1' });
+	harness.equal('BG-RENDER-VARIANT c the DERIVED layout still parses unchanged (regression: its ordinal line carries nothing, so nothing is captured)', `${derivedParsed.fault === undefined}|${derivedParsed.textList && derivedParsed.textList.length}`, 'true|2');
+	harness.ok('BG-RENDER-VARIANT d an UNKNOWN rendererVersion is REFUSED BY NAME listing the known variants — the layout of a prompt is never guessed', /has no candidate-ordinal spec/.test(String(renderingAuditLib.renderedCandidateTextListFromPrompt({ userPrompt: crosswalkPrompt, rendererVersion: 'bridgeEvidenceRenderer-someFutureVariant' }).fault)));
+
+	harness.section('    BG-RENDER-VARIANT twins — the ONE-CHARACTER "fix" that would have manufactured a tie, observed RED');
+	// THE TWIN THAT MATTERS. Reproduce the tempting repair — loosen the end-anchor and DISCARD the ordinal
+	// line's text — and show it collapses the two name-distinct cards into identical text. This is not a
+	// hypothetical: it is the exact edit a reader reaches for when the parser refuses, and the reason the
+	// module's own comment refuses it by name.
+	const loosenedAnchorTextList = (() => {
+		const lineList = crosswalkPrompt.split('\n');
+		const textList = []; let current = null;
+		lineList.slice(1).forEach((oneLine) => {
+			if (/^ {2}\[(\d+)\](?:\s.*)?$/.test(oneLine)) { if (current !== null) { textList.push(current.join('\n')); } current = []; return; }
+			if (current !== null) { current.push(oneLine); }
+		});
+		if (current !== null) { textList.push(current.join('\n')); }
+		return textList;
+	})();
+	harness.ok(`RED-OBSERVED BG-RENDER-VARIANT b — the loosened-anchor repair PARSES but DISCARDS the name, collapsing two name-distinct cards into byte-identical text (${loosenedAnchorTextList.length} blocks, identical: ${loosenedAnchorTextList[0] === loosenedAnchorTextList[1]}). That is a RENDERING TIE THAT WAS NEVER ON THE PAGE — the harm the refusal exists to prevent, reintroduced by the fix for it`, loosenedAnchorTextList.length === 2 && loosenedAnchorTextList[0] === loosenedAnchorTextList[1]);
+	harness.ok('RED-OBSERVED BG-RENDER-VARIANT a — the OLD end-anchored pattern finds ZERO blocks in a crosswalk prompt, which is the refusal that started this (a short parse is refused, never half-used)', crosswalkPrompt.split('\n').filter((oneLine) => /^ {2}\[(\d+)\]$/.test(oneLine)).length === 0);
 
 	runFrozenArtifactSection();
 };

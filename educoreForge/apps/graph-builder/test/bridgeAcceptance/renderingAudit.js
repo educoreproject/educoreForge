@@ -95,9 +95,32 @@ const readPromptRecordList = ({ forensicsDirPath, pairKey, generation }) => {
 // as it goes: a short parse would silently key one candidate's text to another candidate's id and manufacture
 // ties that were never on the page.
 const CANDIDATE_HEADING_REGEX = /^CANDIDATES \((\d+)\), in hub order:$/;
-const CANDIDATE_ORDINAL_REGEX = /^ {2}\[(\d+)\]$/;
 
-const renderedCandidateTextListFromPrompt = ({ userPrompt }) => {
+// THE ORDINAL LINE IS RENDERER-SPECIFIC, AND THE DIFFERENCE IS NOT COSMETIC (RULING BS-10, SABLE_RIVER
+// 2026-08-17). One row per renderer variant, keyed by the rendererVersion the forensic record already carries.
+// An unknown version is REFUSED BY NAME rather than defaulted: guessing which layout a prompt used is how a
+// half-parsed trail keys one candidate's text to another candidate's id.
+//
+// WHY `ordinalLineCarriesText` EXISTS, and why the obvious fix is WRONG. The derived renderer prints the
+// ordinal ALONE on its line, so consuming that line as a delimiter loses nothing. The crosswalk renderer
+// prints "  [1] P000534 — Operational Status Effective Date": THE CARD'S KEY AND NAME LIVE ON THE DELIMITER
+// LINE. The tempting one-character repair — loosen the end-anchor to /^ {2}\[(\d+)\](?:\s.*)?$/ — makes the
+// prompt parse and SILENTLY DISCARDS THE NAME, so two cards differing ONLY by name render as identical text
+// and are counted as a RENDERING TIE THAT WAS NEVER ON THE PAGE. That is the exact harm this module's refusal
+// exists to prevent, reintroduced by the fix for it. THAT REPAIR IS REFUSED BY NAME HERE so nobody re-derives
+// it: when a delimiter carries payload in one variant and not another, loosening the delimiter is never the
+// whole fix — the payload must be CAPTURED INTO the block it belongs to. A red twin holds this: a
+// crosswalk-rendered pair differing only by name must NOT be reported as a tie.
+const CANDIDATE_ORDINAL_SPEC_BY_RENDERER_VERSION = Object.freeze({
+	'bridgeEvidenceRenderer-derived-v1': Object.freeze({ ordinalRegex: /^ {2}\[(\d+)\]$/, ordinalLineCarriesText: false }),
+	'bridgeEvidenceRenderer-v1': Object.freeze({ ordinalRegex: /^ {2}\[(\d+)\](.*)$/, ordinalLineCarriesText: true }),
+});
+
+const renderedCandidateTextListFromPrompt = ({ userPrompt, rendererVersion }) => {
+	const ordinalSpec = CANDIDATE_ORDINAL_SPEC_BY_RENDERER_VERSION[rendererVersion];
+	if (ordinalSpec === undefined) {
+		return { fault: `rendererVersion ${JSON.stringify(rendererVersion)} has no candidate-ordinal spec — the known variants are ${Object.keys(CANDIDATE_ORDINAL_SPEC_BY_RENDERER_VERSION).join(', ')}; the layout of a prompt is never guessed (RULING BS-10)` };
+	}
 	const lineList = String(userPrompt).split('\n');
 	const headingIndex = lineList.findIndex((oneLine) => CANDIDATE_HEADING_REGEX.test(oneLine));
 	if (headingIndex === -1) {
@@ -107,11 +130,14 @@ const renderedCandidateTextListFromPrompt = ({ userPrompt }) => {
 	const textList = [];
 	let currentLineList = null;
 	for (let lineIndex = headingIndex + 1; lineIndex < lineList.length; lineIndex++) {
-		if (CANDIDATE_ORDINAL_REGEX.test(lineList[lineIndex])) {
+		const ordinalMatch = lineList[lineIndex].match(ordinalSpec.ordinalRegex);
+		if (ordinalMatch !== null) {
 			if (currentLineList !== null) {
 				textList.push(currentLineList.join('\n'));
 			}
-			currentLineList = [];
+			// the trailing text on the ordinal line BELONGS TO THIS CANDIDATE and is carried into its block --
+			// it is the card's key and name, and dropping it manufactures ties (BS-10)
+			currentLineList = ordinalSpec.ordinalLineCarriesText ? [String(ordinalMatch[2] === undefined ? '' : ordinalMatch[2]).trim()] : [];
 			continue;
 		}
 		if (currentLineList !== null) {
@@ -155,7 +181,7 @@ const renderedCandidateTextIndexFrom = ({ recordList }) => {
 		if (!Array.isArray(oneRecord.renderedPoolStableIdList) || oneRecord.renderedPoolStableIdList.length === 0) {
 			return;
 		}
-		const parsed = renderedCandidateTextListFromPrompt({ userPrompt: oneRecord.userPrompt });
+		const parsed = renderedCandidateTextListFromPrompt({ userPrompt: oneRecord.userPrompt, rendererVersion: oneRecord.rendererVersion });
 		if (parsed.fault) {
 			faultList.push(`${String(oneRecord.promptHash).slice(0, 12)}: ${parsed.fault}`);
 			return;
@@ -294,4 +320,4 @@ const buildRenderingAudit = ({ forensicsDirPath, pairKey, generation, blockId, r
 	return { markdownText: lineList.join('\n'), promptCount: recordList.length, distinctPromptCount: distinctPromptHashSet.size, hitList, advisoryUrlCount, sampleCount: sampleList.length };
 };
 
-module.exports = { buildRenderingAudit, readPromptRecordList, renderedCandidateTextIndexFrom, renderedFieldsFrom, renderedCandidateTextListFromPrompt, ID_GATE_PATTERN_LIST, ADVISORY_URL_REGEX, DEFAULT_SAMPLE_COUNT, moduleName };
+module.exports = { CANDIDATE_ORDINAL_SPEC_BY_RENDERER_VERSION, buildRenderingAudit, readPromptRecordList, renderedCandidateTextIndexFrom, renderedFieldsFrom, renderedCandidateTextListFromPrompt, ID_GATE_PATTERN_LIST, ADVISORY_URL_REGEX, DEFAULT_SAMPLE_COUNT, moduleName };
