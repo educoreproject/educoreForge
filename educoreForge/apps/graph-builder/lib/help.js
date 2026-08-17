@@ -299,6 +299,15 @@ OPTIONS
                            forged and materialized with no embeddings). Only the exact strings
                            'true' and 'false' are accepted; 'yes'/'no'/'1'/'0' are NOT synonyms
                            and are refused by name rather than guessed at.
+                           WARNING -- A BLOCK ID FROM A --vectorize=false BUILD IS NOT COMPARABLE
+                           TO ONE FROM A VECTORIZED BUILD. A block refId is a content address over
+                           the block TEXT, and the block text CONTAINS the embeddings; so the same
+                           forge over the same snapshot yields a DIFFERENT id under each flag, and
+                           such an id is not a generation of the vectorized lineage. (pureLayer-
+                           Fingerprint's dropped-property list is a DIFFERENT hash and is not
+                           evidence about this one.) Record the build mode beside any id you
+                           publish. Full account: forges/pesc260805/bridgeData/
+                           buildModeIdentityRecord.json
      --embeddingCacheFilePath=<path>
                            Where the content-addressed VECTOR CACHE (textHash x model -> embedding)
                            is read and written for this build. OPTIONAL. WHEN OMITTED it DEFAULTS TO
