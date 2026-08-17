@@ -37,6 +37,17 @@ const { makeTwinRegistry } = require(path.join(__dirname, '..', '..', 'forge-fra
 const moduleDouble = require(path.join(__dirname, '..', '..', 'forge-framework', 'test', 'testSupport', 'moduleDouble'));
 const sssomExporterLib = require('../sssomExporter');
 
+// the INFERRED producer, shaped exactly as bgDerived shapes it: name the derived plugin and stamp the toy
+// embedding model onto every embedded node so retrieval can run.
+const DERIVED_PLUGIN_NAME_FOR_EXPORT = 'toyDerivedPlugin';
+const TOY_EMBED_MODEL_FOR_EXPORT = 'toy-embed-v1';
+const derivedShapeForExport = (scenario) => {
+	scenario.spec.bridge = DERIVED_PLUGIN_NAME_FOR_EXPORT;
+	scenario.graph.nodeList = scenario.graph.nodeList.map((oneNode) =>
+		oneNode.properties.embedding === undefined ? oneNode : { ...oneNode, properties: { ...oneNode.properties, embeddingModelVersion: TOY_EMBED_MODEL_FOR_EXPORT } },
+	);
+};
+
 const GATE_ID = 'BG-P7';
 const twinRegistry = makeTwinRegistry();
 const EXPORTER_FILE = 'sssomExporter.js';
@@ -77,6 +88,34 @@ const conjunctList = [
 	runConjunct({ conjunctId: 'k_mappingSetIdIsUri', title: 'mapping_set_id is a URI over the block id (urn:educore:decisionBlock:<id>), never a bare hash', twinNameList: ['bareHashSetId'], judge: succeeded((runReport, outcome, scenario) => { const parsed = parsedOf(outcome, scenario); const value = parsed.error ? '' : parsed.headerScalarOf('mapping_set_id'); const blockId = runReport.blocks[0].decisionBlock.decisionBlockHash; return { pass: !parsed.error && value === `urn:educore:decisionBlock:${blockId}`, detail: parsed.error || `${value} (block ${blockId.slice(0, 12)}…)` }; }) }),
 	runConjunct({ conjunctId: 'l_extensionDefinitionsDeclareEveryNonStandardSlot', title: 'every NON-STANDARD metadata slot and column the export uses is DECLARED under extension_definitions (slot_name + property IRI + type_hint)', twinNameList: ['extensionDefinitionsEmptied'], judge: succeeded((runReport, outcome, scenario) => { const parsed = parsedOf(outcome, scenario); if (parsed.error) { return { pass: false, detail: parsed.error }; } const declared = parsed.headerLineList.filter((oneLine) => /^#  - slot_name: /.test(oneLine)).map((oneLine) => JSON.parse(oneLine.replace('#  - slot_name: ', ''))); const standardSlotList = ['curie_map', 'mapping_provider', 'mapping_set_id', 'extension_definitions', 'subject_source', 'subject_source_version', 'object_source', 'object_source_version', 'subject_match_field', 'object_match_field', 'author_id', 'creator_id', 'mapping_date']; const usedNonStandard = parsed.headerLineList.filter((oneLine) => /^#[A-Za-z_]+: /.test(oneLine)).map((oneLine) => oneLine.replace(/^#([A-Za-z_]+): .*/, '$1')).filter((oneName) => standardSlotList.indexOf(oneName) === -1); const standardColumnList = ['subject_id', 'predicate_id', 'object_id', 'mapping_justification', 'object_label', 'confidence', 'subject_source', 'subject_source_version', 'object_source', 'object_source_version', 'subject_match_field', 'object_match_field', 'mapping_tool', 'mapping_tool_version']; const nonStandardColumnList = parsed.columnList.filter((oneColumn) => standardColumnList.indexOf(oneColumn) === -1); const undeclared = usedNonStandard.concat(nonStandardColumnList).filter((oneName) => declared.indexOf(oneName) === -1); const propertyLineList = parsed.headerLineList.filter((oneLine) => /^#    property: "https:\/\/w3id\.org\/EDUcore\/sssom\/extension#/.test(oneLine)); return { pass: declared.length >= 2 && undeclared.length === 0 && propertyLineList.length === declared.length, detail: `declared [${declared.join(', ')}]; used non-standard [${usedNonStandard.concat(nonStandardColumnList).join(', ')}]; undeclared [${undeclared.join(', ')}]` }; }) }),
 	runConjunct({ conjunctId: 'm_sourcesAreCurieMapExpansions', title: 'subject_source / object_source are the curie_map EXPANSION IRIs of the subject prefix and the hub prefix (derived), and a URN scheme in use is declared in curie_map', twinNameList: ['sourceNameLiterals'], judge: succeeded((runReport, outcome, scenario) => { const parsed = parsedOf(outcome, scenario); if (parsed.error) { return { pass: false, detail: parsed.error }; } const curieMap = parsed.headerLineList.filter((oneLine) => /^#  \w+: /.test(oneLine)).reduce((soFar, oneLine) => ({ ...soFar, [oneLine.replace(/^#  (\w+): .*/, '$1')]: JSON.parse(oneLine.replace(/^#  \w+: /, '')) }), {}); const subjectPrefix = parsed.rowList[0].subject_id.split(':')[0]; const hubPrefix = parsed.headerScalarOf('object_match_field').split('|')[0].split(':')[0]; const subjectSource = parsed.headerScalarOf('subject_source'); const objectSource = parsed.headerScalarOf('object_source'); const rowsAgree = parsed.rowList.every((oneRow) => oneRow.subject_source === subjectSource && oneRow.object_source === objectSource); const urnDeclared = !/^urn:/.test(subjectSource) || curieMap.urn === 'urn:'; return { pass: subjectSource === curieMap[subjectPrefix] && objectSource === curieMap[hubPrefix] && rowsAgree && urnDeclared, detail: `subject_source ${subjectSource} (curie_map[${subjectPrefix}] ${curieMap[subjectPrefix]}); object_source ${objectSource} (curie_map[${hubPrefix}] ${curieMap[hubPrefix]}); urn declared ${urnDeclared}` }; }) }),
+	// ⟪G-1 + G-2, adversarial review D4 2026-08-17 (DR-2)⟫ Conjunct (n) validates the CROSSWALK toy export. That
+	// producer declares `subjectMatchField: 'required'`, so it never walks the INFERRED path where G-1 lived —
+	// the shipped derived export failed `sssom validate` on a slot the toy cannot emit. A proxy for the real
+	// artifact is not the real artifact; this conjunct runs the DERIVED producer and validates ITS export.
+	runConjunct({
+		conjunctId: 'o_sssomPyValidatesTheREALDERIVEDExport',
+		title: `sssom-py \`sssom validate\` exits 0 on the export of the INFERRED producer — the path the shipped D4 export failed on (${SSSOM_PY_LABEL})`,
+		twinNameList: ['subjectMatchFieldEmittedUnconditionally'],
+		shape: derivedShapeForExport,
+		judge: succeeded((runReport, outcome) => {
+			const exportPath = outcome.runReport ? outcome.runReport.sssomExportPath : undefined;
+			if (typeof exportPath !== 'string' || !fs.existsSync(exportPath)) {
+				return { pass: false, detail: `the derived run wrote no sssom export (${JSON.stringify(exportPath)})` };
+			}
+			const text = fs.readFileSync(exportPath, 'utf8');
+			// the two facts the shipped export got wrong, asserted on the bytes
+			// the SET-LEVEL header only. A per-row subject_match_field COLUMN is lawful and present; the defect was the
+			// commented set-level slot, which is what sssom-py read as the literal string "undefined".
+			const carriesUndefined = /^#subject_match_field:/m.test(text);
+			const justificationWrong = /semapv:CompositeMatching/.test(text);
+			if (!SSSOM_PY_PRESENT) {
+				return { pass: !carriesUndefined && !justificationWrong, detail: `PROXY only — sssom-py absent; subject_match_field present ${carriesUndefined}, CompositeMatching present ${justificationWrong}` };
+			}
+			const validated = require('child_process').spawnSync(SSSOM_PY_BIN_PATH, ['validate', exportPath], { encoding: 'utf8' });
+			const clean = validated.status === 0 && !carriesUndefined && !justificationWrong;
+			return { pass: clean, detail: validated.status === 0 ? `sssom validate exit 0; subject_match_field emitted ${carriesUndefined}; CompositeMatching ${justificationWrong}` : `sssom validate exit ${validated.status}: ${(validated.stderr || '').split('\n').filter((oneLine) => /Error/.test(oneLine)).slice(-1).join('').slice(0, 200)}` };
+		}),
+	}),
 	runConjunct({ conjunctId: 'n_sssomPyValidatesWhenPresent', title: `sssom-py \`sssom validate\` exits 0 on the export when its venv is present (${SSSOM_PY_LABEL}); the PROXY carries the conjunct otherwise`, twinNameList: ['unquotedScalars', 'bareHashSetId'], judge: succeeded((runReport, outcome, scenario) => { const parsed = parsedOf(outcome, scenario); if (parsed.error) { return { pass: false, detail: `PROXY: ${parsed.error}` }; } if (!SSSOM_PY_PRESENT) { return { pass: true, detail: `PROXY only — sssom-py absent at ${SSSOM_PY_BIN_PATH} (ONE-MACHINE)` }; } const validated = require('child_process').spawnSync(SSSOM_PY_BIN_PATH, ['validate', outcome.runReport.sssomExportPath], { encoding: 'utf8' }); return { pass: validated.status === 0, detail: validated.status === 0 ? 'sssom validate exit 0' : `sssom validate exit ${validated.status}: ${(validated.stderr || '').split('\n').filter((oneLine) => /ERROR|Error/.test(oneLine)).slice(-2).join(' | ').slice(0, 300)}` }; }) }),
 ];
 frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'a_tsvParses_PROXY', twinName: 'deleteMandatoryColumn', fileName: EXPORTER_FILE, find: "const COLUMN_LIST = Object.freeze([\n\t'subject_id',\n\t'predicate_id',", replace: "const COLUMN_LIST = Object.freeze([\n\t'subject_id'," });
@@ -101,9 +140,10 @@ frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'l_
 frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'm_sourcesAreCurieMapExpansions', twinName: 'sourceNameLiterals', fileName: EXPORTER_FILE, find: '\tconst subjectSourceIri = curieMap[setLevelSlots.subjectCuriePrefix];\n\tconst objectSourceIri = objectPrefix === null ? undefined : curieMap[objectPrefix];', replace: '\tconst subjectSourceIri = setLevelSlots.subjectSource;\n\tconst objectSourceIri = setLevelSlots.objectSource;' });
 frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'subjectCensusBesideRowCount', twinName: 'censusLineDropped', fileName: EXPORTER_FILE, find: "\theaderLineList.push(`#subject_census: ${yamlScalar(JSON.stringify({ subjectCount: subjectSet.size, rowCount: rowList.length, note: 'rows are per (subject stableId, predicate, object); several source subjects sharing one leaf yield ONE row' }))}`);", replace: '\tvoid subjectSet;' });
 
+frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'o_sssomPyValidatesTheREALDERIVEDExport', twinName: 'subjectMatchFieldEmittedUnconditionally', fileName: EXPORTER_FILE, find: "\t\t...(setSlotDisposition.subjectMatchField === 'required' ? [`#subject_match_field: ${yamlScalar(setLevelSlots.subjectMatchField)}`] : []),", replace: "\t\t`#subject_match_field: ${yamlScalar(setLevelSlots.subjectMatchField)}`," });
 const gateDeclarationList = [{ gateId: GATE_ID, title: `SSSOM/TSV validity — ${VALIDATOR_LABEL}`, conjunctList }];
 
 runGateFamily(
-	{ harness, familyName: GATE_ID, gateDeclarationList, twinRegistry, makeSubject: scenarioLib.makeScenario, cloneSubject: scenarioLib.cloneScenario, expectedConjunctCount: 16 },
+	{ harness, familyName: GATE_ID, gateDeclarationList, twinRegistry, makeSubject: scenarioLib.makeScenario, cloneSubject: scenarioLib.cloneScenario, expectedConjunctCount: 17 },
 	() => harness.report(),
 );

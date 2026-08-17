@@ -172,7 +172,15 @@ const toSssomTsv = ({ decisionBlock, decisionBlockHash, cardByStableId, curieMap
 	const picked = pickedRecordList(decisionBlock.decisionRecordList);
 	for (let recordIndex = 0; recordIndex < picked.length; recordIndex++) {
 		const oneRecord = picked[recordIndex];
-		const justification = JUSTIFICATION_BY_RESOLUTION[oneRecord.resolution];
+		// ⟪G-2, adversarial review D4 2026-08-17⟫ RECORD-FIRST, byte-identical to the expression in
+		// materialiser.js. Reading the table first relabelled every derived row as CompositeMatching — the
+		// justification for "an algorithm chose among candidates", which says nothing about HOW the candidates
+		// were proposed — while the block and the graph both carried SemanticSimilarityThresholdMatching. All 520
+		// rows disagreed with the artifact they describe. The parallel-table comment two files away claimed the
+		// edge and the export "cannot drift into disagreeing about the same fact"; they drifted because only ONE
+		// of the two consulted the record. Documentary producers are unaffected: their records carry exactly the
+		// table's values, so the two expressions agree byte for byte there.
+		const justification = oneRecord.mappingJustification === undefined || oneRecord.mappingJustification === null ? JUSTIFICATION_BY_RESOLUTION[oneRecord.resolution] : oneRecord.mappingJustification;
 		const justificationRefusal = sssomJustificationRefusal(justification);
 		if (justificationRefusal) {
 			refuseWith(justificationRefusal, 'Profile §4.2');
@@ -241,7 +249,12 @@ const toSssomTsv = ({ decisionBlock, decisionBlockHash, cardByStableId, curieMap
 		`#subject_source_version: ${yamlScalar(setLevelSlots.subjectSourceVersion)}`,
 		`#object_source: ${yamlScalar(objectSourceIri)}`,
 		`#object_source_version: ${yamlScalar(setLevelSlots.objectSourceVersion)}`,
-		`#subject_match_field: ${yamlScalar(setLevelSlots.subjectMatchField)}`,
+		// ⟪G-1, adversarial review D4 2026-08-17⟫ CONDITIONAL on the disposition, exactly as mapping_tool above
+		// is. The table already said `subjectMatchField: 'omitted'` for inferred, and the VALIDATION at the top of
+		// this function already refused a value it should not carry — but this EMISSION consulted nothing, so
+		// RULING §11.7(d)'s "OMITTED for derived" wrote the literal string "undefined" into the header and the
+		// shipped file failed `sssom validate`. The data was right and one line did not read it.
+		...(setSlotDisposition.subjectMatchField === 'required' ? [`#subject_match_field: ${yamlScalar(setLevelSlots.subjectMatchField)}`] : []),
 		`#object_match_field: ${yamlScalar(setLevelSlots.objectMatchField)}`,
 	];
 	if (isNonEmptyString(setLevelSlots.authorId)) {

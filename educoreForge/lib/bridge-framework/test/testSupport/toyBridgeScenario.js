@@ -324,6 +324,12 @@ const runRejudgeThenMaterialise = (scenario, callback) => {
 		const second = cloneScenario(scenario);
 		second.stores = scenario.stores; // the SAME stores (the replay protocol's "same store")
 		second.spec.rebridge = false;
+		// ⟪H-2⟫ the second run may declare a DIFFERENT window. Without this the clone inherits the first run's
+		// --limit and the PARTIAL guard can never be reached by a test, which is precisely why it went untwinned:
+		// the harness could not express the only situation the guard exists for.
+		if (scenario.secondRunConfigOverride !== undefined) {
+			second.spec.config = { ...second.spec.config, ...scenario.secondRunConfigOverride };
+		}
 		second.graph = cloneJson(scenario.graph); // a FRESH dependency graph, as build.js gives every pairing
 		runScenario(second, (unusedSecondError, secondOutcome) => callback('', { first, second: secondOutcome }));
 	});

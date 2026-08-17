@@ -226,6 +226,33 @@ const blindConjunctList = [
 		find: '\t\t\tconst forbidden = value[oneSide].find((oneName) => RENDERING_NEVER_NAME_LIST.indexOf(oneName) !== -1);',
 		replace: '\t\t\tconst forbidden = undefined; void RENDERING_NEVER_NAME_LIST;',
 	}),
+	// ⟪H-1, adversarial review D4 2026-08-17⟫ The reviewer neutered renderedBlockRefusal and bgDerived, bgBlind
+	// and bgDecl ALL STAYED GREEN. The comment beside that function says it "has to be able to catch me being
+	// wrong"; nothing tested whether it could.
+	//
+	// The honest test is the one the function claims to be: a SECOND net. So the FIRST net — the declaration
+	// validator that refuses a NEVER name in the allow-list — is DELIBERATELY BYPASSED here, a NEVER name is put
+	// into the allow-list, and the RENDERER must catch the leak in the bytes it produced. A conjunct that merely
+	// re-tested the first net would have left this exactly as unproven as it was.
+	refusalCase({
+		registry: twinRegistry,
+		gateId: 'BG-BLIND-DERIVED',
+		conjunctId: 'd_theSecondNetCatchesALeakTHEFIRSTNETWasBypassedFor',
+		title: 'with the DECLARATION net bypassed, a NEVER property reaching the rendered bytes is refused BY THE RENDERER — the second net catches what the first net was made to miss',
+		shape: (scenario) => {
+			derivedShape(scenario);
+			// bypass net #1 (bridgePluginContract's allow-list validation) so the leak can actually reach the renderer
+			scenario.frameworkMutationList.push({ modulePath: path.join(scenarioLib.FRAMEWORK_DIR, CONTRACT_FILE), find: '\t\t\tconst forbidden = value[oneSide].find((oneName) => RENDERING_NEVER_NAME_LIST.indexOf(oneName) !== -1);', replace: '\t\t\tconst forbidden = undefined; void RENDERING_NEVER_NAME_LIST;' });
+			overrideDerivedDeclaration(scenario, (declaration) => {
+				declaration.renderingAllowList = { ...declaration.renderingAllowList, candidate: declaration.renderingAllowList.candidate.concat(['canonicalKey']) };
+			});
+		},
+		regex: /the rendered prompt carries property 'canonicalKey', which is on RENDERING_NEVER_NAME_LIST/,
+		twinName: 'secondNetRemoved',
+		fileName: RENDERER_FILE,
+		find: '\tconst leaked = renderedNameList.find((oneName) => RENDERING_NEVER_NAME_LIST.indexOf(oneName) !== -1);',
+		replace: '\tconst leaked = undefined; void renderedNameList;',
+	}),
 ];
 
 // ---------------------------------------------------------------------
@@ -293,6 +320,29 @@ const partialConjunctList = [
 			const windowMark = block && block.header ? block.header.sourceWindow : undefined;
 			return { pass: typeof windowMark === 'string' && /PARTIAL_WINDOW/.test(windowMark), detail: `sourceWindow = ${JSON.stringify(windowMark)}` };
 		}),
+	}),
+	// ⟪H-2, adversarial review D4 2026-08-17⟫ The reviewer disabled the PARTIAL guard and bgDerived stayed
+	// 39/39. This family's TITLE claims a windowed block "refuses to ship as a whole graph"; conjunct (a)
+	// asserts only that the block is MARKED. Marking is legibility; refusing is the guarantee, and the
+	// guarantee was the untested half. With three PARTIAL blocks living in one store under one pairKey and
+	// `materialise` being latest-wins, ten edges could have shipped as a graph and reported success.
+	refusalCase({
+		registry: twinRegistry,
+		gateId: 'BG-PARTIAL',
+		conjunctId: 'b_aWindowedBlockREFUSESToMaterialiseUnderADifferentWindow',
+		title: 'a block frozen from a --limit WINDOW is REFUSED BY NAME when a run whose window differs tries to materialise it — the family title\'s "refuses to ship as a whole graph", asserted rather than assumed',
+		mode: 'twice',
+		shape: (scenario) => {
+			derivedShape(scenario);
+			// freeze under a window, then materialise with NO window: the guard must refuse the second run
+			scenario.spec.config = { ...scenario.spec.config, limit: 3, offset: 0 };
+			scenario.secondRunConfigOverride = { limit: undefined, offset: undefined };
+		},
+		regex: /was frozen from a PARTIAL window[\s\S]*and this run's window is/,
+		twinName: 'partialGuardRemoved',
+		fileName: 'materialiser.js',
+		find: '\tif (blockWindowMark !== null && blockWindowMark !== currentWindowMark) {',
+		replace: '\tif (false && blockWindowMark !== null && blockWindowMark !== currentWindowMark) {',
 	}),
 ];
 
@@ -415,8 +465,8 @@ runGateFamily(
 		cloneSubject: scenarioLib.cloneScenario,
 		// LITERAL, never derived from a .length (RULING SABLE_RIVER 2026-08-17)
 		// LITERAL: 5 + 3 + 2 + 1 + 1 + 2
-		expectedConjunctCount: 14,
-		expectedTwinCount: 14,
+		expectedConjunctCount: 16,
+		expectedTwinCount: 16,
 	},
 	() => harness.report(),
 );
