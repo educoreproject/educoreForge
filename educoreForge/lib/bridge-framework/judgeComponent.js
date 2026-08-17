@@ -31,7 +31,44 @@ const refuse = require(path.join(__dirname, '..', 'forge-framework', 'refuse'));
 const { ABSTAIN_TOKEN } = require('./evidenceRenderer');
 const { confidenceForCategory, ABSTAIN_CATEGORY, PICK_CATEGORY_LIST } = require('./confidenceBandTable');
 
-const ORDINAL_RATIONALE_RE = /\b(candidate|option|choice)\s+#?\d+\b/i;
+// ⟪B2 DEFECT #5 found by the FIRST REAL BATCH-2 JUDGMENTS — RULING SABLE_RIVER 2026-08-17 14:10⟫ The pattern
+// gains a capturing group for the NUMBER, because the rule is about the CHOICE and the old check was about
+// the whole rationale.
+//
+// BR-067's own sentence is "a rationale names the CHOICE by hub key + name". Batch 2 died on a rationale that
+// did exactly that and was refused anyway: pick ordinal 1, and the only ordinal anywhere in the text was
+// ELEVEN — a candidate the judge REJECTED and named while explaining why it ruled it out ("Candidate 11 is the
+// organization's own email address value rather than the contact person's"). Naming a rejected candidate by
+// number to contrast it is lawful and is GOOD rationale; the gate was refusing the judge for showing its work.
+//
+// Worse, the fault was UNRECOVERABLE: the re-ask instruction is scoped to the CHOSEN candidate ("name the
+// chosen candidate by its hub key and name") while the check was scoped to the whole text, so a compliant
+// model could not satisfy it by complying. A bounded retry cannot converge when its instruction is narrower
+// than the predicate it must satisfy — which is why this killed a run instead of costing one call.
+//
+// RULED: refuse ONLY when a matched ordinal EQUALS clientReturn.choice. The same batch proved the gate is
+// still needed and still bites — PositionTitle named "Candidate 10", which WAS its pick, was refused,
+// re-asked once and recovered clean. The gate's real target and its false positive are separated by exactly
+// one question: does the named ordinal equal the pick?
+const ORDINAL_RATIONALE_RE = /\b(candidate|option|choice)\s+#?(\d+)\b/gi;
+
+// rationaleNamesOwnChoiceByOrdinal — TRUE only when the rationale refers by NUMBER to the very candidate it
+// picked. The regex is /g and therefore stateful, so a fresh exec loop runs per call and lastIndex never
+// leaks between judgments (a shared /g regex silently skipping every other match is its own classic fault).
+const rationaleNamesOwnChoiceByOrdinal = ({ rationale, choice }) => {
+	if (typeof rationale !== 'string' || typeof choice !== 'string') {
+		return false;
+	}
+	const pattern = new RegExp(ORDINAL_RATIONALE_RE.source, 'gi');
+	let oneMatch = pattern.exec(rationale);
+	while (oneMatch !== null) {
+		if (oneMatch[2] === choice) {
+			return true;
+		}
+		oneMatch = pattern.exec(rationale);
+	}
+	return false;
+};
 
 // ⟪RULING 13:15⟫ ABSENT_CATEGORY_MARK — recorded in reportedCategoryOnAbstain when the model omitted the
 // category on an abstention. It is a RECORD OF AN ABSENCE, not a category: it never reaches the band table
@@ -125,8 +162,8 @@ const judgmentFromReturn = ({ clientReturn, question, isDebugClient }) => {
 	// the rationale must name the choice by hub key + name, never by ordinal — checked lexically for a REAL
 	// judge; the DEBUG double's rationale self-announces INVALID_DEBUG and names ordinals BY DESIGN
 	// (debugJudge.js is UNCHANGED, RULING BF1) — exempt, and every debug edge is flagged anyway
-	if (!isDebugClient && ORDINAL_RATIONALE_RE.test(clientReturn.rationale)) {
-		return { error: refuse.byName({ moduleName, what: `the judge's rationale names the pick by ORDINAL (${JSON.stringify(clientReturn.rationale.slice(0, 120))})`, where: 'a rationale names the choice by hub key + name (BR-067)' }), ordinalRationale: true };
+	if (!isDebugClient && rationaleNamesOwnChoiceByOrdinal({ rationale: clientReturn.rationale, choice: clientReturn.choice })) {
+		return { error: refuse.byName({ moduleName, what: `the judge's rationale names ITS OWN pick by ORDINAL (candidate ${clientReturn.choice}) (${JSON.stringify(clientReturn.rationale.slice(0, 120))})`, where: 'a rationale names the choice by hub key + name; naming a REJECTED candidate by number to contrast it is lawful (BR-067, RULING 14:10)' }), ordinalRationale: true };
 	}
 	return { chosenCardStableId: mapped.chosenCardStableId, choice: clientReturn.choice, category: clientReturn.category, rationale: clientReturn.rationale, confidence: band.confidence, discardedPredicateKeyCount };
 };
@@ -137,7 +174,9 @@ const judgmentFromReturn = ({ clientReturn, question, isDebugClient }) => {
 // budget allowed it (it does not). The absent-rationale text must not touch clientReturn.rationale — it is
 // undefined in exactly that case, and the ordinal text's .slice would throw.
 const REASK_INSTRUCTION_BY_FAULT = Object.freeze({
-	ordinalRationale: ({ question, clientReturn }) => `${question.userPrompt}\n\nRESTATE YOUR RATIONALE: your previous rationale (${JSON.stringify(clientReturn.rationale.slice(0, 200))}) referred to a candidate by NUMBER. Restate the rationale naming the chosen candidate by its hub key and name, never by its number. Keep the same choice unless you have a reason to change it.`,
+	// the instruction now matches the predicate EXACTLY — it names the pick's own ordinal and says plainly that
+	// referring to OTHER candidates by number is fine. An instruction narrower than its check cannot converge.
+	ordinalRationale: ({ question, clientReturn }) => `${question.userPrompt}\n\nRESTATE YOUR RATIONALE: your previous rationale (${JSON.stringify(clientReturn.rationale.slice(0, 200))}) referred to YOUR OWN CHOICE, candidate ${clientReturn.choice}, by NUMBER. Restate the rationale naming the candidate you chose by its hub key and name, never by its number. You may still refer to OTHER candidates by number when explaining why you ruled them out. Keep the same choice unless you have a reason to change it.`,
 	absentAbstainRationale: ({ question }) => `${question.userPrompt}\n\nSTATE YOUR REASON: you answered ${ABSTAIN_TOKEN} — none of the candidates — but gave no rationale. State briefly why none of the candidates means the same thing as the source element. Keep the same answer unless you have a reason to change it.`,
 });
 const REASKABLE_FAULT_NAME_LIST = Object.freeze(Object.keys(REASK_INSTRUCTION_BY_FAULT));
@@ -177,7 +216,13 @@ const judgeOne = ({ question, judgeClient, judgmentCache, matchForensics, budget
 	}
 	const cacheKey = { promptHash: question.promptHash, model: judgeClient.model, rendererVersion: question.rendererVersion };
 
-	const deliver = ({ judgment, cacheHit, attempts, usage }) => {
+	// ⟪RULING 14:10, from my own forensic-fidelity note⟫ reaskUserPrompt — the ACCEPTED record logged
+	// question.userPrompt, the ORIGINAL, even when the answer it carries was given to the RE-ASK prompt. The
+	// trail therefore showed a rationale beside text the judge never saw, and the second attempt's actual
+	// question was recoverable from nowhere. The original STAYS in userPrompt (it is the promptHash's preimage
+	// and the cache key's basis); the re-ask text rides beside it, null when there was no re-ask, so a reader
+	// can always see the text that was actually answered.
+	const deliver = ({ judgment, cacheHit, attempts, usage, reaskUserPrompt }) => {
 		matchForensics.appendRecord(
 			{
 				pairKey,
@@ -189,6 +234,7 @@ const judgeOne = ({ question, judgeClient, judgmentCache, matchForensics, budget
 					decisionAlgorithm: judgeClient.decisionAlgorithm === undefined ? null : judgeClient.decisionAlgorithm,
 					systemPrompt: question.systemPrompt,
 					userPrompt: question.userPrompt,
+					reaskUserPrompt: reaskUserPrompt === undefined ? null : reaskUserPrompt,
 					renderedPoolStableIdList: question.renderedPoolStableIdList,
 					choice: judgment.choice,
 					chosenCardStableId: judgment.chosenCardStableId,
@@ -258,7 +304,7 @@ const judgeOne = ({ question, judgeClient, judgmentCache, matchForensics, budget
 					askCallback(reaskCount === 0 ? judged.error.message : `${judged.error.message} — after ONE re-ask (BR-067; the first attempt is in forensics)`);
 					return;
 				}
-				askCallback('', { judged, clientReturn, reaskCount });
+				askCallback('', { judged, clientReturn, reaskCount, answeredUserPrompt: userPrompt });
 			});
 		};
 		askOnce({ userPrompt: question.userPrompt, reaskCount: 0 }, (askError, asked) => {
@@ -268,8 +314,11 @@ const judgeOne = ({ question, judgeClient, judgmentCache, matchForensics, budget
 			}
 			const { clientReturn, reaskCount } = asked;
 			const judged = { ...asked.judged, reaskCount };
+			// null when no re-ask happened: the answered prompt IS question.userPrompt and repeating it would
+			// double the record's bulk to say nothing
+			const reaskUserPrompt = asked.answeredUserPrompt === question.userPrompt ? null : asked.answeredUserPrompt;
 			if (isDebugClient) {
-				deliver({ judgment: judged, cacheHit: false, attempts: clientReturn.attempts, usage: clientReturn.usage });
+				deliver({ judgment: judged, cacheHit: false, attempts: clientReturn.attempts, usage: clientReturn.usage, reaskUserPrompt });
 				return;
 			}
 			// decided = persisted: putJudgment BEFORE delivery, exactly the payload the cache requires
@@ -280,7 +329,7 @@ const judgeOne = ({ question, judgeClient, judgmentCache, matchForensics, budget
 						callback(`${moduleName}: putJudgment FAILED for promptHash ${question.promptHash} (FATAL, never a warning): ${putError}`);
 						return;
 					}
-					deliver({ judgment: judged, cacheHit: false, attempts: clientReturn.attempts, usage: clientReturn.usage });
+					deliver({ judgment: judged, cacheHit: false, attempts: clientReturn.attempts, usage: clientReturn.usage, reaskUserPrompt });
 				},
 			);
 		});
@@ -317,4 +366,4 @@ const judgeOne = ({ question, judgeClient, judgmentCache, matchForensics, budget
 	});
 };
 
-module.exports = { judgeOne, mapChoiceToStableId, judgmentFromReturn, ORDINAL_RATIONALE_RE, ABSENT_CATEGORY_MARK, REASK_INSTRUCTION_BY_FAULT, moduleName };
+module.exports = { judgeOne, mapChoiceToStableId, judgmentFromReturn, ORDINAL_RATIONALE_RE, rationaleNamesOwnChoiceByOrdinal, ABSENT_CATEGORY_MARK, REASK_INSTRUCTION_BY_FAULT, moduleName };
