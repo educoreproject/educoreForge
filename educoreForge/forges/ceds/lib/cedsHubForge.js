@@ -1,6 +1,30 @@
 'use strict';
 
-const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
+// PHASE 2b — THE PROVENANCE RE-KEY, BY CONTROLLED EXPERIMENT (SPEC-hubKitRole-082826.md §4.9;
+// values CONFIRMED by FROZEN_JOURNEY 2026-08-29T09:48:38Z before this edit was made).
+//
+// This line USED to derive the name from __filename:
+//     const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
+// which yields 'cedsHubForge'. That string is written into HubDefinition.sourceProvenance and
+// sourceProvenance is a NODE PROPERTY, so IT IS A BLOCK BYTE (§3.3 [R2 F1]). In Phase 2c the emission
+// moves to lib/hub-framework/hub-framework.js, whose own __filename derives 'hub-framework' — so the
+// stamp WILL change when the code moves, and §4.9 chose to re-key by controlled experiment rather
+// than pin a label that would name a module no longer doing the emitting.
+//
+// THE EXPERIMENT IS THIS FILE, OTHERWISE UNTOUCHED, WITH ONLY THIS ONE VALUE MOVED TO ITS
+// POST-EXTRACTION TRUTH. FORGE_MODULE_VERSION at :57 is deliberately NOT touched: it is already
+// '1.0.0', which is the hub framework's own first version, so it does not move. One field, one
+// predicted line — if two fields moved and something unexpected appeared, neither could be blamed.
+//
+// PREDICTED, BEFORE RUNNING: exactly ONE differing line (119806, the HubDefinition node line),
+// line count unchanged at 615,926, cmp's first differing byte 263,839,333, +1 byte (12 chars ->
+// 13, both ASCII).
+//
+// ⚠ moduleName ALSO prefixes every refusal message in this module. Changing it changes those
+// strings. It cannot reach the block, because a refusal message is emitted only when a refusal
+// FIRES and none fires on a clean CEDS forge — SO A SECOND DIFFERING LINE WOULD MEAN A REFUSAL
+// FIRED, AND THAT IS A STOP CONDITION, not a curiosity.
+const moduleName = 'hub-framework';
 
 // cedsHubForge.js — the CLEAN REIMPLEMENTATION of the CEDS HubReference derivation
 // (SPEC-hubReimplementation-080326.md §1–§5; replaces referenceSubgraph.js at the forger seam
