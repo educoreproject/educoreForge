@@ -150,7 +150,26 @@ const POST_D1_BASE_TAG = 'derivedBridgeD1-081726';
 // inside this NEW anchor too, which is one commit further along the same line.
 //
 // PREVIOUS BASE, in full: postPescReembed-082926 @ 75d5470 (Phase 0 Commit A).
-const PHASE0_ANCHOR_TAG = 'post2aGSeamReanchor-082926';
+// RE-ANCHOR, hub-kit-role Phase 3. (iii)'s base moves from post2aGSeamReanchor-082926 to
+// post3SeamDiffEmptyReanchor-082926 (cfe6f79) — the seamDiffEmpty re-anchor commit, which is the
+// most recent point at which lib/forge-framework/ is quiet.
+//
+// WHY IT MOVED, AND WHY IT IS A SEPARATE COMMIT. (iii) demands the lib/forge-framework/ diff be
+// EMPTY. Phase 3 put THREE things under that path: the ruled S2 row correction in
+// migrationAllowanceRegistry.js (RULING FJ-P3-2), the S2 conjunct/twin move in test/test-gCompat.js,
+// and the new test/test-labelCensus.js + test/acceptance/expectedLabelCensus.json (RULING
+// FJ-P3-1(a)). Measured at the migration commit: four files. seamDiffEmpty and (iii) therefore went
+// red TOGETHER, and each is re-anchored ALONE, in its own commit, per P1-R11.
+//
+// ⚠ THIS IS THE DOCKETED REMEDY FROM PHASE 0 OPEN ITEM 8, APPLIED AS RULED: MOVE THE BASE, NEVER
+// EXCLUDE. The tempting "fix" is to add a lib/forge-framework/test/ exclusion to (iii) so test-only
+// edits stop reddening it. DO NOT. (iii)'s entire value since the Phase 0 re-anchor is that it
+// admits NOTHING under lib/forge-framework/, and an exclusion would hand back exactly the blind spot
+// the re-anchor closed. The path list is byte-identical; only the base has moved.
+//
+// Verified by grep before editing that PHASE0_ANCHOR_TAG serves conjunct (iii) ALONE — seamDiffEmpty
+// reads PHASE3_ANCHOR_TAG and moved in the previous commit — so this move touches no other conjunct.
+const PHASE0_ANCHOR_TAG = 'post3SeamDiffEmptyReanchor-082926';
 // PHASE 1 RE-ANCHOR — RULING FJ-P1-1, and it moves seamDiffEmpty ALONE.
 //
 // WHY IT HAD TO MOVE. SEAM_PATH_LIST watches forges/*/forge*.js, forges/*/lib/*Declaration.js and
