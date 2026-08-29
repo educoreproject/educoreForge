@@ -378,7 +378,28 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // permanently. The baseline moves; the exclusion list does not.
 //
 // PREVIOUS BASELINE, in full: b260ba8a3ce876d4034ddd885dd51a47472a4de6 (FJ-P1-2).
-const P1_BASELINE_COMMIT = 'ceff79cc973133174cf5f9e0cebc2d5ff3080ce5';
+// PHASE 2a RE-ANCHOR (SILVER_TIDE, 2026-08-29), the FOURTH move of this baseline and the pattern is
+// now well understood. New base: f610e2c62e0688e025f28cad64b7b40871771ab1 — "Re-anchor seamDiffEmpty
+// to post2aHubDiscovery-082926", tag post2aSeamDiffEmptyReanchor-082926. THE BASELINE GOES AT THE
+// COMMIT WHOSE EDIT CAUSED THE COLLISION, NEVER AT ITS PARENT (the FJ-P0-1 off-by-one).
+//
+// ⚠ TWO CAUSES THIS TIME, NOT ONE, AND THE SECOND IS THE ONE EVERY EARLIER NOTE MISSED:
+//   1. f610e2c edits lib/bridge-framework/test/test-bgNosub.js — the familiar cause. (a)'s
+//      diffedPathList excludes lib/bridge-framework/test/acceptance/ but NOT test/.
+//   2. apps/graph-builder/lib/build.js IS ONE OF (a)'S SIX DIFFED PATHS, and Phase 2a edited it for
+//      the I7b refusal. So (a) was ALREADY RED at 9532fa5, BEFORE any re-anchor commit existed.
+//
+// The standing rule as inherited says "every seamDiffEmpty re-anchor must be followed by an (a)
+// re-anchor". That is true and it is only ONE of (a)'s six paths. THE GENERAL FACT: build.js,
+// interfaces.js, apps/bridge-maker/ and lib/vocabulary/ each carry the same cost on their own.
+// Phase 2c edits lib/vocabulary/ and should plan for an (a) re-anchor from the start.
+//
+// The Phase 2 builder predicted (a) would stay GREEN at commit A and was WRONG, because the path
+// list was read out of a DEVLOG sentence instead of out of the gate's own printed command. Recorded
+// here, in the gate, so the next reader takes the list from the six lines below and not from prose.
+//
+// PREVIOUS BASELINE, in full: ceff79cc973133174cf5f9e0cebc2d5ff3080ce5 (Phase 1 Commit E, FJ-P1-3).
+const P1_BASELINE_COMMIT = 'f610e2c62e0688e025f28cad64b7b40871771ab1';
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
