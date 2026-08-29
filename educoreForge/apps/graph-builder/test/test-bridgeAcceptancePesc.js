@@ -318,7 +318,39 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 //
 // OLD BASELINE, in full, so the move is legible without the log:
 // 5360b8ec219a1e40b0b8398de31315cb9a770d6b.
-const P1_BASELINE_COMMIT = '3e9cd1fe385511d28c922f0da723e81d9ae78c17';
+// ── PHASE 1 RE-ANCHOR, RULING FJ-P1-2 ────────────────────────────────────────────────────────────
+// THE TRAP THE BLOCK ABOVE WARNS ABOUT WAS SPRUNG, EXACTLY AS WRITTEN, ONE PHASE LATER — and it is
+// recorded here rather than tidied away because the warning was already in this file and did not
+// prevent it.
+//
+// MECHANISM, identical in shape to FJ-P0-1. Phase 1 Commit B (b260ba8, "Re-anchor seamDiffEmpty to
+// postCedsForgeMigration-082926") edited lib/bridge-framework/test/test-bgNosub.js by 38/2. That
+// path is INSIDE this gate's diffedPathList, which excludes lib/bridge-framework/test/acceptance/
+// but NOT lib/bridge-framework/test/. Measured at b260ba8 against the old base:
+//     1 framework path(s) changed: modified 38  2  educoreForge/lib/bridge-framework/test/test-bgNosub.js
+// so this gate read 25/26 exit 1.
+//
+// THE GENERAL RULE, now a corollary of the FJ-P1-1 standing rule and inherited by Phases 3 and 4:
+// EVERY seamDiffEmpty RE-ANCHOR MUST BE FOLLOWED BY A BG-COMPOSE-PESC (a) RE-ANCHOR. seamDiffEmpty
+// lives inside the paths this gate diffs, so moving one always moves the other. TWO COMMITS PER
+// FORGE MIGRATION, and the second is not optional.
+//
+// NEW BASELINE, in full: b260ba8a3ce876d4034ddd885dd51a47472a4de6 — the commit whose edit caused
+// the collision and which this baseline must therefore INCLUDE, NOT its parent 2615522. Annotated
+// tag **postSeamDiffEmptyReanchorP1-082926**; the constant stays the full hash so it cannot drift
+// if a tag is ever moved.
+//
+// THE THREE ANCHOR POINTS NOW IN PLAY — each gate anchors where its own ruled edits live:
+//     seamDiffEmpty        -> postCedsForgeMigration-082926      at 2615522  (Phase 1 Commit A)
+//     (iii)                -> postPescReembed-082926             at 75d5470  (Phase 0 Commit A)
+//     BG-COMPOSE-PESC (a)  -> postSeamDiffEmptyReanchorP1-082926 at b260ba8  (Phase 1 Commit B)
+//
+// THE EXCLUSION LIST IS UNTOUCHED. Adding lib/bridge-framework/test/ to it would silence this
+// collision in one line and blind the gate to every future bridge-framework test change,
+// permanently. The baseline moves; the exclusion list does not. Refused in Phase 0 and refused again.
+//
+// PREVIOUS BASELINE, in full: 3e9cd1fe385511d28c922f0da723e81d9ae78c17 (FJ-P0-1, as corrected).
+const P1_BASELINE_COMMIT = 'b260ba8a3ce876d4034ddd885dd51a47472a4de6';
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
