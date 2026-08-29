@@ -187,7 +187,7 @@ const PHASE0_ANCHOR_TAG = 'post2aGSeamReanchor-082926';
 // STANDING RULE (FJ-P1-1): EVERY forge migration phase re-anchors this conjunct the same way, so
 // Phases 3 (SIF) and 4 (PESC) do not rediscover the collision.
 const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seamDiffEmpty's base by
-// PHASE1_S3_ANCHOR_TAG below; retained so the move is legible without the log.
+// PHASE3_ANCHOR_TAG below; retained so the move is legible without the log.
 // ── SECOND PHASE 1 RE-ANCHOR, RULING FJ-P1-3 ─────────────────────────────────────────────────────
 // SEAM_PATH_LIST IS BROADER THAN IT READS, AND THAT IS WHY THIS SECOND MOVE WAS NEEDED.
 // A git pathspec's `*` CROSSES `/`. So `forges/*/forge*.js` does NOT mean "the forge entry module of
@@ -230,7 +230,7 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // THE BASELINE MOVES; THE PATH LIST DOES NOT. SEAM_PATH_LIST is byte-identical, the
 // :!lib/forge-framework/test/test-gSeamUntouched.js exclusion is deliberately left in place
 // (STANDDOWN-P0 C.1), and no conjunct's scope is widened. Verified before editing, by RUNNING it and
-// not by reading it, that PHASE1_S3_ANCHOR_TAG reaches gitDiffStat and gitDiffStat serves
+// not by reading it, that PHASE3_ANCHOR_TAG reaches gitDiffStat and gitDiffStat serves
 // seamDiffEmpty ALONE — (ii) uses POST_D1_BASE_TAG over lib/vocabulary/ and (iii) uses
 // PHASE0_ANCHOR_TAG over lib/forge-framework/, each with its own spawnSync.
 //
@@ -257,7 +257,27 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // stale comment at forger.js:422 was DOCKETED rather than fixed.
 //
 // PREVIOUS BASE, in full: post2aHubDiscovery-082926 @ 7db272c40e4d47da3b509e886f5f06e1f574f2eb.
-const PHASE1_S3_ANCHOR_TAG = 'post2cHubExtraction-082926';
+// RE-ANCHOR, hub-kit-role Phase 3, standing rule FJ-P1-1. seamDiffEmpty's base moves from
+// post2cHubExtraction-082926 to post3SifForgeMigration-082926 (343d82e), the SIF forge migration
+// commit itself and NOT its parent — a migration that ADDS files reads as an EMPTY diff until they
+// are tracked, so the tag must sit AT the commit.
+//
+// WHY IT HAD TO MOVE. SEAM_PATH_LIST watches forges/*/forge*.js, forges/*/lib/*Declaration.js,
+// forges/*/lib/*Hooks.js AND lib/forge-framework/. A forge migration necessarily touches the first
+// three; Phase 3 also carried the ruled S2 registry correction (FJ-P3-2) and the new label-census
+// gate, both under the fourth. Measured at the tagged commit: EIGHT files in the diff.
+//
+// AND THE CONSTANT IS RENAMED, WHICH IS A FIX RATHER THAN A FLOURISH. It was PHASE3_ANCHOR_TAG
+// and had been holding a PHASE 2c value since that phase — a name that lies about its own contents,
+// which the Phase 2 handoff had to warn readers about in capitals ("the CONSTANT NAME still says
+// PHASE1_S3 but its VALUE is the 2c tag. Read the value."). Verified by grep before renaming that
+// PHASE3_ANCHOR_TAG reaches gitDiffStat and gitDiffStat serves seamDiffEmpty ALONE, so this move
+// touches no other conjunct; (iii) keeps its own PHASE0_ANCHOR_TAG and does NOT move here.
+//
+// THE BASELINE MOVES; THE PATH LIST DOES NOT. SEAM_PATH_LIST is byte-identical across this commit
+// (md5 38bd6a0da66ca6cff8e07459d9b4b160 before and after), the :!test-gSeamUntouched.js exclusion is
+// deliberately left in place per STANDDOWN-P0 C.1, and nothing is widened.
+const PHASE3_ANCHOR_TAG = 'post3SifForgeMigration-082926';
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');
@@ -366,7 +386,7 @@ const SEAM_PATH_LIST = Object.freeze([
 	':!lib/forge-framework/test/test-gSeamUntouched.js', // the ONE ruled test edit (RULING 17:10) — its own conjunct below
 ]);
 const treeRootInside = (workTreeTopLevel) => (workTreeTopLevel === TREE_ROOT ? TREE_ROOT : path.join(workTreeTopLevel, GIT_PREFIX));
-const gitDiffStat = ({ workTreePath, pathList }) => spawnSync('git', ['diff', '--stat', PHASE1_S3_ANCHOR_TAG, '--'].concat(pathList), { cwd: workTreePath, encoding: 'utf8' });
+const gitDiffStat = ({ workTreePath, pathList }) => spawnSync('git', ['diff', '--stat', PHASE3_ANCHOR_TAG, '--'].concat(pathList), { cwd: workTreePath, encoding: 'utf8' });
 const gitShowAtTag = (relativePath) => String(spawnSync('git', ['show', `${BASE_TAG}:${GIT_PREFIX}${relativePath}`], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '');
 const loadInterfacesAtTag = () => {
 	const scratchDir = fs.mkdtempSync(path.join(os.tmpdir(), 'interfacesAtTag-'));
@@ -376,7 +396,7 @@ const loadInterfacesAtTag = () => {
 };
 let scratchWorkTreePath = null;
 const seamConjunctList = [
-	pureConjunct({ conjunctId: 'seamDiffEmpty', title: `git diff --stat ${PHASE1_S3_ANCHOR_TAG} -- <build.js, forger/, replay/, replay-manager/, forge entry/declaration/hooks files, lib/forge-framework/ minus the ruled test edit> is EMPTY`, twinNameList: ['touchBuildJsInScratchWorktree'], judge: (scenario) => { const workTreePath = scenario.workTreePath ? treeRootInside(scenario.workTreePath) : TREE_ROOT; const run = gitDiffStat({ workTreePath, pathList: SEAM_PATH_LIST }); const statText = String(run.stdout || '').trim(); return { pass: run.status === 0 && statText === '', detail: run.status !== 0 ? `git diff failed: ${run.stderr}` : statText === '' ? 'empty diff — the seam is untouched' : `NON-EMPTY:\n${statText}` }; } }),
+	pureConjunct({ conjunctId: 'seamDiffEmpty', title: `git diff --stat ${PHASE3_ANCHOR_TAG} -- <build.js, forger/, replay/, replay-manager/, forge entry/declaration/hooks files, lib/forge-framework/ minus the ruled test edit> is EMPTY`, twinNameList: ['touchBuildJsInScratchWorktree'], judge: (scenario) => { const workTreePath = scenario.workTreePath ? treeRootInside(scenario.workTreePath) : TREE_ROOT; const run = gitDiffStat({ workTreePath, pathList: SEAM_PATH_LIST }); const statText = String(run.stdout || '').trim(); return { pass: run.status === 0 && statText === '', detail: run.status !== 0 ? `git diff failed: ${run.stderr}` : statText === '' ? 'empty diff — the seam is untouched' : `NON-EMPTY:\n${statText}` }; } }),
 	pureConjunct({ conjunctId: 'i_interfacesOnlyTheTwoBlocks', title: '(i) interfaces.js changed ONLY in the two declaration blocks: every COMPONENT_SHAPES member other than bridgeMaker and MANIFEST_HANDLE_SHAPE byte-equal to the tag; bridgeMaker.run arity/argKeys equal; resultKeys null → the 13-key list; BRIDGE_MODULE_SHAPE gone', twinNameList: ['argKeysAltered'], judge: (scenario) => { const atTag = loadInterfacesAtTag(); const atHead = scenario.interfacesAtHeadOverride === undefined ? require(path.join(TREE_ROOT, 'apps', 'graph-builder', 'interfaces.js')) : scenario.interfacesAtHeadOverride; const otherEqual = Object.keys(atTag.COMPONENT_SHAPES).filter((oneName) => oneName !== 'bridgeMaker').every((oneName) => JSON.stringify(atTag.COMPONENT_SHAPES[oneName]) === JSON.stringify(atHead.COMPONENT_SHAPES[oneName])); const manifestEqual = JSON.stringify(atTag.MANIFEST_HANDLE_SHAPE) === JSON.stringify(atHead.MANIFEST_HANDLE_SHAPE); const callEqual = atTag.COMPONENT_SHAPES.bridgeMaker.run.arity === atHead.COMPONENT_SHAPES.bridgeMaker.run.arity && JSON.stringify(atTag.COMPONENT_SHAPES.bridgeMaker.run.argKeys) === JSON.stringify(atHead.COMPONENT_SHAPES.bridgeMaker.run.argKeys); const resultKeysMoved = atTag.COMPONENT_SHAPES.bridgeMaker.run.resultKeys === null && Array.isArray(atHead.COMPONENT_SHAPES.bridgeMaker.run.resultKeys) && atHead.COMPONENT_SHAPES.bridgeMaker.run.resultKeys.length === 13; const shapeGone = atTag.BRIDGE_MODULE_SHAPE !== undefined && atHead.BRIDGE_MODULE_SHAPE === undefined; return { pass: otherEqual && manifestEqual && callEqual && resultKeysMoved && shapeGone, detail: `others ${otherEqual}, manifest ${manifestEqual}, call ${callEqual}, resultKeys ${resultKeysMoved}, BRIDGE_MODULE_SHAPE gone ${shapeGone}` }; } }),
 	pureConjunct({ conjunctId: 'ii_vocabularyDiffOnlyVocabularyAndTests', title: '(ii) the lib/vocabulary/ diff FROM THE D1 COMMIT touches vocabulary.js and its test/ files only (baseline moved by ruling, allowed-path list NOT widened)', twinNameList: ['touchVocabularyDefinitionsInScratchWorktree'], judge: (scenario) => { const workTreePath = scenario.workTreePath ? treeRootInside(scenario.workTreePath) : TREE_ROOT; const run = spawnSync('git', ['diff', '--name-only', POST_D1_BASE_TAG, '--', 'lib/vocabulary/'], { cwd: workTreePath, encoding: 'utf8' }); const nameList = String(run.stdout || '').trim().split('\n').filter(Boolean).map((oneName) => oneName.replace(GIT_PREFIX, '')); const outside = nameList.filter((oneName) => oneName !== 'lib/vocabulary/vocabulary.js' && !/^lib\/vocabulary\/test\//.test(oneName)); return { pass: run.status === 0 && outside.length === 0, detail: `changed [${nameList.join(', ')}]; outside [${outside.join(', ')}]` }; } }),
 	pureConjunct({ conjunctId: 'iii_forgeFrameworkDiffIsExactlyTheRuledTestEdit', title: `(iii) the lib/forge-framework/ diff from ${PHASE0_ANCHOR_TAG} is EMPTY — the two ruled edits (test/test-gSeamUntouched.js, RULING SABLE_RIVER 17:10; test/acceptance/expectedBlockIds.json, Phase 0.E3) are INSIDE the anchor, so nothing under lib/forge-framework/ may have moved since it`, twinNameList: ['touchForgeFrameworkModuleInScratchWorktree'], judge: (scenario) => { const workTreePath = scenario.workTreePath ? treeRootInside(scenario.workTreePath) : TREE_ROOT; const run = spawnSync('git', ['diff', '--name-only', PHASE0_ANCHOR_TAG, '--', 'lib/forge-framework/'], { cwd: workTreePath, encoding: 'utf8' }); const nameList = String(run.stdout || '').trim().split('\n').filter(Boolean).map((oneName) => oneName.replace(GIT_PREFIX, '')); return { pass: run.status === 0 && nameList.length === 0, detail: nameList.length === 0 ? 'empty diff — lib/forge-framework/ is untouched since the anchor' : `changed [${nameList.join(', ')}]` }; } }),
