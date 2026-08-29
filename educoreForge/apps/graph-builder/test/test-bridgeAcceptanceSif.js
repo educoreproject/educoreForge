@@ -368,6 +368,18 @@ const runComposeSection = () => {
 		const PERMITTED_PATH_REGISTRY = [
 			{ pattern: /^forges\/sif\/bridges\/[A-Za-z]+\.js$/, why: 'the plugin itself — the only new code this phase writes' },
 			{ pattern: /^recipes\/(fourWithHubSifBridge|sifBridgeOnly)\.recipe\.jsonc$/, why: 'the two declared recipes, named individually so a third cannot arrive unremarked' },
+			// ITS OWN ROW, NOT A WIDENING OF THE ROW ABOVE — the row above says a third recipe must not arrive
+			// unremarked, and this IS that third recipe, so it is remarked here by name. Loosening the pattern to
+			// /^recipes\/.*\.recipe\.jsonc$/ was considered and REFUSED: it would hand back exactly the blind spot the
+			// individual naming exists to close, and it is the same 'do NOT widen the exclusion list' the campaign
+			// ruled for FJ-P0-1. Observed doing its job before it was believed (FJ-P5-2 requirement 1): with this row
+			// present, a SECOND unnamed recipe dropped into recipes/ STILL turns this conjunct RED. MEASURED, and
+			// the correction matters: the conjunct refuses but DOES NOT NAME the offending path — grepping the
+			// suite output for the probe filename returned ZERO (control: 'BG-COMPOSE-SIF' appeared 4 times, so
+			// the grep discriminated). The cause is one line: the closure computes pathList and isPermitted and
+			// then collapses both into a boolean via pathList.every(isPermitted), discarding the offender, where
+			// conjunct (a) builds a reason list that DOES name paths. Docketed, not fixed here (FJ-P5-2).
+			{ pattern: /^recipes\/fourWithHubFourBridges\.recipe\.jsonc$/, why: 'RULING FJ-P5-1 (supervisor FROZEN_JOURNEY, 2026-08-29): the Phase 5 four-forge verification build declares the FOUR bridge plugins that can coexist in one manifest — sifCedsStandardPlugin, edfiCedsCrosswalkPlugin, edfiCedsDerivedPlugin, pescCedsDerivedPlugin. It is a THIRD recipe and therefore trips the row above BY DESIGN. Measured, not assumed: the only colliding pair among the five plugins is PESC two derived tiers, which share BOTH a standard pair AND a producerKind and so compose one relationshipSubject (vocabulary.js RELATIONSHIP_PRODUCER_SUFFIX is a three-row map: authored _exact, inferred _close, structural _struct). Ed-Fi two plugins do NOT collide — crosswalk is authored, derived is inferred. pescOptionSetCedsDerivedPlugin stays OUT until Phase 7 puts the bridge name into relationshipSubject' },
 			{ pattern: /^lib\/bridge-framework\/test\/acceptance\//, why: 'acceptance DATA — excluded from the diffed framework set by RULING BF9 because per-plugin fixtures change between phases BY DESIGN' },
 			{ pattern: /^apps\/graph-builder\/test\/test-bridgeAcceptanceSif\.js$/, why: 'this suite' },
 			// ADDED under RULING BS-5, and the addition is the point of the registry being a list: the genesis

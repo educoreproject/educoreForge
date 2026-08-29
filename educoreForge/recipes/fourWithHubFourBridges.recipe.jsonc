@@ -1,0 +1,91 @@
+// fourWithHubFourBridges.recipe.jsonc — PHASE 5 DELIVERABLE RECIPE, hub kit role migration.
+// AMBER_ARROW (Phase 5 builder), 2026-08-29, under RULING FJ-P5-1 (supervisor FROZEN_JOURNEY).
+//
+// fourWithHub-baseline PLUS the four bridge plugins that can coexist in ONE manifest. It is the
+// recipe behind the DEV_ verification graph Phase 8 promotes by RENAME under GNC-001. It is a DEV_
+// and it stays one until a goldEvalCheck PASS and the supervisor's live verification say otherwise.
+//
+// ── WHY FOUR BRIDGES AND NOT FIVE, MEASURED RATHER THAN INHERITED ──────────────────────────────
+// A relationship block's subject is composed by vocabulary.js relationshipSubject as
+//     <hubStandard>@<hubVersion> _rel_ <sourceStandard>@<sourceVersion> <producerSuffix>
+// and RELATIONSHIP_PRODUCER_SUFFIX (vocabulary.js) is a three-row DATA map, not a conditional:
+//     authored -> '_exact'   inferred -> '_close'   structural -> '_struct'
+// The subject carries NO bridge name today; adding one is Phase 7's job. So two plugins collide
+// only when they share BOTH a standard pair AND a producerKind. Measured from the five plugins'
+// own declarations on 2026-08-29:
+//     sifCedsStandardPlugin            sif         authored  -> ceds@..._rel_sif@..._exact
+//     edfiCedsCrosswalkPlugin          edfi        authored  -> ceds@..._rel_edfi@..._exact
+//     edfiCedsDerivedPlugin            edfi        inferred  -> ceds@..._rel_edfi@..._close
+//     pescCedsDerivedPlugin            pesc260805  inferred  -> ceds@..._rel_pesc260805@..._close
+//     pescOptionSetCedsDerivedPlugin   pesc260805  inferred  -> ceds@..._rel_pesc260805@..._close
+// The ONLY colliding pair is PESC's two tiers. That IS ruling P2-R5 and it is narrower than the
+// campaign prose had it: ED-FI'S TWO PLUGINS DO NOT COLLIDE, because a different producerKind
+// gives them a different suffix and therefore a different subject. The four below compose FOUR
+// DISTINCT subjects.
+//
+// ⚠ pescOptionSetCedsDerivedPlugin IS DELIBERATELY ABSENT, AND ITS ABSENCE IS A RECORDED DECISION
+// RATHER THAN AN OVERSIGHT. It collides with pescCedsDerivedPlugin on the subject above and cannot
+// share a manifest with it until Phase 7 puts the bridge name into relationshipSubject. It is NOT
+// dropped and NOT out of scope: the plugin is shipped, validated and censused. The property tier is
+// the one named here because it is the tier the whole P0/P0b measurement chain describes — a reason,
+// not a ranking.
+//
+// ── HOW THIS RECIPE MUST BE RUN, AND WHY A PLAIN BUILD WOULD LIE ───────────────────────────────
+// A PLAIN BUILD ASKS NO JUDGE. build.js resolveInferenceConfig mints a judge only when the
+// --rebridge scope is ACTIVE; with an empty scope a build MATERIALIZES whatever frozen decision
+// blocks the store already holds. Against a store carrying the CERTIFIED real-judge blocks, running
+// this recipe without --rebridge would re-materialise those and report their numbers as though these
+// bridges had been exercised — a check indistinguishable from a check that never ran.
+// And with an ACTIVE --rebridge and no --useDebugJudge, the REAL Anthropic reranker is minted and
+// Opus credit is spent, which this campaign forbids (SPEC section 6).
+// Therefore, both flags, always:
+//     --rebridge=all --useDebugJudge
+// --useDebugJudge with no active scope is refused BY NAME, and so is --useDebugJudge alongside an
+// injected llmClient. BOTH REFUSALS ARE READ FROM build.js AND WERE NOT OBSERVED RED by this phase —
+// said plainly rather than left to read as though they had been exercised. DEFAULT_RULE is 'first', so every decision block header reads judgeKind
+// 'debug:first' — the discriminator that separates this graph from a real-judge one. THE BRIDGE
+// EDGE COUNTS THIS PRODUCES ARE NOT BYTE-ANCHORED, because a debug judge is not a judgement; only
+// the AUTHORED and STANDARD-DECLARED portions are deterministic and comparable to the anchors.
+//
+// STANDARDS ARE REUSED, NOT RE-FORGED. Intended with --reuseForgedBlocks=true against a store whose
+// four bases have already been certified this phase, so the bridges run against exactly the blocks
+// the entry gate vouched for and no forge cost is paid twice.
+//
+// roundTripStage is ON: -goldEvalCheck REFUSES a run whose stage did not run (doctrine 7.4), and an
+// acceptance recipe declares it (fourWithHub-baseline precedent).
+//
+// MEASURED 2026-08-29, AND THE NEXT PERSON TO RUN THIS RECIPE WILL MEET IT: A BUILD FROM THIS RECIPE
+// CANNOT REACH A goldEvalCheck PASS, BY DESIGN, AND IT REFUSES TWICE FOR TWO DIFFERENT REASONS.
+//   --buildLogDirPath alone -> REFUSED: 'the recipe DECLARES 4 bridge(s); mapping edges UNCERTIFIED
+//     ... a bridged build never certifies on the forge round trip alone'. This is a SCOPE refusal.
+//   plus --manifestRefId    -> the bridge sibling RUNS and REFUSES four times: each relationship block
+//     'carries N edge(s) with provenanceTier invalid-debug ... a DEBUG-JUDGE block never reaches a
+//     certified graph (Profile v1.0.6 4.6, RULING R5); re-judge with the real judge before promotion'.
+//     This is a CONTENT refusal. 5,163 edges named across the four blocks.
+// THE PAIR IS NOT REDUNDANT: the first says the question cannot certify a bridged build, the second
+// says the answer would be invalid-debug. Either alone would let a run report something comfortable.
+// CONSEQUENCE: a graph built from this recipe is a DEV_ VERIFICATION graph and is NOT PROMOTABLE under
+// GNC-001 without a real judge. The forgeRoundTripOnly PASS is reachable only by a ZERO-bridge recipe
+// such as fourWithHub-baseline, which is what the Phase 5 entry build used and what PASSED.
+{
+	"schemaVersion": "1.0.0",
+	"recipeName": "fourWithHubFourBridges",
+	"kind": "dev",
+	"description": "The four certified standards with the CEDS hub, plus the four non-colliding bridge plugins (SIF standard-declared, Ed-Fi crosswalk and derived, PESC property-tier derived) — the Phase 5 verification graph.",
+	"standards": [
+		{ "token": "ceds", "version": "current" },
+		{ "token": "edfi", "version": "current" },
+		{ "token": "pesc260805", "version": "current" },
+		{ "token": "sif", "version": "current" }
+	],
+	"hubs": [
+		{ "standard": "ceds" }
+	],
+	"bridges": [
+		{ "source": "sif", "hub": "ceds", "bridge": "sifCedsStandardPlugin", "dependencies": ["sif", "ceds"] },
+		{ "source": "edfi", "hub": "ceds", "bridge": "edfiCedsCrosswalkPlugin", "dependencies": ["edfi", "ceds"] },
+		{ "source": "edfi", "hub": "ceds", "bridge": "edfiCedsDerivedPlugin", "dependencies": ["edfi", "ceds"] },
+		{ "source": "pesc260805", "hub": "ceds", "bridge": "pescCedsDerivedPlugin", "dependencies": ["pesc260805", "ceds"] }
+	],
+	"roundTripStage": true
+}
