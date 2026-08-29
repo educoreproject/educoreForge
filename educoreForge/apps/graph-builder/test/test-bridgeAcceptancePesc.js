@@ -446,7 +446,18 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // paths NOR SEAM_PATH_LIST, so nothing re-trips. Phase 3 pays FOUR commits (migration, seamDiffEmpty,
 // (iii), (a)) rather than Phase 2's three, because the ruled S2 framework edit added
 // lib/forge-framework/ to the diff and that is (iii)'s watched path.
-const P1_BASELINE_COMMIT = 'e6fa1c0';
+// ⚠ MOVED 2026-08-29 by TWILIGHT_GATE (Phase 4), the FOURTH commit of the chain and the one the
+// corollary predicts. (a) diffs SIX declared paths including lib/bridge-framework/ with ONLY
+// test/acceptance/ excluded — so test-bgNosub.js, which lives in lib/bridge-framework/test/, is
+// INSIDE (a)'s watched set, and the two re-anchor commits that had to edit it (seamDiffEmpty, then
+// (iii)) necessarily reddened this gate: 15 insertions / 2 deletions, measured with (a)'s own
+// command before the move.
+// THE MIGRATION COMMIT ITSELF WAS INVISIBLE TO (a) — forges/ and lib/forge-framework/ are NOT among
+// the six paths — which is why this is the fourth commit and not the second, and which was
+// predicted in writing before the first commit and then measured rather than assumed.
+// NEVER WIDEN (a)'s EXCLUSION LIST TO ESCAPE THIS. Moving the baseline is the ruled remedy and it
+// is tedious by design.
+const P1_BASELINE_COMMIT = '19e92bf';
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
