@@ -128,7 +128,29 @@ const POST_D1_BASE_TAG = 'derivedBridgeD1-081726';
 // lib/forge-framework/ has moved since the anchor — is what the gate is for, is STRICTER than what
 // it replaced (an empty list admits less than a one-element list), and is untouched. The twin still
 // proves it by appending to lib/forge-framework/refuse.js.
-const PHASE0_ANCHOR_TAG = 'postPescReembed-082926';
+// PHASE 2a RE-ANCHOR of conjunct (iii) ONLY (SILVER_TIDE, 2026-08-29). This is the DOCKETED REMEDY
+// for a collision Phase 0's review predicted and named, arriving on schedule.
+// postPescReembed-082926 (75d5470) -> post2aGSeamReanchor-082926 (f8e1faa).
+//
+// CAUSE: R-HUB-1 required moving PRE_MIGRATION_REF, and that constant lives INSIDE
+// lib/forge-framework/test/test-gSeamUntouched.js. (iii) demands the lib/forge-framework/ diff be
+// EMPTY and applies NO exclusion, so the ruled edit turned it red — while seamDiffEmpty stayed green
+// because SEAM_PATH_LIST excludes that very file. One gate's ruled edit inside another's watched set,
+// the same shape as FJ-P0-1 and FJ-P1-1/2.
+//
+// ⚠ WHAT WAS DELIBERATELY *NOT* DONE, and it is the whole point of this note: NO EXCLUSION WAS ADDED
+// TO (iii). The obvious "fix" is to exclude test-gSeamUntouched.js here the way SEAM_PATH_LIST does.
+// That would hand back PERMANENTLY the blind spot the Phase 0 re-anchor closed — (iii)'s entire value
+// since then is that it admits NOTHING under lib/forge-framework/. The baseline moves; the scope does
+// not. STANDDOWN-P0 C.1 also warns that the SEAM_PATH_LIST exclusion now LOOKS redundant and must not
+// be tidied away, because removing it would silently widen seamDiffEmpty. Leave both alone.
+//
+// The two edits (iii) formerly described as "inside the anchor" — test-gSeamUntouched.js under
+// RULING SABLE_RIVER 17:10, and test/acceptance/expectedBlockIds.json under Phase 0.E3 — remain
+// inside this NEW anchor too, which is one commit further along the same line.
+//
+// PREVIOUS BASE, in full: postPescReembed-082926 @ 75d5470 (Phase 0 Commit A).
+const PHASE0_ANCHOR_TAG = 'post2aGSeamReanchor-082926';
 // PHASE 1 RE-ANCHOR — RULING FJ-P1-1, and it moves seamDiffEmpty ALONE.
 //
 // WHY IT HAD TO MOVE. SEAM_PATH_LIST watches forges/*/forge*.js, forges/*/lib/*Declaration.js and
