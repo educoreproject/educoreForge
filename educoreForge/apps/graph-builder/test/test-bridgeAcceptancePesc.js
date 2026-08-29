@@ -457,7 +457,23 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // predicted in writing before the first commit and then measured rather than assumed.
 // NEVER WIDEN (a)'s EXCLUSION LIST TO ESCAPE THIS. Moving the baseline is the ruled remedy and it
 // is tedious by design.
-const P1_BASELINE_COMMIT = '19e92bf';
+// ⚠ MOVED 2026-08-29 by WILD_SHARD (Phase 7, RULING FJ-P7-3 as amended). THE BASELINE MOVES; THE PATH
+// LIST DOES NOT — expectedCompose.diffedPathList is byte-identical across this commit.
+//
+// WHY THIS (a) IS OWED A RE-ANCHOR WHEN BG-COMPOSE-SIF'S (a) IS NOT, WHICH IS NOT A DISTINCTION THE
+// CAMPAIGN'S PROSE DRAWS. The two conjuncts are in DIFFERENT FORMS. Sif's takes
+// gitNumstatOver(baselineCommit..sifPluginAcceptedCommit) — a FROZEN HISTORICAL RANGE, plus a live
+// untracked scan — so committing Phase 7 emptied the scan and Sif's (a) went 94/95 -> 95/95 on its own.
+// THIS one takes gitNumstatOver(P1_BASELINE_COMMIT): the SINGLE-COMMIT WORKING-TREE form, with no
+// accepted range at all, so every framework edit stays visible to it forever. Measured with this
+// conjunct's own command before the move: NINE files, 868 insertions, across bridge-maker, interfaces,
+// build.js, bridge-framework, bridgePluginContract, test-bgNosub and lib/vocabulary.
+//
+// Phase 7's framework work sits in 7caa671 and its re-anchor chain in 00d2436 / 8ae2330 / ef0fa96; the
+// (iii) re-anchor edits lib/bridge-framework/test/test-bgNosub.js, which is INSIDE these paths, so the
+// base is the CHAIN HEAD (tag post7ChainHead-082926) rather than the phase commit. apps/graph-builder/test/
+// is OUTSIDE the diffed paths — measured — so moving this constant cannot cascade into another re-anchor.
+const P1_BASELINE_COMMIT = 'ef0fa96';
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
