@@ -259,7 +259,66 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // MEASURED before choosing it: b77c9df (the SIF CLEAR commit) .. 5360b8e is NOT empty — it carries
 // test-bgNosub.js and test-bgP7.js, which are the supervisor's own ruled merge edits at B4 and have
 // nothing to do with PESC. So P1's baseline is 5360b8e, the framework as it stood when P1 branched.
-const P1_BASELINE_COMMIT = '5360b8ec219a1e40b0b8398de31315cb9a770d6b';
+//
+// ⟪RE-ANCHORED 2026-08-28 UNDER RULING FJ-P0-1⟫ — the BG-SEAM-UNTOUCHED re-anchor (3e9cd1f) lives
+// inside this gate's diffedPathList, so the two gates collided — D1 precedent.
+//
+// THE COLLISION, STATED PLAINLY SO IT IS NOT REDISCOVERED. This gate's diffedPathList covers
+// `lib/bridge-framework/` and excludes `lib/bridge-framework/test/acceptance/` — but NOT
+// `lib/bridge-framework/test/`. BG-SEAM-UNTOUCHED's own suite, test-bgNosub.js, lives at
+// `lib/bridge-framework/test/test-bgNosub.js`, i.e. INSIDE the paths this gate diffs. So the
+// ordered re-anchor of THAT gate (BRIEF-SEAM-reanchorBgSeamUntouched.md, RULING P1-R11, commit
+// 3e9cd1f) could not be performed WITHOUT turning THIS conjunct red. Neither gate is wrong; they
+// overlap.
+//
+// MEASURED BEFORE THE MOVE WAS PROPOSED, with this gate's OWN command over its OWN declared paths,
+// which is what separates "the re-anchor caused it" from "it was already red":
+//     5360b8ec..66c5c60  (hub kit role Phase 0 entry)   EMPTY — green
+//     5360b8ec..75d5470  (Phase 0 Commit A)             EMPTY — green
+//     5360b8ec..working tree, with 3e9cd1f              50 3 lib/bridge-framework/test/test-bgNosub.js — RED
+//
+// THE ALTERNATIVE WAS REJECTED, AND BY WHOM. Adding `lib/bridge-framework/test/` to diffedPathList
+// would have silenced the collision in one line — and WIDENED AN EXCLUSION, blinding this gate to
+// every future bridge-framework test change, permanently. The baseline moves; THE EXCLUSION LIST IS
+// NOT TOUCHED. That is the difference between "this change was authorised" and "this file stopped
+// being protected". Ruled by FROZEN_JOURNEY (FJ-P0-1); the implementer proposed both remedies and
+// applied neither until ruled, because narrowing or widening a gate is not the implementer's call.
+//
+// WHAT THE BASELINE MEANT BEFORE, PRESERVED HERE BECAUSE THE MOVE DOES NOT REPUDIATE IT: 5360b8ec
+// was "the framework as it stood when P1 branched", chosen by B4's recorded rule and measured (see
+// the note above). That claim was TRUE and this gate proved it through the whole PESC order. The
+// new baseline makes the same KIND of claim against a later frame: nothing under the declared paths
+// has moved since the hub kit role Phase 0 anchor.
+//
+// ⚠ THE COMMIT FIRST RULED WAS OFF BY ONE, AND THE CORRECTION IS RECORDED HERE RATHER THAN TIDIED
+// AWAY, because the mistake is instructive and a successor re-deriving this baseline can make it
+// again. FJ-P0-1 as first issued named 75d5470. Measured with this gate's own command over its own
+// declared paths, BEFORE anything was committed:
+//     75d5470..HEAD   50 3 lib/bridge-framework/test/test-bgNosub.js   — gate stays RED, 25/26
+//     3e9cd1f..HEAD   (empty)                                          — gate GREEN, 26/26
+// THE COLLISION-CAUSING EDIT *IS* COMMIT 3e9cd1f, AND 75d5470 IS ITS PARENT — so a baseline at
+// 75d5470 sits BEFORE the change it was moved to absorb, and absorbs nothing. It was referred back
+// with both measurements rather than silently substituted (which commit anchors a gate is not the
+// implementer's call) and rather than applied as ruled and reported red (which would be carrying
+// out an instruction known in advance to be self-defeating). FJ-P0-1 was then CORRECTED to 3e9cd1f.
+//
+// NEW BASELINE, in full: 3e9cd1fe385511d28c922f0da723e81d9ae78c17 — "Re-anchor BG-SEAM-UNTOUCHED to
+// postPescReembed-082926", the commit whose edit caused the collision and which this baseline must
+// therefore INCLUDE. It carries annotated tag **postBgSeamReanchor-082926**; the constant stays the
+// full hash so it cannot drift if a tag is ever moved, and the tag is named here for legibility.
+//
+// ⚠ THE TWO GATES LEGITIMATELY ANCHOR AT DIFFERENT COMMITS, ONE APART, AND THIS IS THE TRAP TO
+// AVOID RE-INTRODUCING:
+//     BG-SEAM-UNTOUCHED   -> postPescReembed-082926     at 75d5470  (Phase 0 Commit A)
+//     BG-COMPOSE-PESC (a) -> postBgSeamReanchor-082926  at 3e9cd1f  (Phase 0 Commit B)
+// BG-SEAM's base must be where its own ruled fixture edit lives; THIS gate's base must be one
+// commit later, because BG-SEAM's re-anchor edit is itself inside the paths this gate diffs. There
+// is NO single "Phase 0 anchor" that serves both, and anyone who assumes one will put this gate
+// back to 25/26.
+//
+// OLD BASELINE, in full, so the move is legible without the log:
+// 5360b8ec219a1e40b0b8398de31315cb9a770d6b.
+const P1_BASELINE_COMMIT = '3e9cd1fe385511d28c922f0da723e81d9ae78c17';
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
