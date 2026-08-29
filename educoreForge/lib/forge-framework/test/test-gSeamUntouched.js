@@ -60,7 +60,23 @@ const TREE_ROOT = path.resolve(toyScenario.FRAMEWORK_DIR, '..', '..');
 // PREVIOUS BASE, in full, so the move is legible without the log: preEdfiMigration-081626 @ 428ca06,
 // the tag AMBER_TRAIL cut at F3a CLEARED HEAD before the Ed-Fi migration (F3b, ruling 03:20 #5);
 // before F3b: ae41a89 (F3a start).
-const PRE_MIGRATION_REF = 'post2aHubDiscovery-082926';
+// ⚠ MOVED 2026-08-29 by WILD_SHARD (Phase 7, RULING FJ-P7-3). THE BASELINE MOVES; THE FILE LIST DOES
+// NOT — SEAM_FILE_LIST is byte-identical across this commit.
+//
+// CAUSE, MEASURED WITH THIS GATE'S OWN COMMAND, and it is exactly ONE file of the seven:
+//   git diff --stat post2aHubDiscovery-082926 -- <the 7 seam files>
+//     apps/graph-builder/lib/build.js | 78 +++++
+// build.js gains the pre-spend declaration-collision refusal that RULING FJ-P7-1 placed BEFORE PHASE A.
+// Phase 7 migrates no forge; the other six seam files are untouched.
+//
+// ⚠ AND THIS EDIT NECESSARILY TURNS BG-NOSUB CONJUNCT (iii) RED, WHICH IS PREDICTED, NOT ACCIDENTAL.
+// (iii) demands the lib/forge-framework/ diff from its anchor be EMPTY and applies NO exclusion, while
+// seamDiffEmpty EXCLUDES this very file. So a ruled edit here lands inside (iii)'s watched set and
+// outside seamDiffEmpty's — the collision DEVLOG open item 8 named in Phase 0 and Phase 2a paid. The
+// ruled remedy is the same three steps: commit this move ALONE, tag at that commit, re-anchor (iii) to
+// the tag and re-observe its twin red. NOT an exclusion for this file in (iii): its entire value is that
+// it admits nothing.
+const PRE_MIGRATION_REF = 'post7OptInDiscriminator-082926';
 const SEAM_FILE_LIST = Object.freeze([
 	'apps/graph-builder/apps/forger/forger.js',
 	'apps/graph-builder/lib/build.js',
