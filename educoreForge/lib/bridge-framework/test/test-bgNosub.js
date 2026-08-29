@@ -296,7 +296,13 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // THE BASELINE MOVES; THE PATH LIST DOES NOT. SEAM_PATH_LIST is byte-identical across this commit
 // (md5 38bd6a0da66ca6cff8e07459d9b4b160 before and after), the :!test-gSeamUntouched.js exclusion is
 // deliberately left in place per STANDDOWN-P0 C.1, and nothing is widened.
-const PHASE3_ANCHOR_TAG = 'post3SifForgeMigration-082926';
+// ⚠ MOVED 2026-08-29 by TWILIGHT_GATE (Phase 4, ruling FJ-P1-1 pattern). THE BASELINE MOVES; THE
+// PATH LIST DOES NOT. SEAM_PATH_LIST is byte-identical across this commit — the PESC migration
+// necessarily rewrote forges/pesc260805/forgePesc260805.js and added three files under
+// forges/pesc260805/lib/, all four inside the watched globs, so "seamDiffEmpty green" was
+// unachievable in this phase without a re-anchor. That is the deliberate move this mechanism exists
+// to make legible, and it is the same move Phases 1, 2c and 3 each made for their own migration.
+const PHASE3_ANCHOR_TAG = 'post4PescForgeMigration-082926';
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');
