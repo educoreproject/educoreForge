@@ -36,7 +36,31 @@ const { makeTwinRegistry } = require('../roundTripHarness/twinRegistry');
 const GATE_ID = 'G-SEAM-UNTOUCHED';
 const twinRegistry = makeTwinRegistry();
 const TREE_ROOT = path.resolve(toyScenario.FRAMEWORK_DIR, '..', '..');
-const PRE_MIGRATION_REF = 'preEdfiMigration-081626'; // the tag AMBER_TRAIL cut at 428ca06 (F3a CLEARED HEAD) before the Ed-Fi migration (F3b, ruling 03:20 #5); before F3b: ae41a89 (F3a start)
+// PHASE 2a RE-ANCHOR (SILVER_TIDE, 2026-08-29) — THE RULED MOVE R-HUB-1 EXISTS FOR.
+// preEdfiMigration-081626 (428ca06) -> post2aHubDiscovery-082926 (7db272c).
+//
+// CAUSE, named in the gate's own data: SEAM_FILE_LIST pins apps/graph-builder/apps/forger/forger.js
+// AND apps/graph-builder/lib/build.js, and Phase 2a is the FIRST phase to touch either since
+// 2026-08-16. R-HUB-1 supersedes the D9 clause "build.js, forger, replay: untouched" for the hub
+// dispatch site in forger.js and for the I7b refusal in build.js. Everything else in SEAM_FILE_LIST
+// — shape-forged-graph, replay-engine, replay-block, replayManager, round-trip-stage — is untouched
+// and this move does not license touching it.
+//
+// THE BASELINE MOVES; THE FILE LIST DOES NOT. SEAM_FILE_LIST is byte-identical.
+//
+// ⚠ THIS COMMIT IS PREDICTED TO TURN BG-NOSUB CONJUNCT (iii) RED, AND THAT IS CORRECT BEHAVIOUR,
+// NOT A REGRESSION. (iii) demands the lib/forge-framework/ diff from its own anchor be EMPTY and it
+// applies NO exclusion, while seamDiffEmpty EXCLUDES this very file — so the ruled edit lands inside
+// (iii)'s watched set and outside seamDiffEmpty's. DEVLOG OPEN ITEM 8 predicted this collision from
+// Phase 0 and the docket names the remedy: commit this move ALONE, tag at it, re-anchor (iii) to
+// that tag, re-observe (iii)'s twin red. DO NOT add a test-gSeamUntouched.js exclusion to (iii) —
+// its entire value since the Phase 0 re-anchor is that it admits NOTHING, and an exclusion hands
+// back permanently the blind spot that re-anchor closed.
+//
+// PREVIOUS BASE, in full, so the move is legible without the log: preEdfiMigration-081626 @ 428ca06,
+// the tag AMBER_TRAIL cut at F3a CLEARED HEAD before the Ed-Fi migration (F3b, ruling 03:20 #5);
+// before F3b: ae41a89 (F3a start).
+const PRE_MIGRATION_REF = 'post2aHubDiscovery-082926';
 const SEAM_FILE_LIST = Object.freeze([
 	'apps/graph-builder/apps/forger/forger.js',
 	'apps/graph-builder/lib/build.js',
