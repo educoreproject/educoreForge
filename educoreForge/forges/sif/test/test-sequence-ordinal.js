@@ -153,7 +153,34 @@ const syntheticParsed = {
 	],
 };
 
-const g = bundle.buildContractGraph(syntheticParsed);
+// ---- POST-MIGRATION CALL SHAPE (hub-kit-role Phase 3) --------------------------------------------
+// forgeSif.js now injects lib/forge-framework, whose buildContractGraph signature is
+// `({ parsed, metadata })` with `parsed` keyed by LOADER NAME — where the bespoke module took a
+// SINGLE object carrying `nodes` and `metadata`. The graph these assertions examine is unchanged;
+// only the way it is asked for has moved.
+//
+// The framework mints the DmeStandardRoot itself, from the DECLARATION plus this POST-STAMP metadata
+// (the seven keys forge() step 4 composes), so a synthetic call must supply all seven rather than the
+// parser's four. sourceUrl '' and sourceFiles [] are the values SIF's own root carries and are
+// licensed by the declared allowances S4 and S7; versionSource/publishedVersion 'unknown' is what
+// deriveVersionStamp stamps for a source that does not self-describe, which SIF's TSV does not.
+const SIF_LOADER_NAME = 'sifImplementationSpecification';
+const syntheticPostStampMetadata = {
+	version: '1.0',
+	versionSource: 'unknown',
+	sourceFormat: 'tsv',
+	sourceFiles: [],
+	sourceUrl: '',
+	snapshotKey: '01',
+	publishedVersion: 'unknown',
+};
+const buildContractGraphFromSynthetic = (oneSyntheticParsed) =>
+	bundle.buildContractGraph({
+		parsed: { [SIF_LOADER_NAME]: oneSyntheticParsed },
+		metadata: syntheticPostStampMetadata,
+	});
+
+const g = buildContractGraphFromSynthetic(syntheticParsed);
 const byXpath = (xpath) => g.nodes.find((n) => n.properties.xpath === xpath);
 
 harness.equal('Prefix: sequenceOrdinal 0 (first under Name)', byXpath('StudentPersonal/Name/Prefix').properties.sequenceOrdinal, 0);
@@ -225,7 +252,7 @@ harness.section('SECTION 2 — NEGATIVE CONTROL: identity/addressing fields are 
 	// out, must reproduce EXACTLY the same identity-bearing fields as a run that never touched
 	// sequence capture at all — i.e. sequence capture is provably ADDITIVE, not a mutation of
 	// anything address-bearing (the P4 stability ruling this test exists to pin).
-	const g2 = bundle.buildContractGraph(syntheticParsed);
+	const g2 = buildContractGraphFromSynthetic(syntheticParsed);
 	const identityShape = (graph) =>
 		JSON.stringify(
 			graph.nodes.map((n) => ({

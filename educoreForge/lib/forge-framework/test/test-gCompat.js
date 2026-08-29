@@ -51,6 +51,15 @@ const withDescribeSource = (scenario, transform) => { const baseHooks = toyScena
 const withWalkExtra = (scenario, extra) => { const baseHooks = toyScenario.toyHooksFactory(); scenario.hookOverrides.emitContractGraph = (context) => { const walkResult = baseHooks.emitContractGraph(context); extra(context); return walkResult; }; };
 const mintNameless = ({ kit }) => kit.makeNode({ role: DME_ROLES.CLASS, perStandardLabel: 'ToyClass', stableId: 'toy:class/Nameless', name: null, structural: { parentId: kit.rootStableId, path: 'Nameless' }, searchTextElement: { role: DME_ROLES.CLASS, name: 'Nameless', standardName: 'Toy', owningName: 'Toy' }, origin: 'nameless' });
 const addNativeEdge = ({ kit }) => kit.addEdge({ edgeType: 'HAS_CHILD', fromStableId: 'toy:class/Person', toStableId: 'toy:class/School', edgeContext: 'native parent edge' });
+// S2's fixture, MOVED FROM name TO description (RULING FJ-P3-2). The row was authored against
+// forgeSif.js:350 (`name`) and SIF's real coercion is :351 (`description`); its data contract now
+// reads mustEqual ['description'], so a name-shaped fixture could no longer exercise it at all.
+// NOTE THE SHAPE DIFFERENCE, which is why this is not a rename: the kit has TWO name branches
+// (absent/null -> '' when licensed, and an explicit '' refused-or-counted) but only ONE description
+// branch — an EXPLICIT '' — because nothing coerces an ABSENT description into a byte. So the
+// fixture passes description '' rather than null, and `mintNameless` stays where it is, still used
+// by the nameless-census conjuncts that are genuinely about names.
+const mintEmptyDescription = ({ kit }) => kit.makeNode({ role: DME_ROLES.CLASS, perStandardLabel: 'ToyClass', stableId: 'toy:class/Blank', name: 'Blank', description: '', structural: { parentId: kit.rootStableId, path: 'Blank' }, searchTextElement: { role: DME_ROLES.CLASS, name: 'Blank', standardName: 'Toy', owningName: 'Toy' }, origin: 'empty description' });
 
 // the shipped-configuration texts: the toy entry module + hooks + the four forges' entry modules
 const shippedConfigTextList = () => {
@@ -153,22 +162,22 @@ const conjunctList = [
 	}),
 	shapedConjunct({
 		conjunctId: 's2LiveInKit',
-		title: "S2 declared (as sif) with a null-name node → name '' stamped (the byte), emptyStringCoercionCount 1, activeAllowanceList ['S2'], namelessNodeCountByRole {} (the coerced node is not nameless)",
+		title: "S2 declared (as sif) with an empty-description node → description '' SHIPS as the byte, activeAllowanceList ['S2'], and the node's NAME is untouched (the coercion is scoped to the one declared property)",
 		twinNameList: ['kitIgnoresCoercionAllowance'],
-		shape: (scenario) => { asStandard(scenario, 'sif'); scenario.forgeDeclaration.compatibilityDeclarationList = [{ allowanceId: 'S2', coerceEmptyStringPropertyList: ['name'] }]; withWalkExtra(scenario, mintNameless); },
-		judge: succeeded((result) => { const namelessNode = result.nodes.find((oneNode) => oneNode.stableId === 'toy:class/Nameless'); return { pass: namelessNode.properties.name === '' && result.complianceReport.activeAllowanceList.join(',') === 'S2' && Object.keys(result.complianceReport.namelessNodeCountByRole).length === 0, detail: `name ${JSON.stringify(namelessNode.properties.name)}; report ${JSON.stringify(result.complianceReport)}` }; }),
+		shape: (scenario) => { asStandard(scenario, 'sif'); scenario.forgeDeclaration.compatibilityDeclarationList = [{ allowanceId: 'S2', coerceEmptyStringPropertyList: ['description'] }]; withWalkExtra(scenario, mintEmptyDescription); },
+		judge: succeeded((result) => { const blankNode = result.nodes.find((oneNode) => oneNode.stableId === 'toy:class/Blank'); return { pass: blankNode.properties.description === '' && blankNode.properties.name === 'Blank' && result.complianceReport.activeAllowanceList.join(',') === 'S2', detail: `description ${JSON.stringify(blankNode.properties.description)}; name ${JSON.stringify(blankNode.properties.name)}; report ${JSON.stringify(result.complianceReport)}` }; }),
 	}),
 	shapedConjunct({
-		conjunctId: 's2CountsCallerEmptyName',
-		title: "S2 declared (as sif) with a hook passing name '' → the '' byte ships AND emptyStringCoercionCount EQUALS 1 (FA4: counted, never silent)",
-		twinNameList: ['kitDoesNotCountEmptyName'],
-		shape: (scenario) => { asStandard(scenario, 'sif'); scenario.forgeDeclaration.compatibilityDeclarationList = [{ allowanceId: 'S2', coerceEmptyStringPropertyList: ['name'] }]; withWalkExtra(scenario, ({ kit }) => kit.makeNode({ role: DME_ROLES.CLASS, perStandardLabel: 'ToyClass', stableId: 'toy:class/EmptyNamed', name: '', structural: { parentId: kit.rootStableId, path: 'EmptyNamed' }, searchTextElement: { role: DME_ROLES.CLASS, name: 'EmptyNamed', standardName: 'Toy', owningName: 'Toy' }, origin: 'empty name' })); },
-		judge: succeeded((result) => { const emptyNode = result.nodes.find((oneNode) => oneNode.stableId === 'toy:class/EmptyNamed'); return { pass: emptyNode.properties.name === '' && result.stats.emptyStringCoercionCount === 1 && result.complianceReport.activeAllowanceList.join(',') === 'S2', detail: `name ${JSON.stringify(emptyNode.properties.name)}; emptyStringCoercionCount ${result.stats.emptyStringCoercionCount}` }; }),
+		conjunctId: 's2CountsCallerEmptyDescription',
+		title: "S2 declared (as sif) with a hook passing description '' → emptyStringCoercionCount EQUALS 1 (FA4: counted, never silent — a coercion that ships unrecorded is the silent-default class)",
+		twinNameList: ['kitDoesNotCountEmptyDescription'],
+		shape: (scenario) => { asStandard(scenario, 'sif'); scenario.forgeDeclaration.compatibilityDeclarationList = [{ allowanceId: 'S2', coerceEmptyStringPropertyList: ['description'] }]; withWalkExtra(scenario, ({ kit }) => kit.makeNode({ role: DME_ROLES.CLASS, perStandardLabel: 'ToyClass', stableId: 'toy:class/EmptyDescribed', name: 'EmptyDescribed', description: '', structural: { parentId: kit.rootStableId, path: 'EmptyDescribed' }, searchTextElement: { role: DME_ROLES.CLASS, name: 'EmptyDescribed', standardName: 'Toy', owningName: 'Toy' }, origin: 'empty description' })); },
+		judge: succeeded((result) => { const emptyNode = result.nodes.find((oneNode) => oneNode.stableId === 'toy:class/EmptyDescribed'); return { pass: emptyNode.properties.description === '' && result.stats.emptyStringCoercionCount === 1 && result.complianceReport.activeAllowanceList.join(',') === 'S2', detail: `description ${JSON.stringify(emptyNode.properties.description)}; emptyStringCoercionCount ${result.stats.emptyStringCoercionCount}` }; }),
 	}),
 	refusalCase({
 		registry: twinRegistry, gateId: GATE_ID, conjunctId: 's2DeclaredButUnneededRefused',
-		title: "S2 declared (as sif) with NO nameless node → refused 'allowance S2 active but its condition is not met' (contract-graph step)",
-		shape: (scenario) => { asStandard(scenario, 'sif'); scenario.forgeDeclaration.compatibilityDeclarationList = [{ allowanceId: 'S2', coerceEmptyStringPropertyList: ['name'] }]; },
+		title: "S2 declared (as sif) with NO empty-description node → refused 'allowance S2 active but its condition is not met' (contract-graph step)",
+		shape: (scenario) => { asStandard(scenario, 'sif'); scenario.forgeDeclaration.compatibilityDeclarationList = [{ allowanceId: 'S2', coerceEmptyStringPropertyList: ['description'] }]; },
 		regex: /buildContractGraph: .*allowance S2 active but its condition is not met/,
 		twinName: 'disableDeclaredButUnneededCheck', fileName: FRAMEWORK_FILE,
 		find: '\t\t\t\tif (!oneRow.preconditionMet(context)) {', replace: '\t\t\t\tif (!oneRow.preconditionMet(context) && false) {',
@@ -203,8 +212,15 @@ scenarioTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'migratedFor
 scenarioTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'countEqualsFrozen', twinName: 'declareE6UnderOverride', leverKind: 'inputFault', shippedConfig: false, mutate: (scenario) => { asStandard(scenario, 'edfi'); scenario.forgeDeclaration.compatibilityDeclarationList = [{ allowanceId: 'E6' }]; withDescribeSource(scenario, (described) => ({ ...described, sourceUrl: '' })); scenario.deps = { ...scenario.deps, migratingBundleListOverride: ['toy', 'edfi'] }; } });
 frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'e6LiveReportedAndByteReproduced', twinName: 'censusHidesActiveAllowances', fileName: CENSUS_FILE, find: '\tconst activeAllowanceList = forgeDeclaration.compatibilityDeclarationList.map((oneEntry) => oneEntry.allowanceId);', replace: '\tconst activeAllowanceList = [];' });
 frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'e8LiveLogicalSourceFileNames', twinName: 'frameworkIgnoresE8', fileName: FRAMEWORK_FILE, find: '\t\t\t\t\t\t.filter((oneRow) => oneRow.permitsUnverifiedSourceFileNames === true)', replace: '\t\t\t\t\t\t.filter((oneRow) => false)' });
-frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 's2LiveInKit', twinName: 'kitIgnoresCoercionAllowance', fileName: KIT_FILE, find: "\t\t\tif (emptyStringCoercionPropertyList.indexOf('name') !== -1) {", replace: "\t\t\tif (false && emptyStringCoercionPropertyList.indexOf('name') !== -1) {" });
-frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 's2CountsCallerEmptyName', twinName: 'kitDoesNotCountEmptyName', fileName: KIT_FILE, find: "\t\t\t\tstats.emptyStringCoercionCount += 1;\n\t\t\t}\n\t\t\tnameProperty = { name };", replace: "\t\t\t}\n\t\t\tnameProperty = { name };" });
+// TWIN MOVED WITH THE ROW (FJ-P3-2). It mutated the kit's NAME branch, which the S2 conjuncts no
+// longer exercise — left alone it would go on "passing" against a lever that could never redden its
+// conjunct, which is the defect class STANDDOWN-P2 C.1 records. The lever now disables the
+// DESCRIPTION allowance consultation, so the licensed '' byte is refused and s2LiveInKit goes red.
+frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 's2LiveInKit', twinName: 'kitIgnoresCoercionAllowance', fileName: KIT_FILE, find: "\t\t\tif (emptyStringCoercionPropertyList.indexOf('description') === -1) {", replace: "\t\t\tif (true) {" });
+// Same move. The lever removes the COUNT from the DESCRIPTION branch only (the name branch keeps
+// its own), so the '' byte still ships and only the tally goes wrong — exactly what
+// s2CountsCallerEmptyDescription asserts, and nothing else in the suite would catch it.
+frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 's2CountsCallerEmptyDescription', twinName: 'kitDoesNotCountEmptyDescription', fileName: KIT_FILE, find: "\t\t\tstats.emptyStringCoercionCount += 1;\n\t\t}\n\t\tif (searchTextElement !== undefined", replace: "\t\t}\n\t\tif (searchTextElement !== undefined" });
 frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 's6LiveInKit', twinName: 'kitIgnoresSubstitutionTable', fileName: KIT_FILE, find: '\t\t\tif (parentEdgeSubstitutionTable[edgeType] !== undefined) {', replace: '\t\t\tif (false && parentEdgeSubstitutionTable[edgeType] !== undefined) {' });
 scenarioTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'overrideAbsentFromShippedConfig', twinName: 'shippedEntryPassesOverride', leverKind: 'productionMutation', mutate: (scenario) => { scenario.staticExtraSourceList = (scenario.staticExtraSourceList || []).concat([{ fileName: 'forges/toy/forgeToy.js (in-memory shipped double)', text: "forgeFramework({ embedder, migratingBundleListOverride: ['toy'] })" }]); } });
 

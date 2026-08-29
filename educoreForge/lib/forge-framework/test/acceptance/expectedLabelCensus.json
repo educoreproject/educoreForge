@@ -1,0 +1,64 @@
+{
+  "_comment": "G-LABEL-CENSUS frozen per-standard LABEL censuses — the cheap detector for the ONE defect class that byte-identity catches expensively and NO count-based suite catches at all. Written 2026-08-29 in hub-kit-role Phase 3 under RULING FJ-P3-1, discharging the Phase 1 docket row 'a LABEL-BY-ROLE census assertion ... GENERALISE IT RATHER THAN COPYING IT'. WHY IT IS A CENSUS AND NOT A BY-ROLE TABLE: the three migrated forges key their per-standard labels off THREE DIFFERENT AXES — ceds by DME ROLE (5 labels), sif by NATIVE KIND (9 labels across 6 roles: DmeClass carries BOTH SifObject and SifComplexType, DmeSupport carries three), edfi by METAED ENTITY TYPE (22 labels). A by-role table is STRUCTURALLY INCAPABLE of expressing two of the three, and copying CEDS's shape into SIF would have collapsed five labels into two and mislabelled up to 6,173 nodes. The only thing genuinely common across forges is the label->count table itself, which is checkable uniformly whatever the key space. WHY IT LIVES HERE AND NOT IN THE DECLARATION (ruling FJ-P3-1(a)): forgeDeclarationContract.js is CLOSED at 13 keys with unknown-key refusal, so a census key would be a FRAMEWORK EDIT for data the framework never consumes; this is the expectedBlockIds.json idiom instead, and costs nothing. WHAT THE DEFECT LOOKS LIKE WHEN IT HAPPENS: Phase 1's first CEDS re-forge collapsed four per-role labels into one, produced b7351c60... against 09a5d658..., and ALL FOUR CEDS SUITES WERE GREEN ON IT — including a byte-identical DETERMINISM check, which proves run-to-run stability rather than fidelity. Node and edge counts were identical; the hub census, the tier split and the divergence report were all identical; I5, I6 and I5b would ALL have passed. A LABEL IS NOT A COUNT. Only the 262-second oracle caught it; this file plus test-labelCensus.js catches it in about five seconds with no Docker and no embedding spend. HOW TO UPDATE: a change here is a change to what the graph CALLS things, which is a block byte and therefore an id change — never edit a number to make a red test green. Re-measure, confirm the block id moved for a reason you intended, and update both in the same commit.",
+  "measurementMethod": "Each forge's own bundle, in-process, forge({ sourcePath: <its defaultSnapshot dir>, skipEmbedding: true }); labels censused STRUCTURALLY as (labels minus the framework pair ForgedNode/StandardBase, minus any Dme* role label) rather than positionally. POSITION IS NOT SAFE: harvest emits labels SORTED, so the per-standard label sits at a different index per standard and the Phase 1 docket's 'labels[1]' shorthand is correct for CEDS and WRONG for SIF.",
+  "note_ceds_is_hubless_here": "ceds nodeTotal is 25,202, NOT the 119,805 of a hub-bearing build. The hub fold happens in the FORGER (build.js/forger.js), not inside the bundle's forge(), so an in-process census legitimately sees the hubless base. That is the same 25,202 the Phase 1 docket row names as 'the hubless node count'.",
+  "byStandardKey": {
+    "ceds": {
+      "labelKeyedBy": "DME role (role -> label is a FUNCTION for CEDS, which is why its own registry PER_STANDARD_LABEL_BY_ROLE is role-keyed and correct)",
+      "nodeTotal": 25202,
+      "labelCensus": {
+        "CedsClass": 402,
+        "CedsOntology": 1965,
+        "CedsOptionSet": 965,
+        "CedsOptionValue": 19546,
+        "CedsProperty": 2324
+      }
+    },
+    "edfi": {
+      "labelKeyedBy": "MetaEd entity type — 22 labels, far more than there are DME roles",
+      "nodeTotal": 6336,
+      "labelCensus": {
+        "EdfiAbstractEntity": 1,
+        "EdfiAssociation": 39,
+        "EdfiAssociationExtension": 2,
+        "EdfiAssociationSubclass": 10,
+        "EdfiChoice": 5,
+        "EdfiCommon": 99,
+        "EdfiDescriptor": 270,
+        "EdfiDomain": 22,
+        "EdfiDomainEntity": 121,
+        "EdfiDomainEntityExtension": 12,
+        "EdfiDomainEntitySubclass": 9,
+        "EdfiEnumeration": 1,
+        "EdfiInlineCommon": 11,
+        "EdfiInterchange": 29,
+        "EdfiInterchangeExtension": 3,
+        "EdfiOptionValue": 3582,
+        "EdfiProperty": 1904,
+        "EdfiRoot": 1,
+        "EdfiSharedDecimal": 25,
+        "EdfiSharedInteger": 19,
+        "EdfiSharedString": 162,
+        "EdfiSubdomain": 9
+      }
+    },
+    "sif": {
+      "labelKeyedBy": "NATIVE KIND — DmeClass carries BOTH SifObject and SifComplexType; DmeSupport carries SifPrimitiveType, SifSimpleType AND SifXmlElement. Nine labels across six roles; a role-keyed registry cannot express this.",
+      "nodeTotal": 27069,
+      "labelCensus": {
+        "SifCodeset": 140,
+        "SifCodesetValue": 4064,
+        "SifComplexType": 897,
+        "SifField": 15620,
+        "SifObject": 159,
+        "SifPrimitiveType": 15,
+        "SifRoot": 1,
+        "SifSimpleType": 301,
+        "SifXmlElement": 5872
+      }
+    }
+  },
+  "notOnTheRoster": {
+    "pesc260805": "NOT migrated onto lib/forge-framework yet — that is Phase 4. Its census is added by ITS migration commit, measured then, not guessed now."
+  }
+}

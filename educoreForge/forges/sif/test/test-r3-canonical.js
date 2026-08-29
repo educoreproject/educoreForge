@@ -127,7 +127,34 @@ const syntheticParsed = {
 	],
 };
 
-const g = bundle.buildContractGraph(syntheticParsed);
+// ---- POST-MIGRATION CALL SHAPE (hub-kit-role Phase 3) --------------------------------------------
+// forgeSif.js now injects lib/forge-framework, whose buildContractGraph signature is
+// `({ parsed, metadata })` with `parsed` keyed by LOADER NAME — where the bespoke module took a
+// SINGLE object carrying `nodes` and `metadata`. The graph these assertions examine is unchanged;
+// only the way it is asked for has moved.
+//
+// The framework mints the DmeStandardRoot itself, from the DECLARATION plus this POST-STAMP metadata
+// (the seven keys forge() step 4 composes), so a synthetic call must supply all seven rather than the
+// parser's four. sourceUrl '' and sourceFiles [] are the values SIF's own root carries and are
+// licensed by the declared allowances S4 and S7; versionSource/publishedVersion 'unknown' is what
+// deriveVersionStamp stamps for a source that does not self-describe, which SIF's TSV does not.
+const SIF_LOADER_NAME = 'sifImplementationSpecification';
+const syntheticPostStampMetadata = {
+	version: '1.0',
+	versionSource: 'unknown',
+	sourceFormat: 'tsv',
+	sourceFiles: [],
+	sourceUrl: '',
+	snapshotKey: '01',
+	publishedVersion: 'unknown',
+};
+const buildContractGraphFromSynthetic = (oneSyntheticParsed) =>
+	bundle.buildContractGraph({
+		parsed: { [SIF_LOADER_NAME]: oneSyntheticParsed },
+		metadata: syntheticPostStampMetadata,
+	});
+
+const g = buildContractGraphFromSynthetic(syntheticParsed);
 const byRole = (role) => g.nodes.filter((n) => n.role === role);
 const allEdgeTypes = new Set(g.edges.map((e) => e.type));
 
@@ -174,7 +201,7 @@ check('stats.optionValuesExpanded === 3', g.stats.optionValuesExpanded === 3);
 check('stats.danglingEdges empty', g.stats.danglingEdges.length === 0);
 
 // determinism: same input -> identical node/edge counts + identical serialized shape (minus embedding).
-const g2 = bundle.buildContractGraph(syntheticParsed);
+const g2 = buildContractGraphFromSynthetic(syntheticParsed);
 const strip = (graph) => JSON.stringify({
 	nodes: graph.nodes.map((n) => ({ s: n.stableId, r: n.role, l: n.labels, p: { ...n.properties, ingestedAt: undefined } })),
 	edges: graph.edges,
@@ -186,7 +213,7 @@ const badParsed = JSON.parse(JSON.stringify(syntheticParsed));
 badParsed.nodes.find((n) => n.id === 'siffield-StudentPersonal/Name/FirstName').properties.cedsId = 'not-a-number';
 let threw = false;
 try {
-	bundle.buildContractGraph(badParsed);
+	buildContractGraphFromSynthetic(badParsed);
 } catch (e) {
 	threw = true;
 }

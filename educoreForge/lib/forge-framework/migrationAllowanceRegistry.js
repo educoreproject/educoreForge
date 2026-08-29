@@ -103,9 +103,21 @@ const MIGRATION_ALLOWANCE_REGISTRY = Object.freeze({
 		declarableBy: Object.freeze(['sif']),
 		kind: ALLOWANCE_KIND.FORGE_TIME,
 		evaluatedAt: EVALUATED_AT.CONTRACT_GRAPH,
-		whileDeclared: "kit.makeNode stamps name: '' when the name is absent/null (forgeSif.js:350)",
+		// ⚠ CORRECTED 2026-08-29, hub-kit-role Phase 3 (RULING FJ-P3-2). THIS ROW NAMED THE WRONG
+		// PROPERTY and was therefore unusable by the only forge allowed to declare it. It read
+		// mustEqual ['name'] and cited forgeSif.js:350 — the `name: name == null ? '' : ...` line.
+		// SIF's actual empty-string coercion is on THE NEXT LINE, :351, `description: description || ''`.
+		// MEASURED over all 27,069 nodes of the SIF block before the correction: ZERO nodes carry
+		// name '' and 16,181 carry description '', across all eight non-root labels (SifXmlElement
+		// 5,872 · SifField 4,733 · SifCodesetValue 4,064 · SifComplexType 897 · SifObject 159 ·
+		// SifSimpleType 301 · SifCodeset 140 · SifPrimitiveType 15). Because mustEqual is an EQUALITY
+		// check, S2 could not name 'description', and contractGraphKit.js:221-226 refuses that byte
+		// unless an active allowance names it — so SIF could not reproduce its own bytes at all.
+		// NOT ['name', 'description']: naming a coercion measured never to fire is the same
+		// declared-but-unneeded defect this registry exists to refuse.
+		whileDeclared: "kit.makeNode stamps description: '' when the description is absent/empty (forgeSif.js:351)",
 		allowanceDataContract: Object.freeze({
-			coerceEmptyStringPropertyList: Object.freeze({ kind: 'stringList', mustEqual: ['name'] }),
+			coerceEmptyStringPropertyList: Object.freeze({ kind: 'stringList', mustEqual: ['description'] }),
 		}),
 		preconditionText: 'at least one node received the empty-string coercion on this build',
 		preconditionMet: ({ kitStats }) => kitStats.emptyStringCoercionCount > 0,
