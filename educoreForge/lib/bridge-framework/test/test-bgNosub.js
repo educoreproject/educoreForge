@@ -197,7 +197,24 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // SEQUENCING LESSON FOR PHASES 3 AND 4, now in the PLAN: HOLD THE ANCHOR TAG UNTIL THE REVIEW'S CODE
 // FINDINGS ARE IN. This second pair of re-anchor commits exists only because S3 arrived from review
 // after Commit A had already been tagged.
-const PHASE1_S3_ANCHOR_TAG = 'postCedsForgeS3-082926';
+// PHASE 2a RE-ANCHOR (SILVER_TIDE, 2026-08-29; ruling R-HUB-1 + the standing FJ-P1-1 pattern).
+// seamDiffEmpty's base moves from postCedsForgeS3-082926 (37473dc) to post2aHubDiscovery-082926
+// (7db272c). CAUSE, named in the gate's own data rather than left to the log: Phase 2a's ruled edit
+// deletes HUB_FORGE_BY_STANDARD from apps/graph-builder/apps/forger/forger.js and adds the I7b
+// refusal to apps/graph-builder/lib/build.js — BOTH are in SEAM_PATH_LIST, and so is
+// apps/graph-builder/apps/forger/test/test-forger.js, which had to migrate off the deleted registry.
+// Measured, the non-empty diff was exactly those three files (141 / 101 / 54 lines).
+//
+// THE BASELINE MOVES; THE PATH LIST DOES NOT. SEAM_PATH_LIST is byte-identical, the
+// :!lib/forge-framework/test/test-gSeamUntouched.js exclusion is deliberately left in place
+// (STANDDOWN-P0 C.1), and no conjunct's scope is widened. Verified before editing, by RUNNING it and
+// not by reading it, that PHASE1_S3_ANCHOR_TAG reaches gitDiffStat and gitDiffStat serves
+// seamDiffEmpty ALONE — (ii) uses POST_D1_BASE_TAG over lib/vocabulary/ and (iii) uses
+// PHASE0_ANCHOR_TAG over lib/forge-framework/, each with its own spawnSync.
+//
+// PREVIOUS BASE, in full, so the move is legible without the log:
+//   postCedsForgeS3-082926 @ 37473dcd0ba6a3d2ba0e7cbebe5c62b26f3f1d0b (Phase 1 Commit D)
+const PHASE1_S3_ANCHOR_TAG = 'post2aHubDiscovery-082926';
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');
