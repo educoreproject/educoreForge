@@ -309,7 +309,19 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // forges/pesc260805/lib/, all four inside the watched globs, so "seamDiffEmpty green" was
 // unachievable in this phase without a re-anchor. That is the deliberate move this mechanism exists
 // to make legible, and it is the same move Phases 1, 2c and 3 each made for their own migration.
-const PHASE3_ANCHOR_TAG = 'post4PescForgeMigration-082926';
+//
+// ⚠ MOVED AGAIN 2026-08-29 by WILD_SHARD (Phase 7, RULING FJ-P7-3), and the reason is NARROWER than
+// any move before it. SEAM_PATH_LIST is again BYTE-IDENTICAL across this commit. Phase 7 migrates no
+// forge and touches nothing under lib/forge-framework/ — its ENTIRE intersection with the watched set
+// is ONE FILE, apps/graph-builder/lib/build.js, gaining the pre-spend declaration-collision refusal
+// that RULING FJ-P7-1 placed before phase A. Measured with this conjunct's own command at the commit:
+// 1 file, 78 insertions, 0 deletions, and nothing else in the list moved.
+//
+// THE CONSTANT'S NAME IS HISTORICAL AND IS DELIBERATELY NOT RENAMED. It has said PHASE3 since Phase 3
+// and has been re-anchored by Phases 4 and 7 since; renaming it would put a byte in this file for a
+// cosmetic reason, and this file sits inside BG-COMPOSE (a)'s diffed paths. The TAG it names is the
+// authority, never the identifier.
+const PHASE3_ANCHOR_TAG = 'post7OptInDiscriminator-082926';
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');
