@@ -236,7 +236,28 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 //
 // PREVIOUS BASE, in full, so the move is legible without the log:
 //   postCedsForgeS3-082926 @ 37473dcd0ba6a3d2ba0e7cbebe5c62b26f3f1d0b (Phase 1 Commit D)
-const PHASE1_S3_ANCHOR_TAG = 'post2aHubDiscovery-082926';
+// PHASE 2c RE-ANCHOR (SILVER_TIDE, 2026-08-29). post2aHubDiscovery-082926 (7db272c) ->
+// post2cHubExtraction-082926 (3eb4855). CAUSE, named in the gate's own data and MEASURED with the
+// gate's own command rather than predicted — five watched files moved, and two of them are ones a
+// reader would not expect:
+//   apps/graph-builder/apps/forger/test/test-forger.js   the require migrated to ../hubCeds
+//   forges/ceds/lib/cedsHubDeclaration.js   NEW — matches forges/*/lib/*Declaration.js
+//   forges/ceds/lib/cedsHubHooks.js         NEW — matches forges/*/lib/*Hooks.js
+//   forges/ceds/lib/forgeCedsContractGraph.js  <-- matched by forges/*/forge*.js BECAUSE A GIT
+//     PATHSPEC'S * CROSSES '/'. A comment-only edit, and it still moves this gate. This is the
+//     Phase 1 lesson arriving a third time: measure the watched set by RUNNING git ls-files.
+//   forges/ceds/lib/cedsForgeDeclaration.js    a comment correction, and *Declaration.js is watched
+//
+// THE BASELINE MOVES; THE PATH LIST DOES NOT. SEAM_PATH_LIST byte-identical; the
+// :!lib/forge-framework/test/test-gSeamUntouched.js exclusion left in place (STANDDOWN-P0 C.1).
+//
+// NOT MOVED, and each verified EMPTY with its own command before this edit: (ii) — lib/vocabulary/'s
+// only change is vocabulary.js, which (ii) permits; (iii) — lib/forge-framework/ is untouched by 2c;
+// G-SEAM-UNTOUCHED — forger.js and build.js have not moved since 7db272c, which is exactly why the
+// stale comment at forger.js:422 was DOCKETED rather than fixed.
+//
+// PREVIOUS BASE, in full: post2aHubDiscovery-082926 @ 7db272c40e4d47da3b509e886f5f06e1f574f2eb.
+const PHASE1_S3_ANCHOR_TAG = 'post2cHubExtraction-082926';
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');
