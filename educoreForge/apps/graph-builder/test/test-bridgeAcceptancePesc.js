@@ -425,7 +425,28 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 //   2. 152034b edits lib/bridge-framework/test/test-bgNosub.js — the familiar cause.
 //
 // PREVIOUS BASELINE, in full: 9c58f6028c9318a83eceadcf3d3dd78d62f0417e (2a Commit E).
-const P1_BASELINE_COMMIT = '152034b82a05ed8530f3fc889ce21a58786fa125';
+// RE-ANCHOR, hub-kit-role Phase 3, standing corollary to FJ-P1-1. (a)'s baseline moves from
+// 152034b (Phase 2c's seamDiffEmpty re-anchor) to e6fa1c0, Phase 3's (iii) re-anchor commit.
+//
+// WHY. (a) diffs SIX declared paths, one of which is lib/bridge-framework/ with ONLY
+// test/acceptance/ excluded — so lib/bridge-framework/test/test-bgNosub.js is INSIDE it. Phase 3's
+// chain edited that file TWICE (seamDiffEmpty's re-anchor, then (iii)'s), 45/6 measured, and (a)
+// went red behind them. This is the ruled remedy and it is tedious BY DESIGN: never widen (a)'s
+// exclusion list to escape it.
+//
+// ⚠ AND THE MIGRATION COMMIT ITSELF DID NOT TRIP (a) — MEASURED, NOT ASSUMED. forges/ is NOT among
+// (a)'s six paths, so the SIF migration was invisible to this gate; (a) reddened ONLY once the
+// re-anchor commits touched test-bgNosub.js. That was predicted in writing before the first commit
+// and confirmed by running (a)'s own command at the tagged migration commit, where it returned EMPTY.
+//
+// THE BASELINE MOVES; THE SIX PATHS DO NOT. diffedPathList in
+// test/acceptance/expectedCompose.json is untouched by this commit.
+//
+// AND THE CHAIN TERMINATES HERE: this commit edits ONLY this file, which is in NEITHER (a)'s six
+// paths NOR SEAM_PATH_LIST, so nothing re-trips. Phase 3 pays FOUR commits (migration, seamDiffEmpty,
+// (iii), (a)) rather than Phase 2's three, because the ruled S2 framework edit added
+// lib/forge-framework/ to the diff and that is (iii)'s watched path.
+const P1_BASELINE_COMMIT = 'e6fa1c0';
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
