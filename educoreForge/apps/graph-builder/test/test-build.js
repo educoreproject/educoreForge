@@ -74,7 +74,7 @@ const realReplayBlock = require('../../../lib/replay/replay-block')();
 // truth here is the module forges/ceds/parserDescriptor.ini names in hubModule= (factory takes
 // { hubVersion, hubNamespace }; forgeHub is R7 callback-shaped). It is required by path rather than
 // through the descriptor because THIS suite is the one that must fail if the two ever disagree.
-const cedsHubForge = require('../../../forges/ceds/lib/cedsHubForge');
+const cedsHubForge = require('../../../forges/ceds/hubCeds'); // PHASE 2c: the kit's injection, was lib/cedsHubForge
 
 // The REAL standards-database + a throwaway sqlite file — used by ONE stage (MANIFEST PERSISTED)
 // that must prove a -build writes its manifest THROUGH to a store, not merely composes it. Every

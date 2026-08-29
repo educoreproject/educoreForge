@@ -41,7 +41,7 @@ const { shapeForgedGraph } = require('../lib/shape-forged-graph')();
 // ACTUAL output over a synthetic engine-shape base (pure; no docker/voyage/db). Phase 2 of the
 // hubReimplementation flipped the registry to cedsHubForge; the ground truth is the module the
 // registry actually resolves.
-const cedsHubForge = require('../../../../../forges/ceds/lib/cedsHubForge');
+const cedsHubForge = require('../../../../../forges/ceds/hubCeds'); // PHASE 2c: the kit's injection, was lib/cedsHubForge
 
 const fs = require('fs');
 const path = require('path');

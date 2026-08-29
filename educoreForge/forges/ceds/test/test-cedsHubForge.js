@@ -58,7 +58,10 @@ const xLog = process.global.xLog;
 // what it always meant; the pre-migration `{}` relied on the bespoke module never reading the
 // value. Behaviour of this suite is unchanged.
 const forgeCeds = require('../forgeCeds')({ embedder: null });
-const cedsHubForgeFactory = require('../lib/cedsHubForge');
+// PHASE 2c: the derivation moved to lib/hub-framework and this kit's injection is hubCeds.js.
+// The suite drives the KIT, which is what production loads — not the framework directly, because a
+// framework exercised without its declaration would prove something no build ever runs.
+const cedsHubForgeFactory = require('../hubCeds');
 const gatesLib = require('../lib/roundTripGates')();
 const vocab = require(path.join(__dirname, '..', '..', '..', 'lib', 'vocabulary', 'vocabulary'));
 const { ADDRESS_SIGNATURE_FIELD_ORDER, DME_ROLES, IN_HUB_EDGE_TYPE } = vocab;

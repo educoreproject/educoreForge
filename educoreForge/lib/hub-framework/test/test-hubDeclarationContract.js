@@ -165,4 +165,127 @@ harness.match('a null descriptor is REFUSED by name', refusalFor(null), /descrip
 harness.match('an array descriptor is REFUSED by name', refusalFor([]), /descriptor is an array/);
 harness.match('a string descriptor is REFUSED by name', refusalFor('nope'), /descriptor is a string/);
 
+// =================================================================================================
+// PHASE 2c — THE H1 DECLARATION CONTRACT (SPEC §4.4). Phase 2a's skeleton validated only the
+// DESCRIPTOR; the declaration table arrived with the extraction and is gated here.
+//
+// The two refusal classes FROZEN_JOURNEY named are both driven: UNKNOWN KEY and MISSING REQUIRED
+// KEY. Each is paired with the admission it must not swallow — a validator that refuses everything
+// passes a negative suite exactly as easily as one that refuses nothing.
+// =================================================================================================
+harness.section('H1 DECLARATION — shape');
+
+const liveDeclaration = require('../../../forges/ceds/lib/cedsHubDeclaration');
+const declarationRefusalFor = (hubDeclaration) => {
+	const fault = contract.validateHubDeclaration({ hubDeclaration });
+	return fault === null ? '' : fault.message;
+};
+const withoutKey = (oneName) => {
+	const copy = Object.assign({}, liveDeclaration);
+	delete copy[oneName];
+	return copy;
+};
+
+harness.ok(
+	'HUB_DECLARATION_CONTRACT is frozen and names the eight §4.4 fields',
+	Object.isFrozen(contract.HUB_DECLARATION_CONTRACT) &&
+		JSON.stringify(contract.HUB_DECLARATION_KEY_LIST) ===
+			JSON.stringify([
+				'hubName', 'hubDisplayName', 'canonicalKeyName', 'canonicalKeyMinted',
+				'sourceIdFieldName', 'baseFieldNames', 'qualifiedReference', 'provenanceLabel',
+			]),
+	JSON.stringify(contract.HUB_DECLARATION_KEY_LIST),
+);
+
+harness.section('H1 DECLARATION — CONTROL: the LIVE CEDS declaration is admitted');
+harness.equal(
+	'THE REAL forges/ceds/lib/cedsHubDeclaration.js is ADMITTED — this suite gates the file production loads, not only synthetic shapes',
+	declarationRefusalFor(liveDeclaration),
+	'',
+);
+
+harness.section('H1 DECLARATION — REFUSAL CLASS 1: an unknown key (a typo must not be silently ignored)');
+harness.match(
+	'an unknown top-level property is REFUSED, naming the offender',
+	declarationRefusalFor(Object.assign({}, liveDeclaration, { hubDisplayNmae: 'a plausible typo' })),
+	/unknown property 'hubDisplayNmae'/,
+);
+harness.match(
+	'  and the refusal lists what IS allowed, so the operator can see the correction',
+	declarationRefusalFor(Object.assign({}, liveDeclaration, { hubDisplayNmae: 'x' })),
+	/HUB_DECLARATION_CONTRACT names hubName, hubDisplayName/,
+);
+
+harness.section('H1 DECLARATION — REFUSAL CLASS 2: a missing REQUIRED key, one per field');
+['hubName', 'hubDisplayName', 'canonicalKeyName', 'canonicalKeyMinted', 'sourceIdFieldName', 'baseFieldNames', 'provenanceLabel'].forEach(
+	(oneName) => {
+		harness.match(
+			`a declaration missing '${oneName}' is REFUSED BY NAME (absent is absent, never defaulted)`,
+			declarationRefusalFor(withoutKey(oneName)),
+			new RegExp(`missing required property '${oneName}'`),
+		);
+	},
+);
+
+harness.section('H1 DECLARATION — CONTROL: the ONE optional field is admitted when absent');
+harness.equal(
+	'qualifiedReference OMITTED is ADMITTED — a hub with no identification patterns declares none, pass 2 is skipped, and identificationPatterns is []. Without this control the seven refusals above would also pass against a validator that simply refused everything.',
+	declarationRefusalFor(withoutKey('qualifiedReference')),
+	'',
+);
+
+harness.section('H1 DECLARATION — baseFieldNames is the check that makes the map worth having');
+harness.match(
+	'a baseFieldNames map MISSING a field the derivation reads is REFUSED — otherwise it reads properties[undefined] and drops prose SILENTLY, which no count can see',
+	declarationRefusalFor(
+		Object.assign({}, liveDeclaration, {
+			baseFieldNames: (() => {
+				const copy = Object.assign({}, liveDeclaration.baseFieldNames);
+				delete copy.dataType;
+				return copy;
+			})(),
+		}),
+	),
+	/missing required base field name\(s\): dataType/,
+);
+harness.match(
+	'an UNKNOWN base field name is REFUSED (the derivation reads a closed set)',
+	declarationRefusalFor(
+		Object.assign({}, liveDeclaration, {
+			baseFieldNames: Object.assign({}, liveDeclaration.baseFieldNames, { notAField: 'x' }),
+		}),
+	),
+	/unknown base field name 'notAField'/,
+);
+
+harness.section('H1 DECLARATION — provenanceLabel carries BLOCK BYTES');
+harness.match(
+	'a provenanceLabel missing forgeModule is REFUSED, saying WHY it matters (an absent one would stamp undefined into every hub block)',
+	declarationRefusalFor(Object.assign({}, liveDeclaration, { provenanceLabel: { forgeModuleVersion: '1.0.0' } })),
+	/forgeModule must be .*BLOCK BYTES/s,
+);
+harness.equal(
+	'CONTROL: the live provenanceLabel is exactly the pair Phase 2b re-keyed and proved',
+	JSON.stringify(liveDeclaration.provenanceLabel),
+	JSON.stringify({ forgeModule: 'hub-framework', forgeModuleVersion: '1.0.0' }),
+);
+
+harness.section('H1 HOOKS — present and empty is legal; an unimplemented hook is refused, not ignored');
+harness.equal(
+	'CONTROL: the LIVE cedsHubHooks (empty) is ADMITTED',
+	(() => {
+		const fault = contract.validateHubHooks({ hooks: require('../../../forges/ceds/lib/cedsHubHooks')() });
+		return fault === null ? '' : fault.message;
+	})(),
+	'',
+);
+harness.match(
+	'an UNKNOWN hook name is REFUSED — a hub author learns at injection instead of wondering why nothing happened',
+	(() => {
+		const fault = contract.validateHubHooks({ hooks: { emitExtraCards: () => {} } });
+		return fault === null ? '' : fault.message;
+	})(),
+	/unknown hook 'emitExtraCards'/,
+);
+
 harness.report();

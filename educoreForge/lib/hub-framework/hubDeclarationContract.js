@@ -8,13 +8,15 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // checkers, a walk that refuses an UNKNOWN key before it checks anything else, and messages composed
 // in the house refusal form. Never a switch; never a silent default.
 //
-// PHASE 2a SCOPE — HONEST SKELETON. This file carries exactly what 2a uses and nothing more:
-// HUB_DESCRIPTOR_CONTRACT, the parserDescriptor.ini hub keys that replace the deleted forger
-// registry HUB_FORGE_BY_STANDARD. The hubDeclaration DATA table of SPEC §4.4 (hubName,
-// hubDisplayName, canonicalKeyName, canonicalKeyMinted, sourceIdFieldName, baseFieldNames,
-// qualifiedReference, provenanceLabel) is Phase 2c's and is NOT declared here in advance — a
-// contract entry nobody validates is dead surface, which is the same judgment RULING FB8 made when
-// it deleted refuse.requiredKeys/closedValue for having zero callers.
+// PHASE 2c: THE SKELETON IS NOW COMPLETE. This file carries exactly what 2a uses and nothing more:
+// Two contracts now live here, each with its own table, sharing ONE kind-checker registry:
+//   HUB_DESCRIPTOR_CONTRACT    the parserDescriptor.ini hub keys that replaced the deleted forger
+//                              registry HUB_FORGE_BY_STANDARD (Phase 2a)
+//   HUB_DECLARATION_CONTRACT   the H1 DATA table of SPEC §4.4 (Phase 2c) — hubName, hubDisplayName,
+//                              canonicalKeyName, canonicalKeyMinted, sourceIdFieldName,
+//                              baseFieldNames, qualifiedReference, provenanceLabel
+// The second was deliberately NOT declared in 2a, when nothing validated it: a contract entry nobody
+// walks is dead surface, the same judgment RULING FB8 made when it deleted refuse.requiredKeys.
 //
 // WHY THE DESCRIPTOR AND NOT THE RECIPE. hubModule declares that a kit CAN be a hub; recipe.hubs
 // decides whether it IS one in this build (SPEC §4.2). Both are required. This file validates the
@@ -187,10 +189,191 @@ const validateHubDescriptor = ({ descriptor, descriptorPath } = {}) => {
 	return null;
 };
 
+// ---- THE H1 DECLARATION CONTRACT (SPEC §4.4) ---------------------------------------------------
+// Same shape as forgeDeclarationContract's: a frozen table, the ONE kind-checker registry above, an
+// unknown-key walk FIRST, then a required/kind walk. A hub author writes DATA; this decides whether
+// the data is admissible before a single card is derived.
+const BASE_FIELD_NAME_LIST = Object.freeze([
+	'allDomainIds', 'rangeOptionSetId', 'rangeClassId', 'rangeDatatype',
+	'textFormat', 'prefLabel', 'notation',
+	// dataType and uri ADDED by review finding F6 (FROZEN_JOURNEY, 2026-08-29): both are read off base
+	// nodes by BARE NAME and neither is a vocabulary constant, so both belong in the map. The published
+	// §4.4 table omitted them; the omission was found by enumerating every `.properties.<name>` read in
+	// the module rather than by reading the table.
+	'dataType', 'uri',
+	'name', 'definition', 'description',
+]);
+
+const HUB_DECLARATION_CONTRACT = Object.freeze({
+	hubName: Object.freeze({ required: true, kind: 'nonEmptyString' }),
+	hubDisplayName: Object.freeze({ required: true, kind: 'nonEmptyString' }),
+	canonicalKeyName: Object.freeze({ required: true, kind: 'nonEmptyString' }),
+	canonicalKeyMinted: Object.freeze({ required: true, kind: 'boolean' }),
+	sourceIdFieldName: Object.freeze({ required: true, kind: 'nonEmptyString' }),
+	baseFieldNames: Object.freeze({ required: true, kind: 'baseFieldNameMap' }),
+	// OPTIONAL BY DESIGN: a hub with no identification patterns declares nothing and pass 2 is skipped
+	// entirely, returning identificationPatterns: []. Absent is absent, not zero-by-accident.
+	qualifiedReference: Object.freeze({ required: false, kind: 'qualifiedReference' }),
+	provenanceLabel: Object.freeze({ required: true, kind: 'provenanceLabel' }),
+});
+const HUB_DECLARATION_KEY_LIST = Object.freeze(Object.keys(HUB_DECLARATION_CONTRACT));
+
+const DECLARATION_KIND_CHECKER_REGISTRY = Object.freeze({
+	nonEmptyString: (value) =>
+		typeof value === 'string' && value.trim() !== ''
+			? ''
+			: `must be a non-empty string (got ${JSON.stringify(value)})`,
+	boolean: (value) =>
+		typeof value === 'boolean' ? '' : `must be a boolean (got ${JSON.stringify(value)})`,
+	// EVERY name the framework reads off a base node must be declared. A MISSING one would read
+	// `properties[undefined]`, which is silently undefined — a dropped prose field that no count can
+	// see. This is the check that makes baseFieldNames worth having.
+	baseFieldNameMap: (value) => {
+		if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+			return `must be an object mapping logical field name -> base property name (got ${JSON.stringify(value)})`;
+		}
+		const missing = BASE_FIELD_NAME_LIST.filter((oneName) => value[oneName] === undefined);
+		if (missing.length) {
+			return `is missing required base field name(s): ${missing.join(', ')} — every field the derivation reads must be declared, or it reads properties[undefined] and drops prose silently`;
+		}
+		const unknown = Object.keys(value).filter((oneName) => BASE_FIELD_NAME_LIST.indexOf(oneName) === -1);
+		if (unknown.length) {
+			return `carries unknown base field name '${unknown[0]}' — the derivation reads ${BASE_FIELD_NAME_LIST.join(', ')} and nothing else`;
+		}
+		const notAString = Object.keys(value).find(
+			(oneName) => typeof value[oneName] !== 'string' || value[oneName].trim() === '',
+		);
+		if (notAString !== undefined) {
+			return `base field name '${notAString}' must map to a non-empty string (got ${JSON.stringify(value[notAString])})`;
+		}
+		return '';
+	},
+	qualifiedReference: (value) => {
+		if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+			return `must be an object { typePropertyPattern, tokenNamesForStem } (got ${JSON.stringify(value)})`;
+		}
+		if (!(value.typePropertyPattern instanceof RegExp)) {
+			return `typePropertyPattern must be a RegExp whose first capture group is the stem (got ${typeof value.typePropertyPattern})`;
+		}
+		if (typeof value.tokenNamesForStem !== 'function') {
+			return `tokenNamesForStem must be a function (stem) -> string[] (got ${typeof value.tokenNamesForStem})`;
+		}
+		const unknown = Object.keys(value).filter(
+			(oneName) => ['typePropertyPattern', 'tokenNamesForStem'].indexOf(oneName) === -1,
+		);
+		if (unknown.length) {
+			return `carries unknown key '${unknown[0]}' — it declares typePropertyPattern and tokenNamesForStem only`;
+		}
+		return '';
+	},
+	// ⚠ THESE TWO VALUES ARE BLOCK BYTES. They are stamped into HubDefinition.sourceProvenance, and the
+	// CEDS block id depends on them character for character (SPEC §4.9; re-keyed by controlled
+	// experiment in Phase 2b, commit 4ce39b8, which proved the change moves exactly one block line).
+	provenanceLabel: (value) => {
+		if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+			return `must be an object { forgeModule, forgeModuleVersion } (got ${JSON.stringify(value)})`;
+		}
+		const missing = ['forgeModule', 'forgeModuleVersion'].filter(
+			(oneName) => typeof value[oneName] !== 'string' || value[oneName].trim() === '',
+		);
+		if (missing.length) {
+			return `${missing.join(' and ')} must be (a) non-empty string(s) — these are BLOCK BYTES; an absent one would stamp undefined into every hub block`;
+		}
+		const unknown = Object.keys(value).filter(
+			(oneName) => ['forgeModule', 'forgeModuleVersion'].indexOf(oneName) === -1,
+		);
+		if (unknown.length) {
+			return `carries unknown key '${unknown[0]}' — it declares forgeModule and forgeModuleVersion only`;
+		}
+		return '';
+	},
+});
+
+// validateHubDeclaration({ hubDeclaration }) -> Error | null
+const validateHubDeclaration = ({ hubDeclaration } = {}) => {
+	if (hubDeclaration === null || typeof hubDeclaration !== 'object' || Array.isArray(hubDeclaration)) {
+		return refuse.byName({
+			moduleName,
+			what: `hubDeclaration is ${hubDeclaration === null ? 'null' : Array.isArray(hubDeclaration) ? 'an array' : `a ${typeof hubDeclaration}`}`,
+			where: 'the hub framework needs the H1 declaration object (SPEC §4.4)',
+		});
+	}
+	// unknown properties FIRST — a typo must not become a silently ignored declaration
+	const unknownName = Object.keys(hubDeclaration).find(
+		(oneName) => HUB_DECLARATION_KEY_LIST.indexOf(oneName) === -1,
+	);
+	if (unknownName !== undefined) {
+		return refuse.byName({
+			moduleName,
+			what: `hubDeclaration carries unknown property '${unknownName}'`,
+			where: `HUB_DECLARATION_CONTRACT names ${HUB_DECLARATION_KEY_LIST.join(', ')}; remove or rename it`,
+		});
+	}
+	for (let nameIndex = 0; nameIndex < HUB_DECLARATION_KEY_LIST.length; nameIndex++) {
+		const propertyName = HUB_DECLARATION_KEY_LIST[nameIndex];
+		const contractEntry = HUB_DECLARATION_CONTRACT[propertyName];
+		const value = hubDeclaration[propertyName];
+		if (value === undefined) {
+			if (contractEntry.required) {
+				return refuse.byName({
+					moduleName,
+					what: `hubDeclaration is missing required property '${propertyName}'`,
+					where: `declare ${propertyName} (${contractEntry.kind}) in the kit's hub declaration; absent is absent, never defaulted`,
+				});
+			}
+			continue;
+		}
+		const reason = DECLARATION_KIND_CHECKER_REGISTRY[contractEntry.kind](value, {
+			propertyName,
+			contractEntry,
+			hubDeclaration,
+		});
+		if (reason !== '') {
+			return refuse.byName({
+				moduleName,
+				what: `hubDeclaration '${propertyName}' ${reason}`,
+				where: `fix ${propertyName} in the kit's hub declaration`,
+			});
+		}
+	}
+	return null;
+};
+
+// validateHubHooks({ hooks }) -> Error | null. CEDS declares none; the seam exists so a second hub
+// can add one without a framework change (SPEC §4.4). No hook NAME is admitted yet, so any key is
+// unknown — which is the honest state: an unimplemented hook must refuse, not be ignored.
+const HUB_HOOK_NAME_LIST = Object.freeze([]);
+const validateHubHooks = ({ hooks } = {}) => {
+	if (hooks === undefined) {
+		return null; // hooks are optional in their entirety
+	}
+	if (hooks === null || typeof hooks !== 'object' || Array.isArray(hooks)) {
+		return refuse.byName({
+			moduleName,
+			what: `hubHooks is ${hooks === null ? 'null' : Array.isArray(hooks) ? 'an array' : `a ${typeof hooks}`}`,
+			where: 'the hub framework needs an object of hook methods, or nothing at all',
+		});
+	}
+	const unknownName = Object.keys(hooks).find((oneName) => HUB_HOOK_NAME_LIST.indexOf(oneName) === -1);
+	if (unknownName !== undefined) {
+		return refuse.byName({
+			moduleName,
+			what: `hubHooks carries unknown hook '${unknownName}'`,
+			where: `the hub framework admits ${HUB_HOOK_NAME_LIST.length ? HUB_HOOK_NAME_LIST.join(', ') : 'NO hooks yet'} — an unimplemented hook is refused rather than ignored, so a hub author learns at injection instead of wondering why nothing happened`,
+		});
+	}
+	return null;
+};
+
 module.exports = {
 	HUB_DESCRIPTOR_CONTRACT,
 	HUB_DESCRIPTOR_KEY_LIST,
 	KIND_CHECKER_REGISTRY,
 	validateHubDescriptor,
+	HUB_DECLARATION_CONTRACT,
+	HUB_DECLARATION_KEY_LIST,
+	BASE_FIELD_NAME_LIST,
+	validateHubDeclaration,
+	validateHubHooks,
 	moduleName,
 };

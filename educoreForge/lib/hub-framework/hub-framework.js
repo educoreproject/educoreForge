@@ -26,44 +26,52 @@
 // FIRED, AND THAT IS A STOP CONDITION, not a curiosity.
 const moduleName = 'hub-framework';
 
-// cedsHubForge.js — the CLEAN REIMPLEMENTATION of the CEDS HubReference derivation
-// (SPEC-hubReimplementation-080326.md §1–§5; replaces referenceSubgraph.js at the forger seam
-// in Phase 2 — this phase the incumbent stays registered and this module coexists beside it).
+// hub-framework.js — THE HUB KIT ROLE'S SHARED DERIVATION, extracted in Phase 2c from
+// forges/ceds/lib/cedsHubForge.js (SPEC-hubKitRole-082826.md §4; the module it came from is deleted).
+// Peer of lib/forge-framework and lib/bridge-framework: the third role a standard's kit can play.
 //
-// One card = one addressable idea = one tuple. The card is SELF-SUFFICIENT: everything needed
-// to embed it, render it, and judge it is ON the card (ADDRESS / IDENTITY / MEANING /
-// PROVENANCE / DERIVED groups). Edges remain for traversal; no reader requires them.
+// WHAT MOVED AND WHAT DID NOT. The DERIVATION moved here whole — card enumeration, addressSignature,
+// embedText composition, the tier passes, the divergence and skip reports, slotProfile, HubDefinition
+// minting, the canonical sort. The CEDS-SHAPED PARTS became DATA in the kit's hubDeclaration:
+//   hubName · hubDisplayName · canonicalKeyName · canonicalKeyMinted   the four identity literals
+//   sourceIdFieldName                the source's own id, used as report id AND divergence sort key
+//   baseFieldNames                   the bare names this derivation reads off base nodes ([R1 Q2])
+//   qualifiedReference               {typePropertyPattern, tokenNamesForStem} — DATA, not a hook ([R1 Q7])
+//   provenanceLabel                  {forgeModule, forgeModuleVersion} — BLOCK BYTES ([R2 F1], §4.9)
 //
-// DERIVATION SEMANTICS ARE THE INCUMBENT'S (referenceSubgraph.js is the semantics authority
-// for enumeration even though this module replaces it): one property-tier card per declared
-// (domain, property) pair reading allDomainIds SHAPE-AGNOSTICALLY, one value-tier card per
-// (domain, property, value) triple, qualified §4.3 identification-pattern cards stem-matched
-// exactly as before. What changes is what rides on the address: the MEANING group copies each
-// tuple slot's name and prose from the base nodes already present in baseNodeEdges.
+// ⚠ THE HONESTY CLAUSE, AND IT IS NOT A FORMALITY (SPEC §4.4). A FRAMEWORK EXTRACTED FROM ONE HUB IS
+// PROVEN ON ONE, WHICH IS PROVEN ON NONE. This derivation is generic against a CEDS-SHAPED DME base,
+// not against any base. Three things in particular are CEDS-shaped and are NOT parameterised, because
+// parameterising them without a second hub to test against would be inventing a seam rather than
+// finding one:
+//   * `canonicalKey` and `domainId` are still read by bare name. They happen to match vocabulary
+//     CARD property names, which is a coincidence of naming and not a guarantee.
+//   * the `domainListOf` scalarisation exists because 2,068 of 2,324 CEDS property nodes hold
+//     allDomainIds as a bare string after replay scalarization.
+//   * `composeEmbedText`'s value-tier rule states that the range on the value tier IS an option set.
+// WHEN CTDL ARRIVES, THESE ARE THE THREE PLACES THE BOUNDARY WILL MOVE. Said here so the next author
+// meets the list instead of discovering it.
 //
-// addressSignature — RULING R-P1-1 (AMBER_TOWER, 2026-08-03): the INCUMBENT computation
-// stands. vocabulary.ADDRESS_SIGNATURE_FIELD_ORDER is the single source of truth for hash
-// inputs and order; canonicalKey participates (id-only, so prose purity holds); referenceTier
-// stays un-hashed (valueKey presence encodes tier). Prose NEVER enters the signature (G-2).
+// The card contract is unchanged and is the reason the extraction could be byte-neutral: one card =
+// one addressable idea = one tuple, SELF-SUFFICIENT (ADDRESS / IDENTITY / MEANING / PROVENANCE /
+// DERIVED). Edges remain for traversal; no reader requires them.
 //
-// REFUSALS, NOT SUBSTITUTIONS: a domainId that resolves to no class node, a property with no
-// name, a value with no name, a qualifier with no name, an absent root (sourceProvenance),
-// an absent/empty factory argument — each is refused BY NAME with the offending id. No
-// degraded card is ever emitted. No a||b||c identity chains. Absent is absent: a slot CEDS
-// gave no prose gets NO field, never ''.
+// REFUSALS, NOT SUBSTITUTIONS: a domainId resolving to no class node, a property/value/qualifier with
+// no name, an absent root, an absent factory argument, an invalid declaration — each refused BY NAME
+// with the offending id. No degraded card is ever emitted. No a||b||c identity chains. Absent is
+// absent: a slot the source gave no prose for gets NO field, never ''.
 //
-// R7: forgeHub is error-first callback-shaped even though the derivation is synchronous.
-// PURE + deterministic: no I/O, no Neo4j, no network, no embedding calls, no Date/random.
-// embedText is COMPOSED and STORED here (§4); the vector itself is stamped at build time
-// (Phase 2) through the shared content-addressed cache.
+// R7: forgeHub is error-first callback-shaped even though the derivation is synchronous. PURE +
+// deterministic: no I/O, no Neo4j, no network, no embedding calls, no Date/random. embedText is
+// COMPOSED and STORED here; the vector is stamped at build time through the shared cache.
 //
 // @concept: [[HubReference]]
-// @concept: [[CedsHubForge]]
+// @concept: [[HubFramework]]
 
 const crypto = require('crypto');
 const path = require('path');
 
-const vocab = require(path.join(__dirname, '..', '..', '..', 'lib', 'vocabulary', 'vocabulary'));
+const vocab = require(path.join(__dirname, '..', 'vocabulary', 'vocabulary'));
 const {
 	NODE_LABELS,
 	EQUIVALENCE_NODE_LABELS,
@@ -71,14 +79,33 @@ const {
 	CANONICAL_ADDRESS_PROPERTIES: A,
 	HUB_REFERENCE_PROPERTIES: HR,
 	HUB_DEFINITION_PROPERTIES: HD,
-	CEDS_HUB_EDGE_TYPES,
+	// the GENERIC generator, not a per-hub constant: hubEdgeType(hubName, slot) -> HAS_<HUB>_<SLOT>.
+	// Byte-neutral against the deleted CEDS_HUB_EDGE_TYPES on all five slots, re-verified in Phase 2c
+	// by calling both rather than by citing the earlier verification (SPEC §3.4, STANDDOWN-P1 A.1).
+	hubEdgeType,
+	HUB_DECOMPOSITION_SLOTS,
+	// the base ownership edges this derivation walks — the constants, not the literals they used to be
+	// (SPEC §4.8(4)).
+	EDGE_TYPES,
 	IN_HUB_EDGE_TYPE,
 	ADDRESS_SIGNATURE_FIELD_ORDER,
 	PROVENANCE_TIER,
 	DME_ROLES,
 } = vocab;
+const refuse = require(path.join(__dirname, '..', 'forge-framework', 'refuse'));
+const {
+	validateHubDeclaration,
+	validateHubHooks,
+} = require(path.join(__dirname, 'hubDeclarationContract'));
 
-const FORGE_MODULE_VERSION = '1.0.0';
+// slot NAME -> slot NAME, derived from the vocabulary's own roster so the five slot tokens are never
+// re-typed here as literals. HUB_DECOMPOSITION_SLOTS is the single source of the slot vocabulary.
+const HUB_DECOMPOSITION_SLOTS_BY_NAME = Object.freeze(
+	HUB_DECOMPOSITION_SLOTS.reduce(
+		(soFar, oneSlot) => Object.assign(soFar, { [oneSlot]: oneSlot }),
+		{},
+	),
+);
 
 // single-element PG-JSON array -> scalar. The replay engine scalarizes single-element arrays,
 // so the same property reads back as an array from a fresh forge and as a bare value from a
@@ -137,7 +164,19 @@ const hasProse = (scalar) =>
 
 const moduleFunction =
 	({ moduleName } = {}) =>
+	({ hubDeclaration, hooks, forgeStandardSource } = {}) =>
 	({ hubVersion, hubNamespace } = {}) => {
+		// H1 CONTRACT FIRST — an invalid declaration is refused before a single factory argument is
+		// looked at, so the operator hears about the declaration rather than about its symptom.
+		const declarationFault = validateHubDeclaration({ hubDeclaration });
+		if (declarationFault) {
+			throw declarationFault;
+		}
+		const hooksFault = validateHubHooks({ hooks });
+		if (hooksFault) {
+			throw hooksFault;
+		}
+
 		const absentFactoryArgs = [];
 		if (typeof hubVersion !== 'string' || hubVersion.trim() === '') {
 			absentFactoryArgs.push('hubVersion');
@@ -153,10 +192,37 @@ const moduleFunction =
 			);
 		}
 
-		const hubName = 'CEDS';
-		const hubDisplayName = 'Common Education Data Standards';
-		const canonicalKeyName = 'CEDS Global ID';
-		const canonicalKeyMinted = false;
+		const {
+			hubName,
+			hubDisplayName,
+			canonicalKeyName,
+			canonicalKeyMinted,
+			sourceIdFieldName,
+			baseFieldNames,
+			qualifiedReference,
+			provenanceLabel,
+		} = hubDeclaration;
+
+		// INVARIANT I12 ([R2 F6]) — ASSERTED BY NAME, not assumed. Hub cards carry `_source: hubName`
+		// while base nodes carry the forge's `standardSource`; before Phase 2c those were TWO
+		// declarations of the same value with NO cross-check between them, in two different files. The
+		// hub declaration is now the only place hubName is written, and the framework refuses a
+		// mismatch against the forge declaration when one is supplied to compare against.
+		if (
+			forgeStandardSource !== undefined &&
+			String(forgeStandardSource) !== String(hubName)
+		) {
+			throw refuse.byName({
+				moduleName,
+				what:
+					`I12 VIOLATED — hubDeclaration.hubName '${hubName}' does not equal ` +
+					`forgeDeclaration.standardSource '${forgeStandardSource}'`,
+				where:
+					`hub cards are stamped _source: hubName while base nodes carry standardSource, so a ` +
+					`mismatch silently splits one standard into two sources. Make them equal in ` +
+					`the kit's hub declaration.`,
+			});
+		}
 
 		const hubDefinitionStableId = `${hubNamespace}hubDefinition/${hubName}`;
 
@@ -329,12 +395,12 @@ const moduleFunction =
 				if (!fromNode || !toNode) {
 					return;
 				}
-				if (oneEdge.type === 'HAS_PROPERTY') {
+				if (oneEdge.type === EDGE_TYPES.HAS_PROPERTY) {
 					(propertyNodesOfClass[fromNode.stableId] =
 						propertyNodesOfClass[fromNode.stableId] || []).push(toNode);
-				} else if (oneEdge.type === 'HAS_OPTION_SET') {
+				} else if (oneEdge.type === EDGE_TYPES.HAS_OPTION_SET) {
 					optionSetNodeOfProperty[fromNode.stableId] = toNode;
-				} else if (oneEdge.type === 'HAS_VALUE') {
+				} else if (oneEdge.type === EDGE_TYPES.HAS_VALUE) {
 					(valueNodesOfOptionSet[fromNode.stableId] =
 						valueNodesOfOptionSet[fromNode.stableId] || []).push(toNode);
 				}
@@ -374,7 +440,7 @@ const moduleFunction =
 					);
 					return;
 				}
-				const propertyName = v1(propertyNode.properties.name);
+				const propertyName = v1(propertyNode.properties[baseFieldNames.name]);
 				if (!hasProse(canonicalKey)) {
 					refuse(
 						`${moduleName}: REFUSED — ${referenceTier}-tier card for property ` +
@@ -396,7 +462,7 @@ const moduleFunction =
 					);
 					return;
 				}
-				const valueName = valueNode ? v1(valueNode.properties.name) : undefined;
+				const valueName = valueNode ? v1(valueNode.properties[baseFieldNames.name]) : undefined;
 				if (valueNode && !hasProse(valueName)) {
 					refuse(
 						`${moduleName}: REFUSED — value '${valueKey}' has no name ` +
@@ -483,56 +549,56 @@ const moduleFunction =
 				carryProseField({
 					cardProperties,
 					cardFieldName: 'domainName',
-					sourceValue: classNode.properties.name,
+					sourceValue: classNode.properties[baseFieldNames.name],
 				});
 				carryProseField({
 					cardProperties,
 					cardFieldName: 'domainDefinition',
-					sourceValue: classNode.properties.definition,
+					sourceValue: classNode.properties[baseFieldNames.definition],
 				});
 				cardProperties.propertyName = propertyName;
 				carryProseField({
 					cardProperties,
 					cardFieldName: 'propertyDefinition',
-					sourceValue: propertyNode.properties.definition,
+					sourceValue: propertyNode.properties[baseFieldNames.definition],
 				});
 				carryProseField({
 					cardProperties,
 					cardFieldName: 'propertyNotation',
-					sourceValue: propertyNode.properties.notation,
+					sourceValue: propertyNode.properties[baseFieldNames.notation],
 				});
 				carryProseField({
 					cardProperties,
 					cardFieldName: 'propertyDataType',
-					sourceValue: propertyNode.properties.dataType,
+					sourceValue: propertyNode.properties[baseFieldNames.dataType],
 				});
 				carryProseField({
 					cardProperties,
 					cardFieldName: 'propertyTextFormat',
-					sourceValue: propertyNode.properties.textFormat,
+					sourceValue: propertyNode.properties[baseFieldNames.textFormat],
 				});
 				if (classRangeNode) {
 					carryProseField({
 						cardProperties,
 						cardFieldName: 'rangeClassName',
-						sourceValue: classRangeNode.properties.name,
+						sourceValue: classRangeNode.properties[baseFieldNames.name],
 					});
 					carryProseField({
 						cardProperties,
 						cardFieldName: 'rangeClassDefinition',
-						sourceValue: classRangeNode.properties.definition,
+						sourceValue: classRangeNode.properties[baseFieldNames.definition],
 					});
 				}
 				if (optionSetNode) {
 					carryProseField({
 						cardProperties,
 						cardFieldName: 'rangeOptionSetName',
-						sourceValue: optionSetNode.properties.name,
+						sourceValue: optionSetNode.properties[baseFieldNames.name],
 					});
 					carryProseField({
 						cardProperties,
 						cardFieldName: 'rangeOptionSetDefinition',
-						sourceValue: optionSetNode.properties.definition,
+						sourceValue: optionSetNode.properties[baseFieldNames.definition],
 					});
 				}
 				if (valueNode) {
@@ -540,17 +606,17 @@ const moduleFunction =
 					carryProseField({
 						cardProperties,
 						cardFieldName: 'valueDefinition',
-						sourceValue: valueNode.properties.definition,
+						sourceValue: valueNode.properties[baseFieldNames.definition],
 					});
 					carryProseField({
 						cardProperties,
 						cardFieldName: 'valueNotation',
-						sourceValue: valueNode.properties.notation,
+						sourceValue: valueNode.properties[baseFieldNames.notation],
 					});
 					carryProseField({
 						cardProperties,
 						cardFieldName: 'valuePrefLabel',
-						sourceValue: valueNode.properties.prefLabel,
+						sourceValue: valueNode.properties[baseFieldNames.prefLabel],
 					});
 				}
 				if (sortedQualifierPairs.length) {
@@ -562,7 +628,7 @@ const moduleFunction =
 				// ---- PROVENANCE (§1.4) — the always-fields are REQUIRED: a source node with
 				// no uri is refused by name, never stamped as an undefined-valued key ----
 				const provenanceUriOf = ({ sourceNode, sourceRoleLabel }) => {
-					const sourceUri = v1(sourceNode.properties.uri);
+					const sourceUri = v1(sourceNode.properties[baseFieldNames.uri]);
 					if (!hasProse(sourceUri)) {
 						refuse(
 							`${moduleName}: REFUSED — ${sourceRoleLabel} node ` +
@@ -637,18 +703,18 @@ const moduleFunction =
 						properties: { provenanceTier: PROVENANCE_TIER.STRUCTURAL },
 					});
 				};
-				addEdge(CEDS_HUB_EDGE_TYPES.DOMAIN, classNode.stableId);
-				addEdge(CEDS_HUB_EDGE_TYPES.PROPERTY, propertyNode.stableId);
+				addEdge(hubEdgeType(hubName, HUB_DECOMPOSITION_SLOTS_BY_NAME.DOMAIN), classNode.stableId);
+				addEdge(hubEdgeType(hubName, HUB_DECOMPOSITION_SLOTS_BY_NAME.PROPERTY), propertyNode.stableId);
 				if (optionSetNode) {
-					addEdge(CEDS_HUB_EDGE_TYPES.RANGE, optionSetNode.stableId);
+					addEdge(hubEdgeType(hubName, HUB_DECOMPOSITION_SLOTS_BY_NAME.RANGE), optionSetNode.stableId);
 				} else if (classRangeNode) {
-					addEdge(CEDS_HUB_EDGE_TYPES.RANGE, classRangeNode.stableId);
+					addEdge(hubEdgeType(hubName, HUB_DECOMPOSITION_SLOTS_BY_NAME.RANGE), classRangeNode.stableId);
 				}
 				if (valueNode) {
-					addEdge(CEDS_HUB_EDGE_TYPES.VALUE, valueNode.stableId);
+					addEdge(hubEdgeType(hubName, HUB_DECOMPOSITION_SLOTS_BY_NAME.VALUE), valueNode.stableId);
 				}
 				sortedQualifierPairs.forEach((onePair) => {
-					addEdge(CEDS_HUB_EDGE_TYPES.QUALIFIER, onePair.qualifierNode.stableId);
+					addEdge(hubEdgeType(hubName, HUB_DECOMPOSITION_SLOTS_BY_NAME.QUALIFIER), onePair.qualifierNode.stableId);
 				});
 				addEdge(IN_HUB_EDGE_TYPE, hubDefinitionStableId);
 
@@ -669,7 +735,7 @@ const moduleFunction =
 				// EVERY DECLARED DOMAIN, shape-agnostically (the incumbent's multi-domain rule:
 				// each declared domain is a different idea; addressSignature includes domainId so
 				// the per-domain cards are distinct by construction)
-				const allDeclaredDomainIds = domainListOf(propertyProps.allDomainIds);
+				const allDeclaredDomainIds = domainListOf(propertyProps[baseFieldNames.allDomainIds]);
 				const declaredDomainIds = allDeclaredDomainIds.length
 					? allDeclaredDomainIds
 					: domainListOf(propertyProps.domainId);
@@ -677,27 +743,27 @@ const moduleFunction =
 					skipReport.push({
 						reason: 'zeroDeclaredDomains',
 						role: DME_ROLES.PROPERTY,
-						cedsId: v1(propertyProps.cedsId),
+						[sourceIdFieldName]: v1(propertyProps[sourceIdFieldName]),
 						propertyKey,
-						name: v1(propertyProps.name),
+						name: v1(propertyProps[baseFieldNames.name]),
 					});
 					return;
 				}
 
 				const optionSetNode = optionSetNodeOfProperty[propertyNode.stableId];
 				const rangeOptionSetId = optionSetNode
-					? v1(optionSetNode.properties.rangeOptionSetId)
+					? v1(optionSetNode.properties[baseFieldNames.rangeOptionSetId])
 					: undefined;
 				const rangeClassId = optionSetNode
 					? undefined
-					: v1(propertyProps.rangeClassId);
+					: v1(propertyProps[baseFieldNames.rangeClassId]);
 				const classRangeNode = rangeClassId
 					? classByDomainId[rangeClassId]
 					: undefined;
 				const rangeDatatype =
 					optionSetNode || rangeClassId
 						? undefined
-						: v1(propertyProps.rangeDatatype);
+						: v1(propertyProps[baseFieldNames.rangeDatatype]);
 
 				declaredDomainIds.forEach((domainId) => {
 					const classNode = classByDomainId[domainId];
@@ -751,14 +817,20 @@ const moduleFunction =
 
 			// ---- PASS 2: qualified references (§4.3 identification pattern, stem-matched —
 			//      the incumbent's enumeration verbatim) ----
+			// A hub that declares NO qualifiedReference has no identification patterns to find: pass 2
+			// is skipped ENTIRELY and identificationPatterns is explicitly [] (SPEC §4.4 [R1 Q7]).
+			// ABSENT IS ABSENT — this is a declared capability, not a default that silently produces
+			// zero because the loop happened to match nothing.
 			let qualifiedCount = 0;
 			const identificationPatterns = [];
-			Object.keys(propertyNodesOfClass).forEach((classStableId) => {
+			const classStableIdListForPass2 =
+				qualifiedReference === undefined ? [] : Object.keys(propertyNodesOfClass);
+			classStableIdListForPass2.forEach((classStableId) => {
 				const classNode = nodeByStableId[classStableId];
 				const memberPropertyNodes = propertyNodesOfClass[classStableId];
 				memberPropertyNodes.forEach((typePropertyNode) => {
-					const typePropertyName = v1(typePropertyNode.properties.name);
-					const stemMatch = /^Has (.+) Identifier Type$/.exec(
+					const typePropertyName = v1(typePropertyNode.properties[baseFieldNames.name]);
+					const stemMatch = qualifiedReference.typePropertyPattern.exec(
 						typeof typePropertyName === 'string' ? typePropertyName : '',
 					);
 					if (!stemMatch) {
@@ -770,19 +842,16 @@ const moduleFunction =
 						return; // qualifier must be enumerated to supply qualifier values
 					}
 					const stem = stemMatch[1];
-					const tokenCandidateNames = [
-						`${stem} Identifier`,
-						`Has ${stem} Identifier`,
-					];
+					const tokenCandidateNames = qualifiedReference.tokenNamesForStem(stem);
 					const tokenNodes = memberPropertyNodes.filter(
 						(onePropertyNode) =>
-							tokenCandidateNames.indexOf(v1(onePropertyNode.properties.name)) !==
+							tokenCandidateNames.indexOf(v1(onePropertyNode.properties[baseFieldNames.name])) !==
 							-1,
 					);
 					if (tokenNodes.length !== 1) {
 						// ambiguous or absent token — record and SKIP (never fabricate a pairing)
 						identificationPatterns.push({
-							className: v1(classNode.properties.name),
+							className: v1(classNode.properties[baseFieldNames.name]),
 							typeProperty: typePropertyName,
 							stem,
 							tokenMatchCount: tokenNodes.length,
@@ -793,7 +862,7 @@ const moduleFunction =
 					const tokenNode = tokenNodes[0];
 					const tokenProps = tokenNode.properties;
 					const tokenDomainId = v1(tokenProps.domainId);
-					const tokenRangeClassId = v1(tokenProps.rangeClassId);
+					const tokenRangeClassId = v1(tokenProps[baseFieldNames.rangeClassId]);
 					const tokenRangeClassNode = tokenRangeClassId
 						? classByDomainId[tokenRangeClassId]
 						: undefined;
@@ -809,12 +878,12 @@ const moduleFunction =
 							rangeClassId: tokenRangeClassId,
 							rangeDatatype: tokenRangeClassId
 								? undefined
-								: v1(tokenProps.rangeDatatype),
+								: v1(tokenProps[baseFieldNames.rangeDatatype]),
 							valueKey: '',
 							qualifierPairs: [
 								{
 									qualifierKey: v1(qualifierValueNode.properties.canonicalKey),
-									qualifierName: v1(qualifierValueNode.properties.name),
+									qualifierName: v1(qualifierValueNode.properties[baseFieldNames.name]),
 									qualifierNode: qualifierValueNode,
 								},
 							],
@@ -827,10 +896,10 @@ const moduleFunction =
 						}
 					});
 					identificationPatterns.push({
-						className: v1(classNode.properties.name),
+						className: v1(classNode.properties[baseFieldNames.name]),
 						typeProperty: typePropertyName,
 						stem,
-						tokenProperty: v1(tokenProps.name),
+						tokenProperty: v1(tokenProps[baseFieldNames.name]),
 						tokenKey: v1(tokenProps.canonicalKey),
 						qualifierValueCount: qualifierValueNodes.length,
 						skipped: false,
@@ -859,8 +928,8 @@ const moduleFunction =
 				DME_ROLES.OPTION_VALUE,
 			].forEach((oneRole) => {
 				nodesByRole[oneRole].forEach((oneNode) => {
-					const sourceDescription = v1(oneNode.properties.description);
-					const sourceDefinition = v1(oneNode.properties.definition);
+					const sourceDescription = v1(oneNode.properties[baseFieldNames.description]);
+					const sourceDefinition = v1(oneNode.properties[baseFieldNames.definition]);
 					// 'both exist' means both carry PROSE (hasProse, the module's one existence
 					// rule — S-5): null and '' are not prose and cannot diverge from anything
 					if (
@@ -870,8 +939,8 @@ const moduleFunction =
 					) {
 						divergenceReport.push({
 							role: oneRole,
-							cedsId: v1(oneNode.properties.cedsId),
-							name: v1(oneNode.properties.name),
+							[sourceIdFieldName]: v1(oneNode.properties[sourceIdFieldName]),
+							name: v1(oneNode.properties[baseFieldNames.name]),
 							description: sourceDescription,
 							definition: sourceDefinition,
 						});
@@ -879,8 +948,8 @@ const moduleFunction =
 				});
 			});
 			divergenceReport.sort((left, right) => {
-				const leftSortKey = `${left.role}|${left.cedsId}`;
-				const rightSortKey = `${right.role}|${right.cedsId}`;
+				const leftSortKey = `${left.role}|${left[sourceIdFieldName]}`;
+				const rightSortKey = `${right.role}|${right[sourceIdFieldName]}`;
 				return leftSortKey < rightSortKey ? -1 : leftSortKey > rightSortKey ? 1 : 0;
 			});
 
@@ -946,8 +1015,8 @@ const moduleFunction =
 				publishedVersion: v1(rootProps.publishedVersion),
 				sourceVersion: v1(rootProps.version),
 				sourceUrl: v1(rootProps.sourceUrl),
-				forgeModule: moduleName,
-				forgeModuleVersion: FORGE_MODULE_VERSION,
+				forgeModule: provenanceLabel.forgeModule,
+				forgeModuleVersion: provenanceLabel.forgeModuleVersion,
 			});
 			nodes.push({
 				labels: [
