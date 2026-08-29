@@ -7,7 +7,11 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // whose forge() orchestrated parse -> buildSourceTierGraph -> derived -> composition -> synthetic
 // -> embed by hand):
 //   sourceLoaderList  — ONE loader, `pescCorpus`: the 64-file XSD aggregate parser. It is
-//     DIRECTORY-bound and verifies the snapshot directory's SHA256SUMS itself.
+//     DIRECTORY-bound. ⚠ IT DOES NOT VERIFY CHECKSUMS: an earlier draft of this line said the
+//     parser 'verifies the snapshot directory's SHA256SUMS itself', and grep -a finds no checksum
+//     reference in lib/parser.js at all. The FRAMEWORK verifies, for every forge, at forge() step 2
+//     (verifySnapshotChecksums, FR8) — which is CHECKSUM VERIFICATION PESC NEVER HAD before this
+//     migration, and is why two test fixtures needed SHA256SUMS files.
 //   describeSource    — PURE; the five keys. See the note on the two version keys below, which is
 //     where allowance P17 comes from.
 //   emitContractGraph — the walk, lib/forgePescContractGraph.js (H3): source, derived, searchText
@@ -15,9 +19,11 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //   describeRoot      — PURE; the root description the bespoke forge template-built at :196,
 //     verbatim, plus the ONE licensed root extra property.
 //
-// describeSource / describeRoot are PURE (they read only their arguments); the loader speaks
-// through the xLog the framework hands it. No logger is manufactured anywhere here (Profile §5.3),
-// and no hook stamps a byte the framework owns.
+// describeSource / describeRoot are PURE (they read only their arguments). ⚠ THE LOADER DOES NOT
+// SPEAK: an earlier draft of this line said it 'speaks through the xLog the framework hands it', and
+// loadPescCorpus DISCARDS the xLog it is handed — parsePescCorpus takes no logger. The framework
+// still hands one in, so the seam is there if the parser ever needs it. No logger is manufactured
+// anywhere here (Profile §5.3), and no hook stamps a byte the framework owns.
 //
 // ⚠ WHAT IS *NOT* HERE, AND WHY THE LOSS IS ONLY NARRATION. The bespoke forge() printed four long
 // xLog status lines (source/derived/synthetic/composition), guarded by its own `requiredStat` so a
@@ -80,9 +86,14 @@ const moduleFunction =
 		// whole-family release. MEASURED both ways before choosing:
 		//     sourceVersion 'aggregate-01' -> { snapshotKey '01', publishedVersion 'aggregate-01', versionSource 'spec' }
 		//     sourceVersion null           -> { snapshotKey '01', publishedVersion 'unknown',      versionSource 'unknown' }
-		// The first was available and is REFUSED. The stamp therefore falls to 'unknown' honestly,
-		// the root's version 'aggregate-01' then differs from (selfDescribedVersion ?? 'unknown'),
-		// and P17 is what licenses that disagreement — the same shape SIF declares as S3.
+		// The first was available and is REFUSED — it would claim in a BLOCK BYTE that PESC's source
+		// self-describes a whole-family version it does not publish.
+		// ⚠ AND THE OUTCOME MOVED AFTER THIS COMMENT WAS FIRST WRITTEN (RULING FJ-P4-7): the snapshot
+		// now carries a standardSourceLocation declaring publishedVersion aggregate-01, so the stamp
+		// takes the THIRD branch and returns { snapshotKey '01', publishedVersion 'aggregate-01',
+		// versionSource 'provenance-file' } — the truthful label for a version that is OURS. P17 is
+		// UNAFFECTED and still MET, because selfDescribedVersion is still null and the root's version
+		// 'aggregate-01' still differs from (null ?? 'unknown'). Same shape SIF declares as S3.
 		//
 		// sourceUrl '' is what allowance P16 declares. sourceFiles is the 64 artifact filenames in
 		// the parser's own order; all 64 are named in the snapshot's SHA256SUMS (measured 64 of 64),

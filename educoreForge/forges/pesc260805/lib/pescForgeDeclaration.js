@@ -99,8 +99,11 @@ const pescForgeDeclaration = Object.freeze({
 	// Empty is the honest declaration, not a placeholder.
 	cedsAnchorAbsentSentinelList: Object.freeze([]),
 	// the parser is DIRECTORY-bound (parserDescriptor.ini declares no sourceFile): it demands the
-	// snapshot DIRECTORY — the 64-file XSD aggregate — and verifies that directory's SHA256SUMS
-	// itself. There is no SECOND path for the framework to hand in.
+	// snapshot DIRECTORY — the 64-file XSD aggregate. There is no SECOND path for the framework to
+	// hand in. ⚠ THE PARSER DOES NOT VERIFY CHECKSUMS: an earlier draft of this line said it
+	// 'verifies that directory's SHA256SUMS itself', and grep -a finds no checksum reference in
+	// lib/parser.js. The FRAMEWORK verifies at forge() step 2 (FR8) — verification PESC did not have
+	// before this migration, and the reason two test fixtures needed SHA256SUMS files.
 	additionalSourceInputList: Object.freeze([]),
 	// ---- COMPATIBILITY DECLARATIONS — FIVE, EACH MEASURED AGAINST THE ENTRY BLOCK ----------------
 	// The framework REFUSES a declared-but-unneeded allowance BY NAME and refuses at the step in
@@ -131,7 +134,10 @@ const pescForgeDeclaration = Object.freeze({
 	//             = 'unknown', because describeSource returns selfDescribedVersion null. PESC is the
 	//             SIF case, not the CEDS case: measured, CEDS 14.0.0.0/14.0.0.0/spec (genuinely
 	//             self-describing) against SIF 1.0/unknown/unknown (declares S3) and PESC
-	//             aggregate-01/unknown/unknown.
+	//             aggregate-01/aggregate-01/provenance-file. ⚠ THAT LAST TRIPLE MOVED AFTER THIS NOTE
+	//             WAS WRITTEN: it read aggregate-01/unknown/unknown until RULING FJ-P4-7 added the
+	//             snapshot's missing standardSourceLocation. P17 is unaffected and still MET —
+	//             selfDescribedVersion is still null, so version still differs from 'unknown'.
 	//
 	// NO E8-ANALOGUE IS DECLARED, and that is measured too: E8's precondition is "at least one
 	// sourceFiles entry that is not a verified file". All 64 artifact filenames the root carries are

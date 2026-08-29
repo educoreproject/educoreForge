@@ -284,14 +284,20 @@ const MIGRATION_ALLOWANCE_REGISTRY = Object.freeze({
 	// WHY PESC IS THE SIF CASE AND NOT THE CEDS CASE, measured on the three roots:
 	//     CEDS  version 14.0.0.0  publishedVersion 14.0.0.0  versionSource spec      no S3-analogue
 	//     SIF   version 1.0       publishedVersion unknown   versionSource unknown   S3
-	//     PESC  version aggregate-01  publishedVersion unknown  versionSource unknown  <- this row
+	//     PESC  version aggregate-01  publishedVersion aggregate-01  versionSource provenance-file  <- this row
 	// snapshot-provenance.js:11 defines versionSource 'spec' as "the parser read the version from a
 	// SELF-DESCRIBING source; the SOURCE WINS". PESC's `aggregate-01` is OURS (R-ACQ-7) and the
 	// snapshot's own README_PROVENANCE.md says in capitals that it "must never be read as a PESC
 	// edition", because PESC publishes no coherent whole-family release. The snapshot's
-	// standardSourceLocation supplies no publishedVersion either — measured, not assumed.
-	// So describeSource returns selfDescribedVersion null, the stamp resolves to 'unknown'/'unknown',
-	// and the root's version then differs from (selfDescribedVersion ?? 'unknown').
+	// standardSourceLocation supplied no publishedVersion EITHER, AT THE TIME THIS ROW WAS WRITTEN.
+	// ⚠ CORRECTED (RULING FJ-P4-7, later the same day, and the correction is the point of the row):
+	// the snapshot NOW CARRIES a standardSourceLocation declaring publishedVersion aggregate-01 —
+	// PESC was the only one of the four without one — so the stamp resolves to
+	// publishedVersion 'aggregate-01' / versionSource 'provenance-file', which is the TRUTHFUL label:
+	// the aggregate version is ours, recorded in our own provenance record. THE ROW IS STILL NEEDED
+	// AND STILL MET: describeSource returns selfDescribedVersion null, so the root's version
+	// 'aggregate-01' still differs from (selfDescribedVersion ?? 'unknown') = 'unknown'. What changed
+	// is the publishedVersion/versionSource pair, not this row's predicate.
 	// ⚠ THE OTHER BRANCH WAS AVAILABLE AND WAS REFUSED: passing 'aggregate-01' as the self-described
 	// version stamps versionSource 'spec' — measured, deriveVersionStamp returns exactly that — and
 	// would assert in a BLOCK BYTE that PESC's source declares a whole-family version it does not

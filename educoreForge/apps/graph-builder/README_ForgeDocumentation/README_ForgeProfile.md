@@ -141,9 +141,14 @@ require(<bundleDir>/<entryModule>)({ embedder }) -> bundle
   `:828`.
 - The bundle MUST expose `forge` and `buildContractGraph` under exactly those names. `[code fact]`
   `interfaces.js:237-242`; `forges/ceds/forgeCeds.js:963-968`, `forges/edfi/forgeEdfi.js:269-275`,
-  `forges/sif/forgeSif.js:832-838` return both. `[code fact]` `forges/pesc260805/forgePesc260805.js:800-806`
-  exports its pure layer as `buildSourceTierGraph`, not `buildContractGraph` — the declared interface is
-  not literally satisfied by PESC (§13 punch list).
+  `forges/sif/forgeSif.js:832-838` return both. `[code fact]` ⚠ **SUPERSEDED 2026-08-29** (hub-kit-role Phase 4,
+  commit b1a6705): this read *"`forges/pesc260805/forgePesc260805.js:800-806` exports its pure layer
+  as `buildSourceTierGraph`, not `buildContractGraph` — the declared interface is not literally
+  satisfied by PESC (§13 punch list)"*. PESC is now ON the framework and returns the framework's own
+  bundle, so it exports `buildContractGraph` like the other three and the punch-list item is
+  discharged. `buildSourceTierGraph` is GONE — ruling FJ-P4-4 as amended: keeping it was not
+  mechanically possible (the framework fixes the bundle surface) and it had no consumer anywhere in
+  the tree.
 - The bundle MUST NOT construct an embedding client of its own. The forger constructs the ONE client
   and injects it, so the shared vector cache and the ini-declared model are the same for the base
   pass and the hub pass. `[code fact]` `forger.js:796-813`, `:885-887`.
