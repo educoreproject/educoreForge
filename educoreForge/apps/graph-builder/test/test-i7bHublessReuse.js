@@ -136,7 +136,7 @@ harness.equal(
 // ---------------------------------------------------------------------------------------------
 // C2 — THE HAZARD, OBSERVED: the reuse path inspects only the block's FIRST LINE.
 // ---------------------------------------------------------------------------------------------
-harness.section('C2 — the production reuse path inspects only the header line');
+harness.section('C2 — the production reuse path CONSULTS the I7b refusal (was: inspects only the header line)');
 
 const buildSourceText = fs.readFileSync(`${__dirname}/../lib/build.js`, 'utf8');
 const reuseFunctionText = buildSourceText.slice(
@@ -154,10 +154,37 @@ harness.match(
 	reuseFunctionText,
 	/text\.slice\(0,\s*text\.indexOf\('\\n'\)\)/,
 );
+// ⚠ CONJUNCT INVERTED BY PHASE 2a (SILVER_TIDE, 2026-08-29). It read:
+//
+//     'and it performs NO HubDefinition inspection anywhere — this is the defect'
+//     HUB_DEFINITION_LABEL_PATTERN.test(reuseFunctionText) || /HubDefinition/.test(...) === false
+//
+// That was a CHARACTERISATION OF THE DEFECT, correct and useful at Phase 0. After the fix it became
+// a LIE THAT STILL PASSED: Phase 2a wires the refusal in as a call to a NAMED HELPER, so the literal
+// 'HubDefinition' lives in that helper at the bottom of build.js — OUTSIDE the slice this conjunct
+// examines. The conjunct therefore went on asserting "the defect is present" on a tree where it is
+// fixed, and passed for a reason that has nothing to do with its meaning. A gate that cannot fail is
+// not a gate. (Phase 1's lesson — four suites green on a defective build — arriving inverted: green
+// on a CORRECT build, asserting brokenness.)
+//
+// It is REPLACED, not deleted, by its own opposite, which is strictly stronger: it now proves the
+// production path CONSULTS the refusal. It is robust to whether the pattern is inlined or lives in a
+// helper, because it names the SEAM rather than the implementation. OBSERVED RED against a tree with
+// the wiring removed before it was allowed to pass.
 harness.equal(
-	'and it performs NO HubDefinition inspection anywhere — this is the defect',
-	HUB_DEFINITION_LABEL_PATTERN.test(reuseFunctionText) || /HubDefinition/.test(reuseFunctionText),
-	false,
+	'the reuse path CONSULTS the named I7b refusal before it accepts the block (Phase 2a; this conjunct replaces the Phase 0 characterisation of the defect, which could no longer fail)',
+	/refuseHublessReuseUnderDeriveHub\(/.test(reuseFunctionText),
+	true,
+);
+harness.equal(
+	'  and it feeds that refusal the recipe\'s OWN deriveHub for this standard, not a constant',
+	/deriveHub: hubStdSet\.has\(/.test(reuseFunctionText),
+	true,
+);
+harness.equal(
+	'  and it RETURNS on refusal rather than logging and continuing (nothing substituted)',
+	/if \(hublessReuseRefusal !== ''\) \{[\s\S]{0,120}?callback\(hublessReuseRefusal\);[\s\S]{0,40}?return;/.test(reuseFunctionText),
+	true,
 );
 
 // ---------------------------------------------------------------------------------------------

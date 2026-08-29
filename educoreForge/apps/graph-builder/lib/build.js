@@ -249,7 +249,7 @@ const makeVectorStoreResolver = ({ supportStoreFilePath } = {}) => {
 };
 
 // NOTE (hub-fold design 2026-07-24): the hub derivation no longer lives here. It moved INTO the
-// forger (HUB_FORGE_BY_STANDARD + foldHubIntoNodeEdges), which folds each hub standard's hub into
+// forger (descriptor discovery + foldHubIntoNodeEdges), which folds each hub standard's hub into
 // the nodeEdges it returns. build.js never deserializes a base block, never runs forgeHub, and
 // never mints a separate hub block — so the replay-block codec and the hub-forge registry that the
 // first Phase-3 attempt required here are gone.
@@ -1219,6 +1219,18 @@ const build = (recipe, deps, callback) => {
 						);
 						return;
 					}
+					// I7b — the reuse path's ONLY inspection of the text used to be the header line
+					// above. Ask, now, whether the block it matched by NAME actually carries the hub
+					// this recipe declared. Refused BY NAME; nothing substituted. (Phase 2a.)
+					const hublessReuseRefusal = refuseHublessReuseUnderDeriveHub({
+						deriveHub: hubStdSet.has(String(std.token).toLowerCase()),
+						reusedBlockText: text,
+						subject: reuseSubject,
+					});
+					if (hublessReuseRefusal !== '') {
+						callback(hublessReuseRefusal);
+						return;
+					}
 					resolvedVersionByToken[std.token] = reuseVersion;
 					baseBlockByToken[std.token] = { blockText: text, refId: found.refId };
 					buildEmbeddingModelVersion = header.embeddingModelVersion;
@@ -2066,12 +2078,52 @@ return { build, replay, defaultComponents, makeVectorStoreResolver };
 
 // END OF moduleFunction() ============================================================
 
+// -----
+// refuseHublessReuseUnderDeriveHub — INVARIANT I7b (SPEC-hubKitRole-082826.md §4.2 [R2 F4]),
+// landed Phase 2a. --reuseForgedBlocks resolves a stored block BY SUBJECT — a name, a slot — and the
+// only inspection the reuse path makes of the block TEXT is JSON.parse of its FIRST LINE, read for
+// embedding identity. It never asked whether the block carries a hub.
+//
+// That was reachable, not theoretical. recipes/cedsOnlyRoundTrip.recipe.jsonc declares "hubs": [], so
+// a HUBLESS ceds@14_0_0_0_base is a legitimate store entry; findBlockBySubject orders by createdAt
+// DESC, so the MOST RECENT block for a subject wins on RECENCY and fitness is never consulted. A
+// hubless build followed by a hub build with reuse on therefore handed back the hubless block,
+// deriveHub never ran, and every bridge targeting the CEDS hub ran against ZERO CARDS while
+// reporting success. Phase 0 forged both blocks and proved the pair exists.
+//
+// PURE: text in, string out. '' means ADMITTED. Exported as a static per this module's own idiom so
+// the refusal is provable directly, without standing up the whole build pipeline.
+//
+// The discriminator matches the QUOTED label, not the bare word: HubDefinition is a node line
+// {"kind":"node",…,"labels":[…,"HubDefinition",…]}, and a bare-word match would also hit prose inside
+// a property value and make the discriminator lie.
+const HUB_DEFINITION_LABEL_PATTERN = /"HubDefinition"/;
+const refuseHublessReuseUnderDeriveHub = ({ deriveHub, reusedBlockText, subject } = {}) => {
+	if (!deriveHub) {
+		return ''; // a hubless recipe reusing a hubless block is CORRECT and must keep working
+	}
+	const text = typeof reusedBlockText === 'string' ? reusedBlockText : `${reusedBlockText}`;
+	if (HUB_DEFINITION_LABEL_PATTERN.test(text)) {
+		return '';
+	}
+	return (
+		`build: REFUSED — the recipe declares a hub for '${subject}' (deriveHub) and ` +
+		`--reuseForgedBlocks matched a STORED BLOCK THAT CARRIES NO HubDefinition. Reuse resolves by ` +
+		`SUBJECT and by RECENCY, never by fitness, so a hubless block forged under a "hubs": [] recipe ` +
+		`legitimately occupies the same subject name. Reusing it would skip hub derivation silently and ` +
+		`every bridge targeting this hub would then run against ZERO cards while reporting success. ` +
+		`Forge it (drop --reuseForgedBlocks) or point the store at a hub-bearing block for '${subject}'. ` +
+		`Nothing was substituted.`
+	);
+};
+
 // defaultComponents is RETURNED in the API (not a static) so test-interfaces can assert the
 // orchestrator's DEFAULTS are the real modules themselves — the gate that replaces "the stub set
 // conforms too", which passed for a year while the arguments drifted underneath it.
 module.exports = moduleFunction({ moduleName });
 // pure helpers exported as statics so the rebridge-scope resolution + per-pair scope match can be gated
 // directly (§6 no-silent-default), without standing up the whole build pipeline.
+module.exports.refuseHublessReuseUnderDeriveHub = refuseHublessReuseUnderDeriveHub;
 module.exports.resolveRebridge = resolveRebridge;
 module.exports.pairInRebridgeScope = pairInRebridgeScope;
 module.exports.rebridgeScopeIsActive = rebridgeScopeIsActive;

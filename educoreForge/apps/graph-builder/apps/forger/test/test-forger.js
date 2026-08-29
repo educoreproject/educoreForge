@@ -1362,12 +1362,13 @@ const foldOutcome = (foldArgs) => {
 	return outcome;
 };
 
-// the ground truth: what the REGISTERED hub forge (cedsHubForge, the Phase-2 flip)
-// INDEPENDENTLY derives from the same base — factory args from the registry row, so the
-// namespace has exactly ONE home (forger.js).
-const registryHubNamespace = forgerModule.HUB_FORGE_BY_STANDARD.ceds.hubNamespace;
+// the ground truth: what the DISCOVERED hub forge (cedsHubForge) INDEPENDENTLY derives from the
+// same base — factory args from the KIT'S OWN DESCRIPTOR, so the namespace has exactly ONE home
+// (forges/ceds/parserDescriptor.ini, invariant I8). Phase 2a: HUB_FORGE_BY_STANDARD is deleted and
+// resolveBundle is the reader production itself uses.
+const declaredHubNamespace = forgerModule.resolveBundle({ standard: 'ceds' }).hubNamespace;
 let expectedHub;
-cedsHubForge({ hubVersion: '2', hubNamespace: registryHubNamespace }).forgeHub(
+cedsHubForge({ hubVersion: '2', hubNamespace: declaredHubNamespace }).forgeHub(
 	engineShapeCedsBase,
 	(expectedHubError, expectedHubResult) => {
 		if (expectedHubError) {
@@ -1518,21 +1519,51 @@ harness.ok(
 	JSON.stringify(noRealVersionOutcome.result),
 );
 
-// NO SILENT DEFAULT — a standard declared a hub with no registered forge is refused BY NAME (this is
-// the refusal the first Phase-3 attempt kept in build.js; it now lives here, where the registry does).
-const unregisteredOutcome = foldOutcome({
+// INVARIANT I7 — NO SILENT DEFAULT. A standard the RECIPE declared a hub, whose KIT declares no
+// hubModule=, is refused BY NAME. (Phase 2a re-pointed this conjunct, and the reason is worth
+// keeping: it used to name 'lif', a standard that HAS NO FORGE BUNDLE AT ALL. Under the deleted
+// registry those were ONE case — "not a row in the table" — so 'lif' exercised it. Discovery
+// SEPARATES them: a nonexistent kit now fails earlier, at bundle resolution, and a kit that exists
+// but declares no hub is the case this conjunct actually names. Both still refuse by name with
+// nothing substituted; the refusals are simply no longer conflated. Both are gated below, so the
+// separation costs no coverage and buys precision.)
+//
+// edfi, sif and pesc260805 are REAL kits that genuinely declare no hub today — the honest fixture.
+['edfi', 'sif', 'pesc260805'].forEach((oneHublessStandard) => {
+	const hublessKitOutcome = foldOutcome({
+		standard: oneHublessStandard,
+		bundleVersion: '14.0.0.0',
+		requestedVersion: 'current',
+		baseNodeEdges: engineShapeCedsBase,
+	});
+	harness.match(
+		`I7: '${oneHublessStandard}' is declared a hub by the recipe but its kit declares no hubModule= — refused, naming the standard AND the descriptor that should carry it`,
+		hublessKitOutcome.error,
+		new RegExp(`standard '${oneHublessStandard}' is declared a hub by the recipe but its kit declares no hubModule= in .*forges/${oneHublessStandard}/parserDescriptor\\.ini`),
+	);
+	harness.ok(
+		`  and it names the kits that DO declare a hub (the map the registry's Object.keys used to give free)`,
+		/kits that DO declare a hub: ceds/.test(hublessKitOutcome.error || ''),
+		hublessKitOutcome.error,
+	);
+	harness.ok(`  and nothing was substituted`, /nothing was substituted/.test(hublessKitOutcome.error || ''), hublessKitOutcome.error);
+	harness.ok(`  and it hands back no nodeEdges`, hublessKitOutcome.result === undefined, JSON.stringify(hublessKitOutcome.result));
+});
+
+// THE OTHER HALF OF THE SEPARATION, gated so the case 'lif' used to cover is not lost: a standard
+// with no kit at all is refused at bundle resolution, naming the descriptor path it looked for.
+const noSuchKitOutcome = foldOutcome({
 	standard: 'lif',
 	bundleVersion: '14.0.0.0',
 	requestedVersion: 'current',
 	baseNodeEdges: engineShapeCedsBase,
 });
 harness.match(
-	'a standard declared a hub with NO registered hub forge is refused, naming it and what is known',
-	unregisteredOutcome.error,
-	/standard 'lif' is declared a hub but has no registered hub forge — known hub forges: ceds/,
+	"a standard declared a hub that has NO FORGE BUNDLE AT ALL is refused at bundle resolution, naming the descriptor it looked for and the kits that exist",
+	noSuchKitOutcome.error,
+	/no forge bundle for standard 'lif'[\s\S]*parserDescriptor\.ini[\s\S]*Known forges: ceds, edfi, pesc260805, sif/,
 );
-harness.ok('  and nothing was substituted', /nothing was substituted/.test(unregisteredOutcome.error || ''), unregisteredOutcome.error);
-harness.ok('  and it hands back no nodeEdges', unregisteredOutcome.result === undefined, JSON.stringify(unregisteredOutcome.result));
+harness.ok('  and it hands back no nodeEdges', noSuchKitOutcome.result === undefined, JSON.stringify(noSuchKitOutcome.result));
 
 // a malformed base is CONTAINED as an error-first answer (the module refuses it by callback;
 // the fold routes the refusal, never a throw past forge()'s callback).
@@ -1567,16 +1598,42 @@ harness.ok(
 	deriveHubBoolean.all.join('\n'),
 );
 
-// the registry is DATA keyed by standard token (registry-over-switch); each row carries the
-// factory AND the hub namespace — the namespace's ONE declared home (Phase 2)
+// PHASE 2a — DISCOVERY REPLACED THE REGISTRY. This conjunct asserted the SHAPE of the deleted
+// HUB_FORGE_BY_STANDARD table; it is replaced, not deleted, by the same assertion made against the
+// thing that took its job. The registry-is-DATA property survives the change — it just moved from a
+// table in shared code to a declaration in each kit, which is strictly more so.
 harness.ok(
-	'HUB_FORGE_BY_STANDARD is a registry keyed by standard token; the ceds row carries { hubForgeFactory, hubNamespace }',
-	!!forgerModule.HUB_FORGE_BY_STANDARD &&
-		typeof forgerModule.HUB_FORGE_BY_STANDARD.ceds === 'object' &&
-		typeof forgerModule.HUB_FORGE_BY_STANDARD.ceds.hubForgeFactory === 'function' &&
-		typeof forgerModule.HUB_FORGE_BY_STANDARD.ceds.hubNamespace === 'string' &&
-		forgerModule.HUB_FORGE_BY_STANDARD.ceds.hubNamespace.trim() !== '',
-	JSON.stringify(Object.keys(forgerModule.HUB_FORGE_BY_STANDARD || {})),
+	'HUB_FORGE_BY_STANDARD is GONE from the forger — the registry is deleted, not renamed (Phase 2a, SPEC §4.8(1))',
+	forgerModule.HUB_FORGE_BY_STANDARD === undefined,
+	`typeof = ${typeof forgerModule.HUB_FORGE_BY_STANDARD}`,
+);
+harness.ok(
+	"the ceds KIT declares its own hub: resolveBundle('ceds') yields hubModuleFileName + hubNamespace, and hubModulePath resolves against the bundle dir",
+	(() => {
+		const bundle = forgerModule.resolveBundle({ standard: 'ceds' });
+		return (
+			!bundle.error &&
+			typeof bundle.hubModuleFileName === 'string' &&
+			bundle.hubModuleFileName.trim() !== '' &&
+			typeof bundle.hubNamespace === 'string' &&
+			bundle.hubNamespace.trim() !== '' &&
+			typeof bundle.hubModulePath === 'string' &&
+			bundle.hubModulePath.indexOf(bundle.bundleDir) === 0 &&
+			typeof require(bundle.hubModulePath) === 'function'
+		);
+	})(),
+	JSON.stringify({
+		hubModuleFileName: forgerModule.resolveBundle({ standard: 'ceds' }).hubModuleFileName,
+		hubNamespace: forgerModule.resolveBundle({ standard: 'ceds' }).hubNamespace,
+	}),
+);
+harness.ok(
+	'a kit that is NOT a hub declares neither key — capability is declared, never inferred (edfi, sif, pesc260805)',
+	['edfi', 'sif', 'pesc260805'].every((oneStandard) => {
+		const bundle = forgerModule.resolveBundle({ standard: oneStandard });
+		return !bundle.error && bundle.hubModuleFileName === undefined && bundle.hubNamespace === undefined;
+	}),
+	'edfi, sif, pesc260805',
 );
 
 // forge() actually WIRES the fold in, reading deriveHub and calling foldHubIntoNodeEdges

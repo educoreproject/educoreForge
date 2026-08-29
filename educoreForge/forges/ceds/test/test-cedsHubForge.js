@@ -71,9 +71,14 @@ const CEDS_SOURCE_PATH = path.join(
 // suite forging with the registry's value is the point: G-8's sentinel re-forge already
 // proves minting FLOWS from the factory argument, so what remains to pin is WHICH value
 // production passes — this one.
+// PHASE 2a: the registry HUB_FORGE_BY_STANDARD is DELETED. The namespace's ONE home is now this
+// kit's own parserDescriptor.ini (hubNamespace=), read through the same resolveBundle the forger
+// uses — so this suite still pins WHICH VALUE PRODUCTION PASSES, which is the whole point, and it
+// reads it from production's source rather than restating it. A literal here would create the
+// second occurrence invariant I8 forbids.
 const HUB_NAMESPACE = require(
 	path.join(__dirname, '..', '..', '..', 'apps', 'graph-builder', 'apps', 'forger', 'forger'),
-).HUB_FORGE_BY_STANDARD.ceds.hubNamespace;
+).resolveBundle({ standard: 'ceds' }).hubNamespace;
 const DECLARATIONS_PATH = path.join(__dirname, '..', 'gates', 'hubGates.jsonc');
 const TEST_ARTIFACTS_DIR = path.join(__dirname, 'test-artifacts');
 const DIVERGENCE_REPORT_PATH = path.join(TEST_ARTIFACTS_DIR, 'cedsProseDivergence.json');

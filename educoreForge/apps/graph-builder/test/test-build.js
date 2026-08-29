@@ -69,9 +69,11 @@ const contentAddress = require('../../../lib/content-address/content-address')()
 // ACTUAL output through the pipeline (not a placeholder), so it needs both, hermetically (pure, no
 // docker/voyage/db).
 const realReplayBlock = require('../../../lib/replay/replay-block')();
-// Phase 2 of the hubReimplementation flipped the forger registry to cedsHubForge; the ground
-// truth here is the module the registry actually resolves (factory takes { hubVersion,
-// hubNamespace }; forgeHub is R7 callback-shaped).
+// Phase 2 of the hubReimplementation flipped the forger registry to cedsHubForge; Phase 2a of the
+// hub-kit-role migration DELETED that registry and moved the declaration into the kit. The ground
+// truth here is the module forges/ceds/parserDescriptor.ini names in hubModule= (factory takes
+// { hubVersion, hubNamespace }; forgeHub is R7 callback-shaped). It is required by path rather than
+// through the descriptor because THIS suite is the one that must fail if the two ever disagree.
 const cedsHubForge = require('../../../forges/ceds/lib/cedsHubForge');
 
 // The REAL standards-database + a throwaway sqlite file — used by ONE stage (MANIFEST PERSISTED)
@@ -1373,12 +1375,13 @@ const stageHubFoldedIntoBase = () => {
 	harness.section('HUB FOLDED INTO BASE — one [StandardBase] block carries base + hub, composed against the REAL editor');
 
 	// what forgeHub INDEPENDENTLY derives from the same synthetic base — the ground truth the folded
-	// block's hub set must reproduce (a base-only block would not). Factory args come from the
-	// registry row (the namespace's ONE home); forgeHub calls back synchronously.
+	// block's hub set must reproduce (a base-only block would not). Factory args come from the KIT'S
+	// OWN DESCRIPTOR (Phase 2a: the registry is deleted; hubNamespace= in forges/ceds/
+	// parserDescriptor.ini is the namespace's ONE home, invariant I8); forgeHub calls back synchronously.
 	let expected;
 	cedsHubForge({
 		hubVersion: '2',
-		hubNamespace: forgerModule.HUB_FORGE_BY_STANDARD.ceds.hubNamespace,
+		hubNamespace: forgerModule.resolveBundle({ standard: 'ceds' }).hubNamespace,
 	}).forgeHub(syntheticCedsBaseNodeEdges, (expectedError, expectedResult) => {
 		if (expectedError) {
 			throw new Error(`ground-truth forgeHub refused: ${expectedError}`);

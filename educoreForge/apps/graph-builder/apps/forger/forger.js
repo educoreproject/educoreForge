@@ -27,8 +27,9 @@
 //                                  hub from the base nodeEdges it just produced and FOLDS the hub
 //                                  nodes/edges INTO the nodeEdges it returns, so ONE block per
 //                                  standard already carries its hub. build.js reads recipe.hubs and
-//                                  sets it. A standard DECLARED a hub (deriveHub true) with no entry
-//                                  in HUB_FORGE_BY_STANDARD is REFUSED BY NAME (no silent default);
+//                                  sets it. A standard DECLARED a hub (deriveHub true) whose kit
+//                                  declares no hubModule= in its parserDescriptor.ini is REFUSED BY
+//                                  NAME (invariant I7; no silent default);
 //                                  a standard that is not a hub (the default) returns base-only.
 //       vectorize                  REQUIRED, boolean, NO DEFAULT. The SPEND KNOB: true forges
 //                                  with real Voyage embeddings and spends credit; false skips the
@@ -149,6 +150,12 @@ const resolveVoyageConfigPath = ({ paramPath, getConfig = process.global.getConf
 	return { configFilePath: value };
 };
 
+// the hub kit role's declaration contract (lib/hub-framework, Phase 2a). resolveBundle is a PURE
+// DESCRIPTOR READER, so the CONTRACT — key names, shapes, the trailing-slash rule — lives with the
+// hub framework rather than being re-typed here, exactly as the forge declaration contract lives
+// with the forge framework.
+const hubDeclarationContract = require(path.join(TREE_LIB, 'hub-framework', 'hubDeclarationContract'));
+
 // -----
 // resolveBundle — forges/<standard>/parserDescriptor.ini is the bundle's self-description
 // (discovery pattern, not a registry). Returns { error } or the resolved bundle facts.
@@ -268,6 +275,14 @@ const resolveBundle = ({ standard }) => {
 			? path.join(snapshotDir, `${descriptor.sourceFile}`)
 			: snapshotDir;
 	}
+	// HUB KEYS — validated HERE (at read time) so a malformed hub declaration is refused where the
+	// operator can see which file and which line, rather than deep inside a forge four minutes into a
+	// build. A kit declaring NO hub key is not a hub, which is legal and is the common case.
+	const hubDescriptorFault = hubDeclarationContract.validateHubDescriptor({ descriptor, descriptorPath });
+	if (hubDescriptorFault) {
+		return { error: `forger: ${hubDescriptorFault.message}` };
+	}
+
 	return {
 		bundleDir,
 		standardName: `${descriptor.standardName}`.trim(),
@@ -282,6 +297,15 @@ const resolveBundle = ({ standard }) => {
 		// integrity enforcement (exists / loads / exports validate — the RT-13.3 refusal) belongs
 		// to the roster composer, which is where a blank declared value is also refused by name.
 		roundTripValidatorFileName: descriptor.roundTripValidator,
+		// the HUB DECLARATION, verbatim — SAME IDIOM, one rule for the registration, not two
+		// (SPEC-hubKitRole-082826.md §4.2; this is the extension point forger.js:322 anticipated).
+		// undefined on a kit that is not a hub, which is edfi, sif and pesc260805 today. Enforcement
+		// of the RECIPE PAIRING — a recipe naming a hub whose kit declares no hubModule — belongs to
+		// foldHubIntoNodeEdges, the one place that knows the recipe said so (invariant I7).
+		// hubModulePath is resolved here because the bundle directory is what it is relative TO.
+		hubModuleFileName: descriptor.hubModule,
+		hubModulePath: descriptor.hubModule === undefined ? undefined : path.join(bundleDir, `${descriptor.hubModule}`),
+		hubNamespace: descriptor.hubNamespace,
 	};
 };
 
@@ -389,27 +413,46 @@ const resolveReportedVersion = ({ bundleVersion, requestedVersion } = {}) => {
 };
 
 // -----
-// HUB FORGE REGISTRY (registry-over-switch; polyArch2 §7) — the per-standard hub derivation,
-// keyed by the LOWERCASE standard token. A standard DECLARED a hub (spec.deriveHub) resolves its
-// row here; a standard declared a hub with NO registered derivation is REFUSED BY NAME in
-// foldHubIntoNodeEdges (no silent default — a hub we cannot derive is a recipe error, not a
-// zero-reference hub). ceds is the only hub derivation today; a second hub is one MORE ROW here,
-// never a branch to edit.
+// THE HUB FORGE REGISTRY IS DELETED (Phase 2a, SPEC-hubKitRole-082826.md §4.2, §4.8(1); under
+// ruling R-HUB-1). `HUB_FORGE_BY_STANDARD` was a shared-code table carrying one row — a require()
+// into forges/ceds/lib/ and that hub's namespace literal — which made the forger the registrar of
+// a fact the kit already knows about itself. THE KIT IS ITS OWN REGISTRATION, exactly as it is for
+// entryModule and roundTripValidator: forges/<std>/parserDescriptor.ini now declares
 //
-// Each row is { hubForgeFactory, hubNamespace } (hubReimplementation Phase 2):
-//   hubForgeFactory  ({ hubVersion, hubNamespace }) -> { forgeHub } — forgeHub is R7
-//                    error-first callback-shaped: forgeHub(baseNodeEdges, callback) with
-//                    callback(errString, { nodes, edges, divergenceReport, skipReport, counts })
-//   hubNamespace     the ONE DECLARED HOME of this hub's URI root (SPEC §2). Every card uri and
-//                    the HubDefinition.namespace are minted FROM this value, which flows through
-//                    the factory argument — the module holds no literal, and neither may any
-//                    other site. A second occurrence of this URL anywhere in the tree is a defect.
-const HUB_FORGE_BY_STANDARD = {
-	ceds: {
-		hubForgeFactory: require(path.join(FORGES_DIR, 'ceds', 'lib', 'cedsHubForge')),
-		hubNamespace: 'https://w3id.org/EDUcore/CEDStandards/hub/',
-	},
-};
+//     hubModule=lib/cedsHubForge.js     the kit-relative hub module
+//     hubNamespace=https://…/hub/       the ONE declared home of this hub's URI root (I8)
+//
+// and resolveBundle reads them the same declared-not-sniffed way it reads roundTripValidator.
+// A SECOND HUB IS NOW A SECOND DESCRIPTOR, not a row in shared code — which is the whole point.
+//
+// REFUSAL SEMANTICS ARE PRESERVED EXACTLY, and that is the invariant this deletion had to keep:
+//   * recipe DECLARES a hub, kit declares NO hubModule  -> REFUSED BY NAME in
+//     foldHubIntoNodeEdges (invariant I7). No silent default — a hub we cannot derive is a recipe
+//     error, never a zero-reference hub.
+//   * kit declares hubModule, recipe does NOT name it   -> no hub derived. build.js simply never
+//     sets deriveHub, so this function is never called. Capability is not activation (§4.2).
+// The hub module's own factory contract is unchanged: hubForgeFactory({ hubVersion, hubNamespace })
+// -> { forgeHub }, where forgeHub(baseNodeEdges, callback) is R7 error-first with
+// callback(errString, { nodes, edges, divergenceReport, skipReport, counts }).
+
+// declaredHubStandardList — every kit whose descriptor declares a hubModule, discovered the same
+// way resolveBundle discovers kits at all. This exists ONLY to make the I7 refusal name the kits
+// that DO declare a hub, which is what the registry's `Object.keys(...)` used to do for free. It is
+// never a lookup and never gates anything: a fault reading any single descriptor is skipped here so
+// that composing an error message can never itself become the error.
+const declaredHubStandardList = () =>
+	(fs.existsSync(FORGES_DIR)
+		? fs
+				.readdirSync(FORGES_DIR, { withFileTypes: true })
+				.filter((oneEntry) => oneEntry.isDirectory())
+				.map((oneEntry) => oneEntry.name)
+		: []
+	)
+		.filter((oneName) => {
+			const oneBundle = resolveBundle({ standard: oneName });
+			return !oneBundle.error && oneBundle.hubModuleFileName !== undefined;
+		})
+		.sort();
 
 // -----
 // HUB_EMBED_BATCH_SIZE — voyage batch ceiling headroom, the same bound the forge bundles use for
@@ -554,16 +597,50 @@ const foldHubIntoNodeEdges = (
 	},
 	callback,
 ) => {
-	const hubForgeRow = HUB_FORGE_BY_STANDARD[String(standard).toLowerCase()];
-	if (!hubForgeRow) {
-		const known = Object.keys(HUB_FORGE_BY_STANDARD).join(', ') || '(none)';
+	// DISCOVERY, not a registry (Phase 2a). The kit's own parserDescriptor.ini declares whether it
+	// CAN be a hub; arriving here at all means the RECIPE said it IS one. Both are required, and the
+	// refusal below is invariant I7 — byte-for-byte the same semantics the deleted
+	// HUB_FORGE_BY_STANDARD lookup had, sourced from the kit instead of from shared code.
+	const bundle = resolveBundle({ standard });
+	if (bundle.error) {
+		callback(bundle.error);
+		return;
+	}
+	if (bundle.hubModuleFileName === undefined) {
+		// name the OTHER kits that DO declare a hub, the way the registry used to name its rows — a
+		// refusal that says only "no" makes the operator go looking; one that says who does is a map.
+		const hubDeclaringStandardList = declaredHubStandardList();
 		callback(
-			`forger: standard '${standard}' is declared a hub but has no registered hub forge — ` +
-				`known hub forges: ${known}. A hub declared for a standard with no derivation is a ` +
-				`recipe error; nothing was substituted.`,
+			`forger: standard '${standard}' is declared a hub by the recipe but its kit declares no ` +
+				`hubModule= in ${path.join(bundle.bundleDir, 'parserDescriptor.ini')} — kits that DO ` +
+				`declare a hub: ${hubDeclaringStandardList.join(', ') || '(none)'}. A hub declared for a ` +
+				`standard with no derivation is a recipe error; nothing was substituted.`,
 		);
 		return;
 	}
+	// the contract already refused a half-declared hub at resolveBundle, so hubNamespace is present
+	// here by construction; requiring the module is the remaining fault, and it is contained at this
+	// one boundary and routed error-first rather than thrown through the callback layer.
+	let hubForgeFactory;
+	try {
+		hubForgeFactory = require(bundle.hubModulePath);
+	} catch (requireError) {
+		callback(
+			`forger: standard '${standard}' declares hubModule='${bundle.hubModuleFileName}' but it ` +
+				`could not be loaded from ${bundle.hubModulePath}: ${requireError.message}`,
+		);
+		return;
+	}
+	if (typeof hubForgeFactory !== 'function') {
+		callback(
+			`forger: standard '${standard}' declares hubModule='${bundle.hubModuleFileName}' but ` +
+				`${bundle.hubModulePath} does not export a factory function (got ` +
+				`${typeof hubForgeFactory}); the hub contract is ` +
+				`({ hubVersion, hubNamespace }) -> { forgeHub }.`,
+		);
+		return;
+	}
+	const hubForgeRow = { hubForgeFactory, hubNamespace: bundle.hubNamespace };
 
 	const versions = resolveReportedVersion({ bundleVersion, requestedVersion });
 	if (versions.error) {
@@ -969,7 +1046,9 @@ module.exports.resolveBundle = resolveBundle;
 module.exports.resolveVoyageConfigPath = resolveVoyageConfigPath;
 module.exports.resolveReportedVersion = resolveReportedVersion;
 module.exports.getVersionStamp = getVersionStamp;
-// the hub-fold seam and its registry, exported so the fold logic is provable WITHOUT running a
-// whole forge (test-forger drives foldHubIntoNodeEdges over a synthetic engine-shape base).
+// the hub-fold seam, exported so the fold logic is provable WITHOUT running a whole forge
+// (test-forger drives foldHubIntoNodeEdges over a synthetic engine-shape base). HUB_FORGE_BY_STANDARD
+// is NOT exported because it no longer exists — Phase 2a replaced it with descriptor discovery, and
+// the facts it used to carry are read from the resolved bundle (resolveBundle -> hubModuleFileName,
+// hubNamespace), which is exported above and is what the migrated suites read.
 module.exports.foldHubIntoNodeEdges = foldHubIntoNodeEdges;
-module.exports.HUB_FORGE_BY_STANDARD = HUB_FORGE_BY_STANDARD;
