@@ -1550,6 +1550,105 @@ harness.ok(
 	harness.ok(`  and it hands back no nodeEdges`, hublessKitOutcome.result === undefined, JSON.stringify(hublessKitOutcome.result));
 });
 
+// THE TWO REFUSALS DISCOVERY INTRODUCED, gated (review item 1, FROZEN_JOURNEY 2026-08-29). Under the
+// deleted registry the factory was a `require` evaluated ONCE at module load, so "the module does not
+// load" and "the module is not a factory" could only ever be a startup crash — there was nothing to
+// refuse. Discovery moves that `require` to the moment the seam is resolved, which creates two NEW
+// failure modes that are now operator-reachable through a one-line edit to a descriptor. An
+// unexercised refusal is an unproven refusal, so both are driven here.
+//
+// FIXTURE: the same withTempBundle discipline as above — a real bundle directory under the real
+// forges/ tree (resolveBundle computes its own path from FORGES_DIR and offers no seam), removed on
+// every path including a throw, and named zztestonly* so a leftover is unmistakable. Each case uses a
+// DISTINCT bundle name so no two share a require-cache entry.
+const withTempHubBundle = ({ bundleName, hubModuleRelativePath, hubModuleText }) => {
+	const bundleDir = path.join(FORGES_DIR_FOR_TEST, bundleName);
+	fs.rmSync(bundleDir, { recursive: true, force: true });
+	fs.mkdirSync(bundleDir, { recursive: true });
+	fs.writeFileSync(
+		path.join(bundleDir, 'parserDescriptor.ini'),
+		`[parserDescriptor]\nstandardName=ZZ\nentryModule=forgeThing.js\n` +
+			`hubModule=${hubModuleRelativePath}\nhubNamespace=https://example.org/zztestonly/hub/\n`,
+	);
+	if (hubModuleText !== undefined) {
+		const modulePath = path.join(bundleDir, hubModuleRelativePath);
+		fs.mkdirSync(path.dirname(modulePath), { recursive: true });
+		fs.writeFileSync(modulePath, hubModuleText);
+	}
+	let answer;
+	try {
+		answer = foldOutcome({
+			standard: bundleName,
+			bundleVersion: '1.0.0',
+			requestedVersion: '1.0.0',
+			baseNodeEdges: engineShapeCedsBase,
+		});
+	} finally {
+		fs.rmSync(bundleDir, { recursive: true, force: true });
+	}
+	return answer;
+};
+
+// (1) hubModule names a file that IS NOT THERE
+const absentModuleOutcome = withTempHubBundle({
+	bundleName: 'zztestonlyhubabsentmodule',
+	hubModuleRelativePath: 'lib/thisModuleDoesNotExist.js',
+	hubModuleText: undefined, // deliberately not written
+});
+harness.match(
+	'a kit whose hubModule names a file that DOES NOT LOAD is refused, naming the standard, the declared value and the resolved path',
+	absentModuleOutcome.error,
+	/standard 'zztestonlyhubabsentmodule' declares hubModule='lib\/thisModuleDoesNotExist\.js' but it could not be loaded from .*zztestonlyhubabsentmodule\/lib\/thisModuleDoesNotExist\.js/,
+);
+harness.ok(
+	'  and it carries the loader\'s own reason rather than swallowing it',
+	/Cannot find module/.test(absentModuleOutcome.error || ''),
+	absentModuleOutcome.error,
+);
+harness.ok('  and it hands back no nodeEdges', absentModuleOutcome.result === undefined, JSON.stringify(absentModuleOutcome.result));
+
+// (1b) the same refusal covers a module that EXISTS but is broken — "does not load" is not only "absent"
+const brokenModuleOutcome = withTempHubBundle({
+	bundleName: 'zztestonlyhubbrokenmodule',
+	hubModuleRelativePath: 'lib/brokenHub.js',
+	hubModuleText: "'use strict';\nthis is not javascript(((\n",
+});
+harness.match(
+	'a hubModule that EXISTS but throws on load is refused by the SAME named refusal (does-not-load is not only does-not-exist)',
+	brokenModuleOutcome.error,
+	/declares hubModule='lib\/brokenHub\.js' but it could not be loaded from/,
+);
+harness.ok('  and it hands back no nodeEdges', brokenModuleOutcome.result === undefined, JSON.stringify(brokenModuleOutcome.result));
+
+// (2) hubModule LOADS but is not a factory
+const notAFactoryOutcome = withTempHubBundle({
+	bundleName: 'zztestonlyhubnotafactory',
+	hubModuleRelativePath: 'lib/notAFactory.js',
+	hubModuleText: "'use strict';\nmodule.exports = { forgeHub: 'not a function either' };\n",
+});
+harness.match(
+	'a hubModule that LOADS but does not export a FACTORY FUNCTION is refused by name, saying what it got and stating the contract',
+	notAFactoryOutcome.error,
+	/does not export a factory function \(got object\); the hub contract is \(\{ hubVersion, hubNamespace \}\) -> \{ forgeHub \}/,
+);
+harness.ok('  and it hands back no nodeEdges', notAFactoryOutcome.result === undefined, JSON.stringify(notAFactoryOutcome.result));
+
+// CONTROL — the SAME fixture machinery with a WELL-FORMED factory gets PAST both refusals. Without
+// this the three cases above would also pass against a seam that refused everything.
+const goodFactoryOutcome = withTempHubBundle({
+	bundleName: 'zztestonlyhubgoodfactory',
+	hubModuleRelativePath: 'lib/goodHub.js',
+	hubModuleText:
+		"'use strict';\nmodule.exports = ({ hubVersion, hubNamespace }) => ({\n" +
+		"\tforgeHub: (baseNodeEdges, callback) => callback('zztestonly: reached the module', undefined),\n" +
+		"});\n",
+});
+harness.match(
+	'CONTROL: a WELL-FORMED hubModule gets PAST both new refusals and reaches the module itself (the refusals are specific, not a blanket)',
+	goodFactoryOutcome.error,
+	/forgeHub for 'zztestonlyhubgoodfactory' failed: zztestonly: reached the module/,
+);
+
 // THE OTHER HALF OF THE SEPARATION, gated so the case 'lif' used to cover is not lost: a standard
 // with no kit at all is refused at bundle resolution, naming the descriptor path it looked for.
 const noSuchKitOutcome = foldOutcome({
