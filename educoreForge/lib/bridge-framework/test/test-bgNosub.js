@@ -82,6 +82,53 @@ const BASE_TAG = 'preBridgeFramework-081626';
 // Dropped, and only it: the load-bearing half — that NOTHING outside vocabulary.js and its tests appears — is
 // what the gate is for and is untouched. The twin still proves it by appending to vocabulary-definitions.js.
 const POST_D1_BASE_TAG = 'derivedBridgeD1-081726';
+// ⟪A THIRD BASELINE — RULING P1-R11, BRIEF-SEAM-reanchorBgSeamUntouched.md, applied 2026-08-29 by
+// STERLING_PEAK during hub kit role migration Phase 0.E4⟫
+//
+// THE CAUSE, NAMED IN THE GATE'S OWN DATA rather than only in a DEVLOG, because a successor must be
+// able to see WHY the baseline moved from the artifact that moved:
+//
+//   47f8962  "P0b: the PESC forge hybrid searchText composition (TQ 're-embed authorized')"
+//
+// That commit edited forges/pesc260805/forgePesc260805.js by 98 insertions / 3 deletions. The path
+// is inside this gate's own glob `forges/*/forge*.js`, and the gate measured from
+// preBridgeFramework-081626, which PREDATES the entire PESC re-embed. So the moment TQ authorised
+// the re-embed, seamDiffEmpty could not stay green. It was red from 2026-08-17 until this move, and
+// the redness was nobody's error but the supervisor's for accepting P0b on "suites green" without
+// asking WHICH suites — a green claim that does not name its scope is not a green claim.
+//
+// A SECOND, LATER CAUSE, also authorised: the Phase 0.E3 edit to
+// lib/forge-framework/test/acceptance/expectedBlockIds.json (PLAN-hubKitRoleMigration-082826.md),
+// which filled the three null measuredPreMigration ids with MEASURED values. That file sits inside
+// lib/forge-framework/, so it moved conjunct (iii) as well as seamDiffEmpty. Both edits are inside
+// the new tag; neither is inside the old one.
+//
+// THE BASELINE MOVES; THE ALLOWED-PATH LIST IS NEVER WIDENED. SEAM_PATH_LIST below is byte-identical
+// to what it was. After the move an append to any seam file is red again, which is exactly what the
+// twins still demonstrate — and both were re-observed red against THIS tag before the move was
+// committed. A re-anchor without a fresh red observation is a gate nobody has proven still works.
+//
+// ONLY TWO CONJUNCTS MOVE, AND THE OTHER TWO DELIBERATELY DO NOT — a baseline that moves without
+// needing to is a baseline that has stopped meaning anything (the same principle the POST_D1 note
+// above states):
+//   * seamDiffEmpty  MOVES — it is the conjunct that expired, and it is a "nothing has moved since"
+//                    assertion, which is meaningless against a base that predates authorised moves.
+//   * (iii)          MOVES — same reason, for lib/forge-framework/.
+//   * (i)            DOES NOT MOVE. It reads interfaces.js AT THE TAG and asserts BRIDGE_MODULE_SHAPE
+//                    was present there and is gone at HEAD. That is a claim about the B2 migration
+//                    window. Moving its base to a commit where the shape is ALREADY gone would make
+//                    the assertion vacuously false and DESTROY a true, still-load-bearing check.
+//   * (ii)           DOES NOT MOVE. It has its own baseline, POST_D1_BASE_TAG, for its own reason.
+//
+// AND ONE CLAUSE OF (iii) IS DROPPED, FOR THE IDENTICAL REASON THE vocabulary.js CLAUSE WAS DROPPED
+// ABOVE. (iii) used to require that test/test-gSeamUntouched.js APPEAR in the diff — sensible across
+// the pre-bridge window, where that ruled edit demonstrably had happened. From the new baseline that
+// edit is HISTORY and is inside the base, so the clause would fail on an EMPTY diff, i.e. on the
+// cleanest possible state. Dropped, and only it. The load-bearing half — that NOTHING under
+// lib/forge-framework/ has moved since the anchor — is what the gate is for, is STRICTER than what
+// it replaced (an empty list admits less than a one-element list), and is untouched. The twin still
+// proves it by appending to lib/forge-framework/refuse.js.
+const PHASE0_ANCHOR_TAG = 'postPescReembed-082926';
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');
@@ -190,7 +237,7 @@ const SEAM_PATH_LIST = Object.freeze([
 	':!lib/forge-framework/test/test-gSeamUntouched.js', // the ONE ruled test edit (RULING 17:10) — its own conjunct below
 ]);
 const treeRootInside = (workTreeTopLevel) => (workTreeTopLevel === TREE_ROOT ? TREE_ROOT : path.join(workTreeTopLevel, GIT_PREFIX));
-const gitDiffStat = ({ workTreePath, pathList }) => spawnSync('git', ['diff', '--stat', BASE_TAG, '--'].concat(pathList), { cwd: workTreePath, encoding: 'utf8' });
+const gitDiffStat = ({ workTreePath, pathList }) => spawnSync('git', ['diff', '--stat', PHASE0_ANCHOR_TAG, '--'].concat(pathList), { cwd: workTreePath, encoding: 'utf8' });
 const gitShowAtTag = (relativePath) => String(spawnSync('git', ['show', `${BASE_TAG}:${GIT_PREFIX}${relativePath}`], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '');
 const loadInterfacesAtTag = () => {
 	const scratchDir = fs.mkdtempSync(path.join(os.tmpdir(), 'interfacesAtTag-'));
@@ -200,10 +247,10 @@ const loadInterfacesAtTag = () => {
 };
 let scratchWorkTreePath = null;
 const seamConjunctList = [
-	pureConjunct({ conjunctId: 'seamDiffEmpty', title: `git diff --stat ${BASE_TAG} -- <build.js, forger/, replay/, replay-manager/, forge entry/declaration/hooks files, lib/forge-framework/ minus the ruled test edit> is EMPTY`, twinNameList: ['touchBuildJsInScratchWorktree'], judge: (scenario) => { const workTreePath = scenario.workTreePath ? treeRootInside(scenario.workTreePath) : TREE_ROOT; const run = gitDiffStat({ workTreePath, pathList: SEAM_PATH_LIST }); const statText = String(run.stdout || '').trim(); return { pass: run.status === 0 && statText === '', detail: run.status !== 0 ? `git diff failed: ${run.stderr}` : statText === '' ? 'empty diff — the seam is untouched' : `NON-EMPTY:\n${statText}` }; } }),
+	pureConjunct({ conjunctId: 'seamDiffEmpty', title: `git diff --stat ${PHASE0_ANCHOR_TAG} -- <build.js, forger/, replay/, replay-manager/, forge entry/declaration/hooks files, lib/forge-framework/ minus the ruled test edit> is EMPTY`, twinNameList: ['touchBuildJsInScratchWorktree'], judge: (scenario) => { const workTreePath = scenario.workTreePath ? treeRootInside(scenario.workTreePath) : TREE_ROOT; const run = gitDiffStat({ workTreePath, pathList: SEAM_PATH_LIST }); const statText = String(run.stdout || '').trim(); return { pass: run.status === 0 && statText === '', detail: run.status !== 0 ? `git diff failed: ${run.stderr}` : statText === '' ? 'empty diff — the seam is untouched' : `NON-EMPTY:\n${statText}` }; } }),
 	pureConjunct({ conjunctId: 'i_interfacesOnlyTheTwoBlocks', title: '(i) interfaces.js changed ONLY in the two declaration blocks: every COMPONENT_SHAPES member other than bridgeMaker and MANIFEST_HANDLE_SHAPE byte-equal to the tag; bridgeMaker.run arity/argKeys equal; resultKeys null → the 13-key list; BRIDGE_MODULE_SHAPE gone', twinNameList: ['argKeysAltered'], judge: (scenario) => { const atTag = loadInterfacesAtTag(); const atHead = scenario.interfacesAtHeadOverride === undefined ? require(path.join(TREE_ROOT, 'apps', 'graph-builder', 'interfaces.js')) : scenario.interfacesAtHeadOverride; const otherEqual = Object.keys(atTag.COMPONENT_SHAPES).filter((oneName) => oneName !== 'bridgeMaker').every((oneName) => JSON.stringify(atTag.COMPONENT_SHAPES[oneName]) === JSON.stringify(atHead.COMPONENT_SHAPES[oneName])); const manifestEqual = JSON.stringify(atTag.MANIFEST_HANDLE_SHAPE) === JSON.stringify(atHead.MANIFEST_HANDLE_SHAPE); const callEqual = atTag.COMPONENT_SHAPES.bridgeMaker.run.arity === atHead.COMPONENT_SHAPES.bridgeMaker.run.arity && JSON.stringify(atTag.COMPONENT_SHAPES.bridgeMaker.run.argKeys) === JSON.stringify(atHead.COMPONENT_SHAPES.bridgeMaker.run.argKeys); const resultKeysMoved = atTag.COMPONENT_SHAPES.bridgeMaker.run.resultKeys === null && Array.isArray(atHead.COMPONENT_SHAPES.bridgeMaker.run.resultKeys) && atHead.COMPONENT_SHAPES.bridgeMaker.run.resultKeys.length === 13; const shapeGone = atTag.BRIDGE_MODULE_SHAPE !== undefined && atHead.BRIDGE_MODULE_SHAPE === undefined; return { pass: otherEqual && manifestEqual && callEqual && resultKeysMoved && shapeGone, detail: `others ${otherEqual}, manifest ${manifestEqual}, call ${callEqual}, resultKeys ${resultKeysMoved}, BRIDGE_MODULE_SHAPE gone ${shapeGone}` }; } }),
 	pureConjunct({ conjunctId: 'ii_vocabularyDiffOnlyVocabularyAndTests', title: '(ii) the lib/vocabulary/ diff FROM THE D1 COMMIT touches vocabulary.js and its test/ files only (baseline moved by ruling, allowed-path list NOT widened)', twinNameList: ['touchVocabularyDefinitionsInScratchWorktree'], judge: (scenario) => { const workTreePath = scenario.workTreePath ? treeRootInside(scenario.workTreePath) : TREE_ROOT; const run = spawnSync('git', ['diff', '--name-only', POST_D1_BASE_TAG, '--', 'lib/vocabulary/'], { cwd: workTreePath, encoding: 'utf8' }); const nameList = String(run.stdout || '').trim().split('\n').filter(Boolean).map((oneName) => oneName.replace(GIT_PREFIX, '')); const outside = nameList.filter((oneName) => oneName !== 'lib/vocabulary/vocabulary.js' && !/^lib\/vocabulary\/test\//.test(oneName)); return { pass: run.status === 0 && outside.length === 0, detail: `changed [${nameList.join(', ')}]; outside [${outside.join(', ')}]` }; } }),
-	pureConjunct({ conjunctId: 'iii_forgeFrameworkDiffIsExactlyTheRuledTestEdit', title: '(iii) the lib/forge-framework/ diff from the tag is EXACTLY test/test-gSeamUntouched.js (RULING SABLE_RIVER 17:10) and nothing else', twinNameList: ['touchForgeFrameworkModuleInScratchWorktree'], judge: (scenario) => { const workTreePath = scenario.workTreePath ? treeRootInside(scenario.workTreePath) : TREE_ROOT; const run = spawnSync('git', ['diff', '--name-only', BASE_TAG, '--', 'lib/forge-framework/'], { cwd: workTreePath, encoding: 'utf8' }); const nameList = String(run.stdout || '').trim().split('\n').filter(Boolean).map((oneName) => oneName.replace(GIT_PREFIX, '')); return { pass: run.status === 0 && JSON.stringify(nameList) === JSON.stringify(['lib/forge-framework/test/test-gSeamUntouched.js']), detail: `changed [${nameList.join(', ')}]` }; } }),
+	pureConjunct({ conjunctId: 'iii_forgeFrameworkDiffIsExactlyTheRuledTestEdit', title: `(iii) the lib/forge-framework/ diff from ${PHASE0_ANCHOR_TAG} is EMPTY — the two ruled edits (test/test-gSeamUntouched.js, RULING SABLE_RIVER 17:10; test/acceptance/expectedBlockIds.json, Phase 0.E3) are INSIDE the anchor, so nothing under lib/forge-framework/ may have moved since it`, twinNameList: ['touchForgeFrameworkModuleInScratchWorktree'], judge: (scenario) => { const workTreePath = scenario.workTreePath ? treeRootInside(scenario.workTreePath) : TREE_ROOT; const run = spawnSync('git', ['diff', '--name-only', PHASE0_ANCHOR_TAG, '--', 'lib/forge-framework/'], { cwd: workTreePath, encoding: 'utf8' }); const nameList = String(run.stdout || '').trim().split('\n').filter(Boolean).map((oneName) => oneName.replace(GIT_PREFIX, '')); return { pass: run.status === 0 && nameList.length === 0, detail: nameList.length === 0 ? 'empty diff — lib/forge-framework/ is untouched since the anchor' : `changed [${nameList.join(', ')}]` }; } }),
 ];
 const ensureScratchWorkTree = () => {
 	if (!scratchWorkTreePath) {
