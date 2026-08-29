@@ -670,14 +670,18 @@ const HUB_DECOMPOSITION_EDGE_TYPES = {
 const IN_HUB_EDGE_TYPE = 'IN_HUB';
 // hubEdgeType(hubName, slot) -> 'HAS_<HUBNAME>_<SLOT>' (the spec's hub-parameterized concrete name).
 const hubEdgeType = (hubName, slot) => `HAS_${String(hubName).toUpperCase()}_${slot}`;
-// the concrete CEDS instantiation (hubName 'CEDS'); equals HUB_DECOMPOSITION_SLOTS.map(hubEdgeType('CEDS',...)).
-const CEDS_HUB_EDGE_TYPES = {
-	DOMAIN: 'HAS_CEDS_DOMAIN',
-	PROPERTY: 'HAS_CEDS_PROPERTY',
-	RANGE: 'HAS_CEDS_RANGE',
-	VALUE: 'HAS_CEDS_VALUE',
-	QUALIFIER: 'HAS_CEDS_QUALIFIER',
-};
+// CEDS_HUB_EDGE_TYPES WAS HERE AND IS DELETED (Phase 2c, RULING FJ-P2-3; SPEC §4.8(2)).
+// It was the concrete CEDS instantiation of the five slots, and it equalled
+// HUB_DECOMPOSITION_SLOTS.map(slot => hubEdgeType('CEDS', slot)) on every slot — verified by CALLING
+// both, twice, once by COPPER_HORIZON (STANDDOWN-P1 A.1) and again in Phase 2c rather than cited.
+// The generator above now serves every reader, so a per-hub constant here was a second home for a
+// value the generator already produces, and R7 puts standard-specific material in the forges.
+//
+// ITS DELETION IS BYTE-NEUTRAL and the CEDS re-forge is what proves it: the five edge-type strings
+// HAS_CEDS_DOMAIN / _PROPERTY / _RANGE / _VALUE / _QUALIFIER are unchanged and still stamped on
+// ~94,602 edges each — the NAMES did not go away, only this constant did. That distinction is also
+// why RULING FJ-P2-1 KEPT their definitions in vocabulary-definitions.js and WITHDREW SPEC §4.8(3):
+// a definition describing a live thing is documentation, not dead weight.
 
 // addressSignature CANONICAL FIELD ORDER (§8 formula). The deterministic stable hash is computed over
 // EXACTLY these fields in THIS order; 'range' = rangeOptionSetId (enumerated) ELSE rangeClassId (object/
@@ -891,7 +895,6 @@ const vocabulary = {
 	HUB_DECOMPOSITION_EDGE_TYPES,
 	IN_HUB_EDGE_TYPE,
 	hubEdgeType,
-	CEDS_HUB_EDGE_TYPES,
 	ADDRESS_SIGNATURE_FIELD_ORDER,
 	// structural property names (Wave-2 items 5/6)
 	STRUCTURAL_PROPERTIES,

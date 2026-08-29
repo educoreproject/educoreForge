@@ -93,7 +93,8 @@ const perStandardLabelFor = (role) => {
 // invariant I12 asserts must be EQUAL into a value that merely HAPPENED to be equal:
 //   * _source on every node            — stamped by the kit from forgeDeclaration.standardSource
 //   * hubName on every structural node  — stamped below (WHITEPAPER §8; forgeCeds.js:85)
-//   * hubName on the hub's own cards    — cedsHubForge.js:132, outside this file
+//   * hubName on the hub's own cards    — lib/cedsHubDeclaration.js, outside this file (Phase 2c);
+//     the hub framework now ASSERTS it equals this declaration's standardSource by name (I12)
 //   * the searchText ladder's standardName / owningName default — the SPEC §11.5 BYTE MANDATE,
 //     whose own phrasing is `owningName || standardSource`, not `|| 'CEDS'`
 // Raised by the independent Phase 1 review (S3): a triply-declared value turns an I12 assertion into

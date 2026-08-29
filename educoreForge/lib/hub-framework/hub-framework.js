@@ -80,7 +80,8 @@ const {
 	HUB_REFERENCE_PROPERTIES: HR,
 	HUB_DEFINITION_PROPERTIES: HD,
 	// the GENERIC generator, not a per-hub constant: hubEdgeType(hubName, slot) -> HAS_<HUB>_<SLOT>.
-	// Byte-neutral against the deleted CEDS_HUB_EDGE_TYPES on all five slots, re-verified in Phase 2c
+	// Byte-neutral against the CEDS_HUB_EDGE_TYPES constant it replaced (deleted from vocabulary.js in
+	// the same commit, RULING FJ-P2-3) on all five slots, re-verified in Phase 2c
 	// by calling both rather than by citing the earlier verification (SPEC §3.4, STANDDOWN-P1 A.1).
 	hubEdgeType,
 	HUB_DECOMPOSITION_SLOTS,
@@ -144,10 +145,10 @@ const hasProse = (scalar) =>
 //     hubNamespace + hubVersion + '/' + addressSignature. NO _id (the replay engine stamps it).
 // @property {Array<{type:string, fromRef:Object, toRef:Object, properties:Object}>} edges —
 //     HAS_CEDS_* decomposition + IN_HUB, sorted by (type, from, to).
-// @property {Array<{role:string, cedsId:string, name:string, description:string, definition:string}>}
+// @property {Array<{role:string, [sourceIdFieldName]:string, name:string, description:string, definition:string}>}
 //     divergenceReport — one row per source node whose description and definition both carry
 //     prose (hasProse) and differ (§5). Explicitly [] when there are none.
-// @property {Array<{reason:string, role:string, cedsId:string, propertyKey:string, name:string}>}
+// @property {Array<{reason:string, role:string, [sourceIdFieldName]:string, propertyKey:string, name:string}>}
 //     skipReport — one row per DmeProperty skipped BY NAME (S-3: zeroDeclaredDomains — no
 //     declared domain means no tuple). Explicitly [] when nothing was skipped.
 // @property {Object} counts — { hubDefinition, propertyTier, valueTier, qualified,
@@ -208,10 +209,22 @@ const moduleFunction =
 		// declarations of the same value with NO cross-check between them, in two different files. The
 		// hub declaration is now the only place hubName is written, and the framework refuses a
 		// mismatch against the forge declaration when one is supplied to compare against.
-		if (
-			forgeStandardSource !== undefined &&
-			String(forgeStandardSource) !== String(hubName)
-		) {
+		// ⚠ ABSENT forgeStandardSource IS REFUSED, NOT SKIPPED (RULING on the 2c review). The first cut of
+		// this check read `forgeStandardSource !== undefined && …`, which made I12 A BYPASS BY OMISSION:
+		// a kit that simply forgot to pass it got NO cross-check and no complaint, and the invariant
+		// would have reported itself satisfied by never running. Every kit passes it — hubCeds.js reads
+		// it from the forge declaration — so absence is a wiring fault, not an optional case.
+		if (typeof forgeStandardSource !== 'string' || forgeStandardSource.trim() === '') {
+			throw refuse.byName({
+				moduleName,
+				what: `I12 CANNOT BE CHECKED — forgeStandardSource is ${forgeStandardSource === undefined ? 'absent' : JSON.stringify(forgeStandardSource)}`,
+				where:
+					`the kit must pass forgeDeclaration.standardSource so hubName can be cross-checked ` +
+					`against it. An unrunnable invariant is not a satisfied one, so this is refused rather ` +
+					`than skipped.`,
+			});
+		}
+		if (String(forgeStandardSource) !== String(hubName)) {
 			throw refuse.byName({
 				moduleName,
 				what:
@@ -346,7 +359,11 @@ const moduleFunction =
 			const baseEdges = baseNodeEdges.edges;
 
 			const derivationFaults = [];
-			const refuse = (message) => {
+			// NAMED derivationFault, not `refuse` — it USED to shadow the imported refuse module for the
+			// whole of forgeHub, so `refuse.byName` inside this scope would have thrown TypeError rather
+			// than composing a refusal. Nothing called it that way, which is exactly why the shadow was
+			// worth removing before something did.
+			const recordDerivationFault = (message) => {
 				derivationFaults.push(message);
 			};
 
@@ -433,7 +450,7 @@ const moduleFunction =
 				valueNode,
 			}) => {
 				if (!Array.isArray(qualifierPairs)) {
-					refuse(
+					recordDerivationFault(
 						`${moduleName}: REFUSED — emitReference requires qualifierPairs as an ` +
 							`array (property '${propertyKey}', domain '${domainId}'); an absent ` +
 							`list must be stated as [], never implied.`,
@@ -442,21 +459,21 @@ const moduleFunction =
 				}
 				const propertyName = v1(propertyNode.properties[baseFieldNames.name]);
 				if (!hasProse(canonicalKey)) {
-					refuse(
+					recordDerivationFault(
 						`${moduleName}: REFUSED — ${referenceTier}-tier card for property ` +
 							`'${propertyKey}' in domain '${domainId}' has no canonicalKey.`,
 					);
 					return;
 				}
 				if (!classNode) {
-					refuse(
+					recordDerivationFault(
 						`${moduleName}: REFUSED — domainId '${domainId}' resolves to no ` +
 							`${DME_ROLES.CLASS} node (property '${propertyKey}').`,
 					);
 					return;
 				}
 				if (!hasProse(propertyName)) {
-					refuse(
+					recordDerivationFault(
 						`${moduleName}: REFUSED — property '${propertyKey}' has no name ` +
 							`(domain '${domainId}').`,
 					);
@@ -464,7 +481,7 @@ const moduleFunction =
 				}
 				const valueName = valueNode ? v1(valueNode.properties[baseFieldNames.name]) : undefined;
 				if (valueNode && !hasProse(valueName)) {
-					refuse(
+					recordDerivationFault(
 						`${moduleName}: REFUSED — value '${valueKey}' has no name ` +
 							`(property '${propertyKey}', domain '${domainId}').`,
 					);
@@ -474,7 +491,7 @@ const moduleFunction =
 					(onePair) => !hasProse(onePair.qualifierName),
 				);
 				if (namelessQualifier) {
-					refuse(
+					recordDerivationFault(
 						`${moduleName}: REFUSED — qualifier '${namelessQualifier.qualifierKey}' has ` +
 							`no name (property '${propertyKey}', domain '${domainId}'); qualifierNames ` +
 							`must stay positionally parallel to qualifierKeys.`,
@@ -630,7 +647,7 @@ const moduleFunction =
 				const provenanceUriOf = ({ sourceNode, sourceRoleLabel }) => {
 					const sourceUri = v1(sourceNode.properties[baseFieldNames.uri]);
 					if (!hasProse(sourceUri)) {
-						refuse(
+						recordDerivationFault(
 							`${moduleName}: REFUSED — ${sourceRoleLabel} node ` +
 								`'${sourceNode.stableId}' has no uri (property '${propertyKey}', ` +
 								`domain '${domainId}'); §1.4 provenance cannot be stamped.`,
@@ -842,7 +859,12 @@ const moduleFunction =
 						return; // qualifier must be enumerated to supply qualifier values
 					}
 					const stem = stemMatch[1];
-					const tokenCandidateNames = qualifiedReference.tokenNamesForStem(stem);
+					// expand the declared TEMPLATES. `{stem}` is the one substitution, and it is a literal
+					// replace rather than a regex so a stem containing regex metacharacters cannot change
+					// the shape of the name it produces.
+					const tokenCandidateNames = qualifiedReference.tokenNamesForStem.map((oneTemplate) =>
+						oneTemplate.split('{stem}').join(stem),
+					);
 					const tokenNodes = memberPropertyNodes.filter(
 						(onePropertyNode) =>
 							tokenCandidateNames.indexOf(v1(onePropertyNode.properties[baseFieldNames.name])) !==

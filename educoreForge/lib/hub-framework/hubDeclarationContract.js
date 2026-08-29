@@ -41,7 +41,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // in hubModule=. A seam whose contract is enforced but never DECLARED is a seam nobody can implement
 // against, so it is written out here, in the contract's own home, beside the descriptor keys that
 // select it. (The CEDS implementation's matching @interface CedsHubForge block lives in
-// forges/ceds/lib/cedsHubForge.js and moves to lib/hub-framework in Phase 2c.)
+// lib/hub-framework/hub-framework.js, where Phase 2c moved it.)
 //
 // @typedef {Object} HubDescriptorDeclaration — the [parserDescriptor] hub keys.
 // @property {string} hubModule     kit-relative path to the hub module, ending .js
@@ -85,7 +85,7 @@ const HUB_DESCRIPTOR_CONTRACT = Object.freeze({
 	hubModule: Object.freeze({
 		requiredOnceAnyHubKeyPresent: true,
 		kind: 'bundleRelativeModulePath',
-		whatItIs: 'the kit-relative path of the hub module, e.g. lib/cedsHubForge.js',
+		whatItIs: 'the kit-relative path of the hub module, e.g. hubCeds.js',
 	}),
 	hubNamespace: Object.freeze({
 		requiredOnceAnyHubKeyPresent: true,
@@ -116,7 +116,7 @@ const KIND_CHECKER_REGISTRY = Object.freeze({
 	},
 	// the trailing slash is LOAD-BEARING, not cosmetic: the hub module composes card uris as
 	// `${hubNamespace}${hubVersion}/${addressSignature}` and the HubDefinition stableId as
-	// `${hubNamespace}hubDefinition/${hubName}` (code fact, cedsHubForge.js:137, :409). Without it
+	// `${hubNamespace}hubDefinition/${hubName}` (code fact, hub-framework.js). Without it
 	// every uri in the block silently loses its separator, which moves the block id and nothing
 	// else would say so.
 	namespaceUriRoot: (value) => {
@@ -255,8 +255,17 @@ const DECLARATION_KIND_CHECKER_REGISTRY = Object.freeze({
 		if (!(value.typePropertyPattern instanceof RegExp)) {
 			return `typePropertyPattern must be a RegExp whose first capture group is the stem (got ${typeof value.typePropertyPattern})`;
 		}
-		if (typeof value.tokenNamesForStem !== 'function') {
-			return `tokenNamesForStem must be a function (stem) -> string[] (got ${typeof value.tokenNamesForStem})`;
+		// DATA, NOT A FUNCTION (RULING on the 2c review; SPEC §4.4 [R1 Q7]). A function here would be a
+		// hook wearing a declaration's clothes — unreadable to this contract, uncomparable between hubs,
+		// and free to read anything in its closure. Templates can be inspected and refused.
+		if (!Array.isArray(value.tokenNamesForStem) || value.tokenNamesForStem.length === 0) {
+			return `tokenNamesForStem must be a NON-EMPTY array of name templates (got ${typeof value.tokenNamesForStem}) — it is DATA, not a function`;
+		}
+		const badTemplate = value.tokenNamesForStem.find(
+			(oneTemplate) => typeof oneTemplate !== 'string' || oneTemplate.indexOf('{stem}') === -1,
+		);
+		if (badTemplate !== undefined) {
+			return `token name template ${JSON.stringify(badTemplate)} must be a string containing '{stem}' — a template with no substitution point would match the same name for every pattern`;
 		}
 		const unknown = Object.keys(value).filter(
 			(oneName) => ['typePropertyPattern', 'tokenNamesForStem'].indexOf(oneName) === -1,

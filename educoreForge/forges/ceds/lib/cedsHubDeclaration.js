@@ -69,7 +69,13 @@ const hubDeclaration = {
 		typePropertyPattern: /^Has (.+) Identifier Type$/,
 		// given that stem, the property names that may carry the token. EXACTLY ONE must match or the
 		// pattern is recorded and SKIPPED — never fabricated into a pairing.
-		tokenNamesForStem: (stem) => [`${stem} Identifier`, `Has ${stem} Identifier`],
+		//
+		// TEMPLATES, NOT A FUNCTION (RULING on the 2c review; SPEC §4.4 [R1 Q7] says this seam is DATA).
+		// It WAS `(stem) => [...]`, which is a hook wearing a declaration's clothes: a function can read
+		// anything in its closure and cannot be inspected, compared or serialised by the contract. The
+		// framework expands `{stem}`. Byte-neutral — the same two strings come out — and the re-forge is
+		// what proves that rather than the reasoning.
+		tokenNamesForStem: ['{stem} Identifier', 'Has {stem} Identifier'],
 	},
 
 	// ---- PROVENANCE LABEL — BLOCK BYTES. See the header. ---------------------------------------

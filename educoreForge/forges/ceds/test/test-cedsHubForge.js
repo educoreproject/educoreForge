@@ -981,6 +981,69 @@ forgeCeds.forge(
 				`root version '${hubVersion}'`,
 			);
 
+			// ---- 2c REVIEW ITEM 3: the ABSENT-qualifiedReference FRAMEWORK PATH, over the REAL base ----
+			// The contract ADMITS a declaration with no qualifiedReference; that says nothing about what
+			// the framework then DOES. SPEC §4.4 [R1 Q7] declares pass 2 is SKIPPED ENTIRELY and
+			// identificationPatterns is explicitly [] — absent is absent, not zero-by-accident. Until now
+			// that path was never executed. It is executed here, against the real corpus rather than a
+			// synthetic base, because a fixture I invented would have proved the fixture.
+			(() => {
+				const hubFrameworkDirect = require(path.join(__dirname, '..', '..', '..', 'lib', 'hub-framework', 'hub-framework'));
+				const fullDeclaration = require('../lib/cedsHubDeclaration');
+				const cedsHubHooksDirect = require('../lib/cedsHubHooks')();
+				const forgeStandardSource = require('../lib/cedsForgeDeclaration').standardSource;
+				const declarationWithout = Object.assign({}, fullDeclaration);
+				delete declarationWithout.qualifiedReference;
+
+				// THE THROW IS CONTAINED SO THE GATE CAN FAIL INSTEAD OF DYING. Measured, not assumed:
+				// with the pass-2 skip removed the framework dereferences `undefined.typePropertyPattern`
+				// and THROWS. Uncontained, that killed the whole suite mid-run — and a gate that crashes
+				// reports nothing about WHICH conjunct broke, which makes it a worse gate than one that
+				// goes red. This is boundary containment routed into the harness's own vocabulary, the
+				// same justification forger.js uses at its factory boundary, not try/catch as control flow.
+				const forgeUnder = (oneDeclaration) => {
+					let outcome = null;
+					try {
+						hubFrameworkDirect({ hubDeclaration: oneDeclaration, hooks: cedsHubHooksDirect, forgeStandardSource })({
+							hubVersion,
+							hubNamespace: HUB_NAMESPACE,
+						}).forgeHub({ nodes: base.nodes, edges: base.edges }, (oneError, oneHub) => {
+							outcome = { error: oneError || '', hub: oneHub };
+						});
+					} catch (thrown) {
+						outcome = { error: `THREW: ${thrown.message}`, hub: null };
+					}
+					return outcome;
+				};
+				const countsOf = (oneOutcome) =>
+					oneOutcome.hub ? oneOutcome.hub.counts : { qualified: 'n/a', propertyTier: 'n/a', valueTier: 'n/a' };
+				const patternsOf = (oneOutcome) =>
+					oneOutcome.hub ? oneOutcome.hub.identificationPatterns : 'NO RESULT — it threw';
+				const withQualified = forgeUnder(fullDeclaration);
+				const withoutQualified = forgeUnder(declarationWithout);
+
+				harness.ok(
+					'CONTROL: WITH qualifiedReference the real base DOES yield identification patterns and qualified cards — without this control the assertions below would pass against a corpus that simply has none',
+					!withQualified.error &&
+						!!withQualified.hub &&
+						withQualified.hub.identificationPatterns.length > 0 &&
+						withQualified.hub.counts.qualified > 0,
+					`patterns=${withQualified.hub ? withQualified.hub.identificationPatterns.length : 'n/a'} qualified=${countsOf(withQualified).qualified}`,
+				);
+				harness.equal('a declaration with NO qualifiedReference still forges', withoutQualified.error, '');
+				harness.equal(
+					'  and identificationPatterns is EXPLICITLY [] — pass 2 skipped entirely, not run to find nothing',
+					JSON.stringify(patternsOf(withoutQualified)),
+					'[]',
+				);
+				harness.equal('  and ZERO qualified cards are emitted', countsOf(withoutQualified).qualified, 0);
+				harness.equal(
+					'  and the PROPERTY and VALUE tiers are UNTOUCHED — skipping pass 2 must not disturb pass 1',
+					`${countsOf(withoutQualified).propertyTier}|${countsOf(withoutQualified).valueTier}`,
+					`${countsOf(withQualified).propertyTier}|${countsOf(withQualified).valueTier}`,
+				);
+			})();
+
 			const hubForge = cedsHubForgeFactory({ hubVersion, hubNamespace: HUB_NAMESPACE });
 			hubForge.forgeHub({ nodes: base.nodes, edges: base.edges }, (hubError, hub) => {
 				harness.ok('forgeHub succeeds against the real corpus', !hubError, String(hubError));

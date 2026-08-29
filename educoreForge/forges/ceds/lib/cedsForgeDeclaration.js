@@ -6,10 +6,21 @@
 // root's labels/standardName/parserVersion :468-500, emptyMappingInstruction :88-95, and the
 // embeddable-role exclusion :829-833) written ONCE, in the framework's declared shape.
 //
-// Every value here is a BYTE of the CEDS block (09a5d658…) or an identity rule the framework
-// enforces; none is derived. The pre-migration id is 09a5d658807b9c22b44b28289d9ad4b47df15e45f44c9-
-// eacec765962fe487c33 at 419,649,468 and MUST be reproduced — the hub module cedsHubForge.js is not
-// touched by this phase, so the provenance stamp that names it does not move.
+// Every value here is a BYTE of the CEDS block or an identity rule the framework enforces; none is
+// derived.
+//
+// ⚠ THE ID THIS FILE MUST REPRODUCE HAS MOVED, AND THE OLD SENTENCE HERE HAD BECOME FALSE RATHER
+// THAN MERELY STALE. It read: "The pre-migration id is 09a5d658…487c33 at 419,649,468 and MUST be
+// reproduced — the hub module cedsHubForge.js is not touched by this phase, so the provenance stamp
+// that names it does not move." Every clause of that was true AT PHASE 1 and none of it is true now:
+//   * Phase 2b DELIBERATELY re-keyed the provenance stamp by controlled experiment (commit 4ce39b8),
+//     which moved the id by exactly one line, on purpose, with the diff predicted in advance.
+//   * Phase 2c DELETED cedsHubForge.js; the derivation lives in lib/hub-framework/ and the stamp is
+//     DECLARED DATA in lib/cedsHubDeclaration.js rather than derived from a filename.
+//
+// CURRENT: I1' = e763404ea5864e2c9a9d4521b0887343e0c42bd5aa59565e2d2b1bba70dfb855 at 419,649,469
+// characters / 420,108,188 bytes. 09a5d658…487c33 remains correct for anything at or before commit
+// 351cc17 and is the wrong expectation for anything after it.
 //
 // COMPATIBILITY DECLARATIONS: NONE. This is a measured result, not an omission. The FR6/FR7 probes
 // were run for the first time at Phase 1 entry, against the 420MB Phase 0 CEDS block text rather

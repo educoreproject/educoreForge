@@ -2,7 +2,7 @@
   "name": "hub-framework",
   "version": "1.0.0",
   "private": true,
-  "description": "The EDUcore Hub Framework — the third kit role, peer of lib/forge-framework and lib/bridge-framework (SPEC-hubKitRole-082826.md §4). Phase 2a lands the DECLARATION CONTRACT only; the derivation itself is extracted from forges/ceds/lib/cedsHubForge.js in Phase 2c. This version is the FRAMEWORK's own and never reaches a block. This file does NOT drive test discovery: test/runAllTests.js finds lib/ modules by the recursive .js-presence rule.",
+  "description": "The EDUcore Hub Framework — the third kit role, peer of lib/forge-framework and lib/bridge-framework (SPEC-hubKitRole-082826.md §4). Phase 2a lands the DECLARATION CONTRACT only; Phase 2c extracted the derivation here from forges/ceds/lib/cedsHubForge.js, which is now deleted. This version is the FRAMEWORK's own and never reaches a block. This file does NOT drive test discovery: test/runAllTests.js finds lib/ modules by the recursive .js-presence rule.",
   "main": "hubDeclarationContract.js",
   "license": "UNLICENSED"
 }

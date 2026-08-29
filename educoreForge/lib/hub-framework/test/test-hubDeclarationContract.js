@@ -288,4 +288,59 @@ harness.match(
 	/unknown hook 'emitExtraCards'/,
 );
 
+// =================================================================================================
+// PHASE 2c REVIEW ITEMS 2 AND 3 — the FRAMEWORK paths, driven through hubCeds-shaped injection.
+// Everything above tests the CONTRACT (does it admit this declaration?). These two test the
+// FRAMEWORK (does it behave as declared?), which the contract cannot answer.
+// =================================================================================================
+const hubFramework = require('../hub-framework');
+const cedsHubHooks = require('../../../forges/ceds/lib/cedsHubHooks')();
+const cedsForgeDeclaration = require('../../../forges/ceds/lib/cedsForgeDeclaration');
+const HUB_VERSION = '14.0.0.0';
+
+// injectAndCatch — build the bundle the way hubCeds.js does and return the refusal message, or ''.
+const injectAndCatch = ({ hubDeclaration, forgeStandardSource }) => {
+	try {
+		hubFramework({ hubDeclaration, hooks: cedsHubHooks, forgeStandardSource })({
+			hubVersion: HUB_VERSION,
+			hubNamespace: liveDeclaration ? LIVE_CEDS_BUNDLE.hubNamespace : '',
+		});
+		return '';
+	} catch (thrown) {
+		return thrown.message;
+	}
+};
+
+harness.section('I12 — asserted BY NAME, and NOT bypassable by omission (2c review item 2)');
+
+harness.equal(
+	'CONTROL: the real pairing is ADMITTED — hubName CEDS against forgeDeclaration.standardSource',
+	injectAndCatch({ hubDeclaration: liveDeclaration, forgeStandardSource: cedsForgeDeclaration.standardSource }),
+	'',
+);
+harness.match(
+	'I12: a hubName that DISAGREES with forgeDeclaration.standardSource is REFUSED BY NAME, quoting BOTH values',
+	injectAndCatch({ hubDeclaration: liveDeclaration, forgeStandardSource: 'NotCeds' }),
+	/I12 VIOLATED — hubDeclaration\.hubName 'CEDS' does not equal forgeDeclaration\.standardSource 'NotCeds'/,
+);
+harness.match(
+	'  and the refusal says WHY it matters — hub cards are stamped _source: hubName while base nodes carry standardSource, so a mismatch silently splits one standard into two sources',
+	injectAndCatch({ hubDeclaration: liveDeclaration, forgeStandardSource: 'NotCeds' }),
+	/silently splits one standard into two sources/,
+);
+harness.match(
+	'I12 IS NOT BYPASSABLE BY OMISSION: an ABSENT forgeStandardSource is REFUSED, not skipped — an unrunnable invariant is not a satisfied one (2c review ruling)',
+	injectAndCatch({ hubDeclaration: liveDeclaration, forgeStandardSource: undefined }),
+	/I12 CANNOT BE CHECKED — forgeStandardSource is absent/,
+);
+harness.match(
+	'  and an EMPTY-STRING forgeStandardSource is refused too — the empty case is the one a wiring bug actually produces',
+	injectAndCatch({ hubDeclaration: liveDeclaration, forgeStandardSource: '   ' }),
+	/I12 CANNOT BE CHECKED/,
+);
+
+// NOTE: review item 3 — the FRAMEWORK path for an absent qualifiedReference — is NOT here. It needs a
+// REAL forged base, and inventing a synthetic one would have proved the fixture rather than the code.
+// It lives in forges/ceds/test/test-cedsHubForge.js, which already forges the real CEDS asset.
+
 harness.report();
