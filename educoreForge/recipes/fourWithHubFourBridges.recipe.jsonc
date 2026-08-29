@@ -47,9 +47,28 @@
 // EDGE COUNTS THIS PRODUCES ARE NOT BYTE-ANCHORED, because a debug judge is not a judgement; only
 // the AUTHORED and STANDARD-DECLARED portions are deterministic and comparable to the anchors.
 //
-// STANDARDS ARE REUSED, NOT RE-FORGED. Intended with --reuseForgedBlocks=true against a store whose
-// four bases have already been certified this phase, so the bridges run against exactly the blocks
-// the entry gate vouched for and no forge cost is paid twice.
+// THREE STANDARDS ARE REUSED; SIF IS RE-FORGED, AND THAT IS NOT A DEFECT. Intended with
+// --reuseForgedBlocks=true against a store whose four bases have already been certified, so the
+// bridges run against exactly the blocks the entry gate vouched for.
+// CORRECTED 2026-08-29 AFTER THE PHASE 5 REVIEW (finding F1) — the earlier wording here read
+// "STANDARDS ARE REUSED, NOT RE-FORGED ... no forge cost is paid twice" and that is FALSE FOR SIF.
+// MEASURED MECHANISM: reuse resolves a stored block by NAME, and forger.getVersionStamp will only
+// name a version it can answer WITHOUT parsing the source — forger.js:373 refuses unless
+// versionSource is 'provenance-file'. ceds (14.0.0.0), edfi (5.2.0) and pesc260805 (aggregate-01)
+// each declare a publishedVersion in their standardSourceLocation and are reused. SIF's
+// standardSourceLocation HONESTLY DECLARES publishedVersion: unknown, because the SIF
+// implementation-spec TSV records no version at all — so the stamp cannot be 'provenance-file'
+// and the caller MUST FORGE. SIF is therefore RE-FORGED on every reuse run, this one included.
+// MEASURED HARMLESS HERE AND NOT ASSUMED SO: the re-forge produced the SAME content address
+// d393b040..., so the bridges ran against the certified block; all 212 embedding batches were
+// cache-served (0 distinct miss on every one), so no Voyage credit was spent. The cost is wall
+// clock only, ~70 s of forge plus one scratch container.
+// ⚠ THE STANDING HAZARD, NAMED RATHER THAN FIXED: because reuse resolves by NAME, if the SIF
+// source or its forge moves between runs the re-forge lands under the SAME subject with a
+// DIFFERENT id and nothing refuses. PESC had the same shape until Phase 4 gave it a
+// standardSourceLocation (FJ-P4-7). Giving SIF an aggregate version token would close it, but it
+// would RE-KEY the SIF block and every id downstream of it — a naming DECISION, not a bug fix.
+// DOCKETED (FJ-P5-3); deliberately not done here.
 //
 // roundTripStage is ON: -goldEvalCheck REFUSES a run whose stage did not run (doctrine 7.4), and an
 // acceptance recipe declares it (fourWithHub-baseline precedent).
