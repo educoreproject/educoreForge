@@ -9,8 +9,14 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //
 // ENFORCED (refused by name unless an allowance licenses the omission): REQUIRED_PROPERTIES.STANDARD_ROOT
 // (the eight, vocabulary.js) AND the five (snapshotKey, publishedVersion, versionSource,
-// parserVersion, coreVersion). P5 (PESC, not an F3a row) will license omitting exactly FOUR via
-// `rootOmitPropertyList`; parserVersion is NEVER licensed (FR10). extraProperties are refused
+// parserVersion, coreVersion). ⚠ CORRECTED 2026-08-29 (RULING FJ-P4-5, hub-kit-role Phase 4):
+// this header said "P5 (PESC, not an F3a row) will license omitting exactly FOUR via
+// `rootOmitPropertyList`". P5 NOW EXISTS AND LICENSES NO OMISSION AT ALL — only the pescTier root
+// extra property. The ruling made the PESC root CONFORMANT with the other three (it GAINS
+// snapshotKey, publishedVersion, versionSource, coreVersion) rather than omitting them, because the
+// framework owns the root; that is why PESC re-keys instead of holding f139654a. `rootOmitPropertyList`
+// remains a live mechanism with, today, NO row using it. parserVersion is NEVER licensed (FR10).
+// extraProperties are refused
 // unless an active allowance's `rootExtraPropertyNameList` names each key.
 //
 // sourceUrl: stamped as describeSource returned it; '' survives ONLY through E6/S4/P16 (already

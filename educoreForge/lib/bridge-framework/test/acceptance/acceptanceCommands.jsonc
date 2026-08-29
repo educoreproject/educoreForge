@@ -435,7 +435,7 @@
 			// VECTORLESS artifact and NOT a member of this vectorized lineage. See the history below and
 			// forges/pesc260805/bridgeData/buildModeIdentityRecord.json. The wrong value is left VISIBLE
 			// throughout rather than tidied out, per the supervisor's instruction.
-			"pesc260805@aggregate_01_base": "f139654a98cd0ef238759e6dc2bda2e532f13d5a7db00bfea94d89c3317b149d"
+			"pesc260805@aggregate_01_base": "3107129846864636d403755f19ba3f953cd775f3f7fda01e4105f3efd6fc3949"
 		},
 		// EVERY ENTRY CARRIES buildMode AS A FIELD BESIDE THE ID — RULING P2-R4, and it is here because its
 		// ABSENCE is what let a vectorless id be published as a lineage successor for an entire phase.
@@ -445,8 +445,15 @@
 			{ "blockId": "db885ac42b284135a37135a0fb95baf376547fe401530506cc321f36686a9e61", "buildMode": "vectorize=true", "cause": "pre-re-embed (the pinned historical literal above; DO NOT EDIT IT)" },
 			{ "blockId": "045523dc197f4649712b74d3d6b995522106d44fa5c17c17d900205c4ee4a992", "buildMode": "vectorize=true", "cause": "P0b — TQ-authorised searchText re-embed to the ruled HYBRID composition" },
 			{ "blockId": "c46991d127a3f36bd9bed9708c5701a12b0340497a90235372ef962913566d3f", "buildMode": "vectorize=false", "status": "SUPERSEDED — NOT A LINEAGE MEMBER", "cause": "P1 — WRONGLY PUBLISHED as the named mover in commits 2f51a56 and 27fa1ed. The id is real and was read from the store, but it addresses a VECTORLESS block: a block refId is a content address over block TEXT and the text CONTAINS the embeddings. Retained here deliberately (RULING P2-R3 item 4) because this artifact is the EVIDENCE for the mechanism — 81,517,933 bytes and ZERO embeddingRef rows against the vectorized 88,551,726 and 42,372. See forges/pesc260805/bridgeData/pescVectorlessBlockRecord.json." },
-			{ "blockId": "f139654a98cd0ef238759e6dc2bda2e532f13d5a7db00bfea94d89c3317b149d", "buildMode": "vectorize=true", "status": "CURRENT", "cause": "P1 — RULING P1-R8, the forge stamps effectiveDescription / owningTypeName / proseSource so the MANDATORY rendering seat is reachable by a declaration at all. THE CORRECT NAMED MOVER, independently reproduced by three separate --vectorize=true runs." }
+			{ "blockId": "f139654a98cd0ef238759e6dc2bda2e532f13d5a7db00bfea94d89c3317b149d", "buildMode": "vectorize=true", "cause": "P1 — RULING P1-R8, the forge stamps effectiveDescription / owningTypeName / proseSource so the MANDATORY rendering seat is reachable by a declaration at all. THE CORRECT NAMED MOVER, independently reproduced by three separate --vectorize=true runs. SUPERSEDED 2026-08-29 by the hub-kit-role Phase 4 migration; it was reproduced a FIFTH time at that phase’s entry gate, on unchanged code, as the null experiment that licensed the migration oracle." },
+			{ "blockId": "3107129846864636d403755f19ba3f953cd775f3f7fda01e4105f3efd6fc3949", "buildMode": "vectorize=true", "status": "CURRENT", "cause": "FJ-P4-5/7 — the hub-kit-role Phase 4 migration onto lib/forge-framework. THE FRAMEWORK OWNS THE ROOT: PESC was the only one of the four whose bespoke root did not already look like a framework root (42,371 of 42,372 nodes carried depth and crossRefs; the root carried neither, nor snapshotKey / publishedVersion / versionSource / coreVersion), and structural-contract stamps depth and crossRefs on EVERY node with no allowance channel and no root exemption, so NO declaration-only migration could have held f139654a…. The root was made CONFORMANT with ceds/edfi/sif rather than kept non-conformant by four omission rows. FJ-P4-7 additionally added the snapshot’s missing standardSourceLocation — PESC was the only one of the four without one — so deriveVersionStamp resolves versionSource provenance-file, the truthful value for an aggregate version that is OURS (R-ACQ-7), instead of discarding it as unknown. PROVEN AGAINST THE PRE-MIGRATION BLOCK: the diff is EXACTLY ONE LINE, the root; remainders over all 113,002 lines md5 2b32b9ce26a9958b60a83a14e7f14de2 on BOTH sides; the actual root line equals the root line predicted IN ADVANCE, character for character, 3,261 bytes; textLen 88,551,874 exactly as predicted; counts 42,372 / 70,628 unchanged; label census unchanged." }
 		],
+		// ⚠ STALE AS OF 2026-08-29 AND DELIBERATELY NOT RECOMPUTED. A manifest hashes its MEMBERS, and the
+		// pesc260805 member moved from f139654a… to 31071298… in the Phase 4 migration, so this value
+		// is no longer reachable from the current four forges. It is NOT edited here because a manifest id
+		// must be MEASURED from a real four-standard build, never composed by arithmetic — Phase 5 is that
+		// build. Recording the staleness is the honest act; inventing a successor would repeat exactly the
+		// composition error this file already carries a SUPERSEDED entry for.
 		"fourBaseManifestId": "09cb194a7313e184fbff9bc3f6a5e21265c9dcea8bb2f8068ad0ec6b1664d24b",
 		"fourBaseManifestIdHistory": [
 			{ "manifestId": "97c618c20e07c0c612957def69164402d364a98d5dfee865faacae1deace6382", "pescMemberBuildMode": "vectorize=true", "cause": "the FROZEN historical value (unchanged above)" },

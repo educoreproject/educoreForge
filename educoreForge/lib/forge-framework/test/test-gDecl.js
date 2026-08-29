@@ -209,19 +209,24 @@ conjunctList.push(
 		regex: /allowanceId 'S2' must carry allowanceData 'coerceEmptyStringPropertyList'/,
 		twinName: 'disableKindCheck', fileName: CONTRACT_FILE, find: KIND_CHECK_FIND, replace: KIND_CHECK_REPLACE,
 	}),
-	// the offline-precondition PRESENCE check: no F3a row is offline, so the SUBJECT carries a REGISTRY
-	// DOUBLE that flips S3 to the offline kind (a productionMutation of DATA); the conjunct then asserts
-	// that S3 declared without probeEvidence is refused naming probeEvidence
+	// the offline-precondition PRESENCE check.
+	// ⚠ THE REGISTRY DOUBLE IS RETIRED 2026-08-29 (hub-kit-role Phase 4), FOR TWO REASONS, and the
+	// second is the one that matters. (1) It stopped working: it flipped S3 to the offline kind by
+	// matching S3's inline `kind: ALLOWANCE_KIND.FORGE_TIME,` line, and S3 is now built by the shared
+	// versionDisagreementRow factory and carries no such line — so the mutation silently stopped
+	// applying and the conjunct could no longer be observed red. (2) IT IS NO LONGER NEEDED: this
+	// conjunct used a double because NO SHIPPED ROW WAS OFFLINE, and P5 now is — the registry's first.
+	// Exercising the real row is STRICTLY STRONGER than doubling one: a double proves the CHECK
+	// works, this proves it works on a row that actually ships and that a forge actually declares.
 	refusalCase({
 		registry: twinRegistry, gateId: GATE_ID, conjunctId: 'offlineRowWithoutProbeEvidence',
-		title: 'an offline-precondition row declared without probeEvidence is refused naming probeEvidence (registry double: S3 flipped to offline)',
+		title: "an offline-precondition row declared without probeEvidence is refused naming probeEvidence (P5, the registry's FIRST REAL offline row — no double)",
 		mode: 'inject',
 		shape: (scenario) => {
-			scenario.frameworkMutationList.push({ modulePath: require('path').join(toyScenario.FRAMEWORK_DIR, 'migrationAllowanceRegistry.js'), find: "\t\tallowanceId: 'S3',\n\t\trowRefId: 'S3',\n\t\tdeclarableBy: Object.freeze(['sif']),\n\t\tkind: ALLOWANCE_KIND.FORGE_TIME,", replace: "\t\tallowanceId: 'S3',\n\t\trowRefId: 'S3',\n\t\tdeclarableBy: Object.freeze(['sif']),\n\t\tkind: ALLOWANCE_KIND.OFFLINE," });
-			scenario.forgeDeclaration.standardKey = 'sif';
-			scenario.forgeDeclaration.compatibilityDeclarationList = [{ allowanceId: 'S3' }];
+			scenario.forgeDeclaration.standardKey = 'pesc260805';
+			scenario.forgeDeclaration.compatibilityDeclarationList = [{ allowanceId: 'P5', rootExtraPropertyNameList: ['pescTier'] }];
 		},
-		regex: /allowanceId 'S3' is an offline-precondition row and must carry probeEvidence/,
+		regex: /allowanceId 'P5' is an offline-precondition row and must carry probeEvidence/,
 		twinName: 'disableProbeEvidenceCheck', fileName: CONTRACT_FILE,
 		find: '\t\t\tif (registryRow.kind === ALLOWANCE_KIND.OFFLINE && !isPlainObject(oneEntry.probeEvidence)) {', replace: '\t\t\tif (false && registryRow.kind === ALLOWANCE_KIND.OFFLINE && !isPlainObject(oneEntry.probeEvidence)) {',
 	}),

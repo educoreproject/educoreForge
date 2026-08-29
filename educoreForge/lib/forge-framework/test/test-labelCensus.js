@@ -65,6 +65,7 @@ const MIGRATED_FORGE_ROSTER = Object.freeze([
 	Object.freeze({ standardKey: 'ceds', bundlePath: 'forges/ceds/forgeCeds.js', snapshotPath: 'forges/ceds/assets/standardSourceData/01' }),
 	Object.freeze({ standardKey: 'edfi', bundlePath: 'forges/edfi/forgeEdfi.js', snapshotPath: 'forges/edfi/assets/standardSourceData/04' }),
 	Object.freeze({ standardKey: 'sif', bundlePath: 'forges/sif/forgeSif.js', snapshotPath: 'forges/sif/assets/standardSourceData/01' }),
+	Object.freeze({ standardKey: 'pesc260805', bundlePath: 'forges/pesc260805/forgePesc260805.js', snapshotPath: 'forges/pesc260805/assets/standardSourceData/01' }),
 ]);
 
 let passedCount = 0;

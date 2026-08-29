@@ -1,0 +1,7 @@
+{
+	"name": "forge-pesc260805",
+	"version": "1.0.0",
+	"main": "forgePesc260805.js",
+	"description": "PESC260805 forge bundle — parses the 64-file PESC XSD aggregate and emits the universal forge property contract across three tiers (source / derived / synthetic), nine per-standard labels keyed by native XSD construct kind, content-addressed pescArtifact:<sha256> identity, voyage-4-large embeddings",
+	"private": true
+}

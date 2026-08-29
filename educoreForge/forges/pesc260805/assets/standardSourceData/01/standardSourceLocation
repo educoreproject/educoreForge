@@ -1,0 +1,7 @@
+standard: forge-pesc260805
+publishedVersion: aggregate-01
+publishedVersionEvidence: educoreForge AGGREGATE version, cut 2026-08-05 (session VELVET_COMPASS) — PESC publishes NO coherent whole-family release, so this token is OURS (ruling R-ACQ-7) and must never be read as a PESC edition; every constituent is recorded in manifest.json at its own real published version. Recorded here so deriveVersionStamp resolves versionSource 'provenance-file' — the truthful value — rather than 'spec' (which would claim the source self-describes a whole-family version it does not publish) or 'unknown' (which would discard the aggregate version from the block subject).
+upstreamUrl: unknown (publisher: Postsecondary Electronic Standards Council — https://www.pesc.org; per-artifact URLs recorded in README_PROVENANCE.md, no bundle URL exists)
+copiedFrom: the 64-file PESC XSD aggregate assembled by the composition rule in README_PROVENANCE.md
+copiedDate: 2026-08-05
+note: ADDED 2026-08-29 in the hub-kit-role Phase 4 migration (RULING FJ-P4-7). PESC was the only one of the four snapshots without this file; ceds, edfi and sif have carried one since 2026-05-28. The bespoke forge never called deriveVersionStamp — it stamped its own version directly — so the omission was invisible until the framework introduced the stamp.

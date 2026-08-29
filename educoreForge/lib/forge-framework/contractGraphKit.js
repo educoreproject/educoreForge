@@ -111,6 +111,14 @@ const contractGraphKit = ({ forgeDeclaration, metadata, activeAllowanceById = {}
 		emptyStringCoercionCount: 0,
 		substitutionCount: 0,
 		substitutionCountByNativeType: {},
+		// allowListedEdgeCount — RULING FJ-P4-6 (hub-kit-role Phase 4). The MIRROR of substitutionCount,
+		// for the other arm of the same decision: substitution TRANSLATES a native edge type into a
+		// registry member, the allow list ADMITS one that stays outside the registry. Only substitution
+		// was counted, so an admitted type was invisible to every census and allowance P4 had no
+		// observable precondition to read — a declared-but-unneeded allow list could not have been
+		// refused. COUNTER ONLY: no edge is admitted or refused differently by this edit.
+		allowListedEdgeCount: 0,
+		allowListedEdgeCountByType: {},
 	};
 	const kitState = { rootStableId: null };
 
@@ -306,7 +314,13 @@ const contractGraphKit = ({ forgeDeclaration, metadata, activeAllowanceById = {}
 				}
 				stats.substitutionCount += 1;
 				stats.substitutionCountByNativeType[edgeType] = (stats.substitutionCountByNativeType[edgeType] || 0) + 1;
-			} else if (edgeTypeAllowList.indexOf(edgeType) === -1) {
+			} else if (edgeTypeAllowList.indexOf(edgeType) !== -1) {
+				// ADMITTED by the declared allow list (P4). Counted so the admission is observable: the
+				// row that licenses it reads this counter as its precondition, exactly as S6 reads
+				// substitutionCount, and the census gains a figure for a thing that was invisible.
+				stats.allowListedEdgeCount += 1;
+				stats.allowListedEdgeCountByType[edgeType] = (stats.allowListedEdgeCountByType[edgeType] || 0) + 1;
+			} else {
 				throw refuse.byName({ moduleName, what: `addEdge: edge type '${edgeType}' is not a member of EDGE_TYPES (${contextText})`, where: `use one of ${EDGE_TYPE_VALUE_LIST.join(', ')}; a name outside the registry needs an active P4 edgeTypeAllowList or S6 parentEdgeSubstitutionTable` });
 			}
 		}

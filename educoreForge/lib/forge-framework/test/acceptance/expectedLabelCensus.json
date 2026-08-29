@@ -56,9 +56,22 @@
         "SifSimpleType": 301,
         "SifXmlElement": 5872
       }
+    },
+    "pesc260805": {
+      "labelKeyedBy": "NATIVE XSD CONSTRUCT KIND — a FOURTH axis, and the only one where role -> label is NOT EVEN A FUNCTION: DmeSupport carries SIX labels (PescAnonymousType, PescArtifact, PescDerivation, PescImportDecl, PescNamedDefinition, PescNamespace) and PescNamedDefinition appears under THREE roles (DmeClass for complexTypes and message-root elements, DmeOptionSet for enumeration-carrying simpleTypes, DmeSupport for groups and plain simpleTypes). ceds keys by DME role, sif by native kind, edfi by MetaEd entity type. A role-keyed registry cannot express this; the walk keeps a KIND-keyed refusing registry.",
+      "nodeTotal": 42372,
+      "labelCensus": {
+        "Pesc260805Root": 1,
+        "PescAnonymousType": 720,
+        "PescArtifact": 64,
+        "PescAttributeDecl": 84,
+        "PescDerivation": 10848,
+        "PescElementDecl": 17491,
+        "PescImportDecl": 82,
+        "PescNamedDefinition": 13018,
+        "PescNamespace": 64
+      },
+      "measuredNote": "MEASURED TWICE AND BY TWO METHODS, which is why it is frozen with confidence. First from the Phase 4 ENTRY BLOCK text (f139654a, 42,372 node lines, labels censused structurally rather than positionally), then again by this file measurementMethod — the migrated bundle in-process, forge({ skipEmbedding: true }) — and the two agree on every one of the nine labels and on the sum. PESC has no MERGE collapse (load 42,372/70,628 equals harvest), so the harvested and in-process censuses are expected to agree; they were compared rather than assumed. Reconciles with the tier stats: PescNamedDefinition 13,018 = 12,909 source + 109 synthetic merged; PescElementDecl 17,491 = 16,969 source + 522 synthetic duplicated children; PescNamespace 64 = 63 derived + 1 synthetic alias."
     }
-  },
-  "notOnTheRoster": {
-    "pesc260805": "NOT migrated onto lib/forge-framework yet — that is Phase 4. Its census is added by ITS migration commit, measured then, not guessed now."
   }
 }

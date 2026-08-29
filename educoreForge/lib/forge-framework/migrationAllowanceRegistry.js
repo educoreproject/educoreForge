@@ -40,6 +40,59 @@ const PERMISSIVE_STABLE_ID_PATTERN = Object.freeze({ pattern: '^\\S+$', trimmed:
 const ALLOWANCE_KIND = Object.freeze({ FORGE_TIME: 'forgeTime', OFFLINE: 'offlinePrecondition' });
 const EVALUATED_AT = Object.freeze({ DESCRIBE_SOURCE: 'describeSource', CONTRACT_GRAPH: 'contractGraph' });
 
+// the empty-string-coercion row — ONE behaviour, keyed TWICE (SPEC §7.1, §14 D12). EXTRACTED
+// 2026-08-29 (hub-kit-role Phase 4) for the same reason the version-disagreement row was, and found
+// the same way: the undeclared-but-needed sweep groups BY rowRefId, so PESC declaring its own P9
+// left SIF's S2 still swept, its precondition still met by PESC's 27,139 coerced descriptions, and
+// the build REFUSED naming a SIF row PESC may not declare.
+//
+// THE GENERAL RULE, WORTH STATING ONCE: an allowance ID is per-forge so each forge retires its own
+// in its own commit (D12); a rowRefId is per-BEHAVIOUR because that is what the sweep reasons about.
+// Three behaviours are now shared across forges — sourceUrlEmptyString, versionDisagreement and
+// emptyStringCoercion — and the first was authored that way from the start while the other two were
+// authored per-forge and only became wrong when a second forge needed them.
+const emptyStringCoercionRow = ({ allowanceId, declarableBy, whileDeclared, retiredBy }) =>
+	Object.freeze({
+		allowanceId,
+		rowRefId: 'emptyStringCoercion',
+		declarableBy: Object.freeze([declarableBy]),
+		kind: ALLOWANCE_KIND.FORGE_TIME,
+		evaluatedAt: EVALUATED_AT.CONTRACT_GRAPH,
+		whileDeclared,
+		allowanceDataContract: Object.freeze({
+			coerceEmptyStringPropertyList: Object.freeze({ kind: 'stringList', mustEqual: ['description'] }),
+		}),
+		preconditionText: 'at least one node received the empty-string coercion on this build',
+		preconditionMet: ({ kitStats }) => kitStats.emptyStringCoercionCount > 0,
+		retiredBy,
+	});
+
+// the version-disagreement row — ONE behaviour, keyed TWICE (SPEC §7.1, §14 D12), the same
+// pattern as the sourceUrl row below. EXTRACTED 2026-08-29 (hub-kit-role Phase 4) when PESC needed
+// it: S3 was authored as a SIF-only row with rowRefId 'S3', and evaluateAllowancesAtStep groups the
+// undeclared-but-needed sweep BY rowRefId — so a PESC row with its own rowRefId left S3 still swept,
+// its precondition still met by PESC's version disagreement, and the build REFUSED naming a SIF row
+// PESC is not allowed to declare. Caught by the in-process forge in two seconds, before any
+// re-forge was spent. Both rows now share rowRefId 'versionDisagreement'; the ALLOWANCE IDS stay
+// per-forge so each retires its own in its own commit, which is exactly what D12 asks for.
+const versionDisagreementRow = ({ allowanceId, declarableBy, whileDeclared, retiredBy }) =>
+	Object.freeze({
+		allowanceId,
+		rowRefId: 'versionDisagreement',
+		declarableBy: Object.freeze([declarableBy]),
+		kind: ALLOWANCE_KIND.FORGE_TIME,
+		evaluatedAt: EVALUATED_AT.DESCRIBE_SOURCE,
+		whileDeclared,
+		allowanceDataContract: Object.freeze({}),
+		preconditionText: "describeSource returns version !== (selfDescribedVersion ?? 'unknown')",
+		preconditionMet: ({ describedSource }) =>
+			describedSource.version !==
+			(describedSource.selfDescribedVersion === null || describedSource.selfDescribedVersion === undefined
+				? 'unknown'
+				: describedSource.selfDescribedVersion),
+		retiredBy,
+	});
+
 // the sourceUrl row — ONE behaviour, keyed three ways (SPEC §7.1, §14 D12)
 const sourceUrlEmptyStringRow = ({ allowanceId, declarableBy, retiredBy }) =>
 	Object.freeze({
@@ -97,48 +150,21 @@ const MIGRATION_ALLOWANCE_REGISTRY = Object.freeze({
 		retiredBy: 'sourceFiles becomes the verified file list — a deliberate byte change in its own commit (E8)',
 	}),
 
-	S2: Object.freeze({
+	S2: emptyStringCoercionRow({
 		allowanceId: 'S2',
-		rowRefId: 'S2',
-		declarableBy: Object.freeze(['sif']),
-		kind: ALLOWANCE_KIND.FORGE_TIME,
-		evaluatedAt: EVALUATED_AT.CONTRACT_GRAPH,
-		// ⚠ CORRECTED 2026-08-29, hub-kit-role Phase 3 (RULING FJ-P3-2). THIS ROW NAMED THE WRONG
-		// PROPERTY and was therefore unusable by the only forge allowed to declare it. It read
-		// mustEqual ['name'] and cited forgeSif.js:350 — the `name: name == null ? '' : ...` line.
-		// SIF's actual empty-string coercion is on THE NEXT LINE, :351, `description: description || ''`.
-		// MEASURED over all 27,069 nodes of the SIF block before the correction: ZERO nodes carry
-		// name '' and 16,181 carry description '', across all eight non-root labels (SifXmlElement
-		// 5,872 · SifField 4,733 · SifCodesetValue 4,064 · SifComplexType 897 · SifObject 159 ·
-		// SifSimpleType 301 · SifCodeset 140 · SifPrimitiveType 15). Because mustEqual is an EQUALITY
-		// check, S2 could not name 'description', and contractGraphKit.js:221-226 refuses that byte
-		// unless an active allowance names it — so SIF could not reproduce its own bytes at all.
-		// NOT ['name', 'description']: naming a coercion measured never to fire is the same
-		// declared-but-unneeded defect this registry exists to refuse.
+		declarableBy: 'sif',
+		// ⚠ CORRECTED 2026-08-29 Phase 3 (FJ-P3-2): this row named the WRONG PROPERTY. It read
+		// mustEqual ['name'] and cited forgeSif.js:350, while SIF's coercion is on the NEXT line,
+		// :351, description. 0 SIF nodes carry name ''; 16,181 carry description ''.
 		whileDeclared: "kit.makeNode stamps description: '' when the description is absent/empty (forgeSif.js:351)",
-		allowanceDataContract: Object.freeze({
-			coerceEmptyStringPropertyList: Object.freeze({ kind: 'stringList', mustEqual: ['description'] }),
-		}),
-		preconditionText: 'at least one node received the empty-string coercion on this build',
-		preconditionMet: ({ kitStats }) => kitStats.emptyStringCoercionCount > 0,
-		retiredBy: 'RT-2 repair (absent is absent) → new SIF id (S2)',
+		retiredBy: 'RT-2 repair (absent is absent) → new SIF id (S2; 16,181 nodes carry the byte)',
 	}),
 
-	S3: Object.freeze({
+	S3: versionDisagreementRow({
 		allowanceId: 'S3',
-		rowRefId: 'S3',
-		declarableBy: Object.freeze(['sif']),
-		kind: ALLOWANCE_KIND.FORGE_TIME,
-		evaluatedAt: EVALUATED_AT.DESCRIBE_SOURCE,
+		declarableBy: 'sif',
 		whileDeclared:
 			"root version may differ from (selfDescribedVersion ?? 'unknown') — SIF root '1.0' while the stamp input is null (forgeSif.js:762-765)",
-		allowanceDataContract: Object.freeze({}),
-		preconditionText: "describeSource returns version !== (selfDescribedVersion ?? 'unknown')",
-		preconditionMet: ({ describedSource }) =>
-			describedSource.version !==
-			(describedSource.selfDescribedVersion === null || describedSource.selfDescribedVersion === undefined
-				? 'unknown'
-				: describedSource.selfDescribedVersion),
 		retiredBy: "SIF's parser reports a real source version (or the root carries 'unknown') → new id (S3)",
 	}),
 
@@ -171,6 +197,153 @@ const MIGRATION_ALLOWANCE_REGISTRY = Object.freeze({
 		preconditionText: 'substitutionCount > 0 on this build (census #1 forbids the declaration at zero)',
 		preconditionMet: ({ kitStats }) => kitStats.substitutionCount > 0,
 		retiredBy: 'refuse the unknown type → byte-neutral, its own commit (S6)',
+	}),
+
+	// ---- PESC260805 ROWS — CREATED 2026-08-29, hub-kit-role Phase 4 (rulings FJ-P4-2, FJ-P4-5) ----
+	//
+	// THREE ROWS WERE CREATED HERE WHERE F3a SHIPPED ONE (P16). Two of the three were already NAMED
+	// IN REFUSAL PROSE by framework code that could never have worked: contractGraphKit.js:223 has
+	// pointed readers at "P9" and rootNode.js:124 at "P5: pescTier" since F3a, while NEITHER ROW
+	// EXISTED. A refusal that names a non-existent remedy was docketed in Phase 3 as a defect; Phase
+	// 4 is the phase that walked into it, because PESC is the forge those texts were written for.
+	// The docket's standing observation — a closed registry's rows are UNTESTED until a forge
+	// declares them, which is how S2 was wrong for eleven days with every gate green — has now
+	// landed THREE times in one phase.
+
+	// P9 — the empty-string coercion. THE ROW THE REFUSAL TEXT ALREADY NAMED; creating it makes
+	// contractGraphKit.js:223 true rather than aspirational.
+	// MEASURED on the Phase 4 entry block (f139654a, 42,372 node lines) BEFORE the row was written,
+	// checking the property the forge COERCES rather than the property any prose names — the FJ-P3-2
+	// discipline that S2 was corrected under:
+	//     27,139 nodes carry description ''      <- this row's byte
+	//          0 nodes carry name ''             <- so 'name' is NOT declared; a coercion measured
+	//                                               never to fire is what this registry refuses
+	//          0 nodes lack a description property  <- so "omit instead" was never available
+	// NOT ['name','description'] for the same reason S2 was not widened.
+	P9: emptyStringCoercionRow({
+		allowanceId: 'P9',
+		declarableBy: 'pesc260805',
+		whileDeclared:
+			"kit.makeNode stamps description: '' when the artifact's documentation is absent or empty (the bespoke forgePesc260805.js:148 description: documentation || '')",
+		retiredBy:
+			'RT-2 repair (absent is absent) → new PESC id (P9; 27,139 of 42,372 nodes carry the byte)',
+	}),
+
+	// P5 — pescTier on the root. THE SECOND PHANTOM MADE REAL (rootNode.js:124 names it).
+	//
+	// ⚠ THIS ROW LICENSES ONLY THE ROOT EXTRA PROPERTY. It does NOT license the four root
+	// omissions rootNode.js's header says "P5 (PESC, not an F3a row) will license omitting exactly
+	// FOUR via rootOmitPropertyList". RULING FJ-P4-5 OVERRULED THAT DESIGN: the PESC root is made
+	// CONFORMANT with the other three standards instead — it GAINS snapshotKey, publishedVersion,
+	// versionSource and coreVersion rather than omitting them — because the campaign's thesis is
+	// that the framework owns the root, and four rows whose only purpose was to keep one root
+	// non-conformant would have preserved a byte at the cost of the point. That is the whole reason
+	// I4 is re-keyed rather than held. The stale sentence in rootNode.js's header is corrected in
+	// this same commit.
+	//
+	// ⚠ AND THIS IS THE REGISTRY'S FIRST OFFLINE ROW. The shape has existed since F3a and has NEVER
+	// BEEN EXERCISED — "the shape is declared so the validator walks one table". It is used here
+	// because it is the honest fit rather than for novelty: the framework evaluates preconditions at
+	// exactly TWO steps, describeSource (context { describedSource, verifiedFileList }) and
+	// contractGraph (context { kitStats }), and NEITHER can see whether describeRoot returned a
+	// pescTier — the root is built between them. A forge-time row here would need a predicate over a
+	// context that cannot observe the thing the row is about, which is a proxy, and a proxy
+	// precondition is the same family of lie as a proxy report. So: no evaluatedAt, no
+	// preconditionMet (evaluateAllowancesAtStep skips on the evaluatedAt mismatch, both in the
+	// declared-but-unneeded loop and in the undeclared-but-needed sweep), and the declaration must
+	// carry probeEvidence, whose PRESENCE forgeDeclarationContract.js:178 checks by name.
+	// The undeclared-but-needed direction is not lost: rootNode.js:118-127 already refuses an
+	// extraProperty no active allowance names, which is where that refusal belongs.
+	P5: Object.freeze({
+		allowanceId: 'P5',
+		rowRefId: 'P5',
+		declarableBy: Object.freeze(['pesc260805']),
+		kind: ALLOWANCE_KIND.OFFLINE,
+		evaluatedAt: null,
+		whileDeclared:
+			"the root carries the bundle-local pescTier 'meta' (the bespoke forgePesc260805.js:213), a per-standard tier marker no other standard has",
+		// ⚠ THIS IS DECLARATION DATA, NOT ROW DATA, and the distinction cost a refusal to find.
+		// rootNode.js:91-93 reduces rootExtraPropertyNameList off activeAllowanceById, which
+		// forge-framework.js:113-116 keys to the DECLARATION ENTRY rather than to the registry row —
+		// the same place P9 carries coerceEmptyStringPropertyList and P4 its edgeTypeAllowList. A row
+		// that carried the list itself validated fine and then did nothing, and the build refused
+		// with "no active allowance names it" while the row plainly named it.
+		allowanceDataContract: Object.freeze({
+			rootExtraPropertyNameList: Object.freeze({ kind: 'stringList', mustEqual: ['pescTier'] }),
+		}),
+		preconditionText:
+			'OFFLINE: the root carries pescTier, evidenced by the declaration probe rather than by a forge-time predicate — the framework has no evaluation step that can observe a root extra property',
+		retiredBy:
+			"pescTier moves to a declared descriptor field, or is dropped when the source/derived/synthetic tier marker stops being bundle-local → new PESC id",
+	}),
+
+	// P17 — the version disagreement. S3's behaviour, keyed for PESC (RULING FJ-P4-5, after the
+	// count was measured rather than inherited: the ruling said "P16 + P9 + P5 = 3 unless you
+	// measure otherwise", and this is the otherwise).
+	//
+	// WHY PESC IS THE SIF CASE AND NOT THE CEDS CASE, measured on the three roots:
+	//     CEDS  version 14.0.0.0  publishedVersion 14.0.0.0  versionSource spec      no S3-analogue
+	//     SIF   version 1.0       publishedVersion unknown   versionSource unknown   S3
+	//     PESC  version aggregate-01  publishedVersion unknown  versionSource unknown  <- this row
+	// snapshot-provenance.js:11 defines versionSource 'spec' as "the parser read the version from a
+	// SELF-DESCRIBING source; the SOURCE WINS". PESC's `aggregate-01` is OURS (R-ACQ-7) and the
+	// snapshot's own README_PROVENANCE.md says in capitals that it "must never be read as a PESC
+	// edition", because PESC publishes no coherent whole-family release. The snapshot's
+	// standardSourceLocation supplies no publishedVersion either — measured, not assumed.
+	// So describeSource returns selfDescribedVersion null, the stamp resolves to 'unknown'/'unknown',
+	// and the root's version then differs from (selfDescribedVersion ?? 'unknown').
+	// ⚠ THE OTHER BRANCH WAS AVAILABLE AND WAS REFUSED: passing 'aggregate-01' as the self-described
+	// version stamps versionSource 'spec' — measured, deriveVersionStamp returns exactly that — and
+	// would assert in a BLOCK BYTE that PESC's source declares a whole-family version it does not
+	// publish. That is a label that lies, which is what SPEC §4.9 refused when it chose the honest
+	// re-key over the cheap pin.
+	P17: versionDisagreementRow({
+		allowanceId: 'P17',
+		declarableBy: 'pesc260805',
+		whileDeclared:
+			"root version may differ from (selfDescribedVersion ?? 'unknown') — PESC root 'aggregate-01' while the stamp input is null, because the aggregate version is OURS (R-ACQ-7) and the source self-describes none",
+		retiredBy:
+			"PESC publishes a whole-family version the parser can read, or the root carries 'unknown' honestly → new PESC id (P17)",
+	}),
+
+	// P4 — the edge-type allow list. THE THIRD PHANTOM MADE REAL (RULING FJ-P4-6): contractGraphKit.js
+	// has pointed readers at "an active P4 edgeTypeAllowList" since F3a while no P4 row existed, and
+	// PESC is the only forge that could ever have declared it.
+	//
+	// MEASURED on the Phase 4 entry block, all 70,628 edge lines, before the row was written:
+	//     DECLARES        12,991   IMPORTS            76   IN_NAMESPACE       64
+	//     MERGED_FROM        140   RESOLVES_TO    17,706   SAME_DEFINITION 10,400   SERVED_BY  1
+	//   = 41,378 edges, 58.6% of PESC's edge population, on SEVEN types outside EDGE_TYPES.
+	//   The other three (HAS_PROPERTY 17,575 · HAS_RESTRICTION 10,886 · HAS_SUPPORT 789) are members.
+	//
+	// WHY NOT S6. S6's parentEdgeSubstitutionTable TRANSLATES a native type INTO a registry member,
+	// and the kit refuses a substitution target that is not one (contractGraphKit.js:305). PESC's
+	// seven are not synonyms for registry types — DECLARES, RESOLVES_TO, SAME_DEFINITION and
+	// IN_NAMESPACE are distinct relations the PESC graph model is built on (design §1-§4).
+	// Substituting them would COLLAPSE 41,378 edges onto one type and change the block. They need
+	// ADMITTING, not translating, which is what edgeTypeAllowList does and why the refusal names P4.
+	//
+	// mustEqual PINS THE SEVEN EXACTLY, in a fixed order: an eighth un-registered type emitted later
+	// is refused by name rather than quietly admitted. That is the S2 discipline — a list that can
+	// silently grow is not a gate.
+	P4: Object.freeze({
+		allowanceId: 'P4',
+		rowRefId: 'P4',
+		declarableBy: Object.freeze(['pesc260805']),
+		kind: ALLOWANCE_KIND.FORGE_TIME,
+		evaluatedAt: EVALUATED_AT.CONTRACT_GRAPH,
+		whileDeclared:
+			'kit.addEdge ADMITS an edge type outside EDGE_TYPES when the declared edgeTypeAllowList names it (the bespoke forgePesc260805.js and its derived/synthetic tiers emit seven such relations); the census counts each admission',
+		allowanceDataContract: Object.freeze({
+			edgeTypeAllowList: Object.freeze({
+				kind: 'stringList',
+				mustEqual: ['DECLARES', 'IMPORTS', 'IN_NAMESPACE', 'MERGED_FROM', 'RESOLVES_TO', 'SAME_DEFINITION', 'SERVED_BY'],
+			}),
+		}),
+		preconditionText: 'allowListedEdgeCount > 0 on this build (an allow list that never admits an edge is a stale no-op)',
+		preconditionMet: ({ kitStats }) => kitStats.allowListedEdgeCount > 0,
+		retiredBy:
+			"the seven PESC relations are promoted into EDGE_TYPES — a SHARED-VOCABULARY decision, not a forge decision, because lib/vocabulary serves every producer → new PESC id (P4)",
 	}),
 });
 

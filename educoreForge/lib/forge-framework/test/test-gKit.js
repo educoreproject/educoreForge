@@ -79,7 +79,13 @@ const kitConjunctList = [
 		shape: (scenario) => withWalkExtra(scenario, ({ kit }) => { kit.addEdge({ edgeType: 'OWNS', fromStableId: kit.rootStableId, toStableId: 'toy:class/Person', edgeContext: 'test' }); }),
 		regex: /edge type 'OWNS' is not a member of EDGE_TYPES/,
 		twinName: 'disableEdgeTypeCheck', fileName: KIT_FILE,
-		find: '\t\t\t} else if (edgeTypeAllowList.indexOf(edgeType) === -1) {', replace: '\t\t\t} else if (false && edgeTypeAllowList.indexOf(edgeType) === -1) {',
+		// ⚠ ANCHOR MOVED 2026-08-29 (hub-kit-role Phase 4, RULING FJ-P4-6). The kit's branch was
+		// `} else if (edgeTypeAllowList.indexOf(edgeType) === -1) { throw }` and became
+		// `} else if (...indexOf(edgeType) !== -1) { count } else { throw }` when the P4 admission
+		// counter was added. The old find-text no longer exists, so the twin SILENTLY STOPPED
+		// APPLYING and this conjunct could not be observed red — the failure mode a twin exists to
+		// prevent, arriving at the twin itself. It now disables the ELSE arm that throws.
+		find: '\t\t\t} else {\n\t\t\t\tthrow refuse.byName({ moduleName, what: `addEdge: edge type', replace: '\t\t\t} else if (false) {\n\t\t\t\tthrow refuse.byName({ moduleName, what: `addEdge: edge type',
 	}),
 	refusalCase({
 		registry: twinRegistry, gateId: KIT_GATE_ID, conjunctId: 'retiredMappingEdgeType',

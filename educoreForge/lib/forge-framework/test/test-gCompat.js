@@ -39,6 +39,8 @@ const GATE_ID = 'G-COMPAT';
 const twinRegistry = makeTwinRegistry();
 const FRAMEWORK_FILE = 'forge-framework.js';
 const KIT_FILE = 'contractGraphKit.js';
+const ROOT_NODE_FILE = 'rootNode.js';
+const DECLARATION_CONTRACT_FILE = 'forgeDeclarationContract.js';
 const CENSUS_FILE = 'census.js';
 const FROZEN_TOY_ALLOWANCE_COUNT = 0;
 const REAL_FORGES_DIR = path.resolve(toyScenario.FRAMEWORK_DIR, '..', '..', 'forges');
@@ -51,6 +53,13 @@ const withDescribeSource = (scenario, transform) => { const baseHooks = toyScena
 const withWalkExtra = (scenario, extra) => { const baseHooks = toyScenario.toyHooksFactory(); scenario.hookOverrides.emitContractGraph = (context) => { const walkResult = baseHooks.emitContractGraph(context); extra(context); return walkResult; }; };
 const mintNameless = ({ kit }) => kit.makeNode({ role: DME_ROLES.CLASS, perStandardLabel: 'ToyClass', stableId: 'toy:class/Nameless', name: null, structural: { parentId: kit.rootStableId, path: 'Nameless' }, searchTextElement: { role: DME_ROLES.CLASS, name: 'Nameless', standardName: 'Toy', owningName: 'Toy' }, origin: 'nameless' });
 const addNativeEdge = ({ kit }) => kit.addEdge({ edgeType: 'HAS_CHILD', fromStableId: 'toy:class/Person', toStableId: 'toy:class/School', edgeContext: 'native parent edge' });
+// P4 fixture data: an edge whose type is OUTSIDE EDGE_TYPES but INSIDE the declared allow list —
+// the admission the row licenses. DECLARES is PESC's largest such relation (12,991 edges in the
+// real block) and is a RELATION, not a synonym for a registry type, which is why PESC's seven are
+// ADMITTED by P4 rather than TRANSLATED by an S6-shaped substitution table.
+const PESC_EDGE_TYPE_ALLOW_LIST = ['DECLARES', 'IMPORTS', 'IN_NAMESPACE', 'MERGED_FROM', 'RESOLVES_TO', 'SAME_DEFINITION', 'SERVED_BY'];
+const addAllowListedEdge = ({ kit }) => kit.addEdge({ edgeType: 'DECLARES', fromStableId: 'toy:class/Person', toStableId: 'toy:class/School', edgeContext: 'an allow-listed relation' });
+const withDescribeRoot = (scenario, transform) => { const baseHooks = toyScenario.toyHooksFactory(); scenario.hookOverrides.describeRoot = (context) => transform(baseHooks.describeRoot(context)); };
 // S2's fixture, MOVED FROM name TO description (RULING FJ-P3-2). The row was authored against
 // forgeSif.js:350 (`name`) and SIF's real coercion is :351 (`description`); its data contract now
 // reads mustEqual ['description'], so a name-shaped fixture could no longer exercise it at all.
@@ -206,6 +215,79 @@ const conjunctList = [
 			callback('', { pass: offenderList.length === 0, detail: offenderList.length ? `override token in: ${offenderList.join(', ')}` : `${shippedConfigTextList().length} shipped files clean` });
 		},
 	},
+	// ---- THE FOUR PESC ROWS CREATED IN THE HUB-KIT-ROLE PHASE 4 MIGRATION -------------------
+	// Scope ruled by FJ-P4-6/7 after I measured the existing coverage and asked: this gate has
+	// conjuncts for E6, E8, S2 and S6 and NONE for S3, S4 or S7. So P9's kit behaviour is ALREADY
+	// covered by s2LiveInKit — the two share rowRefId 'emptyStringCoercion' — and P17 shares a
+	// behaviour that has never had a conjunct on either side. P4 and P5 introduce mechanisms with
+	// NO existing coverage at all: edgeTypeAllowList and rootExtraPropertyNameList. Hence: FULL
+	// conjunct + both twins for P4 and P5, a DECLARABILITY conjunct for P9 and P17, and NO
+	// retro-fit for S3/S4/S7, which are pre-existing gaps docketed rather than fixed in this phase.
+	//
+	// AND THE RED TWINS CONSTRUCT THE VIOLATION IN THE KIT (supervisor's requirement): an edge type
+	// outside the declared allow list, and a root extra property no allowance names — rather than
+	// merely flipping a registry flag, so each gate is observed catching the thing it exists for.
+	shapedConjunct({
+		conjunctId: 'p4LiveInKit',
+		title: "P4 declared (as pesc260805) with the seven-name edgeTypeAllowList and a native DECLARES edge → the edge SHIPS with type DECLARES (ADMITTED, not translated), allowListedEdgeCount EQUALS 1, activeAllowanceList ['P4']",
+		twinNameList: ['kitIgnoresEdgeTypeAllowList'],
+		shape: (scenario) => { asStandard(scenario, 'pesc260805'); scenario.forgeDeclaration.compatibilityDeclarationList = [{ allowanceId: 'P4', edgeTypeAllowList: PESC_EDGE_TYPE_ALLOW_LIST }]; withWalkExtra(scenario, addAllowListedEdge); },
+		judge: succeeded((result) => { const admitted = result.edges.find((oneEdge) => oneEdge.type === 'DECLARES' && oneEdge.fromRef.id === 'toy:class/Person' && oneEdge.toRef.id === 'toy:class/School'); return { pass: admitted !== undefined && result.stats.allowListedEdgeCount === 1 && result.complianceReport.activeAllowanceList.join(',') === 'P4', detail: `admitted edge ${admitted ? 'present as DECLARES' : 'ABSENT'}; allowListedEdgeCount ${result.stats.allowListedEdgeCount}; report ${JSON.stringify(result.complianceReport)}` }; }),
+	}),
+	shapedConjunct({
+		conjunctId: 'p4CountsAllowListedEdges',
+		title: 'P4 declared with TWO allow-listed edges → allowListedEdgeCount EQUALS 2 and allowListedEdgeCountByType names each type (an admission that ships unrecorded is the silent-default class, which is why the counter exists at all)',
+		twinNameList: ['kitDoesNotCountAllowListedEdges'],
+		shape: (scenario) => { asStandard(scenario, 'pesc260805'); scenario.forgeDeclaration.compatibilityDeclarationList = [{ allowanceId: 'P4', edgeTypeAllowList: PESC_EDGE_TYPE_ALLOW_LIST }]; withWalkExtra(scenario, ({ kit }) => { addAllowListedEdge({ kit }); kit.addEdge({ edgeType: 'RESOLVES_TO', fromStableId: 'toy:class/School', toStableId: 'toy:class/Person', edgeContext: 'second allow-listed edge' }); }); },
+		judge: succeeded((result) => { const byType = result.stats.allowListedEdgeCountByType || {}; return { pass: result.stats.allowListedEdgeCount === 2 && byType.DECLARES === 1 && byType.RESOLVES_TO === 1, detail: `allowListedEdgeCount ${result.stats.allowListedEdgeCount}; byType ${JSON.stringify(byType)}` }; }),
+	}),
+	refusalCase({
+		registry: twinRegistry, gateId: GATE_ID, conjunctId: 'p4UnlistedEdgeTypeRefused',
+		title: "P4 declared, and the walk emits an edge type the list does NOT name → refused by name. THE VIOLATION IS BUILT IN THE KIT, not by flipping a registry flag: the allow list is what makes the gate mean something, and a list that admitted anything would be indistinguishable from no gate",
+		shape: (scenario) => { asStandard(scenario, 'pesc260805'); scenario.forgeDeclaration.compatibilityDeclarationList = [{ allowanceId: 'P4', edgeTypeAllowList: PESC_EDGE_TYPE_ALLOW_LIST }]; withWalkExtra(scenario, ({ kit }) => kit.addEdge({ edgeType: 'BOGUS_EDGE', fromStableId: 'toy:class/Person', toStableId: 'toy:class/School', edgeContext: 'an edge type outside the declared allow list' })); },
+		regex: /edge type 'BOGUS_EDGE' is not a member of EDGE_TYPES/,
+		twinName: 'kitIgnoresEdgeTypeAllowListRefusal', fileName: KIT_FILE,
+		find: '\t\t\t} else if (edgeTypeAllowList.indexOf(edgeType) !== -1) {', replace: '\t\t\t} else if (true) {',
+	}),
+	refusalCase({
+		registry: twinRegistry, gateId: GATE_ID, conjunctId: 'p4DeclaredButUnneededRefused',
+		title: "P4 declared with NO allow-listed edge emitted on this build → refused 'allowance P4 active but its condition is not met' (contract-graph step, reading the counter the same way S6 reads substitutionCount)",
+		shape: (scenario) => { asStandard(scenario, 'pesc260805'); scenario.forgeDeclaration.compatibilityDeclarationList = [{ allowanceId: 'P4', edgeTypeAllowList: PESC_EDGE_TYPE_ALLOW_LIST }]; },
+		regex: /buildContractGraph: .*allowance P4 active but its condition is not met/,
+		twinName: 'disableDeclaredButUnneededCheckForP4', fileName: FRAMEWORK_FILE,
+		find: '\t\t\t\tif (!oneRow.preconditionMet(context)) {', replace: '\t\t\t\tif (!oneRow.preconditionMet(context) && false) {',
+	}),
+	shapedConjunct({
+		conjunctId: 'p5LiveInRoot',
+		title: "P5 declared (as pesc260805) naming pescTier, and describeRoot returning extraProperties { pescTier: 'meta' } → the ROOT carries pescTier 'meta', activeAllowanceList ['P5']. The registry's FIRST offline-precondition row, and the only one whose data the framework reads at ROOT BUILD rather than at either evaluation step",
+		twinNameList: ['rootNodeIgnoresExtraPropertyAllowance'],
+		shape: (scenario) => { asStandard(scenario, 'pesc260805'); scenario.forgeDeclaration.compatibilityDeclarationList = [{ allowanceId: 'P5', rootExtraPropertyNameList: ['pescTier'], probeEvidence: { probeName: 'gCompatFixture', probeDate: '2026-08-29', probeResult: 'the fixture root carries pescTier' } }]; withDescribeRoot(scenario, (described) => ({ ...described, extraProperties: { pescTier: 'meta' } })); },
+		judge: succeeded((result) => { const rootNode = result.nodes.find((oneNode) => oneNode.properties.role === 'DmeStandardRoot'); return { pass: rootNode !== undefined && rootNode.properties.pescTier === 'meta' && result.complianceReport.activeAllowanceList.join(',') === 'P5', detail: `root pescTier ${JSON.stringify(rootNode && rootNode.properties.pescTier)}; report ${JSON.stringify(result.complianceReport)}` }; }),
+	}),
+	refusalCase({
+		registry: twinRegistry, gateId: GATE_ID, conjunctId: 'p5UndeclaredExtraRefused',
+		title: "describeRoot returns a root extra property with NO allowance naming it → refused by name. THE VIOLATION IS BUILT AT THE SEAM, not by flipping a flag: this is the direction rootNode.js already enforces, and it is what makes P5 a licence rather than a decoration",
+		shape: (scenario) => { asStandard(scenario, 'pesc260805'); scenario.forgeDeclaration.compatibilityDeclarationList = []; withDescribeRoot(scenario, (described) => ({ ...described, extraProperties: { pescTier: 'meta' } })); },
+		regex: /extraProperties carries 'pescTier' and no active allowance names it/,
+		twinName: 'rootNodeAdmitsUnlicensedExtra', fileName: ROOT_NODE_FILE,
+		find: '\tif (unlicensedExtraName !== undefined) {', replace: '\tif (false) {',
+	}),
+	refusalCase({
+		registry: twinRegistry, gateId: GATE_ID, conjunctId: 'p9DeclarableByPescOnly',
+		title: "P9 declared by SIF → refused: 'declarable only by pesc260805'. P9 and S2 share rowRefId 'emptyStringCoercion' so the SWEEP treats them as one behaviour, but the IDS stay per-forge so each retires its own in its own commit (D12) — this conjunct is what keeps those two facts from collapsing into each other",
+		shape: (scenario) => { asStandard(scenario, 'sif'); scenario.forgeDeclaration.compatibilityDeclarationList = [{ allowanceId: 'P9', coerceEmptyStringPropertyList: ['description'] }]; },
+		regex: /allowanceId 'P9' is declarable only by pesc260805, not by 'sif'/,
+		twinName: 'declarableByCheckDisabledForP9', fileName: DECLARATION_CONTRACT_FILE,
+		find: '\t\t\tif (registryRow.declarableBy.indexOf(forgeDeclaration.standardKey) === -1) {', replace: '\t\t\tif (false) {',
+	}),
+	refusalCase({
+		registry: twinRegistry, gateId: GATE_ID, conjunctId: 'p17DeclarableByPescOnly',
+		title: "P17 declared by SIF → refused: 'declarable only by pesc260805'. Same shape as P9 against the OTHER shared behaviour, rowRefId 'versionDisagreement' — the two rows S3 and P17 whose per-forge keying is exactly what refused PESC's build until they were re-keyed onto one behaviour",
+		shape: (scenario) => { asStandard(scenario, 'sif'); scenario.forgeDeclaration.compatibilityDeclarationList = [{ allowanceId: 'P17' }]; },
+		regex: /allowanceId 'P17' is declarable only by pesc260805, not by 'sif'/,
+		twinName: 'declarableByCheckDisabledForP17', fileName: DECLARATION_CONTRACT_FILE,
+		find: '\t\t\tif (registryRow.declarableBy.indexOf(forgeDeclaration.standardKey) === -1) {', replace: '\t\t\tif (false) {',
+	}),
 ];
 
 scenarioTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'migratedForgeCountsEqualFrozen', twinName: 'migratedForgeDeclaresThirdAllowance', leverKind: 'inputFault', mutate: (scenario) => { const edfiDeclaration = migratedForgeDeclarationFor('edfi'); scenario.migratedDeclarationOverrideByStandardKey = { edfi: { ...edfiDeclaration, compatibilityDeclarationList: edfiDeclaration.compatibilityDeclarationList.concat([{ allowanceId: 'S4' }]) } }; } });
@@ -224,5 +306,11 @@ frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 's2
 frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 's6LiveInKit', twinName: 'kitIgnoresSubstitutionTable', fileName: KIT_FILE, find: '\t\t\tif (parentEdgeSubstitutionTable[edgeType] !== undefined) {', replace: '\t\t\tif (false && parentEdgeSubstitutionTable[edgeType] !== undefined) {' });
 scenarioTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'overrideAbsentFromShippedConfig', twinName: 'shippedEntryPassesOverride', leverKind: 'productionMutation', mutate: (scenario) => { scenario.staticExtraSourceList = (scenario.staticExtraSourceList || []).concat([{ fileName: 'forges/toy/forgeToy.js (in-memory shipped double)', text: "forgeFramework({ embedder, migratingBundleListOverride: ['toy'] })" }]); } });
 
+// ---- the PESC rows' twins. Each mutates the PRODUCTION module whose behaviour the conjunct
+// claims, so a green conjunct cannot be green because nothing was checked.
+frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'p4LiveInKit', twinName: 'kitIgnoresEdgeTypeAllowList', fileName: KIT_FILE, find: '\t\t\t} else if (edgeTypeAllowList.indexOf(edgeType) !== -1) {', replace: '\t\t\t} else if (false) {' });
+frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'p4CountsAllowListedEdges', twinName: 'kitDoesNotCountAllowListedEdges', fileName: KIT_FILE, find: '\t\t\t\tstats.allowListedEdgeCount += 1;', replace: '\t\t\t\tstats.allowListedEdgeCount += 0;' });
+frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'p5LiveInRoot', twinName: 'rootNodeIgnoresExtraPropertyAllowance', fileName: ROOT_NODE_FILE, find: '\t\t...extraProperties,', replace: '' });
+
 const gateDeclarationList = [{ gateId: GATE_ID, title: 'the compatibility-declaration mechanism', conjunctList }];
-runGateFamily({ harness, familyName: GATE_ID, gateDeclarationList, twinRegistry, makeSubject: toyScenario.makeScenario, cloneSubject: (scenario) => ({ ...toyScenario.cloneScenario(scenario), staticExtraSourceList: (scenario.staticExtraSourceList || []).slice(), migratedDeclarationOverrideByStandardKey: scenario.migratedDeclarationOverrideByStandardKey }), expectedConjunctCount: 16, expectedTwinCount: 16 }, () => harness.report());
+runGateFamily({ harness, familyName: GATE_ID, gateDeclarationList, twinRegistry, makeSubject: toyScenario.makeScenario, cloneSubject: (scenario) => ({ ...toyScenario.cloneScenario(scenario), staticExtraSourceList: (scenario.staticExtraSourceList || []).slice(), migratedDeclarationOverrideByStandardKey: scenario.migratedDeclarationOverrideByStandardKey }), expectedConjunctCount: 24, expectedTwinCount: 24 }, () => harness.report());

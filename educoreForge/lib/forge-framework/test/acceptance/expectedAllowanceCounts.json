@@ -28,21 +28,16 @@
       ]
     },
     "pesc260805": {
-      "frozenCount": 7,
+      "frozenCount": 5,
       "frozenList": [
-        "P2",
-        "P4",
-        "P5",
-        "P6",
+        "P16",
         "P9",
-        "P10",
-        "P16"
+        "P5",
+        "P17",
+        "P4"
       ],
-      "conditionalList": [
-        "P1 (probe #2)",
-        "P3 (present by construction today)",
-        "C1/C2 (census #1)"
-      ]
+      "conditionalList": [],
+      "measuredNote": "MEASURED 2026-08-29 in the hub-kit-role Phase 4 migration commit, replacing the SPEC 7.3 ANTICIPATED list [P2,P4,P5,P6,P9,P10,P16] (frozenCount 7). Each of the five was measured against the Phase 4 entry block before it was declared: P16 root sourceUrl is empty-string; P9 27,139 of 42,372 nodes carry description empty-string (0 carry name empty-string, 0 lack the property); P5 the root carries pescTier meta; P17 root version aggregate-01 differs from (selfDescribedVersion ?? unknown) because the aggregate version is ours and the source self-describes none; P4 seven edge types outside EDGE_TYPES carry 41,378 of 70,628 edges. THREE OF THE ANTICIPATED SEVEN ARE NOT NEEDED AND TWO OF THEM NAME ROWS THAT DO NOT EXIST: P10 was the permissive stableId pattern, which is exported DATA and is gated by no allowance anywhere in the tree (measured: all 42,372 stableIds match the pattern); P2 and P6 have no rows and no measured precondition. FOUR of the five rows were CREATED in this commit (P9, P5, P17, P4) because F3a shipped only P16, and three of those four were already named in framework refusal prose that could never have worked."
     },
     "ceds": {
       "frozenCount": 0,
