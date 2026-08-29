@@ -169,7 +169,14 @@ const POST_D1_BASE_TAG = 'derivedBridgeD1-081726';
 //
 // Verified by grep before editing that PHASE0_ANCHOR_TAG serves conjunct (iii) ALONE — seamDiffEmpty
 // reads PHASE3_ANCHOR_TAG and moved in the previous commit — so this move touches no other conjunct.
-const PHASE0_ANCHOR_TAG = 'post3SeamDiffEmptyReanchor-082926';
+// ⚠ MOVED 2026-08-29 by TWILIGHT_GATE (Phase 4). Conjunct (iii) demands the lib/forge-framework/
+// diff be EMPTY with NO exclusions, and Phase 4 made R6 edits there under rulings FJ-P4-2/5/6:
+// four new allowance rows plus two extracted shared factories in migrationAllowanceRegistry.js,
+// the allowListedEdgeCount counter in contractGraphKit.js, a corrected comment in rootNode.js,
+// and the gate and fixture files. THE BASE MOVES; NO EXCLUSION IS ADDED — that is the Phase 0
+// open-item-8 remedy, and the prohibition is the whole point: this conjunct is worth having only
+// because it admits NOTHING, so an exclusion would hand back exactly the blind spot it closes.
+const PHASE0_ANCHOR_TAG = 'post4SeamDiffEmptyReanchor-082926';
 // PHASE 1 RE-ANCHOR — RULING FJ-P1-1, and it moves seamDiffEmpty ALONE.
 //
 // WHY IT HAD TO MOVE. SEAM_PATH_LIST watches forges/*/forge*.js, forges/*/lib/*Declaration.js and
