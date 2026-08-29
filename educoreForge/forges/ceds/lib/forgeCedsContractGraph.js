@@ -44,6 +44,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
 const path = require('path');
 const normalize = require('./normalize');
+const forgeDeclaration = require('./cedsForgeDeclaration'); // H1 — the constants live there, once
 
 const CORE_LIB = path.join(__dirname, '..', '..', '..', 'lib');
 const { DME_ROLES, EDGE_TYPES, CANONICAL_ADDRESS_PROPERTIES } = require(
@@ -87,8 +88,19 @@ const perStandardLabelFor = (role) => {
 	}
 	return perStandardLabel;
 };
-// hubName tags every CEDS structural node (WHITEPAPER §8; forgeCeds.js:85)
-const HUB_NAME = 'CEDS';
+// THE STANDARD'S OWN NAME IS DECLARED ONCE, IN H1, AND READ HERE — NEVER RE-TYPED.
+// It is the same string in four distinct roles, and having it as a literal here made a value that
+// invariant I12 asserts must be EQUAL into a value that merely HAPPENED to be equal:
+//   * _source on every node            — stamped by the kit from forgeDeclaration.standardSource
+//   * hubName on every structural node  — stamped below (WHITEPAPER §8; forgeCeds.js:85)
+//   * hubName on the hub's own cards    — cedsHubForge.js:132, outside this file
+//   * the searchText ladder's standardName / owningName default — the SPEC §11.5 BYTE MANDATE,
+//     whose own phrasing is `owningName || standardSource`, not `|| 'CEDS'`
+// Raised by the independent Phase 1 review (S3): a triply-declared value turns an I12 assertion into
+// something that merely happens to hold. Byte-neutral by construction — the same string — and PROVEN
+// so by a full CEDS re-forge after the change (I1 must remain 09a5d658…487c33 at 419,649,468).
+// Precedent: forgeEdfiContractGraph.js:64 requires its own declaration for exactly this reason.
+const STANDARD_SOURCE = forgeDeclaration.standardSource;
 
 // the fields one change record may carry, named exactly as the SOURCE names them, which is what the
 // round-trip compiler's EDIT_HISTORY_ENTRY_FIELDS expects (forgeCeds.js:52-59)
@@ -162,7 +174,7 @@ const moduleFunction =
 			// -----------------------------------------------------------------
 			const addressPropertiesFor = ({ kind, canonicalCedsId, addressSlots }) => {
 				const addressProperties = {
-					[A.HUB_NAME]: HUB_NAME,
+					[A.HUB_NAME]: STANDARD_SOURCE,
 					[A.HUB_VERSION]: metadata.version,
 				};
 				if (kind === 'property' || kind === 'optionValue') {
@@ -392,7 +404,7 @@ const moduleFunction =
 					role: DME_ROLES.CLASS,
 					rawEntity: cls,
 					kind: 'class',
-					searchTextElement: { name: className, standardName: 'CEDS', owningName: 'CEDS' },
+					searchTextElement: { name: className, standardName: STANDARD_SOURCE, owningName: STANDARD_SOURCE },
 					extraProperties: cls.notation !== undefined ? { notation: cls.notation } : {},
 					// parentId referent = MEMBER stableId (M7) — the root's stableId
 					structural: { parentId: rootStableId, path: className },
@@ -534,8 +546,8 @@ const moduleFunction =
 					kind: 'property',
 					searchTextElement: {
 						name: propertyName,
-						owningClassName: owningClassName || 'CEDS',
-						owningName: owningClassName || 'CEDS',
+						owningClassName: owningClassName || STANDARD_SOURCE,
+						owningName: owningClassName || STANDARD_SOURCE,
 					},
 					extraProperties,
 					addressSlots: {
@@ -548,7 +560,7 @@ const moduleFunction =
 						// parentId referent = MEMBER stableId (M7): the owning class's uri, or the
 						// root's stableId — the same value the HAS_PROPERTY edge uses.
 						parentId: parentStableId,
-						path: `${owningClassName || 'CEDS'}.${propertyName}`,
+						path: `${owningClassName || STANDARD_SOURCE}.${propertyName}`,
 					},
 					origin: `property ${propertyName}`,
 				});
@@ -596,7 +608,7 @@ const moduleFunction =
 					role: DME_ROLES.OPTION_SET,
 					rawEntity: os,
 					kind: 'optionSet',
-					searchTextElement: { name: setName, owningName: 'CEDS', owningClassName: 'CEDS' },
+					searchTextElement: { name: setName, owningName: STANDARD_SOURCE, owningClassName: STANDARD_SOURCE },
 					extraProperties: os.notation !== undefined ? { notation: os.notation } : {},
 					// parentId referent = MEMBER stableId (M7); single-owner sets are re-parented to
 					// their owning property by the shared structural-contract finalizer (M8).
@@ -633,7 +645,7 @@ const moduleFunction =
 				const valueName = ov.label || ov.cedsId;
 				const owningSetUri = ov.inSchemeRef;
 				const owningSet = owningSetUri ? optionSetCanonicalByUri[owningSetUri] : undefined;
-				const optionSetName = owningSet ? owningSet.setName : 'CEDS';
+				const optionSetName = owningSet ? owningSet.setName : STANDARD_SOURCE;
 
 				// the value's range slot is its owning option set's canonical OS-id
 				const owningSetRangeId =
@@ -652,7 +664,7 @@ const moduleFunction =
 						name: valueName,
 						optionSetName,
 						owningName: optionSetName,
-						owningClassName: 'CEDS',
+						owningClassName: STANDARD_SOURCE,
 					},
 					extraProperties: ov.notation !== undefined ? { notation: ov.notation } : {},
 					addressSlots: { rangeOptionSetId: owningSetRangeId },
