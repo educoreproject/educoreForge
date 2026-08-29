@@ -399,7 +399,18 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // here, in the gate, so the next reader takes the list from the six lines below and not from prose.
 //
 // PREVIOUS BASELINE, in full: ceff79cc973133174cf5f9e0cebc2d5ff3080ce5 (Phase 1 Commit E, FJ-P1-3).
-const P1_BASELINE_COMMIT = 'f610e2c62e0688e025f28cad64b7b40871771ab1';
+// SECOND PHASE 2a RE-ANCHOR (SILVER_TIDE, 2026-08-29), FIFTH move of this baseline overall.
+// f610e2c (2a Commit B) -> 9c58f6028c9318a83eceadcf3d3dd78d62f0417e (2a Commit E, tag
+// post2aIiiReanchor-082926) — the commit whose edit caused THIS collision, never its parent.
+//
+// WHY TWICE IN ONE STEP, stated so it does not read as thrash: Phase 2a made TWO separate ruled
+// edits to lib/bridge-framework/test/test-bgNosub.js — Commit B moved seamDiffEmpty's base, Commit E
+// moved conjunct (iii)'s — and that file is inside (a)'s diffed paths. Each ruled edit to a watched
+// file costs one (a) re-anchor. Two edits, two re-anchors. Tedious by design: the alternative is
+// widening (a)'s exclusion list, which is forbidden by name.
+//
+// PREVIOUS BASELINE, in full: f610e2c62e0688e025f28cad64b7b40871771ab1 (2a Commit B).
+const P1_BASELINE_COMMIT = '9c58f6028c9318a83eceadcf3d3dd78d62f0417e';
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
