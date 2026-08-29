@@ -410,7 +410,22 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // widening (a)'s exclusion list, which is forbidden by name.
 //
 // PREVIOUS BASELINE, in full: f610e2c62e0688e025f28cad64b7b40871771ab1 (2a Commit B).
-const P1_BASELINE_COMMIT = '9c58f6028c9318a83eceadcf3d3dd78d62f0417e';
+// PHASE 2c RE-ANCHOR (SILVER_TIDE, 2026-08-29), SIXTH move of this baseline.
+// 9c58f60 (2a Commit E) -> 152034b82a05ed8530f3fc889ce21a58786fa125 (2c's seamDiffEmpty re-anchor,
+// tag post2cSeamDiffEmptyReanchor-082926) — the commit whose edit caused the SECOND of two causes,
+// and the later of them, so ONE re-anchor covers both. The baseline goes at the causing commit,
+// never at its parent.
+//
+// TWO CAUSES, and the FIRST is the one the earlier notes here would not have predicted:
+//   1. lib/vocabulary/vocabulary.js — RULING FJ-P2-3 deleted CEDS_HUB_EDGE_TYPES from it. lib/vocabulary/
+//      IS ONE OF THIS GATE'S SIX DIFFED PATHS, so (a) went red at the remediation commit 3eb4855,
+//      BEFORE any re-anchor commit existed. This is the general fact recorded at the previous move
+//      biting for real: build.js, interfaces.js, apps/bridge-maker/ and lib/vocabulary/ each cost an
+//      (a) re-anchor on their own, not only test-bgNosub.js edits.
+//   2. 152034b edits lib/bridge-framework/test/test-bgNosub.js — the familiar cause.
+//
+// PREVIOUS BASELINE, in full: 9c58f6028c9318a83eceadcf3d3dd78d62f0417e (2a Commit E).
+const P1_BASELINE_COMMIT = '152034b82a05ed8530f3fc889ce21a58786fa125';
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
