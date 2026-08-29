@@ -52,7 +52,12 @@ require('../../../test/testLib/testAppStartup')({ moduleName, helpText: helpText
 const harness = require('../../../test/testLib/harness')(moduleName);
 const xLog = process.global.xLog;
 
-const forgeCeds = require('../forgeCeds')({});
+// embedder EXPLICITLY null (framework contract, forge-framework.js:87-90): the bundle is now
+// built at factory time and REFUSES an undefined embedder by name — "silence is not consent
+// to spend". This suite forges with skipEmbedding true, so null is the honest statement of
+// what it always meant; the pre-migration `{}` relied on the bespoke module never reading the
+// value. Behaviour of this suite is unchanged.
+const forgeCeds = require('../forgeCeds')({ embedder: null });
 const cedsHubForgeFactory = require('../lib/cedsHubForge');
 const gatesLib = require('../lib/roundTripGates')();
 const vocab = require(path.join(__dirname, '..', '..', '..', 'lib', 'vocabulary', 'vocabulary'));
