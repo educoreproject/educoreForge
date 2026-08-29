@@ -350,7 +350,35 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // permanently. The baseline moves; the exclusion list does not. Refused in Phase 0 and refused again.
 //
 // PREVIOUS BASELINE, in full: 3e9cd1fe385511d28c922f0da723e81d9ae78c17 (FJ-P0-1, as corrected).
-const P1_BASELINE_COMMIT = 'b260ba8a3ce876d4034ddd885dd51a47472a4de6';
+// ── SECOND PHASE 1 RE-ANCHOR, RULING FJ-P1-3 ─────────────────────────────────────────────────────
+// The pairing above held again, deliberately this time rather than by discovery. Commit E
+// (ceff79c, "Re-anchor seamDiffEmpty to postCedsForgeS3-082926") edited
+// lib/bridge-framework/test/test-bgNosub.js by 36/3 — inside this gate's diffedPathList — so this
+// baseline moves with it. RULED TOGETHER WITH the seamDiffEmpty move rather than after it failed.
+//
+// WHY THERE WAS A SECOND PAIR AT ALL, recorded because the sequencing is the transferable lesson:
+// Commit D (37473dc) applied the independent review's S3 finding AFTER Commit A had already been
+// tagged, and D's edit landed inside SEAM_PATH_LIST — a git pathspec's `*` crosses `/`, so
+// forges/*/forge*.js matches forges/ceds/lib/forgeCedsContractGraph.js, which neither the ruling
+// nor the review expected. PLAN rule for Phases 3 and 4: HOLD THE ANCHOR TAG UNTIL THE REVIEW'S
+// CODE FINDINGS ARE IN, and this pair is paid once instead of twice.
+//
+// NEW BASELINE, in full: ceff79cc973133174cf5f9e0cebc2d5ff3080ce5 — Commit E, whose edit caused this
+// collision and which this baseline must therefore INCLUDE, NOT its parent 37473dc. Annotated tag
+// **postSeamDiffEmptyReanchorP1b-082926**.
+//
+// THE FOUR ANCHOR POINTS NOW IN PLAY — each gate anchors where its own ruled edits live:
+//     seamDiffEmpty        -> postCedsForgeS3-082926              at 37473dc  (Phase 1 Commit D)
+//     (iii)                -> postPescReembed-082926              at 75d5470  (Phase 0 Commit A)
+//     BG-COMPOSE-PESC (a)  -> postSeamDiffEmptyReanchorP1b-082926 at ceff79c  (Phase 1 Commit E)
+//     (i), (ii)            -> their own, unchanged
+//
+// THE EXCLUSION LIST IS UNTOUCHED, for the third time. Adding lib/bridge-framework/test/ would
+// silence the pairing in one line and blind this gate to every future bridge-framework test change,
+// permanently. The baseline moves; the exclusion list does not.
+//
+// PREVIOUS BASELINE, in full: b260ba8a3ce876d4034ddd885dd51a47472a4de6 (FJ-P1-2).
+const P1_BASELINE_COMMIT = 'ceff79cc973133174cf5f9e0cebc2d5ff3080ce5';
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
