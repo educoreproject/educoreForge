@@ -176,7 +176,18 @@ const POST_D1_BASE_TAG = 'derivedBridgeD1-081726';
 // and the gate and fixture files. THE BASE MOVES; NO EXCLUSION IS ADDED — that is the Phase 0
 // open-item-8 remedy, and the prohibition is the whole point: this conjunct is worth having only
 // because it admits NOTHING, so an exclusion would hand back exactly the blind spot it closes.
-const PHASE0_ANCHOR_TAG = 'post4SeamDiffEmptyReanchor-082926';
+// ⚠ MOVED 2026-08-29 by WILD_SHARD (Phase 7, RULING FJ-P7-3), for the reason (iii) exists to make
+// legible and for no other. (iii) demands the lib/forge-framework/ diff from this anchor be EMPTY and
+// applies NO EXCLUSION; seamDiffEmpty EXCLUDES test-gSeamUntouched.js. So the RULED G-SEAM-UNTOUCHED
+// re-anchor — moving its PRE_MIGRATION_REF, which lives inside that file — necessarily lands inside
+// (iii)'s watched set and outside seamDiffEmpty's. MEASURED, not predicted: (iii) was EMPTY before that
+// edit and named exactly that one file after it.
+//
+// THE BASELINE MOVES; THE CONJUNCT DOES NOT. No exclusion is added for test-gSeamUntouched.js — its
+// entire value since the Phase 0 re-anchor is that it admits NOTHING, and an exclusion would hand back
+// the blind spot the re-anchor closed. That refusal is DEVLOG open item 8's own recommendation, and
+// Phase 2a paid it the same way.
+const PHASE0_ANCHOR_TAG = 'post7GSeamReanchor-082926';
 // PHASE 1 RE-ANCHOR — RULING FJ-P1-1, and it moves seamDiffEmpty ALONE.
 //
 // WHY IT HAD TO MOVE. SEAM_PATH_LIST watches forges/*/forge*.js, forges/*/lib/*Declaration.js and
