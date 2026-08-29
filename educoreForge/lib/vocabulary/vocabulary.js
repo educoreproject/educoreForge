@@ -172,6 +172,43 @@ const RELATIONSHIP_PRODUCER_SUFFIXES = Object.keys(RELATIONSHIP_PRODUCER_SUFFIX)
 );
 const RELATIONSHIP_PAIR_INFIX = '_rel_';
 
+// RELATIONSHIP SUBJECT DISCRIMINATOR — the OPT-IN tail (Phase 7, TQ 2026-08-29, under his constraint
+// "purely backward compatible — doesn't affect any other work"). Two bridge plugins can share BOTH a
+// standard pair AND a producerKind — PESC's property and option-set derived tiers do — and then compose
+// ONE subject, which the manifest editor refuses AFTER the colliding bridge's whole judge run. The
+// remedy is a tail a PLUGIN DECLARES, appended AFTER the producer suffix:
+//
+//     <hub>@<hubVersion>_rel_<source>@<sourceVersion><producerSuffix>[~<discriminator>]
+//
+// IT IS OPT-IN AND THAT IS THE WHOLE DESIGN. A plugin that declares nothing composes the string it
+// composed before, byte for byte, on the code path it used before — so no existing subject moves and no
+// existing relationship block re-keys. The universal "bridge name in every subject" form was REJECTED
+// for exactly that reason: it re-keys the entire lineage.
+//
+// '~' was chosen by MEASUREMENT, not taste: re-measured at Phase 7 entry, it appears in NO block subject
+// of any store in the tree (37 stores, 76 subjects), in NO standardKey, and in NO version token.
+const RELATIONSHIP_DISCRIMINATOR_SEPARATOR = '~';
+// THE ONE AUTHORED RULE. Every reader — the composer, both parsers, and the declaration contract's
+// kind-checker — validates against THIS constant, so they cannot drift apart. Lower-case initial then
+// alphanumerics, 32 characters maximum; it excludes the separator by construction, so no separate clause
+// is needed to keep a discriminator from carrying one.
+const RELATIONSHIP_DISCRIMINATOR_PATTERN = /^[a-z][A-Za-z0-9]{0,31}$/;
+// DERIVED from the pattern above by stripping its two anchors and re-anchoring after the separator —
+// never re-typed. A parser needs the TAIL form ('~optionSet' at the end of a subject) while a validator
+// needs the WHOLE-VALUE form, and writing the character class twice is how the two rules silently
+// diverge. Deriving it means a change to the authored rule moves both.
+const RELATIONSHIP_DISCRIMINATOR_TAIL_PATTERN = new RegExp(
+	`${RELATIONSHIP_DISCRIMINATOR_SEPARATOR}${RELATIONSHIP_DISCRIMINATOR_PATTERN.source.replace(/^\^/, '').replace(/\$$/, '')}$`,
+);
+
+// subjectWithoutRelationshipDiscriminator — the subject as it would read had no discriminator been
+// declared. Returns the string UNCHANGED when no well-formed tail trails, so a malformed tail ('..._close~',
+// '..._close~Bad') is NOT stripped: it is left in place to be judged by the producer-suffix test, which
+// then fails to recognise it. A reader that stripped anything after the last '~' would silently accept
+// a subject the composer could never have produced.
+const subjectWithoutRelationshipDiscriminator = (subject) =>
+	typeof subject !== 'string' ? subject : subject.replace(RELATIONSHIP_DISCRIMINATOR_TAIL_PATTERN, '');
+
 // suffixForRelationshipProducer — the trailing producer marker a relationship subject must carry.
 // Returns undefined for an unknown producer; a caller that REQUIRES it treats undefined as a refusal
 // naming the producer (never a silent default).
@@ -180,7 +217,7 @@ const suffixForRelationshipProducer = (oneProducer) => RELATIONSHIP_PRODUCER_SUF
 // relationshipSubject — COMPOSE the pair-scoped, version-keyed relationship name. Both versions are
 // REQUIRED (there is no default — a relationship block that cannot name a resolved version on both
 // endpoints has no address, polyArch2 §6). Returns { subject } or { error }.
-const relationshipSubject = ({ hubStandard, hubVersion, sourceStandard, sourceVersion, producer } = {}) => {
+const relationshipSubject = ({ hubStandard, hubVersion, sourceStandard, sourceVersion, producer, discriminator } = {}) => {
 	const producerSuffix = suffixForRelationshipProducer(producer);
 	const missing = [
 		[hubStandard, 'hubStandard'],
@@ -194,16 +231,31 @@ const relationshipSubject = ({ hubStandard, hubVersion, sourceStandard, sourceVe
 	if (!producerSuffix) {
 		return { error: `relationshipSubject: producer '${producer}' has no registered suffix — known producers: ${Object.keys(RELATIONSHIP_PRODUCER_SUFFIX).join(', ')}.` };
 	}
-	return { subject: `${hubStandard}@${hubVersion}${RELATIONSHIP_PAIR_INFIX}${sourceStandard}@${sourceVersion}${producerSuffix}` };
+	const undiscriminatedSubject = `${hubStandard}@${hubVersion}${RELATIONSHIP_PAIR_INFIX}${sourceStandard}@${sourceVersion}${producerSuffix}`;
+	// ABSENT IS TODAY'S ANSWER, ON TODAY'S PATH. An undeclared discriminator returns the string composed
+	// exactly as it was before this parameter existed — the same template, no separator, no tail. That is
+	// what makes the whole change backward compatible, and it is why the check is `=== undefined` rather
+	// than a truthiness test: '' and null are NOT "absent", they are malformed values and are refused below.
+	if (discriminator === undefined) {
+		return { subject: undiscriminatedSubject };
+	}
+	if (typeof discriminator !== 'string' || !RELATIONSHIP_DISCRIMINATOR_PATTERN.test(discriminator)) {
+		return { error: `relationshipSubject: discriminator ${JSON.stringify(discriminator)} does not match ${RELATIONSHIP_DISCRIMINATOR_PATTERN} — a subject discriminator is lower-case-initial alphanumeric, 32 characters maximum, and never carries the '${RELATIONSHIP_DISCRIMINATOR_SEPARATOR}' separator itself.` };
+	}
+	return { subject: `${undiscriminatedSubject}${RELATIONSHIP_DISCRIMINATOR_SEPARATOR}${discriminator}` };
 };
 
 // relationshipProducerFromSubject — which producer's suffix (if any) a relationship subject
 // carries. Used to make a gate refusal specific; returns undefined when no known producer suffix trails.
+// STRIP A WELL-FORMED DISCRIMINATOR TAIL FIRST, then apply the existing endsWith over the producer
+// suffixes unchanged. The producer suffix TRAILS the pair infix and the discriminator trails the producer
+// suffix, so a discriminated subject's producer is only visible once the tail is removed. An undiscriminated
+// subject is unchanged by the strip and takes exactly the path it took before.
 const relationshipProducerFromSubject = (subject) =>
 	typeof subject !== 'string'
 		? undefined
 		: Object.keys(RELATIONSHIP_PRODUCER_SUFFIX).filter(
-				(oneProducer) => subject.endsWith(RELATIONSHIP_PRODUCER_SUFFIX[oneProducer]),
+				(oneProducer) => subjectWithoutRelationshipDiscriminator(subject).endsWith(RELATIONSHIP_PRODUCER_SUFFIX[oneProducer]),
 		  )[0];
 
 const SCHEMA_BLOCK_KIND_SUFFIX = {
@@ -220,10 +272,13 @@ const SCHEMA_BLOCK_KIND_SUFFIX = {
 const SUFFIX_MATCHERS = {
 	trailing: (subject, marker) => subject.endsWith(marker),
 	infix: (subject, marker) => subject.indexOf(marker) !== -1,
-	// relationshipPairProducer — the pair infix is PRESENT and a KNOWN producer suffix TRAILS.
+	// relationshipPairProducer — the pair infix is PRESENT and a KNOWN producer suffix TRAILS, either at the
+	// very end or immediately before a well-formed discriminator tail. The two cases are ONE test because the
+	// strip is a no-op on an undiscriminated subject; a malformed tail is not stripped, so '..._close~' and
+	// '..._close~Bad' are REFUSED here rather than quietly read as relationship subjects.
 	relationshipPairProducer: (subject, marker) =>
 		subject.indexOf(marker) !== -1 &&
-		RELATIONSHIP_PRODUCER_SUFFIXES.some((oneSuffix) => subject.endsWith(oneSuffix)),
+		RELATIONSHIP_PRODUCER_SUFFIXES.some((oneSuffix) => subjectWithoutRelationshipDiscriminator(subject).endsWith(oneSuffix)),
 };
 
 // suffixMarkerForKind — DERIVE the role marker a kind's subject must carry (the "expected suffix
@@ -845,6 +900,12 @@ const vocabulary = {
 	RELATIONSHIP_PRODUCER_SUFFIX,
 	RELATIONSHIP_PRODUCER_SUFFIXES,
 	suffixForRelationshipProducer,
+	// the OPT-IN subject discriminator (Phase 7) — ONE authored pattern, shared by the composer, both
+	// parsers here and the bridge declaration contract's kind-checker, so every reader agrees by construction
+	RELATIONSHIP_DISCRIMINATOR_SEPARATOR,
+	RELATIONSHIP_DISCRIMINATOR_PATTERN,
+	RELATIONSHIP_DISCRIMINATOR_TAIL_PATTERN,
+	subjectWithoutRelationshipDiscriminator,
 	relationshipSubject,
 	relationshipProducerFromSubject,
 	// pair / version-key vocabulary (Phase C)

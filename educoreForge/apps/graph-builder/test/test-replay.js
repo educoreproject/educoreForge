@@ -161,7 +161,17 @@ const seedForger = () =>
 		{ resolveBundle: ({ standard }) => ({ standardName: String(standard).toUpperCase() }) },
 	);
 
-const seedBridgeMaker = () => () => ({ run: (spec, cb) => cb('', { ...spec, edgesWritten: 0, decisionBlock: null }) });
+// The seed double must expose the DECLARED bridgeMaker surface, which gained describeBridge in Phase 7
+// (apps/graph-builder/interfaces.js COMPONENT_SHAPES.bridgeMaker). build.js's pre-spend collision check
+// refuses a component that cannot describe — by name, and deliberately without a permissive skip, because
+// a pre-spend gate that quietly does not run reads as "no collision" to everything downstream. A double
+// omitting it therefore fails the SEED build and cascades through this whole suite.
+const seedBridgeMaker = () => () => ({
+	run: (spec, cb) => cb('', { ...spec, edgesWritten: 0, decisionBlock: null }),
+	describeBridge: ({ bridgeName, source }) => ({
+		description: Object.freeze({ bridgeName, source, producerKind: 'authored', subjectDiscriminator: undefined }),
+	}),
+});
 
 // ---------------------------------------------------------------------
 // THE REPLAY SPY — the replayManager -replay drives to materialize. Records every call so the suite

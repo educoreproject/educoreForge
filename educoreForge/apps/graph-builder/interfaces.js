@@ -355,6 +355,26 @@ const COMPONENT_SHAPES = {
 				'note',
 			],
 		},
+		// describeBridge — the PRE-SPEND declaration reader (Phase 7, SPEC §3.7). SYNCHRONOUS (arity 1, no
+		// callback): it reads a registered plugin's declaration and returns it, touching no graph, no store,
+		// no judge. build.js calls it BEFORE PHASE A (RULING FJ-P7-1, amending SPEC §3.7's "before phase C") so a
+		// recipe declaring two bridges that would compose one relationship subject is refused before ANY forge or
+		// judge spend, rather than by the manifest editor after the colliding bridge's whole run.
+		//
+		// IT IS DECLARED HERE BECAUSE IT MUST BE. test-interfaces' METHOD SET checker computes
+		// `Object.keys(instance).filter(name => !declared.includes(name))` and refuses any undeclared extra by
+		// name, so the export without this row is `undeclared extras: describeBridge`. Adding it is safe for
+		// BG-NOSUB (i), measured rather than assumed: (i) byte-compares every COMPONENT_SHAPES member OTHER
+		// than bridgeMaker, and its bridgeMaker assertions are run.arity, run.argKeys,
+		// run.resultKeys.length === 13 and BRIDGE_MODULE_SHAPE's removal — a new sibling key touches none.
+		describeBridge: {
+			arity: 1,
+			argKeys: ['bridgeName', 'source'],
+			// `source` is REQUIRED, not decorative: pluginRegistry.lookupPlugin refuses a bridge whose
+			// registered standardKey differs from the pairing's source (BR-009), so a describe that omitted it
+			// could pass on a pairing the run itself would refuse.
+			resultKeys: ['description', 'error'],
+		},
 	},
 	manifestEditor: {
 		// SYNCHRONOUS (arity 1, no callback) — the §4.4 build sequence composes with it inline.

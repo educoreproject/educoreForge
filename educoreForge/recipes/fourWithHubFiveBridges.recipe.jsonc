@@ -1,0 +1,47 @@
+// fourWithHubFiveBridges — the Phase 7 verification build: the four certified standards with the CEDS
+// hub, plus ALL FIVE bridge plugins including pescOptionSetCedsDerivedPlugin, which no recipe has ever
+// been able to declare alongside its sibling.
+//
+// WHY IT COULD NOT EXIST BEFORE. pescCedsDerivedPlugin and pescOptionSetCedsDerivedPlugin share BOTH a
+// standard pair AND a producerKind, so both composed 'ceds@14.0.0.0_rel_pesc260805@aggregate-01_close'
+// and manifestEditor.add refused the second — AFTER the colliding bridge's entire judge run. Phase 5
+// therefore shipped fourWithHubFourBridges and left this tier out, recording its absence as an
+// OBSERVATION rather than an assumption: the PESC bridge printed "0 conflict(s) against 0 sibling
+// block(s)" while naming this plugin's keys.
+//
+// WHAT MAKES IT POSSIBLE NOW. The option-set plugin declares subjectDiscriminator: 'optionSet', so its
+// subject is 'ceds@14.0.0.0_rel_pesc260805@aggregate-01_close~optionSet' — a distinct subject and a
+// distinct relationship block. The other four declare nothing and compose byte-identical strings, which
+// is what makes the manifest here FIVE relationship blocks rather than a re-keyed lineage.
+//
+// EXPECTED SHAPE — stated so a reader can falsify it rather than take it on trust: FIVE relationship
+// blocks, five distinct subjects, TWO of them PESC; and the four relationship block ids from Phase 5
+// (d6cb9d7c… / 816ada74… / 2ab1bf65… / dbdda703…) come back EQUAL under a debug:first rebridge that
+// reuses the Phase 5 bases. Inequality on any of the four STOPS Phase 7; it is not explained away.
+//
+// ⚠ A BUILD FROM THIS RECIPE IS A DEBUG-JUDGE BUILD AND CAN NEVER BE CERTIFIED. goldEvalCheck refuses a
+// bridged build twice by design (scope, then invalid-debug content) — measured in Phase 5, not inferred.
+// Every figure it produces is a debug-judge figure.
+{
+	"schemaVersion": "1.0.0",
+	"recipeName": "fourWithHubFiveBridges",
+	"kind": "dev",
+	"description": "The four certified standards with the CEDS hub, plus ALL FIVE bridge plugins — the Phase 7 verification graph proving the opt-in subjectDiscriminator lets PESC's two derived tiers share one manifest.",
+	"standards": [
+		{ "token": "ceds", "version": "current" },
+		{ "token": "edfi", "version": "current" },
+		{ "token": "pesc260805", "version": "current" },
+		{ "token": "sif", "version": "current" }
+	],
+	"hubs": [
+		{ "standard": "ceds" }
+	],
+	"bridges": [
+		{ "source": "sif", "hub": "ceds", "bridge": "sifCedsStandardPlugin", "dependencies": ["sif", "ceds"] },
+		{ "source": "edfi", "hub": "ceds", "bridge": "edfiCedsCrosswalkPlugin", "dependencies": ["edfi", "ceds"] },
+		{ "source": "edfi", "hub": "ceds", "bridge": "edfiCedsDerivedPlugin", "dependencies": ["edfi", "ceds"] },
+		{ "source": "pesc260805", "hub": "ceds", "bridge": "pescCedsDerivedPlugin", "dependencies": ["pesc260805", "ceds"] },
+		{ "source": "pesc260805", "hub": "ceds", "bridge": "pescOptionSetCedsDerivedPlugin", "dependencies": ["pesc260805", "ceds"] }
+	],
+	"roundTripStage": true
+}

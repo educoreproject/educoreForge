@@ -61,6 +61,7 @@ const { readOptionalBooleanValue } = require('./optional-boolean-value');
 // The base block's subject is <standard>@<version> plus the marker its KIND requires; the
 // marker comes from ONE table (SCHEMA_BLOCK_KIND_SUFFIX), never a literal composed here.
 const vocabulary = require(path.join(__dirname, '..', '..', '..', 'lib', 'vocabulary', 'vocabulary'));
+const bridgeCollisionRuleLib = require(path.join(__dirname, 'bridgeCollisionRule'));
 
 // the canonical home of per-run build reports (the same documented-default convention as the
 // judgment cache and match-forensics homes in actions.js): hub prose-divergence and skip
@@ -1777,6 +1778,12 @@ const build = (recipe, deps, callback) => {
 						sourceStandard: nameSecond,
 						sourceVersion: resolvedVersionByToken[nameSecond],
 						producer,
+						// THE OPT-IN DISCRIMINATOR, CARRIED ON THE BLOCK (Phase 7). The orchestrator never sees a
+						// plugin declaration — it hands bridgeMaker a NAME and gets back a runReport — so the
+						// declared value rides out on each blocks[] entry and is passed straight through here.
+						// `undefined` when the plugin declares nothing, which is every plugin but one, and the
+						// composer's undefined path returns the string it returned before this parameter existed.
+						discriminator: oneBlock.subjectDiscriminator,
 					});
 					if (composed.error) {
 						blockDone(`bridge ${pairLabel}: ${composed.error}`);
@@ -1854,6 +1861,66 @@ const build = (recipe, deps, callback) => {
 			}
 			done(err || '');
 		});
+	};
+
+	// refuseCollidingBridgeDeclarations — THE PRE-SPEND CHECK (SPEC §3.7, placement amended by RULING
+	// FJ-P7-1). The manifest editor already refuses a duplicate subject, but it does so at `manifest.add`,
+	// which is reached AFTER the colliding bridge's entire judge run: on a real judge that is a paid spend
+	// thrown away to learn something the recipe stated up front. This answers the same question from the
+	// DECLARATIONS alone — and, under FJ-P7-1, BEFORE PHASE A, so a colliding recipe costs neither a forge
+	// nor a judge.
+	//
+	// IT DELIBERATELY DOES NOT COMPOSE SUBJECTS, AND THAT IS WHAT LETS IT RUN THIS EARLY. Subjects need
+	// resolved versions, and versions are not resolved until phase A has forged or reused every base — so a
+	// subject-level check could not run before phase A at all. The TUPLE it compares is the part that IS
+	// knowable at declaration time: (hub, source, producerKind,
+	// subjectDiscriminator). Two bridges agreeing on all four WILL compose one subject whatever the versions
+	// turn out to be, because every remaining term is shared. That makes this check sound without being
+	// complete, and it is stated that way rather than sold as a subject check.
+	//
+	// MAPPING BRIDGES ONLY. A structural pairing carries `pairWith` and no `hub`; its subject is composed
+	// from a different pair of tokens, so pooling the two kinds would compare tuples that are not
+	// commensurable. Excluded by the presence of `hub`, which is the same discriminator phase C's own
+	// nameFirst/nameSecond resolution uses.
+	const refuseCollidingBridgeDeclarations = () => {
+		const mappingBridgeList = bridges.filter((oneBridge) => oneBridge.hub !== undefined);
+		// A COMPONENT THAT CANNOT DESCRIBE IS REFUSED BY NAME, NOT TOLERATED. describeBridge is part of the
+		// declared bridgeMaker interface, so a component lacking it is non-conforming — and the one thing this
+		// must never do is skip the check and let the build proceed, because a pre-spend gate that silently
+		// does not run is worse than no gate: it reads as "no collision" to everyone downstream. Reaching this
+		// with mapping bridges to check and no way to check them is a refusal.
+		if (mappingBridgeList.length > 0 && typeof bridgeMaker.describeBridge !== 'function') {
+			return (
+				`the bridgeMaker component does not expose describeBridge, so recipe ` +
+				`'${recipe.recipeName}' cannot be checked for colliding bridge declarations before any forge or ` +
+				`judge spend. describeBridge is a DECLARED member of COMPONENT_SHAPES.bridgeMaker ` +
+				`(apps/graph-builder/interfaces.js); a component missing it is non-conforming. The check is never ` +
+				`skipped silently — a pre-spend gate that does not run reads as "no collision" to everything after it.`
+			);
+		}
+		const describedList = [];
+		for (let bridgeIndex = 0; bridgeIndex < mappingBridgeList.length; bridgeIndex++) {
+			const oneBridge = mappingBridgeList[bridgeIndex];
+			const described = bridgeMaker.describeBridge({ bridgeName: oneBridge.bridge, source: oneBridge.source });
+			if (described.error) {
+				// A DELIBERATE BEHAVIOUR CHANGE, NAMED (review finding C-3, RULING FJ-P7-2 item 2). Before
+				// Phase 7 a recipe naming an unregistered bridge FORGED EVERY BASE and then failed inside
+				// bridgeMaker.run in phase C. Under FJ-P7-1 the declaration read happens before phase A, so the
+				// same recipe is now refused before a single forge runs. Strictly better, and OUTSIDE the
+				// backward-compatibility claim, which is scoped to subjects, block ids, manifests and fixtures —
+				// not to when an already-broken recipe learns it is broken.
+				//
+				// The refusal names the BRIDGE and the SOURCE it was looked up under, then carries the registry's
+				// own message VERBATIM. Verbatim on purpose: test-bgReg pins that text, and a wrapper that
+				// paraphrased it would break a gate while looking like an improvement.
+				return `recipe '${recipe.recipeName}' names bridge '${oneBridge.bridge}', which is not registered for source '${oneBridge.source}' — refused before phase A, so no base was forged for a recipe that cannot run. ${described.error}`;
+			}
+			describedList.push({ hub: oneBridge.hub, ...described.description });
+		}
+		// THE RULE ITSELF LIVES IN A PURE MODULE so its red twins exercise the rule rather than a copy of it
+		// (the genesisGuard.js / batchWindowVerdict.js precedent). This function keeps only the IMPURE half:
+		// one describeBridge lookup per mapping bridge.
+		return bridgeCollisionRuleLib.collisionRefusalFor({ recipeName: recipe.recipeName, describedBridgeList: describedList });
 	};
 
 	const phaseC = (done) => eachSeries(bridges, bridgeOnePairing, done);
@@ -1960,6 +2027,17 @@ const build = (recipe, deps, callback) => {
 				return;
 			}
 			roundTripValidatorRoster = composedRoster;
+			// RULING FJ-P7-1 (supervisor FROZEN_JOURNEY, 2026-08-29) — A DELIBERATE DEVIATION FROM SPEC §3.7,
+			// which placed this check "before phase C". It runs BEFORE PHASE A instead. The check reads
+			// DECLARATIONS ONLY — no resolved version, no per-block producer, nothing phase A produces — so
+			// nothing made it late except the spec's own wording, and refusing before the FORGE spend is
+			// strictly better than refusing before the judge spend. A recipe that cannot compose distinct
+			// relationship subjects is wrong at the moment it is read, not at the moment it is paid for.
+			const declarationCollisionRefusal = refuseCollidingBridgeDeclarations();
+			if (declarationCollisionRefusal !== '') {
+				callback(`graphBuilder build: ${declarationCollisionRefusal}`);
+				return;
+			}
 			phaseA((phaseAError) => {
 				if (phaseAError) {
 					callback(`phase A (forge) failed: ${phaseAError}`);

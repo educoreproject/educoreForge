@@ -56,6 +56,18 @@ const bridgeDeclaration = Object.freeze({
 	standardKey: 'pesc260805',
 	pluginVersion: '1.0.0',
 	producerKind: 'inferred',
+	// THE ONE KIT EDIT OF PHASE 7, AND IT IS A DECLARATION RATHER THAN A CODE CHANGE. This plugin and its
+	// property-tier sibling pescCedsDerivedPlugin share BOTH a standard pair (ceds ← pesc260805) AND a
+	// producerKind ('inferred'), so both compose the subject
+	// 'ceds@14.0.0.0_rel_pesc260805@aggregate-01_close' and the manifest editor refuses the second — after
+	// the colliding bridge's whole judge run. Declaring a discriminator appends '~optionSet' AFTER the
+	// producer suffix, giving this tier its own subject and its own relationship block.
+	//
+	// IT IS THE ONLY PLUGIN IN THE TREE THAT DECLARES ONE, AND THAT IS THE DESIGN, NOT AN OVERSIGHT. The
+	// key is opt-in: the other four declare nothing, compose exactly the strings they composed before, and
+	// no existing relationship block re-keys. 'optionSet' names the TIER this plugin asserts over — the
+	// same word its bridgeName carries — so the subject reads as what it is rather than as a serial number.
+	subjectDiscriminator: 'optionSet',
 	matchBasis: 'derived',
 	// PESC's own published namespace, enforced by its parser's refusal (parser.js:40, :547) rather
 	// than assumed — identical to the sibling, because the standard is the same standard.

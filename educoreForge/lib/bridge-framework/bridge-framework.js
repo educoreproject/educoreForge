@@ -8,6 +8,15 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //   const bridgeFramework = require('<lib>/bridge-framework/bridge-framework')({ graphReaderFactory, graphWriterFactory,
 //                                                                                pluginRegistry, xLog?, conflictDetector? });
 //   bridgeFramework.run(spec, callback)      // EXACTLY as build.js Phase C calls bridgeMaker.run
+//   bridgeFramework.describeBridge({ bridgeName, source }) -> { description } | { error }   // SYNCHRONOUS
+//       READS a registered plugin's declaration WITHOUT running it: { bridgeName, source, producerKind,
+//       subjectDiscriminator }. It exists so build.js can refuse a recipe whose bridges would compose ONE
+//       relationship subject BEFORE PHASE A (RULING FJ-P7-1), so the collision costs neither a forge nor a
+//       judge — rather than learning it from manifestEditor.add after the colliding bridge's whole run.
+//       `source` is REQUIRED because lookupPlugin refuses a bridge
+//       whose registered standardKey differs from the pairing's source (BR-009). subjectDiscriminator is
+//       JS `undefined` when the plugin declares none, NEVER null — the caller compares it as a tuple term
+//       and "declared nothing" must not equal "declared null". Touches no graph, spends nothing.
 //
 // ONE shared library so each of the Bridge Profile's choices is made once and observed red once. It holds NO
 // per-run state: every index, census counter and decision list lives inside one run invocation. deps (§3.2):
@@ -333,7 +342,7 @@ const moduleFunction =
 				},
 			});
 
-			const runReportFor = ({ decisionBlockHash, blocksDecisionBlock, edgesWritten, counts, sssomExportPath, note }) => ({
+			const undiscriminatedRunReportFor = ({ decisionBlockHash, blocksDecisionBlock, edgesWritten, counts, sssomExportPath, note }) => ({
 				inGraph,
 				bridge,
 				applyLabel,
@@ -348,6 +357,34 @@ const moduleFunction =
 				sssomExportPath,
 				note,
 			});
+
+			// THE OPT-IN SUBJECT DISCRIMINATOR (Phase 7), ATTACHED IN A SEPARATE STATEMENT ON PURPOSE.
+			// The object literal above is the verbatim `find` text of three BG-PRODUCER mutation twins and,
+			// on its `producer:` line alone, of BG-REG (f)'s. moduleDouble.assertMutationApplies is EAGER and
+			// THROWS when its find-text no longer matches, so a key added inside that literal would not make
+			// those twins fail loudly — it would make them fail to construct, and a twin that cannot run is a
+			// gate that has stopped watching. Hence: compose the literal untouched, then add the key here.
+			//
+			// UNDECLARED IS JS `undefined`, NEVER `null`, and the key is not added at all — the report a
+			// plugin without a discriminator produces is the object it produced before this phase, key for
+			// key. `subjectDiscriminator` is deliberately NOT added to RUN_REPORT_RESULT_KEYS: BG-NOSUB (i)
+			// pins `COMPONENT_SHAPES.bridgeMaker.run.resultKeys.length === 13`, and BG-REG (f) checks
+			// CONTAINMENT of that list rather than exact key-set equality (measured, Phase 7 entry), so an
+			// extra key on the runtime report is admitted while the declared list stays at 13.
+			const runReportFor = (oneReportArgumentSet) => {
+				const undiscriminatedRunReport = undiscriminatedRunReportFor(oneReportArgumentSet);
+				if (bridgeDeclaration.subjectDiscriminator === undefined) {
+					return undiscriminatedRunReport;
+				}
+				return {
+					...undiscriminatedRunReport,
+					subjectDiscriminator: bridgeDeclaration.subjectDiscriminator,
+					// ON EACH BLOCK ENTRY TOO, because build.js composes a subject PER EMITTED BLOCK and reads
+					// `oneBlock.subjectDiscriminator` there. Measured at Phase 7 entry: no suite anywhere pins the
+					// key SET of a blocks[] entry, so a key added here turns nothing red for the wrong reason.
+					blocks: undiscriminatedRunReport.blocks.map((oneBlock) => ({ ...oneBlock, subjectDiscriminator: bridgeDeclaration.subjectDiscriminator })),
+				};
+			};
 
 			// -----------------------------------------------------------------
 			// channel digests + verification (shared by both modes): every document channel verified against
@@ -1508,8 +1545,40 @@ const moduleFunction =
 		// -----------------------------------------------------------------
 		// the public surface (§3.3)
 		// -----------------------------------------------------------------
+		// describeBridge — READ a registered plugin's declaration WITHOUT running it, so build.js can refuse a
+		// colliding recipe BEFORE PHASE A (RULING FJ-P7-1), so it costs neither a forge nor a judge. It exists
+		// because the orchestrator never
+		// sees a declaration: it passes a bridge NAME to run() and the lookup happens in here.
+		//
+		// IT TAKES `source` BECAUSE lookupPlugin REQUIRES IT — a plugin runs only for the standard it sits
+		// under (BR-009), and the recipe entry's source is the value the run itself would be checked against.
+		// Resolving without it would let this pre-check pass on a pairing that run() would later refuse, which
+		// is worse than not checking at all.
+		//
+		// Returns { description } or { error }. Never throws, and never substitutes a default for an
+		// unregistered name — the refusal names the bridge and lists what IS registered.
+		const describeBridge = ({ bridgeName, source } = {}) => {
+			const looked = pluginRegistryLib.lookupPlugin({ registry, bridgeName, standardKey: source });
+			if (looked.error) {
+				return { error: looked.error.message };
+			}
+			const declaration = looked.entry.bridgeDeclaration;
+			return {
+				description: Object.freeze({
+					bridgeName: declaration.bridgeName,
+					source: declaration.standardKey,
+					producerKind: declaration.producerKind,
+					// UNDECLARED IS `undefined`, carried through as-is. A `null` here would read as "declared
+					// nothing" and compare equal between two plugins that had each declared nothing — which is
+					// exactly the tuple comparison the caller performs, so the distinction is load-bearing.
+					subjectDiscriminator: declaration.subjectDiscriminator,
+				}),
+			};
+		};
+
 		return {
 			run,
+			describeBridge,
 			registerPlugin: pluginRegistryLib.registerPlugin,
 			contracts: Object.freeze({
 				BRIDGE_DECLARATION_CONTRACT: bridgePluginContractLib.BRIDGE_DECLARATION_CONTRACT,

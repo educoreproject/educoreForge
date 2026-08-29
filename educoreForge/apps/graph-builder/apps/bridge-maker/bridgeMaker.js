@@ -80,7 +80,17 @@ const moduleFunction =
 			});
 		};
 
-		return { run };
+		// describeBridge — FORWARDED UNCHANGED, like run above. The seam face adds nothing to it: it reads a
+		// registered plugin's declaration and returns { description } or { error }, touching no graph and
+		// spending nothing. build.js calls it BEFORE PHASE A (RULING FJ-P7-1) so a recipe whose bridges would
+		// compose one relationship subject is refused before the FORGE spend, not merely before the judge run.
+		//
+		// It is a SECOND method on this component, so apps/graph-builder/interfaces.js declares it — the
+		// METHOD SET checker refuses an undeclared extra by name, and it equally refuses a DECLARED method
+		// this face does not expose. Both halves of that pair were observed red before this line existed.
+		const describeBridge = ({ bridgeName, source }) => bridgeFramework.describeBridge({ bridgeName, source });
+
+		return { run, describeBridge };
 	};
 
 // END OF moduleFunction() ============================================================

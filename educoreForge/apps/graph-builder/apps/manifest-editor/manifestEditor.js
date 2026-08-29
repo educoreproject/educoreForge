@@ -274,7 +274,9 @@ function makeManifest({ name, description, recipeName, recipeHash, recipeFileNam
 				`manifestEditor.add to ${selfName()}: subject '${subject}' is already ` +
 					`present at position ${alreadyThere.position}. One subject contributes one schema ` +
 					`block of one kind; a second is a build repeating itself, which is a defect worth ` +
-					`hearing about rather than a membership worth having.`,
+					`hearing about rather than a membership worth having. If two bridge plugins share a ` +
+					`standard pair AND a producerKind they compose this one subject: declare ` +
+					`subjectDiscriminator on one of the bridges sharing this pair and producer.`,
 			);
 			return;
 		}

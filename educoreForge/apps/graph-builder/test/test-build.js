@@ -295,10 +295,34 @@ const workingForger = (overrides) =>
 		{ resolveBundle: forgerRegistryDouble },
 	);
 
+// withDescribeBridge — every bridgeMaker double in this suite must expose the DECLARED component surface,
+// which gained describeBridge in Phase 7 (apps/graph-builder/interfaces.js COMPONENT_SHAPES.bridgeMaker).
+// Wrapping the doubles rather than editing each one means a SEVENTH double cannot arrive missing it. Without
+// it, build.js's pre-spend check refuses the component by name — correctly, but every scenario in the suite
+// would then be red for a reason that has nothing to do with what the scenario is testing.
+//
+// It reports producerKind 'authored' for every bridge, which is inert in this suite because no scenario here
+// declares two MAPPING bridges (one hub each) in a single recipe — the structural pairings carry pairWith and
+// no hub, and the pre-spend check excludes those. A future scenario that DID declare two would need a double
+// answering per bridgeName; it would announce itself as a false collision refusal rather than pass quietly.
+const withDescribeBridge = (oneDoubleFactory) => (...factoryArgumentList) => ({
+	describeBridge: ({ bridgeName, source }) => ({
+		description: Object.freeze({ bridgeName, source, producerKind: 'authored', subjectDiscriminator: undefined }),
+	}),
+	...oneDoubleFactory(...factoryArgumentList),
+});
+
 const workingBridgeMaker = (overrides) => () =>
 	Object.assign(
 		{
 			run: (spec, cb) => cb('', { ...spec, edgesWritten: 0 }),
+			// describeBridge JOINED THE DECLARED COMPONENT INTERFACE in Phase 7 (apps/graph-builder/interfaces.js
+			// COMPONENT_SHAPES.bridgeMaker.describeBridge), so a double that omits it is NON-CONFORMING and
+			// build.js's pre-spend check refuses it by name. Added here because a double's job is to conform to
+			// the contract, not to be the reason a contract cannot be enforced.
+			describeBridge: ({ bridgeName, source }) => ({
+				description: Object.freeze({ bridgeName, source, producerKind: 'authored', subjectDiscriminator: undefined }),
+			}),
 		},
 		overrides || {},
 	);
@@ -408,6 +432,90 @@ const announcedRoundTripStageStub = ({ stageSpec, xLog }, cb) => {
 			`the production default is the real runner, byte-unchanged)`,
 	);
 	cb('', { stageRan: false, disposition: 'hermeticStub' });
+};
+
+
+// ⟪RULING FJ-P7-1⟫ THE PRE-SPEND DECLARATION-COLLISION REFUSAL, AND WHERE IT FIRES.
+// Two MAPPING bridges whose declarations agree on (hub, source, producerKind, subjectDiscriminator)
+// would compose ONE relationship subject, which manifestEditor.add refuses — but only after the second
+// bridge's entire judge run. build.js answers it from the DECLARATIONS, and under FJ-P7-1 it does so
+// BEFORE PHASE A, so a colliding recipe costs neither a forge nor a judge.
+//
+// THE ASSERTION THAT MAKES THIS A GATE RATHER THAN A MESSAGE CHECK is the pair of invocation flags:
+// NO forge ran and NO bridge ran. A refusal with the right words that fired after phase A would still
+// pass a text match, and would have spent exactly what the check exists to save.
+const preSpendCollisionRefusal = (whenDone) => {
+	harness.section('⟪FJ-P7-1⟫ PRE-SPEND — a colliding pair of bridge DECLARATIONS is refused BEFORE phase A');
+	let forgeInvoked = false;
+	let bridgeRunInvoked = false;
+	const flaggingForger = Object.assign(
+		() => ({ forge: (spec, cb) => { forgeInvoked = true; cb('', { standard: spec.standard, version: spec.version, nodeEdges: { nodes: [], edges: [], embeddingDims: null }, nodeCount: 0, edgeCount: 0, embedCallCount: 0 }); } }),
+		{ resolveBundle: ({ standard }) => ({ standardName: String(standard).toUpperCase() }) },
+	);
+	// BOTH bridges describe to the SAME tuple — the pescCedsDerived / pescOptionSetCedsDerived shape.
+	const collidingBridgeMaker = () => ({
+		run: (spec, cb) => { bridgeRunInvoked = true; cb('', { ...spec, edgesWritten: 0, decisionBlock: null, counts: {} }); },
+		describeBridge: ({ bridgeName, source }) => ({
+			description: Object.freeze({ bridgeName, source, producerKind: 'inferred', subjectDiscriminator: undefined }),
+		}),
+	});
+	const collidingRecipe = {
+		recipeName: 'twoTiersOnePair',
+		description: 'two derived tiers on ONE standard pair, neither declaring a discriminator',
+		standards: [{ token: 'ceds', version: 'current' }, { token: 'ctdl', version: 'current' }],
+		hubs: [{ standard: 'ceds' }],
+		bridges: [
+			{ source: 'ctdl', hub: 'ceds', bridge: 'ctdlDerivedBridge' },
+			{ source: 'ctdl', hub: 'ceds', bridge: 'ctdlOptionSetDerivedBridge' },
+		],
+	};
+	runBuildWith(collidingRecipe, { forger: flaggingForger, bridgeMaker: collidingBridgeMaker }, ({ err }) => {
+		harness.match('OBSERVED RED: the colliding pair is REFUSED, naming BOTH bridges and quoting the shared tuple', err || '', /ctdlDerivedBridge and ctdlOptionSetDerivedBridge share \(hub, source, producerKind, subjectDiscriminator\)/);
+		harness.match('  and the refusal states the remedy rather than only the fault', err || '', /Declare a distinct subjectDiscriminator/);
+		harness.equal('  NO FORGE EVER RAN — the refusal precedes phase A (RULING FJ-P7-1)', forgeInvoked, false);
+		harness.equal('  NO BRIDGE EVER RAN — it precedes phase C too', bridgeRunInvoked, false);
+
+		// THE OTHER HALF OF THE THREE STATES: the SAME recipe, with ONE bridge declaring a discriminator,
+		// builds. Without this the conjunct above would pass equally well against a check that refuses
+		// every two-bridge recipe, which is a different (and wrong) rule.
+		let clearedForgeInvoked = false;
+		const clearedForger = Object.assign(
+			() => ({ forge: (spec, cb) => { clearedForgeInvoked = true; cb('', { standard: spec.standard, version: spec.version, nodeEdges: { nodes: [], edges: [], embeddingDims: null }, nodeCount: 0, edgeCount: 0, embedCallCount: 0 }); } }),
+			{ resolveBundle: ({ standard }) => ({ standardName: String(standard).toUpperCase() }) },
+		);
+		const discriminatedBridgeMaker = () => ({
+			run: (spec, cb) => cb('', { ...spec, edgesWritten: 0, decisionBlock: null, counts: {} }),
+			describeBridge: ({ bridgeName, source }) => ({
+				description: Object.freeze({ bridgeName, source, producerKind: 'inferred', subjectDiscriminator: bridgeName === 'ctdlOptionSetDerivedBridge' ? 'optionSet' : undefined }),
+			}),
+		});
+		runBuildWith(collidingRecipe, { forger: clearedForger, bridgeMaker: discriminatedBridgeMaker }, ({ err: clearedErr }) => {
+			harness.equal('  the SAME recipe builds once ONE bridge declares a discriminator', clearedErr, '');
+			harness.equal('  and the forge DID run that time (the check refuses collisions, not two-bridge recipes)', clearedForgeInvoked, true);
+
+			// ⟪REVIEW FINDING C-3, RULING FJ-P7-2 item 2⟫ THE UNREGISTERED-BRIDGE PATH, WHICH MOVED.
+			// Before Phase 7 this recipe forged every base and then failed inside bridgeMaker.run in phase C.
+			// The declaration read now happens before phase A, so it is refused with NO forge at all. That is
+			// a deliberate behaviour change outside the byte-identity claim, and it is gated here rather than
+			// left as a paragraph: the flag is what proves the refusal moved, exactly as in the collision case.
+			let unregisteredForgeInvoked = false;
+			const unregisteredFlaggingForger = Object.assign(
+				() => ({ forge: (spec, cb) => { unregisteredForgeInvoked = true; cb('', { standard: spec.standard, version: spec.version, nodeEdges: { nodes: [], edges: [], embeddingDims: null }, nodeCount: 0, edgeCount: 0, embedCallCount: 0 }); } }),
+				{ resolveBundle: ({ standard }) => ({ standardName: String(standard).toUpperCase() }) },
+			);
+			const refusingBridgeMaker = () => ({
+				run: (spec, cb) => cb('', { ...spec, edgesWritten: 0, decisionBlock: null, counts: {} }),
+				// the registry's own refusal shape, carried through describeBridge
+				describeBridge: ({ bridgeName, source }) => ({ error: `pluginRegistry REFUSED: bridge '${bridgeName}' is REFUSED — no registered plugin declares it; registered names: (none registered) — a recipe names a plugin under forges/<standardKey>/bridges/ by its bridgeName (BR-003); nothing is substituted [source ${source}]` }),
+			});
+			runBuildWith(cedsCtdlRecipe, { forger: unregisteredFlaggingForger, bridgeMaker: refusingBridgeMaker }, ({ err: unregErr }) => {
+				harness.match('OBSERVED RED: an UNREGISTERED bridge is refused NAMING the bridge and the source it was looked up under', unregErr || '', /names bridge 'ctdlAuthoredBridge', which is not registered for source 'ctdl'/);
+				harness.match('  and the registry\'s OWN message is carried VERBATIM, not paraphrased (test-bgReg pins that text)', unregErr || '', /is REFUSED — no registered plugin declares it/);
+				harness.equal('  NO FORGE EVER RAN for the unregistered recipe either (the behaviour change C-3 names)', unregisteredForgeInvoked, false);
+				whenDone();
+			});
+		});
+	});
 };
 
 // ⟪R-WO-16 red twin, supervisor-directed⟫ declared-but-missing refuses on a STAGE-OFF build —
@@ -731,7 +839,7 @@ const stageRelationshipBlockNaming = () => {
 	harness.section('RELATIONSHIP BLOCK NAMING — version-keyed, producer-suffixed (authored _exact / inferred _close)');
 
 	// authored: the bridgeMaker double returns decisionBlock null -> _exact.
-	const authoredBridgeMaker = () => ({ run: (spec, cb) => cb('', { ...spec, edgesWritten: 26, decisionBlock: null, counts: { authored: 26 } }) });
+	const authoredBridgeMaker = withDescribeBridge(() => ({ run: (spec, cb) => cb('', { ...spec, edgesWritten: 26, decisionBlock: null, counts: { authored: 26 } }) }));
 	runBuildWith(cedsCtdlRecipe, { bridgeMaker: authoredBridgeMaker }, ({ err, result, xLog }) => {
 		harness.equal('the authored CTDL pairing builds', err, '');
 		harness.equal('  3 members (ceds base w/ folded hub + ctdl base + 1 relationship)', result.memberCount, 3);
@@ -743,7 +851,7 @@ const stageRelationshipBlockNaming = () => {
 		harness.match('  the bridge threads hub=ceds and ran the authored bridge', xLog.text(), /\[C\] bridge ctdl::ceds \(bridge=ctdlAuthoredBridge\)/);
 
 		// inferred: a frozen decisionBlock -> _close (the SAME pair, a DIFFERENT producer block).
-		const inferredBridgeMaker = () => ({ run: (spec, cb) => cb('', { ...spec, edgesWritten: 5, decisionBlock: { hash: 'frozen' }, counts: { inferred: 5 } }) });
+		const inferredBridgeMaker = withDescribeBridge(() => ({ run: (spec, cb) => cb('', { ...spec, edgesWritten: 5, decisionBlock: { hash: 'frozen' }, counts: { inferred: 5 } }) }));
 		runBuildWith(cedsCtdlRecipe, { bridgeMaker: inferredBridgeMaker }, ({ err: inferErr, xLog: inferLog }) => {
 			harness.equal('the inferred producer variant also builds', inferErr, '');
 			harness.match(
@@ -779,7 +887,7 @@ const stageRelationshipBlockNaming = () => {
 					hubs: [],
 					bridges: [{ source: 'ctdl', pairWith: 'ctdlasn', bridge: 'ctdlFamilyStructure', dependencies: ['ctdl', 'ctdlasn'] }],
 				};
-				const structuralBridgeMaker = () => ({ run: (spec, cb) => cb('', { ...spec, edgesWritten: 4, decisionBlock: null, producer: 'structural', counts: { structural: 4 } }) });
+				const structuralBridgeMaker = withDescribeBridge(() => ({ run: (spec, cb) => cb('', { ...spec, edgesWritten: 4, decisionBlock: null, producer: 'structural', counts: { structural: 4 } }) }));
 				runBuildWith(ctdlFamilyRecipe, { bridgeMaker: structuralBridgeMaker }, ({ err: structErr, result: structResult, xLog: structLog }) => {
 					harness.equal('a STRUCTURAL pairing (hub-less, pairWith names the sibling) builds', structErr, '');
 					harness.equal('  3 members (ctdl base + ctdlasn base + 1 structural relationship)', structResult.memberCount, 3);
@@ -825,7 +933,7 @@ const stageMultiBlockFamily = () => {
 	};
 	// the coordinating producer's status, as a double: THREE pair-scoped blocks, each with its OWN distinct
 	// applyLabel (what its edges were written under) and its pair's endpoint TOKENS root-first.
-	const familyBridgeMaker = () => ({
+	const familyBridgeMaker = withDescribeBridge(() => ({
 		run: (spec, cb) =>
 			cb('', {
 				...spec,
@@ -839,7 +947,7 @@ const stageMultiBlockFamily = () => {
 					{ applyLabel: 'BridgedRelation_CTDLASN_CTDLQDATA', firstStandard: 'ctdlasn', secondStandard: 'ctdlqdata', producer: 'structural', decisionBlock: null, emptyPairing: false, edgesWritten: 1, counts: {} },
 				],
 			}),
-	});
+	}));
 	runBuildWith(familyRecipe, { bridgeMaker: familyBridgeMaker }, ({ err: famErr, result: famResult, xLog: famLog }) => {
 		harness.equal('the ONE-entry family builds', famErr, '');
 		harness.equal('  6 members (3 base + 3 pair-scoped structural relationships)', famResult && famResult.memberCount, 6);
@@ -904,7 +1012,7 @@ const stageRebridgeWiring = () => {
 	// returns producer:'inferred', so build.js names the empty block _close — NOT _exact, which would collide
 	// with the authored pair's _exact for the SAME pair (the two-producers-per-pair design). Proven via a
 	// double so no docker/graph is needed.
-	const emptyInferredBridgeMaker = () => ({ run: (spec, cb) => cb('', { ...spec, edgesWritten: 0, decisionBlock: null, producer: 'inferred', counts: { inferred: 0 } }) });
+	const emptyInferredBridgeMaker = withDescribeBridge(() => ({ run: (spec, cb) => cb('', { ...spec, edgesWritten: 0, decisionBlock: null, producer: 'inferred', counts: { inferred: 0 } }) }));
 	runBuildWith(cedsCtdlRecipe, { bridgeMaker: emptyInferredBridgeMaker }, ({ err: emptyErr, xLog: emptyLog }) => {
 		harness.equal('an empty inferred block (no frozen decisions yet) still builds', emptyErr, '');
 		harness.match('  build.js names it _close from producer=inferred (NOT _exact from the null decisionBlock)', emptyLog.text(), /-> relationship ceds@current_rel_ctdl@current_close /);
@@ -915,7 +1023,7 @@ const stageRebridgeWiring = () => {
 
 	const continueRebridgeWiring = () => {
 	const capturedSpecs = [];
-	const captureBridgeMaker = () => ({ run: (spec, cb) => { capturedSpecs.push(spec); cb('', { ...spec, edgesWritten: 0, decisionBlock: null, counts: {} }); } });
+	const captureBridgeMaker = withDescribeBridge(() => ({ run: (spec, cb) => { capturedSpecs.push(spec); cb('', { ...spec, edgesWritten: 0, decisionBlock: null, counts: {} }); } }));
 	const fakeDecisionStore = { getDecisionBlock: (a, cb) => cb('', { frozenText: null }), saveDecisionBlock: (a, cb) => cb('') };
 	// a deterministic STUB reranker — the hermetic suite's llmClient. Injected on inferenceConfig, it is the
 	// real-vs-stub seam's STUB arm: with it present, resolveInferenceConfig NEVER mints the real Anthropic
@@ -1977,7 +2085,7 @@ const stageManifestPersistedToStore = () => {
 										memberCount,
 									);
 									fs.rmSync(scratchDir, { recursive: true, force: true });
-									stageDeclaredMissingUnconditional(() => harness.report());
+									stageDeclaredMissingUnconditional(() => preSpendCollisionRefusal(() => harness.report()));
 								},
 							);
 						});

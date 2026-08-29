@@ -233,6 +233,19 @@ const BRIDGE_DECLARATION_CONTRACT = Object.freeze({
 	standardKey: Object.freeze({ required: true, kind: 'lowercaseString' }),
 	pluginVersion: Object.freeze({ required: true, kind: 'nonEmptyString' }),
 	producerKind: Object.freeze({ required: true, kind: 'closedValue', allowedValueList: PRODUCER_KIND_LIST }),
+	// OPT-IN (Phase 7, TQ 2026-08-29). The tail appended after the producer suffix so two plugins sharing
+	// BOTH a standard pair AND a producerKind can compose DISTINCT relationship subjects. Absent means no
+	// discriminator, which is today's behaviour exactly — four of the five shipped plugins declare nothing
+	// and are unaffected.
+	//
+	// `optional: true` IS THE PRESENCE MODE, AND IT IS NOT A SYNONYM FOR `required: false`. CODE FACT: the
+	// walk below reads `presentIff`, `basisConditional` and `optional`; it has NEVER read `required`, which
+	// the other rows carry decoratively. A row written `required: false` alone would therefore fall through
+	// to the "missing required key" refusal and make this key MANDATORY — refusing the four other shipped
+	// plugins at registration. That is why this row does not restate `required` at all: naming a field the
+	// walk ignores, on the one row whose whole point is that absence is legal, would be the most misleading
+	// place in the file to put it. (The inert `required` field is DOCKETED, not fixed here.)
+	subjectDiscriminator: Object.freeze({ optional: true, kind: 'subjectDiscriminator' }),
 	matchBasis: Object.freeze({ required: true, kind: 'closedValue', allowedValueList: MATCH_BASIS_LIST }),
 	// basisConditional: presence is ruled by SOURCE_ACQUISITION_REGISTRY[matchBasis]'s required/forbidden lists,
 	// checked in one pass BEFORE the kind walk. matchBasis is validated earlier in contract order, so the row is
@@ -422,6 +435,13 @@ const KIND_CHECKER_REGISTRY = Object.freeze({
 		isNonEmptyString(value) && value === value.toLowerCase() ? '' : `must be a non-empty lowercase string (got ${JSON.stringify(value)})`,
 	lowerCamelString: (value) =>
 		isNonEmptyString(value) && /^[a-z][A-Za-z0-9]*$/.test(value) ? '' : `must be a lowerCamel identifier (got ${JSON.stringify(value)})`,
+	// subjectDiscriminator — validated against the vocabulary's ONE authored pattern, never a local copy, so
+	// a value this contract admits is exactly a value relationshipSubject will compose with. Refuses by name
+	// on a non-string and on a pattern miss, quoting both the value and the pattern.
+	subjectDiscriminator: (value) =>
+		typeof value === 'string' && vocabularyLib.RELATIONSHIP_DISCRIMINATOR_PATTERN.test(value)
+			? ''
+			: `must match ${vocabularyLib.RELATIONSHIP_DISCRIMINATOR_PATTERN} — lower-case-initial alphanumeric, 32 characters maximum, never carrying the '${vocabularyLib.RELATIONSHIP_DISCRIMINATOR_SEPARATOR}' separator itself (got ${JSON.stringify(value)})`,
 	stringList: (value) => (isStringList(value) ? '' : `must be a list of strings (got ${JSON.stringify(value)}); [] means "none", absence is refused`),
 	closedValue: (value, { contractEntry, propertyName }) => closedValueReason(value, contractEntry.allowedValueList, propertyName),
 	mappingProvider: (value) => {
@@ -991,6 +1011,17 @@ const validateBridgeDeclaration = ({ bridgeDeclaration, bundleDirPath } = {}) =>
 			if (value === undefined) {
 				continue;
 			}
+		} else if (contractEntry.optional === true && value === undefined) {
+			// PLAIN-OPTIONAL — the third presence mode, added by Phase 7. An `optional: true` row may simply be
+			// absent, and absence skips the kind check below rather than reaching the fallthrough refusal. This
+			// branch is DELIBERATELY placed after presentIff and basisConditional and before the fallthrough:
+			// ahead of the fallthrough it must be, or an optional row is refused for being absent; behind the
+			// two conditional modes it must be, or a row carrying both would silently lose its condition.
+			//
+			// IT CHANGES NOTHING FOR ANY OTHER ROW. A row without `optional` still reaches the fallthrough and
+			// is still refused on absence — that existing behaviour is the invariant, not a side effect, and it
+			// has its own red twin (mark a required row optional and the absence test goes red).
+			continue;
 		} else if (value === undefined) {
 			return refuseWith(`bridgeDeclaration is missing required key '${propertyName}'`, `declare ${propertyName} (${contractEntry.kind}); absent is absent, never defaulted (SPEC §4.1)`);
 		}
