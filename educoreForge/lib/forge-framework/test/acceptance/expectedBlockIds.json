@@ -1,5 +1,8 @@
 {
   "_comment": "G-ID frozen ids (SPEC §9.1, §9.3, FR9): MEASURED by the F3 builder on each UNMIGRATED forge under acceptanceCommands.jsonc's frozen command (`preMigration`), with the run directory and date; the migrated forge must EQUAL it. F3a measures nothing (no builds in F3a — BRIEF hard line): every entry null. The reference ids under fourWithHub-baseline (G1 golden, DEVLOG-rootAndBranch.md:167-172) are recorded separately as the manifest proof's members; whether a single-forge build reproduces the four-forge id for that member is exactly what the pre-migration measurement answers.",
+
+  "_widenedComment": "WIDENED 2026-08-29 by STERLING_PEAK, hub kit role migration Phase 0.E3 (PLAN-hubKitRoleMigration-082826.md). The three null measuredPreMigration entries are now filled with ids MEASURED in Phase 0.M2/0.M3 at HEAD 66c5c60 on branch hubKitRole-082826. WHAT THIS DOES AND DOES NOT DO: test-gId.js iterates MIGRATED_FORGE_ROSTER, not this object, so filling these entries does NOT by itself widen the gate's coverage — it ARMS it. Coverage arrives per phase as each forge joins the roster (ceds Phase 1, sif Phase 3, pesc260805 Phase 4). The roster was deliberately NOT touched here: test-gId.js also requires each roster member's frozen-command scratch standardsDatabase to exist on disk with phase token 'migrated', and those do not exist for ceds, sif or pesc260805, so adding them now would produce ONE-MACHINE-ONLY refusals rather than measurements.",
+
   "referenceUnderFourWithHubBaseline": {
     "edfi": "aea6d8dfe7899adef57c5ac3adb6b0df2bfc7e4a4ae859c4fa3893c132c8b304",
     "sif": "d393b0406d08f613f3142711fca5a9f2b0c580e84c4bef3ffd6b18d4eaa2330a",
@@ -7,12 +10,20 @@
     "ceds": "09a5d658807b9c22b44b28289d9ad4b47df15e45f44c9eacec765962fe487c33",
     "fourForgeManifest": "97c618c20e07c0c612957def69164402d364a98d5dfee865faacae1deace6382"
   },
+
+  "_referenceUnderFourWithHubBaselineIsHistoricalAndWasNotEdited": {
+    "why": "These values describe ONE REAL ARTIFACT still on disk — system/dataStores/graphBuilder/forgeFramework_fourWithHub_postEdfi.standardsDatabase.sqlite3, which test-gId.js reads by absolute path for its fourForgeManifestEqualsReference conjunct. Rewriting them to today's values would make the object disagree with the store it describes and would break a currently-passing gate. They are left exactly as found.",
+    "PESC_LANDMINE_FOR_PHASE_4": "referenceUnderFourWithHubBaseline.pesc260805 is db885ac4… and is TWO GENERATIONS STALE relative to the current tree. The lineage recorded in lib/bridge-framework/test/acceptance/acceptanceCommands.jsonc:439-449 (pesc260805BaseBlockIdHistory, every entry stamped with buildMode per RULING P2-R4) is: db885ac4… [vectorize=true, pre-re-embed] -> 045523dc… [vectorize=true, P0b searchText re-embed] -> (c46991d1… [vectorize=FALSE, SUPERSEDED, NOT A LINEAGE MEMBER]) -> f139654a… [vectorize=true, CURRENT, RULING P1-R8 rendering-seat stamp]. test-gId.js asserts `recordedId === frozenId && recordedId === referenceId`, so when pesc260805 joins MIGRATED_FORGE_ROSTER in Phase 4 the referenceId half WILL FAIL against db885ac4… for a reason that has nothing to do with the migration. Phase 4 must reconcile the reference — either by re-pointing it at a fresh fourWithHub-baseline store or by splitting the conjunct — BEFORE adding pesc260805 to the roster. Recorded here rather than discovered there.",
+    "ceds_edfi_sif": "Measured Phase 0 values EQUAL their references. Only pesc260805 diverges."
+  },
+
   "measuredPreMigration": {
     "edfi": "aea6d8dfe7899adef57c5ac3adb6b0df2bfc7e4a4ae859c4fa3893c132c8b304",
-    "sif": null,
-    "pesc260805": null,
-    "ceds": null
+    "sif": "d393b0406d08f613f3142711fca5a9f2b0c580e84c4bef3ffd6b18d4eaa2330a",
+    "pesc260805": "f139654a98cd0ef238759e6dc2bda2e532f13d5a7db00bfea94d89c3317b149d",
+    "ceds": "09a5d658807b9c22b44b28289d9ad4b47df15e45f44c9eacec765962fe487c33"
   },
+
   "measuredPreMigrationRecord": {
     "_comment": "provenance of each measuredPreMigration id: date, builder, unmigrated HEAD, recipe, run dir, log, verdict, goldEvalCheck",
     "edfi": {
@@ -31,6 +42,58 @@
       "goldEvalCheck": "PASS",
       "equalsReferenceUnderFourWithHubBaseline": true,
       "container": "DEV_forgeFramework_edfiPre (renamed from DEV_gb_materialize_91827_2)"
+    },
+    "ceds": {
+      "measuredOn": "2026-08-29",
+      "measuredBy": "STERLING_PEAK (hub kit role Phase 0.M2)",
+      "unmigratedHead": "66c5c6032c003069155d18acdc2cf6f88b3583da (branch hubKitRole-082826, cut from architecture-improvement; working tree CLEAN)",
+      "recipe": "recipes/cedsHub.recipe.jsonc",
+      "buildMode": "vectorize=true",
+      "standardsDatabase": "system/dataStores/graphBuilder/hubKitRole_phase0.standardsDatabase.sqlite3",
+      "runDir": "system/dataStores/buildLogs/hubKitRole_phase0/cedsHub_20260829-033913",
+      "buildLog": "system/management/zNotesPlansDocs/hubKitRole/logs/ceds.build.log",
+      "singleForgeManifestId": "34ad94dca8f918cf1159a72c2e2cc327f8564e4b77e541b888ef4d951bc7afde",
+      "blockTextBytes": 419649468,
+      "wallClockSeconds": 271,
+      "vectorCacheHitRate": "100.000000% (117840 texts, 0 distinct misses — zero Voyage spend)",
+      "hubFolded": true,
+      "hubReferenceCardCount": 94602,
+      "roundTrip": {
+        "inventedTotal": 0,
+        "lostTotal": 0,
+        "roundTripClean": true,
+        "measuredBy": "graphBuilder -cedsRoundTrip against DEV_gb_materialize_66581_2, AND the R-1 in-build fidelity gate (source 239761, matched 239761, LOST 0, INVENTED 0)"
+      },
+      "goldEvalCheck": "NOT APPLICABLE — recipes/cedsHub.recipe.jsonc is stage-OFF, so -goldEvalCheck REFUSES BY NAME ('the round-trip stage did not run for this build'). The stage-ON CEDS recipe, cedsOnlyRoundTrip.recipe.jsonc, declares \"hubs\": [] and so would run the stage with NO hub cards. See hubKitRole/ANCHOR-082826.md for the stage-ON hub-bearing run.",
+      "equalsReferenceUnderFourWithHubBaseline": true,
+      "container": "DEV_gb_materialize_66581_2",
+      "note": "Reproduced under a DIFFERENT recipe than the anchor run (cedsHub vs fourWithHub-baseline) and is byte-identical, which independently confirms that block identity carries no recipe identity (replay-block.js:130-170 serializeHeaderLine)."
+    },
+    "sif": {
+      "measuredOn": "2026-08-29",
+      "measuredBy": "STERLING_PEAK (hub kit role Phase 0.M3)",
+      "unmigratedHead": "66c5c6032c003069155d18acdc2cf6f88b3583da",
+      "recipe": "recipes/sifOnly.recipe.jsonc",
+      "buildMode": "vectorize=true",
+      "standardsDatabase": "system/dataStores/graphBuilder/hubKitRole_phase0.standardsDatabase.sqlite3",
+      "buildLog": "system/management/zNotesPlansDocs/hubKitRole/logs/sif.build.log",
+      "blockTextBytes": 56395535,
+      "wallClockSeconds": 69,
+      "equalsReferenceUnderFourWithHubBaseline": true,
+      "OBSERVED_EDGE_COLLAPSE": "SIF is the ONLY standard of the four whose harvest returns fewer edges than the load: 'loading 27069 nodes, 88766 edges' -> 'harvested 27069 nodes, 88757 edges'. NINE edges collapse under MERGE at the load boundary. It is REPRODUCIBLE (the block id equals the anchor, so the collapse is baked into every prior measurement too) and NODE counts are exact, so invariant I11 is unaffected. Docketed, not fixed — CEDS does not need it. See hubKitRole/DOCKET-bugsNotFixed.md."
+    },
+    "pesc260805": {
+      "measuredOn": "2026-08-29",
+      "measuredBy": "STERLING_PEAK (hub kit role Phase 0.M3)",
+      "unmigratedHead": "66c5c6032c003069155d18acdc2cf6f88b3583da",
+      "recipe": "recipes/pesc260805Only.recipe.jsonc",
+      "buildMode": "vectorize=true",
+      "standardsDatabase": "system/dataStores/graphBuilder/hubKitRole_phase0.standardsDatabase.sqlite3",
+      "buildLog": "system/management/zNotesPlansDocs/hubKitRole/logs/pesc260805.build.log",
+      "blockTextBytes": 88551726,
+      "wallClockSeconds": 96,
+      "equalsReferenceUnderFourWithHubBaseline": false,
+      "DIVERGENCE_IS_A_RULED_RE_KEY_NOT_A_DEFECT": "The measured id f139654a… is the CURRENT head of the vectorized PESC lineage, pinned as such at lib/bridge-framework/test/acceptance/acceptanceCommands.jsonc:438 with cause 'P1 — RULING P1-R8, the forge stamps effectiveDescription / owningTypeName / proseSource so the MANDATORY rendering seat is reachable by a declaration at all. THE CORRECT NAMED MOVER, independently reproduced by three separate --vectorize=true runs.' This Phase 0 measurement is the FOURTH independent reproduction. Corroboration: commit bbe36cd independently measured the vectorized block at exactly 88551726 bytes, which this build reproduced to the byte; and the four-forge manifest composed from these members is 09cb194a…, which equals the corrected fourBaseManifestId recorded at acceptanceCommands.jsonc:452 and in forges/pesc260805/bridgeData/buildModeIdentityRecord.json. SPEC-hubKitRole-082826.md §5 I4 cites the PREDECESSOR 045523dc… and should be corrected to f139654a…; see hubKitRole/DEVLOG-hubKitRole.md 0.M3 for the full investigation."
     }
   }
 }
