@@ -1257,6 +1257,7 @@ const cedsGatesAction = (callback) => {
 const goldEvalCheckAction = (callback) => {
 	const { xLog } = process.global;
 	const roundTripStageStatics = require('./round-trip-stage');
+	const certificateEnrichmentLib = require('./certificate-enrichment');
 	const buildLogDirPath = firstValue(process.global.commandLineParameters, 'buildLogDirPath');
 	if (!buildLogDirPath) {
 		callback(
@@ -1375,7 +1376,23 @@ const goldEvalCheckAction = (callback) => {
 		callback(`graphBuilder -goldEvalCheck: REFUSED — the recipe ${recipePathForBridges} DECLARES ${bridgeDeclaration.bridgeCount} bridge(s); mapping edges UNCERTIFIED — pass --manifestRefId=<the manifest -build printed> (and --standardsDatabaseFilePath=<its store>) so the bridge sibling audits the manifest's relationship blocks; a bridged build never certifies on the forge round trip alone`);
 		return;
 	}
-	const emitVerdict = (bridgeSibling) => {
+	// ⟪PHASE 6, RULING R5⟫ THE CERTIFICATE NOW NAMES WHAT IT CERTIFIED, not merely where it ran.
+	// The four fields are APPENDED below, after every incumbent field, so each keeps its name, its
+	// position and its value; the enrichment is computed FIRST because a certificate that cannot name
+	// its base schema block, its recipe, its endpoint or its declared tokens must REFUSE rather than
+	// emit those fields holding null — a null here reads as 'measured and empty' when the truth is
+	// 'never obtained'.
+	const emitVerdict = ({ bridgeSibling, manifest }) => {
+		const enrichmentResult = certificateEnrichmentLib.buildCertificateEnrichment({
+			summary,
+			declaredRowList: declaredRows,
+			manifest,
+			recipePath: recipePathForBridges,
+		});
+		if (enrichmentResult.refusalMessageList.length) {
+			callback(`graphBuilder -goldEvalCheck: REFUSED —\n  - ${enrichmentResult.refusalMessageList.join('\n  - ')}`);
+			return;
+		}
 		const scopeText = bridgeSibling.ran
 			? `bridge sibling: ${bridgeSibling.mappingBlockList.length} relationship block(s) audited, ${bridgeSibling.mappingBlockList.reduce((soFar, oneBlock) => soFar + oneBlock.edgeCount, 0)} mapping edge(s), 0 invalid-debug`
 			: `FORGE ROUND TRIP ONLY — bridge sibling NOT RUN (${bridgeSibling.notRunReason}); ${bridgeDeclaration.known ? `recipe declares ${bridgeDeclaration.bridgeCount} bridge(s)` : bridgeDeclaration.note}; MAPPING EDGES UNCERTIFIED`;
@@ -1420,6 +1437,9 @@ const goldEvalCheckAction = (callback) => {
 						verdictPath: oneRow.verdictPath,
 					})),
 					declaredAbsentTolerated: absentTokens,
+					// ⟪PHASE 6, R5⟫ APPENDED, never interleaved — baseBlockIdByToken, recipeTextHash,
+					// boltEndpoint, declaredTokens. Spreading LAST is what makes the change provably additive.
+					...enrichmentResult.enrichment,
 				},
 				null,
 				2,
@@ -1427,7 +1447,7 @@ const goldEvalCheckAction = (callback) => {
 		});
 	};
 	if (!manifestRefId) {
-		emitVerdict({ ran: false, notRunReason: 'no --manifestRefId given; pass --manifestRefId=<the manifest -build printed> (and --standardsDatabaseFilePath=<its store>) to audit the manifest\'s relationship blocks', mappingBlockList: [] });
+		emitVerdict({ bridgeSibling: { ran: false, notRunReason: 'no --manifestRefId given; pass --manifestRefId=<the manifest -build printed> (and --standardsDatabaseFilePath=<its store>) to audit the manifest\'s relationship blocks', mappingBlockList: [] }, manifest: null });
 		return;
 	}
 	const supportStoreResolution = resolveSupportStoreFilePath({
@@ -1453,7 +1473,21 @@ const goldEvalCheckAction = (callback) => {
 				callback(`graphBuilder -goldEvalCheck: REFUSED —\n  - ${audit.refusalMessageList.join('\n  - ')}`);
 				return;
 			}
-			emitVerdict({ ran: true, manifestRefId: audit.manifestRefId, standardsDatabaseFilePath: supportStoreResolution.filePath, memberCount: audit.memberCount, mappingBlockList: audit.mappingBlockList });
+			// ⟪PHASE 6, R5⟫ the sibling reports its AUDIT; the certificate must also NAME the base blocks,
+			// so the manifest is read here for its members. Deliberately a second read rather than a widened
+			// sibling contract: the sibling's subject is 'do the relationship blocks carry debug edges', and
+			// making it also a manifest accessor would blur a seam that is currently exact.
+			standardsDatabase.getManifest({ refId: manifestRefId }, (manifestError, manifest) => {
+				if (manifestError) {
+					callback(`graphBuilder -goldEvalCheck: getManifest ${manifestRefId}: ${manifestError}`);
+					return;
+				}
+				if (!manifest) {
+					callback(`graphBuilder -goldEvalCheck: REFUSED — manifest ${manifestRefId} is ABSENT from the store when read for its base schema blocks — nothing can be named as certified`);
+					return;
+				}
+				emitVerdict({ bridgeSibling: { ran: true, manifestRefId: audit.manifestRefId, standardsDatabaseFilePath: supportStoreResolution.filePath, memberCount: audit.memberCount, mappingBlockList: audit.mappingBlockList }, manifest });
+			});
 		});
 	});
 };
