@@ -60,6 +60,12 @@ const RECIPE_HASH_ALGORITHM = 'sha256';
 // forge-only build has no manifest open by design (actions.js: "a forge-only build certifies exactly
 // as before B3"), so the field states that fact in words a promoter must read, rather than holding a
 // null that reads as "no base blocks exist".
+const NO_RECIPE_LOCATED_TEXT =
+	'NO RECIPE WAS LOCATED FOR THIS RUN DIRECTORY — the recipe text is UNHASHED, not empty. The verb ' +
+	'derives the recipe from the run directory\'s own name, and a synthetic or foreign run directory ' +
+	'legitimately has none (actions.js states that such a directory certifies its forge round trip ' +
+	'only). Re-run with --recipePath=<the recipe this build ran> for a certificate that names it.';
+
 const NO_MANIFEST_NAMED_TEXT =
 	'NO MANIFEST WAS NAMED — this run passed no --manifestRefId, so no manifest was opened and the ' +
 	'base schema block ids are UNREAD, not empty. Re-run with --manifestRefId=<the manifest -build ' +
@@ -91,13 +97,15 @@ const readDeclaredTokens = ({ summary } = {}) => {
 };
 
 const readRecipeTextHash = ({ recipePath } = {}) => {
+	// ⟪RULING FJ-P6-1, applied a second time⟫ NO RECIPE LOCATED is a NAMED ABSENCE, not a refusal. This
+	// is NOT the same as the recipe being unreadable, and the difference is load-bearing: actions.js
+	// ALREADY treats an unlocatable recipe as a supported case — it certifies with bridgeDeclaration
+	// known:false and the note "bridge declaration UNKNOWN", saying in its own comment that "a synthetic
+	// or foreign run directory certifies its forge round trip only". Refusing here would revoke that
+	// documented behaviour, which is exactly what the ruling forbids an additive-only phase from doing.
+	// A recipe that IS named and cannot be read still REFUSES below: that is a defect, not an absence.
 	if (typeof recipePath !== 'string' || recipePath.trim() === '') {
-		return {
-			refusalMessage:
-				`${moduleName}: the recipe was not located for this run directory, so its text cannot be ` +
-				`hashed — pass --recipePath=<the recipe this build ran> so the certificate can name the ` +
-				`recipe it certified rather than merely the directory it read`,
-		};
+		return { value: NO_RECIPE_LOCATED_TEXT };
 	}
 	if (!fs.existsSync(recipePath)) {
 		return {
@@ -253,5 +261,6 @@ module.exports = {
 	ENRICHMENT_FIELD_NAME_LIST,
 	RECIPE_HASH_ALGORITHM,
 	NO_MANIFEST_NAMED_TEXT,
+	NO_RECIPE_LOCATED_TEXT,
 	moduleName,
 };

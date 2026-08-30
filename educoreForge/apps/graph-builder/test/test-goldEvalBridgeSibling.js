@@ -141,7 +141,13 @@ const runDirFor = ({ recipeName }) => {
 	const verdictDirPath = path.join(stageDirPath, 'toy');
 	fs.mkdirSync(verdictDirPath, { recursive: true });
 	const verdictPath = path.join(verdictDirPath, roundTripStageStatics.VERDICT_FILE_NAME);
-	fs.writeFileSync(verdictPath, JSON.stringify({ roundTripClean: true, inventedTotal: 0, lostTotal: 0 }));
+	// ⟪PHASE 6, R5⟫ `graph.boltUrl` is part of the REAL verdict artifact's shape — measured present in
+	// every roundTripVerdict.json in the build record back to the R4 anchor (2026-08-16), all four
+	// tokens. This fixture omitted it, which made it a MODEL OF THE ARTIFACT THAT THE ARTIFACT DOES NOT
+	// MATCH; -goldEvalCheck now reads the endpoint from there so the certificate can name where the
+	// round trip ran. Added to the FIXTURE rather than softened in the reader: no real build dir in the
+	// record lacks the field, so tolerating its absence would only ever excuse a synthetic one.
+	fs.writeFileSync(verdictPath, JSON.stringify({ roundTripClean: true, inventedTotal: 0, lostTotal: 0, graph: { boltUrl: 'bolt://localhost:7999' } }));
 	fs.writeFileSync(path.join(stageDirPath, roundTripStageStatics.STAGE_SUMMARY_FILE_NAME), JSON.stringify({ stageRan: true, disposition: 'ran', containerName: 'DEV_fixture', declaredTokens: ['toy'], absentTokens: [], standards: [{ token: 'toy', standardName: 'Toy', disposition: 'declared', ran: true, roundTripClean: true, inventedTotal: 0, lostTotal: 0, contentGapTotal: 0, explicitlyOmittedTotal: 0, semanticValidationLimit: 'fixture', snapshotDirPath: scratchDir, verdictPath }] }));
 	return runDirPath;
 };

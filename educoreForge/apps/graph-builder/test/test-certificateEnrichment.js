@@ -155,9 +155,13 @@ const dropScenarioList = [
 		expectedFragment: "carries no 'declaredTokens' array",
 	},
 	{
+		// ⟪RULING FJ-P6-1, second application⟫ the DROP that must refuse is a recipe that IS NAMED and
+		// cannot be read — a defect. A recipe that was never LOCATED is a NAMED ABSENCE instead, because
+		// actions.js already certifies a synthetic or foreign run directory by design; that case is
+		// asserted separately in SECTION 8 rather than here.
 		fieldName: 'recipeTextHash',
-		mutate: (world) => { world.recipePath = null; return world; },
-		expectedFragment: 'the recipe was not located for this run directory',
+		mutate: (world) => { world.recipePath = path.join(scratchDir, 'thisRecipeDoesNotExist.recipe.jsonc'); return world; },
+		expectedFragment: 'is not on disk',
 	},
 	{
 		fieldName: 'boltEndpoint',
@@ -306,6 +310,26 @@ harness.ok(
 	'(i) and it is NOT null — a null would read as "there are no base blocks" rather than "they were never read"',
 	noManifestVerdict.value !== null && noManifestVerdict.refusalMessage === undefined,
 	JSON.stringify(noManifestVerdict),
+);
+
+harness.section('SECTION 8 — (j) an UNLOCATABLE recipe is a NAMED ABSENCE; a NAMED-but-unreadable one still REFUSES');
+
+const unlocatableVerdict = enrichmentLib.readRecipeTextHash({ recipePath: null });
+harness.equal(
+	'(j) no recipe located → the field STATES that, so a synthetic or foreign run directory still certifies as actions.js documents',
+	unlocatableVerdict.value,
+	enrichmentLib.NO_RECIPE_LOCATED_TEXT,
+);
+harness.ok(
+	'(j) and it is NOT a refusal — refusing here would revoke behaviour actions.js already supports by name',
+	unlocatableVerdict.refusalMessage === undefined,
+	JSON.stringify(unlocatableVerdict),
+);
+const namedButAbsentVerdict = enrichmentLib.readRecipeTextHash({ recipePath: path.join(scratchDir, 'namedButAbsent.recipe.jsonc') });
+harness.ok(
+	'RED-OBSERVED (j) a recipe that IS NAMED and is not on disk REFUSES BY NAME — the two absences are NOT the same, and only one of them is a defect',
+	typeof namedButAbsentVerdict.refusalMessage === 'string' && namedButAbsentVerdict.refusalMessage.indexOf('is not on disk') !== -1,
+	namedButAbsentVerdict.refusalMessage || JSON.stringify(namedButAbsentVerdict),
 );
 
 harness.note(`fixtures under ${scratchDir}`);

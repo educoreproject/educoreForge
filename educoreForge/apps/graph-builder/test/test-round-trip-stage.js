@@ -701,7 +701,11 @@ const stageGoldEvalCheck = (done) => {
 		const verdictDirPath = path.join(runDirPath, roundTripStageStatics.STAGE_SUBDIR_NAME, token);
 		fs.mkdirSync(verdictDirPath, { recursive: true });
 		const verdictPath = path.join(verdictDirPath, roundTripStageStatics.VERDICT_FILE_NAME);
-		fs.writeFileSync(verdictPath, JSON.stringify({ roundTripClean: row.roundTripClean }));
+		// ⟪PHASE 6, R5⟫ `graph.boltUrl` belongs to the REAL verdict artifact — measured present in every
+		// roundTripVerdict.json in the build record back to the R4 anchor. -goldEvalCheck reads the
+		// endpoint from there so the certificate names where the round trip ran; this fixture modelled
+		// the artifact without it. Added here rather than tolerated in the reader.
+		fs.writeFileSync(verdictPath, JSON.stringify({ roundTripClean: row.roundTripClean, graph: { boltUrl: 'bolt://localhost:9999' } }));
 		return { ...row, verdictPath };
 	};
 
@@ -770,7 +774,12 @@ const stageGoldEvalCheck = (done) => {
 	fs.writeFileSync(
 		path.join(cleanRunDirPath, roundTripStageStatics.STAGE_SUBDIR_NAME, roundTripStageStatics.STAGE_SUMMARY_FILE_NAME),
 		JSON.stringify(
-			{ stageRan: true, disposition: 'ran', containerName: 'DEV_x', absentTokens: ['beta'], standards: [cleanRow] },
+			// ⟪PHASE 6, R5⟫ declaredTokens added to the fixture: the certificate now NAMES the tokens it
+			// certified, and the stage writes this key on every real build — MEASURED, 91 of 91 stage
+			// summaries in dataStores/buildLogs carry it, none missing. The fixture modelled the artifact
+			// without it. Added here rather than tolerated in the reader, for the reason the bolt fixture
+			// gives above: no real summary in the record lacks the field.
+			{ stageRan: true, disposition: 'ran', containerName: 'DEV_x', declaredTokens: ['alpha'], absentTokens: ['beta'], standards: [cleanRow] },
 			null,
 			'\t',
 		),
