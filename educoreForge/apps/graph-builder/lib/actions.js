@@ -1382,6 +1382,19 @@ const goldEvalCheckAction = (callback) => {
 	// its base schema block, its recipe, its endpoint or its declared tokens must REFUSE rather than
 	// emit those fields holding null — a null here reads as 'measured and empty' when the truth is
 	// 'never obtained'.
+	//
+	// ⚠ THE PRECONDITION THIS INTRODUCED, STATED WHERE THE PROMOTER READS IT (Phase 6 review, P2).
+	// "Additive" is exact about the PAYLOAD — no incumbent field moved, changed or was renamed — and it
+	// would be misleading if left to stand alone about the INPUT. A run directory must now carry
+	// `declaredTokens` in its stage summary and `.graph.boltUrl` in EVERY declared verdict, or this
+	// verb REFUSES where it previously certified. That narrowing was accepted on measurement, not on
+	// argument: of the artifacts on disk under dataStores/buildLogs, 91 of 91 stage summaries carry
+	// `declaredTokens` and 153 of 153 roundTripVerdict.json carry `.graph.boltUrl` — none missing on
+	// either count, measured twice by two parties. SO NO REAL BUILD DIRECTORY IN THE RECORD CHANGES
+	// VERDICT; the class that does is SYNTHETIC run directories, and two test fixtures modelling the
+	// artifact without those fields are the proof it changed at all. A hand-assembled or foreign run
+	// directory that predates them will be refused BY NAME rather than silently certified on partial
+	// evidence, which is the trade this ruling makes deliberately.
 	const emitVerdict = ({ bridgeSibling, manifest }) => {
 		const enrichmentResult = certificateEnrichmentLib.buildCertificateEnrichment({
 			summary,
@@ -1438,7 +1451,11 @@ const goldEvalCheckAction = (callback) => {
 					})),
 					declaredAbsentTolerated: absentTokens,
 					// ⟪PHASE 6, R5⟫ APPENDED, never interleaved — baseBlockIdByToken, recipeTextHash,
-					// boltEndpoint, declaredTokens. Spreading LAST is what makes the change provably additive.
+					// boltEndpoint, declaredTokens. Spreading LAST guarantees the four arrive AFTER every
+					// incumbent key, so no existing key changes POSITION. ⚠ It does NOT by itself guarantee
+					// additivity: a spread key colliding with an incumbent name would overwrite that value
+					// silently, in place. Additivity holds because the four names were checked against the
+					// payload above and none collides — a claim about THESE names, not a property of spread.
 					...enrichmentResult.enrichment,
 				},
 				null,

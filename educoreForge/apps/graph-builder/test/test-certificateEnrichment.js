@@ -21,7 +21,12 @@
 //       only at the top level — the exact near-miss this phase hit while measuring;
 //   (g) validators reporting DIFFERENT endpoints are refused: one certificate is a claim about ONE graph;
 //   (h) an AMBIGUOUS base member (two standardBase blocks for one token) is refused, never guessed;
-//   (i) the no-manifest case carries a NAMED ABSENCE, never null (a forge-only run certifies as before).
+//   (i) the no-manifest case carries a NAMED ABSENCE, never null (a forge-only run certifies as before);
+//   (j) THE TWO RECIPE ABSENCES ARE NOT THE SAME — a recipe that was never LOCATED is a NAMED ABSENCE
+//       (RULING FJ-P6-1's second application: actions.js already certifies a synthetic or foreign run
+//       directory), while a recipe that IS NAMED and is not on disk REFUSES BY NAME. Only one of the
+//       two is a defect, and a later simplification collapsing them back into one branch is exactly
+//       what this pair of assertions exists to stop.
 //
 // Pure and hermetic: fixtures under os.tmpdir(), no store, no container, no LLM, no network.
 // Run: node apps/graph-builder/test/test-certificateEnrichment.js

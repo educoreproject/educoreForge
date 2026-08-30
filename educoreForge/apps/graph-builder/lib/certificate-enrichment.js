@@ -32,13 +32,24 @@
 //                        every token and reads as "absent" while the value sits one level down.
 //   declaredTokens     — summary.declaredTokens, already written by the stage.
 //
+// ⚠ ONE THING A MACHINE READER OF CERTIFICATES MUST KNOW: `baseBlockIdByToken` is an OBJECT in the
+// manifest form and a STRING — a named-absence sentence — in the forge-only form. That is the ruled
+// idiom (`semanticValidationLimit` in this same payload does it too, RULING FJ-P6-1), and it is
+// deliberate rather than sloppy: a null would read as "there are no base blocks" when the truth is
+// "they were never read". But a consumer that assumes an object will break on a forge-only
+// certificate, so the union is stated here rather than left to be discovered.
+//
 // REFUSAL, NOT NULL-FILL. Every reader returns EITHER a value OR a refusalMessage naming what was
 // missing and where it was looked for. Nothing is defaulted, and no field is ever emitted holding
 // null: a null in a certificate reads as "measured and empty" when the truth is "never obtained".
 //
 // callback(errString, result) is the house style for asynchronous work; these readers are
-// SYNCHRONOUS and pure but for the file reads they declare, so they return their verdict directly —
-// the same shape gold-eval-bridge-sibling.js's auditMappingBlockText uses for the same reason. The
+// SYNCHRONOUS and pure but for the file reads they declare, so they return their verdict directly,
+// for the same reason gold-eval-bridge-sibling.js's auditMappingBlockText does. ⚠ THE SAME IDIOM,
+// NOT THE SAME SHAPE, and the distinction was overstated here until the Phase 6 review caught it:
+// auditMappingBlockText ALWAYS returns its counts alongside `refusalMessage | null`, whereas these
+// readers return EITHER `{ value }` OR `{ refusalMessage }` and never both. A caller written against
+// one will not read the other. The
 // try/catch blocks below are the boundary translation of a JSON.parse / fs throw into that verdict
 // channel, the identical dispensation actions.js and gold-eval-bridge-sibling.js already take, and
 // they are never used for control flow.
@@ -56,16 +67,20 @@ const { SCHEMA_BLOCK_KIND } = vocabularyLib;
 
 const RECIPE_HASH_ALGORITHM = 'sha256';
 
-// The named absence for a run that named no manifest. This is NOT a null-fill and NOT a default: a
-// forge-only build has no manifest open by design (actions.js: "a forge-only build certifies exactly
-// as before B3"), so the field states that fact in words a promoter must read, rather than holding a
-// null that reads as "no base blocks exist".
+// The named absence for a run whose RECIPE could not be located. NOT a null-fill and NOT a default:
+// -goldEvalCheck derives the recipe from the run directory's own name, and a synthetic or foreign run
+// directory legitimately has none — actions.js already certifies that case by design. RULING FJ-P6-1
+// applied a second time. A recipe that IS named and cannot be READ is a different thing and refuses.
 const NO_RECIPE_LOCATED_TEXT =
 	'NO RECIPE WAS LOCATED FOR THIS RUN DIRECTORY — the recipe text is UNHASHED, not empty. The verb ' +
 	'derives the recipe from the run directory\'s own name, and a synthetic or foreign run directory ' +
 	'legitimately has none (actions.js states that such a directory certifies its forge round trip ' +
 	'only). Re-run with --recipePath=<the recipe this build ran> for a certificate that names it.';
 
+// The named absence for a run that named no MANIFEST. Same reasoning, different input: a forge-only
+// build has no manifest open by design (actions.js: "a forge-only build certifies exactly as before
+// B3"), so the field states that fact in words a promoter must read, rather than holding a null that
+// reads as "no base blocks exist".
 const NO_MANIFEST_NAMED_TEXT =
 	'NO MANIFEST WAS NAMED — this run passed no --manifestRefId, so no manifest was opened and the ' +
 	'base schema block ids are UNREAD, not empty. Re-run with --manifestRefId=<the manifest -build ' +
