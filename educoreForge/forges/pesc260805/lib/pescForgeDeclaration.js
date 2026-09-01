@@ -130,7 +130,15 @@ const pescForgeDeclaration = Object.freeze({
 	//             block. S6 is NOT the mechanism: substitution translates a native type INTO a
 	//             registry member, and these are relations rather than synonyms — substituting them
 	//             would collapse 41,378 edges onto one type.
-	//  P17  MET — the root's version 'aggregate-01' differs from (selfDescribedVersion ?? 'unknown')
+	//  P17  DROPPED — RETIRED FROM THIS DECLARATION 2026-08-31 (versionFromStamp order). describeSource
+	//             no longer returns a version at all and AGGREGATE_VERSION is retired, so there is no
+	//             declared version left to disagree with anything and nothing to permit. The ROW itself
+	//             was DELETED in Phase 4 (2026-09-01) together with SIF's S3 and their shared factory;
+	//             the disagreement GUARD replaced them in the same phase and is STRICTER. (Original
+	//             note follows: the row survives until Phase 4, when the disagreement GUARD is built and the two dependent
+	//             gates are rewritten against it — there must never be a gap between the rows dying and
+	//             the guard living. The note as it stood read:
+	//         (was) MET — the root's version 'aggregate-01' differs from (selfDescribedVersion ?? 'unknown')
 	//             = 'unknown', because describeSource returns selfDescribedVersion null. PESC is the
 	//             SIF case, not the CEDS case: measured, CEDS 14.0.0.0/14.0.0.0/spec (genuinely
 	//             self-describing) against SIF 1.0/unknown/unknown (declares S3) and PESC
@@ -166,7 +174,6 @@ const pescForgeDeclaration = Object.freeze({
 					"the pesc260805:root node of block f139654a carries pescTier 'meta'; no other standard's root carries a tier marker",
 			}),
 		}),
-		Object.freeze({ allowanceId: 'P17' }),
 		Object.freeze({
 			allowanceId: 'P4',
 			// the seven relations the PESC graph model is built on, pinned EXACTLY and in this order by

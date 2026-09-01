@@ -12,7 +12,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //       'PESC260805', the DECLARED root id 'pesc260805:root', parserVersion '1', the honestly EMPTY
 //       mappingInstruction, an EMPTY nonEmbeddableRoleList because PESC embeds every node including
 //       the root, the shared PERMISSIVE stableId pattern, and the FIVE measured allowances
-//       P16/P9/P5/P17/P4)
+//       P16/P9/P5/P4 — P17 RETIRED 2026-09-01, versionFromStamp order)
 //   H2  lib/pescHooks.js                 — sourceLoaderList (pescCorpus), describeSource,
 //       describeRoot
 //   H3  lib/forgePescContractGraph.js    — the walk: source, derived, searchText composition and

@@ -1325,7 +1325,7 @@ census plus the rulings, and it is the migration's punch list. A repair that cha
 | C8 | ceds | root `description` template-built | §10.4, §7.1 | `forgeCeds.js:475` |
 | S1 | sif | positional parser signature `parseSif(sourcePath, {...}, cb)` — under the framework, an ADAPTER is needed to the H2 hook contract (ruling A1) | §4.2, H2 | `forges/sif/lib/parser.js:8,488` |
 | S2 | sif | `name` coerced to `''` when null (RT-2) | §7.1 | `forgeSif.js:349` |
-| S3 | sif | `metadata.version` is the literal `'1.0'` (provenance `publishedVersion` unknown) — a stamp not READ from the source; and a SECOND source input (`refIdResolutionMap.tsv`) plus a fifth `forge()` argument outside the seam | §2.3, §7.1, §2.2 | `forges/sif/lib/parser.js:943`, `:520-527`; `forgeSif.js:746` |
+| S3 | sif | ⚠ FIRST CLAUSE RESOLVED 2026-09-01 by the versionFromStamp order (the `'1.0'` literal is deleted; the root's `version` now comes from the provenance stamp); THE REMAINING CLAUSES PREDATE IT AND ARE NOT ITS WORK. `metadata.version` is the literal `'1.0'` (provenance `publishedVersion` unknown) — a stamp not READ from the source; and a SECOND source input (`refIdResolutionMap.tsv`) plus a fifth `forge()` argument outside the seam | §2.3, §7.1, §2.2 | `forges/sif/lib/parser.js:943`, `:520-527`; `forgeSif.js:746` |
 | S4 | sif | root `sourceUrl: metadata.sourceUrl \|\| ''` — **retire declaration** `sourceUrl: ''` | §10.4 | `forgeSif.js:395` |
 | S5 | sif | root `description` template-built | §10.4, §7.1 | `forgeSif.js:380` |
 | E1 | edfi | validator writes verdict artifacts only when `outputPath` is truthy — a verdict producible with nothing on disk | §8.1 | `forges/edfi/roundTripValidator.js:395` |

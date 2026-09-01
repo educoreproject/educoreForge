@@ -119,17 +119,22 @@ const conjunctList = [
 		}),
 	}),
 	// FR10 — an allowance row that tried to license omitting parserVersion is refused BY THE FRAMEWORK:
-	// the subject carries a REGISTRY DOUBLE giving S3 an allowanceData rootOmitPropertyList, the toy
-	// declares S3 as 'sif' with rootOmitPropertyList ['parserVersion'] (S3's own precondition made true)
+	// the subject carries a REGISTRY DOUBLE giving S7 an allowanceData rootOmitPropertyList, the toy
+	// declares S7 as 'sif' with rootOmitPropertyList ['parserVersion'] (S7's own precondition made true)
+	// ⟪versionFromStamp, 2026-09-01⟫ VEHICLE SWAPPED S3 -> S7. THE INVARIANT IS UNCHANGED — FR10 says
+	// parserVersion is NEVER licensable for omission, whatever row tries. S3 was only the carrier and it
+	// is RETIRED with P17 and their shared factory. S7 is a live sif row with the same empty
+	// allowanceDataContract and a precondition this shape can satisfy (sourceFiles []).
 	refusalCase({
 		registry: twinRegistry, gateId: GATE_ID, conjunctId: 'parserVersionNeverLicensed',
-		title: 'an allowance licensing omission of parserVersion is refused (FR10) — registry double: S3 carries rootOmitPropertyList',
+		title: 'an allowance licensing omission of parserVersion is refused (FR10) — registry double: S7 carries rootOmitPropertyList',
 		shape: (scenario) => {
-			scenario.frameworkMutationList.push({ modulePath: path.join(toyScenario.FRAMEWORK_DIR, REGISTRY_FILE), find: "\t\tallowanceDataContract: Object.freeze({}),\n\t\tpreconditionText: \"describeSource returns version !== (selfDescribedVersion ?? 'unknown')\",", replace: "\t\tallowanceDataContract: Object.freeze({ rootOmitPropertyList: Object.freeze({ kind: 'stringList' }) }),\n\t\tpreconditionText: \"describeSource returns version !== (selfDescribedVersion ?? 'unknown')\"," });
+			scenario.frameworkMutationList.push({ modulePath: path.join(toyScenario.FRAMEWORK_DIR, REGISTRY_FILE), find: "\t\tallowanceDataContract: Object.freeze({}),\n\t\trootEmptyPermittedPropertyList: Object.freeze(['sourceFiles']),", replace: "\t\tallowanceDataContract: Object.freeze({ rootOmitPropertyList: Object.freeze({ kind: 'stringList' }) }),\n\t\trootEmptyPermittedPropertyList: Object.freeze(['sourceFiles'])," });
 			scenario.forgeDeclaration.standardKey = 'sif';
-			scenario.forgeDeclaration.compatibilityDeclarationList = [{ allowanceId: 'S3', rootOmitPropertyList: ['parserVersion'] }];
+			scenario.forgeDeclaration.compatibilityDeclarationList = [{ allowanceId: 'S7', rootOmitPropertyList: ['parserVersion'] }];
 			const baseHooks = toyScenario.toyHooksFactory();
-			scenario.hookOverrides.describeSource = ({ parsed }) => ({ ...baseHooks.describeSource({ parsed }), version: '1.0', selfDescribedVersion: null });
+			// S7's precondition made true: sourceFiles []
+			scenario.hookOverrides.describeSource = ({ parsed }) => ({ ...baseHooks.describeSource({ parsed }), sourceFiles: [] });
 		},
 		regex: /an allowance licenses omitting root 'parserVersion' — parserVersion is never licensed for omission \(FR10\)/,
 		twinName: 'disableNeverOmittableCheck', fileName: ROOT_FILE,

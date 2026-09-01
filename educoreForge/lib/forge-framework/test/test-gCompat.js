@@ -281,11 +281,11 @@ const conjunctList = [
 		find: '\t\t\tif (registryRow.declarableBy.indexOf(forgeDeclaration.standardKey) === -1) {', replace: '\t\t\tif (false) {',
 	}),
 	refusalCase({
-		registry: twinRegistry, gateId: GATE_ID, conjunctId: 'p17DeclarableByPescOnly',
-		title: "P17 declared by SIF → refused: 'declarable only by pesc260805'. Same shape as P9 against the OTHER shared behaviour, rowRefId 'versionDisagreement' — the two rows S3 and P17 whose per-forge keying is exactly what refused PESC's build until they were re-keyed onto one behaviour",
-		shape: (scenario) => { asStandard(scenario, 'sif'); scenario.forgeDeclaration.compatibilityDeclarationList = [{ allowanceId: 'P17' }]; },
-		regex: /allowanceId 'P17' is declarable only by pesc260805, not by 'sif'/,
-		twinName: 'declarableByCheckDisabledForP17', fileName: DECLARATION_CONTRACT_FILE,
+		registry: twinRegistry, gateId: GATE_ID, conjunctId: 'p16DeclarableByPescOnly',
+		title: "P16 declared by SIF -> refused: 'declarable only by pesc260805'. ⟪versionFromStamp, 2026-09-01⟫ VEHICLE SWAPPED P17 -> P16. THE INVARIANT IS UNCHANGED: per-forge declarableBy keying is enforced even for rows that SHARE a rowRefId. P17's family (versionDisagreement, with S3) was RETIRED this phase, so the shared-behaviour vehicle is now P16 in the sourceUrlEmptyString family (E6/S4/P16) - the same shape against a family that still exists",
+		shape: (scenario) => { asStandard(scenario, 'sif'); scenario.forgeDeclaration.compatibilityDeclarationList = [{ allowanceId: 'P16' }]; },
+		regex: /allowanceId 'P16' is declarable only by pesc260805, not by 'sif'/,
+		twinName: 'declarableByCheckDisabledForP16', fileName: DECLARATION_CONTRACT_FILE,
 		find: '\t\t\tif (registryRow.declarableBy.indexOf(forgeDeclaration.standardKey) === -1) {', replace: '\t\t\tif (false) {',
 	}),
 ];

@@ -60,8 +60,56 @@ const EDGE_TYPE_VALUE_LIST = Object.freeze(Object.values(EDGE_TYPES));
 const SEAM_ARGUMENT_NAME_LIST = Object.freeze(['sourcePath', 'owner', 'embedNodeLimit', 'skipEmbedding']);
 const DEP_NAME_LIST = Object.freeze(['embedder', 'xLog', 'migratingBundleListOverride']);
 const DESCRIBE_SOURCE_KEY_LIST = Object.freeze(['version', 'selfDescribedVersion', 'sourceFormat', 'sourceFiles', 'sourceUrl']);
+// DESCRIBE_SOURCE_KEY_LIST is the PERMITTED set (what a bundle may return). The REQUIRED set is
+// narrower: `version` is OPTIONAL as of the versionFromStamp order — a bundle that read no version
+// from its source omits the key and the framework takes metadata.version from the provenance STAMP
+// instead (see STEP 4). The two lists are separate BECAUSE THE ONE LIST DID DOUBLE DUTY: it gated
+// both 'is this key allowed' and 'is this key present', so dropping `version` from it to make it
+// optional would also have made a DECLARING bundle's version an undeclared key and refused every
+// forge in the tree.
+const DESCRIBE_SOURCE_REQUIRED_KEY_LIST = Object.freeze(['selfDescribedVersion', 'sourceFormat', 'sourceFiles', 'sourceUrl']);
 // the recipe's floating version token(s) — never a bundle's own claim (FA2; forger.js "no floating 'current'")
 const RECIPE_VERSION_TOKEN_LIST = Object.freeze(['current']);
+
+// -----------------------------------------------------------------
+// refuseVersionDisagreement — THE DISAGREEMENT GUARD (versionFromStamp order, tqii 2026-08-31).
+// PURE and exported as a STATIC, per this tree's own idiom ("pure helpers exported as statics so the
+// refusal is provable directly, without standing up the whole build pipeline", build.js:2073-2074),
+// so gate 3's RED-then-GREEN is a direct call rather than a forge.
+//
+// WHAT IT CATCHES, and why it is FATAL where its neighbour is only a warning. A forge that DECLARES a
+// version differing from the resolved stamp has made an UNEVIDENCED ASSERTION: it reports a version it
+// did not read, with no authority to fall back on. That is SIF's deleted '1.0' exactly.
+//
+// ⚠ IT IS NOT snapshot-provenance's DISAGREEMENT WARNING, and the two must never be mistaken for one
+// another in a log. THAT one compares a SELF-DESCRIBING SOURCE against the provenance file — two
+// EVIDENCED observers disagreeing about one fact, which the spec already ranks (spec beats
+// provenance-file), so the build proceeds correctly while a human fixes the stale record. THIS one has
+// no second observer at all. Different in KIND, therefore different in SEVERITY, and each message says
+// which case it is in its own text so a log reader can tell them apart without knowing the codebase.
+//
+// AN ABSENT VERSION IS NOT A DISAGREEMENT — a bundle that declares nothing has made no claim to
+// disagree with, and omission is exactly the state this order creates on purpose.
+const refuseVersionDisagreement = ({ forgePrefix, declaredVersion, publishedVersion }) => {
+	if (declaredVersion === undefined) {
+		return '';
+	}
+	if (declaredVersion === publishedVersion) {
+		return '';
+	}
+	return refuse.byName({
+		moduleName,
+		what:
+			`${forgePrefix} describeSource DECLARES version '${declaredVersion}' but the provenance stamp ` +
+			`resolves '${publishedVersion}' — an UNEVIDENCED ASSERTION (a version the bundle did not read), ` +
+			`NOT the source-versus-provenance disagreement between two evidenced observers that ` +
+			`snapshot-provenance warns about`,
+		where:
+			'a forge reports what it READ. Omit `version` and the framework takes it from the stamp, or ' +
+			'correct whatever is making the claim — a declared version with nothing behind it is the ' +
+			'defect this order exists to remove',
+	}).message;
+};
 
 const isPlainObject = (candidate) =>
 	candidate !== null && typeof candidate === 'object' && !Array.isArray(candidate);
@@ -444,12 +492,22 @@ const moduleFunction =
 						next(refuse.byName({ moduleName, what: `${forgePrefix} describeSource returned undeclared key '${unknownDescribedName}'`, where: `the five keys are ${DESCRIBE_SOURCE_KEY_LIST.join(', ')}; a stamp triple is returned only under allowance P2` }).message);
 						return;
 					}
-					const missingDescribedName = DESCRIBE_SOURCE_KEY_LIST.find((oneName) => describedSource[oneName] === undefined);
+					const missingDescribedName = DESCRIBE_SOURCE_REQUIRED_KEY_LIST.find((oneName) => describedSource[oneName] === undefined);
 					if (missingDescribedName !== undefined) {
-						next(refuse.byName({ moduleName, what: `${forgePrefix} describeSource is missing key '${missingDescribedName}'`, where: `ALL FIVE keys are required: ${DESCRIBE_SOURCE_KEY_LIST.join(', ')} (selfDescribedVersion null when the source does not self-describe; sourceUrl null when the standard has none)` }).message);
+						next(refuse.byName({ moduleName, what: `${forgePrefix} describeSource is missing key '${missingDescribedName}'`, where: `these keys are REQUIRED: ${DESCRIBE_SOURCE_REQUIRED_KEY_LIST.join(', ')} (selfDescribedVersion null when the source does not self-describe; sourceUrl null when the standard has none). 'version' is OPTIONAL — omit it and the framework takes the version from the provenance stamp` }).message);
 						return;
 					}
-					if (typeof describedSource.version !== 'string' || describedSource.version.length === 0) {
+					// `version` ABSENT is now legitimate and means 'this bundle read no version' — the stamp
+					// answers instead. Absent is optional; present-but-invalid is still a fault and is never
+					// substituted for.
+					// ⚠ AMENDED IN PHASE 4, AND THE ORIGINAL WORDING IS WHY: this comment said a PRESENT
+					// version 'is held to the same contract as before'. TRUE WHEN WRITTEN IN PHASE 1, AND
+					// INCOMPLETE ONCE THE GUARD LANDED — a present version now ALSO has to AGREE WITH THE
+					// RESOLVED STAMP (refuseVersionDisagreement, below), a constraint that did not exist when
+					// this line was first written. A comment that was accurate at the time and went stale
+					// under a later change in the SAME ORDER is precisely the defect this order exists to
+					// remove, so it is corrected here rather than left to rot.
+					if (describedSource.version !== undefined && (typeof describedSource.version !== 'string' || describedSource.version.length === 0)) {
 						next(refuse.byName({ moduleName, what: `${forgePrefix} describeSource returned version ${JSON.stringify(describedSource.version)}`, where: "version is what the bundle READ or 'unknown', never '' and never the recipe token" }).message);
 						return;
 					}
@@ -504,8 +562,25 @@ const moduleFunction =
 							next(`${forgePrefix} ${stampError}`);
 							return;
 						}
+						// THE GUARD, at the describeSource evaluation step beside the sourceUrl and sourceFiles
+						// refusals — here rather than above because stamp.publishedVersion does not exist until
+						// deriveVersionStamp answers. UNCOUPLED BY CONSTRUCTION: the versionDisagreement allowance
+						// rows were RETIRED in this same phase, so nothing can suppress it and it depends on nothing.
+						const disagreementRefusal = refuseVersionDisagreement({
+							forgePrefix,
+							declaredVersion: describedSource.version,
+							publishedVersion: stamp.publishedVersion,
+						});
+						if (disagreementRefusal) {
+							next(disagreementRefusal);
+							return;
+						}
 						const metadata = {
-							version: describedSource.version,
+							// THE VERSION COMES FROM THE STAMP WHEN THE BUNDLE DECLARED NONE (versionFromStamp order,
+							// tqii 2026-08-31). A forge reports what it READ; a forge that read nothing reports
+							// nothing, and the resolved publishedVersion — which deriveVersionStamp took from the
+							// snapshot's own provenance file — is the honest answer rather than a literal nobody read.
+							version: describedSource.version === undefined ? stamp.publishedVersion : describedSource.version,
 							versionSource: stamp.versionSource,
 							sourceFormat: describedSource.sourceFormat,
 							sourceFiles: describedSource.sourceFiles,
@@ -637,3 +712,6 @@ const moduleFunction =
 // END OF moduleFunction() ============================================================
 
 module.exports = moduleFunction({ moduleName });
+// ⟪versionFromStamp⟫ the disagreement guard, exported as a static so its refusal is provable by a
+// direct call — gate 3's RED-then-GREEN never stands up a build.
+module.exports.refuseVersionDisagreement = refuseVersionDisagreement;

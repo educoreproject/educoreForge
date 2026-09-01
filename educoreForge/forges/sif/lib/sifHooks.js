@@ -61,14 +61,18 @@ const moduleFunction =
 		// -----------------------------------------------------------------
 		// describeSource — PURE; the parser's metadata in the framework's five-key shape.
 		//
-		// TWO VERSION KEYS (FR2), and for SIF they deliberately disagree. `version` is what the parser
-		// reports and becomes the root's version byte — SIF's parser hard-codes '1.0' (parser.js:943).
-		// `selfDescribedVersion` is the deriveVersionStamp INPUT and is non-null ONLY when the source
+		// ONE VERSION KEY NOW, NOT TWO. `version` IS NO LONGER RETURNED: the TSV declares no version, so
+		// this bundle makes no version claim and the framework takes the root's version from the
+		// provenance STAMP (versionFromStamp order, tqii 2026-08-31). The parser's hard-coded '1.0' is
+		// gone with it — a forge that read no version now REPORTS no version rather than inventing one.
+		// `selfDescribedVersion` REMAINS and stays null: it is the deriveVersionStamp INPUT and is
+		// non-null ONLY when the source
 		// SELF-DESCRIBES its version; SIF's TSV does not, and the parser accordingly never sets
 		// versionSource at all, so the ternary the bespoke forge passed (forgeSif.js:762-765) resolves
 		// to null here exactly as it did there. The stamp then falls to the provenance file or stamps
-		// 'unknown' honestly. That is the precedence rule, not a substitution — and the resulting
-		// disagreement between '1.0' and 'unknown' is precisely what allowance S3 declares.
+		// 'unknown' honestly. That is the precedence rule, not a substitution. THE DISAGREEMENT THAT
+		// ALLOWANCE S3 DECLARED NO LONGER EXISTS — there is no declared version left to disagree with
+		// anything, so SIF's declaration of S3 is dropped in this same phase.
 		//
 		// sourceFiles and sourceUrl are ABSENT from the parser's metadata entirely, so they resolve to
 		// [] and '' — which is what allowances S7 and S4 declare. The `|| []` / `|| ''` here are
@@ -79,7 +83,8 @@ const moduleFunction =
 		const describeSource = ({ parsed }) => {
 			const { metadata } = parsed[LOADER_NAME.SIF_IMPLEMENTATION_SPECIFICATION];
 			return {
-				version: metadata.version,
+				// `version` DELIBERATELY OMITTED — the framework's REQUIRED key list no longer
+				// contains it, and omission is how a bundle says 'I read no version'.
 				selfDescribedVersion: metadata.versionSource === 'spec' ? metadata.version : null,
 				sourceFormat: metadata.sourceFormat,
 				sourceFiles: metadata.sourceFiles || [],

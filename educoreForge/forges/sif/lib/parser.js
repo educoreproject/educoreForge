@@ -940,7 +940,10 @@ module.exports = (sourcePath, options, callback) => {
 		nodes,
 		parseAudit,
 		metadata: {
-			version: '1.0',
+			// NO `version` KEY. The TSV declares no version of its own — it never did, and the
+			// literal '1.0' that stood here was read from nothing and supported by nothing
+			// (versionFromStamp order, tqii 2026-08-31). A parser reports what it PARSED; the
+			// framework now takes the version from the snapshot's provenance stamp instead.
 			sourceFormat: 'tsv',
 			objectCount: sifObjectList.length,
 			fieldCount: totalFieldCount,

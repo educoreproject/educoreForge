@@ -63,9 +63,15 @@ const conjunctList = [
 		judge: succeeded((result) => ({ pass: VERSION_SOURCE_LIST.indexOf(result.metadata.versionSource) !== -1, detail: `versionSource ${JSON.stringify(result.metadata.versionSource)}` })),
 	}),
 	refusalCase({
-		registry: twinRegistry, gateId: GATE_ID, conjunctId: 's3OnFreshFixtureRefused',
-		title: 'S3 declared on a fresh fixture (outside the four) is refused naming MIGRATING_BUNDLE_LIST', mode: 'inject',
-		shape: (scenario) => { scenario.forgeDeclaration.compatibilityDeclarationList = [{ allowanceId: 'S3' }]; },
+		registry: twinRegistry, gateId: GATE_ID, conjunctId: 'allowanceOnFreshFixtureRefused',
+		// ⟪versionFromStamp, 2026-09-01⟫ REWRITTEN FROM 's3OnFreshFixtureRefused'. THE INVARIANT IS
+		// UNCHANGED — an allowance declared by a bundle outside MIGRATING_BUNDLE_LIST is refused naming
+		// that list. S3 was only ever the VEHICLE, and it is RETIRED, so the vehicle is now S2, which is
+		// live. Had the id been left as S3 the refusal would still have fired but for the WRONG REASON
+		// (unknown allowance), and a gate that goes red for the wrong cause is indistinguishable from
+		// one that never fired.
+		title: 'an allowance declared on a fresh fixture (outside the four) is refused naming MIGRATING_BUNDLE_LIST', mode: 'inject',
+		shape: (scenario) => { scenario.forgeDeclaration.compatibilityDeclarationList = [{ allowanceId: 'S2' }]; },
 		regex: /is non-empty but standardKey 'toy' is not in MIGRATING_BUNDLE_LIST/,
 		twinName: 'putToyInsideTheFour', leverKind: 'inputFault', shippedConfig: false,
 		mutate: (scenario) => { scenario.deps = { ...scenario.deps, migratingBundleListOverride: ['toy'] }; },

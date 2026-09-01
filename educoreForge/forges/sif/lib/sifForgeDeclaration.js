@@ -88,10 +88,20 @@ const sifForgeDeclaration = Object.freeze({
 	// claimed 27 blank descriptions that the emitted bytes say do not exist, and declaring the row it
 	// implied would have failed the build for a defect a stale comment invented.)
 	//
-	//  S3  MET      — describeSource returns version '1.0' while selfDescribedVersion is null, so the
-	//                 root's version differs from (selfDescribedVersion ?? 'unknown'). The parser
-	//                 hard-codes version '1.0' (parser.js:943) and never sets versionSource, so the
-	//                 stamp input is null by construction.
+	//  S3  DROPPED  — RETIRED FROM THIS DECLARATION 2026-08-31 (versionFromStamp order). It read:
+	//                 describeSource returns version '1.0' while selfDescribedVersion is null, so the
+	//                 root's version differs from (selfDescribedVersion ?? 'unknown'). BOTH HALVES OF
+	//                 THAT ARE GONE: describeSource no longer returns a version at all and the parser's
+	//                 hard-coded '1.0' is deleted, so there is no declared version left to disagree
+	//                 with anything and nothing to permit.
+	//                 NOTE THE ROUTE: the row's own retiredBy prose names a DIFFERENT one — "SIF's
+	//                 parser reports a real source version (or the root carries 'unknown')" — and
+	//                 neither limb is true here. The declaration disappeared instead. The ROW itself
+	//                 was DELETED in Phase 4 (2026-09-01), together with PESC's P17 and their shared
+	//                 versionDisagreementRow factory. The two gates that depended on it were REWRITTEN
+	//                 AGAINST THE NEW GUARD IN THE SAME PHASE — refuseVersionDisagreement, which is
+	//                 STRICTER: the rows PERMITTED a declared-vs-resolved divergence, the guard FORBIDS
+	//                 it, and no allowance can suppress it.
 	//  S4  MET      — describeSource returns sourceUrl ''. The parser's metadata carries no sourceUrl
 	//                 at all (parser.js:942-955), which the root stamps as '' (:394).
 	//  S7  MET      — describeSource returns sourceFiles []. Same cause; the root stamps [] (:394).
@@ -129,7 +139,6 @@ const sifForgeDeclaration = Object.freeze({
 			// and for the error I made reading the row's prose instead of the code.
 			coerceEmptyStringPropertyList: Object.freeze(['description']),
 		}),
-		Object.freeze({ allowanceId: 'S3' }),
 		Object.freeze({ allowanceId: 'S4' }),
 		Object.freeze({ allowanceId: 'S7' }),
 	]),

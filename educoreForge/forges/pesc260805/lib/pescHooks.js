@@ -53,11 +53,12 @@ const { PESC_TIER } = forgePescContractGraph;
 // the convention standardHookContract.js enforces by name.
 const LOADER_NAME = Object.freeze({ PESC_CORPUS: 'pescCorpus' });
 
-// AGGREGATE_VERSION — OURS, never a PESC edition (R-ACQ-7), carried from the bespoke forge's :70.
-// It is a block byte twice: the root's `version` property and the block subject
-// `pesc260805@aggregate_01_base`. It lives HERE rather than in the declaration because it is a
-// describeSource VALUE, and the declaration is closed at its fourteen contract keys.
-const AGGREGATE_VERSION = 'aggregate-01';
+// AGGREGATE_VERSION IS RETIRED (versionFromStamp order, 2026-08-31). It read 'aggregate-01' and was
+// returned as describeSource's `version`. THE SAME STRING ALREADY LIVES IN THE SNAPSHOT'S PROVENANCE
+// FILE, from which deriveVersionStamp resolves it — so the constant was a SECOND copy of a fact with
+// nothing keeping the two equal. The framework now takes the root's version from the stamp, and this
+// forge declares none. The block subject `pesc260805@aggregate_01_base` is UNAFFECTED: subjects have
+// always derived from publishedVersion, not from this constant.
 const SOURCE_FORMAT = 'pesc-xsd-directory';
 
 // START OF moduleFunction() ============================================================
@@ -102,7 +103,9 @@ const moduleFunction =
 		const describeSource = ({ parsed }) => {
 			const { artifacts } = parsed[LOADER_NAME.PESC_CORPUS];
 			return {
-				version: AGGREGATE_VERSION,
+				// `version` DELIBERATELY OMITTED — this bundle declares no version. The aggregate version is
+				// OURS rather than a PESC edition (R-ACQ-7), and it is recorded in the snapshot's provenance
+				// file where deriveVersionStamp reads it. Omission is how a bundle says 'I read no version'.
 				selfDescribedVersion: null,
 				sourceFormat: SOURCE_FORMAT,
 				sourceFiles: artifacts.map((oneArtifact) => oneArtifact.filename),

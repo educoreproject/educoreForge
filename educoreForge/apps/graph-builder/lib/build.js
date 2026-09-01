@@ -1534,8 +1534,16 @@ const build = (recipe, deps, callback) => {
 						next(`add standardBase ${baseSubject}: ${err}`);
 						return;
 					}
+					// alreadyPresent is REPORTED, not inferred. standards-database.saveBlock content-addresses
+					// the block and answers { refId, alreadyPresent } — true meaning 'the same bytes ARE the same
+					// block. Not an error, not a rewrite.' It is emitted here because A BYTE-IDENTITY GATE CANNOT
+					// READ IT FROM THE ABSENCE OF A NEW ROW: a forge that silently skipped writing also inserts
+					// nothing, and by row count the two are indistinguishable. Observability ONLY — this line
+					// changes no block text, no block id and no control flow. (versionFromStamp order, scope
+					// addition authorized by the design authority 2026-08-31.)
 					xLog.status(
-						`  [A] forge ${baseSubject} -> standardBase ${addReport.schemaBlockRefId}`,
+						`  [A] forge ${baseSubject} -> standardBase ${addReport.schemaBlockRefId} ` +
+							`(alreadyPresent ${addReport.alreadyPresent === true ? 'true' : addReport.alreadyPresent === false ? 'false' : 'NOT REPORTED'})`,
 					);
 					next('', args);
 				},

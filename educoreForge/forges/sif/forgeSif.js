@@ -12,7 +12,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //   H1  lib/sifForgeDeclaration.js     — data (standardKey 'sif', standardSource 'SIF', the DECLARED
 //       root id 'sif:root', parserVersion '1', the POPULATED mappingInstruction anchored on the
 //       'CEDS ID' column, an EMPTY nonEmbeddableRoleList because SIF embeds every node, and the
-//       FOUR measured allowances S2/S3/S4/S7 — matching expectedAllowanceCounts.json's frozen
+//       THREE measured allowances S2/S4/S7 (S3 RETIRED 2026-09-01, versionFromStamp order: this bundle declares no version, so there was nothing left to permit) — matching expectedAllowanceCounts.json's frozen
 //       sif = 4. See that file for the probes, for the S2 correction under RULING FJ-P3-2, and for
 //       why S6 alone is deliberately NOT declared.)
 //   H2  lib/sifHooks.js                — sourceLoaderList (sifImplementationSpecification),

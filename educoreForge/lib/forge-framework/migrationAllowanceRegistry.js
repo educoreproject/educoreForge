@@ -75,23 +75,26 @@ const emptyStringCoercionRow = ({ allowanceId, declarableBy, whileDeclared, reti
 // PESC is not allowed to declare. Caught by the in-process forge in two seconds, before any
 // re-forge was spent. Both rows now share rowRefId 'versionDisagreement'; the ALLOWANCE IDS stay
 // per-forge so each retires its own in its own commit, which is exactly what D12 asks for.
-const versionDisagreementRow = ({ allowanceId, declarableBy, whileDeclared, retiredBy }) =>
-	Object.freeze({
-		allowanceId,
-		rowRefId: 'versionDisagreement',
-		declarableBy: Object.freeze([declarableBy]),
-		kind: ALLOWANCE_KIND.FORGE_TIME,
-		evaluatedAt: EVALUATED_AT.DESCRIBE_SOURCE,
-		whileDeclared,
-		allowanceDataContract: Object.freeze({}),
-		preconditionText: "describeSource returns version !== (selfDescribedVersion ?? 'unknown')",
-		preconditionMet: ({ describedSource }) =>
-			describedSource.version !==
-			(describedSource.selfDescribedVersion === null || describedSource.selfDescribedVersion === undefined
-				? 'unknown'
-				: describedSource.selfDescribedVersion),
-		retiredBy,
-	});
+// ⟪versionFromStamp, tqii 2026-08-31⟫ THE versionDisagreementRow FACTORY IS RETIRED WITH ITS TWO ROWS.
+// It built S3 (sif) and P17 (pesc260805) — ONE behaviour keyed twice, sharing rowRefId
+// 'versionDisagreement' — and both are gone: neither forge declares a version any more, so there is
+// no declared-versus-self-described divergence left to permit. THE ROWS WERE NOT RETIRED BY THE ROUTE
+// THEIR OWN retiredBy PROSE NAMED (SIF's parser reporting a real version, or the root carrying
+// 'unknown'); the DECLARATIONS DISAPPEARED ENTIRELY, so there was nothing left to permit. Recorded so
+// a reader checking retiredBy does not conclude the retirement was premature.
+//
+// WHAT REPLACES IT, and it is stricter: forge-framework's refuseVersionDisagreement, a FATAL guard on
+// a DECLARED version differing from the RESOLVED stamp. The rows permitted that divergence; the guard
+// forbids it. The guard was built only AFTER these rows were deleted, so it is uncoupled by
+// construction — nothing can suppress it and it depends on no row.
+//
+// ⚠ THE HAZARD THIS FACTORY LEAVES BEHIND, for whoever adds the next shared-behaviour row:
+// evaluateAllowancesAtStep's undeclared-but-needed sweep walks the WHOLE registry and skips by
+// rowRefId — NOT by allowanceId and NOT by declarableBy. So two rows sharing a rowRefId are ONE
+// behaviour for the sweep, and retiring one while its twin lives lets the survivor refuse a forge that
+// is not allowed to declare it. That bit this project twice: once in 2026-08-29 (a PESC build refused
+// naming a SIF row) and once in the design of this very order (SIF would have been refused naming
+// PESC's P17).
 
 // the sourceUrl row — ONE behaviour, keyed three ways (SPEC §7.1, §14 D12)
 const sourceUrlEmptyStringRow = ({ allowanceId, declarableBy, retiredBy }) =>
@@ -158,14 +161,6 @@ const MIGRATION_ALLOWANCE_REGISTRY = Object.freeze({
 		// :351, description. 0 SIF nodes carry name ''; 16,181 carry description ''.
 		whileDeclared: "kit.makeNode stamps description: '' when the description is absent/empty (forgeSif.js:351)",
 		retiredBy: 'RT-2 repair (absent is absent) → new SIF id (S2; 16,181 nodes carry the byte)',
-	}),
-
-	S3: versionDisagreementRow({
-		allowanceId: 'S3',
-		declarableBy: 'sif',
-		whileDeclared:
-			"root version may differ from (selfDescribedVersion ?? 'unknown') — SIF root '1.0' while the stamp input is null (forgeSif.js:762-765)",
-		retiredBy: "SIF's parser reports a real source version (or the root carries 'unknown') → new id (S3)",
 	}),
 
 	S7: Object.freeze({
@@ -303,14 +298,6 @@ const MIGRATION_ALLOWANCE_REGISTRY = Object.freeze({
 	// would assert in a BLOCK BYTE that PESC's source declares a whole-family version it does not
 	// publish. That is a label that lies, which is what SPEC §4.9 refused when it chose the honest
 	// re-key over the cheap pin.
-	P17: versionDisagreementRow({
-		allowanceId: 'P17',
-		declarableBy: 'pesc260805',
-		whileDeclared:
-			"root version may differ from (selfDescribedVersion ?? 'unknown') — PESC root 'aggregate-01' while the stamp input is null, because the aggregate version is OURS (R-ACQ-7) and the source self-describes none",
-		retiredBy:
-			"PESC publishes a whole-family version the parser can read, or the root carries 'unknown' honestly → new PESC id (P17)",
-	}),
 
 	// P4 — the edge-type allow list. THE THIRD PHANTOM MADE REAL (RULING FJ-P4-6): contractGraphKit.js
 	// has pointed readers at "an active P4 edgeTypeAllowList" since F3a while no P4 row existed, and

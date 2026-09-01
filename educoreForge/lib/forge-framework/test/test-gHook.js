@@ -124,12 +124,18 @@ const conjunctList = [
 		find: '\t\t\t\t\tif (unknownDescribedName !== undefined) {\n\t\t\t\t\t\tnext(refuse.byName({ moduleName, what: `${forgePrefix} describeSource returned undeclared key', replace: '\t\t\t\t\tif (unknownDescribedName !== undefined && false) {\n\t\t\t\t\t\tnext(refuse.byName({ moduleName, what: `${forgePrefix} describeSource returned undeclared key',
 	}),
 	refusalCase({
-		registry: twinRegistry, gateId: GATE_ID, conjunctId: 'versionDisagreesWithoutS3',
-		title: "version !== (selfDescribedVersion ?? 'unknown') without S3 is refused naming S3",
+		registry: twinRegistry, gateId: GATE_ID, conjunctId: 'declaredVersionDisagreesWithStamp',
+		// ⟪versionFromStamp, 2026-09-01⟫ REWRITTEN FROM 'versionDisagreesWithoutS3'. The invariant is
+		// UNCHANGED and TRANSFERRED: a version disagreement that nothing evidences is refused BY NAME.
+		// What changed is what enforces it. It used to be the undeclared-but-needed sweep naming
+		// allowance S3; S3 and P17 are RETIRED, and refuseVersionDisagreement now refuses the same
+		// condition outright — STRICTER, because no allowance can permit it any more. Rewritten in the
+		// SAME phase the rows died, so the invariant is never unguarded.
+		title: 'a DECLARED version differing from the resolved stamp is refused by name, and no allowance can permit it',
 		shape: (scenario) => withDescribeSource(scenario, (described) => ({ ...described, version: '9.9.9' })),
-		regex: /would need allowance S3 \(sif\)/,
-		twinName: 'disableUndeclaredNeededAllowanceCheck', fileName: FRAMEWORK_FILE,
-		find: '\t\t\t\tif (oneRow.preconditionMet(context)) {\n\t\t\t\t\tconst idList', replace: '\t\t\t\tif (false && oneRow.preconditionMet(context)) {\n\t\t\t\t\tconst idList',
+		regex: /DECLARES version '9\.9\.9' but the provenance stamp resolves/,
+		twinName: 'disableDisagreementGuard', fileName: FRAMEWORK_FILE,
+		find: '\t\t\t\t\t\tif (disagreementRefusal) {', replace: '\t\t\t\t\t\tif (false && disagreementRefusal) {',
 	}),
 	refusalCase({
 		registry: twinRegistry, gateId: GATE_ID, conjunctId: 'sourceFilesEmptyWithoutS7',
@@ -145,7 +151,7 @@ const conjunctList = [
 		shape: (scenario) => withDescribeSource(scenario, (described) => ({ ...described, version: '', selfDescribedVersion: null })),
 		regex: /describeSource returned version ""/,
 		twinName: 'disableVersionCheck', fileName: FRAMEWORK_FILE,
-		find: "\t\t\t\t\tif (typeof describedSource.version !== 'string' || describedSource.version.length === 0) {", replace: "\t\t\t\t\tif (false && (typeof describedSource.version !== 'string' || describedSource.version.length === 0)) {",
+		find: "\t\t\t\t\tif (describedSource.version !== undefined && (typeof describedSource.version !== 'string' || describedSource.version.length === 0)) {", replace: "\t\t\t\t\tif (false && describedSource.version !== undefined && (typeof describedSource.version !== 'string' || describedSource.version.length === 0)) {",
 	}),
 	refusalCase({
 		registry: twinRegistry, gateId: GATE_ID, conjunctId: 'sourceFilesUnverifiedRefused',
