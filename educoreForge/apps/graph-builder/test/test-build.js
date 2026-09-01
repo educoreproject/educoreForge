@@ -238,6 +238,36 @@ const workingReplayManager = (overrides) => () => {
 					schemaBlockCount: schemaBlocks ? schemaBlocks.length : 0,
 				});
 			},
+			// ⟪graphSelfDoc Phase 5⟫ THE FIFTH VERB on the hermetic double. It is written to ENFORCE
+			// the contract, not merely to tolerate the call: a stub that returned success unconditionally
+			// would let build.js call finish with a missing storeReader or manifestRefId and this suite
+			// would never notice — which is exactly how I discovered the gap, by adding a guard to
+			// build.js that the crash then MASKED before it could fire.
+			finish: (spec, cb) => {
+				const { inGraph, manifestRefId, storeReader, gateResults } = spec || {};
+				if (!inGraph || typeof inGraph !== 'object' || !inGraph.boltUrl) {
+					cb(`replayManager.finish: inGraph must be a GraphHandle carrying a boltUrl`);
+					return;
+				}
+				if (!manifestRefId) {
+					cb(`replayManager.finish: a manifestRefId is REQUIRED — it is the passport's central claim`);
+					return;
+				}
+				if (!storeReader || typeof storeReader.getManifest !== 'function') {
+					cb(`replayManager.finish: a storeReader exposing getManifest is REQUIRED`);
+					return;
+				}
+				if (!Array.isArray(gateResults)) {
+					cb(`replayManager.finish: gateResults must be an array of verdicts (an absent entry means notRun)`);
+					return;
+				}
+				cb('', {
+					applied: [{ name: 'stubFinisher', summary: 'test double' }],
+					writeCount: 2,
+					passportElementId: 'stub:passport:1',
+					xorVerified: true,
+				});
+			},
 			harvest: ({ inGraph, selectionLabels, header }, cb) => {
 				if (!header || !header.blockType || !header.standardKey) {
 					cb(`replayManager.harvest: a header carrying blockType and standardKey is required`);
@@ -1742,7 +1772,7 @@ const stageFaultInjection = () => {
 
 			const runCase = (index) => {
 				if (index >= faultCases.length) {
-					stageMonomorphicCreate();
+					stageStoreReaderRefusal();
 					return;
 				}
 				const testCase = faultCases[index];
@@ -1762,6 +1792,60 @@ const stageFaultInjection = () => {
 			};
 
 			runCase(0);
+		},
+	);
+};
+
+// =====================================================================
+// ⟪graphSelfDoc Phase 5⟫ THE storeReader REFUSAL, PROVEN IN THE FAILURE DIRECTION.
+// =====================================================================
+// This exists because the guard was ADDED and then NEVER SEEN TO FIRE: my first run of this suite
+// crashed with `replay.finish is not a function` from a stale double, and THE CRASH MASKED THE
+// GUARD. A 197/197 green afterwards proves the SATISFIED path only. A guard never observed failing
+// is unproven — that is this project's oldest rule and it applies to guards I write myself.
+//
+// THE INJECTION IS AIMED, and the aim matters. Two upstream guards check DIFFERENT methods:
+// build.js:1014 (the build path) requires `saveBlock`; build.js:2174 (the replay path) requires
+// `getManifest`. So a standardsDatabase carrying saveBlock but NOT getManifest CLEARS 1014 and
+// reaches materialize — where the Phase 5 refusal is the only thing between it and a graph whose
+// recipe cannot be read. On the REPLAY path the same refusal is SHADOWED by 2174 and can never
+// fire; naming that asymmetry is the difference between "my guard protects both paths" (false) and
+// "my guard is redundant" (also false).
+const stageStoreReaderRefusal = () => {
+	harness.section('storeReader REFUSAL — the Phase 5 guard, watched firing on the BUILD path');
+
+	const xLog = capturingXLog();
+	const crippledStore = standardsDatabaseDouble();
+	// saveBlock stays (so build.js:1014 passes); getManifest is removed (so mine must bite).
+	delete crippledStore.getManifest;
+
+	buildLib.build(
+		loadOrDie(fixture('cedsLif')),
+		{
+			xLog,
+			standardsDatabase: crippledStore,
+			components: {
+				forger: workingForger(),
+				replayManager: workingReplayManager(),
+				bridgeMaker: workingBridgeMaker(),
+				manifestEditor: workingManifestEditor(),
+			},
+			cedsFidelityGateRunner: announcedFidelityGateStub,
+			roundTripStageRunner: announcedRoundTripStageStub,
+		},
+		(err, result) => {
+			harness.match(
+				'a storeReader without getManifest is REFUSED BY NAME at materialize',
+				err,
+				/a storeReader exposing getManifest is REQUIRED/,
+			);
+			harness.ok(
+				'  and the refusal is MINE, not a neighbouring guard firing first',
+				/graphSelfDoc Phase 5|materialize failed/.test(String(err || '')),
+				`refusal text was: ${String(err || '(none)')}`,
+			);
+			harness.ok('  and no result is returned', result === undefined, JSON.stringify(result));
+			stageMonomorphicCreate();
 		},
 	);
 };

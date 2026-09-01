@@ -537,6 +537,15 @@ const phase2DriftedComponents = () => {
 			},
 			init: (spec, callback) => callback('', { note: 'stub init' }),
 			harvest: (spec, callback) => callback('', { blockId: 'stub-block:1' }),
+			// ⟪graphSelfDoc Phase 4, 2026-09-01⟫ finish is present here and DELIBERATELY UNDRIFTED.
+			// This fixture exists to show the OLD NAME-ONLY GATE PASSING a drifted component while the
+			// current gate catches it — a contrast that only holds while the fixture satisfies the
+			// declared METHOD SET. Omitting finish would make the old gate reject it too, and the
+			// assertion would go green again for the wrong reason: a method-set failure masquerading as
+			// the shape-drift demonstration this test is for. The drift being reconstructed lives in
+			// create's bolt-url string, not in which methods exist.
+			finish: (spec, callback) =>
+				callback('', { applied: [], passportElementId: 'stub:passport', xorVerified: true }),
 			delete: (boltUrl, callback) => callback(''),
 		}),
 		manifestEditor: () => ({

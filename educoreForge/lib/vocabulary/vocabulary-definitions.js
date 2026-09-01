@@ -15,7 +15,7 @@ const TERM_DEFINITIONS = {
 		ForgedNode:
 			'The universal label on every content node the replay engine materializes from a block, plus deterministic finisher output. Marks the content-equality/fingerprint scope.',
 		GraphProvenance:
-			'The single build passport node per graph: what was built, from which manifest, when, by which engine versions. Non-deterministic (carries builtAt), so it is excluded from content fingerprints.',
+			'The single build passport node per graph: what was built, from which manifest, when, by which engine versions. Non-deterministic (carries builtAt), so it is excluded from content fingerprints. It is a SINGLETON, found by MERGE on the property `passportKey`, whose value is the constant \'graphProvenance\' rather than the graph name — so GNC-001 promotion-by-rename cannot orphan it. THE -Key SUFFIX IS A DELIBERATE, DOCUMENTED EXCEPTION to this codebase\'s refId idiom (ruled 2026-08-31, GRANITE_ECHO): `passportKey` identifies nothing among alternatives — it is a constant discriminator whose entire job is to make MERGE find the one passport. `passportRefId` would assert an identity it does not have, and `passportName` would misdescribe it just as surely, since \'graphProvenance\' is not the passport\'s name. A rename that satisfies the lexicon by making the word LESS accurate is the wrong trade. If you are grepping for -Key violations, stop here: this one is ruled, not overlooked.',
 		HubDefinition:
 			'The per-hub descriptor node (one per hub standard, e.g. CEDS): hub name, version, canonical key scheme, slot profile. The anchor every HubReference belongs to via IN_HUB.',
 		DmeEditHistoryEntry:
@@ -36,6 +36,10 @@ const TERM_DEFINITIONS = {
 			'The per-source-standard descriptor derived at finishing time: display name, version and its provenance (versionSource), source format, element counts, and mapping disposition (authored/inferred/island).',
 		GraphMeta:
 			'The structural marker on every legitimately source-less node (schema view, manifest recipe, standard definitions, the build passport). Purity rule: every node carries an _source XOR :GraphMeta — never both, never neither.',
+		UsagePattern:
+			'One named question a consumer can ask this graph, carried as an EXECUTABLE exemplar: the question in words, the cypher that answers it, the label to enter from, and a caveat naming what the answer must not be taken to mean. The finisher RUNS each exemplar and refuses to write one that returns no rows, so a pattern that has rotted fails the build rather than teaching a stale traversal to whatever reads it next.',
+		BuildAttestation:
+			'One gate\'s verdict on this build: which gate, what it said, the supporting detail, and the invention total where the gate produces one. `notRun` is a FIRST-CLASS verdict and is deliberately distinguishable from `pass` — a gate that did not run must never read as a gate that succeeded, which is the entire content of the goldEvalCheck promotion gate and was unrepresentable in the graph before this node type existed. MIXED POPULATION — READ THIS BEFORE COMPARING BUILDS (ruled 2026-09-01, GRANITE_ECHO): the rows carrying this label DO NOT ALL SHARE A SCOPE. Most are written on Channel A through the shared write path and carry :ForgedNode, so they sit inside the determinism fingerprint. The `usagePatternVerification` row does NOT carry :ForgedNode: it is written on Channel B by the passport writer and carries :GraphMeta instead. WHY: its verdict is the finish-time exemplar check, which cannot be computed until the passport exists, and the passport is excluded from fingerprints by construction because it carries a clock. :ForgedNode is a SCOPE MARKER meaning \'this node participates in the determinism fingerprint\', not a family badge — so a node whose value derives from a fingerprint-EXCLUDED node cannot coherently sit inside fingerprint scope. Twin builds could legitimately differ in it for reasons the fingerprint is designed not to see, and the determinism gate would then go red on healthy builds. CONSUMER WARNING, in plain words: A DIFF SCOPED TO :ForgedNode DELIBERATELY OMITS THIS ROW. To compare attestation populations across builds, query (:BuildAttestation) — NOT (:ForgedNode:BuildAttestation), which will silently drop the one row that says whether the graph\'s usage manual was verified. If you have just found this asymmetry: it is RULED, not overlooked.',
 	},
 	edgeType: {
 		HAS_CLASS: 'Standard root or container to a class/entity node it declares.',
@@ -75,12 +79,28 @@ const TERM_DEFINITIONS = {
 		BUILT_FROM: 'GraphProvenance passport to the ManifestRecipe this graph was replayed from.',
 		HAS_BLOCK: 'ManifestRecipe to one RecipeBlock member (the in-graph manifest membership).',
 		BASED_ON: 'ManifestRecipe to its parent recipe — the manifest lineage, in-graph.',
+		DESCRIBES:
+			'GraphProvenance passport to one StandardDefinition — the build\'s own account of one standard it includes. Passport-rooted, therefore created with MATCH and never MERGE: when the standardDefinition finisher is disabled the match yields no rows and no edge appears, which is an honest silence rather than an invented link.',
+		HAS_VIEW:
+			'GraphProvenance passport to the SchemaView root — the entry point to this graph\'s in-graph vocabulary catalog, so a consumer with nothing but a bolt connection can learn the label and edge names before using them. Passport-rooted and MATCH-created.',
+		ATTESTS:
+			'GraphProvenance passport to one BuildAttestation — the graph\'s own account of which gates ran over it and what they found. Passport-rooted and MATCH-created.',
+		ADVISES:
+			'GraphProvenance passport to one UsagePattern — the graph\'s advice on how it is meant to be used, as distinct from what it structurally guarantees. Passport-rooted and MATCH-created.',
+		DEFINES:
+			'StandardDefinition to the DmeStandardRoot it describes: the single hop from the build\'s view of a standard to the parsed standard itself. Both endpoints carry :ForgedNode, so unlike the passport-rooted edges this one is written through the shared content write path. The two nodes stay SEPARATE deliberately — the definition\'s counts depend on the mappings, so folding them onto the content root would let a re-bridge alter a content node and the standard\'s block would stop reproducing byte-for-byte.',
 	},
 	provenanceTier: {
 		'spec-authoritative': 'Asserted by the standard’s own specification or an authored crosswalk. The strongest evidence tier.',
 		'embedding-inferred': 'Derived by embedding retrieval + LLM rerank, frozen in a decision block. A hypothesis tier, never silently composed.',
 		structural: 'Emitted by deterministic structural machinery (hierarchy edges, schema view, self-documentation). True by construction.',
 		'user-asserted': 'Asserted by a user/curator at runtime, outside the replayed content.',
+		// ⟪graphSelfDoc, 2026-08-31⟫ PRE-EXISTING DEBT CLOSED. invalid-debug entered PROVENANCE_TIERS on
+		// 2026-08-10 and never received a definition, because the finisher that refuses an undefined term
+		// was never ported. Text set VERBATIM by GRANITE_ECHO as design authority, drafted from tqii's own
+		// recorded rationale in vocabulary.js; the parenthetical attribution stays.
+		'invalid-debug':
+			'The tier carried by an edge the DEBUG judge produced (--useDebugJudge, rule \'first\': candidate 1 taken unconditionally). It exists because the alternative was a lie — such edges were once stamped embedding-inferred, asserting that an inference informed a choice nothing informed, in the one field a consumer most trusts. An edge carrying this tier is pipeline-valid and semantically unwarranted: it proves the plumbing and must never be read as a judgement about meaning. (tqii ruling, 2026-08-10.)',
 	},
 	skosPredicate: {
 		exactMatch: 'SKOS: the two concepts are interchangeable. The only predicate that composes to cross-standard equivalence.',
@@ -109,6 +129,19 @@ const TERM_DEFINITIONS = {
 		DmeOptionSet: 'An enumerated value set (codeset) constraining one or more properties.',
 		DmeOptionValue: 'One enumerated value of an option set — the mapping unit at the value tier.',
 		DmeSupport: 'Producer-specific supporting material attached to structural nodes (documentation, examples).',
+		// ⟪graphSelfDoc, 2026-08-31⟫ PRE-EXISTING DEBT CLOSED. These three roles were added to DME_ROLES
+		// after this bucket was authored; their text was written under `nodeLabel` instead, so the finisher
+		// — which reads Object.values(DME_ROLES) into the `dmeRole` bucket — found nothing. Per GRANITE_ECHO's
+		// ruling these are NOT copies of the nodeLabel text: a ROLE and a LABEL are different assertions
+		// about the same word. The role sense says what kind of thing a node in this role IS within the
+		// six-role model; the label sense (identity derivation, source ordering, minted ids) stays under
+		// `nodeLabel`, and each entry names where its sibling lives.
+		DmeEditHistoryEntry:
+			'An annotation role: a node in this role records one step of a source element\'s own documented change history rather than any part of the modelled data. It is never a mapping unit at any tier and carries no embedding, so it takes part in neither cross-standard equivalence nor semantic search. (Role sense; the label sense — derived identity and source-file ordering — is under nodeLabel.)',
+		DmeRestriction:
+			'A constraint role: a node in this role expresses a limit a class places on one of its properties, holding both the constrained property and its target as PROPERTIES rather than as edges. It describes a shape the standard permits, not an element the standard defines, so it is never a mapping unit and carries no embedding. (Role sense; the label sense — owl:Restriction mechanics and derived identity — is under nodeLabel.)',
+		DmeVocabularyTerm:
+			'A grammar role: a node in this role is a term the standard defines for its OWN descriptive vocabulary rather than a data element of the domain it models. It carries no data role and no embedding, so it is invisible to both browse and search, and it is never a mapping unit. (Role sense; the label sense — minted identifiers and the cedsIdIsMinted flag — is under nodeLabel.)',
 	},
 	referenceTier: {
 		property: 'A 3-slot hub address (domain · property · range) — the property-tier resolution target.',

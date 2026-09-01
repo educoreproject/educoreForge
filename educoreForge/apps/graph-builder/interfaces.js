@@ -112,6 +112,58 @@
  */
 
 /**
+ * @interface FinisherComponent
+ * ONE member of the replayManager FINISHING REGISTRY (graphSelfDoc campaign, 2026-08-31;
+ * ARCH-replayManager-083126.md §8; RULING GRANITE_ECHO 2026-08-31 on the finisher seam).
+ * A finisher turns a materialized graph into a SELF-DESCRIBING one. It is internal to
+ * replayManager's `finish` verb — it is NOT one of the four components build.js wires, which is
+ * why its shape is declared HERE as a sibling (the MANIFEST_HANDLE_SHAPE precedent) and never as
+ * a COMPONENT_SHAPES key.
+ *
+ * THE SEAM: the word "finisher" names THREE behaviours, and pretending otherwise is what makes
+ * this a polymorphic seam needing a declared contract. Five members produce nodes; schemaConstraints
+ * creates DATABASE OBJECTS (uniqueness constraints — there is nothing to emit, and its gate is
+ * `SHOW CONSTRAINTS > 0`); graphMeta STAMPS and VERIFIES across the whole graph. So a finisher
+ * declares one of exactly two MODES, and the verb dispatches on the DECLARED VALUE:
+ *
+ *   'emit'   -> emit(spec, cb) -> ('', { nodes, edges, summary })
+ *               Produces Channel-A material. Every emitted node is :ForgedNode carrying a stableId,
+ *               so it passes the engine's three guards natively; the VERB writes it, never the
+ *               finisher (see the write rule below).
+ *   'apply'  -> apply(spec, cb) -> ('', { summary })
+ *               Acts on the graph directly because its product is not nodes. Gets the
+ *               session-bearing `runCypher` it genuinely needs.
+ *
+ * THE MODE IS DECLARED, NEVER SNIFFED. The registry entry carries it as data; the verb refuses BY
+ * NAME an absent or unrecognised mode. Probing which method happens to exist would make the
+ * contract depend on an implementation accident, and a finisher that silently did nothing because
+ * neither method matched is precisely the class of silent success this campaign exists to abolish.
+ *
+ * THE WRITE RULE — WHY EMITTERS GET A READ-ONLY DOOR. Emitters legitimately need to READ the built
+ * graph: standardDefinition derives its counts and mapping disposition from it, and usagePattern
+ * must EXECUTE each exemplar and see rows before that exemplar may be written. So `readQuery` is
+ * injected — and it is a READ-MODE session, which makes "an emitter never writes" MECHANICAL rather
+ * than honour-system. Every write an emitter causes goes through the verb's assembled
+ * writeShapedGraph call, which is what keeps replay-engine's "entry points that cannot disagree
+ * about what a safe write is" true when the count goes from two to three.
+ *
+ * ORDER IS FORCED, AND THE REGISTRY IS ITS ONLY HOME. schemaView must emit before schemaConstraints
+ * creates constraints over its nodes; graphMeta must run last so everything above it exists to be
+ * stamped and XOR-verified. THEREFORE the verb walks the registry IN ORDER and batches MAXIMAL
+ * CONTIGUOUS RUNS OF EMITTERS into one writeShapedGraph call each — it does NOT collapse all
+ * emitters into a single write, which would hoist schemaView's nodes past the constraints or sink
+ * them behind later emitters and thereby make the DECLARED ORDER STOP BEING THE EXECUTION ORDER
+ * while still reading as correct. The rule is general; today's registry happens to yield two writes.
+ *
+ * @property {string} mode                'emit' or 'apply' — declared on the registry entry, as data.
+ * @property {function({readQuery: function, storeReader?: Object, gateResults?: Array},
+ *           function(string, {nodes: Array, edges: Array, summary: string}=): void): void} [emit]
+ *           Required when mode is 'emit'. Reads through readQuery only; returns material, writes nothing.
+ * @property {function({runCypher: function}, function(string, {summary: string}=): void): void} [apply]
+ *           Required when mode is 'apply'. Acts on the graph; its product is not nodes.
+ */
+
+/**
  * @interface BridgeMakerComponent
  * Runs a bridge PLUGIN over a materialized dependency graph through the EDUcore Bridge Framework
  * (lib/bridge-framework, SPEC-bridgeFramework-v1.md), writing labeled SKOS mapping edges INTO the graph
@@ -285,6 +337,66 @@ const MANIFEST_HANDLE_SHAPE = {
 // The BRIDGE MODULE contract as DATA (BRIDGE_MODULE_SHAPE) — RETIRED into
 // lib/bridge-framework/bridgePluginContract.js (B2 interfaces commit, RULING BF10 / BR-140).
 
+// FINISHER_MODULE_SHAPE — the FinisherComponent contract, as DATA (graphSelfDoc, 2026-08-31).
+// A SIBLING of COMPONENT_SHAPES, deliberately NOT a member of it: COMPONENT_SHAPES names the four
+// components build.js wires, and test-interfaces asserts that key set EXACTLY. A finisher is
+// internal to replayManager's `finish` verb, so it is declared beside MANIFEST_HANDLE_SHAPE — the
+// established precedent for a shape that is contractual without being a build.js component.
+//
+// Keyed by MODE. The registry entry declares its mode as data and the verb dispatches on that
+// declared value; MODE_TOKENS exists so a refusal can NAME the modes it accepts rather than saying
+// only that the given one was wrong. An absent or unrecognised mode is refused BY NAME — never
+// defaulted, and never resolved by probing which method the module happens to expose.
+const FINISHER_MODULE_SHAPE = {
+	MODE_TOKENS: ['emit', 'apply'],
+	// PRODUCES Channel-A material; the VERB writes it. `readQuery` is a READ-MODE session, which is
+	// what makes "an emitter never writes" mechanical rather than a promise in a comment.
+	emit: {
+		method: 'emit',
+		arity: 2,
+		argKeys: ['readQuery'],
+		resultKeys: ['nodes', 'edges', 'summary'],
+	},
+	// ACTS on the graph because its product is not nodes (DB constraints; label stamping and the XOR
+	// verification). Gets the session-bearing door an emitter is denied.
+	apply: {
+		method: 'apply',
+		arity: 2,
+		argKeys: ['runCypher'],
+		resultKeys: ['summary'],
+	},
+	// ⟪N1 RULING, GRANITE_ECHO 2026-08-31⟫ THE EMITTED NODE SHAPE, PINNED. The REGISTRY WALKER validates
+	// every emitted node against this ONCE, before anything reaches writeShapedGraph — not each finisher
+	// against itself, which would be a finisher grading its own homework and would leave a future
+	// emitter uncovered.
+	//
+	// WHY `ref` IS REQUIRED AND WHY ITS `source` MAY BE NULL — both measured 2026-08-31:
+	//   * replay-engine buildNodeRow dereferences `node.ref.source` and `node.ref.id` UNCONDITIONALLY. A
+	//     node without `ref` does not get refused, it CRASHES — and the TypeError surfaces MISATTRIBUTED
+	//     as "phase1 resolution-key index failed", a signpost pointing at the index code rather than at the
+	//     malformed node. The walker's refusal exists so that crash path is UNREACHABLE from finish.
+	//   * `source` must be PRESENT but may be NULL. Cypher's `SET n += {…}` REMOVES a null-valued property
+	//     rather than storing null, so a metadata node written with `{source: null}` carries NO `_source` —
+	//     which is what lets Channel A satisfy the `_source` XOR `:GraphMeta` invariant through the shared
+	//     write path. `{source: null}` is the honest expression of "computed by the build, parsed from
+	//     nothing"; an omitted `ref` is a defect, and a fabricated source token would be a lie.
+	//   * `_id` IS stored, equal to the stableId. Documented, not incidental.
+	EMITTED_NODE_SHAPE: {
+		requiredKeys: ['stableId', 'ref', 'labels', 'properties'],
+		refRequiredKeys: ['source', 'id'],
+		// `source` is the one key whose value may be null; every other required key must be non-null.
+		nullableRefKeys: ['source'],
+	},
+	// The emitted EDGE shape. `provenanceTier` is required because engine GUARD 3 refuses to write ANY edge
+	// in a block if one lacks it — a whole-batch refusal is far cheaper to diagnose at the walker, naming
+	// the emitting finisher, than at the engine naming nothing.
+	EMITTED_EDGE_SHAPE: {
+		requiredKeys: ['type', 'fromRef', 'toRef', 'properties'],
+		endpointRequiredKeys: ['id'],
+		requiredProperties: ['provenanceTier'],
+	},
+};
+
 const COMPONENT_SHAPES = {
 	forger: {
 		forge: {
@@ -324,6 +436,15 @@ const COMPONENT_SHAPES = {
 			arity: 2,
 			argKeys: ['inGraph', 'selectionLabels', 'header'],
 			resultKeys: ['blockText', 'blockId', 'nodeCount', 'edgeCount', 'stableIdCoverage'],
+		},
+		// ⟪graphSelfDoc Phase 4, 2026-09-01⟫ THE FIFTH VERB. Makes a materialized graph self-documenting:
+		// registry finishers on Channel A, then the Channel-B passport, then the verb's own verifications.
+		// resultKeys are the three CONTRACT-level fields (ARCH §6); the report carries more, and
+		// resultShapeViolation names REQUIRED keys rather than exact ones, so a superset is the contract.
+		finish: {
+			arity: 2,
+			argKeys: ['inGraph', 'manifestRefId', 'storeReader', 'gateResults'],
+			resultKeys: ['applied', 'passportElementId', 'xorVerified'],
 		},
 		// takes a GraphHandle positionally, by contract — no argument object to declare keys of.
 		delete: { arity: 2, argKeys: null, resultKeys: null },
@@ -391,4 +512,4 @@ const COMPONENT_SHAPES = {
 	},
 };
 
-module.exports = { COMPONENT_SHAPES, MANIFEST_HANDLE_SHAPE };
+module.exports = { COMPONENT_SHAPES, MANIFEST_HANDLE_SHAPE, FINISHER_MODULE_SHAPE };

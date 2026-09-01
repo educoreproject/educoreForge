@@ -44,6 +44,9 @@ const { pipeRunner, taskListPlus } = new require('qtools-asynchronous-pipe-plus'
 const TREE_LIB = path.join(__dirname, '..', '..', '..', '..', 'lib');
 const replayEngine = require(path.join(TREE_LIB, 'replay', 'replay-engine'))();
 const contentAddress = require(path.join(TREE_LIB, 'content-address', 'content-address'))();
+const vocabulary = require(path.join(TREE_LIB, 'vocabulary', 'vocabulary'));
+const finishingModule = require(path.join(__dirname, 'lib', 'finishing', 'finishing'));
+const passportWriterModule = require(path.join(__dirname, 'lib', 'finishing', 'passport-writer'));
 
 // The provisioning knobs live in graphBuilder.ini, [replay-manager] section: neo4jImage,
 // portSearchStart, portSearchSpan, readyTimeoutSeconds. All four are REQUIRED and all four are
@@ -920,7 +923,213 @@ const moduleFunction =
 		});
 	};
 
-	return { create, init, harvest, delete: deleteGraph };
+	// -----
+	// finish — THE FIFTH VERB. Make the graph self-documenting BY CONSTRUCTION: passport, recipe,
+	// standard definitions, schema view, attestations, usage patterns.
+	//
+	// THE ORDER BELOW IS RULED AND LOAD-BEARING (GRANITE_ECHO, gates (g)/(h)/(i)):
+	//   Channel A (the whole registry, incl. graphMeta's sweep)
+	//     -> Channel B passport
+	//       -> gate (h) exemplar re-verification against the FINISHED graph
+	//         -> gate (i) the usagePatternVerification row
+	//           -> gate (g) the XOR recheck, LAST, so it covers the row just written
+	// Each step exists because the one before it changed the graph in a way the earlier verifications
+	// could not have seen. Reordering any of them makes a check answer a question about a graph that
+	// no longer exists.
+	//
+	// Channel A goes through init — the SHARED write path. That makes finish a THIRD ENTRY POINT into
+	// one write path, never a bypass: the reason two entry points became the rule was that they
+	// "cannot disagree about what a safe write is", and a third that agreed with neither would undo it.
+	const finish = (spec, callback) => {
+		const { xLog } = process.global;
+		const { inGraph, manifestRefId, storeReader, gateResults, disabled } = spec || {};
+
+		// the name guard fires FIRST, before any payload is examined and before anything connects
+		const graphName = inGraph && (inGraph.containerName || inGraph.graphName);
+		const refusal = nameRefusal(graphName, 'finish');
+		if (refusal) {
+			callback(refusal);
+			return;
+		}
+
+		if (!manifestRefId) {
+			callback(
+				`replayManager.finish: a manifestRefId is REQUIRED for '${graphName}'. "Which manifest was ` +
+					`this graph replayed from" is the passport's central claim; a graph finished without it ` +
+					`would carry a build record that cannot answer the question it exists to answer.`,
+			);
+			return;
+		}
+		if (!storeReader) {
+			callback(
+				`replayManager.finish: a storeReader is REQUIRED for '${graphName}'. The recipe is read from ` +
+					`the store and cannot be reconstructed from the graph; finishing without one would produce ` +
+					`a graph that documents everything EXCEPT how it was built.`,
+			);
+			return;
+		}
+		if (!inGraph.boltUrl || !inGraph.password) {
+			callback(
+				`replayManager.finish: the handle for '${graphName}' carries no boltUrl/password — a graph ` +
+					`handle is the capability token, and half of one is not a credential.`,
+			);
+			return;
+		}
+
+		const driver = require('neo4j-driver').driver(
+			inGraph.boltUrl,
+			require('neo4j-driver').auth.basic(NEO4J_USER, inGraph.password),
+			{ encrypted: false },
+		);
+		const session = driver.session();
+		const closeAll = () => session.close().then(() => driver.close()).catch(() => driver.close());
+
+		const runCypher = ({ cypher }, cb) => {
+			session
+				.run(cypher)
+				.then((result) => cb('', result))
+				.catch((oneError) => cb(`${(oneError && oneError.message) || oneError}`));
+		};
+		// CHANNEL A — through init, the shared write path. Not a private writer.
+		const writeBatch = (nodeEdges, cb) => init({ inGraph, nodeEdges }, cb);
+
+		const finishing = finishingModule({
+			readQuery: runCypher,
+			runCypher,
+			writeBatch,
+			storeReader,
+			manifestRefId,
+			gateResults,
+		});
+		const passportWriter = passportWriterModule({ vocabulary });
+
+		// The verb reuses THE SAME finisher instances the registry ran, found by name in the registry
+		// itself. Requiring fresh copies here would give the verb a second implementation of each
+		// invariant, and two copies of an invariant is how the two copies come to disagree.
+		const finisherByName = (oneName) => {
+			const row = finishing.REGISTRY.filter((oneRow) => oneRow.name === oneName)[0];
+			return row && row.finisher;
+		};
+		const usagePatternFinisher = finisherByName('usagePattern');
+		const graphMetaFinisher = finisherByName('graphMeta');
+		if (!usagePatternFinisher || !graphMetaFinisher) {
+			closeAll();
+			callback(
+				`replayManager.finish: the registry does not carry both 'usagePattern' and 'graphMeta'. ` +
+					`Gates (h) and (g) are run BY THE VERB using those finishers' own exported checks; without ` +
+					`them the verb would report a finished graph having verified nothing.`,
+			);
+			return;
+		}
+
+		const taskList = new taskListPlus();
+
+		// 1 — CHANNEL A: the whole registry.
+		taskList.push((args, next) => {
+			finishing.applyFinishers({ disabled: disabled || [] }, (err, report) => {
+				if (err) {
+					next(err);
+					return;
+				}
+				next('', { ...args, applyReport: report });
+			});
+		});
+
+		// 2 — CHANNEL B: the passport. It counts what the registry produced, so it cannot run earlier.
+		taskList.push((args, next) => {
+			passportWriter.write(
+				{ runCypher, manifestRefId, graphName, engineVersions: { replayManager: 'finish/1' } },
+				(err, report) => {
+					if (err) {
+						next(err);
+						return;
+					}
+					next('', { ...args, passportReport: report });
+				},
+			);
+		});
+
+		// 3 — GATE (h): re-execute every written exemplar against the FINISHED graph, passport present.
+		//     A `defect`-declared exemplar returning zero rows FAILS THE VERB — the graph is NOT reported
+		//     finished, and the caller's dispose-on-failure applies. Emit-time could not have caught this:
+		//     a rotted exemplar and a merely-early one produce the SAME zero rows.
+		taskList.push((args, next) => {
+			usagePatternFinisher.verifyWritten(
+				{ readQuery: runCypher, disabledFinisherList: disabled || [] },
+				(err, report) => {
+					if (err) {
+						next(err);
+						return;
+					}
+					next('', { ...args, exemplarReport: report });
+				},
+			);
+		});
+
+		// 4 — GATE (i): the verdict lands IN THE GRAPH, written on Channel B because it could not exist
+		//     until step 2 completed. Idempotent under a second finish (MERGE on stableId).
+		taskList.push((args, next) => {
+			const exemplarReport = args.exemplarReport || {};
+			const rowCounts = exemplarReport.rowCounts || {};
+			const exemplarCount = Object.keys(rowCounts).length;
+			const verifiedCount = Object.keys(rowCounts).filter((oneName) => rowCounts[oneName] > 0).length;
+			passportWriter.writeVerificationAttestation(
+				{
+					runCypher,
+					verdict: 'pass',
+					detail: exemplarReport.summary || '',
+					exemplarCount,
+					verifiedCount,
+				},
+				(err, report) => {
+					if (err) {
+						next(err);
+						return;
+					}
+					next('', { ...args, verificationAttestation: report });
+				},
+			);
+		});
+
+		// 5 — GATE (g): the XOR recheck, LAST. The registry's sweep ran before the passport AND before the
+		//     row written in step 4; only a recheck here covers them. This is the verb's final act.
+		taskList.push((args, next) => {
+			graphMetaFinisher.verifyXor(
+				{ runCypher, phaseLabel: 'verb-level recheck after Channel B' },
+				(err, report) => {
+					if (err) {
+						next(err);
+						return;
+					}
+					next('', { ...args, xorRecheck: report });
+				},
+			);
+		});
+
+		pipeRunner(taskList.getList(), {}, (err, args) => {
+			closeAll();
+			if (err) {
+				callback(`replayManager.finish '${graphName}': ${err}`);
+				return;
+			}
+			xLog.status(
+				`[replayManager] finished '${graphName}': ${args.applyReport.applied.length} finisher(s), ` +
+					`${args.applyReport.writeCount} write(s), passport + ${args.xorRecheck.totalNodes} node(s) verified`,
+			);
+			callback('', {
+				applied: args.applyReport.applied,
+				writeCount: args.applyReport.writeCount,
+				passportElementId: args.passportReport.passportElementId,
+				passport: args.passportReport,
+				exemplarVerification: args.exemplarReport,
+				verificationAttestation: args.verificationAttestation,
+				xorVerified: true,
+				xorRecheck: args.xorRecheck,
+			});
+		});
+	};
+
+	return { create, init, harvest, finish, delete: deleteGraph };
 };
 
 // END OF moduleFunction() ============================================================

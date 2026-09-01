@@ -805,6 +805,13 @@ const SCHEMA_VIEW = {
 	LABEL: 'SchemaView', // the dual label on every schema-view node (alongside :ForgedNode)
 	EDGE_TYPE: 'HAS_SCHEMA_TERM', // root -> member edge type
 	ROOT_STABLE_ID: 'schemaView:root', // the single root node's stableId
+	// ⟪N7, adversarial review 2026-08-31⟫ the MEMBER stableId prefix — the one metadata id scheme that was
+	// described only in a comment while its five SELF_DOC siblings were declared constants. Member ids are
+	// `schemaView:<kind>:<value>`. Registered here rather than in SELF_DOC, next to ROOT_STABLE_ID, because
+	// that is where this family's OTHER id already lives; splitting the root id from the member prefix
+	// across two blocks would be the same schema-as-code violation one level down. An id scheme stated only
+	// in prose is a literal waiting to be retyped differently by the next reader.
+	MEMBER_STABLE_ID_PREFIX: 'schemaView:', // + `<kind>:<value>`
 	PROVENANCE_TIER: PROVENANCE_TIER.STRUCTURAL, // schema-view edges carry the structural tier
 	// the KINDS of registry term the view enumerates (one member node per value within each kind). The kind
 	// string is the member node's `kind` property; member stableId = `schemaView:<kind>:<value>`.
@@ -841,16 +848,38 @@ const SELF_DOC = {
 		MANIFEST_RECIPE: 'ManifestRecipe',
 		RECIPE_BLOCK: 'RecipeBlock',
 		STANDARD_DEFINITION: 'StandardDefinition',
+		// ⟪graphSelfDoc, 2026-08-31⟫ the two node types the `finish` verb adds (ARCH-replayManager-083126
+		// §8 registry members 5 and 6). BuildAttestation is the only genuinely NEW type in the design —
+		// gate verdicts previously lived only in log files and a work-order docket, which is why "a gate
+		// that never ran" was unrepresentable in the graph and therefore uncheckable from a bolt session.
+		USAGE_PATTERN: 'UsagePattern',
+		BUILD_ATTESTATION: 'BuildAttestation',
 	},
 	EDGE_TYPES: {
 		BUILT_FROM: 'BUILT_FROM', // GraphProvenance passport -> ManifestRecipe (created at stampProvenance)
 		HAS_BLOCK: 'HAS_BLOCK', // ManifestRecipe -> RecipeBlock member
 		BASED_ON: 'BASED_ON', // ManifestRecipe -> parent ManifestRecipe (the lineage)
+		// ⟪graphSelfDoc, 2026-08-31⟫ the remaining PASSPORT-ROOTED edges. Every edge that roots the
+		// metadata tree hangs off GraphProvenance, which is deliberately NOT :ForgedNode (it carries
+		// builtAt, a clock). So these four — like BUILT_FROM above — are created by the Channel-B passport
+		// writer with MATCH on the far endpoint, NEVER MERGE-create: a disabled finisher leaves its target
+		// absent, the MATCH yields zero rows, and no edge appears. Honest degradation over an invented link.
+		DESCRIBES: 'DESCRIBES', // GraphProvenance -> StandardDefinition (one per standard)
+		HAS_VIEW: 'HAS_VIEW', // GraphProvenance -> SchemaView root
+		ATTESTS: 'ATTESTS', // GraphProvenance -> BuildAttestation (one per gate)
+		ADVISES: 'ADVISES', // GraphProvenance -> UsagePattern (one per named question)
+		// ⟪graphSelfDoc, 2026-08-31⟫ the one metadata->CONTENT edge, and the only new edge that is NOT
+		// passport-rooted: both endpoints are :ForgedNode, so it is written on Channel A through
+		// writeShapedGraph like any other content edge (ARCH §7). It is the hop that lets a consumer get
+		// from the build's view of a standard to the parsed standard itself.
+		DEFINES: 'DEFINES', // StandardDefinition -> DmeStandardRoot
 	},
 	PROVENANCE_TIER: PROVENANCE_TIER.STRUCTURAL, // self-doc edges carry the structural tier
 	MANIFEST_RECIPE_STABLE_ID_PREFIX: 'manifestRecipe:', // + manifestKey
 	RECIPE_BLOCK_STABLE_ID_PREFIX: 'recipeBlock:', // + blockId
 	STANDARD_DEFINITION_STABLE_ID_PREFIX: 'standardDefinition:', // + _source
+	USAGE_PATTERN_STABLE_ID_PREFIX: 'usagePattern:', // + patternName
+	BUILD_ATTESTATION_STABLE_ID_PREFIX: 'buildAttestation:', // + gate name
 };
 
 // =====================================================================
@@ -871,6 +900,12 @@ const GRAPH_META = {
 		SELF_DOC.NODE_LABELS.MANIFEST_RECIPE,
 		SELF_DOC.NODE_LABELS.RECIPE_BLOCK,
 		SELF_DOC.NODE_LABELS.STANDARD_DEFINITION,
+		// ⟪graphSelfDoc, 2026-08-31⟫ the two new meta types. This list is the WHOLE cost of adding a
+		// metadata node type: the XOR gate query is never edited, which is the entire reason the rule is
+		// expressed as (_source IS NOT NULL) XOR (:GraphMeta) rather than as an allow-list of labels
+		// maintained by whoever remembers the allow-list exists.
+		SELF_DOC.NODE_LABELS.USAGE_PATTERN,
+		SELF_DOC.NODE_LABELS.BUILD_ATTESTATION,
 		NODE_LABELS.GRAPH_PROVENANCE,
 	],
 };

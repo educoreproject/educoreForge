@@ -443,7 +443,7 @@ const runCedsFidelityGate = ({ xLog, graphName, standardTokens, commandLineParam
 let materializeCounter = 0;
 const resolvedSchemaBlocksCounter = () => (materializeCounter += 1);
 
-const materializeSchemaBlocks = ({ xLog, replay, resolvedSchemaBlocks, manifestId, memberCount, standardTokens, commandLineParameters, fidelityGateRunner, storeResolver, roundTripStageRunner, roundTripStageSpec }, callback) => {
+const materializeSchemaBlocks = ({ xLog, replay, resolvedSchemaBlocks, manifestId, memberCount, standardTokens, commandLineParameters, fidelityGateRunner, storeResolver, storeReader, roundTripStageRunner, roundTripStageSpec }, callback) => {
 	// ⟪R-P2-2⟫ the vector-store RESOLVER is REQUIRED here (both in-module callers supply it;
 	// the engine consults it only for ref-carrying nodes, so legacy inline blocks restore
 	// exactly as before). An absent resolver would restore a ref-style block into a graph
@@ -478,6 +478,17 @@ const materializeSchemaBlocks = ({ xLog, replay, resolvedSchemaBlocks, manifestI
 	// spec from the recipe and the descriptor roster; -replay passes 'replayNotApplicable', a
 	// VISIBLE non-run per R-WO-19). Absence is REFUSED, never defaulted — a skipped stage must
 	// be indistinguishable from nothing, and it is the runner that makes every disposition loud.
+	// ⟪graphSelfDoc Phase 5⟫ the recipe is READ from the store and cannot be reconstructed from the
+	// graph, so finishing without a reader would produce a graph documenting everything EXCEPT how it
+	// was built. Refused by name here rather than deep inside the verb.
+	if (!storeReader || typeof storeReader.getManifest !== 'function') {
+		callback(
+			`materialize failed: a storeReader exposing getManifest is REQUIRED (graphSelfDoc Phase 5) — ` +
+				`the manifest recipe is read from the store, not derived from the graph.`,
+		);
+		return;
+	}
+
 	if (typeof roundTripStageRunner !== 'function' || !roundTripStageSpec) {
 		callback(
 			`materialize failed: a roundTripStageRunner AND a roundTripStageSpec are REQUIRED ` +
@@ -532,18 +543,88 @@ const materializeSchemaBlocks = ({ xLog, replay, resolvedSchemaBlocks, manifestI
 								callback(roundTripStageError);
 								return;
 							}
-							// NOT deleted — this graph is the product. roundTripSummaryPath rides
-							// the result only when the stage wrote a summary (a -replay's visible
-							// non-run writes nothing), so the -goldEvalCheck evidence is findable
-							// from the build report itself.
-							callback('', {
-								manifestId,
-								boltUrl: goldEval.boltUrl,
-								memberCount,
-								...(roundTripStageReport && roundTripStageReport.summaryFilePath
-									? { roundTripSummaryPath: roundTripStageReport.summaryFilePath }
-									: {}),
-							});
+							// ============================================================================
+							// ⟪graphSelfDoc Phase 5⟫ THE SINGLE finish CALL — the graph documents itself.
+							// ============================================================================
+							// It runs LAST, after fidelity and round-trip have validated PURE REPLAYED
+							// CONTENT; finish's own verifications cover the metadata it adds. THE LEAK
+							// INVARIANT HOLDS BY CONSTRUCTION HERE: this is the materialize tail, and no
+							// harvest path reaches it — Phase A/C never call materialize.
+							//
+							// gateResults is ASSEMBLED HERE, where the knowledge lives. build.js learns
+							// "run finish at materialize" and nothing about how any finisher works.
+							//
+							// THE ROUND-TRIP ROW IS READ FROM THE ARTIFACT, never composed: the runner
+							// distinguishes its own outcomes (an error is returned as an error; a non-run
+							// reports stageRan false WITH a disposition), so each branch below is a fact
+							// the runner stated rather than an inference from silence.
+							const roundTripRow =
+								roundTripStageReport && roundTripStageReport.stageRan === false
+									? {
+											gate: 'roundTrip',
+											verdict: 'notRun',
+											detail: `${roundTripStageReport.disposition || 'the runner reported no disposition'}`,
+										}
+									: roundTripStageReport && roundTripStageReport.summaryFilePath
+										? {
+												gate: 'roundTrip',
+												verdict: 'pass',
+												detail: `stage ran and wrote its summary: ${roundTripStageReport.summaryFilePath}`,
+											}
+										: {
+												gate: 'roundTrip',
+												verdict: 'notRun',
+												detail:
+													'the stage neither reported stageRan false nor wrote a summary — its ' +
+													'outcome is not establishable from what it returned, and notRun is the ' +
+													'honest reading of an unestablishable outcome',
+											};
+
+							// NO FIDELITY ROW, AND THE ABSENCE IS THE POINT (RULED 2026-09-01).
+							// fidelityGateRunner's `callback('')` is reachable from THREE states that the
+							// call site cannot tell apart: the gate SKIPPED (build.js:355, standardTokens
+							// lacking 'ceds'), a GENUINE PASS, and A LOSS DELIBERATELY ALLOWED under
+							// --allowFidelityLoss, where verdict.reason is logged at build.js:436 and then
+							// DISCARDED. A derived `pass` would stamp success on a build whose operator
+							// knowingly accepted losses. No vocabulary token is minted for this gap: naming
+							// it would ossify it. The row's ABSENCE stays conspicuous by design, and the
+							// real fix — returning the verdict instead of discarding it — is carried as
+							// FINDING 5-A for a separate order.
+							replay.finish(
+								{
+									inGraph: goldEval,
+									manifestRefId: manifestId,
+									storeReader,
+									gateResults: [roundTripRow],
+								},
+								(finishError, finishReport) => {
+									if (finishError) {
+										// NOT deleted — same posture as R-1 and the stage: an operator needs to
+										// inspect the thing that failed, and a finish refusal means the graph is
+										// NOT the product it claims to be.
+										callback(finishError);
+										return;
+									}
+									// NOT deleted — this graph is the product. roundTripSummaryPath rides
+									// the result only when the stage wrote a summary (a -replay's visible
+									// non-run writes nothing), so the -goldEvalCheck evidence is findable
+									// from the build report itself.
+									callback('', {
+										manifestId,
+										boltUrl: goldEval.boltUrl,
+										memberCount,
+										...(roundTripStageReport && roundTripStageReport.summaryFilePath
+											? { roundTripSummaryPath: roundTripStageReport.summaryFilePath }
+											: {}),
+										// ⟪graphSelfDoc Phase 5⟫ the finish report rides out so the build's own
+										// output names what was written and that the invariant was re-verified.
+										passportElementId: finishReport.passportElementId,
+										finishWriteCount: finishReport.writeCount,
+										finishXorVerified: finishReport.xorVerified,
+										finishApplied: finishReport.applied.map((oneEntry) => oneEntry.name),
+									});
+								},
+							);
 						},
 					);
 				},
@@ -1978,6 +2059,8 @@ const build = (recipe, deps, callback) => {
 					// ⟪R-P2-2⟫ the same per-build resolver the harvest used — restore stamps each
 					// ref-carrying node's vector back onto its graph node
 					storeResolver: vectorStoreResolver,
+					// ⟪graphSelfDoc Phase 5⟫ READ-ONLY store access for the manifest recipe.
+					storeReader: standardsDatabase,
 					// ⟪RT-13⟫ the stage runner + the 'build' spec: the descriptor-composed roster,
 					// the recipe's enablement, and the build's own run directory for the verdicts
 					// and the certification summary (RT-6: the verdict lands with the build outputs).
@@ -2142,6 +2225,8 @@ const replay = ({ manifestRefId } = {}, deps = {}, callback) => {
 					storeResolver:
 						deps.vectorStoreResolver ||
 						makeVectorStoreResolver({ supportStoreFilePath: standardsDatabase.databaseFilePath }),
+					// ⟪graphSelfDoc Phase 5⟫ READ-ONLY store access for the manifest recipe.
+					storeReader: standardsDatabase,
 					// ⟪RT-13 / R-WO-19⟫ the stage is NOT APPLICABLE to -replay (the round trip
 					// belongs to the build that composed the manifest) — and that non-run is
 					// VISIBLE: the runner prints the disposition line rather than silently
