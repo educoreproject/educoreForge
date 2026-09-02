@@ -473,7 +473,20 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // (iii) re-anchor edits lib/bridge-framework/test/test-bgNosub.js, which is INSIDE these paths, so the
 // base is the CHAIN HEAD (tag post7ChainHead-082926) rather than the phase commit. apps/graph-builder/test/
 // is OUTSIDE the diffed paths — measured — so moving this constant cannot cascade into another re-anchor.
-const P1_BASELINE_COMMIT = 'ef0fa96';
+//
+// ═══ RE-ANCHOR, 2026-09-01 (GRANITE_ECHO), graphSelfDoc campaign close ═══
+// ef0fa96 -> postGraphSelfDoc-090126 (4b122b0). graphSelfDoc moved THREE of the six declared paths —
+// apps/graph-builder/lib/build.js (the finish call at materialize's tail), interfaces.js (the
+// ReplayManagerComponent contract gained the verb) and lib/vocabulary/ (the self-doc terms) — and
+// versionFromStamp moved build.js before that. (a) asserts the framework did NOT move while plugins
+// were added; against a base that predates authorised framework work it cannot say that any more.
+// The SIX DECLARED PATHS ARE UNCHANGED: the baseline moves, the scope never widens.
+// THE BASE IS THE CHAIN HEAD, NOT postGraphSelfDoc-090126, for the same reason Phase 7's was: the
+// seam re-anchor edits lib/bridge-framework/test/test-bgNosub.js, which is INSIDE these six paths,
+// so pointing here at the campaign tag would leave this conjunct red on the re-anchor's own commit.
+// apps/graph-builder/test/ remains OUTSIDE the diffed paths — measured — so moving THIS constant
+// cannot cascade into another re-anchor.
+const P1_BASELINE_COMMIT = 'postSeamReanchorChainHead-090126';
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
