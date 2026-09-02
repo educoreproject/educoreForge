@@ -186,11 +186,15 @@ four keys are passed; the values are:
 | `skipEmbedding` | `!vectorize` | MUST be honored: when true the bundle MUST make no embedding call and MUST report `embedCallCount: 0`. `[code fact]` `forgeCeds.js:931-934`, `forgeEdfi.js:235-238`, `forgeSif.js:796-799`, `forgePesc260805.js:756-759` |
 
 - `forge` MUST be arity 2 — one named-argument object plus the callback. `[code fact]`
-  `interfaces.js:237-238`. `[code fact]` SIF's `forge` destructures a FIFTH argument the seam never
-  passes, `resolutionMapPath` (`forgeSif.js:746`), and its parser reads a SECOND input,
-  `refIdResolutionMap.tsv`, resolved beside the TSV when the option is absent
-  (`forges/sif/lib/parser.js:520-527`) — a second declared source input outside the descriptor,
-  recorded as a fact (§13.1 S3).
+  `interfaces.js:237-238`. `[code fact]` Under the framework a fifth key is REFUSED by name
+  (`lib/forge-framework/forge-framework.js:60` fixes `SEAM_ARGUMENT_NAME_LIST` to the four names;
+  `:389-394` refuses any other; twin-proven by `test-gSeam.js` conjunct `fifthKeyRefused`). SIF's former
+  fifth argument `resolutionMapPath` is gone — `forgeSif.js` has been framework wiring since 343d82e
+  (hub-kit-role Phase 3) and destructures nothing. Its parser still reads a SECOND input,
+  `refIdResolutionMap.tsv`, located by fixed name inside the snapshot directory
+  (`forges/sif/lib/parser.js:519`) and NOT declared in `additionalSourceInputList`
+  (`forges/sif/lib/sifForgeDeclaration.js:83`) — recorded as §13.1 S3 (clause 2, OPEN; verified
+  Lane B 2026-09-02, filed in `WORKORDER-standDownBacklog-090226.md` §5).
 - `forge` MUST be error-first callback-shaped: `callback(errString, result)`, `''` on success. No
   Promise, no throw across the boundary. `[code fact]` `interfaces.js:14-15`; doctrine RT-8 (§5.5).
 - A bundle MAY throw INSIDE `buildContractGraph` (its pure layer) and MUST contain that throw at the
@@ -909,6 +913,16 @@ cannot leave to the campaign.
   `round-trip-stage.js:34-36`; `forges/pesc260805/README_roundTripContract.md` "THE ASYMMETRY".
 - Every LOST item MUST carry a `lostCategory` of `explicitlyOmitted` or `contentGap`, and
   `lostTotal` MUST count contentGap ALONE. `[doc fact]` doctrine A7/A13.
+  **⚠ ANNOTATED 2026-09-02 (Lane B, WILD_VALLEY; ruling GRANITE_ECHO — annotate, do not silently
+  reconcile).** `[artifact fact]` NO verdict opened carries a `lostCategory` key. The per-item entries in
+  `report.lostDetailList` carry `subject`, `predicate`, `object`, **`bucketName`** (`'contentGap'`),
+  `backlogLabel`, `located` — 349 of 349 in the Ed-Fi `-2` verdict of 2026-08-05
+  (`dataStoresAttic/buildLogs/fourRoundTripNoBridges_20260805-050037/roundTrip/edfi/roundTripVerdict.json`)
+  have no `lostCategory`. The SEMANTICS this bullet requires are present under the other name; the
+  NAME this bullet requires was never provided. This line records both rather than rewriting the
+  requirement to match the artifact. **Limitation, stated:** no current-generation lossy verdict exists
+  (every 2026-08-31/09-01 run reports `lostTotal 0`, so every `lostDetailList` is empty); the current
+  field names on a lossy row are UNVERIFIED and the evidence is the 08-05 attic artifact only.
 - No percentage participates in acceptance. `[doc fact]` `forges/ceds/README_roundTripContract.md`
   ("A tampered emission carrying four fabricated statements still reported 71.936%").
 - An invention MUST be fixed in phase the moment it is found; a loss goes to the named backlog.
@@ -1325,7 +1339,7 @@ census plus the rulings, and it is the migration's punch list. A repair that cha
 | C8 | ceds | root `description` template-built | §10.4, §7.1 | `forgeCeds.js:475` |
 | S1 | sif | positional parser signature `parseSif(sourcePath, {...}, cb)` — under the framework, an ADAPTER is needed to the H2 hook contract (ruling A1) | §4.2, H2 | `forges/sif/lib/parser.js:8,488` |
 | S2 | sif | `name` coerced to `''` when null (RT-2) | §7.1 | `forgeSif.js:349` |
-| S3 | sif | ⚠ FIRST CLAUSE RESOLVED 2026-09-01 by the versionFromStamp order (the `'1.0'` literal is deleted; the root's `version` now comes from the provenance stamp); THE REMAINING CLAUSES PREDATE IT AND ARE NOT ITS WORK. `metadata.version` is the literal `'1.0'` (provenance `publishedVersion` unknown) — a stamp not READ from the source; and a SECOND source input (`refIdResolutionMap.tsv`) plus a fifth `forge()` argument outside the seam | §2.3, §7.1, §2.2 | `forges/sif/lib/parser.js:943`, `:520-527`; `forgeSif.js:746` |
+| S3 | sif | THREE CLAUSES, status verified by code reading (Lane B, WILD_VALLEY, 2026-09-02; evidence in `zNotesPlansDocs/LANEB-findings-090226.md` §B1). **Clause 1 RESOLVED** 2026-09-01 (versionFromStamp, f87f7da): the `'1.0'` literal is deleted, the parser reports no version, the root's `version` comes from the provenance stamp. **Clause 3 RESOLVED** 2026-08-29 (Phase 3, 343d82e): the fifth `forge()` argument no longer exists; the framework refuses any fifth key by name (twin-proven, `test-gSeam.js` `fifthKeyRefused`); residue only — `parser.js:522-527` still honours `options.resolutionMapPath`, dead because its sole caller `sifHooks.js:58` passes `{}`. **Clause 2 OPEN**: the second source input `refIdResolutionMap.tsv` is checksum-verified twice and refuses by name when absent (`parser.js:425-482`, `:156-166`; gated through `bundle.forge` in `test-r3-canonical.js:288-311`) — integrity is clean — but it is located by fixed name (`parser.js:519`) and NOT declared in `additionalSourceInputList` (`sifForgeDeclaration.js:83`), contrary to the Framework Spec §4.1/§5/§8.3 (FR20, RULING 23:12 #4) which names this exact input as the declared case. Not a runtime fault on the pinned snapshot; a false H1 declaration. Filed as a work order: `WORKORDER-standDownBacklog-090226.md` §5 "SIF's UNDECLARED SECOND SOURCE INPUT" (seam work — both files are in `SEAM_PATH_LIST`) | §2.2, §3.3, §7.1 | `forges/sif/lib/parser.js:519`, `:522-527`, `:425-482`; `sifForgeDeclaration.js:74-83`; `sifHooks.js:55-59`; `forge-framework.js:60`, `:389-394`, `:426-451` |
 | S4 | sif | root `sourceUrl: metadata.sourceUrl \|\| ''` — **retire declaration** `sourceUrl: ''` | §10.4 | `forgeSif.js:395` |
 | S5 | sif | root `description` template-built | §10.4, §7.1 | `forgeSif.js:380` |
 | E1 | edfi | validator writes verdict artifacts only when `outputPath` is truthy — a verdict producible with nothing on disk | §8.1 | `forges/edfi/roundTripValidator.js:395` |
