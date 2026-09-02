@@ -283,7 +283,7 @@ const blindingConjunct = ({ handle, realReader }) => {
 			}
 			harness.match('    a walk reading cedsId (undeclared) is REFUSED BY NAME on the wire', walkRefusal || '', /blinded property 'cedsId'/);
 			// (d) RED: blindedRecordFor keeps the names
-			const blindTwin = readerFor({ handle, readerLib: mutatedReaderLib([{ modulePath: graphSeamRulesPath, find: "	blindingDeclaration.forEach((oneName) => {\n\t\tdelete properties[oneName];\n\t});\n\treturn { stableId: record.stableId, labels: record.labels.slice(), properties };\n};\n\n// walkRecordFor", replace: "	return { stableId: record.stableId, labels: record.labels.slice(), properties };\n};\n\n// walkRecordFor" }]) });
+			const blindTwin = readerFor({ handle, readerLib: mutatedReaderLib([{ modulePath: graphSeamRulesPath, find: "	blindingDeclaration.forEach((oneName) => {\n\t\tdelete properties[oneName];\n\t});\n\treturn { stableId: record.stableId, labels: record.labels.slice(), properties };", replace: "	return { stableId: record.stableId, labels: record.labels.slice(), properties };" }]) });
 			blindTwin.forEvidence().readSourceNodes({ roleList: ['DmeProperty'] }, (twinError, twinList) => {
 				const twinLeaked = (twinList || []).filter((oneRecord) => Object.prototype.hasOwnProperty.call(oneRecord.properties, 'cedsId'));
 				harness.ok(`(d) RED-OBSERVED — with the blinding kept ${twinLeaked.length} evidence records carry cedsId`, !twinError && twinLeaked.length > 0, twinError);
