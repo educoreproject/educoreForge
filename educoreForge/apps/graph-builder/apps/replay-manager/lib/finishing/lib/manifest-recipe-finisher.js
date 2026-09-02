@@ -73,10 +73,19 @@ const PURPOSE_SOURCE = {
 	BRIDGED: 'mechanical:bridged',
 	UNRECOGNIZED: 'unrecognized',
 };
+// `site` NAMES THE WRITE, IT DOES NOT LOCATE IT. This field is emitted into the graph as
+// `purposeTemplateSite`, so it is DOCUMENTATION THAT SHIPS — and a line number is a comment wearing
+// data's clothes: correct the day it is typed and silently false after the next edit above it.
+// It had gone false: measured 2026-09-02, all three coordinates were EXACTLY 81 LINES STALE — one
+// insertion above them all — and nine nodes of the mounted graph carried them.
+// NO REPLACEMENT COORDINATE IS RECORDED HERE, DELIBERATELY. Writing down where the templates sit
+// today would rot on the same schedule as the numbers it replaced, in a comment inside the very fix
+// for that defect. A token naming the write survives any edit that does not change what the write
+// IS. Grep the token to find it; that is the whole point of it.
 const PURPOSE_TEMPLATE_MATCHERS = [
-	{ token: PURPOSE_SOURCE.REUSED, pattern: /REUSED \(not forged\) by recipe /, site: 'build.js:1249' },
-	{ token: PURPOSE_SOURCE.BRIDGED, pattern: /^relationship schema block for .*bridged by bridge /, site: 'build.js:1833' },
-	{ token: PURPOSE_SOURCE.FORGED, pattern: /^standardBase schema block for .*forged by recipe /, site: 'build.js:1529' },
+	{ token: PURPOSE_SOURCE.REUSED, pattern: /REUSED \(not forged\) by recipe /, site: 'build.js reused-standardBase description write' },
+	{ token: PURPOSE_SOURCE.BRIDGED, pattern: /^relationship schema block for .*bridged by bridge /, site: 'build.js bridged-relationship description write' },
+	{ token: PURPOSE_SOURCE.FORGED, pattern: /^standardBase schema block for .*forged by recipe /, site: 'build.js forged-standardBase description write' },
 ];
 
 // START OF moduleFunction() ============================================================
