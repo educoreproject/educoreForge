@@ -61,6 +61,15 @@ const { pipeRunner, taskListPlus } = new require('qtools-asynchronous-pipe-plus'
 
 const BUNDLE_DIR = path.join(__dirname, '..', '..');
 const FORGE_PATH = path.join(BUNDLE_DIR, 'forgePesc260805.js');
+// LEVER 1's target MOVED. The hubKitRole migration relocated the composition call out of
+// forgePesc260805.js into lib/forgePescContractGraph.js and changed WHAT IT IS HANDED from
+// combinedGraph.* to kit.*. NOTE: combinedGraph was NOT renamed — it still exists (it holds
+// applyDerivedTier's return and drives the write-back loop); the composition is simply handed the
+// kit's live arrays instead. Saying "renamed" would send a reader looking for a variable that is
+// still there under its own name.
+// The lever's find-text kept pointing at the old file and matched ZERO times, so applyOneLever threw
+// its drift refusal and the probe could not run at all. Repointed 2026-09-02 (LANE A, item A1).
+const CONTRACT_GRAPH_PATH = path.join(BUNDLE_DIR, 'lib', 'forgePescContractGraph.js');
 const COMPOSITION_PATH = path.join(BUNDLE_DIR, 'lib', 'searchTextComposition.js');
 const SUITE_PATH = path.join(BUNDLE_DIR, 'test', 'test-pesc260805SourceTier.js');
 
@@ -84,10 +93,12 @@ const sha256OfFile = (filePath) =>
 
 const pristineBytesByPath = {
 	[FORGE_PATH]: fs.readFileSync(FORGE_PATH),
+	[CONTRACT_GRAPH_PATH]: fs.readFileSync(CONTRACT_GRAPH_PATH),
 	[COMPOSITION_PATH]: fs.readFileSync(COMPOSITION_PATH),
 };
 const pristineDigestByPath = {
 	[FORGE_PATH]: sha256OfFile(FORGE_PATH),
+	[CONTRACT_GRAPH_PATH]: sha256OfFile(CONTRACT_GRAPH_PATH),
 	[COMPOSITION_PATH]: sha256OfFile(COMPOSITION_PATH),
 };
 
@@ -178,8 +189,9 @@ taskList.push((args, next) => {
 			'  every lever below look effective.',
 	);
 	check(
-		'ACCEPT-CONTROL both production files are pristine before the run',
+		'ACCEPT-CONTROL all three production files are pristine before the run',
 		sha256OfFile(FORGE_PATH) === pristineDigestByPath[FORGE_PATH] &&
+			sha256OfFile(CONTRACT_GRAPH_PATH) === pristineDigestByPath[CONTRACT_GRAPH_PATH] &&
 			sha256OfFile(COMPOSITION_PATH) === pristineDigestByPath[COMPOSITION_PATH],
 	);
 	runShippedSuite((unusedErr, { failedLabels, shippedLabels, wholeOutput, exitedNonZero, suiteAborted }) => {
@@ -217,27 +229,41 @@ taskList.push((args, next) => {
 // =================================================================================================
 taskList.push((args, next) => {
 	console.log(
-		'\nLEVER 1 — PRODUCTION MUTATION, SHIPPED CONFIGURATION: the composition pass is fed the SOURCE\n' +
-			'  graph, which predates the derived tier, instead of the COMBINED graph. This is the naive\n' +
-			'  placement — the same condition as composing inside makeNode.',
+		'\nLEVER 1 — PRODUCTION MUTATION, SHIPPED CONFIGURATION: the composition pass is fed the edge list\n' +
+			'  AS IT STOOD BEFORE THE DERIVED TIER RAN (kit.edges sliced at edgeCountBeforeTiers), instead of\n' +
+			'  the combined list. This is the naive placement — the same condition as composing inside\n' +
+			'  makeNode — and RESOLVES_TO does not exist yet, so the ORDERING TRAP must refuse.',
 	);
 	applyOneLever({
 		leverName: 'LEVER 1',
-		filePath: FORGE_PATH,
+		filePath: CONTRACT_GRAPH_PATH,
+		// anchored to the bytes it replaces and nothing beyond them — the find-text stops at the `});`
+		// that closes the call, so an edit to a NEIGHBOURING statement cannot disarm it (the failure
+		// mode that disarmed the bgBoltLive twin, commit 228844a)
 		findLiteral:
-			'const compositionOutput = applySearchTextComposition({\n\t\t\t\t\t\tnodes: combinedGraph.nodes,\n\t\t\t\t\t\tedges: combinedGraph.edges,\n\t\t\t\t\t});',
+			'\t\tconst compositionOutput = applySearchTextComposition({\n\t\t\tnodes: kit.nodes,\n\t\t\tedges: kit.edges,\n\t\t});',
+		// THE FAULT, RE-EXPRESSED FOR THE POST-MIGRATION SHAPE (2026-09-02, LANE A). This used to read
+		// `edges: sourceGraph.edges` and it INJECTED NOTHING: forgePescContractGraph.js lines 160-161 bind
+		// `const nodes = kit.nodes; const edges = kit.edges;` and buildSourceTierGraph returns those same
+		// bindings, so sourceGraph.edges IS kit.edges — THE SAME ARRAY OBJECT. Both arguments at this call
+		// site are one object, and by the time the composition runs the derived tier's RESOLVES_TO edges
+		// have already been minted into it, so the guard could never see an empty index. The mutation
+		// changed bytes and nothing observable: 63 assertions reached and 0 failures, identical to baseline.
+		// edgeCountBeforeTiers (declared before the derived tier, in scope here, already used below to
+		// slice the newly minted edges) is the one binding the migration left behind that still draws the
+		// line this lever needs — the prefix IS the edge list as it stood BEFORE the derived tier ran.
 		replaceLiteral:
-			'const compositionOutput = applySearchTextComposition({\n\t\t\t\t\t\tnodes: combinedGraph.nodes,\n\t\t\t\t\t\tedges: sourceGraph.edges,\n\t\t\t\t\t});',
+			'\t\tconst compositionOutput = applySearchTextComposition({\n\t\t\tnodes: kit.nodes,\n\t\t\tedges: kit.edges.slice(0, edgeCountBeforeTiers),\n\t\t});',
 	});
 	check(
 		'LEVER 1 the mutation actually changed the production bytes',
-		sha256OfFile(FORGE_PATH) !== pristineDigestByPath[FORGE_PATH],
+		sha256OfFile(CONTRACT_GRAPH_PATH) !== pristineDigestByPath[CONTRACT_GRAPH_PATH],
 	);
 	runShippedSuite((unusedErr, { failedLabels, shippedLabels, wholeOutput, exitedNonZero, suiteAborted }) => {
 		restoreEverything();
 		check(
 			'LEVER 1 the shipped bytes are restored, verified by sha256',
-			sha256OfFile(FORGE_PATH) === pristineDigestByPath[FORGE_PATH],
+			sha256OfFile(CONTRACT_GRAPH_PATH) === pristineDigestByPath[CONTRACT_GRAPH_PATH],
 		);
 		const refusalNamesTheTrap = wholeOutput.indexOf('ORDERING TRAP') !== -1;
 		const refusalNamesZeroEdges = wholeOutput.indexOf('ZERO RESOLVES_TO') !== -1;
@@ -434,6 +460,10 @@ pipeRunner(taskList.getList(), {}, (err) => {
 	check(
 		'forgePesc260805.js restored to its shipped bytes',
 		sha256OfFile(FORGE_PATH) === pristineDigestByPath[FORGE_PATH],
+	);
+	check(
+		'lib/forgePescContractGraph.js restored to its shipped bytes',
+		sha256OfFile(CONTRACT_GRAPH_PATH) === pristineDigestByPath[CONTRACT_GRAPH_PATH],
 	);
 	check(
 		'lib/searchTextComposition.js restored to its shipped bytes',

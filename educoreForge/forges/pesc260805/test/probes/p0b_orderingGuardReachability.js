@@ -256,7 +256,122 @@ check(
 // =================================================================================================
 console.log('\nCALLER PATH — the composition is reached, and reached in the right place');
 const fs = require('fs');
-const forgeText = fs.readFileSync(path.join(BUNDLE_DIR, 'forgePesc260805.js'), 'utf8');
+// THE CALLER MOVED. The hubKitRole migration relocated this whole block out of forgePesc260805.js
+// into lib/forgePescContractGraph.js. combinedGraph was NOT renamed — it still exists here, holding
+// applyDerivedTier's return; what changed is that the COMPOSITION is now handed kit.* instead of
+// combinedGraph.*. Repointed 2026-09-02 (LANE A).
+const forgeText = fs.readFileSync(path.join(BUNDLE_DIR, 'lib', 'forgePescContractGraph.js'), 'utf8');
+
+// depthByIndex — brace nesting depth at every offset, counting only braces that are CODE: braces
+// inside line comments, block comments, strings, template literals and regex literals are stepped
+// over. KNOWN LIMIT, stated rather than discovered later: a template literal is skipped whole, so
+// its ${...} interpolations are not re-entered. That keeps depth correct (an interpolation is a
+// balanced expression) but would mis-read a backtick nested inside one. The final-depth-0 check
+// below is what turns that from an assumption into a measurement for THIS file. Also records every code-level identifier with the depth it occurs at, which is what lets the
+// short-circuit check below ask about the SHARED depth rather than about raw text.
+const scanDepths = (sourceText) => {
+	const depthByIndex = new Int32Array(sourceText.length);
+	const identifierList = [];
+	const regexPrecedingList = ['(', ',', '=', ':', '[', '!', '&', '|', '?', '{', '}', ';', 'return', 'typeof', 'of', 'in'];
+	let depth = 0;
+	let lastSignificant = '';
+	let scanIndex = 0;
+	const fill = (fromIndex, toIndex) => {
+		for (let fillIndex = fromIndex; fillIndex < toIndex && fillIndex < sourceText.length; fillIndex++) {
+			depthByIndex[fillIndex] = depth;
+		}
+	};
+	const skipQuoted = (startIndex, quoteChar) => {
+		let innerIndex = startIndex + 1;
+		while (innerIndex < sourceText.length) {
+			if (sourceText[innerIndex] === '\\') {
+				innerIndex += 2;
+				continue;
+			}
+			if (sourceText[innerIndex] === quoteChar) {
+				return innerIndex + 1;
+			}
+			innerIndex += 1;
+		}
+		return sourceText.length;
+	};
+	while (scanIndex < sourceText.length) {
+		const currentChar = sourceText[scanIndex];
+		if (currentChar === '/' && sourceText[scanIndex + 1] === '/') {
+			const newlineIndex = sourceText.indexOf('\n', scanIndex);
+			const stopIndex = newlineIndex === -1 ? sourceText.length : newlineIndex;
+			fill(scanIndex, stopIndex);
+			scanIndex = stopIndex;
+			continue;
+		}
+		if (currentChar === '/' && sourceText[scanIndex + 1] === '*') {
+			const closeIndex = sourceText.indexOf('*/', scanIndex + 2);
+			const stopIndex = closeIndex === -1 ? sourceText.length : closeIndex + 2;
+			fill(scanIndex, stopIndex);
+			scanIndex = stopIndex;
+			continue;
+		}
+		if (currentChar === '"' || currentChar === "'" || currentChar === '`') {
+			const stopIndex = skipQuoted(scanIndex, currentChar);
+			fill(scanIndex, stopIndex);
+			scanIndex = stopIndex;
+			lastSignificant = 'STRING';
+			continue;
+		}
+		if (currentChar === '/' && regexPrecedingList.indexOf(lastSignificant) !== -1) {
+			let regexIndex = scanIndex + 1;
+			while (regexIndex < sourceText.length && sourceText[regexIndex] !== '\n') {
+				if (sourceText[regexIndex] === '\\') {
+					regexIndex += 2;
+					continue;
+				}
+				if (sourceText[regexIndex] === '/') {
+					break;
+				}
+				regexIndex += 1;
+			}
+			fill(scanIndex, regexIndex + 1);
+			scanIndex = regexIndex + 1;
+			lastSignificant = 'REGEX';
+			continue;
+		}
+		if (/[A-Za-z_$]/.test(currentChar)) {
+			let endIndex = scanIndex + 1;
+			while (endIndex < sourceText.length && /[A-Za-z0-9_$]/.test(sourceText[endIndex])) {
+				endIndex += 1;
+			}
+			const identifierText = sourceText.slice(scanIndex, endIndex);
+			identifierList.push({ name: identifierText, index: scanIndex, depth, followedBy: (sourceText.slice(endIndex).match(/^\s*(.)/) || [])[1] });
+			fill(scanIndex, endIndex);
+			scanIndex = endIndex;
+			lastSignificant = identifierText;
+			continue;
+		}
+		if (currentChar === '{') {
+			depthByIndex[scanIndex] = depth;
+			depth += 1;
+			scanIndex += 1;
+			lastSignificant = '{';
+			continue;
+		}
+		if (currentChar === '}') {
+			depth -= 1;
+			depthByIndex[scanIndex] = depth;
+			scanIndex += 1;
+			lastSignificant = '}';
+			continue;
+		}
+		depthByIndex[scanIndex] = depth;
+		if (!/\s/.test(currentChar)) {
+			lastSignificant = currentChar;
+		}
+		scanIndex += 1;
+	}
+	return { depthByIndex, identifierList, finalDepth: depth };
+};
+const { depthByIndex, identifierList, finalDepth } = scanDepths(forgeText);
+// a scanner that drifted would make every depth claim below meaningless, so it must prove it did not
+check('CALLER the depth scanner balanced the file (final depth 0 — otherwise every depth claim below is void)', finalDepth === 0);
 const derivedCallIndex = forgeText.indexOf('const derivedOutput = buildDerivedTier(');
 const applyDerivedIndex = forgeText.indexOf('const combinedGraph = applyDerivedTier(');
 const compositionCallIndex = forgeText.indexOf('applySearchTextComposition({');
@@ -279,23 +394,76 @@ check(
 );
 check(
 	'CALLER the composition is handed the COMBINED graph, not the source graph',
+	// post-migration the COMBINED graph IS the kit: applyDerivedTier's output is written back and
+	// minted into kit.nodes/kit.edges before this call, so `kit.*` here is the combined graph and
+	// NOT the source tier. (buildSourceTierGraph returns the same two arrays, so naming sourceGraph
+	// here would be indistinguishable from naming kit — see LANEA-A1.)
 	forgeText.indexOf(
-		'applySearchTextComposition({\n\t\t\t\t\t\tnodes: combinedGraph.nodes,\n\t\t\t\t\t\tedges: combinedGraph.edges,\n\t\t\t\t\t})',
+		'applySearchTextComposition({\n\t\t\tnodes: kit.nodes,\n\t\t\tedges: kit.edges,\n\t\t})',
 	) !== -1,
 );
-// there is no early return, conditional or short-circuit between applyDerivedTier and the
-// composition: the three statements are consecutive inside the one sanctioned try block. Asserted by
-// checking that no `return`, `if (` or `next(` appears between them.
-const betweenApplyAndComposition = forgeText.substring(applyDerivedIndex, compositionCallIndex);
-const shortCircuitTokens = ['return', 'next(', 'if ('].filter(
-	(oneToken) => betweenApplyAndComposition.indexOf(oneToken) !== -1,
+// =================================================================================================
+// THE INVARIANT, STATED IN WORDS BECAUSE ITS LAST SPELLING ROTTED SILENTLY:
+//
+//   IF applyDerivedTier RUNS, THE COMPOSITION RUNS. Nothing may wrap the composition in a condition
+//   and nothing may leave the enclosing block before reaching it.
+//
+// That is what this check has always MEANT. Until 2026-09-02 it was expressed as a raw-text scan for
+// `return`, `next(` or `if (` anywhere between the two statements — a PROXY that was valid only
+// while the statements were adjacent. The hubKitRole migration inserted the write-back-and-mint loop
+// between them, and that loop legitimately contains `if (liveNode === undefined) { ... return; }`
+// INSIDE A forEach CALLBACK, which cannot short-circuit the enclosing function at all. The proxy
+// would therefore have reported a defect that does not exist. THE MIGRATION RETIRED THE PROXY, NOT
+// THE INVARIANT, so the invariant is now expressed structurally, over brace depth:
+//
+//   (1) the composition sits at the SAME block depth as applyDerivedTier  -> it is not nested inside
+//       any conditional, loop or callback that could skip it. THE ASSUMPTION THAT MAKES DEPTH
+//       SUFFICIENT HERE, named so a future editor can see when it stops holding: a BRACELESS branch
+//       (`if (x) doThing();`) wraps a statement WITHOUT changing brace depth, so depth equality alone
+//       would not catch it — but the composition is a LEXICAL DECLARATION (`const compositionOutput =
+//       ...`), and JS forbids a lexical declaration as a braceless branch body (it is a SyntaxError).
+//       So no braceless conditional can wrap THIS statement. If it is ever rewritten as a bare call
+//       expression, that protection is gone and this check needs a companion;
+//   (2) the depth never falls BELOW that shared depth between them        -> they are in one block,
+//       so nothing closed the block and reopened elsewhere;
+//   (3) no `return` or `next(` occurs AT THE SHARED DEPTH between them    -> no early exit on the
+//       path itself. Tokens deeper than the shared depth belong to nested callbacks and are correctly
+//       ignored, which is precisely what the old text scan could not do.
+//
+// Depth beats text here because depth answers the question the invariant actually asks. If a future
+// edit makes this fiddly, re-express the invariant again — do NOT narrow the scanned region to make
+// a stale predicate pass, which is the same move as widening an allowed-path list.
+// =================================================================================================
+const sharedDepth = depthByIndex[applyDerivedIndex];
+const compositionDepth = depthByIndex[compositionCallIndex];
+evidence(`block depth — applyDerivedTier ${sharedDepth}, composition ${compositionDepth}`);
+check(
+	'CALLER the composition sits at the SAME BLOCK DEPTH as applyDerivedTier (so no conditional, loop or callback wraps it)',
+	compositionDepth === sharedDepth,
 );
-if (shortCircuitTokens.length > 0) {
-	evidence(`tokens found between applyDerivedTier and the composition: ${shortCircuitTokens.join(', ')}`);
+
+let minimumDepthBetween = sharedDepth;
+for (let depthIndex = applyDerivedIndex; depthIndex < compositionCallIndex; depthIndex++) {
+	minimumDepthBetween = Math.min(minimumDepthBetween, depthByIndex[depthIndex]);
 }
 check(
-	'CALLER nothing can short-circuit between applyDerivedTier and the composition (no return/next/if between them)',
-	shortCircuitTokens.length === 0,
+	'CALLER the enclosing block is never closed between them (depth never falls below the shared depth)',
+	minimumDepthBetween >= sharedDepth,
+);
+
+const earlyExitList = identifierList.filter(
+	(oneIdentifier) =>
+		oneIdentifier.index > applyDerivedIndex &&
+		oneIdentifier.index < compositionCallIndex &&
+		oneIdentifier.depth === sharedDepth &&
+		(oneIdentifier.name === 'return' || (oneIdentifier.name === 'next' && oneIdentifier.followedBy === '(')),
+);
+if (earlyExitList.length > 0) {
+	evidence(`early-exit tokens AT THE SHARED DEPTH: ${earlyExitList.map((oneItem) => `${oneItem.name}@${oneItem.index}`).join(', ')}`);
+}
+check(
+	'CALLER nothing can short-circuit between applyDerivedTier and the composition (no return/next( at the shared depth; nested-callback tokens correctly ignored)',
+	earlyExitList.length === 0,
 );
 
 console.log(`\np0b_orderingGuardReachability: ${pass} passed, ${fail} failed`);

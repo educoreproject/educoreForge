@@ -101,7 +101,16 @@ const conjunctList = [
 		registry: twinRegistry, gateId: GATE_ID, conjunctId: 'neededButUndeclaredRefused',
 		title: "describeSource returns sourceUrl '' (as edfi) with no E6 → refused naming E6 / S4 / P16",
 		shape: (scenario) => { asStandard(scenario, 'edfi'); withDescribeSource(scenario, (described) => ({ ...described, sourceUrl: '' })); },
-		regex: /would need allowance E6 \(edfi\) \/ S4 \(sif\) \/ P16 \(pesc260805\)/,
+		// PINS WHICH IDS ARE NAMED, DELIBERATELY NOT THEIR ORDER. The three ids are siblings on one
+		// rowRefId and forge-framework.js renders them with idList.join(' / '), where idList follows
+		// Object.keys(MIGRATION_ALLOWANCE_REGISTRY) — i.e. the registry's DECLARATION order. Writing the
+		// rendered string out longhand therefore pinned that order by accident, and reordering the
+		// registry literal (a change with no behavioural effect) turned this conjunct red. The lookaheads
+		// require each id to be PRESENT within the allowance list itself — bounded by [^—]* so a mention
+		// after the em-dash cannot satisfy one — which is what the title has always claimed. DO NOT
+		// "tighten" this back into a rendered sequence: the completeness assertion is the point, the
+		// order never was, and the loosening that follows a brittle failure is how it gets lost.
+		regex: /would need allowance (?=[^—]*E6 \(edfi\))(?=[^—]*S4 \(sif\))(?=[^—]*P16 \(pesc260805\))/,
 		twinName: 'disableNeededButUndeclaredCheck', fileName: FRAMEWORK_FILE,
 		find: '\t\t\t\tif (oneRow.preconditionMet(context)) {\n\t\t\t\t\tconst idList', replace: '\t\t\t\tif (false && oneRow.preconditionMet(context)) {\n\t\t\t\t\tconst idList',
 	}),
@@ -116,7 +125,12 @@ const conjunctList = [
 		registry: twinRegistry, gateId: GATE_ID, conjunctId: 'outsideTheFourRefused',
 		title: "the toy (outside the four) declaring E6 is refused naming MIGRATING_BUNDLE_LIST", mode: 'inject',
 		shape: (scenario) => { scenario.forgeDeclaration.compatibilityDeclarationList = [{ allowanceId: 'E6' }]; },
-		regex: /is non-empty but standardKey 'toy' is not in MIGRATING_BUNDLE_LIST \(ceds, edfi, sif, pesc260805\)/,
+		// PINS WHICH BUNDLES ARE NAMED, DELIBERATELY NOT THEIR ORDER — same reasoning as the E6/S4/P16
+		// conjunct above. forgeDeclarationContract.js renders the roster with migratingBundleList.join(', '),
+		// so the longhand string pinned both the order AND the membership of a frozen literal; adding a
+		// fifth migrating bundle would have turned this red for no defect. Each lookahead is bounded by
+		// [^)]* so it must match INSIDE the rendered roster, not anywhere in the message.
+		regex: /is non-empty but standardKey 'toy' is not in MIGRATING_BUNDLE_LIST \((?=[^)]*ceds)(?=[^)]*edfi)(?=[^)]*sif)(?=[^)]*pesc260805)[^)]*\)/,
 		twinName: 'putToyInsideTheFour', leverKind: 'inputFault', shippedConfig: false,
 		mutate: (scenario) => { scenario.deps = { ...scenario.deps, migratingBundleListOverride: ['toy'] }; },
 	}),
@@ -157,6 +171,10 @@ const conjunctList = [
 		registry: twinRegistry, gateId: GATE_ID, conjunctId: 'e8UndeclaredUnverifiedEntryRefused',
 		title: "E8 declared (as edfi) with logicalSourceFileNameList ['descriptorCodeValues'] while sourceFiles ALSO names 'strayLogicalName' (neither verified nor declared) → refused naming the entry and the declared list (E8 tightened, ruling 03:40)",
 		shape: (scenario) => { asStandard(scenario, 'edfi'); scenario.forgeDeclaration.compatibilityDeclarationList = [{ allowanceId: 'E8', logicalSourceFileNameList: ['descriptorCodeValues'] }]; withDescribeSource(scenario, (described) => ({ ...described, sourceFiles: described.sourceFiles.concat(['descriptorCodeValues', 'strayLogicalName']) })); },
+		// LATENT, LEFT ALONE DELIBERATELY: '(declared: descriptorCodeValues)' renders a list that has
+		// exactly ONE element today, so there is no order to depend on and nothing to repair. It acquires
+		// the order-dependence of the two conjuncts above THE MOMENT A SECOND LOGICAL NAME IS DECLARED,
+		// at which point it wants the same presence-of-each treatment.
 		regex: /sourceFiles entry 'strayLogicalName' that is neither verified against SHA256SUMS .* nor a declared logical name \(declared: descriptorCodeValues\)/,
 		twinName: 'disableUndeclaredEntryCheck', fileName: FRAMEWORK_FILE,
 		find: '\t\t\t\t\tif (unverifiedSourceFile !== undefined) {', replace: '\t\t\t\t\tif (unverifiedSourceFile !== undefined && false) {',
