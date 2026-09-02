@@ -387,7 +387,18 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // NO ALLOWED-PATH LIST WAS WIDENED. Every twin in this family was re-observed red against THIS tag
 // before the move was accepted — a re-anchor without a fresh red observation is a gate nobody has
 // proven still works.
-const PHASE3_ANCHOR_TAG = 'postBacklogChainHead-090226';
+// RE-ANCHOR 2026-09-02 (provability sweep). ONLY seamDiffEmpty's base moves, to 75b4eef, the
+// commit that replaced three build.js:NNNN coordinates with stable site tokens in
+// manifest-recipe-finisher.js — 1 file, 12 insertions, 3 deletions, entirely inside
+// replay-manager/. NO ALLOWED-PATH LIST WAS WIDENED and no exclusion was added. Conjunct (iii)
+// keeps PHASE0_ANCHOR_TAG and does NOT move: it watches lib/forge-framework/, which this commit did
+// not touch, and it stayed GREEN through the run that turned seamDiffEmpty red. Verified by grep
+// that PHASE3_ANCHOR_TAG reaches gitDiffStat and gitDiffStat serves seamDiffEmpty ALONE.
+// THE ACCEPTANCE TEST FOR THIS MOVE IS NOT A PASSING SUITE. While seamDiffEmpty's baseline was
+// FAILING, its twin could not demonstrate a green-to-red TRANSITION and correctly refused — the run
+// reported 25/26 conjuncts observed red. This re-anchor is accepted only at 26/26: the gate green
+// AND the twin able to prove it can still fail.
+const PHASE3_ANCHOR_TAG = 'postProvabilitySweep-090226';
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');
