@@ -147,6 +147,31 @@ const seedReplayManager = () => () => {
 			const blockText = doubleBlockText(header, selectionLabels);
 			cb('', { blockText, blockId: contentAddress.blockIdForText(blockText), nodeCount: 1, edgeCount: 0, stableIdCoverage: 1 });
 		},
+		// finish: the seed double builds the graph a later -replay reads, and build()'s materialize
+		// tail finishes what it materializes. A double that omits a verb its seam calls does not
+		// isolate the test — it hides the seam, which is exactly how a TypeError reached a green run.
+		// Contract-enforcing, mirroring the real verb's own required arguments.
+		finish: (spec, cb) => {
+			const given = spec || {};
+			if (!given.inGraph || !given.inGraph.boltUrl) {
+				cb('seedDouble.finish: inGraph carrying a boltUrl is REQUIRED');
+				return;
+			}
+			if (!given.manifestRefId) {
+				cb('seedDouble.finish: a manifestRefId is REQUIRED');
+				return;
+			}
+			if (!given.storeReader) {
+				cb('seedDouble.finish: a storeReader is REQUIRED');
+				return;
+			}
+			cb('', {
+				applied: [{ name: 'seedDoubleFinisher' }],
+				writeCount: 0,
+				passportElementId: `seedPassport:${given.manifestRefId}`,
+				xorVerified: true,
+			});
+		},
 		delete: (handle, cb) => cb(''),
 	};
 };
@@ -180,7 +205,7 @@ const seedBridgeMaker = () => () => ({
 // ---------------------------------------------------------------------
 
 const makeReplaySpy = () => {
-	const calls = { create: [], init: [], deleted: [] };
+	const calls = { create: [], init: [], finish: [], deleted: [] };
 	let seq = 0;
 	const factory = () => ({
 		create: (spec, cb) => {
@@ -192,6 +217,38 @@ const makeReplaySpy = () => {
 		init: (spec, cb) => {
 			calls.init.push(spec);
 			cb('');
+		},
+		// finish is PRESENT and RECORDED, unlike forge/harvest below, because -replay DOES finish:
+		// the verb runs at materialize's tail (build.js) and stamping the graph's self-documentation
+		// is part of what a replay produces. Recording it turns an absence-proof into a
+		// presence-proof — the suite can assert the finish happened and with what.
+		//
+		// It ENFORCES the contract rather than stubbing success. The three refusals mirror the real
+		// verb's own (replayManager.js: manifestRefId, storeReader, and a handle carrying boltUrl),
+		// because a double that accepts a malformed call teaches the suite that a malformed call is
+		// fine. That is how this crash reached a green suite in the first place: the double was
+		// silent about a verb the seam had gained.
+		finish: (spec, cb) => {
+			calls.finish.push(spec);
+			const given = spec || {};
+			if (!given.inGraph || !given.inGraph.boltUrl) {
+				cb('replaySpy.finish: inGraph carrying a boltUrl is REQUIRED');
+				return;
+			}
+			if (!given.manifestRefId) {
+				cb('replaySpy.finish: a manifestRefId is REQUIRED');
+				return;
+			}
+			if (!given.storeReader) {
+				cb('replaySpy.finish: a storeReader is REQUIRED');
+				return;
+			}
+			cb('', {
+				applied: [{ name: 'spyFinisher' }],
+				writeCount: 0,
+				passportElementId: `spyPassport:${given.manifestRefId}`,
+				xorVerified: true,
+			});
 		},
 		delete: (handle, cb) => {
 			calls.deleted.push(handle && handle.graphName);

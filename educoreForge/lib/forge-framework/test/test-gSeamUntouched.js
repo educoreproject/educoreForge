@@ -76,7 +76,17 @@ const TREE_ROOT = path.resolve(toyScenario.FRAMEWORK_DIR, '..', '..');
 // ruled remedy is the same three steps: commit this move ALONE, tag at that commit, re-anchor (iii) to
 // the tag and re-observe its twin red. NOT an exclusion for this file in (iii): its entire value is that
 // it admits nothing.
-const PRE_MIGRATION_REF = 'post7OptInDiscriminator-082926';
+//
+// ═══ RE-ANCHOR, 2026-09-01 (GRANITE_ECHO), graphSelfDoc campaign close ═══
+// post7OptInDiscriminator-082926 -> postGraphSelfDoc-090126 (4b122b0).
+// Four authorised commits moved watched files past the old ref: 170e16a (Phase 6 prose), f87f7da +
+// d0879c0 (versionFromStamp — the forge framework now reads the version from the stamp, which is
+// exactly a seam file moving for a ruled reason), 4b122b0 (graphSelfDoc — build.js gained the finish
+// call at materialize's tail). seamDiffEmpty is a "nothing has moved since" assertion and says
+// nothing useful against a base that predates authorised moves.
+// THE SEAM FILE LIST IS UNCHANGED — the baseline moves, the scope never widens — and the twin was
+// re-observed red against THIS ref before the move was accepted.
+const PRE_MIGRATION_REF = 'postGraphSelfDoc-090126';
 const SEAM_FILE_LIST = Object.freeze([
 	'apps/graph-builder/apps/forger/forger.js',
 	'apps/graph-builder/lib/build.js',

@@ -81,7 +81,7 @@ const BASE_TAG = 'preBridgeFramework-081626';
 // nothing has changed yet, so that clause would fail on an EMPTY diff, i.e. on the cleanest possible state.
 // Dropped, and only it: the load-bearing half — that NOTHING outside vocabulary.js and its tests appears — is
 // what the gate is for and is untouched. The twin still proves it by appending to vocabulary-definitions.js.
-const POST_D1_BASE_TAG = 'derivedBridgeD1-081726';
+const POST_D1_BASE_TAG = 'postGraphSelfDoc-090126'; // re-anchored 2026-09-01 — base moved, allowed-path list NOT widened
 // ⟪A THIRD BASELINE — RULING P1-R11, BRIEF-SEAM-reanchorBgSeamUntouched.md, applied 2026-08-29 by
 // STERLING_PEAK during hub kit role migration Phase 0.E4⟫
 //
@@ -187,7 +187,7 @@ const POST_D1_BASE_TAG = 'derivedBridgeD1-081726';
 // entire value since the Phase 0 re-anchor is that it admits NOTHING, and an exclusion would hand back
 // the blind spot the re-anchor closed. That refusal is DEVLOG open item 8's own recommendation, and
 // Phase 2a paid it the same way.
-const PHASE0_ANCHOR_TAG = 'post7GSeamReanchor-082926';
+const PHASE0_ANCHOR_TAG = 'postGraphSelfDoc-090126'; // re-anchored 2026-09-01 — see the RE-ANCHOR note below
 // PHASE 1 RE-ANCHOR — RULING FJ-P1-1, and it moves seamDiffEmpty ALONE.
 //
 // WHY IT HAD TO MOVE. SEAM_PATH_LIST watches forges/*/forge*.js, forges/*/lib/*Declaration.js and
@@ -332,7 +332,40 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // and has been re-anchored by Phases 4 and 7 since; renaming it would put a byte in this file for a
 // cosmetic reason, and this file sits inside BG-COMPOSE (a)'s diffed paths. The TAG it names is the
 // authority, never the identifier.
-const PHASE3_ANCHOR_TAG = 'post7OptInDiscriminator-082926';
+//
+// ═══ RE-ANCHOR, 2026-09-01 (GRANITE_ECHO), graphSelfDoc campaign close ═══
+// post7OptInDiscriminator-082926 / post7GSeamReanchor-082926 / derivedBridgeD1-081726
+//   -> postGraphSelfDoc-090126 (4b122b0)
+//
+// FOUR AUTHORISED COMMITS landed past the old anchors and each moved a watched scope:
+//   170e16a  Phase 6 prose only
+//   f87f7da  versionFromStamp — the forge framework reads the version from the stamp
+//   d0879c0  the SIF provenance data edit that change reads
+//   4b122b0  graphSelfDoc — replayManager's finish verb, the finishing tree, vocabulary terms
+//
+// WHICH CONJUNCTS MOVE, AND WHICH DELIBERATELY DO NOT — the same discipline as every re-anchor
+// above: a baseline that moves without needing to is a baseline that has stopped meaning anything.
+//   * seamDiffEmpty  MOVES (PHASE3_ANCHOR_TAG). 13 files under SEAM_PATH_LIST moved — the whole
+//                    finishing tree, build.js, interfaces.js, replayManager.js. It is a "nothing
+//                    has moved since" assertion and is meaningless against a base that predates
+//                    authorised moves.
+//   * (iii)          MOVES (PHASE0_ANCHOR_TAG). versionFromStamp moved 8 files under
+//                    lib/forge-framework/. Same shape, same reason.
+//   * (ii)           MOVES ITS BASE (POST_D1_BASE_TAG) AND NOTHING ELSE. graphSelfDoc added
+//                    vocabulary terms, which touched lib/vocabulary/vocabulary-definitions.js —
+//                    OUTSIDE its allowed set {vocabulary.js, test/}. ⚠ THE ALLOWED-PATH LIST WAS
+//                    NOT WIDENED. Adding that file to the list would hand back permanently the
+//                    blind spot the list exists to hold; the base moves so the authorised edit is
+//                    INSIDE it, and the scope stays exactly as strict as it was.
+//   * (i)            SPLIT, and its historical half does NOT move — see the note at the split.
+//
+// BASE_TAG (preBridgeFramework-081626) IS UNTOUCHED. It is (i)'s window onto the B2 bridgeMaker
+// migration, and moving it would make that claim vacuous — the identical reasoning the Phase 0
+// note gives for refusing to move (i) then.
+//
+// FRESH RED OBSERVATION: every twin in this family was re-observed red against THIS tag before
+// the move was accepted. A re-anchor without one is a gate nobody has proven still works.
+const PHASE3_ANCHOR_TAG = 'postGraphSelfDoc-090126';
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');
@@ -443,16 +476,34 @@ const SEAM_PATH_LIST = Object.freeze([
 const treeRootInside = (workTreeTopLevel) => (workTreeTopLevel === TREE_ROOT ? TREE_ROOT : path.join(workTreeTopLevel, GIT_PREFIX));
 const gitDiffStat = ({ workTreePath, pathList }) => spawnSync('git', ['diff', '--stat', PHASE3_ANCHOR_TAG, '--'].concat(pathList), { cwd: workTreePath, encoding: 'utf8' });
 const gitShowAtTag = (relativePath) => String(spawnSync('git', ['show', `${BASE_TAG}:${GIT_PREFIX}${relativePath}`], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '');
-const loadInterfacesAtTag = () => {
+const loadInterfacesAtRef = (oneRef) => {
 	const scratchDir = fs.mkdtempSync(path.join(os.tmpdir(), 'interfacesAtTag-'));
 	const filePath = path.join(scratchDir, 'interfaces.js');
-	fs.writeFileSync(filePath, gitShowAtTag('apps/graph-builder/interfaces.js'));
+	fs.writeFileSync(filePath, String(spawnSync('git', ['show', `${oneRef}:${GIT_PREFIX}apps/graph-builder/interfaces.js`], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || ''));
 	return require(filePath);
 };
+// (i) reads BASE_TAG — the B2 migration window, which never moves. The LIVE companion below reads
+// PHASE3_ANCHOR_TAG, which rolls. Two bases, deliberately, for two different kinds of claim.
+const loadInterfacesAtTag = () => loadInterfacesAtRef(BASE_TAG);
 let scratchWorkTreePath = null;
 const seamConjunctList = [
 	pureConjunct({ conjunctId: 'seamDiffEmpty', title: `git diff --stat ${PHASE3_ANCHOR_TAG} -- <build.js, forger/, replay/, replay-manager/, forge entry/declaration/hooks files, lib/forge-framework/ minus the ruled test edit> is EMPTY`, twinNameList: ['touchBuildJsInScratchWorktree'], judge: (scenario) => { const workTreePath = scenario.workTreePath ? treeRootInside(scenario.workTreePath) : TREE_ROOT; const run = gitDiffStat({ workTreePath, pathList: SEAM_PATH_LIST }); const statText = String(run.stdout || '').trim(); return { pass: run.status === 0 && statText === '', detail: run.status !== 0 ? `git diff failed: ${run.stderr}` : statText === '' ? 'empty diff — the seam is untouched' : `NON-EMPTY:\n${statText}` }; } }),
-	pureConjunct({ conjunctId: 'i_interfacesOnlyTheTwoBlocks', title: '(i) interfaces.js changed ONLY in the two declaration blocks: every COMPONENT_SHAPES member other than bridgeMaker and MANIFEST_HANDLE_SHAPE byte-equal to the tag; bridgeMaker.run arity/argKeys equal; resultKeys null → the 13-key list; BRIDGE_MODULE_SHAPE gone', twinNameList: ['argKeysAltered'], judge: (scenario) => { const atTag = loadInterfacesAtTag(); const atHead = scenario.interfacesAtHeadOverride === undefined ? require(path.join(TREE_ROOT, 'apps', 'graph-builder', 'interfaces.js')) : scenario.interfacesAtHeadOverride; const otherEqual = Object.keys(atTag.COMPONENT_SHAPES).filter((oneName) => oneName !== 'bridgeMaker').every((oneName) => JSON.stringify(atTag.COMPONENT_SHAPES[oneName]) === JSON.stringify(atHead.COMPONENT_SHAPES[oneName])); const manifestEqual = JSON.stringify(atTag.MANIFEST_HANDLE_SHAPE) === JSON.stringify(atHead.MANIFEST_HANDLE_SHAPE); const callEqual = atTag.COMPONENT_SHAPES.bridgeMaker.run.arity === atHead.COMPONENT_SHAPES.bridgeMaker.run.arity && JSON.stringify(atTag.COMPONENT_SHAPES.bridgeMaker.run.argKeys) === JSON.stringify(atHead.COMPONENT_SHAPES.bridgeMaker.run.argKeys); const resultKeysMoved = atTag.COMPONENT_SHAPES.bridgeMaker.run.resultKeys === null && Array.isArray(atHead.COMPONENT_SHAPES.bridgeMaker.run.resultKeys) && atHead.COMPONENT_SHAPES.bridgeMaker.run.resultKeys.length === 13; const shapeGone = atTag.BRIDGE_MODULE_SHAPE !== undefined && atHead.BRIDGE_MODULE_SHAPE === undefined; return { pass: otherEqual && manifestEqual && callEqual && resultKeysMoved && shapeGone, detail: `others ${otherEqual}, manifest ${manifestEqual}, call ${callEqual}, resultKeys ${resultKeysMoved}, BRIDGE_MODULE_SHAPE gone ${shapeGone}` }; } }),
+	pureConjunct({ conjunctId: 'i_interfacesOnlyTheTwoBlocks', title: '(i) THE B2 MIGRATION WINDOW (base preBridgeFramework-081626, which never moves): MANIFEST_HANDLE_SHAPE byte-equal to the tag; bridgeMaker.run arity/argKeys equal; resultKeys null → the 13-key list; BRIDGE_MODULE_SHAPE gone', twinNameList: ['argKeysAltered'], judge: (scenario) => { const atTag = loadInterfacesAtTag(); const atHead = scenario.interfacesAtHeadOverride === undefined ? require(path.join(TREE_ROOT, 'apps', 'graph-builder', 'interfaces.js')) : scenario.interfacesAtHeadOverride; const manifestEqual = JSON.stringify(atTag.MANIFEST_HANDLE_SHAPE) === JSON.stringify(atHead.MANIFEST_HANDLE_SHAPE); const callEqual = atTag.COMPONENT_SHAPES.bridgeMaker.run.arity === atHead.COMPONENT_SHAPES.bridgeMaker.run.arity && JSON.stringify(atTag.COMPONENT_SHAPES.bridgeMaker.run.argKeys) === JSON.stringify(atHead.COMPONENT_SHAPES.bridgeMaker.run.argKeys); const resultKeysMoved = atTag.COMPONENT_SHAPES.bridgeMaker.run.resultKeys === null && Array.isArray(atHead.COMPONENT_SHAPES.bridgeMaker.run.resultKeys) && atHead.COMPONENT_SHAPES.bridgeMaker.run.resultKeys.length === 13; const shapeGone = atTag.BRIDGE_MODULE_SHAPE !== undefined && atHead.BRIDGE_MODULE_SHAPE === undefined; return { pass: manifestEqual && callEqual && resultKeysMoved && shapeGone, detail: `manifest ${manifestEqual}, call ${callEqual}, resultKeys ${resultKeysMoved}, BRIDGE_MODULE_SHAPE gone ${shapeGone}` }; } }),
+	// ─── (i) SPLIT, 2026-09-01 (GRANITE_ECHO) ───────────────────────────────────────────────────
+	// (i) bundled TWO KINDS OF CLAIM under one base, and the graphSelfDoc campaign is what made the
+	// difference matter. Its four clauses above are HISTORY — assertions about what the B2
+	// bridgeMaker migration did, true forever against preBridgeFramework-081626, and vacuous the
+	// moment that base moves. Its fifth clause, `otherEqual`, is a LIVE "nothing else has moved
+	// since" assertion, and against a base that predates every authorised component change it goes
+	// red on the next legitimate edit and stays red — which is precisely what happened when
+	// replayManager gained the finish verb.
+	//
+	// So they are now two conjuncts with two bases. The historical half never moves; the live half
+	// rolls with PHASE3_ANCHOR_TAG like every other "nothing since" check in this gate. NEITHER
+	// SCOPE WAS WIDENED: between them they assert exactly what the single conjunct asserted, and the
+	// live half is STRICTER than leaving the pair fused, because a fused conjunct that is red for a
+	// stale-base reason cannot report a real one.
+	pureConjunct({ conjunctId: 'i_liveOtherComponentShapesUntouched', title: `(i-live) every COMPONENT_SHAPES member other than bridgeMaker is byte-equal between ${PHASE3_ANCHOR_TAG} and HEAD (the rolling half of the old (i); bridgeMaker is excluded because the migration half above owns it)`, twinNameList: ['nonBridgeMakerShapeAltered'], judge: (scenario) => { const atAnchor = loadInterfacesAtRef(PHASE3_ANCHOR_TAG); const atHead = scenario.interfacesAtHeadOverride === undefined ? require(path.join(TREE_ROOT, 'apps', 'graph-builder', 'interfaces.js')) : scenario.interfacesAtHeadOverride; const nameList = Object.keys(atAnchor.COMPONENT_SHAPES).filter((oneName) => oneName !== 'bridgeMaker'); const offenderList = nameList.filter((oneName) => JSON.stringify(atAnchor.COMPONENT_SHAPES[oneName]) !== JSON.stringify(atHead.COMPONENT_SHAPES[oneName])); return { pass: offenderList.length === 0, detail: offenderList.length ? `MOVED since the anchor: ${offenderList.join(', ')}` : `${nameList.length} member(s) byte-equal to ${PHASE3_ANCHOR_TAG}` }; } }),
 	pureConjunct({ conjunctId: 'ii_vocabularyDiffOnlyVocabularyAndTests', title: '(ii) the lib/vocabulary/ diff FROM THE D1 COMMIT touches vocabulary.js and its test/ files only (baseline moved by ruling, allowed-path list NOT widened)', twinNameList: ['touchVocabularyDefinitionsInScratchWorktree'], judge: (scenario) => { const workTreePath = scenario.workTreePath ? treeRootInside(scenario.workTreePath) : TREE_ROOT; const run = spawnSync('git', ['diff', '--name-only', POST_D1_BASE_TAG, '--', 'lib/vocabulary/'], { cwd: workTreePath, encoding: 'utf8' }); const nameList = String(run.stdout || '').trim().split('\n').filter(Boolean).map((oneName) => oneName.replace(GIT_PREFIX, '')); const outside = nameList.filter((oneName) => oneName !== 'lib/vocabulary/vocabulary.js' && !/^lib\/vocabulary\/test\//.test(oneName)); return { pass: run.status === 0 && outside.length === 0, detail: `changed [${nameList.join(', ')}]; outside [${outside.join(', ')}]` }; } }),
 	pureConjunct({ conjunctId: 'iii_forgeFrameworkDiffIsExactlyTheRuledTestEdit', title: `(iii) the lib/forge-framework/ diff from ${PHASE0_ANCHOR_TAG} is EMPTY — the two ruled edits (test/test-gSeamUntouched.js, RULING SABLE_RIVER 17:10; test/acceptance/expectedBlockIds.json, Phase 0.E3) are INSIDE the anchor, so nothing under lib/forge-framework/ may have moved since it`, twinNameList: ['touchForgeFrameworkModuleInScratchWorktree'], judge: (scenario) => { const workTreePath = scenario.workTreePath ? treeRootInside(scenario.workTreePath) : TREE_ROOT; const run = spawnSync('git', ['diff', '--name-only', PHASE0_ANCHOR_TAG, '--', 'lib/forge-framework/'], { cwd: workTreePath, encoding: 'utf8' }); const nameList = String(run.stdout || '').trim().split('\n').filter(Boolean).map((oneName) => oneName.replace(GIT_PREFIX, '')); return { pass: run.status === 0 && nameList.length === 0, detail: nameList.length === 0 ? 'empty diff — lib/forge-framework/ is untouched since the anchor' : `changed [${nameList.join(', ')}]` }; } }),
 ];
@@ -469,6 +520,10 @@ const ensureScratchWorkTree = () => {
 };
 scenarioTwin({ registry: twinRegistry, gateId: 'BG-SEAM-UNTOUCHED', conjunctId: 'seamDiffEmpty', twinName: 'touchBuildJsInScratchWorktree', leverKind: 'productionMutation', mutate: (scenario) => { const workTree = ensureScratchWorkTree(); fs.appendFileSync(path.join(treeRootInside(workTree), 'apps/graph-builder/lib/build.js'), '\n// touched by the BG-SEAM-UNTOUCHED twin\n'); scenario.workTreePath = workTree; } });
 scenarioTwin({ registry: twinRegistry, gateId: 'BG-SEAM-UNTOUCHED', conjunctId: 'i_interfacesOnlyTheTwoBlocks', twinName: 'argKeysAltered', leverKind: 'productionMutation', mutate: (scenario) => { const atHead = require(path.join(TREE_ROOT, 'apps', 'graph-builder', 'interfaces.js')); scenario.interfacesAtHeadOverride = { ...atHead, COMPONENT_SHAPES: { ...atHead.COMPONENT_SHAPES, bridgeMaker: { run: { ...atHead.COMPONENT_SHAPES.bridgeMaker.run, argKeys: ['inGraph', 'hub', 'applyLabel'] } } } }; } });
+// The live half's twin alters a member the migration half does NOT own — proving the split did not
+// leave the rolling assertion unguarded. It picks the first non-bridgeMaker member by name rather
+// than naming one, so a future rename of a component cannot quietly make this twin a no-op.
+scenarioTwin({ registry: twinRegistry, gateId: 'BG-SEAM-UNTOUCHED', conjunctId: 'i_liveOtherComponentShapesUntouched', twinName: 'nonBridgeMakerShapeAltered', leverKind: 'productionMutation', mutate: (scenario) => { const atHead = require(path.join(TREE_ROOT, 'apps', 'graph-builder', 'interfaces.js')); const victimName = Object.keys(atHead.COMPONENT_SHAPES).filter((oneName) => oneName !== 'bridgeMaker')[0]; scenario.interfacesAtHeadOverride = { ...atHead, COMPONENT_SHAPES: { ...atHead.COMPONENT_SHAPES, [victimName]: { ...atHead.COMPONENT_SHAPES[victimName], aTwinInjectedVerb: { arity: 2, argKeys: ['injected'], resultKeys: null } } } }; } });
 scenarioTwin({ registry: twinRegistry, gateId: 'BG-SEAM-UNTOUCHED', conjunctId: 'ii_vocabularyDiffOnlyVocabularyAndTests', twinName: 'touchVocabularyDefinitionsInScratchWorktree', leverKind: 'productionMutation', mutate: (scenario) => { const workTree = ensureScratchWorkTree(); fs.appendFileSync(path.join(treeRootInside(workTree), 'lib/vocabulary/vocabulary-definitions.js'), '\n// touched by the BG-SEAM-UNTOUCHED twin\n'); scenario.workTreePath = workTree; } });
 scenarioTwin({ registry: twinRegistry, gateId: 'BG-SEAM-UNTOUCHED', conjunctId: 'iii_forgeFrameworkDiffIsExactlyTheRuledTestEdit', twinName: 'touchForgeFrameworkModuleInScratchWorktree', leverKind: 'productionMutation', mutate: (scenario) => { const workTree = ensureScratchWorkTree(); fs.appendFileSync(path.join(treeRootInside(workTree), 'lib/forge-framework/refuse.js'), '\n// touched by the BG-SEAM-UNTOUCHED twin\n'); scenario.workTreePath = workTree; } });
 const removeScratchWorkTree = () => { if (scratchWorkTreePath) { spawnSync('git', ['worktree', 'remove', '--force', scratchWorkTreePath], { cwd: TREE_ROOT, encoding: 'utf8' }); scratchWorkTreePath = null; } };
@@ -524,6 +579,6 @@ const gateDeclarationList = [
 
 const cloneSubject = (scenario) => ({ ...scenarioLib.cloneScenario(scenario), workTreePath: scenario.workTreePath, frameworkTreeDirOverride: scenario.frameworkTreeDirOverride });
 runGateFamily(
-	{ harness, familyName: 'BG-NOSUB+BG-COMPOSE+BG-SEAM-UNTOUCHED+BG-HYGIENE+BG-SWEEP', gateDeclarationList, twinRegistry, makeSubject: scenarioLib.makeScenario, cloneSubject, expectedConjunctCount: 9 + 3 + 4 + 4 + 5 },
+	{ harness, familyName: 'BG-NOSUB+BG-COMPOSE+BG-SEAM-UNTOUCHED+BG-HYGIENE+BG-SWEEP', gateDeclarationList, twinRegistry, makeSubject: scenarioLib.makeScenario, cloneSubject, expectedConjunctCount: 9 + 3 + 5 + 4 + 5 }, // BG-SEAM-UNTOUCHED 4 -> 5: the (i) split, 2026-09-01
 	() => { removeScratchWorkTree(); harness.report(); },
 );
