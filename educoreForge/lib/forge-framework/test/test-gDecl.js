@@ -212,8 +212,9 @@ conjunctList.push(
 	// the offline-precondition PRESENCE check.
 	// ⚠ THE REGISTRY DOUBLE IS RETIRED 2026-08-29 (hub-kit-role Phase 4), FOR TWO REASONS, and the
 	// second is the one that matters. (1) It stopped working: it flipped S3 to the offline kind by
-	// matching S3's inline `kind: ALLOWANCE_KIND.FORGE_TIME,` line, and S3 is now built by the shared
-	// versionDisagreementRow factory and carries no such line — so the mutation silently stopped
+	// matching S3's inline `kind: ALLOWANCE_KIND.FORGE_TIME,` line; S3 was then rebuilt by a shared
+	// versionDisagreementRow factory (itself RETIRED with S3 and P17 under versionFromStamp,
+	// 2026-08-31) and carried no such line — so the mutation silently stopped
 	// applying and the conjunct could no longer be observed red. (2) IT IS NO LONGER NEEDED: this
 	// conjunct used a double because NO SHIPPED ROW WAS OFFLINE, and P5 now is — the registry's first.
 	// Exercising the real row is STRICTLY STRONGER than doubling one: a double proves the CHECK

@@ -44,6 +44,14 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // post-Channel-B recheck (work order gate (g)) is what proves this, and withholding this one SET is that
 // gate's RED twin.
 //
+// ============================================================================================
+// standardsIncluded VERSUS THE MANIFEST'S SUBJECTS — A CORRESPONDENCE NOTHING CHECKS (Lane B, 2026-09-02)
+// ============================================================================================
+// `standardsIncluded` lists distinct `_source` values, which are descriptor `standardName`s; manifest
+// subjects are prefixed by bundle DIRECTORY names. They correspond through the descriptor, G-SOURCE,
+// G-UNIQUE and hub invariant I12 — not through any check that reads both sides. Verified by reading for
+// the four bundles, 2026-09-02.
+//
 // Async style: qtools taskListPlus/pipeRunner; callback(errString, result). No async/await, no
 // try/catch-for-control-flow.
 

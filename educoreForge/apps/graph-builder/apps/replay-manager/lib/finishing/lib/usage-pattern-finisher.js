@@ -79,7 +79,9 @@ const moduleFunction =
 					'MATCH (d:StandardDefinition) RETURN d.standardName AS standard, d.version AS version, ' +
 					'd.propertyCount AS properties, d.mappingDisposition AS mappingDisposition ORDER BY standard',
 				caveat:
-					'`version` is what the PARSER reported and is the value that entered the content address. ' +
+					'`version` is what the FORGE stamped (the provenance stamp since versionFromStamp; a ' +
+					'parser-reported value only on pre-framework blocks) and is the value that entered the ' +
+					'content address. ' +
 					'Check `versionDisagreement` before quoting it — where it is true, `publishedVersion` is what ' +
 					'the standard actually is and the two deliberately differ.',
 				zeroRowMeaning: 'defect',

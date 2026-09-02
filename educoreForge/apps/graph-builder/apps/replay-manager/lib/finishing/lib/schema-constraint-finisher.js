@@ -30,7 +30,11 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //     UPGRADED to a constraint-backed one, and that is finish's ONE documented index change.)
 //
 // =====================================================================================================
-// THE FAILURE PATH RESTORES WHAT IT DROPPED — GRANITE_ECHO'S ADDITION, AND IT IS A GATE
+// THE FAILURE PATH RESTORES WHAT IT DROPPED — GRANITE_ECHO'S ADDITION. A REQUIREMENT, NOT YET A GATE:
+// no test drives this branch (gSD N5, 2026-09-01). Every constraint has succeeded in every run, so the
+// restore-then-surface path below has NEVER EXECUTED. Proving it means injecting a constraint failure
+// against a live graph, which the 2026-09-02 stand-down order excluded by name. Until then the graph-
+// worse-than-it-found-it path is unproven, and this comment is the only thing saying so.
 // =====================================================================================================
 // Between the DROP and the successful CREATE there is a window in which the graph has NO resolution-key
 // index at all. If the constraint creation fails in that window — the realistic cause being duplicate

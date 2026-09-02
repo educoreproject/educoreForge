@@ -564,8 +564,22 @@ const moduleFunction =
 						}
 						// THE GUARD, at the describeSource evaluation step beside the sourceUrl and sourceFiles
 						// refusals — here rather than above because stamp.publishedVersion does not exist until
-						// deriveVersionStamp answers. UNCOUPLED BY CONSTRUCTION: the versionDisagreement allowance
-						// rows were RETIRED in this same phase, so nothing can suppress it and it depends on nothing.
+						// deriveVersionStamp answers. UNCOUPLED BY CONSTRUCTION, IN BOTH DIRECTIONS: the
+						// versionDisagreement allowance rows (S3, P17) were RETIRED in this same phase, so nothing
+						// can suppress this guard and it depends on nothing — AND the allowances evaluated ABOVE
+						// (evaluateAllowancesAtStep at DESCRIBE_SOURCE) cannot be misjudged by this guard running
+						// after them, PROVIDED this invariant holds: NO ALLOWANCE ROW EVALUATED AT DESCRIBE_SOURCE
+						// MAY READ describedSource.version, describedSource.selfDescribedVersion, OR THE STAMP; a row
+						// that needs the resolved version must be evaluated after it. Why: the stamp changes exactly
+						// one observable field (version, undefined -> resolved) and a guard refusal aborts the run
+						// with no artifact, so a pre-stamp allowance verdict can differ from a post-stamp one only
+						// for a row that reads version. The retired S3 row is the motivating violation: its
+						// precondition ("version differs from selfDescribedVersion ?? 'unknown'") would be MET
+						// pre-stamp on every SIF run and then REFUSED here, so it could never be satisfied on a
+						// surviving run. UNGATED as of 2026-09-02 (Lane B, B4); the recommended gate walks
+						// MIGRATION_ALLOWANCE_REGISTRY feeding each DESCRIBE_SOURCE precondition a Proxy
+						// describedSource that refuses any read of version/selfDescribedVersion (the
+						// proxyReadsThreeOnly idiom in test-gSeam.js) — filed as a work order, not built.
 						const disagreementRefusal = refuseVersionDisagreement({
 							forgePrefix,
 							declaredVersion: describedSource.version,

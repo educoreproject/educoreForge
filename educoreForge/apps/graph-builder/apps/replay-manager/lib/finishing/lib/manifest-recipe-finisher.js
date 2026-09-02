@@ -46,7 +46,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // wrote why this block is in this manifest". THAT PREMISE IS FALSE ON THIS STORE GENERATION, established
 // three ways: BY ROW (9 of 9 membership rows match the template, 0 candidates); BY WRITER
 // (manifestEditor.add requires a description but its ONLY caller is build.js, which hardcodes three
-// template literals at build.js:1529 forged, :1249 reused, :1833 bridged — so no human description can
+// template literals in build.js's three membership writes (forged, reused, bridged; line numbers move — grep the literal) — so no human description can
 // arrive by any current path); and BY THE STORE'S OWN DESIGN (manifestEditor EXCLUDES descriptions from
 // the manifest hash — "fixing a typo in a description must never change a refId" — so the system already
 // classifies this text as COMMENTARY, not identity-bearing WARRANT).

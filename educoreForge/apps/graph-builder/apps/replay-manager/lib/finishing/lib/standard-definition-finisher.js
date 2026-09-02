@@ -24,16 +24,22 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // ============================================================================================
 // THE HONESTY RULES — ported deliberately, because they are the point of the node
 // ============================================================================================
-//   * `version` passes through from the root UNTIDIED. Whatever the parser reported is what is recorded,
-//     including a value we believe to be wrong. It is the content-address byte; tidying it here would make
-//     the graph disagree with the schema block it came from.
+//   * `version` passes through from the root UNTIDIED. Whatever the forge stamped is what is recorded,
+//     including a value we believe to be wrong. Since versionFromStamp (f87f7da, 2026-09-01) a framework
+//     forge takes the root's version from the provenance stamp when the source declares none and REFUSES
+//     at forge time when a declared version disagrees with the stamp; pre-framework blocks carry whatever
+//     their parser reported. It is the content-address byte; tidying it here would make the graph
+//     disagree with the schema block it came from.
 //   * `versionSource` passes through when present, and defaults to 'declared' ONLY WHEN A VERSION EXISTS.
 //     When the version itself is absent it stays NULL. A MISSING VERSION READS AS AN HONEST NULL, NEVER AN
 //     INVENTED VALUE — the same shape as the `authored` ruling on purposeSource: do not manufacture a
 //     provenance token to fill a hole.
 //   * `versionDisagreement` + `versionNote` are set when `version` and `publishedVersion` DIFFER. Carrying
-//     both numbers silently is NOT enough: a consumer reading the obvious field would be told SIF is
-//     version 1.0 and never learn that 4.3 exists. The disagreement is itself a fact and gets a field.
+//     both silently is NOT enough: a consumer reading the obvious field would learn one and never the
+//     other. The disagreement is itself a fact and gets a field. REACHABILITY: a framework-forged root
+//     cannot differ (forge-framework copies the stamp or refuses at forge time), so this branch serves
+//     pre-framework-generation blocks — where it HAS fired: the 2026-09-01 five-bridge finish measured
+//     one disagreement (SIF, '1.0' beside 'unknown'; COVERAGE-fiveBridgeFinish-090126.md).
 //
 // ============================================================================================
 // DETERMINISM — CYPHER collect() ORDER IS NOT STABLE, AND THIS NODE IS IN FINGERPRINT SCOPE

@@ -30,11 +30,17 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // legible. The alternative — emitting nothing — would let a consumer read "no attestation" as "nothing to
 // report", which is the failure this node exists to prevent.
 //
-// MEASURED CAVEAT, recorded so nobody misreads a fixture (S1): on THIS generation nothing produces
-// gateResults at all, AND the fidelity gate nonetheless RUNS unconditionally on every materialize. So an
-// all-notRun attestation would assert an untruth about a gate that ran. THE GATE BELOW IS STILL EXACTLY
-// RIGHT FOR A GATE THAT GENUINELY DID NOT RUN — the finding was only that fidelity is not such a case this
-// generation, and the repair is the PRODUCER (Phase 5 gate (f)), not this consumer.
+// MEASURED CAVEAT (S1, 2026-08-31), SINCE PARTLY REPAIRED. When this file was written nothing produced
+// gateResults at all. The PRODUCER now exists (build.js materialize tail, "gateResults is ASSEMBLED
+// HERE"): it supplies ONE row, roundTrip, read from the stage runner's own report — pass when the stage
+// wrote its summary, notRun with the runner's disposition when it did not. It supplies NO fidelity row BY
+// RULING (2026-09-01, FINDING 5-A): fidelityGateRunner's success callback is reachable from three states
+// the call site cannot tell apart (skipped, genuine pass, loss allowed under --allowFidelityLoss), so a
+// derived pass would be a guess. CONSEQUENCE A CONSUMER MUST KNOW: on every build the fidelity row reads
+// verdict notRun / verdictSupplied false / expected true EVEN WHEN THE FIDELITY GATE RAN. Read it as
+// "not attested", never as "did not run". goldEvalCheck is likewise unsupplied at materialize (a separate,
+// later verb) and reads the same way. The gate below is still exactly right for a gate that genuinely
+// did not run; the fidelity gap is the producer's, carried as FINDING 5-A for a separate order.
 //
 // ============================================================================================
 // S2 — DETERMINISM. NO PIDs. NO TIMESTAMPS AS IDENTITY.
