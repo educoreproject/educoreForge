@@ -486,7 +486,14 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // so pointing here at the campaign tag would leave this conjunct red on the re-anchor's own commit.
 // apps/graph-builder/test/ remains OUTSIDE the diffed paths — measured — so moving THIS constant
 // cannot cascade into another re-anchor.
-const P1_BASELINE_COMMIT = 'postSeamReanchorChainHead-090126';
+// RE-ANCHOR 2026-09-02 (GRANITE_ECHO): postSeamReanchorChainHead-090126 -> postBacklogSeamReanchor-090226
+// (c43e900). Same collision as before and for the same reason: the stand-down backlog's seam
+// re-anchor edits lib/bridge-framework/test/test-bgNosub.js, which is INSIDE these six paths, so
+// pointing here at anything earlier leaves (a) red on the very commit that fixed the other gates.
+// The base is therefore the CHAIN HEAD. The SIX DECLARED PATHS ARE UNCHANGED — the baseline moves,
+// the scope never widens — and apps/graph-builder/test/ remains OUTSIDE them (measured), so moving
+// THIS constant cannot cascade into a further re-anchor.
+const P1_BASELINE_COMMIT = 'postBacklogSeamReanchor-090226';
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
