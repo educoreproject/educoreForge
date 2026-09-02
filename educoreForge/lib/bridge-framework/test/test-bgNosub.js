@@ -187,7 +187,7 @@ const POST_D1_BASE_TAG = 'postGraphSelfDoc-090126'; // re-anchored 2026-09-01 �
 // entire value since the Phase 0 re-anchor is that it admits NOTHING, and an exclusion would hand back
 // the blind spot the re-anchor closed. That refusal is DEVLOG open item 8's own recommendation, and
 // Phase 2a paid it the same way.
-const PHASE0_ANCHOR_TAG = 'postGraphSelfDoc-090126'; // re-anchored 2026-09-01 — see the RE-ANCHOR note below
+const PHASE0_ANCHOR_TAG = 'postBacklogChainHead-090226'; // re-anchored 2026-09-02 — see the RE-ANCHOR note below
 // PHASE 1 RE-ANCHOR — RULING FJ-P1-1, and it moves seamDiffEmpty ALONE.
 //
 // WHY IT HAD TO MOVE. SEAM_PATH_LIST watches forges/*/forge*.js, forges/*/lib/*Declaration.js and
@@ -365,7 +365,29 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 //
 // FRESH RED OBSERVATION: every twin in this family was re-observed red against THIS tag before
 // the move was accepted. A re-anchor without one is a gate nobody has proven still works.
-const PHASE3_ANCHOR_TAG = 'postGraphSelfDoc-090126';
+//
+// ═══ RE-ANCHOR, 2026-09-02 (GRANITE_ECHO), stand-down backlog close ═══
+// postGraphSelfDoc-090126 -> postBacklogChainHead-090226 (058f5e6)
+//
+// CAUSE: three authorised commits landed prose into watched paths — 5a5eddc (Lane B, the Profile
+// and framework-spec corrections), 87fafd1 (Lane A, the p0b lever/proxy repairs and test-gCompat's
+// faithfulness repair), and 058f5e6 (the batched finisher-header, guard-invariant and emitted-string
+// corrections). COMMENT AND DOCUMENTATION TEXT ONLY; node --check clean; no executable line moved.
+//
+// ONLY THE TWO CONJUNCTS THAT EXPIRED MOVE, and the discipline is the same as every re-anchor above:
+//   * seamDiffEmpty  MOVES — apps/graph-builder/apps/replay-manager/ (the finishing tree) and
+//                    lib/forge-framework/ both gained prose. It is a "nothing has moved since"
+//                    assertion and says nothing useful against a base that predates authorised moves.
+//   * (iii)          MOVES — lib/forge-framework/ gained forge-framework.js's invariant comment and
+//                    test-gDecl.js's one ruled comment line. Same shape, same reason.
+//   * (i) and (i-live) DO NOT MOVE. interfaces.js was not touched by any of the three commits, so
+//                    neither the migration-window claim nor the live COMPONENT_SHAPES comparison has
+//                    expired. A baseline that moves without needing to has stopped meaning anything.
+//   * (ii)           DOES NOT MOVE. lib/vocabulary/ was not touched either.
+// NO ALLOWED-PATH LIST WAS WIDENED. Every twin in this family was re-observed red against THIS tag
+// before the move was accepted — a re-anchor without a fresh red observation is a gate nobody has
+// proven still works.
+const PHASE3_ANCHOR_TAG = 'postBacklogChainHead-090226';
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');
