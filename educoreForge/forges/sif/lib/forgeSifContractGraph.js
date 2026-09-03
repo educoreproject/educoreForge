@@ -175,6 +175,50 @@ const canonicalEdgeTypeFor = ({ nativeEdgeType, edgeContext }) => {
 	return canonicalEdgeType;
 };
 
+// native-edge properties CARRIED onto the canonical edge (WORKORDER-sifViaConservation-090226).
+//
+// EDGE_TYPE_TRANSLATION above folds ten native types into three canonical ones and, until this
+// change, the canonical edge recorded NOTHING of what it was folded from. `nativeEdgeType` is
+// stamped on EVERY translated edge so the fold is recoverable without touching the canonical
+// vocabulary (the DME's traversal.cypher declares a fixed edge set; this adds a property, not a type).
+//
+// `via` and `mandatory` exist ONLY on the edges the parser emits from its object-to-object
+// REFERENCES resolution. There they are edge IDENTITY, not decoration: the parser's
+// deduplicateEdges keys on `sourceTable|targetTable|via`, so two references A->B through DIFFERENT
+// fields are MEANT to survive as two edges. Dropping `via` made them byte-identical and the graph write
+// collapsed them -- four opposed privacy references on PersonPrivacyObligationDocument
+// (ShareWithRefId, DoNotShareWithRefId, NeverShareWithRefId, PermissionGranteeRefId) became one
+// undifferentiated edge.
+//
+// CARRIED ONLY WHEN PRESENT. An edge stamped `via: undefined` is a different block byte from an edge
+// carrying no `via` at all, so an absent native property must leave no trace whatsoever.
+const CARRIED_NATIVE_EDGE_PROPERTY_NAME_LIST = Object.freeze(['via', 'mandatory']);
+
+const carriedEdgePropertiesFor = ({ nativeEdgeType, nativeEdgeProperties, edgeContext }) => {
+	const propertiesAreShaped =
+		nativeEdgeProperties === undefined ||
+		(typeof nativeEdgeProperties === 'object' &&
+			nativeEdgeProperties !== null &&
+			!Array.isArray(nativeEdgeProperties));
+	if (!propertiesAreShaped) {
+		throw new Error(
+			`${moduleName}: native edge '${nativeEdgeType}' (${edgeContext}) carries properties that are ` +
+				`${Array.isArray(nativeEdgeProperties) ? 'an array' : `a ${typeof nativeEdgeProperties}`} -- ` +
+				`a native edge's properties are a plain object or absent; anything else would read as ` +
+				`no properties at all and discard declared edge content silently`,
+		);
+	}
+	const carriedProperties = { nativeEdgeType };
+	CARRIED_NATIVE_EDGE_PROPERTY_NAME_LIST.forEach((oneNativePropertyName) => {
+		const nativeValue =
+			nativeEdgeProperties === undefined ? undefined : nativeEdgeProperties[oneNativePropertyName];
+		if (nativeValue !== undefined) {
+			carriedProperties[oneNativePropertyName] = nativeValue;
+		}
+	});
+	return carriedProperties;
+};
+
 // kinds that the root owns directly (the synthesized HAS_CLASS / HAS_SUPPORT ownership edges).
 const OWNERSHIP_EDGE_FOR_KIND = Object.freeze({
 	object: EDGE_TYPES.HAS_CLASS,
@@ -501,6 +545,11 @@ const moduleFunction =
 						fromStableId: owner && owner.stableId,
 						toStableId: self.stableId,
 						edgeContext,
+						edgeProperties: carriedEdgePropertiesFor({
+							nativeEdgeType: nativeNode._parentEdge.type,
+							nativeEdgeProperties: nativeNode._parentEdge.properties,
+							edgeContext,
+						}),
 					});
 				}
 				// the node's outgoing native edges.
@@ -515,6 +564,11 @@ const moduleFunction =
 						fromStableId: self.stableId,
 						toStableId: target && target.stableId,
 						edgeContext,
+						edgeProperties: carriedEdgePropertiesFor({
+							nativeEdgeType: nativeEdge.type,
+							nativeEdgeProperties: nativeEdge.properties,
+							edgeContext,
+						}),
 					});
 				});
 			});
