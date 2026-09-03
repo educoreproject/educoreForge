@@ -196,7 +196,12 @@ const POST_D1_BASE_TAG = 'postGraphSelfDoc-090126'; // re-anchored 2026-09-01 â€
 // RE-ANCHOR (iii) 2026-09-02 (JOBS 5+6): lib/forge-framework/ did NOT move in JOBS 5-6, but this anchor
 // advances with the seam so the two conjuncts share one head; measured empty over lib/forge-framework/
 // from the new ref before the move.
-const PHASE0_ANCHOR_TAG = 'postSifViaConservationJobs56-090226';
+// RE-ANCHOR (iii), THIRD TIME 2026-09-03 00:2x (TWILIGHT_ARROW): the re-anchor commit d9356a5 ITSELF edits
+// lib/forge-framework/test/test-gSeamUntouched.js (moving PRE_MIGRATION_REF), which is INSIDE this conjunct's
+// watched path. So this anchor, like P1_BASELINE_COMMIT, must be a tag cut ON the re-anchor commit, not before it.
+// RULE (bit three times tonight): any anchor whose watched paths include a file the re-anchor commit edits must
+// point at a tag on the re-anchor commit itself. Tag cut last; accepted only at 26/26 observed.
+const PHASE0_ANCHOR_TAG = 'postSifViaConservationReanchorC-090226';
 // PHASE 1 RE-ANCHOR â€” RULING FJ-P1-1, and it moves seamDiffEmpty ALONE.
 //
 // WHY IT HAD TO MOVE. SEAM_PATH_LIST watches forges/*/forge*.js, forges/*/lib/*Declaration.js and
