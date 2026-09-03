@@ -259,9 +259,14 @@ const makeVectorStoreResolver = ({ supportStoreFilePath } = {}) => {
 // 2026-07-22 (its body lands with Phase C bridging); the other three have real bodies. There is no
 // stub-components.js any more — a second set of implementations is a second contract, and the
 // drift this file just had is what that costs.
+// The replay-manager MODULE (not the factory it default-exports). Held by name because its
+// static exports carry the declared conservation exemption, and a caller must NAME that value
+// rather than repeat a string literal that could drift from the one harvest compares against.
+const replayManagerModule = require(path.join(__dirname, '..', 'apps', 'replay-manager'));
+
 const defaultComponents = {
 	forger: require(path.join(__dirname, '..', 'apps', 'forger')),
-	replayManager: require(path.join(__dirname, '..', 'apps', 'replay-manager')),
+	replayManager: replayManagerModule,
 	bridgeMaker: require(path.join(__dirname, '..', 'apps', 'bridge-maker')),
 	manifestEditor: require(path.join(__dirname, '..', 'apps', 'manifest-editor')),
 };
@@ -1531,7 +1536,14 @@ const build = (recipe, deps, callback) => {
 					applyLabels: [BASE_GRAPH_LABEL],
 					sourceLabel: `nodeEdges from forge bundle '${std.token}'`,
 				},
-				(err) => next(err ? `init ${std.token}: ${err}` : '', args),
+				// CAPTURE THE LOADED CONSERVATION SUMMARY. It is computed at LOAD time from the payload
+				// in hand and threaded to the harvest below, because the scratch graph is destroyed
+				// immediately after harvest and the loaded side cannot be recovered afterwards.
+				(err, initReport) =>
+					next(err ? `init ${std.token}: ${err}` : '', {
+						...args,
+						loadedConservationSummary: initReport && initReport.loadedConservationSummary,
+					}),
 			);
 		});
 
@@ -1564,6 +1576,9 @@ const build = (recipe, deps, callback) => {
 					inGraph: args.workingGraph,
 					selectionLabels: [BASE_GRAPH_LABEL],
 					vectorStore: args.standardVectorStore,
+					// ⟪JOB 2⟫ the forge-to-harvest conservation gate. This block WAS loaded through init,
+					// so it gets a real comparison rather than the declared exemption.
+					conservationExpectation: args.loadedConservationSummary,
 					header: {
 						blockType: 'standardBase',
 						standardKey: std.token,
@@ -1884,6 +1899,13 @@ const build = (recipe, deps, callback) => {
 						{
 							inGraph: args.depGraph,
 							selectionLabels: [blockLabel],
+							// ⟪JOB 2⟫ DECLARED EXEMPTION, NOT A SKIP. This material was written by bridgeMaker
+							// through lib/bridge-framework/graphWriter, which does NOT go through
+							// replayManager.init / writeShapedGraph (MEASURED 2026-09-02), so there is no
+							// init-captured loaded set to conserve against. harvest REFUSES an absent field, so
+							// this exemption has to be written here where a reader sees it, and it is PRINTED on
+							// the harvest status line. The bridge-to-harvest seam is docketed separately.
+							conservationExpectation: replayManagerModule.CONSERVATION_NOT_LOADED_THROUGH_INIT,
 							header: {
 								blockType: 'relationship',
 								standardKey: oneSubject,

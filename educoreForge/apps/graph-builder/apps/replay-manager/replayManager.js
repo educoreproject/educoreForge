@@ -59,6 +59,100 @@ const passportWriterModule = require(path.join(__dirname, 'lib', 'finishing', 'p
 // is nothing to omit and nothing to shadow (polyArch2 §6).
 const NEO4J_USER = 'neo4j';
 
+// THE DECLARED CONSERVATION EXEMPTION (WORKORDER-sifViaConservation-090226, JOB 2).
+// harvest REFUSES a spec that carries no conservationExpectation at all, because an absent field
+// would make "nobody threaded the loaded set" indistinguishable from "there is legitimately nothing
+// to compare against" — the silent-default shape this whole order exists to correct. A caller with
+// no loaded set says so, by name, and the name says WHY rather than what it skips. It is PRINTED on
+// the harvest status line: an exemption nobody can see in the build log is a silent skip with
+// paperwork.
+//
+// MEASURED 2026-09-02, which is why this exists: bridgeMaker.run does NOT write through
+// writeShapedGraph/mergeEdges — it issues its own statement in lib/bridge-framework/graphWriter.js —
+// so the relationship harvest has no init-captured loaded set to compare against. That seam is
+// docketed separately.
+const CONSERVATION_NOT_LOADED_THROUGH_INIT = 'NOT_LOADED_THROUGH_INIT';
+
+// compareConservation — the DISTINCT-SET comparison, both directions.
+// DUPLICATES ARE A NUMBER, NEVER A FAILURE. Had this gate existed on 2026-09-02 as a naive count
+// check it would have refused a build over nine cosmetic duplicate emissions while missing the real
+// defect entirely. Loss and invention refuse; duplication is reported and carried on.
+const CONSERVATION_NAMED_SAMPLE_LIMIT = 3;
+const compareConservation = ({ expectation, harvested, graphName }) => {
+	if (expectation === undefined || expectation === null) {
+		return {
+			error:
+				`replayManager.harvest '${graphName}': REFUSED — the spec carries no ` +
+				`conservationExpectation. Pass the loadedConservationSummary returned by init, or ` +
+				`declare '${CONSERVATION_NOT_LOADED_THROUGH_INIT}' if this material was not loaded ` +
+				`through init and there is genuinely nothing to conserve against. An absent field ` +
+				`would make a forgotten thread indistinguishable from a legitimate exemption, and no ` +
+				`block is minted on a comparison nobody made.`,
+		};
+	}
+	if (expectation === CONSERVATION_NOT_LOADED_THROUGH_INIT) {
+		return {
+			statusText:
+				`conservation ${CONSERVATION_NOT_LOADED_THROUGH_INIT}: '${graphName}' harvested ` +
+				`${harvested.nodeTotal} nodes, ${harvested.edgeTotal} edges with NO loaded set to ` +
+				`compare against (declared, not skipped)`,
+		};
+	}
+	if (!expectation.edgeIdentitySet || !expectation.nodeIdentitySet) {
+		return {
+			error:
+				`replayManager.harvest '${graphName}': REFUSED — conservationExpectation is neither ` +
+				`'${CONSERVATION_NOT_LOADED_THROUGH_INIT}' nor a summary carrying nodeIdentitySet and ` +
+				`edgeIdentitySet. A malformed expectation must not read as a passing comparison.`,
+		};
+	}
+	const missingEdgeList = [];
+	expectation.edgeIdentitySet.forEach((oneKey) => {
+		if (!harvested.edgeIdentitySet.has(oneKey)) { missingEdgeList.push(oneKey); }
+	});
+	const inventedEdgeList = [];
+	harvested.edgeIdentitySet.forEach((oneKey) => {
+		if (!expectation.edgeIdentitySet.has(oneKey)) { inventedEdgeList.push(oneKey); }
+	});
+	const missingNodeList = [];
+	expectation.nodeIdentitySet.forEach((oneKey) => {
+		if (!harvested.nodeIdentitySet.has(oneKey)) { missingNodeList.push(oneKey); }
+	});
+	const inventedNodeList = [];
+	harvested.nodeIdentitySet.forEach((oneKey) => {
+		if (!expectation.nodeIdentitySet.has(oneKey)) { inventedNodeList.push(oneKey); }
+	});
+	const nameSample = (oneList) =>
+		oneList
+			.slice(0, CONSERVATION_NAMED_SAMPLE_LIMIT)
+			.map((oneKey) => oneKey.split('\u241f').slice(0, 3).join(' '))
+			.join(' | ');
+	if (missingEdgeList.length || inventedEdgeList.length || missingNodeList.length || inventedNodeList.length) {
+		return {
+			error:
+				`replayManager.harvest '${graphName}': REFUSED — CONSERVATION FAILED across the ` +
+				`forge-to-harvest seam. edges missing ${missingEdgeList.length}, edges invented ` +
+				`${inventedEdgeList.length}, nodes missing ${missingNodeList.length}, nodes invented ` +
+				`${inventedNodeList.length}. ` +
+				(missingEdgeList.length ? `first missing edge(s): ${nameSample(missingEdgeList)}. ` : '') +
+				(inventedEdgeList.length ? `first invented edge(s): ${nameSample(inventedEdgeList)}. ` : '') +
+				(missingNodeList.length ? `first missing node(s): ${nameSample(missingNodeList)}. ` : '') +
+				(inventedNodeList.length ? `first invented node(s): ${nameSample(inventedNodeList)}. ` : '') +
+				`No block minted.`,
+		};
+	}
+	const duplicateEdgeCount = expectation.edgeTotal - expectation.edgeIdentitySet.size;
+	const duplicateNodeCount = expectation.nodeTotal - expectation.nodeIdentitySet.size;
+	return {
+		statusText:
+			`conservation OK: '${graphName}' loaded ${expectation.edgeTotal} edge emission(s) / ` +
+			`${expectation.edgeIdentitySet.size} distinct, harvested ${harvested.edgeIdentitySet.size} ` +
+			`distinct — nothing missing, nothing invented; ${duplicateEdgeCount} duplicate edge ` +
+			`emission(s), ${duplicateNodeCount} duplicate node emission(s) (reported, not a failure); ` +
+			`nodes ${expectation.nodeIdentitySet.size} distinct both sides`,
+	};
+};
+
 const CONFIG_SECTION = 'replay-manager';
 const CONFIG_FILE = 'graphBuilder.ini';
 
@@ -830,7 +924,18 @@ const moduleFunction =
 					callback(`replayManager.init '${graphName}': ${err}`);
 					return;
 				}
-				callback('', result);
+				// THE LOADED SIDE OF THE CONSERVATION GATE, CAPTURED HERE AND NOWHERE ELSE. It must be
+				// taken at LOAD TIME from the payload in hand: the scratch container is destroyed
+				// immediately after harvest, which is exactly why nobody could diff the two sides of
+				// this seam before today. Re-querying the graph for it later would measure the graph
+				// twice and the loaded set never — the wrong comparison.
+				callback('', {
+					...result,
+					loadedConservationSummary: replayEngine.conservationSummaryFor({
+						nodes: nodeEdges.nodes,
+						edges: nodeEdges.edges,
+					}),
+				});
 			},
 		);
 	};
@@ -854,7 +959,7 @@ const moduleFunction =
 		// or the original searchText format) and persists raw vectors into the store — the block
 		// text carries refs, never half a gigabyte of inline base64. Absent = the legacy inline
 		// path, exactly as before.
-		const { inGraph, selectionLabels, header, vectorStore } = spec || {};
+		const { inGraph, selectionLabels, header, vectorStore, conservationExpectation } = spec || {};
 
 		const graphName = inGraph && (inGraph.containerName || inGraph.graphName);
 		const refusal = nameRefusal(graphName, 'harvest');
@@ -892,6 +997,27 @@ const moduleFunction =
 					callback(`replayManager.harvest '${graphName}': ${err}`);
 					return;
 				}
+				// ⟪JOB 2⟫ THE CONSERVATION GATE, SITED HERE ON PURPOSE — BETWEEN THE ERROR CHECK ABOVE
+				// AND THE MINT BELOW. The address is minted at the moment the block comes into existence;
+				// a gate placed AFTER it would let a block with a false address exist, however briefly.
+				// Refuse before the address, not after it.
+				//
+				// WHY IT EXISTS: this pipeline verified self-consistency thoroughly and conservation
+				// nowhere. A block was guaranteed to be exactly what it said it was; nothing guaranteed it
+				// was everything it should have been. The load count and the harvest count were already
+				// printed on adjacent lines and no assertion related them. RT-13 cannot cover this seam:
+				// MEASURED 2026-09-02, it reproduced the identical 97,888 statements before and after nine
+				// relationships appeared in the graph — its verdict is blind in both directions.
+				const conservationReport = compareConservation({
+					expectation: conservationExpectation,
+					harvested: result.harvestedConservationSummary,
+					graphName,
+				});
+				if (conservationReport.error) {
+					callback(conservationReport.error);
+					return;
+				}
+				xLog.status(`[replayManager] ${conservationReport.statusText}`);
 				// The content address is minted HERE, at the moment the block comes into existence,
 				// so no caller can hold a block whose id it computed by a different rule.
 				const blockId = contentAddress.blockIdForText(result.blockText);
@@ -1141,3 +1267,9 @@ module.exports.schemaBlockTexts = schemaBlockTexts;
 module.exports.resolveSettings = resolveSettings;
 module.exports.resolveEmbeddingDims = resolveEmbeddingDims;
 module.exports.disposeScratchGraph = disposeScratchGraph;
+// The declared conservation exemption, exported so a caller NAMES it rather than repeating a
+// magic string that could drift from the one harvest compares against.
+module.exports.CONSERVATION_NOT_LOADED_THROUGH_INIT = CONSERVATION_NOT_LOADED_THROUGH_INIT;
+// Exported so a discovered suite can assert the gate's refusal LITERALS without a container.
+// The exact text is the contract: a caller reading a refusal must be told what to pass instead.
+module.exports.compareConservation = compareConservation;

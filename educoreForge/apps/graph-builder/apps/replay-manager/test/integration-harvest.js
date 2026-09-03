@@ -214,15 +214,18 @@ require(resolved.entryPath)({ embedder }).forge(
 					applyLabels: [BASE_GRAPH_LABEL],
 					sourceLabel: `nodeEdges from forge bundle '${resolved.standardName}'`,
 				},
-				(initErr) => {
+				(initErr, initReport) => {
 					if (initErr) {
 						harness.ok('init loaded the graph', false, initErr);
 						finish(handle, 1);
 						return;
 					}
 
+					// ⟪JOB 2⟫ This material was loaded through replayManager.init just above, so the harvest gets a
+					// REAL conservation comparison rather than the declared exemption. The summary is captured at
+					// LOAD time; it cannot be recovered once the scratch graph is gone.
 					replayManager.harvest(
-						{ inGraph: handle, selectionLabels: [BASE_GRAPH_LABEL], header },
+						{ inGraph: handle, selectionLabels: [BASE_GRAPH_LABEL], header, conservationExpectation: initReport.loadedConservationSummary },
 						(harvestErr, sideB) => {
 							if (harvestErr) {
 								harness.ok('harvest produced a schema block', false, harvestErr);

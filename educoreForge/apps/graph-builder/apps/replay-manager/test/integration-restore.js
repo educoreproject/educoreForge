@@ -238,8 +238,11 @@ require(resolved.entryPath)({ embedder: null }).forge(
 							harness.ok('the origin graph holds nodes', originNodes > 0, originNodes);
 							harness.ok('the origin graph holds edges', originEdges > 0, originEdges);
 
+							// ⟪JOB 2⟫ This material was loaded through replayManager.init just above, so the harvest gets a
+							// REAL conservation comparison rather than the declared exemption. The summary is captured at
+							// LOAD time; it cannot be recovered once the scratch graph is gone.
 							replayManager.harvest(
-								{ inGraph: originHandle, selectionLabels: [BASE_GRAPH_LABEL], header },
+								{ inGraph: originHandle, selectionLabels: [BASE_GRAPH_LABEL], header, conservationExpectation: originReport.loadedConservationSummary },
 								(harvestErr, schemaBlock) => {
 									if (harvestErr) {
 										harness.ok('a schema block was harvested', false, harvestErr);

@@ -246,14 +246,18 @@ const harvestedGraph = ({ token }, callback) => {
 					applyLabels: [BASE_GRAPH_LABEL],
 					sourceLabel: `nodeEdges from forge bundle '${forged.standard}'`,
 				},
-				(initErr) => {
+				(initErr, initReport) => {
 					if (initErr) {
 						cleanupAnd(initErr);
 						return;
 					}
+					// ⟪JOB 2⟫ REAL comparison, not the declared exemption: this evaluator loads forged nodeEdges
+					// through replayManager.init immediately above, so an init-captured summary exists and
+					// NOT_LOADED_THROUGH_INIT would be a FALSE declaration here.
 					replayManager.harvest(
 						{
 							inGraph: handle,
+							conservationExpectation: initReport.loadedConservationSummary,
 							selectionLabels: [BASE_GRAPH_LABEL],
 							header: {
 								blockType: 'standardBase',

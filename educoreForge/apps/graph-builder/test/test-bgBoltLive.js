@@ -389,7 +389,11 @@ const writeConjuncts = ({ handle, realReader, subjectStableId }) => {
 
 const harvestConjunct = ({ handle, realReader, realWriter, driver, subjectId, bareP001572, anotherCard }) => {
 	const harvestHeader = { blockType: 'relationship', standardKey: 'edfi', pairA: 'edfi', pairB: 'ceds', pairAVersion: '5.2.0', pairBVersion: '14.0.0.0', stableUriPropertyName: 'stableId', resolutionKey: 'stableId', embeddingModelVersion: 'voyage-4-large', embeddingEncoding: 'base64', embeddingDtype: 'float32', embeddingByteOrder: 'little-endian', embeddingDims: 1024 };
-	replayManager.harvest({ inGraph: handle, selectionLabels: [APPLY_LABEL], header: harvestHeader }, (harvestError, harvested) => {
+	// ⟪JOB 2⟫ This harvests material the BRIDGE WRITER wrote, through lib/bridge-framework/graphWriter
+	// and not through replayManager.init, so there is no init-captured loaded set to conserve against
+	// and the declared exemption is TRUE here today. JOB 5 makes the bridge write produce a real
+	// loadedConservationSummary, and this declaration is replaced by it then.
+	replayManager.harvest({ inGraph: handle, selectionLabels: [APPLY_LABEL], header: harvestHeader, conservationExpectation: replayManagerModule.CONSERVATION_NOT_LOADED_THROUGH_INIT }, (harvestError, harvested) => {
 		harness.ok('(g) replayManager.harvest by the pair-scoped label returns a block', !harvestError && harvested, harvestError);
 		let deserialised = null;
 		let codecFault = null;
@@ -414,7 +418,7 @@ const harvestConjunct = ({ handle, realReader, realWriter, driver, subjectId, ba
 		const stampTwin = stampTwinLib.graphWriterFactory({ inGraph: inGraphFor(handle), applyLabel: stampTwinLabel, sourceStandardName: SOURCE_STANDARD_NAME });
 		stampTwin.writeMappingEdge({ subjectStableId: subjectId, objectStableId: bareP001572.stableId, edgeType: 'CLOSE_MATCH', edgeProperties: { ...edgePropertiesFor({ subjectStableId: subjectId, objectStableId: bareP001572.stableId, attestationChannelList: ['elements:6'] }), predicate: 'closeMatch' } }, (twinWriteError) => {
 			harness.ok('    (e twin) the subject-only-stamping writer still writes its edge', !twinWriteError, twinWriteError);
-			replayManager.harvest({ inGraph: handle, selectionLabels: [stampTwinLabel], header: harvestHeader }, (twinHarvestError, twinHarvested) => {
+			replayManager.harvest({ inGraph: handle, selectionLabels: [stampTwinLabel], header: harvestHeader, conservationExpectation: replayManagerModule.CONSERVATION_NOT_LOADED_THROUGH_INIT }, (twinHarvestError, twinHarvested) => {
 				let twinEdgeCount = -1;
 				let twinFault = null;
 				const decodeTwin = () => {
