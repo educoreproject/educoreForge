@@ -151,6 +151,50 @@ const runDirFor = ({ recipeName }) => {
 	fs.writeFileSync(path.join(stageDirPath, roundTripStageStatics.STAGE_SUMMARY_FILE_NAME), JSON.stringify({ stageRan: true, disposition: 'ran', containerName: 'DEV_fixture', declaredTokens: ['toy'], absentTokens: [], standards: [{ token: 'toy', standardName: 'Toy', disposition: 'declared', ran: true, roundTripClean: true, inventedTotal: 0, lostTotal: 0, contentGapTotal: 0, explicitlyOmittedTotal: 0, semanticValidationLimit: 'fixture', snapshotDirPath: scratchDir, verdictPath }] }));
 	return runDirPath;
 };
+// ⟪JOB 6b⟫ mintConservationArtifacts — give a FIXTURE run directory the conservation artifacts a real
+// build would have written, so -goldEvalCheck's conservation audit has something to read.
+//
+// REAL-SHAPED, NOT A STUB THAT ALWAYS READS PASS. Every field is read from the block the manifest
+// ACTUALLY names: the refId is the stored block's own content address, the subject is its stored
+// subject, and the counts come from counting the block text's node and edge lines. A fixture that
+// fabricated a PASS against invented ids would pass no matter what the gate did — which is the defect
+// this campaign documents, installed in the place meant to detect it.
+//
+// SYNCHRONOUS, and deliberately so: this file already depends on better-sqlite3's callbacks firing
+// synchronously (see the note above runGates), and taking a callback here would nest three more levels
+// into an already deep chain for no gain. Returns a refusal string, or null.
+const mintConservationArtifacts = ({ standardsDatabase, manifestRefId, runDirPath }) => {
+	let refusal = null;
+	standardsDatabase.getManifest({ refId: manifestRefId }, (manifestError, manifest) => {
+		if (manifestError || !manifest) {
+			refusal = `mintConservationArtifacts: getManifest ${manifestRefId}: ${manifestError || 'absent'}`;
+			return;
+		}
+		const conservationDirPath = path.join(runDirPath, 'conservation');
+		fs.mkdirSync(conservationDirPath, { recursive: true });
+		(manifest.members || []).forEach((oneMember) => {
+			standardsDatabase.getBlock({ refId: oneMember.schemaBlockRefId }, (blockError, blockRow) => {
+				if (blockError || !blockRow) {
+					refusal = `mintConservationArtifacts: getBlock ${oneMember.schemaBlockRefId}: ${blockError || 'absent'}`;
+					return;
+				}
+				const lineList = String(blockRow.text).split('\n').filter((oneLine) => oneLine.trim() !== '');
+				const countOfKind = (kindName) => lineList.filter((oneLine) => oneLine.indexOf(`"kind":"${kindName}"`) !== -1 || oneLine.indexOf(`"kind": "${kindName}"`) !== -1).length;
+				const nodeCount = countOfKind('node');
+				const edgeCount = countOfKind('edge');
+				fs.writeFileSync(path.join(conservationDirPath, `${oneMember.schemaBlockRefId}.json`), `${JSON.stringify({
+					verdict: 'PASS', graphName: 'DEV_fixture',
+					loadedEdgeTotal: edgeCount, loadedEdgeDistinct: edgeCount, harvestedEdgeDistinct: edgeCount,
+					loadedNodeDistinct: nodeCount, harvestedNodeDistinct: nodeCount,
+					duplicateEdgeCount: 0, duplicateNodeCount: 0,
+					blockRefId: oneMember.schemaBlockRefId, blockSubject: oneMember.subject,
+				}, null, 2)}\n`);
+			});
+		});
+	});
+	return refusal;
+};
+
 const driveGoldEvalCheck = ({ actionsFactory, values }, callback) => {
 	const originalGlobal = process.global;
 	const replacement = { xLog: originalGlobal.xLog, getConfig: () => ({}), commandLineParameters: { switches: {}, values, fileList: [] }, rawConfig: {} };
@@ -162,23 +206,62 @@ const driveGoldEvalCheck = ({ actionsFactory, values }, callback) => {
 		callback(verdictError, verdict);
 	});
 };
-const goldEvalCheckGates = ({ cleanManifestRefId, debugManifestRefId, forgeOnlyManifestRefId, finish }) => {
+const goldEvalCheckGates = ({ standardsDatabase, cleanManifestRefId, debugManifestRefId, forgeOnlyManifestRefId, finish }) => {
 	harness.section('SECTION 4 — (f) the VERB -goldEvalCheck: a bridged recipe without the sibling REFUSES BY NAME; with it, PASS/REFUSED by the audit');
 	const bridgedRunDirPath = runDirFor({ recipeName: 'fourWithHubEdfiBridge' }); // recipes/fourWithHubEdfiBridge.recipe.jsonc declares ONE bridge
 	const forgeOnlyRunDirPath = runDirFor({ recipeName: 'fourWithHub' }); // recipes/fourWithHub.recipe.jsonc declares bridges: []
+	// ⟪JOB 6b⟫ the fixtures get the conservation artifacts a real build writes. BOTH manifests driven
+	// against the bridged directory are minted; the forge-only manifest is minted into its OWN directory.
+	// An artifact for a member of a manifest not under audit is simply never looked up.
+	harness.ok('    the bridged fixture run dir is given REAL-SHAPED conservation artifacts (CLEAN manifest)', !mintConservationArtifacts({ standardsDatabase, manifestRefId: cleanManifestRefId, runDirPath: bridgedRunDirPath }));
+	// the clean manifest itself, held for the negative below (better-sqlite3 callbacks are synchronous)
+	let cleanManifestForNegative = null;
+	standardsDatabase.getManifest({ refId: cleanManifestRefId }, (readError, readManifest) => { cleanManifestForNegative = readManifest; });
+	harness.ok('    …and for the DEBUG manifest', !mintConservationArtifacts({ standardsDatabase, manifestRefId: debugManifestRefId, runDirPath: bridgedRunDirPath }));
+	harness.ok('    …and the forge-only run dir for the FORGE-ONLY manifest', !mintConservationArtifacts({ standardsDatabase, manifestRefId: forgeOnlyManifestRefId, runDirPath: forgeOnlyRunDirPath }));
 	const realActions = () => require(actionsModulePath)();
 	driveGoldEvalCheck({ actionsFactory: realActions, values: { buildLogDirPath: [bridgedRunDirPath] } }, (bridgedError) => {
 		harness.match('(f) a run dir whose recipe DECLARES bridges[] and no --manifestRefId → REFUSED BY NAME (bridges declared; mapping edges uncertified)', bridgedError || '', /DECLARES 1 bridge\(s\); mapping edges UNCERTIFIED/);
+		// the OTHER side of the two-sided pair: with the check CONNECTED the bridge refusal fires FIRST,
+		// so the conservation message must NOT appear. Without this the disconnected assertion below could
+		// pass while both messages were present all along.
+		harness.ok('(f) … and the CONSERVATION message is absent while the bridge check is connected (it refuses first)', !/CONSERVATION UNCERTIFIED without --manifestRefId/.test(bridgedError || ''), bridgedError);
 		driveGoldEvalCheck({ actionsFactory: realActions, values: { buildLogDirPath: [forgeOnlyRunDirPath] } }, (forgeOnlyError, forgeOnlyVerdict) => {
-			harness.ok('    a forge-only recipe (bridges: []) without --manifestRefId → PASS', !forgeOnlyError && forgeOnlyVerdict && forgeOnlyVerdict.exitCode === 0, forgeOnlyError);
-			const forgeOnlyPayload = forgeOnlyVerdict ? JSON.parse(forgeOnlyVerdict.resultText) : {};
-			harness.equal('    … with scope forgeRoundTripOnly', forgeOnlyPayload.scope, 'forgeRoundTripOnly');
-			harness.equal('    … and the bridge declaration stated (0 bridges, recipe known)', forgeOnlyPayload.bridgeDeclaration && forgeOnlyPayload.bridgeDeclaration.bridgeCount, 0);
+			// ⟪CHANGED BY JOB 6b — the CONTRACT moved, so the assertion moved with it, and is not deleted.⟫
+			// These three formerly asserted that a forge-only recipe WITHOUT --manifestRefId answers PASS
+			// with scope 'forgeRoundTripOnly'. That was honest for the BRIDGE sibling — a forge-only build
+			// has no mapping edges to certify — but the CONSERVATION audit has no such honest partial scope:
+			// EVERY build harvests blocks. So the check REFUSES rather than narrows. Kept as a refusal
+			// assertion rather than removed, because a deleted assertion leaves no record that the contract
+			// ever said otherwise.
+			harness.match(
+				'    a forge-only recipe (bridges: []) without --manifestRefId → REFUSED BY NAME (JOB 6b replaced the forgeRoundTripOnly narrowing)',
+				forgeOnlyError || '',
+				/CONSERVATION UNCERTIFIED without --manifestRefId/,
+			);
 			driveGoldEvalCheck({ actionsFactory: realActions, values: { buildLogDirPath: [bridgedRunDirPath], manifestRefId: [cleanManifestRefId], standardsDatabaseFilePath: [databaseFilePath] } }, (cleanError, cleanVerdict) => {
 				harness.ok('    the bridged run dir WITH --manifestRefId naming a CLEAN manifest → PASS', !cleanError && cleanVerdict && cleanVerdict.exitCode === 0, cleanError);
 				const cleanPayload = cleanVerdict ? JSON.parse(cleanVerdict.resultText) : {};
 				harness.equal('    … with scope forgeRoundTripAndMappingEdges', cleanPayload.scope, 'forgeRoundTripAndMappingEdges');
 				harness.equal('    … one relationship block audited, 2 edges', cleanPayload.bridgeSibling && cleanPayload.bridgeSibling.mappingBlockList[0] && cleanPayload.bridgeSibling.mappingBlockList[0].edgeCount, 2);
+				// ⟪JOB 6b NEGATIVE⟫ WITHOUT THIS, THE PASS ABOVE IS A SILENCE. Strip ONE artifact and the same
+				// CLEAN manifest must refuse BY NAME — proof the audit reads these files rather than passing
+				// because nothing looked. Restored immediately so later assertions see the fixture intact.
+				// ⟪JOB 6b NEGATIVE⟫ WITHOUT THIS, THE PASS ABOVE IS A SILENCE. Strip ONE artifact and the same
+				// CLEAN manifest must refuse BY NAME — proof the audit reads these files rather than passing
+				// because nothing looked. Driven against the AUDIT MODULE rather than re-entering
+				// driveGoldEvalCheck: that helper swaps process.global and restores it in its callback, so
+				// re-entering it from inside another of its callbacks corrupts the state the outer chain
+				// depends on (measured — it looped). The audit is the thing under test here either way.
+				const strippedDirPath = path.join(bridgedRunDirPath, 'conservation');
+				const strippedPath = path.join(strippedDirPath, fs.readdirSync(strippedDirPath)[0]);
+				const strippedText = fs.readFileSync(strippedPath);
+				fs.unlinkSync(strippedPath);
+				const strippedAudit = require(path.join(__dirname, '..', 'lib', 'gold-eval-conservation')).auditConservationForManifest({ manifest: cleanManifestForNegative, buildLogDirPath: bridgedRunDirPath });
+				harness.equal('    … and with ONE artifact REMOVED the same CLEAN manifest REFUSES (so the PASS above is a measurement)', strippedAudit.refusalMessageList.length, 1);
+				harness.match('    … refusing BY NAME, naming the member and the missing path', strippedAudit.refusalMessageList[0] || '', /has NO conservation artifact at/);
+				fs.writeFileSync(strippedPath, strippedText);
+				harness.equal('    … and restored byte-for-byte the same manifest certifies again', require(path.join(__dirname, '..', 'lib', 'gold-eval-conservation')).auditConservationForManifest({ manifest: cleanManifestForNegative, buildLogDirPath: bridgedRunDirPath }).refusalMessageList.length, 0);
 				driveGoldEvalCheck({ actionsFactory: realActions, values: { buildLogDirPath: [bridgedRunDirPath], manifestRefId: [debugManifestRefId], standardsDatabaseFilePath: [databaseFilePath] } }, (debugError) => {
 					harness.match('    the bridged run dir naming the DEBUG manifest → REFUSED naming the block and the tier', debugError || '', /invalid-debug/);
 					driveGoldEvalCheck({ actionsFactory: realActions, values: { buildLogDirPath: [forgeOnlyRunDirPath], manifestRefId: [forgeOnlyManifestRefId], standardsDatabaseFilePath: [databaseFilePath] } }, (zeroError, zeroVerdict) => {
@@ -191,7 +274,22 @@ const goldEvalCheckGates = ({ cleanManifestRefId, debugManifestRefId, forgeOnlyM
 						// the idiom for exactly this shape (BG-DEBUG (d) uses it on build.js)
 						const disconnectedActions = () => bridgeTwinFactories.loadBuildJsDouble({ buildJsPath: actionsModulePath, mutationList: [{ find: 'if (!manifestRefId && bridgeDeclaration.known && bridgeDeclaration.bridgeCount > 0) {', replace: 'if (!manifestRefId && bridgeDeclaration.known && bridgeDeclaration.bridgeCount > 1e9) {' }] })();
 						driveGoldEvalCheck({ actionsFactory: disconnectedActions, values: { buildLogDirPath: [bridgedRunDirPath] } }, (redError, redVerdict) => {
-							harness.ok('(f) RED-OBSERVED — with the declared-bridges check disconnected the bridged directory answers PASS on the forge round trip alone', !redError && redVerdict && redVerdict.exitCode === 0, redError);
+							// ⟪REFRAMED BY RULING (TWILIGHT_ARROW 2026-09-02)⟫ This conjunct USED TO assert that
+							// disconnecting the declared-bridges check makes the bridged directory answer PASS on
+							// the forge round trip alone. JOB 6b REMOVED THAT VERDICT PATH — without
+							// --manifestRefId the check now refuses for conservation — so the outcome this twin
+							// once observed no longer exists and cannot be reached by cutting anything. It is
+							// reframed, not deleted, and this note is its provenance: a reframed twin with no
+							// record of what it used to assert reads as though it was always this weak.
+							//
+							// TWO-SIDED, because a one-sided assertion on an error string passes on ANY error.
+							// CONNECTED the bridge fingerprint is present and the conservation one absent;
+							// DISCONNECTED the bridge fingerprint is gone and conservation refuses BEHIND it.
+							// That proves three things at once: the bridge check runs FIRST, it was doing WORK,
+							// and cutting it opens NO HOLE because conservation still refuses.
+							harness.ok('(f) RED-OBSERVED — with the declared-bridges check disconnected the run STILL refuses, but no longer with the bridge fingerprint', !!redError, 'expected a refusal');
+							harness.ok('(f) … the bridge fingerprint is ABSENT once its check is cut', !/DECLARES 1 bridge\(s\); mapping edges UNCERTIFIED/.test(redError || ''), redError);
+							harness.match('(f) … and CONSERVATION refuses behind it, so the cut opens no hole', redError || '', /CONSERVATION UNCERTIFIED without --manifestRefId/);
 							// (g) RULING BR3-5: a recipe whose `bridges` key is PRESENT and NOT AN ARRAY is REFUSED by name — it must never
 							// read as "0 bridges" and disarm (f) (REVIEW-B3 §I B3-5: loadRecipe LOADS such a recipe; only validateRecipe
 							// at -build refuses it, and -goldEvalCheck reads the run dir's recipe after the fact)
@@ -202,7 +300,16 @@ const goldEvalCheckGates = ({ cleanManifestRefId, debugManifestRefId, forgeOnlyM
 								const nonArrayDisarmedActions = () => bridgeTwinFactories.loadBuildJsDouble({ buildJsPath: actionsModulePath, mutationList: [{ find: "if (loadedRecipe && Object.prototype.hasOwnProperty.call(loadedRecipe.recipe, 'bridges') && !Array.isArray(loadedRecipe.recipe.bridges)) {", replace: "if (loadedRecipe && Object.prototype.hasOwnProperty.call(loadedRecipe.recipe, 'bridges') && !Array.isArray(loadedRecipe.recipe.bridges) && false) {" }] })();
 								driveGoldEvalCheck({ actionsFactory: nonArrayDisarmedActions, values: { buildLogDirPath: [forgeOnlyRunDirPath], recipePath: [nonArrayRecipePath] } }, (disarmedError, disarmedVerdict) => {
 									const disarmedPayload = disarmedVerdict ? JSON.parse(disarmedVerdict.resultText) : {};
-									harness.ok('(g) RED-OBSERVED — with the non-array check disconnected the same recipe answers PASS forgeRoundTripOnly with bridgeCount 0 (the silent disarm the ruling closes)', !disarmedError && disarmedVerdict && disarmedVerdict.exitCode === 0 && disarmedPayload.bridgeDeclaration && disarmedPayload.bridgeDeclaration.bridgeCount === 0, disarmedError);
+									// ⟪REFRAMED BY THE SAME RULING⟫ (g) used to assert that cutting the non-array check
+									// lets the recipe answer PASS forgeRoundTripOnly with bridgeCount 0 — the silent
+									// disarm RULING BR3-5 closes. JOB 6b removed the forge-only PASS path, so that
+									// outcome is unreachable. Reframed TWO-SIDED against the non-array check's own
+									// fingerprint, keeping the provenance: cutting the check must remove ITS message
+									// while conservation still refuses behind it, so the disarm is still visible as a
+									// CHANGE IN WHICH GATE SPEAKS rather than as a pass.
+									harness.ok('(g) RED-OBSERVED — with the non-array check disconnected the run STILL refuses, but not with the non-array fingerprint', !!disarmedError, 'expected a refusal');
+									harness.ok('(g) … the non-array fingerprint is ABSENT once its check is cut', !/carries a 'bridges' key that is not an array/.test(disarmedError || ''), disarmedError);
+									harness.match('(g) … and CONSERVATION refuses behind it, so the disarm opens no hole', disarmedError || '', /CONSERVATION UNCERTIFIED without --manifestRefId/);
 									finish();
 								});
 							});
@@ -255,7 +362,7 @@ const runGates = ({ standardsDatabase, cleanManifestRefId, debugManifestRefId, f
 							harness.match('a BLANK manifestRefId is refused by name', blankError || '', /manifestRefId is REQUIRED/);
 							sibling.auditManifestMappingBlocks({ standardsDatabase: null, manifestRefId: cleanManifestRefId }, (noStoreError) => {
 								harness.match('a missing store is refused by name', noStoreError || '', /OPEN standardsDatabase/);
-								goldEvalCheckGates({ cleanManifestRefId, debugManifestRefId, forgeOnlyManifestRefId, finish });
+								goldEvalCheckGates({ standardsDatabase, cleanManifestRefId, debugManifestRefId, forgeOnlyManifestRefId, finish });
 							});
 						});
 					});
