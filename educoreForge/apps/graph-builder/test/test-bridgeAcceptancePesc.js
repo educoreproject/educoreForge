@@ -504,7 +504,10 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // RE-ANCHOR 2026-09-02 (JOBS 5+6): the same rule, a third time tonight - this commit edits test-bgNosub.js
 // inside this gate's diffed paths, so the base is the tag cut ON this commit; lib/bridge-framework
 // moved in JOB 5 (both write doors, the fake driver, two twin repairs) and build.js in JOBS 5b and 6.
-const P1_BASELINE_COMMIT = 'postSifViaConservationReanchorC-090226';
+// RE-ANCHOR D 2026-09-03 (TWILIGHT_ARROW): a887bad moved bgNosub conjunct (iii) by editing test-bgNosub.js, which is
+// inside this gate's diffed paths, so (a)'s baseline moves to a tag cut on THIS commit. (a887bad's message said the
+// tag would be cut on a887bad itself; that was wrong - this file was not edited there. Corrected here, not amended.)
+const P1_BASELINE_COMMIT = 'postSifViaConservationReanchorD-090226';
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
