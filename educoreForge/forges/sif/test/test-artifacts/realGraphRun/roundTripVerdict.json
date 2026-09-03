@@ -19,9 +19,9 @@
   ]
  },
  "scaleReport": {
-  "runtimeMs": 1809,
-  "rssBytes": 445022208,
-  "heapUsedBytes": 247927512,
+  "runtimeMs": 1258,
+  "rssBytes": 412246016,
+  "heapUsedBytes": 220952984,
   "sourceStatements": 97888,
   "emittedStatements": 97888,
   "sourcePrecedencePairs": 28615,
@@ -53,14 +53,14 @@
   ]
  },
  "graph": {
-  "containerName": "DEV_FourWithNewPesc",
+  "containerName": "DEV_sifRtFinal_twilightForge_260902",
   "boltUrl": "bolt://localhost:7811",
   "rootProperties": {
    "rootId": "sif:root",
    "snapshotKey": "01",
-   "version": "1.0",
-   "publishedVersion": "unknown",
-   "versionSource": "unknown",
+   "version": "4.3",
+   "publishedVersion": "4.3",
+   "versionSource": "provenance-file",
    "standardName": "SIF Implementation Specification"
   },
   "nodeCounts": {
@@ -251,7 +251,7 @@
   "context": {
    "snapshotPath": "/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/forges/sif/assets/standardSourceData/01",
    "snapshotDigest": "a9908c614aa83109e6756a9b73d57c99fd4e1137b9c716b59a34b43307e49d4a",
-   "containerName": "DEV_FourWithNewPesc",
+   "containerName": "DEV_sifRtFinal_twilightForge_260902",
    "boltUrl": "bolt://localhost:7811"
   }
  }

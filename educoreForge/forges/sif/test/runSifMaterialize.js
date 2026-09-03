@@ -13,21 +13,38 @@ DESCRIPTION
      zero embedding spend; deterministic) and materializes the result into the scratch container
      DEV_sifRoundTrip_080326 via replayManager.create/init.
 
-     THE MATERIALIZATION PROOF, AND WHAT IT ACTUALLY COMPARES (supervisor-approved amendment,
-     2026-08-04, after this gate went RED on its first run): the graph is verified against the
-     block's DISTINCT (type|from|to) TRIPLE count, not its raw declaration count. The first
-     version compared 88,766 block DECLARATIONS against 88,757 distinct graph RELATIONSHIPS and
-     reported loader loss that had not happened — two different measurables. The block carries 7
-     duplicated REFERENCES triples (9 surplus declarations) because lib/parser.js dedups
-     references by (source, target, VIA) while forgeSif's edge translation erases via, so
-     distinct-via references to one target become byte-identical declarations that the loader's
-     MERGE correctly collapses. Recorded as R-SF-9 (via-erasure), a named enrichment-backlog
-     item — NOT fixed here: this runner measures, it does not adjudicate forge semantics.
-     The duplicate census is PRINTED BY NAME on every run, so the collapse is never silent.
+     THE MATERIALIZATION PROOF, AND WHAT IT ACTUALLY COMPARES. Two amendments, both kept here
+     because the second only makes sense against the first.
+
+     2026-08-04 (supervisor-approved, after this gate went RED on its first run): the graph was
+     verified against the block's DISTINCT (type|from|to) TRIPLE count rather than its raw
+     declaration count. The first version compared 88,766 block DECLARATIONS against 88,757
+     distinct graph RELATIONSHIPS and reported loader loss that had not happened — two different
+     measurables. The block carried 7 duplicated REFERENCES triples (9 surplus declarations)
+     because lib/parser.js dedups references by (source, target, VIA) while forgeSif's edge
+     translation erased via, so distinct-via references to one target became byte-identical
+     declarations that the loader's MERGE collapsed. Recorded as R-SF-9 (via-erasure), a named
+     enrichment-backlog item — NOT fixed then: this runner measures, it does not adjudicate forge
+     semantics. That was a defensible call and it is why the finding survived to be fixed.
+
+     2026-09-02 — R-SF-9 IS RESOLVED, and this runner is RE-KEYED, not renumbered. The forge now
+     carries via/mandatory/nativeEdgeType onto the canonical edge, and the shared write path merges
+     on the full property map instead of on the bare (from, type, to) pattern, so the nine no
+     longer collapse. "What the loader can hold" therefore changed, and the comparison follows it:
+     graph relationships are now checked against distinct block edge IDENTITIES
+     (type|from|to|sorted key=value). NOTHING WAS RENUMBERED — no count in this file was ever a
+     literal but the two census-of-record anchors, and both are unchanged.
+
+     THE TRIPLE CENSUS IS DELIBERATELY STILL COMPUTED AND STILL PRINTED ON EVERY RUN. Those seven
+     triples are still seven triples and the block still declares nine surplus BY TRIPLE; what
+     changed is that the loader now keeps them as separate relationships. Printing it is how the
+     collapse stopped being silent for a month, and removing it to tidy the output would erase the
+     measurement that made the defect visible.
 
      Assertions: node count EXACT against the R-SF-3 census of record (27,069); block
-     declaration count EXACT against that same census (88,766 — the anchor); distinct graph
-     relationships EQUAL to distinct block triples (88,757).
+     declaration count EXACT against that same census (88,766 — the anchor); graph relationships
+     EQUAL to distinct block edge identities (88,766 since the R-SF-9 resolution; it was 88,757
+     against distinct TRIPLES before it).
 
      WHY THIS RUNNER EXISTS (the edfi R-WO-13 precedent, recorded so nobody resurrects the
      alternative): the builder resolves a standard's forge EXCLUSIVELY through
@@ -85,13 +102,30 @@ const failOut = (failureMessage) => {
 
 // -----
 // censusBlockEdges — the block's edge measurables, kept apart because conflating them is the
-// exact defect this amendment corrects. declaredCount is what the forge EMITTED; distinctCount
-// is what a MERGE-semantics loader can hold; duplicateList is the difference, by name.
+// exact defect the 2026-08-04 amendment corrected. declaredCount is what the forge EMITTED.
+//
+// ⚠ RE-KEYED 2026-09-02, WHEN R-SF-9 WAS RESOLVED. distinctCount is "what the loader can hold",
+// and that quantity CHANGED when the write path stopped keying its merge on the bare triple. It is
+// now distinct by (type, from, to, SORTED key=VALUE property pairs), which is the loader's real
+// identity. This is a RE-KEYING, not a renumbering: nothing here was a hardcoded number and nothing
+// was renumbered to make a red go green.
+//
+// The TRIPLE census is DELIBERATELY KEPT AND STILL PRINTED. It is R-SF-9's own history — those seven
+// triples are still seven triples, the block still declares nine surplus BY TRIPLE, and the only
+// thing that changed is that the loader no longer collapses them. Deleting the triple census to
+// tidy the output would erase the measurement that made the defect visible for a month.
 const censusBlockEdges = ({ edges }) => {
 	const countByTriple = new Map();
+	const countByIdentity = new Map();
 	edges.forEach((oneEdge) => {
 		const edgeTriple = `${oneEdge.type}|${oneEdge.fromRef.id}|${oneEdge.toRef.id}`;
 		countByTriple.set(edgeTriple, (countByTriple.get(edgeTriple) || 0) + 1);
+		const propertyNameList = Object.keys(oneEdge.properties || {}).sort();
+		const propertyText = propertyNameList
+			.map((onePropertyName) => `${onePropertyName}=${JSON.stringify(oneEdge.properties[onePropertyName])}`)
+			.join(',');
+		const edgeIdentity = `${edgeTriple}|${propertyText}`;
+		countByIdentity.set(edgeIdentity, (countByIdentity.get(edgeIdentity) || 0) + 1);
 	});
 	const duplicateList = [...countByTriple.entries()]
 		.filter(([, occurrenceCount]) => occurrenceCount > 1)
@@ -99,9 +133,13 @@ const censusBlockEdges = ({ edges }) => {
 		.sort((leftEntry, rightEntry) => leftEntry.edgeTriple.localeCompare(rightEntry.edgeTriple));
 	return {
 		declaredCount: edges.length,
-		distinctCount: countByTriple.size,
+		distinctCount: countByIdentity.size,
+		distinctTripleCount: countByTriple.size,
 		duplicateList,
 		surplusDeclarationCount: edges.length - countByTriple.size,
+		// declarations that are identical in EVERY property, which a property-keyed merge still
+		// collapses and correctly so. Non-zero here would be a genuine duplicate emission.
+		identicalDeclarationCount: edges.length - countByIdentity.size,
 	};
 };
 
@@ -111,16 +149,19 @@ const censusBlockEdges = ({ edges }) => {
 const reportDuplicateCensus = ({ edgeCensus }) => {
 	console.error(
 		`[${moduleName}] block edges: ${edgeCensus.declaredCount} declared, ` +
-			`${edgeCensus.distinctCount} distinct (type|from|to) — ` +
-			`${edgeCensus.surplusDeclarationCount} surplus declaration(s)`,
+			`${edgeCensus.distinctCount} distinct (type|from|to|key=value) — ` +
+			`${edgeCensus.identicalDeclarationCount} identical declaration(s); ` +
+			`${edgeCensus.distinctTripleCount} distinct (type|from|to), ` +
+			`${edgeCensus.surplusDeclarationCount} surplus by triple`,
 	);
 	if (!edgeCensus.duplicateList.length) {
-		console.error(`[${moduleName}] duplicate declarations: NONE`);
+		console.error(`[${moduleName}] triples carrying more than one declaration: NONE`);
 		return;
 	}
 	console.error(
-		`[${moduleName}] duplicate declarations (R-SF-9 via-erasure, ` +
-			`${edgeCensus.duplicateList.length} triple(s)) — the loader's MERGE collapses these:`,
+		`[${moduleName}] triples carrying more than one declaration (R-SF-9 via-erasure, RESOLVED ` +
+			`2026-09-02; ${edgeCensus.duplicateList.length} triple(s)) — these are DISTINGUISHED BY ` +
+			`their via/mandatory properties and the loader now KEEPS them as separate relationships:`,
 	);
 	edgeCensus.duplicateList.forEach((oneDuplicate) => {
 		console.error(`[${moduleName}]   x${oneDuplicate.occurrenceCount}  ${oneDuplicate.edgeTriple}`);
@@ -129,7 +170,8 @@ const reportDuplicateCensus = ({ edgeCensus }) => {
 
 // -----
 // verifyMaterializedCounts — read the graph over bolt (endpoint from docker inspect) and compare
-// against the block census: nodes EXACT, distinct relationships EQUAL to distinct block triples.
+// against the block census: nodes EXACT, graph relationships EQUAL to distinct block edge IDENTITIES
+// (type, from, to, sorted key=value) — re-keyed 2026-09-02 with the R-SF-9 resolution.
 const verifyMaterializedCounts = ({ edgeCensus }, callback) => {
 	roundTripSifCompiler.resolveContainerBolt({ containerName }, (resolveError, boltTriple) => {
 		if (resolveError) {
