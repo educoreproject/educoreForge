@@ -1,5 +1,7 @@
 'use strict';
 
+const { edgeConservationIdentityFor } = require(require('path').join(__dirname, '..', '..', '..', 'replay', 'replay-engine'))();
+
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
 // boltDriverDouble.js — a neo4j-driver DOUBLE for BG-BOLT (RULING BR1): the two bolt files (graphReader.js,
@@ -122,15 +124,22 @@ const runLookup = (cypher, parameters) => {
 	return Promise.resolve({ records: [{ get: (name) => row[name] }] });
 };
 
-// the writer's stamp-and-MERGE: MATCH (s {stableId: $subjectStableId}) MATCH (o[:Label] {stableId: $objectStableId}) SET <stamps> MERGE (s)-[r:`T`]->(o) SET r = $edgeProperties RETURN count(r) AS edgeCount
+// the writer's stamp-and-MERGE, JOB 5a form: MATCH (s {stableId: $subjectStableId}) MATCH (o[:Label]
+// {stableId: $objectStableId}) SET <stamps> WITH s, o CALL apoc.merge.relationship(s, $edgeType,
+// $edgeProperties, {}, o) YIELD rel RETURN count(rel) AS edgeCount
+// ⚠ THIS DOUBLE MUST MERGE BY THE SAME RULE AS THE REAL DRIVER. It keys on the FULL edge identity —
+// the same exported function the loader, the writer and graphDouble use — because apoc.merge.relationship
+// matches on the identity map it is handed. Keying on (from, type, to) here, as this runner did before
+// JOB 5a, would make the double collapse edges the real driver keeps, and every BG-BOLT conjunct that
+// compares bolt against double would then be comparing the double against a fiction.
 const runStampAndMerge = (cypher, parameters) => {
-	const match = /^MATCH \(s \{stableId: \$subjectStableId\}\) MATCH \(o(?::(\w+))? \{stableId: \$objectStableId\}\)(?: SET ((?:\w+:`[^`]+`(?:, )?)+))? MERGE \(s\)-\[r:`([^`]+)`\]->\(o\) SET r = \$edgeProperties RETURN count\(r\) AS edgeCount$/.exec(cypher);
+	const match = /^MATCH \(s \{stableId: \$subjectStableId\}\) MATCH \(o(?::(\w+))? \{stableId: \$objectStableId\}\)(?: SET ((?:\w+:`[^`]+`(?:, )?)+))? WITH s, o CALL apoc\.merge\.relationship\(s, \$edgeType, \$edgeProperties, \{\}, o\) YIELD rel RETURN count\(rel\) AS edgeCount$/.exec(cypher);
 	if (!match) {
 		return null;
 	}
 	const objectLabelName = match[1];
 	const stampText = match[2] === undefined ? '' : match[2];
-	const edgeType = match[3];
+	const edgeType = parameters.edgeType; // a PARAMETER since JOB 5a, no longer interpolated into the text
 	const subjectNode = currentState.nodeList.find((oneNode) => oneNode.stableId === parameters.subjectStableId);
 	const objectNode = currentState.nodeList.find((oneNode) => oneNode.stableId === parameters.objectStableId && (objectLabelName === undefined || oneNode.labels.indexOf(objectLabelName) !== -1));
 	if (!subjectNode || !objectNode) {
@@ -144,11 +153,11 @@ const runStampAndMerge = (cypher, parameters) => {
 			target.labels.push(oneStamp.labelName);
 		}
 	});
-	const existing = currentState.edgeList.find((oneEdge) => oneEdge.fromStableId === subjectNode.stableId && oneEdge.toStableId === objectNode.stableId && oneEdge.type === edgeType);
-	if (existing) {
-		existing.properties = { ...parameters.edgeProperties };
-	} else {
-		currentState.edgeList.push({ fromStableId: subjectNode.stableId, toStableId: objectNode.stableId, type: edgeType, properties: { ...parameters.edgeProperties } });
+	const identityOf = (oneShape) => edgeConservationIdentityFor({ type: oneShape.type, fromRef: { id: oneShape.fromStableId }, toRef: { id: oneShape.toStableId }, properties: oneShape.properties });
+	const incomingShape = { fromStableId: subjectNode.stableId, toStableId: objectNode.stableId, type: edgeType, properties: { ...parameters.edgeProperties } };
+	const existing = currentState.edgeList.find((oneEdge) => identityOf(oneEdge) === identityOf(incomingShape));
+	if (!existing) {
+		currentState.edgeList.push(incomingShape);
 	}
 	return Promise.resolve({ records: [{ get: () => 1 }] });
 };

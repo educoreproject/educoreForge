@@ -358,7 +358,7 @@ const writeConjuncts = ({ handle, realReader, subjectStableId }) => {
 						harness.match('(b) RED-OBSERVED — with the isInt branch dropped the live Integer count(r) never equals 1 and the writer REFUSES by name', integerTwinError || '', /reported 1 edges, not 1/);
 						integerTwin.close(() => {
 					// (f) RED: a writer that unwraps one-element lists before the SET (a productionMutation of the writer)
-					const unwrapWriterLib = mutatedWriterLib([{ modulePath: graphWriterPath, find: '{ subjectStableId, objectStableId, edgeProperties })\n\t\t\t\t\t.then((written) => {', replace: '{ subjectStableId, objectStableId, edgeProperties: Object.keys(edgeProperties).reduce((soFar, oneName) => ({ ...soFar, [oneName]: Array.isArray(edgeProperties[oneName]) && edgeProperties[oneName].length === 1 ? edgeProperties[oneName][0] : edgeProperties[oneName] }), {}) })\n\t\t\t\t\t.then((written) => {' }]);
+					const unwrapWriterLib = mutatedWriterLib([{ modulePath: graphWriterPath, find: '{ subjectStableId, objectStableId, edgeType, edgeProperties })\n\t\t\t\t\t.then((written) => {', replace: '{ subjectStableId, objectStableId, edgeType, edgeProperties: Object.keys(edgeProperties).reduce((soFar, oneName) => ({ ...soFar, [oneName]: Array.isArray(edgeProperties[oneName]) && edgeProperties[oneName].length === 1 ? edgeProperties[oneName][0] : edgeProperties[oneName] }), {}) })\n\t\t\t\t\t.then((written) => {' }]);
 					const unwrapWriter = unwrapWriterLib.graphWriterFactory({ inGraph: inGraphFor(handle), applyLabel: `${APPLY_LABEL}_FTWIN`, sourceStandardName: SOURCE_STANDARD_NAME });
 					unwrapWriter.writeMappingEdge({ subjectStableId: subjectId, objectStableId: anotherCard.stableId, edgeType: 'EXACT_MATCH', edgeProperties: edgePropertiesFor({ subjectStableId: subjectId, objectStableId: anotherCard.stableId, attestationChannelList }) }, (twinWriteError) => {
 						harness.ok('    (f twin) the unwrapping writer still writes its edge', !twinWriteError, twinWriteError);
@@ -413,7 +413,7 @@ const harvestConjunct = ({ handle, realReader, realWriter, driver, subjectId, ba
 		harness.equal('    both endpoint NODES ride in the harvested block (RULING BF3)', deserialised ? deserialised.nodes.length : -1, 2);
 
 		// (e)/(g) RED: a writer that stamps ONLY the subject endpoint → the harvest MATCH (a:L)-[r]->(b:L) finds nothing
-		const stampTwinLib = mutatedWriterLib([{ modulePath: graphWriterPath, find: 'SET s:\\`${applyLabel}\\`, o:\\`${applyLabel}\\` MERGE', replace: 'SET s:\\`${applyLabel}\\` MERGE' }]);
+		const stampTwinLib = mutatedWriterLib([{ modulePath: graphWriterPath, find: 'SET s:\\`${applyLabel}\\`, o:\\`${applyLabel}\\` WITH', replace: 'SET s:\\`${applyLabel}\\` WITH' }]);
 		const stampTwinLabel = `${APPLY_LABEL}_ETWIN`;
 		const stampTwin = stampTwinLib.graphWriterFactory({ inGraph: inGraphFor(handle), applyLabel: stampTwinLabel, sourceStandardName: SOURCE_STANDARD_NAME });
 		stampTwin.writeMappingEdge({ subjectStableId: subjectId, objectStableId: bareP001572.stableId, edgeType: 'CLOSE_MATCH', edgeProperties: { ...edgePropertiesFor({ subjectStableId: subjectId, objectStableId: bareP001572.stableId, attestationChannelList: ['elements:6'] }), predicate: 'closeMatch' } }, (twinWriteError) => {

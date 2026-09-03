@@ -90,6 +90,14 @@ const pgToStored = (properties) => {
 // and differ only in the VALUE of `via`, so a key-set form reports them as one and would certify
 // their loss as conservation. MEASURED 2026-09-02: the forged SIF edge set is 88,757 distinct under
 // the key-set form and 88,766 under this one.
+// A property value that must never enter an edge's IDENTITY map: a bare null, an undefined, or an
+// array carrying a null. Empty string is deliberately NOT here — it is legitimate and matches
+// predictably. Shared by every write door so none can write what another refuses.
+const identityHostileValue = (oneValue) =>
+	oneValue === null ||
+	oneValue === undefined ||
+	(Array.isArray(oneValue) && oneValue.some((oneElement) => oneElement === null));
+
 const edgeConservationIdentityFor = (oneEdge) => {
 	const propertyNameList = Object.keys(oneEdge.properties || {}).sort();
 	const propertyText = propertyNameList
@@ -314,10 +322,6 @@ const mergeEdges = (session, edges, callback) => {
 		// The guard covers EXACTLY the shapes its justification names: a bare null, an undefined,
 		// and an array carrying a null element. An empty string is deliberately NOT refused — it is
 		// a legitimate value and it matches predictably.
-		const identityHostileValue = (oneValue) =>
-			oneValue === null ||
-			oneValue === undefined ||
-			(Array.isArray(oneValue) && oneValue.some((oneElement) => oneElement === null));
 		const nullValuedRow = rows.find((oneRow) =>
 			Object.keys(oneRow.props || {}).some((onePropertyName) => identityHostileValue(oneRow.props[onePropertyName])),
 		);
@@ -1560,6 +1564,13 @@ return {
 	// HARVEST side uses; see the note on edgeConservationIdentityFor.
 	conservationSummaryFor,
 	edgeConservationIdentityFor,
+	// exported so the BRIDGE write door refuses the same identity-hostile property values this one
+	// does. FOUR EMULATIONS OF THE MERGE now share ONE definition of what counts as the same edge:
+	// THREE WRITE DOORS — this one (mergeEdges), bridge-framework/graphWriter, bridge-framework/graphDouble
+	// — plus bridge-framework/test/testSupport/boltDriverDouble, which is not a door but a FAKE DRIVER that
+	// pattern-matches the writer's cypher and emulates its merge. A guard that differed between them would
+	// let one write what another refuses, and the fake driver is the one that would do it silently.
+	identityHostileValue,
 	labelRefusal,
 	replay,
 	// the shared write path — replay() and replayManager.init() are its two entry points

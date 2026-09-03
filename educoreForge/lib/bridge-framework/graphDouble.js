@@ -30,6 +30,14 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // the double proves the SAME rules the bolt files enforce.
 
 const graphSeamRulesLib = require('./graphSeamRules');
+// ⟪JOB 5a⟫ THE DOUBLE MUST MERGE BY THE SAME RULE AS THE REAL WRITER, or every suite that runs
+// against it tests behaviour the real writer no longer has. It therefore keys its edges with the
+// SAME exported identity function the loader and graphWriter use — one definition of what counts
+// as the same edge, across all THREE WRITE DOORS — mergeEdges, graphWriter, this one — and across the
+// FOURTH EMULATION that is not a door: testSupport/boltDriverDouble, the fake driver that pattern-matches
+// the writer's cypher and emulates its merge. Four emulations, one identity definition.
+const replayEngineLib = require(require('path').join(__dirname, '..', 'replay', 'replay-engine'))();
+const { edgeConservationIdentityFor, identityHostileValue } = replayEngineLib;
 
 const isPlainObject = (candidate) => candidate !== null && typeof candidate === 'object' && !Array.isArray(candidate);
 const cloneJson = (value) => JSON.parse(JSON.stringify(value));
@@ -43,6 +51,10 @@ const graphDoubleFrom = ({ nodeList, edgeList } = {}) => {
 		edgeList: cloneJson(edgeList),
 		writtenEdgeList: [],
 		labelStampList: [],
+		// ⟪JOB 5b⟫ the double keeps the SAME loaded-side accumulation the bolt writer keeps, so a test
+		// that gates on the summary exercises the same shape the production door produces.
+		loadedNodeStableIdSet: new Set(),
+		loadedEdgeList: [],
 		readHubCardsCallCount: 0,
 		readHubVectorsCallCount: 0,
 		readSubjectVectorsCallCount: 0,
@@ -144,25 +156,62 @@ const graphDoubleFrom = ({ nodeList, edgeList } = {}) => {
 				callback(refusal.message);
 				return;
 			}
+			// ⟪JOB 5a⟫ the same identity-hostile refusal the real writer makes, so the double cannot
+			// accept an edge the writer would reject. Like the real writer, it sits BEHIND §6, so it is
+			// proven here for the ONE shape §6 cannot see — an array holding null. All three shapes are
+			// proven on the loader door. See the note in graphWriter.js.
+			const hostileNameList = Object.keys(edgeProperties || {}).filter((oneName) => identityHostileValue(edgeProperties[oneName]));
+			if (hostileNameList.length > 0) {
+				callback(`${moduleName} REFUSED: edge ${edgeType} ${subjectStableId} -> ${objectStableId} carries identity-hostile propert(ies) — null, undefined, or an array holding null: ${hostileNameList.join(', ')}. Edge properties are the relationship's merge identity; a null there decides which relationship the edge merges onto and is never defaulted. Nothing written.`);
+				return;
+			}
 			[subjectNode, objectNode].forEach((oneNode) => {
 				if (oneNode.labels.indexOf(applyLabel) === -1) {
 					oneNode.labels.push(applyLabel);
 				}
 				state.labelStampList.push({ stableId: oneNode.stableId, applyLabel });
 			});
-			// MERGE on (from, type, to): an existing edge takes the new properties, no duplicate
-			const existing = state.edgeList.find((oneEdge) => oneEdge.fromStableId === subjectStableId && oneEdge.toStableId === objectStableId && oneEdge.type === edgeType);
-			if (existing !== undefined) {
-				existing.properties = { ...edgeProperties };
-			} else {
-				state.edgeList.push({ fromStableId: subjectStableId, toStableId: objectStableId, type: edgeType, properties: { ...edgeProperties } });
+			// ⟪JOB 5a⟫ MERGE ON THE FULL IDENTITY — (type, from, to, sorted key=VALUE) — exactly as
+			// apoc.merge.relationship does in the real writer. The previous predicate keyed on
+			// (from, type, to) alone and let an existing edge TAKE THE NEW PROPERTIES, which is the
+			// defect being removed: two mapping claims differing only by a property value collapsed into
+			// one carrying the last writer's. Identical edges still merge; distinct ones no longer do.
+			const identityOf = (oneEdgeShape) => edgeConservationIdentityFor({ type: oneEdgeShape.type, fromRef: { id: oneEdgeShape.fromStableId }, toRef: { id: oneEdgeShape.toStableId }, properties: oneEdgeShape.properties });
+			const incomingShape = { fromStableId: subjectStableId, toStableId: objectStableId, type: edgeType, properties: { ...edgeProperties } };
+			const existing = state.edgeList.find((oneEdge) => identityOf(oneEdge) === identityOf(incomingShape));
+			if (existing === undefined) {
+				state.edgeList.push(incomingShape);
 			}
 			state.writtenEdgeList.push({ fromStableId: subjectStableId, toStableId: objectStableId, type: edgeType, properties: { ...edgeProperties }, applyLabel });
+			// ⟪JOB 5b⟫ the loaded side, recorded exactly as the bolt writer records it: both endpoints
+			// stamped, one edge per accepted write. The identity Set dedups a repeat, which is correct —
+			// a repeat merges onto the relationship already there and adds nothing to what was loaded.
+			state.loadedNodeStableIdSet.add(subjectStableId);
+			state.loadedNodeStableIdSet.add(objectStableId);
+			state.loadedEdgeList.push({ type: edgeType, fromRef: { id: subjectStableId }, toRef: { id: objectStableId }, properties: { ...edgeProperties } });
 			callback('', { edgeWritten: true });
 		};
 		const close = (callback) => {
 			state.writerCloseCount += 1;
-			callback('');
+			// ⟪JOB 5b⟫ same contract as the bolt writer: the loaded summary rides out on close's second
+			// argument, built by the SHARED conservationSummaryFor.
+			// ⟪JOB 5b⟫ the SAME PG-JSON shaping the bolt writer applies, and for the same measured
+			// reason — see the long note in graphWriter.js. The double must produce the shape the door
+			// produces or a test gates on something production never sees.
+			const pgShaped = (properties) => {
+				const out = {};
+				Object.keys(properties || {}).forEach((oneName) => {
+					const oneValue = properties[oneName];
+					out[oneName] = Array.isArray(oneValue) ? oneValue : [oneValue];
+				});
+				return out;
+			};
+			callback('', {
+				loadedConservationSummary: replayEngineLib.conservationSummaryFor({
+					nodes: Array.from(state.loadedNodeStableIdSet).sort().map((oneStableId) => ({ stableId: oneStableId })),
+					edges: state.loadedEdgeList.map((oneEdge) => ({ ...oneEdge, properties: pgShaped(oneEdge.properties) })),
+				}),
+			});
 		};
 		return graphSeamRulesLib.closedWriter({ writeMappingEdge, close });
 	};
