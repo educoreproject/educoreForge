@@ -102,6 +102,44 @@ const capturingXLog = () => {
 
 const CREATE_DECLARED_KEYS = ['purpose', 'graphName'];
 
+// ⟪JOB 6a⟫ doubleConservationRecord — the CONSERVATION RECORD the REAL replayManager.harvest returns,
+// mirrored here because a double that omits part of the contract its seam calls does not isolate the
+// test, it HIDES the seam. (That is this file's own rule, written about `finish` before JOB 6a added
+// this field; the same reasoning applies unchanged.) build.js REFUSES a harvest that returns no usable
+// record rather than skipping the artifact, so a double without one fails the build at phase A — which
+// is exactly what it did, and correctly.
+//
+// REAL-SHAPED, NEVER A STUB THAT ALWAYS READS PASS: keyed by the blockId the double is already
+// computing, and carrying counts consistent with the block it actually produced, so a suite gating on
+// these values is gating on something the double genuinely did.
+// THE VERDICT IS DERIVED, NOT DECLARED. An earlier form of this helper wrote `verdict: 'PASS'` as a
+// LITERAL: the counts were honest and the one field that decides anything was a constant, so the double
+// could not have said otherwise no matter what it served. The real verb's rule is that conservation
+// holds when what was LOADED equals what was HARVESTED, so that rule is mirrored here rather than its
+// usual answer. AND WHEN IT DOES NOT HOLD THE DOUBLE REFUSES BY NAME, exactly as the real verb does —
+// it does NOT emit a FAIL verdict, because a failed comparison mints no block and 'FAILED' is
+// unrepresentable by design. Returns { record } or { refusal }.
+const doubleConservationRecord = ({ blockId, header, loadedNodeCount, loadedEdgeCount, harvestedNodeCount, harvestedEdgeCount }) => {
+	if (loadedEdgeCount !== harvestedEdgeCount || loadedNodeCount !== harvestedNodeCount) {
+		return { refusal: `doubleConservationRecord: CONSERVATION FAILED for '${blockId}' — loaded ${loadedNodeCount} nodes / ${loadedEdgeCount} edges, harvested ${harvestedNodeCount} / ${harvestedEdgeCount}. The real verb refuses here and mints no block; a double must not emit a verdict the real one cannot.` };
+	}
+	return {
+		record: {
+			verdict: 'PASS',
+			graphName: 'doubleGraph',
+			loadedEdgeTotal: loadedEdgeCount,
+			loadedEdgeDistinct: loadedEdgeCount,
+			harvestedEdgeDistinct: harvestedEdgeCount,
+			loadedNodeDistinct: loadedNodeCount,
+			harvestedNodeDistinct: harvestedNodeCount,
+			duplicateEdgeCount: 0,
+			duplicateNodeCount: 0,
+			blockRefId: blockId,
+			blockSubject: (header || {}).standardKey,
+		},
+	};
+};
+
 const doubleBlockText = (header, selectionLabels) => {
 	const stableId = `${header.standardKey}/${(selectionLabels || []).join('')}`;
 	const headerLine = JSON.stringify({
@@ -145,7 +183,8 @@ const seedReplayManager = () => () => {
 		init: (spec, cb) => cb('', { schemaBlockCount: (spec && spec.schemaBlocks) ? spec.schemaBlocks.length : 0 }),
 		harvest: ({ header, selectionLabels }, cb) => {
 			const blockText = doubleBlockText(header, selectionLabels);
-			cb('', { blockText, blockId: contentAddress.blockIdForText(blockText), nodeCount: 1, edgeCount: 0, stableIdCoverage: 1 });
+			const blockId = contentAddress.blockIdForText(blockText);
+			cb('', { blockText, blockId, nodeCount: 1, edgeCount: 0, stableIdCoverage: 1, conservationRecord: doubleConservationRecord({ blockId, header, loadedNodeCount: 1, loadedEdgeCount: 0, harvestedNodeCount: 1, harvestedEdgeCount: 0 }).record });
 		},
 		// finish: the seed double builds the graph a later -replay reads, and build()'s materialize
 		// tail finishes what it materializes. A double that omits a verb its seam calls does not
