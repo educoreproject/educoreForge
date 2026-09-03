@@ -128,6 +128,38 @@ const { resolveBundle: resolveForgeBundle } = require(path.join(__dirname, '..',
 // buildLogs home — never a silent skip.
 const roundTripStageLib = require('./round-trip-stage')();
 
+// =====================================================================
+// ⟪JOB 6a⟫ THE PER-BLOCK CONSERVATION ARTIFACT
+// =====================================================================
+// ONE file per harvested block, in <runDir>/conservation/, beside the round-trip verdicts and read by
+// -goldEvalCheck at promotion. Until now the conservation verdict existed ONLY as prose on a status
+// line: true, correct, and unreadable by a gate — which is how a certification comes to be trusted
+// without ever being re-read, the defect this whole campaign documents.
+//
+// NAMED BY CONTENT ADDRESS, never by subject. The subject ('ceds@14_0_0_0_base') is human-readable but
+// is NOT unique across generations; the block's refId is the address of the exact bytes certified. A
+// rebuild that changes a block gets a different refId, so there is simply no artifact at that name and
+// a stale PASS cannot be inherited. The subject rides INSIDE the file so a reader can see what was
+// certified without a store lookup.
+//
+// THERE IS NO INDEX FILE, deliberately: the manifest is the index. A second record of which blocks
+// exist is precisely the thing that drifts, and -goldEvalCheck enumerates the MANIFEST rather than this
+// directory — a population read from the evidence cannot detect its own omission.
+const CONSERVATION_SUBDIR_NAME = 'conservation';
+const writeConservationArtifact = ({ buildReportsDirPath, schemaBlock }) => {
+	const record = schemaBlock === undefined || schemaBlock === null ? undefined : schemaBlock.conservationRecord;
+	// REFUSE BY NAME, NEVER NULL-FILL. An artifact that cannot be written must be reported, not skipped:
+	// -goldEvalCheck refuses a manifest member with no artifact, so a silent skip here would surface
+	// later as an unexplained promotion refusal instead of the real cause.
+	if (record === undefined || record === null || typeof record.verdict !== 'string' || typeof record.blockRefId !== 'string') {
+		return `the harvest returned no usable conservationRecord (verdict/blockRefId absent), so no conservation artifact was written`;
+	}
+	const conservationDirPath = path.join(buildReportsDirPath, CONSERVATION_SUBDIR_NAME);
+	fs.mkdirSync(conservationDirPath, { recursive: true });
+	fs.writeFileSync(path.join(conservationDirPath, `${record.blockRefId}.json`), `${JSON.stringify(record, null, 2)}\n`);
+	return null;
+};
+
 // ⟪P2-review S-2⟫ resolveHeapAdequacy — refuse a vectorized load the process heap cannot
 // hold BEFORE a container is provisioned, naming the remedy. The engine-side JSON.stringify
 // in the LOAD path makes a vectorized build's heap appetite a large multiple of the raw
@@ -1607,6 +1639,12 @@ const build = (recipe, deps, callback) => {
 						// the harvested base block — kept per token so a bridge can RESTORE its dependency
 						// bases into the dependency graph (Phase C), the source the producer WALKs.
 						baseBlockByToken[std.token] = schemaBlock;
+						// ⟪JOB 6a⟫ the conservation verdict for this block, written where the promotion gate reads it.
+						const artifactRefusal = writeConservationArtifact({ buildReportsDirPath, schemaBlock });
+						if (artifactRefusal) {
+							next(`harvest standardBase ${std.token}: ${artifactRefusal}`);
+							return;
+						}
 					}
 					next(err ? `harvest standardBase ${std.token}: ${err}` : '', { ...args, schemaBlock });
 				},
@@ -1934,6 +1972,13 @@ const build = (recipe, deps, callback) => {
 						(harvestErr, schemaBlock) => {
 							if (harvestErr) {
 								blockDone(`harvest relationships ${pairLabel}: ${harvestErr}`);
+								return;
+							}
+							// ⟪JOB 6a⟫ the bridge seam's conservation verdict, written the same way the base
+							// seam's is — one artifact per harvested block, named by content address.
+							const relationshipArtifactRefusal = writeConservationArtifact({ buildReportsDirPath, schemaBlock });
+							if (relationshipArtifactRefusal) {
+								blockDone(`harvest relationships ${pairLabel}: ${relationshipArtifactRefusal}`);
 								return;
 							}
 							manifest.add(

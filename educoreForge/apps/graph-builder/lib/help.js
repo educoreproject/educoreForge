@@ -30,7 +30,7 @@ SYNOPSIS
                                    [--outPath=<path>] [--reportPath=<path>]
      graphBuilder   -cedsGates --containerName=<name> [--reportJsonPath=<path>]
      graphBuilder   -goldEvalCheck --buildLogDirPath=<the build's run directory>
-                                   [--manifestRefId=<the manifest -build printed> [--standardsDatabaseFilePath=<its store>]]
+                                   --manifestRefId=<the manifest -build printed> [--standardsDatabaseFilePath=<its store>]
      graphBuilder   -help
 
      ... | graphBuilder                (JSON on stdin REPLACES command-line parameters)
@@ -402,11 +402,36 @@ OPTIONS
                   RELATIONSHIP member blocks are read out of the standardsDatabase (the artifact,
                   no container; the store resolves as -replay resolves it — an explicit
                   --standardsDatabaseFilePath wins over the configured support store) and every
-                  edge audited. WITHOUT --manifestRefId the sibling does NOT run and the verdict
-                  says so BY NAME (status line "FORGE ROUND TRIP ONLY ... MAPPING EDGES
-                  UNCERTIFIED"; payload scope 'forgeRoundTripOnly', mappingEdgesCertified false)
-                  — a bridged build is not promotable on a forge-only PASS. A manifest with zero
-                  relationship blocks is REPORTED (mappingBlockList []), never refused.
+                  edge audited. A manifest with zero relationship blocks is REPORTED
+                  (mappingBlockList []), never refused.
+                  ⟪CHANGED JOB 6b⟫ --manifestRefId IS NOW REQUIRED AND ITS ABSENCE REFUSES. It
+                  formerly narrowed the verdict to "FORGE ROUND TRIP ONLY ... MAPPING EDGES
+                  UNCERTIFIED" (scope 'forgeRoundTripOnly'), which was honest for the BRIDGE
+                  sibling because a forge-only build has no mapping edges to certify. The
+                  CONSERVATION audit below has no such honest partial scope — every build harvests
+                  blocks — so there is nothing to narrow to and the check refuses instead.
+                  THE CONSERVATION AUDIT (JOB 6b). Every member block of the manifest must carry a
+                  conservation artifact reading PASS, written by -build at
+                  <runDir>/conservation/<schemaBlockRefId>.json beside the round-trip verdicts.
+                  The artifact is named by the block's CONTENT ADDRESS, so a rebuild that changes a
+                  block leaves no artifact at the looked-up name and a stale PASS from an earlier
+                  run of the same recipe cannot pass for this one; the subject rides inside the file
+                  and is cross-checked against the name.
+                  THE POPULATION IS THE MANIFEST, NEVER THE DIRECTORY. The audit enumerates the
+                  manifest's members and demands an artifact for each. It does NOT list
+                  conservation/ and check what it finds: a population read FROM the evidence cannot
+                  detect its own omission, so a block that was never checked would be
+                  indistinguishable from a block with nothing wrong.
+                  REFUSES BY NAME on: a member with no artifact; an artifact that does not parse or
+                  is not an object; an artifact whose blockRefId disagrees with the filename it sits
+                  under; a member harvested under the DECLARED CONSERVATION EXEMPTION (verdict
+                  EXEMPT — since JOB 5b no production caller declares it, so its presence means a
+                  seam went ungated); any verdict that is neither PASS nor EXEMPT; and a manifest
+                  carrying zero members.
+                  THERE IS NO 'FAILED' VERDICT AND YOU SHOULD NOT GO LOOKING FOR ONE. A failed
+                  conservation comparison REFUSES inside replayManager.harvest and mints no block,
+                  so no manifest member can exist for it. The refusal is the enforcement; the
+                  artifact is the evidence that the check RAN.
 
 OUTPUT
      -build:    JSON { manifestId, boltUrl } on stdout (progress on stderr).

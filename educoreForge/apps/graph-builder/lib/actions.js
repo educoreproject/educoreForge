@@ -1463,8 +1463,22 @@ const goldEvalCheckAction = (callback) => {
 			),
 		});
 	};
+	// ⟪JOB 6b⟫ THIS BRANCH USED TO NARROW; IT NOW REFUSES, and the change is deliberate.
+	// Without --manifestRefId the BRIDGE sibling could honestly narrow to 'forge round trip only',
+	// because a forge-only build genuinely has no mapping edges to certify. THE CONSERVATION AUDIT HAS NO
+	// SUCH HONEST PARTIAL SCOPE: every build harvests blocks, so there is no such thing as a build with
+	// nothing to conserve. Emitting a verdict here without enumerating the manifest would be a check
+	// reporting PASS without having looked — precisely the defect this gate exists to catch.
 	if (!manifestRefId) {
-		emitVerdict({ bridgeSibling: { ran: false, notRunReason: 'no --manifestRefId given; pass --manifestRefId=<the manifest -build printed> (and --standardsDatabaseFilePath=<its store>) to audit the manifest\'s relationship blocks', mappingBlockList: [] }, manifest: null });
+		callback(
+			`graphBuilder -goldEvalCheck: REFUSED — CONSERVATION UNCERTIFIED without --manifestRefId. The ` +
+				`audit must enumerate the MANIFEST'S members and demand a conservation artifact for each, ` +
+				`because a population read from the artifacts themselves cannot detect its own omission — a ` +
+				`block that was never checked would be indistinguishable from a block with nothing wrong. ` +
+				`Unlike the bridge sibling there is no honest partial scope to narrow to: every build ` +
+				`harvests blocks. Pass --manifestRefId=<the manifest -build printed> (and ` +
+				`--standardsDatabaseFilePath=<its store>).`,
+		);
 		return;
 	}
 	const supportStoreResolution = resolveSupportStoreFilePath({
@@ -1503,6 +1517,29 @@ const goldEvalCheckAction = (callback) => {
 					callback(`graphBuilder -goldEvalCheck: REFUSED — manifest ${manifestRefId} is ABSENT from the store when read for its base schema blocks — nothing can be named as certified`);
 					return;
 				}
+				// ⟪JOB 6b⟫ THE CONSERVATION AUDIT — the last thing between this run and a PASS.
+				// Every manifest member must carry a conservation artifact reading PASS. The population is
+				// the MANIFEST'S member list, never the conservation directory: a population read from the
+				// evidence cannot detect its own omission, so a block that was never checked would read
+				// exactly like a block with nothing wrong. Refuses by name on a member with no artifact, on
+				// an unparseable or mismatched one, on the DECLARED EXEMPTION — which after JOB 5b no
+				// production caller can produce, so its presence means a seam went ungated — and on any
+				// verdict that is neither PASS nor EXEMPT.
+				// It takes the manifest ALREADY FETCHED above rather than reading a second copy: two reads
+				// of one fact are two things that can drift, which is the subject of this whole campaign.
+				const conservationAudit = require('./gold-eval-conservation').auditConservationForManifest({ manifest, buildLogDirPath });
+				if (conservationAudit.refusalMessageList.length) {
+					callback(
+						`graphBuilder -goldEvalCheck: REFUSED — CONSERVATION UNCERTIFIED across ` +
+							`${conservationAudit.memberCount} manifest member(s) —\n  - ` +
+							`${conservationAudit.refusalMessageList.join('\n  - ')}`,
+					);
+					return;
+				}
+				xLog.status(
+					`[goldEvalCheck] conservation: ${conservationAudit.memberCount} of ` +
+						`${conservationAudit.memberCount} manifest member(s) certified PASS from their per-block artifacts`,
+				);
 				emitVerdict({ bridgeSibling: { ran: true, manifestRefId: audit.manifestRefId, standardsDatabaseFilePath: supportStoreResolution.filePath, memberCount: audit.memberCount, mappingBlockList: audit.mappingBlockList }, manifest });
 			});
 		});

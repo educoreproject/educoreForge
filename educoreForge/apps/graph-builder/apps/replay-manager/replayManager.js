@@ -96,6 +96,17 @@ const compareConservation = ({ expectation, harvested, graphName }) => {
 				`conservation ${CONSERVATION_NOT_LOADED_THROUGH_INIT}: '${graphName}' harvested ` +
 				`${harvested.nodeTotal} nodes, ${harvested.edgeTotal} edges with NO loaded set to ` +
 				`compare against (declared, not skipped)`,
+			// ⟪JOB 6⟫ the exemption is EVIDENCE, not an absence of it. It rides out in the same shape a
+			// PASS does so the artifact writer needs no special case, and so -goldEvalCheck can REFUSE a
+			// golden candidate that contains one BY NAME. After JOB 5b nothing in production declares the
+			// exemption, so an EXEMPT artifact can only come from a caller that reintroduced one — which
+			// is exactly the thing worth catching at promotion.
+			record: {
+				verdict: 'EXEMPT',
+				graphName,
+				harvestedNodeTotal: harvested.nodeTotal,
+				harvestedEdgeTotal: harvested.edgeTotal,
+			},
 		};
 	}
 	if (!expectation.edgeIdentitySet || !expectation.nodeIdentitySet) {
@@ -144,6 +155,27 @@ const compareConservation = ({ expectation, harvested, graphName }) => {
 	const duplicateEdgeCount = expectation.edgeTotal - expectation.edgeIdentitySet.size;
 	const duplicateNodeCount = expectation.nodeTotal - expectation.nodeIdentitySet.size;
 	return {
+		// ⟪JOB 6⟫ THE MACHINE-READABLE VERDICT, BUILT HERE AND NOWHERE ELSE. Until now the verdict
+		// existed only as PROSE on a status line, which is unreadable by a promotion gate and is exactly
+		// how a certification comes to be trusted without being re-read. It is built at THIS stage —
+		// the one place already holding both sides in the compared shape — and never re-derived from the
+		// block text or from the harvest result, because a second derivation is a second thing to drift
+		// and the shape trap is real: an identity computed from block text mismatches on every edge.
+		//
+		// THERE IS NO 'FAILED' VERDICT, BY CONSTRUCTION: a failed comparison REFUSES above and mints no
+		// block, so no manifest member can exist for it. The refusal is the enforcement; this artifact is
+		// the evidence that the check RAN.
+		record: {
+			verdict: 'PASS',
+			graphName,
+			loadedEdgeTotal: expectation.edgeTotal,
+			loadedEdgeDistinct: expectation.edgeIdentitySet.size,
+			harvestedEdgeDistinct: harvested.edgeIdentitySet.size,
+			loadedNodeDistinct: expectation.nodeIdentitySet.size,
+			harvestedNodeDistinct: harvested.nodeIdentitySet.size,
+			duplicateEdgeCount,
+			duplicateNodeCount,
+		},
 		statusText:
 			`conservation OK: '${graphName}' loaded ${expectation.edgeTotal} edge emission(s) / ` +
 			`${expectation.edgeIdentitySet.size} distinct, harvested ${harvested.edgeIdentitySet.size} ` +
@@ -1025,7 +1057,19 @@ const moduleFunction =
 					`[replayManager] harvested ${result.nodeCount} nodes, ${result.edgeCount} edges ` +
 						`from '${graphName}' [${(selectionLabels || []).join(', ')}] -> ${blockId.slice(0, 12)}...`,
 				);
-				callback('', { ...result, blockId });
+				// ⟪JOB 6⟫ the record is keyed by the block's CONTENT ADDRESS, which is minted just above.
+				// The subject is human-readable but not unique across generations; the refId is the address
+				// of the exact bytes certified, so a rebuild that changes a block cannot inherit a stale PASS.
+				// blockSubject IS FOR THE HUMAN READING THE FILE AND IS NEVER LOAD-BEARING. The gate compares
+				// the refId and nothing else. Cross-checking the subject as well would add a way to refuse for
+				// the WRONG REASON — a label that is not unique across generations — without adding any way to
+				// catch a real fault. Decoration, labelled as such, is safer than a check that looks stronger
+				// than it is (RULING TWILIGHT_ARROW 2026-09-02).
+				callback('', {
+					...result,
+					blockId,
+					conservationRecord: { ...conservationReport.record, blockRefId: blockId, blockSubject: (header || {}).standardKey },
+				});
 			},
 		);
 	};
