@@ -784,10 +784,29 @@ const stageGoldEvalCheck = (done) => {
 			'\t',
 		),
 	);
+	// ⟪REFRAMED BY RULING (TWILIGHT_ARROW 2026-09-02), and the provenance matters.⟫
+	// These three USED TO assert that an intact run directory PASSES certification, that stdout carries
+	// the machine-readable PASS, and that declared-ABSENT bundles are LISTED. JOB 6b made
+	// --manifestRefId REQUIRED — every build harvests blocks, so there is no honest partial scope — and
+	// this suite deliberately has NO STORE AND NO MANIFEST: it certifies from RUN DIRECTORIES alone.
+	// So the PASS is unreachable here and CANNOT be restored by any fixture that would not be a database
+	// fabricated solely to satisfy a gate.
+	//
+	// What survives, and why this is not a loss: the gate now emits the ROUND-TRIP STAGE RESULT before
+	// refusing for conservation, so the ABSENT-listing behaviour — a real tolerance of the retrofit —
+	// still has a LIVE witness at the CLI. The PASS-token witness moved to
+	// test-goldEvalBridgeSibling.js's clean-manifest run, which has a store and conservation artifacts;
+	// that is where the PASS path is exercised now.
 	const passRun = runCli(['-goldEvalCheck', `--buildLogDirPath=${cleanRunDirPath}`]);
-	harness.equal('the intact twin PASSES certification', passRun.status, 0);
-	harness.match('  stdout carries the machine-readable PASS', passRun.stdout, /"certification": "PASS"/);
-	harness.match('  tolerated declared-ABSENT bundles are LISTED, not hidden', passRun.stdout, /"beta"/);
+	harness.equal('the intact twin is REFUSED for conservation (no --manifestRefId; JOB 6b), exit nonzero', passRun.status, 1);
+	harness.match('  refusing BY NAME for conservation, not for the stage', passRun.stderr, /CONSERVATION UNCERTIFIED without --manifestRefId/);
+	// ON THE STATUS STREAM, NOT STDOUT, and deliberately: xLog.status writes to stderr, and so does the
+	// PASS path's OWN status line. Machine-readable JSON reaches stdout only through the success
+	// callback's resultText, and a refusal has no such channel by the house contract — so the stage
+	// result is emitted on exactly the stream the PASS status line uses. Asserted where it actually is
+	// rather than where it would be tidier.
+	harness.match('  and the ROUND-TRIP STAGE RESULT is still emitted — a refusal for one reason must not hide the evidence gathered for another', passRun.stderr, /ROUND-TRIP STAGE RESULT \(NOT A VERDICT/);
+	harness.match('  tolerated declared-ABSENT bundles are LISTED, not hidden (the witness survives the refusal)', passRun.stderr, /declared-ABSENT \(tolerated during the retrofit\): .*beta/);
 
 	const noParamRun = runCli(['-goldEvalCheck']);
 	harness.equal('a missing --buildLogDirPath is refused', noParamRun.status, 1);

@@ -1470,6 +1470,24 @@ const goldEvalCheckAction = (callback) => {
 	// nothing to conserve. Emitting a verdict here without enumerating the manifest would be a check
 	// reporting PASS without having looked — precisely the defect this gate exists to catch.
 	if (!manifestRefId) {
+		// ⟪RULING TWILIGHT_ARROW 2026-09-02⟫ A REFUSAL FOR ONE REASON MUST NOT HIDE THE EVIDENCE
+		// GATHERED FOR ANOTHER. By this point the round-trip stage has been read and validated —
+		// `summary`, `declaredRows` and `absentTokens` are all in hand — and refusing here used to throw
+		// all of it away. That is the same defect as a hygiene gate reporting 'CHANGED' without naming
+		// what changed: an instrument that did the work and then withheld it.
+		//
+		// So the STAGE's machine-readable findings are emitted FIRST, labelled unmistakably as a STAGE
+		// result and never as the verdict, and the refusal follows and still exits nonzero. THE GATE'S
+		// STRICTNESS IS UNCHANGED: this is not promotable, and nothing here says PASS. It is also the
+		// live witness that declared-ABSENT bundles are LISTED rather than hidden — a real tolerance of
+		// the retrofit that would otherwise have no witness anywhere once the forge-only PASS path was
+		// removed. (The PASS-token witness lives in test-goldEvalBridgeSibling's clean-manifest run,
+		// which has a store and conservation artifacts.)
+		xLog.status(
+			`graphBuilder: [goldEvalCheck] ROUND-TRIP STAGE RESULT (NOT A VERDICT — certification is REFUSED below): ` +
+				`${declaredRows.length} declared validator(s) ran with inventedTotal=0` +
+				`${absentTokens.length ? `; ${absentTokens.length} bundle(s) declared-ABSENT (tolerated during the retrofit): ${absentTokens.join(', ')}` : ''}`,
+		);
 		callback(
 			`graphBuilder -goldEvalCheck: REFUSED — CONSERVATION UNCERTIFIED without --manifestRefId. The ` +
 				`audit must enumerate the MANIFEST'S members and demand a conservation artifact for each, ` +
