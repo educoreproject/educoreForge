@@ -187,7 +187,13 @@ const POST_D1_BASE_TAG = 'postGraphSelfDoc-090126'; // re-anchored 2026-09-01 �
 // entire value since the Phase 0 re-anchor is that it admits NOTHING, and an exclusion would hand back
 // the blind spot the re-anchor closed. That refusal is DEVLOG open item 8's own recommendation, and
 // Phase 2a paid it the same way.
-const PHASE0_ANCHOR_TAG = 'postBacklogChainHead-090226'; // re-anchored 2026-09-02 — see the RE-ANCHOR note below
+// RE-ANCHOR (iii) 2026-09-02, SECOND MOVE OF THE DAY (TWILIGHT_ARROW). The seam re-anchor commit
+// 6d15e81 edited lib/forge-framework/test/test-gSeamUntouched.js — under the bare 'lib/forge-framework/'
+// pathspec this conjunct diffs — so (iii) went red on a fix, not on code. SEAM_PATH_LIST carries an
+// explicit exclusion for that file; THIS conjunct does not, and the scar protects one conjunct and
+// not its neighbour. The ruled move is the anchor, never an exclusion: it advances to the tag cut on
+// 6d15e81 so the edit falls inside it. Found by the bgNosub twin refusing at 25/26, not by reading.
+const PHASE0_ANCHOR_TAG = 'postSifViaConservationReanchor-090226';
 // PHASE 1 RE-ANCHOR — RULING FJ-P1-1, and it moves seamDiffEmpty ALONE.
 //
 // WHY IT HAD TO MOVE. SEAM_PATH_LIST watches forges/*/forge*.js, forges/*/lib/*Declaration.js and
@@ -403,7 +409,9 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // old ref — the SIF forge carrying via/mandatory (forges/sif/lib), the replay engine merging on the
 // full property map (lib/replay), the conservation gate at the harvest seam (replay-manager,
 // build.js), and the runSifMaterialize re-key. NO ALLOWED-PATH LIST WAS WIDENED and no exclusion was
-// added; SEAM_PATH_LIST is byte-identical across this commit. PHASE0_ANCHOR_TAG does NOT move. The
+// added; SEAM_PATH_LIST is byte-identical across this commit. (The first draft of this note said
+// PHASE0_ANCHOR_TAG does not move — copied from the previous re-anchor without checking; it did have
+// to move, see its own note, because this commit touched lib/forge-framework/test/.) The
 // acceptance for this move is the twin observed red against the NEW ref, never a passing suite.
 const PHASE3_ANCHOR_TAG = 'postSifViaConservation-090226';
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
