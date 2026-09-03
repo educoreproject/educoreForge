@@ -373,16 +373,28 @@ const moduleFunction =
 			// extra key on the runtime report is admitted while the declared list stays at 13.
 			const runReportFor = (oneReportArgumentSet) => {
 				const undiscriminatedRunReport = undiscriminatedRunReportFor(oneReportArgumentSet);
+				// ⟪JOB 5b⟫ ADDED HERE AND NOT IN THE LITERAL ABOVE, for the reason the note above states:
+				// that literal is the verbatim find-text of three BG-PRODUCER twins and BG-REG (f), and
+				// moduleDouble.assertMutationApplies is EAGER — a key added inside it would not make those
+				// twins fail loudly, it would make them fail to CONSTRUCT, which is a gate that has quietly
+				// stopped watching. ON EACH BLOCK ENTRY TOO, because build.js harvests PER EMITTED BLOCK and
+				// reads the expectation there. The declared RUN_REPORT_RESULT_KEYS list stays at 13 and
+				// BG-REG (f) checks CONTAINMENT, so a runtime key is admitted.
+				const conservationBearingRunReport = {
+					...undiscriminatedRunReport,
+					loadedConservationSummary: oneReportArgumentSet.loadedConservationSummary,
+					blocks: undiscriminatedRunReport.blocks.map((oneBlock) => ({ ...oneBlock, loadedConservationSummary: oneReportArgumentSet.loadedConservationSummary })),
+				};
 				if (bridgeDeclaration.subjectDiscriminator === undefined) {
-					return undiscriminatedRunReport;
+					return conservationBearingRunReport;
 				}
 				return {
-					...undiscriminatedRunReport,
+					...conservationBearingRunReport,
 					subjectDiscriminator: bridgeDeclaration.subjectDiscriminator,
 					// ON EACH BLOCK ENTRY TOO, because build.js composes a subject PER EMITTED BLOCK and reads
 					// `oneBlock.subjectDiscriminator` there. Measured at Phase 7 entry: no suite anywhere pins the
 					// key SET of a blocks[] entry, so a key added here turns nothing red for the wrong reason.
-					blocks: undiscriminatedRunReport.blocks.map((oneBlock) => ({ ...oneBlock, subjectDiscriminator: bridgeDeclaration.subjectDiscriminator })),
+					blocks: conservationBearingRunReport.blocks.map((oneBlock) => ({ ...oneBlock, subjectDiscriminator: bridgeDeclaration.subjectDiscriminator })),
 				};
 			};
 
@@ -521,7 +533,14 @@ const moduleFunction =
 					materialiserLib.materialiseBlock(
 						{ block: materialisableBlock, decisionBlockHash, writer, sourceStandardName, sourceVersion: String(sourceVersion), hubName: block.header.hubName, hubVersion: String(hubVersion), mappingProviderUrl: bridgeDeclaration.mappingProvider === undefined ? null : bridgeDeclaration.mappingProvider.url, subjectMatchField, objectMatchField, debugMark: blockDebugMark, runWindowMark: windowMark },
 						(materialiseError, materialised) => {
-							writer.close((closeError) => {
+							// ⟪JOB 5b⟫ close's SECOND argument carries the bridge door's loaded conservation
+							// summary — what this writer actually merged, accumulated as it went. It must be
+							// read HERE: the depGraph is destroyed after harvest, so a set re-derived later
+							// would measure the graph twice and the written set never.
+							writer.close((closeError, closeReport) => {
+								const loadedConservationSummary = closeReport === undefined || closeReport === null
+									? undefined
+									: closeReport.loadedConservationSummary;
 								if (materialiseError) {
 									tailCallback(materialiseError);
 									return;
@@ -546,7 +565,7 @@ const moduleFunction =
 										const counts = { cardinalityCensus: block.header.cardinalityCensus, contentionCensus: block.header.contentionCensus, edgesWritten: materialised.edgesWritten, conflictCount: report.conflictCount, judgeSpend: report.judgeSpend, refusalCount: report.refusalList.length, discardedPredicateKeyCount: report.discardedPredicateKeyCount };
 										say(`materialised ${materialised.edgesWritten} edge(s) under ${pairScopedLabel} from block ${decisionBlockHash.slice(0, 12)}… (${mode})`);
 										const note = mode === MODE_MATERIALISE ? `replayed frozen block ${decisionBlockHash} for ${pairKey}` : `re-judged and froze block ${decisionBlockHash} for ${pairKey}`;
-										tailCallback('', { runReport: runReportFor({ decisionBlockHash, blocksDecisionBlock: { decisionBlockHash, pairKey, generation: block.header.generation }, edgesWritten: materialised.edgesWritten, counts, sssomExportPath, note }), writtenEdgeList: materialised.writtenEdgeList, report });
+										tailCallback('', { runReport: runReportFor({ decisionBlockHash, blocksDecisionBlock: { decisionBlockHash, pairKey, generation: block.header.generation }, edgesWritten: materialised.edgesWritten, counts, sssomExportPath, note, loadedConservationSummary }), writtenEdgeList: materialised.writtenEdgeList, report });
 									};
 									if (!exportSssom) {
 										finish(null);

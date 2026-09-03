@@ -1836,7 +1836,10 @@ const build = (recipe, deps, callback) => {
 					//     falling back to the RECIPE (hub/source or source/pairWith) exactly as before.
 					const emittedBlocks = Array.isArray(runReport.blocks) && runReport.blocks.length
 						? runReport.blocks
-						: [{ applyLabel: RELATION_LABEL, firstStandard: undefined, secondStandard: undefined, producer: runReport.producer, decisionBlock: runReport.decisionBlock }];
+						// ⟪JOB 5b⟫ the degenerate list-of-one carries the run's loaded summary too. A single-block
+						// bridge writes through the same door; if only the blocks[] path carried the expectation,
+						// the commoner shape would silently keep needing an exemption.
+						: [{ applyLabel: RELATION_LABEL, firstStandard: undefined, secondStandard: undefined, producer: runReport.producer, decisionBlock: runReport.decisionBlock, loadedConservationSummary: runReport.loadedConservationSummary }];
 					next('', { ...args, emittedBlocks });
 				},
 			);
@@ -1899,13 +1902,17 @@ const build = (recipe, deps, callback) => {
 						{
 							inGraph: args.depGraph,
 							selectionLabels: [blockLabel],
-							// ⟪JOB 2⟫ DECLARED EXEMPTION, NOT A SKIP. This material was written by bridgeMaker
-							// through lib/bridge-framework/graphWriter, which does NOT go through
-							// replayManager.init / writeShapedGraph (MEASURED 2026-09-02), so there is no
-							// init-captured loaded set to conserve against. harvest REFUSES an absent field, so
-							// this exemption has to be written here where a reader sees it, and it is PRINTED on
-							// the harvest status line. The bridge-to-harvest seam is docketed separately.
-							conservationExpectation: replayManagerModule.CONSERVATION_NOT_LOADED_THROUGH_INIT,
+							// ⟪JOB 5b⟫ THE EXEMPTION IS GONE. JOB 2 declared NOT_LOADED_THROUGH_INIT here because
+							// bridgeMaker writes through lib/bridge-framework/graphWriter rather than
+							// replayManager.init, so no init-captured loaded set existed. One now does: the
+							// bridge writer accumulates what it merged and returns it on close, and it is
+							// threaded here per emitted block. This seam is GATED, not exempted.
+							//
+							// NO SILENT EXEMPTION IF IT IS ABSENT. An undefined here makes compareConservation
+							// REFUSE BY NAME rather than pass, which is the point: a thread that got dropped
+							// must not be indistinguishable from a seam that legitimately has nothing to
+							// compare. Do not restore the exemption to quiet that refusal — find the drop.
+							conservationExpectation: oneBlock.loadedConservationSummary,
 							header: {
 								blockType: 'relationship',
 								standardKey: oneSubject,

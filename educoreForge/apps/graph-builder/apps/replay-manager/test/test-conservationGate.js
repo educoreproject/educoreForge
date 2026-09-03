@@ -212,4 +212,61 @@ harness.ok(
 	'harvest({ conservationExpectation: X })'.indexOf('conservationExpectation') !== -1,
 );
 
+// =====================================================================
+// ⟪JOB 5b⟫ THE EXEMPTION CENSUS — no PRODUCTION caller declares NOT_LOADED_THROUGH_INIT any more.
+// =====================================================================
+// JOB 2 gave build.js's relationship harvest a declared exemption, because bridgeMaker writes through
+// lib/bridge-framework/graphWriter rather than replayManager.init and no loaded set existed. One now
+// does: the bridge writer accumulates what it merged and returns it on close. The exemption remains a
+// LEGITIMATE declaration for material genuinely not loaded through a door that can account for itself
+// — it is not deleted — but nothing in production may still be using it, or 5b threaded a summary that
+// nobody reads.
+const PRODUCTION_ROOT_LIST = ['apps', 'lib', 'forges'];
+const EXEMPTION_LITERAL = 'CONSERVATION_NOT_LOADED_THROUGH_INIT';
+// the DEFINITION site is not a use of the exemption; it is where the constant lives.
+const EXEMPTION_DEFINITION_FILE = 'apps/graph-builder/apps/replay-manager/replayManager.js';
+
+const productionFileList = [];
+const walkForProduction = (oneRelativeDirectory) => {
+	const absoluteDirectory = path.join(TREE_ROOT, oneRelativeDirectory);
+	if (!fs.existsSync(absoluteDirectory)) { return; }
+	fs.readdirSync(absoluteDirectory, { withFileTypes: true }).forEach((oneEntry) => {
+		const relativePath = path.join(oneRelativeDirectory, oneEntry.name);
+		if (oneEntry.isDirectory()) {
+			if (oneEntry.name === 'node_modules' || oneEntry.name === 'test' || oneEntry.name === 'testSupport') { return; }
+			walkForProduction(relativePath);
+			return;
+		}
+		if (oneEntry.name.endsWith('.js')) { productionFileList.push(relativePath); }
+	});
+};
+PRODUCTION_ROOT_LIST.forEach(walkForProduction);
+
+harness.ok(
+	`the exemption census reads production files at all (found ${productionFileList.length}) — a census of zero files would pass for the wrong reason`,
+	productionFileList.length > 0,
+);
+
+const exemptionUserList = productionFileList.filter((oneRelativePath) => {
+	if (oneRelativePath === EXEMPTION_DEFINITION_FILE) { return false; }
+	return fs.readFileSync(path.join(TREE_ROOT, oneRelativePath), 'utf-8').indexOf(EXEMPTION_LITERAL) !== -1;
+});
+
+harness.equal(
+	`⟪JOB 5b⟫ no production caller declares the exemption — users, BY NAME: ${exemptionUserList.length === 0 ? 'none' : exemptionUserList.join(', ')}`,
+	exemptionUserList.length,
+	0,
+);
+
+// THE TWIN, SELF-PROVING: the same predicate against the file that DOES carry the literal must find
+// it. Without this, a typo in EXEMPTION_LITERAL would make every file look clean.
+harness.ok(
+	`  EXEMPTION TWIN — the same search DOES find the literal in its definition site (${EXEMPTION_DEFINITION_FILE})`,
+	fs.readFileSync(path.join(TREE_ROOT, EXEMPTION_DEFINITION_FILE), 'utf-8').indexOf(EXEMPTION_LITERAL) !== -1,
+);
+harness.ok(
+	'  EXEMPTION TWIN — and reports a planted declaration in synthetic text',
+	`conservationExpectation: replayManagerModule.${EXEMPTION_LITERAL},`.indexOf(EXEMPTION_LITERAL) !== -1,
+);
+
 harness.report();
