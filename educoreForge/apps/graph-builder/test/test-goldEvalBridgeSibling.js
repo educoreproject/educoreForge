@@ -21,9 +21,15 @@
 //       whose RECIPE DECLARES bridges[] and no --manifestRefId → REFUSED BY NAME (SABLE_RIVER's tightening at the B3
 //       freeze: a bridged build never certifies on the forge round trip alone); the same directory WITH
 //       --manifestRefId naming a manifest whose relationship block is clean → PASS with scope
-//       forgeRoundTripAndMappingEdges; naming the DEBUG manifest → REFUSED naming the block; a forge-only recipe →
-//       PASS with scope forgeRoundTripOnly and the bridge declaration stated; three-state: a module double of
-//       actions.js with the declared-bridges check disconnected answers PASS on the bridged directory → RED.
+//       forgeRoundTripAndMappingEdges; naming the DEBUG manifest → REFUSED naming the block.
+//       ⟪CHANGED JOB 6b⟫ this header used to continue: "a forge-only recipe → PASS with scope
+//       forgeRoundTripOnly and the bridge declaration stated; … the declared-bridges check disconnected
+//       answers PASS on the bridged directory → RED". BOTH ARE NOW FALSE. --manifestRefId is REQUIRED
+//       and its absence refuses, so there is no forge-only PASS and no 'forgeRoundTripOnly' scope; and
+//       (f)/(g) are reframed TWO-SIDED — cutting a check removes ITS fingerprint while conservation
+//       refuses behind it, rather than yielding a PASS. Corrected in place; this copy was found only by
+//       grepping the fact's phrases across the tree, after the same sentence had been fixed in help.js
+//       and actions.js and twice declared fully found.
 //   (g) RULING BR3-5: a recipe whose `bridges` key is present and NOT an array → REFUSED by name; disconnected → PASS/0 → RED.
 //
 // Runs against a THROWAWAY standardsDatabase under os.tmpdir(); never opens the configured support store; no
@@ -135,6 +141,16 @@ const actionsModulePath = path.join(__dirname, '..', 'lib', 'actions.js');
 const roundTripStageStatics = require(path.join(__dirname, '..', 'lib', 'round-trip-stage'));
 // a synthetic run directory named for a recipe: <recipeName>_<stamp>, carrying a clean stage summary (one declared
 // validator, ran, inventedTotal 0, verdict present) — the forge half PASSES so the bridge half is what decides
+// ⟪JOB 6b RESTORE⟫ the count a recipe DECLARES, read through the HOUSE loader — the same module and
+// call actions.js makes — so a literal can never drift from the recipe and a second jsonc parser never
+// exists to disagree with the first.
+const recipeLibForCounts = require(path.join(__dirname, '..', 'lib', 'recipe'))();
+const declaredBridgeCountOf = (recipeName) => {
+	const loaded = recipeLibForCounts.loadRecipe(path.join(__dirname, '..', '..', '..', 'recipes', `${recipeName}.recipe.jsonc`));
+	if (loaded.error) { throw new Error(`declaredBridgeCountOf('${recipeName}'): ${loaded.error}`); }
+	return (loaded.recipe.bridges || []).length;
+};
+
 const runDirFor = ({ recipeName }) => {
 	const runDirPath = path.join(scratchDir, `${recipeName}_20260816-140000`);
 	const stageDirPath = path.join(runDirPath, roundTripStageStatics.STAGE_SUBDIR_NAME);
@@ -244,6 +260,13 @@ const goldEvalCheckGates = ({ standardsDatabase, cleanManifestRefId, debugManife
 				const cleanPayload = cleanVerdict ? JSON.parse(cleanVerdict.resultText) : {};
 				harness.equal('    … with scope forgeRoundTripAndMappingEdges', cleanPayload.scope, 'forgeRoundTripAndMappingEdges');
 				harness.equal('    … one relationship block audited, 2 edges', cleanPayload.bridgeSibling && cleanPayload.bridgeSibling.mappingBlockList[0] && cleanPayload.bridgeSibling.mappingBlockList[0].edgeCount, 2);
+				// ⟪JOB 6b RESTORE⟫ THE BRIDGE-DECLARATION WITNESS, lost at 243c3c9 and restored here.
+				// The removed assertion ('… and the bridge declaration stated (0 bridges, recipe known)')
+				// rode on the forge-only PASS that JOB 6b deleted, and NOTHING replaced it — the suite's
+				// total rose 45 → 54 while this witness vanished, which is how a healthy aggregate hides a
+				// missing member. Restored on BOTH surviving PASS payloads, counts READ from the recipes.
+				harness.ok('    … and the bridge declaration is STATED on the payload (recipe known)', cleanPayload.bridgeDeclaration && cleanPayload.bridgeDeclaration.known === true, JSON.stringify(cleanPayload.bridgeDeclaration));
+				harness.equal('    … with the count the BRIDGED recipe actually declares (read from the recipe, not a literal)', cleanPayload.bridgeDeclaration && cleanPayload.bridgeDeclaration.bridgeCount, declaredBridgeCountOf('fourWithHubEdfiBridge'));
 				// ⟪JOB 6b NEGATIVE⟫ WITHOUT THIS, THE PASS ABOVE IS A SILENCE. Strip ONE artifact and the same
 				// CLEAN manifest must refuse BY NAME — proof the audit reads these files rather than passing
 				// because nothing looked. Restored immediately so later assertions see the fixture intact.
@@ -267,6 +290,11 @@ const goldEvalCheckGates = ({ standardsDatabase, cleanManifestRefId, debugManife
 					driveGoldEvalCheck({ actionsFactory: realActions, values: { buildLogDirPath: [forgeOnlyRunDirPath], manifestRefId: [forgeOnlyManifestRefId], standardsDatabaseFilePath: [databaseFilePath] } }, (zeroError, zeroVerdict) => {
 						const zeroPayload = zeroVerdict ? JSON.parse(zeroVerdict.resultText) : {};
 						harness.ok('    a manifest with ZERO relationship blocks → PASS, mappingBlockList [] REPORTED', !zeroError && zeroPayload.bridgeSibling && zeroPayload.bridgeSibling.mappingBlockList.length === 0, zeroError);
+						// ⟪JOB 6b RESTORE⟫ the ZERO-BRIDGE half of the lost witness, in the only form the new
+						// contract permits: the forge-only recipe reaches a real PASS payload because it is
+						// driven WITH --manifestRefId naming the manifest minted into its own run directory.
+						harness.ok('    … and the bridge declaration is STATED for the FORGE-ONLY recipe (recipe known)', zeroPayload.bridgeDeclaration && zeroPayload.bridgeDeclaration.known === true, JSON.stringify(zeroPayload.bridgeDeclaration));
+						harness.equal('    … with bridgeCount 0, read from fourWithHub rather than written as a literal', zeroPayload.bridgeDeclaration && zeroPayload.bridgeDeclaration.bridgeCount, declaredBridgeCountOf('fourWithHub'));
 						// THREE-STATE: the declared-bridges check disconnected in an in-memory double of actions.js → the bridged
 						// directory without the sibling answers PASS → the conjunct is observed RED
 						// actions.js writes `new require(...)`, which moduleDouble's arrow require cannot serve — the bridge suite's

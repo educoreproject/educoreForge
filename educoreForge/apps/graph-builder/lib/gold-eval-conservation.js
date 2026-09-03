@@ -1,13 +1,17 @@
 'use strict';
 
 // gold-eval-conservation.js — the -goldEvalCheck CONSERVATION AUDIT (JOB 6b, AMENDMENT 3 §6b).
+//
+//   auditConservationForManifest({ manifest, buildLogDirPath }) → { memberCount, auditedList, refusalMessageList }
+//       SYNCHRONOUS, taking a manifest already in hand. THE ONLY ENTRY POINT: an async wrapper that
+//       fetched its own manifest existed briefly and was DELETED unused — an untested second entry
+//       point into a refusal module is precisely the drift this order closes. A future caller needing
+//       an async form reintroduces one WITH ITS TWIN.
 // The seam owner's wiring, exactly parallel to gold-eval-bridge-sibling.js: it reads the run's MANIFEST
 // out of the standardsDatabase and requires, for EVERY member block, a conservation artifact in the
 // build run directory reading PASS. READ-ONLY: it opens the store, reads files, and computes; no graph,
 // no docker, no LLM, no spend.
 //
-//   auditManifestConservation({ standardsDatabase, manifestRefId, buildLogDirPath }, cb)
-//       → cb(err, { manifestRefId, memberCount, auditedList, refusalMessageList })
 //
 // WHY THE MANIFEST IS THE POPULATION AND THE DIRECTORY IS ONLY THE EVIDENCE. The audit enumerates
 // manifest members and demands an artifact for each. It must NEVER enumerate conservation/ and check
@@ -152,34 +156,4 @@ const auditConservationForManifest = ({ manifest, buildLogDirPath } = {}) => {
 	};
 };
 
-// auditManifestConservation — the async wrapper that FETCHES a manifest, for standalone use and for the
-// twins. -goldEvalCheck uses the synchronous form above with the manifest it already holds.
-const auditManifestConservation = ({ standardsDatabase, manifestRefId, buildLogDirPath } = {}, callback) => {
-	if (!standardsDatabase || typeof standardsDatabase.getManifest !== 'function') {
-		callback(`${moduleName}: an OPEN standardsDatabase (getManifest) is REQUIRED`);
-		return;
-	}
-	if (typeof manifestRefId !== 'string' || manifestRefId.trim() === '') {
-		callback(`${moduleName}: manifestRefId is REQUIRED and has no default — the audit is a claim about ONE manifest's blocks`);
-		return;
-	}
-	if (typeof buildLogDirPath !== 'string' || buildLogDirPath.trim() === '') {
-		callback(`${moduleName}: buildLogDirPath is REQUIRED and has no default — the artifacts live in the run directory`);
-		return;
-	}
-	standardsDatabase.getManifest({ refId: manifestRefId }, (manifestError, manifest) => {
-		if (manifestError) {
-			callback(`${moduleName}: getManifest ${manifestRefId}: ${manifestError}`);
-			return;
-		}
-		if (!manifest) {
-			callback(`${moduleName}: manifest ${manifestRefId} is ABSENT from the store — nothing to certify`);
-			return;
-		}
-		// ONE implementation, delegated to — never a second copy of the rule.
-		const audit = auditConservationForManifest({ manifest, buildLogDirPath });
-		callback('', { manifestRefId, ...audit });
-	});
-};
-
-module.exports = { auditOneArtifact, auditConservationForManifest, auditManifestConservation, CONSERVATION_SUBDIR_NAME, PASS_VERDICT, EXEMPT_VERDICT, moduleName };
+module.exports = { auditOneArtifact, auditConservationForManifest, CONSERVATION_SUBDIR_NAME, PASS_VERDICT, EXEMPT_VERDICT, moduleName };

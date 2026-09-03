@@ -1343,10 +1343,15 @@ const goldEvalCheckAction = (callback) => {
 	// (build.js writes only the round-trip stage summary there, and build.js is a seam file), so the
 	// sibling is driven by --manifestRefId=<the manifest -build printed>, with the store resolved exactly
 	// as -replay resolves it (an explicit --standardsDatabaseFilePath wins over the configured support
-	// store; neither → refused by name). WITHOUT --manifestRefId the sibling DOES NOT RUN and the verdict
-	// SAYS SO BY NAME on the status line and in the payload (scope 'forgeRoundTripOnly',
-	// mappingEdgesCertified false): a forge-only build certifies exactly as before B3, and a bridged
-	// build cannot be promoted on a forge-only PASS without the promoter reading that it was forge-only.
+	// store; neither → refused by name).
+	// ⟪CHANGED JOB 6b⟫ THIS PARAGRAPH USED TO SAY: "WITHOUT --manifestRefId the sibling DOES NOT RUN and
+	// the verdict SAYS SO BY NAME on the status line and in the payload (scope 'forgeRoundTripOnly',
+	// mappingEdgesCertified false): a forge-only build certifies exactly as before B3". EVERY CLAUSE OF
+	// THAT IS NOW FALSE. --manifestRefId is REQUIRED and its absence REFUSES — every build harvests
+	// blocks, so conservation has no honest partial scope to narrow to. There is no forge-only PASS and
+	// no 'forgeRoundTripOnly' verdict; the scope vocabulary shrank with the path (see the payload below).
+	// Corrected IN PLACE rather than appended beside, and the same correction was made in help.js; this
+	// copy was found only by grepping the FACT'S PHRASES across the tree instead of the file being read.
 	// A manifest with ZERO relationship members is REPORTED (mappingBlockList []), never a refusal.
 	const manifestRefId = firstValue(process.global.commandLineParameters, 'manifestRefId');
 	// ⟪B3 tightening, SABLE_RIVER freeze ruling 2026-08-16⟫ when the RECIPE DECLARES bridges[] and the sibling did
@@ -1406,9 +1411,11 @@ const goldEvalCheckAction = (callback) => {
 			callback(`graphBuilder -goldEvalCheck: REFUSED —\n  - ${enrichmentResult.refusalMessageList.join('\n  - ')}`);
 			return;
 		}
-		const scopeText = bridgeSibling.ran
-			? `bridge sibling: ${bridgeSibling.mappingBlockList.length} relationship block(s) audited, ${bridgeSibling.mappingBlockList.reduce((soFar, oneBlock) => soFar + oneBlock.edgeCount, 0)} mapping edge(s), 0 invalid-debug`
-			: `FORGE ROUND TRIP ONLY — bridge sibling NOT RUN (${bridgeSibling.notRunReason}); ${bridgeDeclaration.known ? `recipe declares ${bridgeDeclaration.bridgeCount} bridge(s)` : bridgeDeclaration.note}; MAPPING EDGES UNCERTIFIED`;
+		// ⟪CHANGED JOB 6b⟫ this was a ternary on bridgeSibling.ran. Its false arm — the FORGE ROUND TRIP
+		// ONLY status line — is UNREACHABLE: emitVerdict has exactly ONE call site and it is reached only
+		// after --manifestRefId is present and the sibling has run. A dead arm in a certificate is worse
+		// than dead code elsewhere, because it advertises an outcome the gate can no longer produce.
+		const scopeText = `bridge sibling: ${bridgeSibling.mappingBlockList.length} relationship block(s) audited, ${bridgeSibling.mappingBlockList.reduce((soFar, oneBlock) => soFar + oneBlock.edgeCount, 0)} mapping edge(s), 0 invalid-debug`;
 		xLog.status(
 			`graphBuilder: [goldEvalCheck] PASS — ${declaredRows.length} declared validator(s) ran ` +
 				`with inventedTotal=0${absentTokens.length ? `; ${absentTokens.length} bundle(s) declared-ABSENT (tolerated during the retrofit): ${absentTokens.join(', ')}` : ''}; ${scopeText}`,
@@ -1418,8 +1425,12 @@ const goldEvalCheckAction = (callback) => {
 			resultText: JSON.stringify(
 				{
 					certification: 'PASS',
-					scope: bridgeSibling.ran ? 'forgeRoundTripAndMappingEdges' : 'forgeRoundTripOnly',
-					mappingEdgesCertified: bridgeSibling.ran,
+					// ⟪CHANGED JOB 6b⟫ both were ternaries on bridgeSibling.ran and both false arms are
+					// unreachable — see scopeText above. THE CERTIFICATE'S SCOPE VOCABULARY SHRANK: it can no
+					// longer emit 'forgeRoundTripOnly', and mappingEdgesCertified can no longer be false. A
+					// reader who finds either in an OLD certificate is looking at a pre-JOB-6b artifact.
+					scope: 'forgeRoundTripAndMappingEdges',
+					mappingEdgesCertified: true,
 					bridgeDeclaration,
 					bridgeSibling,
 					summaryFilePath,
@@ -1558,7 +1569,7 @@ const goldEvalCheckAction = (callback) => {
 					`[goldEvalCheck] conservation: ${conservationAudit.memberCount} of ` +
 						`${conservationAudit.memberCount} manifest member(s) certified PASS from their per-block artifacts`,
 				);
-				emitVerdict({ bridgeSibling: { ran: true, manifestRefId: audit.manifestRefId, standardsDatabaseFilePath: supportStoreResolution.filePath, memberCount: audit.memberCount, mappingBlockList: audit.mappingBlockList }, manifest });
+				emitVerdict({ bridgeSibling: { manifestRefId: audit.manifestRefId, standardsDatabaseFilePath: supportStoreResolution.filePath, memberCount: audit.memberCount, mappingBlockList: audit.mappingBlockList }, manifest });
 			});
 		});
 	});
