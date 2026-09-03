@@ -493,7 +493,13 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // The base is therefore the CHAIN HEAD. The SIX DECLARED PATHS ARE UNCHANGED — the baseline moves,
 // the scope never widens — and apps/graph-builder/test/ remains OUTSIDE them (measured), so moving
 // THIS constant cannot cascade into a further re-anchor.
-const P1_BASELINE_COMMIT = 'postBacklogSeamReanchor-090226';
+// RE-ANCHOR 2026-09-02 (TWILIGHT_ARROW), SIF via-conservation order — the standing rule above
+// applied again: the seamDiffEmpty re-anchor edits test-bgNosub.js, which sits INSIDE this gate's
+// diffedPathList, so this baseline must INCLUDE that edit. This time the seam re-anchor and this one
+// travel in the SAME commit, and the tag below is cut ON that commit, so no intermediate commit
+// exists where this gate is red on another gate's fix. build.js also moved (conservation gate),
+// which is a ruled framework change and the other reason this base advances.
+const P1_BASELINE_COMMIT = 'postSifViaConservationReanchor-090226';
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 

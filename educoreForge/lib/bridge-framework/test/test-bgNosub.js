@@ -398,7 +398,14 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // FAILING, its twin could not demonstrate a green-to-red TRANSITION and correctly refused — the run
 // reported 25/26 conjuncts observed red. This re-anchor is accepted only at 26/26: the gate green
 // AND the twin able to prove it can still fail.
-const PHASE3_ANCHOR_TAG = 'postProvabilitySweep-090226';
+// RE-ANCHOR 2026-09-02 (SIF via-conservation order, TWILIGHT_ARROW). ONLY seamDiffEmpty's base moves,
+// to postSifViaConservation-090226 (dec08ad): four authorised commits moved watched files past the
+// old ref — the SIF forge carrying via/mandatory (forges/sif/lib), the replay engine merging on the
+// full property map (lib/replay), the conservation gate at the harvest seam (replay-manager,
+// build.js), and the runSifMaterialize re-key. NO ALLOWED-PATH LIST WAS WIDENED and no exclusion was
+// added; SEAM_PATH_LIST is byte-identical across this commit. PHASE0_ANCHOR_TAG does NOT move. The
+// acceptance for this move is the twin observed red against the NEW ref, never a passing suite.
+const PHASE3_ANCHOR_TAG = 'postSifViaConservation-090226';
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');
