@@ -501,7 +501,10 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // which is a ruled framework change and the other reason this base advances.
 // SECOND MOVE 2026-09-02: the (iii) re-anchor commit edits test-bgNosub.js again, so this base
 // advances again, to the tag cut on THAT commit. Same rule, same mechanism, one commit later.
-const P1_BASELINE_COMMIT = 'postSifViaConservationReanchorB-090226';
+// RE-ANCHOR 2026-09-02 (JOBS 5+6): the same rule, a third time tonight - this commit edits test-bgNosub.js
+// inside this gate's diffed paths, so the base is the tag cut ON this commit; lib/bridge-framework
+// moved in JOB 5 (both write doors, the fake driver, two twin repairs) and build.js in JOBS 5b and 6.
+const P1_BASELINE_COMMIT = 'postSifViaConservationReanchorC-090226';
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 

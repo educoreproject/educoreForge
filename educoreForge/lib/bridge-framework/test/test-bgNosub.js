@@ -193,7 +193,10 @@ const POST_D1_BASE_TAG = 'postGraphSelfDoc-090126'; // re-anchored 2026-09-01 �
 // explicit exclusion for that file; THIS conjunct does not, and the scar protects one conjunct and
 // not its neighbour. The ruled move is the anchor, never an exclusion: it advances to the tag cut on
 // 6d15e81 so the edit falls inside it. Found by the bgNosub twin refusing at 25/26, not by reading.
-const PHASE0_ANCHOR_TAG = 'postSifViaConservationReanchor-090226';
+// RE-ANCHOR (iii) 2026-09-02 (JOBS 5+6): lib/forge-framework/ did NOT move in JOBS 5-6, but this anchor
+// advances with the seam so the two conjuncts share one head; measured empty over lib/forge-framework/
+// from the new ref before the move.
+const PHASE0_ANCHOR_TAG = 'postSifViaConservationJobs56-090226';
 // PHASE 1 RE-ANCHOR — RULING FJ-P1-1, and it moves seamDiffEmpty ALONE.
 //
 // WHY IT HAD TO MOVE. SEAM_PATH_LIST watches forges/*/forge*.js, forges/*/lib/*Declaration.js and
@@ -413,7 +416,12 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // PHASE0_ANCHOR_TAG does not move — copied from the previous re-anchor without checking; it did have
 // to move, see its own note, because this commit touched lib/forge-framework/test/.) The
 // acceptance for this move is the twin observed red against the NEW ref, never a passing suite.
-const PHASE3_ANCHOR_TAG = 'postSifViaConservation-090226';
+// RE-ANCHOR 2026-09-02 (JOBS 5+6, TWILIGHT_ARROW): seamDiffEmpty's base moves to the head after JOBS 5+6 and their follow-on gate-and-test commits (dbf10bd, 243c3c9, 9b4d76a, 347928f). Ruled moves
+// under SEAM_PATH_LIST: build.js, replay-engine.js, replayManager.js and the new test-conservationGate.js
+// (JOB 2's suite gained the exemption census; JOB 6 added the artifact writer, the record and the audit).
+// NO path list widened, NO exclusion added; SEAM_PATH_LIST byte-identical by git show. Twin re-observed
+// red against THIS ref before acceptance (26/26).
+const PHASE3_ANCHOR_TAG = 'postSifViaConservationJobs56-090226';
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');

@@ -92,7 +92,10 @@ const TREE_ROOT = path.resolve(toyScenario.FRAMEWORK_DIR, '..', '..');
 // and replay-engine.js (the merge now keys on the full property map so distinct-by-value edges
 // survive). THE SEAM FILE LIST IS UNCHANGED — the baseline moves, the scope never widens — and the
 // twin was re-observed red against THIS ref before the move was accepted.
-const PRE_MIGRATION_REF = 'postSifViaConservation-090226';
+// ═══ RE-ANCHOR, 2026-09-02 (TWILIGHT_ARROW), JOBS 5+6 ═══ three of the seven seam files moved for ruled
+// reasons: build.js (artifact writer, bridge summary threading), replay-engine.js (shared identity guard
+// and function), replayManager.js (conservation record, harvest keying). List unchanged; twin re-observed red.
+const PRE_MIGRATION_REF = 'postSifViaConservationJobs56-090226';
 const SEAM_FILE_LIST = Object.freeze([
 	'apps/graph-builder/apps/forger/forger.js',
 	'apps/graph-builder/lib/build.js',
