@@ -76,6 +76,48 @@ const pgToStored = (properties) => {
 	return out;
 };
 
+// =====================================================================
+// CONSERVATION IDENTITY — ONE implementation, used by BOTH sides of the forge-to-harvest seam.
+// =====================================================================
+// The seam gate compares what was LOADED against what was HARVESTED. If the two sides computed
+// their identity keys separately they would eventually disagree, and a disagreement between two
+// copies of a key function is EXACTLY the class of silent divergence this gate exists to catch —
+// so the gate must not contain one. This is the same reasoning the write path already states about
+// its own two entry points: two doors into one implementation cannot disagree about what they mean.
+//
+// EDGE identity is (type, from, to, sorted key=VALUE property pairs). NOT the key SET: four SIF
+// privacy references carry the identical key set {provenanceTier, nativeEdgeType, via, mandatory}
+// and differ only in the VALUE of `via`, so a key-set form reports them as one and would certify
+// their loss as conservation. MEASURED 2026-09-02: the forged SIF edge set is 88,757 distinct under
+// the key-set form and 88,766 under this one.
+const edgeConservationIdentityFor = (oneEdge) => {
+	const propertyNameList = Object.keys(oneEdge.properties || {}).sort();
+	const propertyText = propertyNameList
+		.map((onePropertyName) => `${onePropertyName}=${JSON.stringify(oneEdge.properties[onePropertyName])}`)
+		.join(',');
+	return `${oneEdge.type}\u241f${oneEdge.fromRef.id}\u241f${oneEdge.toRef.id}\u241f${propertyText}`;
+};
+
+// NODE identity is the stableId. The two sides SPELL it differently — the loaded side carries
+// ref.id (the forger's engine shape) and the harvested side carries stableId (the block shape) —
+// so this reads either, deliberately and in one place, rather than letting each side normalise
+// its own way.
+const nodeConservationIdentityFor = (oneNode) =>
+	oneNode.stableId !== undefined && oneNode.stableId !== null
+		? `${oneNode.stableId}`
+		: `${oneNode.ref && oneNode.ref.id}`;
+
+// The summary carried across the seam. Counts are TOTALS (emissions); the sets are DISTINCT.
+// total minus distinct is the DUPLICATE count, which the gate reports as a NUMBER and never as a
+// failure — a naive count check on 2026-09-02 would have refused a build for nine cosmetic
+// duplicates while missing the real defect entirely.
+const conservationSummaryFor = ({ nodes, edges }) => ({
+	nodeTotal: (nodes || []).length,
+	edgeTotal: (edges || []).length,
+	nodeIdentitySet: new Set((nodes || []).map(nodeConservationIdentityFor)),
+	edgeIdentitySet: new Set((edges || []).map(edgeConservationIdentityFor)),
+});
+
 // A property value as a PG-JSON multi-valued array (every value an array; CONTRACT §node).
 const neoToJs = (oneValue) => {
 	if (neo4j.isInt(oneValue)) return oneValue.toNumber();
@@ -262,6 +304,38 @@ const mergeEdges = (session, edges, callback) => {
 				? (oneEdge.properties || {}).provenanceTier[0]
 				: (oneEdge.properties || {}).provenanceTier,
 		}));
+		// ⚠ THE IDENTITY MAP MUST NOT CARRY A NULL, AN UNDEFINED, OR AN ARRAY HOLDING A NULL. The
+		// write below hands `props` to apoc.merge.relationship as the IDENTITY map it matches on, so
+		// such a value decides which relationship an edge merges onto. That is not a behaviour to
+		// discover from a production build. MEASURED 2026-09-02 over the four blocks of the run3
+		// store: 663,675 edges, 868,641 property VALUES, zero null, zero undefined, zero
+		// array-containing-null. So this refuses a shape that does not occur today — it exists so
+		// that it cannot START occurring silently.
+		// The guard covers EXACTLY the shapes its justification names: a bare null, an undefined,
+		// and an array carrying a null element. An empty string is deliberately NOT refused — it is
+		// a legitimate value and it matches predictably.
+		const identityHostileValue = (oneValue) =>
+			oneValue === null ||
+			oneValue === undefined ||
+			(Array.isArray(oneValue) && oneValue.some((oneElement) => oneElement === null));
+		const nullValuedRow = rows.find((oneRow) =>
+			Object.keys(oneRow.props || {}).some((onePropertyName) => identityHostileValue(oneRow.props[onePropertyName])),
+		);
+		if (nullValuedRow) {
+			const nullPropertyNameList = Object.keys(nullValuedRow.props).filter((onePropertyName) =>
+				identityHostileValue(nullValuedRow.props[onePropertyName]),
+			);
+			callback(
+				`mergeEdges: REFUSED — edge ${edgeType} ${nullValuedRow.fromStableId} -> ` +
+					`${nullValuedRow.toStableId} carries identity-hostile propert(ies) — null, undefined, or an ` +
+				`array holding null: ` +
+					`${nullPropertyNameList.join(', ')}. Edge properties are the relationship's merge ` +
+					`identity; a null there decides which relationship the edge merges onto and is ` +
+					`never defaulted. Nothing written for this type.`,
+			);
+			return;
+		}
+
 		const batches = batchArray(rows, BATCH_SIZE);
 		let bi = 0;
 
@@ -274,31 +348,86 @@ const mergeEdges = (session, edges, callback) => {
 			bi++;
 			// GREENFIELD: resolve BOTH endpoints on stableId, anywhere in the store (so cross-
 			// source bridges resolve). Write only if both resolve; never a partial edge.
-				// PERF: endpoints labeled :ForgedNode so the reskey RANGE index on :ForgedNode(stableId)
-				// drives a NodeIndexSeek (was AllNodesScan-per-row => O(edges x nodes)). Every replayed
-				// node carries :ForgedNode — ENFORCED at deserialize time in replay() (a block with a
-				// node missing the label is a hard error before any write), so the resolution SET is
-				// identical — purely a plan change; MERGE, the two-endpoint orphan gate, batching and
-				// danglingRefs semantics are unchanged.
+			// PERF: endpoints labeled :ForgedNode so the reskey RANGE index on :ForgedNode(stableId)
+			// drives a NodeIndexSeek (was AllNodesScan-per-row => O(edges x nodes)). Every replayed
+			// node carries :ForgedNode — ENFORCED at deserialize time in replay() (a block with a
+			// node missing the label is a hard error before any write), so the resolution SET is
+			// identical. THAT change was purely a plan change and left the write itself alone.
+			// ⚠ THE WRITE IS NO LONGER A CYPHER MERGE (2026-09-02) — see the note on the query below.
+			// What survived BOTH changes unaltered is what this paragraph is really about: the
+			// two-endpoint orphan gate, the batching, and the danglingRefs semantics.
+			// ⚠ THE MERGE KEYS ON THE FULL PROPERTY MAP, AND IT MUST. A Cypher MERGE pattern cannot
+			// take a map VARIABLE for its relationship properties, so the incumbent pattern carried
+			// NONE — `MERGE (from)-[r:TYPE]->(to) SET r += e.props` matched ANY relationship of that
+			// type between those two nodes and then overwrote its properties. OBSERVED on a scratch
+			// graph 2026-09-02: four writes differing only in `via` produced ONE relationship
+			// carrying the LAST via written. That is how SIF's four opposed privacy references
+			// (ShareWith / DoNotShareWith / NeverShareWith / PermissionGrantee) became one edge.
+			// apoc.merge.relationship merges on the identity map it is handed and stores no
+			// synthetic key, so distinct-by-value edges survive and no block byte moves.
+			//
+			// GENUINELY IDENTICAL EDGES STILL MERGE, AND THAT IS LOAD-BEARING, NOT INCIDENTAL:
+			// MEASURED over the seven-block fourWithHubDebugBridged manifest, the edfi standardBase
+			// block and the ceds<->edfi relationship block share 169 byte-identical HAS_OPTION_SET
+			// edges. CREATE would duplicate every one of them. A merge keyed on the full property
+			// map collapses those 169 exactly as the incumbent did.
+			//
+			// THE SUBQUERY SHAPE IS THE POINT, NOT DECORATION. A procedure cannot be called inside
+			// FOREACH, and the FOREACH is what let rows with an UNRESOLVED endpoint survive to the
+			// RETURN that feeds danglingRefs. Filtering them out with a bare WHERE would drop them
+			// before the RETURN and the dangling accounting would silently lose them. A CALL
+			// subquery ENDING IN AN AGGREGATE returns exactly one row per outer row, so an
+			// unresolved edge still reaches the RETURN with fromMissing/toMissing true and
+			// mergedRelationshipCount 0, and `written` and `danglingRefs` keep their meanings.
+			//
+			// $edgeType is a PARAMETER now rather than a backtick-templated label, because apoc
+			// takes the type as a string — which also closes the interpolation surface the template
+			// form opened.
 			const query = `
 				UNWIND $edges AS e
 				OPTIONAL MATCH (from:ForgedNode {stableId: e.fromStableId})
 				OPTIONAL MATCH (to:ForgedNode   {stableId: e.toStableId})
-				FOREACH (_ IN CASE WHEN from IS NULL OR to IS NULL THEN [] ELSE [1] END |
-					MERGE (from)-[r:\`${edgeType}\`]->(to) SET r += e.props)
+				CALL {
+					WITH e, from, to
+					WITH e, from, to WHERE from IS NOT NULL AND to IS NOT NULL
+					CALL apoc.merge.relationship(from, $edgeType, e.props, {}, to) YIELD rel
+					RETURN count(rel) AS mergedRelationshipCount
+				}
 				RETURN e.fromSrc AS fromSrc, e.fromStableId AS fromStableId,
 				       e.toSrc AS toSrc, e.toStableId AS toStableId,
 				       e.blockType AS blockType,
 				       e.provenanceTier AS provenanceTier,
-				       (from IS NULL) AS fromMissing, (to IS NULL) AS toMissing
+				       (from IS NULL) AS fromMissing, (to IS NULL) AS toMissing,
+				       mergedRelationshipCount AS mergedRelationshipCount
 			`;
 			session
-				.run(query, { edges: batch })
+				.run(query, { edges: batch, edgeType })
 				.then((result) => {
+					let invariantViolation = null;
 					result.records.forEach((rec) => {
 						const fromMissing = rec.get('fromMissing');
 						const toMissing = rec.get('toMissing');
 						if (!fromMissing && !toMissing) {
+							// ⚠ A RESOLVED ROW MUST PRODUCE EXACTLY ONE RELATIONSHIP. apoc.merge.relationship
+							// yields the relationship it matched or created, so a healthy write counts 1. TWO or
+							// more means the identity map matched SEVERAL existing relationships, which can only
+							// happen if the graph already held duplicates; ZERO means nothing was written while
+							// both endpoints resolved. Neither would show in `written`, which counts ROWS and not
+							// relationships — which is precisely the class of blindness this order exists to end.
+							// OBSERVED RED 2026-09-02 against a CREATE-seeded graph holding two identical REFERENCES
+							// between one pair: the refusal fired naming count 2. No load path in this tree can
+							// produce that state today — that is a fact about the LOAD PATHS, not about the guard,
+							// and this tree grew a third write door (bridge-framework/graphWriter) that nobody had
+							// enumerated until the same day. A guard for a graph STATE cannot know how the state arose.
+							const mergedRelationshipCount = neoToJs(rec.get('mergedRelationshipCount'));
+							if (mergedRelationshipCount !== 1 && invariantViolation === null) {
+								invariantViolation =
+									`mergeEdges: REFUSED — edge ${edgeType} ${rec.get('fromStableId')} -> ` +
+									`${rec.get('toStableId')} resolved both endpoints but merged ` +
+									`${mergedRelationshipCount} relationship(s), not exactly 1. More than one means the ` +
+									`identity map matched several existing relationships; zero means nothing was ` +
+									`written. Neither is a count this loader may report as success.`;
+							}
 							written++;
 							return;
 						}
@@ -322,6 +451,10 @@ const mergeEdges = (session, edges, callback) => {
 										: 'to',
 						});
 					});
+					if (invariantViolation) {
+						callback(invariantViolation);
+						return;
+					}
 					nextBatch();
 				})
 				.catch((err) =>
@@ -971,6 +1104,10 @@ const harvestBlock = ({ boltUri, password, selector, header, vectorStore }, call
 			nodeCount: args.nodes.length,
 			edgeCount: args.edges.length,
 			stableIdCoverage: args.stableIdCoverage,
+			// ADDITIVE, for the forge-to-harvest conservation gate. Built HERE, where the harvested
+			// nodes and edges are already in hand, rather than by re-parsing the block text — which
+			// would be a second reading of the same thing and a second place to drift.
+			harvestedConservationSummary: conservationSummaryFor({ nodes: args.nodes, edges: args.edges }),
 		});
 	});
 };
@@ -1419,6 +1556,10 @@ return {
 	// OUT of a graph and changes nothing. The old name `extractBlock` is deliberately NOT aliased —
 	// a second vocabulary surviving one layer down is exactly what the rename exists to prevent.
 	harvestBlock,
+	// exported so the LOAD side computes conservation identity with the SAME function the
+	// HARVEST side uses; see the note on edgeConservationIdentityFor.
+	conservationSummaryFor,
+	edgeConservationIdentityFor,
 	labelRefusal,
 	replay,
 	// the shared write path — replay() and replayManager.init() are its two entry points
