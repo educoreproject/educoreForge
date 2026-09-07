@@ -1298,7 +1298,15 @@ const moduleFunction =
 						next(refuse.byName({ moduleName, what: `a judged decision is needed for subject ${firstJudged.baseRecord.subjectStableId} (${firstJudged.baseRecord.targetKey}) and inferenceConfig.llmClient is absent`, where: 'a re-judge with judged subjects needs the real client or the debug judge (build.js resolveInferenceConfig); a specified-only run needs no judge' }).message);
 						return;
 					}
-					const judgeKind = debugMark ? `debug:${judgeClient.ruleName}` : `anthropic:${judgeClient.model}`;
+					// ⟪JOB 1, 2026-09-07, ruled by DAWN_TOWER⟫ the REAL arm no longer prepends a hard-coded provider
+					// name: since the split, judgeClient.model IS the namespaced identity ('anthropic:claude-opus-4-8'),
+					// so 'anthropic:' + that would read 'anthropic:anthropic:claude-opus-4-8' in a FROZEN block header.
+					// This edit is BYTE-PRESERVING — the old expression built the same string from a literal and a bare
+					// wire name, so no existing header value moves; only where the value comes from does. The DEBUG arm
+					// is deliberately UNCHANGED: test-bgThree.js:109 branches on the 'debug:' prefix, and
+					// debugJudge.model ('debugJudge:<rule>-v1-INVALID_DEBUG') does not carry it. Unifying both arms
+					// through the registry is JOB 4's.
+					const judgeKind = debugMark ? `debug:${judgeClient.ruleName}` : judgeClient.model;
 					const budget = { maxJudgmentCount, judgmentCountSoFar: 0 };
 					const evidenceView = args.reader.forEvidence();
 					// the key is PRESENT iff the hook is declared (contract, RULING BR4); with the hook off there is no guidance to render
@@ -1446,7 +1454,16 @@ const moduleFunction =
 							});
 						});
 					};
-					boundedRunnerLib.runBounded({ itemList: args.judgedTaskList, concurrency: JUDGE_CONCURRENCY, oneItem: judgeOneTask }, (runnerError, judgedRecordList) => {
+					// ⟪JOB 1, 2026-09-07⟫ THE JUDGE RUNS AT THE SLOWER OF TWO CEILINGS. JUDGE_CONCURRENCY is what this
+					// FRAMEWORK will drive; maxConcurrency is what THIS PROVIDER declares it can take (JUDGE_PROVIDER_SHAPE,
+					// apps/graph-builder/interfaces.js). min(), never max(): a local model serving one request at a time must
+					// BOUND the framework rather than be drowned by it. Refused BY NAME when absent or not a positive integer
+					// — Math.min(4, undefined) is NaN, and a NaN concurrency is a defect that surfaces far from its cause.
+					if (!Number.isInteger(judgeClient.maxConcurrency) || judgeClient.maxConcurrency < 1) {
+						next(refuse.byName({ moduleName, what: `judge provider '${judgeClient.model}' declares maxConcurrency ${JSON.stringify(judgeClient.maxConcurrency)}`, where: 'every judge provider declares a positive-integer maxConcurrency (JUDGE_PROVIDER_SHAPE); the run drives the judge at min(JUDGE_CONCURRENCY, maxConcurrency) and there is no default' }).message);
+						return;
+					}
+					boundedRunnerLib.runBounded({ itemList: args.judgedTaskList, concurrency: Math.min(JUDGE_CONCURRENCY, judgeClient.maxConcurrency), oneItem: judgeOneTask }, (runnerError, judgedRecordList) => {
 						if (runnerError) {
 							next(runnerError);
 							return;

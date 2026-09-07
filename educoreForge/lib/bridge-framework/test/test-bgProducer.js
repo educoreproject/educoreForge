@@ -51,7 +51,12 @@ const DECISION_BLOCK_FILE = 'decisionBlock.js';
 const CERTIFICATION_FILE = 'certificationCheck.js';
 const VOCABULARY_PATH = path.join(scenarioLib.FRAMEWORK_DIR, '..', 'vocabulary', 'vocabulary.js');
 const BUILD_JS_PATH = path.join(scenarioLib.FRAMEWORK_DIR, '..', '..', 'apps', 'graph-builder', 'lib', 'build.js');
-const DEBUG_MODEL_ID = 'debugJudge-digest-v1-INVALID_DEBUG';
+// ⟪JOB 1, 2026-09-07⟫ DERIVED from the module under assertion rather than restated as a literal. The
+// literal that stood here ('debugJudge-digest-v1-INVALID_DEBUG') went stale the moment JOB 1 namespaced the
+// debug judge's identity, and this conjunct caught it — correctly, on both the re-judge AND the plain replay,
+// which is exactly what it is for. Reading it from debugJudge's own exported modelIdentifierFor means the
+// assertion can never again disagree with the thing it asserts about: the identity has ONE home.
+const DEBUG_MODEL_ID = require(path.join(__dirname, '..', '..', '..', 'apps', 'graph-builder', 'apps', 'bridge-maker', 'lib', 'debugJudge')).modelIdentifierFor('digest');
 
 // build.js's OWN producer inference, reproduced verbatim (build.js bridgeOnePairing) — the consumer of the runReport
 const buildJsProducerFor = (oneBlock) => (oneBlock && vocabularyLib.suffixForRelationshipProducer(oneBlock.producer) ? oneBlock.producer : oneBlock && oneBlock.decisionBlock != null ? 'inferred' : 'authored');

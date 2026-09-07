@@ -385,8 +385,32 @@ module.exports = {
 // Ed-Fi derived order died on exactly this: eight subjects judged, then an honest abstention with no category,
 // permitted by the schema, refused by the framework, build dead. These options make the omitted-field returns
 // PERMANENTLY exercised, so the seam can never again be proven only against the fields a model happened to fill.
-const makeFakeRealClient = ({ pickOrdinal = '1', category = 'strong', abstainCategory = 'none', omitCategoryOnAbstain = false, abstainRationaleMode = 'stated', rationaleMode = 'keyAndName', extraReturnKeys = {}, throwOnCall = false, model = 'fake-anthropic-judge-v1' } = {}) => {
-	const client = { callCount: 0, questionList: [], model, keySource: 'test' };
+// ⟪JOB 1, 2026-09-07⟫ FAKE_PROVIDER_NAME / wireModel -> model. The double now DERIVES its namespaced
+// identity from its wire name exactly as llmClient does, rather than carrying one flat string that plays
+// both parts — which is the very conflation JOB 1 exists to end. No caller overrides either (checked:
+// FOURTEEN makeFakeRealClient call sites tree-wide excluding this definition, none of which passes a model
+// or a wireModel), so this changes no assertion.
+const FAKE_PROVIDER_NAME = 'fakeAnthropic';
+const makeFakeRealClient = ({ pickOrdinal = '1', category = 'strong', abstainCategory = 'none', omitCategoryOnAbstain = false, abstainRationaleMode = 'stated', rationaleMode = 'keyAndName', extraReturnKeys = {}, throwOnCall = false, wireModel = 'fake-anthropic-judge-v1' } = {}) => {
+	const model = `${FAKE_PROVIDER_NAME}:${wireModel}`;
+	// ⟪JOB 1, 2026-09-07⟫ THE DOUBLE SATISFIES THE WHOLE JUDGE_PROVIDER_SHAPE, not only the members the
+	// framework happens to read today. This file's own header (see the RULING SABLE_RIVER note below) records
+	// why: a double built from what the real client USUALLY provides "is not a double of the client; it is a
+	// double of the lucky case". maxConcurrency is the member bridge-framework.js:1449 now refuses by name when
+	// absent — a real provider declares its own ceiling and the run judges at min(JUDGE_CONCURRENCY, it) — and
+	// name/wireModel/describe are the rest of the contract, present so this double can be handed to the
+	// registry's shape validator (JOB 4) without a special case. `model` stays the caller-supplied value so
+	// every existing assertion about it is untouched.
+	const client = {
+		callCount: 0,
+		questionList: [],
+		name: FAKE_PROVIDER_NAME,
+		wireModel,
+		model,
+		maxConcurrency: 4,
+		describe: () => ({ provider: FAKE_PROVIDER_NAME, model, version: 'toyBridgeScenario-fakeRealClient-v1' }),
+		keySource: 'test',
+	};
 	client.rerank = ({ systemPrompt, userPrompt, choiceEnum } = {}, callback) => {
 		void systemPrompt;
 		client.callCount += 1;

@@ -545,14 +545,35 @@ slot ⟨BR-065⟩ — and the discard is COUNTED (BG-P6 b).
    `chosenStableId` present in the CURRENT `renderedPoolStableIdList`) else refused and re-asked. Every v1 judgment starts
    COLD (the 4,719 warm rows are keyed to the retired renderer ⟨RISK §1.5⟩); the report says
    `liveJudgmentCount` / `cacheHitCount`.
-3. **Ask** ⟨RULING BF1⟩ ⟨REVIEW D2, D3, D5⟩: `judgeClient.rerank({ systemPrompt, userPrompt,
-   choiceEnum: ['1'..'N','NONE'], requireJudgment: true })` — the ONE contract both `llmClient` and
-   `debugJudge` satisfy. **The judge's REAL return is** `[code fact]` `llmClient.js:441-450`
-   `{ choice, model, attempts, category, rationale, usage, stopReason, retryReasons }` where `choice`
-   is an ORDINAL STRING from `choiceEnum` (`'1'..'N'` or `'NONE'`), and there is NO `predicate` key
-   anywhere in `llmClient.js` or `debugJudge.js`. **`llmClient.js` and `debugJudge.js` are UNCHANGED in
-   v1** — no predicate slot exists and none is added; a `derived`-era predicate question is a
-   `llmClient` change inside the fingerprint tree, out of scope. The framework's judge COMPONENT
+3. **Ask** ⟨RULING BF1⟩ ⟨REVIEW D2, D3, D5⟩ ⟪**CORRECTED 2026-09-07** by JOB 0 and JOB 1 of
+   `WORKORDER-judgeProviderRegistry-v2-090726.md`; the two superseded claims are kept below rather than
+   deleted, so a reader can see what changed and when⟫: `judgeClient.rerank({ systemPrompt, userPrompt,
+   choiceEnum: ['1'..'N','NONE'] }, cb)` — and the contract both `llmClient` and `debugJudge` satisfy is
+   **no longer only this sentence. It is DECLARED AS DATA** as `JUDGE_PROVIDER_SHAPE` in
+   `apps/graph-builder/interfaces.js`, beside `FINISHER_MODULE_SHAPE`, with members `name`, `wireModel`,
+   `model`, `maxConcurrency`, `rerank`, `describe`. A module missing any member is REFUSED BY NAME, never
+   probed for which methods it happens to expose.
+   **The judge's REAL return is** `[code fact]` `llmClient.js`, the success callback of `rerank`:
+   `{ choice, model, attempts, category, rationale, usage, stopReason, retryReasons }`, of which
+   `{ choice, category, rationale, model, attempts }` are the CONTRACT members and the rest are this
+   client's own forensic extras. `choice` is an ORDINAL STRING from `choiceEnum` (`'1'..'N'` or `'NONE'`),
+   and there is NO `predicate` key anywhere in `llmClient.js` or `debugJudge.js` — that claim stands, and
+   is still structural rather than merely observed.
+   ⟪THE TWO CLAIMS THAT WERE FALSIFIED⟫
+   (a) This call used to carry `requireJudgment: true`. **JOB 0 retired that option entirely**: passing it
+       is now REFUSED BY NAME by both clients, and judgment is unconditional — the `select_candidate`
+       schema always requires `choice`, `category` and `rationale`. The paragraph documented the exact
+       inverse of the live behaviour between 2026-09-07 and this correction.
+   (b) “`llmClient.js` and `debugJudge.js` are UNCHANGED in v1”. **They are not.** JOB 0 changed both, and
+       JOB 1 split what used to be one `model` property into `wireModel` — the bare API name sent on the
+       wire (`claude-opus-4-8`), internal to the provider — and `model`, the NAMESPACED identity
+       (`anthropic:claude-opus-4-8`). It is `model`, the namespaced one, that is the `model` of step 2's
+       cache key above, the forensic `judgeModel`, and the edge's `mappingTool`. No predicate slot exists
+       and none is added; a `derived`-era predicate question would still be an `llmClient` change inside
+       the fingerprint tree, out of scope.
+   The line citation that stood here (`llmClient.js:441-450`) is **dropped rather than renumbered**: JOB 0
+   and JOB 1 each moved it, no gate watches this file, and a line number nothing verifies is a claim that
+   rots in silence. The function name is stable; the line number never was. The framework's judge COMPONENT
    adapts, in `judgeComponent.js`: (a) it renders the pool in `stableId` order (step 1) and RECORDS that
    ordered list as `renderedPoolStableIdList` on the decision record and in the forensic record — the
    ONE authority for the pick; (b) it maps the returned ORDINAL `choice` to `chosenCardStableId =
@@ -575,7 +596,9 @@ slot ⟨BR-065⟩ — and the discard is COUNTED (BG-P6 b).
    budget: a DECLARED per-run `maxJudgmentCount` + the client's cost report HALTS the run by name, never
    trims ⟨BR-069, BR-120⟩.
 5. **Debug double** ⟨RULING R5⟩ ⟨RISK §3.2⟩: `debugJudge.js` REUSED as-is (`first | abstain | digest`
-   register; `model: debugJudge-<rule>-v1-INVALID_DEBUG`; `decisionAlgorithm: INVALID_DEBUG`; `usage:
+   register; `model: debugJudge:<rule>-v1-INVALID_DEBUG` ⟪separator CORRECTED JOB 1, 2026-09-07: the debug
+   judge's identity is namespaced like every other provider's, `debugJudge:` not `debugJudge-`⟫;
+   `decisionAlgorithm: INVALID_DEBUG`; `usage:
    null`; self-announcing rationale; no caching). The framework reads `debugMarkFromLlmClient` and MUST
    (a) NOT `putJudgment` (cache row count UNCHANGED across a debug run); (b) suffix the block generation
    with the mark (`generationWithDebugMark`); (c) stamp EVERY edge of a debug block — specified ones

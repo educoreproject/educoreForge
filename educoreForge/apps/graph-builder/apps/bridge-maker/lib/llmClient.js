@@ -8,8 +8,13 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // single structured tool call so the model emits a constrained `choice` (a candidate index OR 'NONE'),
 // exactly the json_schema-choice contract inferencePipeline.js consumes: it calls
 //   llmClient.rerank({ systemPrompt, userPrompt, choiceEnum }, cb)  and reads only  cb('', { choice }).
-// The extra returned keys ({ model, attempts }) are harmless surplus the pipeline ignores — the contract is
-// met precisely on `choice`. The key is NEVER logged, echoed, or returned.
+// ⟪JOB 1, 2026-09-07 — THE SENTENCE THAT USED TO STAND HERE WAS WRONG AND IS CORRECTED⟫ It read: "The extra
+// returned keys ({ model, attempts }) are harmless surplus the pipeline ignores — the contract is met
+// precisely on `choice`." They are CONTRACT MEMBERS. JUDGE_PROVIDER_SHAPE (apps/graph-builder/interfaces.js)
+// declares rerank's result as { choice, category, rationale, model, attempts }, and `model` is the
+// NAMESPACED IDENTITY the judgment travelled under — the judgment-cache key (judgeComponent.js:242), the
+// forensic judgeModel, and the edge's mappingTool. A caller that discarded it would be discarding the only
+// record of WHICH judge answered. The API KEY is NEVER logged, echoed, or returned.
 //
 // NON-determinism note: the rerank is the ONE non-deterministic step of the inferred producer — it runs ONCE
 // at --rebridge time and its output is FROZEN into a content-addressed decision block; a plain-build replay
@@ -23,7 +28,9 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // been spent). Operational faults (a bad response, a timeout) still travel by callback.
 //
 // temperature is omitted for claude-opus-4-8 (the API rejects temperature for that model: 400
-// invalid_request_error 'temperature is deprecated'); temperature 0 is sent for other models. Robust answer
+// invalid_request_error 'temperature is deprecated'); temperature 0 is sent for other models. That test reads
+// `wireModel`, NOT `model` — see THE wireModel/model SPLIT below; testing the namespaced identity would match
+// nothing and silently start sending temperature to a model that rejects it. Robust answer
 // extraction (structured tool input.choice -> embedded "choice" regex -> bare NONE -> first in-range integer)
 // mirrors the measured harness so parse failures stay at ~0.
 //
@@ -92,6 +99,47 @@ const API_HOST = 'api.anthropic.com';
 const API_PATH = '/v1/messages';
 const TOOL_NAME = 'select_candidate';
 
+// ⟪JOB 1, 2026-09-07 — THE wireModel/model SPLIT⟫ Until now ONE property, `cfg.model`, did THREE jobs:
+//   (a) the API model name sent on the wire,
+//   (b) the input to the /^claude-opus-4/ temperature rule,
+//   (c) `client.model` — the judgment-cache key (judgeComponent.js:242), the forensic `judgeModel`
+//       (judgeComponent.js:258), and the edge's `mappingTool` (materialiser.js:98).
+// (a) and (b) are an ANTHROPIC WIRE DETAIL. (c) is a CROSS-PROVIDER IDENTITY. Conflating them was safe only
+// while there was exactly one provider. It stops being safe the moment there are two: the judgment cache
+// distinguishes two providers handed identical prompts through the same renderer by `model` ALONE, so two
+// providers sharing a wire name would serve each other's verdicts under a real promptHash — silently, and
+// durably, since the cache persists. The two are therefore SEPARATE MEMBERS from here on:
+//   wireModel  'claude-opus-4-8'            INTERNAL TO THE TRANSPORT. Exactly TWO uses put it anywhere —
+//                                           payload.model and the temperature regex, both below and both
+//                                           labelled WIRE USE. It is also READ three more times, none of
+//                                           them a send: the construction confusion-guard, the derivation
+//                                           of `model`, and the returned provider, which exposes it so an
+//                                           operator can see what actually went on the wire. It reaches no
+//                                           cache key and no edge; only `model` does.
+//   model      'anthropic:claude-opus-4-8'  THE IDENTITY. Namespaced by PROVIDER_NAME, DERIVED rather than
+//                                           configured, so the namespace cannot be forgotten or misspelt.
+// PUTTING THE NAMESPACED FORM ON THE WIRE IS A 400 (gate G-F1-a's twin): the Anthropic API knows nothing of
+// our namespace. That is the whole reason the wire value is a separate, internal member.
+const PROVIDER_NAME = 'anthropic';
+// MODEL_NAMESPACE_SEPARATOR — declared here rather than imported from interfaces.js so that bridge-maker/lib
+// (a fingerprinted directory, decisionBlock.js:69) takes on no dependency outside the fingerprint tree. The
+// duplication is the SAME deliberate trade JOB 0 made for the refusal wording, and it is PROVEN equal to
+// JUDGE_PROVIDER_SHAPE.MODEL_NAMESPACE_SEPARATOR by test-judgeProviderContract.js rather than trusted.
+const MODEL_NAMESPACE_SEPARATOR = ':';
+const namespacedModelFor = (wireModel) => `${PROVIDER_NAME}${MODEL_NAMESPACE_SEPARATOR}${wireModel}`;
+
+// ANTHROPIC_MAX_CONCURRENCY — this provider's OWN ceiling on in-flight judgments. The framework runs the
+// judge at min(JUDGE_CONCURRENCY, provider.maxConcurrency) (bridge-framework.js:1449), so a provider that
+// cannot take the framework's pace bounds it rather than being drowned by it. 4 matches the framework's own
+// JUDGE_CONCURRENCY: the Anthropic API sustains it, and this value has been the effective rate all along —
+// it is a DECLARATION of the status quo, not a new limit. An operator may raise or lower it in the ini; an
+// ini value that is not a positive integer is REFUSED BY NAME at construction, never quietly corrected.
+const ANTHROPIC_MAX_CONCURRENCY = 4;
+
+// CLIENT_VERSION — what describe() reports as its own version. A judge that cannot say what it is must never
+// run, and "what it is" includes which build of this client answered.
+const CLIENT_VERSION = 'llmClient-anthropic-v2-judgeProviderContract';
+
 // ⟪R-a THIRD REAL-RUN FINDING, 2026-07-30⟫ ROOT CAUSE of all three prior live failures, found by a code
 // read after two blind fixes: cfg.maxTokens defaults to 64 (config-overridable; the deployed
 // [anthropicAi].ini evidently never raises it). tool_choice is FORCED, so the model emits
@@ -136,11 +184,53 @@ const JUDGMENT_REQUIRED_FIELD_LIST = Object.freeze(['choice', 'category', 'ratio
 // rather than shared because a judge provider may not depend on another provider's module; the
 // equality is proven by gate G0-d, not by trust.
 const OBSOLETE_JUDGMENT_FLAG_NAME = 'requireJudgment';
+// ⟪JOB 1, 2026-09-07⟫ OBSOLETE_MODEL_OPTION_NAME — the CONSTRUCTION option `model` is retired for exactly the
+// reason this job exists: after the split the bare word names two different things, and a caller writing
+// `model:` cannot be assumed to mean the wire name rather than the identity. It had ZERO callers when it was
+// retired — build.js:993, the only construction site in the tree, passes configFilePath alone — so this is a
+// rename with no migration, not a removal of live behaviour. The replacement option is `wireModel`. As with
+// requireJudgment, the retired name is REFUSED BY NAME rather than ignored: an option that silently does
+// nothing is how the ambiguity would return.
+const OBSOLETE_MODEL_OPTION_NAME = 'model';
+const obsoleteModelOptionRefusalText = (receivedValue) =>
+	`${OBSOLETE_MODEL_OPTION_NAME} is no longer a construction option (JOB 1, 2026-09-07): it was ambiguous ` +
+	`once model split into wireModel (the API name sent on the wire) and model (the namespaced identity ` +
+	`'${PROVIDER_NAME}${MODEL_NAMESPACE_SEPARATOR}<wireModel>' that keys the judgment cache and reaches the ` +
+	`edge). Pass wireModel instead; the identity is DERIVED and cannot be set. Refused by name, never ` +
+	`ignored, so the ambiguity cannot creep back. (received ${JSON.stringify(receivedValue)})`;
 const obsoleteJudgmentFlagRefusalText = (receivedValue) =>
 	`${OBSOLETE_JUDGMENT_FLAG_NAME} is OBSOLETE and was removed (JOB 0, 2026-09-07): judgment is now ` +
 	`UNCONDITIONAL — the select_candidate schema always requires choice, category and rationale. ` +
 	`Remove the argument from the call site; it is refused by name, never ignored, so the retired ` +
 	`scalar default cannot creep back. (received ${JSON.stringify(receivedValue)})`;
+
+// ⟪JOB 1, 2026-09-07 — gate G-F10-b⟫ requestTimeoutRefusalText — a timeout refusal must say WHETHER THE
+// REQUEST WAS EVER SENT. "no response within 120000ms" is the same sentence for two opposite faults: a
+// request that reached Anthropic and got no answer (a slow or wedged model), and a request that never left
+// this process because it sat waiting for a socket (too much concurrency for the agent's pool). The operator
+// response differs completely — wait or retry in the first case, lower maxConcurrency in the second — so the
+// refusal names which happened, and how long was spent in each state.
+//
+// [code fact] Node's `timeout` option on https.request is a SOCKET timeout: it starts when a socket is
+// ASSIGNED, not when the request is created. A request still waiting for a free socket has therefore sent
+// NOTHING, and the 'socket' event is what distinguishes the two states.
+//
+// ⟪NO MILLISECOND DURATIONS HERE, AND THE REASON IS A GATE⟫ The first version of this reported how long was
+// spent queued and in flight, using Date.now(). BG-DET conjunct (a) in lib/bridge-framework/test/
+// test-bgReplay.js refuses `Date.now | new Date | Math.random | process.hrtime | crypto.randomBytes` in
+// lib/bridge-framework/**, bridgeMaker.js AND bridge-maker/lib/*.js — this file — and caught it. The gate is
+// right and the durations were mine to give up: this directory feeds a CONTENT-ADDRESSED decision block, and
+// a clock in it is a determinism hazard whether or not today's use happens to be confined to an error
+// string. The queued-vs-in-flight DISTINCTION is what the operator needs; the milliseconds were decoration.
+// MODULE-SCOPE and pure, so the wording of both arms is provable without a socket, a key or a network.
+const requestTimeoutRefusalText = ({ timeoutMs, socketAssigned }) =>
+	socketAssigned
+		? `no response within ${timeoutMs}ms — the request was IN FLIGHT: a socket was assigned and the ` +
+			`request reached the transport, but no response came back. Retry, or raise ` +
+			`[anthropicAi].requestTimeoutMs.`
+		: `no response within ${timeoutMs}ms — the request was still QUEUED: no socket was ever assigned, so ` +
+			`NOTHING WAS SENT and the whole interval was spent waiting for a free connection. Lower the ` +
+			`judge's maxConcurrency rather than raising requestTimeoutMs; the wire was never the bottleneck.`;
 
 // extractChoice / extractCategoryAndRationale — MODULE-SCOPE (not per-instance closure): both are pure
 // functions of a response body + module-level constants (TOOL_NAME, CATEGORY_ENUM), needing no
@@ -244,10 +334,21 @@ const buildTool = ({ choiceEnum } = {}) => {
 
 const moduleFunction =
 	({ moduleName } = {}) =>
-	({ configFilePath = defaultConfigFilePath, model: modelOverride, componentOverrides = {} } = {}) => {
+	(constructionOptions = {}) => {
+		const { configFilePath = defaultConfigFilePath, wireModel: wireModelOverride, componentOverrides = {} } = constructionOptions;
 		const { xLog } = process.global;
 
-		// resolve key/model/version from ini, with env as the alternative key source (never logged).
+		// ⟪JOB 1⟫ hasOwnProperty, not `!== undefined` — the same reasoning JOB 0 recorded for requireJudgment:
+		// the fault is that the caller MENTIONED the retired option, and every value of it is now ambiguous.
+		if (Object.prototype.hasOwnProperty.call(constructionOptions, OBSOLETE_MODEL_OPTION_NAME)) {
+			throw new Error(`${moduleName}: ${obsoleteModelOptionRefusalText(constructionOptions[OBSOLETE_MODEL_OPTION_NAME])}`);
+		}
+
+		// resolve key/wireModel/version from ini, with env as the alternative key source (never logged).
+		// ⟪JOB 1⟫ the ini key is still spelled `model` because the DEPLOYED [anthropicAi].ini spells it that
+		// way and that file lives in a different repository, outside this lane. What it has ALWAYS held is the
+		// wire name, so it is read into `wireModel` and the ambiguity ends at this boundary rather than
+		// travelling. An ini value that has been namespaced by hand is refused at construction below.
 		const resolveConfig = () => {
 			let iniConfig = {};
 			if (fs.existsSync(configFilePath)) {
@@ -258,7 +359,12 @@ const moduleFunction =
 			return {
 				apiKey,
 				keySource: iniConfig.apiKey ? 'ini' : process.env.ANTHROPIC_API_KEY ? 'env' : 'none',
-				model: modelOverride || iniConfig.model || 'claude-opus-4-8',
+				wireModel: wireModelOverride || iniConfig.model || 'claude-opus-4-8',
+				// maxConcurrency is DECLARED by this provider (ANTHROPIC_MAX_CONCURRENCY) and may be overridden
+				// in the ini. The raw ini text is carried through UNPARSED so the construction guard below can
+				// refuse a malformed value BY NAME showing what was written; parseInt(...) || DEFAULT would turn
+				// 'four' into the default silently, which is precisely the shape §6 forbids.
+				maxConcurrencyIniText: iniConfig.maxConcurrency,
 				apiVersion: iniConfig.apiVersion || '2023-06-01',
 				maxTokens: parseInt(iniConfig.maxTokens, 10) || 64,
 				// L12: response timeout — a hung connection must never stall the pipeline forever (the
@@ -283,6 +389,40 @@ const moduleFunction =
 			);
 		}
 
+		// ⟪JOB 1⟫ THE CONFUSION GUARD. The ini key is spelled `model` and now means the WIRE name, so the one
+		// mistake an operator can make is writing the namespaced identity there. Left unguarded that is a 400
+		// from Anthropic on every judgment of a run — gate G-F1-a's twin, observed deliberately, and a
+		// miserable thing to diagnose from a rebridge log. Caught here, at construction, before a credit is
+		// spent, naming both halves of the split.
+		if (cfg.wireModel.indexOf(`${PROVIDER_NAME}${MODEL_NAMESPACE_SEPARATOR}`) === 0) {
+			throw new Error(
+				`${moduleName}: the configured wire model '${cfg.wireModel}' carries this provider's namespace ` +
+					`prefix '${PROVIDER_NAME}${MODEL_NAMESPACE_SEPARATOR}'. wireModel is the BARE API model name ` +
+					`the Anthropic API accepts (e.g. 'claude-opus-4-8'); the namespaced form is the client's ` +
+					`IDENTITY and is DERIVED from it. Sending the namespaced form on the wire is a 400. Set ` +
+					`[anthropicAi].model in ${configFilePath} to the bare name.`,
+			);
+		}
+
+		// maxConcurrency — the provider DECLARES one (ANTHROPIC_MAX_CONCURRENCY); the ini may override it. An
+		// ini value present but not a positive integer is refused BY NAME rather than quietly becoming the
+		// declared value, because an operator who wrote it meant to change something.
+		const maxConcurrency =
+			cfg.maxConcurrencyIniText === undefined ? ANTHROPIC_MAX_CONCURRENCY : Number(cfg.maxConcurrencyIniText);
+		if (!Number.isInteger(maxConcurrency) || maxConcurrency < 1) {
+			throw new Error(
+				`${moduleName}: [anthropicAi].maxConcurrency is '${cfg.maxConcurrencyIniText}' in ${configFilePath} ` +
+					`— it must be a positive integer (the provider's own ceiling on in-flight judgments; this ` +
+					`client declares ${ANTHROPIC_MAX_CONCURRENCY} when the key is absent). A malformed value is ` +
+					`refused by name, never silently replaced by the declared one.`,
+			);
+		}
+
+		// THE NAMESPACED IDENTITY — derived, never configured. This is what judgeComponent keys the judgment
+		// cache on, what lands in the forensic trail as judgeModel, and what the materialiser writes onto every
+		// judged edge as mappingTool.
+		const namespacedModel = namespacedModelFor(cfg.wireModel);
+
 		// one POST attempt -> callback(err, parsedBody, statusCode). realPostOnce is the ONLY thing in this
 		// file that touches the network; componentOverrides.postOnce (the NET seam, the SAME
 		// componentOverrides idiom kitLoader.buildKit/bridgeMaker.run use for their own doubles) lets a
@@ -291,6 +431,10 @@ const moduleFunction =
 		// https.request. Production callers never pass this; it defaults to the real transport.
 		const realPostOnce = ({ payload }, callback) => {
 			const body = JSON.stringify(payload);
+			// ⟪JOB 1, G-F10-b⟫ the one bit the timeout refusal reports: was a socket ever granted? The 'socket'
+			// event fires when one is assigned, so a request that times out with this still false SENT NOTHING.
+			// A boolean rather than a timestamp — see requestTimeoutRefusalText's note on BG-DET.
+			let socketAssigned = false;
 			const req = https.request(
 				{
 					host: API_HOST,
@@ -328,9 +472,12 @@ const moduleFunction =
 					});
 				},
 			);
+			req.on('socket', () => {
+				socketAssigned = true;
+			});
 			req.on('timeout', () => {
 				// destroy() fires the 'error' handler below with this message -> status 0 (retriable).
-				req.destroy(new Error(`no response within ${cfg.requestTimeoutMs}ms (request timeout)`));
+				req.destroy(new Error(requestTimeoutRefusalText({ timeoutMs: cfg.requestTimeoutMs, socketAssigned })));
 			});
 			req.on('error', (err) => callback(`request error: ${err.message}`, null, 0));
 			req.write(body);
@@ -398,7 +545,9 @@ const moduleFunction =
 			// budget for EVERY judgment: there is no call shape that can put the truncating 64 on the wire.
 			const maxTokens = Math.max(cfg.maxTokens, JUDGMENT_MAX_TOKENS);
 			const payload = {
-				model: cfg.model,
+				// ⟪JOB 1⟫ WIRE USE (a) of two. The BARE API name goes on the wire; the namespaced identity
+				// would be rejected by Anthropic with a 400 (gate G-F1-a's twin, observed).
+				model: cfg.wireModel,
 				max_tokens: maxTokens,
 				system: systemPrompt,
 				messages: [{ role: 'user', content: userPrompt }],
@@ -406,7 +555,10 @@ const moduleFunction =
 				tool_choice: { type: 'tool', name: TOOL_NAME },
 			};
 			// claude-opus-4-8 rejects temperature; send 0 for everything else (the measured fix).
-			if (!/^claude-opus-4/.test(cfg.model)) {
+			// ⟪JOB 1⟫ WIRE USE (b) of two. This anchored regex tests wireModel, NOT the namespaced model:
+			// 'anthropic:claude-opus-4-8' does not match /^claude-opus-4/, so testing the identity would send
+			// temperature to the one model that rejects it — a 400 on every judgment, caused by a rename.
+			if (!/^claude-opus-4/.test(cfg.wireModel)) {
 				payload.temperature = 0;
 			}
 
@@ -483,7 +635,10 @@ const moduleFunction =
 							: null;
 					callback('', {
 						choice,
-						model: cfg.model,
+						// ⟪JOB 1⟫ the IDENTITY, not the wire name. This is a CONTRACT MEMBER of rerank's result
+						// (JUDGE_PROVIDER_SHAPE.rerank.resultKeys) and must agree with client.model, or the same
+						// client would report two identities for one judgment.
+						model: namespacedModel,
 						attempts: attemptIndex + 1,
 						category,
 						rationale,
@@ -496,7 +651,17 @@ const moduleFunction =
 			tryAttempt(0);
 		};
 
-		return { rerank, model: cfg.model, keySource: cfg.keySource };
+		// ⟪JOB 1⟫ describe() — required by JUDGE_PROVIDER_SHAPE and INSTANCE-DERIVED, never a constant: it
+		// reports the wireModel THIS client resolved and the identity derived from it, so a judge that cannot
+		// say what it is cannot construct. `version` is the client build, not the API version — the API version
+		// is a wire detail and is already reported through keySource's sibling config.
+		const describe = () => ({ provider: PROVIDER_NAME, model: namespacedModel, version: CLIENT_VERSION });
+
+		// The JUDGE PROVIDER, satisfying JUDGE_PROVIDER_SHAPE (apps/graph-builder/interfaces.js). `keySource`
+		// is this client's own extra and is not part of the contract; test-build.js and test-useDebugJudge read
+		// it. wireModel is exposed rather than hidden so an operator can SEE what went on the wire — it is
+		// internal to the transport, not a secret.
+		return { name: PROVIDER_NAME, wireModel: cfg.wireModel, model: namespacedModel, maxConcurrency, rerank, describe, keySource: cfg.keySource };
 	};
 
 // END OF moduleFunction() ============================================================
@@ -510,3 +675,12 @@ module.exports.buildTool = buildTool;
 module.exports.CATEGORY_ENUM = CATEGORY_ENUM;
 module.exports.TOOL_NAME = TOOL_NAME;
 module.exports.JUDGMENT_MAX_TOKENS = JUDGMENT_MAX_TOKENS;
+// ⟪JOB 1⟫ the split's own constants and the two pure functions the contract gates exercise — readable
+// without a key, a socket or a construction, the same discipline buildTool/extractChoice are exported under.
+module.exports.PROVIDER_NAME = PROVIDER_NAME;
+module.exports.MODEL_NAMESPACE_SEPARATOR = MODEL_NAMESPACE_SEPARATOR;
+module.exports.namespacedModelFor = namespacedModelFor;
+module.exports.ANTHROPIC_MAX_CONCURRENCY = ANTHROPIC_MAX_CONCURRENCY;
+module.exports.CLIENT_VERSION = CLIENT_VERSION;
+module.exports.requestTimeoutRefusalText = requestTimeoutRefusalText;
+module.exports.OBSOLETE_MODEL_OPTION_NAME = OBSOLETE_MODEL_OPTION_NAME;

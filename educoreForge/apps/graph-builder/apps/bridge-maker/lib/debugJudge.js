@@ -5,8 +5,12 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // debugJudge.js — the DEBUG JUDGE REGISTER and its rule modules: free, flagged stand-ins for the
 // paid reranker. The sibling of lib/llmClient.js — the two are the only things in this tree that
 // answer `rerank`, satisfying the identical call contract
-//   rerank({ systemPrompt, userPrompt, choiceEnum }, cb) -> cb('', { choice, category, rationale, ... })
-// so lib/bridge-framework/judgeComponent.js cannot tell them apart at the seam. build.js selects between them at
+//   rerank({ systemPrompt, userPrompt, choiceEnum }, cb) -> cb('', { choice, category, rationale, model, attempts })
+// so lib/bridge-framework/judgeComponent.js cannot tell them apart at the seam. ⟪JOB 1, 2026-09-07⟫ That
+// contract is no longer only a sentence in two headers: it is DECLARED AS DATA as JUDGE_PROVIDER_SHAPE in
+// apps/graph-builder/interfaces.js, and this module satisfies every member of it — name, wireModel, model,
+// maxConcurrency, rerank, describe. THIS PROVIDER HAS NO WIRE: it makes no request, so its `wireModel` is
+// its `model`, and describe() says so with a 'noWire' token rather than leaving a reader to notice. build.js selects between them at
 // resolveInferenceConfig (the real-vs-stub FACTORY seam); this module is what an operator gets when
 // --useDebugJudge is given.
 //
@@ -184,10 +188,33 @@ const RULE_REGISTER = Object.freeze({
 
 const REGISTERED_RULE_NAMES = Object.freeze(Object.keys(RULE_REGISTER));
 
+// ⟪JOB 1, 2026-09-07⟫ PROVIDER_NAME / MODEL_NAMESPACE_SEPARATOR — this module is a judge PROVIDER and its
+// `model` is now NAMESPACED like every other provider's: 'debugJudge:first-v1-INVALID_DEBUG'. The identifier
+// was already distinctive enough to be uncacheable-by-accident (the NO CACHE PARTICIPATION note above), so
+// the namespace buys nothing HERE — it is adopted because the rule must be UNIVERSAL to be worth anything.
+// A namespacing convention that any one provider may skip when it feels safe is a convention a reader cannot
+// rely on, and JUDGE_PROVIDER_SHAPE's validator would have to carry an exception naming this file.
+// Declared locally rather than imported from interfaces.js for the reason llmClient.js records at its own
+// copy: bridge-maker/lib is a fingerprinted directory (decisionBlock.js:69) and takes on no dependency
+// outside the fingerprint tree. Equality with the shape's separator is PROVEN by
+// apps/graph-builder/test/test-judgeProviderContract.js, not trusted.
+const PROVIDER_NAME = 'debugJudge';
+const MODEL_NAMESPACE_SEPARATOR = ':';
+
+// DEBUG_JUDGE_MAX_CONCURRENCY — required by the contract, and honestly this provider has NO external limit
+// to declare: every rule is pure and synchronous, there is no socket, no rate limit and no server. The shape
+// offers no way to say "unbounded", so this names the framework's own JUDGE_CONCURRENCY, which makes
+// min(JUDGE_CONCURRENCY, maxConcurrency) at bridge-framework.js:1449 a no-op for this provider — the
+// intended meaning. It is deliberately NOT imported from the framework: the framework is downstream of this
+// module, and a provider that read a framework constant would invert that dependency.
+const DEBUG_JUDGE_MAX_CONCURRENCY = 4;
+
 // modelIdentifierFor — what a judge reports as its `model`. Names the RULE so a forensics reader can
 // tell WHICH stand-in produced a record, and carries the debug flag so it could never be mistaken
-// for a real model identifier even if something upstream tried to cache it.
-const modelIdentifierFor = (ruleName) => `debugJudge-${ruleName}-v1-${DEBUG_MARK}`;
+// for a real model identifier even if something upstream tried to cache it. ⟪JOB 1⟫ now namespaced by
+// PROVIDER_NAME; the '-v1-INVALID_DEBUG' tail is unchanged, so the flag every downstream reader greps for
+// (DEBUG_MARK) is exactly where it was.
+const modelIdentifierFor = (ruleName) => `${PROVIDER_NAME}${MODEL_NAMESPACE_SEPARATOR}${ruleName}-v1-${DEBUG_MARK}`;
 
 // rationaleFor — self-announcing prose. EVERY rationale states, in its first words, that no
 // intelligence was applied. This is the human-facing half of the flagging: the graph carries the
@@ -306,7 +333,28 @@ const moduleFunction =
 			});
 		};
 
-		return { rerank, model: modelIdentifier, ruleName, keySource: 'none', decisionAlgorithm: DEBUG_MARK };
+		// ⟪JOB 1⟫ describe() — required by JUDGE_PROVIDER_SHAPE, INSTANCE-DERIVED (it reports the rule THIS
+		// judge was built with, never a constant), and the place this provider states that it has no wire.
+		const describe = () => ({
+			provider: PROVIDER_NAME,
+			model: modelIdentifier,
+			version: `${ruleName}-v1-noWire`,
+		});
+
+		// The JUDGE PROVIDER, satisfying JUDGE_PROVIDER_SHAPE. wireModel EQUALS model deliberately: there is
+		// no transport, so there is no separate wire name to carry, and inventing one would be a lie about a
+		// request that never happens. ruleName / keySource / decisionAlgorithm are this module's own extras.
+		return {
+			name: PROVIDER_NAME,
+			wireModel: modelIdentifier,
+			model: modelIdentifier,
+			maxConcurrency: DEBUG_JUDGE_MAX_CONCURRENCY,
+			rerank,
+			describe,
+			ruleName,
+			keySource: 'none',
+			decisionAlgorithm: DEBUG_MARK,
+		};
 	};
 
 // END OF moduleFunction() ============================================================
@@ -323,6 +371,10 @@ module.exports.PICK_CATEGORIES = PICK_CATEGORIES;
 module.exports.ABSTAIN_SLOTS = ABSTAIN_SLOTS;
 module.exports.promptDigest = promptDigest;
 module.exports.modelIdentifierFor = modelIdentifierFor;
+// ⟪JOB 1⟫ the provider-contract constants, exported so a hermetic gate reads them rather than restating them.
+module.exports.PROVIDER_NAME = PROVIDER_NAME;
+module.exports.MODEL_NAMESPACE_SEPARATOR = MODEL_NAMESPACE_SEPARATOR;
+module.exports.DEBUG_JUDGE_MAX_CONCURRENCY = DEBUG_JUDGE_MAX_CONCURRENCY;
 
 // ⟪skipAI FLAGGING HELPERS⟫ shared by every evidence bridge so the mark's spelling and the
 // generation-suffix convention exist ONCE. They were briefly triplicated across the three bridges;

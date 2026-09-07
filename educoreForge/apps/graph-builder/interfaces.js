@@ -397,6 +397,125 @@ const FINISHER_MODULE_SHAPE = {
 	},
 };
 
+/**
+ * @typedef {Object} JudgeProvider
+ * ONE judge — the thing `judgeComponent.judgeOne` holds and cannot tell apart from any other.
+ * Two implementations exist today (llmClient, debugJudge) and more are coming, which is exactly
+ * the condition polyArch2 §3 says demands a declared interface rather than prose.
+ * @property {string}   name            provider id: 'anthropic', 'ollama', 'debugJudge'
+ * @property {string}   wireModel       what the TRANSPORT sends — 'claude-opus-4-8', 'qwen2.5:32b'.
+ *                                      INTERNAL to the provider; it reaches no caller and no edge.
+ * @property {string}   model           the NAMESPACED IDENTITY — 'anthropic:claude-opus-4-8'. The
+ *                                      judgment-cache key, `judgeModel`, and the edge's mappingTool.
+ * @property {number}   maxConcurrency  the provider's own ceiling on in-flight judgments
+ * @property {function} rerank          ({systemPrompt, userPrompt, choiceEnum}, cb) ->
+ *                                      cb(err, {choice, category, rationale, model, attempts})
+ * @property {function} describe        () -> {provider, model, version}
+ */
+
+// JUDGE_PROVIDER_SHAPE — the JUDGE PROVIDER contract, as DATA (judgeProviderRegistry JOB 1,
+// 2026-09-07). A SIBLING of COMPONENT_SHAPES, deliberately NOT a member of it, for the same reason
+// FINISHER_MODULE_SHAPE is not: COMPONENT_SHAPES names the four components build.js wires and
+// test-interfaces asserts that key set EXACTLY. A judge provider is selected by the registry and
+// handed to the framework inside inferenceConfig, so it is declared here beside the other two
+// contractual-but-not-a-component shapes.
+//
+// WHO VALIDATES, AND WHY IT IS NOT THE PROVIDER — the FINISHER_MODULE_SHAPE precedent, followed
+// deliberately: the REGISTRY validates every provider against this ONCE, before one reaches the
+// framework, rather than each provider checking itself, "which would be a finisher grading its own
+// homework." It also means bridge-maker/lib takes on NO dependency outside the decision-block
+// fingerprint tree (decisionBlock.js:67-69) — a contract change moves the registry's bytes, not the
+// fingerprinted client's. The registry itself is JOB 4; judgeProviderViolation below is what it will
+// call, and is exercised meanwhile by apps/graph-builder/test/test-judgeProviderContract.js.
+//
+// ⟪THE cfg.model SPLIT — the whole reason this shape exists⟫ Before JOB 1, llmClient's `cfg.model`
+// did THREE jobs at once: the API wire name, the input to the /^claude-opus-4/ temperature rule, and
+// `client.model` — which is the judgment cache key (judgeComponent.js:242), the forensic `judgeModel`,
+// and the edge's `mappingTool`. One string cannot be both an API-vendor's model name and a
+// cross-provider identity: the cache distinguishes two providers handed identical prompts through the
+// same renderer by `model` ALONE, so two providers that happened to share a wire name would silently
+// serve each other's verdicts. `wireModel` and `model` are therefore SEPARATE MEMBERS, and `model` is
+// namespaced by `name` so a collision is impossible to construct rather than merely unlikely.
+const JUDGE_PROVIDER_SHAPE = Object.freeze({
+	// MEMBER_KIND_BY_NAME — every required member and the kind of value it must hold. Kinds are
+	// checked (unlike COMPONENT_SHAPES, which checks only presence and arity) because the three
+	// string members are IDENTITIES: a provider whose `model` is undefined does not fail loudly, it
+	// writes `undefined` into a cache key and onto an edge.
+	MEMBER_KIND_BY_NAME: Object.freeze({
+		name: 'nonEmptyString',
+		wireModel: 'nonEmptyString',
+		model: 'nonEmptyString',
+		maxConcurrency: 'positiveInteger',
+		rerank: 'function',
+		describe: 'function',
+	}),
+	// MODEL_NAMESPACE_SEPARATOR — `model` MUST begin `${name}${separator}`. Note the separator may
+	// also occur INSIDE a wireModel ('qwen2.5:32b'), which is why the rule is a PREFIX test against
+	// the provider's own name and never a count of separators or a split.
+	MODEL_NAMESPACE_SEPARATOR: ':',
+	rerank: Object.freeze({
+		arity: 2,
+		argKeys: Object.freeze(['systemPrompt', 'userPrompt', 'choiceEnum']),
+		// ⟪JOB 1⟫ `model` and `attempts` are CONTRACT MEMBERS of the result, no longer the "harmless
+		// surplus the pipeline ignores" llmClient's header used to call them: `model` is the identity
+		// the judgment travelled under and must agree with the provider's own `model`.
+		resultKeys: Object.freeze(['choice', 'category', 'rationale', 'model', 'attempts']),
+	}),
+	describe: Object.freeze({
+		arity: 0,
+		argKeys: null,
+		resultKeys: Object.freeze(['provider', 'model', 'version']),
+	}),
+});
+
+// judgeProviderViolation — the shape check, as a FUNCTION OF DATA. Returns a refusal STRING naming
+// every member at fault, or null when the candidate satisfies the contract. It NEVER probes which
+// methods a module happens to expose: the required set is MEMBER_KIND_BY_NAME and nothing else.
+//
+// It names EVERY violation rather than the first, because a provider written against the wrong
+// contract version typically misses several members and discovering them one construction at a time
+// is the slow way to learn the same thing.
+const judgeProviderViolation = (candidateProvider, { providerLabel = 'judge provider' } = {}) => {
+	if (candidateProvider === null || typeof candidateProvider !== 'object') {
+		return `${providerLabel} is ${candidateProvider === null ? 'null' : `a ${typeof candidateProvider}`} — a judge provider must be an object satisfying JUDGE_PROVIDER_SHAPE (${Object.keys(JUDGE_PROVIDER_SHAPE.MEMBER_KIND_BY_NAME).join(', ')})`;
+	}
+	const kindSatisfiedBy = {
+		nonEmptyString: (oneValue) => typeof oneValue === 'string' && oneValue.length > 0,
+		positiveInteger: (oneValue) => Number.isInteger(oneValue) && oneValue >= 1,
+		function: (oneValue) => typeof oneValue === 'function',
+	};
+	const memberFaultList = Object.keys(JUDGE_PROVIDER_SHAPE.MEMBER_KIND_BY_NAME)
+		.filter((oneMemberName) => !kindSatisfiedBy[JUDGE_PROVIDER_SHAPE.MEMBER_KIND_BY_NAME[oneMemberName]](candidateProvider[oneMemberName]))
+		.map((oneMemberName) => `${oneMemberName} (must be ${JUDGE_PROVIDER_SHAPE.MEMBER_KIND_BY_NAME[oneMemberName]}, got ${JSON.stringify(candidateProvider[oneMemberName])})`);
+	if (memberFaultList.length) {
+		return `${providerLabel} does not satisfy JUDGE_PROVIDER_SHAPE — ${memberFaultList.length} member(s) at fault: ${memberFaultList.join('; ')}. Every member is required; there is no default and no probing of which methods the module happens to expose.`;
+	}
+	// THE NAMESPACE RULE (G-F1-a). `model` is what the judgment cache keys on and what lands on the
+	// edge as mappingTool; namespacing it by the provider's own name is what makes a collision
+	// between two providers impossible to CONSTRUCT rather than merely unlikely to occur.
+	const requiredModelPrefix = `${candidateProvider.name}${JUDGE_PROVIDER_SHAPE.MODEL_NAMESPACE_SEPARATOR}`;
+	if (candidateProvider.model.indexOf(requiredModelPrefix) !== 0) {
+		return `${providerLabel} model '${candidateProvider.model}' is not namespaced by its provider name — it must begin '${requiredModelPrefix}'. The bare wire name ('${candidateProvider.wireModel}') belongs in wireModel; model is the identity the judgment cache keys on and the edge carries as mappingTool, and two providers sharing one identity would serve each other's verdicts.`;
+	}
+	// describe() must be INSTANCE-DERIVED, not a constant: a judge that cannot say what it is must
+	// never run, and a describe() returning a hard-coded string says nothing about the instance that
+	// actually answered. Agreement with the provider's own members is the mechanical form of that.
+	const described = candidateProvider.describe();
+	if (described === null || typeof described !== 'object') {
+		return `${providerLabel} describe() returned ${described === null ? 'null' : `a ${typeof described}`} — it must return {${JUDGE_PROVIDER_SHAPE.describe.resultKeys.join(', ')}}.`;
+	}
+	const describeFaultList = JUDGE_PROVIDER_SHAPE.describe.resultKeys
+		.filter((oneKeyName) => !(typeof described[oneKeyName] === 'string' && described[oneKeyName].length > 0))
+		.map((oneKeyName) => `${oneKeyName} (${JSON.stringify(described[oneKeyName])})`);
+	if (describeFaultList.length) {
+		return `${providerLabel} describe() returned ${describeFaultList.length} empty or absent key(s): ${describeFaultList.join('; ')} — every key must be a non-empty string. A judge that cannot say what it is must never run.`;
+	}
+	if (described.model !== candidateProvider.model || described.provider !== candidateProvider.name) {
+		return `${providerLabel} describe() disagrees with its own members — describe() says provider '${described.provider}' model '${described.model}', the provider says name '${candidateProvider.name}' model '${candidateProvider.model}'. describe() must report THIS instance, never a constant.`;
+	}
+	return null;
+};
+
 const COMPONENT_SHAPES = {
 	forger: {
 		forge: {
@@ -512,4 +631,4 @@ const COMPONENT_SHAPES = {
 	},
 };
 
-module.exports = { COMPONENT_SHAPES, MANIFEST_HANDLE_SHAPE, FINISHER_MODULE_SHAPE };
+module.exports = { COMPONENT_SHAPES, MANIFEST_HANDLE_SHAPE, FINISHER_MODULE_SHAPE, JUDGE_PROVIDER_SHAPE, judgeProviderViolation };
