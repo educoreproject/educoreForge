@@ -124,7 +124,7 @@ replayConjunctList[0].evaluate = (scenario, callback) => {
 };
 scenarioTwin({ registry: twinRegistry, gateId: 'BG-REPLAY', conjunctId: 'a_plainBuildMakesZeroJudgeCalls', twinName: 'materialiserAsksTheJudge', leverKind: 'productionMutation', mutate: (scenario) => {
 	// a materialise path that consults the judge: the framework double calls llmClient.rerank once before materialising
-	scenario.frameworkMutationList.push({ modulePath: path.join(scenarioLib.FRAMEWORK_DIR, FRAMEWORK_FILE), find: '\t\t\t\t\ttaskList.push((args, next) => materialiseAndReport({ block, decisionBlockHash: stored.decisionBlockHash, exportSssom: false }, next));', replace: "\t\t\t\t\ttaskList.push((args, next) => { if (spec.inferenceConfig && spec.inferenceConfig.llmClient) { spec.inferenceConfig.llmClient.rerank({ systemPrompt: 'x', userPrompt: 'x', choiceEnum: ['1', 'NONE'], requireJudgment: true }, () => {}); } materialiseAndReport({ block, decisionBlockHash: stored.decisionBlockHash, exportSssom: false }, next); });" });
+	scenario.frameworkMutationList.push({ modulePath: path.join(scenarioLib.FRAMEWORK_DIR, FRAMEWORK_FILE), find: '\t\t\t\t\ttaskList.push((args, next) => materialiseAndReport({ block, decisionBlockHash: stored.decisionBlockHash, exportSssom: false }, next));', replace: "\t\t\t\t\ttaskList.push((args, next) => { if (spec.inferenceConfig && spec.inferenceConfig.llmClient) { spec.inferenceConfig.llmClient.rerank({ systemPrompt: 'x', userPrompt: 'x', choiceEnum: ['1', 'NONE'] }, () => {}); } materialiseAndReport({ block, decisionBlockHash: stored.decisionBlockHash, exportSssom: false }, next); });" });
 } });
 replayConjunctList.push(
 	twiceConjunct({

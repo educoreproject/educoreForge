@@ -5,7 +5,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // debugJudge.js — the DEBUG JUDGE REGISTER and its rule modules: free, flagged stand-ins for the
 // paid reranker. The sibling of lib/llmClient.js — the two are the only things in this tree that
 // answer `rerank`, satisfying the identical call contract
-//   rerank({ systemPrompt, userPrompt, choiceEnum, requireJudgment }, cb) -> cb('', { choice, category, rationale, ... })
+//   rerank({ systemPrompt, userPrompt, choiceEnum }, cb) -> cb('', { choice, category, rationale, ... })
 // so lib/bridge-framework/judgeComponent.js cannot tell them apart at the seam. build.js selects between them at
 // resolveInferenceConfig (the real-vs-stub FACTORY seam); this module is what an operator gets when
 // --useDebugJudge is given.
@@ -200,6 +200,19 @@ const rationaleFor = ({ ruleName, poolSize, how, choice, category }) =>
 	`abstention carrying this rationale is a plumbing artifact and must never be used as evidence of ` +
 	`a mapping.`;
 
+// ⟪JOB 0, 2026-09-07⟫ OBSOLETE_JUDGMENT_FLAG_NAME / obsoleteJudgmentFlagRefusalText — the retired
+// option's name held as DATA so that `rerank` can REFUSE IT BY NAME. This module answers the SAME
+// rerank contract as llmClient.js and must therefore refuse the same obsolete argument IN THE SAME
+// WORDS: the text below is CHARACTER-IDENTICAL to llmClient.js's copy, and gate G0-d proves that
+// equality rather than trusting it. Duplicated rather than shared because a judge provider must not
+// depend on another provider's module — the seam's whole point is that they are interchangeable.
+const OBSOLETE_JUDGMENT_FLAG_NAME = 'requireJudgment';
+const obsoleteJudgmentFlagRefusalText = (receivedValue) =>
+	`${OBSOLETE_JUDGMENT_FLAG_NAME} is OBSOLETE and was removed (JOB 0, 2026-09-07): judgment is now ` +
+	`UNCONDITIONAL — the select_candidate schema always requires choice, category and rationale. ` +
+	`Remove the argument from the call site; it is refused by name, never ignored, so the retired ` +
+	`scalar default cannot creep back. (received ${JSON.stringify(receivedValue)})`;
+
 // START OF moduleFunction() ============================================================
 
 const moduleFunction =
@@ -232,17 +245,20 @@ const moduleFunction =
 		// rerank — the contract llmClient.rerank satisfies, satisfied here without a network call.
 		// Answers and refusals alike travel by callback; an asynchronous rule registered later needs no
 		// change here (see the callback-shape note in this file's header).
-		const rerank = ({ systemPrompt, userPrompt, choiceEnum, requireJudgment } = {}, callback) => {
+		const rerank = (rerankOptions = {}, callback) => {
+			const { systemPrompt, userPrompt, choiceEnum } = rerankOptions;
 			void systemPrompt; // accepted for contract parity; a rule that reads no prompt cannot read this one either.
 
 			const refuse = (message) => {
 				callback(message);
 			};
 
-			if (requireJudgment !== undefined && typeof requireJudgment !== 'boolean') {
+			// ⟪JOB 0⟫ hasOwnProperty, not `!== undefined`: the point is that the CALLER MENTIONED the
+			// retired option at all. `true` and `false` are refused identically — there is no longer a
+			// value of it that means anything. Mirrors llmClient.rerank's guard exactly, in the same words.
+			if (Object.prototype.hasOwnProperty.call(rerankOptions, OBSOLETE_JUDGMENT_FLAG_NAME)) {
 				refuse(
-					`${moduleName}.rerank: requireJudgment must be a boolean when given (got ` +
-						`${JSON.stringify(requireJudgment)}) — there is no default coercion.`,
+					`${moduleName}.rerank: ${obsoleteJudgmentFlagRefusalText(rerankOptions[OBSOLETE_JUDGMENT_FLAG_NAME])}`,
 				);
 				return;
 			}

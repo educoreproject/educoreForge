@@ -387,9 +387,8 @@ module.exports = {
 // PERMANENTLY exercised, so the seam can never again be proven only against the fields a model happened to fill.
 const makeFakeRealClient = ({ pickOrdinal = '1', category = 'strong', abstainCategory = 'none', omitCategoryOnAbstain = false, abstainRationaleMode = 'stated', rationaleMode = 'keyAndName', extraReturnKeys = {}, throwOnCall = false, model = 'fake-anthropic-judge-v1' } = {}) => {
 	const client = { callCount: 0, questionList: [], model, keySource: 'test' };
-	client.rerank = ({ systemPrompt, userPrompt, choiceEnum, requireJudgment } = {}, callback) => {
+	client.rerank = ({ systemPrompt, userPrompt, choiceEnum } = {}, callback) => {
 		void systemPrompt;
-		void requireJudgment;
 		client.callCount += 1;
 		client.questionList.push({ userPrompt, choiceEnum });
 		if (throwOnCall) {

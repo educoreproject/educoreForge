@@ -40,14 +40,15 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //   lib.d/selector.js        ->  GONE, WITH NO SUCCESSOR. Neither selector.js nor test-selector.js
 //       exists anywhere in the tree. Comments below now say "the scalar path" rather than naming a
 //       file that cannot be opened.
-// CONSEQUENCE, NOW RULED: the SCALAR tool-schema variant (requireJudgment falsy) HAS NO CALLER. Every
-// rerank call site in production and in test passes requireJudgment: true. The variant, its branch, and
-// the claims below about "existing callers" describe a consumer that no longer exists — AND THE DEAD
-// VARIANT IS THE DEFAULT, so a caller that merely omits the option silently gets a schema requiring
-// neither category nor rationale. tqii ruled on 2026-09-07 that it is to be RETIRED: judgment becomes
-// unconditional and an obsolete `requireJudgment` argument is REFUSED BY NAME rather than ignored.
-// That work is JOB 0 of WORKORDER-judgeProviderRegistry-090726.md (AMENDMENT 2) and RUNS FIRST.
-// UNTIL JOB 0 LANDS, THE BRANCH BELOW IS STILL LIVE — do not read this note as describing the code.
+// CONSEQUENCE, RULED AND NOW DONE: the SCALAR tool-schema variant (requireJudgment falsy) HAD NO
+// CALLER. Every rerank call site in production and in test passed requireJudgment: true. The variant,
+// its branch, and the claims that stood below about "existing callers" described a consumer that no
+// longer exists — AND THE DEAD VARIANT WAS THE DEFAULT, so a caller that merely omitted the option
+// silently got a schema requiring neither category nor rationale. tqii ruled on 2026-09-07 that it be
+// RETIRED: judgment becomes unconditional and an obsolete `requireJudgment` argument is REFUSED BY
+// NAME rather than ignored. That work is JOB 0 of WORKORDER-judgeProviderRegistry-v2-090726.md and IT
+// HAS LANDED (2026-09-07, IVORY_BRIDGE): buildTool emits ONE schema and rerank refuses the obsolete
+// argument by name. THE BRANCH IS GONE — this note is history, not a description of live code.
 //
 // ⟪R-a WIRING — bridgeEvidenceRefactor-spec.md §7 P4, the P3 boundary review's named rider⟫. P3's
 // lib/bridge-framework/judgeComponent.js proved the {choice, category, rationale} response shape ⟪A4⟫'s discrete
@@ -57,14 +58,16 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // never a category a MODEL asserts about its own pick — abstain is expressed via choice='NONE', not a
 // category value) and `rationale` (free text), and `rerank`'s callback result carries them alongside
 // `choice` when the model's tool call populated them. ADDITIVE, per the rider's own instruction:
-//   - `required` stays `['choice']` — a model that omits category/rationale (or the scalar path's own
-//     SYSTEM_PROMPT, which never asked for them at all) still gets a valid tool call.
+//   - `required` stayed `['choice']` AT THE TIME — a model that omitted category/rationale still got a
+//     valid tool call. ⟪SUPERSEDED BY JOB 0, 2026-09-07: required is now choice+category+rationale,
+//     unconditionally. The additive posture below is history; the schema is no longer permissive.⟫
 //   - extractCategoryAndRationale has NO free-text fallback (unlike extractChoice's (b)/(c)/(d) paths):
 //     category/rationale are read ONLY from the structured tool_use input; a model that did not report
 //     them yields `undefined` for both, never a fabricated value (polyArch2 §6 — refuse/omit, don't guess).
-//   - the scalar path destructured ONLY `.choice` off this callback's result and is therefore
+//   - the scalar path destructured ONLY `.choice` off this callback's result and was therefore
 //     completely unaffected by these two additional, optional keys — proven at the time in test-selector.js
-//     (since removed with its module) and test-llm-client.js's own R-a section.
+//     (since removed with its module) and test-llm-client.js's own R-a section. ⟪That path is GONE as of
+//     JOB 0; judgeComponent.js is the sole production caller and reads all three.⟫
 //
 // @concept: [[LlmReranker]]
 
@@ -94,13 +97,14 @@ const TOOL_NAME = 'select_candidate';
 // [anthropicAi].ini evidently never raises it). tool_choice is FORCED, so the model emits
 // {choice, category, rationale} as ONE tool_use block and is TRUNCATED at 64 tokens — choice+category
 // (short, early keys) survive; rationale (a full sentence, emitted last) is the one that gets cut. This
-// is DETERMINISTIC per prompt (not model sloppiness), which is exactly why requireJudgment's schema
-// `required` and the retry-on-malformed-judgment loop (both real, both correct) could not reach 100% on
-// their own: retrying a token budget that is structurally too small reproduces the identical truncation.
+// is DETERMINISTIC per prompt (not model sloppiness), which is exactly why the schema's `required` list
+// and the retry-on-malformed-judgment loop (both real, both correct) could not reach 100% on their own:
+// retrying a token budget that is structurally too small reproduces the identical truncation.
 // JUDGMENT_MAX_TOKENS — sized generously: a one-sentence rationale runs roughly 30-60 tokens, plus the
 // tool-call JSON structural overhead (field names, quoting, the enum string) and a safety margin for a
-// longer sentence — 400 is comfortable headroom, never approached by the scalar {choice}-only path (64
-// was correctly sized for THAT, and can never hold a rationale; this constant does not touch it).
+// longer sentence — 400 is comfortable headroom. ⟪JOB 0, 2026-09-07: this floor now applies to EVERY
+// judgment. The 64-token ini default, which was correctly sized for the retired {choice}-only variant
+// and can never hold a rationale, can no longer reach the wire by a caller omitting an option.⟫
 const JUDGMENT_MAX_TOKENS = 400;
 
 // ⟪R-a⟫ CATEGORY_ENUM — DERIVED from SELECT_CATEGORY_ENUM (evidenceContracts.js §5, the single source of
@@ -115,6 +119,28 @@ const JUDGMENT_MAX_TOKENS = 400;
 // three remaining values by hand) means SELECT_CATEGORY_ENUM gaining or renaming a category can never
 // silently drift out of sync with what this tool schema offers.
 const CATEGORY_ENUM = SELECT_CATEGORY_ENUM.filter((oneCategory) => oneCategory !== 'none');
+
+// ⟪JOB 0, 2026-09-07⟫ JUDGMENT_REQUIRED_FIELD_LIST — the `required` list of the ONE select_candidate
+// schema this client now emits. Named and frozen rather than written inline at the single use site so
+// that "what a judgment must contain" is one greppable thing: the retired scalar variant's whole defect
+// was that a SECOND, weaker required-list existed and was the DEFAULT.
+const JUDGMENT_REQUIRED_FIELD_LIST = Object.freeze(['choice', 'category', 'rationale']);
+
+// ⟪JOB 0, 2026-09-07⟫ OBSOLETE_JUDGMENT_FLAG_NAME / obsoleteJudgmentFlagRefusalText — the retired
+// option's name held as DATA in exactly one place per file, so that `rerank` can REFUSE IT BY NAME.
+// A silently-ignored argument is precisely how the dead scalar default would creep back in, so the
+// name must survive the deletion of the parameter: this constant, and the refusal it builds, are the
+// ONLY code occurrences of the identifier left in this file.
+// TWIN: debugJudge.js carries a character-identical copy of this refusal text (it answers the same
+// `rerank` contract and must refuse the same argument in the same words). The two are duplicated
+// rather than shared because a judge provider may not depend on another provider's module; the
+// equality is proven by gate G0-d, not by trust.
+const OBSOLETE_JUDGMENT_FLAG_NAME = 'requireJudgment';
+const obsoleteJudgmentFlagRefusalText = (receivedValue) =>
+	`${OBSOLETE_JUDGMENT_FLAG_NAME} is OBSOLETE and was removed (JOB 0, 2026-09-07): judgment is now ` +
+	`UNCONDITIONAL — the select_candidate schema always requires choice, category and rationale. ` +
+	`Remove the argument from the call site; it is refused by name, never ignored, so the retired ` +
+	`scalar default cannot creep back. (received ${JSON.stringify(receivedValue)})`;
 
 // extractChoice / extractCategoryAndRationale — MODULE-SCOPE (not per-instance closure): both are pure
 // functions of a response body + module-level constants (TOOL_NAME, CATEGORY_ENUM), needing no
@@ -166,29 +192,24 @@ const extractCategoryAndRationale = (responseBody) => {
 	return { category, rationale };
 };
 
-// ⟪R-a REAL-RUN FIX⟫ buildTool — MODULE-SCOPE, pure (no cfg/key/network): builds the `select_candidate`
-// tool definition (name/description/input_schema) for EITHER variant. Hoisted out of `rerank` for the
-// SAME reason extractChoice/extractCategoryAndRationale were: a hermetic test inspects the CONSTRUCTED
-// schema directly — no construction, no key, no network, no https.request ever attempted — proving the
-// scalar variant's `required` list is unchanged and the evidence variant's `required` list carries
-// category+rationale, without needing to intercept or mock the transport layer at all.
-//   requireJudgment falsy -> the SCALAR variant: required: ['choice'] only (byte-identical to pre-fix).
-//   requireJudgment: true -> the EVIDENCE variant: required: ['choice', 'category', 'rationale'].
-// Assumes requireJudgment has ALREADY been refuse-by-value-checked (rerank's own guard, above it in the
-// file) — this function itself does not re-validate, matching extractChoice/extractCategoryAndRationale's
-// own "trust the caller already gated" posture for a pure, internal builder.
-const buildTool = ({ choiceEnum, requireJudgment } = {}) => {
-	const requiredFields = requireJudgment ? ['choice', 'category', 'rationale'] : ['choice'];
+// ⟪R-a REAL-RUN FIX; JOB 0 2026-09-07⟫ buildTool — MODULE-SCOPE, pure (no cfg/key/network): builds THE
+// `select_candidate` tool definition (name/description/input_schema). There is exactly ONE schema, and
+// its `required` list is JUDGMENT_REQUIRED_FIELD_LIST — choice, category and rationale, always. Hoisted
+// out of `rerank` for the SAME reason extractChoice/extractCategoryAndRationale were: a hermetic test
+// inspects the CONSTRUCTED schema directly — no construction, no key, no network, no https.request ever
+// attempted — proving the emitted `required` list carries category+rationale, without needing to
+// intercept or mock the transport layer at all.
+// JOB 0 retired the second, weaker variant this function used to select between. The object emitted
+// here is byte-identical to what the surviving (evidence) variant produced, description included —
+// proven against a pre-edit capture, gate G0-b.
+const buildTool = ({ choiceEnum } = {}) => {
 	return {
 		name: TOOL_NAME,
-		description: requireJudgment
-			? 'Record the single best matching CEDS candidate by its number, or NONE if no candidate is a ' +
-				'correct match. You MUST ALSO record a discrete confidence CATEGORY for the choice (never a ' +
-				'numeric probability) and a short RATIONALE for the choice — both are REQUIRED whenever ' +
-				'choice is a candidate number.'
-			: 'Record the single best matching CEDS candidate by its number, or NONE if no candidate is a correct match. ' +
-				'Also record a discrete confidence CATEGORY for the choice (never a numeric probability) and a short ' +
-				'RATIONALE, whenever the choice is a candidate number (omit category/rationale when choice is NONE).',
+		description:
+			'Record the single best matching CEDS candidate by its number, or NONE if no candidate is a ' +
+			'correct match. You MUST ALSO record a discrete confidence CATEGORY for the choice (never a ' +
+			'numeric probability) and a short RATIONALE for the choice — both are REQUIRED whenever ' +
+			'choice is a candidate number.',
 		input_schema: {
 			type: 'object',
 			properties: {
@@ -197,10 +218,9 @@ const buildTool = ({ choiceEnum, requireJudgment } = {}) => {
 					enum: choiceEnum,
 					description: 'The chosen candidate number, or the string NONE.',
 				},
-				// ⟪R-a⟫ under the SCALAR variant (requireJudgment falsy) these two are NOT in `required`
-				// below — the scalar path's own SYSTEM_PROMPT never asked for them, so it still gets a
-				// valid tool call with only `choice` populated. Under the EVIDENCE variant
-				// (requireJudgment: true) both are REQUIRED — see requiredFields above.
+				// ⟪JOB 0⟫ both are REQUIRED, unconditionally — see JUDGMENT_REQUIRED_FIELD_LIST below.
+				// A model that omits either is caught by the judgmentIncomplete retry in `rerank` and,
+				// on exhaustion, refused by judgeComponent.js — never fabricated here.
 				category: {
 					type: 'string',
 					enum: CATEGORY_ENUM,
@@ -214,7 +234,7 @@ const buildTool = ({ choiceEnum, requireJudgment } = {}) => {
 					description: 'A short rationale (one or two sentences) explaining the choice.',
 				},
 			},
-			required: requiredFields,
+			required: JUDGMENT_REQUIRED_FIELD_LIST,
 			additionalProperties: false,
 		},
 	};
@@ -330,17 +350,14 @@ const moduleFunction =
 		// judgeComponent.js's refusal fired EXACTLY as designed (⟪A4⟫ — never fabricate a missing
 		// category/rationale); the fix is a stricter REQUEST, not a laxer downstream check.
 		//
-		// requireJudgment (rerank's new, explicit, call-time option) selects between TWO tool-schema
-		// variants — NEVER inferred by sniffing the prompt (the ruling's own instruction: an explicit
-		// option is legible at the call site; prompt-sniffing is exactly the kind of implicit coupling
-		// this tree's refuse-by-value discipline exists to avoid):
-		//   requireJudgment falsy (default)  — the SCALAR variant, BYTE-IDENTICAL to before this fix:
-		//     required: ['choice'] only. the scalar path never passed requireJudgment, so its own
-		//     request/response shape is completely unchanged (proven in test-selector.js, byte-unchanged).
-		//   requireJudgment: true            — the EVIDENCE variant: required: ['choice','category',
-		//     'rationale']. lib/bridge-framework/judgeComponent.js requests this on EVERY call (see its own header).
-		// Refuse-by-value: requireJudgment must be boolean when given, or omitted — there is no default
-		// coercion of a truthy-but-not-boolean value.
+		// ⟪JOB 0, 2026-09-07⟫ There is no longer a call-time option selecting between tool-schema
+		// variants. EVERY judgment uses the ONE schema (required: choice, category, rationale), so the
+		// stricter request the 2026-07-30 finding above called for is now structural rather than
+		// opt-in — which is the whole point: the weaker variant was the DEFAULT, so the fix was one
+		// forgotten argument away from being silently undone on every new caller.
+		// The retired option is not merely ignored: rerank REFUSES IT BY NAME (see
+		// OBSOLETE_JUDGMENT_FLAG_NAME at module scope). An argument that silently does nothing is
+		// exactly how the dead default would return.
 		//
 		// ENFORCEMENT LAYER, decided here so there is exactly ONE, never an ambiguous double-refusal:
 		// this file does NOT itself refuse a response that omits category/rationale under the evidence
@@ -353,29 +370,33 @@ const moduleFunction =
 		// refuse on the same condition would be a second, differently-worded error for the identical
 		// fault, exactly the ambiguity the ruling asked to avoid.
 		//
-		// rerank — { systemPrompt, userPrompt, choiceEnum, requireJudgment } -> callback(err, { choice,
-		//   model, attempts, category, rationale }). choiceEnum: e.g. ['1','2',...,'15','NONE']. Retries
-		//   (6) with backoff on 429/5xx/network. the scalar path read ONLY
-		//   result.choice; model/attempts/category/rationale are surplus it ignores.
-		const rerank = ({ systemPrompt, userPrompt, choiceEnum, maxRetries = 6, requireJudgment } = {}, callback) => {
+		// rerank — { systemPrompt, userPrompt, choiceEnum, maxRetries } -> callback(err, { choice,
+		//   model, attempts, category, rationale, usage, stopReason, retryReasons }). choiceEnum: e.g.
+		//   ['1','2',...,'15','NONE']. Retries (6) with backoff on 429/5xx/network AND on an incomplete
+		//   judgment. lib/bridge-framework/judgeComponent.js is the sole production caller and reads
+		//   choice, category and rationale.
+		const rerank = (rerankOptions = {}, callback) => {
+			const { systemPrompt, userPrompt, choiceEnum, maxRetries = 6 } = rerankOptions;
 			if (!cfg.apiKey) {
 				// unreachable in normal use (construction already threw), kept as defense-in-depth.
 				callback(`${moduleName}: no Anthropic API key ([anthropicAi].apiKey or ANTHROPIC_API_KEY)`);
 				return;
 			}
-			if (requireJudgment !== undefined && typeof requireJudgment !== 'boolean') {
+			// ⟪JOB 0⟫ hasOwnProperty, not `!== undefined`: the point is that the CALLER MENTIONED the
+			// retired option at all. `true` and `false` are refused identically — there is no longer a
+			// value of it that means anything, so accepting either would be accepting a lie.
+			if (Object.prototype.hasOwnProperty.call(rerankOptions, OBSOLETE_JUDGMENT_FLAG_NAME)) {
 				callback(
-					`${moduleName}.rerank: requireJudgment must be a boolean when given (got ` +
-						`${JSON.stringify(requireJudgment)}) — there is no default coercion.`,
+					`${moduleName}.rerank: ${obsoleteJudgmentFlagRefusalText(rerankOptions[OBSOLETE_JUDGMENT_FLAG_NAME])}`,
 				);
 				return;
 			}
-			const tool = buildTool({ choiceEnum, requireJudgment });
-			// ⟪R-a THIRD REAL-RUN FIX⟫ under requireJudgment, raise the budget to the max of the
+			const tool = buildTool({ choiceEnum });
+			// ⟪R-a THIRD REAL-RUN FIX; UNCONDITIONAL since JOB 0⟫ raise the budget to the max of the
 			// configured value and JUDGMENT_MAX_TOKENS — never LOWER cfg.maxTokens if an operator already
-			// configured something bigger than 400, only ever raise a too-small default. The scalar variant
-			// is BYTE-UNCHANGED: max_tokens stays exactly cfg.maxTokens, precisely as before this fix.
-			const maxTokens = requireJudgment ? Math.max(cfg.maxTokens, JUDGMENT_MAX_TOKENS) : cfg.maxTokens;
+			// configured something bigger than 400, only ever raise a too-small default. This is now the
+			// budget for EVERY judgment: there is no call shape that can put the truncating 64 on the wire.
+			const maxTokens = Math.max(cfg.maxTokens, JUDGMENT_MAX_TOKENS);
 			const payload = {
 				model: cfg.model,
 				max_tokens: maxTokens,
@@ -395,18 +416,18 @@ const moduleFunction =
 			// judgment took N attempts (⟪TQ RULING⟫ "support forensic examination to improve quality
 			// later"). Additive surplus: every existing caller destructures only the keys it reads.
 			const retryReasons = [];
-			// ⟪R-a SECOND REAL-RUN FINDING, 2026-07-30⟫ requireJudgment alone (schema `required`) did not
-			// reach 100%: a live run failed on a DIFFERENT source than the first finding, with the
+			// ⟪R-a SECOND REAL-RUN FINDING, 2026-07-30⟫ a strict schema `required` alone did not reach
+			// 100%: a live run failed on a DIFFERENT source than the first finding, with the
 			// identical refusal — real Opus INTERMITTENTLY omits a schema-required field (roughly 1 call in
 			// several dozen, not a hard, every-time violation). DESIGN RULING: validate-and-retry AT THE
-			// CLIENT, refuse AT THE CONSUMER. Under requireJudgment, a response whose category is missing/
-			// invalid-enum OR whose rationale is missing/blank joins the SAME retry loop the network-status
-			// conditions already drive above (same backoff table, same maxRetries cap — no second budget).
+			// CLIENT, refuse AT THE CONSUMER. A response whose category is missing/invalid-enum OR whose
+			// rationale is missing/blank joins the SAME retry loop the network-status conditions already
+			// drive above (same backoff table, same maxRetries cap — no second budget).
 			// On EXHAUSTION, this returns whatever came back (category/rationale possibly still undefined)
 			// via the NORMAL success callback — it does NOT fabricate and does NOT itself refuse; that is
 			// STILL lib/bridge-framework/judgeComponent.js's job alone (see this file's own R-a header, unchanged: exactly
-			// ONE enforcer). The scalar variant (requireJudgment falsy) never evaluates this condition —
-			// byte-unchanged behavior, omission is legal there.
+			// ONE enforcer). ⟪JOB 0, 2026-09-07: this condition is now evaluated on EVERY judgment. It was
+			// previously skipped whenever the retired option was falsy — which was the DEFAULT.⟫
 			const tryAttempt = (attemptIndex) => {
 				postOnce({ payload }, (err, parsed, status) => {
 					const retriableTransport = status === 429 || (status >= 500 && status <= 599) || status === 0;
@@ -431,15 +452,15 @@ const moduleFunction =
 						return;
 					}
 					const { category, rationale } = extractCategoryAndRationale(parsed);
-					// ⟪R-a THIRD REAL-RUN FIX⟫ BELT: parsed.stop_reason === 'max_tokens' under requireJudgment
+					// ⟪R-a THIRD REAL-RUN FIX⟫ BELT: parsed.stop_reason === 'max_tokens'
 					// means the model's tool_use JSON was cut off mid-emission — the SAME structural fault
 					// judgmentIncomplete already catches (rationale, emitted last, is what gets truncated),
 					// folded into the identical condition so it is counted the SAME way, not mistaken for
 					// ordinary model sloppiness. With JUDGMENT_MAX_TOKENS's headroom this should never fire;
 					// if it ever does, it stays VISIBLE in `attempts` rather than silently masquerading as a
 					// missing-field omission.
-					const truncated = !!requireJudgment && parsed && parsed.stop_reason === 'max_tokens';
-					const judgmentIncomplete = !!requireJudgment && (category === undefined || rationale === undefined || truncated);
+					const truncated = !!(parsed && parsed.stop_reason === 'max_tokens');
+					const judgmentIncomplete = category === undefined || rationale === undefined || truncated;
 					if (judgmentIncomplete && attemptIndex + 1 < maxRetries) {
 						retryReasons.push(
 							`judgmentIncomplete (attempt ${attemptIndex + 1}): ` +

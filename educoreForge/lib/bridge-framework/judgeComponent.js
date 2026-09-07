@@ -130,8 +130,8 @@ const judgmentFromReturn = ({ clientReturn, question, isDebugClient }) => {
 	const discardedPredicateKeyCount = Object.prototype.hasOwnProperty.call(clientReturn, 'predicate') ? 1 : 0;
 	if (mapped.chosenCardStableId === null) {
 		// ⟪B2 DEFECT found by the FIRST REAL JUDGMENT — RULING SABLE_RIVER 2026-08-16 (B3, "B2 DEFECT found by the first REAL
-		// judgment")⟫ The real client's EVIDENCE tool schema (apps/graph-builder/apps/bridge-maker/lib/llmClient.js:88-99,
-		// requireJudgment: true) makes `category` REQUIRED with CATEGORY_ENUM = SELECT_CATEGORY_ENUM minus 'none' — llmClient's
+		// judgment")⟫ The real client's tool schema (apps/graph-builder/apps/bridge-maker/lib/llmClient.js, buildTool — ONE
+		// schema, unconditional since JOB 0) makes `category` REQUIRED with CATEGORY_ENUM = SELECT_CATEGORY_ENUM minus 'none' — llmClient's
 		// own contract reads "a model reports a category only when it IS making a pick — abstain is expressed through
 		// choice='NONE', never through a category value". So a real abstention can NEVER arrive as (NONE, none): the schema
 		// FORCES a picking category onto it. The judge component takes the client at its stated contract: on NONE the reported
@@ -299,7 +299,7 @@ const judgeOne = ({ question, judgeClient, judgmentCache, matchForensics, budget
 		// (attempts 2 — the ACCEPTED answer is what the cache stores under the ORIGINAL promptHash, so replay stays deterministic),
 		// (4) refuses BY NAME a second violation. BR-067 stands; the re-ask is counted (rationaleReaskCount) in the run report.
 		const askOnce = ({ userPrompt, reaskCount }, askCallback) => {
-			judgeClient.rerank({ systemPrompt: question.systemPrompt, userPrompt, choiceEnum: question.choiceEnum, requireJudgment: true }, (rerankError, clientReturn) => {
+			judgeClient.rerank({ systemPrompt: question.systemPrompt, userPrompt, choiceEnum: question.choiceEnum }, (rerankError, clientReturn) => {
 				if (rerankError) {
 					askCallback(`${moduleName}: the judge refused promptHash ${question.promptHash}: ${rerankError}`);
 					return;
