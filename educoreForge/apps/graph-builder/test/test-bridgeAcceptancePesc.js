@@ -507,7 +507,7 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // RE-ANCHOR D 2026-09-03 (TWILIGHT_ARROW): a887bad moved bgNosub conjunct (iii) by editing test-bgNosub.js, which is
 // inside this gate's diffed paths, so (a)'s baseline moves to a tag cut on THIS commit. (a887bad's message said the
 // tag would be cut on a887bad itself; that was wrong - this file was not edited there. Corrected here, not amended.)
-const P1_BASELINE_COMMIT = 'postSifViaConservationReanchorD-090226';
+const P1_BASELINE_COMMIT = 'postJudgeRegistryJob0-090726'; // re-anchored 2026-09-07 (DAWN_TOWER) after JOB 0 of the judge provider registry; tag is ON the job commit aa6196f — the re-anchor edit lives outside diffedPathList so the tag need not move again. Base moved; diffedPathList NOT widened.
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
