@@ -6,7 +6,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // paid reranker. The sibling of lib/llmClient.js — the two are the only things in this tree that
 // answer `rerank`, satisfying the identical call contract
 //   rerank({ systemPrompt, userPrompt, choiceEnum, requireJudgment }, cb) -> cb('', { choice, category, rationale, ... })
-// so lib.d/evidenceSelect.js cannot tell them apart at the seam. build.js selects between them at
+// so lib/bridge-framework/judgeComponent.js cannot tell them apart at the seam. build.js selects between them at
 // resolveInferenceConfig (the real-vs-stub FACTORY seam); this module is what an operator gets when
 // --useDebugJudge is given.
 //
@@ -260,7 +260,7 @@ const moduleFunction =
 				);
 				return;
 			}
-			// evidenceSelect composes choiceEnum as ['1'..'N','NONE'], so the pool is everything but the
+			// evidenceRenderer's renderQuestion composes choiceEnum as ['1'..'N','NONE'], so the pool is everything but the
 			// trailing abstain token. DERIVED from that shape rather than assumed, and refused by name if
 			// the shape is not what this module was built against.
 			if (choiceEnum[choiceEnum.length - 1] !== 'NONE') {
