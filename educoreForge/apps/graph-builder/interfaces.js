@@ -516,6 +516,51 @@ const judgeProviderViolation = (candidateProvider, { providerLabel = 'judge prov
 	return null;
 };
 
+// JUDGMENT_EXTRACTOR_SHAPE — the RESPONSE side of the judge seam, as DATA (judgeProviderRegistry JOB 2,
+// 2026-09-07). Its sibling JUDGE_PROVIDER_SHAPE declares what a provider IS; this declares what the piece
+// of a provider that READS THE ANSWER BACK must do.
+//
+// ⟪WHY THE RESPONSE SIDE NEEDS ITS OWN CONTRACT⟫ JOB 2 made the REQUEST side single-sourced: one canonical
+// select_candidate schema, rendered per dialect (apps/bridge-maker/lib/selectCandidateSchema.js). The
+// response side CANNOT be unified the same way, because the providers do not merely phrase the answer
+// differently — they put it somewhere structurally different. Anthropic returns a `tool_use` CONTENT BLOCK
+// whose `input` is already parsed. Ollama returns `message.content`, a JSON STRING, with no tool call
+// anywhere in the envelope. There is no common object to read. So extraction stays PER-PROVIDER, inside
+// that provider's own rerank — and what this shape supplies is the DISCIPLINE all of them owe, so that
+// "per-provider" does not quietly come to mean "however each one feels like it".
+//
+// ⟪THE DISCIPLINE, AND WHY IT IS THE WHOLE POINT⟫ The incumbent's extractCategoryAndRationale reads
+// category and rationale ONLY from the structured tool_use input and has NO free-text fallback — unlike
+// extractChoice, which deliberately does have alternative paths. That asymmetry is not an oversight. A
+// choice reconstructed from prose is checked against choiceEnum and is either in it or refused; a CATEGORY
+// or a RATIONALE reconstructed from prose is a value nobody asserted, travelling onward as though a judge
+// had. It would reach the forensic log, the judgment cache and the edge as a real verdict. So: a field the
+// provider did not VALIDLY supply comes back `undefined` and is left for the retry loop and then for
+// judgeComponent.js to refuse — never guessed at, never defaulted, never repaired.
+//
+// JOB 3 writes the Ollama extractor against this shape; gate G-F12-a (a body missing rationale, a choice
+// outside the enum, a non-JSON body — three reds) is that job's twin and is NOT claimed by JOB 2, which
+// owns the contract rather than any implementation of it.
+const JUDGMENT_EXTRACTOR_SHAPE = Object.freeze({
+	arity: 1,
+	// WHAT IT RECEIVES: the provider's raw response, in whatever shape that provider's transport produced.
+	// Deliberately ONE argument and deliberately un-normalised — a shared pre-parse would be the very
+	// common object the dialects do not have, and inventing one would put dialect knowledge back into a
+	// place no provider owns.
+	argKeys: Object.freeze(['rawProviderResponse']),
+	// WHAT IT MUST RETURN: exactly the three judgment fields. A field the provider did not validly supply
+	// is `undefined` — present as a key, absent as a value. These are the three that JUDGE_PROVIDER_SHAPE's
+	// rerank result carries onward; `model` and `attempts` are the provider's own and not an extractor's.
+	resultKeys: Object.freeze(['choice', 'category', 'rationale']),
+	// NO FREE-TEXT FALLBACK. Read the structured answer or report its absence; never reconstruct a
+	// judgment field from prose the model happened to emit alongside it.
+	freeTextFallbackPermitted: false,
+	// A body the extractor cannot read AS ITS OWN DIALECT (Ollama's non-JSON `message.content` is the
+	// case JOB 3 will meet) is REFUSED BY NAME, naming the provider and what was wrong with the body —
+	// never repaired, never partially salvaged.
+	refusesByName: true,
+});
+
 const COMPONENT_SHAPES = {
 	forger: {
 		forge: {
@@ -631,4 +676,4 @@ const COMPONENT_SHAPES = {
 	},
 };
 
-module.exports = { COMPONENT_SHAPES, MANIFEST_HANDLE_SHAPE, FINISHER_MODULE_SHAPE, JUDGE_PROVIDER_SHAPE, judgeProviderViolation };
+module.exports = { COMPONENT_SHAPES, MANIFEST_HANDLE_SHAPE, FINISHER_MODULE_SHAPE, JUDGE_PROVIDER_SHAPE, judgeProviderViolation, JUDGMENT_EXTRACTOR_SHAPE };

@@ -82,12 +82,20 @@ const path = require('path');
 const fs = require('fs');
 const https = require('https');
 const configFileProcessor = require('qtools-config-file-processor');
-// SELECT_CATEGORY_ENUM — the SINGLE SOURCE OF TRUTH for the discrete verdict category (evidenceContracts.js
-// §5, ⟪A4⟫). Same-directory require (lib/evidenceContracts.js) — that module is standalone data + refuse-
-// by-value validators, no sqlite-instance pull, no construction-time side effects. Required here so
-// CATEGORY_ENUM (below) DERIVES from the contract rather than restating it as a second, driftable literal
-// (boundary-review finding, 2026-07-30).
-const { SELECT_CATEGORY_ENUM } = require('./evidenceContracts');
+// ⟪JOB 2, 2026-09-07 — THE SCHEMA IS NO LONGER BUILT HERE⟫ selectCandidateSchema.js (same directory) holds
+// the ONE canonical select_candidate schema and renders it per provider dialect; this client consumes the
+// ANTHROPIC rendering. JOB 3's Ollama provider must impose the SAME constraint in a DIFFERENT dialect
+// (`format: <a JSON schema>` rather than tool_choice + input_schema), and a schema written once per
+// provider is the category enum restated once per provider — which drifts SILENTLY, because a provider
+// whose enum lost a category simply never emits it and nothing errors. This client therefore no longer
+// requires evidenceContracts directly: it takes the tool name and the pick-only category enum from the
+// canonical module, so ONE derivation from SELECT_CATEGORY_ENUM serves every provider. Same-directory
+// require, which keeps bridge-maker/lib's decision-block fingerprint tree closed (decisionBlock.js:69).
+const {
+	SELECT_CANDIDATE_TOOL_NAME,
+	PICK_CATEGORY_ENUM,
+	renderSelectCandidateSchema,
+} = require('./selectCandidateSchema');
 
 // canonical config home for this project (secrets live ONLY here; the SAME [anthropicAi] .ini
 // embedding-client's twin discipline names for [voyageEmbedding]). env ANTHROPIC_API_KEY is the alternative
@@ -97,7 +105,11 @@ const defaultConfigFilePath =
 
 const API_HOST = 'api.anthropic.com';
 const API_PATH = '/v1/messages';
-const TOOL_NAME = 'select_candidate';
+// ⟪JOB 2⟫ TOOL_NAME — taken FROM the canonical schema module rather than declared a second time. The name
+// travels on the wire twice (the tool definition and tool_choice) and is then what extraction uses to FIND
+// the tool_use block in the response, so two spellings of it would be a client that sends a tool it cannot
+// read back. Re-exported below, unchanged, for the tests that already read it.
+const TOOL_NAME = SELECT_CANDIDATE_TOOL_NAME;
 
 // ⟪JOB 1, 2026-09-07 — THE wireModel/model SPLIT⟫ Until now ONE property, `cfg.model`, did THREE jobs:
 //   (a) the API model name sent on the wire,
@@ -155,24 +167,23 @@ const CLIENT_VERSION = 'llmClient-anthropic-v2-judgeProviderContract';
 // and can never hold a rationale, can no longer reach the wire by a caller omitting an option.⟫
 const JUDGMENT_MAX_TOKENS = 400;
 
-// ⟪R-a⟫ CATEGORY_ENUM — DERIVED from SELECT_CATEGORY_ENUM (evidenceContracts.js §5, the single source of
-// truth), never a hand-restated literal (boundary-review finding, 2026-07-30: a second, near-identical
-// literal here was exactly the "third source of truth at the boundary we just declared single-source" the
-// review flagged). The SEMANTIC split is legitimate and stays: SELECT_CATEGORY_ENUM is the full contract
-// enum, including 'none' (the abstain verdict judgeComponent.js itself synthesizes when the LLM's choice is
-// 'NONE' — see judgeOne's `category: 'none'` literal there); CATEGORY_ENUM here is the narrower
-// PICK-ONLY set this tool schema OFFERS THE MODEL, because a model reports a category only when it IS
-// making a pick — abstain is expressed through `choice='NONE'`, never through a category value asserted
-// about a pick that does not exist. Filtering 'none' out at the derivation site (rather than restating the
-// three remaining values by hand) means SELECT_CATEGORY_ENUM gaining or renaming a category can never
-// silently drift out of sync with what this tool schema offers.
-const CATEGORY_ENUM = SELECT_CATEGORY_ENUM.filter((oneCategory) => oneCategory !== 'none');
-
-// ⟪JOB 0, 2026-09-07⟫ JUDGMENT_REQUIRED_FIELD_LIST — the `required` list of the ONE select_candidate
-// schema this client now emits. Named and frozen rather than written inline at the single use site so
-// that "what a judgment must contain" is one greppable thing: the retired scalar variant's whole defect
-// was that a SECOND, weaker required-list existed and was the DEFAULT.
-const JUDGMENT_REQUIRED_FIELD_LIST = Object.freeze(['choice', 'category', 'rationale']);
+// ⟪R-a; RE-SOURCED BY JOB 2, 2026-09-07⟫ CATEGORY_ENUM — the PICK-ONLY categories, still derived and still
+// never a hand-restated literal. What changed is WHERE the derivation lives: it was
+// `SELECT_CATEGORY_ENUM.filter(c => c !== 'none')` right here, which was correct for one provider and
+// would have become one such filter PER PROVIDER. It is now PICK_CATEGORY_ENUM, computed once in
+// selectCandidateSchema.js and shared by every dialect. The SEMANTIC split is unchanged and still
+// legitimate: SELECT_CATEGORY_ENUM is the full contract enum including 'none' (the abstain verdict
+// judgeComponent.js synthesizes when the model's choice is 'NONE'); the pick-only set is what a tool schema
+// OFFERS THE MODEL, because a model reports a confidence category only when it IS making a pick — abstain
+// travels through `choice='NONE'`, never through a category asserted about a pick that does not exist.
+// This alias is KEPT rather than deleted in favour of the import, because it is EXPORTED and genuinely
+// read by name from outside this file. [code fact, census 2026-09-07: `grep -rn CATEGORY_ENUM
+// --include=*.js`, node_modules excluded, bridge-maker/lib's own four files excluded] the readers are
+// extractCategoryAndRationale below, apps/graph-builder/test/test-selectCandidateSchema.js:200, and —
+// the one that matters — lib/bridge-framework/test/test-bgReplay.js:512, which requires THIS MODULE at
+// run time and derives a whole seam conjunct from whatever CATEGORY_ENUM turns out to be. Removing the
+// export would break that conjunct from two directories away.
+const CATEGORY_ENUM = PICK_CATEGORY_ENUM;
 
 // ⟪JOB 0, 2026-09-07⟫ OBSOLETE_JUDGMENT_FLAG_NAME / obsoleteJudgmentFlagRefusalText — the retired
 // option's name held as DATA in exactly one place per file, so that `rerank` can REFUSE IT BY NAME.
@@ -282,53 +293,25 @@ const extractCategoryAndRationale = (responseBody) => {
 	return { category, rationale };
 };
 
-// ⟪R-a REAL-RUN FIX; JOB 0 2026-09-07⟫ buildTool — MODULE-SCOPE, pure (no cfg/key/network): builds THE
-// `select_candidate` tool definition (name/description/input_schema). There is exactly ONE schema, and
-// its `required` list is JUDGMENT_REQUIRED_FIELD_LIST — choice, category and rationale, always. Hoisted
-// out of `rerank` for the SAME reason extractChoice/extractCategoryAndRationale were: a hermetic test
-// inspects the CONSTRUCTED schema directly — no construction, no key, no network, no https.request ever
-// attempted — proving the emitted `required` list carries category+rationale, without needing to
-// intercept or mock the transport layer at all.
-// JOB 0 retired the second, weaker variant this function used to select between. The object emitted
-// here is byte-identical to what the surviving (evidence) variant produced, description included —
-// proven against a pre-edit capture, gate G0-b.
-const buildTool = ({ choiceEnum } = {}) => {
-	return {
-		name: TOOL_NAME,
-		description:
-			'Record the single best matching CEDS candidate by its number, or NONE if no candidate is a ' +
-			'correct match. You MUST ALSO record a discrete confidence CATEGORY for the choice (never a ' +
-			'numeric probability) and a short RATIONALE for the choice — both are REQUIRED whenever ' +
-			'choice is a candidate number.',
-		input_schema: {
-			type: 'object',
-			properties: {
-				choice: {
-					type: 'string',
-					enum: choiceEnum,
-					description: 'The chosen candidate number, or the string NONE.',
-				},
-				// ⟪JOB 0⟫ both are REQUIRED, unconditionally — see JUDGMENT_REQUIRED_FIELD_LIST below.
-				// A model that omits either is caught by the judgmentIncomplete retry in `rerank` and,
-				// on exhaustion, refused by judgeComponent.js — never fabricated here.
-				category: {
-					type: 'string',
-					enum: CATEGORY_ENUM,
-					description:
-						'A discrete confidence category for the choice — strong, moderate, or weakButReal — ' +
-						'reflecting how strongly the evidence supports it, never a numeric probability. ' +
-						'Required when choice is a candidate number; omit when choice is NONE.',
-				},
-				rationale: {
-					type: 'string',
-					description: 'A short rationale (one or two sentences) explaining the choice.',
-				},
-			},
-			required: JUDGMENT_REQUIRED_FIELD_LIST,
-			additionalProperties: false,
-		},
-	};
-};
+// ⟪R-a REAL-RUN FIX; JOB 0 2026-09-07; RE-SOURCED BY JOB 2⟫ buildTool — MODULE-SCOPE, pure (no
+// cfg/key/network): THE `select_candidate` tool definition (name/description/input_schema) this client
+// sends. It no longer CONSTRUCTS that object; it asks selectCandidateSchema.js for the ANTHROPIC rendering
+// of the one canonical schema. The emitted object is BYTE-IDENTICAL to what this function built inline
+// before JOB 2 — pinned by gate G2-a against a capture taken before the edit, exactly as JOB 0 pinned its
+// own change with G0-b, and for the same reason: the description string is part of what the model reads
+// and is precisely the thing that drifts unnoticed.
+//
+// The function is KEPT rather than replaced by the import at its one call site. It is EXPORTED and read by
+// name — a hermetic test inspects the constructed schema with no construction, no key and no network — and
+// it is the name judgeComponent.js:133's comment points at.
+//
+// ⟪ONE NAMED BEHAVIOUR CHANGE⟫ an ABSENT choiceEnum is now REFUSED BY NAME instead of producing a schema
+// with `enum: undefined`. [code fact] that path was already broken, just later and less legibly: an absent
+// choiceEnum reached extractChoice, whose `choiceEnum.indexOf` threw a bare TypeError inside the response
+// callback. [code fact] it is unreachable from production — judgeComponent.js:211 refuses a question whose
+// choiceEnum is not an array before `rerank` is ever called — so this guards direct callers of the export
+// and the providers JOB 3 adds.
+const buildTool = ({ choiceEnum } = {}) => renderSelectCandidateSchema('anthropic', { choiceEnum });
 
 // START OF moduleFunction() ============================================================
 
