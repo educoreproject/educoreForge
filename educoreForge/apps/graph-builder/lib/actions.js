@@ -1323,7 +1323,7 @@ const judgedByViolation = ({ commandLineParameters, audit, manifestRefId }) => {
 		return refusalOf(
 			`graphBuilder -goldEvalCheck: REFUSED — manifest ${manifestRefId} was judged by ${presentIdentityList.length} judge(s) and ` +
 			`--${JUDGED_BY_VALUE_NAME} names none. Every mappingTool FOUND, enumerated from the manifest's own relationship blocks: ` +
-			`${quotedIdentityList(presentIdentityList)}. Promotion requires --${JUDGED_BY_VALUE_NAME}=<toolId> for each, repeatable — ` +
+			`${quotedIdentityList(presentIdentityList)}. Promotion requires --${JUDGED_BY_VALUE_NAME}=<toolId>[,<toolId>...] — ONE flag, COMMA-SEPARATED, one id per judge present (a REPEATED --${JUDGED_BY_VALUE_NAME}= is NOT accumulated; the parser keeps the last value) — ` +
 			`nobody promotes a graph without having been shown what judged it and typing that back.`
 		);
 	}
