@@ -141,7 +141,7 @@ const MODEL_NAMESPACE_SEPARATOR = ':';
 const namespacedModelFor = (wireModel) => `${PROVIDER_NAME}${MODEL_NAMESPACE_SEPARATOR}${wireModel}`;
 
 // ANTHROPIC_MAX_CONCURRENCY — this provider's OWN ceiling on in-flight judgments. The framework runs the
-// judge at min(JUDGE_CONCURRENCY, provider.maxConcurrency) (bridge-framework.js:1449), so a provider that
+// judge at min(JUDGE_CONCURRENCY, provider.maxConcurrency) (bridge-framework.js:1462 (the maxConcurrency guard — line as of JOB 3, 2026-09-07; grep judgeClient.maxConcurrency if it has moved)), so a provider that
 // cannot take the framework's pace bounds it rather than being drowned by it. 4 matches the framework's own
 // JUDGE_CONCURRENCY: the Anthropic API sustains it, and this value has been the effective rate all along —
 // it is a DECLARATION of the status quo, not a new limit. An operator may raise or lower it in the ini; an

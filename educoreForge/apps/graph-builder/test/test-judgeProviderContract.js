@@ -453,7 +453,7 @@ const FRAMEWORK_JUDGE_CONCURRENCY = 4; // bridge-framework.js:92, the ceiling th
 const resolvedConcurrency = (providerMaxConcurrency) => Math.min(FRAMEWORK_JUDGE_CONCURRENCY, providerMaxConcurrency);
 
 // ⟪THE WIRING, not just the arithmetic⟫ The three assertions below prove min() is the right RULE and the
-// runBounded observation proves it SERIALISES — but neither would notice if bridge-framework.js:1449 stopped
+// runBounded observation proves it SERIALISES — but neither would notice if bridge-framework.js:1462 (the maxConcurrency guard — line as of JOB 3, 2026-09-07; grep judgeClient.maxConcurrency if it has moved) stopped
 // calling it. That gap is closed lexically here, the idiom test-bgNosub uses for its own production checks,
 // and it was OBSERVED RED against the pre-JOB-1 line before being made to pass.
 const frameworkJudgeRunnerText = fs.readFileSync(path.join(__dirname, '..', '..', '..', 'lib', 'bridge-framework', 'bridge-framework.js'), 'utf8');
@@ -575,7 +575,7 @@ overlapWitness({ concurrency: resolvedConcurrency(1) }, ({ spanList, overlapCoun
 			null,
 		);
 		harness.ok(
-			'…and declares a positive-integer maxConcurrency (the member bridge-framework.js:1449 refuses without)',
+			'…and declares a positive-integer maxConcurrency (the member bridge-framework.js:1462 (the maxConcurrency guard — line as of JOB 3, 2026-09-07; grep judgeClient.maxConcurrency if it has moved) refuses without)',
 			Number.isInteger(fakeRealClient.maxConcurrency) && fakeRealClient.maxConcurrency >= 1,
 			String(fakeRealClient.maxConcurrency),
 		);

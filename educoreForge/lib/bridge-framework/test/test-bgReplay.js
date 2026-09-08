@@ -819,7 +819,7 @@ const delayedClient = ({ delayList }) => {
 	const inner = scenarioLib.makeFakeRealClient({});
 	// ⟪JOB 1, 2026-09-07⟫ SPREAD the double it decorates rather than rebuilding two of its properties by
 	// hand. Rebuilt by hand, this wrapper silently dropped every contract member makeFakeRealClient gained —
-	// which is how it kept refusing at bridge-framework.js:1449 for a missing maxConcurrency after the double
+	// which is how it kept refusing at bridge-framework.js:1462 (the maxConcurrency guard — line as of JOB 3, 2026-09-07; grep judgeClient.maxConcurrency if it has moved) for a missing maxConcurrency after the double
 	// itself had been fixed. A decorator that re-lists its subject's members is a second place for the
 	// contract to drift; spreading means it can only ever lack what its subject lacks.
 	return { ...inner, keySource: 'test', rerank: (question, callback) => { const thisIndex = callIndex; callIndex += 1; setTimeout(() => inner.rerank(question, callback), delayList[thisIndex % delayList.length]); } };

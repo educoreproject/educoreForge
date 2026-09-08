@@ -204,7 +204,7 @@ const MODEL_NAMESPACE_SEPARATOR = ':';
 // DEBUG_JUDGE_MAX_CONCURRENCY — required by the contract, and honestly this provider has NO external limit
 // to declare: every rule is pure and synchronous, there is no socket, no rate limit and no server. The shape
 // offers no way to say "unbounded", so this names the framework's own JUDGE_CONCURRENCY, which makes
-// min(JUDGE_CONCURRENCY, maxConcurrency) at bridge-framework.js:1449 a no-op for this provider — the
+// min(JUDGE_CONCURRENCY, maxConcurrency) at bridge-framework.js:1462 (the maxConcurrency guard — line as of JOB 3, 2026-09-07; grep judgeClient.maxConcurrency if it has moved) a no-op for this provider — the
 // intended meaning. It is deliberately NOT imported from the framework: the framework is downstream of this
 // module, and a provider that read a framework constant would invert that dependency.
 const DEBUG_JUDGE_MAX_CONCURRENCY = 4;

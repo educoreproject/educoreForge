@@ -396,7 +396,7 @@ const makeFakeRealClient = ({ pickOrdinal = '1', category = 'strong', abstainCat
 	// ⟪JOB 1, 2026-09-07⟫ THE DOUBLE SATISFIES THE WHOLE JUDGE_PROVIDER_SHAPE, not only the members the
 	// framework happens to read today. This file's own header (see the RULING SABLE_RIVER note below) records
 	// why: a double built from what the real client USUALLY provides "is not a double of the client; it is a
-	// double of the lucky case". maxConcurrency is the member bridge-framework.js:1449 now refuses by name when
+	// double of the lucky case". maxConcurrency is the member bridge-framework.js:1462 (the maxConcurrency guard — line as of JOB 3, 2026-09-07; grep judgeClient.maxConcurrency if it has moved) now refuses by name when
 	// absent — a real provider declares its own ceiling and the run judges at min(JUDGE_CONCURRENCY, it) — and
 	// name/wireModel/describe are the rest of the contract, present so this double can be handed to the
 	// registry's shape validator (JOB 4) without a special case. `model` stays the caller-supplied value so
