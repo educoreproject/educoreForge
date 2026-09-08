@@ -311,7 +311,7 @@ harness.section('G3-e — THE FROZEN SCHEMA IS ACTUALLY FROZEN, INCLUDING THE CA
 // after construction, and nothing would say so. It was not found by review; it was found by asking whether
 // the freezes were real, a question nobody had asked precisely because the builder wrote them.
 //
-// It is not a live bug today — judgeComponent.js:211 builds a fresh choiceEnum per question and nothing
+// It is not a live bug today — evidenceRenderer.js builds a BRAND-NEW choiceEnum per question (renderedPoolStableIdList.map(...).concat([ABSTAIN_TOKEN]); judgeComponent.js:211 only TYPE-CHECKS it — corrected by RUBY_ANCHOR, JOB 4) and nothing
 // mutates it afterwards — and it is fixed anyway, because a contract that ASSERTS frozen and DELIVERS
 // partially frozen is a polyArch2 shortfall whether or not today's callers happen to behave. It matters more
 // with two providers than with one: JOB 3's Ollama provider receives the SAME object the incumbent does.
