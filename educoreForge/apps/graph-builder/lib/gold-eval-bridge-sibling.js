@@ -68,11 +68,21 @@ const scalarPropertyOf = (edgeProperties, propertyName) => {
 const judgeEnumerationOf = (harvestedEdgeList) => {
 	const judgedEdgeList = harvestedEdgeList.filter((oneEdge) => scalarPropertyOf(oneEdge.properties, MAPPING_PROPERTIES.RESOLUTION) === JUDGED_RESOLUTION);
 	const missingToolOffenderList = judgedEdgeList.filter((oneEdge) => scalarPropertyOf(oneEdge.properties, MAPPING_PROPERTIES.MAPPING_TOOL) === undefined);
+	// ⟪JOB 6b, G6-k⟫ A NON-STRING identity is its OWN fault class, refused separately from an absent one.
+	// Before this it was enumerated with its native type, so judgeToolIdList held a number while --judgedBy
+	// values are strings: indexOf could never match and the operator was told to name a judge NO SPELLING
+	// COULD SATISFY. That is a STUCK promotion, not a clean refusal. Absent and malformed are DIFFERENT
+	// facts for an operator ("no judge is recorded" vs "the judge recorded is not a name"), so they are
+	// counted and reported separately rather than folded into one number.
+	const malformedToolOffenderList = judgedEdgeList.filter((oneEdge) => {
+		const writtenValue = scalarPropertyOf(oneEdge.properties, MAPPING_PROPERTIES.MAPPING_TOOL);
+		return writtenValue !== undefined && typeof writtenValue !== 'string';
+	});
 	const judgedEdgeCountByPairRefId = {};
 	judgedEdgeList.forEach((oneEdge) => {
 		const writtenMappingTool = scalarPropertyOf(oneEdge.properties, MAPPING_PROPERTIES.MAPPING_TOOL);
-		if (writtenMappingTool === undefined) {
-			return; // the offender list refuses these by name; they are not an identity to enumerate
+		if (writtenMappingTool === undefined || typeof writtenMappingTool !== 'string') {
+			return; // both offender lists refuse these BY NAME; neither is an identity anyone could type back
 		}
 		// THE ONE PLACE a written identity becomes an ENUMERATED one. A retired spelling resolves to its
 		// successor here so a pre-JOB-4 graph reports ONE judge rather than several spellings of one rule.
@@ -92,7 +102,7 @@ const judgeEnumerationOf = (harvestedEdgeList) => {
 	const judgeIdentityPairList = Object.keys(judgedEdgeCountByPairRefId)
 		.sort()
 		.map((onePairRefId) => judgedEdgeCountByPairRefId[onePairRefId]);
-	return { judgedEdgeCount: judgedEdgeList.length, judgedEdgeMissingMappingToolCount: missingToolOffenderList.length, judgeIdentityPairList, missingToolOffenderList };
+	return { judgedEdgeCount: judgedEdgeList.length, judgedEdgeMissingMappingToolCount: missingToolOffenderList.length, judgedEdgeMalformedMappingToolCount: malformedToolOffenderList.length, judgeIdentityPairList, missingToolOffenderList, malformedToolOffenderList };
 };
 
 // the harvest's PG-JSON edge record → the rule's edge shape ({ fromStableId, toStableId, type, properties }); a
@@ -105,7 +115,7 @@ const harvestedEdgeFrom = (oneEdge) => ({ fromStableId: refStableIdOf(oneEdge.fr
 // absent field and an empty one are the same value to a caller, and telling them apart is the whole subject
 // of the gates below. judgeEnumerationRefusalMessage is explicitly null — "looked, nothing to refuse" — the
 // same idiom refusalMessage already uses.
-const UNREADABLE_BLOCK_ENUMERATION = { judgedEdgeCount: 0, judgedEdgeMissingMappingToolCount: 0, judgeIdentityPairList: [], judgeEnumerationRefusalMessage: null };
+const UNREADABLE_BLOCK_ENUMERATION = { judgedEdgeCount: 0, judgedEdgeMissingMappingToolCount: 0, judgedEdgeMalformedMappingToolCount: 0, judgeIdentityPairList: [], judgeEnumerationRefusalMessage: null };
 
 // auditMappingBlockText — PURE: one relationship block's text → its edge audit
 const auditMappingBlockText = ({ blockText, subject } = {}) => {
@@ -139,17 +149,24 @@ const auditMappingBlockText = ({ blockText, subject } = {}) => {
 	// (graphSeamRules.js writeMappingEdge, JUDGED_ONLY_PROPERTY_LIST: judged ⇒ mappingTool). The write side
 	// cannot be relied on to have run: a block can be hand-assembled, or written by a builder that predates
 	// the rule. Named offender, by stableId, in the codec's own idiom — never "[object Object]".
+	const blockLabelText = subject === undefined ? '(unnamed)' : subject;
 	const firstMissingToolOffender = enumeration.missingToolOffenderList[0];
+	const firstMalformedToolOffender = enumeration.malformedToolOffenderList[0];
 	const judgeEnumerationRefusalMessage =
-		firstMissingToolOffender === undefined
-			? null
-			: `${moduleName}: relationship block '${subject === undefined ? '(unnamed)' : subject}' carries ${enumeration.judgedEdgeMissingMappingToolCount} JUDGED edge(s) with NO ${MAPPING_PROPERTIES.MAPPING_TOOL} (first: ${firstMissingToolOffender.fromStableId} -[${firstMissingToolOffender.type}]-> ${firstMissingToolOffender.toStableId}) — a judged edge that cannot say what judged it can never be named at promotion; this is the read-side twin of the write-side rule judged ⇒ ${MAPPING_PROPERTIES.MAPPING_TOOL}`;
+		firstMissingToolOffender !== undefined
+			? `${moduleName}: relationship block '${blockLabelText}' carries ${enumeration.judgedEdgeMissingMappingToolCount} JUDGED edge(s) with NO ${MAPPING_PROPERTIES.MAPPING_TOOL} (first: ${firstMissingToolOffender.fromStableId} -[${firstMissingToolOffender.type}]-> ${firstMissingToolOffender.toStableId}) — a judged edge that cannot say what judged it can never be named at promotion; this is the read-side twin of the write-side rule judged ⇒ ${MAPPING_PROPERTIES.MAPPING_TOOL}`
+			: firstMalformedToolOffender === undefined
+				? null
+				// ⟪G6-k⟫ quote WHAT WAS WRITTEN and its TYPE. A refusal that says only "malformed" leaves the
+				// operator hunting; the value and its type are what let them find the block that produced it.
+				: `${moduleName}: relationship block '${blockLabelText}' carries ${enumeration.judgedEdgeMalformedMappingToolCount} JUDGED edge(s) whose ${MAPPING_PROPERTIES.MAPPING_TOOL} is NOT A STRING (first: ${firstMalformedToolOffender.fromStableId} -[${firstMalformedToolOffender.type}]-> ${firstMalformedToolOffender.toStableId} carries ${JSON.stringify(scalarPropertyOf(firstMalformedToolOffender.properties, MAPPING_PROPERTIES.MAPPING_TOOL))}, a ${typeof scalarPropertyOf(firstMalformedToolOffender.properties, MAPPING_PROPERTIES.MAPPING_TOOL)}) — a judge identity that is not a name can never be typed back with --judgedBy, so it would refuse forever rather than refuse usefully`;
 	return {
 		subject,
 		edgeCount: harvestedEdgeList.length,
 		invalidDebugEdgeCount,
 		judgedEdgeCount: enumeration.judgedEdgeCount,
 		judgedEdgeMissingMappingToolCount: enumeration.judgedEdgeMissingMappingToolCount,
+		judgedEdgeMalformedMappingToolCount: enumeration.judgedEdgeMalformedMappingToolCount,
 		judgeIdentityPairList: enumeration.judgeIdentityPairList,
 		judgeEnumerationRefusalMessage,
 		refusalMessage: refusal === null ? null : refusal.message,
@@ -216,7 +233,7 @@ const auditManifestMappingBlocks = ({ standardsDatabase, manifestRefId } = {}, c
 					return;
 				}
 				const audit = auditMappingBlockText({ blockText: typeof blockRow.text === 'string' ? blockRow.text : `${blockRow.text}`, subject: oneMember.subject });
-				mappingBlockList.push({ subject: oneMember.subject, refId: oneMember.schemaBlockRefId, edgeCount: audit.edgeCount, invalidDebugEdgeCount: audit.invalidDebugEdgeCount, judgedEdgeCount: audit.judgedEdgeCount, judgedEdgeMissingMappingToolCount: audit.judgedEdgeMissingMappingToolCount, judgeIdentityPairList: audit.judgeIdentityPairList });
+				mappingBlockList.push({ subject: oneMember.subject, refId: oneMember.schemaBlockRefId, edgeCount: audit.edgeCount, invalidDebugEdgeCount: audit.invalidDebugEdgeCount, judgedEdgeCount: audit.judgedEdgeCount, judgedEdgeMissingMappingToolCount: audit.judgedEdgeMissingMappingToolCount, judgedEdgeMalformedMappingToolCount: audit.judgedEdgeMalformedMappingToolCount, judgeIdentityPairList: audit.judgeIdentityPairList });
 				if (audit.refusalMessage !== null) {
 					refusalMessageList.push(audit.refusalMessage);
 				}

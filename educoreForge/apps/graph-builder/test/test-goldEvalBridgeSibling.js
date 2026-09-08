@@ -287,6 +287,50 @@ const HYPHEN_DEBUG_IDENTITY = 'debugJudge-first-v1-INVALID_DEBUG';
 const COLON_DEBUG_IDENTITY = 'debugJudge:first-v1-INVALID_DEBUG';
 const CURRENT_DEBUG_IDENTITY = 'debug:first';
 
+harness.section('SECTION 0D — JOB 6b (G6-k) a JUDGED edge whose mappingTool is a NON-STRING is REFUSED BY NAME, never enumerated as an unnameable judge');
+// ⟪JOB 6b, VELVET_PRISM 2026-09-08 — my own stand-down finding, ruled by DAWN_TOWER as G6-k⟫
+// I gated the ABSENT mappingToolVersion (G6-i) and left the WRONG-TYPE mappingTool ungated: an
+// inconsistency inside my own diff that I did not see until I fed the enumeration a number.
+//
+// WHY IT MATTERS AND WHY "IT REFUSES ANYWAY" IS NOT GOOD ENOUGH. A non-string identity was enumerated
+// with its NATIVE TYPE, so judgeToolIdList held a number while --judgedBy values are strings off the
+// command line. indexOf can never match, so the operator is told to name a judge AND NO SPELLING THEY CAN
+// TYPE WILL SATISFY IT. The gate refuses rather than passing — the safe direction — but that is a STUCK
+// PROMOTION, not a clean refusal, and a refusal nobody can act on is a defect wearing a gate's clothes.
+// [code fact, materialiser.js:98] unreachable from the current writer, which writes a string; reachable
+// from a hand-assembled or foreign block — exactly the class G6-i already gates.
+const NON_STRING_TOOL_SPEC_LIST = [
+	{ label: 'a NUMBER', rawMappingTool: 123 },
+	{ label: 'a BOOLEAN', rawMappingTool: true },
+];
+NON_STRING_TOOL_SPEC_LIST.forEach((oneSpec) => {
+	const nonStringEdgeList = [{
+		fromStableId: 'toy:property/A.one', toStableId: 'urn:toyhub:P000001', type: 'CLOSE_MATCH',
+		properties: { resolution: ['judged'], mappingTool: [oneSpec.rawMappingTool], mappingToolVersion: [RENDERER_IDENTITY] },
+	}];
+	const nonStringEnumeration = sibling.judgeEnumerationOf(nonStringEdgeList);
+	harness.equal(`G6-k: mappingTool is ${oneSpec.label} — the edge is still counted as judged`, nonStringEnumeration.judgedEdgeCount, 1);
+	harness.ok(
+		`G6-k: mappingTool is ${oneSpec.label} — it is NOT enumerated as a judge (an identity nobody can type is not an identity)`,
+		Array.isArray(nonStringEnumeration.judgeIdentityPairList) && nonStringEnumeration.judgeIdentityPairList.length === 0,
+		JSON.stringify(nonStringEnumeration.judgeIdentityPairList),
+	);
+	harness.equal(`G6-k: mappingTool is ${oneSpec.label} — it is counted as an OFFENDER`, nonStringEnumeration.judgedEdgeMalformedMappingToolCount, 1);
+});
+// through the BLOCK path, so the refusal text is the one an operator actually sees
+const NON_STRING_TOOL_TEXT = replayBlockLib.serializeBlock({
+	header: RELATIONSHIP_HEADER,
+	nodes: [nodeLineFor({ source: SOURCE_NAME, stableId: 'toy:property/A.one' }), nodeLineFor({ source: HUB_NAME, stableId: 'urn:toyhub:P000001' })],
+	edges: [{ type: 'CLOSE_MATCH', fromRef: { source: SOURCE_NAME, id: 'toy:property/A.one' }, toRef: { source: HUB_NAME, id: 'urn:toyhub:P000001' }, properties: { provenanceTier: [PROVENANCE_TIER.EMBEDDING_INFERRED], matchBasis: ['derived'], resolution: ['judged'], predicate: ['closeMatch'], confidence: [0.9], decisionBlockHash: ['0'.repeat(64)], mappingTool: [123], mappingToolVersion: [RENDERER_IDENTITY] } }],
+});
+const nonStringAudit = sibling.auditMappingBlockText({ blockText: NON_STRING_TOOL_TEXT, subject: 'toy_rel_toyhub_nonStringTool' });
+harness.match('G6-k: REFUSED BY NAME, naming the block', nonStringAudit.judgeEnumerationRefusalMessage || '', /toy_rel_toyhub_nonStringTool/);
+harness.match('G6-k: …naming the offending edge by stableId', nonStringAudit.judgeEnumerationRefusalMessage || '', /toy:property\/A\.one -\[CLOSE_MATCH\]-> urn:toyhub:P000001/);
+harness.match('G6-k: …saying the identity is not a STRING, not merely that something is wrong', nonStringAudit.judgeEnumerationRefusalMessage || '', /not a string|non-string/i);
+harness.match('G6-k: …and quoting what was actually written, so the operator can find it', nonStringAudit.judgeEnumerationRefusalMessage || '', /123/);
+// THE COMPANION: the refusal must fire ONLY when it should. A well-formed string identity is untouched.
+harness.ok('G6-k COMPANION: a well-formed STRING identity is NOT refused and IS enumerated', twoJudgeAudit.judgeEnumerationRefusalMessage === null && twoJudgeAudit.judgeIdentityPairList.length === 2, twoJudgeAudit.judgeEnumerationRefusalMessage);
+
 harness.section('SECTION 0C — JOB 6 (G6-g) the alias table is DATA with a dated reason per row; it RENAMES and never admits or excludes');
 const aliasTableLib = require(aliasTableModulePath);
 harness.ok('G6-g: the table exports a frozen ROW LIST, so the gates enumerate FROM the data', Array.isArray(aliasTableLib.JUDGE_IDENTITY_ALIAS_ROW_LIST) && Object.isFrozen(aliasTableLib.JUDGE_IDENTITY_ALIAS_ROW_LIST));
@@ -539,11 +583,48 @@ const judgeNamingGates = ({ standardsDatabase, driveGoldEvalCheck, realActions, 
 									// be ABSENT from this refusal. A literal naming the two-judge fixture's
 									// identities fails here; only a list derived from THIS manifest passes.
 									harness.ok('G6-c DERIVATION: …and NAMING NEITHER of the other manifest s judges — a hand list would name them', !/claude-opus-4-8/.test(otherUnnamedError || '') && !/qwen2\.5:32b/.test(otherUnnamedError || ''), otherUnnamedError);
-									driveGoldEvalCheck({ actionsFactory: realActions, values: valuesFor(debugManifestRefId, ['someJudgeNobodyDeclared:v9']) }, (orderError) => {
+									// ⟪JOB 6b, G6-l — VELVET_PRISM's own stand-down doubt 1, ruled by DAWN_TOWER⟫
+								// The verdict's namedAtPromotionList USED TO re-read process.global at EMIT time
+								// rather than carry forward the list judgedByViolation had already validated.
+								// TWO READS OF ONE FACT — the species this whole campaign exists to remove — and
+								// I shipped one while writing the gate against it. They cannot disagree today
+								// because nothing mutates the parameters in between, which is exactly why it
+								// would have survived review: it is a drift SITE, not yet a drift.
+								//
+								// THE TWIN MAKES THEM DISAGREE. `judgedBy` is a GETTER that answers truthfully
+								// once and lies afterwards. A second read yields the poison; carrying the
+								// validated list forward yields the truth. And the STRONGEST assertion is not
+								// which value appears — it is that the getter is touched EXACTLY ONCE, which no
+								// implementation with two reads can satisfy however it orders them.
+								let judgedByReadCount = 0;
+								const singleReadValues = { buildLogDirPath: [bridgedRunDirPath], manifestRefId: [twoJudgeManifestRefId], standardsDatabaseFilePath: [databaseFilePath] };
+								Object.defineProperty(singleReadValues, 'judgedBy', {
+									enumerable: true,
+									get() {
+										judgedByReadCount += 1;
+										return judgedByReadCount === 1 ? [ANTHROPIC_IDENTITY, OLLAMA_IDENTITY] : ['POISONED_SECOND_READ_OF_process_global'];
+									},
+								});
+								driveGoldEvalCheck({ actionsFactory: realActions, values: singleReadValues }, (singleReadError, singleReadVerdict) => {
+									harness.ok('G6-l: the run PASSES on the truthful first read', !singleReadError && singleReadVerdict && singleReadVerdict.exitCode === 0, singleReadError);
+									const singleReadPayload = singleReadVerdict ? JSON.parse(singleReadVerdict.resultText) : {};
+									harness.equal('G6-l: --judgedBy is read EXACTLY ONCE — one read of one fact', judgedByReadCount, 1);
+									harness.ok(
+										'G6-l: …and the certificate carries the VALIDATED list, not a later re-read',
+										JSON.stringify(singleReadPayload.judgeEnumeration && singleReadPayload.judgeEnumeration.namedAtPromotionList) === JSON.stringify([ANTHROPIC_IDENTITY, OLLAMA_IDENTITY]),
+										JSON.stringify(singleReadPayload.judgeEnumeration && singleReadPayload.judgeEnumeration.namedAtPromotionList),
+									);
+									harness.ok(
+										'G6-l: …so the poison NEVER reaches the certificate a promoter reads',
+										!/POISONED_SECOND_READ_OF_process_global/.test(singleReadVerdict ? singleReadVerdict.resultText : ''),
+										singleReadVerdict && singleReadVerdict.resultText,
+									);
+								driveGoldEvalCheck({ actionsFactory: realActions, values: valuesFor(debugManifestRefId, ['someJudgeNobodyDeclared:v9']) }, (orderError) => {
 									harness.match('ORDERING: the pre-existing invalid-debug refusal fires FIRST, UNTOUCHED by JOB 6', orderError || '', /invalid-debug/);
 										harness.ok('ORDERING: …and no judge-naming refusal appears ahead of it', !/--judgedBy/.test(orderError || ''), orderError);
 										finish();
 									});
+								});
 								});
 							});
 						});

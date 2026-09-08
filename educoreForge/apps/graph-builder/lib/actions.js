@@ -1262,10 +1262,16 @@ const cedsGatesAction = (callback) => {
 // hand-written list of judges we expect to exist, because a hand list is blind to exactly the judge nobody
 // declared, which is the one a promotion gate is for.
 //
-// --judgedBy is REPEATABLE with no code to make it so: qtools-parse-command-line already collects repeated
-// `--flag=` into an array (actions.js:324's firstValue takes [0] of exactly that array). So graphBuilder.js
-// needs no entry-point change, and the refusal for a malformed value lives HERE, beside every other
-// -goldEvalCheck refusal, rather than being split across two files.
+// --judgedBy ARRIVES AS AN ARRAY, and the CORRECT FORM IS COMMA-SEPARATED — `--judgedBy=A,B`. ⚠ A REPEATED
+// `--flag=` DOES NOT ACCUMULATE: qtools-parse-command-line keeps the LAST value and drops the earlier ones.
+// ⟪CORRECTED 2026-09-08 — this comment previously asserted the opposite, on an INFERENCE from `firstValue`
+// at :324 that was never run. MEASURED against the real startup.js resolveParameters: comma -> 2 values;
+// JSON-on-stdin envelope with a real array -> 2 values; `--judgedBy=A --judgedBy=B` -> 1 value; `--judgedBy A B`
+// -> 1 value. The parser's own README says so — its example is `--value2 1,2,3` yielding ['1','2','3'].⟫
+// The READER below is correct either way because it takes the whole array; the fault was in the DOCUMENTATION,
+// and it fails SAFE (a dropped judge reads as an UNNAMED judge and REFUSES; it can never let a graph through
+// with a judge unnamed). graphBuilder.js still needs no entry-point change, and the refusal for a malformed
+// value lives HERE, beside every other -goldEvalCheck refusal, rather than being split across two files.
 //
 // ZERO judged edges is REPORTED, never refused, and --judgedBy is then not required: an authored-only bridge
 // and a forge-only manifest both pass exactly as before. That is the population rule, and it is why every
@@ -1277,14 +1283,22 @@ const quotedIdentityList = (identityList) => identityList.map((oneIdentity) => `
 const blockSubjectListForIdentity = (audit, oneIdentity) =>
 	audit.mappingBlockList.filter((oneBlockRow) => oneBlockRow.judgeIdentityPairList.some((onePair) => onePair.mappingTool === oneIdentity)).map((oneBlockRow) => oneBlockRow.subject);
 
+// ⟪JOB 6b, G6-l⟫ RETURNS BOTH the refusal AND the list it validated. It used to return only the refusal,
+// and the verdict then RE-READ process.global at emit time to report what the operator had named — TWO READS
+// OF ONE FACT, the species this campaign exists to remove, shipped by me inside the gate written against it.
+// They could not disagree today because nothing mutates the parameters in between; that is what makes it a
+// drift SITE rather than a drift, and what would have carried it past review. The raw value is now read
+// EXACTLY ONCE and travels forward, which the twin asserts by counting reads of a getter.
+// One shape out of every arm: a refusal (or null) plus THE LIST THAT WAS VALIDATED.
+const refusalOf = (refusalMessage) => ({ refusalMessage, namedIdentityList: [] });
 const judgedByViolation = ({ commandLineParameters, audit, manifestRefId }) => {
-	const rawJudgedByList = commandLineParameters.values[JUDGED_BY_VALUE_NAME] || [];
+	const rawJudgedByList = commandLineParameters.values[JUDGED_BY_VALUE_NAME] || [];   // THE ONE READ
 	// A MALFORMED VALUE IS REFUSED BY NAME, NEVER SILENTLY DROPPED. A dropped value is the silent-no-op this
 	// whole order exists to refuse: the promoter typed a judge, believes it took effect, and the gate that
 	// was supposed to check it quietly checked one fewer.
 	const malformedValueList = rawJudgedByList.filter((oneValue) => typeof oneValue !== 'string' || oneValue.trim() === '');
 	if (malformedValueList.length) {
-		return (
+		return refusalOf(
 			`graphBuilder -goldEvalCheck: REFUSED — --${JUDGED_BY_VALUE_NAME} was given ${malformedValueList.length} empty or ` +
 			`non-string value(s) (${malformedValueList.map((oneValue) => JSON.stringify(oneValue)).join(', ')}). A judge id that is blank ` +
 			`names no judge; it is refused rather than dropped, because a dropped value would let a promotion command ` +
@@ -1296,9 +1310,9 @@ const judgedByViolation = ({ commandLineParameters, audit, manifestRefId }) => {
 	// THE POPULATION RULE. Nothing was judged → nothing to name. Reported by the caller, never refused here.
 	if (presentIdentityList.length === 0) {
 		if (namedIdentityList.length === 0) {
-			return null;
+			return { refusalMessage: null, namedIdentityList };
 		}
-		return (
+		return refusalOf(
 			`graphBuilder -goldEvalCheck: REFUSED — --${JUDGED_BY_VALUE_NAME} names ${quotedIdentityList(namedIdentityList)}, but manifest ` +
 			`${manifestRefId} carries NO judged edges at all across its ${audit.mappingBlockList.length} relationship block(s). ` +
 			`A promotion command naming a judge that judged nothing is stale, and a stale command is a defect: it would ` +
@@ -1306,7 +1320,7 @@ const judgedByViolation = ({ commandLineParameters, audit, manifestRefId }) => {
 		);
 	}
 	if (namedIdentityList.length === 0) {
-		return (
+		return refusalOf(
 			`graphBuilder -goldEvalCheck: REFUSED — manifest ${manifestRefId} was judged by ${presentIdentityList.length} judge(s) and ` +
 			`--${JUDGED_BY_VALUE_NAME} names none. Every mappingTool FOUND, enumerated from the manifest's own relationship blocks: ` +
 			`${quotedIdentityList(presentIdentityList)}. Promotion requires --${JUDGED_BY_VALUE_NAME}=<toolId> for each, repeatable — ` +
@@ -1316,7 +1330,7 @@ const judgedByViolation = ({ commandLineParameters, audit, manifestRefId }) => {
 	const unnamedIdentityList = presentIdentityList.filter((oneIdentity) => namedIdentityList.indexOf(oneIdentity) === -1);
 	if (unnamedIdentityList.length) {
 		const unnamedWithBlockList = unnamedIdentityList.map((oneIdentity) => `'${oneIdentity}' (block(s): ${blockSubjectListForIdentity(audit, oneIdentity).join(', ')})`).join('; ');
-		return (
+		return refusalOf(
 			`graphBuilder -goldEvalCheck: REFUSED — ${unnamedIdentityList.length} judge(s) judged this manifest and --${JUDGED_BY_VALUE_NAME} ` +
 			`does not name them: ${unnamedWithBlockList}. Every mappingTool FOUND in manifest ${manifestRefId}, enumerated from its ` +
 			`relationship blocks and never from a list of judges we expected: ${quotedIdentityList(presentIdentityList)}. Add ` +
@@ -1325,14 +1339,14 @@ const judgedByViolation = ({ commandLineParameters, audit, manifestRefId }) => {
 	}
 	const absentIdentityList = namedIdentityList.filter((oneIdentity) => presentIdentityList.indexOf(oneIdentity) === -1);
 	if (absentIdentityList.length) {
-		return (
+		return refusalOf(
 			`graphBuilder -goldEvalCheck: REFUSED — --${JUDGED_BY_VALUE_NAME} names ${absentIdentityList.length} judge(s) that judged NOTHING ` +
 			`in manifest ${manifestRefId}: ${quotedIdentityList(absentIdentityList)}. A stale promotion command is a defect, not a ` +
 			`harmless surplus: it says the operator believes something about this graph that is not true of it. The judges ` +
 			`actually present are: ${quotedIdentityList(presentIdentityList)}.`
 		);
 	}
-	return null;
+	return { refusalMessage: null, namedIdentityList };
 };
 
 const goldEvalCheckAction = (callback) => {
@@ -1637,9 +1651,9 @@ const goldEvalCheckAction = (callback) => {
 				callback(`graphBuilder -goldEvalCheck: REFUSED —\n  - ${audit.judgeEnumerationRefusalMessageList.join('\n  - ')}`);
 				return;
 			}
-			const judgedByRefusalMessage = judgedByViolation({ commandLineParameters: process.global.commandLineParameters, audit, manifestRefId });
-			if (judgedByRefusalMessage !== null) {
-				callback(judgedByRefusalMessage);
+			const judgedByOutcome = judgedByViolation({ commandLineParameters: process.global.commandLineParameters, audit, manifestRefId });
+			if (judgedByOutcome.refusalMessage !== null) {
+				callback(judgedByOutcome.refusalMessage);
 				return;
 			}
 			// ⟪PHASE 6, R5⟫ the sibling reports its AUDIT; the certificate must also NAME the base blocks,
@@ -1686,7 +1700,8 @@ const goldEvalCheckAction = (callback) => {
 						judgeIdentityPairList: audit.judgeIdentityPairList,
 						judgedEdgeTotal: audit.judgedEdgeTotal,
 						perBlockList: audit.mappingBlockList.map((oneBlockRow) => ({ subject: oneBlockRow.subject, judgedEdgeCount: oneBlockRow.judgedEdgeCount, judgeIdentityPairList: oneBlockRow.judgeIdentityPairList })),
-						namedAtPromotionList: (process.global.commandLineParameters.values[JUDGED_BY_VALUE_NAME] || []).map((oneValue) => `${oneValue}`.trim()),
+						// ⟪G6-l⟫ THE LIST judgedByViolation VALIDATED, handed forward — never a second read of process.global.
+						namedAtPromotionList: judgedByOutcome.namedIdentityList,
 					},
 				});
 			});

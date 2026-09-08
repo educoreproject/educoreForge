@@ -31,7 +31,7 @@ SYNOPSIS
      graphBuilder   -cedsGates --containerName=<name> [--reportJsonPath=<path>]
      graphBuilder   -goldEvalCheck --buildLogDirPath=<the build's run directory>
                                    --manifestRefId=<the manifest -build printed> [--standardsDatabaseFilePath=<its store>]
-                                   [--judgedBy=<toolId>]...   (repeatable; REQUIRED once per judge present)
+                                   [--judgedBy=<toolId>[,<toolId>...]]   (COMMA-SEPARATED; one per judge present)
      graphBuilder   -help
 
      ... | graphBuilder                (JSON on stdin REPLACES command-line parameters)
@@ -436,7 +436,13 @@ OPTIONS
                   THE JUDGE ENUMERATION AND --judgedBy (JOB 6). The verdict ENUMERATES the distinct
                   (mappingTool, mappingToolVersion) pairs over edges whose resolution is 'judged',
                   per relationship block and in aggregate, and prints them. Promotion then requires
-                  --judgedBy=<toolId>, REPEATABLE, naming each judge present. The decision about
+                  --judgedBy=<toolId>[,<toolId>...] — a COMMA-SEPARATED list naming each judge
+                  present. ⚠ DO NOT REPEAT THE FLAG: a repeated --judgedBy= does NOT accumulate, the
+                  parser keeps the LAST value and drops the earlier ones, and the check then refuses
+                  naming a judge you did name. (Measured 2026-09-08 against the real resolver: comma
+                  works, the JSON-on-stdin envelope accepts a genuine array, the repeated flag does
+                  not. The failure is SAFE — a dropped judge reads as an UNNAMED judge and refuses —
+                  but it is confusing, so the form is stated here.) The decision about
                   which judge is fit to promote moves from DECLARATION time to PROMOTION time and is
                   made against evidence: the gate shows you what judged the graph and makes you name
                   it back. A toolId is the provider-namespaced identity that reaches the edge --
