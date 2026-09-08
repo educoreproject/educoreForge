@@ -95,7 +95,7 @@ const TREE_ROOT = path.resolve(toyScenario.FRAMEWORK_DIR, '..', '..');
 // ═══ RE-ANCHOR, 2026-09-02 (TWILIGHT_ARROW), JOBS 5+6 ═══ three of the seven seam files moved for ruled
 // reasons: build.js (artifact writer, bridge summary threading), replay-engine.js (shared identity guard
 // and function), replayManager.js (conservation record, harvest keying). List unchanged; twin re-observed red.
-const PRE_MIGRATION_REF = 'postSifViaConservationJobs56-090226';
+const PRE_MIGRATION_REF = 'postJudgeRegistryJob4-090726'; // re-anchored by DAWN_TOWER after judgeProviderRegistry JOB 4 (the first job of that campaign to touch build.js); the tag is cut ON the re-anchor commit because this file lives under lib/forge-framework/, which SEAM_PATH_LIST watches
 const SEAM_FILE_LIST = Object.freeze([
 	'apps/graph-builder/apps/forger/forger.js',
 	'apps/graph-builder/lib/build.js',

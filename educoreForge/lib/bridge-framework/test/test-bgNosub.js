@@ -426,7 +426,7 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // (JOB 2's suite gained the exemption census; JOB 6 added the artifact writer, the record and the audit).
 // NO path list widened, NO exclusion added; SEAM_PATH_LIST byte-identical by git show. Twin re-observed
 // red against THIS ref before acceptance (26/26).
-const PHASE3_ANCHOR_TAG = 'postSifViaConservationJobs56-090226';
+const PHASE3_ANCHOR_TAG = 'postJudgeRegistryJob4-090726'; // re-anchored by DAWN_TOWER after judgeProviderRegistry JOB 4; tag cut ON the re-anchor commit (three anchors moved together — PESC (a), G-SEAM-UNTOUCHED, and this one)
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');
