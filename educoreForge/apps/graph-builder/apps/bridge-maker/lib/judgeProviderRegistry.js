@@ -267,7 +267,15 @@ const constructJudgeProvider = (constructionOptions, constructionCallback) => {
 // exists. They are re-exported HERE, from the module that already owns provider selection, so build.js
 // reaches one seam instead of two. They are READ from debugJudge rather than retyped: a rule added to its
 // register appears here with no edit, which is the same discipline KNOWN_PROVIDER_NAME_LIST follows.
-const DEBUG_JUDGE_PROVIDER_NAME = 'debug';
+// ⟪JOB 6, 2026-09-08⟫ THIS LINE WAS THE LITERAL 'debug' while its three neighbours derived, and the
+// paragraph above already claimed all of them were read rather than retyped — the comment was false about
+// its own first line. RUBY_ANCHOR raised it at the JOB 4 stand-down and declined to edit a committed tree.
+// It is derived now for the reason RUBY_ANCHOR gave: the row-name agreement check that would have caught a
+// drifted literal fires at RUN time on a real build, so it refuses THE RUN rather than the mistake, and a
+// mirror that happens to agree is the one row a fifth provider's author would copy. Pinned by G6-h in
+// test-judgeProviderRegistry.js BEHAVIOURALLY — debugJudge's export is moved and this constant must follow —
+// because 'debug' === debugJudgeLib.PROVIDER_NAME is true today and equality can prove only agreement.
+const DEBUG_JUDGE_PROVIDER_NAME = debugJudgeLib.PROVIDER_NAME;
 const DEBUG_JUDGE_RULE_NAME_LIST = debugJudgeLib.REGISTERED_RULE_NAMES;
 const DEBUG_JUDGE_DEFAULT_RULE_NAME = debugJudgeLib.DEFAULT_RULE;
 const DEBUG_JUDGE_MARK = debugJudgeLib.DEBUG_MARK;

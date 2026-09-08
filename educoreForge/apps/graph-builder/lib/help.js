@@ -31,6 +31,7 @@ SYNOPSIS
      graphBuilder   -cedsGates --containerName=<name> [--reportJsonPath=<path>]
      graphBuilder   -goldEvalCheck --buildLogDirPath=<the build's run directory>
                                    --manifestRefId=<the manifest -build printed> [--standardsDatabaseFilePath=<its store>]
+                                   [--judgedBy=<toolId>]...   (repeatable; REQUIRED once per judge present)
      graphBuilder   -help
 
      ... | graphBuilder                (JSON on stdin REPLACES command-line parameters)
@@ -432,6 +433,39 @@ OPTIONS
                   conservation comparison REFUSES inside replayManager.harvest and mints no block,
                   so no manifest member can exist for it. The refusal is the enforcement; the
                   artifact is the evidence that the check RAN.
+                  THE JUDGE ENUMERATION AND --judgedBy (JOB 6). The verdict ENUMERATES the distinct
+                  (mappingTool, mappingToolVersion) pairs over edges whose resolution is 'judged',
+                  per relationship block and in aggregate, and prints them. Promotion then requires
+                  --judgedBy=<toolId>, REPEATABLE, naming each judge present. The decision about
+                  which judge is fit to promote moves from DECLARATION time to PROMOTION time and is
+                  made against evidence: the gate shows you what judged the graph and makes you name
+                  it back. A toolId is the provider-namespaced identity that reaches the edge --
+                  anthropic:claude-opus-4-8, ollama:qwen2.5:32b@<digest12>, debug:<rule>.
+                  THE POPULATION IS THE MANIFEST, exactly as it is for conservation. The judges are
+                  enumerated from the blocks themselves and NEVER from the judge provider registry:
+                  a population read from a registry of what you EXPECT to find cannot detect the
+                  judge nobody declared, which is the one a promotion gate exists to surface.
+                  REFUSES BY NAME on: a JUDGED edge carrying no mappingTool (the read-side twin of
+                  the write-side rule judged => mappingTool, since a hand-assembled or pre-rule block
+                  cannot be assumed to have met the writer); a judge PRESENT but not named, listing
+                  every mappingTool FOUND and the block it judged; a judge NAMED but not present (a
+                  stale promotion command is a defect, not a harmless surplus); and a --judgedBy
+                  value that is empty or not a string, which is refused rather than dropped because a
+                  dropped value lets a command appear to name a judge it does not name.
+                  ZERO JUDGED EDGES IS REPORTED, NEVER REFUSED, and --judgedBy is then not required.
+                  An AUTHORED-only bridge (every edge 'specified') and a forge-only manifest both
+                  pass exactly as they did before. Note these are different facts: the authored-only
+                  bridge proves the rule, because the gate DID audit a block, DID find edges, and
+                  still demanded nothing -- which only scoping to resolution='judged' explains.
+                  RETIRED JUDGE IDENTITIES are resolved through a DATED ALIAS TABLE
+                  (lib/judgeIdentityAliasTable.js) so a graph judged under an older spelling
+                  enumerates as ONE judge rather than several spellings of one rule. It is DATA with
+                  a dated reason per row -- never a regex and never a general normaliser -- and it
+                  RENAMES, never admits or excludes: an identity it does not know passes through
+                  untouched and is enumerated under its own name.
+                  ORDERING: the invalid-debug block refusal above fires FIRST and is untouched by
+                  any of this. A debug-judge graph is refused for being debug-judged, not for how
+                  its judges were named.
 
 OUTPUT
      -build:    JSON { manifestId, boltUrl } on stdout (progress on stderr).

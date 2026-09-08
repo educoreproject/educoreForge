@@ -1254,6 +1254,87 @@ const cedsGatesAction = (callback) => {
 //     such a build, a hand-doctored or stale summary must not certify).
 // Declared-ABSENT bundles are tolerated during the big-bang retrofit and LISTED in the
 // certification output — the reader sees exactly what was not checked.
+// ⟪JOB 6, 2026-09-08⟫ --judgedBy — THE PROMOTION GATE NAMES ITS JUDGES, AND PROMOTION NAMES THEM BACK.
+//
+// Nobody decides in advance whether a provider is "production". The decision moves from DECLARATION time to
+// PROMOTION time and is made against evidence: the verdict SHOWS what judged the graph, and the promoter has
+// to type it back. Three refusals, each BY NAME, and each list is built FROM THE ENUMERATION — never from a
+// hand-written list of judges we expect to exist, because a hand list is blind to exactly the judge nobody
+// declared, which is the one a promotion gate is for.
+//
+// --judgedBy is REPEATABLE with no code to make it so: qtools-parse-command-line already collects repeated
+// `--flag=` into an array (actions.js:324's firstValue takes [0] of exactly that array). So graphBuilder.js
+// needs no entry-point change, and the refusal for a malformed value lives HERE, beside every other
+// -goldEvalCheck refusal, rather than being split across two files.
+//
+// ZERO judged edges is REPORTED, never refused, and --judgedBy is then not required: an authored-only bridge
+// and a forge-only manifest both pass exactly as before. That is the population rule, and it is why every
+// check below is scoped to what the enumeration FOUND rather than to whether blocks exist.
+const JUDGED_BY_VALUE_NAME = 'judgedBy';
+const quotedIdentityList = (identityList) => identityList.map((oneIdentity) => `'${oneIdentity}'`).join(', ');
+// which blocks a given identity was found in — read from the per-block enumeration, so a refusal can point
+// at the block rather than only at the manifest
+const blockSubjectListForIdentity = (audit, oneIdentity) =>
+	audit.mappingBlockList.filter((oneBlockRow) => oneBlockRow.judgeIdentityPairList.some((onePair) => onePair.mappingTool === oneIdentity)).map((oneBlockRow) => oneBlockRow.subject);
+
+const judgedByViolation = ({ commandLineParameters, audit, manifestRefId }) => {
+	const rawJudgedByList = commandLineParameters.values[JUDGED_BY_VALUE_NAME] || [];
+	// A MALFORMED VALUE IS REFUSED BY NAME, NEVER SILENTLY DROPPED. A dropped value is the silent-no-op this
+	// whole order exists to refuse: the promoter typed a judge, believes it took effect, and the gate that
+	// was supposed to check it quietly checked one fewer.
+	const malformedValueList = rawJudgedByList.filter((oneValue) => typeof oneValue !== 'string' || oneValue.trim() === '');
+	if (malformedValueList.length) {
+		return (
+			`graphBuilder -goldEvalCheck: REFUSED — --${JUDGED_BY_VALUE_NAME} was given ${malformedValueList.length} empty or ` +
+			`non-string value(s) (${malformedValueList.map((oneValue) => JSON.stringify(oneValue)).join(', ')}). A judge id that is blank ` +
+			`names no judge; it is refused rather than dropped, because a dropped value would let a promotion command ` +
+			`appear to name a judge it does not name.`
+		);
+	}
+	const namedIdentityList = rawJudgedByList.map((oneValue) => oneValue.trim());
+	const presentIdentityList = audit.judgeToolIdList;
+	// THE POPULATION RULE. Nothing was judged → nothing to name. Reported by the caller, never refused here.
+	if (presentIdentityList.length === 0) {
+		if (namedIdentityList.length === 0) {
+			return null;
+		}
+		return (
+			`graphBuilder -goldEvalCheck: REFUSED — --${JUDGED_BY_VALUE_NAME} names ${quotedIdentityList(namedIdentityList)}, but manifest ` +
+			`${manifestRefId} carries NO judged edges at all across its ${audit.mappingBlockList.length} relationship block(s). ` +
+			`A promotion command naming a judge that judged nothing is stale, and a stale command is a defect: it would ` +
+			`certify by habit rather than by evidence.`
+		);
+	}
+	if (namedIdentityList.length === 0) {
+		return (
+			`graphBuilder -goldEvalCheck: REFUSED — manifest ${manifestRefId} was judged by ${presentIdentityList.length} judge(s) and ` +
+			`--${JUDGED_BY_VALUE_NAME} names none. Every mappingTool FOUND, enumerated from the manifest's own relationship blocks: ` +
+			`${quotedIdentityList(presentIdentityList)}. Promotion requires --${JUDGED_BY_VALUE_NAME}=<toolId> for each, repeatable — ` +
+			`nobody promotes a graph without having been shown what judged it and typing that back.`
+		);
+	}
+	const unnamedIdentityList = presentIdentityList.filter((oneIdentity) => namedIdentityList.indexOf(oneIdentity) === -1);
+	if (unnamedIdentityList.length) {
+		const unnamedWithBlockList = unnamedIdentityList.map((oneIdentity) => `'${oneIdentity}' (block(s): ${blockSubjectListForIdentity(audit, oneIdentity).join(', ')})`).join('; ');
+		return (
+			`graphBuilder -goldEvalCheck: REFUSED — ${unnamedIdentityList.length} judge(s) judged this manifest and --${JUDGED_BY_VALUE_NAME} ` +
+			`does not name them: ${unnamedWithBlockList}. Every mappingTool FOUND in manifest ${manifestRefId}, enumerated from its ` +
+			`relationship blocks and never from a list of judges we expected: ${quotedIdentityList(presentIdentityList)}. Add ` +
+			`--${JUDGED_BY_VALUE_NAME}=<toolId> for each one you are promoting.`
+		);
+	}
+	const absentIdentityList = namedIdentityList.filter((oneIdentity) => presentIdentityList.indexOf(oneIdentity) === -1);
+	if (absentIdentityList.length) {
+		return (
+			`graphBuilder -goldEvalCheck: REFUSED — --${JUDGED_BY_VALUE_NAME} names ${absentIdentityList.length} judge(s) that judged NOTHING ` +
+			`in manifest ${manifestRefId}: ${quotedIdentityList(absentIdentityList)}. A stale promotion command is a defect, not a ` +
+			`harmless surplus: it says the operator believes something about this graph that is not true of it. The judges ` +
+			`actually present are: ${quotedIdentityList(presentIdentityList)}.`
+		);
+	}
+	return null;
+};
+
 const goldEvalCheckAction = (callback) => {
 	const { xLog } = process.global;
 	const roundTripStageStatics = require('./round-trip-stage');
@@ -1400,7 +1481,7 @@ const goldEvalCheckAction = (callback) => {
 	// artifact without those fields are the proof it changed at all. A hand-assembled or foreign run
 	// directory that predates them will be refused BY NAME rather than silently certified on partial
 	// evidence, which is the trade this ruling makes deliberately.
-	const emitVerdict = ({ bridgeSibling, manifest }) => {
+	const emitVerdict = ({ bridgeSibling, manifest, judgeEnumeration }) => {
 		const enrichmentResult = certificateEnrichmentLib.buildCertificateEnrichment({
 			summary,
 			declaredRowList: declaredRows,
@@ -1415,7 +1496,14 @@ const goldEvalCheckAction = (callback) => {
 		// ONLY status line — is UNREACHABLE: emitVerdict has exactly ONE call site and it is reached only
 		// after --manifestRefId is present and the sibling has run. A dead arm in a certificate is worse
 		// than dead code elsewhere, because it advertises an outcome the gate can no longer produce.
-		const scopeText = `bridge sibling: ${bridgeSibling.mappingBlockList.length} relationship block(s) audited, ${bridgeSibling.mappingBlockList.reduce((soFar, oneBlock) => soFar + oneBlock.edgeCount, 0)} mapping edge(s), 0 invalid-debug`;
+		// ⟪JOB 6⟫ the status line NAMES THE JUDGES, because the point of this gate is that a promoter is SHOWN
+		// what judged the graph rather than having to go and look for it. Zero judged edges says so IN WORDS —
+		// an empty list rendered as nothing would read as 'not measured' instead of 'measured, and none found'.
+		const judgeText =
+			judgeEnumeration.judgedEdgeTotal === 0
+				? 'judges: NONE — zero judged edges across the audited block(s), so --judgedBy is not required'
+				: `judges (${judgeEnumeration.judgeToolIdList.length}, over ${judgeEnumeration.judgedEdgeTotal} judged edge(s)): ${judgeEnumeration.judgeToolIdList.join(', ')}`;
+		const scopeText = `bridge sibling: ${bridgeSibling.mappingBlockList.length} relationship block(s) audited, ${bridgeSibling.mappingBlockList.reduce((soFar, oneBlock) => soFar + oneBlock.edgeCount, 0)} mapping edge(s), 0 invalid-debug; ${judgeText}`;
 		xLog.status(
 			`graphBuilder: [goldEvalCheck] PASS — ${declaredRows.length} declared validator(s) ran ` +
 				`with inventedTotal=0${absentTokens.length ? `; ${absentTokens.length} bundle(s) declared-ABSENT (tolerated during the retrofit): ${absentTokens.join(', ')}` : ''}; ${scopeText}`,
@@ -1461,6 +1549,11 @@ const goldEvalCheckAction = (callback) => {
 						verdictPath: oneRow.verdictPath,
 					})),
 					declaredAbsentTolerated: absentTokens,
+					// ⟪JOB 6⟫ WHAT JUDGED THIS GRAPH, enumerated from the manifest's own relationship blocks and never
+					// from a registry of what we expected to find. namedAtPromotionList records what the operator
+					// actually typed, so the certificate carries BOTH the evidence and the assertion made against it —
+					// a later reader can see the two agreed instead of taking it on faith.
+					judgeEnumeration,
 					// ⟪PHASE 6, R5⟫ APPENDED, never interleaved — baseBlockIdByToken, recipeTextHash,
 					// boltEndpoint, declaredTokens. Spreading LAST guarantees the four arrive AFTER every
 					// incumbent key, so no existing key changes POSITION. ⚠ It does NOT by itself guarantee
@@ -1533,6 +1626,22 @@ const goldEvalCheckAction = (callback) => {
 				callback(`graphBuilder -goldEvalCheck: REFUSED —\n  - ${audit.refusalMessageList.join('\n  - ')}`);
 				return;
 			}
+			// ⟪JOB 6⟫ THE INVALID-DEBUG REFUSAL ABOVE FIRES FIRST AND IS UNTOUCHED. These run only once it has
+			// passed, and the ordering is STRUCTURAL — the two refusals travel in SEPARATE channels off the
+			// audit, so this is not a question of which message happens to be first in a shared list.
+			//
+			// The missing-mappingTool refusal precedes the naming checks deliberately: a judged edge that
+			// cannot say what judged it makes the question "did you name every judge" unanswerable, so
+			// refusing on the naming would report a second-order fault and hide the first-order one.
+			if (audit.judgeEnumerationRefusalMessageList.length) {
+				callback(`graphBuilder -goldEvalCheck: REFUSED —\n  - ${audit.judgeEnumerationRefusalMessageList.join('\n  - ')}`);
+				return;
+			}
+			const judgedByRefusalMessage = judgedByViolation({ commandLineParameters: process.global.commandLineParameters, audit, manifestRefId });
+			if (judgedByRefusalMessage !== null) {
+				callback(judgedByRefusalMessage);
+				return;
+			}
 			// ⟪PHASE 6, R5⟫ the sibling reports its AUDIT; the certificate must also NAME the base blocks,
 			// so the manifest is read here for its members. Deliberately a second read rather than a widened
 			// sibling contract: the sibling's subject is 'do the relationship blocks carry debug edges', and
@@ -1569,7 +1678,17 @@ const goldEvalCheckAction = (callback) => {
 					`[goldEvalCheck] conservation: ${conservationAudit.memberCount} of ` +
 						`${conservationAudit.memberCount} manifest member(s) certified PASS from their per-block artifacts`,
 				);
-				emitVerdict({ bridgeSibling: { manifestRefId: audit.manifestRefId, standardsDatabaseFilePath: supportStoreResolution.filePath, memberCount: audit.memberCount, mappingBlockList: audit.mappingBlockList }, manifest });
+				emitVerdict({
+					bridgeSibling: { manifestRefId: audit.manifestRefId, standardsDatabaseFilePath: supportStoreResolution.filePath, memberCount: audit.memberCount, mappingBlockList: audit.mappingBlockList },
+					manifest,
+					judgeEnumeration: {
+						judgeToolIdList: audit.judgeToolIdList,
+						judgeIdentityPairList: audit.judgeIdentityPairList,
+						judgedEdgeTotal: audit.judgedEdgeTotal,
+						perBlockList: audit.mappingBlockList.map((oneBlockRow) => ({ subject: oneBlockRow.subject, judgedEdgeCount: oneBlockRow.judgedEdgeCount, judgeIdentityPairList: oneBlockRow.judgeIdentityPairList })),
+						namedAtPromotionList: (process.global.commandLineParameters.values[JUDGED_BY_VALUE_NAME] || []).map((oneValue) => `${oneValue}`.trim()),
+					},
+				});
 			});
 		});
 	});

@@ -58,6 +58,10 @@ const BUILD_JS_FILE_PATH = path.join(__dirname, '..', 'lib', 'build.js');
 
 const { JUDGE_PROVIDER_SHAPE } = require('../interfaces');
 const judgeProviderRegistryLib = require(REGISTRY_FILE_PATH);
+// ⟪JOB 6⟫ compiles a module in memory with one of its DEPENDENCIES mutated; every other require loads for
+// real. Section G6-h needs it to move debugJudge's PROVIDER_NAME and watch the registry's constant follow —
+// the only assertion shape a literal that happens to agree cannot satisfy.
+const moduleDouble = require('../../../lib/forge-framework/test/testSupport/moduleDouble');
 
 const sha256 = (text) => crypto.createHash('sha256').update(String(text), 'utf8').digest('hex');
 
@@ -529,6 +533,46 @@ harness.ok(
 		return /const \{ JUDGE_CONCURRENCY \} = require/.test(frameworkText) && /DEBUG_JUDGE_MAX_CONCURRENCY = require/.test(debugJudgeText);
 	})(),
 );
+
+// =====================================================================
+harness.section('G6-h — DEBUG_JUDGE_PROVIDER_NAME IS DERIVED FROM debugJudge, NOT A MIRROR THAT HAPPENS TO AGREE');
+// =====================================================================
+// ⟪JOB 6, VELVET_PRISM 2026-09-08 — RUBY_ANCHOR's JOB 4 stand-down, its own answer to DAWN_TOWER's question⟫
+// Three of the four DEBUG_JUDGE_* constants read from debugJudgeLib; PROVIDER_NAME alone was retyped as the
+// literal 'debug', while the comment block directly above them claimed all four were "READ from debugJudge
+// rather than retyped". The comment was false about its own first line.
+//
+// THE PIN HAD TO BE AN IDENTITY PIN, NOT AN EQUALITY ONE, and that is the whole point of this section.
+// `'debug' === debugJudgeLib.PROVIDER_NAME` is TRUE today, so an equality assertion passes against the
+// literal AND against the derivation and can tell you nothing. That is RUBY_ANCHOR's M9 exactly — "equality
+// can only ever prove agreement, never derivation" — and writing the weaker assertion here, in the gate
+// installed to repair M9's own species of defect, would have been the joke writing itself.
+//
+// So the load-bearing assertion is BEHAVIOURAL: move the SOURCE and require the CONSUMER to follow. A
+// literal cannot follow. No coincidence of values can satisfy it.
+const registryUnderMutatedProviderName = moduleDouble.loadWithMutations({
+	modulePath: REGISTRY_FILE_PATH,
+	mutationList: [{ modulePath: path.join(BRIDGE_MAKER_LIB_DIR_PATH, 'debugJudge.js'), find: "const PROVIDER_NAME = 'debug';", replace: "const PROVIDER_NAME = 'debugMovedBySection_G6h';" }],
+});
+harness.equal(
+	'G6-h — with debugJudge s PROVIDER_NAME MOVED, the registry s constant FOLLOWS IT (a literal could not)',
+	registryUnderMutatedProviderName.DEBUG_JUDGE_PROVIDER_NAME,
+	'debugMovedBySection_G6h',
+);
+// the STRUCTURAL companion: assert the derivation against the source, the one form a coincidence cannot
+// satisfy (COBALT_ANCHOR's M14, RUBY_ANCHOR's M9 repair). Deliberately paired with the behavioural
+// assertion above rather than trusted alone — JOB 1's T3 proved a lexical assertion can match a
+// substring and stay green through the very mutation it was written to catch.
+harness.ok(
+	'…and the source line is a DERIVATION from debugJudgeLib, not a quoted literal',
+	/const DEBUG_JUDGE_PROVIDER_NAME = debugJudgeLib\.PROVIDER_NAME;/.test(fs.readFileSync(REGISTRY_FILE_PATH, 'utf8')),
+);
+// the COMPANION CASE, and it is a separate fact: deriving must not have MOVED the shipped identity.
+// A "fix" that changed the value would satisfy both assertions above and silently rename the debug
+// provider, which is RUBY_ANCHOR's "a refusal that fires is not the same as a refusal that fires ONLY
+// when it should", turned around onto a derivation.
+harness.equal('…and the derived value is still exactly the shipped identity, unmoved', judgeProviderRegistryLib.DEBUG_JUDGE_PROVIDER_NAME, 'debug');
+harness.equal('…which is debugJudge s own export, read back from the unmutated module', judgeProviderRegistryLib.DEBUG_JUDGE_PROVIDER_NAME, debugJudgeLib.PROVIDER_NAME);
 
 // =====================================================================
 harness.section('DOCKET (vii) — THE VALIDATED PROVIDER IS FROZEN BEFORE IT IS HANDED OUT');
