@@ -32,6 +32,13 @@ const vocabularyLib = require(path.join(__dirname, '..', 'vocabulary', 'vocabula
 const refuse = require(path.join(__dirname, '..', 'forge-framework', 'refuse'));
 const transformRegistryLib = require('./transformRegistry');
 const bridgeAllowanceRegistryLib = require('./bridgeAllowanceRegistry');
+// ⟪JOB 3, 2026-09-07⟫ SELECT_CATEGORY_ENUM — the single source of truth for the judge's verdict
+// categories. Required by the SAME path form confidenceBandTable.js:12 uses, from the same directory,
+// for the same reason: this file's JUDGE_CATEGORY_LIST must be derived from the contract rather than
+// restated beside it. evidenceContracts.js is standalone data with ZERO requires of its own (verified by
+// JOB 0 and JOB 1 and re-measured for this edit), so it carries no construction-time side effect and
+// cannot close a require cycle.
+const { SELECT_CATEGORY_ENUM } = require(path.join(__dirname, '..', '..', 'apps', 'graph-builder', 'apps', 'bridge-maker', 'lib', 'evidenceContracts'));
 
 const { SKOS_PREDICATES } = vocabularyLib;
 
@@ -136,9 +143,48 @@ const RENDERING_NEVER_NAME_LIST = Object.freeze([
 	'crossRefs', 'cedsId', 'cedsOriginalAnchorPropertyName', 'cedsOptionCode', 'cedsOptionOriginalAnchorPropertyName',
 	'metaEdId', 'edfiStableId', 'sourceFileRelativePath', 'sourceLineNumber', 'sourceInputName', 'annotationKind',
 ]);
-// the judge's category enum (llmClient CATEGORY_ENUM, MIRRORED as data — llmClient.js is UNTOUCHED in this
-// order per TQ); predicateByCategory must name EVERY member and nothing else
-const JUDGE_CATEGORY_LIST = Object.freeze(['strong', 'moderate', 'weakButReal']);
+// ⟪JOB 3, judgeProviderRegistry, 2026-09-07 — THIS LIST IS NOW DERIVED, AND THE COMMENT ABOVE IT WAS WRONG⟫
+// It used to read: "the judge's category enum (llmClient CATEGORY_ENUM, MIRRORED as data — llmClient.js is
+// UNTOUCHED in this order per TQ)". Both halves had gone stale. The "UNTOUCHED per TQ" was provenance from
+// an EARLIER order; JOBS 0, 1 and 2 of the judge provider registry have each since edited llmClient.js. And
+// "MIRRORED as data" described the defect rather than a design: this was a HAND-RESTATED copy of the judge's
+// category enum, used at :820-832 to REFUSE a plugin whose predicateByCategory does not name exactly these
+// members, and NOTHING checked it against the contract it mirrored. (Those line numbers are POST-EDIT: the
+// refusal sat at :778-788 before this comment block was added above it, and citing where it used to be
+// would send the next reader forty lines short of it.)
+//
+// ⟪WHY A MIRROR HERE WAS DANGEROUS AND NOT MERELY UNTIDY⟫ Found by COBALT_ANCHOR during JOB 2's prose pass
+// (DEVLOG-judgeProviderRegistry-090726.md, "A LIVE, UNGATED MIRROR OF THE CATEGORY ENUM"). If
+// SELECT_CATEGORY_ENUM gained a pick category, confidenceBandTable.js — twenty lines away, same directory —
+// would refuse to load, loudly and correctly, while THIS file would silently keep demanding the old three
+// and would REJECT a plugin that named the new one, reporting it as "not a judge category". Two modules, one
+// directory, one derived and one mirrored, with no gate between them.
+//
+// THE FIX FOLLOWS confidenceBandTable.js:20-25 EXACTLY, because that module already had this right: DERIVE
+// the list from the single source, keep the locally-declared set only as a LOAD-TIME ASSERTION, and THROW at
+// load when the two disagree. The distinction that matters is which one the refusals consult. The old list
+// was consulted BY THE REFUSALS, so drift was silent and a plugin paid for it. REVIEWED_JUDGE_CATEGORY_LIST
+// below is consulted by NOTHING except the check on the next line, so drift is loud: adding a category to
+// the contract stops this file loading until somebody has thought about what the new category means for
+// every plugin's predicateByCategory table. That review is the point; a silent widening would let a category
+// reach the edge builder with no SKOS predicate, which is the exact failure this contract exists to prevent.
+const JUDGE_ABSTAIN_CATEGORY = 'none';
+const JUDGE_CATEGORY_LIST = Object.freeze(
+	SELECT_CATEGORY_ENUM.filter((oneCategory) => oneCategory !== JUDGE_ABSTAIN_CATEGORY),
+);
+// The pick-only categories this contract's predicateByCategory rule was REVIEWED against, on 2026-09-07.
+// Not a source of truth and never read by a refusal — the load-time check below is its ONLY reader.
+const REVIEWED_JUDGE_CATEGORY_LIST = Object.freeze(['strong', 'moderate', 'weakButReal']);
+if (JUDGE_CATEGORY_LIST.join(',') !== REVIEWED_JUDGE_CATEGORY_LIST.join(',')) {
+	throw new Error(
+		`${moduleName} REFUSED AT LOAD: the judge's pick-only categories derived from SELECT_CATEGORY_ENUM ` +
+			`(${JUDGE_CATEGORY_LIST.join(', ')}) disagree with the set predicateByCategory was reviewed against ` +
+			`(${REVIEWED_JUDGE_CATEGORY_LIST.join(', ')}). A judge category with no SKOS predicate would reach ` +
+			`the edge builder and be defaulted, which is the failure this contract exists to prevent. Decide ` +
+			`what the new category means for every plugin's predicateByCategory table, then update ` +
+			`REVIEWED_JUDGE_CATEGORY_LIST here. Refused by name rather than silently widened.`,
+	);
+}
 const LABEL_DISPOSITION_LIST = Object.freeze(['predicate', 'tentative', 'refused', 'sentinelOnly']);
 const TUPLE_FIELD_LIST = Object.freeze(['canonicalKey', 'domainId', 'propertyKey', 'range', 'valueKey', 'qualifierKeys']);
 const TUPLE_LIST_FIELD_LIST = Object.freeze(['qualifierKeys']); // compared as sorted lists; re-widened at the read boundary

@@ -301,6 +301,112 @@ harness.equal(
 );
 
 // =====================================================================
+harness.section('G3-e — THE FROZEN SCHEMA IS ACTUALLY FROZEN, INCLUDING THE CALLER S OWN ARRAY');
+// =====================================================================
+// ⟪WHY THIS GATE EXISTS, AND WHY IT IS JOB 3'S FIRST EDIT⟫ COBALT_ANCHOR found this in its own shipped
+// module while answering JOB 2's stand-down question, ten minutes after the commit landed
+// (STANDDOWN-job2-COBALT_ANCHOR-090726.md §1). Object.freeze is SHALLOW. The canonical schema froze itself,
+// its jsonSchema, each property object and category.enum — but choice.enum held `choiceEnum`, THE CALLER'S
+// OWN ARRAY, by reference. A caller that kept that reference could mutate a schema this module calls frozen,
+// after construction, and nothing would say so. It was not found by review; it was found by asking whether
+// the freezes were real, a question nobody had asked precisely because the builder wrote them.
+//
+// It is not a live bug today — judgeComponent.js:211 builds a fresh choiceEnum per question and nothing
+// mutates it afterwards — and it is fixed anyway, because a contract that ASSERTS frozen and DELIVERS
+// partially frozen is a polyArch2 shortfall whether or not today's callers happen to behave. It matters more
+// with two providers than with one: JOB 3's Ollama provider receives the SAME object the incumbent does.
+//
+// THE BYTES CANNOT MOVE. JSON.stringify renders a frozen copy of an array identically to the array itself,
+// so G2-a's recorded sha256 above must STILL HOLD after the fix. That assertion is not decoration here — it
+// is what distinguishes this one-line repair from a schema change wearing its clothes.
+
+// A DELIBERATELY MUTABLE array — not CHOICE_ENUM_FIXTURE, which is frozen at module load and could not
+// demonstrate the defect even if the defect were present.
+const mutableChoiceEnum = ['1', '2', 'NONE'];
+const schemaFromMutableEnum = selectCandidateSchemaLib.buildCanonicalSelectCandidateSchema({
+	choiceEnum: mutableChoiceEnum,
+});
+
+harness.ok(
+	'G3-e: the schema s choice.enum is FROZEN — the shallow-freeze hole is closed',
+	Object.isFrozen(schemaFromMutableEnum.jsonSchema.properties.choice.enum),
+	`Object.isFrozen(choice.enum) === ${Object.isFrozen(schemaFromMutableEnum.jsonSchema.properties.choice.enum)}`,
+);
+// The three freezes JOB 2 DID get right, asserted beside the one it missed so the gate reads as a statement
+// about the whole object rather than about one property somebody once got wrong.
+harness.ok('…and so is the schema object itself', Object.isFrozen(schemaFromMutableEnum));
+harness.ok('…and the jsonSchema', Object.isFrozen(schemaFromMutableEnum.jsonSchema));
+harness.ok('…and the choice PROPERTY object', Object.isFrozen(schemaFromMutableEnum.jsonSchema.properties.choice));
+harness.ok('…and category.enum, which was frozen all along (it is a module-load constant)', Object.isFrozen(schemaFromMutableEnum.jsonSchema.properties.category.enum));
+
+// THE TWIN — the defect demonstrated in the failure direction rather than reasoned about. The caller mutates
+// ITS OWN array after construction; the schema must not move.
+const enumBeforeCallerMutation = schemaFromMutableEnum.jsonSchema.properties.choice.enum.join(',');
+mutableChoiceEnum.push('MUTATED_AFTER_THE_FACT');
+harness.equal(
+	'G3-e TWIN: the caller mutating its own array AFTER construction does not reach the schema',
+	schemaFromMutableEnum.jsonSchema.properties.choice.enum.join(','),
+	enumBeforeCallerMutation,
+);
+harness.equal(
+	'…and the schema still holds exactly the three values it was built with',
+	schemaFromMutableEnum.jsonSchema.properties.choice.enum.join(','),
+	'1,2,NONE',
+);
+// NON-VACUITY. Everything above would pass trivially if the mutation had not actually happened — a twin that
+// mutates nothing proves nothing. Prove the caller's array really did change.
+harness.equal(
+	'…and the twin is NOT vacuous: the caller s own array genuinely did change',
+	mutableChoiceEnum.join(','),
+	'1,2,NONE,MUTATED_AFTER_THE_FACT',
+);
+// The array must be a COPY, not merely a frozen alias of the caller's. Freezing the caller's own array in
+// place would also pass isFrozen — and would be a worse bug, since it would silently freeze an object the
+// caller owns.
+harness.ok(
+	'…and the schema holds a COPY, never the caller s array frozen in place',
+	schemaFromMutableEnum.jsonSchema.properties.choice.enum !== mutableChoiceEnum,
+);
+harness.ok(
+	'…so the caller s own array is left UNFROZEN — this module freezes its copy, never its caller s property',
+	!Object.isFrozen(mutableChoiceEnum),
+);
+
+// EVERY dialect inherits the fix, because every rendering carries the same canonical jsonSchema. Enumerated
+// from the module's own dialect list so a dialect added later is covered without editing this gate.
+selectCandidateSchemaLib.SCHEMA_DIALECT_NAME_LIST.forEach((oneDialectName) => {
+	const renderedSchema = selectCandidateSchemaLib.renderSelectCandidateSchema(oneDialectName, {
+		choiceEnum: ['1', '2', 'NONE'],
+	});
+	// read the choice enum through the dialect's own shape rather than assuming where it sits
+	const choiceEnumOfRendering =
+		oneDialectName === 'anthropic'
+			? renderedSchema.input_schema.properties.choice.enum
+			: renderedSchema.properties.choice.enum;
+	harness.ok(
+		`the '${oneDialectName}' rendering s choice.enum is frozen too`,
+		Object.isFrozen(choiceEnumOfRendering),
+		`${oneDialectName}: ${JSON.stringify(choiceEnumOfRendering)}`,
+	);
+});
+
+// THE BYTE INVARIANT, RE-ASSERTED AT THE POINT OF THE CHANGE. G2-a's sha256 is checked above against the
+// pre-JOB-2 capture; it is checked AGAIN here, in this gate's own section, because the whole claim of the
+// freeze fix is that it moves no bytes. If this one line ever disagrees with the one above, the fix stopped
+// being a fix and became a schema change.
+harness.equal(
+	'G3-e: the freeze fix moved NO BYTES — G2-a s recorded sha256 still holds',
+	sha256(
+		JSON.stringify(
+			selectCandidateSchemaLib.renderSelectCandidateSchema('anthropic', { choiceEnum: CHOICE_ENUM_FIXTURE }),
+			null,
+			2,
+		),
+	),
+	ANTHROPIC_RENDERING_BASELINE_SHA256,
+);
+
+// =====================================================================
 harness.section('THE DIALECT SEAM — AN UNKNOWN DIALECT IS REFUSED BY NAME, NEVER GUESSED AT');
 // =====================================================================
 
@@ -355,6 +461,80 @@ harness.ok(
 harness.ok(
 	'…and that a body it cannot read in its own dialect is REFUSED BY NAME',
 	JUDGMENT_EXTRACTOR_SHAPE.refusesByName === true,
+);
+
+// =====================================================================
+harness.section('THE FRAMEWORK MIRROR, NOW DERIVED — bridgePluginContract.js JUDGE_CATEGORY_LIST (JOB 3)');
+// =====================================================================
+// ⟪WHY A GATE ABOUT lib/bridge-framework/ LIVES IN THIS FILE⟫ This suite's declared subject is that the
+// judge's category enum is SINGLE-SOURCED and cannot drift. bridgePluginContract.js held a hand-restated copy
+// of that enum at :141 as the file stood BEFORE this job — used to REFUSE plugins, at :820-832 as it stands
+// AFTER — with nothing checking it against the contract it mirrored.
+// COBALT_ANCHOR found it during JOB 2's prose pass and could not fix it (bridge-framework was DO NOT TOUCH
+// for JOB 2); DAWN_TOWER put the one-constant fix in JOB 3's lane. Its twin belongs beside G2-b, which
+// already proves a contract-enum change reaches every consumer, because it is the SAME property about the
+// SAME enum one directory over. Flagged to the supervisor in JOB 3's boundary report as a lane judgement.
+//
+// The fix follows confidenceBandTable.js:20-25: derive the list, keep the reviewed set as a LOAD-TIME
+// assertion only, throw when they disagree. What makes it a fix rather than a second mirror is WHICH list
+// the refusals read — the derived one.
+
+const bridgePluginContractLib = require('../../../lib/bridge-framework/bridgePluginContract');
+
+harness.equal(
+	'bridgePluginContract JUDGE_CATEGORY_LIST equals the pick-only categories, DERIVED in this assertion',
+	bridgePluginContractLib.JUDGE_CATEGORY_LIST.join(','),
+	EXPECTED_PICK_CATEGORY_LIST.join(','),
+);
+harness.equal(
+	'…and it agrees with what the SCHEMA offers the model — one enum, two directories, no drift',
+	bridgePluginContractLib.JUDGE_CATEGORY_LIST.join(','),
+	selectCandidateSchemaLib.PICK_CATEGORY_ENUM.join(','),
+);
+harness.ok('…and it is frozen', Object.isFrozen(bridgePluginContractLib.JUDGE_CATEGORY_LIST));
+
+// THE TWIN — a fifth category in the contract enum must make bridgePluginContract REFUSE TO LOAD. Run in a
+// CHILD PROCESS: the twin works by poisoning the require cache for evidenceContracts, and doing that in this
+// process would hand every later assertion — and every other suite runAllTests loads afterwards — a
+// five-member enum. The child writes nothing and touches no network; it only requires two modules.
+const twinScriptText = [
+	"'use strict';",
+	'process.global = process.global || {};',
+	"const path = require('path');",
+	`const contractsPath = require.resolve(${JSON.stringify(path.join(BRIDGE_MAKER_LIB_DIR_PATH, 'evidenceContracts'))});`,
+	'const real = require(contractsPath);',
+	'require.cache[contractsPath].exports = Object.assign({}, real, {',
+	"  SELECT_CATEGORY_ENUM: Object.freeze(real.SELECT_CATEGORY_ENUM.concat(['ceremonial'])),",
+	'});',
+	'try {',
+	`  require(${JSON.stringify(path.join(__dirname, '..', '..', '..', 'lib', 'bridge-framework', 'bridgePluginContract'))});`,
+	"  process.stdout.write('LOADED_WITHOUT_THROWING');",
+	'} catch (thrown) {',
+	'  process.stdout.write(thrown.message);',
+	'}',
+].join('\n');
+
+const twinOutput = String(
+	require('child_process').execFileSync(process.execPath, ['-e', twinScriptText], { encoding: 'utf8' }),
+);
+
+harness.match(
+	'TWIN: a FIFTH category in SELECT_CATEGORY_ENUM makes bridgePluginContract REFUSE AT LOAD',
+	twinOutput,
+	/REFUSED AT LOAD/,
+);
+harness.match('…and the refusal names the derived list including the new member', twinOutput, /ceremonial/);
+harness.match('…and names the reviewed set it disagrees with', twinOutput, /reviewed against/);
+harness.match(
+	'…and tells the reader what to DECIDE rather than what to edit around',
+	twinOutput,
+	/predicateByCategory table/,
+);
+// NON-VACUITY: prove the twin did not simply fail to load the module for some unrelated reason.
+harness.ok(
+	'…and the twin genuinely reached the load-time check (it did not merely fail to find a module)',
+	twinOutput.indexOf('LOADED_WITHOUT_THROWING') === -1 && twinOutput.indexOf('Cannot find module') === -1,
+	twinOutput.slice(0, 160),
 );
 
 harness.report();

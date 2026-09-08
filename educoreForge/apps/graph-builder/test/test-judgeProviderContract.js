@@ -54,6 +54,7 @@ const harness = require('../../../test/testLib/harness')(moduleName);
 const { JUDGE_PROVIDER_SHAPE, judgeProviderViolation } = require('../interfaces');
 const llmClientLib = require('../apps/bridge-maker/lib/llmClient');
 const debugJudgeLib = require('../apps/bridge-maker/lib/debugJudge');
+const ollamaJudgeClientLib = require('../apps/bridge-maker/lib/ollamaJudgeClient');
 const { runBounded } = require('../../../lib/bridge-framework/boundedRunner');
 
 // A throwaway [anthropicAi] ini holding a DUMMY key. Construction needs a key by design (llmClient's §6
@@ -95,9 +96,55 @@ const withoutModulePrefix = (refusalText) => String(refusalText).replace(/^[A-Za
 
 const anthropicProvider = llmClientLib({ configFilePath: dummyIniFilePath() });
 const debugProvider = debugJudgeLib({ ruleName: 'first' });
+
+// ⟪THE THIRD PROVIDER — JOB 3, 2026-09-07 — AND HOW IT STAYS HERMETIC⟫ This suite has never opened a socket
+// and must not start now. ollamaJudgeClient reads the model digest from GET /api/tags at construction, so
+// its construction is driven through componentOverrides.fetchModelTagList — the same doubling idiom
+// llmClient's postOnce already provides for the wire, one seam further forward. NO OLLAMA SERVER IS
+// CONTACTED by this file: the tag list is canned, and the digest below is real only so that the identity
+// this suite asserts is the identity production would build.
+//
+// ⟪AND WHY THE CONSTRUCTION IS CALLBACK-SHAPED⟫ DAWN_TOWER's ruling of 2026-09-07: JUDGE_PROVIDER_SHAPE
+// requires `model` to be a non-empty string ON THE RETURNED OBJECT, the Ollama identity carries a digest,
+// and a digest can only be read over HTTP — so construction cannot be both synchronous and probe a server.
+// CONFIGURATION faults still throw synchronously, by name, exactly as llmClient's do; only the SERVER PROBE
+// refuses through a callback. The double here calls back synchronously, which is a property of the DOUBLE
+// and not of the module, so the provider is available on the next line.
+const OLLAMA_DIGEST_FIXTURE = '9f13ba1299afea09d9a956fc6a85becc99115a6d596fae201a5487a03bdc4368';
+const ollamaIniFilePath = () => {
+	const dirPath = fs.mkdtempSync(path.join(os.tmpdir(), 'judgeProviderContractOllama-'));
+	const filePath = path.join(dirPath, 'ollamaJudge.ini');
+	fs.writeFileSync(
+		filePath,
+		// ⟪HERMETICITY, PROVEN RATHER THAN ASSERTED⟫ The port here is 11599, where NOTHING LISTENS — deliberately
+		// NOT the real 11434. If the fetchModelTagList double were ever removed or bypassed, this construction
+		// would fail with ECONNREFUSED and the suite would go red, instead of quietly acquiring a dependency on
+		// a running Ollama. A suite that passes only because a service happens to be up is not hermetic; it is
+		// lucky. This one cannot be lucky.
+		'[ollamaJudge]\nendpointHostName=127.0.0.1\nendpointPortNumber=11599\nwireModel=qwen2.5:32b\nmaxConcurrency=1\nrequestTimeoutMs=180000\nnumPredict=400\n',
+	);
+	return filePath;
+};
+let ollamaProvider = null;
+let ollamaConstructionError = 'THE CONSTRUCTION CALLBACK WAS NEVER CALLED';
+ollamaJudgeClientLib(
+	{
+		configFilePath: ollamaIniFilePath(),
+		componentOverrides: {
+			fetchModelTagList: (tagCallback) =>
+				tagCallback('', { models: [{ name: 'qwen2.5:32b', digest: OLLAMA_DIGEST_FIXTURE }] }),
+		},
+	},
+	(constructionError, provider) => {
+		ollamaConstructionError = constructionError;
+		ollamaProvider = provider;
+	},
+);
+
 const REGISTERED_PROVIDER_LIST = [
 	{ label: 'llmClient (anthropic)', provider: anthropicProvider },
 	{ label: 'debugJudge', provider: debugProvider },
+	{ label: 'ollamaJudgeClient', provider: ollamaProvider },
 ];
 
 // =====================================================================
@@ -110,6 +157,24 @@ harness.equal(
 	'describe,maxConcurrency,model,name,rerank,wireModel',
 );
 harness.ok('the shape is frozen (a contract nothing can edit at run time)', Object.isFrozen(JUDGE_PROVIDER_SHAPE));
+
+// The third provider constructed, with NO network — asserted before anything below leans on it, because a
+// null provider would make every per-provider assertion below fail for the wrong reason.
+harness.equal('the ollama provider constructed hermetically (canned /api/tags, no socket)', ollamaConstructionError, '');
+harness.ok('…and yielded a provider object', !!ollamaProvider);
+harness.equal(
+	'…whose identity carries the digest READ from the canned tag list, not a literal',
+	ollamaProvider && ollamaProvider.model,
+	`ollama:qwen2.5:32b@${OLLAMA_DIGEST_FIXTURE.slice(0, 12)}`,
+);
+harness.equal('…and whose wireModel is the bare Ollama model name', ollamaProvider && ollamaProvider.wireModel, 'qwen2.5:32b');
+harness.equal('…and whose declared ceiling is 1, from its ini', ollamaProvider && ollamaProvider.maxConcurrency, 1);
+harness.equal(
+	'ollamaJudgeClient s separator agrees with the shape s',
+	ollamaJudgeClientLib.MODEL_NAMESPACE_SEPARATOR,
+	JUDGE_PROVIDER_SHAPE.MODEL_NAMESPACE_SEPARATOR,
+);
+harness.equal('THREE providers are now under contract, not two', REGISTERED_PROVIDER_LIST.length, 3);
 
 REGISTERED_PROVIDER_LIST.forEach(({ label, provider }) => {
 	harness.equal(`${label} satisfies JUDGE_PROVIDER_SHAPE`, judgeProviderViolation(provider, { providerLabel: label }), null);
@@ -217,8 +282,8 @@ harness.ok(
 	`altered tail: ...${oneCharacterAltered.slice(-40)}`,
 );
 harness.ok(
-	'…and the check is not vacuous: the unaltered pair is genuinely equal, and there are 2 providers compared',
-	refusalBodyList.length === 2 && wordingIsIdentical(refusalBodyList),
+	'…and the check is not vacuous: the unaltered set is genuinely equal, and there are 3 providers compared',
+	refusalBodyList.length === 3 && wordingIsIdentical(refusalBodyList),
 	`compared ${refusalBodyList.length} provider(s)`,
 );
 
@@ -229,6 +294,23 @@ harness.section('G-F1-a — model IS NAMESPACED BY PROVIDER; wireModel IS THE BA
 harness.equal('anthropic wireModel is the bare API name', anthropicProvider.wireModel, 'claude-opus-4-8');
 harness.equal('anthropic model is namespaced', anthropicProvider.model, 'anthropic:claude-opus-4-8');
 harness.equal('debugJudge model is namespaced', debugProvider.model, 'debugJudge:first-v1-INVALID_DEBUG');
+harness.equal('ollama wireModel is the bare API name', ollamaProvider && ollamaProvider.wireModel, 'qwen2.5:32b');
+harness.match('ollama model is namespaced AND carries the model digest', ollamaProvider && ollamaProvider.model, /^ollama:qwen2\.5:32b@[0-9a-f]{12}$/);
+// ⟪THE PROVIDER THAT PROVES THE NAMESPACE RULE HAD TO BE A PREFIX TEST⟫ interfaces.js says the separator
+// "may also occur INSIDE a wireModel ('qwen2.5:32b'), which is why the rule is a PREFIX test against the
+// provider's own name and never a count of separators or a split." Until JOB 3 that was a hypothetical.
+// It is now a live provider, and this is the assertion that would fail the day somebody rewrote the rule
+// as a split.
+harness.equal(
+	'the ollama wire name CONTAINS the namespace separator — the case the prefix rule exists for',
+	ollamaProvider && ollamaProvider.wireModel.indexOf(JUDGE_PROVIDER_SHAPE.MODEL_NAMESPACE_SEPARATOR) !== -1,
+	true,
+);
+harness.equal(
+	'…and splitting on the separator would give the WRONG identity, which is why nothing splits',
+	ollamaProvider && ollamaProvider.model.split(JUDGE_PROVIDER_SHAPE.MODEL_NAMESPACE_SEPARATOR).length,
+	3,
+);
 harness.ok(
 	'debugJudge keeps its INVALID_DEBUG flag inside the namespaced identity',
 	debugProvider.model.indexOf(debugJudgeLib.DEBUG_MARK) !== -1,

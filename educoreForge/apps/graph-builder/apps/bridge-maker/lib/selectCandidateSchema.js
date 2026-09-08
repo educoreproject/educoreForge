@@ -130,7 +130,17 @@ const buildCanonicalSelectCandidateSchema = ({ choiceEnum } = {}) => {
 			properties: Object.freeze({
 				choice: Object.freeze({
 					type: 'string',
-					enum: choiceEnum,
+					// ⟪JOB 3, 2026-09-07 — THE ONE-LINE FIX COBALT_ANCHOR's STAND-DOWN ASKED FOR⟫ slice() then
+					// freeze. Object.freeze is SHALLOW, and this was the one enum that arrives per call: writing
+					// `enum: choiceEnum` stored THE CALLER'S OWN ARRAY by reference, so a caller that kept its
+					// reference could mutate a schema this module calls frozen, after construction, silently.
+					// category.enum never had the hole because it is PICK_CATEGORY_ENUM, frozen at module load.
+					// BOTH halves are load-bearing: slice() severs the shared reference (freezing the caller's
+					// own array in place would be a worse bug — this module would be freezing an object it does
+					// not own), and freeze stops anything downstream mutating the copy. It moves NO BYTES:
+					// JSON.stringify renders a frozen copy identically, which gate G3-e asserts against G2-a's
+					// recorded sha256 rather than leaving it as a claim.
+					enum: Object.freeze(choiceEnum.slice()),
 					description: CHOICE_DESCRIPTION,
 				}),
 				category: Object.freeze({
