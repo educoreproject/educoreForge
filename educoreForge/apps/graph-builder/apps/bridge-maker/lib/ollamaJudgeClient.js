@@ -323,19 +323,34 @@ const judgmentBodyRefusal = (rawProviderResponse) => readJudgmentBody(rawProvide
 // Every field is validated against the contract and NOTHING is reconstructed. An out-of-enum value is not
 // nudged to a neighbour, a blank rationale is not a rationale, and prose containing something that looks
 // like an answer yields nothing at all.
-const makeJudgmentExtractor = (choiceEnum) => (rawProviderResponse) => {
-	const { refusal, judgmentObject } = readJudgmentBody(rawProviderResponse);
-	if (refusal) {
-		return { choice: undefined, category: undefined, rationale: undefined };
-	}
-	const offeredChoice = `${judgmentObject.choice}`;
-	const choice = Array.isArray(choiceEnum) && choiceEnum.indexOf(offeredChoice) !== -1 ? offeredChoice : undefined;
-	const category = PICK_CATEGORY_ENUM.indexOf(judgmentObject.category) !== -1 ? judgmentObject.category : undefined;
-	const rationale =
-		typeof judgmentObject.rationale === 'string' && judgmentObject.rationale.trim()
-			? judgmentObject.rationale
-			: undefined;
-	return { choice, category, rationale };
+// ⟪JOB 4 / G4-f, 2026-09-07⟫ THE ENUM IS COPIED AND FROZEN AT FACTORY TIME, and both halves of that are
+// load-bearing. selectCandidateSchema.js already sends a frozen COPY on the wire; this extractor used to
+// close over the CALLER'S LIVE ARRAY and read it at answer time, so a caller that kept its reference could
+// move the check without moving the constraint — the enum SENT and the enum CHECKED could disagree. The
+// `.slice()` severs that reference; the `Object.freeze` protects the copy. Freezing without slicing would
+// be a worse defect than the one repaired: it would reach back and freeze an array this module does not own.
+// A non-array argument is passed through UNCHANGED so the Array.isArray guard below still answers it with
+// `choice: undefined` rather than this factory throwing — the tolerance was there before and is preserved.
+const makeJudgmentExtractor = (choiceEnum) => {
+	const frozenChoiceEnum = Array.isArray(choiceEnum) ? Object.freeze(choiceEnum.slice()) : choiceEnum;
+	return (rawProviderResponse) => {
+		const { refusal, judgmentObject } = readJudgmentBody(rawProviderResponse);
+		if (refusal) {
+			return { choice: undefined, category: undefined, rationale: undefined };
+		}
+		const offeredChoice = `${judgmentObject.choice}`;
+		const choice =
+			Array.isArray(frozenChoiceEnum) && frozenChoiceEnum.indexOf(offeredChoice) !== -1
+				? offeredChoice
+				: undefined;
+		const category =
+			PICK_CATEGORY_ENUM.indexOf(judgmentObject.category) !== -1 ? judgmentObject.category : undefined;
+		const rationale =
+			typeof judgmentObject.rationale === 'string' && judgmentObject.rationale.trim()
+				? judgmentObject.rationale
+				: undefined;
+		return { choice, category, rationale };
+	};
 };
 
 // START OF moduleFunction() ============================================================

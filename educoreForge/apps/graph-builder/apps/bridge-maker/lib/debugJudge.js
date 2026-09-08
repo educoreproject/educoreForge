@@ -188,8 +188,13 @@ const RULE_REGISTER = Object.freeze({
 
 const REGISTERED_RULE_NAMES = Object.freeze(Object.keys(RULE_REGISTER));
 
-// ⟪JOB 1, 2026-09-07⟫ PROVIDER_NAME / MODEL_NAMESPACE_SEPARATOR — this module is a judge PROVIDER and its
-// `model` is now NAMESPACED like every other provider's: 'debugJudge:first-v1-INVALID_DEBUG'. The identifier
+// ⟪JOB 1, 2026-09-07; NAME AND TAIL REVISED JOB 4, 2026-09-07⟫ PROVIDER_NAME / MODEL_NAMESPACE_SEPARATOR —
+// this module is a judge PROVIDER and its `model` is NAMESPACED like every other provider's: 'debug:first'.
+// JOB 1 wrote that identity as 'debugJudge:first-v1-INVALID_DEBUG'; JOB 4 shortened it to exactly
+// `debug:<rule>` so that bridge-framework's judgeKind could stop being a TERNARY that branches on WHICH
+// PROVIDER IT HOLDS and become the single expression `judgeClient.model`. A framework that asks which
+// provider it has is the thing the registry order exists to remove, and the price of removing it here is
+// this name. See modelIdentifierFor below for what the dropped tail did and did not cost. The identifier
 // was already distinctive enough to be uncacheable-by-accident (the NO CACHE PARTICIPATION note above), so
 // the namespace buys nothing HERE — it is adopted because the rule must be UNIVERSAL to be worth anything.
 // A namespacing convention that any one provider may skip when it feels safe is a convention a reader cannot
@@ -198,23 +203,45 @@ const REGISTERED_RULE_NAMES = Object.freeze(Object.keys(RULE_REGISTER));
 // copy: bridge-maker/lib is a fingerprinted directory (decisionBlock.js:69) and takes on no dependency
 // outside the fingerprint tree. Equality with the shape's separator is PROVEN by
 // apps/graph-builder/test/test-judgeProviderContract.js, not trusted.
-const PROVIDER_NAME = 'debugJudge';
+const PROVIDER_NAME = 'debug';
 const MODEL_NAMESPACE_SEPARATOR = ':';
 
 // DEBUG_JUDGE_MAX_CONCURRENCY — required by the contract, and honestly this provider has NO external limit
 // to declare: every rule is pure and synchronous, there is no socket, no rate limit and no server. The shape
 // offers no way to say "unbounded", so this names the framework's own JUDGE_CONCURRENCY, which makes
 // min(JUDGE_CONCURRENCY, maxConcurrency) at bridge-framework.js:1462 (the maxConcurrency guard — line as of JOB 3, 2026-09-07; grep judgeClient.maxConcurrency if it has moved) a no-op for this provider — the
-// intended meaning. It is deliberately NOT imported from the framework: the framework is downstream of this
-// module, and a provider that read a framework constant would invert that dependency.
-const DEBUG_JUDGE_MAX_CONCURRENCY = 4;
+// intended meaning.
+// ⟪JOB 4 CORRECTS THIS PARAGRAPH'S LAST SENTENCE⟫ It used to end "It is deliberately NOT imported from the
+// framework: the framework is downstream of this module, and a provider that read a framework constant would
+// invert that dependency." That is no longer what the code does, and the reasoning was answered rather than
+// overruled: the value no longer lives in the framework. It lives in lib/bridge-framework/judgeConcurrency.js,
+// a LEAF with zero requires of its own, which bridge-framework.js reads too. Reading a shared leaf is not
+// reading the framework, and both directories are inside decisionBlock.js's FINGERPRINT_ROOT_LIST, so no
+// dependency is taken outside the fingerprint tree.
+// ⟪JOB 4, 2026-09-07, ruled by DAWN_TOWER⟫ DERIVED, not declared. This provider has no external limit of
+// its own (see the paragraph above), so its ceiling IS the framework's by definition — and two literals
+// that must agree, with nothing checking that they do, was the weakest thing JOB 1 shipped by its own
+// builder's account. Deriving beats asserting: an assertion between two literals can pass by coincidence
+// and must itself be maintained; a derivation cannot disagree at all.
+const DEBUG_JUDGE_MAX_CONCURRENCY = require('../../../../../lib/bridge-framework/judgeConcurrency').JUDGE_CONCURRENCY;
 
-// modelIdentifierFor — what a judge reports as its `model`. Names the RULE so a forensics reader can
-// tell WHICH stand-in produced a record, and carries the debug flag so it could never be mistaken
-// for a real model identifier even if something upstream tried to cache it. ⟪JOB 1⟫ now namespaced by
-// PROVIDER_NAME; the '-v1-INVALID_DEBUG' tail is unchanged, so the flag every downstream reader greps for
-// (DEBUG_MARK) is exactly where it was.
-const modelIdentifierFor = (ruleName) => `${PROVIDER_NAME}${MODEL_NAMESPACE_SEPARATOR}${ruleName}-v1-${DEBUG_MARK}`;
+// modelIdentifierFor — what a judge reports as its `model`. Names the RULE so a forensics reader can tell
+// WHICH stand-in produced a record.
+//
+// ⟪JOB 4, 2026-09-07⟫ THE '-v1-INVALID_DEBUG' TAIL IS GONE, AND WHAT IT COST WAS TRACED BEFORE IT WENT.
+// JOB 1's comment here said the tail mattered because it kept "the flag every downstream reader greps for
+// exactly where it was". That was measured for JOB 4 and it is not what any reader actually does: NOTHING
+// mechanical reads this string for debug-ness. debugMarkFromLlmClient (below) reads `decisionAlgorithm`, a
+// SEPARATE member; that flag is what suffixes the block's generation (bridge-framework generationWithDebugMark)
+// and what materialiser turns into provenanceTier 'invalid-debug'; and it is provenanceTier — never
+// mappingTool — that certificationCheck.js, passport-writer.js and gold-eval-bridge-sibling.js all refuse on.
+// So dropping the tail costs a HUMAN-READABLE flag on the edge's mappingTool and nothing mechanical. The
+// edge still carries provenanceTier 'invalid-debug', the block's generation still ends in -INVALID_DEBUG,
+// and every rationale still announces itself. What the shorter identity BUYS is the single-expression
+// judgeKind in bridge-framework.js — the framework no longer branching on which provider it holds. (No
+// line is cited: my own edit moved that expression while this comment was being written, which is the most
+// predictable staleness there is and the fourth consecutive job to record it. Grep `const judgeKind =`.)
+const modelIdentifierFor = (ruleName) => `${PROVIDER_NAME}${MODEL_NAMESPACE_SEPARATOR}${ruleName}`;
 
 // rationaleFor — self-announcing prose. EVERY rationale states, in its first words, that no
 // intelligence was applied. This is the human-facing half of the flagging: the graph carries the

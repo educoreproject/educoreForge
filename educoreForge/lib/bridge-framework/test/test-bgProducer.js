@@ -256,8 +256,16 @@ const debugConjunctList = [
 		judge: (scenario) => {
 			const buildMutationList = scenario.frameworkMutationList.filter((oneMutation) => oneMutation.modulePath === BUILD_JS_PATH);
 			const buildStatics = buildMutationList.length ? loadBuildJsDouble({ buildJsPath: BUILD_JS_PATH, mutationList: buildMutationList }) : require(BUILD_JS_PATH);
-			const idle = buildStatics.resolveInferenceConfig({}, [], 'digest');
-			const twoJudges = buildStatics.resolveInferenceConfig({ inferenceConfig: { llmClient: { rerank: () => {} } } }, ['toy'], 'digest');
+			// ⟪JOB 4, 2026-09-07⟫ CALLBACK-SHAPED. resolveInferenceConfig became error-first because the
+			// Ollama provider's identity carries a model digest that can only be read over HTTP, so every
+			// provider row constructs through a callback. SAME TWO SUBJECTS, SAME TWO REGEXES. Both
+			// refusals are reached BEFORE any construction is attempted, so both still answer without the
+			// event loop turning — which is why this conjunct can stay synchronous while the seam it
+			// exercises is not. The refusals themselves are byte-unchanged.
+			let idle = { error: 'THE CALLBACK WAS NEVER CALLED' };
+			let twoJudges = { error: 'THE CALLBACK WAS NEVER CALLED' };
+			buildStatics.resolveInferenceConfig({}, [], 'digest', (idleError) => { idle = { error: idleError || '' }; });
+			buildStatics.resolveInferenceConfig({ inferenceConfig: { llmClient: { rerank: () => {} } } }, ['toy'], 'digest', (twoJudgesError) => { twoJudges = { error: twoJudgesError || '' }; });
 			return { pass: Boolean(idle.error) && /no --rebridge scope is active/.test(idle.error) && Boolean(twoJudges.error) && /Two judges/.test(twoJudges.error), detail: `idle: ${idle.error ? idle.error.slice(0, 80) : 'ADMITTED'}; two judges: ${twoJudges.error ? twoJudges.error.slice(0, 60) : 'ADMITTED'}` };
 		},
 	}),

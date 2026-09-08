@@ -342,7 +342,14 @@ const moduleFunction =
 			return {
 				apiKey,
 				keySource: iniConfig.apiKey ? 'ini' : process.env.ANTHROPIC_API_KEY ? 'env' : 'none',
-				wireModel: wireModelOverride || iniConfig.model || 'claude-opus-4-8',
+				// ⟪JOB 4, 2026-09-07 — docket (v)⟫ THE SILENT DEFAULT IS GONE. This read `... || 'claude-opus-4-8'`,
+				// which is the exact shape polyArch2 §6 forbids: an operator who deleted or misspelled
+				// [anthropicAi].model got a working client pointed at a model they had not named, and nothing said
+				// so — on a PAID provider, where the wrong model is a wrong bill as well as a wrong measurement.
+				// The raw value is carried through UNRESOLVED so the construction guard below can refuse it BY NAME;
+				// defaulting here would leave that guard nothing to see. Measured before removing it: the deployed
+				// ini at the default path DOES carry model=claude-opus-4-8, so no production path relied on this.
+				wireModel: wireModelOverride || iniConfig.model,
 				// maxConcurrency is DECLARED by this provider (ANTHROPIC_MAX_CONCURRENCY) and may be overridden
 				// in the ini. The raw ini text is carried through UNPARSED so the construction guard below can
 				// refuse a malformed value BY NAME showing what was written; parseInt(...) || DEFAULT would turn
@@ -369,6 +376,21 @@ const moduleFunction =
 				`${moduleName}: no Anthropic API key resolved — set [anthropicAi].apiKey in the config ` +
 					`(${configFilePath}) or the ANTHROPIC_API_KEY environment variable. There is no default; the ` +
 					`reranker refuses to construct without a key rather than no-op later.`,
+			);
+		}
+
+		// ⟪JOB 4, 2026-09-07 — docket (v)⟫ AN ABSENT WIRE MODEL IS REFUSED BY NAME, never defaulted. Placed
+		// beside the no-key throw because it is the same fault class and the same §6 rule: a configuration
+		// value this client cannot invent. It names the key, the section and the file, and it shows what was
+		// actually written so a whitespace-only or blank value reads as the mistake it is rather than as
+		// absence. This throw is a CONFIGURATION fault, so it is synchronous — the split JOB 3 ruled: config
+		// faults throw before any socket exists; only a server probe refuses through a callback.
+		if (typeof cfg.wireModel !== 'string' || !cfg.wireModel.trim()) {
+			throw new Error(
+				`${moduleName}: no wire model resolved — set [anthropicAi].model in the config ` +
+					`(${configFilePath}) to the BARE Anthropic model name, e.g. 'claude-opus-4-8'. ` +
+					`What was found: ${JSON.stringify(cfg.wireModel)}. There is no default; a judge that ran ` +
+					`against a model nobody named would bill real money for an unattributable measurement.`,
 			);
 		}
 

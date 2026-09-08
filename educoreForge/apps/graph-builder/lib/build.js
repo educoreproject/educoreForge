@@ -303,20 +303,17 @@ const defaultComponents = {
 	manifestEditor: require(path.join(__dirname, '..', 'apps', 'manifest-editor')),
 };
 
-// The REAL Anthropic reranker llmClient factory (P3b) — the DEFAULT the inference pre-pass constructs when a
-// real --rebridge runs. It is a factory (curried moduleFunction) build.js calls to MINT a client; a test
-// injects its own via deps.llmClientFactory, and the hermetic suite bypasses it entirely by injecting a
-// ready STUB on deps.inferenceConfig.llmClient (so this real factory is NEVER called under runAllTests —
-// §3 hard line 2). It is required at module top like every other component; it is only CALLED for a real
-// --rebridge (resolveInferenceConfig's eager gate below).
-const realLlmClientFactory = require(path.join(__dirname, '..', 'apps', 'bridge-maker', 'lib', 'llmClient'));
-
-// debugJudgeFactory — the FREE, FLAGGED stand-in for the reranker (skipAI, 2026-08-10). The other
-// module in this tree that answers `rerank`; --useDebugJudge selects it INSTEAD of the real client,
-// so the whole bridging chain can be exercised without spending Opus credit. Its own header carries
-// the full rationale. REGISTERED_RULE_NAMES/DEFAULT_RULE are read from it rather than restated here,
-// so adding a rule to its register needs no edit in this file.
-const debugJudgeFactory = require(path.join(__dirname, '..', 'apps', 'bridge-maker', 'lib', 'debugJudge'));
+// ⟪JOB 4, 2026-09-07⟫ THE JUDGE PROVIDER REGISTRY — and this file no longer `require`s a single judge.
+// It used to require TWO factories directly (the real Anthropic reranker and the debug stand-in) and choose
+// between them with a flag, which meant the orchestrator knew the name of every judge that existed and a
+// third provider could not be added without editing this file. Now ONE config key selects a provider,
+// adding a provider is a new file plus one data row in the registry, and build.js contains ZERO direct
+// requires of any judge factory — asserted as gate G4-a with the denominator stated.
+//
+// The debug vocabulary the --useDebugJudge override needs (the registered rule names, the register's
+// DEFAULT_RULE, and DEBUG_MARK for the loud status line) is re-exported by the registry, DERIVED from
+// debugJudge rather than restated, so adding a rule to that register still needs no edit here.
+const judgeProviderRegistryLib = require(path.join(__dirname, '..', 'apps', 'bridge-maker', 'lib', 'judgeProviderRegistry'));
 
 // parsePositiveInteger — the SAME reader lib/sourceWindow.js applies at slice time, required here so
 // a malformed --limit/--offset is refused identically whether it is caught eagerly (before forging)
@@ -798,11 +795,11 @@ const rebridgeScopeIsActive = (rebridgeScope) =>
 // Returns { value } (a rule name or null) or { error }; no throw, so build() routes a refusal
 // through its callback.
 const resolveDebugJudge = (deps, injectedCommandLineParameters) => {
-	const registeredNames = debugJudgeFactory.REGISTERED_RULE_NAMES;
+	const registeredNames = judgeProviderRegistryLib.DEBUG_JUDGE_RULE_NAME_LIST;
 	const nameOrRefusal = (rawValue) => {
 		const wanted = `${rawValue}`.trim();
 		if (wanted === '') {
-			return { value: debugJudgeFactory.DEFAULT_RULE };
+			return { value: judgeProviderRegistryLib.DEBUG_JUDGE_DEFAULT_RULE_NAME };
 		}
 		const matched = registeredNames.find(
 			(oneName) => oneName.toLowerCase() === wanted.toLowerCase(),
@@ -926,79 +923,104 @@ const resolveSourceWindow = (deps, injectedCommandLineParameters) => {
 	return { value: { limit: limitCheck.value, offset: offsetCheck.value } };
 };
 
-// resolveInferenceConfig — assemble the inferred producer's run config, SELECTING the reranker llmClient with
-// the same §6 discipline as vectorize/rebridge. This is the real-vs-stub seam (the FACTORY):
-//   1. deps.inferenceConfig.llmClient present -> used AS-IS. The hermetic suite injects a deterministic STUB
-//      this way, so the real factory is NEVER consulted under runAllTests (§3 hard line 2). An orchestrator
-//      may likewise inject its own client.
-//   2. else, when the --rebridge scope is ACTIVE (a real reforge WILL run the pre-pass), MINT a real llmClient
-//      from the injected/default factory. Constructed ONLY when actually rebridging — a plain build (empty
-//      scope) mints nothing, and neither does a build that only materializes. Construction THROWS BY NAME when
-//      no key resolves (llmClient's own §6 refusal), surfaced here through the build's callback so a keyless
-//      --rebridge fails LOUDLY before any Voyage/Opus credit is spent, never a silent no-op.
-//   3. else (plain build, inactive scope) -> the config as given; the materialize path needs no llmClient.
-// ⟪skipAI, 2026-08-10⟫ a resolved debugJudgeRule DIVERTS step 2: the register's judge is constructed
-// instead of the Anthropic client, so a real --rebridge runs end to end with no key and no spend. Two
-// refusals guard it, both BY NAME:
-//   - --useDebugJudge with NO ACTIVE --rebridge SCOPE. Nothing would be judged, so the flag would sit
-//     idle and the run would LOOK like it worked — the silent-no-op shape this tree refuses. It does
-//     NOT imply --rebridge=all: a flag that quietly enables another flag is exactly what §6 forbids.
-//   - --useDebugJudge TOGETHER WITH an injected deps.inferenceConfig.llmClient. Two judges were named
-//     for one run; picking either silently would make the run's own report unreliable.
-// Answers { value } or { error } — the error-object idiom, so build() routes a refusal through its callback
-// rather than throwing past it.
-const resolveInferenceConfig = (deps, rebridgeScope, debugJudgeRule) => {
+// resolveInferenceConfig — assemble the inferred producer's run config, SELECTING the judge provider with
+// the same §6 discipline as vectorize/rebridge. This is the real-vs-stub seam:
+//   1. deps.inferenceConfig.llmClient present -> used AS-IS, and it WINS OVER THE CONFIG KEY SILENTLY.
+//      The hermetic suite injects a deterministic STUB this way, so no real provider is ever constructed
+//      under runAllTests (§3 hard line 2). An injected client together with a perfectly ordinary
+//      [judgeProvider].judgeProviderName is the NORMAL test situation and must never be refused — only the
+//      EXPLICIT --useDebugJudge override conflicts with an injection, and that refusal is kept below.
+//   2. else, when the --rebridge scope is ACTIVE (a real reforge WILL run the pre-pass), CONSTRUCT the
+//      selected provider THROUGH THE REGISTRY. Constructed ONLY when actually rebridging — a plain build
+//      (empty scope) constructs nothing, and neither does a build that only materializes.
+//   3. else (plain build, inactive scope) -> the config as given; the materialize path needs no judge.
+//
+// ⟪JOB 4, 2026-09-07⟫ THIS FUNCTION IS NOW ERROR-FIRST, and it had to become so. The Ollama provider's
+// identity carries a model digest read from /api/tags at construction, and a digest can only be read over
+// HTTP — so provider construction is callback-shaped for every row (DAWN_TOWER's JOB 3 ruling; the
+// blocking-probe alternative was proposed and REFUSED). What used to answer { value } / { error } now calls
+// back (errString, inferenceConfig). build() drives it as a taskList step and receives a CONSTRUCTED,
+// VALIDATED provider — never a promise of one.
+//
+// ⟪JOB 4⟫ --useDebugJudge IS NOW AN OVERRIDE OF THE ONE CONFIG KEY, not a second path. It selects the
+// registry's debug row and supplies its RULE; the row is otherwise reached exactly like any other. Both of
+// its existing refusals are UNCHANGED and still fire BY NAME:
+//   - --useDebugJudge with NO ACTIVE --rebridge SCOPE. Nothing would be judged, so the flag would sit idle
+//     and the run would LOOK like it worked — the silent-no-op shape this tree refuses. It does NOT imply
+//     --rebridge=all: a flag that quietly enables another flag is exactly what §6 forbids.
+//   - --useDebugJudge TOGETHER WITH an injected deps.inferenceConfig.llmClient. Two judges were named for
+//     one run; picking either silently would make the run's own report unreliable.
+// A config key naming debug and an explicit --useDebugJudge are NOT a conflict — they are the same answer
+// twice; the flag simply also supplies the rule.
+const resolveInferenceConfig = (deps, rebridgeScope, debugJudgeRule, callback) => {
 	const base = deps.inferenceConfig || {};
 	const scopeIsActive = rebridgeScopeIsActive(rebridgeScope);
 
 	if (debugJudgeRule && !scopeIsActive) {
-		return {
-			error:
-				`graphBuilder build: --useDebugJudge='${debugJudgeRule}' was given but no --rebridge scope is ` +
+		callback(
+			`graphBuilder build: --useDebugJudge='${debugJudgeRule}' was given but no --rebridge scope is ` +
 				`active, so NOTHING WOULD BE JUDGED and the debug judge would never be called. A plain build ` +
 				`MATERIALIZES frozen decision blocks and asks no judge at all. Name what to rebridge ` +
 				`(--rebridge=all or --rebridge=<token>[,<token>...]); --useDebugJudge does not imply it.`,
-		};
+		);
+		return;
 	}
 	if (base.llmClient && debugJudgeRule) {
-		return {
-			error:
-				`graphBuilder build: --useDebugJudge='${debugJudgeRule}' was given AND an llmClient was injected ` +
+		callback(
+			`graphBuilder build: --useDebugJudge='${debugJudgeRule}' was given AND an llmClient was injected ` +
 				`through deps.inferenceConfig. Two judges are named for one run and there is no precedence rule ` +
 				`— pass one or the other.`,
-		};
+		);
+		return;
 	}
 	if (base.llmClient || !scopeIsActive) {
-		return { value: base };
+		callback('', base);
+		return;
 	}
-	if (debugJudgeRule) {
-		// Construction refuses BY NAME on an unregistered rule (already validated in resolveDebugJudge,
-		// so this is defense in depth), translated into the callback channel like the real client below.
-		let debugJudge;
-		try {
-			debugJudge = debugJudgeFactory({ ruleName: debugJudgeRule });
-		} catch (constructError) {
-			return {
-				error: `graphBuilder build: the debug judge could not be constructed: ${constructError.message}`,
-			};
-		}
-		return { value: { ...base, llmClient: debugJudge } };
-	}
-	const llmClientFactory = deps.llmClientFactory || realLlmClientFactory;
-	let mintedClient;
-	// boundary translation of a CONSTRUCTION (configuration) fault into the orchestrator's callback channel —
-	// the same pattern bridgeMaker uses when composing a plugin throws. Not control flow: the throw IS the §6
-	// refusal, caught only to name it through build()'s callback.
-	try {
-		mintedClient = llmClientFactory({ configFilePath: ANTHROPIC_CONFIG_FILE_PATH });
-	} catch (constructError) {
-		return {
-			error:
-				`graphBuilder build: --rebridge is scoped active but the Anthropic reranker could not be ` +
-				`constructed: ${constructError.message}`,
-		};
-	}
-	return { value: { ...base, llmClient: mintedClient } };
+
+	// THE ONE KEY. --useDebugJudge OVERRIDES it; otherwise it is read from
+	// [judgeProvider].judgeProviderName in graphBuilder.ini. There is NO in-code default: getConfig answers
+	// {} for a section that is absent, so an unset key arrives here as undefined and the registry refuses it
+	// BY NAME, listing the providers it knows. That is the same discipline [stores] graphBuilderSupportFilePath
+	// already carries in that file — config-supplied is not a code default, and deleting the line makes the
+	// build refuse rather than quietly pick somewhere.
+	// PRECEDENCE, and it is the SAME precedence resolveDebugJudge already uses for its own flag: an explicit
+	// deps injection (orchestrator or test) wins; absent that, the config key governs. Note what is NOT here —
+	// there is no `|| 'anthropic'`. getConfig answers {} for a section that is absent, so an unset key arrives
+	// as undefined and is refused BY NAME by the registry, listing the providers it knows.
+	const configuredProviderName =
+		deps.judgeProviderName !== undefined
+			? deps.judgeProviderName
+			: process.global && process.global.getConfig
+				? process.global.getConfig(judgeProviderRegistryLib.SELECTION_CONFIG_SECTION_NAME)[judgeProviderRegistryLib.SELECTION_CONFIG_KEY_NAME]
+				: undefined;
+	const selectedProviderName = debugJudgeRule ? judgeProviderRegistryLib.DEBUG_JUDGE_PROVIDER_NAME : configuredProviderName;
+
+	// THE TEST SEAM, and it is ONE seam rather than the two this file used to carry. `deps.llmClientFactory`
+	// is gone: it existed to let a suite substitute the Anthropic factory back when build.js required that
+	// factory directly, and a per-provider factory override is exactly the second construction path this job
+	// removes. What replaces it is the registry's OWN componentOverrides — the same idiom llmClient,
+	// ollamaJudgeClient, kitLoader.buildKit and bridgeMaker.run already use — passed straight through. A suite
+	// can double one provider's transport, point a row at a throwaway ini, or replace the row list entirely,
+	// and every one of those goes through the SAME construction protocol the real run uses.
+	judgeProviderRegistryLib.constructJudgeProvider(
+		{
+			providerName: selectedProviderName,
+			debugJudgeRuleName: debugJudgeRule,
+			configFilePathByProviderName: { anthropic: ANTHROPIC_CONFIG_FILE_PATH, ...(deps.judgeProviderConfigFilePathByProviderName || {}) },
+			componentOverrides: deps.judgeProviderComponentOverrides || {},
+		},
+		(constructionError, judgeProvider) => {
+			if (constructionError) {
+				callback(
+					`graphBuilder build: --rebridge is scoped active but the judge provider could not be ` +
+						`constructed: ${constructionError}`,
+				);
+				return;
+			}
+			callback('', { ...base, llmClient: judgeProvider });
+		},
+	);
 };
 
 const standardKey = (std) => `${std.token}@${std.version}`;
@@ -1190,1034 +1212,1056 @@ const build = (recipe, deps, callback) => {
 		xLog.status(
 			`graphBuilder build: --useDebugJudge='${debugJudgeRule}' — THE REAL RERANKER IS NOT BEING USED. ` +
 				`Judgments this run are mechanical and every resulting node and edge is flagged ` +
-				`${debugJudgeFactory.DEBUG_MARK}. No Opus credit will be spent on inference.`,
+				`${judgeProviderRegistryLib.DEBUG_JUDGE_MARK}. No Opus credit will be spent on inference.`,
 		);
 	}
 
-	const inferenceConfigResolution = resolveInferenceConfig(deps, rebridgeScope, debugJudgeRule);
-	if (inferenceConfigResolution.error) {
-		callback(inferenceConfigResolution.error);
-		return;
-	}
-	const inferenceConfig = inferenceConfigResolution.value;
-
-	const forger = components.forger();
-	const replay = components.replayManager();
-	const bridgeMaker = components.bridgeMaker();
-	const manifest = components.manifestEditor({ standardsDatabase }).init({
-		name: recipe.recipeName,
-		description: recipe.description,
-		recipe,
-		// provenance for the manifest: the recipe's own content hash (verifies "built from exactly
-		// this recipe text") and the recipe file's name. Both come from the build entry (actions.js
-		// read the file); a caller that has neither records nothing rather than inventing precision.
-		recipeText: deps.recipeText,
-		recipeFileName: deps.recipePath ? path.basename(deps.recipePath) : '',
+	// ⟪JOB 4, 2026-09-07⟫ JUDGE CONSTRUCTION IS A taskList STEP, and the reason is docket (vi): the Ollama
+	// provider's identity carries a model digest that can only be read over HTTP, so provider construction is
+	// callback-shaped for every row. What was a synchronous { value }/{ error } resolution is now one step
+	// whose completion the rest of the build waits on — the framework is handed a CONSTRUCTED, VALIDATED,
+	// FROZEN provider and never a promise of one.
+	//
+	// IT SITS EXACTLY WHERE THE SYNCHRONOUS RESOLUTION SAT, and that placement is deliberate rather than
+	// incidental. The orchestrator's own cheap refusals (no standardsDatabase, no recipeName, no description)
+	// still fire FIRST, as that block's own comment insists they must, so a caller who has not said where to
+	// write is still refused before anything is constructed. Moving construction earlier would have made a
+	// keyless judge the reported fault for a build whose recipe was the real problem.
+	const judgeConstructionTaskList = new taskListPlus();
+	judgeConstructionTaskList.push((args, next) => {
+		resolveInferenceConfig(deps, rebridgeScope, debugJudgeRule, (inferenceConfigError, resolvedInferenceConfig) => {
+			if (inferenceConfigError) {
+				next(inferenceConfigError);
+				return;
+			}
+			next('', { ...args, inferenceConfig: resolvedInferenceConfig });
+		});
 	});
-
-	const standards = Array.isArray(recipe.standards) ? recipe.standards : [];
-	const hubs = Array.isArray(recipe.hubs) ? recipe.hubs : [];
-	const bridges = Array.isArray(recipe.bridges) ? recipe.bridges : [];
-	const hubStdSet = new Set(hubs.map((h) => String(h.standard).toLowerCase()));
-
-	// ---- the build's report directory (hubReimplementation Phase 2, SPEC §5) ----
-	// ONE directory per build invocation under the canonical dataStores home (the actions.js
-	// documented-default precedent), named recipe + wall-clock start, created lazily by the
-	// first standard that has something to write. The hub prose-divergence and skip reports
-	// land here — the build orchestrator owns the build's log directory; the forger carries
-	// report DATA only and writes nothing.
-	const buildRunStamp = new Date()
-		.toISOString()
-		.replace(/[-:]/g, '')
-		.replace(/\..+$/, '')
-		.replace('T', '-');
-	const buildLogsDirPathResolution = resolveBuildLogsDirPath(deps);
-	if (buildLogsDirPathResolution.error) {
-		callback(buildLogsDirPathResolution.error);
-		return;
-	}
-	const buildReportsDirPath = path.join(
-		buildLogsDirPathResolution.value,
-		`${recipe.recipeName}_${buildRunStamp}`,
-	);
-
-	// PHASE A -> PHASE C carry (P2, implementationPlan_bridge_072426 §7). A bridge's relationship block
-	// name is version-keyed on BOTH endpoints with the REAL resolved versions the forge READ (the a4a0da2
-	// rule) — NOT the recipe token — so Phase A records, per standard TOKEN, the resolved version the forger
-	// reported and the harvested base schema block (the bridge restores its dependency bases from these into
-	// the dependency graph so the producer can WALK them).
-	const resolvedVersionByToken = {};
-	const baseBlockByToken = {};
-	// The build's ONE embedding identity (all standards in a run share the run's embedder), captured
-	// in Phase A and reused for the Phase C relationship-block harvest header: a bridged node is an
-	// embedded base node, so its relationship block must declare the SAME embeddingDims/model as the
-	// bases or the materialize restore gate refuses it. Undefined on --vectorize=false, when the
-	// optional header fields drop and no block carries a vector.
-	let buildEmbeddingModelVersion;
-	let buildEmbeddingDims;
-
-	// ---- Phase A: forge each standardBase (+ hub block when the standard is a hub) ----
-	// The forge runs BEFORE the graph is provisioned (targetArchitectureDesign §4.4). A forge
-	// bundle never sees, needs or wants a graph, so provisioning one first would spend a container
-	// on material that may not exist — and a standard with no forge bundle now fails before any
-	// docker command is attempted.
-	// ⟪ITEM 4, 2026-08-11⟫ attemptBaseBlockReuse — RETRIEVE an already-forged standardBase instead of
-	// forging it. Answers callback('', true) when it reused, ('', false) on a clean miss (the caller
-	// forges), or (error) on a fault.
-	//
-	// HOW THE NAME IS KNOWN WITHOUT FORGING. The recipe usually says version 'current', and phase A
-	// normally composes the subject AFTER the forge from its snapshot-provenance triple. forger
-	// .getVersionStamp answers that triple from the descriptor's PINNED snapshot and its provenance
-	// file — the SAME deriveVersionStamp arithmetic the forge uses — and REFUSES BY NAME when the
-	// answer would need a parse. The subject is then composed HERE with the very same functions phase
-	// A uses (explicitVersionFrom, slugifyVersion, suffixMarkerForKind), so the reused name and the
-	// forged name cannot drift.
-	//
-	// WHAT REUSE MUST STILL SUPPLY, because phase C reads all of it: the block itself
-	// (baseBlockByToken), the resolved version (resolvedVersionByToken, which keys phase C's
-	// relationship subjects), and the run's EMBEDDING IDENTITY — recovered from the stored block's own
-	// header line, since phase C's relationship harvest must declare the same embeddingDims/model as
-	// the bases or the materialize restore gate refuses it.
-	//
-	// A MISS IS A STATE, NOT AN ERROR. Nothing stored means forge normally.
-	const attemptBaseBlockReuse = (std, callback) => {
-		if (!reuseForgedBlocks) {
-			callback('', false);
+	pipeRunner(judgeConstructionTaskList.getList(), {}, (judgeConstructionError, judgeConstructionResult) => {
+		if (judgeConstructionError) {
+			callback(judgeConstructionError);
 			return;
 		}
-		const stamp = components.forger.getVersionStamp({ standard: std.token });
-		if (stamp.error) {
-			xLog.status(`  [A] ${std.token}: cannot name a stored block without forging — ${stamp.error}`);
-			callback('', false);
+		const inferenceConfig = judgeConstructionResult.inferenceConfig;
+
+		const forger = components.forger();
+		const replay = components.replayManager();
+		const bridgeMaker = components.bridgeMaker();
+		const manifest = components.manifestEditor({ standardsDatabase }).init({
+			name: recipe.recipeName,
+			description: recipe.description,
+			recipe,
+			// provenance for the manifest: the recipe's own content hash (verifies "built from exactly
+			// this recipe text") and the recipe file's name. Both come from the build entry (actions.js
+			// read the file); a caller that has neither records nothing rather than inventing precision.
+			recipeText: deps.recipeText,
+			recipeFileName: deps.recipePath ? path.basename(deps.recipePath) : '',
+		});
+
+		const standards = Array.isArray(recipe.standards) ? recipe.standards : [];
+		const hubs = Array.isArray(recipe.hubs) ? recipe.hubs : [];
+		const bridges = Array.isArray(recipe.bridges) ? recipe.bridges : [];
+		const hubStdSet = new Set(hubs.map((h) => String(h.standard).toLowerCase()));
+
+		// ---- the build's report directory (hubReimplementation Phase 2, SPEC §5) ----
+		// ONE directory per build invocation under the canonical dataStores home (the actions.js
+		// documented-default precedent), named recipe + wall-clock start, created lazily by the
+		// first standard that has something to write. The hub prose-divergence and skip reports
+		// land here — the build orchestrator owns the build's log directory; the forger carries
+		// report DATA only and writes nothing.
+		const buildRunStamp = new Date()
+			.toISOString()
+			.replace(/[-:]/g, '')
+			.replace(/\..+$/, '')
+			.replace('T', '-');
+		const buildLogsDirPathResolution = resolveBuildLogsDirPath(deps);
+		if (buildLogsDirPathResolution.error) {
+			callback(buildLogsDirPathResolution.error);
 			return;
 		}
-		const reuseVersion = explicitVersionFrom(stamp.value);
-		const reuseSubject = `${std.token}@${slugifyVersion(reuseVersion)}${vocabulary.suffixMarkerForKind(
-			vocabulary.SCHEMA_BLOCK_KIND.STANDARD_BASE,
-		)}`;
-		standardsDatabase.findBlockBySubject(
-			{ kind: 'standardBase', subject: reuseSubject, version: reuseVersion },
-			(findError, found) => {
-				if (findError) {
-					callback(findError);
-					return;
-				}
-				if (!found) {
-					xLog.status(`  [A] ${std.token}: no stored block for '${reuseSubject}' — forging`);
-					callback('', false);
-					return;
-				}
-				// getBlock returns the whole ROW and VERIFIES the content address before handing it back,
-				// so reuse inherits corruption detection for free: a tampered or truncated block is
-				// refused by name here rather than materializing into a graph.
-				standardsDatabase.getBlock({ refId: found.refId }, (getError, blockRow) => {
-					if (getError) {
-						callback(`reuse ${reuseSubject}: ${getError}`);
-						return;
-					}
-					if (!blockRow || blockRow.text === undefined || blockRow.text === null) {
-						callback(
-							`reuse ${reuseSubject}: the store found block ${found.refId} by subject but ` +
-								`returned no text for it.`,
-						);
-						return;
-					}
-					const text = typeof blockRow.text === 'string' ? blockRow.text : `${blockRow.text}`;
-					// the block's FIRST LINE is its header; the embedding identity is declared there.
-					let header = {};
-					const parseHeader = () => {
-						header = JSON.parse(text.slice(0, text.indexOf('\n')));
-					};
-					try {
-						parseHeader();
-					} catch (headerError) {
-						callback(
-							`reuse ${reuseSubject}: the stored block's header line is not parseable JSON ` +
-								`(${headerError.message}) — refusing to reuse a block whose embedding identity ` +
-								`cannot be read.`,
-						);
-						return;
-					}
-					// I7b — the reuse path's ONLY inspection of the text used to be the header line
-					// above. Ask, now, whether the block it matched by NAME actually carries the hub
-					// this recipe declared. Refused BY NAME; nothing substituted. (Phase 2a.)
-					const hublessReuseRefusal = refuseHublessReuseUnderDeriveHub({
-						deriveHub: hubStdSet.has(String(std.token).toLowerCase()),
-						reusedBlockText: text,
-						subject: reuseSubject,
-					});
-					if (hublessReuseRefusal !== '') {
-						callback(hublessReuseRefusal);
-						return;
-					}
-					resolvedVersionByToken[std.token] = reuseVersion;
-					baseBlockByToken[std.token] = { blockText: text, refId: found.refId };
-					buildEmbeddingModelVersion = header.embeddingModelVersion;
-					buildEmbeddingDims = header.embeddingDims;
-					xLog.status(
-						`  [A] REUSED ${reuseSubject} -> standardBase ${found.refId} (forged ${found.createdAt}) ` +
-							`— NOT FORGED. --reuseForgedBlocks resolves by NAME, so this is only correct if the ` +
-							`forge that made it is the forge you mean.`,
-					);
-					manifest.add(
-						{
-							subject: reuseSubject,
-							kind: 'standardBase',
-							version: reuseVersion,
-							description: `standardBase schema block for ${reuseSubject}, REUSED (not forged) by recipe '${recipe.recipeName}'`,
-							// refId MUST ride along: manifestEditor re-derives the content address from the
-							// text and refuses a block claiming an address that does not describe it. A
-							// reused block already HAS its address — omitting it claimed '' and was rightly
-							// refused.
-							schemaBlock: { blockText: text, refId: found.refId },
-						},
-						(addError) => callback(addError ? `reuse add ${reuseSubject}: ${addError}` : '', !addError),
-					);
-				});
-			},
+		const buildReportsDirPath = path.join(
+			buildLogsDirPathResolution.value,
+			`${recipe.recipeName}_${buildRunStamp}`,
 		);
-	};
 
-	const forgeOneStandard = (std, done) => {
-		attemptBaseBlockReuse(std, (reuseError, reused) => {
-			if (reuseError) {
-				done(reuseError);
+		// PHASE A -> PHASE C carry (P2, implementationPlan_bridge_072426 §7). A bridge's relationship block
+		// name is version-keyed on BOTH endpoints with the REAL resolved versions the forge READ (the a4a0da2
+		// rule) — NOT the recipe token — so Phase A records, per standard TOKEN, the resolved version the forger
+		// reported and the harvested base schema block (the bridge restores its dependency bases from these into
+		// the dependency graph so the producer can WALK them).
+		const resolvedVersionByToken = {};
+		const baseBlockByToken = {};
+		// The build's ONE embedding identity (all standards in a run share the run's embedder), captured
+		// in Phase A and reused for the Phase C relationship-block harvest header: a bridged node is an
+		// embedded base node, so its relationship block must declare the SAME embeddingDims/model as the
+		// bases or the materialize restore gate refuses it. Undefined on --vectorize=false, when the
+		// optional header fields drop and no block carries a vector.
+		let buildEmbeddingModelVersion;
+		let buildEmbeddingDims;
+
+		// ---- Phase A: forge each standardBase (+ hub block when the standard is a hub) ----
+		// The forge runs BEFORE the graph is provisioned (targetArchitectureDesign §4.4). A forge
+		// bundle never sees, needs or wants a graph, so provisioning one first would spend a container
+		// on material that may not exist — and a standard with no forge bundle now fails before any
+		// docker command is attempted.
+		// ⟪ITEM 4, 2026-08-11⟫ attemptBaseBlockReuse — RETRIEVE an already-forged standardBase instead of
+		// forging it. Answers callback('', true) when it reused, ('', false) on a clean miss (the caller
+		// forges), or (error) on a fault.
+		//
+		// HOW THE NAME IS KNOWN WITHOUT FORGING. The recipe usually says version 'current', and phase A
+		// normally composes the subject AFTER the forge from its snapshot-provenance triple. forger
+		// .getVersionStamp answers that triple from the descriptor's PINNED snapshot and its provenance
+		// file — the SAME deriveVersionStamp arithmetic the forge uses — and REFUSES BY NAME when the
+		// answer would need a parse. The subject is then composed HERE with the very same functions phase
+		// A uses (explicitVersionFrom, slugifyVersion, suffixMarkerForKind), so the reused name and the
+		// forged name cannot drift.
+		//
+		// WHAT REUSE MUST STILL SUPPLY, because phase C reads all of it: the block itself
+		// (baseBlockByToken), the resolved version (resolvedVersionByToken, which keys phase C's
+		// relationship subjects), and the run's EMBEDDING IDENTITY — recovered from the stored block's own
+		// header line, since phase C's relationship harvest must declare the same embeddingDims/model as
+		// the bases or the materialize restore gate refuses it.
+		//
+		// A MISS IS A STATE, NOT AN ERROR. Nothing stored means forge normally.
+		const attemptBaseBlockReuse = (std, callback) => {
+			if (!reuseForgedBlocks) {
+				callback('', false);
 				return;
 			}
-			if (reused) {
-				done('');
+			const stamp = components.forger.getVersionStamp({ standard: std.token });
+			if (stamp.error) {
+				xLog.status(`  [A] ${std.token}: cannot name a stored block without forging — ${stamp.error}`);
+				callback('', false);
 				return;
 			}
-			forgeOneStandardByForging(std, done);
-		});
-	};
-
-	const forgeOneStandardByForging = (std, done) => {
-		// The base block's subject and version are the RESOLVED EXPLICIT version, never the recipe's
-		// floating 'current' — so they are composed AFTER the forge, from its snapshot-provenance triple
-		// (in the forge task below). explicitVersion is the pretty resolved version (blocks.version and
-		// the harvest header); baseSubject SLUGS it for a clean key and appends the '_base' marker DERIVED
-		// from the kind, so the name and the kind cannot drift (the store's suffix<->kind gate refuses
-		// them if they do). Both are filled before the harvest/add tasks that read them run.
-		let explicitVersion = '';
-		let baseSubject = '';
-		const taskList = new taskListPlus();
-
-		// DISPOSE-ON-FAILURE (Item 4). The scratch graph is created mid-pipeline; every step after it
-		// (init, harvest, add) can fail, and pipeRunner aborts the list before its trailing delete
-		// task runs — stranding a live DEV_* container. createdGraph/deleteAttempted let the final
-		// handler best-effort dispose exactly what was created, exactly once: the success path's own
-		// delete task runs (deleteAttempted), so the handler does not double-delete; a mid-pipeline
-		// failure did NOT reach that task, so the handler disposes.
-		let createdGraph = null;
-		let deleteAttempted = false;
-
-		taskList.push((args, next) => {
-			// vectorize is STATED, not omitted. The forger has no default for it (Phase 4, work
-			// group 4) precisely because this call used to leave it out and get real embeddings and
-			// a real bill by silence. -build's contract, in graphBuilder's own -help, is that it
-			// "spends embedding credit BY DEFAULT"; that promise is made HERE, in one greppable
-			// place, rather than by an absent field agreeing with an in-code true.
-			//
-			// FIXED (Item 11): the graphBuilder operator CAN now turn this off. `vectorize` is
-			// resolved once at the top of build() from --vectorize (documented default true) or an
-			// explicit deps.vectorize, and threaded here — so a rehearsal build (`--vectorize=false`)
-			// spends nothing, and a typed `--vectorize=no` is refused rather than silently ignored.
-			// deriveHub is the HUB-FOLD SIGNAL (§7, new design): when this standard is named in
-			// recipe.hubs, the forger derives its hub and folds it into the nodeEdges it returns, so
-			// the ordinary [StandardBase] init+harvest below mints ONE block carrying base + hub. A
-			// non-hub standard passes false and gets base-only nodeEdges.
-			forger.forge(
-				{
-					standard: std.token,
-					version: std.version,
-					vectorize: vectorizeSpend,
-					embeddingCacheFilePath,
-					deriveHub: hubStdSet.has(String(std.token).toLowerCase()),
-				},
-				(err, forgeReport) => {
-					if (!err) {
-						// The EXPLICIT resolved version replaces the recipe's floating 'current' in every
-						// persisted place: composed HERE from the forge's snapshot-provenance triple, then
-						// read by the harvest header (pretty), the block subject (slugged), and blocks.version.
-						explicitVersion = explicitVersionFrom(forgeReport);
-						baseSubject = `${std.token}@${slugifyVersion(explicitVersion)}${vocabulary.suffixMarkerForKind(
-							vocabulary.SCHEMA_BLOCK_KIND.STANDARD_BASE,
-						)}`;
-						// carried per token for Phase C's version-keyed relationship subjects — NOT the
-						// recipe token, NOT bundleVersion.
-						resolvedVersionByToken[std.token] = explicitVersion;
-							// same embedder for every standard in the run — captured for Phase C's
-							// relationship harvest header (undefined on --vectorize=false).
-							buildEmbeddingModelVersion = forgeReport.embeddingModelVersion;
-							buildEmbeddingDims = forgeReport.nodeEdges.embeddingDims;
+			const reuseVersion = explicitVersionFrom(stamp.value);
+			const reuseSubject = `${std.token}@${slugifyVersion(reuseVersion)}${vocabulary.suffixMarkerForKind(
+				vocabulary.SCHEMA_BLOCK_KIND.STANDARD_BASE,
+			)}`;
+			standardsDatabase.findBlockBySubject(
+				{ kind: 'standardBase', subject: reuseSubject, version: reuseVersion },
+				(findError, found) => {
+					if (findError) {
+						callback(findError);
+						return;
 					}
-					next(err ? `forge ${std.token}: ${err}` : '', { ...args, forgeReport });
-				},
-			);
-		});
-
-		// ---- hub-fold reports (hubReimplementation Phase 2, SPEC §5) ----
-		// Present on the forge report ONLY when this standard's forge folded a hub. An EMPTY
-		// report is written explicitly (SPEC §5: "no report" must always mean "did not run").
-		taskList.push((args, next) => {
-			if (
-				args.forgeReport.hubDivergenceReport === undefined &&
-				args.forgeReport.hubSkipReport === undefined
-			) {
-				next('', args);
-				return;
-			}
-			// ⟪P2-review S-1⟫ the two reports are a PAIR from one fold; one without the other is
-			// a malformed forge report, refused BY NAME — not a JSON.stringify(undefined) crash
-			// inside the write callback.
-			if (
-				args.forgeReport.hubDivergenceReport === undefined ||
-				args.forgeReport.hubSkipReport === undefined
-			) {
-				next(
-					`build: the forge report for ${std.token} carries ` +
-						`${args.forgeReport.hubDivergenceReport === undefined ? 'NO hubDivergenceReport' : 'NO hubSkipReport'} ` +
-						`while its pair is present — the fold emits both together (explicit-empty when ` +
-						`empty), so half a pair is a malformed report, refused rather than half-written.`,
-				);
-				return;
-			}
-			fs.mkdir(buildReportsDirPath, { recursive: true }, (mkdirError) => {
-				if (mkdirError) {
-					next(
-						`build: cannot create the build report directory ` +
-							`'${buildReportsDirPath}': ${mkdirError.message}`,
-					);
-					return;
-				}
-				const divergenceReportPath = path.join(
-					buildReportsDirPath,
-					'cedsProseDivergence.json',
-				);
-				const skipReportPath = path.join(buildReportsDirPath, 'cedsHubSkipReport.json');
-				fs.writeFile(
-					divergenceReportPath,
-					JSON.stringify(args.forgeReport.hubDivergenceReport, null, '\t'),
-					(divergenceWriteError) => {
-						if (divergenceWriteError) {
-							next(
-								`build: cannot write '${divergenceReportPath}': ` +
-									`${divergenceWriteError.message}`,
+					if (!found) {
+						xLog.status(`  [A] ${std.token}: no stored block for '${reuseSubject}' — forging`);
+						callback('', false);
+						return;
+					}
+					// getBlock returns the whole ROW and VERIFIES the content address before handing it back,
+					// so reuse inherits corruption detection for free: a tampered or truncated block is
+					// refused by name here rather than materializing into a graph.
+					standardsDatabase.getBlock({ refId: found.refId }, (getError, blockRow) => {
+						if (getError) {
+							callback(`reuse ${reuseSubject}: ${getError}`);
+							return;
+						}
+						if (!blockRow || blockRow.text === undefined || blockRow.text === null) {
+							callback(
+								`reuse ${reuseSubject}: the store found block ${found.refId} by subject but ` +
+									`returned no text for it.`,
 							);
 							return;
 						}
-						fs.writeFile(
-							skipReportPath,
-							JSON.stringify(args.forgeReport.hubSkipReport, null, '\t'),
-							(skipWriteError) => {
-								if (skipWriteError) {
-									next(
-										`build: cannot write '${skipReportPath}': ${skipWriteError.message}`,
-									);
-									return;
-								}
-								xLog.status(
-									`  [hubReports] ${args.forgeReport.hubDivergenceReport.length} ` +
-										`prose-divergence row(s) -> ${divergenceReportPath}; ` +
-										`${args.forgeReport.hubSkipReport.length} skip row(s) -> ${skipReportPath}`,
-								);
-								next('', args);
-							},
-						);
-					},
-				);
-			});
-		});
-
-		// ⟪P2-review S-2⟫ the heap gate fires BEFORE any container is provisioned, so an
-		// under-provisioned process refuses by name (with the --max-old-space-size remedy)
-		// instead of OOM-killing mid-load and stranding the scratch graph.
-		taskList.push((args, next) => {
-			const adequacy = resolveHeapAdequacy({
-				nodeCount: args.forgeReport.nodeEdges.nodes.length,
-				embeddingDims: args.forgeReport.nodeEdges.embeddingDims,
-			});
-			if (adequacy.error) {
-				next(adequacy.error);
-				return;
-			}
-			next('', args);
-		});
-
-		taskList.push((args, next) => {
-			replay.create({ purpose: 'forge' }, (err, workingGraph) => {
-				if (!err) {
-					createdGraph = workingGraph;
-				}
-				next(err ? `create(forge) for ${std.token}: ${err}` : '', { ...args, workingGraph });
-			});
-		});
-
-		// the forger produced; replayManager loads. The label the harvest will select on is the
-		// label init stamps — handed down, not hoped for. When this standard is a hub, forgeReport
-		// .nodeEdges ALREADY carries the folded hub (the forger concatenated it); applyLabels ADDS
-		// StandardBase to every loaded node WITHOUT removing its own labels (replayManager
-		// withAppliedLabels is a union), so the hub nodes gain StandardBase alongside their intrinsic
-		// HubReference/HubDefinition and harvest with the base as one block.
-		taskList.push((args, next) => {
-			replay.init(
-				{
-					inGraph: args.workingGraph,
-					nodeEdges: args.forgeReport.nodeEdges,
-					applyLabels: [BASE_GRAPH_LABEL],
-					sourceLabel: `nodeEdges from forge bundle '${std.token}'`,
-				},
-				// CAPTURE THE LOADED CONSERVATION SUMMARY. It is computed at LOAD time from the payload
-				// in hand and threaded to the harvest below, because the scratch graph is destroyed
-				// immediately after harvest and the loaded side cannot be recovered afterwards.
-				(err, initReport) =>
-					next(err ? `init ${std.token}: ${err}` : '', {
-						...args,
-						loadedConservationSummary: initReport && initReport.loadedConservationSummary,
-					}),
-			);
-		});
-
-		// ⟪R-P2-2⟫ resolve this standard's vector-store BEFORE the harvest, exactly when the block
-		// will carry vectors (the forge report's embeddingDims is the declaration). An un-vectorized
-		// build resolves nothing and creates no store file — hermetic runs never touch the canonical
-		// home. With the store injected, the harvested block carries per-node embeddingRefs and the
-		// raw vectors land in the sidecar, so the block text stays under the V8 string ceiling
-		// whatever the card population.
-		taskList.push((args, next) => {
-			if (
-				args.forgeReport.nodeEdges.embeddingDims === null ||
-				args.forgeReport.nodeEdges.embeddingDims === undefined
-			) {
-				next('', { ...args, standardVectorStore: undefined });
-				return;
-			}
-			vectorStoreResolver(std.token, (resolveError, standardVectorStore) => {
-				if (resolveError) {
-					next(`harvest standardBase ${std.token}: ${resolveError}`);
-					return;
-				}
-				next('', { ...args, standardVectorStore });
-			});
-		});
-
-		taskList.push((args, next) => {
-			replay.harvest(
-				{
-					inGraph: args.workingGraph,
-					selectionLabels: [BASE_GRAPH_LABEL],
-					vectorStore: args.standardVectorStore,
-					// ⟪JOB 2⟫ the forge-to-harvest conservation gate. This block WAS loaded through init,
-					// so it gets a real comparison rather than the declared exemption.
-					conservationExpectation: args.loadedConservationSummary,
-					header: {
-						blockType: 'standardBase',
-						standardKey: std.token,
-						version: explicitVersion,
-						// EMBEDDING/ADDRESSING HEADER (restored 2026-07-26). A standardBase block that
-						// CARRIES vectors must declare, in its header, the property naming its stable URI
-						// and the width + model the vectors were made at: the block serializer copies these
-						// from the header (replay-block.serializeHeaderLine) and the restore gate REFUSES an
-						// embedded block whose header omits embeddingDims. From the 2026-07-23 stub->real
-						// rewrite (1b091d1) this header was a bare {blockType,standardKey,version}, so EVERY
-						// embedded build failed on restore while un-embedded builds (which need none of
-						// this) passed — a whole path no credit-free suite could see. Values are CARRIED
-						// from the forge report, never invented; on --vectorize=false the forger reports
-						// them undefined/null and the optional fields drop, as an un-embedded block wants.
-						stableUriPropertyName: args.forgeReport.stableUriPropertyName,
-						resolutionKey: args.forgeReport.stableUriPropertyName,
-						embeddingModelVersion: args.forgeReport.embeddingModelVersion,
-						embeddingEncoding: 'base64',
-						embeddingDtype: 'float32',
-						embeddingByteOrder: 'little-endian',
-						embeddingDims: args.forgeReport.nodeEdges.embeddingDims,
-					},
-				},
-				(err, schemaBlock) => {
-					if (!err) {
-						// the harvested base block — kept per token so a bridge can RESTORE its dependency
-						// bases into the dependency graph (Phase C), the source the producer WALKs.
-						baseBlockByToken[std.token] = schemaBlock;
-						// ⟪JOB 6a⟫ the conservation verdict for this block, written where the promotion gate reads it.
-						const artifactRefusal = writeConservationArtifact({ buildReportsDirPath, schemaBlock });
-						if (artifactRefusal) {
-							next(`harvest standardBase ${std.token}: ${artifactRefusal}`);
+						const text = typeof blockRow.text === 'string' ? blockRow.text : `${blockRow.text}`;
+						// the block's FIRST LINE is its header; the embedding identity is declared there.
+						let header = {};
+						const parseHeader = () => {
+							header = JSON.parse(text.slice(0, text.indexOf('\n')));
+						};
+						try {
+							parseHeader();
+						} catch (headerError) {
+							callback(
+								`reuse ${reuseSubject}: the stored block's header line is not parseable JSON ` +
+									`(${headerError.message}) — refusing to reuse a block whose embedding identity ` +
+									`cannot be read.`,
+							);
 							return;
 						}
-					}
-					next(err ? `harvest standardBase ${std.token}: ${err}` : '', { ...args, schemaBlock });
-				},
-			);
-		});
-
-		// add takes the harvested SCHEMA BLOCK, not an id: manifestEditor owns storing, and it
-		// re-derives the content address from the text before writing, so a block cannot enter the
-		// store under an address that does not describe it.
-		taskList.push((args, next) => {
-			manifest.add(
-				{
-					subject: baseSubject,
-					kind: 'standardBase',
-					version: explicitVersion,
-					description: `standardBase schema block for ${baseSubject}, forged by recipe '${recipe.recipeName}'`,
-					schemaBlock: args.schemaBlock,
-				},
-				(err, addReport) => {
-					if (err) {
-						next(`add standardBase ${baseSubject}: ${err}`);
-						return;
-					}
-					// alreadyPresent is REPORTED, not inferred. standards-database.saveBlock content-addresses
-					// the block and answers { refId, alreadyPresent } — true meaning 'the same bytes ARE the same
-					// block. Not an error, not a rewrite.' It is emitted here because A BYTE-IDENTITY GATE CANNOT
-					// READ IT FROM THE ABSENCE OF A NEW ROW: a forge that silently skipped writing also inserts
-					// nothing, and by row count the two are indistinguishable. Observability ONLY — this line
-					// changes no block text, no block id and no control flow. (versionFromStamp order, scope
-					// addition authorized by the design authority 2026-08-31.)
-					xLog.status(
-						`  [A] forge ${baseSubject} -> standardBase ${addReport.schemaBlockRefId} ` +
-							`(alreadyPresent ${addReport.alreadyPresent === true ? 'true' : addReport.alreadyPresent === false ? 'false' : 'NOT REPORTED'})`,
-					);
-					next('', args);
-				},
-			);
-		});
-
-		// NO SEPARATE HUB BLOCK (hub-fold design 2026-07-24). A hub standard's hub is already folded
-		// into the base nodeEdges by the forger and harvested with the base above — one block per
-		// standard. The first Phase-3 attempt's second block (deserialize base -> forgeHub -> init ->
-		// harvest(:HubReference:HubDefinition) -> add({..._hub})) is deleted: the replay engine's
-		// conjunctive labelMatch could not union two hub node types and fetchEdgesWithinLabels dropped
-		// the hub's cross-boundary HAS_CEDS_* edges. Folding into the base dissolves both — the edges
-		// live within one [StandardBase] block, both endpoints present. The '_hub' subject marker
-		// and kind:'hub' stay RESERVED in vocabulary, harmless and unused.
-
-		taskList.push((args, next) => {
-			deleteAttempted = true;
-			replay.delete(args.workingGraph, (err) => next(err || '', args));
-		});
-
-		pipeRunner(taskList.getList(), {}, (err) => {
-			if (err && createdGraph && !deleteAttempted) {
-				// a mid-pipeline failure stranded the forge graph — best-effort dispose it, then report
-				// the ORIGINAL error (with a note if disposal also failed). The build's failure is the
-				// forge failure; a disposal that also fails must not mask it.
-				replay.delete(createdGraph, (deleteErr) => {
-					done(
-						deleteErr
-							? `${err} (its scratch graph '${createdGraph.graphName}' also failed to dispose and is leaking: ${deleteErr})`
-							: err,
-					);
-				});
-				return;
-			}
-			done(err || '');
-		});
-	};
-
-	const phaseA = (done) => eachSeries(standards, forgeOneStandard, done);
-
-	// ---- Phase C: bridges (materialize dep graph, run bridge, harvest labeled relationships) ----
-	const bridgeOnePairing = (bridge, done) => {
-		// pairLabel identifies the pairing for the operator (source::hub / source::pairWith / source::family);
-		// the version-keyed, producer-suffixed subject is COMPOSED PER EMITTED BLOCK after the bridge runs
-		// (multi-block change 2026-07-26 — one invocation may emit several pair-scoped blocks). §7.
-		const pairLabel = pairKey(bridge);
-		// THE RECIPE NAMES THE BRIDGE. RECIPE_SCHEMA requires it on every bridge, so a recipe that
-		// reaches here has one; there is no in-code name standing behind the key any more
-		// (polyArch2 §6). The guard is here rather than only in the schema because build() is
-		// reachable with a recipe object that never went through validateRecipe (the test seam
-		// does exactly that), and a bridge whose name is absent must say so rather than run
-		// something nobody asked for. `bridgeName` is the entry's `.bridge` field — the resolvable
-		// bridge NAME (was `mapper`; it names a mapping OR a structural producer, so 'mapper' was a
-		// misnomer, renamed per design_bridgeResolution_072526 §5).
-		const bridgeName = bridge.bridge;
-		if (typeof bridgeName !== 'string' || bridgeName.trim() === '') {
-			done(
-				`bridge ${pairLabel}: bridge is ${
-					bridgeName === undefined ? 'not named' : JSON.stringify(bridgeName)
-				}. Every bridge entry names its bridge in the recipe — it IS what the bridge does, and ` +
-					`there is no default. Nothing was substituted for it.`,
-			);
-			return;
-		}
-		const taskList = new taskListPlus();
-
-		// DISPOSE-ON-FAILURE (Item 4), same idiom as phase A: a bridge failure after create must not
-		// strand the dependency graph.
-		let createdGraph = null;
-		let deleteAttempted = false;
-
-		// create means "an empty graph", always. The dependency schema blocks go IN through init's
-		// RESTORATION payload in the next task — the producer WALKs the restored nodes.
-		taskList.push((args, next) => {
-			replay.create({ purpose: 'dependencyGraph' }, (err, depGraph) => {
-				if (!err) {
-					createdGraph = depGraph;
-				}
-				next(err ? `create(dep) ${pairLabel}: ${err}` : '', { ...args, depGraph });
-			});
-		});
-
-		// RESTORE the bridge's dependency bases (source + hub) into the dependency graph, so the producer
-		// has real nodes to read: the source standard's elements, the CEDS HubReferences and the CEDS
-		// standard rows all live in these two base blocks (the hub is FOLDED into the CEDS base). A missing
-		// dependency base is a recipe/order fault, named — never a silent empty graph (polyArch2 §6).
-		taskList.push((args, next) => {
-			// RESTORE the pairing's two endpoints (source + hub-or-pairWith) AND the bridge's declared
-			// `dependencies` (design_bridgeResolution_072526 §5: "dependencies is what gets loaded to read").
-			// For a mapping bridge dependencies is [source, hub] — no change. For a STRUCTURAL bridge it is the
-			// whole family, so the THIRD sibling's base is restored too and the producer can resolve crossRefs
-			// against the WHOLE family (telling a cross-sibling ref apart from a dangler). Deduped; a missing
-			// base is a recipe/order fault, named — never a silent empty graph (polyArch2 §6).
-			const dependencyTokens = Array.from(
-				new Set(
-					[bridge.source, bridge.hub, bridge.pairWith]
-						.concat(bridge.dependencies || [])
-						.filter((oneToken) => oneToken !== undefined && oneToken !== null && `${oneToken}`.trim() !== ''),
-				),
-			);
-			const missing = dependencyTokens.filter((oneToken) => !baseBlockByToken[oneToken]);
-			if (missing.length) {
-				next(
-					`restore deps ${pairLabel}: dependency base block(s) not forged in this build: ${missing.join(', ')}. ` +
-						`A bridge's source and hub must both be forged before it runs; nothing was substituted.`,
-				);
-				return;
-			}
-			const schemaBlocks = dependencyTokens.map((oneToken) => baseBlockByToken[oneToken].blockText);
-			// ⟪P2-review M-1⟫ the dependency-graph restore carries the SAME resolver as the
-			// materialize leg: a bridge's dependency bases now arrive ref-style (every vectorized
-			// standard after R-P2-2), and a resolverless restore would hand the bridge a graph
-			// whose candidates carry no embedding — the exact path Phase 3's no-reembed contract
-			// (G-15) reads. The engine's M-2 refusal is the layer-owned backstop; this is the wire.
-			replay.init({ inGraph: args.depGraph, schemaBlocks, storeResolver: vectorStoreResolver }, (err) =>
-				next(err ? `restore deps ${pairLabel}: ${err}` : '', args),
-			);
-		});
-
-		taskList.push((args, next) => {
-			// THREAD the recipe's hub token so the producer knows which hub it authors toward. CAPTURE the
-			// run report: a deterministic authored producer returns decisionBlock null (-> _exact); an
-			// inferred producer returns a frozen decision block (-> _close). The producer suffix is DERIVED
-			// from that, then the version-keyed relationship name is composed with the REAL resolved versions.
-			// this pairing's inferred inputs (§5.5): rebridge is TRUE only when this pair's source is in the
-			// resolved --rebridge scope — the scope match happens HERE, where the recipe pair is known, not
-			// guessed in the plugin. config carries the producer's own operational data (the source standard
-			// + the REAL resolved versions the forge read; the a4a0da2 rule). An authored producer ignores
-			// rebridge/decisionStore/inferenceConfig entirely.
-			const thisPairRebridges = pairInRebridgeScope(rebridgeScope, bridge);
-			// sourceStandardName — the EXACT declared standardName from the source bundle's
-			// parserDescriptor.ini (the one canonical token->name authority; forged `_source` carries
-			// this value VERBATIM). Added 2026-07-30 after the EdFi authored-anchor run silently wrote
-			// an EMPTY relationship block: the bridge's old CASE-RULE uppercase of the recipe token
-			// ('edfi'->'EDFI') matched no `_source: 'EdFi'` node. One canonical source, exact match —
-			// never normalize at the comparison site.
-			const sourceBundle = components.forger.resolveBundle({ standard: bridge.source });
-			if (sourceBundle.error) {
-				next(`bridge ${pairLabel}: resolving source bundle for standardName: ${sourceBundle.error}`);
-				return;
-			}
-			bridgeMaker.run(
-				{
-					inGraph: args.depGraph,
-					bridge: bridgeName,
-					// source selects the standard-local bridge search directory
-					// (forges/<source>/bridges/) so a standard's bespoke bridge is found; a
-					// forges-shared or library bridge resolves without it.
-					source: bridge.source,
-					hub: bridge.hub,
-					applyLabel: RELATION_LABEL,
-					rebridge: thisPairRebridges,
-					decisionStore,
-					judgmentCache,
-					matchForensics,
-					inferenceConfig,
-					config: {
-						// bridges[].params — DE-VESTIGIALIZED (2026-07-31, the SIF StudentPersonal trial):
-						// a recipe's bridge entry may now carry bridge-specific options (e.g. the SIF
-						// bridge's sifObjectScope) and they reach the producer as config keys. Spread FIRST
-						// so the orchestrator-owned keys below always win over a recipe collision.
-						...(bridge.params || {}),
-						// ⟪skipAI WINDOW⟫ --limit/--offset reach every bridge as config, AFTER the recipe's own
-						// params spread so an operator's window always wins over a recipe's. Undefined on an
-						// ordinary run, which the bridges pass through untouched.
-						limit: sourceWindow.limit,
-						offset: sourceWindow.offset,
-						sourceStandard: bridge.source,
-						sourceStandardName: sourceBundle.standardName,
-						sourceVersion: resolvedVersionByToken[bridge.source],
-						hubVersion: resolvedVersionByToken[bridge.hub],
-						// pairWith + its resolved version reach a STRUCTURAL producer (ctdlFamilyStructure) so it
-						// knows its sibling pairing endpoint; undefined for a mapping bridge, which ignores them.
-						pairWith: bridge.pairWith,
-						pairWithVersion: resolvedVersionByToken[bridge.pairWith],
-						// familyStandards is the READ scope a structural producer resolves crossRefs against — the
-						// whole family, so a cross-sibling ref is told apart from a dangler (the third sibling is
-						// among the restored dependency bases). undefined for a mapping bridge, which ignores it.
-						familyStandards: bridge.familyStandards || bridge.dependencies,
-					},
-				},
-				(err, runReport) => {
-					if (err) {
-						next(`bridge ${pairLabel}: ${err}`);
-						return;
-					}
-					// MULTI-BLOCK HARVEST (contract change 2026-07-26). A bridge invocation may emit MORE THAN ONE
-					// pair-scoped block. NORMALIZE runReport into a `blocks` array so ONE code path serves both:
-					//   * a coordinating producer (ctdlFamilyStructure) returns blocks[] — each with its OWN
-					//     applyLabel (the distinct per-pair label it WROTE under) and its pair's firstStandard/
-					//     secondStandard TOKENS, so build.js version-keys EACH block on its own two endpoints;
-					//   * a single-block mapping bridge (ctdlAuthoredBridge, semanticBridge) returns NO blocks[];
-					//     the degenerate list-of-one is synthesized from the top-level status, its endpoints
-					//     falling back to the RECIPE (hub/source or source/pairWith) exactly as before.
-					const emittedBlocks = Array.isArray(runReport.blocks) && runReport.blocks.length
-						? runReport.blocks
-						// ⟪JOB 5b⟫ the degenerate list-of-one carries the run's loaded summary too. A single-block
-						// bridge writes through the same door; if only the blocks[] path carried the expectation,
-						// the commoner shape would silently keep needing an exemption.
-						: [{ applyLabel: RELATION_LABEL, firstStandard: undefined, secondStandard: undefined, producer: runReport.producer, decisionBlock: runReport.decisionBlock, loadedConservationSummary: runReport.loadedConservationSummary }];
-					next('', { ...args, emittedBlocks });
-				},
-			);
-		});
-
-		// HARVEST-AND-ADD EACH emitted block into its OWN version-keyed, pair-scoped manifest member. The
-		// three CTDL-family pairings (or the one mapping block) are harvested in the order the producer
-		// emitted them (S11: root-first then lexicographic for the family). eachSeries sequences the
-		// unknown-length block list; a failure on any block names its label and aborts the pairing.
-		taskList.push((args, next) => {
-			eachSeries(
-				args.emittedBlocks,
-				(oneBlock, blockDone) => {
-					// THE PRODUCER DECLARES ITS OWN KIND (polyArch2 §6). A named producer is BELIEVED iff the
-					// vocabulary registers a suffix for it (authored/inferred/structural — one data row, no edit
-					// here). Only a silent producer is inferred from decisionBlock (null -> authored/_exact;
-					// non-null -> inferred/_close), preserving the two-producers-per-pair distinction.
-					const producer =
-						oneBlock && vocabulary.suffixForRelationshipProducer(oneBlock.producer)
-							? oneBlock.producer
-							: oneBlock && oneBlock.decisionBlock != null
-								? 'inferred'
-								: 'authored';
-					// VERSION-KEY ON BOTH ENDPOINTS, ROOT-FIRST. A multi-block producer supplies the pair's two
-					// TOKENS (root-first then lexicographic); a single mapping block falls back to the recipe
-					// (hub_rel_source for a mapping bridge, source_rel_pairWith for a structural pair). Both
-					// endpoints carry their REAL resolved version (the a4a0da2 rule), looked up per token.
-					const nameFirst =
-						oneBlock.firstStandard !== undefined
-							? oneBlock.firstStandard
-							: bridge.hub !== undefined
-								? bridge.hub
-								: bridge.source;
-					const nameSecond =
-						oneBlock.secondStandard !== undefined
-							? oneBlock.secondStandard
-							: bridge.hub !== undefined
-								? bridge.source
-								: bridge.pairWith;
-					const composed = vocabulary.relationshipSubject({
-						hubStandard: nameFirst,
-						hubVersion: resolvedVersionByToken[nameFirst],
-						sourceStandard: nameSecond,
-						sourceVersion: resolvedVersionByToken[nameSecond],
-						producer,
-						// THE OPT-IN DISCRIMINATOR, CARRIED ON THE BLOCK (Phase 7). The orchestrator never sees a
-						// plugin declaration — it hands bridgeMaker a NAME and gets back a runReport — so the
-						// declared value rides out on each blocks[] entry and is passed straight through here.
-						// `undefined` when the plugin declares nothing, which is every plugin but one, and the
-						// composer's undefined path returns the string it returned before this parameter existed.
-						discriminator: oneBlock.subjectDiscriminator,
-					});
-					if (composed.error) {
-						blockDone(`bridge ${pairLabel}: ${composed.error}`);
-						return;
-					}
-					const oneSubject = composed.subject;
-					const blockLabel = oneBlock.applyLabel || RELATION_LABEL;
-					replay.harvest(
-						{
-							inGraph: args.depGraph,
-							selectionLabels: [blockLabel],
-							// ⟪JOB 5b⟫ THE EXEMPTION IS GONE. JOB 2 declared NOT_LOADED_THROUGH_INIT here because
-							// bridgeMaker writes through lib/bridge-framework/graphWriter rather than
-							// replayManager.init, so no init-captured loaded set existed. One now does: the
-							// bridge writer accumulates what it merged and returns it on close, and it is
-							// threaded here per emitted block. This seam is GATED, not exempted.
-							//
-							// NO SILENT EXEMPTION IF IT IS ABSENT. An undefined here makes compareConservation
-							// REFUSE BY NAME rather than pass, which is the point: a thread that got dropped
-							// must not be indistinguishable from a seam that legitimately has nothing to
-							// compare. Do not restore the exemption to quiet that refusal — find the drop.
-							conservationExpectation: oneBlock.loadedConservationSummary,
-							header: {
-								blockType: 'relationship',
-								standardKey: oneSubject,
-								// SECOND SITE of the missing-embedding-header defect (2026-07-26). A bridged
-								// node is an embedded base node, so a relationship block that carries it must
-								// declare the SAME embedding width/model as the bases, or the materialize
-								// restore gate refuses it (this is why --vectorize=false sailed through and
-								// --vectorize=true failed at manifest[3]). stableUriPropertyName is
-								// deliberately OMITTED: these nodes were already replayed, so shapeNode
-								// round-trips them off the stored stableId ("re-extract byte-identical").
-								// undefined on --vectorize=false, when the optional fields drop.
-								embeddingModelVersion: buildEmbeddingModelVersion,
-								embeddingEncoding: 'base64',
-								embeddingDtype: 'float32',
-								embeddingByteOrder: 'little-endian',
-								embeddingDims: buildEmbeddingDims,
+						// I7b — the reuse path's ONLY inspection of the text used to be the header line
+						// above. Ask, now, whether the block it matched by NAME actually carries the hub
+						// this recipe declared. Refused BY NAME; nothing substituted. (Phase 2a.)
+						const hublessReuseRefusal = refuseHublessReuseUnderDeriveHub({
+							deriveHub: hubStdSet.has(String(std.token).toLowerCase()),
+							reusedBlockText: text,
+							subject: reuseSubject,
+						});
+						if (hublessReuseRefusal !== '') {
+							callback(hublessReuseRefusal);
+							return;
+						}
+						resolvedVersionByToken[std.token] = reuseVersion;
+						baseBlockByToken[std.token] = { blockText: text, refId: found.refId };
+						buildEmbeddingModelVersion = header.embeddingModelVersion;
+						buildEmbeddingDims = header.embeddingDims;
+						xLog.status(
+							`  [A] REUSED ${reuseSubject} -> standardBase ${found.refId} (forged ${found.createdAt}) ` +
+								`— NOT FORGED. --reuseForgedBlocks resolves by NAME, so this is only correct if the ` +
+								`forge that made it is the forge you mean.`,
+						);
+						manifest.add(
+							{
+								subject: reuseSubject,
+								kind: 'standardBase',
+								version: reuseVersion,
+								description: `standardBase schema block for ${reuseSubject}, REUSED (not forged) by recipe '${recipe.recipeName}'`,
+								// refId MUST ride along: manifestEditor re-derives the content address from the
+								// text and refuses a block claiming an address that does not describe it. A
+								// reused block already HAS its address — omitting it claimed '' and was rightly
+								// refused.
+								schemaBlock: { blockText: text, refId: found.refId },
 							},
-						},
-						(harvestErr, schemaBlock) => {
-							if (harvestErr) {
-								blockDone(`harvest relationships ${pairLabel}: ${harvestErr}`);
+							(addError) => callback(addError ? `reuse add ${reuseSubject}: ${addError}` : '', !addError),
+						);
+					});
+				},
+			);
+		};
+
+		const forgeOneStandard = (std, done) => {
+			attemptBaseBlockReuse(std, (reuseError, reused) => {
+				if (reuseError) {
+					done(reuseError);
+					return;
+				}
+				if (reused) {
+					done('');
+					return;
+				}
+				forgeOneStandardByForging(std, done);
+			});
+		};
+
+		const forgeOneStandardByForging = (std, done) => {
+			// The base block's subject and version are the RESOLVED EXPLICIT version, never the recipe's
+			// floating 'current' — so they are composed AFTER the forge, from its snapshot-provenance triple
+			// (in the forge task below). explicitVersion is the pretty resolved version (blocks.version and
+			// the harvest header); baseSubject SLUGS it for a clean key and appends the '_base' marker DERIVED
+			// from the kind, so the name and the kind cannot drift (the store's suffix<->kind gate refuses
+			// them if they do). Both are filled before the harvest/add tasks that read them run.
+			let explicitVersion = '';
+			let baseSubject = '';
+			const taskList = new taskListPlus();
+
+			// DISPOSE-ON-FAILURE (Item 4). The scratch graph is created mid-pipeline; every step after it
+			// (init, harvest, add) can fail, and pipeRunner aborts the list before its trailing delete
+			// task runs — stranding a live DEV_* container. createdGraph/deleteAttempted let the final
+			// handler best-effort dispose exactly what was created, exactly once: the success path's own
+			// delete task runs (deleteAttempted), so the handler does not double-delete; a mid-pipeline
+			// failure did NOT reach that task, so the handler disposes.
+			let createdGraph = null;
+			let deleteAttempted = false;
+
+			taskList.push((args, next) => {
+				// vectorize is STATED, not omitted. The forger has no default for it (Phase 4, work
+				// group 4) precisely because this call used to leave it out and get real embeddings and
+				// a real bill by silence. -build's contract, in graphBuilder's own -help, is that it
+				// "spends embedding credit BY DEFAULT"; that promise is made HERE, in one greppable
+				// place, rather than by an absent field agreeing with an in-code true.
+				//
+				// FIXED (Item 11): the graphBuilder operator CAN now turn this off. `vectorize` is
+				// resolved once at the top of build() from --vectorize (documented default true) or an
+				// explicit deps.vectorize, and threaded here — so a rehearsal build (`--vectorize=false`)
+				// spends nothing, and a typed `--vectorize=no` is refused rather than silently ignored.
+				// deriveHub is the HUB-FOLD SIGNAL (§7, new design): when this standard is named in
+				// recipe.hubs, the forger derives its hub and folds it into the nodeEdges it returns, so
+				// the ordinary [StandardBase] init+harvest below mints ONE block carrying base + hub. A
+				// non-hub standard passes false and gets base-only nodeEdges.
+				forger.forge(
+					{
+						standard: std.token,
+						version: std.version,
+						vectorize: vectorizeSpend,
+						embeddingCacheFilePath,
+						deriveHub: hubStdSet.has(String(std.token).toLowerCase()),
+					},
+					(err, forgeReport) => {
+						if (!err) {
+							// The EXPLICIT resolved version replaces the recipe's floating 'current' in every
+							// persisted place: composed HERE from the forge's snapshot-provenance triple, then
+							// read by the harvest header (pretty), the block subject (slugged), and blocks.version.
+							explicitVersion = explicitVersionFrom(forgeReport);
+							baseSubject = `${std.token}@${slugifyVersion(explicitVersion)}${vocabulary.suffixMarkerForKind(
+								vocabulary.SCHEMA_BLOCK_KIND.STANDARD_BASE,
+							)}`;
+							// carried per token for Phase C's version-keyed relationship subjects — NOT the
+							// recipe token, NOT bundleVersion.
+							resolvedVersionByToken[std.token] = explicitVersion;
+								// same embedder for every standard in the run — captured for Phase C's
+								// relationship harvest header (undefined on --vectorize=false).
+								buildEmbeddingModelVersion = forgeReport.embeddingModelVersion;
+								buildEmbeddingDims = forgeReport.nodeEdges.embeddingDims;
+						}
+						next(err ? `forge ${std.token}: ${err}` : '', { ...args, forgeReport });
+					},
+				);
+			});
+
+			// ---- hub-fold reports (hubReimplementation Phase 2, SPEC §5) ----
+			// Present on the forge report ONLY when this standard's forge folded a hub. An EMPTY
+			// report is written explicitly (SPEC §5: "no report" must always mean "did not run").
+			taskList.push((args, next) => {
+				if (
+					args.forgeReport.hubDivergenceReport === undefined &&
+					args.forgeReport.hubSkipReport === undefined
+				) {
+					next('', args);
+					return;
+				}
+				// ⟪P2-review S-1⟫ the two reports are a PAIR from one fold; one without the other is
+				// a malformed forge report, refused BY NAME — not a JSON.stringify(undefined) crash
+				// inside the write callback.
+				if (
+					args.forgeReport.hubDivergenceReport === undefined ||
+					args.forgeReport.hubSkipReport === undefined
+				) {
+					next(
+						`build: the forge report for ${std.token} carries ` +
+							`${args.forgeReport.hubDivergenceReport === undefined ? 'NO hubDivergenceReport' : 'NO hubSkipReport'} ` +
+							`while its pair is present — the fold emits both together (explicit-empty when ` +
+							`empty), so half a pair is a malformed report, refused rather than half-written.`,
+					);
+					return;
+				}
+				fs.mkdir(buildReportsDirPath, { recursive: true }, (mkdirError) => {
+					if (mkdirError) {
+						next(
+							`build: cannot create the build report directory ` +
+								`'${buildReportsDirPath}': ${mkdirError.message}`,
+						);
+						return;
+					}
+					const divergenceReportPath = path.join(
+						buildReportsDirPath,
+						'cedsProseDivergence.json',
+					);
+					const skipReportPath = path.join(buildReportsDirPath, 'cedsHubSkipReport.json');
+					fs.writeFile(
+						divergenceReportPath,
+						JSON.stringify(args.forgeReport.hubDivergenceReport, null, '\t'),
+						(divergenceWriteError) => {
+							if (divergenceWriteError) {
+								next(
+									`build: cannot write '${divergenceReportPath}': ` +
+										`${divergenceWriteError.message}`,
+								);
 								return;
 							}
-							// ⟪JOB 6a⟫ the bridge seam's conservation verdict, written the same way the base
-							// seam's is — one artifact per harvested block, named by content address.
-							const relationshipArtifactRefusal = writeConservationArtifact({ buildReportsDirPath, schemaBlock });
-							if (relationshipArtifactRefusal) {
-								blockDone(`harvest relationships ${pairLabel}: ${relationshipArtifactRefusal}`);
-								return;
-							}
-							manifest.add(
-								{
-									subject: oneSubject,
-									kind: 'relationship',
-									description: `relationship schema block for ${oneSubject}, bridged by bridge '${bridgeName}' from recipe '${recipe.recipeName}'`,
-									schemaBlock,
-								},
-								(addErr, addReport) => {
-									if (addErr) {
-										blockDone(`add relationship ${pairLabel}: ${addErr}`);
+							fs.writeFile(
+								skipReportPath,
+								JSON.stringify(args.forgeReport.hubSkipReport, null, '\t'),
+								(skipWriteError) => {
+									if (skipWriteError) {
+										next(
+											`build: cannot write '${skipReportPath}': ${skipWriteError.message}`,
+										);
 										return;
 									}
 									xLog.status(
-										`  [C] bridge ${pairLabel} (bridge=${bridgeName}) -> relationship ${oneSubject} ${addReport.schemaBlockRefId}`,
+										`  [hubReports] ${args.forgeReport.hubDivergenceReport.length} ` +
+											`prose-divergence row(s) -> ${divergenceReportPath}; ` +
+											`${args.forgeReport.hubSkipReport.length} skip row(s) -> ${skipReportPath}`,
 									);
-									blockDone('');
+									next('', args);
 								},
 							);
 						},
 					);
-				},
-				(eachErr) => next(eachErr || '', args),
-			);
-		});
-
-		taskList.push((args, next) => {
-			deleteAttempted = true;
-			replay.delete(args.depGraph, (err) => next(err || '', args));
-		});
-
-		pipeRunner(taskList.getList(), {}, (err) => {
-			if (err && createdGraph && !deleteAttempted) {
-				replay.delete(createdGraph, (deleteErr) => {
-					done(
-						deleteErr
-							? `${err} (its dependency graph '${createdGraph.graphName}' also failed to dispose and is leaking: ${deleteErr})`
-							: err,
-					);
-				});
-				return;
-			}
-			done(err || '');
-		});
-	};
-
-	// refuseCollidingBridgeDeclarations — THE PRE-SPEND CHECK (SPEC §3.7, placement amended by RULING
-	// FJ-P7-1). The manifest editor already refuses a duplicate subject, but it does so at `manifest.add`,
-	// which is reached AFTER the colliding bridge's entire judge run: on a real judge that is a paid spend
-	// thrown away to learn something the recipe stated up front. This answers the same question from the
-	// DECLARATIONS alone — and, under FJ-P7-1, BEFORE PHASE A, so a colliding recipe costs neither a forge
-	// nor a judge.
-	//
-	// IT DELIBERATELY DOES NOT COMPOSE SUBJECTS, AND THAT IS WHAT LETS IT RUN THIS EARLY. Subjects need
-	// resolved versions, and versions are not resolved until phase A has forged or reused every base — so a
-	// subject-level check could not run before phase A at all. The TUPLE it compares is the part that IS
-	// knowable at declaration time: (hub, source, producerKind,
-	// subjectDiscriminator). Two bridges agreeing on all four WILL compose one subject whatever the versions
-	// turn out to be, because every remaining term is shared. That makes this check sound without being
-	// complete, and it is stated that way rather than sold as a subject check.
-	//
-	// MAPPING BRIDGES ONLY. A structural pairing carries `pairWith` and no `hub`; its subject is composed
-	// from a different pair of tokens, so pooling the two kinds would compare tuples that are not
-	// commensurable. Excluded by the presence of `hub`, which is the same discriminator phase C's own
-	// nameFirst/nameSecond resolution uses.
-	const refuseCollidingBridgeDeclarations = () => {
-		const mappingBridgeList = bridges.filter((oneBridge) => oneBridge.hub !== undefined);
-		// A COMPONENT THAT CANNOT DESCRIBE IS REFUSED BY NAME, NOT TOLERATED. describeBridge is part of the
-		// declared bridgeMaker interface, so a component lacking it is non-conforming — and the one thing this
-		// must never do is skip the check and let the build proceed, because a pre-spend gate that silently
-		// does not run is worse than no gate: it reads as "no collision" to everyone downstream. Reaching this
-		// with mapping bridges to check and no way to check them is a refusal.
-		if (mappingBridgeList.length > 0 && typeof bridgeMaker.describeBridge !== 'function') {
-			return (
-				`the bridgeMaker component does not expose describeBridge, so recipe ` +
-				`'${recipe.recipeName}' cannot be checked for colliding bridge declarations before any forge or ` +
-				`judge spend. describeBridge is a DECLARED member of COMPONENT_SHAPES.bridgeMaker ` +
-				`(apps/graph-builder/interfaces.js); a component missing it is non-conforming. The check is never ` +
-				`skipped silently — a pre-spend gate that does not run reads as "no collision" to everything after it.`
-			);
-		}
-		const describedList = [];
-		for (let bridgeIndex = 0; bridgeIndex < mappingBridgeList.length; bridgeIndex++) {
-			const oneBridge = mappingBridgeList[bridgeIndex];
-			const described = bridgeMaker.describeBridge({ bridgeName: oneBridge.bridge, source: oneBridge.source });
-			if (described.error) {
-				// A DELIBERATE BEHAVIOUR CHANGE, NAMED (review finding C-3, RULING FJ-P7-2 item 2). Before
-				// Phase 7 a recipe naming an unregistered bridge FORGED EVERY BASE and then failed inside
-				// bridgeMaker.run in phase C. Under FJ-P7-1 the declaration read happens before phase A, so the
-				// same recipe is now refused before a single forge runs. Strictly better, and OUTSIDE the
-				// backward-compatibility claim, which is scoped to subjects, block ids, manifests and fixtures —
-				// not to when an already-broken recipe learns it is broken.
-				//
-				// The refusal names the BRIDGE and the SOURCE it was looked up under, then carries the registry's
-				// own message VERBATIM. Verbatim on purpose: test-bgReg pins that text, and a wrapper that
-				// paraphrased it would break a gate while looking like an improvement.
-				return `recipe '${recipe.recipeName}' names bridge '${oneBridge.bridge}', which is not registered for source '${oneBridge.source}' — refused before phase A, so no base was forged for a recipe that cannot run. ${described.error}`;
-			}
-			describedList.push({ hub: oneBridge.hub, ...described.description });
-		}
-		// THE RULE ITSELF LIVES IN A PURE MODULE so its red twins exercise the rule rather than a copy of it
-		// (the genesisGuard.js / batchWindowVerdict.js precedent). This function keeps only the IMPURE half:
-		// one describeBridge lookup per mapping bridge.
-		return bridgeCollisionRuleLib.collisionRefusalFor({ recipeName: recipe.recipeName, describedBridgeList: describedList });
-	};
-
-	const phaseC = (done) => eachSeries(bridges, bridgeOnePairing, done);
-
-	// ---- Finish: compose the manifest, then materialize the eval golden ----
-	const composeAndMaterialize = () => {
-		const memberCount = manifest.members().length;
-
-		// refId() REFUSES an empty membership by throwing, and it is right to: the address of an
-		// empty membership is a constant every empty manifest would share. The orchestrator answers
-		// for its own recipe rather than letting that throw escape a callback-shaped API.
-		if (memberCount === 0) {
-			callback(
-				`compose failed: recipe '${recipe.recipeName}' produced no schema blocks, so there is ` +
-					`no manifest to address. A build that materializes nothing and reports success is ` +
-					`the failure this refuses to be.`,
-			);
-			return;
-		}
-
-		const manifestId = manifest.refId();
-		xLog.status(`  [compose] manifest ${manifestId} -- ${memberCount} members`);
-
-		// materialize the eval golden FROM the composed manifest. Held as a named continuation so the
-		// SAVE below can gate it: the manifest is persisted at compose time, then this runs.
-		const materializeFromManifest = () =>
-		manifest.schemaBlocks((blocksError, resolvedSchemaBlocks) => {
-			if (blocksError) {
-				callback(`compose failed: ${blocksError}`);
-				return;
-			}
-			// the shared materialize/restore tail (also used by -replay). create is MONOMORPHIC, the
-			// RESTORATION init carries no applyLabels, and a mid-fill failure disposes the eval graph
-			// rather than stranding it — all of that lives in materializeSchemaBlocks now.
-			materializeSchemaBlocks(
-				{
-					xLog,
-					replay,
-					resolvedSchemaBlocks,
-					manifestId,
-					memberCount,
-					// R-1 needs to know whether CEDS is in this graph at all.
-					standardTokens: (recipe.standards || []).map((one) => one.token),
-					commandLineParameters: process.global && process.global.commandLineParameters,
-					// ⟪R-P2-1⟫ the injected-or-real fidelity gate, resolved once at the top of build()
-					fidelityGateRunner: cedsFidelityGateRunner,
-					// ⟪R-P2-2⟫ the same per-build resolver the harvest used — restore stamps each
-					// ref-carrying node's vector back onto its graph node
-					storeResolver: vectorStoreResolver,
-					// ⟪graphSelfDoc Phase 5⟫ READ-ONLY store access for the manifest recipe.
-					storeReader: standardsDatabase,
-					// ⟪RT-13⟫ the stage runner + the 'build' spec: the descriptor-composed roster,
-					// the recipe's enablement, and the build's own run directory for the verdicts
-					// and the certification summary (RT-6: the verdict lands with the build outputs).
-					roundTripStageRunner,
-					roundTripStageSpec: {
-						mode: 'build',
-						enabled: roundTripStageEnabled,
-						disabledReason: roundTripStageDisabledReason,
-						roster: roundTripValidatorRoster,
-						outputDirPath: buildReportsDirPath,
-					},
-				},
-				callback,
-			);
-		});
-
-		// PERSIST THE MANIFEST AT COMPOSE TIME — the change that makes a -build ALWAYS write a manifest
-		// that regenerates the graph it just built. The manifest IS the compose artifact (the named,
-		// ordered membership); until 2026-07-25 a -build composed it and materialized from it but never
-		// called save(), so the manifests/manifestBlocks tables stayed EMPTY and the graph could not be
-		// regenerated from storage. save() assembles the membership from the manifest's own state and
-		// writes it through standardsDatabase.saveManifest, which addresses BY that membership — so a
-		// re-run over the same blocks dedups onto the manifest already there rather than erroring or
-		// duplicating. A save failure is NAMED through the callback, never stranded past this
-		// callback-shaped API, the same idiom as the dispose-on-failure handling above. Saved BEFORE
-		// materialize because the manifest is the compose artifact, not a by-product of materializing.
-		manifest.save((saveError) => {
-			if (saveError) {
-				callback(`compose failed: persisting the manifest ${manifestId}: ${saveError}`);
-				return;
-			}
-			// No separate phase marker: persistence is a sub-step of COMPOSE, not a distinct phase, and
-			// the compose line above already named this manifest. A second '[compose]' token would make
-			// the pipeline look like it composed twice.
-			materializeFromManifest();
-		});
-	};
-
-	// ⟪RT-13.1 / R-WO-16⟫ COMPOSE THE VALIDATOR ROSTER FIRST — before a single container is
-	// provisioned or a credit spent. The roster is read from the same parserDescriptor.ini
-	// authority the forge roster uses (components.forger.resolveBundle — injectable, so the
-	// hermetic suites drive it with doubles), and a DECLARED-BUT-MISSING validator refuses the
-	// build here, on every build, stage on or off: a descriptor naming a file that does not
-	// load is a broken bundle self-description regardless of whether anyone was about to run
-	// it. An UNRESOLVABLE bundle is NOT refused here — the forger's own phase-A refusal is the
-	// incumbent error for that case and keeps firing exactly as it always has.
-	roundTripStageLib.composeValidatorRoster(
-		{
-			standardTokens: standards.map((one) => one.token),
-			bundleResolver: components.forger.resolveBundle,
-		},
-		(rosterError, composedRoster) => {
-			if (rosterError) {
-				callback(`graphBuilder build: ${rosterError}`);
-				return;
-			}
-			roundTripValidatorRoster = composedRoster;
-			// RULING FJ-P7-1 (supervisor FROZEN_JOURNEY, 2026-08-29) — A DELIBERATE DEVIATION FROM SPEC §3.7,
-			// which placed this check "before phase C". It runs BEFORE PHASE A instead. The check reads
-			// DECLARATIONS ONLY — no resolved version, no per-block producer, nothing phase A produces — so
-			// nothing made it late except the spec's own wording, and refusing before the FORGE spend is
-			// strictly better than refusing before the judge spend. A recipe that cannot compose distinct
-			// relationship subjects is wrong at the moment it is read, not at the moment it is paid for.
-			const declarationCollisionRefusal = refuseCollidingBridgeDeclarations();
-			if (declarationCollisionRefusal !== '') {
-				callback(`graphBuilder build: ${declarationCollisionRefusal}`);
-				return;
-			}
-			phaseA((phaseAError) => {
-				if (phaseAError) {
-					callback(`phase A (forge) failed: ${phaseAError}`);
-					return;
-				}
-				phaseC((phaseCError) => {
-					if (phaseCError) {
-						callback(`phase C (bridge) failed: ${phaseCError}`);
-						return;
-					}
-					composeAndMaterialize();
 				});
 			});
-		},
-	);
+
+			// ⟪P2-review S-2⟫ the heap gate fires BEFORE any container is provisioned, so an
+			// under-provisioned process refuses by name (with the --max-old-space-size remedy)
+			// instead of OOM-killing mid-load and stranding the scratch graph.
+			taskList.push((args, next) => {
+				const adequacy = resolveHeapAdequacy({
+					nodeCount: args.forgeReport.nodeEdges.nodes.length,
+					embeddingDims: args.forgeReport.nodeEdges.embeddingDims,
+				});
+				if (adequacy.error) {
+					next(adequacy.error);
+					return;
+				}
+				next('', args);
+			});
+
+			taskList.push((args, next) => {
+				replay.create({ purpose: 'forge' }, (err, workingGraph) => {
+					if (!err) {
+						createdGraph = workingGraph;
+					}
+					next(err ? `create(forge) for ${std.token}: ${err}` : '', { ...args, workingGraph });
+				});
+			});
+
+			// the forger produced; replayManager loads. The label the harvest will select on is the
+			// label init stamps — handed down, not hoped for. When this standard is a hub, forgeReport
+			// .nodeEdges ALREADY carries the folded hub (the forger concatenated it); applyLabels ADDS
+			// StandardBase to every loaded node WITHOUT removing its own labels (replayManager
+			// withAppliedLabels is a union), so the hub nodes gain StandardBase alongside their intrinsic
+			// HubReference/HubDefinition and harvest with the base as one block.
+			taskList.push((args, next) => {
+				replay.init(
+					{
+						inGraph: args.workingGraph,
+						nodeEdges: args.forgeReport.nodeEdges,
+						applyLabels: [BASE_GRAPH_LABEL],
+						sourceLabel: `nodeEdges from forge bundle '${std.token}'`,
+					},
+					// CAPTURE THE LOADED CONSERVATION SUMMARY. It is computed at LOAD time from the payload
+					// in hand and threaded to the harvest below, because the scratch graph is destroyed
+					// immediately after harvest and the loaded side cannot be recovered afterwards.
+					(err, initReport) =>
+						next(err ? `init ${std.token}: ${err}` : '', {
+							...args,
+							loadedConservationSummary: initReport && initReport.loadedConservationSummary,
+						}),
+				);
+			});
+
+			// ⟪R-P2-2⟫ resolve this standard's vector-store BEFORE the harvest, exactly when the block
+			// will carry vectors (the forge report's embeddingDims is the declaration). An un-vectorized
+			// build resolves nothing and creates no store file — hermetic runs never touch the canonical
+			// home. With the store injected, the harvested block carries per-node embeddingRefs and the
+			// raw vectors land in the sidecar, so the block text stays under the V8 string ceiling
+			// whatever the card population.
+			taskList.push((args, next) => {
+				if (
+					args.forgeReport.nodeEdges.embeddingDims === null ||
+					args.forgeReport.nodeEdges.embeddingDims === undefined
+				) {
+					next('', { ...args, standardVectorStore: undefined });
+					return;
+				}
+				vectorStoreResolver(std.token, (resolveError, standardVectorStore) => {
+					if (resolveError) {
+						next(`harvest standardBase ${std.token}: ${resolveError}`);
+						return;
+					}
+					next('', { ...args, standardVectorStore });
+				});
+			});
+
+			taskList.push((args, next) => {
+				replay.harvest(
+					{
+						inGraph: args.workingGraph,
+						selectionLabels: [BASE_GRAPH_LABEL],
+						vectorStore: args.standardVectorStore,
+						// ⟪JOB 2⟫ the forge-to-harvest conservation gate. This block WAS loaded through init,
+						// so it gets a real comparison rather than the declared exemption.
+						conservationExpectation: args.loadedConservationSummary,
+						header: {
+							blockType: 'standardBase',
+							standardKey: std.token,
+							version: explicitVersion,
+							// EMBEDDING/ADDRESSING HEADER (restored 2026-07-26). A standardBase block that
+							// CARRIES vectors must declare, in its header, the property naming its stable URI
+							// and the width + model the vectors were made at: the block serializer copies these
+							// from the header (replay-block.serializeHeaderLine) and the restore gate REFUSES an
+							// embedded block whose header omits embeddingDims. From the 2026-07-23 stub->real
+							// rewrite (1b091d1) this header was a bare {blockType,standardKey,version}, so EVERY
+							// embedded build failed on restore while un-embedded builds (which need none of
+							// this) passed — a whole path no credit-free suite could see. Values are CARRIED
+							// from the forge report, never invented; on --vectorize=false the forger reports
+							// them undefined/null and the optional fields drop, as an un-embedded block wants.
+							stableUriPropertyName: args.forgeReport.stableUriPropertyName,
+							resolutionKey: args.forgeReport.stableUriPropertyName,
+							embeddingModelVersion: args.forgeReport.embeddingModelVersion,
+							embeddingEncoding: 'base64',
+							embeddingDtype: 'float32',
+							embeddingByteOrder: 'little-endian',
+							embeddingDims: args.forgeReport.nodeEdges.embeddingDims,
+						},
+					},
+					(err, schemaBlock) => {
+						if (!err) {
+							// the harvested base block — kept per token so a bridge can RESTORE its dependency
+							// bases into the dependency graph (Phase C), the source the producer WALKs.
+							baseBlockByToken[std.token] = schemaBlock;
+							// ⟪JOB 6a⟫ the conservation verdict for this block, written where the promotion gate reads it.
+							const artifactRefusal = writeConservationArtifact({ buildReportsDirPath, schemaBlock });
+							if (artifactRefusal) {
+								next(`harvest standardBase ${std.token}: ${artifactRefusal}`);
+								return;
+							}
+						}
+						next(err ? `harvest standardBase ${std.token}: ${err}` : '', { ...args, schemaBlock });
+					},
+				);
+			});
+
+			// add takes the harvested SCHEMA BLOCK, not an id: manifestEditor owns storing, and it
+			// re-derives the content address from the text before writing, so a block cannot enter the
+			// store under an address that does not describe it.
+			taskList.push((args, next) => {
+				manifest.add(
+					{
+						subject: baseSubject,
+						kind: 'standardBase',
+						version: explicitVersion,
+						description: `standardBase schema block for ${baseSubject}, forged by recipe '${recipe.recipeName}'`,
+						schemaBlock: args.schemaBlock,
+					},
+					(err, addReport) => {
+						if (err) {
+							next(`add standardBase ${baseSubject}: ${err}`);
+							return;
+						}
+						// alreadyPresent is REPORTED, not inferred. standards-database.saveBlock content-addresses
+						// the block and answers { refId, alreadyPresent } — true meaning 'the same bytes ARE the same
+						// block. Not an error, not a rewrite.' It is emitted here because A BYTE-IDENTITY GATE CANNOT
+						// READ IT FROM THE ABSENCE OF A NEW ROW: a forge that silently skipped writing also inserts
+						// nothing, and by row count the two are indistinguishable. Observability ONLY — this line
+						// changes no block text, no block id and no control flow. (versionFromStamp order, scope
+						// addition authorized by the design authority 2026-08-31.)
+						xLog.status(
+							`  [A] forge ${baseSubject} -> standardBase ${addReport.schemaBlockRefId} ` +
+								`(alreadyPresent ${addReport.alreadyPresent === true ? 'true' : addReport.alreadyPresent === false ? 'false' : 'NOT REPORTED'})`,
+						);
+						next('', args);
+					},
+				);
+			});
+
+			// NO SEPARATE HUB BLOCK (hub-fold design 2026-07-24). A hub standard's hub is already folded
+			// into the base nodeEdges by the forger and harvested with the base above — one block per
+			// standard. The first Phase-3 attempt's second block (deserialize base -> forgeHub -> init ->
+			// harvest(:HubReference:HubDefinition) -> add({..._hub})) is deleted: the replay engine's
+			// conjunctive labelMatch could not union two hub node types and fetchEdgesWithinLabels dropped
+			// the hub's cross-boundary HAS_CEDS_* edges. Folding into the base dissolves both — the edges
+			// live within one [StandardBase] block, both endpoints present. The '_hub' subject marker
+			// and kind:'hub' stay RESERVED in vocabulary, harmless and unused.
+
+			taskList.push((args, next) => {
+				deleteAttempted = true;
+				replay.delete(args.workingGraph, (err) => next(err || '', args));
+			});
+
+			pipeRunner(taskList.getList(), {}, (err) => {
+				if (err && createdGraph && !deleteAttempted) {
+					// a mid-pipeline failure stranded the forge graph — best-effort dispose it, then report
+					// the ORIGINAL error (with a note if disposal also failed). The build's failure is the
+					// forge failure; a disposal that also fails must not mask it.
+					replay.delete(createdGraph, (deleteErr) => {
+						done(
+							deleteErr
+								? `${err} (its scratch graph '${createdGraph.graphName}' also failed to dispose and is leaking: ${deleteErr})`
+								: err,
+						);
+					});
+					return;
+				}
+				done(err || '');
+			});
+		};
+
+		const phaseA = (done) => eachSeries(standards, forgeOneStandard, done);
+
+		// ---- Phase C: bridges (materialize dep graph, run bridge, harvest labeled relationships) ----
+		const bridgeOnePairing = (bridge, done) => {
+			// pairLabel identifies the pairing for the operator (source::hub / source::pairWith / source::family);
+			// the version-keyed, producer-suffixed subject is COMPOSED PER EMITTED BLOCK after the bridge runs
+			// (multi-block change 2026-07-26 — one invocation may emit several pair-scoped blocks). §7.
+			const pairLabel = pairKey(bridge);
+			// THE RECIPE NAMES THE BRIDGE. RECIPE_SCHEMA requires it on every bridge, so a recipe that
+			// reaches here has one; there is no in-code name standing behind the key any more
+			// (polyArch2 §6). The guard is here rather than only in the schema because build() is
+			// reachable with a recipe object that never went through validateRecipe (the test seam
+			// does exactly that), and a bridge whose name is absent must say so rather than run
+			// something nobody asked for. `bridgeName` is the entry's `.bridge` field — the resolvable
+			// bridge NAME (was `mapper`; it names a mapping OR a structural producer, so 'mapper' was a
+			// misnomer, renamed per design_bridgeResolution_072526 §5).
+			const bridgeName = bridge.bridge;
+			if (typeof bridgeName !== 'string' || bridgeName.trim() === '') {
+				done(
+					`bridge ${pairLabel}: bridge is ${
+						bridgeName === undefined ? 'not named' : JSON.stringify(bridgeName)
+					}. Every bridge entry names its bridge in the recipe — it IS what the bridge does, and ` +
+						`there is no default. Nothing was substituted for it.`,
+				);
+				return;
+			}
+			const taskList = new taskListPlus();
+
+			// DISPOSE-ON-FAILURE (Item 4), same idiom as phase A: a bridge failure after create must not
+			// strand the dependency graph.
+			let createdGraph = null;
+			let deleteAttempted = false;
+
+			// create means "an empty graph", always. The dependency schema blocks go IN through init's
+			// RESTORATION payload in the next task — the producer WALKs the restored nodes.
+			taskList.push((args, next) => {
+				replay.create({ purpose: 'dependencyGraph' }, (err, depGraph) => {
+					if (!err) {
+						createdGraph = depGraph;
+					}
+					next(err ? `create(dep) ${pairLabel}: ${err}` : '', { ...args, depGraph });
+				});
+			});
+
+			// RESTORE the bridge's dependency bases (source + hub) into the dependency graph, so the producer
+			// has real nodes to read: the source standard's elements, the CEDS HubReferences and the CEDS
+			// standard rows all live in these two base blocks (the hub is FOLDED into the CEDS base). A missing
+			// dependency base is a recipe/order fault, named — never a silent empty graph (polyArch2 §6).
+			taskList.push((args, next) => {
+				// RESTORE the pairing's two endpoints (source + hub-or-pairWith) AND the bridge's declared
+				// `dependencies` (design_bridgeResolution_072526 §5: "dependencies is what gets loaded to read").
+				// For a mapping bridge dependencies is [source, hub] — no change. For a STRUCTURAL bridge it is the
+				// whole family, so the THIRD sibling's base is restored too and the producer can resolve crossRefs
+				// against the WHOLE family (telling a cross-sibling ref apart from a dangler). Deduped; a missing
+				// base is a recipe/order fault, named — never a silent empty graph (polyArch2 §6).
+				const dependencyTokens = Array.from(
+					new Set(
+						[bridge.source, bridge.hub, bridge.pairWith]
+							.concat(bridge.dependencies || [])
+							.filter((oneToken) => oneToken !== undefined && oneToken !== null && `${oneToken}`.trim() !== ''),
+					),
+				);
+				const missing = dependencyTokens.filter((oneToken) => !baseBlockByToken[oneToken]);
+				if (missing.length) {
+					next(
+						`restore deps ${pairLabel}: dependency base block(s) not forged in this build: ${missing.join(', ')}. ` +
+							`A bridge's source and hub must both be forged before it runs; nothing was substituted.`,
+					);
+					return;
+				}
+				const schemaBlocks = dependencyTokens.map((oneToken) => baseBlockByToken[oneToken].blockText);
+				// ⟪P2-review M-1⟫ the dependency-graph restore carries the SAME resolver as the
+				// materialize leg: a bridge's dependency bases now arrive ref-style (every vectorized
+				// standard after R-P2-2), and a resolverless restore would hand the bridge a graph
+				// whose candidates carry no embedding — the exact path Phase 3's no-reembed contract
+				// (G-15) reads. The engine's M-2 refusal is the layer-owned backstop; this is the wire.
+				replay.init({ inGraph: args.depGraph, schemaBlocks, storeResolver: vectorStoreResolver }, (err) =>
+					next(err ? `restore deps ${pairLabel}: ${err}` : '', args),
+				);
+			});
+
+			taskList.push((args, next) => {
+				// THREAD the recipe's hub token so the producer knows which hub it authors toward. CAPTURE the
+				// run report: a deterministic authored producer returns decisionBlock null (-> _exact); an
+				// inferred producer returns a frozen decision block (-> _close). The producer suffix is DERIVED
+				// from that, then the version-keyed relationship name is composed with the REAL resolved versions.
+				// this pairing's inferred inputs (§5.5): rebridge is TRUE only when this pair's source is in the
+				// resolved --rebridge scope — the scope match happens HERE, where the recipe pair is known, not
+				// guessed in the plugin. config carries the producer's own operational data (the source standard
+				// + the REAL resolved versions the forge read; the a4a0da2 rule). An authored producer ignores
+				// rebridge/decisionStore/inferenceConfig entirely.
+				const thisPairRebridges = pairInRebridgeScope(rebridgeScope, bridge);
+				// sourceStandardName — the EXACT declared standardName from the source bundle's
+				// parserDescriptor.ini (the one canonical token->name authority; forged `_source` carries
+				// this value VERBATIM). Added 2026-07-30 after the EdFi authored-anchor run silently wrote
+				// an EMPTY relationship block: the bridge's old CASE-RULE uppercase of the recipe token
+				// ('edfi'->'EDFI') matched no `_source: 'EdFi'` node. One canonical source, exact match —
+				// never normalize at the comparison site.
+				const sourceBundle = components.forger.resolveBundle({ standard: bridge.source });
+				if (sourceBundle.error) {
+					next(`bridge ${pairLabel}: resolving source bundle for standardName: ${sourceBundle.error}`);
+					return;
+				}
+				bridgeMaker.run(
+					{
+						inGraph: args.depGraph,
+						bridge: bridgeName,
+						// source selects the standard-local bridge search directory
+						// (forges/<source>/bridges/) so a standard's bespoke bridge is found; a
+						// forges-shared or library bridge resolves without it.
+						source: bridge.source,
+						hub: bridge.hub,
+						applyLabel: RELATION_LABEL,
+						rebridge: thisPairRebridges,
+						decisionStore,
+						judgmentCache,
+						matchForensics,
+						inferenceConfig,
+						config: {
+							// bridges[].params — DE-VESTIGIALIZED (2026-07-31, the SIF StudentPersonal trial):
+							// a recipe's bridge entry may now carry bridge-specific options (e.g. the SIF
+							// bridge's sifObjectScope) and they reach the producer as config keys. Spread FIRST
+							// so the orchestrator-owned keys below always win over a recipe collision.
+							...(bridge.params || {}),
+							// ⟪skipAI WINDOW⟫ --limit/--offset reach every bridge as config, AFTER the recipe's own
+							// params spread so an operator's window always wins over a recipe's. Undefined on an
+							// ordinary run, which the bridges pass through untouched.
+							limit: sourceWindow.limit,
+							offset: sourceWindow.offset,
+							sourceStandard: bridge.source,
+							sourceStandardName: sourceBundle.standardName,
+							sourceVersion: resolvedVersionByToken[bridge.source],
+							hubVersion: resolvedVersionByToken[bridge.hub],
+							// pairWith + its resolved version reach a STRUCTURAL producer (ctdlFamilyStructure) so it
+							// knows its sibling pairing endpoint; undefined for a mapping bridge, which ignores them.
+							pairWith: bridge.pairWith,
+							pairWithVersion: resolvedVersionByToken[bridge.pairWith],
+							// familyStandards is the READ scope a structural producer resolves crossRefs against — the
+							// whole family, so a cross-sibling ref is told apart from a dangler (the third sibling is
+							// among the restored dependency bases). undefined for a mapping bridge, which ignores it.
+							familyStandards: bridge.familyStandards || bridge.dependencies,
+						},
+					},
+					(err, runReport) => {
+						if (err) {
+							next(`bridge ${pairLabel}: ${err}`);
+							return;
+						}
+						// MULTI-BLOCK HARVEST (contract change 2026-07-26). A bridge invocation may emit MORE THAN ONE
+						// pair-scoped block. NORMALIZE runReport into a `blocks` array so ONE code path serves both:
+						//   * a coordinating producer (ctdlFamilyStructure) returns blocks[] — each with its OWN
+						//     applyLabel (the distinct per-pair label it WROTE under) and its pair's firstStandard/
+						//     secondStandard TOKENS, so build.js version-keys EACH block on its own two endpoints;
+						//   * a single-block mapping bridge (ctdlAuthoredBridge, semanticBridge) returns NO blocks[];
+						//     the degenerate list-of-one is synthesized from the top-level status, its endpoints
+						//     falling back to the RECIPE (hub/source or source/pairWith) exactly as before.
+						const emittedBlocks = Array.isArray(runReport.blocks) && runReport.blocks.length
+							? runReport.blocks
+							// ⟪JOB 5b⟫ the degenerate list-of-one carries the run's loaded summary too. A single-block
+							// bridge writes through the same door; if only the blocks[] path carried the expectation,
+							// the commoner shape would silently keep needing an exemption.
+							: [{ applyLabel: RELATION_LABEL, firstStandard: undefined, secondStandard: undefined, producer: runReport.producer, decisionBlock: runReport.decisionBlock, loadedConservationSummary: runReport.loadedConservationSummary }];
+						next('', { ...args, emittedBlocks });
+					},
+				);
+			});
+
+			// HARVEST-AND-ADD EACH emitted block into its OWN version-keyed, pair-scoped manifest member. The
+			// three CTDL-family pairings (or the one mapping block) are harvested in the order the producer
+			// emitted them (S11: root-first then lexicographic for the family). eachSeries sequences the
+			// unknown-length block list; a failure on any block names its label and aborts the pairing.
+			taskList.push((args, next) => {
+				eachSeries(
+					args.emittedBlocks,
+					(oneBlock, blockDone) => {
+						// THE PRODUCER DECLARES ITS OWN KIND (polyArch2 §6). A named producer is BELIEVED iff the
+						// vocabulary registers a suffix for it (authored/inferred/structural — one data row, no edit
+						// here). Only a silent producer is inferred from decisionBlock (null -> authored/_exact;
+						// non-null -> inferred/_close), preserving the two-producers-per-pair distinction.
+						const producer =
+							oneBlock && vocabulary.suffixForRelationshipProducer(oneBlock.producer)
+								? oneBlock.producer
+								: oneBlock && oneBlock.decisionBlock != null
+									? 'inferred'
+									: 'authored';
+						// VERSION-KEY ON BOTH ENDPOINTS, ROOT-FIRST. A multi-block producer supplies the pair's two
+						// TOKENS (root-first then lexicographic); a single mapping block falls back to the recipe
+						// (hub_rel_source for a mapping bridge, source_rel_pairWith for a structural pair). Both
+						// endpoints carry their REAL resolved version (the a4a0da2 rule), looked up per token.
+						const nameFirst =
+							oneBlock.firstStandard !== undefined
+								? oneBlock.firstStandard
+								: bridge.hub !== undefined
+									? bridge.hub
+									: bridge.source;
+						const nameSecond =
+							oneBlock.secondStandard !== undefined
+								? oneBlock.secondStandard
+								: bridge.hub !== undefined
+									? bridge.source
+									: bridge.pairWith;
+						const composed = vocabulary.relationshipSubject({
+							hubStandard: nameFirst,
+							hubVersion: resolvedVersionByToken[nameFirst],
+							sourceStandard: nameSecond,
+							sourceVersion: resolvedVersionByToken[nameSecond],
+							producer,
+							// THE OPT-IN DISCRIMINATOR, CARRIED ON THE BLOCK (Phase 7). The orchestrator never sees a
+							// plugin declaration — it hands bridgeMaker a NAME and gets back a runReport — so the
+							// declared value rides out on each blocks[] entry and is passed straight through here.
+							// `undefined` when the plugin declares nothing, which is every plugin but one, and the
+							// composer's undefined path returns the string it returned before this parameter existed.
+							discriminator: oneBlock.subjectDiscriminator,
+						});
+						if (composed.error) {
+							blockDone(`bridge ${pairLabel}: ${composed.error}`);
+							return;
+						}
+						const oneSubject = composed.subject;
+						const blockLabel = oneBlock.applyLabel || RELATION_LABEL;
+						replay.harvest(
+							{
+								inGraph: args.depGraph,
+								selectionLabels: [blockLabel],
+								// ⟪JOB 5b⟫ THE EXEMPTION IS GONE. JOB 2 declared NOT_LOADED_THROUGH_INIT here because
+								// bridgeMaker writes through lib/bridge-framework/graphWriter rather than
+								// replayManager.init, so no init-captured loaded set existed. One now does: the
+								// bridge writer accumulates what it merged and returns it on close, and it is
+								// threaded here per emitted block. This seam is GATED, not exempted.
+								//
+								// NO SILENT EXEMPTION IF IT IS ABSENT. An undefined here makes compareConservation
+								// REFUSE BY NAME rather than pass, which is the point: a thread that got dropped
+								// must not be indistinguishable from a seam that legitimately has nothing to
+								// compare. Do not restore the exemption to quiet that refusal — find the drop.
+								conservationExpectation: oneBlock.loadedConservationSummary,
+								header: {
+									blockType: 'relationship',
+									standardKey: oneSubject,
+									// SECOND SITE of the missing-embedding-header defect (2026-07-26). A bridged
+									// node is an embedded base node, so a relationship block that carries it must
+									// declare the SAME embedding width/model as the bases, or the materialize
+									// restore gate refuses it (this is why --vectorize=false sailed through and
+									// --vectorize=true failed at manifest[3]). stableUriPropertyName is
+									// deliberately OMITTED: these nodes were already replayed, so shapeNode
+									// round-trips them off the stored stableId ("re-extract byte-identical").
+									// undefined on --vectorize=false, when the optional fields drop.
+									embeddingModelVersion: buildEmbeddingModelVersion,
+									embeddingEncoding: 'base64',
+									embeddingDtype: 'float32',
+									embeddingByteOrder: 'little-endian',
+									embeddingDims: buildEmbeddingDims,
+								},
+							},
+							(harvestErr, schemaBlock) => {
+								if (harvestErr) {
+									blockDone(`harvest relationships ${pairLabel}: ${harvestErr}`);
+									return;
+								}
+								// ⟪JOB 6a⟫ the bridge seam's conservation verdict, written the same way the base
+								// seam's is — one artifact per harvested block, named by content address.
+								const relationshipArtifactRefusal = writeConservationArtifact({ buildReportsDirPath, schemaBlock });
+								if (relationshipArtifactRefusal) {
+									blockDone(`harvest relationships ${pairLabel}: ${relationshipArtifactRefusal}`);
+									return;
+								}
+								manifest.add(
+									{
+										subject: oneSubject,
+										kind: 'relationship',
+										description: `relationship schema block for ${oneSubject}, bridged by bridge '${bridgeName}' from recipe '${recipe.recipeName}'`,
+										schemaBlock,
+									},
+									(addErr, addReport) => {
+										if (addErr) {
+											blockDone(`add relationship ${pairLabel}: ${addErr}`);
+											return;
+										}
+										xLog.status(
+											`  [C] bridge ${pairLabel} (bridge=${bridgeName}) -> relationship ${oneSubject} ${addReport.schemaBlockRefId}`,
+										);
+										blockDone('');
+									},
+								);
+							},
+						);
+					},
+					(eachErr) => next(eachErr || '', args),
+				);
+			});
+
+			taskList.push((args, next) => {
+				deleteAttempted = true;
+				replay.delete(args.depGraph, (err) => next(err || '', args));
+			});
+
+			pipeRunner(taskList.getList(), {}, (err) => {
+				if (err && createdGraph && !deleteAttempted) {
+					replay.delete(createdGraph, (deleteErr) => {
+						done(
+							deleteErr
+								? `${err} (its dependency graph '${createdGraph.graphName}' also failed to dispose and is leaking: ${deleteErr})`
+								: err,
+						);
+					});
+					return;
+				}
+				done(err || '');
+			});
+		};
+
+		// refuseCollidingBridgeDeclarations — THE PRE-SPEND CHECK (SPEC §3.7, placement amended by RULING
+		// FJ-P7-1). The manifest editor already refuses a duplicate subject, but it does so at `manifest.add`,
+		// which is reached AFTER the colliding bridge's entire judge run: on a real judge that is a paid spend
+		// thrown away to learn something the recipe stated up front. This answers the same question from the
+		// DECLARATIONS alone — and, under FJ-P7-1, BEFORE PHASE A, so a colliding recipe costs neither a forge
+		// nor a judge.
+		//
+		// IT DELIBERATELY DOES NOT COMPOSE SUBJECTS, AND THAT IS WHAT LETS IT RUN THIS EARLY. Subjects need
+		// resolved versions, and versions are not resolved until phase A has forged or reused every base — so a
+		// subject-level check could not run before phase A at all. The TUPLE it compares is the part that IS
+		// knowable at declaration time: (hub, source, producerKind,
+		// subjectDiscriminator). Two bridges agreeing on all four WILL compose one subject whatever the versions
+		// turn out to be, because every remaining term is shared. That makes this check sound without being
+		// complete, and it is stated that way rather than sold as a subject check.
+		//
+		// MAPPING BRIDGES ONLY. A structural pairing carries `pairWith` and no `hub`; its subject is composed
+		// from a different pair of tokens, so pooling the two kinds would compare tuples that are not
+		// commensurable. Excluded by the presence of `hub`, which is the same discriminator phase C's own
+		// nameFirst/nameSecond resolution uses.
+		const refuseCollidingBridgeDeclarations = () => {
+			const mappingBridgeList = bridges.filter((oneBridge) => oneBridge.hub !== undefined);
+			// A COMPONENT THAT CANNOT DESCRIBE IS REFUSED BY NAME, NOT TOLERATED. describeBridge is part of the
+			// declared bridgeMaker interface, so a component lacking it is non-conforming — and the one thing this
+			// must never do is skip the check and let the build proceed, because a pre-spend gate that silently
+			// does not run is worse than no gate: it reads as "no collision" to everyone downstream. Reaching this
+			// with mapping bridges to check and no way to check them is a refusal.
+			if (mappingBridgeList.length > 0 && typeof bridgeMaker.describeBridge !== 'function') {
+				return (
+					`the bridgeMaker component does not expose describeBridge, so recipe ` +
+					`'${recipe.recipeName}' cannot be checked for colliding bridge declarations before any forge or ` +
+					`judge spend. describeBridge is a DECLARED member of COMPONENT_SHAPES.bridgeMaker ` +
+					`(apps/graph-builder/interfaces.js); a component missing it is non-conforming. The check is never ` +
+					`skipped silently — a pre-spend gate that does not run reads as "no collision" to everything after it.`
+				);
+			}
+			const describedList = [];
+			for (let bridgeIndex = 0; bridgeIndex < mappingBridgeList.length; bridgeIndex++) {
+				const oneBridge = mappingBridgeList[bridgeIndex];
+				const described = bridgeMaker.describeBridge({ bridgeName: oneBridge.bridge, source: oneBridge.source });
+				if (described.error) {
+					// A DELIBERATE BEHAVIOUR CHANGE, NAMED (review finding C-3, RULING FJ-P7-2 item 2). Before
+					// Phase 7 a recipe naming an unregistered bridge FORGED EVERY BASE and then failed inside
+					// bridgeMaker.run in phase C. Under FJ-P7-1 the declaration read happens before phase A, so the
+					// same recipe is now refused before a single forge runs. Strictly better, and OUTSIDE the
+					// backward-compatibility claim, which is scoped to subjects, block ids, manifests and fixtures —
+					// not to when an already-broken recipe learns it is broken.
+					//
+					// The refusal names the BRIDGE and the SOURCE it was looked up under, then carries the registry's
+					// own message VERBATIM. Verbatim on purpose: test-bgReg pins that text, and a wrapper that
+					// paraphrased it would break a gate while looking like an improvement.
+					return `recipe '${recipe.recipeName}' names bridge '${oneBridge.bridge}', which is not registered for source '${oneBridge.source}' — refused before phase A, so no base was forged for a recipe that cannot run. ${described.error}`;
+				}
+				describedList.push({ hub: oneBridge.hub, ...described.description });
+			}
+			// THE RULE ITSELF LIVES IN A PURE MODULE so its red twins exercise the rule rather than a copy of it
+			// (the genesisGuard.js / batchWindowVerdict.js precedent). This function keeps only the IMPURE half:
+			// one describeBridge lookup per mapping bridge.
+			return bridgeCollisionRuleLib.collisionRefusalFor({ recipeName: recipe.recipeName, describedBridgeList: describedList });
+		};
+
+		const phaseC = (done) => eachSeries(bridges, bridgeOnePairing, done);
+
+		// ---- Finish: compose the manifest, then materialize the eval golden ----
+		const composeAndMaterialize = () => {
+			const memberCount = manifest.members().length;
+
+			// refId() REFUSES an empty membership by throwing, and it is right to: the address of an
+			// empty membership is a constant every empty manifest would share. The orchestrator answers
+			// for its own recipe rather than letting that throw escape a callback-shaped API.
+			if (memberCount === 0) {
+				callback(
+					`compose failed: recipe '${recipe.recipeName}' produced no schema blocks, so there is ` +
+						`no manifest to address. A build that materializes nothing and reports success is ` +
+						`the failure this refuses to be.`,
+				);
+				return;
+			}
+
+			const manifestId = manifest.refId();
+			xLog.status(`  [compose] manifest ${manifestId} -- ${memberCount} members`);
+
+			// materialize the eval golden FROM the composed manifest. Held as a named continuation so the
+			// SAVE below can gate it: the manifest is persisted at compose time, then this runs.
+			const materializeFromManifest = () =>
+			manifest.schemaBlocks((blocksError, resolvedSchemaBlocks) => {
+				if (blocksError) {
+					callback(`compose failed: ${blocksError}`);
+					return;
+				}
+				// the shared materialize/restore tail (also used by -replay). create is MONOMORPHIC, the
+				// RESTORATION init carries no applyLabels, and a mid-fill failure disposes the eval graph
+				// rather than stranding it — all of that lives in materializeSchemaBlocks now.
+				materializeSchemaBlocks(
+					{
+						xLog,
+						replay,
+						resolvedSchemaBlocks,
+						manifestId,
+						memberCount,
+						// R-1 needs to know whether CEDS is in this graph at all.
+						standardTokens: (recipe.standards || []).map((one) => one.token),
+						commandLineParameters: process.global && process.global.commandLineParameters,
+						// ⟪R-P2-1⟫ the injected-or-real fidelity gate, resolved once at the top of build()
+						fidelityGateRunner: cedsFidelityGateRunner,
+						// ⟪R-P2-2⟫ the same per-build resolver the harvest used — restore stamps each
+						// ref-carrying node's vector back onto its graph node
+						storeResolver: vectorStoreResolver,
+						// ⟪graphSelfDoc Phase 5⟫ READ-ONLY store access for the manifest recipe.
+						storeReader: standardsDatabase,
+						// ⟪RT-13⟫ the stage runner + the 'build' spec: the descriptor-composed roster,
+						// the recipe's enablement, and the build's own run directory for the verdicts
+						// and the certification summary (RT-6: the verdict lands with the build outputs).
+						roundTripStageRunner,
+						roundTripStageSpec: {
+							mode: 'build',
+							enabled: roundTripStageEnabled,
+							disabledReason: roundTripStageDisabledReason,
+							roster: roundTripValidatorRoster,
+							outputDirPath: buildReportsDirPath,
+						},
+					},
+					callback,
+				);
+			});
+
+			// PERSIST THE MANIFEST AT COMPOSE TIME — the change that makes a -build ALWAYS write a manifest
+			// that regenerates the graph it just built. The manifest IS the compose artifact (the named,
+			// ordered membership); until 2026-07-25 a -build composed it and materialized from it but never
+			// called save(), so the manifests/manifestBlocks tables stayed EMPTY and the graph could not be
+			// regenerated from storage. save() assembles the membership from the manifest's own state and
+			// writes it through standardsDatabase.saveManifest, which addresses BY that membership — so a
+			// re-run over the same blocks dedups onto the manifest already there rather than erroring or
+			// duplicating. A save failure is NAMED through the callback, never stranded past this
+			// callback-shaped API, the same idiom as the dispose-on-failure handling above. Saved BEFORE
+			// materialize because the manifest is the compose artifact, not a by-product of materializing.
+			manifest.save((saveError) => {
+				if (saveError) {
+					callback(`compose failed: persisting the manifest ${manifestId}: ${saveError}`);
+					return;
+				}
+				// No separate phase marker: persistence is a sub-step of COMPOSE, not a distinct phase, and
+				// the compose line above already named this manifest. A second '[compose]' token would make
+				// the pipeline look like it composed twice.
+				materializeFromManifest();
+			});
+		};
+
+		// ⟪RT-13.1 / R-WO-16⟫ COMPOSE THE VALIDATOR ROSTER FIRST — before a single container is
+		// provisioned or a credit spent. The roster is read from the same parserDescriptor.ini
+		// authority the forge roster uses (components.forger.resolveBundle — injectable, so the
+		// hermetic suites drive it with doubles), and a DECLARED-BUT-MISSING validator refuses the
+		// build here, on every build, stage on or off: a descriptor naming a file that does not
+		// load is a broken bundle self-description regardless of whether anyone was about to run
+		// it. An UNRESOLVABLE bundle is NOT refused here — the forger's own phase-A refusal is the
+		// incumbent error for that case and keeps firing exactly as it always has.
+		roundTripStageLib.composeValidatorRoster(
+			{
+				standardTokens: standards.map((one) => one.token),
+				bundleResolver: components.forger.resolveBundle,
+			},
+			(rosterError, composedRoster) => {
+				if (rosterError) {
+					callback(`graphBuilder build: ${rosterError}`);
+					return;
+				}
+				roundTripValidatorRoster = composedRoster;
+				// RULING FJ-P7-1 (supervisor FROZEN_JOURNEY, 2026-08-29) — A DELIBERATE DEVIATION FROM SPEC §3.7,
+				// which placed this check "before phase C". It runs BEFORE PHASE A instead. The check reads
+				// DECLARATIONS ONLY — no resolved version, no per-block producer, nothing phase A produces — so
+				// nothing made it late except the spec's own wording, and refusing before the FORGE spend is
+				// strictly better than refusing before the judge spend. A recipe that cannot compose distinct
+				// relationship subjects is wrong at the moment it is read, not at the moment it is paid for.
+				const declarationCollisionRefusal = refuseCollidingBridgeDeclarations();
+				if (declarationCollisionRefusal !== '') {
+					callback(`graphBuilder build: ${declarationCollisionRefusal}`);
+					return;
+				}
+				phaseA((phaseAError) => {
+					if (phaseAError) {
+						callback(`phase A (forge) failed: ${phaseAError}`);
+						return;
+					}
+					phaseC((phaseCError) => {
+						if (phaseCError) {
+							callback(`phase C (bridge) failed: ${phaseCError}`);
+							return;
+						}
+						composeAndMaterialize();
+					});
+				});
+			},
+		);
+	});
 };
 
 // replay — regenerate a graph FROM A STORED MANIFEST, with NO forging and NO bridge runs. This is

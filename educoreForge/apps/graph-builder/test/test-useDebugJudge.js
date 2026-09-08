@@ -51,6 +51,7 @@ const buildStatics = require('../lib/build');
 const debugJudgeFactory = require('../apps/bridge-maker/lib/debugJudge');
 
 const { resolveDebugJudge, resolveInferenceConfig } = buildStatics;
+const judgeProviderRegistryLib = require('../apps/bridge-maker/lib/judgeProviderRegistry');
 const { DEFAULT_RULE, REGISTERED_RULE_NAMES, DEBUG_MARK } = debugJudgeFactory;
 
 // commandLine — a simulated command line, HANDED to the resolver as its second argument.
@@ -65,17 +66,46 @@ const { DEFAULT_RULE, REGISTERED_RULE_NAMES, DEBUG_MARK } = debugJudgeFactory;
 // componentOverrides.postOnce.
 const commandLine = ({ values = {}, switches = {} }) => ({ values, switches });
 
-// countingFactory — stands in for the real Anthropic client factory. Its call count is the evidence
-// for "the real client was never constructed"; asserting that from the absence of an error would
-// prove nothing.
-const makeCountingFactory = () => {
+// ⟪JOB 4, 2026-09-07⟫ THE SEAM MOVED FROM A FACTORY TO A ROW, and the count is still the evidence.
+// This used to be makeCountingFactory, standing in for deps.llmClientFactory — an override that existed
+// only because build.js required the Anthropic factory directly. That override is gone (a per-provider
+// factory substitution is a second construction path, which is the thing this job removes), so the double
+// is now a registry ROW injected through the registry's own componentOverrides. Its construction count is
+// still what proves "the real client was never constructed"; inferring that from the absence of an error
+// would prove nothing. The row satisfies JUDGE_PROVIDER_SHAPE because the registry VALIDATES what it is
+// handed — a stand-in that could not survive validation would be testing a path the real run never takes.
+const makeCountingAnthropicRow = () => {
 	const state = { calls: 0 };
-	const factory = () => {
-		state.calls += 1;
-		return { rerank: () => {}, model: 'FAKE-REAL-CLIENT', keySource: 'fake' };
+	const row = {
+		name: 'anthropic',
+		enabled: true,
+		construct: (rowConstructionOptions, rowCallback) => {
+			state.calls += 1;
+			rowCallback('', {
+				name: 'anthropic',
+				wireModel: 'FAKE-REAL-CLIENT',
+				model: 'anthropic:FAKE-REAL-CLIENT',
+				maxConcurrency: 4,
+				rerank: () => {},
+				describe: () => ({ provider: 'anthropic', model: 'anthropic:FAKE-REAL-CLIENT', version: 'fake-v1' }),
+				keySource: 'fake',
+			});
+		},
 	};
-	return { factory, state };
+	return { row, state };
 };
+
+// depsWithRows — the ONE seam, spelled once. Everything a suite substitutes goes through the registry's
+// componentOverrides, exactly as the real run's construction does.
+const depsWithRows = (deps, rowList) => ({ ...deps, judgeProviderComponentOverrides: { judgeProviderRowList: rowList } });
+
+// resolveInto — resolveInferenceConfig is ERROR-FIRST since JOB 4 (docket vi: the Ollama row's identity
+// needs I/O, so every row constructs through a callback). These assertions were written against the old
+// { value } / { error } return; they assert the same subjects through the callback.
+const resolveInto = (deps, rebridgeScope, debugJudgeRule, done) =>
+	resolveInferenceConfig(deps, rebridgeScope, debugJudgeRule, (inferenceConfigError, inferenceConfig) =>
+		done({ error: inferenceConfigError || '', value: inferenceConfig || null }),
+	);
 
 // =====================================================================
 harness.section('RESOLUTION — absent, bare, named, case-insensitive, injected');
@@ -150,76 +180,119 @@ harness.ok(
 harness.section('GUARD REFUSALS — the two ways the flag would otherwise mislead');
 // =====================================================================
 
-const idleRefusal = resolveInferenceConfig({}, [], 'first');
-harness.ok('--useDebugJudge with an EMPTY rebridge scope is refused', !!idleRefusal.error);
-harness.match('...naming the reason nothing would be judged', idleRefusal.error, /NOTHING WOULD BE JUDGED/);
-harness.match('...and stating it does not imply --rebridge', idleRefusal.error, /does not imply it/);
-
 const injectedStub = { rerank: () => {}, model: 'injected' };
-const bothRefusal = resolveInferenceConfig({ inferenceConfig: { llmClient: injectedStub } }, 'all', 'first');
-harness.ok('--useDebugJudge PLUS an injected llmClient is refused', !!bothRefusal.error);
-harness.match('...naming the ambiguity', bothRefusal.error, /Two judges are named for one run/);
+const debugJudgeRowList = judgeProviderRegistryLib.JUDGE_PROVIDER_ROW_LIST;
 
-// =====================================================================
-harness.section('THE DIVERSION — the real client factory is NEVER constructed');
-// =====================================================================
+resolveInto({}, [], 'first', (idleRefusal) => {
+	harness.ok('--useDebugJudge with an EMPTY rebridge scope is refused', !!idleRefusal.error);
+	harness.match('...naming the reason nothing would be judged', idleRefusal.error, /NOTHING WOULD BE JUDGED/);
+	harness.match('...and stating it does not imply --rebridge', idleRefusal.error, /does not imply it/);
 
-const diverted = makeCountingFactory();
-const divertedResult = resolveInferenceConfig(
-	{ llmClientFactory: diverted.factory, inferenceConfig: { topK: 15 } },
-	'all',
-	'first',
-);
-harness.equal('a scoped rebridge with a debug rule resolves cleanly', divertedResult.error, undefined);
-harness.equal(
-	'THE REAL CLIENT FACTORY WAS NEVER CALLED (measured, not assumed)',
-	diverted.state.calls,
-	0,
-);
-harness.ok('the resolved client answers rerank', typeof divertedResult.value.llmClient.rerank === 'function');
-harness.equal(
-	'the resolved client is the DEBUG judge, flagged',
-	divertedResult.value.llmClient.decisionAlgorithm,
-	DEBUG_MARK,
-);
-harness.equal('...carrying the requested rule', divertedResult.value.llmClient.ruleName, 'first');
-harness.match(
-	'...and a model identifier that could never collide with a real one',
-	divertedResult.value.llmClient.model,
-	new RegExp(DEBUG_MARK),
-);
-harness.equal('operator inferenceConfig fields survive alongside it (topK)', divertedResult.value.topK, 15);
-harness.equal('the debug judge reports no key source', divertedResult.value.llmClient.keySource, 'none');
+	resolveInto({ inferenceConfig: { llmClient: injectedStub } }, 'all', 'first', (bothRefusal) => {
+		harness.ok('--useDebugJudge PLUS an injected llmClient is refused', !!bothRefusal.error);
+		harness.match('...naming the ambiguity', bothRefusal.error, /Two judges are named for one run/);
 
-// each registered rule can be reached through the switch, not merely 'first'
-REGISTERED_RULE_NAMES.forEach((oneRule) => {
-	const perRule = makeCountingFactory();
-	const resolved = resolveInferenceConfig({ llmClientFactory: perRule.factory }, 'all', oneRule);
-	harness.equal(`rule '${oneRule}' is reachable through the seam`, resolved.value.llmClient.ruleName, oneRule);
-	harness.equal(`rule '${oneRule}' mints no real client`, perRule.state.calls, 0);
+		// ⟪JOB 4⟫ THE COMPANION CASE, AND IT MUST NOT REFUSE. An injected client alongside an ORDINARY
+		// config key is the normal hermetic-suite situation — the injection wins silently. Only the EXPLICIT
+		// --useDebugJudge override conflicts with an injection. Ruled by DAWN_TOWER, and asserted here
+		// because "the refusal fires" and "the refusal fires ONLY when it should" are different claims.
+		resolveInto({ inferenceConfig: { llmClient: injectedStub, topK: 15 } }, 'all', null, (injectedNoFlag) => {
+			harness.equal('an injected llmClient with NO --useDebugJudge is NOT refused', injectedNoFlag.error, '');
+			harness.ok('...and wins over the config key silently', injectedNoFlag.value.llmClient === injectedStub);
+			harness.equal('...with operator fields preserved', injectedNoFlag.value.topK, 15);
+
+			// =====================================================================
+			harness.section('THE DIVERSION — the real provider row is NEVER constructed');
+			// =====================================================================
+
+			const diverted = makeCountingAnthropicRow();
+			resolveInto(
+				depsWithRows({ inferenceConfig: { topK: 15 } }, [diverted.row, ...debugJudgeRowList.filter((oneRow) => oneRow.name !== 'anthropic')]),
+				'all',
+				'first',
+				(divertedResult) => {
+					harness.equal('a scoped rebridge with a debug rule resolves cleanly', divertedResult.error, '');
+					harness.equal('THE REAL PROVIDER ROW WAS NEVER CONSTRUCTED (measured, not assumed)', diverted.state.calls, 0);
+					harness.ok('the resolved client answers rerank', typeof divertedResult.value.llmClient.rerank === 'function');
+					harness.equal('the resolved client is the DEBUG judge, flagged', divertedResult.value.llmClient.decisionAlgorithm, DEBUG_MARK);
+					harness.equal('...carrying the requested rule', divertedResult.value.llmClient.ruleName, 'first');
+
+					// ⟪JOB 4 MOVES THIS ASSERTION, and says why rather than quietly relaxing it.⟫ It used to
+					// match the model against DEBUG_MARK, because the identity was
+					// 'debugJudge:first-v1-INVALID_DEBUG'. Docket (i) shortened it to exactly 'debug:<rule>' so
+					// that bridge-framework's judgeKind could stop being a ternary that branches on which
+					// provider it holds. The old assertion's INTENT — that this identity could never be
+					// mistaken for a real model — is now carried by the namespace, which JUDGE_PROVIDER_SHAPE
+					// enforces for every provider. And the flag every mechanical reader ACTUALLY consults was
+					// never this string: it is decisionAlgorithm, asserted immediately above, which is what
+					// materialiser turns into provenanceTier 'invalid-debug'.
+					harness.equal('...and a model identifier namespaced so it could never collide with a real one', divertedResult.value.llmClient.model, 'debug:first');
+					harness.ok('...which is exactly what judgeKind now reads, with no ternary', divertedResult.value.llmClient.model.indexOf('debug:') === 0);
+					harness.equal('operator inferenceConfig fields survive alongside it (topK)', divertedResult.value.topK, 15);
+					harness.equal('the debug judge reports no key source', divertedResult.value.llmClient.keySource, 'none');
+
+					// each registered rule can be reached through the SEAM — and the seam is a row walk, not a switch
+					const perRuleQueue = REGISTERED_RULE_NAMES.slice();
+					const nextRule = (afterRules) => {
+						if (!perRuleQueue.length) {
+							afterRules();
+							return;
+						}
+						const oneRule = perRuleQueue.shift();
+						const perRule = makeCountingAnthropicRow();
+						resolveInto(
+							depsWithRows({}, [perRule.row, ...debugJudgeRowList.filter((oneRow) => oneRow.name !== 'anthropic')]),
+							'all',
+							oneRule,
+							(resolved) => {
+								harness.equal(`rule '${oneRule}' is reachable through the seam`, resolved.value.llmClient.ruleName, oneRule);
+								harness.equal(`rule '${oneRule}' constructs no real provider`, perRule.state.calls, 0);
+								nextRule(afterRules);
+							},
+						);
+					};
+
+					nextRule(() => {
+						// =====================================================================
+						harness.section('REGRESSION CONTROL — without the flag, nothing changed');
+						// =====================================================================
+
+						// ⟪JOB 4⟫ the config key now names the provider where --useDebugJudge does not. These
+						// cases drive the ANTHROPIC row, so they inject a counting row AND name it through the
+						// key, which is the path a real run takes.
+						const control = makeCountingAnthropicRow();
+						resolveInto(
+							depsWithRows({ inferenceConfig: { topK: 15 }, judgeProviderName: 'anthropic' }, [control.row]),
+							'all',
+							null,
+							(realMint) => {
+								harness.equal('no debug rule + active scope: the REAL row IS constructed', control.state.calls, 1);
+								harness.equal('...and its client is threaded', realMint.value.llmClient.model, 'anthropic:FAKE-REAL-CLIENT');
+								harness.equal('...with operator fields preserved', realMint.value.topK, 15);
+								harness.ok('...and what is threaded is FROZEN by the registry', Object.isFrozen(realMint.value.llmClient));
+
+								const plain = makeCountingAnthropicRow();
+								resolveInto(depsWithRows({}, [plain.row]), [], null, (plainResult) => {
+									harness.equal('no debug rule + INACTIVE scope: nothing is constructed', plain.state.calls, 0);
+									harness.equal('...and no llmClient is carried', plainResult.value.llmClient, undefined);
+
+									const injectedOnly = makeCountingAnthropicRow();
+									resolveInto(
+										depsWithRows({ inferenceConfig: { llmClient: injectedStub } }, [injectedOnly.row]),
+										'all',
+										null,
+										(injectedResult) => {
+											harness.equal('an injected client still wins and constructs nothing', injectedOnly.state.calls, 0);
+											harness.ok('...and is threaded unchanged', injectedResult.value.llmClient === injectedStub);
+											harness.report();
+										},
+									);
+								});
+							},
+						);
+					});
+				},
+			);
+		});
+	});
 });
-
-// =====================================================================
-harness.section('REGRESSION CONTROL — without the flag, nothing changed');
-// =====================================================================
-
-const control = makeCountingFactory();
-const realMint = resolveInferenceConfig({ llmClientFactory: control.factory, inferenceConfig: { topK: 15 } }, 'all');
-harness.equal('no debug rule + active scope: the REAL factory IS called', control.state.calls, 1);
-harness.equal('...and its client is threaded', realMint.value.llmClient.model, 'FAKE-REAL-CLIENT');
-harness.equal('...with operator fields preserved', realMint.value.topK, 15);
-
-const plain = makeCountingFactory();
-const plainResult = resolveInferenceConfig({ llmClientFactory: plain.factory }, []);
-harness.equal('no debug rule + INACTIVE scope: nothing is minted', plain.state.calls, 0);
-harness.equal('...and no llmClient is carried', plainResult.value.llmClient, undefined);
-
-const injectedOnly = makeCountingFactory();
-const injectedResult = resolveInferenceConfig(
-	{ llmClientFactory: injectedOnly.factory, inferenceConfig: { llmClient: injectedStub } },
-	'all',
-);
-harness.equal('an injected client still wins and mints nothing', injectedOnly.state.calls, 0);
-harness.ok('...and is threaded unchanged', injectedResult.value.llmClient === injectedStub);
-
-harness.report();

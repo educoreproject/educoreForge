@@ -1140,43 +1140,77 @@ const stageRebridgeWiring = () => {
 	// and no network are ever touched here.
 	// =====================================================================
 	const stageFactorySelection = () => {
-		harness.section('FACTORY SELECTION — resolveInferenceConfig real-vs-stub reranker (§6 no-silent-default)');
-		const sentinelClient = { model: 'sentinel', rerank: () => {} };
+		harness.section('FACTORY SELECTION — resolveInferenceConfig real-vs-stub judge provider (§6 no-silent-default)');
+		// ⟪JOB 4, 2026-09-07⟫ THESE ELEVEN ASSERTIONS MOVED TO THE CALLBACK SHAPE, SAME SUBJECTS. Provider
+		// construction became error-first because the Ollama row's identity carries a model digest that can
+		// only be read over HTTP, so every row constructs through a callback (docket vi). Two things changed
+		// besides the shape: `deps.llmClientFactory` is gone — a per-provider factory override was a second
+		// construction path, which is what this job removes — so the double is now a registry ROW injected
+		// through the registry's own componentOverrides; and the client the run receives is FROZEN, which is
+		// asserted here as well because it is new and load-bearing (docket vii).
+		const sentinelProvider = {
+			name: 'anthropic',
+			wireModel: 'sentinel',
+			model: 'anthropic:sentinel',
+			maxConcurrency: 4,
+			rerank: () => {},
+			describe: () => ({ provider: 'anthropic', model: 'anthropic:sentinel', version: 'sentinel-v1' }),
+		};
 		let factoryCalls = 0;
 		let lastFactoryArg = null;
-		const fakeFactory = (opts) => { factoryCalls++; lastFactoryArg = opts; return sentinelClient; };
+		const countingAnthropicRow = {
+			name: 'anthropic',
+			enabled: true,
+			construct: (rowConstructionOptions, rowCallback) => {
+				factoryCalls++;
+				lastFactoryArg = rowConstructionOptions;
+				rowCallback('', { ...sentinelProvider });
+			},
+		};
+		const withRow = (deps, rowList) => ({ ...deps, judgeProviderComponentOverrides: { judgeProviderRowList: rowList || [countingAnthropicRow] } });
 		const injectedStub = { model: 'injected-stub', rerank: () => {} };
 
-		// 1. STUB injected -> used AS-IS; the factory is NOT consulted (the suite path).
-		const stubRes = buildStatics.resolveInferenceConfig({ inferenceConfig: { llmClient: injectedStub }, llmClientFactory: fakeFactory }, ['ctdl']);
-		harness.ok('an INJECTED llmClient is used as-is (the stub arm)', stubRes.value && stubRes.value.llmClient === injectedStub);
-		harness.equal('  and the factory is NEVER called when a client is injected (suite never mints the real one)', factoryCalls, 0);
+		// 1. STUB injected -> used AS-IS; the row is NOT constructed (the suite path).
+		buildStatics.resolveInferenceConfig(withRow({ inferenceConfig: { llmClient: injectedStub } }), ['ctdl'], null, (stubError, stubValue) => {
+			harness.ok('an INJECTED llmClient is used as-is (the stub arm)', stubValue && stubValue.llmClient === injectedStub);
+			harness.equal('  and the provider row is NEVER constructed when a client is injected (suite never mints the real one)', factoryCalls, 0);
 
-		// 2. active scope, NO injected client -> the REAL run mints via the factory (the real arm).
-		const realRes = buildStatics.resolveInferenceConfig({ inferenceConfig: { topK: 15 }, llmClientFactory: fakeFactory }, 'all');
-		harness.ok('an active --rebridge with no injected client MINTS via the factory (the real arm)', realRes.value && realRes.value.llmClient === sentinelClient);
-		harness.equal('  the factory was called exactly once', factoryCalls, 1);
-		harness.equal('  and pointed at the canonical [anthropicAi] config path', lastFactoryArg && /anthropicAi\.ini$/.test(lastFactoryArg.configFilePath), true);
-		harness.equal('  operator inferenceConfig fields (topK) survive alongside the minted client', realRes.value && realRes.value.topK, 15);
+			// 2. active scope, NO injected client -> the REAL run constructs through the registry (the real arm).
+			buildStatics.resolveInferenceConfig(withRow({ inferenceConfig: { topK: 15 }, judgeProviderName: 'anthropic' }), 'all', null, (realError, realValue) => {
+				harness.ok('an active --rebridge with no injected client CONSTRUCTS through the registry (the real arm)', realValue && realValue.llmClient.model === 'anthropic:sentinel');
+				harness.equal('  the row was constructed exactly once', factoryCalls, 1);
+				harness.equal('  and pointed at the canonical [anthropicAi] config path', lastFactoryArg && /anthropicAi\.ini$/.test(lastFactoryArg.configFilePath), true);
+				harness.equal('  operator inferenceConfig fields (topK) survive alongside the constructed client', realValue && realValue.topK, 15);
+				harness.ok('  and the client handed on is FROZEN — one identity in the cache key and on the edge', Object.isFrozen(realValue.llmClient));
 
-		// 3. INACTIVE scope (plain build) -> mints nothing; no factory call.
-		const plainRes = buildStatics.resolveInferenceConfig({ llmClientFactory: fakeFactory }, []);
-		harness.ok('an inactive scope mints NO client (plain build materializes)', plainRes.value && plainRes.value.llmClient === undefined);
-		harness.equal('  and does NOT call the factory', factoryCalls, 1);
+				// 3. INACTIVE scope (plain build) -> constructs nothing.
+				buildStatics.resolveInferenceConfig(withRow({ judgeProviderName: 'anthropic' }), [], null, (plainError, plainValue) => {
+					harness.ok('an inactive scope constructs NO client (plain build materializes)', plainValue && plainValue.llmClient === undefined);
+					harness.equal('  and does NOT construct the row', factoryCalls, 1);
 
-		// 4. a factory that THROWS (a keyless real client refusing at construction) -> refused BY NAME, as an
-		//    error-object routed through the build callback, never a throw past it or a silent no-op.
-		const throwingFactory = () => { throw new Error('llmClient: no Anthropic API key resolved'); };
-		const refusedRes = buildStatics.resolveInferenceConfig({ llmClientFactory: throwingFactory }, ['ctdl']);
-		harness.match('a keyless mint on an active --rebridge is REFUSED by name (no silent no-op)', refusedRes.error, /Anthropic reranker could not be constructed[\s\S]*no Anthropic API key/);
-		harness.ok('  and yields no value (the build is refused, not run with a broken client)', refusedRes.value === undefined);
+					// 4. a row that THROWS (a keyless real client refusing at construction) -> refused BY NAME,
+					//    routed through the callback, never a throw past it or a silent no-op.
+					const throwingRow = {
+						name: 'anthropic',
+						enabled: true,
+						construct: () => {
+							throw new Error('llmClient: no Anthropic API key resolved');
+						},
+					};
+					buildStatics.resolveInferenceConfig(withRow({ judgeProviderName: 'anthropic' }, [throwingRow]), ['ctdl'], null, (refusedError, refusedValue) => {
+						harness.match('a keyless construction on an active --rebridge is REFUSED by name (no silent no-op)', refusedError, /judge provider could not be constructed[\s\S]*no Anthropic API key/);
+						harness.ok('  and yields no value (the build is refused, not run with a broken client)', refusedValue === undefined || refusedValue === null);
 
-		// rebridgeScopeIsActive — the active/inactive predicate, gated directly.
-		harness.ok("rebridgeScopeIsActive: 'all' is active", buildStatics.rebridgeScopeIsActive('all') === true);
-		harness.ok("rebridgeScopeIsActive: ['ctdl'] is active", buildStatics.rebridgeScopeIsActive(['ctdl']) === true);
-		harness.ok('rebridgeScopeIsActive: [] (default) is NOT active', buildStatics.rebridgeScopeIsActive([]) === false);
+						// rebridgeScopeIsActive — the active/inactive predicate, gated directly.
+						harness.ok("rebridgeScopeIsActive: 'all' is active", buildStatics.rebridgeScopeIsActive('all') === true);
+						harness.ok("rebridgeScopeIsActive: ['ctdl'] is active", buildStatics.rebridgeScopeIsActive(['ctdl']) === true);
+						harness.ok('rebridgeScopeIsActive: [] (default) is NOT active', buildStatics.rebridgeScopeIsActive([]) === false);
 
-		stageEdgeCases();
+						stageEdgeCases();
+					});
+				});
+			});
+		});
 	};
 
 const stageEdgeCases = () => {

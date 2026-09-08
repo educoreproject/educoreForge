@@ -546,6 +546,116 @@ harness.ok(
 	JSON.stringify(cannedChatResponse(LIVE_SHAPED_CONTENT)).indexOf('tool_use') === -1,
 );
 
+
+// =====================================================================
+harness.section('G4-f (twin) — THE EXTRACTOR CHECKS AGAINST A FROZEN COPY, NOT THE CALLER S LIVE ARRAY');
+// =====================================================================
+
+// ⟪JOB 4 / G4-f, 2026-09-07⟫ AZURE_ANCHOR's JOB 3 stand-down found, in its OWN committed diff, the same
+// species of hole it had been sent to repair one layer further in. selectCandidateSchema.js holds
+// `enum: Object.freeze(choiceEnum.slice())` — a frozen COPY — so the constraint that goes ON THE WIRE cannot
+// be moved by a caller that kept a reference to the array it passed. makeJudgmentExtractor closed over the
+// caller's LIVE array and read `choiceEnum.indexOf(offeredChoice)` at READ time, so the check applied to the
+// ANSWER could follow a mutation the constraint did not. A frozen constraint with an unfrozen check is half
+// a constraint: the schema and the extractor could DISAGREE about what the enum is.
+//
+// NOT LIVE TODAY, and JOB 4 finally checked WHY rather than inheriting the reason. The claim carried
+// forward by JOB 2, JOB 3 and the work order itself is that "judgeComponent.js:211 builds choiceEnum per
+// question". [code fact, measured 2026-09-07] IT DOES NOT. That line is judgeOne's VALIDATION —
+// `!Array.isArray(question.choiceEnum)` — which refuses a malformed question and builds nothing. The array
+// is built at evidenceRenderer.js:249, `renderedPoolStableIdList.map(...).concat([ABSTAIN_TOKEN])`, which
+// returns a BRAND-NEW array on every rendered question and therefore cannot alias anything a caller holds.
+// The conclusion was right and is now actually grounded: three builders rested it on a line that type-checks
+// rather than the line that constructs. And 'not live today' is the argument FOR this gate, not against it —
+// it is what was said about the defect this one mirrors, one layer in.
+//
+// CHOICE_ENUM_FIXTURE is itself frozen (:86), so this twin builds its OWN MUTABLE array. Mutating a frozen
+// array under 'use strict' throws, which would make the twin pass for the wrong reason.
+
+const mutableCallerEnum = ['1', '2', 'NONE'];
+const extractorOverMutableEnum = ollamaJudgeClientLib.makeJudgmentExtractor(mutableCallerEnum);
+const schemaOverMutableEnum = selectCandidateSchemaLib.renderSelectCandidateSchema('ollama', {
+	choiceEnum: mutableCallerEnum,
+});
+
+// NON-VACUITY FIRST: the extractor must actually WORK over this array, or every assertion below passes
+// against an extractor that accepts nothing at all.
+harness.equal(
+	'the extractor built over the caller s array accepts a value that IS in it',
+	extractorOverMutableEnum(cannedChatResponse('{"choice":"2","category":"strong","rationale":"r"}')).choice,
+	'2',
+);
+harness.equal(
+	'…and refuses a value that is NOT in it, BEFORE any mutation',
+	extractorOverMutableEnum(cannedChatResponse('{"choice":"9","category":"strong","rationale":"r"}')).choice,
+	undefined,
+);
+
+// BOTH HALVES OF THE FIX ARE LOAD-BEARING — AZURE_ANCHOR's G3-e lesson, applied here. `Object.freeze(
+// choiceEnum)` without the `.slice()` would satisfy every acceptance assertion below and would be a WORSE
+// bug than the one being fixed: this module would reach back into its caller and silently freeze an array
+// it does not own. THIS IS ASSERTED BEFORE THE MUTATION, and the mutation is GUARDED, because pushing to a
+// frozen array throws under 'use strict' — an unguarded push turns this gate into a crash that aborts every
+// assertion after it and names nothing. A gate must report by name, not by taking the suite down with it.
+harness.ok(
+	'the CALLER s own array is left UNFROZEN — the fix copies, it does not freeze in place',
+	!Object.isFrozen(mutableCallerEnum),
+	`Object.isFrozen(caller s array) === ${Object.isFrozen(mutableCallerEnum)}`,
+);
+
+// THE MUTATION. The caller adds a value to the array it still holds, AFTER both the schema and the
+// extractor were built from it.
+if (!Object.isFrozen(mutableCallerEnum)) {
+	mutableCallerEnum.push('9');
+}
+
+harness.equal(
+	'the SCHEMA s enum does not follow the caller s mutation (JOB 3 s G3-e, still holding)',
+	JSON.stringify(schemaOverMutableEnum.properties.choice.enum),
+	JSON.stringify(['1', '2', 'NONE']),
+);
+harness.equal(
+	'G4-f: the EXTRACTOR s acceptance does not follow it either — the check is against a FROZEN COPY',
+	extractorOverMutableEnum(cannedChatResponse('{"choice":"9","category":"strong","rationale":"r"}')).choice,
+	undefined,
+);
+harness.equal(
+	'…so the constraint SENT and the check APPLIED name the same enum, which is the whole point',
+	JSON.stringify(schemaOverMutableEnum.properties.choice.enum),
+	JSON.stringify(['1', '2', 'NONE']),
+);
+harness.equal(
+	'…and a value still genuinely in the enum is still accepted after the mutation (not frozen SHUT)',
+	extractorOverMutableEnum(cannedChatResponse('{"choice":"1","category":"strong","rationale":"r"}')).choice,
+	'1',
+);
+
+harness.equal(
+	'…the caller s array really did take the mutation, so the twin mutated something real',
+	JSON.stringify(mutableCallerEnum),
+	JSON.stringify(['1', '2', 'NONE', '9']),
+);
+
+// PRESERVED BEHAVIOUR, pinned because the FIX could plausibly break it. The extractor tolerates a
+// non-array choiceEnum by yielding `choice: undefined` (the Array.isArray guard). A fix written as a bare
+// `choiceEnum.slice()` at factory time would turn that tolerance into a TypeError thrown at CONSTRUCTION —
+// a behaviour change nothing in this suite would otherwise have caught, since the only other call site
+// passes a real array.
+harness.equal(
+	'a NON-ARRAY choiceEnum still yields choice undefined rather than throwing at factory time',
+	ollamaJudgeClientLib.makeJudgmentExtractor(undefined)(
+		cannedChatResponse('{"choice":"2","category":"strong","rationale":"r"}'),
+	).choice,
+	undefined,
+);
+harness.equal(
+	'…and the other two fields are still read normally when the enum is unusable',
+	ollamaJudgeClientLib.makeJudgmentExtractor(undefined)(
+		cannedChatResponse('{"choice":"2","category":"strong","rationale":"r"}'),
+	).category,
+	'strong',
+);
+
 // =====================================================================
 harness.section('G-F12-a — THREE REDS: MISSING RATIONALE, OUT-OF-ENUM CHOICE, NON-JSON BODY');
 // =====================================================================

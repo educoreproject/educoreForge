@@ -293,7 +293,7 @@ harness.section('G-F1-a — model IS NAMESPACED BY PROVIDER; wireModel IS THE BA
 
 harness.equal('anthropic wireModel is the bare API name', anthropicProvider.wireModel, 'claude-opus-4-8');
 harness.equal('anthropic model is namespaced', anthropicProvider.model, 'anthropic:claude-opus-4-8');
-harness.equal('debugJudge model is namespaced', debugProvider.model, 'debugJudge:first-v1-INVALID_DEBUG');
+harness.equal('debugJudge model is namespaced', debugProvider.model, 'debug:first');
 harness.equal('ollama wireModel is the bare API name', ollamaProvider && ollamaProvider.wireModel, 'qwen2.5:32b');
 harness.match('ollama model is namespaced AND carries the model digest', ollamaProvider && ollamaProvider.model, /^ollama:qwen2\.5:32b@[0-9a-f]{12}$/);
 // ⟪THE PROVIDER THAT PROVES THE NAMESPACE RULE HAD TO BE A PREFIX TEST⟫ interfaces.js says the separator
@@ -311,9 +311,30 @@ harness.equal(
 	ollamaProvider && ollamaProvider.model.split(JUDGE_PROVIDER_SHAPE.MODEL_NAMESPACE_SEPARATOR).length,
 	3,
 );
+// ⟪JOB 4, 2026-09-07⟫ THIS GATE MOVED TO WHERE THE FLAG ACTUALLY LIVES, AND IT GOT STRONGER.
+// It used to assert that DEBUG_MARK appeared INSIDE the model string, because JOB 1's identity was
+// 'debugJudge:first-v1-INVALID_DEBUG'. Docket (i) shortened the identity to exactly 'debug:<rule>' so that
+// bridge-framework's judgeKind could stop being a ternary branching on which provider it holds.
+//
+// BEFORE CHANGING IT, WHAT THE OLD ASSERTION PROTECTED WAS TRACED, because a gate should not be relaxed on
+// the strength of wanting to. [code fact, measured 2026-09-07] NOTHING MECHANICAL READS THE MODEL STRING
+// FOR DEBUG-NESS. debugJudge.js's own debugMarkFromLlmClient reads `client.decisionAlgorithm`; that flag is
+// what bridge-framework suffixes into the block's generation via generationWithDebugMark, what
+// materialiser.js turns into provenanceTier 'invalid-debug', and therefore what certificationCheck.js,
+// passport-writer.js and gold-eval-bridge-sibling.js every one of them refuse on. All of them read
+// provenanceTier; not one reads mappingTool. So the tail was a human-readable flag, not a mechanism.
+//
+// The assertion therefore moves from a SUBSTRING OF A DISPLAY STRING to THE MEMBER THE MECHANISM CONSULTS,
+// which is strictly harder to break by accident: an identity rename can no longer satisfy it, and removing
+// the real flag can no longer slip past it.
+harness.equal(
+	'the debug judge carries its INVALID_DEBUG flag on decisionAlgorithm — the member every mechanical reader actually consults',
+	debugProvider.decisionAlgorithm,
+	debugJudgeLib.DEBUG_MARK,
+);
 harness.ok(
-	'debugJudge keeps its INVALID_DEBUG flag inside the namespaced identity',
-	debugProvider.model.indexOf(debugJudgeLib.DEBUG_MARK) !== -1,
+	'…and the identity is namespaced instead, which is what makes it unmistakable for a real model',
+	debugProvider.model.indexOf(`${debugProvider.name}${JUDGE_PROVIDER_SHAPE.MODEL_NAMESPACE_SEPARATOR}`) === 0,
 	debugProvider.model,
 );
 
@@ -440,9 +461,23 @@ harness.ok(
 	frameworkSourceText.indexOf('`anthropic:${judgeClient.model}`') === -1,
 	'the doubled-prefix expression is still present',
 );
+// ⟪JOB 4, 2026-09-07⟫ THIS GATE IS INVERTED, NOT DELETED, AND THE INVERSION IS THE POINT.
+// It read: "the DEBUG arm still carries its own `debug:` prefix (test-bgThree.js:109 branches on it)",
+// asserting frameworkSourceText CONTAINED '`debug:${judgeClient.ruleName}`'. That expression was the debug
+// arm of the judgeKind TERNARY — the one place the framework asked WHICH PROVIDER IT WAS HOLDING and built
+// the identity two different ways depending on the answer. Docket (i) removed it: debugJudge's identity IS
+// 'debug:<rule>' now, so both arms collapse to the single expression `judgeClient.model` and the value in a
+// frozen block header does not move (test-bgProducer's `judgeKind === 'debug:digest'` is unedited and
+// passing). So the gate that used to FORBID the unification now PROVES it.
 harness.ok(
-	'the DEBUG arm still carries its own `debug:` prefix (test-bgThree.js:109 branches on it)',
-	frameworkSourceText.indexOf('`debug:${judgeClient.ruleName}`') !== -1,
+	'the judgeKind expression is SINGLE — the framework no longer branches on which provider it holds',
+	frameworkSourceText.indexOf('const judgeKind = judgeClient.model;') !== -1,
+	'the single-expression judgeKind is absent',
+);
+harness.ok(
+	'…and the ternary that used to build the debug identity separately is GONE',
+	frameworkSourceText.indexOf('`debug:${judgeClient.ruleName}`') === -1,
+	'the debug arm of the judgeKind ternary is still present',
 );
 
 // =====================================================================
@@ -620,7 +655,7 @@ overlapWitness({ concurrency: resolvedConcurrency(1) }, ({ spanList, overlapCoun
 		harness.match(
 			'…the namespaced identity is what a judged edge now carries as mappingTool',
 			judgedEdgeUnderTest().edgeProperties.mappingTool,
-			/^debugJudge:/,
+			/^debug:/,
 		);
 
 		harness.report();

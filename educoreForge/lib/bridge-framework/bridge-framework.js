@@ -89,7 +89,9 @@ const PROPERTY_TIER = 'property';
 // as a recorded specification change). Named here rather than inlined so the exporter and the edge builder
 // cannot drift apart.
 const SEMANTIC_SIMILARITY_JUSTIFICATION = 'semapv:SemanticSimilarityThresholdMatching';
-const JUDGE_CONCURRENCY = 4; // bounded, index-collecting (BR-072)
+// ⟪JOB 4, 2026-09-07⟫ the ceiling is DERIVED from its one home rather than restated. It used to be a
+// literal here and a second literal in debugJudge.js; where you can derive, you do not assert.
+const { JUDGE_CONCURRENCY } = require('./judgeConcurrency');
 const MAX_JUDGMENT_COUNT_PER_RUN = 20000; // the DECLARED per-run ceiling (BR-069, BR-120); the budget guard halts by name
 const MODE_MATERIALISE = 'materialise';
 const MODE_REJUDGE = 'rejudge';
@@ -1298,15 +1300,25 @@ const moduleFunction =
 						next(refuse.byName({ moduleName, what: `a judged decision is needed for subject ${firstJudged.baseRecord.subjectStableId} (${firstJudged.baseRecord.targetKey}) and inferenceConfig.llmClient is absent`, where: 'a re-judge with judged subjects needs the real client or the debug judge (build.js resolveInferenceConfig); a specified-only run needs no judge' }).message);
 						return;
 					}
-					// ⟪JOB 1, 2026-09-07, ruled by DAWN_TOWER⟫ the REAL arm no longer prepends a hard-coded provider
+					// ⟪JOB 1, 2026-09-07, ruled by DAWN_TOWER⟫ the REAL arm stopped prepending a hard-coded provider
 					// name: since the split, judgeClient.model IS the namespaced identity ('anthropic:claude-opus-4-8'),
-					// so 'anthropic:' + that would read 'anthropic:anthropic:claude-opus-4-8' in a FROZEN block header.
-					// This edit is BYTE-PRESERVING — the old expression built the same string from a literal and a bare
-					// wire name, so no existing header value moves; only where the value comes from does. The DEBUG arm
-					// is deliberately UNCHANGED: test-bgThree.js:109 branches on the 'debug:' prefix, and
-					// debugJudge.model ('debugJudge:<rule>-v1-INVALID_DEBUG') does not carry it. Unifying both arms
-					// through the registry is JOB 4's.
-					const judgeKind = debugMark ? `debug:${judgeClient.ruleName}` : judgeClient.model;
+					// so 'anthropic:' + that would have read 'anthropic:anthropic:claude-opus-4-8' in a FROZEN block
+					// header. JOB 1 left the DEBUG arm alone and handed the unification to JOB 4.
+					//
+					// ⟪JOB 4, 2026-09-07⟫ THE TERNARY IS GONE AND THAT IS THE POINT OF THE WHOLE ORDER. What stood
+					// here asked WHICH PROVIDER THE FRAMEWORK WAS HOLDING and built the identity two different ways
+					// depending on the answer — a switch on provider type, in the one place the registry order says
+					// there must never be one. It is now the single expression `judgeClient.model`, which every
+					// provider supplies because JUDGE_PROVIDER_SHAPE requires it.
+					//
+					// THIS EDIT IS BYTE-PRESERVING FOR BOTH ARMS, which is the only reason it is safe to make.
+					// The real arm already read judgeClient.model. The debug arm read `debug:${ruleName}`, and
+					// debugJudge's identity was changed IN THE SAME COMMIT to be exactly that — 'debug:<rule>' —
+					// so the string a frozen block header carries does not move for either provider.
+					// test-bgProducer's conjunct a_generationEndsInDebugMarkAndJudgeKind asserts
+					// `judgeKind === 'debug:digest'`; it is UNCHANGED and passing, and it is
+					// the proof: it is the one assertion that would fail if this unification had shifted the value.
+					const judgeKind = judgeClient.model;
 					const budget = { maxJudgmentCount, judgmentCountSoFar: 0 };
 					const evidenceView = args.reader.forEvidence();
 					// the key is PRESENT iff the hook is declared (contract, RULING BR4); with the hook off there is no guidance to render
