@@ -160,6 +160,11 @@ const judgmentFromReturn = ({ clientReturn, question, isDebugClient }) => {
 		// differ from the block from a fresh one. A model can never supply this token itself: llmClient's
 		// extractor returns undefined for anything outside CATEGORY_ENUM, so it can only arrive from our own
 		// cache.
+		// ⟪2026-09-10, OCEAN_SUMMIT, TQ-authorised⟫ SUPERSEDES the "can NEVER arrive as (NONE, none)" sentence
+		// above: selectCandidateSchema now OFFERS the abstain category, so a real client's abstention arrives
+		// as (NONE, none) by design and takes the `category === ABSTAIN_CATEGORY` arm below (reportedCategoryOnAbstain
+		// null). The two older arrivals — absent, and schema-forced picking category — remain accepted for
+		// judgments frozen or cached before this date. Three states are now the three the model can actually say.
 		const categoryIsAbsent = !isNonBlank(clientReturn.category) || clientReturn.category === ABSENT_CATEGORY_MARK;
 		if (!isNonBlank(clientReturn.rationale)) {
 			// RULED: an abstention with NO rationale earns the SAME single bounded re-ask as the ordinal case.

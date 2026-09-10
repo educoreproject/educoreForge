@@ -94,6 +94,7 @@ const configFileProcessor = require('qtools-config-file-processor');
 const {
 	SELECT_CANDIDATE_TOOL_NAME,
 	PICK_CATEGORY_ENUM,
+	OFFERED_CATEGORY_ENUM,
 	renderSelectCandidateSchema,
 } = require('./selectCandidateSchema');
 
@@ -184,6 +185,11 @@ const JUDGMENT_MAX_TOKENS = 400;
 // run time and derives a whole seam conjunct from whatever CATEGORY_ENUM turns out to be. Removing the
 // export would break that conjunct from two directories away.
 const CATEGORY_ENUM = PICK_CATEGORY_ENUM;
+// ⟪2026-09-10, OCEAN_SUMMIT⟫ The schema now OFFERS the full contract enum including 'none' (see
+// OFFERED_CATEGORY_ENUM in selectCandidateSchema.js for the measured reason). CATEGORY_ENUM above keeps its
+// pick-only meaning and its export — test-bgReplay.js derives a seam conjunct from it as the set of
+// categories a PICK may carry. EXTRACTION, below, must accept what the schema offers, or an honest
+// abstention answering 'none' would be read as "no category" and retried — the exact defect being removed.
 
 // ⟪JOB 0, 2026-09-07⟫ OBSOLETE_JUDGMENT_FLAG_NAME / obsoleteJudgmentFlagRefusalText — the retired
 // option's name held as DATA in exactly one place per file, so that `rerank` can REFUSE IT BY NAME.
@@ -287,7 +293,7 @@ const extractCategoryAndRationale = (responseBody) => {
 	const blocks = (responseBody && responseBody.content) || [];
 	const toolBlock = blocks.find((b) => b && b.type === 'tool_use' && b.name === TOOL_NAME);
 	const input = (toolBlock && toolBlock.input) || {};
-	const category = CATEGORY_ENUM.indexOf(input.category) !== -1 ? input.category : undefined;
+	const category = OFFERED_CATEGORY_ENUM.indexOf(input.category) !== -1 ? input.category : undefined;
 	const rationale =
 		typeof input.rationale === 'string' && input.rationale.trim() ? input.rationale : undefined;
 	return { category, rationale };

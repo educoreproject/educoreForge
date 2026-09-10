@@ -96,8 +96,16 @@ const CHOICE_ENUM_FIXTURE = Object.freeze(['1', '2', '3', 'NONE']);
 // zNotesPlansDocs/judgeProviderRegistry-evidence/JOB2-g2a-baseline-PREEDIT.txt. It is the SAME value JOB 0
 // recorded for gate G0-b against pre-JOB-0 code, which is a second, independent fact: the tool object has
 // not moved across two intervening jobs.
+//
+// ⟪RE-PINNED 2026-09-10, OCEAN_SUMMIT, TQ-authorised⟫ The schema now OFFERS the abstain category 'none'
+// (OFFERED_CATEGORY_ENUM — see selectCandidateSchema.js for the measured defect it removes), and the two
+// description strings say so. That is a DELIBERATE byte move of the tool object, so the pin moves with it.
+// The JOB 2 value 3a11df3b583a66645f106df74185200634095b83a5b27cde44520a315315a8e6 held from dce97f6
+// through JOB 7; the value below was captured from the tree immediately after the enum change and before
+// any other edit. Every other assertion in this file that cites the baseline is checking the SAME constant,
+// so they stay meaningful: they prove llmClient consumes this rendering, not that the rendering is old.
 const ANTHROPIC_RENDERING_BASELINE_SHA256 =
-	'3a11df3b583a66645f106df74185200634095b83a5b27cde44520a315315a8e6';
+	'7746be79a61b513b51ed9436647c76b20aaa7bdcd9a5994c9c715ef60096713e';
 
 const canonicalSchema = selectCandidateSchemaLib.buildCanonicalSelectCandidateSchema({
 	choiceEnum: CHOICE_ENUM_FIXTURE,
@@ -117,10 +125,16 @@ harness.ok(
 	Object.isFrozen(canonicalSchema.jsonSchema.required),
 );
 harness.equal(
-	'the canonical category enum equals SELECT_CATEGORY_ENUM minus none, DERIVED in this assertion',
+	'the canonical category enum OFFERED to the model equals the FULL SELECT_CATEGORY_ENUM, abstain category included, DERIVED in this assertion (2026-09-10)',
 	canonicalSchema.jsonSchema.properties.category.enum.join(','),
-	EXPECTED_PICK_CATEGORY_LIST.join(','),
+	SELECT_CATEGORY_ENUM.join(','),
 );
+harness.equal(
+	'…and the module exports that offered enum as OFFERED_CATEGORY_ENUM, equal to the contract enum',
+	selectCandidateSchemaLib.OFFERED_CATEGORY_ENUM.join(','),
+	SELECT_CATEGORY_ENUM.join(','),
+);
+harness.ok('…and it is frozen', Object.isFrozen(selectCandidateSchemaLib.OFFERED_CATEGORY_ENUM));
 // NON-VACUITY. The assertion above would also pass if BOTH sides were empty, or if the filter silently
 // removed everything. Pin the shape of the expectation itself so the comparison cannot be trivially true.
 harness.ok(
@@ -129,8 +143,12 @@ harness.ok(
 	`pick-only ${JSON.stringify(EXPECTED_PICK_CATEGORY_LIST)} vs contract ${JSON.stringify(SELECT_CATEGORY_ENUM)}`,
 );
 harness.ok(
-	"…and 'none' is absent from what the schema OFFERS THE MODEL (abstain travels as choice='NONE')",
-	canonicalSchema.jsonSchema.properties.category.enum.indexOf('none') === -1,
+	"…and 'none' IS offered to the model, so an abstention (choice='NONE') can satisfy `required` truthfully instead of fabricating a confidence (2026-09-10)",
+	canonicalSchema.jsonSchema.properties.category.enum.indexOf('none') !== -1,
+);
+harness.ok(
+	"…while PICK_CATEGORY_ENUM — what a PICK may carry — still EXCLUDES 'none'",
+	selectCandidateSchemaLib.PICK_CATEGORY_ENUM.indexOf('none') === -1,
 );
 harness.equal(
 	'the canonical choice enum is the per-call list, passed straight through',
@@ -152,9 +170,9 @@ selectCandidateSchemaLib.SCHEMA_DIALECT_NAME_LIST.forEach((oneDialectName) => {
 	});
 	const renderedCategoryEnum = selectCandidateSchemaLib.categoryEnumOfRendering(oneDialectName, renderedSchema);
 	harness.equal(
-		`the '${oneDialectName}' rendering offers exactly the pick-only categories`,
+		`the '${oneDialectName}' rendering offers exactly the full contract enum (abstain category included)`,
 		renderedCategoryEnum.join(','),
-		EXPECTED_PICK_CATEGORY_LIST.join(','),
+		SELECT_CATEGORY_ENUM.join(','),
 	);
 });
 

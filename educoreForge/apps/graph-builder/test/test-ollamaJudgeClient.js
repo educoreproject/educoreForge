@@ -727,9 +727,9 @@ harness.equal(
 	undefined,
 );
 harness.equal(
-	"…and 'none' is NOT accepted as a category (abstain travels as choice='NONE', never as a category)",
-	extractJudgment(cannedChatResponse('{"choice":"1","category":"none","rationale":"a reason"}')).category,
-	undefined,
+	"…and 'none' IS extracted as a category (2026-09-10: the schema offers it so an abstention can answer truthfully; a PICK carrying it is refused by judgeComponent, not dropped here)",
+	extractJudgment(cannedChatResponse('{"choice":"NONE","category":"none","rationale":"nothing fits"}')).category,
+	'none',
 );
 
 // RED 3 — a body that is not JSON at all. This is the one fault the shape says is REFUSED BY NAME rather
@@ -857,9 +857,9 @@ harness.equal(
 	JSON.stringify(selectCandidateSchemaLib.renderSelectCandidateSchema('ollama', { choiceEnum: CHOICE_ENUM_FIXTURE })),
 );
 harness.equal(
-	'…and the category enum on the wire equals the pick-only categories, DERIVED in this assertion',
+	'…and the category enum on the wire equals the FULL contract enum (abstain category included), DERIVED in this assertion (2026-09-10)',
 	capturedPayload && capturedPayload.format.properties.category.enum.join(','),
-	EXPECTED_PICK_CATEGORY_LIST.join(','),
+	SELECT_CATEGORY_ENUM.join(','),
 );
 harness.ok(
 	'…and there is no tool wrapper: the ollama dialect has no tool call to name',

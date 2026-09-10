@@ -70,7 +70,7 @@ const http = require('http');
 const configFileProcessor = require('qtools-config-file-processor');
 const {
 	renderSelectCandidateSchema,
-	PICK_CATEGORY_ENUM,
+	OFFERED_CATEGORY_ENUM,
 } = require('./selectCandidateSchema');
 
 // canonical config home for this project, matching the incumbent's [anthropicAi] twin. No secrets live
@@ -343,8 +343,10 @@ const makeJudgmentExtractor = (choiceEnum) => {
 			Array.isArray(frozenChoiceEnum) && frozenChoiceEnum.indexOf(offeredChoice) !== -1
 				? offeredChoice
 				: undefined;
+		// ⟪2026-09-10, OCEAN_SUMMIT⟫ membership in what the schema OFFERS, abstain category included; a pick
+		// carrying 'none' is refused one level up by judgeComponent, not silently dropped here.
 		const category =
-			PICK_CATEGORY_ENUM.indexOf(judgmentObject.category) !== -1 ? judgmentObject.category : undefined;
+			OFFERED_CATEGORY_ENUM.indexOf(judgmentObject.category) !== -1 ? judgmentObject.category : undefined;
 		const rationale =
 			typeof judgmentObject.rationale === 'string' && judgmentObject.rationale.trim()
 				? judgmentObject.rationale

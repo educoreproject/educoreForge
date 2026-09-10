@@ -7,7 +7,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //
 // ⟪THE PROBLEM THIS SOLVES, AND WHY IT IS NOT COSMETIC⟫ Every judge provider must impose the SAME
 // constraint — the model may answer only with a candidate number or NONE, and only with one of the
-// pick-only confidence categories — but each expresses it in a DIFFERENT dialect. Anthropic forces a
+// contract's confidence categories — but each expresses it in a DIFFERENT dialect. Anthropic forces a
 // tool call: `tools: [{name, description, input_schema}]` plus `tool_choice`. Ollama constrains
 // generation with `format: <a JSON schema>` and has no tool call at all. If each provider wrote its own
 // schema, N providers would hold N restatements of SELECT_CATEGORY_ENUM.
@@ -52,15 +52,34 @@ const { SELECT_CATEGORY_ENUM } = require('./evidenceContracts');
 // mean a client that could send a tool it cannot then read back.
 const SELECT_CANDIDATE_TOOL_NAME = 'select_candidate';
 
-// PICK_CATEGORY_ENUM — the categories the schema OFFERS THE MODEL. Derived from the contract enum by
-// removing 'none', never restated. The exclusion is SEMANTIC and legitimate: 'none' is the abstain verdict
-// judgeComponent.js synthesizes when the model's choice is 'NONE'; it is never a category a model asserts
-// ABOUT A PICK, because when it abstains there is no pick to have a confidence in. Filtering at the
-// derivation site means the contract gaining or renaming a category cannot silently drift away from what
-// any provider offers.
+// ABSTAIN_CATEGORY_NAME — the contract's abstain category, held as the ONE literal in this module so the
+// filter below and the description strings cannot spell it two ways.
+const ABSTAIN_CATEGORY_NAME = 'none';
+
+// PICK_CATEGORY_ENUM — the categories a PICK may carry. Derived from the contract enum by removing the
+// abstain category, never restated. A pick asserts a confidence about a candidate; 'none' is not a
+// confidence, so judgeComponent.js refuses a pick that carries it. Filtering at the derivation site means
+// the contract gaining or renaming a category cannot silently drift away from what any provider accepts.
 const PICK_CATEGORY_ENUM = Object.freeze(
-	SELECT_CATEGORY_ENUM.filter((oneCategory) => oneCategory !== 'none'),
+	SELECT_CATEGORY_ENUM.filter((oneCategory) => oneCategory !== ABSTAIN_CATEGORY_NAME),
 );
+
+// OFFERED_CATEGORY_ENUM — what the schema OFFERS THE MODEL: the FULL contract enum, abstain category
+// included, in contract order.
+//
+// ⟪2026-09-10, OCEAN_SUMMIT, TQ-authorised⟫ Until this date the schema offered only PICK_CATEGORY_ENUM, on
+// the argument that a confidence category is a statement about a pick and an abstention has no pick. The
+// argument was sound; its consequence was measured to be a defect. `required` names category
+// unconditionally (JOB 0), so an honest abstention could satisfy the schema only by FABRICATING a
+// confidence, and the description told the model to omit it — a contract no answer could meet. Measured
+// from the forensics trails: on the 2026-08-17 Anthropic run (category then optional) 90 of 173 real
+// abstention calls were retried on "missing category", 58 to the six-call ceiling, roughly 354 wasted
+// invocations — about a third of every call made; on the JOB 7 Ollama slice (format-constrained) there
+// were zero retries but 8 of 8 abstentions carried a forced 'moderate'. Offering 'none' lets an abstention
+// satisfy `required` truthfully on both dialects. The pick-only set above is UNCHANGED and still governs
+// what a pick may carry; judgeComponent normalises (NONE, none) to reportedCategoryOnAbstain null, which
+// it already accepted, and refuses a pick carrying 'none', which it already did.
+const OFFERED_CATEGORY_ENUM = Object.freeze(SELECT_CATEGORY_ENUM.slice());
 
 // JUDGMENT_REQUIRED_FIELD_LIST — what a judgment must contain, in one greppable place. JOB 0 named and
 // froze this constant when it retired the scalar variant, whose whole defect was that a SECOND, weaker
@@ -88,14 +107,14 @@ const categoryProse = (categoryList) => {
 // changed, from a literal in a provider to a derivation from the contract.
 const TOOL_DESCRIPTION =
 	'Record the single best matching CEDS candidate by its number, or NONE if no candidate is a ' +
-	'correct match. You MUST ALSO record a discrete confidence CATEGORY for the choice (never a ' +
-	'numeric probability) and a short RATIONALE for the choice — both are REQUIRED whenever ' +
-	'choice is a candidate number.';
+	'correct match. You MUST ALSO record a discrete confidence CATEGORY (never a numeric ' +
+	'probability) and a short RATIONALE — both are REQUIRED on every answer. When choice is NONE, ' +
+	`category MUST be ${ABSTAIN_CATEGORY_NAME}: an abstention carries no confidence about any candidate.`;
 const CHOICE_DESCRIPTION = 'The chosen candidate number, or the string NONE.';
 const CATEGORY_DESCRIPTION =
-	`A discrete confidence category for the choice — ${categoryProse(PICK_CATEGORY_ENUM)} — ` +
-	'reflecting how strongly the evidence supports it, never a numeric probability. ' +
-	'Required when choice is a candidate number; omit when choice is NONE.';
+	`A discrete confidence category for the choice — ${categoryProse(PICK_CATEGORY_ENUM)} for a pick, ` +
+	'reflecting how strongly the evidence supports it, never a numeric probability — ' +
+	`or exactly ${ABSTAIN_CATEGORY_NAME} when choice is NONE. Always required.`;
 const RATIONALE_DESCRIPTION = 'A short rationale (one or two sentences) explaining the choice.';
 
 const absentChoiceEnumRefusalText = (receivedValue) =>
@@ -134,7 +153,7 @@ const buildCanonicalSelectCandidateSchema = ({ choiceEnum } = {}) => {
 					// freeze. Object.freeze is SHALLOW, and this was the one enum that arrives per call: writing
 					// `enum: choiceEnum` stored THE CALLER'S OWN ARRAY by reference, so a caller that kept its
 					// reference could mutate a schema this module calls frozen, after construction, silently.
-					// category.enum never had the hole because it is PICK_CATEGORY_ENUM, frozen at module load.
+					// category.enum never had the hole because it is OFFERED_CATEGORY_ENUM, frozen at module load.
 					// BOTH halves are load-bearing: slice() severs the shared reference (freezing the caller's
 					// own array in place would be a worse bug — this module would be freezing an object it does
 					// not own), and freeze stops anything downstream mutating the copy. It moves NO BYTES:
@@ -145,7 +164,7 @@ const buildCanonicalSelectCandidateSchema = ({ choiceEnum } = {}) => {
 				}),
 				category: Object.freeze({
 					type: 'string',
-					enum: PICK_CATEGORY_ENUM,
+					enum: OFFERED_CATEGORY_ENUM,
 					description: CATEGORY_DESCRIPTION,
 				}),
 				rationale: Object.freeze({
@@ -218,6 +237,7 @@ const categoryEnumOfRendering = (dialectName, renderedSchema) =>
 module.exports = {
 	SELECT_CANDIDATE_TOOL_NAME,
 	PICK_CATEGORY_ENUM,
+	OFFERED_CATEGORY_ENUM,
 	JUDGMENT_REQUIRED_FIELD_LIST,
 	SCHEMA_DIALECT_NAME_LIST,
 	buildCanonicalSelectCandidateSchema,
