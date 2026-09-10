@@ -426,7 +426,27 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // (JOB 2's suite gained the exemption census; JOB 6 added the artifact writer, the record and the audit).
 // NO path list widened, NO exclusion added; SEAM_PATH_LIST byte-identical by git show. Twin re-observed
 // red against THIS ref before acceptance (26/26).
-const PHASE3_ANCHOR_TAG = 'postJudgeRegistryJob4b-090726'; // re-anchored by DAWN_TOWER after judgeProviderRegistry JOB 4; tag cut ON the re-anchor commit (three anchors moved together — PESC (a), G-SEAM-UNTOUCHED, and this one)
+// ⟪RE-ANCHOR — OCEAN_SUMMIT, 2026-09-10. postJudgeRegistryJob4b-090726 -> postNamedSubjectSet-091026 (021d1d7).⟫
+//
+// CAUSE, single and authorised: WORKORDER-namedSubjectSet-091026 added --subjectListFilePath, and the flag
+// must be READ somewhere. apps/graph-builder/lib/build.js is where every operator flag is resolved and
+// eagerly validated before a container is provisioned — and it is the first entry in SEAM_PATH_LIST. So the
+// moment TQ authorised the named subject set, seamDiffEmpty could not stay green. 30 insertions, 2 deletions,
+// in that one file; the census below was taken before the tag moved.
+//
+// CENSUS AT THE RE-ANCHOR (git diff --stat postJudgeRegistryJob4b-090726 -- <SEAM_PATH_LIST>):
+//   apps/graph-builder/lib/build.js | 32 ++ (30 insertions, 2 deletions)   <- the ONE file
+//   nothing else in the seam moved.
+//
+// ONLY THIS CONJUNCT MOVES. Conjunct (iii) watches lib/forge-framework/ from PHASE0_ANCHOR_TAG and that diff
+// is EMPTY at this commit, so its baseline STAYS. A baseline that moves without needing to is a baseline that
+// has stopped meaning anything. (i) and (ii) keep their own bases for their own reasons, unchanged.
+//
+// SEAM_PATH_LIST IS BYTE-IDENTICAL. No exclusion was added for build.js — that would retire the gate rather
+// than re-anchor it. After this move an append to build.js is red again, which is what the twin still proves;
+// the twin was re-observed RED against THIS tag before the move was committed. A re-anchor without a fresh red
+// observation is a gate nobody has proven still works.
+const PHASE3_ANCHOR_TAG = 'postNamedSubjectSet-091026';
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');
