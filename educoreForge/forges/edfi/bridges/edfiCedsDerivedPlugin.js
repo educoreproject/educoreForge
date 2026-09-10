@@ -53,7 +53,16 @@ const bridgeDeclaration = Object.freeze({
 	// the point: they ARE different runs over different populations, and a scheme that gave them one id would be
 	// hiding that. Both digests and both block ids are recorded in the DEVLOG at the phase boundary.
 	// CURRENT PHASE: D3/D4 — switched from null at the CP1 boundary, 2026-08-17, on the supervisor's GO.
-	subjectSource: { kind: 'graphLabel', label: 'EdfiProperty', scopeStableIdListPath: 'bridgeData/edfiDerivedScorableScope.json' },
+	// ⟪2026-09-10, OCEAN_SUMMIT, TQ RULING⟫ Back to null — EVERY EdfiProperty node. The 701-id scope file was the
+	// AEM crosswalk's own subject population (scalar and descriptor properties only; zero reference-typed
+	// properties), kept so the derived run could be scored against that crosswalk. TQ ruled the crosswalk
+	// untrustworthy on 2026-09-10 ("it will not be included in the graph and will not be used as a basis for
+	// evaluating our performance") after 87 of its 184 class-contended rows read as plainly wrong and 166 of the
+	// 184 proved to be the alphabetically-first CEDS class. The file is deleted from source (fileStash backup
+	// 2026-09-10 10-08-41). Operator narrowing for evaluation now belongs to the run, not the declaration —
+	// see the named-subject-set work order (WORKORDER-namedSubjectSet-091026.md). declarationDigest and every
+	// derived block id move with this line; the 80.9% yardstick those ids served is retired.
+	subjectSource: { kind: 'graphLabel', label: 'EdfiProperty', scopeStableIdListPath: null },
 	// K AND THE FLOOR, RULED ON THE MEASURED CURVE (§11.3). The D0 review computed recall@K over the 655
 	// subjects with a picked truth object: @10 = 0.768, @15 = 0.815, @25 = 0.858, rank-1 = 0.415.
 	//   K = 15 — the July-tuned value. K = 10 would cap the judge at 0.768 before Opus is asked anything;

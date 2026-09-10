@@ -318,7 +318,7 @@ const judgeProviderRegistryLib = require(path.join(__dirname, '..', 'apps', 'bri
 // parsePositiveInteger — the SAME reader lib/sourceWindow.js applies at slice time, required here so
 // a malformed --limit/--offset is refused identically whether it is caught eagerly (before forging)
 // or at the moment the window is applied. Two readers would be two chances to disagree.
-const { parsePositiveInteger } = require(path.join(__dirname, '..', 'apps', 'bridge-maker', 'lib', 'sourceWindow'));
+const { parsePositiveInteger, namedSetShapeErrorFor, bothSelectorsRefusalText } = require(path.join(__dirname, '..', 'apps', 'bridge-maker', 'lib', 'sourceWindow'));
 
 // canonical [anthropicAi] config home (the twin of embedding-client's [voyageEmbedding] path). The real
 // llmClient reads the key from here OR from ANTHROPIC_API_KEY, and THROWS BY NAME at construction if neither
@@ -910,6 +910,32 @@ const resolveSourceWindow = (deps, injectedCommandLineParameters) => {
 	};
 	const limit = readOne('limit');
 	const offset = readOne('offset');
+	// ⟪2026-09-10⟫ --subjectListFilePath=<absolute path to a JSON array of stableIds>. READ AND VALIDATED HERE,
+	// eagerly, for the same reason the window is: a typo in a path must fail before a container is provisioned
+	// and a forge runs, not forty minutes later. The FILE READ lives here rather than in sourceWindow.js because
+	// that module is pure and is fingerprinted into every decision block; it receives the parsed array.
+	const subjectListFilePath = readOne('subjectListFilePath');
+	let subjectStableIdList;
+	if (subjectListFilePath !== undefined && `${subjectListFilePath}`.trim() !== '') {
+		const resolvedPath = `${subjectListFilePath}`.trim();
+		if (!fs.existsSync(resolvedPath)) {
+			return { error: `graphBuilder build: --subjectListFilePath names no file at '${resolvedPath}'. The named subject set is DATA on disk; declared-but-broken refuses the run rather than falling through to a full one.` };
+		}
+		let parsed;
+		try {
+			parsed = JSON.parse(fs.readFileSync(resolvedPath, 'utf8'));
+		} catch (parseError) {
+			return { error: `graphBuilder build: --subjectListFilePath '${resolvedPath}' is not readable as JSON (${parseError.message}). Expected a flat array of stableId strings.` };
+		}
+		const shapeError = namedSetShapeErrorFor(parsed);
+		if (shapeError) {
+			return { error: `graphBuilder build: --subjectListFilePath '${resolvedPath}' — ${shapeError}` };
+		}
+		if ((limit !== undefined && `${limit}` !== '') || (offset !== undefined && `${offset}` !== '')) {
+			return { error: `graphBuilder build: ${bothSelectorsRefusalText({ limit, offset })}` };
+		}
+		subjectStableIdList = parsed;
+	}
 	// Validate HERE as well as at apply time, so a malformed window fails BEFORE a container is
 	// provisioned and a forge runs — the same eager-gate discipline a keyless --rebridge gets.
 	const limitCheck = parsePositiveInteger({ value: limit, name: '--limit', minimum: 1 });
@@ -920,7 +946,7 @@ const resolveSourceWindow = (deps, injectedCommandLineParameters) => {
 	if (offsetCheck.error) {
 		return { error: `graphBuilder build: ${offsetCheck.error}` };
 	}
-	return { value: { limit: limitCheck.value, offset: offsetCheck.value } };
+	return { value: { limit: limitCheck.value, offset: offsetCheck.value, subjectStableIdList } };
 };
 
 // resolveInferenceConfig — assemble the inferred producer's run config, SELECTING the judge provider with
@@ -1888,6 +1914,8 @@ const build = (recipe, deps, callback) => {
 							// ordinary run, which the bridges pass through untouched.
 							limit: sourceWindow.limit,
 							offset: sourceWindow.offset,
+							// ⟪2026-09-10⟫ the named subject set, undefined on an ordinary run.
+							subjectStableIdList: sourceWindow.subjectStableIdList,
 							sourceStandard: bridge.source,
 							sourceStandardName: sourceBundle.standardName,
 							sourceVersion: resolvedVersionByToken[bridge.source],

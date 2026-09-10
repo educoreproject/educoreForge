@@ -270,6 +270,24 @@ OPTIONS
                            IT DOES NOT AFFECT VECTORIZATION. Embedding still happens per --vectorize
                            (default true), so a debug run over never-embedded text still spends Voyage
                            credit; over already-embedded text the shared cache makes it free.
+     --subjectListFilePath=<absolute path>
+                           THE NAMED SUBJECT SET -- judge EXACTLY the subjects named in a JSON file
+                           (a flat array of stableId strings), and nothing else. Where --limit/--offset
+                           are for DEBUGGING (any ten will do), this is for MEASUREMENT: the same
+                           subjects, every run, so two runs produce numbers that can be compared.
+                           Introduced 2026-09-10 for bridge-prompt iteration against a frozen
+                           evaluation set (WORKORDER-namedSubjectSet-091026).
+                           THE BLOCK IS STAMPED WITH THE LIST'S OWN sha256, not its filename:
+                           generation suffix NAMED_SET_<sha256 of the canonical sorted list>. So
+                           "did this run judge my set?" is answerable from the block header alone.
+                           AN ABSENT ID REFUSES THE WHOLE RUN, by name, quoting the first absent
+                           stableId. A measurement set that quietly shrinks produces numbers nobody
+                           can compare, and the shrinkage is invisible in the only artifact anyone
+                           reads -- the score.
+                           CANNOT BE COMBINED with --limit/--offset: the composition has two honest
+                           readings and the block header could not say which was meant. Refused by name.
+                           THE RESULTING BLOCK IS PARTIAL, exactly as a windowed one is, and
+                           materialise refuses to replay it under a differently-narrowed run.
      --limit=<N>  |  --offset=<N>
                            THE DEBUG WINDOW over each bridge's SOURCE SUBJECTS (the plugin's own
                            subject identity -- a source element, or a crosswalk row's subject). Both

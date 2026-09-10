@@ -210,6 +210,12 @@ const EVIDENCE_HOOK_NAME_LIST = Object.freeze(['nominate', 'walkEvidence', 'glob
 const RUN_CONFIG_KEY_LIST = Object.freeze([
 	'limit',
 	'offset',
+	// ⟪2026-09-10, WORKORDER-namedSubjectSet-091026⟫ subjectStableIdList — the NAMED SUBJECT SET, an operator
+	// narrowing that names exactly which subjects to judge. It travels as run config, beside limit/offset,
+	// because it is a property of THE RUN and not of the plugin: a plugin's own narrowing is
+	// subjectSource.scopeStableIdListPath, which lives inside the content-addressed declaration and moves every
+	// block id when it changes. Confusing the two is how an evaluation set becomes part of a standard's identity.
+	'subjectStableIdList',
 	'sourceStandard',
 	'sourceStandardName',
 	'sourceVersion',

@@ -294,7 +294,11 @@ const moduleFunction =
 			const mode = spec.rebridge ? MODE_REJUDGE : MODE_MATERIALISE;
 			const judgeClient = spec.rebridge && spec.inferenceConfig && spec.inferenceConfig.llmClient ? spec.inferenceConfig.llmClient : null;
 			const debugMark = spec.rebridge ? debugJudgeLib.debugMarkFromLlmClient({ inferenceConfig: spec.inferenceConfig }) : undefined;
-			const windowMark = sourceWindowLib.windowMarkFor({ limit: spec.config.limit, offset: spec.config.offset });
+			// ⟪2026-09-10⟫ ONE DOOR: sourceSelectionMarkFor answers for whichever selector was asked for — the
+			// debug window or the named subject set — and refuses the combination inside the pure module. The
+			// generation, the judgment-cache key and the frozen block's sourceWindow header all take this one value,
+			// so a third selector added later cannot be wired into one of them and forgotten in another.
+			const windowMark = sourceWindowLib.sourceSelectionMarkFor({ limit: spec.config.limit, offset: spec.config.offset, subjectStableIdList: spec.config.subjectStableIdList });
 			const declarationDigest = sha256Hex(pluginEntry.declarationCanonicalText);
 			const labelTableDigest = sha256Hex(canonicalJson(labelTableOf(bridgeDeclaration)));
 			const subjectMatchField = subjectMatchFieldFor(bridgeDeclaration);
@@ -913,7 +917,7 @@ const moduleFunction =
 						return;
 					}
 					const sortedGroupList = grouped.subjectGroupList.slice().sort((leftGroup, rightGroup) => compareStrings(leftGroup.subjectKey, rightGroup.subjectKey));
-					const windowed = sourceWindowLib.applySourceWindow(sortedGroupList.map((oneGroup) => ({ stableId: oneGroup.subjectKey, group: oneGroup })), { limit: spec.config.limit, offset: spec.config.offset });
+					const windowed = sourceWindowLib.applySourceSelection(sortedGroupList.map((oneGroup) => ({ stableId: oneGroup.subjectKey, group: oneGroup })), { limit: spec.config.limit, offset: spec.config.offset, subjectStableIdList: spec.config.subjectStableIdList });
 					if (windowed.error) {
 						next(`${moduleName}: ${windowed.error}`);
 						return;
@@ -993,13 +997,16 @@ const moduleFunction =
 							scopeDigest = sha256Hex(canonicalJson(parsedScope.value.slice().sort(compareStrings)));
 						}
 						const sortedNodeList = inScopeNodeList.slice().sort((leftNode, rightNode) => compareStrings(leftNode.stableId, rightNode.stableId));
-						const windowed = sourceWindowLib.applySourceWindow(sortedNodeList.map((oneNode) => ({ stableId: oneNode.stableId, node: oneNode })), { limit: spec.config.limit, offset: spec.config.offset });
+						const windowed = sourceWindowLib.applySourceSelection(sortedNodeList.map((oneNode) => ({ stableId: oneNode.stableId, node: oneNode })), { limit: spec.config.limit, offset: spec.config.offset, subjectStableIdList: spec.config.subjectStableIdList });
 						if (windowed.error) {
 							next(`${moduleName}: ${windowed.error}`);
 							return;
 						}
 						if (windowed.window) {
 							say(sourceWindowLib.describeWindow(windowed.window));
+						}
+						if (windowed.namedSet) {
+							say(sourceWindowLib.describeNamedSet(windowed.namedSet));
 						}
 						const windowedNodeList = windowed.sourceNodes.map((oneEntry) => oneEntry.node);
 						// one node = one subject = one leaf, with NO asserting subject: nothing asserted it, which is exactly
