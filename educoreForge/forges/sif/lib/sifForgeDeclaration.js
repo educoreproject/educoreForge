@@ -67,7 +67,19 @@ const sifForgeDeclaration = Object.freeze({
 	// root. CEDS excludes three roles; SIF excludes none. An empty list is the honest declaration and
 	// the framework's embedPass reproduces the bespoke behaviour exactly.
 	nonEmbeddableRoleList: Object.freeze([]),
-	embedTextDeclaration: null,
+	// embed-text lists — TQ decision 1 (PLAN-forgeEmbedText-091426 §8.2), label verbatim (R-ET-15). List
+	// order is the derivation's iteration order. Oracle (R-ET-17, evidence/P1-textListCensus-v2.log):
+	// 3,855 text nodes / 27,700 EMBEDS_TEXT_OF edges (27,697 single-name, 3 multi-name); 5,929 empty
+	// descriptions skipped and counted, none absent, none trimmed. Declaring this MOVES the SIF proxy and
+	// block id (re-pinned by the supervisor after P9), by design.
+	embedTextDeclaration: Object.freeze({
+		embedTextLabel: 'SifEmbedText',
+		textPropertyListByRole: Object.freeze({
+			DmeClass: Object.freeze(['name', 'description']),
+			DmeProperty: Object.freeze(['name', 'description']),
+			DmeOptionSet: Object.freeze(['name', 'description']),
+		}),
+	}),
 	// SIF has no "no mapping" sentinel: normalize.js normalizeCedsCrossRef either extracts a digit
 	// core or RETURNS AN ERROR (which the walk turns into a refusal, R3) — there is no third,
 	// absent-by-sentinel branch. An unannotated field simply carries no cedsId at all, which the
