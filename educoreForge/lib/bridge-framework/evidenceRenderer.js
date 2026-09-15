@@ -214,6 +214,12 @@ const JUDGE_PROMPT_VARIANT_REGISTRY = Object.freeze({
 		subjectMaterialNameListFor: () => CROSSWALK_SUBJECT_MATERIAL_NAME_LIST,
 		// BYTE-FROZEN: the crosswalk keeps its guidance in the user prompt. Nothing in this row may move.
 		guidancePlacement: 'user',
+		// ⟪R1, R-BR-12⟫ the candidate-list framing is ROW DATA. The derived-v11/v12 framing was first written into
+		// renderQuestion's SHARED body, which moved every crosswalk prompt under an unchanged v1 version and
+		// drifted the toy censuses. These three values are the crosswalk's shipped (8642e6d) bytes.
+		candidateListPreambleLineList: Object.freeze([]),
+		candidateListHeadingWord: 'CANDIDATES',
+		answerLineSuffix: '.',
 	}),
 	derived: Object.freeze({
 		rendererVersion: DERIVED_RENDERER_VERSION,
@@ -227,6 +233,11 @@ const JUDGE_PROMPT_VARIANT_REGISTRY = Object.freeze({
 		// smuggling gate still inspects the same segments and promptHash still covers both halves.
 		guidancePlacement: 'system',
 		guidanceHeading: 'GUIDANCE (rules you must follow if possible):',
+		// ⟪v11/v12 — TQ, scoped to this row by R1⟫ the framing line before the candidates, TQ's CANDIDATE ELEMENTS
+		// vocabulary, and the request for a RATIONALE. Byte-identical to d606804's derived-v12 rendering.
+		candidateListPreambleLineList: Object.freeze(['', 'Selected from this CANDIDATE ELEMENTS list:', '']),
+		candidateListHeadingWord: 'CANDIDATE ELEMENTS',
+		answerLineSuffix: ', as well as a RATIONALE.',
 	}),
 });
 
@@ -296,18 +307,16 @@ const renderQuestion = ({ sourceElement, candidatePool, globalGuidanceList, perC
 		lineList.push('GUIDANCE (candidate-blind):');
 		globalSegmentList.forEach((oneSegment) => lineList.push(`  - ${oneSegment}`));
 	}
-	lineList.push('');
-	lineList.push('Selected from this CANDIDATE ELEMENTS list:');
-	lineList.push('');
-	// ⟪v3⟫ TQ's vocabulary: the system prompt now speaks of CANDIDATE ELEMENTS and a CANDIDATE INDEX NUMBER, so
-	// the rendering says the same words. Naming the index explicitly is load-bearing for THIS prompt in a way it
-	// was not before: the judge is asked to SORT the candidates, and a sort that loses the original index
-	// produces a choice that points at the wrong card.
-	lineList.push(`CANDIDATE ELEMENTS (${candidatePool.length}), in hub order:`);
+	lineList.push(...variantRow.candidateListPreambleLineList);
+	// ⟪v3⟫ TQ's vocabulary: the derived system prompt speaks of CANDIDATE ELEMENTS and a CANDIDATE INDEX NUMBER, so
+	// its rendering says the same words. Naming the index explicitly is load-bearing for THAT prompt: the judge is
+	// asked to SORT the candidates, and a sort that loses the original index points at the wrong card. The words
+	// come from the variant row (R1), so the crosswalk keeps its shipped heading and answer line.
+	lineList.push(`${variantRow.candidateListHeadingWord} (${candidatePool.length}), in hub order:`);
 	candidatePool.forEach((oneSeat, seatIndex) => {
 		lineList.push(...variantRow.candidateLineList({ oneSeat, seatIndex, noteByStableId, renderingAllowList }));
 	});
-	lineList.push(`Answer with one of: ${renderedPoolStableIdList.map((unused, seatIndex) => String(seatIndex + 1)).join(', ')}, or ${ABSTAIN_TOKEN}, as well as a RATIONALE.`);
+	lineList.push(`Answer with one of: ${renderedPoolStableIdList.map((unused, seatIndex) => String(seatIndex + 1)).join(', ')}, or ${ABSTAIN_TOKEN}${variantRow.answerLineSuffix}`);
 	const blockRefusal = renderedBlockRefusal({ lineList, variantRow });
 	if (blockRefusal) {
 		return { error: blockRefusal };
