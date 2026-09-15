@@ -90,7 +90,19 @@ const cedsForgeDeclaration = Object.freeze({
 		DME_ROLES.RESTRICTION,
 		DME_ROLES.VOCABULARY_TERM,
 	]),
-	embedTextDeclaration: null,
+	// embed-text lists — TQ decisions 1 and 1b (PLAN-forgeEmbedText-091426 §8.2): NO `alternative`; a
+	// multi-element value is expanded element-wise. Label verbatim (R-ET-15). Text-node ids join the
+	// sourceUrl root with ONE slash: https://w3id.org/CEDStandards/terms/embedText/<sha256> (R-ET-1
+	// revised). Oracle (R-ET-17, evidence/P1-textListCensus-v2.log): 6,684 text nodes / 7,823 edges
+	// (3,204 single-name, 4,619 multi-name). Declaring this MOVES the CEDS proxy and block id (P8).
+	embedTextDeclaration: Object.freeze({
+		embedTextLabel: 'CedsEmbedText',
+		textPropertyListByRole: Object.freeze({
+			DmeClass: Object.freeze(['name', 'definition', 'description', 'prefLabel', 'comment']),
+			DmeProperty: Object.freeze(['name', 'definition', 'description', 'prefLabel', 'comment']),
+			DmeOptionSet: Object.freeze(['name', 'definition', 'description', 'prefLabel', 'comment']),
+		}),
+	}),
 	// CEDS has no "no mapping" sentinel: it is the hub, so an unnormalizable anchor is a REFUSAL
 	// (R3, forgeCeds.js:139-153), never an absence. Empty is the honest declaration.
 	cedsAnchorAbsentSentinelList: Object.freeze([]),
