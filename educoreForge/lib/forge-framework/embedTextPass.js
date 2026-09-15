@@ -22,6 +22,7 @@ const path = require('path');
 const { DME_ROLES, EMBED_TEXT_VECTOR } = require(path.join(__dirname, '..', 'vocabulary', 'vocabulary'));
 const refuse = require('./refuse');
 const { EMBED_BATCH_SIZE } = require('./embedPass');
+const { EMBED_TEXT_PROPERTY_NAME } = require('./embedTextDerivation');
 
 const moduleFunction =
 	({ moduleName } = {}) =>
@@ -51,9 +52,9 @@ const moduleFunction =
 				embedNodeLimit !== undefined && embedNodeLimit < textNodeList.length
 					? textNodeList.slice(0, embedNodeLimit)
 					: textNodeList;
-			const textlessNode = targetNodeList.find((oneNode) => typeof oneNode.properties.text !== 'string' || oneNode.properties.text.length === 0);
+			const textlessNode = targetNodeList.find((oneNode) => typeof oneNode.properties[EMBED_TEXT_PROPERTY_NAME] !== 'string' || oneNode.properties[EMBED_TEXT_PROPERTY_NAME].length === 0);
 			if (textlessNode !== undefined) {
-				callback(refuse.byName({ moduleName, what: `${prefixText} text node '${textlessNode.stableId}' carries text ${JSON.stringify(textlessNode.properties.text)}`, where: 'a DmeEmbedText node is minted by embedTextDerivation with a non-empty text; nothing else may mint one' }).message);
+				callback(refuse.byName({ moduleName, what: `${prefixText} text node '${textlessNode.stableId}' carries text ${JSON.stringify(textlessNode.properties[EMBED_TEXT_PROPERTY_NAME])}`, where: 'a DmeEmbedText node is minted by embedTextDerivation with a non-empty text; nothing else may mint one' }).message);
 				return;
 			}
 
@@ -72,7 +73,7 @@ const moduleFunction =
 				}
 				const batch = batchList[batchIndex];
 				batchIndex++;
-				const texts = batch.map((oneNode) => oneNode.properties.text);
+				const texts = batch.map((oneNode) => oneNode.properties[EMBED_TEXT_PROPERTY_NAME]);
 				embedder.embedTexts({ texts }, (embedError, embedResult) => {
 					if (embedError) {
 						callback(`${prefixText} embedTextNodes batch ${batchIndex} failed: ${embedError}`);

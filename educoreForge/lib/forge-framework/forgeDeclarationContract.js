@@ -28,7 +28,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // PURE: returns an Error or null; the caller (forge-framework.js) throws it at injection.
 
 const path = require('path');
-const { DME_ROLES } = require(path.join(__dirname, '..', 'vocabulary', 'vocabulary'));
+const { DME_ROLES, EMBED_TEXT_VECTOR } = require(path.join(__dirname, '..', 'vocabulary', 'vocabulary'));
 const refuse = require('./refuse');
 const { FRAMEWORK_NON_EMBEDDABLE_ROLE_LIST } = require('./frameworkNonEmbeddableRoles');
 const {
@@ -82,7 +82,7 @@ const EMBED_TEXT_DECLARATION_PROPERTY_NAME_LIST = Object.freeze(['embedTextLabel
 const EMBED_TEXT_FORBIDDEN_PROPERTY_NAME_LIST = Object.freeze([
 	'searchText',
 	'embedding',
-	'textEmbedding',
+	EMBED_TEXT_VECTOR.propertyName,
 	'embeddingModelVersion',
 	'embedSourceProperty',
 	'vectorPropertyName',
