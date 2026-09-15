@@ -5,10 +5,10 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // fingerprint.js — fingerprint.pureLayerFingerprint (SPEC-forgeFramework-v1.md §3.3, §9.3, §10
 // G-ID-CHEAP). The PROXY: sha256 over the pure output canonicalised exactly as the write→harvest→
 // serialize path would, so a unit-time gate can stand in for the block-id gate. It is labelled
-// PROXY in every report line because it CANNOT see: MERGE collapse (a duplicate stableId or a
-// duplicate (from,type,to) triple collapses last-writer-wins in the graph, replay-engine.js:203-205,
-// :288 — here both copies are hashed), the header, the hub fold, or embeddingRef lines. A green
-// proxy is not a green G-ID.
+// PROXY in every report line because it CANNOT see: MERGE collapse (a duplicate stableId collapses
+// last-writer-wins in the graph, replay-engine.js:252-255, and byte-identical edges merge through
+// apoc.merge.relationship on their full property map, :397 — here both copies are hashed), the header,
+// the hub fold, or embeddingRef lines. A green proxy is not a green G-ID.
 //
 // Canonicalisation mirrored (code facts):
 //   shape-forged-graph.js:42-69 — every property value ARRAY-WRAPPED unless already an array;

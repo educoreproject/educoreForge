@@ -10,7 +10,8 @@
 //   c  one edge per (text, node) pair; two properties sharing a text → ONE edge, propertyNameList of 2
 //   d  a text node's property set (no name / searchText / embedding)
 //   e  stableId form under the toy pattern AND a CEDS-shaped pattern (one slash after a '/' root)
-//   f  ordering: a walk returning COPIES still composes; a hook-minted DmeEmbedText is refused (R-ET-35)
+//   f  ordering: a walk returning COPIES still composes; a hook-minted DmeEmbedText node (R-ET-35) or
+//      hook-added EMBEDS_TEXT_OF edge (R-ET-38) is refused
 //   g  determinism, including under a permuted walk emission order
 //   h  the legacy pass never sees a text node; the text pass sends exactly the distinct texts
 //   i  skipEmbedding skips the text pass;  j  embedNodeLimit bounds the text pass
@@ -344,6 +345,14 @@ conjunctList.push(refusalCase({
 	twinName: 'disableWalkMintedEmbedTextCheck', fileName: FRAMEWORK_FILE,
 	find: '\t\t\t\tif (walkMintedEmbedTextNode !== undefined) {', replace: '\t\t\t\tif (false && walkMintedEmbedTextNode !== undefined) {',
 }));
+conjunctList.push(refusalCase({
+	registry: twinRegistry, gateId: GATE_ID, conjunctId: 'f_walkAddedEmbedsTextEdgeRefused',
+	title: 'R-ET-38: a WALK that adds an EMBEDS_TEXT_OF edge itself (between two ordinary nodes) is refused by name (the framework owns the edge type)',
+	shape: (scenario) => withWalkExtra(scenario, ({ kit }) => { kit.addEdge({ edgeType: EDGE_TYPES.EMBEDS_TEXT_OF, fromStableId: 'toy:class/Person', toStableId: 'toy:class/School', edgeContext: 'test:hookEdge' }); }),
+	regex: /emitContractGraph added an EMBEDS_TEXT_OF edge \(toy:class\/Person → toy:class\/School\)/,
+	twinName: 'disableWalkAddedEmbedsTextEdgeCheck', fileName: FRAMEWORK_FILE,
+	find: '\t\t\t\tif (walkAddedEmbedsTextEdge !== undefined) {', replace: '\t\t\t\tif (false && walkAddedEmbedsTextEdge !== undefined) {',
+}));
 
 // g — determinism
 conjunctList.push({
@@ -597,4 +606,4 @@ conjunctList.push(spyConjunct({
 frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'n_stampsCarriedModelVersion', twinName: 'stampInventedModelVersionName', fileName: TEXT_PASS_FILE, shippedConfig: false, find: '\t\t\t\t\t\toneNode.properties.embeddingModelVersion = embedResult.embeddingModelVersion;', replace: '\t\t\t\t\t\toneNode.properties.textEmbeddingModelVersion = embedResult.embeddingModelVersion;' });
 
 const gateDeclarationList = [{ gateId: GATE_ID, title: 'framework-minted embed-text nodes', conjunctList }];
-runGateFamily({ harness, familyName: GATE_ID, gateDeclarationList, twinRegistry, makeSubject: toyScenario.makeScenario, cloneSubject: toyScenario.cloneScenario, expectedConjunctCount: 36, expectedTwinCount: 42 }, () => harness.report());
+runGateFamily({ harness, familyName: GATE_ID, gateDeclarationList, twinRegistry, makeSubject: toyScenario.makeScenario, cloneSubject: toyScenario.cloneScenario, expectedConjunctCount: 37, expectedTwinCount: 43 }, () => harness.report());

@@ -291,11 +291,16 @@ const moduleFunction =
 					const missingEdge = kitInternals.edges.find((oneEdge) => !seenEdgeSet.has(oneEdge));
 					throw refuse.byName({ moduleName, what: `${forgePrefix} emitContractGraph returned ${seenEdgeSet.size} of ${mintedEdgeSet.size} added edges (missing ${missingEdge.type} ${missingEdge.fromRef.id} → ${missingEdge.toRef.id})`, where: 'an added edge that is not returned is a silent loss; return kit.edges whole' });
 				}
-				// DmeEmbedText belongs to the framework (R-ET-3, R-ET-35): a node of that role among the
-				// WALK's returned nodes was minted by a hook, not by the derivation below — refused
+				// DmeEmbedText and EMBEDS_TEXT_OF belong to the framework (R-ET-3, R-ET-35, R-ET-38): a node of
+				// that role or an edge of that type among the WALK's returned arrays was made by a hook, not by the
+				// derivation below — refused
 				const walkMintedEmbedTextNode = returnedNodes.find((oneNode) => oneNode.role === DME_ROLES.EMBED_TEXT);
 				if (walkMintedEmbedTextNode !== undefined) {
 					throw refuse.byName({ moduleName, what: `${forgePrefix} emitContractGraph minted node '${walkMintedEmbedTextNode.stableId}' with role ${DME_ROLES.EMBED_TEXT}`, where: 'the framework owns that role: declare embedTextDeclaration and the framework mints the text nodes itself' });
+				}
+				const walkAddedEmbedsTextEdge = returnedEdges.find((oneEdge) => oneEdge.type === EDGE_TYPES.EMBEDS_TEXT_OF);
+				if (walkAddedEmbedsTextEdge !== undefined) {
+					throw refuse.byName({ moduleName, what: `${forgePrefix} emitContractGraph added an ${EDGE_TYPES.EMBEDS_TEXT_OF} edge (${walkAddedEmbedsTextEdge.fromRef.id} → ${walkAddedEmbedsTextEdge.toRef.id})`, where: 'the framework owns that edge type: declare embedTextDeclaration and the framework adds the EMBEDS_TEXT_OF edges itself' });
 				}
 
 				// 4b. the framework's text nodes (R-ET-2): derived from the walk's returned nodes AFTER the
