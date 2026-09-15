@@ -524,7 +524,28 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // the six declared paths from the P7 tag is EMPTY at the head before this commit (P9 touched no bridge, bridge-maker, build.js,
 // interfaces.js or vocabulary file); this base moves ONLY because THIS commit edits lib/bridge-framework/test/test-bgNosub.js (the
 // two BG anchors above), which is inside the diffed paths — the standing rule, applied again. Six paths unchanged; tag cut ON this commit.
-const P1_BASELINE_COMMIT = 'postEmbedTextP9-091526'; // re-anchored by RADIANT_QUEST, forge embed-text P9; the tag is cut ON the re-anchor commit
+// RE-ANCHOR 2026-09-15 (SCARLET_DELTA, ruling R-BR-19 by PRISM_COMPASS), bridge revision B6: postEmbedTextP9-091526 (77ce7d9) ->
+// bridgeRevisionB6-091526. Unlike every move above, this base moves because the BRIDGE REVISION IS A FRAMEWORK CHANGE BY DESIGN
+// (text-node lookup, neighbour-vote scoring, retrieval as a method registry), merged into this branch before the forge P9 tag was
+// merged in at 958287f. CENSUS AT THE RE-ANCHOR (this gate's own numstat from postEmbedTextP9-091526 over its six declared paths,
+// 19 paths, every line attributed by git log --first-parent postEmbedTextP9-091526..958287f):
+//   R1   (def9486) lib/bridge-framework/evidenceRenderer.js | 18/9
+//   R1   (910e159) lib/bridge-framework/test/test-bgThree.js | 1/1
+//   R1   (995f1c5) + B4 (db7380b) lib/bridge-framework/test/test-bgDerived.js | 525/8
+//   B1   (5e51845) + B1b (5010d5c) lib/bridge-framework/candidateRetrieval.js | 546/1, neighbourVote.js | 415/0,
+//        test/test-neighbourVote.js | 435/0, test/testSupport/toyEmbedTextScenario.js | 463/0
+//   B1 + B3b (1d100d2) + B1b (5010d5c, 5dbb52d) lib/bridge-framework/test/test-bgEts.js | 652/0
+//   B3a  (3545117) lib/bridge-framework/bridgePluginContract.js | 89/20, test/test-bgDecl.js | 278/6,
+//        test/fixtures/toyBridge/forges/toy/bridges/toyDerivedPlugin.js | 1/1
+//   B3b  (1d100d2) lib/bridge-framework/graphReader.js | 116/7, graphSeamRules.js | 135/5, test/test-bgBolt.js | 120/3,
+//        test/testSupport/boltDriverDouble.js | 101/6, test/testSupport/toyEmbedTextBoltGraph.js | 129/0
+//   B4   (db7380b) lib/bridge-framework/bridge-framework.js | 458/50, graphDouble.js | 96/4, test/test-bgNosub.js | 10/1 (conjunct k)
+//   B5   (0a8289b) none of the 19 — its one path, forges/edfi/bridges/edfiCedsDerivedPlugin.js, is outside the declared paths.
+// bridge-maker/, build.js, interfaces.js and lib/vocabulary/: UNTOUCHED since postEmbedTextP9-091526. PESC's OTHER conjuncts (25 of
+// 26, the BG-PLUGIN-PESC, BG-COMPOSE-PESC c and BG-SEAT-PESC sections, all green before and after this move) re-prove that the two
+// PESC plugins still compose through the seam over the revised framework. THE SIX DECLARED PATHS ARE UNCHANGED, no exclusion added;
+// the tag is cut ON the B6 re-pin commit. The RED-OBSERVED range below is untouched; this conjunct's twin was re-observed red.
+const P1_BASELINE_COMMIT = 'bridgeRevisionB6-091526'; // re-anchored by SCARLET_DELTA, bridge revision B6 (R-BR-19); the tag is cut ON the re-anchor commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
