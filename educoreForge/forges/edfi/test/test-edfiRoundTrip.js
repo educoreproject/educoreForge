@@ -1702,6 +1702,19 @@ const measureEdfiEmbedTextRun = ({ forgeResult, snapshotPath, admitEmbedTextRole
 	);
 };
 
+// censusCountOf — a verdict census lists only what it counted, so an ABSENT name counted zero occurrences
+// (under a null Ed-Fi declaration there is no DmeEmbedText key at all). A present non-integer is refused by
+// returning NaN, which no equality below can satisfy.
+const censusCountOf = (countByName, censusName) =>
+	Object.prototype.hasOwnProperty.call(countByName, censusName)
+		? Number.isInteger(countByName[censusName]) ? countByName[censusName] : NaN
+		: 0;
+
+// servedConstructRowCountOf — how many construct rows a run's selection served; a run that captured no rows
+// yields null, which no count equality below can satisfy
+const servedConstructRowCountOf = (measuredRun) =>
+	measuredRun && measuredRun.servedGraphRows ? measuredRun.servedGraphRows.constructRowList.length : null;
+
 // embedTextExcludedFromEmission — gate G-20's conjunct; every clause an equality with a measured value.
 // A run that issued NO verdict (emission refused) cannot satisfy it.
 const embedTextExcludedFromEmission = ({ candidateRun, baselineRun }) =>
@@ -1818,15 +1831,28 @@ pushStep((done) => {
 			// RECORDED, NOT GATED (brief): the diagnostic census now lists the new role and edge type.
 			// roundTripValidator.js places nodeCountByRole / edgeCountByType only under verdict.graph
 			// (:389-390); inventedTotal is headline.invented + crosswalk guard violations (:270).
+			// RELATIVE, R-ET-39 (RADIANT_QUEST, 2026-09-14): P5 pinned 1 and 1, true only while Ed-Fi's
+			// declaration was null. Under P6's declaration the real hermetic forge mints text nodes of its own
+			// (measured 97 nodes / 110 edges), so the fixture's contribution is asserted as EXACTLY +1 over the
+			// baseline census of the same run, which holds under any declaration.
 			const nodeCountByRole = withTextRun.verdict.graph.nodeCountByRole;
 			const edgeCountByType = withTextRun.verdict.graph.edgeCountByType;
+			const baselineTextNodeCount = censusCountOf(baselineRun.verdict.graph.nodeCountByRole, EMBED_TEXT_ROLE);
+			const baselineTextEdgeCount = censusCountOf(baselineRun.verdict.graph.edgeCountByType, 'EMBEDS_TEXT_OF');
 			harness.ok(
-				`census (recorded, not gated): verdict.graph.nodeCountByRole lists DmeEmbedText (${nodeCountByRole[EMBED_TEXT_ROLE]}) and edgeCountByType lists EMBEDS_TEXT_OF (${edgeCountByType.EMBEDS_TEXT_OF})`,
-				nodeCountByRole[EMBED_TEXT_ROLE] === 1 && edgeCountByType.EMBEDS_TEXT_OF === 1,
+				`census (recorded, not gated): the fixture adds exactly +1 — nodeCountByRole DmeEmbedText ${censusCountOf(nodeCountByRole, EMBED_TEXT_ROLE)} = baseline ${baselineTextNodeCount} + 1, edgeCountByType EMBEDS_TEXT_OF ${censusCountOf(edgeCountByType, 'EMBEDS_TEXT_OF')} = baseline ${baselineTextEdgeCount} + 1`,
+				censusCountOf(nodeCountByRole, EMBED_TEXT_ROLE) === baselineTextNodeCount + 1 &&
+					censusCountOf(edgeCountByType, 'EMBEDS_TEXT_OF') === baselineTextEdgeCount + 1,
 			);
 			const exclusionHolds = embedTextExcludedFromEmission({ candidateRun: withTextRun, baselineRun });
 			harness.ok('gate G-20 conjunct holds over the real runs', exclusionHolds);
 
+			// R-ET-39: the widened selection is ALSO measured WITHOUT the fixture, so the fixture's served row
+			// is the difference of two widened runs. Under a declared Ed-Fi that run meets the forge's own text
+			// nodes and emission refuses; only its served rows are read (they travel with the refusal).
+			measureEdfiEmbedTextRun(
+				{ forgeResult: forged.forgeResult, snapshotPath: forged.snapshotPath, admitEmbedTextRole: true },
+				(widenedBaselineError, widenedBaselineRun) => {
 			measureEdfiEmbedTextRun(
 				{ forgeResult: forgeResultWithText, snapshotPath: forged.snapshotPath, admitEmbedTextRole: true },
 				(admittedError, admittedRun) => {
@@ -1835,6 +1861,12 @@ pushStep((done) => {
 						JSON.stringify(roundTripEdfiCompiler.CONSTRUCT_ROLES),
 						originalConstructRoleText,
 					);
+					harness.equal(
+						`the widening reached the selection: WITHOUT the fixture it served exactly the baseline census's ${baselineTextNodeCount} forge-minted text node(s) more`,
+						servedConstructRowCountOf(widenedBaselineRun),
+						servedConstructRowCountOf(baselineRun) + baselineTextNodeCount,
+					);
+					harness.note(`widened run WITHOUT the fixture: ${widenedBaselineError ? `refused at emission (the forge's own text nodes): ${widenedBaselineError}` : 'issued a verdict (no forge-minted text node reached emission)'}`);
 					// MEASURED 2026-09-14: on Ed-Fi an admitted text node is NOT counted as invention. The row
 					// reaches emitGraphStatements, which REFUSES a construct row lacking constructType or name
 					// (roundTripEdfiCompiler.js:670-671), and the validator issues no verdict. The kit mints a
@@ -1842,9 +1874,9 @@ pushStep((done) => {
 					// fabricating fields no text node carries. The RED is therefore the named refusal OR an
 					// invention — never a silent pass — and the observed outcome is recorded verbatim.
 					harness.equal(
-						'the widening reached the selection: one more construct row was served',
-						((admittedRun || {}).servedGraphRows || { constructRowList: [] }).constructRowList.length,
-						baselineRun.servedGraphRows.constructRowList.length + 1,
+						'the widening reached the selection: WITH the fixture it served exactly one more construct row than the widened run without it',
+						servedConstructRowCountOf(admittedRun),
+						servedConstructRowCountOf(widenedBaselineRun) + 1,
 					);
 					const admittedOutcomeText = admittedError
 						? `REFUSED BY NAME at emission, no verdict issued: ${admittedError}`
@@ -1869,6 +1901,8 @@ pushStep((done) => {
 					);
 					suiteState.probe.embedTextExcludedFromEmission = exclusionHolds;
 					done();
+				},
+			);
 				},
 			);
 		});
