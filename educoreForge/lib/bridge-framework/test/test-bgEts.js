@@ -10,9 +10,16 @@
 //          (c) one vote per (text NODE, card): ownVotes equals the distinct voting text nodes, with a text serving
 //              two properties reaching one card by two paths (R-BR-3)
 //          (e) a card reached only through class or option-set slots is never admitted
-//          (f) the votes-only rank is ownVotes, then best cosine, then stableId
+//          (f) the votes-only rank is ownVotes, then cardTextCosine, then best cosine, then stableId (R-BR-14, B1b)
 //          (h) byte-identical twice, and again with every input list reversed
 //          (r1a) a scalar propertyNameList is refused by name, on the subject side and the hub side (R-BR-1a)
+//   BG-ETS (B1b, card-text ordering, R-BR-14/15)
+//          (n) cardTextCosine is the max over the subject's own texts, with the winning text; both ride onto every ranked entry
+//          (o) cardTextCosineFor's six refusals, each by name
+//          (p) the value is the RAW cosine, never Neo4j's (1 + cos) / 2
+//          (q) equal ownVotes and bestCosine: card text, not stableId, decides
+//          (r) a rank refuses an admitted entry without card text; no default of zero
+//          (s) sourceRole is a required field of the closed text record (R-BR-15)
 //   BG-ETS (B3b, over the bolt reader through the driver double, testSupport/toyEmbedTextBoltGraph.js)
 //          (d1-d4) zero text nodes from readSubjectNodes, forWalk and forEvidence, and zero text edges from an untyped
 //              readEdgesAmongSource (R-BR-2); (d5) a roleless source node is kept
@@ -38,7 +45,7 @@ const harness = require('../../../test/testLib/harness')(moduleName);
 
 const path = require('path');
 const toyLib = require('./testSupport/toyEmbedTextScenario');
-const { pureConjunct, frameworkMutationTwin } = require('./testSupport/bridgeTwinFactories');
+const { pureConjunct, frameworkMutationTwin, scenarioTwin } = require('./testSupport/bridgeTwinFactories');
 const { runGateFamily } = require(path.join(__dirname, '..', '..', 'forge-framework', 'test', 'testSupport', 'gateSuiteRunner'));
 const { makeTwinRegistry } = require(path.join(__dirname, '..', '..', 'forge-framework', 'roundTripHarness', 'twinRegistry'));
 
@@ -50,6 +57,9 @@ const refusedRun = (run) => ({ pass: false, detail: `the toy pipeline REFUSED: $
 const stableIdListOf = (candidateList) => candidateList.map((oneCandidate) => oneCandidate.stableId);
 const sameJson = (leftValue, rightValue) => JSON.stringify(leftValue) === JSON.stringify(rightValue);
 const subjectStableIdList = Object.keys(EXPECTED_BY_SUBJECT);
+// hand-derived cosines are irrational (1/√2 and so on), so they are compared to a tolerance far below any gap between two of them
+const CARD_TEXT_TOLERANCE = 1e-12;
+const closeTo = (measuredNumber, handNumber) => typeof measuredNumber === 'number' && Math.abs(measuredNumber - handNumber) < CARD_TEXT_TOLERANCE;
 
 // cardsReachedBy — a TEST-SIDE walk (independent of voteCandidatePool's tally): every card any hit of the
 // subject's texts reaches through any slot
@@ -142,9 +152,9 @@ const etsConjunctList = [
 		},
 	}),
 	pureConjunct({
-		conjunctId: 'f_rankVotesThenCosineThenStableId',
-		title: 'the votes-only rank equals the hand-derived order and every adjacent pair obeys ownVotes DESC, bestCosine DESC, stableId ASC',
-		twinNameList: ['rankByCosineOnly'],
+		conjunctId: 'f_rankVotesThenCardTextThenCosineThenStableId',
+		title: 'the votes-only rank equals the hand-derived order and every adjacent pair obeys ownVotes DESC, cardTextCosine DESC, bestCosine DESC, stableId ASC (R-BR-14)',
+		twinNameList: ['rankByCosineOnly', 'rankWithoutCardText'],
 		judge: (scenario) => {
 			const run = toyLib.runToyPipeline({ scenario });
 			if (run.error) {
@@ -158,7 +168,10 @@ const etsConjunctList = [
 				}
 				rankedList.slice(1).forEach((oneCandidate, oneIndex) => {
 					const prior = rankedList[oneIndex];
-					const ordered = prior.ownVotes > oneCandidate.ownVotes || (prior.ownVotes === oneCandidate.ownVotes && (prior.bestCosine > oneCandidate.bestCosine || (prior.bestCosine === oneCandidate.bestCosine && prior.stableId < oneCandidate.stableId)));
+					const ordered =
+						prior.ownVotes > oneCandidate.ownVotes ||
+						(prior.ownVotes === oneCandidate.ownVotes &&
+							(prior.cardTextCosine > oneCandidate.cardTextCosine || (prior.cardTextCosine === oneCandidate.cardTextCosine && (prior.bestCosine > oneCandidate.bestCosine || (prior.bestCosine === oneCandidate.bestCosine && prior.stableId < oneCandidate.stableId)))));
 					if (!ordered) {
 						problemList.push(`${prior.stableId} before ${oneCandidate.stableId} breaks the order`);
 					}
@@ -170,7 +183,7 @@ const etsConjunctList = [
 	pureConjunct({
 		conjunctId: 'h_byteIdenticalTwiceAndUnderReversedInput',
 		title: 'two runs are byte-identical, a run over every input list REVERSED is byte-identical to them, and the rank orders equal the hand-derived ones',
-		twinNameList: ['reverseTieBreak', 'tieBreakByInputOrder'],
+		twinNameList: ['reverseTieBreak', 'tieBreakByInputOrder', 'textTieToLaterText'],
 		judge: (scenario) => {
 			const firstRun = toyLib.runToyPipeline({ scenario });
 			const secondRun = toyLib.runToyPipeline({ scenario });
@@ -209,6 +222,180 @@ const etsConjunctList = [
 				pass: subjectRefused && hubRefused,
 				detail: `subject side: ${subjectSideRun.error ? String(subjectSideRun.error).slice(0, 140) : 'ACCEPTED'}; hub side: ${hubSideRun.error ? String(hubSideRun.error).slice(0, 140) : 'ACCEPTED'}`,
 			};
+		},
+	}),
+	// ---- B1b: card-text ordering (R-BR-14) and the sourceRole field (R-BR-15). Expected values: the fixture's CARD TEXT block.
+	pureConjunct({
+		conjunctId: 'n_cardTextIsTheMaxOverOwnTexts',
+		title: "cardTextCosine and its winning text equal the hand-derived MAX over the subject's own texts on every admitted card (the NAME text n1 wins Organization.Name, the DESCRIPTION text n2 wins Staff.Name, t1 beats t3 on an exact tie), and both fields ride onto every votes-only and neighbour ranked entry",
+		twinNameList: ['firstTextOnly', 'scoredEntryDropsCardText'],
+		judge: (scenario) => {
+			const run = toyLib.runToyPipeline({ scenario });
+			if (run.error) {
+				return refusedRun(run);
+			}
+			const problemList = [];
+			subjectStableIdList.forEach((oneSubjectStableId) => {
+				const expectedByCard = EXPECTED_BY_SUBJECT[oneSubjectStableId].cardTextByCardStableId;
+				const oneResult = run.resultBySubjectStableId[oneSubjectStableId];
+				if (!sameJson(stableIdListOf(oneResult.cardTextAdmittedList), Object.keys(expectedByCard).sort())) {
+					problemList.push(`${oneSubjectStableId} card-text list ${JSON.stringify(stableIdListOf(oneResult.cardTextAdmittedList))} is not the admitted set`);
+				}
+				[['admitted', oneResult.cardTextAdmittedList], ['votes-only', oneResult.votesOnlyRankedList], ['neighbour', oneResult.rankedList]].forEach(([listName, candidateList]) => {
+					candidateList.forEach((oneCandidate) => {
+						const expected = expectedByCard[oneCandidate.stableId];
+						if (expected === undefined || oneCandidate.cardTextWinningTextStableId !== expected.cardTextWinningTextStableId || !closeTo(oneCandidate.cardTextCosine, expected.cardTextCosine)) {
+							problemList.push(`${listName} ${oneCandidate.stableId} carries ${oneCandidate.cardTextWinningTextStableId} ${oneCandidate.cardTextCosine}, hand-derived ${expected === undefined ? 'none' : `${expected.cardTextWinningTextStableId} ${expected.cardTextCosine}`}`);
+						}
+					});
+				});
+			});
+			return { pass: problemList.length === 0, detail: problemList.join('; ').slice(0, 420) || 'every admitted and ranked card carries the hand-derived card text for both subjects' };
+		},
+	}),
+	pureConjunct({
+		conjunctId: 'o_cardTextRefusalsByName',
+		title: 'cardTextCosineFor refuses BY NAME: no subject text; a text of another subject; a text of another model; a text of another dimension; a zero-norm text; an admitted card absent from hubVectorIndex (R-BR-14)',
+		twinNameList: ['emptyTextListAccepted', 'mixedSubjectAccepted', 'modelMismatchAccepted', 'dimensionMismatchAccepted', 'zeroNormAccepted', 'absentCardAccepted'],
+		judge: (scenario) => {
+			const run = toyLib.runToyPipeline({ scenario });
+			if (run.error) {
+				return refusedRun(run);
+			}
+			const { candidateRetrievalLib } = run.modules;
+			const { admittedList } = run.resultBySubjectStableId[toyLib.SUBJECT_TELEPHONE];
+			const toy = toyLib.makeToyEmbedText();
+			const ownTextList = toy.sourceTextRecordList.filter((oneRecord) => oneRecord.sourceStableId === toyLib.SUBJECT_TELEPHONE);
+			const otherSubjectText = toy.sourceTextRecordList.find((oneRecord) => oneRecord.textStableId === 'src/embedText/n1Name');
+			const withFirstText = (changedFieldMap) => [{ ...ownTextList[0], ...changedFieldMap }].concat(ownTextList.slice(1));
+			const caseList = [
+				{ caseName: 'no subject text', subjectTextRecordList: [], admittedList, regex: /REFUSED: cardTextCosineFor has no text record for the subject/ },
+				{ caseName: 'a text of another subject', subjectTextRecordList: ownTextList.concat([otherSubjectText]), admittedList, regex: /REFUSED: text record src\/embedText\/n1Name describes src\/property\/Applicant\.Name, but subjectTextRecordList\[0\] describes src\/property\/Applicant\.Telephone/ },
+				{ caseName: 'a text of another model', subjectTextRecordList: withFirstText({ embeddingModelVersion: 'other-embed-model' }), admittedList, regex: /REFUSED: text src\/embedText\/t1Telephone is embedded by 'other-embed-model' but hubVectorIndex holds 'toy-embed-text-v1'/ },
+				{ caseName: 'a text of another dimension', subjectTextRecordList: withFirstText({ vector: [1, 0, 0, 0, 0, 0, 0] }), admittedList, regex: /REFUSED: src\/embedText\/t1Telephone carries a 7-dimensional embedding where the index is 8-dimensional/ },
+				{ caseName: 'a zero-norm text', subjectTextRecordList: withFirstText({ vector: [0, 0, 0, 0, 0, 0, 0, 0] }), admittedList, regex: /REFUSED: text src\/embedText\/t1Telephone carries a ZERO-norm vector/ },
+				{ caseName: 'a card absent from the index', subjectTextRecordList: ownTextList, admittedList: admittedList.concat([{ ...admittedList[0], stableId: 'toyhub/card/Nowhere.Nothing' }]), regex: /REFUSED: admitted card toyhub\/card\/Nowhere\.Nothing is absent from hubVectorIndex/ },
+			];
+			const missedList = caseList
+				.map((oneCase) => ({ ...oneCase, outcome: candidateRetrievalLib.cardTextCosineFor({ admittedList: oneCase.admittedList, subjectTextRecordList: oneCase.subjectTextRecordList, hubVectorIndex: run.hubVectorIndex }) }))
+				.filter((oneCase) => !(oneCase.outcome.error && oneCase.regex.test(String(oneCase.outcome.error.message))));
+			return {
+				pass: missedList.length === 0,
+				detail: missedList.length ? missedList.map((oneCase) => `${oneCase.caseName}: ${oneCase.outcome.error ? String(oneCase.outcome.error.message).slice(0, 150) : `ACCEPTED ${JSON.stringify(oneCase.outcome.admittedList.map((oneCandidate) => oneCandidate.cardTextCosine))}`}`).join(' | ') : `${caseList.length} refusals fired by name`,
+			};
+		},
+	}),
+	pureConjunct({
+		conjunctId: 'p_cardTextCosineOnTheRawScale',
+		title: "every cardTextCosine equals the RAW cosine computed by hand (to 1e-12), never Neo4j vector.similarity.cosine's (1 + cos) / 2; non-vacuous: hand values below 1 occur, where the two scales differ",
+		twinNameList: ['halfScaleCosine'],
+		judge: (scenario) => {
+			const run = toyLib.runToyPipeline({ scenario });
+			if (run.error) {
+				return refusedRun(run);
+			}
+			const problemList = [];
+			let belowOneCount = 0;
+			subjectStableIdList.forEach((oneSubjectStableId) => {
+				run.resultBySubjectStableId[oneSubjectStableId].cardTextAdmittedList.forEach((oneCandidate) => {
+					const handCosine = EXPECTED_BY_SUBJECT[oneSubjectStableId].cardTextByCardStableId[oneCandidate.stableId].cardTextCosine;
+					belowOneCount += handCosine < 1 ? 1 : 0;
+					if (!closeTo(oneCandidate.cardTextCosine, handCosine)) {
+						problemList.push(`${oneCandidate.stableId} ${oneCandidate.cardTextCosine} vs raw ${handCosine} (half scale would be ${(1 + handCosine) / 2})`);
+					}
+				});
+			});
+			return { pass: problemList.length === 0 && belowOneCount > 0, detail: `${problemList.join('; ').slice(0, 380) || 'every value equals the raw hand cosine'}; hand values below 1: ${belowOneCount}` };
+		},
+	}),
+	pureConjunct({
+		conjunctId: 'q_cardTextBreaksTheTieStableIdGotWrong',
+		title: 'Applicant.Name: Organization.Name and Staff.Name hold equal ownVotes AND equal bestCosine, stableId puts Organization.Name first and cardTextCosine puts Staff.Name first; the votes-only rank puts Staff.Name first',
+		twinNameList: ['stableIdBeforeCardText'],
+		judge: (scenario) => {
+			const run = toyLib.runToyPipeline({ scenario });
+			if (run.error) {
+				return refusedRun(run);
+			}
+			const rankedList = run.resultBySubjectStableId[toyLib.SUBJECT_NAME].votesOnlyRankedList;
+			const organizationIndex = stableIdListOf(rankedList).indexOf(toyLib.cardId('Organization.Name'));
+			const staffIndex = stableIdListOf(rankedList).indexOf(toyLib.cardId('Staff.Name'));
+			if (organizationIndex === -1 || staffIndex === -1) {
+				return { pass: false, detail: `a tie card is not ranked: ${JSON.stringify(stableIdListOf(rankedList))}` };
+			}
+			const organization = rankedList[organizationIndex];
+			const staff = rankedList[staffIndex];
+			const tieHolds = organization.ownVotes === staff.ownVotes && organization.bestCosine === staff.bestCosine && organization.stableId < staff.stableId && staff.cardTextCosine > organization.cardTextCosine;
+			return {
+				pass: tieHolds && staffIndex < organizationIndex,
+				detail: `ownVotes ${organization.ownVotes}/${staff.ownVotes}, bestCosine ${organization.bestCosine}/${staff.bestCosine}, cardTextCosine ${organization.cardTextCosine}/${staff.cardTextCosine} (Organization.Name/Staff.Name); tie as designed: ${tieHolds}; ranked Staff.Name ${staffIndex + 1}, Organization.Name ${organizationIndex + 1}`,
+			};
+		},
+	}),
+	pureConjunct({
+		conjunctId: 'r_rankRefusesAnEntryWithoutCardText',
+		title: 'rankVotedCandidates and rankCandidatePool (declared neighbourVote) each refuse BY NAME an admitted entry lacking cardTextCosine, one whose cardTextCosine is NaN, and one lacking cardTextWinningTextStableId; there is no default of zero (R-BR-14)',
+		twinNameList: ['missingCardTextAsZero', 'missingWinningTextAccepted'],
+		judge: (scenario) => {
+			const run = toyLib.runToyPipeline({ scenario });
+			if (run.error) {
+				return refusedRun(run);
+			}
+			const { candidateRetrievalLib, neighbourVoteLib } = run.modules;
+			const oneResult = run.resultBySubjectStableId[toyLib.SUBJECT_TELEPHONE];
+			const firstEntryChanged = (changeEntry) => oneResult.cardTextAdmittedList.map((oneCandidate, oneIndex) => (oneIndex === 0 ? changeEntry({ ...oneCandidate }) : oneCandidate));
+			const withoutField = (fieldName) => firstEntryChanged((copiedEntry) => {
+				delete copiedEntry[fieldName];
+				return copiedEntry;
+			});
+			const firstCard = 'toyhub\\/card\\/Organization\\.Email';
+			const faultList = [
+				{ faultName: 'no cardTextCosine', admittedList: withoutField('cardTextCosine'), regex: new RegExp(`REFUSED: (rankVotedCandidates|scoreCandidates) admittedList\\[0\\] \\(${firstCard}\\) carries cardTextCosine undefined, not a finite number`) },
+				{ faultName: 'NaN cardTextCosine', admittedList: firstEntryChanged((copiedEntry) => ({ ...copiedEntry, cardTextCosine: NaN })), regex: new RegExp(`REFUSED: (rankVotedCandidates|scoreCandidates) admittedList\\[0\\] \\(${firstCard}\\) carries cardTextCosine NaN, not a finite number`) },
+				{ faultName: 'no winning text', admittedList: withoutField('cardTextWinningTextStableId'), regex: new RegExp(`REFUSED: (rankVotedCandidates|scoreCandidates) admittedList\\[0\\] \\(${firstCard}\\) carries no cardTextWinningTextStableId`) },
+			];
+			const missedList = [];
+			faultList.forEach((oneFault) => {
+				const votesOnly = candidateRetrievalLib.rankVotedCandidates({ admittedList: oneFault.admittedList, k: TOY_SETTINGS.k });
+				const neighbour = neighbourVoteLib.rankCandidatePool({ admittedList: oneFault.admittedList, neighbourVote: toyLib.TOY_NEIGHBOUR_VOTE, neighbourInput: oneResult.neighbourInput, searchMemo: run.searchMemo, cardSlotIndex: run.cardSlotIndex, k: TOY_SETTINGS.k });
+				[['rankVotedCandidates', votesOnly], ['rankCandidatePool', neighbour]].forEach(([rankName, outcome]) => {
+					if (!(outcome.error && oneFault.regex.test(String(outcome.error.message)))) {
+						missedList.push(`${rankName} ${oneFault.faultName}: ${outcome.error ? String(outcome.error.message).slice(0, 130) : 'RANKED'}`);
+					}
+				});
+			});
+			return { pass: missedList.length === 0, detail: missedList.join(' | ') || `${faultList.length} faults refused by name by both ranks` };
+		},
+	}),
+	pureConjunct({
+		conjunctId: 's_sourceRoleRequiredOnEveryTextRecord',
+		title: 'a text record lacking sourceRole is refused BY NAME on the subject side (voteCandidatePool), on the hub side (buildEmbedTextIndex) and by cardTextCosineFor, and an empty sourceRole too; the reader returns it, so its absence is a fault (R-BR-15)',
+		twinNameList: ['sourceRoleOptional'],
+		judge: (scenario) => {
+			const subjectSideToy = toyLib.makeToyEmbedText();
+			delete subjectSideToy.sourceTextRecordList[0].sourceRole;
+			const hubSideToy = toyLib.makeToyEmbedText();
+			delete hubSideToy.hubTextRecordList[0].sourceRole;
+			const run = toyLib.runToyPipeline({ scenario });
+			if (run.error) {
+				return refusedRun(run);
+			}
+			const ownTextList = toyLib.makeToyEmbedText().sourceTextRecordList.filter((oneRecord) => oneRecord.sourceStableId === toyLib.SUBJECT_TELEPHONE);
+			const withoutRoleList = [{ ...ownTextList[0] }].concat(ownTextList.slice(1));
+			delete withoutRoleList[0].sourceRole;
+			const { admittedList } = run.resultBySubjectStableId[toyLib.SUBJECT_TELEPHONE];
+			const cardTextOf = (subjectTextRecordList) => {
+				const outcome = run.modules.candidateRetrievalLib.cardTextCosineFor({ admittedList, subjectTextRecordList, hubVectorIndex: run.hubVectorIndex });
+				return { error: outcome.error ? outcome.error.message : undefined };
+			};
+			const caseList = [
+				{ caseName: 'subject side', outcome: toyLib.runToyPipeline({ scenario, toy: subjectSideToy }), regex: /REFUSED: subject src\/property\/Applicant\.Telephone text record 0 lacks 'sourceRole'/ },
+				{ caseName: 'hub side', outcome: toyLib.runToyPipeline({ scenario, toy: hubSideToy }), regex: /REFUSED: textRecordList\[0\] lacks 'sourceRole'/ },
+				{ caseName: 'cardTextCosineFor', outcome: cardTextOf(withoutRoleList), regex: /REFUSED: subjectTextRecordList\[0\] lacks 'sourceRole'/ },
+				{ caseName: 'empty sourceRole', outcome: cardTextOf([{ ...ownTextList[0], sourceRole: '' }].concat(ownTextList.slice(1))), regex: /REFUSED: subjectTextRecordList\[0\] sourceRole "" is not a non-empty string/ },
+			];
+			const missedList = caseList.filter((oneCase) => !(typeof oneCase.outcome.error === 'string' && oneCase.regex.test(oneCase.outcome.error)));
+			return { pass: missedList.length === 0, detail: missedList.map((oneCase) => `${oneCase.caseName}: ${oneCase.outcome.error ? oneCase.outcome.error.slice(0, 140) : 'ACCEPTED'}`).join(' | ') || `${caseList.length} records without a sourceRole refused by name` };
 		},
 	}),
 ];
@@ -392,10 +579,50 @@ frameworkMutationTwin({
 	replace: '\t\t\t\townVotes: Array.from(oneTally.voterTextStableIdSet).reduce((soFar, oneTextStableId) => soFar + oneTally.pathList.find((onePath) => onePath.embedTextStableId === oneTextStableId).propertyNameList.length, 0),',
 });
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-ETS', conjunctId: 'e_classOrOptionSetOnlyCardNeverAdmitted', twinName: 'admitOnClassHit', fileName: RETRIEVAL_FILE, find: "const ADMITTING_SLOT_KIND_LIST = Object.freeze(['property']);", replace: "const ADMITTING_SLOT_KIND_LIST = Object.freeze(['property', 'domain', 'range']);" });
-frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-ETS', conjunctId: 'f_rankVotesThenCosineThenStableId', twinName: 'rankByCosineOnly', fileName: RETRIEVAL_FILE, find: '(rightCandidate.ownVotes - leftCandidate.ownVotes) || ', replace: '' });
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-ETS', conjunctId: 'f_rankVotesThenCardTextThenCosineThenStableId', twinName: 'rankByCosineOnly', fileName: RETRIEVAL_FILE, find: '(rightCandidate.ownVotes - leftCandidate.ownVotes) || ', replace: '' });
+// the OLD comparator, ownVotes then bestCosine then stableId
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-ETS', conjunctId: 'f_rankVotesThenCardTextThenCosineThenStableId', twinName: 'rankWithoutCardText', fileName: RETRIEVAL_FILE, find: '(rightCandidate.cardTextCosine - leftCandidate.cardTextCosine) || ', replace: '' });
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-ETS', conjunctId: 'h_byteIdenticalTwiceAndUnderReversedInput', twinName: 'reverseTieBreak', fileName: RETRIEVAL_FILE, find: 'compareStrings(leftCandidate.stableId, rightCandidate.stableId))', replace: 'compareStrings(rightCandidate.stableId, leftCandidate.stableId))' });
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-ETS', conjunctId: 'h_byteIdenticalTwiceAndUnderReversedInput', twinName: 'tieBreakByInputOrder', fileName: RETRIEVAL_FILE, find: '(rightHit.cosine - leftHit.cosine) || compareStrings(leftHit.hitTextStableId, rightHit.hitTextStableId)', replace: '(rightHit.cosine - leftHit.cosine)' });
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-ETS', conjunctId: 'r1a_scalarPropertyNameListRefusedByName', twinName: 'reWidenScalarInsideTheModule', fileName: RETRIEVAL_FILE, find: 'Array.isArray(textRecord.propertyNameList) ? textRecord.propertyNameList : null;', replace: 'Array.isArray(textRecord.propertyNameList) ? textRecord.propertyNameList : [textRecord.propertyNameList];' });
+// ---- B1b twins (R-BR-14, R-BR-15)
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-ETS', conjunctId: 'h_byteIdenticalTwiceAndUnderReversedInput', twinName: 'textTieToLaterText', fileName: RETRIEVAL_FILE, find: '(textCosine === winningCosine && compareStrings(oneText.textStableId, winningTextStableId) < 0)', replace: 'textCosine === winningCosine' });
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-ETS', conjunctId: 'n_cardTextIsTheMaxOverOwnTexts', twinName: 'firstTextOnly', fileName: RETRIEVAL_FILE, find: 'for (let textIndex = 0; textIndex < subjectTextList.length; textIndex++) {', replace: 'for (let textIndex = 0; textIndex < 1; textIndex++) {' });
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-ETS', conjunctId: 'n_cardTextIsTheMaxOverOwnTexts', twinName: 'scoredEntryDropsCardText', fileName: 'neighbourVote.js', find: '\t\t\t\tcardTextCosine: oneCandidate.cardTextCosine,\n\t\t\t\tcardTextWinningTextStableId: oneCandidate.cardTextWinningTextStableId,\n', replace: '' });
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-ETS', conjunctId: 'o_cardTextRefusalsByName', twinName: 'emptyTextListAccepted', fileName: RETRIEVAL_FILE, find: '\tif (subjectTextRecordList.length === 0) {', replace: '\tif (false) {' });
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-ETS', conjunctId: 'o_cardTextRefusalsByName', twinName: 'mixedSubjectAccepted', fileName: RETRIEVAL_FILE, find: '\t\tif (oneRecord.sourceStableId !== subjectStableId) {', replace: '\t\tif (false) {' });
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-ETS', conjunctId: 'o_cardTextRefusalsByName', twinName: 'modelMismatchAccepted', fileName: RETRIEVAL_FILE, find: '\t\tif (oneRecord.embeddingModelVersion !== hubVectorIndex.embeddingModelVersion) {', replace: '\t\tif (false) {' });
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-ETS', conjunctId: 'o_cardTextRefusalsByName', twinName: 'dimensionMismatchAccepted', fileName: RETRIEVAL_FILE, find: 'vectorRefusal({ vector: oneRecord.vector, stableId: oneRecord.textStableId, expectedDimension: hubVectorIndex.dimension })', replace: 'vectorRefusal({ vector: oneRecord.vector, stableId: oneRecord.textStableId, expectedDimension: null })' });
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-ETS', conjunctId: 'o_cardTextRefusalsByName', twinName: 'zeroNormAccepted', fileName: RETRIEVAL_FILE, find: '\t\tif (textNorm === 0) {', replace: '\t\tif (false) {' });
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-ETS', conjunctId: 'o_cardTextRefusalsByName', twinName: 'absentCardAccepted', fileName: RETRIEVAL_FILE, find: '\t\tif (rowIndex === undefined) {', replace: '\t\tif (false) {' });
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-ETS', conjunctId: 'p_cardTextCosineOnTheRawScale', twinName: 'halfScaleCosine', fileName: RETRIEVAL_FILE, find: 'const textCosine = dotProduct / (oneText.norm * normList[rowIndex]);', replace: 'const textCosine = (1 + dotProduct / (oneText.norm * normList[rowIndex])) / 2;' });
+frameworkMutationTwin({
+	registry: twinRegistry,
+	gateId: 'BG-ETS',
+	conjunctId: 'q_cardTextBreaksTheTieStableIdGotWrong',
+	twinName: 'stableIdBeforeCardText',
+	fileName: RETRIEVAL_FILE,
+	find: '(rightCandidate.ownVotes - leftCandidate.ownVotes) || (rightCandidate.cardTextCosine - leftCandidate.cardTextCosine) || (rightCandidate.bestCosine - leftCandidate.bestCosine) || compareStrings(leftCandidate.stableId, rightCandidate.stableId))',
+	replace: '(rightCandidate.ownVotes - leftCandidate.ownVotes) || compareStrings(leftCandidate.stableId, rightCandidate.stableId) || (rightCandidate.cardTextCosine - leftCandidate.cardTextCosine) || (rightCandidate.bestCosine - leftCandidate.bestCosine))',
+});
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-ETS', conjunctId: 'r_rankRefusesAnEntryWithoutCardText', twinName: 'missingCardTextAsZero', fileName: RETRIEVAL_FILE, find: '!Number.isFinite(oneCandidate.cardTextCosine)', replace: '!Number.isFinite(oneCandidate.cardTextCosine === undefined ? 0 : oneCandidate.cardTextCosine)' });
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-ETS', conjunctId: 'r_rankRefusesAnEntryWithoutCardText', twinName: 'missingWinningTextAccepted', fileName: RETRIEVAL_FILE, find: '!isNonEmptyString(oneCandidate.cardTextWinningTextStableId)', replace: 'false' });
+// TWO mutations, so that a record without sourceRole is ACCEPTED rather than refused by the next check for another reason
+const SOURCE_ROLE_MISSING_FIND = 'const missingFieldName = EMBED_TEXT_RECORD_FIELD_LIST.find((oneName) => !hasOwn(textRecord, oneName));';
+const SOURCE_ROLE_EMPTY_FIND = '\tif (!isNonEmptyString(textRecord.sourceRole)) {';
+scenarioTwin({
+	registry: twinRegistry,
+	gateId: 'BG-ETS',
+	conjunctId: 's_sourceRoleRequiredOnEveryTextRecord',
+	twinName: 'sourceRoleOptional',
+	leverKind: 'productionMutation',
+	mutate: (scenario) => {
+		moduleDouble.assertMutationApplies({ modulePath: frameworkFile(RETRIEVAL_FILE), find: SOURCE_ROLE_MISSING_FIND });
+		moduleDouble.assertMutationApplies({ modulePath: frameworkFile(RETRIEVAL_FILE), find: SOURCE_ROLE_EMPTY_FIND });
+		scenario.frameworkMutationList.push({ modulePath: frameworkFile(RETRIEVAL_FILE), find: SOURCE_ROLE_MISSING_FIND, replace: "const missingFieldName = EMBED_TEXT_RECORD_FIELD_LIST.find((oneName) => oneName !== 'sourceRole' && !hasOwn(textRecord, oneName));" });
+		scenario.frameworkMutationList.push({ modulePath: frameworkFile(RETRIEVAL_FILE), find: SOURCE_ROLE_EMPTY_FIND, replace: '\tif (false) {' });
+	},
+});
 
 const readerExclusionFind = "const embedTextExclusionConditionFor = (variableName) => `(${variableName}.role IS NULL OR ${variableName}.role <> $embedTextRole)`;";
 ['d1_subjectNodesCarryNoTextNode', 'd2_walkViewCarriesNoTextNode', 'd3_evidenceViewCarriesNoTextNode', 'd4_untypedEdgeReadCarriesNoTextEdge'].forEach((oneConjunctId) =>
@@ -414,9 +641,10 @@ runGateFamily(
 		makeSubject: toyLib.makeScenario,
 		cloneSubject: toyLib.cloneScenario,
 		// LITERAL, never derived from a .length (RULING SABLE_RIVER 2026-08-17): pure conjuncts b c e f h r1a, twins
-		// 2+2+1+1+2+1; reader conjuncts d1 d2 d3 d4 d5 m1 m2, twins 1+1+1+1+1+1+1 (B3b)
-		expectedConjunctCount: 13,
-		expectedTwinCount: 16,
+		// 2+2+1+2+3+1 (f and h each gained one in B1b); reader conjuncts d1 d2 d3 d4 d5 m1 m2, twins 1+1+1+1+1+1+1 (B3b);
+		// B1b conjuncts n o p q r s, twins 2+6+1+1+2+1
+		expectedConjunctCount: 19,
+		expectedTwinCount: 31,
 	},
 	() => harness.report(),
 );

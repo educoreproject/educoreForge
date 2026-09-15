@@ -14,7 +14,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //   neighbourSharesFor({ neighbourSet, textRecordListBySourceStableId, searchMemo, cardSlotIndex })
 //     → { neighbourShares } | { error }              domain and range shares, counts, trace
 //   scoreCandidates({ admittedList, neighbourShares, cardSlotIndex, neighbourVote, k })
-//     → { rankedList } | { error }                   score DESC, own share DESC, bestCosine DESC, stableId ASC
+//     → { rankedList } | { error }                   score DESC, own share DESC, cardTextCosine DESC, bestCosine DESC, stableId ASC
 //   rankCandidatePool({ admittedList, neighbourVote, neighbourInput, searchMemo, cardSlotIndex, k })
 //     → { rankedList, neighbourTrace } | { error }   neighbourVote null → the votes-only rank, trace null
 //
@@ -300,6 +300,9 @@ const neighbourSharesFor = ({ neighbourSet, textRecordListBySourceStableId, sear
 				referencedObjectCount: neighbourSet.referencedObjectStableIdList.length,
 				topDomainClassList: topClassListOf(domain.shareByClassStableId),
 				topRangeClassList: topClassListOf(range.shareByClassStableId),
+				// R-BR-16: every neighbour → the sorted classes it named, keys in stableId ORDER; a plain object, so the
+				// frozen record keeps it (a Map would serialise as {})
+				namedClassStableIdListByNeighbourStableId: Object.freeze(everyNeighbourStableIdList.reduce((soFar, oneNeighbourStableId) => ({ ...soFar, [oneNeighbourStableId]: namedClassStableIdListByNeighbourStableId.get(oneNeighbourStableId) }), {})),
 			}),
 		}),
 	};
@@ -308,7 +311,7 @@ const neighbourSharesFor = ({ neighbourSet, textRecordListBySourceStableId, sear
 const shareOf = (shareByClassStableId, classStableId) => (shareByClassStableId.has(classStableId) ? shareByClassStableId.get(classStableId) : 0);
 
 const scoreCandidates = ({ admittedList, neighbourShares, cardSlotIndex, neighbourVote, k } = {}) => {
-	const listRefusal = candidateRetrievalLib.admittedListRefusal({ admittedList, callerName: 'scoreCandidates' });
+	const listRefusal = candidateRetrievalLib.rankableListRefusal({ admittedList, callerName: 'scoreCandidates' });
 	if (listRefusal !== '') {
 		return { error: refuse.byName({ moduleName, what: listRefusal, where: 'only the lookup\'s admitted cards are scored' }) };
 	}
@@ -354,12 +357,14 @@ const scoreCandidates = ({ admittedList, neighbourShares, cardSlotIndex, neighbo
 				rangeShare,
 				score: oneCandidate.ownVotes + domainVote + rangeVote,
 				bestCosine: oneCandidate.bestCosine,
+				cardTextCosine: oneCandidate.cardTextCosine,
+				cardTextWinningTextStableId: oneCandidate.cardTextWinningTextStableId,
 				pathList: oneCandidate.pathList,
 			}),
 		);
 	}
 	const rankedList = scoredList
-		.sort((leftScored, rightScored) => (rightScored.score - leftScored.score) || ((rightScored.domainShare + rightScored.rangeShare) - (leftScored.domainShare + leftScored.rangeShare)) || (rightScored.bestCosine - leftScored.bestCosine) || compareStrings(leftScored.stableId, rightScored.stableId))
+		.sort((leftScored, rightScored) => (rightScored.score - leftScored.score) || ((rightScored.domainShare + rightScored.rangeShare) - (leftScored.domainShare + leftScored.rangeShare)) || (rightScored.cardTextCosine - leftScored.cardTextCosine) || (rightScored.bestCosine - leftScored.bestCosine) || compareStrings(leftScored.stableId, rightScored.stableId))
 		.slice(0, k);
 	return { rankedList: Object.freeze(rankedList) };
 };

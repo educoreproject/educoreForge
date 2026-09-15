@@ -171,11 +171,14 @@ const retrieveCandidatePool = ({ hubVectorIndex, subjectStableId, subjectVector,
 //     → { cardSlotIndex } | { error }        card ↔ base node, by slot kind and base kind
 //   voteCandidatePool({ searchMemo, cardSlotIndex, subjectStableId, subjectTextRecordList })
 //     → { admittedList } | { error }         admittedList = [{ stableId, ownVotes, bestCosine, pathList }], by stableId
+//   cardTextCosineFor({ admittedList, subjectTextRecordList, hubVectorIndex })
+//     → { admittedList } | { error }         each entry + cardTextCosine, cardTextWinningTextStableId (R-BR-14)
 //   rankVotedCandidates({ admittedList, k })
-//     → { rankedList } | { error }           ownVotes DESC, bestCosine DESC, stableId ASC; first k
+//     → { rankedList } | { error }           ownVotes DESC, cardTextCosine DESC, bestCosine DESC, stableId ASC; first k
 //
 // RECORD SHAPES ARE CLOSED. A text record is { textStableId, vector, embeddingModelVersion, sourceStableId,
-// propertyNameList }, one per (text node, described node). A card slot edge is { cardStableId, slot,
+// sourceRole, propertyNameList }, one per (text node, described node): exactly what readEmbedTextVectors returns,
+// so the orchestrator passes reader records unmodified (R-BR-15). A card slot edge is { cardStableId, slot,
 // baseStableId, baseRole }. `slot` and `baseRole` are the caller's own names (an edge type made by
 // hubEdgeType, a role constant), mapped here onto the logical kinds below. That mapping is why this file
 // holds no hub or standard name. baseRole is carried because a RANGE slot may point at a class OR an
@@ -186,7 +189,7 @@ const retrieveCandidatePool = ({ hubVectorIndex, subjectStableId, subjectVector,
 // reached it through the PROPERTY slot; class and option-set paths add votes to an admitted card and never
 // admit one.
 
-const EMBED_TEXT_RECORD_FIELD_LIST = Object.freeze(['textStableId', 'vector', 'embeddingModelVersion', 'sourceStableId', 'propertyNameList']);
+const EMBED_TEXT_RECORD_FIELD_LIST = Object.freeze(['textStableId', 'vector', 'embeddingModelVersion', 'sourceStableId', 'sourceRole', 'propertyNameList']);
 const CARD_SLOT_EDGE_FIELD_LIST = Object.freeze(['cardStableId', 'slot', 'baseStableId', 'baseRole']);
 const SLOT_KIND_LIST = Object.freeze(['property', 'domain', 'range']);
 const BASE_KIND_LIST = Object.freeze(['class', 'property', 'optionSet']);
@@ -218,6 +221,9 @@ const embedTextRecordRefusal = ({ textRecord, recordLabel }) => {
 	}
 	if (!isNonEmptyString(textRecord.textStableId) || !isNonEmptyString(textRecord.sourceStableId) || !isNonEmptyString(textRecord.embeddingModelVersion)) {
 		return `${recordLabel} textStableId, sourceStableId and embeddingModelVersion must each be a non-empty string`;
+	}
+	if (!isNonEmptyString(textRecord.sourceRole)) {
+		return `${recordLabel} sourceRole ${JSON.stringify(textRecord.sourceRole)} is not a non-empty string; it is the described node's role, which readEmbedTextVectors returns (R-BR-15)`;
 	}
 	const propertyNameList = Array.isArray(textRecord.propertyNameList) ? textRecord.propertyNameList : null;
 	if (propertyNameList === null) {
@@ -565,9 +571,101 @@ const admittedListRefusal = ({ admittedList, callerName }) => {
 	return '';
 };
 
+// cardTextCosineFor — the CARD-TEXT term for ONE subject's admitted cards (R-BR-14). For each card: the highest
+// RAW cosine between any of the subject's OWN text vectors and the card's row in hubVectorIndex (the whole-card
+// embedding readHubVectors returns); an exact tie between two texts goes to the lower textStableId, so the
+// winning text never depends on read order. Computed here, never by Neo4j vector.similarity.cosine, which
+// returns (1 + cos) / 2 and would compress every gap by half.
+// Text nodes decide which cards are ADMITTED; this term only ORDERS them, after the vote terms.
+const cardTextCosineFor = ({ admittedList, subjectTextRecordList, hubVectorIndex } = {}) => {
+	if (!isPlainObject(hubVectorIndex) || !(hubVectorIndex.matrix instanceof Float64Array) || !Array.isArray(hubVectorIndex.stableIdList)) {
+		return { error: refuse.byName({ moduleName, what: 'cardTextCosineFor needs a hubVectorIndex from buildHubVectorIndex', where: "the hub cards' whole-card vectors, indexed ONCE per run" }) };
+	}
+	const listRefusal = admittedListRefusal({ admittedList, callerName: 'cardTextCosineFor' });
+	if (listRefusal !== '') {
+		return { error: refuse.byName({ moduleName, what: listRefusal, where: "voteCandidatePool's admitted list for this subject" }) };
+	}
+	if (!Array.isArray(subjectTextRecordList)) {
+		return { error: refuse.byName({ moduleName, what: `cardTextCosineFor subjectTextRecordList is ${JSON.stringify(subjectTextRecordList)}, not a list`, where: "the subject's own text records from readEmbedTextVectors" }) };
+	}
+	if (subjectTextRecordList.length === 0) {
+		return { error: refuse.byName({ moduleName, what: 'cardTextCosineFor has no text record for the subject', where: 'a subject with no text node has no card text; it is refused, never scored 0 (R-BR-14)' }) };
+	}
+	// the subject is DERIVED from the records: the first names it and every other must agree
+	const subjectStableId = isPlainObject(subjectTextRecordList[0]) ? subjectTextRecordList[0].sourceStableId : undefined;
+	const subjectTextList = [];
+	for (let recordIndex = 0; recordIndex < subjectTextRecordList.length; recordIndex++) {
+		const oneRecord = subjectTextRecordList[recordIndex];
+		const shapeRefusal = embedTextRecordRefusal({ textRecord: oneRecord, recordLabel: `subjectTextRecordList[${recordIndex}]` });
+		if (shapeRefusal !== '') {
+			return { error: refuse.byName({ moduleName, what: shapeRefusal, where: "the subject's own text records from readEmbedTextVectors" }) };
+		}
+		if (oneRecord.sourceStableId !== subjectStableId) {
+			return { error: refuse.byName({ moduleName, what: `text record ${oneRecord.textStableId} describes ${oneRecord.sourceStableId}, but subjectTextRecordList[0] describes ${subjectStableId}`, where: "cardTextCosineFor takes ONE subject's OWN texts; mixed subjects are refused" }) };
+		}
+		if (oneRecord.embeddingModelVersion !== hubVectorIndex.embeddingModelVersion) {
+			return { error: refuse.byName({ moduleName, what: `text ${oneRecord.textStableId} is embedded by '${oneRecord.embeddingModelVersion}' but hubVectorIndex holds '${hubVectorIndex.embeddingModelVersion}'`, where: 'a cosine between two models is meaningless; re-declare or re-forge, never compare' }) };
+		}
+		const dimensionRefusal = vectorRefusal({ vector: oneRecord.vector, stableId: oneRecord.textStableId, expectedDimension: hubVectorIndex.dimension });
+		if (dimensionRefusal !== '') {
+			return { error: refuse.byName({ moduleName, what: dimensionRefusal, where: 'a subject text must be comparable to the whole-card vectors' }) };
+		}
+		const textNorm = normOf(oneRecord.vector);
+		if (textNorm === 0) {
+			return { error: refuse.byName({ moduleName, what: `text ${oneRecord.textStableId} carries a ZERO-norm vector`, where: 'a zero vector has no direction; its cosine with anything is undefined' }) };
+		}
+		subjectTextList.push({ textStableId: oneRecord.textStableId, vector: oneRecord.vector, norm: textNorm });
+	}
+	const { matrix, normList, stableIdList, dimension } = hubVectorIndex;
+	const rowIndexByCardStableId = new Map(stableIdList.map((oneStableId, oneRowIndex) => [oneStableId, oneRowIndex]));
+	const cardTextList = [];
+	for (let candidateIndex = 0; candidateIndex < admittedList.length; candidateIndex++) {
+		const oneCandidate = admittedList[candidateIndex];
+		const rowIndex = rowIndexByCardStableId.get(oneCandidate.stableId);
+		if (rowIndex === undefined) {
+			return { error: refuse.byName({ moduleName, what: `admitted card ${oneCandidate.stableId} is absent from hubVectorIndex`, where: 'every admitted card is a hub card carrying a whole-card vector; the lookup and the index were read from different hubs' }) };
+		}
+		const base = rowIndex * dimension;
+		let winningCosine = null;
+		let winningTextStableId = null;
+		for (let textIndex = 0; textIndex < subjectTextList.length; textIndex++) {
+			const oneText = subjectTextList[textIndex];
+			let dotProduct = 0;
+			for (let oneIndex = 0; oneIndex < dimension; oneIndex++) {
+				dotProduct += oneText.vector[oneIndex] * matrix[base + oneIndex];
+			}
+			const textCosine = dotProduct / (oneText.norm * normList[rowIndex]);
+			if (winningCosine === null || textCosine > winningCosine || (textCosine === winningCosine && compareStrings(oneText.textStableId, winningTextStableId) < 0)) {
+				winningCosine = textCosine;
+				winningTextStableId = oneText.textStableId;
+			}
+		}
+		cardTextList.push(Object.freeze({ ...oneCandidate, cardTextCosine: winningCosine, cardTextWinningTextStableId: winningTextStableId }));
+	}
+	return { admittedList: Object.freeze(cardTextList) };
+};
+
+// rankableListRefusal — the admitted shape PLUS the two fields cardTextCosineFor adds. A rank never reads an
+// absent card-text term as zero: that would silently put an unscored card below every scored one (R-BR-14).
+const rankableListRefusal = ({ admittedList, callerName }) => {
+	const shapeRefusal = admittedListRefusal({ admittedList, callerName });
+	if (shapeRefusal !== '') {
+		return shapeRefusal;
+	}
+	const unscoredIndex = admittedList.findIndex((oneCandidate) => !Number.isFinite(oneCandidate.cardTextCosine));
+	if (unscoredIndex !== -1) {
+		return `${callerName} admittedList[${unscoredIndex}] (${admittedList[unscoredIndex].stableId}) carries cardTextCosine ${String(admittedList[unscoredIndex].cardTextCosine)}, not a finite number; run cardTextCosineFor before ranking, there is no default`;
+	}
+	const unnamedIndex = admittedList.findIndex((oneCandidate) => !isNonEmptyString(oneCandidate.cardTextWinningTextStableId));
+	if (unnamedIndex !== -1) {
+		return `${callerName} admittedList[${unnamedIndex}] (${admittedList[unnamedIndex].stableId}) carries no cardTextWinningTextStableId; run cardTextCosineFor before ranking`;
+	}
+	return '';
+};
+
 // rankVotedCandidates — step 7, the VOTES-ONLY rank. Also exactly what neighbourVote: null must reproduce.
 const rankVotedCandidates = ({ admittedList, k } = {}) => {
-	const listRefusal = admittedListRefusal({ admittedList, callerName: 'rankVotedCandidates' });
+	const listRefusal = rankableListRefusal({ admittedList, callerName: 'rankVotedCandidates' });
 	if (listRefusal !== '') {
 		return { error: refuse.byName({ moduleName, what: listRefusal, where: 'rank the admitted list only' }) };
 	}
@@ -576,7 +674,7 @@ const rankVotedCandidates = ({ admittedList, k } = {}) => {
 	}
 	const rankedList = admittedList
 		.slice()
-		.sort((leftCandidate, rightCandidate) => (rightCandidate.ownVotes - leftCandidate.ownVotes) || (rightCandidate.bestCosine - leftCandidate.bestCosine) || compareStrings(leftCandidate.stableId, rightCandidate.stableId))
+		.sort((leftCandidate, rightCandidate) => (rightCandidate.ownVotes - leftCandidate.ownVotes) || (rightCandidate.cardTextCosine - leftCandidate.cardTextCosine) || (rightCandidate.bestCosine - leftCandidate.bestCosine) || compareStrings(leftCandidate.stableId, rightCandidate.stableId))
 		.slice(0, k);
 	return { rankedList: Object.freeze(rankedList) };
 };
@@ -592,9 +690,11 @@ module.exports = {
 	searchEmbedText,
 	buildCardSlotIndex,
 	voteCandidatePool,
+	cardTextCosineFor,
 	rankVotedCandidates,
 	embedTextRecordRefusal,
 	admittedListRefusal,
+	rankableListRefusal,
 	isSearchMemo,
 	isCardSlotIndex,
 	compareStrings,

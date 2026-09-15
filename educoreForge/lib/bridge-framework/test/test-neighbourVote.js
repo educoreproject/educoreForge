@@ -13,8 +13,10 @@
 //         (f) the memoised search equals the direct search, and a subject run after another on a shared memo
 //             equals the same subject run alone on a fresh one
 //         (g) neighbourVote: null gives exactly the votes-only rank
-//         (h) the rank is score, own share, best cosine, stableId
+//         (h) the rank is score, own share, cardTextCosine, best cosine, stableId (R-BR-14, B1b)
 //         (i) topShare gives the vote only to the highest-share classes
+//         (traceNamedClasses) the returned neighbourTrace carries every neighbour's sorted named classes, keys in
+//             stableId order, frozen and JSON-safe (R-BR-16, B1b)
 //         (runRefusals) the three run-time refusals of §5 fire by name: no owner property, an owner naming no
 //             source node, a scored card with no DOMAIN slot edge
 //         (contain) neighbourVote.js and candidateRetrieval.js require only an allow-list: no I/O, driver,
@@ -202,9 +204,9 @@ const nvConjunctList = [
 		},
 	}),
 	pureConjunct({
-		conjunctId: 'h_rankScoreThenShareThenCosineThenStableId',
-		title: 'the neighbour rank equals the hand-derived order (Person.Status before Telephone.TelephoneNumber on share, both score 3) and every adjacent pair obeys score DESC, domainShare+rangeShare DESC, bestCosine DESC, stableId ASC',
-		twinNameList: ['rankIgnoresShare'],
+		conjunctId: 'h_rankScoreThenShareThenCardTextThenCosineThenStableId',
+		title: 'the neighbour rank equals the hand-derived order (Person.Status before Telephone.TelephoneNumber on share, both score 3; Organization.PhoneKind before Organization.Name on card text, both score 1 share .5) and every adjacent pair obeys score DESC, domainShare+rangeShare DESC, cardTextCosine DESC, bestCosine DESC, stableId ASC (R-BR-14)',
+		twinNameList: ['rankIgnoresShare', 'neighbourRankWithoutCardText'],
 		judge: (scenario) => {
 			const run = toyLib.runToyPipeline({ scenario });
 			if (run.error) {
@@ -220,7 +222,12 @@ const nvConjunctList = [
 					const prior = rankedList[oneIndex];
 					const priorShare = prior.domainShare + prior.rangeShare;
 					const oneShare = oneCandidate.domainShare + oneCandidate.rangeShare;
-					const ordered = prior.score > oneCandidate.score || (prior.score === oneCandidate.score && (priorShare > oneShare || (priorShare === oneShare && (prior.bestCosine > oneCandidate.bestCosine || (prior.bestCosine === oneCandidate.bestCosine && prior.stableId < oneCandidate.stableId)))));
+					const ordered =
+						prior.score > oneCandidate.score ||
+						(prior.score === oneCandidate.score &&
+							(priorShare > oneShare ||
+								(priorShare === oneShare &&
+									(prior.cardTextCosine > oneCandidate.cardTextCosine || (prior.cardTextCosine === oneCandidate.cardTextCosine && (prior.bestCosine > oneCandidate.bestCosine || (prior.bestCosine === oneCandidate.bestCosine && prior.stableId < oneCandidate.stableId)))))));
 					if (!ordered) {
 						problemList.push(`${prior.stableId} before ${oneCandidate.stableId} breaks the order`);
 					}
@@ -254,6 +261,37 @@ const nvConjunctList = [
 			const organizationEmail = run.resultBySubjectStableId[SUBJECT_TELEPHONE].rankedList.find((oneCandidate) => oneCandidate.stableId === toyLib.cardId('Organization.Email'));
 			const nonVacuous = organizationEmail !== undefined && organizationEmail.domainShare > 0 && organizationEmail.domainVote === 0;
 			return { pass: problemList.length === 0 && nonVacuous, detail: `${problemList.join('; ') || 'every vote goes only to the top-share class'}; Organization.Email share>0 without the vote: ${nonVacuous}` };
+		},
+	}),
+	pureConjunct({
+		conjunctId: 'traceNamedClasses_everyNeighbourInStableIdOrder',
+		title: "rankCandidatePool's neighbourTrace carries namedClassStableIdListByNeighbourStableId: every neighbour's sorted named classes equal to the hand-derived map, keys in stableId ORDER, frozen, and unchanged by a JSON round trip (R-BR-16)",
+		twinNameList: ['traceDropsNamedClasses', 'traceUnsortsNamedClasses', 'mapInsteadOfPlainObject'],
+		judge: (scenario) => {
+			const run = toyLib.runToyPipeline({ scenario });
+			if (run.error) {
+				return refusedRun(run);
+			}
+			const problemList = [];
+			subjectStableIdList.forEach((oneSubjectStableId) => {
+				const neighbourTrace = run.resultBySubjectStableId[oneSubjectStableId].neighbourTrace;
+				const namedClassMap = neighbourTrace === null ? undefined : neighbourTrace.namedClassStableIdListByNeighbourStableId;
+				const expectedEntryList = EXPECTED_BY_SUBJECT[oneSubjectStableId].traceNamedClassEntryList;
+				if (namedClassMap === undefined) {
+					problemList.push(`${oneSubjectStableId} trace carries no namedClassStableIdListByNeighbourStableId`);
+					return;
+				}
+				if (!sameJson(Object.entries(namedClassMap), expectedEntryList)) {
+					problemList.push(`${oneSubjectStableId} trace map ${JSON.stringify(Object.entries(namedClassMap))}`);
+				}
+				if (!Object.isFrozen(namedClassMap)) {
+					problemList.push(`${oneSubjectStableId} trace map is not frozen`);
+				}
+				if (!sameJson(Object.entries(JSON.parse(JSON.stringify(neighbourTrace)).namedClassStableIdListByNeighbourStableId), expectedEntryList)) {
+					problemList.push(`${oneSubjectStableId} trace map does not survive a JSON round trip`);
+				}
+			});
+			return { pass: problemList.length === 0, detail: problemList.join('; ').slice(0, 420) || 'both subjects: the trace map equals the hand-derived map in stableId order, frozen, JSON-safe' };
 		},
 	}),
 	pureConjunct({
@@ -350,7 +388,21 @@ frameworkMutationTwin({
 	find: '\tif (neighbourVote === null) {',
 	replace: `\tif (neighbourVote === null) {\n\t\tneighbourVote = ${JSON.stringify(toyLib.TOY_NEIGHBOUR_VOTE)};\n\t}\n\tif (false) {`,
 });
-frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-NV', conjunctId: 'h_rankScoreThenShareThenCosineThenStableId', twinName: 'rankIgnoresShare', fileName: NEIGHBOUR_FILE, find: '((rightScored.domainShare + rightScored.rangeShare) - (leftScored.domainShare + leftScored.rangeShare)) || ', replace: '' });
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-NV', conjunctId: 'h_rankScoreThenShareThenCardTextThenCosineThenStableId', twinName: 'rankIgnoresShare', fileName: NEIGHBOUR_FILE, find: '((rightScored.domainShare + rightScored.rangeShare) - (leftScored.domainShare + leftScored.rangeShare)) || ', replace: '' });
+// the OLD comparator, score then share then bestCosine then stableId (B1b)
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-NV', conjunctId: 'h_rankScoreThenShareThenCardTextThenCosineThenStableId', twinName: 'neighbourRankWithoutCardText', fileName: NEIGHBOUR_FILE, find: '(rightScored.cardTextCosine - leftScored.cardTextCosine) || ', replace: '' });
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-NV', conjunctId: 'traceNamedClasses_everyNeighbourInStableIdOrder', twinName: 'traceDropsNamedClasses', fileName: NEIGHBOUR_FILE, find: '\t\t\t\tnamedClassStableIdListByNeighbourStableId: Object.freeze(everyNeighbourStableIdList', replace: '\t\t\t\tdroppedNamedClassMap: Object.freeze(everyNeighbourStableIdList' });
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-NV', conjunctId: 'traceNamedClasses_everyNeighbourInStableIdOrder', twinName: 'traceUnsortsNamedClasses', fileName: NEIGHBOUR_FILE, find: 'Object.freeze(everyNeighbourStableIdList.reduce(', replace: 'Object.freeze(everyNeighbourStableIdList.slice().reverse().reduce(' });
+// the internal Map handed out as is: decisionBlock.canonicalText freezes a Map SILENTLY as {} (PRISM_COMPASS, measured)
+frameworkMutationTwin({
+	registry: twinRegistry,
+	gateId: 'BG-NV',
+	conjunctId: 'traceNamedClasses_everyNeighbourInStableIdOrder',
+	twinName: 'mapInsteadOfPlainObject',
+	fileName: NEIGHBOUR_FILE,
+	find: '\t\t\t\tnamedClassStableIdListByNeighbourStableId: Object.freeze(everyNeighbourStableIdList.reduce((soFar, oneNeighbourStableId) => ({ ...soFar, [oneNeighbourStableId]: namedClassStableIdListByNeighbourStableId.get(oneNeighbourStableId) }), {})),',
+	replace: '\t\t\t\tnamedClassStableIdListByNeighbourStableId,',
+});
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-NV', conjunctId: 'i_topShareEarnsOnlyTheHighestShareClasses', twinName: 'earnOnAnyHit', fileName: NEIGHBOUR_FILE, find: '\tconst earnRule = EARN_RULE_REGISTRY[neighbourVote.earnRule];', replace: '\tconst earnRule = EARN_RULE_REGISTRY.anyHit;' });
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-NV', conjunctId: 'runRefusals_threeRunRefusalsFireByName', twinName: 'ownerAbsenceUnchecked', fileName: NEIGHBOUR_FILE, find: '\tif (ownerStableId === undefined) {', replace: '\tif (false) {' });
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-NV', conjunctId: 'runRefusals_threeRunRefusalsFireByName', twinName: 'ownerExistenceUnchecked', fileName: NEIGHBOUR_FILE, find: '\tif (!sourceStableIdSet.has(ownerStableId)) {', replace: '\tif (false) {' });
@@ -374,10 +426,10 @@ runGateFamily(
 		twinRegistry,
 		makeSubject: toyLib.makeScenario,
 		cloneSubject: toyLib.cloneScenario,
-		// LITERAL, never derived from a .length (RULING SABLE_RIVER 2026-08-17): conjuncts a b c d f g h i runRefusals contain;
-		// twins 1+1+2+1+1+1+1+1+3+1
-		expectedConjunctCount: 10,
-		expectedTwinCount: 13,
+		// LITERAL, never derived from a .length (RULING SABLE_RIVER 2026-08-17): conjuncts a b c d f g h i runRefusals contain
+		// traceNamedClasses; twins 1+1+2+1+1+1+2+1+3+1+3 (h gained one and traceNamedClasses is new in B1b)
+		expectedConjunctCount: 11,
+		expectedTwinCount: 17,
 	},
 	() => harness.report(),
 );

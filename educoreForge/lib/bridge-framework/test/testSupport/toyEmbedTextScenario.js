@@ -14,10 +14,13 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //   projectRun(run)                         → the run as canonical JSON (for byte-identity comparisons)
 //   EXPECTED_BY_SUBJECT, EXPECTED_HIT_COUNT_BY_TEXT_STABLE_ID — DERIVED BY HAND, see below
 //
-// THE VECTORS live on seven named axes so every cosine can be done on paper:
-//   0 telephone number · 1 person · 2 name · 3 organization · 4 status · 5 telephone type · 6 code list
+// THE VECTORS live on eight named axes so every cosine can be done on paper:
+//   0 telephone number · 1 person · 2 name · 3 organization · 4 status · 5 telephone type · 6 code list · 7 full legal name
+// No HUB TEXT carries axis 7, so a subject text on axis 7 alone reaches no hub text at all and changes no vote or
+// share; it can only win a card-text comparison (B1b, R-BR-14). Seven axes could not do that: every vector on them
+// is at least 1/√7 = 0.378 from some one-axis hub text, above the floor.
 // A cosine of 1/√2 is 0.7071, 1/2 is 0.5, 1/√5 is 0.4472, 2/√5 is 0.8944, 3/√10 is 0.9487, 1/√10 is 0.3162,
-// 4/√17 is 0.9701, 1/√17 is 0.2425. Settings: hitsPerText 3, minScore 0.30, k 15.
+// 4/√17 is 0.9701, 1/√17 is 0.2425, 1/√3 is 0.5774. Settings: hitsPerText 3, minScore 0.30, k 15.
 //
 // WHAT THE TOY CARRIES (the brief's list, each one named where it is built):
 //   a subject text shared by two of its properties ........ t1, propertyNameList ['description', 'name']
@@ -26,8 +29,13 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //   cards reachable only through class or option-set hits . Organization.Name, Person.Name (class), Staff.PhoneType (option set)
 //   a neighbour hitting an option-set base node ........... Applicant.PhoneKindCode (k1 → the TelephoneType option set)
 //   an owner, three siblings, one referenced object ....... Applicant; Name, PhoneKindCode, Status; Telephone
-//   ties resolved by stableId ............................. t4's third hit (h02 vs h11, both 0.5); Applicant.Name's
-//                                                           votes-only rank (three cards at 1 vote, cosine 1.0)
+//   ties resolved by stableId ............................. t4's third hit (h02 vs h11, both 0.5)
+//   (B1b) card-text ordering, R-BR-14:
+//   a NAME text winning one card, a DESCRIPTION text another  n1 wins Organization.Name; n2 wins Staff.Name
+//   two texts tying EXACTLY on one card ................... t1 and t3 on Telephone.TelephoneType; t1 wins on textStableId
+//   equal ownVotes and bestCosine, stableId order reversed  Organization.Name vs Staff.Name for Applicant.Name
+//     from card-text order
+//   equal score and share decided by card text ............ Organization.PhoneKind before Organization.Name (neighbour rank)
 
 const path = require('path');
 const moduleDouble = require(path.join(__dirname, '..', '..', '..', 'forge-framework', 'test', 'testSupport', 'moduleDouble'));
@@ -55,32 +63,33 @@ const baseIdByKind = { class: classId, property: propertyId, optionSet: optionSe
 
 // [textName, vector, [[baseKind, baseName], ...]] — the hNN prefix fixes stableId order for the ties
 const HUB_TEXT_ROW_LIST = [
-	['h01TelephoneNumber', [1, 0, 0, 0, 0, 0, 0], [['property', 'TelephoneNumber']]],
-	['h02HasTelephone', [1, 1, 0, 0, 0, 0, 0], [['property', 'HasTelephone']]],
-	['h03Person', [0, 1, 0, 0, 0, 0, 0], [['class', 'Person']]],
-	['h04Name', [0, 0, 1, 0, 0, 0, 0], [['property', 'Name']]],
-	['h05Organization', [0, 0, 0, 1, 0, 0, 0], [['class', 'Organization']]],
-	['h06Telephone', [1, 0, 0, 0, 0, 1, 0], [['class', 'Telephone']]],
-	['h07TelephoneTypeCodeList', [0, 0, 0, 0, 0, 1, 1], [['optionSet', 'TelephoneType']]],
+	['h01TelephoneNumber', [1, 0, 0, 0, 0, 0, 0, 0], [['property', 'TelephoneNumber']]],
+	['h02HasTelephone', [1, 1, 0, 0, 0, 0, 0, 0], [['property', 'HasTelephone']]],
+	['h03Person', [0, 1, 0, 0, 0, 0, 0, 0], [['class', 'Person']]],
+	['h04Name', [0, 0, 1, 0, 0, 0, 0, 0], [['property', 'Name']]],
+	['h05Organization', [0, 0, 0, 1, 0, 0, 0, 0], [['class', 'Organization']]],
+	['h06Telephone', [1, 0, 0, 0, 0, 1, 0, 0], [['class', 'Telephone']]],
+	['h07TelephoneTypeCodeList', [0, 0, 0, 0, 0, 1, 1, 0], [['optionSet', 'TelephoneType']]],
 	// ONE hub text describing TWO base nodes, a property and an option set
-	['h08Status', [0, 0, 0, 0, 1, 0, 0], [['property', 'Status'], ['optionSet', 'StatusCode']]],
-	['h09OrganizationEmail', [0, 0, 0, 4, 0, 1, 0], [['property', 'Email']]],
-	['h10TelephoneType', [0, 0, 0, 0, 0, 1, 0], [['property', 'TelephoneType']]],
-	['h11PhoneKind', [0, 0, 1, 0, 1, 0, 0], [['property', 'PhoneKind']]],
+	['h08Status', [0, 0, 0, 0, 1, 0, 0, 0], [['property', 'Status'], ['optionSet', 'StatusCode']]],
+	['h09OrganizationEmail', [0, 0, 0, 4, 0, 1, 0, 0], [['property', 'Email']]],
+	['h10TelephoneType', [0, 0, 0, 0, 0, 1, 0, 0], [['property', 'TelephoneType']]],
+	['h11PhoneKind', [0, 0, 1, 0, 1, 0, 0, 0], [['property', 'PhoneKind']]],
 ];
 
-// [cardName, domainClass, property, range: [baseKind, baseName] | null]. Staff.PhoneType's property has no text.
+// [cardName, domainClass, property, range: [baseKind, baseName] | null, whole-card embedding]. Staff.PhoneType's
+// property has no text. The embedding is what readHubVectors returns for the card; cardTextCosineFor reads it.
 const CARD_ROW_LIST = [
-	['Organization.Email', 'Organization', 'Email', null],
-	['Organization.Name', 'Organization', 'Name', null],
-	['Organization.PhoneKind', 'Organization', 'PhoneKind', ['optionSet', 'TelephoneType']],
-	['Person.HasTelephone', 'Person', 'HasTelephone', ['class', 'Telephone']],
-	['Person.Name', 'Person', 'Name', null],
-	['Person.Status', 'Person', 'Status', ['optionSet', 'StatusCode']],
-	['Staff.Name', 'Staff', 'Name', null],
-	['Staff.PhoneType', 'Staff', 'StaffPhoneType', ['optionSet', 'TelephoneType']],
-	['Telephone.TelephoneNumber', 'Telephone', 'TelephoneNumber', null],
-	['Telephone.TelephoneType', 'Telephone', 'TelephoneType', ['optionSet', 'TelephoneType']],
+	['Organization.Email', 'Organization', 'Email', null, [0, 0, 0, 1, 0, 0, 0, 0]],
+	['Organization.Name', 'Organization', 'Name', null, [0, 0, 1, 2, 0, 0, 0, 0]],
+	['Organization.PhoneKind', 'Organization', 'PhoneKind', ['optionSet', 'TelephoneType'], [0, 0, 1, 1, 0, 1, 0, 0]],
+	['Person.HasTelephone', 'Person', 'HasTelephone', ['class', 'Telephone'], [1, 1, 0, 0, 0, 0, 0, 0]],
+	['Person.Name', 'Person', 'Name', null, [0, 2, 1, 0, 0, 0, 0, 0]],
+	['Person.Status', 'Person', 'Status', ['optionSet', 'StatusCode'], [0, 1, 0, 0, 3, 0, 0, 0]],
+	['Staff.Name', 'Staff', 'Name', null, [0, 0, 1, 0, 0, 0, 0, 2]],
+	['Staff.PhoneType', 'Staff', 'StaffPhoneType', ['optionSet', 'TelephoneType'], [0, 0, 0, 0, 0, 1, 1, 0]],
+	['Telephone.TelephoneNumber', 'Telephone', 'TelephoneNumber', null, [1, 0, 0, 0, 0, 0, 0, 0]],
+	['Telephone.TelephoneType', 'Telephone', 'TelephoneType', ['optionSet', 'TelephoneType'], [1, 0, 0, 0, 0, 1, 0, 0]],
 ];
 
 // ---------------------------------------------------------------------------------------------------------
@@ -93,26 +102,33 @@ const SIBLING_STATUS = 'src/property/Applicant.Status';
 const SIBLING_PHONE_KIND_CODE = 'src/property/Applicant.PhoneKindCode';
 const REFERENCED_TELEPHONE = 'src/class/Telephone';
 
-// [textName, describedStableId, propertyNameList, vector]
+// the described node's role, as readEmbedTextVectors returns it (R-BR-15)
+const SOURCE_PROPERTY_ROLE = 'ToySourcePropertyRole';
+const SOURCE_CLASS_ROLE = 'ToySourceClassRole';
+
+// [textName, describedStableId, describedRole, propertyNameList, vector]
 const SOURCE_TEXT_ROW_LIST = [
-	['t1Telephone', SUBJECT_TELEPHONE, ['description', 'name'], [1, 0, 0, 0, 0, 0, 0]],
-	['t2ApplicantTelephone', SUBJECT_TELEPHONE, ['shortDescription'], [1, 2, 0, 0, 0, 0, 0]],
-	['t3KindOfTelephone', SUBJECT_TELEPHONE, ['comment'], [0, 0, 0, 0, 0, 1, 0]],
-	['t4ApplicantStatusTelephone', SUBJECT_TELEPHONE, ['documentation'], [0, 1, 0, 0, 1, 0, 0]],
-	['t5OrganizationContact', SUBJECT_TELEPHONE, ['definition'], [0, 0, 0, 4, 0, 1, 0]],
-	['o1Applicant', OWNER_APPLICANT, ['name'], [0, 1, 0, 0, 0, 0, 0]],
-	['n1Name', SUBJECT_NAME, ['name'], [0, 0, 1, 0, 0, 0, 0]],
-	['s1Status', SIBLING_STATUS, ['name'], [0, 0, 0, 0, 1, 0, 0]],
-	['k1PhoneKindCode', SIBLING_PHONE_KIND_CODE, ['name'], [0, 0, 0, 0, 0, 0, 1]],
-	['r1TelephoneCommon', REFERENCED_TELEPHONE, ['name'], [1, 0, 0, 0, 0, 1, 0]],
+	['t1Telephone', SUBJECT_TELEPHONE, SOURCE_PROPERTY_ROLE, ['description', 'name'], [1, 0, 0, 0, 0, 0, 0, 0]],
+	['t2ApplicantTelephone', SUBJECT_TELEPHONE, SOURCE_PROPERTY_ROLE, ['shortDescription'], [1, 2, 0, 0, 0, 0, 0, 0]],
+	['t3KindOfTelephone', SUBJECT_TELEPHONE, SOURCE_PROPERTY_ROLE, ['comment'], [0, 0, 0, 0, 0, 1, 0, 0]],
+	['t4ApplicantStatusTelephone', SUBJECT_TELEPHONE, SOURCE_PROPERTY_ROLE, ['documentation'], [0, 1, 0, 0, 1, 0, 0, 0]],
+	['t5OrganizationContact', SUBJECT_TELEPHONE, SOURCE_PROPERTY_ROLE, ['definition'], [0, 0, 0, 4, 0, 1, 0, 0]],
+	['o1Applicant', OWNER_APPLICANT, SOURCE_CLASS_ROLE, ['name'], [0, 1, 0, 0, 0, 0, 0, 0]],
+	['n1Name', SUBJECT_NAME, SOURCE_PROPERTY_ROLE, ['name'], [0, 0, 1, 0, 0, 0, 0, 0]],
+	// axis 7 only: no hub text within the floor, so NO hit, NO vote, NO named class; it acts only through card text
+	['n2FullLegalName', SUBJECT_NAME, SOURCE_PROPERTY_ROLE, ['description'], [0, 0, 0, 0, 0, 0, 0, 1]],
+	['s1Status', SIBLING_STATUS, SOURCE_PROPERTY_ROLE, ['name'], [0, 0, 0, 0, 1, 0, 0, 0]],
+	['k1PhoneKindCode', SIBLING_PHONE_KIND_CODE, SOURCE_PROPERTY_ROLE, ['name'], [0, 0, 0, 0, 0, 0, 1, 0]],
+	['r1TelephoneCommon', REFERENCED_TELEPHONE, SOURCE_CLASS_ROLE, ['name'], [1, 0, 0, 0, 0, 1, 0, 0]],
 ];
 
 const makeToyEmbedText = () => {
 	const hubTextRecordList = HUB_TEXT_ROW_LIST.reduce(
 		(soFar, [textName, vector, baseRowList]) =>
-			soFar.concat(baseRowList.map(([baseKind, baseName]) => ({ textStableId: `toyhub/embedText/${textName}`, vector: vector.slice(), embeddingModelVersion: TOY_EMBEDDING_MODEL_VERSION, sourceStableId: baseIdByKind[baseKind](baseName), propertyNameList: ['name'] }))),
+			soFar.concat(baseRowList.map(([baseKind, baseName]) => ({ textStableId: `toyhub/embedText/${textName}`, vector: vector.slice(), embeddingModelVersion: TOY_EMBEDDING_MODEL_VERSION, sourceStableId: baseIdByKind[baseKind](baseName), sourceRole: TOY_BASE_ROLE_BY_BASE_KIND[baseKind], propertyNameList: ['name'] }))),
 		[],
 	);
+	const hubCardVectorRecordList = CARD_ROW_LIST.map(([cardName, , , , embedding]) => ({ stableId: cardId(cardName), embedding: embedding.slice(), embeddingModelVersion: TOY_EMBEDDING_MODEL_VERSION }));
 	const cardSlotEdgeList = CARD_ROW_LIST.reduce((soFar, [cardName, domainClassName, propertyName, rangeRow]) => {
 		const edgeList = [
 			{ cardStableId: cardId(cardName), slot: TOY_SLOT_NAME_BY_SLOT_KIND.domain, baseStableId: classId(domainClassName), baseRole: TOY_BASE_ROLE_BY_BASE_KIND.class },
@@ -120,7 +136,7 @@ const makeToyEmbedText = () => {
 		];
 		return soFar.concat(rangeRow === null ? edgeList : edgeList.concat([{ cardStableId: cardId(cardName), slot: TOY_SLOT_NAME_BY_SLOT_KIND.range, baseStableId: baseIdByKind[rangeRow[0]](rangeRow[1]), baseRole: TOY_BASE_ROLE_BY_BASE_KIND[rangeRow[0]] }]));
 	}, []);
-	const sourceTextRecordList = SOURCE_TEXT_ROW_LIST.map(([textName, describedStableId, propertyNameList, vector]) => ({ textStableId: `src/embedText/${textName}`, vector: vector.slice(), embeddingModelVersion: TOY_EMBEDDING_MODEL_VERSION, sourceStableId: describedStableId, propertyNameList: propertyNameList.slice() }));
+	const sourceTextRecordList = SOURCE_TEXT_ROW_LIST.map(([textName, describedStableId, describedRole, propertyNameList, vector]) => ({ textStableId: `src/embedText/${textName}`, vector: vector.slice(), embeddingModelVersion: TOY_EMBEDDING_MODEL_VERSION, sourceStableId: describedStableId, sourceRole: describedRole, propertyNameList: propertyNameList.slice() }));
 	const propertyNode = (stableId, parentId) => ({ stableId, labels: ['ToySourceProperty'], properties: parentId === null ? { name: stableId } : { name: stableId, parentId } });
 	const siblingPopulationByStableId = [
 		propertyNode(SUBJECT_TELEPHONE, OWNER_APPLICANT),
@@ -137,6 +153,7 @@ const makeToyEmbedText = () => {
 		baseRoleByBaseKind: { ...TOY_BASE_ROLE_BY_BASE_KIND },
 		neighbourVote: cloneJson(TOY_NEIGHBOUR_VOTE),
 		hubTextRecordList,
+		hubCardVectorRecordList,
 		cardSlotEdgeList,
 		sourceTextRecordList,
 		siblingPopulationByStableId,
@@ -163,6 +180,7 @@ const makeToyEmbedText = () => {
 //   t5 [h09 1.0, h05 .9701]
 //   o1 [h03 1.0, h02 .7071]   n1 [h04 1.0, h11 .7071]   s1 [h08 1.0, h11 .7071]   k1 [h07 .7071]
 //   r1 [h06 1.0, h01 .7071, h10 .7071]            h02 .5 and h07 .5 cut by the cap
+//   n2 []                                          axis 7 only; every hub text is 0 there, so cosine 0 < .30 everywhere
 const EXPECTED_HIT_COUNT_BY_TEXT_STABLE_ID = Object.freeze({
 	'src/embedText/t1Telephone': 3,
 	'src/embedText/t2ApplicantTelephone': 3,
@@ -171,6 +189,7 @@ const EXPECTED_HIT_COUNT_BY_TEXT_STABLE_ID = Object.freeze({
 	'src/embedText/t5OrganizationContact': 2,
 	'src/embedText/o1Applicant': 2,
 	'src/embedText/n1Name': 2,
+	'src/embedText/n2FullLegalName': 0,
 	'src/embedText/s1Status': 2,
 	'src/embedText/k1PhoneKindCode': 1,
 	'src/embedText/r1TelephoneCommon': 3,
@@ -197,13 +216,58 @@ const EXPECTED_HIT_COUNT_BY_TEXT_STABLE_ID = Object.freeze({
 //   Neighbours: owner Applicant + siblings PhoneKindCode, Status, Telephone; no reference edge leaves Applicant.Name.
 //   Telephone (t1..t5 together) names Organization, Person, Telephone. domain shares: Person 3/4, Organization 2/4, Telephone 1/4.
 //   Scores: Person.Name 2 · Organization.Name 1 (.5, 1.0) · Organization.PhoneKind 1 (.5, .7071) · Staff.Name 1 (0, 1.0)
-const landing = (domainVote, rangeVote, domainShare, rangeShare, score) => Object.freeze({ domainVote, rangeVote, domainShare, rangeShare, score });
+//   n2 has no hit (above), so it adds no vote and names no class: every vote and share above is unchanged by it.
+//
+// CARD TEXT (B1b, R-BR-14): cardTextCosine = the highest RAW cosine between the subject's OWN texts and the card
+// embedding in CARD_ROW_LIST; an exact tie goes to the lower textStableId. Norms: t1 1, t2 √5, t3 1, t4 √2, t5 √17,
+// n1 1, n2 1.
+// Applicant.Telephone (t1 t2 t3 t4 t5):
+//   Organization.Email        [0,0,0,1,0,0,0,0] |1|    0, 0, 0, 0, 4/√17                         → t5 4/√17  .9701
+//   Person.HasTelephone       [1,1,0,0,0,0,0,0] |√2|   1/√2, 3/√10, 0, 1/2, 0                    → t2 3/√10  .9487
+//   Person.Status             [0,1,0,0,3,0,0,0] |√10|  0, 2/√50, 0, 4/√20 = 2/√5, 0              → t4 2/√5   .8944
+//   Telephone.TelephoneNumber [1,0,0,0,0,0,0,0] |1|    1, 1/√5, 0, 0, 0                          → t1 1
+//   Telephone.TelephoneType   [1,0,0,0,0,1,0,0] |√2|   1/√2, 1/√10, 1/√2, 0, 1/√34               → t1 1/√2   .7071
+//     t1 and t3 TIE EXACTLY (dot 1 over 1·√2 both) and t1 wins on textStableId
+// Applicant.Name (n1 n2):
+//   Organization.Name         [0,0,1,2,0,0,0,0] |√5|   1/√5, 0                                   → n1 1/√5   .4472
+//   Organization.PhoneKind    [0,0,1,1,0,1,0,0] |√3|   1/√3, 0                                   → n1 1/√3   .5774
+//   Person.Name               [0,2,1,0,0,0,0,0] |√5|   1/√5, 0                                   → n1 1/√5   .4472
+//   Staff.Name                [0,0,1,0,0,0,0,2] |√5|   1/√5, 2/√5                                → n2 2/√5   .8944
+//     the NAME text n1 wins Organization.Name; the DESCRIPTION text n2 wins Staff.Name
+//     Organization.Name and Person.Name TIE EXACTLY on card text (dot 1 over 1·√5 both, √5 from 1+4 either way) and
+//     on bestCosine (1.0), so stableId still decides one pair: the stableId tie-break stays under a twin (BG-ETS h)
+//
+// RANKS (R-BR-14). Votes only: ownVotes DESC, cardTextCosine DESC, bestCosine DESC, stableId ASC.
+//   Applicant.Telephone: HasTelephone 4 · TelephoneNumber 3 · then at 2 votes Person.Status (.8944) before
+//     Telephone.TelephoneType (.7071), although TelephoneType has the better bestCosine (1.0 vs .8944) · Organization.Email 1
+//   Applicant.Name: all at 1 vote, so card text decides: Staff.Name .8944 · Organization.PhoneKind .5774 · then
+//     Organization.Name and Person.Name tied at .4472 and at bestCosine 1.0, so stableId: Organization.Name, Person.Name.
+//     Organization.Name and Staff.Name share ownVotes 1 AND bestCosine 1.0; stableId would put Organization.Name first,
+//     card text puts Staff.Name first (the tie the old order got wrong).
+// Neighbour: score DESC, domainShare + rangeShare DESC, cardTextCosine DESC, bestCosine DESC, stableId ASC.
+//   Applicant.Telephone: unchanged, no pair ties on score and share.
+//   Applicant.Name: Person.Name 2 · then at score 1, share .5: Organization.PhoneKind (.5774) before Organization.Name
+//     (.4472), although Organization.Name has the better bestCosine (1.0 vs .7071) · Staff.Name 1 at share 0.
+const ROOT_2 = Math.sqrt(2);
+const ROOT_3 = Math.sqrt(3);
+const ROOT_5 = Math.sqrt(5);
+const ROOT_10 = Math.sqrt(10);
+const ROOT_17 = Math.sqrt(17);
+const cardText = (winningTextName, cardTextCosine) => Object.freeze({ cardTextCosine, cardTextWinningTextStableId: `src/embedText/${winningTextName}` });
+const landing =(domainVote, rangeVote, domainShare, rangeShare, score) => Object.freeze({ domainVote, rangeVote, domainShare, rangeShare, score });
 const EXPECTED_BY_SUBJECT = Object.freeze({
 	[SUBJECT_TELEPHONE]: Object.freeze({
 		admittedStableIdList: [cardId('Organization.Email'), cardId('Person.HasTelephone'), cardId('Person.Status'), cardId('Telephone.TelephoneNumber'), cardId('Telephone.TelephoneType')],
 		ownVotesByCardStableId: { [cardId('Organization.Email')]: 1, [cardId('Person.HasTelephone')]: 4, [cardId('Person.Status')]: 2, [cardId('Telephone.TelephoneNumber')]: 3, [cardId('Telephone.TelephoneType')]: 2 },
 		reachedNotAdmittedStableIdList: [cardId('Organization.Name'), cardId('Organization.PhoneKind'), cardId('Person.Name'), cardId('Staff.PhoneType')],
-		votesOnlyRankStableIdList: [cardId('Person.HasTelephone'), cardId('Telephone.TelephoneNumber'), cardId('Telephone.TelephoneType'), cardId('Person.Status'), cardId('Organization.Email')],
+		votesOnlyRankStableIdList: [cardId('Person.HasTelephone'), cardId('Telephone.TelephoneNumber'), cardId('Person.Status'), cardId('Telephone.TelephoneType'), cardId('Organization.Email')],
+		cardTextByCardStableId: {
+			[cardId('Organization.Email')]: cardText('t5OrganizationContact', 4 / ROOT_17),
+			[cardId('Person.HasTelephone')]: cardText('t2ApplicantTelephone', 3 / ROOT_10),
+			[cardId('Person.Status')]: cardText('t4ApplicantStatusTelephone', 2 / ROOT_5),
+			[cardId('Telephone.TelephoneNumber')]: cardText('t1Telephone', 1),
+			[cardId('Telephone.TelephoneType')]: cardText('t1Telephone', 1 / ROOT_2),
+		},
 		ownerStableId: OWNER_APPLICANT,
 		siblingStableIdList: [SUBJECT_NAME, SIBLING_PHONE_KIND_CODE, SIBLING_STATUS],
 		referencedObjectStableIdList: [REFERENCED_TELEPHONE],
@@ -216,6 +280,14 @@ const EXPECTED_BY_SUBJECT = Object.freeze({
 			[SIBLING_STATUS]: [classId('Organization'), classId('Person')],
 			[REFERENCED_TELEPHONE]: [classId('Telephone')],
 		},
+		// R-BR-16: the trace's copy of the map above, keys in stableId ORDER (src/class/* before src/property/*)
+		traceNamedClassEntryList: [
+			[OWNER_APPLICANT, [classId('Person')]],
+			[REFERENCED_TELEPHONE, [classId('Telephone')]],
+			[SUBJECT_NAME, [classId('Organization'), classId('Person'), classId('Staff')]],
+			[SIBLING_PHONE_KIND_CODE, []],
+			[SIBLING_STATUS, [classId('Organization'), classId('Person')]],
+		],
 		landingByCardStableId: {
 			[cardId('Organization.Email')]: landing(0, 0, 0.5, 0, 1),
 			[cardId('Person.HasTelephone')]: landing(1, 1, 0.75, 1, 6),
@@ -229,7 +301,13 @@ const EXPECTED_BY_SUBJECT = Object.freeze({
 		admittedStableIdList: [cardId('Organization.Name'), cardId('Organization.PhoneKind'), cardId('Person.Name'), cardId('Staff.Name')],
 		ownVotesByCardStableId: { [cardId('Organization.Name')]: 1, [cardId('Organization.PhoneKind')]: 1, [cardId('Person.Name')]: 1, [cardId('Staff.Name')]: 1 },
 		reachedNotAdmittedStableIdList: [],
-		votesOnlyRankStableIdList: [cardId('Organization.Name'), cardId('Person.Name'), cardId('Staff.Name'), cardId('Organization.PhoneKind')],
+		votesOnlyRankStableIdList: [cardId('Staff.Name'), cardId('Organization.PhoneKind'), cardId('Organization.Name'), cardId('Person.Name')],
+		cardTextByCardStableId: {
+			[cardId('Organization.Name')]: cardText('n1Name', 1 / ROOT_5),
+			[cardId('Organization.PhoneKind')]: cardText('n1Name', 1 / ROOT_3),
+			[cardId('Person.Name')]: cardText('n1Name', 1 / ROOT_5),
+			[cardId('Staff.Name')]: cardText('n2FullLegalName', 2 / ROOT_5),
+		},
 		ownerStableId: OWNER_APPLICANT,
 		siblingStableIdList: [SIBLING_PHONE_KIND_CODE, SIBLING_STATUS, SUBJECT_TELEPHONE],
 		referencedObjectStableIdList: [],
@@ -241,13 +319,19 @@ const EXPECTED_BY_SUBJECT = Object.freeze({
 			[SIBLING_STATUS]: [classId('Organization'), classId('Person')],
 			[SUBJECT_TELEPHONE]: [classId('Organization'), classId('Person'), classId('Telephone')],
 		},
+		traceNamedClassEntryList: [
+			[OWNER_APPLICANT, [classId('Person')]],
+			[SIBLING_PHONE_KIND_CODE, []],
+			[SIBLING_STATUS, [classId('Organization'), classId('Person')]],
+			[SUBJECT_TELEPHONE, [classId('Organization'), classId('Person'), classId('Telephone')]],
+		],
 		landingByCardStableId: {
 			[cardId('Organization.Name')]: landing(0, 0, 0.5, 0, 1),
 			[cardId('Organization.PhoneKind')]: landing(0, 0, 0.5, 0, 1),
 			[cardId('Person.Name')]: landing(1, 0, 0.75, 0, 2),
 			[cardId('Staff.Name')]: landing(0, 0, 0, 0, 1),
 		},
-		neighbourRankStableIdList: [cardId('Person.Name'), cardId('Organization.Name'), cardId('Organization.PhoneKind'), cardId('Staff.Name')],
+		neighbourRankStableIdList: [cardId('Person.Name'), cardId('Organization.PhoneKind'), cardId('Organization.Name'), cardId('Staff.Name')],
 	}),
 });
 
@@ -266,8 +350,9 @@ const loadEmbedTextModules = (scenario) =>
 			};
 
 // runToyPipeline — the ORCHESTRATOR'S job done by hand over the toy, the way B4 will do it over a graph: build
-// the index, memo and card slot index once, then for each subject vote, rank votes-only, resolve neighbours,
-// share, and rank. reverseInput reverses EVERY input list (and the subject order) to expose order dependence.
+// the text index, memo, card slot index and hub card vector index once, then for each subject vote, add card
+// text (R-BR-14), rank votes-only, resolve neighbours, share, and rank. reverseInput reverses EVERY input list
+// (and the subject order) to expose order dependence.
 const runToyPipeline = ({ scenario, toy, reverseInput, neighbourVoteOverride, subjectStableIdListOverride } = {}) => {
 	const toyInput = toy === undefined ? makeToyEmbedText() : toy;
 	const { candidateRetrievalLib, neighbourVoteLib } = loadEmbedTextModules(scenario);
@@ -286,6 +371,11 @@ const runToyPipeline = ({ scenario, toy, reverseInput, neighbourVoteOverride, su
 	if (slotted.error) {
 		return { error: slotted.error.message };
 	}
+	const hubIndexed = candidateRetrievalLib.buildHubVectorIndex({ vectorRecordList: orderOf(toyInput.hubCardVectorRecordList), embeddingModelVersion: toyInput.embeddingModelVersion });
+	if (hubIndexed.error) {
+		return { error: hubIndexed.error.message };
+	}
+	const { hubVectorIndex } = hubIndexed;
 	const { searchMemo } = memoised;
 	const { cardSlotIndex } = slotted;
 	const textRecordListBySourceStableId = new Map();
@@ -302,11 +392,16 @@ const runToyPipeline = ({ scenario, toy, reverseInput, neighbourVoteOverride, su
 	const resultBySubjectStableId = {};
 	for (let subjectIndex = 0; subjectIndex < subjectStableIdList.length; subjectIndex++) {
 		const subjectStableId = subjectStableIdList[subjectIndex];
-		const voted = candidateRetrievalLib.voteCandidatePool({ searchMemo, cardSlotIndex, subjectStableId, subjectTextRecordList: textRecordListBySourceStableId.has(subjectStableId) ? textRecordListBySourceStableId.get(subjectStableId) : [] });
+		const subjectTextRecordList = textRecordListBySourceStableId.has(subjectStableId) ? textRecordListBySourceStableId.get(subjectStableId) : [];
+		const voted = candidateRetrievalLib.voteCandidatePool({ searchMemo, cardSlotIndex, subjectStableId, subjectTextRecordList });
 		if (voted.error) {
 			return { error: voted.error.message };
 		}
-		const votesOnly = candidateRetrievalLib.rankVotedCandidates({ admittedList: voted.admittedList, k });
+		const cardTexted = candidateRetrievalLib.cardTextCosineFor({ admittedList: voted.admittedList, subjectTextRecordList, hubVectorIndex });
+		if (cardTexted.error) {
+			return { error: cardTexted.error.message };
+		}
+		const votesOnly = candidateRetrievalLib.rankVotedCandidates({ admittedList: cardTexted.admittedList, k });
 		if (votesOnly.error) {
 			return { error: votesOnly.error.message };
 		}
@@ -325,13 +420,13 @@ const runToyPipeline = ({ scenario, toy, reverseInput, neighbourVoteOverride, su
 			neighbourSet = resolved.neighbourSet;
 			neighbourShares = shared.neighbourShares;
 		}
-		const ranked = neighbourVoteLib.rankCandidatePool({ admittedList: voted.admittedList, neighbourVote, neighbourInput, searchMemo, cardSlotIndex, k });
+		const ranked = neighbourVoteLib.rankCandidatePool({ admittedList: cardTexted.admittedList, neighbourVote, neighbourInput, searchMemo, cardSlotIndex, k });
 		if (ranked.error) {
 			return { error: ranked.error.message };
 		}
-		resultBySubjectStableId[subjectStableId] = { admittedList: voted.admittedList, votesOnlyRankedList: votesOnly.rankedList, neighbourSet, neighbourShares, rankedList: ranked.rankedList, neighbourTrace: ranked.neighbourTrace };
+		resultBySubjectStableId[subjectStableId] = { admittedList: voted.admittedList, cardTextAdmittedList: cardTexted.admittedList, votesOnlyRankedList: votesOnly.rankedList, neighbourSet, neighbourShares, neighbourInput, rankedList: ranked.rankedList, neighbourTrace: ranked.neighbourTrace };
 	}
-	return { resultBySubjectStableId, searchMemo, embedTextIndex: indexed.embedTextIndex, cardSlotIndex, modules: { candidateRetrievalLib, neighbourVoteLib } };
+	return { resultBySubjectStableId, searchMemo, embedTextIndex: indexed.embedTextIndex, cardSlotIndex, hubVectorIndex, modules: { candidateRetrievalLib, neighbourVoteLib } };
 };
 
 const projectRun = (run) =>
@@ -340,7 +435,7 @@ const projectRun = (run) =>
 			.sort()
 			.map((oneStableId) => {
 				const oneResult = run.resultBySubjectStableId[oneStableId];
-				return { subjectStableId: oneStableId, admittedList: oneResult.admittedList, votesOnlyRankedList: oneResult.votesOnlyRankedList, rankedList: oneResult.rankedList, neighbourTrace: oneResult.neighbourTrace };
+				return { subjectStableId: oneStableId, admittedList: oneResult.admittedList, cardTextAdmittedList: oneResult.cardTextAdmittedList, votesOnlyRankedList: oneResult.votesOnlyRankedList, rankedList: oneResult.rankedList, neighbourTrace: oneResult.neighbourTrace };
 			}),
 	);
 
@@ -356,6 +451,7 @@ module.exports = {
 	EXPECTED_HIT_COUNT_BY_TEXT_STABLE_ID,
 	TOY_SETTINGS,
 	TOY_NEIGHBOUR_VOTE,
+	TOY_EMBEDDING_MODEL_VERSION,
 	SUBJECT_TELEPHONE,
 	SUBJECT_NAME,
 	CANDIDATE_RETRIEVAL_PATH,
