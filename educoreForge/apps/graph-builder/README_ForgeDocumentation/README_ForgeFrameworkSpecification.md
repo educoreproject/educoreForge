@@ -1090,7 +1090,7 @@ Each is a thing that would make the framework a place where a forge could do wha
     argument, no change to graphBuilder, forger, `shapeForgedGraph`, replayManager ⟨PLAN "Hard lines"⟩
     — instrumented by G-SEAM-UNTOUCHED (§10.1) ⟨FR16⟩.
     **Moved by ruling** (forge embed-text revision, TQ decision 3; PLAN-forgeEmbedText §8.3 R-ET-8, §8.4
-    R-ET-30, §8.5): the text-vector sidecar changes three seam files in phase P4 —
+    R-ET-30, §8.5): the text-vector sidecar changes TWO seam files in phase P4 (as built, commits 7bfd1be and af8cfdc; this list amended by the supervisor after the P4 merge, 2026-09-15) —
     `apps/graph-builder/apps/forger/lib/shape-forged-graph.js` (strip `props[vectorPropertyName]` and lift
     it into the record's one vector slot with its `embeddingModelVersion`, so the ragged-dimension and
     model guards cover text vectors; a node carrying both `embedding` and its declared vector property is
@@ -1098,11 +1098,19 @@ Each is a thing that would make the framework a place where a forge could do wha
     serialised properties and read the vector from `props[vectorPropertyName ?? 'embedding']` in BOTH the
     sidecar branch and the store-less inline branch, the ref still derived from `embedSourceProperty`;
     `buildNodeRow`: land the resolved vector under `vectorPropertyName ?? 'embedding'`; the index DDL gains
-    `<graph>_embedText_vector FOR (n:DmeEmbedText) ON (n.textEmbedding)` beside `<graph>_vector`), and
-    `lib/replay/replay-block.js` (serialise and deserialise the per-node discriminator). A record without
+    `<graph>_embedText_vector FOR (n:DmeEmbedText) ON (n.textEmbedding)` beside `<graph>_vector`).
+    `lib/replay/replay-block.js` is NOT changed: `vectorPropertyName` rides as an ordinary property and the
+    codec is byte-identical. As built, `replay-engine.js` also gains GUARD 4 in `validateShapedGraph` (a
+    malformed declaration, or a declared vector left under `properties`, is refused before any write) and
+    `vectorSlotPropertyNameOf`, which refuses any declared name but `EMBED_TEXT_VECTOR.propertyName`
+    (R-ET-37); the both-slots refusal is STRICTER than R-ET-30's letter — a declaring node carrying
+    `embedding` is refused even when its declared vector is absent, because that `embedding` would enter
+    the DME's index; the lift rule is shared by import between the shaper and the loader. A record without
     `vectorPropertyName` keeps today's bytes. G-SEAM-UNTOUCHED goes red by design and is re-anchored in P8
-    with its causes named. This site list is written from R-ET-8; if P4's final list differs, the
-    supervisor amends it at the merge. No other return key, `forge()` argument, or graphBuilder / forger /
+    with its causes named. This site list was written from R-ET-8 in P3 and amended to the AS-BUILT list by the supervisor
+    after the P4 merge (STANDDOWN-P4-AMBER_RIDGE.md; DEVLOG P4 entry); G-SEAM-UNTOUCHED and BG
+    `seamDiffEmpty` were re-anchored at `postEmbedTextP7-091526` (53c2ff2) with these causes named beside
+    each constant. No other return key, `forge()` argument, or graphBuilder / forger /
     replayManager change is licensed.
 
 ---
