@@ -68,6 +68,18 @@ const DME_ROLES = {
 	// data role, so it is invisible to both the DME's browse (which selects by data role) and
 	// its semantic search (one index, on :ForgedNode(embedding)).
 	VOCABULARY_TERM: 'DmeVocabularyTerm',
+	// ONE distinct descriptive text of a standard (a name, description, definition and the like,
+	// trimmed), minted by the FORGE FRAMEWORK -- never by a walk -- from the text-property include list
+	// a forge declares, and linked by EMBEDS_TEXT_OF to every node it describes. ⟪TQ decisions 1, 1b,
+	// 2, 2026-09-14; PLAN-forgeEmbedText-091426 §8⟫ Identity is content-addressed over the text alone
+	// (<rootStableId>/embedText/<sha256(text)>, R-ET-1), so a text repeated inside a standard is one
+	// node. It carries NO name, NO searchText and NO embedding; the framework holds the role
+	// non-embeddable itself (R-ET-3). Its vector lives on textEmbedding, with the ORDINARY
+	// embeddingModelVersion beside it (R-ET-8), under its own index (EMBED_TEXT_VECTOR below). After
+	// P4 a graph therefore carries TWO vector indexes, and the DME's search reads only
+	// <graphName>_vector (label ForgedNode, property embedding): a node with no `embedding` property
+	// has no entry there, so search never sees a text.
+	EMBED_TEXT: 'DmeEmbedText',
 };
 
 // =====================================================================
@@ -85,7 +97,34 @@ const EDGE_TYPES = {
 	REFERENCES_TYPE: 'REFERENCES_TYPE',
 	HAS_EDIT_HISTORY: 'HAS_EDIT_HISTORY',
 	HAS_RESTRICTION: 'HAS_RESTRICTION',
+	// (DmeEmbedText)-[:EMBEDS_TEXT_OF]->(described node), provenanceTier 'structural'. ONE edge per
+	// distinct (text node, described node) pair, carrying propertyNameList: the SORTED names of the
+	// properties on that node whose value the text is. ⟪R-ET-4 as corrected, RADIANT_QUEST, PLAN §8.5⟫
+	// WHY ONE PER PAIR, in order: (1) census.collisionCensus counts duplicate (from, type, to) TRIPLES
+	// and G-ORDER holds that count at 0, so an edge per property would raise it on every text serving
+	// two properties of one node (4,619 such pairs in CEDS, 9,091 in PESC, measured); (2) the pair is
+	// the fact a consumer asks about -- which nodes does this text describe -- and per-property rows
+	// come from enumerating (edge, propertyName). The shape is CHOSEN, not forced by the loader: since
+	// 2026-09-02 replay-engine merges edges on the FULL property map, so per-property edges would have
+	// survived as distinct edges. The loader stores a one-element list as a SCALAR (pgToStored); every
+	// graph reader re-widens it to a one-element list at its read boundary. Never REFERENCES: a
+	// structural walk must not travel from a standard into its texts.
+	EMBEDS_TEXT_OF: 'EMBEDS_TEXT_OF',
 };
+
+// EMBED-TEXT VECTOR INDEX DESCRIPTOR ⟪R-ET-24⟫ -- the one home for the second vector index's names: the
+// label it covers, the property it indexes, and the suffix appended to the graph name to name the index
+// (<graphName>_embedText_vector). P4's index DDL is built from it, so the loader and any reader cannot
+// spell the three differently. `label` is READ from DME_ROLES rather than re-typed, so a role rename
+// moves the index with it. It has NO TERM_DEFINITIONS entry, deliberately: SCHEMA_VIEW.KINDS has no kind
+// for an index descriptor, and adding one would change the schema-view finisher, which this registry
+// does not own. The schema view documents the role and the edge it describes instead.
+
+const EMBED_TEXT_VECTOR = Object.freeze({
+	label: DME_ROLES.EMBED_TEXT,
+	propertyName: 'textEmbedding',
+	indexNameSuffix: '_embedText_vector',
+});
 
 // LEGACY mapping/bridge edge types (emitter edf-bridge RETIRED 2026-07-04). Kept deliberately: the
 // graph-builder legacy-edge purity gate enumerates these names to prove their ABSENCE (legacy 0),
@@ -920,6 +959,7 @@ const vocabulary = {
 	NODE_LABELS,
 	DME_ROLES,
 	EDGE_TYPES,
+	EMBED_TEXT_VECTOR,
 	MAPPING_EDGE_TYPES,
 	CLASSIFICATION_EDGE_TYPES,
 	// schema block taxonomy (targetArchitectureDesign §2 — LOCKED)
