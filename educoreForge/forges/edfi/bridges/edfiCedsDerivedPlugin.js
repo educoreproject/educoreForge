@@ -73,7 +73,20 @@ const bridgeDeclaration = Object.freeze({
 	//            have reported nothing while looking clean.
 	// Both are members of the census-fixture key and ride in the block header: changing either RE-KEYS the
 	// block rather than silently invalidating a fixture that still compares equal.
-	candidateRetrieval: { method: 'cosineTopK-v1', k: 15, floor: 0.3, embeddingModelVersion: 'voyage-4-large' },
+	candidateRetrieval: {
+		method: 'embedTextVote-v1',
+		hitsPerText: 20,
+		minScore: 0.30,
+		k: 15,
+		embeddingModelVersion: 'voyage-4-large',
+		neighbourVote: {
+			method: 'neighbourVote-v1',
+			owner: { kind: 'propertyValue', property: 'parentId' },
+			siblings: { kind: 'sameOwner' },
+			referencedObject: { kind: 'edgeTarget', edgeTypeList: ['REFERENCES'] },
+			earnRule: 'topShare',
+		},
+	},
 	// THE BIAS AUDIT (§4, RULING §11.4). Measured against the live graph before being written here: every
 	// value of every name below was regex-scanned across all 1,904 Ed-Fi nodes and all 2,777 property-tier hub
 	// cards, and NONE carries a CEDS identifier.
