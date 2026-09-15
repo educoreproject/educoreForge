@@ -60,13 +60,14 @@ const representationPolicyLib = require('./representationPolicy');
 const confidenceBandTableLib = require('./confidenceBandTable');
 const decisionBlockLib = require('./decisionBlock');
 const candidateRetrievalLib = require('./candidateRetrieval');
+const neighbourVoteLib = require('./neighbourVote');
 const materialiserLib = require('./materialiser');
 const sssomExporterLib = require('./sssomExporter');
 const boundedRunnerLib = require('./boundedRunner');
 const conflictDetectorLib = require('./conflictDetector');
 const graphSeamRulesLib = require('./graphSeamRules');
 
-const { RELATIONSHIP_PRODUCER_SUFFIX, SKOS_EDGE_TYPES, MAPPING_PROPERTIES } = vocabularyLib;
+const { RELATIONSHIP_PRODUCER_SUFFIX, SKOS_EDGE_TYPES, MAPPING_PROPERTIES, DME_ROLES, HUB_DECOMPOSITION_SLOTS, SSSOM_JUSTIFICATIONS, hubEdgeType } = vocabularyLib;
 const {
 	MATCH_BASIS_LIST,
 	PRODUCER_KIND_LIST,
@@ -111,6 +112,409 @@ const producerSuffixRefusal = () => {
 	return bad === undefined ? null : refuse.byName({ moduleName, what: `PRODUCER_KIND '${bad}' has no NON-EMPTY suffix in vocabulary.RELATIONSHIP_PRODUCER_SUFFIX (got ${JSON.stringify(RELATIONSHIP_PRODUCER_SUFFIX[bad])})`, where: 'build.js guards on the suffix\'s truthiness; an empty suffix would silently fall through to the decisionBlock-inference branch (RULING BF18, REVIEW A1)' });
 };
 
+// =========================================================================================================
+// CANDIDATE RETRIEVAL METHODS (SPEC-bridgeRevision-091426 §4-§7; §13 R-BR-7, R-BR-9, R-BR-14, R-BR-15, R-BR-16).
+// The retrieved basis looks the DECLARED candidateRetrieval.method up in CANDIDATE_RETRIEVAL_METHOD_RUNNER_REGISTRY
+// and never compares a method name, so a new method is a row plus its gate, never a branch. Every row carries
+// exactly RETRIEVAL_METHOD_ROW_MEMBER_LIST (asserted at construction by retrievalRegistryRefusal):
+//   headerFieldNameList                                  the declared fields the block header freezes, in the ruled
+//                                                        order (R-BR-7)
+//   settingsPairListFor(retrievalDeclaration)            → [[label, value], …] what the retrieval log lines print
+//   prepareRetrieval(retrievalContext, callback)         every read and index the method needs, ONCE per run →
+//                                                        callback(errorText, retrievalState); retrievalState always
+//                                                        carries hubVectorIndex
+//   mappingJustificationFor({ retrievalState })          the SSSOM justification a judged record carries
+//   poolForSubject({ retrievalState, retrievalDeclaration, subjectStableId, hubName })
+//                                                        → { seatStableIdList, recordTraceByFieldName } | { error }:
+//                                                        one subject's seats in RANK order, and the trace fields its
+//                                                        frozen record carries
+//   retrievalContext = { retrievalView, evidenceView, retrievalDeclaration, hubName, sourceStandardName, subjectLabel,
+//                        subjectNodeList, windowedNodeList }
+// =========================================================================================================
+const RETRIEVAL_METHOD_ROW_MEMBER_LIST = Object.freeze(['headerFieldNameList', 'settingsPairListFor', 'prepareRetrieval', 'mappingJustificationFor', 'poolForSubject']);
+// the justification a retrieved mapping carries when neighbour votes helped order its pool: several signals were
+// composed (SPEC-bridgeRevision §7, R-SN-4). Checked against vocabulary.SSSOM_JUSTIFICATIONS at construction.
+const COMPOSITE_MATCHING_JUSTIFICATION = 'semapv:CompositeMatching';
+const hasOwn = (container, propertyName) => Object.prototype.hasOwnProperty.call(container, propertyName);
+// isPlainRecord — a JSON-shaped object. Stricter than isPlainObject on purpose: decisionBlock.canonicalText reads
+// Object.keys, so a Map would freeze SILENTLY as {}; a value headed for the frozen text is refused unless it is this.
+const isPlainRecord = (candidate) => isPlainObject(candidate) && (Object.getPrototypeOf(candidate) === Object.prototype || Object.getPrototypeOf(candidate) === null);
+const fieldNameTextOf = (candidate) => Object.keys(candidate).sort(compareStrings).join(', ');
+
+// the logical slot kinds of the pure modules, each resolved to the hub's slot edge type through hubEdgeType (R-BR-9):
+// the ONE table both the card slot index and the frozen path entry read, so a slot cannot be named two ways
+const HUB_SLOT_BY_SLOT_KIND = Object.freeze({ property: 'PROPERTY', domain: 'DOMAIN', range: 'RANGE' });
+// the base node kinds by role constant. The same three roles bound the hub text search population (R-BR-9).
+const BASE_ROLE_BY_BASE_KIND = Object.freeze({ class: DME_ROLES.CLASS, property: DME_ROLES.PROPERTY, optionSet: DME_ROLES.OPTION_SET });
+
+// readHubVectorIndex — the card vectors, flattened ONCE per run under the DECLARED model. Every method needs it:
+// cosineTopK-v1 retrieves against it; embedTextVote-v1 orders the admitted cards by it (cardTextCosine, R-BR-14).
+const readHubVectorIndex = ({ retrievalView, retrievalDeclaration }, callback) => {
+	retrievalView.readHubVectors({ referenceTier: PROPERTY_TIER }, (hubVectorError, hubVectorRecordList) => {
+		if (hubVectorError) {
+			callback(`${moduleName}: readHubVectors: ${hubVectorError}`);
+			return;
+		}
+		const built = candidateRetrievalLib.buildHubVectorIndex({ vectorRecordList: hubVectorRecordList, embeddingModelVersion: retrievalDeclaration.embeddingModelVersion });
+		if (built.error) {
+			callback(built.error.message);
+			return;
+		}
+		callback('', built.hubVectorIndex);
+	});
+};
+
+// readEmbedTextRecordList — one standard's text records exactly as the reader returns them (R-BR-15: never reshaped).
+// A read that matches nothing is refused naming the standardName it was given (R-BR-B4c), never searched empty.
+const readEmbedTextRecordList = ({ retrievalView, standardName, standardRoleText }, callback) => {
+	retrievalView.readEmbedTextVectors({ standardName }, (readError, textRecordList) => {
+		if (readError) {
+			callback(`${moduleName}: readEmbedTextVectors (${standardRoleText} '${standardName}'): ${readError}`);
+			return;
+		}
+		if (textRecordList.length === 0) {
+			callback(refuse.byName({ moduleName, what: `readEmbedTextVectors({ standardName: '${standardName}' }) matched no text node (the ${standardRoleText})`, where: 'embedTextVote-v1 searches the hub texts with the source texts; a standard with none cannot take part (R-BR-1, R-BR-B4c)' }).message);
+			return;
+		}
+		callback('', textRecordList);
+	});
+};
+
+// REFERENCE_EDGE_READ_BY_KIND — which among-source edges name a subject's referenced objects, one row per
+// neighbourVote.js REFERENCED_OBJECT_KIND_REGISTRY kind (equality asserted at construction). 'none' reads nothing:
+// an UNTYPED readEdgesAmongSource returns every edge, so an empty type list is never sent.
+const REFERENCE_EDGE_READ_BY_KIND = Object.freeze({
+	edgeTarget: ({ referencedObjectDeclaration, evidenceView }, callback) => evidenceView.readEdgesAmongSource({ edgeTypeList: referencedObjectDeclaration.edgeTypeList.slice() }, callback),
+	none: (unusedReadArguments, callback) => callback('', []),
+});
+
+// FROZEN NEIGHBOUR TRACE (SPEC-bridgeRevision §7, R-BR-16): rankCandidatePool's neighbourTrace, projected by its exact
+// field set. The per-neighbour named-class map must be a plain record of class stableId lists (see isPlainRecord).
+const NEIGHBOUR_TRACE_FIELD_NAME_LIST = Object.freeze(['namedClassStableIdListByNeighbourStableId', 'ownerStableId', 'referencedObjectCount', 'siblingCount', 'topDomainClassList', 'topRangeClassList']);
+const TRACE_CLASS_SHARE_FIELD_NAME_LIST = Object.freeze(['classStableId', 'share']);
+const frozenNeighbourTraceFor = (neighbourTrace) => {
+	const refuseTrace = (what) => ({ error: refuse.byName({ moduleName, what: `neighbourTrace ${what}`, where: 'the frozen neighbourTrace is rankCandidatePool\'s, projected by name (SPEC-bridgeRevision §7, R-BR-16); a new field is a projection row, never an omission' }) });
+	if (!isPlainRecord(neighbourTrace)) {
+		return refuseTrace(`is ${neighbourTrace === null ? 'null' : `a ${typeof neighbourTrace}`}, not a plain record`);
+	}
+	if (fieldNameTextOf(neighbourTrace) !== NEIGHBOUR_TRACE_FIELD_NAME_LIST.join(', ')) {
+		return refuseTrace(`carries { ${fieldNameTextOf(neighbourTrace)} }, not { ${NEIGHBOUR_TRACE_FIELD_NAME_LIST.join(', ')} }`);
+	}
+	const namedClassMap = neighbourTrace.namedClassStableIdListByNeighbourStableId;
+	if (!isPlainRecord(namedClassMap)) {
+		return refuseTrace('namedClassStableIdListByNeighbourStableId is not a plain record (a Map would freeze as {})');
+	}
+	const malformedNeighbourStableId = Object.keys(namedClassMap).find((oneNeighbourStableId) => !Array.isArray(namedClassMap[oneNeighbourStableId]) || !namedClassMap[oneNeighbourStableId].every(isNonBlank));
+	if (malformedNeighbourStableId !== undefined) {
+		return refuseTrace(`namedClassStableIdListByNeighbourStableId['${malformedNeighbourStableId}'] is not a list of class stableIds`);
+	}
+	const malformedClassListName = ['topDomainClassList', 'topRangeClassList'].find((oneListName) => !Array.isArray(neighbourTrace[oneListName]) || neighbourTrace[oneListName].some((oneEntry) => !isPlainRecord(oneEntry) || fieldNameTextOf(oneEntry) !== TRACE_CLASS_SHARE_FIELD_NAME_LIST.join(', ')));
+	if (malformedClassListName !== undefined) {
+		return refuseTrace(`${malformedClassListName} is not a list of { ${TRACE_CLASS_SHARE_FIELD_NAME_LIST.join(', ')} }`);
+	}
+	const classShareListOf = (classShareList) => classShareList.map((oneEntry) => ({ classStableId: oneEntry.classStableId, share: oneEntry.share }));
+	return {
+		neighbourTrace: {
+			ownerStableId: neighbourTrace.ownerStableId,
+			siblingCount: neighbourTrace.siblingCount,
+			referencedObjectCount: neighbourTrace.referencedObjectCount,
+			topDomainClassList: classShareListOf(neighbourTrace.topDomainClassList),
+			topRangeClassList: classShareListOf(neighbourTrace.topRangeClassList),
+			namedClassStableIdListByNeighbourStableId: Object.keys(namedClassMap)
+				.sort(compareStrings)
+				.reduce((soFar, oneNeighbourStableId) => Object.assign(soFar, { [oneNeighbourStableId]: namedClassMap[oneNeighbourStableId].slice() }), {}),
+		},
+	};
+};
+
+// NEIGHBOUR SCORING — what a declared neighbourVote needs from the run and what its record carries. A null
+// neighbourVote is the DECLARED votes-only rank (SPEC-bridgeRevision §5) and is named here as a row, so no use site
+// tests it again.
+const VOTES_ONLY_SCORING_ROW_NAME = 'votesOnly';
+const neighbourScoringRowNameOf = (neighbourVote) => (neighbourVote === null ? VOTES_ONLY_SCORING_ROW_NAME : neighbourVote.method);
+const NEIGHBOUR_SCORING_REGISTRY = Object.freeze({
+	[VOTES_ONLY_SCORING_ROW_NAME]: Object.freeze({
+		mappingJustification: SEMANTIC_SIMILARITY_JUSTIFICATION,
+		readReferenceEdgeList: (unusedReadArguments, callback) => callback('', []),
+		frozenTraceFor: (neighbourTrace) => (neighbourTrace === null ? { neighbourTrace: null } : { error: refuse.byName({ moduleName, what: 'a votes-only rank returned a neighbourTrace', where: 'neighbourVote: null ranks by votes alone and names no neighbour (SPEC-bridgeRevision §5, invariant 7)' }) }),
+	}),
+	'neighbourVote-v1': Object.freeze({
+		mappingJustification: COMPOSITE_MATCHING_JUSTIFICATION,
+		readReferenceEdgeList: ({ neighbourVote, evidenceView }, callback) => REFERENCE_EDGE_READ_BY_KIND[neighbourVote.referencedObject.kind]({ referencedObjectDeclaration: neighbourVote.referencedObject, evidenceView }, callback),
+		frozenTraceFor: frozenNeighbourTraceFor,
+	}),
+});
+const neighbourScoringRowFor = (neighbourVote) => {
+	const scoringRowName = neighbourScoringRowNameOf(neighbourVote);
+	return hasOwn(NEIGHBOUR_SCORING_REGISTRY, scoringRowName)
+		? { scoringRow: NEIGHBOUR_SCORING_REGISTRY[scoringRowName] }
+		: { error: refuse.byName({ moduleName, what: `candidateRetrieval.neighbourVote names method ${JSON.stringify(scoringRowName)}, which has no NEIGHBOUR_SCORING_REGISTRY row`, where: 'a neighbour scoring method is a row in bridge-framework.js plus its gate (SPEC-bridgeRevision §5)' }) };
+};
+
+// FROZEN VOTE ENTRIES (B1 stand-down item 1; R-BR-14). The ranked entries come in two shapes, named here by their exact
+// field sets and projected explicitly; a third shape is refused by name. Each path entry's LOGICAL slotKind is frozen
+// as the graph's edgeType through hubEdgeType, and its propertyNameList is kept.
+const RANKED_ENTRY_SHAPE_REGISTRY = Object.freeze({
+	votesOnly: Object.freeze({ fieldNameList: Object.freeze(['bestCosine', 'cardTextCosine', 'cardTextWinningTextStableId', 'ownVotes', 'pathList', 'stableId']) }),
+	neighbourVote: Object.freeze({ fieldNameList: Object.freeze(['bestCosine', 'cardTextCosine', 'cardTextWinningTextStableId', 'domainShare', 'domainVote', 'ownVotes', 'pathList', 'rangeShare', 'rangeVote', 'score', 'stableId']) }),
+});
+const RANKED_PATH_FIELD_NAME_LIST = Object.freeze(['baseKind', 'baseStableId', 'cosine', 'embedTextStableId', 'hitTextStableId', 'propertyNameList', 'slotKind']);
+const frozenRetrievalVoteListFor = ({ rankedList, hubName }) => {
+	const retrievalVoteList = [];
+	for (let rankIndex = 0; rankIndex < rankedList.length; rankIndex++) {
+		const oneEntry = rankedList[rankIndex];
+		const entryFieldText = isPlainObject(oneEntry) ? fieldNameTextOf(oneEntry) : String(oneEntry);
+		const shapeName = Object.keys(RANKED_ENTRY_SHAPE_REGISTRY).find((oneShapeName) => RANKED_ENTRY_SHAPE_REGISTRY[oneShapeName].fieldNameList.join(', ') === entryFieldText);
+		if (shapeName === undefined) {
+			return { error: refuse.byName({ moduleName, what: `ranked entry ${rankIndex} carries { ${entryFieldText} }, which is none of the ranked entry shapes (${Object.keys(RANKED_ENTRY_SHAPE_REGISTRY).join(', ')})`, where: 'the frozen retrievalVoteList projects each known shape by name; a new field is a registry row, never an omission' }) };
+		}
+		const frozenPathList = [];
+		for (let pathIndex = 0; pathIndex < oneEntry.pathList.length; pathIndex++) {
+			const onePath = oneEntry.pathList[pathIndex];
+			if (!isPlainObject(onePath) || fieldNameTextOf(onePath) !== RANKED_PATH_FIELD_NAME_LIST.join(', ')) {
+				return { error: refuse.byName({ moduleName, what: `card ${oneEntry.stableId} path ${pathIndex} carries { ${isPlainObject(onePath) ? fieldNameTextOf(onePath) : String(onePath)} }, not { ${RANKED_PATH_FIELD_NAME_LIST.join(', ')} }`, where: 'the frozen path entry is projected by name' }) };
+			}
+			if (!hasOwn(HUB_SLOT_BY_SLOT_KIND, onePath.slotKind)) {
+				return { error: refuse.byName({ moduleName, what: `card ${oneEntry.stableId} path ${pathIndex} names slot kind ${JSON.stringify(onePath.slotKind)}, none of ${Object.keys(HUB_SLOT_BY_SLOT_KIND).join(', ')}`, where: 'a path is frozen with its graph edge type, hubEdgeType(hubName, slot) (R-BR-9)' }) };
+			}
+			frozenPathList.push({ embedTextStableId: onePath.embedTextStableId, propertyNameList: onePath.propertyNameList.slice(), hitTextStableId: onePath.hitTextStableId, baseStableId: onePath.baseStableId, baseKind: onePath.baseKind, edgeType: hubEdgeType(hubName, HUB_SLOT_BY_SLOT_KIND[onePath.slotKind]), cosine: onePath.cosine });
+		}
+		const frozenEntry = RANKED_ENTRY_SHAPE_REGISTRY[shapeName].fieldNameList.filter((oneFieldName) => oneFieldName !== 'pathList').reduce((soFar, oneFieldName) => Object.assign(soFar, { [oneFieldName]: oneEntry[oneFieldName] }), {});
+		retrievalVoteList.push({ ...frozenEntry, pathList: frozenPathList });
+	}
+	return { retrievalVoteList };
+};
+
+const CANDIDATE_RETRIEVAL_METHOD_RUNNER_REGISTRY = Object.freeze({
+	// cosineTopK-v1 — the subject's own vector against every card, top K at or above the floor. Byte-unchanged in
+	// behaviour from before the registry existed: the same two reads in the same order, the same pool, the same trace.
+	'cosineTopK-v1': Object.freeze({
+		headerFieldNameList: Object.freeze(['method', 'k', 'floor', 'embeddingModelVersion']),
+		settingsPairListFor: (retrievalDeclaration) => [['K', retrievalDeclaration.k], ['floor', retrievalDeclaration.floor]],
+		prepareRetrieval: (retrievalContext, callback) => {
+			readHubVectorIndex(retrievalContext, (indexError, hubVectorIndex) => {
+				if (indexError) {
+					callback(indexError);
+					return;
+				}
+				retrievalContext.retrievalView.readSubjectVectors({ label: retrievalContext.subjectLabel }, (subjectVectorError, subjectVectorRecordList) => {
+					if (subjectVectorError) {
+						callback(`${moduleName}: readSubjectVectors: ${subjectVectorError}`);
+						return;
+					}
+					const subjectVectorByStableId = subjectVectorRecordList.reduce((soFar, oneRecord) => ({ ...soFar, [oneRecord.stableId]: oneRecord }), {});
+					const vectorlessSubject = retrievalContext.windowedNodeList.find((oneNode) => subjectVectorByStableId[oneNode.stableId] === undefined);
+					if (vectorlessSubject !== undefined) {
+						callback(refuse.byName({ moduleName, what: `subject ${vectorlessSubject.stableId} carries no embedding`, where: 'a vectorless subject cannot be retrieved for; the framework never re-embeds (BR-123)' }).message);
+						return;
+					}
+					callback('', { hubVectorIndex, subjectVectorByStableId });
+				});
+			});
+		},
+		mappingJustificationFor: () => SEMANTIC_SIMILARITY_JUSTIFICATION,
+		poolForSubject: ({ retrievalState, retrievalDeclaration, subjectStableId }) => {
+			const { k, floor } = retrievalDeclaration;
+			const retrieved = candidateRetrievalLib.retrieveCandidatePool({ hubVectorIndex: retrievalState.hubVectorIndex, subjectStableId, subjectVector: retrievalState.subjectVectorByStableId[subjectStableId].embedding, k, floor });
+			if (retrieved.error) {
+				return { error: retrieved.error };
+			}
+			// the retrieval trace: rank and cosine per seat, in RANK order. Forensics inside the frozen text — it is what
+			// makes recall@K measurable from the block alone, with no judge and no re-run.
+			return { seatStableIdList: retrieved.seatList.map((oneSeat) => oneSeat.stableId), recordTraceByFieldName: { retrievalSeatList: retrieved.seatList.map((oneSeat) => ({ stableId: oneSeat.stableId, rank: oneSeat.rank, cosine: oneSeat.cosine })) } };
+		},
+	}),
+	// embedTextVote-v1 — the subject's TEXT NODES search the hub's text nodes; a hit walks to cards through the slot
+	// edges; a card is admitted only through a property-slot vote; the admitted cards take cardTextCosine (the subject's
+	// own texts against the whole-card vector) and are ranked with or without neighbour votes (SPEC-embedTextSearch §4,
+	// SPEC-bridgeRevision §4, R-BR-14). Reader records reach every pure module UNMODIFIED (R-BR-15).
+	'embedTextVote-v1': Object.freeze({
+		headerFieldNameList: Object.freeze(['method', 'hitsPerText', 'minScore', 'k', 'embeddingModelVersion', 'neighbourVote']),
+		settingsPairListFor: (retrievalDeclaration) => [['hitsPerText', retrievalDeclaration.hitsPerText], ['minScore', retrievalDeclaration.minScore], ['K', retrievalDeclaration.k], ['neighbourVote', neighbourScoringRowNameOf(retrievalDeclaration.neighbourVote)]],
+		prepareRetrieval: (retrievalContext, callback) => {
+			const { retrievalView, evidenceView, retrievalDeclaration, hubName, sourceStandardName } = retrievalContext;
+			const scoringLookup = neighbourScoringRowFor(retrievalDeclaration.neighbourVote);
+			if (scoringLookup.error) {
+				callback(scoringLookup.error.message);
+				return;
+			}
+			const taskList = new taskListPlus();
+			taskList.push((args, next) => readHubVectorIndex(retrievalContext, (indexError, hubVectorIndex) => (indexError ? next(indexError) : next('', { ...args, hubVectorIndex }))));
+			// the SOURCE standard's texts, filed under the node each describes: a subject's own records, and every neighbour's
+			taskList.push((args, next) => {
+				readEmbedTextRecordList({ retrievalView, standardName: sourceStandardName, standardRoleText: 'source standard' }, (readError, sourceTextRecordList) => {
+					if (readError) {
+						next(readError);
+						return;
+					}
+					const textRecordListBySourceStableId = new Map();
+					sourceTextRecordList.forEach((oneRecord) => {
+						if (!textRecordListBySourceStableId.has(oneRecord.sourceStableId)) {
+							textRecordListBySourceStableId.set(oneRecord.sourceStableId, []);
+						}
+						textRecordListBySourceStableId.get(oneRecord.sourceStableId).push(oneRecord);
+					});
+					next('', { ...args, textRecordListBySourceStableId });
+				});
+			});
+			// the HUB's texts that describe a class, a property or an option set (R-BR-9): indexed and memoised ONCE, so each
+			// distinct text node is searched at most once per run (invariant 6). The memo is owned here.
+			taskList.push((args, next) => {
+				readEmbedTextRecordList({ retrievalView, standardName: hubName, standardRoleText: 'hub' }, (readError, hubTextRecordList) => {
+					if (readError) {
+						next(readError);
+						return;
+					}
+					const searchedRoleList = Object.keys(BASE_ROLE_BY_BASE_KIND).map((oneBaseKind) => BASE_ROLE_BY_BASE_KIND[oneBaseKind]);
+					const searchPopulationRecordList = hubTextRecordList.filter((oneRecord) => searchedRoleList.indexOf(oneRecord.sourceRole) !== -1);
+					if (searchPopulationRecordList.length === 0) {
+						next(refuse.byName({ moduleName, what: `readEmbedTextVectors({ standardName: '${hubName}' }) returned ${hubTextRecordList.length} text record(s) and none describes a node whose role is ${searchedRoleList.join(', ')}`, where: 'the search population is the hub texts of classes, properties and option sets (R-BR-9, R-BR-B4c)' }).message);
+						return;
+					}
+					const indexed = candidateRetrievalLib.buildEmbedTextIndex({ textRecordList: searchPopulationRecordList, embeddingModelVersion: retrievalDeclaration.embeddingModelVersion });
+					if (indexed.error) {
+						next(indexed.error.message);
+						return;
+					}
+					const memoMade = candidateRetrievalLib.makeSearchMemo({ embedTextIndex: indexed.embedTextIndex, hitsPerText: retrievalDeclaration.hitsPerText, minScore: retrievalDeclaration.minScore });
+					if (memoMade.error) {
+						next(memoMade.error.message);
+						return;
+					}
+					next('', { ...args, searchMemo: memoMade.searchMemo });
+				});
+			});
+			// the card slot edges: each read edge type is the module's slot name, and each slot resolves through hubEdgeType
+			taskList.push((args, next) => {
+				retrievalView.readCardBaseEdges({ referenceTier: PROPERTY_TIER }, (readError, cardBaseEdgeList) => {
+					if (readError) {
+						next(`${moduleName}: readCardBaseEdges: ${readError}`);
+						return;
+					}
+					const slotNameBySlotKind = Object.keys(HUB_SLOT_BY_SLOT_KIND).reduce((soFar, oneSlotKind) => Object.assign(soFar, { [oneSlotKind]: hubEdgeType(hubName, HUB_SLOT_BY_SLOT_KIND[oneSlotKind]) }), {});
+					const cardSlotEdgeList = cardBaseEdgeList.map((oneEdge) => ({ cardStableId: oneEdge.cardStableId, slot: oneEdge.edgeType, baseStableId: oneEdge.baseStableId, baseRole: oneEdge.baseRole }));
+					const slotted = candidateRetrievalLib.buildCardSlotIndex({ cardSlotEdgeList, slotNameBySlotKind, baseRoleByBaseKind: { ...BASE_ROLE_BY_BASE_KIND } });
+					if (slotted.error) {
+						next(slotted.error.message);
+						return;
+					}
+					next('', { ...args, cardSlotIndex: slotted.cardSlotIndex });
+				});
+			});
+			// the neighbours' structure: the declared reference edges, and the subject-label nodes of the FULL source
+			// population with every source stableId beside them — never the run window (invariant 5, B1 stand-down)
+			taskList.push((args, next) => {
+				scoringLookup.scoringRow.readReferenceEdgeList({ neighbourVote: retrievalDeclaration.neighbourVote, evidenceView }, (readError, referenceEdgeList) => {
+					if (readError) {
+						next(`${moduleName}: reference edges: ${readError}`);
+						return;
+					}
+					const siblingPopulationByStableId = {};
+					retrievalContext.subjectNodeList.filter((oneNode) => oneNode.labels.indexOf(retrievalContext.subjectLabel) !== -1).forEach((oneNode) => {
+						siblingPopulationByStableId[oneNode.stableId] = oneNode;
+					});
+					const sourceStableIdSet = new Set(retrievalContext.subjectNodeList.map((oneNode) => oneNode.stableId));
+					next('', { ...args, neighbourInputBase: { siblingPopulationByStableId, sourceStableIdSet, referenceEdgeList, textRecordListBySourceStableId: args.textRecordListBySourceStableId } });
+				});
+			});
+			pipeRunner(taskList.getList(), {}, (pipelineError, args) => {
+				if (pipelineError) {
+					callback(pipelineError);
+					return;
+				}
+				callback('', { hubVectorIndex: args.hubVectorIndex, searchMemo: args.searchMemo, cardSlotIndex: args.cardSlotIndex, textRecordListBySourceStableId: args.textRecordListBySourceStableId, neighbourInputBase: args.neighbourInputBase, scoringRow: scoringLookup.scoringRow });
+			});
+		},
+		mappingJustificationFor: ({ retrievalState }) => retrievalState.scoringRow.mappingJustification,
+		poolForSubject: ({ retrievalState, retrievalDeclaration, subjectStableId, hubName }) => {
+			const { searchMemo, cardSlotIndex, hubVectorIndex, textRecordListBySourceStableId, neighbourInputBase, scoringRow } = retrievalState;
+			// the subject's OWN text records; a subject the forge gave no text node has none, and votes with an empty list
+			const subjectTextRecordList = textRecordListBySourceStableId.has(subjectStableId) ? textRecordListBySourceStableId.get(subjectStableId) : [];
+			// ORDER (brief §1.3, binding wiring rule 2): vote, then cardTextCosine over the subject's OWN text records, then rank
+			const voted = candidateRetrievalLib.voteCandidatePool({ searchMemo, cardSlotIndex, subjectStableId, subjectTextRecordList });
+			if (voted.error) {
+				return { error: voted.error };
+			}
+			// NO POOL (binding wiring rule 1, PRISM_COMPASS 14:52Z). A subject whose texts admitted no card has no seats and is
+			// an orphan (noCandidate) in the shared tail. It is routed there BEFORE cardTextCosineFor, which refuses an empty
+			// text list by name, so one textless subject never refuses the run. A subject with no text records votes with an
+			// empty list and so lands here too (voteCandidatePool admits nothing without a text). No rank ran, so no trace.
+			if (voted.admittedList.length === 0) {
+				return { seatStableIdList: [], recordTraceByFieldName: { retrievalVoteList: [], neighbourTrace: null } };
+			}
+			const ordered = candidateRetrievalLib.cardTextCosineFor({ admittedList: voted.admittedList, subjectTextRecordList, hubVectorIndex });
+			if (ordered.error) {
+				return { error: ordered.error };
+			}
+			const ranked = neighbourVoteLib.rankCandidatePool({ admittedList: ordered.admittedList, neighbourVote: retrievalDeclaration.neighbourVote, neighbourInput: { subjectStableId, ...neighbourInputBase }, searchMemo, cardSlotIndex, k: retrievalDeclaration.k });
+			if (ranked.error) {
+				return { error: ranked.error };
+			}
+			const frozenVotes = frozenRetrievalVoteListFor({ rankedList: ranked.rankedList, hubName });
+			if (frozenVotes.error) {
+				return { error: frozenVotes.error };
+			}
+			const frozenTrace = scoringRow.frozenTraceFor(ranked.neighbourTrace);
+			if (frozenTrace.error) {
+				return { error: frozenTrace.error };
+			}
+			return { seatStableIdList: ranked.rankedList.map((oneEntry) => oneEntry.stableId), recordTraceByFieldName: { retrievalVoteList: frozenVotes.retrievalVoteList, neighbourTrace: frozenTrace.neighbourTrace } };
+		},
+	}),
+});
+
+const retrievalMethodRowFor = (retrievalDeclaration) =>
+	hasOwn(CANDIDATE_RETRIEVAL_METHOD_RUNNER_REGISTRY, retrievalDeclaration.method)
+		? { methodRow: CANDIDATE_RETRIEVAL_METHOD_RUNNER_REGISTRY[retrievalDeclaration.method] }
+		: { error: refuse.byName({ moduleName, what: `candidateRetrieval.method ${JSON.stringify(retrievalDeclaration.method)} has no CANDIDATE_RETRIEVAL_METHOD_RUNNER_REGISTRY row (rows: ${Object.keys(CANDIDATE_RETRIEVAL_METHOD_RUNNER_REGISTRY).join(', ')})`, where: 'the contract admits a method only with its fields; the orchestrator runs it only with its row' }) };
+
+// candidateRetrievalHeaderValueFor — the header's candidateRetrieval value (R-BR-7): the DECLARED object, canonicalised
+// by its method row's field list; a basis that declares no retrieval freezes null. The contract already refuses an
+// unknown or absent field; the field SET is compared again here so the row and the contract cannot drift apart silently.
+const candidateRetrievalHeaderValueFor = (retrievalDeclaration) => {
+	if (retrievalDeclaration === undefined) {
+		return { headerValue: null };
+	}
+	const methodLookup = retrievalMethodRowFor(retrievalDeclaration);
+	if (methodLookup.error) {
+		return { error: methodLookup.error };
+	}
+	const rowFieldNameText = methodLookup.methodRow.headerFieldNameList.slice().sort(compareStrings).join(', ');
+	if (fieldNameTextOf(retrievalDeclaration) !== rowFieldNameText) {
+		return { error: refuse.byName({ moduleName, what: `candidateRetrieval (method ${retrievalDeclaration.method}) declares { ${fieldNameTextOf(retrievalDeclaration)} } but its header row freezes { ${rowFieldNameText} }`, where: 'CANDIDATE_RETRIEVAL_METHOD_RUNNER_REGISTRY headerFieldNameList and the contract\'s method field list must name the same fields (R-BR-7)' }) };
+	}
+	return { headerValue: methodLookup.methodRow.headerFieldNameList.reduce((soFar, oneFieldName) => Object.assign(soFar, { [oneFieldName]: JSON.parse(canonicalJson(retrievalDeclaration[oneFieldName])) }), {}) };
+};
+
+// retrievalRegistryRefusal — the retrieval registries checked ONCE at framework construction, beside
+// producerSuffixRefusal: a malformed row is a framework defect, refused before any run can reach it
+const retrievalRegistryRefusal = () => {
+	const refuseRegistry = (what, where) => refuse.byName({ moduleName, what, where });
+	const memberListText = RETRIEVAL_METHOD_ROW_MEMBER_LIST.slice().sort(compareStrings).join(', ');
+	const malformedMethodName = Object.keys(CANDIDATE_RETRIEVAL_METHOD_RUNNER_REGISTRY).find((oneMethodName) => fieldNameTextOf(CANDIDATE_RETRIEVAL_METHOD_RUNNER_REGISTRY[oneMethodName]) !== memberListText);
+	if (malformedMethodName !== undefined) {
+		return refuseRegistry(`CANDIDATE_RETRIEVAL_METHOD_RUNNER_REGISTRY['${malformedMethodName}'] carries { ${fieldNameTextOf(CANDIDATE_RETRIEVAL_METHOD_RUNNER_REGISTRY[malformedMethodName])} }`, `every method row carries exactly { ${memberListText} }`);
+	}
+	const undeclaredSlot = Object.keys(HUB_SLOT_BY_SLOT_KIND).map((oneSlotKind) => HUB_SLOT_BY_SLOT_KIND[oneSlotKind]).find((oneSlot) => HUB_DECOMPOSITION_SLOTS.indexOf(oneSlot) === -1);
+	if (undeclaredSlot !== undefined) {
+		return refuseRegistry(`HUB_SLOT_BY_SLOT_KIND names slot '${undeclaredSlot}', which is not in vocabulary.HUB_DECOMPOSITION_SLOTS (${HUB_DECOMPOSITION_SLOTS.join(', ')})`, 'slot edge types are hubEdgeType(hubName, slot) over declared slots (R-BR-9)');
+	}
+	const unnamedBaseKind = Object.keys(BASE_ROLE_BY_BASE_KIND).find((oneBaseKind) => !isNonBlank(BASE_ROLE_BY_BASE_KIND[oneBaseKind]));
+	if (unnamedBaseKind !== undefined) {
+		return refuseRegistry(`BASE_ROLE_BY_BASE_KIND['${unnamedBaseKind}'] names no role`, 'the base roles are vocabulary.DME_ROLES constants');
+	}
+	const unknownJustification = [SEMANTIC_SIMILARITY_JUSTIFICATION, COMPOSITE_MATCHING_JUSTIFICATION].find((oneJustification) => SSSOM_JUSTIFICATIONS.indexOf(oneJustification) === -1);
+	if (unknownJustification !== undefined) {
+		return refuseRegistry(`justification '${unknownJustification}' is not in vocabulary.SSSOM_JUSTIFICATIONS`, 'a record carries only a vocabulary justification');
+	}
+	const readKindText = Object.keys(REFERENCE_EDGE_READ_BY_KIND).sort(compareStrings).join(', ');
+	const moduleKindText = Object.keys(neighbourVoteLib.REFERENCED_OBJECT_KIND_REGISTRY).sort(compareStrings).join(', ');
+	if (readKindText !== moduleKindText) {
+		return refuseRegistry(`REFERENCE_EDGE_READ_BY_KIND covers { ${readKindText} } but neighbourVote.js REFERENCED_OBJECT_KIND_REGISTRY declares { ${moduleKindText} }`, 'every referenced-object kind the scoring module admits needs its edge read here');
+	}
+	return null;
+};
+
 // START OF moduleFunction() ============================================================
 
 const moduleFunction =
@@ -150,6 +554,10 @@ const moduleFunction =
 		const suffixRefusal = producerSuffixRefusal();
 		if (suffixRefusal) {
 			throw suffixRefusal;
+		}
+		const retrievalRefusal = retrievalRegistryRefusal();
+		if (retrievalRefusal) {
+			throw retrievalRefusal;
 		}
 		const registry = deps.pluginRegistry;
 		const { graphReaderFactory, graphWriterFactory } = deps;
@@ -951,8 +1359,9 @@ const moduleFunction =
 					// scope. There is no walk, so there are no assertions, no identity resolution (a node IS its stableId —
 					// this is what "subjectStableIdFor = identity" means, and it is why the hook is FORBIDDEN on this
 					// basis), no merge and no collision: two distinct nodes are two distinct subjects by construction.
-					// The retrieval vectors are read HERE, through the purpose-scoped forRetrieval() view, and the hub
-					// index is built ONCE for the whole run.
+					// The retrieval reads happen HERE, once for the whole run, through the DECLARED method's row
+					// (CANDIDATE_RETRIEVAL_METHOD_RUNNER_REGISTRY): the purpose-scoped forRetrieval() view for vectors, the evidence
+					// view for the structure a neighbour vote needs.
 					graphLabel: (args, next) => {
 						const subjectSource = bridgeDeclaration.subjectSource;
 						const labelledNodeList = args.subjectNodeList.filter((oneNode) => oneNode.labels.indexOf(subjectSource.label) !== -1);
@@ -1012,32 +1421,25 @@ const moduleFunction =
 						// one node = one subject = one leaf, with NO asserting subject: nothing asserted it, which is exactly
 						// what a derived mapping means. The census weights an empty assertingSubjectList as 1 (census.js).
 						const leafList = windowedNodeList.map((oneNode) => ({ subjectKey: oneNode.stableId, subjectStableId: oneNode.stableId, assertingSubjectList: [], assertionList: [] }));
-						const retrievalView = args.reader.forRetrieval();
-						retrievalView.readHubVectors({ referenceTier: PROPERTY_TIER }, (hubVectorError, hubVectorRecordList) => {
-							if (hubVectorError) {
-								next(`${moduleName}: readHubVectors: ${hubVectorError}`);
+						// WHICH reads and indexes retrieval needs is a member of the DECLARED method's row
+						// (CANDIDATE_RETRIEVAL_METHOD_RUNNER_REGISTRY): read ONCE per run here, used per subject in STEP 6.
+						const retrievalDeclaration = bridgeDeclaration.candidateRetrieval;
+						const methodLookup = retrievalMethodRowFor(retrievalDeclaration);
+						if (methodLookup.error) {
+							next(methodLookup.error.message);
+							return;
+						}
+						const retrievalMethodRow = methodLookup.methodRow;
+						const retrievalContext = { retrievalView: args.reader.forRetrieval(), evidenceView: args.reader.forEvidence(), retrievalDeclaration, hubName: args.hubName, sourceStandardName, subjectLabel: subjectSource.label, subjectNodeList: args.subjectNodeList, windowedNodeList };
+						retrievalMethodRow.prepareRetrieval(retrievalContext, (prepareError, retrievalState) => {
+							if (prepareError) {
+								next(prepareError);
 								return;
 							}
-							const built = candidateRetrievalLib.buildHubVectorIndex({ vectorRecordList: hubVectorRecordList, embeddingModelVersion: bridgeDeclaration.candidateRetrieval.embeddingModelVersion });
-							if (built.error) {
-								next(built.error.message);
-								return;
-							}
-							retrievalView.readSubjectVectors({ label: subjectSource.label }, (subjectVectorError, subjectVectorRecordList) => {
-								if (subjectVectorError) {
-									next(`${moduleName}: readSubjectVectors: ${subjectVectorError}`);
-									return;
-								}
-								const subjectVectorByStableId = subjectVectorRecordList.reduce((soFar, oneRecord) => ({ ...soFar, [oneRecord.stableId]: oneRecord }), {});
-								const vectorlessSubject = windowedNodeList.find((oneNode) => subjectVectorByStableId[oneNode.stableId] === undefined);
-								if (vectorlessSubject !== undefined) {
-									next(refuse.byName({ moduleName, what: `subject ${vectorlessSubject.stableId} carries no embedding`, where: 'a vectorless subject cannot be retrieved for; the framework never re-embeds (BR-123)' }).message);
-									return;
-								}
-								report.subjectNodeReport = { subjectCount: leafList.length, resolved: leafList.length, refused: 0, leaves: leafList.length, manyToOneSubjectCount: 0, collisions: 0, hookCallCount: 0 };
-								say(`subjects: ${leafList.length} '${subjectSource.label}' node(s) in scope (of ${labelledNodeList.length} labelled); retrieval index ${built.hubVectorIndex.recordCount} card(s) × ${built.hubVectorIndex.dimension}d (${built.hubVectorIndex.embeddingModelVersion}); K ${bridgeDeclaration.candidateRetrieval.k} floor ${bridgeDeclaration.candidateRetrieval.floor}`);
-								next('', { ...args, subjectGroupList: leafList, leafList, sourceGapList: [], subjectCollisionList: [], manyToOneSubjectCount: 0, windowMark, hubVectorIndex: built.hubVectorIndex, subjectVectorByStableId, scopeDigest });
-							});
+							report.subjectNodeReport = { subjectCount: leafList.length, resolved: leafList.length, refused: 0, leaves: leafList.length, manyToOneSubjectCount: 0, collisions: 0, hookCallCount: 0 };
+							const settingsText = retrievalMethodRow.settingsPairListFor(retrievalDeclaration).map(([settingLabel, settingValue]) => `${settingLabel} ${settingValue}`).join(' ');
+							say(`subjects: ${leafList.length} '${subjectSource.label}' node(s) in scope (of ${labelledNodeList.length} labelled); retrieval index ${retrievalState.hubVectorIndex.recordCount} card(s) × ${retrievalState.hubVectorIndex.dimension}d (${retrievalState.hubVectorIndex.embeddingModelVersion}); ${settingsText}`);
+							next('', { ...args, subjectGroupList: leafList, leafList, sourceGapList: [], subjectCollisionList: [], manyToOneSubjectCount: 0, windowMark, retrievalMethodRow, retrievalState, scopeDigest });
 						});
 					},
 				});
@@ -1077,7 +1479,7 @@ const moduleFunction =
 
 				// STEP 6 — CANDIDATE POOLS + classification → decision records. Which producer builds the pool is a
 				// member of the acquisition row, exactly as the subject producer is. A key-filtered pool is assembled
-				// from the canonicalKey multimap; a retrieved pool is assembled by cosine over stored vectors. Both
+				// from the canonicalKey multimap; a retrieved pool is assembled by the declared retrieval method's row. Both
 				// hand STEP 7 the SAME two outputs, so the judge, the freeze, the materialiser and the census below are
 				// shared byte-for-byte between the two bases.
 				const poolProducerByKind = Object.freeze({
@@ -1221,11 +1623,14 @@ const moduleFunction =
 					},
 					// vectorRetrieval — one subject, one pool, one judged task. There is no target grouping, no union and
 					// no remodel: those exist to reconcile several document rows naming one subject, and a derived subject
-					// has no rows. The retrieval RANK and COSINE are recorded on the record as forensics and are never
-					// rendered — the pool reaches the judge sorted by stableId, which is what makes the order neutral.
+					// has no rows. The METHOD ROW decides the seats and names the trace (the cosineTopK-v1 rank and cosine; the
+					// embedTextVote-v1 votes, paths, cardTextCosine and neighbour trace); the trace is recorded on the record as
+					// forensics and never rendered — the pool reaches the judge sorted by stableId, which is what makes the order neutral.
 					vectorRetrieval: (args, next) => {
-						const { k, floor } = bridgeDeclaration.candidateRetrieval;
+						const retrievalDeclaration = bridgeDeclaration.candidateRetrieval;
+						const { retrievalMethodRow, retrievalState } = args;
 						const attestationChannelList = [`retrieval:${bridgeDeclaration.subjectSource.label}`];
+						const mappingJustification = retrievalMethodRow.mappingJustificationFor({ retrievalState });
 						const decisionRecordList = [];
 						const judgedTaskList = [];
 						let buildFault = null;
@@ -1233,23 +1638,18 @@ const moduleFunction =
 							if (buildFault) {
 								return;
 							}
-							const retrieved = candidateRetrievalLib.retrieveCandidatePool({
-								hubVectorIndex: args.hubVectorIndex,
-								subjectStableId: oneLeaf.subjectStableId,
-								subjectVector: args.subjectVectorByStableId[oneLeaf.subjectStableId].embedding,
-								k,
-								floor,
-							});
-							if (retrieved.error) {
-								buildFault = retrieved.error;
+							// the DECLARED method's pool for this subject, in RANK order, with its trace fields (CANDIDATE_RETRIEVAL_METHOD_RUNNER_REGISTRY)
+							const pooled = retrievalMethodRow.poolForSubject({ retrievalState, retrievalDeclaration, subjectStableId: oneLeaf.subjectStableId, hubName: args.hubName });
+							if (pooled.error) {
+								buildFault = pooled.error;
 								return;
 							}
-							const poolCardList = classificationLib.sortByStableId(retrieved.seatList.map((oneSeat) => args.cardByStableId[oneSeat.stableId]));
-							const missingCard = retrieved.seatList.find((oneSeat) => args.cardByStableId[oneSeat.stableId] === undefined);
-							if (missingCard !== undefined) {
-								buildFault = refuse.byName({ moduleName, what: `retrieval named card ${missingCard.stableId}, which is not in the card index read this run`, where: 'the vector view and the card view must describe the SAME population; a card with a vector and no card row is a forge defect' });
+							const missingSeatStableId = pooled.seatStableIdList.find((oneSeatStableId) => args.cardByStableId[oneSeatStableId] === undefined);
+							if (missingSeatStableId !== undefined) {
+								buildFault = refuse.byName({ moduleName, what: `retrieval named card ${missingSeatStableId}, which is not in the card index read this run`, where: 'the vector view and the card view must describe the SAME population; a card with a vector and no card row is a forge defect' });
 								return;
 							}
+							const poolCardList = classificationLib.sortByStableId(pooled.seatStableIdList.map((oneSeatStableId) => args.cardByStableId[oneSeatStableId]));
 							const classified = classificationLib.classifyTarget({ poolOrigin: 'retrieval', filteredPoolSize: poolCardList.length, keyPoolSize: 0, subjectUnresolvable: false, subjectCollision: false, valueTier: false, allLabelsTentative: false, allLabelsPredicate: false, labelsMixed: false });
 							if (classified.error) {
 								buildFault = classified.error;
@@ -1267,9 +1667,10 @@ const moduleFunction =
 								attestationChannelList,
 								keyPoolStableIdList: [],
 								filteredPoolStableIdList: poolCardList.map((oneCard) => oneCard.stableId),
-								// the retrieval trace: rank and cosine per seat, in RANK order. Forensics inside the frozen text —
-								// it is what makes recall@K measurable from the block alone, with no judge and no re-run.
-								retrievalSeatList: retrieved.seatList.map((oneSeat) => ({ stableId: oneSeat.stableId, rank: oneSeat.rank, cosine: oneSeat.cosine })),
+								// the retrieval trace, in RANK order, under the field names its method row gives it: retrievalSeatList for
+								// cosineTopK-v1; retrievalVoteList and neighbourTrace for embedTextVote-v1. Forensics inside the frozen text —
+								// what makes recall@K measurable from the block alone — and never rendered: the pool above is sorted by stableId.
+								...pooled.recordTraceByFieldName,
 								classification: classified.classification,
 								judgedReason: classified.reason,
 								lossyEcho: false,
@@ -1279,7 +1680,7 @@ const moduleFunction =
 								return;
 							}
 							judgedTaskList.push({
-								baseRecord: { ...baseRecord, resolution: 'judged', mappingJustification: SEMANTIC_SIMILARITY_JUSTIFICATION, sourceSideMismatch: null },
+								baseRecord: { ...baseRecord, resolution: 'judged', mappingJustification, sourceSideMismatch: null },
 								pool: poolCardList,
 								seatReason: 'retrieval',
 								seatReasonByStableId: {},
@@ -1290,7 +1691,8 @@ const moduleFunction =
 							next(buildFault.message);
 							return;
 						}
-						say(`retrieved: ${judgedTaskList.length} subject(s) with a pool, ${decisionRecordList.length} with none (noCandidate) — K ${k}, floor ${floor}`);
+						const settingsText = retrievalMethodRow.settingsPairListFor(retrievalDeclaration).map(([settingLabel, settingValue]) => `${settingLabel} ${settingValue}`).join(', ');
+						say(`retrieved: ${judgedTaskList.length} subject(s) with a pool, ${decisionRecordList.length} with none (noCandidate) — ${settingsText}`);
 						next('', { ...args, decisionRecordList, judgedTaskList });
 					},
 				});
@@ -1524,6 +1926,11 @@ const moduleFunction =
 						contentionCensus: args.contention,
 						indexCollisionCount: args.contention.contendedKeyCount,
 					});
+					const retrievalHeader = candidateRetrievalHeaderValueFor(bridgeDeclaration.candidateRetrieval);
+					if (retrievalHeader.error) {
+						next(retrievalHeader.error.message);
+						return;
+					}
 					const header = {
 						frameworkGeneration: decisionBlockLib.FRAMEWORK_GENERATION,
 						frameworkFingerprint: decisionBlockLib.frameworkFingerprint(),
@@ -1538,7 +1945,8 @@ const moduleFunction =
 						judgeKind: args.judgeKind,
 						// absent is absent: a documentary run stamps null rather than inventing a rule or a K
 						predicateRule: bridgeDeclaration.predicateSource.predicateRule === undefined ? null : bridgeDeclaration.predicateSource.predicateRule,
-						candidateRetrieval: bridgeDeclaration.candidateRetrieval === undefined ? null : { k: bridgeDeclaration.candidateRetrieval.k, floor: bridgeDeclaration.candidateRetrieval.floor, embeddingModelVersion: bridgeDeclaration.candidateRetrieval.embeddingModelVersion },
+						// the DECLARED object canonicalised by its method row (R-BR-7), or null for a basis that declares no retrieval
+						candidateRetrieval: retrievalHeader.headerValue,
 						subjectScopeDigest: args.scopeDigest === undefined ? null : args.scopeDigest,
 						sourceWindow: args.windowMark === undefined ? null : args.windowMark,
 						blindingDeclaration: bridgeDeclaration.blindingDeclaration.slice(),

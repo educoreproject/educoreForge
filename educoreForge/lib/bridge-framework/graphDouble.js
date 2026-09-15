@@ -22,7 +22,19 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //                                                                          blinded names REFUSED on read (Proxy)
 //     reader.forEvidence() → view                                          every record BLINDED (names removed) — nodes AND edges (BR6)
 //     view.readSourceNodes({ roleList }, cb) / view.readNodesByStableId({ stableIdList }, cb) / view.readEdgesAmongSource({ edgeTypeList }, cb)
+//     reader.forRetrieval() → view                                         the vector view, closed to four reads:
+//       readHubVectors({ referenceTier }, cb) / readSubjectVectors({ label }, cb)   [{ stableId, embedding, embeddingModelVersion }]
+//       readEmbedTextVectors({ standardName }, cb)                         one record per text edge out of a text node of standardName:
+//                                                                          { textStableId, vector, embeddingModelVersion, sourceStableId,
+//                                                                          sourceRole, propertyNameList } (R-BR-1a, scalar re-widened)
+//       readCardBaseEdges({ referenceTier }, cb)                           { cardStableId, edgeType, baseStableId, baseRole }, DOMAIN and
+//                                                                          PROPERTY required per card, RANGE optional (R-BR-9, R-BR-13)
 //     reader.close(cb)
+//   Text nodes (role DME_ROLES.EMBED_TEXT) are excluded from every source record and from both ends of every among-source
+//   edge (R-BR-2). readSubjectVectors stays scoped by LABEL, not by that exclusion (B3b stand-down item e).
+//   EQUALITY FOLLOWS CYPHER: a property compared with a parameter never matches when either is absent, not even
+//   absent against absent (cypherEquals below; boltDriverDouble follows the same rule), and an absent property RETURNED
+//   by a read is null, never undefined.
 //   graphWriterFactory({ inGraph, applyLabel, sourceStandardName }) → writer
 //     writer.writeMappingEdge({ subjectStableId, objectStableId, edgeType, edgeProperties }, cb(err, { edgeWritten }))
 //     writer.close(cb)
@@ -41,6 +53,14 @@ const { edgeConservationIdentityFor, identityHostileValue } = replayEngineLib;
 
 const isPlainObject = (candidate) => candidate !== null && typeof candidate === 'object' && !Array.isArray(candidate);
 const cloneJson = (value) => JSON.parse(JSON.stringify(value));
+const compareStrings = (leftValue, rightValue) => (leftValue < rightValue ? -1 : leftValue > rightValue ? 1 : 0);
+// cypherEquals — `n.x = $x` in Cypher is null, so the row is dropped, when EITHER side is absent. The bolt reader lives
+// under that rule and boltDriverDouble emulates it (B3b stand-down item 1); the double follows it so a read with an
+// absent parameter returns what the real graph returns: nothing.
+const isAbsentValue = (candidate) => candidate === undefined || candidate === null;
+const cypherEquals = (propertyValue, parameterValue) => !isAbsentValue(propertyValue) && !isAbsentValue(parameterValue) && propertyValue === parameterValue;
+// cypherValue — a RETURNed absent property is null in a bolt row, never undefined; an array comes back as a fresh copy
+const cypherValue = (propertyValue) => (propertyValue === undefined ? null : Array.isArray(propertyValue) ? propertyValue.slice() : propertyValue);
 
 const graphDoubleFrom = ({ nodeList, edgeList } = {}) => {
 	if (!Array.isArray(nodeList) || !Array.isArray(edgeList)) {
@@ -58,6 +78,8 @@ const graphDoubleFrom = ({ nodeList, edgeList } = {}) => {
 		readHubCardsCallCount: 0,
 		readHubVectorsCallCount: 0,
 		readSubjectVectorsCallCount: 0,
+		readEmbedTextVectorsCallCount: 0,
+		readCardBaseEdgesCallCount: 0,
 		readSubjectNodesCallCount: 0,
 		sessionsOpenedFromPluginFrames: 0,
 		writerCloseCount: 0,
@@ -70,10 +92,15 @@ const graphDoubleFrom = ({ nodeList, edgeList } = {}) => {
 		if (constructionError) {
 			throw constructionError;
 		}
+		// the SAME vocabulary read the bolt reader makes at construction, refused the same way (R-BR-1, R-BR-9)
+		const textSearchVocabulary = graphSeamRulesLib.textSearchVocabularyFor();
+		if (textSearchVocabulary.error) {
+			throw textSearchVocabulary.error;
+		}
 		const rawNodeRecordList = () => state.nodeList.map((oneNode) => ({ stableId: oneNode.stableId, labels: oneNode.labels.slice(), properties: { ...oneNode.properties } }));
 		const readHubCards = ({ referenceTier } = {}, callback) => {
 			state.readHubCardsCallCount += 1;
-			const cardList = rawNodeRecordList().filter((oneRecord) => oneRecord.labels.indexOf('HubReference') !== -1 && oneRecord.properties.referenceTier === referenceTier);
+			const cardList = rawNodeRecordList().filter((oneRecord) => oneRecord.labels.indexOf(graphSeamRulesLib.HUB_REFERENCE_LABEL) !== -1 && cypherEquals(oneRecord.properties.referenceTier, referenceTier));
 			const shaped = graphSeamRulesLib.shapeHubCardList({ rawRecordList: cardList, referenceTier });
 			if (shaped.error) {
 				callback(shaped.error.message);
@@ -81,7 +108,10 @@ const graphDoubleFrom = ({ nodeList, edgeList } = {}) => {
 			}
 			callback('', shaped.cardList);
 		};
-		const sourceRecordList = () => rawNodeRecordList().filter((oneRecord) => oneRecord.properties._source === sourceStandardName);
+		// sourceRecordList — the bolt readSourceRecords: _source EXACTLY the source standard, text nodes excluded BY ROLE
+		// (R-BR-2). A node with no role is kept, as `n.role IS NULL OR n.role <> $embedTextRole` keeps it. Every view's
+		// among-source edge read filters on this set, so an edge touching a text node is excluded at both ends too.
+		const sourceRecordList = () => rawNodeRecordList().filter((oneRecord) => cypherEquals(oneRecord.properties._source, sourceStandardName) && oneRecord.properties.role !== textSearchVocabulary.embedTextRole);
 		const readSubjectNodes = (callback) => {
 			state.readSubjectNodesCallCount += 1;
 			callback('', sourceRecordList().map((oneRecord) => graphSeamRulesLib.blindedRecordFor({ record: graphSeamRulesLib.withoutEmbedding(oneRecord), blindingDeclaration })));
@@ -116,7 +146,7 @@ const graphDoubleFrom = ({ nodeList, edgeList } = {}) => {
 			graphSeamRulesLib.closedRetrievalView({
 				readHubVectors: ({ referenceTier } = {}, callback) => {
 					state.readHubVectorsCallCount += 1;
-					callback('', rawNodeRecordList().filter((oneRecord) => oneRecord.labels.indexOf('HubReference') !== -1 && oneRecord.properties.referenceTier === referenceTier).map(graphSeamRulesLib.retrievalRecordFor));
+					callback('', rawNodeRecordList().filter((oneRecord) => oneRecord.labels.indexOf(graphSeamRulesLib.HUB_REFERENCE_LABEL) !== -1 && cypherEquals(oneRecord.properties.referenceTier, referenceTier)).map(graphSeamRulesLib.retrievalRecordFor));
 				},
 				readSubjectVectors: ({ label } = {}, callback) => {
 					state.readSubjectVectorsCallCount += 1;
@@ -124,7 +154,69 @@ const graphDoubleFrom = ({ nodeList, edgeList } = {}) => {
 						callback(`${moduleName}: readSubjectVectors label ${JSON.stringify(label)} is not a graph label`);
 						return;
 					}
-					callback('', sourceRecordList().filter((oneRecord) => oneRecord.labels.indexOf(label) !== -1).map(graphSeamRulesLib.retrievalRecordFor));
+					// scoped by LABEL and _source exactly as the bolt read is, and deliberately NOT through sourceRecordList's role
+					// exclusion: the bolt read does not exclude by role, and widening it here would prove a read production never makes
+					callback('', rawNodeRecordList().filter((oneRecord) => cypherEquals(oneRecord.properties._source, sourceStandardName) && oneRecord.labels.indexOf(label) !== -1).map(graphSeamRulesLib.retrievalRecordFor));
+				},
+				// readEmbedTextVectors — the bolt MATCH (t)-[r]->(s) WHERE t._source = $standardName AND t.role = $embedTextRole AND
+				// type(r) = $embedsTextOfEdgeType: both endpoints existing nodes, one row per edge, shaped by the SAME
+				// shapeEmbedTextVectorRowList (propertyNameList re-widened, a described node of another _source refused)
+				readEmbedTextVectors: ({ standardName } = {}, callback) => {
+					state.readEmbedTextVectorsCallCount += 1;
+					if (typeof standardName !== 'string' || standardName.length === 0) {
+						callback(`${moduleName}: readEmbedTextVectors standardName ${JSON.stringify(standardName)} is not a standard name; the caller names the source standard or the hub's _source, and there is no default`);
+						return;
+					}
+					const nodeRecordByStableId = rawNodeRecordList().reduce((soFar, oneRecord) => ({ ...soFar, [oneRecord.stableId]: oneRecord }), {});
+					const rowList = state.edgeList
+						.filter((oneEdge) => oneEdge.type === textSearchVocabulary.embedsTextOfEdgeType && nodeRecordByStableId[oneEdge.fromStableId] !== undefined && nodeRecordByStableId[oneEdge.toStableId] !== undefined)
+						.filter((oneEdge) => cypherEquals(nodeRecordByStableId[oneEdge.fromStableId].properties._source, standardName) && cypherEquals(nodeRecordByStableId[oneEdge.fromStableId].properties.role, textSearchVocabulary.embedTextRole))
+						.map((oneEdge) => {
+							const textProperties = nodeRecordByStableId[oneEdge.fromStableId].properties;
+							const describedProperties = nodeRecordByStableId[oneEdge.toStableId].properties;
+							return {
+								textStableId: cypherValue(textProperties.stableId),
+								vector: cypherValue(textProperties[textSearchVocabulary.textVectorPropertyName]),
+								embeddingModelVersion: cypherValue(textProperties.embeddingModelVersion),
+								sourceStableId: cypherValue(describedProperties.stableId),
+								sourceRole: cypherValue(describedProperties.role),
+								sourceStandardName: cypherValue(describedProperties._source),
+								propertyNameList: cypherValue((oneEdge.properties || {}).propertyNameList),
+							};
+						});
+					const shaped = graphSeamRulesLib.shapeEmbedTextVectorRowList({ rowList, standardName });
+					if (shaped.error) {
+						callback(shaped.error.message);
+						return;
+					}
+					callback('', shaped.recordList);
+				},
+				// readCardBaseEdges — the bolt reader's two reads: the cards at referenceTier FIRST (so a card with no slot edge is
+				// still seen), then every edge out of them to an existing node, both ordered by non-null stableIds and edge types
+				// (B3b stand-down item 2), shaped by the SAME shapeCardBaseEdgeRowList (R-BR-9, R-BR-13)
+				readCardBaseEdges: ({ referenceTier } = {}, callback) => {
+					state.readCardBaseEdgesCallCount += 1;
+					if (typeof referenceTier !== 'string' || referenceTier.length === 0) {
+						callback(`${moduleName}: readCardBaseEdges referenceTier ${JSON.stringify(referenceTier)} is not a tier; there is no default`);
+						return;
+					}
+					const nodeRecordList = rawNodeRecordList();
+					const nodeRecordByStableId = nodeRecordList.reduce((soFar, oneRecord) => ({ ...soFar, [oneRecord.stableId]: oneRecord }), {});
+					const cardRecordList = nodeRecordList
+						.filter((oneRecord) => oneRecord.labels.indexOf(graphSeamRulesLib.HUB_REFERENCE_LABEL) !== -1 && cypherEquals(oneRecord.properties.referenceTier, referenceTier))
+						.sort((leftRecord, rightRecord) => compareStrings(leftRecord.stableId, rightRecord.stableId));
+					const cardStableIdSet = new Set(cardRecordList.map((oneRecord) => oneRecord.stableId));
+					const cardRowList = cardRecordList.map((oneRecord) => ({ cardStableId: cypherValue(oneRecord.properties.stableId), hubName: cypherValue(oneRecord.properties.hubName) }));
+					const edgeRowList = state.edgeList
+						.filter((oneEdge) => cardStableIdSet.has(oneEdge.fromStableId) && nodeRecordByStableId[oneEdge.toStableId] !== undefined)
+						.map((oneEdge) => ({ cardStableId: cypherValue(nodeRecordByStableId[oneEdge.fromStableId].properties.stableId), edgeType: oneEdge.type, baseStableId: cypherValue(nodeRecordByStableId[oneEdge.toStableId].properties.stableId), baseRole: cypherValue(nodeRecordByStableId[oneEdge.toStableId].properties.role) }))
+						.sort((leftRow, rightRow) => compareStrings(leftRow.cardStableId, rightRow.cardStableId) || compareStrings(leftRow.edgeType, rightRow.edgeType) || compareStrings(leftRow.baseStableId, rightRow.baseStableId));
+					const shaped = graphSeamRulesLib.shapeCardBaseEdgeRowList({ cardRowList, edgeRowList, textSearchVocabulary });
+					if (shaped.error) {
+						callback(shaped.error.message);
+						return;
+					}
+					callback('', shaped.recordList);
 				},
 			});
 		const close = (callback) => {
