@@ -60,6 +60,8 @@ const roundTripGateTwins = require('../lib/roundTripGateTwins')();
 const GATES_FILE_PATH = path.join(__dirname, '..', 'gates', 'edfiRoundTripGates.jsonc');
 const TEST_ARTIFACTS_PATH = path.join(__dirname, 'test-artifacts');
 const TWIN_OBSERVATION_LOG_PATH = path.join(TEST_ARTIFACTS_PATH, 'roundTripGateTwinObservations.log');
+const EMBED_TEXT_FIXTURE_PATH = path.join(__dirname, 'fixtures', 'embedTextNode.json');
+const EMBED_TEXT_ROLE = 'DmeEmbedText';
 
 // =====================================================================
 // fixture texts — the CARRIABLE vocabulary (everything the graph carries losslessly)
@@ -1625,8 +1627,257 @@ pushStep((done) => {
 });
 
 // ---------------------------------------------------------------------
+// PHASE P5 (embedText-091426, R-ET-5 / R-ET-20) — a TEXT NODE is excluded from the round trip.
+//
+// The text node and its EMBEDS_TEXT_OF edge are appended to the CARRIABLE fixture's REAL forge
+// result — the same { nodes, edges } the double replays — so they enter at the double's input
+// exactly as the forge's own output does. The double's selection (roundTripGraphDouble.js:71-107)
+// admits nodes by role through CONSTRUCT_ROLES and three literal roles; the edge loop keeps only
+// REFERENCES (:112). The RED TWIN widens CONSTRUCT_ROLES — the one list the double shares with the
+// real reader (roundTripEdfiCompiler.js:55, exported at :942) — for the duration of the double's
+// SYNCHRONOUS readAll only, then restores it, so the widening touches the selection step and
+// nothing downstream.
+//
+// WHAT THIS PROVES: THE DIFF. It does NOT prove the production Cypher allowlist
+// (roundTripEdfiCompiler.js:378-381); only P7's live run does.
+const embedTextStatementSetOf = (graphRows) => {
+	const emission = roundTripEdfiCompiler.emitGraphStatements({ graphRows });
+	if (emission.fault) {
+		return { error: emission.fault };
+	}
+	// the validator's own STAGE 5 identity (roundTripValidator.js:221-223)
+	const statementKeyList = Array.from(
+		roundTripMetaEdCanonical.assembleStatementMap({ statementList: emission.statementList }).statementMap.keys(),
+	).sort();
+	const statementSetText = statementKeyList.join('\n');
+	return {
+		statementCount: statementKeyList.length,
+		statementSetText,
+		statementSetSha256: crypto.createHash('sha256').update(statementSetText).digest('hex'),
+	};
+};
+
+// measureEdfiEmbedTextRun — one validation over the double, with the rows the double served captured
+// (deep-cloned at selection time) so the emitted statement set is computed from exactly that input.
+// admitEmbedTextRole: true widens CONSTRUCT_ROLES for the selection step only.
+const measureEdfiEmbedTextRun = ({ forgeResult, snapshotPath, admitEmbedTextRole }, callback) => {
+	const doubleReader = roundTripGraphDouble.makeGraphDouble({ forgeResult });
+	const constructRoleList = roundTripEdfiCompiler.CONSTRUCT_ROLES;
+	let servedGraphRows = null;
+	const reader = {
+		readAll: (readCallback) => {
+			if (admitEmbedTextRole) {
+				constructRoleList.push(EMBED_TEXT_ROLE);
+			}
+			doubleReader.readAll((readError, graphRows) => {
+				if (admitEmbedTextRole) {
+					constructRoleList.splice(constructRoleList.indexOf(EMBED_TEXT_ROLE), 1);
+				}
+				servedGraphRows = readError ? null : JSON.parse(JSON.stringify(graphRows));
+				readCallback(readError, graphRows);
+			});
+		},
+		close: doubleReader.close,
+	};
+	roundTripValidator.validateWithReader(
+		{ reader, snapshotPath, graphIdentity: { containerName: '(hermetic graph double)', boltUrl: '(none)' } },
+		(validateError, verdict) => {
+			if (validateError) {
+				// the served rows travel WITH the refusal, so a caller can still prove what the
+				// selection let through before emission refused it
+				callback(validateError, { servedGraphRows });
+				return;
+			}
+			if (!servedGraphRows) {
+				callback('measureEdfiEmbedTextRun: the double served no rows, so no statement set can be measured');
+				return;
+			}
+			const statementSet = embedTextStatementSetOf(servedGraphRows);
+			if (statementSet.error) {
+				callback(statementSet.error);
+				return;
+			}
+			callback('', { verdict, servedGraphRows, ...statementSet });
+		},
+	);
+};
+
+// embedTextExcludedFromEmission — gate G-20's conjunct; every clause an equality with a measured value.
+// A run that issued NO verdict (emission refused) cannot satisfy it.
+const embedTextExcludedFromEmission = ({ candidateRun, baselineRun }) =>
+	Boolean(candidateRun && candidateRun.verdict) &&
+	candidateRun.verdict.inventedTotal === 0 &&
+	candidateRun.verdict.lostTotal === baselineRun.verdict.lostTotal &&
+	candidateRun.statementSetText === baselineRun.statementSetText;
+
+// checkEdfiEmbedTextFixture — identity RE-DERIVED from the text and the REAL forge's root, never
+// trusted; a drifted fixture proves nothing and is refused by name.
+const checkEdfiEmbedTextFixture = ({ embedTextFixture, forgeResult }) => {
+	const { textNode, embedsTextOfEdge } = embedTextFixture || {};
+	if (!textNode || !embedsTextOfEdge) {
+		return [`${EMBED_TEXT_FIXTURE_PATH}: textNode and embedsTextOfEdge are REQUIRED`];
+	}
+	const rootNode = forgeResult.nodes.find((oneNode) => oneNode.role === 'DmeStandardRoot');
+	const rootStableId = rootNode ? rootNode.stableId : '(no DmeStandardRoot in the forge result)';
+	const textProperties = textNode.properties || {};
+	const textSha256 = crypto.createHash('sha256').update(String(textProperties.text)).digest('hex');
+	const expectedStableId = `${rootStableId}/embedText/${textSha256}`;
+	const propertyNameList = (embedsTextOfEdge.properties || {}).propertyNameList || [];
+	return [
+		[textNode.role === EMBED_TEXT_ROLE, `role is '${textNode.role}'`],
+		[
+			['ForgedNode', 'EdfiEmbedText', EMBED_TEXT_ROLE].every((oneLabel) => (textNode.labels || []).includes(oneLabel)),
+			`labels ${JSON.stringify(textNode.labels)} lack the [ForgedNode, EdfiEmbedText, DmeEmbedText] triple`,
+		],
+		[textNode.stableId === expectedStableId, `stableId '${textNode.stableId}' is not '${expectedStableId}'`],
+		[textProperties.edfiStableId === expectedStableId, 'edfiStableId is not the stableId'],
+		[textProperties.parentId === rootStableId, `parentId '${textProperties.parentId}' is not the forge root '${rootStableId}'`],
+		[textProperties._source === forgeResult.nodes[0].properties._source, `_source '${textProperties._source}' is not the forge's`],
+		[textProperties.path === `embedText/${textSha256}`, 'path is not embedText/<sha256(text)>'],
+		[textProperties.name === undefined, 'a text node carries no name'],
+		[textProperties.searchText === undefined, 'a text node carries no searchText'],
+		[embedsTextOfEdge.type === 'EMBEDS_TEXT_OF', `edge type is '${embedsTextOfEdge.type}'`],
+		[embedsTextOfEdge.fromRef.id === expectedStableId, 'the edge does not leave the text node'],
+		[
+			forgeResult.nodes.some((oneNode) => oneNode.stableId === embedsTextOfEdge.toRef.id),
+			`the edge's target '${embedsTextOfEdge.toRef.id}' is not in the forge result`,
+		],
+		[
+			propertyNameList.length > 0 && JSON.stringify(propertyNameList) === JSON.stringify(propertyNameList.slice().sort()),
+			`propertyNameList ${JSON.stringify(propertyNameList)} is not a non-empty sorted list`,
+		],
+	]
+		.filter(([holds]) => !holds)
+		.map(([, complaint]) => `${EMBED_TEXT_FIXTURE_PATH}: ${complaint}`);
+};
+
 pushStep((done) => {
-	harness.section('RT-10 — gate suite: all 19 green AND every twin observed RED');
+	harness.section(
+		"PHASE P5 — a TEXT NODE and its EMBEDS_TEXT_OF edge are excluded from the round trip (proves the DIFF; the production allowlist is P7's)",
+	);
+	const forged = suiteState.carriableForge;
+	if (!forged) {
+		harness.ok('carriable forge available for the embed-text proof', false);
+		done();
+		return;
+	}
+	if (!fs.existsSync(EMBED_TEXT_FIXTURE_PATH)) {
+		harness.ok('the embed-text fixture exists', false, `${EMBED_TEXT_FIXTURE_PATH} is REQUIRED`);
+		done();
+		return;
+	}
+	const embedTextFixture = JSON.parse(fs.readFileSync(EMBED_TEXT_FIXTURE_PATH, 'utf8'));
+	const fixtureComplaintList = checkEdfiEmbedTextFixture({ embedTextFixture, forgeResult: forged.forgeResult });
+	harness.equal('the text node and edge have the R-ET-1/R-ET-4 shape (identity re-derived)', fixtureComplaintList.length, 0);
+	if (fixtureComplaintList.length) {
+		harness.note(fixtureComplaintList.join('\n'));
+		done();
+		return;
+	}
+	const { textNode, embedsTextOfEdge } = embedTextFixture;
+	const forgeResultWithText = {
+		...forged.forgeResult,
+		nodes: forged.forgeResult.nodes.concat([textNode]),
+		edges: forged.forgeResult.edges.concat([embedsTextOfEdge]),
+	};
+	const originalConstructRoleText = JSON.stringify(roundTripEdfiCompiler.CONSTRUCT_ROLES);
+
+	measureEdfiEmbedTextRun({ forgeResult: forged.forgeResult, snapshotPath: forged.snapshotPath }, (baselineError, baselineRun) => {
+		harness.accepts('the run WITHOUT the text node measures', [baselineError].filter(Boolean));
+		if (baselineError) {
+			done();
+			return;
+		}
+		harness.equal(
+			'the fresh baseline agrees with the RT-7 carriable verdict (lostTotal)',
+			baselineRun.verdict.lostTotal,
+			suiteState.carriableVerdict.lostTotal,
+		);
+		measureEdfiEmbedTextRun({ forgeResult: forgeResultWithText, snapshotPath: forged.snapshotPath }, (withTextError, withTextRun) => {
+			harness.accepts('the run WITH the text node measures', [withTextError].filter(Boolean));
+			if (withTextError) {
+				done();
+				return;
+			}
+			harness.equal('WITH the text node: inventedTotal is 0', withTextRun.verdict.inventedTotal, 0);
+			harness.equal(
+				`WITH the text node: lostTotal EQUALS the run without it (${baselineRun.verdict.lostTotal})`,
+				withTextRun.verdict.lostTotal,
+				baselineRun.verdict.lostTotal,
+			);
+			harness.ok(
+				`the emitted statement set is byte-identical (${baselineRun.statementCount} statements, sha256 ${baselineRun.statementSetSha256})`,
+				withTextRun.statementSetText === baselineRun.statementSetText,
+				`with the text node: ${withTextRun.statementCount} statements, sha256 ${withTextRun.statementSetSha256}`,
+			);
+			harness.equal(
+				'the served rows are identical with and without the text node (the selection dropped it)',
+				JSON.stringify(withTextRun.servedGraphRows.constructRowList.concat(withTextRun.servedGraphRows.propertyRowList, withTextRun.servedGraphRows.optionValueRowList, withTextRun.servedGraphRows.itemEdgeRowList)),
+				JSON.stringify(baselineRun.servedGraphRows.constructRowList.concat(baselineRun.servedGraphRows.propertyRowList, baselineRun.servedGraphRows.optionValueRowList, baselineRun.servedGraphRows.itemEdgeRowList)),
+			);
+			// RECORDED, NOT GATED (brief): the diagnostic census now lists the new role and edge type.
+			// roundTripValidator.js places nodeCountByRole / edgeCountByType only under verdict.graph
+			// (:389-390); inventedTotal is headline.invented + crosswalk guard violations (:270).
+			const nodeCountByRole = withTextRun.verdict.graph.nodeCountByRole;
+			const edgeCountByType = withTextRun.verdict.graph.edgeCountByType;
+			harness.ok(
+				`census (recorded, not gated): verdict.graph.nodeCountByRole lists DmeEmbedText (${nodeCountByRole[EMBED_TEXT_ROLE]}) and edgeCountByType lists EMBEDS_TEXT_OF (${edgeCountByType.EMBEDS_TEXT_OF})`,
+				nodeCountByRole[EMBED_TEXT_ROLE] === 1 && edgeCountByType.EMBEDS_TEXT_OF === 1,
+			);
+			const exclusionHolds = embedTextExcludedFromEmission({ candidateRun: withTextRun, baselineRun });
+			harness.ok('gate G-20 conjunct holds over the real runs', exclusionHolds);
+
+			measureEdfiEmbedTextRun(
+				{ forgeResult: forgeResultWithText, snapshotPath: forged.snapshotPath, admitEmbedTextRole: true },
+				(admittedError, admittedRun) => {
+					harness.equal(
+						'CONSTRUCT_ROLES is restored after the widened selection',
+						JSON.stringify(roundTripEdfiCompiler.CONSTRUCT_ROLES),
+						originalConstructRoleText,
+					);
+					// MEASURED 2026-09-14: on Ed-Fi an admitted text node is NOT counted as invention. The row
+					// reaches emitGraphStatements, which REFUSES a construct row lacking constructType or name
+					// (roundTripEdfiCompiler.js:670-671), and the validator issues no verdict. The kit mints a
+					// text node with neither (R-ET-2), so inventedTotal > 0 is unobservable here without
+					// fabricating fields no text node carries. The RED is therefore the named refusal OR an
+					// invention — never a silent pass — and the observed outcome is recorded verbatim.
+					harness.equal(
+						'the widening reached the selection: one more construct row was served',
+						((admittedRun || {}).servedGraphRows || { constructRowList: [] }).constructRowList.length,
+						baselineRun.servedGraphRows.constructRowList.length + 1,
+					);
+					const admittedOutcomeText = admittedError
+						? `REFUSED BY NAME at emission, no verdict issued: ${admittedError}`
+						: `inventedTotal ${admittedRun.verdict.inventedTotal}, lostTotal ${admittedRun.verdict.lostTotal}, invented subjects ${JSON.stringify(Array.from(new Set(admittedRun.verdict.report.inventedDetailList.map((one) => one.subject))))}`;
+					harness.ok(
+						`RED TWIN admitEmbedTextRole (data level): the admitted text node does NOT pass silently (${admittedOutcomeText})`,
+						admittedError
+							? /emitGraphStatements FAULT/.test(String(admittedError))
+							: admittedRun.verdict.inventedTotal > 0,
+					);
+					harness.equal(
+						'gate G-20 conjunct goes FALSE over the admitting run',
+						embedTextExcludedFromEmission({ candidateRun: admittedRun, baselineRun }),
+						false,
+					);
+					harness.note(
+						`P5 evidence (Ed-Fi): baseline inventedTotal ${baselineRun.verdict.inventedTotal}, lostTotal ${baselineRun.verdict.lostTotal}, ` +
+							`${baselineRun.statementCount} statements sha256 ${baselineRun.statementSetSha256}; ` +
+							`with text node inventedTotal ${withTextRun.verdict.inventedTotal}, lostTotal ${withTextRun.verdict.lostTotal}, ` +
+							`sha256 ${withTextRun.statementSetSha256}; census DmeEmbedText ${nodeCountByRole[EMBED_TEXT_ROLE]}, EMBEDS_TEXT_OF ${edgeCountByType.EMBEDS_TEXT_OF}; ` +
+							`admitting twin: ${admittedOutcomeText}`,
+					);
+					suiteState.probe.embedTextExcludedFromEmission = exclusionHolds;
+					done();
+				},
+			);
+		});
+	});
+});
+
+// ---------------------------------------------------------------------
+pushStep((done) => {
+	harness.section('RT-10 — gate suite: all 20 green AND every twin observed RED');
 
 	roundTripGates.loadGateDeclarations({ gatesFilePath: GATES_FILE_PATH }, (loadError, loaded) => {
 		harness.accepts('gate declarations load', [loadError].filter(Boolean));

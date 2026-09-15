@@ -144,6 +144,19 @@
 			"measure": "probe.derivedPropertiesOutsideStatementDomain",
 			"comparator": "isTrue",
 			"twin": "falsifyDerivedPropertyIsolationProbe"
+		},
+		// ---- PHASE P5 of the forge embed-text revision (embedText-091426, R-ET-5 / R-ET-20). Measured at
+		// the DATA level in test/test-sifRoundTrip.js SECTION 6c: the fixture's real forgeSif output plus one
+		// DmeEmbedText node and one EMBEDS_TEXT_OF edge (test/fixtures/embedTextNode.json). The same conjunct
+		// over a run whose label test admits the text node as a SifField is observed going FALSE there (the
+		// validator refuses the emission by name). It proves THE DIFF, not the production Cypher allowlist
+		// (roundTripSifCompiler.js:81, :226) — that is P9's live run.
+		{
+			"id": "G-18",
+			"title": "a TEXT NODE and its EMBEDS_TEXT_OF edge are excluded: with them present inventedTotal is 0, lostTotal EQUALS the run without them, and the emitted statement file is byte-identical",
+			"measure": "probe.embedTextExcludedFromEmission",
+			"comparator": "isTrue",
+			"twin": "admitEmbedTextLabel"
 		}
 	]
 }

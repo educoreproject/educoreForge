@@ -141,6 +141,14 @@ const moduleFunction =
 			// the doctrine names as strictly worse than the loss it would have cured.
 			falsifyDerivedPropertyIsolationProbe: (measurements) =>
 				setIn(measurements, 'probe.derivedPropertiesOutsideStatementDomain', false),
+
+			// ---- PHASE P5 (embedText-091426).
+
+			// G-18: the label selection admits the text node as a field, and the with/without runs stop
+			// agreeing. The DATA-LEVEL version of this admission is observed RED in
+			// test/test-sifRoundTrip.js SECTION 6c, where the validator refuses the emission by name.
+			admitEmbedTextLabel: (measurements) =>
+				setIn(measurements, 'probe.embedTextExcludedFromEmission', false),
 		};
 
 		// auditRegistryAgainst — a gate can never quietly go twin-less, and a twin can never

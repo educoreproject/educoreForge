@@ -1,0 +1,41 @@
+// =====================================================================================
+// cedsEmbedTextGates — the CEDS round trip's text-node positive-exclusion conjunct
+// =====================================================================================
+//
+// PHASE P5 of the forge embed-text revision (embedText-091426; PLAN §8.1 R-ET-5, §8.3 R-ET-20).
+//
+// WHY THIS IS NOT IN cedsFidelityGates.jsonc (R-ET-34, RADIANT_QUEST 2026-09-14): that file is
+// also read by the LIVE `graphBuilder -cedsGates` action (apps/graph-builder/lib/actions.js),
+// whose measures come from roundTripGateMeasures.js. A conjunct measured only by a hermetic
+// test would read UNMEASURED there forever, and a gate that can never pass live teaches readers
+// to skip the live suite. This file is read ONLY by forges/ceds/test/test-cedsRoundTrip.js,
+// which is where the measure is actually produced, over REAL rows through the REAL compiler,
+// canonicalizer and diff. (test-cedsGates.js synthesizes its measurements from each gate's own
+// expectation, so a gate read there could never be red on real data.)
+//
+// WHAT THE CONJUNCT PROVES, STATED EXACTLY: a DmeEmbedText node and an EMBEDS_TEXT_OF edge fed
+// into the in-test reader double — whose selection step mirrors roundTripCompiler.js:837-846
+// (the role list) and :877-891 (the role-scoped edge queries) — leave the emission unchanged.
+// It proves THE DIFF: that a text node reaching emission WOULD move inventedTotal (the twin's
+// data-level observation) and that the mirrored allowlist keeps it out. It does NOT prove the
+// production Cypher allowlist; that is proven only by P7's live run (inventedTotal 0).
+//
+// Same vocabulary as cedsFidelityGates.jsonc, evaluated by lib/roundTripGates.js. The twin lives
+// in test/cedsEmbedTextGateTwins.js, not lib/roundTripGateTwins.js: the fidelity registry is
+// audited for orphans against the fidelity file (test-cedsGates.js), and a twin declared here
+// would read there as an orphan.
+{
+  "suiteName": "cedsEmbedText",
+  "suiteVersion": "1.0.0",
+  "acceptanceRule": "every gate PASS and every twin observed RED. No percentage participates.",
+
+  "gates": [
+    {
+      "id": "E-1", "family": "E",
+      "contract": "A text node and its EMBEDS_TEXT_OF edge are excluded from the round trip: with them present, inventedTotal is 0, lostTotal EQUALS the run without them, and the emitted RDF and its canonical statement set are byte-identical to that run.",
+      "note": "The data-level red is observed in test-cedsRoundTrip.js: the same conjunct computed over a run whose selection double admits DmeEmbedText as a class goes false, with inventedTotal recorded.",
+      "measure": "probe:embedTextExcludedFromEmission", "comparator": "equals", "expected": true,
+      "twin": "admitEmbedTextRole"
+    }
+  ]
+}

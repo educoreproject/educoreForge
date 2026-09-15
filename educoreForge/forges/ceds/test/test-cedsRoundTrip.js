@@ -55,6 +55,11 @@ const harness = require('../../../test/testLib/harness')(moduleName);
 const canonicalLib = require('../lib/roundTripCanonical')();
 const compilerLib = require('../lib/roundTripCompiler')();
 const diffLib = require('../lib/roundTripDiff')();
+const validatorLib = require('../roundTripValidator')();
+const gatesLib = require('../lib/roundTripGates')();
+const embedTextTwinsLib = require('./cedsEmbedTextGateTwins')();
+
+const crypto = require('crypto');
 
 const FIXTURE_DIR = path.join(__dirname, 'fixtures');
 const CEDS = 'https://w3id.org/CEDStandards/terms/';
@@ -781,15 +786,412 @@ const runContainerResolutionSection = (done) => {
 	);
 };
 
+// =====================================================================
+// PHASE P5 (embedText-091426) — a TEXT NODE is excluded from the round trip
+// =====================================================================
+// R-ET-5 / R-ET-20. The double above hands assembleCedsGraph rows ALREADY sorted into role
+// buckets, so it has no selection step a text node could fall through. The production reader does
+// select: one role-scoped node read per role (roundTripCompiler.js:786, :837-846) and three
+// role-scoped edge queries (:877-891). selectCedsRows mirrors that selection over a FLAT
+// forge-shaped node and edge list, so a text node and its edge enter the double exactly where they
+// would enter the real reader. The mirror is DATA (the bucket registry and the edge rule list) and
+// it is proven faithful before it is trusted: over the fixture alone it must reproduce
+// buildGraphRows() byte for byte.
+//
+// PROJECTION: the production reader projects READ_PROPERTY_NAMES (:264, :782), which the compiler
+// does not export, so no projection is applied here. That is inert for the text node:
+// entityFromNode reads only uri/stableId, the GRAPH_PROPERTY_BY_FIELD properties and crossRefs
+// (:702-735), none of which carries the text.
+//
+// WHAT THIS PROVES: THE DIFF. Admitting DmeEmbedText into the mirrored selection moves
+// inventedTotal; the mirrored allowlist keeps it at zero. It does NOT prove the production Cypher
+// allowlist. Only P7's live run (inventedTotal 0 against the real graph) proves that.
+
+const EMBED_TEXT_FIXTURE_PATH = path.join(FIXTURE_DIR, 'embedTextNode.json');
+const EMBED_TEXT_GATES_PATH = path.join(__dirname, '..', 'gates', 'cedsEmbedTextGates.jsonc');
+const EMBED_TEXT_ROLE = 'DmeEmbedText';
+
+// the reader's per-role node reads (roundTripCompiler.js:837-846) and the assembleCedsGraph
+// argument each role's rows arrive under (:910-919). Order is the reader's order.
+const CEDS_ROW_BUCKET_BY_ROLE = Object.freeze({
+	DmeStandardRoot: 'rootNodes',
+	DmeClass: 'classNodes',
+	DmeProperty: 'propertyNodes',
+	DmeOptionSet: 'optionSetNodes',
+	DmeOptionValue: 'optionValueNodes',
+	DmeEditHistoryEntry: 'editHistoryEntryNodes',
+	DmeRestriction: 'restrictionNodes',
+	DmeVocabularyTerm: 'vocabularyTermNodes',
+});
+
+// THE RED TWIN'S SELECTION: the same registry with the text role admitted as a class, which is
+// what widening the class read to `role IN ['DmeClass', 'DmeEmbedText']` would do.
+const CEDS_ROW_BUCKET_BY_ROLE_ADMITTING_EMBED_TEXT = Object.freeze({
+	...CEDS_ROW_BUCKET_BY_ROLE,
+	[EMBED_TEXT_ROLE]: 'classNodes',
+});
+
+// the three role-scoped edge queries (roundTripCompiler.js:877-891). inScheme returns the value
+// as fromUri and the set as toUri, the reverse of the HAS_VALUE edge's direction.
+const LAYER_ONE_CLASSLIKE_ROLE_LIST = Object.freeze(['DmeClass', 'DmeOptionSet']);
+const CEDS_EDGE_RULE_LIST = Object.freeze([
+	{
+		pairListName: 'subClassOfPairs',
+		edgeTypeList: ['SUBCLASS_OF'],
+		fromRoleList: LAYER_ONE_CLASSLIKE_ROLE_LIST,
+		toRoleList: LAYER_ONE_CLASSLIKE_ROLE_LIST,
+		pairIsReversed: false,
+	},
+	{
+		pairListName: 'rangePairs',
+		edgeTypeList: ['HAS_OPTION_SET', 'REFERENCES'],
+		fromRoleList: ['DmeProperty'],
+		toRoleList: LAYER_ONE_CLASSLIKE_ROLE_LIST,
+		pairIsReversed: false,
+	},
+	{
+		pairListName: 'inSchemePairs',
+		edgeTypeList: ['HAS_VALUE'],
+		fromRoleList: ['DmeOptionSet'],
+		toRoleList: ['DmeOptionValue'],
+		pairIsReversed: true,
+	},
+]);
+
+// flattenFixtureRows — the hand-built buckets back into the forge's flat { nodes, edges } shape.
+// A range target that is an option set travels as HAS_OPTION_SET, a class as REFERENCES.
+const flattenFixtureRows = (rows) => {
+	const nodeList = [];
+	Object.keys(CEDS_ROW_BUCKET_BY_ROLE).forEach((oneRole) => {
+		(rows[CEDS_ROW_BUCKET_BY_ROLE[oneRole]] || []).forEach((oneRow) => {
+			nodeList.push({ stableId: oneRow.stableId, role: oneRow.role, properties: oneRow });
+		});
+	});
+	const roleByStableId = {};
+	nodeList.forEach((oneNode) => {
+		roleByStableId[oneNode.stableId] = oneNode.role;
+	});
+	const edgeFor = ({ type, fromStableId, toStableId }) => ({
+		type,
+		fromRef: { source: 'CEDS', id: fromStableId },
+		toRef: { source: 'CEDS', id: toStableId },
+		properties: { provenanceTier: 'structural' },
+	});
+	const edgeList = [
+		...rows.subClassOfPairs.map((onePair) =>
+			edgeFor({ type: 'SUBCLASS_OF', fromStableId: onePair.from, toStableId: onePair.to }),
+		),
+		...rows.rangePairs.map((onePair) =>
+			edgeFor({
+				type: roleByStableId[onePair.to] === 'DmeOptionSet' ? 'HAS_OPTION_SET' : 'REFERENCES',
+				fromStableId: onePair.from,
+				toStableId: onePair.to,
+			}),
+		),
+		...rows.inSchemePairs.map((onePair) =>
+			edgeFor({ type: 'HAS_VALUE', fromStableId: onePair.to, toStableId: onePair.from }),
+		),
+	];
+	return { nodeList, edgeList };
+};
+
+// selectCedsRows — the reader's SELECTION, as data. A bucket is created only when a role read
+// returns rows (absent is absent), so the fixture-only selection is byte-comparable to
+// buildGraphRows(). Edge endpoints are judged by the node's role property whether or not that role
+// was read, exactly as the Cypher `WHERE a.role IN [...]` judges them.
+const selectCedsRows = ({ nodeList, edgeList, rowBucketByRole }) => {
+	const rows = {};
+	Object.keys(rowBucketByRole).forEach((oneRole) => {
+		nodeList
+			.filter((oneNode) => oneNode.role === oneRole)
+			.forEach((oneNode) => {
+				const bucketName = rowBucketByRole[oneRole];
+				rows[bucketName] = rows[bucketName] || [];
+				rows[bucketName].push({ ...oneNode.properties });
+			});
+	});
+	const nodeByStableId = {};
+	nodeList.forEach((oneNode) => {
+		nodeByStableId[oneNode.stableId] = oneNode;
+	});
+	CEDS_EDGE_RULE_LIST.forEach((oneRule) => {
+		rows[oneRule.pairListName] = edgeList
+			.filter((oneEdge) => oneRule.edgeTypeList.indexOf(oneEdge.type) !== -1)
+			.map((oneEdge) => ({
+				fromNode: nodeByStableId[oneEdge.fromRef.id],
+				toNode: nodeByStableId[oneEdge.toRef.id],
+			}))
+			.filter(
+				({ fromNode, toNode }) =>
+					fromNode &&
+					toNode &&
+					oneRule.fromRoleList.indexOf(fromNode.role) !== -1 &&
+					oneRule.toRoleList.indexOf(toNode.role) !== -1,
+			)
+			.map(({ fromNode, toNode }) =>
+				oneRule.pairIsReversed
+					? { from: toNode.properties.uri, to: fromNode.properties.uri }
+					: { from: fromNode.properties.uri, to: toNode.properties.uri },
+			);
+	});
+	return rows;
+};
+
+// replaceRowsWith — an adjustRows for makeGraphDouble that serves exactly the selected rows.
+const replaceRowsWith = (selectedRows) => (rows) => {
+	Object.keys(rows).forEach((oneBucketName) => {
+		delete rows[oneBucketName];
+	});
+	Object.assign(rows, selectedRows);
+};
+
+// checkEmbedTextFixture — the fixture's identity is RE-DERIVED, never trusted: the stableId is the
+// R-ET-1 join over the CEDS root (one slash), the hash is sha256 of the text, and the node carries
+// no name and no searchText. A fixture that drifts from that shape proves nothing, so it is refused
+// by name.
+const checkEmbedTextFixture = (embedTextFixture) => {
+	const { textNode, embedsTextOfEdge } = embedTextFixture || {};
+	if (!textNode || !embedsTextOfEdge) {
+		return [`${EMBED_TEXT_FIXTURE_PATH}: textNode and embedsTextOfEdge are REQUIRED`];
+	}
+	const textProperties = textNode.properties || {};
+	const textSha256 = crypto.createHash('sha256').update(String(textProperties.text)).digest('hex');
+	const expectedStableId = `${CEDS}embedText/${textSha256}`;
+	const propertyNameList = (embedsTextOfEdge.properties || {}).propertyNameList || [];
+	return [
+		[textNode.role === EMBED_TEXT_ROLE, `role is '${textNode.role}', not ${EMBED_TEXT_ROLE}`],
+		[
+			['ForgedNode', 'CedsEmbedText', EMBED_TEXT_ROLE].every(
+				(oneLabel) => (textNode.labels || []).indexOf(oneLabel) !== -1,
+			),
+			`labels ${JSON.stringify(textNode.labels)} lack the [ForgedNode, CedsEmbedText, DmeEmbedText] triple`,
+		],
+		[textNode.stableId === expectedStableId, `stableId '${textNode.stableId}' is not '${expectedStableId}'`],
+		[textProperties.uri === expectedStableId, `uri '${textProperties.uri}' is not the stableId`],
+		[textProperties.path === `embedText/${textSha256}`, `path '${textProperties.path}' is not embedText/<sha256(text)>`],
+		[textProperties.name === undefined, 'a text node carries no name'],
+		[textProperties.searchText === undefined, 'a text node carries no searchText'],
+		[embedsTextOfEdge.type === 'EMBEDS_TEXT_OF', `edge type is '${embedsTextOfEdge.type}'`],
+		[embedsTextOfEdge.fromRef.id === expectedStableId, 'the edge does not leave the text node'],
+		[
+			propertyNameList.length > 0 && JSON.stringify(propertyNameList) === JSON.stringify(propertyNameList.slice().sort()),
+			`propertyNameList ${JSON.stringify(propertyNameList)} is not a non-empty sorted list`,
+		],
+	]
+		.filter(([holds]) => !holds)
+		.map(([, complaint]) => `${EMBED_TEXT_FIXTURE_PATH}: ${complaint}`);
+};
+
+// measureRun — one round trip's verdict numbers (the validator's own A13 partition), its emitted
+// bytes and its canonical statement set.
+const measureRun = (adjustRows, callback) => {
+	roundTripReport(adjustRows, (runError, result) => {
+		if (runError) {
+			callback(runError);
+			return;
+		}
+		const assembled = validatorLib.assembleVerdictNumbers({ report: result.report });
+		if (assembled.error) {
+			callback(assembled.error);
+			return;
+		}
+		const statementSetText = Array.from(result.emittedStatements.keys()).sort().join('\n');
+		callback('', {
+			numbers: assembled.numbers,
+			report: result.report,
+			rdfText: result.rdfText,
+			statementCount: result.emittedStatements.size,
+			statementSetText,
+			statementSetSha256: crypto.createHash('sha256').update(statementSetText).digest('hex'),
+		});
+	});
+};
+
+// embedTextExcludedFromEmission — gate E-1's conjunct, computed over a candidate run and the run
+// without the text node. Every clause is an equality with a measured value, never "still clean".
+const embedTextExcludedFromEmission = ({ candidateRun, baselineRun }) =>
+	candidateRun.numbers.inventedTotal === 0 &&
+	candidateRun.numbers.lostTotal === baselineRun.numbers.lostTotal &&
+	candidateRun.rdfText === baselineRun.rdfText &&
+	candidateRun.statementSetText === baselineRun.statementSetText;
+
+const runEmbedTextExclusionSection = (done) => {
+	harness.section(
+		'PHASE P5 — a TEXT NODE and its EMBEDS_TEXT_OF edge are excluded from the round trip (proves the DIFF; the production allowlist is P7\'s)',
+	);
+
+	if (!fs.existsSync(EMBED_TEXT_FIXTURE_PATH)) {
+		harness.ok('the embed-text fixture exists', false, `${EMBED_TEXT_FIXTURE_PATH} is REQUIRED`);
+		done();
+		return;
+	}
+	const embedTextFixture = JSON.parse(fs.readFileSync(EMBED_TEXT_FIXTURE_PATH, 'utf8'));
+	const fixtureComplaintList = checkEmbedTextFixture(embedTextFixture);
+	harness.equal(
+		'the text node and edge have the R-ET-1/R-ET-4 shape (identity re-derived from the text)',
+		fixtureComplaintList.length,
+		0,
+	);
+	if (fixtureComplaintList.length) {
+		harness.note(fixtureComplaintList.join('\n'));
+		done();
+		return;
+	}
+	const { textNode, embedsTextOfEdge } = embedTextFixture;
+
+	const fixtureGraph = flattenFixtureRows(buildGraphRows());
+	harness.ok(
+		'the edge points at a node the fixture actually carries',
+		fixtureGraph.nodeList.some((oneNode) => oneNode.stableId === embedsTextOfEdge.toRef.id),
+		embedsTextOfEdge.toRef.id,
+	);
+	harness.equal(
+		'the selection double is FAITHFUL: over the fixture alone it reproduces the hand-built rows byte for byte',
+		JSON.stringify(selectCedsRows({ ...fixtureGraph, rowBucketByRole: CEDS_ROW_BUCKET_BY_ROLE })),
+		JSON.stringify(buildGraphRows()),
+	);
+
+	const graphWithText = {
+		nodeList: fixtureGraph.nodeList.concat([textNode]),
+		edgeList: fixtureGraph.edgeList.concat([embedsTextOfEdge]),
+	};
+	const excludingRows = selectCedsRows({ ...graphWithText, rowBucketByRole: CEDS_ROW_BUCKET_BY_ROLE });
+	const admittingRows = selectCedsRows({
+		...graphWithText,
+		rowBucketByRole: CEDS_ROW_BUCKET_BY_ROLE_ADMITTING_EMBED_TEXT,
+	});
+	const pairTouchesText = (rows) =>
+		CEDS_EDGE_RULE_LIST.some((oneRule) =>
+			rows[oneRule.pairListName].some(
+				(onePair) => onePair.from === textNode.stableId || onePair.to === textNode.stableId,
+			),
+		);
+	harness.ok('EMBEDS_TEXT_OF is selected into no edge pair list', !pairTouchesText(excludingRows));
+	harness.ok(
+		'EMBEDS_TEXT_OF stays out of every pair list even when the role is admitted (no edge query names the type)',
+		!pairTouchesText(admittingRows),
+	);
+
+	measureRun(null, (baselineError, baselineRun) => {
+		harness.accepts('the run WITHOUT the text node measures', baselineError ? [baselineError] : []);
+		if (baselineError) {
+			done();
+			return;
+		}
+		measureRun(replaceRowsWith(excludingRows), (withTextError, withTextRun) => {
+			harness.accepts('the run WITH the text node measures', withTextError ? [withTextError] : []);
+			if (withTextError) {
+				done();
+				return;
+			}
+			harness.equal('WITH the text node: inventedTotal is 0', withTextRun.numbers.inventedTotal, 0);
+			harness.equal(
+				`WITH the text node: lostTotal EQUALS the run without it (${baselineRun.numbers.lostTotal})`,
+				withTextRun.numbers.lostTotal,
+				baselineRun.numbers.lostTotal,
+			);
+			harness.ok(
+				`the emitted RDF is byte-identical with and without the text node (${baselineRun.rdfText.length} bytes)`,
+				withTextRun.rdfText === baselineRun.rdfText,
+			);
+			harness.ok(
+				`the canonical statement set is byte-identical (${baselineRun.statementCount} statements, sha256 ${baselineRun.statementSetSha256})`,
+				withTextRun.statementSetText === baselineRun.statementSetText,
+				`with the text node: ${withTextRun.statementCount} statements, sha256 ${withTextRun.statementSetSha256}`,
+			);
+			const exclusionHolds = embedTextExcludedFromEmission({ candidateRun: withTextRun, baselineRun });
+			harness.ok('gate E-1 conjunct holds over the real runs', exclusionHolds);
+
+			measureRun(replaceRowsWith(admittingRows), (admittedError, admittedRun) => {
+				harness.accepts('the run ADMITTING the text role measures', admittedError ? [admittedError] : []);
+				if (admittedError) {
+					done();
+					return;
+				}
+				const inventedSubjectList = inventedList(admittedRun.report).map((one) => one.subject);
+				harness.ok(
+					`RED TWIN admitEmbedTextRole (data level): admitting DmeEmbedText moves inventedTotal off zero (observed ${admittedRun.numbers.inventedTotal})`,
+					admittedRun.numbers.inventedTotal > 0,
+				);
+				harness.ok(
+					'the invention is charged to the text node, by name',
+					inventedSubjectList.length > 0 &&
+						inventedSubjectList.every((oneSubject) => oneSubject === textNode.stableId),
+					JSON.stringify(inventedSubjectList),
+				);
+				harness.equal(
+					'gate E-1 conjunct goes FALSE over the admitting run',
+					embedTextExcludedFromEmission({ candidateRun: admittedRun, baselineRun }),
+					false,
+				);
+				harness.note(
+					`P5 evidence (CEDS): baseline inventedTotal ${baselineRun.numbers.inventedTotal}, lostTotal ${baselineRun.numbers.lostTotal}, ` +
+						`${baselineRun.statementCount} statements sha256 ${baselineRun.statementSetSha256}; ` +
+						`with text node inventedTotal ${withTextRun.numbers.inventedTotal}, lostTotal ${withTextRun.numbers.lostTotal}, ` +
+						`sha256 ${withTextRun.statementSetSha256}; admitting twin inventedTotal ${admittedRun.numbers.inventedTotal}, ` +
+						`lostTotal ${admittedRun.numbers.lostTotal}`,
+				);
+
+				runEmbedTextGateSuite({ exclusionHolds }, done);
+			});
+		});
+	});
+};
+
+// runEmbedTextGateSuite — E-1 evaluated over the REAL measurement, and its twin observed RED.
+const runEmbedTextGateSuite = ({ exclusionHolds }, done) => {
+	gatesLib.loadGateDeclarations({ filePath: EMBED_TEXT_GATES_PATH }, (loadError, loadResult) => {
+		harness.accepts('cedsEmbedTextGates.jsonc loads', loadError ? [loadError] : []);
+		if (loadError) {
+			done();
+			return;
+		}
+		const { declarations } = loadResult;
+		const measurements = { probe: { embedTextExcludedFromEmission: exclusionHolds } };
+		embedTextTwinsLib.auditRegistryAgainst({ declarations }, (auditError, audit) => {
+			harness.accepts('the embed-text twin registry audits', auditError ? [auditError] : []);
+			harness.equal('every E gate has a twin implementation', audit.missing.length, 0, audit.missing.join(', '));
+			harness.equal('no orphaned embed-text twin', audit.orphaned.length, 0, audit.orphaned.join(', '));
+			gatesLib.runTwins(
+				{ declarations, measurements, twinRegistry: embedTextTwinsLib.twinRegistry },
+				(twinError, twinResult) => {
+					harness.accepts('the embed-text twin sweep runs', twinError ? [twinError] : []);
+					twinResult.twinReports.forEach((oneReport) => {
+						harness.ok(
+							`${oneReport.gateId} twin '${oneReport.twin}' observed RED (measure boundary)`,
+							oneReport.ran && oneReport.gateWentRed,
+							oneReport.note,
+						);
+					});
+					gatesLib.evaluateSuite(
+						{ declarations, measurements, observedTwins: twinResult.observedTwins },
+						(evaluateError, evaluated) => {
+							harness.accepts('the embed-text suite evaluates', evaluateError ? [evaluateError] : []);
+							harness.ok(
+								'embed-text suite ACCEPTED — zero FAIL, zero UNMEASURED, zero UNPROVEN',
+								evaluated.suiteResult.accepted === true,
+								JSON.stringify(evaluated.suiteResult.gates.map((one) => `${one.id}:${one.status}`)),
+							);
+							done();
+						},
+					);
+				},
+			);
+		});
+	});
+};
+
 // serial, because the harness tallies into one report
 runCanonicalizationSection(() => {
 	runZeroLossSection(() => {
 		runDroppedStatementSection(() => {
 			runInventedStatementSection(() => {
 				runCompileToFileSection(() => {
-					runRefusalSection(() => {
-						runContainerResolutionSection(() => {
-							harness.report();
+					runEmbedTextExclusionSection(() => {
+						runRefusalSection(() => {
+							runContainerResolutionSection(() => {
+								harness.report();
+							});
 						});
 					});
 				});

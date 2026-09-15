@@ -135,6 +135,14 @@ const moduleFunction = () => {
 		// G-19: two forge edges share a (from, type, to) triple and would collapse under MERGE.
 		falsifyEdgeUniquenessProbe: (measurements) =>
 			setDottedValue(measurements, 'probe.forgeEdgeTriplesDistinct', false),
+
+		// G-20 (PHASE P5, embedText-091426): the selection admits DmeEmbedText and the with/without
+		// runs stop agreeing. The DATA-LEVEL version of this admission — CONSTRUCT_ROLES widened for
+		// the double's selection step — is observed RED in test/test-edfiRoundTrip.js, where emission
+		// REFUSES the text row by name and no verdict is issued (R-ET-36); the refusal is recorded
+		// verbatim there.
+		admitEmbedTextRole: (measurements) =>
+			setDottedValue(measurements, 'probe.embedTextExcludedFromEmission', false),
 	};
 
 	// auditRegistryAgainst — every declared twin must exist here; every twin here must be

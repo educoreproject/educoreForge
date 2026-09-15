@@ -1,0 +1,30 @@
+{
+	"fixturePurpose": "PHASE P5 (embedText-091426, R-ET-5/R-ET-20): ONE CEDS text node and ONE EMBEDS_TEXT_OF edge, shaped as the P3 kit will mint them (contractGraphKit.js makeNode: _id and the stable-URI property 'uri' stamped with the stableId; R-ET-1 revised identity; R-ET-2 depth 1 / crossRefs '[]'; R-ET-8 embedSourceProperty / vectorPropertyName; no name, no searchText). Fed into the in-test reader double of test-cedsRoundTrip.js to prove a text node reaching the round trip moves nothing, and that admitting its role moves inventedTotal. It proves the DIFF, never the production Cypher allowlist (that is P7's live run).",
+	"textNode": {
+		"labels": ["ForgedNode", "CedsEmbedText", "DmeEmbedText"],
+		"stableId": "https://w3id.org/CEDStandards/terms/embedText/ebd40dd8c1276d15f99f628f53ab47dfc9c125be4eed77e6eb585739c4f20fc2",
+		"role": "DmeEmbedText",
+		"properties": {
+			"_id": "https://w3id.org/CEDStandards/terms/embedText/ebd40dd8c1276d15f99f628f53ab47dfc9c125be4eed77e6eb585739c4f20fc2",
+			"_source": "CEDS",
+			"role": "DmeEmbedText",
+			"uri": "https://w3id.org/CEDStandards/terms/embedText/ebd40dd8c1276d15f99f628f53ab47dfc9c125be4eed77e6eb585739c4f20fc2",
+			"parentId": "https://w3id.org/CEDStandards/terms/",
+			"path": "embedText/ebd40dd8c1276d15f99f628f53ab47dfc9c125be4eed77e6eb585739c4f20fc2",
+			"text": "A person enrolled in the fixture.",
+			"embedSourceProperty": "text",
+			"vectorPropertyName": "textEmbedding",
+			"depth": 1,
+			"crossRefs": "[]"
+		}
+	},
+	"embedsTextOfEdge": {
+		"type": "EMBEDS_TEXT_OF",
+		"fromRef": {
+			"source": "CEDS",
+			"id": "https://w3id.org/CEDStandards/terms/embedText/ebd40dd8c1276d15f99f628f53ab47dfc9c125be4eed77e6eb585739c4f20fc2"
+		},
+		"toRef": { "source": "CEDS", "id": "https://w3id.org/CEDStandards/terms/C900001" },
+		"properties": { "propertyNameList": ["definition", "description"], "provenanceTier": "structural" }
+	}
+}

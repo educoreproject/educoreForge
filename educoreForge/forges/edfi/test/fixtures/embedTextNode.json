@@ -1,0 +1,30 @@
+{
+	"fixturePurpose": "PHASE P5 (embedText-091426, R-ET-5/R-ET-20): ONE Ed-Fi text node and ONE EMBEDS_TEXT_OF edge, shaped as the P3 kit will mint them (contractGraphKit.js makeNode: _id and the stable-URI property 'edfiStableId' stamped with the stableId; R-ET-1 revised identity; R-ET-2 depth 1 / crossRefs '[]'; R-ET-8 embedSourceProperty / vectorPropertyName; no name, no searchText). Appended to the CARRIABLE fixture's real forge result before it enters roundTripGraphDouble.makeGraphDouble. It proves the DIFF, never the production Cypher allowlist (that is P7's live run).",
+	"textNode": {
+		"labels": ["ForgedNode", "EdfiEmbedText", "DmeEmbedText"],
+		"stableId": "edfi:root/embedText/2d31613893e7530af7a087152efd9455a030b2a3550f8850ce3bce83a53aa9ec",
+		"role": "DmeEmbedText",
+		"properties": {
+			"_id": "edfi:root/embedText/2d31613893e7530af7a087152efd9455a030b2a3550f8850ce3bce83a53aa9ec",
+			"_source": "EdFi",
+			"role": "DmeEmbedText",
+			"edfiStableId": "edfi:root/embedText/2d31613893e7530af7a087152efd9455a030b2a3550f8850ce3bce83a53aa9ec",
+			"parentId": "edfi:root",
+			"path": "embedText/2d31613893e7530af7a087152efd9455a030b2a3550f8850ce3bce83a53aa9ec",
+			"text": "A fixture school.",
+			"embedSourceProperty": "text",
+			"vectorPropertyName": "textEmbedding",
+			"depth": 1,
+			"crossRefs": "[]"
+		}
+	},
+	"embedsTextOfEdge": {
+		"type": "EMBEDS_TEXT_OF",
+		"fromRef": {
+			"source": "EdFi",
+			"id": "edfi:root/embedText/2d31613893e7530af7a087152efd9455a030b2a3550f8850ce3bce83a53aa9ec"
+		},
+		"toRef": { "source": "EdFi", "id": "edfi:domainEntity/FixtureSchool" },
+		"properties": { "propertyNameList": ["description"], "provenanceTier": "structural" }
+	}
+}

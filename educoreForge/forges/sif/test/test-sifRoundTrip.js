@@ -397,7 +397,7 @@ taskList.push((args, next) => {
 				path.join(ARTIFACT_DIR, 'sifRoundTripFixtureClean.verdict.json'),
 				`${JSON.stringify(verdict, null, 1)}\n`,
 			);
-			next('', { ...args, snapshotDirPath, sifGraph, cleanVerdict: verdict });
+			next('', { ...args, snapshotDirPath, sifGraph, cleanVerdict: verdict, forgeResult });
 		});
 	});
 });
@@ -982,6 +982,217 @@ taskList.push((args, next) => {
 			next('', args);
 		});
 	});
+});
+
+// SECTION 6c — PHASE P5 (embedText-091426, R-ET-5 / R-ET-20): a TEXT NODE is excluded from the round
+// trip. The text node and its EMBEDS_TEXT_OF edge are appended to the fixture's REAL forgeSif output,
+// the same { nodes, edges } buildSifGraphFromForgeOutput selects from, so they enter the double
+// exactly as the forge's own output does. That selection is BY LABEL (roundTripGraphDouble.js:60-86)
+// and keeps only HAS_PROPERTY pairs between selected objects and fields (:88-98).
+//
+// RED TWIN admitEmbedTextLabel: the text node's label test — `labels.includes('SifField')` (:80) — is
+// widened IN THIS PROCESS, on that one node's label list, to answer SifField too; the production
+// double is not edited. MEASURED 2026-09-14: on SIF the admitted field is NOT counted as invention —
+// the validator REFUSES the emission ('carries no xpath') and issues no verdict. The kit mints a text
+// node without an xpath (R-ET-2), so inventedTotal > 0 is unobservable here without fabricating one.
+// The RED is therefore the named refusal OR an invention, never a silent pass, recorded verbatim.
+//
+// WHAT THIS PROVES: THE DIFF. It does NOT prove the production Cypher allowlist
+// (roundTripSifCompiler.js:81, :226); only P9's live run does.
+const SIF_EMBED_TEXT_FIXTURE_PATH = path.join(__dirname, 'fixtures', 'embedTextNode.json');
+const SIF_EMBED_TEXT_ROLE = 'DmeEmbedText';
+
+const admitEmbedTextLabel = (textNode) => {
+	const widenedLabelList = textNode.labels.slice();
+	widenedLabelList.includes = (oneLabel) =>
+		Array.prototype.includes.call(widenedLabelList, oneLabel) || oneLabel === 'SifField';
+	return { ...textNode, labels: widenedLabelList };
+};
+
+// measureSifEmbedTextRun — one validation over the double; the emitted statement set is the file the
+// validator itself writes (roundTripValidator.js:281-291), compared as bytes.
+const measureSifEmbedTextRun = ({ nodes, edges, snapshotDirPath, runLabel }, callback) => {
+	const sifGraph = doubleLib.buildSifGraphFromForgeOutput({ nodes, edges });
+	const outputPath = makeTempDir(`embedText-${runLabel}`);
+	validatorLib.validateWithReader(
+		{
+			reader: doubleLib.makeGraphDoubleReader({ sifGraph }),
+			snapshotPath: snapshotDirPath,
+			outputPath,
+			graphIdentity: { containerName: `graphDouble:embedText-${runLabel}`, boltUrl: 'none (reader double)' },
+		},
+		(validateError, verdict) => {
+			if (validateError) {
+				callback(validateError, { sifGraph });
+				return;
+			}
+			const emittedFilePath = path.join(outputPath, 'emitted', 'sifStatements.emitted.txt');
+			if (!fs.existsSync(emittedFilePath)) {
+				callback(`measureSifEmbedTextRun: the validator wrote no ${emittedFilePath}`, { sifGraph });
+				return;
+			}
+			const emittedBytes = fs.readFileSync(emittedFilePath);
+			callback('', {
+				verdict,
+				sifGraph,
+				emittedBytes,
+				statementCount: emittedBytes.toString('utf-8').split('\n').filter((oneLine) => oneLine !== '').length,
+				statementSetSha256: crypto.createHash('sha256').update(emittedBytes).digest('hex'),
+			});
+		},
+	);
+};
+
+// embedTextExcludedFromEmission — gate G-18's conjunct; a run that issued no verdict cannot satisfy it.
+const sifEmbedTextExcludedFromEmission = ({ candidateRun, baselineRun }) =>
+	Boolean(candidateRun && candidateRun.verdict) &&
+	candidateRun.verdict.inventedTotal === 0 &&
+	candidateRun.verdict.lostTotal === baselineRun.verdict.lostTotal &&
+	candidateRun.emittedBytes.equals(baselineRun.emittedBytes);
+
+// checkSifEmbedTextFixture — identity RE-DERIVED from the text and the REAL forge's root; refused by name.
+const checkSifEmbedTextFixture = ({ embedTextFixture, forgeResult }) => {
+	const { textNode, embedsTextOfEdge } = embedTextFixture || {};
+	if (!textNode || !embedsTextOfEdge) {
+		return [`${SIF_EMBED_TEXT_FIXTURE_PATH}: textNode and embedsTextOfEdge are REQUIRED`];
+	}
+	const rootNode = forgeResult.nodes.find((oneNode) => (oneNode.labels || []).includes('SifRoot'));
+	const rootStableId = rootNode ? rootNode.stableId : '(no SifRoot in the forge result)';
+	const textProperties = textNode.properties || {};
+	const textSha256 = crypto.createHash('sha256').update(String(textProperties.text)).digest('hex');
+	const expectedStableId = `${rootStableId}/embedText/${textSha256}`;
+	const propertyNameList = (embedsTextOfEdge.properties || {}).propertyNameList || [];
+	return [
+		[textNode.role === SIF_EMBED_TEXT_ROLE, `role is '${textNode.role}'`],
+		[
+			['ForgedNode', 'SifEmbedText', SIF_EMBED_TEXT_ROLE].every((oneLabel) => (textNode.labels || []).includes(oneLabel)),
+			`labels ${JSON.stringify(textNode.labels)} lack the [ForgedNode, SifEmbedText, DmeEmbedText] triple`,
+		],
+		[textNode.stableId === expectedStableId, `stableId '${textNode.stableId}' is not '${expectedStableId}'`],
+		[textProperties._id === expectedStableId, '_id is not the stableId'],
+		[textProperties.sifStableId === expectedStableId, 'sifStableId is not the stableId'],
+		[textProperties.parentId === rootStableId, `parentId '${textProperties.parentId}' is not the forge root '${rootStableId}'`],
+		[textProperties._source === rootNode.properties._source, `_source '${textProperties._source}' is not the forge's`],
+		[textProperties.path === `embedText/${textSha256}`, 'path is not embedText/<sha256(text)>'],
+		[textProperties.name === undefined, 'a text node carries no name'],
+		[textProperties.searchText === undefined, 'a text node carries no searchText'],
+		[embedsTextOfEdge.type === 'EMBEDS_TEXT_OF', `edge type is '${embedsTextOfEdge.type}'`],
+		[embedsTextOfEdge.fromRef.id === expectedStableId, 'the edge does not leave the text node'],
+		[
+			forgeResult.nodes.some((oneNode) => oneNode.stableId === embedsTextOfEdge.toRef.id),
+			`the edge's target '${embedsTextOfEdge.toRef.id}' is not in the forge result`,
+		],
+		[
+			propertyNameList.length > 0 && JSON.stringify(propertyNameList) === JSON.stringify(propertyNameList.slice().sort()),
+			`propertyNameList ${JSON.stringify(propertyNameList)} is not a non-empty sorted list`,
+		],
+	]
+		.filter(([holds]) => !holds)
+		.map(([, complaint]) => `${SIF_EMBED_TEXT_FIXTURE_PATH}: ${complaint}`);
+};
+
+taskList.push((args, next) => {
+	if (args.fixtureBroken) {
+		harness.ok('embed-text proof reachable', false, 'fixture broke upstream — the text-node proof is unmeasurable');
+		next('', args);
+		return;
+	}
+	harness.section(
+		"SECTION 6c — PHASE P5: a TEXT NODE and its EMBEDS_TEXT_OF edge are excluded from the round trip (proves the DIFF; the production allowlist is P9's)",
+	);
+	if (!fs.existsSync(SIF_EMBED_TEXT_FIXTURE_PATH)) {
+		harness.ok('the embed-text fixture exists', false, `${SIF_EMBED_TEXT_FIXTURE_PATH} is REQUIRED`);
+		next('', args);
+		return;
+	}
+	const { forgeResult, snapshotDirPath } = args;
+	const embedTextFixture = JSON.parse(fs.readFileSync(SIF_EMBED_TEXT_FIXTURE_PATH, 'utf-8'));
+	const fixtureComplaintList = checkSifEmbedTextFixture({ embedTextFixture, forgeResult });
+	harness.equal('the text node and edge have the R-ET-1/R-ET-4 shape (identity re-derived)', fixtureComplaintList.length, 0);
+	if (fixtureComplaintList.length) {
+		harness.note(fixtureComplaintList.join('\n'));
+		next('', args);
+		return;
+	}
+	const { textNode, embedsTextOfEdge } = embedTextFixture;
+	const edgesWithText = forgeResult.edges.concat([embedsTextOfEdge]);
+
+	measureSifEmbedTextRun(
+		{ nodes: forgeResult.nodes, edges: forgeResult.edges, snapshotDirPath, runLabel: 'baseline' },
+		(baselineError, baselineRun) => {
+			harness.accepts('the run WITHOUT the text node measures', [baselineError].filter(Boolean));
+			if (baselineError) {
+				next('', args);
+				return;
+			}
+			measureSifEmbedTextRun(
+				{ nodes: forgeResult.nodes.concat([textNode]), edges: edgesWithText, snapshotDirPath, runLabel: 'withText' },
+				(withTextError, withTextRun) => {
+					harness.accepts('the run WITH the text node measures', [withTextError].filter(Boolean));
+					if (withTextError) {
+						next('', args);
+						return;
+					}
+					harness.equal('WITH the text node: inventedTotal is 0', withTextRun.verdict.inventedTotal, 0);
+					harness.equal(
+						`WITH the text node: lostTotal EQUALS the run without it (${baselineRun.verdict.lostTotal})`,
+						withTextRun.verdict.lostTotal,
+						baselineRun.verdict.lostTotal,
+					);
+					harness.ok(
+						`the emitted statement file is byte-identical (${baselineRun.statementCount} statements, sha256 ${baselineRun.statementSetSha256})`,
+						withTextRun.emittedBytes.equals(baselineRun.emittedBytes),
+						`with the text node: ${withTextRun.statementCount} statements, sha256 ${withTextRun.statementSetSha256}`,
+					);
+					harness.equal(
+						'the served sifGraph is identical with and without the text node (the label selection dropped it)',
+						JSON.stringify(withTextRun.sifGraph),
+						JSON.stringify(baselineRun.sifGraph),
+					);
+					const exclusionHolds = sifEmbedTextExcludedFromEmission({ candidateRun: withTextRun, baselineRun });
+					harness.ok('gate G-18 conjunct holds over the real runs', exclusionHolds);
+					probeFacts.embedTextExcludedFromEmission = exclusionHolds;
+
+					measureSifEmbedTextRun(
+						{
+							nodes: forgeResult.nodes.concat([admitEmbedTextLabel(textNode)]),
+							edges: edgesWithText,
+							snapshotDirPath,
+							runLabel: 'admitted',
+						},
+						(admittedError, admittedRun) => {
+							harness.equal(
+								'the widening reached the selection: one more field was served',
+								admittedRun.sifGraph.fieldNodeList.length,
+								baselineRun.sifGraph.fieldNodeList.length + 1,
+							);
+							const admittedOutcomeText = admittedError
+								? `REFUSED BY NAME at emission, no verdict issued: ${admittedError}`
+								: `inventedTotal ${admittedRun.verdict.inventedTotal}, lostTotal ${admittedRun.verdict.lostTotal}`;
+							harness.ok(
+								`RED TWIN admitEmbedTextLabel (data level): the admitted text node does NOT pass silently (${admittedOutcomeText})`,
+								admittedError
+									? /emission fault/.test(String(admittedError)) && String(admittedError).includes(textNode.stableId)
+									: admittedRun.verdict.inventedTotal > 0,
+							);
+							harness.equal(
+								'gate G-18 conjunct goes FALSE over the admitting run',
+								sifEmbedTextExcludedFromEmission({ candidateRun: admittedRun, baselineRun }),
+								false,
+							);
+							harness.note(
+								`P5 evidence (SIF): baseline inventedTotal ${baselineRun.verdict.inventedTotal}, lostTotal ${baselineRun.verdict.lostTotal}, ` +
+									`${baselineRun.statementCount} statements sha256 ${baselineRun.statementSetSha256}; ` +
+									`with text node inventedTotal ${withTextRun.verdict.inventedTotal}, lostTotal ${withTextRun.verdict.lostTotal}, ` +
+									`sha256 ${withTextRun.statementSetSha256}; admitting twin: ${admittedOutcomeText}`,
+							);
+							next('', args);
+						},
+					);
+				},
+			);
+		},
+	);
 });
 
 // SECTION 7 — the gate suite over REAL measurements; every twin observed RED; registry audited.

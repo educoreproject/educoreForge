@@ -189,6 +189,20 @@
 			"measure": "probe.forgeEdgeTriplesDistinct",
 			"comparator": "isTrue",
 			"twin": "falsifyEdgeUniquenessProbe"
+		},
+		// ---- added by PHASE P5 of the forge embed-text revision (embedText-091426, R-ET-5 / R-ET-20) ----
+		// Measured at the DATA level in test/test-edfiRoundTrip.js: the carriable fixture's real forge
+		// result plus one DmeEmbedText node and one EMBEDS_TEXT_OF edge (test/fixtures/embedTextNode.json),
+		// through the double. The same conjunct computed over a run whose CONSTRUCT_ROLES admits the text
+		// role is observed going FALSE there: emission refuses the text row by name and issues no verdict
+		// (R-ET-36), so on Ed-Fi a leak is a FAILED stage, not inventedTotal > 0. It proves THE DIFF, not the
+		// production Cypher allowlist (roundTripEdfiCompiler.js:378-381) — that is P7's live run.
+		{
+			"id": "G-20",
+			"title": "a TEXT NODE and its EMBEDS_TEXT_OF edge are excluded: with them present inventedTotal is 0, lostTotal EQUALS the run without them, and the emitted statement set is byte-identical",
+			"measure": "probe.embedTextExcludedFromEmission",
+			"comparator": "isTrue",
+			"twin": "admitEmbedTextRole"
 		}
 	]
 }
