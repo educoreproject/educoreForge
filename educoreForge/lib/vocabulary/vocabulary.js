@@ -66,7 +66,7 @@ const DME_ROLES = {
 	// the rest -- rather than a data element. ⟪TQ ruling, 2026-08-02: "mint the IDs"⟫ these get
 	// a synthetic VT<localName> id because CEDS assigns them none. Carries no embedding and no
 	// data role, so it is invisible to both the DME's browse (which selects by data role) and
-	// its semantic search (one index, on :ForgedNode(embedding)).
+	// its semantic search (which reads only <graphName>_vector, on :ForgedNode(embedding)).
 	VOCABULARY_TERM: 'DmeVocabularyTerm',
 	// ONE distinct descriptive text of a standard (a name, description, definition and the like,
 	// trimmed), minted by the FORGE FRAMEWORK -- never by a walk -- from the text-property include list

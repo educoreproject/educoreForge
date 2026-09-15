@@ -32,12 +32,58 @@
 // the serialization round trip does not quietly change the data that survives it.
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
+// The vector-slot declaration rule lives in the engine, which lands the vector back under the declared
+// name at restore; the shaper asks the same function so the two ends cannot disagree about it.
+const { vectorSlotPropertyNameOf, ORDINARY_VECTOR_PROPERTY_NAME } =
+	require('../../../../../lib/replay/replay-engine')();
+
 // START OF moduleFunction() ============================================================
 
 const moduleFunction =
 	({ moduleName } = {}) =>
 	(unusedDeps = {}) => {
 const narrowToFloat32 = (floatList) => floatList.map((oneValue) => Math.fround(oneValue));
+
+// ⟪R-ET-8, R-ET-30, PLAN-forgeEmbedText-091426 §8.3-8.4⟫ ONE VECTOR SLOT. A forge record MAY declare, by
+// the ordinary property `vectorPropertyName`, that its vector lives under that property rather than
+// `embedding` (a DmeEmbedText node declares 'textEmbedding' beside embedSourceProperty 'text'). The shaper
+// LIFTS that vector into the same top-level `embedding` slot every vector rides in, so the ragged-dimension
+// and model-version guards below cover it and the float32 narrowing applies to it. A record WITHOUT the
+// declaration is the original format and takes exactly the old path: a format discriminator in the R-P2-2
+// idiom, not a default. Returns { error } or { vectorSlotPropertyName }.
+const forgeRecordVectorSlotOf = (oneNode) => {
+	const forgeProperties = oneNode.properties;
+	const declaredName = forgeProperties.vectorPropertyName;
+	if (declaredName === undefined || declaredName === null) {
+		return { error: '', vectorSlotPropertyName: ORDINARY_VECTOR_PROPERTY_NAME };
+	}
+	const declarationVerdict = vectorSlotPropertyNameOf({
+		stableId: oneNode.stableId,
+		declaredName,
+		embedSourcePropertyValue: forgeProperties.embedSourceProperty,
+	});
+	if (declarationVerdict.error) {
+		return declarationVerdict;
+	}
+	if (forgeProperties[ORDINARY_VECTOR_PROPERTY_NAME] !== undefined && forgeProperties[ORDINARY_VECTOR_PROPERTY_NAME] !== null) {
+		return {
+			error:
+				`node '${oneNode.stableId}' declares vectorPropertyName '${declaredName}' AND carries ` +
+				`'${ORDINARY_VECTOR_PROPERTY_NAME}'. A record has ONE vector slot: a declared vector lives only ` +
+				`under '${declaredName}', and an '${ORDINARY_VECTOR_PROPERTY_NAME}' beside the declaration would ` +
+				`enter the ordinary vector index.`,
+		};
+	}
+	const declaredVector = forgeProperties[declaredName];
+	if (declaredVector !== undefined && declaredVector !== null && !(Array.isArray(declaredVector) && declaredVector.length > 0)) {
+		return {
+			error:
+				`node '${oneNode.stableId}' declares vectorPropertyName '${declaredName}' but the value ` +
+				`there is not a non-empty vector (got ${Array.isArray(declaredVector) ? 'an empty array' : typeof declaredVector}).`,
+		};
+	}
+	return declarationVerdict;
+};
 
 const shapeForgedGraph = ({ forged, declaredEmbeddingDims }) => {
 	if (!forged || !Array.isArray(forged.nodes) || !Array.isArray(forged.edges)) {
@@ -47,13 +93,24 @@ const shapeForgedGraph = ({ forged, declaredEmbeddingDims }) => {
 	let dimsSeen = null;
 	let dimsOffender = null;
 	let modelVersionOffender = null;
+	let vectorSlotOffender = null;
 
 	const nodes = forged.nodes.map((oneNode) => {
+		const vectorSlotVerdict = forgeRecordVectorSlotOf(oneNode);
+		if (vectorSlotVerdict.error) {
+			// refused below, before any shaped node is returned
+			if (vectorSlotOffender === null) {
+				vectorSlotOffender = vectorSlotVerdict.error;
+			}
+			return null;
+		}
+		const vectorSlotPropertyName = vectorSlotVerdict.vectorSlotPropertyName;
+
 		// PG-JSON multi-valued arrays: every property value an array. The embedding is the
 		// deliberate exception (a vector's order is intrinsic) and rides at the top level.
 		const properties = {};
 		Object.keys(oneNode.properties).forEach((oneKey) => {
-			if (oneKey === 'embedding' || oneKey === 'embeddingModelVersion') {
+			if (oneKey === 'embedding' || oneKey === 'embeddingModelVersion' || oneKey === vectorSlotPropertyName) {
 				return;
 			}
 			const value = oneNode.properties[oneKey];
@@ -68,8 +125,8 @@ const shapeForgedGraph = ({ forged, declaredEmbeddingDims }) => {
 			properties,
 		};
 
-		if (oneNode.properties.embedding) {
-			const vector = oneNode.properties.embedding;
+		if (oneNode.properties[vectorSlotPropertyName]) {
+			const vector = oneNode.properties[vectorSlotPropertyName];
 			if (dimsSeen === null) {
 				dimsSeen = vector.length;
 			} else if (vector.length !== dimsSeen && dimsOffender === null) {
@@ -97,6 +154,10 @@ const shapeForgedGraph = ({ forged, declaredEmbeddingDims }) => {
 
 		return shaped;
 	});
+
+	if (vectorSlotOffender) {
+		return { error: `shapeForgedGraph: ${vectorSlotOffender}` };
+	}
 
 	if (modelVersionOffender) {
 		return {
