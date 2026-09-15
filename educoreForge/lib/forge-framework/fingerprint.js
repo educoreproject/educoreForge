@@ -17,12 +17,17 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //   replay-engine.js harvest :709, :739 — nodes ORDER BY stableId; edges ORDER BY from, type, to
 //   replay-block.js serializeNodeLine :178-200 / serializeEdgeLine :202-215 — labels sorted,
 //     property keys sorted, {kind, ref, labels, stableId, properties} / {kind, type, fromRef, toRef, properties}
-// Node lines carry no embedding fields (the proxy hashes an un-embedded pure output).
+// Node lines carry no embedding fields (the proxy hashes an un-embedded pure output). A text node's
+// vector (`textEmbedding`, EMBED_TEXT_VECTOR.propertyName) is dropped like `embedding` (R-ET-9), so an
+// embed run and a skip run hash equal; the text nodes and their EMBEDS_TEXT_OF edges themselves ARE
+// hashed — the proxy sees a declaration's text by design.
 
 const crypto = require('crypto');
+const path = require('path');
+const { EMBED_TEXT_VECTOR } = require(path.join(__dirname, '..', 'vocabulary', 'vocabulary'));
 const refuse = require('./refuse');
 
-const DROPPED_PROPERTY_NAME_LIST = Object.freeze(['_id', '_source', 'embedding', 'embeddingModelVersion', 'stableId']);
+const DROPPED_PROPERTY_NAME_LIST = Object.freeze(['_id', '_source', 'embedding', 'embeddingModelVersion', EMBED_TEXT_VECTOR.propertyName, 'stableId']);
 
 const canonicalProperties = (properties) => {
 	const out = {};

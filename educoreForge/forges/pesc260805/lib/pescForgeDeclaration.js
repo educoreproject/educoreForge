@@ -95,6 +95,7 @@ const pescForgeDeclaration = Object.freeze({
 	// including the root, which is why the root carries embeddingModelVersion in the block. CEDS
 	// excludes three roles; PESC and SIF exclude none.
 	nonEmbeddableRoleList: Object.freeze([]),
+	embedTextDeclaration: null,
 	// PESC has no CEDS anchor at all in this tier, so it has no "no mapping" sentinel to declare.
 	// Empty is the honest declaration, not a placeholder.
 	cedsAnchorAbsentSentinelList: Object.freeze([]),

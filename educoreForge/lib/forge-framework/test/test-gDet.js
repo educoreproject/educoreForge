@@ -129,13 +129,13 @@ const detConjunctList = [
 	},
 	{
 		conjunctId: 'staticListCountFrozen',
-		title: 'static (FA3): the no-clock grep scans a FROZEN 18 files (13 framework + 5 fixture) — equality, so a moved directory goes red',
+		title: 'static (FA3): the no-clock grep scans a FROZEN 21 files (16 framework + 5 fixture) — equality, so a moved directory goes red',
 		twinNameList: ['frameworkDirMovedToEmpty'],
 		evaluate: (scenario, callback) => {
 			const frameworkDir = scenario.frameworkDirOverride || toyScenario.FRAMEWORK_DIR;
 			const frameworkCount = fs.readdirSync(frameworkDir).filter((oneName) => /\.js$/.test(oneName)).length;
 			const total = frameworkCount + 5;
-			callback('', { pass: frameworkCount === 13 && total === 18, detail: `framework ${frameworkCount}/13, total ${total}/18` });
+			callback('', { pass: frameworkCount === 16 && total === 21, detail: `framework ${frameworkCount}/16, total ${total}/21` });
 		},
 	},
 	{

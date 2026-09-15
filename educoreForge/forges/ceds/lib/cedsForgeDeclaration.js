@@ -90,6 +90,7 @@ const cedsForgeDeclaration = Object.freeze({
 		DME_ROLES.RESTRICTION,
 		DME_ROLES.VOCABULARY_TERM,
 	]),
+	embedTextDeclaration: null,
 	// CEDS has no "no mapping" sentinel: it is the hub, so an unnormalizable anchor is a REFUSAL
 	// (R3, forgeCeds.js:139-153), never an absence. Empty is the honest declaration.
 	cedsAnchorAbsentSentinelList: Object.freeze([]),

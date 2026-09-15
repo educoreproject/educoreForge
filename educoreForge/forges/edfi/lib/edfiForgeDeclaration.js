@@ -47,6 +47,7 @@ const edfiForgeDeclaration = Object.freeze({
 		impliedTargets: Object.freeze(['CEDS']),
 	}),
 	nonEmbeddableRoleList: Object.freeze([]),
+	embedTextDeclaration: null,
 	// CEDS_NO_MAPPING_SENTINEL '000000' (forgeEdfiContractGraph.js:64) — the crosswalk's "no mapping" value
 	cedsAnchorAbsentSentinelList: Object.freeze(['000000']),
 	additionalSourceInputList: Object.freeze([]),
