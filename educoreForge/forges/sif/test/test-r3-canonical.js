@@ -26,6 +26,31 @@ process.global.xLog = process.global.xLog || {
 
 const normalize = require('../lib/normalize');
 const bundle = require('../forgeSif')({ embedder: null });
+const { DME_ROLES, EDGE_TYPES } = require('../../../lib/vocabulary/vocabulary');
+const sifForgeDeclaration = require('../lib/sifForgeDeclaration');
+
+// R-ET-40 (P9, RADIANT_QUEST): the framework mints DmeEmbedText nodes and EMBEDS_TEXT_OF edges AFTER the walk
+// (R-ET-2), and a text node carries no searchText by design (R-ET-3). The universal forge-fidelity checks
+// below therefore quantify over the WALK population. The exclusion is EXACT (it equals stats) and the
+// excluded population is checked positively, so it is judged rather than ignored.
+const isEmbedTextNode = (oneNode) => oneNode.role === DME_ROLES.EMBED_TEXT;
+const isEmbedsTextOfEdge = (oneEdge) => oneEdge.type === EDGE_TYPES.EMBEDS_TEXT_OF;
+const walkNodeListOf = (nodeList) => nodeList.filter((oneNode) => !isEmbedTextNode(oneNode));
+const walkEdgeListOf = (edgeList) => edgeList.filter((oneEdge) => !isEmbedsTextOfEdge(oneEdge));
+const checkEmbedTextPopulation = ({ labelPrefix, nodeList, edgeList, forgeStats }) => {
+	const textNodeList = nodeList.filter(isEmbedTextNode);
+	const embedsTextOfEdgeList = edgeList.filter(isEmbedsTextOfEdge);
+	const textStableIdSet = new Set(textNodeList.map((oneNode) => oneNode.stableId));
+	const walkRoleByStableId = {};
+	walkNodeListOf(nodeList).forEach((oneNode) => {
+		walkRoleByStableId[oneNode.stableId] = oneNode.role;
+	});
+	const declaredRoleList = Object.keys(sifForgeDeclaration.embedTextDeclaration.textPropertyListByRole);
+	check(`${labelPrefix}excluded DmeEmbedText nodes (${textNodeList.length}) EQUAL stats.embedTextNodeCount (${forgeStats.embedTextNodeCount})`, textNodeList.length > 0 && textNodeList.length === forgeStats.embedTextNodeCount);
+	check(`${labelPrefix}excluded EMBEDS_TEXT_OF edges (${embedsTextOfEdgeList.length}) EQUAL stats.embedTextEdgeCount (${forgeStats.embedTextEdgeCount})`, embedsTextOfEdgeList.length > 0 && embedsTextOfEdgeList.length === forgeStats.embedTextEdgeCount);
+	check(`${labelPrefix}every excluded text node carries NO searchText and NO pescTier`, textNodeList.every((oneNode) => oneNode.properties.searchText === undefined && oneNode.properties.pescTier === undefined));
+	check(`${labelPrefix}every EMBEDS_TEXT_OF edge leaves a text node and lands on a walk node of a declared role`, embedsTextOfEdgeList.every((oneEdge) => textStableIdSet.has(oneEdge.fromRef.id) && declaredRoleList.indexOf(walkRoleByStableId[oneEdge.toRef.id]) !== -1));
+};
 
 let pass = 0;
 let fail = 0;
@@ -167,7 +192,7 @@ check('one DmeSupport (simpleType)', byRole('DmeSupport').length === 1);
 
 check('every node has clean stableId', g.nodes.every((n) => normalize.isCleanStableId(n.stableId)));
 check('every node _source === SIF', g.nodes.every((n) => n.properties._source === 'SIF'));
-check('every node has non-empty searchText', g.nodes.every((n) => typeof n.properties.searchText === 'string' && n.properties.searchText.length > 0));
+check('every walk node has non-empty searchText (framework text nodes excluded, R-ET-40)', walkNodeListOf(g.nodes).every((n) => typeof n.properties.searchText === 'string' && n.properties.searchText.length > 0));
 check('every node _id === stableId', g.nodes.every((n) => n.properties._id === n.stableId));
 check('every node carries sifStableId === stableId', g.nodes.every((n) => n.properties.sifStableId === n.stableId));
 check('structural nodes carry parentId/depth/path', g.nodes.filter((n) => n.role !== 'DmeStandardRoot').every((n) => n.properties.parentId && typeof n.properties.depth === 'number' && n.properties.path));
@@ -186,7 +211,8 @@ check('DmeProperty searchText carries owning class name', annotated && annotated
 
 // edges: only canonical/REFERENCES types, all structural, all resolved (no throw means no danglers).
 const ALLOWED_EDGE_TYPES = new Set(['HAS_CLASS', 'HAS_PROPERTY', 'HAS_OPTION_SET', 'HAS_VALUE', 'HAS_SUPPORT', 'REFERENCES']);
-check('only canonical/REFERENCES edge types', [...allEdgeTypes].every((t) => ALLOWED_EDGE_TYPES.has(t)));
+check('only canonical/REFERENCES walk edge types (framework EMBEDS_TEXT_OF excluded, R-ET-40)', walkEdgeListOf(g.edges).every((e) => ALLOWED_EDGE_TYPES.has(e.type)));
+checkEmbedTextPopulation({ labelPrefix: 'R-ET-40 synthetic: ', nodeList: g.nodes, edgeList: g.edges, forgeStats: g.stats });
 check('every edge provenanceTier === structural', g.edges.every((e) => e.properties.provenanceTier === 'structural'));
 check('HAS_CLASS root->object present', g.edges.some((e) => e.type === 'HAS_CLASS' && e.fromRef.id === 'sif:root' && e.toRef.id === 'sif:object/StudentPersonals'));
 check('HAS_PROPERTY object->field present', g.edges.some((e) => e.type === 'HAS_PROPERTY' && e.fromRef.id === 'sif:object/StudentPersonals' && e.toRef.id === 'sif:field/StudentPersonal/Name/FirstName'));
@@ -389,11 +415,12 @@ bundle.forge({ sourcePath: assetDir, skipEmbedding: true }, (err, result) => {
 	check('real: has DmeProperty nodes', (roleCount.DmeProperty || 0) > 0);
 	check('real: every node clean stableId', nodes.every((n) => normalize.isCleanStableId(n.stableId)));
 	check('real: every node _source === SIF', nodes.every((n) => n.properties._source === 'SIF'));
-	check('real: every node non-empty searchText', nodes.every((n) => n.properties.searchText && n.properties.searchText.length > 0));
+	check('real: every walk node non-empty searchText (framework text nodes excluded, R-ET-40)', walkNodeListOf(nodes).every((n) => n.properties.searchText && n.properties.searchText.length > 0));
 	check('real: every node carries sifStableId', nodes.every((n) => n.properties.sifStableId === n.stableId));
 	check('real: stableIds unique', new Set(nodes.map((n) => n.stableId)).size === nodes.length);
 	check('real: every annotated field cedsId canonical', nodes.filter((n) => n.properties.cedsId).every((n) => normalize.isCanonicalCrossRefCedsId(n.properties.cedsId)));
-	check('real: only canonical/REFERENCES edges', Object.keys(edgeCount).every((t) => ALLOWED_EDGE_TYPES.has(t)));
+	check('real: only canonical/REFERENCES walk edges (framework EMBEDS_TEXT_OF excluded, R-ET-40)', walkEdgeListOf(edges).every((e) => ALLOWED_EDGE_TYPES.has(e.type)));
+	checkEmbedTextPopulation({ labelPrefix: 'R-ET-40 real: ', nodeList: nodes, edgeList: edges, forgeStats: result.stats });
 	check('real: every edge structural provenanceTier', edges.every((e) => e.properties.provenanceTier === 'structural'));
 	check('real: no embedding stamped (skipEmbedding)', nodes.every((n) => n.properties.embedding === undefined));
 

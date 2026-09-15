@@ -61,6 +61,32 @@ const check = (label, condition) => {
 };
 const evidence = (line) => console.log(`        ${line}`);
 
+// R-ET-40 (P9, RADIANT_QUEST): the framework mints DmeEmbedText nodes and EMBEDS_TEXT_OF edges AFTER the walk
+// (R-ET-2). A text node carries no searchText (R-ET-3) and no pescTier, by design. The universal INTEGRATION
+// checks therefore quantify over the WALK population. The exclusion is EXACT (it equals stats) and the
+// excluded population is checked positively. Labels here are CONSTANT: the LEDGER gate keys on them.
+const { DME_ROLES, EDGE_TYPES } = require(path.join(TREE_ROOT, 'lib', 'vocabulary', 'vocabulary'));
+const pescForgeDeclaration = require(path.join(BUNDLE_DIR, 'lib', 'pescForgeDeclaration'));
+const isEmbedTextNode = (oneNode) => oneNode.role === DME_ROLES.EMBED_TEXT;
+const isEmbedsTextOfEdge = (oneEdge) => oneEdge.type === EDGE_TYPES.EMBEDS_TEXT_OF;
+const walkNodeListOf = (nodeList) => nodeList.filter((oneNode) => !isEmbedTextNode(oneNode));
+const walkEdgeListOf = (edgeList) => edgeList.filter((oneEdge) => !isEmbedsTextOfEdge(oneEdge));
+const checkEmbedTextPopulation = ({ nodeList, edgeList, forgeStats }) => {
+	const textNodeList = nodeList.filter(isEmbedTextNode);
+	const embedsTextOfEdgeList = edgeList.filter(isEmbedsTextOfEdge);
+	const textStableIdSet = new Set(textNodeList.map((oneNode) => oneNode.stableId));
+	const walkRoleByStableId = {};
+	walkNodeListOf(nodeList).forEach((oneNode) => {
+		walkRoleByStableId[oneNode.stableId] = oneNode.role;
+	});
+	const declaredRoleList = Object.keys(pescForgeDeclaration.embedTextDeclaration.textPropertyListByRole);
+	evidence(`R-ET-40 excluded population: ${textNodeList.length} DmeEmbedText nodes (stats ${forgeStats.embedTextNodeCount}), ${embedsTextOfEdgeList.length} EMBEDS_TEXT_OF edges (stats ${forgeStats.embedTextEdgeCount})`);
+	check('INTEGRATION R-ET-40 excluded DmeEmbedText nodes EQUAL stats.embedTextNodeCount', textNodeList.length > 0 && textNodeList.length === forgeStats.embedTextNodeCount);
+	check('INTEGRATION R-ET-40 excluded EMBEDS_TEXT_OF edges EQUAL stats.embedTextEdgeCount', embedsTextOfEdgeList.length > 0 && embedsTextOfEdgeList.length === forgeStats.embedTextEdgeCount);
+	check('INTEGRATION R-ET-40 every excluded text node carries NO searchText and NO pescTier', textNodeList.every((oneNode) => oneNode.properties.searchText === undefined && oneNode.properties.pescTier === undefined));
+	check('INTEGRATION R-ET-40 every EMBEDS_TEXT_OF edge leaves a text node and lands on a walk node of a declared role', embedsTextOfEdgeList.every((oneEdge) => textStableIdSet.has(oneEdge.fromRef.id) && declaredRoleList.indexOf(walkRoleByStableId[oneEdge.toRef.id]) !== -1));
+};
+
 const CONTESTED_NAMESPACE = 'urn:org:pesc:sector:AcademicRecord:v1.6.0';
 
 // ---- node-set helpers over a forged result ----
@@ -409,7 +435,7 @@ taskList.push((args, next) => {
 			check('INTEGRATION standardKey + stableUriPropertyName returned', forged.standardKey === 'pesc260805' && forged.stableUriPropertyName === 'pesc260805StableId');
 			check('INTEGRATION embedCallCount is 0 with skipEmbedding', forged.embedCallCount === 0);
 
-			const everyNodeConforms = forged.nodes.every(
+			const everyNodeConforms = walkNodeListOf(forged.nodes).every(
 				(oneNode) =>
 					oneNode.stableId &&
 					Array.isArray(oneNode.labels) &&
@@ -418,10 +444,11 @@ taskList.push((args, next) => {
 					oneNode.properties.searchText.length > 0,
 			);
 			check('INTEGRATION every node has stableId, ForgedNode label, non-empty searchText', everyNodeConforms);
-			const everyEdgeConforms = forged.edges.every(
+			const everyEdgeConforms = walkEdgeListOf(forged.edges).every(
 				(oneEdge) => oneEdge.properties && oneEdge.properties.provenanceTier === 'structural' && oneEdge.properties.pescTier,
 			);
 			check('INTEGRATION every edge carries provenanceTier structural + pescTier', everyEdgeConforms);
+			checkEmbedTextPopulation({ nodeList: forged.nodes, edgeList: forged.edges, forgeStats: forged.stats });
 
 			// =====================================================================================
 			// COMPOSITION — the HYBRID searchText composition (TQ 2026-08-17 "re-embed authorized").
@@ -575,7 +602,7 @@ taskList.push((args, next) => {
 				nodeCountByTier[oneTierValue] = 0;
 			});
 			const nodesWithUnratifiedTier = [];
-			forged.nodes.forEach((oneNode) => {
+			walkNodeListOf(forged.nodes).forEach((oneNode) => {
 				const nodeTierValue = oneNode.properties.pescTier;
 				if (PESC_TIER_VALUES.indexOf(nodeTierValue) === -1) {
 					nodesWithUnratifiedTier.push(
@@ -610,7 +637,7 @@ taskList.push((args, next) => {
 				'INTEGRATION synthetic tier is EXACTLY 632 nodes (109 S-1 merged definitions + 522 S-1c duplicated children + 1 S-2 alias namespace)',
 				nodeCountByTier.synthetic === 109 + 522 + 1,
 			);
-			check('INTEGRATION the four tiers account for every emitted node', nodeCountByTier.source + nodeCountByTier.derived + nodeCountByTier.meta + nodeCountByTier.synthetic === forged.nodes.length);
+			check('INTEGRATION the four tiers account for every emitted node', nodeCountByTier.source + nodeCountByTier.derived + nodeCountByTier.meta + nodeCountByTier.synthetic === walkNodeListOf(forged.nodes).length);
 
 			// engine shaping — the exact translation forger.js applies before replay.
 			const { shapeForgedGraph } = require(
