@@ -35,7 +35,7 @@ const bridgeDeclaration = Object.freeze({
 	// The toy graph gives every card the SAME vector, so every cosine is 1 and the tie-break — stableId
 	// ascending — decides the whole pool. That is deliberate: it makes the toy pool exactly predictable, which
 	// is what a gate over pool SHAPE (size ≤ K, order, floor) needs.
-	candidateRetrieval: { k: 3, floor: 0.3, embeddingModelVersion: 'toy-embed-v1' },
+	candidateRetrieval: { method: 'cosineTopK-v1', k: 3, floor: 0.3, embeddingModelVersion: 'toy-embed-v1' },
 	// THE BIAS AUDIT, as an ALLOW-list (§11.4). The rendered subject and candidate blocks carry ONLY these
 	// names. Note what is NOT here and could not be even by accident: no identifier, no URI, no content hash,
 	// no notation, no vector, no cross-reference — the declaration validator refuses every one of them BY NAME

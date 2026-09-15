@@ -117,7 +117,7 @@ const bridgeDeclaration = Object.freeze({
 	// UNCHANGED FROM THE SIBLING, AND HONESTLY SO: the candidate pool IS the same 2,777 property-tier
 	// cards, so the floor and K measured over that pool apply unchanged. What is NOT transferred is
 	// any claim about how well these SUBJECTS retrieve — that is what P2 measures, separately.
-	candidateRetrieval: { k: 15, floor: 0.3, embeddingModelVersion: 'voyage-4-large' },
+	candidateRetrieval: { method: 'cosineTopK-v1', k: 15, floor: 0.3, embeddingModelVersion: 'voyage-4-large' },
 	// SUBJECT SIDE — every name here was checked against keys(n) on THIS label before being written,
 	// because a renderingAllowList naming a property no node carries renders NOTHING SILENTLY: the
 	// framework's own guard against that (graphSeamRules.js allowListRefusal) is DEAD CODE, never

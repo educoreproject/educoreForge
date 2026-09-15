@@ -118,7 +118,7 @@ const bridgeDeclaration = Object.freeze({
 	// 0.065), so a larger K buys little and a smaller one risks the ceiling.
 	// BOTH FIGURES ARE PROPERTY-TIER MEASUREMENTS. They are honest for every subject this plugin
 	// declares, because every candidate it can ever see is a property-tier card.
-	candidateRetrieval: { k: 15, floor: 0.3, embeddingModelVersion: 'voyage-4-large' },
+	candidateRetrieval: { method: 'cosineTopK-v1', k: 15, floor: 0.3, embeddingModelVersion: 'voyage-4-large' },
 	// THE BIAS AUDIT (§4, RULING §11.4). An ALLOW-list, so it excludes what nobody thought of.
 	//
 	// SUBJECT SIDE — and two names here are STAMPED BY THE FORGE for this seat (RULING P1-R8):

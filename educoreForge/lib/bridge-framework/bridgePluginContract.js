@@ -24,7 +24,10 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // channel without channelPropertyList; a hook missing / unknown / wrong arity; a hook declared false but
 // present; a forbidden require or function name; a non-empty compatibilityDeclarationList; a
 // mappingProvider.url that is not a URL; globalGuidanceList present while globalGuidance is undeclared, or absent while it
-// is declared (BR4: the key is REQUIRED iff the hook is true, FORBIDDEN otherwise).
+// is declared (BR4: the key is REQUIRED iff the hook is true, FORBIDDEN otherwise); a candidateRetrieval with no
+// method, a method outside CANDIDATE_RETRIEVAL_METHOD_REGISTRY, a field of another method, an unknown or absent
+// field, a field value its rule refuses, a neighbourVote that neighbourVote.js refuses, or a neighbourVote
+// owner.property named in blindingDeclaration (SPEC-bridgeRevision-091426.md §5).
 
 const fs = require('fs');
 const path = require('path');
@@ -32,6 +35,10 @@ const vocabularyLib = require(path.join(__dirname, '..', 'vocabulary', 'vocabula
 const refuse = require(path.join(__dirname, '..', 'forge-framework', 'refuse'));
 const transformRegistryLib = require('./transformRegistry');
 const bridgeAllowanceRegistryLib = require('./bridgeAllowanceRegistry');
+// neighbourVote.js owns neighbourVote-v1's closed lists (owner, siblings and referencedObject kinds; earnRule)
+// and the refusal that reads them. The contract asks it rather than restating them, so a kind row added there
+// is admitted here the same day. It requires only path, the refusal helper and ./candidateRetrieval: no cycle.
+const neighbourVoteLib = require('./neighbourVote');
 // ⟪JOB 3, 2026-09-07⟫ SELECT_CATEGORY_ENUM — the single source of truth for the judge's verdict
 // categories. Required by the SAME path form confidenceBandTable.js:12 uses, from the same directory,
 // for the same reason: this file's JUDGE_CATEGORY_LIST must be derived from the contract rather than
@@ -479,6 +486,75 @@ const SUBJECT_IDENTITY_KIND_VALIDATOR_REGISTRY = Object.freeze({
 	forgedNode: (value) => (value.property === 'stableId' ? '' : `forgedNode subject identity property must be 'stableId' (got ${JSON.stringify(value.property)})`),
 });
 
+// ---------------------------------------------------------------------
+// CANDIDATE RETRIEVAL — a METHOD REGISTRY (SPEC-bridgeRevision-091426.md §5; §13 R-BR-7, R-BR-10)
+//
+// candidateRetrieval.method names a row; the row names every field that method takes, and EVERY field is
+// required. Absence is never defaulted: neighbourVote's votes-only form is an explicit null, and a plugin that
+// omits `method` is refused rather than read as today's cosine search (R-BR-10 puts the method on every shipped
+// plugin for exactly that reason). Each field's value rule is ONE row of the field-rule registry, shared by
+// every method that takes the field, so k means the same thing under both. Nothing here tests a method NAME:
+// a new method is a row here plus its consumer in the orchestrator.
+// ---------------------------------------------------------------------
+const CANDIDATE_RETRIEVAL_METHOD_REGISTRY = Object.freeze({
+	'cosineTopK-v1': Object.freeze({ fieldNameList: Object.freeze(['method', 'k', 'floor', 'embeddingModelVersion']) }),
+	'embedTextVote-v1': Object.freeze({ fieldNameList: Object.freeze(['method', 'hitsPerText', 'minScore', 'k', 'embeddingModelVersion', 'neighbourVote']) }),
+});
+const CANDIDATE_RETRIEVAL_METHOD_LIST = Object.freeze(Object.keys(CANDIDATE_RETRIEVAL_METHOD_REGISTRY));
+const isFiniteCosine = (value) => typeof value === 'number' && Number.isFinite(value) && value >= -1 && value <= 1;
+const CANDIDATE_RETRIEVAL_FIELD_RULE_REGISTRY = Object.freeze({
+	// the method was resolved to its row before any field rule runs
+	method: () => '',
+	k: (value) => (Number.isInteger(value) && value >= 1 ? '' : `candidateRetrieval.k ${JSON.stringify(value)} must be a positive integer (the pool ceiling); there is no default`),
+	floor: (value) => (isFiniteCosine(value) ? '' : `candidateRetrieval.floor ${JSON.stringify(value)} must be a finite cosine in [-1, 1]; there is no default — choose it against the measured distribution and declare it`),
+	embeddingModelVersion: (value) => (isNonEmptyString(value) ? '' : `candidateRetrieval.embeddingModelVersion is required — a vector of another model is refused by name, never compared anyway`),
+	hitsPerText: (value) => (Number.isInteger(value) && value >= 1 ? '' : `candidateRetrieval.hitsPerText ${JSON.stringify(value)} must be a positive integer (the hits each text keeps); there is no default`),
+	minScore: (value) => (isFiniteCosine(value) ? '' : `candidateRetrieval.minScore ${JSON.stringify(value)} must be a finite cosine in [-1, 1]; there is no default — declare the floor a text hit must reach`),
+	// null is the declared votes-only rank; any other value is neighbourVote-v1's object, judged by its owner
+	// module. Its reasons name a path inside neighbourVote (some start 'neighbourVote', some 'owner.'), so they
+	// are quoted whole after a fixed head rather than spliced onto a path they may not continue.
+	neighbourVote: (value) => {
+		const scoringReason = value === null ? '' : neighbourVoteLib.neighbourVoteRefusal(value);
+		return scoringReason === '' ? '' : `candidateRetrieval.neighbourVote is refused: ${scoringReason}`;
+	},
+});
+const ruleLessFieldName = CANDIDATE_RETRIEVAL_METHOD_LIST.reduce((soFar, oneMethod) => soFar.concat(CANDIDATE_RETRIEVAL_METHOD_REGISTRY[oneMethod].fieldNameList), []).find((oneFieldName) => !Object.prototype.hasOwnProperty.call(CANDIDATE_RETRIEVAL_FIELD_RULE_REGISTRY, oneFieldName));
+if (ruleLessFieldName !== undefined) {
+	throw refuse.byName({ moduleName, what: `CANDIDATE_RETRIEVAL_METHOD_REGISTRY names field '${ruleLessFieldName}', which has no row in CANDIDATE_RETRIEVAL_FIELD_RULE_REGISTRY`, where: 'every field a method takes needs its value rule; add the row' });
+}
+
+// candidateRetrievalReason — '' or the first thing wrong, in a fixed order: the method, then fields that belong
+// to ANOTHER method (named as such, so `neighbourVote` under cosineTopK-v1 says whose field it is), then unknown
+// fields, then absent fields, then each field's value rule in the row's order.
+const candidateRetrievalReason = (retrievalDeclaration) => {
+	if (!isPlainObject(retrievalDeclaration)) {
+		return `must be an object whose method is one of: ${listAsText(CANDIDATE_RETRIEVAL_METHOD_LIST)} (got ${JSON.stringify(retrievalDeclaration)})`;
+	}
+	if (retrievalDeclaration.method === undefined) {
+		return `candidateRetrieval declares no method; there is no default — declare one of: ${listAsText(CANDIDATE_RETRIEVAL_METHOD_LIST)}`;
+	}
+	if (!Object.prototype.hasOwnProperty.call(CANDIDATE_RETRIEVAL_METHOD_REGISTRY, retrievalDeclaration.method)) {
+		return `candidateRetrieval.method ${JSON.stringify(retrievalDeclaration.method)} is not one of: ${listAsText(CANDIDATE_RETRIEVAL_METHOD_LIST)}`;
+	}
+	const methodName = retrievalDeclaration.method;
+	const methodFieldNameList = CANDIDATE_RETRIEVAL_METHOD_REGISTRY[methodName].fieldNameList;
+	const outsideFieldNameList = Object.keys(retrievalDeclaration).filter((oneFieldName) => methodFieldNameList.indexOf(oneFieldName) === -1);
+	const foreignFieldName = outsideFieldNameList.find((oneFieldName) => Object.prototype.hasOwnProperty.call(CANDIDATE_RETRIEVAL_FIELD_RULE_REGISTRY, oneFieldName));
+	if (foreignFieldName !== undefined) {
+		const owningMethodList = CANDIDATE_RETRIEVAL_METHOD_LIST.filter((oneMethod) => CANDIDATE_RETRIEVAL_METHOD_REGISTRY[oneMethod].fieldNameList.indexOf(foreignFieldName) !== -1);
+		return `candidateRetrieval carries '${foreignFieldName}', a field of method ${listAsText(owningMethodList)} that method '${methodName}' does not take`;
+	}
+	if (outsideFieldNameList.length > 0) {
+		return `candidateRetrieval carries unknown key '${outsideFieldNameList[0]}'`;
+	}
+	const absentFieldName = methodFieldNameList.find((oneFieldName) => retrievalDeclaration[oneFieldName] === undefined);
+	if (absentFieldName !== undefined) {
+		return `candidateRetrieval method '${methodName}' requires '${absentFieldName}' and it is absent; there is no default (declare null where the method admits one)`;
+	}
+	const fieldReason = methodFieldNameList.map((oneFieldName) => CANDIDATE_RETRIEVAL_FIELD_RULE_REGISTRY[oneFieldName](retrievalDeclaration[oneFieldName])).find((oneReason) => oneReason !== '');
+	return fieldReason === undefined ? '' : fieldReason;
+};
+
 // ONE registry of kind checkers: (value, { propertyName, contractEntry, bridgeDeclaration }) → '' or a reason
 const KIND_CHECKER_REGISTRY = Object.freeze({
 	nonEmptyString: (value) => (isNonEmptyString(value) ? '' : `must be a non-empty string (got ${JSON.stringify(value)})`),
@@ -772,25 +848,11 @@ const KIND_CHECKER_REGISTRY = Object.freeze({
 		const extra = Object.keys(value).filter((oneName) => ['kind', 'label', 'scopeStableIdListPath'].indexOf(oneName) === -1);
 		return extra.length ? `subjectSource carries unknown key '${extra[0]}'` : '';
 	},
-	// candidateRetrieval — K, the cosine floor and the embedding model the STORED vectors must carry. All three
-	// are members of the census-fixture key (RULING §11.3/§11.10): changing one re-keys the fixture rather than
-	// silently invalidating it. The framework READS vectors and never makes them (BG-CONTAIN stands).
-	candidateRetrieval: (value) => {
-		if (!isPlainObject(value)) {
-			return `must be { k, floor, embeddingModelVersion } (got ${JSON.stringify(value)})`;
-		}
-		if (!Number.isInteger(value.k) || value.k < 1) {
-			return `candidateRetrieval.k ${JSON.stringify(value.k)} must be a positive integer (the pool ceiling); there is no default`;
-		}
-		if (typeof value.floor !== 'number' || !Number.isFinite(value.floor) || value.floor < -1 || value.floor > 1) {
-			return `candidateRetrieval.floor ${JSON.stringify(value.floor)} must be a finite cosine in [-1, 1]; there is no default — choose it against the measured distribution and declare it`;
-		}
-		if (!isNonEmptyString(value.embeddingModelVersion)) {
-			return `candidateRetrieval.embeddingModelVersion is required — a vector of another model is refused by name, never compared anyway`;
-		}
-		const extra = Object.keys(value).filter((oneName) => ['k', 'floor', 'embeddingModelVersion'].indexOf(oneName) === -1);
-		return extra.length ? `candidateRetrieval carries unknown key '${extra[0]}'` : '';
-	},
+	// candidateRetrieval — the method and its fields, through CANDIDATE_RETRIEVAL_METHOD_REGISTRY. Every declared
+	// value is a member of the census-fixture key (RULING §11.3/§11.10) and rides in the block header (R-BR-7):
+	// changing one re-keys the fixture rather than silently invalidating it. The framework READS vectors and
+	// never makes them (BG-CONTAIN stands).
+	candidateRetrieval: (value) => candidateRetrievalReason(value),
 	// renderingAllowList — the POSITIVE blinding mechanism (RULING §11.4). The rendered subject block and the
 	// rendered candidate block carry ONLY these property names. Two refusals here, both at DECLARATION time:
 	// an empty side (a rendering of nothing is not a judgement), and any name on RENDERING_NEVER_NAME_LIST —
@@ -1090,6 +1152,13 @@ const validateBridgeDeclaration = ({ bridgeDeclaration, bundleDirPath } = {}) =>
 	const acquisitionRow = SOURCE_ACQUISITION_REGISTRY[bridgeDeclaration.matchBasis];
 	if (acquisitionRow !== undefined && bridgeDeclaration.judgePromptVariant !== undefined && bridgeDeclaration.judgePromptVariant !== acquisitionRow.judgePromptVariant) {
 		return refuseWith(`bridgeDeclaration judgePromptVariant '${bridgeDeclaration.judgePromptVariant}' disagrees with the acquisition row for matchBasis '${bridgeDeclaration.matchBasis}' (which names '${acquisitionRow.judgePromptVariant}')`, 'the row is the authority; declare the same variant or change the basis — a run never chooses between two answers');
+	}
+	// A neighbourVote owner property chooses which neighbours reorder the pool. A property the plugin BLINDS is
+	// withheld from the judge, so it must not steer the pool either. Checked after the walk, where
+	// blindingDeclaration has already passed its own row.
+	const neighbourVoteDeclaration = isPlainObject(bridgeDeclaration.candidateRetrieval) ? bridgeDeclaration.candidateRetrieval.neighbourVote : null;
+	if (isPlainObject(neighbourVoteDeclaration) && bridgeDeclaration.blindingDeclaration.indexOf(neighbourVoteDeclaration.owner.property) !== -1) {
+		return refuseWith(`bridgeDeclaration candidateRetrieval.neighbourVote.owner.property '${neighbourVoteDeclaration.owner.property}' is named in blindingDeclaration`, 'a blinded property may not choose the neighbours that reorder the pool; declare another owner property or stop blinding it (SPEC-bridgeRevision §5)');
 	}
 	if (PRODUCER_KIND_BY_MATCH_BASIS[bridgeDeclaration.matchBasis] !== bridgeDeclaration.producerKind) {
 		return refuseWith(`bridgeDeclaration producerKind '${bridgeDeclaration.producerKind}' disagrees with matchBasis '${bridgeDeclaration.matchBasis}' (which is '${PRODUCER_KIND_BY_MATCH_BASIS[bridgeDeclaration.matchBasis]}')`, 'declared AND checked so build.js can never infer the block suffix (RULING A1)');
