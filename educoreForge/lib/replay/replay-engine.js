@@ -19,7 +19,8 @@
 //   (2) MERGE nodes (grouped by label-set, 500/batch, UNWIND) then MERGE edges (by type,
 //       500/batch) with two-endpoint orphan collection — write the edge only if BOTH endpoints
 //       resolve, else record a danglingRefs entry, NEVER a partial edge;
-//   (3) build the <graphName>_vector index (1024-dim cosine) LAST + db.awaitIndexes.
+//   (3) build the <graphName>_vector index (1024-dim cosine) LAST, and beside it the
+//       <graphName>_embedText_vector index for text nodes (R-ET-8), + db.awaitIndexes.
 // Idempotent (MERGE, not CREATE) + deterministic.
 //
 // provenanceTier ENFORCEMENT (§21): every edge MUST carry a provenanceTier in the four-value
@@ -43,6 +44,8 @@ const neo4j = require('neo4j-driver');
 const { pipeRunner, taskListPlus } = new (require('qtools-asynchronous-pipe-plus'))();
 const replayBlock = require('./replay-block')();
 const contentAddress = require('../content-address/content-address')();
+// ⟪R-ET-24⟫ the second vector index's label, property and name suffix have ONE home, the vocabulary.
+const { EMBED_TEXT_VECTOR } = require('../vocabulary/vocabulary');
 
 const BATCH_SIZE = 500;
 const NEO4J_USER = 'neo4j';
@@ -150,8 +153,79 @@ const labelClause = (labels) =>
 const resKeyIndexName = () => 'replay_reskey';
 const vectorIndexName = (graphName) =>
 	`${graphName ? graphName : 'replay'}_vector`;
+// ⟪R-ET-8, R-ET-24⟫ the text-node index is named off the graph exactly as the ordinary one is.
+const embedTextVectorIndexName = (graphName) =>
+	`${graphName ? graphName : 'replay'}${EMBED_TEXT_VECTOR.indexNameSuffix}`;
 
 // graphName-aware ownerStamp is the replayManager's concern; the engine writes data only.
+
+// =====================================================================
+// THE VECTOR SLOT DECLARATION ⟪R-ET-8, R-ET-30, PLAN-forgeEmbedText-091426 §8.3-8.4⟫
+// =====================================================================
+// A node MAY carry the ordinary property `vectorPropertyName`, naming the graph property its vector
+// lives under (a DmeEmbedText node: 'textEmbedding', so the DME's search, which reads only the
+// ForgedNode(embedding) index, never sees a text). Inside the engine the vector still rides in the
+// record's ONE slot, `embedding`; the declaration decides only where harvest READS it from and where
+// restore LANDS it. ABSENT means the original format ('embedding'), in the R-P2-2 idiom: a format
+// discriminator, not a default. One rule, used by the forger's shaper, shapeNode, buildNodeRow and
+// validateShapedGraph, so no two of them can disagree about what a well-formed declaration is.
+const ORDINARY_VECTOR_PROPERTY_NAME = 'embedding';
+
+// vectorSlotPropertyNameOf — the refusals common to every shape, for a declaration that IS present.
+// ({ stableId, declaredName, embedSourcePropertyValue }) -> { error, vectorSlotPropertyName }
+const vectorSlotPropertyNameOf = ({ stableId, declaredName, embedSourcePropertyValue }) => {
+	const refusalHead = `node '${stableId}' declares vectorPropertyName ${JSON.stringify(declaredName)}`;
+	if (typeof declaredName !== 'string' || declaredName.trim() === '') {
+		return {
+			error: `${refusalHead}, which is not a property name. A declaration must name the property its vector lives under; nothing is substituted.`,
+		};
+	}
+	if (declaredName === ORDINARY_VECTOR_PROPERTY_NAME) {
+		return {
+			error: `${refusalHead}: that is the ordinary vector property. Do not declare it; a node whose vector lives in '${ORDINARY_VECTOR_PROPERTY_NAME}' carries no vectorPropertyName.`,
+		};
+	}
+	if (embedSourcePropertyValue === undefined || embedSourcePropertyValue === null) {
+		return {
+			error: `${refusalHead} but no embedSourceProperty. A vector under a declared property must also declare the property that was embedded: its content address is computed from that value, and searchText is not a stand-in for it.`,
+		};
+	}
+	return { error: '', vectorSlotPropertyName: declaredName };
+};
+
+// engineRecordVectorSlotOf — the declaration on an ENGINE-SHAPED record (PG-JSON property arrays, as the
+// shaper and deserializeBlock both produce). A declared vector must ride in the slot, never under
+// properties: left there it would be written as well, unnarrowed and outside the dimension guards.
+const engineRecordVectorSlotOf = (node) => {
+	const recordProperties = node.properties || {};
+	const declaredValue = recordProperties.vectorPropertyName;
+	if (declaredValue === undefined || declaredValue === null) {
+		return { error: '', vectorSlotPropertyName: ORDINARY_VECTOR_PROPERTY_NAME };
+	}
+	if (Array.isArray(declaredValue) && declaredValue.length !== 1) {
+		return {
+			error: `node '${node.stableId}' declares vectorPropertyName ${JSON.stringify(declaredValue)}; a declaration is ONE property name.`,
+		};
+	}
+	const declaredName = Array.isArray(declaredValue) ? declaredValue[0] : declaredValue;
+	const declarationVerdict = vectorSlotPropertyNameOf({
+		stableId: node.stableId,
+		declaredName,
+		embedSourcePropertyValue: recordProperties.embedSourceProperty,
+	});
+	if (declarationVerdict.error) {
+		return declarationVerdict;
+	}
+	if (recordProperties[declaredName] !== undefined) {
+		return {
+			error:
+				`node '${node.stableId}' carries its declared vector property '${declaredName}' under properties. ` +
+				`A vector rides in the record's one slot, lifted there by the forger's shaper; left in properties ` +
+				`it would be written unnarrowed and outside the dimension guards.`,
+		};
+	}
+	return declarationVerdict;
+};
 
 // buildNodeRow — the stored row for a MERGE. The resolution key is stableId; _source/_id are
 // retained as ordinary stored properties for provenance/debugging but are NOT the merge key.
@@ -160,7 +234,14 @@ const buildNodeRow = (node) => {
 	props._source = node.ref.source;
 	props._id = node.ref.id;
 	props.stableId = node.stableId; // the durable resolution key, stored on the node.
-	if (node.embedding) props.embedding = node.embedding; // number[] -> Neo4j LIST<FLOAT>
+	// ⟪R-ET-8⟫ the slot's vector lands under the record's declared vectorPropertyName, or 'embedding'
+	// when it declares none. validateShapedGraph refuses a malformed declaration before any row is built,
+	// so reaching this throw means a caller built rows without the guard.
+	const vectorSlotVerdict = engineRecordVectorSlotOf(node);
+	if (vectorSlotVerdict.error) {
+		throw new Error(`replay-engine.buildNodeRow: ${vectorSlotVerdict.error}`);
+	}
+	if (node.embedding) props[vectorSlotVerdict.vectorSlotPropertyName] = node.embedding; // number[] -> Neo4j LIST<FLOAT>
 	// Persist the embedding provenance stamp the materializer set at the node's top level
 	// (DECISIONS §3): every replayed node carries its embeddingModelVersion (e.g. 'voyage-4-large').
 	if (node.embeddingModelVersion) props.embeddingModelVersion = node.embeddingModelVersion;
@@ -485,9 +566,19 @@ const sourceOf = (oneSelector) =>
 
 const shapeNode = (neoNode, header, emitEmbeddingRef) => {
 	const props = neoNode.properties || {};
+	// ⟪R-ET-8, R-ET-30⟫ the property this node's vector is READ from, in BOTH branches below (sidecar ref
+	// and store-less inline), and DROPPED from the serialised properties exactly as `embedding` is: the
+	// block never carries a vector as a property. A declaration is validated once stableId is known.
+	const declaredVectorPropertyName = neoToJs(props.vectorPropertyName);
+	const isVectorPropertyDeclared =
+		declaredVectorPropertyName !== undefined && declaredVectorPropertyName !== null;
+	const vectorSlotPropertyName = isVectorPropertyDeclared
+		? declaredVectorPropertyName
+		: ORDINARY_VECTOR_PROPERTY_NAME;
 	const properties = {};
 	Object.keys(props).forEach((oneKey) => {
 		if (oneKey === '_id' || oneKey === '_source' || oneKey === 'embedding') return;
+		if (oneKey === vectorSlotPropertyName) return;
 		if (oneKey === 'stableId') return; // externalized into ref/stableId, not a duplicate prop.
 		properties[oneKey] = pgArray(props[oneKey]);
 	});
@@ -512,7 +603,37 @@ const shapeNode = (neoNode, header, emitEmbeddingRef) => {
 		stableId,
 		properties,
 	};
-	if (Array.isArray(props.embedding) && props.embedding.length > 0) {
+	if (isVectorPropertyDeclared) {
+		const declarationVerdict = vectorSlotPropertyNameOf({
+			stableId,
+			declaredName: declaredVectorPropertyName,
+			embedSourcePropertyValue: props.embedSourceProperty,
+		});
+		if (declarationVerdict.error) {
+			throw new Error(`replay-engine.shapeNode: ${declarationVerdict.error}`);
+		}
+		if (props[ORDINARY_VECTOR_PROPERTY_NAME] !== undefined && props[ORDINARY_VECTOR_PROPERTY_NAME] !== null) {
+			throw new Error(
+				`replay-engine.shapeNode: node '${stableId}' declares vectorPropertyName ` +
+					`'${declaredVectorPropertyName}' AND carries '${ORDINARY_VECTOR_PROPERTY_NAME}'. A node has ONE ` +
+					`vector slot: a declared vector lives only under '${declaredVectorPropertyName}', and an ` +
+					`'${ORDINARY_VECTOR_PROPERTY_NAME}' beside the declaration would enter the ordinary vector index.`,
+			);
+		}
+		const declaredVectorValue = props[declaredVectorPropertyName];
+		if (
+			declaredVectorValue !== undefined &&
+			declaredVectorValue !== null &&
+			!(Array.isArray(declaredVectorValue) && declaredVectorValue.length > 0)
+		) {
+			throw new Error(
+				`replay-engine.shapeNode: node '${stableId}' declares vectorPropertyName ` +
+					`'${declaredVectorPropertyName}' but the value there is not a non-empty vector.`,
+			);
+		}
+	}
+	const slotVectorList = props[vectorSlotPropertyName];
+	if (Array.isArray(slotVectorList) && slotVectorList.length > 0) {
 		if (emitEmbeddingRef) {
 			// EXTRACT-path embedding sidecar (PLAN §3.4): the persisted block carries the
 			// content-hash REF of the vector INPUT, not the base64 vector. The ref is a pure
@@ -574,10 +695,10 @@ const shapeNode = (neoNode, header, emitEmbeddingRef) => {
 				embedInputValue,
 			);
 			node.embeddingModelVersion = header.embeddingModelVersion;
-			node._sidecarVector = props.embedding.map(neoToJs);
+			node._sidecarVector = slotVectorList.map(neoToJs);
 			node._sidecarInputText = embedInputValue;
 		} else {
-			node.embedding = replayBlock.encodeEmbedding(props.embedding.map(neoToJs));
+			node.embedding = replayBlock.encodeEmbedding(slotVectorList.map(neoToJs));
 			node.embeddingModelVersion = header.embeddingModelVersion;
 		}
 	}
@@ -1162,6 +1283,7 @@ const validateShapedGraph = (groups) => {
 	const labelViolations = [];
 	const nullIdViolations = [];
 	const provenanceViolations = [];
+	const vectorSlotViolations = [];
 	const allNodes = [];
 	const allEdges = [];
 
@@ -1235,6 +1357,17 @@ const validateShapedGraph = (groups) => {
 			provenanceViolations.push({ ...oneViolation, sourceLabel }),
 		);
 
+		// GUARD 4 ⟪R-ET-8⟫ — a vectorPropertyName declaration must be well formed, and the declared vector
+		// must ride in the record's one slot. A text node still carries :ForgedNode (GUARD 1 unchanged).
+		const vectorSlotOffenderList = oneGroup.nodes
+			.map((oneNode) => engineRecordVectorSlotOf(oneNode).error)
+			.filter((oneError) => oneError !== '');
+		if (vectorSlotOffenderList.length > 0) {
+			vectorSlotViolations.push(
+				`${sourceLabel}: ${vectorSlotOffenderList.length} node(s) with a malformed vector slot; first: ${vectorSlotOffenderList[0]}`,
+			);
+		}
+
 		oneGroup.nodes.forEach((oneNode) => allNodes.push(oneNode));
 		oneGroup.edges.forEach((oneEdge) => allEdges.push(oneEdge));
 	}
@@ -1261,6 +1394,12 @@ const validateShapedGraph = (groups) => {
 				`first offender in '${sample.sourceLabel}': ${sample.edgeType} ${JSON.stringify(sample.fromRef)} -> ` +
 				`${JSON.stringify(sample.toRef)} tier=${JSON.stringify(sample.provenanceTier)}. ` +
 				`No edges written.`,
+		);
+	}
+	if (vectorSlotViolations.length > 0) {
+		return refuse(
+			`vector slot enforcement: ${vectorSlotViolations.length} non-conforming source(s). ` +
+				`${vectorSlotViolations.join(' | ')} No writes performed.`,
 		);
 	}
 
@@ -1309,6 +1448,7 @@ const writeShapedGraph = (
 ) => {
 	const resKeyIndex = resKeyIndexName();
 	const vectorIndex = vectorIndexName(graphName);
+	const embedTextVectorIndex = embedTextVectorIndexName(graphName);
 	const taskList = new taskListPlus();
 
 	// --- SHAPE + ALL THREE GUARDS, before anything is written. This is the load-bearing line of
@@ -1398,11 +1538,24 @@ const writeShapedGraph = (
 					\`vector.similarity_function\`: 'cosine'
 				}}
 			`;
+			// ⟪R-ET-8, R-ET-24⟫ the SECOND vector index, for text nodes, at the same dimensions: their vectors
+			// are lifted into the one slot by the shaper, so the ragged-dimension guard has already held them
+			// to the width the ordinary vectors share. The label and property come from the vocabulary.
+			const embedTextVectorQuery = `
+				CREATE VECTOR INDEX ${embedTextVectorIndex} IF NOT EXISTS
+				FOR (n:${EMBED_TEXT_VECTOR.label}) ON (n.${EMBED_TEXT_VECTOR.propertyName})
+				OPTIONS {indexConfig: {
+					\`vector.dimensions\`: ${embeddingDims},
+					\`vector.similarity_function\`: 'cosine'
+				}}
+			`;
 			session
 				.run(vectorQuery)
+				.then(() => session.run(embedTextVectorQuery))
 				.then(() => session.run('CALL db.awaitIndexes(300)'))
 				.then(() => {
 					indexesBuilt.push(vectorIndex);
+					indexesBuilt.push(embedTextVectorIndex);
 					next('', { ...args, indexesBuilt });
 				})
 				.catch((err) => next(`phase3 vector index failed: ${err.message}`));
@@ -1421,6 +1574,7 @@ const writeShapedGraph = (
 					return;
 				}
 				indexesBuilt.push(`${vectorIndex}:skipped(serverVersion ${kernelVersion} < 5.13)`);
+				indexesBuilt.push(`${embedTextVectorIndex}:skipped(serverVersion ${kernelVersion} < 5.13)`);
 				next('', { ...args, indexesBuilt });
 			})
 			.catch((err) => next(`phase3 version probe failed: ${err.message}`));
@@ -1582,6 +1736,10 @@ return {
 	resolveNodeVectors,
 	kernelSupportsVectorIndex,
 	resolveManifestEmbeddingDims,
+	// ⟪R-ET-8⟫ the vector-slot declaration rule, shared with the forger's shaper
+	ORDINARY_VECTOR_PROPERTY_NAME,
+	vectorSlotPropertyNameOf,
+	engineRecordVectorSlotOf,
 };
 };
 
