@@ -22,8 +22,8 @@
   "measuredPostEmbedText": {
     "edfi": "0019849775f12aca71130219c345697224590ed31b6df304e14705b4f1102959",
     "ceds": "21110ef1fd423434bfc64899559f31dd7d126fd421e344341fe329e3f65c91dd",
-    "sif": null,
-    "pesc260805": null
+    "sif": "866200ad495ddd2a20a675490f6b5cd306b306c2d980f0267f821fb5d2f55978",
+    "pesc260805": "548019ffa1d5fb202bd8a5d266862c3acf155db51e0a1f56596f9bcde70ec271"
   },
 
   "measuredPostEmbedTextRecord": {
@@ -85,6 +85,50 @@
       "nodeTotalHubless": 31886,
       "textNodeCount": 6684,
       "edgeTotal": 503942
+    },
+    "sif": {
+      "measuredOn": "2026-09-15",
+      "measuredBy": "RADIANT_QUEST (embed-text P9 supervisor half)",
+      "head": "76c5bed (branch embedText-091426, working tree CLEAN)",
+      "buildMode": "vectorize=true",
+      "predecessorId": "d393b0406d08f613f3142711fca5a9f2b0c580e84c4bef3ffd6b18d4eaa2330a (measuredPreMigration.sif)",
+      "recipe": "recipes/sifOnlyRoundTrip.recipe.jsonc",
+      "standardsDatabase": "system/dataStores/graphBuilder/embedTextP9_sif.standardsDatabase.sqlite3",
+      "manifest": "5170111243410ca5899400cc41d8eef64a72541239707d4eb9a96911ca2e0c47",
+      "runDir": "system/dataStores/buildLogs/embedTextP9_sif/sifOnlyRoundTrip_20260915-052459",
+      "buildLog": "embedTextSearch-091426/logs/build_embedTextP9_sif.log",
+      "roundTrip": {
+        "inventedTotal": 0,
+        "lostTotal": 0,
+        "roundTripClean": true
+      },
+      "graph": "DEV_embedTextP9_sif (kept until P10)",
+      "nodeTotal": 30924,
+      "textNodeCount": 3855,
+      "edgeTotal": 116466,
+      "embeddingCalls": 243
+    },
+    "pesc260805": {
+      "measuredOn": "2026-09-15",
+      "measuredBy": "RADIANT_QUEST (embed-text P9 supervisor half)",
+      "head": "76c5bed (branch embedText-091426, working tree CLEAN)",
+      "buildMode": "vectorize=true",
+      "predecessorId": "f139654a98cd0ef238759e6dc2bda2e532f13d5a7db00bfea94d89c3317b149d (measuredPreMigration.pesc260805, the P1-R8 rendering-seat lineage head)",
+      "recipe": "recipes/pesc260805OnlyRoundTrip.recipe.jsonc",
+      "standardsDatabase": "system/dataStores/graphBuilder/embedTextP9_pesc260805.standardsDatabase.sqlite3",
+      "manifest": "1dff3b14ef6c16781bccb6a7eaf8068ebfed1afbd1fa1e8e123f849dfa79c458",
+      "runDir": "system/dataStores/buildLogs/embedTextP9_pesc260805/pesc260805OnlyRoundTrip_20260915-052649",
+      "buildLog": "embedTextSearch-091426/logs/build_embedTextP9_pesc260805.log",
+      "roundTrip": {
+        "inventedTotal": 0,
+        "lostTotal": 0,
+        "roundTripClean": true
+      },
+      "graph": "DEV_embedTextP9_pesc260805 (kept until P10)",
+      "nodeTotal": 45919,
+      "textNodeCount": 3547,
+      "edgeTotal": 109734,
+      "embeddingCalls": 360
     }
   },
 

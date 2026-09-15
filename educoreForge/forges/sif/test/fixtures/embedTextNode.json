@@ -1,17 +1,17 @@
 {
-	"fixturePurpose": "PHASE P5 (embedText-091426, R-ET-5/R-ET-20): ONE SIF text node and ONE EMBEDS_TEXT_OF edge, shaped as the P3 kit will mint them (contractGraphKit.js makeNode: _id and the stable-URI property 'sifStableId' stamped with the stableId; R-ET-1 revised identity; R-ET-2 depth 1 / crossRefs '[]'; R-ET-8 embedSourceProperty / vectorPropertyName; no name, no searchText). Appended to the fixture's real forgeSif output before it enters roundTripGraphDouble.buildSifGraphFromForgeOutput. It proves the DIFF, never the production Cypher allowlist (that is P9's live run).",
+	"fixturePurpose": "PHASE P5 (embedText-091426, R-ET-5/R-ET-20): ONE SIF text node and ONE EMBEDS_TEXT_OF edge, shaped as the P3 kit will mint them (contractGraphKit.js makeNode: _id and the stable-URI property 'sifStableId' stamped with the stableId; R-ET-1 revised identity; R-ET-2 depth 1 / crossRefs '[]'; R-ET-8 embedSourceProperty / vectorPropertyName; no name, no searchText). Appended to the fixture's real forgeSif output before it enters roundTripGraphDouble.buildSifGraphFromForgeOutput. It proves the DIFF, never the production Cypher allowlist (that is P9's live run). The text is a SENTINEL that cannot occur in SIF (P9, R-ET-40 ruling 5, OCEAN_ORBIT 2026-09-14): the earlier text 'GUID identifying this fixture student.' is a real description in the fixture, so once SIF declared its text lists (P9) the forge minted the SAME stableId and the fixture node collided with a forge-minted one.",
 	"textNode": {
 		"labels": ["ForgedNode", "SifEmbedText", "DmeEmbedText"],
-		"stableId": "sif:root/embedText/91822e3ad7e7885457c4141dd7fdab49031b546cee58d00ebab01a07faa145a9",
+		"stableId": "sif:root/embedText/3959c1640cfd5e12cd4dbd8e0c80b8d64c7719d2f05f9ec0b4db1c9ba1030d18",
 		"role": "DmeEmbedText",
 		"properties": {
-			"_id": "sif:root/embedText/91822e3ad7e7885457c4141dd7fdab49031b546cee58d00ebab01a07faa145a9",
+			"_id": "sif:root/embedText/3959c1640cfd5e12cd4dbd8e0c80b8d64c7719d2f05f9ec0b4db1c9ba1030d18",
 			"_source": "SIF",
 			"role": "DmeEmbedText",
-			"sifStableId": "sif:root/embedText/91822e3ad7e7885457c4141dd7fdab49031b546cee58d00ebab01a07faa145a9",
+			"sifStableId": "sif:root/embedText/3959c1640cfd5e12cd4dbd8e0c80b8d64c7719d2f05f9ec0b4db1c9ba1030d18",
 			"parentId": "sif:root",
-			"path": "embedText/91822e3ad7e7885457c4141dd7fdab49031b546cee58d00ebab01a07faa145a9",
-			"text": "GUID identifying this fixture student.",
+			"path": "embedText/3959c1640cfd5e12cd4dbd8e0c80b8d64c7719d2f05f9ec0b4db1c9ba1030d18",
+			"text": "P5 fixture text - not a SIF text (embedText-091426)",
 			"embedSourceProperty": "text",
 			"vectorPropertyName": "textEmbedding",
 			"depth": 1,
@@ -22,7 +22,7 @@
 		"type": "EMBEDS_TEXT_OF",
 		"fromRef": {
 			"source": "SIF",
-			"id": "sif:root/embedText/91822e3ad7e7885457c4141dd7fdab49031b546cee58d00ebab01a07faa145a9"
+			"id": "sif:root/embedText/3959c1640cfd5e12cd4dbd8e0c80b8d64c7719d2f05f9ec0b4db1c9ba1030d18"
 		},
 		"toRef": { "source": "SIF", "id": "sif:field//FixtureStudents/FixtureStudent/@RefId" },
 		"properties": { "propertyNameList": ["description"], "provenanceTier": "structural" }

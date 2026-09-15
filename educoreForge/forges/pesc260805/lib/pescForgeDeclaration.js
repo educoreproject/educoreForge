@@ -95,7 +95,22 @@ const pescForgeDeclaration = Object.freeze({
 	// including the root, which is why the root carries embeddingModelVersion in the block. CEDS
 	// excludes three roles; PESC and SIF exclude none.
 	nonEmbeddableRoleList: Object.freeze([]),
-	embedTextDeclaration: null,
+	// embed-text lists — TQ decision 1 (PLAN-forgeEmbedText-091426 §8.2), label verbatim (R-ET-15). List
+	// order is the derivation's iteration order. `effectiveDescription` is the FORGE-stamped rendering seat
+	// (RULING P1-R8), a legitimate source text: the declaration contract forbids only framework-stamped,
+	// structural and vector names. The ruled searchText composition (searchTextComposition.js) is NOT
+	// touched by declaring it. Oracle (R-ET-17, evidence/P1-textListCensus-v2.log): 3,547 text nodes /
+	// 39,106 EMBEDS_TEXT_OF edges (30,015 single-name, 9,091 multi-name); 5,694 absent effectiveDescription;
+	// 33,664 empty values skipped; 1,802 trimmed. Declaring this MOVES the PESC proxy and block id
+	// (re-pinned by the supervisor after P9), by design.
+	embedTextDeclaration: Object.freeze({
+		embedTextLabel: 'Pesc260805EmbedText',
+		textPropertyListByRole: Object.freeze({
+			DmeClass: Object.freeze(['name', 'description', 'documentation', 'effectiveDescription']),
+			DmeProperty: Object.freeze(['name', 'description', 'documentation', 'effectiveDescription']),
+			DmeOptionSet: Object.freeze(['name', 'description', 'documentation', 'effectiveDescription']),
+		}),
+	}),
 	// PESC has no CEDS anchor at all in this tier, so it has no "no mapping" sentinel to declare.
 	// Empty is the honest declaration, not a placeholder.
 	cedsAnchorAbsentSentinelList: Object.freeze([]),

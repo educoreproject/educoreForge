@@ -997,7 +997,7 @@
 			"suiteFile": "test/test-pesc260805SourceTier.js",
 			"shippedRunLog": "mp_r2_shipped_source.log",
 			"counts": {
-				"proven": 9,
+				"proven": 13,
 				"recordsGap": 41,
 				"genuineGap": 5
 			},
@@ -1199,6 +1199,54 @@
 					"label": "INTEGRATION every edge carries provenanceTier structural + pescTier",
 					"status": "recordsGap",
 					"note": "UNVERIFIABLE BUT BELIEVED. DEVLOG records \"PHASE 2: CLOSED — 47/47 gates, all RED-first\", and Phase 2 was independently reviewed and committed green at b02168b. The red receipts for that run were not retained. Do NOT re-run; hand to Phase 6."
+				},
+				{
+					"label": "INTEGRATION R-ET-40 excluded DmeEmbedText nodes EQUAL stats.embedTextNodeCount",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "test/test-artifacts/p9/p9RET40_nodeCountOffByOne.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION (P9, R-ET-40): lib/forge-framework/embedTextDerivation.js made to report embedTextNodeCount one ABOVE the text nodes it minted, in a scratch worktree at 875e9a7 carrying this suite's R-ET-40 edit; the assertion was OBSERVED RED (64/67 — the other two reds are the LEDGER checks, which could not yet see these rows). The file was restored byte-for-byte and the restore verified by cmp against a pristine copy AND an empty git diff.",
+							"shippedConfig": true
+						}
+					],
+					"note": "R-ET-40 (P9, RADIANT_QUEST ruling; OCEAN_ORBIT 2026-09-14): the universal INTEGRATION checks quantify over the WALK population (framework DmeEmbedText nodes and EMBEDS_TEXT_OF edges excluded); this row belongs to the conjuncts that make that exclusion EXACT and check the excluded population positively. The harness-mutation inversions (text population put back in the domain; one text node or edge dropped from the excluded set) are recorded in the campaign evidence, not here."
+				},
+				{
+					"label": "INTEGRATION R-ET-40 excluded EMBEDS_TEXT_OF edges EQUAL stats.embedTextEdgeCount",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "test/test-artifacts/p9/p9RET40_edgeCountOffByOne.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION (P9, R-ET-40): lib/forge-framework/embedTextDerivation.js made to report embedTextEdgeCount one ABOVE the EMBEDS_TEXT_OF edges it minted, in a scratch worktree at 875e9a7 carrying this suite's R-ET-40 edit; the assertion was OBSERVED RED (64/67 — the other two reds are the LEDGER checks, which could not yet see these rows). The file was restored byte-for-byte and the restore verified by cmp against a pristine copy AND an empty git diff.",
+							"shippedConfig": true
+						}
+					],
+					"note": "R-ET-40 (P9, RADIANT_QUEST ruling; OCEAN_ORBIT 2026-09-14): the universal INTEGRATION checks quantify over the WALK population (framework DmeEmbedText nodes and EMBEDS_TEXT_OF edges excluded); this row belongs to the conjuncts that make that exclusion EXACT and check the excluded population positively. The harness-mutation inversions (text population put back in the domain; one text node or edge dropped from the excluded set) are recorded in the campaign evidence, not here."
+				},
+				{
+					"label": "INTEGRATION R-ET-40 every excluded text node carries NO searchText and NO pescTier",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "test/test-artifacts/p9/p9RET40_textNodeCarriesPescTier.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION (P9, R-ET-40): lib/forge-framework/embedTextDerivation.js made to carry pescTier 'source' on every text node it mints, in a scratch worktree at 875e9a7 carrying this suite's R-ET-40 edit; the assertion was OBSERVED RED (64/67 — the other two reds are the LEDGER checks, which could not yet see these rows). The file was restored byte-for-byte and the restore verified by cmp against a pristine copy AND an empty git diff.",
+							"shippedConfig": true
+						}
+					],
+					"note": "R-ET-40 (P9, RADIANT_QUEST ruling; OCEAN_ORBIT 2026-09-14): the universal INTEGRATION checks quantify over the WALK population (framework DmeEmbedText nodes and EMBEDS_TEXT_OF edges excluded); this row belongs to the conjuncts that make that exclusion EXACT and check the excluded population positively. The harness-mutation inversions (text population put back in the domain; one text node or edge dropped from the excluded set) are recorded in the campaign evidence, not here."
+				},
+				{
+					"label": "INTEGRATION R-ET-40 every EMBEDS_TEXT_OF edge leaves a text node and lands on a walk node of a declared role",
+					"status": "proven",
+					"redEvidence": [
+						{
+							"probeLog": "test/test-artifacts/p9/p9RET40_textSourcedFromUndeclaredRole.log",
+							"lever": "PRODUCTION MUTATION, SHIPPED CONFIGURATION (P9, R-ET-40): lib/forge-framework/embedTextDerivation.js made to derive 'name' texts from nodes of roles the declaration does NOT list, in a scratch worktree at 875e9a7 carrying this suite's R-ET-40 edit; the assertion was OBSERVED RED (64/67 — the other two reds are the LEDGER checks, which could not yet see these rows). The file was restored byte-for-byte and the restore verified by cmp against a pristine copy AND an empty git diff.",
+							"shippedConfig": true
+						}
+					],
+					"note": "R-ET-40 (P9, RADIANT_QUEST ruling; OCEAN_ORBIT 2026-09-14): the universal INTEGRATION checks quantify over the WALK population (framework DmeEmbedText nodes and EMBEDS_TEXT_OF edges excluded); this row belongs to the conjuncts that make that exclusion EXACT and check the excluded population positively. The harness-mutation inversions (text population put back in the domain; one text node or edge dropped from the excluded set) are recorded in the campaign evidence, not here."
 				},
 				{
 					"label": "INTEGRATION every node carries a ratified pescTier (source|derived|synthetic|meta, R-P2-1)",
