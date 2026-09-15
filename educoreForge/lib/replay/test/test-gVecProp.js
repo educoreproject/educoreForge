@@ -802,6 +802,24 @@ const conjunctJudgeByRefId = {
 		);
 	},
 
+	// d — R-ET-37 (RADIANT_QUEST, 2026-09-14): the only declarable vector property is EMBED_TEXT_VECTOR.propertyName,
+	// the one a vector index covers; any other name is refused at every door that reads a declaration
+	d5_undeclarableVectorPropertyNameIsRefused: (subject, done) => {
+		const shaperError = shapeFixture(subject, [forgedTextNode({ vectorPropertyName: 'otherVector', otherVector: TEXT_VECTOR }, ['textEmbedding'])]).error || '';
+		const harvestRefusal = outcomeOf(() =>
+			subject.replayEngine.shapeNode(graphTextNode({ vectorPropertyName: 'otherVector', otherVector: TEXT_VECTOR }, ['textEmbedding']), HEADER, true),
+		).thrownMessage;
+		const guardError = subject.replayEngine.validateShapedGraph([{ sourceLabel: SOURCE_LABEL, nodes: [engineTextRecord({ vectorPropertyName: 'otherVector' })], edges: [] }]).error;
+		const refusalPattern = /declares vectorPropertyName "otherVector"; the only declarable vector property is 'textEmbedding'/;
+		done(
+			verdictOf([
+				{ checkName: 'the shaper refuses it by name', pass: refusalPattern.test(shaperError), detail: shaperError || 'admitted' },
+				{ checkName: 'shapeNode refuses it by name', pass: refusalPattern.test(harvestRefusal), detail: harvestRefusal || 'harvested' },
+				{ checkName: 'validateShapedGraph refuses it by name', pass: refusalPattern.test(guardError), detail: guardError || 'admitted' },
+			]),
+		);
+	},
+
 	// e — two vector indexes on a capable kernel
 	e1_twoVectorIndexStatementsOnACapableKernel: (subject, done) => {
 		writeThroughRecordingSession({ subject, kernelVersion: '5.26.0' }, (writeError, written) => {
@@ -971,6 +989,11 @@ const twinList = [
 		twinName: 'ordinaryNameDeclarationAllowed',
 		mutationList: [{ modulePath: ENGINE_PATH, find: 'if (declaredName === ORDINARY_VECTOR_PROPERTY_NAME) {', replace: 'if (false) {' }],
 		conjunctRefIdList: ['d2_declaringTheOrdinaryVectorPropertyIsRefused'],
+	},
+	{
+		twinName: 'anyVectorPropertyNameDeclarable',
+		mutationList: [{ modulePath: ENGINE_PATH, find: 'if (declaredName !== EMBED_TEXT_VECTOR.propertyName) {', replace: 'if (false) {' }],
+		conjunctRefIdList: ['d5_undeclarableVectorPropertyNameIsRefused'],
 	},
 	{
 		twinName: 'vectorUnderPropertiesAdmitted',

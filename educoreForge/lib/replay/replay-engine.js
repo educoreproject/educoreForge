@@ -185,6 +185,13 @@ const vectorSlotPropertyNameOf = ({ stableId, declaredName, embedSourcePropertyV
 			error: `${refusalHead}: that is the ordinary vector property. Do not declare it; a node whose vector lives in '${ORDINARY_VECTOR_PROPERTY_NAME}' carries no vectorPropertyName.`,
 		};
 	}
+	// ⟪R-ET-37, RADIANT_QUEST 2026-09-14⟫ the only declarable vector property is the one a vector index covers;
+	// a vector declared anywhere else would be written where no index reads it.
+	if (declaredName !== EMBED_TEXT_VECTOR.propertyName) {
+		return {
+			error: `${refusalHead}; the only declarable vector property is '${EMBED_TEXT_VECTOR.propertyName}', the one the ${EMBED_TEXT_VECTOR.label} vector index covers (EMBED_TEXT_VECTOR). A vector declared under any other property would be written where no index reads it.`,
+		};
+	}
 	if (embedSourcePropertyValue === undefined || embedSourcePropertyValue === null) {
 		return {
 			error: `${refusalHead} but no embedSourceProperty. A vector under a declared property must also declare the property that was embedded: its content address is computed from that value, and searchText is not a stand-in for it.`,
