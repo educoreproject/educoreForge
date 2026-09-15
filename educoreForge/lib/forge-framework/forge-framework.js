@@ -44,6 +44,9 @@ const migrationAllowanceRegistryLib = require('./migrationAllowanceRegistry');
 const contractGraphKitLib = require('./contractGraphKit');
 const rootNodeLib = require('./rootNode');
 const embedPassLib = require('./embedPass');
+const embedTextPassLib = require('./embedTextPass');
+const embedTextDerivationLib = require('./embedTextDerivation');
+const { effectiveNonEmbeddableRoleList } = require('./frameworkNonEmbeddableRoles');
 const sourceVerificationLib = require('./sourceVerification');
 const provenanceStampLib = require('./provenanceStamp');
 const censusLib = require('./census');
@@ -150,6 +153,7 @@ const moduleFunction =
 
 		const provenanceStamp = provenanceStampLib({ xLog });
 		const embedPass = embedPassLib({ embedder, xLog });
+		const embedTextPass = embedTextPassLib({ embedder, xLog });
 
 		// -----------------------------------------------------------------
 		// activeAllowancesFor — the declaration's entries and their registry rows, keyed for the
@@ -213,8 +217,10 @@ const moduleFunction =
 			if (hookError) {
 				throw hookError;
 			}
-			const { standardKey, standardSource, stableUriPropertyName, nonEmbeddableRoleList } = forgeDeclaration;
+			const { standardKey, standardSource, stableUriPropertyName, nonEmbeddableRoleList, embedTextDeclaration } = forgeDeclaration;
 			const forgePrefix = `forge-${standardKey}`;
+			// the bundle's list plus the framework-owned roles (R-ET-3) — what the integrity pass exempts from searchText
+			const bundleEffectiveNonEmbeddableRoleList = effectiveNonEmbeddableRoleList({ nonEmbeddableRoleList });
 
 			// =============================================================
 			// buildContractGraph — the PURE layer (§6.2). Synchronous, deterministic, no I/O, no
@@ -285,8 +291,34 @@ const moduleFunction =
 					const missingEdge = kitInternals.edges.find((oneEdge) => !seenEdgeSet.has(oneEdge));
 					throw refuse.byName({ moduleName, what: `${forgePrefix} emitContractGraph returned ${seenEdgeSet.size} of ${mintedEdgeSet.size} added edges (missing ${missingEdge.type} ${missingEdge.fromRef.id} → ${missingEdge.toRef.id})`, where: 'an added edge that is not returned is a silent loss; return kit.edges whole' });
 				}
-				const nodes = returnedNodes;
-				const edges = returnedEdges;
+				// DmeEmbedText and EMBEDS_TEXT_OF belong to the framework (R-ET-3, R-ET-35, R-ET-38): a node of
+				// that role or an edge of that type among the WALK's returned arrays was made by a hook, not by the
+				// derivation below — refused
+				const walkMintedEmbedTextNode = returnedNodes.find((oneNode) => oneNode.role === DME_ROLES.EMBED_TEXT);
+				if (walkMintedEmbedTextNode !== undefined) {
+					throw refuse.byName({ moduleName, what: `${forgePrefix} emitContractGraph minted node '${walkMintedEmbedTextNode.stableId}' with role ${DME_ROLES.EMBED_TEXT}`, where: 'the framework owns that role: declare embedTextDeclaration and the framework mints the text nodes itself' });
+				}
+				const walkAddedEmbedsTextEdge = returnedEdges.find((oneEdge) => oneEdge.type === EDGE_TYPES.EMBEDS_TEXT_OF);
+				if (walkAddedEmbedsTextEdge !== undefined) {
+					throw refuse.byName({ moduleName, what: `${forgePrefix} emitContractGraph added an ${EDGE_TYPES.EMBEDS_TEXT_OF} edge (${walkAddedEmbedsTextEdge.fromRef.id} → ${walkAddedEmbedsTextEdge.toRef.id})`, where: 'the framework owns that edge type: declare embedTextDeclaration and the framework adds the EMBEDS_TEXT_OF edges itself' });
+				}
+
+				// 4b. the framework's text nodes (R-ET-2): derived from the walk's returned nodes AFTER the
+				// origin check above and BEFORE the universal checks below, minted through the kit. Then
+				// composed EXPLICITLY: the walk's arrays followed by the framework's, by IDENTITY — a walk
+				// that returned the live kit arrays already holds the appended text nodes; a walk that
+				// returned a copy has them concatenated here. Under embedTextDeclaration null nothing is
+				// minted and the report is empty, so no embedText* key reaches stats (R-ET-23, R-ET-29).
+				const walkMintedNodeCount = kitInternals.nodes.length;
+				const walkAddedEdgeCount = kitInternals.edges.length;
+				const embedTextReport = embedTextDerivationLib.deriveEmbedTextGraph({ nodes: returnedNodes, embedTextDeclaration, kit });
+				const embedTextNodeList = kitInternals.nodes.slice(walkMintedNodeCount);
+				const embedTextEdgeList = kitInternals.edges.slice(walkAddedEdgeCount);
+				const nodes = returnedNodes === kitInternals.nodes ? returnedNodes : returnedNodes.concat(embedTextNodeList);
+				const edges = returnedEdges === kitInternals.edges ? returnedEdges : returnedEdges.concat(embedTextEdgeList);
+				Object.keys(embedTextReport).forEach((oneStatName) => {
+					walkStats[oneStatName] = embedTextReport[oneStatName];
+				});
 
 				// dangling endpoints — the falsy ones the kit recorded plus any endpoint that resolves to
 				// no member — refused ONCE naming the count and the first offender (C1 is not an F3a row)
@@ -319,7 +351,7 @@ const moduleFunction =
 					if (props[stableUriPropertyName] !== oneNode.stableId) {
 						throw refuse.byName({ moduleName, what: `${forgePrefix}: node '${oneNode.stableId}' carries ${stableUriPropertyName} ${JSON.stringify(props[stableUriPropertyName])} after the walk`, where: `${stableUriPropertyName} equals the stableId on every node` });
 					}
-					const isEmbeddable = nonEmbeddableRoleList.indexOf(oneNode.role) === -1;
+					const isEmbeddable = bundleEffectiveNonEmbeddableRoleList.indexOf(oneNode.role) === -1;
 					if (isEmbeddable && (typeof props.searchText !== 'string' || props.searchText.length === 0)) {
 						throw refuse.byName({ moduleName, what: `${forgePrefix}: node '${oneNode.stableId}' has ${props.searchText === undefined ? 'no' : 'an empty'} searchText after the walk`, where: 'searchText is present and non-empty on every embeddable node' });
 					}
@@ -370,7 +402,8 @@ const moduleFunction =
 				//    refuses ≠1 root / bad parentId / cycle) — P1 is not an F3a row, so it always runs
 				structuralContractLib.finalizeStructuralContract({ nodes, edges });
 
-				// 7. return — the walk's arrays in the walk's order, plus its reports and the compliance report
+				// 7. return — the walk's arrays in the walk's order followed by the framework's text nodes in mint
+				//    order, plus the walk's reports and the compliance report
 				const complianceReport = censusLib.complianceReport({ forgeDeclaration, nodes, kitStats: kitInternals.stats });
 				return { nodes, edges, stats: walkStats, complianceReport, ...standardSpecificReports };
 			};
@@ -640,6 +673,23 @@ const moduleFunction =
 							next('', { ...args, embedCallCount: embedReport.embedCallCount });
 						},
 					);
+				});
+
+				// STEP 6b — the text pass beside the legacy pass (R-ET-8, R-ET-18): embeds the DmeEmbedText nodes'
+				// `text` under textEmbedding, honouring the same embedNodeLimit; skipped under skipEmbedding
+				// exactly as STEP 6 is; the seam's embedCallCount is the SUM of both passes
+				taskList.push((args, next) => {
+					if (skipEmbedding === true) {
+						next('', args);
+						return;
+					}
+					embedTextPass.embedTextNodes({ nodes: args.contractGraph.nodes, embedNodeLimit, standardKey }, (embedTextError, embedTextReport) => {
+						if (embedTextError) {
+							next(embedTextError);
+							return;
+						}
+						next('', { ...args, embedCallCount: args.embedCallCount + embedTextReport.embedCallCount });
+					});
 				});
 
 				// STEP 7 — return: the seam's declared keys + stats + complianceReport + the walk's reports

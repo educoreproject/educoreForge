@@ -12,8 +12,14 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //
 // Refuses by name: embedder null with embedding requested; a batch failure with its batch number;
 // vectors.length !== texts.length (interfaces.js:249-251); a missing embeddingModelVersion.
+//
+// The role filter is the caller's list UNIONED with the framework-owned roles
+// (frameworkNonEmbeddableRoles.js, R-ET-3), computed HERE because the public embed.embedNodes export
+// takes a caller list: a DmeEmbedText node (no searchText) never reaches embedTexts through this pass.
+// Its text is embedded by embedTextPass.js under textEmbedding.
 
 const refuse = require('./refuse');
+const { effectiveNonEmbeddableRoleList } = require('./frameworkNonEmbeddableRoles');
 
 const EMBED_BATCH_SIZE = 128; // the ONE copy (D6): forgeCeds.js:73, forgeEdfi.js:49, forgeSif.js:64, forgePesc260805.js:61
 
@@ -47,7 +53,8 @@ const moduleFunction =
 
 			// FILTER by role first (a non-embeddable node keeps its place and carries no vector), THEN
 			// slice to the limit in emission order (FR20)
-			const embeddableNodeList = nodes.filter((oneNode) => nonEmbeddableRoleList.indexOf(oneNode.role) === -1);
+			const passNonEmbeddableRoleList = effectiveNonEmbeddableRoleList({ nonEmbeddableRoleList });
+			const embeddableNodeList = nodes.filter((oneNode) => passNonEmbeddableRoleList.indexOf(oneNode.role) === -1);
 			const targetNodeList =
 				nodeSubsetLimit !== undefined && nodeSubsetLimit < embeddableNodeList.length
 					? embeddableNodeList.slice(0, nodeSubsetLimit)

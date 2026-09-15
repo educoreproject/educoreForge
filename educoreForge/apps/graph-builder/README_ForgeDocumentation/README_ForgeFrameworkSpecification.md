@@ -261,7 +261,8 @@ never reads the ini ⟨Profile §3⟩. It is a declaration OBJECT, larger than t
 | `rootLabel` | string | yes | `'EdfiRoot'` (`cg:465`) | verbatim; CEDS `'CedsOntology'`, SIF `'SifRoot'`, PESC `'Pesc260805Root'` — never derived by capitalising `standardKey` ⟨RISK H5⟩ |
 | `parserVersion` | string | yes | `'2'` (`cg:485`) | root property, verbatim; the framework MUST NOT substitute its own version ⟨RISK H20⟩ |
 | `mappingInstruction` | six-key object | yes | Ed-Fi's (`cg:68-75`) | exactly `{ cedsOriginalAnchorPropertyName, cedsOptionOriginalAnchorPropertyName, crosswalkPrefix, crosswalkResolveProperty, includeInImplied, impliedTargets }` in THAT order; JSON-stringified onto the root in that order (the string is a byte, §10 G-JSONKEYS) ⟨Profile §10.4⟩ ⟨IMPL §1.4 R5⟩ ⟨RISK H10⟩. More or fewer keys refused |
-| `nonEmbeddableRoleList` | list of `DME_ROLES` members | yes (may be `[]`) | `[]` | a node whose role is listed carries NO `searchText` and is skipped by the embed pass, never removed from the array (CEDS `[EDIT_HISTORY_ENTRY, RESTRICTION, VOCABULARY_TERM]`, `forgeCeds.js:829-834`) ⟨Profile §4.6⟩ ⟨RISK H25⟩. A PERMANENT declaration, not an allowance (§14 D7). A non-member role refused |
+| `nonEmbeddableRoleList` | list of `DME_ROLES` members | yes (may be `[]`) | `[]` | a node whose role is listed carries NO `searchText` and is skipped by the embed pass, never removed from the array (CEDS `[EDIT_HISTORY_ENTRY, RESTRICTION, VOCABULARY_TERM]`, `forgeCeds.js:829-834`) ⟨Profile §4.6⟩ ⟨RISK H25⟩. A PERMANENT declaration, not an allowance (§14 D7). A non-member role refused; a FRAMEWORK-owned role (`DmeEmbedText`) refused too — the framework makes it non-embeddable itself through `frameworkNonEmbeddableRoles.effectiveNonEmbeddableRoleList`, the ONE union used by the kit (no searchText at mint), the §6.2 step-4c re-check and inside `embed.embedNodes` ⟨PLAN-forgeEmbedText §8.3 R-ET-3⟩ |
+| `embedTextDeclaration` | `null`, or `{ embedTextLabel: <non-empty string>, textPropertyListByRole: { <DME_ROLES member>: [unique non-empty property names] } }` | yes (`null` when the bundle embeds no text) | `null` (`edfiForgeDeclaration.js`) | the text a bundle embeds as framework-minted `DmeEmbedText` nodes (§6.2 step 4b, §6.3 text pass). `embedTextLabel` is the per-standard text-node label verbatim (`'EdfiEmbedText'`, `'CedsEmbedText'`, `'SifEmbedText'`, `'Pesc260805EmbedText'`, toy `'ToyEmbedText'`); the framework derives no prefix. Refused by name: any other shape; an unknown inner key; a missing or empty `embedTextLabel`; an EMPTY role map (declare `null` instead); a role outside `DME_ROLES`; `DmeEmbedText` itself; an empty or non-list property list; a non-string or empty name; a duplicate name; a framework-stamped, structural or vector name (`searchText`, `embedding`, `textEmbedding`, `embeddingModelVersion`, `embedSourceProperty`, `vectorPropertyName`, `_id`, `_source`, `role`, `parentId`, `path`, `stableId`, `crossRefs`, `depth`, and the bundle's `stableUriPropertyName`) — `name` and `description` ARE legitimate text properties. Gate G-ETEXT (k) ⟨PLAN-forgeEmbedText §8.3 R-ET-15, R-ET-19⟩ |
 | `cedsAnchorAbsentSentinelList` | string list | yes (may be `[]`) | `['000000']` (`cg:63`) | §3.4 `cedsAnchorValue` |
 | `additionalSourceInputList` | list of `{ inputName, relativePathFromSourcePath }` | yes (may be `[]`) | `[]` | a DECLARED second (third…) source input inside the snapshot, resolved by the framework relative to `sourcePath`, verified against `SHA256SUMS`, and handed to every loader as `additionalSourceInputPathByName`; absent on disk → refused by name. SIF: `[{ inputName: 'refIdResolutionMap', relativePathFromSourcePath: 'refIdResolutionMap.tsv' }]` (today located by search, `sif/lib/parser.js:520-527`) — declared, not sniffed (Profile §3.3) ⟨FR20⟩ ⟨RULING 23:12 #4⟩ |
 | `compatibilityDeclarationList` | list of `{ allowanceId, probeEvidence?, ...allowanceData }` | yes (may be `[]`) | `[{ allowanceId: 'E6' }]` (§7) | every `allowanceId` MUST be a `MIGRATION_ALLOWANCE_REGISTRY` key whose `declarableBy` names this `standardKey`; a non-empty list on a bundle whose `standardKey` is not in `MIGRATING_BUNDLE_LIST` is refused; an offline-precondition row (§7.1) MUST carry `probeEvidence` ⟨RULING 23:12 #1⟩ ⟨FR13⟩ |
@@ -271,7 +272,8 @@ a missing required key; an UNKNOWN key (a typo must not become a silently ignore
 wrong kind; a closed-value violation; a `mappingInstruction` with a missing or extra key or keys in
 the wrong order; a role not in `DME_ROLES`; an unknown allowance id; an allowance id whose `declarableBy` does
 not name this bundle (`edfi` declaring `P4`) ⟨FR20⟩; an offline-precondition row without `probeEvidence`
-⟨ARCH §3⟩ ⟨Profile §7.1⟩.
+⟨ARCH §3⟩ ⟨Profile §7.1⟩; a `nonEmbeddableRoleList` naming `DmeEmbedText`; and every `embedTextDeclaration`
+fault its row lists.
 
 ### 4.2 What is NOT in the declaration, and why
 
@@ -388,8 +390,8 @@ else — `owner` included — is READ ⟨RISK §5⟩.
 | 3 | **load**: run `sourceLoaderList` serially → `parsed = { [loaderName]: loaded }` | hooks (H2) | a loader's error, prefixed `forge-<standardKey> <loaderName>:` |
 | 4 | **describe + stamp**: `describeSource({ parsed })` → `{ version?, selfDescribedVersion, sourceFormat, sourceFiles, sourceUrl }` (`version` OPTIONAL since the versionFromStamp order, tqii 2026-08-31 — omitted, the stamp supplies it; present and disagreeing with the stamp, refused by name); then, unless allowance P2 is active, `provenance.deriveVersionStamp({ sourcePath, sourceVersion: selfDescribedVersion })`; `metadata = { version, versionSource, sourceFormat, sourceFiles, sourceUrl, snapshotKey, publishedVersion }` (Ed-Fi `forgeEdfi.js:170-197`, CEDS `forgeCeds.js:891-909`, SIF `forgeSif.js:759-767` made one) ⟨Profile §10.1⟩ ⟨FR2⟩ | framework | `describeSource` missing a key or returning an undeclared key; `version` of `''` (the seam refuses it later, `forger.js:362-372`; the cheap refusal belongs here); `version !== (selfDescribedVersion ?? 'unknown')` without S3; `sourceUrl: ''` without E6/S4/P16; `sourceFiles` empty without S7 |
 | 5 | **the pure layer under the ONE adapter**: `buildContractGraph({ parsed, metadata })` (§6.2) inside the framework's `try/catch` — "the throw-to-callback ADAPTER, not control flow" (`forgeEdfi.js:199-231`); a throw becomes `next('forge-<standardKey> buildContractGraph: <message>')`. A forge author never writes `try` ⟨Profile §2.2⟩ ⟨DOCTRINE⟩. Then the framework's uniform count line via `xLog.status` | framework | (translated) every pure-layer refusal |
-| 6 | **embed**: `skipEmbedding === true` → `embedCallCount: 0`, no `embedTexts` call (D7); else `embed.embedNodes({ nodes: contractGraph.nodes, nodeSubsetLimit: embedNodeLimit, nonEmbeddableRoleList })` — the hook's node ORDER preserved (§6.4) | framework | §6.3 |
-| 7 | **return** `callback('', { nodes, edges, metadata, stats, embedCallCount, standardKey, stableUriPropertyName, complianceReport, ...standardSpecificReports })` — the seam's six declared keys (`interfaces.js:239-240`; of these the forger's live path READS `nodes`, `edges`, `metadata`'s four, `embedCallCount`, `stableUriPropertyName` — `standardKey` is read by nothing live, the header takes the recipe token, `build.js:1475`, so the framework's own G-SEAM equality check is its only enforcement), plus `stats`, `complianceReport: { activeAllowanceList, activeAllowanceCount, namelessNodeCountByRole, substitutionCount }` (§7.3, ⟨FR4⟩) and the walk's reports as extras ⟨Profile §2.3 "MAY return additional keys"⟩ | framework | — |
+| 6 | **embed**: `skipEmbedding === true` → `embedCallCount: 0`, no `embedTexts` call (D7); else `embed.embedNodes({ nodes: contractGraph.nodes, nodeSubsetLimit: embedNodeLimit, nonEmbeddableRoleList })` — the hook's node ORDER preserved (§6.4) — THEN (step 6b) the text pass `embedTextNodes({ nodes, embedNodeLimit, standardKey })` over the `DmeEmbedText` nodes (§6.3), skipped under the same `skipEmbedding`; `embedCallCount` is the SUM of both passes. The text pass reads nothing new from the seam argument (G-SEAM's Proxy still permits `sourcePath`, `embedNodeLimit`, `skipEmbedding` only) | framework | §6.3 |
+| 7 | **return** `callback('', { nodes, edges, metadata, stats, embedCallCount, standardKey, stableUriPropertyName, complianceReport, ...standardSpecificReports })` — the seam's six declared keys (`interfaces.js:239-240`; of these the forger's live path READS `nodes`, `edges`, `metadata`'s four, `embedCallCount`, `stableUriPropertyName` — `standardKey` is read by nothing live, the header takes the recipe token, `build.js:1475`, so the framework's own G-SEAM equality check is its only enforcement), plus `stats` (the walk's object, carrying the five `embedText*` counts of §6.2 step 4b when `embedTextDeclaration` is non-null and none under `null`), `complianceReport: { activeAllowanceList, activeAllowanceCount, namelessNodeCountByRole, substitutionCount }` (§7.3, ⟨FR4⟩) and the walk's reports as extras ⟨Profile §2.3 "MAY return additional keys"⟩ | framework | — |
 
 `owner` is accepted and NEVER READ by the framework — not carried, not handed to a hook, not
 interpreted; an absent `owner` is not refused ⟨RULINGS row 4⟩ ⟨RISK §8.3⟩ ⟨FR12⟩ ⟨§14 D4⟩. `bundleVersion` is the forger's derivation from `metadata.version` (`forger.js:923-936`); the
@@ -409,14 +411,29 @@ I/O, no clock, no `xLog`. It:
    `kit.rootStableId`. Root stableId: `forgeDeclaration.rootStableId` when `rootStableIdFrom ===
    'declared'`; `metadata.sourceUrl` when `'sourceUrl'` (CEDS, `forgeCeds.js:469`);
 3. calls `emitContractGraph({ parsed, metadata, kit })`;
-4. runs the integrity pass — refuse by name: any returned node or edge not minted by the kit;
-   dangling endpoints → count + first offender (unless C1 active, then recorded in `stats` and the
+4. runs the integrity pass, in three parts whose ORDER is ruled ⟨PLAN-forgeEmbedText §8.3 R-ET-2⟩:
+   **4a — over the WALK's return, unchanged:** refuse by name any returned node or edge not minted by
+   the kit, returned twice, or minted and not returned; and any returned node whose role is
+   `DmeEmbedText`, and any returned edge whose type is `EMBEDS_TEXT_OF` — the framework owns that role
+   and that edge type ⟨§8.5 R-ET-35, R-ET-38⟩;
+   **4b — the framework's text nodes:** `embedTextDerivation.deriveEmbedTextGraph({ nodes: returnedNodes,
+   embedTextDeclaration, kit })` mints, through the kit, one `DmeEmbedText` node per DISTINCT declared
+   text and one `EMBEDS_TEXT_OF` edge per distinct (text node, source node) pair (rules below); the
+   framework then COMPOSES `nodes` = the walk's returned nodes followed by the text nodes, and `edges`
+   likewise, by IDENTITY — a walk that returned the live `kit.nodes`/`kit.edges` already holds the
+   appended text nodes and is not double-appended; a walk that returned a copy has them concatenated and
+   is not refused for nodes it never minted; and it writes the derivation's five counts
+   (`embedTextNodeCount`, `embedTextEdgeCount`, `embedTextSkippedEmptyCount`, `embedTextAbsentCount`,
+   `embedTextTrimmedCount`) onto the `stats` object the walk returned. Under `embedTextDeclaration: null`
+   nothing is minted and no `embedText*` property is written ⟨R-ET-23, §8.4 R-ET-29⟩;
+   **4c — over the COMPOSED arrays:** dangling endpoints → count + first offender (unless C1 active, then recorded in `stats` and the
    census); duplicate stableIds already refused at mint (unless C2 active — then counted);
    `_source === standardSource` on every node; the root's required set (§6.5); every active
    allowance's precondition met and no needed allowance undeclared (§7.2); AND — because a walk may
    write onto a minted node (§3.4) — the kit's universal-property checks are RE-RUN over every node and
    edge POST-MUTATION: `_id === stableId`, `role` a `DME_ROLES` member and equal to the label triple's,
-   `searchText` present and non-empty unless the role is non-embeddable, no universal-name value
+   `searchText` present and non-empty unless the role is non-embeddable (the declaration's list plus the
+   framework-owned roles, R-ET-3), no universal-name value
    overwritten to a non-string, `[stableUriPropertyName] === stableId`, every edge `type` still a member
    of `EDGE_TYPES` or an active P4/S6 name, every edge `properties.provenanceTier === 'structural'`
    ⟨FR15⟩. Creation is single-doored AND enforcement survives mutation;
@@ -433,7 +450,8 @@ I/O, no clock, no `xLog`. It:
 6. calls `finalizeStructuralContract({ nodes, edges })` LAST over structure — derives `depth`, stamps
    `crossRefs: '[]'` where absent, refuses ≠1 root / bad `parentId` / cycle ⟨Profile §4.4.7⟩ — unless
    allowance P1 is active;
-7. returns `{ nodes, edges, stats, ...standardSpecificReports }`.
+7. returns `{ nodes, edges, stats, ...standardSpecificReports }` — `nodes`/`edges` in the walk's order
+   followed by the framework's text nodes/edges in mint order (§6.4).
 
 WHY the root is built first and the walk cannot push its own objects. The kit is the ONLY door for
 CREATION, so every node carries the universal stamp and every stableId went through the duplicate
@@ -441,6 +459,24 @@ registry — the two integrity properties Profile §4.4 item 6 says are unsafe t
 (CEDS has neither, C1/C2). The walk's returned arrays are honoured for ORDER and for composition, and
 checked for ORIGIN ⟨ARCH §4.2⟩ ⟨RULING 23:12 #4⟩. The pure layer stays testable in isolation exactly
 as today: `buildContractGraph` takes what the loaders produced and gives `{ nodes, edges }`.
+
+**The embed-text derivation (step 4b)** ⟨PLAN-forgeEmbedText §8.3 R-ET-1, R-ET-4, R-ET-16; §8.4 R-ET-28,
+R-ET-29⟩. Over the walk's returned nodes in emission order, for each node whose role has a declared
+list, for each listed property in list order: `undefined`/`null` → counted (`embedTextAbsentCount`) and
+skipped; a string is one value; ANY list is expanded element-wise (a one-element list is one value), an
+EMPTY list is refused, and an element that is not a string (a nested list included) is refused; any
+other type is refused; a value containing NUL (U+0000) is refused (the vector sidecar refuses NUL at
+harvest); `text = value.trim()` is the DECLARED identity rule — empty after trim → counted
+(`embedTextSkippedEmptyCount`) and skipped, a non-empty text that differs from its value → counted
+(`embedTextTrimmedCount`). Identity is the text alone: `stableId = rootStableId + ('/' unless the root
+already ends with '/') + 'embedText/' + sha256hex(text)` (CEDS's root `https://w3id.org/CEDStandards/terms/`
+yields ONE slash), `path = 'embedText/' + sha256hex(text)`, `parentId = rootStableId`. Text nodes are minted
+in ascending `stableId` order carrying `{ text, embedSourceProperty: 'text', vectorPropertyName:
+'textEmbedding' }` beyond the kit's stamps — no `name`, no `description`, no `searchText` (the kit builds
+none for a framework-owned role), no `embedding`; the finalizers give them `depth` 1 and `crossRefs '[]'`.
+Edges are added in ascending (from, to) order, ONE per distinct (text node, source node) pair, carrying
+`propertyNameList` — the sorted, unique source property names of that pair (the collision census
+stays 0 per forge). Refusals name the module, the source node's stableId and the property.
 
 ### 6.3 `embed.embedNodes` — census D5–D7 made ONE
 
@@ -456,21 +492,47 @@ vector ⟨RISK H4, H25, §1.3⟩. Refuses by name: `embedder === null` with embe
 failure with its batch number; `vectors.length !== texts.length` (`interfaces.js:249-251`).
 `embedNodeLimit` slices "the first N" of the array as the hook ordered it ⟨ARCH §0 C3⟩.
 
+The role filter is the caller's `nonEmbeddableRoleList` UNIONED with the framework-owned roles
+(`FRAMEWORK_NON_EMBEDDABLE_ROLE_LIST = [DmeEmbedText]`), computed INSIDE `embedNodes` because the public
+`embed.embedNodes` export takes a caller list ⟨PLAN-forgeEmbedText §8.3 R-ET-3⟩: a text node, which
+carries no `searchText`, never reaches `embedTexts` through this pass.
+
+**The text pass — `embedTextPass.embedTextNodes({ nodes, embedNodeLimit, standardKey }, cb)`**, forge()
+step 6b, beside the legacy pass and not on the public surface ⟨R-ET-8, R-ET-18⟩: selects the
+`DmeEmbedText` nodes in array (mint) order, takes the first `embedNodeLimit` when a limit is set (the
+limit bounds spend in BOTH passes, each over its own nodes), embeds `properties.text` in
+`EMBED_BATCH_SIZE` batches through the unchanged `embedder.embedTexts`, and stamps
+`properties.textEmbedding = Array.from(vectors[i])` and `properties.embeddingModelVersion` — the ORDINARY
+name, CARRIED from the result. It writes nothing to `properties.embedding` or to the node's top level, so
+the graph's `<graph>_vector` index on `ForgedNode(embedding)` never sees a text vector. Refuses by name:
+a selected text node without a non-empty string `text`; a batch failure with its batch number;
+`vectors.length !== texts.length`; a missing `embeddingModelVersion`. Its calls ADD to `embedCallCount`;
+`skipEmbedding: true` skips it as it skips the legacy pass. The PROXY fingerprint drops `textEmbedding`
+as it drops `embedding` (R-ET-9), so an embed run and a skip run hash equal; the text nodes and their
+edges themselves ARE hashed.
+
 ### 6.4 Emission order — passed through untouched
 
-The framework MUST return `nodes` and `edges` in the ORDER the walk returned them: no sort, no stable
-partition, no dedup ⟨RULING 23:12 #5⟩ ⟨RISK §1.4⟩ ⟨Profile §5.5⟩. Order does not reach block text —
+The framework MUST return `nodes` and `edges` in the ORDER the walk returned them, followed by the
+framework's own text nodes and edges in mint order (§6.2 step 4b): no sort, no stable partition, no
+dedup of the walk's arrays ⟨RULING 23:12 #5⟩ ⟨PLAN-forgeEmbedText §8.4 R-ET-31⟩ ⟨RISK §1.4⟩ ⟨Profile §5.5⟩. Order does not reach block text —
 harvest sorts nodes by `stableId` and edges by `(from, type, to)`, the serializer sorts keys and labels
-`[code fact]` `replay-engine.js:709,739,813,840`, `replay-block.js:117-128,182` — EXCEPT through MERGE
-collisions: `mergeNodes` is `MERGE (n:ForgedNode {stableId}) SET n += row.props` and `mergeEdges` is
-`MERGE (from)-[r:TYPE]->(to) SET r += e.props` (`replay-engine.js:203-205`, `:288`), so a duplicate
-`stableId` or a duplicate `(from, type, to)` triple collapses LAST-WRITER-WINS and emission order
-decides the bytes. Three of the four do not refuse duplicates today. Hence: pass-through order, plus
+`[code fact]` `replay-engine.js:709,739,813,840`, `replay-block.js:117-128,182` — EXCEPT through a
+NODE MERGE collision: `mergeNodes` is `MERGE (n:ForgedNode {stableId: row.stableId}) … SET n += row.props`
+(`replay-engine.js:252-255`), so a duplicate `stableId` collapses LAST-WRITER-WINS and emission order
+decides the bytes. EDGES no longer collapse that way: since 2026-09-02 `mergeEdges` writes through
+`apoc.merge.relationship(from, $edgeType, e.props, {}, to)` (`replay-engine.js:397`), merging on the FULL
+property map, so edges that share a `(from, type, to)` triple but differ in any property survive as
+distinct relationships and only byte-identical edges merge — a collapse no emission order can change. A
+duplicate `(from, type, to)` triple is instead REFUSED upstream: `census.collisionCensus` counts it and
+G-ORDER freezes that count per forge ⟨PLAN-forgeEmbedText §8.5 R-ET-4 corrected, R-ET-38⟩. Three of the four do not refuse duplicates today. Hence: pass-through order, plus
 the collision census gate G-ORDER frozen per forge, plus allowances C1/C2 ONLY where the census proves
 the pinned snapshot triggers a collision (§7). The sixth-conjunct closure is qualified by that MERGE
 sentence ⟨RULING 23:12 #5⟩ ⟨RISK §8.5⟩.
 
-What the framework MAY freely re-order: nothing on the returned arrays. What it MAY freely do
+What the framework MAY freely re-order: nothing on the returned arrays. The embed-text derivation orders
+only what it mints — text nodes by ascending `stableId`, their edges by ascending (from, to) — and never a
+walk node or edge. What it MAY freely do
 internally: iterate its own frozen registries in any order, because no registry order reaches a value
 — EXCEPT inside stringified JSON values (`mappingInstruction`, `crossRefs`, and Ed-Fi's
 `mergeDirectives`, `cg:433-435` — the walk composes it, its key order is the parser's, G-JSONKEYS lists
@@ -893,6 +955,7 @@ F3b/F3c/F3d proofs (§10.2).
 | **G-ENV** | G-DET repeated under `LC_ALL=C` and `LC_ALL=en_US.UTF-8` (child processes) → identical; a readdir-order fixture whose directory order differs from `SHA256SUMS` order → identical | a fixture hook sorting with `localeCompare` over a mixed-case list ICU and code-unit order disagree on → red under one locale | productionMutation | equality |
 | **G-ORDER** | (a) `census.collisionCensus` over the fixture output EQUALS the frozen expected (0/0/0 for the toy); (b) `forge()` returns `nodes`/`edges` in the walk's emission order (stableId sequence equals the captured sequence) | (a) with the test-only `MIGRATING_BUNDLE_LIST` override (`shippedConfig: false`) the toy declares C2 and its walk emits one stableId twice → census 1 ≠ 0 → red ⟨FR20⟩; a sibling conjunct asserts the override is absent from shipped config; (b) a test double that sorts inside the return step → sequence differs | productionMutation | (a) EQUALITY with a frozen count — trap: "no crash"; (b) equality of sequences |
 | **G-EMBED** | `skipEmbedding: true` → `embedCallCount === 0` and a spy embedder that throws on call is never called; `skipEmbedding: false` + `embedder: null` → refused by name; N nodes → `ceil(N/128)` calls; `embedNodeLimit: n` → exactly `min(n, embeddable)` nodes carry vectors, chosen by role filter FIRST then slice in emission order ⟨FR20⟩; non-embeddable roles carry none and remain in the array in place; vector/text count mismatch → refused; batch failure text carries the batch number | fixture framework build calls the spy once under `skipEmbedding: true` → red; limit 3, embed 4 → red; a double that slices before filtering → a non-embeddable node consumes a slot → count differs → red | productionMutation | EQUALITY of counts — trap: "count is a number" |
+| **G-ETEXT** ⟨PLAN-forgeEmbedText §8.3-8.5⟩ | (a) `null` on the toy → zero `DmeEmbedText` nodes, zero `EMBEDS_TEXT_OF` edges, no `embedText*` stat, and the toy PROXY EQUALS the frozen `3a3130eb…`; (b) the declared (test-only) toy → one text node per DISTINCT trimmed text against an independent oracle, a shared text is ONE node with two edges, the five `stats` counts EQUAL the oracle, text nodes follow every walk node; (c) one edge per (text, node) pair — a node whose two listed properties share a text gets ONE edge with a two-name `propertyNameList` and `collisionCensus.duplicateEdgeTripleCount === 0`; (d) a text node carries no `name`/`searchText`/`embedding` and exactly its ruled property set (`depth` 1, `crossRefs '[]'`, label triple); (e) the stableId literal under the toy pattern and under a CEDS-shaped `^https?://\S+$` with root `https://w3id.org/CEDStandards/terms/` (ONE slash); (f) a walk returning COPIES composes with the text nodes present once; a walk-minted `DmeEmbedText` node (R-ET-35) and a walk-added `EMBEDS_TEXT_OF` edge (R-ET-38) are refused; (g) two runs byte-identical, and a permuted emission order gives the same canonical text; (h) with a spy, the legacy pass sends no text node's text and the text pass exactly the distinct texts, `embedCallCount` EQUALS the sum of both `ceil(n/128)`; (i) `skipEmbedding: true` → no text vectors, no spy call; (j) `embedNodeLimit: 1` → one walk text and one node text; (k) every `embedTextDeclaration` refusal of §4.1, `DmeEmbedText` in `nonEmbeddableRoleList`, and a textless text node at the pass; (l) absent and empty-after-trim counted, padding collapses onto one node, a list expands element-wise, `['x']` is one value, `[]` / nested / NUL / non-string refused; (m) an embed run's PROXY EQUALS a skip run's; (n) text nodes carry the spy's `embeddingModelVersion` and a `textEmbedding` of its dimension, and no `textEmbeddingModelVersion` exists | (each; 43 twins over 37 conjuncts): mint one text node under `null`; hash text + source stableId; always concatenate the text nodes; drop the stats copy; one edge per property use; build searchText for the role in the kit; stamp `searchText` / `embedding` on a text node; drop `vectorPropertyName`; the `<standardKey>:` form; always join with `/`; derive before the origin check; disable the R-ET-35 check; disable the R-ET-38 check; an emission-index stableId; remove the union inside `embedPass`; run the text pass under skip; remove its slice; disable each declaration and value check; keep `textEmbedding` in the proxy; stamp the invented model-version name. Twins over the declared toy are registered `shippedConfig: false` | productionMutation | EQUALITY with an independent oracle and frozen literals |
 | **G-ADAPTER** | a hook that throws inside the pure layer surfaces as `callback('forge-toy buildContractGraph: …')`, never as a thrown error across `forge()` | remove the adapter in a test double → the throw escapes → red | productionMutation | equality of the error-string prefix |
 | **G-FINALIZERS** | after `forge()`, every node's `depth` EQUALS an independent chain-length computation; `crossRefs` present on every node; sequence properties present where groups were declared with the per-group `orderSemantics` value; `finalizeSequence` ran BEFORE `finalizeStructuralContract` (an instrumented double records order); a group without `orderSemantics` → refused by `sequence-contract` naming the group | a fixture walk stamps `depth: 99` and a test double skips the finalizer → red; swap the finalizer order in a double → red; drop one group's `orderSemantics` → refused | productionMutation | equality with an independently computed value |
 | **G-VERSION** | `metadata.version` EQUALS the fixture's declared root version and `selfDescribedVersion ?? 'unknown'` EQUALS what the stamp used (frozen per fixture); never `''`, never `'current'`; `versionSource ∈ {spec, provenance-file, unknown}` unless P2; S3 or P2 declared on a fresh fixture → refused | fixture provenance says `1.2.3` while the hook returns `selfDescribedVersion null` → stamp `'unknown'` ≠ `1.2.3` → red; return the recipe token → red; `version '1.0'` with `selfDescribedVersion null` and no S3 → refused | inputFault | EQUALITY with the source's value — trap: "non-empty" |
@@ -998,7 +1061,9 @@ Each is a thing that would make the framework a place where a forge could do wha
    CARVE-OUTS ⟨FR20⟩: `owningName || standardSource` inside the search-text ladder (Ed-Fi
    `cg:281-286`, SIF `forgeSif.js:217`, and `build-search-text.js:60,65,72`) and the finalizer's
    `crossRefs: '[]'` are BYTE MANDATES that reproduce today's blocks, not substitutions; G-NOSUB is
-   lexical only and does not read them as violations. The lexical rule follows the engineering rule:
+   lexical only and does not read them as violations. The embed-text derivation's `text = value.trim()`
+   is NOT a substitution either: it is a DECLARED identity rule of the derivation, counted
+   (`embedTextTrimmedCount`) and reported in `stats` ⟨PLAN-forgeEmbedText §8.3 R-ET-16, §8.4 R-ET-29⟩. The lexical rule follows the engineering rule:
    the f-word and the stub-logger idioms are absent from framework and hook source (G-NOSUB)
    ⟨Profile §7⟩.
 6. **No embedder construction, no ini reading, no credential.** Injected or `null` ⟨Profile §2.1, §2.4⟩.
@@ -1008,7 +1073,9 @@ Each is a thing that would make the framework a place where a forge could do wha
 8. **No raw-node escape hatch and no per-standard branch.** The kit is the only door for creation; no
    `if (standardKey === 'ceds')` anywhere — every per-standard difference is a declaration value, a
    hook, or an allowance id (registry over switch; G-NOSUB greps for the literal tokens of the four).
-9. **No node/edge sorting or dedup anywhere in `forge()`** ⟨RISK §6.2⟩ — §6.4.
+9. **No node/edge sorting or dedup anywhere in `forge()`** ⟨RISK §6.2⟩ — §6.4. The embed-text derivation
+   (§6.2 step 4b) dedups TEXTS, not nodes: each distinct text becomes ONE node it mints and orders itself;
+   it never removes, merges or re-orders a walk node or edge ⟨PLAN-forgeEmbedText §8.4 R-ET-31⟩.
 10. **No `finalizerPolicy` beyond P1, no `owner` interpretation, no `_id` policy switch, no
     config-driven `EMBED_BATCH_SIZE`, no option-value-expansion opt-out beyond P6, no new root
     fields, no `frameworkVersion` stamp, no `coreVersion` bump, no timestamps, no `ingestedAt`
@@ -1022,6 +1089,21 @@ Each is a thing that would make the framework a place where a forge could do wha
 14. **No touch of the seam.** Not one more return key the forger reads, not a fifth `forge()`
     argument, no change to graphBuilder, forger, `shapeForgedGraph`, replayManager ⟨PLAN "Hard lines"⟩
     — instrumented by G-SEAM-UNTOUCHED (§10.1) ⟨FR16⟩.
+    **Moved by ruling** (forge embed-text revision, TQ decision 3; PLAN-forgeEmbedText §8.3 R-ET-8, §8.4
+    R-ET-30, §8.5): the text-vector sidecar changes three seam files in phase P4 —
+    `apps/graph-builder/apps/forger/lib/shape-forged-graph.js` (strip `props[vectorPropertyName]` and lift
+    it into the record's one vector slot with its `embeddingModelVersion`, so the ragged-dimension and
+    model guards cover text vectors; a node carrying both `embedding` and its declared vector property is
+    refused), `lib/replay/replay-engine.js` (`shapeNode`: drop `props[vectorPropertyName]` from the
+    serialised properties and read the vector from `props[vectorPropertyName ?? 'embedding']` in BOTH the
+    sidecar branch and the store-less inline branch, the ref still derived from `embedSourceProperty`;
+    `buildNodeRow`: land the resolved vector under `vectorPropertyName ?? 'embedding'`; the index DDL gains
+    `<graph>_embedText_vector FOR (n:DmeEmbedText) ON (n.textEmbedding)` beside `<graph>_vector`), and
+    `lib/replay/replay-block.js` (serialise and deserialise the per-node discriminator). A record without
+    `vectorPropertyName` keeps today's bytes. G-SEAM-UNTOUCHED goes red by design and is re-anchored in P8
+    with its causes named. This site list is written from R-ET-8; if P4's final list differs, the
+    supervisor amends it at the merge. No other return key, `forge()` argument, or graphBuilder / forger /
+    replayManager change is licensed.
 
 ---
 

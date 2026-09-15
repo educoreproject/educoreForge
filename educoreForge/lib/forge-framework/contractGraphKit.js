@@ -29,6 +29,7 @@ const {
 } = require(path.join(__dirname, '..', 'vocabulary', 'vocabulary'));
 const { buildSearchText } = require(path.join(__dirname, '..', 'search-text', 'build-search-text'))();
 const refuse = require('./refuse');
+const { effectiveNonEmbeddableRoleList } = require('./frameworkNonEmbeddableRoles');
 
 const DME_ROLE_VALUE_LIST = Object.freeze(Object.values(DME_ROLES));
 const EDGE_TYPE_VALUE_LIST = Object.freeze(Object.values(EDGE_TYPES));
@@ -82,6 +83,8 @@ const contractGraphKit = ({ forgeDeclaration, metadata, activeAllowanceById = {}
 	const { standardSource, stableUriPropertyName, stableIdPattern, nonEmbeddableRoleList, cedsAnchorAbsentSentinelList } = forgeDeclaration;
 	const stableIdRegex = new RegExp(stableIdPattern.pattern);
 	const universalMintPropertyNameList = universalMintPropertyNameListFor({ stableUriPropertyName });
+	// the bundle's list plus the framework-owned roles (R-ET-3): no searchText is built for either
+	const kitNonEmbeddableRoleList = effectiveNonEmbeddableRoleList({ nonEmbeddableRoleList });
 
 	// active allowances the KIT reads (data from the declaration, keyed by allowanceId)
 	const emptyStringCoercionPropertyList = Object.keys(activeAllowanceById).reduce(
@@ -259,9 +262,11 @@ const contractGraphKit = ({ forgeDeclaration, metadata, activeAllowanceById = {}
 			throw refuse.byName({ moduleName, what: `makeNode: name is a ${typeof name} on '${stableId}' (from ${originText})`, where: 'name is a string, or absent; the framework never coerces (probe #10 → an allowance row before migration)' });
 		}
 
-		// searchText — the ladder unless the role is non-embeddable (then NO searchText, CEDS's bytes)
+		// searchText — the ladder unless the role is non-embeddable (then NO searchText, CEDS's bytes).
+		// The framework-owned roles (DmeEmbedText) are exempted HERE, before searchTextElementFor is
+		// reached: build-search-text has no segment builder for them and would throw.
 		let searchTextProperty = {};
-		if (nonEmbeddableRoleList.indexOf(role) === -1) {
+		if (kitNonEmbeddableRoleList.indexOf(role) === -1) {
 			const element = searchTextElement !== undefined
 				? searchTextElement
 				: searchTextElementFor({ role, name: nameProperty.name, owningName: structural.owningName });

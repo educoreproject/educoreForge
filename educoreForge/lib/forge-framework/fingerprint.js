@@ -5,10 +5,10 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // fingerprint.js — fingerprint.pureLayerFingerprint (SPEC-forgeFramework-v1.md §3.3, §9.3, §10
 // G-ID-CHEAP). The PROXY: sha256 over the pure output canonicalised exactly as the write→harvest→
 // serialize path would, so a unit-time gate can stand in for the block-id gate. It is labelled
-// PROXY in every report line because it CANNOT see: MERGE collapse (a duplicate stableId or a
-// duplicate (from,type,to) triple collapses last-writer-wins in the graph, replay-engine.js:203-205,
-// :288 — here both copies are hashed), the header, the hub fold, or embeddingRef lines. A green
-// proxy is not a green G-ID.
+// PROXY in every report line because it CANNOT see: MERGE collapse (a duplicate stableId collapses
+// last-writer-wins in the graph, replay-engine.js:252-255, and byte-identical edges merge through
+// apoc.merge.relationship on their full property map, :397 — here both copies are hashed), the header,
+// the hub fold, or embeddingRef lines. A green proxy is not a green G-ID.
 //
 // Canonicalisation mirrored (code facts):
 //   shape-forged-graph.js:42-69 — every property value ARRAY-WRAPPED unless already an array;
@@ -17,12 +17,17 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //   replay-engine.js harvest :709, :739 — nodes ORDER BY stableId; edges ORDER BY from, type, to
 //   replay-block.js serializeNodeLine :178-200 / serializeEdgeLine :202-215 — labels sorted,
 //     property keys sorted, {kind, ref, labels, stableId, properties} / {kind, type, fromRef, toRef, properties}
-// Node lines carry no embedding fields (the proxy hashes an un-embedded pure output).
+// Node lines carry no embedding fields (the proxy hashes an un-embedded pure output). A text node's
+// vector (`textEmbedding`, EMBED_TEXT_VECTOR.propertyName) is dropped like `embedding` (R-ET-9), so an
+// embed run and a skip run hash equal; the text nodes and their EMBEDS_TEXT_OF edges themselves ARE
+// hashed — the proxy sees a declaration's text by design.
 
 const crypto = require('crypto');
+const path = require('path');
+const { EMBED_TEXT_VECTOR } = require(path.join(__dirname, '..', 'vocabulary', 'vocabulary'));
 const refuse = require('./refuse');
 
-const DROPPED_PROPERTY_NAME_LIST = Object.freeze(['_id', '_source', 'embedding', 'embeddingModelVersion', 'stableId']);
+const DROPPED_PROPERTY_NAME_LIST = Object.freeze(['_id', '_source', 'embedding', 'embeddingModelVersion', EMBED_TEXT_VECTOR.propertyName, 'stableId']);
 
 const canonicalProperties = (properties) => {
 	const out = {};

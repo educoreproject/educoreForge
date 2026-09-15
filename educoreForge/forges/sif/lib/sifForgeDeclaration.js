@@ -67,6 +67,7 @@ const sifForgeDeclaration = Object.freeze({
 	// root. CEDS excludes three roles; SIF excludes none. An empty list is the honest declaration and
 	// the framework's embedPass reproduces the bespoke behaviour exactly.
 	nonEmbeddableRoleList: Object.freeze([]),
+	embedTextDeclaration: null,
 	// SIF has no "no mapping" sentinel: normalize.js normalizeCedsCrossRef either extracts a digit
 	// core or RETURNS AN ERROR (which the walk turns into a refusal, R3) — there is no third,
 	// absent-by-sentinel branch. An unannotated field simply carries no cedsId at all, which the

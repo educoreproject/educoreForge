@@ -86,7 +86,7 @@ scenarioTwin({
 });
 frameworkMutationTwin({
 	registry: twinRegistry, gateId: GATE_ID, conjunctId: 'emissionOrderPassedThrough', twinName: 'sortInsideReturnStep', fileName: 'forge-framework.js',
-	find: '\t\t\t\tconst nodes = returnedNodes;\n\t\t\t\tconst edges = returnedEdges;',
+	find: '\t\t\t\tconst nodes = returnedNodes === kitInternals.nodes ? returnedNodes : returnedNodes.concat(embedTextNodeList);\n\t\t\t\tconst edges = returnedEdges === kitInternals.edges ? returnedEdges : returnedEdges.concat(embedTextEdgeList);',
 	replace: "\t\t\t\tconst nodes = returnedNodes.slice().sort((leftNode, rightNode) => (leftNode.stableId < rightNode.stableId ? -1 : 1));\n\t\t\t\tconst edges = returnedEdges.slice().sort((leftEdge, rightEdge) => (`${leftEdge.fromRef.id}${leftEdge.type}` < `${rightEdge.fromRef.id}${rightEdge.type}` ? -1 : 1));",
 });
 

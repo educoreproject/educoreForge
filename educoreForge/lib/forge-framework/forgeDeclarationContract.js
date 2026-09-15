@@ -16,13 +16,21 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // kind; a closed-value violation; a permuted/missing/extra mappingInstruction key; a role not in
 // DME_ROLES; an unknown allowance id; an allowance id whose declarableBy does not name this
 // bundle; an offline-precondition row without probeEvidence; a non-empty allowance list on a
-// standardKey outside MIGRATING_BUNDLE_LIST; a stableIdPattern that is not { pattern, trimmed }.
+// standardKey outside MIGRATING_BUNDLE_LIST; a stableIdPattern that is not { pattern, trimmed }; a
+// nonEmbeddableRoleList that lists a FRAMEWORK-owned role (DmeEmbedText, R-ET-3); an
+// embedTextDeclaration that is neither null nor exactly { embedTextLabel, textPropertyListByRole } —
+// an unknown inner property, a missing or empty embedTextLabel, an empty role map, a role outside
+// DME_ROLES, the DmeEmbedText role itself, an empty or non-list property list, a non-string or empty
+// property name, a duplicate name, or a framework-stamped / vector name
+// (EMBED_TEXT_FORBIDDEN_PROPERTY_NAME_LIST, plus the bundle's stableUriPropertyName). `name` and
+// `description` ARE legitimate text properties.
 //
 // PURE: returns an Error or null; the caller (forge-framework.js) throws it at injection.
 
 const path = require('path');
-const { DME_ROLES } = require(path.join(__dirname, '..', 'vocabulary', 'vocabulary'));
+const { DME_ROLES, EMBED_TEXT_VECTOR } = require(path.join(__dirname, '..', 'vocabulary', 'vocabulary'));
 const refuse = require('./refuse');
+const { FRAMEWORK_NON_EMBEDDABLE_ROLE_LIST } = require('./frameworkNonEmbeddableRoles');
 const {
 	MIGRATION_ALLOWANCE_REGISTRY,
 	MIGRATING_BUNDLE_LIST,
@@ -57,11 +65,36 @@ const FORGE_DECLARATION_CONTRACT = Object.freeze({
 	rootLabel: Object.freeze({ required: true, kind: 'nonEmptyString' }),
 	parserVersion: Object.freeze({ required: true, kind: 'nonEmptyString' }),
 	mappingInstruction: Object.freeze({ required: true, kind: 'mappingInstruction' }),
-	nonEmbeddableRoleList: Object.freeze({ required: true, kind: 'dmeRoleList' }),
+	nonEmbeddableRoleList: Object.freeze({ required: true, kind: 'nonEmbeddableRoleList' }),
+	// null, or { embedTextLabel, textPropertyListByRole } — REQUIRED on every bundle (R-ET-19): a bundle
+	// that embeds no text says so with null
+	embedTextDeclaration: Object.freeze({ required: true, kind: 'embedTextDeclaration' }),
 	cedsAnchorAbsentSentinelList: Object.freeze({ required: true, kind: 'stringList' }),
 	additionalSourceInputList: Object.freeze({ required: true, kind: 'additionalSourceInputList' }),
 	compatibilityDeclarationList: Object.freeze({ required: true, kind: 'compatibilityDeclarationList' }),
 });
+
+// the two names a non-null embedTextDeclaration carries, exactly
+const EMBED_TEXT_DECLARATION_PROPERTY_NAME_LIST = Object.freeze(['embedTextLabel', 'textPropertyListByRole']);
+
+// names a declared text property may NOT be: what the kit, the finalizers or the embed passes stamp,
+// and the vector bookkeeping of a text node (the bundle's stableUriPropertyName is added at check time)
+const EMBED_TEXT_FORBIDDEN_PROPERTY_NAME_LIST = Object.freeze([
+	'searchText',
+	'embedding',
+	EMBED_TEXT_VECTOR.propertyName,
+	'embeddingModelVersion',
+	'embedSourceProperty',
+	'vectorPropertyName',
+	'_id',
+	'_source',
+	'role',
+	'parentId',
+	'path',
+	'stableId',
+	'crossRefs',
+	'depth',
+]);
 
 const isPlainObject = (candidate) =>
 	candidate !== null && typeof candidate === 'object' && !Array.isArray(candidate);
@@ -92,6 +125,68 @@ const KIND_CHECKER_REGISTRY = Object.freeze({
 		return firstNonMember === undefined
 			? ''
 			: `'${firstNonMember}' is not a DME_ROLES member (allowed: ${DME_ROLE_VALUE_LIST.join(', ')})`;
+	},
+	// a dmeRoleList that lists no FRAMEWORK-owned role (R-ET-3): the framework owns those roles'
+	// non-embeddability and unions them in itself (frameworkNonEmbeddableRoles.js)
+	nonEmbeddableRoleList: (value) => {
+		const roleListReason = KIND_CHECKER_REGISTRY.dmeRoleList(value);
+		if (roleListReason !== '') {
+			return roleListReason;
+		}
+		const frameworkOwnedRole = value.find((oneRole) => FRAMEWORK_NON_EMBEDDABLE_ROLE_LIST.indexOf(oneRole) !== -1);
+		if (frameworkOwnedRole !== undefined) {
+			return `lists '${frameworkOwnedRole}', a role the framework owns — the framework makes it non-embeddable itself (R-ET-3); remove it from the declaration`;
+		}
+		return '';
+	},
+	embedTextDeclaration: (value, { forgeDeclaration }) => {
+		if (value === null) {
+			return '';
+		}
+		if (!isPlainObject(value)) {
+			return `must be null or { ${EMBED_TEXT_DECLARATION_PROPERTY_NAME_LIST.join(', ')} } (got ${JSON.stringify(value)})`;
+		}
+		const unknownInnerName = Object.keys(value).find((oneName) => EMBED_TEXT_DECLARATION_PROPERTY_NAME_LIST.indexOf(oneName) === -1);
+		if (unknownInnerName !== undefined) {
+			return `carries unknown property '${unknownInnerName}'; the shape is exactly { ${EMBED_TEXT_DECLARATION_PROPERTY_NAME_LIST.join(', ')} } or null`;
+		}
+		if (typeof value.embedTextLabel !== 'string' || value.embedTextLabel.length === 0) {
+			return `embedTextLabel must be a non-empty string, the per-standard text-node label verbatim (got ${JSON.stringify(value.embedTextLabel)})`;
+		}
+		if (!isPlainObject(value.textPropertyListByRole)) {
+			return `textPropertyListByRole must be an object { <DME role>: [property names] } (got ${JSON.stringify(value.textPropertyListByRole)})`;
+		}
+		const declaredRoleList = Object.keys(value.textPropertyListByRole);
+		if (declaredRoleList.length === 0) {
+			return 'textPropertyListByRole declares no role; a bundle that embeds no text declares embedTextDeclaration: null instead';
+		}
+		const forbiddenPropertyNameList = EMBED_TEXT_FORBIDDEN_PROPERTY_NAME_LIST.concat([forgeDeclaration.stableUriPropertyName]);
+		for (let roleIndex = 0; roleIndex < declaredRoleList.length; roleIndex++) {
+			const declaredRole = declaredRoleList[roleIndex];
+			const propertyNameList = value.textPropertyListByRole[declaredRole];
+			if (DME_ROLE_VALUE_LIST.indexOf(declaredRole) === -1) {
+				return `textPropertyListByRole names '${declaredRole}', which is not a DME_ROLES member (allowed: ${DME_ROLE_VALUE_LIST.join(', ')})`;
+			}
+			if (FRAMEWORK_NON_EMBEDDABLE_ROLE_LIST.indexOf(declaredRole) !== -1) {
+				return `textPropertyListByRole names '${declaredRole}', the framework's own text-node role; a text node is never itself a text source`;
+			}
+			if (!Array.isArray(propertyNameList) || propertyNameList.length === 0) {
+				return `textPropertyListByRole.${declaredRole} must be a non-empty list of property names (got ${JSON.stringify(propertyNameList)})`;
+			}
+			const invalidPropertyName = propertyNameList.find((onePropertyName) => typeof onePropertyName !== 'string' || onePropertyName.length === 0);
+			if (invalidPropertyName !== undefined) {
+				return `textPropertyListByRole.${declaredRole} lists ${JSON.stringify(invalidPropertyName)}, not a non-empty property name`;
+			}
+			const duplicatePropertyName = propertyNameList.find((onePropertyName, nameIndex) => propertyNameList.indexOf(onePropertyName) !== nameIndex);
+			if (duplicatePropertyName !== undefined) {
+				return `textPropertyListByRole.${declaredRole} lists '${duplicatePropertyName}' twice`;
+			}
+			const forbiddenPropertyName = propertyNameList.find((onePropertyName) => forbiddenPropertyNameList.indexOf(onePropertyName) !== -1);
+			if (forbiddenPropertyName !== undefined) {
+				return `textPropertyListByRole.${declaredRole} lists '${forbiddenPropertyName}', a framework-stamped, structural or vector property (forbidden: ${forbiddenPropertyNameList.join(', ')}); declare source text only — name and description are legitimate`;
+			}
+		}
+		return '';
 	},
 	stableIdPattern: (value) => {
 		if (!isPlainObject(value)) {

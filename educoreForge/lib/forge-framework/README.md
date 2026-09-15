@@ -17,7 +17,9 @@ A forge author writes a **declaration object** (H1, data — `forgeDeclarationCo
 `describeRoot`; the round-trip pair lives in the bundle's `roundTripValidator.js`), and nothing else.
 The framework owns the pipeline (cheap refusals → checksum verification → load → describe + stamp →
 the pure layer under the ONE adapter → embed → return), the kit (`contractGraphKit.js`, the only
-door for creation), the root (`rootNode.js`), the embed pass (`embedPass.js`), source verification
+door for creation), the root (`rootNode.js`), the embed pass (`embedPass.js`) and the text pass beside it (`embedTextPass.js`), the embed-text
+derivation that mints `DmeEmbedText` nodes from a declaration (`embedTextDerivation.js`), the
+framework-owned non-embeddable roles (`frameworkNonEmbeddableRoles.js`), source verification
 (`sourceVerification.js`), the stamp adapter (`provenanceStamp.js`), the census and the PROXY
 fingerprint (`census.js`, `fingerprint.js`), the refusal shape (`refuse.js`), the roster gate
 (`roster.js`), and the closed compatibility-declaration registry (`migrationAllowanceRegistry.js`).
