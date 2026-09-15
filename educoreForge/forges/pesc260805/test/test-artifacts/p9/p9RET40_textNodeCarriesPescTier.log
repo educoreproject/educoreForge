@@ -1,0 +1,119 @@
+P9 R-ET-40 PRODUCTION MUTATION lever 'textNodeCarriesPescTier' (OCEAN_ORBIT 2026-09-15T04:50:46Z); tree 875e9a7 + the R-ET-40 SourceTier edit; mutated file lib/forge-framework/embedTextDerivation.js:
+[{"find":"vectorPropertyName: EMBED_TEXT_VECTOR.propertyName,","replace":"vectorPropertyName: EMBED_TEXT_VECTOR.propertyName, pescTier: 'source',"}]
+
+[forge-pesc260805] contract graph: 45919 nodes, 109734 edges
+[forge-pesc260805] forged 45919 nodes, 109734 edges (0 embedding calls)
+[forge-pesc260805] contract graph: 45919 nodes, 109734 edges
+[forge-pesc260805] forged 45919 nodes, 109734 edges (0 embedding calls)
+
+G-A — full parse + determinism
+        RED (demonstrated): comparator fed a set missing 'pesc260805:root…' -> mismatch detected: true
+  ok    G-A comparator demonstrably able to go red
+  ok    G-A all 64 corpus files produced artifact nodes
+  ok    G-A node count nonzero
+  ok    G-A edge count nonzero
+        census: {"artifacts":64,"importDecls":82,"namedDefinitions":12909,"elementDecls":16969,"anonymousTypes":720,"derivations":10848,"attributeDecls":84,"enumerationValuesCarried":31428,"nodes":45919,"edges":109734}
+        GREEN: run one 45919 unique stableIds (of 45919 nodes), run two identical: true
+  ok    G-A stableIds unique within a run
+  ok    G-A two runs produce identical stableId sets
+
+G-B — same-name/different-namespace identity traps
+        RED (demonstrated): bare-local-name keying fuses 3 TransmissionDataType definitions into 1 key(s): complexType/TransmissionDataType
+  ok    G-B RED: bare keying WOULD fuse the three TransmissionDataTypes
+        GREEN: real keys -> 3 distinct nodes: urn:org:pesc:sector:AcademicRecord:v1.13.0#complexType/TransmissionDataType | urn:org:pesc:sector:AdmissionsRecord:v1.4.0#complexType/TransmissionDataType | urn:org:pesc:core:CoreMain:v1.19.1#complexType/TransmissionDataType
+  ok    G-B three TransmissionDataType definitions are three distinct nodes
+        RED (demonstrated): bare keying fuses PersonType 1.10.0 + 1.19.1 into 1 key(s)
+  ok    G-B RED: bare keying WOULD fuse the two PersonTypes
+        GREEN: PersonType 1.10.0 and 1.19.1 are distinct nodes: urn:org:pesc:core:CoreMain:v1.10.0#complexType/PersonType | urn:org:pesc:core:CoreMain:v1.19.1#complexType/PersonType
+  ok    G-B CoreMain 1.10.0 and 1.19.1 PersonType are distinct nodes
+
+G-C — contested-namespace discriminator
+        RED (demonstrated): discriminator stripped -> 31 same-named definitions in the contested namespace WOULD fuse (e.g. urn:org:pesc:sector:AcademicRecord:v1.6.0#complexType/PersonType)
+  ok    G-C RED: without @sha12 the two collision members WOULD fuse definitions
+        GREEN: 140 contested-namespace definitions, all @sha12-keyed, 2 disjoint artifact groups (948d88f32069, e12830fc86a3)
+  ok    G-C contested-namespace definitions exist
+  ok    G-C every contested definition key carries @sha12
+  ok    G-C the two collision artifacts produce two disjoint definition sets
+  ok    G-C no plain-keyed definition exists in the contested namespace
+  ok    G-C uncontested namespaces carry NO discriminator
+
+G-D — refusal gates (fixtures)
+        RED (observed refusal): forge-pesc260805 pescCorpus: pesc260805 parser REFUSES: file 'UnboundPrefixFixture_v1.0.0.xsd' uses prefix 'ghost' (in 'ghost:SomethingType', top-level element 'FixtureRoot' type) 
+  ok    G-D unbound prefix refused
+  ok    G-D refusal names the file
+  ok    G-D refusal names the prefix
+        RED (observed refusal): forge-pesc260805 pescCorpus: pesc260805 parser REFUSES: file 'MessageImportFixture_v1.0.0.xsd' (layer 'message', namespace 'urn:org:pesc:message:MessageImportFixture:v1.0.0') imports 'urn:org:pesc:message:CollegeTranscri
+  ok    G-D message->message import refused
+  ok    G-D refusal names both namespaces
+        GREEN: the 64-file corpus itself parsed with zero refusals (runs one and two above)
+
+G-E — facet fidelity (ApplicationFeeAmountType)
+  ok    G-E 1.19.0 restriction node exists
+  ok    G-E 1.19.1 restriction node exists
+        RED (demonstrated): asserting totalDigits/fractionDigits on the 1.19.1 node fails as it must (totalDigits=undefined, fractionDigits=undefined)
+  ok    G-E RED: the facet assertion demonstrably fails where facets are absent
+        GREEN: 1.19.0 carries totalDigits=12, fractionDigits=2; 1.19.1 carries neither — the Phase 0 facet difference is VISIBLE in emitted nodes
+  ok    G-E 1.19.0 carries totalDigits 12
+  ok    G-E 1.19.0 carries fractionDigits 2
+  ok    G-E 1.19.1 facets ABSENT
+  ok    G-E both share the written base
+
+G-F — documentation carried verbatim
+  ok    G-F a multi-line documentation specimen exists in the raw source
+        specimen: 1175 bytes, 11 lines; collapsed form would be 984 bytes
+        RED (demonstrated): the incumbent's collapse changes the bytes (byte-identical: false) — this checker would catch it
+  ok    G-F RED: whitespace collapse is detectable by the byte comparison
+        GREEN: specimen found byte-identical on urn:org:pesc:core:CoreMain:v1.10.0#simpleType/AccreditationTypeType/restriction/1
+  ok    G-F specimen is byte-identical on an emitted node
+
+INTEGRATION — descriptor + factory + forge + shapeForgedGraph
+  ok    INTEGRATION [parserDescriptor] section is visible to the ini reader
+  ok    INTEGRATION standardName is PESC260805 (D-6)
+  ok    INTEGRATION entryModule declared
+  ok    INTEGRATION roundTripValidator IS declared (Phase 5; re-pinned in Phase 7)
+  ok    INTEGRATION the declared roundTripValidator file EXISTS (RT-13.3: declared-and-missing refuses every build)
+  ok    INTEGRATION the declared roundTripValidator exports validate() (RT-13.3: declared-and-broken is a refusal, never a downgrade to absent)
+  ok    INTEGRATION defaultSnapshot resolves to exactly the 01 directory
+[forge-pesc260805] contract graph: 45919 nodes, 109734 edges
+[forge-pesc260805] forged 45919 nodes, 109734 edges (0 embedding calls)
+  ok    INTEGRATION forge returns nodes[] and edges[]
+  ok    INTEGRATION metadata.version non-blank
+  ok    INTEGRATION standardKey + stableUriPropertyName returned
+  ok    INTEGRATION embedCallCount is 0 with skipEmbedding
+  ok    INTEGRATION every node has stableId, ForgedNode label, non-empty searchText
+  ok    INTEGRATION every edge carries provenanceTier structural + pescTier
+        R-ET-40 excluded population: 3547 DmeEmbedText nodes (stats 3547), 39106 EMBEDS_TEXT_OF edges (stats 39106)
+  ok    INTEGRATION R-ET-40 excluded DmeEmbedText nodes EQUAL stats.embedTextNodeCount
+  ok    INTEGRATION R-ET-40 excluded EMBEDS_TEXT_OF edges EQUAL stats.embedTextEdgeCount
+  FAIL  INTEGRATION R-ET-40 every excluded text node carries NO searchText and NO pescTier
+  ok    INTEGRATION R-ET-40 every EMBEDS_TEXT_OF edge leaves a text node and lands on a walk node of a declared role
+        composition C2 11939 (mean 165.52 chars, 7333 at/above the hub's 81); C0 5114 (mean 37.99 chars); prose own 5481 / viaResolvesTo 6458 / none 5114
+        composition by label: PescAttributeDecl 84 [outside the measured evidence]; PescElementDecl 16969
+  ok    COMPOSITION zero C1-shaped emissions (a bare element name is the DISQUALIFIED arm)
+  ok    COMPOSITION prose IS borrowed over RESOLVES_TO, so the composition ran AFTER the derived tier
+  ok    COMPOSITION every composed node emits one of the two RULED shapes (name-first or name-last)
+  ok    COMPOSITION a node with its OWN prose emits the NAME FIRST (the C2 direction, so a reversed arm cannot pass as C0)
+        composition accounting: byArm 17053, byLabel 17053, proseSource 17053, composed source nodes 17053
+  ok    COMPOSITION the arms PARTITION the composed population (byArm = byLabel = proseSource = nodes seen)
+        tier census: source 41676, derived 63, meta 1, synthetic 632; total 45919
+  ok    INTEGRATION every node carries a ratified pescTier (source|derived|synthetic|meta, R-P2-1)
+  ok    INTEGRATION source tier is EXACTLY 41,676 nodes
+  ok    INTEGRATION derived tier is EXACTLY 63 nodes (the namespaces)
+  ok    INTEGRATION meta tier is EXACTLY 1 node (the standard root, R-P2-1)
+  ok    INTEGRATION synthetic tier is EXACTLY 632 nodes (109 S-1 merged definitions + 522 S-1c duplicated children + 1 S-2 alias namespace)
+  ok    INTEGRATION the four tiers account for every emitted node
+  ok    INTEGRATION shapeForgedGraph accepts the output (no error)
+  ok    INTEGRATION shaped embeddingDims null (nothing embedded)
+  ok    INTEGRATION shaped nodes carry ref{source,id} resolving the stableId
+  ok    INTEGRATION shaped edges carry provenanceTier (PG-JSON array form)
+
+LEDGER — red evidence for every shipped assertion
+        ledger: 67 shipped assertions; proven-red 11, records-gap 40, GENUINE GAP 5
+        UNLEDGERED (new assertion without red evidence): INTEGRATION R-ET-40 excluded DmeEmbedText nodes EQUAL stats.embedTextNodeCount | INTEGRATION R-ET-40 excluded EMBEDS_TEXT_OF edges EQUAL stats.embedTextEdgeCount | INTEGRATION R-ET-40 every excluded text node carries NO searchText and NO pescTier | INTEGRATION R-ET-40 every EMBEDS_TEXT_OF edge leaves a text node and lands on a walk node of a declared role
+  FAIL  LEDGER every shipped assertion has a red-evidence entry
+  ok    LEDGER carries no stale entries for assertions this suite no longer runs
+  FAIL  LEDGER the entry count matches the assertions actually run
+  ok    LEDGER every proven row carries at least one lever that MUTATES PRODUCTION DATA
+
+64 passed, 3 failed
+RESTORE: lib/forge-framework/embedTextDerivation.js BYTE-IDENTICAL (cmp against the pristine copy AND git diff empty)
