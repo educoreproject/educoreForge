@@ -82,8 +82,15 @@ const bridgeDeclaration = Object.freeze({
 	// 39 characters, and adds nothing the three subject names below do not already say.
 	// `propertyDefinition` is absent on 3 of 2,777 cards; absent is absent, and the line is simply omitted.
 	renderingAllowList: {
-		subject: ['name', 'path', 'description', 'propertyType', 'owningConstructName', 'owningConstructType'],
-		candidate: ['name', 'propertyDefinition', 'domainName', 'domainDefinition', 'rangeOptionSetName', 'rangeOptionSetDefinition'],
+		// ⟪v12⟫ componentIdeaList is COMPUTED by the renderer's shared splitter and declared here like any other
+		// name: the allow-list still governs, so the field cannot appear in a plugin that has not asked for it.
+		subject: ['name', 'path', 'description', 'propertyType', 'owningConstructName', 'owningConstructType', 'componentIdeaList'],
+		// ⟪PROMPT v2 — 2026-09-11⟫ rangeClassName / rangeClassDefinition ADDED. The hub has minted both since
+		// 2026-07-01 (hub-framework.js:600,605; 485 of 94,602 cards carry them) and the prompt threw them away:
+		// measured over the promptV1 run, 635 option-set cards showed their range and 0 of 244 REFERENCE cards
+		// showed theirs, so a card that points at another object rendered identically to one holding a literal.
+		// The graph knew; the prompt did not say. Guidance line (3) is unusable without these two names.
+		candidate: ['name', 'propertyDefinition', 'domainName', 'domainDefinition', 'rangeOptionSetName', 'rangeOptionSetDefinition', 'rangeClassName', 'rangeClassDefinition', 'componentIdeaList'],
 	},
 	judgePromptVariant: 'derived',
 	// THE V1 APPROXIMATION, NAMED AS SUCH (§11.7 (a)). The judge's return carries no predicate slot and TQ has
@@ -106,7 +113,52 @@ const bridgeDeclaration = Object.freeze({
 	// braces: the allow-list already makes these unreachable by the renderer, and this removes them at the
 	// seam. Two independent mechanisms, because the value of an audit is that one of them failing is visible.
 	blindingDeclaration: ['cedsId', 'crossRefs', 'cedsOriginalAnchorPropertyName', 'cedsOptionCode', 'cedsOptionOriginalAnchorPropertyName'],
-	evidenceHooksDeclared: { nominate: false, walkEvidence: false, globalGuidance: false },
+	// ⟪PROMPT v2 — 2026-09-11, OCEAN_SUMMIT, TQ-authorised: "Revise the prompt to include meaning and whatever
+	// else you think will help and rerun the set."⟫ globalGuidance turned ON. The block has existed, guarded and
+	// empty, since the framework was built; these are the first lines to go in it, and every one of them was
+	// EARNED BY A MEASURED FAILURE in the promptV1 run over the frozen 100, not invented:
+	//
+	//   (1) MEANING OVER WORDING. Of 7 declined date subjects, FOUR had a card that meant the same thing sitting
+	//       in the pool and were declined anyway — ProbationCompleteDate against Employment End Date,
+	//       SectionAttendanceTakenEvent.EventDate against Attendance Event Date, USMostRecentEntry against Last
+	//       Qualifying Move Date, and one arguable fourth. The judge declines when no candidate is PHRASED like
+	//       the source. 46 of 100 subjects abstained; this is the costliest defect found.
+	//   (2) ABSTENTION IS NOT A SAFE DEFAULT. Stated because (1) is only half the lesson: the v1 system prompt
+	//       says abstaining "is a correct and expected answer, not a failure", which is true and was read as
+	//       permission. The symmetry has to be said out loud or fixing (1) just trades one error for the other.
+	//   (3) VALUE vs REFERENCE. The judge matched Ed-Fi's ApplicantProfile.Telephone (a reference to a Telephone
+	//       object) to the card holding the digits rather than the card that POINTS AT the telephone. TQ caught
+	//       it. This line pairs with the two rangeClass names added to renderingAllowList above: until now a
+	//       reference card rendered identically to a literal one — 0 of 244 reference cards in that run showed
+	//       their range at all — so the judge could not have seen the difference it is now asked to weigh.
+	//   (4) THE DOMAIN IS HALF THE IDEA. The v1 run's largest error class was right-property/wrong-class, and
+	//       TQ ruled on 2026-09-10 that such a mapping asserts something false.
+	//
+	// CANDIDATE-BLIND BY CONSTRUCTION (A2 smuggling gate, evidenceRenderer.js:222-230): the gate refuses any
+	// global segment containing a candidate's stableId, canonicalKey, NAME or uri. These lines therefore name no
+	// CEDS card and no CEDS domain — they state rules about SHAPE and KIND, which is what makes them safe to
+	// apply to every subject in every pool.
+	// ⟪v4, 2026-09-11 — TQ⟫ globalGuidance back ON, with TWO lines instead of v2's five, written by TQ.
+	//
+	// I had switched it off for v3 and that was a MISTAKE OF MY OWN MAKING: TQ's system prompt refers to "the
+	// GUIDANCE" twice — "You will refer to the GUIDANCE as well as simply thinking about the meaning" — so an
+	// empty block left the frame pointing at something that was not there. He caught it; the fix is to supply the
+	// guidance the system prompt promises rather than to delete the promise.
+	//
+	// WHAT SURVIVED THE CUT, and it is the interesting part. v2 had five lines and all five were measured inert.
+	// TQ kept the one that states what a correspondence IS, rewrote the abstention line into the system prompt's
+	// own vocabulary (CANDIDATE ELEMENT / SOURCE ELEMENT, with *means* emphasised), and dropped the three that
+	// were rules about how to decide — abstention-is-not-a-safe-default, value-versus-reference, and
+	// domain-is-half-the-idea. That is the same distinction the 2026-09-11 probes found from the other end: the
+	// judge takes descriptions and refuses instructions. Two lines that DESCRIBE beat five that DIRECT.
+	evidenceHooksDeclared: { nominate: false, walkEvidence: false, globalGuidance: true },
+	globalGuidanceList: [
+		"Person, student, school are FUNDAMENTAL IDEAS. If any of the CANDIDATE ELEMENTS have COMPONENT IDEAS that share one or more FUNDAMENTAL IDEAS with the SOURCE ELEMENT, one of those must be chosen unless there is a very important reason not to.",
+		"Judge by MEANING, not by wording. Two elements correspond when they assert the same fact about the world, even when their names share no words and their phrasing is nothing alike.",
+		"Answer NONE only when no CANDIDATE ELEMENT *means* the same thing as the SOURCE ELEMENT.",
+		"When evaluating two elements, consider the COMPONENT IDEAS of one against the totality of the other. The number of COMPONENT IDEAS that match are not dispositive but should enhance the potential for the two elements to be considered a match.",
+		"If a FUNDAMENTAL IDEA matches a COMPONENT IDEA in the *domain* of a CANDIDATE ELEMENT, it is mandatory that it be chosen over those that do not.",
+	],
 	compatibilityDeclarationList: [],
 });
 

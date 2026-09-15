@@ -351,7 +351,19 @@ const makeJudgmentExtractor = (choiceEnum) => {
 			typeof judgmentObject.rationale === 'string' && judgmentObject.rationale.trim()
 				? judgmentObject.rationale
 				: undefined;
-		return { choice, category, rationale };
+		// ⟪v3⟫ the judge's own ranking, read back as strings, never repaired.
+			// ⟪v5⟫ the ideas the judge found in the source element, read back verbatim, never repaired.
+		const sourceElementIdeaList = Array.isArray(judgmentObject.sourceElementIdeaList)
+			? judgmentObject.sourceElementIdeaList.map((oneEntry) => `${oneEntry}`)
+			: undefined;
+	// ⟪v7⟫ the judge's decomposition of every CANDIDATE, read back verbatim, never repaired.
+	const candidateIdeaList = Array.isArray(judgmentObject.candidateIdeaList) ? judgmentObject.candidateIdeaList : undefined;
+	// ⟪v8⟫ the coverage the judge computed for its own pick, read back verbatim, never repaired.
+	const ideaCoverage = judgmentObject.ideaCoverage !== null && typeof judgmentObject.ideaCoverage === 'object' ? judgmentObject.ideaCoverage : undefined;
+	const sortedCandidateList = Array.isArray(judgmentObject.sortedCandidateList)
+			? judgmentObject.sortedCandidateList.map((oneEntry) => `${oneEntry}`)
+			: undefined;
+		return { choice, category, rationale, sourceElementIdeaList, candidateIdeaList, sortedCandidateList, ideaCoverage };
 	};
 };
 
@@ -568,7 +580,7 @@ const moduleFunction =
 							callback(`${moduleName}.rerank: ${bodyRefusal}`);
 							return;
 						}
-						const { choice, category, rationale } = extractJudgment(parsedEnvelope);
+						const { choice, category, rationale, sourceElementIdeaList, candidateIdeaList, sortedCandidateList, ideaCoverage } = extractJudgment(parsedEnvelope);
 						// A choice that is absent or outside the per-call enum is REFUSED, never repaired. This
 						// mirrors llmClient's own "could not extract a choice" arm: without a choice there is no
 						// judgment at all, so there is nothing to pass on for judgeComponent to enforce against.
@@ -606,6 +618,11 @@ const moduleFunction =
 							attempts: attemptIndex + 1,
 							category,
 							rationale,
+							// ⟪v3/v5, 2026-09-11⟫ the judge's own working, threaded up beside the verdict.
+							sourceElementIdeaList,
+							candidateIdeaList,
+							sortedCandidateList,
+							ideaCoverage,
 							// the server's own accounting, threaded up ADDITIVELY for the forensic match log. Never
 							// fabricated: an envelope without it yields null.
 							doneReason: parsedEnvelope && parsedEnvelope.done_reason !== undefined ? parsedEnvelope.done_reason : null,

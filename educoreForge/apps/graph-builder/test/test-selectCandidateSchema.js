@@ -104,8 +104,12 @@ const CHOICE_ENUM_FIXTURE = Object.freeze(['1', '2', '3', 'NONE']);
 // through JOB 7; the value below was captured from the tree immediately after the enum change and before
 // any other edit. Every other assertion in this file that cites the baseline is checking the SAME constant,
 // so they stay meaningful: they prove llmClient consumes this rendering, not that the rendering is old.
+// ⟪RE-PINNED AGAIN 2026-09-11, prompt v3⟫ the tool object gained a REQUIRED `sortedCandidateList` field, so
+// its bytes moved deliberately. Previous pin 7746be79a61b… (the 'none'-enum value from earlier today).
+// ⟪RE-PINNED, prompt v7, 2026-09-11⟫ the tool gained candidateIdeaList; previous pin 6f77d8fd6f01…
+// ⟪RE-PINNED, prompt v8, 2026-09-11⟫ the tool gained ideaCoverage; previous pin 1e551d61365c…
 const ANTHROPIC_RENDERING_BASELINE_SHA256 =
-	'7746be79a61b513b51ed9436647c76b20aaa7bdcd9a5994c9c715ef60096713e';
+	'8ef04dc4da8fc02c5fd5ebe1dc675081b16ad7f1915d5a8f6bacf5d27f80169e';
 
 const canonicalSchema = selectCandidateSchemaLib.buildCanonicalSelectCandidateSchema({
 	choiceEnum: CHOICE_ENUM_FIXTURE,
@@ -116,9 +120,9 @@ harness.section('G2-a — THE CANONICAL SCHEMA, AND ITS CATEGORY ENUM DERIVED RA
 // =====================================================================
 
 harness.equal(
-	'the canonical schema s required list is choice, category, rationale',
+	'the canonical schema s required list is choice, category, rationale, sortedCandidateList (2026-09-11: the v3 prompt asks the judge to RANK before it chooses, and an optional ranking is one the model may skip under pressure)',
 	canonicalSchema.jsonSchema.required.join(','),
-	'choice,category,rationale',
+	'choice,category,rationale,sourceElementIdeaList,candidateIdeaList,sortedCandidateList,ideaCoverage',
 );
 harness.ok(
 	'…and that list is FROZEN (a contract nothing can edit at run time)',
@@ -468,9 +472,9 @@ harness.equal(
 	'rawProviderResponse',
 );
 harness.equal(
-	'…and what it must RETURN',
+	'…and what it must RETURN (2026-09-11: sortedCandidateList joined the three when the v3 prompt began asking the judge to rank before choosing)',
 	JUDGMENT_EXTRACTOR_SHAPE.resultKeys.join(','),
-	'choice,category,rationale',
+	'choice,category,rationale,sourceElementIdeaList,candidateIdeaList,sortedCandidateList,ideaCoverage',
 );
 harness.ok(
 	'…and that there is NO free-text fallback: an unsupplied field is undefined, never fabricated',

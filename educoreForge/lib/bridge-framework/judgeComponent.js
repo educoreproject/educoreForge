@@ -174,7 +174,7 @@ const judgmentFromReturn = ({ clientReturn, question, isDebugClient }) => {
 		if (!categoryIsAbsent && clientReturn.category !== ABSTAIN_CATEGORY && PICK_CATEGORY_LIST.indexOf(clientReturn.category) === -1) {
 			return { error: refuse.byName({ moduleName, what: `the judge abstained (${ABSTAIN_TOKEN}) but reported category '${clientReturn.category}', which is neither '${ABSTAIN_CATEGORY}' nor a picking category (${PICK_CATEGORY_LIST.join(', ')})`, where: `an abstention carries category '${ABSTAIN_CATEGORY}' — or, from the real client's evidence schema, a schema-forced picking category, preserved as reportedCategoryOnAbstain` }) };
 		}
-		return { chosenCardStableId: null, choice: clientReturn.choice, category: ABSTAIN_CATEGORY, reportedCategoryOnAbstain: categoryIsAbsent ? ABSENT_CATEGORY_MARK : clientReturn.category === ABSTAIN_CATEGORY ? null : clientReturn.category, rationale: clientReturn.rationale, confidence: null, discardedPredicateKeyCount };
+		return { sourceElementIdeaList: clientReturn.sourceElementIdeaList, candidateIdeaList: clientReturn.candidateIdeaList, sortedCandidateList: clientReturn.sortedCandidateList, chosenCardStableId: null, choice: clientReturn.choice, category: ABSTAIN_CATEGORY, reportedCategoryOnAbstain: categoryIsAbsent ? ABSENT_CATEGORY_MARK : clientReturn.category === ABSTAIN_CATEGORY ? null : clientReturn.category, rationale: clientReturn.rationale, confidence: null, discardedPredicateKeyCount };
 	}
 	// A PICK is unchanged: it asserts something about a candidate, so it carries both a category and a
 	// rationale or it is refused. Only the abstention arm was ever the defect.
@@ -195,7 +195,7 @@ const judgmentFromReturn = ({ clientReturn, question, isDebugClient }) => {
 	if (!isDebugClient && rationaleNamesPickOnlyByOrdinal({ rationale: clientReturn.rationale, choice: clientReturn.choice, pickName })) {
 		return { error: refuse.byName({ moduleName, what: `the judge's rationale identifies its pick ONLY by ORDINAL (candidate ${clientReturn.choice}); the rendered name ${JSON.stringify(pickName === undefined ? null : pickName)} appears nowhere in it (${JSON.stringify(clientReturn.rationale.slice(0, 120))})`, where: 'a rationale must be legible without the pool: name the pick. An ordinal ALONGSIDE the name is lawful, and naming a REJECTED candidate by number to contrast it is lawful (BR-067, RULING 14:55)' }), ordinalRationale: true };
 	}
-	return { chosenCardStableId: mapped.chosenCardStableId, choice: clientReturn.choice, category: clientReturn.category, rationale: clientReturn.rationale, confidence: band.confidence, discardedPredicateKeyCount };
+	return { sourceElementIdeaList: clientReturn.sourceElementIdeaList, candidateIdeaList: clientReturn.candidateIdeaList, sortedCandidateList: clientReturn.sortedCandidateList, chosenCardStableId: mapped.chosenCardStableId, choice: clientReturn.choice, category: clientReturn.category, rationale: clientReturn.rationale, confidence: band.confidence, discardedPredicateKeyCount };
 };
 
 // ⟪RULING 13:15⟫ REASK_INSTRUCTION_BY_FAULT — the bounded re-ask is now TWO faults, so the instruction is a
@@ -270,6 +270,13 @@ const judgeOne = ({ question, judgeClient, judgmentCache, matchForensics, budget
 					chosenCardStableId: judgment.chosenCardStableId,
 					category: judgment.category,
 					reportedCategoryOnAbstain: judgment.reportedCategoryOnAbstain === undefined ? null : judgment.reportedCategoryOnAbstain,
+					// ⟪v3, 2026-09-11⟫ the judge's own ranking of every candidate, recorded verbatim. It is the
+					// artifact that lets a later study ask whether a wrong answer was a JUDGMENT failure (the right
+					// card was ranked low) or a RETRIEVAL failure (it was never there) — a question this system has
+					// never been able to answer about its own misses.
+					sourceElementIdeaList: judgment.sourceElementIdeaList === undefined ? null : judgment.sourceElementIdeaList,
+					candidateIdeaList: judgment.candidateIdeaList === undefined ? null : judgment.candidateIdeaList,
+					sortedCandidateList: judgment.sortedCandidateList === undefined ? null : judgment.sortedCandidateList,
 					rationale: judgment.rationale,
 					confidence: judgment.confidence,
 					cacheHit,

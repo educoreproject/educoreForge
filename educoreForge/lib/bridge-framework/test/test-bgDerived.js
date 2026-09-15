@@ -415,7 +415,7 @@ scenarioTwin({ registry: twinRegistry, gateId: 'BG-RETRIEVAL', conjunctId: 'c_po
 	scenario.frameworkMutationList.push({ modulePath: path.join(scenarioLib.FRAMEWORK_DIR, FRAMEWORK_FILE), find: 'const poolCardList = classificationLib.sortByStableId(retrieved.seatList.map((oneSeat) => args.cardByStableId[oneSeat.stableId]));', replace: 'const poolCardList = retrieved.seatList.map((oneSeat) => args.cardByStableId[oneSeat.stableId]).slice().reverse();' });
 } });
 scenarioTwin({ registry: twinRegistry, gateId: 'BG-RETRIEVAL', conjunctId: 'd_noCosineOrRankIsEverRendered', twinName: 'renderTheCosine', leverKind: 'productionMutation', mutate: (scenario) => {
-	scenario.frameworkMutationList.push({ modulePath: path.join(scenarioLib.FRAMEWORK_DIR, RENDERER_FILE), find: "\tlineList.push(`  [${seatIndex + 1}]`);", replace: "\tlineList.push(`  [${seatIndex + 1}] cosine ${oneSeat.cosine}`);" });
+	scenario.frameworkMutationList.push({ modulePath: path.join(scenarioLib.FRAMEWORK_DIR, RENDERER_FILE), find: "\tlineList.push(`  CANDIDATE INDEX NUMBER: [${seatIndex + 1}]`);", replace: "\tlineList.push(`  CANDIDATE INDEX NUMBER: [${seatIndex + 1}] cosine ${oneSeat.cosine}`);" });
 } });
 scenarioTwin({ registry: twinRegistry, gateId: 'BG-RETRIEVAL', conjunctId: 'e_floorAboveTheMaximumEmptiesEveryPoolAsNoCandidate', twinName: 'emptyPoolStillJudged', leverKind: 'productionMutation', mutate: (scenario) => {
 	// the classification row that makes an empty retrieved pool an orphan is REMOVED: the pool then falls to a

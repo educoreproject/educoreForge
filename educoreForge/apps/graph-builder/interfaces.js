@@ -459,6 +459,11 @@ const JUDGE_PROVIDER_SHAPE = Object.freeze({
 		// ⟪JOB 1⟫ `model` and `attempts` are CONTRACT MEMBERS of the result, no longer the "harmless
 		// surplus the pipeline ignores" llmClient's header used to call them: `model` is the identity
 		// the judgment travelled under and must agree with the provider's own `model`.
+		// ⟪v3, 2026-09-11⟫ sortedCandidateList is deliberately NOT here. It rides up beside the verdict like
+		// `usage` and `retryReasons` do — ADDITIVE EVIDENCE, not a contract member. The SCHEMA requires the MODEL
+		// to produce a ranking; requiring every PROVIDER to carry one would outlaw the debug double, which has no
+		// ranking to give and is lawful without it. A verdict is choice + category + rationale; the ranking is how
+		// it got there.
 		resultKeys: Object.freeze(['choice', 'category', 'rationale', 'model', 'attempts']),
 	}),
 	describe: Object.freeze({
@@ -551,7 +556,11 @@ const JUDGMENT_EXTRACTOR_SHAPE = Object.freeze({
 	// WHAT IT MUST RETURN: exactly the three judgment fields. A field the provider did not validly supply
 	// is `undefined` — present as a key, absent as a value. These are the three that JUDGE_PROVIDER_SHAPE's
 	// rerank result carries onward; `model` and `attempts` are the provider's own and not an extractor's.
-	resultKeys: Object.freeze(['choice', 'category', 'rationale']),
+	// ⟪v3, 2026-09-11⟫ sortedCandidateList joins them. The v3 prompt asks the judge to RANK every candidate
+	// before choosing, and a ranking that is produced but not read back cannot be audited — which is the one
+	// thing this field exists for: to answer, later, whether a wrong answer had the right card ranked second
+	// or fourteenth. Same discipline as the other three: not validly supplied means `undefined`, never guessed.
+	resultKeys: Object.freeze(['choice', 'category', 'rationale', 'sourceElementIdeaList', 'candidateIdeaList', 'sortedCandidateList', 'ideaCoverage']),
 	// NO FREE-TEXT FALLBACK. Read the structured answer or report its absence; never reconstruct a
 	// judgment field from prose the model happened to emit alongside it.
 	freeTextFallbackPermitted: false,

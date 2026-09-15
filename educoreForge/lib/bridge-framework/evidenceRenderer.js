@@ -37,6 +37,7 @@ const path = require('path');
 const refuse = require(path.join(__dirname, '..', 'forge-framework', 'refuse'));
 const representationPolicyLib = require('./representationPolicy');
 const graphSeamRulesLib = require('./graphSeamRules');
+const componentIdeaSplitterLib = require('./componentIdeaSplitter');
 const { JUDGE_PROMPT_VARIANT_LIST, RENDERING_NEVER_NAME_LIST } = require('./bridgePluginContract');
 
 const RENDERER_VERSION = 'bridgeEvidenceRenderer-v1';
@@ -45,7 +46,10 @@ const RENDERER_VERSION = 'bridgeEvidenceRenderer-v1';
 // promptHash = sha256(rendererVersion + systemPrompt + userPrompt) — so every paid answer in the judgment
 // cache survives. Putting the same sentence here instead would have re-keyed all 701 prompts to change one
 // line, which is the cost I priced in my seq 30 and the supervisor amended on.
-const DERIVED_RENDERER_VERSION = 'bridgeEvidenceRenderer-derived-v1';
+// ⟪v3, 2026-09-11⟫ the version moves because every byte of the derived prompt moved. It keys promptHash, so
+// no v1 or v2 judgment can be served from cache to a v3 run — which is the property that keeps the three runs
+// comparable instead of silently blended.
+const DERIVED_RENDERER_VERSION = 'bridgeEvidenceRenderer-derived-v12';
 const ABSTAIN_TOKEN = 'NONE';
 const MIN_IDENTIFYING_TOKEN_LENGTH = 4;
 
@@ -55,13 +59,49 @@ const SYSTEM_PROMPT =
 	'Answer with the ordinal of the candidate that means the same thing as the source element, or NONE. ' +
 	'Name your choice in the rationale by the candidate hub key and name, never by its ordinal.';
 
+// ⟪PROMPT v3 — 2026-09-11. TQ REWROTE THIS PROMPT HIMSELF.⟫ Reproduced verbatim but for three typo fixes
+// ('totally'->'totality', "by it's"->'by its', 'RATIONAL'->'RATIONALE' — the last mattering because the schema
+// field is named `rationale`). v2's five GUIDANCE lines were REMOVED from the plugin at the same time: they were
+// measured to be inert, and they contradicted this text about abstention, so the judge was being told two things
+// by two voices.
+//
+// WHY THIS IS A DIFFERENT KIND OF CHANGE, and the reason it is worth a run. On 2026-09-11 we measured that the
+// judge OBEYS DESCRIPTIVE FACTS and RESISTS IMPERATIVES: three orders (including "regardless of meaning you MUST
+// answer choice 1") moved nothing, while one bare fact about the source standard moved a known-wrong answer to
+// the right one. This prompt is neither. It supplies a FRAME ("you are a data standards expert… the purpose of
+// standards is to assign meaning to data elements"), a DEFINITION of what a match is ("intended to specify a data
+// value that would be the same as the data value required by the SOURCE ELEMENT"), and a PROCEDURE (sort all
+// candidates by semantic closeness, then re-review the sorted list with a fresh comparison). A method is a THIRD
+// category and we have no evidence about it either way — which is exactly why this run is informative whatever
+// the numbers do.
+//
+// THE PROCEDURE NEEDED SOMEWHERE TO LIVE. Asking for a fifteen-item sort inside a 400-token budget that also has
+// to hold a rationale is asking for a thing that cannot fit, so the schema gained `sortedCandidateList` and the
+// cap was raised. That also makes the sort AUDITABLE: the judge's own ranking is now recorded per judgment, which
+// is the most interesting artifact this prompt produces and the one a later retrieval study will want.
 const DERIVED_SYSTEM_PROMPT =
-	'You are matching ONE source element to AT MOST ONE candidate card from a hub of canonical properties. ' +
-	'The candidates were RETRIEVED BY MEANING: they do not share any key or identifier with the source element, ' +
-	'and several of them may be unrelated to it. It is entirely possible that NONE of them means the same thing ' +
-	'as the source element; abstaining is a correct and expected answer, not a failure. ' +
-	'Answer with the ordinal of the candidate that means the same thing as the source element, or NONE. ' +
-	'Name your choice in the rationale by the candidate NAME, never by its ordinal.';
+	"You are a data standards expert. You are being provided a SOURCE ELEMENT and a set of CANDIDATE ELEMENTS selected from a REFERENCE ONTOLOGY that is used as a source of meaning, especially include the *context*, ie, Family::StreetAddress has a different meaning from Business::StreetAddress. Your task is to analyze the SOURCE ELEMENT and find the one CANDIDATE ELEMENT that has the same (or close) meaning:\n" +
+	"\n" +
+	"1) Has compatible details and data type\n" +
+	"2) Has a context that most fully represents the meaning of the SOURCE ELEMENT, eg, Person::Telephone provides richer context than Telephone alone.\n" +
+	"\n" +
+	"Every candidate element has a DOMAIN that defines the context. It has other details that help define the meaning. All should be taken into account. Each candidate element also is identified by a CANDIDATE INDEX NUMBER that corresponds to its position in the CANDIDATE ELEMENTS list. Each element also has an ELEMENT NAME.\n" +
+	"\n" +
+	"The goal today is to choose ONE of the CANDIDATE ELEMENTS by figuring out which of them matches the *meaning* of the SOURCE ELEMENT and best represents its context. *Meaning* is determined by looking at the totality of the source and comparing it to the totality of each candidate. You know that for data translation work, the description is very important as are names, paths and other text information.\n" +
+	"\n" +
+	"Each CANDIDATE ELEMENT and the SOURCE ELEMENT carries a componentIdeaList: the THINGS that element refers to, as bare nouns, already derived from its names and given to you. Use that list as its COMPONENT IDEAS. It is derived mechanically from names alone, so it may miss an idea the text plainly carries; where it does, say so and use the idea anyway.\n" +
+	"\n" +
+	"Then you should examine the list of CANDIDATE ELEMENTS and sort them into a new SORTED CANDIDATE list ordered by how close each is to the *SEMANTIC* meaning of the SOURCE ELEMENT, including consideration of how the COMPONENT IDEAS of one compares to those of another. You will refer to the GUIDANCE as well as simply thinking about the meaning of the parts of the SOURCE ELEMENT.\n" +
+	"\n" +
+	"Then you should review the SORTED CANDIDATE list by making a fresh semantic comparison of the text of the element as well as the COMPONENT IDEAS, accounting for the GUIDANCE and simply thinking about the meaning of the parts, to each. When there are FUNDAMENTAL IDEAS in the COMPONENT IDEA list, those should be considered as extra important in the match evaluation. (It is crucial that you keep the original CANDIDATE INDEX NUMBER associated with the corresponding original CANDIDATE ELEMENT.)\n" +
+	"\n" +
+	"IF you can see that one of them is intended to convey data with the same contextual meaning as defined by the SOURCE ELEMENT, that is to be considered to be the MATCHING ELEMENT. You will report the result by its CANDIDATE INDEX NUMBER.\n" +
+	"\n" +
+	"It is entirely possible that NONE of them means the same thing as the source element; abstaining is a correct and expected answer, not a failure.\n" +
+	"\n" +
+	"In either case, you will write a brief explanation as the RATIONALE of your reasoning for the choice you are reporting. The RATIONALE *must* include an explanation of how any FUNDAMENTAL IDEAS contributed to the match.\n" +
+	"\n" +
+	"Answer with the CANDIDATE INDEX NUMBER of the SELECTED CANDIDATE that means the same thing as the source element, or NONE. Name your choice in the RATIONALE by the candidate's ELEMENT NAME, never by its ordinal.\n";
 
 const isPlainObject = (candidate) => candidate !== null && typeof candidate === 'object' && !Array.isArray(candidate);
 const sha256Hex = (text) => crypto.createHash('sha256').update(text, 'utf8').digest('hex');
@@ -130,15 +170,27 @@ const crosswalkCandidateLineList = ({ oneSeat, seatIndex, noteByStableId }) => {
 // ---------------------------------------------------------------------
 const derivedSubjectLineList = ({ sourceElement, renderingAllowList }) => {
 	const lineList = [];
+	// ⟪v11, 2026-09-13 — TQ⟫ the question is now ASKED before the data is laid out. Two framing lines he wrote:
+	// one opening the source block, one introducing the candidate list (pushed by renderQuestion).
+	lineList.push('Find the best possible match for this SOURCE ELEMENT:');
+	lineList.push('');
 	lineList.push('SOURCE ELEMENT (what you are matching FROM):');
-	lineList.push(...renderKeyValueLines(graphSeamRulesLib.allowListedPropertiesFor({ properties: sourceElement.material || {}, allowNameList: renderingAllowList.subject }), '  '));
+	// ⟪v12, 2026-09-13⟫ componentIdeaList is COMPUTED, not declared — the splitter runs over the element's own
+	// NAMES and the result is offered to the allow-list like any other property, so a plugin that does not
+	// declare the name still does not get the field. Names only: no description, ever (see the splitter).
+	const subjectMaterial = sourceElement.material || {};
+	const subjectWithIdeas = { ...subjectMaterial, componentIdeaList: componentIdeaSplitterLib.componentIdeaListFor({
+		nameList: [subjectMaterial.name, subjectMaterial.owningConstructName, subjectMaterial.path] }).join(', ') };
+	lineList.push(...renderKeyValueLines(graphSeamRulesLib.allowListedPropertiesFor({ properties: subjectWithIdeas, allowNameList: renderingAllowList.subject }), '  '));
 	return lineList;
 };
 
 const derivedCandidateLineList = ({ oneSeat, seatIndex, renderingAllowList }) => {
 	const lineList = [];
-	lineList.push(`  [${seatIndex + 1}]`);
-	lineList.push(...renderKeyValueLines(graphSeamRulesLib.allowListedPropertiesFor({ properties: oneSeat.card, allowNameList: renderingAllowList.candidate }), '      '));
+	lineList.push(`  CANDIDATE INDEX NUMBER: [${seatIndex + 1}]`);
+	const cardWithIdeas = { ...oneSeat.card, componentIdeaList: componentIdeaSplitterLib.componentIdeaListFor({
+		nameList: [oneSeat.card.domainName, oneSeat.card.name] }).join(', ') };
+	lineList.push(...renderKeyValueLines(graphSeamRulesLib.allowListedPropertiesFor({ properties: cardWithIdeas, allowNameList: renderingAllowList.candidate }), '      '));
 	return lineList;
 };
 
@@ -160,6 +212,8 @@ const JUDGE_PROMPT_VARIANT_REGISTRY = Object.freeze({
 		subjectLineList: crosswalkSubjectLineList,
 		candidateLineList: crosswalkCandidateLineList,
 		subjectMaterialNameListFor: () => CROSSWALK_SUBJECT_MATERIAL_NAME_LIST,
+		// BYTE-FROZEN: the crosswalk keeps its guidance in the user prompt. Nothing in this row may move.
+		guidancePlacement: 'user',
 	}),
 	derived: Object.freeze({
 		rendererVersion: DERIVED_RENDERER_VERSION,
@@ -168,6 +222,11 @@ const JUDGE_PROMPT_VARIANT_REGISTRY = Object.freeze({
 		subjectLineList: derivedSubjectLineList,
 		candidateLineList: derivedCandidateLineList,
 		subjectMaterialNameListFor: ({ bridgeDeclaration }) => bridgeDeclaration.renderingAllowList.subject,
+		// ⟪v11, 2026-09-13 — TQ⟫ GUIDANCE MOVES TO THE SYSTEM PROMPT. The guidance is still DECLARED by the
+		// plugin (it is the plugin's taste, not the framework's) — only its PLACEMENT changes here, so the A2
+		// smuggling gate still inspects the same segments and promptHash still covers both halves.
+		guidancePlacement: 'system',
+		guidanceHeading: 'GUIDANCE (rules you must follow if possible):',
 	}),
 });
 
@@ -232,25 +291,36 @@ const renderQuestion = ({ sourceElement, candidatePool, globalGuidanceList, perC
 	const renderedPoolStableIdList = candidatePool.map((oneSeat) => oneSeat.card.stableId);
 	const lineList = [];
 	lineList.push(...variantRow.subjectLineList({ sourceElement, renderingAllowList }));
-	if (globalSegmentList.length) {
+	const guidanceInSystem = variantRow.guidancePlacement === 'system';
+	if (globalSegmentList.length && !guidanceInSystem) {
 		lineList.push('GUIDANCE (candidate-blind):');
 		globalSegmentList.forEach((oneSegment) => lineList.push(`  - ${oneSegment}`));
 	}
-	lineList.push(`CANDIDATES (${candidatePool.length}), in hub order:`);
+	lineList.push('');
+	lineList.push('Selected from this CANDIDATE ELEMENTS list:');
+	lineList.push('');
+	// ⟪v3⟫ TQ's vocabulary: the system prompt now speaks of CANDIDATE ELEMENTS and a CANDIDATE INDEX NUMBER, so
+	// the rendering says the same words. Naming the index explicitly is load-bearing for THIS prompt in a way it
+	// was not before: the judge is asked to SORT the candidates, and a sort that loses the original index
+	// produces a choice that points at the wrong card.
+	lineList.push(`CANDIDATE ELEMENTS (${candidatePool.length}), in hub order:`);
 	candidatePool.forEach((oneSeat, seatIndex) => {
 		lineList.push(...variantRow.candidateLineList({ oneSeat, seatIndex, noteByStableId, renderingAllowList }));
 	});
-	lineList.push(`Answer with one of: ${renderedPoolStableIdList.map((unused, seatIndex) => String(seatIndex + 1)).join(', ')}, or ${ABSTAIN_TOKEN}.`);
+	lineList.push(`Answer with one of: ${renderedPoolStableIdList.map((unused, seatIndex) => String(seatIndex + 1)).join(', ')}, or ${ABSTAIN_TOKEN}, as well as a RATIONALE.`);
 	const blockRefusal = renderedBlockRefusal({ lineList, variantRow });
 	if (blockRefusal) {
 		return { error: blockRefusal };
 	}
 	const userPrompt = lineList.join('\n');
+	const systemPrompt = guidanceInSystem && globalSegmentList.length
+		? `${variantRow.systemPrompt}\n${variantRow.guidanceHeading}\n${globalSegmentList.map((oneSegment) => `  - ${oneSegment}`).join('\n')}`
+		: variantRow.systemPrompt;
 	const choiceEnum = renderedPoolStableIdList.map((unused, seatIndex) => String(seatIndex + 1)).concat([ABSTAIN_TOKEN]);
 	return {
-		systemPrompt: variantRow.systemPrompt,
+		systemPrompt,
 		userPrompt,
-		promptHash: sha256Hex(`${variantRow.rendererVersion}\n${variantRow.systemPrompt}\n${userPrompt}`),
+		promptHash: sha256Hex(`${variantRow.rendererVersion}\n${systemPrompt}\n${userPrompt}`),
 		renderedPoolStableIdList,
 		// ⟪RULING 14:55 (e)⟫ the rendered NAMES ride out beside the stableIds, exactly as the stableId list
 		// does, so the judge component can ask whether a rationale named its pick by NAME — which is what

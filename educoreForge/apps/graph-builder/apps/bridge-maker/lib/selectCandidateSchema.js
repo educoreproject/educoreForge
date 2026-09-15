@@ -85,7 +85,10 @@ const OFFERED_CATEGORY_ENUM = Object.freeze(SELECT_CATEGORY_ENUM.slice());
 // froze this constant when it retired the scalar variant, whose whole defect was that a SECOND, weaker
 // required-list existed and was the default. It moves here with the schema, so the list and the properties
 // it names are declared together rather than a directory apart.
-const JUDGMENT_REQUIRED_FIELD_LIST = Object.freeze(['choice', 'category', 'rationale']);
+// ⟪v3⟫ sortedCandidateList is REQUIRED. An optional field is one the model may skip under pressure, and the
+// whole point of the v3 prompt is that the ranking happens before the choice; an unfilled ranking would mean the
+// procedure was skipped and we would not be able to tell.
+const JUDGMENT_REQUIRED_FIELD_LIST = Object.freeze(['choice', 'category', 'rationale', 'sourceElementIdeaList', 'candidateIdeaList', 'sortedCandidateList', 'ideaCoverage']);
 
 // categoryProse — renders a category list as English for a description string: "strong, moderate, or
 // weakButReal". DERIVED for the same reason the enum is. The prose in a description is not decoration —
@@ -106,7 +109,11 @@ const categoryProse = (categoryList) => {
 // BYTE what llmClient emitted before JOB 2 (gate G2-a pins it to a pre-edit capture); only their SOURCE
 // changed, from a literal in a provider to a derivation from the contract.
 const TOOL_DESCRIPTION =
-	'Record the single best matching CEDS candidate by its number, or NONE if no candidate is a ' +
+	'FIRST record sourceElementIdeaList: the distinct ideas the SOURCE ELEMENT refers to. ' +
+	'THEN record candidateIdeaList: the same for every candidate. ' +
+	'THEN record sortedCandidateList: every CANDIDATE INDEX NUMBER ordered from closest in meaning to furthest. ' +
+	'THEN record ideaCoverage for the candidate you are about to choose: which SOURCE ELEMENT nouns it covers and which it misses. ' +
+	'THEN record the single best matching CEDS candidate by its number, or NONE if no candidate is a ' +
 	'correct match. You MUST ALSO record a discrete confidence CATEGORY (never a numeric ' +
 	'probability) and a short RATIONALE — both are REQUIRED on every answer. When choice is NONE, ' +
 	`category MUST be ${ABSTAIN_CATEGORY_NAME}: an abstention carries no confidence about any candidate.`;
@@ -116,6 +123,64 @@ const CATEGORY_DESCRIPTION =
 	'reflecting how strongly the evidence supports it, never a numeric probability — ' +
 	`or exactly ${ABSTAIN_CATEGORY_NAME} when choice is NONE. Always required.`;
 const RATIONALE_DESCRIPTION = 'A short rationale (one or two sentences) explaining the choice.';
+// ⟪v3, 2026-09-11⟫ SORTED_CANDIDATE_LIST_DESCRIPTION — the judge is now asked to SORT every candidate by semantic
+// closeness before choosing, and a procedure with nowhere to put its working is a procedure the model performs
+// invisibly or not at all. This field gives the sort a home, and three things follow from it being DECLARED
+// rather than described in prose: the model must actually produce the ranking, the ranking is RECORDED on every
+// judgment, and a later study of retrieval can ask "was the correct card ranked second or fourteenth?" — the
+// question that separates a judgment failure from a retrieval failure, which nothing in this system can
+// currently answer.
+// ⟪v5, 2026-09-11 — TQ's idea⟫ SOURCE_ELEMENT_IDEA_LIST_DESCRIPTION. TQ, on why candidate 5 beats candidate 14
+// for ApplicantProfile.Telephone: "it references not one but two ideas that are part of the source element, ie,
+// telephone and person. The chosen one only references one of those."
+//
+// That is a COVERAGE test, and it fits the shape of the data exactly. A CEDS card is always TWO ideas — a domain
+// and a property. An Ed-Fi element is also more than one — the construct that owns it, the element itself, and
+// whatever its description names. `Person :: Has Telephone` covers person AND telephone; `Telephone :: Telephone
+// Number` covers only telephone. Naming the ideas first makes that difference countable instead of felt.
+//
+// It is declared REQUIRED and ordered FIRST for the same reason sortedCandidateList is: a step the model may skip
+// is a step we cannot tell it skipped.
+// ⟪v12, 2026-09-13⟫ RE-SCOPED TO *ADDITIONAL*. The mechanical componentIdeaList is now rendered onto the
+// element, so asking the model to re-derive what it has already been given wastes the field and invites the
+// two lists to disagree. What is still worth having is the model's INFERENCE BEYOND the names — on one
+// subject it produced 'student, school' where the names contain neither — so the field now asks for exactly
+// the difference, and an empty answer is a correct one.
+const SOURCE_ELEMENT_IDEA_LIST_DESCRIPTION =
+	'ADDITIONAL things the SOURCE ELEMENT refers to that are NOT already listed in its componentIdeaList, as ' +
+	'bare nouns. One noun per entry, no phrases. An empty list is a correct answer when the provided list is ' +
+	'complete. Do NOT describe what the element holds and do NOT restate its description.';
+
+// ⟪v7, 2026-09-11 — TQ⟫ CANDIDATE_IDEA_LIST_DESCRIPTION. v5/v6 extracted component ideas from the SOURCE only,
+// which made the coverage test one-sided: the judge counted the source's nouns and then eyeballed the candidates.
+// TQ's v7 makes it SYMMETRIC — "You should extract COMPONENT IDEAS and add them to each CANDIDATE ELEMENT and
+// the SOURCE ELEMENT" — so both sides are decomposed the same way and the comparison is between two lists rather
+// than between a list and an impression. A CEDS card starts with two ideas by construction (its domain and its
+// property) and its definitions add more.
+const CANDIDATE_IDEA_LIST_DESCRIPTION =
+	'For EVERY candidate: its CANDIDATE INDEX NUMBER and any ADDITIONAL things that candidate refers to which ' +
+	'are NOT already listed in its componentIdeaList, as bare nouns. One noun per entry, no phrases. An empty ' +
+	'list is a correct answer.';
+
+// ⟪v8, 2026-09-11⟫ IDEA_COVERAGE_DESCRIPTION — the coverage comparison moved OUT OF PROSE AND INTO THE FORM.
+//
+// This is the afternoon's one reliable finding applied deliberately. Every INSTRUCTION written into this prompt
+// has bounced — five guidance lines, two deliberately poisoned guidances, three direct orders including
+// "regardless of meaning you MUST answer choice 1". Every FIELD added to the schema has been filled honestly and
+// well. On 2026-09-11 the judge decomposed EducationOrganizationNetworkId as (network, organization, identifier)
+// against a card of (organization, identifier), recorded the unmatched `network` in its own output, and picked
+// the card anyway at moderate confidence. It could see the gap; nothing made it look.
+//
+// So the judge is asked to WRITE DOWN, for the candidate it is about to choose, which of the source's nouns that
+// candidate covers and which it misses — before the choice is read. A count it must produce is a count it must
+// perform; a count it is merely told to consider is one we have watched it skip.
+const IDEA_COVERAGE_DESCRIPTION =
+	'For the candidate you are about to choose: which of the SOURCE ELEMENT nouns it covers, and which it does ' +
+	'not. Fill this in BEFORE deciding. When choice is NONE, use the closest candidate you considered.';
+
+const SORTED_CANDIDATE_LIST_DESCRIPTION =
+	'Every CANDIDATE INDEX NUMBER offered, ordered from closest in meaning to the source element to furthest. ' +
+	'Use the ORIGINAL index numbers; every candidate appears exactly once.';
 
 const absentChoiceEnumRefusalText = (receivedValue) =>
 	`${moduleName}: choiceEnum is REQUIRED and must be a non-empty array. It is the per-subject list of ` +
@@ -170,6 +235,40 @@ const buildCanonicalSelectCandidateSchema = ({ choiceEnum } = {}) => {
 				rationale: Object.freeze({
 					type: 'string',
 					description: RATIONALE_DESCRIPTION,
+				}),
+				sourceElementIdeaList: Object.freeze({
+					type: 'array',
+					items: Object.freeze({ type: 'string' }),
+					description: SOURCE_ELEMENT_IDEA_LIST_DESCRIPTION,
+				}),
+				candidateIdeaList: Object.freeze({
+					type: 'array',
+					items: Object.freeze({
+						type: 'object',
+						properties: Object.freeze({
+							candidateIndexNumber: Object.freeze({ type: 'string' }),
+							ideaList: Object.freeze({ type: 'array', items: Object.freeze({ type: 'string' }) }),
+						}),
+						required: Object.freeze(['candidateIndexNumber', 'ideaList']),
+						additionalProperties: false,
+					}),
+					description: CANDIDATE_IDEA_LIST_DESCRIPTION,
+				}),
+				ideaCoverage: Object.freeze({
+					type: 'object',
+					properties: Object.freeze({
+						candidateIndexNumber: Object.freeze({ type: 'string' }),
+						sourceNounsCovered: Object.freeze({ type: 'array', items: Object.freeze({ type: 'string' }) }),
+						sourceNounsNotCovered: Object.freeze({ type: 'array', items: Object.freeze({ type: 'string' }) }),
+					}),
+					required: Object.freeze(['candidateIndexNumber', 'sourceNounsCovered', 'sourceNounsNotCovered']),
+					additionalProperties: false,
+					description: IDEA_COVERAGE_DESCRIPTION,
+				}),
+				sortedCandidateList: Object.freeze({
+					type: 'array',
+					items: Object.freeze({ type: 'string' }),
+					description: SORTED_CANDIDATE_LIST_DESCRIPTION,
 				}),
 			}),
 			required: JUDGMENT_REQUIRED_FIELD_LIST,

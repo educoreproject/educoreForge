@@ -2,6 +2,11 @@
 
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
+// TEMPERATURE_ACCEPTING_MODEL_RE — the models KNOWN to accept `temperature`. Thinking-based models reject it
+// (opus-4-8, opus-5, fable-5-1 all measured rejecting on 2026-09-13). Add a model here only after the API has
+// been observed accepting it; silence means no temperature, which is the safe direction.
+const TEMPERATURE_ACCEPTING_MODEL_RE = /^claude-(?:sonnet-4|haiku-4|opus-4-[567])/;
+
 // llmClient.js — the REAL Anthropic Messages client for the INFERRED-track RERANKER (P3b). FAITHFUL PORT of
 // the incumbent npm/qtools-graph-forge-core/lib/llm-client/llm-client.js into the recreation, repointed at
 // this project's [anthropicAi] .ini (env ANTHROPIC_API_KEY remains the alternative key source). It forces a
@@ -166,7 +171,11 @@ const CLIENT_VERSION = 'llmClient-anthropic-v2-judgeProviderContract';
 // longer sentence — 400 is comfortable headroom. ⟪JOB 0, 2026-09-07: this floor now applies to EVERY
 // judgment. The 64-token ini default, which was correctly sized for the retired {choice}-only variant
 // and can never hold a rationale, can no longer reach the wire by a caller omitting an option.⟫
-const JUDGMENT_MAX_TOKENS = 400;
+// ⟪v3, 2026-09-11⟫ RAISED 400 -> 1500. The v3 prompt asks the judge to rank fifteen candidates before it chooses,
+// and a fifteen-element array plus a rationale does not fit in 400. A budget that silently truncates a required
+// field is the quiet version of the abstention defect fixed this morning: the model complies, the transport calls
+// the answer malformed, and the cause is invisible.
+const JUDGMENT_MAX_TOKENS = 1500;
 
 // ⟪R-a; RE-SOURCED BY JOB 2, 2026-09-07⟫ CATEGORY_ENUM — the PICK-ONLY categories, still derived and still
 // never a hand-restated literal. What changed is WHERE the derivation lives: it was
@@ -296,7 +305,20 @@ const extractCategoryAndRationale = (responseBody) => {
 	const category = OFFERED_CATEGORY_ENUM.indexOf(input.category) !== -1 ? input.category : undefined;
 	const rationale =
 		typeof input.rationale === 'string' && input.rationale.trim() ? input.rationale : undefined;
-	return { category, rationale };
+	// ⟪v3⟫ the judge's own ranking, read back as strings and NEVER repaired: a malformed ranking is a fact about
+	// the judgment and is recorded as it arrived (polyArch2 §6).
+	// ⟪v5⟫ the ideas the judge found in the source element, read back verbatim, never repaired.
+	const sourceElementIdeaList = Array.isArray(input.sourceElementIdeaList)
+		? input.sourceElementIdeaList.map((oneEntry) => `${oneEntry}`)
+		: undefined;
+	// ⟪v7⟫ the judge's decomposition of every CANDIDATE, read back verbatim, never repaired.
+	const candidateIdeaList = Array.isArray(input.candidateIdeaList) ? input.candidateIdeaList : undefined;
+	// ⟪v8⟫ the coverage the judge computed for its own pick, read back verbatim, never repaired.
+	const ideaCoverage = input.ideaCoverage !== null && typeof input.ideaCoverage === 'object' ? input.ideaCoverage : undefined;
+	const sortedCandidateList = Array.isArray(input.sortedCandidateList)
+		? input.sortedCandidateList.map((oneEntry) => `${oneEntry}`)
+		: undefined;
+	return { category, rationale, sourceElementIdeaList, candidateIdeaList, sortedCandidateList, ideaCoverage };
 };
 
 // ⟪R-a REAL-RUN FIX; JOB 0 2026-09-07; RE-SOURCED BY JOB 2⟫ buildTool — MODULE-SCOPE, pure (no
@@ -565,11 +587,17 @@ const moduleFunction =
 				tools: [tool],
 				tool_choice: { type: 'tool', name: TOOL_NAME },
 			};
-			// claude-opus-4-8 rejects temperature; send 0 for everything else (the measured fix).
-			// ⟪JOB 1⟫ WIRE USE (b) of two. This anchored regex tests wireModel, NOT the namespaced model:
-			// 'anthropic:claude-opus-4-8' does not match /^claude-opus-4/, so testing the identity would send
-			// temperature to the one model that rejects it — a 400 on every judgment, caused by a rename.
-			if (!/^claude-opus-4/.test(cfg.wireModel)) {
+			// TEMPERATURE IS OPT-IN BY MODEL, NOT OPT-OUT BY FAMILY (corrected 2026-09-13).
+			// The previous rule was `if (!/^claude-opus-4/) send 0` — an inference about the world drawn from
+			// one data point, which held only while opus-4 was the sole rejecting family. MEASURED against the
+			// live API this day: claude-opus-5 and claude-fable-5-1 BOTH answer
+			//     400 invalid_request_error: `temperature` is deprecated for this model.
+			// so the old rule would have sent temperature to the new default model and 400'd every judgment —
+			// exactly the failure its own comment warned about, arriving from the other direction.
+			// Inverted: a model must be NAMED as accepting temperature. An unknown model gets none, so a new
+			// release arrives as "not yet enabled" rather than as a broken run.
+			// ⟪JOB 1⟫ WIRE USE (b) of two: this tests wireModel, NOT the namespaced identity.
+			if (TEMPERATURE_ACCEPTING_MODEL_RE.test(cfg.wireModel)) {
 				payload.temperature = 0;
 			}
 
@@ -614,7 +642,7 @@ const moduleFunction =
 						callback(`${moduleName}.rerank: could not extract a choice from the response`);
 						return;
 					}
-					const { category, rationale } = extractCategoryAndRationale(parsed);
+					const { category, rationale, sourceElementIdeaList, candidateIdeaList, sortedCandidateList, ideaCoverage } = extractCategoryAndRationale(parsed);
 					// ⟪R-a THIRD REAL-RUN FIX⟫ BELT: parsed.stop_reason === 'max_tokens'
 					// means the model's tool_use JSON was cut off mid-emission — the SAME structural fault
 					// judgmentIncomplete already catches (rationale, emitted last, is what gets truncated),
@@ -653,6 +681,11 @@ const moduleFunction =
 						attempts: attemptIndex + 1,
 						category,
 						rationale,
+						// ⟪v3/v5, 2026-09-11⟫ the judge's own working, threaded up ADDITIVELY beside the verdict.
+						sourceElementIdeaList,
+						candidateIdeaList,
+						sortedCandidateList,
+						ideaCoverage,
 						usage,
 						stopReason: parsed && parsed.stop_reason !== undefined ? parsed.stop_reason : null,
 						retryReasons,
