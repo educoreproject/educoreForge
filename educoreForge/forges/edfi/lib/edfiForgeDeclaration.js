@@ -47,7 +47,18 @@ const edfiForgeDeclaration = Object.freeze({
 		impliedTargets: Object.freeze(['CEDS']),
 	}),
 	nonEmbeddableRoleList: Object.freeze([]),
-	embedTextDeclaration: null,
+	// embed-text lists — TQ decision 1 (PLAN-forgeEmbedText-091426 §8.2), label verbatim (R-ET-15). List
+	// order is the derivation's iteration order. Oracle (R-ET-17, evidence/P1-textListCensus-v2.log):
+	// 3,281 text nodes / 4,954 EMBEDS_TEXT_OF edges, all single-name. Declaring this MOVES the Ed-Fi
+	// proxy and block id (re-pinned in P8), by design.
+	embedTextDeclaration: Object.freeze({
+		embedTextLabel: 'EdfiEmbedText',
+		textPropertyListByRole: Object.freeze({
+			DmeClass: Object.freeze(['name', 'description', 'shortDescription']),
+			DmeProperty: Object.freeze(['name', 'description', 'shortDescription']),
+			DmeOptionSet: Object.freeze(['name', 'description', 'shortDescription']),
+		}),
+	}),
 	// CEDS_NO_MAPPING_SENTINEL '000000' (forgeEdfiContractGraph.js:64) — the crosswalk's "no mapping" value
 	cedsAnchorAbsentSentinelList: Object.freeze(['000000']),
 	additionalSourceInputList: Object.freeze([]),

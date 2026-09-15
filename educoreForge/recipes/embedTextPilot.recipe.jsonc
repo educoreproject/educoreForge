@@ -1,0 +1,30 @@
+{
+  // embedTextPilot — THE EMBED-TEXT PILOT RECIPE (forge embed-text revision, PHASE P6, 2026-09-14;
+  // PLAN-forgeEmbedText-091426 §8.3 R-ET-21, revised §8.4). Ed-Fi and CEDS only — the two standards the
+  // frozen evaluation hundred needs — with the CEDS hub folded exactly as fourWithHub-baseline declares it,
+  // NO bridges, and the round-trip stage ON so every declared validator runs against the finished graph.
+  //
+  // WHAT IT PROVES (P7, supervisor-run under the Docker lock): both standards carry DmeEmbedText nodes and
+  // EMBEDS_TEXT_OF edges in the oracle's counts (evidence/P1-textListCensus-v2.log: Ed-Fi 3,281 / 4,954;
+  // CEDS 6,684 / 7,823), the text vectors land under textEmbedding in their own index, and round-trip
+  // inventedTotal stays 0 with the text nodes present and ignored.
+  //
+  // ORDER: ceds first, then edfi (the hub-bearing base before its dependant, as fourWithHub-baseline).
+  //
+  // ⚠ --rebridge IS FORBIDDEN ON THIS RECIPE AND ON ANY GRAPH IT BUILDS (R-ET-21). Today's bridge reads
+  // every _source node as a subject (lib/bridge-framework/graphReader.js), so it would judge text nodes as
+  // mapping subjects. "bridges": [] is the declaration; the prohibition holds until the bridge revision lands.
+  "schemaVersion": "1.0.0",
+  "recipeName": "embedTextPilot",
+  "roundTripStage": true,
+  "kind": "dev",
+  "description": "Embed-text pilot: Ed-Fi and CEDS with the CEDS hub folded, text nodes declared, no bridges. --rebridge forbidden.",
+  "standards": [
+    { "token": "ceds", "version": "current" },
+    { "token": "edfi", "version": "current" }
+  ],
+  "hubs": [
+    { "standard": "ceds" }
+  ],
+  "bridges": []
+}
