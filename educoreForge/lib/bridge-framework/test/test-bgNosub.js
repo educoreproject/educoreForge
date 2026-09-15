@@ -226,7 +226,13 @@ const POST_D1_BASE_TAG = 'postEmbedTextP7-091526'; // re-anchored 2026-09-15 (em
 // include a file the re-anchor commit edits must point at a tag on the re-anchor commit itself).
 // THE PATH IS UNCHANGED, NO EXCLUSION IS ADDED. The twin (append to lib/forge-framework/refuse.js) re-observed red against
 // THIS tag before the move was committed.
-const PHASE0_ANCHOR_TAG = 'postEmbedTextP7-091526'; // re-anchored by RADIANT_QUEST, forge embed-text P8 — the FIFTH anchor; tag cut ON the re-anchor commit
+// ═══ RE-ANCHOR (iii), 2026-09-15 (RADIANT_QUEST), forge embed-text revision P9 (R-ET-6/7 again) ═══
+// postEmbedTextP7-091526 (53c2ff2) -> postEmbedTextP9-091526. CENSUS (git diff --stat postEmbedTextP7-091526 -- lib/forge-framework/): exactly the
+// three acceptance pins re-pinned for SIF and PESC in d457e8d (test/acceptance/expectedBlockIds.json | 48, expectedFingerprints.json | 6,
+// expectedLabelCensus.json | 8) — the P9 declarations moved SIF's and PESC's censuses, proxies and block ids by design (R-ET-10), and
+// nothing else under lib/forge-framework/ moved. Tag cut ON this commit (it edits nothing under lib/forge-framework/, but the rule is the
+// rule and the three anchors share one head). Path unchanged, no exclusion; twin re-observed red against THIS tag.
+const PHASE0_ANCHOR_TAG = 'postEmbedTextP9-091526'; // re-anchored by RADIANT_QUEST, forge embed-text P9 — the SIXTH anchor
 // PHASE 1 RE-ANCHOR — RULING FJ-P1-1, and it moves seamDiffEmpty ALONE.
 //
 // WHY IT HAD TO MOVE. SEAM_PATH_LIST watches forges/*/forge*.js, forges/*/lib/*Declaration.js and
@@ -486,7 +492,15 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // with the seam so the two conjuncts share one head, and its twin was re-observed red against THIS tag.
 // THE PATH LIST IS BYTE-IDENTICAL, the :!test-gSeamUntouched.js exclusion left exactly as it was (STANDDOWN-P0 C.1). No
 // exclusion was added for any campaign file — that would retire the gate rather than re-anchor it. Twin re-observed red.
-const PHASE3_ANCHOR_TAG = 'postEmbedTextP7-091526'; // re-anchored by RADIANT_QUEST, forge embed-text P8
+// ═══ RE-ANCHOR seamDiffEmpty (+ i_live), 2026-09-15 (RADIANT_QUEST), forge embed-text revision P9 ═══
+// postEmbedTextP7-091526 (53c2ff2) -> postEmbedTextP9-091526. CENSUS (git diff --stat postEmbedTextP7-091526 -- <SEAM_PATH_LIST>): 5 files, 83+/10−, all ruled:
+//   forges/sif/lib/sifForgeDeclaration.js | 14, forges/pesc260805/lib/pescForgeDeclaration.js | 17 — P9's declarations (TQ decision 1;
+//   OCEAN_ORBIT 06978fe, merged 76c5bed), the exact species FJ-P1-1 above says every forge phase re-anchors for;
+//   lib/forge-framework/test/acceptance/{expectedBlockIds,expectedFingerprints,expectedLabelCensus}.json — the P9 re-pin (d457e8d).
+// build.js, forger/, replay/, replay-manager/, forges/*/forge*.js, forges/*/lib/*Hooks.js and every framework source file: UNTOUCHED.
+// i_live reads the same tag and was green against the old one (no component shape moved). PATH LIST BYTE-IDENTICAL, the
+// :!test-gSeamUntouched.js exclusion left as it was; no exclusion added. Twin re-observed red against THIS tag.
+const PHASE3_ANCHOR_TAG = 'postEmbedTextP9-091526'; // re-anchored by RADIANT_QUEST, forge embed-text P9
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');

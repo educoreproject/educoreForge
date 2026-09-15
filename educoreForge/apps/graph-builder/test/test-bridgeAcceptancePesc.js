@@ -520,7 +520,11 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 //     gate's diffed paths, so the base is the tag cut ON this commit (the standing rule above, applied again).
 // THE SIX DECLARED PATHS ARE UNCHANGED — the baseline moves, the scope never widens — and apps/graph-builder/test/ remains
 // OUTSIDE them, so moving THIS constant cannot cascade. The RED-OBSERVED range below is untouched and still moves.
-const P1_BASELINE_COMMIT = 'postEmbedTextP7-091526'; // re-anchored by RADIANT_QUEST, forge embed-text P8; the tag is cut ON the re-anchor commit
+// RE-ANCHOR 2026-09-15 (RADIANT_QUEST), forge embed-text revision P9: postEmbedTextP7-091526 (53c2ff2) -> postEmbedTextP9-091526. The numstat over
+// the six declared paths from the P7 tag is EMPTY at the head before this commit (P9 touched no bridge, bridge-maker, build.js,
+// interfaces.js or vocabulary file); this base moves ONLY because THIS commit edits lib/bridge-framework/test/test-bgNosub.js (the
+// two BG anchors above), which is inside the diffed paths — the standing rule, applied again. Six paths unchanged; tag cut ON this commit.
+const P1_BASELINE_COMMIT = 'postEmbedTextP9-091526'; // re-anchored by RADIANT_QUEST, forge embed-text P9; the tag is cut ON the re-anchor commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
