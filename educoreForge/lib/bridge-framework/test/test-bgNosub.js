@@ -81,7 +81,17 @@ const BASE_TAG = 'preBridgeFramework-081626';
 // nothing has changed yet, so that clause would fail on an EMPTY diff, i.e. on the cleanest possible state.
 // Dropped, and only it: the load-bearing half — that NOTHING outside vocabulary.js and its tests appears — is
 // what the gate is for and is untouched. The twin still proves it by appending to vocabulary-definitions.js.
-const POST_D1_BASE_TAG = 'postGraphSelfDoc-090126'; // re-anchored 2026-09-01 — base moved, allowed-path list NOT widened
+// ═══ RE-ANCHOR (ii), 2026-09-15 (RADIANT_QUEST), forge embed-text revision P8 (PLAN-forgeEmbedText-091426.md R-ET-6/7) ═══
+// postGraphSelfDoc-090126 (4b122b0) -> postEmbedTextP7-091526. THE SAME SPECIES AS THE SABLE_RIVER NOTE ABOVE: P2 (a97bfdd) ADOPTED a
+// DME role (DmeEmbedText), an edge type (EMBEDS_TEXT_OF) and the text-node vector term (EMBED_TEXT_VECTOR), and an adopted
+// term must carry a human definition — which lives in vocabulary-definitions.js, the file this conjunct exists to forbid
+// touching. CENSUS AT THE RE-ANCHOR (git diff --stat postGraphSelfDoc-090126 -- lib/vocabulary/):
+//   lib/vocabulary/test/test-embedTextVocabulary.js | 216 +   (P2, a97bfdd — allowed, a test)
+//   lib/vocabulary/vocabulary-definitions.js        |   4 +   (P2, a97bfdd — the ruled adoption; the ONE file outside the list)
+//   lib/vocabulary/vocabulary.js                    |  42 +-  (P2 a97bfdd + P4 7bfd1be — allowed)
+// THE BASELINE MOVES; THE ALLOWED-PATH LIST IS NEVER WIDENED. After the move an append to vocabulary-definitions.js is red
+// again, which is exactly what the twin still demonstrates — re-observed red against THIS tag before the move was committed.
+const POST_D1_BASE_TAG = 'postEmbedTextP7-091526'; // re-anchored 2026-09-15 (embed-text P8) — base moved, allowed-path list NOT widened
 // ⟪A THIRD BASELINE — RULING P1-R11, BRIEF-SEAM-reanchorBgSeamUntouched.md, applied 2026-08-29 by
 // STERLING_PEAK during hub kit role migration Phase 0.E4⟫
 //
@@ -201,7 +211,22 @@ const POST_D1_BASE_TAG = 'postGraphSelfDoc-090126'; // re-anchored 2026-09-01 �
 // watched path. So this anchor, like P1_BASELINE_COMMIT, must be a tag cut ON the re-anchor commit, not before it.
 // RULE (bit three times tonight): any anchor whose watched paths include a file the re-anchor commit edits must
 // point at a tag on the re-anchor commit itself. Tag cut last; accepted only at 26/26 observed.
-const PHASE0_ANCHOR_TAG = 'postJudgeRegistryJob4b-090726'; // re-anchored by DAWN_TOWER after judgeProviderRegistry JOB 4 — the FOURTH anchor; the first re-anchor moved three and edited test-gSeamUntouched.js under lib/forge-framework/, which conjunct (iii) watches from THIS tag (TWILIGHT_ARROW's trap, 2026-09-03, walked into again 2026-09-07)
+// ═══ RE-ANCHOR (iii), 2026-09-15 (RADIANT_QUEST), forge embed-text revision P8 (PLAN-forgeEmbedText-091426.md R-ET-6/7) ═══
+// postJudgeRegistryJob4b-090726 (ce33088) -> postEmbedTextP7-091526. THIS IS THE CONJUNCT THE CAMPAIGN WAS ALWAYS GOING TO REDDEN:
+// it demands an EMPTY lib/forge-framework/ diff and applies no exclusion, and P3 (6b54b91, "framework-minted embed-text
+// nodes, text pass, G-ETEXT") is a FRAMEWORK CHANGE by design (HANDOFF decision 3 authorised the move). CENSUS AT THE
+// RE-ANCHOR (git diff --name-only postJudgeRegistryJob4b-090726 -- lib/forge-framework/), 15 files at the merged head 44ceddc:
+//   NEW  embedTextDerivation.js, embedTextPass.js, frameworkNonEmbeddableRoles.js, test/test-gEtext.js
+//   EDIT contractGraphKit.js, embedPass.js, fingerprint.js, forge-framework.js, forgeDeclarationContract.js, README.md,
+//        test/fixtures/toyForge/lib/toyForgeDeclaration.js, test/test-gDet.js, test/test-gEmbed.js, test/test-gNograph.js,
+//        test/test-gOrder.js
+// plus, INSIDE this tag and after 44ceddc: the P8 pin refresh (00735c4: test/acceptance/expectedBlockIds.json,
+// expectedFingerprints.json, expectedLabelCensus.json) and THIS commit's edit to test/test-gSeamUntouched.js (the G-SEAM
+// re-anchor) — which is why the tag is cut ON this commit (TWILIGHT_ARROW's rule, 2026-09-03: an anchor whose watched paths
+// include a file the re-anchor commit edits must point at a tag on the re-anchor commit itself).
+// THE PATH IS UNCHANGED, NO EXCLUSION IS ADDED. The twin (append to lib/forge-framework/refuse.js) re-observed red against
+// THIS tag before the move was committed.
+const PHASE0_ANCHOR_TAG = 'postEmbedTextP7-091526'; // re-anchored by RADIANT_QUEST, forge embed-text P8 — the FIFTH anchor; tag cut ON the re-anchor commit
 // PHASE 1 RE-ANCHOR — RULING FJ-P1-1, and it moves seamDiffEmpty ALONE.
 //
 // WHY IT HAD TO MOVE. SEAM_PATH_LIST watches forges/*/forge*.js, forges/*/lib/*Declaration.js and
@@ -446,7 +471,22 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // than re-anchor it. After this move an append to build.js is red again, which is what the twin still proves;
 // the twin was re-observed RED against THIS tag before the move was committed. A re-anchor without a fresh red
 // observation is a gate nobody has proven still works.
-const PHASE3_ANCHOR_TAG = 'postNamedSubjectSet-091026';
+// ═══ RE-ANCHOR seamDiffEmpty (+ i_live), 2026-09-15 (RADIANT_QUEST), forge embed-text revision P8 (R-ET-6/7) ═══
+// postNamedSubjectSet-091026 (021d1d7) -> postEmbedTextP7-091526. CENSUS AT THE RE-ANCHOR (git diff --stat postNamedSubjectSet-091026 --
+// <SEAM_PATH_LIST>) at the merged head 44ceddc: 24 files, 2,538 insertions, 35 deletions, EVERY ONE a ruled campaign edit:
+//   P3 (6b54b91)  lib/forge-framework/: the 15 files listed under (iii) above
+//   P4 (7bfd1be, af8cfdc, b0f7d45)  apps/graph-builder/apps/forger/lib/shape-forged-graph.js | 67; lib/replay/replay-engine.js
+//                 | 179; lib/replay/test/test-gVecProp.js (new, 1,132) and its two fixtures
+//   P3 (6b54b91)  forges/sif/lib/sifForgeDeclaration.js | 1, forges/pesc260805/lib/pescForgeDeclaration.js | 1 — the
+//                 embedTextDeclaration: null lines (R-ET-19)
+//   P6 (0f18754)  forges/edfi/lib/edfiForgeDeclaration.js | 12, forges/ceds/lib/cedsForgeDeclaration.js | 13 — the declared lists
+// plus, inside this tag: the P8 pin refresh (00735c4, under lib/forge-framework/test/acceptance/). build.js, forger.js,
+// replay-block.js, replayManager.js, forges/*/forge*.js and forges/*/lib/*Hooks.js: UNTOUCHED.
+// i_liveOtherComponentShapesUntouched reads the same tag and was GREEN against the old one (no component shape moved); it moves
+// with the seam so the two conjuncts share one head, and its twin was re-observed red against THIS tag.
+// THE PATH LIST IS BYTE-IDENTICAL, the :!test-gSeamUntouched.js exclusion left exactly as it was (STANDDOWN-P0 C.1). No
+// exclusion was added for any campaign file — that would retire the gate rather than re-anchor it. Twin re-observed red.
+const PHASE3_ANCHOR_TAG = 'postEmbedTextP7-091526'; // re-anchored by RADIANT_QUEST, forge embed-text P8
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');

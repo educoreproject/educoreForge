@@ -507,7 +507,20 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // RE-ANCHOR D 2026-09-03 (TWILIGHT_ARROW): a887bad moved bgNosub conjunct (iii) by editing test-bgNosub.js, which is
 // inside this gate's diffed paths, so (a)'s baseline moves to a tag cut on THIS commit. (a887bad's message said the
 // tag would be cut on a887bad itself; that was wrong - this file was not edited there. Corrected here, not amended.)
-const P1_BASELINE_COMMIT = 'postJudgeRegistryJob6-090826'; // re-anchored by DAWN_TOWER after each judgeProviderRegistry job (JOB 0 through JOB 3, 2026-09-07); the tag is cut on the last commit that touches a watched path, and this suite's own path is not watched
+// RE-ANCHOR 2026-09-15 (RADIANT_QUEST), forge embed-text revision P8 (PLAN-forgeEmbedText-091426.md R-ET-6/7):
+// postJudgeRegistryJob6-090826 (decc903) -> postEmbedTextP7-091526. CENSUS AT THE RE-ANCHOR (this gate's own numstat over its six
+// declared paths), every line attributed by git log, in three ruled groups:
+//   TQ's judge refinement, committed as the campaign's baseline by HANDOFF decision 0 (d606804, 7d84613): bridge-maker/lib
+//     llmClient.js, ollamaJudgeClient.js, selectCandidateSchema.js, sourceWindow.js; bridge-framework bridge-framework.js,
+//     bridgePluginContract.js, componentIdeaSplitter.js, evidenceRenderer.js, judgeComponent.js, test/test-bgDerived.js;
+//     interfaces.js | 10/1
+//   TQ's named subject set (021d1d7) build.js | 30/2, and its own seamDiffEmpty re-anchor (8642e6d) test/test-bgNosub.js
+//   the campaign: P2 (a97bfdd) + P4 (7bfd1be) lib/vocabulary/ (vocabulary.js, vocabulary-definitions.js,
+//     test/test-embedTextVocabulary.js), and THIS commit's edit to test/test-bgNosub.js (three BG anchors) — inside this
+//     gate's diffed paths, so the base is the tag cut ON this commit (the standing rule above, applied again).
+// THE SIX DECLARED PATHS ARE UNCHANGED — the baseline moves, the scope never widens — and apps/graph-builder/test/ remains
+// OUTSIDE them, so moving THIS constant cannot cascade. The RED-OBSERVED range below is untouched and still moves.
+const P1_BASELINE_COMMIT = 'postEmbedTextP7-091526'; // re-anchored by RADIANT_QUEST, forge embed-text P8; the tag is cut ON the re-anchor commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 

@@ -95,7 +95,27 @@ const TREE_ROOT = path.resolve(toyScenario.FRAMEWORK_DIR, '..', '..');
 // ═══ RE-ANCHOR, 2026-09-02 (TWILIGHT_ARROW), JOBS 5+6 ═══ three of the seven seam files moved for ruled
 // reasons: build.js (artifact writer, bridge summary threading), replay-engine.js (shared identity guard
 // and function), replayManager.js (conservation record, harvest keying). List unchanged; twin re-observed red.
-const PRE_MIGRATION_REF = 'postJudgeRegistryJob4b-090726'; // re-anchored by DAWN_TOWER after judgeProviderRegistry JOB 4 (the first job of that campaign to touch build.js); the tag is cut ON the re-anchor commit because this file lives under lib/forge-framework/, which SEAM_PATH_LIST watches
+// ═══ RE-ANCHOR, 2026-09-15 (RADIANT_QUEST), forge embed-text revision P8 (PLAN-forgeEmbedText-091426.md R-ET-6/7; HANDOFF decision 3) ═══
+// postJudgeRegistryJob4b-090726 (ce33088) -> postEmbedTextP7-091526. PREVIOUS BASE IN FULL: postJudgeRegistryJob4b-090726 at ce33088,
+// DAWN_TOWER's second JOB 4 re-anchor of 2026-09-07 (the line above this block, now history).
+//
+// CENSUS AT THE RE-ANCHOR, MEASURED WITH THIS GATE'S OWN COMMAND (git diff --stat postJudgeRegistryJob4b-090726 -- <the 7 seam
+// files>), and it is exactly THREE of the seven, every one attributed to a commit by git log:
+//   apps/graph-builder/lib/build.js                          |  32 +++-  021d1d7 — the NAMED SUBJECT SET flag (TQ's judge
+//                                                                        refinement, 2026-09-10); BG seamDiffEmpty absorbed it at
+//                                                                        postNamedSubjectSet-091026 and THIS gate never did
+//   apps/graph-builder/apps/forger/lib/shape-forged-graph.js |  67 +++++- 7bfd1be — P4: the vector-slot lift, embedSourceProperty /
+//                                                                        vectorPropertyName carried from the mint to the shaped node
+//   lib/replay/replay-engine.js                              | 179 +++++ 7bfd1be, af8cfdc, b0f7d45 — P4: the vectorPropertyName
+//                                                                        discriminator, the fourth pre-write guard (R-ET-37), the second
+//                                                                        vector index (EMBED_TEXT_VECTOR), and one prose fix
+// forger.js, replay-block.js, replayManager.js and round-trip-stage.js: UNTOUCHED (the campaign's loader change lives in
+// replay-engine.js alone, as R-ET-8's site list said it would).
+// THE SEAM FILE LIST IS UNCHANGED — the baseline moves, the scope never widens — and the twin was re-observed red against
+// THIS ref before the move was accepted. The tag is cut ON the re-anchor commit (this file lives under lib/forge-framework/,
+// which BG conjunct (iii) watches with no exclusion — TWILIGHT_ARROW's rule, 2026-09-03). The same commit moves the four BG
+// anchors, for the reason recorded in test-bgNosub.js beside them.
+const PRE_MIGRATION_REF = 'postEmbedTextP7-091526'; // re-anchored by RADIANT_QUEST, forge embed-text P8; the tag is cut ON the re-anchor commit
 const SEAM_FILE_LIST = Object.freeze([
 	'apps/graph-builder/apps/forger/forger.js',
 	'apps/graph-builder/lib/build.js',
