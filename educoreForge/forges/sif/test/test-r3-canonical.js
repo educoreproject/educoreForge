@@ -181,7 +181,6 @@ const buildContractGraphFromSynthetic = (oneSyntheticParsed) =>
 
 const g = buildContractGraphFromSynthetic(syntheticParsed);
 const byRole = (role) => g.nodes.filter((n) => n.role === role);
-const allEdgeTypes = new Set(g.edges.map((e) => e.type));
 
 check('exactly one DmeStandardRoot', byRole('DmeStandardRoot').length === 1);
 check('two DmeClass (object + 2 complexTypes = 3)', byRole('DmeClass').length === 3);

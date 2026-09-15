@@ -612,7 +612,7 @@ taskList.push((args, next) => {
 				}
 				nodeCountByTier[nodeTierValue]++;
 			});
-			evidence(`tier census: source ${nodeCountByTier.source}, derived ${nodeCountByTier.derived}, meta ${nodeCountByTier.meta}, synthetic ${nodeCountByTier.synthetic}; total ${forged.nodes.length}`);
+			evidence(`tier census: source ${nodeCountByTier.source}, derived ${nodeCountByTier.derived}, meta ${nodeCountByTier.meta}, synthetic ${nodeCountByTier.synthetic}; walk population ${walkNodeListOf(forged.nodes).length} (what the four tiers must sum to), full population ${forged.nodes.length} (walk + framework embed-text nodes)`);
 			if (nodesWithUnratifiedTier.length > 0) {
 				evidence(`unratified pescTier values: ${nodesWithUnratifiedTier.slice(0, 3).join('; ')}`);
 			}
