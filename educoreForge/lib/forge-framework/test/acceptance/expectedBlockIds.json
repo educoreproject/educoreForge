@@ -17,6 +17,77 @@
     "ceds_edfi_sif": "Measured Phase 0 values EQUAL their references. Only pesc260805 diverges."
   },
 
+  "_postEmbedTextComment": "RECORDED 2026-09-15 by RADIANT_QUEST (forge embed-text revision P8, PLAN-forgeEmbedText-091426.md R-ET-10; campaign head 44ceddc). The embed-text campaign gives every chosen text field its own framework-minted DmeEmbedText node (Ed-Fi 3,281, CEDS 6,684 — the P1 oracle), so the Ed-Fi and CEDS StandardBase block ids MOVE BY DESIGN. The NEW ids are recorded here as measuredPostEmbedText with full provenance. THREE THINGS THIS EDIT DELIBERATELY DOES NOT DO: (1) measuredPreMigration is NOT rewritten — G-ID (test-gId.js) reads the RECORDED `migrated` store on disk (forgeFramework_edfi_migrated, 2026-08-16, aea6d8df…) and asserts the framework migration reproduced the unmigrated id; that claim is about that store and remains TRUE, so the row and the roster stay as they are. (2) referenceUnderFourWithHubBaseline is NOT edited — it describes the historical fourWithHub_postEdfi store (see the sibling note); its four-forge SUCCESSOR is the P10 GOLD_EVAL build and will be recorded as its own section when it exists, never by overwriting the reference. (3) NO gate was re-pointed at the new store: the frozen command was re-run under a NEW phase token (embedText) precisely so the recorded `migrated` run is never overwritten (runAcceptanceCommand.js refuses to overwrite a recorded run).",
+
+  "measuredPostEmbedText": {
+    "edfi": "0019849775f12aca71130219c345697224590ed31b6df304e14705b4f1102959",
+    "ceds": "21110ef1fd423434bfc64899559f31dd7d126fd421e344341fe329e3f65c91dd",
+    "sif": null,
+    "pesc260805": null
+  },
+
+  "measuredPostEmbedTextRecord": {
+    "_comment": "provenance of each measuredPostEmbedText id. edfi was measured TWICE by two recipes and the ids are BYTE-IDENTICAL (block identity carries no recipe identity — the same fact the ceds measuredPreMigrationRecord note records). ceds carries the FOLDED HUB in its block, so its like-for-like predecessor is measuredPreMigration.ceds 09a5d658… (cedsHub / fourWithHub, hub folded), NOT a hubless cedsOnlyRoundTrip run — which is why the frozen ceds line was not re-run for this row. sif and pesc260805 are null until P9 declares them.",
+    "edfi": {
+      "measuredOn": "2026-09-15",
+      "measuredBy": "RADIANT_QUEST (embed-text P7 pilot, then P8 frozen-command reproduction)",
+      "head": "44ceddc9de3f493a01369d9b382cf10fa4049d41 (branch embedText-091426, working tree CLEAN — provenance.json gitDirty false)",
+      "buildMode": "vectorize=true",
+      "predecessorId": "aea6d8dfe7899adef57c5ac3adb6b0df2bfc7e4a4ae859c4fa3893c132c8b304 (measuredPreMigration.edfi; unchanged across the framework migration)",
+      "skipEmbeddingId": "3c563784e64d… (P7 dry build, vectorize=false — differs from the vectorized id by the embeddingRef lines only, as every vectorized lineage has; NOT a lineage member)",
+      "pilotRun": {
+        "recipe": "recipes/embedTextPilot.recipe.jsonc (edfi + ceds with the ceds hub, roundTripStage true, bridges [])",
+        "standardsDatabase": "system/dataStores/graphBuilder/embedTextPilot.standardsDatabase.sqlite3",
+        "manifest": "74406b528d6f5e4e47d381ed8f9406cf21d569f7ba878d695a6a356444bba54f",
+        "runDir": "system/dataStores/buildLogs/embedTextPilot/embedTextPilot_20260915-035646",
+        "graph": "DEV_embedTextPilot (kept, read-only, for the bridge revision)"
+      },
+      "frozenCommandRun": {
+        "command": "acceptanceCommands.jsonc byStandardKey.edfi, phase token embedText (runAcceptanceCommand.js --standardKey=edfi --phaseToken=embedText)",
+        "recipe": "recipes/edfiOnlyRoundTrip.recipe.jsonc",
+        "standardsDatabase": "system/dataStores/graphBuilder/forgeFramework_edfi_embedText.standardsDatabase.sqlite3",
+        "singleForgeManifestId": "2133aeb82262f266d0a6e5bfb15e214e2317200825ff8899842a9e05e7a868c9",
+        "runDir": "system/dataStores/buildLogs/edfiOnlyRoundTrip_20260915-041519",
+        "buildLog": "system/dataStores/buildLogs/forgeFramework/edfi-embedText/build.log (provenance.json beside it)",
+        "roundTrip": {
+          "inventedTotal": 0,
+          "lostTotal": 0,
+          "roundTripClean": true
+        },
+        "equalsPilotId": true,
+        "vectorCache": "warm from the pilot (the same vectorCache.sqlite3) — no new Voyage spend for the text nodes"
+      },
+      "nodeTotal": 9617,
+      "textNodeCount": 3281,
+      "edgeTotal": 13125
+    },
+    "ceds": {
+      "measuredOn": "2026-09-15",
+      "measuredBy": "RADIANT_QUEST (embed-text P7 pilot)",
+      "head": "44ceddc9de3f493a01369d9b382cf10fa4049d41 (branch embedText-091426, working tree CLEAN)",
+      "buildMode": "vectorize=true",
+      "hubFolded": true,
+      "hubReferenceCardCount": 94602,
+      "predecessorId": "09a5d658807b9c22b44b28289d9ad4b47df15e45f44c9eacec765962fe487c33 (measuredPreMigration.ceds; hub folded; unchanged across the framework migration)",
+      "skipEmbeddingId": "97d27cfebe48… (P7 dry build, vectorize=false; NOT a lineage member)",
+      "pilotRun": {
+        "recipe": "recipes/embedTextPilot.recipe.jsonc",
+        "standardsDatabase": "system/dataStores/graphBuilder/embedTextPilot.standardsDatabase.sqlite3",
+        "manifest": "74406b528d6f5e4e47d381ed8f9406cf21d569f7ba878d695a6a356444bba54f",
+        "runDir": "system/dataStores/buildLogs/embedTextPilot/embedTextPilot_20260915-035646",
+        "roundTrip": {
+          "inventedTotal": 0,
+          "lostTotal": 0,
+          "roundTripClean": true
+        }
+      },
+      "nodeTotal": 126489,
+      "nodeTotalHubless": 31886,
+      "textNodeCount": 6684,
+      "edgeTotal": 503942
+    }
+  },
+
   "measuredPreMigration": {
     "edfi": "aea6d8dfe7899adef57c5ac3adb6b0df2bfc7e4a4ae859c4fa3893c132c8b304",
     "sif": "d393b0406d08f613f3142711fca5a9f2b0c580e84c4bef3ffd6b18d4eaa2330a",

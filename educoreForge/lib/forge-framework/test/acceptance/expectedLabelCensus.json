@@ -2,12 +2,14 @@
   "_comment": "G-LABEL-CENSUS frozen per-standard LABEL censuses — the cheap detector for the ONE defect class that byte-identity catches expensively and NO count-based suite catches at all. Written 2026-08-29 in hub-kit-role Phase 3 under RULING FJ-P3-1, discharging the Phase 1 docket row 'a LABEL-BY-ROLE census assertion ... GENERALISE IT RATHER THAN COPYING IT'. WHY IT IS A CENSUS AND NOT A BY-ROLE TABLE: the three migrated forges key their per-standard labels off THREE DIFFERENT AXES — ceds by DME ROLE (5 labels), sif by NATIVE KIND (9 labels across 6 roles: DmeClass carries BOTH SifObject and SifComplexType, DmeSupport carries three), edfi by METAED ENTITY TYPE (22 labels). A by-role table is STRUCTURALLY INCAPABLE of expressing two of the three, and copying CEDS's shape into SIF would have collapsed five labels into two and mislabelled up to 6,173 nodes. The only thing genuinely common across forges is the label->count table itself, which is checkable uniformly whatever the key space. WHY IT LIVES HERE AND NOT IN THE DECLARATION (ruling FJ-P3-1(a)): forgeDeclarationContract.js is CLOSED at 13 keys with unknown-key refusal, so a census key would be a FRAMEWORK EDIT for data the framework never consumes; this is the expectedBlockIds.json idiom instead, and costs nothing. WHAT THE DEFECT LOOKS LIKE WHEN IT HAPPENS: Phase 1's first CEDS re-forge collapsed four per-role labels into one, produced b7351c60... against 09a5d658..., and ALL FOUR CEDS SUITES WERE GREEN ON IT — including a byte-identical DETERMINISM check, which proves run-to-run stability rather than fidelity. Node and edge counts were identical; the hub census, the tier split and the divergence report were all identical; I5, I6 and I5b would ALL have passed. A LABEL IS NOT A COUNT. Only the 262-second oracle caught it; this file plus test-labelCensus.js catches it in about five seconds with no Docker and no embedding spend. HOW TO UPDATE: a change here is a change to what the graph CALLS things, which is a block byte and therefore an id change — never edit a number to make a red test green. Re-measure, confirm the block id moved for a reason you intended, and update both in the same commit.",
   "measurementMethod": "Each forge's own bundle, in-process, forge({ sourcePath: <its defaultSnapshot dir>, skipEmbedding: true }); labels censused STRUCTURALLY as (labels minus the framework pair ForgedNode/StandardBase, minus any Dme* role label) rather than positionally. POSITION IS NOT SAFE: harvest emits labels SORTED, so the per-standard label sits at a different index per standard and the Phase 1 docket's 'labels[1]' shorthand is correct for CEDS and WRONG for SIF.",
   "note_ceds_is_hubless_here": "ceds nodeTotal is 25,202, NOT the 119,805 of a hub-bearing build. The hub fold happens in the FORGER (build.js/forger.js), not inside the bundle's forge(), so an in-process census legitimately sees the hubless base. That is the same 25,202 the Phase 1 docket row names as 'the hubless node count'.",
+  "note_embedText_repin_091526": "RE-PINNED 2026-09-15 by RADIANT_QUEST (forge embed-text revision P8, PLAN-forgeEmbedText-091426.md R-ET-10, campaign head 44ceddc): edfi nodeTotal 6,336 -> 9,617 and ceds 25,202 -> 31,886, each by EXACTLY the P1 oracle's text-node count (Ed-Fi 3,281, CEDS 6,684; evidence/P1-textListCensus-v2.log), carried on ONE new per-standard label each — EdfiEmbedText / CedsEmbedText, the embedTextLabel the declaration names (R-ET-15). EVERY pre-existing label count is UNCHANGED: the framework's text pass mints text nodes BESIDE the walk and relabels nothing, which is what these two rows now assert. The block ids moved for this intended reason and the new ids are recorded in expectedBlockIds.json (measuredPostEmbedText). sif and pesc260805 declare embedTextDeclaration null and are byte-for-byte unchanged here; P9 re-pins them when they declare. Measured by test-labelCensus.js itself on 44ceddc before this edit (58/62: the two nodeTotal rows and the two UNDECLARED-label rows, nothing else).",
   "byStandardKey": {
     "ceds": {
-      "labelKeyedBy": "DME role (role -> label is a FUNCTION for CEDS, which is why its own registry PER_STANDARD_LABEL_BY_ROLE is role-keyed and correct)",
-      "nodeTotal": 25202,
+      "labelKeyedBy": "DME role (role -> label is a FUNCTION for CEDS, which is why its own registry PER_STANDARD_LABEL_BY_ROLE is role-keyed and correct) — plus CedsEmbedText, the declared embedTextLabel of the framework-minted text nodes (embed-text P6, 2026-09-14)",
+      "nodeTotal": 31886,
       "labelCensus": {
         "CedsClass": 402,
+        "CedsEmbedText": 6684,
         "CedsOntology": 1965,
         "CedsOptionSet": 965,
         "CedsOptionValue": 19546,
@@ -15,8 +17,8 @@
       }
     },
     "edfi": {
-      "labelKeyedBy": "MetaEd entity type — 22 labels, far more than there are DME roles",
-      "nodeTotal": 6336,
+      "labelKeyedBy": "MetaEd entity type — 22 labels, far more than there are DME roles — plus EdfiEmbedText, the declared embedTextLabel of the framework-minted text nodes (embed-text P6, 2026-09-14)",
+      "nodeTotal": 9617,
       "labelCensus": {
         "EdfiAbstractEntity": 1,
         "EdfiAssociation": 39,
@@ -29,6 +31,7 @@
         "EdfiDomainEntity": 121,
         "EdfiDomainEntityExtension": 12,
         "EdfiDomainEntitySubclass": 9,
+        "EdfiEmbedText": 3281,
         "EdfiEnumeration": 1,
         "EdfiInlineCommon": 11,
         "EdfiInterchange": 29,
