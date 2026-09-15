@@ -1262,7 +1262,7 @@ const harvestBlock = ({ boltUri, password, selector, header, vectorStore }, call
 // keep naming the offending block, and init passes a single group naming its forge bundle.
 //   group = { sourceLabel: string, nodes: [...], edges: [...] }
 
-// validateShapedGraph — the SHAPE check and the THREE pre-write guards, pure and synchronous.
+// validateShapedGraph — the SHAPE check and the FOUR pre-write guards (GUARD 4, the vector-slot declaration, added by P4 of the embed-text revision), pure and synchronous.
 // Returns { error, nodes, edges }: error '' means admitted, and nodes/edges are the SINGLE
 // flattened walk the writer then uses (assembling them twice would let the thing that was
 // validated drift from the thing that gets written).
@@ -1458,7 +1458,7 @@ const writeShapedGraph = (
 	const embedTextVectorIndex = embedTextVectorIndexName(graphName);
 	const taskList = new taskListPlus();
 
-	// --- SHAPE + ALL THREE GUARDS, before anything is written. This is the load-bearing line of
+	// --- SHAPE + ALL FOUR GUARDS, before anything is written. This is the load-bearing line of
 	//     the whole extraction: nothing may touch the session until validateShapedGraph has
 	//     admitted the content, and the nodes/edges written below are the ones IT walked — not a
 	//     second, independently assembled flattening that could drift from what was checked.
