@@ -16,6 +16,12 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //   blindedEdgeFor / walkEdgeFor                             the same two rules over an EDGE's properties (BR6)
 //   walkRecordFor({ record, blindingDeclaration, channelPropertyList })  forWalk(): declared channel properties
 //                                                            readable, any OTHER blinded name REFUSED on read
+//   textSearchVocabularyFor()                                the text role, its edge type, its vector property and the
+//                                                            slot edge types, read from lib/vocabulary or refused (B3b)
+//   reWidenPropertyNameList / shapeEmbedTextVectorRowList    readEmbedTextVectors' closed record, scalar propertyNameList
+//                                                            re-widened, anything else refused (R-BR-1a)
+//   shapeCardBaseEdgeRowList                                 readCardBaseEdges' closed record, DOMAIN/PROPERTY required,
+//                                                            RANGE optional per card (CARD_BASE_SLOT_DISPOSITION, R-BR-13)
 //   closedView / closedReader / closedWriter                 Proxies asserting the CLOSED member sets (BG-CONTAIN)
 //   mappingEdgeRefusal({...})                                the §6 write-seam refusals incl. the MAPPING_PROPERTIES
 //                                                            closed-set check (NEW enforcement, RULING BF12) and the
@@ -34,12 +40,20 @@ const CARD_LIST_SLOT_LIST = Object.freeze(TUPLE_LIST_FIELD_LIST.concat(['qualifi
 const CARD_REQUIRED_PROPERTY_LIST = Object.freeze(['stableId', 'canonicalKey', 'referenceTier', 'hubName', 'hubVersion', 'name']);
 const READER_MEMBER_LIST = Object.freeze(['readHubCards', 'readSubjectNodes', 'forWalk', 'forEvidence', 'forRetrieval', 'close']);
 const VIEW_MEMBER_LIST = Object.freeze(['readSourceNodes', 'readNodesByStableId', 'readEdgesAmongSource']);
-// the RETRIEVAL view is PURPOSE-SCOPED and closed to exactly two reads, each returning { stableId, embedding,
-// embeddingModelVersion } and NOTHING else (RULING §11.4). It is a separate member set from VIEW_MEMBER_LIST
-// precisely so the renderer's view and the vector view can never be the same object: the renderer cannot
-// reach a vector, and retrieval cannot reach a definition.
-const RETRIEVAL_VIEW_MEMBER_LIST = Object.freeze(['readHubVectors', 'readSubjectVectors']);
+// the RETRIEVAL view is PURPOSE-SCOPED and closed to exactly four reads (RULING §11.4): readHubVectors and
+// readSubjectVectors return { stableId, embedding, embeddingModelVersion } and NOTHING else; the two text-node reads
+// (SPEC-bridgeRevision-091426 §6, §13 R-BR-1, R-BR-1a, R-BR-9, R-BR-13) each return their OWN closed field list.
+// It is a separate member set from VIEW_MEMBER_LIST precisely so the renderer's view and the vector view can never
+// be the same object: the renderer cannot reach a vector, and retrieval cannot reach a text, a name or a definition.
+const RETRIEVAL_VIEW_MEMBER_LIST = Object.freeze(['readHubVectors', 'readSubjectVectors', 'readEmbedTextVectors', 'readCardBaseEdges']);
 const RETRIEVAL_RECORD_KEY_LIST = Object.freeze(['stableId', 'embedding', 'embeddingModelVersion']);
+const EMBED_TEXT_VECTOR_FIELD_NAME_LIST = Object.freeze(['textStableId', 'vector', 'embeddingModelVersion', 'sourceStableId', 'sourceRole', 'propertyNameList']);
+const CARD_BASE_EDGE_FIELD_NAME_LIST = Object.freeze(['cardStableId', 'edgeType', 'baseStableId', 'baseRole']);
+// CARD_BASE_SLOT_DISPOSITION — the decomposition slots a card-to-base read returns, and which of them every card
+// must carry (R-BR-9, R-BR-13). DOMAIN and PROPERTY are on every property-tier card; RANGE is on 1,692 of the
+// pilot's 2,777 (measured 2026-09-15), so a card without one is ordinary. VALUE and QUALIFIER are hub slots no
+// walk follows, so their edges are not returned.
+const CARD_BASE_SLOT_DISPOSITION = Object.freeze({ DOMAIN: 'required', PROPERTY: 'required', RANGE: 'optional' });
 const WRITER_MEMBER_LIST = Object.freeze(['writeMappingEdge', 'close']);
 const EDGE_TYPE_BY_PREDICATE = SKOS_EDGE_TYPES;
 const PREDICATE_BY_EDGE_TYPE = Object.freeze(Object.keys(SKOS_EDGE_TYPES).reduce((soFar, onePredicate) => ({ ...soFar, [SKOS_EDGE_TYPES[onePredicate]]: onePredicate }), {}));
@@ -285,6 +299,115 @@ const retrievalRecordFor = (record) => ({
 	embedding: record.properties.embedding,
 	embeddingModelVersion: record.properties.embeddingModelVersion,
 });
+
+const compareStrings = (leftValue, rightValue) => (leftValue < rightValue ? -1 : leftValue > rightValue ? 1 : 0);
+
+// textSearchVocabularyFor — the text-node role, its edge type, its vector property and the slot edge types, READ from
+// lib/vocabulary and never re-typed (R-BR-1, R-BR-9, BG-NOSUB). A missing constant is refused by name rather than
+// interpolated into cypher as 'undefined'.
+const textSearchVocabularyFor = () => {
+	const { DME_ROLES, EDGE_TYPES, EMBED_TEXT_VECTOR, HUB_DECOMPOSITION_SLOTS, hubEdgeType } = vocabularyLib;
+	const requiredConstantList = [
+		['DME_ROLES.EMBED_TEXT', DME_ROLES && DME_ROLES.EMBED_TEXT],
+		['EDGE_TYPES.EMBEDS_TEXT_OF', EDGE_TYPES && EDGE_TYPES.EMBEDS_TEXT_OF],
+		['EMBED_TEXT_VECTOR.propertyName', EMBED_TEXT_VECTOR && EMBED_TEXT_VECTOR.propertyName],
+	];
+	const missingConstant = requiredConstantList.find(([, constantValue]) => !isNonEmptyString(constantValue));
+	if (missingConstant !== undefined) {
+		return { error: refuse.byName({ moduleName, what: `lib/vocabulary has no ${missingConstant[0]}`, where: 'the reader names text nodes, their edge and their vector through the vocabulary only (R-BR-1)' }) };
+	}
+	if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(EMBED_TEXT_VECTOR.propertyName)) {
+		return { error: refuse.byName({ moduleName, what: `EMBED_TEXT_VECTOR.propertyName ${JSON.stringify(EMBED_TEXT_VECTOR.propertyName)} is not a property name`, where: 'it reaches cypher by interpolation, so it is validated before it gets there' }) };
+	}
+	if (typeof hubEdgeType !== 'function' || !Array.isArray(HUB_DECOMPOSITION_SLOTS)) {
+		return { error: refuse.byName({ moduleName, what: 'lib/vocabulary has no hubEdgeType function or HUB_DECOMPOSITION_SLOTS list', where: 'slot edge types are hubEdgeType(hubName, slot), never literals (R-BR-9)' }) };
+	}
+	const undeclaredSlot = Object.keys(CARD_BASE_SLOT_DISPOSITION).find((oneSlot) => HUB_DECOMPOSITION_SLOTS.indexOf(oneSlot) === -1);
+	if (undeclaredSlot !== undefined) {
+		return { error: refuse.byName({ moduleName, what: `CARD_BASE_SLOT_DISPOSITION names slot '${undeclaredSlot}', which is not in HUB_DECOMPOSITION_SLOTS (${HUB_DECOMPOSITION_SLOTS.join(', ')})`, where: 'the slot rows must be hub decomposition slots' }) };
+	}
+	return {
+		embedTextRole: DME_ROLES.EMBED_TEXT,
+		embedsTextOfEdgeType: EDGE_TYPES.EMBEDS_TEXT_OF,
+		textVectorPropertyName: EMBED_TEXT_VECTOR.propertyName,
+		slotByEdgeTypeFor: (hubName) => Object.keys(CARD_BASE_SLOT_DISPOSITION).reduce((soFar, oneSlot) => ({ ...soFar, [hubEdgeType(hubName, oneSlot)]: oneSlot }), {}),
+	};
+};
+
+// reWidenPropertyNameList — the loader stores a ONE-element propertyNameList as a SCALAR string (R-BR-1a ii), so the
+// read boundary re-widens it, as reWidenListSlots does for card list slots. A list stays a list; anything else
+// (a number, an empty string, an empty list, a list holding a non-name) is refused by name.
+const reWidenPropertyNameList = ({ propertyNameList, edgeLocator }) => {
+	if (isNonEmptyString(propertyNameList)) {
+		return { propertyNameList: [propertyNameList] };
+	}
+	if (Array.isArray(propertyNameList) && propertyNameList.length > 0 && propertyNameList.every(isNonEmptyString)) {
+		return { propertyNameList: propertyNameList.slice() };
+	}
+	return { error: refuse.byName({ moduleName, what: `text edge ${edgeLocator} carries propertyNameList ${JSON.stringify(propertyNameList)}, which is neither a property name nor a non-empty list of names`, where: 'the forge writes the sorted names of the properties the text is; the loader may store one as a scalar, and nothing else (R-BR-1a)' }) };
+};
+
+// shapeEmbedTextVectorRowList — one record per text edge, built by NAMING its fields (so a property added to the
+// graph tomorrow cannot appear by omission), propertyNameList re-widened, sorted by (textStableId, sourceStableId).
+// A text edge reaching a node of another standard is refused by name, never silently dropped.
+const shapeEmbedTextVectorRowList = ({ rowList, standardName }) => {
+	const recordList = [];
+	for (let rowIndex = 0; rowIndex < rowList.length; rowIndex++) {
+		const oneRow = rowList[rowIndex];
+		const edgeLocator = `${oneRow.textStableId} -> ${oneRow.sourceStableId}`;
+		if (oneRow.sourceStandardName !== standardName) {
+			return { error: refuse.byName({ moduleName, what: `text edge ${edgeLocator} reaches a node whose _source is ${JSON.stringify(oneRow.sourceStandardName)}, not '${standardName}'`, where: 'a text node describes nodes of its own standard only (R-ET-1)' }) };
+		}
+		const widened = reWidenPropertyNameList({ propertyNameList: oneRow.propertyNameList, edgeLocator });
+		if (widened.error) {
+			return { error: widened.error };
+		}
+		recordList.push({ textStableId: oneRow.textStableId, vector: oneRow.vector, embeddingModelVersion: oneRow.embeddingModelVersion, sourceStableId: oneRow.sourceStableId, sourceRole: oneRow.sourceRole, propertyNameList: widened.propertyNameList });
+	}
+	return { recordList: recordList.sort((leftRecord, rightRecord) => compareStrings(leftRecord.textStableId, rightRecord.textStableId) || compareStrings(leftRecord.sourceStableId, rightRecord.sourceStableId)) };
+};
+
+// shapeCardBaseEdgeRowList — the slot edges of the cards read, kept only when their type is hubEdgeType(card's
+// hubName, slot) for a slot in CARD_BASE_SLOT_DISPOSITION, sorted by (cardStableId, edgeType, baseStableId). Every
+// card read is checked against the required slots, so a card with NO slot edge at all is refused too (R-BR-13).
+const shapeCardBaseEdgeRowList = ({ cardRowList, edgeRowList, textSearchVocabulary }) => {
+	const hubNameByCardStableId = {};
+	const slotByEdgeTypeByHubName = {};
+	for (let cardIndex = 0; cardIndex < cardRowList.length; cardIndex++) {
+		const oneCardRow = cardRowList[cardIndex];
+		if (!isNonEmptyString(oneCardRow.hubName)) {
+			return { error: refuse.byName({ moduleName, what: `hub card ${JSON.stringify(oneCardRow.cardStableId)} carries no hubName`, where: 'its slot edge types are hubEdgeType(hubName, slot); every HubReference card carries hubName' }) };
+		}
+		hubNameByCardStableId[oneCardRow.cardStableId] = oneCardRow.hubName;
+		if (slotByEdgeTypeByHubName[oneCardRow.hubName] === undefined) {
+			slotByEdgeTypeByHubName[oneCardRow.hubName] = textSearchVocabulary.slotByEdgeTypeFor(oneCardRow.hubName);
+		}
+	}
+	const slotListByCardStableId = {};
+	const recordList = [];
+	for (let edgeIndex = 0; edgeIndex < edgeRowList.length; edgeIndex++) {
+		const oneEdgeRow = edgeRowList[edgeIndex];
+		const hubName = hubNameByCardStableId[oneEdgeRow.cardStableId];
+		if (hubName === undefined) {
+			return { error: refuse.byName({ moduleName, what: `slot edge ${oneEdgeRow.cardStableId} -[${oneEdgeRow.edgeType}]-> ${oneEdgeRow.baseStableId} leaves a card the card read did not return`, where: 'the card read and the edge read name the same tier; a difference means the graph changed between them' }) };
+		}
+		const slot = slotByEdgeTypeByHubName[hubName][oneEdgeRow.edgeType];
+		if (slot === undefined) {
+			continue;
+		}
+		slotListByCardStableId[oneEdgeRow.cardStableId] = (slotListByCardStableId[oneEdgeRow.cardStableId] || []).concat([slot]);
+		recordList.push({ cardStableId: oneEdgeRow.cardStableId, edgeType: oneEdgeRow.edgeType, baseStableId: oneEdgeRow.baseStableId, baseRole: oneEdgeRow.baseRole });
+	}
+	const requiredSlotList = Object.keys(CARD_BASE_SLOT_DISPOSITION).filter((oneSlot) => CARD_BASE_SLOT_DISPOSITION[oneSlot] === 'required');
+	for (let cardIndex = 0; cardIndex < cardRowList.length; cardIndex++) {
+		const cardStableId = cardRowList[cardIndex].cardStableId;
+		const missingSlot = requiredSlotList.find((oneSlot) => (slotListByCardStableId[cardStableId] || []).indexOf(oneSlot) === -1);
+		if (missingSlot !== undefined) {
+			return { error: refuse.byName({ moduleName, what: `hub card ${JSON.stringify(cardStableId)} has no ${missingSlot} slot edge`, where: `every card carries the required slots (${requiredSlotList.join(', ')}); RANGE alone is optional (R-BR-13)` }) };
+		}
+	}
+	return { recordList: recordList.sort((leftRecord, rightRecord) => compareStrings(leftRecord.cardStableId, rightRecord.cardStableId) || compareStrings(leftRecord.edgeType, rightRecord.edgeType) || compareStrings(leftRecord.baseStableId, rightRecord.baseStableId)) };
+};
 // closedHookArgs — the argument object handed to a plugin hook: exactly its own keys, nothing else (no judge, no store, no writer)
 const closedHookArgs = (hookArgs) => closedShape({ target: hookArgs, memberList: Object.keys(hookArgs), shapeName: 'hook argument object' });
 const closedReader = (reader) => closedShape({ target: reader, memberList: READER_MEMBER_LIST, shapeName: 'graphReader' });
@@ -383,6 +506,9 @@ module.exports = {
 	VIEW_MEMBER_LIST,
 	RETRIEVAL_VIEW_MEMBER_LIST,
 	RETRIEVAL_RECORD_KEY_LIST,
+	EMBED_TEXT_VECTOR_FIELD_NAME_LIST,
+	CARD_BASE_EDGE_FIELD_NAME_LIST,
+	CARD_BASE_SLOT_DISPOSITION,
 	WRITER_MEMBER_LIST,
 	EVERY_EDGE_REQUIRED_PROPERTY_LIST,
 	EDGE_PROPERTY_DISPOSITION_BY_PRODUCER_KIND,
@@ -399,6 +525,10 @@ module.exports = {
 	allowListedRecordFor,
 	allowListRefusal,
 	retrievalRecordFor,
+	textSearchVocabularyFor,
+	reWidenPropertyNameList,
+	shapeEmbedTextVectorRowList,
+	shapeCardBaseEdgeRowList,
 	closedRetrievalView,
 	walkRecordFor,
 	blindedEdgeFor,

@@ -21,6 +21,14 @@
 //   (e) forEvidence() edges are blinded on the bolt reader too (BR6's bolt half): no declared name on any edge
 //   (f) readEdgesAmongSource keeps the _source scope on BOTH endpoints — a mapping edge just written (source → hub
 //       card) is NOT among-source
+// The TEXT-NODE READS (B3b; bolt only — the double's parity is B4's) run on testSupport/toyEmbedTextBoltGraph.js:
+//   (g) readEmbedTextVectors returns records of EXACTLY EMBED_TEXT_VECTOR_FIELD_NAME_LIST, equal to the hand-derived
+//       source records, and the hub standard's read returns only the hub's text (the _source scope is in the Cypher)
+//   (h) readCardBaseEdges returns records of EXACTLY CARD_BASE_EDGE_FIELD_NAME_LIST, only DOMAIN / PROPERTY / RANGE
+//       edges named by hubEdgeType, counts equal the hand-derived ones; no QUALIFIER, IN_HUB or value-tier edge
+//   (i) RANGE is optional per card (R-BR-13): a card without one is read, not refused
+//   (j) a card lacking DOMAIN or PROPERTY, or lacking every slot edge, is refused by name (R-BR-13)
+//   (k) an absent standardName or referenceTier is refused by name, never read as undefined
 // A containerised smoke gate over a real DEV_ graph (BG-BOLT-LIVE) is B3's — named in its brief.
 //
 // Run: node lib/bridge-framework/test/test-bgBolt.js [-verbose]
@@ -48,11 +56,14 @@ const moduleDouble = require(path.join(__dirname, '..', '..', 'forge-framework',
 const boltDriverDouble = require('./testSupport/boltDriverDouble');
 const graphDoubleLib = require('../graphDouble');
 const vocabularyLib = require(path.join(__dirname, '..', '..', 'vocabulary', 'vocabulary'));
+const graphSeamRulesLib = require('../graphSeamRules');
+const embedTextGraphLib = require('./testSupport/toyEmbedTextBoltGraph');
 
 const twinRegistry = makeTwinRegistry();
 const GATE_ID = 'BG-BOLT';
 const READER_FILE = 'graphReader.js';
 const WRITER_FILE = 'graphWriter.js';
+const RULES_FILE = 'graphSeamRules.js';
 const DRIVER_DOUBLE_PATH = path.join(__dirname, 'testSupport', 'boltDriverDouble.js');
 const toyGraphLib = scenarioLib.toyGraphLib;
 const cloneJson = scenarioLib.cloneJson;
@@ -80,6 +91,11 @@ const twoStates = () => {
 };
 const readerArgs = { inGraph: IN_GRAPH, dependencyStandardNameList: [HUB_NAME, SOURCE_STANDARD_NAME], sourceStandardName: SOURCE_STANDARD_NAME, blindingDeclaration: BLINDING_DECLARATION };
 const writerArgs = { inGraph: IN_GRAPH, applyLabel: APPLY_LABEL, sourceStandardName: SOURCE_STANDARD_NAME };
+// embedTextReaderFor — the bolt reader over a text-node graph bound into the driver double (the B3b conjuncts)
+const embedTextReaderFor = (scenario, graph) => {
+	boltDriverDouble.useState(graph);
+	return boltReaderLib(scenario).graphReaderFactory(readerArgs);
+};
 const canonicalRecordList = (recordList) => JSON.stringify(recordList.map((oneRecord) => ({ stableId: oneRecord.stableId, properties: Object.keys(oneRecord.properties).sort().reduce((soFar, oneName) => ({ ...soFar, [oneName]: oneRecord.properties[oneName] }), {}) })).sort((leftRecord, rightRecord) => (leftRecord.stableId < rightRecord.stableId ? -1 : 1)));
 
 // a VALID mapping edge on the toy graph (Student.FirstName → card P000001.C1)
@@ -259,19 +275,120 @@ const conjunctList = [
 			});
 		},
 	},
+	{
+		conjunctId: 'g_readEmbedTextVectorsClosedAndScoped',
+		title: "readEmbedTextVectors returns records of EXACTLY EMBED_TEXT_VECTOR_FIELD_NAME_LIST equal to the hand-derived source records, and the hub standard's read returns only the hub's one text",
+		twinNameList: ['embedTextRecordCarriesText', 'textScopeDropped'],
+		evaluate: (scenario, callback) => {
+			const retrievalView = embedTextReaderFor(scenario, embedTextGraphLib.embedTextBoltGraph()).forRetrieval();
+			retrievalView.readEmbedTextVectors({ standardName: SOURCE_STANDARD_NAME }, (sourceError, sourceList) => {
+				if (sourceError) {
+					callback('', { pass: false, detail: `source read: ${String(sourceError).slice(0, 200)}` });
+					return;
+				}
+				retrievalView.readEmbedTextVectors({ standardName: HUB_NAME }, (hubError, hubList) => {
+					if (hubError) {
+						callback('', { pass: false, detail: `hub read: ${String(hubError).slice(0, 200)}` });
+						return;
+					}
+					const offShapeList = sourceList.concat(hubList).filter((oneRecord) => JSON.stringify(Object.keys(oneRecord)) !== JSON.stringify(graphSeamRulesLib.EMBED_TEXT_VECTOR_FIELD_NAME_LIST));
+					const equal = JSON.stringify(sourceList) === JSON.stringify(embedTextGraphLib.EXPECTED_SOURCE_TEXT_RECORD_LIST);
+					const hubOnly = hubList.length === 1 && hubList[0].textStableId === embedTextGraphLib.HUB_TEXT_ID.firstName;
+					callback('', { pass: offShapeList.length === 0 && equal && hubOnly, detail: `${sourceList.length} source / ${hubList.length} hub record(s); off-shape ${offShapeList.length ? JSON.stringify(Object.keys(offShapeList[0])) : 'none'}; source ${equal ? 'EQUAL' : 'DIFFER from'} the hand-derived records; hub ${hubOnly ? 'only its own text' : JSON.stringify(hubList.map((oneRecord) => oneRecord.textStableId))}` });
+				});
+			});
+		},
+	},
+	{
+		conjunctId: 'h_readCardBaseEdgesClosedAndSlotFiltered',
+		title: "readCardBaseEdges({ referenceTier: 'property' }) returns records of EXACTLY CARD_BASE_EDGE_FIELD_NAME_LIST, only hubEdgeType(hubName, DOMAIN | PROPERTY | RANGE) edges, 9 / 9 / 2 as derived by hand; no QUALIFIER, IN_HUB or value-tier edge",
+		twinNameList: ['cardEdgeRecordCarriesName', 'everyCardEdgeReturned'],
+		evaluate: (scenario, callback) => {
+			embedTextReaderFor(scenario, embedTextGraphLib.embedTextBoltGraph()).forRetrieval().readCardBaseEdges({ referenceTier: 'property' }, (readError, recordList) => {
+				if (readError) {
+					callback('', { pass: false, detail: String(readError).slice(0, 200) });
+					return;
+				}
+				const expectedCountBySlot = embedTextGraphLib.EXPECTED_PROPERTY_TIER_SLOT_EDGE_COUNT_BY_SLOT;
+				const slotByEdgeType = Object.keys(expectedCountBySlot).reduce((soFar, oneSlot) => ({ ...soFar, [vocabularyLib.hubEdgeType(HUB_NAME, oneSlot)]: oneSlot }), {});
+				const countBySlot = recordList.reduce((soFar, oneRecord) => ({ ...soFar, [slotByEdgeType[oneRecord.edgeType] || oneRecord.edgeType]: (soFar[slotByEdgeType[oneRecord.edgeType] || oneRecord.edgeType] || 0) + 1 }), {});
+				const offShapeList = recordList.filter((oneRecord) => JSON.stringify(Object.keys(oneRecord)) !== JSON.stringify(graphSeamRulesLib.CARD_BASE_EDGE_FIELD_NAME_LIST));
+				const valueTierList = recordList.filter((oneRecord) => oneRecord.cardStableId === 'toyhub:card/OV000001.C1');
+				const countsEqual = JSON.stringify(countBySlot) === JSON.stringify(expectedCountBySlot);
+				callback('', { pass: offShapeList.length === 0 && countsEqual && valueTierList.length === 0, detail: `${recordList.length} record(s) by slot ${JSON.stringify(countBySlot)} (${countsEqual ? 'EQUAL' : 'DIFFER from'} ${JSON.stringify(expectedCountBySlot)}); off-shape ${offShapeList.length ? JSON.stringify(Object.keys(offShapeList[0])) : 'none'}; value-tier ${valueTierList.length}` });
+			});
+		},
+	},
+	{
+		conjunctId: 'i_rangeOptionalPerCard',
+		title: 'a property-tier card with DOMAIN and PROPERTY but no RANGE is read, not refused, and comes back with exactly those two slot edges (R-BR-13)',
+		twinNameList: ['rangeRequired'],
+		evaluate: (scenario, callback) => {
+			embedTextReaderFor(scenario, embedTextGraphLib.embedTextBoltGraph()).forRetrieval().readCardBaseEdges({ referenceTier: 'property' }, (readError, recordList) => {
+				if (readError) {
+					callback('', { pass: false, detail: String(readError).slice(0, 200) });
+					return;
+				}
+				const cardEdgeTypeList = recordList.filter((oneRecord) => oneRecord.cardStableId === embedTextGraphLib.PROPERTY_TIER_CARD_WITHOUT_RANGE_STABLE_ID).map((oneRecord) => oneRecord.edgeType);
+				const expectedEdgeTypeList = [vocabularyLib.hubEdgeType(HUB_NAME, 'DOMAIN'), vocabularyLib.hubEdgeType(HUB_NAME, 'PROPERTY')];
+				callback('', { pass: JSON.stringify(cardEdgeTypeList) === JSON.stringify(expectedEdgeTypeList), detail: `${embedTextGraphLib.PROPERTY_TIER_CARD_WITHOUT_RANGE_STABLE_ID}: ${JSON.stringify(cardEdgeTypeList)}` });
+			});
+		},
+	},
+	{
+		conjunctId: 'j_missingRequiredSlotRefusedByName',
+		title: 'a card whose PROPERTY slot edge is removed, and a card with NO slot edge at all, are each refused by name (R-BR-13)',
+		twinNameList: ['requiredSlotCheckSkipped'],
+		evaluate: (scenario, callback) => {
+			const withoutPropertyGraph = embedTextGraphLib.embedTextBoltGraph();
+			withoutPropertyGraph.edgeList = withoutPropertyGraph.edgeList.filter((oneEdge) => !(oneEdge.fromStableId === 'toyhub:card/P000002.C2' && oneEdge.type === vocabularyLib.hubEdgeType(HUB_NAME, 'PROPERTY')));
+			embedTextReaderFor(scenario, withoutPropertyGraph).forRetrieval().readCardBaseEdges({ referenceTier: 'property' }, (propertyError) => {
+				const edgelessGraph = embedTextGraphLib.embedTextBoltGraph();
+				edgelessGraph.edgeList = edgelessGraph.edgeList.filter((oneEdge) => oneEdge.fromStableId !== 'toyhub:card/P000006.C1');
+				embedTextReaderFor(scenario, edgelessGraph).forRetrieval().readCardBaseEdges({ referenceTier: 'property' }, (edgelessError) => {
+					const propertyRefused = /REFUSED/.test(String(propertyError)) && /hub card "toyhub:card\/P000002\.C2" has no PROPERTY slot edge/.test(String(propertyError));
+					const edgelessRefused = /REFUSED/.test(String(edgelessError)) && /hub card "toyhub:card\/P000006\.C1" has no DOMAIN slot edge/.test(String(edgelessError));
+					callback('', { pass: propertyRefused && edgelessRefused, detail: `without PROPERTY: ${String(propertyError).slice(0, 120) || 'ACCEPTED'}; edgeless: ${String(edgelessError).slice(0, 120) || 'ACCEPTED'}` });
+				});
+			});
+		},
+	},
+	{
+		conjunctId: 'k_absentArgumentRefusedByName',
+		title: 'readEmbedTextVectors({}) and readCardBaseEdges({}) are each refused by name — an absent standardName or referenceTier is never read as undefined',
+		twinNameList: ['standardNameCheckSkipped', 'referenceTierCheckSkipped'],
+		evaluate: (scenario, callback) => {
+			const retrievalView = embedTextReaderFor(scenario, embedTextGraphLib.embedTextBoltGraph()).forRetrieval();
+			retrievalView.readEmbedTextVectors({}, (standardNameError) => {
+				retrievalView.readCardBaseEdges({}, (referenceTierError) => {
+					const standardNameRefused = /readEmbedTextVectors standardName undefined is not a standard name/.test(String(standardNameError));
+					const referenceTierRefused = /readCardBaseEdges referenceTier undefined is not a tier/.test(String(referenceTierError));
+					callback('', { pass: standardNameRefused && referenceTierRefused, detail: `standardName: ${String(standardNameError).slice(0, 100) || 'READ'}; referenceTier: ${String(referenceTierError).slice(0, 100) || 'READ'}` });
+				});
+			});
+		},
+	},
 ];
 
 frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'a_writerStampsBothEndpoints', twinName: 'objectStampDropped', fileName: WRITER_FILE, find: 'SET s:\\`${applyLabel}\\`, o:\\`${applyLabel}\\` WITH', replace: 'SET s:\\`${applyLabel}\\` WITH' });
 frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'b_forEvidenceRoutesThroughBlindedRecordFor', twinName: 'evidenceViewUnblindedOnBolt', fileName: READER_FILE, find: "\tconst forEvidence = () => graphSeamRulesLib.closedView(makeView({ shapeRecord: (oneRecord) => graphSeamRulesLib.blindedRecordFor({ record: oneRecord, blindingDeclaration }), shapeEdge: (oneEdge) => graphSeamRulesLib.blindedEdgeFor({ edge: oneEdge, blindingDeclaration }) }));", replace: "\tconst forEvidence = () => graphSeamRulesLib.closedView(makeView({ shapeRecord: (oneRecord) => oneRecord, shapeEdge: (oneEdge) => graphSeamRulesLib.blindedEdgeFor({ edge: oneEdge, blindingDeclaration }) }));" });
-frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'c_readSubjectNodesKeepsSourceScope', twinName: 'sourceScopeDropped', fileName: READER_FILE, find: "{ cypher: 'MATCH (n) WHERE n._source = $sourceStandardName RETURN n ORDER BY n.stableId SKIP $skip LIMIT $limit', parameters: { sourceStandardName } },", replace: "{ cypher: 'MATCH (n) RETURN n ORDER BY n.stableId SKIP $skip LIMIT $limit', parameters: { sourceStandardName } }," });
+frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'c_readSubjectNodesKeepsSourceScope', twinName: 'sourceScopeDropped', fileName: READER_FILE, find: " AND n._source = $sourceStandardName RETURN n ORDER BY n.stableId SKIP $skip LIMIT $limit`,", replace: " RETURN n ORDER BY n.stableId SKIP $skip LIMIT $limit`," });
 frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'd_writerRefusesNonHubObjectAtEndpointLookup', twinName: 'endpointRefusalSkipped', fileName: WRITER_FILE, find: '\t\t\t\tif (endpointRefusal) {', replace: '\t\t\t\tif (false && endpointRefusal) {' });
 frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'dPrime_writerRefusesStrayPropertyBeforeSession', twinName: 'shapeRefusalSkipped', fileName: WRITER_FILE, find: '\t\tif (shapeRefusal) {', replace: '\t\tif (false && shapeRefusal) {' });
 frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'e_forEvidenceEdgesBlindedOnBolt', twinName: 'evidenceEdgesRawOnBolt', fileName: READER_FILE, find: "\tconst forEvidence = () => graphSeamRulesLib.closedView(makeView({ shapeRecord: (oneRecord) => graphSeamRulesLib.blindedRecordFor({ record: oneRecord, blindingDeclaration }), shapeEdge: (oneEdge) => graphSeamRulesLib.blindedEdgeFor({ edge: oneEdge, blindingDeclaration }) }));", replace: "\tconst forEvidence = () => graphSeamRulesLib.closedView(makeView({ shapeRecord: (oneRecord) => graphSeamRulesLib.blindedRecordFor({ record: oneRecord, blindingDeclaration }), shapeEdge: (oneEdge) => oneEdge }));" });
 frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'f_readEdgesAmongSourceScopedBothEndpoints', twinName: 'objectEndpointScopeDropped', fileName: READER_FILE, find: 'WHERE a._source = $sourceStandardName AND b._source = $sourceStandardName${typeClause}', replace: 'WHERE a._source = $sourceStandardName${typeClause}' });
+frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'g_readEmbedTextVectorsClosedAndScoped', twinName: 'embedTextRecordCarriesText', fileName: RULES_FILE, find: 'sourceRole: oneRow.sourceRole, propertyNameList: widened.propertyNameList });', replace: 'sourceRole: oneRow.sourceRole, propertyNameList: widened.propertyNameList, text: oneRow.text });' });
+frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'g_readEmbedTextVectorsClosedAndScoped', twinName: 'textScopeDropped', fileName: READER_FILE, find: 'WHERE t._source = $standardName AND t.role = $embedTextRole', replace: 'WHERE t.role = $embedTextRole' });
+frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'h_readCardBaseEdgesClosedAndSlotFiltered', twinName: 'cardEdgeRecordCarriesName', fileName: RULES_FILE, find: 'baseStableId: oneEdgeRow.baseStableId, baseRole: oneEdgeRow.baseRole });', replace: 'baseStableId: oneEdgeRow.baseStableId, baseRole: oneEdgeRow.baseRole, name: oneEdgeRow.name });' });
+frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'h_readCardBaseEdgesClosedAndSlotFiltered', twinName: 'everyCardEdgeReturned', fileName: RULES_FILE, find: '\t\tif (slot === undefined) {\n\t\t\tcontinue;\n\t\t}', replace: '\t\tif (false) {\n\t\t\tcontinue;\n\t\t}' });
+frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'i_rangeOptionalPerCard', twinName: 'rangeRequired', fileName: RULES_FILE, find: "RANGE: 'optional' });", replace: "RANGE: 'required' });" });
+frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'j_missingRequiredSlotRefusedByName', twinName: 'requiredSlotCheckSkipped', fileName: RULES_FILE, find: '\t\tif (missingSlot !== undefined) {', replace: '\t\tif (false && missingSlot !== undefined) {' });
+frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'k_absentArgumentRefusedByName', twinName: 'standardNameCheckSkipped', fileName: READER_FILE, find: "\t\t\t\tif (typeof standardName !== 'string' || standardName.length === 0) {", replace: '\t\t\t\tif (false) {' });
+frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'k_absentArgumentRefusedByName', twinName: 'referenceTierCheckSkipped', fileName: READER_FILE, find: "\t\t\t\tif (typeof referenceTier !== 'string' || referenceTier.length === 0) {", replace: '\t\t\t\tif (false) {' });
 
-const gateDeclarationList = [{ gateId: GATE_ID, title: 'bolt file ↔ graph double parity through the driver double', conjunctList }];
+const gateDeclarationList = [{ gateId: GATE_ID, title: 'bolt file ↔ graph double parity through the driver double, and the text-node reads', conjunctList }];
 
 runGateFamily(
-	{ harness, familyName: GATE_ID, gateDeclarationList, twinRegistry, makeSubject: scenarioLib.makeScenario, cloneSubject: scenarioLib.cloneScenario, expectedConjunctCount: 7, expectedTwinCount: 7 },
+	{ harness, familyName: GATE_ID, gateDeclarationList, twinRegistry, makeSubject: scenarioLib.makeScenario, cloneSubject: scenarioLib.cloneScenario, expectedConjunctCount: 12, expectedTwinCount: 15 },
 	() => harness.report(),
 );
