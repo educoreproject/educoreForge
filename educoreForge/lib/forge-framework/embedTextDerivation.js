@@ -22,7 +22,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //                                           element that is not a string (a nested array included)
 //                                           refused
 //     anything else                       → refused
-//     a value containing NUL (U+0000)     → refused (the vector sidecar refuses NUL at harvest)
+//     a value containing NUL (U+0000)     → refused (the content address refuses NUL at vector-store write (content-address.js vectorIdForInput))
 //     text = value.trim()                 → the DECLARED identity rule; empty → counted
 //                                           (embedTextSkippedEmptyCount), skipped; a non-empty text
 //                                           that differs from its value → counted (embedTextTrimmedCount)
@@ -106,7 +106,7 @@ const deriveEmbedTextGraph = ({ nodes, embedTextDeclaration, kit } = {}) => {
 			}
 			valueListFor({ rawValue, sourceStableId: oneNode.stableId, propertyName: onePropertyName }).forEach((oneValue) => {
 				if (oneValue.indexOf(NUL_CHARACTER) !== -1) {
-					throw refuse.byName({ moduleName, what: `node '${oneNode.stableId}' property '${onePropertyName}' contains the NUL character (U+0000)`, where: 'the vector sidecar refuses NUL at harvest; clean the source text in the walk or omit the property' });
+					throw refuse.byName({ moduleName, what: `node '${oneNode.stableId}' property '${onePropertyName}' contains the NUL character (U+0000)`, where: 'the content address refuses NUL at vector-store write (content-address.js vectorIdForInput); clean the source text in the walk or omit the property' });
 				}
 				const text = oneValue.trim();
 				if (text.length === 0) {
