@@ -232,8 +232,9 @@ const runConjuncts = ({ handle }) => {
 		harness.note('(b) MEASURED: node properties in a replayed graph are Neo4j FLOATS (replay-engine sends JS numbers → Float64), so unwrapValue\'s Integer branch is not reachable on node reads here; the framework meets a live driver Integer on the WRITER\'s count(r) — proven in (e) with its own red twin');
 		harness.ok('    the sorted read is by stableId (first < last)', subjectNodeList && subjectNodeList.length > 1 && String(subjectNodeList[0].stableId) < String(subjectNodeList[subjectNodeList.length - 1].stableId));
 
-		// (a) RED: the short-page stop fires on page 1
-		const pagingTwin = readerFor({ handle, readerLib: mutatedReaderLib([{ modulePath: graphReaderPath, find: 'if (result.records.length < PAGE_SIZE) {', replace: 'if (result.records.length <= PAGE_SIZE) {' }]) });
+		// (a) RED: the short-page stop fires on page 1. The find-text is ANCHORED on pagedNodeRead's collected.push line:
+		// the bare stop line also occurs in pagedRowRead, and a find-text matching twice is REFUSED (the twin blinded itself)
+		const pagingTwin = readerFor({ handle, readerLib: mutatedReaderLib([{ modulePath: graphReaderPath, find: 'collected.push({ stableId: properties.stableId, labels: node.labels.slice(), properties });\n\t\t\t\t\t});\n\t\t\t\t\tif (result.records.length < PAGE_SIZE) {', replace: 'collected.push({ stableId: properties.stableId, labels: node.labels.slice(), properties });\n\t\t\t\t\t});\n\t\t\t\t\tif (result.records.length <= PAGE_SIZE) {' }]) });
 		pagingTwin.readSubjectNodes((twinError, twinList) => {
 			harness.ok(`(a) RED-OBSERVED — with the short-page stop firing on a FULL page the read returns ${twinList ? twinList.length : 'error'} ≠ ${EDFI_NODE_COUNT}`, !twinError && twinList && twinList.length !== EDFI_NODE_COUNT, twinError);
 			pagingTwin.close(() => hubCardConjunct({ handle, realReader }));
