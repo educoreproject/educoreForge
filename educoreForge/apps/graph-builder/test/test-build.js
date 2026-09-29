@@ -1155,6 +1155,9 @@ const stageRebridgeWiring = () => {
 			maxConcurrency: 4,
 			rerank: () => {},
 			describe: () => ({ provider: 'anthropic', model: 'anthropic:sentinel', version: 'sentinel-v1' }),
+			// (phase M1) B2 made judgeConfig a required, frozen, primitives-only member of JUDGE_PROVIDER_SHAPE; this
+			// double predated it and was refused by name. Same form as test-judgeProviderRegistry's double.
+			judgeConfig: Object.freeze({ temperaturePolicy: 'testNoWire', maxTokens: null }),
 		};
 		let factoryCalls = 0;
 		let lastFactoryArg = null;
