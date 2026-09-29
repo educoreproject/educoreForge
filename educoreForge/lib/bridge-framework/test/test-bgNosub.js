@@ -242,7 +242,15 @@ const POST_D1_BASE_TAG = 'postM1VocabularyIi-092926'; // re-anchored 2026-09-29 
 // expectedLabelCensus.json | 8) — the P9 declarations moved SIF's and PESC's censuses, proxies and block ids by design (R-ET-10), and
 // nothing else under lib/forge-framework/ moved. Tag cut ON this commit (it edits nothing under lib/forge-framework/, but the rule is the
 // rule and the three anchors share one head). Path unchanged, no exclusion; twin re-observed red against THIS tag.
-const PHASE0_ANCHOR_TAG = 'postEmbedTextP9-091526'; // re-anchored by RADIANT_QUEST, forge embed-text P9 — the SIXTH anchor
+// ═══ RE-ANCHOR (iii), 2026-09-29 (WILD_PORTAL for EBONY_DREAM), SIF replacement merge gate M1 ═══
+// postEmbedTextP9-091526 -> postM1ForgeFrameworkIii-092926, tag cut ON this re-anchor commit. CENSUS (git diff --stat
+// postEmbedTextP9-091526 -- lib/forge-framework/) on the merged head ac49e77, 3 files, every one a TEST or a PIN, all ruled:
+//   test/test-gCompat.js | 8 — V1 (bb63af1), the vocabulary campaign's own test edit;
+//   test/test-labelCensus.js | 3, test/acceptance/expectedLabelCensus.json | 15 — M1's supervisor-owned G-LABEL-CENSUS append of
+//     sif260928 (33f274c, plan §3 M1, review #18).
+// No framework SOURCE file under lib/forge-framework/ moved in the SIF replacement. THE PATH IS UNCHANGED, NO EXCLUSION IS ADDED.
+// Fresh red observed against THIS tag (DEVLOG-M1).
+const PHASE0_ANCHOR_TAG = 'postM1ForgeFrameworkIii-092926'; // re-anchored by WILD_PORTAL, SIF replacement M1 — the SEVENTH anchor
 // PHASE 1 RE-ANCHOR — RULING FJ-P1-1, and it moves seamDiffEmpty ALONE.
 //
 // WHY IT HAD TO MOVE. SEAM_PATH_LIST watches forges/*/forge*.js, forges/*/lib/*Declaration.js and
