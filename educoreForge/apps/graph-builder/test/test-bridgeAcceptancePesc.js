@@ -590,7 +590,15 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 //   B6 re-anchors 2 and 3     lib/bridge-framework/test/test-bgNosub.js (ea07251, 34e9c23).
 // The PESC plugins still compose through the seam: this gate's other 25 conjuncts were green before the move. THE SIX DECLARED PATHS
 // ARE UNCHANGED, no exclusion added. Fresh scratch red observed against THIS tag (DEVLOG-B6).
-const P1_BASELINE_COMMIT = 'postB6PescComposeA-092926'; // re-anchored by IVORY_MIRROR, SIF replacement B6 (RULING EBONY_DREAM); the tag is cut ON the re-anchor commit
+// ═══ RE-ANCHOR (a), 2026-09-29 (ELECTRIC_PEAK; pre-authorised by the common brief's economy rules), SIF replacement phase B7 ═══
+// postB6PescComposeA-092926 -> postB7PescComposeA-092926, the tag cut ON this re-anchor commit, B7's only move. CENSUS: this gate's
+// own diff from postB6PescComposeA-092926 over its six declared paths, at B7's head cf52343, is exactly three paths, all B7's:
+//   B7 index-backed endpoint matches (cf52343)  lib/bridge-framework/graphWriter.js (both endpoint matches labelled ForgedNode),
+//                             lib/bridge-framework/test/testSupport/boltDriverDouble.js (mirrors the labelled shapes, honours the label),
+//                             lib/bridge-framework/test/test-bgBolt.js (toy states carry ForgedNode; conjunct l and its two twins).
+// The PESC plugins still compose through the seam: this gate's other 25 conjuncts were green before the move. THE SIX DECLARED PATHS
+// ARE UNCHANGED, no exclusion added. Fresh scratch red observed against THIS tag (DEVLOG-B7).
+const P1_BASELINE_COMMIT = 'postB7PescComposeA-092926'; // re-anchored by ELECTRIC_PEAK, SIF replacement B7; the tag is cut ON the re-anchor commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
