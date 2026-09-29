@@ -580,7 +580,17 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 //                lib/bridge-framework/test/test-bgDecl.js (EXPECTED_SHIPPED_DECLARING_PLUGIN_COUNT 3 -> 4, 4bf5d43)
 // No framework source moved. THE SIX DECLARED PATHS ARE UNCHANGED, no exclusion added. Fresh scratch red observed against THIS
 // tag (DEVLOG-D1).
-const P1_BASELINE_COMMIT = 'postD1PescComposeA-092926'; // re-anchored by INDIGO_FLAME, SIF replacement D1 (RULING EBONY_DREAM); the tag is cut ON the re-anchor commit
+// ═══ RE-ANCHOR (a), 2026-09-29 (IVORY_MIRROR; RULING EBONY_DREAM), SIF replacement phase B6 ═══
+// postD1PescComposeA-092926 -> postB6PescComposeA-092926, the tag cut ON this re-anchor commit, LAST of B6's four moves. CENSUS: this
+// gate's own diff from postD1PescComposeA-092926 over its six declared paths, at B6's head 34e9c23, is exactly five paths, all B6's:
+//   B6 harvest fix (7047e35)  apps/graph-builder/interfaces.js (harvest JSDoc names edgeTypeList), apps/graph-builder/lib/build.js
+//                             (the relationship harvest takes the block's harvestEdgeTypeList), lib/bridge-framework/bridge-framework.js
+//                             (the run report and each block entry carry it), lib/bridge-framework/graphDouble.js (the double's harvest
+//                             mirrors the narrowing and keeps a list a list);
+//   B6 re-anchors 2 and 3     lib/bridge-framework/test/test-bgNosub.js (ea07251, 34e9c23).
+// The PESC plugins still compose through the seam: this gate's other 25 conjuncts were green before the move. THE SIX DECLARED PATHS
+// ARE UNCHANGED, no exclusion added. Fresh scratch red observed against THIS tag (DEVLOG-B6).
+const P1_BASELINE_COMMIT = 'postB6PescComposeA-092926'; // re-anchored by IVORY_MIRROR, SIF replacement B6 (RULING EBONY_DREAM); the tag is cut ON the re-anchor commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
