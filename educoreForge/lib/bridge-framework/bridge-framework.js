@@ -520,7 +520,7 @@ const retrievalRegistryRefusal = () => {
 // JUDGE_PICK_PREDICATE_BY_PREDICATE_RULE — for a judge-sourced pick, one row per predicate rule the contract accepts
 // (JUDGE_PREDICATE_RULE_LIST; test-bgJudgePredicate (g) holds the two to the same rules). categoryTable-v1 maps the
 // judge's CATEGORY through the declared predicateByCategory table; judgeSlot-v1 takes the predicate the judge named,
-// which judgeComponent has already verified against the schema's pick values (SIF replacement B3b).
+// which judgeComponent has already verified against the schema's pick values (phase B3b, 2026-09-28).
 const JUDGE_PICK_PREDICATE_BY_PREDICATE_RULE = Object.freeze({
 	'categoryTable-v1': ({ judged, bridgeDeclaration }) => {
 		const predicate = bridgeDeclaration.predicateByCategory[judged.category];
@@ -722,8 +722,8 @@ const moduleFunction =
 			// (judgeConfigRecord.js). Absent, both are omitted and the block text is what it was.
 			const recordsJudgeConfig = bridgeDeclaration.blockRecordsJudgeConfig === true;
 			// the configuration the header will state, taken once, and its digest: the judgment cache folds the digest
-			// into its key so a cached judgment is served only under the configuration the header states (SIF replacement
-			// B3b). null when the plugin does not opt in, which keeps every cache key exactly what it was.
+			// into its key so a cached judgment is served only under the configuration the header states (phase B3b,
+			// 2026-09-28). null when the plugin does not opt in, which keeps every cache key exactly what it was.
 			const runJudgeConfigHeader = recordsJudgeConfig && judgeClient !== null ? judgeConfigRecordLib.judgeConfigHeaderFor({ judgeClient, predicateRule: bridgeDeclaration.predicateSource.predicateRule }) : null;
 			const judgeConfigCacheDigest = runJudgeConfigHeader === null ? null : sha256Hex(canonicalJson(runJudgeConfigHeader));
 			const debugMark = spec.rebridge ? debugJudgeLib.debugMarkFromLlmClient({ inferenceConfig: spec.inferenceConfig }) : undefined;
@@ -1915,8 +1915,8 @@ const moduleFunction =
 								if (recordsJudgeConfig) {
 									judgeRecord.rationale = judged.rationale;
 								}
-								// the relation the judge itself named, on a pick under a rule with a predicate slot (SIF replacement
-								// B3b). An abstention names none, and under categoryTable-v1 the answer carries no predicate at all.
+								// the relation the judge itself named, on a pick under a rule with a predicate slot (phase B3b,
+								// 2026-09-28). An abstention names none, and under categoryTable-v1 the answer carries no predicate at all.
 								if (judged.chosenCardStableId !== null && judged.predicate !== undefined) {
 									judgeRecord.predicate = judged.predicate;
 								}

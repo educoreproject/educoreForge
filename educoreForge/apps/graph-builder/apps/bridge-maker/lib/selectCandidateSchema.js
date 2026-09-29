@@ -340,7 +340,7 @@ const CANONICAL_SCHEMA_BUILDER_BY_PREDICATE_RULE = Object.freeze({
 const PREDICATE_RULE_NAME_LIST = Object.freeze(Object.keys(CANONICAL_SCHEMA_BUILDER_BY_PREDICATE_RULE));
 
 // PREDICATE_FIELD_BY_PREDICATE_RULE — what a provider reads back beyond choice, category and rationale, per rule
-// (SIF replacement B3b). null under categoryTable-v1: that judge names no relation, and its return carries no `predicate` key at all,
+// (phase B3b, 2026-09-28). null under categoryTable-v1: that judge names no relation, and its return carries no `predicate` key at all,
 // because judgeComponent counts the key's mere presence as a discarded predicate (BG-P6 b). Under judgeSlot-v1: the
 // field's name, the values its schema offers, and the value that means an abstention.
 const PREDICATE_FIELD_BY_PREDICATE_RULE = Object.freeze({

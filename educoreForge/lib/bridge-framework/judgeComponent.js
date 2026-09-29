@@ -21,7 +21,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // the judge answers under (question.judgePredicateRule), which is handed to the provider as the schema to send.
 // Under categoryTable-v1 there is NO predicate slot and none is added (RULING BF1, which governs categoryTable-v1
 // only: SPEC §9 A11): a stray `predicate` key on the return is DISCARDED and COUNTED (BG-P6 b). Under judgeSlot-v1
-// the slot is VERIFIED (SIF replacement B3b): predicate is exactly the abstain value when choice is NONE, and one of the pick
+// the slot is VERIFIED (phase B3b, 2026-09-28): predicate is exactly the abstain value when choice is NONE, and one of the pick
 // values otherwise; absent, out of the offered values, or on the wrong side of that rule, it is REFUSED by name.
 // This component maps the ordinal through renderedPoolStableIdList — the ONE authority — to chosenCardStableId;
 // 'NONE' is an abstention (null). A choice outside choiceEnum, or a category / rationale absent or blank, is
@@ -45,13 +45,13 @@ const { confidenceForCategory, ABSTAIN_CATEGORY, PICK_CATEGORY_LIST } = require(
 const { PREDICATE_FIELD_BY_PREDICATE_RULE } = require(path.join(__dirname, '..', '..', 'apps', 'graph-builder', 'apps', 'bridge-maker', 'lib', 'selectCandidateSchema'));
 
 // JUDGE_CONFIG_CACHE_MODEL_SEPARATOR — joins the judge's model to the digest of its configuration in the cache key
-// (SIF replacement B3b). The shipped providers' namespaced models use ':' and '@' and never '#', so a folded key does not collide
+// (phase B3b, 2026-09-28). The shipped providers' namespaced models use ':' and '@' and never '#', so a folded key does not collide
 // with an unfolded one.
 const JUDGE_CONFIG_CACHE_MODEL_SEPARATOR = '#judgeConfig:';
 const JUDGE_CONFIG_CACHE_DIGEST_RE = /^[0-9a-f]{64}$/;
 const cacheModelFor = ({ model, judgeConfigCacheDigest }) => (judgeConfigCacheDigest === null ? model : `${model}${JUDGE_CONFIG_CACHE_MODEL_SEPARATOR}${judgeConfigCacheDigest}`);
 
-// predicateVerdictFor — the predicate slot, by the rule's PREDICATE_FIELD_BY_PREDICATE_RULE row (SIF replacement B3b). A null row
+// predicateVerdictFor — the predicate slot, by the rule's PREDICATE_FIELD_BY_PREDICATE_RULE row (phase B3b, 2026-09-28). A null row
 // (categoryTable-v1) keeps RULING BF1: the answer gains nothing and the caller's count of a stray key stands. A
 // field row verifies the judge's value: present, one of the offered values, the abstain value exactly when the
 // judge abstained. Each violation is refused by its own name.

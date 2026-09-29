@@ -221,7 +221,7 @@ const makeApi = ({ esc, runSql, getRows, databaseFilePath }) => {
 	// required as a string (the discrete ⟪A4⟫ verdict); chosenStableId must be present (null for an
 	// abstain) so a hit can VERIFY the ordinal still names the same candidate. predicate is optional:
 	// a judge answering under a rule with a predicate slot stores the relation it named (its abstain value
-	// on an abstain), and when present it is a non-empty string (SIF replacement B3b). generation is
+	// on an abstain), and when present it is a non-empty string (phase B3b, 2026-09-28). generation is
 	// informational metadata (which pipeline generation bought this judgment), never part of the key.
 	const putJudgment = ({ promptHash, model, rendererVersion, generation, judgment } = {}, callback) => {
 		const keyErr = validateKey({ promptHash, model, rendererVersion }, 'putJudgment');

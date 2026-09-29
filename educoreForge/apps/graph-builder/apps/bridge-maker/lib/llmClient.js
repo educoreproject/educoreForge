@@ -585,7 +585,7 @@ const moduleFunction =
 		//
 		// rerank — { systemPrompt, userPrompt, choiceEnum, predicateRule, maxRetries } -> callback(err, { choice,
 		//   model, attempts, category, rationale, usage, stopReason, retryReasons } plus, under a rule with a predicate
-		//   slot, predicate). predicateRule names the schema sent and is required (SIF replacement B3b). choiceEnum: e.g.
+		//   slot, predicate). predicateRule names the schema sent and is required (phase B3b, 2026-09-28). choiceEnum: e.g.
 		//   ['1','2',...,'15','NONE']. Retries (6) with backoff on 429/5xx/network AND on an incomplete
 		//   judgment. lib/bridge-framework/judgeComponent.js is the sole production caller and reads
 		//   choice, category and rationale.
