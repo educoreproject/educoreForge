@@ -230,8 +230,10 @@ const seedForger = () =>
 // refuses a component that cannot describe — by name, and deliberately without a permissive skip, because
 // a pre-spend gate that quietly does not run reads as "no collision" to everything downstream. A double
 // omitting it therefore fails the SEED build and cascades through this whole suite.
+// (phase B6) build.js also refuses, by name, a relationship block that states no harvest edge types, so the seed double
+// states one, as the framework's runReport does.
 const seedBridgeMaker = () => () => ({
-	run: (spec, cb) => cb('', { ...spec, edgesWritten: 0, decisionBlock: null }),
+	run: (spec, cb) => cb('', { ...spec, harvestEdgeTypeList: ['EXACT_MATCH'], edgesWritten: 0, decisionBlock: null }),
 	describeBridge: ({ bridgeName, source }) => ({
 		description: Object.freeze({ bridgeName, source, producerKind: 'authored', subjectDiscriminator: undefined }),
 	}),
