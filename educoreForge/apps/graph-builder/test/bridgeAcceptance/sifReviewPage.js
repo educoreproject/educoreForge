@@ -90,6 +90,10 @@ const PAGE_WORDING = Object.freeze({
 	rendererWord: 'renderer',
 	roundWord: 'round',
 	noDomainCaption: '(no domain)',
+	miloLabel: 'Milo',
+	miloWouldPickLabel: 'Milo would pick',
+	notInPoolMark: "(not in the judge's pool)",
+	miloFacetCaption: 'Milo',
 	tagYes: 'Yes',
 	tagNo: 'No',
 	tagMaybe: 'Maybe',
@@ -105,6 +109,12 @@ const TAG_VALUE_LIST = Object.freeze([
 	{ tagValue: 'maybe', labelText: PAGE_WORDING.tagMaybe, labelClassName: '' },
 	{ tagValue: 'noValidCandidate', labelText: PAGE_WORDING.tagNoValidCandidate, labelClassName: 'fourth' },
 ]);
+// MILO_VERDICT_REGISTRY — the verdicts an assessment may carry, each with its badge class and captions (the Ed-Fi page's badges)
+const MILO_VERDICT_REGISTRY = Object.freeze({
+	agree: Object.freeze({ badgeClassName: 'ok', captionText: 'Milo agrees', facetCaptionText: 'agrees' }),
+	unsure: Object.freeze({ badgeClassName: 'maybe', captionText: 'Milo unsure', facetCaptionText: 'unsure' }),
+	disagree: Object.freeze({ badgeClassName: 'no', captionText: 'Milo disagrees', facetCaptionText: 'disagrees' }),
+});
 const OUTCOME_NAME = Object.freeze({ picked: 'picked', abstained: 'abstained' });
 const NO_DOMAIN_VALUE = 'noDomain';
 
@@ -242,6 +252,40 @@ const unlabelledCardOf = ({ unitList, cardLabelList }) => {
 	return null;
 };
 
+// milo assessments (phase C6c): {itemKey: {verdict, confidence, reason, suggest: null | {cardStableId, tupleText, inPool}}}.
+// Given a file, every item needs an entry, no entry may name an item the page lacks, and a suggestion's inPool must agree
+// with the unit's own rendered pool. Refused by name at the edge where the file enters.
+const assessmentFaultOf = ({ miloAssessmentByItemKey, unitList }) => {
+	const itemKeyList = unitList.map(itemRefOf);
+	const unmatchedItemKey = Object.keys(miloAssessmentByItemKey).find((oneKey) => itemKeyList.indexOf(oneKey) === -1);
+	if (unmatchedItemKey !== undefined) {
+		return `the Milo assessment file names an item the page does not have: ${unmatchedItemKey}`;
+	}
+	for (let unitIndex = 0; unitIndex < unitList.length; unitIndex++) {
+		const itemKey = itemKeyList[unitIndex];
+		const assessment = miloAssessmentByItemKey[itemKey];
+		if (assessment === undefined) {
+			return `item ${itemKey} has no entry in the Milo assessment file`;
+		}
+		if (MILO_VERDICT_REGISTRY[assessment.verdict] === undefined) {
+			return `item ${itemKey} carries the Milo verdict '${assessment.verdict}', which is not one of ${Object.keys(MILO_VERDICT_REGISTRY).join(', ')}`;
+		}
+		if (typeof assessment.confidence !== 'number' || typeof assessment.reason !== 'string' || assessment.reason === '' || assessment.suggest === undefined) {
+			return `item ${itemKey} has a Milo entry that is not { verdict, confidence (a number), reason (text), suggest (null or a card) }`;
+		}
+		if (assessment.suggest !== null) {
+			const suggestion = assessment.suggest;
+			if (typeof suggestion.cardStableId !== 'string' || typeof suggestion.tupleText !== 'string' || suggestion.tupleText === '' || typeof suggestion.inPool !== 'boolean') {
+				return `item ${itemKey} has a Milo suggestion that is not { cardStableId, tupleText, inPool (true or false) }`;
+			}
+			if (unitList[unitIndex].record.renderedPoolStableIdList.indexOf(suggestion.cardStableId) !== -1 !== suggestion.inPool) {
+				return `item ${itemKey} has a Milo suggestion (${suggestion.cardStableId}) whose inPool (${suggestion.inPool}) disagrees with the judge's rendered pool`;
+			}
+		}
+	}
+	return null;
+};
+
 const pageSettingFaultOf = (pageSetting) => {
 	if (typeof pageSetting.feedbackTargetPath !== 'string' || !/^[^/].*\.json$/.test(pageSetting.feedbackTargetPath)) {
 		return `pageSetting.feedbackTargetPath '${pageSetting.feedbackTargetPath}' is not a relative path ending .json`;
@@ -261,7 +305,7 @@ const pageSettingFaultOf = (pageSetting) => {
 // itemHtmlOf — one unit, laid out as the Ed-Fi review page lays out an answer: a collapsible block whose summary puts the
 // SIF element and the CEDS answer side by side; inside, the source text, the card chosen as a full tuple, the judge's
 // rationale, every candidate in the judge's pool as a full tuple, and the tags.
-const itemHtmlOf = ({ unit, unitIndex, cardLabelList }) => {
+const itemHtmlOf = ({ unit, unitIndex, cardLabelList, miloAssessment }) => {
 	const itemRef = itemRefOf(unit);
 	const cardLabelByStableId = cardLabelList.cardLabelByStableId;
 	const record = unit.record;
@@ -278,7 +322,12 @@ const itemHtmlOf = ({ unit, unitIndex, cardLabelList }) => {
 		: [`${dataSpan(cardLabelByStableId[unit.proposedCardStableId].domainName)}.`, `${dataSpan(cardLabelByStableId[unit.proposedCardStableId].propertyName)}.`, dataSpan(rangeNameOf(cardLabelByStableId[unit.proposedCardStableId]))];
 	const gridHtml = `<span class="tgrid"><span class="rl">${PAGE_WORDING.sourceRowLabel}</span>${sourceCellHtmlList.map((oneCell) => `<code class="dc src">${oneCell}</code>`).join('')}<span></span>`
 		+ `<span class="rl">${PAGE_WORDING.answerRowLabel}</span>${answerCellHtmlList.map((oneCell) => `<code class="dc pic${unit.proposedCardStableId === null ? ' abst' : ''}">${oneCell}</code>`).join('')}</span>`;
-	const badgeHtml = `<span class="badges"><span class="bdg kind">${dataSpan(judge.category)}</span></span>`;
+	const miloVerdict = miloAssessment === undefined ? undefined : MILO_VERDICT_REGISTRY[miloAssessment.verdict];
+	const miloBadgeHtml = miloVerdict === undefined ? '' : `<span class="v ${miloVerdict.badgeClassName}">${miloVerdict.captionText}</span>`;
+	const miloHtml = miloVerdict === undefined ? ''
+		: `<div class="mr"><span class="lbl">${PAGE_WORDING.miloLabel}</span>${miloBadgeHtml} ${dataSpan(miloAssessment.reason)}</div>`
+			+ (miloAssessment.suggest === null ? '' : `<div class="sug"><span class="lbl">${PAGE_WORDING.miloWouldPickLabel}</span>${dataSpan(miloAssessment.suggest.tupleText)}${miloAssessment.suggest.inPool ? '' : ` <span class="bdg mark">${PAGE_WORDING.notInPoolMark}</span>`}</div>`);
+	const badgeHtml = `<span class="badges"><span class="bdg kind">${dataSpan(judge.category)}</span>${miloBadgeHtml}</span>`;
 
 	const sourceHtml = `<div class="srcbox"><div class="ph">${PAGE_WORDING.sourceHeading} <span class="ptype">${dataSpan(question.objectNameList.join(', '))}</span></div>`
 		+ `<div class="d">${question.description === undefined ? '' : dataSpan(question.description)}</div>`
@@ -294,8 +343,8 @@ const itemHtmlOf = ({ unit, unitIndex, cardLabelList }) => {
 	}).join('')}</details>`;
 	const tagsHtml = `<div class="tags">\n${TAG_VALUE_LIST.map((oneTag) => ` <label${oneTag.labelClassName === '' ? '' : ` class="${oneTag.labelClassName}"`}><input type="radio" name="t_${escapeHtml(itemRef)}" value="${oneTag.tagValue}"> ${oneTag.labelText}</label>`).join('\n')}\n <input class="note" type="text" name="n_${escapeHtml(itemRef)}" placeholder="${PAGE_WORDING.notePlaceholder}" value="">\n</div>`;
 	return {
-		itemHtml: `<article class="item" data-item-ref="${escapeHtml(itemRef)}" data-outcome="${outcomeText}" data-cat="${escapeHtml(judge.category)}" data-block="${escapeHtml(unit.sharedBlock)}" data-domain="${escapeHtml(domainValue)}">\n<details class="outer" open>\n<summary class="osum"><span class="num">${unitIndex + 1}</span>\n${gridHtml}\n${badgeHtml}</summary>\n<div class="body">\n${sourceHtml}\n${pickHtml}\n${judgeHtml}\n${slateHtml}\n${tagsHtml}\n</div></details></article>`,
-		facetState: { outcome: outcomeText, cat: judge.category, block: unit.sharedBlock, domain: domainValue },
+		itemHtml: `<article class="item" data-item-ref="${escapeHtml(itemRef)}" data-outcome="${outcomeText}" data-cat="${escapeHtml(judge.category)}" data-block="${escapeHtml(unit.sharedBlock)}" data-domain="${escapeHtml(domainValue)}"${miloAssessment === undefined ? '' : ` data-v="${miloAssessment.verdict}"`}>\n<details class="outer" open>\n<summary class="osum"><span class="num">${unitIndex + 1}</span>\n${gridHtml}\n${badgeHtml}</summary>\n<div class="body">\n${sourceHtml}\n${pickHtml}\n${judgeHtml}\n${miloHtml}\n${slateHtml}\n${tagsHtml}\n</div></details></article>`,
+		facetState: { outcome: outcomeText, cat: judge.category, block: unit.sharedBlock, domain: domainValue, v: miloAssessment === undefined ? undefined : miloAssessment.verdict },
 	};
 };
 
@@ -306,10 +355,11 @@ const FACET_GROUP_LIST = Object.freeze([
 	{ facetName: 'cat', caption: 'judge category', boxList: [['strong', 'strong'], ['moderate', 'moderate'], ['weakButReal', 'weak but real'], ['none', 'none (abstained)']] },
 	{ facetName: 'block', caption: 'block', boxList: null },
 	{ facetName: 'domain', caption: 'domain', boxList: null },
+	{ facetName: 'v', caption: PAGE_WORDING.miloFacetCaption, boxList: Object.keys(MILO_VERDICT_REGISTRY).map((oneVerdict) => [oneVerdict, MILO_VERDICT_REGISTRY[oneVerdict].facetCaptionText]), onlyWithMilo: true },
 	{ facetName: 'review', caption: 'your review', boxList: [['untagged', 'not yet'], ['tagged', 'tagged'], ['noted', 'has a note']] },
 ]);
 const facetBoxCaptionOf = (facetName, facetValue) => (facetName === 'domain' && facetValue === NO_DOMAIN_VALUE ? PAGE_WORDING.noDomainCaption : facetValue);
-const facetPanelHtmlOf = ({ facetStateList }) => FACET_GROUP_LIST.map((oneGroup) => {
+const facetPanelHtmlOf = ({ facetStateList, withMilo }) => FACET_GROUP_LIST.filter((oneGroup) => withMilo || oneGroup.onlyWithMilo !== true).map((oneGroup) => {
 	const boxList = oneGroup.boxList === null ? Array.from(new Set(facetStateList.map((oneState) => oneState[oneGroup.facetName]))).sort().map((oneValue) => [oneValue, facetBoxCaptionOf(oneGroup.facetName, oneValue)]) : oneGroup.boxList;
 	const boxHtmlList = boxList.map(([oneValue, captionText]) => {
 		const boxCount = oneGroup.facetName === 'review' ? null : facetStateList.filter((oneState) => oneState[oneGroup.facetName] === oneValue).length;
@@ -331,7 +381,7 @@ const RETRIEVAL_PROSE_REGISTRY = Object.freeze({
 });
 
 // detailsHtmlOf — what the Details panel says, with the numbers generated from the block's header and records
-const detailsHtmlOf = ({ decisionBlock, unitList }) => {
+const detailsHtmlOf = ({ decisionBlock, unitList, withMilo }) => {
 	const header = decisionBlock.header;
 	const retrievalProse = RETRIEVAL_PROSE_REGISTRY[header.candidateRetrieval && header.candidateRetrieval.method];
 	if (retrievalProse === undefined) {
@@ -358,20 +408,20 @@ const detailsHtmlOf = ({ decisionBlock, unitList }) => {
 		'<h3>Record</h3>',
 		`<p>Each judgment is stored with its rationale, a category (strong, moderate, weak but real, or none when it abstained), a confidence, the match predicate, the candidate pool as rendered, the fields of the unit, and a hash of the prompt.</p>`,
 		'<h3>What this page leaves out</h3>',
-		`<p><b>Milo's opinion</b> is left out: no pre-assessment of the SIF answers was done (an economy ruling). <b>Shared Ideas</b> and the overlap flag are left out: the SIF decision block carries no component ideas. The source panel shows the standard's own text for the element (its name, path, description and objects), <b>not the prompt as rendered</b>: the block keeps a hash of the prompt, not its text. The per-card retrieval votes are kept in the block and are not shown here.</p>`,
+		`<p>${withMilo ? "<b>Milo's opinion</b> is shown for every item (it is one reader's view, made with the whole hub in sight, not an answer key)." : "<b>Milo's opinion</b> is left out: no pre-assessment of the SIF answers was done (an economy ruling)."} <b>Shared Ideas</b> and the overlap flag are left out: the SIF decision block carries no component ideas. The source panel shows the standard's own text for the element (its name, path, description and objects), <b>not the prompt as rendered</b>: the block keeps a hash of the prompt, not its text. The per-card retrieval votes are kept in the block and are not shown here.</p>`,
 		`<h3>The run</h3>`,
 		`<table id="runTable"><tr><th>judge</th><th>renderer</th><th>retrieval</th><th>units</th></tr><tr><td>${dataSpan(header.judgeKind)}</td><td>${dataSpan(header.rendererVersion)}</td><td>${dataSpan(header.candidateRetrieval.method)}</td><td>${unitCount}</td></tr></table>`,
 	].join('\n');
 	return { detailsHtml };
 };
 
-const HOW_TO_HTML = ({ unitCount, retrievalK }) => `<div class="note-box"><b>How to use this page</b><br><br>`
+const HOW_TO_HTML = ({ unitCount, retrievalK, withMilo }) => `<div class="note-box"><b>How to use this page</b><br><br>`
 	+ `This page shows the SIF elements the bridge judged, ${unitCount} judgment units in all, each against the CEDS cards the judge could choose from (up to ${retrievalK} candidates per unit). A unit is one SIF element in one CEDS domain. The <b>Details</b> button explains how the answers are made.<br><br>`
 	+ `Each item shows the SIF element's own text, the card the judge chose as a full CEDS tuple (domain, property, range, and any qualifier, each with its id and definition), the judge's rationale, and every candidate the judge was choosing among.<br><br>`
 	+ `<b>Tag it</b>: Yes, No or Maybe for the bridge's answer, or No Valid Candidate when none of the candidates is right. The note is optional.<br><br>`
 	+ `<b>Filters</b> &rarr; many are provided to allow you to examine the mappings in many ways.<br><br>`
 	+ `Your choices save to this browser automatically. Submit often so your work is not lost.<br><br>`
-	+ `There is no Milo opinion on this page: no pre-assessment of the SIF answers was done (an economy ruling).<br><br>`
+	+ (withMilo ? `<b>Milo</b>, who can see the whole hub and not only the judge's candidates, gives an opinion on each answer: agrees, disagrees or is unsure, with a reason, and the card it would pick when it would pick another (marked when that card is not in the judge's pool). It is one reader's opinion, not an answer key.<br><br>` : `There is no Milo opinion on this page: no pre-assessment of the SIF answers was done (an economy ruling).<br><br>`)
 	+ `<button id="algoBtn" class="info">Details: how the answers are made</button></div>`;
 
 // the page's script: browser code, so async/await and try/catch are the house form here (browserCodePractices §1)
@@ -389,7 +439,7 @@ function draftStoreName(){return DRAFT_STORAGE_PREFIX+'draft::'+(reviewerName()|
 const allItems=()=>document.querySelectorAll('article.item');
 function collectTags(){const tagByItemRef={};allItems().forEach(oneItem=>{
  const checkedRadio=oneItem.querySelector('input[type=radio]:checked');const noteBox=oneItem.querySelector('input.note');
- if(checkedRadio||(noteBox&&noteBox.value)){tagByItemRef[oneItem.dataset.itemRef]={tag:checkedRadio?checkedRadio.value:null,note:noteBox?noteBox.value:'',judgeCategory:oneItem.dataset.cat,outcome:oneItem.dataset.outcome};}});
+ if(checkedRadio||(noteBox&&noteBox.value)){tagByItemRef[oneItem.dataset.itemRef]={tag:checkedRadio?checkedRadio.value:null,note:noteBox?noteBox.value:'',judgeCategory:oneItem.dataset.cat,outcome:oneItem.dataset.outcome,miloVerdict:oneItem.dataset.v||null};}});
  return tagByItemRef;}
 function saveDraft(){try{localStorage.setItem(draftStoreName(),JSON.stringify(collectTags()));}catch(storageFault){}}
 function restoreDraft(){let draftByItemRef={};try{draftByItemRef=JSON.parse(localStorage.getItem(draftStoreName())||'{}');}catch(storageFault){draftByItemRef={};}
@@ -409,7 +459,7 @@ function applyFilters(){const wanted={};
  let shownCount=0;
  allItems().forEach(oneItem=>{
   const isTagged=!!oneItem.querySelector('input[type=radio]:checked');const isNoted=!!(oneItem.querySelector('input.note')||{}).value;
-  const state={outcome:oneItem.dataset.outcome,cat:oneItem.dataset.cat,block:oneItem.dataset.block,domain:oneItem.dataset.domain,review:[isTagged?'tagged':'untagged'].concat(isNoted?['noted']:[])};
+  const state={outcome:oneItem.dataset.outcome,cat:oneItem.dataset.cat,block:oneItem.dataset.block,domain:oneItem.dataset.domain,v:oneItem.dataset.v,review:[isTagged?'tagged':'untagged'].concat(isNoted?['noted']:[])};
   const isShown=Object.entries(wanted).every(([facetName,valueList])=>{const have=state[facetName];return Array.isArray(have)?valueList.some(oneValue=>have.includes(oneValue)):valueList.includes(have);});
   oneItem.classList.toggle('hidden',!isShown);if(isShown){shownCount+=1;}});
  const checkedCount=document.querySelectorAll('.filters input[type=checkbox]:checked').length;
@@ -501,6 +551,8 @@ const PAGE_STYLE = `
 .bdg{font-size:.7rem;padding:2px 7px;border-radius:10px;white-space:nowrap;background:#efe9df;color:#4a453e}
 .bdg.kind{background:#e8eef7;color:#3d5a80}.bdg.mark{background:#f6efd9;color:#7a5c10}
 .body{margin-top:10px;padding-top:10px;border-top:1px solid #f0ece3}
+.v{font-size:.72rem;padding:2px 7px;border-radius:10px;font-weight:600}.v.ok{background:#ddeee4;color:var(--ok)}.v.maybe{background:#f6efd9;color:var(--may)}.v.no{background:#fbe9e9;color:var(--no)}
+.mr{font-size:.88rem;margin:8px 0;border-left:3px solid #cfc6b8;padding-left:9px}.sug{font-size:.86rem;margin:6px 0 6px 12px;color:var(--no)}
 #algoPanel{position:fixed;inset:0;background:rgba(35,32,28,.5);z-index:60;display:flex;align-items:flex-start;justify-content:center;padding:36px 16px;overflow:auto}
 #algoPanel[hidden]{display:none}
 #algoCard{background:#fff;border-radius:10px;padding:26px 30px 30px;max-width:840px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,.25);position:relative}
@@ -536,7 +588,7 @@ const PAGE_STYLE = `
 `;
 
 // buildReviewPageHtml — pure: the page for one block
-const buildReviewPageHtml = ({ decisionBlock, questionMap, cardLabelList, pageSetting, inputFileSha256ByRole }) => {
+const buildReviewPageHtml = ({ decisionBlock, questionMap, cardLabelList, pageSetting, inputFileSha256ByRole, miloAssessmentByItemKey }) => {
 	const pageSettingFault = pageSettingFaultOf(pageSetting);
 	if (pageSettingFault !== null) {
 		return { error: refuse.byName({ moduleName, what: pageSettingFault, where: 'the page setting names where replies land (feedbackTargetPath, relative to the webdev root, ending .json), the draft store prefix, the title and the round; none has a default' }) };
@@ -558,12 +610,19 @@ const buildReviewPageHtml = ({ decisionBlock, questionMap, cardLabelList, pageSe
 	if (unlabelled !== null) {
 		return { error: refuse.byName({ moduleName, what: `card ${unlabelled.cardStableId} (unit ${unlabelled.subjectStableId}) ${unlabelled.faultText}`, where: 'the label list must carry the whole tuple of every card the page names (each unit\'s proposed card and every candidate in its pool), each qualifier with its option value name; the block carries stableIds only' }) };
 	}
-	const detailsBuilt = detailsHtmlOf({ decisionBlock, unitList });
+	const withMilo = miloAssessmentByItemKey !== undefined;
+	if (withMilo) {
+		const assessmentFault = assessmentFaultOf({ miloAssessmentByItemKey, unitList });
+		if (assessmentFault !== null) {
+			return { error: refuse.byName({ moduleName, what: assessmentFault, where: 'when a Milo assessment file is given, every item needs its entry ({ verdict, confidence, reason, suggest }), and a suggestion says whether its card is in the judge\'s pool, which the block\'s rendered pool must confirm' }) };
+		}
+	}
+	const detailsBuilt = detailsHtmlOf({ decisionBlock, unitList, withMilo });
 	if (detailsBuilt.error) {
 		return { error: detailsBuilt.error };
 	}
 
-	const itemBuiltList = unitList.map((unit, unitIndex) => itemHtmlOf({ unit, unitIndex, cardLabelList }));
+	const itemBuiltList = unitList.map((unit, unitIndex) => itemHtmlOf({ unit, unitIndex, cardLabelList, miloAssessment: withMilo ? miloAssessmentByItemKey[itemRefOf(unit)] : undefined }));
 	const itemCount = unitList.length;
 	const candidateCount = unitList.reduce((soFar, oneUnit) => soFar + oneUnit.record.renderedPoolStableIdList.length, 0);
 	const header = decisionBlock.header;
@@ -571,9 +630,9 @@ const buildReviewPageHtml = ({ decisionBlock, questionMap, cardLabelList, pageSe
 		`<div class="wrap">`,
 		`<h1>${escapeHtml(pageSetting.pageTitle)}</h1>`,
 		`<div class="sub">${itemCount} ${PAGE_WORDING.subLineUnits} &middot; ${PAGE_WORDING.judgeWord} <b>${dataSpan(header.judgeKind)}</b> &middot; ${PAGE_WORDING.rendererWord} <code>${dataSpan(header.rendererVersion)}</code> &middot; ${PAGE_WORDING.roundWord} ${escapeHtml(pageSetting.roundNumber)}</div>`,
-		HOW_TO_HTML({ unitCount: itemCount, retrievalK: header.candidateRetrieval.k }),
+		HOW_TO_HTML({ unitCount: itemCount, retrievalK: header.candidateRetrieval.k, withMilo }),
 		`<div id="algoPanel" hidden><div id="algoCard"><button id="closeAlgo" class="ghost algoclose">close</button>${detailsBuilt.detailsHtml}</div></div>`,
-		`<div id="filterPanel" hidden><div class="filters" id="filterCard"><div class="fhead"><b>Filters</b><span class="fhint">boxes inside a group are OR&rsquo;d; groups narrow each other; the number is how many items each box matches</span><button id="closeFilters" class="ghost">done</button></div>\n${facetPanelHtmlOf({ facetStateList: itemBuiltList.map((oneBuilt) => oneBuilt.facetState) })} <div class="fgroup"><span class="fname"></span><button id="clearFilters" class="ghost">clear all</button>\n  <span id="shown" class="fcount"></span></div>\n</div></div>`,
+		`<div id="filterPanel" hidden><div class="filters" id="filterCard"><div class="fhead"><b>Filters</b><span class="fhint">boxes inside a group are OR&rsquo;d; groups narrow each other; the number is how many items each box matches</span><button id="closeFilters" class="ghost">done</button></div>\n${facetPanelHtmlOf({ facetStateList: itemBuiltList.map((oneBuilt) => oneBuilt.facetState), withMilo })} <div class="fgroup"><span class="fname"></span><button id="clearFilters" class="ghost">clear all</button>\n  <span id="shown" class="fcount"></span></div>\n</div></div>`,
 		`<section id="items">`,
 		itemBuiltList.map((oneBuilt) => oneBuilt.itemHtml).join('\n'),
 		'</section>',
@@ -582,6 +641,7 @@ const buildReviewPageHtml = ({ decisionBlock, questionMap, cardLabelList, pageSe
 	const manifest = {
 		itemCount,
 		candidateCount,
+		miloAssessmentCount: withMilo ? itemCount : 0,
 		feedbackTargetPath: pageSetting.feedbackTargetPath,
 		draftStoragePrefix: pageSetting.draftStoragePrefix,
 		roundNumber: pageSetting.roundNumber,
@@ -599,13 +659,13 @@ const buildReviewPageHtml = ({ decisionBlock, questionMap, cardLabelList, pageSe
 };
 
 const sha256OfFile = (filePath) => crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
-const inputFileSha256ByRoleOf = ({ decisionBlockFilePath, questionMapFilePath, cardLabelFilePath }) => ({ decisionBlock: sha256OfFile(decisionBlockFilePath), questionMap: sha256OfFile(questionMapFilePath), cardLabelList: sha256OfFile(cardLabelFilePath) });
+const inputFileSha256ByRoleOf = ({ decisionBlockFilePath, questionMapFilePath, cardLabelFilePath, miloAssessmentFilePath }) => ({ decisionBlock: sha256OfFile(decisionBlockFilePath), questionMap: sha256OfFile(questionMapFilePath), cardLabelList: sha256OfFile(cardLabelFilePath), ...(miloAssessmentFilePath === undefined ? {} : { miloAssessments: sha256OfFile(miloAssessmentFilePath) }) });
 
 // buildReviewPageFromFiles — reads the three inputs, then builds the page; their sha256 ride on it
-const buildReviewPageFromFiles = ({ decisionBlockFilePath, questionMapFilePath, cardLabelFilePath, pageSetting }) => {
-	const inputFileSha256ByRole = inputFileSha256ByRoleOf({ decisionBlockFilePath, questionMapFilePath, cardLabelFilePath });
+const buildReviewPageFromFiles = ({ decisionBlockFilePath, questionMapFilePath, cardLabelFilePath, miloAssessmentFilePath, pageSetting }) => {
+	const inputFileSha256ByRole = inputFileSha256ByRoleOf({ decisionBlockFilePath, questionMapFilePath, cardLabelFilePath, miloAssessmentFilePath });
 	const decisionBlock = JSON.parse(fs.readFileSync(decisionBlockFilePath, 'utf8'));
-	const built = buildReviewPageHtml({ decisionBlock, questionMap: JSON.parse(fs.readFileSync(questionMapFilePath, 'utf8')), cardLabelList: JSON.parse(fs.readFileSync(cardLabelFilePath, 'utf8')), pageSetting, inputFileSha256ByRole });
+	const built = buildReviewPageHtml({ decisionBlock, questionMap: JSON.parse(fs.readFileSync(questionMapFilePath, 'utf8')), cardLabelList: JSON.parse(fs.readFileSync(cardLabelFilePath, 'utf8')), pageSetting, inputFileSha256ByRole, miloAssessmentByItemKey: miloAssessmentFilePath === undefined ? undefined : JSON.parse(fs.readFileSync(miloAssessmentFilePath, 'utf8')) });
 	if (built.error) {
 		return { error: built.error };
 	}
@@ -652,9 +712,12 @@ const verifySifReviewPage = ({ htmlText, decisionBlock, inputFileSha256ByRole })
 	const hitList = forbiddenWordHitList(renderedText);
 	addCheck('ownProseClean', hitList.length === 0, hitList.join(', '));
 
+	const miloItemCount = (renderedText.match(/<div class="mr">/g) || []).length;
+	addCheck('miloPerItem', String(miloItemCount) === manifest.miloAssessmentCount && (miloItemCount === 0 || miloItemCount === itemRefList.length), `${miloItemCount} Milo entries for ${itemRefList.length} items, manifest ${manifest.miloAssessmentCount}`);
+
 	const shaRoleList = Object.keys(inputFileSha256ByRole);
-	const unequalShaRoleList = INPUT_ROLE_LIST.filter((oneRole) => manifest[`inputSha256.${oneRole}`] !== inputFileSha256ByRole[oneRole]);
-	addCheck('inputShas', shaRoleList.length === INPUT_ROLE_LIST.length && unequalShaRoleList.length === 0, unequalShaRoleList.length === 0 ? `${shaRoleList.length} roles` : `differ: ${unequalShaRoleList.join(', ')}`);
+	const unequalShaRoleList = shaRoleList.filter((oneRole) => manifest[`inputSha256.${oneRole}`] !== inputFileSha256ByRole[oneRole]);
+	addCheck('inputShas', INPUT_ROLE_LIST.every((oneRole) => shaRoleList.indexOf(oneRole) !== -1) && unequalShaRoleList.length === 0, unequalShaRoleList.length === 0 ? `${shaRoleList.length} roles` : `differ: ${unequalShaRoleList.join(', ')}`);
 
 	return { pass: checkList.every((oneCheck) => oneCheck.pass), checkList };
 };

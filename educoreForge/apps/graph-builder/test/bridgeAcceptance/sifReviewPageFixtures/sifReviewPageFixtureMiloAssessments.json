@@ -1,0 +1,100 @@
+{
+	"sif260928:question/q01#Dom Student": {
+		"verdict": "agree",
+		"confidence": 0.6,
+		"reason": "Fixture Milo reason 1.",
+		"suggest": null
+	},
+	"sif260928:question/q02#Dom Student": {
+		"verdict": "disagree",
+		"confidence": 0.62,
+		"reason": "Fixture Milo reason 2.",
+		"suggest": {
+			"cardStableId": "card:A1",
+			"tupleText": "Dom Student (C000001) · Alpha (P000001) · range option set Alpha Set (OS000001)",
+			"inPool": true
+		}
+	},
+	"sif260928:question/q03#Dom Student": {
+		"verdict": "unsure",
+		"confidence": 0.64,
+		"reason": "Fixture Milo reason 3.",
+		"suggest": {
+			"cardStableId": "card:W",
+			"tupleText": "Dom Other (C000009) · Omega (P000012) · range option set Omega Set (OS000002)",
+			"inPool": false
+		}
+	},
+	"sif260928:question/q04#Dom Student": {
+		"verdict": "agree",
+		"confidence": 0.66,
+		"reason": "Fixture Milo reason 4.",
+		"suggest": null
+	},
+	"sif260928:question/q05#Dom Student": {
+		"verdict": "agree",
+		"confidence": 0.68,
+		"reason": "Fixture Milo reason 5.",
+		"suggest": null
+	},
+	"sif260928:question/q05#Dom Staff": {
+		"verdict": "unsure",
+		"confidence": 0.7,
+		"reason": "Fixture Milo reason 6.",
+		"suggest": null
+	},
+	"sif260928:question/q06": {
+		"verdict": "disagree",
+		"confidence": 0.72,
+		"reason": "Fixture Milo reason 7.",
+		"suggest": null
+	},
+	"sif260928:question/q07": {
+		"verdict": "agree",
+		"confidence": 0.74,
+		"reason": "Fixture Milo reason 8.",
+		"suggest": null
+	},
+	"sif260928:question/q08#Dom Student": {
+		"verdict": "agree",
+		"confidence": 0.76,
+		"reason": "Fixture Milo reason 9.",
+		"suggest": null
+	},
+	"sif260928:question/q09#Dom Student": {
+		"verdict": "unsure",
+		"confidence": 0.78,
+		"reason": "Fixture Milo reason 10.",
+		"suggest": null
+	},
+	"sif260928:question/q10#Dom Student": {
+		"verdict": "agree",
+		"confidence": 0.8,
+		"reason": "Fixture Milo reason 11.",
+		"suggest": null
+	},
+	"sif260928:question/q11#Dom Student": {
+		"verdict": "disagree",
+		"confidence": 0.82,
+		"reason": "Fixture Milo reason 12.",
+		"suggest": null
+	},
+	"sif260928:question/q12#Dom Student": {
+		"verdict": "agree",
+		"confidence": 0.84,
+		"reason": "Fixture Milo reason 13.",
+		"suggest": null
+	},
+	"sif260928:question/q12#Dom Staff": {
+		"verdict": "agree",
+		"confidence": 0.86,
+		"reason": "Fixture Milo reason 14.",
+		"suggest": null
+	},
+	"sif260928:question/q13#Dom Student": {
+		"verdict": "unsure",
+		"confidence": 0.88,
+		"reason": "Fixture Milo reason 15.",
+		"suggest": null
+	}
+}

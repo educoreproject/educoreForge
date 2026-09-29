@@ -44,6 +44,7 @@ const FIXTURE_FILE_PATH_BY_ROLE = Object.freeze({
 	decisionBlock: path.join(PAGE_FIXTURE_DIRECTORY_PATH, 'sifReviewPageFixtureBlock.json'),
 	questionMap: path.join(PAGE_FIXTURE_DIRECTORY_PATH, 'sifReviewPageFixtureQuestionMap.json'),
 	cardLabelList: path.join(PAGE_FIXTURE_DIRECTORY_PATH, 'sifReviewPageFixtureCardLabelList.json'),
+	miloAssessments: path.join(PAGE_FIXTURE_DIRECTORY_PATH, 'sifReviewPageFixtureMiloAssessments.json'),
 });
 const PAGE_SETTING = Object.freeze({ feedbackTargetPath: 'educoreForge/system/dataStores/bridgeAcceptance/sif260928/feedback/c6FixtureTags.json', draftStoragePrefix: 'sifReviewPageFixture::', pageTitle: 'SIF review page (C6 fixture)', roundNumber: 1 });
 const INPUT_FILE_SHA256_BY_ROLE = Object.freeze({ decisionBlock: 'shaOfTheBlock', questionMap: 'shaOfTheQuestionMap', cardLabelList: 'shaOfTheLabelList' });
@@ -54,11 +55,11 @@ const TEST_DATA_SPAN_PATTERN = /<span data-source="standard">[^<]*<\/span>/g;
 const TEST_TAG_PATTERN = /<[^>]*>/g;
 const ERROR_BEARING_DATA_LABEL = 'Standard Error of Measurement';
 // the phrases of the comparison with the standard's own annotation (TQ: "remove it entirely"), none of which may appear
-const TEST_COMPARISON_PHRASE_LIST = Object.freeze(['the standard specifies', 'agrees-target', 'agrees-key', 'disagrees', 'abstained-where-specified', 'new-claim', 'not-retrieved', 'best rank', 'contended', 'unannotated', 'scoreCell', 'data-score-path']);
+const TEST_COMPARISON_PHRASE_LIST = Object.freeze(['the standard specifies', 'agrees-target', 'agrees-key', 'abstained-where-specified', 'new-claim', 'not-retrieved', 'best rank', 'contended', 'unannotated', 'scoreCell', 'data-score-path']);
 
 const readFixtureSet = () => Object.keys(FIXTURE_FILE_PATH_BY_ROLE).reduce((soFar, oneRole) => ({ ...soFar, [oneRole]: JSON.parse(fs.readFileSync(FIXTURE_FILE_PATH_BY_ROLE[oneRole], 'utf8')) }), {});
-const makeSubject = () => ({ fixtureSet: readFixtureSet(), pageSetting: { ...PAGE_SETTING }, pageMutationList: [], htmlTamperList: [] });
-const cloneSubject = (subject) => ({ fixtureSet: JSON.parse(JSON.stringify(subject.fixtureSet)), pageSetting: { ...subject.pageSetting }, pageMutationList: subject.pageMutationList.slice(), htmlTamperList: subject.htmlTamperList.slice() });
+const makeSubject = () => ({ fixtureSet: readFixtureSet(), pageSetting: { ...PAGE_SETTING }, pageMutationList: [], htmlTamperList: [], withMilo: false });
+const cloneSubject = (subject) => ({ fixtureSet: JSON.parse(JSON.stringify(subject.fixtureSet)), pageSetting: { ...subject.pageSetting }, pageMutationList: subject.pageMutationList.slice(), htmlTamperList: subject.htmlTamperList.slice(), withMilo: subject.withMilo });
 
 const testScanHitList = (htmlText) => TEST_FORBIDDEN_WORD_LIST.filter((oneWord) => htmlText.replace(TEST_DATA_SPAN_PATTERN, '').toLowerCase().indexOf(oneWord) !== -1);
 const escapeForPattern = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -71,7 +72,7 @@ const answerCellTextListOf = (htmlText, itemRef) => Array.from(itemHtmlOf(htmlTe
 const runPage = (subject, fixtureSet) => {
 	const pageModule = subject.pageMutationList.length === 0 ? require(PAGE_FILE_PATH) : moduleDouble.loadWithMutations({ modulePath: PAGE_FILE_PATH, mutationList: subject.pageMutationList });
 	try {
-		const built = pageModule.buildReviewPageHtml({ decisionBlock: fixtureSet.decisionBlock, questionMap: fixtureSet.questionMap, cardLabelList: fixtureSet.cardLabelList, pageSetting: subject.pageSetting, inputFileSha256ByRole: { ...INPUT_FILE_SHA256_BY_ROLE } });
+		const built = pageModule.buildReviewPageHtml({ decisionBlock: fixtureSet.decisionBlock, questionMap: fixtureSet.questionMap, cardLabelList: fixtureSet.cardLabelList, pageSetting: subject.pageSetting, inputFileSha256ByRole: { ...INPUT_FILE_SHA256_BY_ROLE }, miloAssessmentByItemKey: subject.withMilo ? fixtureSet.miloAssessments : undefined });
 		if (built.error) {
 			return { error: built.error };
 		}
@@ -469,11 +470,141 @@ registerPageMutationTwin({ gateId: GATE_T, conjunctId: 'r7_recordWithoutJudgeRef
 registerPageMutationTwin({ gateId: GATE_T, conjunctId: 'r8_roundNotWholeRefused', twinName: 'roundCheckDeleted', mutationList: [{ find: 'if (!Number.isInteger(pageSetting.roundNumber) || pageSetting.roundNumber < 1) {', replace: 'if (false) {' }] });
 registerPageMutationTwin({ gateId: GATE_T, conjunctId: 'r9_undescribedRetrievalRefused', twinName: 'retrievalCheckDeleted', mutationList: [{ find: 'if (retrievalProse === undefined) {', replace: 'if (false) {' }] });
 
+// ---- GATE (m): Milo's opinion (TQ's addition, 2026-09-29): a badge, the reason, what Milo would pick (marked when it is not in the
+// judge's pool), a filter by verdict; a file given means every item needs an entry ----
+// THE FROZEN ANSWERS, worked by hand from sifReviewPageFixtureMiloAssessments.json: verdicts in item order are agree, disagree,
+// unsure, agree, agree, unsure, disagree, agree, agree, unsure, agree, disagree, agree, agree, unsure = agree 8, unsure 4, disagree 3;
+// q02 (disagrees) would pick card:A1, which IS in its pool; q03 (unsure) would pick card:W, which is NOT in its pool.
+const GATE_M = 'SIF-PAGE-MILO';
+const Q02_REF = 'sif260928:question/q02#Dom Student';
+const Q03_REF = 'sif260928:question/q03#Dom Student';
+const miloHtmlOf = (htmlText, itemRef) => (itemHtmlOf(htmlText, itemRef).match(/<div class="mr">[\s\S]*?(?=<details class="slate">)/) || [''])[0];
+const withMiloShape = (subject) => {
+	subject.withMilo = true;
+};
+const gateMConjunctList = [
+	pageConjunct({
+		conjunctId: 'm0_noMiloWithoutTheFile',
+		title: 'with no Milo assessment file the page carries no Milo slot and says there is none (an item never shows an invented opinion)',
+		twinNameList: ['miloSlotAlwaysOn'],
+		judge: builtJudge((outcome) => ({ pass: outcome.htmlText.indexOf('There is no Milo opinion on this page') !== -1 && outcome.htmlText.indexOf('<div class="mr">') === -1 && outcome.htmlText.indexOf('data-v=') === -1, detail: 'checked the line, the slot and the verdict attribute' })),
+	}),
+	pageConjunct({
+		conjunctId: 'm1_miloBadgeAndReasonShown',
+		title: "q02 shows the badge 'Milo disagrees' and the reason 'Fixture Milo reason 2.'; q01 shows 'Milo agrees'; the summary carries the badge too",
+		twinNameList: ['miloReasonDropped'],
+		shape: withMiloShape,
+		judge: builtJudge((outcome) => {
+			const q02Text = miloHtmlOf(outcome.htmlText, Q02_REF).replace(TEST_TAG_PATTERN, '|');
+			const q01Text = miloHtmlOf(outcome.htmlText, 'sif260928:question/q01#Dom Student').replace(TEST_TAG_PATTERN, '|');
+			const summaryBadgeShown = /<summary class="osum">[\s\S]*?<span class="v no">Milo disagrees<\/span>[\s\S]*?<\/summary>/.test(itemHtmlOf(outcome.htmlText, Q02_REF));
+			return { pass: q02Text.indexOf('Milo disagrees') !== -1 && q02Text.indexOf('Fixture Milo reason 2.') !== -1 && q01Text.indexOf('Milo agrees') !== -1 && summaryBadgeShown, detail: q02Text.slice(0, 160) };
+		}),
+	}),
+	pageConjunct({
+		conjunctId: 'm2_miloSuggestionAndPoolMark',
+		title: "q02's Milo would pick card:A1's tuple with NO 'not in the judge's pool' mark (it is in the pool); q03's would pick card:W's tuple WITH the mark; q01 (no suggestion) shows none",
+		twinNameList: ['notInPoolMarkDropped'],
+		shape: withMiloShape,
+		judge: builtJudge((outcome) => {
+			const q02Text = miloHtmlOf(outcome.htmlText, Q02_REF).replace(TEST_TAG_PATTERN, '');
+			const q03Text = miloHtmlOf(outcome.htmlText, Q03_REF).replace(TEST_TAG_PATTERN, '');
+			const q01Text = miloHtmlOf(outcome.htmlText, 'sif260928:question/q01#Dom Student');
+			const pass = q02Text.indexOf(`Milo would pick${TUPLE_A1_TEXT}`) !== -1 && q02Text.indexOf("not in the judge's pool") === -1 && q03Text.indexOf("Milo would pick" + 'Dom Other (C000009) · Omega (P000012) · range option set Omega Set (OS000002)' + " (not in the judge's pool)") !== -1 && q01Text.indexOf('Milo would pick') === -1;
+			return { pass, detail: `q02: ${q02Text.slice(-140)} || q03: ${q03Text.slice(-160)}` };
+		}),
+	}),
+	pageConjunct({
+		conjunctId: 'm3_miloFilterCounts',
+		title: 'the Milo filter boxes carry the hand-worked counts: agrees 8, unsure 4, disagrees 3',
+		twinNameList: ['miloFacetCountNotMeasured'],
+		shape: withMiloShape,
+		judge: builtJudge((outcome) => {
+			const wantedList = [['agree', 8], ['unsure', 4], ['disagree', 3]];
+			const unequalList = wantedList.filter(([verdictName, wantedCount]) => new RegExp(`data-facet="v" value="${verdictName}"> [^<]*<span class="fcount">${wantedCount}</span>`).test(outcome.htmlText) === false);
+			return { pass: unequalList.length === 0 && (outcome.htmlText.match(/data-v="/g) || []).length === 15, detail: unequalList.length === 0 ? 'three counts equal; 15 items carry a verdict' : `unequal: ${unequalList.map((oneWanted) => oneWanted.join(':')).join(', ')}` };
+		}),
+	}),
+	pageConjunct({
+		conjunctId: 'm4_miloTextIsData',
+		title: "a Milo reason that says 'wrong' and 'Error' renders (it is Milo's text, in a data span) without refusal",
+		twinNameList: ['miloReasonUntagged'],
+		shape: (subject) => {
+			subject.withMilo = true;
+			subject.fixtureSet.miloAssessments['sif260928:question/q01#Dom Student'].reason = 'Not wrong: an Error of Measurement.';
+		},
+		judge: builtJudge((outcome) => ({ pass: outcome.htmlText.indexOf('<span data-source="standard">Not wrong: an Error of Measurement.</span>') !== -1, detail: 'checked for the reason in a data span' })),
+	}),
+	pageConjunct({
+		conjunctId: 'm5_verifyWithMilo',
+		title: 'verifySifReviewPage passes a page built with Milo assessments and reads one Milo slot per item; a page that loses one slot fails',
+		twinNameList: ['miloSlotRemoved'],
+		shape: withMiloShape,
+		judge: builtJudge((outcome) => {
+			const verified = outcome.pageModule.verifySifReviewPage({ htmlText: outcome.htmlText, decisionBlock: outcome.decisionBlock, inputFileSha256ByRole: { ...INPUT_FILE_SHA256_BY_ROLE } });
+			return { pass: verified.pass, detail: verified.checkList.filter((oneCheck) => !oneCheck.pass).map((oneCheck) => `${oneCheck.checkName}: ${oneCheck.detail}`).join('; ') || `${verified.checkList.length} checks pass` };
+		}),
+	}),
+	pageConjunct({
+		conjunctId: 'r10_itemWithoutAssessmentRefused',
+		title: 'with a Milo file given, an item with no entry (q07) is refused by name',
+		twinNameList: ['entryCheckDeleted'],
+		shape: (subject) => {
+			subject.withMilo = true;
+			delete subject.fixtureSet.miloAssessments['sif260928:question/q07'];
+		},
+		judge: refusalJudge(/item sif260928:question\/q07 has no entry in the Milo assessment file/),
+	}),
+	pageConjunct({
+		conjunctId: 'r11_suggestionPoolClaimRefused',
+		title: "a Milo suggestion whose inPool disagrees with the judge's rendered pool (q02's card:A1 claimed outside it) is refused by name",
+		twinNameList: ['poolAgreementCheckDeleted'],
+		shape: (subject) => {
+			subject.withMilo = true;
+			subject.fixtureSet.miloAssessments[Q02_REF].suggest.inPool = false;
+		},
+		judge: refusalJudge(/item sif260928:question\/q02#Dom Student has a Milo suggestion \(card:A1\) whose inPool \(false\) disagrees with the judge's rendered pool/),
+	}),
+	pageConjunct({
+		conjunctId: 'r12_unknownItemKeyRefused',
+		title: 'a Milo entry keyed to an item the page does not have is refused by name',
+		twinNameList: ['unmatchedKeyCheckDeleted'],
+		shape: (subject) => {
+			subject.withMilo = true;
+			subject.fixtureSet.miloAssessments['sif260928:question/q99'] = { verdict: 'agree', confidence: 0.5, reason: 'x', suggest: null };
+		},
+		judge: refusalJudge(/names an item the page does not have: sif260928:question\/q99/),
+	}),
+	pageConjunct({
+		conjunctId: 'r13_unknownVerdictRefused',
+		title: "a Milo verdict that is not agree, unsure or disagree ('maybe' on q01) is refused by name",
+		twinNameList: ['verdictCheckDeleted'],
+		shape: (subject) => {
+			subject.withMilo = true;
+			subject.fixtureSet.miloAssessments['sif260928:question/q01#Dom Student'].verdict = 'maybe';
+		},
+		judge: refusalJudge(/item sif260928:question\/q01#Dom Student carries the Milo verdict 'maybe', which is not one of agree, unsure, disagree/),
+	}),
+];
+registerPageMutationTwin({ gateId: GATE_M, conjunctId: 'm0_noMiloWithoutTheFile', twinName: 'miloSlotAlwaysOn', mutationList: [{ find: 'const withMilo = miloAssessmentByItemKey !== undefined;', replace: 'const withMilo = true;' }] });
+registerPageMutationTwin({ gateId: GATE_M, conjunctId: 'm1_miloBadgeAndReasonShown', twinName: 'miloReasonDropped', mutationList: [{ find: '${miloBadgeHtml} ${dataSpan(miloAssessment.reason)}</div>', replace: '${miloBadgeHtml}</div>' }] });
+registerPageMutationTwin({ gateId: GATE_M, conjunctId: 'm2_miloSuggestionAndPoolMark', twinName: 'notInPoolMarkDropped', mutationList: [{ find: "${miloAssessment.suggest.inPool ? '' : ` <span class=\"bdg mark\">${PAGE_WORDING.notInPoolMark}</span>`}", replace: '' }] });
+registerPageMutationTwin({ gateId: GATE_M, conjunctId: 'm3_miloFilterCounts', twinName: 'miloFacetCountNotMeasured', mutationList: [{ find: 'facetStateList.filter((oneState) => oneState[oneGroup.facetName] === oneValue).length', replace: 'facetStateList.length' }] });
+registerPageMutationTwin({ gateId: GATE_M, conjunctId: 'm4_miloTextIsData', twinName: 'miloReasonUntagged', mutationList: [{ find: '${dataSpan(miloAssessment.reason)}', replace: '${escapeHtml(miloAssessment.reason)}' }] });
+registerTwin({ gateId: GATE_M, conjunctId: 'm5_verifyWithMilo', twinName: 'miloSlotRemoved', leverKind: 'inputFault', mutate: (subject) => {
+	subject.htmlTamperList.push((htmlText) => htmlText.replace('<div class="mr">', '<div class="mrGone">'));
+} });
+registerPageMutationTwin({ gateId: GATE_M, conjunctId: 'r10_itemWithoutAssessmentRefused', twinName: 'entryCheckDeleted', mutationList: [{ find: 'if (assessment === undefined) {', replace: 'if (false) {' }] });
+registerPageMutationTwin({ gateId: GATE_M, conjunctId: 'r11_suggestionPoolClaimRefused', twinName: 'poolAgreementCheckDeleted', mutationList: [{ find: 'if (unitList[unitIndex].record.renderedPoolStableIdList.indexOf(suggestion.cardStableId) !== -1 !== suggestion.inPool) {', replace: 'if (false) {' }] });
+registerPageMutationTwin({ gateId: GATE_M, conjunctId: 'r12_unknownItemKeyRefused', twinName: 'unmatchedKeyCheckDeleted', mutationList: [{ find: 'if (unmatchedItemKey !== undefined) {', replace: 'if (false) {' }] });
+registerPageMutationTwin({ gateId: GATE_M, conjunctId: 'r13_unknownVerdictRefused', twinName: 'verdictCheckDeleted', mutationList: [{ find: 'if (MILO_VERDICT_REGISTRY[assessment.verdict] === undefined) {', replace: 'if (false) {' }] });
+
 const gateDeclarationList = [
 	{ gateId: GATE_A, title: "items are keyed by unit; the page carries no comparison with the standard's own annotation (TQ, 2026-09-29)", conjunctList: gateAConjunctList },
 	{ gateId: GATE_V, title: 'the verify-against-deployed step reads rendered content only', conjunctList: gateVConjunctList },
 	{ gateId: GATE_C, title: "brief (c): no 'error' or 'wrong' in the page's own prose; the standards' data and the judge's text may carry them", conjunctList: gateCConjunctList },
 	{ gateId: GATE_R, title: 'the refusals where the label list and the page setting enter', conjunctList: gateRConjunctList },
+	{ gateId: GATE_M, title: "Milo's opinion (TQ's addition): badge, reason, what Milo would pick (marked when outside the pool), filter by verdict; a file given means every item needs an entry", conjunctList: gateMConjunctList },
 	{ gateId: GATE_T, title: 'phases C6b, C6c: every card renders as its full tuple, qualifiers resolved, the range in its three shapes; the layout (source text, pick, rationale, the whole pool with the pick marked, four tags, facets, Details numbers); the refusals where the block and the label list enter', conjunctList: gateTConjunctList },
 ];
 
@@ -488,4 +619,4 @@ harness.ok('the file-built page verifies against its inputs, input shas included
 harness.equal('the feedback target is in the rendered script', fromFiles.htmlText.indexOf(`const FEEDBACK_TARGET_PATH=${JSON.stringify(PAGE_SETTING.feedbackTargetPath)};`) !== -1, true);
 harness.equal('the page module does not read the yardstick scorer', fs.readFileSync(PAGE_FILE_PATH, 'utf8').replace(/\/\/.*$/gm, '').indexOf('sifYardstickScorer') === -1, true);
 
-runGateFamily({ harness, familyName: 'SIF-PAGE', gateDeclarationList, twinRegistry, makeSubject, cloneSubject, expectedConjunctCount: 27, expectedTwinCount: 31 }, () => harness.report());
+runGateFamily({ harness, familyName: 'SIF-PAGE', gateDeclarationList, twinRegistry, makeSubject, cloneSubject, expectedConjunctCount: 37, expectedTwinCount: 41 }, () => harness.report());

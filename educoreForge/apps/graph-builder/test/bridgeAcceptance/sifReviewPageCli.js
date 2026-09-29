@@ -8,6 +8,7 @@
 
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 const PAGE_INPUT_NAME_LIST = ['decisionBlockFilePath', 'questionMapFilePath', 'cardLabelFilePath'];
+const OPTIONAL_NAME_LIST = ['miloAssessmentFilePath'];
 const REQUIRED_NAME_LIST_BY_MODE = Object.freeze({
 	build: PAGE_INPUT_NAME_LIST.concat(['feedbackTargetPath', 'draftStoragePrefix', 'pageTitle', 'roundNumber', 'outputFilePath']),
 	verify: PAGE_INPUT_NAME_LIST.concat(['htmlFilePath']),
@@ -20,6 +21,8 @@ SYNOPSIS
      ${moduleName} -build --${REQUIRED_NAME_LIST_BY_MODE.build.join('=<> --')}=<>
      ${moduleName} -verify --${REQUIRED_NAME_LIST_BY_MODE.verify.join('=<> --')}=<>
 
+     both may take --miloAssessmentFilePath=<file>; given, the page carries Milo's opinion on every item (an item without an entry refuses),
+              absent, the page says there is none; -verify must be given the same one
      -build   reads the block, the question map and the card label list, writes the page to outputFilePath, prints the manifest
      -verify  checks the page's rendered items, candidates, tag choices, feedback target, handler ids, wording and input
               shas against the same three inputs; curl the live URL to a file first
@@ -46,7 +49,7 @@ if (missingNameList.length > 0) {
 	xLog.error(`${moduleName} REFUSED: -${modeName} needs --${missingNameList.join(', --')} — none has a default`);
 	process.exit(1);
 }
-const pageInputSet = PAGE_INPUT_NAME_LIST.reduce((soFar, oneName) => ({ ...soFar, [oneName]: path.resolve(firstValue(oneName)) }), {});
+const pageInputSet = PAGE_INPUT_NAME_LIST.concat(OPTIONAL_NAME_LIST.filter((oneName) => firstValue(oneName) !== undefined)).reduce((soFar, oneName) => ({ ...soFar, [oneName]: path.resolve(firstValue(oneName)) }), {});
 
 if (modeName === 'build') {
 	const built = sifReviewPage.buildReviewPageFromFiles({ ...pageInputSet, pageSetting: { feedbackTargetPath: firstValue('feedbackTargetPath'), draftStoragePrefix: firstValue('draftStoragePrefix'), pageTitle: firstValue('pageTitle'), roundNumber: Number(firstValue('roundNumber')) } });
