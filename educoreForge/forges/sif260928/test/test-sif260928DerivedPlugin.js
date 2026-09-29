@@ -421,7 +421,7 @@ const harvestedConservationOf = (runReport, outcome) => {
 };
 const edgeLineOf = (oneEdge, propertiesOf) => `${oneEdge.fromStableId} -${oneEdge.type}-> ${oneEdge.toStableId} ${JSON.stringify(propertiesOf(oneEdge.properties))}`;
 const listWrapped = (properties) => Object.keys(properties).sort().reduce((soFar, oneName) => ({ ...soFar, [oneName]: Array.isArray(properties[oneName]) ? properties[oneName] : [properties[oneName]] }), {});
-const sortedKeys = (properties) => Object.keys(properties).sort().reduce((soFar, oneName) => ({ ...soFar, [oneName]: properties[oneName] }), {});
+const sortedByPropertyName = (properties) => Object.keys(properties).sort().reduce((soFar, oneName) => ({ ...soFar, [oneName]: properties[oneName] }), {});
 // the planted base edges whose two ends BOTH carry the pair label after the run: the precondition that gives the gate teeth
 const labelledChildEdgeCountOf = (runReport, outcome) => {
 	const applyLabel = runReport.blocks[0].applyLabel;
@@ -436,7 +436,7 @@ const harvestConjunctList = [
 		shape: sifShape,
 		judge: succeeded((runReport, outcome) => {
 			const { harvest, conservationReport } = harvestedConservationOf(runReport, outcome);
-			const harvestedLineList = harvest.edgeList.map((oneEdge) => edgeLineOf(oneEdge, sortedKeys)).sort();
+			const harvestedLineList = harvest.edgeList.map((oneEdge) => edgeLineOf(oneEdge, sortedByPropertyName)).sort();
 			const writtenLineList = edgesOf(outcome).map((oneEdge) => edgeLineOf(oneEdge, listWrapped)).sort();
 			const labelledChildEdgeCount = labelledChildEdgeCountOf(runReport, outcome);
 			const pass = labelledChildEdgeCount === FIELD_CHILD_EDGE_LIST.length && writtenLineList.length === FIELD_STABLE_ID_LIST.length && JSON.stringify(harvestedLineList) === JSON.stringify(writtenLineList) && !conservationReport.error;
