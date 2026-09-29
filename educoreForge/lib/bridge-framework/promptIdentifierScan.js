@@ -19,7 +19,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // as the surface 'reaskUserPrompt' before it is sent. Every prompt the judge is sent passes through scanSurfaces.
 //
 // WHAT IT BANS, AND WHAT IT DELIBERATELY DOES NOT. Identifiers only (TQ, 2026-09-28, A19): the plugin's declared
-// patterns (SIF declares P\d{6} and C\d{6}) and the ids in its declared list file. There is no word list. The word
+// patterns (a CEDS-hub plugin declares P\d{6} and C\d{6}) and the ids in its declared list file. There is no word list. The word
 // "CEDS" reveals nothing about which card is the answer, and the shared tool description uses it legitimately.
 //
 // WHY THE TOOL TEXT IS RENDERED HERE RATHER THAN READ FROM THE CLIENT. The debug judge never builds a schema at all,
@@ -28,7 +28,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // taken from selectCandidateSchema.renderSelectCandidateSchema for the run's DECLARED predicate rule, in EVERY
 // dialect the schema module knows, so what is scanned does not depend on which provider is active.
 //
-// WHY A LIST ID MATCHES ONLY BETWEEN ALPHANUMERIC BOUNDARIES. The SIF list holds bare six-digit ids such as 000505.
+// WHY A LIST ID MATCHES ONLY BETWEEN ALPHANUMERIC BOUNDARIES. A list may hold bare six-digit ids such as 000505.
 // A bare substring match would also fire inside P000505 (which the P pattern already names correctly) and inside any
 // longer run of digits, where it names nothing. The boundary makes a list hit mean "this id, standing alone".
 //
