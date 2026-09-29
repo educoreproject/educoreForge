@@ -537,7 +537,17 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // build.js, forger/, replay/, replay-manager/, every existing forge's entry/declaration/hooks files and every framework source file:
 // UNTOUCHED. i_live reads the same tag and moves with it, as at every earlier move. PATH LIST BYTE-IDENTICAL, the
 // :!test-gSeamUntouched.js exclusion left as it was; no exclusion added. Fresh red observed against THIS tag (DEVLOG-M1).
-const PHASE3_ANCHOR_TAG = 'postM1SeamDiffEmpty-092926'; // re-anchored by WILD_PORTAL, SIF replacement M1
+// ═══ RE-ANCHOR seamDiffEmpty (+ i_live), 2026-09-29 (IVORY_MIRROR; RULING EBONY_DREAM), SIF replacement phase B6 ═══
+// postM1SeamDiffEmpty-092926 -> postB6SeamDiffEmpty-092926, tag cut ON this re-anchor commit. CENSUS (git diff --stat
+// postM1SeamDiffEmpty-092926 -- <SEAM_PATH_LIST>) at B6's head ea07251, 3 files, 50+/9−, every one B6's own ruled harvest fix (7047e35):
+//   apps/graph-builder/apps/replay-manager/replayManager.js | 8 — threads spec.edgeTypeList to the selector;
+//   apps/graph-builder/lib/build.js | 15 — passes the block's harvestEdgeTypeList to the relationship harvest, refuses a block without one;
+//   lib/replay/replay-engine.js | 36 — the optional edgeTypeList on the label selector.
+// B6's test-gSeamUntouched.js re-anchor (803d4b0) is inside the path list's standing exclusion and does not appear. forger/, every
+// forge's entry/declaration/hooks files and every framework source file under lib/forge-framework/: UNTOUCHED. i_live reads the same
+// tag and moves with it (B6's interfaces.js change is JSDoc only). PATH LIST BYTE-IDENTICAL, no exclusion added. Fresh red observed
+// against THIS tag (DEVLOG-B6).
+const PHASE3_ANCHOR_TAG = 'postB6SeamDiffEmpty-092926'; // re-anchored by IVORY_MIRROR, SIF replacement B6
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');
