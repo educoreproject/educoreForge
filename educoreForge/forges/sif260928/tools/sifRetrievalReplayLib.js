@@ -224,7 +224,8 @@ const admissionReportFor = ({ score, scorableBlock, annotation }) => {
 	scorableBlock.decisionRecordList.forEach((oneRecord) => {
 		recordByUnitRefId[unitRefIdOf(oneRecord)] = oneRecord;
 	});
-	const annotatedRowCountOf = (oneRecord) => (oneRecord.instanceStableIdList === undefined ? null : oneRecord.instanceStableIdList.filter((oneStableId) => annotation.cedsElementIdByXpath[oneStableId.slice('sif260928:field'.length)] !== undefined).length);
+	// a unit's ROWS are its own annotated instances; the SIF plugin declares fan-out, so every record carries its list
+	const annotatedRowCountOf = (oneRecord) => oneRecord.instanceStableIdList.filter((oneStableId) => annotation.cedsElementIdByXpath[oneStableId.slice('sif260928:field'.length)] !== undefined).length;
 	const tallyOf = (unitVerdictList) => {
 		const specifiedList = unitVerdictList.filter((oneVerdict) => oneVerdict.standing === 'specified');
 		const admittedList = specifiedList.filter((oneVerdict) => oneVerdict.bestKeyRank !== null);
