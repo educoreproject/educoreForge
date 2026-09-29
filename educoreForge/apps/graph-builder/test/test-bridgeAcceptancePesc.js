@@ -545,7 +545,34 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // 26, the BG-PLUGIN-PESC, BG-COMPOSE-PESC c and BG-SEAT-PESC sections, all green before and after this move) re-prove that the two
 // PESC plugins still compose through the seam over the revised framework. THE SIX DECLARED PATHS ARE UNCHANGED, no exclusion added;
 // the tag is cut ON the B6 re-pin commit. The RED-OBSERVED range below is untouched; this conjunct's twin was re-observed red.
-const P1_BASELINE_COMMIT = 'bridgeRevisionB6-091526'; // re-anchored by SCARLET_DELTA, bridge revision B6 (R-BR-19); the tag is cut ON the re-anchor commit
+// ═══ RE-ANCHOR (a), 2026-09-29 (WILD_PORTAL; RULING EBONY_DREAM), SIF replacement merge gate M1 ═══
+// bridgeRevisionB6-091526 -> postM1PescComposeA-092926, the tag cut ON this re-anchor commit (the standing rule: M1's bgNosub
+// re-anchors edit test-bgNosub.js, INSIDE these six paths, so any earlier base leaves (a) red on another gate's fix).
+// CENSUS AT THE RE-ANCHOR (this gate's own diff from bridgeRevisionB6-091526 over its six declared paths, on the merged head
+// 51e008f): 57 paths, every one attributed by git log, all ruled and blessed SIF-replacement campaign work. No commit between
+// bridgeRevisionB6-091526 and sifReplacementBase touches these paths. Grouped by the phase(s) that touched each path:
+//   V1           lib/vocabulary/vocabulary.js, test/test-mappingProperties.js, test/test-sifEdgeVocabulary.js,
+//                test/test-sifVocabularyInvariance.js, test/testSupport/pureProxyFingerprintProbe.js
+//   V1 + M1      lib/vocabulary/vocabulary-definitions.js (V1's definitions; M1's HAS_CHILD Field -> Field text, e96c847)
+//   B1           test/test-bgPromptScan.js and two toy fixtures (a branch-cut block, the identifier list)
+//   B1..B3a      promptIdentifierScan.js
+//   B1..B4p      bridge-framework.js (B1 B2 B3a B3b B4a B4c B4p), bridgePluginContract.js (B1 B2 B3a B4a B4p), judgeComponent.js (B1 B3a B3b)
+//   B2           bridge-maker/lib/judgeProviderRegistry.js, judgeConfigRecord.js, test/test-bgJudgeConfig.js, test/test-bgProducer.js,
+//                test/testSupport/toyBridgeScenario.js, one branch-cut block
+//   B2 + later   decisionBlock.js (B2 B3a B4a B4p); bridge-maker/lib/debugJudge.js, llmClient.js, ollamaJudgeClient.js and
+//                apps/graph-builder/interfaces.js (B2 B3b)
+//   B3a (+B3b)   predicateSource.js, bridge-maker/lib/selectCandidateSchema.js, evidenceRenderer.js, test/test-bgJudgeSlot.js, one block
+//   B3b          test/test-bgJudgePredicate.js, test/test-bgReplay.js, one block; test/test-bgThree.js (B3b B4c)
+//   B4p / B4a    judgmentPartition.js + test/test-bgJudgmentPartition.js (B4a B4p); materialisationFanout.js,
+//                test/test-bgMaterialisationFanout.js, test/testSupport/toyInstanceScenario.js (B4a); two toy fixtures (B4p)
+//   B4b          materialiser.js, test/test-bgMaterialiseFanout.js, two branch-cut fixtures
+//   B4c          conflictDetector.js, sssomExporter.js and nine test/fixture files (branch-cut blocks, SSSOM, counts, forensics)
+//   M1           test/test-bgNosub.js (the three BG-SEAM-UNTOUCHED re-anchors, postM1*-092926)
+// build.js: UNTOUCHED. WHY THE MOVE IS WIDE: lane-B builders ran six of the 31 lock suites, and this suite was not one of them, so
+// this conjunct never saw lane B until the merge (EBONY_DREAM, logged as a process gap). PESC's OTHER 25 conjuncts were green
+// before and after the move and re-prove the two PESC plugins compose through the revised seam. THE SIX DECLARED PATHS ARE
+// UNCHANGED, no exclusion added. Fresh scratch red observed against THIS tag (DEVLOG-M1).
+const P1_BASELINE_COMMIT = 'postM1PescComposeA-092926'; // re-anchored by WILD_PORTAL, SIF replacement M1 (RULING EBONY_DREAM); the tag is cut ON the re-anchor commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
