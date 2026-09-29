@@ -9,6 +9,9 @@
 //   SIF-YARDSTICK-B       (b) neither forbidden word in the output, by the test's own scan; the scorer refuses one
 //   SIF-YARDSTICK-C       (c) a debug block's judgment reads 'debug — not scored'
 //   SIF-YARDSTICK-REFUSE  the named refusals where the yardstick, card list and remodel table enter
+//   (phase D2, RULED)     the ranked pool is read by the header's retrieval method: the embedTextVote-v1 fixture
+//                         (the same units, each pool a retrievalVoteList whose position is the rank) scores
+//                         exactly as the cosineTopK-v1 one; a missing pool list and an unknown method refuse by name
 //
 // Every conjunct is observed red under its own twin (forge-framework gateSuiteRunner). Hermetic: no graph,
 // no Docker, no network.
@@ -43,6 +46,8 @@ const FIXTURE_FILE_PATH_BY_ROLE = Object.freeze({
 	questionMap: path.join(FIXTURE_DIRECTORY_PATH, 'sifYardstickFixtureQuestionMap.json'),
 	cardList: path.join(FIXTURE_DIRECTORY_PATH, 'sifYardstickFixtureCardList.json'),
 	remodelTable: path.join(FIXTURE_DIRECTORY_PATH, 'sifYardstickFixtureRemodelTable.json'),
+	// phase D2: the same block in the embedTextVote-v1 shape (evidence/D2/makeEmbedTextVoteFixture.py derived it)
+	embedTextVoteBlock: path.join(FIXTURE_DIRECTORY_PATH, 'sifYardstickFixtureBlockEmbedTextVote.json'),
 });
 
 // THE FROZEN ANSWERS, worked out by hand from the fixture (one unit per record; see the DEVLOG's table).
@@ -164,6 +169,22 @@ registerTwin({ gateId: GATE_A, conjunctId: 'a1_classCountsExact', twinName: 'one
 	recordOf(subject, 'sif260928:question/q01').objectStableId = 'card:X';
 } });
 registerScorerMutationTwin({ gateId: GATE_A, conjunctId: 'a1_classCountsExact', twinName: 'recallBoundOffByOne', find: 'unitVerdict.bestKeyRank <= oneK ? 1 : 0', replace: 'unitVerdict.bestKeyRank < oneK ? 1 : 0' });
+// phase D2 (RULED): the vote-list shape scores through its own reader
+gateAConjunctList.push(
+	scorerConjunct({
+		conjunctId: 'a3_embedTextVoteShapeScoresIdentically',
+		title: 'the embedTextVote-v1 fixture (the same units; each pool a retrievalVoteList, rank = position) gives exactly the hand-worked counts',
+		twinNameList: ['voteListRankOffByOne'],
+		shape: (subject) => {
+			subject.fixtureSet.decisionBlock = subject.fixtureSet.embedTextVoteBlock;
+		},
+		judge: scoredJudge((outcome) => {
+			const measuredText = JSON.stringify(countViewOf(outcome.score));
+			return { pass: measuredText === JSON.stringify(EXPECTED_COUNT_VIEW), detail: measuredText === JSON.stringify(EXPECTED_COUNT_VIEW) ? 'equal to the frozen literal' : `measured ${measuredText}` };
+		}),
+	}),
+);
+registerScorerMutationTwin({ gateId: GATE_A, conjunctId: 'a3_embedTextVoteShapeScoresIdentically', twinName: 'voteListRankOffByOne', find: 'rank: entryIndex + 1 }', replace: 'rank: entryIndex + 2 }' });
 registerScorerMutationTwin({ gateId: GATE_A, conjunctId: 'a2_remodelApplied', twinName: 'remodelNotApplied', find: 'target: { canonicalKey: cedsElementId }, remodelTable, hubName, hubVersion', replace: 'target: { canonicalKey: cedsElementId }, remodelTable: null, hubName, hubVersion' });
 
 // ---- GATE (b): the words the report never says ----
@@ -285,6 +306,31 @@ registerScorerMutationTwin({ gateId: GATE_R, conjunctId: 'r4_idWithoutCardListEn
 registerScorerMutationTwin({ gateId: GATE_R, conjunctId: 'r5_remodelSectionAbsentRefused', twinName: 'remodelSectionCheckDeleted', find: "if (remodelTable[remodelTableSectionName] === null || typeof remodelTable[remodelTableSectionName] !== 'object') {", replace: 'if (false) {' });
 registerScorerMutationTwin({ gateId: GATE_R, conjunctId: 'r6_instanceOutsideQuestionRefused', twinName: 'instanceRowCheckDeleted', find: 'if (strayXpath !== undefined) {', replace: 'if (false) {' });
 
+// phase D2 (RULED): a missing pool list and an unknown retrieval method are refused by name, never crashed on
+gateRConjunctList.push(
+	scorerConjunct({
+		conjunctId: 'r7_missingRankedPoolRefused',
+		title: "an embedTextVote-v1 record carrying no retrievalVoteList is refused by name",
+		twinNameList: ['rankedPoolCheckDeleted'],
+		shape: (subject) => {
+			subject.fixtureSet.decisionBlock = subject.fixtureSet.embedTextVoteBlock;
+			delete recordOf(subject, 'sif260928:question/q01').retrievalVoteList;
+		},
+		judge: refusalJudge(/record 0 \(sif260928:question\/q01\) carries no retrievalVoteList/),
+	}),
+	scorerConjunct({
+		conjunctId: 'r8_unknownRetrievalMethodRefused',
+		title: "a block whose candidateRetrieval.method has no ranked-pool reader is refused by name",
+		twinNameList: ['retrievalMethodCheckDeleted'],
+		shape: (subject) => {
+			subject.fixtureSet.decisionBlock.header.candidateRetrieval.method = 'cosineTopK-v9';
+		},
+		judge: refusalJudge(/candidateRetrieval.method is "cosineTopK-v9"/),
+	}),
+);
+registerScorerMutationTwin({ gateId: GATE_R, conjunctId: 'r7_missingRankedPoolRefused', twinName: 'rankedPoolCheckDeleted', find: 'if (!Array.isArray(decisionRecord[rankedPoolReader.poolFieldName])) {', replace: 'if (false) {' });
+registerScorerMutationTwin({ gateId: GATE_R, conjunctId: 'r8_unknownRetrievalMethodRefused', twinName: 'retrievalMethodCheckDeleted', find: 'if (rankedPoolReader === undefined) {', replace: 'if (false) {' });
+
 const gateDeclarationList = [
 	{ gateId: GATE_A, title: 'plan §3 C5 (a): a synthetic block with known answers gives exact class counts; the remap (supervisor ruling)', conjunctList: gateAConjunctList },
 	{ gateId: GATE_B, title: "plan §3 C5 (b): no 'error' or 'wrong' in the output", conjunctList: gateBConjunctList },
@@ -307,4 +353,4 @@ const mislabelledCountByClass = runScorer(mislabelledSubject).score.judgment.cou
 const classDeltaList = Object.keys(EXPECTED_COUNT_VIEW.countByClass).filter((oneClass) => mislabelledCountByClass[oneClass] !== EXPECTED_COUNT_VIEW.countByClass[oneClass]).map((oneClass) => `${oneClass} ${mislabelledCountByClass[oneClass] - EXPECTED_COUNT_VIEW.countByClass[oneClass] > 0 ? '+' : ''}${mislabelledCountByClass[oneClass] - EXPECTED_COUNT_VIEW.countByClass[oneClass]}`);
 harness.equal('the class deltas are exactly agrees-target -1, disagrees +1', classDeltaList.join('; '), 'agrees-target -1; disagrees +1');
 
-runGateFamily({ harness, familyName: 'SIF-YARDSTICK', gateDeclarationList, twinRegistry, makeSubject, cloneSubject, expectedConjunctCount: 11, expectedTwinCount: 12 }, () => harness.report());
+runGateFamily({ harness, familyName: 'SIF-YARDSTICK', gateDeclarationList, twinRegistry, makeSubject, cloneSubject, expectedConjunctCount: 14, expectedTwinCount: 15 }, () => harness.report());

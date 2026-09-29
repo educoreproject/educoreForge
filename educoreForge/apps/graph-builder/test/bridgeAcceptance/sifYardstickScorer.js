@@ -19,8 +19,8 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // list: no id → unannotated; no card → key-without-card; one card → specified, that card the target;
 // several → contended, the target being the one card in the unit's partition label (domain), or none.
 //
-// IN ORDER, as SPEC §5.7 orders them: retrieval first (not-retrieved: no card of the id in retrievalSeatList;
-// recall@K on the best such rank), then judgment over retrieved units only (agrees-target, agrees-key,
+// IN ORDER, as SPEC §5.7 orders them: retrieval first (not-retrieved: no card of the id in the record's ranked
+// pool, retrievalSeatList under cosineTopK-v1 or retrievalVoteList under embedTextVote-v1; recall@K on the best such rank), then judgment over retrieved units only (agrees-target, agrees-key,
 // disagrees, abstained-where-specified), the two grains (target on specified, key on contended), new-claim
 // for unannotated picks, and all of it again per shared block. Every number is measured from the block.
 //
@@ -105,10 +105,18 @@ const standingOf = ({ decisionRecord, question, cedsElementIdByXpath, cardsBySif
 	return { standing: REPORT_WORDING.standingContended, cedsElementId, remodeledToCedsElementId, keyCardStableIdList, targetCardStableId: partitionCardList.length === 1 ? partitionCardList[0].cardStableId : null };
 };
 
+// THE RANKED POOL EACH RETRIEVAL METHOD FREEZES on a record, by the header's candidateRetrieval.method (phase D2,
+// RULED by EBONY_DREAM): cosineTopK-v1 writes retrievalSeatList, seats carrying their rank; embedTextVote-v1 writes
+// retrievalVoteList, whose ORDER is the rank (bridge-framework.js, the vectorRetrieval record's trace fields)
+const RANKED_POOL_READER_BY_RETRIEVAL_METHOD = Object.freeze({
+	'cosineTopK-v1': Object.freeze({ poolFieldName: 'retrievalSeatList', rankedSeatListOf: (seatList) => seatList.map((oneSeat) => ({ stableId: oneSeat.stableId, rank: oneSeat.rank })) }),
+	'embedTextVote-v1': Object.freeze({ poolFieldName: 'retrievalVoteList', rankedSeatListOf: (voteList) => voteList.map((oneEntry, entryIndex) => ({ stableId: oneEntry.stableId, rank: entryIndex + 1 })) }),
+});
+
 // bestKeyRankOf — the best retrieval rank any card of the key reached (key grain; on a specified unit the
 // key has one card, so this is the target's rank), or null when none was retrieved
-const bestKeyRankOf = ({ decisionRecord, keyCardStableIdList }) => {
-	const rankList = decisionRecord.retrievalSeatList.filter((oneSeat) => keyCardStableIdList.indexOf(oneSeat.stableId) !== -1).map((oneSeat) => oneSeat.rank);
+const bestKeyRankOf = ({ rankedSeatList, keyCardStableIdList }) => {
+	const rankList = rankedSeatList.filter((oneSeat) => keyCardStableIdList.indexOf(oneSeat.stableId) !== -1).map((oneSeat) => oneSeat.rank);
 	return rankList.length === 0 ? null : Math.min(...rankList);
 };
 
@@ -197,6 +205,11 @@ const scoreBlock = ({ decisionBlock, annotation, questionMap, cardList, remodelT
 		questionByRefId[oneQuestion.questionRefId] = oneQuestion;
 	});
 	const debugMark = debugJudge.debugMarkFromGeneration(decisionBlock.header.generation);
+	const retrievalMethod = decisionBlock.header.candidateRetrieval.method;
+	const rankedPoolReader = RANKED_POOL_READER_BY_RETRIEVAL_METHOD[retrievalMethod];
+	if (rankedPoolReader === undefined) {
+		return { error: refuse.byName({ moduleName, what: `the block's candidateRetrieval.method is ${JSON.stringify(retrievalMethod)}`, where: `the scorer reads the ranked pool of ${Object.keys(RANKED_POOL_READER_BY_RETRIEVAL_METHOD).join(', ')} only; a new method is a row in RANKED_POOL_READER_BY_RETRIEVAL_METHOD` }) };
+	}
 
 	const unitVerdictList = [];
 	for (let recordIndex = 0; recordIndex < decisionBlock.decisionRecordList.length; recordIndex++) {
@@ -205,6 +218,9 @@ const scoreBlock = ({ decisionBlock, annotation, questionMap, cardList, remodelT
 		const question = questionByRefId[questionRefId];
 		if (question === undefined) {
 			return { error: refuse.byName({ moduleName, what: `record ${recordIndex} names subject ${decisionRecord.subjectStableId}, which is not a question of the yardstick's question map`, where: `a scored subject must be '${SUBJECT_STABLE_ID_PREFIX}<questionRefId>' for a questionRefId the question map holds; otherwise the block and the yardstick describe different sources` }) };
+		}
+		if (!Array.isArray(decisionRecord[rankedPoolReader.poolFieldName])) {
+			return { error: refuse.byName({ moduleName, what: `record ${recordIndex} (${decisionRecord.subjectStableId}) carries no ${rankedPoolReader.poolFieldName}`, where: `a ${retrievalMethod} block freezes its ranked pool on every record as ${rankedPoolReader.poolFieldName}; without it retrieval cannot be scored` }) };
 		}
 		if (SHARED_BLOCK_LIST.indexOf(question.sharedBlock) === -1) {
 			return { error: refuse.byName({ moduleName, what: `question ${questionRefId} carries sharedBlock '${question.sharedBlock}'`, where: `the per-block split knows exactly ${SHARED_BLOCK_LIST.join(', ')}` }) };
@@ -217,7 +233,7 @@ const scoreBlock = ({ decisionBlock, annotation, questionMap, cardList, remodelT
 		if (standing.standing === REPORT_WORDING.standingUnannotated) {
 			unitVerdict.newClaim = decisionRecord.abstained !== true;
 		} else if (standing.standing !== REPORT_WORDING.standingKeyWithoutCard) {
-			unitVerdict.bestKeyRank = bestKeyRankOf({ decisionRecord, keyCardStableIdList: standing.keyCardStableIdList });
+			unitVerdict.bestKeyRank = bestKeyRankOf({ rankedSeatList: rankedPoolReader.rankedSeatListOf(decisionRecord[rankedPoolReader.poolFieldName]), keyCardStableIdList: standing.keyCardStableIdList });
 			unitVerdict.judgmentClass = unitVerdict.bestKeyRank === null ? REPORT_WORDING.classNotRetrieved : judgmentClassOf({ decisionRecord, keyCardStableIdList: standing.keyCardStableIdList, targetCardStableId: standing.targetCardStableId });
 		}
 		unitVerdictList.push(unitVerdict);

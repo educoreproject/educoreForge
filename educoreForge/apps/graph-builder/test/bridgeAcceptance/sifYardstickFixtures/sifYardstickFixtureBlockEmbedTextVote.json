@@ -1,0 +1,680 @@
+{
+	"header": {
+		"generation": "bridgeFramework-v1:sifToyPlugin@1.0.0:bridgeEvidenceRenderer-derived-v12",
+		"producerKind": "inferred",
+		"judgeKind": "anthropic:toy",
+		"predicateRule": "judgeSlot-v1",
+		"candidateRetrieval": {
+			"method": "embedTextVote-v1",
+			"k": 15
+		},
+		"hubName": "ToyHub",
+		"hubVersion": "1"
+	},
+	"decisionRecordList": [
+		{
+			"subjectStableId": "sif260928:question/q01",
+			"objectStableId": "card:A1",
+			"abstained": false,
+			"predicate": "closeMatch",
+			"renderedPoolStableIdList": [
+				"card:A1",
+				"card:X"
+			],
+			"instanceStableIdList": [
+				"sif260928:field/Os/O1/a"
+			],
+			"judgmentPartitionLabel": "Dom Student",
+			"retrievalVoteList": [
+				{
+					"stableId": "card:A1",
+					"ownVotes": 1,
+					"bestCosine": 0.99,
+					"cardTextCosine": 0.99,
+					"cardTextWinningTextStableId": "text:fixture",
+					"pathList": []
+				},
+				{
+					"stableId": "card:X",
+					"ownVotes": 1,
+					"bestCosine": 0.98,
+					"cardTextCosine": 0.98,
+					"cardTextWinningTextStableId": "text:fixture",
+					"pathList": []
+				}
+			],
+			"neighbourTrace": null
+		},
+		{
+			"subjectStableId": "sif260928:question/q02",
+			"objectStableId": "card:X",
+			"abstained": false,
+			"predicate": "closeMatch",
+			"renderedPoolStableIdList": [
+				"card:A1",
+				"card:X"
+			],
+			"instanceStableIdList": [
+				"sif260928:field/Os/O1/b"
+			],
+			"judgmentPartitionLabel": "Dom Student",
+			"retrievalVoteList": [
+				{
+					"stableId": "card:X",
+					"ownVotes": 1,
+					"bestCosine": 0.99,
+					"cardTextCosine": 0.99,
+					"cardTextWinningTextStableId": "text:fixture",
+					"pathList": []
+				},
+				{
+					"stableId": "card:A1",
+					"ownVotes": 1,
+					"bestCosine": 0.98,
+					"cardTextCosine": 0.98,
+					"cardTextWinningTextStableId": "text:fixture",
+					"pathList": []
+				}
+			],
+			"neighbourTrace": null
+		},
+		{
+			"subjectStableId": "sif260928:question/q03",
+			"objectStableId": null,
+			"abstained": true,
+			"predicate": null,
+			"renderedPoolStableIdList": [
+				"card:A1",
+				"card:X",
+				"card:Y",
+				"card:Z"
+			],
+			"instanceStableIdList": [
+				"sif260928:field/Os/O1/c"
+			],
+			"judgmentPartitionLabel": "Dom Student",
+			"retrievalVoteList": [
+				{
+					"stableId": "card:X",
+					"ownVotes": 1,
+					"bestCosine": 0.99,
+					"cardTextCosine": 0.99,
+					"cardTextWinningTextStableId": "text:fixture",
+					"pathList": []
+				},
+				{
+					"stableId": "card:Y",
+					"ownVotes": 1,
+					"bestCosine": 0.98,
+					"cardTextCosine": 0.98,
+					"cardTextWinningTextStableId": "text:fixture",
+					"pathList": []
+				},
+				{
+					"stableId": "card:Z",
+					"ownVotes": 1,
+					"bestCosine": 0.97,
+					"cardTextCosine": 0.97,
+					"cardTextWinningTextStableId": "text:fixture",
+					"pathList": []
+				},
+				{
+					"stableId": "card:A1",
+					"ownVotes": 1,
+					"bestCosine": 0.96,
+					"cardTextCosine": 0.96,
+					"cardTextWinningTextStableId": "text:fixture",
+					"pathList": []
+				}
+			],
+			"neighbourTrace": null
+		},
+		{
+			"subjectStableId": "sif260928:question/q04",
+			"objectStableId": "card:X",
+			"abstained": false,
+			"predicate": "closeMatch",
+			"renderedPoolStableIdList": [
+				"card:X",
+				"card:Y"
+			],
+			"instanceStableIdList": [
+				"sif260928:field/Os/O1/d"
+			],
+			"judgmentPartitionLabel": "Dom Student",
+			"retrievalVoteList": [
+				{
+					"stableId": "card:X",
+					"ownVotes": 1,
+					"bestCosine": 0.99,
+					"cardTextCosine": 0.99,
+					"cardTextWinningTextStableId": "text:fixture",
+					"pathList": []
+				},
+				{
+					"stableId": "card:Y",
+					"ownVotes": 1,
+					"bestCosine": 0.98,
+					"cardTextCosine": 0.98,
+					"cardTextWinningTextStableId": "text:fixture",
+					"pathList": []
+				}
+			],
+			"neighbourTrace": null
+		},
+		{
+			"subjectStableId": "sif260928:question/q05",
+			"objectStableId": "card:B1",
+			"abstained": false,
+			"predicate": "closeMatch",
+			"renderedPoolStableIdList": [
+				"card:B1",
+				"card:B2"
+			],
+			"instanceStableIdList": [
+				"sif260928:field/Os/O1/e"
+			],
+			"judgmentPartitionLabel": "Dom Student",
+			"retrievalVoteList": [
+				{
+					"stableId": "card:B1",
+					"ownVotes": 1,
+					"bestCosine": 0.99,
+					"cardTextCosine": 0.99,
+					"cardTextWinningTextStableId": "text:fixture",
+					"pathList": []
+				},
+				{
+					"stableId": "card:F0402",
+					"ownVotes": 1,
+					"bestCosine": 0.5,
+					"cardTextCosine": 0.5,
+					"cardTextWinningTextStableId": "text:fixture",
+					"pathList": []
+				},
+				{
+					"stableId": "card:F0403",
+					"ownVotes": 1,
+					"bestCosine": 0.5,
+					"cardTextCosine": 0.5,
+					"cardTextWinningTextStableId": "text:fixture",
+					"pathList": []
+				},
+				{
+					"stableId": "card:F0404",
+					"ownVotes": 1,
+					"bestCosine": 0.5,
+					"cardTextCosine": 0.5,
+					"cardTextWinningTextStableId": "text:fixture",
+					"pathList": []
+				},
+				{
+					"stableId": "card:F0405",
+					"ownVotes": 1,
+					"bestCosine": 0.5,
+					"cardTextCosine": 0.5,
+					"cardTextWinningTextStableId": "text:fixture",
+					"pathList": []
+				},
+				{
+					"stableId": "card:F0406",
+					"ownVotes": 1,
+					"bestCosine": 0.5,
+					"cardTextCosine": 0.5,
+					"cardTextWinningTextStableId": "text:fixture",
+					"pathList": []
+				},
+				{
+					"stableId": "card:B2",
+					"ownVotes": 1,
+					"bestCosine": 0.9299999999999999,
+					"cardTextCosine": 0.9299999999999999,
+					"cardTextWinningTextStableId": "text:fixture",
+					"pathList": []
+				}
+			],
+			"neighbourTrace": null
+		},
+		{
+			"subjectStableId": "sif260928:question/q05",
+			"objectStableId": "card:B1",
+			"abstained": false,
+			"predicate": "closeMatch",
+			"renderedPoolStableIdList": [
+				"card:B1",
+				"card:B2"
+			],
+			"instanceStableIdList": [
+				"sif260928:field/Ss/S1/e"
+			],
+			"judgmentPartitionLabel": "Dom Staff",
+			"retrievalVoteList": [
+				{
+					"stableId": "card:B1",
+					"ownVotes": 1,
+					"bestCosine": 0.99,
+					"cardTextCosine": 0.99,
+					"cardTextWinningTextStableId": "text:fixture",
+					"pathList": []
+				},
+				{
+					"stableId": "card:F0502",
+					"ownVotes": 1,
+					"bestCosine": 0.5,
+					"cardTextCosine": 0.5,
+					"cardTextWinningTextStableId": "text:fixture",
+					"pathList": []
+				},
+				{
+					"stableId": "card:F0503",
+					"ownVotes": 1,
+					"bestCosine": 0.5,
+					"cardTextCosine": 0.5,
+					"cardTextWinningTextStableId": "text:fixture",
+					"pathList": []
+				},
+				{
+					"stableId": "card:F0504",
+					"ownVotes": 1,
+					"bestCosine": 0.5,
+					"cardTextCosine": 0.5,
+					"cardTextWinningTextStableId": "text:fixture",
+					"pathList": []
+				},
+				{
+					"stableId": "card:F0505",
+					"ownVotes": 1,
+					"bestCosine": 0.5,
+					"cardTextCosine": 0.5,
+					"cardTextWinningTextStableId": "text:fixture",
+					"pathList": []
+				},
+				{
+					"stableId": "card:F0506",
+					"ownVotes": 1,
+					"bestCosine": 0.5,
+					"cardTextCosine": 0.5,
+					"cardTextWinningTextStableId": "text:fixture",
+					"pathList": []
+				},
+				{
+					"stableId": "card:B2",
+					"ownVotes": 1,
+					"bestCosine": 0.9299999999999999,
+					"cardTextCosine": 0.9299999999999999,
+					"cardTextWinningTextStableId": "text:fixture",
+					"pathList": []
+				}
+			],
+			"neighbourTrace": null
+		},
+		{
+			"subjectStableId": "sif260928:question/q06",
+			"objectStableId": "card:B2",
+			"abstained": false,
+			"predicate": "closeMatch",
+			"renderedPoolStableIdList": [
+				"card:B2",
+				"card:X",
+				"card:Y"
+			],
+			"instanceStableIdList": [
+				"sif260928:field/Os/O1/SIF_Metadata/g"
+			],
+			"judgmentPartitionLabel": null,
+			"retrievalVoteList": [
+				{
+					"stableId": "card:Y",
+					"ownVotes": 1,
+					"bestCosine": 0.99,
+					"cardTextCosine": 0.99,
+					"cardTextWinningTextStableId": "text:fixture",
+					"pathList": []
+				},
+				{
+					"stableId": "card:X",
+					"ownVotes": 1,
+					"bestCosine": 0.98,
+					"cardTextCosine": 0.98,
+					"cardTextWinningTextStableId": "text:fixture",
+					"pathList": []
+				},
+				{
+					"stableId": "card:B2",
+					"ownVotes": 1,
+					"bestCosine": 0.97,
+					"cardTextCosine": 0.97,
+					"cardTextWinningTextStableId": "text:fixture",
+					"pathList": []
+				}
+			],
+			"neighbourTrace": null
+		},
+		{
+			"subjectStableId": "sif260928:question/q07",
+			"objectStableId": "card:D1",
+			"abstained": false,
+			"predicate": "closeMatch",
+			"renderedPoolStableIdList": [
+				"card:D1",
+				"card:X"
+			],
+			"instanceStableIdList": [
+				"sif260928:field/Os/O1/SIF_Metadata/h"
+			],
+			"judgmentPartitionLabel": null,
+			"retrievalVoteList": [
+				{
+					"stableId": "card:X",
+					"ownVotes": 1,
+					"bestCosine": 0.99,
+					"cardTextCosine": 0.99,
+					"cardTextWinningTextStableId": "text:fixture",
+					"pathList": []
+				},
+				{
+					"stableId": "card:F0702",
+					"ownVotes": 1,
+					"bestCosine": 0.5,
+					"cardTextCosine": 0.5,
+					"cardTextWinningTextStableId": "text:fixture",
+					"pathList": []
+				},
+				{
+					"stableId": "card:F0703",
+					"ownVotes": 1,
+					"bestCosine": 0.5,
+					"cardTextCosine": 0.5,
+					"cardTextWinningTextStableId": "text:fixture",
+					"pathList": []
+				},
+				{
+					"stableId": "card:F0704",
+					"ownVotes": 1,
+					"bestCosine": 0.5,
+					"cardTextCosine": 0.5,
+					"cardTextWinningTextStableId": "text:fixture",
+					"pathList": []
+				},
+				{
+					"stableId": "card:F0705",
+					"ownVotes": 1,
+					"bestCosine": 0.5,
+					"cardTextCosine": 0.5,
+					"cardTextWinningTextStableId": "text:fixture",
+					"pathList": []
+				},
+				{
+					"stableId": "card:F0706",
+					"ownVotes": 1,
+					"bestCosine": 0.5,
+					"cardTextCosine": 0.5,
+					"cardTextWinningTextStableId": "text:fixture",
+					"pathList": []
+				},
+				{
+					"stableId": "card:F0707",
+					"ownVotes": 1,
+					"bestCosine": 0.5,
+					"cardTextCosine": 0.5,
+					"cardTextWinningTextStableId": "text:fixture",
+					"pathList": []
+				},
+				{
+					"stableId": "card:F0708",
+					"ownVotes": 1,
+					"bestCosine": 0.5,
+					"cardTextCosine": 0.5,
+					"cardTextWinningTextStableId": "text:fixture",
+					"pathList": []
+				},
+				{
+					"stableId": "card:F0709",
+					"ownVotes": 1,
+					"bestCosine": 0.5,
+					"cardTextCosine": 0.5,
+					"cardTextWinningTextStableId": "text:fixture",
+					"pathList": []
+				},
+				{
+					"stableId": "card:F0710",
+					"ownVotes": 1,
+					"bestCosine": 0.5,
+					"cardTextCosine": 0.5,
+					"cardTextWinningTextStableId": "text:fixture",
+					"pathList": []
+				},
+				{
+					"stableId": "card:F0711",
+					"ownVotes": 1,
+					"bestCosine": 0.5,
+					"cardTextCosine": 0.5,
+					"cardTextWinningTextStableId": "text:fixture",
+					"pathList": []
+				},
+				{
+					"stableId": "card:D1",
+					"ownVotes": 1,
+					"bestCosine": 0.88,
+					"cardTextCosine": 0.88,
+					"cardTextWinningTextStableId": "text:fixture",
+					"pathList": []
+				}
+			],
+			"neighbourTrace": null
+		},
+		{
+			"subjectStableId": "sif260928:question/q08",
+			"objectStableId": "card:X",
+			"abstained": false,
+			"predicate": "closeMatch",
+			"renderedPoolStableIdList": [
+				"card:X"
+			],
+			"instanceStableIdList": [
+				"sif260928:field/Os/O1/i"
+			],
+			"judgmentPartitionLabel": "Dom Student",
+			"retrievalVoteList": [
+				{
+					"stableId": "card:X",
+					"ownVotes": 1,
+					"bestCosine": 0.99,
+					"cardTextCosine": 0.99,
+					"cardTextWinningTextStableId": "text:fixture",
+					"pathList": []
+				}
+			],
+			"neighbourTrace": null
+		},
+		{
+			"subjectStableId": "sif260928:question/q09",
+			"objectStableId": null,
+			"abstained": true,
+			"predicate": null,
+			"renderedPoolStableIdList": [
+				"card:X"
+			],
+			"instanceStableIdList": [
+				"sif260928:field/Os/O1/SIF_ExtendedElements/l"
+			],
+			"judgmentPartitionLabel": "Dom Student",
+			"retrievalVoteList": [
+				{
+					"stableId": "card:X",
+					"ownVotes": 1,
+					"bestCosine": 0.99,
+					"cardTextCosine": 0.99,
+					"cardTextWinningTextStableId": "text:fixture",
+					"pathList": []
+				}
+			],
+			"neighbourTrace": null
+		},
+		{
+			"subjectStableId": "sif260928:question/q10",
+			"objectStableId": "card:X",
+			"abstained": false,
+			"predicate": "closeMatch",
+			"renderedPoolStableIdList": [
+				"card:X"
+			],
+			"instanceStableIdList": [
+				"sif260928:field/Os/O1/j"
+			],
+			"judgmentPartitionLabel": "Dom Student",
+			"retrievalVoteList": [
+				{
+					"stableId": "card:X",
+					"ownVotes": 1,
+					"bestCosine": 0.99,
+					"cardTextCosine": 0.99,
+					"cardTextWinningTextStableId": "text:fixture",
+					"pathList": []
+				}
+			],
+			"neighbourTrace": null
+		},
+		{
+			"subjectStableId": "sif260928:question/q11",
+			"objectStableId": "card:Y",
+			"abstained": false,
+			"predicate": "closeMatch",
+			"renderedPoolStableIdList": [
+				"card:A1",
+				"card:Y"
+			],
+			"instanceStableIdList": [
+				"sif260928:field/Os/O1/SIF_ExtendedElements/k"
+			],
+			"judgmentPartitionLabel": "Dom Student",
+			"retrievalVoteList": [
+				{
+					"stableId": "card:Y",
+					"ownVotes": 1,
+					"bestCosine": 0.99,
+					"cardTextCosine": 0.99,
+					"cardTextWinningTextStableId": "text:fixture",
+					"pathList": []
+				},
+				{
+					"stableId": "card:A1",
+					"ownVotes": 1,
+					"bestCosine": 0.98,
+					"cardTextCosine": 0.98,
+					"cardTextWinningTextStableId": "text:fixture",
+					"pathList": []
+				}
+			],
+			"neighbourTrace": null
+		},
+		{
+			"subjectStableId": "sif260928:question/q12",
+			"objectStableId": "card:D1",
+			"abstained": false,
+			"predicate": "closeMatch",
+			"renderedPoolStableIdList": [
+				"card:D1"
+			],
+			"instanceStableIdList": [
+				"sif260928:field/Os/O1/f"
+			],
+			"judgmentPartitionLabel": "Dom Student",
+			"retrievalVoteList": [
+				{
+					"stableId": "card:D1",
+					"ownVotes": 1,
+					"bestCosine": 0.99,
+					"cardTextCosine": 0.99,
+					"cardTextWinningTextStableId": "text:fixture",
+					"pathList": []
+				}
+			],
+			"neighbourTrace": null
+		},
+		{
+			"subjectStableId": "sif260928:question/q12",
+			"objectStableId": "card:D1",
+			"abstained": false,
+			"predicate": "closeMatch",
+			"renderedPoolStableIdList": [
+				"card:D1"
+			],
+			"instanceStableIdList": [
+				"sif260928:field/Os/O2/f"
+			],
+			"judgmentPartitionLabel": "Dom Staff",
+			"retrievalVoteList": [
+				{
+					"stableId": "card:D1",
+					"ownVotes": 1,
+					"bestCosine": 0.99,
+					"cardTextCosine": 0.99,
+					"cardTextWinningTextStableId": "text:fixture",
+					"pathList": []
+				}
+			],
+			"neighbourTrace": null
+		},
+		{
+			"subjectStableId": "sif260928:question/q13",
+			"objectStableId": "card:A1",
+			"abstained": false,
+			"predicate": "closeMatch",
+			"renderedPoolStableIdList": [
+				"card:A1",
+				"card:W",
+				"card:X",
+				"card:Y",
+				"card:Z"
+			],
+			"instanceStableIdList": [
+				"sif260928:field/Os/O1/m"
+			],
+			"judgmentPartitionLabel": "Dom Student",
+			"retrievalVoteList": [
+				{
+					"stableId": "card:X",
+					"ownVotes": 1,
+					"bestCosine": 0.99,
+					"cardTextCosine": 0.99,
+					"cardTextWinningTextStableId": "text:fixture",
+					"pathList": []
+				},
+				{
+					"stableId": "card:Y",
+					"ownVotes": 1,
+					"bestCosine": 0.98,
+					"cardTextCosine": 0.98,
+					"cardTextWinningTextStableId": "text:fixture",
+					"pathList": []
+				},
+				{
+					"stableId": "card:Z",
+					"ownVotes": 1,
+					"bestCosine": 0.97,
+					"cardTextCosine": 0.97,
+					"cardTextWinningTextStableId": "text:fixture",
+					"pathList": []
+				},
+				{
+					"stableId": "card:W",
+					"ownVotes": 1,
+					"bestCosine": 0.96,
+					"cardTextCosine": 0.96,
+					"cardTextWinningTextStableId": "text:fixture",
+					"pathList": []
+				},
+				{
+					"stableId": "card:A1",
+					"ownVotes": 1,
+					"bestCosine": 0.95,
+					"cardTextCosine": 0.95,
+					"cardTextWinningTextStableId": "text:fixture",
+					"pathList": []
+				}
+			],
+			"neighbourTrace": null
+		}
+	]
+}
