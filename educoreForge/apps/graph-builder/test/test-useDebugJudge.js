@@ -89,6 +89,7 @@ const makeCountingAnthropicRow = () => {
 				rerank: () => {},
 				describe: () => ({ provider: 'anthropic', model: 'anthropic:FAKE-REAL-CLIENT', version: 'fake-v1' }),
 				keySource: 'fake',
+				judgeConfig: Object.freeze({ temperaturePolicy: 'fakeNoWire', maxTokens: null }),
 			});
 		},
 	};

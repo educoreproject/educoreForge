@@ -152,9 +152,9 @@ harness.section('G1-a — THE SHAPE IS EXPORTED AND EVERY PROVIDER SATISFIES IT'
 // =====================================================================
 
 harness.equal(
-	'JUDGE_PROVIDER_SHAPE declares exactly the six contract members',
+	'JUDGE_PROVIDER_SHAPE declares exactly the seven contract members',
 	Object.keys(JUDGE_PROVIDER_SHAPE.MEMBER_KIND_BY_NAME).sort().join(','),
-	'describe,maxConcurrency,model,name,rerank,wireModel',
+	'describe,judgeConfig,maxConcurrency,model,name,rerank,wireModel',
 );
 harness.ok('the shape is frozen (a contract nothing can edit at run time)', Object.isFrozen(JUDGE_PROVIDER_SHAPE));
 
@@ -206,12 +206,17 @@ Object.keys(JUDGE_PROVIDER_SHAPE.MEMBER_KIND_BY_NAME).forEach((oneMemberName) =>
 harness.match(
 	'a provider that is not an object at all is refused, naming every member it should have had',
 	judgeProviderViolation(null, { providerLabel: 'twin' }),
-	/is null — a judge provider must be an object satisfying JUDGE_PROVIDER_SHAPE \(name, wireModel, model, maxConcurrency, rerank, describe\)/,
+	/is null — a judge provider must be an object satisfying JUDGE_PROVIDER_SHAPE \(name, wireModel, model, maxConcurrency, rerank, describe, judgeConfig\)/,
 );
 harness.match(
 	'maxConcurrency 0 is refused (positive integer, not merely a number)',
 	judgeProviderViolation({ ...debugProvider, maxConcurrency: 0 }, { providerLabel: 'twin' }),
 	/maxConcurrency \(must be positiveInteger, got 0\)/,
+);
+harness.match(
+	'an UNFROZEN judgeConfig is refused by name (the registry freezes providers shallowly, so this member must already be frozen; B2)',
+	judgeProviderViolation({ ...debugProvider, judgeConfig: { ...debugProvider.judgeConfig } }, { providerLabel: 'twin' }),
+	/judgeConfig \(must be judgeConfig, got/,
 );
 
 // =====================================================================

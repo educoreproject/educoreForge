@@ -448,6 +448,12 @@ const JUDGE_PROVIDER_SHAPE = Object.freeze({
 		maxConcurrency: 'positiveInteger',
 		rerank: 'function',
 		describe: 'function',
+		// judgeConfig — what the provider sends besides the prompts, a FROZEN { temperaturePolicy, maxTokens }: a
+		// non-empty string and a positive integer, or null when there is no wire (the debug judge). A plugin that
+		// declares blockRecordsJudgeConfig copies it into the decision block header (lib/bridge-framework/
+		// judgeConfigRecord.js). It must be frozen because the registry freezes providers only one level deep.
+		// An unfrozen one could change after validation and move a header that has already been judged.
+		judgeConfig: 'judgeConfig',
 	}),
 	// MODEL_NAMESPACE_SEPARATOR — `model` MUST begin `${name}${separator}`. Note the separator may
 	// also occur INSIDE a wireModel ('qwen2.5:32b'), which is why the rule is a PREFIX test against
@@ -488,6 +494,8 @@ const judgeProviderViolation = (candidateProvider, { providerLabel = 'judge prov
 		nonEmptyString: (oneValue) => typeof oneValue === 'string' && oneValue.length > 0,
 		positiveInteger: (oneValue) => Number.isInteger(oneValue) && oneValue >= 1,
 		function: (oneValue) => typeof oneValue === 'function',
+		judgeConfig: (oneValue) =>
+			oneValue !== null && typeof oneValue === 'object' && Object.isFrozen(oneValue) && typeof oneValue.temperaturePolicy === 'string' && oneValue.temperaturePolicy.length > 0 && (oneValue.maxTokens === null || (Number.isInteger(oneValue.maxTokens) && oneValue.maxTokens >= 1)),
 	};
 	const memberFaultList = Object.keys(JUDGE_PROVIDER_SHAPE.MEMBER_KIND_BY_NAME)
 		.filter((oneMemberName) => !kindSatisfiedBy[JUDGE_PROVIDER_SHAPE.MEMBER_KIND_BY_NAME[oneMemberName]](candidateProvider[oneMemberName]))
