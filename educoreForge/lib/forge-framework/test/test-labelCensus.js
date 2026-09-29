@@ -66,6 +66,9 @@ const MIGRATED_FORGE_ROSTER = Object.freeze([
 	Object.freeze({ standardKey: 'edfi', bundlePath: 'forges/edfi/forgeEdfi.js', snapshotPath: 'forges/edfi/assets/standardSourceData/04' }),
 	Object.freeze({ standardKey: 'sif', bundlePath: 'forges/sif/forgeSif.js', snapshotPath: 'forges/sif/assets/standardSourceData/01' }),
 	Object.freeze({ standardKey: 'pesc260805', bundlePath: 'forges/pesc260805/forgePesc260805.js', snapshotPath: 'forges/pesc260805/assets/standardSourceData/01' }),
+	// (phase M1) sif260928 reads ONE file: the forger hands it <snapshot>/<sourceFile> (parserDescriptor.ini), so its
+	// snapshotPath names that file rather than the snapshot directory the other bundles take.
+	Object.freeze({ standardKey: 'sif260928', bundlePath: 'forges/sif260928/forgeSif260928.js', snapshotPath: 'forges/sif260928/assets/standardSourceData/01/ImplementationSpecification_031326.tsv' }),
 ]);
 
 let passedCount = 0;

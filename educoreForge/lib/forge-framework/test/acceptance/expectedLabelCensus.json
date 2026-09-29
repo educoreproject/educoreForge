@@ -77,6 +77,21 @@
         "PescNamespace": 64
       },
       "measuredNote": "MEASURED TWICE AND BY TWO METHODS, which is why it is frozen with confidence. First from the Phase 4 ENTRY BLOCK text (f139654a, 42,372 node lines, labels censused structurally rather than positionally), then again by this file measurementMethod — the migrated bundle in-process, forge({ skipEmbedding: true }) — and the two agree on every one of the nine labels and on the sum. PESC has no MERGE collapse (load 42,372/70,628 equals harvest), so the harvested and in-process censuses are expected to agree; they were compared rather than assumed. Reconciles with the tier stats: PescNamedDefinition 13,018 = 12,909 source + 109 synthetic merged; PescElementDecl 17,491 = 16,969 source + 522 synthetic duplicated children; PescNamespace 64 = 63 derived + 1 synthetic alias."
+    },
+    "sif260928": {
+      "labelKeyedBy": "NODE KIND of the sif260928 rebuild (SPEC-sifStructuralBridge-replacement §3.1): one Sif260928<Kind> label per kind, the label names frozen at A1c (Root, Object, Field) and extended by A2 (Container), A3 (Question), A4 (Codeset, CodesetValue) and A5 (EmbedText). Distinct from the incumbent sif's Sif* labels so both bundles coexist in one graph (SPEC §9 A8).",
+      "nodeTotal": 39268,
+      "labelCensus": {
+        "Sif260928Codeset": 131,
+        "Sif260928CodesetValue": 4055,
+        "Sif260928Container": 6586,
+        "Sif260928EmbedText": 7698,
+        "Sif260928Field": 15620,
+        "Sif260928Object": 159,
+        "Sif260928Question": 5018,
+        "Sif260928Root": 1
+      },
+      "measuredNote": "Appended at M1 (supervisor-owned, plan §3 M1, review #18). The counts are A7's pure census (evidence/A7/liveChecks/a7LiveChecks.json pureCensus, the bundle in-process with skipEmbedding) and equal A7's LIVE census scoped to _source SIF260928 label for label; they sum to 39,268, the node total A7 measured live."
     }
   }
 }
