@@ -19,7 +19,9 @@
 //
 // Twins build SCRATCH snapshots under the OS temp directory and remove them at the end. A scratch
 // TSV gets a regenerated SHA256SUMS line, so the fault reaches the loader instead of being stopped
-// by the checksum (A1a's gate). Loader mutations are compiled in memory (moduleDouble).
+// by the checksum (A1a's gate); since A4 the rewritten SHA256SUMS keeps a line for every file the real
+// one lists, because the framework also verifies the RefId map. Loader mutations are compiled in
+// memory (moduleDouble).
 //
 // Run: PATH=/usr/local/bin:$PATH node forges/sif260928/test/test-sif260928TsvLoader.js [-verbose]
 
@@ -154,7 +156,8 @@ const readC1MeasuredValueByFactName = () => {
 const scratchRootPathList = [];
 const sha256Of = (textOrBuffer) => crypto.createHash('sha256').update(textOrBuffer).digest('hex');
 
-// a copy of the real snapshot with its TSV altered and SHA256SUMS rewritten to match
+// a copy of the real snapshot with its TSV altered and SHA256SUMS rewritten to match, one line per file
+// the real SHA256SUMS lists (the TSV and, since A4, the RefId map)
 const makeScratchSnapshot = ({ alterSourceText }) => {
 	const scratchRootPath = fs.mkdtempSync(path.join(os.tmpdir(), 'sif260928Loader-'));
 	scratchRootPathList.push(scratchRootPath);
@@ -168,7 +171,12 @@ const makeScratchSnapshot = ({ alterSourceText }) => {
 		throw new Error(`${moduleName}: fixture fault — the alteration changed nothing`);
 	}
 	fs.writeFileSync(sourceFilePath, alteredText);
-	fs.writeFileSync(path.join(snapshotDirPath, CHECKSUM_FILE_NAME), `${sha256Of(fs.readFileSync(sourceFilePath))}  ${SOURCE_FILE_NAME}\n`);
+	const listedFileNameList = fs
+		.readFileSync(path.join(REAL_SNAPSHOT_DIR, CHECKSUM_FILE_NAME), 'utf8')
+		.split('\n')
+		.filter((checksumLine) => checksumLine !== '')
+		.map((checksumLine) => checksumLine.split('  ')[1]);
+	fs.writeFileSync(path.join(snapshotDirPath, CHECKSUM_FILE_NAME), listedFileNameList.map((listedFileName) => `${sha256Of(fs.readFileSync(path.join(snapshotDirPath, listedFileName)))}  ${listedFileName}\n`).join(''));
 	return snapshotDirPath;
 };
 

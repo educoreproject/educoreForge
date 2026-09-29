@@ -15,14 +15,31 @@ input to this one (SPEC §9 A8; GROUNDING F-F3). The incumbent's snapshot was no
 | file | bytes | sha256 | role |
 |---|---|---|---|
 | `ImplementationSpecification_031326.tsv` | 3,178,798 | `6814727786bd767a23b3f6eabdf1862d30c126a0e82146cd3e622107174ae706` | the SIF data model: 159 object tables, flattened |
+| `refIdResolutionMap.tsv` | 4,042 | `7ca182bc442128ef69fef1dfa0902d150d73b3383b1db03c3751bab682dac2b3` | curated RefId name → table-title map (header plus 38 rows over 37 names); read by the walk for `REFERENCES_OBJECT` |
 
 The TSV is a **byte copy** of `forges/sif/assets/standardSourceData/01/ImplementationSpecification_031326.tsv`
 (verified with `cmp`, and its sha256 equals the incumbent's `SHA256SUMS` entry). Its byte shape
 matters to the loader (SPEC §9 A21): it has CRLF line endings, 163 blank separator lines, and
 **no trailing newline**. `wc -l` therefore reports 16,100 lines, while a split gives 16,101.
 
-The incumbent's second input, `refIdResolutionMap.tsv`, is **not** in this snapshot yet. Phase A4
-copies it here, declares it in `additionalSourceInputList`, and adds it to `SHA256SUMS`.
+## The second input: `refIdResolutionMap.tsv` (added in phase A4)
+
+Copied in phase A4 (builder VIOLET_CIPHER, 2026-09-28) as a **byte copy** of
+`forges/sif/assets/standardSourceData/01/refIdResolutionMap.tsv` (verified with `cmp`; its sha256
+equals the incumbent's `SHA256SUMS` entry). It is declared in the forge declaration's
+`additionalSourceInputList` and listed in `SHA256SUMS`, so the framework verifies it like the TSV.
+
+- **Acquisition class: human-artifact-snapshot.** A locally curated map, authored in-house, not a
+  publisher artifact (the incumbent README says the same). Columns `refIdProperty / inferredTarget /
+  resolvedTable / resolutionMethod / notes`. LF line endings, with a closing newline.
+- **What it states.** For 37 RefId names the TSV's own naming does not resolve, the table the
+  reference points at. `resolvedTable` is a **table title** (the `<TableName>: Table N` line, which is
+  the spreadsheet's sheet name and is cut at 31 characters, e.g. `FinancialAccountAccountingPerio`),
+  not an object name. One row, `SIF_RefId`, names `UNRESOLVABLE_GENERIC_REF`: SIF's polymorphic
+  reference, whose target no table states, so it resolves to nothing.
+- One row appears twice, identically (`ContactForRequestsRefId`).
+- Only `refIdProperty` and `resolvedTable` are read; `inferredTarget`, `resolutionMethod` and `notes`
+  are the curator's working and are not carried.
 
 ## Version: 4.3 (corrected)
 
@@ -66,9 +83,11 @@ so the bytes cannot be verified against the publisher.
 3. Put it in a NEW snapshot directory beside this one; nothing changes until `defaultSnapshot` in
    `parserDescriptor.ini` is deliberately flipped. Write `standardSourceLocation` with a bare
    `publishedVersion:` line.
-4. Regenerate the checksums with `shasum -a 256 ImplementationSpecification_<MMDDYY>.tsv > SHA256SUMS`,
-   and update this README.
+4. Copy `refIdResolutionMap.tsv` beside it (curated, not published by A4L; re-check its table titles
+   against the new sheet names). Regenerate the checksums with
+   `shasum -a 256 ImplementationSpecification_<MMDDYY>.tsv refIdResolutionMap.tsv > SHA256SUMS`, and
+   update this README.
 
-`SHA256SUMS` lists the source data only. `standardSourceLocation` and this README are not
+`SHA256SUMS` lists the source data only (the TSV and, since A4, the map). `standardSourceLocation` and this README are not
 listed, following the incumbent's convention. Listing `standardSourceLocation` would also make a
 deleted version line fail the checksum before the version guard could fire.

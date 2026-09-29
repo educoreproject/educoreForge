@@ -11,6 +11,7 @@
 
 const path = require('path');
 const { DME_ROLES } = require(path.join(__dirname, '..', '..', '..', 'lib', 'vocabulary', 'vocabulary'));
+const { REF_ID_MAP_INPUT_NAME } = require('./sif260928RefIdMapLoader');
 
 // every node's own address, and mappingInstruction.crosswalkResolveProperty: written once, read twice
 const STABLE_URI_PROPERTY_NAME = 'sif260928StableId';
@@ -47,9 +48,10 @@ const sif260928ForgeDeclaration = Object.freeze({
 	// Objects: name; SPEC §9 A1) together with the gates that count them (ruled, A1a).
 	embedTextDeclaration: null,
 	cedsAnchorAbsentSentinelList: Object.freeze([]),
-	// EMPTY. The object-domain file is a BRIDGE input and never a forge input (SPEC §9 A20). Phase
-	// A4 adds refIdResolutionMap.tsv here.
-	additionalSourceInputList: Object.freeze([]),
+	// the RefId map only (phase A4; SPEC §9 A24). The framework verifies it against SHA256SUMS like
+	// the TSV and hands its path to the map loader under this inputName. The object-domain file is a
+	// BRIDGE input and never a forge input (SPEC §9 A20).
+	additionalSourceInputList: Object.freeze([Object.freeze({ inputName: REF_ID_MAP_INPUT_NAME, relativePathFromSourcePath: 'refIdResolutionMap.tsv' })]),
 	// EMPTY, as the framework requires of any standardKey outside MIGRATING_BUNDLE_LIST. The old
 	// forges' migration allowances stay in the framework, and this bundle uses none of them (TQ).
 	compatibilityDeclarationList: Object.freeze([]),

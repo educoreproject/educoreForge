@@ -10,7 +10,9 @@
 //   A1a-VERSION   (a) the snapshot stamps 4.3 from standardSourceLocation; with the line gone the
 //                     forge's OWN guard refuses by name (the framework alone would only warn)
 //   A1a-UNIQUE    (b) G-UNIQUE and G-SOURCE hold with SIF and SIF260928 both present
-//   A1a-CHECKSUM  (c) the TSV verifies against SHA256SUMS; one altered byte is refused
+//   A1a-CHECKSUM  (c) the TSV verifies against SHA256SUMS; one altered byte is refused (restated in A4:
+//                     the RefId map is the snapshot's second declared input, verified the same way,
+//                     and the root names both files)
 //   A1a-ROLES     (d) the role table and nonEmbeddableRoleList equal the ruling; the declaration,
 //                     with no allowances, is accepted by the framework
 //   A1a-VALIDATOR     the declared round-trip validator is a stub that refuses by name until A6
@@ -63,6 +65,8 @@ const sif260928NodeKindTable = require(path.join(BUNDLE_DIR, 'lib', 'sif260928No
 // the descriptor is the one place the snapshot and its source file are named
 const descriptorValueByName = rosterLib.readDescriptorSection(DESCRIPTOR_PATH).valueByName;
 const SOURCE_FILE_NAME = descriptorValueByName.sourceFile;
+// PLAN §3 A4: the snapshot's second input, declared in additionalSourceInputList
+const REF_ID_MAP_FILE_NAME = 'refIdResolutionMap.tsv';
 const REAL_SNAPSHOT_DIR = path.join(BUNDLE_DIR, 'assets', 'standardSourceData', descriptorValueByName.defaultSnapshot);
 
 // ---- FROZEN LITERALS: the rulings these gates hold the code to. Never edited to match a measurement.
@@ -108,7 +112,7 @@ const withoutPublishedVersionLine = (fileBuffer) => {
 	return alteredText;
 };
 
-// flips the case of the first letter in the TSV (its first byte, 'S' of the first table heading)
+// flips the case of a file's first letter (the TSV's first table heading; the map's header)
 const withOneByteAltered = (fileBuffer) => {
 	const alteredBuffer = Buffer.from(fileBuffer);
 	alteredBuffer[0] = alteredBuffer[0] ^ 0x20;
@@ -319,16 +323,16 @@ twinRegistry.register({
 // =====================================================================
 const checksumConjunctList = [
 	{
-		conjunctId: 'tsvVerifiesAgainstSha256sums',
-		title: `the framework verifies ${SOURCE_FILE_NAME} against the snapshot's SHA256SUMS, forges, and the root names it as its one source file`,
-		twinNameList: ['oneTsvByteAltered'],
+		conjunctId: 'sourceFilesVerifyAgainstSha256sums',
+		title: `the framework verifies ${SOURCE_FILE_NAME} and ${REF_ID_MAP_FILE_NAME} against the snapshot's SHA256SUMS, forges, and the root names exactly those two source files`,
+		twinNameList: ['oneTsvByteAltered', 'oneMapByteAltered'],
 		evaluate: (subject, callback) => {
 			forgeSnapshot({ subject, snapshotDirPath: subject.snapshotDirPath }, (forgeError, forged) => {
 				if (forgeError) {
 					callback('', { pass: false, detail: `forge refused: ${forgeError.slice(0, 300)}` });
 					return;
 				}
-				const pass = forged.metadata.sourceFiles.length === 1 && forged.metadata.sourceFiles[0] === SOURCE_FILE_NAME;
+				const pass = JSON.stringify(forged.metadata.sourceFiles) === JSON.stringify([SOURCE_FILE_NAME, REF_ID_MAP_FILE_NAME]);
 				callback('', { pass, detail: `sourceFiles ${JSON.stringify(forged.metadata.sourceFiles)}` });
 			});
 		},
@@ -336,11 +340,19 @@ const checksumConjunctList = [
 ];
 twinRegistry.register({
 	gateId: CHECKSUM_GATE_ID,
-	conjunctId: 'tsvVerifiesAgainstSha256sums',
+	conjunctId: 'sourceFilesVerifyAgainstSha256sums',
 	twinName: 'oneTsvByteAltered',
 	leverKind: 'inputFault',
 	shippedConfig: true,
 	run: (subject) => ({ ...subject, snapshotDirPath: makeScratchSnapshot({ alterFileByName: { [SOURCE_FILE_NAME]: withOneByteAltered } }) }),
+});
+twinRegistry.register({
+	gateId: CHECKSUM_GATE_ID,
+	conjunctId: 'sourceFilesVerifyAgainstSha256sums',
+	twinName: 'oneMapByteAltered',
+	leverKind: 'inputFault',
+	shippedConfig: true,
+	run: (subject) => ({ ...subject, snapshotDirPath: makeScratchSnapshot({ alterFileByName: { [REF_ID_MAP_FILE_NAME]: withOneByteAltered } }) }),
 });
 
 // =====================================================================
@@ -441,13 +453,13 @@ twinRegistry.register({
 const gateDeclarationList = [
 	{ gateId: VERSION_GATE_ID, title: '(a) the version is 4.3, and an unknown version is refused by the forge itself', conjunctList: versionConjunctList },
 	{ gateId: UNIQUE_GATE_ID, title: '(b) G-UNIQUE and G-SOURCE with SIF and SIF260928 both present', conjunctList: uniqueConjunctList },
-	{ gateId: CHECKSUM_GATE_ID, title: '(c) the TSV checksum', conjunctList: checksumConjunctList },
+	{ gateId: CHECKSUM_GATE_ID, title: '(c) the source-file checksums (the TSV and, since A4, the RefId map)', conjunctList: checksumConjunctList },
 	{ gateId: ROLES_GATE_ID, title: '(d) the role table, nonEmbeddableRoleList, and no allowances', conjunctList: rolesConjunctList },
 	{ gateId: VALIDATOR_GATE_ID, title: 'the round-trip validator is a refusing stub until A6', conjunctList: validatorConjunctList },
 ];
 
 runGateFamily(
-	{ harness, familyName: 'sif260928 A1a skeleton', gateDeclarationList, twinRegistry, makeSubject, cloneSubject, expectedConjunctCount: 10, expectedTwinCount: 10 },
+	{ harness, familyName: 'sif260928 A1a skeleton', gateDeclarationList, twinRegistry, makeSubject, cloneSubject, expectedConjunctCount: 10, expectedTwinCount: 11 },
 	() => {
 		scratchRootPathList.forEach((oneScratchRootPath) => fs.rmSync(oneScratchRootPath, { recursive: true, force: true }));
 		harness.report();

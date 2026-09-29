@@ -26,6 +26,10 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //               CEDS ID — a SIF property carried verbatim (cedsIdCellText) and as cedsElementId,
 //                 'P' plus the six digits. Anything but empty or six digits is refused. Nothing
 //                 else reads it (FBB-001: the forge does no bridging).
+//               Format — carried verbatim. A cell that is ONE enclosing pair of double quotes is a
+//                 code list (SPEC §9 A28): codeListValueList is its ", "-separated values in source
+//                 order; an empty, padded or repeated value is refused. Any other cell is not a list
+//                 (codeListValueList null): a single fixed value, an object name or a pattern.
 //   3. XPATH    xpath is unique across the file.
 //   4. CENSUS   the measured counts equal the snapshot's entry in sif260928SourceCensus.json.
 
@@ -42,6 +46,8 @@ const CEDS_ELEMENT_ID_PREFIX = 'P';
 const METADATA_XPATH_SEGMENT = '/SIF_Metadata/';
 const EXTENDED_ELEMENTS_XPATH_SEGMENT = '/SIF_ExtendedElements/';
 const ATTRIBUTE_NAME_PREFIX = '@';
+// a quote-wrapped Format cell lists its values separated by exactly this (A28)
+const CODE_LIST_VALUE_SEPARATOR = ', ';
 const { LINE_KIND } = sourceGrammar;
 
 const refusal = (what, where) => ({ refusalError: refuse.byName({ moduleName, what, where }) });
@@ -112,6 +118,20 @@ const stripOneEnclosingQuotePair = (cellText) => {
 	return { isQuoteWrapped, unwrappedText: isQuoteWrapped ? cellText.slice(1, -1) : cellText };
 };
 
+// A28: a quote-wrapped Format cell is a code list; its values are exactly as the source writes them
+const codeListOf = ({ formatCellText, sourceLineNumber, xpath }) => {
+	const { isQuoteWrapped, unwrappedText } = stripOneEnclosingQuotePair(formatCellText);
+	if (!isQuoteWrapped) {
+		return { codeListValueList: null };
+	}
+	const codeListValueList = unwrappedText.split(CODE_LIST_VALUE_SEPARATOR);
+	const faultyValueList = codeListValueList.filter((codeListValue, valueIndex) => codeListValue === '' || codeListValue !== codeListValue.trim() || codeListValueList.indexOf(codeListValue) !== valueIndex);
+	if (faultyValueList.length) {
+		return refusal(`line ${sourceLineNumber} (${xpath}) has a code list with an empty, padded or repeated value: ${JSON.stringify(faultyValueList[0])}`, `a quote-wrapped Format cell lists distinct values separated by '${CODE_LIST_VALUE_SEPARATOR}' (SPEC §9 A28)`);
+	}
+	return { codeListValueList };
+};
+
 const interpretDataLine = ({ sourceLineNumber, tableTitleName, cellList }) => {
 	const [name, mandatoryCellText, characteristicsCellText, type, descriptionCellText, xpath, cedsIdCellText, format] = cellList;
 
@@ -124,6 +144,11 @@ const interpretDataLine = ({ sourceLineNumber, tableTitleName, cellList }) => {
 	}
 	if (cedsIdCellText !== '' && !CEDS_ID_CELL_RE.test(cedsIdCellText)) {
 		return refusal(`line ${sourceLineNumber} (${xpath}) has CEDS ID '${cedsIdCellText}'`, 'the CEDS ID cell is empty or six digits');
+	}
+
+	const codeList = codeListOf({ formatCellText: format, sourceLineNumber, xpath });
+	if (codeList.refusalError) {
+		return codeList;
 	}
 
 	const { isQuoteWrapped, unwrappedText } = stripOneEnclosingQuotePair(descriptionCellText);
@@ -149,6 +174,7 @@ const interpretDataLine = ({ sourceLineNumber, tableTitleName, cellList }) => {
 			cedsIdCellText,
 			cedsElementId: cedsIdCellText === '' ? null : `${CEDS_ELEMENT_ID_PREFIX}${cedsIdCellText}`,
 			format,
+			codeListValueList: codeList.codeListValueList,
 		},
 	};
 };

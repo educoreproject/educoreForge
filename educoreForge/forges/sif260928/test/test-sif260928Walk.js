@@ -13,7 +13,8 @@
 //   A1c-DESCRIPTION (b) description is absent, never ''; the kit refuses a forced ''
 //   A1c-PARENTPATH  (c) parentPath is floored at the object for an attribute on the object element;
 //                       without the floor the named row lands above its object and is refused by name
-//   A1c-ROLES       (d) every minted node's role equals the ruled table
+//   A1c-ROLES       (d) every minted node's role equals the ruled table (restated in A4: the
+//                       Codeset and CodesetValue rows of A1a's table arrive with the code lists)
 //   A1c-PROPERTIES      the brief's Field properties, read against the TSV cells independently:
 //                       verbatim cells, empty cells absent (A25), derived facts equal to the SPEC's and C1's
 //   A1c-STRUCTURE       questionRefId only on Fields and Questions, and each Object's structural parent
@@ -64,8 +65,16 @@ const SOURCE_PATH = path.join(BUNDLE_DIR, 'assets', 'standardSourceData', descri
 // PLAN §3 A1c (a); SPEC §1. The Containers A2 adds are counted by test-sif260928Tree.js.
 const RULED_NODE_COUNT_BY_LABEL = Object.freeze({ Sif260928Root: 1, Sif260928Object: 159, Sif260928Field: 15620 });
 // PLAN §3 A1a role table (review #9), plus the framework's root; the Container row arrived with A2,
-// the Question row with A3
-const RULED_ROLE_BY_LABEL = Object.freeze({ Sif260928Root: 'DmeStandardRoot', Sif260928Object: 'DmeClass', Sif260928Field: 'DmeSupport', Sif260928Container: 'DmeSupport', Sif260928Question: 'DmeProperty' });
+// the Question row with A3, the Codeset and CodesetValue rows with A4
+const RULED_ROLE_BY_LABEL = Object.freeze({
+	Sif260928Root: 'DmeStandardRoot',
+	Sif260928Object: 'DmeClass',
+	Sif260928Field: 'DmeSupport',
+	Sif260928Container: 'DmeSupport',
+	Sif260928Question: 'DmeProperty',
+	Sif260928Codeset: 'DmeOptionSet',
+	Sif260928CodesetValue: 'DmeOptionValue',
+});
 // PLAN §3 A1b (a): empty descriptions
 const EMPTY_DESCRIPTION_ROW_COUNT = 4733;
 // the named row of gate (c): an attribute directly on the object element
@@ -291,7 +300,7 @@ registerMutationTwin({
 const rolesConjunctList = [
 	{
 		conjunctId: 'everyNodeRoleEqualsRuledTable',
-		title: "every minted node's role (its role property and its role label) equals the ruled table for its per-standard label: Object DmeClass, Field and Container DmeSupport, Question DmeProperty",
+		title: "every minted node's role (its role property and its role label) equals the ruled table for its per-standard label: Object DmeClass, Field and Container DmeSupport, Question DmeProperty, Codeset DmeOptionSet, CodesetValue DmeOptionValue",
 		twinNameList: ['oneFieldMintedAsDmeProperty'],
 		evaluate: overForged((forged) => {
 			const wrongList = forged.nodes.filter((oneNode) => {
