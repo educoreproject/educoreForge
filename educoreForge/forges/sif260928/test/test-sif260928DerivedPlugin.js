@@ -10,7 +10,7 @@
 //   D1-REGISTER  (a) the registry discovers and accepts the plugin from the real forges/ at zero spend. Twins: the
 //                    retrieval declaration loses neighbourVote (refused by the contract); the plugin file requires
 //                    neo4j-driver (refused by source policing).
-//                (a′) the 354-id list is non-empty, sorted, unique and every entry six bare digits: an empty list
+//                (a′) the id list is non-empty, sorted, unique and every entry six bare digits: an empty list
 //                    would match every prompt, and a P-prefixed one would repeat what the pattern already catches.
 //                (a″) the list is wired: a listed bare id planted in a question's description refuses the run, naming
 //                    the identifierList pattern.
@@ -75,7 +75,8 @@ const PLUGIN_FILE_NAME = `${PLUGIN_NAME}.js`;
 const REAL_FORGES_DIR = path.join(TREE_ROOT, 'forges');
 const SHIPPED_BRIDGES_DIR = path.join(BUNDLE_DIR, 'bridges');
 const IDENTIFIER_LIST_FILE_NAME = 'sif260928CedsIdList.json';
-const IDENTIFIER_LIST_COUNT = 354;
+// 354 SIF-column ids widened to every hub id (phase D4, RULING EBONY_DREAM 2026-09-29): a ruled data change, not a measurement
+const IDENTIFIER_LIST_COUNT = 2731;
 const SOURCE_STANDARD_NAME = 'SIF260928';
 const SOURCE_VERSION = '4.3';
 const MATERIALISER_FILE = 'materialiser.js';

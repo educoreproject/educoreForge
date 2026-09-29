@@ -16,7 +16,10 @@
 // WHAT THE JUDGE NEVER SEES. SIF's own CEDS ID column reaches a Question as cedsElementId, and it is the answer
 // key the yardstick scores against afterwards. It is blinded here AND left off the allow-list, and every prompt
 // is scanned in the run for a CEDS identifier: the P and C forms by pattern, and the bare six-digit form SIF's
-// column writes (which neither pattern catches) by the 354-id list.
+// column writes (which neither pattern catches) by the id list: the 354 ids SIF's column names, widened (phase D4,
+// RULING EBONY_DREAM 2026-09-29) to every id the live hub's cards carry, in bare form, 2,731 in all. D3 found a SIF
+// description quoting 'CEDS Id 000102', an id outside the 354; over all 6,011 rendered prompts it was the only
+// bare six-digit token outside them, so the widened list adds no false positive.
 //
 // THE REMODEL IS NOT DECLARED (remodelTableRef null), deliberately. The hub's property remodel table is applied
 // only by the documentary pool producer; a retrieved pool applies none. It matters to the SCORE, and the
