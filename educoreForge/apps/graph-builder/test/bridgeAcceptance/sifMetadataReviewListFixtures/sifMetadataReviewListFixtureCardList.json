@@ -1,0 +1,24 @@
+{
+	"fixtureNote": "SYNTHETIC (phase C6). Three SIF_Metadata questions (m01 3 rows, m02 2 rows, m03 4 rows; 9 metadata rows) and one model question (q90), to prove that only the metadata block is listed. P000011 has one card (specified), P000012 two (contended).",
+	"cardsBySifCedsId": {
+		"P000011": [
+			{
+				"cardStableId": "card:M1",
+				"domainName": "Dom Record",
+				"propertyName": "Record Identifier"
+			}
+		],
+		"P000012": [
+			{
+				"cardStableId": "card:N1",
+				"domainName": "Dom Finance",
+				"propertyName": "Cost"
+			},
+			{
+				"cardStableId": "card:N2",
+				"domainName": "Dom Facility",
+				"propertyName": "Cost"
+			}
+		]
+	}
+}

@@ -1,0 +1,37 @@
+{
+	"fixtureNote": "SYNTHETIC (phase C6). cardStableId -> the domain and property names the page shows beside a card; the real list is exported from the hub.",
+	"cardLabelByStableId": {
+		"card:A1": {
+			"domainName": "Dom Student",
+			"propertyName": "Alpha"
+		},
+		"card:B1": {
+			"domainName": "Dom Student",
+			"propertyName": "Beta"
+		},
+		"card:B2": {
+			"domainName": "Dom Staff",
+			"propertyName": "Beta"
+		},
+		"card:D1": {
+			"domainName": "Dom Student",
+			"propertyName": "Delta"
+		},
+		"card:X": {
+			"domainName": "Dom Other",
+			"propertyName": "Chi"
+		},
+		"card:Y": {
+			"domainName": "Dom Other",
+			"propertyName": "Upsilon"
+		},
+		"card:Z": {
+			"domainName": "Dom Other",
+			"propertyName": "Zeta"
+		},
+		"card:W": {
+			"domainName": "Dom Other",
+			"propertyName": "Omega"
+		}
+	}
+}

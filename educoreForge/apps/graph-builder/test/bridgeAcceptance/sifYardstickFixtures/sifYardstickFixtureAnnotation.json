@@ -1,0 +1,18 @@
+{
+	"fixtureNote": "SYNTHETIC (phase C5). Same shape as sifCedsAnnotation-<sha>.json.",
+	"annotatedRowCount": 12,
+	"cedsElementIdByXpath": {
+		"/Os/O1/a": "P000001",
+		"/Os/O1/b": "P000001",
+		"/Os/O1/c": "P000001",
+		"/Os/O1/d": "P000001",
+		"/Os/O1/e": "P000002",
+		"/Ss/S1/e": "P000002",
+		"/Os/O1/SIF_Metadata/g": "P000002",
+		"/Os/O1/SIF_Metadata/h": "P000004",
+		"/Os/O1/j": "P000003",
+		"/Os/O1/SIF_ExtendedElements/k": "P000001",
+		"/Os/O1/f": "P000004",
+		"/Os/O1/m": "P000005"
+	}
+}

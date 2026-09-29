@@ -1,0 +1,112 @@
+{
+	"fixtureNote": "SYNTHETIC (phase C5). Same shape as sifQuestionMap-global-<sha>.json, carrying only the members the scorer reads.",
+	"questionCount": 13,
+	"questionList": [
+		{
+			"questionRefId": "q01",
+			"sharedBlock": "model",
+			"instanceCount": 1,
+			"xpathList": [
+				"/Os/O1/a"
+			]
+		},
+		{
+			"questionRefId": "q02",
+			"sharedBlock": "model",
+			"instanceCount": 1,
+			"xpathList": [
+				"/Os/O1/b"
+			]
+		},
+		{
+			"questionRefId": "q03",
+			"sharedBlock": "model",
+			"instanceCount": 1,
+			"xpathList": [
+				"/Os/O1/c"
+			]
+		},
+		{
+			"questionRefId": "q04",
+			"sharedBlock": "model",
+			"instanceCount": 1,
+			"xpathList": [
+				"/Os/O1/d"
+			]
+		},
+		{
+			"questionRefId": "q05",
+			"sharedBlock": "model",
+			"instanceCount": 2,
+			"xpathList": [
+				"/Os/O1/e",
+				"/Ss/S1/e"
+			]
+		},
+		{
+			"questionRefId": "q06",
+			"sharedBlock": "SIF_Metadata",
+			"instanceCount": 1,
+			"xpathList": [
+				"/Os/O1/SIF_Metadata/g"
+			]
+		},
+		{
+			"questionRefId": "q07",
+			"sharedBlock": "SIF_Metadata",
+			"instanceCount": 1,
+			"xpathList": [
+				"/Os/O1/SIF_Metadata/h"
+			]
+		},
+		{
+			"questionRefId": "q08",
+			"sharedBlock": "model",
+			"instanceCount": 1,
+			"xpathList": [
+				"/Os/O1/i"
+			]
+		},
+		{
+			"questionRefId": "q09",
+			"sharedBlock": "SIF_ExtendedElements",
+			"instanceCount": 1,
+			"xpathList": [
+				"/Os/O1/SIF_ExtendedElements/l"
+			]
+		},
+		{
+			"questionRefId": "q10",
+			"sharedBlock": "model",
+			"instanceCount": 1,
+			"xpathList": [
+				"/Os/O1/j"
+			]
+		},
+		{
+			"questionRefId": "q11",
+			"sharedBlock": "SIF_ExtendedElements",
+			"instanceCount": 1,
+			"xpathList": [
+				"/Os/O1/SIF_ExtendedElements/k"
+			]
+		},
+		{
+			"questionRefId": "q12",
+			"sharedBlock": "model",
+			"instanceCount": 2,
+			"xpathList": [
+				"/Os/O1/f",
+				"/Os/O2/f"
+			]
+		},
+		{
+			"questionRefId": "q13",
+			"sharedBlock": "model",
+			"instanceCount": 1,
+			"xpathList": [
+				"/Os/O1/m"
+			]
+		}
+	]
+}

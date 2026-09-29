@@ -1,0 +1,413 @@
+{
+	"header": {
+		"generation": "bridgeFramework-v1:sifToyPlugin@1.0.0:bridgeEvidenceRenderer-derived-v12",
+		"producerKind": "inferred",
+		"judgeKind": "anthropic:toy",
+		"predicateRule": "judgeSlot-v1",
+		"candidateRetrieval": {
+			"method": "embedTextVote-v1",
+			"k": 15
+		},
+		"hubName": "ToyHub",
+		"hubVersion": "1"
+	},
+	"decisionRecordList": [
+		{
+			"subjectStableId": "sif260928:question/q01",
+			"objectStableId": "card:A1",
+			"abstained": false,
+			"predicate": "closeMatch",
+			"retrievalSeatList": [
+				{
+					"stableId": "card:A1",
+					"rank": 1,
+					"cosine": 0.99
+				},
+				{
+					"stableId": "card:X",
+					"rank": 2,
+					"cosine": 0.98
+				}
+			],
+			"renderedPoolStableIdList": [
+				"card:A1",
+				"card:X"
+			],
+			"instanceStableIdList": [
+				"sif260928:field/Os/O1/a"
+			],
+			"judgmentPartitionLabel": "Dom Student"
+		},
+		{
+			"subjectStableId": "sif260928:question/q02",
+			"objectStableId": "card:X",
+			"abstained": false,
+			"predicate": "closeMatch",
+			"retrievalSeatList": [
+				{
+					"stableId": "card:X",
+					"rank": 1,
+					"cosine": 0.99
+				},
+				{
+					"stableId": "card:A1",
+					"rank": 2,
+					"cosine": 0.98
+				}
+			],
+			"renderedPoolStableIdList": [
+				"card:A1",
+				"card:X"
+			],
+			"instanceStableIdList": [
+				"sif260928:field/Os/O1/b"
+			],
+			"judgmentPartitionLabel": "Dom Student"
+		},
+		{
+			"subjectStableId": "sif260928:question/q03",
+			"objectStableId": null,
+			"abstained": true,
+			"predicate": null,
+			"retrievalSeatList": [
+				{
+					"stableId": "card:X",
+					"rank": 1,
+					"cosine": 0.99
+				},
+				{
+					"stableId": "card:Y",
+					"rank": 2,
+					"cosine": 0.98
+				},
+				{
+					"stableId": "card:Z",
+					"rank": 3,
+					"cosine": 0.97
+				},
+				{
+					"stableId": "card:A1",
+					"rank": 4,
+					"cosine": 0.96
+				}
+			],
+			"renderedPoolStableIdList": [
+				"card:A1",
+				"card:X",
+				"card:Y",
+				"card:Z"
+			],
+			"instanceStableIdList": [
+				"sif260928:field/Os/O1/c"
+			],
+			"judgmentPartitionLabel": "Dom Student"
+		},
+		{
+			"subjectStableId": "sif260928:question/q04",
+			"objectStableId": "card:X",
+			"abstained": false,
+			"predicate": "closeMatch",
+			"retrievalSeatList": [
+				{
+					"stableId": "card:X",
+					"rank": 1,
+					"cosine": 0.99
+				},
+				{
+					"stableId": "card:Y",
+					"rank": 2,
+					"cosine": 0.98
+				}
+			],
+			"renderedPoolStableIdList": [
+				"card:X",
+				"card:Y"
+			],
+			"instanceStableIdList": [
+				"sif260928:field/Os/O1/d"
+			],
+			"judgmentPartitionLabel": "Dom Student"
+		},
+		{
+			"subjectStableId": "sif260928:question/q05",
+			"objectStableId": "card:B1",
+			"abstained": false,
+			"predicate": "closeMatch",
+			"retrievalSeatList": [
+				{
+					"stableId": "card:B1",
+					"rank": 1,
+					"cosine": 0.99
+				},
+				{
+					"stableId": "card:B2",
+					"rank": 7,
+					"cosine": 0.9299999999999999
+				}
+			],
+			"renderedPoolStableIdList": [
+				"card:B1",
+				"card:B2"
+			],
+			"instanceStableIdList": [
+				"sif260928:field/Os/O1/e"
+			],
+			"judgmentPartitionLabel": "Dom Student"
+		},
+		{
+			"subjectStableId": "sif260928:question/q05",
+			"objectStableId": "card:B1",
+			"abstained": false,
+			"predicate": "closeMatch",
+			"retrievalSeatList": [
+				{
+					"stableId": "card:B1",
+					"rank": 1,
+					"cosine": 0.99
+				},
+				{
+					"stableId": "card:B2",
+					"rank": 7,
+					"cosine": 0.9299999999999999
+				}
+			],
+			"renderedPoolStableIdList": [
+				"card:B1",
+				"card:B2"
+			],
+			"instanceStableIdList": [
+				"sif260928:field/Ss/S1/e"
+			],
+			"judgmentPartitionLabel": "Dom Staff"
+		},
+		{
+			"subjectStableId": "sif260928:question/q06",
+			"objectStableId": "card:B2",
+			"abstained": false,
+			"predicate": "closeMatch",
+			"retrievalSeatList": [
+				{
+					"stableId": "card:Y",
+					"rank": 1,
+					"cosine": 0.99
+				},
+				{
+					"stableId": "card:X",
+					"rank": 2,
+					"cosine": 0.98
+				},
+				{
+					"stableId": "card:B2",
+					"rank": 3,
+					"cosine": 0.97
+				}
+			],
+			"renderedPoolStableIdList": [
+				"card:B2",
+				"card:X",
+				"card:Y"
+			],
+			"instanceStableIdList": [
+				"sif260928:field/Os/O1/SIF_Metadata/g"
+			],
+			"judgmentPartitionLabel": null
+		},
+		{
+			"subjectStableId": "sif260928:question/q07",
+			"objectStableId": "card:D1",
+			"abstained": false,
+			"predicate": "closeMatch",
+			"retrievalSeatList": [
+				{
+					"stableId": "card:X",
+					"rank": 1,
+					"cosine": 0.99
+				},
+				{
+					"stableId": "card:D1",
+					"rank": 12,
+					"cosine": 0.88
+				}
+			],
+			"renderedPoolStableIdList": [
+				"card:D1",
+				"card:X"
+			],
+			"instanceStableIdList": [
+				"sif260928:field/Os/O1/SIF_Metadata/h"
+			],
+			"judgmentPartitionLabel": null
+		},
+		{
+			"subjectStableId": "sif260928:question/q08",
+			"objectStableId": "card:X",
+			"abstained": false,
+			"predicate": "closeMatch",
+			"retrievalSeatList": [
+				{
+					"stableId": "card:X",
+					"rank": 1,
+					"cosine": 0.99
+				}
+			],
+			"renderedPoolStableIdList": [
+				"card:X"
+			],
+			"instanceStableIdList": [
+				"sif260928:field/Os/O1/i"
+			],
+			"judgmentPartitionLabel": "Dom Student"
+		},
+		{
+			"subjectStableId": "sif260928:question/q09",
+			"objectStableId": null,
+			"abstained": true,
+			"predicate": null,
+			"retrievalSeatList": [
+				{
+					"stableId": "card:X",
+					"rank": 1,
+					"cosine": 0.99
+				}
+			],
+			"renderedPoolStableIdList": [
+				"card:X"
+			],
+			"instanceStableIdList": [
+				"sif260928:field/Os/O1/SIF_ExtendedElements/l"
+			],
+			"judgmentPartitionLabel": "Dom Student"
+		},
+		{
+			"subjectStableId": "sif260928:question/q10",
+			"objectStableId": "card:X",
+			"abstained": false,
+			"predicate": "closeMatch",
+			"retrievalSeatList": [
+				{
+					"stableId": "card:X",
+					"rank": 1,
+					"cosine": 0.99
+				}
+			],
+			"renderedPoolStableIdList": [
+				"card:X"
+			],
+			"instanceStableIdList": [
+				"sif260928:field/Os/O1/j"
+			],
+			"judgmentPartitionLabel": "Dom Student"
+		},
+		{
+			"subjectStableId": "sif260928:question/q11",
+			"objectStableId": "card:Y",
+			"abstained": false,
+			"predicate": "closeMatch",
+			"retrievalSeatList": [
+				{
+					"stableId": "card:Y",
+					"rank": 1,
+					"cosine": 0.99
+				},
+				{
+					"stableId": "card:A1",
+					"rank": 2,
+					"cosine": 0.98
+				}
+			],
+			"renderedPoolStableIdList": [
+				"card:A1",
+				"card:Y"
+			],
+			"instanceStableIdList": [
+				"sif260928:field/Os/O1/SIF_ExtendedElements/k"
+			],
+			"judgmentPartitionLabel": "Dom Student"
+		},
+		{
+			"subjectStableId": "sif260928:question/q12",
+			"objectStableId": "card:D1",
+			"abstained": false,
+			"predicate": "closeMatch",
+			"retrievalSeatList": [
+				{
+					"stableId": "card:D1",
+					"rank": 1,
+					"cosine": 0.99
+				}
+			],
+			"renderedPoolStableIdList": [
+				"card:D1"
+			],
+			"instanceStableIdList": [
+				"sif260928:field/Os/O1/f"
+			],
+			"judgmentPartitionLabel": "Dom Student"
+		},
+		{
+			"subjectStableId": "sif260928:question/q12",
+			"objectStableId": "card:D1",
+			"abstained": false,
+			"predicate": "closeMatch",
+			"retrievalSeatList": [
+				{
+					"stableId": "card:D1",
+					"rank": 1,
+					"cosine": 0.99
+				}
+			],
+			"renderedPoolStableIdList": [
+				"card:D1"
+			],
+			"instanceStableIdList": [
+				"sif260928:field/Os/O2/f"
+			],
+			"judgmentPartitionLabel": "Dom Staff"
+		},
+		{
+			"subjectStableId": "sif260928:question/q13",
+			"objectStableId": "card:A1",
+			"abstained": false,
+			"predicate": "closeMatch",
+			"retrievalSeatList": [
+				{
+					"stableId": "card:X",
+					"rank": 1,
+					"cosine": 0.99
+				},
+				{
+					"stableId": "card:Y",
+					"rank": 2,
+					"cosine": 0.98
+				},
+				{
+					"stableId": "card:Z",
+					"rank": 3,
+					"cosine": 0.97
+				},
+				{
+					"stableId": "card:W",
+					"rank": 4,
+					"cosine": 0.96
+				},
+				{
+					"stableId": "card:A1",
+					"rank": 5,
+					"cosine": 0.95
+				}
+			],
+			"renderedPoolStableIdList": [
+				"card:A1",
+				"card:W",
+				"card:X",
+				"card:Y",
+				"card:Z"
+			],
+			"instanceStableIdList": [
+				"sif260928:field/Os/O1/m"
+			],
+			"judgmentPartitionLabel": "Dom Student"
+		}
+	],
+	"refusalList": []
+}
