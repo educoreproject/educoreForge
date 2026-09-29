@@ -11,7 +11,7 @@
 // reports the decision block id, the manifest id, the container and the bolt url the log names. Mirrors
 // lib/forge-framework/test/acceptance/runAcceptanceCommand.js.
 //
-// The spending lines (materialiseReal, rejudgeRealLimit) put the REAL judge to work: the runner REFUSES a spending
+// The spending lines (materialiseReal, rejudgeRealLimit, rejudgeRealNamedSet) put the REAL judge to work: the runner REFUSES a spending
 // line by name unless the acceptance file records an authorisation FOR THAT LINE under spendAuthorisationByLine
 // (the supervisor's authorisation, as data, per line — RULING B4R-2). The rule itself is spendAuthorisationGuard.js.
 //
@@ -42,7 +42,7 @@ DESCRIPTION
      runner's line EQUALS the committed one, writes <buildLogsDirPath>/<line>-<phase>.provenance.json (git HEAD, dirty
      list, the exact command line, start time, PID), launches the build nohup-detached and returns. -verify reads the
      finished log and asserts the pinned base block ids (the command's contract), then prints the run's ids.
-     A SPENDING line (materialiseReal, rejudgeRealLimit) is REFUSED unless spendAuthorisationByLine records an
+     A SPENDING line (materialiseReal, rejudgeRealLimit, rejudgeRealNamedSet) is REFUSED unless spendAuthorisationByLine records an
      authorisation object under THAT LINE'S OWN NAME. A line whose name is null is refused as WITHHELD; a line
      whose name is absent is refused as UNDECLARED; the retired flat materialiseRealSpendAuthorisedBy field is
      itself refused by name, because a field that reads as authorisation and grants nothing is worse than none.
