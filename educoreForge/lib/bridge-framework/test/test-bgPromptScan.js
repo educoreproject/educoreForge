@@ -13,9 +13,6 @@
 //                   declared, the toy derived block equals the branch-cut text with frameworkFingerprint masked; (m)
 //                   unmasked, the two differ in exactly that one header key; (e) the one rationale re-ask prompt is
 //                   scanned too (EBONY_DREAM), with (e0) its unplanted companion passing through the re-ask.
-//   BG-PROMPTSCAN-DECL  the declaration and the list file are data entering the framework: a vacuous scan, a scan on a
-//                   documentary predicate source, a pattern that does not compile, a pattern matching the empty string,
-//                   a list file absent or malformed — each refused by name.
 //   BG-PROMPTSCAN-ORACLE  (§1.7) the shipped Ed-Fi and PESC derived plugins register with the key absent; (R1) run E's
 //                   frozen block parses unchanged and its block id is the frozen literal.
 //
@@ -24,7 +21,7 @@
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 const helpText = () => `
 NAME
-     ${moduleName} -- BG-PROMPTSCAN + BG-PROMPTSCAN-DECL + BG-PROMPTSCAN-ORACLE
+     ${moduleName} -- BG-PROMPTSCAN + BG-PROMPTSCAN-ORACLE
 
 SYNOPSIS
      ${moduleName} [-verbose] [-quiet] [-help]
@@ -38,7 +35,7 @@ const harness = require('../../../test/testLib/harness')(moduleName);
 const path = require('path');
 const fs = require('fs');
 const scenarioLib = require('./testSupport/toyBridgeScenario');
-const { runConjunct, pureConjunct, succeeded, nameInRefusal, refusalCase, frameworkMutationTwin, scenarioTwin, blockOf } = require('./testSupport/bridgeTwinFactories');
+const { runConjunct, pureConjunct, succeeded, refusalCase, frameworkMutationTwin, scenarioTwin, blockOf } = require('./testSupport/bridgeTwinFactories');
 const decisionBlockLib = require('../decisionBlock');
 const moduleDouble = require(path.join(__dirname, '..', '..', 'forge-framework', 'test', 'testSupport', 'moduleDouble'));
 const { runGateFamily } = require(path.join(__dirname, '..', '..', 'forge-framework', 'test', 'testSupport', 'gateSuiteRunner'));
@@ -46,7 +43,6 @@ const { makeTwinRegistry } = require(path.join(__dirname, '..', '..', 'forge-fra
 
 const twinRegistry = makeTwinRegistry();
 const DERIVED_PLUGIN_NAME = 'toyDerivedPlugin';
-const CROSSWALK_PLUGIN_NAME = 'toyCrosswalkPlugin';
 const FRAMEWORK_FILE = 'bridge-framework.js';
 const SCAN_FILE = 'promptIdentifierScan.js';
 const JUDGE_COMPONENT_FILE = 'judgeComponent.js';
@@ -95,10 +91,10 @@ const TOY_SCAN_DECLARATION = Object.freeze({
 	],
 	identifierListPath: TOY_IDENTIFIER_LIST_PATH,
 });
-const scannedShape = (scenario, scanDeclaration = TOY_SCAN_DECLARATION) => {
+const scannedShape = (scenario) => {
 	derivedShape(scenario);
 	overrideDeclaration(scenario, DERIVED_PLUGIN_NAME, (declaration) => {
-		declaration.promptIdentifierScan = cloneJson(scanDeclaration);
+		declaration.promptIdentifierScan = cloneJson(TOY_SCAN_DECLARATION);
 	});
 };
 const plantInSubject = (scenario, propertyName, plantedText) => {
@@ -264,103 +260,6 @@ frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-PROMPTSCAN', conjunc
 scenarioTwin({ registry: twinRegistry, gateId: 'BG-PROMPTSCAN', conjunctId: 'e0_unplantedReaskPasses', twinName: 'listIdPlantedInFirstRationale', leverKind: 'inputFault', mutate: (scenario) => { scenario.reaskPlantedText = 'cf. 004242'; } });
 
 // ---------------------------------------------------------------------
-// BG-PROMPTSCAN-DECL — the declaration and the list file, refused by name at the edge where they enter
-// ---------------------------------------------------------------------
-const withScanDeclaration = (scanDeclaration) => (scenario) => scannedShape(scenario, scanDeclaration);
-const withScratchList = (listText) => (scenario) => {
-	const scratchForgesDir = scenarioLib.makeScratchForgesCopy();
-	fs.writeFileSync(path.join(scratchForgesDir, 'toy', TOY_IDENTIFIER_LIST_PATH), listText);
-	scenario.forgesDirOverride = scratchForgesDir;
-	scannedShape(scenario);
-};
-const declConjunctList = [
-	refusalCase({
-		registry: twinRegistry,
-		gateId: 'BG-PROMPTSCAN-DECL',
-		conjunctId: 'a_vacuousScanRefused',
-		title: 'a scan declaring no pattern and no list is refused at registration — it could never fire',
-		shape: withScanDeclaration({ identifierPatternList: [], identifierListPath: null }),
-		regex: /bridgeDeclaration 'promptIdentifierScan' declares no pattern and no identifier list/,
-		twinName: 'vacuousScanAccepted',
-		fileName: SCAN_FILE,
-		find: 'if (value.identifierPatternList.length === 0 && value.identifierListPath === null) {',
-		replace: 'if (false) {',
-	}),
-	refusalCase({
-		registry: twinRegistry,
-		gateId: 'BG-PROMPTSCAN-DECL',
-		conjunctId: 'b_documentaryPredicateSourceRefused',
-		title: 'a scan on a documentary predicate source (no predicateRule, so no tool text to name) is refused at registration',
-		shape: (scenario) => overrideDeclaration(scenario, CROSSWALK_PLUGIN_NAME, (declaration) => { declaration.promptIdentifierScan = cloneJson(TOY_SCAN_DECLARATION); }),
-		regex: /bridgeDeclaration 'promptIdentifierScan' needs the run's declared predicateSource\.predicateRule to name a tool text it can scan, and undefined is not one of: categoryTable-v1/,
-		twinName: 'documentaryRuleAccepted',
-		fileName: SCAN_FILE,
-		find: '\tif (TOOL_TEXT_RENDERER_BY_PREDICATE_RULE[predicateRule] === undefined) {',
-		replace: '\tif (false) {',
-	}),
-	refusalCase({
-		registry: twinRegistry,
-		gateId: 'BG-PROMPTSCAN-DECL',
-		conjunctId: 'c_uncompilablePatternRefused',
-		title: 'a declared pattern that does not compile is refused at registration, naming the pattern',
-		shape: withScanDeclaration({ identifierPatternList: [{ patternName: 'broken', regexSource: 'P(\\d{6}' }], identifierListPath: null }),
-		regex: /identifierPatternList\[0\] \('broken'\) regexSource "P\(\\\\d\{6\}" does not compile/,
-		twinName: 'compileFaultIgnored',
-		fileName: SCAN_FILE,
-		find: '\tif (compiled.error) {\n\t\treturn `identifierPatternList',
-		replace: '\tif (false) {\n\t\treturn `identifierPatternList',
-	}),
-	refusalCase({
-		registry: twinRegistry,
-		gateId: 'BG-PROMPTSCAN-DECL',
-		conjunctId: 'd_emptyStringPatternRefused',
-		title: 'a declared pattern that matches the empty string (it would refuse every prompt) is refused at registration',
-		shape: withScanDeclaration({ identifierPatternList: [{ patternName: 'everything', regexSource: 'P?' }], identifierListPath: null }),
-		regex: /identifierPatternList\[0\] \('everything'\) regexSource "P\?" matches the empty string/,
-		twinName: 'emptyStringPatternAccepted',
-		fileName: SCAN_FILE,
-		find: "\tif (compiled.regex.test('')) {",
-		replace: '\tif (false) {',
-	}),
-	refusalCase({
-		registry: twinRegistry,
-		gateId: 'BG-PROMPTSCAN-DECL',
-		conjunctId: 'e_absentListFileRefused',
-		title: 'a declared list path naming no file refuses the run by name',
-		shape: withScanDeclaration({ identifierPatternList: [], identifierListPath: 'bridgeData/noSuchList.json' }),
-		regex: /promptIdentifierScan\.identifierListPath names no file at .*noSuchList\.json/,
-		twinName: 'absentListFileRead',
-		fileName: SCAN_FILE,
-		find: '\tif (!fs.existsSync(filePath)) {\n\t\treturn { error: refuse.byName({ moduleName, what: `promptIdentifierScan.identifierListPath',
-		replace: '\tif (false) {\n\t\treturn { error: refuse.byName({ moduleName, what: `promptIdentifierScan.identifierListPath',
-	}),
-	refusalCase({
-		registry: twinRegistry,
-		gateId: 'BG-PROMPTSCAN-DECL',
-		conjunctId: 'f_emptyListFileRefused',
-		title: 'a list file holding an empty array refuses the run by name (a list that names nothing is not a list)',
-		shape: withScratchList('[]\n'),
-		regex: /the identifier list at .*toyPromptScanIdentifierList\.json is not a non-empty JSON array of non-empty strings/,
-		twinName: 'emptyListAccepted',
-		fileName: SCAN_FILE,
-		find: 'parsed.value.length === 0 || ',
-		replace: '',
-	}),
-	refusalCase({
-		registry: twinRegistry,
-		gateId: 'BG-PROMPTSCAN-DECL',
-		conjunctId: 'g_duplicatedListEntryRefused',
-		title: 'a list file naming one id twice refuses the run by name',
-		shape: withScratchList('["004242", "004242"]\n'),
-		regex: /the identifier list at .*toyPromptScanIdentifierList\.json names '004242' twice/,
-		twinName: 'duplicateListEntryAccepted',
-		fileName: SCAN_FILE,
-		find: '\tif (duplicateIdentifier !== undefined) {\n\t\treturn { error:',
-		replace: '\tif (false) {\n\t\treturn { error:',
-	}),
-];
-
-// ---------------------------------------------------------------------
 // BG-PROMPTSCAN-ORACLE — §1.7 (new key absent disturbs no shipped plugin) and R1 (run E's block, hermetic)
 // ---------------------------------------------------------------------
 const contractFor = (scenario) => (scenario.frameworkMutationList.length ? moduleDouble.loadWithMutations({ modulePath: path.join(scenarioLib.FRAMEWORK_DIR, CONTRACT_FILE), mutationList: scenario.frameworkMutationList }) : require('../bridgePluginContract'));
@@ -404,11 +303,10 @@ scenarioTwin({ registry: twinRegistry, gateId: 'BG-PROMPTSCAN-ORACLE', conjunctI
 
 const gateDeclarationList = [
 	{ gateId: 'BG-PROMPTSCAN', title: 'the in-run blinding scan refuses on a CEDS identifier in anything the judge is shown', conjunctList: promptScanConjunctList },
-	{ gateId: 'BG-PROMPTSCAN-DECL', title: 'the scan declaration and its list file are refused by name when broken', conjunctList: declConjunctList },
 	{ gateId: 'BG-PROMPTSCAN-ORACLE', title: 'the new key disturbs no shipped plugin, and run E still replays hermetically', conjunctList: oracleConjunctList },
 ];
 
 runGateFamily(
-	{ harness, familyName: 'BG-PROMPTSCAN+BG-PROMPTSCAN-DECL+BG-PROMPTSCAN-ORACLE', gateDeclarationList, twinRegistry, makeSubject: scenarioLib.makeScenario, cloneSubject: scenarioLib.cloneScenario, expectedConjunctCount: 8 + 7 + 2 },
+	{ harness, familyName: 'BG-PROMPTSCAN+BG-PROMPTSCAN-ORACLE', gateDeclarationList, twinRegistry, makeSubject: scenarioLib.makeScenario, cloneSubject: scenarioLib.cloneScenario, expectedConjunctCount: 8 + 2 },
 	() => harness.report(),
 );

@@ -330,7 +330,7 @@ const BRIDGE_DECLARATION_CONTRACT = Object.freeze({
 	classSideRemodelTable: Object.freeze({ required: true, kind: 'classSideRemodelTable' }),
 	blindingDeclaration: Object.freeze({ required: true, kind: 'stringList' }),
 	// the IN-RUN identifier scan over everything the judge is shown (promptIdentifierScan.js; SPEC §9 A19). Plain-optional:
-	// absent, nothing is scanned and the run is unchanged; its checker also needs predicateSource, validated above.
+	// absent, nothing is scanned and the run is unchanged. Its checker is a shape check only.
 	promptIdentifierScan: Object.freeze({ optional: true, kind: 'promptIdentifierScan' }),
 	evidenceHooksDeclared: Object.freeze({ required: true, kind: 'evidenceHooksDeclared' }),
 	// CONDITIONAL presence (RULING BR4): REQUIRED iff evidenceHooksDeclared.globalGuidance === true, FORBIDDEN (refused
@@ -575,7 +575,7 @@ const KIND_CHECKER_REGISTRY = Object.freeze({
 			? ''
 			: `must match ${vocabularyLib.RELATIONSHIP_DISCRIMINATOR_PATTERN} — lower-case-initial alphanumeric, 32 characters maximum, never carrying the '${vocabularyLib.RELATIONSHIP_DISCRIMINATOR_SEPARATOR}' separator itself (got ${JSON.stringify(value)})`,
 	stringList: (value) => (isStringList(value) ? '' : `must be a list of strings (got ${JSON.stringify(value)}); [] means "none", absence is refused`),
-	promptIdentifierScan: (value, { bridgeDeclaration }) => promptIdentifierScanLib.declarationReason(value, { bridgeDeclaration }),
+	promptIdentifierScan: (value) => promptIdentifierScanLib.declarationReason(value),
 	closedValue: (value, { contractEntry, propertyName }) => closedValueReason(value, contractEntry.allowedValueList, propertyName),
 	mappingProvider: (value) => {
 		if (!isPlainObject(value)) {

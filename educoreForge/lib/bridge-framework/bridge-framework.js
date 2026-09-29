@@ -1699,29 +1699,15 @@ const moduleFunction =
 				});
 				taskList.push((args, next) => poolProducerByKind[acquisitionRow.poolProducerKind](args, next));
 
-				// STEP 6b — the prompt identifier scan (promptIdentifierScan.js; SPEC §9 A19), compiled ONCE and BEFORE any
-				// subject is judged, so a broken list file refuses every re-judge whether or not a subject needs judging.
-				// Undeclared, compiledPromptScan is null and STEP 7 is exactly what it was.
+				// STEP 6b — the prompt identifier scan (promptIdentifierScan.js; SPEC §9 A19), compiled ONCE, before any subject
+				// is judged. Undeclared, compiledPromptScan is null and STEP 7 is exactly what it was.
 				taskList.push((args, next) => {
 					const scanDeclaration = bridgeDeclaration.promptIdentifierScan;
 					if (scanDeclaration === undefined) {
 						next('', { ...args, compiledPromptScan: null });
 						return;
 					}
-					let identifierList = null;
-					if (scanDeclaration.identifierListPath !== null) {
-						if (!path.isAbsolute(scanDeclaration.identifierListPath) && typeof registry.forgesDirPath !== 'string') {
-							next(refuse.byName({ moduleName, what: `plugin declares promptIdentifierScan.identifierListPath '${scanDeclaration.identifierListPath}' but the registry names no forgesDirPath`, where: 'a relative list path is resolved under the registry\'s forges directory, beside the plugin that declares it' }).message);
-							return;
-						}
-						const identifierListFilePath = promptIdentifierScanLib.identifierListFilePathFor({ identifierListPath: scanDeclaration.identifierListPath, forgesDirPath: registry.forgesDirPath, standardKey: bridgeDeclaration.standardKey });
-						const readList = promptIdentifierScanLib.readIdentifierList({ filePath: identifierListFilePath });
-						if (readList.error) {
-							next(readList.error.message);
-							return;
-						}
-						identifierList = readList.identifierList;
-					}
+					const identifierList = scanDeclaration.identifierListPath === null ? null : promptIdentifierScanLib.readIdentifierList({ filePath: promptIdentifierScanLib.identifierListFilePathFor({ identifierListPath: scanDeclaration.identifierListPath, forgesDirPath: registry.forgesDirPath, standardKey: bridgeDeclaration.standardKey }) });
 					const { compiledScan } = promptIdentifierScanLib.compileScan({ scanDeclaration, identifierList });
 					say(`prompt identifier scan: ${compiledScan.compiledPatternList.map((onePattern) => onePattern.patternName).join(', ')}${identifierList === null ? '' : ` (${identifierList.length} listed identifier(s))`} over the system prompt, user prompt, tool text and any re-ask prompt; one hit refuses the run`);
 					next('', { ...args, compiledPromptScan: compiledScan });

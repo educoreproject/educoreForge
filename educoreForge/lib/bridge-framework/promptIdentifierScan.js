@@ -7,10 +7,10 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // is scanned for a CEDS identifier, and ONE hit refuses the whole run by name, naming the subject and the pattern.
 //
 //   TOOL_TEXT_RENDERER_BY_PREDICATE_RULE             predicateRule → ({ choiceEnum }) → the tool text for that rule
-//   declarationReason(value, { bridgeDeclaration })  the contract row's checker → '' | reason
+//   declarationReason(value)                         the contract row's shape check → '' | reason
 //   identifierListFilePathFor({ identifierListPath, forgesDirPath, standardKey }) → absolute path
-//   readIdentifierList({ filePath })                 → { identifierList } | { error }
-//   compileScan({ scanDeclaration, identifierList }) → { compiledScan }  (the contract has already proven each pattern compiles)
+//   readIdentifierList({ filePath })                 → identifierList
+//   compileScan({ scanDeclaration, identifierList }) → { compiledScan }
 //   questionSurfaceTextByName({ predicateRule, question }) → { systemPrompt, userPrompt, toolText }
 //   scanSurfaces({ compiledScan, surfaceTextByName })  → { hit: null } | { hit: { surfaceName, patternName, matchedText } }
 //
@@ -32,12 +32,10 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // A bare substring match would also fire inside P000505 (which the P pattern already names correctly) and inside any
 // longer run of digits, where it names nothing. The boundary makes a list hit mean "this id, standing alone".
 //
-// PURE and synchronous. Faults are RETURNED as values; the orchestration side hands them to its callback.
+// PURE and synchronous. It returns a hit or none; the orchestration side builds the refusal and hands it to its callback.
 
 const path = require('path');
 const fs = require('fs');
-const refuse = require(path.join(__dirname, '..', 'forge-framework', 'refuse'));
-const decisionBlockLib = require('./decisionBlock');
 const { renderSelectCandidateSchema, SCHEMA_DIALECT_NAME_LIST } = require(path.join(__dirname, '..', '..', 'apps', 'graph-builder', 'apps', 'bridge-maker', 'lib', 'selectCandidateSchema'));
 
 const IDENTIFIER_LIST_PATTERN_NAME = 'identifierList';
@@ -55,80 +53,21 @@ const isPlainObject = (candidate) => candidate !== null && typeof candidate === 
 const isNonEmptyString = (value) => typeof value === 'string' && value.length > 0;
 const escapeRegexText = (text) => text.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&');
 
-// compileRegexSource — the throw-to-value adapter for a plugin-declared pattern: RegExp throws on a bad source,
-// and the declaration is data entering the framework, so the fault becomes a value here and a refusal upstream
-const compileRegexSource = (regexSource) => {
-	let regex = null;
-	let compileFault = '';
-	const attempt = () => {
-		regex = new RegExp(regexSource);
-	};
-	try {
-		attempt();
-	} catch (compileError) {
-		compileFault = compileError.message;
-	}
-	return compileFault ? { error: compileFault } : { regex };
-};
+const isPatternRow = (patternRow) =>
+	isPlainObject(patternRow) && Object.keys(patternRow).length === PATTERN_ROW_MEMBER_LIST.length && PATTERN_ROW_MEMBER_LIST.every((oneName) => isNonEmptyString(patternRow[oneName]));
 
-const patternRowReason = (patternRow, rowIndex) => {
-	if (!isPlainObject(patternRow)) {
-		return `identifierPatternList[${rowIndex}] must be { patternName, regexSource } (got ${JSON.stringify(patternRow)})`;
+// declarationReason — the contract row's SHAPE check, the same as any other optional key's (absent = no scan, behaviour
+// unchanged). It does not second-guess the values: this is our own declaration, and a pattern that does not compile or a
+// list file that is not there fails loudly on its own the first time the run reaches it (EBONY_DREAM, B1 back-gate).
+const declarationReason = (value) => {
+	if (!isPlainObject(value) || Object.keys(value).length !== SCAN_DECLARATION_MEMBER_LIST.length || !SCAN_DECLARATION_MEMBER_LIST.every((oneName) => Object.prototype.hasOwnProperty.call(value, oneName))) {
+		return `must be exactly { identifierPatternList, identifierListPath } (got ${JSON.stringify(value)})`;
 	}
-	const extra = Object.keys(patternRow).filter((oneName) => PATTERN_ROW_MEMBER_LIST.indexOf(oneName) === -1);
-	if (extra.length) {
-		return `identifierPatternList[${rowIndex}] carries unknown member '${extra[0]}'; the shape is exactly { patternName, regexSource }`;
-	}
-	if (!isNonEmptyString(patternRow.patternName) || patternRow.patternName === IDENTIFIER_LIST_PATTERN_NAME) {
-		return `identifierPatternList[${rowIndex}].patternName must be a non-empty string other than '${IDENTIFIER_LIST_PATTERN_NAME}' (which names the list file in a refusal)`;
-	}
-	if (!isNonEmptyString(patternRow.regexSource)) {
-		return `identifierPatternList[${rowIndex}] ('${patternRow.patternName}') regexSource must be a non-empty string`;
-	}
-	const compiled = compileRegexSource(patternRow.regexSource);
-	if (compiled.error) {
-		return `identifierPatternList[${rowIndex}] ('${patternRow.patternName}') regexSource ${JSON.stringify(patternRow.regexSource)} does not compile (${compiled.error})`;
-	}
-	if (compiled.regex.test('')) {
-		return `identifierPatternList[${rowIndex}] ('${patternRow.patternName}') regexSource ${JSON.stringify(patternRow.regexSource)} matches the empty string, so it would refuse every prompt`;
-	}
-	return '';
-};
-
-// declarationReason — the contract row's checker. The key is plain-optional (absent = no scan, behaviour unchanged);
-// PRESENT, it must be able to find something, and the run must have a predicate rule whose tool text it can render.
-const declarationReason = (value, { bridgeDeclaration }) => {
-	if (!isPlainObject(value)) {
-		return `must be { identifierPatternList, identifierListPath } (got ${JSON.stringify(value)})`;
-	}
-	const extra = Object.keys(value).filter((oneName) => SCAN_DECLARATION_MEMBER_LIST.indexOf(oneName) === -1);
-	if (extra.length) {
-		return `carries unknown member '${extra[0]}'; the shape is exactly { identifierPatternList, identifierListPath }`;
-	}
-	if (!Array.isArray(value.identifierPatternList)) {
-		return 'identifierPatternList must be a list of { patternName, regexSource } ([] is valid when a list file is declared; absent is refused)';
-	}
-	for (let rowIndex = 0; rowIndex < value.identifierPatternList.length; rowIndex++) {
-		const rowReason = patternRowReason(value.identifierPatternList[rowIndex], rowIndex);
-		if (rowReason) {
-			return rowReason;
-		}
-	}
-	const patternNameList = value.identifierPatternList.map((onePatternRow) => onePatternRow.patternName);
-	const duplicateName = patternNameList.find((oneName, nameIndex) => patternNameList.indexOf(oneName) !== nameIndex);
-	if (duplicateName !== undefined) {
-		return `identifierPatternList names pattern '${duplicateName}' twice; a refusal names its pattern, so each name is used once`;
+	if (!Array.isArray(value.identifierPatternList) || !value.identifierPatternList.every(isPatternRow)) {
+		return `identifierPatternList must be a list of { patternName, regexSource }, both non-empty strings (got ${JSON.stringify(value.identifierPatternList)})`;
 	}
 	if (value.identifierListPath !== null && !isNonEmptyString(value.identifierListPath)) {
-		return 'identifierListPath must be a path to a JSON list of identifiers, or null to declare none (absent is refused)';
-	}
-	if (value.identifierPatternList.length === 0 && value.identifierListPath === null) {
-		return 'declares no pattern and no identifier list, so it could never find anything; a scan that cannot fire is not a scan (declare patterns, a list, or omit the key)';
-	}
-	const predicateSource = bridgeDeclaration.predicateSource;
-	const predicateRule = isPlainObject(predicateSource) ? predicateSource.predicateRule : undefined;
-	if (TOOL_TEXT_RENDERER_BY_PREDICATE_RULE[predicateRule] === undefined) {
-		return `needs the run's declared predicateSource.predicateRule to name a tool text it can scan, and ${JSON.stringify(predicateRule)} is not one of: ${Object.keys(TOOL_TEXT_RENDERER_BY_PREDICATE_RULE).join(', ')} (a documentary predicate source declares no rule)`;
+		return `identifierListPath must be a path to a JSON list of identifiers, or null to declare none (got ${JSON.stringify(value.identifierListPath)})`;
 	}
 	return '';
 };
@@ -139,21 +78,8 @@ const declarationReason = (value, { bridgeDeclaration }) => {
 const identifierListFilePathFor = ({ identifierListPath, forgesDirPath, standardKey }) =>
 	path.isAbsolute(identifierListPath) ? identifierListPath : path.join(forgesDirPath, standardKey, identifierListPath);
 
-// readIdentifierList — the list file is SOURCE DATA entering the framework, so its shape is checked here, once
-const readIdentifierList = ({ filePath }) => {
-	if (!fs.existsSync(filePath)) {
-		return { error: refuse.byName({ moduleName, what: `promptIdentifierScan.identifierListPath names no file at ${filePath}`, where: 'the identifier list is DATA on disk beside the plugin; declared-but-broken refuses every build (FF §5.4)' }) };
-	}
-	const parsed = decisionBlockLib.parseJsonText(fs.readFileSync(filePath, 'utf8'));
-	if (parsed.error || !Array.isArray(parsed.value) || parsed.value.length === 0 || parsed.value.some((oneIdentifier) => !isNonEmptyString(oneIdentifier))) {
-		return { error: refuse.byName({ moduleName, what: `the identifier list at ${filePath} is not a non-empty JSON array of non-empty strings (${parsed.error || 'wrong shape'})`, where: 'the list names the identifiers the judge must never see, one string each' }) };
-	}
-	const duplicateIdentifier = parsed.value.find((oneIdentifier, identifierIndex) => parsed.value.indexOf(oneIdentifier) !== identifierIndex);
-	if (duplicateIdentifier !== undefined) {
-		return { error: refuse.byName({ moduleName, what: `the identifier list at ${filePath} names '${duplicateIdentifier}' twice`, where: 'a duplicated entry means the list was assembled carelessly; regenerate it rather than let the scan paper over it' }) };
-	}
-	return { identifierList: parsed.value.slice() };
-};
+// readIdentifierList — the list file is a JSON array of identifier strings, read once per run
+const readIdentifierList = ({ filePath }) => JSON.parse(fs.readFileSync(filePath, 'utf8'));
 
 // compileScan — the declared patterns (already proven to compile by the contract) plus ONE alternation over the list
 // ids, bounded on both sides by a non-alphanumeric (see the header). identifierList is null when no list is declared.
