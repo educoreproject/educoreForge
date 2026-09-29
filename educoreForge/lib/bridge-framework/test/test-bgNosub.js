@@ -92,7 +92,16 @@ const BASE_TAG = 'preBridgeFramework-081626';
 //   lib/vocabulary/vocabulary.js                    |  42 +-  (P2 a97bfdd + P4 7bfd1be — allowed)
 // THE BASELINE MOVES; THE ALLOWED-PATH LIST IS NEVER WIDENED. After the move an append to vocabulary-definitions.js is red
 // again, which is exactly what the twin still demonstrates — re-observed red against THIS tag before the move was committed.
-const POST_D1_BASE_TAG = 'postEmbedTextP7-091526'; // re-anchored 2026-09-15 (embed-text P8) — base moved, allowed-path list NOT widened
+// ═══ RE-ANCHOR (ii), 2026-09-29 (WILD_PORTAL for EBONY_DREAM), SIF replacement merge gate M1 ═══
+// postEmbedTextP7-091526 -> postM1VocabularyIi-092926, tag cut ON this re-anchor commit. THE SAME SPECIES AGAIN: two RULED edits to
+// vocabulary-definitions.js, the one file outside the list. CENSUS (git diff --name-only postEmbedTextP7-091526 -- lib/vocabulary/)
+// on the merged head 891f1d5:
+//   lib/vocabulary/vocabulary.js, test/test-mappingProperties.js, test/test-sifEdgeVocabulary.js, test/test-sifVocabularyInvariance.js,
+//     test/testSupport/pureProxyFingerprintProbe.js — V1 (bb63af1), allowed (vocabulary.js and tests);
+//   lib/vocabulary/vocabulary-definitions.js — V1's definitions of the four sif260928 edge types and judgedSubjectStableId (bb63af1)
+//     plus M1's supervisor-owned widening of HAS_CHILD's text to Field -> Field (e96c847, SPEC §9 A26). THE ONE FILE OUTSIDE THE LIST.
+// THE BASELINE MOVES; THE ALLOWED-PATH LIST IS NEVER WIDENED. Fresh red observed against THIS tag (DEVLOG-M1).
+const POST_D1_BASE_TAG = 'postM1VocabularyIi-092926'; // re-anchored 2026-09-29 (SIF replacement M1) — base moved, allowed-path list NOT widened
 // ⟪A THIRD BASELINE — RULING P1-R11, BRIEF-SEAM-reanchorBgSeamUntouched.md, applied 2026-08-29 by
 // STERLING_PEAK during hub kit role migration Phase 0.E4⟫
 //
