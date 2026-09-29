@@ -501,7 +501,19 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // build.js, forger/, replay/, replay-manager/, forges/*/forge*.js, forges/*/lib/*Hooks.js and every framework source file: UNTOUCHED.
 // i_live reads the same tag and was green against the old one (no component shape moved). PATH LIST BYTE-IDENTICAL, the
 // :!test-gSeamUntouched.js exclusion left as it was; no exclusion added. Twin re-observed red against THIS tag.
-const PHASE3_ANCHOR_TAG = 'postEmbedTextP9-091526'; // re-anchored by RADIANT_QUEST, forge embed-text P9
+// ═══ RE-ANCHOR seamDiffEmpty (+ i_live), 2026-09-29 (WILD_PORTAL for EBONY_DREAM), SIF replacement merge gate M1 ═══
+// postEmbedTextP9-091526 -> postM1SeamDiffEmpty-092926, tag cut ON this re-anchor commit. CENSUS (git diff --stat
+// postEmbedTextP9-091526 -- <SEAM_PATH_LIST>) on the merged head 128236b, 6 files, 210+/4−, every one ruled:
+//   forges/sif260928/forgeSif260928.js | 34, lib/sif260928ForgeDeclaration.js | 67, lib/sif260928Hooks.js | 87 — the NEW sif260928
+//     bundle (lane A: A1a d4b041d, A4 52df8c1, A5 347be9e), matched by forges/*/forge*.js and forges/*/lib/*{Declaration,Hooks}.js:
+//     the FJ-P1-1 species, a forge phase re-anchors this conjunct;
+//   lib/forge-framework/test/test-gCompat.js | 8 — V1 (bb63af1), the ruled vocabulary campaign's own test edit;
+//   lib/forge-framework/test/test-labelCensus.js | 3 and test/acceptance/expectedLabelCensus.json | 15 — M1's supervisor-owned
+//     G-LABEL-CENSUS append of sif260928 (33f274c, plan §3 M1, review #18).
+// build.js, forger/, replay/, replay-manager/, every existing forge's entry/declaration/hooks files and every framework source file:
+// UNTOUCHED. i_live reads the same tag and moves with it, as at every earlier move. PATH LIST BYTE-IDENTICAL, the
+// :!test-gSeamUntouched.js exclusion left as it was; no exclusion added. Fresh red observed against THIS tag (DEVLOG-M1).
+const PHASE3_ANCHOR_TAG = 'postM1SeamDiffEmpty-092926'; // re-anchored by WILD_PORTAL, SIF replacement M1
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');
