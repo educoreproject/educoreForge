@@ -1,0 +1,29 @@
+{
+  // sif260928Derived — the SIF replacement's bridge build (phases D2–D5): the sif260928 forge beside the CEDS hub,
+  // PLUS the SIF → CEDS derived plugin (sif260928CedsDerivedPlugin). It is sif260928WithHub with the bridge added.
+  //
+  // WHY ONLY TWO STANDARDS. The pool is drawn from the CEDS hub's cards and the subjects are SIF Questions; Ed-Fi
+  // and PESC contribute nothing a SIF retrieval or judgment can use, and this recipe is built repeatedly.
+  //
+  // A plain -build REPLAYS the pair's frozen block (zero judge calls); --rebridge=sif260928 FREEZES a new one.
+  // --useDebugJudge=digest for every free run (D2, D3); a real judge only under a spending line whose authorisation
+  // the supervisor has written into acceptanceCommands.jsonc (D4, D5).
+  //
+  // Builds go to scratch DEV_ graphs only, onto scratch store copies (plan §1.5). Derived edges are never mounted
+  // on a served graph.
+  "schemaVersion": "1.0.0",
+  "recipeName": "sif260928Derived",
+  "kind": "dev",
+  "description": "The sif260928 forge beside the CEDS hub, PLUS the SIF -> CEDS derived bridge plugin (sif260928CedsDerivedPlugin).",
+  "standards": [
+    { "token": "ceds", "version": "current" },
+    { "token": "sif260928", "version": "current" }
+  ],
+  "hubs": [
+    { "standard": "ceds" }
+  ],
+  "bridges": [
+    { "source": "sif260928", "hub": "ceds", "bridge": "sif260928CedsDerivedPlugin", "dependencies": ["sif260928", "ceds"] }
+  ],
+  "roundTripStage": true
+}
