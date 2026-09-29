@@ -545,7 +545,14 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // 26, the BG-PLUGIN-PESC, BG-COMPOSE-PESC c and BG-SEAT-PESC sections, all green before and after this move) re-prove that the two
 // PESC plugins still compose through the seam over the revised framework. THE SIX DECLARED PATHS ARE UNCHANGED, no exclusion added;
 // the tag is cut ON the B6 re-pin commit. The RED-OBSERVED range below is untouched; this conjunct's twin was re-observed red.
-const P1_BASELINE_COMMIT = 'bridgeRevisionB6-091526'; // re-anchored by SCARLET_DELTA, bridge revision B6 (R-BR-19); the tag is cut ON the re-anchor commit
+// RE-ANCHOR 2026-09-29 (COPPER_LOOM, TQ-directed), Jev judge provider: bridgeRevisionB6-091526 (0831ff5) -> jevJudgeProvider-092926.
+// The Jev provider is a FRAMEWORK CHANGE BY DESIGN (a fourth judge row, and the renderer's split question for it). CENSUS AT THE
+// RE-ANCHOR (this gate's own numstat from bridgeRevisionB6-091526 over its six declared paths, 5 paths, all from ONE commit, ca89b2c):
+//   bridge-maker/lib/jevJudgeClient.js 274/0 (new), bridge-maker/lib/judgeProviderRegistry.js 10/0,
+//   lib/bridge-framework/evidenceRenderer.js 57/5 (text prompt byte-identical; choiceQuestion added),
+//   lib/bridge-framework/judgeComponent.js 1/1, lib/bridge-framework/test/test-bgDerived.js 2/2 (twin retargeted).
+// THE SIX DECLARED PATHS ARE UNCHANGED, no exclusion added; the tag is cut ON this re-anchor commit.
+const P1_BASELINE_COMMIT = 'jevJudgeProvider-092926'; // re-anchored by COPPER_LOOM for the Jev provider; the tag is cut ON the re-anchor commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
