@@ -512,5 +512,46 @@
 		"rejudgeRealLimitMaxJudgmentCount": 0,
 		"materialiseRealMaxJudgmentCount": 0,
 		"frozenBy": null
+	},
+	"sif260928CedsDerivedPlugin": {
+		// THE SIF REPLACEMENT'S DERIVED BRIDGE (phase D4, 2026-09-29; entry written by ELECTRIC_PEAK under EBONY_DREAM's
+		// pre-authorisation). ONE line is offered: rejudgeRealNamedSet, the real judge over exactly C4b's hundred questions.
+		// Every other line is null and honest.
+		//
+		// THE PATHS NAME THE D4 WORKTREE, deliberately. The runner reconstructs the line from ITS OWN tree and refuses on
+		// drift, and the shared system/code checkout is on main (97feee9), which has no sif260928 forge at all. When the
+		// campaign merges, these two paths (graphBuilder.js and the recipe) move to system/code with it.
+		//
+		// THE MAX COUNTS QUESTIONS. namedSetSpendGuard refuses before launch when the LIST (100 questions) is longer than
+		// the max; the hundred are 123 judgment units once partitioned by CEDS domain, and -verify reports the units
+		// judged beside the max. So 100 is the right number for the pre-launch bound, and 123 judged is expected.
+		"standardKey": "sif260928",
+		"recipePath": "/Users/tqwhite/Documents/webdev/educoreForge/system/codeWorktrees/D4/educoreForge/recipes/sif260928Derived.recipe.jsonc",
+		"storeFilePath": "/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/sif260928/d4/sif260928D4.standardsDatabase.sqlite3",
+		"decisionStoreFilePath": "/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/sif260928/d4/sif260928D4.decisions.sqlite3",
+		"judgmentCacheFilePath": "/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/sif260928/d4/sif260928D4.judgmentCache.sqlite3",
+		"matchForensicsDirPath": "/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/sif260928/d4/matchForensics",
+		"buildLogsDirPath": "/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/sif260928/d4/buildLogs",
+		"expectedBaseBlockIdBySubject": {
+			"ceds@14_0_0_0_base": "21110ef1fd423434bfc64899559f31dd7d126fd421e344341fe329e3f65c91dd",
+			"sif260928@4_3_base": "576db6546c8f9e85ab51b3b40b5dd5a10e8c051dbc059cbb5e47b0d547ef3d74"
+		},
+		"namedSetFilePath": "/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/sif260928/yardstick/sifEvalSet-100-331f9cddb8f0.json",
+		"namedSetSha256": "331f9cddb8f02c4153d0d4d6c536a10ec2f9ea7358de1a9c25747df4a9f87028",
+		"namedSetSubjectStableIdFilePath": "/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/sif260928/yardstick/sifEvalSetStableIds-100-0f33f6dde6c7.json",
+		"namedSetSubjectStableIdPrefix": "sif260928:question/",
+		"rejudgeRealNamedSet": "node --max-old-space-size=20000 /Users/tqwhite/Documents/webdev/educoreForge/system/codeWorktrees/D4/educoreForge/apps/graph-builder/graphBuilder.js -build --recipePath=/Users/tqwhite/Documents/webdev/educoreForge/system/codeWorktrees/D4/educoreForge/recipes/sif260928Derived.recipe.jsonc --vectorize=true --reuseForgedBlocks=true --standardsDatabaseFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/sif260928/d4/sif260928D4.standardsDatabase.sqlite3 --decisionStoreFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/sif260928/d4/sif260928D4.decisions.sqlite3 --judgmentCacheFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/sif260928/d4/sif260928D4.judgmentCache.sqlite3 --matchForensicsDirPath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/sif260928/d4/matchForensics --embeddingCacheFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/vectorCache/vectorCache.sqlite3 --rebridge=sif260928 --subjectListFilePath=/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/sif260928/yardstick/sifEvalSetStableIds-100-0f33f6dde6c7.json </dev/null > /Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/sif260928/d4/buildLogs/<line>-<phase>.log 2>&1 &",
+		"rejudgeRealNamedSetMaxJudgmentCount": 100,
+		"rejudgeDebug": null,
+		"materialise": null,
+		"materialiseReal": null,
+		"rejudgeRealLimit": null,
+		"eyeGraph": null,
+		"spendAuthorisationByLine": {
+			"rejudgeRealLimit": null,
+			"materialiseReal": null,
+			"rejudgeRealNamedSet": { "sessionName": "EBONY_DREAM", "date": "2026-09-29", "note": "TQ standing dev-spend permission; D4 ~$33 re-measured at D3" }
+		},
+		"frozenBy": null
 	}
 }
