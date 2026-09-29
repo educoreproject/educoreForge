@@ -12,8 +12,8 @@
 //                 no instance); (c) a subject the unpartitioned rule names is ONE unit with label null, all its
 //                 instances and no label line; (e) the frozen instance list is canonical (sorted by the freeze);
 //                 (f) the contract refuses a basis that does not admit a partition, a rendered name outside the
-//                 subject allow-list, a blinded property, a rendered name a subject already carries, a malformed
-//                 declaration and an unregistered kind.
+//                 subject allow-list, a blinded property, a rendered name a subject already carries, an undeclared
+//                 member and an unregistered kind.
 //   BG-PARTITION-ORACLE  (R1) run E's frozen block parses unchanged and keeps its id; (d, §1.7) with the key absent
 //                 the toy derived block equals the branch-cut text with frameworkFingerprint masked, (m) unmasked it
 //                 differs in that key alone, and (o) the key is optional: absent, it is omitted from every record.
@@ -217,20 +217,6 @@ const fileRefusalConjunctList = [
 		twinName: 'coverageCheckDeleted', fileName: PARTITION_FILE, find: 'if (partitionLabel === undefined) {', replace: 'if (false) {',
 	}),
 	refusalCase({
-		registry: twinRegistry, gateId: 'BG-PARTITION', conjunctId: 'b3_fileAbsentRefused',
-		title: '(b) a declared partition file that is not there refuses the run by name',
-		shape: partitionShapeWith((bridgeDeclaration) => { bridgeDeclaration.judgmentPartition.filePath = 'bridgeData/noSuchPartitionFile.tsv'; }),
-		regex: /judgmentPartition\.filePath names no file at .*noSuchPartitionFile\.tsv/,
-		twinName: 'existenceCheckDeleted', fileName: PARTITION_FILE, find: 'if (!fs.existsSync(filePath)) {', replace: 'if (false) {',
-	}),
-	refusalCase({
-		registry: twinRegistry, gateId: 'BG-PARTITION', conjunctId: 'b4_headerLacksColumnRefused',
-		title: '(b) a file whose header lacks the declared label column refuses the run by name',
-		shape: partitionShapeWith(scratchPartitionFileFor({ transformText: (text) => text.replace('object\tpartitionLabel\t', 'object\tlabel\t'), restateSha: true })),
-		regex: /header \[object, label, reason\] lacks column 'partitionLabel'/,
-		twinName: 'headerCheckDeleted', fileName: PARTITION_FILE, find: 'if (objectColumnIndex === -1 || labelColumnIndex === -1) {', replace: 'if (false) {',
-	}),
-	refusalCase({
 		registry: twinRegistry, gateId: 'BG-PARTITION', conjunctId: 'b5_blankLabelCellRefused',
 		title: '(b) a line with a blank label cell refuses the run by name',
 		shape: partitionShapeWith(scratchPartitionFileFor({ transformText: (text) => text.replace('StudentEnrollment\tToy Student\t', 'StudentEnrollment\t \t'), restateSha: true })),
@@ -243,16 +229,6 @@ const fileRefusalConjunctList = [
 		shape: partitionShapeWith(scratchPartitionFileFor({ transformText: (text) => `${text}StaffRecord\tToy Staff\tthe same line again\n`, restateSha: true })),
 		regex: /names object 'StaffRecord' twice \(line 6\)/,
 		twinName: 'duplicateCheckDeleted', fileName: PARTITION_FILE, find: 'if (labelByObjectName.has(objectName)) {', replace: 'if (false) {',
-	}),
-	refusalCase({
-		registry: twinRegistry, gateId: 'BG-PARTITION', conjunctId: 'b7_instanceNamesNoObjectRefused',
-		title: '(b) an instance carrying no object-naming property refuses the run by name',
-		shape: (scenario) => {
-			partitionShape(scenario);
-			scenario.graph.nodeList = scenario.graph.nodeList.map((oneNode) => (oneNode.stableId === 'toy:field/StaffRecord.Identifier' ? { ...oneNode, properties: Object.keys(oneNode.properties).filter((oneName) => oneName !== 'objectName').reduce((soFar, oneName) => ({ ...soFar, [oneName]: oneNode.properties[oneName] }), {}) } : oneNode));
-		},
-		regex: /instance toy:field\/StaffRecord\.Identifier of subject toy:question\/Identifier carries no 'objectName'/,
-		twinName: 'objectNameCheckDeleted', fileName: PARTITION_FILE, find: 'if (!isNonEmptyString(objectName)) {', replace: 'if (false) {',
 	}),
 	refusalCase({
 		registry: twinRegistry, gateId: 'BG-PARTITION', conjunctId: 'b8_subjectWithoutInstanceRefused',
@@ -360,9 +336,9 @@ const contractConjunctList = [
 		twinName: 'collisionCheckDeleted', fileName: PARTITION_FILE, find: 'if (Object.prototype.hasOwnProperty.call(subjectProperties, partitionDeclaration.renderedPropertyName)) {', replace: 'if (false) {',
 	}),
 	refusalCase({
-		registry: twinRegistry, gateId: 'BG-PARTITION', conjunctId: 'f5_declarationShapeRefused',
-		title: '(f) a judgmentPartition declaration missing a member is refused at registration by name',
-		shape: partitionShapeWith((bridgeDeclaration) => { delete bridgeDeclaration.judgmentPartition.instanceEdgeType; }),
+		registry: twinRegistry, gateId: 'BG-PARTITION', conjunctId: 'f5_undeclaredMemberRefused',
+		title: '(f) a judgmentPartition declaration carrying a member its kind does not declare is refused at registration by name',
+		shape: partitionShapeWith((bridgeDeclaration) => { bridgeDeclaration.judgmentPartition.instanceEdgeDirection = 'outgoing'; }),
 		regex: /judgmentPartition' kind 'objectPartitionFile' must be exactly \{ kind, filePath, sha256, instanceEdgeType/,
 		twinName: 'memberCheckDeleted', fileName: PARTITION_FILE, find: 'if (!hasExactMembers(value, memberNameList)) {', replace: 'if (false) {',
 	}),
@@ -462,6 +438,6 @@ const gateDeclarationList = [
 ];
 
 runGateFamily(
-	{ harness, familyName: 'BG-PARTITION+BG-PARTITION-ORACLE', gateDeclarationList, twinRegistry, makeSubject: scenarioLib.makeScenario, cloneSubject: scenarioLib.cloneScenario, expectedConjunctCount: 18 + 4 },
+	{ harness, familyName: 'BG-PARTITION+BG-PARTITION-ORACLE', gateDeclarationList, twinRegistry, makeSubject: scenarioLib.makeScenario, cloneSubject: scenarioLib.cloneScenario, expectedConjunctCount: 15 + 4 },
 	() => harness.report(),
 );

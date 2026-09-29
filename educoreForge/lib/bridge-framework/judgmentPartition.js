@@ -27,10 +27,12 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // partitioned object" cannot be observed from the graph.
 //
 // WHERE THE GUARDS ARE. The file and the graph it is applied to are data entering the framework, so these are refused
-// by name here: an absent file, a checksum other than the declared one, a header lacking a declared column, a blank
-// cell, an object named twice, an instance naming no object, an object missing from the file, a subject with no
-// instance, and a subject already carrying the rendered name. The declaration gets a shape check here; its cross-key
-// rules (the acquisition row admitting it, the subject allow-list, the blinding) are in bridgePluginContract.js.
+// by name here: a checksum other than the declared one, a blank cell, an object named twice, an object missing from the
+// file, a subject with no instance, and a subject already carrying the rendered name. Each guard is the ONLY catcher of
+// its fault (EBONY_DREAM, B4p back-gate): an absent file is the platform's ENOENT; a header lacking a declared column
+// reads every cell of that column as blank; an instance naming no object is an object missing from the file. The
+// declaration gets a shape check here; its cross-key rules (the acquisition row admitting it, the subject allow-list,
+// the blinding) are in bridgePluginContract.js.
 //
 // WHAT READS THE FROZEN FIELDS. Each record carries judgmentPartitionLabel and judgmentPartitionInstanceStableIdList.
 // The materialiser does not read them: it writes one subject → card edge per picked record, as it always has, so two
@@ -86,9 +88,6 @@ const partitionFilePathFor = ({ filePath, forgesDirPath, standardKey }) => (path
 const readPartitionFile = ({ partitionDeclaration, filePath }) => {
 	const refusalFor = (what, where) => ({ error: refuse.byName({ moduleName, what, where }) });
 	const partitionFileWhere = 'the partition file is declared, checksummed data; fix the file or the declaration, never the check';
-	if (!fs.existsSync(filePath)) {
-		return refusalFor(`judgmentPartition.filePath names no file at ${filePath}`, partitionFileWhere);
-	}
 	const fileBytes = fs.readFileSync(filePath);
 	const measuredSha256 = sha256HexOfBytes(fileBytes);
 	if (measuredSha256 !== partitionDeclaration.sha256) {
@@ -101,9 +100,6 @@ const readPartitionFile = ({ partitionDeclaration, filePath }) => {
 	const headerCellList = lineList[0].split(TSV_FIELD_SEPARATOR);
 	const objectColumnIndex = headerCellList.indexOf(partitionDeclaration.objectColumnName);
 	const labelColumnIndex = headerCellList.indexOf(partitionDeclaration.partitionLabelColumnName);
-	if (objectColumnIndex === -1 || labelColumnIndex === -1) {
-		return refusalFor(`judgmentPartition file ${filePath} header [${headerCellList.join(', ')}] lacks column '${objectColumnIndex === -1 ? partitionDeclaration.objectColumnName : partitionDeclaration.partitionLabelColumnName}'`, partitionFileWhere);
-	}
 	const labelByObjectName = new Map();
 	for (let lineIndex = 1; lineIndex < lineList.length; lineIndex++) {
 		const cellList = lineList[lineIndex].split(TSV_FIELD_SEPARATOR);
@@ -164,9 +160,6 @@ const partitionLeafList = ({ leafList, partitionDeclaration, labelByObjectName, 
 		for (let instanceIndex = 0; instanceIndex < instanceStableIdList.length; instanceIndex++) {
 			const instanceStableId = instanceStableIdList[instanceIndex];
 			const objectName = subjectNodeByStableId[instanceStableId].properties[partitionDeclaration.instanceObjectPropertyName];
-			if (!isNonEmptyString(objectName)) {
-				return refusalFor(`instance ${instanceStableId} of subject ${oneLeaf.subjectStableId} carries no '${partitionDeclaration.instanceObjectPropertyName}'`, 'every instance names the object it sits in; without it the instance has no partition');
-			}
 			const partitionLabel = labelByObjectName.get(objectName);
 			if (partitionLabel === undefined) {
 				return refusalFor(`object '${objectName}' (instance ${instanceStableId} of subject ${oneLeaf.subjectStableId}) is missing from the judgment partition file`, 'every object an instance sits in has a line in the file; add the line, never skip the instance');
