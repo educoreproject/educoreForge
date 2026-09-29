@@ -572,7 +572,15 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // this conjunct never saw lane B until the merge (EBONY_DREAM, logged as a process gap). PESC's OTHER 25 conjuncts were green
 // before and after the move and re-prove the two PESC plugins compose through the revised seam. THE SIX DECLARED PATHS ARE
 // UNCHANGED, no exclusion added. Fresh scratch red observed against THIS tag (DEVLOG-M1).
-const P1_BASELINE_COMMIT = 'postM1PescComposeA-092926'; // re-anchored by WILD_PORTAL, SIF replacement M1 (RULING EBONY_DREAM); the tag is cut ON the re-anchor commit
+// ═══ RE-ANCHOR (a), 2026-09-29 (INDIGO_FLAME; RULING EBONY_DREAM), SIF replacement phase D1 ═══
+// postM1PescComposeA-092926 -> postD1PescComposeA-092926, the tag cut ON this re-anchor commit. CENSUS: this gate's own diff from
+// postM1PescComposeA-092926 over its six declared paths, at D1's head 4bf5d43, is exactly two paths, both supervisor-authorised
+// roster edits for the new SIF derived plugin (forges/sif260928/bridges/, outside the six paths):
+//   D1           lib/bridge-framework/test/test-bgJudgeSlot.js (one SHIPPED_PLUGIN_LIST row, 155fbe8),
+//                lib/bridge-framework/test/test-bgDecl.js (EXPECTED_SHIPPED_DECLARING_PLUGIN_COUNT 3 -> 4, 4bf5d43)
+// No framework source moved. THE SIX DECLARED PATHS ARE UNCHANGED, no exclusion added. Fresh scratch red observed against THIS
+// tag (DEVLOG-D1).
+const P1_BASELINE_COMMIT = 'postD1PescComposeA-092926'; // re-anchored by INDIGO_FLAME, SIF replacement D1 (RULING EBONY_DREAM); the tag is cut ON the re-anchor commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
