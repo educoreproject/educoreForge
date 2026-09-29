@@ -69,17 +69,20 @@ const PRE_EXISTING_NAME_LIST = [
 	'matchId',
 	'provenanceTier',
 ];
+// the one name the SIF replacement's phase V1 ADDED (review #1): the question a fanned-out mapping edge was
+// judged as, written on every instance edge by the materialiser (plan phase B4b)
+const V1_ADDED_NAME_LIST = ['judgedSubjectStableId'];
 
 // the four conjuncts, each a pure judge over a vocabulary module (real or double)
 const conjunctJudgeByRefId = {
 	'a_everyEdgePropertyNameIsARow': (subject) => {
 		const valueList = Object.keys(subject.MAPPING_PROPERTIES).map((oneMember) => subject.MAPPING_PROPERTIES[oneMember]);
-		const missing = B2_ADDED_NAME_LIST.concat(PRE_EXISTING_NAME_LIST).filter((oneName) => valueList.indexOf(oneName) === -1);
-		return { pass: missing.length === 0 && valueList.length === 20, detail: missing.length ? `missing: ${missing.join(', ')}` : `count ${valueList.length}` };
+		const missing = B2_ADDED_NAME_LIST.concat(PRE_EXISTING_NAME_LIST, V1_ADDED_NAME_LIST).filter((oneName) => valueList.indexOf(oneName) === -1);
+		return { pass: missing.length === 0 && valueList.length === 21, detail: missing.length ? `missing: ${missing.join(', ')}` : `count ${valueList.length}` };
 	},
 	'b_nameListEqualsRegistryValues': (subject) => {
 		const valueList = Object.keys(subject.MAPPING_PROPERTIES).map((oneMember) => subject.MAPPING_PROPERTIES[oneMember]);
-		const equal = JSON.stringify(subject.MAPPING_PROPERTY_NAME_LIST) === JSON.stringify(valueList) && subject.MAPPING_PROPERTY_NAME_LIST.length === 20;
+		const equal = JSON.stringify(subject.MAPPING_PROPERTY_NAME_LIST) === JSON.stringify(valueList) && subject.MAPPING_PROPERTY_NAME_LIST.length === 21;
 		return { pass: equal, detail: `list ${JSON.stringify(subject.MAPPING_PROPERTY_NAME_LIST)}` };
 	},
 	'c_producerDerivedTiersOnly': (subject) => ({
