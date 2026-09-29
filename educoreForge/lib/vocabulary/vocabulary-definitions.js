@@ -56,7 +56,7 @@ const TERM_DEFINITIONS = {
 		HAS_FIELD:
 			'Object to one of its fields, every one, at any depth: one edge per field row of the source. A flat membership edge that answers "which fields does this object specify" without walking the nesting; the nesting itself is HAS_CHILD. Introduced for the sif260928 forge (Object to Field).',
 		HAS_CHILD:
-			'Structural parent to its immediate child in one object\'s element tree: an object to a top-level container, or a container to a container or field nested directly inside it. It records nesting, where HAS_FIELD records membership. Introduced for the sif260928 forge, whose containers are the element paths the source implies but never lists as rows.',
+			'Structural parent to its immediate child in one object\'s element tree: an object to a top-level container, a container to a container or field nested directly inside it, or a field to a field nested directly inside it (an element field to one of its own attributes, which the source parents on that element). It records nesting, where HAS_FIELD records membership. Introduced for the sif260928 forge, whose containers are the element paths the source implies but never lists as rows.',
 		HAS_INSTANCE:
 			'A question to each field it stands for. A question is one distinct (name, description, relative path) the source asks, and a source that repeats a block across objects asks the same question many times; this edge links the one to the many, so a judgement made once about the question can be read on every field. Introduced for the sif260928 forge (Question to Field).',
 		CONSTRAINED_BY:
