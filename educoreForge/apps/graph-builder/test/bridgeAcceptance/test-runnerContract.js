@@ -137,10 +137,11 @@ harness.ok('(e) RED-OBSERVED — THE DEFECT D-2 CASE: the SAME entry, whose reju
 	/materialiseReal line SPENDS/.test(spendRefusalFor({ entry: cp3ReleasedFullRunHeld, lineName: 'materialiseReal' })) && /WITHHELD/.test(spendRefusalFor({ entry: cp3ReleasedFullRunHeld, lineName: 'materialiseReal' })),
 	spendRefusalFor({ entry: cp3ReleasedFullRunHeld, lineName: 'materialiseReal' }));
 
-// BOTH NULL — the state every bridge sits in before a supervisor speaks at all
-const bothWithheld = { spendAuthorisationByLine: { rejudgeRealLimit: null, materialiseReal: null } };
+// EVERY LINE NULL — the state every bridge sits in before a supervisor speaks at all. Built from the runner's own
+// spending list, so a spending line added later (rejudgeRealNamedSet, phase B5) is stated here without an edit
+const bothWithheld = { spendAuthorisationByLine: spendingLineNameList.reduce((soFar, oneSpendingLineName) => ({ ...soFar, [oneSpendingLineName]: null }), {}) };
 spendingLineNameList.forEach((oneSpendingLineName) => {
-	harness.ok(`(e) RED-OBSERVED — with BOTH lines null, '${oneSpendingLineName}' is REFUSED as WITHHELD`, /WITHHELD/.test(spendRefusalFor({ entry: bothWithheld, lineName: oneSpendingLineName })), spendRefusalFor({ entry: bothWithheld, lineName: oneSpendingLineName }));
+	harness.ok(`(e) RED-OBSERVED — with EVERY spending line null, '${oneSpendingLineName}' is REFUSED as WITHHELD`, /WITHHELD/.test(spendRefusalFor({ entry: bothWithheld, lineName: oneSpendingLineName })), spendRefusalFor({ entry: bothWithheld, lineName: oneSpendingLineName }));
 });
 
 // ABSENT is not WITHHELD, and the two refusals must say different things. Reading an absent name as a "no" would
