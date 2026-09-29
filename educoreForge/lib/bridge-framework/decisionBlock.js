@@ -72,7 +72,9 @@ const HEADER_KEY_ORDER = Object.freeze([
 // A block frozen before they existed still parses and keeps its id (PLAN small phases §1.6 R1).
 const OPTIONAL_HEADER_KEY_LIST = Object.freeze(['judgeTemperaturePolicy', 'judgeMaxTokens', 'judgeToolSchemaSha256']);
 const REQUIRED_HEADER_KEY_LIST = Object.freeze(HEADER_KEY_ORDER.filter((oneName) => OPTIONAL_HEADER_KEY_LIST.indexOf(oneName) === -1));
-const STABLE_ID_LIST_KEY_LIST = Object.freeze(['renderedPoolStableIdList', 'filteredPoolStableIdList', 'keyPoolStableIdList', 'assertingSubjectList']);
+// judgmentPartitionInstanceStableIdList: the instances a judgment unit stands for (judgmentPartition.js; phase B4p), absent
+// from every record of a run that declares no partition
+const STABLE_ID_LIST_KEY_LIST = Object.freeze(['renderedPoolStableIdList', 'filteredPoolStableIdList', 'keyPoolStableIdList', 'assertingSubjectList', 'judgmentPartitionInstanceStableIdList']);
 const FINGERPRINT_ROOT_LIST = Object.freeze([
 	{ label: 'lib/bridge-framework', dirPath: __dirname, recursive: true, excludeDirNameList: ['test'] },
 	{ label: 'apps/graph-builder/apps/bridge-maker', dirPath: path.join(__dirname, '..', '..', 'apps', 'graph-builder', 'apps', 'bridge-maker'), recursive: false, excludeDirNameList: [] },

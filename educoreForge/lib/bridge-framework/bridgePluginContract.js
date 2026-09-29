@@ -40,6 +40,7 @@ const bridgeAllowanceRegistryLib = require('./bridgeAllowanceRegistry');
 // is admitted here the same day. It requires only path, the refusal helper and ./candidateRetrieval: no cycle.
 const neighbourVoteLib = require('./neighbourVote');
 const promptIdentifierScanLib = require('./promptIdentifierScan');
+const judgmentPartitionLib = require('./judgmentPartition');
 // ⟪JOB 3, 2026-09-07⟫ SELECT_CATEGORY_ENUM — the single source of truth for the judge's verdict
 // categories. Required by the SAME path form confidenceBandTable.js:12 uses, from the same directory,
 // for the same reason: this file's JUDGE_CATEGORY_LIST must be derived from the contract rather than
@@ -77,6 +78,8 @@ const PRODUCER_KIND_BY_MATCH_BASIS = Object.freeze({ standard: 'authored', cross
 //   poolProducerKind           which registered producer builds the candidate pool (poolProducer.js)
 //   requiredDeclarationKeyList  declaration keys this basis REQUIRES (absent → refused by name)
 //   forbiddenDeclarationKeyList declaration keys this basis FORBIDS (present → refused by name)
+//   admitsJudgmentPartition    whether the optional judgmentPartition key may be declared: true only where each
+//                              subject is one graph node whose instances can be read (phase B4p, 2026-09-28)
 // ---------------------------------------------------------------------
 const EMPTY_NAME_LIST = Object.freeze([]);
 const DOCUMENTARY_REQUIRED_HOOK_NAME_LIST = Object.freeze(['walkSourceAssertions', 'subjectStableIdFor']);
@@ -92,6 +95,7 @@ const SOURCE_ACQUISITION_REGISTRY = Object.freeze({
 		forbiddenHookNameList: EMPTY_NAME_LIST,
 		requiredDeclarationKeyList: DOCUMENTARY_REQUIRED_KEY_LIST,
 		forbiddenDeclarationKeyList: DERIVED_ONLY_KEY_LIST,
+		admitsJudgmentPartition: false,
 	}),
 	crosswalk: Object.freeze({
 		walkChannelSourceKind: 'document',
@@ -101,6 +105,7 @@ const SOURCE_ACQUISITION_REGISTRY = Object.freeze({
 		forbiddenHookNameList: EMPTY_NAME_LIST,
 		requiredDeclarationKeyList: DOCUMENTARY_REQUIRED_KEY_LIST,
 		forbiddenDeclarationKeyList: DERIVED_ONLY_KEY_LIST,
+		admitsJudgmentPartition: false,
 	}),
 	derived: Object.freeze({
 		walkChannelSourceKind: null,
@@ -117,9 +122,10 @@ const SOURCE_ACQUISITION_REGISTRY = Object.freeze({
 		// a derived producer names no join key and no mapping PROVIDER — the tool is the producer (Profile
 		// §4.3 as amended, RULING §11.7 (c)): mapping_provider is ABSENT, mapping_tool is REQUIRED
 		forbiddenDeclarationKeyList: Object.freeze(['tupleFieldColumnMap', 'mappingProvider']),
+		admitsJudgmentPartition: true,
 	}),
 });
-const SOURCE_ACQUISITION_ROW_KEY_LIST = Object.freeze(['walkChannelSourceKind', 'subjectGroupProducerKind', 'poolProducerKind', 'requiredHookNameList', 'forbiddenHookNameList', 'requiredDeclarationKeyList', 'forbiddenDeclarationKeyList']);
+const SOURCE_ACQUISITION_ROW_KEY_LIST = Object.freeze(['walkChannelSourceKind', 'subjectGroupProducerKind', 'poolProducerKind', 'requiredHookNameList', 'forbiddenHookNameList', 'requiredDeclarationKeyList', 'forbiddenDeclarationKeyList', 'admitsJudgmentPartition']);
 const SUBJECT_GROUP_PRODUCER_KIND_LIST = Object.freeze(['walkAssertion', 'graphLabel']);
 const POOL_PRODUCER_KIND_LIST = Object.freeze(['canonicalKeyIndex', 'vectorRetrieval']);
 const SUBJECT_SOURCE_KIND_LIST = Object.freeze(['graphLabel']);
@@ -367,6 +373,9 @@ const BRIDGE_DECLARATION_CONTRACT = Object.freeze({
 	// the judge's configuration and each judged record's rationale, frozen into the block (SPEC §9 A12; PLAN small phases §3
 	// B2). Plain-optional, and `true` is its only value: absent is the one way to say no, so there is no second spelling of it.
 	blockRecordsJudgeConfig: Object.freeze({ optional: true, kind: 'closedValue', allowedValueList: Object.freeze([true]) }),
+	// each subject judged once per partition of its instances, the partition read from a declared, checksummed file
+	// (judgmentPartition.js; phase B4p, 2026-09-28). Plain-optional: absent, each subject is one judgment unit, as before.
+	judgmentPartition: Object.freeze({ optional: true, kind: 'judgmentPartition' }),
 	evidenceHooksDeclared: Object.freeze({ required: true, kind: 'evidenceHooksDeclared' }),
 	// CONDITIONAL presence (RULING BR4): REQUIRED iff evidenceHooksDeclared.globalGuidance === true, FORBIDDEN (refused
 	// by name) when it is false — not a default, a conditional requirement; SPEC §10.1 as printed (hook false, no key) validates
@@ -611,6 +620,7 @@ const KIND_CHECKER_REGISTRY = Object.freeze({
 			: `must match ${vocabularyLib.RELATIONSHIP_DISCRIMINATOR_PATTERN} — lower-case-initial alphanumeric, 32 characters maximum, never carrying the '${vocabularyLib.RELATIONSHIP_DISCRIMINATOR_SEPARATOR}' separator itself (got ${JSON.stringify(value)})`,
 	stringList: (value) => (isStringList(value) ? '' : `must be a list of strings (got ${JSON.stringify(value)}); [] means "none", absence is refused`),
 	promptIdentifierScan: (value) => promptIdentifierScanLib.declarationReason(value),
+	judgmentPartition: (value) => judgmentPartitionLib.declarationReason(value),
 	closedValue: (value, { contractEntry, propertyName }) => closedValueReason(value, contractEntry.allowedValueList, propertyName),
 	mappingProvider: (value) => {
 		if (!isPlainObject(value)) {
@@ -1203,6 +1213,22 @@ const validateBridgeDeclaration = ({ bridgeDeclaration, bundleDirPath } = {}) =>
 	const neighbourVoteDeclaration = isPlainObject(bridgeDeclaration.candidateRetrieval) ? bridgeDeclaration.candidateRetrieval.neighbourVote : null;
 	if (isPlainObject(neighbourVoteDeclaration) && bridgeDeclaration.blindingDeclaration.indexOf(neighbourVoteDeclaration.owner.property) !== -1) {
 		return refuseWith(`bridgeDeclaration candidateRetrieval.neighbourVote.owner.property '${neighbourVoteDeclaration.owner.property}' is named in blindingDeclaration`, 'a blinded property may not choose the neighbours that reorder the pool; declare another owner property or stop blinding it (SPEC-bridgeRevision §5)');
+	}
+	// judgmentPartition (phase B4p): admitted only where the acquisition row says so; its label renders only if the
+	// subject allow-list names the line it renders under; and a property it reads must not be one the plugin blinds,
+	// because a blinded property reads as absent, and an absent rule property would quietly partition every subject.
+	const partitionDeclaration = bridgeDeclaration.judgmentPartition;
+	if (partitionDeclaration !== undefined) {
+		if (SOURCE_ACQUISITION_REGISTRY[bridgeDeclaration.matchBasis].admitsJudgmentPartition !== true) {
+			return refuseWith(`bridgeDeclaration carries judgmentPartition, which matchBasis '${bridgeDeclaration.matchBasis}' does not admit`, 'a partition splits one subject node\'s instances; only a basis whose row sets admitsJudgmentPartition has such subjects');
+		}
+		if (bridgeDeclaration.renderingAllowList.subject.indexOf(partitionDeclaration.renderedPropertyName) === -1) {
+			return refuseWith(`bridgeDeclaration judgmentPartition.renderedPropertyName '${partitionDeclaration.renderedPropertyName}' is not in renderingAllowList.subject`, 'the judge must be told which partition it is judging; add the name to the subject allow-list');
+		}
+		const blindedReadName = [partitionDeclaration.instanceObjectPropertyName, partitionDeclaration.unpartitionedSubjectRule === null ? null : partitionDeclaration.unpartitionedSubjectRule.propertyName].find((oneName) => oneName !== null && bridgeDeclaration.blindingDeclaration.indexOf(oneName) !== -1);
+		if (blindedReadName !== undefined) {
+			return refuseWith(`bridgeDeclaration judgmentPartition reads property '${blindedReadName}', which blindingDeclaration names`, 'a blinded property is removed from every view the run reads; partition on a property the plugin does not blind');
+		}
 	}
 	if (PRODUCER_KIND_BY_MATCH_BASIS[bridgeDeclaration.matchBasis] !== bridgeDeclaration.producerKind) {
 		return refuseWith(`bridgeDeclaration producerKind '${bridgeDeclaration.producerKind}' disagrees with matchBasis '${bridgeDeclaration.matchBasis}' (which is '${PRODUCER_KIND_BY_MATCH_BASIS[bridgeDeclaration.matchBasis]}')`, 'declared AND checked so build.js can never infer the block suffix (RULING A1)');

@@ -68,6 +68,7 @@ const conflictDetectorLib = require('./conflictDetector');
 const graphSeamRulesLib = require('./graphSeamRules');
 const promptIdentifierScanLib = require('./promptIdentifierScan');
 const judgeConfigRecordLib = require('./judgeConfigRecord');
+const judgmentPartitionLib = require('./judgmentPartition');
 
 const { RELATIONSHIP_PRODUCER_SUFFIX, SKOS_EDGE_TYPES, MAPPING_PROPERTIES, DME_ROLES, HUB_DECOMPOSITION_SLOTS, SSSOM_JUSTIFICATIONS, hubEdgeType } = vocabularyLib;
 const {
@@ -1473,6 +1474,36 @@ const moduleFunction =
 				});
 				taskList.push((args, next) => subjectGroupProducerByKind[acquisitionRow.subjectGroupProducerKind](args, next));
 
+				// STEP 5a — JUDGMENT PARTITION (judgmentPartition.js; phase B4p, 2026-09-28). Declared, each subject leaf becomes
+				// one leaf per partition of its instances, each carrying its label and its instance list, and each is judged
+				// once. The window and the named set have already chosen the SUBJECTS. Undeclared, the leaves pass through.
+				taskList.push((args, next) => {
+					const partitionDeclaration = bridgeDeclaration.judgmentPartition;
+					if (partitionDeclaration === undefined) {
+						next('', args);
+						return;
+					}
+					const partitionFilePath = judgmentPartitionLib.partitionFilePathFor({ filePath: partitionDeclaration.filePath, forgesDirPath: registry.forgesDirPath, standardKey: bridgeDeclaration.standardKey });
+					const partitionFile = judgmentPartitionLib.readPartitionFile({ partitionDeclaration, filePath: partitionFilePath });
+					if (partitionFile.error) {
+						next(partitionFile.error.message);
+						return;
+					}
+					args.reader.forEvidence().readEdgesAmongSource({ edgeTypeList: [partitionDeclaration.instanceEdgeType] }, (edgeError, instanceEdgeList) => {
+						if (edgeError) {
+							next(`${moduleName}: judgmentPartition instance edges: ${edgeError}`);
+							return;
+						}
+						const partitioned = judgmentPartitionLib.partitionLeafList({ leafList: args.leafList, partitionDeclaration, labelByObjectName: partitionFile.labelByObjectName, instanceEdgeList, subjectNodeByStableId: args.subjectNodeByStableId });
+						if (partitioned.error) {
+							next(partitioned.error.message);
+							return;
+						}
+						say(`judgment partition: ${args.leafList.length} subject(s) → ${partitioned.unitCount} judgment unit(s) (${partitioned.unpartitionedSubjectCount} unpartitioned by rule), ${partitionFile.labelByObjectName.size} object(s) in ${partitionFilePath}`);
+						next('', { ...args, leafList: partitioned.leafList });
+					});
+				});
+
 				// STEP 5b — the HUB-owned remodel table, by REFERENCE (RULING P11, D-S5): forges/<hubToken>/bridgeData/
 				// <remodelTableRef>.json keyed hubName@hubVersion, read as data (never required as code), digested into
 				// the header; a declared ref with no table, or a table without this hub@version, is refused by name
@@ -1686,7 +1717,9 @@ const moduleFunction =
 							const baseRecord = {
 								subjectStableId: oneLeaf.subjectStableId,
 								assertingSubjectList: [],
-								targetKey: `retrieval:${oneLeaf.subjectStableId}`,
+								// a labelled judgment unit is one of several for its subject, so its label joins the targetKey,
+								// which is what orders two records of one subject in the frozen text (decisionBlock.compareRecords)
+								targetKey: typeof oneLeaf.judgmentPartitionLabel === 'string' ? `retrieval:${oneLeaf.subjectStableId}#partition:${oneLeaf.judgmentPartitionLabel}` : `retrieval:${oneLeaf.subjectStableId}`,
 								targetCanonicalKeyList: [],
 								suppliedTupleByTarget: {},
 								remodelApplied: null,
@@ -1702,6 +1735,8 @@ const moduleFunction =
 								classification: classified.classification,
 								judgedReason: classified.reason,
 								lossyEcho: false,
+								// the judgment unit's partition and the instances it stands for, only when the run declares a partition
+								...(oneLeaf.judgmentPartitionInstanceStableIdList === undefined ? {} : { judgmentPartitionLabel: oneLeaf.judgmentPartitionLabel, judgmentPartitionInstanceStableIdList: oneLeaf.judgmentPartitionInstanceStableIdList }),
 							};
 							if (classified.classification === 'orphan') {
 								decisionRecordList.push({ ...baseRecord, resolution: null, objectStableId: null, predicate: null, reason: classified.reason });
@@ -1807,9 +1842,10 @@ const moduleFunction =
 						const sourceElement = {
 							name: typeof subjectNode.properties.name === 'string' && subjectNode.properties.name.trim() !== '' ? subjectNode.properties.name : subjectNode.stableId,
 							stableId: subjectNode.stableId,
+							// a labelled judgment unit's partition label is one more subject line, under the declared name (phase B4p)
 							material: Object.keys(subjectNode.properties)
 								.filter((oneName) => subjectMaterialNameList.indexOf(oneName) !== -1)
-								.reduce((soFar, oneName) => ({ ...soFar, [oneName]: subjectNode.properties[oneName] }), {}),
+								.reduce((soFar, oneName) => ({ ...soFar, [oneName]: subjectNode.properties[oneName] }), typeof oneTask.baseRecord.judgmentPartitionLabel === 'string' ? { [bridgeDeclaration.judgmentPartition.renderedPropertyName]: oneTask.baseRecord.judgmentPartitionLabel } : {}),
 							evidence: { subject: mergedByColumn((oneAssertion) => (oneAssertion.evidence ? oneAssertion.evidence.subject : {})), assertion: mergedByColumn((oneAssertion) => (oneAssertion.evidence ? oneAssertion.evidence.assertion : {})) },
 							sourceLabelByColumn: mergedByColumn((oneAssertion) => oneAssertion.sourceLabelByColumn),
 							sourceNoteByColumn: mergedByColumn((oneAssertion) => oneAssertion.sourceNoteByColumn),
