@@ -5,7 +5,7 @@
 		"judgeKind": "anthropic:toy",
 		"predicateRule": "judgeSlot-v1",
 		"candidateRetrieval": {
-			"method": "embedTextVote-v1",
+			"method": "cosineTopK-v1",
 			"k": 15
 		},
 		"hubName": "ToyHub",
