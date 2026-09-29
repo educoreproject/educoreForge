@@ -52,7 +52,7 @@ const asStandard = (scenario, standardKey) => { scenario.forgeDeclaration.standa
 const withDescribeSource = (scenario, transform) => { const baseHooks = toyScenario.toyHooksFactory(); scenario.hookOverrides.describeSource = ({ parsed }) => transform(baseHooks.describeSource({ parsed })); };
 const withWalkExtra = (scenario, extra) => { const baseHooks = toyScenario.toyHooksFactory(); scenario.hookOverrides.emitContractGraph = (context) => { const walkResult = baseHooks.emitContractGraph(context); extra(context); return walkResult; }; };
 const mintNameless = ({ kit }) => kit.makeNode({ role: DME_ROLES.CLASS, perStandardLabel: 'ToyClass', stableId: 'toy:class/Nameless', name: null, structural: { parentId: kit.rootStableId, path: 'Nameless' }, searchTextElement: { role: DME_ROLES.CLASS, name: 'Nameless', standardName: 'Toy', owningName: 'Toy' }, origin: 'nameless' });
-const addNativeEdge = ({ kit }) => kit.addEdge({ edgeType: 'HAS_CHILD', fromStableId: 'toy:class/Person', toStableId: 'toy:class/School', edgeContext: 'native parent edge' });
+const addNativeEdge = ({ kit }) => kit.addEdge({ edgeType: 'TOY_NATIVE_PARENT_EDGE', fromStableId: 'toy:class/Person', toStableId: 'toy:class/School', edgeContext: 'native parent edge' });
 // P4 fixture data: an edge whose type is OUTSIDE EDGE_TYPES but INSIDE the declared allow list —
 // the admission the row licenses. DECLARES is PESC's largest such relation (12,991 edges in the
 // real block) and is a RELATION, not a synonym for a registry type, which is why PESC's seven are
@@ -211,15 +211,15 @@ const conjunctList = [
 	}),
 	shapedConjunct({
 		conjunctId: 's6LiveInKit',
-		title: "S6 declared (as sif) with parentEdgeSubstitutionTable { HAS_CHILD: REFERENCES } and a native HAS_CHILD edge → a REFERENCES edge is emitted, substitutionCount EQUALS 1, activeAllowanceList ['S6']",
+		title: "S6 declared (as sif) with parentEdgeSubstitutionTable { TOY_NATIVE_PARENT_EDGE: REFERENCES } and a native TOY_NATIVE_PARENT_EDGE edge → a REFERENCES edge is emitted, substitutionCount EQUALS 1, activeAllowanceList ['S6']",
 		twinNameList: ['kitIgnoresSubstitutionTable'],
-		shape: (scenario) => { asStandard(scenario, 'sif'); scenario.forgeDeclaration.compatibilityDeclarationList = [{ allowanceId: 'S6', parentEdgeSubstitutionTable: { HAS_CHILD: 'REFERENCES' } }]; withWalkExtra(scenario, addNativeEdge); },
+		shape: (scenario) => { asStandard(scenario, 'sif'); scenario.forgeDeclaration.compatibilityDeclarationList = [{ allowanceId: 'S6', parentEdgeSubstitutionTable: { TOY_NATIVE_PARENT_EDGE: 'REFERENCES' } }]; withWalkExtra(scenario, addNativeEdge); },
 		judge: succeeded((result) => { const substituted = result.edges.find((oneEdge) => oneEdge.type === 'REFERENCES' && oneEdge.fromRef.id === 'toy:class/Person' && oneEdge.toRef.id === 'toy:class/School'); return { pass: substituted !== undefined && result.complianceReport.substitutionCount === 1 && result.complianceReport.activeAllowanceList.join(',') === 'S6', detail: `substituted edge ${substituted ? 'present' : 'ABSENT'}; report ${JSON.stringify(result.complianceReport)}` }; }),
 	}),
 	refusalCase({
 		registry: twinRegistry, gateId: GATE_ID, conjunctId: 's6DeclaredButUnneededRefused',
 		title: "S6 declared (as sif) with NO substitution on this build → refused 'allowance S6 active but its condition is not met'",
-		shape: (scenario) => { asStandard(scenario, 'sif'); scenario.forgeDeclaration.compatibilityDeclarationList = [{ allowanceId: 'S6', parentEdgeSubstitutionTable: { HAS_CHILD: 'REFERENCES' } }]; },
+		shape: (scenario) => { asStandard(scenario, 'sif'); scenario.forgeDeclaration.compatibilityDeclarationList = [{ allowanceId: 'S6', parentEdgeSubstitutionTable: { TOY_NATIVE_PARENT_EDGE: 'REFERENCES' } }]; },
 		regex: /buildContractGraph: .*allowance S6 active but its condition is not met/,
 		twinName: 'disableDeclaredButUnneededCheck', fileName: FRAMEWORK_FILE,
 		find: '\t\t\t\tif (!oneRow.preconditionMet(context)) {', replace: '\t\t\t\tif (!oneRow.preconditionMet(context) && false) {',

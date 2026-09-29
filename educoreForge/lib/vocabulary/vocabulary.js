@@ -110,6 +110,19 @@ const EDGE_TYPES = {
 	// graph reader re-widens it to a one-element list at its read boundary. Never REFERENCES: a
 	// structural walk must not travel from a standard into its texts.
 	EMBEDS_TEXT_OF: 'EMBEDS_TEXT_OF',
+	// ⟪SIF replacement, phase V1, 2026-09-28; SPEC-sifStructuralBridge-replacement §3.2⟫ the structural
+	// edges of the sif260928 bundle, each its own type. The incumbent SIF forge folded its native kinds
+	// onto HAS_PROPERTY / HAS_OPTION_SET / REFERENCES with a nativeEdgeType property, and the fold made
+	// the structure unreadable; these rows are for the new bundle to use in place of the fold. Every value
+	// lands in every graph's schema view (schema-view-finisher enumerates EDGE_TYPES whole).
+	HAS_FIELD: 'HAS_FIELD',
+	HAS_CHILD: 'HAS_CHILD',
+	HAS_INSTANCE: 'HAS_INSTANCE',
+	CONSTRAINED_BY: 'CONSTRAINED_BY',
+	// the one NATIVE relation kind ruled for the new SIF snapshot (supervisor ruling, SPEC §9 A24): Field to
+	// Object, from a RefId field to the object it names. FROM THE FIELD, not from its object, so two
+	// references between the same pair of objects through different fields stay two distinct triples.
+	REFERENCES_OBJECT: 'REFERENCES_OBJECT',
 };
 
 // EMBED-TEXT VECTOR INDEX DESCRIPTOR ⟪R-ET-24⟫ -- the one home for the second vector index's names: the
@@ -614,6 +627,10 @@ const MAPPING_PROPERTIES = {
 	PREDICATE_ASSERTED_BY: 'predicateAssertedBy',
 	ATTESTATION_CHANNEL_LIST: 'attestationChannelList',
 	DECISION_BLOCK_HASH: 'decisionBlockHash',
+	// ⟪SIF replacement V1, 2026-09-28; SPEC §9 A10⟫ under fan-out one judgement about a QUESTION is written as
+	// one edge per instance Field, so the edge's subject is the Field and this names the question that was
+	// judged. Nothing writes it yet: plan phase B4b makes the materialiser write it under fan-out only.
+	JUDGED_SUBJECT_STABLE_ID: 'judgedSubjectStableId',
 };
 // the property NAMES a mapping edge may carry — derived from the registry above; the writer's closed set
 const MAPPING_PROPERTY_NAME_LIST = Object.freeze(Object.keys(MAPPING_PROPERTIES).map((oneMember) => MAPPING_PROPERTIES[oneMember]));
