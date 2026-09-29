@@ -1,0 +1,33 @@
+{
+	"fixtureNote": "SYNTHETIC (phase C5). Same shape as the baseline hubCardsByCedsId.json: cardsBySifCedsId maps a P id to its cards. P000001 and P000004 have one card (specified), P000002 has two (contended), P000003 has none. P000005 is remodeled by the fixture remodel table to P000001; like the real export for a remodeled id, it carries an empty list.",
+	"cardsBySifCedsId": {
+		"P000001": [
+			{
+				"cardStableId": "card:A1",
+				"domainName": "Dom Student",
+				"propertyName": "Alpha"
+			}
+		],
+		"P000002": [
+			{
+				"cardStableId": "card:B1",
+				"domainName": "Dom Student",
+				"propertyName": "Beta"
+			},
+			{
+				"cardStableId": "card:B2",
+				"domainName": "Dom Staff",
+				"propertyName": "Beta"
+			}
+		],
+		"P000003": [],
+		"P000004": [
+			{
+				"cardStableId": "card:D1",
+				"domainName": "Dom Student",
+				"propertyName": "Delta"
+			}
+		],
+		"P000005": []
+	}
+}
