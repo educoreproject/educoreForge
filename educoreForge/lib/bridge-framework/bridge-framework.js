@@ -66,6 +66,8 @@ const sssomExporterLib = require('./sssomExporter');
 const boundedRunnerLib = require('./boundedRunner');
 const conflictDetectorLib = require('./conflictDetector');
 const graphSeamRulesLib = require('./graphSeamRules');
+// (phase B6) the relationship types a block's harvest selects: exactly the writer's admitted set, sorted for a stable report
+const HARVEST_EDGE_TYPE_LIST = Object.freeze(Object.keys(graphSeamRulesLib.PREDICATE_BY_EDGE_TYPE).sort());
 const promptIdentifierScanLib = require('./promptIdentifierScan');
 const judgeConfigRecordLib = require('./judgeConfigRecord');
 const judgmentPartitionLib = require('./judgmentPartition');
@@ -824,10 +826,15 @@ const moduleFunction =
 				// stopped watching. ON EACH BLOCK ENTRY TOO, because build.js harvests PER EMITTED BLOCK and
 				// reads the expectation there. The declared RUN_REPORT_RESULT_KEYS list stays at 13 and
 				// BG-REG (f) checks CONTAINMENT, so a runtime key is admitted.
+				// (phase B6) harvestEdgeTypeList rides beside the summary, added here for the same reason: the relationship
+				// types this run's writer admits, read from the writer's own closed set (graphSeamRules.PREDICATE_BY_EDGE_TYPE,
+				// the §6 refusal). build.js harvests by it, so the harvest takes what the door can write and never a base
+				// edge whose two endpoints both carry the pair label, which fan-out makes common (Field -HAS_CHILD-> Field).
 				const conservationBearingRunReport = {
 					...undiscriminatedRunReport,
 					loadedConservationSummary: oneReportArgumentSet.loadedConservationSummary,
-					blocks: undiscriminatedRunReport.blocks.map((oneBlock) => ({ ...oneBlock, loadedConservationSummary: oneReportArgumentSet.loadedConservationSummary })),
+					harvestEdgeTypeList: HARVEST_EDGE_TYPE_LIST,
+					blocks: undiscriminatedRunReport.blocks.map((oneBlock) => ({ ...oneBlock, loadedConservationSummary: oneReportArgumentSet.loadedConservationSummary, harvestEdgeTypeList: HARVEST_EDGE_TYPE_LIST })),
 				};
 				if (bridgeDeclaration.subjectDiscriminator === undefined) {
 					return conservationBearingRunReport;

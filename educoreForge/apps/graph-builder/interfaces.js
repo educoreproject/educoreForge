@@ -102,11 +102,13 @@
  *           time and stamping more would make the block and the graph restored from it disagree.
  *           Both payloads reach replay-engine.writeShapedGraph — creation directly, restoration
  *           through replay() — so the guards cannot diverge between them.
- * @property {function({inGraph: GraphHandle, selectionLabels: string[], header: Object},
+ * @property {function({inGraph: GraphHandle, selectionLabels: string[], edgeTypeList?: string[], header: Object},
  *           function(string, Object=): void): void} harvest
  *           THE ONLY PLACE A SCHEMA BLOCK IS BORN. Selection is POSITIVE and by label — the same
  *           label the orchestrator handed to init — so producer and harvester agree by parameter
- *           rather than by two hopeful literals. Returns { blockText, blockId, nodeCount,
+ *           rather than by two hopeful literals. edgeTypeList (phase B6), when given, narrows the
+ *           edges to those relationship types: a relationship block passes the types its producer
+ *           wrote; a base block passes none and takes every edge between its labelled nodes. Returns { blockText, blockId, nodeCount,
  *           edgeCount, stableIdCoverage }; it PERSISTS nothing (manifestEditor owns storing).
  * @property {function(GraphHandle, function(string): void): void} delete
  */

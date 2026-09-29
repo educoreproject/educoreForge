@@ -1947,8 +1947,9 @@ const build = (recipe, deps, callback) => {
 							? runReport.blocks
 							// ⟪JOB 5b⟫ the degenerate list-of-one carries the run's loaded summary too. A single-block
 							// bridge writes through the same door; if only the blocks[] path carried the expectation,
-							// the commoner shape would silently keep needing an exemption.
-							: [{ applyLabel: RELATION_LABEL, firstStandard: undefined, secondStandard: undefined, producer: runReport.producer, decisionBlock: runReport.decisionBlock, loadedConservationSummary: runReport.loadedConservationSummary }];
+							// the commoner shape would silently keep needing an exemption. (phase B6) The harvest's edge
+							// types ride the same way, for the same reason.
+							: [{ applyLabel: RELATION_LABEL, firstStandard: undefined, secondStandard: undefined, producer: runReport.producer, decisionBlock: runReport.decisionBlock, loadedConservationSummary: runReport.loadedConservationSummary, harvestEdgeTypeList: runReport.harvestEdgeTypeList }];
 						next('', { ...args, emittedBlocks });
 					},
 				);
@@ -2007,10 +2008,20 @@ const build = (recipe, deps, callback) => {
 						}
 						const oneSubject = composed.subject;
 						const blockLabel = oneBlock.applyLabel || RELATION_LABEL;
+						// (phase B6) THE PRODUCER STATES THE EDGE TYPES IT WROTE, and the harvest takes those alone.
+						// Selecting by endpoint label only took every edge between two stamped nodes, which under
+						// fan-out includes the source's own Field -HAS_CHILD-> Field base edges (D2 FINDING 1).
+						// No list is refused rather than harvested untyped: an untyped relationship harvest is the
+						// defect itself, and a dropped thread must not quietly restore it.
+						if (!Array.isArray(oneBlock.harvestEdgeTypeList)) {
+							blockDone(`bridge ${pairLabel}: block '${blockLabel}' carries no harvestEdgeTypeList — the producer must state the relationship types it wrote; the harvest does not select by endpoint label alone`);
+							return;
+						}
 						replay.harvest(
 							{
 								inGraph: args.depGraph,
 								selectionLabels: [blockLabel],
+								edgeTypeList: oneBlock.harvestEdgeTypeList,
 								// ⟪JOB 5b⟫ THE EXEMPTION IS GONE. JOB 2 declared NOT_LOADED_THROUGH_INIT here because
 								// bridgeMaker writes through lib/bridge-framework/graphWriter rather than
 								// replayManager.init, so no init-captured loaded set existed. One now does: the

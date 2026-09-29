@@ -382,10 +382,14 @@ const withDescribeBridge = (oneDoubleFactory) => (...factoryArgumentList) => ({
 	...oneDoubleFactory(...factoryArgumentList),
 });
 
+// (phase B6) build.js refuses a relationship block that states no harvest edge types, so every bridgeMaker double states
+// one, as the framework's runReport does (the writer's closed set; one type is enough for a double)
+const DOUBLE_HARVEST_EDGE_TYPE_LIST = Object.freeze(['EXACT_MATCH']);
+
 const workingBridgeMaker = (overrides) => () =>
 	Object.assign(
 		{
-			run: (spec, cb) => cb('', { ...spec, edgesWritten: 0 }),
+			run: (spec, cb) => cb('', { ...spec, harvestEdgeTypeList: DOUBLE_HARVEST_EDGE_TYPE_LIST, edgesWritten: 0 }),
 			// describeBridge JOINED THE DECLARED COMPONENT INTERFACE in Phase 7 (apps/graph-builder/interfaces.js
 			// COMPONENT_SHAPES.bridgeMaker.describeBridge), so a double that omits it is NON-CONFORMING and
 			// build.js's pre-spend check refuses it by name. Added here because a double's job is to conform to
@@ -524,7 +528,7 @@ const preSpendCollisionRefusal = (whenDone) => {
 	);
 	// BOTH bridges describe to the SAME tuple — the pescCedsDerived / pescOptionSetCedsDerived shape.
 	const collidingBridgeMaker = () => ({
-		run: (spec, cb) => { bridgeRunInvoked = true; cb('', { ...spec, edgesWritten: 0, decisionBlock: null, counts: {} }); },
+		run: (spec, cb) => { bridgeRunInvoked = true; cb('', { ...spec, harvestEdgeTypeList: DOUBLE_HARVEST_EDGE_TYPE_LIST, edgesWritten: 0, decisionBlock: null, counts: {} }); },
 		describeBridge: ({ bridgeName, source }) => ({
 			description: Object.freeze({ bridgeName, source, producerKind: 'inferred', subjectDiscriminator: undefined }),
 		}),
@@ -554,7 +558,7 @@ const preSpendCollisionRefusal = (whenDone) => {
 			{ resolveBundle: ({ standard }) => ({ standardName: String(standard).toUpperCase() }) },
 		);
 		const discriminatedBridgeMaker = () => ({
-			run: (spec, cb) => cb('', { ...spec, edgesWritten: 0, decisionBlock: null, counts: {} }),
+			run: (spec, cb) => cb('', { ...spec, harvestEdgeTypeList: DOUBLE_HARVEST_EDGE_TYPE_LIST, edgesWritten: 0, decisionBlock: null, counts: {} }),
 			describeBridge: ({ bridgeName, source }) => ({
 				description: Object.freeze({ bridgeName, source, producerKind: 'inferred', subjectDiscriminator: bridgeName === 'ctdlOptionSetDerivedBridge' ? 'optionSet' : undefined }),
 			}),
@@ -574,7 +578,7 @@ const preSpendCollisionRefusal = (whenDone) => {
 				{ resolveBundle: ({ standard }) => ({ standardName: String(standard).toUpperCase() }) },
 			);
 			const refusingBridgeMaker = () => ({
-				run: (spec, cb) => cb('', { ...spec, edgesWritten: 0, decisionBlock: null, counts: {} }),
+				run: (spec, cb) => cb('', { ...spec, harvestEdgeTypeList: DOUBLE_HARVEST_EDGE_TYPE_LIST, edgesWritten: 0, decisionBlock: null, counts: {} }),
 				// the registry's own refusal shape, carried through describeBridge
 				describeBridge: ({ bridgeName, source }) => ({ error: `pluginRegistry REFUSED: bridge '${bridgeName}' is REFUSED — no registered plugin declares it; registered names: (none registered) — a recipe names a plugin under forges/<standardKey>/bridges/ by its bridgeName (BR-003); nothing is substituted [source ${source}]` }),
 			});
@@ -909,7 +913,7 @@ const stageRelationshipBlockNaming = () => {
 	harness.section('RELATIONSHIP BLOCK NAMING — version-keyed, producer-suffixed (authored _exact / inferred _close)');
 
 	// authored: the bridgeMaker double returns decisionBlock null -> _exact.
-	const authoredBridgeMaker = withDescribeBridge(() => ({ run: (spec, cb) => cb('', { ...spec, edgesWritten: 26, decisionBlock: null, counts: { authored: 26 } }) }));
+	const authoredBridgeMaker = withDescribeBridge(() => ({ run: (spec, cb) => cb('', { ...spec, harvestEdgeTypeList: DOUBLE_HARVEST_EDGE_TYPE_LIST, edgesWritten: 26, decisionBlock: null, counts: { authored: 26 } }) }));
 	runBuildWith(cedsCtdlRecipe, { bridgeMaker: authoredBridgeMaker }, ({ err, result, xLog }) => {
 		harness.equal('the authored CTDL pairing builds', err, '');
 		harness.equal('  3 members (ceds base w/ folded hub + ctdl base + 1 relationship)', result.memberCount, 3);
@@ -921,7 +925,7 @@ const stageRelationshipBlockNaming = () => {
 		harness.match('  the bridge threads hub=ceds and ran the authored bridge', xLog.text(), /\[C\] bridge ctdl::ceds \(bridge=ctdlAuthoredBridge\)/);
 
 		// inferred: a frozen decisionBlock -> _close (the SAME pair, a DIFFERENT producer block).
-		const inferredBridgeMaker = withDescribeBridge(() => ({ run: (spec, cb) => cb('', { ...spec, edgesWritten: 5, decisionBlock: { hash: 'frozen' }, counts: { inferred: 5 } }) }));
+		const inferredBridgeMaker = withDescribeBridge(() => ({ run: (spec, cb) => cb('', { ...spec, harvestEdgeTypeList: DOUBLE_HARVEST_EDGE_TYPE_LIST, edgesWritten: 5, decisionBlock: { hash: 'frozen' }, counts: { inferred: 5 } }) }));
 		runBuildWith(cedsCtdlRecipe, { bridgeMaker: inferredBridgeMaker }, ({ err: inferErr, xLog: inferLog }) => {
 			harness.equal('the inferred producer variant also builds', inferErr, '');
 			harness.match(
@@ -957,7 +961,7 @@ const stageRelationshipBlockNaming = () => {
 					hubs: [],
 					bridges: [{ source: 'ctdl', pairWith: 'ctdlasn', bridge: 'ctdlFamilyStructure', dependencies: ['ctdl', 'ctdlasn'] }],
 				};
-				const structuralBridgeMaker = withDescribeBridge(() => ({ run: (spec, cb) => cb('', { ...spec, edgesWritten: 4, decisionBlock: null, producer: 'structural', counts: { structural: 4 } }) }));
+				const structuralBridgeMaker = withDescribeBridge(() => ({ run: (spec, cb) => cb('', { ...spec, harvestEdgeTypeList: DOUBLE_HARVEST_EDGE_TYPE_LIST, edgesWritten: 4, decisionBlock: null, producer: 'structural', counts: { structural: 4 } }) }));
 				runBuildWith(ctdlFamilyRecipe, { bridgeMaker: structuralBridgeMaker }, ({ err: structErr, result: structResult, xLog: structLog }) => {
 					harness.equal('a STRUCTURAL pairing (hub-less, pairWith names the sibling) builds', structErr, '');
 					harness.equal('  3 members (ctdl base + ctdlasn base + 1 structural relationship)', structResult.memberCount, 3);
@@ -1012,9 +1016,9 @@ const stageMultiBlockFamily = () => {
 				producer: 'structural',
 				counts: { structural: 4 },
 				blocks: [
-					{ applyLabel: 'BridgedRelation_CTDL_CTDLASN', firstStandard: 'ctdl', secondStandard: 'ctdlasn', producer: 'structural', decisionBlock: null, emptyPairing: false, edgesWritten: 2, counts: {} },
-					{ applyLabel: 'BridgedRelation_CTDL_CTDLQDATA', firstStandard: 'ctdl', secondStandard: 'ctdlqdata', producer: 'structural', decisionBlock: null, emptyPairing: false, edgesWritten: 1, counts: {} },
-					{ applyLabel: 'BridgedRelation_CTDLASN_CTDLQDATA', firstStandard: 'ctdlasn', secondStandard: 'ctdlqdata', producer: 'structural', decisionBlock: null, emptyPairing: false, edgesWritten: 1, counts: {} },
+					{ applyLabel: 'BridgedRelation_CTDL_CTDLASN', harvestEdgeTypeList: DOUBLE_HARVEST_EDGE_TYPE_LIST, firstStandard: 'ctdl', secondStandard: 'ctdlasn', producer: 'structural', decisionBlock: null, emptyPairing: false, edgesWritten: 2, counts: {} },
+					{ applyLabel: 'BridgedRelation_CTDL_CTDLQDATA', harvestEdgeTypeList: DOUBLE_HARVEST_EDGE_TYPE_LIST, firstStandard: 'ctdl', secondStandard: 'ctdlqdata', producer: 'structural', decisionBlock: null, emptyPairing: false, edgesWritten: 1, counts: {} },
+					{ applyLabel: 'BridgedRelation_CTDLASN_CTDLQDATA', harvestEdgeTypeList: DOUBLE_HARVEST_EDGE_TYPE_LIST, firstStandard: 'ctdlasn', secondStandard: 'ctdlqdata', producer: 'structural', decisionBlock: null, emptyPairing: false, edgesWritten: 1, counts: {} },
 				],
 			}),
 	}));
@@ -1082,7 +1086,7 @@ const stageRebridgeWiring = () => {
 	// returns producer:'inferred', so build.js names the empty block _close — NOT _exact, which would collide
 	// with the authored pair's _exact for the SAME pair (the two-producers-per-pair design). Proven via a
 	// double so no docker/graph is needed.
-	const emptyInferredBridgeMaker = withDescribeBridge(() => ({ run: (spec, cb) => cb('', { ...spec, edgesWritten: 0, decisionBlock: null, producer: 'inferred', counts: { inferred: 0 } }) }));
+	const emptyInferredBridgeMaker = withDescribeBridge(() => ({ run: (spec, cb) => cb('', { ...spec, harvestEdgeTypeList: DOUBLE_HARVEST_EDGE_TYPE_LIST, edgesWritten: 0, decisionBlock: null, producer: 'inferred', counts: { inferred: 0 } }) }));
 	runBuildWith(cedsCtdlRecipe, { bridgeMaker: emptyInferredBridgeMaker }, ({ err: emptyErr, xLog: emptyLog }) => {
 		harness.equal('an empty inferred block (no frozen decisions yet) still builds', emptyErr, '');
 		harness.match('  build.js names it _close from producer=inferred (NOT _exact from the null decisionBlock)', emptyLog.text(), /-> relationship ceds@current_rel_ctdl@current_close /);
@@ -1093,7 +1097,7 @@ const stageRebridgeWiring = () => {
 
 	const continueRebridgeWiring = () => {
 	const capturedSpecs = [];
-	const captureBridgeMaker = withDescribeBridge(() => ({ run: (spec, cb) => { capturedSpecs.push(spec); cb('', { ...spec, edgesWritten: 0, decisionBlock: null, counts: {} }); } }));
+	const captureBridgeMaker = withDescribeBridge(() => ({ run: (spec, cb) => { capturedSpecs.push(spec); cb('', { ...spec, harvestEdgeTypeList: DOUBLE_HARVEST_EDGE_TYPE_LIST, edgesWritten: 0, decisionBlock: null, counts: {} }); } }));
 	const fakeDecisionStore = { getDecisionBlock: (a, cb) => cb('', { frozenText: null }), saveDecisionBlock: (a, cb) => cb('') };
 	// a deterministic STUB reranker — the hermetic suite's llmClient. Injected on inferenceConfig, it is the
 	// real-vs-stub seam's STUB arm: with it present, resolveInferenceConfig NEVER mints the real Anthropic
@@ -2250,13 +2254,38 @@ const stageManifestPersistedToStore = () => {
 										memberCount,
 									);
 									fs.rmSync(scratchDir, { recursive: true, force: true });
-									stageDeclaredMissingUnconditional(() => preSpendCollisionRefusal(() => harness.report()));
+									stageDeclaredMissingUnconditional(() => preSpendCollisionRefusal(() => stageHarvestEdgeTypeList(() => harness.report())));
 								},
 							);
 						});
 					});
 				});
 			});
+		});
+	});
+};
+
+// =====================================================================
+// (phase B6) the relationship harvest is narrowed to the edge types the producer states; a base harvest is not
+// =====================================================================
+const stageHarvestEdgeTypeList = (next) => {
+	harness.section('HARVEST EDGE TYPES — the relationship harvest takes the producer-stated types; no list is refused by name');
+	const harvestSpecList = [];
+	const capturingReplayManager = () => {
+		const working = workingReplayManager()();
+		return Object.assign({}, working, { harvest: (spec, cb) => { harvestSpecList.push(spec); working.harvest(spec, cb); } });
+	};
+	const statingBridgeMaker = withDescribeBridge(() => ({ run: (spec, cb) => cb('', { ...spec, harvestEdgeTypeList: ['CLOSE_MATCH', 'EXACT_MATCH'], edgesWritten: 1, decisionBlock: null, counts: {} }) }));
+	runBuildWith(cedsCtdlRecipe, { bridgeMaker: statingBridgeMaker, replayManager: capturingReplayManager }, ({ err }) => {
+		harness.equal('a build whose bridge states its harvest edge types succeeds', err, '');
+		const relationshipSpecList = harvestSpecList.filter((oneSpec) => oneSpec.header && oneSpec.header.blockType === 'relationship');
+		const baseSpecList = harvestSpecList.filter((oneSpec) => !oneSpec.header || oneSpec.header.blockType !== 'relationship');
+		harness.ok('  the relationship harvest is handed exactly the stated edgeTypeList', relationshipSpecList.length === 1 && JSON.stringify(relationshipSpecList[0].edgeTypeList) === JSON.stringify(['CLOSE_MATCH', 'EXACT_MATCH']), JSON.stringify(relationshipSpecList.map((oneSpec) => oneSpec.edgeTypeList)));
+		harness.ok('  every base harvest is untyped (no edgeTypeList: a base block carries every intra-base edge)', baseSpecList.length > 0 && baseSpecList.every((oneSpec) => oneSpec.edgeTypeList === undefined), `${baseSpecList.length} base harvest(s)`);
+		const silentBridgeMaker = withDescribeBridge(() => ({ run: (spec, cb) => cb('', { ...spec, edgesWritten: 1, decisionBlock: null, counts: {} }) }));
+		runBuildWith(cedsCtdlRecipe, { bridgeMaker: silentBridgeMaker }, ({ err: silentErr }) => {
+			harness.match('a bridge that states no harvest edge types is refused by name, never harvested untyped', silentErr, /carries no harvestEdgeTypeList/);
+			next();
 		});
 	});
 };

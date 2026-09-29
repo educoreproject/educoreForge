@@ -12,7 +12,8 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //     nodeList  [{ stableId, labels: [...], properties: {...} }]     edgeList [{ fromStableId, toStableId, type, properties }]
 //     state     the mutable double: node labels stamped by the writer, edges written (edgeList grows), the
 //               reader's own counters (readHubCardsCallCount, sessionsOpenedFromPluginFrames …)
-//     harvestByLabel({ applyLabel }) → { nodeList, edgeList }   the harvest MATCH (a:Label)-[r]->(b:Label) mirror
+//     harvestByLabel({ applyLabel, edgeTypeList? }) → { nodeList, edgeList }   the harvest MATCH (a:Label)-[r[:T1|T2…]]->(b:Label)
+//               mirror: untyped when edgeTypeList is absent (a base block), those types only when present (phase B6)
 //
 // The reader/writer CONTRACT (the two bolt files implement the same):
 //   graphReaderFactory({ inGraph, dependencyStandardNameList, sourceStandardName, blindingDeclaration }) → reader
@@ -308,16 +309,21 @@ const graphDoubleFrom = ({ nodeList, edgeList } = {}) => {
 		return graphSeamRulesLib.closedWriter({ writeMappingEdge, close });
 	};
 
-	// harvestByLabel — the replay-engine harvest MATCH (a:L)-[r]->(b:L): every edge whose BOTH endpoints carry the label
-	const harvestByLabel = ({ applyLabel } = {}) => {
+	// harvestByLabel — the replay-engine harvest MATCH (a:L)-[r]->(b:L): every edge whose BOTH endpoints carry the label,
+	// narrowed to edgeTypeList's types when one is given, as replay-engine's edgeTypeMatch narrows the pattern (phase B6)
+	const harvestByLabel = ({ applyLabel, edgeTypeList } = {}) => {
 		const labelled = state.nodeList.filter((oneNode) => oneNode.labels.indexOf(applyLabel) !== -1);
 		const labelledSet = new Set(labelled.map((oneNode) => oneNode.stableId));
 		return {
 			nodeList: labelled.map((oneNode) => ({ stableId: oneNode.stableId, labels: oneNode.labels.slice(), properties: { ...oneNode.properties } })),
-			// harvest wraps every edge property in a one-element list (replay-engine shapeEdgeProps / pgArray)
+			// harvest shapes every edge property as replay-engine's shapeEdgeProps / pgArray does: a scalar becomes a
+			// one-element list and a list stays the list. (phase B6) This double had wrapped a list in a second list
+			// (attestationChannelList as [[…]]), which the engine never does, so a conservation comparison run on the
+			// double's harvest disagreed with the writer's own summary on every edge.
 			edgeList: state.edgeList
 				.filter((oneEdge) => labelledSet.has(oneEdge.fromStableId) && labelledSet.has(oneEdge.toStableId))
-				.map((oneEdge) => ({ fromStableId: oneEdge.fromStableId, toStableId: oneEdge.toStableId, type: oneEdge.type, properties: Object.keys(oneEdge.properties).reduce((soFar, oneName) => ({ ...soFar, [oneName]: [oneEdge.properties[oneName]] }), {}) })),
+				.filter((oneEdge) => edgeTypeList === undefined || edgeTypeList.indexOf(oneEdge.type) !== -1)
+				.map((oneEdge) => ({ fromStableId: oneEdge.fromStableId, toStableId: oneEdge.toStableId, type: oneEdge.type, properties: Object.keys(oneEdge.properties).reduce((soFar, oneName) => ({ ...soFar, [oneName]: Array.isArray(oneEdge.properties[oneName]) ? oneEdge.properties[oneName] : [oneEdge.properties[oneName]] }), {}) })),
 		};
 	};
 

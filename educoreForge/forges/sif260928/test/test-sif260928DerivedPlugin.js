@@ -20,6 +20,12 @@
 //                    both. Every picked unit writes one edge per Field, from that Field to its card, naming its question.
 //   D1-SSSOM     (c) the SSSOM export over that block passes the subject-prefix check: every subject_id is a Field
 //                    stableId beginning 'sif260928:'.
+//   B6-HARVEST   (a) phase B6: the toy graph carries Field -HAS_CHILD-> Field base edges between picked Fields, as SIF's
+//                    does (SPEC A26), so under fan-out both ends of each carry the pair label. Harvested with the edge
+//                    types the block entry states, the harvest equals the written edge list exactly and conservation
+//                    passes. Twins: the block entry states no list (the old untyped selector), and the double's type
+//                    filter deleted; each makes conservation refuse, naming the invented HAS_CHILD edges.
+//                (a′) the replay engine's pattern text for that list, and its refusals of an empty list and a bad name.
 //
 // THE TOY GRAPH. The framework's toy hub (toyEmbedTextBoltGraph: cards, their slot edges, the property base nodes)
 // with its text layer replaced: three hub texts, and SIF-shaped Sif260928Question and Sif260928Field nodes with their
@@ -55,6 +61,8 @@ const { runGateFamily } = require(path.join(TREE_ROOT, 'lib', 'forge-framework',
 const { makeTwinRegistry } = require(path.join(TREE_ROOT, 'lib', 'forge-framework', 'roundTripHarness', 'twinRegistry'));
 const pluginRegistryLib = require(path.join(TREE_ROOT, 'lib', 'bridge-framework', 'pluginRegistry'));
 const sssomExporterLib = require(path.join(TREE_ROOT, 'lib', 'bridge-framework', 'sssomExporter'));
+const replayEngineLib = require(path.join(TREE_ROOT, 'lib', 'replay', 'replay-engine'))();
+const { compareConservation } = require(path.join(TREE_ROOT, 'apps', 'graph-builder', 'apps', 'replay-manager', 'replayManager'));
 const { DME_ROLES, EDGE_TYPES, EMBED_TEXT_VECTOR } = require(path.join(TREE_ROOT, 'lib', 'vocabulary', 'vocabulary'));
 
 const twinRegistry = makeTwinRegistry();
@@ -71,6 +79,8 @@ const IDENTIFIER_LIST_COUNT = 354;
 const SOURCE_STANDARD_NAME = 'SIF260928';
 const SOURCE_VERSION = '4.3';
 const MATERIALISER_FILE = 'materialiser.js';
+const BRIDGE_FRAMEWORK_FILE = 'bridge-framework.js';
+const GRAPH_DOUBLE_FILE = 'graphDouble.js';
 const HUB_NAME = toyEmbedTextBoltGraphLib.HUB_NAME;
 
 // the two questions and their Fields; the object names are SIF's, so the shipped domain file labels them
@@ -93,6 +103,13 @@ const PROMPT_DOMAIN_LINE_LITERAL = Object.freeze(['', 'objectDomain: K12 Staff E
 const PLANTED_ANSWER_ID = 'P001071';
 const QUESTION_BY_FIELD = Object.freeze({ [STUDENT_LOCAL_ID]: MODEL_QUESTION, [STAFF_LOCAL_ID]: MODEL_QUESTION, [STUDENT_METADATA_TYPE]: METADATA_QUESTION, [STAFF_METADATA_TYPE]: METADATA_QUESTION });
 const FIELD_STABLE_ID_LIST = Object.freeze(Object.keys(QUESTION_BY_FIELD).sort());
+// (phase B6) the Field -HAS_CHILD-> Field base edges planted between PICKED Fields of one object, standing in for SIF's
+// element-to-attribute edges (SPEC A26): every Field is picked under the debug rule 'first', so both ends of each get
+// the pair label, which is the shape D2's harvest refused on (2,992 such edges)
+const FIELD_CHILD_EDGE_LIST = Object.freeze([
+	{ fromStableId: STUDENT_LOCAL_ID, toStableId: STUDENT_METADATA_TYPE },
+	{ fromStableId: STAFF_LOCAL_ID, toStableId: STAFF_METADATA_TYPE },
+]);
 // a bare id from the shipped list (the student local id SIF annotates) and a P-form the pattern alone catches
 const PLANTED_BARE_ID = '001071';
 
@@ -200,7 +217,8 @@ const sifGraph = ({ modelDescription }) => {
 		]);
 	const edgeList = baseGraph.edgeList
 		.filter((oneEdge) => oneEdge.type !== EDGE_TYPES.EMBEDS_TEXT_OF)
-		.concat(Object.keys(QUESTION_BY_FIELD).map((fieldStableId) => ({ fromStableId: QUESTION_BY_FIELD[fieldStableId], toStableId: fieldStableId, type: EDGE_TYPES.HAS_INSTANCE, properties: { provenanceTier: 'structural' } })));
+		.concat(Object.keys(QUESTION_BY_FIELD).map((fieldStableId) => ({ fromStableId: QUESTION_BY_FIELD[fieldStableId], toStableId: fieldStableId, type: EDGE_TYPES.HAS_INSTANCE, properties: { provenanceTier: 'structural' } })))
+		.concat(FIELD_CHILD_EDGE_LIST.map((oneEdge) => ({ ...oneEdge, type: EDGE_TYPES.HAS_CHILD, properties: { provenanceTier: 'structural' } })));
 	HUB_TEXT_LIST.forEach((oneText) => {
 		const textStableId = `toyhub:root/embedText/${oneText.textName}`;
 		nodeList.push(textNode({ stableId: textStableId, standardName: HUB_NAME, vector: oneText.vector }));
@@ -388,13 +406,74 @@ scenarioTwin({
 	},
 });
 
+// ---------------------------------------------------------------------
+// B6-HARVEST (a) — the relationship harvest under fan-out
+// ---------------------------------------------------------------------
+// harvestedConservationOf — the double's harvest of the block entry's label, narrowed by the entry's own
+// harvestEdgeTypeList (the value build.js passes to replayManager.harvest), put in the engine's edge shape and compared
+// by the SAME compareConservation the build runs, against the writer's loaded summary the entry carries
+const harvestedConservationOf = (runReport, outcome) => {
+	const blockEntry = runReport.blocks[0];
+	const harvest = outcome.graphDouble.harvestByLabel({ applyLabel: blockEntry.applyLabel, edgeTypeList: blockEntry.harvestEdgeTypeList });
+	const engineEdgeList = harvest.edgeList.map((oneEdge) => ({ type: oneEdge.type, fromRef: { id: oneEdge.fromStableId }, toRef: { id: oneEdge.toStableId }, properties: oneEdge.properties }));
+	const conservationReport = compareConservation({ expectation: blockEntry.loadedConservationSummary, harvested: replayEngineLib.conservationSummaryFor({ nodes: harvest.nodeList, edges: engineEdgeList }), graphName: 'graphDouble' });
+	return { harvest, conservationReport };
+};
+const edgeLineOf = (oneEdge, propertiesOf) => `${oneEdge.fromStableId} -${oneEdge.type}-> ${oneEdge.toStableId} ${JSON.stringify(propertiesOf(oneEdge.properties))}`;
+const listWrapped = (properties) => Object.keys(properties).sort().reduce((soFar, oneName) => ({ ...soFar, [oneName]: Array.isArray(properties[oneName]) ? properties[oneName] : [properties[oneName]] }), {});
+const sortedKeys = (properties) => Object.keys(properties).sort().reduce((soFar, oneName) => ({ ...soFar, [oneName]: properties[oneName] }), {});
+// the planted base edges whose two ends BOTH carry the pair label after the run: the precondition that gives the gate teeth
+const labelledChildEdgeCountOf = (runReport, outcome) => {
+	const applyLabel = runReport.blocks[0].applyLabel;
+	const labelledSet = new Set(outcome.graphDouble.state.nodeList.filter((oneNode) => oneNode.labels.indexOf(applyLabel) !== -1).map((oneNode) => oneNode.stableId));
+	return outcome.graphDouble.state.edgeList.filter((oneEdge) => oneEdge.type === EDGE_TYPES.HAS_CHILD && labelledSet.has(oneEdge.fromStableId) && labelledSet.has(oneEdge.toStableId)).length;
+};
+const harvestConjunctList = [
+	runConjunct({
+		conjunctId: 'a_harvestEqualsWrittenEdgesUnderFanout',
+		title: `(a) with ${FIELD_CHILD_EDGE_LIST.length} Field -HAS_CHILD-> Field base edges between picked Fields (both ends carrying the pair label), the harvest narrowed by the block entry's harvestEdgeTypeList equals the written edge list exactly, and conservation passes`,
+		twinNameList: ['harvestEdgeTypeListDropped', 'doubleTypeFilterDeleted'],
+		shape: sifShape,
+		judge: succeeded((runReport, outcome) => {
+			const { harvest, conservationReport } = harvestedConservationOf(runReport, outcome);
+			const harvestedLineList = harvest.edgeList.map((oneEdge) => edgeLineOf(oneEdge, sortedKeys)).sort();
+			const writtenLineList = edgesOf(outcome).map((oneEdge) => edgeLineOf(oneEdge, listWrapped)).sort();
+			const labelledChildEdgeCount = labelledChildEdgeCountOf(runReport, outcome);
+			const pass = labelledChildEdgeCount === FIELD_CHILD_EDGE_LIST.length && writtenLineList.length === FIELD_STABLE_ID_LIST.length && JSON.stringify(harvestedLineList) === JSON.stringify(writtenLineList) && !conservationReport.error;
+			// the named edges lead the detail, so an observed red shows WHICH edges the harvest invented or lost
+			const conservationText = conservationReport.error ? conservationReport.error.slice(conservationReport.error.indexOf('edges missing')) : conservationReport.statusText;
+			return { pass, detail: `${labelledChildEdgeCount} labelled HAS_CHILD; harvested ${harvestedLineList.length}, written ${writtenLineList.length}; ${conservationText}` };
+		}),
+	}),
+	pureConjunct({
+		conjunctId: 'aPrime_enginePatternAndRefusals',
+		title: "(a′) replay-engine narrows the label harvest's pattern to exactly the stated types (':`T1`|`T2`…'), leaves it untyped when none is stated, and refuses an empty list and a non-identifier by name",
+		twinNameList: ['emptyTypeListAccepted'],
+		judge: (scenario) => {
+			const edgeTypeList = ['CLOSE_MATCH', 'EXACT_MATCH'];
+			const patternText = replayEngineLib.edgeTypeMatch(edgeTypeList);
+			const untypedText = replayEngineLib.edgeTypeMatch(undefined);
+			const refusalOf = scenario.edgeTypeRefusalOverride === undefined ? replayEngineLib.edgeTypeRefusal : scenario.edgeTypeRefusalOverride;
+			const emptyRefusal = refusalOf([]);
+			const badNameRefusal = refusalOf(['EXACT_MATCH]->(x) DETACH DELETE x //']);
+			const pass = patternText === ':`CLOSE_MATCH`|`EXACT_MATCH`' && untypedText === '' && refusalOf(undefined) === '' && refusalOf(edgeTypeList) === '' && /non-empty array/.test(emptyRefusal) && /invalid relationship type name/.test(badNameRefusal);
+			return { pass, detail: `pattern ${JSON.stringify(patternText)}; untyped ${JSON.stringify(untypedText)}; empty → ${JSON.stringify(emptyRefusal)}; bad → ${JSON.stringify(badNameRefusal.slice(0, 80))}` };
+		},
+	}),
+];
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'B6-HARVEST', conjunctId: 'a_harvestEqualsWrittenEdgesUnderFanout', twinName: 'harvestEdgeTypeListDropped', fileName: BRIDGE_FRAMEWORK_FILE, find: ', harvestEdgeTypeList: HARVEST_EDGE_TYPE_LIST })),', replace: ' })),' });
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'B6-HARVEST', conjunctId: 'a_harvestEqualsWrittenEdgesUnderFanout', twinName: 'doubleTypeFilterDeleted', fileName: GRAPH_DOUBLE_FILE, find: '.filter((oneEdge) => edgeTypeList === undefined || edgeTypeList.indexOf(oneEdge.type) !== -1)', replace: '' });
+// the engine is not a bridge-framework file, so its twin is an input fault: a refusal that accepts the empty list
+scenarioTwin({ registry: twinRegistry, gateId: 'B6-HARVEST', conjunctId: 'aPrime_enginePatternAndRefusals', twinName: 'emptyTypeListAccepted', leverKind: 'inputFault', mutate: (scenario) => { scenario.edgeTypeRefusalOverride = (edgeTypeList) => (Array.isArray(edgeTypeList) && edgeTypeList.length === 0 ? '' : replayEngineLib.edgeTypeRefusal(edgeTypeList)); } });
+
 const gateDeclarationList = [
 	{ gateId: 'D1-REGISTER', title: 'the SIF derived plugin registers at zero spend, and its identifier list is well-formed and wired into the scan', conjunctList: registerConjunctList },
 	{ gateId: 'D1-FANOUT', title: 'on the graph double, a model question is judged once per CEDS domain and a metadata question once, and each answer is written onto exactly its Fields', conjunctList: fanoutConjunctList },
 	{ gateId: 'D1-SSSOM', title: 'the SSSOM export over the fanned-out block passes the subject-prefix check', conjunctList: sssomConjunctList },
+	{ gateId: 'B6-HARVEST', title: "under fan-out, the relationship harvest takes exactly the written edges, never the source's own base edges between two picked Fields", conjunctList: harvestConjunctList },
 ];
 
 runGateFamily(
-	{ harness, familyName: 'D1-REGISTER+D1-FANOUT+D1-SSSOM', gateDeclarationList, twinRegistry, makeSubject: scenarioLib.makeScenario, cloneSubject: scenarioLib.cloneScenario, expectedConjunctCount: 7 },
+	{ harness, familyName: 'D1-REGISTER+D1-FANOUT+D1-SSSOM+B6-HARVEST', gateDeclarationList, twinRegistry, makeSubject: scenarioLib.makeScenario, cloneSubject: scenarioLib.cloneScenario, expectedConjunctCount: 9 },
 	() => harness.report(),
 );

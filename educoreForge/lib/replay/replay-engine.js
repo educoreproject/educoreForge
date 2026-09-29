@@ -1066,6 +1066,29 @@ const labelRefusal = (selectionLabels) => {
 	return '';
 };
 
+// (phase B6) edgeTypeList narrows the edges a label-scoped harvest takes to the named relationship types.
+// ABSENT, the selector is untyped: a base block carries every intra-base edge, whatever its type. PRESENT, it
+// must be a non-empty list of bare identifiers, validated exactly as labels are, because a relationship type is
+// interpolated into the pattern too. A producer whose endpoints share a label with base edges between them
+// (fan-out: Field -HAS_CHILD-> Field, both endpoints stamped) states the types it wrote, so the harvest takes
+// those and never the base edges.
+const edgeTypeRefusal = (edgeTypeList) => {
+	if (edgeTypeList === undefined) {
+		return '';
+	}
+	if (!Array.isArray(edgeTypeList) || edgeTypeList.length === 0) {
+		return 'harvestBlock: edgeTypeList, when given, must be a non-empty array of relationship type names';
+	}
+	const bad = edgeTypeList.filter((oneEdgeType) => !LABEL_RE.test(oneEdgeType));
+	if (bad.length > 0) {
+		return `harvestBlock: invalid relationship type name(s) ${JSON.stringify(bad)} — a type is a bare identifier`;
+	}
+	return '';
+};
+
+const edgeTypeMatch = (edgeTypeList) =>
+	edgeTypeList === undefined ? '' : `:${edgeTypeList.map((oneEdgeType) => `\`${oneEdgeType}\``).join('|')}`;
+
 const labelMatch = (selectionLabels) =>
 	selectionLabels.map((oneLabel) => `\`${oneLabel}\``).join(':');
 
@@ -1095,11 +1118,11 @@ const fetchNodesByLabelsPaged = (session, selectionLabels, header, emitEmbedding
 
 // Edges with BOTH endpoints inside the selected labels. A block carries only the edges whose
 // endpoints it also carries; anything else would deserialize into a dangling reference.
-const fetchEdgesWithinLabels = (session, selectionLabels, callback) => {
+const fetchEdgesWithinLabels = (session, selectionLabels, edgeTypeList, callback) => {
 	const clause = labelMatch(selectionLabels);
 	session
 		.run(
-			`MATCH (a:${clause})-[r]->(b:${clause})
+			`MATCH (a:${clause})-[r${edgeTypeMatch(edgeTypeList)}]->(b:${clause})
 			 RETURN a._source AS fromSrc, a.stableId AS fromStableId, type(r) AS type,
 			        b._source AS toSrc, b.stableId AS toStableId, properties(r) AS props
 			 ORDER BY fromStableId, type, toStableId`,
@@ -1123,9 +1146,10 @@ const harvestBlock = ({ boltUri, password, selector, header, vectorStore }, call
 	// selector = { selectionLabels: [...] } is the RECREATION path; { source } and { pairA, pairB }
 	// are the incumbent-faithful ones, kept because they are proven and cost nothing.
 	const selectionLabels = selector && selector.selectionLabels;
+	const edgeTypeList = selector && selector.edgeTypeList;
 	const isLabelScoped = !!selectionLabels;
 	if (isLabelScoped) {
-		const refusal = labelRefusal(selectionLabels);
+		const refusal = labelRefusal(selectionLabels) || edgeTypeRefusal(edgeTypeList);
 		if (refusal) {
 			session.close().then(() => driver.close());
 			callback(refusal);
@@ -1192,7 +1216,7 @@ const harvestBlock = ({ boltUri, password, selector, header, vectorStore }, call
 			next('', { ...args, edges });
 		};
 		if (isLabelScoped) {
-			fetchEdgesWithinLabels(session, selectionLabels, collectEdges);
+			fetchEdgesWithinLabels(session, selectionLabels, edgeTypeList, collectEdges);
 			return;
 		}
 		fetchStandardEdges(session, sourceOf(selector.source), collectEdges);
@@ -1733,6 +1757,10 @@ return {
 	// let one write what another refuses, and the fake driver is the one that would do it silently.
 	identityHostileValue,
 	labelRefusal,
+	// (phase B6) the relationship-type narrowing of a label-scoped harvest, exported so a suite can gate the
+	// refusal and the pattern text without a container
+	edgeTypeRefusal,
+	edgeTypeMatch,
 	replay,
 	// the shared write path — replay() and replayManager.init() are its two entry points
 	writeShapedGraph,
