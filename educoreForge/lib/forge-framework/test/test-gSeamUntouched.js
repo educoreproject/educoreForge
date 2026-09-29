@@ -115,7 +115,17 @@ const TREE_ROOT = path.resolve(toyScenario.FRAMEWORK_DIR, '..', '..');
 // THIS ref before the move was accepted. The tag is cut ON the re-anchor commit (this file lives under lib/forge-framework/,
 // which BG conjunct (iii) watches with no exclusion — TWILIGHT_ARROW's rule, 2026-09-03). The same commit moves the four BG
 // anchors, for the reason recorded in test-bgNosub.js beside them.
-const PRE_MIGRATION_REF = 'postEmbedTextP7-091526'; // re-anchored by RADIANT_QUEST, forge embed-text P8; the tag is cut ON the re-anchor commit
+// ═══ RE-ANCHOR, 2026-09-29 (IVORY_MIRROR; RULING EBONY_DREAM), SIF replacement phase B6 ═══
+// postEmbedTextP7-091526 -> postB6GSeamUntouched-092926, the tag cut ON this re-anchor commit. CENSUS, MEASURED WITH THIS GATE'S
+// OWN COMMAND (git diff --stat postEmbedTextP7-091526 -- <the 7 seam files>) at B6's head 3220f8b: exactly THREE of the seven,
+// every one B6's own ruled change (commit 7047e35 — the relationship harvest selects by the producer-stated edge types):
+//   apps/graph-builder/apps/replay-manager/replayManager.js  |  8 +++--   threads spec.edgeTypeList to the selector
+//   apps/graph-builder/lib/build.js                          | 15 +++++++-- passes the block's harvestEdgeTypeList; refuses none
+//   lib/replay/replay-engine.js                              | 36 ++++++++-- the optional edgeTypeList on the label selector
+// forger.js, shape-forged-graph.js, replay-block.js and round-trip-stage.js: UNTOUCHED. THE SEAM FILE LIST IS UNCHANGED, no
+// exclusion added; a fresh scratch red was observed against THIS tag (DEVLOG-B6). This file lives under lib/forge-framework/,
+// which BG conjunct (iii) watches with no exclusion, so (iii) moves next, on its own commit.
+const PRE_MIGRATION_REF = 'postB6GSeamUntouched-092926'; // re-anchored by IVORY_MIRROR, SIF replacement B6 (RULING EBONY_DREAM); the tag is cut ON the re-anchor commit
 const SEAM_FILE_LIST = Object.freeze([
 	'apps/graph-builder/apps/forger/forger.js',
 	'apps/graph-builder/lib/build.js',
