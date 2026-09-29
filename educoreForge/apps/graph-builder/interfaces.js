@@ -408,8 +408,9 @@ const FINISHER_MODULE_SHAPE = {
  * @property {string}   model           the NAMESPACED IDENTITY — 'anthropic:claude-opus-4-8'. The
  *                                      judgment-cache key, `judgeModel`, and the edge's mappingTool.
  * @property {number}   maxConcurrency  the provider's own ceiling on in-flight judgments
- * @property {function} rerank          ({systemPrompt, userPrompt, choiceEnum}, cb) ->
- *                                      cb(err, {choice, category, rationale, model, attempts})
+ * @property {function} rerank          ({systemPrompt, userPrompt, choiceEnum, predicateRule}, cb) ->
+ *                                      cb(err, {choice, category, rationale, model, attempts}), plus
+ *                                      predicate under a predicateRule whose schema has the slot
  * @property {function} describe        () -> {provider, model, version}
  */
 
@@ -461,7 +462,9 @@ const JUDGE_PROVIDER_SHAPE = Object.freeze({
 	MODEL_NAMESPACE_SEPARATOR: ':',
 	rerank: Object.freeze({
 		arity: 2,
-		argKeys: Object.freeze(['systemPrompt', 'userPrompt', 'choiceEnum']),
+		// ⟪B3b, 2026-09-28⟫ predicateRule names the select_candidate schema the provider sends (selectCandidateSchema.js); required,
+		// and refused by name when absent or unknown
+		argKeys: Object.freeze(['systemPrompt', 'userPrompt', 'choiceEnum', 'predicateRule']),
 		// ⟪JOB 1⟫ `model` and `attempts` are CONTRACT MEMBERS of the result, no longer the "harmless
 		// surplus the pipeline ignores" llmClient's header used to call them: `model` is the identity
 		// the judgment travelled under and must agree with the provider's own `model`.

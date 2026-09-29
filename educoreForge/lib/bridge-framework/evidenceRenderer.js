@@ -9,7 +9,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //
 //   renderQuestion({ sourceElement, candidatePool, globalGuidanceList, perCandidateNoteByStableId,
 //                    promptSegmentList, judgePromptVariant, renderingAllowList })
-//     → { systemPrompt, userPrompt, promptHash, renderedPoolStableIdList, choiceEnum, rendererVersion } | { error }
+//     → { systemPrompt, userPrompt, promptHash, renderedPoolStableIdList, choiceEnum, rendererVersion, judgePredicateRule } | { error }
 //
 // THREE REGISTERED VARIANTS, one row each (RULING §11.1) — never a branch on the variant name:
 //
@@ -228,6 +228,11 @@ const DERIVED_VARIANT_ROW = Object.freeze({
 	candidateListPreambleLineList: Object.freeze(['', 'Selected from this CANDIDATE ELEMENTS list:', '']),
 	candidateListHeadingWord: 'CANDIDATE ELEMENTS',
 	answerLineSuffix: ', as well as a RATIONALE.',
+	// ⟪B3b, 2026-09-28⟫ judgePredicateRule — the predicate rule whose select_candidate schema the judge answers through. It rides
+	// out on every rendered question beside rendererVersion, and judgeComponent hands it to the provider and verifies
+	// the answer by it. Each rule named by VARIANT_BY_BASIS_AND_PREDICATE_RULE (bridgePluginContract.js) lands on a
+	// variant carrying that same rule; a documentary basis judges through the categoryTable-v1 schema.
+	judgePredicateRule: 'categoryTable-v1',
 });
 const JUDGE_PROMPT_VARIANT_REGISTRY = Object.freeze({
 	crosswalk: Object.freeze({
@@ -245,9 +250,10 @@ const JUDGE_PROMPT_VARIANT_REGISTRY = Object.freeze({
 		candidateListPreambleLineList: Object.freeze([]),
 		candidateListHeadingWord: 'CANDIDATES',
 		answerLineSuffix: '.',
+		judgePredicateRule: 'categoryTable-v1',
 	}),
 	derived: DERIVED_VARIANT_ROW,
-	derivedJudgeSlot: Object.freeze({ ...DERIVED_VARIANT_ROW, rendererVersion: DERIVED_JUDGE_SLOT_RENDERER_VERSION }),
+	derivedJudgeSlot: Object.freeze({ ...DERIVED_VARIANT_ROW, rendererVersion: DERIVED_JUDGE_SLOT_RENDERER_VERSION, judgePredicateRule: 'judgeSlot-v1' }),
 });
 
 // renderedBlockRefusal — the POSITIVE half of the id gate, applied to the bytes actually produced. The
@@ -346,6 +352,7 @@ const renderQuestion = ({ sourceElement, candidatePool, globalGuidanceList, perC
 		renderedPoolNameList: candidatePool.map((oneSeat) => (typeof oneSeat.card.name === 'string' ? oneSeat.card.name : null)),
 		choiceEnum,
 		rendererVersion: variantRow.rendererVersion,
+		judgePredicateRule: variantRow.judgePredicateRule,
 	};
 };
 

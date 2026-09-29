@@ -517,6 +517,21 @@ const retrievalRegistryRefusal = () => {
 	return null;
 };
 
+// JUDGE_PICK_PREDICATE_BY_PREDICATE_RULE — for a judge-sourced pick, one row per predicate rule the contract accepts
+// (JUDGE_PREDICATE_RULE_LIST; test-bgJudgePredicate (g) holds the two to the same rules). categoryTable-v1 maps the
+// judge's CATEGORY through the declared predicateByCategory table; judgeSlot-v1 takes the predicate the judge named,
+// which judgeComponent has already verified against the schema's pick values (SIF replacement B3b).
+const JUDGE_PICK_PREDICATE_BY_PREDICATE_RULE = Object.freeze({
+	'categoryTable-v1': ({ judged, bridgeDeclaration }) => {
+		const predicate = bridgeDeclaration.predicateByCategory[judged.category];
+		if (predicate === undefined) {
+			return { error: refuse.byName({ moduleName, what: `the judge returned category '${judged.category}' and predicateByCategory names no predicate for it`, where: 'the declaration validator refuses a table that does not cover every judge category, so reaching this names a framework defect, not a declaration one' }) };
+		}
+		return { predicate };
+	},
+	'judgeSlot-v1': ({ judged }) => ({ predicate: judged.predicate }),
+});
+
 // START OF moduleFunction() ============================================================
 
 const moduleFunction =
@@ -706,6 +721,11 @@ const moduleFunction =
 			// blockRecordsJudgeConfig (SPEC §9 A12): the judge's configuration in the header and each rationale in its record
 			// (judgeConfigRecord.js). Absent, both are omitted and the block text is what it was.
 			const recordsJudgeConfig = bridgeDeclaration.blockRecordsJudgeConfig === true;
+			// the configuration the header will state, taken once, and its digest: the judgment cache folds the digest
+			// into its key so a cached judgment is served only under the configuration the header states (SIF replacement
+			// B3b). null when the plugin does not opt in, which keeps every cache key exactly what it was.
+			const runJudgeConfigHeader = recordsJudgeConfig && judgeClient !== null ? judgeConfigRecordLib.judgeConfigHeaderFor({ judgeClient, predicateRule: bridgeDeclaration.predicateSource.predicateRule }) : null;
+			const judgeConfigCacheDigest = runJudgeConfigHeader === null ? null : sha256Hex(canonicalJson(runJudgeConfigHeader));
 			const debugMark = spec.rebridge ? debugJudgeLib.debugMarkFromLlmClient({ inferenceConfig: spec.inferenceConfig }) : undefined;
 			// ⟪2026-09-10⟫ ONE DOOR: sourceSelectionMarkFor answers for whichever selector was asked for — the
 			// debug window or the named subject set — and refuses the combination inside the pure module. The
@@ -754,14 +774,13 @@ const moduleFunction =
 				column: sourceRowPickPredicate,
 				labelTable: sourceRowPickPredicate,
 				channelAssertion: sourceRowPickPredicate,
-				// judge reads the categoryTable-v1 table. A judgeSlot-v1 declaration carries no table, so it cannot be
-				// served by this row; the judge's own predicate reaches the record in PLAN small phases §3 B3b.
+				// judge: where the relation comes from is the declared predicate rule's row (JUDGE_PICK_PREDICATE_BY_PREDICATE_RULE)
 				judge: ({ judged }) => {
-					const predicate = bridgeDeclaration.predicateByCategory[judged.category];
-					if (predicate === undefined) {
-						return { error: refuse.byName({ moduleName, what: `the judge returned category '${judged.category}' and predicateByCategory names no predicate for it`, where: 'the declaration validator refuses a table that does not cover every judge category, so reaching this names a framework defect, not a declaration one' }) };
+					const resolvedPredicate = JUDGE_PICK_PREDICATE_BY_PREDICATE_RULE[bridgeDeclaration.predicateSource.predicateRule]({ judged, bridgeDeclaration });
+					if (resolvedPredicate.error) {
+						return { error: resolvedPredicate.error };
 					}
-					return { predicate, predicateAssertedBy: bridgePluginContractLib.PREDICATE_ASSERTED_BY_BY_SOURCE_KIND.judge, sourceLabel: null };
+					return { predicate: resolvedPredicate.predicate, predicateAssertedBy: bridgePluginContractLib.PREDICATE_ASSERTED_BY_BY_SOURCE_KIND.judge, sourceLabel: null };
 				},
 			});
 
@@ -1862,7 +1881,7 @@ const moduleFunction =
 								return;
 							}
 							const reaskPromptRefusalFor = (reaskUserPrompt) => promptScanRefusalFor({ subjectStableId: oneTask.baseRecord.subjectStableId, surfaceTextByName: () => ({ reaskUserPrompt }) });
-							judgeComponentLib.judgeOne({ question, judgeClient, judgmentCache: spec.judgmentCache, matchForensics: spec.matchForensics, budget, pairKey, generation, debugMark, reaskPromptRefusalFor }, (judgeError, judged, judgeFault) => {
+							judgeComponentLib.judgeOne({ question, judgeClient, judgmentCache: spec.judgmentCache, matchForensics: spec.matchForensics, budget, pairKey, generation, debugMark, reaskPromptRefusalFor, judgeConfigCacheDigest }, (judgeError, judged, judgeFault) => {
 								if (judgeError) {
 									// ⟪RULING 14:55 (a) THE NET⟫ a rationale-FORM refusal after its one re-ask names the SUBJECT in
 									// refusalList and the run CARRIES ON. No edge, no default, and explicitly NOT recorded as an
@@ -1896,6 +1915,11 @@ const moduleFunction =
 								if (recordsJudgeConfig) {
 									judgeRecord.rationale = judged.rationale;
 								}
+								// the relation the judge itself named, on a pick under a rule with a predicate slot (SIF replacement
+								// B3b). An abstention names none, and under categoryTable-v1 the answer carries no predicate at all.
+								if (judged.chosenCardStableId !== null && judged.predicate !== undefined) {
+									judgeRecord.predicate = judged.predicate;
+								}
 								if (judged.chosenCardStableId === null) {
 									report.judgeSpend.abstained += 1;
 									taskDone('', { ...oneTask.baseRecord, objectStableId: null, predicate: null, predicateAssertedBy: null, sourceLabel: null, confidence: null, abstained: true, judge: judgeRecord, renderedPoolStableIdList: question.renderedPoolStableIdList });
@@ -1905,11 +1929,11 @@ const moduleFunction =
 								// never a branch on matchBasis. For the three documentary kinds it comes from the SOURCE ROW
 								// that named the picked card (a tentative row's predicateIfPicked, a predicate row's
 								// predicate); the judge never names the relation. For kind 'judge' there IS no source row,
-								// so the plugin's declared predicateByCategory table maps the judge's CATEGORY to a relation
-								// — a v1 approximation, NAMED as such in the block header (predicateRule 'categoryTable-v1',
-								// RULING §11.7 (a)) so a later judge with a real predicate slot re-measures rather than
-								// silently differing. The mapping is total by construction: predicateByCategory is refused
-								// at declaration time unless it names every judge category.
+								// and the declared predicate rule decides (JUDGE_PICK_PREDICATE_BY_PREDICATE_RULE; the rule is
+								// named in the block header). Under 'categoryTable-v1' the plugin's predicateByCategory table maps the
+								// judge's CATEGORY to a relation — a v1 approximation (RULING §11.7 (a)), total by construction
+								// because the table is refused at declaration time unless it names every judge category. Under
+								// 'judgeSlot-v1' the judge names the relation itself (SPEC §9 A11).
 								const pickPredicateResolved = PICK_PREDICATE_RESOLVER_BY_SOURCE_KIND[bridgeDeclaration.predicateSource.kind]({ judged, oneTask, orderedAssertionList });
 								if (pickPredicateResolved.error) {
 									taskDone(pickPredicateResolved.error.message);
@@ -2004,7 +2028,7 @@ const moduleFunction =
 						generation,
 					};
 					if (recordsJudgeConfig) {
-						Object.assign(header, judgeConfigRecordLib.judgeConfigHeaderFor({ judgeClient, predicateRule: header.predicateRule }));
+						Object.assign(header, runJudgeConfigHeader);
 					}
 					const refusalList = report.refusalList.map((oneRefusal) => ({ ...oneRefusal }));
 					const frozen = decisionBlockLib.frozenTextFor({ header, decisionRecordList, refusalList });
@@ -2131,3 +2155,4 @@ const moduleFunction =
 // END OF moduleFunction() ============================================================
 
 module.exports = moduleFunction({ moduleName });
+module.exports.JUDGE_PICK_PREDICATE_BY_PREDICATE_RULE = JUDGE_PICK_PREDICATE_BY_PREDICATE_RULE;

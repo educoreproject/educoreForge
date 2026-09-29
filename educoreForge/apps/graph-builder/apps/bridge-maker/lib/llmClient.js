@@ -100,7 +100,10 @@ const {
 	SELECT_CANDIDATE_TOOL_NAME,
 	PICK_CATEGORY_ENUM,
 	OFFERED_CATEGORY_ENUM,
-	renderSelectCandidateSchema,
+	PREDICATE_RULE_NAME_LIST,
+	PREDICATE_FIELD_BY_PREDICATE_RULE,
+	unknownPredicateRuleRefusalText,
+	renderSelectCandidateSchemaForPredicateRule,
 } = require('./selectCandidateSchema');
 
 // canonical config home for this project (secrets live ONLY here; the SAME [anthropicAi] .ini
@@ -321,6 +324,21 @@ const extractCategoryAndRationale = (responseBody) => {
 	return { category, rationale, sourceElementIdeaList, candidateIdeaList, sortedCandidateList, ideaCoverage };
 };
 
+// ⟪B3b, 2026-09-28⟫ extractPredicate — the judge's predicate, under a rule whose schema asks for one. predicateField is the
+// rule's PREDICATE_FIELD_BY_PREDICATE_RULE row. A null row gives {}: the return then carries no predicate key at
+// all. Otherwise the value is read from the structured tool input only, and is `undefined` when absent or outside
+// the offered values, never repaired (the same discipline as extractCategoryAndRationale).
+const extractPredicate = (responseBody, predicateField) => {
+	if (predicateField === null) {
+		return {};
+	}
+	const blocks = (responseBody && responseBody.content) || [];
+	const toolBlock = blocks.find((b) => b && b.type === 'tool_use' && b.name === TOOL_NAME);
+	const input = (toolBlock && toolBlock.input) || {};
+	const offeredValue = input[predicateField.fieldName];
+	return { [predicateField.fieldName]: predicateField.offeredValueList.indexOf(offeredValue) !== -1 ? offeredValue : undefined };
+};
+
 // ⟪R-a REAL-RUN FIX; JOB 0 2026-09-07; RE-SOURCED BY JOB 2⟫ buildTool — MODULE-SCOPE, pure (no
 // cfg/key/network): THE `select_candidate` tool definition (name/description/input_schema) this client
 // sends. It no longer CONSTRUCTS that object; it asks selectCandidateSchema.js for the ANTHROPIC rendering
@@ -333,13 +351,16 @@ const extractCategoryAndRationale = (responseBody) => {
 // name — a hermetic test inspects the constructed schema with no construction, no key and no network — and
 // it is the name judgeComponent.js:133's comment points at.
 //
+// ⟪B3b, 2026-09-28⟫ It renders the schema of the rule the question is judged under (predicateRule, required): the categoryTable-v1
+// rendering is the same object as before, and judgeSlot-v1 adds the predicate slot. An unknown rule throws by name.
+//
 // ⟪ONE NAMED BEHAVIOUR CHANGE⟫ an ABSENT choiceEnum is now REFUSED BY NAME instead of producing a schema
 // with `enum: undefined`. [code fact] that path was already broken, just later and less legibly: an absent
 // choiceEnum reached extractChoice, whose `choiceEnum.indexOf` threw a bare TypeError inside the response
 // callback. [code fact] it is unreachable from production — judgeComponent.js:211 refuses a question whose
 // choiceEnum is not an array before `rerank` is ever called — so this guards direct callers of the export
 // and the providers JOB 3 adds.
-const buildTool = ({ choiceEnum } = {}) => renderSelectCandidateSchema('anthropic', { choiceEnum });
+const buildTool = ({ choiceEnum, predicateRule } = {}) => renderSelectCandidateSchemaForPredicateRule('anthropic', { choiceEnum, predicateRule });
 
 // START OF moduleFunction() ============================================================
 
@@ -562,13 +583,14 @@ const moduleFunction =
 		// refuse on the same condition would be a second, differently-worded error for the identical
 		// fault, exactly the ambiguity the ruling asked to avoid.
 		//
-		// rerank — { systemPrompt, userPrompt, choiceEnum, maxRetries } -> callback(err, { choice,
-		//   model, attempts, category, rationale, usage, stopReason, retryReasons }). choiceEnum: e.g.
+		// rerank — { systemPrompt, userPrompt, choiceEnum, predicateRule, maxRetries } -> callback(err, { choice,
+		//   model, attempts, category, rationale, usage, stopReason, retryReasons } plus, under a rule with a predicate
+		//   slot, predicate). predicateRule names the schema sent and is required (SIF replacement B3b). choiceEnum: e.g.
 		//   ['1','2',...,'15','NONE']. Retries (6) with backoff on 429/5xx/network AND on an incomplete
 		//   judgment. lib/bridge-framework/judgeComponent.js is the sole production caller and reads
 		//   choice, category and rationale.
 		const rerank = (rerankOptions = {}, callback) => {
-			const { systemPrompt, userPrompt, choiceEnum, maxRetries = 6 } = rerankOptions;
+			const { systemPrompt, userPrompt, choiceEnum, predicateRule, maxRetries = 6 } = rerankOptions;
 			if (!cfg.apiKey) {
 				// unreachable in normal use (construction already threw), kept as defense-in-depth.
 				callback(`${moduleName}: no Anthropic API key ([anthropicAi].apiKey or ANTHROPIC_API_KEY)`);
@@ -583,7 +605,12 @@ const moduleFunction =
 				);
 				return;
 			}
-			const tool = buildTool({ choiceEnum });
+			if (PREDICATE_RULE_NAME_LIST.indexOf(predicateRule) === -1) {
+				callback(`${moduleName}.rerank: ${unknownPredicateRuleRefusalText(predicateRule)}`);
+				return;
+			}
+			const predicateField = PREDICATE_FIELD_BY_PREDICATE_RULE[predicateRule];
+			const tool = buildTool({ choiceEnum, predicateRule });
 			// ⟪R-a THIRD REAL-RUN FIX; UNCONDITIONAL since JOB 0⟫ raise the budget to the max of the
 			// configured value and JUDGMENT_MAX_TOKENS — never LOWER cfg.maxTokens if an operator already
 			// configured something bigger than 400, only ever raise a too-small default. This is now the
@@ -663,11 +690,14 @@ const moduleFunction =
 					// if it ever does, it stays VISIBLE in `attempts` rather than silently masquerading as a
 					// missing-field omission.
 					const truncated = !!(parsed && parsed.stop_reason === 'max_tokens');
-					const judgmentIncomplete = category === undefined || rationale === undefined || truncated;
+					// ⟪B3b, 2026-09-28⟫ a predicate the rule asks for and the model did not validly supply joins the same retry
+					const predicateByFieldName = extractPredicate(parsed, predicateField);
+					const predicateMissing = predicateField !== null && predicateByFieldName[predicateField.fieldName] === undefined;
+					const judgmentIncomplete = category === undefined || rationale === undefined || predicateMissing || truncated;
 					if (judgmentIncomplete && attemptIndex + 1 < maxRetries) {
 						retryReasons.push(
 							`judgmentIncomplete (attempt ${attemptIndex + 1}): ` +
-								`${truncated ? 'stop_reason max_tokens (tool JSON truncated)' : `category ${category === undefined ? 'missing' : 'ok'}, rationale ${rationale === undefined ? 'missing' : 'ok'}`}`,
+								`${truncated ? 'stop_reason max_tokens (tool JSON truncated)' : `category ${category === undefined ? 'missing' : 'ok'}, rationale ${rationale === undefined ? 'missing' : 'ok'}${predicateField === null ? '' : `, predicate ${predicateMissing ? 'missing' : 'ok'}`}`}`,
 						);
 						const waitMs = backoffMs[Math.min(attemptIndex + 1, backoffMs.length - 1)];
 						setTimeout(() => tryAttempt(attemptIndex + 1), waitMs);
@@ -693,6 +723,8 @@ const moduleFunction =
 						attempts: attemptIndex + 1,
 						category,
 						rationale,
+						// ⟪B3b, 2026-09-28⟫ present only under a rule with a predicate slot
+						...predicateByFieldName,
 						// ⟪v3/v5, 2026-09-11⟫ the judge's own working, threaded up ADDITIVELY beside the verdict.
 						sourceElementIdeaList,
 						candidateIdeaList,
@@ -727,6 +759,7 @@ module.exports = moduleFunction({ moduleName });
 // REAL extraction logic against a mocked Anthropic response-body shape without constructing a client.
 module.exports.extractChoice = extractChoice;
 module.exports.extractCategoryAndRationale = extractCategoryAndRationale;
+module.exports.extractPredicate = extractPredicate;
 module.exports.buildTool = buildTool;
 module.exports.CATEGORY_ENUM = CATEGORY_ENUM;
 module.exports.TOOL_NAME = TOOL_NAME;

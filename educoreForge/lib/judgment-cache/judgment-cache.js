@@ -219,7 +219,9 @@ const makeApi = ({ esc, runSql, getRows, databaseFilePath }) => {
 	//   { choice: '<1-based ordinal>' | 'NONE', chosenStableId: <string|null>, category, rationale }
 	// choice/rationale are required (a judgment without them is not a judgment); category is
 	// required as a string (the discrete ⟪A4⟫ verdict); chosenStableId must be present (null for an
-	// abstain) so a hit can VERIFY the ordinal still names the same candidate. generation is
+	// abstain) so a hit can VERIFY the ordinal still names the same candidate. predicate is optional:
+	// a judge answering under a rule with a predicate slot stores the relation it named (its abstain value
+	// on an abstain), and when present it is a non-empty string (SIF replacement B3b). generation is
 	// informational metadata (which pipeline generation bought this judgment), never part of the key.
 	const putJudgment = ({ promptHash, model, rendererVersion, generation, judgment } = {}, callback) => {
 		const keyErr = validateKey({ promptHash, model, rendererVersion }, 'putJudgment');
@@ -244,6 +246,10 @@ const makeApi = ({ esc, runSql, getRows, databaseFilePath }) => {
 		}
 		if (typeof judgment.rationale !== 'string' || judgment.rationale.trim() === '') {
 			callback('judgmentCache.putJudgment: judgment.rationale is required and must be a non-empty string');
+			return;
+		}
+		if (judgment.predicate !== undefined && (typeof judgment.predicate !== 'string' || judgment.predicate.trim() === '')) {
+			callback('judgmentCache.putJudgment: judgment.predicate, when present, must be a non-empty string');
 			return;
 		}
 		if (judgment.chosenStableId === undefined) {

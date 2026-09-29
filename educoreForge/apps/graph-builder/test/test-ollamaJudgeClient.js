@@ -514,7 +514,7 @@ const rerankThroughLater = (chatResponse) => {
 	const { provider } = okConstruction({ postOnce: ({ payload }, postCallback) => postCallback('', chatResponse, 200) });
 	let captured = { rerankError: 'THE RERANK CALLBACK WAS NEVER CALLED', clientReturn: null };
 	provider.rerank(
-		{ systemPrompt: 's', userPrompt: 'u', choiceEnum: CHOICE_ENUM_FIXTURE, maxRetries: 1 },
+		{ systemPrompt: 's', userPrompt: 'u', choiceEnum: CHOICE_ENUM_FIXTURE, predicateRule: 'categoryTable-v1', maxRetries: 1 },
 		(rerankError, clientReturn) => {
 			captured = { rerankError, clientReturn };
 		},
@@ -777,7 +777,7 @@ const rerankThrough = (chatResponse, rerankOptions = {}) => {
 	});
 	let captured = { rerankError: 'THE RERANK CALLBACK WAS NEVER CALLED', clientReturn: null };
 	provider.rerank(
-		Object.assign({ systemPrompt: 's', userPrompt: 'u', choiceEnum: CHOICE_ENUM_FIXTURE, maxRetries: 1 }, rerankOptions),
+		Object.assign({ systemPrompt: 's', userPrompt: 'u', choiceEnum: CHOICE_ENUM_FIXTURE, predicateRule: 'categoryTable-v1', maxRetries: 1 }, rerankOptions),
 		(rerankError, clientReturn) => {
 			captured = { rerankError, clientReturn };
 		},
@@ -814,7 +814,7 @@ harness.ok('…and no judgment is returned', !outOfEnumRerank.clientReturn);
 const nonOkStatusRerank = (() => {
 	const { provider } = okConstruction({ postOnce: ({ payload }, postCallback) => postCallback('', { error: 'model not found' }, 404) });
 	let captured = { rerankError: '', clientReturn: null };
-	provider.rerank({ systemPrompt: 's', userPrompt: 'u', choiceEnum: CHOICE_ENUM_FIXTURE, maxRetries: 1 }, (rerankError, clientReturn) => {
+	provider.rerank({ systemPrompt: 's', userPrompt: 'u', choiceEnum: CHOICE_ENUM_FIXTURE, predicateRule: 'categoryTable-v1', maxRetries: 1 }, (rerankError, clientReturn) => {
 		captured = { rerankError, clientReturn };
 	});
 	return captured;
@@ -833,7 +833,7 @@ let capturedPayload = null;
 			postCallback('', cannedChatResponse(LIVE_SHAPED_CONTENT), 200);
 		},
 	});
-	provider.rerank({ systemPrompt: 'SYS', userPrompt: 'USR', choiceEnum: CHOICE_ENUM_FIXTURE }, () => {});
+	provider.rerank({ systemPrompt: 'SYS', userPrompt: 'USR', choiceEnum: CHOICE_ENUM_FIXTURE, predicateRule: 'categoryTable-v1' }, () => {});
 })();
 
 harness.equal('the wire carries the BARE Ollama model name', capturedPayload && capturedPayload.model, 'qwen2.5:32b');

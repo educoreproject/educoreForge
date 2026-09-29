@@ -202,7 +202,7 @@ harness.equal(
 // rather than asserting about the module that feeds it.
 harness.equal(
 	'llmClient.buildTool — the function production calls — still emits the baseline object EXACTLY',
-	sha256(JSON.stringify(llmClientLib.buildTool({ choiceEnum: CHOICE_ENUM_FIXTURE }), null, 2)),
+	sha256(JSON.stringify(llmClientLib.buildTool({ choiceEnum: CHOICE_ENUM_FIXTURE, predicateRule: 'categoryTable-v1' }), null, 2)),
 	ANTHROPIC_RENDERING_BASELINE_SHA256,
 );
 // …and the two are pinned TO EACH OTHER, not merely each to the same recorded constant. Added after the
@@ -214,7 +214,7 @@ harness.equal(
 // that day this assertion is the one that still says the client is consuming the rendering.
 harness.equal(
 	'llmClient.buildTool and the anthropic rendering are the SAME object, not two objects that agree today',
-	sha256(JSON.stringify(llmClientLib.buildTool({ choiceEnum: CHOICE_ENUM_FIXTURE }), null, 2)),
+	sha256(JSON.stringify(llmClientLib.buildTool({ choiceEnum: CHOICE_ENUM_FIXTURE, predicateRule: 'categoryTable-v1' }), null, 2)),
 	sha256(JSON.stringify(anthropicRendering, null, 2)),
 );
 harness.equal(

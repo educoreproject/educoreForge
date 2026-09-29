@@ -415,6 +415,8 @@ const judgePools = () => {
 						systemPrompt: oneEntry.systemPrompt,
 						userPrompt: userPromptText,
 						choiceEnum: choiceEnumFor({ renderedPoolStableIdList: oneEntry[onePoolName].renderedPoolStableIdList }),
+						// the probe replays categoryTable-v1 judgments; rerank names the schema it sends (SIF replacement B3b)
+						predicateRule: 'categoryTable-v1',
 					},
 					(rerankError, rerankResult) => {
 						const elapsedMs = Date.now() - judgmentStartMs;

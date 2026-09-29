@@ -373,7 +373,7 @@ const wireWitnessProvider = llmClientLib({
 	},
 });
 let rerankResult = null;
-wireWitnessProvider.rerank({ systemPrompt: 's', userPrompt: 'u', choiceEnum: ['1', 'NONE'] }, (rerankError, clientReturn) => {
+wireWitnessProvider.rerank({ systemPrompt: 's', userPrompt: 'u', choiceEnum: ['1', 'NONE'], predicateRule: 'categoryTable-v1' }, (rerankError, clientReturn) => {
 	rerankResult = { rerankError, clientReturn };
 });
 
@@ -421,7 +421,7 @@ const sentTemperatureFor = (llmClientFactory, wireModel) => {
 	llmClientFactory({
 		configFilePath: temperatureIniFilePath(wireModel),
 		componentOverrides: { postOnce: ({ payload }, postCallback) => { sentWirePayload = payload; postCallback('', cannedToolUseResponse, 200); } },
-	}).rerank({ systemPrompt: 's', userPrompt: 'u', choiceEnum: ['1', 'NONE'] }, () => {});
+	}).rerank({ systemPrompt: 's', userPrompt: 'u', choiceEnum: ['1', 'NONE'], predicateRule: 'categoryTable-v1' }, () => {});
 	return sentWirePayload ? sentWirePayload.temperature : 'NO PAYLOAD WAS SENT';
 };
 const temperatureRuleVerdict = (llmClientFactory) => {

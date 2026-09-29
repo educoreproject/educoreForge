@@ -339,6 +339,15 @@ const CANONICAL_SCHEMA_BUILDER_BY_PREDICATE_RULE = Object.freeze({
 });
 const PREDICATE_RULE_NAME_LIST = Object.freeze(Object.keys(CANONICAL_SCHEMA_BUILDER_BY_PREDICATE_RULE));
 
+// PREDICATE_FIELD_BY_PREDICATE_RULE — what a provider reads back beyond choice, category and rationale, per rule
+// (SIF replacement B3b). null under categoryTable-v1: that judge names no relation, and its return carries no `predicate` key at all,
+// because judgeComponent counts the key's mere presence as a discarded predicate (BG-P6 b). Under judgeSlot-v1: the
+// field's name, the values its schema offers, and the value that means an abstention.
+const PREDICATE_FIELD_BY_PREDICATE_RULE = Object.freeze({
+	'categoryTable-v1': null,
+	'judgeSlot-v1': Object.freeze({ fieldName: 'predicate', offeredValueList: OFFERED_PREDICATE_ENUM, pickValueList: PICK_PREDICATE_ENUM, abstainValue: ABSTAIN_CATEGORY_NAME }),
+});
+
 const unknownPredicateRuleRefusalText = (receivedPredicateRule) =>
 	`${moduleName}: predicateRule ${JSON.stringify(receivedPredicateRule)} names no select_candidate schema. The ` +
 	`known rules are: ${PREDICATE_RULE_NAME_LIST.join(', ')}. A rule is added by adding a row to ` +
@@ -418,6 +427,8 @@ module.exports = {
 	JUDGE_SLOT_REQUIRED_FIELD_LIST,
 	SCHEMA_DIALECT_NAME_LIST,
 	PREDICATE_RULE_NAME_LIST,
+	PREDICATE_FIELD_BY_PREDICATE_RULE,
+	unknownPredicateRuleRefusalText,
 	buildCanonicalSelectCandidateSchema,
 	buildJudgeSlotSelectCandidateSchema,
 	renderSelectCandidateSchema,
