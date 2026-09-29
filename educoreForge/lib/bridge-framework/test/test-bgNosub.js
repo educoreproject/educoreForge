@@ -250,7 +250,14 @@ const POST_D1_BASE_TAG = 'postM1VocabularyIi-092926'; // re-anchored 2026-09-29 
 //     sif260928 (33f274c, plan §3 M1, review #18).
 // No framework SOURCE file under lib/forge-framework/ moved in the SIF replacement. THE PATH IS UNCHANGED, NO EXCLUSION IS ADDED.
 // Fresh red observed against THIS tag (DEVLOG-M1).
-const PHASE0_ANCHOR_TAG = 'postM1ForgeFrameworkIii-092926'; // re-anchored by WILD_PORTAL, SIF replacement M1 — the SEVENTH anchor
+// ═══ RE-ANCHOR (iii), 2026-09-29 (IVORY_MIRROR; RULING EBONY_DREAM), SIF replacement phase B6 ═══
+// postM1ForgeFrameworkIii-092926 -> postB6ForgeFrameworkIii-092926, tag cut ON this re-anchor commit. CENSUS (git diff --stat
+// postM1ForgeFrameworkIii-092926 -- lib/forge-framework/) at B6's head 803d4b0: exactly ONE file, a TEST, ruled:
+//   test/test-gSeamUntouched.js | 12 — B6's G-SEAM-UNTOUCHED re-anchor (803d4b0, tag postB6GSeamUntouched-092926), itself forced by
+//     B6's harvest fix in its seam files. This is the trap recorded above: that file sits in (iii)'s watched set with no exclusion.
+// No framework SOURCE file under lib/forge-framework/ moved in B6. THE PATH IS UNCHANGED, NO EXCLUSION IS ADDED. Fresh red observed
+// against THIS tag (DEVLOG-B6).
+const PHASE0_ANCHOR_TAG = 'postB6ForgeFrameworkIii-092926'; // re-anchored by IVORY_MIRROR, SIF replacement B6 — the EIGHTH anchor
 // PHASE 1 RE-ANCHOR — RULING FJ-P1-1, and it moves seamDiffEmpty ALONE.
 //
 // WHY IT HAD TO MOVE. SEAM_PATH_LIST watches forges/*/forge*.js, forges/*/lib/*Declaration.js and
