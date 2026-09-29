@@ -10,10 +10,15 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // (edgeUniquenessRefusal, applied at freeze AND re-checked here). Every edge carries decisionBlockHash and
 // the ENGINE-LEVEL provenanceTier derived from the block's producerKind (invalid-debug on a debug block —
 // on freeze AND on plain replay, read back from the generation).
+// FAN-OUT (phase B4b): a picked record frozen with instanceStableIdList is written as one edge per instance, FROM the
+// instance to the chosen card, carrying judgedSubjectStableId (the record's subject) and a MATCH_ID that adds the
+// instance. The list is read off the record; nothing here reads the graph. Uniqueness is then per (instance, object).
+// A record without the list is written exactly as before. A record with no card (abstained, orphan) writes nothing,
+// list or not.
 //
 //   materialiseBlock({ block, decisionBlockHash, writer, sourceStandardName, sourceVersion, hubName, hubVersion,
 //                      mappingProviderUrl, subjectMatchField, objectMatchField, debugMark }, cb)
-//     → { edgesWritten, writtenEdgeList }
+//     → { edgesWritten, writtenEdgeList }   (a written edge's subjectStableId is its from-node: the instance under fan-out)
 
 const path = require('path');
 const vocabularyLib = require(path.join(__dirname, '..', 'vocabulary', 'vocabulary'));
@@ -29,17 +34,41 @@ const JUSTIFICATION_BY_RESOLUTION = Object.freeze({ specified: 'semapv:ManualMap
 const pickedRecordList = (decisionRecordList) =>
 	decisionRecordList.filter((oneRecord) => typeof oneRecord.objectStableId === 'string' && oneRecord.objectStableId.length > 0 && typeof oneRecord.predicate === 'string').slice().sort(compareRecords);
 
-// edgeUniquenessRefusal(decisionRecordList) → Error | null — a (subject, object) pair with two predicates
+// plannedEdgeList(decisionRecordList) → [{ record, fromStableId, instanceStableId }] — every edge the block yields, in
+// write order: the picked records sorted, then each record's from-nodes. A record frozen with instanceStableIdList
+// (fan-out, phase B4b) writes one edge FROM each instance in the list's frozen order, and instanceStableId names it; a
+// record without the list writes one edge from its own subject, and instanceStableId is undefined.
+const plannedEdgeList = (decisionRecordList) =>
+	pickedRecordList(decisionRecordList).reduce(
+		(soFar, oneRecord) =>
+			soFar.concat(
+				oneRecord.instanceStableIdList === undefined
+					? [{ record: oneRecord, fromStableId: oneRecord.subjectStableId, instanceStableId: undefined }]
+					: oneRecord.instanceStableIdList.map((instanceStableId) => ({ record: oneRecord, fromStableId: instanceStableId, instanceStableId })),
+			),
+		[],
+	);
+
+// edgeUniquenessRefusal(decisionRecordList) → Error | null — keyed on (from-node, object). A (subject, object) pair
+// with two predicates is refused. Under fan-out the pair is (instance, object), and ANY second edge reaching it is
+// refused, whatever its predicate: an instance listed twice, or listed by two records, would otherwise be written twice.
 const edgeUniquenessRefusal = (decisionRecordList) => {
-	const predicateSetByPair = {};
-	const pickedList = pickedRecordList(decisionRecordList);
-	for (let recordIndex = 0; recordIndex < pickedList.length; recordIndex++) {
-		const oneRecord = pickedList[recordIndex];
-		const pairRefId = `${oneRecord.subjectStableId}\u001f${oneRecord.objectStableId}`;
-		const seen = predicateSetByPair[pairRefId] === undefined ? (predicateSetByPair[pairRefId] = new Set()) : predicateSetByPair[pairRefId];
-		seen.add(oneRecord.predicate);
-		if (seen.size > 1) {
-			return refuse.byName({ moduleName, what: `(${oneRecord.subjectStableId}, ${oneRecord.objectStableId}) carries two predicates (${Array.from(seen).sort().join(', ')})`, where: 'ONE edge per distinct (subject, predicate, object); a pair with two predicates is refused at freeze (BG-EDGE-UNIQUE b)' });
+	const pairSeenByPairRefId = {};
+	const plannedList = plannedEdgeList(decisionRecordList);
+	for (let edgeIndex = 0; edgeIndex < plannedList.length; edgeIndex++) {
+		const { record: oneRecord, fromStableId, instanceStableId } = plannedList[edgeIndex];
+		const pairRefId = `${fromStableId}\u001f${oneRecord.objectStableId}`;
+		const pairSeen = pairSeenByPairRefId[pairRefId];
+		if (pairSeen === undefined) {
+			pairSeenByPairRefId[pairRefId] = { subjectStableId: oneRecord.subjectStableId, firstPredicate: oneRecord.predicate, predicateSet: new Set([oneRecord.predicate]) };
+			continue;
+		}
+		if (instanceStableId !== undefined) {
+			return refuse.byName({ moduleName, what: `instance ${instanceStableId} → ${oneRecord.objectStableId} is reached twice (subject ${pairSeen.subjectStableId} ${pairSeen.firstPredicate}, then subject ${oneRecord.subjectStableId} ${oneRecord.predicate})`, where: 'ONE edge per (instance, object) under fan-out (phase B4b); an instance listed twice in one record, or by two records, is refused at freeze' });
+		}
+		pairSeen.predicateSet.add(oneRecord.predicate);
+		if (pairSeen.predicateSet.size > 1) {
+			return refuse.byName({ moduleName, what: `(${oneRecord.subjectStableId}, ${oneRecord.objectStableId}) carries two predicates (${Array.from(pairSeen.predicateSet).sort().join(', ')})`, where: 'ONE edge per distinct (subject, predicate, object); a pair with two predicates is refused at freeze (BG-EDGE-UNIQUE b)' });
 		}
 	}
 	return null;
@@ -56,7 +85,7 @@ const provenanceTierFor = ({ producerKind, debugMark }) => {
 };
 
 // edgePropertiesFor — assembled from the record + the run's identity; camelCase; the CLOSED set
-const edgePropertiesFor = ({ record, block, decisionBlockHash, sourceStandardName, sourceVersion, hubName, hubVersion, mappingProviderUrl, subjectMatchField, objectMatchField, debugMark }) => {
+const edgePropertiesFor = ({ record, instanceStableId, block, decisionBlockHash, sourceStandardName, sourceVersion, hubName, hubVersion, mappingProviderUrl, subjectMatchField, objectMatchField, debugMark }) => {
 	const edgeProperties = {
 		[MAPPING_PROPERTIES.PREDICATE]: record.predicate,
 		// THE RECORD IS THE AUTHORITY on its own justification; the resolution table is the answer only when the
@@ -92,6 +121,12 @@ const edgePropertiesFor = ({ record, block, decisionBlockHash, sourceStandardNam
 	}
 	if (record.sourceLabel !== null && record.sourceLabel !== undefined) {
 		edgeProperties[MAPPING_PROPERTIES.SOURCE_LABEL] = record.sourceLabel;
+	}
+	// FAN-OUT (phase B4b): the edge leaves an instance, so it names the subject that was judged, and its MATCH_ID gains
+	// the instance as a fifth line. The four-line form above is untouched, so an edge written without fan-out keeps it.
+	if (instanceStableId !== undefined) {
+		edgeProperties[MAPPING_PROPERTIES.JUDGED_SUBJECT_STABLE_ID] = record.subjectStableId;
+		edgeProperties[MAPPING_PROPERTIES.MATCH_ID] = sha256Hex(`${decisionBlockHash}\n${record.subjectStableId}\n${record.predicate}\n${record.objectStableId}\n${instanceStableId}`);
 	}
 	if (record.resolution === 'judged') {
 		edgeProperties[MAPPING_PROPERTIES.CONFIDENCE] = record.confidence;
@@ -136,32 +171,32 @@ const materialiseBlock = ({ block, decisionBlockHash, writer, sourceStandardName
 		callback(uniquenessRefusal.message);
 		return;
 	}
-	const orderedList = pickedRecordList(block.decisionRecordList);
+	const orderedList = plannedEdgeList(block.decisionRecordList);
 	const writtenEdgeList = [];
-	let recordIndex = 0;
-	const nextRecord = () => {
-		if (recordIndex >= orderedList.length) {
+	let edgeIndex = 0;
+	const nextEdge = () => {
+		if (edgeIndex >= orderedList.length) {
 			callback('', { edgesWritten: writtenEdgeList.length, writtenEdgeList });
 			return;
 		}
-		const oneRecord = orderedList[recordIndex];
-		recordIndex += 1;
-		const edgeProperties = edgePropertiesFor({ record: oneRecord, block, decisionBlockHash, sourceStandardName, sourceVersion, hubName, hubVersion, mappingProviderUrl, subjectMatchField, objectMatchField, debugMark });
+		const { record: oneRecord, fromStableId, instanceStableId } = orderedList[edgeIndex];
+		edgeIndex += 1;
+		const edgeProperties = edgePropertiesFor({ record: oneRecord, instanceStableId, block, decisionBlockHash, sourceStandardName, sourceVersion, hubName, hubVersion, mappingProviderUrl, subjectMatchField, objectMatchField, debugMark });
 		const edgeType = SKOS_EDGE_TYPES[oneRecord.predicate];
-		writer.writeMappingEdge({ subjectStableId: oneRecord.subjectStableId, objectStableId: oneRecord.objectStableId, edgeType, edgeProperties }, (writeError, written) => {
+		writer.writeMappingEdge({ subjectStableId: fromStableId, objectStableId: oneRecord.objectStableId, edgeType, edgeProperties }, (writeError, written) => {
 			if (writeError) {
-				callback(`${moduleName}: record ${oneRecord.subjectStableId} → ${oneRecord.objectStableId} (${oneRecord.predicate}): ${writeError}`);
+				callback(`${moduleName}: edge ${fromStableId} → ${oneRecord.objectStableId} (${oneRecord.predicate}, subject ${oneRecord.subjectStableId}): ${writeError}`);
 				return;
 			}
 			if (!written || written.edgeWritten !== true) {
-				callback(refuse.byName({ moduleName, what: `the writer did not report edgeWritten for ${oneRecord.subjectStableId} → ${oneRecord.objectStableId}`, where: 'an un-counted write cannot be gated (HARVEST §1.14)' }).message);
+				callback(refuse.byName({ moduleName, what: `the writer did not report edgeWritten for ${fromStableId} → ${oneRecord.objectStableId}`, where: 'an un-counted write cannot be gated (HARVEST §1.14)' }).message);
 				return;
 			}
-			writtenEdgeList.push({ subjectStableId: oneRecord.subjectStableId, objectStableId: oneRecord.objectStableId, edgeType, predicate: oneRecord.predicate, edgeProperties });
-			nextRecord();
+			writtenEdgeList.push({ subjectStableId: fromStableId, objectStableId: oneRecord.objectStableId, edgeType, predicate: oneRecord.predicate, edgeProperties });
+			nextEdge();
 		});
 	};
-	nextRecord();
+	nextEdge();
 };
 
-module.exports = { materialiseBlock, edgePropertiesFor, edgeUniquenessRefusal, pickedRecordList, provenanceTierFor, JUSTIFICATION_BY_RESOLUTION, moduleName };
+module.exports = { materialiseBlock, edgePropertiesFor, edgeUniquenessRefusal, pickedRecordList, plannedEdgeList, provenanceTierFor, JUSTIFICATION_BY_RESOLUTION, moduleName };
