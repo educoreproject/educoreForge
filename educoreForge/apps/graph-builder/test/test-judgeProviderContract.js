@@ -390,19 +390,69 @@ JUDGE_PROVIDER_SHAPE.rerank.resultKeys.forEach((oneKeyName) => {
 	harness.ok(`rerank's result carries the contract member '${oneKeyName}'`, rerankResult && rerankResult.clientReturn[oneKeyName] !== undefined, JSON.stringify(rerankResult && Object.keys(rerankResult.clientReturn)));
 });
 
-// a NON-opus wire model DOES get temperature 0 — proving the regex reads wireModel and still discriminates.
-const temperatureIniFilePath = () => {
+// ⟪THE TEMPERATURE RULE IS AN ALLOW-LIST — X0 of the SIF replacement, 2026-09-28⟫ This conjunct used to read
+// "a non-opus wireModel still gets temperature 0", with claude-sonnet-5 as its witness. That was the rule
+// before 2026-09-13: temperature for everything except /^claude-opus-4/. llmClient.js now sends temperature
+// ONLY to a wire model its TEMPERATURE_ACCEPTING_MODEL_RE names, because claude-opus-5 and claude-fable-5-1
+// answer HTTP 400 when sent it. claude-sonnet-5 is not named, so it gets none, and the old conjunct went red.
+//
+// The replacement tells wire models apart on the REAL rerank path: one the allow-list names gets 0, while an
+// unnamed non-opus model and opus-5 get none. The unnamed non-opus model is the row that separates the two
+// rules; the deny-list sends it temperature. temperatureRuleVerdict takes the llmClient factory as an
+// argument so the twin below can run the SAME conjunct against a double carrying the old rule.
+const TEMPERATURE_EXPECTATION_LIST = [
+	{ wireModel: 'claude-sonnet-4-5', expectedTemperature: 0, reason: 'named by the allow-list' },
+	{ wireModel: 'claude-sonnet-5', expectedTemperature: undefined, reason: 'a non-opus model the allow-list does not name' },
+	{ wireModel: 'claude-opus-5', expectedTemperature: undefined, reason: 'measured rejecting temperature with a 400, 2026-09-13' },
+];
+const temperatureIniFilePath = (wireModel) => {
 	const dirPath = fs.mkdtempSync(path.join(os.tmpdir(), 'judgeProviderContractTemp-'));
 	const filePath = path.join(dirPath, 'anthropicAi.ini');
-	fs.writeFileSync(filePath, '[anthropicAi]\napiKey=DUMMY-NEVER-SENT\nmodel=claude-sonnet-5\n');
+	fs.writeFileSync(filePath, `[anthropicAi]\napiKey=DUMMY-NEVER-SENT\nmodel=${wireModel}\n`);
 	return filePath;
 };
-let sonnetPayload = null;
-llmClientLib({
-	configFilePath: temperatureIniFilePath(),
-	componentOverrides: { postOnce: ({ payload }, postCallback) => { sonnetPayload = payload; postCallback('', cannedToolUseResponse, 200); } },
-}).rerank({ systemPrompt: 's', userPrompt: 'u', choiceEnum: ['1', 'NONE'] }, () => {});
-harness.equal('a non-opus wireModel still gets temperature 0 (the regex reads wireModel and discriminates)', sonnetPayload && sonnetPayload.temperature, 0);
+const sentTemperatureFor = (llmClientFactory, wireModel) => {
+	let sentWirePayload = null;
+	llmClientFactory({
+		configFilePath: temperatureIniFilePath(wireModel),
+		componentOverrides: { postOnce: ({ payload }, postCallback) => { sentWirePayload = payload; postCallback('', cannedToolUseResponse, 200); } },
+	}).rerank({ systemPrompt: 's', userPrompt: 'u', choiceEnum: ['1', 'NONE'] }, () => {});
+	return sentWirePayload ? sentWirePayload.temperature : 'NO PAYLOAD WAS SENT';
+};
+const temperatureRuleVerdict = (llmClientFactory) => {
+	const observationList = TEMPERATURE_EXPECTATION_LIST.map((oneExpectation) => ({
+		...oneExpectation,
+		sentTemperature: sentTemperatureFor(llmClientFactory, oneExpectation.wireModel),
+	}));
+	return {
+		pass: observationList.every((oneObservation) => oneObservation.sentTemperature === oneObservation.expectedTemperature),
+		detail: observationList.map((oneObservation) => `${oneObservation.wireModel}: sent ${String(oneObservation.sentTemperature)}, expected ${String(oneObservation.expectedTemperature)} (${oneObservation.reason})`).join('; '),
+	};
+};
+
+const allowListVerdict = temperatureRuleVerdict(llmClientLib);
+harness.ok('the temperature rule is an ALLOW-LIST read from wireModel: a named model gets 0, an unnamed non-opus model and opus-5 get none', allowListVerdict.pass, allowListVerdict.detail);
+harness.note(allowListVerdict.detail);
+// NON-VACUITY: the rows must disagree with each other, or "tells wire models apart" is not being tested.
+harness.ok(
+	'…and the expectation list contains BOTH outcomes, so the conjunct discriminates rather than asserting one constant',
+	TEMPERATURE_EXPECTATION_LIST.some((oneExpectation) => oneExpectation.expectedTemperature === 0) &&
+		TEMPERATURE_EXPECTATION_LIST.some((oneExpectation) => oneExpectation.expectedTemperature === undefined),
+);
+
+// TWIN: llmClient.js compiled in memory with the pre-2026-09-13 deny-list rule restored, the line d606804
+// removed. The SAME conjunct must go red on it. Both unnamed rows go red there (the deny-list sends 0 to
+// claude-sonnet-5 and to claude-opus-5); the sonnet row is asserted by name because it is the row that
+// separates the two rules on a model that is not opus.
+const moduleDouble = require('../../../lib/forge-framework/test/testSupport/moduleDouble');
+const LLM_CLIENT_FILE_PATH = path.join(__dirname, '..', 'apps', 'bridge-maker', 'lib', 'llmClient.js');
+const denyListLlmClientLib = moduleDouble.loadWithMutations({
+	modulePath: LLM_CLIENT_FILE_PATH,
+	mutationList: [{ modulePath: LLM_CLIENT_FILE_PATH, find: 'if (TEMPERATURE_ACCEPTING_MODEL_RE.test(cfg.wireModel)) {', replace: 'if (!/^claude-opus-4/.test(cfg.wireModel)) {' }],
+});
+const denyListVerdict = temperatureRuleVerdict(denyListLlmClientLib);
+harness.ok('TWIN: with the old DENY-LIST rule restored in a moduleDouble, the same conjunct goes RED', !denyListVerdict.pass, denyListVerdict.detail);
+harness.match('…and it goes red on the unnamed non-opus model, the row that separates the two rules', denyListVerdict.detail, /claude-sonnet-5: sent 0, expected undefined/);
 harness.equal('…and that client s identity is namespaced too', llmClientLib.namespacedModelFor('claude-sonnet-5'), 'anthropic:claude-sonnet-5');
 
 // TWIN: the bare wire name as the identity — the shape refuses it, which is what makes a cache collision
