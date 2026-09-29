@@ -21,6 +21,13 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // <span data-source="standard">, and the scan skips those spans, so a CEDS name such as a "Standard Error of
 // Measurement" card never makes the page refuse.
 //
+// CARD TUPLES (phase C6b). A card is shown as its FULL TUPLE, so a reviewer can tell apart cards that share one
+// property id and differ only by qualifier: domain (id), property (id), then the range option set, the value and
+// each qualifier as `option set = option value (id)`, where the card has them; an empty slot is omitted. The label
+// list (sifCardTuple.js builds it, from the hub) carries the tuple; a card whose tuple is incomplete, or whose
+// qualifier has no option value name, is refused by name, so the page never shows a raw id alone. The standard's
+// own id line ("the standard specifies P000577") is unchanged.
+//
 // FEEDBACK: tags POST to the miloFeedback endpoint at pageSetting.feedbackTargetPath (relative to the webdev
 // root, as the endpoint resolves it), with the reviewer and the time appended, as the Ed-Fi review pages do. A
 // per-reviewer draft lives in localStorage under pageSetting.draftStoragePrefix. Tags are keyed by the unit's
@@ -64,6 +71,8 @@ const PAGE_WORDING = Object.freeze({
 	recallColumnLast: (lastKHtml) => `in pool at K = ${lastKHtml}`,
 	standardSpecifiesLine: ({ standardHtml, proposedHtml }) => `the standard specifies ${standardHtml}; the bridge proposed ${proposedHtml}`,
 	standardNamesNothing: 'no element for this question',
+	rangeSlot: 'range',
+	valueSlot: 'value',
 	hubCarriesNoCard: 'a card the hub does not carry',
 	remodeledTo: 'remodeled to',
 	noCardProposed: 'no card (it abstained)',
@@ -97,20 +106,59 @@ const itemRefOf = (unitVerdict) => (unitVerdict.judgmentPartitionLabel === null 
 const ownProseTextOf = (htmlText) => htmlText.replace(DATA_SPAN_PATTERN, '');
 const forbiddenWordHitList = (htmlText) => ownProseTextOf(htmlText).match(FORBIDDEN_WORD_PATTERN) || [];
 
-// cardLabelHtmlOf — a card as the reviewer reads it; the block carries stableIds only
-const cardLabelHtmlOf = ({ cardStableId, cardLabelByStableId }) => {
-	const cardLabel = cardLabelByStableId[cardStableId];
-	return `${dataSpan(cardLabel.domainName)} · ${dataSpan(cardLabel.propertyName)}`;
+// cardLabelHtmlOf — a card as the reviewer reads it, its FULL TUPLE (phase C6b): domain, property, then the range
+// option set, the value and each qualifier, where the card has them. A slot the card lacks is omitted. The block
+// carries stableIds only; the label list carries the tuple.
+const cardLabelHtmlOf = ({ cardStableId, cardLabelList }) => {
+	const cardLabel = cardLabelList.cardLabelByStableId[cardStableId];
+	const slotHtmlList = [`${dataSpan(cardLabel.domainName)} (${dataSpan(cardLabel.domainId)})`, `${dataSpan(cardLabel.propertyName)} (${dataSpan(cardLabel.propertyId)})`];
+	if (cardLabel.rangeOptionSetId !== undefined) {
+		slotHtmlList.push(`${PAGE_WORDING.rangeSlot} ${dataSpan(cardLabel.rangeOptionSetName)} (${dataSpan(cardLabel.rangeOptionSetId)})`);
+	}
+	if (cardLabel.valueNotation !== undefined) {
+		slotHtmlList.push(`${PAGE_WORDING.valueSlot} ${dataSpan(cardLabel.valueName)} (${dataSpan(cardLabel.valueNotation)})`);
+	}
+	cardLabel.qualifierRefIdList.forEach((oneRefId) => {
+		const optionValueLabel = cardLabelList.optionValueLabelByRefId[oneRefId];
+		slotHtmlList.push(`${dataSpan(optionValueLabel.optionSetName)} = ${dataSpan(optionValueLabel.optionValueName)} (${dataSpan(oneRefId)})`);
+	});
+	return slotHtmlList.join(' · ');
 };
 
-// the one edge where the label list meets the block: every card the page names must carry a label
-const unlabelledCardOf = ({ unitVerdictList, cardLabelByStableId }) => {
+// cardLabelFaultOf — why a card cannot be shown as a tuple, or null: the label list is where data enters, so each
+// slot the tuple prints must be present, and each qualifier must resolve to its human label
+const cardLabelFaultOf = ({ cardStableId, cardLabelList }) => {
+	const cardLabel = cardLabelList.cardLabelByStableId[cardStableId];
+	if (cardLabel === undefined) {
+		return 'has no entry in the card label list';
+	}
+	const absentSlotName = ['domainId', 'domainName', 'propertyId', 'propertyName'].find((oneSlotName) => typeof cardLabel[oneSlotName] !== 'string' || cardLabel[oneSlotName] === '');
+	if (absentSlotName !== undefined) {
+		return `has a card label list entry with no ${absentSlotName}`;
+	}
+	if (cardLabel.rangeOptionSetId !== undefined && !cardLabel.rangeOptionSetName) {
+		return `has range option set ${cardLabel.rangeOptionSetId} with no name in the card label list`;
+	}
+	if (cardLabel.valueNotation !== undefined && !cardLabel.valueName) {
+		return `has value ${cardLabel.valueNotation} with no name in the card label list`;
+	}
+	const unresolvedRefId = cardLabel.qualifierRefIdList.find((oneRefId) => !cardLabelList.optionValueLabelByRefId[oneRefId] || !cardLabelList.optionValueLabelByRefId[oneRefId].optionSetName || !cardLabelList.optionValueLabelByRefId[oneRefId].optionValueName);
+	if (unresolvedRefId !== undefined) {
+		return `carries qualifier ${unresolvedRefId} with no label in the card label list`;
+	}
+	return null;
+};
+
+// the one edge where the label list meets the block: every card the page names must carry a whole tuple
+const unlabelledCardOf = ({ unitVerdictList, cardLabelList }) => {
 	for (let unitIndex = 0; unitIndex < unitVerdictList.length; unitIndex++) {
 		const unitVerdict = unitVerdictList[unitIndex];
 		const shownCardStableIdList = [unitVerdict.proposedCardStableId].concat(unitVerdict.keyCardStableIdList || []).filter((oneStableId) => oneStableId !== null);
-		const unlabelled = shownCardStableIdList.find((oneStableId) => cardLabelByStableId[oneStableId] === undefined);
-		if (unlabelled !== undefined) {
-			return { cardStableId: unlabelled, subjectStableId: unitVerdict.subjectStableId };
+		for (let shownIndex = 0; shownIndex < shownCardStableIdList.length; shownIndex++) {
+			const faultText = cardLabelFaultOf({ cardStableId: shownCardStableIdList[shownIndex], cardLabelList });
+			if (faultText !== null) {
+				return { cardStableId: shownCardStableIdList[shownIndex], subjectStableId: unitVerdict.subjectStableId, faultText };
+			}
 		}
 	}
 	return null;
@@ -169,7 +217,7 @@ const summaryHtmlOf = ({ score }) => {
 };
 
 // standardHtmlOf — the X of "the standard specifies X", by the unit's standing
-const standardHtmlOf = ({ unitVerdict, cardLabelByStableId }) => {
+const standardHtmlOf = ({ unitVerdict, cardLabelList }) => {
 	if (unitVerdict.standing === sifYardstickScorer.REPORT_WORDING.standingUnannotated) {
 		return PAGE_WORDING.standardNamesNothing;
 	}
@@ -178,13 +226,13 @@ const standardHtmlOf = ({ unitVerdict, cardLabelByStableId }) => {
 		return `${idHtml} (${PAGE_WORDING.hubCarriesNoCard})`;
 	}
 	const shownCardStableIdList = unitVerdict.targetCardStableId ? [unitVerdict.targetCardStableId] : unitVerdict.keyCardStableIdList;
-	return `${idHtml} (${shownCardStableIdList.map((oneStableId) => cardLabelHtmlOf({ cardStableId: oneStableId, cardLabelByStableId })).join('; ')})`;
+	return `${idHtml} (${shownCardStableIdList.map((oneStableId) => cardLabelHtmlOf({ cardStableId: oneStableId, cardLabelList })).join('; ')})`;
 };
 
-const itemHtmlOf = ({ score, unitVerdict, unitIndex, question, cardLabelByStableId }) => {
+const itemHtmlOf = ({ score, unitVerdict, unitIndex, question, cardLabelList }) => {
 	const itemRef = itemRefOf(unitVerdict);
 	const classText = unitVerdict.judgmentClass !== undefined ? unitVerdict.judgmentClass : unitVerdict.newClaim ? sifYardstickScorer.REPORT_WORDING.classNewClaim : unitVerdict.standing;
-	const proposedHtml = unitVerdict.proposedCardStableId === null ? PAGE_WORDING.noCardProposed : cardLabelHtmlOf({ cardStableId: unitVerdict.proposedCardStableId, cardLabelByStableId });
+	const proposedHtml = unitVerdict.proposedCardStableId === null ? PAGE_WORDING.noCardProposed : cardLabelHtmlOf({ cardStableId: unitVerdict.proposedCardStableId, cardLabelList });
 	const partList = [];
 	partList.push(`<article class="item" data-item-ref="${escapeHtml(itemRef)}" data-unit-class="${classText}">`);
 	partList.push(`<h3>${dataSpan(question.name)} <span class="badge">${classText}</span> <span class="standing">${unitVerdict.standing}</span></h3>`);
@@ -192,7 +240,7 @@ const itemHtmlOf = ({ score, unitVerdict, unitIndex, question, cardLabelByStable
 	if (question.description !== undefined) {
 		partList.push(`<p class="description">${dataSpan(question.description)}</p>`);
 	}
-	partList.push(`<p class="line">${PAGE_WORDING.standardSpecifiesLine({ standardHtml: standardHtmlOf({ unitVerdict, cardLabelByStableId }), proposedHtml })}</p>`);
+	partList.push(`<p class="line">${PAGE_WORDING.standardSpecifiesLine({ standardHtml: standardHtmlOf({ unitVerdict, cardLabelList }), proposedHtml })}</p>`);
 	if (unitVerdict.bestKeyRank !== undefined && unitVerdict.bestKeyRank !== null) {
 		partList.push(`<p class="rank">${PAGE_WORDING.bestRank}: ${scoreCell(score, `unitVerdictList.${unitIndex}.bestKeyRank`)}</p>`);
 	}
@@ -259,17 +307,16 @@ const buildReviewPageHtml = ({ score, questionMap, cardLabelList, pageSetting })
 	if (pageSettingFault !== null) {
 		return { error: refuse.byName({ moduleName, what: pageSettingFault, where: 'the page setting names where replies land (feedbackTargetPath, relative to the webdev root, ending .json), the draft store prefix and the title; none has a default' }) };
 	}
-	const cardLabelByStableId = cardLabelList.cardLabelByStableId;
-	const unlabelled = unlabelledCardOf({ unitVerdictList: score.unitVerdictList, cardLabelByStableId });
+	const unlabelled = unlabelledCardOf({ unitVerdictList: score.unitVerdictList, cardLabelList });
 	if (unlabelled !== null) {
-		return { error: refuse.byName({ moduleName, what: `card ${unlabelled.cardStableId} (unit ${unlabelled.subjectStableId}) has no entry in the card label list`, where: 'the label list must carry every card the page names (each unit\'s proposed card and its standard\'s cards); the block carries stableIds only' }) };
+		return { error: refuse.byName({ moduleName, what: `card ${unlabelled.cardStableId} (unit ${unlabelled.subjectStableId}) ${unlabelled.faultText}`, where: 'the label list must carry the whole tuple of every card the page names (each unit\'s proposed card and its standard\'s cards), each qualifier with its option value name; the block carries stableIds only' }) };
 	}
 	const questionByRefId = {};
 	questionMap.questionList.forEach((oneQuestion) => {
 		questionByRefId[oneQuestion.questionRefId] = oneQuestion;
 	});
 
-	const itemHtmlList = score.unitVerdictList.map((unitVerdict, unitIndex) => itemHtmlOf({ score, unitVerdict, unitIndex, question: questionByRefId[unitVerdict.subjectStableId.slice(SUBJECT_STABLE_ID_PREFIX.length)], cardLabelByStableId }));
+	const itemHtmlList = score.unitVerdictList.map((unitVerdict, unitIndex) => itemHtmlOf({ score, unitVerdict, unitIndex, question: questionByRefId[unitVerdict.subjectStableId.slice(SUBJECT_STABLE_ID_PREFIX.length)], cardLabelList }));
 	const bodyHtml = [
 		`<h1>${escapeHtml(pageSetting.pageTitle)}</h1>`,
 		`<p class="where">${dataSpan(score.generation)}</p>`,

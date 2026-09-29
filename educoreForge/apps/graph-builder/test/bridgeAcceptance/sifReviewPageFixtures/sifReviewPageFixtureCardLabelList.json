@@ -1,37 +1,81 @@
 {
-	"fixtureNote": "SYNTHETIC (phase C6). cardStableId -> the domain and property names the page shows beside a card; the real list is exported from the hub.",
+	"fixtureNote": "SYNTHETIC (phases C6, C6b). cardStableId -> the card's full tuple (domain, property, and the range option set, value and qualifiers a card has); optionValueLabelByRefId -> each qualifier's option set and option value names. card:B1 and card:B2 share domain and property and differ ONLY by qualifier, as the real hub's Person Identifier cards do. The real list is exported from the hub (evidence/C6b/liveHubCardTupleExport.js).",
 	"cardLabelByStableId": {
 		"card:A1": {
+			"domainId": "C000001",
 			"domainName": "Dom Student",
-			"propertyName": "Alpha"
+			"propertyId": "P000001",
+			"propertyName": "Alpha",
+			"rangeOptionSetId": "OS000001",
+			"rangeOptionSetName": "Alpha Set",
+			"qualifierRefIdList": []
 		},
 		"card:B1": {
+			"domainId": "C000001",
 			"domainName": "Dom Student",
-			"propertyName": "Beta"
+			"propertyId": "P000002",
+			"propertyName": "Beta",
+			"qualifierRefIdList": [
+				"OV900001"
+			]
 		},
 		"card:B2": {
-			"domainName": "Dom Staff",
-			"propertyName": "Beta"
+			"domainId": "C000001",
+			"domainName": "Dom Student",
+			"propertyId": "P000002",
+			"propertyName": "Beta",
+			"qualifierRefIdList": [
+				"OV900002"
+			]
 		},
 		"card:D1": {
+			"domainId": "C000001",
 			"domainName": "Dom Student",
-			"propertyName": "Delta"
+			"propertyId": "P000004",
+			"propertyName": "Delta",
+			"valueNotation": "DeltaOne",
+			"valueName": "Delta One",
+			"qualifierRefIdList": []
 		},
 		"card:X": {
+			"domainId": "C000009",
 			"domainName": "Dom Other",
-			"propertyName": "Chi"
+			"propertyId": "P000009",
+			"propertyName": "Chi",
+			"qualifierRefIdList": []
 		},
 		"card:Y": {
+			"domainId": "C000009",
 			"domainName": "Dom Other",
-			"propertyName": "Upsilon"
+			"propertyId": "P000010",
+			"propertyName": "Upsilon",
+			"qualifierRefIdList": []
 		},
 		"card:Z": {
+			"domainId": "C000009",
 			"domainName": "Dom Other",
-			"propertyName": "Zeta"
+			"propertyId": "P000011",
+			"propertyName": "Zeta",
+			"qualifierRefIdList": []
 		},
 		"card:W": {
+			"domainId": "C000009",
 			"domainName": "Dom Other",
-			"propertyName": "Omega"
+			"propertyId": "P000012",
+			"propertyName": "Omega",
+			"qualifierRefIdList": []
+		}
+	},
+	"optionValueLabelByRefId": {
+		"OV900001": {
+			"optionSetId": "OS900001",
+			"optionSetName": "Beta Type",
+			"optionValueName": "Kind One"
+		},
+		"OV900002": {
+			"optionSetId": "OS900001",
+			"optionSetName": "Beta Type",
+			"optionValueName": "Kind Two"
 		}
 	}
 }

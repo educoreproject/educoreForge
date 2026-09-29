@@ -11,6 +11,7 @@
 //   SIF-PAGE-C       (c) the page's own prose never says either forbidden word; a data label that does renders
 //   SIF-PAGE-DEBUG   a debug block's judgment reads 'debug — not scored', with no judgment numbers
 //   SIF-PAGE-REFUSE  the named refusals where the label list and the page setting enter
+//   SIF-PAGE-TUPLE   (phase C6b) every card renders as its full tuple; a qualifier never renders as a raw id
 //
 // Every conjunct is observed red under its own twin (forge-framework gateSuiteRunner). Hermetic: no graph,
 // no Docker, no network.
@@ -293,12 +294,108 @@ const gateRConjunctList = [
 registerPageMutationTwin({ gateId: GATE_R, conjunctId: 'r1_unlabelledCardRefused', twinName: 'labelCheckDeleted', mutationList: [{ find: 'if (unlabelled !== null) {', replace: 'if (false) {' }] });
 registerPageMutationTwin({ gateId: GATE_R, conjunctId: 'r2_feedbackTargetNotJsonRefused', twinName: 'pageSettingCheckDeleted', mutationList: [{ find: 'if (pageSettingFault !== null) {', replace: 'if (false) {' }] });
 
+// ---- GATE (t): every card is shown as its full tuple (phase C6b) ----
+// THE FROZEN LINES, worked by hand from the fixture label list (sifReviewPageFixtureCardLabelList.json): card:B1 and
+// card:B2 share domain C000001 and property P000002 and differ only by qualifier (OV900001 'Kind One', OV900002
+// 'Kind Two', both of option set 'Beta Type'); card:A1 has a range option set, card:D1 a value, card:X nothing else.
+const GATE_T = 'SIF-PAGE-TUPLE';
+const TUPLE_B1_TEXT = 'Dom Student (C000001) · Beta (P000002) · Beta Type = Kind One (OV900001)';
+const TUPLE_B2_TEXT = 'Dom Student (C000001) · Beta (P000002) · Beta Type = Kind Two (OV900002)';
+const TUPLE_A1_TEXT = 'Dom Student (C000001) · Alpha (P000001) · range Alpha Set (OS000001)';
+const TUPLE_D1_TEXT = 'Dom Student (C000001) · Delta (P000004) · value Delta One (DeltaOne)';
+const TUPLE_X_TEXT = 'Dom Other (C000009) · Chi (P000009)';
+const EXPECTED_LINE_TEXT_BY_ITEM_REF = Object.freeze({
+	'sif260928:question/q06': `the standard specifies P000002 (${TUPLE_B1_TEXT}; ${TUPLE_B2_TEXT}); the bridge proposed ${TUPLE_B2_TEXT}`,
+	'sif260928:question/q05#Dom Student': `the standard specifies P000002 (${TUPLE_B1_TEXT}); the bridge proposed ${TUPLE_B1_TEXT}`,
+	'sif260928:question/q01#Dom Student': `the standard specifies P000001 (${TUPLE_A1_TEXT}); the bridge proposed ${TUPLE_A1_TEXT}`,
+	'sif260928:question/q07': `the standard specifies P000004 (${TUPLE_D1_TEXT}); the bridge proposed ${TUPLE_D1_TEXT}`,
+	'sif260928:question/q08#Dom Student': `the standard specifies no element for this question; the bridge proposed ${TUPLE_X_TEXT}`,
+});
+const TEST_TAG_PATTERN = /<[^>]*>/g;
+const lineTextByItemRefOf = (htmlText) => {
+	const lineTextByItemRef = {};
+	Array.from(htmlText.matchAll(/<article class="item" data-item-ref="([^"]*)"[\s\S]*?<p class="line">([\s\S]*?)<\/p>/g)).forEach((oneMatch) => {
+		lineTextByItemRef[oneMatch[1]] = oneMatch[2].replace(TEST_TAG_PATTERN, '');
+	});
+	return lineTextByItemRef;
+};
+const gateTConjunctList = [
+	pageConjunct({
+		conjunctId: 't1_everyCardShowsFullTuple',
+		title: 'the hand-worked lines render exactly: domain and property with their ids, then the range option set, the value or each qualifier where the card has one',
+		twinNameList: ['propertyIdDropped'],
+		judge: builtJudge((outcome) => {
+			const lineTextByItemRef = lineTextByItemRefOf(outcome.htmlText);
+			const unequalList = Object.keys(EXPECTED_LINE_TEXT_BY_ITEM_REF).filter((oneItemRef) => lineTextByItemRef[oneItemRef] !== EXPECTED_LINE_TEXT_BY_ITEM_REF[oneItemRef]);
+			return { pass: unequalList.length === 0, detail: unequalList.length === 0 ? `${Object.keys(EXPECTED_LINE_TEXT_BY_ITEM_REF).length} lines equal` : `${unequalList[0]} shows: ${lineTextByItemRef[unequalList[0]]}` };
+		}),
+	}),
+	pageConjunct({
+		conjunctId: 't2_qualifierNeverRawId',
+		title: 'every qualifier id on the page is preceded by its option set and option value names; no qualifier renders as a raw id',
+		twinNameList: ['qualifierLabelDropped'],
+		judge: builtJudge((outcome) => {
+			const allLineText = Object.values(lineTextByItemRefOf(outcome.htmlText)).join('\n');
+			const qualifierIdCount = (allLineText.match(/OV\d+/g) || []).length;
+			const labelledCount = (allLineText.match(/Beta Type = Kind (One|Two) \(OV\d+\)/g) || []).length;
+			return { pass: qualifierIdCount > 0 && qualifierIdCount === labelledCount, detail: `${qualifierIdCount} qualifier ids, ${labelledCount} with their labels` };
+		}),
+	}),
+	pageConjunct({
+		conjunctId: 't3_sameIdCardsDistinguishable',
+		title: 'the two cards of P000002 (one property id, qualifier the only difference) render as two different texts, each carrying its own qualifier label, in the contended unit q06',
+		twinNameList: ['qualifierSlotOmitted'],
+		judge: builtJudge((outcome) => {
+			const lineText = lineTextByItemRefOf(outcome.htmlText)['sif260928:question/q06'];
+			const standardText = lineText.slice(lineText.indexOf('(') + 1, lineText.indexOf('); the bridge proposed'));
+			const cardTextList = standardText.split('; ');
+			return { pass: cardTextList.length === 2 && cardTextList[0] !== cardTextList[1] && cardTextList[0].indexOf('Kind One') !== -1 && cardTextList[1].indexOf('Kind Two') !== -1, detail: cardTextList.join(' | ') };
+		}),
+	}),
+	pageConjunct({
+		conjunctId: 't4_emptySlotsOmitted',
+		title: "a card with no range, value or qualifier renders as domain and property only: no 'null', no 'undefined', no empty slot, in any line",
+		twinNameList: ['emptySlotPrinted'],
+		judge: builtJudge((outcome) => {
+			const lineTextByItemRef = lineTextByItemRefOf(outcome.htmlText);
+			const allLineText = Object.values(lineTextByItemRef).join('\n');
+			const emptySlotHit = /null|undefined|\(\)| ·  ·| · $/.test(allLineText);
+			return { pass: !emptySlotHit && lineTextByItemRef['sif260928:question/q08#Dom Student'].endsWith(`proposed ${TUPLE_X_TEXT}`), detail: emptySlotHit ? 'an empty slot is printed' : 'no empty slot printed' };
+		}),
+	}),
+	pageConjunct({
+		conjunctId: 'r3_unresolvedQualifierRefused',
+		title: "one qualifier's label dropped from the label list (OV900002, the second of the two P000002 cards) is refused by name; the page never renders a raw id alone",
+		twinNameList: ['qualifierCheckDeleted'],
+		shape: (subject) => {
+			delete subject.fixtureSet.cardLabelList.optionValueLabelByRefId.OV900002;
+		},
+		judge: refusalJudge(/card card:B2 \(unit sif260928:question\/q05\) carries qualifier OV900002 with no label in the card label list/),
+	}),
+	pageConjunct({
+		conjunctId: 'r4_incompleteTupleRefused',
+		title: 'a card label with no property id (card:Y) is refused by name',
+		twinNameList: ['slotCheckDeleted'],
+		shape: (subject) => {
+			delete subject.fixtureSet.cardLabelList.cardLabelByStableId['card:Y'].propertyId;
+		},
+		judge: refusalJudge(/card card:Y \(unit sif260928:question\/q11\) has a card label list entry with no propertyId/),
+	}),
+];
+registerPageMutationTwin({ gateId: GATE_T, conjunctId: 't1_everyCardShowsFullTuple', twinName: 'propertyIdDropped', mutationList: [{ find: '`${dataSpan(cardLabel.propertyName)} (${dataSpan(cardLabel.propertyId)})`', replace: '`${dataSpan(cardLabel.propertyName)}`' }] });
+registerPageMutationTwin({ gateId: GATE_T, conjunctId: 't2_qualifierNeverRawId', twinName: 'qualifierLabelDropped', mutationList: [{ find: '`${dataSpan(optionValueLabel.optionSetName)} = ${dataSpan(optionValueLabel.optionValueName)} (${dataSpan(oneRefId)})`', replace: '`${dataSpan(oneRefId)}`' }] });
+registerPageMutationTwin({ gateId: GATE_T, conjunctId: 't3_sameIdCardsDistinguishable', twinName: 'qualifierSlotOmitted', mutationList: [{ find: 'cardLabel.qualifierRefIdList.forEach((oneRefId) => {\n\t\tconst optionValueLabel', replace: '[].forEach((oneRefId) => {\n\t\tconst optionValueLabel' }] });
+registerPageMutationTwin({ gateId: GATE_T, conjunctId: 't4_emptySlotsOmitted', twinName: 'emptySlotPrinted', mutationList: [{ find: 'if (cardLabel.rangeOptionSetId !== undefined) {', replace: 'if (true) {' }] });
+registerPageMutationTwin({ gateId: GATE_T, conjunctId: 'r3_unresolvedQualifierRefused', twinName: 'qualifierCheckDeleted', mutationList: [{ find: 'if (unresolvedRefId !== undefined) {', replace: 'if (false) {' }] });
+registerPageMutationTwin({ gateId: GATE_T, conjunctId: 'r4_incompleteTupleRefused', twinName: 'slotCheckDeleted', mutationList: [{ find: 'if (absentSlotName !== undefined) {', replace: 'if (false) {' }] });
+
 const gateDeclarationList = [
 	{ gateId: GATE_A, title: "plan §3 C6 (a): the page's numbers equal C5's on a synthetic block; a mislabelled pick changes exactly its numbers", conjunctList: gateAConjunctList },
 	{ gateId: GATE_V, title: 'the verify-against-deployed step reads rendered content only', conjunctList: gateVConjunctList },
 	{ gateId: GATE_C, title: "brief (c): no 'error' or 'wrong' in the page's own prose; the standards' data may carry them", conjunctList: gateCConjunctList },
 	{ gateId: GATE_D, title: "a debug block's judgment is not scored on the page", conjunctList: gateDConjunctList },
 	{ gateId: GATE_R, title: 'the refusals where the label list and the page setting enter', conjunctList: gateRConjunctList },
+	{ gateId: GATE_T, title: 'phase C6b: every proposed and standard card renders as its full tuple, qualifiers resolved to their labels, and a card the hub distinguishes only by qualifier reads distinguishably', conjunctList: gateTConjunctList },
 ];
 
 // ---- outside the gates ----
@@ -315,4 +412,4 @@ const fromFilesVerified = pageModule.verifySifReviewPage({ htmlText: fromFiles.h
 harness.ok('the file-built page verifies against its score, input shas included', fromFilesVerified.pass, JSON.stringify(fromFilesVerified.checkList.filter((oneCheck) => !oneCheck.pass)));
 harness.equal('the feedback target is in the rendered script', fromFiles.htmlText.indexOf(`const FEEDBACK_TARGET_PATH=${JSON.stringify(PAGE_SETTING.feedbackTargetPath)};`) !== -1, true);
 
-runGateFamily({ harness, familyName: 'SIF-PAGE', gateDeclarationList, twinRegistry, makeSubject, cloneSubject, expectedConjunctCount: 10, expectedTwinCount: 13 }, () => harness.report());
+runGateFamily({ harness, familyName: 'SIF-PAGE', gateDeclarationList, twinRegistry, makeSubject, cloneSubject, expectedConjunctCount: 16, expectedTwinCount: 19 }, () => harness.report());
