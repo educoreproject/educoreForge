@@ -60,6 +60,7 @@ const { judgeProviderViolation } = require(path.join(__dirname, '..', '..', '..'
 const llmClientLib = require(path.join(__dirname, 'llmClient'));
 const debugJudgeLib = require(path.join(__dirname, 'debugJudge'));
 const ollamaJudgeClientLib = require(path.join(__dirname, 'ollamaJudgeClient'));
+const jevJudgeClientLib = require(path.join(__dirname, 'jevJudgeClient'));
 
 // THE CONFIG KEY. Named here so every refusal can quote the thing an operator would actually have to set,
 // and so the name has ONE home. [judgeProvider] judgeProviderName in graphBuilder.ini — the file
@@ -108,6 +109,15 @@ const JUDGE_PROVIDER_ROW_LIST = Object.freeze([
 				Object.assign({}, configFilePath ? { configFilePath } : {}, componentOverrides ? { componentOverrides } : {}),
 				rowCallback,
 			),
+	}),
+	Object.freeze({
+		name: 'jev',
+		enabled: true,
+		// TypeSafe System One (2026-09-29, COPPER_LOOM, TQ's probe). Synchronous construction, wrapped like
+		// the anthropic row. Its key comes from the environment, so a missing key throws here by name.
+		construct: constructOnNextTick(({ configFilePath, componentOverrides }) =>
+			jevJudgeClientLib(Object.assign({}, configFilePath ? { configFilePath } : {}, componentOverrides ? { componentOverrides } : {})),
+		),
 	}),
 	Object.freeze({
 		name: 'debug',

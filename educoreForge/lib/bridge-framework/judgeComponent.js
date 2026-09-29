@@ -311,7 +311,7 @@ const judgeOne = ({ question, judgeClient, judgmentCache, matchForensics, budget
 		// (attempts 2 — the ACCEPTED answer is what the cache stores under the ORIGINAL promptHash, so replay stays deterministic),
 		// (4) refuses BY NAME a second violation. BR-067 stands; the re-ask is counted (rationaleReaskCount) in the run report.
 		const askOnce = ({ userPrompt, reaskCount }, askCallback) => {
-			judgeClient.rerank({ systemPrompt: question.systemPrompt, userPrompt, choiceEnum: question.choiceEnum }, (rerankError, clientReturn) => {
+			judgeClient.rerank({ systemPrompt: question.systemPrompt, userPrompt, choiceEnum: question.choiceEnum, choiceQuestion: question.choiceQuestion }, (rerankError, clientReturn) => {
 				if (rerankError) {
 					askCallback(`${moduleName}: the judge refused promptHash ${question.promptHash}: ${rerankError}`);
 					return;
