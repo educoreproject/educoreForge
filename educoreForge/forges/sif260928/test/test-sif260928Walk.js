@@ -183,7 +183,7 @@ const countsConjunctList = [
 	{
 		conjunctId: 'objectAndFieldCountsAsMintedNodes',
 		title: "the minted nodes are exactly 1 root, 159 Objects and 15,620 Fields (beside A2's Containers), and each Object's fieldCount equals its HAS_FIELD edges",
-		twinNameList: ['oneRowNotMinted', 'objectTakesThreeSegments'],
+		twinNameList: ['oneRowNotMinted', 'oneObjectDroppedWithItsSubtree'],
 		evaluate: overForged((forged) => {
 			const countByLabel = countBy(forged.nodes.filter((oneNode) => RULED_NODE_COUNT_BY_LABEL[oneNode.labels[1]] !== undefined), (oneNode) => oneNode.labels[1]);
 			const hasFieldCountByObjectStableId = countBy(forged.edges.filter((oneEdge) => oneEdge.type === 'HAS_FIELD'), (oneEdge) => oneEdge.fromRef.id);
@@ -197,7 +197,8 @@ const countsConjunctList = [
 	},
 ];
 registerMutationTwin({ gateId: COUNTS_GATE_ID, conjunctId: 'objectAndFieldCountsAsMintedNodes', twinName: 'oneRowNotMinted', mutation: walkMutation({ find: 'const fieldFactsList = rowList.map(fieldFactsOf);', replace: 'const fieldFactsList = rowList.slice(1).map(fieldFactsOf);' }) });
-registerMutationTwin({ gateId: COUNTS_GATE_ID, conjunctId: 'objectAndFieldCountsAsMintedNodes', twinName: 'objectTakesThreeSegments', mutation: walkMutation({ find: 'const OBJECT_SEGMENT_COUNT = 2;', replace: 'const OBJECT_SEGMENT_COUNT = 3;' }) });
+// one Object dropped together with its whole subtree: the tree stays whole and the counts move (A2 back-gate)
+registerMutationTwin({ gateId: COUNTS_GATE_ID, conjunctId: 'objectAndFieldCountsAsMintedNodes', twinName: 'oneObjectDroppedWithItsSubtree', mutation: walkMutation({ find: 'const fieldFactsList = rowList.map(fieldFactsOf);', replace: "const fieldFactsList = rowList.filter((row) => !row.xpath.startsWith('/AccountingPeriods/AccountingPeriod/')).map(fieldFactsOf);" }) });
 
 // =====================================================================
 // (b) A1c-DESCRIPTION

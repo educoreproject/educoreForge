@@ -142,7 +142,8 @@ const KIND_BY_PER_STANDARD_LABEL = Object.freeze({ Sif260928Object: 'object', Si
 const firstOf = (itemList) => (itemList.length ? ` (first ${JSON.stringify(itemList[0])})` : '');
 
 const twinRegistry = makeTwinRegistry();
-const registerMutationTwin = ({ gateId, conjunctId, twinName, mutation }) => {
+// a twin applies one mutation, or a list of them applied together
+const registerMutationTwin = ({ gateId, conjunctId, twinName, mutation, mutationList = [mutation] }) => {
 	twinRegistry.register({
 		gateId,
 		conjunctId,
@@ -150,8 +151,10 @@ const registerMutationTwin = ({ gateId, conjunctId, twinName, mutation }) => {
 		leverKind: 'productionMutation',
 		shippedConfig: true,
 		run: (subject) => {
-			moduleDouble.assertMutationApplies(mutation);
-			subject.bundleMutationList.push(mutation);
+			mutationList.forEach((oneMutation) => {
+				moduleDouble.assertMutationApplies(oneMutation);
+				subject.bundleMutationList.push(oneMutation);
+			});
 			return subject;
 		},
 	});
@@ -202,9 +205,20 @@ const containersConjunctList = [
 		}),
 	},
 ];
-// the plan's twin: skip the three-segment prefixes. Their children then name a parent that was never
-// minted, so the forge fails before it can count; the second twin moves the count without breaking the tree
-registerMutationTwin({ gateId: CONTAINERS_GATE_ID, conjunctId: 'containersAreTheNonRowPrefixes', twinName: 'depthThreePrefixesSkipped', mutation: walkMutation({ find: 'let prefixSegmentCount = OBJECT_SEGMENT_COUNT + 1;', replace: 'let prefixSegmentCount = OBJECT_SEGMENT_COUNT + 2;' }) });
+// the plan's twin: skip the three-segment prefixes, and re-parent their children one level up onto the
+// Object, so the tree stays whole, the forge completes, and the count itself moves (6,586 - 699)
+registerMutationTwin({
+	gateId: CONTAINERS_GATE_ID,
+	conjunctId: 'containersAreTheNonRowPrefixes',
+	twinName: 'depthThreePrefixesSkipped',
+	mutationList: [
+		walkMutation({ find: 'let prefixSegmentCount = OBJECT_SEGMENT_COUNT + 1;', replace: 'let prefixSegmentCount = OBJECT_SEGMENT_COUNT + 2;' }),
+		walkMutation({
+			find: 'const parentPath = structuralParentPathOf(nodePath);',
+			replace: 'const elementPath = structuralParentPathOf(nodePath);\n		const parentPath = nodeKindByPath.has(elementPath) ? elementPath : structuralParentPathOf(elementPath);',
+		}),
+	],
+});
 registerMutationTwin({ gateId: CONTAINERS_GATE_ID, conjunctId: 'containersAreTheNonRowPrefixes', twinName: 'rowPrefixesMintedAsContainers', mutation: walkMutation({ find: 'if (!xpathSet.has(containerPath) && !containerFactsByPath.has(containerPath)) {', replace: 'if (!containerFactsByPath.has(containerPath)) {' }) });
 
 // =====================================================================
