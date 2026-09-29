@@ -67,6 +67,7 @@ const boundedRunnerLib = require('./boundedRunner');
 const conflictDetectorLib = require('./conflictDetector');
 const graphSeamRulesLib = require('./graphSeamRules');
 const promptIdentifierScanLib = require('./promptIdentifierScan');
+const judgeConfigRecordLib = require('./judgeConfigRecord');
 
 const { RELATIONSHIP_PRODUCER_SUFFIX, SKOS_EDGE_TYPES, MAPPING_PROPERTIES, DME_ROLES, HUB_DECOMPOSITION_SLOTS, SSSOM_JUSTIFICATIONS, hubEdgeType } = vocabularyLib;
 const {
@@ -702,6 +703,9 @@ const moduleFunction =
 			const pairKey = `${pairKeyPrefix}::${bridgeDeclaration.bridgeName}::${bridgeDeclaration.producerKind}`;
 			const mode = spec.rebridge ? MODE_REJUDGE : MODE_MATERIALISE;
 			const judgeClient = spec.rebridge && spec.inferenceConfig && spec.inferenceConfig.llmClient ? spec.inferenceConfig.llmClient : null;
+			// blockRecordsJudgeConfig (SPEC §9 A12): the judge's configuration in the header and each rationale in its record
+			// (judgeConfigRecord.js). Absent, both are omitted and the block text is what it was.
+			const recordsJudgeConfig = bridgeDeclaration.blockRecordsJudgeConfig === true;
 			const debugMark = spec.rebridge ? debugJudgeLib.debugMarkFromLlmClient({ inferenceConfig: spec.inferenceConfig }) : undefined;
 			// ⟪2026-09-10⟫ ONE DOOR: sourceSelectionMarkFor answers for whichever selector was asked for — the
 			// debug window or the named subject set — and refuses the combination inside the pure module. The
@@ -1884,6 +1888,10 @@ const moduleFunction =
 								if (judged.reportedCategoryOnAbstain !== undefined && judged.reportedCategoryOnAbstain !== null) {
 									judgeRecord.reportedCategoryOnAbstain = judged.reportedCategoryOnAbstain;
 								}
+								// the judge's rationale word for word, picks and abstentions alike, when the plugin opts in
+								if (recordsJudgeConfig) {
+									judgeRecord.rationale = judged.rationale;
+								}
 								if (judged.chosenCardStableId === null) {
 									report.judgeSpend.abstained += 1;
 									taskDone('', { ...oneTask.baseRecord, objectStableId: null, predicate: null, predicateAssertedBy: null, sourceLabel: null, confidence: null, abstained: true, judge: judgeRecord, renderedPoolStableIdList: question.renderedPoolStableIdList });
@@ -1991,6 +1999,9 @@ const moduleFunction =
 						cardinalityCensus: provisionalCensus,
 						generation,
 					};
+					if (recordsJudgeConfig) {
+						Object.assign(header, judgeConfigRecordLib.judgeConfigHeaderFor({ judgeClient, predicateRule: header.predicateRule }));
+					}
 					const refusalList = report.refusalList.map((oneRefusal) => ({ ...oneRefusal }));
 					const frozen = decisionBlockLib.frozenTextFor({ header, decisionRecordList, refusalList });
 					if (frozen.error) {

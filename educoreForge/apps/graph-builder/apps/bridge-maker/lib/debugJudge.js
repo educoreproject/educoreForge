@@ -381,6 +381,8 @@ const moduleFunction =
 			ruleName,
 			keySource: 'none',
 			decisionAlgorithm: DEBUG_MARK,
+			// judgeConfig — there is no wire, so no temperature and no token budget: 'noWire' and null, stated rather than invented
+			judgeConfig: Object.freeze({ temperaturePolicy: 'noWire', maxTokens: null }),
 		};
 	};
 

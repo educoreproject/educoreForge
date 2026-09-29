@@ -41,7 +41,9 @@ const { runGateFamily } = require(path.join(__dirname, '..', '..', 'forge-framew
 const { makeTwinRegistry } = require(path.join(__dirname, '..', '..', 'forge-framework', 'roundTripHarness', 'twinRegistry'));
 const moduleDouble = require(path.join(__dirname, '..', '..', 'forge-framework', 'test', 'testSupport', 'moduleDouble'));
 const vocabularyLib = require(path.join(__dirname, '..', '..', 'vocabulary', 'vocabulary'));
-const { HEADER_KEY_ORDER } = require('../decisionBlock');
+// REQUIRED_HEADER_KEY_LIST, not HEADER_KEY_ORDER: BG-GEN proves that stripping a member refuses the freeze, which is
+// true only of the required members. The optional judge-config keys (B2) are omitted by design; test-bgJudgeConfig owns them.
+const { REQUIRED_HEADER_KEY_LIST } = require('../decisionBlock');
 const { debugEdgeRefusal } = require('../certificationCheck');
 
 const twinRegistry = makeTwinRegistry();
@@ -176,7 +178,7 @@ frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-PRODUCER', conjunctI
 // ---------------------------------------------------------------------
 // BG-GEN — one conjunct per header member (strip → refused at freeze) + the debug mark on every edge on replay
 // ---------------------------------------------------------------------
-const genConjunctList = HEADER_KEY_ORDER.map((oneMember) =>
+const genConjunctList = REQUIRED_HEADER_KEY_LIST.map((oneMember) =>
 	runConjunct({
 		conjunctId: `header_${oneMember}`,
 		title: `the frozen text carries header member '${oneMember}'`,
@@ -187,7 +189,7 @@ const genConjunctList = HEADER_KEY_ORDER.map((oneMember) =>
 		}),
 	}),
 );
-HEADER_KEY_ORDER.forEach((oneMember) => {
+REQUIRED_HEADER_KEY_LIST.forEach((oneMember) => {
 	// the twin: a framework double that OMITS the member from the header → frozenTextFor refuses (the run fails) → red
 	scenarioTwin({ registry: twinRegistry, gateId: 'BG-GEN', conjunctId: `header_${oneMember}`, twinName: `strip_${oneMember}`, leverKind: 'productionMutation', mutate: (scenario) => {
 		scenario.frameworkMutationList.push({ modulePath: path.join(scenarioLib.FRAMEWORK_DIR, FRAMEWORK_FILE), find: '\t\t\t\t\tconst refusalList = report.refusalList.map((oneRefusal) => ({ ...oneRefusal }));\n\t\t\t\t\tconst frozen = decisionBlockLib.frozenTextFor({ header, decisionRecordList, refusalList });', replace: `\t\t\t\t\tconst refusalList = report.refusalList.map((oneRefusal) => ({ ...oneRefusal }));\n\t\t\t\t\tdelete header['${oneMember}'];\n\t\t\t\t\tconst frozen = decisionBlockLib.frozenTextFor({ header, decisionRecordList, refusalList });` });
@@ -318,6 +320,8 @@ runGateFamily(
 		// 37 = 6 + 24 header keys + 1 + 6. Was 34 at 21 keys; RULING §11.7 (a)/§11.3/§11.10 add predicateRule,
 		// candidateRetrieval and subjectScopeDigest to HEADER_KEY_ORDER, so the frozen number moves BY THREE and
 		// says why — which is the entire benefit of it being a literal.
+		// Still 37 after B2 of the SIF replacement: its three judge-config keys are OPTIONAL and BG-GEN counts only
+		// REQUIRED_HEADER_KEY_LIST (24 keys).
 		expectedConjunctCount: 37, expectedTwinCount: 37 },
 	() => harness.report(),
 );

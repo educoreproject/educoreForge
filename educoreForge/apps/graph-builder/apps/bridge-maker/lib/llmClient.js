@@ -456,6 +456,18 @@ const moduleFunction =
 		// judged edge as mappingTool.
 		const namespacedModel = namespacedModelFor(cfg.wireModel);
 
+		// judgmentMaxTokens — the budget EVERY judgment goes on the wire with: the configured value raised to
+		// JUDGMENT_MAX_TOKENS, never lowered (see rerank). Resolved once, because judgeConfig below reports it.
+		const judgmentMaxTokens = Math.max(cfg.maxTokens, JUDGMENT_MAX_TOKENS);
+
+		// judgeConfig — what this judge sends besides the prompts, for a block that records it (blockRecordsJudgeConfig;
+		// lib/bridge-framework/decisionBlock.js OPTIONAL_HEADER_KEY_LIST). temperaturePolicy is 'zero' when the wire
+		// model is on TEMPERATURE_ACCEPTING_MODEL_RE and 'omitted' when it is not; maxTokens is judgmentMaxTokens.
+		const judgeConfig = Object.freeze({
+			temperaturePolicy: TEMPERATURE_ACCEPTING_MODEL_RE.test(cfg.wireModel) ? 'zero' : 'omitted',
+			maxTokens: judgmentMaxTokens,
+		});
+
 		// one POST attempt -> callback(err, parsedBody, statusCode). realPostOnce is the ONLY thing in this
 		// file that touches the network; componentOverrides.postOnce (the NET seam, the SAME
 		// componentOverrides idiom kitLoader.buildKit/bridgeMaker.run use for their own doubles) lets a
@@ -576,12 +588,12 @@ const moduleFunction =
 			// configured value and JUDGMENT_MAX_TOKENS — never LOWER cfg.maxTokens if an operator already
 			// configured something bigger than 400, only ever raise a too-small default. This is now the
 			// budget for EVERY judgment: there is no call shape that can put the truncating 64 on the wire.
-			const maxTokens = Math.max(cfg.maxTokens, JUDGMENT_MAX_TOKENS);
+			// (The max is taken once, at construction, as judgmentMaxTokens.)
 			const payload = {
 				// ⟪JOB 1⟫ WIRE USE (a) of two. The BARE API name goes on the wire; the namespaced identity
 				// would be rejected by Anthropic with a 400 (gate G-F1-a's twin, observed).
 				model: cfg.wireModel,
-				max_tokens: maxTokens,
+				max_tokens: judgmentMaxTokens,
 				system: systemPrompt,
 				messages: [{ role: 'user', content: userPrompt }],
 				tools: [tool],
@@ -705,7 +717,7 @@ const moduleFunction =
 		// is this client's own extra and is not part of the contract; test-build.js and test-useDebugJudge read
 		// it. wireModel is exposed rather than hidden so an operator can SEE what went on the wire — it is
 		// internal to the transport, not a secret.
-		return { name: PROVIDER_NAME, wireModel: cfg.wireModel, model: namespacedModel, maxConcurrency, rerank, describe, keySource: cfg.keySource };
+		return { name: PROVIDER_NAME, wireModel: cfg.wireModel, model: namespacedModel, maxConcurrency, rerank, describe, keySource: cfg.keySource, judgeConfig };
 	};
 
 // END OF moduleFunction() ============================================================

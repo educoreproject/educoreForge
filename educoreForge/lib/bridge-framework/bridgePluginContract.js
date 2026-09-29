@@ -332,6 +332,9 @@ const BRIDGE_DECLARATION_CONTRACT = Object.freeze({
 	// the IN-RUN identifier scan over everything the judge is shown (promptIdentifierScan.js; SPEC §9 A19). Plain-optional:
 	// absent, nothing is scanned and the run is unchanged. Its checker is a shape check only.
 	promptIdentifierScan: Object.freeze({ optional: true, kind: 'promptIdentifierScan' }),
+	// the judge's configuration and each judged record's rationale, frozen into the block (SPEC §9 A12; PLAN small phases §3
+	// B2). Plain-optional, and `true` is its only value: absent is the one way to say no, so there is no second spelling of it.
+	blockRecordsJudgeConfig: Object.freeze({ optional: true, kind: 'closedValue', allowedValueList: Object.freeze([true]) }),
 	evidenceHooksDeclared: Object.freeze({ required: true, kind: 'evidenceHooksDeclared' }),
 	// CONDITIONAL presence (RULING BR4): REQUIRED iff evidenceHooksDeclared.globalGuidance === true, FORBIDDEN (refused
 	// by name) when it is false — not a default, a conditional requirement; SPEC §10.1 as printed (hook false, no key) validates

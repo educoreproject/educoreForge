@@ -649,6 +649,8 @@ const moduleFunction =
 				rerank,
 				describe,
 				endpoint: `${cfg.endpointHostName}:${cfg.endpointPortNumber}`,
+				// judgeConfig — what rerank sends besides the prompts: temperature 0 always, and numPredict as the token budget
+				judgeConfig: Object.freeze({ temperaturePolicy: 'zero', maxTokens: cfg.numPredict }),
 			});
 		});
 	};
