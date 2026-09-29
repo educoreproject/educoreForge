@@ -1,0 +1,7 @@
+{
+	"name": "forge-sif260928",
+	"version": "1.0.0",
+	"main": "forgeSif260928.js",
+	"description": "SIF260928 forge bundle — the SIF replacement: forges the SIF 4.3 Implementation Specification TSV into objects, fields, containers, questions and codesets on the Forge Framework. It does no bridging.",
+	"private": true
+}

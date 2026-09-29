@@ -1,0 +1,29 @@
+{
+  // sif260928WithHub — the SIF replacement's first LIVE graph (phase A7): the sif260928 forge beside
+  // the CEDS hub, embedded, with the round-trip stage on. No bridges.
+  //
+  // WHY THE HUB IS HERE WITH NO BRIDGE. Declaring CEDS as a hub makes the forger fold the hub into the
+  // CEDS base, so the materialised graph holds the hub cards and texts that the SIF bridge (phase D2
+  // onward) retrieves against. This graph is the thing A7 proves: the SIF texts are embedded with the
+  // hub's model, and the forge's output survives Neo4j.
+  //
+  // WHY roundTripStage IS ON. It makes -build run sif260928's declared roundTripValidator against the
+  // materialised graph through the real graph reader (ORDER BY stableId), not the in-memory double A6
+  // used. The verdict must equal A6's: clean, 0 invented, 0 lost, 0 contentGap, 6,586 omitted.
+  //
+  // The graph is a scratch DEV_ graph (GNC-001). Build every store explicitly onto scratch copies,
+  // except the vector cache, which A7 uses read-write so SIF's embeddings are paid once (plan §1.5).
+  "schemaVersion": "1.0.0",
+  "recipeName": "sif260928WithHub",
+  "roundTripStage": true,
+  "kind": "dev",
+  "description": "The sif260928 forge beside the CEDS hub (folded into the CEDS base), embedded, round-trip stage on. No bridges.",
+  "standards": [
+    { "token": "ceds", "version": "current" },
+    { "token": "sif260928", "version": "current" }
+  ],
+  "hubs": [
+    { "standard": "ceds" }
+  ],
+  "bridges": []
+}
