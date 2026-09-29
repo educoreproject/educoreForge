@@ -1,0 +1,14 @@
+{
+	"fixtureNote": "SYNTHETIC (phase C6). Three SIF_Metadata questions (m01 3 rows, m02 2 rows, m03 4 rows; 9 metadata rows) and one model question (q90), to prove that only the metadata block is listed.",
+	"annotatedRowCount": 8,
+	"cedsElementIdByXpath": {
+		"/As/A1/SIF_Metadata/RefId": "P000011",
+		"/Bs/B1/SIF_Metadata/RefId": "P000011",
+		"/Cs/C1/SIF_Metadata/RefId": "P000011",
+		"/As/A1/SIF_Metadata/Cost": "P000012",
+		"/Bs/B1/SIF_Metadata/Cost": "P000012",
+		"/Cs/C1/SIF_Metadata/Cost": "P000012",
+		"/Ds/D1/SIF_Metadata/Cost": "P000012",
+		"/As/A1/Name": "P000011"
+	}
+}

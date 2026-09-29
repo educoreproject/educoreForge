@@ -1,0 +1,70 @@
+{
+	"fixtureNote": "SYNTHETIC (phase C6). Three SIF_Metadata questions (m01 3 rows, m02 2 rows, m03 4 rows; 9 metadata rows) and one model question (q90), to prove that only the metadata block is listed.",
+	"questionCount": 4,
+	"questionList": [
+		{
+			"questionRefId": "m01",
+			"name": "RefId",
+			"description": "The metadata record identifier.",
+			"relativePath": "SIF_Metadata/RefId",
+			"sharedBlock": "SIF_Metadata",
+			"instanceCount": 3,
+			"cedsElementIdList": [
+				"P000011"
+			],
+			"annotatedInstanceCount": 3,
+			"xpathList": [
+				"/As/A1/SIF_Metadata/RefId",
+				"/Bs/B1/SIF_Metadata/RefId",
+				"/Cs/C1/SIF_Metadata/RefId"
+			]
+		},
+		{
+			"questionRefId": "m02",
+			"name": "Source",
+			"description": "Where the record came from.",
+			"relativePath": "SIF_Metadata/Source",
+			"sharedBlock": "SIF_Metadata",
+			"instanceCount": 2,
+			"cedsElementIdList": [],
+			"annotatedInstanceCount": 0,
+			"xpathList": [
+				"/As/A1/SIF_Metadata/Source",
+				"/Bs/B1/SIF_Metadata/Source"
+			]
+		},
+		{
+			"questionRefId": "m03",
+			"name": "Cost",
+			"description": "The cost.",
+			"relativePath": "SIF_Metadata/Cost",
+			"sharedBlock": "SIF_Metadata",
+			"instanceCount": 4,
+			"cedsElementIdList": [
+				"P000012"
+			],
+			"annotatedInstanceCount": 4,
+			"xpathList": [
+				"/As/A1/SIF_Metadata/Cost",
+				"/Bs/B1/SIF_Metadata/Cost",
+				"/Cs/C1/SIF_Metadata/Cost",
+				"/Ds/D1/SIF_Metadata/Cost"
+			]
+		},
+		{
+			"questionRefId": "q90",
+			"name": "Name",
+			"description": "A name.",
+			"relativePath": "Name",
+			"sharedBlock": "model",
+			"instanceCount": 1,
+			"cedsElementIdList": [
+				"P000011"
+			],
+			"annotatedInstanceCount": 1,
+			"xpathList": [
+				"/As/A1/Name"
+			]
+		}
+	]
+}

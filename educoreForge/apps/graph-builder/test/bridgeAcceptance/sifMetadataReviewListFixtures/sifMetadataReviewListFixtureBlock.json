@@ -1,0 +1,111 @@
+{
+	"header": {
+		"generation": "bridgeFramework-v1:sifToyPlugin@1.0.0:bridgeEvidenceRenderer-derived-v12",
+		"producerKind": "inferred",
+		"judgeKind": "anthropic:toy",
+		"predicateRule": "judgeSlot-v1",
+		"candidateRetrieval": {
+			"method": "embedTextVote-v1",
+			"k": 15
+		},
+		"hubName": "ToyHub",
+		"hubVersion": "1"
+	},
+	"decisionRecordList": [
+		{
+			"subjectStableId": "sif260928:question/m01",
+			"objectStableId": "card:M1",
+			"abstained": false,
+			"predicate": "exactMatch",
+			"retrievalSeatList": [
+				{
+					"stableId": "card:M1",
+					"rank": 1,
+					"cosine": 0.99
+				},
+				{
+					"stableId": "card:S9",
+					"rank": 2,
+					"cosine": 0.98
+				}
+			],
+			"renderedPoolStableIdList": [
+				"card:M1",
+				"card:S9"
+			],
+			"instanceStableIdList": [
+				"sif260928:field/As/A1/SIF_Metadata/RefId",
+				"sif260928:field/Bs/B1/SIF_Metadata/RefId",
+				"sif260928:field/Cs/C1/SIF_Metadata/RefId"
+			]
+		},
+		{
+			"subjectStableId": "sif260928:question/m02",
+			"objectStableId": "card:S9",
+			"abstained": false,
+			"predicate": "exactMatch",
+			"retrievalSeatList": [
+				{
+					"stableId": "card:S9",
+					"rank": 1,
+					"cosine": 0.99
+				}
+			],
+			"renderedPoolStableIdList": [
+				"card:S9"
+			],
+			"instanceStableIdList": [
+				"sif260928:field/As/A1/SIF_Metadata/Source",
+				"sif260928:field/Bs/B1/SIF_Metadata/Source"
+			]
+		},
+		{
+			"subjectStableId": "sif260928:question/m03",
+			"objectStableId": null,
+			"abstained": true,
+			"predicate": null,
+			"retrievalSeatList": [
+				{
+					"stableId": "card:S9",
+					"rank": 1,
+					"cosine": 0.99
+				},
+				{
+					"stableId": "card:N1",
+					"rank": 2,
+					"cosine": 0.98
+				}
+			],
+			"renderedPoolStableIdList": [
+				"card:N1",
+				"card:S9"
+			],
+			"instanceStableIdList": [
+				"sif260928:field/As/A1/SIF_Metadata/Cost",
+				"sif260928:field/Bs/B1/SIF_Metadata/Cost",
+				"sif260928:field/Cs/C1/SIF_Metadata/Cost",
+				"sif260928:field/Ds/D1/SIF_Metadata/Cost"
+			]
+		},
+		{
+			"subjectStableId": "sif260928:question/q90",
+			"objectStableId": "card:M1",
+			"abstained": false,
+			"predicate": "exactMatch",
+			"retrievalSeatList": [
+				{
+					"stableId": "card:M1",
+					"rank": 1,
+					"cosine": 0.99
+				}
+			],
+			"renderedPoolStableIdList": [
+				"card:M1"
+			],
+			"instanceStableIdList": [
+				"sif260928:field/As/A1/Name"
+			],
+			"judgmentPartitionLabel": "Dom Record"
+		}
+	]
+}

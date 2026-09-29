@@ -1,0 +1,198 @@
+{
+	"fixtureNote": "SYNTHETIC (phase C6). The C5 fixture question map, carrying also the members the review page reads (name, description, relativePath, cedsElementIdList, annotatedInstanceCount). The scorer reads only questionRefId, sharedBlock and xpathList, which are unchanged, so the score equals C5s.",
+	"questionCount": 13,
+	"questionList": [
+		{
+			"questionRefId": "q01",
+			"name": "BirthDate",
+			"description": "The date of birth.",
+			"relativePath": "a",
+			"sharedBlock": "model",
+			"instanceCount": 1,
+			"cedsElementIdList": [
+				"P000001"
+			],
+			"annotatedInstanceCount": 1,
+			"xpathList": [
+				"/Os/O1/a"
+			]
+		},
+		{
+			"questionRefId": "q02",
+			"name": "LocalId",
+			"description": "A local identifier.",
+			"relativePath": "b",
+			"sharedBlock": "model",
+			"instanceCount": 1,
+			"cedsElementIdList": [
+				"P000001"
+			],
+			"annotatedInstanceCount": 1,
+			"xpathList": [
+				"/Os/O1/b"
+			]
+		},
+		{
+			"questionRefId": "q03",
+			"name": "GradeLevel",
+			"description": "The grade level.",
+			"relativePath": "c",
+			"sharedBlock": "model",
+			"instanceCount": 1,
+			"cedsElementIdList": [
+				"P000001"
+			],
+			"annotatedInstanceCount": 1,
+			"xpathList": [
+				"/Os/O1/c"
+			]
+		},
+		{
+			"questionRefId": "q04",
+			"name": "Email",
+			"description": "An email address.",
+			"relativePath": "d",
+			"sharedBlock": "model",
+			"instanceCount": 1,
+			"cedsElementIdList": [
+				"P000001"
+			],
+			"annotatedInstanceCount": 1,
+			"xpathList": [
+				"/Os/O1/d"
+			]
+		},
+		{
+			"questionRefId": "q05",
+			"name": "EntryDate",
+			"description": "The date the record began.",
+			"relativePath": "e",
+			"sharedBlock": "model",
+			"instanceCount": 2,
+			"cedsElementIdList": [
+				"P000002"
+			],
+			"annotatedInstanceCount": 2,
+			"xpathList": [
+				"/Os/O1/e",
+				"/Ss/S1/e"
+			]
+		},
+		{
+			"questionRefId": "q06",
+			"name": "Cost",
+			"description": "The cost of the item.",
+			"relativePath": "SIF_Metadata/g",
+			"sharedBlock": "SIF_Metadata",
+			"instanceCount": 1,
+			"cedsElementIdList": [
+				"P000002"
+			],
+			"annotatedInstanceCount": 1,
+			"xpathList": [
+				"/Os/O1/SIF_Metadata/g"
+			]
+		},
+		{
+			"questionRefId": "q07",
+			"name": "Units",
+			"description": "The unit of measure.",
+			"relativePath": "SIF_Metadata/h",
+			"sharedBlock": "SIF_Metadata",
+			"instanceCount": 1,
+			"cedsElementIdList": [
+				"P000004"
+			],
+			"annotatedInstanceCount": 1,
+			"xpathList": [
+				"/Os/O1/SIF_Metadata/h"
+			]
+		},
+		{
+			"questionRefId": "q08",
+			"name": "Nickname",
+			"relativePath": "i",
+			"sharedBlock": "model",
+			"instanceCount": 1,
+			"cedsElementIdList": [],
+			"annotatedInstanceCount": 0,
+			"xpathList": [
+				"/Os/O1/i"
+			]
+		},
+		{
+			"questionRefId": "q09",
+			"name": "Extension",
+			"description": "An extension value.",
+			"relativePath": "SIF_ExtendedElements/l",
+			"sharedBlock": "SIF_ExtendedElements",
+			"instanceCount": 1,
+			"cedsElementIdList": [],
+			"annotatedInstanceCount": 0,
+			"xpathList": [
+				"/Os/O1/SIF_ExtendedElements/l"
+			]
+		},
+		{
+			"questionRefId": "q10",
+			"name": "SchoolYear",
+			"description": "The school year.",
+			"relativePath": "j",
+			"sharedBlock": "model",
+			"instanceCount": 1,
+			"cedsElementIdList": [
+				"P000003"
+			],
+			"annotatedInstanceCount": 1,
+			"xpathList": [
+				"/Os/O1/j"
+			]
+		},
+		{
+			"questionRefId": "q11",
+			"name": "Custom",
+			"description": "A custom element.",
+			"relativePath": "SIF_ExtendedElements/k",
+			"sharedBlock": "SIF_ExtendedElements",
+			"instanceCount": 1,
+			"cedsElementIdList": [
+				"P000001"
+			],
+			"annotatedInstanceCount": 1,
+			"xpathList": [
+				"/Os/O1/SIF_ExtendedElements/k"
+			]
+		},
+		{
+			"questionRefId": "q12",
+			"name": "ExitDate",
+			"description": "The date the record ended.",
+			"relativePath": "f",
+			"sharedBlock": "model",
+			"instanceCount": 2,
+			"cedsElementIdList": [
+				"P000004"
+			],
+			"annotatedInstanceCount": 1,
+			"xpathList": [
+				"/Os/O1/f",
+				"/Os/O2/f"
+			]
+		},
+		{
+			"questionRefId": "q13",
+			"name": "StudentId",
+			"description": "The student identifier.",
+			"relativePath": "m",
+			"sharedBlock": "model",
+			"instanceCount": 1,
+			"cedsElementIdList": [
+				"P000005"
+			],
+			"annotatedInstanceCount": 1,
+			"xpathList": [
+				"/Os/O1/m"
+			]
+		}
+	]
+}
