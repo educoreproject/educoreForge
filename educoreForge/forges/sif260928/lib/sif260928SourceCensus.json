@@ -1,0 +1,20 @@
+{
+	"censusNote": "The counts each snapshot's TSV must reproduce, keyed by snapshot directory name. The loader refuses by name on any difference, or on a snapshot with no entry here. Values are PLAN-sifReplacement-smallPhases-092826.md section 3 A1b (a) and the layout measured by C1 (SPEC section 9 A21); C1's CENSUS-636450dd7276.md measures every one independently. Never edit a value to match a measurement.",
+	"censusBySnapshotName": {
+		"01": {
+			"lineCount": 16101,
+			"tableTitleLineCount": 159,
+			"columnHeaderLineCount": 159,
+			"blankLineCount": 163,
+			"rowCount": 15620,
+			"metadataRowCount": 8976,
+			"extendedElementsRowCount": 492,
+			"cedsAnnotatedRowCount": 2231,
+			"distinctCedsElementIdCount": 354,
+			"emptyDescriptionRowCount": 4733,
+			"attributeRowCount": 3789,
+			"emptyCharacteristicsRowCount": 162,
+			"quoteWrappedDescriptionRowCount": 3627
+		}
+	}
+}

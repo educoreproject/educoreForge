@@ -4,12 +4,12 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
 // sif260928Hooks.js — the H2/H3 hook set for the sif260928 forge bundle (SPEC-forgeFramework-v1.md §5).
 //
-// THIS IS THE A1a SKELETON. It is enough for the framework to run the whole pipeline in pure mode:
-// verify the TSV against SHA256SUMS, stamp the version, apply the version guard, and mint the
-// root. It does not parse the TSV yet.
-//   sourceLoaderList  — ONE loader, sifImplementationSpecificationTsv. In A1a it returns only the
-//                       name of the file the framework has just verified. A1b replaces its body
-//                       with the TSV loader (SPEC §9 A3–A5, A21).
+// As of A1b the framework runs the whole pipeline in pure mode: verify the TSV against SHA256SUMS,
+// load and census the TSV, stamp the version, apply the version guard, and mint the root. The walk
+// mints nothing else yet.
+//   sourceLoaderList  — ONE loader, sifImplementationSpecificationTsv: the TSV loader
+//                       (lib/sif260928TsvLoader.js; SPEC §9 A3, A4, A21). It hands the walk one
+//                       row object per SIF field, or refuses by name.
 //   describeSource    — PURE. The TSV declares no version (selfDescribedVersion null), so the
 //                       framework takes the version from standardSourceLocation. sourceUrl is
 //                       null: this TSV has no published URL, and the root omits the property.
@@ -21,8 +21,8 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // The forger hands the forge <snapshot>/ImplementationSpecification_031326.tsv (parserDescriptor.ini
 // sourceFile), so sourcePath is that one file.
 
-const path = require('path');
 const versionGuard = require('./sif260928VersionGuard');
+const tsvLoader = require('./sif260928TsvLoader');
 
 const LOADER_NAME = Object.freeze({ SIF_IMPLEMENTATION_SPECIFICATION_TSV: 'sifImplementationSpecificationTsv' });
 const SOURCE_FORMAT = 'tsv';
@@ -32,10 +32,6 @@ const SOURCE_FORMAT = 'tsv';
 const moduleFunction =
 	({ moduleName } = {}) =>
 	() => {
-		const loadSifImplementationSpecificationTsv = ({ sourcePath, additionalSourceInputPathByName, xLog }, callback) => {
-			callback('', { sourceFileName: path.basename(sourcePath) });
-		};
-
 		const describeSource = ({ parsed }) => ({
 			selfDescribedVersion: null,
 			sourceFormat: SOURCE_FORMAT,
@@ -58,7 +54,7 @@ const moduleFunction =
 			sourceLoaderList: [
 				{
 					loaderName: LOADER_NAME.SIF_IMPLEMENTATION_SPECIFICATION_TSV,
-					load: loadSifImplementationSpecificationTsv,
+					load: tsvLoader.loadImplementationSpecification,
 				},
 			],
 			describeSource,
