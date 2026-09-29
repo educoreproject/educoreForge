@@ -9,7 +9,7 @@
 | source | `assets/standardSourceData/01/ImplementationSpecification_031326.tsv`, sha256 `6814727786bd…` (plus `refIdResolutionMap.tsv`, `7ca182bc…`) |
 | graph | `DEV_sif260928Hub` (a scratch graph, built beside the CEDS hub), 2026-09-29 |
 | build | recipe `recipes/sif260928WithHub.recipe.jsonc`, manifest `f7e5b0c8…`, sif260928 block `576db654…` |
-| commit | branch `sifReplacement/A7`, cut from `f203498` (phase A7 of the SIF replacement) |
+| commit | built at A7 from `f203498` on branch `sifReplacement/A7` (this certificate and the recipe were committed after that build, as `92a503b`). **Re-measured at the merge gate M1** by a fresh build of the same recipe on `sifReplacement/main` at `68bf388`, 2026-09-29: the same manifest `f7e5b0c8…` and block `576db654…`, the same verdict, and the same census (39,268 nodes, 72,953 edges scoped `SIF260928`). That M1 graph was disposed after the check. |
 
 ---
 
