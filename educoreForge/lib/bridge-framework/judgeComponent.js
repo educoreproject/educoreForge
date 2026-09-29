@@ -217,7 +217,7 @@ const reaskableFaultNameOf = (judged) => REASKABLE_FAULT_NAME_LIST.find((oneFaul
 
 const judgeOne = ({ question, judgeClient, judgmentCache, matchForensics, budget, pairKey, generation, debugMark, reaskPromptRefusalFor } = {}, callback) => {
 	if (!isPlainObject(question) || !Array.isArray(question.renderedPoolStableIdList) || !Array.isArray(question.choiceEnum) || typeof question.promptHash !== 'string') {
-		callback(refuse.byName({ moduleName, what: 'question is not a renderQuestion result', where: 'judgeOne takes { question, judgeClient, judgmentCache, matchForensics, budget, pairKey, generation, debugMark }' }).message);
+		callback(refuse.byName({ moduleName, what: 'question is not a renderQuestion result', where: 'judgeOne takes { question, judgeClient, judgmentCache, matchForensics, budget, pairKey, generation, debugMark, reaskPromptRefusalFor }' }).message);
 		return;
 	}
 	// The renderer version comes FROM THE QUESTION, not from a module constant (RULING §11.1: each rendering

@@ -1699,7 +1699,7 @@ const moduleFunction =
 				});
 				taskList.push((args, next) => poolProducerByKind[acquisitionRow.poolProducerKind](args, next));
 
-				// STEP 6c — the prompt identifier scan (promptIdentifierScan.js; SPEC §9 A19), compiled ONCE and BEFORE any
+				// STEP 6b — the prompt identifier scan (promptIdentifierScan.js; SPEC §9 A19), compiled ONCE and BEFORE any
 				// subject is judged, so a broken list file refuses every re-judge whether or not a subject needs judging.
 				// Undeclared, compiledPromptScan is null and STEP 7 is exactly what it was.
 				taskList.push((args, next) => {
