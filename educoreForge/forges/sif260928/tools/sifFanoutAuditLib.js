@@ -18,7 +18,7 @@
 
 const OBJECT_NAME_SEGMENT_INDEX = 2; // sif260928:field/<Plural>/<ObjectName>/… → split('/')[2]
 
-const tripleKeyFor = ({ fieldStableId, objectStableId, judgedSubjectStableId }) => `${fieldStableId}\t${objectStableId}\t${judgedSubjectStableId}`;
+const tripleIdentityFor = ({ fieldStableId, objectStableId, judgedSubjectStableId }) => `${fieldStableId}\t${objectStableId}\t${judgedSubjectStableId}`;
 const objectNameOfField = (fieldStableId) => fieldStableId.split('/')[OBJECT_NAME_SEGMENT_INDEX];
 
 // pickedRecordListOf — the units that write edges: not abstained, and carrying a card
@@ -49,20 +49,20 @@ const fanoutArithmetic = ({ decisionRecordList, liveEdgeList }) => {
 };
 
 const edgeSetEqualsBlock = ({ expectedEdgeList, liveEdgeList }) => {
-	const expectedByTriple = new Map(expectedEdgeList.map((oneEdge) => [tripleKeyFor(oneEdge), oneEdge]));
-	const liveByTriple = new Map(liveEdgeList.map((oneEdge) => [tripleKeyFor(oneEdge), oneEdge]));
-	const missingList = expectedEdgeList.filter((oneEdge) => !liveByTriple.has(tripleKeyFor(oneEdge)));
-	const inventedList = liveEdgeList.filter((oneEdge) => !expectedByTriple.has(tripleKeyFor(oneEdge)));
+	const expectedByTriple = new Map(expectedEdgeList.map((oneEdge) => [tripleIdentityFor(oneEdge), oneEdge]));
+	const liveByTriple = new Map(liveEdgeList.map((oneEdge) => [tripleIdentityFor(oneEdge), oneEdge]));
+	const missingList = expectedEdgeList.filter((oneEdge) => !liveByTriple.has(tripleIdentityFor(oneEdge)));
+	const inventedList = liveEdgeList.filter((oneEdge) => !expectedByTriple.has(tripleIdentityFor(oneEdge)));
 	const mismatchList = liveEdgeList
-		.filter((oneEdge) => expectedByTriple.has(tripleKeyFor(oneEdge)))
+		.filter((oneEdge) => expectedByTriple.has(tripleIdentityFor(oneEdge)))
 		.filter((oneEdge) => {
-			const expected = expectedByTriple.get(tripleKeyFor(oneEdge));
+			const expected = expectedByTriple.get(tripleIdentityFor(oneEdge));
 			return oneEdge.edgeType !== expected.edgeType || oneEdge.predicate !== expected.predicate || oneEdge.confidence !== expected.confidence || oneEdge.decisionBlockHash !== expected.decisionBlockHash;
 		});
 	const duplicateCount = liveEdgeList.length - liveByTriple.size;
 	return {
 		pass: missingList.length === 0 && inventedList.length === 0 && mismatchList.length === 0 && duplicateCount === 0,
-		detail: `expected ${expectedEdgeList.length}, live ${liveEdgeList.length}; missing ${missingList.length}, invented ${inventedList.length}, property mismatch ${mismatchList.length}, duplicate triples ${duplicateCount}${missingList.length ? `; first missing ${tripleKeyFor(missingList[0])}` : ''}${inventedList.length ? `; first invented ${tripleKeyFor(inventedList[0])}` : ''}${mismatchList.length ? `; first mismatch ${JSON.stringify(mismatchList[0])}` : ''}`,
+		detail: `expected ${expectedEdgeList.length}, live ${liveEdgeList.length}; missing ${missingList.length}, invented ${inventedList.length}, property mismatch ${mismatchList.length}, duplicate triples ${duplicateCount}${missingList.length ? `; first missing ${tripleIdentityFor(missingList[0])}` : ''}${inventedList.length ? `; first invented ${tripleIdentityFor(inventedList[0])}` : ''}${mismatchList.length ? `; first mismatch ${JSON.stringify(mismatchList[0])}` : ''}`,
 	};
 };
 
