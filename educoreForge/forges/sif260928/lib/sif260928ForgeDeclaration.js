@@ -44,9 +44,16 @@ const sif260928ForgeDeclaration = Object.freeze({
 	// (DmeOptionSet, DmeOptionValue) get no node vector. Only Objects (159) and Questions (5,018 by
 	// C1's measurement, SPEC §9 A21) do. The roles themselves live in sif260928NodeKindTable.js.
 	nonEmbeddableRoleList: Object.freeze([DME_ROLES.SUPPORT, DME_ROLES.OPTION_SET, DME_ROLES.OPTION_VALUE]),
-	// null until phase A5, which declares the texts (Questions: name, description, contextText;
-	// Objects: name; SPEC §9 A1) together with the gates that count them (ruled, A1a).
-	embedTextDeclaration: null,
+	// the search texts (phase A5; SPEC §9 A1): a Question's name, description and contextText, an
+	// Object's name. No other role carries one. The framework mints one text node per distinct trimmed
+	// string; an absent description is counted as absent, never minted.
+	embedTextDeclaration: Object.freeze({
+		embedTextLabel: 'Sif260928EmbedText',
+		textPropertyListByRole: Object.freeze({
+			[DME_ROLES.PROPERTY]: Object.freeze(['name', 'description', 'contextText']),
+			[DME_ROLES.CLASS]: Object.freeze(['name']),
+		}),
+	}),
 	cedsAnchorAbsentSentinelList: Object.freeze([]),
 	// the RefId map only (phase A4; SPEC §9 A24). The framework verifies it against SHA256SUMS like
 	// the TSV and hands its path to the map loader under this inputName. The object-domain file is a

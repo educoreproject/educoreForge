@@ -73,6 +73,9 @@ const RULED_CODESET_VALUE_COUNT = 4055;
 const RULED_CONSTRAINED_BY_COUNT = 1495;
 const RULED_REFERENCES_OBJECT_COUNT = 607;
 const RULED_REFERENCES_OBJECT_VIA_MAP_COUNT = 200;
+// A5's text edges, rebuilt from C1's question map and segment table alone (DEVLOG-A5.md): not A4's
+// separate count, but part of the exact edge set A4-KINDS asserts
+const RULED_EMBEDS_TEXT_OF_COUNT = 14539;
 // sorted '<xpath>\t<value>\t<value>...' lines, one per list-carrying Field, each text ending in a newline
 const RULED_CONSTRAINED_LIST_SHA256 = 'a9f70c75823afec317c86a0f849fb8a01d562b642f5acc40038b5aea59f2f6d1';
 // sorted '<xpath>\t<target object path>' lines, one per resolved RefId Field
@@ -331,12 +334,12 @@ registerMutationTwin({
 const kindsConjunctList = [
 	{
 		conjunctId: 'edgeTypesDistinctBetweenTheirOwnLabels',
-		title: 'the edges are exactly HAS_FIELD 15,620, HAS_CHILD 21,017, HAS_INSTANCE 15,620, HAS_VALUE 4,055, CONSTRAINED_BY 1,495 and REFERENCES_OBJECT 607, and every HAS_VALUE, CONSTRAINED_BY and REFERENCES_OBJECT edge joins its own two labels',
+		title: 'the edges are exactly HAS_FIELD 15,620, HAS_CHILD 21,017, HAS_INSTANCE 15,620, HAS_VALUE 4,055, CONSTRAINED_BY 1,495, REFERENCES_OBJECT 607 and (A5) EMBEDS_TEXT_OF 14,539, and every HAS_VALUE, CONSTRAINED_BY and REFERENCES_OBJECT edge joins its own two labels',
 		twinNameList: ['referencesFoldedIntoConstrainedBy'],
 		evaluate: overForged((forged) => {
 			const labelByStableId = new Map(forged.nodes.map((oneNode) => [oneNode.stableId, oneNode.labels[1]]));
 			const edgeCountByType = countBy(forged.edges, (oneEdge) => oneEdge.type);
-			const ruledEdgeCountByType = { ...RULED_EARLIER_EDGE_COUNT_BY_TYPE, HAS_VALUE: RULED_CODESET_VALUE_COUNT, CONSTRAINED_BY: RULED_CONSTRAINED_BY_COUNT, REFERENCES_OBJECT: RULED_REFERENCES_OBJECT_COUNT };
+			const ruledEdgeCountByType = { ...RULED_EARLIER_EDGE_COUNT_BY_TYPE, HAS_VALUE: RULED_CODESET_VALUE_COUNT, CONSTRAINED_BY: RULED_CONSTRAINED_BY_COUNT, REFERENCES_OBJECT: RULED_REFERENCES_OBJECT_COUNT, EMBEDS_TEXT_OF: RULED_EMBEDS_TEXT_OF_COUNT };
 			const endpointWrongList = forged.edges
 				.filter((oneEdge) => RULED_EDGE_ENDPOINT_LABELS_BY_TYPE[oneEdge.type] !== undefined && `${labelByStableId.get(oneEdge.fromRef.id)}>${labelByStableId.get(oneEdge.toRef.id)}` !== RULED_EDGE_ENDPOINT_LABELS_BY_TYPE[oneEdge.type])
 				.map((oneEdge) => `${oneEdge.type} ${oneEdge.fromRef.id} -> ${oneEdge.toRef.id}`);

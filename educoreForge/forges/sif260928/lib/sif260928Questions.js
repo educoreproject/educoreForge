@@ -18,6 +18,10 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // Field's split slot is its own id, so the Fields with no id form their own question with a null
 // slot. Every other group has a null split slot. SIF_Metadata is grouped like any other block.
 //
+// TEXTS (A5): each Question carries contextText, its relativePath made readable (lib/sif260928ContextText.js;
+// SPEC §9 A22). The framework embeds name, description and contextText as declared in
+// sif260928ForgeDeclaration.js; an absent description is omitted, so the framework counts it absent.
+//
 // THE FORGE DOES NO BRIDGING (FBB-001; A20). No CEDS domain enters the identity or any property.
 // SIF's own CEDS ID column is read for exactly two things: the split, and cedsElementId, which a
 // Question carries only when EVERY one of its Fields carries that same id (A27).
@@ -26,6 +30,7 @@ const path = require('path');
 const crypto = require('crypto');
 const { EDGE_TYPES } = require(path.join(__dirname, '..', '..', '..', 'lib', 'vocabulary', 'vocabulary'));
 const SIF260928_NODE_KIND_TABLE = require('./sif260928NodeKindTable');
+const { contextTextOf } = require('./sif260928ContextText');
 
 // the identity tuple, in order. The order IS the identity: a reordering mints different ids.
 const QUESTION_IDENTITY_SLOT_LIST = Object.freeze(['name', 'descriptionOrNull', 'relativePath', 'splitCedsElementIdOrNull']);
@@ -36,7 +41,7 @@ const QUESTION_STABLE_ID_PREFIX = 'sif260928:question/';
 // A7: the judge sees at most this many object names
 const OBJECT_NAME_SAMPLE_LIMIT = 12;
 // the Question's carried properties; name and description go through makeNode itself
-const QUESTION_CARRY_LIST = Object.freeze(['questionRefId', 'relativePath', 'instanceCount', 'sharedBlock', 'objectNameList', 'objectNameSampleList', 'cedsElementId']);
+const QUESTION_CARRY_LIST = Object.freeze(['questionRefId', 'relativePath', 'contextText', 'instanceCount', 'sharedBlock', 'objectNameList', 'objectNameSampleList', 'cedsElementId']);
 
 const sha256Hex = (text) => crypto.createHash('sha256').update(text, 'utf8').digest('hex');
 
@@ -71,6 +76,8 @@ const questionFactsOf = ({ questionFieldFactsList, splitCedsElementIdOrNull }) =
 		name: firstFieldFacts.name,
 		description: firstFieldFacts.description,
 		relativePath: firstFieldFacts.relativePath,
+		// the readable path, one of the Question's three search texts (A5; SPEC §9 A22)
+		contextText: contextTextOf(firstFieldFacts.relativePath),
 		// the relative path fixes the block, so every Field of a question shares it
 		sharedBlock: firstFieldFacts.sharedBlock,
 		instanceCount: questionFieldFactsList.length,

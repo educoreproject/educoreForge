@@ -83,9 +83,10 @@ const RULED_OBJECT_NAME_SAMPLE_LIMIT = 12;
 // and under the strict reading those 8 carry no cedsElementId (SPEC §9 A27).
 const RULED_EVERY_FIELD_ONE_ID_QUESTION_COUNT = 1248;
 const RULED_SOME_FIELDS_ONE_ID_QUESTION_COUNT = 8;
-// the Question's property names: the kit's universal stamps, the brief's list, the finalizer's stamps
+// the Question's property names: the kit's universal stamps, the brief's list (with A5's contextText),
+// the finalizer's stamps
 const RULED_QUESTION_REQUIRED_PROPERTY_NAME_LIST = Object.freeze(
-	['_id', '_source', 'name', 'role', 'sif260928StableId', 'searchText', 'parentId', 'path', 'questionRefId', 'relativePath', 'instanceCount', 'sharedBlock', 'objectNameList', 'objectNameSampleList', 'depth', 'crossRefs'].sort(),
+	['_id', '_source', 'name', 'role', 'sif260928StableId', 'searchText', 'parentId', 'path', 'questionRefId', 'relativePath', 'contextText', 'instanceCount', 'sharedBlock', 'objectNameList', 'objectNameSampleList', 'depth', 'crossRefs'].sort(),
 );
 // present only when the question has one (description) or every Field agrees on one (cedsElementId)
 const RULED_QUESTION_OPTIONAL_PROPERTY_NAME_LIST = Object.freeze(['description', 'cedsElementId']);

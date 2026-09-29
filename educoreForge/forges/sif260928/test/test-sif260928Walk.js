@@ -65,7 +65,8 @@ const SOURCE_PATH = path.join(BUNDLE_DIR, 'assets', 'standardSourceData', descri
 // PLAN §3 A1c (a); SPEC §1. The Containers A2 adds are counted by test-sif260928Tree.js.
 const RULED_NODE_COUNT_BY_LABEL = Object.freeze({ Sif260928Root: 1, Sif260928Object: 159, Sif260928Field: 15620 });
 // PLAN §3 A1a role table (review #9), plus the framework's root; the Container row arrived with A2,
-// the Question row with A3, the Codeset and CodesetValue rows with A4
+// the Question row with A3, the Codeset and CodesetValue rows with A4, and with A5 the text nodes, which
+// the framework mints under its own role from the bundle's embedTextDeclaration
 const RULED_ROLE_BY_LABEL = Object.freeze({
 	Sif260928Root: 'DmeStandardRoot',
 	Sif260928Object: 'DmeClass',
@@ -74,6 +75,7 @@ const RULED_ROLE_BY_LABEL = Object.freeze({
 	Sif260928Question: 'DmeProperty',
 	Sif260928Codeset: 'DmeOptionSet',
 	Sif260928CodesetValue: 'DmeOptionValue',
+	Sif260928EmbedText: 'DmeEmbedText',
 });
 // PLAN §3 A1b (a): empty descriptions
 const EMPTY_DESCRIPTION_ROW_COUNT = 4733;
