@@ -32,26 +32,29 @@ const moduleDouble = require('../../../../lib/forge-framework/test/testSupport/m
 
 const TUPLE_FILE_PATH = path.join(__dirname, 'sifCardTuple.js');
 
-// the rows the export tool hands over, as the live hub carries them: a plain card, a card with a range option
-// set, and two cards of one property id that differ only by qualifier
+// the rows the export tool hands over, as the live hub carries them (null where the node has no such field): the three
+// range shapes (a datatype, an option set, a class), and two cards of one property id that differ only by qualifier
+const nullSlotRow = { rangeOptionSetId: null, rangeOptionSetName: null, rangeOptionSetDefinition: null, rangeDatatype: null, rangeClassId: null, rangeClassName: null, rangeClassDefinition: null, valueNotation: null, valueName: null, domainDefinition: null, propertyDefinition: null };
 const makeCardRowList = () => [
-	{ cardStableId: 'card:plain', domainId: 'C1', domainName: 'Dom One', propertyId: 'P1', propertyName: 'Prop One', rangeOptionSetId: null, rangeOptionSetName: null, valueNotation: null, valueName: null, qualifierRefIdList: [] },
-	{ cardStableId: 'card:ranged', domainId: 'C1', domainName: 'Dom One', propertyId: 'P2', propertyName: 'Prop Two', rangeOptionSetId: 'OS2', rangeOptionSetName: 'Set Two', valueNotation: null, valueName: null, qualifierRefIdList: [] },
-	{ cardStableId: 'card:qualA', domainId: 'C1', domainName: 'Dom One', propertyId: 'P3', propertyName: 'Prop Three', rangeOptionSetId: null, rangeOptionSetName: null, valueNotation: null, valueName: null, qualifierRefIdList: ['OV1'] },
-	{ cardStableId: 'card:qualB', domainId: 'C1', domainName: 'Dom One', propertyId: 'P3', propertyName: 'Prop Three', rangeOptionSetId: null, rangeOptionSetName: null, valueNotation: null, valueName: null, qualifierRefIdList: ['OV2'] },
+	{ ...nullSlotRow, cardStableId: 'card:plain', domainId: 'C1', domainName: 'Dom One', propertyId: 'P1', propertyName: 'Prop One', rangeDatatype: 'token', qualifierRefIdList: [] },
+	{ ...nullSlotRow, cardStableId: 'card:ranged', domainId: 'C1', domainName: 'Dom One', propertyId: 'P2', propertyName: 'Prop Two', rangeOptionSetId: 'OS2', rangeOptionSetName: 'Set Two', rangeOptionSetDefinition: 'Set two def', propertyDefinition: 'Prop two def', qualifierRefIdList: [] },
+	{ ...nullSlotRow, cardStableId: 'card:qualA', domainId: 'C1', domainName: 'Dom One', propertyId: 'P3', propertyName: 'Prop Three', rangeDatatype: 'string', qualifierRefIdList: ['OV1'] },
+	{ ...nullSlotRow, cardStableId: 'card:qualB', domainId: 'C1', domainName: 'Dom One', propertyId: 'P3', propertyName: 'Prop Three', rangeDatatype: 'string', qualifierRefIdList: ['OV2'] },
+	{ ...nullSlotRow, cardStableId: 'card:classy', domainId: 'C1', domainName: 'Dom One', propertyId: 'P4', propertyName: 'Prop Four', rangeClassId: 'C7', rangeClassName: 'Class Seven', rangeClassDefinition: 'Class seven def', domainDefinition: 'Dom one def', qualifierRefIdList: [] },
 ];
 const makeOptionValueRowList = () => [
 	{ optionValueRefId: 'OV1', optionValueName: 'Value One', optionSetId: 'OS9', optionSetName: 'Type Nine' },
 	{ optionValueRefId: 'OV2', optionValueName: 'Value Two', optionSetId: 'OS9', optionSetName: 'Type Nine' },
 ];
 // THE FROZEN ANSWER, worked by hand from the rows above: null slots are absent, each qualifier is carried by id
-// and labelled once
+// and labelled once, each card's one range shape is carried
 const EXPECTED_LIST_TEXT = JSON.stringify({
 	cardLabelByStableId: {
-		'card:plain': { domainId: 'C1', domainName: 'Dom One', propertyId: 'P1', propertyName: 'Prop One', qualifierRefIdList: [] },
-		'card:ranged': { domainId: 'C1', domainName: 'Dom One', propertyId: 'P2', propertyName: 'Prop Two', rangeOptionSetId: 'OS2', rangeOptionSetName: 'Set Two', qualifierRefIdList: [] },
-		'card:qualA': { domainId: 'C1', domainName: 'Dom One', propertyId: 'P3', propertyName: 'Prop Three', qualifierRefIdList: ['OV1'] },
-		'card:qualB': { domainId: 'C1', domainName: 'Dom One', propertyId: 'P3', propertyName: 'Prop Three', qualifierRefIdList: ['OV2'] },
+		'card:plain': { domainId: 'C1', domainName: 'Dom One', propertyId: 'P1', propertyName: 'Prop One', rangeDatatype: 'token', qualifierRefIdList: [] },
+		'card:ranged': { domainId: 'C1', domainName: 'Dom One', propertyId: 'P2', propertyName: 'Prop Two', propertyDefinition: 'Prop two def', rangeOptionSetId: 'OS2', rangeOptionSetName: 'Set Two', rangeOptionSetDefinition: 'Set two def', qualifierRefIdList: [] },
+		'card:qualA': { domainId: 'C1', domainName: 'Dom One', propertyId: 'P3', propertyName: 'Prop Three', rangeDatatype: 'string', qualifierRefIdList: ['OV1'] },
+		'card:qualB': { domainId: 'C1', domainName: 'Dom One', propertyId: 'P3', propertyName: 'Prop Three', rangeDatatype: 'string', qualifierRefIdList: ['OV2'] },
+		'card:classy': { domainId: 'C1', domainName: 'Dom One', propertyId: 'P4', propertyName: 'Prop Four', domainDefinition: 'Dom one def', rangeClassId: 'C7', rangeClassName: 'Class Seven', rangeClassDefinition: 'Class seven def', qualifierRefIdList: [] },
 	},
 	optionValueLabelByRefId: {
 		OV1: { optionSetId: 'OS9', optionSetName: 'Type Nine', optionValueName: 'Value One' },
@@ -94,6 +97,22 @@ const gateAConjunctList = [
 		},
 	},
 	{
+		conjunctId: 'e3_rangeShapeRequired',
+		title: 'a card with no range shape (none of option set, datatype, class) and a card with two are each refused by name; the range is never left unstated',
+		twinNameList: ['rangeCheckDeleted'],
+		evaluate: (subject, callback) => {
+			const noRangeSubject = cloneSubject(subject);
+			noRangeSubject.cardRowList[0].rangeDatatype = null;
+			const twoRangeSubject = cloneSubject(subject);
+			twoRangeSubject.cardRowList[1].rangeDatatype = 'string';
+			const noRangeBuilt = runTuple(noRangeSubject);
+			const twoRangeBuilt = runTuple(twoRangeSubject);
+			const noRangeRefused = noRangeBuilt.error !== undefined && /card card:plain carries 0 range shapes \(none\)/.test(noRangeBuilt.error.message);
+			const twoRangeRefused = twoRangeBuilt.error !== undefined && /card card:ranged carries 2 range shapes \(rangeOptionSetId, rangeDatatype\)/.test(twoRangeBuilt.error.message);
+			callback('', { pass: noRangeRefused && twoRangeRefused, detail: `no range refused ${noRangeRefused}; two ranges refused ${twoRangeRefused}` });
+		},
+	},
+	{
 		conjunctId: 'e2_unresolvedQualifierRefused',
 		title: 'a qualifier no option value row resolves (OV2 dropped) is refused by name, and no list is returned',
 		twinNameList: ['resolveCheckDeleted'],
@@ -109,9 +128,10 @@ const gateAConjunctList = [
 		},
 	},
 ];
-registerMutationTwin({ conjunctId: 'e1_tupleListExact', twinName: 'nullSlotCarried', find: 'oneCard[oneSlotName] !== undefined && oneCard[oneSlotName] !== null', replace: 'true' });
+registerMutationTwin({ conjunctId: 'e1_tupleListExact', twinName: 'nullSlotCarried', find: 'filter((oneSlotName) => isPresent(oneCard[oneSlotName]))', replace: 'filter(() => true)' });
+registerMutationTwin({ conjunctId: 'e3_rangeShapeRequired', twinName: 'rangeCheckDeleted', find: 'if (carriedRangeShapeList.length !== 1) {', replace: 'if (false) {' });
 registerMutationTwin({ conjunctId: 'e2_unresolvedQualifierRefused', twinName: 'resolveCheckDeleted', find: 'if (unresolvedRefId !== undefined) {', replace: 'if (false) {' });
 
 const gateDeclarationList = [{ gateId: GATE_A, title: "phase C6b: the card label list carries each card's full tuple; an unresolved qualifier is refused by name", conjunctList: gateAConjunctList }];
 
-runGateFamily({ harness, familyName: 'SIF-TUPLE', gateDeclarationList, twinRegistry, makeSubject, cloneSubject, expectedConjunctCount: 2, expectedTwinCount: 2 }, () => harness.report());
+runGateFamily({ harness, familyName: 'SIF-TUPLE', gateDeclarationList, twinRegistry, makeSubject, cloneSubject, expectedConjunctCount: 3, expectedTwinCount: 3 }, () => harness.report());

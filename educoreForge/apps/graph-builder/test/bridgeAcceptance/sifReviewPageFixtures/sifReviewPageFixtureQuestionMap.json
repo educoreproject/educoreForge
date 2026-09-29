@@ -15,6 +15,9 @@
 			"annotatedInstanceCount": 1,
 			"xpathList": [
 				"/Os/O1/a"
+			],
+			"objectNameList": [
+				"ObjectOfBirthDate"
 			]
 		},
 		{
@@ -30,6 +33,9 @@
 			"annotatedInstanceCount": 1,
 			"xpathList": [
 				"/Os/O1/b"
+			],
+			"objectNameList": [
+				"ObjectOfLocalId"
 			]
 		},
 		{
@@ -45,6 +51,9 @@
 			"annotatedInstanceCount": 1,
 			"xpathList": [
 				"/Os/O1/c"
+			],
+			"objectNameList": [
+				"ObjectOfGradeLevel"
 			]
 		},
 		{
@@ -60,6 +69,9 @@
 			"annotatedInstanceCount": 1,
 			"xpathList": [
 				"/Os/O1/d"
+			],
+			"objectNameList": [
+				"ObjectOfEmail"
 			]
 		},
 		{
@@ -76,6 +88,9 @@
 			"xpathList": [
 				"/Os/O1/e",
 				"/Ss/S1/e"
+			],
+			"objectNameList": [
+				"ObjectOfEntryDate"
 			]
 		},
 		{
@@ -91,6 +106,9 @@
 			"annotatedInstanceCount": 1,
 			"xpathList": [
 				"/Os/O1/SIF_Metadata/g"
+			],
+			"objectNameList": [
+				"ObjectOfCost"
 			]
 		},
 		{
@@ -106,6 +124,9 @@
 			"annotatedInstanceCount": 1,
 			"xpathList": [
 				"/Os/O1/SIF_Metadata/h"
+			],
+			"objectNameList": [
+				"ObjectOfUnits"
 			]
 		},
 		{
@@ -118,6 +139,9 @@
 			"annotatedInstanceCount": 0,
 			"xpathList": [
 				"/Os/O1/i"
+			],
+			"objectNameList": [
+				"ObjectOfNickname"
 			]
 		},
 		{
@@ -131,6 +155,9 @@
 			"annotatedInstanceCount": 0,
 			"xpathList": [
 				"/Os/O1/SIF_ExtendedElements/l"
+			],
+			"objectNameList": [
+				"ObjectOfExtension"
 			]
 		},
 		{
@@ -146,6 +173,9 @@
 			"annotatedInstanceCount": 1,
 			"xpathList": [
 				"/Os/O1/j"
+			],
+			"objectNameList": [
+				"ObjectOfSchoolYear"
 			]
 		},
 		{
@@ -161,6 +191,9 @@
 			"annotatedInstanceCount": 1,
 			"xpathList": [
 				"/Os/O1/SIF_ExtendedElements/k"
+			],
+			"objectNameList": [
+				"ObjectOfCustom"
 			]
 		},
 		{
@@ -177,6 +210,9 @@
 			"xpathList": [
 				"/Os/O1/f",
 				"/Os/O2/f"
+			],
+			"objectNameList": [
+				"ObjectOfExitDate"
 			]
 		},
 		{
@@ -192,6 +228,9 @@
 			"annotatedInstanceCount": 1,
 			"xpathList": [
 				"/Os/O1/m"
+			],
+			"objectNameList": [
+				"ObjectOfStudentId"
 			]
 		}
 	]

@@ -8,7 +8,7 @@
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 const SCORE_INPUT_NAME_LIST = ['decisionBlockFilePath', 'annotationFilePath', 'questionMapFilePath', 'cardListFilePath', 'remodelTableFilePath'];
 const REQUIRED_NAME_LIST_BY_MODE = Object.freeze({
-	build: SCORE_INPUT_NAME_LIST.concat(['cardLabelFilePath', 'feedbackTargetPath', 'draftStoragePrefix', 'pageTitle', 'outputFilePath']),
+	build: SCORE_INPUT_NAME_LIST.concat(['cardLabelFilePath', 'feedbackTargetPath', 'draftStoragePrefix', 'pageTitle', 'roundNumber', 'outputFilePath']),
 	verify: SCORE_INPUT_NAME_LIST.concat(['htmlFilePath']),
 });
 const helpText = () => `
@@ -49,7 +49,7 @@ if (missingNameList.length > 0) {
 const scoreInputSet = SCORE_INPUT_NAME_LIST.reduce((soFar, oneName) => ({ ...soFar, [oneName]: path.resolve(firstValue(oneName)) }), {});
 
 if (modeName === 'build') {
-	const built = sifReviewPage.buildReviewPageFromFiles({ ...scoreInputSet, cardLabelFilePath: path.resolve(firstValue('cardLabelFilePath')), pageSetting: { feedbackTargetPath: firstValue('feedbackTargetPath'), draftStoragePrefix: firstValue('draftStoragePrefix'), pageTitle: firstValue('pageTitle') } });
+	const built = sifReviewPage.buildReviewPageFromFiles({ ...scoreInputSet, cardLabelFilePath: path.resolve(firstValue('cardLabelFilePath')), pageSetting: { feedbackTargetPath: firstValue('feedbackTargetPath'), draftStoragePrefix: firstValue('draftStoragePrefix'), pageTitle: firstValue('pageTitle'), roundNumber: Number(firstValue('roundNumber')) } });
 	if (built.error) {
 		xLog.error(built.error.message);
 		process.exit(1);

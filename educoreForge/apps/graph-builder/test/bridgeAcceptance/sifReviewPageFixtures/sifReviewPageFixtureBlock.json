@@ -1,0 +1,692 @@
+{
+	"header": {
+		"generation": "bridgeFramework-v1:sifToyPlugin@1.0.0:bridgeEvidenceRenderer-derived-v12",
+		"producerKind": "inferred",
+		"judgeKind": "anthropic:toy",
+		"predicateRule": "judgeSlot-v1",
+		"candidateRetrieval": {
+			"embeddingModelVersion": "toy-embedding",
+			"hitsPerText": 40,
+			"k": 15,
+			"method": "embedTextVote-v1",
+			"minScore": 0.3,
+			"neighbourVote": null
+		},
+		"hubName": "ToyHub",
+		"hubVersion": "1",
+		"rendererVersion": "bridgeEvidenceRenderer-derivedJudgeSlot-v1"
+	},
+	"decisionRecordList": [
+		{
+			"subjectStableId": "sif260928:question/q01",
+			"objectStableId": "card:A1",
+			"abstained": false,
+			"predicate": "closeMatch",
+			"renderedPoolStableIdList": [
+				"card:A1",
+				"card:X"
+			],
+			"instanceStableIdList": [
+				"sif260928:field/Os/O1/a"
+			],
+			"judgmentPartitionLabel": "Dom Student",
+			"judge": {
+				"category": "strong",
+				"choice": "1",
+				"judgeModel": "anthropic:toy",
+				"promptHash": "h00",
+				"rationale": "The source means card:A1 (fixture rationale 0)."
+			},
+			"confidence": 0.8,
+			"retrievalVoteList": [
+				{
+					"stableId": "card:A1",
+					"ownVotes": 1
+				},
+				{
+					"stableId": "card:X",
+					"ownVotes": 1
+				}
+			],
+			"retrievalSeatList": [
+				{
+					"stableId": "card:A1",
+					"rank": 1,
+					"cosine": 0.9
+				},
+				{
+					"stableId": "card:X",
+					"rank": 2,
+					"cosine": 0.9
+				}
+			]
+		},
+		{
+			"subjectStableId": "sif260928:question/q02",
+			"objectStableId": "card:X",
+			"abstained": false,
+			"predicate": "closeMatch",
+			"renderedPoolStableIdList": [
+				"card:A1",
+				"card:X"
+			],
+			"instanceStableIdList": [
+				"sif260928:field/Os/O1/b"
+			],
+			"judgmentPartitionLabel": "Dom Student",
+			"judge": {
+				"category": "moderate",
+				"choice": "2",
+				"judgeModel": "anthropic:toy",
+				"promptHash": "h01",
+				"rationale": "The source means card:X (fixture rationale 1)."
+			},
+			"confidence": 0.8,
+			"retrievalVoteList": [
+				{
+					"stableId": "card:X",
+					"ownVotes": 1
+				},
+				{
+					"stableId": "card:A1",
+					"ownVotes": 1
+				}
+			],
+			"retrievalSeatList": [
+				{
+					"stableId": "card:X",
+					"rank": 1,
+					"cosine": 0.9
+				},
+				{
+					"stableId": "card:A1",
+					"rank": 2,
+					"cosine": 0.9
+				}
+			]
+		},
+		{
+			"subjectStableId": "sif260928:question/q03",
+			"objectStableId": null,
+			"abstained": true,
+			"predicate": null,
+			"renderedPoolStableIdList": [
+				"card:A1",
+				"card:X",
+				"card:Y",
+				"card:Z"
+			],
+			"instanceStableIdList": [
+				"sif260928:field/Os/O1/c"
+			],
+			"judgmentPartitionLabel": "Dom Student",
+			"judge": {
+				"category": "none",
+				"choice": "NONE",
+				"judgeModel": "anthropic:toy",
+				"promptHash": "h02",
+				"rationale": "No candidate for q03 means the same thing."
+			},
+			"confidence": 0.9,
+			"retrievalVoteList": [
+				{
+					"stableId": "card:X",
+					"ownVotes": 1
+				},
+				{
+					"stableId": "card:Y",
+					"ownVotes": 1
+				},
+				{
+					"stableId": "card:Z",
+					"ownVotes": 1
+				},
+				{
+					"stableId": "card:A1",
+					"ownVotes": 1
+				}
+			],
+			"retrievalSeatList": [
+				{
+					"stableId": "card:X",
+					"rank": 1,
+					"cosine": 0.9
+				},
+				{
+					"stableId": "card:Y",
+					"rank": 2,
+					"cosine": 0.9
+				},
+				{
+					"stableId": "card:Z",
+					"rank": 3,
+					"cosine": 0.9
+				},
+				{
+					"stableId": "card:A1",
+					"rank": 4,
+					"cosine": 0.9
+				}
+			]
+		},
+		{
+			"subjectStableId": "sif260928:question/q04",
+			"objectStableId": "card:X",
+			"abstained": false,
+			"predicate": "closeMatch",
+			"renderedPoolStableIdList": [
+				"card:X",
+				"card:Y"
+			],
+			"instanceStableIdList": [
+				"sif260928:field/Os/O1/d"
+			],
+			"judgmentPartitionLabel": "Dom Student",
+			"judge": {
+				"category": "strong",
+				"choice": "1",
+				"judgeModel": "anthropic:toy",
+				"promptHash": "h03",
+				"rationale": "The source means card:X (fixture rationale 3)."
+			},
+			"confidence": 0.8,
+			"retrievalVoteList": [
+				{
+					"stableId": "card:X",
+					"ownVotes": 1
+				},
+				{
+					"stableId": "card:Y",
+					"ownVotes": 1
+				}
+			],
+			"retrievalSeatList": [
+				{
+					"stableId": "card:X",
+					"rank": 1,
+					"cosine": 0.9
+				},
+				{
+					"stableId": "card:Y",
+					"rank": 2,
+					"cosine": 0.9
+				}
+			]
+		},
+		{
+			"subjectStableId": "sif260928:question/q05",
+			"objectStableId": "card:B1",
+			"abstained": false,
+			"predicate": "closeMatch",
+			"renderedPoolStableIdList": [
+				"card:B1",
+				"card:B2"
+			],
+			"instanceStableIdList": [
+				"sif260928:field/Os/O1/e"
+			],
+			"judgmentPartitionLabel": "Dom Student",
+			"judge": {
+				"category": "moderate",
+				"choice": "1",
+				"judgeModel": "anthropic:toy",
+				"promptHash": "h04",
+				"rationale": "The source means card:B1 (fixture rationale 4)."
+			},
+			"confidence": 0.8,
+			"retrievalVoteList": [
+				{
+					"stableId": "card:B1",
+					"ownVotes": 1
+				},
+				{
+					"stableId": "card:B2",
+					"ownVotes": 1
+				}
+			],
+			"retrievalSeatList": [
+				{
+					"stableId": "card:B1",
+					"rank": 1,
+					"cosine": 0.9
+				},
+				{
+					"stableId": "card:B2",
+					"rank": 2,
+					"cosine": 0.9
+				}
+			]
+		},
+		{
+			"subjectStableId": "sif260928:question/q05",
+			"objectStableId": "card:B1",
+			"abstained": false,
+			"predicate": "closeMatch",
+			"renderedPoolStableIdList": [
+				"card:B1",
+				"card:B2"
+			],
+			"instanceStableIdList": [
+				"sif260928:field/Ss/S1/e"
+			],
+			"judgmentPartitionLabel": "Dom Staff",
+			"judge": {
+				"category": "weakButReal",
+				"choice": "1",
+				"judgeModel": "anthropic:toy",
+				"promptHash": "h05",
+				"rationale": "The source means card:B1 (fixture rationale 5)."
+			},
+			"confidence": 0.8,
+			"retrievalVoteList": [
+				{
+					"stableId": "card:B1",
+					"ownVotes": 1
+				},
+				{
+					"stableId": "card:B2",
+					"ownVotes": 1
+				}
+			],
+			"retrievalSeatList": [
+				{
+					"stableId": "card:B1",
+					"rank": 1,
+					"cosine": 0.9
+				},
+				{
+					"stableId": "card:B2",
+					"rank": 2,
+					"cosine": 0.9
+				}
+			]
+		},
+		{
+			"subjectStableId": "sif260928:question/q06",
+			"objectStableId": "card:B2",
+			"abstained": false,
+			"predicate": "closeMatch",
+			"renderedPoolStableIdList": [
+				"card:B2",
+				"card:X",
+				"card:Y"
+			],
+			"instanceStableIdList": [
+				"sif260928:field/Os/O1/SIF_Metadata/g"
+			],
+			"judgmentPartitionLabel": null,
+			"judge": {
+				"category": "strong",
+				"choice": "1",
+				"judgeModel": "anthropic:toy",
+				"promptHash": "h06",
+				"rationale": "The source means card:B2 (fixture rationale 6)."
+			},
+			"confidence": 0.8,
+			"retrievalVoteList": [
+				{
+					"stableId": "card:Y",
+					"ownVotes": 1
+				},
+				{
+					"stableId": "card:X",
+					"ownVotes": 1
+				},
+				{
+					"stableId": "card:B2",
+					"ownVotes": 1
+				}
+			],
+			"retrievalSeatList": [
+				{
+					"stableId": "card:Y",
+					"rank": 1,
+					"cosine": 0.9
+				},
+				{
+					"stableId": "card:X",
+					"rank": 2,
+					"cosine": 0.9
+				},
+				{
+					"stableId": "card:B2",
+					"rank": 3,
+					"cosine": 0.9
+				}
+			]
+		},
+		{
+			"subjectStableId": "sif260928:question/q07",
+			"objectStableId": "card:D1",
+			"abstained": false,
+			"predicate": "closeMatch",
+			"renderedPoolStableIdList": [
+				"card:D1",
+				"card:X"
+			],
+			"instanceStableIdList": [
+				"sif260928:field/Os/O1/SIF_Metadata/h"
+			],
+			"judgmentPartitionLabel": null,
+			"judge": {
+				"category": "moderate",
+				"choice": "1",
+				"judgeModel": "anthropic:toy",
+				"promptHash": "h07",
+				"rationale": "The source means card:D1 (fixture rationale 7)."
+			},
+			"confidence": 0.8,
+			"retrievalVoteList": [
+				{
+					"stableId": "card:X",
+					"ownVotes": 1
+				},
+				{
+					"stableId": "card:D1",
+					"ownVotes": 1
+				}
+			],
+			"retrievalSeatList": [
+				{
+					"stableId": "card:X",
+					"rank": 1,
+					"cosine": 0.9
+				},
+				{
+					"stableId": "card:D1",
+					"rank": 2,
+					"cosine": 0.9
+				}
+			]
+		},
+		{
+			"subjectStableId": "sif260928:question/q08",
+			"objectStableId": "card:X",
+			"abstained": false,
+			"predicate": "closeMatch",
+			"renderedPoolStableIdList": [
+				"card:X"
+			],
+			"instanceStableIdList": [
+				"sif260928:field/Os/O1/i"
+			],
+			"judgmentPartitionLabel": "Dom Student",
+			"judge": {
+				"category": "weakButReal",
+				"choice": "1",
+				"judgeModel": "anthropic:toy",
+				"promptHash": "h08",
+				"rationale": "The source means card:X (fixture rationale 8)."
+			},
+			"confidence": 0.8,
+			"retrievalVoteList": [
+				{
+					"stableId": "card:X",
+					"ownVotes": 1
+				}
+			],
+			"retrievalSeatList": [
+				{
+					"stableId": "card:X",
+					"rank": 1,
+					"cosine": 0.9
+				}
+			]
+		},
+		{
+			"subjectStableId": "sif260928:question/q09",
+			"objectStableId": null,
+			"abstained": true,
+			"predicate": null,
+			"renderedPoolStableIdList": [
+				"card:X"
+			],
+			"instanceStableIdList": [
+				"sif260928:field/Os/O1/SIF_ExtendedElements/l"
+			],
+			"judgmentPartitionLabel": "Dom Student",
+			"judge": {
+				"category": "none",
+				"choice": "NONE",
+				"judgeModel": "anthropic:toy",
+				"promptHash": "h09",
+				"rationale": "No candidate for q09 means the same thing."
+			},
+			"confidence": 0.9,
+			"retrievalVoteList": [
+				{
+					"stableId": "card:X",
+					"ownVotes": 1
+				}
+			],
+			"retrievalSeatList": [
+				{
+					"stableId": "card:X",
+					"rank": 1,
+					"cosine": 0.9
+				}
+			]
+		},
+		{
+			"subjectStableId": "sif260928:question/q10",
+			"objectStableId": "card:X",
+			"abstained": false,
+			"predicate": "closeMatch",
+			"renderedPoolStableIdList": [
+				"card:X"
+			],
+			"instanceStableIdList": [
+				"sif260928:field/Os/O1/j"
+			],
+			"judgmentPartitionLabel": "Dom Student",
+			"judge": {
+				"category": "moderate",
+				"choice": "1",
+				"judgeModel": "anthropic:toy",
+				"promptHash": "h10",
+				"rationale": "The source means card:X (fixture rationale 10)."
+			},
+			"confidence": 0.8,
+			"retrievalVoteList": [
+				{
+					"stableId": "card:X",
+					"ownVotes": 1
+				}
+			],
+			"retrievalSeatList": [
+				{
+					"stableId": "card:X",
+					"rank": 1,
+					"cosine": 0.9
+				}
+			]
+		},
+		{
+			"subjectStableId": "sif260928:question/q11",
+			"objectStableId": "card:Y",
+			"abstained": false,
+			"predicate": "closeMatch",
+			"renderedPoolStableIdList": [
+				"card:A1",
+				"card:Y"
+			],
+			"instanceStableIdList": [
+				"sif260928:field/Os/O1/SIF_ExtendedElements/k"
+			],
+			"judgmentPartitionLabel": "Dom Student",
+			"judge": {
+				"category": "weakButReal",
+				"choice": "2",
+				"judgeModel": "anthropic:toy",
+				"promptHash": "h11",
+				"rationale": "The source means card:Y (fixture rationale 11)."
+			},
+			"confidence": 0.8,
+			"retrievalVoteList": [
+				{
+					"stableId": "card:Y",
+					"ownVotes": 1
+				},
+				{
+					"stableId": "card:A1",
+					"ownVotes": 1
+				}
+			],
+			"retrievalSeatList": [
+				{
+					"stableId": "card:Y",
+					"rank": 1,
+					"cosine": 0.9
+				},
+				{
+					"stableId": "card:A1",
+					"rank": 2,
+					"cosine": 0.9
+				}
+			]
+		},
+		{
+			"subjectStableId": "sif260928:question/q12",
+			"objectStableId": "card:D1",
+			"abstained": false,
+			"predicate": "closeMatch",
+			"renderedPoolStableIdList": [
+				"card:D1"
+			],
+			"instanceStableIdList": [
+				"sif260928:field/Os/O1/f"
+			],
+			"judgmentPartitionLabel": "Dom Student",
+			"judge": {
+				"category": "strong",
+				"choice": "1",
+				"judgeModel": "anthropic:toy",
+				"promptHash": "h12",
+				"rationale": "The source means card:D1 (fixture rationale 12)."
+			},
+			"confidence": 0.8,
+			"retrievalVoteList": [
+				{
+					"stableId": "card:D1",
+					"ownVotes": 1
+				}
+			],
+			"retrievalSeatList": [
+				{
+					"stableId": "card:D1",
+					"rank": 1,
+					"cosine": 0.9
+				}
+			]
+		},
+		{
+			"subjectStableId": "sif260928:question/q12",
+			"objectStableId": "card:D1",
+			"abstained": false,
+			"predicate": "closeMatch",
+			"renderedPoolStableIdList": [
+				"card:D1"
+			],
+			"instanceStableIdList": [
+				"sif260928:field/Os/O2/f"
+			],
+			"judgmentPartitionLabel": "Dom Staff",
+			"judge": {
+				"category": "moderate",
+				"choice": "1",
+				"judgeModel": "anthropic:toy",
+				"promptHash": "h13",
+				"rationale": "The source means card:D1 (fixture rationale 13)."
+			},
+			"confidence": 0.8,
+			"retrievalVoteList": [
+				{
+					"stableId": "card:D1",
+					"ownVotes": 1
+				}
+			],
+			"retrievalSeatList": [
+				{
+					"stableId": "card:D1",
+					"rank": 1,
+					"cosine": 0.9
+				}
+			]
+		},
+		{
+			"subjectStableId": "sif260928:question/q13",
+			"objectStableId": "card:A1",
+			"abstained": false,
+			"predicate": "closeMatch",
+			"renderedPoolStableIdList": [
+				"card:A1",
+				"card:W",
+				"card:X",
+				"card:Y",
+				"card:Z"
+			],
+			"instanceStableIdList": [
+				"sif260928:field/Os/O1/m"
+			],
+			"judgmentPartitionLabel": "Dom Student",
+			"judge": {
+				"category": "weakButReal",
+				"choice": "1",
+				"judgeModel": "anthropic:toy",
+				"promptHash": "h14",
+				"rationale": "The source means card:A1 (fixture rationale 14)."
+			},
+			"confidence": 0.8,
+			"retrievalVoteList": [
+				{
+					"stableId": "card:X",
+					"ownVotes": 1
+				},
+				{
+					"stableId": "card:Y",
+					"ownVotes": 1
+				},
+				{
+					"stableId": "card:Z",
+					"ownVotes": 1
+				},
+				{
+					"stableId": "card:W",
+					"ownVotes": 1
+				},
+				{
+					"stableId": "card:A1",
+					"ownVotes": 1
+				}
+			],
+			"retrievalSeatList": [
+				{
+					"stableId": "card:X",
+					"rank": 1,
+					"cosine": 0.9
+				},
+				{
+					"stableId": "card:Y",
+					"rank": 2,
+					"cosine": 0.9
+				},
+				{
+					"stableId": "card:Z",
+					"rank": 3,
+					"cosine": 0.9
+				},
+				{
+					"stableId": "card:W",
+					"rank": 4,
+					"cosine": 0.9
+				},
+				{
+					"stableId": "card:A1",
+					"rank": 5,
+					"cosine": 0.9
+				}
+			]
+		}
+	],
+	"refusalList": []
+}

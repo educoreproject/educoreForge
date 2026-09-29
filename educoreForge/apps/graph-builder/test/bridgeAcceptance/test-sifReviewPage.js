@@ -43,7 +43,7 @@ const PAGE_FILE_PATH = path.join(__dirname, 'sifReviewPage.js');
 const YARDSTICK_FIXTURE_DIRECTORY_PATH = path.join(__dirname, 'sifYardstickFixtures');
 const PAGE_FIXTURE_DIRECTORY_PATH = path.join(__dirname, 'sifReviewPageFixtures');
 const FIXTURE_FILE_PATH_BY_ROLE = Object.freeze({
-	decisionBlock: path.join(YARDSTICK_FIXTURE_DIRECTORY_PATH, 'sifYardstickFixtureBlock.json'),
+	decisionBlock: path.join(PAGE_FIXTURE_DIRECTORY_PATH, 'sifReviewPageFixtureBlock.json'),
 	annotation: path.join(YARDSTICK_FIXTURE_DIRECTORY_PATH, 'sifYardstickFixtureAnnotation.json'),
 	questionMap: path.join(PAGE_FIXTURE_DIRECTORY_PATH, 'sifReviewPageFixtureQuestionMap.json'),
 	cardList: path.join(YARDSTICK_FIXTURE_DIRECTORY_PATH, 'sifYardstickFixtureCardList.json'),
@@ -51,7 +51,7 @@ const FIXTURE_FILE_PATH_BY_ROLE = Object.freeze({
 	cardLabelList: path.join(PAGE_FIXTURE_DIRECTORY_PATH, 'sifReviewPageFixtureCardLabelList.json'),
 });
 const C5_QUESTION_MAP_FILE_PATH = path.join(YARDSTICK_FIXTURE_DIRECTORY_PATH, 'sifYardstickFixtureQuestionMap.json');
-const PAGE_SETTING = Object.freeze({ feedbackTargetPath: 'educoreForge/system/dataStores/bridgeAcceptance/sif260928/feedback/c6FixtureTags.json', draftStoragePrefix: 'sifReviewPageFixture::', pageTitle: 'SIF review page (C6 fixture)' });
+const PAGE_SETTING = Object.freeze({ feedbackTargetPath: 'educoreForge/system/dataStores/bridgeAcceptance/sif260928/feedback/c6FixtureTags.json', draftStoragePrefix: 'sifReviewPageFixture::', pageTitle: 'SIF review page (C6 fixture)', roundNumber: 1 });
 
 // THE FROZEN ANSWERS, worked by hand from the page's layout and C5's fixture (see the DEVLOG). Never edited to
 // match a measurement.
@@ -89,7 +89,7 @@ const runPage = (subject, fixtureSet) => {
 		return { scorerRefused: scored.error.message };
 	}
 	try {
-		const built = pageModule.buildReviewPageHtml({ score: scored.score, questionMap: fixtureSet.questionMap, cardLabelList: fixtureSet.cardLabelList, pageSetting: subject.pageSetting });
+		const built = pageModule.buildReviewPageHtml({ score: scored.score, decisionBlock: fixtureSet.decisionBlock, questionMap: fixtureSet.questionMap, cardLabelList: fixtureSet.cardLabelList, pageSetting: subject.pageSetting });
 		if (built.error) {
 			return { error: built.error, score: scored.score };
 		}
@@ -193,7 +193,7 @@ const gateVConjunctList = [
 	pageConjunct({
 		conjunctId: 'v1_verifyPassesOnRenderedContent',
 		title: 'verifySifReviewPage passes the built page, reading only rendered content (comments and the manifest removed)',
-		twinNameList: ['visibleItemMovedIntoComment', 'oneCellTampered', 'feedbackPathOnlyInManifest'],
+		twinNameList: ['visibleItemMovedIntoComment', 'oneCellTampered', 'feedbackPathOnlyInManifest', 'oneTagRadioRemoved'],
 		judge: builtJudge((outcome) => {
 			const verified = outcome.pageModule.verifySifReviewPage({ htmlText: outcome.htmlText, score: outcome.score });
 			return { pass: verified.pass, detail: verified.checkList.filter((oneCheck) => !oneCheck.pass).map((oneCheck) => `${oneCheck.checkName}: ${oneCheck.detail}`).join('; ') || `${verified.checkList.length} checks pass` };
@@ -209,6 +209,10 @@ registerTwin({ gateId: GATE_V, conjunctId: 'v1_verifyPassesOnRenderedContent', t
 } });
 registerTwin({ gateId: GATE_V, conjunctId: 'v1_verifyPassesOnRenderedContent', twinName: 'feedbackPathOnlyInManifest', leverKind: 'inputFault', mutate: (subject) => {
 	subject.htmlTamperList.push((htmlText) => htmlText.replace(/const FEEDBACK_TARGET_PATH=[^\n]*\n/, ''));
+} });
+
+registerTwin({ gateId: GATE_V, conjunctId: 'v1_verifyPassesOnRenderedContent', twinName: 'oneTagRadioRemoved', leverKind: 'inputFault', mutate: (subject) => {
+	subject.htmlTamperList.push((htmlText) => htmlText.replace(/ <label><input type="radio" name="t_[^>]*value="maybe"> Maybe<\/label>\n/, ''));
 } });
 
 // ---- GATE (c): the words the page never says, in its own prose ----
@@ -246,7 +250,7 @@ const gateCConjunctList = [
 	}),
 ];
 // the wording row carries the word AND the page's own scan is removed, so the red is the TEST's scan's
-registerPageMutationTwin({ gateId: GATE_C, conjunctId: 'c1_ownProseClean', twinName: 'templateRowCarriesForbiddenWord', mutationList: [{ find: "tagUnsure: 'unsure',", replace: "tagUnsure: 'wrong'," }, { find: 'if (hitList.length > 0) {', replace: 'if (false) {' }] });
+registerPageMutationTwin({ gateId: GATE_C, conjunctId: 'c1_ownProseClean', twinName: 'templateRowCarriesForbiddenWord', mutationList: [{ find: "tagMaybe: 'Maybe',", replace: "tagMaybe: 'wrong'," }, { find: 'if (hitList.length > 0) {', replace: 'if (false) {' }] });
 registerPageMutationTwin({ gateId: GATE_C, conjunctId: 'c2_dataLabelWithForbiddenWordRenders', twinName: 'dataSpanUntagged', mutationList: [{ find: 'const dataSpan = (text) => `${DATA_SPAN_OPEN}${escapeHtml(text)}</span>`;', replace: 'const dataSpan = (text) => `<span>${escapeHtml(text)}</span>`;' }] });
 registerPageMutationTwin({ gateId: GATE_C, conjunctId: 'c3_pageRefusesOwnProseWord', twinName: 'selfScanRemoved', mutationList: [{ find: 'if (hitList.length > 0) {', replace: 'if (false) {' }] });
 
@@ -279,7 +283,7 @@ const gateRConjunctList = [
 		shape: (subject) => {
 			delete subject.fixtureSet.cardLabelList.cardLabelByStableId['card:Y'];
 		},
-		judge: refusalJudge(/card card:Y \(unit sif260928:question\/q11\) has no entry in the card label list/),
+		judge: refusalJudge(/card card:Y \(unit sif260928:question\/q03\) has no entry in the card label list/),
 	}),
 	pageConjunct({
 		conjunctId: 'r2_feedbackTargetNotJsonRefused',
@@ -299,11 +303,13 @@ registerPageMutationTwin({ gateId: GATE_R, conjunctId: 'r2_feedbackTargetNotJson
 // card:B2 share domain C000001 and property P000002 and differ only by qualifier (OV900001 'Kind One', OV900002
 // 'Kind Two', both of option set 'Beta Type'); card:A1 has a range option set, card:D1 a value, card:X nothing else.
 const GATE_T = 'SIF-PAGE-TUPLE';
-const TUPLE_B1_TEXT = 'Dom Student (C000001) · Beta (P000002) · Beta Type = Kind One (OV900001)';
-const TUPLE_B2_TEXT = 'Dom Student (C000001) · Beta (P000002) · Beta Type = Kind Two (OV900002)';
-const TUPLE_A1_TEXT = 'Dom Student (C000001) · Alpha (P000001) · range Alpha Set (OS000001)';
-const TUPLE_D1_TEXT = 'Dom Student (C000001) · Delta (P000004) · value Delta One (DeltaOne)';
-const TUPLE_X_TEXT = 'Dom Other (C000009) · Chi (P000009)';
+const TUPLE_B1_TEXT = 'Dom Student (C000001) · Beta (P000002) · range datatype string · Beta Type = Kind One (OV900001)';
+const TUPLE_B2_TEXT = 'Dom Student (C000001) · Beta (P000002) · range datatype string · Beta Type = Kind Two (OV900002)';
+const TUPLE_A1_TEXT = 'Dom Student (C000001) · Alpha (P000001) · range option set Alpha Set (OS000001)';
+const TUPLE_D1_TEXT = 'Dom Student (C000001) · Delta (P000004) · range datatype date · value Delta One (DeltaOne)';
+const TUPLE_X_TEXT = 'Dom Other (C000009) · Chi (P000009) · range datatype token';
+const TUPLE_Y_TEXT = 'Dom Other (C000009) · Upsilon (P000010) · range datatype decimal';
+const TUPLE_Z_TEXT = 'Dom Other (C000009) · Zeta (P000011) · range class Zeta Class (C000077)';
 const EXPECTED_LINE_TEXT_BY_ITEM_REF = Object.freeze({
 	'sif260928:question/q06': `the standard specifies P000002 (${TUPLE_B1_TEXT}; ${TUPLE_B2_TEXT}); the bridge proposed ${TUPLE_B2_TEXT}`,
 	'sif260928:question/q05#Dom Student': `the standard specifies P000002 (${TUPLE_B1_TEXT}); the bridge proposed ${TUPLE_B1_TEXT}`,
@@ -319,6 +325,8 @@ const lineTextByItemRefOf = (htmlText) => {
 	});
 	return lineTextByItemRef;
 };
+const itemHtmlOf = (htmlText, itemRef) => (htmlText.match(new RegExp(`<article class="item" data-item-ref="${itemRef.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"[\\s\\S]*?<\\/article>`)) || [''])[0];
+const candidateTextListOf = (htmlText, itemRef) => Array.from(itemHtmlOf(htmlText, itemRef).matchAll(/<code class="dc alt">([\s\S]*?)<\/code>/g)).map((oneMatch) => oneMatch[1].replace(TEST_TAG_PATTERN, ''));
 const gateTConjunctList = [
 	pageConjunct({
 		conjunctId: 't1_everyCardShowsFullTuple',
@@ -354,14 +362,86 @@ const gateTConjunctList = [
 	}),
 	pageConjunct({
 		conjunctId: 't4_emptySlotsOmitted',
-		title: "a card with no range, value or qualifier renders as domain and property only: no 'null', no 'undefined', no empty slot, in any line",
+		title: "a slot the card lacks (value, qualifier) is omitted: no 'null', no 'undefined', no empty slot, in any line or candidate, and a card with only a datatype ends at its range",
 		twinNameList: ['emptySlotPrinted'],
 		judge: builtJudge((outcome) => {
 			const lineTextByItemRef = lineTextByItemRefOf(outcome.htmlText);
 			const allLineText = Object.values(lineTextByItemRef).join('\n');
-			const emptySlotHit = /null|undefined|\(\)| ·  ·| · $/.test(allLineText);
+			const allText = allLineText + '\n' + Array.from(outcome.htmlText.matchAll(/<code class="dc alt">([\s\S]*?)<\/code>/g)).map((oneMatch) => oneMatch[1].replace(TEST_TAG_PATTERN, '')).join('\n');
+			const emptySlotHit = /null|undefined|\(\)| ·  ·| · $/m.test(allText);
 			return { pass: !emptySlotHit && lineTextByItemRef['sif260928:question/q08#Dom Student'].endsWith(`proposed ${TUPLE_X_TEXT}`), detail: emptySlotHit ? 'an empty slot is printed' : 'no empty slot printed' };
 		}),
+	}),
+	pageConjunct({
+		conjunctId: 't5_everyRangeShapeShown',
+		title: "the four candidates of q03's pool (an option set, a datatype, a datatype, a class) each render their range in its own shape, in pool order",
+		twinNameList: ['classRangeDropped'],
+		judge: builtJudge((outcome) => {
+			const candidateTextList = candidateTextListOf(outcome.htmlText, 'sif260928:question/q03#Dom Student');
+			const expectedList = [TUPLE_A1_TEXT, TUPLE_X_TEXT, TUPLE_Y_TEXT, TUPLE_Z_TEXT];
+			return { pass: JSON.stringify(candidateTextList) === JSON.stringify(expectedList), detail: candidateTextList.join(' | ') };
+		}),
+	}),
+	pageConjunct({
+		conjunctId: 't6_poolListedPickMarked',
+		title: "q02's pool (two candidates, card:X picked) lists both in pool order and marks the pick on the second only; q03 (abstained) marks none",
+		twinNameList: ['pickNotMarked'],
+		judge: builtJudge((outcome) => {
+			const markCountByItemRef = {};
+			['sif260928:question/q02#Dom Student', 'sif260928:question/q03#Dom Student'].forEach((oneItemRef) => {
+				markCountByItemRef[oneItemRef] = (itemHtmlOf(outcome.htmlText, oneItemRef).match(/<span class="bdg mark">picked<\/span>/g) || []).length;
+			});
+			const q02CandidateList = candidateTextListOf(outcome.htmlText, 'sif260928:question/q02#Dom Student');
+			const q02PickIsSecond = /<div class="alt"><span class="ordn">2<\/span>[\s\S]*?<span class="bdg mark">picked<\/span>/.test(itemHtmlOf(outcome.htmlText, 'sif260928:question/q02#Dom Student'));
+			return { pass: JSON.stringify(q02CandidateList) === JSON.stringify([TUPLE_A1_TEXT, TUPLE_X_TEXT]) && markCountByItemRef['sif260928:question/q02#Dom Student'] === 1 && markCountByItemRef['sif260928:question/q03#Dom Student'] === 0 && q02PickIsSecond, detail: `q02 candidates ${q02CandidateList.length}, marks q02 ${markCountByItemRef['sif260928:question/q02#Dom Student']}, q03 ${markCountByItemRef['sif260928:question/q03#Dom Student']}` };
+		}),
+	}),
+	pageConjunct({
+		conjunctId: 't7_judgeRationaleShown',
+		title: "q02 shows the judge's rationale exactly as the block carries it",
+		twinNameList: ['rationaleDropped'],
+		judge: builtJudge((outcome) => {
+			const rationaleText = (itemHtmlOf(outcome.htmlText, 'sif260928:question/q02#Dom Student').match(/<span class="lbl">judge said<\/span>([\s\S]*?)<\/div>/) || [null, ''])[1].replace(TEST_TAG_PATTERN, '');
+			return { pass: rationaleText === 'The source means card:X (fixture rationale 1).', detail: rationaleText };
+		}),
+	}),
+	pageConjunct({
+		conjunctId: 't8_judgeTextIsData',
+		title: "a rationale that says 'wrong' and 'Error' renders (it is the judge's text, in a data span) without refusal",
+		twinNameList: ['rationaleUntagged'],
+		shape: (subject) => {
+			subject.fixtureSet.decisionBlock.decisionRecordList[1].judge.rationale = 'It is not wrong to call this an Error of Measurement.';
+		},
+		judge: builtJudge((outcome) => ({ pass: outcome.htmlText.indexOf('<span data-source="standard">It is not wrong to call this an Error of Measurement.</span>') !== -1, detail: 'checked for the rationale in a data span' })),
+	}),
+	pageConjunct({
+		conjunctId: 't9_fourTagsAndNote',
+		title: 'every item offers Yes, No, Maybe and No Valid Candidate, and a note',
+		twinNameList: ['maybeTagMissing'],
+		judge: builtJudge((outcome) => {
+			const articleList = outcome.htmlText.match(/<article class="item"[\s\S]*?<\/article>/g);
+			const everyItemOffersAll = articleList.length === 15 && articleList.every((oneArticle) => ['yes', 'no', 'maybe', 'noValidCandidate'].every((oneValue) => oneArticle.indexOf(`type="radio" name="t_`) !== -1 && new RegExp(`value="${oneValue}">`).test(oneArticle)) && /<input class="note" type="text" name="n_/.test(oneArticle));
+			return { pass: everyItemOffersAll, detail: `${articleList.length} items` };
+		}),
+	}),
+	pageConjunct({
+		conjunctId: 'f1_facetCountsMeasured',
+		title: 'the filter boxes carry the counts worked from the fixture block: matched 13, abstained 2; judge category strong 4, moderate 5, weak but real 4, none 2',
+		twinNameList: ['facetCountNotMeasured'],
+		judge: builtJudge((outcome) => {
+			const wantedList = [['outcome', 'picked', 13], ['outcome', 'abstained', 2], ['cat', 'strong', 4], ['cat', 'moderate', 5], ['cat', 'weakButReal', 4], ['cat', 'none', 2]];
+			const unequalList = wantedList.filter(([facetName, facetValue, wantedCount]) => new RegExp(`data-facet="${facetName}" value="${facetValue}"> [^<]*<span class="fcount">${wantedCount}</span>`).test(outcome.htmlText) === false);
+			return { pass: unequalList.length === 0, detail: unequalList.length === 0 ? 'six counts equal' : `unequal: ${unequalList.map((oneWanted) => oneWanted.join(':')).join(', ')}` };
+		}),
+	}),
+	pageConjunct({
+		conjunctId: 'd2_detailsNumbersAreTheBlocks',
+		title: "the Details panel and the how-to state the block header's own retrieval settings (k 25 planted in the header of this run): 'up to 25 cards', 'up to 25 candidates per unit', and 'nothing below 0.3'",
+		twinNameList: ['kTyped'],
+		shape: (subject) => {
+			subject.fixtureSet.decisionBlock.header.candidateRetrieval.k = 25;
+		},
+		judge: builtJudge((outcome) => ({ pass: outcome.htmlText.indexOf('up to 25 cards go to the judge') !== -1 && outcome.htmlText.indexOf('up to 25 candidates per unit') !== -1 && outcome.htmlText.indexOf('nothing below 0.3 similarity') !== -1, detail: 'checked the three phrases' })),
 	}),
 	pageConjunct({
 		conjunctId: 'r3_unresolvedQualifierRefused',
@@ -379,15 +459,72 @@ const gateTConjunctList = [
 		shape: (subject) => {
 			delete subject.fixtureSet.cardLabelList.cardLabelByStableId['card:Y'].propertyId;
 		},
-		judge: refusalJudge(/card card:Y \(unit sif260928:question\/q11\) has a card label list entry with no propertyId/),
+		judge: refusalJudge(/card card:Y \(unit sif260928:question\/q03\) has a card label list entry with no propertyId/),
+	}),
+	pageConjunct({
+		conjunctId: 'r5_noRangeRefused',
+		title: 'a card with no range shape (card:Y) is refused by name; the range is never left unstated',
+		twinNameList: ['rangeShapeCheckDeleted'],
+		shape: (subject) => {
+			delete subject.fixtureSet.cardLabelList.cardLabelByStableId['card:Y'].rangeDatatype;
+		},
+		judge: refusalJudge(/card card:Y \(unit sif260928:question\/q03\) carries 0 range shapes in the card label list \(none\)/),
+	}),
+	pageConjunct({
+		conjunctId: 'r6_proposedNotInPoolRefused',
+		title: "a unit whose proposed card is not in its record's rendered pool (q02, card:X) is refused by name",
+		twinNameList: ['poolCheckDeleted'],
+		shape: (subject) => {
+			subject.fixtureSet.decisionBlock.decisionRecordList[1].renderedPoolStableIdList = ['card:A1'];
+		},
+		judge: refusalJudge(/unit sif260928:question\/q02 has a proposed card \(card:X\) that is not in its rendered pool/),
+	}),
+	pageConjunct({
+		conjunctId: 'r7_scoredUnitWithoutJudgeRefused',
+		title: "a scored block's record with no judge answer (q01) is refused by name",
+		twinNameList: ['judgeCheckDeleted'],
+		shape: (subject) => {
+			delete subject.fixtureSet.decisionBlock.decisionRecordList[0].judge;
+		},
+		judge: refusalJudge(/unit sif260928:question\/q01 has a record with no judge rationale or category/),
+	}),
+	pageConjunct({
+		conjunctId: 'r8_roundNotWholeRefused',
+		title: 'a round that is not a whole number of at least 1 is refused by name',
+		twinNameList: ['roundCheckDeleted'],
+		shape: (subject) => {
+			subject.pageSetting.roundNumber = 0;
+		},
+		judge: refusalJudge(/pageSetting\.roundNumber '0' is not a whole number of at least 1/),
+	}),
+	pageConjunct({
+		conjunctId: 'r9_undescribedRetrievalRefused',
+		title: "a block declaring a retrieval method the Details prose has no description for is refused by name",
+		twinNameList: ['retrievalCheckDeleted'],
+		shape: (subject) => {
+			subject.fixtureSet.decisionBlock.header.candidateRetrieval.method = 'cosineTopK-v1';
+		},
+		judge: refusalJudge(/the block declares candidate retrieval method 'cosineTopK-v1', which the Details prose has no description for/),
 	}),
 ];
-registerPageMutationTwin({ gateId: GATE_T, conjunctId: 't1_everyCardShowsFullTuple', twinName: 'propertyIdDropped', mutationList: [{ find: '`${dataSpan(cardLabel.propertyName)} (${dataSpan(cardLabel.propertyId)})`', replace: '`${dataSpan(cardLabel.propertyName)}`' }] });
-registerPageMutationTwin({ gateId: GATE_T, conjunctId: 't2_qualifierNeverRawId', twinName: 'qualifierLabelDropped', mutationList: [{ find: '`${dataSpan(optionValueLabel.optionSetName)} = ${dataSpan(optionValueLabel.optionValueName)} (${dataSpan(oneRefId)})`', replace: '`${dataSpan(oneRefId)}`' }] });
-registerPageMutationTwin({ gateId: GATE_T, conjunctId: 't3_sameIdCardsDistinguishable', twinName: 'qualifierSlotOmitted', mutationList: [{ find: 'cardLabel.qualifierRefIdList.forEach((oneRefId) => {\n\t\tconst optionValueLabel', replace: '[].forEach((oneRefId) => {\n\t\tconst optionValueLabel' }] });
-registerPageMutationTwin({ gateId: GATE_T, conjunctId: 't4_emptySlotsOmitted', twinName: 'emptySlotPrinted', mutationList: [{ find: 'if (cardLabel.rangeOptionSetId !== undefined) {', replace: 'if (true) {' }] });
+registerPageMutationTwin({ gateId: GATE_T, conjunctId: 't1_everyCardShowsFullTuple', twinName: 'propertyIdDropped', mutationList: [{ find: 'nameText: cardLabel.propertyName, idText: cardLabel.propertyId,', replace: 'nameText: cardLabel.propertyName, idText: undefined,' }] });
+registerPageMutationTwin({ gateId: GATE_T, conjunctId: 't2_qualifierNeverRawId', twinName: 'qualifierLabelDropped', mutationList: [{ find: 'nameText: `${optionValueLabel.optionSetName} = ${optionValueLabel.optionValueName}`, idText: oneRefId', replace: 'nameText: oneRefId, idText: undefined' }] });
+registerPageMutationTwin({ gateId: GATE_T, conjunctId: 't3_sameIdCardsDistinguishable', twinName: 'qualifierSlotOmitted', mutationList: [{ find: 'cardLabel.qualifierRefIdList.forEach((oneRefId) => {', replace: '[].forEach((oneRefId) => {' }] });
+registerPageMutationTwin({ gateId: GATE_T, conjunctId: 't4_emptySlotsOmitted', twinName: 'emptySlotPrinted', mutationList: [{ find: 'if (cardLabel.valueNotation !== undefined) {', replace: 'if (true) {' }] });
 registerPageMutationTwin({ gateId: GATE_T, conjunctId: 'r3_unresolvedQualifierRefused', twinName: 'qualifierCheckDeleted', mutationList: [{ find: 'if (unresolvedRefId !== undefined) {', replace: 'if (false) {' }] });
 registerPageMutationTwin({ gateId: GATE_T, conjunctId: 'r4_incompleteTupleRefused', twinName: 'slotCheckDeleted', mutationList: [{ find: 'if (absentSlotName !== undefined) {', replace: 'if (false) {' }] });
+registerPageMutationTwin({ gateId: GATE_T, conjunctId: 't5_everyRangeShapeShown', twinName: 'classRangeDropped', mutationList: [{ find: 'if (cardLabel.rangeClassId !== undefined) {', replace: 'if (false) {' }] });
+registerPageMutationTwin({ gateId: GATE_T, conjunctId: 't6_poolListedPickMarked', twinName: 'pickNotMarked', mutationList: [{ find: 'const isPick = oneStableId === unitVerdict.proposedCardStableId;', replace: 'const isPick = false;' }] });
+registerPageMutationTwin({ gateId: GATE_T, conjunctId: 't7_judgeRationaleShown', twinName: 'rationaleDropped', mutationList: [{ find: "const judgeHtml = judge === undefined ? '' :", replace: "const judgeHtml = true ? '' :" }] });
+registerPageMutationTwin({ gateId: GATE_T, conjunctId: 't8_judgeTextIsData', twinName: 'rationaleUntagged', mutationList: [{ find: '${dataSpan(judge.rationale)}', replace: '${escapeHtml(judge.rationale)}' }] });
+registerPageMutationTwin({ gateId: GATE_T, conjunctId: 't9_fourTagsAndNote', twinName: 'maybeTagMissing', mutationList: [{ find: "	{ tagValue: 'maybe', labelText: PAGE_WORDING.tagMaybe, labelClassName: '' },\n", replace: '' }] });
+registerPageMutationTwin({ gateId: GATE_T, conjunctId: 'f1_facetCountsMeasured', twinName: 'facetCountNotMeasured', mutationList: [{ find: 'facetStateList.filter((oneState) => oneState[oneGroup.facetName] === oneValue).length', replace: 'facetStateList.length' }] });
+registerPageMutationTwin({ gateId: GATE_T, conjunctId: 'd2_detailsNumbersAreTheBlocks', twinName: 'kTyped', mutationList: [{ find: 'up to ${escapeHtml(retrieval.k)} cards go to the judge', replace: 'up to 15 cards go to the judge' }] });
+registerPageMutationTwin({ gateId: GATE_T, conjunctId: 'r5_noRangeRefused', twinName: 'rangeShapeCheckDeleted', mutationList: [{ find: 'if (rangeShapeNameList.length !== 1) {', replace: 'if (false) {' }] });
+registerPageMutationTwin({ gateId: GATE_T, conjunctId: 'r6_proposedNotInPoolRefused', twinName: 'poolCheckDeleted', mutationList: [{ find: 'if (unitVerdict.proposedCardStableId !== null && record.renderedPoolStableIdList.indexOf(unitVerdict.proposedCardStableId) === -1) {', replace: 'if (false) {' }] });
+registerPageMutationTwin({ gateId: GATE_T, conjunctId: 'r7_scoredUnitWithoutJudgeRefused', twinName: 'judgeCheckDeleted', mutationList: [{ find: 'if (judgmentScored && (record.judge === undefined', replace: 'if (false && (record.judge === undefined' }] });
+registerPageMutationTwin({ gateId: GATE_T, conjunctId: 'r8_roundNotWholeRefused', twinName: 'roundCheckDeleted', mutationList: [{ find: 'if (!Number.isInteger(pageSetting.roundNumber) || pageSetting.roundNumber < 1) {', replace: 'if (false) {' }] });
+registerPageMutationTwin({ gateId: GATE_T, conjunctId: 'r9_undescribedRetrievalRefused', twinName: 'retrievalCheckDeleted', mutationList: [{ find: 'if (retrievalProse === undefined) {', replace: 'if (false) {' }] });
 
 const gateDeclarationList = [
 	{ gateId: GATE_A, title: "plan §3 C6 (a): the page's numbers equal C5's on a synthetic block; a mislabelled pick changes exactly its numbers", conjunctList: gateAConjunctList },
@@ -412,4 +549,4 @@ const fromFilesVerified = pageModule.verifySifReviewPage({ htmlText: fromFiles.h
 harness.ok('the file-built page verifies against its score, input shas included', fromFilesVerified.pass, JSON.stringify(fromFilesVerified.checkList.filter((oneCheck) => !oneCheck.pass)));
 harness.equal('the feedback target is in the rendered script', fromFiles.htmlText.indexOf(`const FEEDBACK_TARGET_PATH=${JSON.stringify(PAGE_SETTING.feedbackTargetPath)};`) !== -1, true);
 
-runGateFamily({ harness, familyName: 'SIF-PAGE', gateDeclarationList, twinRegistry, makeSubject, cloneSubject, expectedConjunctCount: 16, expectedTwinCount: 19 }, () => harness.report());
+runGateFamily({ harness, familyName: 'SIF-PAGE', gateDeclarationList, twinRegistry, makeSubject, cloneSubject, expectedConjunctCount: 28, expectedTwinCount: 32 }, () => harness.report());
