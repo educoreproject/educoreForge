@@ -16,8 +16,10 @@
 //   A1c-ROLES       (d) every minted node's role equals the ruled table
 //   A1c-PROPERTIES      the brief's Field properties, read against the TSV cells independently:
 //                       verbatim cells, empty cells absent (A25), derived facts equal to the SPEC's and C1's
-//   A1c-STRUCTURE       no questionRefId, and each Object's structural parent is the root (restated in
-//                       A2: the edges and the Field parentage now belong to test-sif260928Tree.js)
+//   A1c-STRUCTURE       questionRefId only on Fields and Questions, and each Object's structural parent
+//                       is the root (restated in A2: the edges and the Field parentage now belong to
+//                       test-sif260928Tree.js; restated in A3: questionRefId arrives with the Questions,
+//                       whose values test-sif260928Questions.js proves)
 //
 // Mutations are compiled in memory (moduleDouble); nothing in the tree is written.
 //
@@ -61,8 +63,9 @@ const SOURCE_PATH = path.join(BUNDLE_DIR, 'assets', 'standardSourceData', descri
 // ---- FROZEN LITERALS. Never edited to match a measurement.
 // PLAN §3 A1c (a); SPEC §1. The Containers A2 adds are counted by test-sif260928Tree.js.
 const RULED_NODE_COUNT_BY_LABEL = Object.freeze({ Sif260928Root: 1, Sif260928Object: 159, Sif260928Field: 15620 });
-// PLAN §3 A1a role table (review #9), plus the framework's root; the Container row arrived with A2
-const RULED_ROLE_BY_LABEL = Object.freeze({ Sif260928Root: 'DmeStandardRoot', Sif260928Object: 'DmeClass', Sif260928Field: 'DmeSupport', Sif260928Container: 'DmeSupport' });
+// PLAN §3 A1a role table (review #9), plus the framework's root; the Container row arrived with A2,
+// the Question row with A3
+const RULED_ROLE_BY_LABEL = Object.freeze({ Sif260928Root: 'DmeStandardRoot', Sif260928Object: 'DmeClass', Sif260928Field: 'DmeSupport', Sif260928Container: 'DmeSupport', Sif260928Question: 'DmeProperty' });
 // PLAN §3 A1b (a): empty descriptions
 const EMPTY_DESCRIPTION_ROW_COUNT = 4733;
 // the named row of gate (c): an attribute directly on the object element
@@ -86,6 +89,8 @@ const RULED_FIELD_PROPERTY_NAME_LIST = Object.freeze(
 		// the brief's list
 		'description', 'descriptionQuoted', 'descriptionCellText', 'xpath', 'relativePath', 'objectName', 'parentPath', 'xpathDepth', 'isAttribute',
 		'characteristics', 'obligation', 'repeatable', 'mandatoryCellText', 'sharedBlock', 'cedsElementId', 'cedsIdCellText', 'type', 'format',
+		// A3: the id of the Field's Question (SPEC §9 A17)
+		'questionRefId',
 		// the structural finalizer's stamps
 		'depth', 'crossRefs',
 	].sort(),
@@ -286,7 +291,7 @@ registerMutationTwin({
 const rolesConjunctList = [
 	{
 		conjunctId: 'everyNodeRoleEqualsRuledTable',
-		title: "every minted node's role (its role property and its role label) equals the ruled table for its per-standard label: Object DmeClass, Field and Container DmeSupport",
+		title: "every minted node's role (its role property and its role label) equals the ruled table for its per-standard label: Object DmeClass, Field and Container DmeSupport, Question DmeProperty",
 		twinNameList: ['oneFieldMintedAsDmeProperty'],
 		evaluate: overForged((forged) => {
 			const wrongList = forged.nodes.filter((oneNode) => {
@@ -394,28 +399,37 @@ registerMutationTwin({ gateId: PROPERTIES_GATE_ID, conjunctId: 'derivedFactsEqua
 // =====================================================================
 const structureConjunctList = [
 	{
-		conjunctId: 'noQuestionRefIdAndObjectParentIsRoot',
-		title: "the walk stamps no questionRefId (A3 owns it), and every Object's structural parent is the root, so the finalizer's depth is 1",
-		twinNameList: ['questionRefIdStamped', 'objectParentedOnAnotherObject'],
+		conjunctId: 'questionRefIdOnFieldsAndQuestionsAndObjectParentIsRoot',
+		title: "questionRefId is carried by every Field and every Question and by no other node (restated in A3, which mints the Questions), and every Object's structural parent is the root, so the finalizer's depth is 1",
+		twinNameList: ['questionRefIdStamped', 'fieldQuestionRefIdDropped', 'objectParentedOnAnotherObject'],
 		evaluate: overForged((forged) => {
-			const questionRefIdNodeList = forged.nodes.filter((oneNode) => oneNode.properties.questionRefId !== undefined);
+			// the carriers are exactly the Fields and the Questions: nothing else has it, and none of them lacks it
+			const QUESTION_REF_ID_CARRIER_LABEL_LIST = ['Sif260928Field', 'Sif260928Question'];
+			const questionRefIdNodeList = forged.nodes.filter((oneNode) => (oneNode.properties.questionRefId !== undefined) !== QUESTION_REF_ID_CARRIER_LABEL_LIST.includes(oneNode.labels[1]));
 			const objectWrongList = nodeListByLabel(forged, 'Sif260928Object').filter((oneNode) => oneNode.properties.parentId !== 'sif260928:root' || oneNode.properties.depth !== 1);
 			return {
 				pass: questionRefIdNodeList.length === 0 && objectWrongList.length === 0,
-				detail: `questionRefId on ${questionRefIdNodeList.length}; Objects wrong ${objectWrongList.length}${objectWrongList.length ? ` (first ${objectWrongList[0].stableId} parent ${objectWrongList[0].properties.parentId} depth ${objectWrongList[0].properties.depth})` : ''}`,
+				detail: `questionRefId misplaced or missing on ${questionRefIdNodeList.length}${questionRefIdNodeList.length ? ` (first ${questionRefIdNodeList[0].stableId})` : ''}; Objects wrong ${objectWrongList.length}${objectWrongList.length ? ` (first ${objectWrongList[0].stableId} parent ${objectWrongList[0].properties.parentId} depth ${objectWrongList[0].properties.depth})` : ''}`,
 			};
 		}),
 	},
 ];
 registerMutationTwin({
 	gateId: STRUCTURE_GATE_ID,
-	conjunctId: 'noQuestionRefIdAndObjectParentIsRoot',
+	conjunctId: 'questionRefIdOnFieldsAndQuestionsAndObjectParentIsRoot',
 	twinName: 'questionRefIdStamped',
 	mutation: walkMutation({ find: 'carriedProperties: kit.carriedProperties({ parsedObject: { objectName, fieldCount }, carryList: OBJECT_CARRY_LIST }),', replace: "carriedProperties: { ...kit.carriedProperties({ parsedObject: { objectName, fieldCount }, carryList: OBJECT_CARRY_LIST }), questionRefId: 'twin' }," }),
 });
+// the other half of the A3 restatement: a Field that lost its questionRefId
 registerMutationTwin({
 	gateId: STRUCTURE_GATE_ID,
-	conjunctId: 'noQuestionRefIdAndObjectParentIsRoot',
+	conjunctId: 'questionRefIdOnFieldsAndQuestionsAndObjectParentIsRoot',
+	twinName: 'fieldQuestionRefIdDropped',
+	mutation: walkMutation({ find: 'questionRefId: questionRefIdByXpath.get(fieldFacts.xpath) }', replace: "questionRefId: fieldFacts.xpath === '/AccountingPeriods/AccountingPeriod/EndDate' ? undefined : questionRefIdByXpath.get(fieldFacts.xpath) }" }),
+});
+registerMutationTwin({
+	gateId: STRUCTURE_GATE_ID,
+	conjunctId: 'questionRefIdOnFieldsAndQuestionsAndObjectParentIsRoot',
 	twinName: 'objectParentedOnAnotherObject',
 	mutation: walkMutation({ find: 'structural: { parentId: kit.rootStableId, path: objectPath },', replace: "structural: { parentId: objectPath === '/AccountingPeriods/AccountingPeriod' ? kit.rootStableId : 'sif260928:object/AccountingPeriods/AccountingPeriod', path: objectPath }," }),
 });
@@ -426,9 +440,9 @@ const gateDeclarationList = [
 	{ gateId: PARENT_PATH_GATE_ID, title: '(c) parentPath is floored at the object; above the object is refused', conjunctList: parentPathConjunctList },
 	{ gateId: ROLES_GATE_ID, title: "(d) every node's role equals the A1a table", conjunctList: rolesConjunctList },
 	{ gateId: PROPERTIES_GATE_ID, title: "the Field properties: verbatim cells, empty cells absent, derived facts", conjunctList: propertiesConjunctList },
-	{ gateId: STRUCTURE_GATE_ID, title: 'no questionRefId, Object parented on the root', conjunctList: structureConjunctList },
+	{ gateId: STRUCTURE_GATE_ID, title: 'questionRefId on Fields and Questions only, Object parented on the root', conjunctList: structureConjunctList },
 ];
 
-runGateFamily({ harness, familyName: 'sif260928 A1c walk', gateDeclarationList, twinRegistry, makeSubject, cloneSubject, expectedConjunctCount: 9, expectedTwinCount: 11 }, () => {
+runGateFamily({ harness, familyName: 'sif260928 A1c walk', gateDeclarationList, twinRegistry, makeSubject, cloneSubject, expectedConjunctCount: 9, expectedTwinCount: 12 }, () => {
 	harness.report();
 });

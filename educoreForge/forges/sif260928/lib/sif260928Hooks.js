@@ -4,9 +4,10 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
 // sif260928Hooks.js — the H2/H3 hook set for the sif260928 forge bundle (SPEC-forgeFramework-v1.md §5).
 //
-// As of A2 the framework runs the whole pipeline in pure mode: verify the TSV against SHA256SUMS,
+// As of A3 the framework runs the whole pipeline in pure mode: verify the TSV against SHA256SUMS,
 // load and census the TSV, stamp the version, apply the version guard, and mint the root; the walk
-// then mints the Objects, Containers and Fields and adds the HAS_FIELD and HAS_CHILD edges.
+// then mints the Objects, Containers, Fields and Questions and adds the HAS_FIELD, HAS_CHILD and
+// HAS_INSTANCE edges.
 //   sourceLoaderList  — ONE loader, sifImplementationSpecificationTsv: the TSV loader
 //                       (lib/sif260928TsvLoader.js; SPEC §9 A3, A4, A21). It hands the walk one
 //                       row object per SIF field, or refuses by name.
@@ -16,8 +17,9 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //   describeRoot      — PURE apart from the version guard, which throws a named refusal when the
 //                       stamp found no version (lib/sif260928VersionGuard.js).
 //   emitContractGraph — runs the walk (lib/sif260928Walk.js), which mints 159 Objects, 6,586
-//                       Containers and 15,620 Fields through the kit and adds 15,620 HAS_FIELD and
-//                       21,017 HAS_CHILD edges, and returns the kit's collections.
+//                       Containers, 15,620 Fields and 5,018 Questions through the kit and adds
+//                       15,620 HAS_FIELD, 21,017 HAS_CHILD and 15,620 HAS_INSTANCE edges, and
+//                       returns the kit's collections.
 //
 // The forger hands the forge <snapshot>/ImplementationSpecification_031326.tsv (parserDescriptor.ini
 // sourceFile), so sourcePath is that one file.

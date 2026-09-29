@@ -13,7 +13,9 @@
 //   A2-STRUCTURE  (c) the structural contract finalizes (acyclic), every node's parentId chain reaches
 //                     the Object of its path, and each HAS_CHILD edge is the parentId it mirrors
 //   A2-DEPTHONE   (d) every depth-1 Container has exactly one incoming HAS_CHILD, from its Object
-//   A2-UNCHANGED  (e) the A1b and A1c counts are unchanged beside the new nodes and edges
+//   A2-UNCHANGED  (e) the A1b and A1c counts are unchanged beside the new nodes and edges (restated in
+//                     A3: the node labels and edge types gain the Questions and HAS_INSTANCE, counted
+//                     by test-sif260928Questions.js)
 //   A2-DEPTH          SPEC §9 A25: the framework's depth = xpathDepth - 1 for every Field (and the
 //                     segment count - 1 for every Container)
 //   A2-ATTRIBUTE      SPEC §9 A26: an attribute on an element that is itself a row is parented on
@@ -61,8 +63,10 @@ const SOURCE_PATH = path.join(BUNDLE_DIR, 'assets', 'standardSourceData', descri
 const RULED_CONTAINER_COUNT = 6586;
 // PLAN §3 A2 (b): one HAS_FIELD per Field
 const RULED_HAS_FIELD_COUNT = 15620;
-// PLAN §3 A1c (a) and A2 (e), SPEC §1: the earlier counts, beside the Containers
-const RULED_NODE_COUNT_BY_LABEL = Object.freeze({ Sif260928Root: 1, Sif260928Object: 159, Sif260928Container: 6586, Sif260928Field: 15620 });
+// PLAN §3 A1c (a) and A2 (e), SPEC §1: the earlier counts, beside the Containers; A3 adds the 5,018
+// Questions (SPEC §9 A21) and their 15,620 HAS_INSTANCE edges (PLAN §3 A3 (b))
+const RULED_NODE_COUNT_BY_LABEL = Object.freeze({ Sif260928Root: 1, Sif260928Object: 159, Sif260928Container: 6586, Sif260928Field: 15620, Sif260928Question: 5018 });
+const RULED_HAS_INSTANCE_COUNT = 15620;
 // Measured on the TSV by A2 BEFORE the tree existed (scratch script over the forge's loader):
 // 699 three-segment Containers, and 3,138 attributes on an element that is itself a row, over
 // 2,645 such elements. The other two rows follow: 6,586 - 699, and the 14,431 Fields not directly
@@ -347,7 +351,7 @@ registerMutationTwin({
 const unchangedConjunctList = [
 	{
 		conjunctId: 'earlierCountsUnchanged',
-		title: 'the nodes are exactly 1 root, 159 Objects, 6,586 Containers and 15,620 Fields; the edges are HAS_FIELD and HAS_CHILD only; each Object still carries fieldCount = its rows',
+		title: 'the nodes are exactly 1 root, 159 Objects, 6,586 Containers, 15,620 Fields and 5,018 Questions; the edges are HAS_FIELD, HAS_CHILD and HAS_INSTANCE only; each Object still carries fieldCount = its rows',
 		twinNameList: ['oneRowNotMinted'],
 		evaluate: overForged((forged) => {
 			const countByLabel = countBy(forged.nodes, (oneNode) => oneNode.labels[1]);
@@ -356,7 +360,7 @@ const unchangedConjunctList = [
 			const fieldCountWrongList = nodeListByLabel(forged, 'Sif260928Object').filter((oneNode) => oneNode.properties.fieldCount !== rowCountByObjectPath[oneNode.properties.path]).map((oneNode) => oneNode.stableId);
 			const ruledHasChildTotal = Object.values(RULED_HAS_CHILD_COUNT_BY_KIND_PAIR).reduce((soFar, pairCount) => soFar + pairCount, 0);
 			return {
-				pass: sortedEntriesText(countByLabel) === sortedEntriesText(RULED_NODE_COUNT_BY_LABEL) && sortedEntriesText(edgeCountByType) === sortedEntriesText({ HAS_FIELD: RULED_HAS_FIELD_COUNT, HAS_CHILD: ruledHasChildTotal }) && fieldCountWrongList.length === 0,
+				pass: sortedEntriesText(countByLabel) === sortedEntriesText(RULED_NODE_COUNT_BY_LABEL) && sortedEntriesText(edgeCountByType) === sortedEntriesText({ HAS_FIELD: RULED_HAS_FIELD_COUNT, HAS_CHILD: ruledHasChildTotal, HAS_INSTANCE: RULED_HAS_INSTANCE_COUNT }) && fieldCountWrongList.length === 0,
 				detail: `nodes ${JSON.stringify(countByLabel)}; edges ${JSON.stringify(edgeCountByType)}; Objects whose fieldCount is not their row count ${fieldCountWrongList.length}${firstOf(fieldCountWrongList)}`,
 			};
 		}),
