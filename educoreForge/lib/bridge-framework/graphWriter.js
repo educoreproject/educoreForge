@@ -34,6 +34,11 @@ const graphSeamRulesLib = require('./graphSeamRules');
 const replayEngineLib = require(path.join(__dirname, '..', 'replay', 'replay-engine'))();
 const { identityHostileValue } = replayEngineLib;
 
+// (phase B7) every node replay writes carries this label (replay-engine GUARD 1) and its stableId is indexed
+// under it, so labelling both endpoint matches turns two whole-graph scans per edge into two index seeks.
+const { NODE_LABELS } = require(path.join(__dirname, '..', 'vocabulary', 'vocabulary'));
+const FORGED_NODE_LABEL = NODE_LABELS.FORGED_NODE;
+
 const NEO4J_USER = 'neo4j';
 
 const graphWriterFactory = ({ inGraph, applyLabel, sourceStandardName } = {}) => {
@@ -80,7 +85,7 @@ const graphWriterFactory = ({ inGraph, applyLabel, sourceStandardName } = {}) =>
 		}
 		const session = driver.session();
 		session
-			.run('OPTIONAL MATCH (s {stableId: $subjectStableId}) WITH s OPTIONAL MATCH (o {stableId: $objectStableId}) RETURN s._source AS subjectSource, labels(s) AS subjectLabels, s IS NOT NULL AS subjectPresent, labels(o) AS objectLabels, o.referenceTier AS objectReferenceTier, o IS NOT NULL AS objectPresent', { subjectStableId, objectStableId })
+			.run(`OPTIONAL MATCH (s:${FORGED_NODE_LABEL} {stableId: $subjectStableId}) WITH s OPTIONAL MATCH (o:${FORGED_NODE_LABEL} {stableId: $objectStableId}) RETURN s._source AS subjectSource, labels(s) AS subjectLabels, s IS NOT NULL AS subjectPresent, labels(o) AS objectLabels, o.referenceTier AS objectReferenceTier, o IS NOT NULL AS objectPresent`, { subjectStableId, objectStableId })
 			.then((lookup) => {
 				const row = lookup.records[0];
 				const subjectEndpoint = row && row.get('subjectPresent') ? { labels: row.get('subjectLabels'), sourceStandardName: row.get('subjectSource') } : null;
@@ -110,7 +115,7 @@ const graphWriterFactory = ({ inGraph, applyLabel, sourceStandardName } = {}) =>
 				// $edgeType is a PARAMETER now rather than a backtick-templated identifier; apoc takes the
 				// type as a string, which also closes the interpolation surface the template form opened.
 				return session
-					.run(`MATCH (s {stableId: $subjectStableId}) MATCH (o:${graphSeamRulesLib.HUB_REFERENCE_LABEL} {stableId: $objectStableId}) SET s:\`${applyLabel}\`, o:\`${applyLabel}\` WITH s, o CALL apoc.merge.relationship(s, $edgeType, $edgeProperties, {}, o) YIELD rel RETURN count(rel) AS edgeCount`, { subjectStableId, objectStableId, edgeType, edgeProperties })
+					.run(`MATCH (s:${FORGED_NODE_LABEL} {stableId: $subjectStableId}) MATCH (o:${FORGED_NODE_LABEL}:${graphSeamRulesLib.HUB_REFERENCE_LABEL} {stableId: $objectStableId}) SET s:\`${applyLabel}\`, o:\`${applyLabel}\` WITH s, o CALL apoc.merge.relationship(s, $edgeType, $edgeProperties, {}, o) YIELD rel RETURN count(rel) AS edgeCount`, { subjectStableId, objectStableId, edgeType, edgeProperties })
 					.then((written) => {
 						const edgeCount = written.records[0] ? written.records[0].get('edgeCount') : 0;
 						const wroteOne = neo4j.isInt(edgeCount) ? edgeCount.toNumber() === 1 : edgeCount === 1;

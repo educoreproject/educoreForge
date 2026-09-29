@@ -141,14 +141,16 @@ const runEdgeRead = (cypher, parameters) => {
 	});
 };
 
-// the writer's endpoint lookup
-const LOOKUP_CYPHER = 'OPTIONAL MATCH (s {stableId: $subjectStableId}) WITH s OPTIONAL MATCH (o {stableId: $objectStableId}) RETURN s._source AS subjectSource, labels(s) AS subjectLabels, s IS NOT NULL AS subjectPresent, labels(o) AS objectLabels, o.referenceTier AS objectReferenceTier, o IS NOT NULL AS objectPresent';
+// the writer's endpoint lookup. (phase B7) Both endpoints are matched under the forged-node label, as the writer
+// now emits them, and the double honours that label: a node without it is not found, exactly as on the real driver.
+const FORGED_NODE_LABEL = require(require('path').join(__dirname, '..', '..', '..', 'vocabulary', 'vocabulary')).NODE_LABELS.FORGED_NODE;
+const LOOKUP_CYPHER = `OPTIONAL MATCH (s:${FORGED_NODE_LABEL} {stableId: $subjectStableId}) WITH s OPTIONAL MATCH (o:${FORGED_NODE_LABEL} {stableId: $objectStableId}) RETURN s._source AS subjectSource, labels(s) AS subjectLabels, s IS NOT NULL AS subjectPresent, labels(o) AS objectLabels, o.referenceTier AS objectReferenceTier, o IS NOT NULL AS objectPresent`;
 const runLookup = (cypher, parameters) => {
 	if (cypher !== LOOKUP_CYPHER) {
 		return null;
 	}
-	const subjectNode = currentState.nodeList.find((oneNode) => oneNode.stableId === parameters.subjectStableId);
-	const objectNode = currentState.nodeList.find((oneNode) => oneNode.stableId === parameters.objectStableId);
+	const subjectNode = currentState.nodeList.find((oneNode) => oneNode.stableId === parameters.subjectStableId && oneNode.labels.indexOf(FORGED_NODE_LABEL) !== -1);
+	const objectNode = currentState.nodeList.find((oneNode) => oneNode.stableId === parameters.objectStableId && oneNode.labels.indexOf(FORGED_NODE_LABEL) !== -1);
 	const row = {
 		subjectSource: subjectNode ? subjectNode.properties._source : null,
 		subjectLabels: subjectNode ? subjectNode.labels.slice() : null,
@@ -160,8 +162,8 @@ const runLookup = (cypher, parameters) => {
 	return Promise.resolve({ records: [{ get: (name) => row[name] }] });
 };
 
-// the writer's stamp-and-MERGE, JOB 5a form: MATCH (s {stableId: $subjectStableId}) MATCH (o[:Label]
-// {stableId: $objectStableId}) SET <stamps> WITH s, o CALL apoc.merge.relationship(s, $edgeType,
+// the writer's stamp-and-MERGE, JOB 5a form (endpoint labels since phase B7): MATCH (s[:Label…] {stableId:
+// $subjectStableId}) MATCH (o[:Label…] {stableId: $objectStableId}) SET <stamps> WITH s, o CALL apoc.merge.relationship(s, $edgeType,
 // $edgeProperties, {}, o) YIELD rel RETURN count(rel) AS edgeCount
 // ⚠ THIS DOUBLE MUST MERGE BY THE SAME RULE AS THE REAL DRIVER. It keys on the FULL edge identity —
 // the same exported function the loader, the writer and graphDouble use — because apoc.merge.relationship
@@ -169,15 +171,18 @@ const runLookup = (cypher, parameters) => {
 // JOB 5a, would make the double collapse edges the real driver keeps, and every BG-BOLT conjunct that
 // compares bolt against double would then be comparing the double against a fiction.
 const runStampAndMerge = (cypher, parameters) => {
-	const match = /^MATCH \(s \{stableId: \$subjectStableId\}\) MATCH \(o(?::(\w+))? \{stableId: \$objectStableId\}\)(?: SET ((?:\w+:`[^`]+`(?:, )?)+))? WITH s, o CALL apoc\.merge\.relationship\(s, \$edgeType, \$edgeProperties, \{\}, o\) YIELD rel RETURN count\(rel\) AS edgeCount$/.exec(cypher);
+	const match = /^MATCH \(s((?::\w+)*) \{stableId: \$subjectStableId\}\) MATCH \(o((?::\w+)*) \{stableId: \$objectStableId\}\)(?: SET ((?:\w+:`[^`]+`(?:, )?)+))? WITH s, o CALL apoc\.merge\.relationship\(s, \$edgeType, \$edgeProperties, \{\}, o\) YIELD rel RETURN count\(rel\) AS edgeCount$/.exec(cypher);
 	if (!match) {
 		return null;
 	}
-	const objectLabelName = match[1];
-	const stampText = match[2] === undefined ? '' : match[2];
+	const labelListOf = (labelText) => labelText.split(':').filter((oneLabel) => oneLabel !== '');
+	const subjectLabelList = labelListOf(match[1]);
+	const objectLabelList = labelListOf(match[2]);
+	const stampText = match[3] === undefined ? '' : match[3];
 	const edgeType = parameters.edgeType; // a PARAMETER since JOB 5a, no longer interpolated into the text
-	const subjectNode = currentState.nodeList.find((oneNode) => oneNode.stableId === parameters.subjectStableId);
-	const objectNode = currentState.nodeList.find((oneNode) => oneNode.stableId === parameters.objectStableId && (objectLabelName === undefined || oneNode.labels.indexOf(objectLabelName) !== -1));
+	const carriesEvery = (oneNode, labelList) => labelList.every((oneLabel) => oneNode.labels.indexOf(oneLabel) !== -1);
+	const subjectNode = currentState.nodeList.find((oneNode) => oneNode.stableId === parameters.subjectStableId && carriesEvery(oneNode, subjectLabelList));
+	const objectNode = currentState.nodeList.find((oneNode) => oneNode.stableId === parameters.objectStableId && carriesEvery(oneNode, objectLabelList));
 	if (!subjectNode || !objectNode) {
 		return Promise.resolve({ records: [{ get: () => 0 }] });
 	}

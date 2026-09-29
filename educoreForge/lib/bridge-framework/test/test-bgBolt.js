@@ -72,6 +72,7 @@ const SOURCE_STANDARD_NAME = toyGraphLib.SOURCE_STANDARD_NAME;
 const HUB_NAME = toyGraphLib.HUB_NAME;
 const BLINDING_DECLARATION = ['hubAnchorId', 'crossRefs', 'hubAnchorOriginalPropertyName', 'hubOptionCode', 'hubOptionOriginalPropertyName'];
 const APPLY_LABEL = 'BridgedRelation_TOY_TOYHUB';
+const FORGED_NODE_LABEL = vocabularyLib.NODE_LABELS.FORGED_NODE;
 const IN_GRAPH = { boltUrl: 'bolt://double.invalid:7687', password: 'double', containerName: 'DEV_bgBolt_double' };
 
 // the driver swap — the harness lever (NOT a twin): the bolt file's one require of neo4j-driver becomes the double
@@ -81,9 +82,14 @@ const writerDriverSwap = { modulePath: frameworkFile(WRITER_FILE), find: "\tcons
 const boltReaderLib = (scenario) => moduleDouble.loadWithMutations({ modulePath: frameworkFile(READER_FILE), mutationList: [readerDriverSwap].concat(scenario.frameworkMutationList) });
 const boltWriterLib = (scenario) => moduleDouble.loadWithMutations({ modulePath: frameworkFile(WRITER_FILE), mutationList: [writerDriverSwap].concat(scenario.frameworkMutationList) });
 
-// twoStates — a fresh toy state for the BOLT half (bound into the driver double) and an identical fresh graphDouble
+// twoStates — a fresh toy state for the BOLT half (bound into the driver double) and an identical fresh graphDouble.
+// (phase B7) Every node carries the forged-node label, as every node replay writes to a real graph does: the
+// writer's endpoint matches are labelled with it, and the driver double honours the label.
 const twoStates = () => {
 	const graph = toyGraphLib.toyGraph();
+	graph.nodeList.forEach((oneNode) => {
+		oneNode.labels.push(FORGED_NODE_LABEL);
+	});
 	const boltState = { nodeList: cloneJson(graph.nodeList), edgeList: cloneJson(graph.edgeList) };
 	boltDriverDouble.useState(boltState);
 	const graphDouble = graphDoubleLib.graphDoubleFrom(graph);
@@ -368,6 +374,23 @@ const conjunctList = [
 			});
 		},
 	},
+	{
+		// (phase B7) an unlabelled stableId match is a whole-graph scan per endpoint per edge; labelled, it is a seek
+		// on the forged-node stableId index. Read from the Cypher TEXT, because the double cannot measure a plan.
+		conjunctId: 'l_writerEndpointMatchesAreForgedNodeLabelled',
+		title: "both of the bolt writer's statements for one edge (endpoint lookup, stamp-and-MERGE) match subject AND object under the forged-node label, so each endpoint resolves by an index seek; the edge still lands",
+		twinNameList: ['lookupSubjectUnlabelled', 'mergeSubjectUnlabelled'],
+		evaluate: (scenario, callback) => {
+			writeThroughBoth(scenario, validEdge(), (unusedError, outcome) => {
+				const statementList = boltDriverDouble.cypherLog();
+				const subjectLabelled = `(s:${FORGED_NODE_LABEL} {stableId: $subjectStableId})`;
+				const objectLabelledPattern = new RegExp(`\\(o:${FORGED_NODE_LABEL}(:\\w+)* \\{stableId: \\$objectStableId\\}\\)`);
+				const unlabelledList = statementList.filter((oneStatement) => oneStatement.indexOf(subjectLabelled) === -1 || !objectLabelledPattern.test(oneStatement));
+				const edgeLanded = outcome.boltState.edgeList.some((oneEdge) => oneEdge.fromStableId === validEdge().subjectStableId && oneEdge.toStableId === validEdge().objectStableId);
+				callback('', { pass: !outcome.boltError && statementList.length === 2 && unlabelledList.length === 0 && edgeLanded, detail: `bolt: ${outcome.boltError || 'ok'}; ${statementList.length} statement(s), ${unlabelledList.length} with an unlabelled endpoint: ${unlabelledList.map((oneStatement) => oneStatement.slice(0, 90)).join(' | ') || 'none'}; edge ${edgeLanded ? 'landed' : 'ABSENT'}` });
+			});
+		},
+	},
 ];
 
 frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'a_writerStampsBothEndpoints', twinName: 'objectStampDropped', fileName: WRITER_FILE, find: 'SET s:\\`${applyLabel}\\`, o:\\`${applyLabel}\\` WITH', replace: 'SET s:\\`${applyLabel}\\` WITH' });
@@ -385,10 +408,12 @@ frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'i_
 frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'j_missingRequiredSlotRefusedByName', twinName: 'requiredSlotCheckSkipped', fileName: RULES_FILE, find: '\t\tif (missingSlot !== undefined) {', replace: '\t\tif (false && missingSlot !== undefined) {' });
 frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'k_absentArgumentRefusedByName', twinName: 'standardNameCheckSkipped', fileName: READER_FILE, find: "\t\t\t\tif (typeof standardName !== 'string' || standardName.length === 0) {", replace: '\t\t\t\tif (false) {' });
 frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'k_absentArgumentRefusedByName', twinName: 'referenceTierCheckSkipped', fileName: READER_FILE, find: "\t\t\t\tif (typeof referenceTier !== 'string' || referenceTier.length === 0) {", replace: '\t\t\t\tif (false) {' });
+frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'l_writerEndpointMatchesAreForgedNodeLabelled', twinName: 'lookupSubjectUnlabelled', fileName: WRITER_FILE, find: '`OPTIONAL MATCH (s:${FORGED_NODE_LABEL} {stableId: $subjectStableId}) WITH s', replace: '`OPTIONAL MATCH (s {stableId: $subjectStableId}) WITH s' });
+frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'l_writerEndpointMatchesAreForgedNodeLabelled', twinName: 'mergeSubjectUnlabelled', fileName: WRITER_FILE, find: '`MATCH (s:${FORGED_NODE_LABEL} {stableId: $subjectStableId}) MATCH', replace: '`MATCH (s {stableId: $subjectStableId}) MATCH' });
 
 const gateDeclarationList = [{ gateId: GATE_ID, title: 'bolt file ↔ graph double parity through the driver double, and the text-node reads', conjunctList }];
 
 runGateFamily(
-	{ harness, familyName: GATE_ID, gateDeclarationList, twinRegistry, makeSubject: scenarioLib.makeScenario, cloneSubject: scenarioLib.cloneScenario, expectedConjunctCount: 12, expectedTwinCount: 15 },
+	{ harness, familyName: GATE_ID, gateDeclarationList, twinRegistry, makeSubject: scenarioLib.makeScenario, cloneSubject: scenarioLib.cloneScenario, expectedConjunctCount: 13, expectedTwinCount: 17 },
 	() => harness.report(),
 );
