@@ -5,10 +5,10 @@
 // markdown file. --priorListFilePath names an earlier run's JSON, or the literal 'none' when there is no prior.
 
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
-const REQUIRED_NAME_LIST = Object.freeze(['decisionBlockFilePath', 'annotationFilePath', 'questionMapFilePath', 'cardListFilePath', 'remodelTableFilePath', 'cardLabelFilePath', 'priorListFilePath', 'outputJsonFilePath', 'outputMarkdownFilePath']);
+const REQUIRED_NAME_LIST = Object.freeze(['decisionBlockFilePath', 'questionMapFilePath', 'cardLabelFilePath', 'priorListFilePath', 'outputJsonFilePath', 'outputMarkdownFilePath']);
 const helpText = () => `
 NAME
-     ${moduleName} -- build the M6b list: every SIF_Metadata decision beside the standard's ids, with the number of fields it will be copied to
+     ${moduleName} -- build the M6b list: every SIF_Metadata decision with the number of fields it will be copied to
 
 SYNOPSIS
      ${moduleName} --${REQUIRED_NAME_LIST.join('=<> --')}=<>
@@ -35,10 +35,7 @@ if (missingNameList.length > 0) {
 const inputFilePathOf = (valueName) => path.resolve(firstValue(valueName));
 const built = sifMetadataReviewList.buildMetadataReviewListFromFiles({
 	decisionBlockFilePath: inputFilePathOf('decisionBlockFilePath'),
-	annotationFilePath: inputFilePathOf('annotationFilePath'),
 	questionMapFilePath: inputFilePathOf('questionMapFilePath'),
-	cardListFilePath: inputFilePathOf('cardListFilePath'),
-	remodelTableFilePath: inputFilePathOf('remodelTableFilePath'),
 	cardLabelFilePath: inputFilePathOf('cardLabelFilePath'),
 	priorListFilePath: firstValue('priorListFilePath') === NO_PRIOR_LIST_TOKEN ? null : inputFilePathOf('priorListFilePath'),
 });

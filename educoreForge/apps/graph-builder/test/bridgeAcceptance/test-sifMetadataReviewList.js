@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 'use strict';
 
-// test-sifMetadataReviewList.js — phase C6's gates for sifMetadataReviewList.js (SPEC §6 M6b), over
+// test-sifMetadataReviewList.js — phases C6 and C6c: the gates for sifMetadataReviewList.js (SPEC §6 M6b), over
 // sifMetadataReviewListFixtures/: three SIF_Metadata questions (m01 3 rows, m02 2 rows, m03 4 rows) and one model
 // question (q90) that must never be listed.
 //
-//   SIF-M6B         (b) the hand-worked list; SPEC M6b's twin (alter one metadata decision in scratch and the
+//   SIF-M6B         (b) the hand-worked list (no comparison with the standard's annotation, TQ 2026-09-29); SPEC M6b's twin (alter one metadata decision in scratch and the
 //                   list shows the change in propagation count); the exact delta of that alteration
 //   SIF-M6B-REFUSE  the named refusals where the block, the label list and the prior list enter
 //
@@ -32,22 +32,17 @@ const path = require('path');
 const { runGateFamily } = require('../../../../lib/forge-framework/test/testSupport/gateSuiteRunner');
 const { makeTwinRegistry } = require('../../../../lib/forge-framework/roundTripHarness/twinRegistry');
 const moduleDouble = require('../../../../lib/forge-framework/test/testSupport/moduleDouble');
-const scorer = require('./sifYardstickScorer');
 
 const LIST_FILE_PATH = path.join(__dirname, 'sifMetadataReviewList.js');
 const FIXTURE_DIRECTORY_PATH = path.join(__dirname, 'sifMetadataReviewListFixtures');
 const FIXTURE_FILE_PATH_BY_ROLE = Object.freeze({
 	decisionBlock: path.join(FIXTURE_DIRECTORY_PATH, 'sifMetadataReviewListFixtureBlock.json'),
-	annotation: path.join(FIXTURE_DIRECTORY_PATH, 'sifMetadataReviewListFixtureAnnotation.json'),
 	questionMap: path.join(FIXTURE_DIRECTORY_PATH, 'sifMetadataReviewListFixtureQuestionMap.json'),
-	cardList: path.join(FIXTURE_DIRECTORY_PATH, 'sifMetadataReviewListFixtureCardList.json'),
-	remodelTable: path.join(FIXTURE_DIRECTORY_PATH, 'sifMetadataReviewListFixtureRemodelTable.json'),
 	cardLabelList: path.join(FIXTURE_DIRECTORY_PATH, 'sifMetadataReviewListFixtureCardLabelList.json'),
 });
 
 // THE FROZEN ANSWERS, worked by hand from the fixture (see the DEVLOG). Never edited to match a measurement.
-// m01: P000011 has one card, M1; picked M1 over 3 rows -> agrees-target, 3. m02: unannotated; picked S9 over 2
-// rows -> new-claim, 2. m03: P000012 has two cards and metadata has no domain, so key grain; abstained -> 0.
+// m01: picked M1 over 3 rows -> 3. m02: picked S9 over 2 rows -> 2. m03: abstained -> 0.
 const EXPECTED_LIST_VIEW = Object.freeze({
 	metadataQuestionCount: 3,
 	instanceTotal: 9,
@@ -55,9 +50,9 @@ const EXPECTED_LIST_VIEW = Object.freeze({
 	pickedCount: 2,
 	abstainedCount: 1,
 	rowList: [
-		{ relativePath: 'SIF_Metadata/Cost', standardCedsElementIdList: ['P000012'], proposedCardStableId: null, judgmentClass: 'abstained-where-specified', propagationCount: 0 },
-		{ relativePath: 'SIF_Metadata/RefId', standardCedsElementIdList: ['P000011'], proposedCardStableId: 'card:M1', judgmentClass: 'agrees-target', propagationCount: 3 },
-		{ relativePath: 'SIF_Metadata/Source', standardCedsElementIdList: [], proposedCardStableId: 'card:S9', judgmentClass: 'new-claim', propagationCount: 2 },
+		{ relativePath: 'SIF_Metadata/Cost', proposedCardStableId: null, propagationCount: 0 },
+		{ relativePath: 'SIF_Metadata/RefId', proposedCardStableId: 'card:M1', propagationCount: 3 },
+		{ relativePath: 'SIF_Metadata/Source', proposedCardStableId: 'card:S9', propagationCount: 2 },
 	],
 });
 // SPEC M6b's twin, as the fixture carries it: m03 (Cost, 4 rows) changes from an abstention to card:N1
@@ -66,7 +61,6 @@ const EXPECTED_ALTERED_CHANGE_VIEW = Object.freeze({
 	propagationTotal: 9,
 	propagationTotalDelta: 4,
 	changedRowList: [{ questionRefId: 'm03', relativePath: 'SIF_Metadata/Cost', priorDecisionText: 'abstained', decisionText: 'Dom Finance · Cost', priorPropagationCount: 0, propagationCount: 4, propagationDelta: 4 }],
-	alteredRowClass: 'agrees-key',
 	changedMarkdownLine: '- `SIF_Metadata/Cost`: abstained → Dom Finance · Cost; fields 0 → 4 (+4)',
 });
 
@@ -86,16 +80,12 @@ const alterOneMetadataDecision = (decisionBlock) => {
 	decisionRecord.predicate = 'closeMatch';
 };
 
-// runList — builds the list for a block (the real scorer's score), with an optional prior list. A throw is a
+// runList — builds the list for a block, with an optional prior list. A throw is a
 // MEASURED OUTCOME, as in C5's suite.
 const runList = ({ subject, decisionBlock, priorList }) => {
 	const listModule = subject.listMutationList.length === 0 ? require(LIST_FILE_PATH) : moduleDouble.loadWithMutations({ modulePath: LIST_FILE_PATH, mutationList: subject.listMutationList });
-	const scored = scorer.scoreBlock({ decisionBlock, annotation: subject.fixtureSet.annotation, questionMap: subject.fixtureSet.questionMap, cardList: subject.fixtureSet.cardList, remodelTable: subject.fixtureSet.remodelTable });
-	if (scored.error) {
-		return { scorerRefused: scored.error.message };
-	}
 	try {
-		return listModule.buildMetadataReviewList({ score: scored.score, decisionBlock, questionMap: subject.fixtureSet.questionMap, cardLabelList: subject.fixtureSet.cardLabelList, priorList });
+		return listModule.buildMetadataReviewList({ decisionBlock, questionMap: subject.fixtureSet.questionMap, cardLabelList: subject.fixtureSet.cardLabelList, priorList });
 	} catch (listThrow) {
 		return { thrownFromList: listThrow.message };
 	}
@@ -116,9 +106,9 @@ const listViewOf = (list) => ({
 	propagationTotal: list.propagationTotal,
 	pickedCount: list.pickedCount,
 	abstainedCount: list.abstainedCount,
-	rowList: list.rowList.map((oneRow) => ({ relativePath: oneRow.relativePath, standardCedsElementIdList: oneRow.standardCedsElementIdList, proposedCardStableId: oneRow.proposedCardStableId, judgmentClass: oneRow.judgmentClass, propagationCount: oneRow.propagationCount })),
+	rowList: list.rowList.map((oneRow) => ({ relativePath: oneRow.relativePath, proposedCardStableId: oneRow.proposedCardStableId, propagationCount: oneRow.propagationCount })),
 });
-const builtJudge = (judgeList) => (outcome) => (outcome.thrownFromList !== undefined ? { pass: false, detail: `the list crashed: ${outcome.thrownFromList}` } : outcome.scorerRefused !== undefined ? { pass: false, detail: `the scorer refused: ${outcome.scorerRefused.slice(0, 200)}` } : outcome.error ? { pass: false, detail: `the list refused: ${outcome.error.message.slice(0, 200)}` } : judgeList(outcome));
+const builtJudge = (judgeList) => (outcome) => (outcome.thrownFromList !== undefined ? { pass: false, detail: `the list crashed: ${outcome.thrownFromList}` } : outcome.error ? { pass: false, detail: `the list refused: ${outcome.error.message.slice(0, 200)}` } : judgeList(outcome));
 const refusalJudge = (regex) => (outcome) => {
 	if (outcome.thrownFromList !== undefined) {
 		return { pass: false, detail: `NOT A REFUSAL — the list crashed, naming nothing: ${outcome.thrownFromList}` };
@@ -156,7 +146,7 @@ const GATE_B = 'SIF-M6B';
 const gateBConjunctList = [
 	listConjunct({
 		conjunctId: 'b1_listExact',
-		title: 'the list is exactly the hand-worked one: the three metadata questions (never the model question), each beside the standard\'s ids, with its class and propagation count, and the totals',
+		title: 'the list is exactly the hand-worked one: the three metadata questions (never the model question), each with its decision and propagation count, and the totals',
 		twinNameList: ['abstentionPropagates', 'modelQuestionListed'],
 		run: runWithoutPrior,
 		judge: builtJudge((outcome) => {
@@ -177,18 +167,31 @@ const gateBConjunctList = [
 	}),
 	listConjunct({
 		conjunctId: 'b3_alteredDecisionShowsItsDelta',
-		title: 'altering m03 from an abstention to card:N1 in scratch shows exactly that change: 0 -> 4 fields (+4), the total 9 (+4), the row now agrees-key, and the markdown says so',
+		title: 'altering m03 from an abstention to card:N1 in scratch shows exactly that change: 0 -> 4 fields (+4), the total 9 (+4), and the markdown says so',
 		twinNameList: ['deltaNotComputed', 'decisionChangeNotDetected'],
 		shape: (subject) => alterOneMetadataDecision(subject.fixtureSet.decisionBlock),
 		run: runWithPrior,
 		judge: builtJudge((outcome) => {
 			const alteredRow = outcome.list.rowList.find((oneRow) => oneRow.subjectStableId === ALTERED_SUBJECT_STABLE_ID);
-			const view = { propagationTotal: outcome.list.propagationTotal, propagationTotalDelta: outcome.list.propagationTotalDelta, changedRowList: outcome.list.changedRowList, alteredRowClass: alteredRow.judgmentClass, changedMarkdownLine: outcome.markdownText.split('\n').find((oneLine) => oneLine.startsWith('- `SIF_Metadata/Cost`')) };
+			const view = { propagationTotal: outcome.list.propagationTotal, propagationTotalDelta: outcome.list.propagationTotalDelta, changedRowList: outcome.list.changedRowList, changedMarkdownLine: outcome.markdownText.split('\n').find((oneLine) => oneLine.startsWith('- `SIF_Metadata/Cost`')) };
 			const pass = JSON.stringify(view) === JSON.stringify(EXPECTED_ALTERED_CHANGE_VIEW) && alteredRow.propagationDelta === 4;
 			return { pass, detail: pass ? 'the delta equals the frozen literal' : `measured ${JSON.stringify(view)}; row delta ${alteredRow.propagationDelta}` };
 		}),
 	}),
+	listConjunct({
+		conjunctId: 'b4_noComparisonWithStandard',
+		title: "the list and its markdown carry none of the comparison with the standard's annotation: no standard's id, standing, class or comparison column (TQ: remove it entirely)",
+		twinNameList: ['comparisonColumnRestored'],
+		run: runWithoutPrior,
+		judge: builtJudge((outcome) => {
+			const phraseList = ['the standard', 'standing', 'agrees-', 'abstained-where', 'new-claim', 'comparison', 'standardCedsElementIdList', 'judgmentClass', 'P000011', 'P000012'];
+			const wholeText = `${JSON.stringify(outcome.list)}\n${outcome.markdownText}`;
+			const hitList = phraseList.filter((onePhrase) => wholeText.indexOf(onePhrase) !== -1);
+			return { pass: hitList.length === 0, detail: hitList.length === 0 ? 'none of the comparison phrases' : `found: ${hitList.join(', ')}` };
+		}),
+	}),
 ];
+registerListMutationTwin({ gateId: GATE_B, conjunctId: 'b4_noComparisonWithStandard', twinName: 'comparisonColumnRestored', find: "`| question | fields | the bridge's decision | predicate |", replace: "`| question | fields | the standard's ids | the bridge's decision | predicate |" });
 registerListMutationTwin({ gateId: GATE_B, conjunctId: 'b1_listExact', twinName: 'abstentionPropagates', find: 'propagationCount: proposedCardStableId === null ? 0 : decisionRecord.instanceStableIdList.length,', replace: 'propagationCount: decisionRecord.instanceStableIdList.length,' });
 registerListMutationTwin({ gateId: GATE_B, conjunctId: 'b1_listExact', twinName: 'modelQuestionListed', find: '.filter((oneQuestion) => oneQuestion.sharedBlock === METADATA_SHARED_BLOCK)', replace: '.filter((oneQuestion) => true)' });
 // SPEC §6 M6b's own twin: one of the metadata decisions altered in a scratch copy of the block
@@ -260,17 +263,17 @@ registerListMutationTwin({ gateId: GATE_R, conjunctId: 'r4_unlabelledCardRefused
 registerListMutationTwin({ gateId: GATE_R, conjunctId: 'r5_priorOverOtherQuestionsRefused', twinName: 'priorSetCheckDeleted', find: 'if (priorRefIdText !== currentRefIdText) {', replace: 'if (false) {' });
 
 const gateDeclarationList = [
-	{ gateId: GATE_B, title: 'plan §3 C6 (b) and SPEC §6 M6b: the metadata decisions beside the standard\'s ids, with propagation counts, and the change when one decision is altered', conjunctList: gateBConjunctList },
+	{ gateId: GATE_B, title: 'plan §3 C6 (b) and SPEC §6 M6b: the metadata decisions with propagation counts (no comparison with the standard), and the change when one decision is altered', conjunctList: gateBConjunctList },
 	{ gateId: GATE_R, title: 'the refusals where the block, the label list and the prior list enter', conjunctList: gateRConjunctList },
 ];
 
 // ---- outside the gates: the file path ----
-harness.section('buildMetadataReviewListFromFiles scores the files with the scorer and gives the same list');
+harness.section('buildMetadataReviewListFromFiles reads the three inputs and gives the same list');
 const listModule = require(LIST_FILE_PATH);
-const fromFiles = listModule.buildMetadataReviewListFromFiles({ decisionBlockFilePath: FIXTURE_FILE_PATH_BY_ROLE.decisionBlock, annotationFilePath: FIXTURE_FILE_PATH_BY_ROLE.annotation, questionMapFilePath: FIXTURE_FILE_PATH_BY_ROLE.questionMap, cardListFilePath: FIXTURE_FILE_PATH_BY_ROLE.cardList, remodelTableFilePath: FIXTURE_FILE_PATH_BY_ROLE.remodelTable, cardLabelFilePath: FIXTURE_FILE_PATH_BY_ROLE.cardLabelList, priorListFilePath: null });
+const fromFiles = listModule.buildMetadataReviewListFromFiles({ decisionBlockFilePath: FIXTURE_FILE_PATH_BY_ROLE.decisionBlock, questionMapFilePath: FIXTURE_FILE_PATH_BY_ROLE.questionMap, cardLabelFilePath: FIXTURE_FILE_PATH_BY_ROLE.cardLabelList, priorListFilePath: null });
 harness.ok('buildMetadataReviewListFromFiles succeeds', !fromFiles.error, fromFiles.error && fromFiles.error.message);
 harness.equal('its list equals the frozen literal', JSON.stringify(listViewOf(fromFiles.list)), JSON.stringify(EXPECTED_LIST_VIEW));
-harness.equal('it records a sha256 per input role', Object.keys(fromFiles.list.inputFileSha256ByRole).sort().join(','), 'annotation,cardList,decisionBlock,questionMap,remodelTable');
+harness.equal('it records a sha256 per input role', Object.keys(fromFiles.list.inputFileSha256ByRole).sort().join(','), 'cardLabelList,decisionBlock,questionMap');
 harness.ok('without a prior list, the markdown says no change is shown', fromFiles.markdownText.indexOf(listModule.LIST_WORDING.noPriorList) !== -1 && fromFiles.list.propagationTotalDelta === null);
 
-runGateFamily({ harness, familyName: 'SIF-M6B', gateDeclarationList, twinRegistry, makeSubject, cloneSubject, expectedConjunctCount: 8, expectedTwinCount: 10 }, () => harness.report());
+runGateFamily({ harness, familyName: 'SIF-M6B', gateDeclarationList, twinRegistry, makeSubject, cloneSubject, expectedConjunctCount: 9, expectedTwinCount: 11 }, () => harness.report());

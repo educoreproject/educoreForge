@@ -2,18 +2,17 @@
 
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
-// sifMetadataReviewList.js — THE M6b LIST (phase C6; SPEC §6 M6b, amendment A9). SIF copies one metadata block
+// sifMetadataReviewList.js — THE M6b LIST (phases C6, C6c; SPEC §6 M6b, amendment A9). SIF copies one metadata block
 // into every object, so its SIF_Metadata questions (66 on the real source) land on 8,976 fields. Before any of
-// those edges is propagated, TQ reviews the block's decisions as a batch: each one beside the standard's own ids,
-// with the number of fields the decision will be copied to.
+// those edges is propagated, TQ reviews the block's decisions as a batch: each one with the number of fields the
+// decision will be copied to. NO COMPARISON WITH THE STANDARD'S OWN ANNOTATIONS (TQ, 2026-09-29, ruling on the review page,
+// applied to this list by EBONY_DREAM): no standard's id, standing or class, and the yardstick scorer is not read.
 //
-//   buildMetadataReviewList({ score, decisionBlock, questionMap, cardLabelList, priorList }) → { list, markdownText } | { error }
-//   buildMetadataReviewListFromFiles({ decisionBlockFilePath, annotationFilePath, questionMapFilePath, cardListFilePath,
-//                                      remodelTableFilePath, cardLabelFilePath, priorListFilePath }) → the same
+//   buildMetadataReviewList({ decisionBlock, questionMap, cardLabelList, priorList }) → { list, markdownText } | { error }
+//   buildMetadataReviewListFromFiles({ decisionBlockFilePath, questionMapFilePath, cardLabelFilePath, priorListFilePath }) → the same
 //
-// score is the yardstick scorer's (sifYardstickScorer.js, C5); the list reads each unit's standing and class
-// from it and never classifies anything itself. The metadata questions are the question map's SIF_Metadata
-// questions, and each must have exactly one decision in the block (metadata is not split by domain, A20).
+// The metadata questions are the question map's SIF_Metadata questions, and each must have exactly one decision in
+// the block (metadata is not split by domain, A20).
 //
 // PROPAGATION COUNT: a pick is copied to every instance the block froze for the unit (instanceStableIdList,
 // A10), so the count is that list's length; an abstention propagates to nothing, 0.
@@ -26,15 +25,12 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 const fs = require('fs');
 const path = require('path');
 const refuse = require(path.join(__dirname, '..', '..', '..', '..', 'lib', 'forge-framework', 'refuse'));
-const sifYardstickScorer = require(path.join(__dirname, 'sifYardstickScorer'));
+const crypto = require('crypto');
 
 const METADATA_SHARED_BLOCK = 'SIF_Metadata';
 const SUBJECT_STABLE_ID_PREFIX = 'sif260928:question/';
 const LIST_WORDING = Object.freeze({
 	abstainedDecision: 'abstained',
-	standardNamesNothing: 'no element for this question',
-	hubCarriesNoCard: 'a card the hub does not carry',
-	noCardProposed: 'no card (it abstained)',
 	noPriorList: 'no prior list was given, so no change is shown',
 	changedHeading: 'Decisions changed since the prior list',
 	noChange: 'no decision changed since the prior list',
@@ -46,16 +42,7 @@ const signedText = (delta) => (delta > 0 ? `+${delta}` : `${delta}`);
 const cardLabelTextOf = ({ cardStableId, cardLabelByStableId }) => `${cardLabelByStableId[cardStableId].domainName} · ${cardLabelByStableId[cardStableId].propertyName}`;
 const decisionTextOf = (row) => (row.proposedCardStableId === null ? LIST_WORDING.abstainedDecision : row.proposedCardLabelText);
 
-// the SPEC §5.7 sentence for one row: "the standard specifies X; the bridge proposed Y"
-const comparisonLineOf = ({ row, cardLabelByStableId }) => {
-	const standardText =
-		row.standardCedsElementIdList.length === 0
-			? LIST_WORDING.standardNamesNothing
-			: `${row.standardCedsElementIdList.join(', ')} (${row.keyCardStableIdList.length === 0 ? LIST_WORDING.hubCarriesNoCard : row.keyCardStableIdList.map((oneStableId) => cardLabelTextOf({ cardStableId: oneStableId, cardLabelByStableId })).join('; ')})`;
-	return `the standard specifies ${standardText}; the bridge proposed ${row.proposedCardStableId === null ? LIST_WORDING.noCardProposed : row.proposedCardLabelText}`;
-};
-
-const buildMetadataReviewList = ({ score, decisionBlock, questionMap, cardLabelList, priorList }) => {
+const buildMetadataReviewList = ({ decisionBlock, questionMap, cardLabelList, priorList }) => {
 	const cardLabelByStableId = cardLabelList.cardLabelByStableId;
 	const metadataQuestionList = questionMap.questionList.filter((oneQuestion) => oneQuestion.sharedBlock === METADATA_SHARED_BLOCK).sort((leftQuestion, rightQuestion) => compareStrings(leftQuestion.relativePath, rightQuestion.relativePath));
 	const rowList = [];
@@ -74,9 +61,7 @@ const buildMetadataReviewList = ({ score, decisionBlock, questionMap, cardLabelL
 			return { error: refuse.byName({ moduleName, what: `the decision for metadata question ${question.questionRefId} carries no instanceStableIdList`, where: 'the propagation count is the list of instances the block froze for the unit (materialisation fan-out, A10); a block frozen without fan-out cannot say how many fields a decision reaches' }) };
 		}
 		const proposedCardStableId = decisionRecord.abstained === true ? null : decisionRecord.objectStableId;
-		const unitVerdict = score.unitVerdictList.find((oneVerdict) => oneVerdict.subjectStableId === subjectStableId);
-		const shownCardStableIdList = [proposedCardStableId].concat(unitVerdict.keyCardStableIdList || []).filter((oneStableId) => oneStableId !== null);
-		const unlabelledCardStableId = shownCardStableIdList.find((oneStableId) => cardLabelByStableId[oneStableId] === undefined);
+		const unlabelledCardStableId = proposedCardStableId !== null && cardLabelByStableId[proposedCardStableId] === undefined ? proposedCardStableId : undefined;
 		if (unlabelledCardStableId !== undefined) {
 			return { error: refuse.byName({ moduleName, what: `card ${unlabelledCardStableId} (metadata question ${question.questionRefId}) has no entry in the card label list`, where: 'the label list must carry every card the list names; the block carries stableIds only' }) };
 		}
@@ -86,17 +71,11 @@ const buildMetadataReviewList = ({ score, decisionBlock, questionMap, cardLabelL
 			name: question.name,
 			relativePath: question.relativePath,
 			instanceCount: question.instanceCount,
-			standardCedsElementIdList: question.cedsElementIdList,
-			annotatedInstanceCount: question.annotatedInstanceCount,
-			keyCardStableIdList: unitVerdict.keyCardStableIdList || [],
 			proposedCardStableId,
 			proposedCardLabelText: proposedCardStableId === null ? null : cardLabelTextOf({ cardStableId: proposedCardStableId, cardLabelByStableId }),
 			predicate: decisionRecord.predicate === undefined ? null : decisionRecord.predicate,
-			standing: unitVerdict.standing,
-			judgmentClass: unitVerdict.judgmentClass !== undefined ? unitVerdict.judgmentClass : unitVerdict.newClaim ? sifYardstickScorer.REPORT_WORDING.classNewClaim : null,
 			propagationCount: proposedCardStableId === null ? 0 : decisionRecord.instanceStableIdList.length,
 		};
-		row.comparisonLineText = comparisonLineOf({ row, cardLabelByStableId });
 		rowList.push(row);
 	}
 
@@ -158,26 +137,24 @@ const markdownOf = ({ list }) => {
 	lineList.push('');
 	lineList.push(`## ${LIST_WORDING.rowTableHeading}`);
 	lineList.push('');
-	lineList.push(`| question | fields | the standard's ids (fields carrying one) | comparison | predicate | class | copied to${list.priorGiven ? ' | change' : ''} |`);
-	lineList.push(`|---|---:|---|---|---|---|---:|${list.priorGiven ? '---:|' : ''}`);
-	list.rowList.forEach((oneRow) => lineList.push(`| \`${oneRow.relativePath}\` | ${oneRow.instanceCount} | ${oneRow.standardCedsElementIdList.length === 0 ? '—' : `${oneRow.standardCedsElementIdList.join(', ')} (${oneRow.annotatedInstanceCount})`} | ${oneRow.comparisonLineText} | ${oneRow.predicate === null ? '—' : oneRow.predicate} | ${oneRow.judgmentClass === null ? oneRow.standing : oneRow.judgmentClass} | ${oneRow.propagationCount} |${list.priorGiven ? ` ${signedText(oneRow.propagationDelta)} |` : ''}`));
+	lineList.push(`| question | fields | the bridge's decision | predicate | copied to${list.priorGiven ? ' | change' : ''} |`);
+	lineList.push(`|---|---:|---|---|---:|${list.priorGiven ? '---:|' : ''}`);
+	list.rowList.forEach((oneRow) => lineList.push(`| \`${oneRow.relativePath}\` | ${oneRow.instanceCount} | ${decisionTextOf(oneRow)} | ${oneRow.predicate === null ? '—' : oneRow.predicate} | ${oneRow.propagationCount} |${list.priorGiven ? ` ${signedText(oneRow.propagationDelta)} |` : ''}`));
 	lineList.push('');
 	return lineList.join('\n');
 };
 
-// buildMetadataReviewListFromFiles — scores the five inputs with the scorer itself, then builds the list;
-// priorListFilePath is a path or null
-const buildMetadataReviewListFromFiles = ({ decisionBlockFilePath, annotationFilePath, questionMapFilePath, cardListFilePath, remodelTableFilePath, cardLabelFilePath, priorListFilePath }) => {
-	const scored = sifYardstickScorer.scoreFromFiles({ decisionBlockFilePath, annotationFilePath, questionMapFilePath, cardListFilePath, remodelTableFilePath });
-	if (scored.error) {
-		return { error: scored.error };
-	}
+// buildMetadataReviewListFromFiles — reads the three inputs, then builds the list; priorListFilePath is a path or null
+const sha256OfFile = (filePath) => crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
+const buildMetadataReviewListFromFiles = ({ decisionBlockFilePath, questionMapFilePath, cardLabelFilePath, priorListFilePath }) => {
 	const readJson = (filePath) => JSON.parse(fs.readFileSync(filePath, 'utf8'));
-	const built = buildMetadataReviewList({ score: scored.score, decisionBlock: readJson(decisionBlockFilePath), questionMap: readJson(questionMapFilePath), cardLabelList: readJson(cardLabelFilePath), priorList: priorListFilePath === null ? null : readJson(priorListFilePath) });
+	const built = buildMetadataReviewList({ decisionBlock: readJson(decisionBlockFilePath), questionMap: readJson(questionMapFilePath), cardLabelList: readJson(cardLabelFilePath), priorList: priorListFilePath === null ? null : readJson(priorListFilePath) });
 	if (built.error) {
 		return { error: built.error };
 	}
-	return { list: { ...built.list, inputFilePathByRole: scored.score.inputFilePathByRole, inputFileSha256ByRole: scored.score.inputFileSha256ByRole }, markdownText: built.markdownText };
+	const inputFilePathByRole = { decisionBlock: decisionBlockFilePath, questionMap: questionMapFilePath, cardLabelList: cardLabelFilePath };
+	const inputFileSha256ByRole = Object.keys(inputFilePathByRole).reduce((soFar, oneRole) => ({ ...soFar, [oneRole]: sha256OfFile(inputFilePathByRole[oneRole]) }), {});
+	return { list: { ...built.list, inputFilePathByRole, inputFileSha256ByRole }, markdownText: built.markdownText };
 };
 
 module.exports = { buildMetadataReviewList, buildMetadataReviewListFromFiles, LIST_WORDING, moduleName };
