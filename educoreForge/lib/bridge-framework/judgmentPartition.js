@@ -9,7 +9,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // declared, checksummed file, and each (subject, partition) pair becomes one judgment unit: judged once, with its
 // label stated in the prompt, and frozen with the list of instances that belong to it.
 //
-//   JUDGMENT_PARTITION_KIND_REGISTRY               kind → { memberNameList }
+//   JUDGMENT_PARTITION_KIND_REGISTRY               kind → { memberNameList, readLabelByObjectName }
 //   declarationReason(value)                       the contract row's shape check → '' | reason
 //   partitionFilePathFor({ filePath, forgesDirPath, standardKey }) → absolute path
 //   readPartitionFile({ partitionDeclaration, filePath }) → { labelByObjectName } | { error }
@@ -26,9 +26,15 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // The rule is declared because a shared block copied into every object has instances in every object, so "sits in no
 // partitioned object" cannot be observed from the graph.
 //
-// WHERE THE GUARDS ARE. The file is external data entering the framework, so its checksum, its header, its cells and
-// its coverage of every instance's object are refused by name here. The declaration itself gets a shape check only,
-// as every other optional key does.
+// WHERE THE GUARDS ARE. The file and the graph it is applied to are data entering the framework, so these are refused
+// by name here: an absent file, a checksum other than the declared one, a header lacking a declared column, a blank
+// cell, an object named twice, an instance naming no object, an object missing from the file, a subject with no
+// instance, and a subject already carrying the rendered name. The declaration gets a shape check here; its cross-key
+// rules (the acquisition row admitting it, the subject allow-list, the blinding) are in bridgePluginContract.js.
+//
+// WHAT READS THE FROZEN FIELDS. Each record carries judgmentPartitionLabel and judgmentPartitionInstanceStableIdList.
+// The materialiser does not read them: it writes one subject → card edge per picked record, as it always has, so two
+// units of one subject may write two edges from that subject.
 //
 // PURE and synchronous. It returns a result or an error; the orchestration side hands the error to its callback.
 
@@ -38,12 +44,6 @@ const crypto = require('crypto');
 const refuse = require(path.join(__dirname, '..', 'forge-framework', 'refuse'));
 
 const OBJECT_PARTITION_FILE_KIND = 'objectPartitionFile';
-// one row per partition kind; a new kind is a row here and its reader
-const JUDGMENT_PARTITION_KIND_REGISTRY = Object.freeze({
-	[OBJECT_PARTITION_FILE_KIND]: Object.freeze({
-		memberNameList: Object.freeze(['kind', 'filePath', 'sha256', 'instanceEdgeType', 'instanceObjectPropertyName', 'objectColumnName', 'partitionLabelColumnName', 'renderedPropertyName', 'unpartitionedSubjectRule']),
-	}),
-});
 const UNPARTITIONED_RULE_MEMBER_LIST = Object.freeze(['propertyName', 'valueList']);
 const NAME_MEMBER_LIST = Object.freeze(['filePath', 'instanceEdgeType', 'instanceObjectPropertyName', 'objectColumnName', 'partitionLabelColumnName', 'renderedPropertyName']);
 const TSV_FIELD_SEPARATOR = '\t';
@@ -119,6 +119,15 @@ const readPartitionFile = ({ partitionDeclaration, filePath }) => {
 	}
 	return { labelByObjectName };
 };
+
+// JUDGMENT_PARTITION_KIND_REGISTRY — one row per partition kind: its declaration members and the reader that turns its
+// file into { labelByObjectName }. A new kind is a row here and its reader, never a branch in the orchestrator.
+const JUDGMENT_PARTITION_KIND_REGISTRY = Object.freeze({
+	[OBJECT_PARTITION_FILE_KIND]: Object.freeze({
+		memberNameList: Object.freeze(['kind', 'filePath', 'sha256', 'instanceEdgeType', 'instanceObjectPropertyName', 'objectColumnName', 'partitionLabelColumnName', 'renderedPropertyName', 'unpartitionedSubjectRule']),
+		readLabelByObjectName: readPartitionFile,
+	}),
+});
 
 // partitionLeafList — each leaf becomes one leaf per distinct label of its instances (sorted by label), carrying
 // judgmentPartitionLabel and judgmentPartitionInstanceStableIdList; an unpartitioned subject stays one leaf with label null

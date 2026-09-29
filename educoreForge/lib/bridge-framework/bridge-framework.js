@@ -1484,7 +1484,7 @@ const moduleFunction =
 						return;
 					}
 					const partitionFilePath = judgmentPartitionLib.partitionFilePathFor({ filePath: partitionDeclaration.filePath, forgesDirPath: registry.forgesDirPath, standardKey: bridgeDeclaration.standardKey });
-					const partitionFile = judgmentPartitionLib.readPartitionFile({ partitionDeclaration, filePath: partitionFilePath });
+					const partitionFile = judgmentPartitionLib.JUDGMENT_PARTITION_KIND_REGISTRY[partitionDeclaration.kind].readLabelByObjectName({ partitionDeclaration, filePath: partitionFilePath });
 					if (partitionFile.error) {
 						next(partitionFile.error.message);
 						return;

@@ -1216,7 +1216,7 @@ const validateBridgeDeclaration = ({ bridgeDeclaration, bundleDirPath } = {}) =>
 	}
 	// judgmentPartition (phase B4p): admitted only where the acquisition row says so; its label renders only if the
 	// subject allow-list names the line it renders under; and a property it reads must not be one the plugin blinds,
-	// because a blinded property reads as absent, and an absent rule property would quietly partition every subject.
+	// because a blinded property reads as absent, and an absent rule property would quietly partition the subjects the rule exists to keep whole.
 	const partitionDeclaration = bridgeDeclaration.judgmentPartition;
 	if (partitionDeclaration !== undefined) {
 		if (SOURCE_ACQUISITION_REGISTRY[bridgeDeclaration.matchBasis].admitsJudgmentPartition !== true) {

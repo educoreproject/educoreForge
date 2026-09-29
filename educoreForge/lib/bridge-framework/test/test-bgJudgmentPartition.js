@@ -12,7 +12,8 @@
 //                 no instance); (c) a subject the unpartitioned rule names is ONE unit with label null, all its
 //                 instances and no label line; (e) the frozen instance list is canonical (sorted by the freeze);
 //                 (f) the contract refuses a basis that does not admit a partition, a rendered name outside the
-//                 subject allow-list, a blinded property, and a rendered name a subject already carries.
+//                 subject allow-list, a blinded property, a rendered name a subject already carries, a malformed
+//                 declaration and an unregistered kind.
 //   BG-PARTITION-ORACLE  (R1) run E's frozen block parses unchanged and keeps its id; (d, §1.7) with the key absent
 //                 the toy derived block equals the branch-cut text with frameworkFingerprint masked, (m) unmasked it
 //                 differs in that key alone, and (o) the key is optional: absent, it is omitted from every record.
@@ -365,6 +366,13 @@ const contractConjunctList = [
 		regex: /judgmentPartition' kind 'objectPartitionFile' must be exactly \{ kind, filePath, sha256, instanceEdgeType/,
 		twinName: 'memberCheckDeleted', fileName: PARTITION_FILE, find: 'if (!hasExactMembers(value, memberNameList)) {', replace: 'if (false) {',
 	}),
+	refusalCase({
+		registry: twinRegistry, gateId: 'BG-PARTITION', conjunctId: 'f6_unknownKindRefused',
+		title: '(f) a judgmentPartition kind with no JUDGMENT_PARTITION_KIND_REGISTRY row is refused at registration by name',
+		shape: partitionShapeWith((bridgeDeclaration) => { bridgeDeclaration.judgmentPartition.kind = 'objectPartitionSheet'; }),
+		regex: /judgmentPartition' must be an object whose kind is one of objectPartitionFile/,
+		twinName: 'kindRowAdded', fileName: PARTITION_FILE, find: '		readLabelByObjectName: readPartitionFile,\n	}),\n});', replace: "		readLabelByObjectName: readPartitionFile,\n	}),\n	objectPartitionSheet: Object.freeze({ memberNameList: Object.freeze(['kind', 'filePath', 'sha256', 'instanceEdgeType', 'instanceObjectPropertyName', 'objectColumnName', 'partitionLabelColumnName', 'renderedPropertyName', 'unpartitionedSubjectRule']), readLabelByObjectName: readPartitionFile }),\n});",
+	}),
 ];
 
 // ---------------------------------------------------------------------
@@ -454,6 +462,6 @@ const gateDeclarationList = [
 ];
 
 runGateFamily(
-	{ harness, familyName: 'BG-PARTITION+BG-PARTITION-ORACLE', gateDeclarationList, twinRegistry, makeSubject: scenarioLib.makeScenario, cloneSubject: scenarioLib.cloneScenario, expectedConjunctCount: 17 + 4 },
+	{ harness, familyName: 'BG-PARTITION+BG-PARTITION-ORACLE', gateDeclarationList, twinRegistry, makeSubject: scenarioLib.makeScenario, cloneSubject: scenarioLib.cloneScenario, expectedConjunctCount: 18 + 4 },
 	() => harness.report(),
 );
