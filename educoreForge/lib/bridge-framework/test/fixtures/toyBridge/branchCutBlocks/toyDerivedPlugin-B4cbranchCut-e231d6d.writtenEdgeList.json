@@ -1,0 +1,272 @@
+[
+ {
+  "fromStableId": "toy:property/Course.Level",
+  "toStableId": "toyhub:card/P000001.C1",
+  "type": "EXACT_MATCH",
+  "properties": {
+   "predicate": "exactMatch",
+   "mappingJustification": "semapv:SemanticSimilarityThresholdMatching",
+   "matchBasis": "derived",
+   "resolution": "judged",
+   "objectMatchField": "EDUcoreHub:semanticSimilarity",
+   "subjectSource": "Toy",
+   "subjectVersion": "1.2.3",
+   "objectSource": "ToyHub",
+   "objectVersion": "1.0",
+   "predicateAssertedBy": "judge",
+   "attestationChannelList": [
+    "retrieval:ToyProperty"
+   ],
+   "decisionBlockHash": "f658cd0a87e4fa5d6446043c82b44e9c6cf7e947d1c96a800f1719d464612cf9",
+   "provenanceTier": "invalid-debug",
+   "matchId": "c7fa98c87098d27f63bc01785e753caf992dd48ac36dee84a15048f2b9646cc8",
+   "confidence": 0.9,
+   "mappingTool": "debug:digest",
+   "mappingToolVersion": "bridgeEvidenceRenderer-derived-v12"
+  },
+  "applyLabel": "BridgedRelation_TOY_TOYHUB"
+ },
+ {
+  "fromStableId": "toy:property/School.Address",
+  "toStableId": "toyhub:card/P000001.C1",
+  "type": "EXACT_MATCH",
+  "properties": {
+   "predicate": "exactMatch",
+   "mappingJustification": "semapv:SemanticSimilarityThresholdMatching",
+   "matchBasis": "derived",
+   "resolution": "judged",
+   "objectMatchField": "EDUcoreHub:semanticSimilarity",
+   "subjectSource": "Toy",
+   "subjectVersion": "1.2.3",
+   "objectSource": "ToyHub",
+   "objectVersion": "1.0",
+   "predicateAssertedBy": "judge",
+   "attestationChannelList": [
+    "retrieval:ToyProperty"
+   ],
+   "decisionBlockHash": "f658cd0a87e4fa5d6446043c82b44e9c6cf7e947d1c96a800f1719d464612cf9",
+   "provenanceTier": "invalid-debug",
+   "matchId": "952b4827d6c6f688c969706fbd6df950aecf042edb89d2919631c70c3354fbc4",
+   "confidence": 0.9,
+   "mappingTool": "debug:digest",
+   "mappingToolVersion": "bridgeEvidenceRenderer-derived-v12"
+  },
+  "applyLabel": "BridgedRelation_TOY_TOYHUB"
+ },
+ {
+  "fromStableId": "toy:property/School.Code",
+  "toStableId": "toyhub:card/P000002.C1",
+  "type": "CLOSE_MATCH",
+  "properties": {
+   "predicate": "closeMatch",
+   "mappingJustification": "semapv:SemanticSimilarityThresholdMatching",
+   "matchBasis": "derived",
+   "resolution": "judged",
+   "objectMatchField": "EDUcoreHub:semanticSimilarity",
+   "subjectSource": "Toy",
+   "subjectVersion": "1.2.3",
+   "objectSource": "ToyHub",
+   "objectVersion": "1.0",
+   "predicateAssertedBy": "judge",
+   "attestationChannelList": [
+    "retrieval:ToyProperty"
+   ],
+   "decisionBlockHash": "f658cd0a87e4fa5d6446043c82b44e9c6cf7e947d1c96a800f1719d464612cf9",
+   "provenanceTier": "invalid-debug",
+   "matchId": "a735d9a1d1f71f62ce6f778914b07812daa9fb905cea53f712c381703cb0ee25",
+   "confidence": 0.5,
+   "mappingTool": "debug:digest",
+   "mappingToolVersion": "bridgeEvidenceRenderer-derived-v12"
+  },
+  "applyLabel": "BridgedRelation_TOY_TOYHUB"
+ },
+ {
+  "fromStableId": "toy:property/School.Ghost",
+  "toStableId": "toyhub:card/P000001.C1",
+  "type": "CLOSE_MATCH",
+  "properties": {
+   "predicate": "closeMatch",
+   "mappingJustification": "semapv:SemanticSimilarityThresholdMatching",
+   "matchBasis": "derived",
+   "resolution": "judged",
+   "objectMatchField": "EDUcoreHub:semanticSimilarity",
+   "subjectSource": "Toy",
+   "subjectVersion": "1.2.3",
+   "objectSource": "ToyHub",
+   "objectVersion": "1.0",
+   "predicateAssertedBy": "judge",
+   "attestationChannelList": [
+    "retrieval:ToyProperty"
+   ],
+   "decisionBlockHash": "f658cd0a87e4fa5d6446043c82b44e9c6cf7e947d1c96a800f1719d464612cf9",
+   "provenanceTier": "invalid-debug",
+   "matchId": "e7462004f265f69917005b3fb229f18a63ae7d46d9a829d2e54dd56805548f36",
+   "confidence": 0.7,
+   "mappingTool": "debug:digest",
+   "mappingToolVersion": "bridgeEvidenceRenderer-derived-v12"
+  },
+  "applyLabel": "BridgedRelation_TOY_TOYHUB"
+ },
+ {
+  "fromStableId": "toy:property/School.Name",
+  "toStableId": "toyhub:card/P000002.C2",
+  "type": "CLOSE_MATCH",
+  "properties": {
+   "predicate": "closeMatch",
+   "mappingJustification": "semapv:SemanticSimilarityThresholdMatching",
+   "matchBasis": "derived",
+   "resolution": "judged",
+   "objectMatchField": "EDUcoreHub:semanticSimilarity",
+   "subjectSource": "Toy",
+   "subjectVersion": "1.2.3",
+   "objectSource": "ToyHub",
+   "objectVersion": "1.0",
+   "predicateAssertedBy": "judge",
+   "attestationChannelList": [
+    "retrieval:ToyProperty"
+   ],
+   "decisionBlockHash": "f658cd0a87e4fa5d6446043c82b44e9c6cf7e947d1c96a800f1719d464612cf9",
+   "provenanceTier": "invalid-debug",
+   "matchId": "fd8c5f4b8c08b410ae61a3d36e5d0f4e5bdda49832816d37479fdacdf1b919c1",
+   "confidence": 0.5,
+   "mappingTool": "debug:digest",
+   "mappingToolVersion": "bridgeEvidenceRenderer-derived-v12"
+  },
+  "applyLabel": "BridgedRelation_TOY_TOYHUB"
+ },
+ {
+  "fromStableId": "toy:property/Student.Ethnicity",
+  "toStableId": "toyhub:card/P000002.C2",
+  "type": "CLOSE_MATCH",
+  "properties": {
+   "predicate": "closeMatch",
+   "mappingJustification": "semapv:SemanticSimilarityThresholdMatching",
+   "matchBasis": "derived",
+   "resolution": "judged",
+   "objectMatchField": "EDUcoreHub:semanticSimilarity",
+   "subjectSource": "Toy",
+   "subjectVersion": "1.2.3",
+   "objectSource": "ToyHub",
+   "objectVersion": "1.0",
+   "predicateAssertedBy": "judge",
+   "attestationChannelList": [
+    "retrieval:ToyProperty"
+   ],
+   "decisionBlockHash": "f658cd0a87e4fa5d6446043c82b44e9c6cf7e947d1c96a800f1719d464612cf9",
+   "provenanceTier": "invalid-debug",
+   "matchId": "3d0c34a7940e475f9338cad7f3045a2e6e2393e22e6cfac368a860d1f4683285",
+   "confidence": 0.7,
+   "mappingTool": "debug:digest",
+   "mappingToolVersion": "bridgeEvidenceRenderer-derived-v12"
+  },
+  "applyLabel": "BridgedRelation_TOY_TOYHUB"
+ },
+ {
+  "fromStableId": "toy:property/Student.Gender",
+  "toStableId": "toyhub:card/P000002.C1",
+  "type": "EXACT_MATCH",
+  "properties": {
+   "predicate": "exactMatch",
+   "mappingJustification": "semapv:SemanticSimilarityThresholdMatching",
+   "matchBasis": "derived",
+   "resolution": "judged",
+   "objectMatchField": "EDUcoreHub:semanticSimilarity",
+   "subjectSource": "Toy",
+   "subjectVersion": "1.2.3",
+   "objectSource": "ToyHub",
+   "objectVersion": "1.0",
+   "predicateAssertedBy": "judge",
+   "attestationChannelList": [
+    "retrieval:ToyProperty"
+   ],
+   "decisionBlockHash": "f658cd0a87e4fa5d6446043c82b44e9c6cf7e947d1c96a800f1719d464612cf9",
+   "provenanceTier": "invalid-debug",
+   "matchId": "3b1c9260d027d57c4a18f88905a3edd2a3df9b2824fc9183bc2de0277fd96621",
+   "confidence": 0.9,
+   "mappingTool": "debug:digest",
+   "mappingToolVersion": "bridgeEvidenceRenderer-derived-v12"
+  },
+  "applyLabel": "BridgedRelation_TOY_TOYHUB"
+ },
+ {
+  "fromStableId": "toy:property/Student.Missing",
+  "toStableId": "toyhub:card/P000001.C1",
+  "type": "CLOSE_MATCH",
+  "properties": {
+   "predicate": "closeMatch",
+   "mappingJustification": "semapv:SemanticSimilarityThresholdMatching",
+   "matchBasis": "derived",
+   "resolution": "judged",
+   "objectMatchField": "EDUcoreHub:semanticSimilarity",
+   "subjectSource": "Toy",
+   "subjectVersion": "1.2.3",
+   "objectSource": "ToyHub",
+   "objectVersion": "1.0",
+   "predicateAssertedBy": "judge",
+   "attestationChannelList": [
+    "retrieval:ToyProperty"
+   ],
+   "decisionBlockHash": "f658cd0a87e4fa5d6446043c82b44e9c6cf7e947d1c96a800f1719d464612cf9",
+   "provenanceTier": "invalid-debug",
+   "matchId": "2b2ad149306c58a264d093f61a6b5c194e42ff53acc8480d29a0bf19623dbb63",
+   "confidence": 0.7,
+   "mappingTool": "debug:digest",
+   "mappingToolVersion": "bridgeEvidenceRenderer-derived-v12"
+  },
+  "applyLabel": "BridgedRelation_TOY_TOYHUB"
+ },
+ {
+  "fromStableId": "toy:property/Student.Nothing",
+  "toStableId": "toyhub:card/P000001.C1",
+  "type": "CLOSE_MATCH",
+  "properties": {
+   "predicate": "closeMatch",
+   "mappingJustification": "semapv:SemanticSimilarityThresholdMatching",
+   "matchBasis": "derived",
+   "resolution": "judged",
+   "objectMatchField": "EDUcoreHub:semanticSimilarity",
+   "subjectSource": "Toy",
+   "subjectVersion": "1.2.3",
+   "objectSource": "ToyHub",
+   "objectVersion": "1.0",
+   "predicateAssertedBy": "judge",
+   "attestationChannelList": [
+    "retrieval:ToyProperty"
+   ],
+   "decisionBlockHash": "f658cd0a87e4fa5d6446043c82b44e9c6cf7e947d1c96a800f1719d464612cf9",
+   "provenanceTier": "invalid-debug",
+   "matchId": "5ebb0d67693ae75f13c4e938833a004873b6f4a91f4f66f563a1d36e3ab3e0fd",
+   "confidence": 0.5,
+   "mappingTool": "debug:digest",
+   "mappingToolVersion": "bridgeEvidenceRenderer-derived-v12"
+  },
+  "applyLabel": "BridgedRelation_TOY_TOYHUB"
+ },
+ {
+  "fromStableId": "toy:property/Student.Weight",
+  "toStableId": "toyhub:card/P000002.C1",
+  "type": "CLOSE_MATCH",
+  "properties": {
+   "predicate": "closeMatch",
+   "mappingJustification": "semapv:SemanticSimilarityThresholdMatching",
+   "matchBasis": "derived",
+   "resolution": "judged",
+   "objectMatchField": "EDUcoreHub:semanticSimilarity",
+   "subjectSource": "Toy",
+   "subjectVersion": "1.2.3",
+   "objectSource": "ToyHub",
+   "objectVersion": "1.0",
+   "predicateAssertedBy": "judge",
+   "attestationChannelList": [
+    "retrieval:ToyProperty"
+   ],
+   "decisionBlockHash": "f658cd0a87e4fa5d6446043c82b44e9c6cf7e947d1c96a800f1719d464612cf9",
+   "provenanceTier": "invalid-debug",
+   "matchId": "355f0e14300e1f4d259250dd958ee0f784d1a4574efd41a417cee9c08de57249",
+   "confidence": 0.5,
+   "mappingTool": "debug:digest",
+   "mappingToolVersion": "bridgeEvidenceRenderer-derived-v12"
+  },
+  "applyLabel": "BridgedRelation_TOY_TOYHUB"
+ }
+]

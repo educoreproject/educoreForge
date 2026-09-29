@@ -11,7 +11,7 @@
 // reports the decision block id, the manifest id, the container and the bolt url the log names. Mirrors
 // lib/forge-framework/test/acceptance/runAcceptanceCommand.js.
 //
-// The spending lines (materialiseReal, rejudgeRealLimit) put the REAL judge to work: the runner REFUSES a spending
+// The spending lines (materialiseReal, rejudgeRealLimit, rejudgeRealNamedSet) put the REAL judge to work: the runner REFUSES a spending
 // line by name unless the acceptance file records an authorisation FOR THAT LINE under spendAuthorisationByLine
 // (the supervisor's authorisation, as data, per line — RULING B4R-2). The rule itself is spendAuthorisationGuard.js.
 //
@@ -23,6 +23,8 @@ const fs = require('fs');
 const path = require('path');
 const genesisGuardLib = require(path.join(__dirname, 'genesisGuard'));
 const spendAuthorisationGuardLib = require(path.join(__dirname, 'spendAuthorisationGuard'));
+const namedSetSpendGuardLib = require(path.join(__dirname, 'namedSetSpendGuard'));
+const sourceWindowLib = require(path.join(__dirname, '..', '..', 'apps', 'bridge-maker', 'lib', 'sourceWindow'));
 const { spawn, spawnSync } = require('child_process');
 
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
@@ -32,7 +34,7 @@ NAME
      ${moduleName} -- run (or -verify) ONE frozen bridge acceptance line with a git-provenance sidecar beside its log
 
 SYNOPSIS
-     ${moduleName} --bridgeName=<plugin> --line=<rejudgeDebug|materialise|materialiseReal> --phaseToken=<token>
+     ${moduleName} --bridgeName=<plugin> --line=<rejudgeDebug|materialise|materialiseReal|rejudgeRealLimit|eyeGraph|rejudgeRealNamedSet> --phaseToken=<token>
      ${moduleName} -verify --bridgeName=<plugin> --line=<line> --phaseToken=<token>
 
 DESCRIPTION
@@ -40,10 +42,14 @@ DESCRIPTION
      runner's line EQUALS the committed one, writes <buildLogsDirPath>/<line>-<phase>.provenance.json (git HEAD, dirty
      list, the exact command line, start time, PID), launches the build nohup-detached and returns. -verify reads the
      finished log and asserts the pinned base block ids (the command's contract), then prints the run's ids.
-     A SPENDING line (materialiseReal, rejudgeRealLimit) is REFUSED unless spendAuthorisationByLine records an
+     A SPENDING line (materialiseReal, rejudgeRealLimit, rejudgeRealNamedSet) is REFUSED unless spendAuthorisationByLine records an
      authorisation object under THAT LINE'S OWN NAME. A line whose name is null is refused as WITHHELD; a line
      whose name is absent is refused as UNDECLARED; the retired flat materialiseRealSpendAuthorisedBy field is
      itself refused by name, because a field that reads as authorisation and grants nothing is worse than none.
+     rejudgeRealNamedSet judges exactly the list at namedSetFilePath. It is refused before launch unless the
+     file's sha256 equals namedSetSha256, the list is no longer than rejudgeRealNamedSetMaxJudgmentCount, and
+     namedSetSubjectStableIdFilePath (what the build is handed) is exactly namedSetSubjectStableIdPrefix + each id.
+     -verify then reports judged count, re-ask count and max side by side.
 
 EXIT
      0 launched / verified;  1 refused by name / verification failed.
@@ -67,8 +73,11 @@ const EXPECTED_IDS_FILE_PATH = path.join(__dirname, '..', '..', '..', '..', 'lib
 // eyeGraph — the FULL four-standard + hub graph carrying the derived bridge, built for a human to look at.
 // It carries NO --rebridge, so it REPLAYS the frozen block and calls the judge ZERO times; that is why it is
 // deliberately absent from SPENDING_LINE_NAME_LIST and declares no maxJudgmentCount.
-const LINE_NAME_LIST = Object.freeze(['rejudgeDebug', 'materialise', 'materialiseReal', 'rejudgeRealLimit', 'eyeGraph']);
-const SPENDING_LINE_NAME_LIST = Object.freeze(['materialiseReal', 'rejudgeRealLimit']);
+//
+// rejudgeRealNamedSet (phase B5) — the real judge over exactly one sha-pinned list of subjects. A SPENDING line, so
+// it is here and needs its own authorisation; its named-set rules are namedSetSpendGuard.js.
+const LINE_NAME_LIST = Object.freeze(['rejudgeDebug', 'materialise', 'materialiseReal', 'rejudgeRealLimit', 'eyeGraph', 'rejudgeRealNamedSet']);
+const SPENDING_LINE_NAME_LIST = Object.freeze(['materialiseReal', 'rejudgeRealLimit', 'rejudgeRealNamedSet']);
 
 const stripJsoncComments = (text) => text.replace(/^\s*\/\/.*$/gm, '');
 const acceptanceCommands = JSON.parse(stripJsoncComments(fs.readFileSync(ACCEPTANCE_FILE_PATH, 'utf8')));
@@ -142,6 +151,29 @@ if (!Number.isInteger(declaredMaxJudgmentCount) || declaredMaxJudgmentCount < 0)
 	refuse(`the ${lineName} line for ${bridgeName} declares no ${lineName}MaxJudgmentCount (got ${JSON.stringify(declaredMaxJudgmentCount)}) — every line declares its own judgment ceiling as data; there is no default (RULING §11.12)`);
 }
 
+// THE NAMED SET (phase B5): the list of record must hash to the pinned sha, must be no longer than the max, and the
+// stableId file the build is handed must be exactly that list. All refused here, before anything is launched.
+const isNamedSetLine = lineName === namedSetSpendGuardLib.NAMED_SET_LINE_NAME;
+const fileTextOrNull = (filePath) => (fs.existsSync(filePath) ? fs.readFileSync(filePath, 'utf8') : null);
+if (isNamedSetLine) {
+	const namedSetRefusal = namedSetSpendGuardLib.namedSetRefusalFor({ entry, bridgeName, namedSetFileText: fileTextOrNull(entry.namedSetFilePath), subjectStableIdFileText: fileTextOrNull(entry.namedSetSubjectStableIdFilePath) });
+	if (namedSetRefusal) {
+		refuse(namedSetRefusal);
+	}
+}
+// the forensic trail files of THIS named set: the build names each <pairKey>/<generation>.jsonl, and a named-set
+// generation carries NAMED_SET_<digest of the stableId list> (sourceWindow.namedSetMarkFor, the build's own function)
+const namedSetForensicFilePathList = () => {
+	const namedSetMark = sourceWindowLib.namedSetMarkFor({ subjectStableIdList: JSON.parse(fs.readFileSync(entry.namedSetSubjectStableIdFilePath, 'utf8')) });
+	if (!fs.existsSync(entry.matchForensicsDirPath)) {
+		return [];
+	}
+	return fs
+		.readdirSync(entry.matchForensicsDirPath, { withFileTypes: true })
+		.filter((onePairEntry) => onePairEntry.isDirectory())
+		.reduce((soFar, onePairEntry) => soFar.concat(fs.readdirSync(path.join(entry.matchForensicsDirPath, onePairEntry.name)).filter((oneFileName) => oneFileName.endsWith('.jsonl') && oneFileName.indexOf(namedSetMark) !== -1).map((oneFileName) => path.join(entry.matchForensicsDirPath, onePairEntry.name, oneFileName))), []);
+};
+
 // <n> is the BATCH OFFSET for the windowed real-judge line. It is substituted from --offset and the line is
 // REFUSED if the placeholder survives: running `--offset=<n>` literally would either fail obscurely or, worse,
 // be silently parsed as something else — and this is the one line in the system that spends real money.
@@ -204,6 +236,8 @@ const lineSpecificArgumentList = {
 	materialise: [],
 	materialiseReal: [`--rebridge=${entry.standardKey}`],
 	rejudgeRealLimit: [`--rebridge=${entry.standardKey}`, `--limit=${releasedBatchSize}`, `--offset=${offsetValue}`],
+	// the build is handed the stableId file that namedSetSpendGuard proved equal to the pinned list of record
+	rejudgeRealNamedSet: [`--rebridge=${entry.standardKey}`, `--subjectListFilePath=${entry.namedSetSubjectStableIdFilePath}`],
 	// eyeGraph adds NOTHING beyond the pinned set: no --rebridge, no --useDebugJudge. It replays the frozen
 	// block, which is exactly why its declared ceiling is 0.
 	eyeGraph: [],
@@ -257,6 +291,21 @@ if (commandLineParameters.switches.verify === true) {
 		refuse(checked.refusal);
 	}
 	const verdict = { bridgeName, lineName, phaseToken, buildLogPath, ...checked.verdict, faultList: checked.faultList };
+	// the named-set report (phase B5): judged, re-asks and max side by side, counted from the forensic records THIS
+	// run appended — the bytes past each file's size at launch, as the provenance sidecar recorded it
+	if (isNamedSetLine) {
+		const provenanceFilePath = path.join(entry.buildLogsDirPath, `${lineName}-${phaseToken}.provenance.json`);
+		if (!fs.existsSync(provenanceFilePath)) {
+			refuse(`no provenance sidecar at ${provenanceFilePath} — the named-set report counts only what this run appended, and the sidecar holds where each forensic file ended at launch`);
+		}
+		const forensicByteSizeAtLaunchByPath = JSON.parse(fs.readFileSync(provenanceFilePath, 'utf8')).forensicByteSizeAtLaunchByPath;
+		// a file absent from the launch snapshot was created by this run, so all of it is this run's
+		const forensicFileList = namedSetForensicFilePathList().map((oneFilePath) => ({ filePath: oneFilePath, fileBuffer: fs.readFileSync(oneFilePath), byteSizeAtLaunch: forensicByteSizeAtLaunchByPath[oneFilePath] === undefined ? 0 : forensicByteSizeAtLaunchByPath[oneFilePath] }));
+		const namedSetRunReport = namedSetSpendGuardLib.namedSetRunReportFor({ forensicFileList, logText, maxJudgmentCount: declaredMaxJudgmentCount });
+		verdict.namedSetRunReport = namedSetRunReport;
+		checked.faultList.push(...namedSetRunReport.faultList);
+		xLog.status(`${moduleName}: NAMED SET ${entry.namedSetSha256.slice(0, 12)}… — ${namedSetRunReport.sideBySideText}`);
+	}
 	xLog.result(JSON.stringify(verdict, null, 2));
 	if (checked.faultList.length) {
 		refuse(`${checked.faultList.length} contract fault(s):\n  - ${checked.faultList.join('\n  - ')}`);
@@ -306,6 +355,8 @@ const gitOutput = (argumentList) => {
 const gitHead = gitOutput(['rev-parse', 'HEAD']);
 const gitDirtyFileList = gitOutput(['status', '--porcelain']).split('\n').filter((oneLine) => oneLine.length > 0);
 fs.mkdirSync(entry.buildLogsDirPath, { recursive: true });
+// where each of this named set's forensic files ends BEFORE the run, so -verify counts only this run's records
+const forensicByteSizeAtLaunchByPath = isNamedSetLine ? namedSetForensicFilePathList().reduce((soFar, oneFilePath) => ({ ...soFar, [oneFilePath]: fs.statSync(oneFilePath).size }), {}) : undefined;
 const startedAt = new Date().toISOString();
 const child = spawn('node', nodeArgumentList, { cwd: treeRoot, detached: true, stdio: ['ignore', fs.openSync(buildLogPath, 'a'), fs.openSync(buildLogPath, 'a')] });
 child.unref();
@@ -314,7 +365,7 @@ fs.writeFileSync(path.join(entry.buildLogsDirPath, `${lineName}-${phaseToken}.pi
 // guard actually read rather than as a boolean: a run that cost real money should carry, beside its command line,
 // the name of whoever released THAT LINE and the note they released it under. `null` for a non-spending line is the
 // honest value — it asked no real judge and needed no release (RULING B4R-2).
-fs.writeFileSync(path.join(entry.buildLogsDirPath, `${lineName}-${phaseToken}.provenance.json`), JSON.stringify({ bridgeName, lineName, phaseToken, gitHead, gitDirty: gitDirtyFileList.length > 0, gitDirtyFileList, commandLine: committedLine, startedAt, pid: child.pid, buildLogPath, spendsOnTheRealJudge: SPENDING_LINE_NAME_LIST.indexOf(lineName) !== -1, spendAuthorisation: spendAuthorisation === undefined ? null : spendAuthorisation }, null, 2) + '\n');
+fs.writeFileSync(path.join(entry.buildLogsDirPath, `${lineName}-${phaseToken}.provenance.json`), JSON.stringify({ bridgeName, lineName, phaseToken, gitHead, gitDirty: gitDirtyFileList.length > 0, gitDirtyFileList, commandLine: committedLine, startedAt, pid: child.pid, buildLogPath, spendsOnTheRealJudge: SPENDING_LINE_NAME_LIST.indexOf(lineName) !== -1, spendAuthorisation: spendAuthorisation === undefined ? null : spendAuthorisation, ...(isNamedSetLine ? { namedSetFilePath: entry.namedSetFilePath, namedSetSha256: entry.namedSetSha256, namedSetSubjectStableIdFilePath: entry.namedSetSubjectStableIdFilePath, forensicByteSizeAtLaunchByPath } : {}) }, null, 2) + '\n');
 if (spendAuthorisation !== undefined) {
 	xLog.status(`${moduleName}: this is a SPENDING line, released for '${lineName}' specifically by ${spendAuthorisation.sessionName}${spendAuthorisation.date ? ` on ${spendAuthorisation.date}` : ''} (RULING B4R-2 — per-line authorisation; the release for one spending line is not a release for the other)`);
 }

@@ -1,0 +1,501 @@
+#!/usr/bin/env node
+'use strict';
+
+// test-bgFanoutConsumers.js — BG-FANOUT-CONSUMERS: the tools that read mappings see one answer spread over many fields, one
+// edge per field (PLAN-sifReplacement-smallPhases §3 B4c), plus the oracle conjuncts B4c owes (§1.6 R1, §1.7).
+//
+//   BG-FANOUT-CONSUMERS  (a) the SSSOM export has one row per written edge, subject_id the field and judged_subject_id the
+//              question, and the extension column is declared; (b) a sibling block's conflict on one instance is reported
+//              and removes that instance's edge alone, a sibling claim on the question itself (no edge leaves it) is not a
+//              conflict, and two partition units of one question are compared per instance; (c) the fanned-out export
+//              passes the subject-prefix check with field stableIds, and an unprefixed field is refused by name; (d) the
+//              gold-eval sibling harvest round-trips judgedSubjectStableId and counts the judged subjects; (f) the frozen
+//              census edgeCount equals edgesWritten.
+//   BG-FANOUT-CONSUMERS-ORACLE  (R1) run E's frozen block parses unchanged and keeps its id; (e, §1.7) without fan-out the
+//              toy derived block, its edges and its SSSOM export, and the two-plugin conflict run's counts, edges, SSSOM
+//              export and MappingReview trail, all equal what was captured at this phase's cut (e231d6d) with the
+//              block-id-derived values masked; (m) unmasked, the block differs in frameworkFingerprint alone.
+//
+// Run: node lib/bridge-framework/test/test-bgFanoutConsumers.js [-verbose]
+
+const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
+const helpText = () => `
+NAME
+     ${moduleName} -- BG-FANOUT-CONSUMERS + BG-FANOUT-CONSUMERS-ORACLE
+
+SYNOPSIS
+     ${moduleName} [-verbose] [-quiet] [-help]
+
+EXIT STATUS
+     0 all conjuncts PASS and every conjunct was observed RED under its twin;  1 otherwise.
+`;
+require('../../../test/testLib/testAppStartup')({ moduleName, helpText: helpText() });
+const harness = require('../../../test/testLib/harness')(moduleName);
+
+const path = require('path');
+const fs = require('fs');
+const scenarioLib = require('./testSupport/toyBridgeScenario');
+const instanceScenarioLib = require('./testSupport/toyInstanceScenario');
+const { runConjunct, pureConjunct, succeeded, frameworkMutationTwin, scenarioTwin, refusalCase, blockOf, edgesOf, forensicsOf, frameworkFile } = require('./testSupport/bridgeTwinFactories');
+const moduleDouble = require(path.join(__dirname, '..', '..', 'forge-framework', 'test', 'testSupport', 'moduleDouble'));
+const { runGateFamily } = require(path.join(__dirname, '..', '..', 'forge-framework', 'test', 'testSupport', 'gateSuiteRunner'));
+const { makeTwinRegistry } = require(path.join(__dirname, '..', '..', 'forge-framework', 'roundTripHarness', 'twinRegistry'));
+const decisionBlockLib = require(frameworkFile('decisionBlock.js'));
+const sssomExporterLib = require(frameworkFile('sssomExporter.js'));
+
+const twinRegistry = makeTwinRegistry();
+const TREE_ROOT = path.join(__dirname, '..', '..', '..');
+const FRAMEWORK_FILE = 'bridge-framework.js';
+const EXPORTER_FILE = 'sssomExporter.js';
+const CONFLICT_FILE = 'conflictDetector.js';
+const DECISION_BLOCK_FILE = 'decisionBlock.js';
+const SIBLING_HARVEST_PATH = path.join(TREE_ROOT, 'apps', 'graph-builder', 'lib', 'gold-eval-bridge-sibling.js');
+const replayBlockLib = require(path.join(TREE_ROOT, 'lib', 'replay', 'replay-block'))();
+const { IDENTIFIER_QUESTION, TIMESTAMP_QUESTION, INSTANCE_EDGE_LIST, derivedShape, instanceShapeWith } = instanceScenarioLib;
+const instanceShape = instanceShapeWith();
+
+// the frozen literals this phase is measured against
+const IDENTIFIER_CARD = 'toyhub:card/P000001.C1';
+const SECOND_CARD = 'toyhub:card/P000006.C1';
+const THIRD_CARD = 'toyhub:card/P000002.C1';
+const STAFF_IDENTIFIER = 'toy:field/StaffRecord.Identifier';
+const ENROLLMENT_IDENTIFIER = 'toy:field/StudentEnrollment.Identifier';
+const STUDENT_IDENTIFIER = 'toy:field/StudentRecord.Identifier';
+const UNPREFIXED_STAFF_IDENTIFIER = 'field/StaffRecord.Identifier';
+// the toy fan-out run: Identifier picks the first card over its three instances; Timestamp abstains and writes nothing
+const FANOUT_EDGE_LITERAL = Object.freeze([`${STAFF_IDENTIFIER} → ${IDENTIFIER_CARD}`, `${ENROLLMENT_IDENTIFIER} → ${IDENTIFIER_CARD}`, `${STUDENT_IDENTIFIER} → ${IDENTIFIER_CARD}`]);
+const FANOUT_EDGE_COUNT = 3;
+const SIBLING_PRODUCER_KIND_SUFFIX = '::authored';
+const BRANCH_CUT_DIR = path.join(__dirname, 'fixtures', 'toyBridge', 'branchCutBlocks');
+const BRANCH_CUT_BLOCK_PATH = path.join(BRANCH_CUT_DIR, 'toyDerivedPlugin-B4cbranchCut-e231d6d.frozenText.json');
+const BRANCH_CUT_EDGE_LIST_PATH = path.join(BRANCH_CUT_DIR, 'toyDerivedPlugin-B4cbranchCut-e231d6d.writtenEdgeList.json');
+const BRANCH_CUT_SSSOM_PATH = path.join(BRANCH_CUT_DIR, 'toyDerivedPlugin-B4cbranchCut-e231d6d.sssom.tsv');
+const BRANCH_CUT_CONFLICT_COUNTS_PATH = path.join(BRANCH_CUT_DIR, 'toyConflictPair-B4cbranchCut-e231d6d.second.counts.json');
+const BRANCH_CUT_CONFLICT_EDGE_LIST_PATH = path.join(BRANCH_CUT_DIR, 'toyConflictPair-B4cbranchCut-e231d6d.second.writtenEdgeList.json');
+const BRANCH_CUT_CONFLICT_SSSOM_PATH = path.join(BRANCH_CUT_DIR, 'toyConflictPair-B4cbranchCut-e231d6d.second.sssom.tsv');
+const BRANCH_CUT_CONFLICT_FORENSICS_PATH = path.join(BRANCH_CUT_DIR, 'toyConflictPair-B4cbranchCut-e231d6d.second.forensics.json');
+const RUN_E_BLOCK_PATH = path.join(TREE_ROOT, '..', '..', 'dataStores', 'bridgeAcceptance', 'edfiEval', 'runE_091726', 'block.json');
+const RUN_E_BLOCK_ID = '7e362cebe7bb74d572e643eed37944d2577eb850313028bc0b9eb11f245c8755';
+const FRAMEWORK_FINGERPRINT_TEXT_RE = /"frameworkFingerprint":"[0-9a-f]{64}"/g;
+const MAPPING_SET_ID_TEXT_RE = /urn:educore:decisionBlock:[0-9a-f]{64}/g;
+
+const cloneJson = scenarioLib.cloneJson;
+const edgeLineOf = (oneEdge) => `${oneEdge.fromStableId} → ${oneEdge.toStableId}`;
+const failureOf = (outcome) => outcome.runError || outcome.constructionError || outcome.thrownFromRun;
+const frozenTextOf = (outcome) => outcome.stores.decisionStore.rowList.find((oneRow) => oneRow.decisionBlockHash === outcome.runReport.decisionBlock.decisionBlockHash).frozenText;
+const sssomTextOf = (outcome) => fs.readFileSync(outcome.runReport.sssomExportPath, 'utf8');
+const questionByInstanceStableId = INSTANCE_EDGE_LIST.reduce((soFar, oneEdge) => ({ ...soFar, [oneEdge.toStableId]: oneEdge.fromStableId }), {});
+const moduleFor = (scenario, modulePath) => (scenario.frameworkMutationList.some((oneMutation) => oneMutation.modulePath === modulePath) ? moduleDouble.loadWithMutations({ modulePath, mutationList: scenario.frameworkMutationList }) : require(modulePath));
+const pushMutation = (scenario, modulePath, find, replace) => {
+	moduleDouble.assertMutationApplies({ modulePath, find });
+	scenario.frameworkMutationList.push({ modulePath, find, replace });
+};
+
+// ---------------------------------------------------------------------
+// BG-FANOUT-CONSUMERS (a) SSSOM: one row per edge
+// ---------------------------------------------------------------------
+const PLANNED_LIST_FIND = '\tconst plannedList = plannedEdgeList(decisionBlock.decisionRecordList);';
+const EXTENSION_LIST_FIND = 'const extensionSlotNameList = isFannedOut ? EXTENSION_SLOT_NAME_LIST.concat([JUDGED_SUBJECT_COLUMN]) : EXTENSION_SLOT_NAME_LIST;';
+const sssomConjunctList = [
+	runConjunct({
+		conjunctId: 'a1_sssomRowsEqualEdges',
+		title: "(a) the fan-out toy's SSSOM export has one row per written edge (3): its (subject_id → object) set is the written edge set, each row's judged_subject_id is its edge's judgedSubjectStableId, and subject_census says 3 rows, 3 subjects, 1 judged subject",
+		twinNameList: ['rowsDedupedByQuestion'],
+		shape: instanceShape,
+		judge: succeeded((runReport, outcome) => {
+			const parsed = sssomExporterLib.parseSssomTsv(sssomTextOf(outcome));
+			if (parsed.error) {
+				return { pass: false, detail: `the export does not parse: ${parsed.error}` };
+			}
+			const edgeList = edgesOf(outcome);
+			const judgedSubjectByFromStableId = edgeList.reduce((soFar, oneEdge) => ({ ...soFar, [oneEdge.fromStableId]: oneEdge.properties.judgedSubjectStableId }), {});
+			const rowSubjectList = parsed.rowList.map((oneRow) => oneRow.subject_id).sort();
+			const edgeFromList = edgeList.map((oneEdge) => oneEdge.fromStableId).sort();
+			const judgedMismatchList = parsed.rowList.filter((oneRow) => oneRow[sssomExporterLib.JUDGED_SUBJECT_COLUMN] === undefined || oneRow[sssomExporterLib.JUDGED_SUBJECT_COLUMN] !== judgedSubjectByFromStableId[oneRow.subject_id]);
+			const census = parsed.headerScalarOf('subject_census');
+			const censusObject = census === undefined ? {} : JSON.parse(census);
+			const pass = parsed.rowList.length === FANOUT_EDGE_COUNT && runReport.edgesWritten === FANOUT_EDGE_COUNT && JSON.stringify(rowSubjectList) === JSON.stringify(edgeFromList) && judgedMismatchList.length === 0 && censusObject.rowCount === 3 && censusObject.subjectCount === 3 && censusObject.judgedSubjectCount === 1;
+			return { pass, detail: `${parsed.rowList.length} row(s), edgesWritten ${runReport.edgesWritten}; rows ${JSON.stringify(rowSubjectList)}; ${judgedMismatchList.length} judged_subject_id mismatch(es); census ${census}` };
+		}),
+	}),
+	runConjunct({
+		conjunctId: 'a2_judgedSubjectColumnDeclared',
+		title: '(a) the fanned-out export declares judged_subject_id under extension_definitions (slot, EDUcore property IRI, type hint), and every non-standard column it uses is declared',
+		twinNameList: ['extensionListNotExtended'],
+		shape: instanceShape,
+		judge: succeeded((runReport, outcome) => {
+			const parsed = sssomExporterLib.parseSssomTsv(sssomTextOf(outcome));
+			if (parsed.error) {
+				return { pass: false, detail: parsed.error };
+			}
+			const declaredList = parsed.headerLineList.filter((oneLine) => /^#  - slot_name: /.test(oneLine)).map((oneLine) => JSON.parse(oneLine.replace('#  - slot_name: ', '')));
+			const nonStandardColumnList = parsed.columnList.filter((oneColumn) => sssomExporterLib.COLUMN_LIST.indexOf(oneColumn) === -1 || sssomExporterLib.EXTENSION_SLOT_NAME_LIST.indexOf(oneColumn) !== -1);
+			const undeclaredList = nonStandardColumnList.filter((oneColumn) => declaredList.indexOf(oneColumn) === -1);
+			const propertyDeclared = parsed.headerLineList.indexOf(`#    property: "${sssomExporterLib.EXTENSION_PROPERTY_BASE}${sssomExporterLib.JUDGED_SUBJECT_COLUMN}"`) !== -1;
+			const pass = parsed.columnList[parsed.columnList.length - 1] === sssomExporterLib.JUDGED_SUBJECT_COLUMN && undeclaredList.length === 0 && propertyDeclared;
+			return { pass, detail: `columns end ${parsed.columnList[parsed.columnList.length - 1]}; undeclared [${undeclaredList.join(', ')}]; property line ${propertyDeclared ? 'present' : 'ABSENT'}` };
+		}),
+	}),
+];
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-FANOUT-CONSUMERS', conjunctId: 'a1_sssomRowsEqualEdges', twinName: 'rowsDedupedByQuestion', fileName: EXPORTER_FILE, find: PLANNED_LIST_FIND, replace: '\tconst plannedList = plannedEdgeList(decisionBlock.decisionRecordList).filter((oneEdge, edgeIndex, allEdgeList) => allEdgeList.findIndex((otherEdge) => otherEdge.record === oneEdge.record) === edgeIndex);' });
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-FANOUT-CONSUMERS', conjunctId: 'a2_judgedSubjectColumnDeclared', twinName: 'extensionListNotExtended', fileName: EXPORTER_FILE, find: EXTENSION_LIST_FIND, replace: 'const extensionSlotNameList = EXTENSION_SLOT_NAME_LIST;' });
+
+// ---------------------------------------------------------------------
+// BG-FANOUT-CONSUMERS (b) conflicts are per instance
+// ---------------------------------------------------------------------
+// plantedSiblingRun — run the fan-out toy once on fresh stores to freeze a real block; plant, under the SAME bridge's other
+// producerKind (a sibling key on the pairing, RULING BR7), a block whose picked records are plantRecordListFor(recordList);
+// then run the fan-out toy again on those stores, where the conflict lookup finds the plant. → { outcome, error? }
+const plantedSiblingRun = ({ scenario, plantRecordListFor }, callback) => {
+	const firstScenario = scenarioLib.cloneScenario(scenario);
+	firstScenario.frameworkMutationList = [];
+	instanceShape(firstScenario);
+	scenarioLib.runScenario(firstScenario, (unusedFirstError, first) => {
+		if (failureOf(first)) {
+			callback({ error: `the setup run failed: ${failureOf(first)}` });
+			return;
+		}
+		const firstRow = first.stores.decisionStore.rowList[0];
+		const firstBlock = JSON.parse(firstRow.frozenText);
+		const planted = decisionBlockLib.frozenTextFor({ header: firstBlock.header, decisionRecordList: plantRecordListFor(firstBlock.decisionRecordList), refusalList: [] });
+		if (planted.error) {
+			callback({ error: `the plant does not freeze: ${planted.error.message}` });
+			return;
+		}
+		instanceShape(scenario);
+		const siblingPairKey = firstRow.pairKey.replace(/::inferred$/, SIBLING_PRODUCER_KIND_SUFFIX);
+		scenario.stores.decisionStore.saveDecisionBlock({ pairKey: siblingPairKey, frozenText: planted.frozenText }, (saveError) => {
+			if (saveError) {
+				callback({ error: `the plant does not save: ${saveError}` });
+				return;
+			}
+			scenarioLib.runScenario(scenario, (unusedError, outcome) => callback({ outcome, error: failureOf(outcome) || undefined }));
+		});
+	});
+};
+const identifierRecordOf = (recordList) => recordList.find((oneRecord) => oneRecord.subjectStableId === IDENTIFIER_QUESTION);
+// a sibling record without an instance list: its edge leaves its own subject
+const siblingRecordFor = (recordList, subjectStableId, objectStableId) => {
+	const siblingRecord = { ...cloneJson(identifierRecordOf(recordList)), subjectStableId, objectStableId };
+	delete siblingRecord.instanceStableIdList;
+	return [siblingRecord];
+};
+const mappingReviewOf = (outcome) => forensicsOf(outcome).find((oneRecord) => oneRecord.record.kind === 'MappingReview');
+const THIS_OBJECT_MAP_FIND = '(thisObjectByFromStableId[fromStableId] = thisObjectByFromStableId[fromStableId] || new Set()).add(oneRecord.objectStableId);';
+const THIS_OBJECT_MAP_AT_SUBJECT = '(thisObjectByFromStableId[oneRecord.subjectStableId] = thisObjectByFromStableId[oneRecord.subjectStableId] || new Set()).add(oneRecord.objectStableId);';
+const FILTER_FIND = "\t\t\t\t\t\t\t.map((oneRecord) => (oneRecord.instanceStableIdList === undefined ? oneRecord : { ...oneRecord, instanceStableIdList: oneRecord.instanceStableIdList.filter((instanceStableId) => !conflictedFromStableIdSet.has(instanceStableId)) }))\n\t\t\t\t\t\t\t.filter((oneRecord) => (oneRecord.instanceStableIdList === undefined ? !conflictedFromStableIdSet.has(oneRecord.subjectStableId) : oneRecord.instanceStableIdList.length > 0)),";
+const FILTER_AT_SUBJECT = '\t\t\t\t\t\t\t.filter((oneRecord) => !conflictedFromStableIdSet.has(oneRecord.subjectStableId)),';
+// two partition units of Identifier: Staff picks the first card, the two Student fields pick the third
+const unitBlockFor = (recordList) => {
+	const identifierRecord = identifierRecordOf(recordList);
+	return recordList.filter((oneRecord) => oneRecord !== identifierRecord).concat([
+		{ ...cloneJson(identifierRecord), instanceStableIdList: [STAFF_IDENTIFIER], objectStableId: IDENTIFIER_CARD, targetKey: `retrieval:${IDENTIFIER_QUESTION}#partition:Toy Staff` },
+		{ ...cloneJson(identifierRecord), instanceStableIdList: [ENROLLMENT_IDENTIFIER, STUDENT_IDENTIFIER], objectStableId: THIRD_CARD, targetKey: `retrieval:${IDENTIFIER_QUESTION}#partition:Toy Student` },
+	]);
+};
+const conflictConjunctList = [
+	{
+		conjunctId: 'b1_instanceConflictReportedAndOnlyItsEdgeDropped',
+		title: "(b) a sibling block claiming a DIFFERENT card for one instance (StaffRecord.Identifier) is reported as one conflict naming the instance, its judged question and this block's card; that instance's edge alone is withheld (the two Student fields are written), the frozen block still lists all three instances, and the MappingReview trail carries the conflict",
+		twinNameList: ['detectorKeyedBySubject', 'filterDropsWholeSubject'],
+		evaluate: (scenario, callback) => {
+			plantedSiblingRun({ scenario, plantRecordListFor: (recordList) => siblingRecordFor(recordList, STAFF_IDENTIFIER, SECOND_CARD) }, ({ outcome, error }) => {
+				if (error) {
+					callback('', { pass: false, detail: String(error).slice(0, 240) });
+					return;
+				}
+				const conflictList = outcome.runReport.counts.conflictCount === 1 && mappingReviewOf(outcome) ? mappingReviewOf(outcome).record.conflictList : [];
+				const conflict = conflictList[0] || {};
+				const edgeLineList = edgesOf(outcome).map(edgeLineOf).sort();
+				const frozenList = identifierRecordOf(blockOf(outcome).decisionRecordList).instanceStableIdList;
+				const pass = conflictList.length === 1 && conflict.subjectStableId === STAFF_IDENTIFIER && conflict.judgedSubjectStableId === IDENTIFIER_QUESTION && JSON.stringify(conflict.thisObjectStableIdList) === JSON.stringify([IDENTIFIER_CARD]) && conflict.siblingObjectStableId === SECOND_CARD && JSON.stringify(edgeLineList) === JSON.stringify([`${ENROLLMENT_IDENTIFIER} → ${IDENTIFIER_CARD}`, `${STUDENT_IDENTIFIER} → ${IDENTIFIER_CARD}`]) && outcome.runReport.edgesWritten === 2 && frozenList.length === 3;
+				callback('', { pass, detail: `conflictCount ${outcome.runReport.counts.conflictCount}; conflict ${JSON.stringify(conflict).slice(0, 200)}; edges ${JSON.stringify(edgeLineList)}; frozen list ${frozenList.length}` });
+			});
+		},
+	},
+	{
+		conjunctId: 'b2_questionPlantNotAConflict',
+		title: '(b) a sibling block claiming a different card for the QUESTION itself (a non-instance: under fan-out no edge leaves it) is not reported, and all three instance edges are written',
+		twinNameList: ['detectorKeyedBySubjectToo'],
+		evaluate: (scenario, callback) => {
+			plantedSiblingRun({ scenario, plantRecordListFor: (recordList) => siblingRecordFor(recordList, IDENTIFIER_QUESTION, SECOND_CARD) }, ({ outcome, error }) => {
+				if (error) {
+					callback('', { pass: false, detail: String(error).slice(0, 240) });
+					return;
+				}
+				const edgeLineList = edgesOf(outcome).map(edgeLineOf).sort();
+				const pass = outcome.runReport.counts.conflictCount === 0 && mappingReviewOf(outcome) === undefined && JSON.stringify(edgeLineList) === JSON.stringify(FANOUT_EDGE_LITERAL.slice().sort());
+				callback('', { pass, detail: `conflictCount ${outcome.runReport.counts.conflictCount}; edges ${JSON.stringify(edgeLineList)}` });
+			});
+		},
+	},
+	{
+		conjunctId: 'b3_partitionUnitsComparedPerInstance',
+		title: "(b) with Identifier split into two partition units (Staff picks P000001, the Student fields pick P000002), a sibling claiming P000001 for a STUDENT field is a conflict (the Student unit's card is P000002), and a sibling claiming P000001 for the Staff field is not",
+		twinNameList: ['detectorPoolsUnitsBySubject'],
+		evaluate: (scenario, callback) => {
+			const conflictDetectorLib = moduleFor(scenario, frameworkFile(CONFLICT_FILE));
+			const firstScenario = scenarioLib.cloneScenario(scenario);
+			firstScenario.frameworkMutationList = [];
+			instanceShape(firstScenario);
+			scenarioLib.runScenario(firstScenario, (unusedError, first) => {
+				if (failureOf(first)) {
+					callback('', { pass: false, detail: `the setup run failed: ${failureOf(first)}` });
+					return;
+				}
+				const firstBlock = JSON.parse(first.stores.decisionStore.rowList[0].frozenText);
+				const thisBlock = { ...firstBlock, decisionRecordList: unitBlockFor(firstBlock.decisionRecordList) };
+				const siblingTextFor = (subjectStableId) => decisionBlockLib.frozenTextFor({ header: firstBlock.header, decisionRecordList: siblingRecordFor(firstBlock.decisionRecordList, subjectStableId, IDENTIFIER_CARD), refusalList: [] }).frozenText;
+				const detectAgainst = (subjectStableId, detected) => {
+					const siblingText = siblingTextFor(subjectStableId);
+					const siblingStore = { getDecisionBlock: (unusedArgs, storeCallback) => storeCallback('', { frozenText: siblingText, decisionBlockHash: decisionBlockLib.blockIdFor({ frozenText: siblingText }) }) };
+					conflictDetectorLib.detectSiblingConflicts({ decisionStore: siblingStore, siblingPairKeyList: [{ siblingBridgeName: 'toyDerivedPlugin', siblingProducerKind: 'authored', siblingPairKey: 'plant' }], thisBlock }, detected);
+				};
+				detectAgainst(STUDENT_IDENTIFIER, (studentError, studentResult) => {
+					detectAgainst(STAFF_IDENTIFIER, (staffError, staffResult) => {
+						const studentList = studentError ? [] : studentResult.conflictList;
+						const staffList = staffError ? [] : staffResult.conflictList;
+						const pass = !studentError && !staffError && studentList.length === 1 && studentList[0].subjectStableId === STUDENT_IDENTIFIER && JSON.stringify(studentList[0].thisObjectStableIdList) === JSON.stringify([THIRD_CARD]) && staffList.length === 0;
+						callback('', { pass, detail: `student plant: ${studentError || `${studentList.length} conflict(s) ${JSON.stringify(studentList.map((oneConflict) => oneConflict.thisObjectStableIdList))}`}; staff plant: ${staffError || `${staffList.length} conflict(s)`}` });
+					});
+				});
+			});
+		},
+	},
+];
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-FANOUT-CONSUMERS', conjunctId: 'b1_instanceConflictReportedAndOnlyItsEdgeDropped', twinName: 'detectorKeyedBySubject', fileName: CONFLICT_FILE, find: THIS_OBJECT_MAP_FIND, replace: THIS_OBJECT_MAP_AT_SUBJECT });
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-FANOUT-CONSUMERS', conjunctId: 'b1_instanceConflictReportedAndOnlyItsEdgeDropped', twinName: 'filterDropsWholeSubject', fileName: FRAMEWORK_FILE, find: FILTER_FIND, replace: FILTER_AT_SUBJECT });
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-FANOUT-CONSUMERS', conjunctId: 'b2_questionPlantNotAConflict', twinName: 'detectorKeyedBySubjectToo', fileName: CONFLICT_FILE, find: THIS_OBJECT_MAP_FIND, replace: THIS_OBJECT_MAP_AT_SUBJECT });
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-FANOUT-CONSUMERS', conjunctId: 'b3_partitionUnitsComparedPerInstance', twinName: 'detectorPoolsUnitsBySubject', fileName: CONFLICT_FILE, find: THIS_OBJECT_MAP_FIND, replace: THIS_OBJECT_MAP_AT_SUBJECT });
+
+// ---------------------------------------------------------------------
+// BG-FANOUT-CONSUMERS (c) the subject-prefix check over field stableIds
+// ---------------------------------------------------------------------
+// the Staff Identifier field forged WITHOUT the standard's prefix
+const unprefixedFieldShape = (scenario) => {
+	instanceShape(scenario);
+	const renamed = (stableId) => (stableId === STAFF_IDENTIFIER ? UNPREFIXED_STAFF_IDENTIFIER : stableId);
+	scenario.graph.nodeList = scenario.graph.nodeList.map((oneNode) => (oneNode.stableId !== STAFF_IDENTIFIER ? oneNode : { ...oneNode, stableId: UNPREFIXED_STAFF_IDENTIFIER, properties: { ...oneNode.properties, stableId: UNPREFIXED_STAFF_IDENTIFIER } }));
+	scenario.graph.edgeList = scenario.graph.edgeList.map((oneEdge) => ({ ...oneEdge, fromStableId: renamed(oneEdge.fromStableId), toStableId: renamed(oneEdge.toStableId) }));
+};
+const PREFIX_CHECK_FIND = '\t\tif (fromStableId.indexOf(`${setLevelSlots.subjectCuriePrefix}:`) !== 0) {';
+const prefixConjunctList = [
+	runConjunct({
+		conjunctId: 'c1_fanoutExportPassesPrefixCheckWithFields',
+		title: "(c) the fanned-out export passes the subject-prefix check: it is written, and every subject_id is a field stableId beginning with the declared prefix 'toy:'",
+		twinNameList: ['unprefixedFieldInGraph'],
+		// the twin's flag swaps in the unprefixed field, so its inputFault lands on this conjunct
+		shape: (scenario) => (scenario.useUnprefixedField === true ? unprefixedFieldShape(scenario) : instanceShape(scenario)),
+		judge: succeeded((runReport, outcome) => {
+			const parsed = sssomExporterLib.parseSssomTsv(sssomTextOf(outcome));
+			const subjectList = parsed.error ? [] : parsed.rowList.map((oneRow) => oneRow.subject_id);
+			const pass = !parsed.error && subjectList.length === FANOUT_EDGE_COUNT && subjectList.every((subjectId) => subjectId.indexOf('toy:field/') === 0);
+			return { pass, detail: parsed.error || `subject_id ${JSON.stringify(subjectList)}` };
+		}),
+	}),
+	refusalCase({
+		registry: twinRegistry, gateId: 'BG-FANOUT-CONSUMERS', conjunctId: 'c2_unprefixedFieldRefusedByName',
+		title: "(c) a field forged without the prefix is refused by the exporter, naming the field stableId and the declared prefix",
+		shape: unprefixedFieldShape,
+		regex: /subjectStableId 'field\/StaffRecord\.Identifier' does not begin with the declared subjectCuriePrefix 'toy:'/,
+		twinName: 'prefixCheckDeleted', fileName: EXPORTER_FILE, find: PREFIX_CHECK_FIND, replace: '\t\tif (false) {',
+	}),
+];
+scenarioTwin({ registry: twinRegistry, gateId: 'BG-FANOUT-CONSUMERS', conjunctId: 'c1_fanoutExportPassesPrefixCheckWithFields', twinName: 'unprefixedFieldInGraph', leverKind: 'inputFault', mutate: (scenario) => { scenario.useUnprefixedField = true; } });
+
+// ---------------------------------------------------------------------
+// BG-FANOUT-CONSUMERS (d) the gold-eval sibling harvest round-trips judgedSubjectStableId
+// ---------------------------------------------------------------------
+const RELATIONSHIP_HEADER = Object.freeze({ blockType: 'relationship', pairA: 'toy', pairB: 'toyhub', pairAVersion: '1.2.3', pairBVersion: '1.0', stableUriPropertyName: 'stableId', resolutionKey: 'stableId', embeddingModelVersion: 'none', embeddingEncoding: 'base64', embeddingDtype: 'float32', embeddingByteOrder: 'little-endian', embeddingDims: 0 });
+// relationshipBlockTextFor — the written edges in the harvest's PG-JSONL shape (every property value a one-element list)
+const relationshipBlockTextFor = (edgeList) => {
+	const stableIdList = Array.from(new Set(edgeList.reduce((soFar, oneEdge) => soFar.concat([oneEdge.fromStableId, oneEdge.toStableId]), []))).sort();
+	const nodes = stableIdList.map((stableId) => ({ ref: { source: 'toy', id: stableId }, labels: ['BridgedRelation_TOY_TOYHUB'], stableId, properties: { stableId: [stableId] } }));
+	const edges = edgeList.map((oneEdge) => ({ type: oneEdge.type, fromRef: { source: 'toy', id: oneEdge.fromStableId }, toRef: { source: 'toy', id: oneEdge.toStableId }, properties: Object.keys(oneEdge.properties).reduce((soFar, propertyName) => ({ ...soFar, [propertyName]: [oneEdge.properties[propertyName]] }), {}) }));
+	return replayBlockLib.serializeBlock({ header: RELATIONSHIP_HEADER, nodes, edges });
+};
+const JUDGED_SUBJECT_CENSUS_FIND = '\tconst judgedSubjectCensus = judgedSubjectStableIdSet.size === 0 ? {} : { judgedSubjectCount: judgedSubjectStableIdSet.size };';
+const harvestConjunctList = [
+	runConjunct({
+		conjunctId: 'd1_harvestRoundTripsJudgedSubject',
+		title: "(d) the fan-out toy's written edges, serialised as a relationship block and read back by the gold-eval sibling audit, keep judgedSubjectStableId on every edge (each the question of its from-node), and the audit reports 3 edges over 1 judged subject",
+		twinNameList: ['judgedSubjectCountNotReported'],
+		shape: instanceShape,
+		judge: succeeded((runReport, outcome, scenario) => {
+			const siblingHarvestLib = moduleFor(scenario, SIBLING_HARVEST_PATH);
+			const blockText = relationshipBlockTextFor(edgesOf(outcome));
+			const harvestedEdgeList = replayBlockLib.deserializeBlock(blockText).edges;
+			const mismatchList = harvestedEdgeList.filter((oneEdge) => oneEdge.properties.judgedSubjectStableId === undefined || oneEdge.properties.judgedSubjectStableId[0] !== questionByInstanceStableId[oneEdge.fromRef.id]);
+			const audit = siblingHarvestLib.auditMappingBlockText({ blockText, subject: 'B4cFanout' });
+			const pass = harvestedEdgeList.length === FANOUT_EDGE_COUNT && mismatchList.length === 0 && audit.edgeCount === FANOUT_EDGE_COUNT && audit.judgedSubjectCount === 1;
+			return { pass, detail: `${harvestedEdgeList.length} harvested edge(s), ${mismatchList.length} without the right judgedSubjectStableId; audit edgeCount ${audit.edgeCount}, judgedSubjectCount ${audit.judgedSubjectCount}` };
+		}),
+	}),
+	runConjunct({
+		conjunctId: 'd2_harvestWithoutFanoutOmitsJudgedSubjectCount',
+		title: "(d) without fan-out, the toy derived run's edges audit exactly as before: no judgedSubjectCount member at all",
+		twinNameList: ['judgedSubjectCountAlwaysReported'],
+		shape: derivedShape,
+		judge: succeeded((runReport, outcome, scenario) => {
+			const siblingHarvestLib = moduleFor(scenario, SIBLING_HARVEST_PATH);
+			const audit = siblingHarvestLib.auditMappingBlockText({ blockText: relationshipBlockTextFor(edgesOf(outcome)), subject: 'B4cNoFanout' });
+			const pass = audit.edgeCount === edgesOf(outcome).length && audit.edgeCount > 0 && !Object.prototype.hasOwnProperty.call(audit, 'judgedSubjectCount');
+			return { pass, detail: `audit edgeCount ${audit.edgeCount}; members [${Object.keys(audit).join(', ')}]` };
+		}),
+	}),
+];
+scenarioTwin({ registry: twinRegistry, gateId: 'BG-FANOUT-CONSUMERS', conjunctId: 'd1_harvestRoundTripsJudgedSubject', twinName: 'judgedSubjectCountNotReported', leverKind: 'productionMutation', mutate: (scenario) => pushMutation(scenario, SIBLING_HARVEST_PATH, JUDGED_SUBJECT_CENSUS_FIND, '\tconst judgedSubjectCensus = {};') });
+scenarioTwin({ registry: twinRegistry, gateId: 'BG-FANOUT-CONSUMERS', conjunctId: 'd2_harvestWithoutFanoutOmitsJudgedSubjectCount', twinName: 'judgedSubjectCountAlwaysReported', leverKind: 'productionMutation', mutate: (scenario) => pushMutation(scenario, SIBLING_HARVEST_PATH, JUDGED_SUBJECT_CENSUS_FIND, '\tconst judgedSubjectCensus = { judgedSubjectCount: judgedSubjectStableIdSet.size };') });
+
+// ---------------------------------------------------------------------
+// BG-FANOUT-CONSUMERS (f) the census counts edges
+// ---------------------------------------------------------------------
+const CENSUS_EDGE_COUNT_FIND = '\t\t\t\t\t\tedgeCount: materialiserLib.plannedEdgeList(decisionRecordList).length,';
+const censusConjunctList = [
+	runConjunct({
+		conjunctId: 'f_censusEdgeCountEqualsEdgesWritten',
+		title: "(f) the fan-out toy's frozen census perTarget.edgeCount equals runReport.edgesWritten (3), not the picked-record count (1)",
+		twinNameList: ['censusCountsRecords'],
+		shape: instanceShape,
+		judge: succeeded((runReport, outcome) => {
+			const edgeCount = blockOf(outcome).header.cardinalityCensus.perTarget.edgeCount;
+			return { pass: edgeCount === runReport.edgesWritten && edgeCount === FANOUT_EDGE_COUNT, detail: `census edgeCount ${edgeCount}, edgesWritten ${runReport.edgesWritten}` };
+		}),
+	}),
+];
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-FANOUT-CONSUMERS', conjunctId: 'f_censusEdgeCountEqualsEdgesWritten', twinName: 'censusCountsRecords', fileName: FRAMEWORK_FILE, find: CENSUS_EDGE_COUNT_FIND, replace: '\t\t\t\t\t\tedgeCount: materialiserLib.pickedRecordList(decisionRecordList).length,' });
+
+// ---------------------------------------------------------------------
+// BG-FANOUT-CONSUMERS-ORACLE — R1, and the §1.7 conjuncts against the outputs captured at this phase's cut
+// ---------------------------------------------------------------------
+const branchCutText = fs.readFileSync(BRANCH_CUT_BLOCK_PATH, 'utf8');
+const branchCutEdgeList = JSON.parse(fs.readFileSync(BRANCH_CUT_EDGE_LIST_PATH, 'utf8'));
+const branchCutSssomText = fs.readFileSync(BRANCH_CUT_SSSOM_PATH, 'utf8');
+const branchCutConflictCounts = JSON.parse(fs.readFileSync(BRANCH_CUT_CONFLICT_COUNTS_PATH, 'utf8'));
+const branchCutConflictEdgeList = JSON.parse(fs.readFileSync(BRANCH_CUT_CONFLICT_EDGE_LIST_PATH, 'utf8'));
+const branchCutConflictSssomText = fs.readFileSync(BRANCH_CUT_CONFLICT_SSSOM_PATH, 'utf8');
+const branchCutConflictReview = JSON.parse(fs.readFileSync(BRANCH_CUT_CONFLICT_FORENSICS_PATH, 'utf8')).find((oneRecord) => oneRecord.record.kind === 'MappingReview');
+const maskedTextOf = (frozenText) => {
+	const fingerprintMatchList = frozenText.match(FRAMEWORK_FINGERPRINT_TEXT_RE) || [];
+	return fingerprintMatchList.length === 1 ? { maskedText: frozenText.replace(FRAMEWORK_FINGERPRINT_TEXT_RE, '"frameworkFingerprint":"MASKED"') } : { error: `frameworkFingerprint occurs ${fingerprintMatchList.length} times in the frozen text (must be exactly once)` };
+};
+// the values that are functions of a block id, which frameworkFingerprint moves
+const maskedEdgeListText = (edgeList) => JSON.stringify(edgeList.map((oneEdge) => ({ ...oneEdge, properties: { ...oneEdge.properties, decisionBlockHash: 'MASKED', matchId: 'MASKED' } })));
+const maskedSssomText = (sssomText) => sssomText.replace(MAPPING_SET_ID_TEXT_RE, 'urn:educore:decisionBlock:MASKED');
+const maskedReviewText = (reviewRecord) => JSON.stringify(reviewRecord === undefined ? null : { ...reviewRecord, record: { ...reviewRecord.record, conflictList: reviewRecord.record.conflictList.map((oneConflict) => ({ ...oneConflict, siblingDecisionBlockHash: 'MASKED' })) } });
+const differingHeaderNameList = (leftBlock, rightBlock) => {
+	const nameList = Array.from(new Set(Object.keys(leftBlock.header).concat(Object.keys(rightBlock.header)))).sort();
+	return nameList.filter((oneName) => JSON.stringify(leftBlock.header[oneName]) !== JSON.stringify(rightBlock.header[oneName]));
+};
+const runEBlockTextFor = (scenario) => {
+	const frozenText = fs.readFileSync(RUN_E_BLOCK_PATH, 'utf8');
+	return typeof scenario.runEBlockTextTransform === 'function' ? scenario.runEBlockTextTransform(frozenText) : frozenText;
+};
+// conflictPairRun — the two toy plugins on one pairing (crosswalk first, then standard on the same stores), as bgConflict runs them
+const conflictPairRun = (scenario, callback) => {
+	scenario.spec.bridge = 'toyCrosswalkPlugin';
+	scenarioLib.runScenario(scenario, (unusedFirstError, first) => {
+		if (failureOf(first)) {
+			callback({ error: `the first plugin failed: ${failureOf(first)}` });
+			return;
+		}
+		const second = scenarioLib.cloneScenario(scenario);
+		second.stores = scenario.stores;
+		second.graph = cloneJson(scenario.graph);
+		second.spec.bridge = 'toyStandardPlugin';
+		scenarioLib.runScenario(second, (unusedSecondError, secondOutcome) => callback({ outcome: secondOutcome, error: failureOf(secondOutcome) || undefined }));
+	});
+};
+const ABSTENTION_RECORD_FIND = "taskDone('', { ...oneTask.baseRecord, objectStableId: null, predicate: null, predicateAssertedBy: null, sourceLabel: null, confidence: null, abstained: true, judge: judgeRecord,";
+const ABSTENTION_RECORD_FORCED = "taskDone('', { ...oneTask.baseRecord, objectStableId: null, predicate: null, predicateAssertedBy: null, sourceLabel: null, confidence: null, abstained: 'forced', judge: judgeRecord,";
+const IS_FANNED_OUT_FIND = '\tconst isFannedOut = decisionBlock.decisionRecordList.some((oneRecord) => oneRecord.instanceStableIdList !== undefined);';
+const CONFLICT_JUDGED_SUBJECT_FIND = '\t\t\t\t\t\t...(judgedSubjectStableId === undefined ? {} : { judgedSubjectStableId }),';
+const FILTER_VIEW_FIND = '.map((oneRecord) => (oneRecord.instanceStableIdList === undefined ? oneRecord : {';
+const oracleConjunctList = [
+	pureConjunct({
+		conjunctId: 'r1_runEBlockParsesAndKeepsItsId',
+		title: "R1: run E's frozen block parses unchanged and blockIdFor equals the frozen literal",
+		twinNameList: ['runEBlockOneByteChanged'],
+		judge: (scenario) => {
+			const blockLib = moduleFor(scenario, frameworkFile(DECISION_BLOCK_FILE));
+			const frozenText = runEBlockTextFor(scenario);
+			const parsed = blockLib.parseFrozenText(frozenText);
+			const blockId = blockLib.blockIdFor({ frozenText });
+			return { pass: !parsed.error && blockId === RUN_E_BLOCK_ID, detail: `${parsed.error ? `parse REFUSED: ${parsed.error.message.slice(0, 160)}` : 'parses'}; blockIdFor ${blockId}` };
+		},
+	}),
+	runConjunct({
+		conjunctId: 'e1_toyDerivedBlockMaskedIdentical',
+		title: "(e, §1.7) without fan-out, the toy derived block equals the text captured at this phase's cut (e231d6d) with frameworkFingerprint masked",
+		twinNameList: ['abstentionFieldForced'],
+		shape: derivedShape,
+		judge: succeeded((runReport, outcome) => {
+			const now = maskedTextOf(frozenTextOf(outcome));
+			const then = maskedTextOf(branchCutText);
+			if (now.error || then.error) {
+				return { pass: false, detail: now.error || then.error };
+			}
+			const maskedEqual = now.maskedText === then.maskedText;
+			return { pass: maskedEqual, detail: `masked texts ${maskedEqual ? 'EQUAL' : 'DIFFER'} (${now.maskedText.length} vs ${then.maskedText.length} bytes)` };
+		}),
+	}),
+	runConjunct({
+		conjunctId: 'e2_toyDerivedEdgesAndSssomMaskedIdentical',
+		title: "(e, §1.7) without fan-out, the toy derived run's written edges (decisionBlockHash and matchId masked) and its SSSOM export (mapping_set_id masked) equal the captures at this phase's cut",
+		twinNameList: ['judgedColumnAlways', 'conflictViewListsEveryRecord'],
+		shape: derivedShape,
+		judge: succeeded((runReport, outcome) => {
+			const edgeEqual = maskedEdgeListText(edgesOf(outcome)) === maskedEdgeListText(branchCutEdgeList);
+			const sssomEqual = maskedSssomText(sssomTextOf(outcome)) === maskedSssomText(branchCutSssomText);
+			return { pass: edgeEqual && sssomEqual, detail: `${edgesOf(outcome).length} vs ${branchCutEdgeList.length} edge(s), masked ${edgeEqual ? 'EQUAL' : 'DIFFER'}; SSSOM masked ${sssomEqual ? 'EQUAL' : 'DIFFER'}` };
+		}),
+	}),
+	{
+		conjunctId: 'e3_conflictPairMaskedIdentical',
+		title: "(e, §1.7) without fan-out, the two-plugin conflict run's second plugin (Student.FirstName in conflict) has the same counts, written edges, SSSOM export and MappingReview trail as captured at this phase's cut, block-id values masked",
+		twinNameList: ['conflictAlwaysNamesJudgedSubject', 'conflictRecordsKeptWhole'],
+		evaluate: (scenario, callback) => {
+			conflictPairRun(scenario, ({ outcome, error }) => {
+				if (error) {
+					callback('', { pass: false, detail: String(error).slice(0, 240) });
+					return;
+				}
+				const countsEqual = JSON.stringify(outcome.runReport.counts) === JSON.stringify(branchCutConflictCounts);
+				const edgeEqual = maskedEdgeListText(edgesOf(outcome)) === maskedEdgeListText(branchCutConflictEdgeList);
+				const sssomEqual = maskedSssomText(sssomTextOf(outcome)) === maskedSssomText(branchCutConflictSssomText);
+				const reviewEqual = maskedReviewText(mappingReviewOf(outcome)) === maskedReviewText(branchCutConflictReview);
+				callback('', { pass: countsEqual && edgeEqual && sssomEqual && reviewEqual, detail: `counts ${countsEqual ? 'EQUAL' : 'DIFFER'}; edges (${edgesOf(outcome).length}) ${edgeEqual ? 'EQUAL' : 'DIFFER'}; SSSOM ${sssomEqual ? 'EQUAL' : 'DIFFER'}; MappingReview ${reviewEqual ? 'EQUAL' : 'DIFFER'}` });
+			});
+		},
+	},
+	runConjunct({
+		conjunctId: 'm_unmaskedDiffersOnlyInFrameworkFingerprint',
+		title: '(§1.7 m) unmasked, the toy derived block and the branch-cut text differ in exactly one header key, frameworkFingerprint',
+		twinNameList: ['censusEdgeCountMoved'],
+		shape: derivedShape,
+		judge: succeeded((runReport, outcome) => {
+			const nowBlock = JSON.parse(frozenTextOf(outcome));
+			const thenBlock = JSON.parse(branchCutText);
+			const headerDiffList = differingHeaderNameList(nowBlock, thenBlock);
+			const bodyEqual = JSON.stringify(nowBlock.decisionRecordList) === JSON.stringify(thenBlock.decisionRecordList) && JSON.stringify(nowBlock.refusalList) === JSON.stringify(thenBlock.refusalList);
+			return { pass: headerDiffList.length === 1 && headerDiffList[0] === 'frameworkFingerprint' && bodyEqual, detail: `differing header keys [${headerDiffList.join(', ')}]; records and refusals ${bodyEqual ? 'equal' : 'DIFFER'}` };
+		}),
+	}),
+];
+scenarioTwin({ registry: twinRegistry, gateId: 'BG-FANOUT-CONSUMERS-ORACLE', conjunctId: 'r1_runEBlockParsesAndKeepsItsId', twinName: 'runEBlockOneByteChanged', leverKind: 'inputFault', mutate: (scenario) => { scenario.runEBlockTextTransform = (frozenText) => frozenText.replace('"frameworkGeneration":"', '"frameworkGeneration":"x'); } });
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-FANOUT-CONSUMERS-ORACLE', conjunctId: 'e1_toyDerivedBlockMaskedIdentical', twinName: 'abstentionFieldForced', fileName: FRAMEWORK_FILE, find: ABSTENTION_RECORD_FIND, replace: ABSTENTION_RECORD_FORCED });
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-FANOUT-CONSUMERS-ORACLE', conjunctId: 'e2_toyDerivedEdgesAndSssomMaskedIdentical', twinName: 'judgedColumnAlways', fileName: EXPORTER_FILE, find: IS_FANNED_OUT_FIND, replace: '\tconst isFannedOut = true;' });
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-FANOUT-CONSUMERS-ORACLE', conjunctId: 'e2_toyDerivedEdgesAndSssomMaskedIdentical', twinName: 'conflictViewListsEveryRecord', fileName: FRAMEWORK_FILE, find: FILTER_VIEW_FIND, replace: '.map((oneRecord) => (oneRecord.instanceStableIdList === undefined ? { ...oneRecord, instanceStableIdList: [oneRecord.subjectStableId] } : {' });
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-FANOUT-CONSUMERS-ORACLE', conjunctId: 'e3_conflictPairMaskedIdentical', twinName: 'conflictAlwaysNamesJudgedSubject', fileName: CONFLICT_FILE, find: CONFLICT_JUDGED_SUBJECT_FIND, replace: '\t\t\t\t\t\tjudgedSubjectStableId: judgedSubjectStableId === undefined ? siblingFromStableId : judgedSubjectStableId,' });
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-FANOUT-CONSUMERS-ORACLE', conjunctId: 'e3_conflictPairMaskedIdentical', twinName: 'conflictRecordsKeptWhole', fileName: FRAMEWORK_FILE, find: FILTER_FIND, replace: '\t\t\t\t\t\t\t.filter(() => true),' });
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-FANOUT-CONSUMERS-ORACLE', conjunctId: 'm_unmaskedDiffersOnlyInFrameworkFingerprint', twinName: 'censusEdgeCountMoved', fileName: FRAMEWORK_FILE, find: CENSUS_EDGE_COUNT_FIND, replace: '\t\t\t\t\t\tedgeCount: materialiserLib.plannedEdgeList(decisionRecordList).length + 1,' });
+
+const gateDeclarationList = [
+	{ gateId: 'BG-FANOUT-CONSUMERS', title: 'the SSSOM export, the conflict detector, the census and the gold-eval sibling harvest read one answer spread over many fields, one edge per field', conjunctList: [].concat(sssomConjunctList, conflictConjunctList, prefixConjunctList, harvestConjunctList, censusConjunctList) },
+	{ gateId: 'BG-FANOUT-CONSUMERS-ORACLE', title: 'run E still replays hermetically, and without fan-out every consumer output is unmoved but for the framework fingerprint and what it derives', conjunctList: oracleConjunctList },
+];
+
+runGateFamily(
+	{ harness, familyName: 'BG-FANOUT-CONSUMERS+BG-FANOUT-CONSUMERS-ORACLE', gateDeclarationList, twinRegistry, makeSubject: scenarioLib.makeScenario, cloneSubject: scenarioLib.cloneScenario, expectedConjunctCount: 10 + 5 },
+	() => harness.report(),
+);

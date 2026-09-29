@@ -241,7 +241,7 @@ harness.ok('G6-e COMPANION: …so it is NOT refused, though not one of its edges
 harness.ok('G6-e COMPANION: and a well-formed judged block is not refused either', twoJudgeAudit.judgeEnumerationRefusalMessage === null, `got ${typeof twoJudgeAudit.judgeEnumerationRefusalMessage}: ${twoJudgeAudit.judgeEnumerationRefusalMessage}`);
 
 harness.section('SECTION 0B — JOB 6 (G6-i) mappingToolVersion ABSENT is enumerated as an EXPLICIT TOKEN, never substituted and never empty');
-// [code fact, read from materialiser.js:99] The CURRENT WRITER CANNOT PRODUCE THIS SHAPE: it writes
+// [code fact, read from materialiser.js edgePropertiesFor] The CURRENT WRITER CANNOT PRODUCE THIS SHAPE: it writes
 // mappingToolVersion for every judged edge through a template literal
 // (`${record.judge.rendererVersion === undefined ? RENDERER_VERSION : record.judge.rendererVersion}`), so the
 // value is always a string. The shape is reachable only from a legacy or hand-assembled block. It is gated
@@ -297,7 +297,7 @@ harness.section('SECTION 0D — JOB 6b (G6-k) a JUDGED edge whose mappingTool is
 // command line. indexOf can never match, so the operator is told to name a judge AND NO SPELLING THEY CAN
 // TYPE WILL SATISFY IT. The gate refuses rather than passing — the safe direction — but that is a STUCK
 // PROMOTION, not a clean refusal, and a refusal nobody can act on is a defect wearing a gate's clothes.
-// [code fact, materialiser.js:98] unreachable from the current writer, which writes a string; reachable
+// [code fact, materialiser.js edgePropertiesFor] unreachable from the current writer, which writes a string; reachable
 // from a hand-assembled or foreign block — exactly the class G6-i already gates.
 const NON_STRING_TOOL_SPEC_LIST = [
 	{ label: 'a NUMBER', rawMappingTool: 123 },

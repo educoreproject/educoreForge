@@ -5,7 +5,8 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // debugJudge.js — the DEBUG JUDGE REGISTER and its rule modules: free, flagged stand-ins for the
 // paid reranker. The sibling of lib/llmClient.js — the two are the only things in this tree that
 // answer `rerank`, satisfying the identical call contract
-//   rerank({ systemPrompt, userPrompt, choiceEnum }, cb) -> cb('', { choice, category, rationale, model, attempts })
+//   rerank({ systemPrompt, userPrompt, choiceEnum, predicateRule }, cb) -> cb('', { choice, category, rationale, model, attempts })
+// (plus `predicate` under a predicate rule whose schema has the slot; phase B3b, 2026-09-28)
 // so lib/bridge-framework/judgeComponent.js cannot tell them apart at the seam. ⟪JOB 1, 2026-09-07⟫ That
 // contract is no longer only a sentence in two headers: it is DECLARED AS DATA as JUDGE_PROVIDER_SHAPE in
 // apps/graph-builder/interfaces.js, and this module satisfies every member of it — name, wireModel, model,
@@ -89,6 +90,7 @@ const crypto = require('crypto');
 // than restating the strings as a second, driftable literal — the same boundary-review discipline
 // llmClient.js documents at its own require site.
 const { SELECT_CATEGORY_ENUM } = require('./evidenceContracts');
+const { PREDICATE_RULE_NAME_LIST, PREDICATE_FIELD_BY_PREDICATE_RULE, unknownPredicateRuleRefusalText } = require('./selectCandidateSchema');
 
 // PICK_CATEGORIES — the categories a judge may assert ABOUT A PICK. 'none' is excluded by
 // construction: abstention is expressed as choice 'NONE', never as a category on a chosen candidate
@@ -174,14 +176,20 @@ const ruleDigest = (poolSize, userPrompt) => {
 const RULE_REGISTER = Object.freeze({
 	first: {
 		rule: ruleFirst,
+		// ⟪B3b, 2026-09-28⟫ which of the rule's pick predicates a pick names, as an index into the offered pick values
+		pickPredicateIndexFor: () => 0,
 		description: 'always candidate 1 (top of the retrieval ranking); degenerate by design',
 	},
 	abstain: {
 		rule: ruleAbstain,
+		// never picks, so it never names a pick predicate
+		pickPredicateIndexFor: null,
 		description: 'never picks; exercises the abstention and empty-decision paths',
 	},
 	digest: {
 		rule: ruleDigest,
+		// a digest of its own, apart from the choice's and the category's, so the three vary independently
+		pickPredicateIndexFor: ({ pickValueCount, userPrompt }) => promptDigest(`predicate:${userPrompt}`) % pickValueCount,
 		description: 'deterministic sha256 of the prompt; varied, non-degenerate distribution',
 	},
 });
@@ -300,7 +308,7 @@ const moduleFunction =
 		// Answers and refusals alike travel by callback; an asynchronous rule registered later needs no
 		// change here (see the callback-shape note in this file's header).
 		const rerank = (rerankOptions = {}, callback) => {
-			const { systemPrompt, userPrompt, choiceEnum } = rerankOptions;
+			const { systemPrompt, userPrompt, choiceEnum, predicateRule } = rerankOptions;
 			void systemPrompt; // accepted for contract parity; a rule that reads no prompt cannot read this one either.
 
 			const refuse = (message) => {
@@ -342,8 +350,25 @@ const moduleFunction =
 				return;
 			}
 
+			if (PREDICATE_RULE_NAME_LIST.indexOf(predicateRule) === -1) {
+				refuse(`${moduleName}.rerank: ${unknownPredicateRuleRefusalText(predicateRule)}`);
+				return;
+			}
+
 			const poolSize = choiceEnum.length - 1;
 			const { choice, category, how } = registryEntry.rule(poolSize, userPrompt);
+			// ⟪B3b, 2026-09-28⟫ under a rule with a predicate slot the answer carries a deterministic predicate: the abstain value on
+			// NONE, otherwise the rule's pick. Under a rule without one the answer carries no predicate key at all.
+			const predicateField = PREDICATE_FIELD_BY_PREDICATE_RULE[predicateRule];
+			const predicateByFieldName =
+				predicateField === null
+					? {}
+					: {
+							[predicateField.fieldName]:
+								choice === 'NONE'
+									? predicateField.abstainValue
+									: predicateField.pickValueList[registryEntry.pickPredicateIndexFor({ pickValueCount: predicateField.pickValueList.length, userPrompt })],
+						};
 
 			callback('', {
 				choice,
@@ -351,6 +376,7 @@ const moduleFunction =
 				attempts: 1,
 				category,
 				rationale: rationaleFor({ ruleName, poolSize, how, choice, category }),
+				...predicateByFieldName,
 				// usage is null, NOT zero: no tokens were consumed because no request was made, and a
 				// literal 0 would read in the forensics as "a call that happened to cost nothing".
 				usage: null,
@@ -381,6 +407,8 @@ const moduleFunction =
 			ruleName,
 			keySource: 'none',
 			decisionAlgorithm: DEBUG_MARK,
+			// judgeConfig — there is no wire, so no temperature and no token budget: 'noWire' and null, stated rather than invented
+			judgeConfig: Object.freeze({ temperaturePolicy: 'noWire', maxTokens: null }),
 		};
 	};
 

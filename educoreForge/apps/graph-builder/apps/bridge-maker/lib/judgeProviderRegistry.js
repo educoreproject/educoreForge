@@ -247,9 +247,10 @@ const constructJudgeProvider = (constructionOptions, constructionCallback) => {
 			// afterwards. Without this, a caller could reassign `model` between construction and use and put
 			// one identity in the judgment cache key and a different one on the edge. The freeze is SHALLOW
 			// and that is enough BY INSPECTION OF THE CONTRACT, not by luck: every member JUDGE_PROVIDER_SHAPE
-			// declares is a string, a positive integer or a function, so there is no nested object for a
-			// caller to reach through. A provider that added a mutable object member would need this
-			// revisited, and the suite asserts the members really are only those kinds.
+			// declares is a string, a positive integer, a function, or judgeConfig, the one object member.
+			// The shape requires judgeConfig to be FROZEN and to hold only primitives (B2 of the SIF
+			// replacement), so there is still nothing mutable for a caller to reach through. The suite asserts
+			// the members really are only those kinds.
 			constructionCallback('', Object.freeze(constructedProvider));
 		});
 	} catch (rowConstructionFault) {

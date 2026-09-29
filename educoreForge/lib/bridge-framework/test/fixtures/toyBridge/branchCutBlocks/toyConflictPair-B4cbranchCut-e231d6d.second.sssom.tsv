@@ -1,0 +1,40 @@
+#curie_map:
+#  EDUcoreHub: "urn:educore:hub:ToyHub:"
+#  toy: "https://toy.example/standard/v1#"
+#  urn: "urn:"
+#mapping_provider: "https://toy.example/standard/v1"
+#mapping_provider_verified_by: "FROZEN_STREAM 2026-08-16 — toy fixture — declared verified so the export path runs"
+#mapping_set_id: "urn:educore:decisionBlock:58f2b1f623b054c4a07e13ab3bc4917a51970473ab334457ebe9395e216ae2ae"
+#extension_definitions:
+#  - slot_name: "mapping_provider_verified_by"
+#    property: "https://w3id.org/EDUcore/sssom/extension#mapping_provider_verified_by"
+#    type_hint: "xsd:string"
+#  - slot_name: "label_table"
+#    property: "https://w3id.org/EDUcore/sssom/extension#label_table"
+#    type_hint: "xsd:string"
+#  - slot_name: "channel_assertion"
+#    property: "https://w3id.org/EDUcore/sssom/extension#channel_assertion"
+#    type_hint: "xsd:string"
+#  - slot_name: "subject_census"
+#    property: "https://w3id.org/EDUcore/sssom/extension#subject_census"
+#    type_hint: "xsd:string"
+#  - slot_name: "source_label"
+#    property: "https://w3id.org/EDUcore/sssom/extension#source_label"
+#    type_hint: "xsd:string"
+#  - slot_name: "predicate_asserted_by"
+#    property: "https://w3id.org/EDUcore/sssom/extension#predicate_asserted_by"
+#    type_hint: "xsd:string"
+#subject_source: "https://toy.example/standard/v1#"
+#subject_source_version: "1.2.3"
+#object_source: "urn:educore:hub:ToyHub:"
+#object_source_version: "1.0"
+#subject_match_field: "toy:hubAnchorId"
+#object_match_field: "EDUcoreHub:canonicalKey"
+#channel_assertion: "{\"kind\":\"channelAssertion\",\"predicate\":\"exactMatch\",\"assertedBy\":{\"documentName\":\"ToyStandardSpecification_v1\",\"citation\":\"The Hub Global Id column states which hub property the element IS.\"}}"
+#subject_census: "{\"subjectCount\":5,\"rowCount\":5,\"note\":\"rows are per (subject stableId, predicate, object); several source subjects sharing one leaf yield ONE row\"}"
+subject_id	predicate_id	object_id	mapping_justification	object_label	confidence	subject_source	subject_source_version	object_source	object_source_version	subject_match_field	object_match_field	mapping_tool	mapping_tool_version	predicate_asserted_by	source_label
+toy:property/Course.Credits	skos:exactMatch	urn:toyhub:P000010#C1	semapv:ManualMappingCuration	Course Credits		https://toy.example/standard/v1#	1.2.3	urn:educore:hub:ToyHub:	1.0	toy:hubAnchorId	EDUcoreHub:canonicalKey			channelAssertion	
+toy:property/Course.Title	skos:exactMatch	urn:toyhub:P000006#C1	semapv:ManualMappingCuration	Course Title		https://toy.example/standard/v1#	1.2.3	urn:educore:hub:ToyHub:	1.0	toy:hubAnchorId	EDUcoreHub:canonicalKey			channelAssertion	
+toy:property/School.Name	skos:exactMatch	urn:toyhub:P000005#C1?q=OV0001	semapv:CompositeMatching	Organization Name (school)	0.7	https://toy.example/standard/v1#	1.2.3	urn:educore:hub:ToyHub:	1.0	toy:hubAnchorId	EDUcoreHub:canonicalKey	debug:digest	bridgeEvidenceRenderer-v1	channelAssertion	
+toy:property/Student.BirthDate	skos:exactMatch	urn:toyhub:P000002#C1	semapv:CompositeMatching	Birth Date	0.7	https://toy.example/standard/v1#	1.2.3	urn:educore:hub:ToyHub:	1.0	toy:hubAnchorId	EDUcoreHub:canonicalKey	debug:digest	bridgeEvidenceRenderer-v1	channelAssertion	
+toy:property/Student.FirstName	skos:exactMatch	urn:toyhub:P000006#C1	semapv:ManualMappingCuration	Course Title		https://toy.example/standard/v1#	1.2.3	urn:educore:hub:ToyHub:	1.0	toy:hubAnchorId	EDUcoreHub:canonicalKey			channelAssertion	

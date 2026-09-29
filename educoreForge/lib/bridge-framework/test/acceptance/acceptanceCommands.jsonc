@@ -53,7 +53,8 @@
 		// accident of which fields somebody remembered to write.
 		"spendAuthorisationByLine": {
 			"rejudgeRealLimit": null,
-			"materialiseReal": { "sessionName": "SABLE_RIVER", "date": "2026-08-16", "note": "RULINGS-supervisor-bridgeFramework.md, block 'Ed-Fi crosswalk PROVENANCE — settled' (3); 216 judged subjects; GO by IMCS 2026-08-16 19:21 CDT" }
+			"materialiseReal": { "sessionName": "SABLE_RIVER", "date": "2026-08-16", "note": "RULINGS-supervisor-bridgeFramework.md, block 'Ed-Fi crosswalk PROVENANCE — settled' (3); 216 judged subjects; GO by IMCS 2026-08-16 19:21 CDT" },
+			"rejudgeRealNamedSet": null
 		},
 		// PER-LINE JUDGMENT CEILINGS (RULING §11.12), added 2026-08-17 with the derived lines. The runner now
 		// REFUSES any line that declares none, so the crosswalk lines declare theirs too. Measured from the
@@ -125,7 +126,8 @@
 		// entry where the flat field was granting more than its author meant (DEFECT D-2).
 		"spendAuthorisationByLine": {
 			"rejudgeRealLimit": { "sessionName": "SABLE_RIVER", "date": "2026-08-17", "note": "CP1 signed 12:20; D3 rejudgeRealLimit batches of 10 released one at a time by the supervisor; D4 materialiseReal released only after three consecutive mechanically-clean batches; PLAN-derivedBridge section 11.12" },
-			"materialiseReal": { "sessionName": "SABLE_RIVER", "date": "2026-08-17", "note": "CP1 signed 12:20; D3 rejudgeRealLimit batches of 10 released one at a time by the supervisor; D4 materialiseReal released only after three consecutive mechanically-clean batches; PLAN-derivedBridge section 11.12" }
+			"materialiseReal": { "sessionName": "SABLE_RIVER", "date": "2026-08-17", "note": "CP1 signed 12:20; D3 rejudgeRealLimit batches of 10 released one at a time by the supervisor; D4 materialiseReal released only after three consecutive mechanically-clean batches; PLAN-derivedBridge section 11.12" },
+			"rejudgeRealNamedSet": null
 		},
 		// replay: a plain -build REPLAYS the pair's latest frozen block with ZERO judge calls
 		"eyeGraphRecipePath": "/Users/tqwhite/Documents/webdev/educoreForge/system/code/educoreForge/recipes/fourWithHubEdfiDerived.recipe.jsonc",
@@ -258,7 +260,8 @@
 		// is how TQ's standing directive of 2026-08-17 00:46 CDT stops being a comment.
 		"spendAuthorisationByLine": {
 			"rejudgeRealLimit": { "sessionName": "SABLE_RIVER", "date": "2026-08-17", "note": "CP3 conformance batch ONLY. EXTENDED under RULING BS-9 to rejudgeRealLimit --limit=70 --offset=0, maxJudgmentCount 30 UNCHANGED. The original --limit=10 window yielded exactly ONE judgment, because the window counts SOURCE ELEMENTS and SIF judges only 327 of 2,231 (14.7 percent) - ten source elements bought about one and a half judged subjects, where the same flag on the derived plugin bought ten. A conformance batch exists to exercise the real client contract (bounded re-ask, rationale form, category on picks) and one abstention exercises almost none of it. 70 source elements yield about ten judged. STILL NOT materialiseReal: CP4 and any full run remain HELD by TQ (text 00:46 CDT). Written after the post-rebase CP2 census measured EQUAL." },
-			"materialiseReal": null
+			"materialiseReal": null,
+			"rejudgeRealNamedSet": null
 		},
 		"expectedBaseBlockIdBySubject": {
 			"ceds@14_0_0_0_base": "09a5d658807b9c22b44b28289d9ad4b47df15e45f44c9eacec765962fe487c33",
@@ -383,7 +386,8 @@
 			// blocks become HISTORICAL rather than reusable — correct behaviour, but it should be chosen
 			// rather than discovered.
 			"rejudgeRealLimit": null,
-			"materialiseReal": null
+			"materialiseReal": null,
+			"rejudgeRealNamedSet": null
 		},
 		// SET EQUAL TO THE PREDICTION, NOT ABOVE IT. --limit SIZES the window; only this bounds SPEND if
 		// the window resolves differently than predicted. Any upward deviation REFUSES rather than quietly
@@ -500,7 +504,8 @@
 		"scopeWritten": "bridgeData/pescOptionSetConceptScope.json — 223 entries, sha256 ecc8e7eb, a BARE ARRAY of non-empty stableId strings, which is the only shape the framework accepts. Ruled by RULING P1-R13; the 156 of PLAN §1-A is SUPERSEDED, not overlooked.",
 		"spendAuthorisationByLine": {
 			"rejudgeRealLimit": null,
-			"materialiseReal": null
+			"materialiseReal": null,
+			"rejudgeRealNamedSet": null
 		},
 		"rejudgeDebugMaxJudgmentCount": 3000,
 		"materialiseMaxJudgmentCount": 0,

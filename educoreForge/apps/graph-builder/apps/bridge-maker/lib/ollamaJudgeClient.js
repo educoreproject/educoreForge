@@ -69,8 +69,11 @@ const fs = require('fs');
 const http = require('http');
 const configFileProcessor = require('qtools-config-file-processor');
 const {
-	renderSelectCandidateSchema,
+	renderSelectCandidateSchemaForPredicateRule,
 	OFFERED_CATEGORY_ENUM,
+	PREDICATE_RULE_NAME_LIST,
+	PREDICATE_FIELD_BY_PREDICATE_RULE,
+	unknownPredicateRuleRefusalText,
 } = require('./selectCandidateSchema');
 
 // canonical config home for this project, matching the incumbent's [anthropicAi] twin. No secrets live
@@ -367,6 +370,19 @@ const makeJudgmentExtractor = (choiceEnum) => {
 	};
 };
 
+// ⟪B3b, 2026-09-28⟫ makePredicateExtractor — the judge's predicate, under a rule whose schema asks for one. predicateField is the
+// rule's PREDICATE_FIELD_BY_PREDICATE_RULE row. A null row gives {}: the return then carries no predicate key at
+// all. Otherwise the value is `undefined` when absent, outside the offered values or in an unreadable body, never
+// repaired (the discipline of makeJudgmentExtractor above).
+const makePredicateExtractor = (predicateField) => (rawProviderResponse) => {
+	if (predicateField === null) {
+		return {};
+	}
+	const { refusal, judgmentObject } = readJudgmentBody(rawProviderResponse);
+	const offeredValue = refusal ? undefined : judgmentObject[predicateField.fieldName];
+	return { [predicateField.fieldName]: predicateField.offeredValueList.indexOf(offeredValue) !== -1 ? offeredValue : undefined };
+};
+
 // START OF moduleFunction() ============================================================
 
 const moduleFunction =
@@ -522,11 +538,12 @@ const moduleFunction =
 			};
 			const postOnce = componentOverrides.postOnce || realPostOnce;
 
-			// rerank — { systemPrompt, userPrompt, choiceEnum, maxRetries } -> callback(err, { choice, category,
-			// rationale, model, attempts, doneReason, retryReasons }). judgeComponent.js is the sole production
-			// caller and reads choice, category and rationale.
+			// rerank — { systemPrompt, userPrompt, choiceEnum, predicateRule, maxRetries } -> callback(err, { choice,
+			// category, rationale, model, attempts, doneReason, retryReasons } plus, under a rule with a predicate slot,
+			// predicate). predicateRule names the schema sent and is required (phase B3b, 2026-09-28). judgeComponent.js is the sole
+			// production caller and reads choice, category, rationale and predicate.
 			const rerank = (rerankOptions = {}, callback) => {
-				const { systemPrompt, userPrompt, choiceEnum, maxRetries = 6 } = rerankOptions;
+				const { systemPrompt, userPrompt, choiceEnum, predicateRule, maxRetries = 6 } = rerankOptions;
 				// hasOwnProperty, not `!== undefined`: the fault is that the caller MENTIONED the retired option
 				// at all. `true` and `false` are refused identically — there is no longer a value of it that
 				// means anything, so accepting either would be accepting a lie.
@@ -536,8 +553,14 @@ const moduleFunction =
 				}
 				// THE SCHEMA IS NOT WRITTEN HERE. This is the ollama RENDERING of the one canonical schema, and
 				// it goes straight into `format` — no tool wrapper, because this dialect has no tool call to name.
-				const renderedSchema = renderSelectCandidateSchema(PROVIDER_NAME, { choiceEnum });
+				if (PREDICATE_RULE_NAME_LIST.indexOf(predicateRule) === -1) {
+					callback(`${moduleName}.rerank: ${unknownPredicateRuleRefusalText(predicateRule)}`);
+					return;
+				}
+				const renderedSchema = renderSelectCandidateSchemaForPredicateRule(PROVIDER_NAME, { choiceEnum, predicateRule });
 				const extractJudgment = makeJudgmentExtractor(choiceEnum);
+				const predicateField = PREDICATE_FIELD_BY_PREDICATE_RULE[predicateRule];
+				const extractPredicate = makePredicateExtractor(predicateField);
 				const payload = {
 					model: cfg.wireModel,
 					stream: false,
@@ -601,11 +624,14 @@ const moduleFunction =
 						// refuse on a missing rationale, deliberately and for the reason llmClient records: there is
 						// exactly ONE enforcer of that contract, judgeComponent.js's judgeOne, and a second
 						// differently-worded refusal for the identical fault is the ambiguity the ruling avoids.
-						const judgmentIncomplete = category === undefined || rationale === undefined;
+						// ⟪B3b, 2026-09-28⟫ a predicate the rule asks for and the model did not validly supply joins the same retry
+						const predicateByFieldName = extractPredicate(parsedEnvelope);
+						const predicateMissing = predicateField !== null && predicateByFieldName[predicateField.fieldName] === undefined;
+						const judgmentIncomplete = category === undefined || rationale === undefined || predicateMissing;
 						if (judgmentIncomplete && attemptIndex + 1 < maxRetries) {
 							retryReasons.push(
 								`judgmentIncomplete (attempt ${attemptIndex + 1}): ` +
-									`category ${category === undefined ? 'missing' : 'ok'}, rationale ${rationale === undefined ? 'missing' : 'ok'}`,
+									`category ${category === undefined ? 'missing' : 'ok'}, rationale ${rationale === undefined ? 'missing' : 'ok'}${predicateField === null ? '' : `, predicate ${predicateMissing ? 'missing' : 'ok'}`}`,
 							);
 							setTimeout(() => tryAttempt(attemptIndex + 1), backoffMs[Math.min(attemptIndex + 1, backoffMs.length - 1)]);
 							return;
@@ -618,6 +644,8 @@ const moduleFunction =
 							attempts: attemptIndex + 1,
 							category,
 							rationale,
+							// ⟪B3b, 2026-09-28⟫ present only under a rule with a predicate slot
+							...predicateByFieldName,
 							// ⟪v3/v5, 2026-09-11⟫ the judge's own working, threaded up beside the verdict.
 							sourceElementIdeaList,
 							candidateIdeaList,
@@ -649,6 +677,8 @@ const moduleFunction =
 				rerank,
 				describe,
 				endpoint: `${cfg.endpointHostName}:${cfg.endpointPortNumber}`,
+				// judgeConfig — what rerank sends besides the prompts: temperature 0 always, and numPredict as the token budget
+				judgeConfig: Object.freeze({ temperaturePolicy: 'zero', maxTokens: cfg.numPredict }),
 			});
 		});
 	};
@@ -659,6 +689,7 @@ module.exports = moduleFunction({ moduleName });
 // static, config-independent exports (module-scope, not per-instance) — a hermetic test exercises the REAL
 // extraction and refusal logic against a mocked Ollama envelope without constructing a client.
 module.exports.makeJudgmentExtractor = makeJudgmentExtractor;
+module.exports.makePredicateExtractor = makePredicateExtractor;
 module.exports.judgmentBodyRefusal = judgmentBodyRefusal;
 module.exports.PROVIDER_NAME = PROVIDER_NAME;
 module.exports.MODEL_NAMESPACE_SEPARATOR = MODEL_NAMESPACE_SEPARATOR;

@@ -5,24 +5,36 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // judgeComponent.js — judgeOne: frame → cache → ask → verify → record (SPEC-bridgeFramework-v1.md §5.6;
 // RULINGS BF1, R5; BR-065..069, BR-120, BR-122). FRAMEWORK-OWNED; a plugin cannot reach it.
 //
-//   judgeOne({ question, judgeClient, judgmentCache, matchForensics, budget, pairKey, generation, debugMark }, cb)
+//   judgeOne({ question, judgeClient, judgmentCache, matchForensics, budget, pairKey, generation, debugMark,
+//              reaskPromptRefusalFor }, cb)
+//     reaskPromptRefusalFor(reaskUserPrompt) → '' | refusal text — the caller's prompt identifier scan, applied to the
+//                one rationale re-ask before it is sent (the first prompt was scanned by the caller before judgeOne)
 //     question = renderQuestion's result ({ systemPrompt, userPrompt, promptHash, renderedPoolStableIdList,
-//                choiceEnum }) — the pool ALREADY sorted by stableId by the caller
+//                choiceEnum, rendererVersion, judgePredicateRule }) — the pool ALREADY sorted by stableId by the caller
+//     judgeConfigCacheDigest = null | sha256 hex — the caller's digest of the judge configuration its block header
+//                states (blockRecordsJudgeConfig), folded into the cache key; null when the block states none
 //     → { chosenCardStableId | null, choice, category, rationale, confidence | null, promptHash, cacheHit,
-//         judgeModel, discardedPredicateKeyCount, attempts, usage }
+//         judgeModel, discardedPredicateKeyCount, attempts, usage } plus predicate under a rule with a predicate slot
 //
 // The judge's REAL return is llmClient/debugJudge's { choice, model, attempts, category, rationale, usage, … }
-// where `choice` is an ORDINAL string from choiceEnum ('1'..'N' | 'NONE'); there is NO predicate slot and
-// none is added (RULING BF1). This component maps the ordinal through renderedPoolStableIdList — the ONE
-// authority — to chosenCardStableId; 'NONE' is an abstention (null). A choice outside choiceEnum, or a
-// category / rationale absent or blank, is REFUSED by name, never defaulted; a stray `predicate` key on the
-// return is DISCARDED and COUNTED (BG-P6 b). confidence is DERIVED from category by CONFIDENCE_BAND_TABLE.
+// where `choice` is an ORDINAL string from choiceEnum ('1'..'N' | 'NONE'). The question names the predicate rule
+// the judge answers under (question.judgePredicateRule), which is handed to the provider as the schema to send.
+// Under categoryTable-v1 there is NO predicate slot and none is added (RULING BF1, which governs categoryTable-v1
+// only: SPEC §9 A11): a stray `predicate` key on the return is DISCARDED and COUNTED (BG-P6 b). Under judgeSlot-v1
+// the slot is VERIFIED (phase B3b, 2026-09-28): predicate is exactly the abstain value when choice is NONE, and one of the pick
+// values otherwise; absent, out of the offered values, or on the wrong side of that rule, it is REFUSED by name.
+// This component maps the ordinal through renderedPoolStableIdList — the ONE authority — to chosenCardStableId;
+// 'NONE' is an abstention (null). A choice outside choiceEnum, or a category / rationale absent or blank, is
+// REFUSED by name, never defaulted. confidence is DERIVED from category by CONFIDENCE_BAND_TABLE.
 //
 // Cache (BR-069, BR-120): key (promptHash, model, rendererVersion); a hit is RE-VERIFIED (its chosenStableId
 // present in the CURRENT rendered list) else refused and re-asked; putJudgment BEFORE delivery with exactly
-// { choice, category, rationale, chosenStableId } (what judgment-cache.js putJudgment REQUIRES); a put
-// failure is FATAL. A DEBUG client (debugMark set) reads NO cache and writes NO row (the hazard debugJudge.js
-// names: "no debug values in the cache"). Forensics: matchForensics.appendRecord with the prompt inline,
+// { choice, category, rationale, chosenStableId } (what judgment-cache.js putJudgment REQUIRES), plus predicate
+// under a rule with a predicate slot (the abstain value on an abstention, so a hit rebuilds the same judgment and
+// passes the same verification); a put failure is FATAL. ⟪B3b, 2026-09-28⟫ When the caller passes a judgeConfigCacheDigest,
+// the key's model half is '<model>#judgeConfig:<digest>', so a judgment is served only under the judge
+// configuration its block states (B2 stand-down item 1). With null the key is exactly what it always was.
+// A DEBUG client (debugMark set) reads NO cache and writes NO row (the hazard debugJudge.js names: "no debug values in the cache"). Forensics: matchForensics.appendRecord with the prompt inline,
 // renderedPoolStableIdList beside the ordinal, usage, latency-free (no clock in the framework — BG-DET).
 // Budget: a DECLARED per-run maxJudgmentCount HALTS by name; the counter lives in the caller's run scope.
 
@@ -30,6 +42,38 @@ const path = require('path');
 const refuse = require(path.join(__dirname, '..', 'forge-framework', 'refuse'));
 const { ABSTAIN_TOKEN } = require('./evidenceRenderer');
 const { confidenceForCategory, ABSTAIN_CATEGORY, PICK_CATEGORY_LIST } = require('./confidenceBandTable');
+const { PREDICATE_FIELD_BY_PREDICATE_RULE } = require(path.join(__dirname, '..', '..', 'apps', 'graph-builder', 'apps', 'bridge-maker', 'lib', 'selectCandidateSchema'));
+
+// JUDGE_CONFIG_CACHE_MODEL_SEPARATOR — joins the judge's model to the digest of its configuration in the cache key
+// (phase B3b, 2026-09-28). The shipped providers' namespaced models use ':' and '@' and never '#', so a folded key does not collide
+// with an unfolded one.
+const JUDGE_CONFIG_CACHE_MODEL_SEPARATOR = '#judgeConfig:';
+const JUDGE_CONFIG_CACHE_DIGEST_RE = /^[0-9a-f]{64}$/;
+const cacheModelFor = ({ model, judgeConfigCacheDigest }) => (judgeConfigCacheDigest === null ? model : `${model}${JUDGE_CONFIG_CACHE_MODEL_SEPARATOR}${judgeConfigCacheDigest}`);
+
+// predicateVerdictFor — the predicate slot, by the rule's PREDICATE_FIELD_BY_PREDICATE_RULE row (phase B3b, 2026-09-28). A null row
+// (categoryTable-v1) keeps RULING BF1: the answer gains nothing and the caller's count of a stray key stands. A
+// field row verifies the judge's value: present, one of the offered values, the abstain value exactly when the
+// judge abstained. Each violation is refused by its own name.
+const predicateVerdictFor = ({ predicateField, clientReturn, isAbstention, discardedPredicateKeyCount }) => {
+	if (predicateField === null) {
+		return { predicateByFieldName: {}, discardedPredicateKeyCount };
+	}
+	const offeredValue = clientReturn[predicateField.fieldName];
+	if (!isNonBlank(offeredValue)) {
+		return { error: refuse.byName({ moduleName, what: `the judge returned choice '${clientReturn.choice}' with no ${predicateField.fieldName} (${JSON.stringify(offeredValue)})`, where: `the ${predicateField.fieldName} slot is required on every answer: one of ${predicateField.pickValueList.join(', ')} for a pick, '${predicateField.abstainValue}' for ${ABSTAIN_TOKEN}` }) };
+	}
+	if (predicateField.offeredValueList.indexOf(offeredValue) === -1) {
+		return { error: refuse.byName({ moduleName, what: `the judge returned ${predicateField.fieldName} '${offeredValue}', which is not one of the offered values (${predicateField.offeredValueList.join(', ')})`, where: 'a predicate outside the schema enum is refused, never mapped to a neighbour' }) };
+	}
+	if (isAbstention && offeredValue !== predicateField.abstainValue) {
+		return { error: refuse.byName({ moduleName, what: `the judge abstained (${ABSTAIN_TOKEN}) but returned ${predicateField.fieldName} '${offeredValue}'`, where: `an abstention names no relation: ${predicateField.fieldName} is '${predicateField.abstainValue}' exactly when choice is ${ABSTAIN_TOKEN}` }) };
+	}
+	if (!isAbstention && offeredValue === predicateField.abstainValue) {
+		return { error: refuse.byName({ moduleName, what: `the judge picked ordinal ${clientReturn.choice} but returned ${predicateField.fieldName} '${offeredValue}'`, where: `a pick names its relation: ${predicateField.fieldName} is '${predicateField.abstainValue}' exactly when choice is ${ABSTAIN_TOKEN}` }) };
+	}
+	return { predicateByFieldName: { [predicateField.fieldName]: offeredValue }, discardedPredicateKeyCount: 0 };
+};
 
 // ⟪B2 DEFECT #5 found by the FIRST REAL BATCH-2 JUDGMENTS — RULING SABLE_RIVER 2026-08-17 14:10⟫ The pattern
 // gains a capturing group for the NUMBER, because the rule is about the CHOICE and the old check was about
@@ -128,6 +172,7 @@ const judgmentFromReturn = ({ clientReturn, question, isDebugClient }) => {
 		return { error: mapped.error };
 	}
 	const discardedPredicateKeyCount = Object.prototype.hasOwnProperty.call(clientReturn, 'predicate') ? 1 : 0;
+	const predicateField = PREDICATE_FIELD_BY_PREDICATE_RULE[question.judgePredicateRule];
 	if (mapped.chosenCardStableId === null) {
 		// ⟪B2 DEFECT found by the FIRST REAL JUDGMENT — RULING SABLE_RIVER 2026-08-16 (B3, "B2 DEFECT found by the first REAL
 		// judgment")⟫ The real client's tool schema (apps/graph-builder/apps/bridge-maker/lib/llmClient.js, buildTool — ONE
@@ -174,7 +219,11 @@ const judgmentFromReturn = ({ clientReturn, question, isDebugClient }) => {
 		if (!categoryIsAbsent && clientReturn.category !== ABSTAIN_CATEGORY && PICK_CATEGORY_LIST.indexOf(clientReturn.category) === -1) {
 			return { error: refuse.byName({ moduleName, what: `the judge abstained (${ABSTAIN_TOKEN}) but reported category '${clientReturn.category}', which is neither '${ABSTAIN_CATEGORY}' nor a picking category (${PICK_CATEGORY_LIST.join(', ')})`, where: `an abstention carries category '${ABSTAIN_CATEGORY}' — or, from the real client's evidence schema, a schema-forced picking category, preserved as reportedCategoryOnAbstain` }) };
 		}
-		return { sourceElementIdeaList: clientReturn.sourceElementIdeaList, candidateIdeaList: clientReturn.candidateIdeaList, sortedCandidateList: clientReturn.sortedCandidateList, chosenCardStableId: null, choice: clientReturn.choice, category: ABSTAIN_CATEGORY, reportedCategoryOnAbstain: categoryIsAbsent ? ABSENT_CATEGORY_MARK : clientReturn.category === ABSTAIN_CATEGORY ? null : clientReturn.category, rationale: clientReturn.rationale, confidence: null, discardedPredicateKeyCount };
+		const abstentionPredicateVerdict = predicateVerdictFor({ predicateField, clientReturn, isAbstention: true, discardedPredicateKeyCount });
+		if (abstentionPredicateVerdict.error) {
+			return { error: abstentionPredicateVerdict.error };
+		}
+		return { sourceElementIdeaList: clientReturn.sourceElementIdeaList, candidateIdeaList: clientReturn.candidateIdeaList, sortedCandidateList: clientReturn.sortedCandidateList, chosenCardStableId: null, choice: clientReturn.choice, category: ABSTAIN_CATEGORY, reportedCategoryOnAbstain: categoryIsAbsent ? ABSENT_CATEGORY_MARK : clientReturn.category === ABSTAIN_CATEGORY ? null : clientReturn.category, rationale: clientReturn.rationale, confidence: null, ...abstentionPredicateVerdict.predicateByFieldName, discardedPredicateKeyCount: abstentionPredicateVerdict.discardedPredicateKeyCount };
 	}
 	// A PICK is unchanged: it asserts something about a candidate, so it carries both a category and a
 	// rationale or it is refused. Only the abstention arm was ever the defect.
@@ -190,12 +239,16 @@ const judgmentFromReturn = ({ clientReturn, question, isDebugClient }) => {
 	}
 	// the rationale must name the choice by hub key + name, never by ordinal — checked lexically for a REAL
 	// judge; the DEBUG double's rationale self-announces INVALID_DEBUG and names ordinals BY DESIGN
-	// (debugJudge.js is UNCHANGED, RULING BF1) — exempt, and every debug edge is flagged anyway
+	// (its rationale text is unchanged, RULING BF1) — exempt, and every debug edge is flagged anyway
 	const pickName = Array.isArray(question.renderedPoolNameList) ? question.renderedPoolNameList[Number(clientReturn.choice) - 1] : undefined;
 	if (!isDebugClient && rationaleNamesPickOnlyByOrdinal({ rationale: clientReturn.rationale, choice: clientReturn.choice, pickName })) {
 		return { error: refuse.byName({ moduleName, what: `the judge's rationale identifies its pick ONLY by ORDINAL (candidate ${clientReturn.choice}); the rendered name ${JSON.stringify(pickName === undefined ? null : pickName)} appears nowhere in it (${JSON.stringify(clientReturn.rationale.slice(0, 120))})`, where: 'a rationale must be legible without the pool: name the pick. An ordinal ALONGSIDE the name is lawful, and naming a REJECTED candidate by number to contrast it is lawful (BR-067, RULING 14:55)' }), ordinalRationale: true };
 	}
-	return { sourceElementIdeaList: clientReturn.sourceElementIdeaList, candidateIdeaList: clientReturn.candidateIdeaList, sortedCandidateList: clientReturn.sortedCandidateList, chosenCardStableId: mapped.chosenCardStableId, choice: clientReturn.choice, category: clientReturn.category, rationale: clientReturn.rationale, confidence: band.confidence, discardedPredicateKeyCount };
+	const pickPredicateVerdict = predicateVerdictFor({ predicateField, clientReturn, isAbstention: false, discardedPredicateKeyCount });
+	if (pickPredicateVerdict.error) {
+		return { error: pickPredicateVerdict.error };
+	}
+	return { sourceElementIdeaList: clientReturn.sourceElementIdeaList, candidateIdeaList: clientReturn.candidateIdeaList, sortedCandidateList: clientReturn.sortedCandidateList, chosenCardStableId: mapped.chosenCardStableId, choice: clientReturn.choice, category: clientReturn.category, rationale: clientReturn.rationale, confidence: band.confidence, ...pickPredicateVerdict.predicateByFieldName, discardedPredicateKeyCount: pickPredicateVerdict.discardedPredicateKeyCount };
 };
 
 // ⟪RULING 13:15⟫ REASK_INSTRUCTION_BY_FAULT — the bounded re-ask is now TWO faults, so the instruction is a
@@ -212,9 +265,9 @@ const REASK_INSTRUCTION_BY_FAULT = Object.freeze({
 const REASKABLE_FAULT_NAME_LIST = Object.freeze(Object.keys(REASK_INSTRUCTION_BY_FAULT));
 const reaskableFaultNameOf = (judged) => REASKABLE_FAULT_NAME_LIST.find((oneFaultName) => judged[oneFaultName] === true);
 
-const judgeOne = ({ question, judgeClient, judgmentCache, matchForensics, budget, pairKey, generation, debugMark } = {}, callback) => {
+const judgeOne = ({ question, judgeClient, judgmentCache, matchForensics, budget, pairKey, generation, debugMark, reaskPromptRefusalFor, judgeConfigCacheDigest } = {}, callback) => {
 	if (!isPlainObject(question) || !Array.isArray(question.renderedPoolStableIdList) || !Array.isArray(question.choiceEnum) || typeof question.promptHash !== 'string') {
-		callback(refuse.byName({ moduleName, what: 'question is not a renderQuestion result', where: 'judgeOne takes { question, judgeClient, judgmentCache, matchForensics, budget, pairKey, generation, debugMark }' }).message);
+		callback(refuse.byName({ moduleName, what: 'question is not a renderQuestion result', where: 'judgeOne takes { question, judgeClient, judgmentCache, matchForensics, budget, pairKey, generation, debugMark, reaskPromptRefusalFor, judgeConfigCacheDigest }' }).message);
 		return;
 	}
 	// The renderer version comes FROM THE QUESTION, not from a module constant (RULING §11.1: each rendering
@@ -225,6 +278,16 @@ const judgeOne = ({ question, judgeClient, judgmentCache, matchForensics, budget
 	// abstention normalisation, not the band table. Only the provenance stamp stops being a constant.
 	if (typeof question.rendererVersion !== 'string' || question.rendererVersion === '') {
 		callback(refuse.byName({ moduleName, what: 'the question carries no rendererVersion', where: 'renderQuestion returns the version of the variant that rendered it; it is the cache key half and the forensic stamp — there is no default' }).message);
+		return;
+	}
+	// ⟪B3b, 2026-09-28⟫ the rule the judge answers under comes FROM THE QUESTION too: its variant names it, and it decides the
+	// schema the provider sends and how the answer's predicate is verified
+	if (!Object.prototype.hasOwnProperty.call(PREDICATE_FIELD_BY_PREDICATE_RULE, question.judgePredicateRule)) {
+		callback(refuse.byName({ moduleName, what: `the question names judgePredicateRule ${JSON.stringify(question.judgePredicateRule)}, which is not a PREDICATE_FIELD_BY_PREDICATE_RULE row (${Object.keys(PREDICATE_FIELD_BY_PREDICATE_RULE).join(', ')})`, where: 'renderQuestion returns the rule of the variant that rendered it — there is no default' }).message);
+		return;
+	}
+	if (judgeConfigCacheDigest !== null && !JUDGE_CONFIG_CACHE_DIGEST_RE.test(String(judgeConfigCacheDigest))) {
+		callback(refuse.byName({ moduleName, what: `judgeConfigCacheDigest is ${JSON.stringify(judgeConfigCacheDigest)}`, where: 'the caller passes null (its block states no judge configuration) or the sha256 hex of the configuration it states — there is no default' }).message);
 		return;
 	}
 	if (!judgeClient || typeof judgeClient.rerank !== 'function' || typeof judgeClient.model !== 'string') {
@@ -244,7 +307,10 @@ const judgeOne = ({ question, judgeClient, judgmentCache, matchForensics, budget
 		callback(refuse.byName({ moduleName, what: 'matchForensics is absent or lacks appendRecord', where: 'every judgment lands in the forensic trail (BR-122)' }).message);
 		return;
 	}
-	const cacheKey = { promptHash: question.promptHash, model: judgeClient.model, rendererVersion: question.rendererVersion };
+	// the predicate slot's value, when the rule has one, carried into and back out of the cache under the field's name
+	const questionPredicateField = PREDICATE_FIELD_BY_PREDICATE_RULE[question.judgePredicateRule];
+	const predicateByFieldNameOf = (judgmentLike) => (questionPredicateField === null || judgmentLike[questionPredicateField.fieldName] === undefined ? {} : { [questionPredicateField.fieldName]: judgmentLike[questionPredicateField.fieldName] });
+	const cacheKey = { promptHash: question.promptHash, model: cacheModelFor({ model: judgeClient.model, judgeConfigCacheDigest }), rendererVersion: question.rendererVersion };
 
 	// ⟪RULING 14:10, from my own forensic-fidelity note⟫ reaskUserPrompt — the ACCEPTED record logged
 	// question.userPrompt, the ORIGINAL, even when the answer it carries was given to the RE-ASK prompt. The
@@ -282,6 +348,8 @@ const judgeOne = ({ question, judgeClient, judgmentCache, matchForensics, budget
 					cacheHit,
 					attempts,
 					usage: usage === undefined ? null : usage,
+					// ⟪B3b, 2026-09-28⟫ the verified predicate, only under a rule with a predicate slot
+					...predicateByFieldNameOf(judgment),
 					discardedPredicateKeyCount: judgment.discardedPredicateKeyCount,
 					reaskCount: judgment.reaskCount === undefined ? 0 : judgment.reaskCount,
 				},
@@ -311,7 +379,12 @@ const judgeOne = ({ question, judgeClient, judgmentCache, matchForensics, budget
 		// (attempts 2 — the ACCEPTED answer is what the cache stores under the ORIGINAL promptHash, so replay stays deterministic),
 		// (4) refuses BY NAME a second violation. BR-067 stands; the re-ask is counted (rationaleReaskCount) in the run report.
 		const askOnce = ({ userPrompt, reaskCount }, askCallback) => {
-			judgeClient.rerank({ systemPrompt: question.systemPrompt, userPrompt, choiceEnum: question.choiceEnum }, (rerankError, clientReturn) => {
+			const reaskRefusal = reaskCount > 0 ? reaskPromptRefusalFor(userPrompt) : '';
+			if (reaskRefusal) {
+				askCallback(reaskRefusal);
+				return;
+			}
+			judgeClient.rerank({ systemPrompt: question.systemPrompt, userPrompt, choiceEnum: question.choiceEnum, predicateRule: question.judgePredicateRule }, (rerankError, clientReturn) => {
 				if (rerankError) {
 					askCallback(`${moduleName}: the judge refused promptHash ${question.promptHash}: ${rerankError}`);
 					return;
@@ -363,7 +436,7 @@ const judgeOne = ({ question, judgeClient, judgmentCache, matchForensics, budget
 			}
 			// decided = persisted: putJudgment BEFORE delivery, exactly the payload the cache requires
 			judgmentCache.putJudgment(
-				{ ...cacheKey, generation, judgment: { choice: judged.choice, category: judged.reportedCategoryOnAbstain === undefined || judged.reportedCategoryOnAbstain === null ? judged.category : judged.reportedCategoryOnAbstain, rationale: judged.rationale, chosenStableId: judged.chosenCardStableId } },
+				{ ...cacheKey, generation, judgment: { choice: judged.choice, category: judged.reportedCategoryOnAbstain === undefined || judged.reportedCategoryOnAbstain === null ? judged.category : judged.reportedCategoryOnAbstain, rationale: judged.rationale, chosenStableId: judged.chosenCardStableId, ...predicateByFieldNameOf(judged) } },
 				(putError) => {
 					if (putError) {
 						callback(`${moduleName}: putJudgment FAILED for promptHash ${question.promptHash} (FATAL, never a warning): ${putError}`);
@@ -397,7 +470,7 @@ const judgeOne = ({ question, judgeClient, judgmentCache, matchForensics, budget
 			callback(refuse.byName({ moduleName, what: `cache hit for promptHash ${question.promptHash} remembers chosenStableId ${JSON.stringify(remembered.chosenStableId)} at ordinal ${remembered.choice}, which is not the CURRENT rendered candidate`, where: 'a stale hit is refused, never served (SPEC §5.6 step 2)' }).message);
 			return;
 		}
-		const judged = judgmentFromReturn({ clientReturn: { choice: remembered.choice, category: remembered.category, rationale: remembered.rationale, model: judgeClient.model, attempts: 0 }, question, isDebugClient: false });
+		const judged = judgmentFromReturn({ clientReturn: { choice: remembered.choice, category: remembered.category, rationale: remembered.rationale, ...predicateByFieldNameOf(remembered), model: judgeClient.model, attempts: 0 }, question, isDebugClient: false });
 		if (judged.error) {
 			callback(judged.error.message);
 			return;
@@ -406,4 +479,4 @@ const judgeOne = ({ question, judgeClient, judgmentCache, matchForensics, budget
 	});
 };
 
-module.exports = { judgeOne, mapChoiceToStableId, judgmentFromReturn, ORDINAL_RATIONALE_RE, rationaleNamesOwnChoiceByOrdinal, rationaleNamesPickOnlyByOrdinal, ABSENT_CATEGORY_MARK, REASK_INSTRUCTION_BY_FAULT, moduleName };
+module.exports = { judgeOne, mapChoiceToStableId, judgmentFromReturn, predicateVerdictFor, cacheModelFor, JUDGE_CONFIG_CACHE_MODEL_SEPARATOR, ORDINAL_RATIONALE_RE, rationaleNamesOwnChoiceByOrdinal, rationaleNamesPickOnlyByOrdinal, ABSENT_CATEGORY_MARK, REASK_INSTRUCTION_BY_FAULT, moduleName };

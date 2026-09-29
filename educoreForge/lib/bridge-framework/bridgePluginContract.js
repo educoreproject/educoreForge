@@ -39,6 +39,9 @@ const bridgeAllowanceRegistryLib = require('./bridgeAllowanceRegistry');
 // and the refusal that reads them. The contract asks it rather than restating them, so a kind row added there
 // is admitted here the same day. It requires only path, the refusal helper and ./candidateRetrieval: no cycle.
 const neighbourVoteLib = require('./neighbourVote');
+const promptIdentifierScanLib = require('./promptIdentifierScan');
+const judgmentPartitionLib = require('./judgmentPartition');
+const materialisationFanoutLib = require('./materialisationFanout');
 // ⟪JOB 3, 2026-09-07⟫ SELECT_CATEGORY_ENUM — the single source of truth for the judge's verdict
 // categories. Required by the SAME path form confidenceBandTable.js:12 uses, from the same directory,
 // for the same reason: this file's JUDGE_CATEGORY_LIST must be derived from the contract rather than
@@ -76,37 +79,40 @@ const PRODUCER_KIND_BY_MATCH_BASIS = Object.freeze({ standard: 'authored', cross
 //   poolProducerKind           which registered producer builds the candidate pool (poolProducer.js)
 //   requiredDeclarationKeyList  declaration keys this basis REQUIRES (absent → refused by name)
 //   forbiddenDeclarationKeyList declaration keys this basis FORBIDS (present → refused by name)
+//   admitsMaterialisationFanout whether the optional materialisationFanout key (and so judgmentPartition, which requires
+//                              it) may be declared: true only where each subject is one graph node whose instances can be
+//                              read, and whose records carry them (phases B4p, B4a, 2026-09-28)
 // ---------------------------------------------------------------------
 const EMPTY_NAME_LIST = Object.freeze([]);
 const DOCUMENTARY_REQUIRED_HOOK_NAME_LIST = Object.freeze(['walkSourceAssertions', 'subjectStableIdFor']);
 const DOCUMENTARY_REQUIRED_KEY_LIST = Object.freeze(['tupleFieldColumnMap', 'mappingProvider', 'predicateSource']);
-const DERIVED_ONLY_KEY_LIST = Object.freeze(['subjectSource', 'candidateRetrieval', 'renderingAllowList', 'judgePromptVariant', 'predicateByCategory', 'mappingTool']);
+// predicateByCategory is not in this list: its presence is ruled by the declared predicateRule (presentIff, below).
+const DERIVED_ONLY_KEY_LIST = Object.freeze(['subjectSource', 'candidateRetrieval', 'renderingAllowList', 'judgePromptVariant', 'mappingTool']);
 const SOURCE_ACQUISITION_REGISTRY = Object.freeze({
 	standard: Object.freeze({
 		walkChannelSourceKind: 'forgedGraph',
 		subjectGroupProducerKind: 'walkAssertion',
 		poolProducerKind: 'canonicalKeyIndex',
-		judgePromptVariant: 'crosswalk',
 		requiredHookNameList: DOCUMENTARY_REQUIRED_HOOK_NAME_LIST,
 		forbiddenHookNameList: EMPTY_NAME_LIST,
 		requiredDeclarationKeyList: DOCUMENTARY_REQUIRED_KEY_LIST,
 		forbiddenDeclarationKeyList: DERIVED_ONLY_KEY_LIST,
+		admitsMaterialisationFanout: false,
 	}),
 	crosswalk: Object.freeze({
 		walkChannelSourceKind: 'document',
 		subjectGroupProducerKind: 'walkAssertion',
 		poolProducerKind: 'canonicalKeyIndex',
-		judgePromptVariant: 'crosswalk',
 		requiredHookNameList: DOCUMENTARY_REQUIRED_HOOK_NAME_LIST,
 		forbiddenHookNameList: EMPTY_NAME_LIST,
 		requiredDeclarationKeyList: DOCUMENTARY_REQUIRED_KEY_LIST,
 		forbiddenDeclarationKeyList: DERIVED_ONLY_KEY_LIST,
+		admitsMaterialisationFanout: false,
 	}),
 	derived: Object.freeze({
 		walkChannelSourceKind: null,
 		subjectGroupProducerKind: 'graphLabel',
 		poolProducerKind: 'vectorRetrieval',
-		judgePromptVariant: 'derived',
 		// A derived plugin has NO hooks at all. There is no document to walk, and a graph-sourced subject IS its
 		// own stableId, so a subjectStableIdFor that returned anything but identity would be resolving a question
 		// nobody asked. Both mandatory hooks are therefore FORBIDDEN here, which makes a derived plugin pure
@@ -118,24 +124,57 @@ const SOURCE_ACQUISITION_REGISTRY = Object.freeze({
 		// a derived producer names no join key and no mapping PROVIDER — the tool is the producer (Profile
 		// §4.3 as amended, RULING §11.7 (c)): mapping_provider is ABSENT, mapping_tool is REQUIRED
 		forbiddenDeclarationKeyList: Object.freeze(['tupleFieldColumnMap', 'mappingProvider']),
+		admitsMaterialisationFanout: true,
 	}),
 });
-const SOURCE_ACQUISITION_ROW_KEY_LIST = Object.freeze(['walkChannelSourceKind', 'subjectGroupProducerKind', 'poolProducerKind', 'judgePromptVariant', 'requiredHookNameList', 'forbiddenHookNameList', 'requiredDeclarationKeyList', 'forbiddenDeclarationKeyList']);
+const SOURCE_ACQUISITION_ROW_KEY_LIST = Object.freeze(['walkChannelSourceKind', 'subjectGroupProducerKind', 'poolProducerKind', 'requiredHookNameList', 'forbiddenHookNameList', 'requiredDeclarationKeyList', 'forbiddenDeclarationKeyList', 'admitsMaterialisationFanout']);
 const SUBJECT_GROUP_PRODUCER_KIND_LIST = Object.freeze(['walkAssertion', 'graphLabel']);
 const POOL_PRODUCER_KIND_LIST = Object.freeze(['canonicalKeyIndex', 'vectorRetrieval']);
 const SUBJECT_SOURCE_KIND_LIST = Object.freeze(['graphLabel']);
 
 const RESOLUTION_LIST = Object.freeze(['specified', 'judged']);
-// 'judge' is a NAMED, TIME-BOXED non-conformance under RULING §11.7 (a): the v1 judge's return shape carries no
-// predicate slot, so the plugin declares a predicateByCategory TABLE over the judge's category and the block
-// header stamps predicateRule 'categoryTable-v1'. It is stamped, not hidden, so a later judge re-measures.
+// 'judge' under predicateRule 'categoryTable-v1' is a NAMED, TIME-BOXED non-conformance under RULING §11.7 (a): that
+// judge's return shape carries no predicate slot, so the plugin declares a predicateByCategory TABLE over the judge's
+// category and the block header stamps the rule. It is stamped, not hidden, so a later judge re-measures; 'judgeSlot-v1'
+// (below) is the rule under which the judge names the relation itself.
 const PREDICATE_SOURCE_KIND_LIST = Object.freeze(['column', 'labelTable', 'channelAssertion', 'judge']);
 const PREDICATE_ASSERTED_BY_LIST = Object.freeze(['source', 'labelTable', 'channelAssertion', 'judge']);
 const PREDICATE_ASSERTED_BY_BY_SOURCE_KIND = Object.freeze({ column: 'source', labelTable: 'labelTable', channelAssertion: 'channelAssertion', judge: 'judge' });
 const PREDICATE_RULE_CATEGORY_TABLE_V1 = 'categoryTable-v1';
+// judgeSlot-v1: the judge names the relation itself, in a required predicate slot of its tool schema
+// (selectCandidateSchema.js), so no predicateByCategory table is declared (SPEC §9 A11).
+const PREDICATE_RULE_JUDGE_SLOT_V1 = 'judgeSlot-v1';
+const JUDGE_PREDICATE_RULE_LIST = Object.freeze([PREDICATE_RULE_CATEGORY_TABLE_V1, PREDICATE_RULE_JUDGE_SLOT_V1]);
 // the declared system-prompt / rendering variants (RULING §11.1). 'crosswalk' is the shipped text, BYTE-frozen
-// so its judgment cache keeps hitting; 'derived' is the retrieval-pool text with its OWN renderer version.
-const JUDGE_PROMPT_VARIANT_LIST = Object.freeze(['crosswalk', 'derived']);
+// so its judgment cache keeps hitting; 'derived' is the retrieval-pool text with its OWN renderer version;
+// 'derivedJudgeSlot' is the derived text under its own renderer version, so a judgeSlot-v1 prompt never shares a
+// promptHash (and so a cache row) with a categoryTable-v1 one.
+const JUDGE_PROMPT_VARIANT_LIST = Object.freeze(['crosswalk', 'derived', 'derivedJudgeSlot']);
+
+// ---------------------------------------------------------------------
+// VARIANT_BY_BASIS_AND_PREDICATE_RULE — the ONE place a run's judgePromptVariant is decided (PLAN small phases §3
+// B3a, RULINGS round-2 N1 and round-3 K3). Keyed by matchBasis, then by the declared predicateSource.predicateRule;
+// a documentary predicate source declares no rule and is keyed by NO_JUDGE_PREDICATE_RULE. The rows are exactly the
+// pairs the shipped plugins produce, plus (derived, judgeSlot-v1). An unregistered pair is refused by name at
+// registration; there is no wildcard row and no default.
+// ---------------------------------------------------------------------
+const NO_JUDGE_PREDICATE_RULE = '—';
+const VARIANT_BY_BASIS_AND_PREDICATE_RULE = Object.freeze({
+	standard: Object.freeze({ [NO_JUDGE_PREDICATE_RULE]: 'crosswalk' }),
+	crosswalk: Object.freeze({ [NO_JUDGE_PREDICATE_RULE]: 'crosswalk' }),
+	derived: Object.freeze({ [PREDICATE_RULE_CATEGORY_TABLE_V1]: 'derived', [PREDICATE_RULE_JUDGE_SLOT_V1]: 'derivedJudgeSlot' }),
+});
+
+// judgePromptVariantFor — { judgePromptVariant } | { error: text } for a declaration whose matchBasis and
+// predicateSource have already passed their own rows
+const judgePromptVariantFor = ({ bridgeDeclaration }) => {
+	const predicateRule = bridgeDeclaration.predicateSource.predicateRule === undefined ? NO_JUDGE_PREDICATE_RULE : bridgeDeclaration.predicateSource.predicateRule;
+	const variantByPredicateRule = VARIANT_BY_BASIS_AND_PREDICATE_RULE[bridgeDeclaration.matchBasis] || {};
+	if (!Object.prototype.hasOwnProperty.call(variantByPredicateRule, predicateRule)) {
+		return { error: `(matchBasis '${bridgeDeclaration.matchBasis}', predicateRule '${predicateRule}') names no VARIANT_BY_BASIS_AND_PREDICATE_RULE row` };
+	}
+	return { judgePromptVariant: variantByPredicateRule[predicateRule] };
+};
 // RENDERING_NEVER_NAME_LIST — property names that may never appear in a renderingAllowList on EITHER side,
 // refused at declaration time. Measured on the live schema (D0 review §C1/§C2 re-verified by GRANITE_VALLEY
 // against GOLD_EVAL_260816): every one is an identifier, contains one, or is the vector itself. TQ's
@@ -320,7 +359,9 @@ const BRIDGE_DECLARATION_CONTRACT = Object.freeze({
 	candidateRetrieval: Object.freeze({ required: false, basisConditional: true, kind: 'candidateRetrieval' }),
 	renderingAllowList: Object.freeze({ required: false, basisConditional: true, kind: 'renderingAllowList' }),
 	judgePromptVariant: Object.freeze({ required: false, basisConditional: true, kind: 'judgePromptVariant' }),
-	predicateByCategory: Object.freeze({ required: false, basisConditional: true, kind: 'predicateByCategory' }),
+	// REQUIRED iff predicateSource.predicateRule is categoryTable-v1, FORBIDDEN otherwise: under judgeSlot-v1 the judge
+	// names the relation and a table would be read by nothing; a documentary source declares no rule at all.
+	predicateByCategory: Object.freeze({ required: false, kind: 'predicateByCategory', presentIff: Object.freeze({ key: 'predicateSource', member: 'predicateRule', value: PREDICATE_RULE_CATEGORY_TABLE_V1 }) }),
 	mappingTool: Object.freeze({ required: false, basisConditional: true, kind: 'mappingTool' }),
 	evidenceColumnMap: Object.freeze({ required: true, kind: 'evidenceColumnMap' }),
 	consistencyCheckColumnList: Object.freeze({ required: true, kind: 'consistencyCheckColumnList' }),
@@ -328,6 +369,19 @@ const BRIDGE_DECLARATION_CONTRACT = Object.freeze({
 	remodelTableRef: Object.freeze({ required: true, kind: 'stringOrNull' }),
 	classSideRemodelTable: Object.freeze({ required: true, kind: 'classSideRemodelTable' }),
 	blindingDeclaration: Object.freeze({ required: true, kind: 'stringList' }),
+	// the IN-RUN identifier scan over everything the judge is shown (promptIdentifierScan.js; SPEC §9 A19). Plain-optional:
+	// absent, nothing is scanned and the run is unchanged. Its checker is a shape check only.
+	promptIdentifierScan: Object.freeze({ optional: true, kind: 'promptIdentifierScan' }),
+	// the judge's configuration and each judged record's rationale, frozen into the block (SPEC §9 A12; PLAN small phases §3
+	// B2). Plain-optional, and `true` is its only value: absent is the one way to say no, so there is no second spelling of it.
+	blockRecordsJudgeConfig: Object.freeze({ optional: true, kind: 'closedValue', allowedValueList: Object.freeze([true]) }),
+	// each subject judged once per partition of its instances, the partition read from a declared, checksummed file
+	// (judgmentPartition.js; phase B4p, 2026-09-28). Plain-optional: absent, each subject is one judgment unit, as before.
+	judgmentPartition: Object.freeze({ optional: true, kind: 'judgmentPartition' }),
+	// each judged subject's instances, read through a declared edge and frozen with its record, for the materialiser to
+	// write one edge per instance (materialisationFanout.js; phase B4a, 2026-09-28; the writing is B4b's). Plain-optional:
+	// absent, no record carries the list.
+	materialisationFanout: Object.freeze({ optional: true, kind: 'materialisationFanout' }),
 	evidenceHooksDeclared: Object.freeze({ required: true, kind: 'evidenceHooksDeclared' }),
 	// CONDITIONAL presence (RULING BR4): REQUIRED iff evidenceHooksDeclared.globalGuidance === true, FORBIDDEN (refused
 	// by name) when it is false — not a default, a conditional requirement; SPEC §10.1 as printed (hook false, no key) validates
@@ -463,10 +517,10 @@ const PREDICATE_SOURCE_KIND_VALIDATOR_REGISTRY = Object.freeze({
 	// the block header can stamp the rule by name.
 	judge: (value) => {
 		if (value.table !== undefined || value.column !== undefined || value.predicate !== undefined) {
-			return `kind 'judge' carries no column, no table and no predicate — the relation comes from the judge through the declaration's predicateByCategory table (predicateRule '${PREDICATE_RULE_CATEGORY_TABLE_V1}')`;
+			return `kind 'judge' carries no column, no table and no predicate — the relation comes from the judge, through the declaration's predicateByCategory table (predicateRule '${PREDICATE_RULE_CATEGORY_TABLE_V1}') or its own predicate slot (predicateRule '${PREDICATE_RULE_JUDGE_SLOT_V1}')`;
 		}
-		if (value.predicateRule !== PREDICATE_RULE_CATEGORY_TABLE_V1) {
-			return `kind 'judge' must declare predicateRule '${PREDICATE_RULE_CATEGORY_TABLE_V1}' by name (got ${JSON.stringify(value.predicateRule)}) — a v1 approximation is NAMED in the block header so a later judge with a real predicate slot re-measures rather than silently differs (RULING §11.7 (a))`;
+		if (JUDGE_PREDICATE_RULE_LIST.indexOf(value.predicateRule) === -1) {
+			return `kind 'judge' must declare predicateRule by name, one of ${listAsText(JUDGE_PREDICATE_RULE_LIST)} (got ${JSON.stringify(value.predicateRule)}) — the rule is NAMED in the block header so a run under one rule is never silently compared with a run under the other (RULING §11.7 (a); SPEC §9 A11)`;
 		}
 		const extra = Object.keys(value).filter((oneName) => oneName !== 'kind' && oneName !== 'predicateRule');
 		return extra.length ? `kind 'judge' carries unknown key '${extra[0]}'; the shape is exactly { kind, predicateRule }` : '';
@@ -571,6 +625,9 @@ const KIND_CHECKER_REGISTRY = Object.freeze({
 			? ''
 			: `must match ${vocabularyLib.RELATIONSHIP_DISCRIMINATOR_PATTERN} — lower-case-initial alphanumeric, 32 characters maximum, never carrying the '${vocabularyLib.RELATIONSHIP_DISCRIMINATOR_SEPARATOR}' separator itself (got ${JSON.stringify(value)})`,
 	stringList: (value) => (isStringList(value) ? '' : `must be a list of strings (got ${JSON.stringify(value)}); [] means "none", absence is refused`),
+	promptIdentifierScan: (value) => promptIdentifierScanLib.declarationReason(value),
+	judgmentPartition: (value) => judgmentPartitionLib.declarationReason(value),
+	materialisationFanout: (value) => materialisationFanoutLib.declarationReason(value),
 	closedValue: (value, { contractEntry, propertyName }) => closedValueReason(value, contractEntry.allowedValueList, propertyName),
 	mappingProvider: (value) => {
 		if (!isPlainObject(value)) {
@@ -1099,7 +1156,7 @@ const validateBridgeDeclaration = ({ bridgeDeclaration, bundleDirPath } = {}) =>
 				return refuseWith(`bridgeDeclaration is missing key '${propertyName}' (REQUIRED because ${contractEntry.presentIff.key}.${contractEntry.presentIff.member} is ${JSON.stringify(contractEntry.presentIff.value)})`, `declare ${propertyName} (${contractEntry.kind}); absent is absent, never defaulted (RULING BR4)`);
 			}
 			if (!expectedPresent && value !== undefined) {
-				return refuseWith(`bridgeDeclaration carries key '${propertyName}' which is FORBIDDEN while ${contractEntry.presentIff.key}.${contractEntry.presentIff.member} is not ${JSON.stringify(contractEntry.presentIff.value)}`, `remove ${propertyName} (an empty list is not "absent"; the key must not be declared) or declare the hook (RULING BR4)`);
+				return refuseWith(`bridgeDeclaration carries key '${propertyName}' which is FORBIDDEN while ${contractEntry.presentIff.key}.${contractEntry.presentIff.member} is not ${JSON.stringify(contractEntry.presentIff.value)}`, `remove ${propertyName} (an empty list is not "absent"; the key must not be declared) or change ${contractEntry.presentIff.key}.${contractEntry.presentIff.member} (RULING BR4)`);
 			}
 			if (!expectedPresent) {
 				continue;
@@ -1145,13 +1202,17 @@ const validateBridgeDeclaration = ({ bridgeDeclaration, bundleDirPath } = {}) =>
 		}
 	}
 	// cross-key rules
-	// The rendering VARIANT is named by the acquisition row for EVERY basis, so no run ever falls back on an
-	// implied renderer. A basis whose row also REQUIRES the declaration key (derived) must declare the same
-	// value: the plugin restating what the row says is redundant on purpose — the redundancy is what makes a
-	// disagreement visible instead of letting one of the two silently win (RULING §11.1).
-	const acquisitionRow = SOURCE_ACQUISITION_REGISTRY[bridgeDeclaration.matchBasis];
-	if (acquisitionRow !== undefined && bridgeDeclaration.judgePromptVariant !== undefined && bridgeDeclaration.judgePromptVariant !== acquisitionRow.judgePromptVariant) {
-		return refuseWith(`bridgeDeclaration judgePromptVariant '${bridgeDeclaration.judgePromptVariant}' disagrees with the acquisition row for matchBasis '${bridgeDeclaration.matchBasis}' (which names '${acquisitionRow.judgePromptVariant}')`, 'the row is the authority; declare the same variant or change the basis — a run never chooses between two answers');
+	// The rendering VARIANT is named by VARIANT_BY_BASIS_AND_PREDICATE_RULE for EVERY basis, so no run ever falls back
+	// on an implied renderer, and an unregistered (basis, rule) pair is refused here rather than at the first judged
+	// subject. A basis that also REQUIRES the declaration key (derived) must declare the same value: the plugin
+	// restating what the registry says is redundant on purpose — the redundancy is what makes a disagreement visible
+	// instead of letting one of the two silently win (RULING §11.1).
+	const variantResolved = judgePromptVariantFor({ bridgeDeclaration });
+	if (variantResolved.error) {
+		return refuseWith(`bridgeDeclaration ${variantResolved.error}`, `every (matchBasis, predicateRule) pair a plugin may declare has a row (${listAsText(Object.keys(VARIANT_BY_BASIS_AND_PREDICATE_RULE))} are registered bases); add the row, never a default`);
+	}
+	if (bridgeDeclaration.judgePromptVariant !== undefined && bridgeDeclaration.judgePromptVariant !== variantResolved.judgePromptVariant) {
+		return refuseWith(`bridgeDeclaration judgePromptVariant '${bridgeDeclaration.judgePromptVariant}' disagrees with VARIANT_BY_BASIS_AND_PREDICATE_RULE for (matchBasis '${bridgeDeclaration.matchBasis}', predicateRule '${bridgeDeclaration.predicateSource.predicateRule}'), which names '${variantResolved.judgePromptVariant}'`, 'the registry is the authority; declare the same variant or change the rule — a run never chooses between two answers');
 	}
 	// A neighbourVote owner property chooses which neighbours reorder the pool. A property the plugin BLINDS is
 	// withheld from the judge, so it must not steer the pool either. Checked after the walk, where
@@ -1159,6 +1220,28 @@ const validateBridgeDeclaration = ({ bridgeDeclaration, bundleDirPath } = {}) =>
 	const neighbourVoteDeclaration = isPlainObject(bridgeDeclaration.candidateRetrieval) ? bridgeDeclaration.candidateRetrieval.neighbourVote : null;
 	if (isPlainObject(neighbourVoteDeclaration) && bridgeDeclaration.blindingDeclaration.indexOf(neighbourVoteDeclaration.owner.property) !== -1) {
 		return refuseWith(`bridgeDeclaration candidateRetrieval.neighbourVote.owner.property '${neighbourVoteDeclaration.owner.property}' is named in blindingDeclaration`, 'a blinded property may not choose the neighbours that reorder the pool; declare another owner property or stop blinding it (SPEC-bridgeRevision §5)');
+	}
+	// materialisationFanout (phase B4a): admitted only where the acquisition row says so, because only there is a subject
+	// one graph node, and only there does a record carry its leaf's instances; elsewhere the key would freeze nothing.
+	if (bridgeDeclaration.materialisationFanout !== undefined && SOURCE_ACQUISITION_REGISTRY[bridgeDeclaration.matchBasis].admitsMaterialisationFanout !== true) {
+		return refuseWith(`bridgeDeclaration carries materialisationFanout, which matchBasis '${bridgeDeclaration.matchBasis}' does not admit`, 'fan-out writes one subject node\'s answer to its instances; only a basis whose row sets admitsMaterialisationFanout has such subjects');
+	}
+	// judgmentPartition (phase B4p): it splits the instance list fan-out reads, so it requires fan-out (phase B4a), and
+	// through it the acquisition row's admission; its label renders only if the subject allow-list names the line it
+	// renders under; and a property it reads must not be one the plugin blinds, because a blinded property reads as
+	// absent, and an absent rule property would quietly partition the subjects the rule exists to keep whole.
+	const partitionDeclaration = bridgeDeclaration.judgmentPartition;
+	if (partitionDeclaration !== undefined) {
+		if (bridgeDeclaration.materialisationFanout === undefined) {
+			return refuseWith('bridgeDeclaration carries judgmentPartition without materialisationFanout', 'a partition splits the instance list fan-out reads, one instance edge for both; declare materialisationFanout, or drop the partition');
+		}
+		if (bridgeDeclaration.renderingAllowList.subject.indexOf(partitionDeclaration.renderedPropertyName) === -1) {
+			return refuseWith(`bridgeDeclaration judgmentPartition.renderedPropertyName '${partitionDeclaration.renderedPropertyName}' is not in renderingAllowList.subject`, 'the judge must be told which partition it is judging; add the name to the subject allow-list');
+		}
+		const blindedReadName = [partitionDeclaration.instanceObjectPropertyName, partitionDeclaration.unpartitionedSubjectRule === null ? null : partitionDeclaration.unpartitionedSubjectRule.propertyName].find((oneName) => oneName !== null && bridgeDeclaration.blindingDeclaration.indexOf(oneName) !== -1);
+		if (blindedReadName !== undefined) {
+			return refuseWith(`bridgeDeclaration judgmentPartition reads property '${blindedReadName}', which blindingDeclaration names`, 'a blinded property is removed from every view the run reads; partition on a property the plugin does not blind');
+		}
 	}
 	if (PRODUCER_KIND_BY_MATCH_BASIS[bridgeDeclaration.matchBasis] !== bridgeDeclaration.producerKind) {
 		return refuseWith(`bridgeDeclaration producerKind '${bridgeDeclaration.producerKind}' disagrees with matchBasis '${bridgeDeclaration.matchBasis}' (which is '${PRODUCER_KIND_BY_MATCH_BASIS[bridgeDeclaration.matchBasis]}')`, 'declared AND checked so build.js can never infer the block suffix (RULING A1)');
@@ -1287,6 +1370,11 @@ module.exports = {
 	JUDGE_PROMPT_VARIANT_LIST,
 	JUDGE_CATEGORY_LIST,
 	PREDICATE_RULE_CATEGORY_TABLE_V1,
+	PREDICATE_RULE_JUDGE_SLOT_V1,
+	JUDGE_PREDICATE_RULE_LIST,
+	NO_JUDGE_PREDICATE_RULE,
+	VARIANT_BY_BASIS_AND_PREDICATE_RULE,
+	judgePromptVariantFor,
 	RENDERING_NEVER_NAME_LIST,
 	PREDICATE_SOURCE_KIND_VALIDATOR_REGISTRY,
 	RESOLUTION_LIST,

@@ -410,6 +410,8 @@ const makeFakeRealClient = ({ pickOrdinal = '1', category = 'strong', abstainCat
 		maxConcurrency: 4,
 		describe: () => ({ provider: FAKE_PROVIDER_NAME, model, version: 'toyBridgeScenario-fakeRealClient-v1' }),
 		keySource: 'test',
+		// the judge-config member every provider states (B2); this double has no wire, so its values say so
+		judgeConfig: Object.freeze({ temperaturePolicy: 'fakeNoWire', maxTokens: null }),
 	};
 	client.rerank = ({ systemPrompt, userPrompt, choiceEnum } = {}, callback) => {
 		void systemPrompt;

@@ -1,0 +1,5 @@
+object	partitionLabel	reason
+StaffRecord	Toy Staff	the staff member the record is about
+StudentEnrollment	Toy Student	the student enrolled
+StudentRecord	Toy Student	the student the record is about
+UnusedRecord	Toy Unused	an object no instance sits in

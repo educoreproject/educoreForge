@@ -1,0 +1,238 @@
+[
+ {
+  "pairKey": "toyhub@1.0::toy@1.2.3::toyCrosswalkPlugin::authored",
+  "generation": "bridgeFramework-v1:toyCrosswalkPlugin@1.0.0:bridgeEvidenceRenderer-v1-INVALID_DEBUG",
+  "record": {
+   "promptHash": "83d3883c97b1d595e2a5c03fd815d59b33160dc04778b0f34087eeeef2ed978a",
+   "rendererVersion": "bridgeEvidenceRenderer-v1",
+   "judgeModel": "debug:digest",
+   "decisionAlgorithm": "INVALID_DEBUG",
+   "systemPrompt": "You are matching ONE source element to AT MOST ONE candidate card from a hub of canonical properties. Every candidate shares the join key the source named; your job is to CHOOSE among them or ABSTAIN. Answer with the ordinal of the candidate that means the same thing as the source element, or NONE. Name your choice in the rationale by the candidate hub key and name, never by its ordinal.",
+   "userPrompt": "SOURCE ELEMENT (what you are matching FROM):\n  name: Title\n  stableId: toy:property/Course.Title\n  description: The title of the course.\n  role: property\n  source-side evidence:\n    ElementDescription: The title of the course\n  assertion-side evidence:\n    MappingNotes: lossy echo of two ids\n  the source's own labels:\n    MappingConfidence: Yes\n  the source's own notes:\n    MappingNotes: lossy echo of two ids\nCANDIDATES (2), in hub order:\n  [1] P000001 — First Name\n      seat: filteredOnKey\n      domainDefinition: The C1 domain of the toy hub.\n      domainId: C1\n      domainName: Domain C1\n      propertyDefinition: First Name — a toy hub property.\n      propertyKey: P000001\n      propertyNotation: FirstName\n      rangeDatatype: xsd:string\n  [2] P000006 — Course Title\n      seat: filteredOnKey\n      domainDefinition: The C1 domain of the toy hub.\n      domainId: C1\n      domainName: Domain C1\n      propertyDefinition: Course Title — a toy hub property.\n      propertyKey: P000006\n      propertyNotation: CourseTitle\n      rangeDatatype: xsd:string\nAnswer with one of: 1, 2, or NONE.",
+   "reaskUserPrompt": null,
+   "renderedPoolStableIdList": [
+    "toyhub:card/P000001.C1",
+    "toyhub:card/P000006.C1"
+   ],
+   "choice": "2",
+   "chosenCardStableId": "toyhub:card/P000006.C1",
+   "category": "moderate",
+   "reportedCategoryOnAbstain": null,
+   "sourceElementIdeaList": null,
+   "candidateIdeaList": null,
+   "sortedCandidateList": null,
+   "rationale": "DEBUG JUDGE (INVALID_DEBUG) — NO INTELLIGENCE WAS APPLIED AND THIS IS NOT A JUDGMENT. Rule 'digest' over a pool of 2: digest bucket 1 of 4 selected candidate 2, reported with category 'moderate'. Nothing about the source element or any candidate was read, compared, or weighed. Any edge or abstention carrying this rationale is a plumbing artifact and must never be used as evidence of a mapping.",
+   "confidence": 0.7,
+   "cacheHit": false,
+   "attempts": 1,
+   "usage": null,
+   "discardedPredicateKeyCount": 0,
+   "reaskCount": 0
+  }
+ },
+ {
+  "pairKey": "toyhub@1.0::toy@1.2.3::toyCrosswalkPlugin::authored",
+  "generation": "bridgeFramework-v1:toyCrosswalkPlugin@1.0.0:bridgeEvidenceRenderer-v1-INVALID_DEBUG",
+  "record": {
+   "promptHash": "a59d56cd2da1e055ed47fd82628e055652a7e0a2df18f6dc4054c38d6b278235",
+   "rendererVersion": "bridgeEvidenceRenderer-v1",
+   "judgeModel": "debug:digest",
+   "decisionAlgorithm": "INVALID_DEBUG",
+   "systemPrompt": "You are matching ONE source element to AT MOST ONE candidate card from a hub of canonical properties. Every candidate shares the join key the source named; your job is to CHOOSE among them or ABSTAIN. Answer with the ordinal of the candidate that means the same thing as the source element, or NONE. Name your choice in the rationale by the candidate hub key and name, never by its ordinal.",
+   "userPrompt": "SOURCE ELEMENT (what you are matching FROM):\n  name: Address\n  stableId: toy:property/School.Address\n  description: The address of the school.\n  role: property\n  source-side evidence:\n    ElementDescription: The address of the school\n  the source's own labels:\n    MappingConfidence: Yes\nCANDIDATES (1), in hub order:\n  [1] P000008 — Address\n      seat: keyPoolOnSourceSideMismatch\n      domainDefinition: The C3 domain of the toy hub.\n      domainId: C3\n      domainName: Domain C3\n      propertyDefinition: Address — a toy hub property.\n      propertyKey: P000008\n      propertyNotation: Address\n      rangeDatatype: xsd:string\nAnswer with one of: 1, or NONE.",
+   "reaskUserPrompt": null,
+   "renderedPoolStableIdList": [
+    "toyhub:card/P000008.C3"
+   ],
+   "choice": "NONE",
+   "chosenCardStableId": null,
+   "category": "none",
+   "reportedCategoryOnAbstain": null,
+   "sourceElementIdeaList": null,
+   "candidateIdeaList": null,
+   "sortedCandidateList": null,
+   "rationale": "DEBUG JUDGE (INVALID_DEBUG) — NO INTELLIGENCE WAS APPLIED AND THIS IS NOT A JUDGMENT. Rule 'digest' over a pool of 1: digest bucket 2 fell in the 2 reserved abstain buckets. Nothing about the source element or any candidate was read, compared, or weighed. Any edge or abstention carrying this rationale is a plumbing artifact and must never be used as evidence of a mapping.",
+   "confidence": null,
+   "cacheHit": false,
+   "attempts": 1,
+   "usage": null,
+   "discardedPredicateKeyCount": 0,
+   "reaskCount": 0
+  }
+ },
+ {
+  "pairKey": "toyhub@1.0::toy@1.2.3::toyCrosswalkPlugin::authored",
+  "generation": "bridgeFramework-v1:toyCrosswalkPlugin@1.0.0:bridgeEvidenceRenderer-v1-INVALID_DEBUG",
+  "record": {
+   "promptHash": "dda2095aba861242b53300adccc7ab1e3edd9152141676cace5383840540dbdc",
+   "rendererVersion": "bridgeEvidenceRenderer-v1",
+   "judgeModel": "debug:digest",
+   "decisionAlgorithm": "INVALID_DEBUG",
+   "systemPrompt": "You are matching ONE source element to AT MOST ONE candidate card from a hub of canonical properties. Every candidate shares the join key the source named; your job is to CHOOSE among them or ABSTAIN. Answer with the ordinal of the candidate that means the same thing as the source element, or NONE. Name your choice in the rationale by the candidate hub key and name, never by its ordinal.",
+   "userPrompt": "SOURCE ELEMENT (what you are matching FROM):\n  name: Ethnicity\n  stableId: toy:property/Student.Ethnicity\n  description: The ethnicity of the student.\n  role: property\n  source-side evidence:\n    ElementDescription: The ethnicity of the student\n  assertion-side evidence:\n    MappingNotes: tentative, see notes\n  the source's own labels:\n    MappingConfidence: Maybe\n  the source's own notes:\n    MappingNotes: tentative, see notes\nCANDIDATES (1), in hub order:\n  [1] P000003 — Ethnicity\n      seat: filteredOnKeyAndTuple\n      domainDefinition: The C1 domain of the toy hub.\n      domainId: C1\n      domainName: Domain C1\n      propertyDefinition: Ethnicity — a toy hub property.\n      propertyKey: P000003\n      propertyNotation: Ethnicity\n      rangeDatatype: xsd:string\nAnswer with one of: 1, or NONE.",
+   "reaskUserPrompt": null,
+   "renderedPoolStableIdList": [
+    "toyhub:card/P000003.C1"
+   ],
+   "choice": "NONE",
+   "chosenCardStableId": null,
+   "category": "none",
+   "reportedCategoryOnAbstain": null,
+   "sourceElementIdeaList": null,
+   "candidateIdeaList": null,
+   "sortedCandidateList": null,
+   "rationale": "DEBUG JUDGE (INVALID_DEBUG) — NO INTELLIGENCE WAS APPLIED AND THIS IS NOT A JUDGMENT. Rule 'digest' over a pool of 1: digest bucket 1 fell in the 2 reserved abstain buckets. Nothing about the source element or any candidate was read, compared, or weighed. Any edge or abstention carrying this rationale is a plumbing artifact and must never be used as evidence of a mapping.",
+   "confidence": null,
+   "cacheHit": false,
+   "attempts": 1,
+   "usage": null,
+   "discardedPredicateKeyCount": 0,
+   "reaskCount": 0
+  }
+ },
+ {
+  "pairKey": "toyhub@1.0::toy@1.2.3::toyCrosswalkPlugin::authored",
+  "generation": "bridgeFramework-v1:toyCrosswalkPlugin@1.0.0:bridgeEvidenceRenderer-v1-INVALID_DEBUG",
+  "record": {
+   "promptHash": "85ab9b649087ead72447cef975f30276a03f9bcd870a35469e7268f07e294e60",
+   "rendererVersion": "bridgeEvidenceRenderer-v1",
+   "judgeModel": "debug:digest",
+   "decisionAlgorithm": "INVALID_DEBUG",
+   "systemPrompt": "You are matching ONE source element to AT MOST ONE candidate card from a hub of canonical properties. Every candidate shares the join key the source named; your job is to CHOOSE among them or ABSTAIN. Answer with the ordinal of the candidate that means the same thing as the source element, or NONE. Name your choice in the rationale by the candidate hub key and name, never by its ordinal.",
+   "userPrompt": "SOURCE ELEMENT (what you are matching FROM):\n  name: Gender\n  stableId: toy:property/Student.Gender\n  description: The gender of the student.\n  role: property\n  source-side evidence:\n    ElementDescription: The gender of the student\n  assertion-side evidence:\n    MappingNotes: domain unknown to the author\n  the source's own labels:\n    MappingConfidence: Yes\n  the source's own notes:\n    MappingNotes: domain unknown to the author\nCANDIDATES (2), in hub order:\n  [1] P000002 — Birth Date\n      seat: filteredOnKey\n      domainDefinition: The C1 domain of the toy hub.\n      domainId: C1\n      domainName: Domain C1\n      propertyDefinition: Birth Date — a toy hub property.\n      propertyKey: P000002\n      propertyNotation: BirthDate\n      rangeDatatype: xsd:string\n  [2] P000002 — Birth Date (staff)\n      seat: filteredOnKey\n      domainDefinition: The C2 domain of the toy hub.\n      domainId: C2\n      domainName: Domain C2\n      propertyDefinition: Birth Date (staff) — a toy hub property.\n      propertyKey: P000002\n      propertyNotation: BirthDate(staff)\n      rangeDatatype: xsd:string\nAnswer with one of: 1, 2, or NONE.",
+   "reaskUserPrompt": null,
+   "renderedPoolStableIdList": [
+    "toyhub:card/P000002.C1",
+    "toyhub:card/P000002.C2"
+   ],
+   "choice": "2",
+   "chosenCardStableId": "toyhub:card/P000002.C2",
+   "category": "moderate",
+   "reportedCategoryOnAbstain": null,
+   "sourceElementIdeaList": null,
+   "candidateIdeaList": null,
+   "sortedCandidateList": null,
+   "rationale": "DEBUG JUDGE (INVALID_DEBUG) — NO INTELLIGENCE WAS APPLIED AND THIS IS NOT A JUDGMENT. Rule 'digest' over a pool of 2: digest bucket 1 of 4 selected candidate 2, reported with category 'moderate'. Nothing about the source element or any candidate was read, compared, or weighed. Any edge or abstention carrying this rationale is a plumbing artifact and must never be used as evidence of a mapping.",
+   "confidence": 0.7,
+   "cacheHit": false,
+   "attempts": 1,
+   "usage": null,
+   "discardedPredicateKeyCount": 0,
+   "reaskCount": 0
+  }
+ },
+ {
+  "pairKey": "toyhub@1.0::toy@1.2.3::toyCrosswalkPlugin::authored",
+  "generation": "bridgeFramework-v1:toyCrosswalkPlugin@1.0.0:bridgeEvidenceRenderer-v1-INVALID_DEBUG",
+  "record": {
+   "promptHash": "8e312ee241a746b35a4957f13f9c0ad697bfbe8d24779984aa0432368efdf50e",
+   "rendererVersion": "bridgeEvidenceRenderer-v1",
+   "judgeModel": "debug:digest",
+   "decisionAlgorithm": "INVALID_DEBUG",
+   "systemPrompt": "You are matching ONE source element to AT MOST ONE candidate card from a hub of canonical properties. Every candidate shares the join key the source named; your job is to CHOOSE among them or ABSTAIN. Answer with the ordinal of the candidate that means the same thing as the source element, or NONE. Name your choice in the rationale by the candidate hub key and name, never by its ordinal.",
+   "userPrompt": "SOURCE ELEMENT (what you are matching FROM):\n  name: Weight\n  stableId: toy:property/Student.Weight\n  description: The weight of the student.\n  role: property\n  source-side evidence:\n    ElementDescription: The weight of the student\n  assertion-side evidence:\n    MappingNotes: weight by name | weight maybe\n  the source's own labels:\n    MappingConfidence: Maybe | Yes\n  the source's own notes:\n    MappingNotes: weight by name | weight maybe\nCANDIDATES (2), in hub order:\n  [1] P000006 — Course Title\n      seat: filteredOnKey\n      domainDefinition: The C1 domain of the toy hub.\n      domainId: C1\n      domainName: Domain C1\n      propertyDefinition: Course Title — a toy hub property.\n      propertyKey: P000006\n      propertyNotation: CourseTitle\n      rangeDatatype: xsd:string\n  [2] P000010 — Course Credits\n      seat: filteredOnKey\n      domainDefinition: The C1 domain of the toy hub.\n      domainId: C1\n      domainName: Domain C1\n      propertyDefinition: Course Credits — a toy hub property.\n      propertyKey: P000010\n      propertyNotation: CourseCredits\n      rangeDatatype: xsd:string\nAnswer with one of: 1, 2, or NONE.",
+   "reaskUserPrompt": null,
+   "renderedPoolStableIdList": [
+    "toyhub:card/P000006.C1",
+    "toyhub:card/P000010.C1"
+   ],
+   "choice": "NONE",
+   "chosenCardStableId": null,
+   "category": "none",
+   "reportedCategoryOnAbstain": null,
+   "sourceElementIdeaList": null,
+   "candidateIdeaList": null,
+   "sortedCandidateList": null,
+   "rationale": "DEBUG JUDGE (INVALID_DEBUG) — NO INTELLIGENCE WAS APPLIED AND THIS IS NOT A JUDGMENT. Rule 'digest' over a pool of 2: digest bucket 2 fell in the 2 reserved abstain buckets. Nothing about the source element or any candidate was read, compared, or weighed. Any edge or abstention carrying this rationale is a plumbing artifact and must never be used as evidence of a mapping.",
+   "confidence": null,
+   "cacheHit": false,
+   "attempts": 1,
+   "usage": null,
+   "discardedPredicateKeyCount": 0,
+   "reaskCount": 0
+  }
+ },
+ {
+  "pairKey": "toyhub@1.0::toy@1.2.3::toyStandardPlugin::authored",
+  "generation": "bridgeFramework-v1:toyStandardPlugin@1.0.0:bridgeEvidenceRenderer-v1-INVALID_DEBUG",
+  "record": {
+   "promptHash": "109cdbe2b74b5714c8a700be3514823167b97f493738f888b232f6dd1954c81c",
+   "rendererVersion": "bridgeEvidenceRenderer-v1",
+   "judgeModel": "debug:digest",
+   "decisionAlgorithm": "INVALID_DEBUG",
+   "systemPrompt": "You are matching ONE source element to AT MOST ONE candidate card from a hub of canonical properties. Every candidate shares the join key the source named; your job is to CHOOSE among them or ABSTAIN. Answer with the ordinal of the candidate that means the same thing as the source element, or NONE. Name your choice in the rationale by the candidate hub key and name, never by its ordinal.",
+   "userPrompt": "SOURCE ELEMENT (what you are matching FROM):\n  name: Name\n  stableId: toy:property/School.Name\n  description: The name of the school.\n  role: property\nCANDIDATES (2), in hub order:\n  [1] P000005 — Organization Name\n      seat: filteredOnKey\n      domainDefinition: The C1 domain of the toy hub.\n      domainId: C1\n      domainName: Domain C1\n      propertyDefinition: Organization Name — a toy hub property.\n      propertyKey: P000005\n      propertyNotation: OrganizationName\n      rangeDatatype: xsd:string\n  [2] P000005 — Organization Name (school)\n      seat: filteredOnKey\n      domainDefinition: The C1 domain of the toy hub.\n      domainId: C1\n      domainName: Domain C1\n      propertyDefinition: Organization Name (school) — a toy hub property.\n      propertyKey: P000005\n      propertyNotation: OrganizationName(school)\n      qualifierKeys: [\"OV0001\"]\n      rangeDatatype: xsd:string\nAnswer with one of: 1, 2, or NONE.",
+   "reaskUserPrompt": null,
+   "renderedPoolStableIdList": [
+    "toyhub:card/P000005.C1",
+    "toyhub:card/P000005.C1.OV0001"
+   ],
+   "choice": "2",
+   "chosenCardStableId": "toyhub:card/P000005.C1.OV0001",
+   "category": "moderate",
+   "reportedCategoryOnAbstain": null,
+   "sourceElementIdeaList": null,
+   "candidateIdeaList": null,
+   "sortedCandidateList": null,
+   "rationale": "DEBUG JUDGE (INVALID_DEBUG) — NO INTELLIGENCE WAS APPLIED AND THIS IS NOT A JUDGMENT. Rule 'digest' over a pool of 2: digest bucket 1 of 4 selected candidate 2, reported with category 'moderate'. Nothing about the source element or any candidate was read, compared, or weighed. Any edge or abstention carrying this rationale is a plumbing artifact and must never be used as evidence of a mapping.",
+   "confidence": 0.7,
+   "cacheHit": false,
+   "attempts": 1,
+   "usage": null,
+   "discardedPredicateKeyCount": 0,
+   "reaskCount": 0
+  }
+ },
+ {
+  "pairKey": "toyhub@1.0::toy@1.2.3::toyStandardPlugin::authored",
+  "generation": "bridgeFramework-v1:toyStandardPlugin@1.0.0:bridgeEvidenceRenderer-v1-INVALID_DEBUG",
+  "record": {
+   "promptHash": "8dbea6aa97e1dce4dd26b2390f513f6a86aa7ad8a80634a24cceb33c8435b39a",
+   "rendererVersion": "bridgeEvidenceRenderer-v1",
+   "judgeModel": "debug:digest",
+   "decisionAlgorithm": "INVALID_DEBUG",
+   "systemPrompt": "You are matching ONE source element to AT MOST ONE candidate card from a hub of canonical properties. Every candidate shares the join key the source named; your job is to CHOOSE among them or ABSTAIN. Answer with the ordinal of the candidate that means the same thing as the source element, or NONE. Name your choice in the rationale by the candidate hub key and name, never by its ordinal.",
+   "userPrompt": "SOURCE ELEMENT (what you are matching FROM):\n  name: BirthDate\n  stableId: toy:property/Student.BirthDate\n  description: The birth date of the student.\n  role: property\nCANDIDATES (2), in hub order:\n  [1] P000002 — Birth Date\n      seat: filteredOnKey\n      domainDefinition: The C1 domain of the toy hub.\n      domainId: C1\n      domainName: Domain C1\n      propertyDefinition: Birth Date — a toy hub property.\n      propertyKey: P000002\n      propertyNotation: BirthDate\n      rangeDatatype: xsd:string\n  [2] P000002 — Birth Date (staff)\n      seat: filteredOnKey\n      domainDefinition: The C2 domain of the toy hub.\n      domainId: C2\n      domainName: Domain C2\n      propertyDefinition: Birth Date (staff) — a toy hub property.\n      propertyKey: P000002\n      propertyNotation: BirthDate(staff)\n      rangeDatatype: xsd:string\nAnswer with one of: 1, 2, or NONE.",
+   "reaskUserPrompt": null,
+   "renderedPoolStableIdList": [
+    "toyhub:card/P000002.C1",
+    "toyhub:card/P000002.C2"
+   ],
+   "choice": "1",
+   "chosenCardStableId": "toyhub:card/P000002.C1",
+   "category": "moderate",
+   "reportedCategoryOnAbstain": null,
+   "sourceElementIdeaList": null,
+   "candidateIdeaList": null,
+   "sortedCandidateList": null,
+   "rationale": "DEBUG JUDGE (INVALID_DEBUG) — NO INTELLIGENCE WAS APPLIED AND THIS IS NOT A JUDGMENT. Rule 'digest' over a pool of 2: digest bucket 0 of 4 selected candidate 1, reported with category 'moderate'. Nothing about the source element or any candidate was read, compared, or weighed. Any edge or abstention carrying this rationale is a plumbing artifact and must never be used as evidence of a mapping.",
+   "confidence": 0.7,
+   "cacheHit": false,
+   "attempts": 1,
+   "usage": null,
+   "discardedPredicateKeyCount": 0,
+   "reaskCount": 0
+  }
+ },
+ {
+  "pairKey": "toyhub@1.0::toy@1.2.3::toyStandardPlugin::authored",
+  "generation": "bridgeFramework-v1:toyStandardPlugin@1.0.0:bridgeEvidenceRenderer-v1-INVALID_DEBUG",
+  "record": {
+   "kind": "MappingReview",
+   "conflictList": [
+    {
+     "subjectStableId": "toy:property/Student.FirstName",
+     "thisObjectStableIdList": [
+      "toyhub:card/P000006.C1"
+     ],
+     "siblingBridgeName": "toyCrosswalkPlugin",
+     "siblingPairKey": "toyhub@1.0::toy@1.2.3::toyCrosswalkPlugin::authored",
+     "siblingObjectStableId": "toyhub:card/P000001.C1",
+     "siblingDecisionBlockHash": "6dea9a48961f430be12ace7978c7bfbb9b39b46950de4ebf12b4b7d9cef8faa0",
+     "disposition": "thisPluginMaterialisationRefused",
+     "mappingJustification": "semapv:MappingReview"
+    }
+   ]
+  }
+ }
+]

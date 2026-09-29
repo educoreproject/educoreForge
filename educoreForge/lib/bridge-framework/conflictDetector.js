@@ -7,20 +7,24 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // graphs, so "refuse the SECOND plugin's materialisation" is implemented as: before materialising, look up in
 // the decision store the LATEST block of every OTHER (bridgeName, producerKind) on the same hub@ver::source@ver
 // prefix — ANY bridge, ANY producerKind (RULING BR7; the sibling pairKeys are composed from the registry — the store's API is getDecisionBlock({ pairKey }),
-// untouched); for each subjectStableId present in both with a DIFFERENT objectStableId, THIS plugin's
-// materialisation of that subject is REFUSED by name (its block is recorded, that edge is NOT written), a
+// untouched); for each FROM-NODE present in both with a DIFFERENT objectStableId, THIS plugin's
+// materialisation from that node is REFUSED by name (its block is recorded, that edge is NOT written), a
 // conflict record naming both targets goes to the REPORT and to a MappingReview trail (matchForensics — the
 // store has no queue API and is untouched; named DEVLOG deviation), and the FIRST plugin's edges STAND.
 // conflictCount is a REPORT member, never a census member. HOSTED by the seam face (which composes the
 // sibling list from its registry) and called by the framework before materialise; a suite hands the same
 // detector a fixture registry (two toy plugins on one pairing).
+// FROM-NODE (phase B4c): both sides are read as the edges the materialiser writes (plannedEdgeList). Without fan-out the
+// from-node is the subject, exactly as before; under fan-out it is one instance, the conflict record's subjectStableId
+// names that instance and judgedSubjectStableId names the subject that was judged. A sibling claim on the judged subject
+// itself meets no edge of this block and is not a conflict.
 //
 //   detectSiblingConflicts({ decisionStore, siblingPairKeyList, thisBlock }, cb(err, { conflictList, siblingBlockCount }))
 
 const path = require('path');
 const refuse = require(path.join(__dirname, '..', 'forge-framework', 'refuse'));
 const { parseFrozenText } = require('./decisionBlock');
-const { pickedRecordList } = require('./materialiser');
+const { plannedEdgeList } = require('./materialiser');
 const { MAPPING_EDGE_PROVENANCE_TIER_BY_PRODUCER_KIND } = require(path.join(__dirname, '..', 'vocabulary', 'vocabulary'));
 
 // siblingPairKeyListFor — the sibling lookup SPANS THE PAIRING (RULING BR7): every registered plugin on the SAME
@@ -55,9 +59,15 @@ const detectSiblingConflicts = ({ decisionStore, siblingPairKeyList, thisBlock }
 		callback(refuse.byName({ moduleName, what: 'siblingPairKeyList (a list) and thisBlock (parsed) are required', where: 'detectSiblingConflicts' }).message);
 		return;
 	}
-	const thisObjectBySubject = {};
-	pickedRecordList(thisBlock.decisionRecordList).forEach((oneRecord) => {
-		(thisObjectBySubject[oneRecord.subjectStableId] = thisObjectBySubject[oneRecord.subjectStableId] || new Set()).add(oneRecord.objectStableId);
+	// keyed by FROM-NODE (phase B4c): the node an edge leaves, which is the subject, or under fan-out one of its instances.
+	// Keyed by subject, two partition units of one subject pooled their cards, and a sibling edge on an instance was unseen.
+	const thisObjectByFromStableId = {};
+	const thisJudgedSubjectByInstanceStableId = {};
+	plannedEdgeList(thisBlock.decisionRecordList).forEach(({ record: oneRecord, fromStableId, instanceStableId }) => {
+		(thisObjectByFromStableId[fromStableId] = thisObjectByFromStableId[fromStableId] || new Set()).add(oneRecord.objectStableId);
+		if (instanceStableId !== undefined) {
+			thisJudgedSubjectByInstanceStableId[instanceStableId] = oneRecord.subjectStableId;
+		}
 	});
 	const conflictList = [];
 	let siblingBlockCount = 0;
@@ -84,14 +94,16 @@ const detectSiblingConflicts = ({ decisionStore, siblingPairKeyList, thisBlock }
 				return;
 			}
 			siblingBlockCount += 1;
-			pickedRecordList(parsed.block.decisionRecordList).forEach((oneSiblingRecord) => {
-				const thisSet = thisObjectBySubject[oneSiblingRecord.subjectStableId];
+			plannedEdgeList(parsed.block.decisionRecordList).forEach(({ record: oneSiblingRecord, fromStableId: siblingFromStableId }) => {
+				const thisSet = thisObjectByFromStableId[siblingFromStableId];
 				if (thisSet === undefined) {
 					return;
 				}
 				if (!thisSet.has(oneSiblingRecord.objectStableId)) {
+					const judgedSubjectStableId = thisJudgedSubjectByInstanceStableId[siblingFromStableId];
 					conflictList.push({
-						subjectStableId: oneSiblingRecord.subjectStableId,
+						subjectStableId: siblingFromStableId,
+						...(judgedSubjectStableId === undefined ? {} : { judgedSubjectStableId }),
 						thisObjectStableIdList: Array.from(thisSet).sort(),
 						siblingBridgeName: oneSibling.siblingBridgeName,
 						siblingPairKey: oneSibling.siblingPairKey,

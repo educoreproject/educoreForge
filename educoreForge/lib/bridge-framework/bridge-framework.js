@@ -66,6 +66,10 @@ const sssomExporterLib = require('./sssomExporter');
 const boundedRunnerLib = require('./boundedRunner');
 const conflictDetectorLib = require('./conflictDetector');
 const graphSeamRulesLib = require('./graphSeamRules');
+const promptIdentifierScanLib = require('./promptIdentifierScan');
+const judgeConfigRecordLib = require('./judgeConfigRecord');
+const judgmentPartitionLib = require('./judgmentPartition');
+const materialisationFanoutLib = require('./materialisationFanout');
 
 const { RELATIONSHIP_PRODUCER_SUFFIX, SKOS_EDGE_TYPES, MAPPING_PROPERTIES, DME_ROLES, HUB_DECOMPOSITION_SLOTS, SSSOM_JUSTIFICATIONS, hubEdgeType } = vocabularyLib;
 const {
@@ -515,6 +519,21 @@ const retrievalRegistryRefusal = () => {
 	return null;
 };
 
+// JUDGE_PICK_PREDICATE_BY_PREDICATE_RULE — for a judge-sourced pick, one row per predicate rule the contract accepts
+// (JUDGE_PREDICATE_RULE_LIST; test-bgJudgePredicate (g) holds the two to the same rules). categoryTable-v1 maps the
+// judge's CATEGORY through the declared predicateByCategory table; judgeSlot-v1 takes the predicate the judge named,
+// which judgeComponent has already verified against the schema's pick values (phase B3b, 2026-09-28).
+const JUDGE_PICK_PREDICATE_BY_PREDICATE_RULE = Object.freeze({
+	'categoryTable-v1': ({ judged, bridgeDeclaration }) => {
+		const predicate = bridgeDeclaration.predicateByCategory[judged.category];
+		if (predicate === undefined) {
+			return { error: refuse.byName({ moduleName, what: `the judge returned category '${judged.category}' and predicateByCategory names no predicate for it`, where: 'the declaration validator refuses a table that does not cover every judge category, so reaching this names a framework defect, not a declaration one' }) };
+		}
+		return { predicate };
+	},
+	'judgeSlot-v1': ({ judged }) => ({ predicate: judged.predicate }),
+});
+
 // START OF moduleFunction() ============================================================
 
 const moduleFunction =
@@ -701,6 +720,14 @@ const moduleFunction =
 			const pairKey = `${pairKeyPrefix}::${bridgeDeclaration.bridgeName}::${bridgeDeclaration.producerKind}`;
 			const mode = spec.rebridge ? MODE_REJUDGE : MODE_MATERIALISE;
 			const judgeClient = spec.rebridge && spec.inferenceConfig && spec.inferenceConfig.llmClient ? spec.inferenceConfig.llmClient : null;
+			// blockRecordsJudgeConfig (SPEC §9 A12): the judge's configuration in the header and each rationale in its record
+			// (judgeConfigRecord.js). Absent, both are omitted and the block text is what it was.
+			const recordsJudgeConfig = bridgeDeclaration.blockRecordsJudgeConfig === true;
+			// the configuration the header will state, taken once, and its digest: the judgment cache folds the digest
+			// into its key so a cached judgment is served only under the configuration the header states (phase B3b,
+			// 2026-09-28). null when the plugin does not opt in, which keeps every cache key exactly what it was.
+			const runJudgeConfigHeader = recordsJudgeConfig && judgeClient !== null ? judgeConfigRecordLib.judgeConfigHeaderFor({ judgeClient, predicateRule: bridgeDeclaration.predicateSource.predicateRule }) : null;
+			const judgeConfigCacheDigest = runJudgeConfigHeader === null ? null : sha256Hex(canonicalJson(runJudgeConfigHeader));
 			const debugMark = spec.rebridge ? debugJudgeLib.debugMarkFromLlmClient({ inferenceConfig: spec.inferenceConfig }) : undefined;
 			// ⟪2026-09-10⟫ ONE DOOR: sourceSelectionMarkFor answers for whichever selector was asked for — the
 			// debug window or the named subject set — and refuses the combination inside the pure module. The
@@ -720,7 +747,9 @@ const moduleFunction =
 				callback(refuse.byName({ moduleName, what: `matchBasis '${bridgeDeclaration.matchBasis}' names no SOURCE_ACQUISITION_REGISTRY row`, where: 'the row declares how a basis acquires subjects and pools; a basis without one cannot be run' }).message);
 				return;
 			}
-			const judgePromptVariant = acquisitionRow.judgePromptVariant;
+			// the rendering variant comes from VARIANT_BY_BASIS_AND_PREDICATE_RULE, which registration has already
+			// checked, so the pair always has a row here
+			const judgePromptVariant = bridgePluginContractLib.judgePromptVariantFor({ bridgeDeclaration }).judgePromptVariant;
 			const runRendererVersion = evidenceRendererLib.JUDGE_PROMPT_VARIANT_REGISTRY[judgePromptVariant].rendererVersion;
 			// WHICH subject-node properties become rendered material is a member of the VARIANT row, not a constant
 			// in this file: the crosswalk variant names its seven by name (byte-frozen), the derived variant takes
@@ -747,12 +776,13 @@ const moduleFunction =
 				column: sourceRowPickPredicate,
 				labelTable: sourceRowPickPredicate,
 				channelAssertion: sourceRowPickPredicate,
+				// judge: where the relation comes from is the declared predicate rule's row (JUDGE_PICK_PREDICATE_BY_PREDICATE_RULE)
 				judge: ({ judged }) => {
-					const predicate = bridgeDeclaration.predicateByCategory[judged.category];
-					if (predicate === undefined) {
-						return { error: refuse.byName({ moduleName, what: `the judge returned category '${judged.category}' and predicateByCategory names no predicate for it`, where: 'the declaration validator refuses a table that does not cover every judge category, so reaching this names a framework defect, not a declaration one' }) };
+					const resolvedPredicate = JUDGE_PICK_PREDICATE_BY_PREDICATE_RULE[bridgeDeclaration.predicateSource.predicateRule]({ judged, bridgeDeclaration });
+					if (resolvedPredicate.error) {
+						return { error: resolvedPredicate.error };
 					}
-					return { predicate, predicateAssertedBy: bridgePluginContractLib.PREDICATE_ASSERTED_BY_BY_SOURCE_KIND.judge, sourceLabel: null };
+					return { predicate: resolvedPredicate.predicate, predicateAssertedBy: bridgePluginContractLib.PREDICATE_ASSERTED_BY_BY_SOURCE_KIND.judge, sourceLabel: null };
 				},
 			});
 
@@ -925,7 +955,8 @@ const moduleFunction =
 						tailCallback(conflictError);
 						return;
 					}
-					const conflictedSubjectSet = new Set(conflicts.conflictList.map((oneConflict) => oneConflict.subjectStableId));
+					// a conflict names a from-node (phase B4c): the subject, or under fan-out one instance of it
+					const conflictedFromStableIdSet = new Set(conflicts.conflictList.map((oneConflict) => oneConflict.subjectStableId));
 					report.conflictCount = conflicts.conflictList.length;
 					report.conflictList = conflicts.conflictList;
 					// BR7: the sibling list spans every (bridge × producerKind) key on the pairing, so it is never empty; "one plugin
@@ -936,7 +967,15 @@ const moduleFunction =
 					} else {
 						say(`${conflicts.conflictList.length} conflict(s) against ${conflicts.siblingBlockCount} sibling block(s) (${siblingPairKeyList.map((oneSibling) => `${oneSibling.siblingBridgeName}::${oneSibling.siblingProducerKind}`).join(', ')})`);
 					}
-					const materialisableBlock = { ...block, decisionRecordList: block.decisionRecordList.filter((oneRecord) => !conflictedSubjectSet.has(oneRecord.subjectStableId)) };
+					// a VIEW for the writer; the frozen block and its hash are untouched. A record without an instance list is dropped
+					// whole when its subject conflicts, as before. A fanned-out record loses only its conflicted instances, so one
+					// conflicting instance does not take the answer from the rest; it is dropped only when no instance is left.
+					const materialisableBlock = {
+						...block,
+						decisionRecordList: block.decisionRecordList
+							.map((oneRecord) => (oneRecord.instanceStableIdList === undefined ? oneRecord : { ...oneRecord, instanceStableIdList: oneRecord.instanceStableIdList.filter((instanceStableId) => !conflictedFromStableIdSet.has(instanceStableId)) }))
+							.filter((oneRecord) => (oneRecord.instanceStableIdList === undefined ? !conflictedFromStableIdSet.has(oneRecord.subjectStableId) : oneRecord.instanceStableIdList.length > 0)),
+					};
 					const writerArgs = { inGraph, applyLabel: pairScopedLabel, sourceStandardName };
 					const writerRefusal = graphSeamRulesLib.writerConstructionRefusal(writerArgs);
 					if (writerRefusal) {
@@ -1445,6 +1484,55 @@ const moduleFunction =
 				});
 				taskList.push((args, next) => subjectGroupProducerByKind[acquisitionRow.subjectGroupProducerKind](args, next));
 
+				// STEP 5a — MATERIALISATION FAN-OUT (materialisationFanout.js; phase B4a, 2026-09-28). Declared, the instance
+				// edge is read ONCE and each subject leaf carries instanceStableIdList, the instances its answer is for (B4b writes
+				// one edge per instance); a subject with none is refused by name. Undeclared, the leaves pass through.
+				taskList.push((args, next) => {
+					const fanoutDeclaration = bridgeDeclaration.materialisationFanout;
+					if (fanoutDeclaration === undefined) {
+						next('', args);
+						return;
+					}
+					materialisationFanoutLib.MATERIALISATION_FANOUT_KIND_REGISTRY[fanoutDeclaration.kind].readInstanceStableIdListBySubject({ fanoutDeclaration, evidenceView: args.reader.forEvidence() }, (readError, instanceStableIdListBySubject) => {
+						if (readError) {
+							next(`${moduleName}: materialisationFanout instance edges: ${readError}`);
+							return;
+						}
+						const fannedOut = materialisationFanoutLib.fannedOutLeafList({ leafList: args.leafList, fanoutDeclaration, instanceStableIdListBySubject });
+						if (fannedOut.error) {
+							next(fannedOut.error.message);
+							return;
+						}
+						say(`materialisation fan-out: ${args.leafList.length} subject(s) stand for ${fannedOut.instanceCount} '${fanoutDeclaration.edgeType}' instance(s)`);
+						next('', { ...args, leafList: fannedOut.leafList });
+					});
+				});
+
+				// STEP 5a' — JUDGMENT PARTITION (judgmentPartition.js; phase B4p, 2026-09-28). Declared, each fanned-out leaf
+				// becomes one leaf per partition of its instances, each carrying its label and its share of the instance list,
+				// and each is judged once. The window and the named set have already chosen the SUBJECTS. Undeclared, the leaves
+				// pass through.
+				taskList.push((args, next) => {
+					const partitionDeclaration = bridgeDeclaration.judgmentPartition;
+					if (partitionDeclaration === undefined) {
+						next('', args);
+						return;
+					}
+					const partitionFilePath = judgmentPartitionLib.partitionFilePathFor({ filePath: partitionDeclaration.filePath, forgesDirPath: registry.forgesDirPath, standardKey: bridgeDeclaration.standardKey });
+					const partitionFile = judgmentPartitionLib.JUDGMENT_PARTITION_KIND_REGISTRY[partitionDeclaration.kind].readLabelByObjectName({ partitionDeclaration, filePath: partitionFilePath });
+					if (partitionFile.error) {
+						next(partitionFile.error.message);
+						return;
+					}
+					const partitioned = judgmentPartitionLib.partitionLeafList({ leafList: args.leafList, partitionDeclaration, labelByObjectName: partitionFile.labelByObjectName, subjectNodeByStableId: args.subjectNodeByStableId });
+					if (partitioned.error) {
+						next(partitioned.error.message);
+						return;
+					}
+					say(`judgment partition: ${args.leafList.length} subject(s) → ${partitioned.unitCount} judgment unit(s) (${partitioned.unpartitionedSubjectCount} unpartitioned by rule), ${partitionFile.labelByObjectName.size} object(s) in ${partitionFilePath}`);
+					next('', { ...args, leafList: partitioned.leafList });
+				});
+
 				// STEP 5b — the HUB-owned remodel table, by REFERENCE (RULING P11, D-S5): forges/<hubToken>/bridgeData/
 				// <remodelTableRef>.json keyed hubName@hubVersion, read as data (never required as code), digested into
 				// the header; a declared ref with no table, or a table without this hub@version, is refused by name
@@ -1658,7 +1746,9 @@ const moduleFunction =
 							const baseRecord = {
 								subjectStableId: oneLeaf.subjectStableId,
 								assertingSubjectList: [],
-								targetKey: `retrieval:${oneLeaf.subjectStableId}`,
+								// a labelled judgment unit is one of several for its subject, so its label joins the targetKey,
+								// which is what orders two records of one subject in the frozen text (decisionBlock.compareRecords)
+								targetKey: typeof oneLeaf.judgmentPartitionLabel === 'string' ? `retrieval:${oneLeaf.subjectStableId}#partition:${oneLeaf.judgmentPartitionLabel}` : `retrieval:${oneLeaf.subjectStableId}`,
 								targetCanonicalKeyList: [],
 								suppliedTupleByTarget: {},
 								remodelApplied: null,
@@ -1674,6 +1764,10 @@ const moduleFunction =
 								classification: classified.classification,
 								judgedReason: classified.reason,
 								lossyEcho: false,
+								// the instances the answer is for, only when the run declares fan-out; the partition label, only when it
+								// declares a partition
+								...(oneLeaf.instanceStableIdList === undefined ? {} : { instanceStableIdList: oneLeaf.instanceStableIdList }),
+								...(oneLeaf.judgmentPartitionLabel === undefined ? {} : { judgmentPartitionLabel: oneLeaf.judgmentPartitionLabel }),
 							};
 							if (classified.classification === 'orphan') {
 								decisionRecordList.push({ ...baseRecord, resolution: null, objectStableId: null, predicate: null, reason: classified.reason });
@@ -1697,6 +1791,20 @@ const moduleFunction =
 					},
 				});
 				taskList.push((args, next) => poolProducerByKind[acquisitionRow.poolProducerKind](args, next));
+
+				// STEP 6b — the prompt identifier scan (promptIdentifierScan.js; SPEC §9 A19), compiled ONCE, before any subject
+				// is judged. Undeclared, compiledPromptScan is null and STEP 7 is exactly what it was.
+				taskList.push((args, next) => {
+					const scanDeclaration = bridgeDeclaration.promptIdentifierScan;
+					if (scanDeclaration === undefined) {
+						next('', { ...args, compiledPromptScan: null });
+						return;
+					}
+					const identifierList = scanDeclaration.identifierListPath === null ? null : promptIdentifierScanLib.readIdentifierList({ filePath: promptIdentifierScanLib.identifierListFilePathFor({ identifierListPath: scanDeclaration.identifierListPath, forgesDirPath: registry.forgesDirPath, standardKey: bridgeDeclaration.standardKey }) });
+					const { compiledScan } = promptIdentifierScanLib.compileScan({ scanDeclaration, identifierList });
+					say(`prompt identifier scan: ${compiledScan.compiledPatternList.map((onePattern) => onePattern.patternName).join(', ')}${identifierList === null ? '' : ` (${identifierList.length} listed identifier(s))`} over the system prompt, user prompt, tool text and any re-ask prompt; one hit refuses the run`);
+					next('', { ...args, compiledPromptScan: compiledScan });
+				});
 
 				// STEP 7 — the JUDGE (bounded runner, index-collecting); the debug double is the only judge in B2
 				taskList.push((args, next) => {
@@ -1732,6 +1840,17 @@ const moduleFunction =
 					const evidenceView = args.reader.forEvidence();
 					// the key is PRESENT iff the hook is declared (contract, RULING BR4); with the hook off there is no guidance to render
 					const globalGuidanceList = bridgeDeclaration.evidenceHooksDeclared.globalGuidance ? bridgeDeclaration.globalGuidanceList.slice() : [];
+					// promptScanRefusalFor — '' when no scan is declared or nothing hits, else the run's refusal naming the subject,
+					// the pattern and the surface. surfaceTextByName is a thunk so an undeclared scan renders no tool text at all.
+					const promptScanRefusalFor = ({ subjectStableId, surfaceTextByName }) => {
+						if (args.compiledPromptScan === null) {
+							return '';
+						}
+						const { hit } = promptIdentifierScanLib.scanSurfaces({ compiledScan: args.compiledPromptScan, surfaceTextByName: surfaceTextByName() });
+						return hit === null
+							? ''
+							: refuse.byName({ moduleName, what: `prompt identifier scan hit for subject ${subjectStableId}: pattern '${hit.patternName}' matched '${hit.matchedText}' in the ${hit.surfaceName}`, where: 'a CEDS identifier must never reach the judge (SPEC-sifStructuralBridge-replacement §9 A19); remove it from the source text or the rendering, never from the scan' }).message;
+					};
 					const judgeOneTask = (oneTask, taskIndex, taskDone) => {
 						const subjectNode = args.subjectNodeByStableId[oneTask.baseRecord.subjectStableId];
 						// the source's own material is MERGED over every row of the group in LOCATOR order (never walk order —
@@ -1754,9 +1873,10 @@ const moduleFunction =
 						const sourceElement = {
 							name: typeof subjectNode.properties.name === 'string' && subjectNode.properties.name.trim() !== '' ? subjectNode.properties.name : subjectNode.stableId,
 							stableId: subjectNode.stableId,
+							// a labelled judgment unit's partition label is one more subject line, under the declared name (phase B4p)
 							material: Object.keys(subjectNode.properties)
 								.filter((oneName) => subjectMaterialNameList.indexOf(oneName) !== -1)
-								.reduce((soFar, oneName) => ({ ...soFar, [oneName]: subjectNode.properties[oneName] }), {}),
+								.reduce((soFar, oneName) => ({ ...soFar, [oneName]: subjectNode.properties[oneName] }), typeof oneTask.baseRecord.judgmentPartitionLabel === 'string' ? { [bridgeDeclaration.judgmentPartition.renderedPropertyName]: oneTask.baseRecord.judgmentPartitionLabel } : {}),
 							evidence: { subject: mergedByColumn((oneAssertion) => (oneAssertion.evidence ? oneAssertion.evidence.subject : {})), assertion: mergedByColumn((oneAssertion) => (oneAssertion.evidence ? oneAssertion.evidence.assertion : {})) },
 							sourceLabelByColumn: mergedByColumn((oneAssertion) => oneAssertion.sourceLabelByColumn),
 							sourceNoteByColumn: mergedByColumn((oneAssertion) => oneAssertion.sourceNoteByColumn),
@@ -1822,7 +1942,13 @@ const moduleFunction =
 								taskDone(question.error.message);
 								return;
 							}
-							judgeComponentLib.judgeOne({ question, judgeClient, judgmentCache: spec.judgmentCache, matchForensics: spec.matchForensics, budget, pairKey, generation, debugMark }, (judgeError, judged, judgeFault) => {
+							const questionScanRefusal = promptScanRefusalFor({ subjectStableId: oneTask.baseRecord.subjectStableId, surfaceTextByName: () => promptIdentifierScanLib.questionSurfaceTextByName({ predicateRule: bridgeDeclaration.predicateSource.predicateRule, question }) });
+							if (questionScanRefusal) {
+								taskDone(questionScanRefusal);
+								return;
+							}
+							const reaskPromptRefusalFor = (reaskUserPrompt) => promptScanRefusalFor({ subjectStableId: oneTask.baseRecord.subjectStableId, surfaceTextByName: () => ({ reaskUserPrompt }) });
+							judgeComponentLib.judgeOne({ question, judgeClient, judgmentCache: spec.judgmentCache, matchForensics: spec.matchForensics, budget, pairKey, generation, debugMark, reaskPromptRefusalFor, judgeConfigCacheDigest }, (judgeError, judged, judgeFault) => {
 								if (judgeError) {
 									// ⟪RULING 14:55 (a) THE NET⟫ a rationale-FORM refusal after its one re-ask names the SUBJECT in
 									// refusalList and the run CARRIES ON. No edge, no default, and explicitly NOT recorded as an
@@ -1852,6 +1978,15 @@ const moduleFunction =
 								if (judged.reportedCategoryOnAbstain !== undefined && judged.reportedCategoryOnAbstain !== null) {
 									judgeRecord.reportedCategoryOnAbstain = judged.reportedCategoryOnAbstain;
 								}
+								// the judge's rationale word for word, picks and abstentions alike, when the plugin opts in
+								if (recordsJudgeConfig) {
+									judgeRecord.rationale = judged.rationale;
+								}
+								// the relation the judge itself named, on a pick under a rule with a predicate slot (phase B3b,
+								// 2026-09-28). An abstention names none, and under categoryTable-v1 the answer carries no predicate at all.
+								if (judged.chosenCardStableId !== null && judged.predicate !== undefined) {
+									judgeRecord.predicate = judged.predicate;
+								}
 								if (judged.chosenCardStableId === null) {
 									report.judgeSpend.abstained += 1;
 									taskDone('', { ...oneTask.baseRecord, objectStableId: null, predicate: null, predicateAssertedBy: null, sourceLabel: null, confidence: null, abstained: true, judge: judgeRecord, renderedPoolStableIdList: question.renderedPoolStableIdList });
@@ -1861,11 +1996,11 @@ const moduleFunction =
 								// never a branch on matchBasis. For the three documentary kinds it comes from the SOURCE ROW
 								// that named the picked card (a tentative row's predicateIfPicked, a predicate row's
 								// predicate); the judge never names the relation. For kind 'judge' there IS no source row,
-								// so the plugin's declared predicateByCategory table maps the judge's CATEGORY to a relation
-								// — a v1 approximation, NAMED as such in the block header (predicateRule 'categoryTable-v1',
-								// RULING §11.7 (a)) so a later judge with a real predicate slot re-measures rather than
-								// silently differing. The mapping is total by construction: predicateByCategory is refused
-								// at declaration time unless it names every judge category.
+								// and the declared predicate rule decides (JUDGE_PICK_PREDICATE_BY_PREDICATE_RULE; the rule is
+								// named in the block header). Under 'categoryTable-v1' the plugin's predicateByCategory table maps the
+								// judge's CATEGORY to a relation — a v1 approximation (RULING §11.7 (a)), total by construction
+								// because the table is refused at declaration time unless it names every judge category. Under
+								// 'judgeSlot-v1' the judge names the relation itself (SPEC §9 A11).
 								const pickPredicateResolved = PICK_PREDICATE_RESOLVER_BY_SOURCE_KIND[bridgeDeclaration.predicateSource.kind]({ judged, oneTask, orderedAssertionList });
 								if (pickPredicateResolved.error) {
 									taskDone(pickPredicateResolved.error.message);
@@ -1922,7 +2057,7 @@ const moduleFunction =
 						labelRefusedCount: args.labelRefusedCount,
 						manyToOneSubjectCount: args.manyToOneSubjectCount,
 						refusedValueTierAssertionCount: args.refusedValueTierAssertionCount,
-						edgeCount: materialiserLib.pickedRecordList(decisionRecordList).length,
+						edgeCount: materialiserLib.plannedEdgeList(decisionRecordList).length,
 						contentionCensus: args.contention,
 						indexCollisionCount: args.contention.contendedKeyCount,
 					});
@@ -1959,6 +2094,9 @@ const moduleFunction =
 						cardinalityCensus: provisionalCensus,
 						generation,
 					};
+					if (recordsJudgeConfig) {
+						Object.assign(header, runJudgeConfigHeader);
+					}
 					const refusalList = report.refusalList.map((oneRefusal) => ({ ...oneRefusal }));
 					const frozen = decisionBlockLib.frozenTextFor({ header, decisionRecordList, refusalList });
 					if (frozen.error) {
@@ -2084,3 +2222,4 @@ const moduleFunction =
 // END OF moduleFunction() ============================================================
 
 module.exports = moduleFunction({ moduleName });
+module.exports.JUDGE_PICK_PREDICATE_BY_PREDICATE_RULE = JUDGE_PICK_PREDICATE_BY_PREDICATE_RULE;

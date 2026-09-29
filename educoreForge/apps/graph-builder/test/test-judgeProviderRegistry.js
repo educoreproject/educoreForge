@@ -101,6 +101,7 @@ const conformingProvider = ({ name = 'alpha', wireModel = 'w-1', model, maxConcu
 		maxConcurrency,
 		rerank: (rerankOptions, rerankCallback) => rerankCallback('', {}),
 		describe: () => ({ provider: name, model: resolvedModel, version: `${name}-vTest` }),
+		judgeConfig: Object.freeze({ temperaturePolicy: 'testNoWire', maxTokens: null }),
 	};
 };
 
@@ -596,13 +597,18 @@ harness.ok(
 		frozenResult.provider.smuggledMember = 1;
 	}).length > 0,
 );
+// isShallowFreezeSafe — a member a shallow freeze fully protects: a primitive or a function, or a FROZEN plain object
+// whose values are all primitives (judgeConfig, B2). Anything a caller could still mutate through the frozen provider fails.
+const isShallowFreezeSafe = (memberValue) =>
+	['string', 'number', 'function'].indexOf(typeof memberValue) !== -1 ||
+	(memberValue !== null && typeof memberValue === 'object' && Object.isFrozen(memberValue) && Object.keys(memberValue).every((oneName) => memberValue[oneName] === null || ['string', 'number', 'boolean'].indexOf(typeof memberValue[oneName]) !== -1));
 harness.ok(
 	'…the freeze is SHALLOW BY DECISION, and the header says so — every member is a string or a function',
 	/shallow/i.test(registrySourceText),
 );
 harness.ok(
-	'…and the members really are only strings and functions, which is what makes shallow enough',
-	Object.keys(frozenResult.provider).every((oneMemberName) => ['string', 'number', 'function'].indexOf(typeof frozenResult.provider[oneMemberName]) !== -1),
+	'…and the members really are only strings, numbers, functions and one frozen object of primitives (judgeConfig), which is what makes shallow enough',
+	Object.keys(frozenResult.provider).every((oneMemberName) => isShallowFreezeSafe(frozenResult.provider[oneMemberName])),
 	Object.keys(frozenResult.provider)
 		.map((oneMemberName) => `${oneMemberName}:${typeof frozenResult.provider[oneMemberName]}`)
 		.join(', '),

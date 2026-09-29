@@ -511,7 +511,7 @@ const judgeConjunctList = [
 		judge: (scenario) => {
 			const clientCategoryEnum = require(path.join(scenarioLib.FRAMEWORK_DIR, '..', '..', 'apps', 'graph-builder', 'apps', 'bridge-maker', 'lib', 'llmClient')).CATEGORY_ENUM;
 			const lib = scenario.frameworkMutationList.length ? moduleDouble.loadWithMutations({ modulePath: path.join(scenarioLib.FRAMEWORK_DIR, JUDGE_FILE), mutationList: scenario.frameworkMutationList }) : require(path.join(scenarioLib.FRAMEWORK_DIR, JUDGE_FILE));
-			const question = { choiceEnum: ['1', 'NONE'], renderedPoolStableIdList: ['urn:toy:card1'], promptHash: 'x' };
+			const question = { choiceEnum: ['1', 'NONE'], renderedPoolStableIdList: ['urn:toy:card1'], promptHash: 'x', judgePredicateRule: 'categoryTable-v1' };
 			const forEach = clientCategoryEnum.map((oneCategory) => lib.judgmentFromReturn({ clientReturn: { choice: 'NONE', category: oneCategory, rationale: 'nothing fits' }, question, isDebugClient: false }));
 			const allAccepted = clientCategoryEnum.length > 0 && forEach.every((oneJudged, oneIndex) => !oneJudged.error && oneJudged.category === 'none' && oneJudged.reportedCategoryOnAbstain === clientCategoryEnum[oneIndex] && oneJudged.chosenCardStableId === null);
 			const outsideRefused = Boolean(lib.judgmentFromReturn({ clientReturn: { choice: 'NONE', category: 'perhaps', rationale: 'nothing fits' }, question, isDebugClient: false }).error);
@@ -544,7 +544,7 @@ const judgeConjunctList = [
 		twinNameList: ['absentCategoryRefusedAgain'],
 		judge: (scenario) => {
 			const lib = scenario.frameworkMutationList.length ? moduleDouble.loadWithMutations({ modulePath: path.join(scenarioLib.FRAMEWORK_DIR, JUDGE_FILE), mutationList: scenario.frameworkMutationList }) : require(path.join(scenarioLib.FRAMEWORK_DIR, JUDGE_FILE));
-			const question = { choiceEnum: ['1', 'NONE'], renderedPoolStableIdList: ['urn:toy:card1'], promptHash: 'x' };
+			const question = { choiceEnum: ['1', 'NONE'], renderedPoolStableIdList: ['urn:toy:card1'], promptHash: 'x', judgePredicateRule: 'categoryTable-v1' };
 			const absentCategory = lib.judgmentFromReturn({ clientReturn: { choice: 'NONE', rationale: 'nothing fits' }, question, isDebugClient: false });
 			const acceptedWithMark = !absentCategory.error && absentCategory.category === 'none' && absentCategory.reportedCategoryOnAbstain === lib.ABSENT_CATEGORY_MARK && absentCategory.chosenCardStableId === null;
 			// THE CACHE ROUND-TRIP: putJudgment stores reportedCategoryOnAbstain in the category slot, and a hit
@@ -614,7 +614,7 @@ const judgeConjunctList = [
 		twinNameList: ['blankRationaleNotAbsent'],
 		judge: (scenario) => {
 			const lib = scenario.frameworkMutationList.length ? moduleDouble.loadWithMutations({ modulePath: path.join(scenarioLib.FRAMEWORK_DIR, JUDGE_FILE), mutationList: scenario.frameworkMutationList }) : require(path.join(scenarioLib.FRAMEWORK_DIR, JUDGE_FILE));
-			const question = { choiceEnum: ['1', 'NONE'], renderedPoolStableIdList: ['urn:toy:card1'], promptHash: 'x' };
+			const question = { choiceEnum: ['1', 'NONE'], renderedPoolStableIdList: ['urn:toy:card1'], promptHash: 'x', judgePredicateRule: 'categoryTable-v1' };
 			// the four shapes a missing rationale actually arrives in: the key omitted (llmClient's extractor),
 			// the empty string, whitespace only, and null (a SQLite NULL surfacing through the judgment cache).
 			// The supervisor's ruling names blank and absent as ONE case; nothing here may distinguish them.
@@ -661,7 +661,7 @@ const judgeConjunctList = [
 ];
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'a_outOfRangeChoiceRefused', twinName: 'clampOrdinal', fileName: JUDGE_FILE, find: "\tif (typeof choice !== 'string' || choiceEnum.indexOf(choice) === -1) {\n\t\treturn { error:", replace: "\tif (typeof choice !== 'string' || choiceEnum.indexOf(choice) === -1) {\n\t\treturn { chosenCardStableId: renderedPoolStableIdList[Math.min(renderedPoolStableIdList.length, Number(choice)) - 1] };\n\t\treturn { error:" });
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'a_pickMappedThroughRenderedOrder', twinName: 'mapThroughReversedList', fileName: JUDGE_FILE, find: '\tconst chosenCardStableId = renderedPoolStableIdList[ordinal - 1];', replace: '\tconst chosenCardStableId = renderedPoolStableIdList.slice().reverse()[ordinal - 1];' });
-frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'aPrime_putJudgmentPayloadExactlyFourKeys', twinName: 'payloadLacksChosenStableId', fileName: JUDGE_FILE, find: "\t\t\t\t{ ...cacheKey, generation, judgment: { choice: judged.choice, category: judged.reportedCategoryOnAbstain === undefined || judged.reportedCategoryOnAbstain === null ? judged.category : judged.reportedCategoryOnAbstain, rationale: judged.rationale, chosenStableId: judged.chosenCardStableId } },", replace: "\t\t\t\t{ ...cacheKey, generation, judgment: { choice: judged.choice, category: judged.reportedCategoryOnAbstain === undefined || judged.reportedCategoryOnAbstain === null ? judged.category : judged.reportedCategoryOnAbstain, rationale: judged.rationale, chosenStableId: judged.chosenCardStableId, model: judgeClient.model } }," });
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'aPrime_putJudgmentPayloadExactlyFourKeys', twinName: 'payloadLacksChosenStableId', fileName: JUDGE_FILE, find: "\t\t\t\t{ ...cacheKey, generation, judgment: { choice: judged.choice, category: judged.reportedCategoryOnAbstain === undefined || judged.reportedCategoryOnAbstain === null ? judged.category : judged.reportedCategoryOnAbstain, rationale: judged.rationale, chosenStableId: judged.chosenCardStableId, ...predicateByFieldNameOf(judged) } },", replace: "\t\t\t\t{ ...cacheKey, generation, judgment: { choice: judged.choice, category: judged.reportedCategoryOnAbstain === undefined || judged.reportedCategoryOnAbstain === null ? judged.category : judged.reportedCategoryOnAbstain, rationale: judged.rationale, chosenStableId: judged.chosenCardStableId, ...predicateByFieldNameOf(judged), model: judgeClient.model } }," });
 scenarioTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'b_abstentionNoEdgeCountedSeparately', twinName: 'abstainYieldsEdgeToFirstCandidate', leverKind: 'productionMutation', mutate: (scenario) => {
 	// an abstention that yields an edge to the first candidate (three coordinated faults in the judge component)
 	scenario.frameworkMutationList.push({ modulePath: path.join(scenarioLib.FRAMEWORK_DIR, JUDGE_FILE), find: "\tif (choice === ABSTAIN_TOKEN) {\n\t\treturn { chosenCardStableId: null };\n\t}", replace: "\tif (choice === ABSTAIN_TOKEN) {\n\t\treturn { chosenCardStableId: renderedPoolStableIdList[0] };\n\t}" });

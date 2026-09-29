@@ -5,7 +5,8 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // decisionBlock.js — the canonical freeze text, the header, blockIdFor, frameworkFingerprint and the
 // parse+verify used on materialise (SPEC-bridgeFramework-v1.md §7; RULINGS R1, R4, R7, BF12; BR-070..075).
 //
-// FROZEN TEXT = CANONICAL JSON: header keys in the DECLARED order (HEADER_KEY_ORDER); decisionRecordList
+// FROZEN TEXT = CANONICAL JSON: header keys in the DECLARED order (HEADER_KEY_ORDER; an OPTIONAL_HEADER_KEY_LIST key is
+// written only when present); decisionRecordList
 // sorted by (subjectStableId, objectStableId, predicate, targetKey); inside a record keys sorted; every list of
 // stableIds sorted; no undefined / NaN / Infinity (REFUSED); no timestamps, run ids or paths (a document is
 // named by channelKey + sha256); evidence BY REFERENCE (promptHash, rendererVersion, judgeModel). The
@@ -41,8 +42,13 @@ const HEADER_KEY_ORDER = Object.freeze([
 	// predicate sources (the SOURCE ROW names the relation there). 'categoryTable-v1' for a judge-sourced
 	// predicate: a NAMED, TIME-BOXED v1 approximation (RULING §11.7 (a)) stamped INSIDE the content address, so
 	// a later judge with a real predicate slot produces a visibly different block rather than silently
-	// different edges under the same story.
+	// different edges under the same story. 'judgeSlot-v1' is that later judge: it names the relation itself.
 	'predicateRule',
+	// the judge's configuration (SPEC-sifStructuralBridge-replacement §9 A12): OPTIONAL_HEADER_KEY_LIST below. Present
+	// only when the plugin declares blockRecordsJudgeConfig: true; otherwise omitted, so older blocks keep their text.
+	'judgeTemperaturePolicy',
+	'judgeMaxTokens',
+	'judgeToolSchemaSha256',
 	// candidateRetrieval — K, the cosine floor and the embedding model, or null for a key-filtered pool. These
 	// are the parameters that DECIDE WHICH CANDIDATES THE JUDGE EVER SAW, so they belong inside the content
 	// address and inside the census-fixture key (RULING §11.3/§11.10): changing K must re-key the block, not
@@ -62,7 +68,14 @@ const HEADER_KEY_ORDER = Object.freeze([
 	'cardinalityCensus',
 	'generation',
 ]);
-const STABLE_ID_LIST_KEY_LIST = Object.freeze(['renderedPoolStableIdList', 'filteredPoolStableIdList', 'keyPoolStableIdList', 'assertingSubjectList']);
+// OPTIONAL_HEADER_KEY_LIST — header keys that are omitted when absent, never frozen as null, and never required on read.
+// A block frozen before they existed still parses and keeps its id (PLAN small phases §1.6 R1).
+const OPTIONAL_HEADER_KEY_LIST = Object.freeze(['judgeTemperaturePolicy', 'judgeMaxTokens', 'judgeToolSchemaSha256']);
+const REQUIRED_HEADER_KEY_LIST = Object.freeze(HEADER_KEY_ORDER.filter((oneName) => OPTIONAL_HEADER_KEY_LIST.indexOf(oneName) === -1));
+// instanceStableIdList: the instances a record's answer is written to (materialisationFanout.js; a partitioned unit's share,
+// judgmentPartition.js; phases B4p, B4a), absent from every record of a run that declares no fan-out. This sort is the
+// only one the list gets: the reader hands it over in graph order.
+const STABLE_ID_LIST_KEY_LIST = Object.freeze(['renderedPoolStableIdList', 'filteredPoolStableIdList', 'keyPoolStableIdList', 'assertingSubjectList', 'instanceStableIdList']);
 const FINGERPRINT_ROOT_LIST = Object.freeze([
 	{ label: 'lib/bridge-framework', dirPath: __dirname, recursive: true, excludeDirNameList: ['test'] },
 	{ label: 'apps/graph-builder/apps/bridge-maker', dirPath: path.join(__dirname, '..', '..', 'apps', 'graph-builder', 'apps', 'bridge-maker'), recursive: false, excludeDirNameList: [] },
@@ -114,9 +127,9 @@ const frozenTextFor = ({ header, decisionRecordList, refusalList } = {}) => {
 	if (!isPlainObject(header)) {
 		return { error: refuse.byName({ moduleName, what: 'header is not an object', where: 'frozenTextFor({ header, decisionRecordList, refusalList })' }) };
 	}
-	const missingHeaderKey = HEADER_KEY_ORDER.find((oneName) => !Object.prototype.hasOwnProperty.call(header, oneName));
+	const missingHeaderKey = REQUIRED_HEADER_KEY_LIST.find((oneName) => !Object.prototype.hasOwnProperty.call(header, oneName));
 	if (missingHeaderKey !== undefined) {
-		return { error: refuse.byName({ moduleName, what: `header lacks '${missingHeaderKey}'`, where: `every block header carries ${HEADER_KEY_ORDER.join(', ')} (BR-071, BG-GEN)` }) };
+		return { error: refuse.byName({ moduleName, what: `header lacks '${missingHeaderKey}'`, where: `every block header carries ${REQUIRED_HEADER_KEY_LIST.join(', ')} (BR-071, BG-GEN)` }) };
 	}
 	const unknownHeaderKey = Object.keys(header).find((oneName) => HEADER_KEY_ORDER.indexOf(oneName) === -1);
 	if (unknownHeaderKey !== undefined) {
@@ -128,7 +141,7 @@ const frozenTextFor = ({ header, decisionRecordList, refusalList } = {}) => {
 	let frozenText = '';
 	let freezeFault = null;
 	const attempt = () => {
-		const headerText = `{${HEADER_KEY_ORDER.map((oneName) => `${JSON.stringify(oneName)}:${canonicalText(header[oneName], `header.${oneName}`)}`).join(',')}}`;
+		const headerText = `{${HEADER_KEY_ORDER.filter((oneName) => Object.prototype.hasOwnProperty.call(header, oneName)).map((oneName) => `${JSON.stringify(oneName)}:${canonicalText(header[oneName], `header.${oneName}`)}`).join(',')}}`;
 		const recordText = `[${decisionRecordList
 			.map(sortStableIdLists)
 			.sort(compareRecords)
@@ -183,9 +196,9 @@ const parseFrozenText = (frozenText) => {
 	if (!isPlainObject(block) || !isPlainObject(block.header) || !Array.isArray(block.decisionRecordList) || !Array.isArray(block.refusalList)) {
 		return { error: refuse.byName({ moduleName, what: 'the frozen text lacks header / decisionRecordList / refusalList', where: 'not a bridge decision block' }) };
 	}
-	const missingHeaderKey = HEADER_KEY_ORDER.find((oneName) => !Object.prototype.hasOwnProperty.call(block.header, oneName));
+	const missingHeaderKey = REQUIRED_HEADER_KEY_LIST.find((oneName) => !Object.prototype.hasOwnProperty.call(block.header, oneName));
 	if (missingHeaderKey !== undefined) {
-		return { error: refuse.byName({ moduleName, what: `the block header lacks '${missingHeaderKey}'`, where: 'BG-GEN: every header member is required on read as on freeze' }) };
+		return { error: refuse.byName({ moduleName, what: `the block header lacks '${missingHeaderKey}'`, where: 'BG-GEN: every required header member (REQUIRED_HEADER_KEY_LIST) is required on read as on freeze' }) };
 	}
 	return { block };
 };
@@ -229,6 +242,8 @@ const frameworkFingerprintFileList = () =>
 module.exports = {
 	FRAMEWORK_GENERATION,
 	HEADER_KEY_ORDER,
+	OPTIONAL_HEADER_KEY_LIST,
+	REQUIRED_HEADER_KEY_LIST,
 	STABLE_ID_LIST_KEY_LIST,
 	FINGERPRINT_ROOT_LIST,
 	canonicalText,

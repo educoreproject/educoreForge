@@ -10,7 +10,8 @@
 // scalarises), and applies debugEdgeRefusal per block. READ-ONLY: it opens the store, reads text, and computes;
 // no graph, no docker, no LLM.
 //
-//   auditMappingBlockText({ blockText, subject })                       → { subject, edgeCount, invalidDebugEdgeCount, refusalMessage | null }   (pure)
+//   auditMappingBlockText({ blockText, subject })                       → { subject, edgeCount, judgedSubjectCount?, invalidDebugEdgeCount, refusalMessage | null }   (pure)
+//   (judgedSubjectCount, phase B4c: the distinct judgedSubjectStableId values of a fanned-out block; absent for any other)
 //   auditManifestMappingBlocks({ standardsDatabase, manifestRefId }, cb) → cb(err, { manifestRefId, memberCount, mappingBlockList, refusalMessageList })
 //
 // Refuses BY NAME: an absent manifest; a member the store cannot return; a block whose text does not deserialise;
@@ -47,7 +48,7 @@ const { SCHEMA_BLOCK_KIND, MAPPING_PROPERTIES } = vocabularyLib;
 // would demand a judge for a bridge that was never judged.
 const JUDGED_RESOLUTION = 'judged';
 // An ABSENT mappingToolVersion is reported AS ABSENT, in words. Never '', never null, never a substituted
-// renderer version. [code fact, materialiser.js:99] the current writer CANNOT produce the shape — it writes
+// renderer version. [code fact, materialiser.js edgePropertiesFor] the current writer CANNOT produce the shape — it writes
 // the version through a template literal, so it is always a string — but absence is the shape a fabricator
 // needs, and a reader that quietly supplied a default here would print a version the edge does not carry
 // into a certificate that a promoter reads as measured.
@@ -93,7 +94,7 @@ const judgeEnumerationOf = (harvestedEdgeList) => {
 		const mappingToolVersionRaw = scalarPropertyOf(oneEdge.properties, MAPPING_PROPERTIES.MAPPING_TOOL_VERSION);
 		const mappingToolVersion = mappingToolVersionRaw === undefined ? ABSENT_MAPPING_TOOL_VERSION_TOKEN : `${mappingToolVersionRaw}`;
 		// the UNIT SEPARATOR, not bare concatenation: ('ab','c') and ('a','bc') are DIFFERENT pairs and
-		// must not collapse into one row. materialiser.js:38 keys its uniqueness check with the same
+		// must not collapse into one row. materialiser.js edgeUniquenessRefusal keys its check with the same
 		// separator, for the same reason.
 		const pairRefId = `${mappingTool}\u001f${mappingToolVersion}`;
 		const existingPair = judgedEdgeCountByPairRefId[pairRefId];
@@ -145,6 +146,10 @@ const auditMappingBlockText = ({ blockText, subject } = {}) => {
 	// returns on it, and only then looks at this one. It also leaves refusalMessage byte-unchanged for the
 	// conjuncts that already assert on it.
 	const enumeration = judgeEnumerationOf(harvestedEdgeList);
+	// FAN-OUT (phase B4c): a fanned-out edge leaves an instance and names the subject that was judged. The count of those
+	// subjects is reported beside edgeCount only for a block that carries the property, so any other audit row is unchanged.
+	const judgedSubjectStableIdSet = new Set(harvestedEdgeList.map((oneEdge) => scalarPropertyOf(oneEdge.properties, MAPPING_PROPERTIES.JUDGED_SUBJECT_STABLE_ID)).filter((judgedSubjectStableId) => judgedSubjectStableId !== undefined));
+	const judgedSubjectCensus = judgedSubjectStableIdSet.size === 0 ? {} : { judgedSubjectCount: judgedSubjectStableIdSet.size };
 	// A judged edge with NO mappingTool is the READ-SIDE TWIN of the write-side rule
 	// (graphSeamRules.js writeMappingEdge, JUDGED_ONLY_PROPERTY_LIST: judged ⇒ mappingTool). The write side
 	// cannot be relied on to have run: a block can be hand-assembled, or written by a builder that predates
@@ -163,6 +168,7 @@ const auditMappingBlockText = ({ blockText, subject } = {}) => {
 	return {
 		subject,
 		edgeCount: harvestedEdgeList.length,
+		...judgedSubjectCensus,
 		invalidDebugEdgeCount,
 		judgedEdgeCount: enumeration.judgedEdgeCount,
 		judgedEdgeMissingMappingToolCount: enumeration.judgedEdgeMissingMappingToolCount,
@@ -233,7 +239,7 @@ const auditManifestMappingBlocks = ({ standardsDatabase, manifestRefId } = {}, c
 					return;
 				}
 				const audit = auditMappingBlockText({ blockText: typeof blockRow.text === 'string' ? blockRow.text : `${blockRow.text}`, subject: oneMember.subject });
-				mappingBlockList.push({ subject: oneMember.subject, refId: oneMember.schemaBlockRefId, edgeCount: audit.edgeCount, invalidDebugEdgeCount: audit.invalidDebugEdgeCount, judgedEdgeCount: audit.judgedEdgeCount, judgedEdgeMissingMappingToolCount: audit.judgedEdgeMissingMappingToolCount, judgedEdgeMalformedMappingToolCount: audit.judgedEdgeMalformedMappingToolCount, judgeIdentityPairList: audit.judgeIdentityPairList });
+				mappingBlockList.push({ subject: oneMember.subject, refId: oneMember.schemaBlockRefId, edgeCount: audit.edgeCount, ...(audit.judgedSubjectCount === undefined ? {} : { judgedSubjectCount: audit.judgedSubjectCount }), invalidDebugEdgeCount: audit.invalidDebugEdgeCount, judgedEdgeCount: audit.judgedEdgeCount, judgedEdgeMissingMappingToolCount: audit.judgedEdgeMissingMappingToolCount, judgedEdgeMalformedMappingToolCount: audit.judgedEdgeMalformedMappingToolCount, judgeIdentityPairList: audit.judgeIdentityPairList });
 				if (audit.refusalMessage !== null) {
 					refusalMessageList.push(audit.refusalMessage);
 				}

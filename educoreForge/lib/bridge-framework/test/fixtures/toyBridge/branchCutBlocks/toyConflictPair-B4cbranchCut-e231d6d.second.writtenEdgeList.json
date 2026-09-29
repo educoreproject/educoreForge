@@ -1,0 +1,112 @@
+[
+ {
+  "fromStableId": "toy:property/Course.Credits",
+  "toStableId": "toyhub:card/P000010.C1",
+  "type": "EXACT_MATCH",
+  "properties": {
+   "predicate": "exactMatch",
+   "mappingJustification": "semapv:ManualMappingCuration",
+   "matchBasis": "standard",
+   "resolution": "specified",
+   "objectMatchField": "EDUcoreHub:canonicalKey",
+   "subjectSource": "Toy",
+   "subjectVersion": "1.2.3",
+   "objectSource": "ToyHub",
+   "objectVersion": "1.0",
+   "predicateAssertedBy": "channelAssertion",
+   "attestationChannelList": [
+    "anchorColumn:toy:property/Course.Credits"
+   ],
+   "decisionBlockHash": "58f2b1f623b054c4a07e13ab3bc4917a51970473ab334457ebe9395e216ae2ae",
+   "provenanceTier": "invalid-debug",
+   "matchId": "f741932ed7fb3fd98af91a90910d6023b1e14a957fd546a10de6cbce908a0102",
+   "mappingProvider": "https://toy.example/standard/v1",
+   "subjectMatchField": "toy:hubAnchorId"
+  },
+  "applyLabel": "BridgedRelation_TOY_TOYHUB"
+ },
+ {
+  "fromStableId": "toy:property/Course.Title",
+  "toStableId": "toyhub:card/P000006.C1",
+  "type": "EXACT_MATCH",
+  "properties": {
+   "predicate": "exactMatch",
+   "mappingJustification": "semapv:ManualMappingCuration",
+   "matchBasis": "standard",
+   "resolution": "specified",
+   "objectMatchField": "EDUcoreHub:canonicalKey",
+   "subjectSource": "Toy",
+   "subjectVersion": "1.2.3",
+   "objectSource": "ToyHub",
+   "objectVersion": "1.0",
+   "predicateAssertedBy": "channelAssertion",
+   "attestationChannelList": [
+    "anchorColumn:toy:property/Course.Title"
+   ],
+   "decisionBlockHash": "58f2b1f623b054c4a07e13ab3bc4917a51970473ab334457ebe9395e216ae2ae",
+   "provenanceTier": "invalid-debug",
+   "matchId": "1dc038a13e1c1b7b19362fd9f7b44009046f2b603c48caf600be4ca999a32597",
+   "mappingProvider": "https://toy.example/standard/v1",
+   "subjectMatchField": "toy:hubAnchorId"
+  },
+  "applyLabel": "BridgedRelation_TOY_TOYHUB"
+ },
+ {
+  "fromStableId": "toy:property/School.Name",
+  "toStableId": "toyhub:card/P000005.C1.OV0001",
+  "type": "EXACT_MATCH",
+  "properties": {
+   "predicate": "exactMatch",
+   "mappingJustification": "semapv:CompositeMatching",
+   "matchBasis": "standard",
+   "resolution": "judged",
+   "objectMatchField": "EDUcoreHub:canonicalKey",
+   "subjectSource": "Toy",
+   "subjectVersion": "1.2.3",
+   "objectSource": "ToyHub",
+   "objectVersion": "1.0",
+   "predicateAssertedBy": "channelAssertion",
+   "attestationChannelList": [
+    "anchorColumn:toy:property/School.Name"
+   ],
+   "decisionBlockHash": "58f2b1f623b054c4a07e13ab3bc4917a51970473ab334457ebe9395e216ae2ae",
+   "provenanceTier": "invalid-debug",
+   "matchId": "aea9547340a69d3584bd96d1ca5036e8ebaad48884e61607e37892a2c98ca1de",
+   "mappingProvider": "https://toy.example/standard/v1",
+   "subjectMatchField": "toy:hubAnchorId",
+   "confidence": 0.7,
+   "mappingTool": "debug:digest",
+   "mappingToolVersion": "bridgeEvidenceRenderer-v1"
+  },
+  "applyLabel": "BridgedRelation_TOY_TOYHUB"
+ },
+ {
+  "fromStableId": "toy:property/Student.BirthDate",
+  "toStableId": "toyhub:card/P000002.C1",
+  "type": "EXACT_MATCH",
+  "properties": {
+   "predicate": "exactMatch",
+   "mappingJustification": "semapv:CompositeMatching",
+   "matchBasis": "standard",
+   "resolution": "judged",
+   "objectMatchField": "EDUcoreHub:canonicalKey",
+   "subjectSource": "Toy",
+   "subjectVersion": "1.2.3",
+   "objectSource": "ToyHub",
+   "objectVersion": "1.0",
+   "predicateAssertedBy": "channelAssertion",
+   "attestationChannelList": [
+    "anchorColumn:toy:property/Student.BirthDate"
+   ],
+   "decisionBlockHash": "58f2b1f623b054c4a07e13ab3bc4917a51970473ab334457ebe9395e216ae2ae",
+   "provenanceTier": "invalid-debug",
+   "matchId": "a1b38b8644e8011e15bf23bbb29a6e9f08072fecb57aaaf5d13fde706147fa40",
+   "mappingProvider": "https://toy.example/standard/v1",
+   "subjectMatchField": "toy:hubAnchorId",
+   "confidence": 0.7,
+   "mappingTool": "debug:digest",
+   "mappingToolVersion": "bridgeEvidenceRenderer-v1"
+  },
+  "applyLabel": "BridgedRelation_TOY_TOYHUB"
+ }
+]

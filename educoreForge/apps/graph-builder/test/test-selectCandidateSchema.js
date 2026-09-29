@@ -108,8 +108,13 @@ const CHOICE_ENUM_FIXTURE = Object.freeze(['1', '2', '3', 'NONE']);
 // its bytes moved deliberately. Previous pin 7746be79a61b… (the 'none'-enum value from earlier today).
 // ⟪RE-PINNED, prompt v7, 2026-09-11⟫ the tool gained candidateIdeaList; previous pin 6f77d8fd6f01…
 // ⟪RE-PINNED, prompt v8, 2026-09-11⟫ the tool gained ideaCoverage; previous pin 1e551d61365c…
+// ⟪RE-PINNED, prompt v12, 2026-09-28, phase X0 of the SIF replacement, TQ-approved⟫ previous pin 8ef04dc4da8f…
+// The v8 pin was never the bytes of any COMMITTED tree: d606804 committed the v8 pin and the v12 schema
+// together, so this suite was red from that commit on. The value below is MEASURED from git, not from a
+// run of this file: renderSelectCandidateSchema over d606804's own selectCandidateSchema.js and
+// evidenceContracts.js hashes to it, and so does the campaign base 97feee9. d606804^ gives 7746be79a61b…
 const ANTHROPIC_RENDERING_BASELINE_SHA256 =
-	'8ef04dc4da8fc02c5fd5ebe1dc675081b16ad7f1915d5a8f6bacf5d27f80169e';
+	'96fc8257688b7080db84491405a023ec724e6e88f8a82c1b04d7f71088cf2feb';
 
 const canonicalSchema = selectCandidateSchemaLib.buildCanonicalSelectCandidateSchema({
 	choiceEnum: CHOICE_ENUM_FIXTURE,
@@ -197,7 +202,7 @@ harness.equal(
 // rather than asserting about the module that feeds it.
 harness.equal(
 	'llmClient.buildTool — the function production calls — still emits the baseline object EXACTLY',
-	sha256(JSON.stringify(llmClientLib.buildTool({ choiceEnum: CHOICE_ENUM_FIXTURE }), null, 2)),
+	sha256(JSON.stringify(llmClientLib.buildTool({ choiceEnum: CHOICE_ENUM_FIXTURE, predicateRule: 'categoryTable-v1' }), null, 2)),
 	ANTHROPIC_RENDERING_BASELINE_SHA256,
 );
 // …and the two are pinned TO EACH OTHER, not merely each to the same recorded constant. Added after the
@@ -209,7 +214,7 @@ harness.equal(
 // that day this assertion is the one that still says the client is consuming the rendering.
 harness.equal(
 	'llmClient.buildTool and the anthropic rendering are the SAME object, not two objects that agree today',
-	sha256(JSON.stringify(llmClientLib.buildTool({ choiceEnum: CHOICE_ENUM_FIXTURE }), null, 2)),
+	sha256(JSON.stringify(llmClientLib.buildTool({ choiceEnum: CHOICE_ENUM_FIXTURE, predicateRule: 'categoryTable-v1' }), null, 2)),
 	sha256(JSON.stringify(anthropicRendering, null, 2)),
 );
 harness.equal(

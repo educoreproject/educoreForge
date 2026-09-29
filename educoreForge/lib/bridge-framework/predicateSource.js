@@ -31,8 +31,8 @@ const PREDICATE_SOURCE_KIND_REGISTRY = Object.freeze({
 	column: Object.freeze({ readsTable: true, rowFor: tableRowFor, provenanceOf: (predicateSource) => predicateSource.table, provenanceSlotName: 'labelTableProvenance' }),
 	labelTable: Object.freeze({ readsTable: true, rowFor: tableRowFor, provenanceOf: (predicateSource) => predicateSource.table, provenanceSlotName: 'labelTableProvenance' }),
 	channelAssertion: Object.freeze({ readsTable: false, rowFor: () => null, provenanceOf: (predicateSource) => predicateSource, provenanceSlotName: 'channelAssertionProvenance' }),
-	// judge — the relation comes from the JUDGE, through the plugin's declared predicateByCategory table
-	// (RULING §11.7 (a)). readsTable is FALSE in this registry's sense: there is no per-ROW label to look up,
+	// judge — the relation comes from the JUDGE: under predicateRule categoryTable-v1 through the plugin's declared
+	// predicateByCategory table (RULING §11.7 (a)), under judgeSlot-v1 through the judge's own predicate slot. readsTable is FALSE in this registry's sense: there is no per-ROW label to look up,
 	// because a derived subject has no source row. The set-level provenance it exports is the RULE ITSELF —
 	// the category→predicate table plus the name of the rule — so a reader of the SSSOM can see exactly what
 	// turned a confidence category into a relation, and see that it was an approximation.
