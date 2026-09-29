@@ -25,7 +25,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // WHY THE TOOL TEXT IS RENDERED HERE RATHER THAN READ FROM THE CLIENT. The debug judge never builds a schema at all,
 // so a scan that read "what the client sent" would scan nothing under the debug judge and something else under the
 // real one: a debug run could be green and the paid run refused (front-gate review #6). The tool text is therefore
-// taken from selectCandidateSchema.renderSelectCandidateSchema for the run's DECLARED predicate rule, in EVERY
+// taken from selectCandidateSchema's rendering for the run's DECLARED predicate rule, in EVERY
 // dialect the schema module knows, so what is scanned does not depend on which provider is active.
 //
 // WHY A LIST ID MATCHES ONLY BETWEEN ALPHANUMERIC BOUNDARIES. A list may hold bare six-digit ids such as 000505.
@@ -36,17 +36,19 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
 const path = require('path');
 const fs = require('fs');
-const { renderSelectCandidateSchema, SCHEMA_DIALECT_NAME_LIST } = require(path.join(__dirname, '..', '..', 'apps', 'graph-builder', 'apps', 'bridge-maker', 'lib', 'selectCandidateSchema'));
+const { renderSelectCandidateSchema, renderSelectCandidateSchemaForPredicateRule, SCHEMA_DIALECT_NAME_LIST } = require(path.join(__dirname, '..', '..', 'apps', 'graph-builder', 'apps', 'bridge-maker', 'lib', 'selectCandidateSchema'));
 
 const IDENTIFIER_LIST_PATTERN_NAME = 'identifierList';
 const SCAN_DECLARATION_MEMBER_LIST = Object.freeze(['identifierPatternList', 'identifierListPath']);
 const PATTERN_ROW_MEMBER_LIST = Object.freeze(['patternName', 'regexSource']);
 
 // TOOL_TEXT_RENDERER_BY_PREDICATE_RULE — one row per predicate rule whose judge answers through a tool schema. The
-// rule is the key because the schema is the rule's (B3a adds judgeSlot-v1 with its own schema). The text is every
-// dialect's rendering, each on its own line under its dialect name.
+// rule is the key because the schema is the rule's: judgeSlot-v1's schema carries the predicate slot. The text is
+// every dialect's rendering, each on its own line under its dialect name. A rule with no row here fails at the first
+// judged subject with a TypeError (B1 back-gate ruling: no guard), so a new rule adds its row with its schema.
 const TOOL_TEXT_RENDERER_BY_PREDICATE_RULE = Object.freeze({
 	'categoryTable-v1': ({ choiceEnum }) => SCHEMA_DIALECT_NAME_LIST.map((oneDialectName) => `${oneDialectName}: ${JSON.stringify(renderSelectCandidateSchema(oneDialectName, { choiceEnum }))}`).join('\n'),
+	'judgeSlot-v1': ({ choiceEnum }) => SCHEMA_DIALECT_NAME_LIST.map((oneDialectName) => `${oneDialectName}: ${JSON.stringify(renderSelectCandidateSchemaForPredicateRule(oneDialectName, { choiceEnum, predicateRule: 'judgeSlot-v1' }))}`).join('\n'),
 });
 
 const isPlainObject = (candidate) => candidate !== null && typeof candidate === 'object' && !Array.isArray(candidate);

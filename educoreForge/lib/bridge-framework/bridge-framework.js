@@ -725,7 +725,9 @@ const moduleFunction =
 				callback(refuse.byName({ moduleName, what: `matchBasis '${bridgeDeclaration.matchBasis}' names no SOURCE_ACQUISITION_REGISTRY row`, where: 'the row declares how a basis acquires subjects and pools; a basis without one cannot be run' }).message);
 				return;
 			}
-			const judgePromptVariant = acquisitionRow.judgePromptVariant;
+			// the rendering variant comes from VARIANT_BY_BASIS_AND_PREDICATE_RULE, which registration has already
+			// checked, so the pair always has a row here
+			const judgePromptVariant = bridgePluginContractLib.judgePromptVariantFor({ bridgeDeclaration }).judgePromptVariant;
 			const runRendererVersion = evidenceRendererLib.JUDGE_PROMPT_VARIANT_REGISTRY[judgePromptVariant].rendererVersion;
 			// WHICH subject-node properties become rendered material is a member of the VARIANT row, not a constant
 			// in this file: the crosswalk variant names its seven by name (byte-frozen), the derived variant takes
@@ -752,6 +754,8 @@ const moduleFunction =
 				column: sourceRowPickPredicate,
 				labelTable: sourceRowPickPredicate,
 				channelAssertion: sourceRowPickPredicate,
+				// judge reads the categoryTable-v1 table. A judgeSlot-v1 declaration carries no table, so it cannot be
+				// served by this row; the judge's own predicate reaches the record in PLAN small phases §3 B3b.
 				judge: ({ judged }) => {
 					const predicate = bridgeDeclaration.predicateByCategory[judged.category];
 					if (predicate === undefined) {

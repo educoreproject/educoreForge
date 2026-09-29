@@ -11,7 +11,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //                    promptSegmentList, judgePromptVariant, renderingAllowList })
 //     → { systemPrompt, userPrompt, promptHash, renderedPoolStableIdList, choiceEnum, rendererVersion } | { error }
 //
-// TWO REGISTERED VARIANTS, one row each (RULING §11.1) — never a branch on the variant name:
+// THREE REGISTERED VARIANTS, one row each (RULING §11.1) — never a branch on the variant name:
 //
 //   crosswalk  the shipped rendering, BYTE-FROZEN. Every candidate is headlined by its canonicalKey and the
 //              subject prints its stableId, because for a key-filtered pool those ARE the shared join key the
@@ -24,6 +24,12 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //              renderer builds each block by walking the declared names, so a property nobody thought to
 //              forbid cannot appear. It has its OWN renderer version (bridgeEvidenceRenderer-derived-v1), which
 //              is why bumping it cannot orphan the crosswalk's cache.
+//
+//   derivedJudgeSlot  the derived rendering, byte for byte, under its OWN renderer version
+//              (bridgeEvidenceRenderer-derivedJudgeSlot-v1; PLAN small phases §3 B3a, RULING review #5). It is chosen
+//              for predicateRule judgeSlot-v1, whose judge also names the relation; that request lives in the tool
+//              schema, not in these prompts. The separate version keeps its promptHash, and so its cache rows, apart
+//              from the derived variant's, and leaves DERIVED_RENDERER_VERSION where it was.
 //
 // WHY THE DERIVED SYSTEM PROMPT SAYS "by name". BR-067 tells the judge to cite its choice by the candidate's
 // hub key, and judgeComponent's ORDINAL_RATIONALE_RE refuses a rationale that names an ordinal instead —
@@ -50,6 +56,7 @@ const RENDERER_VERSION = 'bridgeEvidenceRenderer-v1';
 // no v1 or v2 judgment can be served from cache to a v3 run — which is the property that keeps the three runs
 // comparable instead of silently blended.
 const DERIVED_RENDERER_VERSION = 'bridgeEvidenceRenderer-derived-v12';
+const DERIVED_JUDGE_SLOT_RENDERER_VERSION = 'bridgeEvidenceRenderer-derivedJudgeSlot-v1';
 const ABSTAIN_TOKEN = 'NONE';
 const MIN_IDENTIFYING_TOKEN_LENGTH = 4;
 
@@ -204,6 +211,24 @@ const CROSSWALK_SUBJECT_MATERIAL_NAME_LIST = Object.freeze(['description', 'defi
 // allow-list that the material step can silently overrule is not an allow-list. This is the seam where the
 // bias audit would have leaked in the other direction: a constant list would have quietly DROPPED
 // propertyType / owningConstructName from the derived prompt no matter what the plugin declared.
+const DERIVED_VARIANT_ROW = Object.freeze({
+	rendererVersion: DERIVED_RENDERER_VERSION,
+	systemPrompt: DERIVED_SYSTEM_PROMPT,
+	requiresRenderingAllowList: true,
+	subjectLineList: derivedSubjectLineList,
+	candidateLineList: derivedCandidateLineList,
+	subjectMaterialNameListFor: ({ bridgeDeclaration }) => bridgeDeclaration.renderingAllowList.subject,
+	// ⟪v11, 2026-09-13 — TQ⟫ GUIDANCE MOVES TO THE SYSTEM PROMPT. The guidance is still DECLARED by the
+	// plugin (it is the plugin's taste, not the framework's) — only its PLACEMENT changes here, so the A2
+	// smuggling gate still inspects the same segments and promptHash still covers both halves.
+	guidancePlacement: 'system',
+	guidanceHeading: 'GUIDANCE (rules you must follow if possible):',
+	// ⟪v11/v12 — TQ, scoped to this row by R1⟫ the framing line before the candidates, TQ's CANDIDATE ELEMENTS
+	// vocabulary, and the request for a RATIONALE. Byte-identical to d606804's derived-v12 rendering.
+	candidateListPreambleLineList: Object.freeze(['', 'Selected from this CANDIDATE ELEMENTS list:', '']),
+	candidateListHeadingWord: 'CANDIDATE ELEMENTS',
+	answerLineSuffix: ', as well as a RATIONALE.',
+});
 const JUDGE_PROMPT_VARIANT_REGISTRY = Object.freeze({
 	crosswalk: Object.freeze({
 		rendererVersion: RENDERER_VERSION,
@@ -221,24 +246,8 @@ const JUDGE_PROMPT_VARIANT_REGISTRY = Object.freeze({
 		candidateListHeadingWord: 'CANDIDATES',
 		answerLineSuffix: '.',
 	}),
-	derived: Object.freeze({
-		rendererVersion: DERIVED_RENDERER_VERSION,
-		systemPrompt: DERIVED_SYSTEM_PROMPT,
-		requiresRenderingAllowList: true,
-		subjectLineList: derivedSubjectLineList,
-		candidateLineList: derivedCandidateLineList,
-		subjectMaterialNameListFor: ({ bridgeDeclaration }) => bridgeDeclaration.renderingAllowList.subject,
-		// ⟪v11, 2026-09-13 — TQ⟫ GUIDANCE MOVES TO THE SYSTEM PROMPT. The guidance is still DECLARED by the
-		// plugin (it is the plugin's taste, not the framework's) — only its PLACEMENT changes here, so the A2
-		// smuggling gate still inspects the same segments and promptHash still covers both halves.
-		guidancePlacement: 'system',
-		guidanceHeading: 'GUIDANCE (rules you must follow if possible):',
-		// ⟪v11/v12 — TQ, scoped to this row by R1⟫ the framing line before the candidates, TQ's CANDIDATE ELEMENTS
-		// vocabulary, and the request for a RATIONALE. Byte-identical to d606804's derived-v12 rendering.
-		candidateListPreambleLineList: Object.freeze(['', 'Selected from this CANDIDATE ELEMENTS list:', '']),
-		candidateListHeadingWord: 'CANDIDATE ELEMENTS',
-		answerLineSuffix: ', as well as a RATIONALE.',
-	}),
+	derived: DERIVED_VARIANT_ROW,
+	derivedJudgeSlot: Object.freeze({ ...DERIVED_VARIANT_ROW, rendererVersion: DERIVED_JUDGE_SLOT_RENDERER_VERSION }),
 });
 
 // renderedBlockRefusal — the POSITIVE half of the id gate, applied to the bytes actually produced. The
@@ -258,7 +267,7 @@ const renderedBlockRefusal = ({ lineList, variantRow }) => {
 
 const renderQuestion = ({ sourceElement, candidatePool, globalGuidanceList, perCandidateNoteByStableId, promptSegmentList, judgePromptVariant, renderingAllowList } = {}) => {
 	if (JUDGE_PROMPT_VARIANT_REGISTRY[judgePromptVariant] === undefined) {
-		return { error: refuse.byName({ moduleName, what: `judgePromptVariant ${JSON.stringify(judgePromptVariant)} names no rendering variant`, where: `the framework passes the variant named by the run's SOURCE_ACQUISITION_REGISTRY row; the registered variants are ${JUDGE_PROMPT_VARIANT_LIST.join(', ')} — there is no default renderer` }) };
+		return { error: refuse.byName({ moduleName, what: `judgePromptVariant ${JSON.stringify(judgePromptVariant)} names no rendering variant`, where: `the framework passes the variant VARIANT_BY_BASIS_AND_PREDICATE_RULE names for the run; the registered variants are ${JUDGE_PROMPT_VARIANT_LIST.join(', ')} — there is no default renderer` }) };
 	}
 	const variantRow = JUDGE_PROMPT_VARIANT_REGISTRY[judgePromptVariant];
 	if (variantRow.requiresRenderingAllowList && !(isPlainObject(renderingAllowList) && Array.isArray(renderingAllowList.subject) && Array.isArray(renderingAllowList.candidate) && renderingAllowList.subject.length > 0 && renderingAllowList.candidate.length > 0)) {
@@ -343,6 +352,7 @@ const renderQuestion = ({ sourceElement, candidatePool, globalGuidanceList, perC
 module.exports = {
 	RENDERER_VERSION,
 	DERIVED_RENDERER_VERSION,
+	DERIVED_JUDGE_SLOT_RENDERER_VERSION,
 	SYSTEM_PROMPT,
 	DERIVED_SYSTEM_PROMPT,
 	JUDGE_PROMPT_VARIANT_REGISTRY,

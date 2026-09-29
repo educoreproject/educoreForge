@@ -42,7 +42,7 @@ const HEADER_KEY_ORDER = Object.freeze([
 	// predicate sources (the SOURCE ROW names the relation there). 'categoryTable-v1' for a judge-sourced
 	// predicate: a NAMED, TIME-BOXED v1 approximation (RULING §11.7 (a)) stamped INSIDE the content address, so
 	// a later judge with a real predicate slot produces a visibly different block rather than silently
-	// different edges under the same story.
+	// different edges under the same story. 'judgeSlot-v1' is that later judge: it names the relation itself.
 	'predicateRule',
 	// the judge's configuration (SPEC-sifStructuralBridge-replacement §9 A12): OPTIONAL_HEADER_KEY_LIST below. Present
 	// only when the plugin declares blockRecordsJudgeConfig: true; otherwise omitted, so older blocks keep their text.

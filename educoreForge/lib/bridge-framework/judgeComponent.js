@@ -15,8 +15,10 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //         judgeModel, discardedPredicateKeyCount, attempts, usage }
 //
 // The judge's REAL return is llmClient/debugJudge's { choice, model, attempts, category, rationale, usage, … }
-// where `choice` is an ORDINAL string from choiceEnum ('1'..'N' | 'NONE'); there is NO predicate slot and
-// none is added (RULING BF1). This component maps the ordinal through renderedPoolStableIdList — the ONE
+// where `choice` is an ORDINAL string from choiceEnum ('1'..'N' | 'NONE'); under predicateRule categoryTable-v1
+// there is NO predicate slot and none is added (RULING BF1, which governs categoryTable-v1 only: SPEC §9 A11).
+// judgeSlot-v1's tool schema does carry one (selectCandidateSchema.js); this component does not yet read it
+// (PLAN small phases §3 B3b). This component maps the ordinal through renderedPoolStableIdList — the ONE
 // authority — to chosenCardStableId; 'NONE' is an abstention (null). A choice outside choiceEnum, or a
 // category / rationale absent or blank, is REFUSED by name, never defaulted; a stray `predicate` key on the
 // return is DISCARDED and COUNTED (BG-P6 b). confidence is DERIVED from category by CONFIDENCE_BAND_TABLE.

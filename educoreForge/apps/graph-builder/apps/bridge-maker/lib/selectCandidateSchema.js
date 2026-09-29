@@ -40,6 +40,11 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // judgment could recover from. Operational faults still travel by callback, in the providers. There is no
 // try/catch here and no async: the module is synchronous and pure.
 //
+// TWO SHAPES, ONE PER PREDICATE RULE (PLAN small phases §3 B3a; SPEC §9 A11). renderSelectCandidateSchema is the
+// categoryTable-v1 shape, byte-for-byte as it was: the judge returns a category and the plugin's table turns it into
+// a relation. renderSelectCandidateSchemaForPredicateRule renders either shape by name; the judgeSlot-v1 shape adds a
+// REQUIRED `predicate` field in which the judge names the relation itself. An unknown rule throws by name.
+//
 // @concept: [[SelectCandidateSchema]]
 
 // SELECT_CATEGORY_ENUM — the SINGLE SOURCE OF TRUTH for the discrete verdict category (evidenceContracts.js
@@ -182,6 +187,29 @@ const SORTED_CANDIDATE_LIST_DESCRIPTION =
 	'Every CANDIDATE INDEX NUMBER offered, ordered from closest in meaning to the source element to furthest. ' +
 	'Use the ORIGINAL index numbers; every candidate appears exactly once.';
 
+// ⟪B3a, 2026-09-28⟫ THE PREDICATE SLOT, judgeSlot-v1 only. Four SKOS mapping relations a judge may name (relatedMatch
+// is not offered), plus the same abstain word the category uses: an abstention cannot honestly name a relation, and a
+// required field it could not fill is the defect OFFERED_CATEGORY_ENUM records above (EBONY_DREAM ruling). The direction follows the
+// mapping's subject and object: the SOURCE ELEMENT is the subject, the chosen candidate the object, so broadMatch
+// says the candidate is the broader of the two.
+const PICK_PREDICATE_ENUM = Object.freeze(['exactMatch', 'closeMatch', 'broadMatch', 'narrowMatch']);
+const OFFERED_PREDICATE_ENUM = Object.freeze(PICK_PREDICATE_ENUM.concat([ABSTAIN_CATEGORY_NAME]));
+const JUDGE_SLOT_REQUIRED_FIELD_LIST = Object.freeze(
+	JUDGMENT_REQUIRED_FIELD_LIST.slice(0, JUDGMENT_REQUIRED_FIELD_LIST.indexOf('category') + 1)
+		.concat(['predicate'])
+		.concat(JUDGMENT_REQUIRED_FIELD_LIST.slice(JUDGMENT_REQUIRED_FIELD_LIST.indexOf('category') + 1)),
+);
+const JUDGE_SLOT_TOOL_DESCRIPTION =
+	`${TOOL_DESCRIPTION} You MUST ALSO record a PREDICATE: how the chosen candidate relates in meaning to the ` +
+	`SOURCE ELEMENT. When choice is NONE, predicate MUST be ${ABSTAIN_CATEGORY_NAME}.`;
+const PREDICATE_DESCRIPTION =
+	'How the chosen candidate relates in meaning to the SOURCE ELEMENT. exactMatch: they mean the same thing and ' +
+	'can be used interchangeably. closeMatch: close enough to be used in place of each other for most purposes, ' +
+	'but not exactly the same. broadMatch: the candidate is BROADER than the source element; the source element is ' +
+	'a more specific case of it. narrowMatch: the candidate is NARROWER than the source element; it is a more ' +
+	`specific case of the source element. Exactly ${ABSTAIN_CATEGORY_NAME} when choice is NONE, and never otherwise. ` +
+	'Always required.';
+
 const absentChoiceEnumRefusalText = (receivedValue) =>
 	`${moduleName}: choiceEnum is REQUIRED and must be a non-empty array. It is the per-subject list of ` +
 	`candidate numbers plus 'NONE', so it differs on every judgment and has no meaningful default — a ` +
@@ -277,6 +305,45 @@ const buildCanonicalSelectCandidateSchema = ({ choiceEnum } = {}) => {
 	});
 };
 
+// buildJudgeSlotSelectCandidateSchema — the categoryTable-v1 schema plus the predicate slot, placed after
+// category, and the tool description that asks for it. Everything else is the categoryTable-v1 schema's own.
+const buildJudgeSlotSelectCandidateSchema = ({ choiceEnum } = {}) => {
+	const categoryTableSchema = buildCanonicalSelectCandidateSchema({ choiceEnum });
+	const { choice, category, ...laterPropertyByName } = categoryTableSchema.jsonSchema.properties;
+	return Object.freeze({
+		toolName: categoryTableSchema.toolName,
+		toolDescription: JUDGE_SLOT_TOOL_DESCRIPTION,
+		jsonSchema: Object.freeze({
+			...categoryTableSchema.jsonSchema,
+			properties: Object.freeze({
+				choice,
+				category,
+				predicate: Object.freeze({
+					type: 'string',
+					enum: OFFERED_PREDICATE_ENUM,
+					description: PREDICATE_DESCRIPTION,
+				}),
+				...laterPropertyByName,
+			}),
+			required: JUDGE_SLOT_REQUIRED_FIELD_LIST,
+		}),
+	});
+};
+
+// CANONICAL_SCHEMA_BUILDER_BY_PREDICATE_RULE — which canonical schema a predicate rule's judge answers through.
+// The rule names are the bridge contract's (bridgePluginContract.JUDGE_PREDICATE_RULE_LIST); they are literals here
+// because this module requires nothing outside its own directory (see the header).
+const CANONICAL_SCHEMA_BUILDER_BY_PREDICATE_RULE = Object.freeze({
+	'categoryTable-v1': buildCanonicalSelectCandidateSchema,
+	'judgeSlot-v1': buildJudgeSlotSelectCandidateSchema,
+});
+const PREDICATE_RULE_NAME_LIST = Object.freeze(Object.keys(CANONICAL_SCHEMA_BUILDER_BY_PREDICATE_RULE));
+
+const unknownPredicateRuleRefusalText = (receivedPredicateRule) =>
+	`${moduleName}: predicateRule ${JSON.stringify(receivedPredicateRule)} names no select_candidate schema. The ` +
+	`known rules are: ${PREDICATE_RULE_NAME_LIST.join(', ')}. A rule is added by adding a row to ` +
+	`CANONICAL_SCHEMA_BUILDER_BY_PREDICATE_RULE. Refused by name, never rendered as another rule's schema.`;
+
 // SCHEMA_DIALECT_REGISTRY — the per-provider renderings, as ORDERED DATA walked by name. No switch, no
 // conditional chain: adding a provider dialect is a new row here and nothing else in this file changes.
 //
@@ -327,6 +394,14 @@ const dialectRowOrRefuse = (dialectName) => {
 const renderSelectCandidateSchema = (dialectName, { choiceEnum } = {}) =>
 	dialectRowOrRefuse(dialectName).render(buildCanonicalSelectCandidateSchema({ choiceEnum }));
 
+// renderSelectCandidateSchemaForPredicateRule — the same, for the schema of a named predicate rule
+const renderSelectCandidateSchemaForPredicateRule = (dialectName, { choiceEnum, predicateRule } = {}) => {
+	if (!Object.prototype.hasOwnProperty.call(CANONICAL_SCHEMA_BUILDER_BY_PREDICATE_RULE, predicateRule)) {
+		throw new Error(unknownPredicateRuleRefusalText(predicateRule));
+	}
+	return dialectRowOrRefuse(dialectName).render(CANONICAL_SCHEMA_BUILDER_BY_PREDICATE_RULE[predicateRule]({ choiceEnum }));
+};
+
 // categoryEnumOfRendering — reads the category enum back out of a rendering. This is how a gate asserts
 // "every dialect offers exactly the pick-only categories" without itself knowing where any dialect puts
 // them; a test that knew each dialect's shape would be a fourth place the dialects are described.
@@ -338,9 +413,15 @@ module.exports = {
 	PICK_CATEGORY_ENUM,
 	OFFERED_CATEGORY_ENUM,
 	JUDGMENT_REQUIRED_FIELD_LIST,
+	PICK_PREDICATE_ENUM,
+	OFFERED_PREDICATE_ENUM,
+	JUDGE_SLOT_REQUIRED_FIELD_LIST,
 	SCHEMA_DIALECT_NAME_LIST,
+	PREDICATE_RULE_NAME_LIST,
 	buildCanonicalSelectCandidateSchema,
+	buildJudgeSlotSelectCandidateSchema,
 	renderSelectCandidateSchema,
+	renderSelectCandidateSchemaForPredicateRule,
 	categoryEnumOfRendering,
 	unknownDialectRefusalText,
 };
