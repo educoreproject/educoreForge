@@ -8,12 +8,13 @@
 //   BG-PARTITION  (a) a toy subject whose instances sit in objects of two partitions yields two judgment units, each
 //                 prompt stating its label on the declared line, each record carrying its label and its instances;
 //                 (b) the file's sha256 is checked, an object missing from the file is refused by name, and so are the
-//                 file's other faults (header, blank cell, duplicate object) and the instance faults (no object named,
-//                 no instance); (c) a subject the unpartitioned rule names is ONE unit with label null, all its
-//                 instances and no label line; (e) the frozen instance list is canonical (sorted by the freeze);
-//                 (f) the contract refuses a basis that does not admit a partition, a rendered name outside the
-//                 subject allow-list, a blinded property, a rendered name a subject already carries, an undeclared
-//                 member and an unregistered kind.
+//                 file's other faults (blank cell, duplicate object); (c) a subject the unpartitioned rule names is ONE
+//                 unit with label null, all its instances and no label line; (e) each unit's frozen instance list is
+//                 canonical (sorted by the freeze); (f) the contract refuses a rendered name outside the subject
+//                 allow-list, a blinded property, a rendered name a subject already carries, an undeclared member and an
+//                 unregistered kind. Since B4a the partition splits the list materialisationFanout attaches, so every
+//                 partitioned toy here declares fan-out too; the fan-out's own gates, the zero-instance refusal and the
+//                 admission rule are in test-bgMaterialisationFanout.js.
 //   BG-PARTITION-ORACLE  (R1) run E's frozen block parses unchanged and keeps its id; (d, §1.7) with the key absent
 //                 the toy derived block equals the branch-cut text with frameworkFingerprint masked, (m) unmasked it
 //                 differs in that key alone, and (o) the key is optional: absent, it is omitted from every record.
@@ -39,106 +40,65 @@ const fs = require('fs');
 const os = require('os');
 const crypto = require('crypto');
 const scenarioLib = require('./testSupport/toyBridgeScenario');
+const instanceScenarioLib = require('./testSupport/toyInstanceScenario');
 const { runConjunct, pureConjunct, succeeded, frameworkMutationTwin, scenarioTwin, refusalCase, blockOf, frameworkFile } = require('./testSupport/bridgeTwinFactories');
 const moduleDouble = require(path.join(__dirname, '..', '..', 'forge-framework', 'test', 'testSupport', 'moduleDouble'));
 const { runGateFamily } = require(path.join(__dirname, '..', '..', 'forge-framework', 'test', 'testSupport', 'gateSuiteRunner'));
 const { makeTwinRegistry } = require(path.join(__dirname, '..', '..', 'forge-framework', 'roundTripHarness', 'twinRegistry'));
 
 const twinRegistry = makeTwinRegistry();
-const DERIVED_PLUGIN_NAME = 'toyDerivedPlugin';
 const FRAMEWORK_FILE = 'bridge-framework.js';
 const CONTRACT_FILE = 'bridgePluginContract.js';
 const PARTITION_FILE = 'judgmentPartition.js';
 const DECISION_BLOCK_FILE = 'decisionBlock.js';
-const TOY_EMBED_MODEL = 'toy-embed-v1';
 const TREE_ROOT = path.join(__dirname, '..', '..', '..');
-const TOY_BUNDLE_DIR = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy');
-const cloneJson = scenarioLib.cloneJson;
+const TOY_BUNDLE_DIR = instanceScenarioLib.TOY_BUNDLE_DIR;
 const sha256OfBytes = (bytes) => crypto.createHash('sha256').update(bytes).digest('hex');
 
 // the frozen literals this phase is measured against
 const PARTITION_FILE_RELATIVE_PATH = 'bridgeData/toyObjectPartition.tsv';
 const PARTITION_FILE_SHA256_LITERAL = 'c88af19f70f8117fc069ceef4d8f36157297ec3e3fe67a0dd3c2c419a51930a2';
 const RENDERED_PROPERTY_NAME = 'objectPartition';
-const IDENTIFIER_QUESTION = 'toy:question/Identifier';
-const TIMESTAMP_QUESTION = 'toy:question/Timestamp';
+const IDENTIFIER_QUESTION = instanceScenarioLib.IDENTIFIER_QUESTION;
+const TIMESTAMP_QUESTION = instanceScenarioLib.TIMESTAMP_QUESTION;
 const IDENTIFIER_UNIT_LITERAL_LIST = Object.freeze([
-	Object.freeze({ judgmentPartitionLabel: 'Toy Staff', judgmentPartitionInstanceStableIdList: Object.freeze(['toy:field/StaffRecord.Identifier']) }),
-	Object.freeze({ judgmentPartitionLabel: 'Toy Student', judgmentPartitionInstanceStableIdList: Object.freeze(['toy:field/StudentEnrollment.Identifier', 'toy:field/StudentRecord.Identifier']) }),
+	Object.freeze({ judgmentPartitionLabel: 'Toy Staff', instanceStableIdList: Object.freeze(['toy:field/StaffRecord.Identifier']) }),
+	Object.freeze({ judgmentPartitionLabel: 'Toy Student', instanceStableIdList: Object.freeze(['toy:field/StudentEnrollment.Identifier', 'toy:field/StudentRecord.Identifier']) }),
 ]);
-const TIMESTAMP_UNIT_LITERAL = Object.freeze({ judgmentPartitionLabel: null, judgmentPartitionInstanceStableIdList: Object.freeze(['toy:field/StaffRecord.Timestamp', 'toy:field/StudentRecord.Timestamp']) });
+const TIMESTAMP_UNIT_LITERAL = Object.freeze({ judgmentPartitionLabel: null, instanceStableIdList: Object.freeze(['toy:field/StaffRecord.Timestamp', 'toy:field/StudentRecord.Timestamp']) });
 const PARTITIONED_UNIT_COUNT_LITERAL = 3;
 const BRANCH_CUT_BLOCK_PATH = path.join(__dirname, 'fixtures', 'toyBridge', 'branchCutBlocks', 'toyDerivedPlugin-B4pbranchCut-16f661a.frozenText.json');
 const RUN_E_BLOCK_PATH = path.join(TREE_ROOT, '..', '..', 'dataStores', 'bridgeAcceptance', 'edfiEval', 'runE_091726', 'block.json');
 const RUN_E_BLOCK_ID = '7e362cebe7bb74d572e643eed37944d2577eb850313028bc0b9eb11f245c8755';
 const FRAMEWORK_FINGERPRINT_TEXT_RE = /"frameworkFingerprint":"[0-9a-f]{64}"/g;
-const PARTITION_RECORD_FIELD_NAME_LIST = Object.freeze(['judgmentPartitionLabel', 'judgmentPartitionInstanceStableIdList']);
+const PARTITION_RECORD_FIELD_NAME_LIST = Object.freeze(['judgmentPartitionLabel', 'instanceStableIdList']);
 
 // ---------------------------------------------------------------------
-// the toy partition scenario: two questions over five fields in three objects
+// the toy partition scenario: the fan-out toy (testSupport/toyInstanceScenario.js) with the partition laid over it
 // ---------------------------------------------------------------------
-const questionNode = ({ element, description, sharedBlock }) => ({
-	stableId: `toy:question/${element}`,
-	labels: ['ToyQuestion'],
-	properties: { stableId: `toy:question/${element}`, name: element, description, role: 'property', sharedBlock, _source: scenarioLib.toyGraphLib.SOURCE_STANDARD_NAME, embedding: scenarioLib.toyGraphLib.EMBEDDING.slice(), embeddingModelVersion: TOY_EMBED_MODEL },
-});
-const fieldNode = ({ objectName, element }) => ({
-	stableId: `toy:field/${objectName}.${element}`,
-	labels: ['ToyField'],
-	properties: { stableId: `toy:field/${objectName}.${element}`, name: element, objectName, role: 'support', _source: scenarioLib.toyGraphLib.SOURCE_STANDARD_NAME },
-});
-const PARTITION_NODE_LIST = Object.freeze([
-	questionNode({ element: 'Identifier', description: 'The identifier of the record subject.', sharedBlock: 'model' }),
-	questionNode({ element: 'Timestamp', description: 'When the record was last changed.', sharedBlock: 'ToyMetadata' }),
-	fieldNode({ objectName: 'StudentRecord', element: 'Identifier' }),
-	fieldNode({ objectName: 'StudentEnrollment', element: 'Identifier' }),
-	fieldNode({ objectName: 'StaffRecord', element: 'Identifier' }),
-	fieldNode({ objectName: 'StudentRecord', element: 'Timestamp' }),
-	fieldNode({ objectName: 'StaffRecord', element: 'Timestamp' }),
-]);
-const instanceEdge = (fromStableId, toStableId) => ({ fromStableId, toStableId, type: 'HAS_INSTANCE', properties: { provenanceTier: 'structural' } });
-const PARTITION_EDGE_LIST = Object.freeze([
-	instanceEdge(IDENTIFIER_QUESTION, 'toy:field/StudentRecord.Identifier'),
-	instanceEdge(IDENTIFIER_QUESTION, 'toy:field/StudentEnrollment.Identifier'),
-	instanceEdge(IDENTIFIER_QUESTION, 'toy:field/StaffRecord.Identifier'),
-	instanceEdge(TIMESTAMP_QUESTION, 'toy:field/StudentRecord.Timestamp'),
-	instanceEdge(TIMESTAMP_QUESTION, 'toy:field/StaffRecord.Timestamp'),
-]);
 const partitionDeclarationFixture = () => ({
 	kind: 'objectPartitionFile',
 	filePath: PARTITION_FILE_RELATIVE_PATH,
 	sha256: PARTITION_FILE_SHA256_LITERAL,
-	instanceEdgeType: 'HAS_INSTANCE',
 	instanceObjectPropertyName: 'objectName',
 	objectColumnName: 'object',
 	partitionLabelColumnName: 'partitionLabel',
 	renderedPropertyName: RENDERED_PROPERTY_NAME,
 	unpartitionedSubjectRule: { propertyName: 'sharedBlock', valueList: ['ToyMetadata'] },
 });
-const toyDerivedDeclaration = () => cloneJson(require(path.join(TOY_BUNDLE_DIR, 'bridges', `${DERIVED_PLUGIN_NAME}.js`)).bridgeDeclaration);
-const derivedShape = (scenario) => {
-	scenario.spec.bridge = DERIVED_PLUGIN_NAME;
-	scenario.graph.nodeList = scenario.graph.nodeList.map((oneNode) =>
-		oneNode.properties.embedding === undefined ? oneNode : { ...oneNode, properties: { ...oneNode.properties, embeddingModelVersion: TOY_EMBED_MODEL } },
-	);
-};
-// partitionShape — the derived toy over the question nodes, declaring the partition; mutateDeclaration adjusts it after
-const partitionShapeWith = (mutateDeclaration) => (scenario) => {
-	derivedShape(scenario);
-	scenario.graph.nodeList = scenario.graph.nodeList.concat(cloneJson(PARTITION_NODE_LIST));
-	scenario.graph.edgeList = scenario.graph.edgeList.concat(cloneJson(PARTITION_EDGE_LIST));
-	const bridgeDeclaration = toyDerivedDeclaration();
-	bridgeDeclaration.subjectSource = { kind: 'graphLabel', label: 'ToyQuestion', scopeStableIdListPath: null };
-	bridgeDeclaration.renderingAllowList = { ...bridgeDeclaration.renderingAllowList, subject: bridgeDeclaration.renderingAllowList.subject.concat([RENDERED_PROPERTY_NAME]) };
-	bridgeDeclaration.judgmentPartition = partitionDeclarationFixture();
-	if (scenario.partitionDeclarationTransform !== undefined) {
-		scenario.partitionDeclarationTransform(bridgeDeclaration);
-	}
-	if (mutateDeclaration !== undefined) {
-		mutateDeclaration(bridgeDeclaration, scenario);
-	}
-	scenario.pluginModuleOverrides[DERIVED_PLUGIN_NAME] = { bridgeDeclaration };
-};
+const derivedShape = instanceScenarioLib.derivedShape;
+// partitionShape — the fan-out toy declaring the partition; a twin's partitionDeclarationTransform, then mutateDeclaration, adjust it after
+const partitionShapeWith = (mutateDeclaration) =>
+	instanceScenarioLib.instanceShapeWith((bridgeDeclaration, scenario) => {
+		bridgeDeclaration.renderingAllowList = { ...bridgeDeclaration.renderingAllowList, subject: bridgeDeclaration.renderingAllowList.subject.concat([RENDERED_PROPERTY_NAME]) };
+		bridgeDeclaration.judgmentPartition = partitionDeclarationFixture();
+		if (scenario.partitionDeclarationTransform !== undefined) {
+			scenario.partitionDeclarationTransform(bridgeDeclaration);
+		}
+		if (mutateDeclaration !== undefined) {
+			mutateDeclaration(bridgeDeclaration, scenario);
+		}
+	});
 const partitionShape = partitionShapeWith();
 // a scratch copy of the partition file with its bytes transformed; the declaration points at it by absolute path.
 // restateSha: the declared sha256 follows the new bytes, so only the fault under test can fire.
@@ -230,16 +190,6 @@ const fileRefusalConjunctList = [
 		regex: /names object 'StaffRecord' twice \(line 6\)/,
 		twinName: 'duplicateCheckDeleted', fileName: PARTITION_FILE, find: 'if (labelByObjectName.has(objectName)) {', replace: 'if (false) {',
 	}),
-	refusalCase({
-		registry: twinRegistry, gateId: 'BG-PARTITION', conjunctId: 'b8_subjectWithoutInstanceRefused',
-		title: '(b) a partitioned subject with no instance edge refuses the run by name',
-		shape: (scenario) => {
-			partitionShape(scenario);
-			scenario.graph.edgeList = scenario.graph.edgeList.filter((oneEdge) => oneEdge.fromStableId !== TIMESTAMP_QUESTION);
-		},
-		regex: /subject toy:question\/Timestamp has no 'HAS_INSTANCE' instance/,
-		twinName: 'noInstanceCheckDeleted', fileName: PARTITION_FILE, find: 'if (instanceStableIdList.length === 0) {', replace: 'if (false) {',
-	}),
 ];
 
 // ---------------------------------------------------------------------
@@ -269,48 +219,22 @@ frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-PARTITION', conjunct
 const canonicalConjunctList = [
 	runConjunct({
 		conjunctId: 'e_instanceListSortedByTheFreeze',
-		title: '(e) with the partition producing its instance lists in REVERSE order, the frozen lists are still sorted: the freeze canonicalises judgmentPartitionInstanceStableIdList',
+		title: '(e) the fan-out reader hands each list over in graph order, which here is unsorted for both multi-instance units, and the frozen lists are sorted: the freeze canonicalises each unit\'s instanceStableIdList',
 		twinNameList: ['freezeDoesNotSortInstanceList'],
-		shape: (scenario) => {
-			partitionShape(scenario);
-			scenario.frameworkMutationList.push({ modulePath: frameworkFile(PARTITION_FILE), find: "const instanceStableIdList = (instanceStableIdListBySubject.get(oneLeaf.subjectStableId) || []).slice().sort(compareStrings);", replace: "const instanceStableIdList = (instanceStableIdListBySubject.get(oneLeaf.subjectStableId) || []).slice().sort(compareStrings).reverse();" });
-		},
+		shape: partitionShape,
 		judge: succeeded((runReport, outcome) => {
-			const multiInstanceList = blockOf(outcome).decisionRecordList.filter((oneRecord) => oneRecord.judgmentPartitionInstanceStableIdList.length > 1).map((oneRecord) => oneRecord.judgmentPartitionInstanceStableIdList);
+			const multiInstanceList = blockOf(outcome).decisionRecordList.filter((oneRecord) => oneRecord.instanceStableIdList.length > 1).map((oneRecord) => oneRecord.instanceStableIdList);
 			const allSorted = multiInstanceList.every((oneList) => JSON.stringify(oneList) === JSON.stringify(oneList.slice().sort()));
 			return { pass: multiInstanceList.length === 2 && allSorted, detail: `${multiInstanceList.length} multi-instance list(s): ${JSON.stringify(multiInstanceList)}` };
 		}),
 	}),
 ];
-frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-PARTITION', conjunctId: 'e_instanceListSortedByTheFreeze', twinName: 'freezeDoesNotSortInstanceList', fileName: DECISION_BLOCK_FILE, find: "'assertingSubjectList', 'judgmentPartitionInstanceStableIdList']);", replace: "'assertingSubjectList']);" });
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-PARTITION', conjunctId: 'e_instanceListSortedByTheFreeze', twinName: 'freezeDoesNotSortInstanceList', fileName: DECISION_BLOCK_FILE, find: "'assertingSubjectList', 'instanceStableIdList']);", replace: "'assertingSubjectList']);" });
 
 // ---------------------------------------------------------------------
 // BG-PARTITION (f) the declaration's cross-key rules
 // ---------------------------------------------------------------------
 const contractConjunctList = [
-	// f1 runs the derived toy under a derived row that does NOT admit a partition, so removing the check lets a whole
-	// plugin through and the run succeeds; a documentary plugin would instead crash on its absent allow-list, which
-	// observes nothing. f0 holds the shipped rows to their literal values.
-	pureConjunct({
-		conjunctId: 'f0_acquisitionRowsAdmitLiteral',
-		title: '(f) SOURCE_ACQUISITION_REGISTRY admits a partition on derived only: standard false, crosswalk false, derived true',
-		twinNameList: ['crosswalkRowAdmits'],
-		judge: (scenario) => {
-			const contractLib = scenario.frameworkMutationList.length ? moduleDouble.loadWithMutations({ modulePath: frameworkFile(CONTRACT_FILE), mutationList: scenario.frameworkMutationList }) : require(frameworkFile(CONTRACT_FILE));
-			const admitsByBasis = Object.keys(contractLib.SOURCE_ACQUISITION_REGISTRY).sort().reduce((soFar, oneBasis) => ({ ...soFar, [oneBasis]: contractLib.SOURCE_ACQUISITION_REGISTRY[oneBasis].admitsJudgmentPartition }), {});
-			return { pass: JSON.stringify(admitsByBasis) === JSON.stringify({ crosswalk: false, derived: true, standard: false }), detail: JSON.stringify(admitsByBasis) };
-		},
-	}),
-	refusalCase({
-		registry: twinRegistry, gateId: 'BG-PARTITION', conjunctId: 'f1_basisNotAdmittingRefused',
-		title: '(f) under an acquisition row that does not admit a partition, a plugin declaring judgmentPartition is refused at registration by name',
-		shape: (scenario) => {
-			partitionShape(scenario);
-			scenario.frameworkMutationList.push({ modulePath: frameworkFile(CONTRACT_FILE), find: "		forbiddenDeclarationKeyList: Object.freeze(['tupleFieldColumnMap', 'mappingProvider']),\n		admitsJudgmentPartition: true,", replace: "		forbiddenDeclarationKeyList: Object.freeze(['tupleFieldColumnMap', 'mappingProvider']),\n		admitsJudgmentPartition: false," });
-		},
-		regex: /carries judgmentPartition, which matchBasis 'derived' does not admit/,
-		twinName: 'admitsCheckDeleted', fileName: CONTRACT_FILE, find: 'if (SOURCE_ACQUISITION_REGISTRY[bridgeDeclaration.matchBasis].admitsJudgmentPartition !== true) {', replace: 'if (false) {',
-	}),
 	refusalCase({
 		registry: twinRegistry, gateId: 'BG-PARTITION', conjunctId: 'f2_renderedNameOutsideAllowListRefused',
 		title: '(f) a renderedPropertyName the subject allow-list does not name is refused at registration by name',
@@ -339,7 +263,7 @@ const contractConjunctList = [
 		registry: twinRegistry, gateId: 'BG-PARTITION', conjunctId: 'f5_undeclaredMemberRefused',
 		title: '(f) a judgmentPartition declaration carrying a member its kind does not declare is refused at registration by name',
 		shape: partitionShapeWith((bridgeDeclaration) => { bridgeDeclaration.judgmentPartition.instanceEdgeDirection = 'outgoing'; }),
-		regex: /judgmentPartition' kind 'objectPartitionFile' must be exactly \{ kind, filePath, sha256, instanceEdgeType/,
+		regex: /judgmentPartition' kind 'objectPartitionFile' must be exactly \{ kind, filePath, sha256, instanceObjectPropertyName/,
 		twinName: 'memberCheckDeleted', fileName: PARTITION_FILE, find: 'if (!hasExactMembers(value, memberNameList)) {', replace: 'if (false) {',
 	}),
 	refusalCase({
@@ -347,7 +271,7 @@ const contractConjunctList = [
 		title: '(f) a judgmentPartition kind with no JUDGMENT_PARTITION_KIND_REGISTRY row is refused at registration by name',
 		shape: partitionShapeWith((bridgeDeclaration) => { bridgeDeclaration.judgmentPartition.kind = 'objectPartitionSheet'; }),
 		regex: /judgmentPartition' must be an object whose kind is one of objectPartitionFile/,
-		twinName: 'kindRowAdded', fileName: PARTITION_FILE, find: '		readLabelByObjectName: readPartitionFile,\n	}),\n});', replace: "		readLabelByObjectName: readPartitionFile,\n	}),\n	objectPartitionSheet: Object.freeze({ memberNameList: Object.freeze(['kind', 'filePath', 'sha256', 'instanceEdgeType', 'instanceObjectPropertyName', 'objectColumnName', 'partitionLabelColumnName', 'renderedPropertyName', 'unpartitionedSubjectRule']), readLabelByObjectName: readPartitionFile }),\n});",
+		twinName: 'kindRowAdded', fileName: PARTITION_FILE, find: '		readLabelByObjectName: readPartitionFile,\n	}),\n});', replace: "		readLabelByObjectName: readPartitionFile,\n	}),\n	objectPartitionSheet: Object.freeze({ memberNameList: Object.freeze(['kind', 'filePath', 'sha256', 'instanceObjectPropertyName', 'objectColumnName', 'partitionLabelColumnName', 'renderedPropertyName', 'unpartitionedSubjectRule']), readLabelByObjectName: readPartitionFile }),\n});",
 	}),
 ];
 
@@ -370,9 +294,8 @@ const runEBlockTextFor = (scenario) => {
 };
 const ABSTENTION_RECORD_FIND = "taskDone('', { ...oneTask.baseRecord, objectStableId: null, predicate: null, predicateAssertedBy: null, sourceLabel: null, confidence: null, abstained: true, judge: judgeRecord,";
 const ABSTENTION_RECORD_FORCED = "taskDone('', { ...oneTask.baseRecord, objectStableId: null, predicate: null, predicateAssertedBy: null, sourceLabel: null, confidence: null, abstained: 'forced', judge: judgeRecord,";
-const PARTITION_FIELDS_SPREAD_FIND = '...(oneLeaf.judgmentPartitionInstanceStableIdList === undefined ? {} : { judgmentPartitionLabel: oneLeaf.judgmentPartitionLabel, judgmentPartitionInstanceStableIdList: oneLeaf.judgmentPartitionInstanceStableIdList }),';
-const PARTITION_FIELDS_NULLED = '...(oneLeaf.judgmentPartitionInstanceStableIdList === undefined ? { judgmentPartitionLabel: null } : { judgmentPartitionLabel: oneLeaf.judgmentPartitionLabel, judgmentPartitionInstanceStableIdList: oneLeaf.judgmentPartitionInstanceStableIdList }),';
-frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-PARTITION', conjunctId: 'f0_acquisitionRowsAdmitLiteral', twinName: 'crosswalkRowAdmits', fileName: CONTRACT_FILE, find: "		forbiddenDeclarationKeyList: DERIVED_ONLY_KEY_LIST,\n		admitsJudgmentPartition: false,\n	}),\n	derived:", replace: "		forbiddenDeclarationKeyList: DERIVED_ONLY_KEY_LIST,\n		admitsJudgmentPartition: true,\n	}),\n	derived:" });
+const PARTITION_FIELDS_SPREAD_FIND = '...(oneLeaf.judgmentPartitionLabel === undefined ? {} : { judgmentPartitionLabel: oneLeaf.judgmentPartitionLabel }),';
+const PARTITION_FIELDS_NULLED = '...(oneLeaf.judgmentPartitionLabel === undefined ? { judgmentPartitionLabel: null } : { judgmentPartitionLabel: oneLeaf.judgmentPartitionLabel }),';
 const oracleConjunctList = [
 	pureConjunct({
 		conjunctId: 'r1_runEBlockParsesAndKeepsItsId',
@@ -438,6 +361,6 @@ const gateDeclarationList = [
 ];
 
 runGateFamily(
-	{ harness, familyName: 'BG-PARTITION+BG-PARTITION-ORACLE', gateDeclarationList, twinRegistry, makeSubject: scenarioLib.makeScenario, cloneSubject: scenarioLib.cloneScenario, expectedConjunctCount: 15 + 4 },
+	{ harness, familyName: 'BG-PARTITION+BG-PARTITION-ORACLE', gateDeclarationList, twinRegistry, makeSubject: scenarioLib.makeScenario, cloneSubject: scenarioLib.cloneScenario, expectedConjunctCount: 12 + 4 },
 	() => harness.report(),
 );

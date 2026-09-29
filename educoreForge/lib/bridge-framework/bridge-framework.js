@@ -69,6 +69,7 @@ const graphSeamRulesLib = require('./graphSeamRules');
 const promptIdentifierScanLib = require('./promptIdentifierScan');
 const judgeConfigRecordLib = require('./judgeConfigRecord');
 const judgmentPartitionLib = require('./judgmentPartition');
+const materialisationFanoutLib = require('./materialisationFanout');
 
 const { RELATIONSHIP_PRODUCER_SUFFIX, SKOS_EDGE_TYPES, MAPPING_PROPERTIES, DME_ROLES, HUB_DECOMPOSITION_SLOTS, SSSOM_JUSTIFICATIONS, hubEdgeType } = vocabularyLib;
 const {
@@ -1474,9 +1475,34 @@ const moduleFunction =
 				});
 				taskList.push((args, next) => subjectGroupProducerByKind[acquisitionRow.subjectGroupProducerKind](args, next));
 
-				// STEP 5a — JUDGMENT PARTITION (judgmentPartition.js; phase B4p, 2026-09-28). Declared, each subject leaf becomes
-				// one leaf per partition of its instances, each carrying its label and its instance list, and each is judged
-				// once. The window and the named set have already chosen the SUBJECTS. Undeclared, the leaves pass through.
+				// STEP 5a — MATERIALISATION FAN-OUT (materialisationFanout.js; phase B4a, 2026-09-28). Declared, the instance
+				// edge is read ONCE and each subject leaf carries instanceStableIdList, the instances its answer is for (B4b writes
+				// one edge per instance); a subject with none is refused by name. Undeclared, the leaves pass through.
+				taskList.push((args, next) => {
+					const fanoutDeclaration = bridgeDeclaration.materialisationFanout;
+					if (fanoutDeclaration === undefined) {
+						next('', args);
+						return;
+					}
+					materialisationFanoutLib.MATERIALISATION_FANOUT_KIND_REGISTRY[fanoutDeclaration.kind].readInstanceStableIdListBySubject({ fanoutDeclaration, evidenceView: args.reader.forEvidence() }, (readError, instanceStableIdListBySubject) => {
+						if (readError) {
+							next(`${moduleName}: materialisationFanout instance edges: ${readError}`);
+							return;
+						}
+						const fannedOut = materialisationFanoutLib.fannedOutLeafList({ leafList: args.leafList, fanoutDeclaration, instanceStableIdListBySubject });
+						if (fannedOut.error) {
+							next(fannedOut.error.message);
+							return;
+						}
+						say(`materialisation fan-out: ${args.leafList.length} subject(s) stand for ${fannedOut.instanceCount} '${fanoutDeclaration.edgeType}' instance(s)`);
+						next('', { ...args, leafList: fannedOut.leafList });
+					});
+				});
+
+				// STEP 5a' — JUDGMENT PARTITION (judgmentPartition.js; phase B4p, 2026-09-28). Declared, each fanned-out leaf
+				// becomes one leaf per partition of its instances, each carrying its label and its share of the instance list,
+				// and each is judged once. The window and the named set have already chosen the SUBJECTS. Undeclared, the leaves
+				// pass through.
 				taskList.push((args, next) => {
 					const partitionDeclaration = bridgeDeclaration.judgmentPartition;
 					if (partitionDeclaration === undefined) {
@@ -1489,19 +1515,13 @@ const moduleFunction =
 						next(partitionFile.error.message);
 						return;
 					}
-					args.reader.forEvidence().readEdgesAmongSource({ edgeTypeList: [partitionDeclaration.instanceEdgeType] }, (edgeError, instanceEdgeList) => {
-						if (edgeError) {
-							next(`${moduleName}: judgmentPartition instance edges: ${edgeError}`);
-							return;
-						}
-						const partitioned = judgmentPartitionLib.partitionLeafList({ leafList: args.leafList, partitionDeclaration, labelByObjectName: partitionFile.labelByObjectName, instanceEdgeList, subjectNodeByStableId: args.subjectNodeByStableId });
-						if (partitioned.error) {
-							next(partitioned.error.message);
-							return;
-						}
-						say(`judgment partition: ${args.leafList.length} subject(s) → ${partitioned.unitCount} judgment unit(s) (${partitioned.unpartitionedSubjectCount} unpartitioned by rule), ${partitionFile.labelByObjectName.size} object(s) in ${partitionFilePath}`);
-						next('', { ...args, leafList: partitioned.leafList });
-					});
+					const partitioned = judgmentPartitionLib.partitionLeafList({ leafList: args.leafList, partitionDeclaration, labelByObjectName: partitionFile.labelByObjectName, subjectNodeByStableId: args.subjectNodeByStableId });
+					if (partitioned.error) {
+						next(partitioned.error.message);
+						return;
+					}
+					say(`judgment partition: ${args.leafList.length} subject(s) → ${partitioned.unitCount} judgment unit(s) (${partitioned.unpartitionedSubjectCount} unpartitioned by rule), ${partitionFile.labelByObjectName.size} object(s) in ${partitionFilePath}`);
+					next('', { ...args, leafList: partitioned.leafList });
 				});
 
 				// STEP 5b — the HUB-owned remodel table, by REFERENCE (RULING P11, D-S5): forges/<hubToken>/bridgeData/
@@ -1735,8 +1755,10 @@ const moduleFunction =
 								classification: classified.classification,
 								judgedReason: classified.reason,
 								lossyEcho: false,
-								// the judgment unit's partition and the instances it stands for, only when the run declares a partition
-								...(oneLeaf.judgmentPartitionInstanceStableIdList === undefined ? {} : { judgmentPartitionLabel: oneLeaf.judgmentPartitionLabel, judgmentPartitionInstanceStableIdList: oneLeaf.judgmentPartitionInstanceStableIdList }),
+								// the instances the answer is for, only when the run declares fan-out; the partition label, only when it
+								// declares a partition
+								...(oneLeaf.instanceStableIdList === undefined ? {} : { instanceStableIdList: oneLeaf.instanceStableIdList }),
+								...(oneLeaf.judgmentPartitionLabel === undefined ? {} : { judgmentPartitionLabel: oneLeaf.judgmentPartitionLabel }),
 							};
 							if (classified.classification === 'orphan') {
 								decisionRecordList.push({ ...baseRecord, resolution: null, objectStableId: null, predicate: null, reason: classified.reason });

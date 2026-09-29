@@ -7,17 +7,19 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // A subject (a question standing for many instances) may mean different things in different places. With the
 // optional declaration key judgmentPartition, each subject's instances are split by a partition label read from a
 // declared, checksummed file, and each (subject, partition) pair becomes one judgment unit: judged once, with its
-// label stated in the prompt, and frozen with the list of instances that belong to it.
+// label stated in the prompt, and frozen with the list of instances that belong to it. The instances come from
+// materialisationFanout (materialisationFanout.js), which a partition requires: the partition splits the list fan-out
+// attached to each leaf and reads no instance edge of its own (phase B4a).
 //
 //   JUDGMENT_PARTITION_KIND_REGISTRY               kind → { memberNameList, readLabelByObjectName }
 //   declarationReason(value)                       the contract row's shape check → '' | reason
 //   partitionFilePathFor({ filePath, forgesDirPath, standardKey }) → absolute path
 //   readPartitionFile({ partitionDeclaration, filePath }) → { labelByObjectName } | { error }
-//   partitionLeafList({ leafList, partitionDeclaration, labelByObjectName, instanceEdgeList, subjectNodeByStableId })
+//   partitionLeafList({ leafList, partitionDeclaration, labelByObjectName, subjectNodeByStableId })
 //       → { leafList, unitCount, unpartitionedSubjectCount } | { error }
 //
-// HOW AN INSTANCE'S OBJECT IS LEARNED. The subject reaches its instances through the declared instanceEdgeType
-// (subject → instance). Each instance names the object it sits in through the declared instanceObjectPropertyName.
+// HOW AN INSTANCE'S OBJECT IS LEARNED. The subject's instances are its leaf's instanceStableIdList (fan-out's edge).
+// Each instance names the object it sits in through the declared instanceObjectPropertyName.
 // The partition file maps that object name to a label. Nothing else is consulted: no path is parsed and no name is
 // guessed.
 //
@@ -28,15 +30,16 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //
 // WHERE THE GUARDS ARE. The file and the graph it is applied to are data entering the framework, so these are refused
 // by name here: a checksum other than the declared one, a blank cell, an object named twice, an object missing from the
-// file, a subject with no instance, and a subject already carrying the rendered name. Each guard is the ONLY catcher of
-// its fault (EBONY_DREAM, B4p back-gate): an absent file is the platform's ENOENT; a header lacking a declared column
-// reads every cell of that column as blank; an instance naming no object is an object missing from the file. The
-// declaration gets a shape check here; its cross-key rules (the acquisition row admitting it, the subject allow-list,
-// the blinding) are in bridgePluginContract.js.
+// file, and a subject already carrying the rendered name. Each guard is the ONLY catcher of its fault (EBONY_DREAM, B4p
+// back-gate): an absent file is the platform's ENOENT; a header lacking a declared column reads every cell of that column
+// as blank; an instance naming no object is an object missing from the file; a subject with no instance is refused by
+// fan-out before it reaches the partition. The declaration gets a shape check here; its cross-key rules (fan-out
+// declared, the subject allow-list, the blinding) are in bridgePluginContract.js.
 //
-// WHAT READS THE FROZEN FIELDS. Each record carries judgmentPartitionLabel and judgmentPartitionInstanceStableIdList.
-// The materialiser does not read them: it writes one subject → card edge per picked record, as it always has, so two
-// units of one subject may write two edges from that subject.
+// WHAT READS THE FROZEN FIELDS. Each record carries judgmentPartitionLabel, and its instanceStableIdList is the unit's
+// share of the subject's instances, for the per-instance materialiser to come (phase B4b). Until then the materialiser
+// reads neither: it writes one subject → card edge per picked record, so two units of one subject may write two edges
+// from that subject.
 //
 // PURE and synchronous. It returns a result or an error; the orchestration side hands the error to its callback.
 
@@ -47,7 +50,7 @@ const refuse = require(path.join(__dirname, '..', 'forge-framework', 'refuse'));
 
 const OBJECT_PARTITION_FILE_KIND = 'objectPartitionFile';
 const UNPARTITIONED_RULE_MEMBER_LIST = Object.freeze(['propertyName', 'valueList']);
-const NAME_MEMBER_LIST = Object.freeze(['filePath', 'instanceEdgeType', 'instanceObjectPropertyName', 'objectColumnName', 'partitionLabelColumnName', 'renderedPropertyName']);
+const NAME_MEMBER_LIST = Object.freeze(['filePath', 'instanceObjectPropertyName', 'objectColumnName', 'partitionLabelColumnName', 'renderedPropertyName']);
 const TSV_FIELD_SEPARATOR = '\t';
 
 const isPlainObject = (candidate) => candidate !== null && typeof candidate === 'object' && !Array.isArray(candidate);
@@ -56,7 +59,7 @@ const hasExactMembers = (candidate, memberNameList) => isPlainObject(candidate) 
 const compareStrings = (leftValue, rightValue) => (leftValue < rightValue ? -1 : leftValue > rightValue ? 1 : 0);
 const sha256HexOfBytes = (bytes) => crypto.createHash('sha256').update(bytes).digest('hex');
 
-// declarationReason — the shape of { kind, filePath, sha256, instanceEdgeType, instanceObjectPropertyName,
+// declarationReason — the shape of { kind, filePath, sha256, instanceObjectPropertyName,
 // objectColumnName, partitionLabelColumnName, renderedPropertyName, unpartitionedSubjectRule }
 const declarationReason = (value) => {
 	if (!isPlainObject(value) || JUDGMENT_PARTITION_KIND_REGISTRY[value.kind] === undefined) {
@@ -120,24 +123,15 @@ const readPartitionFile = ({ partitionDeclaration, filePath }) => {
 // file into { labelByObjectName }. A new kind is a row here and its reader, never a branch in the orchestrator.
 const JUDGMENT_PARTITION_KIND_REGISTRY = Object.freeze({
 	[OBJECT_PARTITION_FILE_KIND]: Object.freeze({
-		memberNameList: Object.freeze(['kind', 'filePath', 'sha256', 'instanceEdgeType', 'instanceObjectPropertyName', 'objectColumnName', 'partitionLabelColumnName', 'renderedPropertyName', 'unpartitionedSubjectRule']),
+		memberNameList: Object.freeze(['kind', 'filePath', 'sha256', 'instanceObjectPropertyName', 'objectColumnName', 'partitionLabelColumnName', 'renderedPropertyName', 'unpartitionedSubjectRule']),
 		readLabelByObjectName: readPartitionFile,
 	}),
 });
 
-// partitionLeafList — each leaf becomes one leaf per distinct label of its instances (sorted by label), carrying
-// judgmentPartitionLabel and judgmentPartitionInstanceStableIdList; an unpartitioned subject stays one leaf with label null
-const partitionLeafList = ({ leafList, partitionDeclaration, labelByObjectName, instanceEdgeList, subjectNodeByStableId }) => {
+// partitionLeafList — each fanned-out leaf becomes one leaf per distinct label of its instances (sorted by label), carrying
+// judgmentPartitionLabel and its share of instanceStableIdList; an unpartitioned subject stays one leaf with label null
+const partitionLeafList = ({ leafList, partitionDeclaration, labelByObjectName, subjectNodeByStableId }) => {
 	const refusalFor = (what, where) => ({ error: refuse.byName({ moduleName, what, where }) });
-	const instanceStableIdListBySubject = new Map();
-	instanceEdgeList
-		.filter((oneEdge) => oneEdge.type === partitionDeclaration.instanceEdgeType)
-		.forEach((oneEdge) => {
-			if (!instanceStableIdListBySubject.has(oneEdge.fromStableId)) {
-				instanceStableIdListBySubject.set(oneEdge.fromStableId, []);
-			}
-			instanceStableIdListBySubject.get(oneEdge.fromStableId).push(oneEdge.toStableId);
-		});
 	const rule = partitionDeclaration.unpartitionedSubjectRule;
 	const partitionedLeafList = [];
 	let unpartitionedSubjectCount = 0;
@@ -147,13 +141,10 @@ const partitionLeafList = ({ leafList, partitionDeclaration, labelByObjectName, 
 		if (Object.prototype.hasOwnProperty.call(subjectProperties, partitionDeclaration.renderedPropertyName)) {
 			return refusalFor(`subject ${oneLeaf.subjectStableId} already carries a property named '${partitionDeclaration.renderedPropertyName}', the name the partition label renders under`, 'choose a renderedPropertyName no subject carries, so the rendered line says one thing');
 		}
-		const instanceStableIdList = (instanceStableIdListBySubject.get(oneLeaf.subjectStableId) || []).slice().sort(compareStrings);
-		if (instanceStableIdList.length === 0) {
-			return refusalFor(`subject ${oneLeaf.subjectStableId} has no '${partitionDeclaration.instanceEdgeType}' instance`, 'a partitioned run judges a subject for the instances it stands for; a subject with none cannot be partitioned');
-		}
+		const instanceStableIdList = oneLeaf.instanceStableIdList;
 		if (rule !== null && rule.valueList.indexOf(subjectProperties[rule.propertyName]) !== -1) {
 			unpartitionedSubjectCount += 1;
-			partitionedLeafList.push({ ...oneLeaf, judgmentPartitionLabel: null, judgmentPartitionInstanceStableIdList: instanceStableIdList });
+			partitionedLeafList.push({ ...oneLeaf, judgmentPartitionLabel: null });
 			continue;
 		}
 		const instanceStableIdListByLabel = new Map();
@@ -171,7 +162,7 @@ const partitionLeafList = ({ leafList, partitionDeclaration, labelByObjectName, 
 		}
 		Array.from(instanceStableIdListByLabel.keys())
 			.sort(compareStrings)
-			.forEach((partitionLabel) => partitionedLeafList.push({ ...oneLeaf, judgmentPartitionLabel: partitionLabel, judgmentPartitionInstanceStableIdList: instanceStableIdListByLabel.get(partitionLabel) }));
+			.forEach((partitionLabel) => partitionedLeafList.push({ ...oneLeaf, judgmentPartitionLabel: partitionLabel, instanceStableIdList: instanceStableIdListByLabel.get(partitionLabel) }));
 	}
 	return { leafList: partitionedLeafList, unitCount: partitionedLeafList.length, unpartitionedSubjectCount };
 };
