@@ -104,8 +104,13 @@ const RULED_FIELD_PROPERTY_NAME_LIST = Object.freeze(
 		'questionRefId',
 		// the structural finalizer's stamps
 		'depth', 'crossRefs',
+		// A6: the TSV line the row sits on (the regeneration proof's row order)
+		'sourceLineNumber',
 	].sort(),
 );
+// restated at A6: every Object carries exactly these property names, tableTitleName (the table's title
+// less ': Table 1') being A6's addition for the regeneration proof
+const RULED_OBJECT_PROPERTY_NAME_LIST = Object.freeze(['_id', '_source', 'name', 'role', 'sif260928StableId', 'searchText', 'parentId', 'path', 'objectName', 'fieldCount', 'depth', 'crossRefs', 'tableTitleName'].sort());
 // SPEC §3.1: the closed Characteristics table and what each code derives
 const RULED_CHARACTERISTICS = Object.freeze({
 	M: { obligation: 'mandatory', repeatable: false },
@@ -361,16 +366,19 @@ const propertiesConjunctList = [
 	},
 	{
 		conjunctId: 'emptyCellsAbsentNeverEmptyString',
-		title: "no property of any node is '' (SPEC A25), each verbatim cell property is absent exactly as often as its cell is empty, and every Field carries exactly the brief's property names",
-		twinNameList: ['emptyCellsStampedAsEmptyString'],
+		title: "no property of any node is '' (SPEC A25), each verbatim cell property is absent exactly as often as its cell is empty, every Field carries only the brief's property names, and every Object exactly the ruled ones (restated at A6: +sourceLineNumber, +tableTitleName)",
+		twinNameList: ['emptyCellsStampedAsEmptyString', 'objectTableTitleNotCarried'],
 		evaluate: overForged((forged) => {
 			const emptyStringList = forged.nodes.reduce((soFar, oneNode) => soFar.concat(Object.keys(oneNode.properties).filter((propertyName) => oneNode.properties[propertyName] === '').map((propertyName) => `${oneNode.stableId}.${propertyName}`)), []);
 			const fieldNodeList = nodeListByLabel(forged, 'Sif260928Field');
 			const absentCountByProperty = Object.keys(RULED_ABSENT_COUNT_BY_PROPERTY).reduce((soFar, propertyName) => ({ ...soFar, [propertyName]: fieldNodeList.filter((oneNode) => oneNode.properties[propertyName] === undefined).length }), {});
 			const unruledNameList = [...new Set(fieldNodeList.reduce((soFar, oneNode) => soFar.concat(Object.keys(oneNode.properties)), []))].filter((propertyName) => RULED_FIELD_PROPERTY_NAME_LIST.indexOf(propertyName) === -1);
+			const objectPropertyWrongList = nodeListByLabel(forged, 'Sif260928Object')
+				.filter((oneNode) => JSON.stringify(Object.keys(oneNode.properties).sort()) !== JSON.stringify(RULED_OBJECT_PROPERTY_NAME_LIST))
+				.map((oneNode) => `${oneNode.stableId} [${Object.keys(oneNode.properties).sort()}]`);
 			return {
-				pass: emptyStringList.length === 0 && JSON.stringify(absentCountByProperty) === JSON.stringify(RULED_ABSENT_COUNT_BY_PROPERTY) && unruledNameList.length === 0,
-				detail: `'' on ${emptyStringList.length}${emptyStringList.length ? ` (first ${emptyStringList[0]})` : ''}; absent ${JSON.stringify(absentCountByProperty)}; unruled names [${unruledNameList}]`,
+				pass: emptyStringList.length === 0 && JSON.stringify(absentCountByProperty) === JSON.stringify(RULED_ABSENT_COUNT_BY_PROPERTY) && unruledNameList.length === 0 && objectPropertyWrongList.length === 0,
+				detail: `'' on ${emptyStringList.length}${emptyStringList.length ? ` (first ${emptyStringList[0]})` : ''}; absent ${JSON.stringify(absentCountByProperty)}; unruled names [${unruledNameList}]; Objects not carrying exactly the ruled names ${objectPropertyWrongList.length}${objectPropertyWrongList.length ? ` (first ${objectPropertyWrongList[0]})` : ''}`,
 			};
 		}),
 	},
@@ -403,6 +411,8 @@ const propertiesConjunctList = [
 ];
 registerMutationTwin({ gateId: PROPERTIES_GATE_ID, conjunctId: 'fieldCellsCarriedVerbatim', twinName: 'formatQuotesStripped', mutation: walkMutation({ find: '		...row,\n', replace: "		...row,\n		format: row.format.replace(/\"/g, ''),\n" }) });
 registerMutationTwin({ gateId: PROPERTIES_GATE_ID, conjunctId: 'emptyCellsAbsentNeverEmptyString', twinName: 'emptyCellsStampedAsEmptyString', mutation: walkMutation({ find: "facts[factName] === null || facts[factName] === ''", replace: 'facts[factName] === null' }) });
+// A6: the Object property pin, restated with tableTitleName
+registerMutationTwin({ gateId: PROPERTIES_GATE_ID, conjunctId: 'emptyCellsAbsentNeverEmptyString', twinName: 'objectTableTitleNotCarried', mutation: walkMutation({ find: "['objectName', 'fieldCount', 'tableTitleName']", replace: "['objectName', 'fieldCount']" }) });
 registerMutationTwin({ gateId: PROPERTIES_GATE_ID, conjunctId: 'derivedFactsEqualSpec', twinName: 'sharedBlockTopLevelOnly', mutation: walkMutation({ find: 'relativeSegmentList.includes(blockName)', replace: 'relativeSegmentList[0] === blockName' }) });
 
 // =====================================================================
@@ -454,6 +464,6 @@ const gateDeclarationList = [
 	{ gateId: STRUCTURE_GATE_ID, title: 'questionRefId on Fields and Questions only, Object parented on the root', conjunctList: structureConjunctList },
 ];
 
-runGateFamily({ harness, familyName: 'sif260928 A1c walk', gateDeclarationList, twinRegistry, makeSubject, cloneSubject, expectedConjunctCount: 9, expectedTwinCount: 12 }, () => {
+runGateFamily({ harness, familyName: 'sif260928 A1c walk', gateDeclarationList, twinRegistry, makeSubject, cloneSubject, expectedConjunctCount: 9, expectedTwinCount: 13 }, () => {
 	harness.report();
 });

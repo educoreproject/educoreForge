@@ -180,7 +180,7 @@ const registerMutationTwin = ({ gateId, conjunctId, twinName, mutation, mutation
 const questionsMutation = ({ find, replace }) => ({ modulePath: QUESTIONS_MODULE_PATH, find, replace });
 const walkMutation = ({ find, replace }) => ({ modulePath: WALK_MODULE_PATH, find, replace });
 
-const OBJECT_CARRY_LINE = 'carriedProperties: kit.carriedProperties({ parsedObject: { objectName, fieldCount }, carryList: OBJECT_CARRY_LIST }),';
+const OBJECT_CARRY_LINE = 'carriedProperties: kit.carriedProperties({ parsedObject: { objectName, fieldCount, tableTitleName: tableTitleNameByObjectPath.get(objectPath) }, carryList: OBJECT_CARRY_LIST }),';
 
 const REF_ID_LIST_GATE_ID = 'A3-REFIDLIST';
 const INSTANCES_GATE_ID = 'A3-INSTANCES';
@@ -363,14 +363,14 @@ registerMutationTwin({
 	gateId: NO_DOMAIN_GATE_ID,
 	conjunctId: 'noCedsDomainNamedInForgeOutput',
 	twinName: 'assignedDomainNameStampedOnObject',
-	mutation: walkMutation({ find: OBJECT_CARRY_LINE, replace: `carriedProperties: { ...kit.carriedProperties({ parsedObject: { objectName, fieldCount }, carryList: OBJECT_CARRY_LIST }), ...(objectPath === '${NAMED_DOMAIN_OBJECT_PATH}' ? { assignedDomainName: '${NAMED_HUB_DOMAIN_NAME}' } : {}) },` }),
+	mutation: walkMutation({ find: OBJECT_CARRY_LINE, replace: `carriedProperties: { ...kit.carriedProperties({ parsedObject: { objectName, fieldCount, tableTitleName: tableTitleNameByObjectPath.get(objectPath) }, carryList: OBJECT_CARRY_LIST }), ...(objectPath === '${NAMED_DOMAIN_OBJECT_PATH}' ? { assignedDomainName: '${NAMED_HUB_DOMAIN_NAME}' } : {}) },` }),
 });
 // the same fact under a name that does not say 'domain': only the value scan can see it
 registerMutationTwin({
 	gateId: NO_DOMAIN_GATE_ID,
 	conjunctId: 'noCedsDomainNamedInForgeOutput',
 	twinName: 'domainNameUnderAnotherPropertyName',
-	mutation: walkMutation({ find: OBJECT_CARRY_LINE, replace: `carriedProperties: { ...kit.carriedProperties({ parsedObject: { objectName, fieldCount }, carryList: OBJECT_CARRY_LIST }), ...(objectPath === '${NAMED_DOMAIN_OBJECT_PATH}' ? { subjectArea: '${NAMED_HUB_DOMAIN_NAME}' } : {}) },` }),
+	mutation: walkMutation({ find: OBJECT_CARRY_LINE, replace: `carriedProperties: { ...kit.carriedProperties({ parsedObject: { objectName, fieldCount, tableTitleName: tableTitleNameByObjectPath.get(objectPath) }, carryList: OBJECT_CARRY_LIST }), ...(objectPath === '${NAMED_DOMAIN_OBJECT_PATH}' ? { subjectArea: '${NAMED_HUB_DOMAIN_NAME}' } : {}) },` }),
 });
 
 // =====================================================================

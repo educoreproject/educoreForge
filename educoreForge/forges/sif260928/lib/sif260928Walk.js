@@ -74,8 +74,13 @@ const FIELD_CARRY_LIST = Object.freeze([
 	'cedsIdCellText',
 	// the id of the Field's Question (A3; SPEC §9 A17)
 	'questionRefId',
+	// the TSV line the row sits on (A6): the graph holds the file's row order, which the regeneration
+	// proof needs because a graph returns nodes in no source order
+	'sourceLineNumber',
 ]);
-const OBJECT_CARRY_LIST = Object.freeze(['objectName', 'fieldCount']);
+// tableTitleName is the table's title line less ': Table 1' (A6). It is the spreadsheet's sheet name,
+// which Excel truncates, so it is not the objectName and the regeneration proof cannot derive it
+const OBJECT_CARRY_LIST = Object.freeze(['objectName', 'fieldCount', 'tableTitleName']);
 // a Container has no row, so it carries only what its path implies (SPEC §3.1)
 const CONTAINER_CARRY_LIST = Object.freeze(['objectName']);
 
@@ -164,9 +169,16 @@ const emitObjectTree = ({ rowList, resolvedTableTitleByRefIdName, kit }) => {
 
 	const fieldCountByObjectPath = new Map();
 	const objectNameByObjectPath = new Map();
+	const tableTitleNameByObjectPath = new Map();
 	fieldFactsList.forEach((fieldFacts) => {
 		fieldCountByObjectPath.set(fieldFacts.objectPath, (fieldCountByObjectPath.get(fieldFacts.objectPath) || 0) + 1);
 		objectNameByObjectPath.set(fieldFacts.objectPath, fieldFacts.objectName);
+		// the title of the table the Object's first row sits in. Every Object is one table (159 of 159,
+		// measured at A6); an Object split over two would regenerate a wrong title, and the A6 proof
+		// would report it
+		if (!tableTitleNameByObjectPath.has(fieldFacts.objectPath)) {
+			tableTitleNameByObjectPath.set(fieldFacts.objectPath, fieldFacts.tableTitleName);
+		}
 	});
 
 	const nodeKindByPath = new Map([
@@ -195,7 +207,7 @@ const emitObjectTree = ({ rowList, resolvedTableTitleByRefIdName, kit }) => {
 			stableId: stableIdOfPath(objectPath),
 			name: objectName,
 			structural: { parentId: kit.rootStableId, path: objectPath },
-			carriedProperties: kit.carriedProperties({ parsedObject: { objectName, fieldCount }, carryList: OBJECT_CARRY_LIST }),
+			carriedProperties: kit.carriedProperties({ parsedObject: { objectName, fieldCount, tableTitleName: tableTitleNameByObjectPath.get(objectPath) }, carryList: OBJECT_CARRY_LIST }),
 			origin: `object ${objectPath}`,
 		});
 	});

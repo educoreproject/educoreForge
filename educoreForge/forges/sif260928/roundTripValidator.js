@@ -1,25 +1,25 @@
 'use strict';
 
-const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
-
-// roundTripValidator.js — the sif260928 round-trip validator, a REFUSING STUB until phase A6.
+// roundTripValidator.js — the sif260928 round-trip validator (phase A6): the graph regenerates the
+// SIF spreadsheet byte for byte. It is built on the forge framework's round-trip harness, in the
+// toyForge validator's shape, and exports the applied stage { validate, validateWithReader }. The
+// harness is required directly here, never by the entry module or a hook (FR15).
 //
-// parserDescriptor.ini declares this file now. The round-trip stage requires a declared validator
-// to exist, load and export validate, and refuses every build otherwise, stage on or off. This stub
-// meets that. When it is actually run (a stage-on build), it refuses by name, so no build can
-// report a verdict for this bundle before A6 builds the eight-column regeneration proof.
+// The two sides of the proof and its diff live in lib/sif260928RoundTripPair.js, which states what
+// the proof models and what it does not (its semanticValidationLimit). The answer key is
+// parserDescriptor.ini's sourceFile inside the pinned snapshot, and intake verifies it against
+// SHA256SUMS before either side runs.
 
 const path = require('path');
-const refuse = require(path.join(__dirname, '..', '..', 'lib', 'forge-framework', 'refuse'));
+const roundTripHarness = require(path.join(__dirname, '..', '..', 'lib', 'forge-framework', 'roundTripHarness', 'roundTripHarness'))();
+const rosterLib = require(path.join(__dirname, '..', '..', 'lib', 'forge-framework', 'roster'));
+const forgeDeclaration = require('./lib/sif260928ForgeDeclaration'); // the SAME declaration object as forgeSif260928.js
 
-const validate = ({ containerName, boltUrl, user, password, snapshotPath, outputPath } = {}, callback) => {
-	callback(
-		refuse.byName({
-			moduleName,
-			what: 'forge-sif260928 round-trip validator is not built yet',
-			where: 'phase A6 builds the eight-column regeneration proof; until then no verdict exists for this bundle, so run no stage-on build with it',
-		}).message,
-	);
-};
+const { sourceFile } = rosterLib.readDescriptorSection(path.join(__dirname, rosterLib.DESCRIPTOR_FILE_NAME)).valueByName;
+const roundTripPair = require('./lib/sif260928RoundTripPair')({ sourceFileName: sourceFile });
 
-module.exports = { validate };
+module.exports = roundTripHarness.validatorFrom({
+	forgeDeclaration,
+	...roundTripPair,
+	verdictVersion: 'sif260928RoundTripVerdict-1',
+});

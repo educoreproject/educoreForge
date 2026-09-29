@@ -15,7 +15,8 @@
 //                     and the root names both files)
 //   A1a-ROLES     (d) the role table and nonEmbeddableRoleList equal the ruling; the declaration,
 //                     with no allowances, is accepted by the framework
-//   A1a-VALIDATOR     the declared round-trip validator is a stub that refuses by name until A6
+//   A1a-VALIDATOR     the declared round-trip validator (a refusing stub until A6; restated at A6: it is
+//                     the round-trip proof, and with no graph to read it refuses rather than report)
 //
 // Twins build SCRATCH snapshots and scratch forges directories under the OS temp directory and
 // remove them at the end. Nothing in the tree is written. Bundle mutations are compiled in memory
@@ -26,7 +27,7 @@
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 const helpText = () => `
 NAME
-     ${moduleName} -- phase A1a gates: version guard, G-UNIQUE/G-SOURCE, checksum, role table, validator stub
+     ${moduleName} -- phase A1a gates: version guard, G-UNIQUE/G-SOURCE, checksum, role table, the declared validator
 
 SYNOPSIS
      ${moduleName} [-verbose] [-quiet] [-help]
@@ -414,35 +415,42 @@ twinRegistry.register({
 });
 
 // =====================================================================
-// A1a-VALIDATOR — the declared stub refuses by name
+// A1a-VALIDATOR — restated at A6: the stub is replaced by the round-trip proof
+// (test-sif260928RoundTrip.js proves what it measures; this gate pins the declaration)
 // =====================================================================
-const VALIDATOR_REFUSAL_RE = /roundTripValidator REFUSED: forge-sif260928 round-trip validator is not built yet/;
+const VALIDATOR_VERDICT_VERSION = 'sif260928RoundTripVerdict-1';
+const NO_BOLT_REFUSAL_RE = /graphReader REFUSED: boltUrl is required/;
 const validatorConjunctList = [
 	{
-		conjunctId: 'stubValidatorRefusesByName',
-		title: 'the declared roundTripValidator loads, exports validate, and REFUSES BY NAME when run',
-		twinNameList: ['stubReturnsVerdict'],
+		conjunctId: 'declaredValidatorIsTheRoundTripProof',
+		title: `the declared roundTripValidator loads, exports validate and validateWithReader with verdictVersion ${VALIDATOR_VERDICT_VERSION}, and run with no graph to read it REFUSES BY NAME rather than report a verdict`,
+		twinNameList: ['validatorReplacedByVerdictStub'],
 		evaluate: (subject, callback) => {
 			const validatorModule = subject.validatorMutationList.length ? moduleDouble.loadWithMutations({ modulePath: VALIDATOR_MODULE_PATH, mutationList: subject.validatorMutationList }) : require(VALIDATOR_MODULE_PATH);
 			const declaredValidatorFileName = rosterLib.readDescriptorSection(DESCRIPTOR_PATH).valueByName.roundTripValidator;
 			validatorModule.validate({ containerName: 'DEV_gb_notRun', snapshotPath: subject.snapshotDirPath }, (validateError, verdict) => {
-				const pass = declaredValidatorFileName === path.basename(VALIDATOR_MODULE_PATH) && typeof validateError === 'string' && VALIDATOR_REFUSAL_RE.test(validateError);
-				callback('', { pass, detail: validateError ? `declared '${declaredValidatorFileName}': ${validateError.slice(0, 200)}` : `NOT refused: verdict ${JSON.stringify(verdict)}` });
+				const pass =
+					declaredValidatorFileName === path.basename(VALIDATOR_MODULE_PATH) &&
+					typeof validatorModule.validateWithReader === 'function' &&
+					validatorModule.verdictVersion === VALIDATOR_VERDICT_VERSION &&
+					typeof validateError === 'string' &&
+					NO_BOLT_REFUSAL_RE.test(validateError);
+				callback('', { pass, detail: `declared '${declaredValidatorFileName}', verdictVersion ${validatorModule.verdictVersion}, validateWithReader ${typeof validatorModule.validateWithReader}; ${validateError ? validateError.slice(0, 200) : `NOT refused: verdict ${JSON.stringify(verdict)}`}` });
 			});
 		},
 	},
 ];
 twinRegistry.register({
 	gateId: VALIDATOR_GATE_ID,
-	conjunctId: 'stubValidatorRefusesByName',
-	twinName: 'stubReturnsVerdict',
+	conjunctId: 'declaredValidatorIsTheRoundTripProof',
+	twinName: 'validatorReplacedByVerdictStub',
 	leverKind: 'productionMutation',
 	shippedConfig: true,
 	run: (subject) => {
 		const validatorMutation = {
 			modulePath: VALIDATOR_MODULE_PATH,
-			find: 'const validate = ({ containerName, boltUrl, user, password, snapshotPath, outputPath } = {}, callback) => {\n',
-			replace: "const validate = ({ containerName, boltUrl, user, password, snapshotPath, outputPath } = {}, callback) => {\n\tcallback('', { roundTripClean: true, inventedTotal: 0, lostTotal: 0, contentGapTotal: 0, explicitlyOmittedTotal: 0 });\n\treturn;\n",
+			find: 'module.exports = roundTripHarness.validatorFrom({',
+			replace: "module.exports = { validate: (unusedArgs, callback) => callback('', { roundTripClean: true, inventedTotal: 0, lostTotal: 0, contentGapTotal: 0, explicitlyOmittedTotal: 0 }) };\nconst unusedValidator = roundTripHarness.validatorFrom({",
 		};
 		moduleDouble.assertMutationApplies(validatorMutation);
 		subject.validatorMutationList.push(validatorMutation);
@@ -455,7 +463,7 @@ const gateDeclarationList = [
 	{ gateId: UNIQUE_GATE_ID, title: '(b) G-UNIQUE and G-SOURCE with SIF and SIF260928 both present', conjunctList: uniqueConjunctList },
 	{ gateId: CHECKSUM_GATE_ID, title: '(c) the source-file checksums (the TSV and, since A4, the RefId map)', conjunctList: checksumConjunctList },
 	{ gateId: ROLES_GATE_ID, title: '(d) the role table, nonEmbeddableRoleList, and no allowances', conjunctList: rolesConjunctList },
-	{ gateId: VALIDATOR_GATE_ID, title: 'the round-trip validator is a refusing stub until A6', conjunctList: validatorConjunctList },
+	{ gateId: VALIDATOR_GATE_ID, title: 'the declared round-trip validator is the A6 proof, and reports no verdict without a graph', conjunctList: validatorConjunctList },
 ];
 
 runGateFamily(
