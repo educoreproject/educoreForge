@@ -27,12 +27,14 @@ const fs = require('fs');
 const path = require('path');
 const refuse = require(path.join(__dirname, '..', '..', '..', '..', 'lib', 'forge-framework', 'refuse'));
 const sifYardstickScorer = require(path.join(__dirname, 'sifYardstickScorer'));
-const sifReviewPage = require(path.join(__dirname, 'sifReviewPage'));
 
 const METADATA_SHARED_BLOCK = 'SIF_Metadata';
 const SUBJECT_STABLE_ID_PREFIX = 'sif260928:question/';
 const LIST_WORDING = Object.freeze({
 	abstainedDecision: 'abstained',
+	standardNamesNothing: 'no element for this question',
+	hubCarriesNoCard: 'a card the hub does not carry',
+	noCardProposed: 'no card (it abstained)',
 	noPriorList: 'no prior list was given, so no change is shown',
 	changedHeading: 'Decisions changed since the prior list',
 	noChange: 'no decision changed since the prior list',
@@ -48,9 +50,9 @@ const decisionTextOf = (row) => (row.proposedCardStableId === null ? LIST_WORDIN
 const comparisonLineOf = ({ row, cardLabelByStableId }) => {
 	const standardText =
 		row.standardCedsElementIdList.length === 0
-			? sifReviewPage.PAGE_WORDING.standardNamesNothing
-			: `${row.standardCedsElementIdList.join(', ')} (${row.keyCardStableIdList.length === 0 ? sifReviewPage.PAGE_WORDING.hubCarriesNoCard : row.keyCardStableIdList.map((oneStableId) => cardLabelTextOf({ cardStableId: oneStableId, cardLabelByStableId })).join('; ')})`;
-	return `the standard specifies ${standardText}; the bridge proposed ${row.proposedCardStableId === null ? sifReviewPage.PAGE_WORDING.noCardProposed : row.proposedCardLabelText}`;
+			? LIST_WORDING.standardNamesNothing
+			: `${row.standardCedsElementIdList.join(', ')} (${row.keyCardStableIdList.length === 0 ? LIST_WORDING.hubCarriesNoCard : row.keyCardStableIdList.map((oneStableId) => cardLabelTextOf({ cardStableId: oneStableId, cardLabelByStableId })).join('; ')})`;
+	return `the standard specifies ${standardText}; the bridge proposed ${row.proposedCardStableId === null ? LIST_WORDING.noCardProposed : row.proposedCardLabelText}`;
 };
 
 const buildMetadataReviewList = ({ score, decisionBlock, questionMap, cardLabelList, priorList }) => {

@@ -1,27 +1,28 @@
 #!/usr/bin/env node
 'use strict';
 
-// sifReviewPageCli.js — the publisher's commands for the SIF review page (phase C6). It builds a page to a file,
-// and verifies a page, normally a copy fetched back from the live URL, against the score of the same five inputs.
+// sifReviewPageCli.js — the publisher's commands for the SIF review page (phases C6, C6c). It builds a page to a file,
+// and verifies a page, normally a copy fetched back from the live URL, against the block and the other two inputs it was
+// built from (the page carries no score and no comparison with the standard's annotation).
 // It deploys nothing: publication is the supervisor's step (see DEVLOG-C6 for what the publisher records).
 
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
-const SCORE_INPUT_NAME_LIST = ['decisionBlockFilePath', 'annotationFilePath', 'questionMapFilePath', 'cardListFilePath', 'remodelTableFilePath'];
+const PAGE_INPUT_NAME_LIST = ['decisionBlockFilePath', 'questionMapFilePath', 'cardLabelFilePath'];
 const REQUIRED_NAME_LIST_BY_MODE = Object.freeze({
-	build: SCORE_INPUT_NAME_LIST.concat(['cardLabelFilePath', 'feedbackTargetPath', 'draftStoragePrefix', 'pageTitle', 'roundNumber', 'outputFilePath']),
-	verify: SCORE_INPUT_NAME_LIST.concat(['htmlFilePath']),
+	build: PAGE_INPUT_NAME_LIST.concat(['feedbackTargetPath', 'draftStoragePrefix', 'pageTitle', 'roundNumber', 'outputFilePath']),
+	verify: PAGE_INPUT_NAME_LIST.concat(['htmlFilePath']),
 });
 const helpText = () => `
 NAME
-     ${moduleName} -- build the SIF review page, or verify a page (a fetched deployed copy) against its inputs' score
+     ${moduleName} -- build the SIF review page, or verify a page (a fetched deployed copy) against its inputs
 
 SYNOPSIS
      ${moduleName} -build --${REQUIRED_NAME_LIST_BY_MODE.build.join('=<> --')}=<>
      ${moduleName} -verify --${REQUIRED_NAME_LIST_BY_MODE.verify.join('=<> --')}=<>
 
-     -build   scores the five inputs with sifYardstickScorer, writes the page to outputFilePath, prints the manifest
-     -verify  scores the same five inputs and checks the page's rendered numbers, items, feedback target, handler
-              ids, wording and input shas against that score; curl the live URL to a file first
+     -build   reads the block, the question map and the card label list, writes the page to outputFilePath, prints the manifest
+     -verify  checks the page's rendered items, candidates, tag choices, feedback target, handler ids, wording and input
+              shas against the same three inputs; curl the live URL to a file first
 
 EXIT STATUS
      0 built, or every verify check passes;  1 otherwise.
@@ -30,7 +31,6 @@ const commandLineParameters = require('../../../../test/testLib/testAppStartup')
 
 const fs = require('fs');
 const path = require('path');
-const sifYardstickScorer = require(path.join(__dirname, 'sifYardstickScorer'));
 const sifReviewPage = require(path.join(__dirname, 'sifReviewPage'));
 const xLog = process.global.xLog;
 
@@ -46,10 +46,10 @@ if (missingNameList.length > 0) {
 	xLog.error(`${moduleName} REFUSED: -${modeName} needs --${missingNameList.join(', --')} — none has a default`);
 	process.exit(1);
 }
-const scoreInputSet = SCORE_INPUT_NAME_LIST.reduce((soFar, oneName) => ({ ...soFar, [oneName]: path.resolve(firstValue(oneName)) }), {});
+const pageInputSet = PAGE_INPUT_NAME_LIST.reduce((soFar, oneName) => ({ ...soFar, [oneName]: path.resolve(firstValue(oneName)) }), {});
 
 if (modeName === 'build') {
-	const built = sifReviewPage.buildReviewPageFromFiles({ ...scoreInputSet, cardLabelFilePath: path.resolve(firstValue('cardLabelFilePath')), pageSetting: { feedbackTargetPath: firstValue('feedbackTargetPath'), draftStoragePrefix: firstValue('draftStoragePrefix'), pageTitle: firstValue('pageTitle'), roundNumber: Number(firstValue('roundNumber')) } });
+	const built = sifReviewPage.buildReviewPageFromFiles({ ...pageInputSet, pageSetting: { feedbackTargetPath: firstValue('feedbackTargetPath'), draftStoragePrefix: firstValue('draftStoragePrefix'), pageTitle: firstValue('pageTitle'), roundNumber: Number(firstValue('roundNumber')) } });
 	if (built.error) {
 		xLog.error(built.error.message);
 		process.exit(1);
@@ -59,11 +59,6 @@ if (modeName === 'build') {
 	process.exit(0);
 }
 
-const scored = sifYardstickScorer.scoreFromFiles(scoreInputSet);
-if (scored.error) {
-	xLog.error(scored.error.message);
-	process.exit(1);
-}
-const verified = sifReviewPage.verifySifReviewPage({ htmlText: fs.readFileSync(path.resolve(firstValue('htmlFilePath')), 'utf8'), score: scored.score });
+const verified = sifReviewPage.verifySifReviewPage({ htmlText: fs.readFileSync(path.resolve(firstValue('htmlFilePath')), 'utf8'), decisionBlock: JSON.parse(fs.readFileSync(pageInputSet.decisionBlockFilePath, 'utf8')), inputFileSha256ByRole: sifReviewPage.inputFileSha256ByRoleOf(pageInputSet) });
 xLog.result(`${verified.checkList.map((oneCheck) => `  ${oneCheck.pass ? 'ok  ' : 'FAIL'}  ${oneCheck.checkName}  ${oneCheck.detail}`).join('\n')}\n${moduleName}: ${verified.pass ? 'VERIFIED' : 'NOT VERIFIED'} ${path.resolve(firstValue('htmlFilePath'))}\n`);
 process.exit(verified.pass ? 0 : 1);
