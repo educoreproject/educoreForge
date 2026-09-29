@@ -37,13 +37,14 @@ const bridgeDeclaration = Object.freeze({
 	subjectSource: { kind: 'graphLabel', label: 'Sif260928Question', scopeStableIdListPath: null },
 	// TEXT-NODE MATCHING, NO COHORT VOTE (SPEC §5.2). Each of the question's texts (name, description, contextText)
 	// searches the hub's texts. neighbourVote is null because the measured vote HURT SIF (the truth card reached the
-	// top 15 for 98.7% of questions on text votes alone, 77.0% with the vote). hitsPerText, minScore and k are
-	// STARTING values; D2's sweep chooses them under the rule it commits first, and the header carries whichever ran.
+	// top 15 for 98.7% of questions on text votes alone, 77.0% with the vote). hitsPerText, minScore and k are D2's
+	// sweep cell 3, chosen by the rule committed to DEVLOG-D2 before the first cell (highest specified-target
+	// admission with a median pool of at most 40; D1 started at 20 / 0.30 / 20).
 	candidateRetrieval: {
 		method: 'embedTextVote-v1',
-		hitsPerText: 20,
+		hitsPerText: 40,
 		minScore: 0.30,
-		k: 20,
+		k: 40,
 		embeddingModelVersion: 'voyage-4-large',
 		neighbourVote: null,
 	},
