@@ -75,6 +75,7 @@ const SHIPPED_PLUGIN_LIST = [
 	{ bridgeName: 'edfiCedsDerivedPlugin', pluginPath: 'forges/edfi/bridges/edfiCedsDerivedPlugin.js', judgePromptVariant: 'derived', rendererVersion: DERIVED_RENDERER_VERSION_LITERAL },
 	{ bridgeName: 'pescCedsDerivedPlugin', pluginPath: 'forges/pesc260805/bridges/pescCedsDerivedPlugin.js', judgePromptVariant: 'derived', rendererVersion: DERIVED_RENDERER_VERSION_LITERAL },
 	{ bridgeName: 'pescOptionSetCedsDerivedPlugin', pluginPath: 'forges/pesc260805/bridges/pescOptionSetCedsDerivedPlugin.js', judgePromptVariant: 'derived', rendererVersion: DERIVED_RENDERER_VERSION_LITERAL },
+	{ bridgeName: 'sif260928CedsDerivedPlugin', pluginPath: 'forges/sif260928/bridges/sif260928CedsDerivedPlugin.js', judgePromptVariant: 'derivedJudgeSlot', rendererVersion: JUDGE_SLOT_RENDERER_VERSION_LITERAL },
 ];
 
 // ---------------------------------------------------------------------
