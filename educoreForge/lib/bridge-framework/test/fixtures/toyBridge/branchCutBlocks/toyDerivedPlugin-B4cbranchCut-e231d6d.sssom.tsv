@@ -1,0 +1,42 @@
+#curie_map:
+#  EDUcoreHub: "urn:educore:hub:ToyHub:"
+#  toy: "https://toy.example/standard/v1#"
+#  urn: "urn:"
+#mapping_tool: "educoreForge bridge-framework derived 1.0.0"
+#mapping_set_id: "urn:educore:decisionBlock:f658cd0a87e4fa5d6446043c82b44e9c6cf7e947d1c96a800f1719d464612cf9"
+#extension_definitions:
+#  - slot_name: "mapping_provider_verified_by"
+#    property: "https://w3id.org/EDUcore/sssom/extension#mapping_provider_verified_by"
+#    type_hint: "xsd:string"
+#  - slot_name: "label_table"
+#    property: "https://w3id.org/EDUcore/sssom/extension#label_table"
+#    type_hint: "xsd:string"
+#  - slot_name: "channel_assertion"
+#    property: "https://w3id.org/EDUcore/sssom/extension#channel_assertion"
+#    type_hint: "xsd:string"
+#  - slot_name: "subject_census"
+#    property: "https://w3id.org/EDUcore/sssom/extension#subject_census"
+#    type_hint: "xsd:string"
+#  - slot_name: "source_label"
+#    property: "https://w3id.org/EDUcore/sssom/extension#source_label"
+#    type_hint: "xsd:string"
+#  - slot_name: "predicate_asserted_by"
+#    property: "https://w3id.org/EDUcore/sssom/extension#predicate_asserted_by"
+#    type_hint: "xsd:string"
+#subject_source: "https://toy.example/standard/v1#"
+#subject_source_version: "1.2.3"
+#object_source: "urn:educore:hub:ToyHub:"
+#object_source_version: "1.0"
+#object_match_field: "EDUcoreHub:semanticSimilarity"
+#subject_census: "{\"subjectCount\":10,\"rowCount\":10,\"note\":\"rows are per (subject stableId, predicate, object); several source subjects sharing one leaf yield ONE row\"}"
+subject_id	predicate_id	object_id	mapping_justification	object_label	confidence	subject_source	subject_source_version	object_source	object_source_version	subject_match_field	object_match_field	mapping_tool	mapping_tool_version	predicate_asserted_by	source_label
+toy:property/Course.Level	skos:exactMatch	urn:toyhub:P000001#C1	semapv:SemanticSimilarityThresholdMatching	First Name	0.9	https://toy.example/standard/v1#	1.2.3	urn:educore:hub:ToyHub:	1.0		EDUcoreHub:semanticSimilarity	debug:digest	bridgeEvidenceRenderer-derived-v12	judge	
+toy:property/School.Address	skos:exactMatch	urn:toyhub:P000001#C1	semapv:SemanticSimilarityThresholdMatching	First Name	0.9	https://toy.example/standard/v1#	1.2.3	urn:educore:hub:ToyHub:	1.0		EDUcoreHub:semanticSimilarity	debug:digest	bridgeEvidenceRenderer-derived-v12	judge	
+toy:property/School.Code	skos:closeMatch	urn:toyhub:P000002#C1	semapv:SemanticSimilarityThresholdMatching	Birth Date	0.5	https://toy.example/standard/v1#	1.2.3	urn:educore:hub:ToyHub:	1.0		EDUcoreHub:semanticSimilarity	debug:digest	bridgeEvidenceRenderer-derived-v12	judge	
+toy:property/School.Ghost	skos:closeMatch	urn:toyhub:P000001#C1	semapv:SemanticSimilarityThresholdMatching	First Name	0.7	https://toy.example/standard/v1#	1.2.3	urn:educore:hub:ToyHub:	1.0		EDUcoreHub:semanticSimilarity	debug:digest	bridgeEvidenceRenderer-derived-v12	judge	
+toy:property/School.Name	skos:closeMatch	urn:toyhub:P000002#C2	semapv:SemanticSimilarityThresholdMatching	Birth Date (staff)	0.5	https://toy.example/standard/v1#	1.2.3	urn:educore:hub:ToyHub:	1.0		EDUcoreHub:semanticSimilarity	debug:digest	bridgeEvidenceRenderer-derived-v12	judge	
+toy:property/Student.Ethnicity	skos:closeMatch	urn:toyhub:P000002#C2	semapv:SemanticSimilarityThresholdMatching	Birth Date (staff)	0.7	https://toy.example/standard/v1#	1.2.3	urn:educore:hub:ToyHub:	1.0		EDUcoreHub:semanticSimilarity	debug:digest	bridgeEvidenceRenderer-derived-v12	judge	
+toy:property/Student.Gender	skos:exactMatch	urn:toyhub:P000002#C1	semapv:SemanticSimilarityThresholdMatching	Birth Date	0.9	https://toy.example/standard/v1#	1.2.3	urn:educore:hub:ToyHub:	1.0		EDUcoreHub:semanticSimilarity	debug:digest	bridgeEvidenceRenderer-derived-v12	judge	
+toy:property/Student.Missing	skos:closeMatch	urn:toyhub:P000001#C1	semapv:SemanticSimilarityThresholdMatching	First Name	0.7	https://toy.example/standard/v1#	1.2.3	urn:educore:hub:ToyHub:	1.0		EDUcoreHub:semanticSimilarity	debug:digest	bridgeEvidenceRenderer-derived-v12	judge	
+toy:property/Student.Nothing	skos:closeMatch	urn:toyhub:P000001#C1	semapv:SemanticSimilarityThresholdMatching	First Name	0.5	https://toy.example/standard/v1#	1.2.3	urn:educore:hub:ToyHub:	1.0		EDUcoreHub:semanticSimilarity	debug:digest	bridgeEvidenceRenderer-derived-v12	judge	
+toy:property/Student.Weight	skos:closeMatch	urn:toyhub:P000002#C1	semapv:SemanticSimilarityThresholdMatching	Birth Date	0.5	https://toy.example/standard/v1#	1.2.3	urn:educore:hub:ToyHub:	1.0		EDUcoreHub:semanticSimilarity	debug:digest	bridgeEvidenceRenderer-derived-v12	judge	

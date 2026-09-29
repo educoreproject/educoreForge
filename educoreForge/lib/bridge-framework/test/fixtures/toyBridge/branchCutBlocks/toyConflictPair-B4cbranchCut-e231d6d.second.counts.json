@@ -1,0 +1,59 @@
+{
+ "cardinalityCensus": {
+  "perSubject": {
+   "judgedSubjectCount": 2,
+   "orphanSubjectCount": 0,
+   "sourceGapCount": 0,
+   "specifiedSubjectCount": 3,
+   "subjectCollisionCount": 0,
+   "subjectCount": 5
+  },
+  "perTarget": {
+   "abstainedCount": 0,
+   "contentionCensus": {
+    "cardCount": 9,
+    "contendedKeyCount": 2,
+    "distinctKeyCount": 7,
+    "tier": "property",
+    "worstContention": 2
+   },
+   "distinctTripleCount": 5,
+   "edgeCount": 5,
+   "indexCollisionCount": 2,
+   "judgedCount": 2,
+   "labelRefusedCount": 0,
+   "manyToOneSubjectCount": 0,
+   "orphanCount": 0,
+   "refusedValueTierAssertionCount": 0,
+   "remodelAppliedCount": {
+    "classSide": 0,
+    "propertySide": 0
+   },
+   "sentinelDroppedCount": 12,
+   "sentinelLabelledRowCount": 12,
+   "sourceSideMismatchCount": 0,
+   "specifiedCount": 3,
+   "targetCount": 5,
+   "tentativeCount": 0,
+   "valueTierRefusedCount": 0
+  }
+ },
+ "contentionCensus": {
+  "cardCount": 9,
+  "contendedKeyCount": 2,
+  "distinctKeyCount": 7,
+  "tier": "property",
+  "worstContention": 2
+ },
+ "edgesWritten": 4,
+ "conflictCount": 1,
+ "judgeSpend": {
+  "asked": 2,
+  "servedFromCache": 0,
+  "abstained": 0,
+  "rationaleReaskCount": 0,
+  "usd": null
+ },
+ "refusalCount": 0,
+ "discardedPredicateKeyCount": 0
+}

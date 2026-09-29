@@ -955,7 +955,8 @@ const moduleFunction =
 						tailCallback(conflictError);
 						return;
 					}
-					const conflictedSubjectSet = new Set(conflicts.conflictList.map((oneConflict) => oneConflict.subjectStableId));
+					// a conflict names a from-node (phase B4c): the subject, or under fan-out one instance of it
+					const conflictedFromStableIdSet = new Set(conflicts.conflictList.map((oneConflict) => oneConflict.subjectStableId));
 					report.conflictCount = conflicts.conflictList.length;
 					report.conflictList = conflicts.conflictList;
 					// BR7: the sibling list spans every (bridge × producerKind) key on the pairing, so it is never empty; "one plugin
@@ -966,7 +967,15 @@ const moduleFunction =
 					} else {
 						say(`${conflicts.conflictList.length} conflict(s) against ${conflicts.siblingBlockCount} sibling block(s) (${siblingPairKeyList.map((oneSibling) => `${oneSibling.siblingBridgeName}::${oneSibling.siblingProducerKind}`).join(', ')})`);
 					}
-					const materialisableBlock = { ...block, decisionRecordList: block.decisionRecordList.filter((oneRecord) => !conflictedSubjectSet.has(oneRecord.subjectStableId)) };
+					// a VIEW for the writer; the frozen block and its hash are untouched. A record without an instance list is dropped
+					// whole when its subject conflicts, as before. A fanned-out record loses only its conflicted instances, so one
+					// conflicting instance does not take the answer from the rest; it is dropped only when no instance is left.
+					const materialisableBlock = {
+						...block,
+						decisionRecordList: block.decisionRecordList
+							.map((oneRecord) => (oneRecord.instanceStableIdList === undefined ? oneRecord : { ...oneRecord, instanceStableIdList: oneRecord.instanceStableIdList.filter((instanceStableId) => !conflictedFromStableIdSet.has(instanceStableId)) }))
+							.filter((oneRecord) => (oneRecord.instanceStableIdList === undefined ? !conflictedFromStableIdSet.has(oneRecord.subjectStableId) : oneRecord.instanceStableIdList.length > 0)),
+					};
 					const writerArgs = { inGraph, applyLabel: pairScopedLabel, sourceStandardName };
 					const writerRefusal = graphSeamRulesLib.writerConstructionRefusal(writerArgs);
 					if (writerRefusal) {
@@ -2048,7 +2057,7 @@ const moduleFunction =
 						labelRefusedCount: args.labelRefusedCount,
 						manyToOneSubjectCount: args.manyToOneSubjectCount,
 						refusedValueTierAssertionCount: args.refusedValueTierAssertionCount,
-						edgeCount: materialiserLib.pickedRecordList(decisionRecordList).length,
+						edgeCount: materialiserLib.plannedEdgeList(decisionRecordList).length,
 						contentionCensus: args.contention,
 						indexCollisionCount: args.contention.contendedKeyCount,
 					});

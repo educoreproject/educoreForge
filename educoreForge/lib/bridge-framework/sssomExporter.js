@@ -23,12 +23,16 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // recorded as verified (verifiedBy null — never a placeholder); a mapping_date the source did not supply.
 // The report carries the SUBJECT census beside the row count (82 same-target shared leaves → fewer rows than
 // subjects, by design — RULING 12:05 #9). TSV only in v1.
+// FAN-OUT (phase B4c): rows are the materialiser's planned edges (plannedEdgeList), so a record frozen with
+// instanceStableIdList yields one row per instance: subject_id is the instance (it must carry the prefix, like any subject)
+// and the extension column judged_subject_id names the judged subject; subject_census adds judgedSubjectCount. A block with
+// no such record has neither, so its export is unchanged.
 
 const fs = require('fs');
 const path = require('path');
 const vocabularyLib = require(path.join(__dirname, '..', 'vocabulary', 'vocabulary'));
 const refuse = require(path.join(__dirname, '..', 'forge-framework', 'refuse'));
-const { pickedRecordList } = require('./materialiser');
+const { plannedEdgeList } = require('./materialiser');
 const { JUSTIFICATION_BY_RESOLUTION } = require('./materialiser');
 
 const { sssomJustificationRefusal } = vocabularyLib;
@@ -38,6 +42,9 @@ const BUILT_IN_PREFIX_LIST = Object.freeze(['skos', 'semapv', 'owl', 'rdfs', 'ss
 // slots) with a property IRI under the EDUcore namespace; the data is kept, its non-standard status stated
 const EXTENSION_SLOT_NAME_LIST = Object.freeze(['mapping_provider_verified_by', 'label_table', 'channel_assertion', 'subject_census', 'source_label', 'predicate_asserted_by']);
 const EXTENSION_PROPERTY_BASE = 'https://w3id.org/EDUcore/sssom/extension#';
+// FAN-OUT (phase B4c): a block whose records carry instanceStableIdList yields one row per instance edge, and each row names
+// the judged subject in this extension column. It exists only in a fanned-out export; any other export is unchanged.
+const JUDGED_SUBJECT_COLUMN = 'judged_subject_id';
 const MAPPING_SET_ID_URN_BASE = 'urn:educore:decisionBlock:';
 const URN_SCHEME_PREFIX = 'urn';
 const URN_SCHEME_EXPANSION = 'urn:';
@@ -169,9 +176,14 @@ const toSssomTsv = ({ decisionBlock, decisionBlockHash, cardByStableId, curieMap
 	const effectiveCurieMap = usesUrnScheme && curieMap[URN_SCHEME_PREFIX] === undefined ? { ...curieMap, [URN_SCHEME_PREFIX]: URN_SCHEME_EXPANSION } : curieMap;
 	const rowList = [];
 	const subjectSet = new Set();
-	const picked = pickedRecordList(decisionBlock.decisionRecordList);
-	for (let recordIndex = 0; recordIndex < picked.length; recordIndex++) {
-		const oneRecord = picked[recordIndex];
+	const judgedSubjectSet = new Set();
+	// one row per edge the materialiser writes: subject_id is the edge's from-node, which under fan-out is the instance
+	const isFannedOut = decisionBlock.decisionRecordList.some((oneRecord) => oneRecord.instanceStableIdList !== undefined);
+	const columnList = isFannedOut ? COLUMN_LIST.concat([JUDGED_SUBJECT_COLUMN]) : COLUMN_LIST;
+	const extensionSlotNameList = isFannedOut ? EXTENSION_SLOT_NAME_LIST.concat([JUDGED_SUBJECT_COLUMN]) : EXTENSION_SLOT_NAME_LIST;
+	const plannedList = plannedEdgeList(decisionBlock.decisionRecordList);
+	for (let edgeIndex = 0; edgeIndex < plannedList.length; edgeIndex++) {
+		const { record: oneRecord, fromStableId } = plannedList[edgeIndex];
 		// ⟪G-2, adversarial review D4 2026-08-17⟫ RECORD-FIRST, byte-identical to the expression in
 		// materialiser.js. Reading the table first relabelled every derived row as CompositeMatching — the
 		// justification for "an algorithm chose among candidates", which says nothing about HOW the candidates
@@ -194,13 +206,14 @@ const toSssomTsv = ({ decisionBlock, decisionBlockHash, cardByStableId, curieMap
 		// subject_id IS the forged stableId VERBATIM — a forged id already carries its standard's prefix
 		// (`toy:property/…`, `<standard>:property/…`); prepending would double it (RULING BR2). A stableId that does NOT
 		// begin with the declared subjectCuriePrefix is a contract violation and is REFUSED by name, never repaired.
-		if (oneRecord.subjectStableId.indexOf(`${setLevelSlots.subjectCuriePrefix}:`) !== 0) {
-			refuseWith(`subjectStableId '${oneRecord.subjectStableId}' does not begin with the declared subjectCuriePrefix '${setLevelSlots.subjectCuriePrefix}:'`, 'subject_id is the forged stableId verbatim (RULING BR2); the prefix is never prepended and never repaired');
+		if (fromStableId.indexOf(`${setLevelSlots.subjectCuriePrefix}:`) !== 0) {
+			refuseWith(`subjectStableId '${fromStableId}' does not begin with the declared subjectCuriePrefix '${setLevelSlots.subjectCuriePrefix}:'`, 'subject_id is the forged stableId verbatim (RULING BR2); the prefix is never prepended and never repaired');
 			return;
 		}
-		subjectSet.add(oneRecord.subjectStableId);
+		subjectSet.add(fromStableId);
+		judgedSubjectSet.add(oneRecord.subjectStableId);
 		rowList.push({
-			subject_id: oneRecord.subjectStableId,
+			subject_id: fromStableId,
 			predicate_id: `skos:${oneRecord.predicate}`,
 			object_id: card.uri,
 			mapping_justification: justification,
@@ -216,6 +229,7 @@ const toSssomTsv = ({ decisionBlock, decisionBlockHash, cardByStableId, curieMap
 			mapping_tool_version: oneRecord.resolution === 'judged' ? oneRecord.judge.rendererVersion : '',
 			predicate_asserted_by: oneRecord.predicateAssertedBy,
 			source_label: oneRecord.sourceLabel === null || oneRecord.sourceLabel === undefined ? '' : oneRecord.sourceLabel,
+			[JUDGED_SUBJECT_COLUMN]: oneRecord.subjectStableId,
 		});
 	}
 	// ⟪B2 DEFECT #3 found by sssom-py on the first REAL export — RULING SABLE_RIVER 2026-08-16 (B3, "sssomExporter validator
@@ -226,7 +240,7 @@ const toSssomTsv = ({ decisionBlock, decisionBlockHash, cardByStableId, curieMap
 	// DERIVED from the declaration's curie map, never literals — and, because a URN is CURIE-shaped ('urn:…'), the URN scheme is
 	// itself declared in curie_map (`urn: "urn:"`, an identity expansion) so a strict validator resolves it. Measured with
 	// sssom-py 0.4.21: `sssom validate` exits 0 on this shape; the framework's PROXY (parseSssomTsv) had accepted the old shape.
-	const extensionDefinitionList = EXTENSION_SLOT_NAME_LIST.map((oneSlot) => ({ slot_name: oneSlot, property: `${EXTENSION_PROPERTY_BASE}${oneSlot}`, type_hint: 'xsd:string' }));
+	const extensionDefinitionList = extensionSlotNameList.map((oneSlot) => ({ slot_name: oneSlot, property: `${EXTENSION_PROPERTY_BASE}${oneSlot}`, type_hint: 'xsd:string' }));
 	const headerLineList = [
 		'#curie_map:',
 		...Object.keys(effectiveCurieMap)
@@ -269,15 +283,16 @@ const toSssomTsv = ({ decisionBlock, decisionBlockHash, cardByStableId, curieMap
 	if (setLevelSlots.channelAssertionProvenance !== undefined) {
 		headerLineList.push(`#channel_assertion: ${yamlScalar(JSON.stringify(setLevelSlots.channelAssertionProvenance))}`);
 	}
-	headerLineList.push(`#subject_census: ${yamlScalar(JSON.stringify({ subjectCount: subjectSet.size, rowCount: rowList.length, note: 'rows are per (subject stableId, predicate, object); several source subjects sharing one leaf yield ONE row' }))}`);
-	const text = `${headerLineList.join('\n')}\n${COLUMN_LIST.join('\t')}\n${rowList.map((oneRow) => COLUMN_LIST.map((oneColumn) => tsvCell(oneRow[oneColumn])).join('\t')).join('\n')}${rowList.length ? '\n' : ''}`;
+	const subjectCensus = { subjectCount: subjectSet.size, rowCount: rowList.length, note: 'rows are per (subject stableId, predicate, object); several source subjects sharing one leaf yield ONE row' };
+	headerLineList.push(`#subject_census: ${yamlScalar(JSON.stringify(isFannedOut ? { ...subjectCensus, judgedSubjectCount: judgedSubjectSet.size } : subjectCensus))}`);
+	const text = `${headerLineList.join('\n')}\n${columnList.join('\t')}\n${rowList.map((oneRow) => columnList.map((oneColumn) => tsvCell(oneRow[oneColumn])).join('\t')).join('\n')}${rowList.length ? '\n' : ''}`;
 	fs.mkdirSync(path.dirname(outputPath), { recursive: true });
 	fs.writeFile(outputPath, text, 'utf8', (writeError) => {
 		if (writeError) {
 			callback(`${moduleName}: writing ${outputPath}: ${writeError.message}`);
 			return;
 		}
-		callback('', { outputPath, rowCount: rowList.length, subjectCount: subjectSet.size, setLevelSlots });
+		callback('', { outputPath, rowCount: rowList.length, subjectCount: subjectSet.size, ...(isFannedOut ? { judgedSubjectCount: judgedSubjectSet.size } : {}), setLevelSlots });
 	});
 };
 
@@ -334,4 +349,4 @@ const parseSssomTsv = (text) => {
 	return { headerLineList, columnList, rowList, headerScalarOf: (name) => { const line = headerLineList.find((oneLine) => oneLine.startsWith(`#${name}: `)); return line === undefined ? undefined : JSON.parse(line.replace(`#${name}: `, '')); } };
 };
 
-module.exports = { toSssomTsv, parseSssomTsv, COLUMN_LIST, BUILT_IN_PREFIX_LIST, EXTENSION_SLOT_NAME_LIST, EXTENSION_PROPERTY_BASE, MAPPING_SET_ID_URN_BASE, URN_SCHEME_PREFIX, yamlScalar, moduleName };
+module.exports = { toSssomTsv, parseSssomTsv, COLUMN_LIST, JUDGED_SUBJECT_COLUMN, BUILT_IN_PREFIX_LIST, EXTENSION_SLOT_NAME_LIST, EXTENSION_PROPERTY_BASE, MAPPING_SET_ID_URN_BASE, URN_SCHEME_PREFIX, yamlScalar, moduleName };
