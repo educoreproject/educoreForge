@@ -53,6 +53,16 @@ const TERM_DEFINITIONS = {
 			'Element to one record of its own change history. Ordered by the entry\'s `sequence`, which is its position in the SOURCE FILE and deliberately not its position in time -- CEDS\'s own ordering is untidy (P000225 runs 10, 11, 12, 3, 4, 7, 8) and tidying it would break round-trip fidelity.',
 		EMBEDS_TEXT_OF:
 			'Text node to a node it describes: (DmeEmbedText)-[:EMBEDS_TEXT_OF]->(described node), provenanceTier \'structural\'. ONE edge per distinct (text node, described node) pair, carrying propertyNameList — the SORTED list of the property names on that node whose value this text is, so a text that is both the name and the description of one node is one edge naming both. The pair is the unit because it is the fact a consumer asks about (which nodes does this text describe); a consumer that needs one row per property enumerates (edge, propertyName). The graph loader stores a one-element list as a SCALAR (a multi-element list stays a list; blocks are unaffected), so every graph reader re-widens a scalar propertyNameList to a one-element list at its read boundary. Never REFERENCES: a structural walk must not travel from a standard into its texts.',
+		HAS_FIELD:
+			'Object to one of its fields, every one, at any depth: one edge per field row of the source. A flat membership edge that answers "which fields does this object specify" without walking the nesting; the nesting itself is HAS_CHILD. Introduced for the sif260928 forge (Object to Field).',
+		HAS_CHILD:
+			'Structural parent to its immediate child in one object\'s element tree: an object to a top-level container, or a container to a container or field nested directly inside it. It records nesting, where HAS_FIELD records membership. Introduced for the sif260928 forge, whose containers are the element paths the source implies but never lists as rows.',
+		HAS_INSTANCE:
+			'A question to each field it stands for. A question is one distinct (name, description, relative path) the source asks, and a source that repeats a block across objects asks the same question many times; this edge links the one to the many, so a judgement made once about the question can be read on every field. Introduced for the sif260928 forge (Question to Field).',
+		CONSTRAINED_BY:
+			'Field to the code list (option set) that constrains its values. The field-level counterpart of HAS_OPTION_SET, kept as its own type so a standard\'s field-to-codeset links are not read as ownership. Introduced for the sif260928 forge (Field to Codeset).',
+		REFERENCES_OBJECT:
+			'A reference field to the object it names: a field whose value is another object\'s identifier, linked to that object. It runs from the FIELD, which is the "via" of the reference, so one object referring to another through several fields keeps one edge per field. Introduced for the sif260928 forge (a RefId Field to an Object); SPEC §9 A24 admits only a curated-map resolution or an exact <Object>RefId name match, and gives an unresolved field no edge.',
 		REFERENCES: 'Generic intra-standard reference between structural nodes.',
 		HAS_SUPPORT: 'Node to producer-specific supporting material (documentation fragments, examples).',
 		REFERENCES_TYPE: 'Property/field to the named type it references within its own standard.',
