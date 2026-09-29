@@ -111,7 +111,7 @@ const canonicalConjunctList = [
 					const listsSorted = JSON.stringify(listBySubject) === JSON.stringify(INSTANCE_LIST_LITERAL_BY_SUBJECT);
 					const graphOrderBlockId = graphOrderOutcome.runReport.decisionBlock.decisionBlockHash;
 					const sortedBlockId = sortedOutcome.runReport.decisionBlock.decisionBlockHash;
-					callback('', { pass: listsSorted && graphOrderBlockId === sortedBlockId, detail: `lists ${JSON.stringify(listBySubject)}; block ids ${graphOrderBlockId.slice(0, 12)} vs ${sortedBlockId.slice(0, 12)}` });
+					callback('', { pass: listsSorted && graphOrderBlockId === sortedBlockId, detail: `block ids ${graphOrderBlockId.slice(0, 12)} vs ${sortedBlockId.slice(0, 12)}; lists ${JSON.stringify(listBySubject)}` });
 				});
 			});
 		},
