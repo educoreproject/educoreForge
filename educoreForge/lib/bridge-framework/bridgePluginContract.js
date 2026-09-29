@@ -39,6 +39,7 @@ const bridgeAllowanceRegistryLib = require('./bridgeAllowanceRegistry');
 // and the refusal that reads them. The contract asks it rather than restating them, so a kind row added there
 // is admitted here the same day. It requires only path, the refusal helper and ./candidateRetrieval: no cycle.
 const neighbourVoteLib = require('./neighbourVote');
+const promptIdentifierScanLib = require('./promptIdentifierScan');
 // ⟪JOB 3, 2026-09-07⟫ SELECT_CATEGORY_ENUM — the single source of truth for the judge's verdict
 // categories. Required by the SAME path form confidenceBandTable.js:12 uses, from the same directory,
 // for the same reason: this file's JUDGE_CATEGORY_LIST must be derived from the contract rather than
@@ -328,6 +329,9 @@ const BRIDGE_DECLARATION_CONTRACT = Object.freeze({
 	remodelTableRef: Object.freeze({ required: true, kind: 'stringOrNull' }),
 	classSideRemodelTable: Object.freeze({ required: true, kind: 'classSideRemodelTable' }),
 	blindingDeclaration: Object.freeze({ required: true, kind: 'stringList' }),
+	// the IN-RUN identifier scan over everything the judge is shown (promptIdentifierScan.js; SPEC §9 A19). Plain-optional:
+	// absent, nothing is scanned and the run is unchanged; its checker also needs predicateSource, validated above.
+	promptIdentifierScan: Object.freeze({ optional: true, kind: 'promptIdentifierScan' }),
 	evidenceHooksDeclared: Object.freeze({ required: true, kind: 'evidenceHooksDeclared' }),
 	// CONDITIONAL presence (RULING BR4): REQUIRED iff evidenceHooksDeclared.globalGuidance === true, FORBIDDEN (refused
 	// by name) when it is false — not a default, a conditional requirement; SPEC §10.1 as printed (hook false, no key) validates
@@ -571,6 +575,7 @@ const KIND_CHECKER_REGISTRY = Object.freeze({
 			? ''
 			: `must match ${vocabularyLib.RELATIONSHIP_DISCRIMINATOR_PATTERN} — lower-case-initial alphanumeric, 32 characters maximum, never carrying the '${vocabularyLib.RELATIONSHIP_DISCRIMINATOR_SEPARATOR}' separator itself (got ${JSON.stringify(value)})`,
 	stringList: (value) => (isStringList(value) ? '' : `must be a list of strings (got ${JSON.stringify(value)}); [] means "none", absence is refused`),
+	promptIdentifierScan: (value, { bridgeDeclaration }) => promptIdentifierScanLib.declarationReason(value, { bridgeDeclaration }),
 	closedValue: (value, { contractEntry, propertyName }) => closedValueReason(value, contractEntry.allowedValueList, propertyName),
 	mappingProvider: (value) => {
 		if (!isPlainObject(value)) {

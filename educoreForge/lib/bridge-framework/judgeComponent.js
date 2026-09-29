@@ -5,7 +5,10 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // judgeComponent.js — judgeOne: frame → cache → ask → verify → record (SPEC-bridgeFramework-v1.md §5.6;
 // RULINGS BF1, R5; BR-065..069, BR-120, BR-122). FRAMEWORK-OWNED; a plugin cannot reach it.
 //
-//   judgeOne({ question, judgeClient, judgmentCache, matchForensics, budget, pairKey, generation, debugMark }, cb)
+//   judgeOne({ question, judgeClient, judgmentCache, matchForensics, budget, pairKey, generation, debugMark,
+//              reaskPromptRefusalFor }, cb)
+//     reaskPromptRefusalFor(reaskUserPrompt) → '' | refusal text — the caller's prompt identifier scan, applied to the
+//                one rationale re-ask before it is sent (the first prompt was scanned by the caller before judgeOne)
 //     question = renderQuestion's result ({ systemPrompt, userPrompt, promptHash, renderedPoolStableIdList,
 //                choiceEnum }) — the pool ALREADY sorted by stableId by the caller
 //     → { chosenCardStableId | null, choice, category, rationale, confidence | null, promptHash, cacheHit,
@@ -212,7 +215,7 @@ const REASK_INSTRUCTION_BY_FAULT = Object.freeze({
 const REASKABLE_FAULT_NAME_LIST = Object.freeze(Object.keys(REASK_INSTRUCTION_BY_FAULT));
 const reaskableFaultNameOf = (judged) => REASKABLE_FAULT_NAME_LIST.find((oneFaultName) => judged[oneFaultName] === true);
 
-const judgeOne = ({ question, judgeClient, judgmentCache, matchForensics, budget, pairKey, generation, debugMark } = {}, callback) => {
+const judgeOne = ({ question, judgeClient, judgmentCache, matchForensics, budget, pairKey, generation, debugMark, reaskPromptRefusalFor } = {}, callback) => {
 	if (!isPlainObject(question) || !Array.isArray(question.renderedPoolStableIdList) || !Array.isArray(question.choiceEnum) || typeof question.promptHash !== 'string') {
 		callback(refuse.byName({ moduleName, what: 'question is not a renderQuestion result', where: 'judgeOne takes { question, judgeClient, judgmentCache, matchForensics, budget, pairKey, generation, debugMark }' }).message);
 		return;
@@ -311,6 +314,11 @@ const judgeOne = ({ question, judgeClient, judgmentCache, matchForensics, budget
 		// (attempts 2 — the ACCEPTED answer is what the cache stores under the ORIGINAL promptHash, so replay stays deterministic),
 		// (4) refuses BY NAME a second violation. BR-067 stands; the re-ask is counted (rationaleReaskCount) in the run report.
 		const askOnce = ({ userPrompt, reaskCount }, askCallback) => {
+			const reaskRefusal = reaskCount > 0 ? reaskPromptRefusalFor(userPrompt) : '';
+			if (reaskRefusal) {
+				askCallback(reaskRefusal);
+				return;
+			}
 			judgeClient.rerank({ systemPrompt: question.systemPrompt, userPrompt, choiceEnum: question.choiceEnum }, (rerankError, clientReturn) => {
 				if (rerankError) {
 					askCallback(`${moduleName}: the judge refused promptHash ${question.promptHash}: ${rerankError}`);

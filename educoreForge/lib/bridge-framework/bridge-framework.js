@@ -66,6 +66,7 @@ const sssomExporterLib = require('./sssomExporter');
 const boundedRunnerLib = require('./boundedRunner');
 const conflictDetectorLib = require('./conflictDetector');
 const graphSeamRulesLib = require('./graphSeamRules');
+const promptIdentifierScanLib = require('./promptIdentifierScan');
 
 const { RELATIONSHIP_PRODUCER_SUFFIX, SKOS_EDGE_TYPES, MAPPING_PROPERTIES, DME_ROLES, HUB_DECOMPOSITION_SLOTS, SSSOM_JUSTIFICATIONS, hubEdgeType } = vocabularyLib;
 const {
@@ -1698,6 +1699,34 @@ const moduleFunction =
 				});
 				taskList.push((args, next) => poolProducerByKind[acquisitionRow.poolProducerKind](args, next));
 
+				// STEP 6c — the prompt identifier scan (promptIdentifierScan.js; SPEC §9 A19), compiled ONCE and BEFORE any
+				// subject is judged, so a broken list file refuses every re-judge whether or not a subject needs judging.
+				// Undeclared, compiledPromptScan is null and STEP 7 is exactly what it was.
+				taskList.push((args, next) => {
+					const scanDeclaration = bridgeDeclaration.promptIdentifierScan;
+					if (scanDeclaration === undefined) {
+						next('', { ...args, compiledPromptScan: null });
+						return;
+					}
+					let identifierList = null;
+					if (scanDeclaration.identifierListPath !== null) {
+						if (!path.isAbsolute(scanDeclaration.identifierListPath) && typeof registry.forgesDirPath !== 'string') {
+							next(refuse.byName({ moduleName, what: `plugin declares promptIdentifierScan.identifierListPath '${scanDeclaration.identifierListPath}' but the registry names no forgesDirPath`, where: 'a relative list path is resolved under the registry\'s forges directory, beside the plugin that declares it' }).message);
+							return;
+						}
+						const identifierListFilePath = promptIdentifierScanLib.identifierListFilePathFor({ identifierListPath: scanDeclaration.identifierListPath, forgesDirPath: registry.forgesDirPath, standardKey: bridgeDeclaration.standardKey });
+						const readList = promptIdentifierScanLib.readIdentifierList({ filePath: identifierListFilePath });
+						if (readList.error) {
+							next(readList.error.message);
+							return;
+						}
+						identifierList = readList.identifierList;
+					}
+					const { compiledScan } = promptIdentifierScanLib.compileScan({ scanDeclaration, identifierList });
+					say(`prompt identifier scan: ${compiledScan.compiledPatternList.map((onePattern) => onePattern.patternName).join(', ')}${identifierList === null ? '' : ` (${identifierList.length} listed identifier(s))`} over the system prompt, user prompt, tool text and any re-ask prompt; one hit refuses the run`);
+					next('', { ...args, compiledPromptScan: compiledScan });
+				});
+
 				// STEP 7 — the JUDGE (bounded runner, index-collecting); the debug double is the only judge in B2
 				taskList.push((args, next) => {
 					if (args.judgedTaskList.length === 0) {
@@ -1732,6 +1761,17 @@ const moduleFunction =
 					const evidenceView = args.reader.forEvidence();
 					// the key is PRESENT iff the hook is declared (contract, RULING BR4); with the hook off there is no guidance to render
 					const globalGuidanceList = bridgeDeclaration.evidenceHooksDeclared.globalGuidance ? bridgeDeclaration.globalGuidanceList.slice() : [];
+					// promptScanRefusalFor — '' when no scan is declared or nothing hits, else the run's refusal naming the subject,
+					// the pattern and the surface. surfaceTextByName is a thunk so an undeclared scan renders no tool text at all.
+					const promptScanRefusalFor = ({ subjectStableId, surfaceTextByName }) => {
+						if (args.compiledPromptScan === null) {
+							return '';
+						}
+						const { hit } = promptIdentifierScanLib.scanSurfaces({ compiledScan: args.compiledPromptScan, surfaceTextByName: surfaceTextByName() });
+						return hit === null
+							? ''
+							: refuse.byName({ moduleName, what: `prompt identifier scan hit for subject ${subjectStableId}: pattern '${hit.patternName}' matched '${hit.matchedText}' in the ${hit.surfaceName}`, where: 'a CEDS identifier must never reach the judge (SPEC-sifStructuralBridge-replacement §9 A19); remove it from the source text or the rendering, never from the scan' }).message;
+					};
 					const judgeOneTask = (oneTask, taskIndex, taskDone) => {
 						const subjectNode = args.subjectNodeByStableId[oneTask.baseRecord.subjectStableId];
 						// the source's own material is MERGED over every row of the group in LOCATOR order (never walk order —
@@ -1822,7 +1862,13 @@ const moduleFunction =
 								taskDone(question.error.message);
 								return;
 							}
-							judgeComponentLib.judgeOne({ question, judgeClient, judgmentCache: spec.judgmentCache, matchForensics: spec.matchForensics, budget, pairKey, generation, debugMark }, (judgeError, judged, judgeFault) => {
+							const questionScanRefusal = promptScanRefusalFor({ subjectStableId: oneTask.baseRecord.subjectStableId, surfaceTextByName: () => promptIdentifierScanLib.questionSurfaceTextByName({ predicateRule: bridgeDeclaration.predicateSource.predicateRule, question }) });
+							if (questionScanRefusal) {
+								taskDone(questionScanRefusal);
+								return;
+							}
+							const reaskPromptRefusalFor = (reaskUserPrompt) => promptScanRefusalFor({ subjectStableId: oneTask.baseRecord.subjectStableId, surfaceTextByName: () => ({ reaskUserPrompt }) });
+							judgeComponentLib.judgeOne({ question, judgeClient, judgmentCache: spec.judgmentCache, matchForensics: spec.matchForensics, budget, pairKey, generation, debugMark, reaskPromptRefusalFor }, (judgeError, judged, judgeFault) => {
 								if (judgeError) {
 									// ⟪RULING 14:55 (a) THE NET⟫ a rationale-FORM refusal after its one re-ask names the SUBJECT in
 									// refusalList and the run CARRIES ON. No edge, no default, and explicitly NOT recorded as an
