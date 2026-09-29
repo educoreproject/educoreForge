@@ -2,29 +2,36 @@
 
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
-// sif260928Walk.js — the emission walk (PLAN §3 A1c; SPEC §3.1 as amended by §9). PURE and
-// synchronous: it runs inside the framework's buildContractGraph, where a throw is the sanctioned
-// refusal (the framework's one adapter hands it to the forge callback).
+// sif260928Walk.js — the emission walk (PLAN §3 A1c and A2; SPEC §3.1 and §3.2 as amended by §9,
+// including A25 and A26). PURE and synchronous: it runs inside the framework's buildContractGraph,
+// where a throw is the sanctioned refusal (the framework's one adapter hands it to the forge callback).
 //
-//   emitObjectsAndFields({ rowList, kit }) → mints, after the framework's root:
-//     one Object per distinct object path (the first two xpath segments), in first-appearance order,
-//     then one Field per loaded row, in source order.
+//   emitObjectTree({ rowList, kit }) → mints, after the framework's root:
+//     one Object per distinct object path (the first two xpath segments), in first-appearance order;
+//     one Container per xpath prefix below the object that is not itself a row (6,586), each after
+//       its ancestors, carrying no isUnbounded (the TSV never states it; A26);
+//     one Field per loaded row, in source order.
+//   and adds Object -HAS_FIELD-> Field for every Field, plus HAS_CHILD along the element tree.
 //
-// Each Field's structural parent is its Object. The walk adds NO edges: the edge types arrive with
-// V1 and the tree with A2. No questionRefId either: A3 stamps it.
+// Every node's structural parent is the element one xpath segment up: the Object, a Container, or,
+// for an attribute on an element that is itself a row, that element's Field (A26). HAS_CHILD mirrors
+// that parentId, except that a Field directly on its Object has only its HAS_FIELD edge. No
+// questionRefId yet: A3 stamps it.
 //
 // The per-node facts are derived here from the loader's row; the loader already refused every
 // malformed cell, so nothing below re-checks the source. The ONE refusal is the parentPath floor
-// (gate (c)): a parentPath that is not the Object's path or beneath it is refused by name.
+// (A1c gate (c)): a parentPath that is not the Object's path or beneath it is refused by name.
+// parentPath is SPEC §3.1's attribute-folded property; it is not the structural parent.
 //
 // THE FORGE DOES NO BRIDGING (FBB-001). cedsElementId and cedsIdCellText are SIF's own column,
 // carried verbatim; nothing here reads them.
 
 const path = require('path');
 const refuse = require(path.join(__dirname, '..', '..', '..', 'lib', 'forge-framework', 'refuse'));
+const { EDGE_TYPES } = require(path.join(__dirname, '..', '..', '..', 'lib', 'vocabulary', 'vocabulary'));
 const SIF260928_NODE_KIND_TABLE = require('./sif260928NodeKindTable');
 
-const STABLE_ID_PREFIX_BY_KIND = Object.freeze({ object: 'sif260928:object', field: 'sif260928:field' });
+const STABLE_ID_PREFIX_BY_KIND = Object.freeze({ object: 'sif260928:object', container: 'sif260928:container', field: 'sif260928:field' });
 const XPATH_SEPARATOR = '/';
 const OBJECT_SEGMENT_COUNT = 2; // /<collection>/<object>
 const ATTRIBUTE_NAME_PREFIX = '@';
@@ -56,6 +63,8 @@ const FIELD_CARRY_LIST = Object.freeze([
 	'cedsIdCellText',
 ]);
 const OBJECT_CARRY_LIST = Object.freeze(['objectName', 'fieldCount']);
+// a Container has no row, so it carries only what its path implies (SPEC §3.1)
+const CONTAINER_CARRY_LIST = Object.freeze(['objectName']);
 
 // ---- derived facts ----------------------------------------------------------------------------
 
@@ -100,10 +109,43 @@ const assertParentPathWithinObject = ({ fieldFacts }) => {
 	}
 };
 
+// ---- the per-object tree (A2) ------------------------------------------------------------------
+
+// every xpath prefix below the object that is not itself a row is a Container (SPEC §3.1, decision
+// D2), listed in first-appearance order with each Container after its own ancestors
+const containerFactsListOf = ({ fieldFactsList }) => {
+	const xpathSet = new Set(fieldFactsList.map((fieldFacts) => fieldFacts.xpath));
+	const containerFactsByPath = new Map();
+	fieldFactsList.forEach((fieldFacts) => {
+		const segmentList = fieldFacts.xpath.split(XPATH_SEPARATOR).slice(1);
+		for (let prefixSegmentCount = OBJECT_SEGMENT_COUNT + 1; prefixSegmentCount < segmentList.length; prefixSegmentCount++) {
+			const containerPath = joinXpath(segmentList.slice(0, prefixSegmentCount));
+			if (!xpathSet.has(containerPath) && !containerFactsByPath.has(containerPath)) {
+				containerFactsByPath.set(containerPath, { containerPath, name: segmentList[prefixSegmentCount - 1], objectName: fieldFacts.objectName });
+			}
+		}
+	});
+	return [...containerFactsByPath.values()];
+};
+
+// a node's structural parent is the element one xpath segment up: its Object, a Container, or, for
+// an attribute on an element that is itself a row, that element's Field. Every such prefix is a
+// minted node, so the framework's depth is the xpath segment count less one (SPEC §9 A25).
+const structuralParentPathOf = (nodePath) => nodePath.slice(0, nodePath.lastIndexOf(XPATH_SEPARATOR));
+
+// which structural parent → child pairs carry a HAS_CHILD edge. A Field directly on its Object
+// has no HAS_CHILD: its HAS_FIELD edge already joins them.
+const HAS_CHILD_CHILD_KIND_LIST_BY_PARENT_KIND = Object.freeze({
+	object: Object.freeze(['container']),
+	container: Object.freeze(['container', 'field']),
+	field: Object.freeze(['field']),
+});
+
 // ---- the walk -------------------------------------------------------------------------------
 
-const emitObjectsAndFields = ({ rowList, kit }) => {
+const emitObjectTree = ({ rowList, kit }) => {
 	const fieldFactsList = rowList.map(fieldFactsOf);
+	const containerFactsList = containerFactsListOf({ fieldFactsList });
 
 	const fieldCountByObjectPath = new Map();
 	const objectNameByObjectPath = new Map();
@@ -112,17 +154,47 @@ const emitObjectsAndFields = ({ rowList, kit }) => {
 		objectNameByObjectPath.set(fieldFacts.objectPath, fieldFacts.objectName);
 	});
 
+	const nodeKindByPath = new Map([
+		...[...fieldCountByObjectPath.keys()].map((objectPath) => [objectPath, 'object']),
+		...containerFactsList.map((containerFacts) => [containerFacts.containerPath, 'container']),
+		...fieldFactsList.map((fieldFacts) => [fieldFacts.xpath, 'field']),
+	]);
+	const stableIdOfPath = (nodePath) => `${STABLE_ID_PREFIX_BY_KIND[nodeKindByPath.get(nodePath)]}${nodePath}`;
+
+	// adds the HAS_CHILD edge the table asks for, and returns the parent's stableId for parentId, so
+	// the edge and the parentId are derived from one parent and cannot disagree
+	const attachToStructuralParent = ({ nodePath }) => {
+		const parentPath = structuralParentPathOf(nodePath);
+		if (HAS_CHILD_CHILD_KIND_LIST_BY_PARENT_KIND[nodeKindByPath.get(parentPath)].includes(nodeKindByPath.get(nodePath))) {
+			kit.addEdge({ edgeType: EDGE_TYPES.HAS_CHILD, fromStableId: stableIdOfPath(parentPath), toStableId: stableIdOfPath(nodePath), edgeContext: `HAS_CHILD ${nodePath}` });
+		}
+		return stableIdOfPath(parentPath);
+	};
+
 	const objectKind = SIF260928_NODE_KIND_TABLE.object;
 	fieldCountByObjectPath.forEach((fieldCount, objectPath) => {
 		const objectName = objectNameByObjectPath.get(objectPath);
 		kit.makeNode({
 			role: objectKind.role,
 			perStandardLabel: objectKind.perStandardLabel,
-			stableId: `${STABLE_ID_PREFIX_BY_KIND.object}${objectPath}`,
+			stableId: stableIdOfPath(objectPath),
 			name: objectName,
 			structural: { parentId: kit.rootStableId, path: objectPath },
 			carriedProperties: kit.carriedProperties({ parsedObject: { objectName, fieldCount }, carryList: OBJECT_CARRY_LIST }),
 			origin: `object ${objectPath}`,
+		});
+	});
+
+	const containerKind = SIF260928_NODE_KIND_TABLE.container;
+	containerFactsList.forEach((containerFacts) => {
+		kit.makeNode({
+			role: containerKind.role,
+			perStandardLabel: containerKind.perStandardLabel,
+			stableId: stableIdOfPath(containerFacts.containerPath),
+			name: containerFacts.name,
+			structural: { parentId: attachToStructuralParent({ nodePath: containerFacts.containerPath }), path: containerFacts.containerPath },
+			carriedProperties: kit.carriedProperties({ parsedObject: containerFacts, carryList: CONTAINER_CARRY_LIST }),
+			origin: `container ${containerFacts.containerPath}`,
 		});
 	});
 
@@ -132,16 +204,17 @@ const emitObjectsAndFields = ({ rowList, kit }) => {
 		kit.makeNode({
 			role: fieldKind.role,
 			perStandardLabel: fieldKind.perStandardLabel,
-			stableId: `${STABLE_ID_PREFIX_BY_KIND.field}${fieldFacts.xpath}`,
+			stableId: stableIdOfPath(fieldFacts.xpath),
 			name: fieldFacts.name,
 			...(fieldFacts.description === null ? {} : { description: fieldFacts.description }),
-			structural: { parentId: `${STABLE_ID_PREFIX_BY_KIND.object}${fieldFacts.objectPath}`, path: fieldFacts.xpath },
+			structural: { parentId: attachToStructuralParent({ nodePath: fieldFacts.xpath }), path: fieldFacts.xpath },
 			carriedProperties: kit.carriedProperties({ parsedObject: presentFactsOf(fieldFacts), carryList: FIELD_CARRY_LIST }),
 			origin: `line ${fieldFacts.sourceLineNumber} ${fieldFacts.xpath}`,
 		});
+		kit.addEdge({ edgeType: EDGE_TYPES.HAS_FIELD, fromStableId: stableIdOfPath(fieldFacts.objectPath), toStableId: stableIdOfPath(fieldFacts.xpath), edgeContext: `HAS_FIELD ${fieldFacts.xpath}` });
 	});
 
-	return { objectCount: fieldCountByObjectPath.size, fieldCount: fieldFactsList.length };
+	return { objectCount: fieldCountByObjectPath.size, containerCount: containerFactsList.length, fieldCount: fieldFactsList.length };
 };
 
-module.exports = { emitObjectsAndFields, STABLE_ID_PREFIX_BY_KIND, FIELD_CARRY_LIST, moduleName };
+module.exports = { emitObjectTree, STABLE_ID_PREFIX_BY_KIND, FIELD_CARRY_LIST, moduleName };
