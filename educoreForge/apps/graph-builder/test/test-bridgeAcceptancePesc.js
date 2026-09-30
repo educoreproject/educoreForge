@@ -615,7 +615,12 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // work, merged at 07605e6 plus the judgeConfig fix): bridge-maker/lib/jevJudgeClient.js 281/0, jevOpusJudgeClient.js 136/0,
 // judgeProviderRegistry.js 20/0, lib/bridge-framework/evidenceRenderer.js 57/5, judgeComponent.js 1/1, test/test-bgDerived.js 2/2.
 // Six declared paths unchanged, no exclusion added; the tag is cut ON this re-anchor commit.
-const P1_BASELINE_COMMIT = 'postJevMergePescComposeA-093026'; // re-anchored by COPPER_LOOM after merging the Jev providers; the tag is cut ON the re-anchor commit
+// RE-ANCHOR 2026-09-30 (IVORY_ECHO; WORKORDER-jevRelations-093026 R1, COPPER_LOOM supervising), Jev names the relation:
+// postJevMergePescComposeA-093026 -> postJevRelationsR1PescComposeA-093026. CENSUS (numstat from postJevMergePescComposeA-093026
+// over the six declared paths, 2 paths, both from ONE commit, c031ee7): bridge-maker/lib/jevJudgeClient.js 148/36 (the relation
+// question under judgeSlot-v1; the wording hash in the model identity), bridge-maker/lib/jevOpusJudgeClient.js 5/1 (comments only).
+// Six declared paths unchanged, no exclusion added; the tag is cut ON this re-anchor commit.
+const P1_BASELINE_COMMIT = 'postJevRelationsR1PescComposeA-093026'; // re-anchored by IVORY_ECHO for jevRelations R1; the tag is cut ON the re-anchor commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
