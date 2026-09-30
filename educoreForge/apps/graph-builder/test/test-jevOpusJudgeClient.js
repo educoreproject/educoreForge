@@ -56,6 +56,7 @@ const jevDouble = ({ verdict, error }) => {
 			wireModel: 'jev-1.13.0',
 			model: 'jev:jev-1.13.0:data',
 			maxConcurrency: 4,
+			judgeConfig: Object.freeze({ temperaturePolicy: 'notOffered', maxTokens: null }),
 			describe: () => ({ provider: 'jev', model: 'jev:jev-1.13.0:data', version: 'double' }),
 			rerank: (rerankOptions, callback) => {
 				callCountHolder.count += 1;
@@ -74,6 +75,7 @@ const anthropicDouble = () => {
 			wireModel: 'claude-opus-5',
 			model: 'anthropic:claude-opus-5',
 			maxConcurrency: 8,
+			judgeConfig: Object.freeze({ temperaturePolicy: 'zero', maxTokens: 16000 }),
 			describe: () => ({ provider: 'anthropic', model: 'anthropic:claude-opus-5', version: 'double' }),
 			rerank: (rerankOptions, callback) => {
 				callCountHolder.count += 1;
@@ -109,6 +111,8 @@ harness.ok('no contract violation', judgeProviderViolation(shapeCascade, { provi
 harness.equal('the identity carries both judges and the cut', shapeCascade.model, 'jevOpus:jev-1.13.0:data@0.7+anthropic:claude-opus-5');
 harness.equal('a different cut is a different identity', cascadeFor({ escalateBelowConfidence: 0.6, jev: jevDouble({ verdict: jevVerdictAt(0.9) }), anthropic: anthropicDouble() }).model, 'jevOpus:jev-1.13.0:data@0.6+anthropic:claude-opus-5');
 harness.equal('concurrency is the lower of the two', shapeCascade.maxConcurrency, 4);
+harness.equal("judgeConfig names both legs' policies", shapeCascade.judgeConfig.temperaturePolicy, 'jev:notOffered+anthropic:zero');
+harness.equal("…and carries the Anthropic leg's token budget", shapeCascade.judgeConfig.maxTokens, 16000);
 
 const caseList = [
 	(done) => {

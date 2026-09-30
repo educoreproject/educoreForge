@@ -268,6 +268,9 @@ const moduleFunction = (constructionOptions = {}) => {
 		wireModel: cfg.wireModel,
 		model: namespacedModel,
 		maxConcurrency: cfg.maxConcurrency,
+		// judgeConfig — what rerank sends besides the question. Jev's API takes no temperature and no token budget,
+		// so there is nothing to record beyond saying so; maxTokens null means no budget exists, not an unset one.
+		judgeConfig: Object.freeze({ temperaturePolicy: 'notOffered', maxTokens: null }),
 		rerank,
 		describe,
 	};

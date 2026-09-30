@@ -121,6 +121,11 @@ const moduleFunction = (constructionOptions = {}) => {
 		wireModel: `${jevProvider.wireModel}+${anthropicProvider.wireModel}`,
 		model: namespacedModel,
 		maxConcurrency: Math.min(jevProvider.maxConcurrency, anthropicProvider.maxConcurrency),
+		// judgeConfig — both legs' policies, named; the token budget is the Anthropic leg's, the only one that has one.
+		judgeConfig: Object.freeze({
+			temperaturePolicy: `${jevProvider.name}:${jevProvider.judgeConfig.temperaturePolicy}+${anthropicProvider.name}:${anthropicProvider.judgeConfig.temperaturePolicy}`,
+			maxTokens: anthropicProvider.judgeConfig.maxTokens,
+		}),
 		rerank,
 		describe,
 	};

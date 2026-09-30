@@ -129,6 +129,7 @@ harness.ok('no contract violation', judgeProviderViolation(dataProvider, { provi
 harness.equal('name is jev', dataProvider.name, 'jev');
 harness.equal('model carries provider, wire model AND request form', dataProvider.model, 'jev:jev-1.13.0:data');
 harness.equal('describe() agrees with the provider', dataProvider.describe().model, dataProvider.model);
+harness.equal('judgeConfig says Jev takes no temperature and has no token budget', JSON.stringify(dataProvider.judgeConfig), '{"temperaturePolicy":"notOffered","maxTokens":null}');
 const { provider: stringProvider } = providerFor({ requestForm: 'string' }, [{ statusCode: 200, responseBody: answerBody({ choice: '1', confidence: 0.9, probabilities: { 1: 0.95, 2: 0.03, NONE: 0.02 } }) }]);
 harness.equal('the string form is a DIFFERENT identity, so the forms never share cached verdicts', stringProvider.model, 'jev:jev-1.13.0:string');
 
