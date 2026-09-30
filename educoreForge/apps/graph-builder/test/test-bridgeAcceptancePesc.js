@@ -620,7 +620,13 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // over the six declared paths, 2 paths, both from ONE commit, c031ee7): bridge-maker/lib/jevJudgeClient.js 148/36 (the relation
 // question under judgeSlot-v1; the wording hash in the model identity), bridge-maker/lib/jevOpusJudgeClient.js 5/1 (comments only).
 // Six declared paths unchanged, no exclusion added; the tag is cut ON this re-anchor commit.
-const P1_BASELINE_COMMIT = 'postJevRelationsR1PescComposeA-093026'; // re-anchored by IVORY_ECHO for jevRelations R1; the tag is cut ON the re-anchor commit
+// RE-ANCHOR 2026-09-30 (IVORY_ECHO; WORKORDER-jevRelations-093026 R2, COPPER_LOOM supervising), Ed-Fi takes judge-named
+// relations: postJevRelationsR1PescComposeA-093026 -> postJevRelationsR2PescComposeA-093026. CENSUS (numstat from
+// postJevRelationsR1PescComposeA-093026 over the six declared paths, 1 path, from ONE commit, e96ddb4):
+// lib/bridge-framework/test/test-bgJudgeSlot.js 4/2 (a roster edit: BG-JUDGESLOT d's SHIPPED_PLUGIN_LIST row for
+// edfiCedsDerivedPlugin now resolves to derivedJudgeSlot; D1 precedent). The plugin itself lives under forges/, outside
+// the six paths. No framework source moved. Six declared paths unchanged, no exclusion added; the tag is cut ON this commit.
+const P1_BASELINE_COMMIT = 'postJevRelationsR2PescComposeA-093026'; // re-anchored by IVORY_ECHO for jevRelations R2; the tag is cut ON the re-anchor commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
