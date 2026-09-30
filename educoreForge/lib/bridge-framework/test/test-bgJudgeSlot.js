@@ -72,7 +72,9 @@ const JUDGE_SLOT_PREDICATE_ENUM_LITERAL = Object.freeze(['exactMatch', 'closeMat
 const SHIPPED_PLUGIN_LIST = [
 	{ bridgeName: 'sifCedsStandardPlugin', pluginPath: 'forges/sif/bridges/sifCedsStandardPlugin.js', judgePromptVariant: 'crosswalk', rendererVersion: CROSSWALK_RENDERER_VERSION_LITERAL },
 	{ bridgeName: 'edfiCedsCrosswalkPlugin', pluginPath: 'forges/edfi/bridges/edfiCedsCrosswalkPlugin.js', judgePromptVariant: 'crosswalk', rendererVersion: CROSSWALK_RENDERER_VERSION_LITERAL },
-	{ bridgeName: 'edfiCedsDerivedPlugin', pluginPath: 'forges/edfi/bridges/edfiCedsDerivedPlugin.js', judgePromptVariant: 'derived', rendererVersion: DERIVED_RENDERER_VERSION_LITERAL },
+	// MOVED 2026-09-30 (IVORY_ECHO, WORKORDER-jevRelations-093026 R2, TQ ruling "every bridge uses judge-named relations"):
+	// Ed-Fi derived now declares predicateRule judgeSlot-v1, so it resolves to derivedJudgeSlot. Was: 'derived' / derived-v12.
+	{ bridgeName: 'edfiCedsDerivedPlugin', pluginPath: 'forges/edfi/bridges/edfiCedsDerivedPlugin.js', judgePromptVariant: 'derivedJudgeSlot', rendererVersion: JUDGE_SLOT_RENDERER_VERSION_LITERAL },
 	{ bridgeName: 'pescCedsDerivedPlugin', pluginPath: 'forges/pesc260805/bridges/pescCedsDerivedPlugin.js', judgePromptVariant: 'derived', rendererVersion: DERIVED_RENDERER_VERSION_LITERAL },
 	{ bridgeName: 'pescOptionSetCedsDerivedPlugin', pluginPath: 'forges/pesc260805/bridges/pescOptionSetCedsDerivedPlugin.js', judgePromptVariant: 'derived', rendererVersion: DERIVED_RENDERER_VERSION_LITERAL },
 	{ bridgeName: 'sif260928CedsDerivedPlugin', pluginPath: 'forges/sif260928/bridges/sif260928CedsDerivedPlugin.js', judgePromptVariant: 'derivedJudgeSlot', rendererVersion: JUDGE_SLOT_RENDERER_VERSION_LITERAL },
@@ -295,7 +297,7 @@ const judgeSlotConjunctList = [
 	}),
 	pureConjunct({
 		conjunctId: 'd_shippedPluginsResolveToTheirVariants',
-		title: `the Ed-Fi and PESC derived plugins resolve to 'derived' (${DERIVED_RENDERER_VERSION_LITERAL}); the two documentary plugins resolve to 'crosswalk'`,
+		title: `the PESC derived plugins resolve to 'derived' (${DERIVED_RENDERER_VERSION_LITERAL}); the Ed-Fi and SIF 260928 derived plugins to 'derivedJudgeSlot' (${JUDGE_SLOT_RENDERER_VERSION_LITERAL}); the two documentary plugins resolve to 'crosswalk'`,
 		twinNameList: ['categoryTableMappedToJudgeSlot'],
 		judge: (scenario) => {
 			const contractLib = frameworkLibFor(scenario, CONTRACT_FILE);

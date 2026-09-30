@@ -105,15 +105,14 @@ const bridgeDeclaration = Object.freeze({
 		// The graph knew; the prompt did not say. Guidance line (3) is unusable without these two names.
 		candidate: ['name', 'propertyDefinition', 'domainName', 'domainDefinition', 'rangeOptionSetName', 'rangeOptionSetDefinition', 'rangeClassName', 'rangeClassDefinition', 'componentIdeaList'],
 	},
-	judgePromptVariant: 'derived',
-	// THE V1 APPROXIMATION, NAMED AS SUCH (§11.7 (a)). The judge's return carries no predicate slot and TQ has
-	// ruled the judge is embellished only after Ed-Fi is complete, so the relation is derived from the judge's
-	// CONFIDENCE CATEGORY through this table. That is not a conforming design and is not presented as one: it
-	// is a declared, time-boxed non-conformance, stamped predicateRule 'categoryTable-v1' in the block header
-	// and in the SSSOM comment, so a later judge with a real predicate slot RE-MEASURES rather than silently
-	// differing. §6's per-predicate metric measures this table, not the judge, and says so.
-	predicateByCategory: { strong: 'exactMatch', moderate: 'closeMatch', weakButReal: 'closeMatch' },
-	predicateSource: { kind: 'judge', predicateRule: 'categoryTable-v1' },
+	judgePromptVariant: 'derivedJudgeSlot',
+	// THE JUDGE NAMES THE RELATION (jevRelations R2, 2026-09-30, TQ: "we always want the SSSOM characterization").
+	// Under judgeSlot-v1 the judge returns a predicate (exactMatch, closeMatch, broadMatch or narrowMatch) beside its
+	// pick, and 'none' beside NONE; judgeComponent verifies it. No category table is declared: the contract forbids
+	// predicateByCategory under this rule. This replaces the categoryTable-v1 non-conformance Ed-Fi carried since
+	// 2026-08-17, and it moves the renderer version (derived-v12 -> derivedJudgeSlot), so every Ed-Fi prompt hash,
+	// cache row and decision block is new.
+	predicateSource: { kind: 'judge', predicateRule: 'judgeSlot-v1' },
 	// THE PRODUCER, in place of a mapping PROVIDER. Nobody authored these mappings — mappingProvider is
 	// FORBIDDEN for this basis, on the edge and in the SSSOM alike (§11.7 (c), amended 2026-08-17).
 	mappingTool: { name: 'educoreForge bridge-framework derived', version: '1.0.0' },
