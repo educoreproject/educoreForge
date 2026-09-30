@@ -598,6 +598,18 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 //                             lib/bridge-framework/test/test-bgBolt.js (toy states carry ForgedNode; conjunct l and its two twins).
 // The PESC plugins still compose through the seam: this gate's other 25 conjuncts were green before the move. THE SIX DECLARED PATHS
 // ARE UNCHANGED, no exclusion added. Fresh scratch red observed against THIS tag (DEVLOG-B7).
+// (The two re-anchors below were made on branch jevJudgeProvider, in parallel with the SIF line; their tags stay valid there.)
+// RE-ANCHOR 2026-09-29 (COPPER_LOOM, TQ-directed), Jev judge provider: bridgeRevisionB6-091526 (0831ff5) -> jevJudgeProvider-092926.
+// The Jev provider is a FRAMEWORK CHANGE BY DESIGN (a fourth judge row, and the renderer's split question for it). CENSUS AT THE
+// RE-ANCHOR (this gate's own numstat from bridgeRevisionB6-091526 over its six declared paths, 5 paths, all from ONE commit, ca89b2c):
+//   bridge-maker/lib/jevJudgeClient.js 274/0 (new), bridge-maker/lib/judgeProviderRegistry.js 10/0,
+//   lib/bridge-framework/evidenceRenderer.js 57/5 (text prompt byte-identical; choiceQuestion added),
+//   lib/bridge-framework/judgeComponent.js 1/1, lib/bridge-framework/test/test-bgDerived.js 2/2 (twin retargeted).
+// THE SIX DECLARED PATHS ARE UNCHANGED, no exclusion added; the tag is cut ON this re-anchor commit.
+// RE-ANCHOR 2026-09-30 (COPPER_LOOM, TQ-directed), jevOpus cascade: jevJudgeProvider-092926 (aa62de1) -> jevOpusCascade-093026.
+// CENSUS (numstat from jevJudgeProvider-092926 over the six declared paths, 3 paths, all from ONE commit, be7ae01):
+//   bridge-maker/lib/jevOpusJudgeClient.js 131/0 (new), bridge-maker/lib/judgeProviderRegistry.js 10/0,
+//   bridge-maker/lib/jevJudgeClient.js 4/0 (additive evidence fields). Six declared paths unchanged; tag cut ON this commit.
 const P1_BASELINE_COMMIT = 'postB7PescComposeA-092926'; // re-anchored by ELECTRIC_PEAK, SIF replacement B7; the tag is cut ON the re-anchor commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;

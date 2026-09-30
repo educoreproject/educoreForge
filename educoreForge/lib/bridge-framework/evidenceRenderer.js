@@ -58,6 +58,11 @@ const RENDERER_VERSION = 'bridgeEvidenceRenderer-v1';
 const DERIVED_RENDERER_VERSION = 'bridgeEvidenceRenderer-derived-v12';
 const DERIVED_JUDGE_SLOT_RENDERER_VERSION = 'bridgeEvidenceRenderer-derivedJudgeSlot-v1';
 const ABSTAIN_TOKEN = 'NONE';
+
+// The split form of the question (choiceQuestion, below): the one-sentence question and the abstain option's
+// description. Each option's key IS its candidate number, so no index line is carried.
+const CHOICE_QUESTION_INSTRUCTION_TEXT = 'Which candidate element has the same meaning, in the same context, as the source element?';
+const CHOICE_QUESTION_ABSTAIN_TEXT = 'None of the candidate elements has the same meaning as the source element.';
 const MIN_IDENTIFYING_TOKEN_LENGTH = 4;
 
 const SYSTEM_PROMPT =
@@ -182,22 +187,33 @@ const derivedSubjectLineList = ({ sourceElement, renderingAllowList }) => {
 	lineList.push('Find the best possible match for this SOURCE ELEMENT:');
 	lineList.push('');
 	lineList.push('SOURCE ELEMENT (what you are matching FROM):');
+	lineList.push(...renderKeyValueLines(derivedSubjectData({ sourceElement, renderingAllowList }), '  '));
+	return lineList;
+};
+
+// ⟪2026-09-29, COPPER_LOOM⟫ The ALLOW-LISTED DATA, separated from its rendering so the split question
+// (choiceQuestion) can carry the same fields as objects. Blinding happens HERE, before either consumer: the
+// text prompt and the split question are built from the one filtered object, never from the raw card.
+const derivedSubjectData = ({ sourceElement, renderingAllowList }) => {
 	// ⟪v12, 2026-09-13⟫ componentIdeaList is COMPUTED, not declared — the splitter runs over the element's own
 	// NAMES and the result is offered to the allow-list like any other property, so a plugin that does not
 	// declare the name still does not get the field. Names only: no description, ever (see the splitter).
 	const subjectMaterial = sourceElement.material || {};
 	const subjectWithIdeas = { ...subjectMaterial, componentIdeaList: componentIdeaSplitterLib.componentIdeaListFor({
 		nameList: [subjectMaterial.name, subjectMaterial.owningConstructName, subjectMaterial.path] }).join(', ') };
-	lineList.push(...renderKeyValueLines(graphSeamRulesLib.allowListedPropertiesFor({ properties: subjectWithIdeas, allowNameList: renderingAllowList.subject }), '  '));
-	return lineList;
+	return graphSeamRulesLib.allowListedPropertiesFor({ properties: subjectWithIdeas, allowNameList: renderingAllowList.subject });
+};
+
+const derivedCandidateData = ({ oneSeat, renderingAllowList }) => {
+	const cardWithIdeas = { ...oneSeat.card, componentIdeaList: componentIdeaSplitterLib.componentIdeaListFor({
+		nameList: [oneSeat.card.domainName, oneSeat.card.name] }).join(', ') };
+	return graphSeamRulesLib.allowListedPropertiesFor({ properties: cardWithIdeas, allowNameList: renderingAllowList.candidate });
 };
 
 const derivedCandidateLineList = ({ oneSeat, seatIndex, renderingAllowList }) => {
 	const lineList = [];
 	lineList.push(`  CANDIDATE INDEX NUMBER: [${seatIndex + 1}]`);
-	const cardWithIdeas = { ...oneSeat.card, componentIdeaList: componentIdeaSplitterLib.componentIdeaListFor({
-		nameList: [oneSeat.card.domainName, oneSeat.card.name] }).join(', ') };
-	lineList.push(...renderKeyValueLines(graphSeamRulesLib.allowListedPropertiesFor({ properties: cardWithIdeas, allowNameList: renderingAllowList.candidate }), '      '));
+	lineList.push(...renderKeyValueLines(derivedCandidateData({ oneSeat, renderingAllowList }), '      '));
 	return lineList;
 };
 
@@ -217,6 +233,10 @@ const DERIVED_VARIANT_ROW = Object.freeze({
 	requiresRenderingAllowList: true,
 	subjectLineList: derivedSubjectLineList,
 	candidateLineList: derivedCandidateLineList,
+	// The split question's data (choiceQuestion, 2026-09-29). Declared on the derived row, so derivedJudgeSlot
+	// inherits it; a variant without them gets NO choiceQuestion, and a provider that needs one refuses by name.
+	subjectData: derivedSubjectData,
+	candidateData: derivedCandidateData,
 	subjectMaterialNameListFor: ({ bridgeDeclaration }) => bridgeDeclaration.renderingAllowList.subject,
 	// ⟪v11, 2026-09-13 — TQ⟫ GUIDANCE MOVES TO THE SYSTEM PROMPT. The guidance is still DECLARED by the
 	// plugin (it is the plugin's taste, not the framework's) — only its PLACEMENT changes here, so the A2
@@ -340,6 +360,37 @@ const renderQuestion = ({ sourceElement, candidatePool, globalGuidanceList, perC
 	const systemPrompt = guidanceInSystem && globalSegmentList.length
 		? `${variantRow.systemPrompt}\n${variantRow.guidanceHeading}\n${globalSegmentList.map((oneSegment) => `  - ${oneSegment}`).join('\n')}`
 		: variantRow.systemPrompt;
+	// ⟪2026-09-29, COPPER_LOOM, TQ's template slot⟫ THE SAME QUESTION, SPLIT for a provider that takes
+	// state / instructions / criteria (Jev) instead of one text prompt. Built from the SAME allow-listed objects
+	// the prompt lines were rendered from, so the two cannot disagree; text providers ignore it. Only a variant
+	// declaring subjectData and candidateData gets one.
+	// ⟪CACHE TRAP⟫ choiceQuestion is NOT part of promptHash, and the judgment cache keys on promptHash + model +
+	// rendererVersion. Its data is a function of the same inputs as the prompt, so that is sound for the data —
+	// but CHOICE_QUESTION_INSTRUCTION_TEXT and CHOICE_QUESTION_ABSTAIN_TEXT are not in any key. Changing either
+	// without changing the consuming provider's model identity would let cached verdicts answer a different
+	// question.
+	const choiceQuestion = variantRow.subjectData && variantRow.candidateData
+		? {
+			stateObject: { matchingInstructions: systemPrompt, sourceElement: variantRow.subjectData({ sourceElement, renderingAllowList }) },
+			instructionText: CHOICE_QUESTION_INSTRUCTION_TEXT,
+			criteriaByChoice: candidatePool.reduce(
+				(soFar, oneSeat, seatIndex) => Object.assign({}, soFar, { [String(seatIndex + 1)]: variantRow.candidateData({ oneSeat, renderingAllowList }) }),
+				{ [ABSTAIN_TOKEN]: CHOICE_QUESTION_ABSTAIN_TEXT },
+			),
+		}
+		: undefined;
+	// THE SECOND NET, FOR THE SECOND CHANNEL. renderedBlockRefusal guards the prompt bytes; choiceQuestion reaches
+	// a judge by another road, so the same NEVER list is swept over its property names too.
+	const choiceQuestionLeakedName = choiceQuestion === undefined
+		? undefined
+		: [choiceQuestion.stateObject.sourceElement]
+			.concat(Object.keys(choiceQuestion.criteriaByChoice).map((optionName) => choiceQuestion.criteriaByChoice[optionName]))
+			.filter((oneValue) => isPlainObject(oneValue))
+			.reduce((soFar, oneObject) => soFar.concat(Object.keys(oneObject)), [])
+			.find((oneName) => RENDERING_NEVER_NAME_LIST.indexOf(oneName) !== -1);
+	if (choiceQuestionLeakedName !== undefined) {
+		return { error: refuse.byName({ moduleName, what: `the split question (choiceQuestion) carries property '${choiceQuestionLeakedName}', which is on RENDERING_NEVER_NAME_LIST`, where: 'an identifier never reaches the judge, by the prompt or by the split question' }) };
+	}
 	const choiceEnum = renderedPoolStableIdList.map((unused, seatIndex) => String(seatIndex + 1)).concat([ABSTAIN_TOKEN]);
 	return {
 		systemPrompt,
@@ -353,6 +404,7 @@ const renderQuestion = ({ sourceElement, candidatePool, globalGuidanceList, perC
 		choiceEnum,
 		rendererVersion: variantRow.rendererVersion,
 		judgePredicateRule: variantRow.judgePredicateRule,
+		choiceQuestion,
 	};
 };
 

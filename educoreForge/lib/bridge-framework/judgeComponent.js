@@ -384,7 +384,7 @@ const judgeOne = ({ question, judgeClient, judgmentCache, matchForensics, budget
 				askCallback(reaskRefusal);
 				return;
 			}
-			judgeClient.rerank({ systemPrompt: question.systemPrompt, userPrompt, choiceEnum: question.choiceEnum, predicateRule: question.judgePredicateRule }, (rerankError, clientReturn) => {
+			judgeClient.rerank({ systemPrompt: question.systemPrompt, userPrompt, choiceEnum: question.choiceEnum, predicateRule: question.judgePredicateRule, choiceQuestion: question.choiceQuestion }, (rerankError, clientReturn) => {
 				if (rerankError) {
 					askCallback(`${moduleName}: the judge refused promptHash ${question.promptHash}: ${rerankError}`);
 					return;

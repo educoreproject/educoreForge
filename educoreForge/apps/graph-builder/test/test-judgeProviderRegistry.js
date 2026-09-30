@@ -176,8 +176,8 @@ harness.ok(
 	Object.isFrozen(judgeProviderRegistryLib.JUDGE_PROVIDER_ROW_LIST),
 );
 harness.ok(
-	'…and it carries the THREE providers that exist today, in order',
-	judgeProviderRegistryLib.JUDGE_PROVIDER_ROW_LIST.length === 3,
+	'…and it carries the FIVE providers that exist today, in order (jev 2026-09-29, jevOpus 2026-09-30)',
+	judgeProviderRegistryLib.JUDGE_PROVIDER_ROW_LIST.map((oneRow) => oneRow.name).join(',') === 'anthropic,ollama,jev,jevOpus,debug',
 	`${judgeProviderRegistryLib.JUDGE_PROVIDER_ROW_LIST.length} row(s): ${judgeProviderRegistryLib.JUDGE_PROVIDER_ROW_LIST.map((oneRow) => oneRow.name).join(', ')}`,
 );
 harness.ok(
