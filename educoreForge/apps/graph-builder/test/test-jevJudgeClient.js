@@ -55,6 +55,11 @@ const iniTextFor = (overrideByKey = {}) => {
 			requestForm: 'data',
 			strongMinConfidence: '0.8',
 			moderateMinConfidence: '0.5',
+			relationInstructionText: 'How does the source element relate in meaning to the chosen candidate element?',
+			exactMatchDescription: 'Exact match: same meaning.',
+			closeMatchDescription: 'Close match: similar enough for most contexts.',
+			broadMatchDescription: 'Broad match: the chosen candidate is more general.',
+			narrowMatchDescription: 'Narrow match: the chosen candidate is more specific.',
 		},
 		overrideByKey,
 	);
@@ -97,6 +102,15 @@ const answerBody = ({ choice, confidence, probabilities }) => ({
 	usage: { input_tokens: 100, output_tokens: 10 },
 });
 
+// relationBody — Jev's answer to the SECOND question, the relation to the chosen candidate.
+const relationBody = ({ choice, confidence, probabilities }) => ({
+	model: 'jev-1.13.0',
+	answers: { relationToChosenCandidate: { type: 'choice', choice, confidence, probabilities } },
+	usage: { input_tokens: 40, output_tokens: 5 },
+});
+const RELATION_PROBABILITIES = { exactMatch: 0.1, closeMatch: 0.2, broadMatch: 0.6, narrowMatch: 0.1 };
+const MODEL_IDENTITY_RE = /^jev:jev-1\.13\.0:data:rel-[0-9a-f]{12}$/;
+
 const choiceQuestion = {
 	stateObject: { matchingInstructions: 'match by meaning', sourceElement: { name: 'EducationOrganizationId', description: 'An id.' } },
 	instructionText: 'Which candidate element has the same meaning, in the same context, as the source element?',
@@ -127,30 +141,38 @@ harness.section('THE PROVIDER SATISFIES JUDGE_PROVIDER_SHAPE');
 const { provider: dataProvider } = providerFor({}, [{ statusCode: 200, responseBody: answerBody({ choice: '1', confidence: 0.9, probabilities: { 1: 0.95, 2: 0.03, NONE: 0.02 } }) }]);
 harness.ok('no contract violation', judgeProviderViolation(dataProvider, { providerLabel: 'jev' }) === null, judgeProviderViolation(dataProvider, { providerLabel: 'jev' }));
 harness.equal('name is jev', dataProvider.name, 'jev');
-harness.equal('model carries provider, wire model AND request form', dataProvider.model, 'jev:jev-1.13.0:data');
+harness.match('model carries provider, wire model, request form AND the relation wording hash', dataProvider.model, MODEL_IDENTITY_RE);
 harness.equal('describe() agrees with the provider', dataProvider.describe().model, dataProvider.model);
 harness.equal('judgeConfig says Jev takes no temperature and has no token budget', JSON.stringify(dataProvider.judgeConfig), '{"temperaturePolicy":"notOffered","maxTokens":null}');
 const { provider: stringProvider } = providerFor({ requestForm: 'string' }, [{ statusCode: 200, responseBody: answerBody({ choice: '1', confidence: 0.9, probabilities: { 1: 0.95, 2: 0.03, NONE: 0.02 } }) }]);
-harness.equal('the string form is a DIFFERENT identity, so the forms never share cached verdicts', stringProvider.model, 'jev:jev-1.13.0:string');
+harness.equal('the string form is a DIFFERENT identity, so the forms never share cached verdicts', stringProvider.model, dataProvider.model.replace(':data:', ':string:'));
+const { provider: rewordedProvider } = providerFor({ broadMatchDescription: 'Broad match: reworded.' }, []);
+harness.ok('rewording ONE relation description moves the identity, so cached verdicts never answer a different question', rewordedProvider.model !== dataProvider.model && MODEL_IDENTITY_RE.test(rewordedProvider.model), `${rewordedProvider.model} vs ${dataProvider.model}`);
+const { provider: reinstructedProvider } = providerFor({ relationInstructionText: 'Reworded instruction?' }, []);
+harness.ok('rewording the relation instruction moves the identity', reinstructedProvider.model !== dataProvider.model, reinstructedProvider.model);
 
 harness.section('CONFIGURATION IS REFUSED BY NAME');
 harness.match('an absent key is refused naming the key', constructionErrorFor({ wireModel: null }), /\[jevJudge\]\.wireModel is not configured/);
 harness.match('an unknown requestForm is refused listing the forms', constructionErrorFor({ requestForm: 'yaml' }), /requestForm is 'yaml'.*data, string/);
 harness.match('moderate above strong is refused', constructionErrorFor({ moderateMinConfidence: '0.9' }), /moderateMinConfidence \(0\.9\) is above strongMinConfidence/);
 harness.match('an out-of-range confidence floor is refused', constructionErrorFor({ strongMinConfidence: '1.5' }), /must be a number from 0 to 1/);
+harness.match('an absent relation description is refused naming its key', constructionErrorFor({ narrowMatchDescription: null }), /\[jevJudge\]\.narrowMatchDescription is not configured/);
+harness.match('an absent relation instruction is refused naming its key', constructionErrorFor({ relationInstructionText: null }), /\[jevJudge\]\.relationInstructionText is not configured/);
 harness.match('an unset key variable is refused naming the variable', constructionErrorFor({ apiKeyEnvironmentVariableName: 'JEV_JUDGE_CLIENT_TEST_KEY_UNSET' }), /JEV_JUDGE_CLIENT_TEST_KEY_UNSET .* is empty or unset/);
 
 const pickCase = ({ label, confidence, expectedCategory }) => (done) => {
 	const { provider, transport } = providerFor({}, [{ statusCode: 200, responseBody: answerBody({ choice: '1', confidence, probabilities: { 1: confidence, 2: 0.1, NONE: 0.05 } }) }]);
-	provider.rerank({ systemPrompt: 's', userPrompt: 'u', choiceEnum, choiceQuestion }, (rerankError, verdict) => {
+	provider.rerank({ systemPrompt: 's', userPrompt: 'u', choiceEnum, predicateRule: 'categoryTable-v1', choiceQuestion }, (rerankError, verdict) => {
 		harness.section(label);
 		harness.ok('no error', !rerankError, rerankError);
 		harness.equal('choice is the pick', verdict && verdict.choice, '1');
 		harness.equal(`category is ${expectedCategory}`, verdict && verdict.category, expectedCategory);
 		harness.match('the rationale names the pick by NAME', verdict && verdict.rationale, /"Has Organization Identifier"/);
 		harness.match('…and says the numbers are not reasons', verdict && verdict.rationale, /Jev reports probabilities, not reasons/);
-		harness.equal('model on the verdict is the provider identity', verdict && verdict.model, 'jev:jev-1.13.0:data');
+		harness.equal('model on the verdict is the provider identity', verdict && verdict.model, provider.model);
 		harness.equal('one attempt', verdict && verdict.attempts, 1);
+		harness.equal('categoryTable-v1: the verdict carries NO predicate key (a present key is counted as discarded)', verdict && Object.prototype.hasOwnProperty.call(verdict, 'predicate'), false);
+		harness.equal('categoryTable-v1: ONE call, no relation question', transport.sentPayloadList.length, 1);
 		harness.equal('the wire model is sent, not the identity', transport.sentPayloadList[0].model, 'jev-1.13.0');
 		done();
 	});
@@ -162,7 +184,7 @@ const caseList = [
 	pickCase({ label: 'A PICK BELOW moderateMinConfidence IS weakButReal', confidence: 0.3, expectedCategory: 'weakButReal' }),
 	(done) => {
 		const { provider, transport } = providerFor({}, [{ statusCode: 200, responseBody: answerBody({ choice: '1', confidence: 0.9, probabilities: { 1: 0.9, 2: 0.05, NONE: 0.05 } }) }]);
-		provider.rerank({ choiceEnum, choiceQuestion }, () => {
+		provider.rerank({ choiceEnum, predicateRule: 'categoryTable-v1', choiceQuestion }, () => {
 			harness.section('THE data FORM SENDS OBJECTS');
 			const payload = transport.sentPayloadList[0];
 			harness.equal('a candidate is an object', typeof payload.questions.matchingCandidate.criteria['1'], 'object');
@@ -174,7 +196,7 @@ const caseList = [
 	},
 	(done) => {
 		const { provider, transport } = providerFor({ requestForm: 'string' }, [{ statusCode: 200, responseBody: answerBody({ choice: '1', confidence: 0.9, probabilities: { 1: 0.9, 2: 0.05, NONE: 0.05 } }) }]);
-		provider.rerank({ choiceEnum, choiceQuestion }, () => {
+		provider.rerank({ choiceEnum, predicateRule: 'categoryTable-v1', choiceQuestion }, () => {
 			harness.section('THE string FORM SENDS THE SAME FIELDS AS name: value LINES');
 			const payload = transport.sentPayloadList[0];
 			harness.equal('a candidate is a string', typeof payload.questions.matchingCandidate.criteria['1'], 'string');
@@ -185,7 +207,7 @@ const caseList = [
 	},
 	(done) => {
 		const { provider } = providerFor({}, [{ statusCode: 200, responseBody: answerBody({ choice: 'NONE', confidence: 0.5, probabilities: { 1: 0.3, 2: 0.1, NONE: 0.6 } }) }]);
-		provider.rerank({ choiceEnum, choiceQuestion }, (rerankError, verdict) => {
+		provider.rerank({ choiceEnum, predicateRule: 'categoryTable-v1', choiceQuestion }, (rerankError, verdict) => {
 			harness.section('AN ABSTENTION IS CATEGORY none WITH A RATIONALE');
 			harness.ok('no error', !rerankError, rerankError);
 			harness.equal('choice NONE', verdict && verdict.choice, 'NONE');
@@ -196,9 +218,9 @@ const caseList = [
 	},
 	(done) => {
 		const { provider } = providerFor({}, [{ statusCode: 200, responseBody: answerBody({ choice: '7', confidence: 0.9, probabilities: { 7: 0.9 } }) }]);
-		provider.rerank({ choiceEnum, choiceQuestion }, (rerankError) => {
+		provider.rerank({ choiceEnum, predicateRule: 'categoryTable-v1', choiceQuestion }, (rerankError) => {
 			harness.section('AN ANSWER OUTSIDE THE OFFERED OPTIONS IS REFUSED');
-			harness.match('refused by name', rerankError, /Jev chose '7', which is not one of the offered options/);
+			harness.match('refused by name', rerankError, /Jev chose '7' for 'matchingCandidate', which is not one of the offered options/);
 			done();
 		});
 	},
@@ -207,7 +229,7 @@ const caseList = [
 			{ statusCode: 429, responseBody: { error: 'rate limited' } },
 			{ statusCode: 200, responseBody: answerBody({ choice: '2', confidence: 0.9, probabilities: { 1: 0.05, 2: 0.9, NONE: 0.05 } }) },
 		]);
-		provider.rerank({ choiceEnum, choiceQuestion }, (rerankError, verdict) => {
+		provider.rerank({ choiceEnum, predicateRule: 'categoryTable-v1', choiceQuestion }, (rerankError, verdict) => {
 			harness.section('A 429 IS RETRIED');
 			harness.ok('no error', !rerankError, rerankError);
 			harness.equal('two calls were made', transport.sentPayloadList.length, 2);
@@ -217,7 +239,7 @@ const caseList = [
 	},
 	(done) => {
 		const { provider, transport } = providerFor({}, [{ statusCode: 400, responseBody: { error: 'bad request' } }]);
-		provider.rerank({ choiceEnum, choiceQuestion }, (rerankError) => {
+		provider.rerank({ choiceEnum, predicateRule: 'categoryTable-v1', choiceQuestion }, (rerankError) => {
 			harness.section('A 400 IS NOT RETRIED');
 			harness.match('refused naming the status', rerankError, /HTTP 400 after 1 attempt/);
 			harness.equal('one call only', transport.sentPayloadList.length, 1);
@@ -226,7 +248,7 @@ const caseList = [
 	},
 	(done) => {
 		const { provider, transport } = providerFor({}, [{ statusCode: 503, responseBody: { error: 'down' } }]);
-		provider.rerank({ choiceEnum, choiceQuestion }, (rerankError) => {
+		provider.rerank({ choiceEnum, predicateRule: 'categoryTable-v1', choiceQuestion }, (rerankError) => {
 			harness.section('RETRIES STOP AT maxAttempts');
 			harness.match('refused after three attempts', rerankError, /HTTP 503 after 3 attempt/);
 			harness.equal('three calls', transport.sentPayloadList.length, 3);
@@ -235,9 +257,98 @@ const caseList = [
 	},
 	(done) => {
 		const { provider, transport } = providerFor({}, [{ statusCode: 200, responseBody: answerBody({ choice: '1', confidence: 0.9, probabilities: { 1: 0.9 } }) }]);
-		provider.rerank({ systemPrompt: 's', userPrompt: 'u', choiceEnum }, (rerankError) => {
+		provider.rerank({ systemPrompt: 's', userPrompt: 'u', choiceEnum, predicateRule: 'categoryTable-v1' }, (rerankError) => {
 			harness.section('A QUESTION WITHOUT choiceQuestion IS REFUSED — THERE IS NO TEXT PARSE');
 			harness.match('refused by name', rerankError, /rerank received no choiceQuestion/);
+			harness.equal('nothing was sent', transport.sentPayloadList.length, 0);
+			done();
+		});
+	},
+	// ── R1 (jevRelations, 2026-09-30): the relation question under judgeSlot-v1 ──
+	(done) => {
+		const { provider, transport } = providerFor({}, [
+			{ statusCode: 200, responseBody: answerBody({ choice: '1', confidence: 0.9, probabilities: { 1: 0.9, 2: 0.05, NONE: 0.05 } }) },
+			{ statusCode: 200, responseBody: relationBody({ choice: 'broadMatch', confidence: 0.55, probabilities: RELATION_PROBABILITIES }) },
+		]);
+		provider.rerank({ choiceEnum, predicateRule: 'judgeSlot-v1', choiceQuestion }, (rerankError, verdict) => {
+			harness.section('judgeSlot-v1 WITH A PICK: A SECOND CALL NAMES THE RELATION');
+			harness.ok('no error', !rerankError, rerankError);
+			harness.equal('two calls were made', transport.sentPayloadList.length, 2);
+			const relationPayload = transport.sentPayloadList[1] || { questions: {}, state: {} };
+			const relationQuestion = relationPayload.questions.relationToChosenCandidate || {};
+			harness.equal('the second call asks relationToChosenCandidate, a choice', relationQuestion.type, 'choice');
+			harness.equal('its options are the four SSSOM predicates, in schema order', Object.keys(relationQuestion.criteria || {}).join(','), 'exactMatch,closeMatch,broadMatch,narrowMatch');
+			harness.equal('each option carries its configured description', (relationQuestion.criteria || {}).broadMatch, 'Broad match: the chosen candidate is more general.');
+			harness.equal('the instruction is the configured wording', relationQuestion.instructions, 'How does the source element relate in meaning to the chosen candidate element?');
+			harness.equal('the state holds the source element', JSON.stringify(relationPayload.state.sourceElement), JSON.stringify(choiceQuestion.stateObject.sourceElement));
+			harness.equal('…and the CHOSEN candidate, not another seat', JSON.stringify(relationPayload.state.chosenCandidate), JSON.stringify(choiceQuestion.criteriaByChoice['1']));
+			harness.equal('the wire model is sent on the second call too', relationPayload.model, 'jev-1.13.0');
+			harness.equal('the verdict carries predicate = the relation Jev chose', verdict && verdict.predicate, 'broadMatch');
+			harness.equal('the pick is unchanged by the second call', verdict && verdict.choice, '1');
+			harness.equal('category still comes from the PICK confidence', verdict && verdict.category, 'strong');
+			harness.match('the rationale carries the relation and its confidence beside the pick', verdict && verdict.rationale, /chose "Has Organization Identifier".*Relation: broadMatch with probability 0\.6 and confidence 0\.55\. Next: closeMatch \(0\.2\)/);
+			harness.equal('attempts count both calls', verdict && verdict.attempts, 2);
+			harness.equal('usage sums both calls', JSON.stringify(verdict && verdict.usage), JSON.stringify({ input_tokens: 140, output_tokens: 15 }));
+			harness.equal('jevConfidence stays the PICK confidence (the cascade escalates on it)', verdict && verdict.jevConfidence, 0.9);
+			harness.equal('jevRelationConfidence is carried as evidence', verdict && verdict.jevRelationConfidence, 0.55);
+			done();
+		});
+	},
+	(done) => {
+		const { provider, transport } = providerFor({ requestForm: 'string' }, [
+			{ statusCode: 200, responseBody: answerBody({ choice: '2', confidence: 0.9, probabilities: { 1: 0.05, 2: 0.9, NONE: 0.05 } }) },
+			{ statusCode: 200, responseBody: relationBody({ choice: 'exactMatch', confidence: 0.8, probabilities: RELATION_PROBABILITIES }) },
+		]);
+		provider.rerank({ choiceEnum, predicateRule: 'judgeSlot-v1', choiceQuestion }, (rerankError, verdict) => {
+			harness.section('THE RELATION QUESTION FOLLOWS requestForm');
+			harness.ok('no error', !rerankError, rerankError);
+			const relationPayload = transport.sentPayloadList[1] || { state: {} };
+			harness.equal('string form: the chosen candidate is name: value lines', relationPayload.state.chosenCandidate, 'name: Learning Resource Identifier\ndomainName: Organization');
+			harness.match('string form: the source element is lines too', relationPayload.state.sourceElement, /^name: EducationOrganizationId\n/);
+			harness.equal('predicate carried', verdict && verdict.predicate, 'exactMatch');
+			done();
+		});
+	},
+	(done) => {
+		const { provider, transport } = providerFor({}, [{ statusCode: 200, responseBody: answerBody({ choice: 'NONE', confidence: 0.7, probabilities: { 1: 0.2, 2: 0.1, NONE: 0.7 } }) }]);
+		provider.rerank({ choiceEnum, predicateRule: 'judgeSlot-v1', choiceQuestion }, (rerankError, verdict) => {
+			harness.section('judgeSlot-v1 WITH NONE: THE ABSTAIN VALUE, NO SECOND CALL');
+			harness.ok('no error', !rerankError, rerankError);
+			harness.equal('ONE call only', transport.sentPayloadList.length, 1);
+			harness.equal('predicate is the abstain value', verdict && verdict.predicate, 'none');
+			harness.equal('category none', verdict && verdict.category, 'none');
+			done();
+		});
+	},
+	(done) => {
+		const { provider } = providerFor({}, [
+			{ statusCode: 200, responseBody: answerBody({ choice: '1', confidence: 0.9, probabilities: { 1: 0.9, 2: 0.05, NONE: 0.05 } }) },
+			{ statusCode: 200, responseBody: relationBody({ choice: 'relatedMatch', confidence: 0.9, probabilities: { relatedMatch: 0.9 } }) },
+		]);
+		provider.rerank({ choiceEnum, predicateRule: 'judgeSlot-v1', choiceQuestion }, (rerankError) => {
+			harness.section('A RELATION OUTSIDE THE FOUR IS REFUSED, NEVER MAPPED');
+			harness.match('refused by name', rerankError, /picked '1' but the relation question failed: .*Jev chose 'relatedMatch' for 'relationToChosenCandidate'/);
+			done();
+		});
+	},
+	(done) => {
+		const { provider, transport } = providerFor({}, [
+			{ statusCode: 200, responseBody: answerBody({ choice: '1', confidence: 0.9, probabilities: { 1: 0.9, 2: 0.05, NONE: 0.05 } }) },
+			{ statusCode: 400, responseBody: { error: 'bad request' } },
+		]);
+		provider.rerank({ choiceEnum, predicateRule: 'judgeSlot-v1', choiceQuestion }, (rerankError, verdict) => {
+			harness.section('A FAILED RELATION CALL FAILS THE JUDGMENT — NO PREDICATE-LESS PICK');
+			harness.match('refused naming the status', rerankError, /relation question failed: .*HTTP 400 after 1 attempt/);
+			harness.equal('no verdict', verdict, undefined);
+			harness.equal('two calls', transport.sentPayloadList.length, 2);
+			done();
+		});
+	},
+	(done) => {
+		const { provider, transport } = providerFor({}, [{ statusCode: 200, responseBody: answerBody({ choice: '1', confidence: 0.9, probabilities: { 1: 0.9 } }) }]);
+		provider.rerank({ choiceEnum, choiceQuestion }, (rerankError) => {
+			harness.section('AN ABSENT predicateRule IS REFUSED BY NAME');
+			harness.match('refused listing the known rules', rerankError, /predicateRule undefined names no select_candidate schema\. The known rules are: categoryTable-v1, judgeSlot-v1/);
 			harness.equal('nothing was sent', transport.sentPayloadList.length, 0);
 			done();
 		});

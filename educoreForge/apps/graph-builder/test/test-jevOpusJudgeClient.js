@@ -34,6 +34,7 @@ const harness = require('../../../test/testLib/harness')(moduleName);
 
 const { judgeProviderViolation } = require('../interfaces');
 const jevOpusJudgeClientLib = require(path.join(__dirname, '..', 'apps', 'bridge-maker', 'lib', 'jevOpusJudgeClient'));
+const jevJudgeClientLib = require(path.join(__dirname, '..', 'apps', 'bridge-maker', 'lib', 'jevJudgeClient'));
 
 const scratchDirectoryPath = fs.mkdtempSync(path.join(os.tmpdir(), 'jevOpusJudgeClientTest-'));
 
@@ -66,10 +67,12 @@ const jevDouble = ({ verdict, error }) => {
 	};
 };
 
-const anthropicDouble = () => {
+const anthropicDouble = ({ predicate } = {}) => {
 	const callCountHolder = { count: 0 };
+	const receivedOptionsList = [];
 	return {
 		callCountHolder,
+		receivedOptionsList,
 		provider: {
 			name: 'anthropic',
 			wireModel: 'claude-opus-5',
@@ -79,7 +82,9 @@ const anthropicDouble = () => {
 			describe: () => ({ provider: 'anthropic', model: 'anthropic:claude-opus-5', version: 'double' }),
 			rerank: (rerankOptions, callback) => {
 				callCountHolder.count += 1;
-				setImmediate(() => callback('', { choice: '2', category: 'moderate', rationale: 'Opus chose "Learning Resource Identifier".', model: 'anthropic:claude-opus-5', attempts: 1, usage: { inputTokens: 5000 } }));
+				receivedOptionsList.push(rerankOptions);
+				const predicateByFieldName = predicate === undefined ? {} : { predicate };
+				setImmediate(() => callback('', { choice: '2', category: 'moderate', rationale: 'Opus chose "Learning Resource Identifier".', model: 'anthropic:claude-opus-5', attempts: 1, usage: { inputTokens: 5000 }, ...predicateByFieldName }));
 			},
 		},
 	};
@@ -96,6 +101,37 @@ const jevVerdictAt = (jevConfidence, choice = '1') => ({
 
 const cascadeFor = ({ escalateBelowConfidence = 0.7, jev, anthropic }) =>
 	jevOpusJudgeClientLib({ configFilePath: iniFilePathFor(escalateBelowConfidence), componentOverrides: { jevProvider: jev.provider, anthropicProvider: anthropic.provider } });
+
+// realJevWithTransport — the REAL jevJudgeClient, its one transport seam scripted: the Jev leg exactly as production
+// runs it, without the network. (R1, jevRelations 2026-09-30: the cascade's Jev leg must carry the predicate.)
+const TEST_KEY_VARIABLE_NAME = 'JEV_OPUS_CASCADE_TEST_KEY';
+process.env[TEST_KEY_VARIABLE_NAME] = 'test-key-not-real';
+const jevIniFilePath = path.join(scratchDirectoryPath, 'jevJudge.ini');
+fs.writeFileSync(
+	jevIniFilePath,
+	[
+		'[jevJudge]', 'endpointHostName=api.example.invalid', 'endpointPath=/v1/systemone', 'wireModel=jev-1.13.0',
+		`apiKeyEnvironmentVariableName=${TEST_KEY_VARIABLE_NAME}`, 'maxConcurrency=4', 'requestTimeoutMs=1000', 'maxAttempts=1', 'requestForm=data',
+		'strongMinConfidence=0.8', 'moderateMinConfidence=0.5', 'relationInstructionText=How does the source element relate?',
+		'exactMatchDescription=same', 'closeMatchDescription=close', 'broadMatchDescription=broader', 'narrowMatchDescription=narrower',
+	].join('\n'),
+);
+const realJevWithTransport = (responseBodyList) => {
+	const sentPayloadList = [];
+	const postOnce = ({ payload }, postCallback) => {
+		sentPayloadList.push(payload);
+		const responseBody = responseBodyList[sentPayloadList.length - 1];
+		setImmediate(() => postCallback('', { statusCode: 200, responseBody, responseText: JSON.stringify(responseBody) }));
+	};
+	return { sentPayloadList, provider: jevJudgeClientLib({ configFilePath: jevIniFilePath, componentOverrides: { postOnce } }) };
+};
+const pickBody = (confidence) => ({ answers: { matchingCandidate: { type: 'choice', choice: '1', confidence, probabilities: { 1: confidence, 2: 0.05, NONE: 0.05 } } }, usage: { input_tokens: 100 } });
+const relationBody = (predicate) => ({ answers: { relationToChosenCandidate: { type: 'choice', choice: predicate, confidence: 0.6, probabilities: { exactMatch: 0.1, closeMatch: 0.6, broadMatch: 0.2, narrowMatch: 0.1 } } }, usage: { input_tokens: 40 } });
+const cascadeChoiceQuestion = {
+	stateObject: { matchingInstructions: 'match by meaning', sourceElement: { name: 'EducationOrganizationId' } },
+	instructionText: 'Which candidate?',
+	criteriaByChoice: { NONE: 'None.', 1: { name: 'Has Organization Identifier' }, 2: { name: 'Learning Resource Identifier' } },
+};
 
 const runSequence = (caseList, finalCallback) => {
 	if (!caseList.length) {
@@ -173,6 +209,45 @@ const caseList = [
 		cascadeFor({ jev, anthropic }).rerank({ choiceEnum: ['1', '2', 'NONE'] }, (rerankError) => {
 			harness.section('A JEV VERDICT WITHOUT A CONFIDENCE IS REFUSED');
 			harness.match('refused by name', rerankError, /carries no jevConfidence/);
+			done();
+		});
+	},
+	// ── R1 (jevRelations, 2026-09-30): the predicate through the cascade ──
+	(done) => {
+		const jev = realJevWithTransport([pickBody(0.9), relationBody('closeMatch')]);
+		const anthropic = anthropicDouble();
+		const cascade = cascadeFor({ jev, anthropic });
+		cascade.rerank({ choiceEnum: ['1', '2', 'NONE'], predicateRule: 'judgeSlot-v1', choiceQuestion: cascadeChoiceQuestion }, (rerankError, verdict) => {
+			harness.section("judgeSlot-v1, JEV ANSWERS: THE CASCADE CARRIES THE JEV LEG'S PREDICATE");
+			harness.ok('no error', !rerankError, rerankError);
+			harness.equal('answeredBy is jev', verdict && verdict.answeredBy, 'jev');
+			harness.equal('the predicate Jev named is on the cascade verdict', verdict && verdict.predicate, 'closeMatch');
+			harness.equal('the real Jev leg asked two questions', jev.sentPayloadList.length, 2);
+			harness.equal('Opus was not called', anthropic.callCountHolder.count, 0);
+			harness.match("the cascade identity carries the Jev leg's relation wording hash", cascade.model, /^jevOpus:jev-1\.13\.0:data:rel-[0-9a-f]{12}@0\.7\+anthropic:claude-opus-5$/);
+			done();
+		});
+	},
+	(done) => {
+		const jev = realJevWithTransport([pickBody(0.9)]);
+		const anthropic = anthropicDouble();
+		cascadeFor({ jev, anthropic }).rerank({ choiceEnum: ['1', '2', 'NONE'], predicateRule: 'categoryTable-v1', choiceQuestion: cascadeChoiceQuestion }, (rerankError, verdict) => {
+			harness.section('categoryTable-v1, JEV ANSWERS: NO PREDICATE KEY THROUGH THE CASCADE');
+			harness.ok('no error', !rerankError, rerankError);
+			harness.equal('no predicate key', verdict && Object.prototype.hasOwnProperty.call(verdict, 'predicate'), false);
+			harness.equal('one Jev call', jev.sentPayloadList.length, 1);
+			done();
+		});
+	},
+	(done) => {
+		const jev = realJevWithTransport([pickBody(0.5), relationBody('broadMatch')]);
+		const anthropic = anthropicDouble({ predicate: 'exactMatch' });
+		cascadeFor({ jev, anthropic }).rerank({ choiceEnum: ['1', '2', 'NONE'], predicateRule: 'judgeSlot-v1', choiceQuestion: cascadeChoiceQuestion }, (rerankError, verdict) => {
+			harness.section('judgeSlot-v1, ESCALATED: OPUS GETS predicateRule AND ITS PREDICATE STANDS');
+			harness.ok('no error', !rerankError, rerankError);
+			harness.equal('the Anthropic leg received predicateRule', anthropic.receivedOptionsList[0] && anthropic.receivedOptionsList[0].predicateRule, 'judgeSlot-v1');
+			harness.equal("Opus's predicate stands, not Jev's", verdict && verdict.predicate, 'exactMatch');
+			harness.equal('answeredBy is anthropic', verdict && verdict.answeredBy, 'anthropic');
 			done();
 		});
 	},

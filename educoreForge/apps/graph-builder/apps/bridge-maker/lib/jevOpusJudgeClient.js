@@ -21,6 +21,10 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // ⟪WHO ANSWERED⟫ Every rationale ends with a bracketed [jevOpus: …] note saying which judge answered and, on
 // an escalation, what Jev had said. That note is how a run is audited for its escalation rate.
 //
+// ⟪THE PREDICATE⟫ Each leg's verdict is passed through whole, so under judgeSlot-v1 the answering leg's predicate
+// is the cascade's; rerankOptions reach both legs whole, predicateRule included. Jev's own relation call is made
+// before the cut is read, so an escalated subject has paid for a Jev relation that Opus's answer replaces.
+//
 // A Jev FAILURE is refused by name, never escalated: an outage must not silently turn a cascade run into an
 // Opus run.
 
@@ -66,7 +70,7 @@ const resolveConfigOrThrow = (configFilePath) => {
 };
 
 // identitySuffixFor — a provider's model identity without its own namespace, so the cascade's identity reads
-// jevOpus:jev-1.13.0:data@0.7+anthropic:claude-opus-5 rather than repeating 'jev:'.
+// jevOpus:jev-1.13.0:data:rel-<hash>@0.7+anthropic:claude-opus-5 rather than repeating 'jev:'.
 const identitySuffixFor = (namespacedModel) => namespacedModel.slice(namespacedModel.indexOf(MODEL_NAMESPACE_SEPARATOR) + 1);
 
 const moduleFunction = (constructionOptions = {}) => {
