@@ -552,7 +552,11 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 //   lib/bridge-framework/evidenceRenderer.js 57/5 (text prompt byte-identical; choiceQuestion added),
 //   lib/bridge-framework/judgeComponent.js 1/1, lib/bridge-framework/test/test-bgDerived.js 2/2 (twin retargeted).
 // THE SIX DECLARED PATHS ARE UNCHANGED, no exclusion added; the tag is cut ON this re-anchor commit.
-const P1_BASELINE_COMMIT = 'jevJudgeProvider-092926'; // re-anchored by COPPER_LOOM for the Jev provider; the tag is cut ON the re-anchor commit
+// RE-ANCHOR 2026-09-30 (COPPER_LOOM, TQ-directed), jevOpus cascade: jevJudgeProvider-092926 (aa62de1) -> jevOpusCascade-093026.
+// CENSUS (numstat from jevJudgeProvider-092926 over the six declared paths, 3 paths, all from ONE commit, be7ae01):
+//   bridge-maker/lib/jevOpusJudgeClient.js 131/0 (new), bridge-maker/lib/judgeProviderRegistry.js 10/0,
+//   bridge-maker/lib/jevJudgeClient.js 4/0 (additive evidence fields). Six declared paths unchanged; tag cut ON this commit.
+const P1_BASELINE_COMMIT = 'jevOpusCascade-093026'; // re-anchored by COPPER_LOOM for the jevOpus cascade; the tag is cut ON the re-anchor commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
