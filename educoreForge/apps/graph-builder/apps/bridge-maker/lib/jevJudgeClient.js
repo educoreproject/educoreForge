@@ -251,6 +251,10 @@ const moduleFunction = (constructionOptions = {}) => {
 					model: namespacedModel,
 					attempts: attemptNumber,
 					usage: postResult.responseBody.usage,
+					// ADDITIVE EVIDENCE, like usage: Jev's own numbers, read by the jevOpus cascade to decide
+					// whether to escalate. judgeComponent does not read them.
+					jevConfidence: answer.confidence,
+					jevProbabilities: answer.probabilities,
 				});
 			});
 		};

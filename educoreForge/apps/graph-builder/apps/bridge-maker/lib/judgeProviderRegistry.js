@@ -61,6 +61,7 @@ const llmClientLib = require(path.join(__dirname, 'llmClient'));
 const debugJudgeLib = require(path.join(__dirname, 'debugJudge'));
 const ollamaJudgeClientLib = require(path.join(__dirname, 'ollamaJudgeClient'));
 const jevJudgeClientLib = require(path.join(__dirname, 'jevJudgeClient'));
+const jevOpusJudgeClientLib = require(path.join(__dirname, 'jevOpusJudgeClient'));
 
 // THE CONFIG KEY. Named here so every refusal can quote the thing an operator would actually have to set,
 // and so the name has ONE home. [judgeProvider] judgeProviderName in graphBuilder.ini — the file
@@ -117,6 +118,15 @@ const JUDGE_PROVIDER_ROW_LIST = Object.freeze([
 		// the anthropic row. Its key comes from the environment, so a missing key throws here by name.
 		construct: constructOnNextTick(({ configFilePath, componentOverrides }) =>
 			jevJudgeClientLib(Object.assign({}, configFilePath ? { configFilePath } : {}, componentOverrides ? { componentOverrides } : {})),
+		),
+	}),
+	Object.freeze({
+		name: 'jevOpus',
+		enabled: true,
+		// Jev first, Opus below a confidence cut (2026-09-30, COPPER_LOOM, TQ). Composes the jev and anthropic
+		// providers from the config files its own ini names; synchronous, wrapped like them.
+		construct: constructOnNextTick(({ configFilePath, componentOverrides }) =>
+			jevOpusJudgeClientLib(Object.assign({}, configFilePath ? { configFilePath } : {}, componentOverrides ? { componentOverrides } : {})),
 		),
 	}),
 	Object.freeze({
