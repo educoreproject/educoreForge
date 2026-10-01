@@ -1,0 +1,29 @@
+{
+  // pesctestscorereport1v1v0Derived — the PESC Test Score Report 1.1.0 bridge build (BRIEF-B-pescBridges lane B1x: B2, B3, then the real Jev run): the release's
+  // forge beside the CEDS hub, PLUS the PESC → CEDS derived plugin (pescTestScoreReport1v1v0CedsDerivedPlugin).
+  // It is pesctestscorereport1v1v0Only with the hub and the bridge added; the sif260928Derived shape.
+  //
+  // WHY ONLY TWO STANDARDS. The pool is drawn from the CEDS hub's cards and the subjects are the release's element
+  // declarations; no other standard contributes anything a PESC retrieval or judgment can use.
+  //
+  // A plain -build REPLAYS the pair's frozen block (zero judge calls); --rebridge=pesctestscorereport1v1v0 FREEZES a
+  // new one. --useDebugJudge for every free run (B2, B3); the real run uses the shared judge provider
+  // (Jev, judgeProviderName=jev) under BRIEF-B AMENDMENT's spend GO (USD 10 cap per release).
+  //
+  // Builds go to scratch DEV_ graphs only. Derived edges are never mounted on a served graph.
+  "schemaVersion": "1.0.0",
+  "recipeName": "pesctestscorereport1v1v0Derived",
+  "kind": "dev",
+  "description": "The PESC Test Score Report v1.1.0 forge beside the CEDS hub, PLUS the PESC -> CEDS derived bridge plugin (pescTestScoreReport1v1v0CedsDerivedPlugin).",
+  "standards": [
+    { "token": "ceds", "version": "current" },
+    { "token": "pesctestscorereport1v1v0", "version": "current" }
+  ],
+  "hubs": [
+    { "standard": "ceds" }
+  ],
+  "bridges": [
+    { "source": "pesctestscorereport1v1v0", "hub": "ceds", "bridge": "pescTestScoreReport1v1v0CedsDerivedPlugin", "dependencies": ["pesctestscorereport1v1v0", "ceds"] }
+  ],
+  "roundTripStage": true
+}

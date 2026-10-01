@@ -81,6 +81,11 @@ const SHIPPED_PLUGIN_LIST = [
 	// ADDED 2026-10-01 (COPPER_MARBLE, PESC B1, QUIET_ORBIT-authorised): the PESC College Transcript 1.8.0 derived plugin,
 	// judgeSlot-v1 like SIF 260928, so it resolves to derivedJudgeSlot.
 	{ bridgeName: 'pescCollegeTranscript1v8v0CedsDerivedPlugin', pluginPath: 'forges/pesccollegetranscript1v8v0/bridges/pescCollegeTranscript1v8v0CedsDerivedPlugin.js', judgePromptVariant: 'derivedJudgeSlot', rendererVersion: JUDGE_SLOT_RENDERER_VERSION_LITERAL },
+	// ADDED 2026-10-01 (NOBLE_DREAM, PESC lane B1x, NOTES-supervisor item 21 pre-authorised): the PESC High School Transcript
+	// 1.6.0, Test Score Report 1.1.0 and Learning Record 1.0.0 derived plugins, judgeSlot-v1 like College Transcript 1.8.0.
+	{ bridgeName: 'pescHighSchoolTranscript1v6v0CedsDerivedPlugin', pluginPath: 'forges/peschighschooltranscript1v6v0/bridges/pescHighSchoolTranscript1v6v0CedsDerivedPlugin.js', judgePromptVariant: 'derivedJudgeSlot', rendererVersion: JUDGE_SLOT_RENDERER_VERSION_LITERAL },
+	{ bridgeName: 'pescTestScoreReport1v1v0CedsDerivedPlugin', pluginPath: 'forges/pesctestscorereport1v1v0/bridges/pescTestScoreReport1v1v0CedsDerivedPlugin.js', judgePromptVariant: 'derivedJudgeSlot', rendererVersion: JUDGE_SLOT_RENDERER_VERSION_LITERAL },
+	{ bridgeName: 'pescLearningRecord1v0v0CedsDerivedPlugin', pluginPath: 'forges/pesclearningrecord1v0v0/bridges/pescLearningRecord1v0v0CedsDerivedPlugin.js', judgePromptVariant: 'derivedJudgeSlot', rendererVersion: JUDGE_SLOT_RENDERER_VERSION_LITERAL },
 ];
 
 // ---------------------------------------------------------------------

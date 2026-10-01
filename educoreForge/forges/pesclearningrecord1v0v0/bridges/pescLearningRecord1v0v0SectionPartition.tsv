@@ -1,0 +1,27 @@
+sectionPath	documentSection
+LearningRecord/DocumentProduction	Learning Record / Document Production
+LearningRecord/DocumentProduction/AcademicAward	Learning Record / Document Production / Academic Award
+LearningRecord/DocumentProduction/AwardEndorse	Learning Record / Document Production / Award Endorse
+LearningRecord/DocumentProduction/DocumentTypeCode	Learning Record / Document Production / Document Type Code
+LearningRecord/DocumentProduction/ElectronicFormat	Learning Record / Document Production / Electronic Format
+LearningRecord/DocumentProduction/Person	Learning Record / Document Production / Person
+LearningRecord/LearningRecordDetail	Learning Record / Learning Record Detail
+LearningRecord/LearningRecordDetail/AcademicLearning	Learning Record / Learning Record Detail / Academic Learning
+LearningRecord/LearningRecordDetail/NoteMessage	Learning Record / Learning Record Detail / Note Message
+LearningRecord/LearningRecordDetail/Person	Learning Record / Learning Record Detail / Person
+LearningRecord/LearningRecordDetail/UserDefinedExtensions	Learning Record / Learning Record Detail / User Defined Extensions
+LearningRecord/NoteMessage	Learning Record / Note Message
+LearningRecord/TransmissionData	Learning Record / Transmission Data
+LearningRecord/TransmissionData/CreatedDateTime	Learning Record / Transmission Data / Created Date Time
+LearningRecord/TransmissionData/Destination	Learning Record / Transmission Data / Destination
+LearningRecord/TransmissionData/DocumentCompleteCode	Learning Record / Transmission Data / Document Complete Code
+LearningRecord/TransmissionData/DocumentID	Learning Record / Transmission Data / Document ID
+LearningRecord/TransmissionData/DocumentOfficialCode	Learning Record / Transmission Data / Document Official Code
+LearningRecord/TransmissionData/DocumentProcessCode	Learning Record / Transmission Data / Document Process Code
+LearningRecord/TransmissionData/DocumentTypeCode	Learning Record / Transmission Data / Document Type Code
+LearningRecord/TransmissionData/NoteMessage	Learning Record / Transmission Data / Note Message
+LearningRecord/TransmissionData/RequestTrackingID	Learning Record / Transmission Data / Request Tracking ID
+LearningRecord/TransmissionData/Source	Learning Record / Transmission Data / Source
+LearningRecord/TransmissionData/TransmissionType	Learning Record / Transmission Data / Transmission Type
+LearningRecord/TransmissionData/UserDefinedExtensions	Learning Record / Transmission Data / User Defined Extensions
+LearningRecord/UserDefinedExtensions	Learning Record / User Defined Extensions

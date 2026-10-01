@@ -301,7 +301,9 @@ const FORGES_DIR = path.join(TREE_ROOT, 'forges');
 // D1 (2026-09-29, supervisor-authorised): 3 → 4, the SIF derived plugin (forges/sif260928/bridges/) declares it too.
 // PESC B1 (2026-10-01, QUIET_ORBIT-authorised): 4 → 5, the PESC College Transcript 1.8.0 derived plugin
 // (forges/pesccollegetranscript1v8v0/bridges/) declares it too.
-const EXPECTED_SHIPPED_DECLARING_PLUGIN_COUNT = 5;
+// PESC B1x (2026-10-01, NOTES-supervisor item 21 pre-authorised): 5 → 8, the PESC High School Transcript 1.6.0, Test Score
+// Report 1.1.0 and Learning Record 1.0.0 derived plugins (forges/<release>/bridges/) declare it too, one each.
+const EXPECTED_SHIPPED_DECLARING_PLUGIN_COUNT = 8;
 const EMBED_TEXT_VOTE_RETRIEVAL = Object.freeze({
 	method: 'embedTextVote-v1',
 	hitsPerText: 20,

@@ -1,0 +1,23 @@
+sectionPath	documentSection
+HighSchoolTranscript/NoteMessage	High School Transcript / Note Message
+HighSchoolTranscript/Student	High School Transcript / Student
+HighSchoolTranscript/Student/AcademicRecord	High School Transcript / Student / Academic Record
+HighSchoolTranscript/Student/Health	High School Transcript / Student / Health
+HighSchoolTranscript/Student/NoteMessage	High School Transcript / Student / Note Message
+HighSchoolTranscript/Student/Person	High School Transcript / Student / Person
+HighSchoolTranscript/Student/Tests	High School Transcript / Student / Tests
+HighSchoolTranscript/Student/UserDefinedExtensions	High School Transcript / Student / User Defined Extensions
+HighSchoolTranscript/TransmissionData	High School Transcript / Transmission Data
+HighSchoolTranscript/TransmissionData/CreatedDateTime	High School Transcript / Transmission Data / Created Date Time
+HighSchoolTranscript/TransmissionData/Destination	High School Transcript / Transmission Data / Destination
+HighSchoolTranscript/TransmissionData/DocumentCompleteCode	High School Transcript / Transmission Data / Document Complete Code
+HighSchoolTranscript/TransmissionData/DocumentID	High School Transcript / Transmission Data / Document ID
+HighSchoolTranscript/TransmissionData/DocumentOfficialCode	High School Transcript / Transmission Data / Document Official Code
+HighSchoolTranscript/TransmissionData/DocumentProcessCode	High School Transcript / Transmission Data / Document Process Code
+HighSchoolTranscript/TransmissionData/DocumentTypeCode	High School Transcript / Transmission Data / Document Type Code
+HighSchoolTranscript/TransmissionData/NoteMessage	High School Transcript / Transmission Data / Note Message
+HighSchoolTranscript/TransmissionData/RequestTrackingID	High School Transcript / Transmission Data / Request Tracking ID
+HighSchoolTranscript/TransmissionData/Source	High School Transcript / Transmission Data / Source
+HighSchoolTranscript/TransmissionData/TransmissionType	High School Transcript / Transmission Data / Transmission Type
+HighSchoolTranscript/TransmissionData/UserDefinedExtensions	High School Transcript / Transmission Data / User Defined Extensions
+HighSchoolTranscript/UserDefinedExtensions	High School Transcript / User Defined Extensions
