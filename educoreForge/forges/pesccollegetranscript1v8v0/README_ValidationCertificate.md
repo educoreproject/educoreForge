@@ -10,11 +10,11 @@ independent XML reader. Nothing was missed and nothing was invented. The regener
 |---|---|
 | standard | PESC College Transcript 1.8.0 (bundle `pesccollegetranscript1v8v0`, `_source` `PESC-CollegeTranscript-1.8.0`, DME title `PESC College Transcript v1.8.0`) |
 | source | `assets/standardSourceData/01/`: `CollegeTranscript_v1.8.0.xsd`, `CoreMain_v1.19.0.xsd` (`d9ded348…`), `AcademicRecord_v1.13.0.xsd`, `iso_3166-1_v1.0.0.xsd`, and the expander's `releaseManifestEntry.json`, every file checked against `SHA256SUMS` at every build. Provenance: `README_PROVENANCE.md` |
-| graph | `DEV_pescCollegeTranscript1v8v0_codeList` (a scratch graph; bolt 7811), 2026-10-01 |
-| build | recipe `recipes/pesccollegetranscript1v8v0Only.recipe.jsonc` (the release alone, `roundTripStage: true`), manifest `c4b4ccad…cedca4c1`, standardBase block **`5c6b404080ef8eec3d662d60fffb39bda1912f7cca9c1a76757cce7ed6c7ea22`** (it was `f9e2a095…ac7518` before the code-list facts below; that block moved by design) |
-| reproduced | the same block and manifest from **two** builds of the recipe at head `8fee4c9` (`f6CodeListBuild1`, `f6CodeListBuild2`); the certifying build is the first. (The earlier block `f9e2a095…` was reproduced three times in phase F5.) |
-| certification | `graphBuilder -goldEvalCheck` on `f6CodeListBuild1`'s run directory: **PASS** (1 declared validator, inventedTotal 0; no bridge, no judged edge) |
-| commit | branch `pescRelease/F6` at `8fee4c9` (PESC phase F6's first commit, on F5's `f10ae13`); the round-trip harness fix it needed is `39f0502` |
+| graph | `DEV_pescCollegeTranscript1v8v0_f6` (a scratch graph; bolt 7835), 2026-10-01 |
+| build | recipe `recipes/pesccollegetranscript1v8v0Only.recipe.jsonc` (the release alone, `roundTripStage: true`), manifest `091b7ae1…692aa7bca4`, standardBase block **`e1af198978006964f26005bab2102ba318a684b2079b66d811df9b7b33c67f09`** (it was `f9e2a095…ac7518` in phase F5 and `5c6b4040…` after the code-list facts; it moved again, by design, when phase F6 taught the forge every documentation value, §Accuracy) |
+| reproduced | the same block and manifest from **two** builds of the recipe at head `d3e048f` (`f6Build1`, and `f6Build2b`, whose graph `DEV_pescCollegeTranscript1v8v0_f6_repro` is stopped); the certifying build is the first. (`f9e2a095…` was reproduced three times in phase F5, `5c6b4040…` twice at `8fee4c9`.) |
+| certification | `graphBuilder -goldEvalCheck` on `f6Build1`'s run directory: **PASS** (1 declared validator, inventedTotal 0; no bridge, no judged edge) |
+| commit | branch `pescRelease/F6` at `d3e048f` (PESC phase F6); the round-trip harness fix it needed is `39f0502` |
 
 ---
 
@@ -81,15 +81,20 @@ explicitly omitted ............ 29,339 = 907 XML comments + 28,428 whitespace ru
 regenerated root, xmllint ..... compiles (a probe document "fails to validate", exit 3, as with the source files)
 ```
 
-The comparison is on resolved qualified names (a prefix is not content) and covers every definition and import in
+Since phase F6 the forge also carries every documentation string as written on element-like declarations and derivations
+(`documentationValueList`, `derivationDocumentationValueList`) and every schema-level annotation in its place
+(`fileAnnotationList`): College Transcript 1.8.0 has none of the shapes that needed it (0 empty or second element
+documentations, 0 derivation annotations, its schema annotations first), so nothing it regenerates changed; the node
+properties did, which moved the block. The comparison is on resolved qualified names (a prefix is not content, on attribute
+names as on QName values) and covers every definition and import in
 document order, every element, attribute, group reference and wildcard in its compositor position (14 nested
 `xs:choice` groups included), every attribute as written, every facet and enumeration value, and every documentation
 string verbatim. The validator read the graph through the framework's live reader; the verdict is the build's own stage.
 It is also measured hermetically on every test run (`test/test-release.js`, phase F4 gates).
 
-**Measured live** (read-only Cypher; on `DEV_pescCollegeTranscript1v8v0`, phase F5, and the node, edge and code-list counts
-again on `DEV_pescCollegeTranscript1v8v0_codeList`, phase F6: 160 elements with `codeListName`, 160 with
-`codeListDocumentation`): 8,997 nodes and 11,932 edges scoped
+**Measured live** (read-only Cypher; on `DEV_pescCollegeTranscript1v8v0`, phase F5, and the node, edge, vector and code-list
+counts again on `DEV_pescCollegeTranscript1v8v0_f6`, phase F6: 160 elements with `codeListName`, 1,220 with
+`documentationValueList`, 4,055 vectors): 8,997 nodes and 11,932 edges scoped
 `_source = 'PESC-CollegeTranscript-1.8.0'`, equal to the pure forge label by label and type by type, plus the loader's
 `StandardBase` label on every node; the DME's own standards query (`MATCH (r:DmeStandardRoot) RETURN r._source,
 r.standardName, r.version`) returns `PESC-CollegeTranscript-1.8.0`, `PESC College Transcript v1.8.0`, `1.8.0`; the root has
