@@ -11,6 +11,8 @@
 //               (a′) the id list holds 2,731 unique bare six-digit ids, sorted. Twin: the list emptied.
 //               (a″) a listed bare id planted in a subject's documentation refuses the run by the identifierList pattern.
 //                    Twin: the planted id dropped from the list.
+//               (B3) P000505 planted in a subject's documentation refuses the run by the cedsPropertyId pattern (phase B3's
+//                    red twin, kept as a standing conjunct). Twin: that pattern dropped from the declaration.
 //               (s)  the scope list and the section file are the forge's: the 375 declarations marked reachable, each
 //                    with at least one HAS_INSTANCE, and the 22 sectionPaths the occurrences carry, at the declared sha.
 //                    Twin: the scope list loses one declaration.
@@ -105,6 +107,8 @@ const STRING_SHAPED_SECTION_LIST_COUNT = 303;
 const CODE_LIST_PROMPT_COUNT = 68;
 // the bare id planted in (a″): the first id on the shipped list
 const PLANTED_BARE_ID = '000102';
+// the P-form id planted by B3's twin (WORKORDER §3 B3: "P000505 injected into a scratch text; the run refuses")
+const PLANTED_PROPERTY_ID = 'P000505';
 // the strings that would name the release in a prompt (DESIGN-pescBridge §4.4)
 const RELEASE_NAMING_TEXT_LIST = Object.freeze(['1.8.0', 'v1.8.0', 'urn:org:pesc', '.xsd', 'PESC-CollegeTranscript']);
 const CODE_LIST_PROPERTY_NAME_LIST = Object.freeze(['codeListName', 'codeListDocumentation']);
@@ -429,6 +433,19 @@ const buildGateDeclarationList = ({ forgedGraph, runDouble }) => {
 			},
 			judge: nameInRefusal(new RegExp(`prompt identifier scan hit for subject ${ADDRESS_SUBJECT.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}: pattern 'identifierList' matched '${PLANTED_BARE_ID}'`)),
 		}),
+		runConjunct({
+			conjunctId: 'b3_plantedPropertyIdRefused',
+			title: `(B3) a CEDS property id (${PLANTED_PROPERTY_ID}) planted in ContactsType/Address's documentation refuses the run, naming the cedsPropertyId pattern (WORKORDER B3's red twin, as a standing conjunct)`,
+			twinNameList: ['propertyIdPatternDropped'],
+			shape: (scenario) => {
+				scenario.graphEdit = (graph) => {
+					const addressNode = subjectNodeOf(graph, ADDRESS_SUBJECT);
+					addressNode.properties.effectiveDocumentation = `${addressNode.properties.effectiveDocumentation} (${PLANTED_PROPERTY_ID})`;
+				};
+				pescShape(scenario);
+			},
+			judge: nameInRefusal(new RegExp(`prompt identifier scan hit for subject ${ADDRESS_SUBJECT.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}: pattern 'cedsPropertyId' matched '${PLANTED_PROPERTY_ID}'`)),
+		}),
 		pureConjunct({
 			conjunctId: 's_scopeAndSectionsAreTheForges',
 			title: `(s) the scope list is exactly the ${SUBJECT_COUNT} declarations the forge marks reachable, each with a HAS_INSTANCE edge; the section file is exactly the ${SECTION_COUNT} sectionPaths the ${OCCURRENCE_COUNT} occurrences carry, at the sha256 the declaration restates`,
@@ -447,6 +464,7 @@ const buildGateDeclarationList = ({ forgedGraph, runDouble }) => {
 			},
 		}),
 	];
+	scenarioTwin({ registry: twinRegistry, gateId: 'B1-REGISTER', conjunctId: 'b3_plantedPropertyIdRefused', twinName: 'propertyIdPatternDropped', leverKind: 'inputFault', mutate: (scenario) => { scenario.declarationEdit = (bridgeDeclaration) => { bridgeDeclaration.promptIdentifierScan.identifierPatternList = bridgeDeclaration.promptIdentifierScan.identifierPatternList.filter((onePattern) => onePattern.patternName !== 'cedsPropertyId'); }; } });
 	scenarioTwin({ registry: twinRegistry, gateId: 'B1-REGISTER', conjunctId: 'a_registryAcceptsThePlugin', twinName: 'neighbourVoteRemoved', leverKind: 'inputFault', mutate: (scenario) => { scenario.declarationEdit = (bridgeDeclaration) => { delete bridgeDeclaration.candidateRetrieval.neighbourVote; }; } });
 	scenarioTwin({ registry: twinRegistry, gateId: 'B1-REGISTER', conjunctId: 'aPrime_identifierListShape', twinName: 'identifierListEmptied', leverKind: 'inputFault', mutate: (scenario) => { scenario.identifierListTransform = () => []; } });
 	scenarioTwin({ registry: twinRegistry, gateId: 'B1-REGISTER', conjunctId: 'aDoublePrime_listedBareIdRefused', twinName: 'plantedIdDroppedFromList', leverKind: 'inputFault', mutate: (scenario) => { scenario.identifierListTransform = (identifierList) => identifierList.filter((oneId) => oneId !== PLANTED_BARE_ID); } });
@@ -657,7 +675,7 @@ require(path.join(BUNDLE_DIR, descriptorValueByName.entryModule))({ embedder: nu
 	const scopeStableIdSet = new Set(JSON.parse(fs.readFileSync(path.join(SHIPPED_BRIDGES_DIR, SCOPE_LIST_FILE_NAME), 'utf8')));
 	const gateDeclarationList = buildGateDeclarationList(forgedGraphToDouble({ forged, scopeStableIdSet }));
 	runGateFamily(
-		{ harness, familyName: 'B1-REGISTER+B1-UNITS+B1-EDGES+B1-PROMPT', gateDeclarationList, twinRegistry, makeSubject: scenarioLib.makeScenario, cloneSubject: scenarioLib.cloneScenario, expectedConjunctCount: 12 },
+		{ harness, familyName: 'B1-REGISTER+B1-UNITS+B1-EDGES+B1-PROMPT', gateDeclarationList, twinRegistry, makeSubject: scenarioLib.makeScenario, cloneSubject: scenarioLib.cloneScenario, expectedConjunctCount: 13 },
 		() => harness.report(),
 	);
 });
