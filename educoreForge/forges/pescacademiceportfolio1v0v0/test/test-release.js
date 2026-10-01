@@ -12,7 +12,7 @@
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 const helpText = () => `
 NAME
-     ${moduleName} -- the PESC release gates for PESC Academic Eportfolio v1.0.0
+     ${moduleName} -- the PESC release gates for PESC Academic ePortfolio v1.0.0
 
 SYNOPSIS
      ${moduleName} [-verbose] [-quiet] [-help]

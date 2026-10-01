@@ -32,6 +32,13 @@ const VERSION_COMPONENT_JOINER = 'v';
 // 'CollegeTranscript' → 'College Transcript': a space before every capital that follows a lowercase letter
 const spacedStandardWords = (standard) => standard.replace(/([a-z])([A-Z])/g, '$1 $2');
 
+// the display words where the rule above does not give PESC's own spelling: one row each, with the reason.
+// Only standardDisplayName (the DME title) reads it; standardKey, standardSource and labelPrefix keep the token.
+const DISPLAY_WORDS_OVERRIDE_BY_STANDARD = Object.freeze({
+	AcademicEportfolio: Object.freeze({ displayWords: 'Academic ePortfolio', reason: "PESC capitalises its standard 'ePortfolio'; the rule gives 'Eportfolio' (QUIET_ORBIT ruling for TQ, phase F6, 2026-10-01)" }),
+});
+const displayWordsOf = (standard) => (DISPLAY_WORDS_OVERRIDE_BY_STANDARD[standard] === undefined ? spacedStandardWords(standard) : DISPLAY_WORDS_OVERRIDE_BY_STANDARD[standard].displayWords);
+
 const deriveReleaseNames = ({ standard, version }) => {
 	if (typeof standard !== 'string' || !STANDARD_TOKEN_RE.test(standard)) {
 		return { refusalMessage: refuse.byName({ moduleName, what: `standard is ${JSON.stringify(standard)}`, where: `a PESC standard token is letters only, starting with a capital (${STANDARD_TOKEN_RE})` }).message };
@@ -49,7 +56,7 @@ const deriveReleaseNames = ({ standard, version }) => {
 			version,
 			standardKey,
 			standardSource: `${SOURCE_PREFIX}-${standard}-${version}`,
-			standardDisplayName: `${SOURCE_PREFIX} ${spacedStandardWords(standard)} v${version}`,
+			standardDisplayName: `${SOURCE_PREFIX} ${displayWordsOf(standard)} v${version}`,
 			labelPrefix,
 			stableUriPropertyName: `${standardKey}StableId`,
 			rootStableId: `${standardKey}:root`,
@@ -63,4 +70,4 @@ const deriveReleaseNames = ({ standard, version }) => {
 	};
 };
 
-module.exports = { deriveReleaseNames, spacedStandardWords, moduleName };
+module.exports = { deriveReleaseNames, spacedStandardWords, DISPLAY_WORDS_OVERRIDE_BY_STANDARD, moduleName };

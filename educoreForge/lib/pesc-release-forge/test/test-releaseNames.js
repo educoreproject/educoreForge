@@ -64,6 +64,14 @@ Object.keys(RULED_COLLEGE_TRANSCRIPT_NAMES).forEach((oneName) => {
 harness.ok('the root id and the release record id match the stableId pattern', ['pesccollegetranscript1v8v0:root', 'pesccollegetranscript1v8v0:release', 'pesccollegetranscript1v8v0:type/urn:org:pesc:core:CoreMain:v1.19.0#NoteMessageType'].every((oneStableId) => new RegExp(collegeTranscriptNames.stableIdPatternText).test(oneStableId)));
 harness.ok('every node-kind label carries the declared prefix', Object.values(buildNodeKindTable({ labelPrefix: collegeTranscriptNames.labelPrefix })).every((oneRow) => oneRow.perStandardLabel.startsWith('PescCollegeTranscript1v8v0')));
 
+harness.section('the display-words override: one row, ePortfolio (QUIET_ORBIT ruling, phase F6)');
+const ePortfolioNames = deriveReleaseNames({ standard: 'AcademicEportfolio', version: '1.0.0' }).releaseNames;
+harness.equal("AcademicEportfolio 1.0.0's DME title is 'PESC Academic ePortfolio v1.0.0'", ePortfolioNames.standardDisplayName, 'PESC Academic ePortfolio v1.0.0');
+harness.equal('its standardSource keeps the token', ePortfolioNames.standardSource, 'PESC-AcademicEportfolio-1.0.0');
+harness.equal('its labelPrefix keeps the token', ePortfolioNames.labelPrefix, 'PescAcademicEportfolio1v0v0');
+harness.equal('the override table has exactly one row', Object.keys(require(path.join(__dirname, '..', 'releaseNames')).DISPLAY_WORDS_OVERRIDE_BY_STANDARD).join(','), 'AcademicEportfolio');
+harness.equal('a standard without a row follows the rule', deriveReleaseNames({ standard: 'HighSchoolTranscript', version: '1.6.0' }).releaseNames.standardDisplayName, 'PESC High School Transcript v1.6.0');
+
 harness.section('the encoding reads one way only, and bad input is refused');
 harness.ok("1.10.0 and 11.0.0 give different keys ('1v10v0', '11v0v0')", deriveReleaseNames({ standard: 'CollegeTranscript', version: '1.10.0' }).releaseNames.standardKey !== deriveReleaseNames({ standard: 'CollegeTranscript', version: '11.0.0' }).releaseNames.standardKey);
 harness.match("a two-component version '1.8' is refused by name", deriveReleaseNames({ standard: 'CollegeTranscript', version: '1.8' }).refusalMessage, /releaseNames REFUSED: version is "1\.8"/);

@@ -1884,23 +1884,23 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 	};
 	// the shapes in a release's own source statements: an element-like declaration's empty or second
 	// documentation, a derivation's own annotation, a schema-level annotation not first among the children
-	const DECLARATION_DOCUMENTATION_KEY_RE = /\/\d+:(element|attribute)\/annotation\/documentation#(\d+)$|\|schema\/element:[^/]+\/annotation\/documentation#(\d+)$/;
-	const DERIVATION_ANNOTATION_KEY_RE = /:(restriction|extension)\/annotation$/;
-	const documentationShapeKeyListByName = (sourceStatements) => {
-		const keyListByName = { declarationDocumentationShapeCount: [], derivationAnnotationCount: [], fileAnnotationNotFirstCount: [] };
+	const DECLARATION_DOCUMENTATION_STATEMENT_KEY_RE = /\/\d+:(element|attribute)\/annotation\/documentation#(\d+)$|\|schema\/element:[^/]+\/annotation\/documentation#(\d+)$/;
+	const DERIVATION_ANNOTATION_STATEMENT_KEY_RE = /:(restriction|extension)\/annotation$/;
+	const documentationShapeStatementKeyListByShape = (sourceStatements) => {
+		const statementKeyListByShape = { declarationDocumentationShapeCount: [], derivationAnnotationCount: [], fileAnnotationNotFirstCount: [] };
 		sourceStatements.forEach((oneStatement, oneStatementKey) => {
-			const declarationMatch = DECLARATION_DOCUMENTATION_KEY_RE.exec(oneStatementKey);
+			const declarationMatch = DECLARATION_DOCUMENTATION_STATEMENT_KEY_RE.exec(oneStatementKey);
 			if (declarationMatch !== null && (oneStatement.text.trim() === '' || Number(declarationMatch[2] || declarationMatch[3]) > 1)) {
-				keyListByName.declarationDocumentationShapeCount.push(oneStatementKey);
+				statementKeyListByShape.declarationDocumentationShapeCount.push(oneStatementKey);
 			}
-			if (DERIVATION_ANNOTATION_KEY_RE.test(oneStatementKey)) {
-				keyListByName.derivationAnnotationCount.push(oneStatementKey);
+			if (DERIVATION_ANNOTATION_STATEMENT_KEY_RE.test(oneStatementKey)) {
+				statementKeyListByShape.derivationAnnotationCount.push(oneStatementKey);
 			}
 			if (oneStatement.schemaChildSegmentList !== undefined && oneStatement.schemaChildSegmentList.indexOf('annotation') > 0) {
-				keyListByName.fileAnnotationNotFirstCount.push(oneStatementKey);
+				statementKeyListByShape.fileAnnotationNotFirstCount.push(oneStatementKey);
 			}
 		});
-		return keyListByName;
+		return statementKeyListByShape;
 	};
 	roundTripConjunctList.push({
 		conjunctId: 'documentationShapesRoundTrip',
@@ -1912,21 +1912,21 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 				return;
 			}
 			sideStatementsOf({ subject }, callback, ({ sourceStatements, graphStatements }) => {
-				const keyListByName = documentationShapeKeyListByName(sourceStatements);
+				const statementKeyListByShape = documentationShapeStatementKeyListByShape(sourceStatements);
 				const failingList = [];
-				Object.keys(keyListByName).forEach((shapeName) => {
-					const unregeneratedKey = keyListByName[shapeName].find((oneStatementKey) => !sameStatement(sourceStatements.get(oneStatementKey), graphStatements.get(oneStatementKey)));
-					if (keyListByName[shapeName].length !== roundTripLiteralSet.documentationShapeCount[shapeName] || unregeneratedKey !== undefined) {
-						failingList.push(`${shapeName} ${keyListByName[shapeName].length} (literal ${roundTripLiteralSet.documentationShapeCount[shapeName]})${unregeneratedKey ? ` not regenerated ${unregeneratedKey}` : ''}`);
+				Object.keys(statementKeyListByShape).forEach((shapeName) => {
+					const unregeneratedStatementKey = statementKeyListByShape[shapeName].find((oneStatementKey) => !sameStatement(sourceStatements.get(oneStatementKey), graphStatements.get(oneStatementKey)));
+					if (statementKeyListByShape[shapeName].length !== roundTripLiteralSet.documentationShapeCount[shapeName] || unregeneratedStatementKey !== undefined) {
+						failingList.push(`${shapeName} ${statementKeyListByShape[shapeName].length} (literal ${roundTripLiteralSet.documentationShapeCount[shapeName]})${unregeneratedStatementKey ? ` not regenerated ${unregeneratedStatementKey}` : ''}`);
 					}
 				});
 				sideStatementsOf({ subject: { ...subject, snapshotDirPath: plantedDocumentationSnapshot(subject) } }, callback, (planted) => {
 					const plantedDiff = roundTripPairOf(subject).diffStatementsOf({ sourceStatements: planted.sourceStatements, graphStatements: planted.graphStatements });
 					const plantedGapList = plantedDiff.lostList.filter((oneLost) => oneLost.lostCategory === 'contentGap');
-					const plantedKeyListByName = documentationShapeKeyListByName(planted.sourceStatements);
-					const everyShapePlanted = Object.keys(plantedKeyListByName).every((shapeName) => plantedKeyListByName[shapeName].length > keyListByName[shapeName].length);
+					const plantedStatementKeyListByShape = documentationShapeStatementKeyListByShape(planted.sourceStatements);
+					const everyShapePlanted = Object.keys(plantedStatementKeyListByShape).every((shapeName) => plantedStatementKeyListByShape[shapeName].length > statementKeyListByShape[shapeName].length);
 					const pass = failingList.length === 0 && everyShapePlanted && plantedGapList.length === 0 && plantedDiff.inventedList.length === 0;
-					callback('', { pass, detail: `release ${Object.keys(keyListByName).map((shapeName) => `${shapeName} ${keyListByName[shapeName].length}`).join(', ')}; failing ${failingList.length ? failingList.join('; ') : 'none'}; planted copy: every shape planted ${everyShapePlanted}, contentGap ${plantedGapList.length}${plantedGapList.length ? ` (first ${plantedGapList[0].statementKey})` : ''}, invented ${plantedDiff.inventedList.length}` });
+					callback('', { pass, detail: `release ${Object.keys(statementKeyListByShape).map((shapeName) => `${shapeName} ${statementKeyListByShape[shapeName].length}`).join(', ')}; failing ${failingList.length ? failingList.join('; ') : 'none'}; planted copy: every shape planted ${everyShapePlanted}, contentGap ${plantedGapList.length}${plantedGapList.length ? ` (first ${plantedGapList[0].statementKey})` : ''}, invented ${plantedDiff.inventedList.length}` });
 				});
 			});
 		},
