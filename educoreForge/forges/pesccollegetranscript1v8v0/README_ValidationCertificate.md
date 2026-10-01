@@ -10,11 +10,11 @@ independent XML reader. Nothing was missed and nothing was invented. The regener
 |---|---|
 | standard | PESC College Transcript 1.8.0 (bundle `pesccollegetranscript1v8v0`, `_source` `PESC-CollegeTranscript-1.8.0`, DME title `PESC College Transcript v1.8.0`) |
 | source | `assets/standardSourceData/01/`: `CollegeTranscript_v1.8.0.xsd`, `CoreMain_v1.19.0.xsd` (`d9ded348…`), `AcademicRecord_v1.13.0.xsd`, `iso_3166-1_v1.0.0.xsd`, and the expander's `releaseManifestEntry.json`, every file checked against `SHA256SUMS` at every build. Provenance: `README_PROVENANCE.md` |
-| graph | `DEV_pescCollegeTranscript1v8v0` (a scratch graph; bolt 7813), 2026-10-01 |
-| build | recipe `recipes/pesccollegetranscript1v8v0Only.recipe.jsonc` (the release alone, `roundTripStage: true`), manifest `8309cb9c…53a03dc`, standardBase block **`f9e2a095ed27edc4935897653c00187c54d4bd1a82dc75332ab1fc36b1ac7518`** |
-| reproduced | the same block and manifest from **three** builds of the recipe (heads `ec9f034`, `ec9f034`, `90d481c`); the certifying build is the third |
-| certification | `graphBuilder -goldEvalCheck` on the third build's run directory: **PASS** (1 declared validator, inventedTotal 0; no bridge, no judged edge) |
-| commit | branch `pescRelease/F3` at `90d481c` (PESC phase F5); the round-trip harness fix it needed is `39f0502` |
+| graph | `DEV_pescCollegeTranscript1v8v0_codeList` (a scratch graph; bolt 7811), 2026-10-01 |
+| build | recipe `recipes/pesccollegetranscript1v8v0Only.recipe.jsonc` (the release alone, `roundTripStage: true`), manifest `c4b4ccad…cedca4c1`, standardBase block **`5c6b404080ef8eec3d662d60fffb39bda1912f7cca9c1a76757cce7ed6c7ea22`** (it was `f9e2a095…ac7518` before the code-list facts below; that block moved by design) |
+| reproduced | the same block and manifest from **two** builds of the recipe at head `8fee4c9` (`f6CodeListBuild1`, `f6CodeListBuild2`); the certifying build is the first. (The earlier block `f9e2a095…` was reproduced three times in phase F5.) |
+| certification | `graphBuilder -goldEvalCheck` on `f6CodeListBuild1`'s run directory: **PASS** (1 declared validator, inventedTotal 0; no bridge, no judged edge) |
+| commit | branch `pescRelease/F6` at `8fee4c9` (PESC phase F6's first commit, on F5's `f10ae13`); the round-trip harness fix it needed is `39f0502` |
 
 ---
 
@@ -60,6 +60,11 @@ are reachable.
 Every vector (4,055: 2,578 texts, 235 classes, 1,241 properties, the root) names `voyage-4-large`. Occurrences carry no
 text and no vector.
 
+**Code lists, on their elements.** Each of the 160 element declarations typed by a named code list carries the list's
+`codeListName` and `codeListDocumentation` (every named list in this release is documented), so a reader of the element
+alone sees its list's prose. The 17 typed by an anonymous list carry neither: such a list has no name, and none of the 17
+has documentation. Neither property is a search text, and the round trip does not read them.
+
 **Not present:** any mapping to CEDS or to any other standard. The forge does no bridging.
 
 ---
@@ -82,7 +87,9 @@ document order, every element, attribute, group reference and wildcard in its co
 string verbatim. The validator read the graph through the framework's live reader; the verdict is the build's own stage.
 It is also measured hermetically on every test run (`test/test-release.js`, phase F4 gates).
 
-**Measured live on `DEV_pescCollegeTranscript1v8v0`** (read-only Cypher): 8,997 nodes and 11,932 edges scoped
+**Measured live** (read-only Cypher; on `DEV_pescCollegeTranscript1v8v0`, phase F5, and the node, edge and code-list counts
+again on `DEV_pescCollegeTranscript1v8v0_codeList`, phase F6: 160 elements with `codeListName`, 160 with
+`codeListDocumentation`): 8,997 nodes and 11,932 edges scoped
 `_source = 'PESC-CollegeTranscript-1.8.0'`, equal to the pure forge label by label and type by type, plus the loader's
 `StandardBase` label on every node; the DME's own standards query (`MATCH (r:DmeStandardRoot) RETURN r._source,
 r.standardName, r.version`) returns `PESC-CollegeTranscript-1.8.0`, `PESC College Transcript v1.8.0`, `1.8.0`; the root has
@@ -130,6 +137,7 @@ restriction.
 |---|---|
 | `lib/pesc-release-forge/roundTripPair.js` | the round trip's two sides and its diff, including what it does not model |
 | `management/zNotesPlansDocs/PESC/pescForgeBridgeBuild-093026/DEVLOG-F3.md`, `DEVLOG-F4.md` | reachability, occurrences, and how the round trip was built |
-| `management/zNotesPlansDocs/PESC/pescForgeBridgeBuild-093026/DEVLOG-F5.md` | these builds, the commands that reproduce them, and every live check above |
+| `management/zNotesPlansDocs/PESC/pescForgeBridgeBuild-093026/DEVLOG-F5.md` | phase F5's builds, the commands that reproduce them, and its live checks |
+| `management/zNotesPlansDocs/PESC/pescForgeBridgeBuild-093026/DEVLOG-F6.md` | the code-list facts, the two rebuilds that moved the block, and their goldEvalCheck |
 
 Figures measured 2026-10-01 from the builds named above.
