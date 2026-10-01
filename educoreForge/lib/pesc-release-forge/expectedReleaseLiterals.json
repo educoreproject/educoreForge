@@ -80,7 +80,13 @@
 					"REFERENCES_TYPE Element -> Type": 322,
 					"REFERENCES_TYPE GlobalElement -> Type": 10
 				},
-				"textNodeCountBeforePhaseF3": 2203
+				"textNodeCountBeforePhaseF3": 2203,
+				"codeListFactCountNote": "ADDED by phase F6's first commit (QUIET_CIPHER, 2026-10-01, on QUIET_ORBIT's directive): codeListName and codeListDocumentation stamped on every element with HAS_OPTION_SET. First measured here: 160 elements typed by a named code list carry both (every named list in this release is documented); the 17 typed by an anonymous list carry neither, because an anonymous list has no name and none of the 17 carries documentation. No other literal moved: neither property is a declared text, the round trip does not read them, and node and edge counts are unchanged (8,997 / 11,932).",
+				"codeListFactCount": {
+					"anonymousCodeList": 17,
+					"namedCodeList": 160,
+					"withCodeListDocumentation": 160
+				}
 			},
 			"reachability": {
 				"literalSource": "WORKORDER section 3 F3; evidence/q4SectionSpan/sectionCensus.json CollegeTranscript_v1.8.0 (sections with occurrences and units, occurrencesByDepth, sectionsPerDeclarationHistogram, perSectionSampleListMaxLength); evidence/graphModelSummary.json reachableTypesOrGroups 263. RULED by QUIET_ORBIT 2026-10-01 on AMBER_PORTAL's STOP: deepestDocumentDepth 10 with xsiType (the work order said 9; 9 is the content-and-base figure; the planner's own sectionCensus.json shows 10 occurrences at depth 10), reachableDefinitionCount 265 with xsiType (the work order said 263 + 1 = 264; the rule also reaches CoreMain LearningOutcomeType, the type of the xsi-only declaration LearningProgramType/el/3:LearningOutcome), and the framework depth of an occurrence is documentDepth + 1 (the root global element is depth 1). Substitution rule: subtypesNotReachedByContent (the planner's), ruled kept for release 1. reachableDocumentationSourceCount: contentAndBase 367 own + 4 type is WORKORDER F2's; xsiTypeOnly 4 own first measured by phase F3.",

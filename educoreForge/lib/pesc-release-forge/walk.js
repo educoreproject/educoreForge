@@ -26,6 +26,12 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // the work order's literals; the planner's model had counted local elements to named types only).
 // An anonymous complex type or data type stays its declaration's child (parentId) with no edge.
 //
+// A local element typed by a code list also CARRIES that list's codeListName (named lists only; an
+// anonymous list has none) and codeListDocumentation (absent when the list has none): the derived
+// bridge renders only its subject's own properties, and code lists are evidence for their element
+// (QUIET_ORBIT, phase F6's first commit). Neither is a declared text, and the round trip never reads
+// them. In the seven built releases no attribute or global element is typed by a code list (measured).
+//
 // REACHABILITY AND OCCURRENCES (phase F3, §2.8; reachability.js walks, this file mints). Before any
 // node is minted the walk from the document root runs, so every source node is minted already
 // stamped: reachableFromRoot on declarations, definitions, anonymous types and codes; on each element
@@ -116,7 +122,10 @@ const CARRY_LIST_BY_NODE_KIND = Object.freeze({
 	dataType: Object.freeze(SOURCE_CARRY_LIST.concat(['targetNamespace', 'documentation', 'documentationValueList', 'baseTypeQName', 'derivationVariety', 'facets'])),
 	group: Object.freeze(SOURCE_CARRY_LIST.concat(['targetNamespace', 'documentation', 'documentationValueList', 'contentModelShape'])),
 	globalElement: Object.freeze(SOURCE_CARRY_LIST.concat(['targetNamespace', 'documentation', 'typeQName', 'typeAsWritten', 'typeName', 'substitutionGroupQName', 'abstractAsWritten', 'nillableAsWritten'], PATH_CARRY_LIST)),
-	element: Object.freeze(SOURCE_CARRY_LIST.concat(['documentation', 'typeQName', 'typeAsWritten', 'typeName', 'minOccursAsWritten', 'maxOccursAsWritten', 'nillableAsWritten', 'formAsWritten', 'defaultAsWritten', 'fixedAsWritten', 'owningTypeName', 'effectiveDocumentation', 'documentationSource'], PATH_CARRY_LIST)),
+	// codeListName and codeListDocumentation: the code list an element is typed by, carried onto the element
+	// because the derived bridge renders only the subject's own properties (QUIET_ORBIT, F6 first commit);
+	// not text-declared, and the round trip never reads them (the list is regenerated from its own node)
+	element: Object.freeze(SOURCE_CARRY_LIST.concat(['documentation', 'typeQName', 'typeAsWritten', 'typeName', 'minOccursAsWritten', 'maxOccursAsWritten', 'nillableAsWritten', 'formAsWritten', 'defaultAsWritten', 'fixedAsWritten', 'owningTypeName', 'effectiveDocumentation', 'documentationSource', 'codeListName', 'codeListDocumentation'], PATH_CARRY_LIST)),
 	attribute: Object.freeze(SOURCE_CARRY_LIST.concat(['documentation', 'typeQName', 'typeAsWritten', 'typeName', 'useAsWritten', 'owningTypeName', 'effectiveDocumentation', 'documentationSource'])),
 	// a code whose value is the empty string carries no value (absent is absent, gate F7) and
 	// valueIsEmptyString true, so the round trip can write value="" without guessing (phase F4 ruling);
@@ -364,6 +373,14 @@ const emitReleaseGraph = ({ xsdSet, loadedManifestEntry, standardKey, nodeKindTa
 		}
 		return target === null ? null : nonBlankOrNull(target.definition.documentation);
 	};
+	// the code list an element is typed by, named or anonymous: its name (an anonymous list has none, so
+	// none is stamped) and its documentation; an element not typed by a code list gets neither
+	const codeListFactsOf = ({ target, anonymousType }) => {
+		if (anonymousType !== null) {
+			return NODE_KIND_BY_ANONYMOUS_VARIETY[anonymousType.typeVariety](anonymousType.body) === 'codeList' ? { codeListName: null, codeListDocumentation: nonBlankOrNull(anonymousType.body.documentation) } : {};
+		}
+		return target !== null && target.nodeKind === 'codeList' ? { codeListName: target.definition.name, codeListDocumentation: nonBlankOrNull(target.definition.documentation) } : {};
+	};
 	const effectiveDocumentationFactsOf = ({ ownDocumentation, typeDocumentation }) => {
 		if (ownDocumentation !== null) {
 			documentationSourceCount[DOCUMENTATION_SOURCE.OWN]++;
@@ -439,6 +456,7 @@ const emitReleaseGraph = ({ xsdSet, loadedManifestEntry, standardKey, nodeKindTa
 					fixedAsWritten: oneElement.fixedAsWritten,
 					owningTypeName,
 					...effectiveDocumentationFactsOf({ ownDocumentation, typeDocumentation: typeDocumentationOf({ target: typed.target, anonymousType: oneElement.anonymousType }) }),
+					...codeListFactsOf({ target: typed.target, anonymousType: oneElement.anonymousType }),
 					...declarationPathFactsOf(elementStableId),
 				},
 			});

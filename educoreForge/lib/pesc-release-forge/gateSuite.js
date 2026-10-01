@@ -1097,6 +1097,62 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 	];
 	registerWalkTwin(DECLARATIONS_GATE_ID, 'noteMessageDeclarationsPerFile', 'rootNoteMessageRemoved', 'inputFault', (subject) => ({ ...subject, snapshotDirPath: makeScratchSnapshot({ baseSnapshotDirPath: subject.snapshotDirPath, alterTextByFileName: { [rootFileName]: withOneElementRemoved }, resealManifestEntry: true, resealChecksums: true }), frozenReleaseCensus: { ...subject.frozenReleaseCensus, elementDeclarationCount: subject.frozenReleaseCensus.elementDeclarationCount - 1, referenceCount: subject.frozenReleaseCensus.referenceCount - 1, inReleaseReferenceCount: subject.frozenReleaseCensus.inReleaseReferenceCount - 1 } }));
 
+	// ---- F2 (extra): the code list an element is typed by, carried onto the element (QUIET_ORBIT, F6 first
+	// commit: the derived bridge renders only the subject's own properties, so the list's prose must sit there)
+	const CODE_LIST_FACTS_GATE_ID = 'F2-CODE-LIST-FACTS';
+	const CODE_LIST_FACT_NAME_LIST = ['codeListName', 'codeListDocumentation'];
+	const codeListFactsConjunctList = [
+		{
+			conjunctId: 'codeListFactsOnTypedElements',
+			title: 'every element with HAS_OPTION_SET carries codeListName (the named list\'s name; none for an anonymous list) and codeListDocumentation (the list\'s own documentation, absent when it has none), read through the edge; no other element carries either; neither is a declared text property; the counts EQUAL the frozen literal',
+			twinNameList: ['namedCodeListDocumentationDropped', 'codeListDocumentationDeclaredAsText'],
+			evaluate: (subject, callback) => {
+				if (walkLiteralSet === undefined || walkLiteralSet.codeListFactCount === undefined) {
+					callback('', missingLiteralResult('codeListFactCount'));
+					return;
+				}
+				forgeOrFail({ subject }, callback, (forged) => {
+					const nodeByStableId = {};
+					forged.nodes.forEach((oneNode) => {
+						nodeByStableId[oneNode.stableId] = oneNode;
+					});
+					const codeListByElement = {};
+					forged.edges.filter((oneEdge) => oneEdge.type === EDGE_TYPES.HAS_OPTION_SET).forEach((oneEdge) => {
+						codeListByElement[oneEdge.fromRef.id] = nodeByStableId[oneEdge.toRef.id];
+					});
+					const wrongList = [];
+					const factCount = { namedCodeList: 0, anonymousCodeList: 0, withCodeListDocumentation: 0 };
+					forged.nodes.filter((oneNode) => labelSuffixOf(oneNode) === 'Element').forEach((oneNode) => {
+						const codeListNode = codeListByElement[oneNode.stableId];
+						const props = oneNode.properties;
+						const expected = codeListNode === undefined ? {} : { codeListName: codeListNode.properties.documentPosition === undefined ? undefined : codeListNode.properties.name, codeListDocumentation: codeListNode.properties.documentation };
+						if (props.codeListName !== expected.codeListName || props.codeListDocumentation !== expected.codeListDocumentation) {
+							wrongList.push(`${oneNode.stableId} carries ${JSON.stringify([props.codeListName, (props.codeListDocumentation || '').slice(0, 30)])}`);
+						}
+						if (codeListNode !== undefined) {
+							factCount[codeListNode.properties.documentPosition === undefined ? 'anonymousCodeList' : 'namedCodeList']++;
+							factCount.withCodeListDocumentation += props.codeListDocumentation === undefined ? 0 : 1;
+						}
+					});
+					const textPropertyListByRole = subject.forgeDeclaration.embedTextDeclaration.textPropertyListByRole;
+					const declaredAsText = Object.keys(textPropertyListByRole).filter((oneRole) => textPropertyListByRole[oneRole].some((onePropertyName) => CODE_LIST_FACT_NAME_LIST.indexOf(onePropertyName) !== -1));
+					const pass = wrongList.length === 0 && declaredAsText.length === 0 && sortedCountText(factCount) === sortedCountText(walkLiteralSet.codeListFactCount);
+					callback('', { pass, detail: `${sortedCountText(factCount)}; declared as text by ${declaredAsText.length ? declaredAsText.join(', ') : 'no role'}; wrong ${wrongList.length ? wrongList.slice(0, 3).join('; ') : 'none'}` });
+				});
+			},
+		},
+	];
+	registerWalkTwin(CODE_LIST_FACTS_GATE_ID, 'codeListFactsOnTypedElements', 'namedCodeListDocumentationDropped', 'productionMutation', (subject) =>
+		addMutation(subject, 'hooksMutationList', { modulePath: WALK_PATH, find: 'codeListDocumentation: nonBlankOrNull(target.definition.documentation) }', replace: 'codeListDocumentation: null }' }),
+	);
+	registerWalkTwin(CODE_LIST_FACTS_GATE_ID, 'codeListFactsOnTypedElements', 'codeListDocumentationDeclaredAsText', 'inputFault', (subject) => ({
+		...subject,
+		forgeDeclaration: {
+			...subject.forgeDeclaration,
+			embedTextDeclaration: { ...subject.forgeDeclaration.embedTextDeclaration, textPropertyListByRole: { ...subject.forgeDeclaration.embedTextDeclaration.textPropertyListByRole, [DME_ROLES.PROPERTY]: subject.forgeDeclaration.embedTextDeclaration.textPropertyListByRole[DME_ROLES.PROPERTY].concat(['codeListDocumentation']) } },
+		},
+	}));
+
 	const walkGateDeclarationList = [
 		{ gateId: IDENTITY_GATE_ID, title: 'F6 identity: unique, patterned, deterministic', conjunctList: identityConjunctList },
 		{ gateId: ABSENT_GATE_ID, title: 'F7 absent is absent', conjunctList: absentConjunctList },
@@ -1106,6 +1162,7 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 		{ gateId: BRIDGING_GATE_ID, title: 'F14 no bridging', conjunctList: bridgingConjunctList },
 		{ gateId: SEQUENCE_GATE_ID, title: 'F22 sequence', conjunctList: sequenceConjunctList },
 		{ gateId: DECLARATIONS_GATE_ID, title: 'F2 declarations (extra): one node per declaration', conjunctList: declarationsConjunctList },
+		{ gateId: CODE_LIST_FACTS_GATE_ID, title: 'F2 code-list facts (extra): the list an element is typed by, on the element', conjunctList: codeListFactsConjunctList },
 	];
 	const makeWalkSubject = () => ({ ...makeSubject(), secondReleaseStandardName: SECOND_RELEASE_STANDARD_NAME });
 
@@ -1831,7 +1888,7 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 		{ harness, familyName: `${standardKey} release gates (phase F1)`, gateDeclarationList, twinRegistry, makeSubject, cloneSubject, expectedConjunctCount: 17, expectedTwinCount: 17 },
 		() => {
 			runGateFamily(
-				{ harness, familyName: `${standardKey} walk gates (phase F2)`, gateDeclarationList: walkGateDeclarationList, twinRegistry: walkTwinRegistry, makeSubject: makeWalkSubject, cloneSubject, expectedConjunctCount: 15, expectedTwinCount: 17 },
+				{ harness, familyName: `${standardKey} walk gates (phase F2)`, gateDeclarationList: walkGateDeclarationList, twinRegistry: walkTwinRegistry, makeSubject: makeWalkSubject, cloneSubject, expectedConjunctCount: 16, expectedTwinCount: 19 },
 				() => {
 					runGateFamily(
 						{ harness, familyName: `${standardKey} reachability gates (phase F3)`, gateDeclarationList: reachabilityGateDeclarationList, twinRegistry: reachabilityTwinRegistry, makeSubject: makeReachabilitySubject, cloneSubject: cloneReachabilitySubject, expectedConjunctCount: 12, expectedTwinCount: 14 },
