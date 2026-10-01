@@ -301,7 +301,9 @@ const FORGES_DIR = path.join(TREE_ROOT, 'forges');
 // D1 (2026-09-29, supervisor-authorised): 3 → 4, the SIF derived plugin (forges/sif260928/bridges/) declares it too.
 // PESC B1 (2026-10-01, QUIET_ORBIT-authorised): 4 → 5, the PESC College Transcript 1.8.0 derived plugin
 // (forges/pesccollegetranscript1v8v0/bridges/) declares it too.
-const EXPECTED_SHIPPED_DECLARING_PLUGIN_COUNT = 5;
+// PESC lane E (2026-10-01, DAWN_CHORUS; roster literals pre-authorised, CAMPAIGN-goldJevFour, NOTES 21): 5 → 6, the PESC
+// Academic ePortfolio 1.0.0 derived plugin declares it too. Lanes B1x (+3) and B2x (+2) move the same count on their branches.
+const EXPECTED_SHIPPED_DECLARING_PLUGIN_COUNT = 6;
 const EMBED_TEXT_VOTE_RETRIEVAL = Object.freeze({
 	method: 'embedTextVote-v1',
 	hitsPerText: 20,
