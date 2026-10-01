@@ -1562,6 +1562,267 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 		{ gateId: OCCURRENCE_TEXTS_GATE_ID, title: "F8's occurrence conjunct, and the documentation of what is reachable", conjunctList: occurrenceTextsConjunctList },
 		{ gateId: DIGEST_GATE_ID, title: "F6 digest (extra): a global element's digest covers its type", conjunctList: digestConjunctList },
 	];
+	// =====================================================================
+	// PHASE F4 FAMILY — the round-trip pair and its hermetic gates (WORKORDER §3 F4): F11 round trip over
+	// the graph double, F12 the regenerated files compile, F20 derived structure out of the round trip;
+	// and QUIET_ORBIT's 2026-10-01 ruling (the three closed losses and the parser's attribute census).
+	// =====================================================================
+	const roundTripLiteralSet = expectedLiteralSet === undefined ? undefined : expectedLiteralSet.roundTrip;
+	const roundTripTwinRegistry = makeTwinRegistry();
+	const registerRoundTripTwin = (gateId, conjunctId, twinName, leverKind, run) => roundTripTwinRegistry.register({ gateId, conjunctId, twinName, leverKind, shippedConfig: true, run });
+	const ROUND_TRIP_PAIR_PATH = path.join(LIBRARY_DIR, 'roundTripPair.js');
+	const ROUND_TRIP_VALIDATOR_FOR_PATH = path.join(LIBRARY_DIR, 'roundTripValidatorFor.js');
+	const roundTripHarnessLib = require(path.join(FORGE_FRAMEWORK_DIR, 'roundTripHarness', 'roundTripHarness'))();
+	const childProcess = require('child_process');
+	const missingRoundTripLiteralResult = () => ({ pass: false, detail: `expectedReleaseLiterals.json has no roundTrip block for ${releaseName}` });
+	const XMLLINT_PROBE_TEXT = '<?xml version="1.0"?><roundTripProbe/>\n';
+	const XMLLINT_PROBE_FILE_NAME = 'roundTripProbe.xml';
+	const DROPPED_DEFINITION_OPEN_TEXT = '<xs:simpleType name="DocumentCompleteCodeType">';
+
+	const roundTripPairOf = (subject) => (subject.roundTripMutationList.length ? moduleDouble.loadWithMutations({ modulePath: ROUND_TRIP_PAIR_PATH, mutationList: subject.roundTripMutationList }) : require(ROUND_TRIP_PAIR_PATH));
+	const roundTripValidatorOf = (subject) => (subject.roundTripMutationList.length ? moduleDouble.loadWithMutations({ modulePath: ROUND_TRIP_VALIDATOR_FOR_PATH, mutationList: subject.roundTripMutationList }) : require(ROUND_TRIP_VALIDATOR_FOR_PATH)).makeRoundTripValidator({ forgeDeclaration: subject.forgeDeclaration });
+
+	// the double's faults: a forge result with one code removed, or one invented code added
+	const firstCodeOf = (forged) => forged.nodes.find((oneNode) => labelSuffixOf(oneNode) === 'Code');
+	const DOUBLE_FAULT_BY_NAME = Object.freeze({
+		oneCodeDeleted: (forged) => {
+			const deletedStableId = firstCodeOf(forged).stableId;
+			return { nodes: forged.nodes.filter((oneNode) => oneNode.stableId !== deletedStableId), edges: forged.edges.filter((oneEdge) => oneEdge.fromRef.id !== deletedStableId && oneEdge.toRef.id !== deletedStableId) };
+		},
+		oneCodeInjected: (forged) => {
+			const modelCode = firstCodeOf(forged);
+			const injectedProperties = { ...modelCode.properties, value: 'INJECTED', codePosition: 9999 };
+			delete injectedProperties.documentation;
+			delete injectedProperties.documentationValueList;
+			return { nodes: forged.nodes.concat([{ ...modelCode, stableId: `${modelCode.stableId}Injected`, properties: injectedProperties }]), edges: forged.edges };
+		},
+	});
+	const doubleOf = ({ subject, forged }) => roundTripHarnessLib.graphDoubleFrom({ forgeResult: subject.doubleFaultName === null ? forged : DOUBLE_FAULT_BY_NAME[subject.doubleFaultName](forged) });
+
+	// the pair's two sides over the double, as the validator would see them
+	const sideStatementsOf = ({ subject }, callback, onSides) => {
+		forgeOrFail({ subject }, callback, (forged) => {
+			const pair = roundTripPairOf(subject).makeRoundTripPair({ labelPrefix: releaseDeclarationData.labelPrefix });
+			const verifiedFileList = parseChecksumFile(fs.readFileSync(path.join(subject.snapshotDirPath, CHECKSUM_FILE_NAME), 'utf8')).map((oneEntry) => oneEntry.relativePath);
+			pair.canonicalizeSource({ snapshotPath: subject.snapshotDirPath, verifiedFileList }, (sourceError, sourceSide) => {
+				if (sourceError) {
+					callback('', { pass: false, detail: `canonicalizeSource refused: ${sourceError.slice(0, 300)}` });
+					return;
+				}
+				pair.emitFromGraph({ reader: doubleOf({ subject, forged }) }, (emitError, graphSide) => {
+					if (emitError || graphSide.fault !== undefined) {
+						callback('', { pass: false, detail: `emitFromGraph: ${(emitError || graphSide.fault).slice(0, 300)}` });
+						return;
+					}
+					onSides({ forged, pair, sourceStatements: sourceSide.statements, graphStatements: graphSide.statements, sourceStats: sourceSide.stats });
+				});
+			});
+		});
+	};
+	const compareText = (leftText, rightText) => (leftText < rightText ? -1 : leftText > rightText ? 1 : 0);
+	const sameStatement = (leftStatement, rightStatement) => rightStatement !== undefined && JSON.stringify(leftStatement) === JSON.stringify(rightStatement);
+
+	// ---- F11-ROUND-TRIP
+	const ROUND_TRIP_GATE_ID = 'F11-ROUND-TRIP';
+	const NESTED_CHOICE_STATEMENT_RE = /\/\d+:(sequence|choice)\/\d+:choice$/;
+	const FORBIDDEN_CANONICALIZER_REQUIRE_RE = /require\([^)]*(xsdTree|xsdParser|resolutionTable|walk|definitionDigest|reachability)['"]?\)/;
+	const roundTripConjunctList = [
+		{
+			conjunctId: 'hermeticRoundTripClean',
+			title: "the bundle's round-trip validator over the graph double: inventedTotal 0, contentGapTotal 0, roundTripClean, and explicitlyOmittedTotal EQUALS the literal and the canonicalizer's own count of comments, whitespace runs and processing instructions; the verdict file is written",
+			twinNameList: ['oneCodeDeletedFromDouble', 'oneCodeInjectedIntoDouble'],
+			evaluate: (subject, callback) => {
+				if (roundTripLiteralSet === undefined) {
+					callback('', missingRoundTripLiteralResult());
+					return;
+				}
+				forgeOrFail({ subject }, callback, (forged) => {
+					const outputPath = makeScratchRoot(`${standardKey}RoundTrip-`);
+					roundTripValidatorOf(subject).validateWithReader({ reader: doubleOf({ subject, forged }), snapshotPath: subject.snapshotDirPath, outputPath }, (validateError, verdict) => {
+						if (validateError) {
+							callback('', { pass: false, detail: `validator refused: ${validateError.slice(0, 400)}` });
+							return;
+						}
+						const omittedCountByKind = verdict.census.sourceStats.omittedCountByKind;
+						const canonicalizerOmittedCount = Object.keys(omittedCountByKind).reduce((soFar, oneKind) => soFar + omittedCountByKind[oneKind], 0);
+						const verdictWritten = fs.existsSync(path.join(outputPath, roundTripHarnessLib.VERDICT_FILE_NAME));
+						const pass = verdict.inventedTotal === roundTripLiteralSet.inventedTotal && verdict.contentGapTotal === roundTripLiteralSet.contentGapTotal && verdict.roundTripClean === true && verdict.explicitlyOmittedTotal === roundTripLiteralSet.explicitlyOmittedTotal && verdict.explicitlyOmittedTotal === canonicalizerOmittedCount && sortedCountText(omittedCountByKind) === sortedCountText(roundTripLiteralSet.explicitlyOmittedCountByKind) && verdictWritten;
+						const firstLost = verdict.lostList.find((oneLost) => oneLost.lostCategory === 'contentGap');
+						callback('', { pass, detail: `invented ${verdict.inventedTotal}; contentGap ${verdict.contentGapTotal}; explicitlyOmitted ${verdict.explicitlyOmittedTotal} ${sortedCountText(omittedCountByKind)}; clean ${verdict.roundTripClean}; verdict written ${verdictWritten}${verdict.inventedList.length ? `; first invented ${verdict.inventedList[0].statementKey}` : ''}${firstLost ? `; first gap ${firstLost.statementKey}` : ''}` });
+					});
+				});
+			},
+		},
+		{
+			conjunctId: 'canonicalizerIsNotTheParser',
+			title: "roundTripPair.js requires none of the forge's readers (xsdTree, xsdParser, resolutionTable, walk, definitionDigest, reachability): the proof cannot show the forge agreeing with itself",
+			twinNameList: ['canonicalizerRequiresTheParser'],
+			evaluate: (subject, callback) => {
+				const pairText = subject.roundTripMutationList.reduce((soFar, oneMutation) => (oneMutation.modulePath === ROUND_TRIP_PAIR_PATH ? soFar.replace(oneMutation.find, oneMutation.replace) : soFar), fs.readFileSync(ROUND_TRIP_PAIR_PATH, 'utf8'));
+				const requireTextList = pairText.match(/require\([^)]*\)/g) || [];
+				const forbiddenText = requireTextList.find((oneRequireText) => FORBIDDEN_CANONICALIZER_REQUIRE_RE.test(oneRequireText));
+				callback('', { pass: forbiddenText === undefined && requireTextList.length > 0, detail: `requires ${requireTextList.join(', ')}; forbidden ${forbiddenText === undefined ? 'none' : forbiddenText}` });
+			},
+		},
+		{
+			conjunctId: 'nestedChoiceRebuilt',
+			title: 'every xs:choice nested in a compositor (NOTES-supervisor item 6: elements under it are stamped normative, so contentModelShape must keep the choice) is regenerated in its place with its attributes; the count EQUALS the literal',
+			twinNameList: ['nestedChoiceFlattenedToSequence'],
+			evaluate: (subject, callback) => {
+				if (roundTripLiteralSet === undefined) {
+					callback('', missingRoundTripLiteralResult());
+					return;
+				}
+				sideStatementsOf({ subject }, callback, ({ sourceStatements, graphStatements }) => {
+					const nestedChoiceKeyList = [...sourceStatements.keys()].filter((oneKey) => NESTED_CHOICE_STATEMENT_RE.test(oneKey));
+					const unrebuiltKeyList = nestedChoiceKeyList.filter((oneKey) => !sameStatement(sourceStatements.get(oneKey), graphStatements.get(oneKey)));
+					callback('', { pass: nestedChoiceKeyList.length === roundTripLiteralSet.nestedChoiceCount && unrebuiltKeyList.length === 0, detail: `${nestedChoiceKeyList.length} nested choices (literal ${roundTripLiteralSet.nestedChoiceCount}); not rebuilt ${unrebuiltKeyList.length ? unrebuiltKeyList.slice(0, 2).join(' | ') : 'none'}` });
+				});
+			},
+		},
+		{
+			conjunctId: 'rulingLossesRegenerated',
+			title: "the three losses the round trip found and the ruling closed are regenerated: every element's form attribute, every empty enumeration value and every empty documentation (counts EQUAL the literals)",
+			twinNameList: ['formDroppedByWalk', 'emptyValueFlagDroppedByWalk', 'codeDocumentationListDroppedByWalk'],
+			evaluate: (subject, callback) => {
+				if (roundTripLiteralSet === undefined) {
+					callback('', missingRoundTripLiteralResult());
+					return;
+				}
+				sideStatementsOf({ subject }, callback, ({ sourceStatements, graphStatements }) => {
+					const keysWhere = (predicate) => [...sourceStatements.entries()].filter((oneEntry) => predicate(oneEntry[1])).map((oneEntry) => oneEntry[0]);
+					const hasAttribute = (oneStatement, attributeName, attributeValue) => Array.isArray(oneStatement.attributeList) && oneStatement.attributeList.some((onePair) => onePair[0] === attributeName && (attributeValue === undefined || onePair[1] === attributeValue));
+					const caseKeyListByName = {
+						formElementCount: keysWhere((oneStatement) => oneStatement.tag === 'element' && hasAttribute(oneStatement, 'form')),
+						emptyEnumerationValueCount: keysWhere((oneStatement) => oneStatement.tag === 'enumeration' && hasAttribute(oneStatement, 'value', '')),
+						emptyDocumentationCount: keysWhere((oneStatement) => oneStatement.tag === 'documentation' && oneStatement.text === ''),
+					};
+					const failingList = [];
+					Object.keys(caseKeyListByName).forEach((caseName) => {
+						const caseKeyList = caseKeyListByName[caseName];
+						const unregeneratedKey = caseKeyList.find((oneKey) => !sameStatement(sourceStatements.get(oneKey), graphStatements.get(oneKey)));
+						if (caseKeyList.length !== roundTripLiteralSet[caseName] || unregeneratedKey !== undefined) {
+							failingList.push(`${caseName} ${caseKeyList.length} (literal ${roundTripLiteralSet[caseName]})${unregeneratedKey ? ` not regenerated ${unregeneratedKey}` : ''}`);
+						}
+					});
+					callback('', { pass: failingList.length === 0, detail: `${Object.keys(caseKeyListByName).map((caseName) => `${caseName} ${caseKeyListByName[caseName].length}`).join(', ')}; failing ${failingList.length ? failingList.join('; ') : 'none'}` });
+				});
+			},
+		},
+		{
+			conjunctId: 'untaughtAttributeRefusedByCensus',
+			title: "a scratch snapshot whose root NoteMessage element carries an untaught attribute (block=\"#all\") is REFUSED BY NAME by the parser's attribute census (QUIET_ORBIT ruling: no silent attribute drop)",
+			twinNameList: ['attributeCensusDisabled'],
+			evaluate: (subject, callback) => {
+				const scratchSnapshotDirPath = makeScratchSnapshot({ baseSnapshotDirPath: subject.snapshotDirPath, alterTextByFileName: { [rootFileName]: (fileText, fileName) => replacedOnce({ fileText, findText: REMOVED_ELEMENT_TEXT, replaceText: REMOVED_ELEMENT_TEXT.replace('<xs:element name="NoteMessage"', '<xs:element block="#all" name="NoteMessage"'), fileName }) }, resealManifestEntry: true, resealChecksums: true });
+				forgeSnapshot({ subject, snapshotDirPath: scratchSnapshotDirPath }, (forgeError, forged) => {
+					callback('', { pass: refusedLike({ forgeError, refusalRe: /xsdParser REFUSES: file '[^']+': attribute 'block' on xs:element \(a localElement/ }), detail: refusalDetail(forgeError, forged) });
+				});
+			},
+		},
+	];
+	registerRoundTripTwin(ROUND_TRIP_GATE_ID, 'hermeticRoundTripClean', 'oneCodeDeletedFromDouble', 'inputFault', (subject) => ({ ...subject, doubleFaultName: 'oneCodeDeleted' }));
+	registerRoundTripTwin(ROUND_TRIP_GATE_ID, 'hermeticRoundTripClean', 'oneCodeInjectedIntoDouble', 'inputFault', (subject) => ({ ...subject, doubleFaultName: 'oneCodeInjected' }));
+	registerRoundTripTwin(ROUND_TRIP_GATE_ID, 'canonicalizerIsNotTheParser', 'canonicalizerRequiresTheParser', 'productionMutation', (subject) => addMutation(subject, 'roundTripMutationList', { modulePath: ROUND_TRIP_PAIR_PATH, find: "const sax = require('sax');", replace: "const sax = require('sax');\nconst forgeTreeReader = require('./xsdTree');" }));
+	registerRoundTripTwin(ROUND_TRIP_GATE_ID, 'nestedChoiceRebuilt', 'nestedChoiceFlattenedToSequence', 'productionMutation', (subject) => addMutation(subject, 'roundTripMutationList', { modulePath: ROUND_TRIP_PAIR_PATH, find: '						return compositorText({ shape: oneParticle, ownerStableId });', replace: "						return compositorText({ shape: { ...oneParticle, compositor: 'sequence' }, ownerStableId });" }));
+	registerRoundTripTwin(ROUND_TRIP_GATE_ID, 'rulingLossesRegenerated', 'formDroppedByWalk', 'productionMutation', (subject) => addMutation(subject, 'hooksMutationList', { modulePath: WALK_PATH, find: '					formAsWritten: oneElement.formAsWritten,', replace: '					formAsWritten: null,' }));
+	registerRoundTripTwin(ROUND_TRIP_GATE_ID, 'rulingLossesRegenerated', 'emptyValueFlagDroppedByWalk', 'productionMutation', (subject) => addMutation(subject, 'hooksMutationList', { modulePath: WALK_PATH, find: "valueIsEmptyString: oneValue.value === '' ? true : null,", replace: 'valueIsEmptyString: null,' }));
+	registerRoundTripTwin(ROUND_TRIP_GATE_ID, 'rulingLossesRegenerated', 'codeDocumentationListDroppedByWalk', 'productionMutation', (subject) => addMutation(subject, 'hooksMutationList', { modulePath: WALK_PATH, find: 'documentationValueList: oneValue.documentationValues, codePosition }', replace: 'codePosition }' }));
+	registerRoundTripTwin(ROUND_TRIP_GATE_ID, 'untaughtAttributeRefusedByCensus', 'attributeCensusDisabled', 'productionMutation', (subject) => addMutation(subject, 'hooksMutationList', { modulePath: XSD_PARSER_PATH, find: '			if (untaughtAttribute !== null) {', replace: '			if (false) {' }));
+
+	// ---- F12-REGENERATED-COMPILE
+	const COMPILE_GATE_ID = 'F12-REGENERATED-COMPILE';
+	const xmllintExitOf = ({ schemaDirPath }, onExit) => {
+		fs.writeFileSync(path.join(schemaDirPath, XMLLINT_PROBE_FILE_NAME), XMLLINT_PROBE_TEXT);
+		childProcess.execFile('xmllint', ['--nonet', '--noout', '--schema', rootFileName, XMLLINT_PROBE_FILE_NAME], { cwd: schemaDirPath }, (execError, stdoutText, stderrText) => {
+			onExit({ exitCode: execError ? execError.code : 0, stderrText: String(stderrText).trim() });
+		});
+	};
+	const compileConjunctList = [
+		{
+			conjunctId: 'regeneratedRootCompiles',
+			title: "the files regenerated from the graph double compile: xmllint --nonet --schema <root> over a probe document exits 3 ('fails to validate', the schema compiled), as the source folder does",
+			twinNameList: ['oneDefinitionDroppedFromRegeneration'],
+			evaluate: (subject, callback) => {
+				if (roundTripLiteralSet === undefined) {
+					callback('', missingRoundTripLiteralResult());
+					return;
+				}
+				forgeOrFail({ subject }, callback, (forged) => {
+					const pair = roundTripPairOf(subject).makeRoundTripPair({ labelPrefix: releaseDeclarationData.labelPrefix });
+					pair.regenerateFromGraph({ reader: doubleOf({ subject, forged }) }, (regenerateError, regenerated) => {
+						if (regenerateError || regenerated.fault !== undefined) {
+							callback('', { pass: false, detail: `regeneration: ${regenerateError || regenerated.fault}` });
+							return;
+						}
+						const regeneratedDirPath = makeScratchRoot(`${standardKey}Regenerated-`);
+						Object.keys(regenerated.fileTextByName).forEach((oneFileName) => {
+							const fileText = regenerated.fileTextByName[oneFileName];
+							const droppedStart = subject.dropRegeneratedDefinition ? fileText.indexOf(DROPPED_DEFINITION_OPEN_TEXT) : -1;
+							fs.writeFileSync(path.join(regeneratedDirPath, oneFileName), droppedStart === -1 ? fileText : fileText.slice(0, droppedStart) + fileText.slice(fileText.indexOf('</xs:simpleType>', droppedStart) + '</xs:simpleType>'.length));
+						});
+						const sourceCopyDirPath = makeScratchRoot(`${standardKey}SourceCopy-`);
+						xsdFileNameList.forEach((oneFileName) => fs.copyFileSync(path.join(subject.snapshotDirPath, oneFileName), path.join(sourceCopyDirPath, oneFileName)));
+						xmllintExitOf({ schemaDirPath: regeneratedDirPath }, (regeneratedResult) => {
+							xmllintExitOf({ schemaDirPath: sourceCopyDirPath }, (sourceResult) => {
+								const pass = regeneratedResult.exitCode === roundTripLiteralSet.xmllintProbeExitCode && sourceResult.exitCode === roundTripLiteralSet.xmllintProbeExitCode;
+								callback('', { pass, detail: `regenerated exit ${regeneratedResult.exitCode} (${regeneratedResult.stderrText.split('\n').slice(-1)[0].slice(0, 160)}); source exit ${sourceResult.exitCode}; literal ${roundTripLiteralSet.xmllintProbeExitCode}` });
+							});
+						});
+					});
+				});
+			},
+		},
+	];
+	registerRoundTripTwin(COMPILE_GATE_ID, 'regeneratedRootCompiles', 'oneDefinitionDroppedFromRegeneration', 'inputFault', (subject) => ({ ...subject, dropRegeneratedDefinition: true }));
+
+	// ---- F20-DERIVED-OUT
+	const DERIVED_GATE_ID = 'F20-DERIVED-OUT';
+	const RULED_DERIVED_SUFFIX_LIST = ['Root', 'Release', 'Occurrence', 'EmbedText'];
+	const derivedConjunctList = [
+		{
+			conjunctId: 'derivedStructureNeverEmitted',
+			title: "the pair's disposition table names Root, Release, Occurrence and EmbedText as derived structure, and the emitter reads none of them: the statements from the double EQUAL those from the double with every derived node (and its edges) removed",
+			twinNameList: ['statementEmittedFromOccurrence'],
+			evaluate: (subject, callback) => {
+				forgeOrFail({ subject }, callback, (forged) => {
+					const pairModule = roundTripPairOf(subject);
+					const pair = pairModule.makeRoundTripPair({ labelPrefix: releaseDeclarationData.labelPrefix });
+					const derivedSuffixList = Object.keys(pairModule.GRAPH_LABEL_SUFFIX_DISPOSITION_TABLE).filter((oneSuffix) => pairModule.GRAPH_LABEL_SUFFIX_DISPOSITION_TABLE[oneSuffix] === pairModule.NODE_DISPOSITION.DERIVED_STRUCTURE).sort();
+					const derivedStableIdSet = new Set(forged.nodes.filter((oneNode) => derivedSuffixList.indexOf(labelSuffixOf(oneNode)) !== -1 || oneNode.labels.indexOf(subject.forgeDeclaration.rootLabel) !== -1).map((oneNode) => oneNode.stableId));
+					const strippedForged = { nodes: forged.nodes.filter((oneNode) => !derivedStableIdSet.has(oneNode.stableId)), edges: forged.edges.filter((oneEdge) => !derivedStableIdSet.has(oneEdge.fromRef.id) && !derivedStableIdSet.has(oneEdge.toRef.id)) };
+					const statementText = (statements) => JSON.stringify([...statements.entries()].sort((left, right) => compareText(left[0], right[0])));
+					pair.emitFromGraph({ reader: roundTripHarnessLib.graphDoubleFrom({ forgeResult: forged }) }, (fullError, fullSide) => {
+						pair.emitFromGraph({ reader: roundTripHarnessLib.graphDoubleFrom({ forgeResult: strippedForged }) }, (strippedError, strippedSide) => {
+							if (fullError || strippedError || fullSide.fault !== undefined || strippedSide.fault !== undefined) {
+								callback('', { pass: false, detail: `emitFromGraph: ${fullError || strippedError || fullSide.fault || strippedSide.fault}` });
+								return;
+							}
+							const identical = statementText(fullSide.statements) === statementText(strippedSide.statements);
+							const tableHolds = JSON.stringify(derivedSuffixList) === JSON.stringify(RULED_DERIVED_SUFFIX_LIST.slice().sort());
+							callback('', { pass: identical && tableHolds, detail: `derived kinds ${derivedSuffixList.join(', ')}; ${derivedStableIdSet.size} derived nodes removed; statements full ${fullSide.statements.size}, stripped ${strippedSide.statements.size}, identical ${identical}` });
+						});
+					});
+				});
+			},
+		},
+	];
+	registerRoundTripTwin(DERIVED_GATE_ID, 'derivedStructureNeverEmitted', 'statementEmittedFromOccurrence', 'productionMutation', (subject) =>
+		addMutation(subject, 'roundTripMutationList', {
+			modulePath: ROUND_TRIP_PAIR_PATH,
+			find: '		placedList.sort((left, right) => left.documentPosition - right.documentPosition);',
+			replace: "		const derivedOccurrenceNode = schemaFileNode.properties.layer === 'message' ? nodes.find((oneNode) => oneNode.labels.indexOf(`${labelPrefix}Occurrence`) !== -1) : undefined;\n		if (derivedOccurrenceNode !== undefined) { placedList.push({ documentPosition: 1e9, placedText: `<xs:element name=\"${derivedOccurrenceNode.properties.name}FromOccurrence\"/>` }); }\n		placedList.sort((left, right) => left.documentPosition - right.documentPosition);",
+		}),
+	);
+
+	const roundTripGateDeclarationList = [
+		{ gateId: ROUND_TRIP_GATE_ID, title: 'F11 round trip, hermetic: the graph gives the files back (and the ruling\'s closed losses and attribute census)', conjunctList: roundTripConjunctList },
+		{ gateId: COMPILE_GATE_ID, title: 'F12 the regenerated files compile', conjunctList: compileConjunctList },
+		{ gateId: DERIVED_GATE_ID, title: 'F20 derived structure out of the round trip', conjunctList: derivedConjunctList },
+	];
+	const makeRoundTripSubject = () => ({ ...makeSubject(), roundTripMutationList: [], doubleFaultName: null, dropRegeneratedDefinition: false });
+	const cloneRoundTripSubject = (subject) => ({ ...cloneSubject(subject), roundTripMutationList: subject.roundTripMutationList.slice() });
+
 	const makeReachabilitySubject = () => ({ ...makeSubject(), scopeToolMutationList: [] });
 	const cloneReachabilitySubject = (subject) => ({ ...cloneSubject(subject), scopeToolMutationList: subject.scopeToolMutationList.slice() });
 
@@ -1575,8 +1836,13 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 					runGateFamily(
 						{ harness, familyName: `${standardKey} reachability gates (phase F3)`, gateDeclarationList: reachabilityGateDeclarationList, twinRegistry: reachabilityTwinRegistry, makeSubject: makeReachabilitySubject, cloneSubject: cloneReachabilitySubject, expectedConjunctCount: 12, expectedTwinCount: 14 },
 						() => {
-							scratchRootPathList.forEach((oneScratchRootPath) => fs.rmSync(oneScratchRootPath, { recursive: true, force: true }));
-							whenDone();
+							runGateFamily(
+								{ harness, familyName: `${standardKey} round-trip gates (phase F4)`, gateDeclarationList: roundTripGateDeclarationList, twinRegistry: roundTripTwinRegistry, makeSubject: makeRoundTripSubject, cloneSubject: cloneRoundTripSubject, expectedConjunctCount: 7, expectedTwinCount: 10 },
+								() => {
+									scratchRootPathList.forEach((oneScratchRootPath) => fs.rmSync(oneScratchRootPath, { recursive: true, force: true }));
+									whenDone();
+								},
+							);
 						},
 					);
 				},

@@ -116,9 +116,12 @@ const CARRY_LIST_BY_NODE_KIND = Object.freeze({
 	dataType: Object.freeze(SOURCE_CARRY_LIST.concat(['targetNamespace', 'documentation', 'documentationValueList', 'baseTypeQName', 'derivationVariety', 'facets'])),
 	group: Object.freeze(SOURCE_CARRY_LIST.concat(['targetNamespace', 'documentation', 'documentationValueList', 'contentModelShape'])),
 	globalElement: Object.freeze(SOURCE_CARRY_LIST.concat(['targetNamespace', 'documentation', 'typeQName', 'typeAsWritten', 'typeName', 'substitutionGroupQName', 'abstractAsWritten', 'nillableAsWritten'], PATH_CARRY_LIST)),
-	element: Object.freeze(SOURCE_CARRY_LIST.concat(['documentation', 'typeQName', 'typeAsWritten', 'typeName', 'minOccursAsWritten', 'maxOccursAsWritten', 'nillableAsWritten', 'defaultAsWritten', 'fixedAsWritten', 'owningTypeName', 'effectiveDocumentation', 'documentationSource'], PATH_CARRY_LIST)),
+	element: Object.freeze(SOURCE_CARRY_LIST.concat(['documentation', 'typeQName', 'typeAsWritten', 'typeName', 'minOccursAsWritten', 'maxOccursAsWritten', 'nillableAsWritten', 'formAsWritten', 'defaultAsWritten', 'fixedAsWritten', 'owningTypeName', 'effectiveDocumentation', 'documentationSource'], PATH_CARRY_LIST)),
 	attribute: Object.freeze(SOURCE_CARRY_LIST.concat(['documentation', 'typeQName', 'typeAsWritten', 'typeName', 'useAsWritten', 'owningTypeName', 'effectiveDocumentation', 'documentationSource'])),
-	code: Object.freeze(SOURCE_CARRY_LIST.concat(['value', 'documentation', 'codePosition'])),
+	// a code whose value is the empty string carries no value (absent is absent, gate F7) and
+	// valueIsEmptyString true, so the round trip can write value="" without guessing (phase F4 ruling);
+	// documentationValueList is every documentation string as written, an empty one included
+	code: Object.freeze(SOURCE_CARRY_LIST.concat(['value', 'valueIsEmptyString', 'documentation', 'documentationValueList', 'codePosition'])),
 	occurrence: Object.freeze(['contextPath', 'contextText', 'sectionPath', 'documentDepth', 'reachableVia', 'xsiTypeName']),
 });
 
@@ -326,7 +329,7 @@ const emitReleaseGraph = ({ xsdSet, loadedManifestEntry, standardKey, nodeKindTa
 					stableId: codeStableId,
 					name: oneValue.value,
 					parentId: codeListStableId,
-					facts: { sourceFileName: artifact.filename, releaseIndependentId: releaseIndependentIdOf(codeStableId), definitionDigest: definitionDigestOf(oneValue), reachableFromRoot, value: oneValue.value, documentation: nonBlankOrNull(oneValue.documentation), codePosition },
+					facts: { sourceFileName: artifact.filename, releaseIndependentId: releaseIndependentIdOf(codeStableId), definitionDigest: definitionDigestOf(oneValue), reachableFromRoot, value: oneValue.value, valueIsEmptyString: oneValue.value === '' ? true : null, documentation: nonBlankOrNull(oneValue.documentation), documentationValueList: oneValue.documentationValues, codePosition },
 				});
 				addEdge({ edgeType: EDGE_TYPES.HAS_VALUE, fromStableId: codeListStableId, toStableId: codeStableId });
 				codeStableIdList.push(codeStableId);
@@ -431,6 +434,7 @@ const emitReleaseGraph = ({ xsdSet, loadedManifestEntry, standardKey, nodeKindTa
 					minOccursAsWritten: oneElement.minOccursAsWritten,
 					maxOccursAsWritten: oneElement.maxOccursAsWritten,
 					nillableAsWritten: oneElement.nillableAsWritten,
+					formAsWritten: oneElement.formAsWritten,
 					defaultAsWritten: oneElement.defaultAsWritten,
 					fixedAsWritten: oneElement.fixedAsWritten,
 					owningTypeName,

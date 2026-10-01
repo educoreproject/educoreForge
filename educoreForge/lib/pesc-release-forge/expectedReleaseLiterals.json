@@ -233,6 +233,24 @@
 						"own": 4
 					}
 				}
+			},
+			"roundTrip": {
+				"literalSource": "WORKORDER section 3 F4 (invented 0, contentGap 0, xmllint exit 3 with a probe); every other figure first measured by phase F4 (AMBER_PORTAL, 2026-10-01) over the graph double, after QUIET_ORBIT's ruling closed the three losses the first measurement found (contentGap 7 before: one form attribute, two empty enumeration values with their empty documentation). explicitlyOmittedTotal is the canonicalizer's comment, whitespace-run and processing-instruction count.",
+				"inventedTotal": 0,
+				"contentGapTotal": 0,
+				"contentGapTotalBeforeRuling": 7,
+				"explicitlyOmittedTotal": 29339,
+				"explicitlyOmittedCountByKind": {
+					"comment": 907,
+					"processingInstruction": 4,
+					"whitespace": 28428
+				},
+				"nestedChoiceCount": 14,
+				"formElementCount": 1,
+				"emptyEnumerationValueCount": 2,
+				"emptyDocumentationCount": 2,
+				"xmllintProbeExitCode": 3,
+				"xmllintDefinitionDroppedExitCode": 5
 			}
 		}
 	}

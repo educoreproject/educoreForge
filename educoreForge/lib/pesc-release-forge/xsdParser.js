@@ -62,6 +62,78 @@ const SCALAR_FACET_TAGS = [
 	'xs:whiteSpace',
 ];
 
+// THE ATTRIBUTE CENSUS (phase F4, QUIET_ORBIT ruling 2026-10-01). The parser refuses untaught
+// CONSTRUCTS by name but read only the attributes it knew, so an untaught ATTRIBUTE was silently
+// dropped (the round trip found xs:element form="unqualified"). Now every attribute on every XSD
+// element is either CARRIED (read into the model) or on its construct's declared IGNORE list with a
+// reason, and anything else is refused by name before the walk starts. Measured across the 7 selected
+// release folders (2026-10-01): no attribute outside these rows. The construct of an element depends on
+// its parent: a top-level xs:element / xs:complexType / xs:simpleType / xs:group differs from a local
+// one. xs:schema carries every attribute: xmlns declarations into prefixBindings, the rest verbatim
+// into schemaAttributes.
+const SCHEMA_CARRIES_EVERY_ATTRIBUTE = 'everyAttribute';
+const ATTRIBUTE_RULE_BY_CONSTRUCT = Object.freeze({
+	schema: Object.freeze({ carriedAttributeNameList: SCHEMA_CARRIES_EVERY_ATTRIBUTE, ignoredReasonByAttributeName: Object.freeze({}) }),
+	import: Object.freeze({ carriedAttributeNameList: Object.freeze(['namespace', 'schemaLocation']), ignoredReasonByAttributeName: Object.freeze({}) }),
+	topLevelElement: Object.freeze({ carriedAttributeNameList: Object.freeze(['name', 'type', 'substitutionGroup', 'abstract', 'nillable']), ignoredReasonByAttributeName: Object.freeze({}) }),
+	localElement: Object.freeze({ carriedAttributeNameList: Object.freeze(['name', 'type', 'minOccurs', 'maxOccurs', 'nillable', 'fixed', 'default', 'form']), ignoredReasonByAttributeName: Object.freeze({}) }),
+	topLevelComplexType: Object.freeze({ carriedAttributeNameList: Object.freeze(['name', 'abstract']), ignoredReasonByAttributeName: Object.freeze({}) }),
+	topLevelSimpleType: Object.freeze({ carriedAttributeNameList: Object.freeze(['name']), ignoredReasonByAttributeName: Object.freeze({}) }),
+	topLevelGroup: Object.freeze({ carriedAttributeNameList: Object.freeze(['name']), ignoredReasonByAttributeName: Object.freeze({}) }),
+	anonymousType: Object.freeze({ carriedAttributeNameList: Object.freeze([]), ignoredReasonByAttributeName: Object.freeze({}) }),
+	compositor: Object.freeze({ carriedAttributeNameList: Object.freeze(['minOccurs', 'maxOccurs']), ignoredReasonByAttributeName: Object.freeze({}) }),
+	groupReference: Object.freeze({ carriedAttributeNameList: Object.freeze(['ref', 'minOccurs', 'maxOccurs']), ignoredReasonByAttributeName: Object.freeze({}) }),
+	wildcard: Object.freeze({ carriedAttributeNameList: Object.freeze(['namespace', 'processContents', 'minOccurs', 'maxOccurs']), ignoredReasonByAttributeName: Object.freeze({}) }),
+	attribute: Object.freeze({ carriedAttributeNameList: Object.freeze(['name', 'type', 'use']), ignoredReasonByAttributeName: Object.freeze({}) }),
+	derivation: Object.freeze({ carriedAttributeNameList: Object.freeze(['base']), ignoredReasonByAttributeName: Object.freeze({}) }),
+	contentWrapper: Object.freeze({ carriedAttributeNameList: Object.freeze([]), ignoredReasonByAttributeName: Object.freeze({}) }),
+	facet: Object.freeze({ carriedAttributeNameList: Object.freeze(['value']), ignoredReasonByAttributeName: Object.freeze({}) }),
+	annotation: Object.freeze({ carriedAttributeNameList: Object.freeze([]), ignoredReasonByAttributeName: Object.freeze({}) }),
+});
+// a tag's construct, by whether its parent is xs:schema (a tag not listed is the walk's to refuse)
+const CONSTRUCT_BY_TAG = Object.freeze({
+	'xs:schema': () => 'schema',
+	'xs:import': () => 'import',
+	'xs:element': ({ parentTag }) => (parentTag === 'xs:schema' ? 'topLevelElement' : 'localElement'),
+	'xs:complexType': ({ parentTag }) => (parentTag === 'xs:schema' ? 'topLevelComplexType' : 'anonymousType'),
+	'xs:simpleType': ({ parentTag }) => (parentTag === 'xs:schema' ? 'topLevelSimpleType' : 'anonymousType'),
+	'xs:group': ({ parentTag }) => (parentTag === 'xs:schema' ? 'topLevelGroup' : 'groupReference'),
+	'xs:sequence': () => 'compositor',
+	'xs:choice': () => 'compositor',
+	'xs:any': () => 'wildcard',
+	'xs:attribute': () => 'attribute',
+	'xs:restriction': () => 'derivation',
+	'xs:extension': () => 'derivation',
+	'xs:complexContent': () => 'contentWrapper',
+	'xs:simpleContent': () => 'contentWrapper',
+	'xs:enumeration': () => 'facet',
+	'xs:annotation': () => 'annotation',
+	'xs:documentation': () => 'annotation',
+	...SCALAR_FACET_TAGS.reduce((soFar, oneFacetTag) => ({ ...soFar, [oneFacetTag]: () => 'facet' }), {}),
+});
+
+// every attribute of the tree carried or declared ignored; the first other one, named, or null
+const untaughtAttributeOf = ({ treeNode, parentTag }) => {
+	const constructOf = CONSTRUCT_BY_TAG[treeNode.tag];
+	if (constructOf !== undefined) {
+		const constructName = constructOf({ parentTag });
+		const attributeRule = ATTRIBUTE_RULE_BY_CONSTRUCT[constructName];
+		if (attributeRule.carriedAttributeNameList !== SCHEMA_CARRIES_EVERY_ATTRIBUTE) {
+			const untaughtName = treeNode.attributeOrder.find((oneName) => attributeRule.carriedAttributeNameList.indexOf(oneName) === -1 && attributeRule.ignoredReasonByAttributeName[oneName] === undefined);
+			if (untaughtName !== undefined) {
+				return { untaughtName, constructName, treeNode };
+			}
+		}
+	}
+	for (let childIndex = 0; childIndex < treeNode.children.length; childIndex++) {
+		const found = untaughtAttributeOf({ treeNode: treeNode.children[childIndex], parentTag: treeNode.tag });
+		if (found !== null) {
+			return found;
+		}
+	}
+	return null;
+};
+
 // START OF moduleFunction() ============================================================
 
 const moduleFunction =
@@ -181,9 +253,13 @@ const moduleFunction =
 								`file '${filename}': xs:enumeration without value= (line ${oneChild.line})`,
 							);
 						}
+						const enumerationAnnotation = leadingAnnotation(oneChild);
 						derivation.enumerationValues.push({
 							value: enumerationValue,
-							documentation: leadingAnnotation(oneChild).documentation,
+							documentation: enumerationAnnotation.documentation,
+							// every documentation string as written, an empty one included (phase F4: the round trip
+							// found two empty <xs:documentation/> on codes that the first-value reading lost)
+							documentationValues: enumerationAnnotation.documentationValues,
 						});
 						parseAudit.enumerationValues++;
 						return;
@@ -310,6 +386,7 @@ const moduleFunction =
 					minOccursAsWritten: optionalAttribute(elementNode, 'minOccurs'),
 					maxOccursAsWritten: optionalAttribute(elementNode, 'maxOccurs'),
 					nillableAsWritten: optionalAttribute(elementNode, 'nillable'),
+					formAsWritten: optionalAttribute(elementNode, 'form'),
 					fixedAsWritten: optionalAttribute(elementNode, 'fixed'),
 					defaultAsWritten: optionalAttribute(elementNode, 'default'),
 					documentation: '',
@@ -525,6 +602,14 @@ const moduleFunction =
 			const schemaNode = treeResult.root;
 			if (schemaNode.tag !== 'xs:schema') {
 				refuse(`file '${filename}': root element is '${schemaNode.tag}', not xs:schema`);
+			}
+			const untaughtAttribute = untaughtAttributeOf({ treeNode: schemaNode, parentTag: null });
+			if (untaughtAttribute !== null) {
+				refuse(
+					`file '${filename}': attribute '${untaughtAttribute.untaughtName}' on ${untaughtAttribute.treeNode.tag} ` +
+						`(a ${untaughtAttribute.constructName}, line ${untaughtAttribute.treeNode.line}) is neither carried nor on ` +
+						`the construct's declared ignore list. Reading past it would drop it silently; teach it or declare it ignored, with the reason.`,
+				);
 			}
 
 			// prefix table — every xmlns declaration on the schema element. The corpus declares
