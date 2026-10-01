@@ -1,0 +1,7 @@
+{
+	"name": "forge-peschighschooltranscript1v6v0",
+	"version": "1.0.0",
+	"main": "forgePescHighSchoolTranscript1v6v0.js",
+	"description": "PESC High School Transcript v1.6.0 forge bundle — one PESC release on the shared library lib/pesc-release-forge. Written by the scaffold tool. It does no bridging.",
+	"private": true
+}

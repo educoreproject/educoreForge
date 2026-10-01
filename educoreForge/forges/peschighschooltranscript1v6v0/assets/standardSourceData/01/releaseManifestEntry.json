@@ -1,0 +1,87 @@
+{
+	"copiedFromManifest": {
+		"manifestFormat": "pescReleaseExpander/1",
+		"sourceCorpus": {
+			"fileCount": 64,
+			"totalByteCount": 9733713,
+			"corpusDigest": "a060538b87eda9644de043f56f6f7a3cb81e80765b4e8f19570e6662298fec66"
+		}
+	},
+	"releaseEntry": {
+		"releaseName": "HighSchoolTranscript_v1.6.0",
+		"standard": "HighSchoolTranscript",
+		"version": "1.6.0",
+		"rootFilename": "HighSchoolTranscript_v1.6.0.xsd",
+		"rootSha256": "2e753ab4cd7800753f4ecd23bcadc388af0a779530f7752e1b318e44a2a2fdfd",
+		"verdict": "clean",
+		"memberFiles": [
+			{
+				"filename": "HighSchoolTranscript_v1.6.0.xsd",
+				"publishedFilename": "HighSchoolTranscript_v1.6.0.xsd",
+				"sha256": "2e753ab4cd7800753f4ecd23bcadc388af0a779530f7752e1b318e44a2a2fdfd",
+				"reachedVia": null
+			},
+			{
+				"filename": "CoreMain_v1.17.0.xsd",
+				"publishedFilename": "CoreMain_v1.17.0.xsd",
+				"sha256": "f4b05efd5839528d316dc6f58c3dfd3d623767b53c82d918198c57fa25f840c7",
+				"reachedVia": "HighSchoolTranscript_v1.6.0.xsd"
+			},
+			{
+				"filename": "AcademicRecord_v1.11.0.xsd",
+				"publishedFilename": "AcademicRecord_v1.11.0.xsd",
+				"sha256": "76ef93896303b613c2000bb1b565c433d021bec0a2c31e9f91389af3e3ad4487",
+				"reachedVia": "HighSchoolTranscript_v1.6.0.xsd"
+			},
+			{
+				"filename": "iso_3166-1_v1.0.0.xsd",
+				"publishedFilename": "iso_3166-1_v1.0.0.xsd",
+				"sha256": "3634b533ecc9db84190abb5648840ad54967a0474941f3de6a3f638f70c29772",
+				"reachedVia": "CoreMain_v1.17.0.xsd"
+			}
+		],
+		"closureDigest": "64ebd8f52b4d1dd3e0e9eebe803194ad97468e23a3dc7db451e9299fc2431b46",
+		"librariesNamed": [
+			"urn:org:pesc:codes:iso_3166-1:v1.0.0",
+			"urn:org:pesc:core:CoreMain:v1.17.0",
+			"urn:org:pesc:sector:AcademicRecord:v1.11.0"
+		],
+		"missingLibraries": [],
+		"pinDecisionsApplied": [],
+		"closureDate": "2016-09-09",
+		"closureDateEvidence": {
+			"isoDate": "2016-09-09",
+			"datePrecision": "day",
+			"filename": "HighSchoolTranscript_v1.6.0.xsd",
+			"dateAsWritten": "09-September-2016",
+			"commentText": "v1.6.0 09-September-2016 "
+		},
+		"unreadableDates": [],
+		"selected": true,
+		"selectionReason": "closure date 2016-09-09 is on or after 2016-01-01 (selectionRule.json)",
+		"folderName": "HighSchoolTranscript_v1.6.0",
+		"releaseReferenceCheck": {
+			"totalReferences": 2016,
+			"checkedReferences": 2016,
+			"missingNameReferences": 0,
+			"referencesLeavingRelease": 0
+		},
+		"rootChangeLogLines": [
+			"Date:       17-December-2014",
+			"v1.0.x 23-May-2005 Bruce Marton  - Draft version proposed by PESC High School Transcript workgroup. ",
+			"v1.0.x 24-May-2005 Bruce Marton  -Minor corrections. ",
+			"v1.0.x 15-September-2005 Bruce Marton  - Additional draft changes proposed by PESC High School Transcript workgroup. ",
+			"v1.0.0 15-February-2006 Bruce Marton  - Final proposed changes for PESC High School Transcript as approved for public comment by PESC Change Control Board (reviewed - JAF). ",
+			"v1.2.0 29-April-2011 Jeffrey Funck  -  ",
+			"   Change #   TS20110329030400 ",
+			"v1.3.0 15-June-2012 Jeffrey Funck  -  ",
+			"   Change #   TS20120305094902 ",
+			"v1.4.0 15-October-2013 Jeffrey Funck  -  ",
+			"   Change #   TS20130624000001 ",
+			"v1.5.0 17-December-2014 Jeffrey Funck  -  ",
+			"   Change #   MB20140606000001 ",
+			"v1.6.0 09-September-2016 ",
+			"   Change #JW160901-03 "
+		]
+	}
+}

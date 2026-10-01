@@ -1,0 +1,16 @@
+{
+	// pesclearningrecord1v0v0Only — the PESC Learning Record v1.0.0 release alone, with the RT-13 round-trip stage on: the release's
+	// CERTIFICATION recipe (WORKORDER-pescForgeBridge-093026.md §3 F6, gate F16; DESIGN-pescForge.md §4.3).
+	// Written in phase F6 (QUIET_CIPHER, 2026-10-01), in the shape of pesccollegetranscript1v8v0Only.
+	//
+	// GNC-001: any container built from this is DEV_PescLearningRecord1v0v0[_label] and stays one; every Docker provision
+	// takes /tmp/miloPersistence/dockerProvisionLock (WORKORDER §2).
+	"schemaVersion": "1.0.0",
+	"recipeName": "pesclearningrecord1v0v0Only",
+	"kind": "dev",
+	"description": "Forge the PESC Learning Record v1.0.0 release alone and round-trip-validate the materialized product (RT-13 stage, certification).",
+	"roundTripStage": true,
+	"standards": [ { "token": "pesclearningrecord1v0v0", "version": "current" } ],
+	"hubs": [],
+	"bridges": []
+}

@@ -1,0 +1,7 @@
+{
+	"name": "forge-pesclearningrecord1v0v0",
+	"version": "1.0.0",
+	"main": "forgePescLearningRecord1v0v0.js",
+	"description": "PESC Learning Record v1.0.0 forge bundle — one PESC release on the shared library lib/pesc-release-forge. Written by the scaffold tool. It does no bridging.",
+	"private": true
+}

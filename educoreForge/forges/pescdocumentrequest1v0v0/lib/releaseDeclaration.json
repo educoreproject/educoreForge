@@ -1,0 +1,14 @@
+{
+	"releaseName": "DocumentRequest_v1.0.0",
+	"standard": "DocumentRequest",
+	"version": "1.0.0",
+	"standardKey": "pescdocumentrequest1v0v0",
+	"standardSource": "PESC-DocumentRequest-1.0.0",
+	"standardDisplayName": "PESC Document Request v1.0.0",
+	"labelPrefix": "PescDocumentRequest1v0v0",
+	"stableUriPropertyName": "pescdocumentrequest1v0v0StableId",
+	"rootStableId": "pescdocumentrequest1v0v0:root",
+	"rootLabel": "PescDocumentRequest1v0v0Root",
+	"stableIdPatternText": "^pescdocumentrequest1v0v0:[A-Za-z]+(/.+)?$",
+	"embedTextLabel": "PescDocumentRequest1v0v0EmbedText"
+}

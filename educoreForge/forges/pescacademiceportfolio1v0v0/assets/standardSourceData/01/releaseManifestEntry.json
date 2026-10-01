@@ -1,0 +1,71 @@
+{
+	"copiedFromManifest": {
+		"manifestFormat": "pescReleaseExpander/1",
+		"sourceCorpus": {
+			"fileCount": 64,
+			"totalByteCount": 9733713,
+			"corpusDigest": "a060538b87eda9644de043f56f6f7a3cb81e80765b4e8f19570e6662298fec66"
+		}
+	},
+	"releaseEntry": {
+		"releaseName": "AcademicEportfolio_v1.0.0",
+		"standard": "AcademicEportfolio",
+		"version": "1.0.0",
+		"rootFilename": "AcademicEportfolio_v1.0.0.xsd",
+		"rootSha256": "5aeefa06cd2df8515d146a644814e59280a7d1076a727cf4a739a0dce1927f08",
+		"verdict": "clean",
+		"memberFiles": [
+			{
+				"filename": "AcademicEportfolio_v1.0.0.xsd",
+				"publishedFilename": "AcademicEportfolio_v1.0.0.xsd",
+				"sha256": "5aeefa06cd2df8515d146a644814e59280a7d1076a727cf4a739a0dce1927f08",
+				"reachedVia": null
+			},
+			{
+				"filename": "CoreMain_v1.16.0.xsd",
+				"publishedFilename": "CoreMain_v1.16.0.xsd",
+				"sha256": "870c35770ffd7daf68c270eef291c360a32dcc32bd952c439c175439b7bb04b6",
+				"reachedVia": "AcademicEportfolio_v1.0.0.xsd"
+			},
+			{
+				"filename": "AcademicRecord_v1.10.0.xsd",
+				"publishedFilename": "AcademicRecord_v1.10.0.xsd",
+				"sha256": "87502be504916a0fcd47495bcf9156221b0320c8aa6e05fb48e2ed598486c283",
+				"reachedVia": "AcademicEportfolio_v1.0.0.xsd"
+			},
+			{
+				"filename": "AdmissionsRecord_v1.4.0.xsd",
+				"publishedFilename": "AdmissionsRecord_v1.4.0.xsd",
+				"sha256": "2a36221eec31eada4021717a2d16d356b9b75881efcdccfa66a02daabd696441",
+				"reachedVia": "AcademicEportfolio_v1.0.0.xsd"
+			}
+		],
+		"closureDigest": "a7ece7c1dc1de4bcae4f9c162314bcd05d25381fd883c8e8875c98e24ddf3693",
+		"librariesNamed": [
+			"urn:org:pesc:core:CoreMain:v1.16.0",
+			"urn:org:pesc:sector:AcademicRecord:v1.10.0",
+			"urn:org:pesc:sector:AdmissionsRecord:v1.4.0"
+		],
+		"missingLibraries": [],
+		"pinDecisionsApplied": [],
+		"closureDate": "2016-03-22",
+		"closureDateEvidence": {
+			"isoDate": "2016-03-22",
+			"datePrecision": "day",
+			"filename": "CoreMain_v1.16.0.xsd",
+			"dateAsWritten": "22-March-2016",
+			"commentText": "v1.16.0 22-March-2016 Michael Morris "
+		},
+		"unreadableDates": [],
+		"selected": true,
+		"selectionReason": "closure date 2016-03-22 is on or after 2016-01-01 (selectionRule.json)",
+		"folderName": "AcademicEportfolio_v1.0.0",
+		"releaseReferenceCheck": {
+			"totalReferences": 2777,
+			"checkedReferences": 2777,
+			"missingNameReferences": 0,
+			"referencesLeavingRelease": 0
+		},
+		"rootChangeLogLines": []
+	}
+}

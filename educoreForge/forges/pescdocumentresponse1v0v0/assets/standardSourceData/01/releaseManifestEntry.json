@@ -1,0 +1,74 @@
+{
+	"copiedFromManifest": {
+		"manifestFormat": "pescReleaseExpander/1",
+		"sourceCorpus": {
+			"fileCount": 64,
+			"totalByteCount": 9733713,
+			"corpusDigest": "a060538b87eda9644de043f56f6f7a3cb81e80765b4e8f19570e6662298fec66"
+		}
+	},
+	"releaseEntry": {
+		"releaseName": "DocumentResponse_v1.0.0",
+		"standard": "DocumentResponse",
+		"version": "1.0.0",
+		"rootFilename": "DocumentResponse_v1.0.0.xsd",
+		"rootSha256": "5fd61aadcef00e8ae9014b66726267c07722f2c6a3c246d094632ab8fa3840bd",
+		"verdict": "clean",
+		"memberFiles": [
+			{
+				"filename": "DocumentResponse_v1.0.0.xsd",
+				"publishedFilename": "DocumentResponse_v1.0.0.xsd",
+				"sha256": "5fd61aadcef00e8ae9014b66726267c07722f2c6a3c246d094632ab8fa3840bd",
+				"reachedVia": null
+			},
+			{
+				"filename": "CoreMain_v1.19.1.xsd",
+				"publishedFilename": "CoreMain_v1.19.1.xsd",
+				"sha256": "5ade556046aabf40296db71d57ca7e8a3e633774898e7d44c256847138de34ec",
+				"reachedVia": "DocumentResponse_v1.0.0.xsd"
+			},
+			{
+				"filename": "AcademicRecord_v1.14.0.xsd",
+				"publishedFilename": "AcademicRecord_v1.14.0.xsd",
+				"sha256": "592054a062bd43bda7f1fe80b754874bd8e0271f9899e44c0fe8368cad5e5299",
+				"reachedVia": "DocumentResponse_v1.0.0.xsd"
+			},
+			{
+				"filename": "iso_3166-1_v1.0.0.xsd",
+				"publishedFilename": "iso_3166-1_v1.0.0.xsd",
+				"sha256": "3634b533ecc9db84190abb5648840ad54967a0474941f3de6a3f638f70c29772",
+				"reachedVia": "CoreMain_v1.19.1.xsd"
+			}
+		],
+		"closureDigest": "c44773cda85aaf8188f50c22f872c0a0f1d537fe7b183497bd4306791c137658",
+		"librariesNamed": [
+			"urn:org:pesc:codes:iso_3166-1:v1.0.0",
+			"urn:org:pesc:core:CoreMain:v1.19.1",
+			"urn:org:pesc:sector:AcademicRecord:v1.14.0"
+		],
+		"missingLibraries": [],
+		"pinDecisionsApplied": [],
+		"closureDate": "2016-09-09",
+		"closureDateEvidence": {
+			"isoDate": "2016-09-09",
+			"datePrecision": "day",
+			"filename": "AcademicRecord_v1.14.0.xsd",
+			"dateAsWritten": "09-September-2016",
+			"commentText": "v1.11 09-September-2016 Michael Morris"
+		},
+		"unreadableDates": [],
+		"selected": true,
+		"selectionReason": "closure date 2016-09-09 is on or after 2016-01-01 (selectionRule.json)",
+		"folderName": "DocumentResponse_v1.0.0",
+		"releaseReferenceCheck": {
+			"totalReferences": 2120,
+			"checkedReferences": 2120,
+			"missingNameReferences": 0,
+			"referencesLeavingRelease": 0
+		},
+		"rootChangeLogLines": [
+			"Date:       17-December-2014",
+			"1.0.0  06-NOV-2003  Initial Release based on PESC CoreMain.xsd Version 1.3.10"
+		]
+	}
+}

@@ -1,0 +1,14 @@
+{
+	"releaseName": "HighSchoolTranscript_v1.6.0",
+	"standard": "HighSchoolTranscript",
+	"version": "1.6.0",
+	"standardKey": "peschighschooltranscript1v6v0",
+	"standardSource": "PESC-HighSchoolTranscript-1.6.0",
+	"standardDisplayName": "PESC High School Transcript v1.6.0",
+	"labelPrefix": "PescHighSchoolTranscript1v6v0",
+	"stableUriPropertyName": "peschighschooltranscript1v6v0StableId",
+	"rootStableId": "peschighschooltranscript1v6v0:root",
+	"rootLabel": "PescHighSchoolTranscript1v6v0Root",
+	"stableIdPatternText": "^peschighschooltranscript1v6v0:[A-Za-z]+(/.+)?$",
+	"embedTextLabel": "PescHighSchoolTranscript1v6v0EmbedText"
+}

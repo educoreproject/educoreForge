@@ -1,0 +1,14 @@
+{
+	"releaseName": "LearningRecord_v1.0.0",
+	"standard": "LearningRecord",
+	"version": "1.0.0",
+	"standardKey": "pesclearningrecord1v0v0",
+	"standardSource": "PESC-LearningRecord-1.0.0",
+	"standardDisplayName": "PESC Learning Record v1.0.0",
+	"labelPrefix": "PescLearningRecord1v0v0",
+	"stableUriPropertyName": "pesclearningrecord1v0v0StableId",
+	"rootStableId": "pesclearningrecord1v0v0:root",
+	"rootLabel": "PescLearningRecord1v0v0Root",
+	"stableIdPatternText": "^pesclearningrecord1v0v0:[A-Za-z]+(/.+)?$",
+	"embedTextLabel": "PescLearningRecord1v0v0EmbedText"
+}

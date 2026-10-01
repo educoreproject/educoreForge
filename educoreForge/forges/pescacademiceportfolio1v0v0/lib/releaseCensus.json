@@ -1,0 +1,26 @@
+{
+	"censusNote": "The counts this bundle's snapshot must reproduce, measured from the release folder by lib/pesc-release-forge/tools/scaffoldReleaseBundle.js when the bundle was written. The forge refuses by name on any difference (gate F4). Never edit a value to match a measurement.",
+	"releaseName": "AcademicEportfolio_v1.0.0",
+	"census": {
+		"fileCount": 4,
+		"importCount": 5,
+		"definitionCount": 1128,
+		"complexTypeCount": 325,
+		"namedCodeListCount": 211,
+		"namedDataTypeCount": 572,
+		"groupCount": 9,
+		"globalElementCount": 11,
+		"elementDeclarationCount": 1916,
+		"attributeDeclarationCount": 6,
+		"anonymousComplexTypeCount": 12,
+		"anonymousCodeListCount": 17,
+		"anonymousDataTypeCount": 24,
+		"codeCount": 2749,
+		"facetCount": 652,
+		"groupReferenceCount": 24,
+		"anyWildcardCount": 2,
+		"referenceCount": 2777,
+		"builtinReferenceCount": 880,
+		"inReleaseReferenceCount": 1897
+	}
+}

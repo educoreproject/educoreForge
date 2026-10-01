@@ -1,0 +1,26 @@
+{
+	"censusNote": "The counts this bundle's snapshot must reproduce, measured from the release folder by lib/pesc-release-forge/tools/scaffoldReleaseBundle.js when the bundle was written. The forge refuses by name on any difference (gate F4). Never edit a value to match a measurement.",
+	"releaseName": "LearningRecord_v1.0.0",
+	"census": {
+		"fileCount": 4,
+		"importCount": 4,
+		"definitionCount": 1019,
+		"complexTypeCount": 222,
+		"namedCodeListCount": 202,
+		"namedDataTypeCount": 575,
+		"groupCount": 9,
+		"globalElementCount": 11,
+		"elementDeclarationCount": 1218,
+		"attributeDeclarationCount": 6,
+		"anonymousComplexTypeCount": 12,
+		"anonymousCodeListCount": 17,
+		"anonymousDataTypeCount": 25,
+		"codeCount": 2739,
+		"facetCount": 660,
+		"groupReferenceCount": 20,
+		"anyWildcardCount": 2,
+		"referenceCount": 2073,
+		"builtinReferenceCount": 805,
+		"inReleaseReferenceCount": 1268
+	}
+}

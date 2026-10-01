@@ -1,0 +1,14 @@
+{
+	"releaseName": "DocumentResponse_v1.0.0",
+	"standard": "DocumentResponse",
+	"version": "1.0.0",
+	"standardKey": "pescdocumentresponse1v0v0",
+	"standardSource": "PESC-DocumentResponse-1.0.0",
+	"standardDisplayName": "PESC Document Response v1.0.0",
+	"labelPrefix": "PescDocumentResponse1v0v0",
+	"stableUriPropertyName": "pescdocumentresponse1v0v0StableId",
+	"rootStableId": "pescdocumentresponse1v0v0:root",
+	"rootLabel": "PescDocumentResponse1v0v0Root",
+	"stableIdPatternText": "^pescdocumentresponse1v0v0:[A-Za-z]+(/.+)?$",
+	"embedTextLabel": "PescDocumentResponse1v0v0EmbedText"
+}

@@ -1,0 +1,77 @@
+{
+	"copiedFromManifest": {
+		"manifestFormat": "pescReleaseExpander/1",
+		"sourceCorpus": {
+			"fileCount": 64,
+			"totalByteCount": 9733713,
+			"corpusDigest": "a060538b87eda9644de043f56f6f7a3cb81e80765b4e8f19570e6662298fec66"
+		}
+	},
+	"releaseEntry": {
+		"releaseName": "TestScoreReport_v1.1.0",
+		"standard": "TestScoreReport",
+		"version": "1.1.0",
+		"rootFilename": "TestScoreReport_v1.1.0.xsd",
+		"rootSha256": "038d796bd097d2095389f7338fa4c758c8cb6fc831f2b6775469536b8c112c49",
+		"verdict": "clean",
+		"memberFiles": [
+			{
+				"filename": "TestScoreReport_v1.1.0.xsd",
+				"publishedFilename": "TestScoreReport_v1.1.0.xsd",
+				"sha256": "038d796bd097d2095389f7338fa4c758c8cb6fc831f2b6775469536b8c112c49",
+				"reachedVia": null
+			},
+			{
+				"filename": "AcademicRecord_v1.11.0.xsd",
+				"publishedFilename": "AcademicRecord_v1.11.0.xsd",
+				"sha256": "76ef93896303b613c2000bb1b565c433d021bec0a2c31e9f91389af3e3ad4487",
+				"reachedVia": "TestScoreReport_v1.1.0.xsd"
+			},
+			{
+				"filename": "CoreMain_v1.17.0.xsd",
+				"publishedFilename": "CoreMain_v1.17.0.xsd",
+				"sha256": "f4b05efd5839528d316dc6f58c3dfd3d623767b53c82d918198c57fa25f840c7",
+				"reachedVia": "AcademicRecord_v1.11.0.xsd"
+			},
+			{
+				"filename": "iso_3166-1_v1.0.0.xsd",
+				"publishedFilename": "iso_3166-1_v1.0.0.xsd",
+				"sha256": "3634b533ecc9db84190abb5648840ad54967a0474941f3de6a3f638f70c29772",
+				"reachedVia": "CoreMain_v1.17.0.xsd"
+			}
+		],
+		"closureDigest": "e28f82c37104b0947acf07cfa94b76e537b53eda3ed127fbbc9c7c6907a15791",
+		"librariesNamed": [
+			"urn:org:pesc:codes:iso_3166-1:v1.0.0",
+			"urn:org:pesc:core:CoreMain:v1.17.0",
+			"urn:org:pesc:sector:AcademicRecord:v1.11.0"
+		],
+		"missingLibraries": [],
+		"pinDecisionsApplied": [],
+		"closureDate": "2016-09-09",
+		"closureDateEvidence": {
+			"isoDate": "2016-09-09",
+			"datePrecision": "day",
+			"filename": "TestScoreReport_v1.1.0.xsd",
+			"dateAsWritten": "09-September-2016",
+			"commentText": "v1.6.0 09-September-2016 "
+		},
+		"unreadableDates": [],
+		"selected": true,
+		"selectionReason": "closure date 2016-09-09 is on or after 2016-01-01 (selectionRule.json)",
+		"folderName": "TestScoreReport_v1.1.0",
+		"releaseReferenceCheck": {
+			"totalReferences": 2013,
+			"checkedReferences": 2013,
+			"missingNameReferences": 0,
+			"referencesLeavingRelease": 0
+		},
+		"rootChangeLogLines": [
+			"Date:  30-March-2009 ",
+			"v1.0.0 30-March-2009 Jeffrey Funck  -  ",
+			"   Change #   KB20081027050500",
+			"v1.6.0 09-September-2016 ",
+			"   Change #JW160901-03 "
+		]
+	}
+}

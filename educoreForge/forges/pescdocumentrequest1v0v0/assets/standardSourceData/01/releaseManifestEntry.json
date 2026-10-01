@@ -1,0 +1,74 @@
+{
+	"copiedFromManifest": {
+		"manifestFormat": "pescReleaseExpander/1",
+		"sourceCorpus": {
+			"fileCount": 64,
+			"totalByteCount": 9733713,
+			"corpusDigest": "a060538b87eda9644de043f56f6f7a3cb81e80765b4e8f19570e6662298fec66"
+		}
+	},
+	"releaseEntry": {
+		"releaseName": "DocumentRequest_v1.0.0",
+		"standard": "DocumentRequest",
+		"version": "1.0.0",
+		"rootFilename": "DocumentRequest_v1.0.0.xsd",
+		"rootSha256": "04a1f80f6dcaa141ea9c9d1667225ad9f84bf7466a733a6ebdc5308fa338afd8",
+		"verdict": "clean",
+		"memberFiles": [
+			{
+				"filename": "DocumentRequest_v1.0.0.xsd",
+				"publishedFilename": "DocumentRequest_v1.0.0.xsd",
+				"sha256": "04a1f80f6dcaa141ea9c9d1667225ad9f84bf7466a733a6ebdc5308fa338afd8",
+				"reachedVia": null
+			},
+			{
+				"filename": "CoreMain_v1.19.1.xsd",
+				"publishedFilename": "CoreMain_v1.19.1.xsd",
+				"sha256": "5ade556046aabf40296db71d57ca7e8a3e633774898e7d44c256847138de34ec",
+				"reachedVia": "DocumentRequest_v1.0.0.xsd"
+			},
+			{
+				"filename": "AcademicRecord_v1.14.0.xsd",
+				"publishedFilename": "AcademicRecord_v1.14.0.xsd",
+				"sha256": "592054a062bd43bda7f1fe80b754874bd8e0271f9899e44c0fe8368cad5e5299",
+				"reachedVia": "DocumentRequest_v1.0.0.xsd"
+			},
+			{
+				"filename": "iso_3166-1_v1.0.0.xsd",
+				"publishedFilename": "iso_3166-1_v1.0.0.xsd",
+				"sha256": "3634b533ecc9db84190abb5648840ad54967a0474941f3de6a3f638f70c29772",
+				"reachedVia": "CoreMain_v1.19.1.xsd"
+			}
+		],
+		"closureDigest": "2ecee9c311eb23054f4e7778fffceb76f94dfb6cc51a4de9c87634a842328724",
+		"librariesNamed": [
+			"urn:org:pesc:codes:iso_3166-1:v1.0.0",
+			"urn:org:pesc:core:CoreMain:v1.19.1",
+			"urn:org:pesc:sector:AcademicRecord:v1.14.0"
+		],
+		"missingLibraries": [],
+		"pinDecisionsApplied": [],
+		"closureDate": "2018-02-23",
+		"closureDateEvidence": {
+			"isoDate": "2018-02-23",
+			"datePrecision": "day",
+			"filename": "DocumentRequest_v1.0.0.xsd",
+			"dateAsWritten": "23-February-2018",
+			"commentText": "Date:       23-February-2018"
+		},
+		"unreadableDates": [],
+		"selected": true,
+		"selectionReason": "closure date 2018-02-23 is on or after 2016-01-01 (selectionRule.json)",
+		"folderName": "DocumentRequest_v1.0.0",
+		"releaseReferenceCheck": {
+			"totalReferences": 2120,
+			"checkedReferences": 2120,
+			"missingNameReferences": 0,
+			"referencesLeavingRelease": 0
+		},
+		"rootChangeLogLines": [
+			"Date:       23-February-2018",
+			"1.0.0  2-February-2018  Initial Release "
+		]
+	}
+}

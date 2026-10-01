@@ -1,0 +1,14 @@
+{
+	"releaseName": "AcademicEportfolio_v1.0.0",
+	"standard": "AcademicEportfolio",
+	"version": "1.0.0",
+	"standardKey": "pescacademiceportfolio1v0v0",
+	"standardSource": "PESC-AcademicEportfolio-1.0.0",
+	"standardDisplayName": "PESC Academic Eportfolio v1.0.0",
+	"labelPrefix": "PescAcademicEportfolio1v0v0",
+	"stableUriPropertyName": "pescacademiceportfolio1v0v0StableId",
+	"rootStableId": "pescacademiceportfolio1v0v0:root",
+	"rootLabel": "PescAcademicEportfolio1v0v0Root",
+	"stableIdPatternText": "^pescacademiceportfolio1v0v0:[A-Za-z]+(/.+)?$",
+	"embedTextLabel": "PescAcademicEportfolio1v0v0EmbedText"
+}

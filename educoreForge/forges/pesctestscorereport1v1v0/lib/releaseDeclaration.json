@@ -1,0 +1,14 @@
+{
+	"releaseName": "TestScoreReport_v1.1.0",
+	"standard": "TestScoreReport",
+	"version": "1.1.0",
+	"standardKey": "pesctestscorereport1v1v0",
+	"standardSource": "PESC-TestScoreReport-1.1.0",
+	"standardDisplayName": "PESC Test Score Report v1.1.0",
+	"labelPrefix": "PescTestScoreReport1v1v0",
+	"stableUriPropertyName": "pesctestscorereport1v1v0StableId",
+	"rootStableId": "pesctestscorereport1v1v0:root",
+	"rootLabel": "PescTestScoreReport1v1v0Root",
+	"stableIdPatternText": "^pesctestscorereport1v1v0:[A-Za-z]+(/.+)?$",
+	"embedTextLabel": "PescTestScoreReport1v1v0EmbedText"
+}

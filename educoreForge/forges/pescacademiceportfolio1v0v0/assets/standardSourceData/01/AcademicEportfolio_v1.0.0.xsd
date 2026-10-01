@@ -1,0 +1,1903 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- edited with XMLSpy v2014 sp1 (http://www.altova.com) by Donald Phillips (private) -->
+<!-- Create initial draft consistent with Core Component Submission Form -->
+<xs:schema xmlns="urn:org:pesc:message:AcademicEportfolio:v1.0.0" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:core="urn:org:pesc:core:CoreMain:v1.16.0" xmlns:AcRec="urn:org:pesc:sector:AcademicRecord:v1.10.0" xmlns:AcademicEportfolio="urn:org:pesc:message:AcademicEportfolio:v1.0.0" xmlns:vc="http://www.w3.org/2007/XMLSchema-versioning" xmlns:AdmRec="urn:org:pesc:sector:AdmissionsRecord:v1.4.0" targetNamespace="urn:org:pesc:message:AcademicEportfolio:v1.0.0" elementFormDefault="unqualified" attributeFormDefault="unqualified" vc:minVersion="1.1">
+	<!--                              -->
+	<xs:import namespace="urn:org:pesc:core:CoreMain:v1.16.0" schemaLocation="CoreMain_v1.16.0.xsd"/>
+	<xs:import namespace="urn:org:pesc:sector:AcademicRecord:v1.10.0" schemaLocation="AcademicRecord_v1.10.0.xsd"/>
+	<xs:import namespace="urn:org:pesc:sector:AdmissionsRecord:v1.4.0" schemaLocation="AdmissionsRecord_v1.4.0.xsd"/>
+	<!--Root Element-->
+	<xs:element name="AcademicEPortfolio" type="AcademicEPortfolioType">
+		<xs:annotation>
+			<xs:documentation>Root element of Academic ePortfolio message</xs:documentation>
+		</xs:annotation>
+	</xs:element>
+	<!--                              -->
+	<!--=========================================-->
+	<!--Academic ePortfolio Complex Types-->
+	<!--=========================================-->
+	<xs:complexType name="AcademicEPortfolioType">
+		<xs:annotation>
+			<xs:documentation>A type defining contents of the owner's academic eportfolio.</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="TransmissionData" type="TransmissionDataType">
+				<xs:annotation>
+					<xs:documentation>This element provides a logical grouping of elements related to Transmission information.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Profile" type="ProfileType">
+				<xs:annotation>
+					<xs:documentation>Student identification and demographical information.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Events" type="EventType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>Attributes describing an event as stored in a student’s portfolio. An event could be related to an academic course or program or a life/work/education event or experience.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Goals" type="GoalType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>A student’s goals and related action plans as stored in the student’s portfolio. Active and completed goals can be defined.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Artifacts" type="ArtifactType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>The Artifacts component provides a flexible structure for storing artifacts related to many of the other components of the schema. For example, artifacts could be related to events, goals, education, employment, or competencies. Artifacts can represent documents uploaded into the eportfolio or online documents stored at a specific URL.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Comments" type="CommentType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>The Comments component supports the related Events and Artifacts components providing a structure for owner, advisor, teacher, professor, peer, and parent/guardian eportfolio comments that can be connected to other related objects. The same comment can refer to multiple objects in the instance.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Education" type="EducationType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Contains score and interpretive data for all the tests reported in the test score report</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="EmploymentHistory" type="EmploymentHistoryType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>The Employment History component supports data related to jobs at multiple employers and a place for ObjectLinks to artifacts such as résumés stored in the student’s portfolio. This employment history data could be used by a system as part of a résumé function.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Competencies" type="CompetencyType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>The Competencies component provides a general structure for data related to the eportfolio owner’s competencies and skills. A general structure was defined to support the numerous skill and competency models and taxonomies in existence.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Networks" type="NetworksType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>The Networks component includes elements to describe the eportfolio owner’s networks and references.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="LicensesAndCredentials" type="LicensesCertificationsType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>The Licenses and Credentials component defines the eportfolio owner’s licenses—including information on the currency of the license and the issuing authority—as well as industry-recognized credentials.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="MilitaryHistory" type="MilitaryServiceType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>The Military History component provides a summary of the eportfolio owner’s military employment experiences.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="CareerAssessments" type="CareerAssessmentType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>The Career Assessments component provides a structure for supporting a range of career assessment results including two standard Department of Labor assessments commonly used in education and workforce development settings.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Lists" type="ListsType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>The Lists component defines a flexible structure for transmitting or exporting lists of stored items that are typically part of career and education planning in a student’s portfolio. This includes lists of careers of interest, postsecondary programs and majors of interest, postsecondary schools of interest, and scholarships.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="UserDefinedExtensions" type="core:UserDefinedExtensionsType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>This is used to create a place holder for the Unique Data which is defined by the VendorCode and IdentifierCode.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="NoteMessage" type="core:NoteMessageType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation> Note Message: Entities may use this field to store information not otherwise specified.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="ProfileType">
+		<xs:annotation>
+			<xs:documentation>A complex type describing profile information for the portfolio owner.</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="Name" type="core:NameType">
+				<xs:annotation>
+					<xs:documentation>The title given to someone, usually at birth. The name of the author of the comment.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Gender" type="core:GenderType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>The sex designation of a person.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Birth" type="core:BirthType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Information about the delivery, creation or beginning of life of a person.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="SSN" type="core:SSNType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>The person's U.S. Social Security Number.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="SIN" type="core:SINIDType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>The Social Insurance Number (Canadian) of the portfolio owner.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="NSN" type="core:NSNIDType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>The National Student Number (Canadian) of the portfolio owner.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="AgencyAssignedID" type="core:AgencyAssignedIDType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>The ID assigned by an agency to the person (student or borrower).</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Contacts" type="AcRec:ContactsType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>This element provides a logical grouping of elements related to contact information.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Citizenship" type="core:CitizenshipType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>Attributes of a person's qualifications to become or to have become a citizen of a country.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="EthnicityRace" type="core:EthnicityRaceType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>The cultural, tribal or national background of a person.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="ParentGuardian" type="core:ParentGuardianType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>To be deprecated in a future release</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="EducationType">
+		<xs:annotation>
+			<xs:documentation>A complex type describing the portfolio owner’s education.</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="HSTranscript" type="HSTranscriptType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>A portfolio owner's high school transcript.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="CollegeTranscript" type="CollegeTranscriptType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>A portfolio owner's College transcript.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="TestScoreReport" type="AcRec:TestScoreReportType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>Information about the attribuites, accomplishments and test scores of a set of students</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="ApplicationForAdmission" type="ApplicationForAdmissionType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>A portfolio owner’s application to a postsecondary institution.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="PostsecondaryProgram" type="PostsecondaryProgramType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>A portfolio owner's postsecondary program; both completed and in-progress.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="SecondaryEducation" type="SecondaryEducationType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>A portfolio owner's high school education details.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="OtherLearning" type="OtherLearningType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>A portfolio owner's other learning experiences.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="GoalType">
+		<xs:annotation>
+			<xs:documentation>A complex type describing a goal defined by the portfolio owner.</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="GoalID" type="ObjectIDSimpleType">
+				<xs:annotation>
+					<xs:documentation>An identifier for a goal.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="GoalCode" type="GoalCodeSimpleType">
+				<xs:annotation>
+					<xs:documentation>The type of goal.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="GoalTitle" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>The title or label for the goal.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="GoalDescription" type="xs:string" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>A brief description of the goal.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="GoalTargetDate" type="SeparatedDateType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>The target date for achieving the goal.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="GoalCompletionDate" type="SeparatedDateType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>The actual date when the goal was achieved.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="GoalObjectLink" type="ObjectLinkType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>An object link to another node or object related to this goal. For example, it could connect this goal to a related artifact stored in the portfolio.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="GoalActionPlanStep" type="ActionPlanStepType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>Details describing the attributes of a single step in an action plan related to a goal set by the portfolio owner.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="ObjectLinkType">
+		<xs:annotation>
+			<xs:documentation>A complex type describing a link between related items stored in a portfolio.</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="ObjectPath" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>Path expression specifying a node within this XML document. The node specified by the expression has a parent or child relationship to the current node/object.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="ObjectRelationCode" type="ObjectRelationSimpleType">
+				<xs:annotation>
+					<xs:documentation>The relationship between the linked node/object and the current node/object.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="ObjectID" type="ObjectIDSimpleType">
+				<xs:annotation>
+					<xs:documentation>An alternate identifier, unique within this component, to the node/object within this XML document that has a relationship to the current node. Can be used by applications to reference the related node. Examples of ID elements in the schema: EventID, ArtifactID, CommentID, GoalID, and StepID.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="EventType">
+		<xs:annotation>
+			<xs:documentation>A complex type describing an event documented in the portfolio.</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="EventID" type="ObjectIDSimpleType">
+				<xs:annotation>
+					<xs:documentation>An identifier for an event.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="EventClassification" type="EventClassificationType">
+				<xs:annotation>
+					<xs:documentation>The classification of an event.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="EventTitle" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>The name, title, or label of the event.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="EventStartDate" type="SeparatedDateType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>The start date of the event.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="EventEndDate" type="SeparatedDateType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>The end date of the event.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="EventDescription" type="xs:string" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>A brief description of the event.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="OrganizationName" type="core:OrganizationNameType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Name of Non-person entity such as Organization, Institution, Agency or Business.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="EventOrganizationDescription" type="xs:string" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>A brief description of an organization related to an event.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="EventObjectLink" type="ObjectLinkType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>An object link to another node or object related to this event. For example, it could connect this event to a goal defined in the portfolio.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="CommentType">
+		<xs:annotation>
+			<xs:documentation>A complex type describing a comment stored in a portfolio.</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="CommentID" type="ObjectIDSimpleType">
+				<xs:annotation>
+					<xs:documentation>An identifier for a comment. </xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="CommentDate" type="xs:date">
+				<xs:annotation>
+					<xs:documentation>Date comment was created or saved in the portfolio. </xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="CommentTitle" type="xs:string" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Title of the comment. </xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="CommentDescription" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>Comment text or description. </xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="CommentAuthor" type="AuthorType">
+				<xs:annotation>
+					<xs:documentation>Comment author name and details. </xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="CommentObjectLink" type="ObjectLinkType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>Object link to another node or object related to this comment. For example, it could connect this comment to a related artifact stored in the portfolio. </xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="ArtifactType">
+		<xs:annotation>
+			<xs:documentation>A complex type describing an artifact stored in a portfolio.</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="ArtifactID" type="ObjectIDSimpleType">
+				<xs:annotation>
+					<xs:documentation>An identifying code for an artifact.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="ArtifactTitle" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>Name of the stored artifact.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="ArtifactAuthor" type="xs:string" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Name of the author of the artifact. Could be a person or some other entity.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="ArtifactCreationDate" type="SeparatedDateType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Date the artifact was created.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="ArtifactDescription" type="xs:string" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Description or background details on the artifact and/or the reasons for its inclusion in the portfolio.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="ArtifactSource" type="SourceType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Either an indication that the artifact was self-reported or the contact information for the entity that generated or supplied the artifact. Can be used for informal authentication of official artifacts.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="ArtifactClassification" type="xs:string" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Element for portfolio system classification of artifacts. Would need to be supported by a mutually defined classification taxonomy.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="ArtifactMediaIdentifierCode" type="ArtifactMediaIdentifierCodeSimpleType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Media type represented by the stored artifact.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="ArtifactLocationURL" type="core:URLAddressType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>URL for Internet-based artifacts stored in the portfolio.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="ArtifactFileName" type="xs:string" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>File name for artifacts that are documents stored in the portfolio.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="ArtifactObjectLink" type="ObjectLinkType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>Object link to another node or object related to this artifact. For example it could connect this artifact to a related event documented in the portfolio.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="AuthorType">
+		<xs:annotation>
+			<xs:documentation>A complex type describing the author of a comment.</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="Name" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>The title given to someone, usually at birth. The name of the author of the comment.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="OrganizationName" type="core:OrganizationNameType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Name of Non-person entity such as Organization, Institution, Agency or Business.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Relationship" type="RelationshipSimpleType">
+				<xs:annotation>
+					<xs:documentation>The relationship of the comment's author to the portfolio owner.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="EventClassificationType">
+		<xs:annotation>
+			<xs:documentation>A complex type describing the classification of an event.</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="EventPrimaryClassification" type="EventPrimaryClassificationCodeSimpleType">
+				<xs:annotation>
+					<xs:documentation>The primary classification of an event.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:choice>
+				<xs:element name="ActivityCode" type="core:StudentActivityCodeType" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>A subclassification for an event that is an activity.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="AcademicProgramDegreeLevel" type="core:AcademicProgramDegreeLevelCodeType" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>The level of the degree for which the applicant is applying.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+			</xs:choice>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="SeparatedDateType">
+		<xs:annotation>
+			<xs:documentation>A complex type that separates the date into separate day, month, and year elements</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="Day" type="xs:gDay" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>The day part of the specified date.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Month" type="xs:gMonth" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>The month part of the specified date.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Year" type="xs:gYear" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>The year part of the specified date.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="SourceType">
+		<xs:annotation>
+			<xs:documentation>A complex type describing the source of a portfolio component.</xs:documentation>
+		</xs:annotation>
+		<xs:choice>
+			<xs:element name="SelfReportedIndicator" type="xs:boolean">
+				<xs:annotation>
+					<xs:documentation>An indicator that the portfolio component is self reported data.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Contacts" type="core:ContactsType">
+				<xs:annotation>
+					<xs:documentation>This element provides a logical grouping of elements related to contact information.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:choice>
+	</xs:complexType>
+	<xs:complexType name="NetworkType">
+		<xs:annotation>
+			<xs:documentation>A complex type describing networks to which the portfolio owner belongs.</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="NetworkID" type="ObjectIDSimpleType">
+				<xs:annotation>
+					<xs:documentation>An identifying code for a network to which the portfolio owner belongs.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="NetworkName" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>The name of a network to which the portfolio owner belongs.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="NetworkCode" type="NetworkCodeSimpleType">
+				<xs:annotation>
+					<xs:documentation>The type of network.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="NetworkUserName" type="xs:string" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>The portfolio owner's user name in the network.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="NetworkObjectLink" type="ObjectLinkType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>Object link to another node or object related to this network. For example, it could connect this network to a related goal defined in the portfolio.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="ReferenceType">
+		<xs:annotation>
+			<xs:documentation>A complex type describing a personal reference of the portfolio owner.</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="ReferenceID" type="ObjectIDSimpleType">
+				<xs:annotation>
+					<xs:documentation>An identifying code for a personal reference.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Contacts" type="core:ContactsType">
+				<xs:annotation>
+					<xs:documentation>This element provides a logical grouping of elements related to contact information.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="RelationshipCode" type="core:RelationshipCodeType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Indicates the person's relationship.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="ReferenceObjectLink" type="ObjectLinkType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>Object link to another node or object related to this personal reference. For example, it could connect this personal reference to a related artifact stored in the portfolio such as an employment performance review authored by the reference.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="MilitaryServiceType">
+		<xs:annotation>
+			<xs:documentation>A complex type describing an element of the military service of the portfolio owner. Each element can represent service in a different branch, for a different time period, or in a different military occupation.</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="MilitaryServiceID" type="ObjectIDSimpleType">
+				<xs:annotation>
+					<xs:documentation>An identifier for an element of the portfolio owner's military history.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="CountryIdentifier" type="core:CountryCodeType">
+				<xs:annotation>
+					<xs:documentation>The identifier for the country in whose military service the portfolio owner is or was employed.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="MilitaryServiceBranchCode" type="MilitaryServiceBranchCodeSimpleType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>The military branch for this element of the portfolio owner's military service. The military branch for this element of the portfolio owner's military service.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="MilitaryServicePeriod" type="ServicePeriodType">
+				<xs:annotation>
+					<xs:documentation>The service time frame for this element of the portfolio owner's military service.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="MilitaryOccupationalClassification" type="xs:string" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>The Military Occupational Classification (MOC) for the military occupation related to this element of the portfolio owner's military service.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="MilitaryServiceObjectLink" type="ObjectLinkType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>Object link to another node or object related to this element of military service. For example, it could connect this element of military service to a related artifact stored in the portfolio.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="LicenseType">
+		<xs:annotation>
+			<xs:documentation>A type defining details on a license held by the portfolio owner.</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="LicenseID" type="ObjectIDSimpleType">
+				<xs:annotation>
+					<xs:documentation>An identifier for a license.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="LicenseName" type="core:LicensureNameType">
+				<xs:annotation>
+					<xs:documentation>The name of the license.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="LicenseClassification" type="xs:string" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>The classification for the license</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="LicenseStatus" type="xs:string" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>The status of the license.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="LicenseNumber" type="xs:string" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>The identifying number for the portfolio owner's license.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="LicensurePassageDate" type="core:LicensurePassageDateType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Specifies the date the licensure was passed.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="LicenseDuration" type="xs:string" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>The period during which the license is valid.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="LicenseIssuingAuthority" type="IssuingAuthorityType">
+				<xs:annotation>
+					<xs:documentation>The authority issuing the license.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="LicenseDescription" type="xs:string" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>A brief description of the license.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="LicenseObjectLink" type="ObjectLinkType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>Object link to another node or object related to this license. For example, it could connect this license to a related artifact such as a copy of the license stored in the portfolio.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="EmployerType">
+		<xs:annotation>
+			<xs:documentation>A complex type describing one of the portfolio owner’s employers.</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="EmployerID" type="ObjectIDSimpleType">
+				<xs:annotation>
+					<xs:documentation>An identifier for an employer.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Employment" type="core:EmploymentType">
+				<xs:annotation>
+					<xs:documentation>The information about a persons employment.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="EmployerObjectLink" type="ObjectLinkType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>Object link to another node or object related to this employer. For example, it could connect this employer to an artifact stored in the portfolio.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="DateRangeType">
+		<xs:annotation>
+			<xs:documentation>A complex type describing a date range that ends with a fixed date or an indicator that the date range has not yet ended.</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="StartDate" type="xs:date">
+				<xs:annotation>
+					<xs:documentation>The start date of a date range.  The start date of a date range.  The start date of the military service period.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:choice>
+				<xs:element name="EndDate" type="xs:date">
+					<xs:annotation>
+						<xs:documentation>The end date of a date range.  The end date of a date range.  The end date of the military service period.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="CurrentIndicator" type="xs:boolean">
+					<xs:annotation>
+						<xs:documentation>Flag that indicates that a date range does not have an end date. For example, an employment date range could represent the date range for current employment.  Flag that indicates that a date range does not have an end date as the education event is still in progress. For example, a postsecondary program date range could represent the date range for a current program.  An indicator that the portfolio owner is still in active military service.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+			</xs:choice>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="EducationDateRangeType">
+		<xs:annotation>
+			<xs:documentation>A complex type describing a date range that ends with a fixed date or an indicator that the date range has not yet ended or an indicator that the related education experience was not completed.</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="StartDate" type="xs:date">
+				<xs:annotation>
+					<xs:documentation>The start date of a date range.  The start date of a date range.  The start date of the military service period.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:choice>
+				<xs:element name="EndDate" type="xs:date">
+					<xs:annotation>
+						<xs:documentation>The end date of a date range.  The end date of a date range.  The end date of the military service period.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="CurrentIndicator" type="xs:boolean">
+					<xs:annotation>
+						<xs:documentation>Flag that indicates that a date range does not have an end date. For example, an employment date range could represent the date range for current employment.  Flag that indicates that a date range does not have an end date as the education event is still in progress. For example, a postsecondary program date range could represent the date range for a current program.  An indicator that the portfolio owner is still in active military service.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="IncompleteIndicator" type="xs:boolean">
+					<xs:annotation>
+						<xs:documentation>Flag that indicates that a date range does not have an end date as the education event is incomplete but is no longer in progress. For example, a postsecondary program date range could represent the date range for a past program that was started but never finished. </xs:documentation>
+					</xs:annotation>
+				</xs:element>
+			</xs:choice>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="OtherLearningExperienceType">
+		<xs:annotation>
+			<xs:documentation>A type defining Details of an "other" learning experience documented in the portfolio.</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="OtherLearningID" type="ObjectIDSimpleType">
+				<xs:annotation>
+					<xs:documentation>An identifying code for an "other" learning experience.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="OtherLearningCode" type="OtherLearningCodeSimpleType">
+				<xs:annotation>
+					<xs:documentation>A type for an "other" learning experience.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="OtherLearningName" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>A name or label for the "other" learning experience.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="OtherLearningDescription" type="xs:string" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>A brief description of the "other" learning experience.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="OtherLearningCertification" type="xs:string" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>A certification earned from the "other" learning experience.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="OtherLearningDates" type="EducationDateRangeType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>The timeframe for the "other" learning experience</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="OtherLearningObjectLink" type="ObjectLinkType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>Object link to another node or object related to this Other Learning Experience. For example, it could connect this experience to a related goal defined in the portfolio.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="SecondaryEducationType">
+		<xs:annotation>
+			<xs:documentation>A type defining A portfolio owner's high school education details.</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="SecondaryEducationID" type="ObjectIDSimpleType">
+				<xs:annotation>
+					<xs:documentation>An identifying code for a high school experience.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="School" type="AcRec:SchoolType">
+				<xs:annotation>
+					<xs:documentation>A place or system for educating students.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="AcademicAwardLevel" type="core:AcademicAwardLevelType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>The level of the degree, certificate, or award granted for the successful completion of requirements of an academic program.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="SecondaryEducationDates" type="EducationDateRangeType">
+				<xs:annotation>
+					<xs:documentation>The date range when the portfolio owner attended the high school. An end date may be specificied if the portfolio owner graduated. An indicator may be specified if the portfolio owner is still in attendance. An indicator may be specified if the graduation was not achieved.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="SecondaryEducationObjectLink" type="ObjectLinkType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>Object link to another node or object related to this high school experience. For example, it could connect this high school experience to a related artifact stored in the portfolio such as a diploma.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Course" type="AcRec:CourseType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>Details on a course in the portfolio owner’s course plan at the high school.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="PostsecondaryProgramType">
+		<xs:annotation>
+			<xs:documentation>A type defining A portfolio owner's postsecondary program; both completed and in-progress.</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="ProgramID" type="ObjectIDSimpleType">
+				<xs:annotation>
+					<xs:documentation>An identifying code for the postsecondary program in which the portfolio owner is/was enrolled.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="School" type="AcRec:SchoolType">
+				<xs:annotation>
+					<xs:documentation>A place or system for educating students.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="ProgramName" type="core:AcademicProgramNameType">
+				<xs:annotation>
+					<xs:documentation>The name of the postsecondary program in which the portfolio owner is/was enrolled.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="CIP" type="core:CourseCIPCodeType">
+				<xs:annotation>
+					<xs:documentation>The Classification of Instructional Programs identifier for the postsecondary program in which the portfolio owner is/was enrolled.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="CredentialEarned" type="core:AcademicAwardTitleType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>The academic award earned by the portfolio owner for completion of the postsecondary program.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="ProgramPeriod" type="EducationDateRangeType">
+				<xs:annotation>
+					<xs:documentation>The date range when the portfolio owner was enrolled in the postsecondary program. May also represent a current program with a start date and a current program indicator.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="ProgramObjectLink" type="ObjectLinkType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>Object link to another node or object related to this postsecondary program. For example, it could connect this postsecondary program to a related goal defined in the portfolio.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="CompetencyType">
+		<xs:annotation>
+			<xs:documentation>A complex type describing the portfolio owner’s skills and competencies.</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="CompetencyID" type="ObjectIDSimpleType">
+				<xs:annotation>
+					<xs:documentation>An identifier for the competency. </xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="CompetencyName" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>The name of the competency. </xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="CompetencyDescription" type="xs:string" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>A brief description of the competency. </xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="CompetencyLevel" type="xs:string" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Portfolio owner's achieved or learned level of the competency or skill. </xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="CompetencyObjectLink" type="ObjectLinkType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>Object link to another node or object related to this competency. For example, it could connect this competency to a related artifact stored in the portfolio. </xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="CompetencySource" type="SourceType">
+				<xs:annotation>
+					<xs:documentation>The source of the assignment of the competency to the portfolio owner. Can be self-reported or assigned by a documented organization. </xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="ListsType">
+		<xs:annotation>
+			<xs:documentation>A complex type describing items in lists saved in a portfolio for career and education planning.</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="ListItemID" type="ObjectIDSimpleType">
+				<xs:annotation>
+					<xs:documentation>An identifier for an item in a list created by the portfolio owner.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="ListItemName" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>The name of an item in a list.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="ListItemNotes" type="xs:string" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Notes about an item in a list created by the portfolio owner.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="ListItemClassificationCode" type="ListItemClassificationCodeSimpleType">
+				<xs:annotation>
+					<xs:documentation>The type of list which includes the described item.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="ListItemIdentifier" type="ListItemCodeType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>An identifier related to a standard taxonomy for an item in a list.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="ListItemURL" type="core:URLAddressType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>A URL related to an item in a list.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="ListItemObjectLink" type="ObjectLinkType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>Object link to another node or object related to this list item. For example, it could connect this list item to a related artifact stored in the portfolio.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="ActionPlanStepType">
+		<xs:annotation>
+			<xs:documentation>A complex type describing the attributes of a single step in an action plan related to a goal set by a portfolio owner.</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="StepID" type="ObjectIDSimpleType">
+				<xs:annotation>
+					<xs:documentation>An identifier for an action plan step related to a goal.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="StepTitle" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>Name of the action plan step related to a goal.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="StepDescription" type="xs:string" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Description or details for the action plan step related to a goal.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="StepStartDate" type="SeparatedDateType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Defined start date for the action plan step related to a goal</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="StepTargetDate" type="SeparatedDateType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Defined target completion date for the action plan step related to a goal.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="StepCompletionDate" type="SeparatedDateType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Actual completion date for the action plan step related to a goal. Could be used as an indicator that an action plan step is no longer active.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="StepObjectLink" type="ObjectLinkType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>Object link to another node or object related to this action plan step. For example it could connect this action plan step to a related artifact stored in the portfolio.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="ApplicationForAdmissionType">
+		<xs:annotation>
+			<xs:documentation>A complex type describing a portfolio owner’s application to a postsecondary institution.</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="TransmissionData" type="AdmRec:TransmissionDataType">
+				<xs:annotation>
+					<xs:documentation>This element provides a logical grouping of elements related to Transmission information.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Applicant" type="AdmRec:ApplicantType">
+				<xs:annotation>
+					<xs:documentation>Describes the person that is applying for admission or readmission to the postsecondary school.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="NoteMessage" type="core:NoteMessageType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation> Note Message: Entities may use this field to store information not otherwise tracked on a loan.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="UserDefinedExtensions" type="core:UserDefinedExtensionsType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>This is used to create a place holder for the Unique Data which is defined by the VendorCode and IdentifierCode.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="HSTranscriptType">
+		<xs:annotation>
+			<xs:documentation>A complex type describing a college transcript for the portfolio owner.</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="TransmissionData" type="AcRec:TransmissionDataType">
+				<xs:annotation>
+					<xs:documentation>This element provides a logical grouping of elements related to Transmission information.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Student" type="AcRec:K12StudentType">
+				<xs:annotation>
+					<xs:documentation>Student Type</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="NoteMessage" type="core:NoteMessageType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation> Note Message: Entities may use this field to store information not otherwise tracked on a loan.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="UserDefinedExtensions" type="core:UserDefinedExtensionsType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>This is used to create a place holder for the Unique Data which is defined by the VendorCode and IdentifierCode.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="CollegeTranscriptType">
+		<xs:annotation>
+			<xs:documentation>A complex type describing a college transcript for the portfolio owner.</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="TransmissionData" type="AcRec:TransmissionDataType">
+				<xs:annotation>
+					<xs:documentation>This element provides a logical grouping of elements related to Transmission information.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Student" type="AcRec:StudentType">
+				<xs:annotation>
+					<xs:documentation>Student Type</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="NoteMessage" type="core:NoteMessageType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation> Note Message: Entities may use this field to store information not otherwise tracked on a loan.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="UserDefinedExtensions" type="core:UserDefinedExtensionsType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>This is used to create a place holder for the Unique Data which is defined by the VendorCode and IdentifierCode.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="EmploymentHistoryType">
+		<xs:annotation>
+			<xs:documentation>A complex type describing the portfolio owner’s employment history.</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="EmploymentHistoryID" type="ObjectIDSimpleType">
+				<xs:annotation>
+					<xs:documentation>An identifier for the portfolio owner's employment history used for backward references from XLink objects.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="EmployerHistory" type="EmployerType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>The portfolio owner's employment experience at an employer.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="EmploymentHistoryObjectLink" type="ObjectLinkType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>Object link to another node or object related to the portfolio owner's overall employment history. For example, it could connect the employment history to an artifact like a resume stored in the portfolio.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="NetworksType">
+		<xs:annotation>
+			<xs:documentation>A complex type describing networks to which the portfolio owner belongs as well as personal references.</xs:documentation>
+		</xs:annotation>
+		<xs:choice>
+			<xs:element name="Network" type="NetworkType">
+				<xs:annotation>
+					<xs:documentation>Details on a network to which the portfolio owner belongs.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="PersonalReference" type="ReferenceType">
+				<xs:annotation>
+					<xs:documentation>Details for a personal reference for the portfolio owner.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:choice>
+	</xs:complexType>
+	<xs:complexType name="IssuingAuthorityType">
+		<xs:annotation>
+			<xs:documentation>A complex type describing an organization that issues formal or informal credentials.</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="OrganizationName" type="core:OrganizationNameType">
+				<xs:annotation>
+					<xs:documentation>Name of Non-person entity such as Organization, Institution, Agency or Business.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="City" type="core:CityType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>I could not find this data element in any schemas now in use.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="StateProvince" type="core:StateProvinceCodeType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Code for US states, etc., and Canadian provinces.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="CountryIdentifier" type="core:CountryCodeType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>The identifier for the country in which the issuing organization or authority is located.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="WebSite" type="core:URLAddressType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>The URL for the website for the issuing organization or authority</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="ServicePeriodType">
+		<xs:annotation>
+			<xs:documentation>A complex type describing a military service period.</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="StartDate" type="xs:date">
+				<xs:annotation>
+					<xs:documentation>The start date of a date range.  The start date of a date range.  The start date of the military service period.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:choice>
+				<xs:element name="EndDate" type="xs:date">
+					<xs:annotation>
+						<xs:documentation>The end date of a date range.  The end date of a date range.  The end date of the military service period.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="CurrentIndicator" type="xs:boolean">
+					<xs:annotation>
+						<xs:documentation>Flag that indicates that a date range does not have an end date. For example, an employment date range could represent the date range for current employment.  Flag that indicates that a date range does not have an end date as the education event is still in progress. For example, a postsecondary program date range could represent the date range for a current program.  An indicator that the portfolio owner is still in active military service.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+			</xs:choice>
+			<xs:element name="Description" type="xs:string" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>A brief description of the military service period.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="ListItemCodeType">
+		<xs:annotation>
+			<xs:documentation>A complex type providing for identifiers for items in portfolio-based lists for career and college planning.</xs:documentation>
+		</xs:annotation>
+		<xs:choice>
+			<xs:element name="ONET" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>A unique identifier used by the Department of Labor as part of the O*NET system for identifying occupations.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="ProgramCIPCode" type="core:ProgramCIPCodeType">
+				<xs:annotation>
+					<xs:documentation>Code indicating a discipline or field of study assigned by the Classification of Instructional Programs. The current XML format definition is deprecated. Future releases will enforce the following format: nn.nnnn or nn.nn (with leading and trailing zeroes) The following examples are all valid: 01.1299 04.08 11.1002 15.00 16.0500 19.0000 For a complete list of valid codes see http://nces.ed.gov/.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="OPEID" type="core:OPEIDType">
+				<xs:annotation>
+					<xs:documentation>Groups not allowed in NIEM.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="IPEDS" type="core:IPEDSType">
+				<xs:annotation>
+					<xs:documentation>The unique identifier assigned by National Center for Education Statistics for each data exchange partner.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="FICE" type="core:FICEType">
+				<xs:annotation>
+					<xs:documentation>The unique identifier once maintained by the National Center for Education Statistics for each data exchange partner.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="CEEBACT" type="core:CEEBACTType">
+				<xs:annotation>
+					<xs:documentation>The unique identifier assigned by the College Entrance Examining Board and ACT for each data exchange partner.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="ACT" type="core:ACTType">
+				<xs:annotation>
+					<xs:documentation>This element provides a logical grouping of elements related to contact information.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:choice>
+	</xs:complexType>
+	<xs:complexType name="LicensesCertificationsType">
+		<xs:annotation>
+			<xs:documentation>A complex type describing a license or certification held by the portfolio owner.</xs:documentation>
+		</xs:annotation>
+		<xs:choice>
+			<xs:element name="License" type="LicenseType">
+				<xs:annotation>
+					<xs:documentation>Details on a license held by the portfolio owner.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="IndustryRecognizedCredential" type="IndustryRecognizedCredentialType">
+				<xs:annotation>
+					<xs:documentation>Details on an industry-recognized credential held by the portfolio owner.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:choice>
+	</xs:complexType>
+	<xs:complexType name="IndustryRecognizedCredentialType">
+		<xs:annotation>
+			<xs:documentation>A type defining details on an industry-recognized credential held by the portfolio owner.</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="IRCredentialID" type="ObjectIDSimpleType">
+				<xs:annotation>
+					<xs:documentation>An identifier for an industry-recognized credential.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="IRCredentialName" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>The name or title of an industry-recognized credential.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="IRCredentialCode" type="IRCredentialCodeSimpleType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>The type of industry-recognized credential held by the portfolio owner.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="IRCredentialIssuedDate" type="xs:date" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>The date the industry-recognized credential was issued to the portfolio owner.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="IRCredentialOrganization" type="IssuingAuthorityType">
+				<xs:annotation>
+					<xs:documentation>Details on the organization that issued the industry-recognized credential to the portfolio owner.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="IRCredentialDescription" type="xs:string" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>A brief description of the industry-recognized credential.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="IRCredentialObjectLink" type="ObjectLinkType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>An object link to another node or object related to this industry-recognized credential. For example, it could connect this industry-recognized credential to a related artifact about the credential stored in thye portfolio.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="OtherLearningType">
+		<xs:annotation>
+			<xs:documentation>A type defining A portfolio owner's other learning experiences.</xs:documentation>
+		</xs:annotation>
+		<xs:choice>
+			<xs:element name="OtherLearningExperience" type="OtherLearningExperienceType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>Details of an "other" learning experience documented in the portfolio.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="Badge" type="BadgeType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>Details of a badge earned by the portfolio owner.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:choice>
+	</xs:complexType>
+	<xs:complexType name="BadgeType">
+		<xs:annotation>
+			<xs:documentation>A type defining Details of a badge earned by the portfolio owner.</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="BadgeID" type="ObjectIDSimpleType">
+				<xs:annotation>
+					<xs:documentation>An identifying code for the badge as stored in the portfolio.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="BadgeName" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>The name of the achievement.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="BadgeDescription" type="xs:string" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>A short description of the achievement.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="BadgeImageURL" type="core:URLAddressType">
+				<xs:annotation>
+					<xs:documentation>URL of an image representing the achievement.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="BadgeCriteriaURL" type="core:URLAddressType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>URL of the criteria for earning the achievement.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="BadgeIssuingOrganization" type="IssuingAuthorityType">
+				<xs:annotation>
+					<xs:documentation>Details on the organization that issued the badge</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="BadgeStandardsAlignment" type="BadgeAlignmentType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>Details on the related badge standards alignment.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="BadgeIssuedDate" type="xs:date" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Date the earned badge was issued by the badge issuing authority.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="BadgeExpiryDate" type="xs:date" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>The expiry date for earned badges with a limited timeframe.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="BadgeObjectLink" type="ObjectLinkType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>Object link to another node or object related to this badge. For example, it could connect this badge to a goal defined in the portfolio.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="BadgeAlignmentType">
+		<xs:annotation>
+			<xs:documentation>A complex type describing a badge standards alignment to which the earned badge is aligned.</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="BadgeAlignmentName" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>Name of the badge standard alignment.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="BadgeAlignmentDescription" type="xs:string" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Short description of the badge standard alignment.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="BadgeAlignmentURL" type="core:URLAddressType" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>URL linking to the official description of the badge standard alignment.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="TransmissionDataType">
+		<xs:annotation>
+			<xs:documentation>This element provides a logical grouping of elements related to Transmission information.</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="DocumentID" type="core:DocumentIDType">
+				<xs:annotation>
+					<xs:documentation>The File Transmission Date and Time stamp with additional unique qualifying characters.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="CreatedDateType" type="core:CreatedDateTimeType">
+				<xs:annotation>
+					<xs:documentation>The date and time stamp when the document was created.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="TransmissionType" type="core:TransmissionTypeType">
+				<xs:annotation>
+					<xs:documentation>The nature and/or purpose of the document being transmitted.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="DocumentType" type="core:DocumentTypeCodeType">
+				<xs:annotation>
+					<xs:documentation>Specifies a short description of the data in the document.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="NoteMessage" type="core:NoteMessageType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation> Note Message: Entities may use this field to store information not otherwise tracked on a loan.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="CareerAssessmentType">
+		<xs:annotation>
+			<xs:documentation>A complex type describing the portfolio owner’s result from taking a career assessment.</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="CareerAssessmentID" type="ObjectIDSimpleType">
+				<xs:annotation>
+					<xs:documentation>An identifying code for a career assessment. </xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="AssessedAttribute" type="AssessedAttributeType">
+				<xs:annotation>
+					<xs:documentation>The career-related attribute of the portfolio owner that was measured by the assessment. Some standard assessed attributes are defined with an open element to add others.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="CareerAssessmentName" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>The name of the career assessment. </xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="CareerAssessmentResult" type="CareerAssessmentResultType">
+				<xs:annotation>
+					<xs:documentation>The result of the career assessment. Structures are defined for two common assessments: interests and work values. A separate structure is defined for describing the results of other career assessments. </xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="CareerAssessmentDate" type="xs:date" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Date the career assessment was taken. </xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="CareerAssessmentDescription" type="xs:string" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Brief description of the career assessment. </xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="CareerAssessmentObjectLink" type="ObjectLinkType" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>Object link to another node or object related to this assessment. For example it could connect this assessment to a comment stored in the portfolio. </xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="AssessedAttributeType">
+		<xs:annotation>
+			<xs:documentation>A type defining The career-related attribute of the portfolio owner that was measured by the assessment. Some standard assessed attributes are defined with an open element to add others.</xs:documentation>
+		</xs:annotation>
+		<xs:choice>
+			<xs:element name="StandardAttributeCode" type="StandardAttributeCodeSimpleType">
+				<xs:annotation>
+					<xs:documentation>A standard career-related attribute of the portfolio owner that was measured by the assessment. </xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="OtherAttribute" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>A non-standard career-related attribute of the portfolio owner that was measured by the assessment. </xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:choice>
+	</xs:complexType>
+	<xs:complexType name="CareerAssessmentResultType">
+		<xs:annotation>
+			<xs:documentation>A type defining The result of the career assessment. Structures are defined for two common assessments: interests and work values. A separate structure is defined for describing the results of other career assessments. </xs:documentation>
+		</xs:annotation>
+		<xs:choice>
+			<xs:element name="InterestProfile" type="InterestProfileType">
+				<xs:annotation>
+					<xs:documentation>Results of an interest assessment aligned with Holland interest types. For example, the Interest Profiler from the U.S. Department of Labor. </xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="WorkValuesProfile" type="WorkValuesProfileType">
+				<xs:annotation>
+					<xs:documentation>Results of a work values assessment aligned with O*NET work values. For example, the Work Importance Profiler from the U.S. Department of Labor/Employment and Training Administration. </xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="OtherCareerAssessmentResultProfile" type="OtherCareersAssessmentResultProfileType" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>Results of another career assessment (not interests or work values).  </xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:choice>
+	</xs:complexType>
+	<xs:complexType name="InterestProfileType">
+		<xs:annotation>
+			<xs:documentation>A type defining Results of an interest assessment aligned with Holland interest types. For example, the Interest Profiler from the U.S. Department of Labor. </xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="RealisticLevel" type="xs:integer">
+				<xs:annotation>
+					<xs:documentation>Measured level of Realistic interest type from interest assessment. </xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="InvestigativeLevel" type="xs:integer">
+				<xs:annotation>
+					<xs:documentation>Measured level of Investigative interest type from interest assessment. </xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="ArtisticLevel" type="xs:integer">
+				<xs:annotation>
+					<xs:documentation>Measured level of Artistic interest type from interest assessment. </xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="SocialLevel" type="xs:integer">
+				<xs:annotation>
+					<xs:documentation>Measured level of Social interest type from interest assessment. </xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="EnterprisingLevel" type="xs:integer">
+				<xs:annotation>
+					<xs:documentation>Measured level of Enterprising interest type from interest assessment. </xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="ConventionalLevel" type="xs:integer">
+				<xs:annotation>
+					<xs:documentation>Measured level of Conventional interest type from interest assessment. </xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="WorkValuesProfileType">
+		<xs:annotation>
+			<xs:documentation>A type defining Results of a work values assessment aligned with O*NET work values. For example, the Work Importance Profiler from the U.S. Department of Labor/Employment and Training Administration. </xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="AchievementLevel" type="xs:integer">
+				<xs:annotation>
+					<xs:documentation>Measured level of Achievement work value factor from work values assessment. </xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="IndependenceLevel" type="xs:integer">
+				<xs:annotation>
+					<xs:documentation>Measured level of Independence work value factor from work values assessment. </xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="RecognitionLevel" type="xs:integer">
+				<xs:annotation>
+					<xs:documentation>Measured level of Recognition work value factor from work values assessment. </xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="RelationshipsLevel" type="xs:integer">
+				<xs:annotation>
+					<xs:documentation>Measured level of Relationships work value factor from work values assessment. </xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="SupportLevel" type="xs:integer">
+				<xs:annotation>
+					<xs:documentation>Measured level of Support work value factor from work values assessment. </xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="WorkingConditionsLevel" type="xs:integer">
+				<xs:annotation>
+					<xs:documentation>Measured level of Working Conditions work value factor from work values assessment. </xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="OtherCareersAssessmentResultProfileType">
+		<xs:annotation>
+			<xs:documentation>Results from a career assessment that is not a RIASEC interest assessment or a work values assessment.</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="FactorName" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>Name of the career-related attribute measured by the assessment. </xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="FactorLevel" type="xs:integer" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Measured level of career-related attribute for the portfolio owner measured by the assessment. </xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<!--=========================================-->
+	<!--Academic ePortfolio Simple Types-->
+	<!--=========================================-->
+	<xs:simpleType name="MilitaryServiceBranchCodeSimpleType">
+		<xs:annotation>
+			<xs:documentation/>
+		</xs:annotation>
+		<xs:restriction base="core:MilitaryDutyBranchType">
+			<xs:enumeration value="AirForce">
+				<xs:annotation>
+					<xs:documentation/>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="Army">
+				<xs:annotation>
+					<xs:documentation/>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="CoastGuard">
+				<xs:annotation>
+					<xs:documentation/>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="Marines">
+				<xs:annotation>
+					<xs:documentation/>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="Navy">
+				<xs:annotation>
+					<xs:documentation/>
+				</xs:annotation>
+			</xs:enumeration>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="ObjectIDSimpleType">
+		<xs:annotation>
+			<xs:documentation>A type defining An alternate identifier, unique within this component, to the node/object within this XML document that has a relationship to the current node. Can be used by applications to reference the related node. Examples of ID elements in the schema: EventID, ArtifactID, CommentID, GoalID, and StepID.</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string"/>
+	</xs:simpleType>
+	<xs:simpleType name="ObjectRelationSimpleType">
+		<xs:annotation>
+			<xs:documentation>A type defining the relationship between two related objects in the portfolio.</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="ParentOf">
+				<xs:annotation>
+					<xs:documentation>current object is parent of related object</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="ChildOf">
+				<xs:annotation>
+					<xs:documentation>current object is child of related object</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="RelationshipSimpleType">
+		<xs:annotation>
+			<xs:documentation>A type defining The relationship of the comment's author to the portfolio owner.</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="Self">
+				<xs:annotation>
+					<xs:documentation>portfolio owner</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="Peer">
+				<xs:annotation>
+					<xs:documentation>peer of the portfolio owner</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="Instructor">
+				<xs:annotation>
+					<xs:documentation>instructor of the portfolio owner</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="Supervisor">
+				<xs:annotation>
+					<xs:documentation>supervisor of the portfolio owner</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="Subordinate">
+				<xs:annotation>
+					<xs:documentation>subordinate of the portfolio owner</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="Parent/guardian">
+				<xs:annotation>
+					<xs:documentation>parent or guardian of the portfolio owner</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="EventPrimaryClassificationCodeSimpleType">
+		<xs:annotation>
+			<xs:documentation>A type defining The primary classification of an event.</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="Activity">
+				<xs:annotation>
+					<xs:documentation>Activity</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="Award">
+				<xs:annotation>
+					<xs:documentation>Award</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="CommunityService">
+				<xs:annotation>
+					<xs:documentation>Community service</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="Course">
+				<xs:annotation>
+					<xs:documentation>Course</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="IndependentStudy">
+				<xs:annotation>
+					<xs:documentation>Independent study</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="Internship">
+				<xs:annotation>
+					<xs:documentation>Internship</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="Job">
+				<xs:annotation>
+					<xs:documentation>Job</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="LeadershipExperience">
+				<xs:annotation>
+					<xs:documentation>Leadership experience</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="LifeExperience">
+				<xs:annotation>
+					<xs:documentation>Life experience</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="OrganizationMembership">
+				<xs:annotation>
+					<xs:documentation>Organization membership</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="Other">
+				<xs:annotation>
+					<xs:documentation>Other type of event</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="ServiceLearning">
+				<xs:annotation>
+					<xs:documentation>Service learning</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="Training">
+				<xs:annotation>
+					<xs:documentation>Training</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="OtherLearningCodeSimpleType">
+		<xs:annotation>
+			<xs:documentation>A type defining A type for an "other" learning experience.</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="Course">
+				<xs:annotation>
+					<xs:documentation>A single completed course</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="SelfStudy">
+				<xs:annotation>
+					<xs:documentation>A self-study program</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="GoalCodeSimpleType">
+		<xs:annotation>
+			<xs:documentation>A type defining The type of goal.</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="Academic">
+				<xs:annotation>
+					<xs:documentation>Academic goal</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="Career">
+				<xs:annotation>
+					<xs:documentation>Career goal</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="Personal/Social">
+				<xs:annotation>
+					<xs:documentation>Personal or social goal</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="ArtifactMediaIdentifierCodeSimpleType">
+		<xs:annotation>
+			<xs:documentation>A type defining Media type represented by the stored artifact.</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="document">
+				<xs:annotation>
+					<xs:documentation>document</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="audio">
+				<xs:annotation>
+					<xs:documentation>audio</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="video">
+				<xs:annotation>
+					<xs:documentation>video</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="image">
+				<xs:annotation>
+					<xs:documentation>image</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="NetworkCodeSimpleType">
+		<xs:annotation>
+			<xs:documentation>A type defining The type of network.</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="Social">
+				<xs:annotation>
+					<xs:documentation>social network</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="Professional">
+				<xs:annotation>
+					<xs:documentation>professional network</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="Informal">
+				<xs:annotation>
+					<xs:documentation>informal network</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="ListItemClassificationCodeSimpleType">
+		<xs:annotation>
+			<xs:documentation>A type defining The type of list which includes the described item.</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="Career">
+				<xs:annotation>
+					<xs:documentation>career</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="ProgramOrMajor">
+				<xs:annotation>
+					<xs:documentation>program or major</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="School">
+				<xs:annotation>
+					<xs:documentation>school</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="Scholarship">
+				<xs:annotation>
+					<xs:documentation>scholarship</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="IRCredentialCodeSimpleType">
+		<xs:annotation>
+			<xs:documentation>A type defining The type of industry-recognized credential held by the portfolio owner.</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="RegisteredApprenticeshipCompletionCertificate">
+				<xs:annotation>
+					<xs:documentation>Registered Apprenticeship Completion Certificate</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="GeneralApprenticeshipCompletionCertificate">
+				<xs:annotation>
+					<xs:documentation>General Apprenticeship Completion Certificate</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="ThirdPartyCertification">
+				<xs:annotation>
+					<xs:documentation>Third Party Certification</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="StandardAttributeCodeSimpleType">
+		<xs:annotation>
+			<xs:documentation>A type defining A standard career-related attribute of the portfolio owner that was measured by the assessment. </xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="Interests">
+				<xs:annotation>
+					<xs:documentation>Interests</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="Values">
+				<xs:annotation>
+					<xs:documentation>Work values</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="PersonalityType">
+				<xs:annotation>
+					<xs:documentation>Personality type</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="Aptitudes">
+				<xs:annotation>
+					<xs:documentation>Aptitudes</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="Skills">
+				<xs:annotation>
+					<xs:documentation>Skills</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+		</xs:restriction>
+	</xs:simpleType>
+</xs:schema>
