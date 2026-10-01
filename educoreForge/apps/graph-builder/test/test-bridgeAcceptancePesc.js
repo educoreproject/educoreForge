@@ -653,7 +653,15 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // F6's own two intermediate re-anchors of this constant (postPescF6PescComposeA-100126, postPescF6EportfolioPescComposeA-100126)
 // were dropped in the rebase. No framework source moved. Six declared paths unchanged, no exclusion added; the tag is cut ON
 // this re-anchor commit.
-const P1_BASELINE_COMMIT = 'postPescF6B1MergedPescComposeA-100126'; // re-anchored by QUIET_CIPHER on the merged F6+B1 head; the tag is cut ON the re-anchor commit
+// RE-ANCHOR 2026-10-01 (DAWN_CHORUS; pre-authorised, NOTES 5 and CAMPAIGN-goldJevFour, PESC lane E):
+// postPescF6B1MergedPescComposeA-100126 -> postPescEPescComposeA-100126. CENSUS (numstat from
+// postPescF6B1MergedPescComposeA-100126 over the six declared paths, 3 paths, from TWO commits): 1d5e80d
+// lib/bridge-framework/test/testSupport/toyBridgeScenario.js 12/2 (a scenario may pass its own hangGuardMs, QUIET_ORBIT
+// ruling 2026-10-01); ed9fe02 lib/bridge-framework/test/test-bgDecl.js 3/1 and lib/bridge-framework/test/test-bgJudgeSlot.js
+// 3/0 (the shipped-plugin roster literals for pescAcademicEportfolio1v0v0CedsDerivedPlugin). Lanes B1x and B2x move the
+// same constant on their branches; the merge needs one anchor whose census names all three lanes. No framework source
+// moved. Six declared paths unchanged, no exclusion added; the tag is cut ON this re-anchor commit.
+const P1_BASELINE_COMMIT = 'postPescEPescComposeA-100126'; // re-anchored by DAWN_CHORUS (lane E); the tag is cut ON the re-anchor commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
