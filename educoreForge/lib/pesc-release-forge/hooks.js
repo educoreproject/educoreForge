@@ -8,14 +8,16 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //   require('<lib>/pesc-release-forge/hooks').makeReleaseHooks({ standardKey, labelPrefix, frozenReleaseCensus, frozenCensusName })
 //     → { sourceLoaderList, describeSource, describeRoot, emitContractGraph }
 //
-//   sourceLoaderList  — TWO loaders, run in this order:
+//   sourceLoaderList  — THREE loaders, run in this order:
 //                       pescReleaseXsdSet (xsdSetLoader.js): parse the folder, resolve every QName
 //                         inside the release, and hold the counts to the bundle's frozen census;
 //                       pescReleaseManifestEntry (manifestEntryLoader.js): the expander's entry,
-//                         whose member files must be exactly the folder's .xsd files by sha256.
+//                         whose member files must be exactly the folder's .xsd files by sha256;
+//                       pescDocumentationDonorSet (documentationDonorSet.js, phase F-B): the
+//                         later-edition files the release borrows element text from (none for most).
 //   describeSource    — PURE. The XSD files are not read for a version (selfDescribedVersion null),
 //                       so the framework takes it from standardSourceLocation. sourceFiles names the
-//                       .xsd files in the parser's order and then the manifest entry. sourceUrl null:
+//                       .xsd files in the parser's order, then the manifest entry, then the donors. sourceUrl null:
 //                       a release is our closure of PESC files, not a published bundle with a URL.
 //   describeRoot      — PURE apart from the version guard, which throws a named refusal.
 //   emitContractGraph — the walk (walk.js): every source node and structural edge (phase F2), the
@@ -27,11 +29,12 @@ const path = require('path');
 const refuse = require(path.join(__dirname, '..', 'forge-framework', 'refuse'));
 const { makeXsdSetLoader } = require('./xsdSetLoader');
 const manifestEntryLoader = require('./manifestEntryLoader');
+const documentationDonorSet = require('./documentationDonorSet');
 const versionGuard = require('./versionGuard');
 const walk = require('./walk');
 const { buildNodeKindTable } = require('./nodeKindTable');
 
-const LOADER_NAME = Object.freeze({ PESC_RELEASE_XSD_SET: 'pescReleaseXsdSet', PESC_RELEASE_MANIFEST_ENTRY: 'pescReleaseManifestEntry' });
+const LOADER_NAME = Object.freeze({ PESC_RELEASE_XSD_SET: 'pescReleaseXsdSet', PESC_RELEASE_MANIFEST_ENTRY: 'pescReleaseManifestEntry', PESC_DOCUMENTATION_DONOR_SET: 'pescDocumentationDonorSet' });
 const SOURCE_FORMAT = 'pesc-xsd-release-folder';
 
 // START OF moduleFunction() ============================================================
@@ -48,7 +51,7 @@ const moduleFunction =
 		const describeSource = ({ parsed }) => ({
 			selfDescribedVersion: null,
 			sourceFormat: SOURCE_FORMAT,
-			sourceFiles: parsed[LOADER_NAME.PESC_RELEASE_XSD_SET].artifacts.map((oneArtifact) => oneArtifact.filename).concat([parsed[LOADER_NAME.PESC_RELEASE_MANIFEST_ENTRY].sourceFileName]),
+			sourceFiles: parsed[LOADER_NAME.PESC_RELEASE_XSD_SET].artifacts.map((oneArtifact) => oneArtifact.filename).concat([parsed[LOADER_NAME.PESC_RELEASE_MANIFEST_ENTRY].sourceFileName], parsed[LOADER_NAME.PESC_DOCUMENTATION_DONOR_SET].donorRelativePathList),
 			sourceUrl: null,
 		});
 
@@ -61,6 +64,7 @@ const moduleFunction =
 			const { walkStats, sequenceGroups } = walk.emitReleaseGraph({
 				xsdSet: parsed[LOADER_NAME.PESC_RELEASE_XSD_SET],
 				loadedManifestEntry: parsed[LOADER_NAME.PESC_RELEASE_MANIFEST_ENTRY],
+				loadedDonorSet: parsed[LOADER_NAME.PESC_DOCUMENTATION_DONOR_SET],
 				standardKey,
 				nodeKindTable,
 				kit,
@@ -82,6 +86,10 @@ const moduleFunction =
 				{
 					loaderName: LOADER_NAME.PESC_RELEASE_MANIFEST_ENTRY,
 					load: manifestEntryLoader.loadReleaseManifestEntry,
+				},
+				{
+					loaderName: LOADER_NAME.PESC_DOCUMENTATION_DONOR_SET,
+					load: documentationDonorSet.loadDocumentationDonorSet,
 				},
 			],
 			describeSource,

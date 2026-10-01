@@ -117,14 +117,27 @@
 			},
 			"replacedFileName": "AdmissionsRecord_v1.4.0.xsd",
 			"documentationBlanking": {
-				"fileName": "AcademicRecord_v1.10.0.xsd",
-				"ownerTypeName": "PersonType",
-				"elementName": "HighSchool"
+				"fileName": "AcademicEportfolio_v1.0.0.xsd",
+				"ownerTypeName": "AcademicEPortfolioType",
+				"elementName": "Goals",
+				"fixtureNote": "phase F-B moved this from AcademicRecord_v1.10.0.xsd PersonType/HighSchool: with donors, a blanked library element borrows a later edition's identical text, so the text set no longer moves; the message file has no donor edition"
 			},
 			"extensionRewrite": {
 				"fileName": "CoreMain_v1.16.0.xsd",
 				"typeName": "EmployerType",
 				"baseQNameText": "core:OrganizationEntityType"
+			},
+			"donorBoundsAlteration": {
+				"fixtureNote": "phase F-B, gate F21 twin oneDonorTypeBoundsAltered: AcademicRecord HighSchoolType's one element gets maxOccurs in every donor edition that carries the type, so its one borrower (OrganizationName, mute in 1.10.0) loses its structural donor and the borrowed count falls by exactly one (measured)",
+				"ownerTypeName": "HighSchoolType",
+				"elementOpenText": "<xs:element name=\"OrganizationName\"",
+				"alteredMaxOccurs": "2",
+				"donorFileNameList": [
+					"AcademicRecord_v1.11.0.xsd",
+					"AcademicRecord_v1.12.0.xsd",
+					"AcademicRecord_v1.13.0.xsd",
+					"AcademicRecord_v1.14.0.xsd"
+				]
 			}
 		}
 	}

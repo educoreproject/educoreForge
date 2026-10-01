@@ -18,7 +18,7 @@ NAME
      ${moduleName} -- write one PESC release forge bundle from a release folder and its manifest entry
 
 SYNOPSIS
-     ${moduleName} --releaseFolder=<dir> --manifest=<releaseManifest.json> --outputRoot=<forges dir> --expanderCodeDir=<dir>
+     ${moduleName} --releaseFolder=<dir> --manifest=<releaseManifest.json> --outputRoot=<forges dir> --expanderCodeDir=<dir> [--donorCorpus=<dir>]
 
 DESCRIPTION
      Refuses, writing nothing, when the folder disagrees with its manifest entry, when the parser
@@ -26,6 +26,9 @@ DESCRIPTION
      already exists. Otherwise writes <outputRoot>/<standardKey>/ and prints what it wrote.
      --expanderCodeDir is pescReleaseExpander's git repository; its HEAD commit is recorded in the
      bundle's README_PROVENANCE.md.
+     --donorCorpus (phase F-B) is the folder holding the release's documentation donors, normally
+     pescReleaseExpander's sourceCorpus. Required exactly when documentationDonorTable.json names
+     donors for the release; refused for a release that has none.
 
 EXIT
      0 the bundle was written;  1 refused.
@@ -41,6 +44,9 @@ const { xLog, commandLineParameters } = process.global;
 const { scaffoldReleaseBundle } = require('./scaffoldReleaseBundleLib');
 
 const FLAG_NAME_LIST = Object.freeze(['releaseFolder', 'manifest', 'outputRoot', 'expanderCodeDir']);
+// phase F-B: required for a release that declares documentation donors (documentationDonorTable.json),
+// refused for one that declares none; the library decides, this tool only passes it on
+const DONOR_CORPUS_FLAG_NAME = 'donorCorpus';
 
 const refuseAndExit = (refusalText) => {
 	xLog.error(`${moduleName}: REFUSED: ${refusalText}`);
@@ -68,8 +74,9 @@ scaffoldReleaseBundle(
 		releaseFolderPath: path.resolve(flagValueOf('releaseFolder')),
 		manifestPath: path.resolve(flagValueOf('manifest')),
 		outputRootPath: path.resolve(flagValueOf('outputRoot')),
+		...(flagValueOf(DONOR_CORPUS_FLAG_NAME) === undefined ? {} : { donorCorpusPath: path.resolve(flagValueOf(DONOR_CORPUS_FLAG_NAME)) }),
 		expanderProvenanceText,
-		scaffoldCommandText: `node ${path.relative(TREE_ROOT, __filename)} ${FLAG_NAME_LIST.map((oneFlagName) => `--${oneFlagName}=${flagValueOf(oneFlagName)}`).join(' ')}`,
+		scaffoldCommandText: `node ${path.relative(TREE_ROOT, __filename)} ${FLAG_NAME_LIST.concat(flagValueOf(DONOR_CORPUS_FLAG_NAME) === undefined ? [] : [DONOR_CORPUS_FLAG_NAME]).map((oneFlagName) => `--${oneFlagName}=${flagValueOf(oneFlagName)}`).join(' ')}`,
 		copiedDateText: new Date().toISOString().slice(0, 10),
 	},
 	(scaffoldError, scaffolded) => {

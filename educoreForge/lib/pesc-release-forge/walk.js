@@ -6,7 +6,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // WORKORDER §3 F2). PURE and synchronous: it runs inside the framework's buildContractGraph, where a
 // throw is the sanctioned refusal (the framework's one adapter hands it to the forge callback).
 //
-//   emitReleaseGraph({ xsdSet, loadedManifestEntry, standardKey, nodeKindTable, kit })
+//   emitReleaseGraph({ xsdSet, loadedManifestEntry, loadedDonorSet, standardKey, nodeKindTable, kit })
 //     → { walkStats, sequenceGroups }
 //
 // It mints, after the framework's root: the release record; one schema file node per member file;
@@ -46,6 +46,15 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // A reachable attribute is refused by name: no release reaches one (DESIGN-pescBridge.md §1.1,
 // measured), and an attribute has no element path for an occurrence to name.
 //
+// BORROWED TEXT (phase F-B, §2.7; borrowing.js decides). A local element of a named complex type with
+// no text of its own borrows a later edition's text when the release declares donors (loader 3) and
+// a donor's same-named type is structurally identical: it carries borrowedDocumentation and
+// borrowedFrom (the donor's namespace, file, sha256 and type), and its effectiveDocumentation is the
+// borrowed text with documentationSource 'borrowed' (own text first, then borrowed, then the type's).
+// So the text reaches the vectors through effectiveDocumentation. It never reaches definitionDigest
+// (computed from the parser's model, which the donor never enters) nor the round trip (the emitter
+// reads documentationValueList; roundTripPair.js names the exclusion).
+//
 // THE FORGE DOES NO BRIDGING (FBB-001): the walk ends with a scan that refuses any property whose
 // name speaks of CEDS (gate F14).
 
@@ -57,6 +66,7 @@ const { definitionDigestOf } = require('./definitionDigest');
 const { makeSequenceGroupCollector, GROUP_KIND } = require('./sequenceGroups');
 const reachabilityLib = require('./reachability');
 const { contextTextOf } = require('./contextText');
+const borrowingLib = require('./borrowing');
 
 const { SYMBOL_SPACE } = resolutionTableLib;
 const ELEMENT_SEGMENT = 'el';
@@ -65,7 +75,7 @@ const ANONYMOUS_SEGMENT = 'anon';
 const CODE_SEGMENT = 'code';
 const RELEASE_RECORD_SEGMENT = 'release';
 const SCHEMA_FILE_SEGMENT = 'file';
-const DOCUMENTATION_SOURCE = Object.freeze({ OWN: 'own', TYPE: 'type' });
+const DOCUMENTATION_SOURCE = Object.freeze({ OWN: 'own', BORROWED: 'borrowed', TYPE: 'type' });
 const BRIDGING_PROPERTY_NAME_RE = /ceds/i;
 // the section rule (§2.8): the first two segments BELOW the root element
 const SECTION_DEPTH_BELOW_ROOT = 2;
@@ -132,7 +142,7 @@ const CARRY_LIST_BY_NODE_KIND = Object.freeze({
 	// codeListName and codeListDocumentation: the code list an element is typed by, carried onto the element
 	// because the derived bridge renders only the subject's own properties (QUIET_ORBIT, F6 first commit);
 	// not text-declared, and the round trip never reads them (the list is regenerated from its own node)
-	element: Object.freeze(SOURCE_CARRY_LIST.concat(['documentation', 'documentationValueList', 'typeQName', 'typeAsWritten', 'typeName', 'minOccursAsWritten', 'maxOccursAsWritten', 'nillableAsWritten', 'formAsWritten', 'defaultAsWritten', 'fixedAsWritten', 'owningTypeName', 'effectiveDocumentation', 'documentationSource', 'codeListName', 'codeListDocumentation'], PATH_CARRY_LIST)),
+	element: Object.freeze(SOURCE_CARRY_LIST.concat(['documentation', 'documentationValueList', 'typeQName', 'typeAsWritten', 'typeName', 'minOccursAsWritten', 'maxOccursAsWritten', 'nillableAsWritten', 'formAsWritten', 'defaultAsWritten', 'fixedAsWritten', 'owningTypeName', 'effectiveDocumentation', 'documentationSource', 'codeListName', 'codeListDocumentation', 'borrowedDocumentation', 'borrowedFrom'], PATH_CARRY_LIST)),
 	attribute: Object.freeze(SOURCE_CARRY_LIST.concat(['documentation', 'documentationValueList', 'typeQName', 'typeAsWritten', 'typeName', 'useAsWritten', 'owningTypeName', 'effectiveDocumentation', 'documentationSource'])),
 	// a code whose value is the empty string carries no value (absent is absent, gate F7) and
 	// valueIsEmptyString true, so the round trip can write value="" without guessing (phase F4 ruling);
@@ -198,13 +208,14 @@ const singleDerivationOf = ({ container, ownerStableId }) => {
 	return container.derivations.length === 1 ? container.derivations[0] : null;
 };
 
-const emitReleaseGraph = ({ xsdSet, loadedManifestEntry, standardKey, nodeKindTable, kit }) => {
+const emitReleaseGraph = ({ xsdSet, loadedManifestEntry, loadedDonorSet, standardKey, nodeKindTable, kit }) => {
 	const { artifacts, resolutionTable } = xsdSet;
 	const stableIdPrefix = `${standardKey}:`;
 	const releaseIndependentIdOf = (stableId) => stableId.slice(stableIdPrefix.length);
 	const nodeCountByKind = {};
 	const edgeCountByType = {};
-	const documentationSourceCount = { [DOCUMENTATION_SOURCE.OWN]: 0, [DOCUMENTATION_SOURCE.TYPE]: 0, none: 0 };
+	const documentationSourceCount = { [DOCUMENTATION_SOURCE.OWN]: 0, [DOCUMENTATION_SOURCE.BORROWED]: 0, [DOCUMENTATION_SOURCE.TYPE]: 0, none: 0 };
+	const borrowingIndex = borrowingLib.makeBorrowingIndex({ donorArtifactList: loadedDonorSet.donorArtifactList });
 	const sequenceGroupCollector = makeSequenceGroupCollector();
 
 	const addEdge = ({ edgeType, fromStableId, toStableId, edgeProperties }) => {
@@ -404,10 +415,14 @@ const emitReleaseGraph = ({ xsdSet, loadedManifestEntry, standardKey, nodeKindTa
 		}
 		return target !== null && target.nodeKind === 'codeList' ? { codeListName: target.definition.name, codeListDocumentation: nonBlankOrNull(target.definition.documentation) } : {};
 	};
-	const effectiveDocumentationFactsOf = ({ ownDocumentation, typeDocumentation }) => {
+	const effectiveDocumentationFactsOf = ({ ownDocumentation, borrowedText, typeDocumentation }) => {
 		if (ownDocumentation !== null) {
 			documentationSourceCount[DOCUMENTATION_SOURCE.OWN]++;
 			return { effectiveDocumentation: ownDocumentation, documentationSource: DOCUMENTATION_SOURCE.OWN };
+		}
+		if (borrowedText !== null) {
+			documentationSourceCount[DOCUMENTATION_SOURCE.BORROWED]++;
+			return { effectiveDocumentation: borrowedText.borrowedDocumentation, documentationSource: DOCUMENTATION_SOURCE.BORROWED, ...borrowedText };
 		}
 		if (typeDocumentation !== null) {
 			documentationSourceCount[DOCUMENTATION_SOURCE.TYPE]++;
@@ -446,11 +461,13 @@ const emitReleaseGraph = ({ xsdSet, loadedManifestEntry, standardKey, nodeKindTa
 			emitCodes({ container: anonymousType.body, codeListStableId: anonymousStableId, artifact, reachableFromRoot });
 			addEdge({ edgeType: EDGE_TYPES.HAS_OPTION_SET, fromStableId: ownerDeclarationStableId, toStableId: anonymousStableId });
 		}
-		emitContainerContent({ container: anonymousType.body, ownerStableId: anonymousStableId, owningTypeName: null, artifact, ownerIsReachable: reachableFromRoot });
+		emitContainerContent({ container: anonymousType.body, ownerStableId: anonymousStableId, owningTypeName: null, ownerDefinition: null, artifact, ownerIsReachable: reachableFromRoot });
 		return anonymousStableId;
 	};
 
-	const emitContainerContent = ({ container, ownerStableId, owningTypeName, artifact, ownerIsReachable }) => {
+	// ownerDefinition: the top-level definition owning the container; null inside an anonymous type,
+	// whose elements have no named type a donor could carry
+	const emitContainerContent = ({ container, ownerStableId, owningTypeName, ownerDefinition, artifact, ownerIsReachable }) => {
 		const elementStableIdList = [];
 		container.elements.forEach((oneElement) => {
 			const elementStableId = elementStableIdOf({ ownerStableId, oneElement });
@@ -479,7 +496,11 @@ const emitReleaseGraph = ({ xsdSet, loadedManifestEntry, standardKey, nodeKindTa
 					defaultAsWritten: oneElement.defaultAsWritten,
 					fixedAsWritten: oneElement.fixedAsWritten,
 					owningTypeName,
-					...effectiveDocumentationFactsOf({ ownDocumentation, typeDocumentation: typeDocumentationOf({ target: typed.target, anonymousType: oneElement.anonymousType }) }),
+					...effectiveDocumentationFactsOf({
+						ownDocumentation,
+						borrowedText: ownDocumentation !== null || ownerDefinition === null ? null : borrowingIndex.donorTextFor({ ownerDefinition, ownerArtifact: artifact, elementName: oneElement.name }),
+						typeDocumentation: typeDocumentationOf({ target: typed.target, anonymousType: oneElement.anonymousType }),
+					}),
 					...codeListFactsOf({ target: typed.target, anonymousType: oneElement.anonymousType }),
 					...declarationPathFactsOf(elementStableId),
 				},
@@ -516,7 +537,7 @@ const emitReleaseGraph = ({ xsdSet, loadedManifestEntry, standardKey, nodeKindTa
 					typeName: typed.resolvedReference === null ? null : typed.resolvedReference.localName,
 					useAsWritten: oneAttribute.useAsWritten,
 					owningTypeName,
-					...effectiveDocumentationFactsOf({ ownDocumentation, typeDocumentation: typeDocumentationOf({ target: typed.target, anonymousType: oneAttribute.anonymousType }) }),
+					...effectiveDocumentationFactsOf({ ownDocumentation, borrowedText: null, typeDocumentation: typeDocumentationOf({ target: typed.target, anonymousType: oneAttribute.anonymousType }) }),
 				},
 			});
 			addEdge({ edgeType: EDGE_TYPES.HAS_PROPERTY, fromStableId: ownerStableId, toStableId: attributeStableId });
@@ -604,7 +625,7 @@ const emitReleaseGraph = ({ xsdSet, loadedManifestEntry, standardKey, nodeKindTa
 			if (nodeKind === 'codeList') {
 				emitCodes({ container, codeListStableId: stableId, artifact: oneArtifact, reachableFromRoot });
 			}
-			emitContainerContent({ container, ownerStableId: stableId, owningTypeName: oneDefinition.name, artifact: oneArtifact, ownerIsReachable: reachableFromRoot });
+			emitContainerContent({ container, ownerStableId: stableId, owningTypeName: oneDefinition.name, ownerDefinition: oneDefinition, artifact: oneArtifact, ownerIsReachable: reachableFromRoot });
 			definitionStableIdList.push(stableId);
 		});
 		sequenceGroupCollector.addGroup({ groupKey: `${stableIdPrefix}${SCHEMA_FILE_SEGMENT}/${oneArtifact.targetNamespace}#definitions`, members: definitionStableIdList, compositor: GROUP_KIND.DOCUMENT_ORDER });

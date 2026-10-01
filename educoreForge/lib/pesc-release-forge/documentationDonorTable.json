@@ -1,0 +1,42 @@
+{
+	"tableNote": "Phase F-B (DESIGN-pescForge.md 2.7; WORKORDER 3 F-B): the later-edition library files each PESC release may borrow element text from. EVERY release the library forges has a row; a release absent from this table is refused by name, so 'borrows nothing' is a declared fact, never an absence. donorFileList names files in the bundle snapshot's donorLibraries folder, each listed in its SHA256SUMS (the framework verifies them before every forge) and copied there by the scaffold tool from pescReleaseExpander's sourceCorpus. A donor is a later edition of a library family the release itself uses; the walk takes the latest edition whose same-named type is structurally identical (borrowing.js).",
+	"donorSetByReleaseName": {
+		"CollegeTranscript_v1.8.0": {
+			"donorReason": "none: CoreMain 1.19.0 and AcademicRecord 1.13.0 postdate PESC's 2016 documentation pass",
+			"donorFileList": []
+		},
+		"HighSchoolTranscript_v1.6.0": {
+			"donorReason": "none: CoreMain 1.17.0 and AcademicRecord 1.11.0 postdate PESC's 2016 documentation pass",
+			"donorFileList": []
+		},
+		"TestScoreReport_v1.1.0": {
+			"donorReason": "none: CoreMain 1.17.0 and AcademicRecord 1.11.0 postdate PESC's 2016 documentation pass",
+			"donorFileList": []
+		},
+		"DocumentRequest_v1.0.0": {
+			"donorReason": "none: CoreMain 1.19.1 and AcademicRecord 1.14.0 are the latest editions in the corpus",
+			"donorFileList": []
+		},
+		"DocumentResponse_v1.0.0": {
+			"donorReason": "none: CoreMain 1.19.1 and AcademicRecord 1.14.0 are the latest editions in the corpus",
+			"donorFileList": []
+		},
+		"LearningRecord_v1.0.0": {
+			"donorReason": "none: CoreMain 1.18.0 and AcademicRecord 1.12.0 postdate PESC's 2016 documentation pass",
+			"donorFileList": []
+		},
+		"AcademicEportfolio_v1.0.0": {
+			"donorReason": "TQ ruling (Q3, 2026-09-30): CoreMain 1.16.0 and AcademicRecord 1.10.0 predate the 2016 documentation pass; every later corpus edition of both families donates. AdmissionsRecord 1.4.0 is the latest AdmissionsRecord edition, so it has no donor, and no edition of it carries text (REPORT 4)",
+			"donorFileList": [
+				"AcademicRecord_v1.11.0.xsd",
+				"AcademicRecord_v1.12.0.xsd",
+				"AcademicRecord_v1.13.0.xsd",
+				"AcademicRecord_v1.14.0.xsd",
+				"CoreMain_v1.17.0.xsd",
+				"CoreMain_v1.18.0.xsd",
+				"CoreMain_v1.19.0.xsd",
+				"CoreMain_v1.19.1.xsd"
+			]
+		}
+	}
+}

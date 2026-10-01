@@ -23,6 +23,7 @@ const refuse = require(path.join(__dirname, '..', 'forge-framework', 'refuse'));
 const { DME_ROLES } = require(path.join(__dirname, '..', 'vocabulary', 'vocabulary'));
 const { deriveReleaseNames } = require('./releaseNames');
 const { MANIFEST_ENTRY_INPUT_NAME, MANIFEST_ENTRY_FILE_NAME } = require('./manifestEntryLoader');
+const { donorSourceInputListFor } = require('./documentationDonorSet');
 
 // the names the data file carries that the rule derives; each must agree
 const DERIVED_NAME_LIST = Object.freeze([
@@ -83,8 +84,10 @@ const buildForgeDeclaration = ({ releaseDeclarationData, releaseDeclarationName 
 		}),
 		cedsAnchorAbsentSentinelList: Object.freeze([]),
 		// the manifest entry is the snapshot's declared second input: the framework verifies it against
-		// SHA256SUMS like the .xsd files and hands its path to loader 2 under this inputName
-		additionalSourceInputList: Object.freeze([Object.freeze({ inputName: MANIFEST_ENTRY_INPUT_NAME, relativePathFromSourcePath: MANIFEST_ENTRY_FILE_NAME })]),
+		// SHA256SUMS like the .xsd files and hands its path to loader 2 under this inputName. Then the
+		// release's documentation donors (phase F-B, documentationDonorTable.json; none for most
+		// releases), each verified the same way and handed to loader 3
+		additionalSourceInputList: Object.freeze([Object.freeze({ inputName: MANIFEST_ENTRY_INPUT_NAME, relativePathFromSourcePath: MANIFEST_ENTRY_FILE_NAME })].concat(donorSourceInputListFor({ releaseName: releaseDeclarationData.releaseName }))),
 		// EMPTY: a new bundle may declare no migration allowance
 		compatibilityDeclarationList: Object.freeze([]),
 	});
