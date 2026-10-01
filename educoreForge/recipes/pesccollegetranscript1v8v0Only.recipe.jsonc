@@ -3,10 +3,8 @@
 	// round-trip stage on: the release's CERTIFICATION recipe (WORKORDER-pescForgeBridge-093026.md §3 F5,
 	// gate F16; DESIGN-pescForge.md §4.3). Written in phase F1 (MARBLE_BRIDGE, 2026-09-30).
 	//
-	// ⚠️ NOT RUNNABLE TO A VERDICT UNTIL PHASES F2 TO F4 MERGE. In F1 the forge mints the root alone (the
-	// walk is F2) and the declared round-trip validator is a refusing stub (the pair is F4), so a stage-on
-	// build with this recipe refuses by name at the round-trip stage. That is the intended state: no
-	// verdict can be reported for this release before the proof exists.
+	// Runnable to a verdict since phase F4 (the round-trip pair replaced the refusing stub); first built
+	// stage-on in phase F5 (AMBER_PORTAL, 2026-10-01; see the bundle's README_ValidationCertificate.md).
 	//
 	// GNC-001: any container built from this is DEV_pescCollegeTranscript1v8v0[_label] and stays one;
 	// every Docker provision takes /tmp/miloPersistence/dockerProvisionLock (WORKORDER §2).
