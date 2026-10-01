@@ -15,6 +15,9 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //   stores                  in-memory doubles for decisionStore / judgmentCache / matchForensics — the same API as
 //                           lib/decision-store, lib/judgment-cache, lib/match-forensics; a store persists ACROSS runs
 //                           of one scenario (materialise after re-judge) unless reset
+//   hangGuardMs             how long a run may go without calling back before it is reported HUNG (default
+//                           HANG_GUARD_MS, 4000; a release whose real-size double needs longer passes its own: PESC
+//                           ePortfolio's 2,542 units, QUIET_ORBIT ruling 2026-10-01). A positive integer, else refused
 // runScenario(scenario, cb) → { runError?, runReport?, graphDouble, stores, framework }  — a refusal is a RESULT
 
 const path = require('path');
@@ -178,6 +181,7 @@ const makeScenario = () => ({
 	judgeClientOverride: null,
 	stores: makeStores(),
 	conflictDetectorOverride: null,
+	hangGuardMs: HANG_GUARD_MS,
 });
 
 const cloneScenario = (scenario) => ({
@@ -192,6 +196,7 @@ const cloneScenario = (scenario) => ({
 	judgeClientOverride: scenario.judgeClientOverride,
 	stores: makeStores(), // every clone starts with FRESH stores; runRejudgeThenMaterialise carries them across its two runs explicitly
 	conflictDetectorOverride: scenario.conflictDetectorOverride,
+	hangGuardMs: scenario.hangGuardMs,
 });
 
 // makeScratchBundleCopy — a scratch copy of the toy bundle in a temp dir (never inside the tree) → its path
@@ -287,15 +292,20 @@ const runScenario = (scenario, callback) => {
 	if (scenario.specInferenceConfigOverride !== undefined) {
 		spec.inferenceConfig = scenario.specInferenceConfigOverride;
 	}
+	// a scenario built by hand (not by makeScenario) carries no hangGuardMs and gets the default
+	const hangGuardMs = scenario.hangGuardMs === undefined ? HANG_GUARD_MS : scenario.hangGuardMs;
+	if (!Number.isInteger(hangGuardMs) || hangGuardMs <= 0) {
+		throw new Error(`${moduleName} REFUSED: scenario.hangGuardMs is ${JSON.stringify(scenario.hangGuardMs)} — a positive integer of milliseconds, or absent for ${HANG_GUARD_MS}`);
+	}
 	let calledBack = false;
 	// a run that NEVER calls back (an arity-1 hook under a disabled check, a swallowed callback) is an outcome too:
 	// the hang guard reports it as { hungForMs } so a gate can go red instead of the whole suite going silent
 	const hangGuard = setTimeout(() => {
 		if (!calledBack) {
 			calledBack = true;
-			callback('', { hungForMs: HANG_GUARD_MS, runError: `${moduleName}: the run never called back within ${HANG_GUARD_MS}ms (HUNG)`, graphDouble, stores: scenario.stores, framework, registry });
+			callback('', { hungForMs: hangGuardMs, runError: `${moduleName}: the run never called back within ${hangGuardMs}ms (HUNG)`, graphDouble, stores: scenario.stores, framework, registry });
 		}
-	}, HANG_GUARD_MS);
+	}, hangGuardMs);
 	try {
 		framework.run(spec, (runError, runReport) => {
 			if (calledBack) {
