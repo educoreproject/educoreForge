@@ -643,7 +643,17 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // ONE commit, 3d62fa6): lib/bridge-framework/test/test-bgDecl.js 3/1 and lib/bridge-framework/test/test-bgJudgeSlot.js 4/1 (the
 // shipped-plugin roster literals for the new pescCollegeTranscript1v8v0CedsDerivedPlugin, ruled by QUIET_ORBIT). No framework
 // source moved. Six declared paths unchanged, no exclusion added; the tag is cut ON this re-anchor commit.
-const P1_BASELINE_COMMIT = 'postPescB1PescComposeA-100126'; // re-anchored by COPPER_MARBLE for PESC bridge B1; the tag is cut ON the re-anchor commit
+// RE-ANCHOR 2026-10-01 (QUIET_CIPHER; pre-authorised, NOTES 5; QUIET_ORBIT's merge directive: ONE anchor on the merged head
+// naming both lanes): postPescB1PescComposeA-100126 -> postPescF6B1MergedPescComposeA-100126. CENSUS (numstat from the last
+// common anchor postPescF5PescComposeA-100126 over the six declared paths, 3 paths, both lanes, test files only):
+//   B1 (3d62fa6): lib/bridge-framework/test/test-bgDecl.js 3/1, lib/bridge-framework/test/test-bgJudgeSlot.js 4/1 (the
+//     shipped-plugin roster literals);
+//   F6 (2ca62ea, 93c2709, the rebased a07552e and b7d4337): lib/bridge-framework/test/test-bgNosub.js 12/1 (the two
+//     BG-SEAM-UNTOUCHED seamDiffEmpty re-anchors for the six new release bundles' entry modules).
+// F6's own two intermediate re-anchors of this constant (postPescF6PescComposeA-100126, postPescF6EportfolioPescComposeA-100126)
+// were dropped in the rebase. No framework source moved. Six declared paths unchanged, no exclusion added; the tag is cut ON
+// this re-anchor commit.
+const P1_BASELINE_COMMIT = 'postPescF6B1MergedPescComposeA-100126'; // re-anchored by QUIET_CIPHER on the merged F6+B1 head; the tag is cut ON the re-anchor commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
