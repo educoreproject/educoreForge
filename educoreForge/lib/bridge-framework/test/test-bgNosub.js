@@ -566,7 +566,11 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // *Declaration.js / *Hooks.js; forges/* only). build.js, replay/, replay-manager/, every existing forge's entry/declaration/hooks
 // files and every framework source file under lib/forge-framework/: UNTOUCHED. i_live reads the same tag and moves with it.
 // PATH LIST BYTE-IDENTICAL, no exclusion added. Fresh red observed against THIS tag (DEVLOG-F1 §8.2).
-const PHASE3_ANCHOR_TAG = 'postPescF1SeamDiffEmpty-093026'; // re-anchored by MARBLE_BRIDGE, PESC release forge F1
+// PESC F5 RE-ANCHOR (AMBER_PORTAL, 2026-10-01; pre-authorised, NOTES-supervisor item 5): postPescF1SeamDiffEmpty-093026 ->
+// postPescF5SeamDiffEmpty-100126, tag cut ON this re-anchor commit. CENSUS (git diff --stat postPescF1SeamDiffEmpty-093026 -- the
+// seam paths) at cceeeb2: exactly the two files of the ruled framework fix 39f0502, both under lib/forge-framework/roundTripHarness/
+// (roundTripHarness.js 6, test/test-gRt.js 30). SEAM_PATH_LIST byte-identical. Fresh red observed against THIS tag (DEVLOG-F5).
+const PHASE3_ANCHOR_TAG = 'postPescF5SeamDiffEmpty-100126'; // re-anchored by AMBER_PORTAL, PESC release forge F5
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');
