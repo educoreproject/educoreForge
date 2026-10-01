@@ -55,8 +55,8 @@ const withForgeResult = (callback) => {
 		callback(cachedForgeResult);
 	});
 };
-const makeSubject = () => ({ harnessMutationList: [], validatorArgOverrides: {}, adjustForgeResult: null, outputPathOverride: undefined });
-const cloneSubject = (subject) => ({ harnessMutationList: subject.harnessMutationList.slice(), validatorArgOverrides: { ...subject.validatorArgOverrides }, adjustForgeResult: subject.adjustForgeResult, outputPathOverride: subject.outputPathOverride });
+const makeSubject = () => ({ harnessMutationList: [], validatorArgOverrides: {}, adjustForgeResult: null, outputPathOverride: undefined, graphIdentity: undefined });
+const cloneSubject = (subject) => ({ harnessMutationList: subject.harnessMutationList.slice(), validatorArgOverrides: { ...subject.validatorArgOverrides }, adjustForgeResult: subject.adjustForgeResult, outputPathOverride: subject.outputPathOverride, graphIdentity: subject.graphIdentity });
 const harnessFor = (subject) => (subject.harnessMutationList.length ? moduleDouble.loadWithMutations({ modulePath: HARNESS_PATH, mutationList: subject.harnessMutationList }) : require(HARNESS_PATH))();
 const assemblerFor = (subject) => (subject.harnessMutationList.length ? moduleDouble.loadWithMutations({ modulePath: ASSEMBLER_PATH, mutationList: subject.harnessMutationList }) : verdictAssemblerLib);
 
@@ -74,8 +74,9 @@ const runValidator = (subject, callback) => {
 		}
 		const adjusted = subject.adjustForgeResult ? subject.adjustForgeResult({ nodes: forgeResult.nodes.slice(), edges: forgeResult.edges.slice() }) : forgeResult;
 		const reader = harnessApi.graphDoubleFrom({ forgeResult: adjusted });
-		validator.validateWithReader({ reader, snapshotPath: toyScenario.TOY_SNAPSHOT_DIR, outputPath: subject.outputPathOverride === undefined ? scratchOutputPath() : subject.outputPathOverride }, (validateError, verdict) => {
-			callback({ validateError, verdict });
+		const outputPath = subject.outputPathOverride === undefined ? scratchOutputPath() : subject.outputPathOverride;
+		validator.validateWithReader({ reader, snapshotPath: toyScenario.TOY_SNAPSHOT_DIR, outputPath, ...(subject.graphIdentity === undefined ? {} : { graphIdentity: subject.graphIdentity }) }, (validateError, verdict) => {
+			callback({ validateError, verdict, verdictFilePath: outputPath ? path.join(outputPath, 'roundTripVerdict.json') : undefined });
 		});
 	});
 };
@@ -143,5 +144,24 @@ mutationTwin({ conjunctId: 'absentOutputPathRefused', twinName: 'disableOutputPa
 mutationTwin({ conjunctId: 'syncEmitterRefused', twinName: 'disableEmitterArityCheck', modulePath: HARNESS_PATH, find: "\t\t\tif (typeof emitFromGraph !== 'function' || emitFromGraph.length !== 2) {", replace: "\t\t\tif (typeof emitFromGraph !== 'function') {" });
 mutationTwin({ conjunctId: 'handBuiltVerdictRefusals', twinName: 'disableShapeChecks', modulePath: ASSEMBLER_PATH, find: '\tif (verdict.roundTripClean !== (verdict.contentGapTotal === 0 && verdict.inventedTotal === 0)) {', replace: '\tif (false && verdict.roundTripClean !== (verdict.contentGapTotal === 0 && verdict.inventedTotal === 0)) {' });
 
+// the endpoint where -goldEvalCheck reads it (PESC F5, QUIET_ORBIT ruling 2026-10-01): a verdict written with a
+// graphIdentity carries it also as .graph, and graph-builder's certificate-enrichment reads the boltUrl back from the file
+const certificateEnrichmentLib = require('../../../../apps/graph-builder/lib/certificate-enrichment');
+const TOY_GRAPH_IDENTITY = Object.freeze({ containerName: 'DEV_toyEndpoint', boltUrl: 'bolt://localhost:7999' });
+conjunctList.push({
+	conjunctId: 'endpointWhereCertificationReadsIt',
+	title: "a verdict validated with a graphIdentity carries it as .graph too, and certificate-enrichment's readBoltEndpoint reads that boltUrl back from the written file",
+	twinNameList: ['graphFieldDropped'],
+	evaluate: (subject, callback) => {
+		subject.graphIdentity = TOY_GRAPH_IDENTITY;
+		runValidator(subject, (outcome) => {
+			if (outcome.constructError || outcome.validateError) { callback('', { pass: false, detail: outcome.constructError || outcome.validateError }); return; }
+			const endpoint = certificateEnrichmentLib.readBoltEndpoint({ declaredRowList: [{ token: 'toy', verdictPath: outcome.verdictFilePath }] });
+			callback('', { pass: endpoint.value === TOY_GRAPH_IDENTITY.boltUrl, detail: endpoint.refusalMessage === undefined ? `endpoint ${endpoint.value}` : endpoint.refusalMessage.slice(0, 200) });
+		});
+	},
+});
+mutationTwin({ conjunctId: 'endpointWhereCertificationReadsIt', twinName: 'graphFieldDropped', modulePath: HARNESS_PATH, find: '{ graphIdentity, graph: graphIdentity }', replace: '{ graphIdentity }' });
+
 const gateDeclarationList = [{ gateId: GATE_ID, title: 'the round-trip harness contract', conjunctList }];
-runGateFamily({ harness, familyName: GATE_ID, gateDeclarationList, twinRegistry, makeSubject, cloneSubject, expectedConjunctCount: 10, expectedTwinCount: 10 }, () => harness.report());
+runGateFamily({ harness, familyName: GATE_ID, gateDeclarationList, twinRegistry, makeSubject, cloneSubject, expectedConjunctCount: 11, expectedTwinCount: 11 }, () => harness.report());

@@ -233,7 +233,11 @@ const moduleFunction =
 						peakMemoryBytes,
 						sourceStats: args.sourceStats,
 						graphStats: args.graphStats,
-						extraFields: { standardKey: forgeDeclaration.standardKey, standardSource: forgeDeclaration.standardSource, snapshotPath, ...(graphIdentity === undefined ? {} : { graphIdentity }) },
+						// graph: the same object again, where graphBuilder -goldEvalCheck reads the endpoint the round trip
+						// read (certificate-enrichment.js readBoltEndpoint: verdict.graph.boltUrl, the incumbent validators'
+						// field). graphIdentity alone left every harness-built verdict uncertifiable (PESC F5, QUIET_ORBIT
+						// ruling 2026-10-01; SIF260928 needs the same)
+						extraFields: { standardKey: forgeDeclaration.standardKey, standardSource: forgeDeclaration.standardSource, snapshotPath, ...(graphIdentity === undefined ? {} : { graphIdentity, graph: graphIdentity }) },
 						extraVerdictFieldList,
 					});
 					if (assembled.error) {
