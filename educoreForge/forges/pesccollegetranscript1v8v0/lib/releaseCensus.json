@@ -1,0 +1,26 @@
+{
+	"censusNote": "The counts this bundle's snapshot must reproduce, measured from the release folder by lib/pesc-release-forge/tools/scaffoldReleaseBundle.js when the bundle was written. The forge refuses by name on any difference (gate F4). Never edit a value to match a measurement.",
+	"releaseName": "CollegeTranscript_v1.8.0",
+	"census": {
+		"fileCount": 4,
+		"importCount": 4,
+		"definitionCount": 1020,
+		"complexTypeCount": 222,
+		"namedCodeListCount": 202,
+		"namedDataTypeCount": 576,
+		"groupCount": 9,
+		"globalElementCount": 11,
+		"elementDeclarationCount": 1224,
+		"attributeDeclarationCount": 6,
+		"anonymousComplexTypeCount": 13,
+		"anonymousCodeListCount": 17,
+		"anonymousDataTypeCount": 25,
+		"codeCount": 2741,
+		"facetCount": 662,
+		"groupReferenceCount": 20,
+		"anyWildcardCount": 2,
+		"referenceCount": 2079,
+		"builtinReferenceCount": 807,
+		"inReleaseReferenceCount": 1272
+	}
+}

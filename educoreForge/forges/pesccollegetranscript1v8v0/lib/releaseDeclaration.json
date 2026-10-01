@@ -1,0 +1,14 @@
+{
+	"releaseName": "CollegeTranscript_v1.8.0",
+	"standard": "CollegeTranscript",
+	"version": "1.8.0",
+	"standardKey": "pesccollegetranscript1v8v0",
+	"standardSource": "PESC-CollegeTranscript-1.8.0",
+	"standardDisplayName": "PESC College Transcript v1.8.0",
+	"labelPrefix": "PescCollegeTranscript1v8v0",
+	"stableUriPropertyName": "pesccollegetranscript1v8v0StableId",
+	"rootStableId": "pesccollegetranscript1v8v0:root",
+	"rootLabel": "PescCollegeTranscript1v8v0Root",
+	"stableIdPatternText": "^pesccollegetranscript1v8v0:[A-Za-z]+(/.+)?$",
+	"embedTextLabel": "PescCollegeTranscript1v8v0EmbedText"
+}

@@ -1,0 +1,30 @@
+{
+	"literalNote": "The expected literals the PESC release gates hold each bundle to, keyed by release name. They come from the work order (WORKORDER-pescForgeBridge-093026.md section 3) and the planner's evidence (pescForgeBridgeDesign-093026/evidence/census.json, graphModelSummary.json), which were measured before any forge existed; a bundle's own frozen census is measured by the scaffold tool, and the census gate requires the two to agree. A measured number that disagrees is STOP and report both, never an edit here. builtinReferenceCount and inReleaseReferenceCount were first measured by phase F1 (MARBLE_BRIDGE, 2026-09-30) and are literals from then on; their sum is the expander's 2,079.",
+	"literalByReleaseName": {
+		"CollegeTranscript_v1.8.0": {
+			"literalSource": "WORKORDER section 3 F1; evidence/census.json CollegeTranscript_v1.8.0 (definitions, complexType, elementDecls, attributeDecls, enumerationValues, facets, groupRefs, anyWildcards, imports); evidence/graphModelSummary.json (202 named and 17 anonymous code lists, 576 named data types, 13 anonymous complex types); releaseManifest.json releaseReferenceCheck (2,079 references)",
+			"census": {
+				"fileCount": 4,
+				"importCount": 4,
+				"definitionCount": 1020,
+				"complexTypeCount": 222,
+				"namedCodeListCount": 202,
+				"namedDataTypeCount": 576,
+				"groupCount": 9,
+				"globalElementCount": 11,
+				"elementDeclarationCount": 1224,
+				"attributeDeclarationCount": 6,
+				"anonymousComplexTypeCount": 13,
+				"anonymousCodeListCount": 17,
+				"anonymousDataTypeCount": 25,
+				"codeCount": 2741,
+				"facetCount": 662,
+				"groupReferenceCount": 20,
+				"anyWildcardCount": 2,
+				"referenceCount": 2079,
+				"builtinReferenceCount": 807,
+				"inReleaseReferenceCount": 1272
+			}
+		}
+	}
+}
