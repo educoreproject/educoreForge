@@ -658,7 +658,20 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // commit, 2cfe657): apps/graph-builder/apps/bridge-maker/lib/jevJudgeClient.js 3/1 (the Jev client retries the edge proxy's
 // 520-524 like the 50x family; one 520 killed jevBuild2's SIF run; ruled by QUIET_ORBIT, its test b0b39ca). Six declared
 // paths unchanged, no exclusion added; the tag is cut ON this re-anchor commit.
-const P1_BASELINE_COMMIT = 'postGoldJevAPescComposeA-100126'; // re-anchored by COPPER_MARBLE for goldJev lane A; the tag is cut ON the re-anchor commit
+// RE-ANCHOR 2026-10-02 (SOLAR_STREAM, lane C, successor of MIDNIGHT_HAVEN; pre-authorised, CAMPAIGN-goldJevFour + NOTES 5):
+// postGoldJevAPescComposeA-100126 -> postCandidateRegistryCOnGoldJevAPescComposeA-100226. This time FRAMEWORK SOURCE DID MOVE,
+// and that is the lane's whole job, not PESC's: candidate retrieval became a method registry (DESIGN-C-candidateRegistry.md).
+// Rebased onto goldJev/A 937734f; it replaces lane C's earlier re-anchor (postCandidateRegistryCPescComposeA-100126, cut on
+// the 2cfe657 base). CENSUS (numstat from postGoldJevAPescComposeA-100126 over the six declared paths, 9 paths, from TWO
+// lane C commits, the registry move 88c4ed5 and the real-standard identity runner 302b783):
+//   lib/bridge-framework/bridge-framework.js 15/398 (the two method rows moved out), bridgePluginContract.js 15/6 (field lists
+//   read from the rows; duplicate method names refused at load), candidateRetrievalMethodRegistry.js 521/0 (NEW: the rows);
+//   tests: test/candidateRegistryIdentity/captureToyIdentity.js 268/0, test-bgRetrievalRegistry.js 243/0 (NEW), test-bgDecl.js
+//   7/5 and test-bgDerived.js 11/8 (twins retargeted to the moved text); 302b783: test/candidateRegistryIdentity/
+//   runRealStandardIdentity.sh 64/0 and compareRealStandardIdentity.js 98/0 (NEW, proof instruments). PESC's own claim, that its plugins add ZERO framework
+//   change, is untouched: no PESC file is in the range. Six declared paths unchanged, no exclusion added; the tag is cut ON
+//   this re-anchor commit.
+const P1_BASELINE_COMMIT = 'postCandidateRegistryCOnGoldJevAPescComposeA-100226'; // re-anchored by SOLAR_STREAM (lane C, candidate registry); the tag is cut ON the re-anchor commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
