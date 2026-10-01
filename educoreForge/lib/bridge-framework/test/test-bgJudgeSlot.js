@@ -78,6 +78,9 @@ const SHIPPED_PLUGIN_LIST = [
 	{ bridgeName: 'pescCedsDerivedPlugin', pluginPath: 'forges/pesc260805/bridges/pescCedsDerivedPlugin.js', judgePromptVariant: 'derived', rendererVersion: DERIVED_RENDERER_VERSION_LITERAL },
 	{ bridgeName: 'pescOptionSetCedsDerivedPlugin', pluginPath: 'forges/pesc260805/bridges/pescOptionSetCedsDerivedPlugin.js', judgePromptVariant: 'derived', rendererVersion: DERIVED_RENDERER_VERSION_LITERAL },
 	{ bridgeName: 'sif260928CedsDerivedPlugin', pluginPath: 'forges/sif260928/bridges/sif260928CedsDerivedPlugin.js', judgePromptVariant: 'derivedJudgeSlot', rendererVersion: JUDGE_SLOT_RENDERER_VERSION_LITERAL },
+	// ADDED 2026-10-01 (COPPER_MARBLE, PESC B1, QUIET_ORBIT-authorised): the PESC College Transcript 1.8.0 derived plugin,
+	// judgeSlot-v1 like SIF 260928, so it resolves to derivedJudgeSlot.
+	{ bridgeName: 'pescCollegeTranscript1v8v0CedsDerivedPlugin', pluginPath: 'forges/pesccollegetranscript1v8v0/bridges/pescCollegeTranscript1v8v0CedsDerivedPlugin.js', judgePromptVariant: 'derivedJudgeSlot', rendererVersion: JUDGE_SLOT_RENDERER_VERSION_LITERAL },
 ];
 
 // ---------------------------------------------------------------------
@@ -323,7 +326,7 @@ const judgeSlotConjunctList = [
 	}),
 	pureConjunct({
 		conjunctId: 'f_allShippedPluginsRegisterThroughDiscovery',
-		title: `pluginRegistry.buildRegistryFromDirectory over the real forges/ registers exactly the five shipped plugins and does not throw`,
+		title: `pluginRegistry.buildRegistryFromDirectory over the real forges/ registers exactly the ${SHIPPED_PLUGIN_LIST.length} shipped plugins and does not throw`,
 		twinNameList: ['standardRowDeleted'],
 		judge: (scenario) => {
 			const registryLib = frameworkLibFor(scenario, REGISTRY_FILE);

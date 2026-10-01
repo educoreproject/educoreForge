@@ -299,7 +299,9 @@ const FORGES_DIR = path.join(TREE_ROOT, 'forges');
 // LITERAL (the BR3-6 lesson at the foot of this file): R-BR-10 counted three shipped plugins declaring
 // candidateRetrieval. A plugin gained or lost changes this number here, with a reason, rather than quietly.
 // D1 (2026-09-29, supervisor-authorised): 3 → 4, the SIF derived plugin (forges/sif260928/bridges/) declares it too.
-const EXPECTED_SHIPPED_DECLARING_PLUGIN_COUNT = 4;
+// PESC B1 (2026-10-01, QUIET_ORBIT-authorised): 4 → 5, the PESC College Transcript 1.8.0 derived plugin
+// (forges/pesccollegetranscript1v8v0/bridges/) declares it too.
+const EXPECTED_SHIPPED_DECLARING_PLUGIN_COUNT = 5;
 const EMBED_TEXT_VOTE_RETRIEVAL = Object.freeze({
 	method: 'embedTextVote-v1',
 	hitsPerText: 20,
