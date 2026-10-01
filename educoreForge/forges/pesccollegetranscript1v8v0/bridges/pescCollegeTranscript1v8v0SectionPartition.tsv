@@ -1,0 +1,23 @@
+sectionPath	documentSection
+CollegeTranscript/NoteMessage	College Transcript / Note Message
+CollegeTranscript/Student	College Transcript / Student
+CollegeTranscript/Student/AcademicRecord	College Transcript / Student / Academic Record
+CollegeTranscript/Student/Health	College Transcript / Student / Health
+CollegeTranscript/Student/NoteMessage	College Transcript / Student / Note Message
+CollegeTranscript/Student/Person	College Transcript / Student / Person
+CollegeTranscript/Student/Tests	College Transcript / Student / Tests
+CollegeTranscript/Student/UserDefinedExtensions	College Transcript / Student / User Defined Extensions
+CollegeTranscript/TransmissionData	College Transcript / Transmission Data
+CollegeTranscript/TransmissionData/CreatedDateTime	College Transcript / Transmission Data / Created Date Time
+CollegeTranscript/TransmissionData/Destination	College Transcript / Transmission Data / Destination
+CollegeTranscript/TransmissionData/DocumentCompleteCode	College Transcript / Transmission Data / Document Complete Code
+CollegeTranscript/TransmissionData/DocumentID	College Transcript / Transmission Data / Document ID
+CollegeTranscript/TransmissionData/DocumentOfficialCode	College Transcript / Transmission Data / Document Official Code
+CollegeTranscript/TransmissionData/DocumentProcessCode	College Transcript / Transmission Data / Document Process Code
+CollegeTranscript/TransmissionData/DocumentTypeCode	College Transcript / Transmission Data / Document Type Code
+CollegeTranscript/TransmissionData/NoteMessage	College Transcript / Transmission Data / Note Message
+CollegeTranscript/TransmissionData/RequestTrackingID	College Transcript / Transmission Data / Request Tracking ID
+CollegeTranscript/TransmissionData/Source	College Transcript / Transmission Data / Source
+CollegeTranscript/TransmissionData/TransmissionType	College Transcript / Transmission Data / Transmission Type
+CollegeTranscript/TransmissionData/UserDefinedExtensions	College Transcript / Transmission Data / User Defined Extensions
+CollegeTranscript/UserDefinedExtensions	College Transcript / User Defined Extensions

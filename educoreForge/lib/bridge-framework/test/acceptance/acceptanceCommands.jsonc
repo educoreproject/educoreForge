@@ -553,5 +553,40 @@
 			"rejudgeRealNamedSet": { "sessionName": "EBONY_DREAM", "date": "2026-09-29", "note": "TQ standing dev-spend permission; D4 ~$33 re-measured at D3" }
 		},
 		"frozenBy": null
+	},
+	"pescCollegeTranscript1v8v0CedsDerivedPlugin": {
+		// THE PESC COLLEGE TRANSCRIPT 1.8.0 DERIVED BRIDGE (phase B1, 2026-10-01; COPPER_MARBLE under QUIET_ORBIT;
+		// WORKORDER-pescForgeBridge-093026 §2 and §3A.2: appended, one entry per release). EVERY line is null and every spend
+		// line is null until the supervisor writes a GO, at the time.
+		//
+		// THE HUB IS PINNED FOR THE PESC FAMILY (DESIGN-pescBridge §4.4): the ceds block id below is the SAME id the
+		// sif260928 entry pins, and every later PESC entry names it too, so a cache carry between versions of one standard is
+		// never silently lost to a rebuilt hub. The release's own base id is F5's certified block (reproduced three times).
+		//
+		// THE PATHS NAME THE pescRelease-B1 WORKTREE, deliberately (the sif260928 entry's reason): the runner reconstructs the
+		// line from its own tree and refuses on drift. They move to system/code when pescRelease/main merges to main.
+		"standardKey": "pesccollegetranscript1v8v0",
+		"recipePath": "/Users/tqwhite/Documents/webdev/educoreForge/system/codeWorktrees/pescRelease-B1/educoreForge/recipes/pesccollegetranscript1v8v0Derived.recipe.jsonc",
+		"storeFilePath": "/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/pesccollegetranscript1v8v0/b2/pescCollegeTranscript1v8v0B2.standardsDatabase.sqlite3",
+		"decisionStoreFilePath": "/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/pesccollegetranscript1v8v0/b2/pescCollegeTranscript1v8v0B2.decisions.sqlite3",
+		"judgmentCacheFilePath": "/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/pesccollegetranscript1v8v0/b2/pescCollegeTranscript1v8v0B2.judgmentCache.sqlite3",
+		"matchForensicsDirPath": "/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/pesccollegetranscript1v8v0/b2/matchForensics",
+		"buildLogsDirPath": "/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/pesccollegetranscript1v8v0/b2/buildLogs",
+		"expectedBaseBlockIdBySubject": {
+			"ceds@14_0_0_0_base": "21110ef1fd423434bfc64899559f31dd7d126fd421e344341fe329e3f65c91dd",
+			"pesccollegetranscript1v8v0@1_8_0_base": "f9e2a095ed27edc4935897653c00187c54d4bd1a82dc75332ab1fc36b1ac7518"
+		},
+		"rejudgeDebug": null,
+		"materialise": null,
+		"materialiseReal": null,
+		"rejudgeRealLimit": null,
+		"rejudgeRealNamedSet": null,
+		"eyeGraph": null,
+		"spendAuthorisationByLine": {
+			"rejudgeRealLimit": null,
+			"materialiseReal": null,
+			"rejudgeRealNamedSet": null
+		},
+		"frozenBy": null
 	}
 }
