@@ -36,8 +36,14 @@ const bridgeDeclaration = Object.freeze({
 	// EMPTY, and required to be: nothing is walked, the subjects come from the graph
 	sourceChannelList: [],
 	subjectIdentity: { kind: 'forgedNode', property: 'stableId' },
-	// every Question the forge minted (about 5,018); a run narrows by window or named set, never by declaration
-	subjectSource: { kind: 'graphLabel', label: 'Sif260928Question', scopeStableIdListPath: null },
+	// every Question the forge minted EXCEPT ONE: 5,017 of 5,018 (goldJev lane A, ruled by QUIET_ORBIT 2026-10-01).
+	// The excluded Question (sif260928:question/183a6000…1ca7) carries SIF's own description "This element
+	// corresponds to the global CEDS Id 000102": its text names its answer, so the prompt identifier scan
+	// (rightly) refuses to show it to the judge. The forge carries SIF's text verbatim (FBB-001), so the subject
+	// is left unjudged here, by declaration, rather than redacted. The list file is every Question stableId in
+	// the sif260928 base block 576db6546c8f minus that one; regenerate it if the forge's Questions change.
+	// Any other narrowing still belongs to the run (window or named set), never to this declaration.
+	subjectSource: { kind: 'graphLabel', label: 'Sif260928Question', scopeStableIdListPath: 'bridges/sif260928ScopeWithoutIdentifierLeak.json' },
 	// TEXT-NODE MATCHING, NO COHORT VOTE (SPEC §5.2). Each of the question's texts (name, description, contextText)
 	// searches the hub's texts. neighbourVote is null because the measured vote HURT SIF (the truth card reached the
 	// top 15 for 98.7% of questions on text votes alone, 77.0% with the vote). hitsPerText, minScore and k are D2's
