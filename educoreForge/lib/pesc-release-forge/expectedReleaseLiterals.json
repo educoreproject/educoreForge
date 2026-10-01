@@ -26,9 +26,11 @@
 				"inReleaseReferenceCount": 1272
 			},
 			"walk": {
-				"literalSource": "WORKORDER section 3 F2 (edge counts, NoteMessage, text ceiling); evidence/graphModelSummary.json; the NoteMessage total ruled 103 = 50 + 52 + 1 by QUIET_ORBIT 2026-09-30 (the work order's 102 omitted the root file). textNodeCount, documentationSourceCountByLabelSuffix beyond the 1,220 own-text elements, and sequenceCountByOrderSemantics were first measured by phase F2 (MARBLE_BRIDGE, 2026-09-30). MOVED by QUIET_ORBIT's ruling on DEVLOG-F2 §10 (2026-09-30): every element-like declaration gets its type edge, and a declaration with an anonymous code list gets HAS_OPTION_SET to it. Before the move: REFERENCES_TYPE 961 (type 322, dataType 639), HAS_OPTION_SET 160. After, measured by phase F2: REFERENCES_TYPE 974 (type 332, dataType 642), HAS_OPTION_SET 177; the per-declaration split is typeEdgeCountByDeclaration.",
+				"literalSource": "WORKORDER section 3 F2 (edge counts, NoteMessage, text ceiling); evidence/graphModelSummary.json; the NoteMessage total ruled 103 = 50 + 52 + 1 by QUIET_ORBIT 2026-09-30 (the work order's 102 omitted the root file). textNodeCount, documentationSourceCountByLabelSuffix beyond the 1,220 own-text elements, and sequenceCountByOrderSemantics were first measured by phase F2 (MARBLE_BRIDGE, 2026-09-30). MOVED by QUIET_ORBIT's ruling on DEVLOG-F2 §10 (2026-09-30): every element-like declaration gets its type edge, and a declaration with an anonymous code list gets HAS_OPTION_SET to it. Before the move: REFERENCES_TYPE 961 (type 322, dataType 639), HAS_OPTION_SET 160. After, measured by phase F2: REFERENCES_TYPE 974 (type 332, dataType 642), HAS_OPTION_SET 177; the per-declaration split is typeEdgeCountByDeclaration. MOVED by phase F3 (AMBER_PORTAL, 2026-10-01), by design (NOTES-supervisor item 9): edgeCountByType gains HAS_INSTANCE 1,367 and HAS_CHILD 1,367 (WORKORDER F3); textNodeCount 2,203 -> 2,578, because contextText (a declared DmeProperty text) is now stamped on the 375 reachable element declarations and the root global element (+375 distinct texts, measured).",
 				"edgeCountByType": {
+					"HAS_CHILD": 1367,
 					"HAS_CLASS": 222,
+					"HAS_INSTANCE": 1367,
 					"HAS_OPTION_SET": 177,
 					"HAS_PROPERTY": 1230,
 					"HAS_SUPPORT": 14,
@@ -49,7 +51,7 @@
 					"element": 8,
 					"group": 20
 				},
-				"textNodeCount": 2203,
+				"textNodeCount": 2578,
 				"textNodeCountCeiling": 3379,
 				"documentationSourceCountByLabelSuffix": {
 					"Attribute": {
@@ -77,6 +79,159 @@
 					"REFERENCES_TYPE Element -> DataType": 639,
 					"REFERENCES_TYPE Element -> Type": 322,
 					"REFERENCES_TYPE GlobalElement -> Type": 10
+				},
+				"textNodeCountBeforePhaseF3": 2203
+			},
+			"reachability": {
+				"literalSource": "WORKORDER section 3 F3; evidence/q4SectionSpan/sectionCensus.json CollegeTranscript_v1.8.0 (sections with occurrences and units, occurrencesByDepth, sectionsPerDeclarationHistogram, perSectionSampleListMaxLength); evidence/graphModelSummary.json reachableTypesOrGroups 263. RULED by QUIET_ORBIT 2026-10-01 on AMBER_PORTAL's STOP: deepestDocumentDepth 10 with xsiType (the work order said 9; 9 is the content-and-base figure; the planner's own sectionCensus.json shows 10 occurrences at depth 10), reachableDefinitionCount 265 with xsiType (the work order said 263 + 1 = 264; the rule also reaches CoreMain LearningOutcomeType, the type of the xsi-only declaration LearningProgramType/el/3:LearningOutcome), and the framework depth of an occurrence is documentDepth + 1 (the root global element is depth 1). Substitution rule: subtypesNotReachedByContent (the planner's), ruled kept for release 1. reachableDocumentationSourceCount: contentAndBase 367 own + 4 type is WORKORDER F2's; xsiTypeOnly 4 own first measured by phase F3.",
+				"substitutableSubtypeRuleName": "subtypesNotReachedByContent",
+				"contentAndBaseDeclarationCount": 371,
+				"xsiTypeOnlyDeclarationCount": 4,
+				"reachableDeclarationCount": 375,
+				"contentAndBaseOccurrenceCount": 1187,
+				"xsiTypeOccurrenceCount": 180,
+				"occurrenceCount": 1367,
+				"contentAndBaseDefinitionCount": 263,
+				"reachableDefinitionCount": 265,
+				"reachableDefinitionCountInWorkOrder": 264,
+				"deepestContentAndBaseDocumentDepth": 9,
+				"deepestDocumentDepth": 10,
+				"deepestDocumentDepthInWorkOrder": 9,
+				"frameworkDepthMinusDocumentDepth": 1,
+				"sectionCount": 22,
+				"spanningDeclarationCount": 72,
+				"judgmentUnitCount": 539,
+				"pathReachedByTwoDeclarationsCount": 7,
+				"declarationReachingOnePathTwiceCount": 0,
+				"perSectionSampleListMaxLength": 8,
+				"sectionsPerDeclarationHistogram": {
+					"1": 303,
+					"2": 25,
+					"3": 2,
+					"4": 45
+				},
+				"occurrenceCountByDocumentDepth": {
+					"1": 4,
+					"2": 18,
+					"3": 43,
+					"4": 248,
+					"5": 340,
+					"6": 310,
+					"7": 223,
+					"8": 126,
+					"9": 45,
+					"10": 10
+				},
+				"occurrenceAndUnitCountBySection": {
+					"CollegeTranscript/NoteMessage": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"CollegeTranscript/Student": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"CollegeTranscript/Student/AcademicRecord": {
+						"occurrences": 1071,
+						"units": 273
+					},
+					"CollegeTranscript/Student/Health": {
+						"occurrences": 7,
+						"units": 7
+					},
+					"CollegeTranscript/Student/NoteMessage": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"CollegeTranscript/Student/Person": {
+						"occurrences": 120,
+						"units": 104
+					},
+					"CollegeTranscript/Student/Tests": {
+						"occurrences": 23,
+						"units": 23
+					},
+					"CollegeTranscript/Student/UserDefinedExtensions": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"CollegeTranscript/TransmissionData": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"CollegeTranscript/TransmissionData/CreatedDateTime": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"CollegeTranscript/TransmissionData/Destination": {
+						"occurrences": 65,
+						"units": 58
+					},
+					"CollegeTranscript/TransmissionData/DocumentCompleteCode": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"CollegeTranscript/TransmissionData/DocumentID": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"CollegeTranscript/TransmissionData/DocumentOfficialCode": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"CollegeTranscript/TransmissionData/DocumentProcessCode": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"CollegeTranscript/TransmissionData/DocumentTypeCode": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"CollegeTranscript/TransmissionData/NoteMessage": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"CollegeTranscript/TransmissionData/RequestTrackingID": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"CollegeTranscript/TransmissionData/Source": {
+						"occurrences": 65,
+						"units": 58
+					},
+					"CollegeTranscript/TransmissionData/TransmissionType": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"CollegeTranscript/TransmissionData/UserDefinedExtensions": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"CollegeTranscript/UserDefinedExtensions": {
+						"occurrences": 1,
+						"units": 1
+					}
+				},
+				"postalCodeOccurrenceCount": 14,
+				"spanningExample": {
+					"declarationReleaseIndependentId": "type/urn:org:pesc:sector:AcademicRecord:v1.13.0#ContactsType/el/1:Address",
+					"occurrenceCount": 7,
+					"occurrenceSectionList": [
+						"CollegeTranscript/Student/AcademicRecord",
+						"CollegeTranscript/Student/Person",
+						"CollegeTranscript/TransmissionData/Destination",
+						"CollegeTranscript/TransmissionData/Source"
+					],
+					"contextPathSampleListLength": 5
+				},
+				"reachableDocumentationSourceCount": {
+					"contentAndBase": {
+						"own": 367,
+						"type": 4
+					},
+					"xsiTypeOnly": {
+						"own": 4
+					}
 				}
 			}
 		}

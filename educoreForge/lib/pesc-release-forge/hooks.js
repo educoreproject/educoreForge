@@ -18,9 +18,10 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //                       .xsd files in the parser's order and then the manifest entry. sourceUrl null:
 //                       a release is our closure of PESC files, not a published bundle with a URL.
 //   describeRoot      — PURE apart from the version guard, which throws a named refusal.
-//   emitContractGraph — the walk (walk.js, phase F2): every source node and structural edge, and
-//                       the ordering groups the framework stamps (sequenceGroups). `stats` carries
-//                       the loaders' census (gate F4) beside the walk's own counts.
+//   emitContractGraph — the walk (walk.js): every source node and structural edge (phase F2), the
+//                       reachability walk and its occurrences (phase F3, reachability.js), and the
+//                       ordering groups the framework stamps (sequenceGroups). `stats` carries the
+//                       loaders' census (gate F4) beside the walk's own counts and reachabilityStats.
 
 const path = require('path');
 const refuse = require(path.join(__dirname, '..', 'forge-framework', 'refuse'));

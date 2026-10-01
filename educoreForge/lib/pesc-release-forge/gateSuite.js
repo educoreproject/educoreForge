@@ -217,9 +217,10 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 	const rootFileName = realReleaseEntry.rootFilename;
 
 	// ---- the subject every conjunct reads and every twin mutates (on a clone)
+	const bundleForgeDeclaration = releaseBundle.readForgeDeclaration({ bundleDirPath });
 	const makeSubject = () => ({
 		snapshotDirPath: realSnapshotDirPath,
-		forgeDeclaration: releaseBundle.readForgeDeclaration({ bundleDirPath }),
+		forgeDeclaration: bundleForgeDeclaration,
 		frozenReleaseCensus: bundleData.frozenReleaseCensus,
 		frozenCensusName: bundleData.frozenCensusName,
 		nodeKindTable: buildNodeKindTable({ labelPrefix: releaseDeclarationData.labelPrefix }),
@@ -233,10 +234,12 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 		scaffoldMutationList: subject.scaffoldMutationList.slice(),
 	});
 
-	// forge a snapshot as the forger does: through the bundle's own entry module, or, with mutations or
-	// a twin's census, through the framework, the bundle's declaration and (a double of) the shared hooks
+	// forge a snapshot as the forger does: through the bundle's own entry module, or, with mutations, a
+	// twin's census or a twin's declaration, through the framework, the subject's declaration and (a
+	// double of) the shared hooks. (Phase F3: a twin that changes only the declaration is now honoured;
+	// before, the entry module read the declaration from disk and such a twin never reached the forge.)
 	const forgeSnapshot = ({ subject, snapshotDirPath }, callback) => {
-		const bundle = subject.hooksMutationList.length || subject.frozenReleaseCensus !== bundleData.frozenReleaseCensus
+		const bundle = subject.hooksMutationList.length || subject.frozenReleaseCensus !== bundleData.frozenReleaseCensus || subject.forgeDeclaration !== bundleForgeDeclaration
 			? forgeFrameworkFactory({ embedder: null }).injectStandardHooks({
 					forgeDeclaration: subject.forgeDeclaration,
 					hooks: (subject.hooksMutationList.length ? moduleDouble.loadWithMutations({ modulePath: HOOKS_MODULE_PATH, mutationList: subject.hooksMutationList }) : require(HOOKS_MODULE_PATH)).makeReleaseHooks({ standardKey, labelPrefix: releaseDeclarationData.labelPrefix, frozenReleaseCensus: subject.frozenReleaseCensus, frozenCensusName: subject.frozenCensusName }),
@@ -952,6 +955,11 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 	];
 	registerWalkTwin(COEXISTENCE_GATE_ID, 'uniqueWithPesc260805AndTwoReleaseBundles', 'secondReleaseSharesTheName', 'inputFault', (subject) => ({ ...subject, secondReleaseStandardName: releaseDeclarationData.standardSource }));
 	registerWalkTwin(COEXISTENCE_GATE_ID, 'sourceEqualsDescriptorOnEveryNode', 'declarationSourceRenamed', 'inputFault', (subject) => ({ ...subject, forgeDeclaration: { ...subject.forgeDeclaration, standardSource: SECOND_RELEASE_STANDARD_NAME } }));
+	// the per-node half on its own (phase F3, NOTES-supervisor item 9): the declaration and the descriptor
+	// agree, and one minted node's _source is altered after the kit stamped it
+	registerWalkTwin(COEXISTENCE_GATE_ID, 'sourceEqualsDescriptorOnEveryNode', 'oneNodeSourceAltered', 'productionMutation', (subject) =>
+		addMutation(subject, 'hooksMutationList', { modulePath: WALK_PATH, find: '	// ---- F14: the forge names no bridge target', replace: "	kit.nodes[kit.nodes.length - 1].properties._source = `${kit.nodes[kit.nodes.length - 1].properties._source}-altered`;\n	// ---- F14: the forge names no bridge target" }),
+	);
 
 	// ---- F14-NO-BRIDGING
 	const BRIDGING_GATE_ID = 'F14-NO-BRIDGING';
@@ -1101,14 +1109,476 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 	];
 	const makeWalkSubject = () => ({ ...makeSubject(), secondReleaseStandardName: SECOND_RELEASE_STANDARD_NAME });
 
+	// =====================================================================
+	// PHASE F3 FAMILY — reachability and occurrences (WORKORDER §3 F3): F9 reachability, F18 occurrence
+	// identity, F19 occurrence tree, F10's HAS_INSTANCE and HAS_CHILD, F8's occurrence conjunct, and
+	// (extra) the global element digest. A third family with its own twin registry.
+	// =====================================================================
+	const reachabilityLiteralSet = expectedLiteralSet === undefined ? undefined : expectedLiteralSet.reachability;
+	const reachabilityTwinRegistry = makeTwinRegistry();
+	const registerReachabilityTwin = (gateId, conjunctId, twinName, leverKind, run) => reachabilityTwinRegistry.register({ gateId, conjunctId, twinName, leverKind, shippedConfig: true, run });
+	const REACHABILITY_PATH = path.join(LIBRARY_DIR, 'reachability.js');
+	const SCOPE_TOOL_LIB_PATH = path.join(LIBRARY_DIR, 'tools', 'writeScopeAndSectionsLib.js');
+	const { contextTextOf } = require('./contextText');
+	const missingReachabilityLiteralResult = () => ({ pass: false, detail: `expectedReleaseLiterals.json has no reachability block for ${releaseName}` });
+	const widened = (listOrScalar) => (listOrScalar === undefined ? [] : Array.isArray(listOrScalar) ? listOrScalar : [listOrScalar]);
+	const sortedCountText = (countMap) => JSON.stringify(Object.keys(countMap).sort().map((oneName) => [oneName, countMap[oneName]]));
+	const countOf = (itemList, nameOf) => itemList.reduce((soFar, oneItem) => ({ ...soFar, [nameOf(oneItem)]: (soFar[nameOf(oneItem)] || 0) + 1 }), {});
+
+	// what every F3 conjunct reads from one forge: the nodes by kind, and each declaration's occurrences
+	// in document order (the order the walk minted them)
+	const releaseViewOf = (forged) => {
+		const nodeByStableId = {};
+		forged.nodes.forEach((oneNode) => {
+			nodeByStableId[oneNode.stableId] = oneNode;
+		});
+		const occurrenceList = forged.nodes.filter((oneNode) => labelSuffixOf(oneNode) === 'Occurrence');
+		const elementList = forged.nodes.filter((oneNode) => labelSuffixOf(oneNode) === 'Element');
+		const instanceEdgeList = forged.edges.filter((oneEdge) => oneEdge.type === EDGE_TYPES.HAS_INSTANCE);
+		const childEdgeList = forged.edges.filter((oneEdge) => oneEdge.type === EDGE_TYPES.HAS_CHILD);
+		const occurrenceListByDeclaration = {};
+		const occurrencePositionByStableId = {};
+		occurrenceList.forEach((oneOccurrence, occurrenceIndex) => {
+			occurrencePositionByStableId[oneOccurrence.stableId] = occurrenceIndex;
+		});
+		instanceEdgeList.forEach((oneEdge) => {
+			(occurrenceListByDeclaration[oneEdge.fromRef.id] = occurrenceListByDeclaration[oneEdge.fromRef.id] || []).push(nodeByStableId[oneEdge.toRef.id]);
+		});
+		Object.keys(occurrenceListByDeclaration).forEach((oneDeclarationStableId) => occurrenceListByDeclaration[oneDeclarationStableId].sort((left, right) => occurrencePositionByStableId[left.stableId] - occurrencePositionByStableId[right.stableId]));
+		const viaSetOf = (declarationStableId) => new Set((occurrenceListByDeclaration[declarationStableId] || []).map((oneOccurrence) => oneOccurrence.properties.reachableVia));
+		return { nodeByStableId, occurrenceList, elementList, instanceEdgeList, childEdgeList, occurrenceListByDeclaration, viaSetOf };
+	};
+	const sectionsOfDeclaration = (declarationOccurrenceList) => [...new Set(declarationOccurrenceList.map((oneOccurrence) => oneOccurrence.properties.sectionPath))];
+
+	// ---- F9-REACHABILITY
+	const REACHABILITY_GATE_ID = 'F9-REACHABILITY';
+	const learningProgramExtensionRewritten = (fileText, fileName) => {
+		const typeStart = fileText.indexOf('<xs:complexType name="LearningProgramType">');
+		const extensionOpenText = '<xs:extension base="core:AcademicProgramType">';
+		const extensionStart = fileText.indexOf(extensionOpenText, typeStart);
+		const extensionEnd = fileText.indexOf('</xs:extension>', extensionStart);
+		if (typeStart === -1 || extensionStart === -1 || extensionEnd === -1 || fileText.indexOf('</xs:complexType>', typeStart) < extensionEnd) {
+			throw new Error(`${moduleName}: fixture fault — no LearningProgramType extension of AcademicProgramType in ${fileName}`);
+		}
+		return `${fileText.slice(0, extensionStart)}<xs:restriction base="core:AcademicProgramType">${fileText.slice(extensionStart + extensionOpenText.length, extensionEnd)}</xs:restriction>${fileText.slice(extensionEnd + '</xs:extension>'.length)}`;
+	};
+	const rootNoteMessageRemovedSubject = (subject) => ({
+		...subject,
+		snapshotDirPath: makeScratchSnapshot({ baseSnapshotDirPath: subject.snapshotDirPath, alterTextByFileName: { [rootFileName]: withOneElementRemoved }, resealManifestEntry: true, resealChecksums: true }),
+		frozenReleaseCensus: { ...subject.frozenReleaseCensus, elementDeclarationCount: subject.frozenReleaseCensus.elementDeclarationCount - 1, referenceCount: subject.frozenReleaseCensus.referenceCount - 1, inReleaseReferenceCount: subject.frozenReleaseCensus.inReleaseReferenceCount - 1 },
+	});
+	const reachabilityConjunctList = [
+		{
+			conjunctId: 'reachabilityCountsEqualLiterals',
+			title: 'reachable declarations (content and base, xsiType only, all), occurrences (all, xsiType), reachable named types and groups (content and base, all), sections, deepest document depths and the substitution rule EQUAL the literals (WORKORDER F3, as ruled)',
+			twinNameList: ['rootNoteMessageRemoved', 'learningProgramExtensionRewritten', 'wildcardFollowed'],
+			evaluate: (subject, callback) => {
+				if (reachabilityLiteralSet === undefined) {
+					callback('', missingReachabilityLiteralResult());
+					return;
+				}
+				forgeOrFail({ subject }, callback, (forged) => {
+					const view = releaseViewOf(forged);
+					const reachableElementList = view.elementList.filter((oneNode) => oneNode.properties.reachableFromRoot === true);
+					const stats = forged.stats.reachabilityStats;
+					const measured = {
+						substitutableSubtypeRuleName: stats.substitutableSubtypeRuleName,
+						contentAndBaseDeclarationCount: reachableElementList.filter((oneNode) => view.viaSetOf(oneNode.stableId).has('content') || view.viaSetOf(oneNode.stableId).has('base')).length,
+						xsiTypeOnlyDeclarationCount: reachableElementList.filter((oneNode) => view.viaSetOf(oneNode.stableId).size === 1 && view.viaSetOf(oneNode.stableId).has('xsiType')).length,
+						reachableDeclarationCount: reachableElementList.length,
+						contentAndBaseOccurrenceCount: view.occurrenceList.filter((oneNode) => oneNode.properties.reachableVia !== 'xsiType').length,
+						xsiTypeOccurrenceCount: view.occurrenceList.filter((oneNode) => oneNode.properties.reachableVia === 'xsiType').length,
+						occurrenceCount: view.occurrenceList.length,
+						contentAndBaseDefinitionCount: stats.contentAndBaseDefinitionCount,
+						reachableDefinitionCount: forged.nodes.filter((oneNode) => oneNode.properties.documentPosition !== undefined && labelSuffixOf(oneNode) !== 'GlobalElement' && oneNode.properties.reachableFromRoot === true).length,
+						deepestContentAndBaseDocumentDepth: Math.max(...view.occurrenceList.filter((oneNode) => oneNode.properties.reachableVia !== 'xsiType').map((oneNode) => oneNode.properties.documentDepth)),
+						deepestDocumentDepth: Math.max(...view.occurrenceList.map((oneNode) => oneNode.properties.documentDepth)),
+						sectionCount: new Set(view.occurrenceList.map((oneNode) => oneNode.properties.sectionPath)).size,
+					};
+					const differingNameList = Object.keys(measured).filter((oneName) => measured[oneName] !== reachabilityLiteralSet[oneName]);
+					// the content-and-base declaration count also equals the walk's own first pass (no substitution)
+					const firstPassAgrees = stats.contentAndBaseDeclarationCount === measured.contentAndBaseDeclarationCount && stats.contentAndBaseOccurrenceCount === measured.contentAndBaseOccurrenceCount;
+					callback('', { pass: differingNameList.length === 0 && firstPassAgrees, detail: `${JSON.stringify(measured)}; first pass ${stats.contentAndBaseDeclarationCount}/${stats.contentAndBaseOccurrenceCount}; differing: ${differingNameList.length ? differingNameList.map((oneName) => `${oneName} ${measured[oneName]} (literal ${reachabilityLiteralSet[oneName]})`).join(', ') : 'none'}` });
+				});
+			},
+		},
+		{
+			conjunctId: 'marksAgreeWithInstances',
+			title: 'every reachableFromRoot true element declaration has at least one HAS_INSTANCE edge and every false one has none; no unreachable declaration carries a path fact; contextPathCount equals its HAS_INSTANCE count and contextText is its first occurrence\'s; every top-level definition, anonymous type, attribute and code carries the mark',
+			twinNameList: ['everyElementMarkedReachable'],
+			evaluate: (subject, callback) => {
+				forgeOrFail({ subject }, callback, (forged) => {
+					const view = releaseViewOf(forged);
+					const PATH_FACT_NAME_LIST = ['contextText', 'contextPathSampleList', 'contextPathCount', 'occurrenceSectionList', 'reachableVia'];
+					const wrongList = [];
+					view.elementList.forEach((oneNode) => {
+						const declarationOccurrenceList = view.occurrenceListByDeclaration[oneNode.stableId] || [];
+						const props = oneNode.properties;
+						if (props.reachableFromRoot !== (declarationOccurrenceList.length > 0)) {
+							wrongList.push(`${oneNode.stableId} marked ${props.reachableFromRoot} with ${declarationOccurrenceList.length} instances`);
+							return;
+						}
+						if (declarationOccurrenceList.length === 0) {
+							const carriedName = PATH_FACT_NAME_LIST.find((oneName) => props[oneName] !== undefined);
+							if (carriedName !== undefined) {
+								wrongList.push(`${oneNode.stableId} unreachable carries ${carriedName}`);
+							}
+							return;
+						}
+						if (props.contextPathCount !== declarationOccurrenceList.length || props.contextText !== declarationOccurrenceList[0].properties.contextText) {
+							wrongList.push(`${oneNode.stableId} contextPathCount ${props.contextPathCount} / contextText '${props.contextText}' against ${declarationOccurrenceList.length} instances`);
+						}
+					});
+					const MARKED_LABEL_SUFFIX_LIST = ['Type', 'AnonymousType', 'CodeList', 'DataType', 'Group', 'GlobalElement', 'Attribute', 'Code'];
+					const unmarkedNode = forged.nodes.find((oneNode) => MARKED_LABEL_SUFFIX_LIST.indexOf(labelSuffixOf(oneNode)) !== -1 && typeof oneNode.properties.reachableFromRoot !== 'boolean');
+					if (unmarkedNode !== undefined) {
+						wrongList.push(`${unmarkedNode.stableId} carries no reachableFromRoot`);
+					}
+					callback('', { pass: wrongList.length === 0, detail: `${view.elementList.length} element declarations, ${view.instanceEdgeList.length} HAS_INSTANCE; wrong ${wrongList.length ? wrongList.slice(0, 3).join('; ') : 'none'}` });
+				});
+			},
+		},
+		{
+			conjunctId: 'scopeAndSectionFilesFromTheForge',
+			title: 'writeScopeAndSections over the forge: the scope list holds exactly the reachable declarations (the literal count), the section file exactly the literal sections, each labelled by the readable-path rule, and a graph read (every one-element list a scalar, as the replay engine stores it) yields byte-identical files',
+			twinNameList: ['scalarWideningDisabled'],
+			evaluate: (subject, callback) => {
+				if (reachabilityLiteralSet === undefined) {
+					callback('', missingReachabilityLiteralResult());
+					return;
+				}
+				forgeOrFail({ subject }, callback, (forged) => {
+					const scopeToolLib = subject.scopeToolMutationList.length ? moduleDouble.loadWithMutations({ modulePath: SCOPE_TOOL_LIB_PATH, mutationList: subject.scopeToolMutationList }) : require(SCOPE_TOOL_LIB_PATH);
+					const fromForge = scopeToolLib.scopeAndSectionsOf({ nodeList: forged.nodes, edgeList: forged.edges, labelPrefix: releaseDeclarationData.labelPrefix });
+					// the replay engine's storage: a one-element list reads back as its one value
+					const scalarizedNodeList = forged.nodes.map((oneNode) => ({ ...oneNode, properties: Object.keys(oneNode.properties).reduce((soFar, onePropertyName) => ({ ...soFar, [onePropertyName]: Array.isArray(oneNode.properties[onePropertyName]) && oneNode.properties[onePropertyName].length === 1 ? oneNode.properties[onePropertyName][0] : oneNode.properties[onePropertyName] }), {}) }));
+					const collapsedDeclarationCount = scalarizedNodeList.filter((oneNode) => labelSuffixOf(oneNode) === 'Element' && typeof oneNode.properties.occurrenceSectionList === 'string').length;
+					const fromGraphRead = scopeToolLib.scopeAndSectionsOf({ nodeList: scalarizedNodeList, edgeList: forged.edges, labelPrefix: releaseDeclarationData.labelPrefix });
+					if (fromForge.refusalMessage || fromGraphRead.refusalMessage) {
+						callback('', { pass: false, detail: `refused: ${(fromForge.refusalMessage || fromGraphRead.refusalMessage).slice(0, 400)}` });
+						return;
+					}
+					const literalSectionPathList = Object.keys(reachabilityLiteralSet.occurrenceAndUnitCountBySection).sort();
+					const reachableStableIdList = forged.nodes.filter((oneNode) => labelSuffixOf(oneNode) === 'Element' && oneNode.properties.reachableFromRoot === true).map((oneNode) => oneNode.stableId).sort();
+					const labelsFollowRule = fromForge.sectionRowList.every((oneRow) => oneRow.documentSection === contextTextOf(oneRow.sectionPath));
+					const pass =
+						fromForge.reachableSubjectStableIdList.length === reachabilityLiteralSet.reachableDeclarationCount &&
+						JSON.stringify(fromForge.reachableSubjectStableIdList) === JSON.stringify(reachableStableIdList) &&
+						JSON.stringify(fromForge.sectionRowList.map((oneRow) => oneRow.sectionPath)) === JSON.stringify(literalSectionPathList) &&
+						labelsFollowRule &&
+						fromForge.scopeFileText === fromGraphRead.scopeFileText &&
+						fromForge.sectionFileText === fromGraphRead.sectionFileText &&
+						collapsedDeclarationCount > 0;
+					callback('', { pass, detail: `scope ${fromForge.reachableSubjectStableIdList.length} (literal ${reachabilityLiteralSet.reachableDeclarationCount}); sections ${fromForge.sectionRowList.length} (literal ${literalSectionPathList.length}); labels follow the rule ${labelsFollowRule}; ${collapsedDeclarationCount} declarations' section list collapses to a scalar in a graph read; graph read identical: scope ${fromForge.scopeFileText === fromGraphRead.scopeFileText}, sections ${fromForge.sectionFileText === fromGraphRead.sectionFileText}; section file sha256 ${fromForge.sectionFileSha256}` });
+				});
+			},
+		},
+	];
+	registerReachabilityTwin(REACHABILITY_GATE_ID, 'reachabilityCountsEqualLiterals', 'rootNoteMessageRemoved', 'inputFault', rootNoteMessageRemovedSubject);
+	registerReachabilityTwin(REACHABILITY_GATE_ID, 'reachabilityCountsEqualLiterals', 'learningProgramExtensionRewritten', 'inputFault', (subject) => ({ ...subject, snapshotDirPath: makeScratchSnapshot({ baseSnapshotDirPath: subject.snapshotDirPath, alterTextByFileName: { [academicRecordFileName]: learningProgramExtensionRewritten }, resealManifestEntry: true, resealChecksums: true }) }));
+	registerReachabilityTwin(REACHABILITY_GATE_ID, 'reachabilityCountsEqualLiterals', 'wildcardFollowed', 'productionMutation', (subject) => addMutation(subject, 'hooksMutationList', { modulePath: REACHABILITY_PATH, find: 'const WILDCARD_IS_FOLLOWED = false;', replace: 'const WILDCARD_IS_FOLLOWED = true;' }));
+	registerReachabilityTwin(REACHABILITY_GATE_ID, 'marksAgreeWithInstances', 'everyElementMarkedReachable', 'productionMutation', (subject) => addMutation(subject, 'hooksMutationList', { modulePath: WALK_PATH, find: 'reachableFromRoot: declarationIsReachable(elementStableId),', replace: 'reachableFromRoot: true,' }));
+	registerReachabilityTwin(REACHABILITY_GATE_ID, 'scopeAndSectionFilesFromTheForge', 'scalarWideningDisabled', 'productionMutation', (subject) => addMutation(subject, 'scopeToolMutationList', { modulePath: SCOPE_TOOL_LIB_PATH, find: 'const widenedList = (listOrScalar) => (Array.isArray(listOrScalar) ? listOrScalar : [listOrScalar]);', replace: 'const widenedList = (listOrScalar) => listOrScalar;' }));
+
+	// ---- F18-OCCURRENCE-IDENTITY
+	const OCCURRENCE_IDENTITY_GATE_ID = 'F18-OCCURRENCE-IDENTITY';
+	const OCCURRENCE_ID_MUTATION_FIND = 'occurrenceStableId: `${declarationStableId}/${OCCURRENCE_SEGMENT}/${contextPath}`,';
+	const PUSHED_TWICE_MUTATION = {
+		modulePath: REACHABILITY_PATH,
+		find: '		descendInto({ occurrence, typeTarget, anonymousType: oneElement.anonymousType, anonymousOwnerStableId: anonymousTypeStableIdOf(declarationStableId), artifact, walkState });',
+		replace: "		if (oneElement.name === 'DocumentID') { recordOccurrence({ declarationStableId, declarationName: oneElement.name, parentOccurrence: walkState.parentOccurrence, reachableVia: walkState.stepVia, xsiTypeName: walkState.xsiTypeName }); }\n		descendInto({ occurrence, typeTarget, anonymousType: oneElement.anonymousType, anonymousOwnerStableId: anonymousTypeStableIdOf(declarationStableId), artifact, walkState });",
+	};
+	const pushedTwiceRefusalRe = /reachability REFUSED: declaration '[^']+:DocumentID' reaches '[^']+' twice/;
+	const occurrenceIdentityConjunctList = [
+		{
+			conjunctId: 'occurrenceIsDeclarationAtPath',
+			title: "every occurrence's stableId is '<its declaration's stableId>/at/<contextPath>', it has exactly one HAS_INSTANCE (from that declaration), the paths reached by two declarations EQUAL the literal (every …/Contacts/Address/PostalCode, 14 occurrences), and no declaration reaches one path twice",
+			twinNameList: ['occurrenceMintedByPathAlone'],
+			evaluate: (subject, callback) => {
+				if (reachabilityLiteralSet === undefined) {
+					callback('', missingReachabilityLiteralResult());
+					return;
+				}
+				forgeOrFail({ subject }, callback, (forged) => {
+					const view = releaseViewOf(forged);
+					const instanceSourceListByOccurrence = {};
+					view.instanceEdgeList.forEach((oneEdge) => {
+						(instanceSourceListByOccurrence[oneEdge.toRef.id] = instanceSourceListByOccurrence[oneEdge.toRef.id] || []).push(oneEdge.fromRef.id);
+					});
+					const misnamedList = view.occurrenceList.filter((oneNode) => {
+						const sourceList = instanceSourceListByOccurrence[oneNode.stableId] || [];
+						return sourceList.length !== 1 || oneNode.stableId !== `${sourceList[0]}/at/${oneNode.properties.contextPath}`;
+					});
+					const declarationCountByPath = countOf(view.occurrenceList, (oneNode) => oneNode.properties.contextPath);
+					const sharedPathList = Object.keys(declarationCountByPath).filter((onePath) => declarationCountByPath[onePath] > 1);
+					const postalCodeOccurrenceCount = view.occurrenceList.filter((oneNode) => /\/Contacts\/Address\/PostalCode$/.test(oneNode.properties.contextPath)).length;
+					const repeatingDeclarationCount = Object.keys(view.occurrenceListByDeclaration).filter((oneId) => new Set(view.occurrenceListByDeclaration[oneId].map((oneNode) => oneNode.properties.contextPath)).size !== view.occurrenceListByDeclaration[oneId].length).length;
+					const pass = misnamedList.length === 0 && sharedPathList.length === reachabilityLiteralSet.pathReachedByTwoDeclarationsCount && sharedPathList.every((onePath) => /\/Contacts\/Address\/PostalCode$/.test(onePath)) && postalCodeOccurrenceCount === reachabilityLiteralSet.postalCodeOccurrenceCount && repeatingDeclarationCount === reachabilityLiteralSet.declarationReachingOnePathTwiceCount;
+					callback('', { pass, detail: `${view.occurrenceList.length} occurrences; misnamed ${misnamedList.length ? misnamedList[0].stableId : 'none'}; paths by two declarations ${sharedPathList.length} (literal ${reachabilityLiteralSet.pathReachedByTwoDeclarationsCount}); PostalCode occurrences ${postalCodeOccurrenceCount}; declarations repeating a path ${repeatingDeclarationCount}` });
+				});
+			},
+		},
+		{
+			conjunctId: 'pathPushedTwiceRefused',
+			title: 'a scratch walk that pushes one path twice for one declaration (DocumentID) is REFUSED BY NAME by reachability.js, naming the declaration, the path and both parents',
+			twinNameList: ['duplicatePathGuardDisabled'],
+			evaluate: (subject, callback) => {
+				forgeSnapshot({ subject: withExtraHooksMutation(subject, PUSHED_TWICE_MUTATION), snapshotDirPath: subject.snapshotDirPath }, (forgeError, forged) => {
+					callback('', { pass: refusedLike({ forgeError, refusalRe: pushedTwiceRefusalRe }), detail: refusalDetail(forgeError, forged) });
+				});
+			},
+		},
+	];
+	registerReachabilityTwin(OCCURRENCE_IDENTITY_GATE_ID, 'occurrenceIsDeclarationAtPath', 'occurrenceMintedByPathAlone', 'productionMutation', (subject) => addMutation(subject, 'hooksMutationList', { modulePath: REACHABILITY_PATH, find: OCCURRENCE_ID_MUTATION_FIND, replace: "occurrenceStableId: `${declarationStableId.split(':')[0]}:occurrence/${contextPath}`," }));
+	registerReachabilityTwin(OCCURRENCE_IDENTITY_GATE_ID, 'pathPushedTwiceRefused', 'duplicatePathGuardDisabled', 'productionMutation', (subject) => addMutation(subject, 'hooksMutationList', { modulePath: REACHABILITY_PATH, find: '		if (parentByPath.has(contextPath)) {', replace: '		if (false) {' }));
+
+	// ---- F19-OCCURRENCE-TREE
+	const OCCURRENCE_TREE_GATE_ID = 'F19-OCCURRENCE-TREE';
+	const occurrenceTreeConjunctList = [
+		{
+			conjunctId: 'parentChainIsThePath',
+			title: "every occurrence's parentId chain (occurrences up to the root global element) spells its contextPath; its one HAS_CHILD comes from its parentId; documentDepth is its segment count less one, the framework's depth is documentDepth + 1 (ruled), and the occurrences by depth EQUAL the literal",
+			twinNameList: ['occurrenceParentedOnDeclaration'],
+			evaluate: (subject, callback) => {
+				if (reachabilityLiteralSet === undefined) {
+					callback('', missingReachabilityLiteralResult());
+					return;
+				}
+				forgeOrFail({ subject }, callback, (forged) => {
+					const view = releaseViewOf(forged);
+					const childSourceListByOccurrence = {};
+					view.childEdgeList.forEach((oneEdge) => {
+						(childSourceListByOccurrence[oneEdge.toRef.id] = childSourceListByOccurrence[oneEdge.toRef.id] || []).push(oneEdge.fromRef.id);
+					});
+					const wrongList = [];
+					view.occurrenceList.forEach((oneOccurrence) => {
+						const props = oneOccurrence.properties;
+						const spelledNameList = [];
+						let cursor = oneOccurrence;
+						while (cursor !== undefined && labelSuffixOf(cursor) === 'Occurrence') {
+							spelledNameList.unshift(cursor.properties.name);
+							cursor = view.nodeByStableId[cursor.properties.parentId];
+						}
+						const topIsGlobalElement = cursor !== undefined && labelSuffixOf(cursor) === 'GlobalElement' && cursor.properties.reachableFromRoot === true;
+						const spelledPath = topIsGlobalElement ? [cursor.properties.name].concat(spelledNameList).join('/') : `(chain ends at ${cursor === undefined ? 'nothing' : labelSuffixOf(cursor)})`;
+						const childSourceList = childSourceListByOccurrence[oneOccurrence.stableId] || [];
+						if (spelledPath !== props.contextPath || props.path !== props.contextPath || childSourceList.length !== 1 || childSourceList[0] !== props.parentId || props.documentDepth !== props.contextPath.split('/').length - 1 || props.depth !== props.documentDepth + reachabilityLiteralSet.frameworkDepthMinusDocumentDepth) {
+							wrongList.push(`${oneOccurrence.stableId}: spelled '${spelledPath}', HAS_CHILD from [${childSourceList.join(', ')}], documentDepth ${props.documentDepth}, depth ${props.depth}`);
+						}
+					});
+					const depthCountText = sortedCountText(countOf(view.occurrenceList, (oneNode) => String(oneNode.properties.documentDepth)));
+					const pass = wrongList.length === 0 && view.childEdgeList.length === view.occurrenceList.length && depthCountText === sortedCountText(reachabilityLiteralSet.occurrenceCountByDocumentDepth);
+					callback('', { pass, detail: `${view.occurrenceList.length} occurrences, ${view.childEdgeList.length} HAS_CHILD; by depth ${depthCountText}; wrong ${wrongList.length ? wrongList.slice(0, 2).join('; ') : 'none'}` });
+				});
+			},
+		},
+		{
+			conjunctId: 'sectionIsTwoSegmentsBelowRoot',
+			title: "every occurrence's sectionPath is the first two segments below the root, or its whole path when shallower, and the occurrences and judgment units by section EQUAL the literal (22 sections)",
+			twinNameList: ['sectionRuleThreeSegments'],
+			evaluate: (subject, callback) => {
+				if (reachabilityLiteralSet === undefined) {
+					callback('', missingReachabilityLiteralResult());
+					return;
+				}
+				forgeOrFail({ subject }, callback, (forged) => {
+					const view = releaseViewOf(forged);
+					const RULED_SEGMENT_COUNT = 3;
+					const wrongNode = view.occurrenceList.find((oneNode) => oneNode.properties.sectionPath !== oneNode.properties.contextPath.split('/').slice(0, RULED_SEGMENT_COUNT).join('/'));
+					const measuredBySection = {};
+					view.occurrenceList.forEach((oneNode) => {
+						const sectionRow = (measuredBySection[oneNode.properties.sectionPath] = measuredBySection[oneNode.properties.sectionPath] || { occurrences: 0, units: 0 });
+						sectionRow.occurrences++;
+					});
+					Object.keys(view.occurrenceListByDeclaration).forEach((oneDeclarationStableId) => sectionsOfDeclaration(view.occurrenceListByDeclaration[oneDeclarationStableId]).forEach((oneSectionPath) => {
+						measuredBySection[oneSectionPath].units++;
+					}));
+					const bySectionText = (sectionMap) => JSON.stringify(Object.keys(sectionMap).sort().map((oneSection) => [oneSection, sectionMap[oneSection].occurrences, sectionMap[oneSection].units]));
+					const pass = wrongNode === undefined && bySectionText(measuredBySection) === bySectionText(reachabilityLiteralSet.occurrenceAndUnitCountBySection);
+					callback('', { pass, detail: `${Object.keys(measuredBySection).length} sections (literal ${reachabilityLiteralSet.sectionCount}); off-rule ${wrongNode ? `${wrongNode.properties.contextPath} → ${wrongNode.properties.sectionPath}` : 'none'}; by section equal ${bySectionText(measuredBySection) === bySectionText(reachabilityLiteralSet.occurrenceAndUnitCountBySection)}` });
+				});
+			},
+		},
+		{
+			conjunctId: 'declarationPathEvidence',
+			title: 'every reachable declaration: occurrenceSectionList is its occurrences\' sections, sorted; contextPathSampleList is the first two readable paths of each section in document order; reachableVia is its occurrences\' routes; spanning declarations, units, the sections-per-declaration histogram, the longest sample and ContactsType/Address (7 paths, 4 sections, 5 samples) EQUAL the literals',
+			twinNameList: ['perSectionSampleOfOne'],
+			evaluate: (subject, callback) => {
+				if (reachabilityLiteralSet === undefined) {
+					callback('', missingReachabilityLiteralResult());
+					return;
+				}
+				forgeOrFail({ subject }, callback, (forged) => {
+					const view = releaseViewOf(forged);
+					const VIA_ORDER = ['content', 'base', 'xsiType'];
+					const wrongList = [];
+					let unitCount = 0;
+					const sectionCountHistogram = {};
+					let longestSample = 0;
+					view.elementList.filter((oneNode) => oneNode.properties.reachableFromRoot === true).forEach((oneNode) => {
+						const declarationOccurrenceList = view.occurrenceListByDeclaration[oneNode.stableId];
+						const sectionList = sectionsOfDeclaration(declarationOccurrenceList);
+						const expectedSampleList = sectionList.reduce((soFar, oneSection) => soFar.concat(declarationOccurrenceList.filter((oneOccurrence) => oneOccurrence.properties.sectionPath === oneSection).slice(0, 2).map((oneOccurrence) => contextTextOf(oneOccurrence.properties.contextPath))), []);
+						const expectedViaList = VIA_ORDER.filter((oneVia) => declarationOccurrenceList.some((oneOccurrence) => oneOccurrence.properties.reachableVia === oneVia));
+						const props = oneNode.properties;
+						if (JSON.stringify(widened(props.occurrenceSectionList)) !== JSON.stringify(sectionList.slice().sort()) || JSON.stringify(widened(props.contextPathSampleList)) !== JSON.stringify(expectedSampleList) || JSON.stringify(widened(props.reachableVia)) !== JSON.stringify(expectedViaList)) {
+							wrongList.push(oneNode.stableId);
+						}
+						unitCount += sectionList.length;
+						sectionCountHistogram[sectionList.length] = (sectionCountHistogram[sectionList.length] || 0) + 1;
+						longestSample = Math.max(longestSample, widened(props.contextPathSampleList).length);
+					});
+					const example = reachabilityLiteralSet.spanningExample;
+					const exampleNode = view.nodeByStableId[`${standardKey}:${example.declarationReleaseIndependentId}`];
+					const exampleHolds = exampleNode !== undefined && (view.occurrenceListByDeclaration[exampleNode.stableId] || []).length === example.occurrenceCount && JSON.stringify(widened(exampleNode.properties.occurrenceSectionList)) === JSON.stringify(example.occurrenceSectionList) && widened(exampleNode.properties.contextPathSampleList).length === example.contextPathSampleListLength;
+					const spanningCount = Object.keys(sectionCountHistogram).filter((oneCount) => Number(oneCount) > 1).reduce((soFar, oneCount) => soFar + sectionCountHistogram[oneCount], 0);
+					const pass = wrongList.length === 0 && exampleHolds && unitCount === reachabilityLiteralSet.judgmentUnitCount && spanningCount === reachabilityLiteralSet.spanningDeclarationCount && sortedCountText(sectionCountHistogram) === sortedCountText(reachabilityLiteralSet.sectionsPerDeclarationHistogram) && longestSample === reachabilityLiteralSet.perSectionSampleListMaxLength;
+					callback('', { pass, detail: `units ${unitCount}; spanning ${spanningCount}; histogram ${sortedCountText(sectionCountHistogram)}; longest sample ${longestSample}; Address holds ${exampleHolds}; wrong ${wrongList.length ? wrongList.slice(0, 2).join('; ') : 'none'}` });
+				});
+			},
+		},
+	];
+	registerReachabilityTwin(OCCURRENCE_TREE_GATE_ID, 'parentChainIsThePath', 'occurrenceParentedOnDeclaration', 'productionMutation', (subject) => addMutation(subject, 'hooksMutationList', { modulePath: WALK_PATH, find: '			structural: { parentId: oneOccurrence.parentStableId, path: contextPath },', replace: '			structural: { parentId: oneOccurrence.declarationStableId, path: contextPath },' }));
+	registerReachabilityTwin(OCCURRENCE_TREE_GATE_ID, 'sectionIsTwoSegmentsBelowRoot', 'sectionRuleThreeSegments', 'productionMutation', (subject) => addMutation(subject, 'hooksMutationList', { modulePath: WALK_PATH, find: 'const SECTION_DEPTH_BELOW_ROOT = 2;', replace: 'const SECTION_DEPTH_BELOW_ROOT = 3;' }));
+	registerReachabilityTwin(OCCURRENCE_TREE_GATE_ID, 'declarationPathEvidence', 'perSectionSampleOfOne', 'productionMutation', (subject) => addMutation(subject, 'hooksMutationList', { modulePath: WALK_PATH, find: 'const PER_SECTION_SAMPLE_COUNT = 2;', replace: 'const PER_SECTION_SAMPLE_COUNT = 1;' }));
+
+	// ---- F10-INSTANCE-CHILD
+	const INSTANCE_CHILD_GATE_ID = 'F10-INSTANCE-CHILD';
+	const instanceChildConjunctList = [
+		{
+			conjunctId: 'instanceAndChildEdgesWellFormed',
+			title: 'HAS_INSTANCE runs only element declaration → occurrence and HAS_CHILD only occurrence or root global element → occurrence; each EQUALS the occurrence count (1,367), one of each into every occurrence',
+			twinNameList: ['childEdgeFromDeclaration'],
+			evaluate: (subject, callback) => {
+				if (reachabilityLiteralSet === undefined) {
+					callback('', missingReachabilityLiteralResult());
+					return;
+				}
+				forgeOrFail({ subject }, callback, (forged) => {
+					const view = releaseViewOf(forged);
+					const endpointText = (edgeList) => sortedCountText(countOf(edgeList, (oneEdge) => `${labelSuffixOf(view.nodeByStableId[oneEdge.fromRef.id])} -> ${labelSuffixOf(view.nodeByStableId[oneEdge.toRef.id])}`));
+					const rootGlobalElementStableIdSet = new Set(forged.nodes.filter((oneNode) => labelSuffixOf(oneNode) === 'GlobalElement' && oneNode.properties.reachableFromRoot === true).map((oneNode) => oneNode.stableId));
+					const instanceWellFormed = view.instanceEdgeList.every((oneEdge) => labelSuffixOf(view.nodeByStableId[oneEdge.fromRef.id]) === 'Element' && labelSuffixOf(view.nodeByStableId[oneEdge.toRef.id]) === 'Occurrence');
+					const childWellFormed = view.childEdgeList.every((oneEdge) => labelSuffixOf(view.nodeByStableId[oneEdge.toRef.id]) === 'Occurrence' && (labelSuffixOf(view.nodeByStableId[oneEdge.fromRef.id]) === 'Occurrence' || rootGlobalElementStableIdSet.has(oneEdge.fromRef.id)));
+					const intoEveryOccurrence = (edgeList) => new Set(edgeList.map((oneEdge) => oneEdge.toRef.id)).size === view.occurrenceList.length;
+					const pass = instanceWellFormed && childWellFormed && view.instanceEdgeList.length === reachabilityLiteralSet.occurrenceCount && view.childEdgeList.length === reachabilityLiteralSet.occurrenceCount && intoEveryOccurrence(view.instanceEdgeList) && intoEveryOccurrence(view.childEdgeList);
+					callback('', { pass, detail: `HAS_INSTANCE ${endpointText(view.instanceEdgeList)}; HAS_CHILD ${endpointText(view.childEdgeList)}` });
+				});
+			},
+		},
+	];
+	registerReachabilityTwin(INSTANCE_CHILD_GATE_ID, 'instanceAndChildEdgesWellFormed', 'childEdgeFromDeclaration', 'productionMutation', (subject) => addMutation(subject, 'hooksMutationList', { modulePath: WALK_PATH, find: 'addEdge({ edgeType: EDGE_TYPES.HAS_CHILD, fromStableId: oneOccurrence.parentStableId,', replace: 'addEdge({ edgeType: EDGE_TYPES.HAS_CHILD, fromStableId: oneOccurrence.declarationStableId,' }));
+
+	// ---- F8-OCCURRENCE-TEXTS
+	const OCCURRENCE_TEXTS_GATE_ID = 'F8-OCCURRENCE-TEXTS';
+	const occurrenceTextsConjunctList = [
+		{
+			conjunctId: 'occurrencesCarryNoText',
+			title: 'no occurrence is described by a text node (no EMBEDS_TEXT_OF reaches one), none carries searchText or a vector, and its role is non-embeddable in the declaration',
+			twinNameList: ['supportTextDeclared'],
+			evaluate: (subject, callback) => {
+				forgeOrFail({ subject }, callback, (forged) => {
+					const view = releaseViewOf(forged);
+					const occurrenceStableIdSet = new Set(view.occurrenceList.map((oneNode) => oneNode.stableId));
+					const describedCount = forged.edges.filter((oneEdge) => oneEdge.type === 'EMBEDS_TEXT_OF' && occurrenceStableIdSet.has(oneEdge.toRef.id)).length;
+					const carryingNode = view.occurrenceList.find((oneNode) => oneNode.properties.searchText !== undefined || oneNode.properties.embedding !== undefined);
+					const declaredRoleList = Object.keys(subject.forgeDeclaration.embedTextDeclaration.textPropertyListByRole);
+					const occurrenceRole = subject.nodeKindTable.occurrence.role;
+					const pass = describedCount === 0 && carryingNode === undefined && declaredRoleList.indexOf(occurrenceRole) === -1 && subject.forgeDeclaration.nonEmbeddableRoleList.indexOf(occurrenceRole) !== -1;
+					callback('', { pass, detail: `${view.occurrenceList.length} occurrences; described by text ${describedCount}; carrying searchText or embedding ${carryingNode ? carryingNode.stableId : 'none'}; text roles ${declaredRoleList.join(', ')}` });
+				});
+			},
+		},
+		{
+			conjunctId: 'reachableDocumentationSource',
+			title: 'reachable element declarations by route and documentationSource EQUAL the literal (content and base: 367 own, 4 type, WORKORDER F2; xsiType-only: first measured in F3)',
+			twinNameList: ['highSchoolDocumentationBlankedReachable'],
+			evaluate: (subject, callback) => {
+				if (reachabilityLiteralSet === undefined || reachabilityLiteralSet.reachableDocumentationSourceCount === undefined) {
+					callback('', { pass: false, detail: `expectedReleaseLiterals.json has no reachability.reachableDocumentationSourceCount for ${releaseName}` });
+					return;
+				}
+				forgeOrFail({ subject }, callback, (forged) => {
+					const view = releaseViewOf(forged);
+					const countByRoute = {};
+					view.elementList.filter((oneNode) => oneNode.properties.reachableFromRoot === true).forEach((oneNode) => {
+						const viaSet = view.viaSetOf(oneNode.stableId);
+						const routeName = viaSet.has('content') || viaSet.has('base') ? 'contentAndBase' : 'xsiTypeOnly';
+						const sourceName = oneNode.properties.documentationSource === undefined ? 'none' : oneNode.properties.documentationSource;
+						countByRoute[routeName] = countByRoute[routeName] || {};
+						countByRoute[routeName][sourceName] = (countByRoute[routeName][sourceName] || 0) + 1;
+					});
+					const routeText = (routeMap) => JSON.stringify(Object.keys(routeMap).sort().map((oneRoute) => [oneRoute, sortedCountText(routeMap[oneRoute])]));
+					callback('', { pass: routeText(countByRoute) === routeText(reachabilityLiteralSet.reachableDocumentationSourceCount), detail: routeText(countByRoute) });
+				});
+			},
+		},
+	];
+	registerReachabilityTwin(OCCURRENCE_TEXTS_GATE_ID, 'occurrencesCarryNoText', 'supportTextDeclared', 'inputFault', (subject) => ({
+		...subject,
+		forgeDeclaration: {
+			...subject.forgeDeclaration,
+			embedTextDeclaration: { ...subject.forgeDeclaration.embedTextDeclaration, textPropertyListByRole: { ...subject.forgeDeclaration.embedTextDeclaration.textPropertyListByRole, [DME_ROLES.SUPPORT]: ['name', 'contextText'] } },
+		},
+	}));
+	registerReachabilityTwin(OCCURRENCE_TEXTS_GATE_ID, 'reachableDocumentationSource', 'highSchoolDocumentationBlankedReachable', 'inputFault', (subject) => ({ ...subject, snapshotDirPath: blankedHighSchoolSnapshot(subject) }));
+
+	// ---- F6-DIGEST (extra; NOTES-supervisor item 9: verdict carry depends on it)
+	const DIGEST_GATE_ID = 'F6-DIGEST';
+	const digestConjunctList = [
+		{
+			conjunctId: 'globalElementDigestCoversItsType',
+			title: "a global element's definitionDigest covers its resolved type, as an element's and an attribute's do: a scratch snapshot that alters only the documentation of LoanInformationType changes LoanInformation's digest",
+			twinNameList: ['globalElementDigestDefinitionOnly'],
+			evaluate: (subject, callback) => {
+				const coreMainText = fs.readFileSync(path.join(subject.snapshotDirPath, coreMainFileName), 'latin1');
+				const typeOpenText = '<xs:complexType name="LoanInformationType">';
+				const typeStart = coreMainText.indexOf(typeOpenText);
+				const documentationStart = coreMainText.indexOf('<xs:documentation>', typeStart) + '<xs:documentation>'.length;
+				if (typeStart === -1 || documentationStart < typeStart + typeOpenText.length || coreMainText.indexOf('</xs:complexType>', typeStart) < documentationStart) {
+					throw new Error(`${moduleName}: fixture fault — LoanInformationType carries no documentation in ${coreMainFileName}`);
+				}
+				const alteredSnapshotDirPath = makeScratchSnapshot({ baseSnapshotDirPath: subject.snapshotDirPath, alterTextByFileName: { [coreMainFileName]: (fileText) => `${fileText.slice(0, documentationStart)}Altered for the digest gate. ${fileText.slice(documentationStart)}` }, resealManifestEntry: true, resealChecksums: true });
+				const digestOf = (forged, nameText) => forged.nodes.find((oneNode) => labelSuffixOf(oneNode) === nameText.labelSuffix && oneNode.properties.name === nameText.name).properties.definitionDigest;
+				forgeOrFail({ subject }, callback, (realForged) => {
+					forgeOrFail({ subject, snapshotDirPath: alteredSnapshotDirPath }, callback, (alteredForged) => {
+						const globalElement = { labelSuffix: 'GlobalElement', name: 'LoanInformation' };
+						const typeNode = { labelSuffix: 'Type', name: 'LoanInformationType' };
+						const globalDigestMoved = digestOf(realForged, globalElement) !== digestOf(alteredForged, globalElement);
+						const typeDigestMoved = digestOf(realForged, typeNode) !== digestOf(alteredForged, typeNode);
+						callback('', { pass: globalDigestMoved && typeDigestMoved, detail: `LoanInformationType digest moved ${typeDigestMoved}; LoanInformation digest moved ${globalDigestMoved}` });
+					});
+				});
+			},
+		},
+	];
+	registerReachabilityTwin(DIGEST_GATE_ID, 'globalElementDigestCoversItsType', 'globalElementDigestDefinitionOnly', 'productionMutation', (subject) => addMutation(subject, 'hooksMutationList', { modulePath: WALK_PATH, find: 'definitionDigest: definitionDigestOf({ globalElement: oneDefinition, resolvedType: typed.target === null ? null : typed.target.definition }),', replace: 'definitionDigest: definitionDigestOf(oneDefinition),' }));
+
+	const reachabilityGateDeclarationList = [
+		{ gateId: REACHABILITY_GATE_ID, title: 'F9 reachability: the counts, the marks, and the bridge\'s two files', conjunctList: reachabilityConjunctList },
+		{ gateId: OCCURRENCE_IDENTITY_GATE_ID, title: 'F18 occurrence identity: the declaration at the path', conjunctList: occurrenceIdentityConjunctList },
+		{ gateId: OCCURRENCE_TREE_GATE_ID, title: 'F19 occurrence tree: the parent chain, the section rule, the per-declaration evidence', conjunctList: occurrenceTreeConjunctList },
+		{ gateId: INSTANCE_CHILD_GATE_ID, title: "F10's HAS_INSTANCE and HAS_CHILD conjuncts", conjunctList: instanceChildConjunctList },
+		{ gateId: OCCURRENCE_TEXTS_GATE_ID, title: "F8's occurrence conjunct, and the documentation of what is reachable", conjunctList: occurrenceTextsConjunctList },
+		{ gateId: DIGEST_GATE_ID, title: "F6 digest (extra): a global element's digest covers its type", conjunctList: digestConjunctList },
+	];
+	const makeReachabilitySubject = () => ({ ...makeSubject(), scopeToolMutationList: [] });
+	const cloneReachabilitySubject = (subject) => ({ ...cloneSubject(subject), scopeToolMutationList: subject.scopeToolMutationList.slice() });
+
+
 	runGateFamily(
 		{ harness, familyName: `${standardKey} release gates (phase F1)`, gateDeclarationList, twinRegistry, makeSubject, cloneSubject, expectedConjunctCount: 17, expectedTwinCount: 17 },
 		() => {
 			runGateFamily(
-				{ harness, familyName: `${standardKey} walk gates (phase F2)`, gateDeclarationList: walkGateDeclarationList, twinRegistry: walkTwinRegistry, makeSubject: makeWalkSubject, cloneSubject, expectedConjunctCount: 15, expectedTwinCount: 16 },
+				{ harness, familyName: `${standardKey} walk gates (phase F2)`, gateDeclarationList: walkGateDeclarationList, twinRegistry: walkTwinRegistry, makeSubject: makeWalkSubject, cloneSubject, expectedConjunctCount: 15, expectedTwinCount: 17 },
 				() => {
-					scratchRootPathList.forEach((oneScratchRootPath) => fs.rmSync(oneScratchRootPath, { recursive: true, force: true }));
-					whenDone();
+					runGateFamily(
+						{ harness, familyName: `${standardKey} reachability gates (phase F3)`, gateDeclarationList: reachabilityGateDeclarationList, twinRegistry: reachabilityTwinRegistry, makeSubject: makeReachabilitySubject, cloneSubject: cloneReachabilitySubject, expectedConjunctCount: 12, expectedTwinCount: 14 },
+						() => {
+							scratchRootPathList.forEach((oneScratchRootPath) => fs.rmSync(oneScratchRootPath, { recursive: true, force: true }));
+							whenDone();
+						},
+					);
 				},
 			);
 		},

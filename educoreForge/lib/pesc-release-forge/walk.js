@@ -26,7 +26,19 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // the work order's literals; the planner's model had counted local elements to named types only).
 // An anonymous complex type or data type stays its declaration's child (parentId) with no edge.
 //
-// Occurrences, HAS_INSTANCE, HAS_CHILD, reachableFromRoot and the context paths are phase F3.
+// REACHABILITY AND OCCURRENCES (phase F3, §2.8; reachability.js walks, this file mints). Before any
+// node is minted the walk from the document root runs, so every source node is minted already
+// stamped: reachableFromRoot on declarations, definitions, anonymous types and codes; on each element
+// declaration its paths (contextText of the first, contextPathSampleList with the first
+// PER_SECTION_SAMPLE_COUNT readable paths of every section it occurs in, contextPathCount,
+// occurrenceSectionList, reachableVia). After the source nodes it mints one …Occurrence per path,
+// parented on its parent occurrence (the root global element at the top) so the parentId chain IS the
+// document path, with HAS_INSTANCE declaration → occurrence and HAS_CHILD parent → occurrence.
+// An occurrence's sectionPath is the first SECTION_DEPTH_BELOW_ROOT segments below the root, or the
+// whole path when it is shallower: a fact about the document the forge stamps; partitioning on it is
+// the bridge's (FBB-001). Occurrences are derived: no text, no vector, no ordering group.
+// A reachable attribute is refused by name: no release reaches one (DESIGN-pescBridge.md §1.1,
+// measured), and an attribute has no element path for an occurrence to name.
 //
 // THE FORGE DOES NO BRIDGING (FBB-001): the walk ends with a scan that refuses any property whose
 // name speaks of CEDS (gate F14).
@@ -37,6 +49,8 @@ const { EDGE_TYPES } = require(path.join(__dirname, '..', 'vocabulary', 'vocabul
 const resolutionTableLib = require('./resolutionTable');
 const { definitionDigestOf } = require('./definitionDigest');
 const { makeSequenceGroupCollector, GROUP_KIND } = require('./sequenceGroups');
+const reachabilityLib = require('./reachability');
+const { contextTextOf } = require('./contextText');
 
 const { SYMBOL_SPACE } = resolutionTableLib;
 const ELEMENT_SEGMENT = 'el';
@@ -47,6 +61,11 @@ const RELEASE_RECORD_SEGMENT = 'release';
 const SCHEMA_FILE_SEGMENT = 'file';
 const DOCUMENTATION_SOURCE = Object.freeze({ OWN: 'own', TYPE: 'type' });
 const BRIDGING_PROPERTY_NAME_RE = /ceds/i;
+// the section rule (§2.8): the first two segments BELOW the root element
+const SECTION_DEPTH_BELOW_ROOT = 2;
+// the declaration's path sample (§2.2): the first two readable paths of every section it occurs in
+const PER_SECTION_SAMPLE_COUNT = 2;
+const REACHABLE_VIA_ORDER = Object.freeze([reachabilityLib.REACHABLE_VIA.CONTENT, reachabilityLib.REACHABLE_VIA.BASE, reachabilityLib.REACHABLE_VIA.XSI_TYPE]);
 
 // the stableId kind segment of each top-level node kind (§2.3: '<standardKey>:<kind>/<namespace>#<localName>')
 const STABLE_ID_SEGMENT_BY_NODE_KIND = Object.freeze({
@@ -86,7 +105,8 @@ const NODE_KIND_BY_ANONYMOUS_VARIETY = Object.freeze({
 
 // the carry list of each node kind, in property order (§2.2). A fact that is null, '' or an empty
 // list is omitted, never stamped (absent is absent; gate F7)
-const SOURCE_CARRY_LIST = Object.freeze(['sourceFileName', 'documentPosition', 'sequencePosition', 'releaseIndependentId', 'definitionDigest']);
+const SOURCE_CARRY_LIST = Object.freeze(['sourceFileName', 'documentPosition', 'sequencePosition', 'releaseIndependentId', 'definitionDigest', 'reachableFromRoot']);
+const PATH_CARRY_LIST = Object.freeze(['contextText', 'contextPathSampleList', 'contextPathCount', 'occurrenceSectionList', 'reachableVia']);
 const CARRY_LIST_BY_NODE_KIND = Object.freeze({
 	releaseRecord: Object.freeze(['releaseName', 'standard', 'version', 'closureDigest', 'closureDate', 'closureDatePrecision', 'closureDateEvidence', 'verdict', 'pinDecisionsApplied', 'librariesNamed', 'rootChangeLogLineList', 'expanderManifestFormat', 'sourceCorpusDigest']),
 	schemaFile: Object.freeze(['sourceFileName', 'releaseIndependentId', 'sha256', 'byteCount', 'targetNamespace', 'layer', 'importList', 'schemaAttributeList', 'fileDocumentation']),
@@ -95,10 +115,11 @@ const CARRY_LIST_BY_NODE_KIND = Object.freeze({
 	codeList: Object.freeze(SOURCE_CARRY_LIST.concat(['targetNamespace', 'documentation', 'documentationValueList', 'baseTypeQName', 'derivationVariety', 'facets', 'codeCount'])),
 	dataType: Object.freeze(SOURCE_CARRY_LIST.concat(['targetNamespace', 'documentation', 'documentationValueList', 'baseTypeQName', 'derivationVariety', 'facets'])),
 	group: Object.freeze(SOURCE_CARRY_LIST.concat(['targetNamespace', 'documentation', 'documentationValueList', 'contentModelShape'])),
-	globalElement: Object.freeze(SOURCE_CARRY_LIST.concat(['targetNamespace', 'documentation', 'typeQName', 'typeAsWritten', 'typeName', 'substitutionGroupQName', 'abstractAsWritten', 'nillableAsWritten'])),
-	element: Object.freeze(SOURCE_CARRY_LIST.concat(['documentation', 'typeQName', 'typeAsWritten', 'typeName', 'minOccursAsWritten', 'maxOccursAsWritten', 'nillableAsWritten', 'defaultAsWritten', 'fixedAsWritten', 'owningTypeName', 'effectiveDocumentation', 'documentationSource'])),
+	globalElement: Object.freeze(SOURCE_CARRY_LIST.concat(['targetNamespace', 'documentation', 'typeQName', 'typeAsWritten', 'typeName', 'substitutionGroupQName', 'abstractAsWritten', 'nillableAsWritten'], PATH_CARRY_LIST)),
+	element: Object.freeze(SOURCE_CARRY_LIST.concat(['documentation', 'typeQName', 'typeAsWritten', 'typeName', 'minOccursAsWritten', 'maxOccursAsWritten', 'nillableAsWritten', 'defaultAsWritten', 'fixedAsWritten', 'owningTypeName', 'effectiveDocumentation', 'documentationSource'], PATH_CARRY_LIST)),
 	attribute: Object.freeze(SOURCE_CARRY_LIST.concat(['documentation', 'typeQName', 'typeAsWritten', 'typeName', 'useAsWritten', 'owningTypeName', 'effectiveDocumentation', 'documentationSource'])),
 	code: Object.freeze(SOURCE_CARRY_LIST.concat(['value', 'documentation', 'codePosition'])),
+	occurrence: Object.freeze(['contextPath', 'contextText', 'sectionPath', 'documentDepth', 'reachableVia', 'xsiTypeName']),
 });
 
 const isAbsent = (factValue) => factValue === null || factValue === undefined || factValue === '' || (Array.isArray(factValue) && factValue.length === 0);
@@ -106,6 +127,34 @@ const presentFactsOf = (facts) => Object.keys(facts).reduce((soFar, factName) =>
 const jsonOrAbsent = (jsonValue) => (isAbsent(jsonValue) || (typeof jsonValue === 'object' && !Array.isArray(jsonValue) && Object.keys(jsonValue).length === 0) ? null : JSON.stringify(jsonValue));
 const qualifiedTypeNameOf = (resolvedReference) => `${resolvedReference.referencedNamespace}#${resolvedReference.localName}`;
 const nonBlankOrNull = (text) => (typeof text === 'string' && text.trim() !== '' ? text : null);
+
+// identity of a local element and of an anonymous type (§2.3); reachability.js names declarations
+// through these, so a declaration has one stableId whoever names it
+const elementStableIdOf = ({ ownerStableId, oneElement }) => `${ownerStableId}/${ELEMENT_SEGMENT}/${oneElement.sequencePosition}:${oneElement.name}`;
+const anonymousTypeStableIdOf = (ownerDeclarationStableId) => `${ownerDeclarationStableId}/${ANONYMOUS_SEGMENT}`;
+const sectionPathOf = (contextPathSegmentList) => contextPathSegmentList.slice(0, 1 + SECTION_DEPTH_BELOW_ROOT).join(reachabilityLib.PATH_SEPARATOR);
+
+// what a declaration's occurrences say about it, in document order (§2.2)
+const pathFactsOf = (occurrenceList) => {
+	const sectionPathList = [];
+	const readablePathListBySection = {};
+	occurrenceList.forEach((oneOccurrence) => {
+		const sectionPath = sectionPathOf(oneOccurrence.contextPathSegmentList);
+		if (readablePathListBySection[sectionPath] === undefined) {
+			readablePathListBySection[sectionPath] = [];
+			sectionPathList.push(sectionPath);
+		}
+		readablePathListBySection[sectionPath].push(contextTextOf(oneOccurrence.contextPathSegmentList.join(reachabilityLib.PATH_SEPARATOR)));
+	});
+	const viaSet = new Set(occurrenceList.map((oneOccurrence) => oneOccurrence.reachableVia));
+	return {
+		contextText: contextTextOf(occurrenceList[0].contextPathSegmentList.join(reachabilityLib.PATH_SEPARATOR)),
+		contextPathSampleList: sectionPathList.reduce((soFar, oneSectionPath) => soFar.concat(readablePathListBySection[oneSectionPath].slice(0, PER_SECTION_SAMPLE_COUNT)), []),
+		contextPathCount: occurrenceList.length,
+		occurrenceSectionList: sectionPathList.slice().sort(),
+		reachableVia: REACHABLE_VIA_ORDER.filter((oneVia) => viaSet.has(oneVia)),
+	};
+};
 
 // one derivation at most per container in this corpus; a second is new information and refused
 const singleDerivationOf = ({ container, ownerStableId }) => {
@@ -168,6 +217,26 @@ const emitReleaseGraph = ({ xsdSet, loadedManifestEntry, standardKey, nodeKindTa
 		}
 		return { resolvedReference, target };
 	};
+
+	// ---- reachability first (reachability.js), so every node is minted already stamped
+	const { occurrenceList, reachableDefinitionStableIdSet, rootGlobalElementStableIdList, reachabilityStats } = reachabilityLib.computeReachability({
+		artifacts,
+		topLevelByQualifiedName,
+		resolveOrRefuse,
+		elementStableIdOf,
+		anonymousTypeStableIdOf,
+		typeSymbolSpace: SYMBOL_SPACE.TYPE,
+		groupSymbolSpace: SYMBOL_SPACE.GROUP,
+	});
+	const occurrenceListByDeclaration = new Map();
+	occurrenceList.forEach((oneOccurrence) => {
+		const declarationOccurrenceList = occurrenceListByDeclaration.get(oneOccurrence.declarationStableId) || [];
+		declarationOccurrenceList.push(oneOccurrence);
+		occurrenceListByDeclaration.set(oneOccurrence.declarationStableId, declarationOccurrenceList);
+	});
+	const rootGlobalElementStableIdSet = new Set(rootGlobalElementStableIdList);
+	const declarationIsReachable = (declarationStableId) => occurrenceListByDeclaration.has(declarationStableId) || rootGlobalElementStableIdSet.has(declarationStableId);
+	const declarationPathFactsOf = (declarationStableId) => (occurrenceListByDeclaration.has(declarationStableId) ? pathFactsOf(occurrenceListByDeclaration.get(declarationStableId)) : {});
 
 	// ---- the release record and the schema files
 	const rootStableId = kit.rootStableId;
@@ -243,7 +312,7 @@ const emitReleaseGraph = ({ xsdSet, loadedManifestEntry, standardKey, nodeKindTa
 		return { baseTypeQName: qualifiedTypeNameOf(resolvedReference), derivationVariety: derivation.variety, contentStyle: derivation.contentStyle, facets: jsonOrAbsent(derivation.facets) };
 	};
 
-	const emitCodes = ({ container, codeListStableId, artifact }) => {
+	const emitCodes = ({ container, codeListStableId, artifact, reachableFromRoot }) => {
 		const codeStableIdList = [];
 		container.derivations.forEach((oneDerivation) => {
 			oneDerivation.enumerationValues.forEach((oneValue, valueIndex) => {
@@ -257,7 +326,7 @@ const emitReleaseGraph = ({ xsdSet, loadedManifestEntry, standardKey, nodeKindTa
 					stableId: codeStableId,
 					name: oneValue.value,
 					parentId: codeListStableId,
-					facts: { sourceFileName: artifact.filename, releaseIndependentId: releaseIndependentIdOf(codeStableId), definitionDigest: definitionDigestOf(oneValue), value: oneValue.value, documentation: nonBlankOrNull(oneValue.documentation), codePosition },
+					facts: { sourceFileName: artifact.filename, releaseIndependentId: releaseIndependentIdOf(codeStableId), definitionDigest: definitionDigestOf(oneValue), reachableFromRoot, value: oneValue.value, documentation: nonBlankOrNull(oneValue.documentation), codePosition },
 				});
 				addEdge({ edgeType: EDGE_TYPES.HAS_VALUE, fromStableId: codeListStableId, toStableId: codeStableId });
 				codeStableIdList.push(codeStableId);
@@ -308,7 +377,8 @@ const emitReleaseGraph = ({ xsdSet, loadedManifestEntry, standardKey, nodeKindTa
 	// an anonymous type, owned by the declaration it is written inside
 	const emitAnonymousType = ({ anonymousType, ownerDeclarationStableId, ownerDeclarationName, artifact }) => {
 		const nodeKind = NODE_KIND_BY_ANONYMOUS_VARIETY[anonymousType.typeVariety](anonymousType.body);
-		const anonymousStableId = `${ownerDeclarationStableId}/${ANONYMOUS_SEGMENT}`;
+		const anonymousStableId = anonymousTypeStableIdOf(ownerDeclarationStableId);
+		const reachableFromRoot = declarationIsReachable(ownerDeclarationStableId);
 		const derivationFacts = derivationFactsOf({ container: anonymousType.body, ownerStableId: anonymousStableId, artifact });
 		const codeCount = nodeKind === 'codeList' ? anonymousType.body.derivations.reduce((soFar, oneDerivation) => soFar + oneDerivation.enumerationValues.length, 0) : null;
 		mintNode({
@@ -320,6 +390,7 @@ const emitReleaseGraph = ({ xsdSet, loadedManifestEntry, standardKey, nodeKindTa
 				sourceFileName: artifact.filename,
 				releaseIndependentId: releaseIndependentIdOf(anonymousStableId),
 				definitionDigest: definitionDigestOf(anonymousType),
+				reachableFromRoot,
 				targetNamespace: artifact.targetNamespace,
 				documentation: nonBlankOrNull(anonymousType.body.documentation),
 				documentationValueList: anonymousType.body.documentationValues,
@@ -329,17 +400,17 @@ const emitReleaseGraph = ({ xsdSet, loadedManifestEntry, standardKey, nodeKindTa
 			},
 		});
 		if (nodeKind === 'codeList') {
-			emitCodes({ container: anonymousType.body, codeListStableId: anonymousStableId, artifact });
+			emitCodes({ container: anonymousType.body, codeListStableId: anonymousStableId, artifact, reachableFromRoot });
 			addEdge({ edgeType: EDGE_TYPES.HAS_OPTION_SET, fromStableId: ownerDeclarationStableId, toStableId: anonymousStableId });
 		}
-		emitContainerContent({ container: anonymousType.body, ownerStableId: anonymousStableId, owningTypeName: null, artifact });
+		emitContainerContent({ container: anonymousType.body, ownerStableId: anonymousStableId, owningTypeName: null, artifact, ownerIsReachable: reachableFromRoot });
 		return anonymousStableId;
 	};
 
-	const emitContainerContent = ({ container, ownerStableId, owningTypeName, artifact }) => {
+	const emitContainerContent = ({ container, ownerStableId, owningTypeName, artifact, ownerIsReachable }) => {
 		const elementStableIdList = [];
 		container.elements.forEach((oneElement) => {
-			const elementStableId = `${ownerStableId}/${ELEMENT_SEGMENT}/${oneElement.sequencePosition}:${oneElement.name}`;
+			const elementStableId = elementStableIdOf({ ownerStableId, oneElement });
 			const typed = oneElement.typeAsWritten === null ? { resolvedReference: null, target: null } : resolveOrRefuse({ artifact, writtenQName: oneElement.typeAsWritten, referencedKind: SYMBOL_SPACE.TYPE, siteText: `${elementStableId} type` });
 			const ownDocumentation = nonBlankOrNull(oneElement.documentation);
 			mintNode({
@@ -352,6 +423,7 @@ const emitReleaseGraph = ({ xsdSet, loadedManifestEntry, standardKey, nodeKindTa
 					sequencePosition: oneElement.sequencePosition,
 					releaseIndependentId: releaseIndependentIdOf(elementStableId),
 					definitionDigest: definitionDigestOf({ element: oneElement, resolvedType: typed.target === null ? null : typed.target.definition }),
+					reachableFromRoot: declarationIsReachable(elementStableId),
 					documentation: ownDocumentation,
 					typeQName: typed.resolvedReference === null ? null : qualifiedTypeNameOf(typed.resolvedReference),
 					typeAsWritten: oneElement.typeAsWritten,
@@ -363,6 +435,7 @@ const emitReleaseGraph = ({ xsdSet, loadedManifestEntry, standardKey, nodeKindTa
 					fixedAsWritten: oneElement.fixedAsWritten,
 					owningTypeName,
 					...effectiveDocumentationFactsOf({ ownDocumentation, typeDocumentation: typeDocumentationOf({ target: typed.target, anonymousType: oneElement.anonymousType }) }),
+					...declarationPathFactsOf(elementStableId),
 				},
 			});
 			addEdge({ edgeType: EDGE_TYPES.HAS_PROPERTY, fromStableId: ownerStableId, toStableId: elementStableId });
@@ -376,6 +449,9 @@ const emitReleaseGraph = ({ xsdSet, loadedManifestEntry, standardKey, nodeKindTa
 			const attributeStableId = `${ownerStableId}/${ATTRIBUTE_SEGMENT}/${oneAttribute.attributePosition}:${oneAttribute.name}`;
 			const typed = oneAttribute.typeAsWritten === null ? { resolvedReference: null, target: null } : resolveOrRefuse({ artifact, writtenQName: oneAttribute.typeAsWritten, referencedKind: SYMBOL_SPACE.TYPE, siteText: `${attributeStableId} type` });
 			const ownDocumentation = nonBlankOrNull(oneAttribute.documentation);
+			if (ownerIsReachable) {
+				throw refuse.byName({ moduleName, what: `attribute '${attributeStableId}' sits on a reachable owner`, where: 'no release reaches an attribute (DESIGN-pescBridge.md §1.1, measured); an attribute has no element path, so its occurrence rule is undesigned: design it, do not let it pass unmarked' });
+			}
 			mintNode({
 				nodeKind: 'attribute',
 				stableId: attributeStableId,
@@ -386,6 +462,7 @@ const emitReleaseGraph = ({ xsdSet, loadedManifestEntry, standardKey, nodeKindTa
 					sequencePosition: oneAttribute.attributePosition,
 					releaseIndependentId: releaseIndependentIdOf(attributeStableId),
 					definitionDigest: definitionDigestOf({ attribute: oneAttribute, resolvedType: typed.target === null ? null : typed.target.definition }),
+					reachableFromRoot: false,
 					documentation: ownDocumentation,
 					typeQName: typed.resolvedReference === null ? null : qualifiedTypeNameOf(typed.resolvedReference),
 					typeAsWritten: oneAttribute.typeAsWritten,
@@ -416,11 +493,13 @@ const emitReleaseGraph = ({ xsdSet, loadedManifestEntry, standardKey, nodeKindTa
 		oneArtifact.definitions.forEach((oneDefinition) => {
 			const qualifiedName = resolutionTableLib.qualifiedNameFor({ targetNamespace: oneArtifact.targetNamespace, symbolSpace: SYMBOL_SPACE_BY_KIND[oneDefinition.kind], localName: oneDefinition.name });
 			const { nodeKind, stableId } = topLevelByQualifiedName[qualifiedName];
+			const reachableFromRoot = nodeKind === 'globalElement' ? declarationIsReachable(stableId) : reachableDefinitionStableIdSet.has(stableId);
 			const commonFacts = {
 				sourceFileName: oneArtifact.filename,
 				documentPosition: oneDefinition.documentPosition,
 				releaseIndependentId: releaseIndependentIdOf(stableId),
 				definitionDigest: definitionDigestOf(oneDefinition),
+				reachableFromRoot,
 				targetNamespace: oneArtifact.targetNamespace,
 				documentation: nonBlankOrNull(oneDefinition.documentation),
 			};
@@ -434,12 +513,15 @@ const emitReleaseGraph = ({ xsdSet, loadedManifestEntry, standardKey, nodeKindTa
 					parentId: rootStableId,
 					facts: {
 						...commonFacts,
+						// like an element's and an attribute's, the declaration plus its resolved type (verdict carry)
+						definitionDigest: definitionDigestOf({ globalElement: oneDefinition, resolvedType: typed.target === null ? null : typed.target.definition }),
 						typeQName: typed.resolvedReference === null ? null : qualifiedTypeNameOf(typed.resolvedReference),
 						typeAsWritten: oneDefinition.typeAsWritten,
 						typeName: typed.resolvedReference === null ? null : typed.resolvedReference.localName,
 						substitutionGroupQName: headed.resolvedReference === null ? null : qualifiedTypeNameOf(headed.resolvedReference),
 						abstractAsWritten: oneDefinition.abstractAsWritten,
 						nillableAsWritten: oneDefinition.nillableAsWritten,
+						...(rootGlobalElementStableIdSet.has(stableId) ? { contextText: contextTextOf(oneDefinition.name) } : declarationPathFactsOf(stableId)),
 					},
 				});
 				addTypeEdge({ declarationStableId: stableId, target: typed.target });
@@ -472,12 +554,36 @@ const emitReleaseGraph = ({ xsdSet, loadedManifestEntry, standardKey, nodeKindTa
 				addEdge({ edgeType: ROOT_EDGE_BY_NODE_KIND[nodeKind], fromStableId: rootStableId, toStableId: stableId });
 			}
 			if (nodeKind === 'codeList') {
-				emitCodes({ container, codeListStableId: stableId, artifact: oneArtifact });
+				emitCodes({ container, codeListStableId: stableId, artifact: oneArtifact, reachableFromRoot });
 			}
-			emitContainerContent({ container, ownerStableId: stableId, owningTypeName: oneDefinition.name, artifact: oneArtifact });
+			emitContainerContent({ container, ownerStableId: stableId, owningTypeName: oneDefinition.name, artifact: oneArtifact, ownerIsReachable: reachableFromRoot });
 			definitionStableIdList.push(stableId);
 		});
 		sequenceGroupCollector.addGroup({ groupKey: `${stableIdPrefix}${SCHEMA_FILE_SEGMENT}/${oneArtifact.targetNamespace}#definitions`, members: definitionStableIdList, compositor: GROUP_KIND.DOCUMENT_ORDER });
+	});
+
+	// ---- the occurrences (§2.8), in document order: each parented on its parent occurrence or, at the
+	// top, the root global element; HAS_INSTANCE from its declaration, HAS_CHILD from its parent
+	const sectionPathSet = new Set();
+	occurrenceList.forEach((oneOccurrence) => {
+		const contextPath = oneOccurrence.contextPathSegmentList.join(reachabilityLib.PATH_SEPARATOR);
+		const sectionPath = sectionPathOf(oneOccurrence.contextPathSegmentList);
+		sectionPathSet.add(sectionPath);
+		kit.makeNode({
+			role: nodeKindTable.occurrence.role,
+			perStandardLabel: nodeKindTable.occurrence.perStandardLabel,
+			stableId: oneOccurrence.occurrenceStableId,
+			name: oneOccurrence.declarationName,
+			structural: { parentId: oneOccurrence.parentStableId, path: contextPath },
+			carriedProperties: kit.carriedProperties({
+				parsedObject: presentFactsOf({ contextPath, contextText: contextTextOf(contextPath), sectionPath, documentDepth: oneOccurrence.contextPathSegmentList.length - 1, reachableVia: oneOccurrence.reachableVia, xsiTypeName: oneOccurrence.xsiTypeName }),
+				carryList: CARRY_LIST_BY_NODE_KIND.occurrence,
+			}),
+			origin: `occurrence ${oneOccurrence.occurrenceStableId}`,
+		});
+		nodeCountByKind.occurrence = (nodeCountByKind.occurrence || 0) + 1;
+		addEdge({ edgeType: EDGE_TYPES.HAS_INSTANCE, fromStableId: oneOccurrence.declarationStableId, toStableId: oneOccurrence.occurrenceStableId });
+		addEdge({ edgeType: EDGE_TYPES.HAS_CHILD, fromStableId: oneOccurrence.parentStableId, toStableId: oneOccurrence.occurrenceStableId });
 	});
 
 	// ---- F14: the forge names no bridge target
@@ -489,7 +595,12 @@ const emitReleaseGraph = ({ xsdSet, loadedManifestEntry, standardKey, nodeKindTa
 	});
 
 	return {
-		walkStats: { nodeCountByKind, edgeCountByType, documentationSourceCount },
+		walkStats: {
+			nodeCountByKind,
+			edgeCountByType,
+			documentationSourceCount,
+			reachabilityStats: { ...reachabilityStats, occurrenceCount: occurrenceList.length, reachableDeclarationCount: occurrenceListByDeclaration.size, reachableDefinitionCount: reachableDefinitionStableIdSet.size, sectionCount: sectionPathSet.size },
+		},
 		sequenceGroups: sequenceGroupCollector.sequenceGroups(),
 	};
 };
@@ -502,4 +613,4 @@ const SYMBOL_SPACE_BY_KIND = Object.freeze({
 	group: SYMBOL_SPACE.GROUP,
 });
 
-module.exports = { emitReleaseGraph, CARRY_LIST_BY_NODE_KIND, STABLE_ID_SEGMENT_BY_NODE_KIND, moduleName };
+module.exports = { emitReleaseGraph, CARRY_LIST_BY_NODE_KIND, STABLE_ID_SEGMENT_BY_NODE_KIND, SECTION_DEPTH_BELOW_ROOT, PER_SECTION_SAMPLE_COUNT, sectionPathOf, moduleName };
