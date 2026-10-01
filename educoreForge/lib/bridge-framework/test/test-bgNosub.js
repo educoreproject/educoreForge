@@ -577,7 +577,11 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // forgePescTestScoreReport1v1v0.js, forgePescDocumentRequest1v0v0.js, forgePescDocumentResponse1v0v0.js,
 // forgePescLearningRecord1v0v0.js, forgePescAcademicEportfolio1v0v0.js. Every existing forge's files, build.js, replay/,
 // replay-manager/ and lib/forge-framework/: UNTOUCHED. SEAM_PATH_LIST byte-identical. Fresh red observed against THIS tag (DEVLOG-F6).
-const PHASE3_ANCHOR_TAG = 'postPescF6SeamDiffEmpty-100126'; // re-anchored by QUIET_CIPHER, PESC release forge F6
+// PESC F6 SECOND RE-ANCHOR (QUIET_CIPHER, 2026-10-01; pre-authorised, NOTES 5): postPescF6SeamDiffEmpty-100126 ->
+// postPescF6EportfolioSeamDiffEmpty-100126, tag cut ON this commit. CENSUS at d4fddd5: one file, 1+/1−,
+// forges/pescacademiceportfolio1v0v0/forgePescAcademicEportfolio1v0v0.js — its header comment's DME title, rescaffolded after
+// QUIET_ORBIT's display-name ruling ('PESC Academic ePortfolio v1.0.0'). SEAM_PATH_LIST byte-identical. Fresh red (DEVLOG-F6).
+const PHASE3_ANCHOR_TAG = 'postPescF6EportfolioSeamDiffEmpty-100126'; // re-anchored by QUIET_CIPHER, PESC release forge F6 (second)
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');
