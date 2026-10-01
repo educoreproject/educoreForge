@@ -1657,10 +1657,22 @@ const noSuchKitOutcome = foldOutcome({
 	requestedVersion: 'current',
 	baseNodeEdges: engineShapeCedsBase,
 });
+// RE-ANCHORED 2026-09-30 (QUIET_ORBIT ruling, pescRelease F1): this read /…Known forges: ceds, edfi,
+// pesc260805, sif/, a prefix of the alphabetical roster, which every new bundle sorting between two of
+// those names broke (pesccollegetranscript1v8v0 did). What the test MEANS is: the refusal names the
+// missing standard and the descriptor it looked for, and lists the kits that exist. So the kit names
+// are checked as a SET, order-free: each named kit must appear; others may.
+const KITS_THAT_MUST_BE_LISTED = ['ceds', 'edfi', 'pesc260805', 'sif'];
 harness.match(
 	"a standard declared a hub that has NO FORGE BUNDLE AT ALL is refused at bundle resolution, naming the descriptor it looked for and the kits that exist",
 	noSuchKitOutcome.error,
-	/no forge bundle for standard 'lif'[\s\S]*parserDescriptor\.ini[\s\S]*Known forges: ceds, edfi, pesc260805, sif/,
+	/no forge bundle for standard 'lif'[\s\S]*parserDescriptor\.ini[\s\S]*Known forges: /,
+);
+const listedKitNameList = String(noSuchKitOutcome.error).replace(/^[\s\S]*Known forges: /, '').split(/,\s*/).map((oneName) => oneName.trim());
+harness.ok(
+	`  and its Known forges list names each of ${KITS_THAT_MUST_BE_LISTED.join(', ')} (order-free)`,
+	KITS_THAT_MUST_BE_LISTED.every((oneKitName) => listedKitNameList.indexOf(oneKitName) !== -1),
+	`listed: ${listedKitNameList.join(', ')}`,
 );
 harness.ok('  and it hands back no nodeEdges', noSuchKitOutcome.result === undefined, JSON.stringify(noSuchKitOutcome.result));
 
