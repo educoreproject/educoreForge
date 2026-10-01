@@ -588,5 +588,73 @@
 			"rejudgeRealNamedSet": null
 		},
 		"frozenBy": null
+	},
+	"pescDocumentRequest1v0v0CedsDerivedPlugin": {
+		// THE PESC DOCUMENT REQUEST 1.0.0 DERIVED BRIDGE (lane B2x, 2026-10-01; SCARLET_RIVER under QUIET_ORBIT; goldJevCampaign
+		// BRIEF-B; WORKORDER-pescForgeBridge-093026 §3A.2: appended, one entry per release). Every line and every spend line
+		// is null: the real Jev run is authorised by BRIEF-B's AMENDMENT (Jev only, USD 10 cap) and recorded in DEVLOG-B2x.
+		//
+		// THE HUB PIN is the PESC family's (DESIGN-pescBridge §4.4), the same ceds id as the sif260928 and College Transcript
+		// entries. The release's own base id is the block F6 certified (README_ValidationCertificate.md, f31be75).
+		//
+		// THE PATHS NAME THE pescBridges-B2x WORKTREE, deliberately (the sif260928 entry's reason); they move to system/code
+		// at the merge.
+		"standardKey": "pescdocumentrequest1v0v0",
+		"recipePath": "/Users/tqwhite/Documents/webdev/educoreForge/system/codeWorktrees/pescBridges-B2x/educoreForge/recipes/pescdocumentrequest1v0v0Derived.recipe.jsonc",
+		"storeFilePath": "/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/pescdocumentrequest1v0v0/b2/pescDocumentRequest1v0v0B2.standardsDatabase.sqlite3",
+		"decisionStoreFilePath": "/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/pescdocumentrequest1v0v0/b2/pescDocumentRequest1v0v0B2.decisions.sqlite3",
+		"judgmentCacheFilePath": "/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/pescdocumentrequest1v0v0/b2/pescDocumentRequest1v0v0B2.judgmentCache.sqlite3",
+		"matchForensicsDirPath": "/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/pescdocumentrequest1v0v0/b2/matchForensics",
+		"buildLogsDirPath": "/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/pescdocumentrequest1v0v0/b2/buildLogs",
+		"expectedBaseBlockIdBySubject": {
+			"ceds@14_0_0_0_base": "21110ef1fd423434bfc64899559f31dd7d126fd421e344341fe329e3f65c91dd",
+			"pescdocumentrequest1v0v0@1_0_0_base": "b68b8e53a4ca0f016c27ec10a078fa6d199fbd9d182bc9f6f1f4e60d73fbb709"
+		},
+		"rejudgeDebug": null,
+		"materialise": null,
+		"materialiseReal": null,
+		"rejudgeRealLimit": null,
+		"rejudgeRealNamedSet": null,
+		"eyeGraph": null,
+		"spendAuthorisationByLine": {
+			"rejudgeRealLimit": null,
+			"materialiseReal": null,
+			"rejudgeRealNamedSet": null
+		},
+		"frozenBy": null
+	},
+	"pescDocumentResponse1v0v0CedsDerivedPlugin": {
+		// THE PESC DOCUMENT RESPONSE 1.0.0 DERIVED BRIDGE (lane B2x, 2026-10-01; SCARLET_RIVER under QUIET_ORBIT; goldJevCampaign
+		// BRIEF-B; WORKORDER-pescForgeBridge-093026 §3A.2: appended, one entry per release). Every line and every spend line
+		// is null: the real Jev run is authorised by BRIEF-B's AMENDMENT (Jev only, USD 10 cap) and recorded in DEVLOG-B2x.
+		//
+		// THE HUB PIN is the PESC family's (DESIGN-pescBridge §4.4), the same ceds id as the sif260928 and College Transcript
+		// entries. The release's own base id is the block F6 certified (README_ValidationCertificate.md, f31be75).
+		//
+		// THE PATHS NAME THE pescBridges-B2x WORKTREE, deliberately (the sif260928 entry's reason); they move to system/code
+		// at the merge.
+		"standardKey": "pescdocumentresponse1v0v0",
+		"recipePath": "/Users/tqwhite/Documents/webdev/educoreForge/system/codeWorktrees/pescBridges-B2x/educoreForge/recipes/pescdocumentresponse1v0v0Derived.recipe.jsonc",
+		"storeFilePath": "/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/pescdocumentresponse1v0v0/b2/pescDocumentResponse1v0v0B2.standardsDatabase.sqlite3",
+		"decisionStoreFilePath": "/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/pescdocumentresponse1v0v0/b2/pescDocumentResponse1v0v0B2.decisions.sqlite3",
+		"judgmentCacheFilePath": "/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/pescdocumentresponse1v0v0/b2/pescDocumentResponse1v0v0B2.judgmentCache.sqlite3",
+		"matchForensicsDirPath": "/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/pescdocumentresponse1v0v0/b2/matchForensics",
+		"buildLogsDirPath": "/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/pescdocumentresponse1v0v0/b2/buildLogs",
+		"expectedBaseBlockIdBySubject": {
+			"ceds@14_0_0_0_base": "21110ef1fd423434bfc64899559f31dd7d126fd421e344341fe329e3f65c91dd",
+			"pescdocumentresponse1v0v0@1_0_0_base": "e0a35e773d79ccbd5cea27d2f0e1dda387e1e681bc85c5d2b9c86df69ab1a79b"
+		},
+		"rejudgeDebug": null,
+		"materialise": null,
+		"materialiseReal": null,
+		"rejudgeRealLimit": null,
+		"rejudgeRealNamedSet": null,
+		"eyeGraph": null,
+		"spendAuthorisationByLine": {
+			"rejudgeRealLimit": null,
+			"materialiseReal": null,
+			"rejudgeRealNamedSet": null
+		},
+		"frozenBy": null
 	}
 }
