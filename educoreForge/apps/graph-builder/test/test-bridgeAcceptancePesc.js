@@ -638,7 +638,12 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // seamDiffEmpty re-anchors to postPescF5ForgeFrameworkIii-100126 and postPescF5SeamDiffEmpty-100126, which QUIET_ORBIT's ruled
 // round-trip harness fix 39f0502 required). That fix lives in lib/forge-framework/, outside the six paths. Six declared paths
 // unchanged, no exclusion added; the tag is cut ON this re-anchor commit.
-const P1_BASELINE_COMMIT = 'postPescF5PescComposeA-100126'; // re-anchored by AMBER_PORTAL for PESC release forge F5; the tag is cut ON the re-anchor commit
+// RE-ANCHOR 2026-10-01 (COPPER_MARBLE; pre-authorised, NOTES-supervisor item 5, PESC bridge B1): postPescF5PescComposeA-100126 ->
+// postPescB1PescComposeA-100126. CENSUS (numstat from postPescF5PescComposeA-100126 over the six declared paths, 2 paths, from
+// ONE commit, 3d62fa6): lib/bridge-framework/test/test-bgDecl.js 3/1 and lib/bridge-framework/test/test-bgJudgeSlot.js 4/1 (the
+// shipped-plugin roster literals for the new pescCollegeTranscript1v8v0CedsDerivedPlugin, ruled by QUIET_ORBIT). No framework
+// source moved. Six declared paths unchanged, no exclusion added; the tag is cut ON this re-anchor commit.
+const P1_BASELINE_COMMIT = 'postPescB1PescComposeA-100126'; // re-anchored by COPPER_MARBLE for PESC bridge B1; the tag is cut ON the re-anchor commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
