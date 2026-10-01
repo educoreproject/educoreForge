@@ -12,6 +12,8 @@
 //                    neo4j-driver (refused by source policing).
 //                (a′) the id list is non-empty, sorted, unique and every entry six bare digits: an empty list
 //                    would match every prompt, and a P-prefixed one would repeat what the pattern already catches.
+//                (a‴) goldJev lane A: the shipped scope list holds 5,017 Question ids, sorted and unique, and not the one
+//                    whose SIF description names CEDS Id 000102. Twin: that Question restored to the list.
 //                (a″) the list is wired: a listed bare id planted in a question's description refuses the run, naming
 //                    the identifierList pattern.
 //   D1-FANOUT    (b) two SIF questions (a model question in StudentPersonal and StaffPersonal; a SIF_Metadata question
@@ -113,6 +115,12 @@ const FIELD_CHILD_EDGE_LIST = Object.freeze([
 ]);
 // a bare id from the shipped list (the student local id SIF annotates) and a P-form the pattern alone catches
 const PLANTED_BARE_ID = '001071';
+// the shipped scope list (goldJev lane A): every Question of the sif260928 base block 576db6546c8f except the one whose own
+// SIF description names CEDS Id 000102 (the prompt identifier scan refused it in jevBuild1)
+const SCOPE_LIST_FILE_NAME = 'sif260928ScopeWithoutIdentifierLeak.json';
+const SCOPE_LIST_COUNT = 5017;
+const EXCLUDED_IDENTIFIER_LEAK_QUESTION = 'sif260928:question/183a60008bd203cec3adb01979500e005073f1ff26836a311874872004171ca7';
+const TOY_SCOPE_LIST = Object.freeze([METADATA_QUESTION, MODEL_QUESTION].sort());
 
 // ---------------------------------------------------------------------
 // THE SCRATCH FORGES TREE — the harness's toy bundles plus a COPY of the shipped sif260928 bridges/ folder, so the
@@ -138,6 +146,10 @@ const makeSifForgesDir = (scenario) => {
 		const pluginFilePath = path.join(bridgesDirPath, PLUGIN_FILE_NAME);
 		fs.writeFileSync(pluginFilePath, scenario.pluginTextTransform(fs.readFileSync(pluginFilePath, 'utf8')));
 	}
+	// THE SCOPE LIST (goldJev lane A, 2026-10-01): the shipped plugin now narrows its subjects to a declared list of the
+	// forge's real Question stableIds, none of which is in this toy graph. The COPY of the folder therefore gets a list of
+	// the toy's two Questions, so the shipped declaration runs unmodified and its scope list is exercised, not bypassed.
+	fs.writeFileSync(path.join(bridgesDirPath, SCOPE_LIST_FILE_NAME), `${JSON.stringify(scenario.toyScopeListTransform === undefined ? TOY_SCOPE_LIST : scenario.toyScopeListTransform(TOY_SCOPE_LIST.slice()), null, '\t')}\n`);
 	if (scenario.identifierListTransform !== undefined) {
 		const identifierListFilePath = path.join(bridgesDirPath, IDENTIFIER_LIST_FILE_NAME);
 		fs.writeFileSync(identifierListFilePath, `${JSON.stringify(scenario.identifierListTransform(JSON.parse(fs.readFileSync(identifierListFilePath, 'utf8'))), null, '\t')}\n`);
@@ -304,6 +316,19 @@ const registerConjunctList = [
 			return { pass: identifierList.length === IDENTIFIER_LIST_COUNT && allBare && sortedUnique, detail: `${identifierList.length} id(s); all bare six digits ${allBare}; sorted and unique ${sortedUnique}` };
 		},
 	}),
+	pureConjunct({
+		conjunctId: 'aTriple_scopeListOmitsOnlyTheLeak',
+		title: `(a‴) the shipped scope list holds ${SCOPE_LIST_COUNT} unique Question stableIds, sorted, and not the one whose SIF description names a CEDS id (${EXCLUDED_IDENTIFIER_LEAK_QUESTION.slice(0, 40)}…)`,
+		twinNameList: ['leakQuestionRestored'],
+		judge: (scenario) => {
+			const shippedScopeList = JSON.parse(fs.readFileSync(path.join(SHIPPED_BRIDGES_DIR, SCOPE_LIST_FILE_NAME), 'utf8'));
+			const scopeList = scenario.shippedScopeListTransform === undefined ? shippedScopeList : scenario.shippedScopeListTransform(shippedScopeList.slice());
+			const allQuestions = scopeList.every((stableId) => typeof stableId === 'string' && stableId.indexOf('sif260928:question/') === 0);
+			const sortedUnique = scopeList.every((stableId, listIndex) => listIndex === 0 || scopeList[listIndex - 1] < stableId);
+			const leakAbsent = scopeList.indexOf(EXCLUDED_IDENTIFIER_LEAK_QUESTION) === -1;
+			return { pass: scopeList.length === SCOPE_LIST_COUNT && allQuestions && sortedUnique && leakAbsent, detail: `${scopeList.length} id(s); all Questions ${allQuestions}; sorted and unique ${sortedUnique}; the leaking Question absent ${leakAbsent}` };
+		},
+	}),
 	runConjunct({
 		conjunctId: 'aDoublePrime_listedBareIdRefused',
 		title: `(a″) a listed bare id (${PLANTED_BARE_ID}) planted in the model question's description refuses the run, naming the identifierList pattern`,
@@ -318,6 +343,7 @@ const registerConjunctList = [
 scenarioTwin({ registry: twinRegistry, gateId: 'D1-REGISTER', conjunctId: 'a_registryAcceptsThePlugin', twinName: 'neighbourVoteRemoved', leverKind: 'inputFault', mutate: (scenario) => { scenario.declarationEdit = (bridgeDeclaration) => { delete bridgeDeclaration.candidateRetrieval.neighbourVote; }; } });
 scenarioTwin({ registry: twinRegistry, gateId: 'D1-REGISTER', conjunctId: 'a_registryAcceptsThePlugin', twinName: 'neo4jDriverRequired', leverKind: 'inputFault', mutate: (scenario) => { scenario.pluginTextTransform = (pluginText) => pluginText.replace("'use strict';\n", "'use strict';\n\nrequire('neo4j-driver');\n"); } });
 scenarioTwin({ registry: twinRegistry, gateId: 'D1-REGISTER', conjunctId: 'aPrime_identifierListShape', twinName: 'identifierListEmptied', leverKind: 'inputFault', mutate: (scenario) => { scenario.identifierListTransform = () => []; } });
+scenarioTwin({ registry: twinRegistry, gateId: 'D1-REGISTER', conjunctId: 'aTriple_scopeListOmitsOnlyTheLeak', twinName: 'leakQuestionRestored', leverKind: 'inputFault', mutate: (scenario) => { scenario.shippedScopeListTransform = (scopeList) => scopeList.concat([EXCLUDED_IDENTIFIER_LEAK_QUESTION]).sort(); } });
 scenarioTwin({ registry: twinRegistry, gateId: 'D1-REGISTER', conjunctId: 'aDoublePrime_listedBareIdRefused', twinName: 'plantedIdDroppedFromList', leverKind: 'inputFault', mutate: (scenario) => { scenario.identifierListTransform = (identifierList) => identifierList.filter((oneId) => oneId !== PLANTED_BARE_ID); } });
 
 // ---------------------------------------------------------------------
@@ -475,6 +501,6 @@ const gateDeclarationList = [
 ];
 
 runGateFamily(
-	{ harness, familyName: 'D1-REGISTER+D1-FANOUT+D1-SSSOM+B6-HARVEST', gateDeclarationList, twinRegistry, makeSubject: scenarioLib.makeScenario, cloneSubject: scenarioLib.cloneScenario, expectedConjunctCount: 9 },
+	{ harness, familyName: 'D1-REGISTER+D1-FANOUT+D1-SSSOM+B6-HARVEST', gateDeclarationList, twinRegistry, makeSubject: scenarioLib.makeScenario, cloneSubject: scenarioLib.cloneScenario, expectedConjunctCount: 10 },
 	() => harness.report(),
 );
