@@ -218,6 +218,16 @@ const moduleFunction =
 					: { documentation: '', documentationValues: [] };
 			};
 
+			// refuseSecondAnnotation — XSD allows one xs:annotation per element, attribute or derivation;
+			// a second would overwrite the first silently, so it is refused by name (phase F6). An
+			// annotation with no documentation child reads as an empty list, so alreadyRead is the
+			// caller's own flag of having read one.
+			const refuseSecondAnnotation = ({ ownerText, alreadyRead, annotationNode }) => {
+				if (alreadyRead) {
+					refuse(`file '${filename}': ${ownerText} carries a second xs:annotation (line ${annotationNode.line}); one is read, the next would overwrite it.`);
+				}
+			};
+
 			// ---- walkRestrictionOrExtension — ONE derivation carrier for both xs:restriction and
 			// xs:extension (design §3.1 catalogs the restriction/facet carrier; extension — 700+ in
 			// this corpus, uncataloged — is carried on the same node kind with derivationVariety
@@ -237,13 +247,21 @@ const moduleFunction =
 					contentStyle,
 					baseAsWritten,
 					documentation: '',
+					// every documentation string of the derivation's own annotation, as written (phase F6:
+					// ePortfolio's CoreMain 1.16.0 annotates a restriction; the first-value reading lost it)
+					documentationValues: [],
 					facets: {},
 					enumerationValues: [],
 				};
 
+				let derivationAnnotationRead = false;
 				derivationNode.children.forEach((oneChild) => {
 					if (oneChild.tag === 'xs:annotation') {
-						derivation.documentation = readAnnotation(oneChild).documentation;
+						refuseSecondAnnotation({ ownerText: `${contentStyle} ${variety} of base '${baseAsWritten}'`, alreadyRead: derivationAnnotationRead, annotationNode: oneChild });
+						derivationAnnotationRead = true;
+						const derivationAnnotation = readAnnotation(oneChild);
+						derivation.documentation = derivationAnnotation.documentation;
+						derivation.documentationValues = derivationAnnotation.documentationValues;
 						return;
 					}
 					if (oneChild.tag === 'xs:enumeration') {
@@ -390,12 +408,20 @@ const moduleFunction =
 					fixedAsWritten: optionalAttribute(elementNode, 'fixed'),
 					defaultAsWritten: optionalAttribute(elementNode, 'default'),
 					documentation: '',
+					// every documentation string as written, an empty one and a second one included (phase F6:
+					// the round trip found both on elements, which the first-value reading lost)
+					documentationValues: [],
 					sequencePosition: container.elements.length + 1,
 					anonymousType: null,
 				};
+				let elementAnnotationRead = false;
 				elementNode.children.forEach((oneChild) => {
 					if (oneChild.tag === 'xs:annotation') {
-						elementDecl.documentation = readAnnotation(oneChild).documentation;
+						refuseSecondAnnotation({ ownerText: `element '${elementName}'`, alreadyRead: elementAnnotationRead, annotationNode: oneChild });
+						elementAnnotationRead = true;
+						const elementAnnotation = readAnnotation(oneChild);
+						elementDecl.documentation = elementAnnotation.documentation;
+						elementDecl.documentationValues = elementAnnotation.documentationValues;
 						return;
 					}
 					if (oneChild.tag === 'xs:complexType' || oneChild.tag === 'xs:simpleType') {
@@ -434,12 +460,18 @@ const moduleFunction =
 					),
 					useAsWritten: optionalAttribute(attributeNode, 'use'),
 					documentation: '',
+					documentationValues: [],
 					attributePosition: container.attributes.length + 1,
 					anonymousType: null,
 				};
+				let attributeAnnotationRead = false;
 				attributeNode.children.forEach((oneChild) => {
 					if (oneChild.tag === 'xs:annotation') {
-						attributeDecl.documentation = readAnnotation(oneChild).documentation;
+						refuseSecondAnnotation({ ownerText: `attribute '${attributeName}'`, alreadyRead: attributeAnnotationRead, annotationNode: oneChild });
+						attributeAnnotationRead = true;
+						const attributeAnnotation = readAnnotation(oneChild);
+						attributeDecl.documentation = attributeAnnotation.documentation;
+						attributeDecl.documentationValues = attributeAnnotation.documentationValues;
 						return;
 					}
 					if (oneChild.tag === 'xs:simpleType') {
@@ -580,6 +612,7 @@ const moduleFunction =
 				validateWrittenQName,
 				leadingAnnotation,
 				readAnnotation,
+				refuseSecondAnnotation,
 				walkComplexTypeBody,
 				walkSimpleTypeBody,
 				walkGroupBody,
@@ -656,6 +689,10 @@ const moduleFunction =
 				prefixBindings,
 				schemaAttributes,
 				documentation: '',
+				// every schema-level annotation, where it stands: after the import or definition whose
+				// documentPosition is afterDocumentPosition (0: before the first). Phase F6: Document Request's
+				// and Document Response's annotations follow their imports, which a leading-only reading moved
+				annotationList: [],
 				imports: [],
 				definitions: [],
 			};
@@ -666,7 +703,11 @@ const moduleFunction =
 			let documentPosition = 0;
 			schemaNode.children.forEach((oneChild) => {
 				if (oneChild.tag === 'xs:annotation') {
-					artifact.documentation = walker.readAnnotation(oneChild).documentation;
+					const fileAnnotation = walker.readAnnotation(oneChild);
+					if (artifact.annotationList.length === 0) {
+						artifact.documentation = fileAnnotation.documentation;
+					}
+					artifact.annotationList.push({ afterDocumentPosition: documentPosition, documentationValues: fileAnnotation.documentationValues });
 					return;
 				}
 				if (oneChild.tag === 'xs:import') {
@@ -735,6 +776,8 @@ const moduleFunction =
 					name: definitionName,
 					documentPosition,
 					documentation: '',
+					// every documentation string as written: set for a top-level element (phase F6, as local elements); a type or group carries its own on content
+					documentationValues: [],
 					// top-level ELEMENT declarations carry reference-ish attributes of their own
 					typeAsWritten: null,
 					substitutionGroupAsWritten: null,
@@ -753,9 +796,14 @@ const moduleFunction =
 						optionalAttribute(oneChild, 'substitutionGroup'),
 						`top-level element '${definitionName}' substitutionGroup`,
 					);
+					let globalAnnotationRead = false;
 					oneChild.children.forEach((oneInner) => {
 						if (oneInner.tag === 'xs:annotation') {
-							definition.documentation = walker.readAnnotation(oneInner).documentation;
+							walker.refuseSecondAnnotation({ ownerText: `top-level element '${definitionName}'`, alreadyRead: globalAnnotationRead, annotationNode: oneInner });
+							globalAnnotationRead = true;
+							const globalAnnotation = walker.readAnnotation(oneInner);
+							definition.documentation = globalAnnotation.documentation;
+							definition.documentationValues = globalAnnotation.documentationValues;
 							return;
 						}
 						if (oneInner.tag === 'xs:complexType' || oneInner.tag === 'xs:simpleType') {

@@ -26,7 +26,8 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // every other child, the ordinal counted among those children: so the compositor tree, nested
 // xs:choice inside xs:sequence included (NOTES-supervisor item 6), is a set of positioned statements.
 // A statement's value is { tag, attributeList } (sorted name/value pairs, xmlns declarations left out,
-// QNames resolved to '{namespace}local'); documentation adds its text, verbatim. One statement
+// QNames resolved to '{namespace}local', and a prefixed attribute NAME resolved the same way);
+// documentation adds its text, verbatim. One statement
 // '<file>|schemaChildOrder' lists xs:schema's children in order.
 // Source only, each flagged explicitlyOmitted (the verdict's explicitlyOmittedTotal): every XML
 // comment, every whitespace-only text run outside documentation, every processing instruction (the
@@ -35,12 +36,15 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // THE EMITTER classifies every node by GRAPH_LABEL_SUFFIX_DISPOSITION_TABLE and reads only the SOURCE
 // kinds; Root, Release, Occurrence and EmbedText are DERIVED_STRUCTURE and are never read (gate F20).
 // A node with no classified label, or two, is an emission FAULT. It writes, per schema file, the
-// schema element (schemaAttributeList), the annotation, then imports and definitions in their shared
-// documentPosition order; inside a definition its annotation (every documentationValueList entry),
-// its derivation (contentStyle wrapper, base from baseTypeQName, facets, codes in codePosition order),
+// schema element (schemaAttributeList; a '{namespace}local' attribute under a prefix the emitter binds),
+// then imports, definitions and schema-level annotations in document order (an annotation after the
+// documentPosition it follows, fileAnnotationList); inside a definition its annotation (every
+// documentationValueList entry), its derivation (contentStyle wrapper, base from baseTypeQName, the
+// derivation's own annotation, facets, codes in codePosition order),
 // its compositor tree from contentModelShape (elements by sequencePosition, group references
 // resolved through the owner's REFERENCES edges, wildcards as written), its attributes; inside an
-// element its anonymous type. Prefixes are the emitter's own (xs, ns1, ns2, …): the graph keeps
+// element, attribute or global element its annotation (every documentationValueList entry, an empty
+// and a second one included) and its anonymous type. Prefixes are the emitter's own (xs, ns1, ns2, …): the graph keeps
 // resolved names, not the files' xmlns bindings, and the canonicalizer compares resolved names.
 // A one-element list read back from a live graph is a scalar (the replay engine's storage); every list
 // property is widened.
@@ -55,7 +59,13 @@ const XSD_FILE_NAME_RE = /\.xsd$/i;
 const STATEMENT_SEPARATOR = '|';
 const PATH_SEPARATOR = '/';
 const QNAME_ATTRIBUTE_NAME_LIST = Object.freeze(['type', 'base', 'ref', 'substitutionGroup']);
+// the one prefix bound without a declaration (Namespaces in XML 1.0)
+const XML_PREFIX_BINDING = Object.freeze({ xml: 'http://www.w3.org/XML/1998/namespace' });
+// a namespaced attribute name in a statement and in the graph: '{namespace}local'
+const NAMESPACED_ATTRIBUTE_NAME_RE = /^\{([^}]+)\}(.+)$/;
 const FACET_TAG_LIST = Object.freeze(['length', 'minLength', 'maxLength', 'pattern', 'whiteSpace', 'maxInclusive', 'maxExclusive', 'minInclusive', 'minExclusive', 'totalDigits', 'fractionDigits']);
+// annotations after one position are placed at position + k / divisor, before the next whole position
+const FILE_ANNOTATION_POSITION_DIVISOR = 1000;
 const OMITTED_KIND = Object.freeze({ COMMENT: 'comment', WHITESPACE: 'whitespace', PROCESSING_INSTRUCTION: 'processingInstruction' });
 const LOST_REASON = Object.freeze({ ABSENT_FROM_GRAPH: 'absentFromGraph', VALUE_DIFFERS: 'valueDiffers' });
 
@@ -155,10 +165,13 @@ const canonicalStatementsOfXsdText = ({ fileName, xsdText, includeOmitted }) => 
 			}
 		});
 		const tag = localNameOf(saxNode.name);
+		// a prefixed attribute NAME is resolved like a QName value ('{namespace}local'), so a prefix is not
+		// content here either; an unprefixed name is in no namespace (phase F6: ePortfolio's vc:minVersion)
+		const resolvedAttributeNameOf = (attributeName) => (attributeName.indexOf(':') === -1 ? attributeName : resolvedQNameOf(attributeName, { ...XML_PREFIX_BINDING, ...bindingByPrefix }));
 		const attributeList = Object.keys(saxNode.attributes)
 			.filter((attributeName) => attributeName !== 'xmlns' && !attributeName.startsWith('xmlns:'))
-			.sort(compareStrings)
-			.map((attributeName) => [attributeName, QNAME_ATTRIBUTE_NAME_LIST.indexOf(attributeName) !== -1 ? resolvedQNameOf(saxNode.attributes[attributeName], bindingByPrefix) : saxNode.attributes[attributeName]]);
+			.map((attributeName) => [resolvedAttributeNameOf(attributeName), QNAME_ATTRIBUTE_NAME_LIST.indexOf(attributeName) !== -1 ? resolvedQNameOf(saxNode.attributes[attributeName], bindingByPrefix) : saxNode.attributes[attributeName]])
+			.sort((left, right) => compareStrings(left[0], right[0]));
 
 		let segment;
 		if (parentFrame === undefined) {
@@ -247,7 +260,9 @@ const regenerateXsdTextByFileName = ({ nodes, edges, labelPrefix }) => {
 		const schemaAttributeByName = parsedJsonOrNull(schemaFileNode.properties.schemaAttributeList) || {};
 		const importList = parsedJsonOrNull(schemaFileNode.properties.importList) || [];
 		const prefixByNamespace = { [XSD_NAMESPACE]: XSD_PREFIX };
-		[schemaFileNode.properties.targetNamespace].concat(importList.map((oneImport) => oneImport.namespace)).forEach((oneNamespace) => {
+		// a namespaced schema attribute's namespace is bound too (the graph names it '{namespace}local')
+		const schemaAttributeNamespaceList = Object.keys(schemaAttributeByName).filter((oneName) => NAMESPACED_ATTRIBUTE_NAME_RE.test(oneName)).map((oneName) => NAMESPACED_ATTRIBUTE_NAME_RE.exec(oneName)[1]);
+		[schemaFileNode.properties.targetNamespace].concat(importList.map((oneImport) => oneImport.namespace), schemaAttributeNamespaceList).forEach((oneNamespace) => {
 			if (prefixByNamespace[oneNamespace] === undefined) {
 				prefixByNamespace[oneNamespace] = `ns${Object.keys(prefixByNamespace).length}`;
 			}
@@ -314,7 +329,7 @@ const regenerateXsdTextByFileName = ({ nodes, edges, labelPrefix }) => {
 				return isSimple ? fault(`${typeNode.stableId}: a simple type with no derivation`) : innerText;
 			}
 			const baseText = writtenQNameOf(props.baseTypeQName, typeNode.stableId);
-			const derivationText = `<xs:${props.derivationVariety} base="${xmlEscapedAttributeValue(baseText)}">${facetText}${codeText}${innerText}</xs:${props.derivationVariety}>`;
+			const derivationText = `<xs:${props.derivationVariety} base="${xmlEscapedAttributeValue(baseText)}">${annotationText(widenedList(props.derivationDocumentationValueList))}${facetText}${codeText}${innerText}</xs:${props.derivationVariety}>`;
 			return isSimple ? derivationText : `<xs:${props.contentStyle}>${derivationText}</xs:${props.contentStyle}>`;
 		};
 
@@ -344,7 +359,8 @@ const regenerateXsdTextByFileName = ({ nodes, edges, labelPrefix }) => {
 				['use', props.useAsWritten],
 				['abstract', props.abstractAsWritten],
 			];
-			const innerText = `${annotationText(widenedList(props.documentation))}${anonymousTypeText(declarationNode.stableId)}`;
+			// every documentation string as written (phase F6: an empty one and a second one included)
+			const innerText = `${annotationText(widenedList(props.documentationValueList))}${anonymousTypeText(declarationNode.stableId)}`;
 			return innerText === '' ? `<xs:${tag}${attributeText(attributePairList)}/>` : `<xs:${tag}${attributeText(attributePairList)}>${innerText}</xs:${tag}>`;
 		};
 
@@ -363,11 +379,16 @@ const regenerateXsdTextByFileName = ({ nodes, edges, labelPrefix }) => {
 		sourceNodeList
 			.filter((oneNode) => oneNode.properties.sourceFileName === fileName && oneNode.properties.documentPosition !== undefined && DEFINITION_TEXT_BY_KIND[kindByStableId[oneNode.stableId]] !== undefined)
 			.forEach((oneNode) => placedList.push({ documentPosition: oneNode.properties.documentPosition, placedText: DEFINITION_TEXT_BY_KIND[kindByStableId[oneNode.stableId]](oneNode) }));
+		// each schema-level annotation where it stood: after the import or definition it follows (phase F6)
+		(parsedJsonOrNull(schemaFileNode.properties.fileAnnotationList) || []).forEach((oneAnnotation, annotationIndex) => {
+			placedList.push({ documentPosition: oneAnnotation.afterDocumentPosition + (annotationIndex + 1) / FILE_ANNOTATION_POSITION_DIVISOR, placedText: annotationText(widenedList(oneAnnotation.documentationValueList)) });
+		});
 		placedList.sort((left, right) => left.documentPosition - right.documentPosition);
 
 		const namespaceDeclarationText = Object.keys(prefixByNamespace).map((oneNamespace) => ` xmlns:${prefixByNamespace[oneNamespace]}="${xmlEscapedAttributeValue(oneNamespace)}"`).join('');
-		const schemaAttributeText = attributeText(Object.keys(schemaAttributeByName).map((oneName) => [oneName, schemaAttributeByName[oneName]]));
-		fileTextByName[fileName] = `<?xml version="1.0" encoding="UTF-8"?>\n<xs:schema${namespaceDeclarationText}${schemaAttributeText}>\n${annotationText(widenedList(schemaFileNode.properties.fileDocumentation))}${placedList.map((onePlaced) => `${onePlaced.placedText}\n`).join('')}</xs:schema>\n`;
+		const writtenSchemaAttributeNameOf = (oneName) => (NAMESPACED_ATTRIBUTE_NAME_RE.test(oneName) ? `${prefixByNamespace[NAMESPACED_ATTRIBUTE_NAME_RE.exec(oneName)[1]]}:${NAMESPACED_ATTRIBUTE_NAME_RE.exec(oneName)[2]}` : oneName);
+		const schemaAttributeText = attributeText(Object.keys(schemaAttributeByName).map((oneName) => [writtenSchemaAttributeNameOf(oneName), schemaAttributeByName[oneName]]));
+		fileTextByName[fileName] = `<?xml version="1.0" encoding="UTF-8"?>\n<xs:schema${namespaceDeclarationText}${schemaAttributeText}>\n${placedList.map((onePlaced) => `${onePlaced.placedText}\n`).join('')}</xs:schema>\n`;
 	});
 
 	if (faultText !== null) {

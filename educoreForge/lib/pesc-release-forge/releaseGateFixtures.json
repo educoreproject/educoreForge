@@ -1,0 +1,131 @@
+{
+	"fixtureNote": "The faults the PESC release gates plant in each release's own text, keyed by release name (gateSuite.js reads this; an absent entry or field is a fixture fault, never a default). noteMessageRemoval: the first element opening with elementOpenText after the file's one anchorText, a reachable NoteMessage typed core:NoteMessageType (removed: the census, NoteMessage-per-file and reachability twins; repointed: the resolution twin; given block=\"#all\": the attribute-census conjunct). replacedFileName: a member file other than CoreMain whose first byte the scaffold twin alters. documentationBlanking: a reachable element whose own documentation no other node carries (the F8 text and documentation-source twins). extensionRewrite: an extension rewritten as a restriction: an xsi:type substitution subtype where the release has one, else a reached type's extension. College Transcript 1.8.0's entry is exactly the faults phases F1 to F4 wrote as constants; the other six were chosen in phase F6 (QUIET_CIPHER, 2026-10-01) from a forge of each release.",
+	"fixtureByReleaseName": {
+		"CollegeTranscript_v1.8.0": {
+			"noteMessageRemoval": {
+				"fileName": "CollegeTranscript_v1.8.0.xsd",
+				"anchorText": "<xs:schema ",
+				"elementOpenText": "<xs:element name=\"NoteMessage\" type=\"core:NoteMessageType\""
+			},
+			"replacedFileName": "iso_3166-1_v1.0.0.xsd",
+			"documentationBlanking": {
+				"fileName": "AcademicRecord_v1.13.0.xsd",
+				"ownerTypeName": "PersonType",
+				"elementName": "HighSchool"
+			},
+			"extensionRewrite": {
+				"fileName": "AcademicRecord_v1.13.0.xsd",
+				"typeName": "LearningProgramType",
+				"baseQNameText": "core:AcademicProgramType"
+			}
+		},
+		"HighSchoolTranscript_v1.6.0": {
+			"noteMessageRemoval": {
+				"fileName": "HighSchoolTranscript_v1.6.0.xsd",
+				"anchorText": "<xs:schema ",
+				"elementOpenText": "<xs:element name=\"NoteMessage\" type=\"core:NoteMessageType\""
+			},
+			"replacedFileName": "iso_3166-1_v1.0.0.xsd",
+			"documentationBlanking": {
+				"fileName": "AcademicRecord_v1.11.0.xsd",
+				"ownerTypeName": "K12PersonType",
+				"elementName": "ParentGuardianName"
+			},
+			"extensionRewrite": {
+				"fileName": "AcademicRecord_v1.11.0.xsd",
+				"typeName": "PhoneType",
+				"baseQNameText": "core:PhoneType"
+			}
+		},
+		"TestScoreReport_v1.1.0": {
+			"noteMessageRemoval": {
+				"fileName": "AcademicRecord_v1.11.0.xsd",
+				"anchorText": "<xs:complexType name=\"TestScoreReportType\">",
+				"elementOpenText": "<xs:element name=\"NoteMessage\" type=\"core:NoteMessageType\""
+			},
+			"replacedFileName": "iso_3166-1_v1.0.0.xsd",
+			"documentationBlanking": {
+				"fileName": "AcademicRecord_v1.11.0.xsd",
+				"ownerTypeName": "AcademicRecordType",
+				"elementName": "AcademicSummary"
+			},
+			"extensionRewrite": {
+				"fileName": "CoreMain_v1.17.0.xsd",
+				"typeName": "GuarantorType",
+				"baseQNameText": "core:OrganizationType"
+			}
+		},
+		"DocumentRequest_v1.0.0": {
+			"noteMessageRemoval": {
+				"fileName": "DocumentRequest_v1.0.0.xsd",
+				"anchorText": "<xs:schema ",
+				"elementOpenText": "<xs:element name=\"NoteMessage\" type=\"core:NoteMessageType\""
+			},
+			"replacedFileName": "iso_3166-1_v1.0.0.xsd",
+			"documentationBlanking": {
+				"fileName": "AcademicRecord_v1.14.0.xsd",
+				"ownerTypeName": "PersonType",
+				"elementName": "HighSchool"
+			},
+			"extensionRewrite": {
+				"fileName": "AcademicRecord_v1.14.0.xsd",
+				"typeName": "PhoneType",
+				"baseQNameText": "core:PhoneType"
+			}
+		},
+		"DocumentResponse_v1.0.0": {
+			"noteMessageRemoval": {
+				"fileName": "DocumentResponse_v1.0.0.xsd",
+				"anchorText": "<xs:schema ",
+				"elementOpenText": "<xs:element name=\"NoteMessage\" type=\"core:NoteMessageType\""
+			},
+			"replacedFileName": "iso_3166-1_v1.0.0.xsd",
+			"documentationBlanking": {
+				"fileName": "AcademicRecord_v1.14.0.xsd",
+				"ownerTypeName": "PersonType",
+				"elementName": "HighSchool"
+			},
+			"extensionRewrite": {
+				"fileName": "AcademicRecord_v1.14.0.xsd",
+				"typeName": "PhoneType",
+				"baseQNameText": "core:PhoneType"
+			}
+		},
+		"LearningRecord_v1.0.0": {
+			"noteMessageRemoval": {
+				"fileName": "LearningRecord_v1.0.0.xsd",
+				"anchorText": "<xs:schema ",
+				"elementOpenText": "<xs:element name=\"NoteMessage\" type=\"core:NoteMessageType\""
+			},
+			"replacedFileName": "iso_3166-1_v1.0.0.xsd",
+			"documentationBlanking": {
+				"fileName": "AcademicRecord_v1.12.0.xsd",
+				"ownerTypeName": "PersonType",
+				"elementName": "HighSchool"
+			},
+			"extensionRewrite": {
+				"fileName": "AcademicRecord_v1.12.0.xsd",
+				"typeName": "PhoneType",
+				"baseQNameText": "core:PhoneType"
+			}
+		},
+		"AcademicEportfolio_v1.0.0": {
+			"noteMessageRemoval": {
+				"fileName": "AcademicEportfolio_v1.0.0.xsd",
+				"anchorText": "<xs:schema ",
+				"elementOpenText": "<xs:element name=\"NoteMessage\" type=\"core:NoteMessageType\""
+			},
+			"replacedFileName": "AdmissionsRecord_v1.4.0.xsd",
+			"documentationBlanking": {
+				"fileName": "AcademicRecord_v1.10.0.xsd",
+				"ownerTypeName": "PersonType",
+				"elementName": "HighSchool"
+			},
+			"extensionRewrite": {
+				"fileName": "CoreMain_v1.16.0.xsd",
+				"typeName": "EmployerType",
+				"baseQNameText": "core:OrganizationEntityType"
+			}
+		}
+	}
+}

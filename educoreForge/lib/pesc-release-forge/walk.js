@@ -115,18 +115,25 @@ const SOURCE_CARRY_LIST = Object.freeze(['sourceFileName', 'documentPosition', '
 const PATH_CARRY_LIST = Object.freeze(['contextText', 'contextPathSampleList', 'contextPathCount', 'occurrenceSectionList', 'reachableVia']);
 const CARRY_LIST_BY_NODE_KIND = Object.freeze({
 	releaseRecord: Object.freeze(['releaseName', 'standard', 'version', 'closureDigest', 'closureDate', 'closureDatePrecision', 'closureDateEvidence', 'verdict', 'pinDecisionsApplied', 'librariesNamed', 'rootChangeLogLineList', 'expanderManifestFormat', 'sourceCorpusDigest']),
-	schemaFile: Object.freeze(['sourceFileName', 'releaseIndependentId', 'sha256', 'byteCount', 'targetNamespace', 'layer', 'importList', 'schemaAttributeList', 'fileDocumentation']),
-	type: Object.freeze(SOURCE_CARRY_LIST.concat(['targetNamespace', 'documentation', 'documentationValueList', 'contentModelShape', 'baseTypeQName', 'derivationVariety', 'contentStyle', 'facets', 'abstractAsWritten'])),
-	anonymousType: Object.freeze(SOURCE_CARRY_LIST.concat(['targetNamespace', 'documentation', 'documentationValueList', 'contentModelShape', 'baseTypeQName', 'derivationVariety', 'contentStyle', 'facets'])),
-	codeList: Object.freeze(SOURCE_CARRY_LIST.concat(['targetNamespace', 'documentation', 'documentationValueList', 'baseTypeQName', 'derivationVariety', 'facets', 'codeCount'])),
-	dataType: Object.freeze(SOURCE_CARRY_LIST.concat(['targetNamespace', 'documentation', 'documentationValueList', 'baseTypeQName', 'derivationVariety', 'facets'])),
+	// fileAnnotationList: every schema-level annotation with the documentPosition it follows (phase F6);
+	// schemaAttributeList names a namespaced attribute '{namespace}local' (phase F6: ePortfolio's
+	// vc:minVersion; the graph keeps no prefix bindings, so a prefixed name alone would be unbound)
+	schemaFile: Object.freeze(['sourceFileName', 'releaseIndependentId', 'sha256', 'byteCount', 'targetNamespace', 'layer', 'importList', 'schemaAttributeList', 'fileDocumentation', 'fileAnnotationList']),
+	// derivationDocumentationValueList: the derivation's own annotation (an xs:restriction or
+	// xs:extension may carry one apart from its type's; phase F6)
+	type: Object.freeze(SOURCE_CARRY_LIST.concat(['targetNamespace', 'documentation', 'documentationValueList', 'contentModelShape', 'baseTypeQName', 'derivationVariety', 'contentStyle', 'facets', 'derivationDocumentationValueList', 'abstractAsWritten'])),
+	anonymousType: Object.freeze(SOURCE_CARRY_LIST.concat(['targetNamespace', 'documentation', 'documentationValueList', 'contentModelShape', 'baseTypeQName', 'derivationVariety', 'contentStyle', 'facets', 'derivationDocumentationValueList'])),
+	codeList: Object.freeze(SOURCE_CARRY_LIST.concat(['targetNamespace', 'documentation', 'documentationValueList', 'baseTypeQName', 'derivationVariety', 'facets', 'derivationDocumentationValueList', 'codeCount'])),
+	dataType: Object.freeze(SOURCE_CARRY_LIST.concat(['targetNamespace', 'documentation', 'documentationValueList', 'baseTypeQName', 'derivationVariety', 'facets', 'derivationDocumentationValueList'])),
 	group: Object.freeze(SOURCE_CARRY_LIST.concat(['targetNamespace', 'documentation', 'documentationValueList', 'contentModelShape'])),
-	globalElement: Object.freeze(SOURCE_CARRY_LIST.concat(['targetNamespace', 'documentation', 'typeQName', 'typeAsWritten', 'typeName', 'substitutionGroupQName', 'abstractAsWritten', 'nillableAsWritten'], PATH_CARRY_LIST)),
+	// documentationValueList on element-like declarations: every documentation string as written, an
+	// empty one and a second one included (phase F6; documentation stays the first non-blank one)
+	globalElement: Object.freeze(SOURCE_CARRY_LIST.concat(['targetNamespace', 'documentation', 'documentationValueList', 'typeQName', 'typeAsWritten', 'typeName', 'substitutionGroupQName', 'abstractAsWritten', 'nillableAsWritten'], PATH_CARRY_LIST)),
 	// codeListName and codeListDocumentation: the code list an element is typed by, carried onto the element
 	// because the derived bridge renders only the subject's own properties (QUIET_ORBIT, F6 first commit);
 	// not text-declared, and the round trip never reads them (the list is regenerated from its own node)
-	element: Object.freeze(SOURCE_CARRY_LIST.concat(['documentation', 'typeQName', 'typeAsWritten', 'typeName', 'minOccursAsWritten', 'maxOccursAsWritten', 'nillableAsWritten', 'formAsWritten', 'defaultAsWritten', 'fixedAsWritten', 'owningTypeName', 'effectiveDocumentation', 'documentationSource', 'codeListName', 'codeListDocumentation'], PATH_CARRY_LIST)),
-	attribute: Object.freeze(SOURCE_CARRY_LIST.concat(['documentation', 'typeQName', 'typeAsWritten', 'typeName', 'useAsWritten', 'owningTypeName', 'effectiveDocumentation', 'documentationSource'])),
+	element: Object.freeze(SOURCE_CARRY_LIST.concat(['documentation', 'documentationValueList', 'typeQName', 'typeAsWritten', 'typeName', 'minOccursAsWritten', 'maxOccursAsWritten', 'nillableAsWritten', 'formAsWritten', 'defaultAsWritten', 'fixedAsWritten', 'owningTypeName', 'effectiveDocumentation', 'documentationSource', 'codeListName', 'codeListDocumentation'], PATH_CARRY_LIST)),
+	attribute: Object.freeze(SOURCE_CARRY_LIST.concat(['documentation', 'documentationValueList', 'typeQName', 'typeAsWritten', 'typeName', 'useAsWritten', 'owningTypeName', 'effectiveDocumentation', 'documentationSource'])),
 	// a code whose value is the empty string carries no value (absent is absent, gate F7) and
 	// valueIsEmptyString true, so the round trip can write value="" without guessing (phase F4 ruling);
 	// documentationValueList is every documentation string as written, an empty one included
@@ -167,6 +174,21 @@ const pathFactsOf = (occurrenceList) => {
 		reachableVia: REACHABLE_VIA_ORDER.filter((oneVia) => viaSet.has(oneVia)),
 	};
 };
+
+// the schema element's attributes, a namespaced one named '{namespace}local' through the file's own
+// bindings (an unbound prefix is refused by name); an unprefixed name is in no namespace and stays as written
+const resolvedSchemaAttributesOf = (oneArtifact) =>
+	Object.keys(oneArtifact.schemaAttributes).reduce((soFar, attributeName) => {
+		const colonIndex = attributeName.indexOf(':');
+		if (colonIndex === -1) {
+			return { ...soFar, [attributeName]: oneArtifact.schemaAttributes[attributeName] };
+		}
+		const boundNamespace = oneArtifact.prefixBindings[attributeName.slice(0, colonIndex)];
+		if (boundNamespace === undefined) {
+			throw refuse.byName({ moduleName, what: `${oneArtifact.filename}: schema attribute '${attributeName}' has an unbound prefix`, where: 'a namespaced schema attribute is carried as {namespace}local, through the file\'s xmlns bindings' });
+		}
+		return { ...soFar, [`{${boundNamespace}}${attributeName.slice(colonIndex + 1)}`]: oneArtifact.schemaAttributes[attributeName] };
+	}, {});
 
 // one derivation at most per container in this corpus; a second is new information and refused
 const singleDerivationOf = ({ container, ownerStableId }) => {
@@ -292,8 +314,9 @@ const emitReleaseGraph = ({ xsdSet, loadedManifestEntry, standardKey, nodeKindTa
 				targetNamespace: oneArtifact.targetNamespace,
 				layer: oneArtifact.layer,
 				importList: JSON.stringify(oneArtifact.imports.map((oneImport) => ({ namespace: oneImport.namespaceAsWritten, schemaLocation: oneImport.schemaLocationAsWritten, documentPosition: oneImport.documentPosition }))),
-				schemaAttributeList: jsonOrAbsent(oneArtifact.schemaAttributes),
+				schemaAttributeList: jsonOrAbsent(resolvedSchemaAttributesOf(oneArtifact)),
 				fileDocumentation: nonBlankOrNull(oneArtifact.documentation),
+				fileAnnotationList: jsonOrAbsent(oneArtifact.annotationList.map((oneAnnotation) => ({ afterDocumentPosition: oneAnnotation.afterDocumentPosition, documentationValueList: oneAnnotation.documentationValues }))),
 			},
 		});
 		addEdge({ edgeType: EDGE_TYPES.HAS_SUPPORT, fromStableId: rootStableId, toStableId: schemaFileStableId });
@@ -315,13 +338,13 @@ const emitReleaseGraph = ({ xsdSet, loadedManifestEntry, standardKey, nodeKindTa
 	const derivationFactsOf = ({ container, ownerStableId, artifact }) => {
 		const derivation = singleDerivationOf({ container, ownerStableId });
 		if (derivation === null) {
-			return { baseTypeQName: null, derivationVariety: null, contentStyle: null, facets: null };
+			return { baseTypeQName: null, derivationVariety: null, contentStyle: null, facets: null, derivationDocumentationValueList: null };
 		}
 		const { resolvedReference, target } = resolveOrRefuse({ artifact, writtenQName: derivation.baseAsWritten, referencedKind: SYMBOL_SPACE.TYPE, siteText: `${ownerStableId} ${derivation.variety} base` });
 		if (target !== null) {
 			addEdge({ edgeType: EDGE_TYPES.SUBCLASS_OF, fromStableId: ownerStableId, toStableId: target.stableId, edgeProperties: { derivationVariety: derivation.variety } });
 		}
-		return { baseTypeQName: qualifiedTypeNameOf(resolvedReference), derivationVariety: derivation.variety, contentStyle: derivation.contentStyle, facets: jsonOrAbsent(derivation.facets) };
+		return { baseTypeQName: qualifiedTypeNameOf(resolvedReference), derivationVariety: derivation.variety, contentStyle: derivation.contentStyle, facets: jsonOrAbsent(derivation.facets), derivationDocumentationValueList: derivation.documentationValues };
 	};
 
 	const emitCodes = ({ container, codeListStableId, artifact, reachableFromRoot }) => {
@@ -445,6 +468,7 @@ const emitReleaseGraph = ({ xsdSet, loadedManifestEntry, standardKey, nodeKindTa
 					definitionDigest: definitionDigestOf({ element: oneElement, resolvedType: typed.target === null ? null : typed.target.definition }),
 					reachableFromRoot: declarationIsReachable(elementStableId),
 					documentation: ownDocumentation,
+					documentationValueList: oneElement.documentationValues,
 					typeQName: typed.resolvedReference === null ? null : qualifiedTypeNameOf(typed.resolvedReference),
 					typeAsWritten: oneElement.typeAsWritten,
 					typeName: typed.resolvedReference === null ? null : typed.resolvedReference.localName,
@@ -486,6 +510,7 @@ const emitReleaseGraph = ({ xsdSet, loadedManifestEntry, standardKey, nodeKindTa
 					definitionDigest: definitionDigestOf({ attribute: oneAttribute, resolvedType: typed.target === null ? null : typed.target.definition }),
 					reachableFromRoot: false,
 					documentation: ownDocumentation,
+					documentationValueList: oneAttribute.documentationValues,
 					typeQName: typed.resolvedReference === null ? null : qualifiedTypeNameOf(typed.resolvedReference),
 					typeAsWritten: oneAttribute.typeAsWritten,
 					typeName: typed.resolvedReference === null ? null : typed.resolvedReference.localName,
@@ -537,6 +562,7 @@ const emitReleaseGraph = ({ xsdSet, loadedManifestEntry, standardKey, nodeKindTa
 						...commonFacts,
 						// like an element's and an attribute's, the declaration plus its resolved type (verdict carry)
 						definitionDigest: definitionDigestOf({ globalElement: oneDefinition, resolvedType: typed.target === null ? null : typed.target.definition }),
+						documentationValueList: oneDefinition.documentationValues,
 						typeQName: typed.resolvedReference === null ? null : qualifiedTypeNameOf(typed.resolvedReference),
 						typeAsWritten: oneDefinition.typeAsWritten,
 						typeName: typed.resolvedReference === null ? null : typed.resolvedReference.localName,

@@ -91,6 +91,7 @@
 			"reachability": {
 				"literalSource": "WORKORDER section 3 F3; evidence/q4SectionSpan/sectionCensus.json CollegeTranscript_v1.8.0 (sections with occurrences and units, occurrencesByDepth, sectionsPerDeclarationHistogram, perSectionSampleListMaxLength); evidence/graphModelSummary.json reachableTypesOrGroups 263. RULED by QUIET_ORBIT 2026-10-01 on AMBER_PORTAL's STOP: deepestDocumentDepth 10 with xsiType (the work order said 9; 9 is the content-and-base figure; the planner's own sectionCensus.json shows 10 occurrences at depth 10), reachableDefinitionCount 265 with xsiType (the work order said 263 + 1 = 264; the rule also reaches CoreMain LearningOutcomeType, the type of the xsi-only declaration LearningProgramType/el/3:LearningOutcome), and the framework depth of an occurrence is documentDepth + 1 (the root global element is depth 1). Substitution rule: subtypesNotReachedByContent (the planner's), ruled kept for release 1. reachableDocumentationSourceCount: contentAndBase 367 own + 4 type is WORKORDER F2's; xsiTypeOnly 4 own first measured by phase F3.",
 				"substitutableSubtypeRuleName": "subtypesNotReachedByContent",
+				"substitutedSubtypeCount": 1,
 				"contentAndBaseDeclarationCount": 371,
 				"xsiTypeOnlyDeclarationCount": 4,
 				"reachableDeclarationCount": 375,
@@ -108,6 +109,7 @@
 				"spanningDeclarationCount": 72,
 				"judgmentUnitCount": 539,
 				"pathReachedByTwoDeclarationsCount": 7,
+				"pathReachedByTwoDeclarationsSuffix": "/Contacts/Address/PostalCode",
 				"declarationReachingOnePathTwiceCount": 0,
 				"perSectionSampleListMaxLength": 8,
 				"sectionsPerDeclarationHistogram": {
@@ -256,7 +258,1956 @@
 				"emptyEnumerationValueCount": 2,
 				"emptyDocumentationCount": 2,
 				"xmllintProbeExitCode": 3,
-				"xmllintDefinitionDroppedExitCode": 5
+				"xmllintDefinitionDroppedExitCode": 5,
+				"documentationShapeCount": {
+					"declarationDocumentationShapeCount": 0,
+					"derivationAnnotationCount": 0,
+					"fileAnnotationNotFirstCount": 0
+				},
+				"namespacedSchemaAttributeCount": 0,
+				"documentationShapeCountNote": "ADDED by phase F6 (QUIET_CIPHER, 2026-10-01): the first round trips of the six other releases found element documentation lists (an empty and a second documentation), a derivation's own annotation and a schema-level annotation after the imports lost (NOTES-supervisor item 16); the fix carries all three. College Transcript 1.8.0 has none of the three shapes (measured 0, 0, 0) and no namespaced schema attribute."
+			}
+		},
+		"HighSchoolTranscript_v1.6.0": {
+			"literalSource": "WORKORDER section 3 F6 (339 reachable / 1099 occurrences / 22 sections); evidence/census.json, graphModelSummary.json and q4SectionSpan/sectionCensus.json HighSchoolTranscript_v1.6.0 (every census, edge, reachability, section and documentation-source figure they hold, compared field by field before this block was written, all equal); releaseManifest.json releaseReferenceCheck (2016 references). First measured by phase F6 (QUIET_CIPHER, 2026-10-01), literals from then on: the built-in / in-release reference split, textNodeCount, the attribute and type-documentation counts, sequenceCountByOrderSemantics, noteMessageDeclarationCountByFile, typeEdgeCountByDeclaration's attribute and global-element rows and anonymous code-list row, codeListFactCount, reachableDefinitionCount, the deepest depths, pathReachedByTwoDeclarationsSuffix, postalCodeOccurrenceCount, spanningExample, every roundTrip figure but invented 0, contentGap 0 and the xmllint exits (WORKORDER F4).",
+			"census": {
+				"fileCount": 4,
+				"importCount": 4,
+				"definitionCount": 1002,
+				"complexTypeCount": 210,
+				"namedCodeListCount": 200,
+				"namedDataTypeCount": 572,
+				"groupCount": 9,
+				"globalElementCount": 11,
+				"elementDeclarationCount": 1168,
+				"attributeDeclarationCount": 6,
+				"anonymousComplexTypeCount": 13,
+				"anonymousCodeListCount": 17,
+				"anonymousDataTypeCount": 24,
+				"codeCount": 2721,
+				"facetCount": 652,
+				"groupReferenceCount": 20,
+				"anyWildcardCount": 2,
+				"referenceCount": 2016,
+				"builtinReferenceCount": 796,
+				"inReleaseReferenceCount": 1220
+			},
+			"walk": {
+				"edgeCountByType": {
+					"HAS_CHILD": 1099,
+					"HAS_CLASS": 210,
+					"HAS_INSTANCE": 1099,
+					"HAS_OPTION_SET": 170,
+					"HAS_PROPERTY": 1174,
+					"HAS_SUPPORT": 14,
+					"HAS_VALUE": 2721,
+					"REFERENCES": 28,
+					"REFERENCES_TYPE": 931,
+					"SUBCLASS_OF": 108
+				},
+				"referencesTypeCountByTarget": {
+					"dataType": 627,
+					"type": 304
+				},
+				"subclassOfCountByVariety": {
+					"extension": 50,
+					"restriction": 58
+				},
+				"referencesCountByTarget": {
+					"element": 8,
+					"group": 20
+				},
+				"textNodeCount": 2447,
+				"documentationSourceCountByLabelSuffix": {
+					"Attribute": {
+						"none": 3,
+						"type": 3
+					},
+					"Element": {
+						"none": 3,
+						"own": 1161,
+						"type": 4
+					}
+				},
+				"sequenceCountByOrderSemantics": {
+					"document": 3748,
+					"normative": 1143
+				},
+				"noteMessageDeclarationCountByFile": {
+					"AcademicRecord_v1.11.0.xsd": 47,
+					"CoreMain_v1.17.0.xsd": 52,
+					"HighSchoolTranscript_v1.6.0.xsd": 1
+				},
+				"typeEdgeCountByDeclaration": {
+					"HAS_OPTION_SET Element -> CodeList": 153,
+					"HAS_OPTION_SET Element -> anonymous CodeList": 17,
+					"REFERENCES_TYPE Attribute -> DataType": 3,
+					"REFERENCES_TYPE Element -> DataType": 624,
+					"REFERENCES_TYPE Element -> Type": 294,
+					"REFERENCES_TYPE GlobalElement -> Type": 10
+				},
+				"codeListFactCount": {
+					"anonymousCodeList": 17,
+					"namedCodeList": 153,
+					"withCodeListDocumentation": 153
+				}
+			},
+			"reachability": {
+				"substitutableSubtypeRuleName": "subtypesNotReachedByContent",
+				"substitutedSubtypeCount": 0,
+				"contentAndBaseDeclarationCount": 339,
+				"xsiTypeOnlyDeclarationCount": 0,
+				"reachableDeclarationCount": 339,
+				"contentAndBaseOccurrenceCount": 1099,
+				"xsiTypeOccurrenceCount": 0,
+				"occurrenceCount": 1099,
+				"contentAndBaseDefinitionCount": 245,
+				"reachableDefinitionCount": 245,
+				"deepestContentAndBaseDocumentDepth": 9,
+				"deepestDocumentDepth": 9,
+				"frameworkDepthMinusDocumentDepth": 1,
+				"sectionCount": 22,
+				"spanningDeclarationCount": 62,
+				"judgmentUnitCount": 475,
+				"pathReachedByTwoDeclarationsCount": 7,
+				"pathReachedByTwoDeclarationsSuffix": "/Contacts/Address/PostalCode",
+				"declarationReachingOnePathTwiceCount": 0,
+				"perSectionSampleListMaxLength": 8,
+				"sectionsPerDeclarationHistogram": {
+					"1": 277,
+					"2": 16,
+					"3": 18,
+					"4": 28
+				},
+				"occurrenceCountByDocumentDepth": {
+					"1": 4,
+					"2": 18,
+					"3": 45,
+					"4": 226,
+					"5": 322,
+					"6": 266,
+					"7": 150,
+					"8": 62,
+					"9": 6
+				},
+				"occurrenceAndUnitCountBySection": {
+					"HighSchoolTranscript/NoteMessage": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"HighSchoolTranscript/Student": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"HighSchoolTranscript/Student/AcademicRecord": {
+						"occurrences": 804,
+						"units": 228
+					},
+					"HighSchoolTranscript/Student/Health": {
+						"occurrences": 7,
+						"units": 7
+					},
+					"HighSchoolTranscript/Student/NoteMessage": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"HighSchoolTranscript/Student/Person": {
+						"occurrences": 121,
+						"units": 87
+					},
+					"HighSchoolTranscript/Student/Tests": {
+						"occurrences": 23,
+						"units": 23
+					},
+					"HighSchoolTranscript/Student/UserDefinedExtensions": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"HighSchoolTranscript/TransmissionData": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"HighSchoolTranscript/TransmissionData/CreatedDateTime": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"HighSchoolTranscript/TransmissionData/Destination": {
+						"occurrences": 64,
+						"units": 57
+					},
+					"HighSchoolTranscript/TransmissionData/DocumentCompleteCode": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"HighSchoolTranscript/TransmissionData/DocumentID": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"HighSchoolTranscript/TransmissionData/DocumentOfficialCode": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"HighSchoolTranscript/TransmissionData/DocumentProcessCode": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"HighSchoolTranscript/TransmissionData/DocumentTypeCode": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"HighSchoolTranscript/TransmissionData/NoteMessage": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"HighSchoolTranscript/TransmissionData/RequestTrackingID": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"HighSchoolTranscript/TransmissionData/Source": {
+						"occurrences": 64,
+						"units": 57
+					},
+					"HighSchoolTranscript/TransmissionData/TransmissionType": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"HighSchoolTranscript/TransmissionData/UserDefinedExtensions": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"HighSchoolTranscript/UserDefinedExtensions": {
+						"occurrences": 1,
+						"units": 1
+					}
+				},
+				"postalCodeOccurrenceCount": 14,
+				"spanningExample": {
+					"declarationReleaseIndependentId": "type/urn:org:pesc:sector:AcademicRecord:v1.11.0#ContactsType/el/1:Address",
+					"occurrenceCount": 7,
+					"occurrenceSectionList": [
+						"HighSchoolTranscript/Student/AcademicRecord",
+						"HighSchoolTranscript/Student/Person",
+						"HighSchoolTranscript/TransmissionData/Destination",
+						"HighSchoolTranscript/TransmissionData/Source"
+					],
+					"contextPathSampleListLength": 5
+				},
+				"reachableDocumentationSourceCount": {
+					"contentAndBase": {
+						"own": 335,
+						"type": 4
+					}
+				}
+			},
+			"roundTrip": {
+				"inventedTotal": 0,
+				"contentGapTotal": 0,
+				"contentGapTotalBeforePhaseF6Fix": 6,
+				"explicitlyOmittedTotal": 28671,
+				"explicitlyOmittedCountByKind": {
+					"comment": 835,
+					"processingInstruction": 4,
+					"whitespace": 27832
+				},
+				"nestedChoiceCount": 14,
+				"formElementCount": 1,
+				"emptyEnumerationValueCount": 2,
+				"emptyDocumentationCount": 5,
+				"xmllintProbeExitCode": 3,
+				"xmllintDefinitionDroppedExitCode": 5,
+				"documentationShapeCount": {
+					"declarationDocumentationShapeCount": 3,
+					"derivationAnnotationCount": 0,
+					"fileAnnotationNotFirstCount": 0
+				},
+				"namespacedSchemaAttributeCount": 0
+			}
+		},
+		"TestScoreReport_v1.1.0": {
+			"literalSource": "WORKORDER section 3 F6 (483 reachable / 1355 occurrences / 26 sections; 3 xsi:type types, 0 declarations); evidence/census.json, graphModelSummary.json and q4SectionSpan/sectionCensus.json TestScoreReport_v1.1.0 (every census, edge, reachability, section and documentation-source figure they hold, compared field by field before this block was written, all equal); releaseManifest.json releaseReferenceCheck (2013 references). First measured by phase F6 (QUIET_CIPHER, 2026-10-01), literals from then on: the built-in / in-release reference split, textNodeCount, the attribute and type-documentation counts, sequenceCountByOrderSemantics, noteMessageDeclarationCountByFile, typeEdgeCountByDeclaration's attribute and global-element rows and anonymous code-list row, codeListFactCount, reachableDefinitionCount, the deepest depths, pathReachedByTwoDeclarationsSuffix, postalCodeOccurrenceCount, spanningExample, every roundTrip figure but invented 0, contentGap 0 and the xmllint exits (WORKORDER F4).",
+			"census": {
+				"fileCount": 4,
+				"importCount": 3,
+				"definitionCount": 1002,
+				"complexTypeCount": 210,
+				"namedCodeListCount": 200,
+				"namedDataTypeCount": 572,
+				"groupCount": 9,
+				"globalElementCount": 11,
+				"elementDeclarationCount": 1164,
+				"attributeDeclarationCount": 6,
+				"anonymousComplexTypeCount": 12,
+				"anonymousCodeListCount": 17,
+				"anonymousDataTypeCount": 24,
+				"codeCount": 2721,
+				"facetCount": 652,
+				"groupReferenceCount": 20,
+				"anyWildcardCount": 2,
+				"referenceCount": 2013,
+				"builtinReferenceCount": 796,
+				"inReleaseReferenceCount": 1217
+			},
+			"walk": {
+				"edgeCountByType": {
+					"HAS_CHILD": 1355,
+					"HAS_CLASS": 210,
+					"HAS_INSTANCE": 1355,
+					"HAS_OPTION_SET": 170,
+					"HAS_PROPERTY": 1170,
+					"HAS_SUPPORT": 14,
+					"HAS_VALUE": 2721,
+					"REFERENCES": 28,
+					"REFERENCES_TYPE": 928,
+					"SUBCLASS_OF": 108
+				},
+				"referencesTypeCountByTarget": {
+					"dataType": 626,
+					"type": 302
+				},
+				"subclassOfCountByVariety": {
+					"extension": 50,
+					"restriction": 58
+				},
+				"referencesCountByTarget": {
+					"element": 8,
+					"group": 20
+				},
+				"textNodeCount": 2591,
+				"documentationSourceCountByLabelSuffix": {
+					"Attribute": {
+						"none": 3,
+						"type": 3
+					},
+					"Element": {
+						"none": 3,
+						"own": 1161
+					}
+				},
+				"sequenceCountByOrderSemantics": {
+					"document": 3748,
+					"normative": 1139
+				},
+				"noteMessageDeclarationCountByFile": {
+					"AcademicRecord_v1.11.0.xsd": 47,
+					"CoreMain_v1.17.0.xsd": 52
+				},
+				"typeEdgeCountByDeclaration": {
+					"HAS_OPTION_SET Element -> CodeList": 153,
+					"HAS_OPTION_SET Element -> anonymous CodeList": 17,
+					"REFERENCES_TYPE Attribute -> DataType": 3,
+					"REFERENCES_TYPE Element -> DataType": 623,
+					"REFERENCES_TYPE Element -> Type": 291,
+					"REFERENCES_TYPE GlobalElement -> Type": 11
+				},
+				"codeListFactCount": {
+					"anonymousCodeList": 17,
+					"namedCodeList": 153,
+					"withCodeListDocumentation": 153
+				}
+			},
+			"reachability": {
+				"substitutableSubtypeRuleName": "subtypesNotReachedByContent",
+				"substitutedSubtypeCount": 3,
+				"contentAndBaseDeclarationCount": 483,
+				"xsiTypeOnlyDeclarationCount": 0,
+				"reachableDeclarationCount": 483,
+				"contentAndBaseOccurrenceCount": 1355,
+				"xsiTypeOccurrenceCount": 0,
+				"occurrenceCount": 1355,
+				"contentAndBaseDefinitionCount": 337,
+				"reachableDefinitionCount": 340,
+				"deepestContentAndBaseDocumentDepth": 9,
+				"deepestDocumentDepth": 9,
+				"frameworkDepthMinusDocumentDepth": 1,
+				"sectionCount": 26,
+				"spanningDeclarationCount": 136,
+				"judgmentUnitCount": 733,
+				"pathReachedByTwoDeclarationsCount": 8,
+				"pathReachedByTwoDeclarationsSuffix": "/Contacts/Address/PostalCode",
+				"declarationReachingOnePathTwiceCount": 0,
+				"perSectionSampleListMaxLength": 8,
+				"sectionsPerDeclarationHistogram": {
+					"1": 347,
+					"2": 77,
+					"3": 26,
+					"4": 11,
+					"5": 22
+				},
+				"occurrenceCountByDocumentDepth": {
+					"1": 4,
+					"2": 22,
+					"3": 68,
+					"4": 302,
+					"5": 398,
+					"6": 306,
+					"7": 180,
+					"8": 66,
+					"9": 9
+				},
+				"occurrenceAndUnitCountBySection": {
+					"TestScoreReport/NoteMessage": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"TestScoreReport/TestStudent": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"TestScoreReport/TestStudent/AcademicPrediction": {
+						"occurrences": 49,
+						"units": 49
+					},
+					"TestScoreReport/TestStudent/AcademicRecord": {
+						"occurrences": 804,
+						"units": 228
+					},
+					"TestScoreReport/TestStudent/AdditionalStudentCharacteristics": {
+						"occurrences": 15,
+						"units": 15
+					},
+					"TestScoreReport/TestStudent/EducationTests": {
+						"occurrences": 77,
+						"units": 77
+					},
+					"TestScoreReport/TestStudent/NoteMessage": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"TestScoreReport/TestStudent/SchoolSelectionCriteria": {
+						"occurrences": 56,
+						"units": 46
+					},
+					"TestScoreReport/TestStudent/SelfReportedAcademicRecord": {
+						"occurrences": 98,
+						"units": 85
+					},
+					"TestScoreReport/TestStudent/StudentActivities": {
+						"occurrences": 25,
+						"units": 25
+					},
+					"TestScoreReport/TestStudent/TestPerson": {
+						"occurrences": 87,
+						"units": 78
+					},
+					"TestScoreReport/TestStudent/UserDefinedExtensions": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"TestScoreReport/TransmissionData": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"TestScoreReport/TransmissionData/CreatedDateTime": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"TestScoreReport/TransmissionData/Destination": {
+						"occurrences": 64,
+						"units": 57
+					},
+					"TestScoreReport/TransmissionData/DocumentCompleteCode": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"TestScoreReport/TransmissionData/DocumentID": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"TestScoreReport/TransmissionData/DocumentOfficialCode": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"TestScoreReport/TransmissionData/DocumentProcessCode": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"TestScoreReport/TransmissionData/DocumentTypeCode": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"TestScoreReport/TransmissionData/NoteMessage": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"TestScoreReport/TransmissionData/RequestTrackingID": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"TestScoreReport/TransmissionData/Source": {
+						"occurrences": 64,
+						"units": 57
+					},
+					"TestScoreReport/TransmissionData/TransmissionType": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"TestScoreReport/TransmissionData/UserDefinedExtensions": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"TestScoreReport/UserDefinedExtensions": {
+						"occurrences": 1,
+						"units": 1
+					}
+				},
+				"postalCodeOccurrenceCount": 16,
+				"spanningExample": {
+					"declarationReleaseIndependentId": "type/urn:org:pesc:sector:AcademicRecord:v1.11.0#ContactsType/el/1:Address",
+					"occurrenceCount": 6,
+					"occurrenceSectionList": [
+						"TestScoreReport/TestStudent/AcademicRecord",
+						"TestScoreReport/TransmissionData/Destination",
+						"TestScoreReport/TransmissionData/Source"
+					],
+					"contextPathSampleListLength": 4
+				},
+				"reachableDocumentationSourceCount": {
+					"contentAndBase": {
+						"none": 3,
+						"own": 480
+					}
+				}
+			},
+			"roundTrip": {
+				"inventedTotal": 0,
+				"contentGapTotal": 0,
+				"contentGapTotalBeforePhaseF6Fix": 6,
+				"explicitlyOmittedTotal": 28635,
+				"explicitlyOmittedCountByKind": {
+					"comment": 820,
+					"processingInstruction": 4,
+					"whitespace": 27811
+				},
+				"nestedChoiceCount": 14,
+				"formElementCount": 1,
+				"emptyEnumerationValueCount": 2,
+				"emptyDocumentationCount": 5,
+				"xmllintProbeExitCode": 3,
+				"xmllintDefinitionDroppedExitCode": 5,
+				"documentationShapeCount": {
+					"declarationDocumentationShapeCount": 3,
+					"derivationAnnotationCount": 0,
+					"fileAnnotationNotFirstCount": 0
+				},
+				"namespacedSchemaAttributeCount": 0
+			}
+		},
+		"DocumentRequest_v1.0.0": {
+			"literalSource": "WORKORDER section 3 F6 (198 reachable / 733 occurrences / 23 sections); evidence/census.json, graphModelSummary.json and q4SectionSpan/sectionCensus.json DocumentRequest_v1.0.0 (every census, edge, reachability, section and documentation-source figure they hold, compared field by field before this block was written, all equal); releaseManifest.json releaseReferenceCheck (2120 references). First measured by phase F6 (QUIET_CIPHER, 2026-10-01), literals from then on: the built-in / in-release reference split, textNodeCount, the attribute and type-documentation counts, sequenceCountByOrderSemantics, noteMessageDeclarationCountByFile, typeEdgeCountByDeclaration's attribute and global-element rows and anonymous code-list row, codeListFactCount, reachableDefinitionCount, the deepest depths, pathReachedByTwoDeclarationsSuffix, postalCodeOccurrenceCount, spanningExample, every roundTrip figure but invented 0, contentGap 0 and the xmllint exits (WORKORDER F4).",
+			"census": {
+				"fileCount": 4,
+				"importCount": 4,
+				"definitionCount": 1024,
+				"complexTypeCount": 226,
+				"namedCodeListCount": 202,
+				"namedDataTypeCount": 576,
+				"groupCount": 9,
+				"globalElementCount": 11,
+				"elementDeclarationCount": 1265,
+				"attributeDeclarationCount": 6,
+				"anonymousComplexTypeCount": 13,
+				"anonymousCodeListCount": 17,
+				"anonymousDataTypeCount": 25,
+				"codeCount": 2741,
+				"facetCount": 575,
+				"groupReferenceCount": 20,
+				"anyWildcardCount": 2,
+				"referenceCount": 2120,
+				"builtinReferenceCount": 809,
+				"inReleaseReferenceCount": 1311
+			},
+			"walk": {
+				"edgeCountByType": {
+					"HAS_CHILD": 733,
+					"HAS_CLASS": 226,
+					"HAS_INSTANCE": 733,
+					"HAS_OPTION_SET": 184,
+					"HAS_PROPERTY": 1271,
+					"HAS_SUPPORT": 14,
+					"HAS_VALUE": 2741,
+					"REFERENCES": 28,
+					"REFERENCES_TYPE": 1006,
+					"SUBCLASS_OF": 110
+				},
+				"referencesTypeCountByTarget": {
+					"dataType": 658,
+					"type": 348
+				},
+				"subclassOfCountByVariety": {
+					"extension": 51,
+					"restriction": 59
+				},
+				"referencesCountByTarget": {
+					"element": 8,
+					"group": 20
+				},
+				"textNodeCount": 2423,
+				"documentationSourceCountByLabelSuffix": {
+					"Attribute": {
+						"none": 3,
+						"type": 3
+					},
+					"Element": {
+						"own": 1261,
+						"type": 4
+					}
+				},
+				"sequenceCountByOrderSemantics": {
+					"document": 3791,
+					"normative": 1239
+				},
+				"noteMessageDeclarationCountByFile": {
+					"AcademicRecord_v1.14.0.xsd": 53,
+					"CoreMain_v1.19.1.xsd": 52,
+					"DocumentRequest_v1.0.0.xsd": 1
+				},
+				"typeEdgeCountByDeclaration": {
+					"HAS_OPTION_SET Element -> CodeList": 167,
+					"HAS_OPTION_SET Element -> anonymous CodeList": 17,
+					"REFERENCES_TYPE Attribute -> DataType": 3,
+					"REFERENCES_TYPE Element -> DataType": 655,
+					"REFERENCES_TYPE Element -> Type": 338,
+					"REFERENCES_TYPE GlobalElement -> Type": 10
+				},
+				"codeListFactCount": {
+					"anonymousCodeList": 17,
+					"namedCodeList": 167,
+					"withCodeListDocumentation": 167
+				}
+			},
+			"reachability": {
+				"substitutableSubtypeRuleName": "subtypesNotReachedByContent",
+				"substitutedSubtypeCount": 0,
+				"contentAndBaseDeclarationCount": 198,
+				"xsiTypeOnlyDeclarationCount": 0,
+				"reachableDeclarationCount": 198,
+				"contentAndBaseOccurrenceCount": 733,
+				"xsiTypeOccurrenceCount": 0,
+				"occurrenceCount": 733,
+				"contentAndBaseDefinitionCount": 141,
+				"reachableDefinitionCount": 141,
+				"deepestContentAndBaseDocumentDepth": 7,
+				"deepestDocumentDepth": 7,
+				"frameworkDepthMinusDocumentDepth": 1,
+				"sectionCount": 23,
+				"spanningDeclarationCount": 122,
+				"judgmentUnitCount": 515,
+				"pathReachedByTwoDeclarationsCount": 8,
+				"pathReachedByTwoDeclarationsSuffix": "/Contacts/Address/PostalCode",
+				"declarationReachingOnePathTwiceCount": 0,
+				"perSectionSampleListMaxLength": 10,
+				"sectionsPerDeclarationHistogram": {
+					"1": 76,
+					"2": 17,
+					"3": 60,
+					"5": 45
+				},
+				"occurrenceCountByDocumentDepth": {
+					"1": 4,
+					"2": 19,
+					"3": 35,
+					"4": 122,
+					"5": 235,
+					"6": 231,
+					"7": 87
+				},
+				"occurrenceAndUnitCountBySection": {
+					"DocumentRequest/NoteMessage": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"DocumentRequest/RequestDetails": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"DocumentRequest/RequestDetails/CreatedDateTime": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"DocumentRequest/RequestDetails/DocumentDescription": {
+						"occurrences": 3,
+						"units": 3
+					},
+					"DocumentRequest/RequestDetails/DocumentRecipient": {
+						"occurrences": 208,
+						"units": 140
+					},
+					"DocumentRequest/RequestDetails/NoteMessage": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"DocumentRequest/RequestDetails/RequestedStudent": {
+						"occurrences": 196,
+						"units": 128
+					},
+					"DocumentRequest/RequestDetails/Requestor": {
+						"occurrences": 179,
+						"units": 111
+					},
+					"DocumentRequest/RequestDetails/UserDefinedExtensions": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"DocumentRequest/TransmissionData": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"DocumentRequest/TransmissionData/CreatedDateTime": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"DocumentRequest/TransmissionData/Destination": {
+						"occurrences": 65,
+						"units": 58
+					},
+					"DocumentRequest/TransmissionData/DocumentCompleteCode": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"DocumentRequest/TransmissionData/DocumentID": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"DocumentRequest/TransmissionData/DocumentOfficialCode": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"DocumentRequest/TransmissionData/DocumentProcessCode": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"DocumentRequest/TransmissionData/DocumentTypeCode": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"DocumentRequest/TransmissionData/NoteMessage": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"DocumentRequest/TransmissionData/RequestTrackingID": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"DocumentRequest/TransmissionData/Source": {
+						"occurrences": 65,
+						"units": 58
+					},
+					"DocumentRequest/TransmissionData/TransmissionType": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"DocumentRequest/TransmissionData/UserDefinedExtensions": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"DocumentRequest/UserDefinedExtensions": {
+						"occurrences": 1,
+						"units": 1
+					}
+				},
+				"postalCodeOccurrenceCount": 16,
+				"spanningExample": {
+					"declarationReleaseIndependentId": "type/urn:org:pesc:sector:AcademicRecord:v1.14.0#ContactsType/el/1:Address",
+					"occurrenceCount": 8,
+					"occurrenceSectionList": [
+						"DocumentRequest/RequestDetails/DocumentRecipient",
+						"DocumentRequest/RequestDetails/RequestedStudent",
+						"DocumentRequest/RequestDetails/Requestor",
+						"DocumentRequest/TransmissionData/Destination",
+						"DocumentRequest/TransmissionData/Source"
+					],
+					"contextPathSampleListLength": 8
+				},
+				"reachableDocumentationSourceCount": {
+					"contentAndBase": {
+						"own": 194,
+						"type": 4
+					}
+				}
+			},
+			"roundTrip": {
+				"inventedTotal": 0,
+				"contentGapTotal": 0,
+				"contentGapTotalBeforePhaseF6Fix": 3,
+				"explicitlyOmittedTotal": 29403,
+				"explicitlyOmittedCountByKind": {
+					"comment": 884,
+					"processingInstruction": 4,
+					"whitespace": 28515
+				},
+				"nestedChoiceCount": 14,
+				"formElementCount": 1,
+				"emptyEnumerationValueCount": 2,
+				"emptyDocumentationCount": 2,
+				"xmllintProbeExitCode": 3,
+				"xmllintDefinitionDroppedExitCode": 5,
+				"documentationShapeCount": {
+					"declarationDocumentationShapeCount": 2,
+					"derivationAnnotationCount": 0,
+					"fileAnnotationNotFirstCount": 1
+				},
+				"namespacedSchemaAttributeCount": 0
+			}
+		},
+		"DocumentResponse_v1.0.0": {
+			"literalSource": "WORKORDER section 3 F6 (189 reachable / 546 occurrences / 31 sections); evidence/census.json, graphModelSummary.json and q4SectionSpan/sectionCensus.json DocumentResponse_v1.0.0 (every census, edge, reachability, section and documentation-source figure they hold, compared field by field before this block was written, all equal); releaseManifest.json releaseReferenceCheck (2120 references). First measured by phase F6 (QUIET_CIPHER, 2026-10-01), literals from then on: the built-in / in-release reference split, textNodeCount, the attribute and type-documentation counts, sequenceCountByOrderSemantics, noteMessageDeclarationCountByFile, typeEdgeCountByDeclaration's attribute and global-element rows and anonymous code-list row, codeListFactCount, reachableDefinitionCount, the deepest depths, pathReachedByTwoDeclarationsSuffix, postalCodeOccurrenceCount, spanningExample, every roundTrip figure but invented 0, contentGap 0 and the xmllint exits (WORKORDER F4).",
+			"census": {
+				"fileCount": 4,
+				"importCount": 4,
+				"definitionCount": 1024,
+				"complexTypeCount": 226,
+				"namedCodeListCount": 202,
+				"namedDataTypeCount": 576,
+				"groupCount": 9,
+				"globalElementCount": 11,
+				"elementDeclarationCount": 1265,
+				"attributeDeclarationCount": 6,
+				"anonymousComplexTypeCount": 13,
+				"anonymousCodeListCount": 17,
+				"anonymousDataTypeCount": 25,
+				"codeCount": 2741,
+				"facetCount": 575,
+				"groupReferenceCount": 20,
+				"anyWildcardCount": 2,
+				"referenceCount": 2120,
+				"builtinReferenceCount": 809,
+				"inReleaseReferenceCount": 1311
+			},
+			"walk": {
+				"edgeCountByType": {
+					"HAS_CHILD": 546,
+					"HAS_CLASS": 226,
+					"HAS_INSTANCE": 546,
+					"HAS_OPTION_SET": 184,
+					"HAS_PROPERTY": 1271,
+					"HAS_SUPPORT": 14,
+					"HAS_VALUE": 2741,
+					"REFERENCES": 28,
+					"REFERENCES_TYPE": 1006,
+					"SUBCLASS_OF": 110
+				},
+				"referencesTypeCountByTarget": {
+					"dataType": 658,
+					"type": 348
+				},
+				"subclassOfCountByVariety": {
+					"extension": 51,
+					"restriction": 59
+				},
+				"referencesCountByTarget": {
+					"element": 8,
+					"group": 20
+				},
+				"textNodeCount": 2414,
+				"documentationSourceCountByLabelSuffix": {
+					"Attribute": {
+						"none": 3,
+						"type": 3
+					},
+					"Element": {
+						"own": 1261,
+						"type": 4
+					}
+				},
+				"sequenceCountByOrderSemantics": {
+					"document": 3791,
+					"normative": 1239
+				},
+				"noteMessageDeclarationCountByFile": {
+					"AcademicRecord_v1.14.0.xsd": 53,
+					"CoreMain_v1.19.1.xsd": 52,
+					"DocumentResponse_v1.0.0.xsd": 1
+				},
+				"typeEdgeCountByDeclaration": {
+					"HAS_OPTION_SET Element -> CodeList": 167,
+					"HAS_OPTION_SET Element -> anonymous CodeList": 17,
+					"REFERENCES_TYPE Attribute -> DataType": 3,
+					"REFERENCES_TYPE Element -> DataType": 655,
+					"REFERENCES_TYPE Element -> Type": 338,
+					"REFERENCES_TYPE GlobalElement -> Type": 10
+				},
+				"codeListFactCount": {
+					"anonymousCodeList": 17,
+					"namedCodeList": 167,
+					"withCodeListDocumentation": 167
+				}
+			},
+			"reachability": {
+				"substitutableSubtypeRuleName": "subtypesNotReachedByContent",
+				"substitutedSubtypeCount": 0,
+				"contentAndBaseDeclarationCount": 189,
+				"xsiTypeOnlyDeclarationCount": 0,
+				"reachableDeclarationCount": 189,
+				"contentAndBaseOccurrenceCount": 546,
+				"xsiTypeOccurrenceCount": 0,
+				"occurrenceCount": 546,
+				"contentAndBaseDefinitionCount": 135,
+				"reachableDefinitionCount": 135,
+				"deepestContentAndBaseDocumentDepth": 7,
+				"deepestDocumentDepth": 7,
+				"frameworkDepthMinusDocumentDepth": 1,
+				"sectionCount": 31,
+				"spanningDeclarationCount": 115,
+				"judgmentUnitCount": 396,
+				"pathReachedByTwoDeclarationsCount": 6,
+				"pathReachedByTwoDeclarationsSuffix": "/Contacts/Address/PostalCode",
+				"declarationReachingOnePathTwiceCount": 0,
+				"perSectionSampleListMaxLength": 8,
+				"sectionsPerDeclarationHistogram": {
+					"1": 74,
+					"2": 68,
+					"3": 2,
+					"4": 45
+				},
+				"occurrenceCountByDocumentDepth": {
+					"1": 4,
+					"2": 27,
+					"3": 30,
+					"4": 106,
+					"5": 197,
+					"6": 153,
+					"7": 29
+				},
+				"occurrenceAndUnitCountBySection": {
+					"DocumentResponse/NoteMessage": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"DocumentResponse/ResponseDetails": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"DocumentResponse/ResponseDetails/CarrierName": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"DocumentResponse/ResponseDetails/CarrierTrackingID": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"DocumentResponse/ResponseDetails/CreatedDateTime": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"DocumentResponse/ResponseDetails/DeliveryMethod": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"DocumentResponse/ResponseDetails/DocumentDescription": {
+						"occurrences": 3,
+						"units": 3
+					},
+					"DocumentResponse/ResponseDetails/ElectronicDelivery": {
+						"occurrences": 6,
+						"units": 6
+					},
+					"DocumentResponse/ResponseDetails/NoteMessage": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"DocumentResponse/ResponseDetails/OrderFee": {
+						"occurrences": 5,
+						"units": 5
+					},
+					"DocumentResponse/ResponseDetails/Receiver": {
+						"occurrences": 179,
+						"units": 111
+					},
+					"DocumentResponse/ResponseDetails/RecipientTrackingID": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"DocumentResponse/ResponseDetails/RequestTrackingID": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"DocumentResponse/ResponseDetails/RequestedStudent": {
+						"occurrences": 196,
+						"units": 128
+					},
+					"DocumentResponse/ResponseDetails/ResponseHold": {
+						"occurrences": 4,
+						"units": 4
+					},
+					"DocumentResponse/ResponseDetails/ResponseStatus": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"DocumentResponse/ResponseDetails/UserDefinedExtensions": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"DocumentResponse/TransmissionData": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"DocumentResponse/TransmissionData/CreatedDateTime": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"DocumentResponse/TransmissionData/Destination": {
+						"occurrences": 65,
+						"units": 58
+					},
+					"DocumentResponse/TransmissionData/DocumentCompleteCode": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"DocumentResponse/TransmissionData/DocumentID": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"DocumentResponse/TransmissionData/DocumentOfficialCode": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"DocumentResponse/TransmissionData/DocumentProcessCode": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"DocumentResponse/TransmissionData/DocumentTypeCode": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"DocumentResponse/TransmissionData/NoteMessage": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"DocumentResponse/TransmissionData/RequestTrackingID": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"DocumentResponse/TransmissionData/Source": {
+						"occurrences": 65,
+						"units": 58
+					},
+					"DocumentResponse/TransmissionData/TransmissionType": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"DocumentResponse/TransmissionData/UserDefinedExtensions": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"DocumentResponse/UserDefinedExtensions": {
+						"occurrences": 1,
+						"units": 1
+					}
+				},
+				"postalCodeOccurrenceCount": 12,
+				"spanningExample": {
+					"declarationReleaseIndependentId": "type/urn:org:pesc:sector:AcademicRecord:v1.14.0#ContactsType/el/1:Address",
+					"occurrenceCount": 6,
+					"occurrenceSectionList": [
+						"DocumentResponse/ResponseDetails/Receiver",
+						"DocumentResponse/ResponseDetails/RequestedStudent",
+						"DocumentResponse/TransmissionData/Destination",
+						"DocumentResponse/TransmissionData/Source"
+					],
+					"contextPathSampleListLength": 6
+				},
+				"reachableDocumentationSourceCount": {
+					"contentAndBase": {
+						"own": 185,
+						"type": 4
+					}
+				}
+			},
+			"roundTrip": {
+				"inventedTotal": 0,
+				"contentGapTotal": 0,
+				"contentGapTotalBeforePhaseF6Fix": 3,
+				"explicitlyOmittedTotal": 29409,
+				"explicitlyOmittedCountByKind": {
+					"comment": 887,
+					"processingInstruction": 4,
+					"whitespace": 28518
+				},
+				"nestedChoiceCount": 14,
+				"formElementCount": 1,
+				"emptyEnumerationValueCount": 2,
+				"emptyDocumentationCount": 2,
+				"xmllintProbeExitCode": 3,
+				"xmllintDefinitionDroppedExitCode": 5,
+				"documentationShapeCount": {
+					"declarationDocumentationShapeCount": 2,
+					"derivationAnnotationCount": 0,
+					"fileAnnotationNotFirstCount": 1
+				},
+				"namespacedSchemaAttributeCount": 0
+			}
+		},
+		"LearningRecord_v1.0.0": {
+			"literalSource": "WORKORDER section 3 F6 (341 reachable / 1249 occurrences / 26 sections); evidence/census.json, graphModelSummary.json and q4SectionSpan/sectionCensus.json LearningRecord_v1.0.0 (every census, edge, reachability, section and documentation-source figure they hold, compared field by field before this block was written, all equal); releaseManifest.json releaseReferenceCheck (2073 references). First measured by phase F6 (QUIET_CIPHER, 2026-10-01), literals from then on: the built-in / in-release reference split, textNodeCount, the attribute and type-documentation counts, sequenceCountByOrderSemantics, noteMessageDeclarationCountByFile, typeEdgeCountByDeclaration's attribute and global-element rows and anonymous code-list row, codeListFactCount, reachableDefinitionCount, the deepest depths, pathReachedByTwoDeclarationsSuffix, postalCodeOccurrenceCount, spanningExample, every roundTrip figure but invented 0, contentGap 0 and the xmllint exits (WORKORDER F4).",
+			"census": {
+				"fileCount": 4,
+				"importCount": 4,
+				"definitionCount": 1019,
+				"complexTypeCount": 222,
+				"namedCodeListCount": 202,
+				"namedDataTypeCount": 575,
+				"groupCount": 9,
+				"globalElementCount": 11,
+				"elementDeclarationCount": 1218,
+				"attributeDeclarationCount": 6,
+				"anonymousComplexTypeCount": 12,
+				"anonymousCodeListCount": 17,
+				"anonymousDataTypeCount": 25,
+				"codeCount": 2739,
+				"facetCount": 660,
+				"groupReferenceCount": 20,
+				"anyWildcardCount": 2,
+				"referenceCount": 2073,
+				"builtinReferenceCount": 805,
+				"inReleaseReferenceCount": 1268
+			},
+			"walk": {
+				"edgeCountByType": {
+					"HAS_CHILD": 1249,
+					"HAS_CLASS": 222,
+					"HAS_INSTANCE": 1249,
+					"HAS_OPTION_SET": 177,
+					"HAS_PROPERTY": 1224,
+					"HAS_SUPPORT": 14,
+					"HAS_VALUE": 2739,
+					"REFERENCES": 28,
+					"REFERENCES_TYPE": 970,
+					"SUBCLASS_OF": 110
+				},
+				"referencesTypeCountByTarget": {
+					"dataType": 637,
+					"type": 333
+				},
+				"subclassOfCountByVariety": {
+					"extension": 51,
+					"restriction": 59
+				},
+				"referencesCountByTarget": {
+					"element": 8,
+					"group": 20
+				},
+				"textNodeCount": 2538,
+				"documentationSourceCountByLabelSuffix": {
+					"Attribute": {
+						"none": 3,
+						"type": 3
+					},
+					"Element": {
+						"own": 1218
+					}
+				},
+				"sequenceCountByOrderSemantics": {
+					"document": 3783,
+					"normative": 1193
+				},
+				"noteMessageDeclarationCountByFile": {
+					"AcademicRecord_v1.12.0.xsd": 50,
+					"CoreMain_v1.18.0.xsd": 52,
+					"LearningRecord_v1.0.0.xsd": 1
+				},
+				"typeEdgeCountByDeclaration": {
+					"HAS_OPTION_SET Element -> CodeList": 160,
+					"HAS_OPTION_SET Element -> anonymous CodeList": 17,
+					"REFERENCES_TYPE Attribute -> DataType": 3,
+					"REFERENCES_TYPE Element -> DataType": 634,
+					"REFERENCES_TYPE Element -> Type": 322,
+					"REFERENCES_TYPE GlobalElement -> Type": 11
+				},
+				"codeListFactCount": {
+					"anonymousCodeList": 17,
+					"namedCodeList": 160,
+					"withCodeListDocumentation": 160
+				}
+			},
+			"reachability": {
+				"substitutableSubtypeRuleName": "subtypesNotReachedByContent",
+				"substitutedSubtypeCount": 0,
+				"contentAndBaseDeclarationCount": 341,
+				"xsiTypeOnlyDeclarationCount": 0,
+				"reachableDeclarationCount": 341,
+				"contentAndBaseOccurrenceCount": 1249,
+				"xsiTypeOccurrenceCount": 0,
+				"occurrenceCount": 1249,
+				"contentAndBaseDefinitionCount": 243,
+				"reachableDefinitionCount": 243,
+				"deepestContentAndBaseDocumentDepth": 9,
+				"deepestDocumentDepth": 9,
+				"frameworkDepthMinusDocumentDepth": 1,
+				"sectionCount": 26,
+				"spanningDeclarationCount": 176,
+				"judgmentUnitCount": 677,
+				"pathReachedByTwoDeclarationsCount": 8,
+				"pathReachedByTwoDeclarationsSuffix": "/Contacts/Address/PostalCode",
+				"declarationReachingOnePathTwiceCount": 0,
+				"perSectionSampleListMaxLength": 10,
+				"sectionsPerDeclarationHistogram": {
+					"1": 165,
+					"2": 113,
+					"3": 10,
+					"4": 9,
+					"5": 44
+				},
+				"occurrenceCountByDocumentDepth": {
+					"1": 5,
+					"2": 21,
+					"3": 63,
+					"4": 302,
+					"5": 304,
+					"6": 323,
+					"7": 159,
+					"8": 66,
+					"9": 6
+				},
+				"occurrenceAndUnitCountBySection": {
+					"LearningRecord/DocumentProduction": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"LearningRecord/DocumentProduction/AcademicAward": {
+						"occurrences": 103,
+						"units": 60
+					},
+					"LearningRecord/DocumentProduction/AwardEndorse": {
+						"occurrences": 13,
+						"units": 13
+					},
+					"LearningRecord/DocumentProduction/DocumentTypeCode": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"LearningRecord/DocumentProduction/ElectronicFormat": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"LearningRecord/DocumentProduction/Person": {
+						"occurrences": 119,
+						"units": 103
+					},
+					"LearningRecord/LearningRecordDetail": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"LearningRecord/LearningRecordDetail/AcademicLearning": {
+						"occurrences": 748,
+						"units": 265
+					},
+					"LearningRecord/LearningRecordDetail/NoteMessage": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"LearningRecord/LearningRecordDetail/Person": {
+						"occurrences": 119,
+						"units": 103
+					},
+					"LearningRecord/LearningRecordDetail/UserDefinedExtensions": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"LearningRecord/NoteMessage": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"LearningRecord/TransmissionData": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"LearningRecord/TransmissionData/CreatedDateTime": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"LearningRecord/TransmissionData/Destination": {
+						"occurrences": 64,
+						"units": 57
+					},
+					"LearningRecord/TransmissionData/DocumentCompleteCode": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"LearningRecord/TransmissionData/DocumentID": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"LearningRecord/TransmissionData/DocumentOfficialCode": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"LearningRecord/TransmissionData/DocumentProcessCode": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"LearningRecord/TransmissionData/DocumentTypeCode": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"LearningRecord/TransmissionData/NoteMessage": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"LearningRecord/TransmissionData/RequestTrackingID": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"LearningRecord/TransmissionData/Source": {
+						"occurrences": 64,
+						"units": 57
+					},
+					"LearningRecord/TransmissionData/TransmissionType": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"LearningRecord/TransmissionData/UserDefinedExtensions": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"LearningRecord/UserDefinedExtensions": {
+						"occurrences": 1,
+						"units": 1
+					}
+				},
+				"postalCodeOccurrenceCount": 16,
+				"spanningExample": {
+					"declarationReleaseIndependentId": "type/urn:org:pesc:sector:AcademicRecord:v1.12.0#ContactsType/el/1:Address",
+					"occurrenceCount": 8,
+					"occurrenceSectionList": [
+						"LearningRecord/DocumentProduction/Person",
+						"LearningRecord/LearningRecordDetail/AcademicLearning",
+						"LearningRecord/LearningRecordDetail/Person",
+						"LearningRecord/TransmissionData/Destination",
+						"LearningRecord/TransmissionData/Source"
+					],
+					"contextPathSampleListLength": 6
+				},
+				"reachableDocumentationSourceCount": {
+					"contentAndBase": {
+						"own": 341
+					}
+				}
+			},
+			"roundTrip": {
+				"inventedTotal": 0,
+				"contentGapTotal": 0,
+				"contentGapTotalBeforePhaseF6Fix": 0,
+				"explicitlyOmittedTotal": 29174,
+				"explicitlyOmittedCountByKind": {
+					"comment": 842,
+					"processingInstruction": 4,
+					"whitespace": 28328
+				},
+				"nestedChoiceCount": 14,
+				"formElementCount": 1,
+				"emptyEnumerationValueCount": 2,
+				"emptyDocumentationCount": 3,
+				"xmllintProbeExitCode": 3,
+				"xmllintDefinitionDroppedExitCode": 5,
+				"documentationShapeCount": {
+					"declarationDocumentationShapeCount": 0,
+					"derivationAnnotationCount": 0,
+					"fileAnnotationNotFirstCount": 0
+				},
+				"namespacedSchemaAttributeCount": 0
+			}
+		},
+		"AcademicEportfolio_v1.0.0": {
+			"literalSource": "WORKORDER section 3 F6 (1362 reachable / 6742 occurrences / 106 sections; 5 xsi:type types, 0 declarations); evidence/census.json, graphModelSummary.json and q4SectionSpan/sectionCensus.json AcademicEportfolio_v1.0.0 (every census, edge, reachability, section and documentation-source figure they hold, compared field by field before this block was written, all equal); releaseManifest.json releaseReferenceCheck (2777 references). First measured by phase F6 (QUIET_CIPHER, 2026-10-01), literals from then on: the built-in / in-release reference split, textNodeCount, the attribute and type-documentation counts, sequenceCountByOrderSemantics, noteMessageDeclarationCountByFile, typeEdgeCountByDeclaration's attribute and global-element rows and anonymous code-list row, codeListFactCount, reachableDefinitionCount, the deepest depths, pathReachedByTwoDeclarationsSuffix, postalCodeOccurrenceCount, spanningExample, every roundTrip figure but invented 0, contentGap 0 and the xmllint exits (WORKORDER F4).",
+			"census": {
+				"fileCount": 4,
+				"importCount": 5,
+				"definitionCount": 1128,
+				"complexTypeCount": 325,
+				"namedCodeListCount": 211,
+				"namedDataTypeCount": 572,
+				"groupCount": 9,
+				"globalElementCount": 11,
+				"elementDeclarationCount": 1916,
+				"attributeDeclarationCount": 6,
+				"anonymousComplexTypeCount": 12,
+				"anonymousCodeListCount": 17,
+				"anonymousDataTypeCount": 24,
+				"codeCount": 2749,
+				"facetCount": 652,
+				"groupReferenceCount": 24,
+				"anyWildcardCount": 2,
+				"referenceCount": 2777,
+				"builtinReferenceCount": 880,
+				"inReleaseReferenceCount": 1897
+			},
+			"walk": {
+				"edgeCountByType": {
+					"HAS_CHILD": 6742,
+					"HAS_CLASS": 325,
+					"HAS_INSTANCE": 6742,
+					"HAS_OPTION_SET": 296,
+					"HAS_PROPERTY": 1922,
+					"HAS_SUPPORT": 14,
+					"HAS_VALUE": 2749,
+					"REFERENCES": 32,
+					"REFERENCES_TYPE": 1478,
+					"SUBCLASS_OF": 108
+				},
+				"referencesTypeCountByTarget": {
+					"dataType": 908,
+					"type": 570
+				},
+				"subclassOfCountByVariety": {
+					"extension": 50,
+					"restriction": 58
+				},
+				"referencesCountByTarget": {
+					"element": 8,
+					"group": 24
+				},
+				"textNodeCount": 3789,
+				"documentationSourceCountByLabelSuffix": {
+					"Attribute": {
+						"none": 4,
+						"type": 2
+					},
+					"Element": {
+						"none": 713,
+						"own": 303,
+						"type": 900
+					}
+				},
+				"sequenceCountByOrderSemantics": {
+					"document": 3922,
+					"normative": 1871
+				},
+				"noteMessageDeclarationCountByFile": {
+					"AcademicEportfolio_v1.0.0.xsd": 5,
+					"AcademicRecord_v1.10.0.xsd": 47,
+					"AdmissionsRecord_v1.4.0.xsd": 38,
+					"CoreMain_v1.16.0.xsd": 52
+				},
+				"typeEdgeCountByDeclaration": {
+					"HAS_OPTION_SET Element -> CodeList": 279,
+					"HAS_OPTION_SET Element -> anonymous CodeList": 17,
+					"REFERENCES_TYPE Attribute -> DataType": 3,
+					"REFERENCES_TYPE Element -> DataType": 905,
+					"REFERENCES_TYPE Element -> Type": 559,
+					"REFERENCES_TYPE GlobalElement -> Type": 11
+				},
+				"codeListFactCount": {
+					"anonymousCodeList": 17,
+					"namedCodeList": 279,
+					"withCodeListDocumentation": 198
+				}
+			},
+			"reachability": {
+				"substitutableSubtypeRuleName": "subtypesNotReachedByContent",
+				"substitutedSubtypeCount": 5,
+				"contentAndBaseDeclarationCount": 1362,
+				"xsiTypeOnlyDeclarationCount": 0,
+				"reachableDeclarationCount": 1362,
+				"contentAndBaseOccurrenceCount": 6742,
+				"xsiTypeOccurrenceCount": 0,
+				"occurrenceCount": 6742,
+				"contentAndBaseDefinitionCount": 659,
+				"reachableDefinitionCount": 664,
+				"deepestContentAndBaseDocumentDepth": 12,
+				"deepestDocumentDepth": 12,
+				"frameworkDepthMinusDocumentDepth": 1,
+				"sectionCount": 106,
+				"spanningDeclarationCount": 365,
+				"judgmentUnitCount": 2542,
+				"pathReachedByTwoDeclarationsCount": 58,
+				"pathReachedByTwoDeclarationsSuffix": "/PostalCode",
+				"declarationReachingOnePathTwiceCount": 0,
+				"perSectionSampleListMaxLength": 19,
+				"sectionsPerDeclarationHistogram": {
+					"1": 997,
+					"2": 51,
+					"3": 124,
+					"4": 97,
+					"5": 23,
+					"6": 43,
+					"7": 2,
+					"11": 22,
+					"18": 3
+				},
+				"occurrenceCountByDocumentDepth": {
+					"1": 16,
+					"2": 90,
+					"3": 169,
+					"4": 322,
+					"5": 448,
+					"6": 1257,
+					"7": 1816,
+					"8": 1350,
+					"9": 847,
+					"10": 349,
+					"11": 56,
+					"12": 22
+				},
+				"occurrenceAndUnitCountBySection": {
+					"AcademicEPortfolio/Artifacts": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"AcademicEPortfolio/Artifacts/ArtifactAuthor": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"AcademicEPortfolio/Artifacts/ArtifactClassification": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"AcademicEPortfolio/Artifacts/ArtifactCreationDate": {
+						"occurrences": 4,
+						"units": 4
+					},
+					"AcademicEPortfolio/Artifacts/ArtifactDescription": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"AcademicEPortfolio/Artifacts/ArtifactFileName": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"AcademicEPortfolio/Artifacts/ArtifactID": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"AcademicEPortfolio/Artifacts/ArtifactLocationURL": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"AcademicEPortfolio/Artifacts/ArtifactMediaIdentifierCode": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"AcademicEPortfolio/Artifacts/ArtifactObjectLink": {
+						"occurrences": 4,
+						"units": 4
+					},
+					"AcademicEPortfolio/Artifacts/ArtifactSource": {
+						"occurrences": 34,
+						"units": 34
+					},
+					"AcademicEPortfolio/Artifacts/ArtifactTitle": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"AcademicEPortfolio/CareerAssessments": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"AcademicEPortfolio/CareerAssessments/AssessedAttribute": {
+						"occurrences": 3,
+						"units": 3
+					},
+					"AcademicEPortfolio/CareerAssessments/CareerAssessmentDate": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"AcademicEPortfolio/CareerAssessments/CareerAssessmentDescription": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"AcademicEPortfolio/CareerAssessments/CareerAssessmentID": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"AcademicEPortfolio/CareerAssessments/CareerAssessmentName": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"AcademicEPortfolio/CareerAssessments/CareerAssessmentObjectLink": {
+						"occurrences": 4,
+						"units": 4
+					},
+					"AcademicEPortfolio/CareerAssessments/CareerAssessmentResult": {
+						"occurrences": 18,
+						"units": 18
+					},
+					"AcademicEPortfolio/Comments": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"AcademicEPortfolio/Comments/CommentAuthor": {
+						"occurrences": 4,
+						"units": 4
+					},
+					"AcademicEPortfolio/Comments/CommentDate": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"AcademicEPortfolio/Comments/CommentDescription": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"AcademicEPortfolio/Comments/CommentID": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"AcademicEPortfolio/Comments/CommentObjectLink": {
+						"occurrences": 4,
+						"units": 4
+					},
+					"AcademicEPortfolio/Comments/CommentTitle": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"AcademicEPortfolio/Competencies": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"AcademicEPortfolio/Competencies/CompetencyDescription": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"AcademicEPortfolio/Competencies/CompetencyID": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"AcademicEPortfolio/Competencies/CompetencyLevel": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"AcademicEPortfolio/Competencies/CompetencyName": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"AcademicEPortfolio/Competencies/CompetencyObjectLink": {
+						"occurrences": 4,
+						"units": 4
+					},
+					"AcademicEPortfolio/Competencies/CompetencySource": {
+						"occurrences": 34,
+						"units": 34
+					},
+					"AcademicEPortfolio/Education": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"AcademicEPortfolio/Education/ApplicationForAdmission": {
+						"occurrences": 2391,
+						"units": 682
+					},
+					"AcademicEPortfolio/Education/CollegeTranscript": {
+						"occurrences": 1098,
+						"units": 340
+					},
+					"AcademicEPortfolio/Education/HSTranscript": {
+						"occurrences": 1100,
+						"units": 340
+					},
+					"AcademicEPortfolio/Education/OtherLearning": {
+						"occurrences": 38,
+						"units": 35
+					},
+					"AcademicEPortfolio/Education/PostsecondaryProgram": {
+						"occurrences": 74,
+						"units": 67
+					},
+					"AcademicEPortfolio/Education/SecondaryEducation": {
+						"occurrences": 209,
+						"units": 131
+					},
+					"AcademicEPortfolio/Education/TestScoreReport": {
+						"occurrences": 1353,
+						"units": 481
+					},
+					"AcademicEPortfolio/EmploymentHistory": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"AcademicEPortfolio/EmploymentHistory/EmployerHistory": {
+						"occurrences": 67,
+						"units": 67
+					},
+					"AcademicEPortfolio/EmploymentHistory/EmploymentHistoryID": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"AcademicEPortfolio/EmploymentHistory/EmploymentHistoryObjectLink": {
+						"occurrences": 4,
+						"units": 4
+					},
+					"AcademicEPortfolio/Events": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"AcademicEPortfolio/Events/EventClassification": {
+						"occurrences": 4,
+						"units": 4
+					},
+					"AcademicEPortfolio/Events/EventDescription": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"AcademicEPortfolio/Events/EventEndDate": {
+						"occurrences": 4,
+						"units": 4
+					},
+					"AcademicEPortfolio/Events/EventID": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"AcademicEPortfolio/Events/EventObjectLink": {
+						"occurrences": 4,
+						"units": 4
+					},
+					"AcademicEPortfolio/Events/EventOrganizationDescription": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"AcademicEPortfolio/Events/EventStartDate": {
+						"occurrences": 4,
+						"units": 4
+					},
+					"AcademicEPortfolio/Events/EventTitle": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"AcademicEPortfolio/Events/OrganizationName": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"AcademicEPortfolio/Goals": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"AcademicEPortfolio/Goals/GoalActionPlanStep": {
+						"occurrences": 20,
+						"units": 14
+					},
+					"AcademicEPortfolio/Goals/GoalCode": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"AcademicEPortfolio/Goals/GoalCompletionDate": {
+						"occurrences": 4,
+						"units": 4
+					},
+					"AcademicEPortfolio/Goals/GoalDescription": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"AcademicEPortfolio/Goals/GoalID": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"AcademicEPortfolio/Goals/GoalObjectLink": {
+						"occurrences": 4,
+						"units": 4
+					},
+					"AcademicEPortfolio/Goals/GoalTargetDate": {
+						"occurrences": 4,
+						"units": 4
+					},
+					"AcademicEPortfolio/Goals/GoalTitle": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"AcademicEPortfolio/LicensesAndCredentials": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"AcademicEPortfolio/LicensesAndCredentials/IndustryRecognizedCredential": {
+						"occurrences": 16,
+						"units": 16
+					},
+					"AcademicEPortfolio/LicensesAndCredentials/License": {
+						"occurrences": 19,
+						"units": 19
+					},
+					"AcademicEPortfolio/Lists": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"AcademicEPortfolio/Lists/ListItemClassificationCode": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"AcademicEPortfolio/Lists/ListItemID": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"AcademicEPortfolio/Lists/ListItemIdentifier": {
+						"occurrences": 8,
+						"units": 8
+					},
+					"AcademicEPortfolio/Lists/ListItemName": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"AcademicEPortfolio/Lists/ListItemNotes": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"AcademicEPortfolio/Lists/ListItemObjectLink": {
+						"occurrences": 4,
+						"units": 4
+					},
+					"AcademicEPortfolio/Lists/ListItemURL": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"AcademicEPortfolio/MilitaryHistory": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"AcademicEPortfolio/MilitaryHistory/CountryIdentifier": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"AcademicEPortfolio/MilitaryHistory/MilitaryOccupationalClassification": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"AcademicEPortfolio/MilitaryHistory/MilitaryServiceBranchCode": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"AcademicEPortfolio/MilitaryHistory/MilitaryServiceID": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"AcademicEPortfolio/MilitaryHistory/MilitaryServiceObjectLink": {
+						"occurrences": 4,
+						"units": 4
+					},
+					"AcademicEPortfolio/MilitaryHistory/MilitaryServicePeriod": {
+						"occurrences": 5,
+						"units": 5
+					},
+					"AcademicEPortfolio/Networks": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"AcademicEPortfolio/Networks/Network": {
+						"occurrences": 9,
+						"units": 9
+					},
+					"AcademicEPortfolio/Networks/PersonalReference": {
+						"occurrences": 39,
+						"units": 39
+					},
+					"AcademicEPortfolio/NoteMessage": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"AcademicEPortfolio/Profile": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"AcademicEPortfolio/Profile/AgencyAssignedID": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"AcademicEPortfolio/Profile/Birth": {
+						"occurrences": 9,
+						"units": 9
+					},
+					"AcademicEPortfolio/Profile/Citizenship": {
+						"occurrences": 4,
+						"units": 4
+					},
+					"AcademicEPortfolio/Profile/Contacts": {
+						"occurrences": 36,
+						"units": 29
+					},
+					"AcademicEPortfolio/Profile/EthnicityRace": {
+						"occurrences": 5,
+						"units": 5
+					},
+					"AcademicEPortfolio/Profile/Gender": {
+						"occurrences": 3,
+						"units": 3
+					},
+					"AcademicEPortfolio/Profile/NSN": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"AcademicEPortfolio/Profile/Name": {
+						"occurrences": 10,
+						"units": 10
+					},
+					"AcademicEPortfolio/Profile/ParentGuardian": {
+						"occurrences": 12,
+						"units": 12
+					},
+					"AcademicEPortfolio/Profile/SIN": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"AcademicEPortfolio/Profile/SSN": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"AcademicEPortfolio/TransmissionData": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"AcademicEPortfolio/TransmissionData/CreatedDateType": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"AcademicEPortfolio/TransmissionData/DocumentID": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"AcademicEPortfolio/TransmissionData/DocumentType": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"AcademicEPortfolio/TransmissionData/NoteMessage": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"AcademicEPortfolio/TransmissionData/TransmissionType": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"AcademicEPortfolio/UserDefinedExtensions": {
+						"occurrences": 1,
+						"units": 1
+					}
+				},
+				"postalCodeOccurrenceCount": 116,
+				"spanningExample": {
+					"declarationReleaseIndependentId": "type/urn:org:pesc:core:CoreMain:v1.16.0#ContactsType/el/1:Address",
+					"occurrenceCount": 26,
+					"occurrenceSectionList": [
+						"AcademicEPortfolio/Artifacts/ArtifactSource",
+						"AcademicEPortfolio/Competencies/CompetencySource",
+						"AcademicEPortfolio/Education/ApplicationForAdmission",
+						"AcademicEPortfolio/Education/TestScoreReport",
+						"AcademicEPortfolio/EmploymentHistory/EmployerHistory",
+						"AcademicEPortfolio/Networks/PersonalReference"
+					],
+					"contextPathSampleListLength": 8
+				},
+				"reachableDocumentationSourceCount": {
+					"contentAndBase": {
+						"none": 455,
+						"own": 283,
+						"type": 624
+					}
+				}
+			},
+			"roundTrip": {
+				"inventedTotal": 0,
+				"contentGapTotal": 0,
+				"contentGapTotalBeforePhaseF6Fix": 2,
+				"explicitlyOmittedTotal": 15950,
+				"explicitlyOmittedCountByKind": {
+					"comment": 872,
+					"processingInstruction": 4,
+					"whitespace": 15074
+				},
+				"nestedChoiceCount": 21,
+				"formElementCount": 1,
+				"emptyEnumerationValueCount": 2,
+				"emptyDocumentationCount": 8,
+				"xmllintProbeExitCode": 3,
+				"xmllintDefinitionDroppedExitCode": 5,
+				"documentationShapeCount": {
+					"declarationDocumentationShapeCount": 0,
+					"derivationAnnotationCount": 1,
+					"fileAnnotationNotFirstCount": 0
+				},
+				"namespacedSchemaAttributeCount": 1
 			}
 		}
 	}

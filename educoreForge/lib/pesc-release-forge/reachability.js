@@ -10,6 +10,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //   computeReachability({ artifacts, topLevelByQualifiedName, resolveOrRefuse, elementStableIdOf,
 //                         anonymousTypeStableIdOf, typeSymbolSpace, groupSymbolSpace })
 //     → { occurrenceList, reachableDefinitionStableIdSet, rootGlobalElementStableIdList, reachabilityStats }
+//   (reachabilityStats.substitutedSubtypeCount: the distinct subtypes substituted anywhere, phase F6)
 //
 // It reads the parser's model only and mints nothing: walk.js owns identity and minting, and hands
 // in its own resolution (resolveOrRefuse) and its own id rules (elementStableIdOf,
@@ -89,6 +90,9 @@ const computeReachability = (reachabilityArgs) => {
 			contentAndBaseOccurrenceCount: contentPass.occurrenceList.length,
 			contentAndBaseDeclarationCount: new Set(contentPass.occurrenceList.map((oneOccurrence) => oneOccurrence.declarationStableId)).size,
 			contentAndBaseDefinitionCount: contentPass.reachableDefinitionStableIdSet.size,
+			// distinct subtypes an instance may name with xsi:type somewhere (WORKORDER F6: Test Score Report 3,
+			// ePortfolio 5); a subtype substituted under several elements counts once
+			substitutedSubtypeCount: releasePass.substitutedSubtypeStableIdSet.size,
 		},
 	};
 };
@@ -98,6 +102,7 @@ const walkFromRoots = ({ artifacts, topLevelByQualifiedName, resolveOrRefuse, el
 	const complexTypeTypingReachedElementSet = new Set();
 	const parentByPathByDeclaration = new Map();
 	const reachableDefinitionStableIdSet = new Set();
+	const substitutedSubtypeStableIdSet = new Set();
 	const reachabilityStats = { wildcardParticleCount: 0, recursionStopCount: 0, substitutedLayerCount: 0 };
 
 	const topLevelEntryList = Object.keys(topLevelByQualifiedName).map((oneQualifiedName) => topLevelByQualifiedName[oneQualifiedName]);
@@ -193,6 +198,7 @@ const walkFromRoots = ({ artifacts, topLevelByQualifiedName, resolveOrRefuse, el
 			}
 			reachabilityStats.substitutedLayerCount++;
 			reachableDefinitionStableIdSet.add(oneSubtype.stableId);
+			substitutedSubtypeStableIdSet.add(oneSubtype.stableId);
 			const layerWalkState = { ...walkState, ancestryStableIdSet: new Set([...walkState.ancestryStableIdSet, oneSubtype.stableId]), stepVia: REACHABLE_VIA.XSI_TYPE, xsiTypeName: oneSubtype.definition.name };
 			walkContainer({ container: oneSubtype.definition.content, artifact: oneSubtype.artifact, ownerStableId: oneSubtype.stableId, walkState: layerWalkState });
 			walkSubstitutedLayers({ baseEntry: oneSubtype, walkState: layerWalkState });
@@ -268,6 +274,7 @@ const walkFromRoots = ({ artifacts, topLevelByQualifiedName, resolveOrRefuse, el
 		rootGlobalElementStableIdList: rootGlobalEntryList.map((oneEntry) => oneEntry.stableId),
 		reachabilityStats,
 		complexTypeTypingReachedElementSet,
+		substitutedSubtypeStableIdSet,
 	};
 };
 

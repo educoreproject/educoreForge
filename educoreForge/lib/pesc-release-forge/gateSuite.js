@@ -26,6 +26,12 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //   F1-ROLES       (extra) the node-kind table equals the design's §2.1 and the declaration is
 //                  accepted with no migration allowance
 //
+// Every fault a twin plants in a release's own text (which NoteMessage it removes, which documentation it
+// blanks, which extension it rewrites, which file it replaces) is DATA: releaseGateFixtures.json, one entry
+// per release, refused by name when absent (phase F6; College Transcript 1.8.0's entry is the faults phases
+// F1 to F4 wrote here as constants). Faults that only name CoreMain content every release carries
+// (AccreditationTypeType, DocumentCompleteCodeType, LoanInformationType, DocumentID) stay constants.
+//
 // Twins build SCRATCH snapshots, release folders and output roots under the OS temp directory and
 // remove them at the end. Nothing in the tree is written. Production mutations are compiled in
 // memory (moduleDouble), never written to disk. "Resealed" means the twin also rewrites the seals
@@ -65,13 +71,14 @@ const XSD_PARSER_PATH = path.join(LIBRARY_DIR, 'xsdParser.js');
 const SCAFFOLD_LIB_PATH = path.join(LIBRARY_DIR, 'tools', 'scaffoldReleaseBundleLib.js');
 const BUNDLE_TEMPLATES_PATH = path.join(LIBRARY_DIR, 'tools', 'bundleTemplates.js');
 const EXPECTED_LITERALS_PATH = path.join(LIBRARY_DIR, 'expectedReleaseLiterals.json');
+const GATE_FIXTURES_PATH = path.join(LIBRARY_DIR, 'releaseGateFixtures.json');
+const GATE_FIXTURE_FIELD_NAME_LIST = Object.freeze(['noteMessageRemoval', 'replacedFileName', 'documentationBlanking', 'extensionRewrite']);
 
 const SNAPSHOT_CONTAINER_NAME = 'standardSourceData';
 const CHECKSUM_FILE_NAME = 'SHA256SUMS';
 const PROVENANCE_FILE_NAME = 'standardSourceLocation';
 const PROVENANCE_README_RELATIVE_PATH = path.join('assets', SNAPSHOT_CONTAINER_NAME, '01', 'README_PROVENANCE.md');
 const CORE_MAIN_FILE_RE = /^CoreMain_v[\d.]+\.xsd$/;
-const CODES_FILE_RE = /^iso_3166-1_v[\d.]+\.xsd$/;
 
 // ---- the ruled role table (DESIGN-pescForge.md §2.1, revision 3; QUIET_ORBIT ruling 3A.3), as suffix → role
 const RULED_ROLE_BY_LABEL_SUFFIX = Object.freeze({
@@ -108,6 +115,11 @@ const replacedOnce = ({ fileText, findText, replaceText, fileName }) => {
 	return fileText.replace(findText, replaceText);
 };
 
+// Phase F6 added: F2-CODE-LIST-FACTS (the code list an element is typed by, on the element); in F11
+// documentationShapesRoundTrip (element documentation lists, derivation annotations, schema-level
+// annotations in place, on the release and on planted copies); in F12 regeneratedFilesNamespaceWellFormed
+// (a namespaced schema attribute is written under a bound prefix); in F9 the substituted xsi:type
+// subtype count (WORKORDER F6: Test Score Report 3, ePortfolio 5).
 const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 	const bundleData = releaseBundle.readBundleData({ bundleDirPath });
 	const { releaseDeclarationData } = bundleData;
@@ -119,8 +131,19 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 	const realReleaseEntry = realManifestEntryDocument.releaseEntry;
 	const xsdFileNameList = realReleaseEntry.memberFiles.map((oneMember) => oneMember.filename).sort();
 	const coreMainFileName = xsdFileNameList.find((oneFileName) => CORE_MAIN_FILE_RE.test(oneFileName));
-	const codesFileName = xsdFileNameList.find((oneFileName) => CODES_FILE_RE.test(oneFileName));
 	const expectedLiteralSet = readJsonOrThrow(EXPECTED_LITERALS_PATH).literalByReleaseName[releaseName];
+	// the release's twin faults (releaseGateFixtures.json): absent or partial is a fixture fault, never a default
+	const gateFixture = readJsonOrThrow(GATE_FIXTURES_PATH).fixtureByReleaseName[releaseName];
+	const missingFixtureFieldName = gateFixture === undefined ? 'the whole entry' : GATE_FIXTURE_FIELD_NAME_LIST.find((oneFieldName) => gateFixture[oneFieldName] === undefined);
+	if (missingFixtureFieldName !== undefined) {
+		throw new Error(`${moduleName}: fixture fault — releaseGateFixtures.json has no ${missingFixtureFieldName} for ${releaseName}`);
+	}
+	const fixtureFileNameList = [gateFixture.noteMessageRemoval.fileName, gateFixture.replacedFileName, gateFixture.documentationBlanking.fileName, gateFixture.extensionRewrite.fileName];
+	const strangerFileName = fixtureFileNameList.find((oneFileName) => xsdFileNameList.indexOf(oneFileName) === -1);
+	if (strangerFileName !== undefined) {
+		throw new Error(`${moduleName}: fixture fault — releaseGateFixtures.json names '${strangerFileName}', which is no member file of ${releaseName} (${xsdFileNameList.join(', ')})`);
+	}
+	const replacedFileName = gateFixture.replacedFileName;
 	const standardKey = releaseDeclarationData.standardKey;
 
 	// ---- scratch fixtures, all removed at the end
@@ -207,11 +230,34 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 	const withoutPublishedVersionLine = (fileText) => fileText.replace(/^publishedVersion:.*\n/m, '');
 	const DISAGREEING_VERSION = '0.0.1';
 	const withDisagreeingPublishedVersion = (fileText) => fileText.replace(/^publishedVersion:.*$/m, `publishedVersion: ${DISAGREEING_VERSION}`);
-	// the root's NoteMessage: one local element of the root's anonymous type
-	const REMOVED_ELEMENT_TEXT = '<xs:element name="NoteMessage" type="core:NoteMessageType" minOccurs="0" maxOccurs="unbounded"/>';
-	const withOneElementRemoved = (fileText, fileName) => replacedOnce({ fileText, findText: REMOVED_ELEMENT_TEXT, replaceText: '', fileName });
+	// the fixture's NoteMessage: the first element opening with elementOpenText after the file's one
+	// anchorText, self-closing or closed by the next </xs:element> (no element nested inside it)
+	const noteMessageRemoval = gateFixture.noteMessageRemoval;
+	const noteMessageFileName = noteMessageRemoval.fileName;
+	const NOTE_MESSAGE_TYPE_TEXT = 'core:NoteMessageType"';
+	const fixtureElementSpanOf = (fileText, fileName) => {
+		const anchorCount = fileText.split(noteMessageRemoval.anchorText).length - 1;
+		const elementStart = anchorCount === 1 ? fileText.indexOf(noteMessageRemoval.elementOpenText, fileText.indexOf(noteMessageRemoval.anchorText)) : -1;
+		const openTagEnd = elementStart === -1 ? -1 : fileText.indexOf('>', elementStart) + 1;
+		const selfClosing = openTagEnd > 0 && fileText[openTagEnd - 2] === '/';
+		const closeStart = selfClosing || openTagEnd <= 0 ? -1 : fileText.indexOf('</xs:element>', openTagEnd);
+		const elementEnd = selfClosing ? openTagEnd : closeStart === -1 ? -1 : closeStart + '</xs:element>'.length;
+		const openTagText = elementStart === -1 ? '' : fileText.slice(elementStart, openTagEnd);
+		if (elementEnd === -1 || openTagText.indexOf(NOTE_MESSAGE_TYPE_TEXT) === -1 || (!selfClosing && fileText.slice(openTagEnd, closeStart).indexOf('<xs:element') !== -1)) {
+			throw new Error(`${moduleName}: fixture fault — no removable '${noteMessageRemoval.elementOpenText}' after the one '${noteMessageRemoval.anchorText}' in ${fileName} (anchors ${anchorCount})`);
+		}
+		return { elementStart, openTagEnd, elementEnd };
+	};
+	const withOneElementRemoved = (fileText, fileName) => {
+		const { elementStart, elementEnd } = fixtureElementSpanOf(fileText, fileName);
+		return fileText.slice(0, elementStart) + fileText.slice(elementEnd);
+	};
+	const withOpenTagRewritten = (fileText, fileName, rewriteOpenTag) => {
+		const { elementStart, openTagEnd } = fixtureElementSpanOf(fileText, fileName);
+		return fileText.slice(0, elementStart) + rewriteOpenTag(fileText.slice(elementStart, openTagEnd)) + fileText.slice(openTagEnd);
+	};
 	const REPOINTED_TYPE_NAME = 'NoteMessageTypeAbsent';
-	const withOneTypeRepointed = (fileText, fileName) => replacedOnce({ fileText, findText: REMOVED_ELEMENT_TEXT, replaceText: REMOVED_ELEMENT_TEXT.replace('core:NoteMessageType"', `core:${REPOINTED_TYPE_NAME}"`), fileName });
+	const withOneTypeRepointed = (fileText, fileName) => withOpenTagRewritten(fileText, fileName, (openTagText) => openTagText.replace(NOTE_MESSAGE_TYPE_TEXT, `core:${REPOINTED_TYPE_NAME}"`));
 	const UNION_TARGET_TEXT = '<xs:simpleType name="AccreditationTypeType">';
 	const withUnionInserted = (fileText, fileName) => replacedOnce({ fileText, findText: UNION_TARGET_TEXT, replaceText: `${UNION_TARGET_TEXT}<xs:union memberTypes="xs:string xs:token"/>`, fileName });
 	const rootFileName = realReleaseEntry.rootFilename;
@@ -421,17 +467,17 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 		},
 		{
 			conjunctId: 'removedElementRefusedByCensus',
-			title: `a scratch snapshot with the root's NoteMessage element removed (every seal resealed) is REFUSED BY THE CENSUS: elementDeclarationCount ${frozenElementCount - 1} against ${frozenElementCount}`,
+			title: `a scratch snapshot with the fixture's NoteMessage element (${noteMessageFileName}) removed (every seal resealed) is REFUSED BY THE CENSUS: elementDeclarationCount ${frozenElementCount - 1} against ${frozenElementCount}`,
 			twinNameList: ['censusComparisonDisabled'],
 			evaluate: (subject, callback) => {
-				const scratchSnapshotDirPath = makeScratchSnapshot({ baseSnapshotDirPath: subject.snapshotDirPath, alterTextByFileName: { [rootFileName]: withOneElementRemoved }, resealManifestEntry: true, resealChecksums: true });
+				const scratchSnapshotDirPath = makeScratchSnapshot({ baseSnapshotDirPath: subject.snapshotDirPath, alterTextByFileName: { [noteMessageFileName]: withOneElementRemoved }, resealManifestEntry: true, resealChecksums: true });
 				forgeSnapshot({ subject, snapshotDirPath: scratchSnapshotDirPath }, (forgeError, forged) => {
 					callback('', { pass: refusedLike({ forgeError, refusalRe: censusRefusalRe }), detail: refusalDetail(forgeError, forged) });
 				});
 			},
 		},
 	];
-	registerTwin(CENSUS_GATE_ID, 'statsEqualFrozenAndExpectedCensus', 'oneElementRemovedResealed', 'inputFault', (subject) => ({ ...subject, snapshotDirPath: makeScratchSnapshot({ baseSnapshotDirPath: subject.snapshotDirPath, alterTextByFileName: { [rootFileName]: withOneElementRemoved }, resealManifestEntry: true, resealChecksums: true }) }));
+	registerTwin(CENSUS_GATE_ID, 'statsEqualFrozenAndExpectedCensus', 'oneElementRemovedResealed', 'inputFault', (subject) => ({ ...subject, snapshotDirPath: makeScratchSnapshot({ baseSnapshotDirPath: subject.snapshotDirPath, alterTextByFileName: { [noteMessageFileName]: withOneElementRemoved }, resealManifestEntry: true, resealChecksums: true }) }));
 	registerTwin(CENSUS_GATE_ID, 'removedElementRefusedByCensus', 'censusComparisonDisabled', 'productionMutation', (subject) =>
 		addMutation(subject, 'hooksMutationList', { modulePath: RELEASE_CENSUS_PATH, find: 'if (differingFieldNameList.length > 0) {', replace: 'if (false) {' }),
 	);
@@ -440,7 +486,7 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 	// F5-RESOLUTION
 	// =====================================================================
 	const RESOLUTION_GATE_ID = 'F5-RESOLUTION';
-	const resolutionRefusalRe = new RegExp(`resolutionTable REFUSED: ${rootFileName.replace(/\./g, '\\.')}: 'core:${REPOINTED_TYPE_NAME}' \\(type\\) resolves to urn:org:pesc:core:CoreMain:[^#]+#type/${REPOINTED_TYPE_NAME}, which ${coreMainFileName.replace(/\./g, '\\.')} does not define`);
+	const resolutionRefusalRe = new RegExp(`resolutionTable REFUSED: ${noteMessageFileName.replace(/\./g, '\\.')}: 'core:${REPOINTED_TYPE_NAME}' \\(type\\) resolves to urn:org:pesc:core:CoreMain:[^#]+#type/${REPOINTED_TYPE_NAME}, which ${coreMainFileName.replace(/\./g, '\\.')} does not define`);
 	const resolutionConjunctList = [
 		{
 			conjunctId: 'everyReferenceResolvesInside',
@@ -461,17 +507,17 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 		},
 		{
 			conjunctId: 'repointedTypeRefusedByResolution',
-			title: `a scratch snapshot whose root NoteMessage type= names core:${REPOINTED_TYPE_NAME} (resealed) is REFUSED BY THE RESOLUTION TABLE, naming the file, the QName and the namespace`,
+			title: `a scratch snapshot whose fixture NoteMessage (${noteMessageFileName}) type= names core:${REPOINTED_TYPE_NAME} (resealed) is REFUSED BY THE RESOLUTION TABLE, naming the file, the QName and the namespace`,
 			twinNameList: ['missingNameRefusalDisabled'],
 			evaluate: (subject, callback) => {
-				const scratchSnapshotDirPath = makeScratchSnapshot({ baseSnapshotDirPath: subject.snapshotDirPath, alterTextByFileName: { [rootFileName]: withOneTypeRepointed }, resealManifestEntry: true, resealChecksums: true });
+				const scratchSnapshotDirPath = makeScratchSnapshot({ baseSnapshotDirPath: subject.snapshotDirPath, alterTextByFileName: { [noteMessageFileName]: withOneTypeRepointed }, resealManifestEntry: true, resealChecksums: true });
 				forgeSnapshot({ subject, snapshotDirPath: scratchSnapshotDirPath }, (forgeError, forged) => {
 					callback('', { pass: refusedLike({ forgeError, refusalRe: resolutionRefusalRe }), detail: refusalDetail(forgeError, forged) });
 				});
 			},
 		},
 	];
-	registerTwin(RESOLUTION_GATE_ID, 'everyReferenceResolvesInside', 'oneTypeRepointedResealed', 'inputFault', (subject) => ({ ...subject, snapshotDirPath: makeScratchSnapshot({ baseSnapshotDirPath: subject.snapshotDirPath, alterTextByFileName: { [rootFileName]: withOneTypeRepointed }, resealManifestEntry: true, resealChecksums: true }) }));
+	registerTwin(RESOLUTION_GATE_ID, 'everyReferenceResolvesInside', 'oneTypeRepointedResealed', 'inputFault', (subject) => ({ ...subject, snapshotDirPath: makeScratchSnapshot({ baseSnapshotDirPath: subject.snapshotDirPath, alterTextByFileName: { [noteMessageFileName]: withOneTypeRepointed }, resealManifestEntry: true, resealChecksums: true }) }));
 	registerTwin(RESOLUTION_GATE_ID, 'repointedTypeRefusedByResolution', 'missingNameRefusalDisabled', 'productionMutation', (subject) =>
 		addMutation(subject, 'hooksMutationList', { modulePath: RESOLUTION_TABLE_PATH, find: 'if (resolvedRow === undefined) {', replace: 'if (false) {' }),
 	);
@@ -481,7 +527,7 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 	// =====================================================================
 	const SCAFFOLD_GATE_ID = 'F15-SCAFFOLD';
 	const overwriteRefusalRe = /scaffoldReleaseBundleLib REFUSED: bundle directory '.*' already exists/;
-	const folderRefusalRe = new RegExp(`manifestEntryLoader REFUSED: ${codesFileName.replace(/\./g, '\\.')}: the manifest entry for '${realReleaseEntry.folderName.replace(/\./g, '\\.')}' says sha256`);
+	const folderRefusalRe = new RegExp(`manifestEntryLoader REFUSED: ${replacedFileName.replace(/\./g, '\\.')}: the manifest entry for '${realReleaseEntry.folderName.replace(/\./g, '\\.')}' says sha256`);
 	const unionRefusalRe = new RegExp(`xsdParser REFUSES: file '${coreMainFileName.replace(/\./g, '\\.')}': untaught construct 'xs:union' inside simpleType`);
 	const scaffoldConjunctList = [
 		{
@@ -524,10 +570,10 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 		},
 		{
 			conjunctId: 'replacedFileRefused',
-			title: `a scratch release folder with one byte of ${codesFileName} replaced is REFUSED: the folder disagrees with its manifest entry`,
+			title: `a scratch release folder with one byte of ${replacedFileName} replaced is REFUSED: the folder disagrees with its manifest entry`,
 			twinNameList: ['folderShaComparisonDisabled'],
 			evaluate: (subject, callback) => {
-				scaffoldWith({ subject, scaffoldArgs: makeScratchReleaseInputs({ alterTextByFileName: { [codesFileName]: withFirstByteAltered } }) }, (scaffoldError) => {
+				scaffoldWith({ subject, scaffoldArgs: makeScratchReleaseInputs({ alterTextByFileName: { [replacedFileName]: withFirstByteAltered } }) }, (scaffoldError) => {
 					callback('', { pass: refusedLike({ forgeError: scaffoldError, refusalRe: folderRefusalRe }), detail: scaffoldError ? scaffoldError.slice(0, 400) : 'NOT refused: a bundle was written' });
 				});
 			},
@@ -704,7 +750,6 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 	// ---- F8-TEXTS
 	const TEXTS_GATE_ID = 'F8-TEXTS';
 	const EMBED_TEXT_ROLE = DME_ROLES.EMBED_TEXT;
-	const BLANKED_ELEMENT_STABLE_ID = `${standardKey}:type/urn:org:pesc:sector:AcademicRecord:v1.13.0#PersonType/el/12:HighSchool`;
 	const textsConjunctList = [
 		{
 			conjunctId: 'textNodesAreTheDistinctDeclaredTexts',
@@ -737,14 +782,14 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 					const undeclaredTargetEdge = forged.edges.find((oneEdge) => oneEdge.type === 'EMBEDS_TEXT_OF' && textPropertyListByRole[roleByStableId[oneEdge.toRef.id]] === undefined);
 					const sameSet = expectedTextSet.size === mintedTextSet.size && [...expectedTextSet].every((oneText) => mintedTextSet.has(oneText));
 					const pass = sameSet && textNodeList.length === walkLiteralSet.textNodeCount && undeclaredTargetEdge === undefined;
-					callback('', { pass, detail: `text nodes ${textNodeList.length} (frozen ${walkLiteralSet.textNodeCount}; work order: at most ${walkLiteralSet.textNodeCountCeiling}); distinct declared texts ${expectedTextSet.size}; same set ${sameSet}; edge to an undeclared role ${undeclaredTargetEdge ? undeclaredTargetEdge.toRef.id : 'none'}` });
+					callback('', { pass, detail: `text nodes ${textNodeList.length} (frozen ${walkLiteralSet.textNodeCount}${walkLiteralSet.textNodeCountCeiling === undefined ? '' : `; work order: at most ${walkLiteralSet.textNodeCountCeiling}`}); distinct declared texts ${expectedTextSet.size}; same set ${sameSet}; edge to an undeclared role ${undeclaredTargetEdge ? undeclaredTargetEdge.toRef.id : 'none'}` });
 				});
 			},
 		},
 		{
 			conjunctId: 'effectiveDocumentationRule',
-			title: 'every element and attribute: effectiveDocumentation is its own text when it has one, else its type\'s, and documentationSource says which; the per-kind counts EQUAL the frozen literals (elements with own text: 1,220, the evidence census)',
-			twinNameList: ['highSchoolDocumentationBlanked'],
+			title: 'every element and attribute: effectiveDocumentation is its own text when it has one, else its type\'s, and documentationSource says which; the per-kind counts EQUAL the frozen literals (elements with own text: the evidence census)',
+			twinNameList: ['fixtureDocumentationBlanked'],
 			evaluate: (subject, callback) => {
 				if (walkLiteralSet === undefined) {
 					callback('', missingLiteralResult('documentationSourceCountByLabelSuffix'));
@@ -789,20 +834,22 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 			},
 		},
 	];
-	const blankHighSchoolDocumentation = (fileText, fileName) => {
-		const highSchoolOpenText = '<xs:element name="HighSchool"';
-		const elementStart = fileText.indexOf(highSchoolOpenText, fileText.indexOf('<xs:complexType name="PersonType">'));
-		const documentationStart = fileText.indexOf('<xs:documentation>', elementStart) + '<xs:documentation>'.length;
-		const documentationEnd = fileText.indexOf('</xs:documentation>', documentationStart);
-		if (elementStart === -1 || documentationEnd === -1) {
-			throw new Error(`${moduleName}: fixture fault — no PersonType/HighSchool documentation in ${fileName}`);
+	// the fixture's element documentation (a reachable element whose own text no other node carries), blanked
+	const documentationBlanking = gateFixture.documentationBlanking;
+	const blankFixtureDocumentation = (fileText, fileName) => {
+		const ownerOpenText = `<xs:complexType name="${documentationBlanking.ownerTypeName}">`;
+		const ownerStart = fileText.indexOf(ownerOpenText);
+		const elementStart = ownerStart === -1 ? -1 : fileText.indexOf(`<xs:element name="${documentationBlanking.elementName}"`, ownerStart);
+		const documentationStart = elementStart === -1 ? -1 : fileText.indexOf('<xs:documentation>', elementStart) + '<xs:documentation>'.length;
+		const documentationEnd = elementStart === -1 ? -1 : fileText.indexOf('</xs:documentation>', documentationStart);
+		if (ownerStart === -1 || fileText.split(ownerOpenText).length !== 2 || elementStart === -1 || documentationEnd === -1 || fileText.indexOf('</xs:complexType>', ownerStart) < elementStart) {
+			throw new Error(`${moduleName}: fixture fault — no ${documentationBlanking.ownerTypeName}/${documentationBlanking.elementName} documentation in ${fileName}`);
 		}
 		return fileText.slice(0, documentationStart) + fileText.slice(documentationEnd);
 	};
-	const academicRecordFileName = xsdFileNameList.find((oneFileName) => /^AcademicRecord_v/.test(oneFileName));
-	const blankedHighSchoolSnapshot = (subject) => makeScratchSnapshot({ baseSnapshotDirPath: subject.snapshotDirPath, alterTextByFileName: { [academicRecordFileName]: blankHighSchoolDocumentation }, resealManifestEntry: true, resealChecksums: true });
-	registerWalkTwin(TEXTS_GATE_ID, 'textNodesAreTheDistinctDeclaredTexts', 'oneElementDocumentationBlanked', 'inputFault', (subject) => ({ ...subject, snapshotDirPath: blankedHighSchoolSnapshot(subject) }));
-	registerWalkTwin(TEXTS_GATE_ID, 'effectiveDocumentationRule', 'highSchoolDocumentationBlanked', 'inputFault', (subject) => ({ ...subject, snapshotDirPath: blankedHighSchoolSnapshot(subject) }));
+	const blankedDocumentationSnapshot = (subject) => makeScratchSnapshot({ baseSnapshotDirPath: subject.snapshotDirPath, alterTextByFileName: { [documentationBlanking.fileName]: blankFixtureDocumentation }, resealManifestEntry: true, resealChecksums: true });
+	registerWalkTwin(TEXTS_GATE_ID, 'textNodesAreTheDistinctDeclaredTexts', 'oneElementDocumentationBlanked', 'inputFault', (subject) => ({ ...subject, snapshotDirPath: blankedDocumentationSnapshot(subject) }));
+	registerWalkTwin(TEXTS_GATE_ID, 'effectiveDocumentationRule', 'fixtureDocumentationBlanked', 'inputFault', (subject) => ({ ...subject, snapshotDirPath: blankedDocumentationSnapshot(subject) }));
 
 	// ---- F10-EDGES
 	const EDGES_GATE_ID = 'F10-EDGES';
@@ -1072,13 +1119,14 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 		addMutation(subject, 'hooksMutationList', { modulePath: SEQUENCE_GROUPS_PATH, find: 'if (orderSemantics === NORMATIVE && compositor !== NORMATIVE_COMPOSITOR) {', replace: 'if (false) {' }),
 	);
 
-	// ---- F2 (extra): the NoteMessage declarations, per file (QUIET_ORBIT ruling: 103 = AR 50 + CM 52 + root 1)
+	// ---- F2 (extra): the NoteMessage declarations, per file (College Transcript 1.8.0, QUIET_ORBIT ruling: 103 =
+	// AR 50 + CM 52 + root 1; each release's count is its own literal)
 	const DECLARATIONS_GATE_ID = 'F2-DECLARATIONS';
 	const declarationsConjunctList = [
 		{
 			conjunctId: 'noteMessageDeclarationsPerFile',
 			title: 'NoteMessage element declarations per file EQUAL the ruled literal (each its own node, under its own owner)',
-			twinNameList: ['rootNoteMessageRemoved'],
+			twinNameList: ['fixtureNoteMessageRemoved'],
 			evaluate: (subject, callback) => {
 				if (walkLiteralSet === undefined) {
 					callback('', missingLiteralResult('noteMessageDeclarationCountByFile'));
@@ -1095,7 +1143,7 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 			},
 		},
 	];
-	registerWalkTwin(DECLARATIONS_GATE_ID, 'noteMessageDeclarationsPerFile', 'rootNoteMessageRemoved', 'inputFault', (subject) => ({ ...subject, snapshotDirPath: makeScratchSnapshot({ baseSnapshotDirPath: subject.snapshotDirPath, alterTextByFileName: { [rootFileName]: withOneElementRemoved }, resealManifestEntry: true, resealChecksums: true }), frozenReleaseCensus: { ...subject.frozenReleaseCensus, elementDeclarationCount: subject.frozenReleaseCensus.elementDeclarationCount - 1, referenceCount: subject.frozenReleaseCensus.referenceCount - 1, inReleaseReferenceCount: subject.frozenReleaseCensus.inReleaseReferenceCount - 1 } }));
+	registerWalkTwin(DECLARATIONS_GATE_ID, 'noteMessageDeclarationsPerFile', 'fixtureNoteMessageRemoved', 'inputFault', (subject) => ({ ...subject, snapshotDirPath: makeScratchSnapshot({ baseSnapshotDirPath: subject.snapshotDirPath, alterTextByFileName: { [noteMessageFileName]: withOneElementRemoved }, resealManifestEntry: true, resealChecksums: true }), frozenReleaseCensus: { ...subject.frozenReleaseCensus, elementDeclarationCount: subject.frozenReleaseCensus.elementDeclarationCount - 1, referenceCount: subject.frozenReleaseCensus.referenceCount - 1, inReleaseReferenceCount: subject.frozenReleaseCensus.inReleaseReferenceCount - 1 } }));
 
 	// ---- F2 (extra): the code list an element is typed by, carried onto the element (QUIET_ORBIT, F6 first
 	// commit: the derived bridge renders only the subject's own properties, so the list's prose must sit there)
@@ -1209,26 +1257,35 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 
 	// ---- F9-REACHABILITY
 	const REACHABILITY_GATE_ID = 'F9-REACHABILITY';
-	const learningProgramExtensionRewritten = (fileText, fileName) => {
-		const typeStart = fileText.indexOf('<xs:complexType name="LearningProgramType">');
-		const extensionOpenText = '<xs:extension base="core:AcademicProgramType">';
-		const extensionStart = fileText.indexOf(extensionOpenText, typeStart);
-		const extensionEnd = fileText.indexOf('</xs:extension>', extensionStart);
-		if (typeStart === -1 || extensionStart === -1 || extensionEnd === -1 || fileText.indexOf('</xs:complexType>', typeStart) < extensionEnd) {
-			throw new Error(`${moduleName}: fixture fault — no LearningProgramType extension of AcademicProgramType in ${fileName}`);
+	// the fixture's extension rewritten as a restriction: an xsi:type substitution subtype where the release
+	// has one (its substitution disappears), else a reached type's extension (its base content disappears)
+	const extensionRewrite = gateFixture.extensionRewrite;
+	const fixtureExtensionRewritten = (fileText, fileName) => {
+		const typeOpenText = `<xs:complexType name="${extensionRewrite.typeName}">`;
+		const typeStart = fileText.indexOf(typeOpenText);
+		const extensionOpenHead = `<xs:extension base="${extensionRewrite.baseQNameText}"`;
+		const extensionStart = typeStart === -1 ? -1 : fileText.indexOf(extensionOpenHead, typeStart);
+		const extensionOpenEnd = extensionStart === -1 ? -1 : fileText.indexOf('>', extensionStart) + 1;
+		const selfClosing = extensionOpenEnd > 0 && fileText[extensionOpenEnd - 2] === '/';
+		const extensionEnd = extensionOpenEnd <= 0 ? -1 : selfClosing ? extensionOpenEnd : fileText.indexOf('</xs:extension>', extensionOpenEnd);
+		if (typeStart === -1 || fileText.split(typeOpenText).length !== 2 || extensionStart === -1 || extensionEnd === -1 || fileText.indexOf('</xs:complexType>', typeStart) < extensionEnd) {
+			throw new Error(`${moduleName}: fixture fault — no ${extensionRewrite.typeName} extension of ${extensionRewrite.baseQNameText} in ${fileName}`);
 		}
-		return `${fileText.slice(0, extensionStart)}<xs:restriction base="core:AcademicProgramType">${fileText.slice(extensionStart + extensionOpenText.length, extensionEnd)}</xs:restriction>${fileText.slice(extensionEnd + '</xs:extension>'.length)}`;
+		const restrictionOpenText = `<xs:restriction base="${extensionRewrite.baseQNameText}"${selfClosing ? '/>' : '>'}`;
+		return selfClosing
+			? `${fileText.slice(0, extensionStart)}${restrictionOpenText}${fileText.slice(extensionOpenEnd)}`
+			: `${fileText.slice(0, extensionStart)}${restrictionOpenText}${fileText.slice(extensionOpenEnd, extensionEnd)}</xs:restriction>${fileText.slice(extensionEnd + '</xs:extension>'.length)}`;
 	};
-	const rootNoteMessageRemovedSubject = (subject) => ({
+	const fixtureNoteMessageRemovedSubject = (subject) => ({
 		...subject,
-		snapshotDirPath: makeScratchSnapshot({ baseSnapshotDirPath: subject.snapshotDirPath, alterTextByFileName: { [rootFileName]: withOneElementRemoved }, resealManifestEntry: true, resealChecksums: true }),
+		snapshotDirPath: makeScratchSnapshot({ baseSnapshotDirPath: subject.snapshotDirPath, alterTextByFileName: { [noteMessageFileName]: withOneElementRemoved }, resealManifestEntry: true, resealChecksums: true }),
 		frozenReleaseCensus: { ...subject.frozenReleaseCensus, elementDeclarationCount: subject.frozenReleaseCensus.elementDeclarationCount - 1, referenceCount: subject.frozenReleaseCensus.referenceCount - 1, inReleaseReferenceCount: subject.frozenReleaseCensus.inReleaseReferenceCount - 1 },
 	});
 	const reachabilityConjunctList = [
 		{
 			conjunctId: 'reachabilityCountsEqualLiterals',
-			title: 'reachable declarations (content and base, xsiType only, all), occurrences (all, xsiType), reachable named types and groups (content and base, all), sections, deepest document depths and the substitution rule EQUAL the literals (WORKORDER F3, as ruled)',
-			twinNameList: ['rootNoteMessageRemoved', 'learningProgramExtensionRewritten', 'wildcardFollowed'],
+			title: 'reachable declarations (content and base, xsiType only, all), occurrences (all, xsiType), reachable named types and groups (content and base, all), substituted xsi:type subtypes, sections, deepest document depths and the substitution rule EQUAL the literals (WORKORDER F3 and F6, as ruled)',
+			twinNameList: ['fixtureNoteMessageRemoved', 'fixtureExtensionRewritten', 'wildcardFollowed'],
 			evaluate: (subject, callback) => {
 				if (reachabilityLiteralSet === undefined) {
 					callback('', missingReachabilityLiteralResult());
@@ -1240,6 +1297,7 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 					const stats = forged.stats.reachabilityStats;
 					const measured = {
 						substitutableSubtypeRuleName: stats.substitutableSubtypeRuleName,
+						substitutedSubtypeCount: stats.substitutedSubtypeCount,
 						contentAndBaseDeclarationCount: reachableElementList.filter((oneNode) => view.viaSetOf(oneNode.stableId).has('content') || view.viaSetOf(oneNode.stableId).has('base')).length,
 						xsiTypeOnlyDeclarationCount: reachableElementList.filter((oneNode) => view.viaSetOf(oneNode.stableId).size === 1 && view.viaSetOf(oneNode.stableId).has('xsiType')).length,
 						reachableDeclarationCount: reachableElementList.length,
@@ -1331,8 +1389,8 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 			},
 		},
 	];
-	registerReachabilityTwin(REACHABILITY_GATE_ID, 'reachabilityCountsEqualLiterals', 'rootNoteMessageRemoved', 'inputFault', rootNoteMessageRemovedSubject);
-	registerReachabilityTwin(REACHABILITY_GATE_ID, 'reachabilityCountsEqualLiterals', 'learningProgramExtensionRewritten', 'inputFault', (subject) => ({ ...subject, snapshotDirPath: makeScratchSnapshot({ baseSnapshotDirPath: subject.snapshotDirPath, alterTextByFileName: { [academicRecordFileName]: learningProgramExtensionRewritten }, resealManifestEntry: true, resealChecksums: true }) }));
+	registerReachabilityTwin(REACHABILITY_GATE_ID, 'reachabilityCountsEqualLiterals', 'fixtureNoteMessageRemoved', 'inputFault', fixtureNoteMessageRemovedSubject);
+	registerReachabilityTwin(REACHABILITY_GATE_ID, 'reachabilityCountsEqualLiterals', 'fixtureExtensionRewritten', 'inputFault', (subject) => ({ ...subject, snapshotDirPath: makeScratchSnapshot({ baseSnapshotDirPath: subject.snapshotDirPath, alterTextByFileName: { [extensionRewrite.fileName]: fixtureExtensionRewritten }, resealManifestEntry: true, resealChecksums: true }) }));
 	registerReachabilityTwin(REACHABILITY_GATE_ID, 'reachabilityCountsEqualLiterals', 'wildcardFollowed', 'productionMutation', (subject) => addMutation(subject, 'hooksMutationList', { modulePath: REACHABILITY_PATH, find: 'const WILDCARD_IS_FOLLOWED = false;', replace: 'const WILDCARD_IS_FOLLOWED = true;' }));
 	registerReachabilityTwin(REACHABILITY_GATE_ID, 'marksAgreeWithInstances', 'everyElementMarkedReachable', 'productionMutation', (subject) => addMutation(subject, 'hooksMutationList', { modulePath: WALK_PATH, find: 'reachableFromRoot: declarationIsReachable(elementStableId),', replace: 'reachableFromRoot: true,' }));
 	registerReachabilityTwin(REACHABILITY_GATE_ID, 'scopeAndSectionFilesFromTheForge', 'scalarWideningDisabled', 'productionMutation', (subject) => addMutation(subject, 'scopeToolMutationList', { modulePath: SCOPE_TOOL_LIB_PATH, find: 'const widenedList = (listOrScalar) => (Array.isArray(listOrScalar) ? listOrScalar : [listOrScalar]);', replace: 'const widenedList = (listOrScalar) => listOrScalar;' }));
@@ -1349,7 +1407,7 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 	const occurrenceIdentityConjunctList = [
 		{
 			conjunctId: 'occurrenceIsDeclarationAtPath',
-			title: "every occurrence's stableId is '<its declaration's stableId>/at/<contextPath>', it has exactly one HAS_INSTANCE (from that declaration), the paths reached by two declarations EQUAL the literal (every …/Contacts/Address/PostalCode, 14 occurrences), and no declaration reaches one path twice",
+			title: "every occurrence's stableId is '<its declaration's stableId>/at/<contextPath>', it has exactly one HAS_INSTANCE (from that declaration), the paths reached by two declarations EQUAL the literal, each ending in the literal suffix (College Transcript 1.8.0: every …/Contacts/Address/PostalCode, 14 occurrences), and no declaration reaches one path twice",
 			twinNameList: ['occurrenceMintedByPathAlone'],
 			evaluate: (subject, callback) => {
 				if (reachabilityLiteralSet === undefined) {
@@ -1368,10 +1426,11 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 					});
 					const declarationCountByPath = countOf(view.occurrenceList, (oneNode) => oneNode.properties.contextPath);
 					const sharedPathList = Object.keys(declarationCountByPath).filter((onePath) => declarationCountByPath[onePath] > 1);
-					const postalCodeOccurrenceCount = view.occurrenceList.filter((oneNode) => /\/Contacts\/Address\/PostalCode$/.test(oneNode.properties.contextPath)).length;
+					const sharedPathSuffix = reachabilityLiteralSet.pathReachedByTwoDeclarationsSuffix;
+					const postalCodeOccurrenceCount = view.occurrenceList.filter((oneNode) => oneNode.properties.contextPath.endsWith(sharedPathSuffix)).length;
 					const repeatingDeclarationCount = Object.keys(view.occurrenceListByDeclaration).filter((oneId) => new Set(view.occurrenceListByDeclaration[oneId].map((oneNode) => oneNode.properties.contextPath)).size !== view.occurrenceListByDeclaration[oneId].length).length;
-					const pass = misnamedList.length === 0 && sharedPathList.length === reachabilityLiteralSet.pathReachedByTwoDeclarationsCount && sharedPathList.every((onePath) => /\/Contacts\/Address\/PostalCode$/.test(onePath)) && postalCodeOccurrenceCount === reachabilityLiteralSet.postalCodeOccurrenceCount && repeatingDeclarationCount === reachabilityLiteralSet.declarationReachingOnePathTwiceCount;
-					callback('', { pass, detail: `${view.occurrenceList.length} occurrences; misnamed ${misnamedList.length ? misnamedList[0].stableId : 'none'}; paths by two declarations ${sharedPathList.length} (literal ${reachabilityLiteralSet.pathReachedByTwoDeclarationsCount}); PostalCode occurrences ${postalCodeOccurrenceCount}; declarations repeating a path ${repeatingDeclarationCount}` });
+					const pass = misnamedList.length === 0 && sharedPathList.length === reachabilityLiteralSet.pathReachedByTwoDeclarationsCount && sharedPathList.every((onePath) => onePath.endsWith(sharedPathSuffix)) && postalCodeOccurrenceCount === reachabilityLiteralSet.postalCodeOccurrenceCount && repeatingDeclarationCount === reachabilityLiteralSet.declarationReachingOnePathTwiceCount;
+					callback('', { pass, detail: `${view.occurrenceList.length} occurrences; misnamed ${misnamedList.length ? misnamedList[0].stableId : 'none'}; paths by two declarations ${sharedPathList.length} (literal ${reachabilityLiteralSet.pathReachedByTwoDeclarationsCount}); occurrences ending '${sharedPathSuffix}' ${postalCodeOccurrenceCount}; declarations repeating a path ${repeatingDeclarationCount}` });
 				});
 			},
 		},
@@ -1458,7 +1517,7 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 		},
 		{
 			conjunctId: 'declarationPathEvidence',
-			title: 'every reachable declaration: occurrenceSectionList is its occurrences\' sections, sorted; contextPathSampleList is the first two readable paths of each section in document order; reachableVia is its occurrences\' routes; spanning declarations, units, the sections-per-declaration histogram, the longest sample and ContactsType/Address (7 paths, 4 sections, 5 samples) EQUAL the literals',
+			title: 'every reachable declaration: occurrenceSectionList is its occurrences\' sections, sorted; contextPathSampleList is the first two readable paths of each section in document order; reachableVia is its occurrences\' routes; spanning declarations, units, the sections-per-declaration histogram, the longest sample and the literal\'s spanning example (College Transcript 1.8.0: ContactsType/Address, 7 paths, 4 sections, 5 samples) EQUAL the literals',
 			twinNameList: ['perSectionSampleOfOne'],
 			evaluate: (subject, callback) => {
 				if (reachabilityLiteralSet === undefined) {
@@ -1490,7 +1549,7 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 					const exampleHolds = exampleNode !== undefined && (view.occurrenceListByDeclaration[exampleNode.stableId] || []).length === example.occurrenceCount && JSON.stringify(widened(exampleNode.properties.occurrenceSectionList)) === JSON.stringify(example.occurrenceSectionList) && widened(exampleNode.properties.contextPathSampleList).length === example.contextPathSampleListLength;
 					const spanningCount = Object.keys(sectionCountHistogram).filter((oneCount) => Number(oneCount) > 1).reduce((soFar, oneCount) => soFar + sectionCountHistogram[oneCount], 0);
 					const pass = wrongList.length === 0 && exampleHolds && unitCount === reachabilityLiteralSet.judgmentUnitCount && spanningCount === reachabilityLiteralSet.spanningDeclarationCount && sortedCountText(sectionCountHistogram) === sortedCountText(reachabilityLiteralSet.sectionsPerDeclarationHistogram) && longestSample === reachabilityLiteralSet.perSectionSampleListMaxLength;
-					callback('', { pass, detail: `units ${unitCount}; spanning ${spanningCount}; histogram ${sortedCountText(sectionCountHistogram)}; longest sample ${longestSample}; Address holds ${exampleHolds}; wrong ${wrongList.length ? wrongList.slice(0, 2).join('; ') : 'none'}` });
+					callback('', { pass, detail: `units ${unitCount}; spanning ${spanningCount}; histogram ${sortedCountText(sectionCountHistogram)}; longest sample ${longestSample}; spanning example holds ${exampleHolds}; wrong ${wrongList.length ? wrongList.slice(0, 2).join('; ') : 'none'}` });
 				});
 			},
 		},
@@ -1548,8 +1607,8 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 		},
 		{
 			conjunctId: 'reachableDocumentationSource',
-			title: 'reachable element declarations by route and documentationSource EQUAL the literal (content and base: 367 own, 4 type, WORKORDER F2; xsiType-only: first measured in F3)',
-			twinNameList: ['highSchoolDocumentationBlankedReachable'],
+			title: 'reachable element declarations by route and documentationSource EQUAL the literal (College Transcript 1.8.0 content and base: 367 own, 4 type, WORKORDER F2; xsiType-only: first measured in F3)',
+			twinNameList: ['fixtureDocumentationBlankedReachable'],
 			evaluate: (subject, callback) => {
 				if (reachabilityLiteralSet === undefined || reachabilityLiteralSet.reachableDocumentationSourceCount === undefined) {
 					callback('', { pass: false, detail: `expectedReleaseLiterals.json has no reachability.reachableDocumentationSourceCount for ${releaseName}` });
@@ -1578,24 +1637,31 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 			embedTextDeclaration: { ...subject.forgeDeclaration.embedTextDeclaration, textPropertyListByRole: { ...subject.forgeDeclaration.embedTextDeclaration.textPropertyListByRole, [DME_ROLES.SUPPORT]: ['name', 'contextText'] } },
 		},
 	}));
-	registerReachabilityTwin(OCCURRENCE_TEXTS_GATE_ID, 'reachableDocumentationSource', 'highSchoolDocumentationBlankedReachable', 'inputFault', (subject) => ({ ...subject, snapshotDirPath: blankedHighSchoolSnapshot(subject) }));
+	registerReachabilityTwin(OCCURRENCE_TEXTS_GATE_ID, 'reachableDocumentationSource', 'fixtureDocumentationBlankedReachable', 'inputFault', (subject) => ({ ...subject, snapshotDirPath: blankedDocumentationSnapshot(subject) }));
 
 	// ---- F6-DIGEST (extra; NOTES-supervisor item 9: verdict carry depends on it)
 	const DIGEST_GATE_ID = 'F6-DIGEST';
 	const digestConjunctList = [
 		{
 			conjunctId: 'globalElementDigestCoversItsType',
-			title: "a global element's definitionDigest covers its resolved type, as an element's and an attribute's do: a scratch snapshot that alters only the documentation of LoanInformationType changes LoanInformation's digest",
+			title: "a global element's definitionDigest covers its resolved type, as an element's and an attribute's do: a scratch snapshot that alters only the documentation of LoanInformationType (adds one where it has none) changes LoanInformation's digest",
 			twinNameList: ['globalElementDigestDefinitionOnly'],
 			evaluate: (subject, callback) => {
 				const coreMainText = fs.readFileSync(path.join(subject.snapshotDirPath, coreMainFileName), 'latin1');
 				const typeOpenText = '<xs:complexType name="LoanInformationType">';
 				const typeStart = coreMainText.indexOf(typeOpenText);
-				const documentationStart = coreMainText.indexOf('<xs:documentation>', typeStart) + '<xs:documentation>'.length;
-				if (typeStart === -1 || documentationStart < typeStart + typeOpenText.length || coreMainText.indexOf('</xs:complexType>', typeStart) < documentationStart) {
-					throw new Error(`${moduleName}: fixture fault — LoanInformationType carries no documentation in ${coreMainFileName}`);
+				const typeEnd = coreMainText.indexOf('</xs:complexType>', typeStart);
+				const documentationOpenStart = coreMainText.indexOf('<xs:documentation>', typeStart);
+				if (typeStart === -1 || typeEnd === -1) {
+					throw new Error(`${moduleName}: fixture fault — no LoanInformationType in ${coreMainFileName}`);
 				}
-				const alteredSnapshotDirPath = makeScratchSnapshot({ baseSnapshotDirPath: subject.snapshotDirPath, alterTextByFileName: { [coreMainFileName]: (fileText) => `${fileText.slice(0, documentationStart)}Altered for the digest gate. ${fileText.slice(documentationStart)}` }, resealManifestEntry: true, resealChecksums: true });
+				// the type's own documentation is altered; a type with none (CoreMain 1.16.0, ePortfolio's) gains one,
+				// written first inside the type, where XSD puts it
+				const typeIsDocumented = documentationOpenStart !== -1 && documentationOpenStart < typeEnd && coreMainText.slice(typeStart + typeOpenText.length, documentationOpenStart).replace(/<xs:annotation>/, '').trim() === '';
+				const alteredCoreMainText = typeIsDocumented
+					? (fileText) => `${fileText.slice(0, documentationOpenStart + '<xs:documentation>'.length)}Altered for the digest gate. ${fileText.slice(documentationOpenStart + '<xs:documentation>'.length)}`
+					: (fileText) => `${fileText.slice(0, typeStart + typeOpenText.length)}<xs:annotation><xs:documentation>Added for the digest gate.</xs:documentation></xs:annotation>${fileText.slice(typeStart + typeOpenText.length)}`;
+				const alteredSnapshotDirPath = makeScratchSnapshot({ baseSnapshotDirPath: subject.snapshotDirPath, alterTextByFileName: { [coreMainFileName]: alteredCoreMainText }, resealManifestEntry: true, resealChecksums: true });
 				const digestOf = (forged, nameText) => forged.nodes.find((oneNode) => labelSuffixOf(oneNode) === nameText.labelSuffix && oneNode.properties.name === nameText.name).properties.definitionDigest;
 				forgeOrFail({ subject }, callback, (realForged) => {
 					forgeOrFail({ subject, snapshotDirPath: alteredSnapshotDirPath }, callback, (alteredForged) => {
@@ -1768,16 +1834,107 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 		},
 		{
 			conjunctId: 'untaughtAttributeRefusedByCensus',
-			title: "a scratch snapshot whose root NoteMessage element carries an untaught attribute (block=\"#all\") is REFUSED BY NAME by the parser's attribute census (QUIET_ORBIT ruling: no silent attribute drop)",
+			title: "a scratch snapshot whose fixture NoteMessage element carries an untaught attribute (block=\"#all\") is REFUSED BY NAME by the parser's attribute census (QUIET_ORBIT ruling: no silent attribute drop)",
 			twinNameList: ['attributeCensusDisabled'],
 			evaluate: (subject, callback) => {
-				const scratchSnapshotDirPath = makeScratchSnapshot({ baseSnapshotDirPath: subject.snapshotDirPath, alterTextByFileName: { [rootFileName]: (fileText, fileName) => replacedOnce({ fileText, findText: REMOVED_ELEMENT_TEXT, replaceText: REMOVED_ELEMENT_TEXT.replace('<xs:element name="NoteMessage"', '<xs:element block="#all" name="NoteMessage"'), fileName }) }, resealManifestEntry: true, resealChecksums: true });
+				const scratchSnapshotDirPath = makeScratchSnapshot({ baseSnapshotDirPath: subject.snapshotDirPath, alterTextByFileName: { [noteMessageFileName]: (fileText, fileName) => withOpenTagRewritten(fileText, fileName, (openTagText) => openTagText.replace('<xs:element ', '<xs:element block="#all" ')) }, resealManifestEntry: true, resealChecksums: true });
 				forgeSnapshot({ subject, snapshotDirPath: scratchSnapshotDirPath }, (forgeError, forged) => {
 					callback('', { pass: refusedLike({ forgeError, refusalRe: /xsdParser REFUSES: file '[^']+': attribute 'block' on xs:element \(a localElement/ }), detail: refusalDetail(forgeError, forged) });
 				});
 			},
 		},
 	];
+	// ---- F11 (phase F6): the documentation shapes the first measurement of the six releases found lost,
+	// proved on the release itself (its own counts, literals) AND on planted copies every release carries,
+	// so each fix's twin is red on every bundle, not only on the release that needed it
+	const PLANTED_ELEMENT_DOCUMENTATION_LIST = Object.freeze(['', 'planted second documentation (gate F11, phase F6)']);
+	const PLANTED_DERIVATION_DOCUMENTATION = 'planted derivation documentation (gate F11, phase F6)';
+	const PLANTED_FILE_DOCUMENTATION = 'planted trailing schema documentation (gate F11, phase F6)';
+	const DERIVATION_PLANT_OPEN_TEXT = '<xs:simpleType name="DocumentCompleteCodeType">';
+	const plantedDocumentationTextOf = (documentationList) => documentationList.map((oneText) => (oneText === '' ? '<xs:documentation/>' : `<xs:documentation>${oneText}</xs:documentation>`)).join('');
+	// the fixture NoteMessage gains an empty and a second documentation (an annotation if it had none)
+	const withElementDocumentationPlanted = (fileText, fileName) => {
+		const { elementStart, openTagEnd, elementEnd } = fixtureElementSpanOf(fileText, fileName);
+		const plantedText = plantedDocumentationTextOf(PLANTED_ELEMENT_DOCUMENTATION_LIST);
+		const openTagText = fileText.slice(elementStart, openTagEnd);
+		if (openTagText.endsWith('/>')) {
+			return `${fileText.slice(0, elementStart)}${openTagText.slice(0, -2)}><xs:annotation>${plantedText}</xs:annotation></xs:element>${fileText.slice(elementEnd)}`;
+		}
+		const annotationCloseStart = fileText.indexOf('</xs:annotation>', openTagEnd);
+		return annotationCloseStart !== -1 && annotationCloseStart < elementEnd
+			? `${fileText.slice(0, annotationCloseStart)}${plantedText}${fileText.slice(annotationCloseStart)}`
+			: `${fileText.slice(0, openTagEnd)}<xs:annotation>${plantedText}</xs:annotation>${fileText.slice(openTagEnd)}`;
+	};
+	// CoreMain's DocumentCompleteCodeType restriction gains its own annotation; a trailing schema-level
+	// annotation follows CoreMain's last definition
+	const withCoreMainDocumentationPlanted = (fileText, fileName) => {
+		const typeStart = fileText.indexOf(DERIVATION_PLANT_OPEN_TEXT);
+		const restrictionStart = typeStart === -1 ? -1 : fileText.indexOf('<xs:restriction', typeStart);
+		const restrictionOpenEnd = restrictionStart === -1 ? -1 : fileText.indexOf('>', restrictionStart) + 1;
+		const schemaCloseStart = fileText.lastIndexOf('</xs:schema>');
+		if (restrictionOpenEnd <= 0 || fileText.slice(restrictionOpenEnd).trimStart().startsWith('<xs:annotation') || schemaCloseStart === -1) {
+			throw new Error(`${moduleName}: fixture fault — no unannotated DocumentCompleteCodeType restriction, or no </xs:schema>, in ${fileName}`);
+		}
+		return `${fileText.slice(0, restrictionOpenEnd)}<xs:annotation>${plantedDocumentationTextOf([PLANTED_DERIVATION_DOCUMENTATION])}</xs:annotation>${fileText.slice(restrictionOpenEnd, schemaCloseStart)}<xs:annotation>${plantedDocumentationTextOf([PLANTED_FILE_DOCUMENTATION])}</xs:annotation>${fileText.slice(schemaCloseStart)}`;
+	};
+	const plantedDocumentationSnapshot = (subject) => {
+		const alterTextByFileName = { [coreMainFileName]: withCoreMainDocumentationPlanted };
+		alterTextByFileName[noteMessageFileName] = noteMessageFileName === coreMainFileName ? (fileText, fileName) => withElementDocumentationPlanted(withCoreMainDocumentationPlanted(fileText, fileName), fileName) : withElementDocumentationPlanted;
+		return makeScratchSnapshot({ baseSnapshotDirPath: subject.snapshotDirPath, alterTextByFileName, resealManifestEntry: true, resealChecksums: true });
+	};
+	// the shapes in a release's own source statements: an element-like declaration's empty or second
+	// documentation, a derivation's own annotation, a schema-level annotation not first among the children
+	const DECLARATION_DOCUMENTATION_KEY_RE = /\/\d+:(element|attribute)\/annotation\/documentation#(\d+)$|\|schema\/element:[^/]+\/annotation\/documentation#(\d+)$/;
+	const DERIVATION_ANNOTATION_KEY_RE = /:(restriction|extension)\/annotation$/;
+	const documentationShapeKeyListByName = (sourceStatements) => {
+		const keyListByName = { declarationDocumentationShapeCount: [], derivationAnnotationCount: [], fileAnnotationNotFirstCount: [] };
+		sourceStatements.forEach((oneStatement, oneStatementKey) => {
+			const declarationMatch = DECLARATION_DOCUMENTATION_KEY_RE.exec(oneStatementKey);
+			if (declarationMatch !== null && (oneStatement.text.trim() === '' || Number(declarationMatch[2] || declarationMatch[3]) > 1)) {
+				keyListByName.declarationDocumentationShapeCount.push(oneStatementKey);
+			}
+			if (DERIVATION_ANNOTATION_KEY_RE.test(oneStatementKey)) {
+				keyListByName.derivationAnnotationCount.push(oneStatementKey);
+			}
+			if (oneStatement.schemaChildSegmentList !== undefined && oneStatement.schemaChildSegmentList.indexOf('annotation') > 0) {
+				keyListByName.fileAnnotationNotFirstCount.push(oneStatementKey);
+			}
+		});
+		return keyListByName;
+	};
+	roundTripConjunctList.push({
+		conjunctId: 'documentationShapesRoundTrip',
+		title: "every element-like declaration's documentation list (an empty and a second documentation included), every derivation's own annotation and every schema-level annotation in its place are regenerated: on the release itself (each shape's count EQUALS the literal) and on a scratch copy that plants all three in every release (the fixture NoteMessage; CoreMain's DocumentCompleteCodeType restriction; a trailing CoreMain annotation), whose round trip is clean",
+		twinNameList: ['declarationDocumentationListDroppedByWalk', 'derivationAnnotationDroppedByWalk', 'fileAnnotationPositionIgnoredByEmitter'],
+		evaluate: (subject, callback) => {
+			if (roundTripLiteralSet === undefined || roundTripLiteralSet.documentationShapeCount === undefined) {
+				callback('', { pass: false, detail: `expectedReleaseLiterals.json has no roundTrip.documentationShapeCount for ${releaseName}` });
+				return;
+			}
+			sideStatementsOf({ subject }, callback, ({ sourceStatements, graphStatements }) => {
+				const keyListByName = documentationShapeKeyListByName(sourceStatements);
+				const failingList = [];
+				Object.keys(keyListByName).forEach((shapeName) => {
+					const unregeneratedKey = keyListByName[shapeName].find((oneStatementKey) => !sameStatement(sourceStatements.get(oneStatementKey), graphStatements.get(oneStatementKey)));
+					if (keyListByName[shapeName].length !== roundTripLiteralSet.documentationShapeCount[shapeName] || unregeneratedKey !== undefined) {
+						failingList.push(`${shapeName} ${keyListByName[shapeName].length} (literal ${roundTripLiteralSet.documentationShapeCount[shapeName]})${unregeneratedKey ? ` not regenerated ${unregeneratedKey}` : ''}`);
+					}
+				});
+				sideStatementsOf({ subject: { ...subject, snapshotDirPath: plantedDocumentationSnapshot(subject) } }, callback, (planted) => {
+					const plantedDiff = roundTripPairOf(subject).diffStatementsOf({ sourceStatements: planted.sourceStatements, graphStatements: planted.graphStatements });
+					const plantedGapList = plantedDiff.lostList.filter((oneLost) => oneLost.lostCategory === 'contentGap');
+					const plantedKeyListByName = documentationShapeKeyListByName(planted.sourceStatements);
+					const everyShapePlanted = Object.keys(plantedKeyListByName).every((shapeName) => plantedKeyListByName[shapeName].length > keyListByName[shapeName].length);
+					const pass = failingList.length === 0 && everyShapePlanted && plantedGapList.length === 0 && plantedDiff.inventedList.length === 0;
+					callback('', { pass, detail: `release ${Object.keys(keyListByName).map((shapeName) => `${shapeName} ${keyListByName[shapeName].length}`).join(', ')}; failing ${failingList.length ? failingList.join('; ') : 'none'}; planted copy: every shape planted ${everyShapePlanted}, contentGap ${plantedGapList.length}${plantedGapList.length ? ` (first ${plantedGapList[0].statementKey})` : ''}, invented ${plantedDiff.inventedList.length}` });
+				});
+			});
+		},
+	});
+	registerRoundTripTwin(ROUND_TRIP_GATE_ID, 'documentationShapesRoundTrip', 'declarationDocumentationListDroppedByWalk', 'productionMutation', (subject) => addMutation(subject, 'hooksMutationList', { modulePath: WALK_PATH, find: '					documentationValueList: oneElement.documentationValues,', replace: '					documentationValueList: nonBlankOrNull(oneElement.documentation) === null ? null : [oneElement.documentation],' }));
+	registerRoundTripTwin(ROUND_TRIP_GATE_ID, 'documentationShapesRoundTrip', 'derivationAnnotationDroppedByWalk', 'productionMutation', (subject) => addMutation(subject, 'hooksMutationList', { modulePath: WALK_PATH, find: 'derivationDocumentationValueList: derivation.documentationValues };', replace: 'derivationDocumentationValueList: null };' }));
+	registerRoundTripTwin(ROUND_TRIP_GATE_ID, 'documentationShapesRoundTrip', 'fileAnnotationPositionIgnoredByEmitter', 'productionMutation', (subject) => addMutation(subject, 'roundTripMutationList', { modulePath: ROUND_TRIP_PAIR_PATH, find: 'placedList.push({ documentPosition: oneAnnotation.afterDocumentPosition + (annotationIndex + 1) / FILE_ANNOTATION_POSITION_DIVISOR,', replace: 'placedList.push({ documentPosition: (annotationIndex + 1) / FILE_ANNOTATION_POSITION_DIVISOR,' }));
+
 	registerRoundTripTwin(ROUND_TRIP_GATE_ID, 'hermeticRoundTripClean', 'oneCodeDeletedFromDouble', 'inputFault', (subject) => ({ ...subject, doubleFaultName: 'oneCodeDeleted' }));
 	registerRoundTripTwin(ROUND_TRIP_GATE_ID, 'hermeticRoundTripClean', 'oneCodeInjectedIntoDouble', 'inputFault', (subject) => ({ ...subject, doubleFaultName: 'oneCodeInjected' }));
 	registerRoundTripTwin(ROUND_TRIP_GATE_ID, 'canonicalizerIsNotTheParser', 'canonicalizerRequiresTheParser', 'productionMutation', (subject) => addMutation(subject, 'roundTripMutationList', { modulePath: ROUND_TRIP_PAIR_PATH, find: "const sax = require('sax');", replace: "const sax = require('sax');\nconst forgeTreeReader = require('./xsdTree');" }));
@@ -1832,6 +1989,46 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 		},
 	];
 	registerRoundTripTwin(COMPILE_GATE_ID, 'regeneratedRootCompiles', 'oneDefinitionDroppedFromRegeneration', 'inputFault', (subject) => ({ ...subject, dropRegeneratedDefinition: true }));
+	// ---- F12 (phase F6, NOTES-supervisor item 13): a namespaced schema attribute (ePortfolio's vc:minVersion)
+	// is regenerated with its prefix bound, so every regenerated file is namespace-well-formed
+	const sax = require('sax');
+	const NAMESPACED_SCHEMA_ATTRIBUTE_NAME_RE = /^\{[^}]+\}.+$/;
+	const UNBOUND_PROBE_ATTRIBUTE_NAME = 'zz:unboundProbe';
+	const namespaceErrorListOf = (fileText) => {
+		const errorList = [];
+		const strictParser = sax.parser(true, { xmlns: true });
+		strictParser.onerror = (parseError) => {
+			errorList.push(parseError.message.split('\n')[0]);
+			strictParser.resume();
+		};
+		strictParser.write(fileText).close();
+		return errorList;
+	};
+	compileConjunctList.push({
+		conjunctId: 'regeneratedFilesNamespaceWellFormed',
+		title: "every file regenerated from the graph double parses as namespace-well-formed XML (sax, strict, xmlns): every prefix it writes is bound, a namespaced schema attribute's included; the count of namespaced schema attributes EQUALS the literal",
+		twinNameList: ['unboundSchemaAttributeInDouble'],
+		evaluate: (subject, callback) => {
+			if (roundTripLiteralSet === undefined || roundTripLiteralSet.namespacedSchemaAttributeCount === undefined) {
+				callback('', { pass: false, detail: `expectedReleaseLiterals.json has no roundTrip.namespacedSchemaAttributeCount for ${releaseName}` });
+				return;
+			}
+			forgeOrFail({ subject }, callback, (forged) => {
+				const doubledForged = subject.unboundSchemaAttribute ? { nodes: forged.nodes.map((oneNode, nodeIndex) => (nodeIndex === forged.nodes.findIndex((candidateNode) => labelSuffixOf(candidateNode) === 'SchemaFile') ? { ...oneNode, properties: { ...oneNode.properties, schemaAttributeList: JSON.stringify({ ...JSON.parse(oneNode.properties.schemaAttributeList || '{}'), [UNBOUND_PROBE_ATTRIBUTE_NAME]: 'probe' }) } } : oneNode)), edges: forged.edges } : forged;
+				const namespacedCount = forged.nodes.filter((oneNode) => labelSuffixOf(oneNode) === 'SchemaFile').reduce((soFar, oneNode) => soFar + Object.keys(JSON.parse(oneNode.properties.schemaAttributeList || '{}')).filter((oneName) => NAMESPACED_SCHEMA_ATTRIBUTE_NAME_RE.test(oneName)).length, 0);
+				roundTripPairOf(subject).makeRoundTripPair({ labelPrefix: releaseDeclarationData.labelPrefix }).regenerateFromGraph({ reader: roundTripHarnessLib.graphDoubleFrom({ forgeResult: doubledForged }) }, (regenerateError, regenerated) => {
+					if (regenerateError || regenerated.fault !== undefined) {
+						callback('', { pass: false, detail: `regeneration: ${regenerateError || regenerated.fault}` });
+						return;
+					}
+					const errorTextList = [];
+					Object.keys(regenerated.fileTextByName).sort().forEach((oneFileName) => namespaceErrorListOf(regenerated.fileTextByName[oneFileName]).forEach((oneError) => errorTextList.push(`${oneFileName}: ${oneError}`)));
+					callback('', { pass: errorTextList.length === 0 && namespacedCount === roundTripLiteralSet.namespacedSchemaAttributeCount, detail: `${Object.keys(regenerated.fileTextByName).length} files; namespaced schema attributes ${namespacedCount} (literal ${roundTripLiteralSet.namespacedSchemaAttributeCount}); namespace errors ${errorTextList.length ? errorTextList.slice(0, 2).join(' | ') : 'none'}` });
+				});
+			});
+		},
+	});
+	registerRoundTripTwin(COMPILE_GATE_ID, 'regeneratedFilesNamespaceWellFormed', 'unboundSchemaAttributeInDouble', 'inputFault', (subject) => ({ ...subject, unboundSchemaAttribute: true }));
 
 	// ---- F20-DERIVED-OUT
 	const DERIVED_GATE_ID = 'F20-DERIVED-OUT';
@@ -1877,7 +2074,7 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 		{ gateId: COMPILE_GATE_ID, title: 'F12 the regenerated files compile', conjunctList: compileConjunctList },
 		{ gateId: DERIVED_GATE_ID, title: 'F20 derived structure out of the round trip', conjunctList: derivedConjunctList },
 	];
-	const makeRoundTripSubject = () => ({ ...makeSubject(), roundTripMutationList: [], doubleFaultName: null, dropRegeneratedDefinition: false });
+	const makeRoundTripSubject = () => ({ ...makeSubject(), roundTripMutationList: [], doubleFaultName: null, dropRegeneratedDefinition: false, unboundSchemaAttribute: false });
 	const cloneRoundTripSubject = (subject) => ({ ...cloneSubject(subject), roundTripMutationList: subject.roundTripMutationList.slice() });
 
 	const makeReachabilitySubject = () => ({ ...makeSubject(), scopeToolMutationList: [] });
@@ -1894,7 +2091,7 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 						{ harness, familyName: `${standardKey} reachability gates (phase F3)`, gateDeclarationList: reachabilityGateDeclarationList, twinRegistry: reachabilityTwinRegistry, makeSubject: makeReachabilitySubject, cloneSubject: cloneReachabilitySubject, expectedConjunctCount: 12, expectedTwinCount: 14 },
 						() => {
 							runGateFamily(
-								{ harness, familyName: `${standardKey} round-trip gates (phase F4)`, gateDeclarationList: roundTripGateDeclarationList, twinRegistry: roundTripTwinRegistry, makeSubject: makeRoundTripSubject, cloneSubject: cloneRoundTripSubject, expectedConjunctCount: 7, expectedTwinCount: 10 },
+								{ harness, familyName: `${standardKey} round-trip gates (phase F4)`, gateDeclarationList: roundTripGateDeclarationList, twinRegistry: roundTripTwinRegistry, makeSubject: makeRoundTripSubject, cloneSubject: cloneRoundTripSubject, expectedConjunctCount: 9, expectedTwinCount: 14 },
 								() => {
 									scratchRootPathList.forEach((oneScratchRootPath) => fs.rmSync(oneScratchRootPath, { recursive: true, force: true }));
 									whenDone();
