@@ -653,7 +653,12 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // F6's own two intermediate re-anchors of this constant (postPescF6PescComposeA-100126, postPescF6EportfolioPescComposeA-100126)
 // were dropped in the rebase. No framework source moved. Six declared paths unchanged, no exclusion added; the tag is cut ON
 // this re-anchor commit.
-const P1_BASELINE_COMMIT = 'postPescF6B1MergedPescComposeA-100126'; // re-anchored by QUIET_CIPHER on the merged F6+B1 head; the tag is cut ON the re-anchor commit
+// RE-ANCHOR 2026-10-01 (COPPER_MARBLE; pre-authorised, NOTES-supervisor item 5, goldJev lane A): postPescF6B1MergedPescComposeA-100126 ->
+// postGoldJevAPescComposeA-100126. CENSUS (numstat from postPescF6B1MergedPescComposeA-100126 over the six declared paths, 1 path, from ONE
+// commit, 2cfe657): apps/graph-builder/apps/bridge-maker/lib/jevJudgeClient.js 3/1 (the Jev client retries the edge proxy's
+// 520-524 like the 50x family; one 520 killed jevBuild2's SIF run; ruled by QUIET_ORBIT, its test b0b39ca). Six declared
+// paths unchanged, no exclusion added; the tag is cut ON this re-anchor commit.
+const P1_BASELINE_COMMIT = 'postGoldJevAPescComposeA-100126'; // re-anchored by COPPER_MARBLE for goldJev lane A; the tag is cut ON the re-anchor commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
