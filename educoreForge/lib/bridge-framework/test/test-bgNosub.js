@@ -570,7 +570,14 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // postPescF5SeamDiffEmpty-100126, tag cut ON this re-anchor commit. CENSUS (git diff --stat postPescF1SeamDiffEmpty-093026 -- the
 // seam paths) at cceeeb2: exactly the two files of the ruled framework fix 39f0502, both under lib/forge-framework/roundTripHarness/
 // (roundTripHarness.js 6, test/test-gRt.js 30). SEAM_PATH_LIST byte-identical. Fresh red observed against THIS tag (DEVLOG-F5).
-const PHASE3_ANCHOR_TAG = 'postPescF5SeamDiffEmpty-100126'; // re-anchored by AMBER_PORTAL, PESC release forge F5
+// PESC F6 RE-ANCHOR (QUIET_CIPHER, 2026-10-01; pre-authorised, NOTES-supervisor item 5): postPescF5SeamDiffEmpty-100126 ->
+// postPescF6SeamDiffEmpty-100126, tag cut ON this re-anchor commit. CENSUS (git diff --stat postPescF5SeamDiffEmpty-100126 -- the
+// seam paths) at 99fcd04: exactly the six NEW PESC release bundles' entry modules (99fcd04), each 28+, written by the scaffold
+// tool and matched by forges/*/forge*.js, the FJ-P1-1 species F1 foretold: forgePescHighSchoolTranscript1v6v0.js,
+// forgePescTestScoreReport1v1v0.js, forgePescDocumentRequest1v0v0.js, forgePescDocumentResponse1v0v0.js,
+// forgePescLearningRecord1v0v0.js, forgePescAcademicEportfolio1v0v0.js. Every existing forge's files, build.js, replay/,
+// replay-manager/ and lib/forge-framework/: UNTOUCHED. SEAM_PATH_LIST byte-identical. Fresh red observed against THIS tag (DEVLOG-F6).
+const PHASE3_ANCHOR_TAG = 'postPescF6SeamDiffEmpty-100126'; // re-anchored by QUIET_CIPHER, PESC release forge F6
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');
