@@ -1,0 +1,35 @@
+{
+  // goldJevFour — TQ's pure-Jev four-standard gold graph for the dev DME (CAMPAIGN-goldJevFour-100126, BRIEF-A,
+  // 2026-10-01): the CEDS hub, Ed-Fi, the new SIF (sif260928) and PESC College Transcript 1.8.0, with every bridge
+  // those three ship that a judge can run under Jev.
+  //
+  // THE ED-FI CROSSWALK IS DELIBERATELY ABSENT (QUIET_ORBIT ruling, 2026-10-01, on TQ's rule 3 "pure Jev").
+  // edfiCedsCrosswalkPlugin is not judge-free: its frozen block carries Anthropic (claude-opus-4-8) judgments, and Jev
+  // cannot judge a crosswalk question, because the crosswalk prompt variant declares no subjectData/candidateData and
+  // so carries no choiceQuestion, which the Jev client requires. Ed-Fi is mapped by edfiCedsDerivedPlugin under Jev.
+  // Teaching the crosswalk variant to Jev is on the docket for after lane C.
+  //
+  // THE JUDGE is chosen by graphBuilder.ini [judgeProvider] judgeProviderName (=jev), not here; every block header
+  // records judgeKind. --rebridge freezes new blocks; a plain -build replays them with zero judge calls.
+  //
+  // GNC-001: the product is renamed GOLD_EVAL_<YYMMDD>_jevFour only after goldEvalCheck PASS.
+  "schemaVersion": "1.0.0",
+  "recipeName": "goldJevFour",
+  "kind": "dev",
+  "description": "Pure-Jev gold graph: CEDS hub, Ed-Fi, SIF 260928 and PESC College Transcript v1.8.0, with the Ed-Fi derived, SIF 260928 derived and PESC CT 1.8.0 derived bridges judged by Jev (Ed-Fi crosswalk excluded: Opus-judged, not Jev-judgeable).",
+  "standards": [
+    { "token": "ceds", "version": "current" },
+    { "token": "edfi", "version": "current" },
+    { "token": "sif260928", "version": "current" },
+    { "token": "pesccollegetranscript1v8v0", "version": "current" }
+  ],
+  "hubs": [
+    { "standard": "ceds" }
+  ],
+  "bridges": [
+    { "source": "edfi", "hub": "ceds", "bridge": "edfiCedsDerivedPlugin", "dependencies": ["edfi", "ceds"] },
+    { "source": "sif260928", "hub": "ceds", "bridge": "sif260928CedsDerivedPlugin", "dependencies": ["sif260928", "ceds"] },
+    { "source": "pesccollegetranscript1v8v0", "hub": "ceds", "bridge": "pescCollegeTranscript1v8v0CedsDerivedPlugin", "dependencies": ["pesccollegetranscript1v8v0", "ceds"] }
+  ],
+  "roundTripStage": true
+}
