@@ -257,7 +257,14 @@ const POST_D1_BASE_TAG = 'postM1VocabularyIi-092926'; // re-anchored 2026-09-29 
 //     B6's harvest fix in its seam files. This is the trap recorded above: that file sits in (iii)'s watched set with no exclusion.
 // No framework SOURCE file under lib/forge-framework/ moved in B6. THE PATH IS UNCHANGED, NO EXCLUSION IS ADDED. Fresh red observed
 // against THIS tag (DEVLOG-B6).
-const PHASE0_ANCHOR_TAG = 'postB6ForgeFrameworkIii-092926'; // re-anchored by IVORY_MIRROR, SIF replacement B6 — the EIGHTH anchor
+// PESC F5 RE-ANCHOR OF (iii) (AMBER_PORTAL, 2026-10-01; seam re-anchors PRE-AUTHORISED for the PESC campaign by QUIET_ORBIT,
+// NOTES-supervisor item 5; the framework change itself ruled by QUIET_ORBIT for F5). postB6ForgeFrameworkIii-092926 ->
+// postPescF5ForgeFrameworkIii-100126, tag cut ON this re-anchor commit. CENSUS (git diff --stat postB6ForgeFrameworkIii-092926
+// -- lib/forge-framework/) at 39f0502: exactly TWO files, both the ruled framework fix (commit 39f0502):
+//   roundTripHarness/roundTripHarness.js | 6 — a verdict written with a graphIdentity also carries it as .graph (goldEvalCheck reads it)
+//   roundTripHarness/test/test-gRt.js    | 30 — G-RT conjunct endpointWhereCertificationReadsIt and its red twin
+// THE PATH IS UNCHANGED, NO EXCLUSION IS ADDED. Fresh red observed against THIS tag (DEVLOG-F5).
+const PHASE0_ANCHOR_TAG = 'postPescF5ForgeFrameworkIii-100126'; // re-anchored by AMBER_PORTAL, PESC release forge F5 — the NINTH anchor
 // PHASE 1 RE-ANCHOR — RULING FJ-P1-1, and it moves seamDiffEmpty ALONE.
 //
 // WHY IT HAD TO MOVE. SEAM_PATH_LIST watches forges/*/forge*.js, forges/*/lib/*Declaration.js and
