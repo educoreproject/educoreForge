@@ -547,7 +547,19 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // forge's entry/declaration/hooks files and every framework source file under lib/forge-framework/: UNTOUCHED. i_live reads the same
 // tag and moves with it (B6's interfaces.js change is JSDoc only). PATH LIST BYTE-IDENTICAL, no exclusion added. Fresh red observed
 // against THIS tag (DEVLOG-B6).
-const PHASE3_ANCHOR_TAG = 'postB6SeamDiffEmpty-092926'; // re-anchored by IVORY_MIRROR, SIF replacement B6
+// ═══ RE-ANCHOR seamDiffEmpty (+ i_live), 2026-09-30 (MARBLE_BRIDGE; RULING QUIET_ORBIT), PESC release forge phase F1 ═══
+// postB6SeamDiffEmpty-092926 -> postPescF1SeamDiffEmpty-093026, tag cut ON this re-anchor commit. CENSUS (git diff --stat
+// postB6SeamDiffEmpty-092926 -- <SEAM_PATH_LIST>) at F1's head 3b66069, 2 files, 41+/1−, both ruled:
+//   forges/pesccollegetranscript1v8v0/forgePescCollegeTranscript1v8v0.js | 28 — the NEW PESC College Transcript 1.8.0 release
+//     bundle (891565f), written by lib/pesc-release-forge/tools/scaffoldReleaseBundle.js, matched by forges/*/forge*.js: the
+//     FJ-P1-1 species, a forge phase re-anchors this conjunct (every later PESC release bundle will be the same species);
+//   apps/graph-builder/apps/forger/test/test-forger.js | 14 — the 'NO FORGE BUNDLE AT ALL' assertion re-anchored from an
+//     alphabetical prefix of the roster to an order-free set check (3b66069, QUIET_ORBIT ruling (a)).
+// The new bundle's lib/declaration.js and the shared lib/pesc-release-forge/hooks.js are outside the pathspecs (case-sensitive
+// *Declaration.js / *Hooks.js; forges/* only). build.js, replay/, replay-manager/, every existing forge's entry/declaration/hooks
+// files and every framework source file under lib/forge-framework/: UNTOUCHED. i_live reads the same tag and moves with it.
+// PATH LIST BYTE-IDENTICAL, no exclusion added. Fresh red observed against THIS tag (DEVLOG-F1 §8.2).
+const PHASE3_ANCHOR_TAG = 'postPescF1SeamDiffEmpty-093026'; // re-anchored by MARBLE_BRIDGE, PESC release forge F1
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');
