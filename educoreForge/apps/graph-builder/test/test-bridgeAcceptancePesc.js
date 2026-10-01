@@ -626,7 +626,13 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // lib/bridge-framework/test/test-bgJudgeSlot.js 4/2 (a roster edit: BG-JUDGESLOT d's SHIPPED_PLUGIN_LIST row for
 // edfiCedsDerivedPlugin now resolves to derivedJudgeSlot; D1 precedent). The plugin itself lives under forges/, outside
 // the six paths. No framework source moved. Six declared paths unchanged, no exclusion added; the tag is cut ON this commit.
-const P1_BASELINE_COMMIT = 'postJevRelationsR2PescComposeA-093026'; // re-anchored by IVORY_ECHO for jevRelations R2; the tag is cut ON the re-anchor commit
+// RE-ANCHOR 2026-09-30 (MARBLE_BRIDGE; QUIET_ORBIT ruling, PESC release forge F1): postJevRelationsR2PescComposeA-093026 ->
+// postPescF1PescComposeA-093026. CENSUS (numstat from postJevRelationsR2PescComposeA-093026 over the six declared paths, 1 path,
+// from ONE commit, 3388011): lib/bridge-framework/test/test-bgNosub.js 13/1 (the BG-SEAM-UNTOUCHED re-anchor to
+// postPescF1SeamDiffEmpty-093026, which the new PESC release bundle required). No framework source moved; the release forge's
+// shared library lives under lib/pesc-release-forge/, outside the six paths. Six declared paths unchanged, no exclusion added;
+// the tag is cut ON this re-anchor commit.
+const P1_BASELINE_COMMIT = 'postPescF1PescComposeA-093026'; // re-anchored by MARBLE_BRIDGE for PESC release forge F1; the tag is cut ON the re-anchor commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
