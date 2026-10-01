@@ -845,6 +845,59 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 			},
 		},
 	];
+	edgesConjunctList.push({
+		conjunctId: 'everyDeclarationHasItsTypeEdge',
+		title: "every element-like declaration (element, attribute, global element) typed by a named type has exactly one REFERENCES_TYPE or HAS_OPTION_SET edge to that type, every declaration with an anonymous code list has HAS_OPTION_SET to it (QUIET_ORBIT ruling), and the counts by declaration kind EQUAL the frozen literal",
+		twinNameList: ['attributeTypeEdgesDropped', 'anonymousOptionSetEdgeDropped'],
+		evaluate: (subject, callback) => {
+			if (walkLiteralSet === undefined || walkLiteralSet.typeEdgeCountByDeclaration === undefined) {
+				callback('', missingLiteralResult('typeEdgeCountByDeclaration'));
+				return;
+			}
+			forgeOrFail({ subject }, callback, (forged) => {
+				const nodeByStableId = {};
+				forged.nodes.forEach((oneNode) => {
+					nodeByStableId[oneNode.stableId] = oneNode;
+				});
+				const topLevelTypeByQName = {};
+				forged.nodes
+					.filter((oneNode) => oneNode.properties.documentPosition !== undefined && ['Type', 'CodeList', 'DataType'].indexOf(labelSuffixOf(oneNode)) !== -1)
+					.forEach((oneNode) => {
+						topLevelTypeByQName[`${oneNode.properties.targetNamespace}#${oneNode.properties.name}`] = oneNode;
+					});
+				const typeEdgeList = forged.edges.filter((oneEdge) => oneEdge.type === 'REFERENCES_TYPE' || oneEdge.type === 'HAS_OPTION_SET');
+				const typeEdgeTargetListByDeclaration = {};
+				const countByDeclaration = {};
+				typeEdgeList.forEach((oneEdge) => {
+					(typeEdgeTargetListByDeclaration[oneEdge.fromRef.id] = typeEdgeTargetListByDeclaration[oneEdge.fromRef.id] || []).push(oneEdge.toRef.id);
+					const toNode = nodeByStableId[oneEdge.toRef.id];
+					const countName = `${oneEdge.type} ${labelSuffixOf(nodeByStableId[oneEdge.fromRef.id])} -> ${oneEdge.toRef.id.endsWith('/anon') ? 'anonymous ' : ''}${labelSuffixOf(toNode)}`;
+					countByDeclaration[countName] = (countByDeclaration[countName] || 0) + 1;
+				});
+				const wrongList = [];
+				forged.nodes
+					.filter((oneNode) => ['Element', 'Attribute', 'GlobalElement'].indexOf(labelSuffixOf(oneNode)) !== -1)
+					.forEach((oneNode) => {
+						const namedType = topLevelTypeByQName[oneNode.properties.typeQName];
+						const anonymousNode = nodeByStableId[`${oneNode.stableId}/anon`];
+						const expectedTarget = namedType !== undefined ? namedType.stableId : anonymousNode !== undefined && labelSuffixOf(anonymousNode) === 'CodeList' ? anonymousNode.stableId : undefined;
+						const actualTargetList = typeEdgeTargetListByDeclaration[oneNode.stableId] || [];
+						if (expectedTarget === undefined ? actualTargetList.length !== 0 : actualTargetList.length !== 1 || actualTargetList[0] !== expectedTarget) {
+							wrongList.push(`${oneNode.stableId} → [${actualTargetList.join(', ')}]`);
+						}
+					});
+				const sortedText = (countMap) => JSON.stringify(Object.keys(countMap).sort().map((oneName) => [oneName, countMap[oneName]]));
+				const pass = wrongList.length === 0 && sortedText(countByDeclaration) === sortedText(walkLiteralSet.typeEdgeCountByDeclaration);
+				callback('', { pass, detail: `${sortedText(countByDeclaration)}; wrong ${wrongList.length ? wrongList.slice(0, 3).join('; ') : 'none'}` });
+			});
+		},
+	});
+	registerWalkTwin(EDGES_GATE_ID, 'everyDeclarationHasItsTypeEdge', 'attributeTypeEdgesDropped', 'productionMutation', (subject) =>
+		addMutation(subject, 'hooksMutationList', { modulePath: WALK_PATH, find: '			addTypeEdge({ declarationStableId: attributeStableId, target: typed.target });\n', replace: '' }),
+	);
+	registerWalkTwin(EDGES_GATE_ID, 'everyDeclarationHasItsTypeEdge', 'anonymousOptionSetEdgeDropped', 'productionMutation', (subject) =>
+		addMutation(subject, 'hooksMutationList', { modulePath: WALK_PATH, find: '			addEdge({ edgeType: EDGE_TYPES.HAS_OPTION_SET, fromStableId: ownerDeclarationStableId, toStableId: anonymousStableId });\n', replace: '' }),
+	);
 	registerWalkTwin(EDGES_GATE_ID, 'edgeCountsEqualLiterals', 'dataTypeSupportRestored', 'productionMutation', (subject) =>
 		addMutation(subject, 'hooksMutationList', { modulePath: WALK_PATH, find: '	group: EDGE_TYPES.HAS_SUPPORT,\n	type: EDGE_TYPES.HAS_CLASS,', replace: '	group: EDGE_TYPES.HAS_SUPPORT,\n	dataType: EDGE_TYPES.HAS_SUPPORT,\n	type: EDGE_TYPES.HAS_CLASS,' }),
 	);
@@ -1052,7 +1105,7 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 		{ harness, familyName: `${standardKey} release gates (phase F1)`, gateDeclarationList, twinRegistry, makeSubject, cloneSubject, expectedConjunctCount: 17, expectedTwinCount: 17 },
 		() => {
 			runGateFamily(
-				{ harness, familyName: `${standardKey} walk gates (phase F2)`, gateDeclarationList: walkGateDeclarationList, twinRegistry: walkTwinRegistry, makeSubject: makeWalkSubject, cloneSubject, expectedConjunctCount: 14, expectedTwinCount: 14 },
+				{ harness, familyName: `${standardKey} walk gates (phase F2)`, gateDeclarationList: walkGateDeclarationList, twinRegistry: walkTwinRegistry, makeSubject: makeWalkSubject, cloneSubject, expectedConjunctCount: 15, expectedTwinCount: 16 },
 				() => {
 					scratchRootPathList.forEach((oneScratchRootPath) => fs.rmSync(oneScratchRootPath, { recursive: true, force: true }));
 					whenDone();

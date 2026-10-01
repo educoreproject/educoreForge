@@ -26,20 +26,20 @@
 				"inReleaseReferenceCount": 1272
 			},
 			"walk": {
-				"literalSource": "WORKORDER section 3 F2 (edge counts, NoteMessage, text ceiling); evidence/graphModelSummary.json; the NoteMessage total ruled 103 = 50 + 52 + 1 by QUIET_ORBIT 2026-09-30 (the work order's 102 omitted the root file). textNodeCount, documentationSourceCountByLabelSuffix beyond the 1,220 own-text elements, and sequenceCountByOrderSemantics were first measured by phase F2 (MARBLE_BRIDGE, 2026-09-30).",
+				"literalSource": "WORKORDER section 3 F2 (edge counts, NoteMessage, text ceiling); evidence/graphModelSummary.json; the NoteMessage total ruled 103 = 50 + 52 + 1 by QUIET_ORBIT 2026-09-30 (the work order's 102 omitted the root file). textNodeCount, documentationSourceCountByLabelSuffix beyond the 1,220 own-text elements, and sequenceCountByOrderSemantics were first measured by phase F2 (MARBLE_BRIDGE, 2026-09-30). MOVED by QUIET_ORBIT's ruling on DEVLOG-F2 §10 (2026-09-30): every element-like declaration gets its type edge, and a declaration with an anonymous code list gets HAS_OPTION_SET to it. Before the move: REFERENCES_TYPE 961 (type 322, dataType 639), HAS_OPTION_SET 160. After, measured by phase F2: REFERENCES_TYPE 974 (type 332, dataType 642), HAS_OPTION_SET 177; the per-declaration split is typeEdgeCountByDeclaration.",
 				"edgeCountByType": {
 					"HAS_CLASS": 222,
-					"HAS_OPTION_SET": 160,
+					"HAS_OPTION_SET": 177,
 					"HAS_PROPERTY": 1230,
 					"HAS_SUPPORT": 14,
 					"HAS_VALUE": 2741,
 					"REFERENCES": 28,
-					"REFERENCES_TYPE": 961,
+					"REFERENCES_TYPE": 974,
 					"SUBCLASS_OF": 110
 				},
 				"referencesTypeCountByTarget": {
-					"dataType": 639,
-					"type": 322
+					"dataType": 642,
+					"type": 332
 				},
 				"subclassOfCountByVariety": {
 					"extension": 51,
@@ -69,6 +69,14 @@
 					"AcademicRecord_v1.13.0.xsd": 50,
 					"CollegeTranscript_v1.8.0.xsd": 1,
 					"CoreMain_v1.19.0.xsd": 52
+				},
+				"typeEdgeCountByDeclaration": {
+					"HAS_OPTION_SET Element -> CodeList": 160,
+					"HAS_OPTION_SET Element -> anonymous CodeList": 17,
+					"REFERENCES_TYPE Attribute -> DataType": 3,
+					"REFERENCES_TYPE Element -> DataType": 639,
+					"REFERENCES_TYPE Element -> Type": 322,
+					"REFERENCES_TYPE GlobalElement -> Type": 10
 				}
 			}
 		}

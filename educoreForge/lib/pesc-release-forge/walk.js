@@ -14,17 +14,17 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // global element) and everything it owns (local elements, attributes, anonymous types, codes). And it
 // adds HAS_SUPPORT (root → release record, schema files, groups; NOT data types, stand-down item 1),
 // HAS_CLASS (root → named complex type), HAS_PROPERTY (owner → local element or attribute),
-// REFERENCES_TYPE (local element → named complex type or data type), HAS_OPTION_SET (local element →
-// named code list), HAS_VALUE (code list → code), SUBCLASS_OF (derivation owner → named base, with
+// REFERENCES_TYPE (declaration → named complex type or data type), HAS_OPTION_SET (declaration →
+// named or anonymous code list), HAS_VALUE (code list → code), SUBCLASS_OF (derivation owner → named base, with
 // derivationVariety), REFERENCES (owner → group it references; global element → its substitution
 // group head).
 //
-// Which declarations get the type edges follows the planner's counted model exactly
-// (evidence/graphModel.js, whose numbers are the work order's literals): LOCAL elements only, typed
-// by a NAMED type. Attributes and global elements carry their typeQName as a property and get no
-// type edge; an anonymous type is its declaration's child (parentId), not an edge target; and an
-// anonymous code list therefore has no HAS_OPTION_SET. These are recorded in DEVLOG-F2 as open
-// items, not silent drops.
+// Every element-like declaration (local element, attribute, global element) gets the same type edge
+// to a NAMED type: REFERENCES_TYPE to a complex type or data type, HAS_OPTION_SET to a code list. And
+// a declaration whose code list is ANONYMOUS gets HAS_OPTION_SET to it, because the DME reaches an
+// option set only through that edge (QUIET_ORBIT ruling on DEVLOG-F2 §10, 2026-09-30, which moved
+// the work order's literals; the planner's model had counted local elements to named types only).
+// An anonymous complex type or data type stays its declaration's child (parentId) with no edge.
 //
 // Occurrences, HAS_INSTANCE, HAS_CHILD, reachableFromRoot and the context paths are phase F3.
 //
@@ -218,6 +218,18 @@ const emitReleaseGraph = ({ xsdSet, loadedManifestEntry, standardKey, nodeKindTa
 		addEdge({ edgeType: EDGE_TYPES.HAS_SUPPORT, fromStableId: rootStableId, toStableId: schemaFileStableId });
 	});
 
+	// the type edge of any element-like declaration to the named type it references
+	const addTypeEdge = ({ declarationStableId, target }) => {
+		if (target === null) {
+			return;
+		}
+		const typeEdgeType = TYPE_EDGE_BY_TARGET_NODE_KIND[target.nodeKind];
+		if (typeEdgeType === undefined) {
+			throw refuse.byName({ moduleName, what: `${declarationStableId} is typed by a ${target.nodeKind} (${target.stableId})`, where: `a declaration's type is one of ${Object.keys(TYPE_EDGE_BY_TARGET_NODE_KIND).join(', ')}` });
+		}
+		addEdge({ edgeType: typeEdgeType, fromStableId: declarationStableId, toStableId: target.stableId });
+	};
+
 	// ---- what a container owns: local elements, attributes, their anonymous types, codes, edges
 	const derivationFactsOf = ({ container, ownerStableId, artifact }) => {
 		const derivation = singleDerivationOf({ container, ownerStableId });
@@ -318,6 +330,7 @@ const emitReleaseGraph = ({ xsdSet, loadedManifestEntry, standardKey, nodeKindTa
 		});
 		if (nodeKind === 'codeList') {
 			emitCodes({ container: anonymousType.body, codeListStableId: anonymousStableId, artifact });
+			addEdge({ edgeType: EDGE_TYPES.HAS_OPTION_SET, fromStableId: ownerDeclarationStableId, toStableId: anonymousStableId });
 		}
 		emitContainerContent({ container: anonymousType.body, ownerStableId: anonymousStableId, owningTypeName: null, artifact });
 		return anonymousStableId;
@@ -353,13 +366,7 @@ const emitReleaseGraph = ({ xsdSet, loadedManifestEntry, standardKey, nodeKindTa
 				},
 			});
 			addEdge({ edgeType: EDGE_TYPES.HAS_PROPERTY, fromStableId: ownerStableId, toStableId: elementStableId });
-			if (typed.target !== null) {
-				const typeEdgeType = TYPE_EDGE_BY_TARGET_NODE_KIND[typed.target.nodeKind];
-				if (typeEdgeType === undefined) {
-					throw refuse.byName({ moduleName, what: `${elementStableId} is typed by a ${typed.target.nodeKind} (${typed.target.stableId})`, where: `an element's type is one of ${Object.keys(TYPE_EDGE_BY_TARGET_NODE_KIND).join(', ')}` });
-				}
-				addEdge({ edgeType: typeEdgeType, fromStableId: elementStableId, toStableId: typed.target.stableId });
-			}
+			addTypeEdge({ declarationStableId: elementStableId, target: typed.target });
 			if (oneElement.anonymousType !== null) {
 				emitAnonymousType({ anonymousType: oneElement.anonymousType, ownerDeclarationStableId: elementStableId, ownerDeclarationName: oneElement.name, artifact });
 			}
@@ -389,6 +396,7 @@ const emitReleaseGraph = ({ xsdSet, loadedManifestEntry, standardKey, nodeKindTa
 				},
 			});
 			addEdge({ edgeType: EDGE_TYPES.HAS_PROPERTY, fromStableId: ownerStableId, toStableId: attributeStableId });
+			addTypeEdge({ declarationStableId: attributeStableId, target: typed.target });
 			if (oneAttribute.anonymousType !== null) {
 				emitAnonymousType({ anonymousType: oneAttribute.anonymousType, ownerDeclarationStableId: attributeStableId, ownerDeclarationName: oneAttribute.name, artifact });
 			}
@@ -417,7 +425,7 @@ const emitReleaseGraph = ({ xsdSet, loadedManifestEntry, standardKey, nodeKindTa
 				documentation: nonBlankOrNull(oneDefinition.documentation),
 			};
 			if (nodeKind === 'globalElement') {
-				const typed = oneDefinition.typeAsWritten === null ? { resolvedReference: null } : resolveOrRefuse({ artifact: oneArtifact, writtenQName: oneDefinition.typeAsWritten, referencedKind: SYMBOL_SPACE.TYPE, siteText: `${stableId} type` });
+				const typed = oneDefinition.typeAsWritten === null ? { resolvedReference: null, target: null } : resolveOrRefuse({ artifact: oneArtifact, writtenQName: oneDefinition.typeAsWritten, referencedKind: SYMBOL_SPACE.TYPE, siteText: `${stableId} type` });
 				const headed = oneDefinition.substitutionGroupAsWritten === null ? { resolvedReference: null, target: null } : resolveOrRefuse({ artifact: oneArtifact, writtenQName: oneDefinition.substitutionGroupAsWritten, referencedKind: SYMBOL_SPACE.ELEMENT, siteText: `${stableId} substitutionGroup` });
 				mintNode({
 					nodeKind,
@@ -434,6 +442,7 @@ const emitReleaseGraph = ({ xsdSet, loadedManifestEntry, standardKey, nodeKindTa
 						nillableAsWritten: oneDefinition.nillableAsWritten,
 					},
 				});
+				addTypeEdge({ declarationStableId: stableId, target: typed.target });
 				if (headed.target !== null) {
 					addEdge({ edgeType: EDGE_TYPES.REFERENCES, fromStableId: stableId, toStableId: headed.target.stableId });
 				}
