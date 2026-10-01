@@ -33,9 +33,9 @@
 //               (d2) no prompt names the release: no '1.8.0', 'v1.8.0', 'urn:org:pesc', '.xsd' or the _source. Twin:
 //                    typeQName added to the allow-list (the forge stamps no targetNamespace on an element; typeQName
 //                    carries the namespace, so every typed unit's prompt names it).
-//               (d3) the count of prompts carrying a codeListName or codeListDocumentation line equals the measured
-//                    literal (RULING QUIET_ORBIT 2026-10-01 (2): 0 until the forge stamps them; then the number of
-//                    code-list-typed units). Twin: one subject given a codeListName.
+//               (d3) the prompts carrying a codeListName or codeListDocumentation line are exactly the code-list-typed
+//                    units: 68 (57 subjects), the measured literal (RULING QUIET_ORBIT 2026-10-01 (2); 0 before F6's
+//                    8fee4c9). Twin: ContactsType/Address given a codeListName (its four units join).
 //
 // THE DOUBLE. The forge's own nodes and edges, every property stored as the replay engine stores it (a one-element list
 // becomes a scalar, replay-engine.js pgToStored), every text node given a fabricated vector under the plugin's declared
@@ -100,9 +100,9 @@ const OCCURRENCE_COUNT = 1367;
 const SECTION_COUNT = 22;
 // the one-element-list collapse, measured live on DEV_pescCollegeTranscript1v8v0 (DEVLOG-F5 §4) and in F3
 const STRING_SHAPED_SECTION_LIST_COUNT = 303;
-// RULING QUIET_ORBIT 2026-10-01 (2): the forge stamps no code-list property on an element yet; this literal becomes the
-// number of code-list-typed units when it does
-const CODE_LIST_PROMPT_COUNT = 0;
+// RULING QUIET_ORBIT 2026-10-01 (2): the code-list-typed units, measured after F6's 8fee4c9 stamped codeListName and
+// codeListDocumentation on code-list-typed elements: 57 subjects, 68 units (it was 0 before that commit)
+const CODE_LIST_PROMPT_COUNT = 68;
 // the bare id planted in (a″): the first id on the shipped list
 const PLANTED_BARE_ID = '000102';
 // the strings that would name the release in a prompt (DESIGN-pescBridge §4.4)
@@ -264,6 +264,43 @@ const forgedGraphToDouble = ({ forged, scopeStableIdSet }) => {
 	return { forgedGraph: { nodeList: pescNodeList, edgeList: pescEdgeList }, runDouble };
 };
 
+// endpointScopedWriterFactory — the double's OWN writer, unchanged, handed for the length of each write a node list of
+// exactly the write's two endpoints and an edge list of exactly the edges already joining them. graphDouble.js's
+// writeMappingEdge rebuilds a map of state.nodeList on every call with a spread-reduce, O(N²), and scans state.edgeList
+// computing a merge identity per edge: measured 484 ms per write at N = 2,700 for the map alone, so one run of 1,367
+// writes took 9 m 59 s, and with the map scoped the edge scan still took 9.3 s of a 13 s run (CPU profile). The writer
+// reads the map only to find the two endpoints, and an incoming edge merges only onto an edge with its own type, ends and
+// properties, so an edge not joining the two endpoints can never be the one found. Every refusal and the merge identity
+// are therefore exactly as they are: the SAME node objects (label stamps land on the double's nodes), an endpoint missing
+// from the double missing here too, and an edge the writer appends carried back onto the double's list before the
+// callback. Editing graphDouble.js was ruled out (QUIET_ORBIT 2026-10-01): it is inside frameworkFingerprint and would
+// move every future decision block id. Each answer is delivered on a later turn (setImmediate, see below).
+const endpointScopedWriterFactory = (graphDouble) => (writerArgs) => {
+	const innerWriter = graphDouble.graphWriterFactory(writerArgs);
+	let nodeByStableId = null;
+	return {
+		writeMappingEdge: (writeArgs, callback) => {
+			const fullNodeList = graphDouble.state.nodeList;
+			const fullEdgeList = graphDouble.state.edgeList;
+			if (nodeByStableId === null) {
+				nodeByStableId = new Map(fullNodeList.map((oneNode) => [oneNode.stableId, oneNode]));
+			}
+			const joiningEdgeList = fullEdgeList.filter((oneEdge) => oneEdge.fromStableId === writeArgs.subjectStableId && oneEdge.toStableId === writeArgs.objectStableId);
+			const joiningCountBefore = joiningEdgeList.length;
+			graphDouble.state.nodeList = [writeArgs.subjectStableId, writeArgs.objectStableId].filter((stableId) => nodeByStableId.has(stableId)).map((stableId) => nodeByStableId.get(stableId));
+			graphDouble.state.edgeList = joiningEdgeList;
+			innerWriter.writeMappingEdge(writeArgs, (writeError, writeResult) => {
+				graphDouble.state.nodeList = fullNodeList;
+				graphDouble.state.edgeList = fullEdgeList.concat(joiningEdgeList.slice(joiningCountBefore));
+				// answered on a later turn, as the bolt writer's network round trip is: the materialiser walks its edges by
+				// callback recursion (materialiser.js nextEdge), and 1,367 synchronous answers overflow the call stack
+				setImmediate(() => callback(writeError, writeResult));
+			});
+		},
+		close: innerWriter.close,
+	};
+};
+
 // ---------------------------------------------------------------------
 // what the forge says the units are, read WITHOUT the framework: HAS_INSTANCE grouped by the occurrence's
 // sectionPath, labelled through the shipped section file
@@ -327,6 +364,7 @@ const buildGateDeclarationList = ({ forgedGraph, runDouble }) => {
 		if (scenario.graphEdit !== undefined) {
 			scenario.graphEdit(scenario.graph);
 		}
+		scenario.graphWriterFactoryOverride = endpointScopedWriterFactory;
 		scenario.judgeRule = 'first';
 		scenario.spec.bridge = PLUGIN_NAME;
 		scenario.spec.source = STANDARD_KEY;
@@ -540,20 +578,23 @@ const buildGateDeclarationList = ({ forgedGraph, runDouble }) => {
 	const promptConjunctList = [
 		runConjunct({
 			conjunctId: 'd1_oneSectionLinePerPrompt',
-			title: `(d1) each of the ${UNIT_COUNT} prompts carries exactly one documentSection line, and the lines equal the units' own labels prompt for prompt (joined by promptHash)`,
-			twinNameList: ['sectionPathBlinded'],
+			title: `(d1) each of the ${UNIT_COUNT} prompts carries exactly one documentSection line; that section is where one of the prompt's own sample paths lies; and the lines over all prompts are the units' labels, one for one`,
+			twinNameList: ['sectionPathBlinded', 'sectionLineRenamed'],
 			shape: pescShape,
 			judge: succeeded((runReport, outcome) => {
+				// a decision record carries no promptHash, so a prompt is tied to its unit through its own lines: the section
+				// it states must head one of the readable paths it shows (each declaration's sample holds paths from every
+				// section it occurs in), and the multiset of stated sections must be the multiset of the block's unit labels
 				const promptRecordList = promptListOf(outcome);
-				const labelByPromptHash = blockOf(outcome).decisionRecordList.reduce((soFar, oneRecord) => {
-					soFar[oneRecord.promptHash] = oneRecord.judgmentPartitionLabel;
-					return soFar;
-				}, {});
 				const wrongList = promptRecordList.filter((oneRecord) => {
 					const sectionLineList = subjectLineListOf(oneRecord.userPrompt, 'documentSection');
-					return sectionLineList.length !== 1 || sectionLineList[0] !== labelByPromptHash[oneRecord.promptHash];
+					const samplePathList = subjectLineListOf(oneRecord.userPrompt, 'contextPathSampleList').reduce((soFar, sampleText) => soFar.concat(sampleText.indexOf('[') === 0 ? JSON.parse(sampleText) : [sampleText]), []);
+					return sectionLineList.length !== 1 || !samplePathList.some((samplePath) => samplePath === sectionLineList[0] || samplePath.indexOf(`${sectionLineList[0]} / `) === 0);
 				});
-				return { pass: promptRecordList.length === UNIT_COUNT && wrongList.length === 0, detail: `${promptRecordList.length} prompt(s); ${wrongList.length} without exactly their own documentSection line` };
+				const statedSectionList = promptRecordList.map((oneRecord) => subjectLineListOf(oneRecord.userPrompt, 'documentSection').join('|')).sort();
+				const unitLabelList = blockOf(outcome).decisionRecordList.map((oneRecord) => oneRecord.judgmentPartitionLabel).sort();
+				const multisetEqual = JSON.stringify(statedSectionList) === JSON.stringify(unitLabelList);
+				return { pass: promptRecordList.length === UNIT_COUNT && wrongList.length === 0 && multisetEqual, detail: `${promptRecordList.length} prompt(s); ${wrongList.length} without exactly one documentSection line heading one of their own sample paths; stated sections equal the unit labels ${multisetEqual}` };
 			}),
 		}),
 		runConjunct({
@@ -569,7 +610,7 @@ const buildGateDeclarationList = ({ forgedGraph, runDouble }) => {
 		}),
 		runConjunct({
 			conjunctId: 'd3_codeListLinesMeasured',
-			title: `(d3) the prompts carrying a codeListName or codeListDocumentation line number ${CODE_LIST_PROMPT_COUNT} (the measured literal; RULING QUIET_ORBIT 2026-10-01 (2))`,
+			title: `(d3) the prompts carrying a codeListName or codeListDocumentation line number ${CODE_LIST_PROMPT_COUNT}, the code-list-typed units (RULING QUIET_ORBIT 2026-10-01 (2))`,
 			twinNameList: ['codeListNamePlanted'],
 			shape: pescShape,
 			judge: succeeded((runReport, outcome) => {
@@ -579,6 +620,7 @@ const buildGateDeclarationList = ({ forgedGraph, runDouble }) => {
 			}),
 		}),
 	];
+	scenarioTwin({ registry: twinRegistry, gateId: 'B1-PROMPT', conjunctId: 'd1_oneSectionLinePerPrompt', twinName: 'sectionLineRenamed', leverKind: 'inputFault', mutate: (scenario) => { scenario.declarationEdit = (bridgeDeclaration) => { bridgeDeclaration.judgmentPartition.renderedPropertyName = 'documentPart'; bridgeDeclaration.renderingAllowList.subject.push('documentPart'); }; } });
 	scenarioTwin({ registry: twinRegistry, gateId: 'B1-PROMPT', conjunctId: 'd1_oneSectionLinePerPrompt', twinName: 'sectionPathBlinded', leverKind: 'inputFault', mutate: (scenario) => { scenario.declarationEdit = (bridgeDeclaration) => { bridgeDeclaration.blindingDeclaration.push('sectionPath'); }; } });
 	scenarioTwin({ registry: twinRegistry, gateId: 'B1-PROMPT', conjunctId: 'd2_noPromptNamesTheRelease', twinName: 'typeQNameRendered', leverKind: 'inputFault', mutate: (scenario) => { scenario.declarationEdit = (bridgeDeclaration) => { bridgeDeclaration.renderingAllowList.subject.push('typeQName'); }; } });
 	scenarioTwin({

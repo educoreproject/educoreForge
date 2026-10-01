@@ -561,7 +561,7 @@
 		//
 		// THE HUB IS PINNED FOR THE PESC FAMILY (DESIGN-pescBridge §4.4): the ceds block id below is the SAME id the
 		// sif260928 entry pins, and every later PESC entry names it too, so a cache carry between versions of one standard is
-		// never silently lost to a rebuilt hub. The release's own base id is F5's certified block (reproduced three times).
+		// never silently lost to a rebuilt hub. The release's own base id is the block certified after F6's code-list commit 8fee4c9 (03b2719).
 		//
 		// THE PATHS NAME THE pescRelease-B1 WORKTREE, deliberately (the sif260928 entry's reason): the runner reconstructs the
 		// line from its own tree and refuses on drift. They move to system/code when pescRelease/main merges to main.
@@ -574,7 +574,7 @@
 		"buildLogsDirPath": "/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/pesccollegetranscript1v8v0/b2/buildLogs",
 		"expectedBaseBlockIdBySubject": {
 			"ceds@14_0_0_0_base": "21110ef1fd423434bfc64899559f31dd7d126fd421e344341fe329e3f65c91dd",
-			"pesccollegetranscript1v8v0@1_8_0_base": "f9e2a095ed27edc4935897653c00187c54d4bd1a82dc75332ab1fc36b1ac7518"
+			"pesccollegetranscript1v8v0@1_8_0_base": "5c6b404080ef8eec3d662d60fffb39bda1912f7cca9c1a76757cce7ed6c7ea22"
 		},
 		"rejudgeDebug": null,
 		"materialise": null,
