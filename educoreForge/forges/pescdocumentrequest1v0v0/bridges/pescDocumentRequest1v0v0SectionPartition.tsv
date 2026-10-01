@@ -1,0 +1,24 @@
+sectionPath	documentSection
+DocumentRequest/NoteMessage	Document Request / Note Message
+DocumentRequest/RequestDetails	Document Request / Request Details
+DocumentRequest/RequestDetails/CreatedDateTime	Document Request / Request Details / Created Date Time
+DocumentRequest/RequestDetails/DocumentDescription	Document Request / Request Details / Document Description
+DocumentRequest/RequestDetails/DocumentRecipient	Document Request / Request Details / Document Recipient
+DocumentRequest/RequestDetails/NoteMessage	Document Request / Request Details / Note Message
+DocumentRequest/RequestDetails/RequestedStudent	Document Request / Request Details / Requested Student
+DocumentRequest/RequestDetails/Requestor	Document Request / Request Details / Requestor
+DocumentRequest/RequestDetails/UserDefinedExtensions	Document Request / Request Details / User Defined Extensions
+DocumentRequest/TransmissionData	Document Request / Transmission Data
+DocumentRequest/TransmissionData/CreatedDateTime	Document Request / Transmission Data / Created Date Time
+DocumentRequest/TransmissionData/Destination	Document Request / Transmission Data / Destination
+DocumentRequest/TransmissionData/DocumentCompleteCode	Document Request / Transmission Data / Document Complete Code
+DocumentRequest/TransmissionData/DocumentID	Document Request / Transmission Data / Document ID
+DocumentRequest/TransmissionData/DocumentOfficialCode	Document Request / Transmission Data / Document Official Code
+DocumentRequest/TransmissionData/DocumentProcessCode	Document Request / Transmission Data / Document Process Code
+DocumentRequest/TransmissionData/DocumentTypeCode	Document Request / Transmission Data / Document Type Code
+DocumentRequest/TransmissionData/NoteMessage	Document Request / Transmission Data / Note Message
+DocumentRequest/TransmissionData/RequestTrackingID	Document Request / Transmission Data / Request Tracking ID
+DocumentRequest/TransmissionData/Source	Document Request / Transmission Data / Source
+DocumentRequest/TransmissionData/TransmissionType	Document Request / Transmission Data / Transmission Type
+DocumentRequest/TransmissionData/UserDefinedExtensions	Document Request / Transmission Data / User Defined Extensions
+DocumentRequest/UserDefinedExtensions	Document Request / User Defined Extensions
