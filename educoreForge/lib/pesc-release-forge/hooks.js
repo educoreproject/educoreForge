@@ -5,7 +5,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // hooks.js — the H2/H3 hook set every PESC release bundle shares (SPEC-forgeFramework-v1.md §5;
 // DESIGN-pescForge.md §1.2, §4.1).
 //
-//   require('<lib>/pesc-release-forge/hooks').makeReleaseHooks({ standardKey, frozenReleaseCensus, frozenCensusName })
+//   require('<lib>/pesc-release-forge/hooks').makeReleaseHooks({ standardKey, labelPrefix, frozenReleaseCensus, frozenCensusName })
 //     → { sourceLoaderList, describeSource, describeRoot, emitContractGraph }
 //
 //   sourceLoaderList  — TWO loaders, run in this order:
@@ -18,15 +18,17 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //                       .xsd files in the parser's order and then the manifest entry. sourceUrl null:
 //                       a release is our closure of PESC files, not a published bundle with a URL.
 //   describeRoot      — PURE apart from the version guard, which throws a named refusal.
-//   emitContractGraph — PHASE F1: MINTS NOTHING. The walk is phase F2 (WORKORDER §3). Until then
-//                       the forge returns the root alone, and carries the loaders' census in
-//                       `stats` so the census gate (F4) reads it where it will read it from then on.
+//   emitContractGraph — the walk (walk.js, phase F2): every source node and structural edge, and
+//                       the ordering groups the framework stamps (sequenceGroups). `stats` carries
+//                       the loaders' census (gate F4) beside the walk's own counts.
 
 const path = require('path');
 const refuse = require(path.join(__dirname, '..', 'forge-framework', 'refuse'));
 const { makeXsdSetLoader } = require('./xsdSetLoader');
 const manifestEntryLoader = require('./manifestEntryLoader');
 const versionGuard = require('./versionGuard');
+const walk = require('./walk');
+const { buildNodeKindTable } = require('./nodeKindTable');
 
 const LOADER_NAME = Object.freeze({ PESC_RELEASE_XSD_SET: 'pescReleaseXsdSet', PESC_RELEASE_MANIFEST_ENTRY: 'pescReleaseManifestEntry' });
 const SOURCE_FORMAT = 'pesc-xsd-release-folder';
@@ -35,11 +37,12 @@ const SOURCE_FORMAT = 'pesc-xsd-release-folder';
 
 const moduleFunction =
 	({ moduleName } = {}) =>
-	({ standardKey, frozenReleaseCensus, frozenCensusName }) => {
-		if (typeof standardKey !== 'string' || frozenReleaseCensus === null || typeof frozenReleaseCensus !== 'object' || typeof frozenCensusName !== 'string') {
-			throw refuse.byName({ moduleName, what: `makeReleaseHooks was given standardKey ${JSON.stringify(standardKey)}, frozenReleaseCensus ${frozenReleaseCensus === null ? 'null' : typeof frozenReleaseCensus}, frozenCensusName ${JSON.stringify(frozenCensusName)}`, where: 'a release bundle hands its standardKey, its frozen census object and that census file\'s name (releaseBundle.makeBundleHooks)' });
+	({ standardKey, labelPrefix, frozenReleaseCensus, frozenCensusName }) => {
+		if (typeof standardKey !== 'string' || typeof labelPrefix !== 'string' || frozenReleaseCensus === null || typeof frozenReleaseCensus !== 'object' || typeof frozenCensusName !== 'string') {
+			throw refuse.byName({ moduleName, what: `makeReleaseHooks was given standardKey ${JSON.stringify(standardKey)}, labelPrefix ${JSON.stringify(labelPrefix)}, frozenReleaseCensus ${frozenReleaseCensus === null ? 'null' : typeof frozenReleaseCensus}, frozenCensusName ${JSON.stringify(frozenCensusName)}`, where: 'a release bundle hands its standardKey, its labelPrefix, its frozen census object and that census file\'s name (releaseBundle.makeBundleHooks)' });
 		}
 		const xsdSetLoader = makeXsdSetLoader({ frozenReleaseCensus, frozenCensusName });
+		const nodeKindTable = buildNodeKindTable({ labelPrefix });
 
 		const describeSource = ({ parsed }) => ({
 			selfDescribedVersion: null,
@@ -53,13 +56,21 @@ const moduleFunction =
 			return {};
 		};
 
-		const emitContractGraph = ({ parsed, kit }) => ({
-			nodes: kit.nodes,
-			edges: kit.edges,
-			stats: {
-				releaseCensus: parsed[LOADER_NAME.PESC_RELEASE_XSD_SET].releaseCensus,
-			},
-		});
+		const emitContractGraph = ({ parsed, kit }) => {
+			const { walkStats, sequenceGroups } = walk.emitReleaseGraph({
+				xsdSet: parsed[LOADER_NAME.PESC_RELEASE_XSD_SET],
+				loadedManifestEntry: parsed[LOADER_NAME.PESC_RELEASE_MANIFEST_ENTRY],
+				standardKey,
+				nodeKindTable,
+				kit,
+			});
+			return {
+				nodes: kit.nodes,
+				edges: kit.edges,
+				stats: { releaseCensus: parsed[LOADER_NAME.PESC_RELEASE_XSD_SET].releaseCensus, ...walkStats },
+				sequenceGroups,
+			};
+		};
 
 		return {
 			sourceLoaderList: [

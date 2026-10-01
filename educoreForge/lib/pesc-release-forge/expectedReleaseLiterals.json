@@ -24,6 +24,52 @@
 				"referenceCount": 2079,
 				"builtinReferenceCount": 807,
 				"inReleaseReferenceCount": 1272
+			},
+			"walk": {
+				"literalSource": "WORKORDER section 3 F2 (edge counts, NoteMessage, text ceiling); evidence/graphModelSummary.json; the NoteMessage total ruled 103 = 50 + 52 + 1 by QUIET_ORBIT 2026-09-30 (the work order's 102 omitted the root file). textNodeCount, documentationSourceCountByLabelSuffix beyond the 1,220 own-text elements, and sequenceCountByOrderSemantics were first measured by phase F2 (MARBLE_BRIDGE, 2026-09-30).",
+				"edgeCountByType": {
+					"HAS_CLASS": 222,
+					"HAS_OPTION_SET": 160,
+					"HAS_PROPERTY": 1230,
+					"HAS_SUPPORT": 14,
+					"HAS_VALUE": 2741,
+					"REFERENCES": 28,
+					"REFERENCES_TYPE": 961,
+					"SUBCLASS_OF": 110
+				},
+				"referencesTypeCountByTarget": {
+					"dataType": 639,
+					"type": 322
+				},
+				"subclassOfCountByVariety": {
+					"extension": 51,
+					"restriction": 59
+				},
+				"referencesCountByTarget": {
+					"element": 8,
+					"group": 20
+				},
+				"textNodeCount": 2203,
+				"textNodeCountCeiling": 3379,
+				"documentationSourceCountByLabelSuffix": {
+					"Attribute": {
+						"none": 3,
+						"type": 3
+					},
+					"Element": {
+						"own": 1220,
+						"type": 4
+					}
+				},
+				"sequenceCountByOrderSemantics": {
+					"document": 3787,
+					"normative": 1198
+				},
+				"noteMessageDeclarationCountByFile": {
+					"AcademicRecord_v1.13.0.xsd": 50,
+					"CollegeTranscript_v1.8.0.xsd": 1,
+					"CoreMain_v1.19.0.xsd": 52
+				}
 			}
 		}
 	}

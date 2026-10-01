@@ -46,7 +46,7 @@ const forgeDeclarationContract = require(path.join(FORGE_FRAMEWORK_DIR, 'forgeDe
 const { MIGRATING_BUNDLE_LIST } = require(path.join(FORGE_FRAMEWORK_DIR, 'migrationAllowanceRegistry'));
 const forgeFrameworkFactory = require(path.join(FORGE_FRAMEWORK_DIR, 'forge-framework'));
 const { parseChecksumFile } = require(path.join(FORGE_FRAMEWORK_DIR, 'sourceVerification'));
-const { DME_ROLES } = require(path.join(TREE_ROOT, 'lib', 'vocabulary', 'vocabulary'));
+const { DME_ROLES, EDGE_TYPES } = require(path.join(TREE_ROOT, 'lib', 'vocabulary', 'vocabulary'));
 const rosterLib = require(path.join(FORGE_FRAMEWORK_DIR, 'roster'));
 
 const releaseBundle = require('./releaseBundle');
@@ -233,13 +233,13 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 		scaffoldMutationList: subject.scaffoldMutationList.slice(),
 	});
 
-	// forge a snapshot as the forger does: through the bundle's own entry module, or, with mutations,
-	// through the framework, the bundle's declaration and an in-memory double of the shared hooks
+	// forge a snapshot as the forger does: through the bundle's own entry module, or, with mutations or
+	// a twin's census, through the framework, the bundle's declaration and (a double of) the shared hooks
 	const forgeSnapshot = ({ subject, snapshotDirPath }, callback) => {
-		const bundle = subject.hooksMutationList.length
+		const bundle = subject.hooksMutationList.length || subject.frozenReleaseCensus !== bundleData.frozenReleaseCensus
 			? forgeFrameworkFactory({ embedder: null }).injectStandardHooks({
 					forgeDeclaration: subject.forgeDeclaration,
-					hooks: moduleDouble.loadWithMutations({ modulePath: HOOKS_MODULE_PATH, mutationList: subject.hooksMutationList }).makeReleaseHooks({ standardKey, frozenReleaseCensus: subject.frozenReleaseCensus, frozenCensusName: subject.frozenCensusName }),
+					hooks: (subject.hooksMutationList.length ? moduleDouble.loadWithMutations({ modulePath: HOOKS_MODULE_PATH, mutationList: subject.hooksMutationList }) : require(HOOKS_MODULE_PATH)).makeReleaseHooks({ standardKey, labelPrefix: releaseDeclarationData.labelPrefix, frozenReleaseCensus: subject.frozenReleaseCensus, frozenCensusName: subject.frozenCensusName }),
 				})
 			: require(entryModulePath)({ embedder: null });
 		bundle.forge({ sourcePath: snapshotDirPath, owner: 'test', skipEmbedding: true }, callback);
@@ -600,11 +600,464 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 		{ gateId: ROLES_GATE_ID, title: 'F1 roles (extra): the node-kind table and the declaration', conjunctList: rolesConjunctList },
 	];
 
+	// =====================================================================
+	// PHASE F2 FAMILY — the walk: identity, absent is absent, texts, edges, coexistence, no bridging,
+	// sequence (WORKORDER §3 F2). A second family with its own twin registry, run after phase F1's.
+	// =====================================================================
+	const walkLiteralSet = expectedLiteralSet === undefined ? undefined : expectedLiteralSet.walk;
+	const walkTwinRegistry = makeTwinRegistry();
+	const registerWalkTwin = (gateId, conjunctId, twinName, leverKind, run) => walkTwinRegistry.register({ gateId, conjunctId, twinName, leverKind, shippedConfig: true, run });
+	const WALK_PATH = path.join(LIBRARY_DIR, 'walk.js');
+	const SEQUENCE_GROUPS_PATH = path.join(LIBRARY_DIR, 'sequenceGroups.js');
+	const labelSuffixOf = (oneNode) => oneNode.labels[1].slice(releaseDeclarationData.labelPrefix.length);
+	const stableIdKindOf = (stableId) => stableId.slice(standardKey.length + 1).split('/')[0];
+	const forgeOrFail = ({ subject, snapshotDirPath }, callback, onForged) => {
+		forgeSnapshot({ subject, snapshotDirPath: snapshotDirPath === undefined ? subject.snapshotDirPath : snapshotDirPath }, (forgeError, forged) => {
+			if (forgeError) {
+				callback('', { pass: false, detail: `forge refused: ${forgeError.slice(0, 400)}` });
+				return;
+			}
+			onForged(forged);
+		});
+	};
+	const withExtraHooksMutation = (subject, mutation) => {
+		moduleDouble.assertMutationApplies(mutation);
+		return { ...subject, hooksMutationList: subject.hooksMutationList.concat([mutation]) };
+	};
+	const missingLiteralResult = (literalName) => ({ pass: false, detail: `expectedReleaseLiterals.json has no walk.${literalName} for ${releaseName}` });
+
+	// ---- F6-IDENTITY
+	const IDENTITY_GATE_ID = 'F6-IDENTITY';
+	const identityConjunctList = [
+		{
+			conjunctId: 'idsUniquePatternedAndReleaseIndependent',
+			title: `every stableId is unique and matches the declared pattern, and every carried releaseIndependentId is its stableId less '${standardKey}:'`,
+			twinNameList: ['releaseIndependentIdOffByOne'],
+			evaluate: (subject, callback) => {
+				forgeOrFail({ subject }, callback, (forged) => {
+					const stableIdPatternRe = new RegExp(subject.forgeDeclaration.stableIdPattern.pattern);
+					const seenStableIdSet = new Set();
+					const duplicateNode = forged.nodes.find((oneNode) => (seenStableIdSet.has(oneNode.stableId) ? true : (seenStableIdSet.add(oneNode.stableId), false)));
+					const unpatternedNode = forged.nodes.find((oneNode) => !stableIdPatternRe.test(oneNode.stableId));
+					const misnamedNode = forged.nodes.find((oneNode) => oneNode.properties.releaseIndependentId !== undefined && `${standardKey}:${oneNode.properties.releaseIndependentId}` !== oneNode.stableId);
+					const carryingCount = forged.nodes.filter((oneNode) => oneNode.properties.releaseIndependentId !== undefined).length;
+					const pass = duplicateNode === undefined && unpatternedNode === undefined && misnamedNode === undefined && carryingCount > 0;
+					callback('', { pass, detail: `${forged.nodes.length} nodes; ${carryingCount} carry releaseIndependentId; duplicate ${duplicateNode ? duplicateNode.stableId : 'none'}; unpatterned ${unpatternedNode ? unpatternedNode.stableId : 'none'}; misnamed ${misnamedNode ? `${misnamedNode.stableId} → ${misnamedNode.properties.releaseIndependentId}` : 'none'}` });
+				});
+			},
+		},
+		{
+			conjunctId: 'twoForgesByteIdentical',
+			title: 'two forges of the one snapshot, by one bundle, produce byte-identical { nodes, edges }',
+			twinNameList: ['runCounterInReleaseRecordId'],
+			evaluate: (subject, callback) => {
+				forgeOrFail({ subject }, callback, (firstForged) => {
+					forgeOrFail({ subject }, callback, (secondForged) => {
+						const firstText = JSON.stringify({ nodes: firstForged.nodes, edges: firstForged.edges });
+						const secondText = JSON.stringify({ nodes: secondForged.nodes, edges: secondForged.edges });
+						callback('', { pass: firstText === secondText, detail: `${firstText.length} and ${secondText.length} bytes; identical ${firstText === secondText}` });
+					});
+				});
+			},
+		},
+	];
+	registerWalkTwin(IDENTITY_GATE_ID, 'idsUniquePatternedAndReleaseIndependent', 'releaseIndependentIdOffByOne', 'productionMutation', (subject) =>
+		addMutation(subject, 'hooksMutationList', { modulePath: WALK_PATH, find: 'const releaseIndependentIdOf = (stableId) => stableId.slice(stableIdPrefix.length);', replace: 'const releaseIndependentIdOf = (stableId) => stableId.slice(stableIdPrefix.length - 1);' }),
+	);
+	// the fault: a counter that survives between two forges of one snapshot
+	registerWalkTwin(IDENTITY_GATE_ID, 'twoForgesByteIdentical', 'runCounterInReleaseRecordId', 'productionMutation', (subject) => {
+		// the counter lives on globalThis because every forge here compiles the walk afresh (moduleDouble), so
+		// a module-level counter would restart at each forge and prove nothing
+		return addMutation(subject, 'hooksMutationList', { modulePath: WALK_PATH, find: 'const releaseRecordStableId = `${stableIdPrefix}${RELEASE_RECORD_SEGMENT}`;', replace: 'globalThis.pescRunCounterForTwin = (globalThis.pescRunCounterForTwin || 0) + 1;\n	const releaseRecordStableId = `${stableIdPrefix}${RELEASE_RECORD_SEGMENT}/run${globalThis.pescRunCounterForTwin}`;' });
+	});
+
+	// ---- F7-ABSENT
+	const ABSENT_GATE_ID = 'F7-ABSENT';
+	const absentConjunctList = [
+		{
+			conjunctId: 'noEmptyStringOrEmptyList',
+			title: "no node carries a property whose value is '' or an empty list (name and description included): absent is absent",
+			twinNameList: ['noteMessageNameForcedEmpty'],
+			evaluate: (subject, callback) => {
+				forgeOrFail({ subject }, callback, (forged) => {
+					const emptyList = [];
+					forged.nodes.forEach((oneNode) =>
+						Object.keys(oneNode.properties).forEach((onePropertyName) => {
+							const propertyValue = oneNode.properties[onePropertyName];
+							if (propertyValue === '' || (Array.isArray(propertyValue) && propertyValue.length === 0)) {
+								emptyList.push(`${oneNode.stableId}.${onePropertyName}`);
+							}
+						}),
+					);
+					callback('', { pass: emptyList.length === 0, detail: `${forged.nodes.length} nodes; empty properties: ${emptyList.length ? emptyList.slice(0, 5).join(', ') : 'none'}` });
+				});
+			},
+		},
+	];
+	registerWalkTwin(ABSENT_GATE_ID, 'noEmptyStringOrEmptyList', 'noteMessageNameForcedEmpty', 'productionMutation', (subject) =>
+		addMutation(subject, 'hooksMutationList', { modulePath: WALK_PATH, find: '			...(isAbsent(name) ? {} : { name }),', replace: "			...(isAbsent(name) ? {} : { name: name === 'NoteMessage' ? '' : name })," }),
+	);
+
+	// ---- F8-TEXTS
+	const TEXTS_GATE_ID = 'F8-TEXTS';
+	const EMBED_TEXT_ROLE = DME_ROLES.EMBED_TEXT;
+	const BLANKED_ELEMENT_STABLE_ID = `${standardKey}:type/urn:org:pesc:sector:AcademicRecord:v1.13.0#PersonType/el/12:HighSchool`;
+	const textsConjunctList = [
+		{
+			conjunctId: 'textNodesAreTheDistinctDeclaredTexts',
+			title: 'the text nodes are exactly the distinct trimmed values of the declared text properties (computed here from the nodes and the declaration), their count EQUALS the frozen literal, and no text reaches a DmeSupport, DmeOptionValue or DmeOptionSet-without-declaration node',
+			twinNameList: ['oneElementDocumentationBlanked'],
+			evaluate: (subject, callback) => {
+				if (walkLiteralSet === undefined) {
+					callback('', missingLiteralResult('textNodeCount'));
+					return;
+				}
+				forgeOrFail({ subject }, callback, (forged) => {
+					const textPropertyListByRole = subject.forgeDeclaration.embedTextDeclaration.textPropertyListByRole;
+					const expectedTextSet = new Set();
+					forged.nodes.forEach((oneNode) => {
+						(textPropertyListByRole[oneNode.role] || []).forEach((onePropertyName) => {
+							const propertyValue = oneNode.properties[onePropertyName];
+							[].concat(propertyValue === undefined ? [] : propertyValue).forEach((oneText) => {
+								if (oneText.trim() !== '') {
+									expectedTextSet.add(oneText.trim());
+								}
+							});
+						});
+					});
+					const textNodeList = forged.nodes.filter((oneNode) => oneNode.role === EMBED_TEXT_ROLE);
+					const mintedTextSet = new Set(textNodeList.map((oneNode) => oneNode.properties.text));
+					const roleByStableId = {};
+					forged.nodes.forEach((oneNode) => {
+						roleByStableId[oneNode.stableId] = oneNode.role;
+					});
+					const undeclaredTargetEdge = forged.edges.find((oneEdge) => oneEdge.type === 'EMBEDS_TEXT_OF' && textPropertyListByRole[roleByStableId[oneEdge.toRef.id]] === undefined);
+					const sameSet = expectedTextSet.size === mintedTextSet.size && [...expectedTextSet].every((oneText) => mintedTextSet.has(oneText));
+					const pass = sameSet && textNodeList.length === walkLiteralSet.textNodeCount && undeclaredTargetEdge === undefined;
+					callback('', { pass, detail: `text nodes ${textNodeList.length} (frozen ${walkLiteralSet.textNodeCount}; work order: at most ${walkLiteralSet.textNodeCountCeiling}); distinct declared texts ${expectedTextSet.size}; same set ${sameSet}; edge to an undeclared role ${undeclaredTargetEdge ? undeclaredTargetEdge.toRef.id : 'none'}` });
+				});
+			},
+		},
+		{
+			conjunctId: 'effectiveDocumentationRule',
+			title: 'every element and attribute: effectiveDocumentation is its own text when it has one, else its type\'s, and documentationSource says which; the per-kind counts EQUAL the frozen literals (elements with own text: 1,220, the evidence census)',
+			twinNameList: ['highSchoolDocumentationBlanked'],
+			evaluate: (subject, callback) => {
+				if (walkLiteralSet === undefined) {
+					callback('', missingLiteralResult('documentationSourceCountByLabelSuffix'));
+					return;
+				}
+				forgeOrFail({ subject }, callback, (forged) => {
+					const nodeByStableId = {};
+					forged.nodes.forEach((oneNode) => {
+						nodeByStableId[oneNode.stableId] = oneNode;
+					});
+					// a named type, found by its qualified name among the top-level definitions (they alone carry
+					// documentPosition; parentId cannot say, see F22)
+					const topLevelTypeByQName = {};
+					forged.nodes
+						.filter((oneNode) => oneNode.properties.documentPosition !== undefined && ['Type', 'CodeList', 'DataType'].indexOf(labelSuffixOf(oneNode)) !== -1)
+						.forEach((oneNode) => {
+							topLevelTypeByQName[`${oneNode.properties.targetNamespace}#${oneNode.properties.name}`] = oneNode;
+						});
+					const countByLabelSuffix = {};
+					const ruleBreakList = [];
+					forged.nodes
+						.filter((oneNode) => ['Element', 'Attribute'].indexOf(labelSuffixOf(oneNode)) !== -1)
+						.forEach((oneNode) => {
+							const props = oneNode.properties;
+							const ownText = props.documentation;
+							const anonymousNode = nodeByStableId[`${oneNode.stableId}/anon`];
+							const typeNode = anonymousNode !== undefined ? anonymousNode : topLevelTypeByQName[props.typeQName];
+							const typeText = typeNode === undefined ? undefined : typeNode.properties.documentation;
+							const expected = ownText !== undefined ? { text: ownText, source: 'own' } : typeText !== undefined ? { text: typeText, source: 'type' } : { text: undefined, source: undefined };
+							if (props.effectiveDocumentation !== expected.text || props.documentationSource !== expected.source) {
+								ruleBreakList.push(oneNode.stableId);
+							}
+							const suffix = labelSuffixOf(oneNode);
+							countByLabelSuffix[suffix] = countByLabelSuffix[suffix] || {};
+							const sourceName = props.documentationSource === undefined ? 'none' : props.documentationSource;
+							countByLabelSuffix[suffix][sourceName] = (countByLabelSuffix[suffix][sourceName] || 0) + 1;
+						});
+					const sortedText = (countMap) => JSON.stringify(Object.keys(countMap).sort().map((oneSuffix) => [oneSuffix, Object.keys(countMap[oneSuffix]).sort().map((oneSource) => [oneSource, countMap[oneSuffix][oneSource]])]));
+					const pass = ruleBreakList.length === 0 && sortedText(countByLabelSuffix) === sortedText(walkLiteralSet.documentationSourceCountByLabelSuffix);
+					callback('', { pass, detail: `counts ${sortedText(countByLabelSuffix)}; rule broken on ${ruleBreakList.length ? ruleBreakList.slice(0, 3).join(', ') : 'none'}` });
+				});
+			},
+		},
+	];
+	const blankHighSchoolDocumentation = (fileText, fileName) => {
+		const highSchoolOpenText = '<xs:element name="HighSchool"';
+		const elementStart = fileText.indexOf(highSchoolOpenText, fileText.indexOf('<xs:complexType name="PersonType">'));
+		const documentationStart = fileText.indexOf('<xs:documentation>', elementStart) + '<xs:documentation>'.length;
+		const documentationEnd = fileText.indexOf('</xs:documentation>', documentationStart);
+		if (elementStart === -1 || documentationEnd === -1) {
+			throw new Error(`${moduleName}: fixture fault — no PersonType/HighSchool documentation in ${fileName}`);
+		}
+		return fileText.slice(0, documentationStart) + fileText.slice(documentationEnd);
+	};
+	const academicRecordFileName = xsdFileNameList.find((oneFileName) => /^AcademicRecord_v/.test(oneFileName));
+	const blankedHighSchoolSnapshot = (subject) => makeScratchSnapshot({ baseSnapshotDirPath: subject.snapshotDirPath, alterTextByFileName: { [academicRecordFileName]: blankHighSchoolDocumentation }, resealManifestEntry: true, resealChecksums: true });
+	registerWalkTwin(TEXTS_GATE_ID, 'textNodesAreTheDistinctDeclaredTexts', 'oneElementDocumentationBlanked', 'inputFault', (subject) => ({ ...subject, snapshotDirPath: blankedHighSchoolSnapshot(subject) }));
+	registerWalkTwin(TEXTS_GATE_ID, 'effectiveDocumentationRule', 'highSchoolDocumentationBlanked', 'inputFault', (subject) => ({ ...subject, snapshotDirPath: blankedHighSchoolSnapshot(subject) }));
+
+	// ---- F10-EDGES
+	const EDGES_GATE_ID = 'F10-EDGES';
+	const edgesConjunctList = [
+		{
+			conjunctId: 'edgeCountsEqualLiterals',
+			title: 'structural edge counts by type EQUAL the work order literals (and REFERENCES_TYPE by target, SUBCLASS_OF by variety, REFERENCES by target), and no HAS_SUPPORT reaches a data type',
+			twinNameList: ['dataTypeSupportRestored'],
+			evaluate: (subject, callback) => {
+				if (walkLiteralSet === undefined) {
+					callback('', missingLiteralResult('edgeCountByType'));
+					return;
+				}
+				forgeOrFail({ subject }, callback, (forged) => {
+					const countBy = (edgeList, nameOf) => edgeList.reduce((soFar, oneEdge) => ({ ...soFar, [nameOf(oneEdge)]: (soFar[nameOf(oneEdge)] || 0) + 1 }), {});
+					const structuralEdgeList = forged.edges.filter((oneEdge) => oneEdge.type !== 'EMBEDS_TEXT_OF');
+					const measured = {
+						edgeCountByType: countBy(structuralEdgeList, (oneEdge) => oneEdge.type),
+						referencesTypeCountByTarget: countBy(structuralEdgeList.filter((oneEdge) => oneEdge.type === 'REFERENCES_TYPE'), (oneEdge) => stableIdKindOf(oneEdge.toRef.id)),
+						subclassOfCountByVariety: countBy(structuralEdgeList.filter((oneEdge) => oneEdge.type === 'SUBCLASS_OF'), (oneEdge) => oneEdge.properties.derivationVariety),
+						referencesCountByTarget: countBy(structuralEdgeList.filter((oneEdge) => oneEdge.type === 'REFERENCES'), (oneEdge) => stableIdKindOf(oneEdge.toRef.id)),
+					};
+					const supportToDataTypeCount = structuralEdgeList.filter((oneEdge) => oneEdge.type === 'HAS_SUPPORT' && stableIdKindOf(oneEdge.toRef.id) === 'dataType').length;
+					const sortedText = (countMap) => JSON.stringify(Object.keys(countMap).sort().map((oneName) => [oneName, countMap[oneName]]));
+					const differingNameList = Object.keys(measured).filter((oneName) => sortedText(measured[oneName]) !== sortedText(walkLiteralSet[oneName]));
+					const pass = differingNameList.length === 0 && supportToDataTypeCount === 0;
+					callback('', { pass, detail: `${Object.keys(measured).map((oneName) => `${oneName} ${sortedText(measured[oneName])}`).join('; ')}; HAS_SUPPORT to a data type ${supportToDataTypeCount}; differing: ${differingNameList.length ? differingNameList.join(', ') : 'none'}` });
+				});
+			},
+		},
+		{
+			conjunctId: 'noDanglingEndpointAndVocabularyOnly',
+			title: 'every edge endpoint is a minted node and every edge type is an EDGE_TYPES member',
+			twinNameList: ['groupReferenceToMissingId'],
+			evaluate: (subject, callback) => {
+				forgeOrFail({ subject }, callback, (forged) => {
+					const stableIdSet = new Set(forged.nodes.map((oneNode) => oneNode.stableId));
+					const edgeTypeValueList = Object.values(EDGE_TYPES);
+					const danglingEdge = forged.edges.find((oneEdge) => !stableIdSet.has(oneEdge.fromRef.id) || !stableIdSet.has(oneEdge.toRef.id));
+					const foreignEdge = forged.edges.find((oneEdge) => edgeTypeValueList.indexOf(oneEdge.type) === -1);
+					callback('', { pass: danglingEdge === undefined && foreignEdge === undefined, detail: `${forged.edges.length} edges; dangling ${danglingEdge ? `${danglingEdge.type} → ${danglingEdge.toRef.id}` : 'none'}; outside EDGE_TYPES ${foreignEdge ? foreignEdge.type : 'none'}` });
+				});
+			},
+		},
+	];
+	registerWalkTwin(EDGES_GATE_ID, 'edgeCountsEqualLiterals', 'dataTypeSupportRestored', 'productionMutation', (subject) =>
+		addMutation(subject, 'hooksMutationList', { modulePath: WALK_PATH, find: '	group: EDGE_TYPES.HAS_SUPPORT,\n	type: EDGE_TYPES.HAS_CLASS,', replace: '	group: EDGE_TYPES.HAS_SUPPORT,\n	dataType: EDGE_TYPES.HAS_SUPPORT,\n	type: EDGE_TYPES.HAS_CLASS,' }),
+	);
+	registerWalkTwin(EDGES_GATE_ID, 'noDanglingEndpointAndVocabularyOnly', 'groupReferenceToMissingId', 'productionMutation', (subject) =>
+		addMutation(subject, 'hooksMutationList', { modulePath: WALK_PATH, find: 'addEdge({ edgeType: EDGE_TYPES.REFERENCES, fromStableId: ownerStableId, toStableId: target.stableId });', replace: 'addEdge({ edgeType: EDGE_TYPES.REFERENCES, fromStableId: ownerStableId, toStableId: `${target.stableId}Missing` });' }),
+	);
+
+	// ---- F13-COEXISTENCE
+	const COEXISTENCE_GATE_ID = 'F13-COEXISTENCE';
+	const SECOND_RELEASE_DIR_NAME = `${standardKey}second`;
+	const descriptorText = fs.readFileSync(path.join(bundleDirPath, rosterLib.DESCRIPTOR_FILE_NAME), 'utf8');
+	const secondReleaseDescriptorText = ({ standardName }) => descriptorText.replace(/^standardName=.*$/m, `standardName=${standardName}`);
+	const makeScratchForgesDir = ({ secondStandardName }) => {
+		const scratchForgesDirPath = makeScratchRoot(`${standardKey}Forges-`);
+		const realForgesDirPath = path.dirname(bundleDirPath);
+		fs.readdirSync(realForgesDirPath, { withFileTypes: true })
+			.filter((oneEntry) => oneEntry.isDirectory() && fs.existsSync(path.join(realForgesDirPath, oneEntry.name, rosterLib.DESCRIPTOR_FILE_NAME)))
+			.forEach((oneEntry) => {
+				fs.mkdirSync(path.join(scratchForgesDirPath, oneEntry.name));
+				fs.copyFileSync(path.join(realForgesDirPath, oneEntry.name, rosterLib.DESCRIPTOR_FILE_NAME), path.join(scratchForgesDirPath, oneEntry.name, rosterLib.DESCRIPTOR_FILE_NAME));
+			});
+		fs.mkdirSync(path.join(scratchForgesDirPath, SECOND_RELEASE_DIR_NAME));
+		fs.writeFileSync(path.join(scratchForgesDirPath, SECOND_RELEASE_DIR_NAME, rosterLib.DESCRIPTOR_FILE_NAME), secondReleaseDescriptorText({ standardName: secondStandardName }));
+		return scratchForgesDirPath;
+	};
+	const SECOND_RELEASE_STANDARD_NAME = `${releaseDeclarationData.standardSource}-second`;
+	const coexistenceConjunctList = [
+		{
+			conjunctId: 'uniqueWithPesc260805AndTwoReleaseBundles',
+			title: `G-UNIQUE holds over every real bundle plus a second PESC release bundle ('${SECOND_RELEASE_STANDARD_NAME}'), with pesc260805 present`,
+			twinNameList: ['secondReleaseSharesTheName'],
+			evaluate: (subject, callback) => {
+				const scratchForgesDirPath = makeScratchForgesDir({ secondStandardName: subject.secondReleaseStandardName });
+				const verdict = rosterLib.assertUniqueStandardNames({ forgesDirPath: scratchForgesDirPath });
+				const pass = verdict === null && fs.existsSync(path.join(scratchForgesDirPath, 'pesc260805', rosterLib.DESCRIPTOR_FILE_NAME));
+				callback('', { pass, detail: verdict === null ? `unique over ${fs.readdirSync(scratchForgesDirPath).length} bundles` : verdict.message.slice(0, 300) });
+			},
+		},
+		{
+			conjunctId: 'sourceEqualsDescriptorOnEveryNode',
+			title: "G-SOURCE: the declaration's standardSource EQUALS the descriptor's standardName, and every forged node's _source equals it",
+			twinNameList: ['declarationSourceRenamed'],
+			evaluate: (subject, callback) => {
+				forgeOrFail({ subject }, callback, (forged) => {
+					const descriptorStandardName = /^standardName=(.*)$/m.exec(descriptorText)[1];
+					const offendingNode = forged.nodes.find((oneNode) => oneNode.properties._source !== descriptorStandardName);
+					const pass = subject.forgeDeclaration.standardSource === descriptorStandardName && offendingNode === undefined;
+					callback('', { pass, detail: `descriptor '${descriptorStandardName}', declaration '${subject.forgeDeclaration.standardSource}', ${offendingNode ? `node ${offendingNode.stableId} _source '${offendingNode.properties._source}'` : `all ${forged.nodes.length} nodes match`}` });
+				});
+			},
+		},
+	];
+	registerWalkTwin(COEXISTENCE_GATE_ID, 'uniqueWithPesc260805AndTwoReleaseBundles', 'secondReleaseSharesTheName', 'inputFault', (subject) => ({ ...subject, secondReleaseStandardName: releaseDeclarationData.standardSource }));
+	registerWalkTwin(COEXISTENCE_GATE_ID, 'sourceEqualsDescriptorOnEveryNode', 'declarationSourceRenamed', 'inputFault', (subject) => ({ ...subject, forgeDeclaration: { ...subject.forgeDeclaration, standardSource: SECOND_RELEASE_STANDARD_NAME } }));
+
+	// ---- F14-NO-BRIDGING
+	const BRIDGING_GATE_ID = 'F14-NO-BRIDGING';
+	const CEDS_PROPERTY_MUTATION = {
+		modulePath: WALK_PATH,
+		find: '			carriedProperties: kit.carriedProperties({ parsedObject: presentFactsOf(facts), carryList: CARRY_LIST_BY_NODE_KIND[nodeKind] }),',
+		replace: "			carriedProperties: { ...kit.carriedProperties({ parsedObject: presentFactsOf(facts), carryList: CARRY_LIST_BY_NODE_KIND[nodeKind] }), ...(nodeKind === 'element' ? { cedsId: 'P000001' } : {}) },",
+	};
+	const bridgingRefusalRe = /walk REFUSED: node '[^']+' carries property 'cedsId'/;
+	const bridgingConjunctList = [
+		{
+			conjunctId: 'noBridgingInTheGraph',
+			title: 'the forge names no bridge target: no property name speaks of CEDS, mappingInstruction is empty, and every edge stays inside the release',
+			twinNameList: ['cedsIdPropertyAdded'],
+			evaluate: (subject, callback) => {
+				forgeOrFail({ subject }, callback, (forged) => {
+					const cedsNamedNode = forged.nodes.find((oneNode) => Object.keys(oneNode.properties).some((onePropertyName) => /ceds/i.test(onePropertyName)));
+					const foreignEdge = forged.edges.find((oneEdge) => oneEdge.fromRef.source !== subject.forgeDeclaration.standardSource || oneEdge.toRef.source !== subject.forgeDeclaration.standardSource);
+					const mappingInstruction = subject.forgeDeclaration.mappingInstruction;
+					const pass = cedsNamedNode === undefined && foreignEdge === undefined && mappingInstruction.cedsOriginalAnchorPropertyName.length === 0 && mappingInstruction.impliedTargets.length === 0;
+					callback('', { pass, detail: `CEDS-named property on ${cedsNamedNode ? cedsNamedNode.stableId : 'no node'}; cross-standard edge ${foreignEdge ? foreignEdge.type : 'none'}` });
+				});
+			},
+		},
+		{
+			conjunctId: 'cedsPropertyRefusedByScan',
+			title: "a scratch walk that adds a 'cedsId' property to the elements is REFUSED BY NAME by the forge's own scan",
+			twinNameList: ['bridgingScanDisabled'],
+			evaluate: (subject, callback) => {
+				forgeSnapshot({ subject: withExtraHooksMutation(subject, CEDS_PROPERTY_MUTATION), snapshotDirPath: subject.snapshotDirPath }, (forgeError, forged) => {
+					callback('', { pass: refusedLike({ forgeError, refusalRe: bridgingRefusalRe }), detail: refusalDetail(forgeError, forged) });
+				});
+			},
+		},
+	];
+	registerWalkTwin(BRIDGING_GATE_ID, 'noBridgingInTheGraph', 'cedsIdPropertyAdded', 'productionMutation', (subject) => addMutation(subject, 'hooksMutationList', CEDS_PROPERTY_MUTATION));
+	registerWalkTwin(BRIDGING_GATE_ID, 'cedsPropertyRefusedByScan', 'bridgingScanDisabled', 'productionMutation', (subject) =>
+		addMutation(subject, 'hooksMutationList', { modulePath: WALK_PATH, find: 'const BRIDGING_PROPERTY_NAME_RE = /ceds/i;', replace: 'const BRIDGING_PROPERTY_NAME_RE = /^$/;' }),
+	);
+
+	// ---- F22-SEQUENCE
+	const SEQUENCE_GATE_ID = 'F22-SEQUENCE';
+	const CHOICE_NORMATIVE_MUTATION = { modulePath: SEQUENCE_GROUPS_PATH, find: '	choice: DOCUMENT,', replace: '	choice: NORMATIVE,' };
+	const choiceNormativeRefusalRe = /sequenceGroups REFUSED: group '[^']+' would be marked 'normative' under compositor 'choice'/;
+	const sequenceConjunctList = [
+		{
+			conjunctId: 'orderedNodesStamped',
+			title: "every local element, code and top-level definition carries sequenceOrdinal, siblingCount and orderSemantics, and nothing else does; 'normative' only on elements whose owner's top compositor is xs:sequence; the counts EQUAL the frozen literals",
+			twinNameList: ['choiceGroupMarkedNormative'],
+			evaluate: (subject, callback) => {
+				if (walkLiteralSet === undefined) {
+					callback('', missingLiteralResult('sequenceCountByOrderSemantics'));
+					return;
+				}
+				forgeOrFail({ subject }, callback, (forged) => {
+					const ORDERED_LABEL_SUFFIX_LIST = ['Element', 'Code', 'Type', 'CodeList', 'DataType', 'Group', 'GlobalElement'];
+					const nodeByStableId = {};
+					forged.nodes.forEach((oneNode) => {
+						nodeByStableId[oneNode.stableId] = oneNode;
+					});
+					const isOrderedNode = (oneNode) => {
+						const suffix = labelSuffixOf(oneNode);
+						if (suffix === 'Element' || suffix === 'Code') {
+							return true;
+						}
+						// a top-level definition carries documentPosition; nothing else does. Not 'its parent is the
+						// root': the structural contract re-parents a single-owner code list onto its one owning
+						// property (structural-contract.js M8), so 89 named code lists here have an element parent
+						return ORDERED_LABEL_SUFFIX_LIST.indexOf(suffix) !== -1 && oneNode.properties.documentPosition !== undefined;
+					};
+					const wrongList = [];
+					const countByOrderSemantics = {};
+					forged.nodes.forEach((oneNode) => {
+						const props = oneNode.properties;
+						const stamped = props.sequenceOrdinal !== undefined && props.siblingCount !== undefined && props.orderSemantics !== undefined;
+						if (stamped !== isOrderedNode(oneNode)) {
+							wrongList.push(`${oneNode.stableId} stamped ${stamped}`);
+							return;
+						}
+						if (!stamped) {
+							return;
+						}
+						countByOrderSemantics[props.orderSemantics] = (countByOrderSemantics[props.orderSemantics] || 0) + 1;
+						if (props.orderSemantics === 'normative') {
+							const ownerShape = JSON.parse(nodeByStableId[props.parentId].properties.contentModelShape || 'null');
+							if (labelSuffixOf(oneNode) !== 'Element' || ownerShape === null || ownerShape.compositor !== 'sequence') {
+								wrongList.push(`${oneNode.stableId} normative under ${ownerShape === null ? 'no compositor' : ownerShape.compositor}`);
+							}
+						}
+					});
+					const sortedText = (countMap) => JSON.stringify(Object.keys(countMap).sort().map((oneName) => [oneName, countMap[oneName]]));
+					const pass = wrongList.length === 0 && sortedText(countByOrderSemantics) === sortedText(walkLiteralSet.sequenceCountByOrderSemantics);
+					callback('', { pass, detail: `stamped ${sortedText(countByOrderSemantics)}; wrong ${wrongList.length ? wrongList.slice(0, 3).join(', ') : 'none'}` });
+				});
+			},
+		},
+		{
+			conjunctId: 'choiceNormativeRefused',
+			title: 'a scratch ordering table that marks an xs:choice group normative is REFUSED BY NAME by sequenceGroups (the sequence contract cannot check it)',
+			twinNameList: ['normativeGuardDisabled'],
+			evaluate: (subject, callback) => {
+				forgeSnapshot({ subject: withExtraHooksMutation(subject, CHOICE_NORMATIVE_MUTATION), snapshotDirPath: subject.snapshotDirPath }, (forgeError, forged) => {
+					callback('', { pass: refusedLike({ forgeError, refusalRe: choiceNormativeRefusalRe }), detail: refusalDetail(forgeError, forged) });
+				});
+			},
+		},
+	];
+	registerWalkTwin(SEQUENCE_GATE_ID, 'orderedNodesStamped', 'choiceGroupMarkedNormative', 'productionMutation', (subject) => addMutation(subject, 'hooksMutationList', CHOICE_NORMATIVE_MUTATION));
+	registerWalkTwin(SEQUENCE_GATE_ID, 'choiceNormativeRefused', 'normativeGuardDisabled', 'productionMutation', (subject) =>
+		addMutation(subject, 'hooksMutationList', { modulePath: SEQUENCE_GROUPS_PATH, find: 'if (orderSemantics === NORMATIVE && compositor !== NORMATIVE_COMPOSITOR) {', replace: 'if (false) {' }),
+	);
+
+	// ---- F2 (extra): the NoteMessage declarations, per file (QUIET_ORBIT ruling: 103 = AR 50 + CM 52 + root 1)
+	const DECLARATIONS_GATE_ID = 'F2-DECLARATIONS';
+	const declarationsConjunctList = [
+		{
+			conjunctId: 'noteMessageDeclarationsPerFile',
+			title: 'NoteMessage element declarations per file EQUAL the ruled literal (each its own node, under its own owner)',
+			twinNameList: ['rootNoteMessageRemoved'],
+			evaluate: (subject, callback) => {
+				if (walkLiteralSet === undefined) {
+					callback('', missingLiteralResult('noteMessageDeclarationCountByFile'));
+					return;
+				}
+				forgeOrFail({ subject }, callback, (forged) => {
+					const countByFile = {};
+					forged.nodes.filter((oneNode) => labelSuffixOf(oneNode) === 'Element' && oneNode.properties.name === 'NoteMessage').forEach((oneNode) => {
+						countByFile[oneNode.properties.sourceFileName] = (countByFile[oneNode.properties.sourceFileName] || 0) + 1;
+					});
+					const sortedText = (countMap) => JSON.stringify(Object.keys(countMap).sort().map((oneName) => [oneName, countMap[oneName]]));
+					callback('', { pass: sortedText(countByFile) === sortedText(walkLiteralSet.noteMessageDeclarationCountByFile), detail: sortedText(countByFile) });
+				});
+			},
+		},
+	];
+	registerWalkTwin(DECLARATIONS_GATE_ID, 'noteMessageDeclarationsPerFile', 'rootNoteMessageRemoved', 'inputFault', (subject) => ({ ...subject, snapshotDirPath: makeScratchSnapshot({ baseSnapshotDirPath: subject.snapshotDirPath, alterTextByFileName: { [rootFileName]: withOneElementRemoved }, resealManifestEntry: true, resealChecksums: true }), frozenReleaseCensus: { ...subject.frozenReleaseCensus, elementDeclarationCount: subject.frozenReleaseCensus.elementDeclarationCount - 1, referenceCount: subject.frozenReleaseCensus.referenceCount - 1, inReleaseReferenceCount: subject.frozenReleaseCensus.inReleaseReferenceCount - 1 } }));
+
+	const walkGateDeclarationList = [
+		{ gateId: IDENTITY_GATE_ID, title: 'F6 identity: unique, patterned, deterministic', conjunctList: identityConjunctList },
+		{ gateId: ABSENT_GATE_ID, title: 'F7 absent is absent', conjunctList: absentConjunctList },
+		{ gateId: TEXTS_GATE_ID, title: 'F8 texts (the occurrence conjunct waits for F3)', conjunctList: textsConjunctList },
+		{ gateId: EDGES_GATE_ID, title: 'F10 edges (HAS_INSTANCE and HAS_CHILD wait for F3)', conjunctList: edgesConjunctList },
+		{ gateId: COEXISTENCE_GATE_ID, title: 'F13 coexistence: G-UNIQUE and G-SOURCE', conjunctList: coexistenceConjunctList },
+		{ gateId: BRIDGING_GATE_ID, title: 'F14 no bridging', conjunctList: bridgingConjunctList },
+		{ gateId: SEQUENCE_GATE_ID, title: 'F22 sequence', conjunctList: sequenceConjunctList },
+		{ gateId: DECLARATIONS_GATE_ID, title: 'F2 declarations (extra): one node per declaration', conjunctList: declarationsConjunctList },
+	];
+	const makeWalkSubject = () => ({ ...makeSubject(), secondReleaseStandardName: SECOND_RELEASE_STANDARD_NAME });
+
 	runGateFamily(
 		{ harness, familyName: `${standardKey} release gates (phase F1)`, gateDeclarationList, twinRegistry, makeSubject, cloneSubject, expectedConjunctCount: 17, expectedTwinCount: 17 },
 		() => {
-			scratchRootPathList.forEach((oneScratchRootPath) => fs.rmSync(oneScratchRootPath, { recursive: true, force: true }));
-			whenDone();
+			runGateFamily(
+				{ harness, familyName: `${standardKey} walk gates (phase F2)`, gateDeclarationList: walkGateDeclarationList, twinRegistry: walkTwinRegistry, makeSubject: makeWalkSubject, cloneSubject, expectedConjunctCount: 14, expectedTwinCount: 14 },
+				() => {
+					scratchRootPathList.forEach((oneScratchRootPath) => fs.rmSync(oneScratchRootPath, { recursive: true, force: true }));
+					whenDone();
+				},
+			);
 		},
 	);
 };

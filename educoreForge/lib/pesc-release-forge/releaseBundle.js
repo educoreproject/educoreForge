@@ -61,7 +61,7 @@ const readForgeDeclaration = ({ bundleDirPath }) => {
 
 const makeBundleHooks = ({ bundleDirPath }) => {
 	const { releaseDeclarationData, frozenReleaseCensus, frozenCensusName } = readBundleData({ bundleDirPath });
-	return makeReleaseHooks({ standardKey: releaseDeclarationData.standardKey, frozenReleaseCensus, frozenCensusName });
+	return makeReleaseHooks({ standardKey: releaseDeclarationData.standardKey, labelPrefix: releaseDeclarationData.labelPrefix, frozenReleaseCensus, frozenCensusName });
 };
 
 module.exports = { readBundleData, readForgeDeclaration, makeBundleHooks, RELEASE_DECLARATION_RELATIVE_PATH, RELEASE_CENSUS_RELATIVE_PATH, moduleName };
