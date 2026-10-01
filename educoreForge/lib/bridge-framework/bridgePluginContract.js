@@ -39,6 +39,7 @@ const bridgeAllowanceRegistryLib = require('./bridgeAllowanceRegistry');
 // and the refusal that reads them. The contract asks it rather than restating them, so a kind row added there
 // is admitted here the same day. It requires only path, the refusal helper and ./candidateRetrieval: no cycle.
 const neighbourVoteLib = require('./neighbourVote');
+const candidateRetrievalMethodRegistryLib = require('./candidateRetrievalMethodRegistry');
 const promptIdentifierScanLib = require('./promptIdentifierScan');
 const judgmentPartitionLib = require('./judgmentPartition');
 const materialisationFanoutLib = require('./materialisationFanout');
@@ -543,18 +544,26 @@ const SUBJECT_IDENTITY_KIND_VALIDATOR_REGISTRY = Object.freeze({
 // ---------------------------------------------------------------------
 // CANDIDATE RETRIEVAL — a METHOD REGISTRY (SPEC-bridgeRevision-091426.md §5; §13 R-BR-7, R-BR-10)
 //
-// candidateRetrieval.method names a row; the row names every field that method takes, and EVERY field is
+// candidateRetrieval.method names a row (candidateRetrievalMethodRegistry.js); the row names every field that method takes, and EVERY field is
 // required. Absence is never defaulted: neighbourVote's votes-only form is an explicit null, and a plugin that
 // omits `method` is refused rather than read as today's cosine search (R-BR-10 puts the method on every shipped
 // plugin for exactly that reason). Each field's value rule is ONE row of the field-rule registry, shared by
 // every method that takes the field, so k means the same thing under both. Nothing here tests a method NAME:
-// a new method is a row here plus its consumer in the orchestrator.
+// a new method is a row in candidateRetrievalMethodRegistry.js, and this registry follows it.
 // ---------------------------------------------------------------------
-const CANDIDATE_RETRIEVAL_METHOD_REGISTRY = Object.freeze({
-	'cosineTopK-v1': Object.freeze({ fieldNameList: Object.freeze(['method', 'k', 'floor', 'embeddingModelVersion']) }),
-	'embedTextVote-v1': Object.freeze({ fieldNameList: Object.freeze(['method', 'hitsPerText', 'minScore', 'k', 'embeddingModelVersion', 'neighbourVote']) }),
-});
+// ⟪lane C, 2026-10-01⟫ The field lists are READ from the method rows in candidateRetrievalMethodRegistry.js, their one
+// home, rather than stated here a second time: a method the orchestrator can run is admitted here the same day, with
+// the same fields, and the two can no longer drift apart. The registry requires nothing of this file: no cycle.
+const CANDIDATE_RETRIEVAL_METHOD_REGISTRY = Object.freeze(
+	candidateRetrievalMethodRegistryLib.CANDIDATE_RETRIEVAL_METHOD_ROW_LIST.reduce((soFar, oneRow) => Object.assign(soFar, { [oneRow.methodName]: Object.freeze({ fieldNameList: oneRow.fieldNameList }) }), {}),
+);
 const CANDIDATE_RETRIEVAL_METHOD_LIST = Object.freeze(Object.keys(CANDIDATE_RETRIEVAL_METHOD_REGISTRY));
+// two rows sharing a method name would collapse into ONE entry above, silently keeping the later row's fields: refused at
+// load, by name, before any declaration is judged against a field list nobody wrote
+const duplicatedRetrievalMethodName = candidateRetrievalMethodRegistryLib.CANDIDATE_RETRIEVAL_METHOD_ROW_LIST.map((oneRow) => oneRow.methodName).find((oneMethodName, nameIndex, methodNameList) => methodNameList.indexOf(oneMethodName) !== nameIndex);
+if (duplicatedRetrievalMethodName !== undefined) {
+	throw refuse.byName({ moduleName, what: `candidateRetrievalMethodRegistry's CANDIDATE_RETRIEVAL_METHOD_ROW_LIST names method '${duplicatedRetrievalMethodName}' twice`, where: 'one declared method name, one row; the contract would otherwise read one of the two field lists and drop the other' });
+}
 const isFiniteCosine = (value) => typeof value === 'number' && Number.isFinite(value) && value >= -1 && value <= 1;
 const CANDIDATE_RETRIEVAL_FIELD_RULE_REGISTRY = Object.freeze({
 	// the method was resolved to its row before any field rule runs
