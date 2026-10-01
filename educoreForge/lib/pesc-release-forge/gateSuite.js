@@ -1674,9 +1674,9 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 					return;
 				}
 				sideStatementsOf({ subject }, callback, ({ sourceStatements, graphStatements }) => {
-					const nestedChoiceKeyList = [...sourceStatements.keys()].filter((oneKey) => NESTED_CHOICE_STATEMENT_RE.test(oneKey));
-					const unrebuiltKeyList = nestedChoiceKeyList.filter((oneKey) => !sameStatement(sourceStatements.get(oneKey), graphStatements.get(oneKey)));
-					callback('', { pass: nestedChoiceKeyList.length === roundTripLiteralSet.nestedChoiceCount && unrebuiltKeyList.length === 0, detail: `${nestedChoiceKeyList.length} nested choices (literal ${roundTripLiteralSet.nestedChoiceCount}); not rebuilt ${unrebuiltKeyList.length ? unrebuiltKeyList.slice(0, 2).join(' | ') : 'none'}` });
+					const nestedChoiceStatementKeyList = [...sourceStatements.keys()].filter((oneStatementKey) => NESTED_CHOICE_STATEMENT_RE.test(oneStatementKey));
+					const unrebuiltStatementKeyList = nestedChoiceStatementKeyList.filter((oneStatementKey) => !sameStatement(sourceStatements.get(oneStatementKey), graphStatements.get(oneStatementKey)));
+					callback('', { pass: nestedChoiceStatementKeyList.length === roundTripLiteralSet.nestedChoiceCount && unrebuiltStatementKeyList.length === 0, detail: `${nestedChoiceStatementKeyList.length} nested choices (literal ${roundTripLiteralSet.nestedChoiceCount}); not rebuilt ${unrebuiltStatementKeyList.length ? unrebuiltStatementKeyList.slice(0, 2).join(' | ') : 'none'}` });
 				});
 			},
 		},
@@ -1692,20 +1692,20 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 				sideStatementsOf({ subject }, callback, ({ sourceStatements, graphStatements }) => {
 					const keysWhere = (predicate) => [...sourceStatements.entries()].filter((oneEntry) => predicate(oneEntry[1])).map((oneEntry) => oneEntry[0]);
 					const hasAttribute = (oneStatement, attributeName, attributeValue) => Array.isArray(oneStatement.attributeList) && oneStatement.attributeList.some((onePair) => onePair[0] === attributeName && (attributeValue === undefined || onePair[1] === attributeValue));
-					const caseKeyListByName = {
+					const caseStatementKeyListByName = {
 						formElementCount: keysWhere((oneStatement) => oneStatement.tag === 'element' && hasAttribute(oneStatement, 'form')),
 						emptyEnumerationValueCount: keysWhere((oneStatement) => oneStatement.tag === 'enumeration' && hasAttribute(oneStatement, 'value', '')),
 						emptyDocumentationCount: keysWhere((oneStatement) => oneStatement.tag === 'documentation' && oneStatement.text === ''),
 					};
 					const failingList = [];
-					Object.keys(caseKeyListByName).forEach((caseName) => {
-						const caseKeyList = caseKeyListByName[caseName];
-						const unregeneratedKey = caseKeyList.find((oneKey) => !sameStatement(sourceStatements.get(oneKey), graphStatements.get(oneKey)));
-						if (caseKeyList.length !== roundTripLiteralSet[caseName] || unregeneratedKey !== undefined) {
-							failingList.push(`${caseName} ${caseKeyList.length} (literal ${roundTripLiteralSet[caseName]})${unregeneratedKey ? ` not regenerated ${unregeneratedKey}` : ''}`);
+					Object.keys(caseStatementKeyListByName).forEach((caseName) => {
+						const caseStatementKeyList = caseStatementKeyListByName[caseName];
+						const unregeneratedStatementKey = caseStatementKeyList.find((oneStatementKey) => !sameStatement(sourceStatements.get(oneStatementKey), graphStatements.get(oneStatementKey)));
+						if (caseStatementKeyList.length !== roundTripLiteralSet[caseName] || unregeneratedStatementKey !== undefined) {
+							failingList.push(`${caseName} ${caseStatementKeyList.length} (literal ${roundTripLiteralSet[caseName]})${unregeneratedStatementKey ? ` not regenerated ${unregeneratedStatementKey}` : ''}`);
 						}
 					});
-					callback('', { pass: failingList.length === 0, detail: `${Object.keys(caseKeyListByName).map((caseName) => `${caseName} ${caseKeyListByName[caseName].length}`).join(', ')}; failing ${failingList.length ? failingList.join('; ') : 'none'}` });
+					callback('', { pass: failingList.length === 0, detail: `${Object.keys(caseStatementKeyListByName).map((caseName) => `${caseName} ${caseStatementKeyListByName[caseName].length}`).join(', ')}; failing ${failingList.length ? failingList.join('; ') : 'none'}` });
 				});
 			},
 		},

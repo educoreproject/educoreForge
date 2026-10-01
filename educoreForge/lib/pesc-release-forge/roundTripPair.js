@@ -91,7 +91,6 @@ const SEMANTIC_VALIDATION_LIMIT =
 	'restriction (not significant to XSD). Occurrences, HAS_INSTANCE, HAS_CHILD, the release record, text nodes and the ' +
 	'stamped ordinals are derived structure, proved by the reachability, identity and sequence gates, not here.';
 
-const isPlainObject = (candidate) => candidate !== null && typeof candidate === 'object' && !Array.isArray(candidate);
 const widenedList = (listOrScalar) => (listOrScalar === undefined || listOrScalar === null ? [] : Array.isArray(listOrScalar) ? listOrScalar : [listOrScalar]);
 const localNameOf = (tagName) => (tagName.indexOf(':') === -1 ? tagName : tagName.slice(tagName.indexOf(':') + 1));
 const compareStrings = (leftText, rightText) => (leftText < rightText ? -1 : leftText > rightText ? 1 : 0);
@@ -497,6 +496,5 @@ module.exports = {
 	OMITTED_KIND,
 	LOST_REASON,
 	SEMANTIC_VALIDATION_LIMIT,
-	isPlainObject,
 	moduleName,
 };
