@@ -53,7 +53,7 @@ const FORGES_DIR_PATH = path.join(TREE_ROOT, 'forges');
 // the five shipped plugins, with the bundle directory the contract resolves document channels against
 const SHIPPED_PLUGIN_LIST = [
 	{ bridgeName: 'sifCedsStandardPlugin', bundleDirName: 'sif', pluginPath: 'forges/sif/bridges/sifCedsStandardPlugin.js' },
-	{ bridgeName: 'edfiCedsCrosswalkPlugin', bundleDirName: 'edfi', pluginPath: 'forges/edfi/bridges/edfiCedsCrosswalkPlugin.js' },
+	// RETIRED 2026-10-02 (goldJev lane F, BRIEF-F; TQ 2026-09-10 and 2026-10-01: the CEDS-authored crosswalk is excluded, "known to be garbage"): edfiCedsCrosswalkPlugin moved to forges/edfi/retiredBridges/, out of the roster
 	{ bridgeName: 'edfiCedsDerivedPlugin', bundleDirName: 'edfi', pluginPath: 'forges/edfi/bridges/edfiCedsDerivedPlugin.js' },
 	{ bridgeName: 'pescCedsDerivedPlugin', bundleDirName: 'pesc260805', pluginPath: 'forges/pesc260805/bridges/pescCedsDerivedPlugin.js' },
 	{ bridgeName: 'pescOptionSetCedsDerivedPlugin', bundleDirName: 'pesc260805', pluginPath: 'forges/pesc260805/bridges/pescOptionSetCedsDerivedPlugin.js' },
@@ -87,12 +87,12 @@ const validateWith = (subject, onePlugin, overrideByName) =>
 		bundleDirPath: path.join(FORGES_DIR_PATH, onePlugin.bundleDirName),
 	});
 
-const optionSetPlugin = SHIPPED_PLUGIN_LIST[4];
+const optionSetPlugin = SHIPPED_PLUGIN_LIST.find((onePlugin) => onePlugin.bridgeName === 'pescOptionSetCedsDerivedPlugin'); // by name, not index: the crosswalk row's retirement (2026-10-02) shifted the indices
 // The property-tier sibling declares NO discriminator and is the fixture for every ABSENCE case. Using the
 // option-set plugin for those was correct until the kit change of this same phase gave it a declaration —
 // at which point "absent" quietly stopped being absent and the [C1] twin stopped being able to go red. The
 // gate caught it; the fixture is now chosen for the property it needs rather than for convenience.
-const undeclaredPlugin = SHIPPED_PLUGIN_LIST[3];
+const undeclaredPlugin = SHIPPED_PLUGIN_LIST.find((onePlugin) => onePlugin.bridgeName === 'pescCedsDerivedPlugin');
 
 const conjunctJudgeByRefId = {
 	// FOUR declare nothing and ONE declares 'optionSet' — the state after this phase's single kit edit, and

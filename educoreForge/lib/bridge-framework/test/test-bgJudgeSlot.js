@@ -71,7 +71,7 @@ const JUDGE_SLOT_PREDICATE_ENUM_LITERAL = Object.freeze(['exactMatch', 'closeMat
 // every bridge plugin shipped under forges/ on 2026-09-28, with the variant and renderer version each resolves to
 const SHIPPED_PLUGIN_LIST = [
 	{ bridgeName: 'sifCedsStandardPlugin', pluginPath: 'forges/sif/bridges/sifCedsStandardPlugin.js', judgePromptVariant: 'crosswalk', rendererVersion: CROSSWALK_RENDERER_VERSION_LITERAL },
-	{ bridgeName: 'edfiCedsCrosswalkPlugin', pluginPath: 'forges/edfi/bridges/edfiCedsCrosswalkPlugin.js', judgePromptVariant: 'crosswalk', rendererVersion: CROSSWALK_RENDERER_VERSION_LITERAL },
+	// RETIRED 2026-10-02 (goldJev lane F, BRIEF-F; TQ 2026-09-10 and 2026-10-01: the CEDS-authored crosswalk is excluded, "known to be garbage"): edfiCedsCrosswalkPlugin moved to forges/edfi/retiredBridges/, out of the roster
 	// MOVED 2026-09-30 (IVORY_ECHO, WORKORDER-jevRelations-093026 R2, TQ ruling "every bridge uses judge-named relations"):
 	// Ed-Fi derived now declares predicateRule judgeSlot-v1, so it resolves to derivedJudgeSlot. Was: 'derived' / derived-v12.
 	{ bridgeName: 'edfiCedsDerivedPlugin', pluginPath: 'forges/edfi/bridges/edfiCedsDerivedPlugin.js', judgePromptVariant: 'derivedJudgeSlot', rendererVersion: JUDGE_SLOT_RENDERER_VERSION_LITERAL },

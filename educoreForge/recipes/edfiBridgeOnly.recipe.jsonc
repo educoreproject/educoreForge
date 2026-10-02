@@ -1,4 +1,9 @@
 {
+  // RETIRED 2026-10-02 (goldJev lane F, BRIEF-F): this recipe names edfiCedsCrosswalkPlugin, which is OUT of the
+  // plugin roster (moved to forges/edfi/retiredBridges/) because TQ ruled the CEDS-authored crosswalk excluded from
+  // every graph (2026-09-10; 2026-10-01: "known to be garbage"). A build of this recipe now REFUSES BY NAME
+  // (unregistered bridge). Kept as the record of the phase that built with it; do not revive it without a TQ ruling.
+  //
   // edfiBridgeOnly — the FAST ITERATION LOOP for the Ed-Fi bridge plugin: Ed-Fi + the CEDS hub only, one
   // bridge. DEV_ builds only; NEVER an acceptance run — the acceptance census (SPEC §10.4) and the frozen
   // decision block are keyed to the four-forge assembly (fourWithHubEdfiBridge.recipe.jsonc, manifest
