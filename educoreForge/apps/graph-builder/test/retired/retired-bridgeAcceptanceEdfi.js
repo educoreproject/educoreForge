@@ -1,6 +1,14 @@
 #!/usr/bin/env node
 'use strict';
 
+// ╔══════════════════════════════════════════════════════════════════════════════════════════════════════════════╗
+// ║ RETIRED 2026-10-02 — DO NOT USE (goldJev lane F, BRIEF-F). TQ, 2026-09-10: the CEDS-authored Ed-Fi crosswalk ║
+// ║ "will not be included in the graph and will not be used as a basis for evaluating our performance"; restated ║
+// ║ 2026-10-01: "known to be garbage". The plugin is out of the roster (forges/edfi/bridges/ no longer holds it)   ║
+// ║ and its CSVs sit unread in forges/edfi/assets/standardSourceData/04/cedsAuthoredCrosswalk_DO_NOT_USE/.         ║
+// ║ Kept as HISTORY only: it is outside every discovery path and will not run without a new TQ ruling.            ║
+// ╚══════════════════════════════════════════════════════════════════════════════════════════════════════════════╝
+
 // test-bridgeAcceptanceEdfi.js — the Ed-Fi plugin's ACCEPTANCE gates over the ARTIFACTS (SPEC-bridgeFramework-v1.md §12,
 // §13.1 BG-P1..P7 "against the real block", BG-CENSUS (a) "live for Ed-Fi", BG-ACCEPT (a)(c)(e); the B3 order):
 // reads the PINNED B3 acceptance store (decision store + standardsDatabase under system/dataStores/bridgeAcceptance/edfi/)

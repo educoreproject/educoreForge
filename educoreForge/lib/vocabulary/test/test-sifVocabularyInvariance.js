@@ -48,7 +48,12 @@ const PROBE_PATH = path.join(__dirname, 'testSupport', 'pureProxyFingerprintProb
 // measurement.
 const G0_PROXY_FINGERPRINT_BY_STANDARD = Object.freeze({
 	ceds: 'ed4785ba9212999d005608357abdfc9d5db9a32b6f57830eae91864fed517252',
-	edfi: '814ce961570cd707b2648dd02f6bccfe28dea3bbebf3daad2d95d638f2662127',
+	// edfi RE-PINNED 2026-10-02 (PRISM_LATTICE, goldJev lane F): G0's 814ce961570c… -> 04abc77b…. NOT edited to match a
+	// measurement: a RULED base move. TQ excluded the CEDS-authored crosswalk from every graph (2026-09-10, 2026-10-01), so the
+	// Ed-Fi forge no longer stamps its CEDS ids (3,045 nodes) and its root no longer names it; expectedFingerprints.json
+	// carries the same move with the evidence (runEdfiPreMigrationProbes: 937734f EQUAL 814ce961…, lane F 04abc77b…). The
+	// other three are G0's literals, unchanged.
+	edfi: '04abc77bc8d15a0326d3c047fc4cf725eb631badb5434538c090481ce5866be8',
 	sif: '72029d9ac1f366a6bb0f470863077bf5f9837eda7844602b86056e2b09b1d90b',
 	pesc260805: '87c90588c87fd73fe4838b1662da3b08b9a1d373ba839779977deb6685b6bc61',
 });

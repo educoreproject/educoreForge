@@ -677,6 +677,17 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // roster count, merged by union to 11 with lane I's dated note) and lib/bridge-framework/test/test-bgJudgeSlot.js 5/0 (B1x's three
 // rows). B1x's own anchor postPescB1xPescComposeA-100126 is superseded by this one. No framework source moved. Six declared paths
 // unchanged, no exclusion added; the tag is cut ON this re-anchor commit.
+// RE-ANCHOR 2026-10-02 (PRISM_LATTICE; pre-authorised, NOTES-supervisor items 5 and 21, goldJev lane F): postGoldJevAPescComposeA-100126 ->
+// postEdfiCrosswalkOutFPescComposeA-100226. CENSUS (numstat from postGoldJevAPescComposeA-100126 over the six declared paths, 4 paths, from ONE
+// commit, 48af4af — the retirement of edfiCedsCrosswalkPlugin from the shipped-plugin roster literals, test files only, outside the
+// frameworkFingerprint): lib/bridge-framework/test/test-bgJudgeConfig.js 1/1, test-bgJudgeSlot.js 1/1, test-bgPromptScan.js 1/1,
+// test-bgSubjectDiscriminator.js 3/3 (one roster row each; the last also picks its two fixtures by name). Six declared paths unchanged,
+// no exclusion added; the tag is cut ON this re-anchor commit.
+// SECOND RE-ANCHOR 2026-10-02 (PRISM_LATTICE; pre-authorised, NOTES-supervisor item 5, goldJev lane F, BG-COMPOSE-PESC LAST after the two
+// BG-SEAM-UNTOUCHED moves): postEdfiCrosswalkOutFPescComposeA-100226 -> postEdfiCrosswalkOutFPescComposeB-100226. CENSUS (numstat from
+// postEdfiCrosswalkOutFPescComposeA-100226 over the six declared paths, 2 paths, TEST files only): lib/bridge-framework/test/test-bgNosub.js
+// 16/2 (its seamDiffEmpty and (iii) re-anchors, 0580451 and 371598e), lib/vocabulary/test/test-sifVocabularyInvariance.js 6/1 (the edfi G0
+// proxy re-pin, dfc9d07). Six declared paths unchanged, no exclusion added; the tag is cut ON this re-anchor commit.
 const P1_BASELINE_COMMIT = 'postGoldJevNextB1xPescComposeA-100226'; // re-anchored by ELECTRIC_MEADOW on goldJev/next after the B1x merge; the tag is cut ON the re-anchor commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;

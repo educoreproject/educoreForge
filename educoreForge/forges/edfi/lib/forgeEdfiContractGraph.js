@@ -4,9 +4,9 @@
 // §5.1 emitContractGraph, §8.2; migrated F3b 2026-08-16 from the Phase 2 pure shaping layer,
 // R-WO-8/R-WO-9). PURE, synchronous, deterministic. Consumes the Phase 1 parser's in-memory MetaEd
 // model (the declared interface in metaEdParser.js), the descriptor code-value sets
-// (descriptorCodeValueLoader.js), the authored crosswalk registries (crosswalkCarrier.js) and the
-// framework's KIT, and returns { nodes, edges, stats, crosswalkMatchReport } — the kit's collected
-// arrays in emission order plus this standard's report.
+// (descriptorCodeValueLoader.js) and the framework's KIT, and returns { nodes, edges, stats } — the kit's
+// collected arrays in emission order. (Until 2026-10-02 it also consumed the authored crosswalk registries and
+// returned a crosswalkMatchReport; the crosswalk is retired, see PASS 5.)
 //
 // WHAT MOVED TO THE FRAMEWORK (SPEC §8.2, byte-identical — block aea6d8dfe789…): the constants
 // (→ lib/edfiForgeDeclaration.js), makeNode / addEdge / registerStableId / isCleanStableId /
@@ -15,7 +15,7 @@
 // kit.carriedProperties, kit.crossRefsJson, kit.emitOptionValue), the ROOT (→ rootNode.js from the
 // declaration + describeRoot), the dangling-endpoint terminal check and the structural finalizer
 // (→ buildContractGraph's integrity pass). What remains is Ed-Fi: the registries, the identity rule,
-// the passes over constructs / properties / descriptors / option values / crosswalk annotation, and
+// the passes over constructs / properties / descriptors / option values / the crosswalk-exclusion scan, and
 // the per-standard refusals of malformed STANDARD content (Profile §7.2 keeps those in the hook).
 //
 // ROLE MAPPING (ruling R-WO-9, AMBER_TOWER 2026-08-03):
@@ -45,10 +45,9 @@
 //     between two declared inputs of one snapshot)
 //   - an unresolvable model-internal reference (property target, subclass base, extension
 //     extendee, domain item, interchange component, subdomain parent)
-//   - an unnormalizable CEDS cross-ref (R3, kit.cedsAnchorValue); a duplicate stableId and a
-//     dangling edge endpoint are the KIT's refusals now (same wording class, same three-state twins)
-// UNMATCHED CROSSWALK ROWS ARE NOT REFUSALS (R-WO-11): they are reported, per row, in
-// crosswalkMatchReport — the honest partial match IS the census-delta evidence.
+//   - any node carrying a CEDS-named property or a cross-reference (PASS 5: the crosswalk is excluded);
+//     a duplicate stableId and a dangling edge endpoint are the KIT's refusals now (same wording
+//     class, same three-state twins)
 //
 // This module is self-contained by design: it takes NO dependency on the incumbent forge's
 // lib/ (parser.js, normalize.js), which is scheduled for closeout removal (R-WO-2).
@@ -63,22 +62,11 @@ const forgeFramework = require(path.join(CORE_LIB, 'forge-framework', 'forge-fra
 const { DME_ROLES, EDGE_TYPES } = forgeFramework.vocabulary;
 const forgeDeclaration = require('./edfiForgeDeclaration'); // H1 — the constants live there, once
 
-const { standardSource: STANDARD_SOURCE, mappingInstruction } = forgeDeclaration;
+const { standardSource: STANDARD_SOURCE } = forgeDeclaration;
 
-// the authored-crosswalk anchor names the walk stashes as `locator` and as the nodes'
-// cedsOriginalAnchorPropertyName / cedsOptionOriginalAnchorPropertyName lists ARE the declaration's
-// original anchor property names (one source, no second literal); Ed-Fi declares exactly ONE of each
-const anchorNameFrom = (anchorNameList, anchorKindLabel) => {
-	if (!Array.isArray(anchorNameList) || anchorNameList.length !== 1 || typeof anchorNameList[0] !== 'string') {
-		throw new Error(
-			`forge-edfi REFUSED: mappingInstruction.${anchorKindLabel} must name exactly ONE anchor property ` +
-				`(got ${JSON.stringify(anchorNameList)}) — the walk stashes that name as the crossRefs locator`,
-		);
-	}
-	return anchorNameList[0];
-};
-const CEDS_ANCHOR_PROPERTY_NAME = anchorNameFrom(mappingInstruction.cedsOriginalAnchorPropertyName, 'cedsOriginalAnchorPropertyName');
-const CEDS_OPTION_ANCHOR_PROPERTY_NAME = anchorNameFrom(mappingInstruction.cedsOptionOriginalAnchorPropertyName, 'cedsOptionOriginalAnchorPropertyName');
+// PASS 5's rule: a property name speaking of CEDS (cedsId, cedsOptionCode, cedsOriginalAnchorPropertyName …)
+// or a crossRefs written by the walk marks crosswalk carriage. The finalizer adds crossRefs '[]' AFTER the walk.
+const CROSSWALK_CARRIED_PROPERTY_NAME_RE = /ceds|^crossRefs$/i;
 
 // =====================================================================
 // REGISTRIES (house law: registry over switch, everywhere)
@@ -231,11 +219,6 @@ const buildConstructStableId = ({ constructType, constructName }) => {
 	return `edfi:${constructType}/${cleanName}`;
 };
 
-// the canonical CEDS property anchor (P<6-digit zero-padded>) is kit.cedsAnchorValue({ rawValue, kind:
-// 'property' }) — the ONE normalizer (D14), the declaration's cedsAnchorAbsentSentinelList ('000000'),
-// a present-but-unnormalizable annotation REFUSED by the kit (R3), never data
-const CEDS_ANCHOR_KIND = 'property';
-
 // the effective property name: MetaEd role-name context prefixes the base name (Ed-Fi naming
 // semantics); 'named' overrides for shared properties; shared properties without 'named' take
 // the shared type's local name
@@ -257,22 +240,19 @@ const effectivePropertyNameFor = (parsedProperty) => {
 const moduleFunction = () => {
 	// =====================================================================
 	// emitContractGraph — the WALK (H3). PURE, deterministic.
-	//   { metaEdModel, descriptorCodeValues, authoredCrosswalk, kit }
-	//     -> { nodes, edges, stats, crosswalkMatchReport }
+	//   { metaEdModel, descriptorCodeValues, kit }
+	//     -> { nodes, edges, stats }
 	//   nodes / edges are the KIT's collected arrays (every creation went through kit.makeNode /
 	//   kit.addEdge / kit.emitOptionValue); the ROOT is already minted when the walk starts
 	//   (kit.rootStableId) and is the first member of kit.nodes.
 	// =====================================================================
-	const emitContractGraph = ({ metaEdModel, descriptorCodeValues, authoredCrosswalk, kit }) => {
+	const emitContractGraph = ({ metaEdModel, descriptorCodeValues, kit }) => {
 		const { nodes, edges, stats } = kit;
 		// this standard's own counters, added onto the kit's (nodeCountByRole / edgeCountByType /
 		// danglingEdges are the kit's)
 		Object.assign(stats, {
 			constructCountByType: {},
 			optionValueCountByOrigin: {},
-			crossRefsAnnotatedProperties: 0,
-			crossRefsAnnotatedDescriptors: 0,
-			crossRefsAnnotatedOptionValues: 0,
 			orphanAnchoredOptionSets: 0,
 			itemKeywordMismatchList: [],
 		});
@@ -280,8 +260,6 @@ const moduleFunction = () => {
 
 		// ---- indexes ----
 		const constructNodeByTypeAndName = {}; // `${constructType}/${name}` -> node
-		const propertyNodeListByOwnerAndName = {}; // `${ownerName}.${effectiveName}` -> [node]
-		const optionValueNodeBySetAndCode = {}; // `${optionSetName}.${codeValue}` -> node
 		const optionSetConstrainedStableIds = new Set(); // sets owned by >=1 property
 
 		const originFor = (parsedConstruct) =>
@@ -422,7 +400,7 @@ const moduleFunction = () => {
 					parsedProperty.documentationText !== undefined
 						? parsedProperty.documentationText
 						: undefined;
-				const propertyNode = kit.makeNode({
+				kit.makeNode({
 					role: DME_ROLES.PROPERTY,
 					perStandardLabel: 'EdfiProperty',
 					stableId: propertyStableId,
@@ -442,10 +420,6 @@ const moduleFunction = () => {
 					},
 					origin: propertyOrigin,
 				});
-				(propertyNodeListByOwnerAndName[`${constructName}.${effectiveName}`] =
-					propertyNodeListByOwnerAndName[`${constructName}.${effectiveName}`] || []).push(
-					propertyNode,
-				);
 
 				kit.addEdge({ edgeType: EDGE_TYPES.HAS_PROPERTY, fromStableId: constructStableId, toStableId: propertyStableId, edgeContext: `${constructName}->${effectiveName}` });
 
@@ -492,7 +466,7 @@ const moduleFunction = () => {
 				}
 				const optionValueStableId = `edfi:value/${constructName}.${trimmedCodeValue}`;
 				// the kit's helper mints the DmeOptionValue parented on its set and adds HAS_VALUE (set → value)
-				const optionValueNode = kit.emitOptionValue({
+				kit.emitOptionValue({
 					optionSetStableId: constructStableId,
 					optionValueStableId,
 					perStandardLabel: 'EdfiOptionValue',
@@ -504,7 +478,6 @@ const moduleFunction = () => {
 					edgeContext: `${constructName}->${codeValueText}`,
 					origin,
 				});
-				optionValueNodeBySetAndCode[`${constructName}.${trimmedCodeValue}`] = optionValueNode;
 				stats.optionValueCountByOrigin[valueOrigin] =
 					(stats.optionValueCountByOrigin[valueOrigin] || 0) + 1;
 			};
@@ -763,167 +736,30 @@ const moduleFunction = () => {
 		});
 
 		// =====================================================================
-		// PASS 5 — authored crosswalk carriage (R-WO-4 stash; R-WO-11 reporting)
+		// PASS 5 — THE CEDS-AUTHORED CROSSWALK IS EXCLUDED (BRIEF-F, 2026-10-02). TQ, 2026-09-10: "it will
+		// not be included in the graph"; 2026-10-01: "known to be garbage". This pass USED to stamp the
+		// crosswalk's CEDS ids onto 3,045 nodes (cedsId + crossRefs on properties and descriptors,
+		// cedsOptionCode + crossRefs on option values). Ed-Fi's own MetaEd publishes no CEDS anchor, so a
+		// property naming CEDS, or a cross-reference of any kind, can only have come from a crosswalk:
+		// REFUSED BY NAME (FBB-001: the forge does no bridging; the PESC release forge's F14 scan is the
+		// same rule). The finalizer then stamps the universal crossRefs '[]' on every node.
 		// =====================================================================
-		const crosswalkMatchReport = {
-			propertyRows: {
-				matchedCount: 0,
-				matchedDirectCount: 0,
-				matchedByDescriptorSuffixCount: 0,
-				unmatchedList: [],
-				ambiguousList: [],
-			},
-			descriptorRows: { matchedCount: 0, unmatchedList: [] },
-			optionValueRows: { matchedCount: 0, unmatchedList: [] },
-		};
-
-		const stashCrossRefsOnNode = ({ targetNode, crossRefList, canonicalCedsId }) => {
-			targetNode.properties.cedsId = canonicalCedsId;
-			targetNode.properties.cedsOriginalAnchorPropertyName = [CEDS_ANCHOR_PROPERTY_NAME];
-			// D22 shape [{ system, id, raw, locator }] in exactly that key order — kit.crossRefsJson
-			targetNode.properties.crossRefs = kit.crossRefsJson(crossRefList);
-		};
-
-		// property-row matching, TWO mechanical tiers (both censused separately):
-		//   tier 1 — exact (ownerName.elementName)
-		//   tier 2 — the old world's ODS naming appends 'Descriptor' to descriptor-reference
-		//     columns ('TermDescriptor' where MetaEd says 'Term'); when the element name ends in
-		//     'Descriptor', the suffix-stripped name is tried, and the match is accepted ONLY if
-		//     the candidate property is itself a descriptor reference (propertyType 'descriptor')
-		//     — a naming-convention inversion, not a guess.
-		Object.values(authoredCrosswalk.propertyCrossRefRegistry).forEach((oneRegistryEntry) => {
-			// the old crosswalk names TPDM entities with a literal ' (TPDM)' suffix the MetaEd
-			// model never carries — stripped from the OWNER side before either tier (same
-			// mechanical inversion class as the element-side 'Descriptor' strip)
-			const ownerName = oneRegistryEntry.edfiEntityName.replace(/ \(TPDM\)$/, '');
-			const matchRefId = `${ownerName}.${oneRegistryEntry.edfiElementName}`;
-			let matchTierName = 'direct';
-			let candidateNodeList = propertyNodeListByOwnerAndName[matchRefId] || [];
-			if (
-				candidateNodeList.length === 0 &&
-				oneRegistryEntry.edfiElementName.endsWith('Descriptor')
-			) {
-				const strippedElementName = oneRegistryEntry.edfiElementName.replace(/Descriptor$/, '');
-				candidateNodeList = (
-					propertyNodeListByOwnerAndName[`${ownerName}.${strippedElementName}`] || []
-				).filter((oneNode) => oneNode.properties.propertyType === 'descriptor');
-				matchTierName = 'descriptorSuffix';
+		nodes.forEach((oneNode) => {
+			const crosswalkPropertyName = Object.keys(oneNode.properties).find((onePropertyName) => CROSSWALK_CARRIED_PROPERTY_NAME_RE.test(onePropertyName));
+			if (crosswalkPropertyName !== undefined) {
+				// a plain Error in this walk's own REFUSED form (the framework's refuse.byName would give the G-SHARE
+				// caller census a new edfi caller and stale its written justification for a one-line message)
+				throw new Error(
+					`forge-edfi REFUSED: node '${oneNode.stableId}' carries property '${crosswalkPropertyName}' — the CEDS-authored ` +
+						'crosswalk is excluded from the graph (TQ rulings 2026-09-10, 2026-10-01): no Ed-Fi node names CEDS or carries a cross-reference',
+				);
 			}
-			if (candidateNodeList.length === 0) {
-				crosswalkMatchReport.propertyRows.unmatchedList.push({
-					edfiEntityName: oneRegistryEntry.edfiEntityName,
-					edfiElementName: oneRegistryEntry.edfiElementName,
-					carriesCedsData: oneRegistryEntry.cedsGlobalIdList.length > 0,
-				});
-				return;
-			}
-			if (candidateNodeList.length > 1) {
-				crosswalkMatchReport.propertyRows.ambiguousList.push({
-					edfiEntityName: oneRegistryEntry.edfiEntityName,
-					edfiElementName: oneRegistryEntry.edfiElementName,
-					candidateStableIds: candidateNodeList.map((oneNode) => oneNode.stableId),
-				});
-				return;
-			}
-			crosswalkMatchReport.propertyRows.matchedCount += 1;
-			if (matchTierName === 'direct') {
-				crosswalkMatchReport.propertyRows.matchedDirectCount += 1;
-			} else {
-				crosswalkMatchReport.propertyRows.matchedByDescriptorSuffixCount += 1;
-			}
-			if (!oneRegistryEntry.cedsGlobalIdList.length) {
-				return; // matched, but the authored row carries no CEDS mapping — nothing to stash
-			}
-			const crossRefList = [];
-			let canonicalCedsId = null;
-			oneRegistryEntry.cedsGlobalIdList.forEach((rawGlobalId) => {
-				// an unnormalizable anchor is REFUSED by the kit (R3), never data
-				const normalized = kit.cedsAnchorValue({ rawValue: rawGlobalId, kind: CEDS_ANCHOR_KIND });
-				if (normalized.absent) {
-					return;
-				}
-				if (!canonicalCedsId) {
-					canonicalCedsId = normalized.cedsAnchorValue;
-				}
-				crossRefList.push({
-					system: 'ceds',
-					id: normalized.cedsAnchorValue,
-					raw: `${rawGlobalId}`,
-					locator: CEDS_ANCHOR_PROPERTY_NAME,
-				});
-			});
-			if (canonicalCedsId) {
-				stashCrossRefsOnNode({
-					targetNode: candidateNodeList[0],
-					crossRefList,
-					canonicalCedsId,
-				});
-				stats.crossRefsAnnotatedProperties += 1;
-			}
-		});
-
-		Object.values(authoredCrosswalk.descriptorCrossRefRegistry).forEach((oneRegistryEntry) => {
-			const descriptorNode =
-				constructNodeByTypeAndName[`descriptor/${oneRegistryEntry.descriptorName}`];
-			if (!descriptorNode) {
-				crosswalkMatchReport.descriptorRows.unmatchedList.push({
-					descriptorName: oneRegistryEntry.descriptorName,
-				});
-				return;
-			}
-			crosswalkMatchReport.descriptorRows.matchedCount += 1;
-			// an unnormalizable anchor is REFUSED by the kit (R3), never data
-			const normalized = kit.cedsAnchorValue({ rawValue: oneRegistryEntry.cedsGlobalId, kind: CEDS_ANCHOR_KIND });
-			if (!normalized.absent) {
-				stashCrossRefsOnNode({
-					targetNode: descriptorNode,
-					crossRefList: [
-						{
-							system: 'ceds',
-							id: normalized.cedsAnchorValue,
-							raw: `${oneRegistryEntry.cedsGlobalId}`,
-							locator: CEDS_ANCHOR_PROPERTY_NAME,
-						},
-					],
-					canonicalCedsId: normalized.cedsAnchorValue,
-				});
-				stats.crossRefsAnnotatedDescriptors += 1;
-			}
-		});
-
-		Object.values(authoredCrosswalk.optionValueCrossRefRegistry).forEach((oneRegistryEntry) => {
-			const optionValueNode =
-				optionValueNodeBySetAndCode[
-					`${oneRegistryEntry.descriptorName}.${oneRegistryEntry.codeValue}`
-				];
-			if (!optionValueNode) {
-				crosswalkMatchReport.optionValueRows.unmatchedList.push({
-					descriptorName: oneRegistryEntry.descriptorName,
-					codeValue: oneRegistryEntry.codeValue,
-				});
-				return;
-			}
-			crosswalkMatchReport.optionValueRows.matchedCount += 1;
-			optionValueNode.properties.cedsOptionCode = `${oneRegistryEntry.cedsOptionCode}`;
-			optionValueNode.properties.cedsOptionOriginalAnchorPropertyName = [
-				CEDS_OPTION_ANCHOR_PROPERTY_NAME,
-			];
-			// Ed-Fi's OWN option-value cross-ref shape { system, optionCode, locator } — not the D22
-			// { system, id, raw, locator } shape kit.crossRefsJson serialises, so the walk composes it
-			optionValueNode.properties.crossRefs = JSON.stringify([
-				{
-					system: 'ceds',
-					optionCode: `${oneRegistryEntry.cedsOptionCode}`,
-					locator: CEDS_OPTION_ANCHOR_PROPERTY_NAME,
-				},
-			]);
-			stats.crossRefsAnnotatedOptionValues += 1;
 		});
 
 		// the dangling-endpoint terminal check and finalizeStructuralContract are the FRAMEWORK's
 		// (buildContractGraph integrity pass, then the finalizer LAST over structure); the walk returns
-		// the kit's collected arrays whole, in emission order, plus its own report
-		return { nodes, edges, stats, crosswalkMatchReport };
+		// the kit's collected arrays whole, in emission order
+		return { nodes, edges, stats };
 	};
 
 	return {

@@ -1,5 +1,13 @@
 'use strict';
 
+// ╔══════════════════════════════════════════════════════════════════════════════════════════════════════════════╗
+// ║ RETIRED 2026-10-02 — DO NOT USE (goldJev lane F, BRIEF-F). TQ, 2026-09-10: the CEDS-authored Ed-Fi crosswalk ║
+// ║ "will not be included in the graph and will not be used as a basis for evaluating our performance"; restated ║
+// ║ 2026-10-01: "known to be garbage". The plugin is out of the roster (forges/edfi/bridges/ no longer holds it)   ║
+// ║ and its CSVs sit unread in forges/edfi/assets/standardSourceData/04/cedsAuthoredCrosswalk_DO_NOT_USE/.         ║
+// ║ Kept as HISTORY only: it is outside every discovery path and will not run without a new TQ ruling.            ║
+// ╚══════════════════════════════════════════════════════════════════════════════════════════════════════════════╝
+
 // edfiCedsCrosswalkPlugin.js — the Ed-Fi → CEDS bridge PLUGIN on the Bridge Framework (SPEC-bridgeFramework-v1.md
 // §10 — the worked example; RULINGS P1–P4, P11, BF5, BF6, BF14, BF17, BR4; Profile v1.0.6). The FIRST real
 // instance of the plugin shape the toy fixtures established (lib/bridge-framework/test/fixtures/toyBridge/…):

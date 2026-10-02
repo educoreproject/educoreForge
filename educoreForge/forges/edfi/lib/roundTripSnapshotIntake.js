@@ -13,10 +13,10 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // digests, plus a combined digest over the consumed inputs (sha256 of the sorted per-file
 // digest lines).
 //
-// CONSUMED INPUTS (the five declared source inputs of snapshot 04):
+// CONSUMED INPUTS (the four declared source inputs of snapshot 04; the fifth, the authored crosswalk, is
+// RETIRED 2026-10-02 — its CSVs sit in cedsAuthoredCrosswalk_DO_NOT_USE/ and are never read):
 //   metaEdModel/**.metaed, tpdmCommunityModel/**.metaed          (the MetaEd sources)
 //   descriptorCodeValues/*.xml, tpdmDescriptorCodeValues/*.xml   (code-value XMLs)
-//   cedsAuthoredCrosswalk/*.csv                                  (the authored crosswalk)
 // Non-consumed peers (LICENSE, package.json, provenance files) are NOT checksum-audited here —
 // they belong to the forge's own consumers.
 //
@@ -32,7 +32,6 @@ const CONSUMED_INPUT_REGISTRY = {
 	tpdmCommunityModel: '.metaed',
 	descriptorCodeValues: '.xml',
 	tpdmDescriptorCodeValues: '.xml',
-	cedsAuthoredCrosswalk: '.csv',
 };
 
 const sha256HexOf = (bufferValue) => crypto.createHash('sha256').update(bufferValue).digest('hex');

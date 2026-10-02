@@ -264,7 +264,13 @@ const POST_D1_BASE_TAG = 'postM1VocabularyIi-092926'; // re-anchored 2026-09-29 
 //   roundTripHarness/roundTripHarness.js | 6 — a verdict written with a graphIdentity also carries it as .graph (goldEvalCheck reads it)
 //   roundTripHarness/test/test-gRt.js    | 30 — G-RT conjunct endpointWhereCertificationReadsIt and its red twin
 // THE PATH IS UNCHANGED, NO EXCLUSION IS ADDED. Fresh red observed against THIS tag (DEVLOG-F5).
-const PHASE0_ANCHOR_TAG = 'postPescF5ForgeFrameworkIii-100126'; // re-anchored by AMBER_PORTAL, PESC release forge F5 — the NINTH anchor
+// goldJev LANE F RE-ANCHOR OF (iii) (PRISM_LATTICE, 2026-10-02; pre-authorised, NOTES-supervisor item 5): postPescF5ForgeFrameworkIii-100126
+// -> postEdfiCrosswalkOutFForgeFrameworkIii-100226, tag cut ON this re-anchor commit. CENSUS (git diff --stat
+// postPescF5ForgeFrameworkIii-100126 -- lib/forge-framework/) at 0580451: exactly ONE file, a TEST FIXTURE:
+//   test/acceptance/expectedFingerprints.json | 4 — the edfi PROXY re-pin 814ce961… -> 04abc77b… (f8ea687), the RULED crosswalk exclusion.
+// No framework SOURCE file under lib/forge-framework/ moved. THE PATH IS UNCHANGED, NO EXCLUSION IS ADDED. Fresh red observed
+// against THIS tag (DEVLOG-F).
+const PHASE0_ANCHOR_TAG = 'postEdfiCrosswalkOutFForgeFrameworkIii-100226'; // re-anchored by PRISM_LATTICE, goldJev lane F — the TENTH anchor
 // PHASE 1 RE-ANCHOR — RULING FJ-P1-1, and it moves seamDiffEmpty ALONE.
 //
 // WHY IT HAD TO MOVE. SEAM_PATH_LIST watches forges/*/forge*.js, forges/*/lib/*Declaration.js and
@@ -581,7 +587,15 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // postPescF6EportfolioSeamDiffEmpty-100126, tag cut ON this commit. CENSUS at d4fddd5: one file, 1+/1−,
 // forges/pescacademiceportfolio1v0v0/forgePescAcademicEportfolio1v0v0.js — its header comment's DME title, rescaffolded after
 // QUIET_ORBIT's display-name ruling ('PESC Academic ePortfolio v1.0.0'). SEAM_PATH_LIST byte-identical. Fresh red (DEVLOG-F6).
-const PHASE3_ANCHOR_TAG = 'postPescF6EportfolioSeamDiffEmpty-100126'; // re-anchored by QUIET_CIPHER, PESC release forge F6 (second)
+// goldJev LANE F RE-ANCHOR (PRISM_LATTICE, 2026-10-02; pre-authorised, NOTES-supervisor item 5): postPescF6EportfolioSeamDiffEmpty-100126
+// -> postEdfiCrosswalkOutFSeamDiffEmpty-100226, tag cut ON this commit. CENSUS (git diff --stat postPescF6EportfolioSeamDiffEmpty-100126
+// -- the seam paths) at dfc9d07: five files, all the RULED crosswalk exclusion (TQ 2026-09-10 and 2026-10-01; BRIEF-F), commits f8ea687 and
+// 8de0657 (the refusal's form): forges/edfi/forgeEdfi.js 2 (a comment), forges/edfi/lib/edfiForgeDeclaration.js 36 (empty
+// mappingInstruction, no sentinel, four E8 names), forges/edfi/lib/edfiHooks.js 63 (the crosswalk loader out),
+// forges/edfi/lib/forgeEdfiContractGraph.js 232 (PASS 5 carriage -> the exclusion refusal), lib/forge-framework/test/acceptance/
+// expectedFingerprints.json 4 (the edfi proxy re-pin). build.js, forger/, replay/, replay-manager/, every other forge and
+// lib/forge-framework/ SOURCE: UNTOUCHED. SEAM_PATH_LIST byte-identical. Fresh red observed against THIS tag (DEVLOG-F).
+const PHASE3_ANCHOR_TAG = 'postEdfiCrosswalkOutFSeamDiffEmpty-100226'; // re-anchored by PRISM_LATTICE, goldJev lane F
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');

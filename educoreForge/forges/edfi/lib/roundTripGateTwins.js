@@ -60,11 +60,11 @@ const moduleFunction = () => {
 		injectOneInventedStatement: (measurements) =>
 			bumpDottedValue(measurements, 'report.headline.invented', 1),
 
-		// G-2: the combined invention meter (diff + crosswalk guard) must bite too.
+		// G-2: the combined invention meter (diff + crosswalk exclusion guard) must bite too.
 		bumpInventedTotal: (measurements) => bumpDottedValue(measurements, 'verdict.inventedTotal', 1),
 
-		// G-3: one stashed CEDS raw value the CSVs never contained.
-		doctorOneStashRawValue: (measurements) =>
+		// G-3: one crosswalk CEDS value stashed on a graph node (the crosswalk is excluded).
+		plantOneCrosswalkValue: (measurements) =>
 			bumpDottedValue(measurements, 'verdict.crosswalkGuard.violationCount', 1),
 
 		// G-4: one carriable-fixture statement stops round-tripping; clean must fall with it.

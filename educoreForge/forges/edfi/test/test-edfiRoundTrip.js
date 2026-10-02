@@ -8,7 +8,7 @@ NAME
      test-edfiRoundTrip.js — HERMETIC suite for the forge-edfi roundTripValidator (Phase 3)
 
 DESCRIPTION
-     RT-7 in full: builds throwaway five-input snapshots under os.tmpdir(), forges them with
+     RT-7 in full: builds throwaway four-input snapshots (five until the crosswalk retired, 2026-10-02) under os.tmpdir(), forges them with
      forgeEdfi (skipEmbedding), replays the forge output through the hermetic graph double,
      runs the REAL validator core (validateWithReader), and proves:
        - the CARRIABLE-vocabulary fixture round-trips CLEAN (zero loss, zero invention)
@@ -24,7 +24,8 @@ DESCRIPTION
          collapse silently and become last-write-wins data loss once edges carry properties
        - the cheating detector: deleting a REAL graph fact names it LOST; injecting one fires
          INVENTED — both through the double's adjustGraphRows seam, at the DATA level
-       - the crosswalk invention guard bites at the DATA level (a doctored stash raw value)
+       - the crosswalk EXCLUSION guard bites at the DATA level (one planted CEDS value; the
+         crosswalk is excluded since 2026-10-02, so the graph must carry none)
        - refusals are BY NAME (intake, bolt resolution, reducer scope limits, edge uniqueness)
        - the canonicalizer is bounded BOTH directions (cosmetic variants collapse; adversarial
          pairs stay distinct)
@@ -351,19 +352,6 @@ const TPDM_BADGE_XML = [
 	'</InterchangeDescriptors>',
 ].join('\n');
 
-const ELEMENTS_CSV_TEXT = [
-	'EdFiEntity,EdFiEntityPath,EdFiElementName,EdFiElementType,EdFiRequired,EdFiElementDescription,EdFiEntityDescription,CEDSElementName,CEDSElementType,CEDSElementDefinition,CEDSGlobalId,CEDSMappingNotes,CEDSMappingConfidence,CEDSDWTable,CEDSDWColumn,CEDSDWElementType,CEDSStagingTable,CEDSStagingColumn,CEDSStagingElementType,CEDSOntologyClassURI,CEDSOntologyClassLabel,CEDSOntologyConceptSchemeURI,CEDSOntologyConceptSchemeLabel,CEDSOntologyPropertyURI,CEDSOntologyPropertyLabel,CEDSOntologyPropertyNotation,CEDSOntologyPropertyRangeIncludes',
-	'FixtureStudent,FixtureStudent,FixtureLevel,descriptor,required,The level element.,A fixture student.,Fixture Level Type,option set,The fixture level.,000456,,High,,,,,,,,,,,,,,',
-	'FixtureStudent,FixtureStudent,MissingElement,string,optional,An element the model does not carry.,A fixture student.,Fixture Missing,string,The missing one.,000457,,Low,,,,,,,,,,,,,,',
-	'',
-].join('\n');
-
-const DESCRIPTORS_CSV_TEXT = [
-	'EdFiVersionNumber,EdFiNamespace,EdFiCodeValue,EdFiShortDescription,EdFiDescription,EdFiElementName,EdFiEntity,EdFiPath,EdFiDescription,CEDSElementName,CEDSGlobalId,CEDSOptionCode,CEDSOptionDescription,CEDSOptionDefinition,CEDSDataType,OptionSetMatchConfidence,ElementMatchConfidence,Notes',
-	'DS5.2,uri://fixture/FixtureLevelDescriptor,Alpha,Alpha level,The alpha fixture level.,FixtureLevelDescriptor,FixtureStudent,FixtureLevel,The level element.,Fixture Level Type,000456,AlphaOption,The alpha option.,,,High,High,',
-	'',
-].join('\n');
-
 // =====================================================================
 // scratch snapshot plumbing
 // =====================================================================
@@ -384,8 +372,6 @@ const CARRIABLE_FILE_MAP = {
 	'tpdmCommunityModel/DomainEntity/FixtureTpdm.metaed': TPDM_METAED,
 	'descriptorCodeValues/FixtureLevelDescriptor.xml': CORE_LEVEL_XML,
 	'tpdmDescriptorCodeValues/FixtureBadgeDescriptor.xml': TPDM_BADGE_XML,
-	'cedsAuthoredCrosswalk/EdFiEntityElementsToCEDS.csv': ELEMENTS_CSV_TEXT,
-	'cedsAuthoredCrosswalk/EdFiEntityDescriptorsToCEDS.csv': DESCRIPTORS_CSV_TEXT,
 };
 
 const FULL_VOCABULARY_EXTRA_FILE_MAP = {
@@ -456,7 +442,8 @@ const writeScratchSha256Sums = (scratchSnapshotPath) => {
 				sumLineList.push(`${fileHash}  ${relativePath}`);
 			});
 	};
-	['metaEdModel', 'descriptorCodeValues', 'tpdmCommunityModel', 'tpdmDescriptorCodeValues', 'cedsAuthoredCrosswalk'].forEach(
+	// four inputs: the authored crosswalk is retired (2026-10-02, BRIEF-F) and no scratch snapshot carries it
+	['metaEdModel', 'descriptorCodeValues', 'tpdmCommunityModel', 'tpdmDescriptorCodeValues'].forEach(
 		walkForSums,
 	);
 	fs.writeFileSync(path.join(scratchSnapshotPath, 'SHA256SUMS'), `${sumLineList.join('\n')}\n`);
@@ -890,13 +877,14 @@ pushStep((done) => {
 			harness.equal('carriable fixture LOST is zero', verdict.lost, 0);
 			harness.equal('carriable fixture inventedTotal is zero', verdict.inventedTotal, 0);
 			harness.equal(
-				'crosswalk guard sees stash and zero violations',
+				'crosswalk exclusion guard: zero violations',
 				verdict.crosswalkGuard.violationCount,
 				0,
 			);
-			harness.ok(
-				'crosswalk stash is nonempty (the guard guarded something real)',
-				verdict.crosswalkGuard.stashRawValueCount > 0,
+			harness.equal(
+				'crosswalk exclusion guard: the graph carries NO stashed CEDS value (the crosswalk is excluded)',
+				verdict.crosswalkGuard.stashRawValueCount,
+				0,
 			);
 			harness.ok(
 				'the verbatim trailing-space code value REPRODUCED (house line: trimmed identity, verbatim value)',
@@ -1347,20 +1335,20 @@ pushStep((done) => {
 					suiteState.probe.injectedFactShowsInvented = injectedFactShowsInvented;
 					harness.ok('an injected graph fact fires INVENTED by name', injectedFactShowsInvented);
 
-					// doctor a stash raw value: the crosswalk guard must bite at the DATA level
+					// plant one crosswalk CEDS value on an option value row: the exclusion guard must bite at the
+					// DATA level (the crosswalk is excluded, so no stashed value is licensed)
 					validateDouble(
 						{
 							...forged,
 							adjustGraphRows: (graphRows) => {
-								const annotatedValueRow = graphRows.optionValueRowList.find((oneRow) => oneRow.cedsOptionCode !== undefined);
-								annotatedValueRow.cedsOptionCode = 'DoctoredOption';
+								graphRows.optionValueRowList[0].cedsOptionCode = 'PlantedCrosswalkOption';
 								return graphRows;
 							},
 						},
 						(doctorError, doctorVerdict) => {
-							harness.accepts('doctored-stash run validates', [doctorError].filter(Boolean));
+							harness.accepts('planted-crosswalk-value run validates', [doctorError].filter(Boolean));
 							harness.ok(
-								'a stash raw value absent from the CSVs is a guard VIOLATION (counts INVENTED)',
+								'a planted crosswalk CEDS value is an exclusion-guard VIOLATION (counts INVENTED)',
 								!doctorError &&
 									doctorVerdict.crosswalkGuard.violationCount === 1 &&
 									doctorVerdict.inventedTotal === 1 &&
@@ -1830,7 +1818,7 @@ pushStep((done) => {
 			);
 			// RECORDED, NOT GATED (brief): the diagnostic census now lists the new role and edge type.
 			// roundTripValidator.js places nodeCountByRole / edgeCountByType only under verdict.graph
-			// (:389-390); inventedTotal is headline.invented + crosswalk guard violations (:270).
+			// (:389-390); inventedTotal is headline.invented + crosswalk exclusion guard violations.
 			// RELATIVE, R-ET-39 (RADIANT_QUEST, 2026-09-14): P5 pinned 1 and 1, true only while Ed-Fi's
 			// declaration was null. Under P6's declaration the real hermetic forge mints text nodes of its own
 			// (measured 97 nodes / 110 edges), so the fixture's contribution is asserted as EXACTLY +1 over the

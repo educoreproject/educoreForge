@@ -8,7 +8,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // the adapter, the embed pass and the return; this file owns nothing but the wiring:
 //   H1  lib/edfiForgeDeclaration.js — data (standardKey 'edfi', standardSource 'EdFi', the identity
 //       rule, mappingInstruction, allowances E6 + E8)
-//   H2  lib/edfiHooks.js — sourceLoaderList (metaEdModel, descriptorCodeValues, authoredCrosswalk),
+//   H2  lib/edfiHooks.js — sourceLoaderList (metaEdModel, descriptorCodeValues; authoredCrosswalk retired 2026-10-02),
 //       describeSource, describeRoot
 //   H3  lib/forgeEdfiContractGraph.js — the walk (via edfiHooks.emitContractGraph)
 //   H4  roundTripValidator.js — the round-trip pair (unchanged by the migration)

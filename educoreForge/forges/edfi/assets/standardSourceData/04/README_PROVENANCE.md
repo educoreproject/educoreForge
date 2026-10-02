@@ -10,7 +10,29 @@ plus the **TPDM Community Model 1.2** extension and the **authored Ed-Fi→CEDS 
 Provenance files (this README, `SHA256SUMS`, `standardSourceLocation`) are **peers** of the
 source subfolders, per TQ's snapshot-handling ruling (2026-08-03).
 
-## The five declared source inputs
+## THE CROSSWALK IS RETIRED — `cedsAuthoredCrosswalk_DO_NOT_USE/` (2026-10-02, lane F, goldJev campaign)
+
+The authored Ed-Fi→CEDS crosswalk is **excluded from every graph** and is **no longer a source input**.
+TQ, 2026-09-10: *"it will not be included in the graph and will not be used as a basis for evaluating our
+performance"* (87 of its 184 class-contended rows read as plainly wrong; 166 of the 184 were the
+alphabetically-first CEDS class). TQ, 2026-10-01, restating it: *"When we create a new graph including the new
+PESC standards, I want that crosswalk excluded. It is known to be garbage."* — and asked that it carry
+`_DO_NOT_USE`. The September retirement removed the crosswalk BRIDGE from the gold graph but the forge kept
+reading both CSVs and stamping their CEDS ids onto 3,045 Ed-Fi nodes; this retirement removes it at every layer.
+
+- The folder is renamed `cedsAuthoredCrosswalk/` → **`cedsAuthoredCrosswalk_DO_NOT_USE/`**. The two CSVs are KEPT,
+  byte-identical, as provenance only.
+- Their two lines are REMOVED from this snapshot's `SHA256SUMS` (the forge framework verifies — and so opens —
+  every file that manifest lists). They move to **`cedsAuthoredCrosswalk_DO_NOT_USE/SHA256SUMS`**, so the bytes
+  stay provable: `cd cedsAuthoredCrosswalk_DO_NOT_USE && shasum -a 256 -c SHA256SUMS`.
+- The forge, the round-trip validator and the bridge roster no longer name it; the crosswalk bridge plugin
+  moved to `forges/edfi/retiredBridges/`. Gate: `forges/edfi/test/test-edfiCrosswalkExcluded.js`.
+- **Do not reintroduce it** as a source, a bridge, a scoring yardstick or a test oracle without a new TQ ruling.
+
+Everything below that describes the crosswalk as the fifth input is HISTORY, kept so the earlier certificates
+can still be read.
+
+## The declared source inputs (five until 2026-10-02; FOUR since — the crosswalk is retired)
 
 | Subfolder | Content | Acquisition class (RT-9) | License | In git? |
 |---|---|---|---|---|
@@ -18,7 +40,7 @@ source subfolders, per TQ's snapshot-handling ruling (2026-08-03).
 | `descriptorCodeValues/` | 203 descriptor code-value XMLs + LICENSE | machine-canonical | Apache-2.0 | yes |
 | `tpdmCommunityModel/` | 196 `.metaed` + LICENSE + package.json | machine-canonical | Apache-2.0 | yes |
 | `tpdmDescriptorCodeValues/` | 27 TPDM descriptor XMLs + LICENSE | machine-canonical | Apache-2.0 | yes |
-| `cedsAuthoredCrosswalk/` | 2 CSVs, byte-identical to old snapshot 01 | **human-artifact-snapshot** | (in-repo since 2026-06-23; ORIGIN SETTLED 2026-08-16 — see "Crosswalk provenance" below) | yes |
+| ~~`cedsAuthoredCrosswalk/`~~ now `cedsAuthoredCrosswalk_DO_NOT_USE/` — RETIRED 2026-10-02, not an input | 2 CSVs, byte-identical to old snapshot 01 | **human-artifact-snapshot** | (in-repo since 2026-06-23; ORIGIN SETTLED 2026-08-16 — see "Crosswalk provenance" below) | yes |
 
 **Mixed acquisition classes, stated per input (RT-9):** the round trip against the four
 machine-canonical inputs proves fidelity to the publisher's own artifacts. For
@@ -71,7 +93,8 @@ git clone https://github.com/Ed-Fi-Alliance-OSS/Ed-Fi-TPDM-Artifacts
 cd Ed-Fi-TPDM-Artifacts && git checkout de6f7c27f31e8032321dd8bc860c76dc847699e3 && cd ..
 #    -> Descriptors/*.xml (27 files) + LICENSE = tpdmDescriptorCodeValues/
 
-# 5. cedsAuthoredCrosswalk/ needs no acquisition — its two CSVs are committed in this snapshot.
+# 5. (RETIRED 2026-10-02) the crosswalk is no longer an input; its CSVs sit in cedsAuthoredCrosswalk_DO_NOT_USE/
+#    with their own SHA256SUMS, provenance only.
 
 # Verify the whole snapshot (gitignored bytes included):
 cd 04 && shasum -c SHA256SUMS --quiet && echo CLEAN

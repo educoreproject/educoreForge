@@ -37,11 +37,14 @@ note: |
   4. tpdmDescriptorCodeValues/ — 27 TPDM descriptor code-value XMLs from
      Ed-Fi-Alliance-OSS/Ed-Fi-TPDM-Artifacts (commit de6f7c27f31e8032321dd8bc860c76dc847699e3),
      Apache-2.0, committed. Acquisition class: machine-canonical.
-  5. cedsAuthoredCrosswalk/ — the authored Ed-Fi→CEDS crosswalk, BOTH CSVs byte-identical to
+  5. RETIRED 2026-10-02 (TQ rulings 2026-09-10 and 2026-10-01: excluded from every graph, "known to be
+     garbage"): renamed cedsAuthoredCrosswalk_DO_NOT_USE/, no longer an input, its two lines moved out of
+     SHA256SUMS into the folder's own SHA256SUMS (provenance only). HISTORY: cedsAuthoredCrosswalk/ — the authored Ed-Fi→CEDS crosswalk, BOTH CSVs byte-identical to
      old snapshot 01 (cmp-verified 2026-08-03). Authored DATA, not structure (R-WO-4 ruling:
      carried verbatim as second declared source input). Acquisition class:
      human-artifact-snapshot — upstream URL/version unrecorded by the original harvest; this
      snapshot IS the authority for these bytes.
 
-  SHA256SUMS (peer) covers every source file in all five subfolders, gitignored bytes included,
+  SHA256SUMS (peer) covers every source file in the FOUR input subfolders (the retired crosswalk folder
+  carries its own), gitignored bytes included,
   so "same bytes" is provable on any machine. Verify: cd 04 && shasum -c SHA256SUMS --quiet

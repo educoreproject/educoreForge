@@ -3,14 +3,13 @@
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
 // roundTripMetaEdCanonical.js — forge-edfi Phase 3 (R-WO-14): the INDEPENDENT statement
-// reducer. Reduces MetaEd source text, descriptor code-value XML text, and authored-crosswalk
-// CSV text to canonical statement sets — the ANSWER-KEY side of the round-trip diff (and the
+// reducer. Reduces MetaEd source text and descriptor code-value XML text to canonical statement sets
+// (the authored-crosswalk CSV reducer is retired with the crosswalk, 2026-10-02) — the ANSWER-KEY side of the round-trip diff (and the
 // shared statement grammar the graph-side emitter targets).
 //
 // INDEPENDENCE (R-WO-14, the pesc campaign's independent-canonicalizer principle): this module
 // shares ZERO code with the Phase 1 parser (metaEdLexer.js / metaEdSyntaxParser.js /
-// metaEdParser.js) and with the Phase 2 loaders (descriptorCodeValueLoader.js /
-// crosswalkCarrier.js). The forge's input parser IS the Phase 1 parser; if this instrument
+// metaEdParser.js) and with the Phase 2 loader (descriptorCodeValueLoader.js). The forge's input parser IS the Phase 1 parser; if this instrument
 // reused it, a parser bug would cancel on both sides of the diff and a dropped statement would
 // read as REPRODUCED. The implementation strategy also differs on purpose: a masking scanner
 // plus a flat keyword-phrase extractor emitting surface statements — no token-type registry, no
@@ -1198,99 +1197,6 @@ const moduleFunction = () => {
 	};
 
 	// --------------------------------------------------------
-	// reduceCrosswalkCsvText — ONE crosswalk CSV text -> the raw-value sets for the R-WO-12
-	// invention guard (pure set-membership; deliberately NO row matching — reimplementing the
-	// forge's matching here would cancel its bugs).
-	//   inputs:  { csvText, sourceFileRelativePath }
-	//   returns { headerFieldList, rawValuesByHeaderField: { <headerField>: Set }, rowCount }
-	//   (synchronous return-shaped internals; the public wrapper below is callback-shaped R7)
-	// --------------------------------------------------------
-	const parseCsvRows = (csvText) => {
-		// minimal RFC-4180 reader: quoted cells, "" escapes, CRLF/newline rows
-		const rowList = [];
-		let currentRow = [];
-		let currentCell = '';
-		let insideQuotes = false;
-		let charIndex = 0;
-		while (charIndex < csvText.length) {
-			const currentCharacter = csvText[charIndex];
-			if (insideQuotes) {
-				if (currentCharacter === '"') {
-					if (csvText[charIndex + 1] === '"') {
-						currentCell += '"';
-						charIndex += 2;
-						continue;
-					}
-					insideQuotes = false;
-					charIndex += 1;
-					continue;
-				}
-				currentCell += currentCharacter;
-				charIndex += 1;
-				continue;
-			}
-			if (currentCharacter === '"') {
-				insideQuotes = true;
-				charIndex += 1;
-				continue;
-			}
-			if (currentCharacter === ',') {
-				currentRow.push(currentCell);
-				currentCell = '';
-				charIndex += 1;
-				continue;
-			}
-			if (currentCharacter === '\r') {
-				charIndex += 1;
-				continue;
-			}
-			if (currentCharacter === '\n') {
-				currentRow.push(currentCell);
-				rowList.push(currentRow);
-				currentRow = [];
-				currentCell = '';
-				charIndex += 1;
-				continue;
-			}
-			currentCell += currentCharacter;
-			charIndex += 1;
-		}
-		if (currentCell !== '' || currentRow.length > 0) {
-			currentRow.push(currentCell);
-			rowList.push(currentRow);
-		}
-		return rowList;
-	};
-
-	const reduceCrosswalkCsvText = ({ csvText, sourceFileRelativePath }, callback) => {
-		if (typeof csvText !== 'string' || !sourceFileRelativePath) {
-			callback(
-				`${moduleName}.reduceCrosswalkCsvText: csvText (string) and sourceFileRelativePath are REQUIRED and have no default.`,
-			);
-			return;
-		}
-		const rowList = parseCsvRows(csvText);
-		if (rowList.length < 1) {
-			callback(`${moduleName}.reduceCrosswalkCsvText FAULT ${sourceFileRelativePath} — empty CSV`);
-			return;
-		}
-		const headerFieldList = rowList[0].map((headerCell) => headerCell.trim());
-		const rawValuesByHeaderField = {};
-		headerFieldList.forEach((headerField) => {
-			rawValuesByHeaderField[headerField] = new Set();
-		});
-		rowList.slice(1).forEach((oneRow) => {
-			oneRow.forEach((cellValue, cellIndex) => {
-				const headerField = headerFieldList[cellIndex];
-				if (headerField !== undefined && `${cellValue}`.trim() !== '') {
-					rawValuesByHeaderField[headerField].add(`${cellValue}`);
-				}
-			});
-		});
-		callback('', { headerFieldList, rawValuesByHeaderField, rowCount: rowList.length - 1 });
-	};
-
-	// --------------------------------------------------------
 	// assembleStatementMap — statement list -> Map keyed by statementKey; identical duplicates
 	// collapse (censused), so set semantics are explicit rather than accidental.
 	// --------------------------------------------------------
@@ -1311,7 +1217,6 @@ const moduleFunction = () => {
 	return {
 		reduceMetaEdSourceText,
 		reduceDescriptorXmlText,
-		reduceCrosswalkCsvText,
 		assembleStatementMap,
 		statementKey,
 		collapseWhitespace,

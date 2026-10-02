@@ -26,6 +26,10 @@
 	"sharedToolPaths": {
 		"sssomPyBinPath": "/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/sssomVenv/bin/sssom"
 	},
+	// RETIRED 2026-10-02 (goldJev lane F, BRIEF-F; TQ 2026-09-10 and 2026-10-01: the CEDS-authored crosswalk is excluded from
+	// every graph, "known to be garbage"). The plugin left the roster for forges/edfi/retiredBridges/ and its acceptance suite
+	// is apps/graph-builder/test/retired/retired-bridgeAcceptanceEdfi.js; this entry and its two fixtures
+	// (expectedDecisionBlockIds.json, expectedCensus.edfiCedsCrosswalkPlugin.GOLD_EVAL_260816.json) stay as HISTORY only.
 	"edfiCedsCrosswalkPlugin": {
 		// FROZEN by B3 (SCARLET_BRIDGE) under the supervisor's freeze ruling (RULINGS "B3 checkpoint 1 — the FREEZE", 2026-08-16):
 		// THREE lines over the ONE pinned store (a COPY of the four-base postEdfi store — GOLD_EVAL_260816's bytes; the four base

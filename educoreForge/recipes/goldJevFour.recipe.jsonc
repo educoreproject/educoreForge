@@ -3,11 +3,13 @@
   // 2026-10-01): the CEDS hub, Ed-Fi, the new SIF (sif260928) and PESC College Transcript 1.8.0, with every bridge
   // those three ship that a judge can run under Jev.
   //
-  // THE ED-FI CROSSWALK IS DELIBERATELY ABSENT (QUIET_ORBIT ruling, 2026-10-01, on TQ's rule 3 "pure Jev").
+  // THE ED-FI CROSSWALK IS EXCLUDED, AND SINCE 2026-10-02 RETIRED (TQ 2026-09-10 and 2026-10-01: "known to be garbage";
+  // goldJev lane F moved edfiCedsCrosswalkPlugin out of the roster and stopped the Ed-Fi forge stamping its CEDS ids).
+  // The earlier reason, kept for the record: (QUIET_ORBIT ruling, 2026-10-01, on TQ's rule 3 "pure Jev").
   // edfiCedsCrosswalkPlugin is not judge-free: its frozen block carries Anthropic (claude-opus-4-8) judgments, and Jev
   // cannot judge a crosswalk question, because the crosswalk prompt variant declares no subjectData/candidateData and
   // so carries no choiceQuestion, which the Jev client requires. Ed-Fi is mapped by edfiCedsDerivedPlugin under Jev.
-  // Teaching the crosswalk variant to Jev is on the docket for after lane C.
+  // (The docket item "teach the crosswalk variant to Jev" was CANCELLED by TQ's 2026-10-01 ruling.)
   //
   // THE JUDGE is chosen by graphBuilder.ini [judgeProvider] judgeProviderName (=jev), not here; every block header
   // records judgeKind. --rebridge freezes new blocks; a plain -build replays them with zero judge calls.

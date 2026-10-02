@@ -4,15 +4,17 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
 // edfiHooks.js — the H2/H3 hook set for the Ed-Fi forge bundle (SPEC-forgeFramework-v1.md §5;
 // migrated F3b 2026-08-16 from forgeEdfi.js:114-267, byte-identical block aea6d8dfe789…):
-//   sourceLoaderList — THREE loaders, run SERIALLY in list order (the canonical N-loader form,
+//   sourceLoaderList — TWO loaders, run SERIALLY in list order (the canonical N-loader form,
 //     RULING 23:12 #4): the MetaEd model (Phase 1 parser; verifies the .metaed checksums itself —
-//     the double hash is accepted, SPEC §4.2), the descriptor code values, the authored crosswalk.
+//     the double hash is accepted, SPEC §4.2), the descriptor code values. The third, the authored
+//     crosswalk, is RETIRED (2026-10-02, BRIEF-F; TQ 2026-09-10 and 2026-10-01: excluded from every
+//     graph, "known to be garbage"): its CSVs sit in cedsAuthoredCrosswalk_DO_NOT_USE/, unread.
 //     Each loader consumes ONLY bytes the framework has already verified (forge() step 2 verifies
 //     every SHA256SUMS-listed file of the snapshot before step 3 runs).
 //   describeSource — PURE; TWO version keys (FR2): the model package's own projectVersion is BOTH
 //     the root `version` and the stamp input (`selfDescribedVersion`), exactly as forgeEdfi.js:170-181
 //     composed them; null → root 'unknown' (the framework then stamps 'unknown' in the triple).
-//     sourceFiles = the FIVE logical input names (allowance E8 declares them);
+//     sourceFiles = the FOUR logical input names (allowance E8 declares them);
 //     sourceUrl '' (allowance E6).
 //   emitContractGraph — the walk, forgeEdfiContractGraph.js (H3).
 //   describeRoot — PURE; the root description Ed-Fi's contract graph template-built at cg:472-475,
@@ -20,35 +22,32 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //     row; its retirement is a byte change in its own commit).
 //
 // describeSource / describeRoot are PURE (they read only their arguments); the loaders speak through
-// the xLog the framework hands them; emitContractGraph prints the R-WO-11 crosswalk-match status line
-// through process.global.xLog after the walk (ruling FB6 — a hook MAY log; it stamps no byte).
-// No logger is manufactured anywhere here (Profile §5.3).
+// the xLog the framework hands them (the R-WO-11 crosswalk-match status line emitContractGraph printed
+// retired with the crosswalk). No logger is manufactured anywhere here (Profile §5.3).
 
 const forgeDeclaration = require('./edfiForgeDeclaration'); // H1 — data
 const metaEdParser = require('./metaEdParser')();
 const descriptorCodeValueLoader = require('./descriptorCodeValueLoader')();
-const crosswalkCarrier = require('./crosswalkCarrier')();
 const forgeEdfiContractGraph = require('./forgeEdfiContractGraph')();
 
-// the three loader logical names + Ed-Fi's sourceFormat literal (forgeEdfi.js:182-185) — bytes on the root
-const SOURCE_FORMAT = 'metaed+xml+csv';
+// the loader logical names + Ed-Fi's sourceFormat literal — bytes on the root. The format drops '+csv':
+// the only CSVs this forge ever read were the retired crosswalk's
+const SOURCE_FORMAT = 'metaed+xml';
 const LOADER_NAME = Object.freeze({
 	META_ED_MODEL: 'metaEdModel',
 	DESCRIPTOR_CODE_VALUES: 'descriptorCodeValues',
-	AUTHORED_CROSSWALK: 'authoredCrosswalk',
 });
-// the three logical names forgeEdfi.js:185 appended after the MetaEd source input names, verbatim
+// the logical names appended after the MetaEd source input names ('cedsAuthoredCrosswalk' retired 2026-10-02)
 const LOADER_LOGICAL_SOURCE_FILE_NAME_LIST = Object.freeze([
 	'descriptorCodeValues',
 	'tpdmDescriptorCodeValues',
-	'cedsAuthoredCrosswalk',
 ]);
 
 const moduleFunction =
 	({ moduleName } = {}) =>
 	() => {
 		// -----------------------------------------------------------------
-		// H2 — the three loaders (forgeEdfi.js STAGE 1-3, verbatim behaviour incl. the status lines)
+		// H2 — the two loaders (forgeEdfi.js STAGE 1-2, verbatim behaviour incl. the status lines)
 		// -----------------------------------------------------------------
 		const loadMetaEdModel = ({ sourcePath, additionalSourceInputPathByName, xLog }, callback) => {
 			metaEdParser.parseMetaEdSnapshot({ snapshotPath: sourcePath, xLog }, callback);
@@ -67,21 +66,6 @@ const moduleFunction =
 						`duplicates collapsed)`,
 				);
 				callback('', descriptorCodeValues);
-			});
-		};
-
-		const loadAuthoredCrosswalk = ({ sourcePath, additionalSourceInputPathByName, xLog }, callback) => {
-			crosswalkCarrier.loadAuthoredCrosswalk({ snapshotPath: sourcePath }, (loadError, authoredCrosswalk) => {
-				if (loadError) {
-					callback(loadError);
-					return;
-				}
-				xLog.status(
-					`[forge-edfi] authored crosswalk: ` +
-						`${authoredCrosswalk.census.elementsRowCount} element rows, ` +
-						`${authoredCrosswalk.census.descriptorsRowCount} descriptor rows loaded`,
-				);
-				callback('', authoredCrosswalk);
 			});
 		};
 
@@ -107,30 +91,12 @@ const moduleFunction =
 		// -----------------------------------------------------------------
 		// H3 — the walk
 		// -----------------------------------------------------------------
-		const emitContractGraph = ({ parsed, metadata, kit }) => {
-			const walkResult = forgeEdfiContractGraph.emitContractGraph({
+		const emitContractGraph = ({ parsed, metadata, kit }) =>
+			forgeEdfiContractGraph.emitContractGraph({
 				metaEdModel: parsed[LOADER_NAME.META_ED_MODEL],
 				descriptorCodeValues: parsed[LOADER_NAME.DESCRIPTOR_CODE_VALUES],
-				authoredCrosswalk: parsed[LOADER_NAME.AUTHORED_CROSSWALK],
 				kit,
 			});
-			// the R-WO-11 crosswalk-match status line forgeEdfi.js:220-229 printed (restored by ruling FB6
-			// 2026-08-16: a hook MAY log, no bytes) — through the house channel process.global.xLog (D2, the
-			// four forges' own pattern; the framework already refused an absent xLog at factory time, so no
-			// stand-in logger is ever manufactured here). unmatched rows are REPORTED, never invented.
-			const { xLog } = process.global;
-			const report = walkResult.crosswalkMatchReport;
-			xLog.status(
-				`[forge-edfi] crosswalk matches — properties ` +
-					`${report.propertyRows.matchedCount} matched / ` +
-					`${report.propertyRows.unmatchedList.length} unmatched / ` +
-					`${report.propertyRows.ambiguousList.length} ambiguous; descriptors ` +
-					`${report.descriptorRows.matchedCount}/${report.descriptorRows.unmatchedList.length}; ` +
-					`values ${report.optionValueRows.matchedCount}/${report.optionValueRows.unmatchedList.length} ` +
-					`(unmatched rows are REPORTED, never invented — R-WO-11)`,
-			);
-			return walkResult;
-		};
 
 		// -----------------------------------------------------------------
 		// describeRoot — PURE; the template-built description (cg:472-475), verbatim (E7)
@@ -154,7 +120,6 @@ const moduleFunction =
 			sourceLoaderList: [
 				{ loaderName: LOADER_NAME.META_ED_MODEL, load: loadMetaEdModel },
 				{ loaderName: LOADER_NAME.DESCRIPTOR_CODE_VALUES, load: loadDescriptorCodeValues },
-				{ loaderName: LOADER_NAME.AUTHORED_CROSSWALK, load: loadAuthoredCrosswalk },
 			],
 			describeSource,
 			emitContractGraph,
