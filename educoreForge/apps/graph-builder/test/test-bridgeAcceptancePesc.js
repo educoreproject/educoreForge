@@ -671,7 +671,13 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // lib/bridge-framework/test/test-bgDecl.js 5/1 (E's roster count, merged by union to 8 with lane I's dated merge note). E's own anchor
 // postPescEPescComposeA-100126 is superseded by this one. No framework source moved. Six declared paths unchanged, no exclusion
 // added; the tag is cut ON this re-anchor commit.
-const P1_BASELINE_COMMIT = 'postGoldJevNextEPescComposeA-100226'; // re-anchored by ELECTRIC_MEADOW on goldJev/next after the E merge; the tag is cut ON the re-anchor commit
+// RE-ANCHOR 2026-10-02 (ELECTRIC_MEADOW; pre-authorised, NOTES 5, lane I, merge of pescBridges/B1x into goldJev/next as b36b7c3):
+// postGoldJevNextEPescComposeA-100226 -> postGoldJevNextB1xPescComposeA-100226. CENSUS (numstat from
+// postGoldJevNextEPescComposeA-100226 over the six declared paths, 2 paths): lib/bridge-framework/test/test-bgDecl.js 5/1 (B1x's
+// roster count, merged by union to 11 with lane I's dated note) and lib/bridge-framework/test/test-bgJudgeSlot.js 5/0 (B1x's three
+// rows). B1x's own anchor postPescB1xPescComposeA-100126 is superseded by this one. No framework source moved. Six declared paths
+// unchanged, no exclusion added; the tag is cut ON this re-anchor commit.
+const P1_BASELINE_COMMIT = 'postGoldJevNextB1xPescComposeA-100226'; // re-anchored by ELECTRIC_MEADOW on goldJev/next after the B1x merge; the tag is cut ON the re-anchor commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
