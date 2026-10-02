@@ -29,17 +29,17 @@
 		},
 		{
 			"id": "G-2",
-			"title": "inventedTotal (diff + crosswalk guard) is zero — the combined invention meter the verdict judges by",
+			"title": "inventedTotal (diff + crosswalk exclusion guard) is zero — the combined invention meter the verdict judges by",
 			"measure": "verdict.inventedTotal",
 			"comparator": "isZero",
 			"twin": "bumpInventedTotal"
 		},
 		{
 			"id": "G-3",
-			"title": "crosswalk invention guard: every stashed CEDS raw value appears verbatim in the CSVs (R-WO-12 set membership; no row matching)",
+			"title": "crosswalk EXCLUSION guard: no graph node carries a stashed CEDS value (the CEDS-authored crosswalk is excluded, TQ 2026-09-10 and 2026-10-01; until 2026-10-02 this gate licensed values by CSV membership, R-WO-12)",
 			"measure": "verdict.crosswalkGuard.violationCount",
 			"comparator": "isZero",
-			"twin": "doctorOneStashRawValue"
+			"twin": "plantOneCrosswalkValue"
 		},
 		{
 			"id": "G-4",

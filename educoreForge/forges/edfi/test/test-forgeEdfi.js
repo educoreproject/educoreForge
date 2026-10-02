@@ -6,21 +6,23 @@
 // its RT-1 manifest name).
 //
 // NOTHING HERE TOUCHES THE REAL SNAPSHOT, DOCKER, THE NETWORK, OR ANY EMBEDDING PROVIDER.
-// Every run builds a throwaway five-input snapshot under os.tmpdir() (MetaEd sources reusing
-// the Phase 1 synthetic grammar fixture forms, descriptor code-value XMLs, authored crosswalk
-// CSVs, SHA256SUMS, README_PROVENANCE.md peers) and runs the full forge with skipEmbedding.
+// Every run builds a throwaway four-input snapshot under os.tmpdir() (MetaEd sources reusing
+// the Phase 1 synthetic grammar fixture forms, descriptor code-value XMLs, SHA256SUMS,
+// README_PROVENANCE.md peers; the fifth input, the authored crosswalk, is RETIRED 2026-10-02) and runs
+// the full forge with skipEmbedding.
 //
 // COVERAGE:
 //   contract shape — role mapping per R-WO-9 (DmeClass/DmeProperty/DmeOptionSet/DmeOptionValue/
 //     DmeSupport), root provenance block, stableId scheme (owner-typed property ids, trimmed
 //     value identity with verbatim name), edge inventory (HAS_CLASS/HAS_SUPPORT/HAS_PROPERTY/
 //     HAS_OPTION_SET/HAS_VALUE/SUBCLASS_OF/REFERENCES/REFERENCES_TYPE), absent-is-absent (RT-2),
-//     crosswalk stash + R-WO-11 reporting, item-keyword drift census, determinism (two builds,
+//     the crosswalk EXCLUSION (no CEDS property, no crossRef, a stray crosswalk folder never read),
+//     item-keyword drift census, determinism (two builds,
 //     one canonical hash).
 //   refusal twins (every negative uses harness.rejects with a SPECIFIC regex — observed-red
 //     discipline): missing input folder (F3: README_PROVENANCE.md named), checksum mismatch,
 //     manifest drift, R-WO-10 unknown-descriptor XML, conflicting duplicate code values,
-//     missing crosswalk, unresolvable model reference, non-Descriptor record element, empty
+//     unresolvable model reference, non-Descriptor record element, empty
 //     CodeValue, duplicate stableId.
 //
 // Run: node forges/edfi/test/test-forgeEdfi.js [-verbose]
@@ -40,8 +42,8 @@ SYNOPSIS
      ${moduleName} [-verbose] [-quiet] [-help]
 
 DESCRIPTION
-     Builds throwaway five-input snapshots under os.tmpdir() and exercises the forge's
-     contract shape, crosswalk carriage, determinism, and refusal doctrine. Touches no real
+     Builds throwaway four-input snapshots under os.tmpdir() and exercises the forge's
+     contract shape, the crosswalk exclusion, determinism, and refusal doctrine. Touches no real
      snapshot bytes, no Docker, no network, no embedding provider.
 
 EXIT
@@ -55,13 +57,9 @@ const harness = require('../../../test/testLib/harness')(moduleName);
 // the framework refuses an ABSENT embedder key by name; null = the spend knob is off (SPEC §3.2)
 const forgeEdfi = require('../forgeEdfi.js')({ embedder: null });
 const forgeEdfiContractGraph = require('../lib/forgeEdfiContractGraph')();
-const edfiForgeDeclaration = require('../lib/edfiForgeDeclaration');
-// the SAME kit the walk is handed, built from Ed-Fi's declaration (its cedsAnchorAbsentSentinelList) —
-// the CEDS anchor normalizer moved into it at the F3b migration (kit.cedsAnchorValue, D14)
-const { contractGraphKit } = require('../../../lib/forge-framework/contractGraphKit');
 
 // =====================================================================
-// scratch snapshot builder — a VALID five-input snapshot; tests mutate copies of it
+// scratch snapshot builder — a VALID four-input snapshot; tests mutate copies of it
 // =====================================================================
 
 const CORE_METAED_TEXT = [
@@ -219,7 +217,9 @@ const TPDM_XML_BY_FILE_NAME = {
 	].join('\n'),
 };
 
-const ELEMENTS_CSV_TEXT = [
+// the RETIRED crosswalk's CSV shape, kept ONLY as the stray-folder fixture: written where the crosswalk used
+// to live, it must be ignored (BRIEF-F, 2026-10-02)
+const STRAY_ELEMENTS_CSV_TEXT = [
 	'EdFiEntity,EdFiEntityPath,EdFiElementName,EdFiElementType,EdFiRequired,EdFiElementDescription,EdFiEntityDescription,CEDSElementName,CEDSElementType,CEDSElementDefinition,CEDSGlobalId',
 	'FixtureSchool,FixtureSchool,FixtureSchoolName,String,1,The fixture school name.,,Fixture Name,Element,The fixture name.,000123',
 	'FixtureSchool,FixtureSchool,FixtureSchoolId,Integer,1,The fixture school id.,,Fixture Id,Element,The fixture id.,000000',
@@ -228,12 +228,17 @@ const ELEMENTS_CSV_TEXT = [
 	'',
 ].join('\n');
 
-const DESCRIPTORS_CSV_TEXT = [
+const STRAY_DESCRIPTORS_CSV_TEXT = [
 	'EdFiVersionNumber,EdFiNamespace,EdFiCodeValue,EdFiShortDescription,EdFiDescription,EdFiElementName,EdFiEntity,EdFiPath,EdFiDescription,CEDSElementName,CEDSGlobalId,CEDSOptionCode,CEDSOptionDescription',
 	'DS5.2,uri://fixture/FixtureLevelDescriptor,Alpha,Alpha level,The alpha fixture level.,FixtureLevelDescriptor,FixtureStudent,FixtureLevel,The level element.,Fixture Level Type,000456,AlphaOption,The alpha option.',
 	'DS5.2,uri://fixture/FixtureLevelDescriptor,Gone,Gone level,A value the new model does not carry.,FixtureLevelDescriptor,FixtureStudent,FixtureLevel,The level element.,Fixture Level Type,000456,GoneOption,The gone option.',
 	'',
 ].join('\n');
+
+const STRAY_CROSSWALK_CSV_TEXT_BY_FILE_NAME = Object.freeze({
+	'EdFiEntityElementsToCEDS.csv': STRAY_ELEMENTS_CSV_TEXT,
+	'EdFiEntityDescriptorsToCEDS.csv': STRAY_DESCRIPTORS_CSV_TEXT,
+});
 
 const buildScratchSnapshot = () => {
 	const scratchSnapshotPath = fs.mkdtempSync(path.join(os.tmpdir(), 'edfiPhase2Snapshot-'));
@@ -250,8 +255,6 @@ const buildScratchSnapshot = () => {
 			metaEdProject: { projectName: 'TPDM', projectVersion: '1.2.0' },
 		}),
 		'tpdmCommunityModel/DomainEntity/FixtureTpdm.metaed': TPDM_METAED_TEXT,
-		[`cedsAuthoredCrosswalk/EdFiEntityElementsToCEDS.csv`]: ELEMENTS_CSV_TEXT,
-		[`cedsAuthoredCrosswalk/EdFiEntityDescriptorsToCEDS.csv`]: DESCRIPTORS_CSV_TEXT,
 	};
 	Object.entries(CORE_XML_BY_FILE_NAME).forEach(([fileName, xmlText]) => {
 		fileMap[`descriptorCodeValues/${fileName}`] = xmlText;
@@ -268,7 +271,7 @@ const buildScratchSnapshot = () => {
 	return scratchSnapshotPath;
 };
 
-// (re)generate SHA256SUMS over the source files of all five inputs — called after any mutation
+// (re)generate SHA256SUMS over the source files of all four inputs — called after any mutation
 // that is NOT supposed to trip the checksum gate
 const writeScratchSha256Sums = (scratchSnapshotPath) => {
 	const sumLineList = [];
@@ -297,7 +300,6 @@ const writeScratchSha256Sums = (scratchSnapshotPath) => {
 		'descriptorCodeValues',
 		'tpdmCommunityModel',
 		'tpdmDescriptorCodeValues',
-		'cedsAuthoredCrosswalk',
 	].forEach(walkForSums);
 	fs.writeFileSync(
 		path.join(scratchSnapshotPath, 'SHA256SUMS'),
@@ -354,7 +356,7 @@ const runNextStep = () => {
 
 // ---------------------------------------------------------------------
 pushStep((done) => {
-	harness.section('CONTRACT SHAPE — full forge over a valid five-input scratch snapshot');
+	harness.section('CONTRACT SHAPE — full forge over a valid four-input scratch snapshot');
 	const snapshotPath = buildScratchSnapshot();
 	runForgeOn(snapshotPath, (forgeError, forged) => {
 		harness.accepts('valid scratch snapshot forges without refusal', [forgeError].filter(Boolean));
@@ -386,10 +388,10 @@ pushStep((done) => {
 			rootNode.properties.stableUriPropertyName,
 			'edfiStableId',
 		);
-		harness.match(
-			'root mappingInstruction carries the CEDS anchor contract',
+		harness.equal(
+			'root mappingInstruction makes NO mapping claim (the crosswalk is retired; empty anchors, no implied target)',
 			rootNode.properties.mappingInstruction,
-			/CEDSGlobalId/,
+			'{"cedsOriginalAnchorPropertyName":[],"cedsOptionOriginalAnchorPropertyName":[],"crosswalkPrefix":[],"crosswalkResolveProperty":"edfiStableId","includeInImplied":false,"impliedTargets":[]}',
 		);
 
 		// stableId scheme
@@ -490,62 +492,18 @@ pushStep((done) => {
 			forged.nodes.every((oneNode) => oneNode.properties.description !== ''),
 		);
 
-		// crosswalk carriage (R-WO-4) + reporting (R-WO-11)
-		const matchedProperty = nodeById(
-			forged,
-			'edfi:property/domainEntity.FixtureSchool.FixtureSchoolName',
-		);
-		harness.equal(
-			'matched crosswalk property carries canonical cedsId',
-			matchedProperty.properties.cedsId,
-			'P000123',
-		);
-		harness.match(
-			'matched crosswalk property carries crossRefs with the raw anchor',
-			matchedProperty.properties.crossRefs,
-			/"raw":"000123"/,
-		);
-		const alphaValueNode = nodeById(forged, 'edfi:value/FixtureLevel.Alpha');
-		harness.equal(
-			'matched crosswalk option value carries cedsOptionCode',
-			alphaValueNode.properties.cedsOptionCode,
-			'AlphaOption',
-		);
-		const report = forged.crosswalkMatchReport;
-		harness.equal('sentinel-only crosswalk row still matches (FixtureSchoolId)', report.propertyRows.matchedCount, 3);
-		harness.equal(
-			'descriptor-suffix tier matched exactly one row (censused separately)',
-			report.propertyRows.matchedByDescriptorSuffixCount,
-			1,
-		);
-		const suffixMatchedProperty = nodeById(
-			forged,
-			'edfi:property/domainEntity.FixtureStudent.FixtureLevel',
-		);
-		harness.equal(
-			"old-world 'FixtureLevelDescriptor' element lands on the descriptor-reference property",
-			suffixMatchedProperty.properties.cedsId,
-			'P000321',
-		);
-		harness.equal(
-			'unmatched crosswalk property row is REPORTED, not refused, not invented',
-			report.propertyRows.unmatchedList.length,
-			1,
-		);
-		harness.equal(
-			'unmatched property row names its old-world identity',
-			report.propertyRows.unmatchedList[0].edfiEntityName,
-			'OldWorldEntity',
+		// THE CROSSWALK IS EXCLUDED (BRIEF-F, 2026-10-02; TQ 2026-09-10 and 2026-10-01). Until then this block
+		// asserted crosswalk CARRIAGE (cedsId/crossRefs/cedsOptionCode stamped from the CSVs, plus the R-WO-11
+		// match report); those assertions are retired with the crosswalk and listed in DEVLOG-F.
+		harness.ok(
+			'no node carries a CEDS-named property (cedsId, cedsOptionCode, …) — the crosswalk is excluded',
+			forged.nodes.every((oneNode) => !Object.keys(oneNode.properties).some((onePropertyName) => /ceds/i.test(onePropertyName))),
 		);
 		harness.ok(
-			'no node was invented for the unmatched row',
-			!forged.nodes.some((oneNode) => `${oneNode.properties.name}`.includes('OldWorldElement')),
+			"no node carries a non-empty crossRefs (every one is the finalizer's '[]')",
+			forged.nodes.every((oneNode) => oneNode.properties.crossRefs === '[]'),
 		);
-		harness.equal(
-			'unmatched crosswalk VALUE row (Gone) is reported',
-			report.optionValueRows.unmatchedList.length,
-			1,
-		);
+		harness.ok('the forge returns no crosswalkMatchReport', forged.crosswalkMatchReport === undefined);
 
 		// structural contract finalizer ran: crossRefs universal
 		harness.ok(
@@ -676,13 +634,28 @@ pushRefusalStep({
 	expectedRegex: /duplicate code value 'Alpha' for descriptor 'FixtureLevel' with DIFFERING fields/,
 });
 
-pushRefusalStep({
-	sectionLabel: 'missing crosswalk folder refuses naming README_PROVENANCE.md',
-	mutateSnapshot: (snapshotPath) => {
-		fs.rmSync(path.join(snapshotPath, 'cedsAuthoredCrosswalk'), { recursive: true });
-	},
-	// framework step 2 again (see the descriptorCodeValues folder case above)
-	expectedRegex: /listed file 'cedsAuthoredCrosswalk\/[^']+' is missing on disk[\s\S]*README_PROVENANCE\.md/,
+// a STRAY crosswalk folder (the retired CSVs written where the fifth input used to live, unlisted in SHA256SUMS)
+// is NOT READ: the forge succeeds and stamps nothing. Replaces the retired refusal "missing crosswalk folder
+// refuses" (the crosswalk is no longer an input, so its absence is the normal case; BRIEF-F 2026-10-02).
+pushStep((done) => {
+	harness.section('CROSSWALK EXCLUDED — a stray cedsAuthoredCrosswalk/ folder in the snapshot is never read');
+	const snapshotPath = buildScratchSnapshot();
+	Object.entries(STRAY_CROSSWALK_CSV_TEXT_BY_FILE_NAME).forEach(([fileName, csvText]) => {
+		fs.mkdirSync(path.join(snapshotPath, 'cedsAuthoredCrosswalk'), { recursive: true });
+		fs.writeFileSync(path.join(snapshotPath, 'cedsAuthoredCrosswalk', fileName), csvText);
+	});
+	runForgeOn(snapshotPath, (forgeError, forged) => {
+		harness.accepts('the snapshot with a stray crosswalk folder forges', [forgeError].filter(Boolean));
+		if (!forged) {
+			done();
+			return;
+		}
+		harness.ok(
+			'the stray CSVs stamp nothing: no CEDS-named property and no non-empty crossRefs on any node',
+			forged.nodes.every((oneNode) => oneNode.properties.crossRefs === '[]' && !Object.keys(oneNode.properties).some((onePropertyName) => /ceds/i.test(onePropertyName))),
+		);
+		done();
+	});
 });
 
 pushRefusalStep({
@@ -758,7 +731,7 @@ pushRefusalStep({
 
 // ---------------------------------------------------------------------
 pushStep((done) => {
-	harness.section('PURE HELPERS — effective property name + CEDS cross-ref normalization');
+	harness.section('PURE HELPERS — effective property name');
 	harness.equal(
 		'role name prefixes the base name',
 		forgeEdfiContractGraph.effectivePropertyNameFor({
@@ -788,27 +761,9 @@ pushStep((done) => {
 		}),
 		'Mailing',
 	);
-	const { kit } = contractGraphKit({ forgeDeclaration: edfiForgeDeclaration, metadata: {} });
-	harness.ok(
-		"CEDS sentinel '000000' (the declaration's cedsAnchorAbsentSentinelList) is ABSENT, not data",
-		kit.cedsAnchorValue({ rawValue: '000000', kind: 'property' }).absent === true,
-	);
-	harness.equal(
-		'CEDS global-id canonicalizes to P-form',
-		kit.cedsAnchorValue({ rawValue: '123', kind: 'property' }).cedsAnchorValue,
-		'P000123',
-	);
-	let nonNumericRefusal = '';
-	try {
-		kit.cedsAnchorValue({ rawValue: 'not-a-number', kind: 'property' });
-	} catch (thrownError) {
-		nonNumericRefusal = thrownError.message; // the kit THROWS inside the pure layer (SPEC §3.3) — this is the observation, not control flow
-	}
-	harness.match(
-		'non-numeric CEDS global-id is REFUSED by name, never silent (R3)',
-		nonNumericRefusal,
-		/could not extract a numeric CEDS anchor from 'not-a-number'/,
-	);
+	// the three CEDS cross-ref normalization checks (the '000000' sentinel, P-form, the non-numeric refusal)
+	// are RETIRED with the crosswalk: Ed-Fi no longer normalizes any CEDS anchor and declares no sentinel
+	// (BRIEF-F, 2026-10-02). kit.cedsAnchorValue itself stays covered by the forge-framework suites.
 	done();
 });
 

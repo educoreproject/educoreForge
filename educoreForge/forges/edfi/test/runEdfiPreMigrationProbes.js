@@ -160,7 +160,6 @@ const doubledContractGraph = mintProbeApplies
 const forgeEdfi = require(forgeEntryPath)({ embedder: null });
 const metaEdParser = require(path.join(BUNDLE_DIR_PATH, 'lib', 'metaEdParser'))();
 const descriptorCodeValueLoader = require(path.join(BUNDLE_DIR_PATH, 'lib', 'descriptorCodeValueLoader'))();
-const crosswalkCarrier = require(path.join(BUNDLE_DIR_PATH, 'lib', 'crosswalkCarrier'))();
 
 // -----------------------------------------------------------------
 // the descriptor's standardName (probe #4) — the ONE ini read, by the same parser the roster uses
@@ -202,15 +201,13 @@ forgeEdfi.forge({ sourcePath: SNAPSHOT_PATH, owner: 'probe', embedNodeLimit: und
 				xLog.error(`${moduleName}: descriptorCodeValueLoader REFUSED on the second pass: ${loadError}`);
 				process.exit(1);
 			}
-			crosswalkCarrier.loadAuthoredCrosswalk({ snapshotPath: SNAPSHOT_PATH }, (crosswalkError, authoredCrosswalk) => {
-				if (crosswalkError) {
-					xLog.error(`${moduleName}: crosswalkCarrier REFUSED on the second pass: ${crosswalkError}`);
-					process.exit(1);
-				}
+			// the authored crosswalk (and crosswalkCarrier.js) were RETIRED 2026-10-02 (BRIEF-F): the walk no
+			// longer takes it, so the second pass hands only the two remaining inputs
+			{
 				let doubledGraph;
 				let doubledError = '';
 				try {
-					doubledGraph = doubledContractGraph.buildContractGraph({ metaEdModel, descriptorCodeValues, authoredCrosswalk, metadata });
+					doubledGraph = doubledContractGraph.buildContractGraph({ metaEdModel, descriptorCodeValues, metadata });
 				} catch (thrownError) {
 					doubledError = thrownError.message;
 				}
@@ -220,7 +217,7 @@ forgeEdfi.forge({ sourcePath: SNAPSHOT_PATH, owner: 'probe', embedNodeLimit: und
 				}
 				const doubledFingerprint = forgeFramework.fingerprint.pureLayerFingerprint({ nodes: doubledGraph.nodes, edges: doubledGraph.edges });
 				measureAndWrite({ nodes, edges, metadata, forgeResult, doubledFingerprint });
-			});
+			}
 		});
 	});
 });

@@ -5,7 +5,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // roundTripValidator.js — forge-edfi Phase 3: THE round-trip validator (doctrine §5 in full;
 // the RT-1 uniform entry-point name). Reads the MATERIALIZED EdFi graph over bolt, re-emits
 // MetaEd-shaped semantic statements, reduces the pinned snapshot with the INDEPENDENT reducer,
-// diffs, adjudicates the crosswalk input, and lands the RT-6 verdict artifact.
+// diffs, enforces the crosswalk EXCLUSION, and lands the RT-6 verdict artifact.
 //
 // UNIFORM INVOCATION SIGNATURE (RT-13 — builder-callable with zero per-standard knowledge):
 //   roundTripValidator.validate(
@@ -23,11 +23,10 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //
 // THE VERDICT (RT-6): REPRODUCED / LOST / INVENTED with located detail; LOST split
 // explicitlyOmitted vs contentGap (named declaredContext until A13); INVENTED must be 0 always;
-// roundTripClean = (lost === 0 && inventedTotal === 0). The crosswalk input is adjudicated
-// explicitly omitted (R-WO-12) with a HARD invention guard: every CEDS raw value stashed on a
-// graph node must appear verbatim in the crosswalk CSVs (pure set membership — deliberately NO
-// row matching, so the forge's matching logic can never cancel its own bugs here); violations
-// count INVENTED.
+// roundTripClean = (lost === 0 && inventedTotal === 0). THE CROSSWALK IS EXCLUDED (2026-10-02, BRIEF-F;
+// TQ 2026-09-10 and 2026-10-01: "known to be garbage"): it is no longer an input, so NO CEDS raw value may
+// be stashed on any graph node. The guard that once licensed stashed values by membership in the crosswalk
+// CSVs (R-WO-12) now licenses none: every stashed CEDS value is a violation and counts INVENTED.
 //
 // validateWithReader({ reader, snapshotPath, outputPath, graphIdentity }, callback) is the
 // reader-agnostic core — the same machinery whether the reader is real bolt
@@ -56,11 +55,6 @@ const roundTripDiff = require('./lib/roundTripDiff')();
 const VERDICT_VERSION = 'edfiRoundTripVerdict-2';
 const STANDARD_SOURCE = 'EdFi';
 
-// crosswalk guard: anchorKind -> the CSV header field whose raw-value set licenses it
-const GUARD_COLUMN_BY_ANCHOR_KIND = {
-	cedsGlobalId: 'CEDSGlobalId',
-	cedsOptionCode: 'CEDSOptionCode',
-};
 
 const moduleFunction = () => {
 	// --------------------------------------------------------
@@ -102,8 +96,6 @@ const moduleFunction = () => {
 				domainItemCount: 0,
 				interchangeComponentCount: 0,
 			};
-			const crosswalkRawValueSetByColumn = {};
-			let crosswalkRowCountTotal = 0;
 
 			const fileQueue = [...args.intake.fileEntryList];
 			const reduceNextFile = (queueIndex) => {
@@ -113,8 +105,6 @@ const moduleFunction = () => {
 						answerKeyStatementList,
 						commentCensusList,
 						reducerCensusTotals,
-						crosswalkRawValueSetByColumn,
-						crosswalkRowCountTotal,
 					});
 					return;
 				}
@@ -170,24 +160,10 @@ const moduleFunction = () => {
 					);
 					return;
 				}
-				// .csv — the crosswalk: raw-value sets for the R-WO-12 invention guard; NEVER
-				// statements (explicitly-omitted, out-of-domain input)
-				roundTripMetaEdCanonical.reduceCrosswalkCsvText(
-					{ csvText: oneEntry.fileText, sourceFileRelativePath: oneEntry.sourceFileRelativePath },
-					(reduceError, reduceResult) => {
-						if (reduceError) {
-							continueAfter(reduceError);
-							return;
-						}
-						crosswalkRowCountTotal += reduceResult.rowCount;
-						Object.entries(reduceResult.rawValuesByHeaderField).forEach(([headerField, valueSet]) => {
-							if (!crosswalkRawValueSetByColumn[headerField]) {
-								crosswalkRawValueSetByColumn[headerField] = new Set();
-							}
-							valueSet.forEach((oneValue) => crosswalkRawValueSetByColumn[headerField].add(oneValue));
-						});
-						continueAfter('', reduceResult, []);
-					},
+				// the intake consumes .metaed and .xml only (the crosswalk's .csv retired 2026-10-02); any
+				// other suffix is a fault, never a silent skip
+				continueAfter(
+					`${moduleName}: intake handed '${oneEntry.sourceFileRelativePath}' with suffix '${oneEntry.suffix}', which no reducer reads`,
 				);
 			};
 			reduceNextFile(0);
@@ -243,24 +219,13 @@ const moduleFunction = () => {
 			);
 		});
 
-		// STAGE 6 — the crosswalk invention guard (R-WO-12): stash ⊆ CSV raw values, pure set
-		// membership; a violation is an INVENTION
+		// STAGE 6 — the crosswalk EXCLUSION guard: the crosswalk is not an input, so nothing licenses a
+		// stashed CEDS value; every one the graph carries is a violation, and an INVENTION
 		taskList.push((args, next) => {
-			const violationList = [];
-			args.emission.cedsStashList.forEach((oneStashEntry) => {
-				const guardColumnName = GUARD_COLUMN_BY_ANCHOR_KIND[oneStashEntry.anchorKind];
-				if (!guardColumnName) {
-					violationList.push({
-						...oneStashEntry,
-						violationKind: `unknown anchorKind '${oneStashEntry.anchorKind}'`,
-					});
-					return;
-				}
-				const licensedValueSet = args.crosswalkRawValueSetByColumn[guardColumnName];
-				if (!licensedValueSet || !licensedValueSet.has(oneStashEntry.rawValue)) {
-					violationList.push({ ...oneStashEntry, violationKind: 'rawValueAbsentFromCsv' });
-				}
-			});
+			const violationList = args.emission.cedsStashList.map((oneStashEntry) => ({
+				...oneStashEntry,
+				violationKind: 'crosswalkExcluded',
+			}));
 			next('', { ...args, crosswalkGuardViolationList: violationList });
 		});
 
@@ -357,18 +322,10 @@ const moduleFunction = () => {
 					'"Semantically clean" must never be reported as "identical".',
 				crosswalkGuard: {
 					adjudication:
-						'crosswalk CSVs are a declaredContext input (R-WO-12): authored data stashed for the later bridge phase, never Layer 1 statements; guarded against invention by raw-value set membership — that category renamed explicitlyOmitted by doctrine amendment A13 (2026-08-04); the R-WO-12 wording is preserved verbatim so the code can still be matched against the ruling that authorized it',
+						'the CEDS-authored crosswalk is EXCLUDED (TQ rulings 2026-09-10 and 2026-10-01; BRIEF-F 2026-10-02): it is not an input, its CSVs sit unread in cedsAuthoredCrosswalk_DO_NOT_USE/, and every CEDS value stashed on a graph node (a cedsOptionCode, or a crossRefs entry) is a violation counted INVENTED. Until 2026-10-02 this guard licensed stashed values by membership in the crosswalk CSVs (R-WO-12)',
 					stashRawValueCount: args.emission.cedsStashList.length,
 					violationCount: args.crosswalkGuardViolationList.length,
 					violationList: args.crosswalkGuardViolationList,
-					csvRowCountTotal: args.crosswalkRowCountTotal,
-					csvDistinctGlobalIdCount: (args.crosswalkRawValueSetByColumn.CEDSGlobalId || new Set())
-						.size,
-					csvDistinctOptionCodeCount: (
-						args.crosswalkRawValueSetByColumn.CEDSOptionCode || new Set()
-					).size,
-					reverseDirectionNote:
-						'unmatched-row detail (764 element rows and friends) is FORGE-REPORT PROVENANCE — see the Phase 2 crosswalkMatchReport artifact (test-artifacts/censusDeltaReport.json); this instrument runs no row matching by design',
 				},
 				explicitlyOmittedOutOfDomainCensus: {
 					commentLineCount: args.commentCensusList.length,
@@ -402,8 +359,8 @@ const moduleFunction = () => {
 					path.join(outputPath, 'roundTrip.report.txt'),
 					roundTripDiff.renderReportText({ report: args.report }) +
 						`\nroundTripClean: ${verdict.roundTripClean}` +
-						`\ninventedTotal (diff + crosswalk guard): ${inventedTotal}` +
-						`\ncrosswalk guard violations: ${verdict.crosswalkGuard.violationCount}` +
+						`\ninventedTotal (diff + crosswalk exclusion guard): ${inventedTotal}` +
+						`\ncrosswalk exclusion guard violations: ${verdict.crosswalkGuard.violationCount}` +
 						`\ncomment lines (explicitly omitted, out of statement domain): ${verdict.explicitlyOmittedOutOfDomainCensus.commentLineCount}\n`,
 				);
 			}
