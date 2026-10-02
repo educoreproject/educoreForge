@@ -658,7 +658,13 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // commit, 2cfe657): apps/graph-builder/apps/bridge-maker/lib/jevJudgeClient.js 3/1 (the Jev client retries the edge proxy's
 // 520-524 like the 50x family; one 520 killed jevBuild2's SIF run; ruled by QUIET_ORBIT, its test b0b39ca). Six declared
 // paths unchanged, no exclusion added; the tag is cut ON this re-anchor commit.
-const P1_BASELINE_COMMIT = 'postGoldJevAPescComposeA-100126'; // re-anchored by COPPER_MARBLE for goldJev lane A; the tag is cut ON the re-anchor commit
+// RE-ANCHOR 2026-10-02 (ELECTRIC_MEADOW; pre-authorised, NOTES 5 and RESUME-100226 lane I, merge of pescBridges/B2x into goldJev/next):
+// postGoldJevAPescComposeA-100126 -> postGoldJevNextB2xPescComposeA-100226. CENSUS (numstat from postGoldJevAPescComposeA-100126 over
+// the six declared paths, 2 paths, from ONE commit, B2x's a6f9ec8, arriving by the merge 2ff7bba): lib/bridge-framework/test/test-bgDecl.js
+// 3/1 and lib/bridge-framework/test/test-bgJudgeSlot.js 4/0 (the roster literals for the Document Request and Document Response
+// derived plugins). B2x's own anchor postPescB2xPescComposeA-100126 is superseded by this one. No framework source moved. Six
+// declared paths unchanged, no exclusion added; the tag is cut ON this re-anchor commit.
+const P1_BASELINE_COMMIT = 'postGoldJevNextB2xPescComposeA-100226'; // re-anchored by ELECTRIC_MEADOW on goldJev/next after the B2x merge; the tag is cut ON the re-anchor commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
