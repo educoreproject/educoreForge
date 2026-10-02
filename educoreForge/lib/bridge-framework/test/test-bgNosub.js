@@ -581,7 +581,15 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // postPescF6EportfolioSeamDiffEmpty-100126, tag cut ON this commit. CENSUS at d4fddd5: one file, 1+/1−,
 // forges/pescacademiceportfolio1v0v0/forgePescAcademicEportfolio1v0v0.js — its header comment's DME title, rescaffolded after
 // QUIET_ORBIT's display-name ruling ('PESC Academic ePortfolio v1.0.0'). SEAM_PATH_LIST byte-identical. Fresh red (DEVLOG-F6).
-const PHASE3_ANCHOR_TAG = 'postPescF6EportfolioSeamDiffEmpty-100126'; // re-anchored by QUIET_CIPHER, PESC release forge F6 (second)
+// goldJev LANE F RE-ANCHOR (PRISM_LATTICE, 2026-10-02; pre-authorised, NOTES-supervisor item 5): postPescF6EportfolioSeamDiffEmpty-100126
+// -> postEdfiCrosswalkOutFSeamDiffEmpty-100226, tag cut ON this commit. CENSUS (git diff --stat postPescF6EportfolioSeamDiffEmpty-100126
+// -- the seam paths) at dfc9d07: five files, all the RULED crosswalk exclusion (TQ 2026-09-10 and 2026-10-01; BRIEF-F), commits f8ea687 and
+// 8de0657 (the refusal's form): forges/edfi/forgeEdfi.js 2 (a comment), forges/edfi/lib/edfiForgeDeclaration.js 36 (empty
+// mappingInstruction, no sentinel, four E8 names), forges/edfi/lib/edfiHooks.js 63 (the crosswalk loader out),
+// forges/edfi/lib/forgeEdfiContractGraph.js 232 (PASS 5 carriage -> the exclusion refusal), lib/forge-framework/test/acceptance/
+// expectedFingerprints.json 4 (the edfi proxy re-pin). build.js, forger/, replay/, replay-manager/, every other forge and
+// lib/forge-framework/ SOURCE: UNTOUCHED. SEAM_PATH_LIST byte-identical. Fresh red observed against THIS tag (DEVLOG-F).
+const PHASE3_ANCHOR_TAG = 'postEdfiCrosswalkOutFSeamDiffEmpty-100226'; // re-anchored by PRISM_LATTICE, goldJev lane F
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');
