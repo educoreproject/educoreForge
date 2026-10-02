@@ -326,8 +326,10 @@ const EMBED_TEXT_VOTE_RETRIEVAL = Object.freeze({
 		earnRule: 'topShare',
 	},
 });
-const COSINE_TOP_K_ROW_LINE = "\t'cosineTopK-v1': Object.freeze({ fieldNameList: Object.freeze(['method', 'k', 'floor', 'embeddingModelVersion']) }),";
-const EMBED_TEXT_VOTE_ROW_LINE = "\t'embedTextVote-v1': Object.freeze({ fieldNameList: Object.freeze(['method', 'hitsPerText', 'minScore', 'k', 'embeddingModelVersion', 'neighbourVote']) }),\n";
+// ⟪lane C, 2026-10-01⟫ the method rows moved to candidateRetrievalMethodRegistry.js and the contract READS its field lists
+// from them, so the twins that admit or unregister a method fault the registry rows (or the contract's one read of them)
+const RETRIEVAL_METHOD_REGISTRY_FILE = 'candidateRetrievalMethodRegistry.js';
+const CONTRACT_METHOD_ROW_LIST_READ = 'candidateRetrievalMethodRegistryLib.CANDIDATE_RETRIEVAL_METHOD_ROW_LIST.reduce(';
 
 const contractUnder = (scenario) => (scenario.frameworkMutationList.length === 0 ? contractLib : moduleDouble.loadWithMutations({ modulePath: path.join(scenarioLib.FRAMEWORK_DIR, CONTRACT_FILE), mutationList: scenario.frameworkMutationList }));
 const toyDerivedDeclaration = () => cloneJson(require(path.join(TOY_BUNDLE_DIR, 'bridges', 'toyDerivedPlugin.js')).bridgeDeclaration);
@@ -381,7 +383,7 @@ const nvConjunctList = [
 		title: 'an unregistered candidateRetrieval.method is refused naming every registered method',
 		shapeDeclaration: withCosineTopK((retrieval) => { retrieval.method = 'cosineTopK-v2'; }),
 		regex: /candidateRetrieval\.method "cosineTopK-v2" is not one of: cosineTopK-v1, embedTextVote-v1/,
-		twinName: 'admitUnregisteredMethod', fileName: CONTRACT_FILE, find: COSINE_TOP_K_ROW_LINE, replace: `${COSINE_TOP_K_ROW_LINE}\n\t'cosineTopK-v2': Object.freeze({ fieldNameList: Object.freeze(['method', 'k', 'floor', 'embeddingModelVersion']) }),`,
+		twinName: 'admitUnregisteredMethod', fileName: CONTRACT_FILE, find: CONTRACT_METHOD_ROW_LIST_READ, replace: CONTRACT_METHOD_ROW_LIST_READ.replace('CANDIDATE_RETRIEVAL_METHOD_ROW_LIST.reduce(', "CANDIDATE_RETRIEVAL_METHOD_ROW_LIST.concat([{ methodName: 'cosineTopK-v2', fieldNameList: ['method', 'k', 'floor', 'embeddingModelVersion'] }]).reduce("),
 	}),
 	nvRefusalCase({
 		conjunctId: 'l_neighbourVoteUnderCosineTopK',
@@ -544,8 +546,8 @@ const nvConjunctList = [
 		},
 	}),
 ];
-frameworkMutationTwin({ registry: twinRegistry, gateId: NV_GATE_ID, conjunctId: 'l_embedTextVoteDeclarationsRegister', twinName: 'unregisterEmbedTextVoteMethod', fileName: CONTRACT_FILE, find: EMBED_TEXT_VOTE_ROW_LINE, replace: '' });
-frameworkMutationTwin({ registry: twinRegistry, gateId: NV_GATE_ID, conjunctId: 'l_shippedDeclaringPluginsRegister', twinName: 'unregisterCosineTopKMethod', fileName: CONTRACT_FILE, find: "\t'cosineTopK-v1': Object.freeze({", replace: "\t'cosineTopKRetired-v1': Object.freeze({" });
+frameworkMutationTwin({ registry: twinRegistry, gateId: NV_GATE_ID, conjunctId: 'l_embedTextVoteDeclarationsRegister', twinName: 'unregisterEmbedTextVoteMethod', fileName: RETRIEVAL_METHOD_REGISTRY_FILE, find: "\t\tmethodName: 'embedTextVote-v1',", replace: "\t\tmethodName: 'embedTextVoteUnregistered-v1'," });
+frameworkMutationTwin({ registry: twinRegistry, gateId: NV_GATE_ID, conjunctId: 'l_shippedDeclaringPluginsRegister', twinName: 'unregisterCosineTopKMethod', fileName: RETRIEVAL_METHOD_REGISTRY_FILE, find: "\t\tmethodName: 'cosineTopK-v1',", replace: "\t\tmethodName: 'cosineTopKRetired-v1'," });
 
 const gateDeclarationList = [
 	{ gateId: GATE_ID, title: 'the plugin declaration object, validated by name at registration', conjunctList },

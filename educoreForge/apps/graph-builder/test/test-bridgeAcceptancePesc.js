@@ -696,6 +696,21 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // merge, so those two need no move here) and lib/vocabulary/test/test-sifVocabularyInvariance.js 6/1 (the edfi G0 proxy re-pin,
 // dfc9d07). F's anchor postEdfiCrosswalkOutFPescComposeB-100226 is superseded by this one. No framework source moved. Six declared
 // paths unchanged, no exclusion added; the tag is cut ON this re-anchor commit.
+// RE-ANCHOR 2026-10-02 (SOLAR_STREAM, lane C, successor of MIDNIGHT_HAVEN; pre-authorised, CAMPAIGN-goldJevFour + NOTES 5):
+// postGoldJevAPescComposeA-100126 -> postCandidateRegistryCOnGoldJevAPescComposeA-100226. This time FRAMEWORK SOURCE DID MOVE,
+// and that is the lane's whole job, not PESC's: candidate retrieval became a method registry (DESIGN-C-candidateRegistry.md).
+// Rebased onto goldJev/A 937734f; it replaces lane C's earlier re-anchor (postCandidateRegistryCPescComposeA-100126, cut on
+// the 2cfe657 base). CENSUS (numstat from postGoldJevAPescComposeA-100126 over the six declared paths, 9 paths, from TWO
+// lane C commits, the registry move 88c4ed5 and the real-standard identity runner 302b783):
+//   lib/bridge-framework/bridge-framework.js 15/398 (the two method rows moved out), bridgePluginContract.js 15/6 (field lists
+//   read from the rows; duplicate method names refused at load), candidateRetrievalMethodRegistry.js 521/0 (NEW: the rows);
+//   tests: test/candidateRegistryIdentity/captureToyIdentity.js 268/0, test-bgRetrievalRegistry.js 243/0 (NEW), test-bgDecl.js
+//   7/5 and test-bgDerived.js 11/8 (twins retargeted to the moved text); 302b783: test/candidateRegistryIdentity/
+//   runRealStandardIdentity.sh 64/0 and compareRealStandardIdentity.js 98/0 (NEW, proof instruments). PESC's own claim, that its plugins add ZERO framework
+//   change, is untouched: no PESC file is in the range. Six declared paths unchanged, no exclusion added; the tag is cut ON
+//   this re-anchor commit.
+// MERGE 2026-10-02 (SUNSET_BEACON, lane FRESH, merge of candidateRegistry/C into goldJev/fresh): both lanes' census comments kept;
+// goldJev/next's anchor kept here, re-anchored in the next commit after a fresh red names lane C's paths.
 const P1_BASELINE_COMMIT = 'postGoldJevNextFPescComposeA-100226'; // re-anchored by ELECTRIC_MEADOW on goldJev/next after the F merge; the tag is cut ON the re-anchor commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
