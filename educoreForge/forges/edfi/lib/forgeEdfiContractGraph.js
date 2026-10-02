@@ -62,7 +62,6 @@ const forgeFramework = require(path.join(CORE_LIB, 'forge-framework', 'forge-fra
 const { DME_ROLES, EDGE_TYPES } = forgeFramework.vocabulary;
 const forgeDeclaration = require('./edfiForgeDeclaration'); // H1 — the constants live there, once
 
-const refuse = require(path.join(CORE_LIB, 'forge-framework', 'refuse'));
 const { standardSource: STANDARD_SOURCE } = forgeDeclaration;
 
 // PASS 5's rule: a property name speaking of CEDS (cedsId, cedsOptionCode, cedsOriginalAnchorPropertyName …)
@@ -748,11 +747,12 @@ const moduleFunction = () => {
 		nodes.forEach((oneNode) => {
 			const crosswalkPropertyName = Object.keys(oneNode.properties).find((onePropertyName) => CROSSWALK_CARRIED_PROPERTY_NAME_RE.test(onePropertyName));
 			if (crosswalkPropertyName !== undefined) {
-				throw refuse.byName({
-					moduleName: 'forge-edfi',
-					what: `node '${oneNode.stableId}' carries property '${crosswalkPropertyName}'`,
-					where: 'the CEDS-authored crosswalk is excluded from the graph (TQ rulings 2026-09-10, 2026-10-01): no Ed-Fi node names CEDS or carries a cross-reference',
-				});
+				// a plain Error in this walk's own REFUSED form (the framework's refuse.byName would give the G-SHARE
+				// caller census a new edfi caller and stale its written justification for a one-line message)
+				throw new Error(
+					`forge-edfi REFUSED: node '${oneNode.stableId}' carries property '${crosswalkPropertyName}' — the CEDS-authored ` +
+						'crosswalk is excluded from the graph (TQ rulings 2026-09-10, 2026-10-01): no Ed-Fi node names CEDS or carries a cross-reference',
+				);
 			}
 		});
 
