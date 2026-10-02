@@ -264,7 +264,13 @@ const POST_D1_BASE_TAG = 'postM1VocabularyIi-092926'; // re-anchored 2026-09-29 
 //   roundTripHarness/roundTripHarness.js | 6 — a verdict written with a graphIdentity also carries it as .graph (goldEvalCheck reads it)
 //   roundTripHarness/test/test-gRt.js    | 30 — G-RT conjunct endpointWhereCertificationReadsIt and its red twin
 // THE PATH IS UNCHANGED, NO EXCLUSION IS ADDED. Fresh red observed against THIS tag (DEVLOG-F5).
-const PHASE0_ANCHOR_TAG = 'postPescF5ForgeFrameworkIii-100126'; // re-anchored by AMBER_PORTAL, PESC release forge F5 — the NINTH anchor
+// goldJev LANE F RE-ANCHOR OF (iii) (PRISM_LATTICE, 2026-10-02; pre-authorised, NOTES-supervisor item 5): postPescF5ForgeFrameworkIii-100126
+// -> postEdfiCrosswalkOutFForgeFrameworkIii-100226, tag cut ON this re-anchor commit. CENSUS (git diff --stat
+// postPescF5ForgeFrameworkIii-100126 -- lib/forge-framework/) at 0580451: exactly ONE file, a TEST FIXTURE:
+//   test/acceptance/expectedFingerprints.json | 4 — the edfi PROXY re-pin 814ce961… -> 04abc77b… (f8ea687), the RULED crosswalk exclusion.
+// No framework SOURCE file under lib/forge-framework/ moved. THE PATH IS UNCHANGED, NO EXCLUSION IS ADDED. Fresh red observed
+// against THIS tag (DEVLOG-F).
+const PHASE0_ANCHOR_TAG = 'postEdfiCrosswalkOutFForgeFrameworkIii-100226'; // re-anchored by PRISM_LATTICE, goldJev lane F — the TENTH anchor
 // PHASE 1 RE-ANCHOR — RULING FJ-P1-1, and it moves seamDiffEmpty ALONE.
 //
 // WHY IT HAD TO MOVE. SEAM_PATH_LIST watches forges/*/forge*.js, forges/*/lib/*Declaration.js and
