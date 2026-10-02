@@ -711,7 +711,14 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 //   this re-anchor commit.
 // MERGE 2026-10-02 (SUNSET_BEACON, lane FRESH, merge of candidateRegistry/C into goldJev/fresh): both lanes' census comments kept;
 // goldJev/next's anchor kept here, re-anchored in the next commit after a fresh red names lane C's paths.
-const P1_BASELINE_COMMIT = 'postGoldJevNextFPescComposeA-100226'; // re-anchored by ELECTRIC_MEADOW on goldJev/next after the F merge; the tag is cut ON the re-anchor commit
+// RE-ANCHOR 2026-10-02 (SUNSET_BEACON; pre-authorised, NOTES 5, lane FRESH, merge of candidateRegistry/C into goldJev/fresh as 3fe62c6):
+// postGoldJevNextFPescComposeA-100226 -> postGoldJevFreshCPescComposeA-100226. CENSUS (fresh red on 3fe62c6, numstat from
+// postGoldJevNextFPescComposeA-100226 over the six declared paths, 9 paths, exactly lane C's census above): bridge-framework.js 15/398,
+// bridgePluginContract.js 15/6, candidateRetrievalMethodRegistry.js 521/0, test/candidateRegistryIdentity/captureToyIdentity.js 268/0,
+// compareRealStandardIdentity.js 98/0, runRealStandardIdentity.sh 64/0, test-bgDecl.js 7/5, test-bgDerived.js 11/8,
+// test-bgRetrievalRegistry.js 243/0. Framework source moved BY DESIGN (lane C); no PESC file in the range. Six declared paths
+// unchanged, no exclusion added; the tag is cut ON this re-anchor commit.
+const P1_BASELINE_COMMIT = 'postGoldJevFreshCPescComposeA-100226'; // re-anchored by SUNSET_BEACON on goldJev/fresh after the C merge; the tag is cut ON the re-anchor commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
