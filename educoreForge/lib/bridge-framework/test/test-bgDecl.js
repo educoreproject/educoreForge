@@ -307,7 +307,11 @@ const FORGES_DIR = path.join(TREE_ROOT, 'forges');
 // Academic ePortfolio 1.0.0 derived plugin declares it too. Lanes B1x (+3) and B2x (+2) move the same count on their branches.
 // goldJev/next MERGE (2026-10-02, ELECTRIC_MEADOW, lane I; NOTES 21): B2x's 7 and E's 6 both start from 5, so the union is
 // 5 + 2 + 1 = 8.
-const EXPECTED_SHIPPED_DECLARING_PLUGIN_COUNT = 8;
+// PESC B1x (2026-10-01, NOTES-supervisor item 21 pre-authorised): 5 → 8, the PESC High School Transcript 1.6.0, Test Score
+// Report 1.1.0 and Learning Record 1.0.0 derived plugins (forges/<release>/bridges/) declare it too, one each.
+// goldJev/next MERGE of pescBridges/B1x (2026-10-02, ELECTRIC_MEADOW, lane I; NOTES 21): B1x's 8 starts from 5 too, so the
+// union is 5 + 2 (B2x) + 1 (E) + 3 (B1x) = 11.
+const EXPECTED_SHIPPED_DECLARING_PLUGIN_COUNT = 11;
 const EMBED_TEXT_VOTE_RETRIEVAL = Object.freeze({
 	method: 'embedTextVote-v1',
 	hitsPerText: 20,

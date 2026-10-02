@@ -1,0 +1,27 @@
+sectionPath	documentSection
+TestScoreReport/NoteMessage	Test Score Report / Note Message
+TestScoreReport/TestStudent	Test Score Report / Test Student
+TestScoreReport/TestStudent/AcademicPrediction	Test Score Report / Test Student / Academic Prediction
+TestScoreReport/TestStudent/AcademicRecord	Test Score Report / Test Student / Academic Record
+TestScoreReport/TestStudent/AdditionalStudentCharacteristics	Test Score Report / Test Student / Additional Student Characteristics
+TestScoreReport/TestStudent/EducationTests	Test Score Report / Test Student / Education Tests
+TestScoreReport/TestStudent/NoteMessage	Test Score Report / Test Student / Note Message
+TestScoreReport/TestStudent/SchoolSelectionCriteria	Test Score Report / Test Student / School Selection Criteria
+TestScoreReport/TestStudent/SelfReportedAcademicRecord	Test Score Report / Test Student / Self Reported Academic Record
+TestScoreReport/TestStudent/StudentActivities	Test Score Report / Test Student / Student Activities
+TestScoreReport/TestStudent/TestPerson	Test Score Report / Test Student / Test Person
+TestScoreReport/TestStudent/UserDefinedExtensions	Test Score Report / Test Student / User Defined Extensions
+TestScoreReport/TransmissionData	Test Score Report / Transmission Data
+TestScoreReport/TransmissionData/CreatedDateTime	Test Score Report / Transmission Data / Created Date Time
+TestScoreReport/TransmissionData/Destination	Test Score Report / Transmission Data / Destination
+TestScoreReport/TransmissionData/DocumentCompleteCode	Test Score Report / Transmission Data / Document Complete Code
+TestScoreReport/TransmissionData/DocumentID	Test Score Report / Transmission Data / Document ID
+TestScoreReport/TransmissionData/DocumentOfficialCode	Test Score Report / Transmission Data / Document Official Code
+TestScoreReport/TransmissionData/DocumentProcessCode	Test Score Report / Transmission Data / Document Process Code
+TestScoreReport/TransmissionData/DocumentTypeCode	Test Score Report / Transmission Data / Document Type Code
+TestScoreReport/TransmissionData/NoteMessage	Test Score Report / Transmission Data / Note Message
+TestScoreReport/TransmissionData/RequestTrackingID	Test Score Report / Transmission Data / Request Tracking ID
+TestScoreReport/TransmissionData/Source	Test Score Report / Transmission Data / Source
+TestScoreReport/TransmissionData/TransmissionType	Test Score Report / Transmission Data / Transmission Type
+TestScoreReport/TransmissionData/UserDefinedExtensions	Test Score Report / Transmission Data / User Defined Extensions
+TestScoreReport/UserDefinedExtensions	Test Score Report / User Defined Extensions
