@@ -1,0 +1,32 @@
+sectionPath	documentSection
+DocumentResponse/NoteMessage	Document Response / Note Message
+DocumentResponse/ResponseDetails	Document Response / Response Details
+DocumentResponse/ResponseDetails/CarrierName	Document Response / Response Details / Carrier Name
+DocumentResponse/ResponseDetails/CarrierTrackingID	Document Response / Response Details / Carrier Tracking ID
+DocumentResponse/ResponseDetails/CreatedDateTime	Document Response / Response Details / Created Date Time
+DocumentResponse/ResponseDetails/DeliveryMethod	Document Response / Response Details / Delivery Method
+DocumentResponse/ResponseDetails/DocumentDescription	Document Response / Response Details / Document Description
+DocumentResponse/ResponseDetails/ElectronicDelivery	Document Response / Response Details / Electronic Delivery
+DocumentResponse/ResponseDetails/NoteMessage	Document Response / Response Details / Note Message
+DocumentResponse/ResponseDetails/OrderFee	Document Response / Response Details / Order Fee
+DocumentResponse/ResponseDetails/Receiver	Document Response / Response Details / Receiver
+DocumentResponse/ResponseDetails/RecipientTrackingID	Document Response / Response Details / Recipient Tracking ID
+DocumentResponse/ResponseDetails/RequestTrackingID	Document Response / Response Details / Request Tracking ID
+DocumentResponse/ResponseDetails/RequestedStudent	Document Response / Response Details / Requested Student
+DocumentResponse/ResponseDetails/ResponseHold	Document Response / Response Details / Response Hold
+DocumentResponse/ResponseDetails/ResponseStatus	Document Response / Response Details / Response Status
+DocumentResponse/ResponseDetails/UserDefinedExtensions	Document Response / Response Details / User Defined Extensions
+DocumentResponse/TransmissionData	Document Response / Transmission Data
+DocumentResponse/TransmissionData/CreatedDateTime	Document Response / Transmission Data / Created Date Time
+DocumentResponse/TransmissionData/Destination	Document Response / Transmission Data / Destination
+DocumentResponse/TransmissionData/DocumentCompleteCode	Document Response / Transmission Data / Document Complete Code
+DocumentResponse/TransmissionData/DocumentID	Document Response / Transmission Data / Document ID
+DocumentResponse/TransmissionData/DocumentOfficialCode	Document Response / Transmission Data / Document Official Code
+DocumentResponse/TransmissionData/DocumentProcessCode	Document Response / Transmission Data / Document Process Code
+DocumentResponse/TransmissionData/DocumentTypeCode	Document Response / Transmission Data / Document Type Code
+DocumentResponse/TransmissionData/NoteMessage	Document Response / Transmission Data / Note Message
+DocumentResponse/TransmissionData/RequestTrackingID	Document Response / Transmission Data / Request Tracking ID
+DocumentResponse/TransmissionData/Source	Document Response / Transmission Data / Source
+DocumentResponse/TransmissionData/TransmissionType	Document Response / Transmission Data / Transmission Type
+DocumentResponse/TransmissionData/UserDefinedExtensions	Document Response / Transmission Data / User Defined Extensions
+DocumentResponse/UserDefinedExtensions	Document Response / User Defined Extensions
