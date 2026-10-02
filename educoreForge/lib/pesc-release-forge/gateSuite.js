@@ -58,6 +58,8 @@ const rosterLib = require(path.join(FORGE_FRAMEWORK_DIR, 'roster'));
 const releaseBundle = require('./releaseBundle');
 const { buildNodeKindTable } = require('./nodeKindTable');
 const manifestEntryLoader = require('./manifestEntryLoader');
+const documentationDonorSet = require('./documentationDonorSet');
+const { CARRY_LIST_BY_NODE_KIND } = require('./walk');
 const { parseJsonText } = require('./jsonText');
 const bundleTemplates = require('./tools/bundleTemplates');
 
@@ -145,6 +147,10 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 	}
 	const replacedFileName = gateFixture.replacedFileName;
 	const standardKey = releaseDeclarationData.standardKey;
+	// phase F-B: the release's documentation donors (documentationDonorTable.json; none for most), as
+	// snapshot-relative paths in the donor folder
+	const donorFileNameList = documentationDonorSet.donorFileListFor({ releaseName });
+	const donorRelativePathList = donorFileNameList.map((oneFileName) => path.join(documentationDonorSet.DONOR_FOLDER_NAME, oneFileName)).sort();
 
 	// ---- scratch fixtures, all removed at the end
 	const scratchRootPathList = [];
@@ -161,7 +167,8 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 	const makeScratchSnapshot = ({ baseSnapshotDirPath, alterTextByFileName = {}, resealManifestEntry = false, resealChecksums = false }) => {
 		const snapshotDirPath = path.join(makeScratchRoot(`${standardKey}Snapshot-`), SNAPSHOT_CONTAINER_NAME, '01');
 		fs.mkdirSync(snapshotDirPath, { recursive: true });
-		fs.readdirSync(baseSnapshotDirPath).forEach((oneFileName) => fs.copyFileSync(path.join(baseSnapshotDirPath, oneFileName), path.join(snapshotDirPath, oneFileName)));
+		// recursive: a release with documentation donors (phase F-B) carries them in a donor folder
+		fs.cpSync(baseSnapshotDirPath, snapshotDirPath, { recursive: true });
 		Object.keys(alterTextByFileName).forEach((oneFileName) => {
 			const filePath = path.join(snapshotDirPath, oneFileName);
 			const originalText = fs.readFileSync(filePath, 'latin1');
@@ -192,6 +199,7 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 
 	// a scratch release folder and a one-entry scratch manifest built from a snapshot, the scaffold
 	// tool's inputs; alterTextByFileName edits the folder, and updateManifestSha makes the entry agree
+	// a release with documentation donors also gets a scratch donor corpus: the committed donors, copied
 	const makeScratchReleaseInputs = ({ alterTextByFileName = {}, updateManifestSha = false }) => {
 		const scratchRootPath = makeScratchRoot(`${standardKey}Release-`);
 		const releaseFolderPath = path.join(scratchRootPath, realReleaseEntry.folderName);
@@ -216,7 +224,13 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 		fs.writeFileSync(manifestPath, bundleTemplates.jsonFileText({ manifestFormat: realManifestEntryDocument.copiedFromManifest.manifestFormat, sourceCorpus: realManifestEntryDocument.copiedFromManifest.sourceCorpus, releases: [releaseEntry] }));
 		const outputRootPath = path.join(scratchRootPath, 'forges');
 		fs.mkdirSync(outputRootPath);
-		return { releaseFolderPath, manifestPath, outputRootPath };
+		if (donorFileNameList.length === 0) {
+			return { releaseFolderPath, manifestPath, outputRootPath };
+		}
+		const donorCorpusPath = path.join(scratchRootPath, 'donorCorpus');
+		fs.mkdirSync(donorCorpusPath);
+		donorFileNameList.forEach((oneFileName) => fs.copyFileSync(path.join(realSnapshotDirPath, documentationDonorSet.DONOR_FOLDER_NAME, oneFileName), path.join(donorCorpusPath, oneFileName)));
+		return { releaseFolderPath, manifestPath, outputRootPath, donorCorpusPath };
 	};
 
 	// ---- the faults the twins and refusal conjuncts use
@@ -313,7 +327,7 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 	// =====================================================================
 	const CHECKSUM_GATE_ID = 'F1-CHECKSUM';
 	const checksumRefusalRe = new RegExp(`sourceVerification REFUSED: '${coreMainFileName.replace(/\./g, '\\.')}' sha256 MISMATCH`);
-	const expectedSourceFileList = xsdFileNameList.concat([manifestEntryLoader.MANIFEST_ENTRY_FILE_NAME]);
+	const expectedSourceFileList = xsdFileNameList.concat([manifestEntryLoader.MANIFEST_ENTRY_FILE_NAME], donorRelativePathList);
 	const checksumConjunctList = [
 		{
 			conjunctId: 'snapshotVerifiesAndForges',
@@ -788,7 +802,7 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 		},
 		{
 			conjunctId: 'effectiveDocumentationRule',
-			title: 'every element and attribute: effectiveDocumentation is its own text when it has one, else its type\'s, and documentationSource says which; the per-kind counts EQUAL the frozen literals (elements with own text: the evidence census)',
+			title: 'every element and attribute: effectiveDocumentation is its own text when it has one, else its borrowed text (phase F-B: borrowedDocumentation, with borrowedFrom), else its type\'s, and documentationSource says which; the per-kind counts EQUAL the frozen literals (elements with own text: the evidence census)',
 			twinNameList: ['fixtureDocumentationBlanked'],
 			evaluate: (subject, callback) => {
 				if (walkLiteralSet === undefined) {
@@ -818,8 +832,9 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 							const anonymousNode = nodeByStableId[`${oneNode.stableId}/anon`];
 							const typeNode = anonymousNode !== undefined ? anonymousNode : topLevelTypeByQName[props.typeQName];
 							const typeText = typeNode === undefined ? undefined : typeNode.properties.documentation;
-							const expected = ownText !== undefined ? { text: ownText, source: 'own' } : typeText !== undefined ? { text: typeText, source: 'type' } : { text: undefined, source: undefined };
-							if (props.effectiveDocumentation !== expected.text || props.documentationSource !== expected.source) {
+							const borrowedText = ownText === undefined && props.borrowedFrom !== undefined ? props.borrowedDocumentation : undefined;
+							const expected = ownText !== undefined ? { text: ownText, source: 'own' } : borrowedText !== undefined ? { text: borrowedText, source: 'borrowed' } : typeText !== undefined ? { text: typeText, source: 'type' } : { text: undefined, source: undefined };
+							if (props.effectiveDocumentation !== expected.text || props.documentationSource !== expected.source || (props.borrowedDocumentation === undefined) !== (props.borrowedFrom === undefined)) {
 								ruleBreakList.push(oneNode.stableId);
 							}
 							const suffix = labelSuffixOf(oneNode);
@@ -2080,6 +2095,196 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 	const makeReachabilitySubject = () => ({ ...makeSubject(), scopeToolMutationList: [] });
 	const cloneReachabilitySubject = (subject) => ({ ...cloneSubject(subject), scopeToolMutationList: subject.scopeToolMutationList.slice() });
 
+	// =====================================================================
+	// PHASE F-B FAMILY — borrowed text (DESIGN-pescForge.md §2.7; WORKORDER §3 F-B, gate F21; NOTES 28b).
+	// Every release runs it: one with no documentation donors proves it borrows nothing and keeps no
+	// donor folder; one with donors (ePortfolio) proves the borrowing's counts, attribution, digest
+	// blindness and round-trip exclusion against its literals.
+	// =====================================================================
+	const BORROWED_GATE_ID = 'F21-BORROWED';
+	const DONOR_SET_PATH = path.join(LIBRARY_DIR, 'documentationDonorSet.js');
+	const borrowingLiteralSet = expectedLiteralSet === undefined ? undefined : expectedLiteralSet.borrowing;
+	const releaseHasDonors = donorFileNameList.length > 0;
+	const borrowedTwinRegistry = makeTwinRegistry();
+	const registerBorrowedTwin = (gateId, conjunctId, twinName, leverKind, run) => borrowedTwinRegistry.register({ gateId, conjunctId, twinName, leverKind, shippedConfig: true, run });
+	// a read of a borrowed property: props.name or props['name'] (the pair's own name list is not a read)
+	const BORROWED_PROPERTY_ACCESS_RE = new RegExp(`(\\.(${roundTripPairOf({ roundTripMutationList: [] }).BORROWED_PROPERTY_NAME_LIST.join('|')})\\b)|(\\[\\s*['"](${roundTripPairOf({ roundTripMutationList: [] }).BORROWED_PROPERTY_NAME_LIST.join('|')})['"]\\s*\\])`);
+	const donorFolderRefusalRe = /documentationDonorSet REFUSED: .*donorLibraries (exists but the release declares no donors|holds )/;
+	const donorBoundsAlteration = gateFixture.donorBoundsAlteration;
+	if (releaseHasDonors && (borrowingLiteralSet === undefined || donorBoundsAlteration === undefined)) {
+		throw new Error(`${moduleName}: fixture fault — ${releaseName} declares documentation donors, so expectedReleaseLiterals.json needs a borrowing entry and releaseGateFixtures.json a donorBoundsAlteration (literal ${borrowingLiteralSet === undefined ? 'absent' : 'present'}, fixture ${donorBoundsAlteration === undefined ? 'absent' : 'present'})`);
+	}
+	const donorShaByRelativePath = {};
+	parseChecksumFile(fs.readFileSync(path.join(realSnapshotDirPath, CHECKSUM_FILE_NAME), 'utf8')).forEach((oneEntry) => {
+		donorShaByRelativePath[oneEntry.relativePath] = oneEntry.expectedSha256;
+	});
+	const familyNameOfFile = (fileName) => fileName.replace(/_v[\d.]+(\.collision-[0-9a-f]+)?\.xsd$/, '');
+	const editionNumberListOfFile = (fileName) => fileName.replace(/^.*_v([\d.]+?)(\.collision-[0-9a-f]+)?\.xsd$/, '$1').split('.').map(Number);
+	const isLaterEdition = (leftList, rightList) => {
+		const differingIndex = leftList.findIndex((oneNumber, numberIndex) => oneNumber !== rightList[numberIndex]);
+		return differingIndex !== -1 && leftList[differingIndex] > rightList[differingIndex];
+	};
+	// the walk's borrowed carry names (phase F-B), which the round trip must never read
+	const borrowedPropertyNameList = CARRY_LIST_BY_NODE_KIND.element.filter((onePropertyName) => /^borrowed/.test(onePropertyName));
+
+	const borrowedConjunctList = [
+		{
+			conjunctId: 'borrowedTextFromDonorsOnly',
+			title: releaseHasDonors
+				? `every node carrying borrowed text is a local element of a named type with no text of its own, documentationSource 'borrowed', effectiveDocumentation its borrowed text, and borrowedFrom naming a declared donor (${donorFileNameList.length} files) by its SHA256SUMS sha, a LATER edition of the element's own library family; the counts EQUAL the literals (all elements, the reachable ones, and per family the reachable elements without own text and how many borrow)`
+				: 'the release declares no documentation donors (documentationDonorTable.json), and no node carries borrowed text or documentationSource \'borrowed\'',
+			twinNameList: releaseHasDonors ? ['borrowedStampedBesideOwnText', 'oneDonorTypeBoundsAltered'] : ['borrowedStampedBesideOwnText'],
+			evaluate: (subject, callback) => {
+				forgeOrFail({ subject }, callback, (forged) => {
+					const ruleBreakList = [];
+					const reachableTextlessCountByFamily = {};
+					let borrowedElementCount = 0;
+					let reachableBorrowedElementCount = 0;
+					forged.nodes.forEach((oneNode) => {
+						const props = oneNode.properties;
+						const carriesBorrowed = borrowedPropertyNameList.some((onePropertyName) => props[onePropertyName] !== undefined) || props.documentationSource === 'borrowed';
+						const isNamedTypeElement = labelSuffixOf(oneNode) === 'Element' && stableIdKindOf(oneNode.stableId) === 'type' && oneNode.stableId.indexOf('/anon/') === -1;
+						if (isNamedTypeElement && props.reachableFromRoot === true && props.documentation === undefined) {
+							const familyName = familyNameOfFile(props.sourceFileName);
+							reachableTextlessCountByFamily[familyName] = reachableTextlessCountByFamily[familyName] || { textless: 0, borrowed: 0 };
+							reachableTextlessCountByFamily[familyName].textless++;
+							reachableTextlessCountByFamily[familyName].borrowed += carriesBorrowed ? 1 : 0;
+						}
+						if (!carriesBorrowed) {
+							return;
+						}
+						borrowedElementCount++;
+						reachableBorrowedElementCount += props.reachableFromRoot === true ? 1 : 0;
+						const borrowedFrom = typeof props.borrowedFrom === 'string' ? parseJsonText(props.borrowedFrom).value : undefined;
+						const donorRelativePath = borrowedFrom === undefined || borrowedFrom === null ? undefined : path.join(documentationDonorSet.DONOR_FOLDER_NAME, String(borrowedFrom.donorFileName));
+						const wellFormed =
+							isNamedTypeElement &&
+							props.documentation === undefined &&
+							props.documentationSource === 'borrowed' &&
+							typeof props.borrowedDocumentation === 'string' &&
+							props.effectiveDocumentation === props.borrowedDocumentation &&
+							donorRelativePath !== undefined &&
+							donorRelativePathList.indexOf(donorRelativePath) !== -1 &&
+							borrowedFrom.donorFileSha256 === donorShaByRelativePath[donorRelativePath] &&
+							familyNameOfFile(borrowedFrom.donorFileName) === familyNameOfFile(props.sourceFileName) &&
+							isLaterEdition(editionNumberListOfFile(borrowedFrom.donorFileName), editionNumberListOfFile(props.sourceFileName)) &&
+							borrowedFrom.donorOwningTypeName === props.owningTypeName;
+						if (!wellFormed) {
+							ruleBreakList.push(oneNode.stableId);
+						}
+					});
+					const familyText = JSON.stringify(Object.keys(reachableTextlessCountByFamily).sort().map((oneFamily) => [oneFamily, reachableTextlessCountByFamily[oneFamily].textless, reachableTextlessCountByFamily[oneFamily].borrowed]));
+					const countsHold = releaseHasDonors
+						? borrowedElementCount === borrowingLiteralSet.borrowedElementCount && reachableBorrowedElementCount === borrowingLiteralSet.reachableBorrowedElementCount && familyText === JSON.stringify(Object.keys(borrowingLiteralSet.reachableTextlessCountByFamily).sort().map((oneFamily) => [oneFamily, borrowingLiteralSet.reachableTextlessCountByFamily[oneFamily].textless, borrowingLiteralSet.reachableTextlessCountByFamily[oneFamily].borrowed]))
+						: borrowedElementCount === 0;
+					callback('', { pass: countsHold && ruleBreakList.length === 0, detail: `donors ${donorFileNameList.length}; borrowed ${borrowedElementCount} (reachable ${reachableBorrowedElementCount})${releaseHasDonors ? ` literal ${borrowingLiteralSet.borrowedElementCount} (reachable ${borrowingLiteralSet.reachableBorrowedElementCount})` : ''}; reachable textless by family [family, textless, borrowed] ${familyText}; rule broken on ${ruleBreakList.length ? `${ruleBreakList.length}: ${ruleBreakList.slice(0, 2).join(', ')}` : 'none'}` });
+				});
+			},
+		},
+		{
+			conjunctId: 'borrowedTextNeverRoundTrips',
+			title: `the round trip excludes borrowed text by name: roundTripPair.js reads none of ${borrowedPropertyNameList.join(', ')} (the walk's borrowed carry names, equal to the pair's list) and skips the ${documentationDonorSet.DONOR_FOLDER_NAME} folder (the pair's name equals the loader's)${releaseHasDonors ? '; and the validator over the double, borrowed text present, is clean: inventedTotal 0, contentGapTotal 0' : ''}`,
+			twinNameList: ['borrowedTextEmittedAsDocumentation'],
+			evaluate: (subject, callback) => {
+				const pairModule = roundTripPairOf(subject);
+				const pairText = subject.roundTripMutationList.reduce((soFar, oneMutation) => (oneMutation.modulePath === ROUND_TRIP_PAIR_PATH ? soFar.replace(oneMutation.find, oneMutation.replace) : soFar), fs.readFileSync(ROUND_TRIP_PAIR_PATH, 'utf8'));
+				const accessMatch = pairText.match(BORROWED_PROPERTY_ACCESS_RE);
+				const namesAgree = JSON.stringify(pairModule.BORROWED_PROPERTY_NAME_LIST.slice().sort()) === JSON.stringify(borrowedPropertyNameList.slice().sort()) && pairModule.DONOR_FOLDER_NAME === documentationDonorSet.DONOR_FOLDER_NAME;
+				const staticDetail = `names agree ${namesAgree}; borrowed property read ${accessMatch === null ? 'none' : accessMatch[0]}`;
+				if (!releaseHasDonors) {
+					callback('', { pass: namesAgree && accessMatch === null, detail: staticDetail });
+					return;
+				}
+				forgeOrFail({ subject }, callback, (forged) => {
+					const outputPath = makeScratchRoot(`${standardKey}Borrowed-`);
+					roundTripValidatorOf(subject).validateWithReader({ reader: doubleOf({ subject, forged }), snapshotPath: subject.snapshotDirPath, outputPath }, (validateError, verdict) => {
+						if (validateError) {
+							callback('', { pass: false, detail: `validator refused: ${validateError.slice(0, 400)}` });
+							return;
+						}
+						const pass = namesAgree && accessMatch === null && verdict.inventedTotal === 0 && verdict.contentGapTotal === 0;
+						callback('', { pass, detail: `${staticDetail}; invented ${verdict.inventedTotal}${verdict.inventedList.length ? ` (first ${verdict.inventedList[0].statementKey})` : ''}; contentGap ${verdict.contentGapTotal}` });
+					});
+				});
+			},
+		},
+		{
+			conjunctId: 'donorFolderIsExactlyTheDeclaredDonors',
+			title: releaseHasDonors
+				? `a scratch snapshot with one undeclared .xsd planted in its ${documentationDonorSet.DONOR_FOLDER_NAME} folder is REFUSED by loader 3 (pescDocumentationDonorSet), naming the folder`
+				: `a scratch snapshot given a ${documentationDonorSet.DONOR_FOLDER_NAME} folder this release does not declare is REFUSED by loader 3 (pescDocumentationDonorSet)`,
+			twinNameList: ['donorFolderCheckDisabled'],
+			evaluate: (subject, callback) => {
+				const scratchSnapshotDirPath = makeScratchSnapshot({ baseSnapshotDirPath: subject.snapshotDirPath });
+				fs.mkdirSync(path.join(scratchSnapshotDirPath, documentationDonorSet.DONOR_FOLDER_NAME), { recursive: true });
+				fs.copyFileSync(path.join(scratchSnapshotDirPath, coreMainFileName), path.join(scratchSnapshotDirPath, documentationDonorSet.DONOR_FOLDER_NAME, `Planted_${coreMainFileName}`));
+				forgeSnapshot({ subject, snapshotDirPath: scratchSnapshotDirPath }, (forgeError, forged) => {
+					callback('', { pass: refusedLike({ forgeError, refusalRe: donorFolderRefusalRe }), detail: refusalDetail(forgeError, forged) });
+				});
+			},
+		},
+	].concat(
+		releaseHasDonors
+			? [
+					{
+						conjunctId: 'definitionDigestBlindToBorrowing',
+						title: "every node's definitionDigest is what it was before borrowing existed: the digest of the sorted (stableId, definitionDigest) list EQUALS the literal measured at educoreForge main e83212f (NOTES 28b: shared-file identity depends on it)",
+						twinNameList: ['borrowedTextFoldedIntoDigest'],
+						evaluate: (subject, callback) => {
+							forgeOrFail({ subject }, callback, (forged) => {
+								const digestPairList = forged.nodes
+									.filter((oneNode) => oneNode.properties.definitionDigest !== undefined)
+									.map((oneNode) => [oneNode.stableId, oneNode.properties.definitionDigest])
+									.sort((left, right) => compareText(left[0], right[0]));
+								const digestSetSha256 = crypto.createHash('sha256').update(JSON.stringify(digestPairList)).digest('hex');
+								callback('', { pass: digestSetSha256 === borrowingLiteralSet.definitionDigestSetSha256, detail: `${digestPairList.length} digests; set sha ${digestSetSha256} (literal ${borrowingLiteralSet.definitionDigestSetSha256})` });
+							});
+						},
+					},
+				]
+			: [],
+	);
+
+	registerBorrowedTwin(BORROWED_GATE_ID, 'borrowedTextFromDonorsOnly', 'borrowedStampedBesideOwnText', 'productionMutation', (subject) =>
+		addMutation(subject, 'hooksMutationList', { modulePath: WALK_PATH, find: '			return { effectiveDocumentation: ownDocumentation, documentationSource: DOCUMENTATION_SOURCE.OWN };', replace: "			return { effectiveDocumentation: ownDocumentation, documentationSource: DOCUMENTATION_SOURCE.OWN, borrowedDocumentation: ownDocumentation, borrowedFrom: '{}' };" }),
+	);
+	registerBorrowedTwin(BORROWED_GATE_ID, 'borrowedTextNeverRoundTrips', 'borrowedTextEmittedAsDocumentation', 'productionMutation', (subject) =>
+		addMutation(subject, 'roundTripMutationList', { modulePath: ROUND_TRIP_PAIR_PATH, find: '			const innerText = `${annotationText(widenedList(props.documentationValueList))}${anonymousTypeText(declarationNode.stableId)}`;', replace: '			const innerText = `${annotationText(widenedList(props.documentationValueList).concat(widenedList(props.borrowedDocumentation)))}${anonymousTypeText(declarationNode.stableId)}`;' }),
+	);
+	registerBorrowedTwin(BORROWED_GATE_ID, 'donorFolderIsExactlyTheDeclaredDonors', 'donorFolderCheckDisabled', 'productionMutation', (subject) =>
+		addMutation(subject, 'hooksMutationList', releaseHasDonors ? { modulePath: DONOR_SET_PATH, find: '		if (parsedFileNameText !== declaredFileNameText) {', replace: '		if (false) {' } : { modulePath: DONOR_SET_PATH, find: '		if (fs.existsSync(donorFolderPath)) {', replace: '		if (false) {' }),
+	);
+	if (releaseHasDonors) {
+		// the fixture's type, in EVERY donor file that carries it, gets one element's bounds altered (the
+		// donor is the latest MATCHING edition, so altering one edition alone would only move the donor);
+		// SHA256SUMS resealed, so only the structural digest can see it. Its borrowers fall back to type text
+		const withDonorTypeBoundsAltered = (fileText, fileName) => {
+			const typeOpenText = `<xs:complexType name="${donorBoundsAlteration.ownerTypeName}">`;
+			const typeStart = fileText.indexOf(typeOpenText);
+			const elementStart = typeStart === -1 ? -1 : fileText.indexOf(donorBoundsAlteration.elementOpenText, typeStart);
+			if (typeStart === -1 || fileText.split(typeOpenText).length !== 2 || elementStart === -1 || fileText.indexOf('</xs:complexType>', typeStart) < elementStart) {
+				throw new Error(`${moduleName}: fixture fault — no ${donorBoundsAlteration.ownerTypeName} holding '${donorBoundsAlteration.elementOpenText}' in ${fileName}`);
+			}
+			return `${fileText.slice(0, elementStart)}${donorBoundsAlteration.elementOpenText} maxOccurs="${donorBoundsAlteration.alteredMaxOccurs}"${fileText.slice(elementStart + donorBoundsAlteration.elementOpenText.length)}`;
+		};
+		registerBorrowedTwin(BORROWED_GATE_ID, 'borrowedTextFromDonorsOnly', 'oneDonorTypeBoundsAltered', 'inputFault', (subject) => ({
+			...subject,
+			snapshotDirPath: makeScratchSnapshot({
+				baseSnapshotDirPath: subject.snapshotDirPath,
+				alterTextByFileName: donorBoundsAlteration.donorFileNameList.reduce((soFar, oneFileName) => ({ ...soFar, [path.join(documentationDonorSet.DONOR_FOLDER_NAME, oneFileName)]: withDonorTypeBoundsAltered }), {}),
+				resealChecksums: true,
+			}),
+		}));
+		registerBorrowedTwin(BORROWED_GATE_ID, 'definitionDigestBlindToBorrowing', 'borrowedTextFoldedIntoDigest', 'productionMutation', (subject) =>
+			addMutation(subject, 'hooksMutationList', {
+				modulePath: WALK_PATH,
+				find: '					definitionDigest: definitionDigestOf({ element: oneElement, resolvedType: typed.target === null ? null : typed.target.definition }),',
+				replace: '					definitionDigest: definitionDigestOf({ element: oneElement, resolvedType: typed.target === null ? null : typed.target.definition, borrowed: oneElement.documentation.trim() !== \'\' || ownerDefinition === null ? null : borrowingIndex.donorTextFor({ ownerDefinition, ownerArtifact: artifact, elementName: oneElement.name }) }),',
+			}),
+		);
+	}
+	const borrowedGateDeclarationList = [{ gateId: BORROWED_GATE_ID, title: 'F21 borrowed text: from structural donors only, attributed, never in the round trip or the digest', conjunctList: borrowedConjunctList }];
+
 
 	runGateFamily(
 		{ harness, familyName: `${standardKey} release gates (phase F1)`, gateDeclarationList, twinRegistry, makeSubject, cloneSubject, expectedConjunctCount: 17, expectedTwinCount: 17 },
@@ -2093,8 +2298,13 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 							runGateFamily(
 								{ harness, familyName: `${standardKey} round-trip gates (phase F4)`, gateDeclarationList: roundTripGateDeclarationList, twinRegistry: roundTripTwinRegistry, makeSubject: makeRoundTripSubject, cloneSubject: cloneRoundTripSubject, expectedConjunctCount: 9, expectedTwinCount: 14 },
 								() => {
-									scratchRootPathList.forEach((oneScratchRootPath) => fs.rmSync(oneScratchRootPath, { recursive: true, force: true }));
-									whenDone();
+									runGateFamily(
+										{ harness, familyName: `${standardKey} borrowed-text gates (phase F-B)`, gateDeclarationList: borrowedGateDeclarationList, twinRegistry: borrowedTwinRegistry, makeSubject: makeRoundTripSubject, cloneSubject: cloneRoundTripSubject, expectedConjunctCount: borrowedConjunctList.length, expectedTwinCount: releaseHasDonors ? 5 : 3 },
+										() => {
+											scratchRootPathList.forEach((oneScratchRootPath) => fs.rmSync(oneScratchRootPath, { recursive: true, force: true }));
+											whenDone();
+										},
+									);
 								},
 							);
 						},

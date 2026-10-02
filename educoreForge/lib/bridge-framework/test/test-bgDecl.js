@@ -303,7 +303,11 @@ const FORGES_DIR = path.join(TREE_ROOT, 'forges');
 // (forges/pesccollegetranscript1v8v0/bridges/) declares it too.
 // PESC B2x (2026-10-01, SCARLET_RIVER; roster literals pre-authorised, CAMPAIGN-goldJevFour, NOTES 21): 5 → 7, the PESC
 // Document Request 1.0.0 and Document Response 1.0.0 derived plugins declare it too.
-const EXPECTED_SHIPPED_DECLARING_PLUGIN_COUNT = 7;
+// PESC lane E (2026-10-01, DAWN_CHORUS; roster literals pre-authorised, CAMPAIGN-goldJevFour, NOTES 21): 5 → 6, the PESC
+// Academic ePortfolio 1.0.0 derived plugin declares it too. Lanes B1x (+3) and B2x (+2) move the same count on their branches.
+// goldJev/next MERGE (2026-10-02, ELECTRIC_MEADOW, lane I; NOTES 21): B2x's 7 and E's 6 both start from 5, so the union is
+// 5 + 2 + 1 = 8.
+const EXPECTED_SHIPPED_DECLARING_PLUGIN_COUNT = 8;
 const EMBED_TEXT_VOTE_RETRIEVAL = Object.freeze({
 	method: 'embedTextVote-v1',
 	hitsPerText: 20,

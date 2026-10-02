@@ -48,6 +48,14 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // resolved names, not the files' xmlns bindings, and the canonicalizer compares resolved names.
 // A one-element list read back from a live graph is a scalar (the replay engine's storage); every list
 // property is widened.
+//
+// BORROWED TEXT IS NOT THE RELEASE (phase F-B, DESIGN-pescForge.md §2.7). The exclusion is by name, on
+// both sides: the SOURCE side never reads a file in the snapshot's DONOR_FOLDER_NAME folder (the
+// later-edition files a release borrows text from are verified like every snapshot byte, but they are
+// not the release), and the EMITTER reads none of BORROWED_PROPERTY_NAME_LIST (it writes an element's
+// annotation from documentationValueList alone). The name is kept here, not required from
+// documentationDonorSet.js, because the canonicalizer requires none of the forge's readers; gate F21
+// holds the two names equal.
 
 const fs = require('fs');
 const path = require('path');
@@ -68,6 +76,9 @@ const FACET_TAG_LIST = Object.freeze(['length', 'minLength', 'maxLength', 'patte
 const FILE_ANNOTATION_POSITION_DIVISOR = 1000;
 const OMITTED_KIND = Object.freeze({ COMMENT: 'comment', WHITESPACE: 'whitespace', PROCESSING_INSTRUCTION: 'processingInstruction' });
 const LOST_REASON = Object.freeze({ ABSENT_FROM_GRAPH: 'absentFromGraph', VALUE_DIFFERS: 'valueDiffers' });
+const DONOR_FOLDER_NAME = 'donorLibraries';
+const DONOR_RELATIVE_PATH_RE = new RegExp(`^${DONOR_FOLDER_NAME}[\\\\/]`);
+const BORROWED_PROPERTY_NAME_LIST = Object.freeze(['borrowedDocumentation', 'borrowedFrom']);
 
 const NODE_DISPOSITION = Object.freeze({ SOURCE: 'source', DERIVED_STRUCTURE: 'derivedStructure' });
 // what the proof does with each node kind, by label suffix (the bundle's labelPrefix + suffix)
@@ -434,7 +445,7 @@ const makeRoundTripPair = ({ labelPrefix }) => {
 
 	const canonicalizeSource = ({ snapshotPath, verifiedFileList }, callback) => {
 		const snapshotDirPath = fs.existsSync(snapshotPath) && fs.statSync(snapshotPath).isDirectory() ? snapshotPath : path.dirname(snapshotPath);
-		const xsdRelativePathList = verifiedFileList.filter((oneRelativePath) => XSD_FILE_NAME_RE.test(oneRelativePath)).sort(compareStrings);
+		const xsdRelativePathList = verifiedFileList.filter((oneRelativePath) => XSD_FILE_NAME_RE.test(oneRelativePath) && !DONOR_RELATIVE_PATH_RE.test(oneRelativePath)).sort(compareStrings);
 		if (xsdRelativePathList.length === 0) {
 			callback(`${moduleName} REFUSED: the verified snapshot ${snapshotDirPath} lists no .xsd file`);
 			return;
@@ -517,5 +528,7 @@ module.exports = {
 	OMITTED_KIND,
 	LOST_REASON,
 	SEMANTIC_VALIDATION_LIMIT,
+	DONOR_FOLDER_NAME,
+	BORROWED_PROPERTY_NAME_LIST,
 	moduleName,
 };

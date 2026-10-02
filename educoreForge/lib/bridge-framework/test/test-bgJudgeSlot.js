@@ -85,6 +85,9 @@ const SHIPPED_PLUGIN_LIST = [
 	// Document Response 1.0.0 derived plugins, judgeSlot-v1 like College Transcript, so each resolves to derivedJudgeSlot.
 	{ bridgeName: 'pescDocumentRequest1v0v0CedsDerivedPlugin', pluginPath: 'forges/pescdocumentrequest1v0v0/bridges/pescDocumentRequest1v0v0CedsDerivedPlugin.js', judgePromptVariant: 'derivedJudgeSlot', rendererVersion: JUDGE_SLOT_RENDERER_VERSION_LITERAL },
 	{ bridgeName: 'pescDocumentResponse1v0v0CedsDerivedPlugin', pluginPath: 'forges/pescdocumentresponse1v0v0/bridges/pescDocumentResponse1v0v0CedsDerivedPlugin.js', judgePromptVariant: 'derivedJudgeSlot', rendererVersion: JUDGE_SLOT_RENDERER_VERSION_LITERAL },
+	// ADDED 2026-10-01 (DAWN_CHORUS, PESC lane E, roster literals pre-authorised): the PESC Academic ePortfolio 1.0.0 derived
+	// plugin, judgeSlot-v1 like College Transcript, so it resolves to derivedJudgeSlot.
+	{ bridgeName: 'pescAcademicEportfolio1v0v0CedsDerivedPlugin', pluginPath: 'forges/pescacademiceportfolio1v0v0/bridges/pescAcademicEportfolio1v0v0CedsDerivedPlugin.js', judgePromptVariant: 'derivedJudgeSlot', rendererVersion: JUDGE_SLOT_RENDERER_VERSION_LITERAL },
 ];
 
 // ---------------------------------------------------------------------

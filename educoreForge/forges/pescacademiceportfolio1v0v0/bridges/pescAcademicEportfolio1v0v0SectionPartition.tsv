@@ -1,0 +1,107 @@
+sectionPath	documentSection
+AcademicEPortfolio/Artifacts	Academic E Portfolio / Artifacts
+AcademicEPortfolio/Artifacts/ArtifactAuthor	Academic E Portfolio / Artifacts / Artifact Author
+AcademicEPortfolio/Artifacts/ArtifactClassification	Academic E Portfolio / Artifacts / Artifact Classification
+AcademicEPortfolio/Artifacts/ArtifactCreationDate	Academic E Portfolio / Artifacts / Artifact Creation Date
+AcademicEPortfolio/Artifacts/ArtifactDescription	Academic E Portfolio / Artifacts / Artifact Description
+AcademicEPortfolio/Artifacts/ArtifactFileName	Academic E Portfolio / Artifacts / Artifact File Name
+AcademicEPortfolio/Artifacts/ArtifactID	Academic E Portfolio / Artifacts / Artifact ID
+AcademicEPortfolio/Artifacts/ArtifactLocationURL	Academic E Portfolio / Artifacts / Artifact Location URL
+AcademicEPortfolio/Artifacts/ArtifactMediaIdentifierCode	Academic E Portfolio / Artifacts / Artifact Media Identifier Code
+AcademicEPortfolio/Artifacts/ArtifactObjectLink	Academic E Portfolio / Artifacts / Artifact Object Link
+AcademicEPortfolio/Artifacts/ArtifactSource	Academic E Portfolio / Artifacts / Artifact Source
+AcademicEPortfolio/Artifacts/ArtifactTitle	Academic E Portfolio / Artifacts / Artifact Title
+AcademicEPortfolio/CareerAssessments	Academic E Portfolio / Career Assessments
+AcademicEPortfolio/CareerAssessments/AssessedAttribute	Academic E Portfolio / Career Assessments / Assessed Attribute
+AcademicEPortfolio/CareerAssessments/CareerAssessmentDate	Academic E Portfolio / Career Assessments / Career Assessment Date
+AcademicEPortfolio/CareerAssessments/CareerAssessmentDescription	Academic E Portfolio / Career Assessments / Career Assessment Description
+AcademicEPortfolio/CareerAssessments/CareerAssessmentID	Academic E Portfolio / Career Assessments / Career Assessment ID
+AcademicEPortfolio/CareerAssessments/CareerAssessmentName	Academic E Portfolio / Career Assessments / Career Assessment Name
+AcademicEPortfolio/CareerAssessments/CareerAssessmentObjectLink	Academic E Portfolio / Career Assessments / Career Assessment Object Link
+AcademicEPortfolio/CareerAssessments/CareerAssessmentResult	Academic E Portfolio / Career Assessments / Career Assessment Result
+AcademicEPortfolio/Comments	Academic E Portfolio / Comments
+AcademicEPortfolio/Comments/CommentAuthor	Academic E Portfolio / Comments / Comment Author
+AcademicEPortfolio/Comments/CommentDate	Academic E Portfolio / Comments / Comment Date
+AcademicEPortfolio/Comments/CommentDescription	Academic E Portfolio / Comments / Comment Description
+AcademicEPortfolio/Comments/CommentID	Academic E Portfolio / Comments / Comment ID
+AcademicEPortfolio/Comments/CommentObjectLink	Academic E Portfolio / Comments / Comment Object Link
+AcademicEPortfolio/Comments/CommentTitle	Academic E Portfolio / Comments / Comment Title
+AcademicEPortfolio/Competencies	Academic E Portfolio / Competencies
+AcademicEPortfolio/Competencies/CompetencyDescription	Academic E Portfolio / Competencies / Competency Description
+AcademicEPortfolio/Competencies/CompetencyID	Academic E Portfolio / Competencies / Competency ID
+AcademicEPortfolio/Competencies/CompetencyLevel	Academic E Portfolio / Competencies / Competency Level
+AcademicEPortfolio/Competencies/CompetencyName	Academic E Portfolio / Competencies / Competency Name
+AcademicEPortfolio/Competencies/CompetencyObjectLink	Academic E Portfolio / Competencies / Competency Object Link
+AcademicEPortfolio/Competencies/CompetencySource	Academic E Portfolio / Competencies / Competency Source
+AcademicEPortfolio/Education	Academic E Portfolio / Education
+AcademicEPortfolio/Education/ApplicationForAdmission	Academic E Portfolio / Education / Application For Admission
+AcademicEPortfolio/Education/CollegeTranscript	Academic E Portfolio / Education / College Transcript
+AcademicEPortfolio/Education/HSTranscript	Academic E Portfolio / Education / HS Transcript
+AcademicEPortfolio/Education/OtherLearning	Academic E Portfolio / Education / Other Learning
+AcademicEPortfolio/Education/PostsecondaryProgram	Academic E Portfolio / Education / Postsecondary Program
+AcademicEPortfolio/Education/SecondaryEducation	Academic E Portfolio / Education / Secondary Education
+AcademicEPortfolio/Education/TestScoreReport	Academic E Portfolio / Education / Test Score Report
+AcademicEPortfolio/EmploymentHistory	Academic E Portfolio / Employment History
+AcademicEPortfolio/EmploymentHistory/EmployerHistory	Academic E Portfolio / Employment History / Employer History
+AcademicEPortfolio/EmploymentHistory/EmploymentHistoryID	Academic E Portfolio / Employment History / Employment History ID
+AcademicEPortfolio/EmploymentHistory/EmploymentHistoryObjectLink	Academic E Portfolio / Employment History / Employment History Object Link
+AcademicEPortfolio/Events	Academic E Portfolio / Events
+AcademicEPortfolio/Events/EventClassification	Academic E Portfolio / Events / Event Classification
+AcademicEPortfolio/Events/EventDescription	Academic E Portfolio / Events / Event Description
+AcademicEPortfolio/Events/EventEndDate	Academic E Portfolio / Events / Event End Date
+AcademicEPortfolio/Events/EventID	Academic E Portfolio / Events / Event ID
+AcademicEPortfolio/Events/EventObjectLink	Academic E Portfolio / Events / Event Object Link
+AcademicEPortfolio/Events/EventOrganizationDescription	Academic E Portfolio / Events / Event Organization Description
+AcademicEPortfolio/Events/EventStartDate	Academic E Portfolio / Events / Event Start Date
+AcademicEPortfolio/Events/EventTitle	Academic E Portfolio / Events / Event Title
+AcademicEPortfolio/Events/OrganizationName	Academic E Portfolio / Events / Organization Name
+AcademicEPortfolio/Goals	Academic E Portfolio / Goals
+AcademicEPortfolio/Goals/GoalActionPlanStep	Academic E Portfolio / Goals / Goal Action Plan Step
+AcademicEPortfolio/Goals/GoalCode	Academic E Portfolio / Goals / Goal Code
+AcademicEPortfolio/Goals/GoalCompletionDate	Academic E Portfolio / Goals / Goal Completion Date
+AcademicEPortfolio/Goals/GoalDescription	Academic E Portfolio / Goals / Goal Description
+AcademicEPortfolio/Goals/GoalID	Academic E Portfolio / Goals / Goal ID
+AcademicEPortfolio/Goals/GoalObjectLink	Academic E Portfolio / Goals / Goal Object Link
+AcademicEPortfolio/Goals/GoalTargetDate	Academic E Portfolio / Goals / Goal Target Date
+AcademicEPortfolio/Goals/GoalTitle	Academic E Portfolio / Goals / Goal Title
+AcademicEPortfolio/LicensesAndCredentials	Academic E Portfolio / Licenses And Credentials
+AcademicEPortfolio/LicensesAndCredentials/IndustryRecognizedCredential	Academic E Portfolio / Licenses And Credentials / Industry Recognized Credential
+AcademicEPortfolio/LicensesAndCredentials/License	Academic E Portfolio / Licenses And Credentials / License
+AcademicEPortfolio/Lists	Academic E Portfolio / Lists
+AcademicEPortfolio/Lists/ListItemClassificationCode	Academic E Portfolio / Lists / List Item Classification Code
+AcademicEPortfolio/Lists/ListItemID	Academic E Portfolio / Lists / List Item ID
+AcademicEPortfolio/Lists/ListItemIdentifier	Academic E Portfolio / Lists / List Item Identifier
+AcademicEPortfolio/Lists/ListItemName	Academic E Portfolio / Lists / List Item Name
+AcademicEPortfolio/Lists/ListItemNotes	Academic E Portfolio / Lists / List Item Notes
+AcademicEPortfolio/Lists/ListItemObjectLink	Academic E Portfolio / Lists / List Item Object Link
+AcademicEPortfolio/Lists/ListItemURL	Academic E Portfolio / Lists / List Item URL
+AcademicEPortfolio/MilitaryHistory	Academic E Portfolio / Military History
+AcademicEPortfolio/MilitaryHistory/CountryIdentifier	Academic E Portfolio / Military History / Country Identifier
+AcademicEPortfolio/MilitaryHistory/MilitaryOccupationalClassification	Academic E Portfolio / Military History / Military Occupational Classification
+AcademicEPortfolio/MilitaryHistory/MilitaryServiceBranchCode	Academic E Portfolio / Military History / Military Service Branch Code
+AcademicEPortfolio/MilitaryHistory/MilitaryServiceID	Academic E Portfolio / Military History / Military Service ID
+AcademicEPortfolio/MilitaryHistory/MilitaryServiceObjectLink	Academic E Portfolio / Military History / Military Service Object Link
+AcademicEPortfolio/MilitaryHistory/MilitaryServicePeriod	Academic E Portfolio / Military History / Military Service Period
+AcademicEPortfolio/Networks	Academic E Portfolio / Networks
+AcademicEPortfolio/Networks/Network	Academic E Portfolio / Networks / Network
+AcademicEPortfolio/Networks/PersonalReference	Academic E Portfolio / Networks / Personal Reference
+AcademicEPortfolio/NoteMessage	Academic E Portfolio / Note Message
+AcademicEPortfolio/Profile	Academic E Portfolio / Profile
+AcademicEPortfolio/Profile/AgencyAssignedID	Academic E Portfolio / Profile / Agency Assigned ID
+AcademicEPortfolio/Profile/Birth	Academic E Portfolio / Profile / Birth
+AcademicEPortfolio/Profile/Citizenship	Academic E Portfolio / Profile / Citizenship
+AcademicEPortfolio/Profile/Contacts	Academic E Portfolio / Profile / Contacts
+AcademicEPortfolio/Profile/EthnicityRace	Academic E Portfolio / Profile / Ethnicity Race
+AcademicEPortfolio/Profile/Gender	Academic E Portfolio / Profile / Gender
+AcademicEPortfolio/Profile/NSN	Academic E Portfolio / Profile / NSN
+AcademicEPortfolio/Profile/Name	Academic E Portfolio / Profile / Name
+AcademicEPortfolio/Profile/ParentGuardian	Academic E Portfolio / Profile / Parent Guardian
+AcademicEPortfolio/Profile/SIN	Academic E Portfolio / Profile / SIN
+AcademicEPortfolio/Profile/SSN	Academic E Portfolio / Profile / SSN
+AcademicEPortfolio/TransmissionData	Academic E Portfolio / Transmission Data
+AcademicEPortfolio/TransmissionData/CreatedDateType	Academic E Portfolio / Transmission Data / Created Date Type
+AcademicEPortfolio/TransmissionData/DocumentID	Academic E Portfolio / Transmission Data / Document ID
+AcademicEPortfolio/TransmissionData/DocumentType	Academic E Portfolio / Transmission Data / Document Type
+AcademicEPortfolio/TransmissionData/NoteMessage	Academic E Portfolio / Transmission Data / Note Message
+AcademicEPortfolio/TransmissionData/TransmissionType	Academic E Portfolio / Transmission Data / Transmission Type
+AcademicEPortfolio/UserDefinedExtensions	Academic E Portfolio / User Defined Extensions

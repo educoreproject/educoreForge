@@ -1,0 +1,29 @@
+{
+  // pescacademiceportfolio1v0v0Derived — the PESC Academic ePortfolio 1.0.0 bridge build (B1–B3, then the real Jev run; goldJevCampaign BRIEF-E): the release's
+  // forge beside the CEDS hub, PLUS the PESC → CEDS derived plugin (pescAcademicEportfolio1v0v0CedsDerivedPlugin).
+  // It is pescacademiceportfolio1v0v0Only with the hub and the bridge added; the sif260928Derived shape.
+  //
+  // WHY ONLY TWO STANDARDS. The pool is drawn from the CEDS hub's cards and the subjects are the release's element
+  // declarations; no other standard contributes anything a PESC retrieval or judgment can use.
+  //
+  // A plain -build REPLAYS the pair's frozen block (zero judge calls); --rebridge=pescacademiceportfolio1v0v0 FREEZES a
+  // new one. --useDebugJudge for every free run (B2, B3); a real judge only under a spending line whose authorisation
+  // the supervisor has written (BRIEF-E: Jev only, USD 15 cap).
+  //
+  // Builds go to scratch DEV_ graphs only. Derived edges are never mounted on a served graph.
+  "schemaVersion": "1.0.0",
+  "recipeName": "pescacademiceportfolio1v0v0Derived",
+  "kind": "dev",
+  "description": "The PESC Academic ePortfolio v1.0.0 forge beside the CEDS hub, PLUS the PESC -> CEDS derived bridge plugin (pescAcademicEportfolio1v0v0CedsDerivedPlugin).",
+  "standards": [
+    { "token": "ceds", "version": "current" },
+    { "token": "pescacademiceportfolio1v0v0", "version": "current" }
+  ],
+  "hubs": [
+    { "standard": "ceds" }
+  ],
+  "bridges": [
+    { "source": "pescacademiceportfolio1v0v0", "hub": "ceds", "bridge": "pescAcademicEportfolio1v0v0CedsDerivedPlugin", "dependencies": ["pescacademiceportfolio1v0v0", "ceds"] }
+  ],
+  "roundTripStage": true
+}

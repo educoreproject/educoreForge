@@ -656,5 +656,39 @@
 			"rejudgeRealNamedSet": null
 		},
 		"frozenBy": null
+	},
+	"pescAcademicEportfolio1v0v0CedsDerivedPlugin": {
+		// THE PESC ACADEMIC EPORTFOLIO 1.0.0 DERIVED BRIDGE (lane E, 2026-10-01; DAWN_CHORUS under QUIET_ORBIT; goldJevCampaign
+		// BRIEF-E; WORKORDER-pescForgeBridge-093026 §3A.2: appended, one entry per release). Every line and every spend line
+		// is null: the real Jev run is authorised by BRIEF-E (Jev only, USD 15 cap) and recorded in DEVLOG-E-eportfolio.
+		//
+		// THE HUB PIN is the PESC family's (DESIGN-pescBridge §4.4), the same ceds id as the other PESC entries. The release's
+		// own base id is the block lane E re-certified WITH BORROWED TEXT (phase F-B, eFbBuild3 at d994666), not F6's 6e2bad9a.
+		//
+		// THE PATHS NAME THE eportfolio-E WORKTREE, deliberately (the sif260928 entry's reason); they move to system/code
+		// at the merge.
+		"standardKey": "pescacademiceportfolio1v0v0",
+		"recipePath": "/Users/tqwhite/Documents/webdev/educoreForge/system/codeWorktrees/eportfolio-E/educoreForge/recipes/pescacademiceportfolio1v0v0Derived.recipe.jsonc",
+		"storeFilePath": "/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/pescacademiceportfolio1v0v0/b2/pescAcademicEportfolio1v0v0B2.standardsDatabase.sqlite3",
+		"decisionStoreFilePath": "/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/pescacademiceportfolio1v0v0/b2/pescAcademicEportfolio1v0v0B2.decisions.sqlite3",
+		"judgmentCacheFilePath": "/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/pescacademiceportfolio1v0v0/b2/pescAcademicEportfolio1v0v0B2.judgmentCache.sqlite3",
+		"matchForensicsDirPath": "/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/pescacademiceportfolio1v0v0/b2/matchForensics",
+		"buildLogsDirPath": "/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/pescacademiceportfolio1v0v0/b2/buildLogs",
+		"expectedBaseBlockIdBySubject": {
+			"ceds@14_0_0_0_base": "21110ef1fd423434bfc64899559f31dd7d126fd421e344341fe329e3f65c91dd",
+			"pescacademiceportfolio1v0v0@1_0_0_base": "c72e36807d99de9989b9ccb036d30094f0f2623efeabf7139a97ff4e23076cfa"
+		},
+		"rejudgeDebug": null,
+		"materialise": null,
+		"materialiseReal": null,
+		"rejudgeRealLimit": null,
+		"rejudgeRealNamedSet": null,
+		"eyeGraph": null,
+		"spendAuthorisationByLine": {
+			"rejudgeRealLimit": null,
+			"materialiseReal": null,
+			"rejudgeRealNamedSet": null
+		},
+		"frozenBy": null
 	}
 }

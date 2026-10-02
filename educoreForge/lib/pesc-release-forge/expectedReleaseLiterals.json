@@ -1656,16 +1656,17 @@
 					"element": 8,
 					"group": 24
 				},
-				"textNodeCount": 3789,
+				"textNodeCount": 4285,
 				"documentationSourceCountByLabelSuffix": {
 					"Attribute": {
 						"none": 4,
 						"type": 2
 					},
 					"Element": {
-						"none": 713,
+						"borrowed": 1026,
+						"none": 330,
 						"own": 303,
-						"type": 900
+						"type": 257
 					}
 				},
 				"sequenceCountByOrderSemantics": {
@@ -2180,9 +2181,10 @@
 				},
 				"reachableDocumentationSourceCount": {
 					"contentAndBase": {
-						"none": 455,
+						"borrowed": 508,
+						"none": 321,
 						"own": 283,
-						"type": 624
+						"type": 250
 					}
 				}
 			},
@@ -2208,6 +2210,27 @@
 					"fileAnnotationNotFirstCount": 0
 				},
 				"namespacedSchemaAttributeCount": 1
+			},
+			"borrowing": {
+				"literalSource": "Phase F-B (DAWN_CHORUS, 2026-10-01), re-frozen side by side with the pre-borrowing values. BEFORE (F6, main e83212f): walk.textNodeCount 3789; Element documentationSource none 713, own 303, type 900; reachable contentAndBase none 455, own 283, type 624 (DESIGN-pescForge 2.7: 1,079 reachable without own text). AFTER: textNodeCount 4285; Element borrowed 1026, none 330, own 303, type 257; reachable borrowed 508 (the design's measured 508 structural matches, exactly), none 321, own 283, type 250. The rule borrows on every local element of a named complex type, reachable or not (the design states no reachability condition): 1026 in all, 508 reachable. definitionDigestSetSha256 is the sha256 of the sorted (stableId, definitionDigest) list measured at main e83212f BEFORE borrowing (5852 nodes); it must not move. Per family, reachable elements of named complex types without own text and how many borrow: CoreMain 191/191, AcademicRecord 332/317, AdmissionsRecord 510/0 (no text in any edition, REPORT 4).",
+				"donorFileCount": 8,
+				"borrowedElementCount": 1026,
+				"reachableBorrowedElementCount": 508,
+				"reachableTextlessCountByFamily": {
+					"AcademicRecord": {
+						"textless": 332,
+						"borrowed": 317
+					},
+					"AdmissionsRecord": {
+						"textless": 510,
+						"borrowed": 0
+					},
+					"CoreMain": {
+						"textless": 191,
+						"borrowed": 191
+					}
+				},
+				"definitionDigestSetSha256": "ef03e89e5c2cbfa9c06ba9e0032e550c4074d8fdd929e0f95923626573e0a992"
 			}
 		}
 	}

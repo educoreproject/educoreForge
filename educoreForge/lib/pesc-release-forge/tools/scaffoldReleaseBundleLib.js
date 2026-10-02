@@ -7,7 +7,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // the facts of the moment and calls this; the gate calls it directly on scratch folders.
 //
 //   scaffoldReleaseBundle({ releaseFolderPath, manifestPath, outputRootPath, expanderProvenanceText,
-//                           scaffoldCommandText, copiedDateText }, callback)
+//                           scaffoldCommandText, copiedDateText, donorCorpusPath }, callback)
 //     → callback('', { bundleDirPath, releaseNames, releaseCensus, writtenRelativePathList })
 //
 // In order, each step refusing by name, and nothing written before step 6:
@@ -18,9 +18,12 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //   4. PARSE      the parser, the resolution table and the census run over the folder, so an
 //                 untaught construct in a future PESC edition is refused HERE, never in a build
 //   5. NAMES      releaseNames.js; the bundle directory must not exist (no overwrite, ever)
-//   6. WRITE      the bundle directory, the .xsd files copied with COPYFILE_EXCL, every other file
-//                 from bundleTemplates.js with flag 'wx'; then every copied byte re-read and
-//                 compared with the source
+//   5b. DONORS    phase F-B: the release's documentation donors (documentationDonorTable.json). A
+//                 release with donors needs donorCorpusPath, a folder holding each of them (the
+//                 expander's sourceCorpus); a release with none must not be given one
+//   6. WRITE      the bundle directory, the .xsd files (and the donors, into the snapshot's donor
+//                 folder) copied with COPYFILE_EXCL, every other file from bundleTemplates.js with
+//                 flag 'wx'; then every copied byte re-read and compared with the source
 // It never edits a byte of a source file.
 
 const fs = require('fs');
@@ -34,6 +37,7 @@ const releaseCensusLib = require('../releaseCensus');
 const manifestEntryLoader = require('../manifestEntryLoader');
 const { deriveReleaseNames } = require('../releaseNames');
 const { parseJsonText } = require('../jsonText');
+const documentationDonorSet = require('../documentationDonorSet');
 const bundleTemplates = require('./bundleTemplates');
 
 const XSD_FILE_NAME_RE = /\.xsd$/i;
@@ -166,6 +170,25 @@ const scaffoldReleaseBundle = (scaffoldArgs, callback) => {
 		next('', { ...args, releaseNames: derived.releaseNames, bundleDirPath });
 	});
 
+	// 5b. DONORS
+	taskList.push((args, next) => {
+		const donorFileNameList = documentationDonorSet.donorFileListFor({ releaseName: args.releaseEntry.releaseName });
+		if (donorFileNameList.length === 0) {
+			if (scaffoldArgs.donorCorpusPath !== undefined) {
+				next(refusalText(`donorCorpusPath '${scaffoldArgs.donorCorpusPath}' was given for ${args.releaseEntry.releaseName}, which declares no documentation donors`, 'donors come from documentationDonorTable.json; a release with none takes no donor corpus'));
+				return;
+			}
+			next('', { ...args, donorFileNameList });
+			return;
+		}
+		const missingDonorFileName = typeof scaffoldArgs.donorCorpusPath !== 'string' ? donorFileNameList[0] : donorFileNameList.find((oneFileName) => !fs.existsSync(path.join(scaffoldArgs.donorCorpusPath, oneFileName)));
+		if (missingDonorFileName !== undefined) {
+			next(refusalText(`${args.releaseEntry.releaseName} borrows from ${donorFileNameList.join(', ')}; donorCorpusPath ${JSON.stringify(scaffoldArgs.donorCorpusPath)} does not hold ${missingDonorFileName}`, "donorCorpusPath is pescReleaseExpander's sourceCorpus folder (or any folder holding the declared donors)"));
+			return;
+		}
+		next('', { ...args, donorFileNameList });
+	});
+
 	// 6. WRITE — callback fs throughout, so a failed write is a refusal and never a throw. The
 	// non-recursive mkdir of the bundle directory is the atomic claim: if step 5's check was raced,
 	// it fails here with EEXIST rather than writing into someone else's bundle.
@@ -174,6 +197,7 @@ const scaffoldReleaseBundle = (scaffoldArgs, callback) => {
 		const releaseName = releaseEntry.releaseName;
 		const snapshotDirPath = path.join(bundleDirPath, SNAPSHOT_RELATIVE_DIR);
 		const manifestEntryRelativePath = manifestEntryLoader.MANIFEST_ENTRY_FILE_NAME;
+		const donorRelativePathList = args.donorFileNameList.map((oneFileName) => path.join(documentationDonorSet.DONOR_FOLDER_NAME, oneFileName));
 		const shaByRelativePath = {};
 		const fileTextByRelativePath = {};
 
@@ -184,10 +208,12 @@ const scaffoldReleaseBundle = (scaffoldArgs, callback) => {
 			(done) => fs.mkdir(snapshotDirPath, { recursive: true }, (mkdirError) => done(mkdirError)),
 		]
 			.concat(args.folderFileNameList.map((oneFileName) => (done) => fs.copyFile(path.join(args.releaseFolderPath, oneFileName), path.join(snapshotDirPath, oneFileName), fs.constants.COPYFILE_EXCL, done)))
+			.concat(args.donorFileNameList.length === 0 ? [] : [(done) => fs.mkdir(path.join(snapshotDirPath, documentationDonorSet.DONOR_FOLDER_NAME), done)])
+			.concat(args.donorFileNameList.map((oneFileName, donorIndex) => (done) => fs.copyFile(path.join(args.donorCorpusPath, oneFileName), path.join(snapshotDirPath, donorRelativePathList[donorIndex]), fs.constants.COPYFILE_EXCL, done)))
 			.concat([
 				(done) => fs.writeFile(path.join(snapshotDirPath, manifestEntryRelativePath), bundleTemplates.jsonFileText(manifestEntryDocument), { flag: 'wx' }, done),
 				(done) => {
-					args.folderFileNameList.concat([manifestEntryRelativePath]).forEach((oneFileName) => {
+					args.folderFileNameList.concat([manifestEntryRelativePath], donorRelativePathList).forEach((oneFileName) => {
 						shaByRelativePath[oneFileName] = sha256OfFile(path.join(snapshotDirPath, oneFileName));
 					});
 					const templateArgs = {
@@ -228,14 +254,18 @@ const scaffoldReleaseBundle = (scaffoldArgs, callback) => {
 				next(refusalText(`writing bundle '${bundleDirPath}' failed: ${writeError.message}`, 'the scaffold tool writes a new bundle directory and never overwrites a file'));
 				return;
 			}
-			const miscopiedFileName = args.folderFileNameList.find((oneFileName) => sha256OfFile(path.join(snapshotDirPath, oneFileName)) !== sha256OfFile(path.join(args.releaseFolderPath, oneFileName)));
+			const miscopiedFileName = args.folderFileNameList
+				.map((oneFileName) => ({ copiedPath: path.join(snapshotDirPath, oneFileName), sourcePath: path.join(args.releaseFolderPath, oneFileName), fileName: oneFileName }))
+				.concat(args.donorFileNameList.map((oneFileName, donorIndex) => ({ copiedPath: path.join(snapshotDirPath, donorRelativePathList[donorIndex]), sourcePath: path.join(args.donorCorpusPath, oneFileName), fileName: donorRelativePathList[donorIndex] })))
+				.filter((oneCopy) => sha256OfFile(oneCopy.copiedPath) !== sha256OfFile(oneCopy.sourcePath))
+				.map((oneCopy) => oneCopy.fileName)[0];
 			if (miscopiedFileName !== undefined) {
 				next(refusalText(`the copy of '${miscopiedFileName}' in ${snapshotDirPath} differs from the source`, 'every .xsd file is copied byte for byte'));
 				return;
 			}
 			const writtenRelativePathList = args.folderFileNameList
 				.map((oneFileName) => path.join(SNAPSHOT_RELATIVE_DIR, oneFileName))
-				.concat([path.join(SNAPSHOT_RELATIVE_DIR, manifestEntryRelativePath)], Object.keys(fileTextByRelativePath))
+				.concat([path.join(SNAPSHOT_RELATIVE_DIR, manifestEntryRelativePath)], donorRelativePathList.map((oneRelativePath) => path.join(SNAPSHOT_RELATIVE_DIR, oneRelativePath)), Object.keys(fileTextByRelativePath))
 				.sort();
 			next('', { ...args, writtenRelativePathList });
 		});
