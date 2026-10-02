@@ -1,0 +1,43 @@
+{
+  // goldJevNext — the next pure-Jev gold graph for the dev DME (goldJevCampaign-100126, RESUME-100226 lane I step 4, 2026-10-02):
+  // the CEDS hub, the new SIF (sif260928), Ed-Fi WITHOUT the CEDS-authored crosswalk (lane F: the forge no longer reads it; TQ's
+  // rulings 2026-09-10 and 2026-10-01, "known to be garbage"), and ALL SEVEN PESC releases, each with its derived bridge.
+  //
+  // EVERY BRIDGE IS REPLAYED, NONE IS JUDGED HERE. Each pair's Jev block was frozen by its own lane (A: SIF, College Transcript;
+  // F: Ed-Fi; B1x: High School Transcript, Test Score Report, Learning Record; B2x: Document Request, Document Response; E:
+  // ePortfolio) and gathered into this build's decision store by lane I's assembleDecisionStore.js. A plain -build (no --rebridge)
+  // materialises each from its block with zero judge calls; a pair with no block would write zero edges, never judge.
+  //
+  // GNC-001: the product is renamed GOLD_EVAL_<YYMMDD>_jevNext only after goldEvalCheck PASS.
+  "schemaVersion": "1.0.0",
+  "recipeName": "goldJevNext",
+  "kind": "dev",
+  "description": "Pure-Jev gold graph: CEDS hub, Ed-Fi (crosswalk excluded), SIF 260928 and all seven PESC releases (College Transcript 1.8.0, High School Transcript 1.6.0, Test Score Report 1.1.0, Learning Record 1.0.0, Document Request 1.0.0, Document Response 1.0.0, Academic ePortfolio 1.0.0), every derived bridge replayed from its frozen Jev block.",
+  "standards": [
+    { "token": "ceds", "version": "current" },
+    { "token": "edfi", "version": "current" },
+    { "token": "sif260928", "version": "current" },
+    { "token": "pesccollegetranscript1v8v0", "version": "current" },
+    { "token": "peschighschooltranscript1v6v0", "version": "current" },
+    { "token": "pesctestscorereport1v1v0", "version": "current" },
+    { "token": "pesclearningrecord1v0v0", "version": "current" },
+    { "token": "pescdocumentrequest1v0v0", "version": "current" },
+    { "token": "pescdocumentresponse1v0v0", "version": "current" },
+    { "token": "pescacademiceportfolio1v0v0", "version": "current" }
+  ],
+  "hubs": [
+    { "standard": "ceds" }
+  ],
+  "bridges": [
+    { "source": "edfi", "hub": "ceds", "bridge": "edfiCedsDerivedPlugin", "dependencies": ["edfi", "ceds"] },
+    { "source": "sif260928", "hub": "ceds", "bridge": "sif260928CedsDerivedPlugin", "dependencies": ["sif260928", "ceds"] },
+    { "source": "pesccollegetranscript1v8v0", "hub": "ceds", "bridge": "pescCollegeTranscript1v8v0CedsDerivedPlugin", "dependencies": ["pesccollegetranscript1v8v0", "ceds"] },
+    { "source": "peschighschooltranscript1v6v0", "hub": "ceds", "bridge": "pescHighSchoolTranscript1v6v0CedsDerivedPlugin", "dependencies": ["peschighschooltranscript1v6v0", "ceds"] },
+    { "source": "pesctestscorereport1v1v0", "hub": "ceds", "bridge": "pescTestScoreReport1v1v0CedsDerivedPlugin", "dependencies": ["pesctestscorereport1v1v0", "ceds"] },
+    { "source": "pesclearningrecord1v0v0", "hub": "ceds", "bridge": "pescLearningRecord1v0v0CedsDerivedPlugin", "dependencies": ["pesclearningrecord1v0v0", "ceds"] },
+    { "source": "pescdocumentrequest1v0v0", "hub": "ceds", "bridge": "pescDocumentRequest1v0v0CedsDerivedPlugin", "dependencies": ["pescdocumentrequest1v0v0", "ceds"] },
+    { "source": "pescdocumentresponse1v0v0", "hub": "ceds", "bridge": "pescDocumentResponse1v0v0CedsDerivedPlugin", "dependencies": ["pescdocumentresponse1v0v0", "ceds"] },
+    { "source": "pescacademiceportfolio1v0v0", "hub": "ceds", "bridge": "pescAcademicEportfolio1v0v0CedsDerivedPlugin", "dependencies": ["pescacademiceportfolio1v0v0", "ceds"] }
+  ],
+  "roundTripStage": true
+}
