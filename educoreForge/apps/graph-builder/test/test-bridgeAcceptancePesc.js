@@ -688,7 +688,15 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // postEdfiCrosswalkOutFPescComposeA-100226 over the six declared paths, 2 paths, TEST files only): lib/bridge-framework/test/test-bgNosub.js
 // 16/2 (its seamDiffEmpty and (iii) re-anchors, 0580451 and 371598e), lib/vocabulary/test/test-sifVocabularyInvariance.js 6/1 (the edfi G0
 // proxy re-pin, dfc9d07). Six declared paths unchanged, no exclusion added; the tag is cut ON this re-anchor commit.
-const P1_BASELINE_COMMIT = 'postGoldJevNextB1xPescComposeA-100226'; // re-anchored by ELECTRIC_MEADOW on goldJev/next after the B1x merge; the tag is cut ON the re-anchor commit
+// RE-ANCHOR 2026-10-02 (ELECTRIC_MEADOW; pre-authorised, NOTES 5, lane I, merge of edfiCrosswalkOut/F into goldJev/next as a134b27):
+// postGoldJevNextB1xPescComposeA-100226 -> postGoldJevNextFPescComposeA-100226. CENSUS (numstat from
+// postGoldJevNextB1xPescComposeA-100226 over the six declared paths, 6 paths, all lane F's, TEST files only): lib/bridge-framework/test/
+// test-bgJudgeConfig.js 1/1, test-bgJudgeSlot.js 1/1, test-bgPromptScan.js 1/1, test-bgSubjectDiscriminator.js 3/3 (the crosswalk
+// plugin's roster rows, 48af4af), test-bgNosub.js 16/2 (F's BG-SEAM-UNTOUCHED re-anchors, 0580451 and 371598e; test-bgNosub 64/64 on the
+// merge, so those two need no move here) and lib/vocabulary/test/test-sifVocabularyInvariance.js 6/1 (the edfi G0 proxy re-pin,
+// dfc9d07). F's anchor postEdfiCrosswalkOutFPescComposeB-100226 is superseded by this one. No framework source moved. Six declared
+// paths unchanged, no exclusion added; the tag is cut ON this re-anchor commit.
+const P1_BASELINE_COMMIT = 'postGoldJevNextFPescComposeA-100226'; // re-anchored by ELECTRIC_MEADOW on goldJev/next after the F merge; the tag is cut ON the re-anchor commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
