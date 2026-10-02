@@ -658,7 +658,13 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // commit, 2cfe657): apps/graph-builder/apps/bridge-maker/lib/jevJudgeClient.js 3/1 (the Jev client retries the edge proxy's
 // 520-524 like the 50x family; one 520 killed jevBuild2's SIF run; ruled by QUIET_ORBIT, its test b0b39ca). Six declared
 // paths unchanged, no exclusion added; the tag is cut ON this re-anchor commit.
-const P1_BASELINE_COMMIT = 'postGoldJevAPescComposeA-100126'; // re-anchored by COPPER_MARBLE for goldJev lane A; the tag is cut ON the re-anchor commit
+// RE-ANCHOR 2026-10-02 (PRISM_LATTICE; pre-authorised, NOTES-supervisor items 5 and 21, goldJev lane F): postGoldJevAPescComposeA-100126 ->
+// postEdfiCrosswalkOutFPescComposeA-100226. CENSUS (numstat from postGoldJevAPescComposeA-100126 over the six declared paths, 4 paths, from ONE
+// commit, 48af4af — the retirement of edfiCedsCrosswalkPlugin from the shipped-plugin roster literals, test files only, outside the
+// frameworkFingerprint): lib/bridge-framework/test/test-bgJudgeConfig.js 1/1, test-bgJudgeSlot.js 1/1, test-bgPromptScan.js 1/1,
+// test-bgSubjectDiscriminator.js 3/3 (one roster row each; the last also picks its two fixtures by name). Six declared paths unchanged,
+// no exclusion added; the tag is cut ON this re-anchor commit.
+const P1_BASELINE_COMMIT = 'postEdfiCrosswalkOutFPescComposeA-100226'; // re-anchored by PRISM_LATTICE for goldJev lane F; the tag is cut ON the re-anchor commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
