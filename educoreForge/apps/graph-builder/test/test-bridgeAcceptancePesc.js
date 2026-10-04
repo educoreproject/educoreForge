@@ -728,7 +728,11 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // test-bgProducer 19/16, test-bgThree 9/7, toyBridgeScenario 5/1, test-mappingProperties 25/18, test-sifEdgeVocabulary 11/4.
 // Framework source moved BY DESIGN (mappingKind / mappingSource / mappingConfidence on every mapping edge; provenanceTier retired
 // from them, TQ 2026-10-04); no PESC file in the range. Six declared paths unchanged, no exclusion added; tag cut ON this commit.
-const P1_BASELINE_COMMIT = 'postMappingProvenancePPescComposeA-100426'; // re-anchored by VIOLET_OCEAN on mappingProvenance/P; the tag is cut ON the re-anchor commit
+// RE-ANCHOR 2026-10-04 (VIOLET_OCEAN, lane P second; the TQ-approved metadata additions): postMappingProvenancePPescComposeA-100426 ->
+// postMappingProvenancePPescComposeB-100426. CENSUS (fresh red on 05d4d80): 2 paths — lib/vocabulary/vocabulary-definitions.js 10/10
+// (the match relations described as judgments; StandardDefinition's kind/source lists) and lib/bridge-framework/test/test-bgNosub.js
+// 13/2 (its two third re-anchors). No framework source, no PESC file. Six declared paths unchanged; tag cut ON this commit.
+const P1_BASELINE_COMMIT = 'postMappingProvenancePPescComposeB-100426'; // re-anchored by VIOLET_OCEAN on mappingProvenance/P2; the tag is cut ON the re-anchor commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
