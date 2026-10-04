@@ -604,7 +604,14 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // forges/edfi/lib/forgeEdfiContractGraph.js 232 (PASS 5 carriage -> the exclusion refusal), lib/forge-framework/test/acceptance/
 // expectedFingerprints.json 4 (the edfi proxy re-pin). build.js, forger/, replay/, replay-manager/, every other forge and
 // lib/forge-framework/ SOURCE: UNTOUCHED. SEAM_PATH_LIST byte-identical. Fresh red observed against THIS tag (DEVLOG-F).
-const PHASE3_ANCHOR_TAG = 'postEdfiCrosswalkOutFSeamDiffEmpty-100226'; // re-anchored by PRISM_LATTICE, goldJev lane F
+// mappingProvenance LANE P RE-ANCHOR (VIOLET_OCEAN, 2026-10-04; pre-authorised, WORKORDER-mappingProvenance-100426 step 3):
+// postEdfiCrosswalkOutFSeamDiffEmpty-100226 -> postMappingProvenancePSeamDiffEmpty-100426, tag cut ON this commit. CENSUS (git diff
+// --stat postEdfiCrosswalkOutFSeamDiffEmpty-100226 -- the seam paths) at ab6a240: three files, all lane P 9bace1b, all under
+// apps/graph-builder/apps/replay-manager/lib/finishing/: lib/standard-definition-finisher.js 47 (mappingDisposition read from the
+// edges' mappingKind, never the relation type), lib/usage-pattern-finisher.js 19 (the mapping exemplar reads mappingKind and
+// mappingSource first), test/test-standardDefinitionDisposition.js 146 (new, its gate). build.js, forger/, replay/, every forge
+// and lib/forge-framework/: UNTOUCHED. SEAM_PATH_LIST byte-identical. Fresh red observed on ab6a240 before this commit (DEVLOG-P).
+const PHASE3_ANCHOR_TAG = 'postMappingProvenancePSeamDiffEmpty-100426'; // re-anchored by VIOLET_OCEAN, mappingProvenance lane P
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');
