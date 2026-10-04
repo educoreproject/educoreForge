@@ -618,7 +618,15 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // edges' mappingKind, never the relation type), lib/usage-pattern-finisher.js 19 (the mapping exemplar reads mappingKind and
 // mappingSource first), test/test-standardDefinitionDisposition.js 146 (new, its gate). build.js, forger/, replay/, every forge
 // and lib/forge-framework/: UNTOUCHED. SEAM_PATH_LIST byte-identical. Fresh red observed on ab6a240 before this commit (DEVLOG-P).
-const PHASE3_ANCHOR_TAG = 'postMappingProvenancePSeamDiffEmpty-100426'; // re-anchored by VIOLET_OCEAN, mappingProvenance lane P
+// mappingProvenance LANE P SECOND RE-ANCHOR (VIOLET_OCEAN, 2026-10-04; TQ reversed ruling A1; pre-authorised): ->
+// postMappingProvenancePSeamDiffEmptyB-100426, tag cut ON this commit. CENSUS (git diff --stat postMappingProvenancePSeamDiffEmpty-100426
+// -- the seam paths) at 3923467: six files, all lane P 3923467 — lib/replay/replay-engine.js 41 (GUARD 3: a mapping edge carries a
+// valid mappingKind and NO provenanceTier; every other edge keeps the tier rule), lib/replay/test/test-write-shaped-graph.js 29 (its
+// mapping cases and old-rule red), replay-manager/replayManager.js 4 (injects debugMappingSource), finishing/passport-writer.js 32
+// (trust census by mappingKind/mappingSource), finishing/lib/usage-pattern-finisher.js 10 (caveat text), finishing/test/
+// test-passportTrustVerdict.js 88 (new). build.js, forger/, every forge and lib/forge-framework/: UNTOUCHED. SEAM_PATH_LIST
+// byte-identical. Fresh red observed on 3923467's tree before this commit (DEVLOG-P).
+const PHASE3_ANCHOR_TAG = 'postMappingProvenancePSeamDiffEmptyB-100426'; // re-anchored by VIOLET_OCEAN, mappingProvenance lane P (second)
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');
