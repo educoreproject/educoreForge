@@ -701,7 +701,11 @@ const goldEvalCheckGates = ({ standardsDatabase, cleanManifestRefId, debugManife
 				// re-entering it from inside another of its callbacks corrupts the state the outer chain
 				// depends on (measured — it looped). The audit is the thing under test here either way.
 				const strippedDirPath = path.join(bridgedRunDirPath, 'conservation');
-				const strippedPath = path.join(strippedDirPath, fs.readdirSync(strippedDirPath)[0]);
+				// ⟪lane P, 2026-10-04⟫ the artifact stripped is one the CLEAN manifest names. This was readdir()[0], which held only
+				// while the clean manifest's first member happened to sort first: lane P's fixture edges (provenance fields) moved the
+				// block ids, the first file became another manifest's, and removing it proved nothing about this one.
+				const strippedMemberRefId = cleanManifestForNegative.members.map((oneMember) => oneMember.schemaBlockRefId).sort()[0];
+				const strippedPath = path.join(strippedDirPath, `${strippedMemberRefId}.json`);
 				const strippedText = fs.readFileSync(strippedPath);
 				fs.unlinkSync(strippedPath);
 				const strippedAudit = require(path.join(__dirname, '..', 'lib', 'gold-eval-conservation')).auditConservationForManifest({ manifest: cleanManifestForNegative, buildLogDirPath: bridgedRunDirPath });
