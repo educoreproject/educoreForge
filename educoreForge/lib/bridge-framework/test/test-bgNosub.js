@@ -110,7 +110,14 @@ const BASE_TAG = 'preBridgeFramework-081626';
 //   lib/vocabulary/vocabulary-definitions.js — lane P 9bace1b: the 'judge-inferred' tier definition (ruled A1), EXACT_MATCH /
 //     CLOSE_MATCH no longer described as authored / inferred, StandardDefinition's disposition text. THE ONE FILE OUTSIDE THE LIST.
 // THE BASELINE MOVES; THE ALLOWED-PATH LIST IS NEVER WIDENED. Fresh red observed on 9bace1b before this commit (DEVLOG-P).
-const POST_D1_BASE_TAG = 'postMappingProvenancePVocabularyIi-100426'; // re-anchored 2026-10-04 (mappingProvenance lane P) — base moved, allowed-path list NOT widened
+// ═══ RE-ANCHOR (ii) AGAIN, 2026-10-04 (VIOLET_OCEAN, lane P; TQ reversed ruling A1) ═══
+// postMappingProvenancePVocabularyIi-100426 -> postMappingProvenancePVocabularyIiB-100426, tag cut ON this commit. CENSUS (git
+// diff --name-only postMappingProvenancePVocabularyIi-100426 -- lib/vocabulary/) on 3923467: vocabulary.js, test/test-mappingProperties.js,
+// test/test-sifEdgeVocabulary.js (allowed); vocabulary-definitions.js — 3923467: 'judge-inferred' definition removed,
+// REQUIRED_PROPERTIES.MAPPING_EDGE defined, the tier and match-edge texts say a mapping edge carries no provenanceTier and that
+// the debug judge is mappingSource bridge-debug. THE ONE FILE OUTSIDE THE LIST. Base moved; list NOT widened. Fresh red observed
+// on 3923467's tree before this commit (DEVLOG-P).
+const POST_D1_BASE_TAG = 'postMappingProvenancePVocabularyIiB-100426'; // re-anchored 2026-10-04 (mappingProvenance lane P, second) — base moved, allowed-path list NOT widened
 // ⟪A THIRD BASELINE — RULING P1-R11, BRIEF-SEAM-reanchorBgSeamUntouched.md, applied 2026-08-29 by
 // STERLING_PEAK during hub kit role migration Phase 0.E4⟫
 //
