@@ -75,7 +75,7 @@ const TERM_DEFINITIONS = {
 		// edge TYPE names the SKOS relation only; WHO made the claim and how sure they were are separate axes, carried on the
 		// edge as mappingKind, mappingSource and mappingConfidence. TQ found the DME repeating the old text about edges that
 		// were every one a judge's choice.
-		EXACT_MATCH: 'Source element to HubReference whose SKOS relation is exactMatch: the two are judged interchangeable. The relation says nothing about who made the claim or how sure they were: read mappingKind (inferred = a judge chose; authored = a document named it), mappingSource and mappingConfidence. The only relation that composes to cross-standard equivalence.',
+		EXACT_MATCH: 'Source element to HubReference whose SKOS relation is exactMatch: the two are judged interchangeable. The relation says nothing about who made the claim or how sure they were: read mappingKind (inferred = a judge chose; authored = a document named it), mappingSource (bridge-debug = the debug judge, no meaning) and mappingConfidence. The only relation that composes to cross-standard equivalence.',
 		CLOSE_MATCH: 'Source element to HubReference whose SKOS relation is closeMatch: similar enough for some applications. Like every match edge, read mappingKind, mappingSource and mappingConfidence for who made the claim and how sure they were. Never composes to equivalence on its own.',
 		BROAD_MATCH: 'Source element to a broader HubReference (SKOS broadMatch). Non-composing.',
 		NARROW_MATCH: 'Source element to a narrower HubReference (SKOS narrowMatch). Non-composing.',
@@ -108,18 +108,16 @@ const TERM_DEFINITIONS = {
 	},
 	provenanceTier: {
 		'spec-authoritative': 'Asserted by the standard’s own specification or an authored crosswalk. The strongest evidence tier.',
-		'embedding-inferred': 'Derived by embedding retrieval + LLM rerank, frozen in a decision block. A hypothesis tier, never silently composed.',
+		// ⟪lane P, 2026-10-04⟫ no mapping edge carries a provenanceTier any more; the note says where the answer moved
+		'embedding-inferred': 'Derived by embedding retrieval + LLM rerank, frozen in a decision block. A hypothesis tier, never silently composed. Mapping edges carried it until 2026-10-04; a mapping edge now carries mappingKind (inferred / authored), mappingSource and mappingConfidence, and no provenanceTier at all.',
 		structural: 'Emitted by deterministic structural machinery (hierarchy edges, schema view, self-documentation). True by construction.',
 		'user-asserted': 'Asserted by a user/curator at runtime, outside the replayed content.',
-		// ⟪lane P, 2026-10-04; ruled VIOLET_VALLEY⟫ worded from the measurement over GOLD_EVAL_261002_jevFresh's nine blocks
-		'judge-inferred':
-			'The tier of a mapping edge a JUDGE chose. Embeddings PROPOSED the candidates: embedding retrieval (embedTextVote-v1) admitted every card in the pool the judge saw, a few dozen of the hub\'s thousands. The judge CHOSE the card and the SKOS relation, and never saw a similarity score or rank. Which judge: mappingSource and mappingTool; how sure: mappingConfidence. A hypothesis tier, never silently composed. Replaces embedding-inferred on judged mapping edges (2026-10-04), which named the proposer as the actor.',
 		// ⟪graphSelfDoc, 2026-08-31⟫ PRE-EXISTING DEBT CLOSED. invalid-debug entered PROVENANCE_TIERS on
 		// 2026-08-10 and never received a definition, because the finisher that refuses an undefined term
 		// was never ported. Text set VERBATIM by GRANITE_ECHO as design authority, drafted from tqii's own
 		// recorded rationale in vocabulary.js; the parenthetical attribution stays.
 		'invalid-debug':
-			'The tier carried by an edge the DEBUG judge produced (--useDebugJudge, rule \'first\': candidate 1 taken unconditionally). It exists because the alternative was a lie — such edges were once stamped embedding-inferred, asserting that an inference informed a choice nothing informed, in the one field a consumer most trusts. An edge carrying this tier is pipeline-valid and semantically unwarranted: it proves the plumbing and must never be read as a judgement about meaning. (tqii ruling, 2026-08-10.)',
+			'The tier carried by an edge the DEBUG judge produced (--useDebugJudge, rule \'first\': candidate 1 taken unconditionally). It exists because the alternative was a lie — such edges were once stamped embedding-inferred, asserting that an inference informed a choice nothing informed, in the one field a consumer most trusts. An edge carrying this tier is pipeline-valid and semantically unwarranted: it proves the plumbing and must never be read as a judgement about meaning. (tqii ruling, 2026-08-10.) Since 2026-10-04 a mapping edge carries no provenanceTier; a debug-judge edge is marked by mappingSource bridge-debug and mappingConfidence 0.',
 	},
 	skosPredicate: {
 		exactMatch: 'SKOS: the two concepts are interchangeable. The only predicate that composes to cross-standard equivalence.',
@@ -171,7 +169,8 @@ const TERM_DEFINITIONS = {
 	requiredPropertySet: {
 		NODE: 'Properties every forged content node must carry: _id, _source, name, role, searchText.',
 		STANDARD_ROOT: 'Additional properties required on a DmeStandardRoot: the provenance block (standardKey, standardName, version, sourceFormat, sourceFiles, sourceUrl) plus stableUriPropertyName and mappingInstruction.',
-		EDGE: 'Properties every edge must carry: provenanceTier.',
+		EDGE: 'Properties every NON-mapping edge must carry: provenanceTier. A mapping edge (EXACT/CLOSE/BROAD/NARROW/RELATED_MATCH) carries none since 2026-10-04: see MAPPING_EDGE.',
+		MAPPING_EDGE: 'Properties every mapping edge (EXACT/CLOSE/BROAD/NARROW/RELATED_MATCH) must carry in place of provenanceTier: mappingKind, which says what kind of claim the edge is: inferred (a judge chose the card from candidates embeddings proposed) or authored (a document named it). mappingSource names who made it (bridge-<judge>, crosswalk-<name>, standard-<name>; bridge-debug is the debug judge, which takes candidate 1 and carries no meaning) and, on a judged edge, mappingConfidence how sure (0 for the debug judge).',
 		HUB_REFERENCE: 'Properties every HubReference must carry: canonicalKey, hubVersion, referenceTier, addressSignature.',
 		HUB_DEFINITION: 'Properties every HubDefinition must carry: hubName, displayName, version, canonicalKeyName, canonicalKeyMinted, slotProfile, sourceProvenance.',
 	},

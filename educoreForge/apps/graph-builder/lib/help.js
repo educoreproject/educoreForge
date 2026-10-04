@@ -258,7 +258,7 @@ OPTIONS
 
                            EVERYTHING IT PRODUCES IS FLAGGED. The frozen block's generation carries the
                            INVALID_DEBUG suffix, every mapping edge it materializes carries
-                           provenanceTier 'invalid-debug', every forensic record names the debug rule
+                           mappingSource 'bridge-debug' and mappingConfidence 0, every forensic record names the debug rule
                            as its decisionAlgorithm, and every rationale announces itself, so a debug
                            graph is detectable rather than merely documented -- askMilo can be told to
                            accept INVALID_DEBUG deliberately, and will otherwise raise an alarm; the
@@ -415,7 +415,7 @@ OPTIONS
                   run directory. READ-ONLY and FREE -- no graph, no docker, no database.
                   THE BRIDGE SIBLING (wired 2026-08-16, B3): the bridge framework supplies this
                   gate's sibling rule for mapping edges (lib/bridge-framework/certificationCheck.js:
-                  a relationship block carrying any edge with provenanceTier 'invalid-debug' — a
+                  a relationship block carrying any edge with mappingSource 'bridge-debug' — a
                   DEBUG-JUDGE block — refuses certification by name). Pass
                   --manifestRefId=<the manifest -build printed> to run it: the manifest's
                   RELATIONSHIP member blocks are read out of the standardsDatabase (the artifact,

@@ -484,13 +484,6 @@ const PROVENANCE_TIERS = [
 	// reading it would have been told the edge was inferred when it was arithmetic.
 	// tqii, 2026-08-10, on seeing askMilo describe fake mappings as calibrated-confidence equivalents.
 	'invalid-debug',
-	// ⟪lane P, mappingProvenance 2026-10-04; ruled VIOLET_VALLEY (A1)⟫ JUDGE_INFERRED — the tier a JUDGED inferred mapping
-	// edge carries, replacing 'embedding-inferred' on those edges. MEASURED on GOLD_EVAL_261002_jevFresh's nine frozen blocks
-	// (13,791 judged units): embeddings PROPOSE the pool (embedTextVote-v1 admitted every seat; 15 or 40 of 2,777 cards), and
-	// the judge CHOOSES the card and the relation without ever seeing a cosine or a rank. 'embedding-inferred' named the
-	// proposer as the actor. It stays in this list (other edges and older graphs carry it) but leaves
-	// MAPPING_EDGE_PERMITTED_PROVENANCE_TIER_LIST. Appended, because the order above is significant.
-	'judge-inferred',
 ];
 const PROVENANCE_TIER = {
 	SPEC_AUTHORITATIVE: 'spec-authoritative',
@@ -498,7 +491,6 @@ const PROVENANCE_TIER = {
 	STRUCTURAL: 'structural',
 	USER_ASSERTED: 'user-asserted',
 	INVALID_DEBUG: 'invalid-debug',
-	JUDGE_INFERRED: 'judge-inferred',
 };
 const isValidProvenanceTier = (oneTier) => PROVENANCE_TIERS.indexOf(oneTier) !== -1;
 
@@ -608,12 +600,11 @@ const sssomJustificationRefusal = (oneJustification) => {
 //   PROVENANCE_TIER — an ENGINE-LEVEL value on every mapping edge, DERIVED FROM producerKind (RULING
 //                     SABLE_RIVER 2026-08-16 12:20, SPEC v1.1.2 / Profile v1.0.6, on the finding that
 //                     lib/replay/replay-engine.js GUARD 3 refuses any edge without a valid tier):
-//                     authored → 'spec-authoritative'; inferred → 'judge-inferred' (was 'embedding-inferred'
-//                     until lane P, 2026-10-04: embeddings propose the pool, the judge chooses); a
+//                     authored → 'spec-authoritative'; inferred (not in v1) → 'embedding-inferred'; a
 //                     DEBUG-JUDGE block's edges → 'invalid-debug' (Profile §4.6 carve-out, RULING BF16/R5).
 //                     It carries NO mapping semantics — those are matchBasis × resolution × predicate (C6)
-//                     — and is NEVER exported to SSSOM. The writer stamps exactly the value
-//                     MAPPING_EDGE_PROVENANCE_TIER_BY_PRODUCER_KIND names; any other tier is refused.
+//                     — and is NEVER exported to SSSOM. ⟪RETIRED from mapping edges by lane P, 2026-10-04: the
+//                     history above is kept; see the row.⟫
 const MAPPING_PROPERTIES = {
 	PREDICATE: 'predicate',
 	CONFIDENCE: 'confidence',
@@ -624,7 +615,11 @@ const MAPPING_PROPERTIES = {
 	OBJECT_VERSION: 'objectVersion',
 	MAPPING_TOOL: 'mappingTool',
 	MATCH_ID: 'matchId', // INTERNAL — never exported (C6)
-	PROVENANCE_TIER: 'provenanceTier', // RETIRED from mapping edges except the 'invalid-debug' carve-out (see above)
+	// PROVENANCE_TIER — RETIRED FROM MAPPING EDGES ENTIRELY (lane P, 2026-10-04; TQ, relayed by VIOLET_VALLEY, reversing
+	// ruling A1): "TQ's three fields ARE the provenance; a separate tier would say the same thing twice in other words."
+	// mappingKind carries the kind; the debug marker is mappingSource 'bridge-debug' with mappingConfidence 0. With the
+	// row gone the write seam refuses provenanceTier on a mapping edge by name. Structural and every other NON-mapping edge keeps
+	// provenanceTier exactly as before (REQUIRED_PROPERTIES.EDGE; replay-engine GUARD 3).
 	// --- B2 additions (Bridge Profile edge shape) ---
 	MATCH_BASIS: 'matchBasis',
 	RESOLUTION: 'resolution',
@@ -652,13 +647,16 @@ const MAPPING_PROPERTIES = {
 // is inferred: an algorithm chose the card, whoever proposed the candidates. A SPECIFIED edge is authored: a document named
 // the card. 'authored' is in the vocabulary although the live graph has none, because the framework still writes authored
 // edges (crosswalk and standard-declared producers) and its toy suites exercise them.
+// A DEBUG-judge edge is 'inferred' like any judged edge (TQ, 2026-10-04: there is no debug kind). What marks it is WHO
+// made it: mappingSource 'bridge-debug', with mappingConfidence 0 (judgeProviderRegistry.FIXED_MAPPING_CONFIDENCE_BY_PROVIDER_NAME).
 const MAPPING_KIND = Object.freeze({ INFERRED: 'inferred', AUTHORED: 'authored' });
 const MAPPING_KIND_LIST = Object.freeze([MAPPING_KIND.INFERRED, MAPPING_KIND.AUTHORED]);
 const MAPPING_KIND_BY_RESOLUTION = Object.freeze({ judged: MAPPING_KIND.INFERRED, specified: MAPPING_KIND.AUTHORED });
 // MAPPING_SOURCE — '<family><separator><name>'. A judged edge's family is 'bridge' and its name is the judge provider's
 // registered name (judgeProviderRegistry.providerNameForJudgeModel, never a literal): 'bridge-jev'. A specified edge's
 // family is the document kind its matchBasis names and its name is the bridge plugin's: 'crosswalk-<bridgeName>'. Each
-// family belongs to exactly one kind, so the writer can hold the two fields to each other.
+// family belongs to exactly one kind, so the writer can hold the two fields to each other. The NAME is the ACTUAL
+// judge's, read from its identity (TQ, 2026-10-04): 'bridge-jev', 'bridge-jevOpus', 'bridge-debug'.
 const MAPPING_SOURCE_SEPARATOR = '-';
 const MAPPING_SOURCE_FAMILY = Object.freeze({ BRIDGE: 'bridge', CROSSWALK: 'crosswalk', STANDARD: 'standard' });
 const MAPPING_KIND_BY_MAPPING_SOURCE_FAMILY = Object.freeze({
@@ -692,18 +690,10 @@ const mappingSourceFamilyOf = (mappingSource) => mappingSource.slice(0, mappingS
 const composeMappingSource = ({ family, sourceName }) => `${family}${MAPPING_SOURCE_SEPARATOR}${sourceName}`;
 // the property NAMES a mapping edge may carry — derived from the registry above; the writer's closed set
 const MAPPING_PROPERTY_NAME_LIST = Object.freeze(Object.keys(MAPPING_PROPERTIES).map((oneMember) => MAPPING_PROPERTIES[oneMember]));
-// the ENGINE-LEVEL provenanceTier a mapping edge carries, keyed by the block's producerKind (RULING 12:20);
-// a debug-judge block overrides with 'invalid-debug' on every edge (Profile v1.0.6 §4.6). DATA, no branch.
-const MAPPING_EDGE_PROVENANCE_TIER_BY_PRODUCER_KIND = Object.freeze({
-	authored: PROVENANCE_TIER.SPEC_AUTHORITATIVE,
-	inferred: PROVENANCE_TIER.JUDGE_INFERRED,
-});
-// the tiers a mapping edge may carry — the two producer-derived values plus the debug carve-out
-const MAPPING_EDGE_PERMITTED_PROVENANCE_TIER_LIST = Object.freeze([
-	PROVENANCE_TIER.SPEC_AUTHORITATIVE,
-	PROVENANCE_TIER.JUDGE_INFERRED,
-	PROVENANCE_TIER.INVALID_DEBUG,
-]);
+// MAPPING_EDGE_PROVENANCE_TIER_BY_PRODUCER_KIND and MAPPING_EDGE_PERMITTED_PROVENANCE_TIER_LIST are RETIRED with
+// provenanceTier's place on mapping edges (lane P, 2026-10-04). The producer kinds a mapping block may have, which
+// conflictDetector read off the first table's keys, are declared here in their own right.
+const MAPPING_PRODUCER_KIND_LIST = Object.freeze(['authored', 'inferred']);
 
 // =====================================================================
 // UNIQUENESS KEYS (replay-engine.js MERGE key; addressSignature reserved for the HubReference phases)
@@ -747,8 +737,10 @@ const REQUIRED_PROPERTIES = {
 		'stableUriPropertyName',
 		'mappingInstruction',
 	],
-	// every edge carries a provenance tier (replay-engine enforces this today)
+	// every NON-mapping edge carries a provenance tier (replay-engine GUARD 3); a mapping edge (a SKOS_EDGE_TYPES type)
+	// carries mappingKind instead and must NOT carry provenanceTier (lane P, 2026-10-04)
 	EDGE: ['provenanceTier'],
+	MAPPING_EDGE: ['mappingKind'],
 	// HubReference required props (§8 HubReference schema — the ✓ columns). qualifierKeys/rangeDatatype/
 	// label/anchorUri/embedding are optional. canonicalKey is intentionally NON-unique among value-tier
 	// refs (the same option-value under different properties is a distinct address) — uniqueness is the
@@ -1090,8 +1082,7 @@ const vocabulary = {
 	sssomJustificationRefusal,
 	MAPPING_PROPERTIES,
 	MAPPING_PROPERTY_NAME_LIST,
-	MAPPING_EDGE_PROVENANCE_TIER_BY_PRODUCER_KIND,
-	MAPPING_EDGE_PERMITTED_PROVENANCE_TIER_LIST,
+	MAPPING_PRODUCER_KIND_LIST,
 	MAPPING_KIND,
 	MAPPING_KIND_LIST,
 	MAPPING_KIND_BY_RESOLUTION,

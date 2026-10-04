@@ -63,9 +63,10 @@ const V1_EDGE_TYPE_NAME_LIST = ['HAS_FIELD', 'HAS_CHILD', 'HAS_INSTANCE', 'CONST
 // later measurement; a disagreement is reported, not absorbed.
 const SCHEMA_VIEW_MEMBER_COUNT_BEFORE_V1 = 89;
 const SCHEMA_VIEW_MEMBER_COUNT_AFTER_V1 = 94;
-// ⟪lane P, mappingProvenance 2026-10-04⟫ one schema-view member added AFTER V1 and unrelated to it: the provenance tier
-// 'judge-inferred' (ruled A1). The two V1 literals above stay as measured; both readings now include this one row, so each
-// is compared against its literal PLUS it. The rise of exactly five is unaffected.
+// ⟪lane P, mappingProvenance 2026-10-04⟫ one schema-view member added AFTER V1 and unrelated to it: the required-property set
+// REQUIRED_PROPERTIES.MAPPING_EDGE (a mapping edge carries mappingKind, not provenanceTier). The two V1 literals above stay as
+// measured; both readings now include this one row, so each is compared against its literal PLUS it. The rise of exactly
+// five is unaffected.
 const SCHEMA_VIEW_MEMBER_ROWS_ADDED_AFTER_V1 = 1;
 
 // ---------------------------------------------------------------------
@@ -143,7 +144,6 @@ const fanOutEdgeRequest = () => ({
 		predicateAssertedBy: 'judge',
 		attestationChannelList: ['derived:1'],
 		decisionBlockHash: 'c'.repeat(64),
-		provenanceTier: 'judge-inferred',
 		confidence: 0.8,
 		mappingConfidence: 0.8,
 		mappingKind: 'inferred',

@@ -45,7 +45,7 @@ const { pipeRunner, taskListPlus } = new (require('qtools-asynchronous-pipe-plus
 const replayBlock = require('./replay-block')();
 const contentAddress = require('../content-address/content-address')();
 // ⟪R-ET-24⟫ the second vector index's label, property and name suffix have ONE home, the vocabulary.
-const { EMBED_TEXT_VECTOR } = require('../vocabulary/vocabulary');
+const { EMBED_TEXT_VECTOR, SKOS_EDGE_TYPES, MAPPING_KIND_LIST } = require('../vocabulary/vocabulary');
 
 const BATCH_SIZE = 500;
 const NEO4J_USER = 'neo4j';
@@ -273,23 +273,41 @@ const openDriver = (boltUri, password) =>
 // Scan all edges BEFORE any write. A missing/invalid provenanceTier is a malformed-edge ERROR
 // (distinct from dangling/partial). Surfaced as an audit finding; the engine refuses the run so
 // no edge in a malformed block is silently written.
+// ⟪lane P, mappingProvenance 2026-10-04; TQ, relayed by VIOLET_VALLEY⟫ TWO RULES, chosen by edge type. A MAPPING edge (a
+// SKOS_EDGE_TYPES type) carries mappingKind from MAPPING_KIND_LIST and NO provenanceTier: the tier was retired from
+// mapping edges because mappingKind / mappingSource / mappingConfidence ARE the provenance. Every other edge keeps the
+// rule it always had. PG-JSON: a single-element array, OR (post pgToStored) a scalar; either shape is accepted.
+const MAPPING_EDGE_TYPE_LIST = Object.freeze(Object.keys(SKOS_EDGE_TYPES).map((onePredicate) => SKOS_EDGE_TYPES[onePredicate]));
+const scalarOfPropertyValue = (propertyValue) => (Array.isArray(propertyValue) ? propertyValue[0] : propertyValue);
+// each rule → '' when the edge is sound, else the reason it is not
+const PROVENANCE_RULE_BY_EDGE_CLASS = Object.freeze({
+	mapping: (edgeProperties) => {
+		const mappingKindValue = scalarOfPropertyValue(edgeProperties.mappingKind);
+		if (edgeProperties.provenanceTier !== undefined) {
+			return `a mapping edge carries provenanceTier ${JSON.stringify(scalarOfPropertyValue(edgeProperties.provenanceTier))}, retired from mapping edges (mappingKind carries the kind)`;
+		}
+		return MAPPING_KIND_LIST.indexOf(mappingKindValue) === -1 ? `a mapping edge's mappingKind is ${JSON.stringify(mappingKindValue === undefined ? null : mappingKindValue)}, not one of ${MAPPING_KIND_LIST.join(', ')}` : '';
+	},
+	other: (edgeProperties) => {
+		const tierValue = scalarOfPropertyValue(edgeProperties.provenanceTier);
+		return tierValue === undefined || tierValue === null || !replayBlock.isValidProvenanceTier(tierValue) ? `provenanceTier ${JSON.stringify(tierValue === undefined ? null : tierValue)} is not one of ${replayBlock.PROVENANCE_TIERS.join(', ')}` : '';
+	},
+});
 const findProvenanceViolations = (edges) => {
 	const violations = [];
 	edges.forEach((oneEdge) => {
-		const tierProp = (oneEdge.properties || {}).provenanceTier;
-		// PG-JSON: a single-element array, OR (post pgToStored) a scalar. Accept either shape.
-		const tierValue = Array.isArray(tierProp) ? tierProp[0] : tierProp;
-		if (
-			tierValue === undefined ||
-			tierValue === null ||
-			!replayBlock.isValidProvenanceTier(tierValue)
-		) {
+		const edgeProperties = oneEdge.properties || {};
+		const edgeClass = MAPPING_EDGE_TYPE_LIST.indexOf(oneEdge.type) === -1 ? 'other' : 'mapping';
+		const violationReason = PROVENANCE_RULE_BY_EDGE_CLASS[edgeClass](edgeProperties);
+		if (violationReason) {
+			const tierValue = scalarOfPropertyValue(edgeProperties.provenanceTier);
 			violations.push({
 				blockType: oneEdge.blockType,
 				edgeType: oneEdge.type,
 				fromRef: oneEdge.fromRef,
 				toRef: oneEdge.toRef,
 				provenanceTier: tierValue === undefined ? null : tierValue,
+				violationReason,
 			});
 		}
 	});
@@ -1421,9 +1439,10 @@ const validateShapedGraph = (groups) => {
 		const sample = provenanceViolations[0];
 		return refuse(
 			`provenanceTier enforcement: ${provenanceViolations.length} edge(s) missing/invalid ` +
-				`provenanceTier (must be one of ${replayBlock.PROVENANCE_TIERS.join(', ')}); ` +
+				`provenance (a non-mapping edge's provenanceTier must be one of ${replayBlock.PROVENANCE_TIERS.join(', ')}; ` +
+				`a mapping edge carries mappingKind, one of ${MAPPING_KIND_LIST.join(', ')}, and no provenanceTier); ` +
 				`first offender in '${sample.sourceLabel}': ${sample.edgeType} ${JSON.stringify(sample.fromRef)} -> ` +
-				`${JSON.stringify(sample.toRef)} tier=${JSON.stringify(sample.provenanceTier)}. ` +
+				`${JSON.stringify(sample.toRef)} tier=${JSON.stringify(sample.provenanceTier)}: ${sample.violationReason}. ` +
 				`No edges written.`,
 		);
 	}

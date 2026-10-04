@@ -96,7 +96,7 @@ const directRun = ({ scenario, reshapeRecordList }, callback) => {
 		const writer = graphDouble.graphWriterFactory({ inGraph: {}, applyLabel: DIRECT_APPLY_LABEL, sourceStandardName: toyGraphLib.SOURCE_STANDARD_NAME });
 		const materialiserLib = materialiserFor(scenario);
 		materialiserLib.materialiseBlock(
-			{ block: { ...block, decisionRecordList: recordList }, decisionBlockHash: outcome.runReport.decisionBlock.decisionBlockHash, writer, sourceStandardName: toyGraphLib.SOURCE_STANDARD_NAME, sourceVersion: String(toyGraphLib.SOURCE_VERSION), hubName: block.header.hubName, hubVersion: '1', mappingProviderUrl: null, subjectMatchField: null, objectMatchField: DIRECT_OBJECT_MATCH_FIELD, debugMark: false, runWindowMark: null },
+			{ block: { ...block, decisionRecordList: recordList }, decisionBlockHash: outcome.runReport.decisionBlock.decisionBlockHash, writer, sourceStandardName: toyGraphLib.SOURCE_STANDARD_NAME, sourceVersion: String(toyGraphLib.SOURCE_VERSION), hubName: block.header.hubName, hubVersion: '1', mappingProviderUrl: null, subjectMatchField: null, objectMatchField: DIRECT_OBJECT_MATCH_FIELD, runWindowMark: null },
 			(materialiseError) => {
 				callback({ error: materialiseError || undefined, recordList, edgeList: graphDouble.state.writtenEdgeList, uniquenessRefusal: materialiserLib.edgeUniquenessRefusal(recordList) });
 			},

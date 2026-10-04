@@ -7,9 +7,10 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // Materialise reads the FROZEN BLOCK ONLY (objectStableId off the record — never re-derived) and writes through
 // the writer ONLY. Records sorted by (subjectStableId, objectStableId, predicate) before writing; ONE EDGE PER
 // DISTINCT (subject, predicate, object) — a (subject, object) pair carrying TWO predicates is refused
-// (edgeUniquenessRefusal, applied at freeze AND re-checked here). Every edge carries decisionBlockHash and
-// the ENGINE-LEVEL provenanceTier derived from the block's producerKind (invalid-debug on a debug block —
-// on freeze AND on plain replay, read back from the generation).
+// (edgeUniquenessRefusal, applied at freeze AND re-checked here). Every edge carries decisionBlockHash, mappingKind
+// (inferred / authored, by resolution), mappingSource (the ACTUAL judge, read from its identity: bridge-jev, bridge-debug),
+// and on a judged edge mappingConfidence (0 for the debug judge). NO provenanceTier: retired from mapping edges by lane P,
+// 2026-10-04 (TQ: the three fields ARE the provenance).
 // FAN-OUT (phase B4b): a picked record frozen with instanceStableIdList is written as one edge per instance, FROM the
 // instance to the chosen card, carrying judgedSubjectStableId (the record's subject) and a MATCH_ID that adds the
 // instance. The list is read off the record; nothing here reads the graph. Uniqueness is then per (instance, object).
@@ -17,7 +18,9 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // list or not.
 //
 //   materialiseBlock({ block, decisionBlockHash, writer, sourceStandardName, sourceVersion, hubName, hubVersion,
-//                      mappingProviderUrl, subjectMatchField, objectMatchField, debugMark }, cb)
+//                      mappingProviderUrl, subjectMatchField, objectMatchField, runWindowMark }, cb)
+// (debugMark is no longer an argument: a debug judge's edges are marked by WHO judged them, read from each frozen record's
+// judge identity, so the mark cannot be lost on replay. Lane P, 2026-10-04.)
 //     → { edgesWritten, writtenEdgeList }   (a written edge's subjectStableId is its from-node: the instance under fan-out)
 
 const path = require('path');
@@ -25,9 +28,9 @@ const vocabularyLib = require(path.join(__dirname, '..', 'vocabulary', 'vocabula
 const refuse = require(path.join(__dirname, '..', 'forge-framework', 'refuse'));
 const { compareRecords, sha256Hex } = require('./decisionBlock');
 const { RENDERER_VERSION } = require('./evidenceRenderer');
-const { providerNameForJudgeModel } = require(path.join(__dirname, '..', '..', 'apps', 'graph-builder', 'apps', 'bridge-maker', 'lib', 'judgeProviderRegistry'));
+const { providerNameForJudgeModel, FIXED_MAPPING_CONFIDENCE_BY_PROVIDER_NAME } = require(path.join(__dirname, '..', '..', 'apps', 'graph-builder', 'apps', 'bridge-maker', 'lib', 'judgeProviderRegistry'));
 
-const { SKOS_EDGE_TYPES, MAPPING_PROPERTIES, PROVENANCE_TIER, MAPPING_EDGE_PROVENANCE_TIER_BY_PRODUCER_KIND, MAPPING_KIND_BY_RESOLUTION, MAPPING_SOURCE_FAMILY, MAPPING_SOURCE_FAMILY_BY_AUTHORED_MATCH_BASIS, composeMappingSource } = vocabularyLib;
+const { SKOS_EDGE_TYPES, MAPPING_PROPERTIES, MAPPING_KIND_BY_RESOLUTION, MAPPING_SOURCE_FAMILY, MAPPING_SOURCE_FAMILY_BY_AUTHORED_MATCH_BASIS, composeMappingSource } = vocabularyLib;
 
 const JUSTIFICATION_BY_RESOLUTION = Object.freeze({ specified: 'semapv:ManualMappingCuration', judged: 'semapv:CompositeMatching' });
 
@@ -75,14 +78,14 @@ const edgeUniquenessRefusal = (decisionRecordList) => {
 	return null;
 };
 
-// provenanceTierFor — the ENGINE-LEVEL tier (RULING 12:20): debug block → invalid-debug; else by producerKind
-const provenanceTierFor = ({ producerKind, debugMark }) => {
-	if (debugMark) {
-		return PROVENANCE_TIER.INVALID_DEBUG;
-	}
-	const tier = MAPPING_EDGE_PROVENANCE_TIER_BY_PRODUCER_KIND[producerKind];
-	// an unknown producerKind yields undefined; the writer's closed-set check refuses it by name (never a throw here)
-	return tier;
+// mappingConfidenceFor — a judged edge's confidence: the judge's own, unless its provider is held to a FIXED value (the
+// debug judge: 0, TQ 2026-10-04 — its edges are marked by mappingSource 'bridge-debug' and this 0, not by a kind). The
+// provider is read from the record's identity as mappingSource's is; materialiseBlock has already refused a record whose
+// identity no registered provider minted.
+const mappingConfidenceFor = ({ record }) => {
+	const owner = providerNameForJudgeModel(record.judge && record.judge.judgeModel);
+	const fixedConfidence = owner.error ? undefined : FIXED_MAPPING_CONFIDENCE_BY_PROVIDER_NAME[owner.providerName];
+	return fixedConfidence === undefined ? record.confidence : fixedConfidence;
 };
 
 // MAPPING_SOURCE_BY_RESOLUTION — who made the claim, by the record's resolution (lane P, 2026-10-04; DATA, no branch). A
@@ -111,7 +114,7 @@ const mappingSourceFor = ({ record, block }) => {
 };
 
 // edgePropertiesFor — assembled from the record + the run's identity; camelCase; the CLOSED set
-const edgePropertiesFor = ({ record, instanceStableId, block, decisionBlockHash, sourceStandardName, sourceVersion, hubName, hubVersion, mappingProviderUrl, subjectMatchField, objectMatchField, debugMark }) => {
+const edgePropertiesFor = ({ record, instanceStableId, block, decisionBlockHash, sourceStandardName, sourceVersion, hubName, hubVersion, mappingProviderUrl, subjectMatchField, objectMatchField }) => {
 	const edgeProperties = {
 		[MAPPING_PROPERTIES.PREDICATE]: record.predicate,
 		// THE RECORD IS THE AUTHORITY on its own justification; the resolution table is the answer only when the
@@ -133,7 +136,6 @@ const edgePropertiesFor = ({ record, instanceStableId, block, decisionBlockHash,
 		[MAPPING_PROPERTIES.PREDICATE_ASSERTED_BY]: record.predicateAssertedBy,
 		[MAPPING_PROPERTIES.ATTESTATION_CHANNEL_LIST]: record.attestationChannelList.slice(),
 		[MAPPING_PROPERTIES.DECISION_BLOCK_HASH]: decisionBlockHash,
-		[MAPPING_PROPERTIES.PROVENANCE_TIER]: provenanceTierFor({ producerKind: block.header.producerKind, debugMark }),
 		[MAPPING_PROPERTIES.MATCH_ID]: sha256Hex(`${decisionBlockHash}\n${record.subjectStableId}\n${record.predicate}\n${record.objectStableId}`),
 		[MAPPING_PROPERTIES.MAPPING_KIND]: MAPPING_KIND_BY_RESOLUTION[record.resolution],
 		// undefined when the source cannot be named; materialiseBlock refuses such a record by name before any write
@@ -159,14 +161,14 @@ const edgePropertiesFor = ({ record, instanceStableId, block, decisionBlockHash,
 	}
 	if (record.resolution === 'judged') {
 		edgeProperties[MAPPING_PROPERTIES.CONFIDENCE] = record.confidence;
-		edgeProperties[MAPPING_PROPERTIES.MAPPING_CONFIDENCE] = record.confidence;
+		edgeProperties[MAPPING_PROPERTIES.MAPPING_CONFIDENCE] = mappingConfidenceFor({ record });
 		edgeProperties[MAPPING_PROPERTIES.MAPPING_TOOL] = record.judge.judgeModel;
 		edgeProperties[MAPPING_PROPERTIES.MAPPING_TOOL_VERSION] = `${record.judge.rendererVersion === undefined ? RENDERER_VERSION : record.judge.rendererVersion}`;
 	}
 	return edgeProperties;
 };
 
-const materialiseBlock = ({ block, decisionBlockHash, writer, sourceStandardName, sourceVersion, hubName, hubVersion, mappingProviderUrl, subjectMatchField, objectMatchField, debugMark, runWindowMark } = {}, callback) => {
+const materialiseBlock = ({ block, decisionBlockHash, writer, sourceStandardName, sourceVersion, hubName, hubVersion, mappingProviderUrl, subjectMatchField, objectMatchField, runWindowMark } = {}, callback) => {
 	if (!block || !block.header || !Array.isArray(block.decisionRecordList)) {
 		callback(refuse.byName({ moduleName, what: 'materialiseBlock needs a parsed block ({ header, decisionRecordList })', where: 'decisionBlock.parseFrozenText' }).message);
 		return;
@@ -217,7 +219,7 @@ const materialiseBlock = ({ block, decisionBlockHash, writer, sourceStandardName
 		}
 		const { record: oneRecord, fromStableId, instanceStableId } = orderedList[edgeIndex];
 		edgeIndex += 1;
-		const edgeProperties = edgePropertiesFor({ record: oneRecord, instanceStableId, block, decisionBlockHash, sourceStandardName, sourceVersion, hubName, hubVersion, mappingProviderUrl, subjectMatchField, objectMatchField, debugMark });
+		const edgeProperties = edgePropertiesFor({ record: oneRecord, instanceStableId, block, decisionBlockHash, sourceStandardName, sourceVersion, hubName, hubVersion, mappingProviderUrl, subjectMatchField, objectMatchField });
 		const edgeType = SKOS_EDGE_TYPES[oneRecord.predicate];
 		writer.writeMappingEdge({ subjectStableId: fromStableId, objectStableId: oneRecord.objectStableId, edgeType, edgeProperties }, (writeError, written) => {
 			if (writeError) {
@@ -235,4 +237,4 @@ const materialiseBlock = ({ block, decisionBlockHash, writer, sourceStandardName
 	nextEdge();
 };
 
-module.exports = { materialiseBlock, edgePropertiesFor, mappingSourceFor, MAPPING_SOURCE_BY_RESOLUTION, edgeUniquenessRefusal, pickedRecordList, plannedEdgeList, provenanceTierFor, JUSTIFICATION_BY_RESOLUTION, moduleName };
+module.exports = { materialiseBlock, edgePropertiesFor, mappingSourceFor, MAPPING_SOURCE_BY_RESOLUTION, edgeUniquenessRefusal, pickedRecordList, plannedEdgeList, mappingConfidenceFor, JUSTIFICATION_BY_RESOLUTION, moduleName };

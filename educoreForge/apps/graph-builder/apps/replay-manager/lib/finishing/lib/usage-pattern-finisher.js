@@ -120,8 +120,7 @@ const moduleFunction =
 				entryLabel: 'HubReference',
 				cypher:
 					'MATCH ()-[m]->(:HubReference) RETURN type(m) AS relation, m.mappingKind AS mappingKind, ' +
-					'm.mappingSource AS mappingSource, m.provenanceTier AS provenanceTier, count(*) AS edges ' +
-					'ORDER BY relation, mappingKind, mappingSource, provenanceTier',
+					'm.mappingSource AS mappingSource, count(*) AS edges ORDER BY relation, mappingKind, mappingSource',
 				// ⟪lane P, 2026-10-04⟫ the relation (EXACT/CLOSE/BROAD/NARROW) says how close a match is, never who made it
 				caveat:
 					'READ mappingKind AND mappingSource BEFORE USING ANY ROW. The relation (EXACT_MATCH, CLOSE_MATCH, ' +
@@ -129,9 +128,10 @@ const moduleFunction =
 					'made the claim. mappingKind `inferred` means a judge chose the card (mappingSource names it, ' +
 					'e.g. bridge-jev; mappingConfidence says how sure, on a judged edge only) from candidates that ' +
 					'embeddings proposed: a hypothesis, however close its relation. `authored` means a document named ' +
-					'it (mappingSource crosswalk-… or standard-…). An edge tiered `invalid-debug` was produced by the ' +
-					'debug judge (candidate 1 taken unconditionally) and carries NO semantic warrant: it proves the ' +
-					'plumbing, not the meaning, and is otherwise INDISTINGUISHABLE from a real mapping.',
+					'it (mappingSource crosswalk-… or standard-…). mappingSource `bridge-debug` (mappingConfidence 0) is the ' +
+					'debug judge (candidate 1 taken unconditionally): its edges carry NO semantic warrant; they prove the ' +
+					'plumbing, not the meaning, and are otherwise INDISTINGUISHABLE from real mappings. A mapping ' +
+					'edge carries no provenanceTier.',
 				zeroRowMeaning: 'finding',
 			},
 		];

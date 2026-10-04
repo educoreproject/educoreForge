@@ -25,18 +25,19 @@ const path = require('path');
 const refuse = require(path.join(__dirname, '..', 'forge-framework', 'refuse'));
 const { parseFrozenText } = require('./decisionBlock');
 const { plannedEdgeList } = require('./materialiser');
-const { MAPPING_EDGE_PROVENANCE_TIER_BY_PRODUCER_KIND } = require(path.join(__dirname, '..', 'vocabulary', 'vocabulary'));
+const { MAPPING_PRODUCER_KIND_LIST } = require(path.join(__dirname, '..', 'vocabulary', 'vocabulary'));
 
 // siblingPairKeyListFor — the sibling lookup SPANS THE PAIRING (RULING BR7): every registered plugin on the SAME
 // standardKey (any bridgeName, this one included under a DIFFERENT producerKind) × EVERY mapping-block producerKind
-// the vocabulary knows (MAPPING_EDGE_PROVENANCE_TIER_BY_PRODUCER_KIND — authored, inferred), minus THIS block's own
+// the vocabulary knows (MAPPING_PRODUCER_KIND_LIST — authored, inferred; the tier table it was read from retired with
+// provenanceTier's place on mapping edges, lane P 2026-10-04), minus THIS block's own
 // (bridgeName, producerKind) pairKey. Two sources disagreeing on a subject's hub card is a conflict regardless of who
 // produced the other block. The store's API stays getDecisionBlock({ pairKey }); the keys are composed here.
 const siblingPairKeyListFor = ({ registry, thisBridgeName, standardKey, pairKeyPrefix, producerKind } = {}) => {
 	const bridgeNameList = Object.keys(registry.entryByBridgeName)
 		.filter((oneName) => registry.entryByBridgeName[oneName].standardKey === standardKey)
 		.sort();
-	const producerKindList = Object.keys(MAPPING_EDGE_PROVENANCE_TIER_BY_PRODUCER_KIND).sort();
+	const producerKindList = MAPPING_PRODUCER_KIND_LIST.slice().sort();
 	const thisPairKey = `${pairKeyPrefix}::${thisBridgeName}::${producerKind}`;
 	const siblingList = [];
 	bridgeNameList.forEach((oneName) => {

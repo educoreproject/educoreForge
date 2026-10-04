@@ -61,8 +61,14 @@ const { pipeRunner, taskListPlus } = new require('qtools-asynchronous-pipe-plus'
 
 const moduleFunction =
 	({ moduleName } = {}) =>
-	({ vocabulary } = {}) => {
+	({ vocabulary, debugMappingSource } = {}) => {
 		const { NODE_LABELS, SELF_DOC, SCHEMA_VIEW, GRAPH_META, PROVENANCE_TIER } = vocabulary;
+		// ⟪lane P, 2026-10-04⟫ the debug judge's mappingSource ('bridge-debug'), INJECTED by the composition root from the
+		// bridge framework's certificationCheck, which composes it from the judge provider registry. This module does not
+		// reach into the bridge framework itself, and it has no default: without the value it cannot tell a debug graph.
+		if (typeof debugMappingSource !== 'string' || !debugMappingSource) {
+			throw new Error(`${moduleName} REFUSED: debugMappingSource is required (the debug judge's mappingSource, from certificationCheck.DEBUG_MAPPING_SOURCE); without it a debug graph would read as trustworthy`);
+		}
 
 		const passportLabel = NODE_LABELS.GRAPH_PROVENANCE;
 		const metaLabel = GRAPH_META.LABEL;
@@ -141,11 +147,16 @@ const moduleFunction =
 		// says nothing about whether the graph's cross-standard claims can be relied on, so it is excluded
 		// here rather than allowed to dilute the verdict. Grouped by tier AND type so the report can show
 		// what actually carries the claim rather than a single flattened number.
+		// ⟪lane P, 2026-10-04⟫ a MAPPING edge carries mappingKind and no provenanceTier, so it is selected by its
+		// mappingKind; without this every mapping edge would fall out of the census and every graph would read as an
+		// island. A non-mapping edge is still selected by its tier.
 		const MEANING_TIER_CENSUS_CYPHER = `
 			MATCH ()-[r]->()
-			WHERE r.provenanceTier IS NOT NULL AND r.provenanceTier <> ${cypherString(PROVENANCE_TIER.STRUCTURAL)}
-			RETURN type(r) AS edgeType, r.provenanceTier AS provenanceTier, count(r) AS tierCount
-			ORDER BY edgeType, provenanceTier`;
+			WHERE r.mappingKind IS NOT NULL
+			   OR (r.provenanceTier IS NOT NULL AND r.provenanceTier <> ${cypherString(PROVENANCE_TIER.STRUCTURAL)})
+			RETURN type(r) AS edgeType, r.provenanceTier AS provenanceTier, r.mappingKind AS mappingKind,
+			       r.mappingSource AS mappingSource, count(r) AS tierCount
+			ORDER BY edgeType, provenanceTier, mappingKind, mappingSource`;
 
 		// ----- trustVerdict — THE HONEST ANSWER, NOT THE FLATTERING ONE (work order gate (d)).
 		//   Derived from the tiers actually present. Every false verdict carries its REASON, because a bare
@@ -156,7 +167,7 @@ const moduleFunction =
 				0,
 			);
 			const invalidDebugCount = meaningTierRowList
-				.filter((oneRow) => oneRow.provenanceTier === PROVENANCE_TIER.INVALID_DEBUG)
+				.filter((oneRow) => oneRow.mappingSource === debugMappingSource || oneRow.provenanceTier === PROVENANCE_TIER.INVALID_DEBUG)
 				.reduce((runningTotal, oneRow) => runningTotal + oneRow.tierCount, 0);
 
 			if (!meaningBearingCount) {
@@ -164,8 +175,8 @@ const moduleFunction =
 					trustworthyForMeaning: false,
 					trustBasis: 'noMeaningBearingEdges',
 					trustNote:
-						'This graph asserts NO cross-standard meaning at all: every edge carrying a provenanceTier ' +
-						'is structural scaffolding. That is not a defect — it is an island graph — but nothing here ' +
+						'This graph asserts NO cross-standard meaning at all: it has no mapping edge, and every edge ' +
+						'carrying a provenanceTier is structural scaffolding. That is not a defect — it is an island graph — but nothing here ' +
 						'may be relied on for equivalence between standards.',
 				};
 			}
@@ -175,7 +186,7 @@ const moduleFunction =
 					trustBasis: 'invalidDebugPresent',
 					trustNote:
 						`${invalidDebugCount} of ${meaningBearingCount} meaning-bearing edge(s) carry the ` +
-						`'${PROVENANCE_TIER.INVALID_DEBUG}' tier, produced by a debug judge that takes the first ` +
+						`mappingSource '${debugMappingSource}' (mappingConfidence 0): a debug judge that takes the first ` +
 						'candidate unconditionally. NOTHING informed those choices. They are recorded honestly ' +
 						'rather than dressed as inference, and their presence makes this graph unfit to be relied ' +
 						'on for meaning — which is the true answer and the one this passport is required to give.',
@@ -185,7 +196,8 @@ const moduleFunction =
 				trustworthyForMeaning: true,
 				trustBasis: 'allMeaningBearingEdgesCarryAValidTier',
 				trustNote:
-					`All ${meaningBearingCount} meaning-bearing edge(s) carry a tier that asserts a real basis. ` +
+					`All ${meaningBearingCount} meaning-bearing edge(s) carry a real basis (a mapping edge's mappingKind, ` +
+					'inferred or authored; another edge\'s tier). ' +
 					'This is a claim about PROVENANCE, not about correctness: it says how the mappings were ' +
 					'arrived at, not that they are right.',
 			};
@@ -268,6 +280,8 @@ const moduleFunction =
 					const meaningTierRowList = ((result && result.records) || []).map((oneRecord) => ({
 						edgeType: oneRecord.get('edgeType'),
 						provenanceTier: oneRecord.get('provenanceTier'),
+						mappingKind: oneRecord.get('mappingKind'),
+						mappingSource: oneRecord.get('mappingSource'),
 						tierCount: numberFrom(oneRecord, 'tierCount'),
 					}));
 					next('', { ...args, meaningTierRowList, trust: trustVerdict(meaningTierRowList) });

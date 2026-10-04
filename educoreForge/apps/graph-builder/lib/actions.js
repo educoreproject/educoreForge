@@ -1428,7 +1428,7 @@ const goldEvalCheckAction = (callback) => {
 	const absentTokens = summary.absentTokens || [];
 
 	// ⟪B3, 2026-08-16⟫ THE BRIDGE SIBLING (SPEC-bridgeFramework-v1 §12 item 7, BG-DEBUG (c); RULING R5;
-	// B2 review ruling for B3): a relationship block carrying ANY edge with provenanceTier 'invalid-debug'
+	// B2 review ruling for B3): a relationship block carrying ANY edge with mappingSource 'bridge-debug' (provenanceTier 'invalid-debug' until 2026-10-04)
 	// (a debug-judge block) MUST NOT reach a certified graph. The RULE is the framework's
 	// (lib/bridge-framework/certificationCheck.js); the WIRING here reads the run's MANIFEST out of the
 	// standardsDatabase (the artifact — no container) and audits every relationship member block's edge

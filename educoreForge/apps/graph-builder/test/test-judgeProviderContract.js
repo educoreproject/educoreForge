@@ -688,7 +688,9 @@ overlapWitness({ concurrency: resolvedConcurrency(1) }, ({ spanList, overlapCoun
 				matchBasis: 'derived', resolution: 'judged', objectMatchField: 'name',
 				subjectSource: 'toy', subjectVersion: '1', objectSource: 'toyhub', objectVersion: '1',
 				predicateAssertedBy: 'judge', attestationChannelList: ['x'], decisionBlockHash: 'abc',
-				provenanceTier: 'invalid-debug', confidence: 0.8,
+				// lane P (2026-10-04): a mapping edge carries no provenanceTier; the debug judge's edge is marked by
+				// mappingSource 'bridge-debug' and mappingConfidence 0
+				mappingKind: 'inferred', mappingSource: 'bridge-debug', mappingConfidence: 0, confidence: 0.8,
 				mappingTool: debugProvider.model, mappingToolVersion: '1',
 			},
 		});

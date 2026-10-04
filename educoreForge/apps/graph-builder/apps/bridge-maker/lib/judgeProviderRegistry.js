@@ -323,6 +323,11 @@ const DEBUG_JUDGE_PROVIDER_NAME = debugJudgeLib.PROVIDER_NAME;
 const DEBUG_JUDGE_RULE_NAME_LIST = debugJudgeLib.REGISTERED_RULE_NAMES;
 const DEBUG_JUDGE_DEFAULT_RULE_NAME = debugJudgeLib.DEFAULT_RULE;
 const DEBUG_JUDGE_MARK = debugJudgeLib.DEBUG_MARK;
+// FIXED_MAPPING_CONFIDENCE_BY_PROVIDER_NAME — a provider whose verdicts must carry a FIXED mappingConfidence whatever its own
+// category says (lane P, 2026-10-04; TQ). The debug judge takes candidate 1 unconditionally, so its edges say 0: nothing
+// informed them. The materialiser stamps it and the write seam refuses any other value; the row is keyed by the name read
+// above, never a second literal.
+const FIXED_MAPPING_CONFIDENCE_BY_PROVIDER_NAME = Object.freeze({ [DEBUG_JUDGE_PROVIDER_NAME]: 0 });
 
 module.exports = Object.freeze({
 	JUDGE_PROVIDER_ROW_LIST,
@@ -333,6 +338,7 @@ module.exports = Object.freeze({
 	DEBUG_JUDGE_RULE_NAME_LIST,
 	DEBUG_JUDGE_DEFAULT_RULE_NAME,
 	DEBUG_JUDGE_MARK,
+	FIXED_MAPPING_CONFIDENCE_BY_PROVIDER_NAME,
 	constructJudgeProvider,
 	providerNameForJudgeModel,
 });

@@ -7,16 +7,15 @@
 //   (a) every Bridge-Profile edge property NAME the framework writes is a registry row (the ten B2 rows
 //       plus the ten pre-existing ones — the writer's CLOSED SET; a name outside it is refused there);
 //   (b) MAPPING_PROPERTY_NAME_LIST is EXACTLY the registry's values (the derived list the writer reads);
-//   (c) the provenanceTier a mapping edge carries is the ENGINE-LEVEL value derived from producerKind
-//       (RULING 2026-08-16 12:20, SPEC v1.1.2): authored → spec-authoritative, inferred → judge-inferred (embedding-inferred until lane P, 2026-10-04),
-//       plus the 'invalid-debug' carve-out on a debug block — the permitted list is EXACTLY those three and
-//       the by-producer table is EXACTLY those two rows;
+//   (c) ⟪lane P, 2026-10-04⟫ a mapping edge carries NO provenanceTier (retired: the row is absent from the closed set, and
+//       the two tier tables are gone); its kind is MAPPING_KIND_LIST, EXACTLY inferred and authored — no debug kind (a
+//       debug judge is named by mappingSource 'bridge-debug');
 //   (d) isValidSssomJustification is GONE (BR-145 RULED: the boolean invited a caller to discard the
 //       ban's name) — sssomJustificationRefusal is the only door.
 // RED TWINS (observed by the sweep below on every run, three-state): a vocabulary DOUBLE compiled in
 // memory (lib/forge-framework/test/testSupport/moduleDouble.js — no file is written) with (a) the
-// DECISION_BLOCK_HASH row removed → (a) and (b) red; (c) 'structural' added to the permitted
-// tier list → (c) red; (d) the boolean re-added → (d) red. Pure; no docker/db.
+// DECISION_BLOCK_HASH row removed → (a) and (b) red; (c) 'invalid-debug' added to the mapping
+// kind list → (c) red; (d) the boolean re-added → (d) red. Pure; no docker/db.
 //
 // Run: node lib/vocabulary/test/test-mappingProperties.js
 
@@ -67,8 +66,10 @@ const PRE_EXISTING_NAME_LIST = [
 	'objectVersion',
 	'mappingTool',
 	'matchId',
-	'provenanceTier',
 ];
+// the one name lane P RETIRED from mapping edges (TQ, 2026-10-04): it must be ABSENT from the closed set, so the write seam
+// refuses it. Pre-existing until then; listed so its absence is asserted, not merely unmentioned.
+const RETIRED_NAME_LIST = ['provenanceTier'];
 // the one name the SIF replacement's phase V1 ADDED (review #1): the question a fanned-out mapping edge was
 // judged as, written on every instance edge by the materialiser (plan phase B4b)
 const V1_ADDED_NAME_LIST = ['judgedSubjectStableId'];
@@ -80,18 +81,22 @@ const conjunctJudgeByRefId = {
 	'a_everyEdgePropertyNameIsARow': (subject) => {
 		const valueList = Object.keys(subject.MAPPING_PROPERTIES).map((oneMember) => subject.MAPPING_PROPERTIES[oneMember]);
 		const missing = B2_ADDED_NAME_LIST.concat(PRE_EXISTING_NAME_LIST, V1_ADDED_NAME_LIST, PROVENANCE_ADDED_NAME_LIST).filter((oneName) => valueList.indexOf(oneName) === -1);
-		return { pass: missing.length === 0 && valueList.length === 24, detail: missing.length ? `missing: ${missing.join(', ')}` : `count ${valueList.length}` };
+		const retiredPresent = RETIRED_NAME_LIST.filter((oneName) => valueList.indexOf(oneName) !== -1);
+		return { pass: missing.length === 0 && retiredPresent.length === 0 && valueList.length === 23, detail: missing.length || retiredPresent.length ? `missing: ${missing.join(', ')}; retired yet present: ${retiredPresent.join(', ')}` : `count ${valueList.length}` };
 	},
 	'b_nameListEqualsRegistryValues': (subject) => {
 		const valueList = Object.keys(subject.MAPPING_PROPERTIES).map((oneMember) => subject.MAPPING_PROPERTIES[oneMember]);
-		const equal = JSON.stringify(subject.MAPPING_PROPERTY_NAME_LIST) === JSON.stringify(valueList) && subject.MAPPING_PROPERTY_NAME_LIST.length === 24;
+		const equal = JSON.stringify(subject.MAPPING_PROPERTY_NAME_LIST) === JSON.stringify(valueList) && subject.MAPPING_PROPERTY_NAME_LIST.length === 23;
 		return { pass: equal, detail: `list ${JSON.stringify(subject.MAPPING_PROPERTY_NAME_LIST)}` };
 	},
-	'c_producerDerivedTiersOnly': (subject) => ({
+	// ⟪lane P, 2026-10-04⟫ replaces c_producerDerivedTiersOnly: the tier tables it pinned are retired with provenanceTier's
+	// place on mapping edges; what a mapping edge's kind may be is now MAPPING_KIND_LIST, exactly two, with no debug kind
+	'c_mappingKindsOnlyNoTierTables': (subject) => ({
 		pass:
-			JSON.stringify(subject.MAPPING_EDGE_PERMITTED_PROVENANCE_TIER_LIST) === JSON.stringify(['spec-authoritative', 'judge-inferred', 'invalid-debug']) &&
-			JSON.stringify(subject.MAPPING_EDGE_PROVENANCE_TIER_BY_PRODUCER_KIND) === JSON.stringify({ authored: 'spec-authoritative', inferred: 'judge-inferred' }),
-		detail: `${JSON.stringify(subject.MAPPING_EDGE_PERMITTED_PROVENANCE_TIER_LIST)} / ${JSON.stringify(subject.MAPPING_EDGE_PROVENANCE_TIER_BY_PRODUCER_KIND)}`,
+			JSON.stringify(subject.MAPPING_KIND_LIST) === JSON.stringify(['inferred', 'authored']) &&
+			subject.MAPPING_EDGE_PERMITTED_PROVENANCE_TIER_LIST === undefined &&
+			subject.MAPPING_EDGE_PROVENANCE_TIER_BY_PRODUCER_KIND === undefined,
+		detail: `${JSON.stringify(subject.MAPPING_KIND_LIST)} / tier tables ${typeof subject.MAPPING_EDGE_PERMITTED_PROVENANCE_TIER_LIST}, ${typeof subject.MAPPING_EDGE_PROVENANCE_TIER_BY_PRODUCER_KIND}`,
 	}),
 	'd_booleanJustificationGateRemoved': (subject) => ({
 		pass: subject.isValidSssomJustification === undefined && typeof subject.sssomJustificationRefusal === 'function',
@@ -121,11 +126,11 @@ const twinList = [
 		replace: '',
 	},
 	{
-		conjunctRefIdList: ['c_producerDerivedTiersOnly'],
-		twinName: 'permitStructuralTier',
+		conjunctRefIdList: ['c_mappingKindsOnlyNoTierTables'],
+		twinName: 'debugKindAdded',
 		leverKind: 'productionMutation',
-		find: '\tPROVENANCE_TIER.JUDGE_INFERRED,\n\tPROVENANCE_TIER.INVALID_DEBUG,\n]);',
-		replace: '\tPROVENANCE_TIER.JUDGE_INFERRED,\n\tPROVENANCE_TIER.INVALID_DEBUG,\n\tPROVENANCE_TIER.STRUCTURAL,\n]);',
+		find: "const MAPPING_KIND_LIST = Object.freeze([MAPPING_KIND.INFERRED, MAPPING_KIND.AUTHORED]);",
+		replace: "const MAPPING_KIND_LIST = Object.freeze([MAPPING_KIND.INFERRED, MAPPING_KIND.AUTHORED, 'invalid-debug']);",
 	},
 	{
 		conjunctRefIdList: ['d_booleanJustificationGateRemoved'],

@@ -572,7 +572,6 @@ const moduleFunction =
 			// materialiseAndReport — shared tail: conflict lookup → writer → export? → runReport
 			// -----------------------------------------------------------------
 			const materialiseAndReport = ({ block, decisionBlockHash, exportSssom, cardByStableId }, tailCallback) => {
-				const blockDebugMark = debugJudgeLib.debugMarkFromGeneration(block.header.generation);
 				const siblingPairKeyList = conflictDetectorLib.siblingPairKeyListFor({ registry, thisBridgeName: bridgeDeclaration.bridgeName, standardKey: bridgeDeclaration.standardKey, pairKeyPrefix, producerKind: bridgeDeclaration.producerKind });
 				conflictDetector({ decisionStore: spec.decisionStore, siblingPairKeyList, thisBlock: block }, (conflictError, conflicts) => {
 					if (conflictError) {
@@ -608,7 +607,7 @@ const moduleFunction =
 					}
 					const writer = graphWriterFactory(writerArgs);
 					materialiserLib.materialiseBlock(
-						{ block: materialisableBlock, decisionBlockHash, writer, sourceStandardName, sourceVersion: String(sourceVersion), hubName: block.header.hubName, hubVersion: String(hubVersion), mappingProviderUrl: bridgeDeclaration.mappingProvider === undefined ? null : bridgeDeclaration.mappingProvider.url, subjectMatchField, objectMatchField, debugMark: blockDebugMark, runWindowMark: windowMark },
+						{ block: materialisableBlock, decisionBlockHash, writer, sourceStandardName, sourceVersion: String(sourceVersion), hubName: block.header.hubName, hubVersion: String(hubVersion), mappingProviderUrl: bridgeDeclaration.mappingProvider === undefined ? null : bridgeDeclaration.mappingProvider.url, subjectMatchField, objectMatchField, runWindowMark: windowMark },
 						(materialiseError, materialised) => {
 							// ⟪JOB 5b⟫ close's SECOND argument carries the bridge door's loaded conservation
 							// summary — what this writer actually merged, accumulated as it went. It must be

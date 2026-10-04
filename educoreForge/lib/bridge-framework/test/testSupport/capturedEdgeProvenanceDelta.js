@@ -9,11 +9,11 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //
 // The delta is exactly what lane P does to a written edge, read from the vocabulary and the judge provider registry the
 // production code reads, never restated:
-//   mappingKind        MAPPING_KIND_BY_RESOLUTION[resolution]
+//   mappingKind        MAPPING_KIND_BY_RESOLUTION[resolution] (a debug judge's edge too: there is no debug kind)
 //   mappingSource      judged: 'bridge-' + the registered provider that minted mappingTool; specified: the authored family
 //                      of matchBasis + the bridge plugin's name, which an edge does not carry, so the caller names it
-//   mappingConfidence  judged edges only: confidence
-//   provenanceTier     'embedding-inferred' → 'judge-inferred' (ruled A1); every other tier unchanged
+//   mappingConfidence  judged edges only: confidence, or the provider's FIXED value (the debug judge: 0)
+//   provenanceTier     REMOVED: retired from mapping edges (TQ, 2026-10-04)
 //
 //   capturedEdgeListWithProvenanceDelta({ capturedEdgeList, specifiedBridgeName }) → edge list | throws by name
 //   canonicalEdgeListText(edgeList, maskedPropertyNameList) → text with each edge's properties in sorted-name order, so the
@@ -21,11 +21,9 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
 const path = require('path');
 const vocabularyLib = require(path.join(__dirname, '..', '..', '..', 'vocabulary', 'vocabulary'));
-const { providerNameForJudgeModel } = require(path.join(__dirname, '..', '..', '..', '..', 'apps', 'graph-builder', 'apps', 'bridge-maker', 'lib', 'judgeProviderRegistry'));
+const { providerNameForJudgeModel, FIXED_MAPPING_CONFIDENCE_BY_PROVIDER_NAME } = require(path.join(__dirname, '..', '..', '..', '..', 'apps', 'graph-builder', 'apps', 'bridge-maker', 'lib', 'judgeProviderRegistry'));
 
-const { MAPPING_PROPERTIES, MAPPING_KIND_BY_RESOLUTION, MAPPING_SOURCE_FAMILY, MAPPING_SOURCE_FAMILY_BY_AUTHORED_MATCH_BASIS, PROVENANCE_TIER, composeMappingSource } = vocabularyLib;
-
-const TIER_RENAME_BY_CAPTURED_TIER = Object.freeze({ [PROVENANCE_TIER.EMBEDDING_INFERRED]: PROVENANCE_TIER.JUDGE_INFERRED });
+const { MAPPING_PROPERTIES, MAPPING_KIND_BY_RESOLUTION, MAPPING_SOURCE_FAMILY, MAPPING_SOURCE_FAMILY_BY_AUTHORED_MATCH_BASIS, composeMappingSource } = vocabularyLib;
 
 const MAPPING_SOURCE_DELTA_BY_RESOLUTION = Object.freeze({
 	judged: ({ capturedProperties }) => {
@@ -51,15 +49,15 @@ const capturedEdgeListWithProvenanceDelta = ({ capturedEdgeList, specifiedBridge
 		if (sourceDelta === undefined) {
 			throw new Error(`${moduleName} REFUSED: captured edge resolution ${JSON.stringify(capturedProperties.resolution)} has no delta row`);
 		}
-		const renamedTier = TIER_RENAME_BY_CAPTURED_TIER[capturedProperties.provenanceTier];
+		const { provenanceTier: retiredTier, ...retainedProperties } = capturedProperties;
 		const properties = {
-			...capturedProperties,
-			[MAPPING_PROPERTIES.PROVENANCE_TIER]: renamedTier === undefined ? capturedProperties.provenanceTier : renamedTier,
+			...retainedProperties,
 			[MAPPING_PROPERTIES.MAPPING_KIND]: MAPPING_KIND_BY_RESOLUTION[capturedProperties.resolution],
 			[MAPPING_PROPERTIES.MAPPING_SOURCE]: sourceDelta({ capturedProperties, specifiedBridgeName }),
 		};
 		if (capturedProperties.resolution === 'judged') {
-			properties[MAPPING_PROPERTIES.MAPPING_CONFIDENCE] = capturedProperties.confidence;
+			const fixedConfidence = FIXED_MAPPING_CONFIDENCE_BY_PROVIDER_NAME[providerNameForJudgeModel(capturedProperties.mappingTool).providerName];
+			properties[MAPPING_PROPERTIES.MAPPING_CONFIDENCE] = fixedConfidence === undefined ? capturedProperties.confidence : fixedConfidence;
 		}
 		return { ...capturedEdge, properties };
 	});

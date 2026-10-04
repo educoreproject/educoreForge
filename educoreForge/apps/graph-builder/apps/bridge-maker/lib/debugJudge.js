@@ -241,10 +241,13 @@ const DEBUG_JUDGE_MAX_CONCURRENCY = require('../../../../../lib/bridge-framework
 // exactly where it was". That was measured for JOB 4 and it is not what any reader actually does: NOTHING
 // mechanical reads this string for debug-ness. debugMarkFromLlmClient (below) reads `decisionAlgorithm`, a
 // SEPARATE member; that flag is what suffixes the block's generation (bridge-framework generationWithDebugMark)
-// and what materialiser turns into provenanceTier 'invalid-debug'; and it is provenanceTier — never
-// mappingTool — that certificationCheck.js, passport-writer.js and gold-eval-bridge-sibling.js all refuse on.
+// (provenanceTier 'invalid-debug' on the edge until lane P, 2026-10-04). Since then an edge names this provider as
+// mappingSource 'bridge-debug' with mappingConfidence 0, and it is mappingSource — never mappingTool — that
+// certificationCheck.js, passport-writer.js and gold-eval-bridge-sibling.js refuse on. mappingSource is composed from the
+// identity's PREFIX ('debug', via judgeProviderRegistry.providerNameForJudgeModel), so the prefix IS now read mechanically;
+// the tail still is not.
 // So dropping the tail costs a HUMAN-READABLE flag on the edge's mappingTool and nothing mechanical. The
-// edge still carries provenanceTier 'invalid-debug', the block's generation still ends in -INVALID_DEBUG,
+// edge still carries mappingSource 'bridge-debug', the block's generation still ends in -INVALID_DEBUG,
 // and every rationale still announces itself. What the shorter identity BUYS is the single-expression
 // judgeKind in bridge-framework.js — the framework no longer branching on which provider it holds. (No
 // line is cited: my own edit moved that expression while this comment was being written, which is the most

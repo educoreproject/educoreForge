@@ -25,22 +25,33 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //   closedView / closedReader / closedWriter                 Proxies asserting the CLOSED member sets (BG-CONTAIN)
 //   mappingEdgeRefusal({...})                                the §6 write-seam refusals incl. the MAPPING_PROPERTIES
 //                                                            closed-set check (NEW enforcement, RULING BF12) and the
-//                                                            producer-derived provenanceTier (RULING 12:20)
+//                                                            mappingKind / mappingSource / mappingConfidence rules
+//                                                            (lane P, 2026-10-04; provenanceTier retired from these edges)
 
 const path = require('path');
 const vocabularyLib = require(path.join(__dirname, '..', 'vocabulary', 'vocabulary'));
 const refuse = require(path.join(__dirname, '..', 'forge-framework', 'refuse'));
 const { TUPLE_LIST_FIELD_LIST, PRODUCER_KIND_BY_MATCH_BASIS } = require('./bridgePluginContract');
 
-const { JUDGE_PROVIDER_ROW_LIST } = require(path.join(__dirname, '..', '..', 'apps', 'graph-builder', 'apps', 'bridge-maker', 'lib', 'judgeProviderRegistry'));
+const { JUDGE_PROVIDER_ROW_LIST, FIXED_MAPPING_CONFIDENCE_BY_PROVIDER_NAME } = require(path.join(__dirname, '..', '..', 'apps', 'graph-builder', 'apps', 'bridge-maker', 'lib', 'judgeProviderRegistry'));
 
-const { SKOS_EDGE_TYPES, SKOS_PREDICATES, MAPPING_PROPERTIES, MAPPING_PROPERTY_NAME_LIST, MAPPING_EDGE_PERMITTED_PROVENANCE_TIER_LIST, SSSOM_JUSTIFICATIONS, sssomJustificationRefusal, MAPPING_KIND_LIST, MAPPING_KIND_BY_RESOLUTION, MAPPING_KIND_BY_MAPPING_SOURCE_FAMILY, MAPPING_SOURCE_FAMILY, MAPPING_SOURCE_SEPARATOR, mappingSourceRefusal, mappingSourceFamilyOf } = vocabularyLib;
+const { SKOS_EDGE_TYPES, SKOS_PREDICATES, MAPPING_PROPERTIES, MAPPING_PROPERTY_NAME_LIST, SSSOM_JUSTIFICATIONS, sssomJustificationRefusal, MAPPING_KIND_LIST, MAPPING_KIND_BY_RESOLUTION, MAPPING_KIND_BY_MAPPING_SOURCE_FAMILY, MAPPING_SOURCE_FAMILY, MAPPING_SOURCE_SEPARATOR, mappingSourceRefusal, mappingSourceFamilyOf, composeMappingSource } = vocabularyLib;
 // the names a 'bridge-<name>' mappingSource may carry: every registered judge provider, enabled or not (a frozen block can
 // hold a verdict from a provider since disabled); read from the registry, never restated
 const JUDGE_PROVIDER_NAME_LIST = Object.freeze(JUDGE_PROVIDER_ROW_LIST.map((oneRow) => oneRow.name));
 // the registry each mappingSource family's NAME is checked against. A family without a row (crosswalk, standard) names a
 // bridge plugin, which the plugin contract has already validated by the time an edge is written.
+// RETIRED_MAPPING_PROPERTY_REASON_BY_NAME — a property a mapping edge once carried and must not carry now, with the reason
+// the refusal gives. provenanceTier: retired by lane P (2026-10-04; TQ, reversing ruling A1); structural and other
+// non-mapping edges keep it.
+const RETIRED_MAPPING_PROPERTY_REASON_BY_NAME = Object.freeze({
+	provenanceTier: 'provenanceTier is RETIRED from mapping edges (2026-10-04): mappingKind carries the kind (inferred / authored), mappingSource who made it (bridge-debug for the debug judge), mappingConfidence how sure. A second field saying the same thing in other words is how the DME came to call judgments authored.',
+});
 const REGISTERED_SOURCE_NAME_LIST_BY_FAMILY = Object.freeze({ [MAPPING_SOURCE_FAMILY.BRIDGE]: JUDGE_PROVIDER_NAME_LIST });
+// the fixed mappingConfidence a whole mappingSource is held to ('bridge-debug' → 0), composed from the registry's row
+const FIXED_MAPPING_CONFIDENCE_BY_MAPPING_SOURCE = Object.freeze(
+	Object.keys(FIXED_MAPPING_CONFIDENCE_BY_PROVIDER_NAME).reduce((soFar, oneProviderName) => ({ ...soFar, [composeMappingSource({ family: MAPPING_SOURCE_FAMILY.BRIDGE, sourceName: oneProviderName })]: FIXED_MAPPING_CONFIDENCE_BY_PROVIDER_NAME[oneProviderName] }), {}),
+);
 
 const HUB_REFERENCE_LABEL = 'HubReference';
 const PROPERTY_TIER = 'property';
@@ -79,7 +90,6 @@ const EVERY_EDGE_REQUIRED_PROPERTY_LIST = Object.freeze([
 	MAPPING_PROPERTIES.PREDICATE_ASSERTED_BY,
 	MAPPING_PROPERTIES.ATTESTATION_CHANNEL_LIST,
 	MAPPING_PROPERTIES.DECISION_BLOCK_HASH,
-	MAPPING_PROPERTIES.PROVENANCE_TIER,
 	MAPPING_PROPERTIES.MAPPING_KIND,
 	MAPPING_PROPERTIES.MAPPING_SOURCE,
 ]);
@@ -434,6 +444,11 @@ const mappingEdgeRefusal = ({ subjectStableId, objectStableId, edgeType, edgePro
 	if (!isPlainObject(edgeProperties)) {
 		return refuse.byName({ moduleName, what: 'writeMappingEdge: edgeProperties is not an object', where: 'the closed MAPPING_PROPERTIES set' });
 	}
+	// a RETIRED property is refused with its own reason before the closed-set check would refuse it as merely unknown
+	const retiredName = Object.keys(RETIRED_MAPPING_PROPERTY_REASON_BY_NAME).find((oneName) => Object.prototype.hasOwnProperty.call(edgeProperties, oneName));
+	if (retiredName !== undefined) {
+		return refuse.byName({ moduleName, what: `writeMappingEdge: a mapping edge carries '${retiredName}' (${JSON.stringify(edgeProperties[retiredName])})`, where: RETIRED_MAPPING_PROPERTY_REASON_BY_NAME[retiredName] });
+	}
 	const outside = Object.keys(edgeProperties).find((oneName) => MAPPING_PROPERTY_NAME_LIST.indexOf(oneName) === -1);
 	if (outside !== undefined) {
 		return refuse.byName({ moduleName, what: `writeMappingEdge: edge property '${outside}' is outside vocabulary.MAPPING_PROPERTIES (${MAPPING_PROPERTY_NAME_LIST.join(', ')})`, where: 'the CLOSED SET check (RULING BF12); add a vocabulary row in its own named commit or drop the property' });
@@ -455,7 +470,7 @@ const mappingEdgeRefusal = ({ subjectStableId, objectStableId, edgeType, edgePro
 			return refuse.byName({ moduleName, what: `writeMappingEdge: an '${edgeProducerKind}' edge lacks '${oneName}'`, where: 'an authored mapping names WHO asserted it and WHAT FIELD it matched on; both are required on every authored edge (§5.7, BG-THREE)' });
 		}
 		if (disposition === 'forbidden' && Object.prototype.hasOwnProperty.call(edgeProperties, oneName)) {
-			return refuse.byName({ moduleName, what: `writeMappingEdge: an '${edgeProducerKind}' edge carries '${oneName}' (${JSON.stringify(oneValue)})`, where: 'nobody AUTHORED an inferred mapping and it matched on no FIELD — the key must be ABSENT, not null, not a borrowed one; the producer is named by producerKind and provenanceTier (RULING 2026-08-17 amending §11.7 (c)(d))' });
+			return refuse.byName({ moduleName, what: `writeMappingEdge: an '${edgeProducerKind}' edge carries '${oneName}' (${JSON.stringify(oneValue)})`, where: 'nobody AUTHORED an inferred mapping and it matched on no FIELD — the key must be ABSENT, not null, not a borrowed one; the producer is named by producerKind, mappingKind and mappingSource (RULING 2026-08-17 amending §11.7 (c)(d))' });
 		}
 	}
 	if (SKOS_PREDICATES.indexOf(edgeProperties.predicate) === -1) {
@@ -493,7 +508,7 @@ const mappingEdgeRefusal = ({ subjectStableId, objectStableId, edgeType, edgePro
 		return refuse.byName({ moduleName, what: `writeMappingEdge: mappingKind ${JSON.stringify(edgeProperties.mappingKind)} is not in MAPPING_KIND_LIST (${MAPPING_KIND_LIST.join(', ')})`, where: 'vocabulary.MAPPING_KIND (lane P, 2026-10-04)' });
 	}
 	if (MAPPING_KIND_BY_RESOLUTION[edgeProperties.resolution] !== edgeProperties.mappingKind) {
-		return refuse.byName({ moduleName, what: `writeMappingEdge: mappingKind '${edgeProperties.mappingKind}' disagrees with resolution '${edgeProperties.resolution}' (which is ${MAPPING_KIND_BY_RESOLUTION[edgeProperties.resolution]})`, where: 'vocabulary.MAPPING_KIND_BY_RESOLUTION: a judged edge is inferred, a specified edge authored' });
+		return refuse.byName({ moduleName, what: `writeMappingEdge: mappingKind '${edgeProperties.mappingKind}' disagrees with resolution '${edgeProperties.resolution}' (which is ${MAPPING_KIND_BY_RESOLUTION[edgeProperties.resolution]})`, where: 'vocabulary.MAPPING_KIND_BY_RESOLUTION: a judged edge is inferred (the debug judge\'s too), a specified edge authored' });
 	}
 	const sourceRefusal = mappingSourceRefusal(edgeProperties.mappingSource);
 	if (sourceRefusal) {
@@ -508,8 +523,10 @@ const mappingEdgeRefusal = ({ subjectStableId, objectStableId, edgeType, edgePro
 	if (registeredSourceNameList !== undefined && registeredSourceNameList.indexOf(sourceName) === -1) {
 		return refuse.byName({ moduleName, what: `writeMappingEdge: mappingSource '${edgeProperties.mappingSource}' names '${sourceName}', which is not registered for the '${sourceFamily}' family (${registeredSourceNameList.join(', ')})`, where: 'judgeProviderRegistry.JUDGE_PROVIDER_ROW_LIST: a bridge source is named from the registry, never a literal' });
 	}
-	if (MAPPING_EDGE_PERMITTED_PROVENANCE_TIER_LIST.indexOf(edgeProperties.provenanceTier) === -1) {
-		return refuse.byName({ moduleName, what: `writeMappingEdge: provenanceTier '${edgeProperties.provenanceTier}' is not a mapping-edge tier (${MAPPING_EDGE_PERMITTED_PROVENANCE_TIER_LIST.join(', ')})`, where: 'the ENGINE-LEVEL tier derived from producerKind, or invalid-debug on a debug block (RULING 12:20)' });
+	// a judge held to a FIXED confidence (the debug judge: 0) may not appear surer than that
+	const fixedConfidence = FIXED_MAPPING_CONFIDENCE_BY_MAPPING_SOURCE[edgeProperties.mappingSource];
+	if (fixedConfidence !== undefined && edgeProperties.mappingConfidence !== fixedConfidence) {
+		return refuse.byName({ moduleName, what: `writeMappingEdge: a '${edgeProperties.mappingSource}' edge carries mappingConfidence ${JSON.stringify(edgeProperties.mappingConfidence)}, not its fixed ${fixedConfidence}`, where: 'judgeProviderRegistry.FIXED_MAPPING_CONFIDENCE_BY_PROVIDER_NAME: the debug judge took candidate 1 unconditionally, so nothing informed its edges (TQ, 2026-10-04)' });
 	}
 	if (!Array.isArray(edgeProperties.attestationChannelList) || edgeProperties.attestationChannelList.length === 0) {
 		return refuse.byName({ moduleName, what: 'writeMappingEdge: attestationChannelList must be a non-empty list', where: 'attestation channels are DATA on the edge (BR-045)' });

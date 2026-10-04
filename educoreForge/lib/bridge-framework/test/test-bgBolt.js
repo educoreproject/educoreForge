@@ -122,7 +122,6 @@ const validEdge = () => ({
 		[vocabularyLib.MAPPING_PROPERTIES.ATTESTATION_CHANNEL_LIST]: ['crosswalk:2'],
 		[vocabularyLib.MAPPING_PROPERTIES.DECISION_BLOCK_HASH]: 'c'.repeat(64),
 		[vocabularyLib.MAPPING_PROPERTIES.MATCH_ID]: 'd'.repeat(64),
-		[vocabularyLib.MAPPING_PROPERTIES.PROVENANCE_TIER]: 'spec-authoritative',
 		[vocabularyLib.MAPPING_PROPERTIES.SUBJECT_SOURCE]: 'Toy',
 		[vocabularyLib.MAPPING_PROPERTIES.SUBJECT_VERSION]: '1.2.3',
 		[vocabularyLib.MAPPING_PROPERTIES.OBJECT_SOURCE]: 'ToyHub',

@@ -15,7 +15,7 @@
 //   auditManifestMappingBlocks({ standardsDatabase, manifestRefId }, cb) → cb(err, { manifestRefId, memberCount, mappingBlockList, refusalMessageList })
 //
 // Refuses BY NAME: an absent manifest; a member the store cannot return; a block whose text does not deserialise;
-// any relationship block carrying an edge with provenanceTier 'invalid-debug' (naming the block subject and the
+// any relationship block carrying an edge with mappingSource 'bridge-debug' (provenanceTier 'invalid-debug' until lane P, 2026-10-04) (naming the block subject and the
 // first offender — the rule's own message). A manifest with ZERO relationship members is NOT a refusal — it is
 // REPORTED as such (mappingBlockList: []), so a forge-only build certifies as before and a bridged build cannot
 // hide a debug block behind "no blocks were looked at".
@@ -137,8 +137,9 @@ const auditMappingBlockText = ({ blockText, subject } = {}) => {
 	const harvestedEdgeList = deserialised.edges.map(harvestedEdgeFrom);
 	const refusal = certificationCheckLib.debugEdgeRefusal({ harvestedEdgeList, blockLabel: subject });
 	const invalidDebugEdgeCount = harvestedEdgeList.filter((oneEdge) => {
-		const tier = oneEdge.properties && oneEdge.properties.provenanceTier;
-		return (Array.isArray(tier) ? tier[0] : tier) === vocabularyLib.PROVENANCE_TIER.INVALID_DEBUG;
+		// the debug marker is mappingSource 'bridge-debug' since lane P (2026-10-04); provenanceTier no longer rides a mapping edge
+		const mappingSource = oneEdge.properties && oneEdge.properties.mappingSource;
+		return (Array.isArray(mappingSource) ? mappingSource[0] : mappingSource) === certificationCheckLib.DEBUG_MAPPING_SOURCE;
 	}).length;
 	// ⟪JOB 6⟫ THE JUDGE ENUMERATION, and its refusal is kept in a SEPARATE FIELD from refusalMessage.
 	// That separation is the mechanism by which "the invalid-debug refusal fires FIRST" is STRUCTURAL rather

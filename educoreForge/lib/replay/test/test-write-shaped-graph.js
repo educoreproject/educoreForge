@@ -216,6 +216,35 @@ harness.match(
 	/provenanceTier enforcement/,
 );
 
+// =====================================================================
+// GUARD 3, MAPPING EDGES (lane P, mappingProvenance 2026-10-04; TQ, relayed by VIOLET_VALLEY): a SKOS-typed edge carries
+// mappingKind and NO provenanceTier, which is retired from mapping edges. Each refusal is RE-OBSERVED under an engine double
+// whose mapping rule is replaced by the old every-edge tier rule, and must change BY MESSAGE.
+// =====================================================================
+// the double compiles ONLY replay-engine.js with the mutation; every require it makes loads for real (moduleDouble's
+// recursive compile chokes on content-address.js's shebang)
+const { loadBuildJsDouble } = require('../../bridge-framework/test/testSupport/bridgeTwinFactories');
+const REPLAY_ENGINE_PATH = require('path').join(__dirname, '..', 'replay-engine.js');
+const mappingEdgeWith = (properties) => ({ type: 'EXACT_MATCH', fromRef: { source: 'LIF', id: 'urn:a' }, toRef: { source: 'LIF', id: 'urn:b' }, properties });
+const mappingErrorOf = (engine, properties) => engine.validateShapedGraph(oneGroup([goodNode('urn:a'), goodNode('urn:b')], [mappingEdgeWith(properties)])).error;
+const OLD_RULE_FIND = "\t\tconst edgeClass = MAPPING_EDGE_TYPE_LIST.indexOf(oneEdge.type) === -1 ? 'other' : 'mapping';";
+const oldRuleEngine = (() => {
+	return loadBuildJsDouble({ buildJsPath: REPLAY_ENGINE_PATH, mutationList: [{ find: OLD_RULE_FIND, replace: "\t\tconst edgeClass = 'other';" }] })();
+})();
+
+harness.equal('a mapping edge with mappingKind and NO provenanceTier is admitted', mappingErrorOf(replayEngine, { mappingKind: ['inferred'], mappingSource: ['bridge-jev'] }), '');
+const unkindedMappingRefusal = mappingErrorOf(replayEngine, { mappingSource: ['bridge-jev'] });
+harness.match('a mapping edge with NO mappingKind is REFUSED, by its own reason', unkindedMappingRefusal, /a mapping edge's mappingKind is null, not one of inferred, authored/);
+harness.match('  and names the edge type', unkindedMappingRefusal, /EXACT_MATCH/);
+const tieredMappingRefusal = mappingErrorOf(replayEngine, { mappingKind: ['inferred'], provenanceTier: ['embedding-inferred'] });
+harness.match('a mapping edge carrying provenanceTier is REFUSED as retired', tieredMappingRefusal, /a mapping edge carries provenanceTier "embedding-inferred", retired from mapping edges/);
+harness.match('a mapping edge with an out-of-vocabulary mappingKind is REFUSED', mappingErrorOf(replayEngine, { mappingKind: ['guessed'] }), /mappingKind is "guessed", not one of/);
+harness.equal('a NON-mapping edge still needs its tier and nothing else (the old rule, unchanged)', errorOf(oneGroup([goodNode('urn:a'), goodNode('urn:b')], [goodEdge('urn:a', 'urn:b')])), '');
+// RED, BY MESSAGE, under the old every-edge rule
+const unkindedUnderOldRule = mappingErrorOf(oldRuleEngine, { mappingSource: ['bridge-jev'] });
+harness.ok('RED-OBSERVED: under the old rule the unkinded mapping edge is refused for a DIFFERENT reason', !/mappingKind is null/.test(unkindedUnderOldRule) && /provenanceTier null is not one of/.test(unkindedUnderOldRule), unkindedUnderOldRule);
+harness.equal('RED-OBSERVED: under the old rule a tiered mapping edge is ADMITTED', mappingErrorOf(oldRuleEngine, { mappingKind: ['inferred'], provenanceTier: ['embedding-inferred'] }), '');
+
 harness.equal(
 	'a SCALAR provenanceTier is accepted (the post-pgToStored shape)',
 	errorOf(

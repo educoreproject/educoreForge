@@ -10,8 +10,9 @@
 //   asserted at framework construction (a vocabulary double with authored: '' → construction refused).
 //   BG-GEN: the frozen text contains EACH header member (one conjunct each; strip → refused at freeze); a debug
 //   block's mark appears on EVERY edge it produces, and materialise reads it back on plain replay.
-//   BG-DEBUG (a) generation ends -INVALID_DEBUG and judgeKind is debug:<rule>; (b) EVERY edge of a debug block carries
-//   provenanceTier invalid-debug (specified included) and every judged edge mappingTool = the debug model id — on
+//   BG-DEBUG (a) generation ends -INVALID_DEBUG and judgeKind is debug:<rule>; (b) every JUDGED edge of a debug block carries
+//   mappingSource bridge-debug + mappingConfidence 0 (provenanceTier retired from mapping edges, lane P 2026-10-04), every
+//   specified edge stays authored, and every judged edge mappingTool = the debug model id — on
 //   the plain replay too; (c) the goldEvalCheck bridge sibling's rule (certificationCheck) REFUSES a harvested block
 //   with an invalid-debug edge naming it; (d) --useDebugJudge without --rebridge refused, two judges refused —
 //   RE-OBSERVED red in THIS suite through build.js's resolveInferenceConfig under an in-memory build.js double;
@@ -44,7 +45,7 @@ const vocabularyLib = require(path.join(__dirname, '..', '..', 'vocabulary', 'vo
 // REQUIRED_HEADER_KEY_LIST, not HEADER_KEY_ORDER: BG-GEN proves that stripping a member refuses the freeze, which is
 // true only of the required members. The optional judge-config keys (B2) are omitted by design; test-bgJudgeConfig owns them.
 const { REQUIRED_HEADER_KEY_LIST } = require('../decisionBlock');
-const { debugEdgeRefusal } = require('../certificationCheck');
+const { debugEdgeRefusal, DEBUG_MAPPING_SOURCE } = require('../certificationCheck');
 
 const twinRegistry = makeTwinRegistry();
 const FRAMEWORK_FILE = 'bridge-framework.js';
@@ -197,21 +198,23 @@ REQUIRED_HEADER_KEY_LIST.forEach((oneMember) => {
 });
 genConjunctList.push(
 	twiceConjunct({
-		conjunctId: 'debugMarkOnEveryEdgeOnReplay',
-		title: 'a debug block\'s mark (invalid-debug) is on EVERY edge on freeze AND on plain replay (materialise reads it back from the generation)',
-		twinNameList: ['skipDebugMarkFromGeneration'],
+		conjunctId: 'debugJudgeMarkSurvivesReplay',
+		title: 'a debug block\'s JUDGED edges carry mappingSource bridge-debug and mappingConfidence 0 on the plain replay too (read from each frozen record\'s judge identity; lane P, 2026-10-04)',
+		twinNameList: ['fixedDebugConfidenceIgnored'],
 		judge: (outcome) => {
 			const second = outcome.second;
 			if (!second || second.runError) {
 				return { pass: false, detail: String(second ? second.runError : 'no second run').slice(0, 200) };
 			}
-			const edgeList = edgesOf(second);
-			const unmarked = edgeList.filter((oneEdge) => oneEdge.properties.provenanceTier !== 'invalid-debug');
-			return { pass: edgeList.length > 0 && unmarked.length === 0, detail: `${edgeList.length} edges, ${unmarked.length} unmarked on the plain replay` };
+			const judgedEdgeList = edgesOf(second).filter((oneEdge) => oneEdge.properties.resolution === 'judged');
+			const unmarked = judgedEdgeList.filter((oneEdge) => oneEdge.properties.mappingSource !== DEBUG_MAPPING_SOURCE || oneEdge.properties.mappingConfidence !== 0);
+			return { pass: judgedEdgeList.length > 0 && unmarked.length === 0, detail: `${judgedEdgeList.length} judged edges, ${unmarked.length} unmarked on the plain replay` };
 		},
 	}),
 );
-frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-GEN', conjunctId: 'debugMarkOnEveryEdgeOnReplay', twinName: 'skipDebugMarkFromGeneration', fileName: FRAMEWORK_FILE, find: '\t\t\t\tconst blockDebugMark = debugJudgeLib.debugMarkFromGeneration(block.header.generation);', replace: '\t\t\t\tconst blockDebugMark = undefined;' });
+// a materialiser that ignores the provider's FIXED confidence writes the band value; the seam refuses that on the double, so
+// the replay run itself fails, and the conjunct reads the failure
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-GEN', conjunctId: 'debugJudgeMarkSurvivesReplay', twinName: 'fixedDebugConfidenceIgnored', fileName: MATERIALISER_FILE, find: '\treturn fixedConfidence === undefined ? record.confidence : fixedConfidence;', replace: '\treturn record.confidence;' });
 
 // ---------------------------------------------------------------------
 // BG-DEBUG
@@ -227,15 +230,15 @@ const debugConjunctList = [
 		}),
 	}),
 	twiceConjunct({
-		conjunctId: 'b_everyEdgeInvalidDebugAndJudgedToolIsDebugModel',
-		title: 'EVERY edge of a debug block carries provenanceTier invalid-debug (specified included) and every judged edge mappingTool = the debug model id — on the re-judge AND the plain replay',
-		twinNameList: ['specifiedEdgesKeepAuthoredTier'],
+		conjunctId: 'b_judgedEdgesNameDebugJudgeSpecifiedStayAuthored',
+		title: 'every JUDGED edge of a debug block carries mappingSource bridge-debug, mappingConfidence 0 and mappingTool = the debug model id; every SPECIFIED edge stays authored (a document named it, the debug judge did not) — on the re-judge AND the plain replay (lane P, 2026-10-04)',
+		twinNameList: ['debugSourceFromLiteral'],
 		judge: (outcome) => {
 			const both = [outcome.first, outcome.second].filter(Boolean);
 			if (both.length !== 2 || both.some((oneOutcome) => oneOutcome.runError)) {
 				return { pass: false, detail: both.map((oneOutcome) => String(oneOutcome.runError || 'ok').slice(0, 100)).join('; ') };
 			}
-			const bad = both.reduce((soFar, oneOutcome) => soFar.concat(edgesOf(oneOutcome).filter((oneEdge) => oneEdge.properties.provenanceTier !== 'invalid-debug' || (oneEdge.properties.resolution === 'judged' && oneEdge.properties.mappingTool !== DEBUG_MODEL_ID))), []);
+			const bad = both.reduce((soFar, oneOutcome) => soFar.concat(edgesOf(oneOutcome).filter((oneEdge) => (oneEdge.properties.resolution === 'judged' ? oneEdge.properties.mappingSource !== DEBUG_MAPPING_SOURCE || oneEdge.properties.mappingConfidence !== 0 || oneEdge.properties.mappingTool !== DEBUG_MODEL_ID : oneEdge.properties.mappingKind !== 'authored'))), []);
 			const specifiedSeen = both.some((oneOutcome) => edgesOf(oneOutcome).some((oneEdge) => oneEdge.properties.resolution === 'specified'));
 			return { pass: bad.length === 0 && specifiedSeen, detail: `${bad.length} bad edge(s); specified edges seen ${specifiedSeen}` };
 		},
@@ -248,7 +251,7 @@ const debugConjunctList = [
 			const harvest = outcome.graphDouble.harvestByLabel({ applyLabel: 'BridgedRelation_TOY_TOYHUB' });
 			const checker = scenario.frameworkMutationList.some((oneMutation) => oneMutation.modulePath.endsWith(CERTIFICATION_FILE)) ? moduleDouble.loadWithMutations({ modulePath: path.join(scenarioLib.FRAMEWORK_DIR, CERTIFICATION_FILE), mutationList: scenario.frameworkMutationList.filter((oneMutation) => oneMutation.modulePath.endsWith(CERTIFICATION_FILE)) }).debugEdgeRefusal : debugEdgeRefusal;
 			const refusal = checker({ harvestedEdgeList: harvest.edgeList, blockLabel: 'BridgedRelation_TOY_TOYHUB' });
-			return { pass: refusal !== null && /invalid-debug/.test(refusal.message) && /BridgedRelation_TOY_TOYHUB/.test(refusal.message), detail: refusal === null ? 'the checker PASSED a debug block' : refusal.message.slice(0, 200) };
+			return { pass: refusal !== null && /mappingSource 'bridge-debug'/.test(refusal.message) && /BridgedRelation_TOY_TOYHUB/.test(refusal.message), detail: refusal === null ? 'the checker PASSED a debug block' : refusal.message.slice(0, 200) };
 		}),
 	}),
 	pureConjunct({
@@ -295,7 +298,7 @@ const debugConjunctList = [
 	}),
 ];
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-DEBUG', conjunctId: 'a_generationEndsInDebugMarkAndJudgeKind', twinName: 'dropGenerationSuffix', fileName: FRAMEWORK_FILE, find: '\t\t\tconst generation = debugJudgeLib.generationWithDebugMark(sourceWindowLib.generationWithWindowMark(baseGeneration, windowMark), debugMark);', replace: '\t\t\tconst generation = sourceWindowLib.generationWithWindowMark(baseGeneration, windowMark);' });
-frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-DEBUG', conjunctId: 'b_everyEdgeInvalidDebugAndJudgedToolIsDebugModel', twinName: 'specifiedEdgesKeepAuthoredTier', fileName: MATERIALISER_FILE, find: '\tif (debugMark) {\n\t\treturn PROVENANCE_TIER.INVALID_DEBUG;\n\t}', replace: "\tif (debugMark && producerKind !== 'authored') {\n\t\treturn PROVENANCE_TIER.INVALID_DEBUG;\n\t}" });
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-DEBUG', conjunctId: 'b_judgedEdgesNameDebugJudgeSpecifiedStayAuthored', twinName: 'debugSourceFromLiteral', fileName: MATERIALISER_FILE, find: 'sourceName: owner.providerName })', replace: "sourceName: 'jev' })" });
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-DEBUG', conjunctId: 'c_certificationCheckRefusesInvalidDebugEdge', twinName: 'certificationCheckPassesDebug', fileName: CERTIFICATION_FILE, find: '\tif (offenderList.length === 0) {\n\t\treturn null;\n\t}', replace: '\tif (offenderList.length >= 0) {\n\t\treturn null;\n\t}' });
 scenarioTwin({ registry: twinRegistry, gateId: 'BG-DEBUG', conjunctId: 'd_useDebugJudgeWithoutRebridgeRefused', twinName: 'buildDoubleAdmitsDebugWithoutScope', leverKind: 'productionMutation', mutate: (scenario) => {
 	moduleDouble.assertMutationApplies({ modulePath: BUILD_JS_PATH, find: '\tif (debugJudgeRule && !scopeIsActive) {' });

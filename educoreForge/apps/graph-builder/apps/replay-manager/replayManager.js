@@ -47,6 +47,8 @@ const contentAddress = require(path.join(TREE_LIB, 'content-address', 'content-a
 const vocabulary = require(path.join(TREE_LIB, 'vocabulary', 'vocabulary'));
 const finishingModule = require(path.join(__dirname, 'lib', 'finishing', 'finishing'));
 const passportWriterModule = require(path.join(__dirname, 'lib', 'finishing', 'passport-writer'));
+// the debug judge's mappingSource, which the passport's trust verdict reads (lane P, 2026-10-04)
+const certificationCheckLib = require(path.join(TREE_LIB, 'bridge-framework', 'certificationCheck'));
 
 // The provisioning knobs live in graphBuilder.ini, [replay-manager] section: neo4jImage,
 // portSearchStart, portSearchSpan, readyTimeoutSeconds. All four are REQUIRED and all four are
@@ -1173,7 +1175,7 @@ const moduleFunction =
 			manifestRefId,
 			gateResults,
 		});
-		const passportWriter = passportWriterModule({ vocabulary });
+		const passportWriter = passportWriterModule({ vocabulary, debugMappingSource: certificationCheckLib.DEBUG_MAPPING_SOURCE });
 
 		// The verb reuses THE SAME finisher instances the registry ran, found by name in the registry
 		// itself. Requiring fresh copies here would give the verb a second implementation of each
