@@ -117,7 +117,11 @@ const BASE_TAG = 'preBridgeFramework-081626';
 // REQUIRED_PROPERTIES.MAPPING_EDGE defined, the tier and match-edge texts say a mapping edge carries no provenanceTier and that
 // the debug judge is mappingSource bridge-debug. THE ONE FILE OUTSIDE THE LIST. Base moved; list NOT widened. Fresh red observed
 // on 3923467's tree before this commit (DEVLOG-P).
-const POST_D1_BASE_TAG = 'postMappingProvenancePVocabularyIiB-100426'; // re-anchored 2026-10-04 (mappingProvenance lane P, second) — base moved, allowed-path list NOT widened
+// ═══ RE-ANCHOR (ii) THIRD, 2026-10-04 (VIOLET_OCEAN, lane P; TQ-approved metadata additions) ═══ postMappingProvenancePVocabularyIiB-100426
+// -> postMappingProvenancePVocabularyIiC-100426, tag cut ON this commit. CENSUS on f4ab2c4: ONE file, vocabulary-definitions.js
+// (the five match-relation definitions as judgments; StandardDefinition's mappingKindList / mappingSourceList). Outside the list;
+// base moved, list NOT widened. Fresh red observed on f4ab2c4 (DEVLOG-P).
+const POST_D1_BASE_TAG = 'postMappingProvenancePVocabularyIiC-100426'; // re-anchored 2026-10-04 (mappingProvenance lane P, third) — base moved, allowed-path list NOT widened
 // ⟪A THIRD BASELINE — RULING P1-R11, BRIEF-SEAM-reanchorBgSeamUntouched.md, applied 2026-08-29 by
 // STERLING_PEAK during hub kit role migration Phase 0.E4⟫
 //
