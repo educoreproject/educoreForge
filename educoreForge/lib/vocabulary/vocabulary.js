@@ -694,6 +694,12 @@ const MAPPING_PROPERTY_NAME_LIST = Object.freeze(Object.keys(MAPPING_PROPERTIES)
 // provenanceTier's place on mapping edges (lane P, 2026-10-04). The producer kinds a mapping block may have, which
 // conflictDetector read off the first table's keys, are declared here in their own right.
 const MAPPING_PRODUCER_KIND_LIST = Object.freeze(['authored', 'inferred']);
+// STANDARD_KIND — what kind of standard a StandardDefinition card describes (lane P, 2026-10-04; TQ via VIOLET_VALLEY): a data
+// standard (elements that map to the hub) or a classification taxonomy (codes that classify, CIP / SOC). Every current
+// standard is a dataStandard. Today the value is stamped from configs/dmeStandardUsageTips.json beside each standard's usage
+// tips; TODO (2026-10-04, TQ): move it into each standard's forge declaration.
+const STANDARD_KIND = Object.freeze({ DATA_STANDARD: 'dataStandard', CLASSIFICATION_TAXONOMY: 'classificationTaxonomy' });
+const STANDARD_KIND_LIST = Object.freeze([STANDARD_KIND.DATA_STANDARD, STANDARD_KIND.CLASSIFICATION_TAXONOMY]);
 
 // =====================================================================
 // UNIQUENESS KEYS (replay-engine.js MERGE key; addressSignature reserved for the HubReference phases)
@@ -1083,6 +1089,8 @@ const vocabulary = {
 	MAPPING_PROPERTIES,
 	MAPPING_PROPERTY_NAME_LIST,
 	MAPPING_PRODUCER_KIND_LIST,
+	STANDARD_KIND,
+	STANDARD_KIND_LIST,
 	MAPPING_KIND,
 	MAPPING_KIND_LIST,
 	MAPPING_KIND_BY_RESOLUTION,

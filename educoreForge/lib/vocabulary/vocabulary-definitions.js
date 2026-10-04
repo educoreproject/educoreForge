@@ -33,7 +33,7 @@ const TERM_DEFINITIONS = {
 		RecipeBlock:
 			'One member block of a ManifestRecipe: block type, subject, version, producer, and content-address (blockId). The graph-side view of a content-addressed store block.',
 		StandardDefinition:
-			'The per-source-standard descriptor derived at finishing time: display name, version and its provenance (versionSource), source format, element counts, and mappingKindList / mappingSourceList: the distinct mappingKind and mappingSource values its own match edges carry, in the same vocabulary as the edges, read from the graph (both empty for a standard with no match edge, such as the hub).',
+			'The per-source-standard descriptor derived at finishing time: display name, version and its provenance (versionSource), source format, element counts, and mappingKindList / mappingSourceList: the distinct mappingKind and mappingSource values its own match edges carry, in the same vocabulary as the edges, read from the graph (both empty for a standard with no match edge, such as the hub); and, where configured, standardKind (dataStandard | classificationTaxonomy) and standardUsageTips, guidance for reading this standard, stamped from configs/dmeStandardUsageTips.json (absent when the standard has no entry).',
 		GraphMeta:
 			'The structural marker on every legitimately source-less node (schema view, manifest recipe, standard definitions, the build passport). Purity rule: every node carries an _source XOR :GraphMeta — never both, never neither.',
 		UsagePattern:

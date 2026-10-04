@@ -50,6 +50,10 @@ const TREE_LIB = path.join(__dirname, '..', '..', '..', '..', '..', '..', 'lib')
 const vocabulary = require(path.join(TREE_LIB, 'vocabulary', 'vocabulary'));
 const { FINISHER_MODULE_SHAPE } = require(path.join(__dirname, '..', '..', '..', '..', 'interfaces'));
 
+// system/configs/dmeStandardUsageTips.json: TREE_LIB/../../.. is system/ for the main checkout (system/code/educoreForge) and,
+// through the codeWorktrees/configs symlink, for a worktree too
+const STANDARD_METADATA_FILE_PATH = path.join(TREE_LIB, '..', '..', '..', 'configs', 'dmeStandardUsageTips.json');
+
 const MODE_EMIT = 'emit';
 const MODE_APPLY = 'apply';
 
@@ -67,7 +71,13 @@ const moduleFunction =
 		const schemaViewFinisher = require('./lib/schema-view-finisher')({ vocabulary });
 		const schemaConstraintFinisher = require('./lib/schema-constraint-finisher')({ vocabulary });
 		const manifestRecipeFinisher = require('./lib/manifest-recipe-finisher')({ vocabulary });
-		const standardDefinitionFinisher = require('./lib/standard-definition-finisher')({ vocabulary });
+		// ⟪lane P, 2026-10-04; TQ: "the EASIEST HACK for now"⟫ per-standard kind + usage tips from the configs side file; a
+		// missing or malformed file is refused by name. TODO (2026-10-04, TQ): move kind + tips into each forge declaration.
+		const standardMetadataRead = require('./lib/standard-usage-tips').readStandardMetadataEntryList({ filePath: STANDARD_METADATA_FILE_PATH, standardKindList: vocabulary.STANDARD_KIND_LIST });
+		if (standardMetadataRead.error) {
+			throw new Error(standardMetadataRead.error);
+		}
+		const standardDefinitionFinisher = require('./lib/standard-definition-finisher')({ vocabulary, standardMetadataEntryList: standardMetadataRead.standardMetadataEntryList });
 		const buildAttestationFinisher = require('./lib/build-attestation-finisher')({ vocabulary });
 		const usagePatternFinisher = require('./lib/usage-pattern-finisher')({ vocabulary });
 		const graphMetaFinisher = require('./lib/graph-meta-finisher')({ vocabulary });
