@@ -290,7 +290,11 @@ const POST_D1_BASE_TAG = 'postMappingProvenancePVocabularyIiC-100426'; // re-anc
 //   test/acceptance/expectedFingerprints.json | 4 — the edfi PROXY re-pin 814ce961… -> 04abc77b… (f8ea687), the RULED crosswalk exclusion.
 // No framework SOURCE file under lib/forge-framework/ moved. THE PATH IS UNCHANGED, NO EXCLUSION IS ADDED. Fresh red observed
 // against THIS tag (DEVLOG-F).
-const PHASE0_ANCHOR_TAG = 'postEdfiCrosswalkOutFForgeFrameworkIii-100226'; // re-anchored by PRISM_LATTICE, goldJev lane F — the TENTH anchor
+// mappingProvenance LANE P RE-ANCHOR of (iii) (VIOLET_OCEAN, 2026-10-04; pre-authorised): postEdfiCrosswalkOutFForgeFrameworkIii-100226
+// -> postMappingProvenancePForgeFrameworkIii-100426, tag cut ON this commit. CENSUS (git diff --stat ... -- lib/forge-framework) at
+// 94c2a9c: ONE file, lib/forge-framework/test/test-gSeamUntouched.js 11 — its own re-anchor to postMappingProvenancePGSeamUntouched-100426
+// (94c2a9c). lib/forge-framework SOURCE: UNTOUCHED. Fresh red observed on 94c2a9c (DEVLOG-P). The ELEVENTH anchor.
+const PHASE0_ANCHOR_TAG = 'postMappingProvenancePForgeFrameworkIii-100426'; // re-anchored by VIOLET_OCEAN, mappingProvenance lane P — the ELEVENTH anchor
 // PHASE 1 RE-ANCHOR — RULING FJ-P1-1, and it moves seamDiffEmpty ALONE.
 //
 // WHY IT HAD TO MOVE. SEAM_PATH_LIST watches forges/*/forge*.js, forges/*/lib/*Declaration.js and
