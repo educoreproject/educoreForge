@@ -101,7 +101,16 @@ const BASE_TAG = 'preBridgeFramework-081626';
 //   lib/vocabulary/vocabulary-definitions.js — V1's definitions of the four sif260928 edge types and judgedSubjectStableId (bb63af1)
 //     plus M1's supervisor-owned widening of HAS_CHILD's text to Field -> Field (e96c847, SPEC §9 A26). THE ONE FILE OUTSIDE THE LIST.
 // THE BASELINE MOVES; THE ALLOWED-PATH LIST IS NEVER WIDENED. Fresh red observed against THIS tag (DEVLOG-M1).
-const POST_D1_BASE_TAG = 'postM1VocabularyIi-092926'; // re-anchored 2026-09-29 (SIF replacement M1) — base moved, allowed-path list NOT widened
+// ═══ RE-ANCHOR (ii), 2026-10-04 (VIOLET_OCEAN, mappingProvenance lane P; pre-authorised, WORKORDER step 3) ═══
+// postM1VocabularyIi-092926 -> postMappingProvenancePVocabularyIi-100426, tag cut ON this re-anchor commit. THE SAME SPECIES
+// AGAIN: one RULED edit to vocabulary-definitions.js, the one file outside the list. CENSUS (git diff --name-only
+// postM1VocabularyIi-092926 -- lib/vocabulary/) on 9bace1b:
+//   lib/vocabulary/vocabulary.js, test/test-mappingProperties.js, test/test-sifEdgeVocabulary.js — lane P 9bace1b, allowed;
+//   test/test-sifVocabularyInvariance.js — already in the diff before lane P (not lane P's), allowed (a test file);
+//   lib/vocabulary/vocabulary-definitions.js — lane P 9bace1b: the 'judge-inferred' tier definition (ruled A1), EXACT_MATCH /
+//     CLOSE_MATCH no longer described as authored / inferred, StandardDefinition's disposition text. THE ONE FILE OUTSIDE THE LIST.
+// THE BASELINE MOVES; THE ALLOWED-PATH LIST IS NEVER WIDENED. Fresh red observed on 9bace1b before this commit (DEVLOG-P).
+const POST_D1_BASE_TAG = 'postMappingProvenancePVocabularyIi-100426'; // re-anchored 2026-10-04 (mappingProvenance lane P) — base moved, allowed-path list NOT widened
 // ⟪A THIRD BASELINE — RULING P1-R11, BRIEF-SEAM-reanchorBgSeamUntouched.md, applied 2026-08-29 by
 // STERLING_PEAK during hub kit role migration Phase 0.E4⟫
 //
