@@ -332,14 +332,16 @@ const writeConjuncts = ({ handle, realReader, subjectStableId }) => {
 			const driver = neo4j.driver(handle.boltUrl, neo4j.auth.basic(handle.user, handle.password), { encrypted: false });
 			const session = driver.session();
 			session
-				.run(`MATCH (s {stableId: $subjectId})-[r:EXACT_MATCH]->(o {stableId: $objectId}) RETURN labels(s) AS sLabels, labels(o) AS oLabels, r.attestationChannelList AS acl, r.provenanceTier AS tier, s.role AS replayedRole`, { subjectId, objectId: bareP001572.stableId })
+				.run(`MATCH (s {stableId: $subjectId})-[r:EXACT_MATCH]->(o {stableId: $objectId}) RETURN labels(s) AS sLabels, labels(o) AS oLabels, r.attestationChannelList AS acl, r.mappingKind AS mappingKind, r.provenanceTier AS tier, s.role AS replayedRole`, { subjectId, objectId: bareP001572.stableId })
 				.then((result) => {
 					const row = result.records[0];
 					harness.ok('    the edge exists on the live graph', !!row);
 					harness.ok(`(e) the pair-scoped label is stamped on BOTH endpoints (${APPLY_LABEL})`, row && row.get('sLabels').indexOf(APPLY_LABEL) !== -1 && row.get('oLabels').indexOf(APPLY_LABEL) !== -1, row ? `${row.get('sLabels')} / ${row.get('oLabels')}` : 'no row');
 					const acl = row && row.get('acl');
 					harness.ok(`(f) attestationChannelList round-trips as a LIST of one on the live edge — THE WRITER'S OWN BOLT PATH (graphWriter \`SET r = $map\`), NOT the replay path (see (h)) (got ${JSON.stringify(acl)})`, Array.isArray(acl) && acl.length === 1 && acl[0] === 'elements:5', JSON.stringify(acl));
-					harness.equal('    provenanceTier is the engine-level authored value', row && row.get('tier'), 'spec-authoritative');
+					// ⟪lane P, 2026-10-04⟫ a mapping edge carries mappingKind and NO provenanceTier (retired from mapping edges)
+					harness.equal('    mappingKind is the authored value', row && row.get('mappingKind'), 'authored');
+					harness.equal('    and the edge carries no provenanceTier', row && row.get('tier'), null);
 					// (h) RULING BR3-2 — the PG-JSON contract on the REPLAY path: the block stores the subject's `role` as a
 					// one-element LIST; the replayed node carries the SCALAR. Block-side value read off the pinned block itself.
 					const blockSideNode = replayBlockLib.deserializeBlock(typeof edfiBaseBlockText === 'string' ? edfiBaseBlockText : edfiBaseBlockText.toString('utf8')).nodes.find((oneNode) => oneNode.stableId === subjectId);

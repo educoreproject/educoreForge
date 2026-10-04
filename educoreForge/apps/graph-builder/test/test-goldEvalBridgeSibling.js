@@ -71,9 +71,10 @@ const replayBlockLib = require(path.join(treeRoot, 'lib', 'replay', 'replay-bloc
 const standardsDatabaseModule = require(path.join(treeRoot, 'lib', 'standards-database', 'standards-database'));
 const moduleDouble = require(path.join(treeRoot, 'lib', 'forge-framework', 'test', 'testSupport', 'moduleDouble'));
 const bridgeTwinFactories = require(path.join(treeRoot, 'lib', 'bridge-framework', 'test', 'testSupport', 'bridgeTwinFactories'));
-const vocabularyLib = require(path.join(treeRoot, 'lib', 'vocabulary', 'vocabulary'));
 
-const { PROVENANCE_TIER } = vocabularyLib;
+// the debug judge's mappingSource, read where the production readers read it; and the source a real-judge fixture edge names
+const { DEBUG_MAPPING_SOURCE } = require(path.join(__dirname, '..', '..', '..', 'lib', 'bridge-framework', 'certificationCheck'));
+const REAL_JUDGE_SOURCE = 'bridge-jev';
 
 // ---------------------------------------------------------------------
 // fixtures — a tiny relationship block in the harvest's own PG-JSONL shape (every property a one-element list)
@@ -95,21 +96,29 @@ const RELATIONSHIP_HEADER = {
 	embeddingDims: 0,
 };
 const nodeLineFor = ({ source, stableId }) => ({ ref: { source, id: stableId }, labels: ['BridgedRelation_TOY_TOYHUB'], stableId, properties: { stableId: [stableId] } });
-const edgeLineFor = ({ fromStableId, toStableId, provenanceTier }) => ({
+// ⟪lane P, 2026-10-04⟫ a mapping edge carries no provenanceTier: its provenance is mappingKind / mappingSource (and on a
+// judged edge mappingConfidence). The debug judge is marked by mappingSource 'bridge-debug' with mappingConfidence 0, so the
+// fixtures describe each edge by its SOURCE, and the edge's other provenance fields follow from it (EDGE_PROVENANCE_BY_SOURCE).
+const AUTHORED_SOURCE = 'crosswalk-toyCrosswalkPlugin';
+const EDGE_PROVENANCE_BY_SOURCE = Object.freeze({
+	[AUTHORED_SOURCE]: { mappingKind: ['authored'], mappingSource: [AUTHORED_SOURCE] },
+	[DEBUG_MAPPING_SOURCE]: { mappingKind: ['inferred'], mappingSource: [DEBUG_MAPPING_SOURCE], mappingConfidence: [0] },
+});
+const edgeLineFor = ({ fromStableId, toStableId, mappingSource }) => ({
 	type: 'EXACT_MATCH',
 	fromRef: { source: SOURCE_NAME, id: fromStableId },
 	toRef: { source: HUB_NAME, id: toStableId },
-	properties: { provenanceTier: [provenanceTier], matchBasis: ['crosswalk'], resolution: ['specified'], predicate: ['exactMatch'], decisionBlockHash: ['0'.repeat(64)] },
+	properties: { ...EDGE_PROVENANCE_BY_SOURCE[mappingSource], matchBasis: ['crosswalk'], resolution: ['specified'], predicate: ['exactMatch'], decisionBlockHash: ['0'.repeat(64)] },
 });
-const relationshipBlockTextFor = ({ tierList }) => {
+const relationshipBlockTextFor = ({ sourceList }) => {
 	const nodes = [nodeLineFor({ source: SOURCE_NAME, stableId: 'toy:property/A.one' }), nodeLineFor({ source: SOURCE_NAME, stableId: 'toy:property/A.two' }), nodeLineFor({ source: HUB_NAME, stableId: 'urn:toyhub:P000001' }), nodeLineFor({ source: HUB_NAME, stableId: 'urn:toyhub:P000002' })];
-	const edges = tierList.map((oneTier, oneIndex) => edgeLineFor({ fromStableId: `toy:property/A.${oneIndex === 0 ? 'one' : 'two'}`, toStableId: `urn:toyhub:P00000${oneIndex + 1}`, provenanceTier: oneTier }));
+	const edges = sourceList.map((oneSource, oneIndex) => edgeLineFor({ fromStableId: `toy:property/A.${oneIndex === 0 ? 'one' : 'two'}`, toStableId: `urn:toyhub:P00000${oneIndex + 1}`, mappingSource: oneSource }));
 	return replayBlockLib.serializeBlock({ header: RELATIONSHIP_HEADER, nodes, edges });
 };
 const STANDARD_BASE_TEXT = replayBlockLib.serializeBlock({ header: { ...RELATIONSHIP_HEADER, blockType: 'standardBase', standardKey: 'toy', version: '1.0' }, nodes: [nodeLineFor({ source: SOURCE_NAME, stableId: 'toy:property/A.one' })], edges: [] });
 
-const CLEAN_TEXT = relationshipBlockTextFor({ tierList: [PROVENANCE_TIER.SPEC_AUTHORITATIVE, PROVENANCE_TIER.SPEC_AUTHORITATIVE] });
-const DEBUG_TEXT = relationshipBlockTextFor({ tierList: [PROVENANCE_TIER.SPEC_AUTHORITATIVE, PROVENANCE_TIER.INVALID_DEBUG] });
+const CLEAN_TEXT = relationshipBlockTextFor({ sourceList: [AUTHORED_SOURCE, AUTHORED_SOURCE] });
+const DEBUG_TEXT = relationshipBlockTextFor({ sourceList: [AUTHORED_SOURCE, DEBUG_MAPPING_SOURCE] });
 
 // ---------------------------------------------------------------------
 // SECTION 0 — the PURE half (e): a block edge's ref maps to the endpoint stableId
@@ -135,6 +144,8 @@ harness.match('a block that does not deserialise is refused by name', sibling.au
 // judge provider registry, and that is deliberate — a gate that asked the registry what judges exist could
 // only ever confirm its own expectations, and would go blind to precisely the judge nobody declared.
 //
+// ⟪lane P, 2026-10-04⟫ the tier history below is kept; today a REAL-judge edge carries mappingKind inferred and a
+// mappingSource naming its judge, and only a debug-judge edge carries mappingSource 'bridge-debug'.
 // WHY THESE FIXTURES CARRY 'embedding-inferred' AND NOT 'invalid-debug'. A judged edge from a REAL judge takes
 // its tier from the block's producerKind (MAPPING_EDGE_PROVENANCE_TIER_BY_PRODUCER_KIND: inferred →
 // embedding-inferred); only a DEBUG block is stamped invalid-debug, on every edge it contains (RULING 12:20).
@@ -142,8 +153,8 @@ harness.match('a block that does not deserialise is refused by name', sibling.au
 // pre-existing rule before the enumeration ever ran — measured: -goldEvalCheck against the real five-bridge
 // manifest REFUSES at that gate with all five blocks named, so no artifact in this project today can exercise
 // these gates. These fixtures model the post-JOB-7 world, which is the world this gate exists for.
-const judgedEdgeLineFor = ({ fromStableId, toStableId, mappingTool, mappingToolVersion, provenanceTier }) => {
-	const edgeProperties = { provenanceTier: [provenanceTier], matchBasis: ['derived'], resolution: ['judged'], predicate: ['closeMatch'], confidence: [0.9], decisionBlockHash: ['0'.repeat(64)] };
+const judgedEdgeLineFor = ({ fromStableId, toStableId, mappingTool, mappingToolVersion }) => {
+	const edgeProperties = { mappingKind: ['inferred'], mappingSource: [REAL_JUDGE_SOURCE], mappingConfidence: [0.9], matchBasis: ['derived'], resolution: ['judged'], predicate: ['closeMatch'], confidence: [0.9], decisionBlockHash: ['0'.repeat(64)] };
 	// ABSENT means ABSENT, never null and never an empty list — the write seam's own rule, and the shape G6-e
 	// and G6-i exist to meet. A fixture that wrote `mappingTool: [undefined]` would be testing a DIFFERENT
 	// fault (a present-but-wrong value) and would leave the fabricating-a-default path unobserved.
@@ -157,8 +168,8 @@ const judgedBlockTextFor = ({ edgeSpecList }) => {
 	const nodes = [nodeLineFor({ source: SOURCE_NAME, stableId: 'toy:property/A.one' }), nodeLineFor({ source: SOURCE_NAME, stableId: 'toy:property/A.two' }), nodeLineFor({ source: SOURCE_NAME, stableId: 'toy:property/A.three' }), nodeLineFor({ source: HUB_NAME, stableId: 'urn:toyhub:P000001' }), nodeLineFor({ source: HUB_NAME, stableId: 'urn:toyhub:P000002' }), nodeLineFor({ source: HUB_NAME, stableId: 'urn:toyhub:P000003' })];
 	const edges = edgeSpecList.map((oneSpec, oneIndex) =>
 		oneSpec.resolutionIsSpecified
-			? edgeLineFor({ fromStableId: `toy:property/A.${['one', 'two', 'three'][oneIndex]}`, toStableId: `urn:toyhub:P00000${oneIndex + 1}`, provenanceTier: PROVENANCE_TIER.SPEC_AUTHORITATIVE })
-			: judgedEdgeLineFor({ fromStableId: `toy:property/A.${['one', 'two', 'three'][oneIndex]}`, toStableId: `urn:toyhub:P00000${oneIndex + 1}`, mappingTool: oneSpec.mappingTool, mappingToolVersion: oneSpec.mappingToolVersion, provenanceTier: PROVENANCE_TIER.EMBEDDING_INFERRED }),
+			? edgeLineFor({ fromStableId: `toy:property/A.${['one', 'two', 'three'][oneIndex]}`, toStableId: `urn:toyhub:P00000${oneIndex + 1}`, mappingSource: AUTHORED_SOURCE })
+			: judgedEdgeLineFor({ fromStableId: `toy:property/A.${['one', 'two', 'three'][oneIndex]}`, toStableId: `urn:toyhub:P00000${oneIndex + 1}`, mappingTool: oneSpec.mappingTool, mappingToolVersion: oneSpec.mappingToolVersion }),
 	);
 	return replayBlockLib.serializeBlock({ header: RELATIONSHIP_HEADER, nodes, edges });
 };
@@ -321,7 +332,7 @@ NON_STRING_TOOL_SPEC_LIST.forEach((oneSpec) => {
 const NON_STRING_TOOL_TEXT = replayBlockLib.serializeBlock({
 	header: RELATIONSHIP_HEADER,
 	nodes: [nodeLineFor({ source: SOURCE_NAME, stableId: 'toy:property/A.one' }), nodeLineFor({ source: HUB_NAME, stableId: 'urn:toyhub:P000001' })],
-	edges: [{ type: 'CLOSE_MATCH', fromRef: { source: SOURCE_NAME, id: 'toy:property/A.one' }, toRef: { source: HUB_NAME, id: 'urn:toyhub:P000001' }, properties: { provenanceTier: [PROVENANCE_TIER.EMBEDDING_INFERRED], matchBasis: ['derived'], resolution: ['judged'], predicate: ['closeMatch'], confidence: [0.9], decisionBlockHash: ['0'.repeat(64)], mappingTool: [123], mappingToolVersion: [RENDERER_IDENTITY] } }],
+	edges: [{ type: 'CLOSE_MATCH', fromRef: { source: SOURCE_NAME, id: 'toy:property/A.one' }, toRef: { source: HUB_NAME, id: 'urn:toyhub:P000001' }, properties: { mappingKind: ['inferred'], mappingSource: [REAL_JUDGE_SOURCE], mappingConfidence: [0.9], matchBasis: ['derived'], resolution: ['judged'], predicate: ['closeMatch'], confidence: [0.9], decisionBlockHash: ['0'.repeat(64)], mappingTool: [123], mappingToolVersion: [RENDERER_IDENTITY] } }],
 });
 const nonStringAudit = sibling.auditMappingBlockText({ blockText: NON_STRING_TOOL_TEXT, subject: 'toy_rel_toyhub_nonStringTool' });
 harness.match('G6-k: REFUSED BY NAME, naming the block', nonStringAudit.judgeEnumerationRefusalMessage || '', /toy_rel_toyhub_nonStringTool/);
@@ -620,7 +631,7 @@ const judgeNamingGates = ({ standardsDatabase, driveGoldEvalCheck, realActions, 
 										singleReadVerdict && singleReadVerdict.resultText,
 									);
 								driveGoldEvalCheck({ actionsFactory: realActions, values: valuesFor(debugManifestRefId, ['someJudgeNobodyDeclared:v9']) }, (orderError) => {
-									harness.match('ORDERING: the pre-existing invalid-debug refusal fires FIRST, UNTOUCHED by JOB 6', orderError || '', /invalid-debug/);
+									harness.match('ORDERING: the pre-existing debug refusal fires FIRST, UNTOUCHED by JOB 6', orderError || '', /bridge-debug/);
 										harness.ok('ORDERING: …and no judge-naming refusal appears ahead of it', !/--judgedBy/.test(orderError || ''), orderError);
 										finish();
 									});
@@ -699,7 +710,7 @@ const goldEvalCheckGates = ({ standardsDatabase, cleanManifestRefId, debugManife
 				fs.writeFileSync(strippedPath, strippedText);
 				harness.equal('    … and restored byte-for-byte the same manifest certifies again', require(path.join(__dirname, '..', 'lib', 'gold-eval-conservation')).auditConservationForManifest({ manifest: cleanManifestForNegative, buildLogDirPath: bridgedRunDirPath }).refusalMessageList.length, 0);
 				driveGoldEvalCheck({ actionsFactory: realActions, values: { buildLogDirPath: [bridgedRunDirPath], manifestRefId: [debugManifestRefId], standardsDatabaseFilePath: [databaseFilePath] } }, (debugError) => {
-					harness.match('    the bridged run dir naming the DEBUG manifest → REFUSED naming the block and the tier', debugError || '', /invalid-debug/);
+					harness.match('    the bridged run dir naming the DEBUG manifest → REFUSED naming the block and the debug source', debugError || '', /bridge-debug/);
 					driveGoldEvalCheck({ actionsFactory: realActions, values: { buildLogDirPath: [forgeOnlyRunDirPath], manifestRefId: [forgeOnlyManifestRefId], standardsDatabaseFilePath: [databaseFilePath] } }, (zeroError, zeroVerdict) => {
 						const zeroPayload = zeroVerdict ? JSON.parse(zeroVerdict.resultText) : {};
 						harness.ok('    a manifest with ZERO relationship blocks → PASS, mappingBlockList [] REPORTED', !zeroError && zeroPayload.bridgeSibling && zeroPayload.bridgeSibling.mappingBlockList.length === 0, zeroError);
@@ -782,7 +793,7 @@ const runGates = ({ standardsDatabase, cleanManifestRefId, debugManifestRefId, f
 				harness.ok('debug manifest: the audit itself completes (the refusal is a RESULT, not a crash)', !debugError, debugError);
 				harness.equal('debug manifest: exactly ONE refusal', debugResult && debugResult.refusalMessageList.length, 1);
 				harness.match('debug manifest: the refusal names the BLOCK', (debugResult && debugResult.refusalMessageList[0]) || '', /toy@1_0_rel_toyhub@1_0_debug_exact/);
-				harness.match('debug manifest: the refusal names the tier and the offender', (debugResult && debugResult.refusalMessageList[0]) || '', /invalid-debug.*toy:property\/A\.two -\[EXACT_MATCH\]-> urn:toyhub:P000002/);
+				harness.match('debug manifest: the refusal names the debug source and the offender', (debugResult && debugResult.refusalMessageList[0]) || '', /mappingSource 'bridge-debug'.*toy:property\/A\.two -\[EXACT_MATCH\]-> urn:toyhub:P000002/);
 				harness.equal('debug manifest: invalidDebugEdgeCount 1 on the audited block', debugResult && debugResult.mappingBlockList[0].invalidDebugEdgeCount, 1);
 
 				// THREE-STATE: the SAME debug input through a sibling whose RULE is disconnected (production mutation of
