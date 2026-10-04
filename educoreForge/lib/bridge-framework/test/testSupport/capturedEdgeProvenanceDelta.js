@@ -56,7 +56,11 @@ const capturedEdgeListWithProvenanceDelta = ({ capturedEdgeList, specifiedBridge
 			[MAPPING_PROPERTIES.MAPPING_SOURCE]: sourceDelta({ capturedProperties, specifiedBridgeName }),
 		};
 		if (capturedProperties.resolution === 'judged') {
-			const fixedConfidence = FIXED_MAPPING_CONFIDENCE_BY_PROVIDER_NAME[providerNameForJudgeModel(capturedProperties.mappingTool).providerName];
+			const owner = providerNameForJudgeModel(capturedProperties.mappingTool);
+			if (owner.error) {
+				throw new Error(`${moduleName} REFUSED: captured judged edge: ${owner.error}`);
+			}
+			const fixedConfidence = FIXED_MAPPING_CONFIDENCE_BY_PROVIDER_NAME[owner.providerName];
 			properties[MAPPING_PROPERTIES.MAPPING_CONFIDENCE] = fixedConfidence === undefined ? capturedProperties.confidence : fixedConfidence;
 		}
 		return { ...capturedEdge, properties };
