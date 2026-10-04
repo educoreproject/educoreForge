@@ -718,7 +718,17 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // compareRealStandardIdentity.js 98/0, runRealStandardIdentity.sh 64/0, test-bgDecl.js 7/5, test-bgDerived.js 11/8,
 // test-bgRetrievalRegistry.js 243/0. Framework source moved BY DESIGN (lane C); no PESC file in the range. Six declared paths
 // unchanged, no exclusion added; the tag is cut ON this re-anchor commit.
-const P1_BASELINE_COMMIT = 'postGoldJevFreshCPescComposeA-100226'; // re-anchored by SUNSET_BEACON on goldJev/fresh after the C merge; the tag is cut ON the re-anchor commit
+// RE-ANCHOR 2026-10-04 (VIOLET_OCEAN; pre-authorised, WORKORDER-mappingProvenance-100426 step 3, lane P; LAST of the lane's re-anchors):
+// postGoldJevFreshCPescComposeA-100226 -> postMappingProvenancePPescComposeA-100426. CENSUS (fresh red on a626954, numstat from
+// postGoldJevFreshCPescComposeA-100226 over the six declared paths, 22 paths, all lane P 9bace1b..a626954): framework source —
+// bridge-framework.js 1/2, certificationCheck.js 20/6, conflictDetector.js 4/3, graphSeamRules.js 58/7, graphWriter.js 3/3,
+// materialiser.js 56/18, bridge-maker/lib/judgeProviderRegistry.js 31/1, debugJudge.js 6/3 (comment), vocabulary.js 79/18,
+// vocabulary-definitions.js 12/6; tests — test-bgMappingProvenance.js 232/0 (new), testSupport/capturedEdgeProvenanceDelta.js 75/0
+// (new), test-bgBolt 2/1, test-bgConflict 2/2, test-bgFanoutConsumers 7/3, test-bgMaterialiseFanout 7/3, test-bgNosub 33/2,
+// test-bgProducer 19/16, test-bgThree 9/7, toyBridgeScenario 5/1, test-mappingProperties 25/18, test-sifEdgeVocabulary 11/4.
+// Framework source moved BY DESIGN (mappingKind / mappingSource / mappingConfidence on every mapping edge; provenanceTier retired
+// from them, TQ 2026-10-04); no PESC file in the range. Six declared paths unchanged, no exclusion added; tag cut ON this commit.
+const P1_BASELINE_COMMIT = 'postMappingProvenancePPescComposeA-100426'; // re-anchored by VIOLET_OCEAN on mappingProvenance/P; the tag is cut ON the re-anchor commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
