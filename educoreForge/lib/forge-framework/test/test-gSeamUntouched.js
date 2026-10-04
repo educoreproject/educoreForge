@@ -125,7 +125,16 @@ const TREE_ROOT = path.resolve(toyScenario.FRAMEWORK_DIR, '..', '..');
 // forger.js, shape-forged-graph.js, replay-block.js and round-trip-stage.js: UNTOUCHED. THE SEAM FILE LIST IS UNCHANGED, no
 // exclusion added; a fresh scratch red was observed against THIS tag (DEVLOG-B6). This file lives under lib/forge-framework/,
 // which BG conjunct (iii) watches with no exclusion, so (iii) moves next, on its own commit.
-const PRE_MIGRATION_REF = 'postB6GSeamUntouched-092926'; // re-anchored by IVORY_MIRROR, SIF replacement B6 (RULING EBONY_DREAM); the tag is cut ON the re-anchor commit
+// ═══ RE-ANCHOR, 2026-10-04 (VIOLET_OCEAN; mappingProvenance lane P, pre-authorised WORKORDER step 3) ═══
+// postB6GSeamUntouched-092926 -> postMappingProvenancePGSeamUntouched-100426, the tag cut ON this re-anchor commit. CENSUS, MEASURED
+// WITH THIS GATE'S OWN COMMAND (git diff --stat postB6GSeamUntouched-092926 -- <the 7 seam files>) at 680c4ed: exactly TWO of the
+// seven, both lane P 3923467 (TQ, 2026-10-04: provenanceTier retired from mapping edges):
+//   lib/replay/replay-engine.js                              | 41  GUARD 3: a mapping edge carries a valid mappingKind and NO
+//                                                                   provenanceTier; every other edge keeps the tier rule
+//   apps/graph-builder/apps/replay-manager/replayManager.js  |  4  injects debugMappingSource into the passport writer
+// forger.js, build.js, shape-forged-graph.js, replay-block.js and round-trip-stage.js: UNTOUCHED. THE SEAM FILE LIST IS UNCHANGED,
+// no exclusion added; the fresh red was observed in fleet f1 (DEVLOG-P). (iii) moves next, on its own commit.
+const PRE_MIGRATION_REF = 'postMappingProvenancePGSeamUntouched-100426'; // re-anchored by VIOLET_OCEAN, mappingProvenance lane P; the tag is cut ON the re-anchor commit
 const SEAM_FILE_LIST = Object.freeze([
 	'apps/graph-builder/apps/forger/forger.js',
 	'apps/graph-builder/lib/build.js',
