@@ -738,7 +738,10 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // RE-ANCHOR 2026-10-04 (VIOLET_OCEAN, lane P fourth; TQ's standardKind + standardUsageTips): -> postMappingProvenancePPescComposeD-100426.
 // CENSUS (fresh red): 3 paths — vocabulary.js 8/0 (STANDARD_KIND), vocabulary-definitions.js 1/1 (StandardDefinition text),
 // test-bgNosub.js 12/2 (its two re-anchors). No framework source, no PESC file. Six declared paths unchanged; tag cut ON this commit.
-const P1_BASELINE_COMMIT = 'postMappingProvenancePPescComposeD-100426'; // re-anchored by VIOLET_OCEAN on mappingProvenance/P2; the tag is cut ON the re-anchor commit
+// RE-ANCHOR 2026-10-04 (VIOLET_OCEAN, lane P fifth; the self-audit fix): -> postMappingProvenancePPescComposeE-100426. CENSUS (fresh red
+// on 98f3da6): 1 path, lib/bridge-framework/test/testSupport/capturedEdgeProvenanceDelta.js 5/1 (refuses an unregistered judge by name).
+// Test support only; no framework source, no PESC file. Six declared paths unchanged; tag cut ON this commit.
+const P1_BASELINE_COMMIT = 'postMappingProvenancePPescComposeE-100426'; // re-anchored by VIOLET_OCEAN on mappingProvenance/P2; the tag is cut ON the re-anchor commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
