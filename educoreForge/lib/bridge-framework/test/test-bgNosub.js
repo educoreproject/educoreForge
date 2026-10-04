@@ -645,7 +645,13 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // promotion-stamp.js 208 (new), and three tests (test-passportTrustVerdict 11, test-promotionStamp 128 new,
 // test-standardDefinitionDisposition 82). build.js, forger/, replay/, every forge and lib/forge-framework/: UNTOUCHED.
 // SEAM_PATH_LIST byte-identical. Fresh red observed on f4ab2c4 (DEVLOG-P).
-const PHASE3_ANCHOR_TAG = 'postMappingProvenancePSeamDiffEmptyC-100426'; // re-anchored by VIOLET_OCEAN, mappingProvenance lane P (third)
+// mappingProvenance LANE P FOURTH RE-ANCHOR (VIOLET_OCEAN, 2026-10-04; pre-authorised): -> postMappingProvenancePSeamDiffEmptyD-100426,
+// tag cut ON this commit. CENSUS (git diff --stat postMappingProvenancePSeamDiffEmptyC-100426 -- the seam paths) at cf58dfb: six
+// files — replay-manager/lib/finishing/finishing.js 12 (reads configs/dmeStandardUsageTips.json), lib/standard-definition-finisher.js
+// 22 (stamps standardKind + standardUsageTips), lib/standard-usage-tips.js 66 (new), two finishing tests (29, 91 new), and
+// lib/forge-framework/test/test-gSeamUntouched.js 11 (its own re-anchor 94c2a9c, the ruled-test exception). build.js, forger/,
+// replay/, every forge and lib/forge-framework SOURCE: UNTOUCHED. SEAM_PATH_LIST byte-identical. Fresh red observed (DEVLOG-P).
+const PHASE3_ANCHOR_TAG = 'postMappingProvenancePSeamDiffEmptyD-100426'; // re-anchored by VIOLET_OCEAN, mappingProvenance lane P (fourth)
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');
