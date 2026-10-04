@@ -158,6 +158,21 @@ const moduleFunction =
 			       r.mappingSource AS mappingSource, count(r) AS tierCount
 			ORDER BY edgeType, provenanceTier, mappingKind, mappingSource`;
 
+		// the shape of one census row, by edge class (DATA, no branch at the call site)
+		const MEANING_ROW_SHAPE_BY_EDGE_CLASS = Object.freeze({
+			mapping: (oneRecord) => ({
+				edgeType: oneRecord.get('edgeType'),
+				mappingKind: oneRecord.get('mappingKind'),
+				mappingSource: oneRecord.get('mappingSource'),
+				tierCount: numberFrom(oneRecord, 'tierCount'),
+			}),
+			other: (oneRecord) => ({
+				edgeType: oneRecord.get('edgeType'),
+				provenanceTier: oneRecord.get('provenanceTier'),
+				tierCount: numberFrom(oneRecord, 'tierCount'),
+			}),
+		});
+
 		// ----- trustVerdict — THE HONEST ANSWER, NOT THE FLATTERING ONE (work order gate (d)).
 		//   Derived from the tiers actually present. Every false verdict carries its REASON, because a bare
 		//   `false` is indistinguishable from a default and a consumer cannot act on it.
@@ -277,13 +292,11 @@ const moduleFunction =
 					}
 					// ZERO ROWS IS A REAL AND MEANINGFUL ANSWER HERE, unlike the aggregates above: it means the
 					// graph carries no meaning-bearing edges at all, which trustVerdict reports as its own basis.
-					const meaningTierRowList = ((result && result.records) || []).map((oneRecord) => ({
-						edgeType: oneRecord.get('edgeType'),
-						provenanceTier: oneRecord.get('provenanceTier'),
-						mappingKind: oneRecord.get('mappingKind'),
-						mappingSource: oneRecord.get('mappingSource'),
-						tierCount: numberFrom(oneRecord, 'tierCount'),
-					}));
+					// ⟪lane P, 2026-10-04; TQ⟫ a MAPPING row is tallied by mappingKind + mappingSource and carries no tier
+					// field; any other meaning-bearing row (no mappingKind) keeps its provenanceTier
+					const meaningTierRowList = ((result && result.records) || []).map((oneRecord) =>
+						MEANING_ROW_SHAPE_BY_EDGE_CLASS[oneRecord.get('mappingKind') === null || oneRecord.get('mappingKind') === undefined ? 'other' : 'mapping'](oneRecord),
+					);
 					next('', { ...args, meaningTierRowList, trust: trustVerdict(meaningTierRowList) });
 				});
 			});
@@ -597,6 +610,7 @@ const moduleFunction =
 			CONTENT_EDGE_CENSUS_CYPHER,
 			MEANING_TIER_CENSUS_CYPHER,
 			trustVerdict,
+			MEANING_ROW_SHAPE_BY_EDGE_CLASS,
 			numberFrom,
 		};
 	};

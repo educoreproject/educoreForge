@@ -33,7 +33,7 @@ const TERM_DEFINITIONS = {
 		RecipeBlock:
 			'One member block of a ManifestRecipe: block type, subject, version, producer, and content-address (blockId). The graph-side view of a content-addressed store block.',
 		StandardDefinition:
-			'The per-source-standard descriptor derived at finishing time: display name, version and its provenance (versionSource), source format, element counts, and mapping disposition (authored / inferred / authoredAndInferred / island), read from the mappingKind on its mapping edges, never from their relation type.',
+			'The per-source-standard descriptor derived at finishing time: display name, version and its provenance (versionSource), source format, element counts, and mappingKindList / mappingSourceList: the distinct mappingKind and mappingSource values its own match edges carry, in the same vocabulary as the edges, read from the graph (both empty for a standard with no match edge, such as the hub).',
 		GraphMeta:
 			'The structural marker on every legitimately source-less node (schema view, manifest recipe, standard definitions, the build passport). Purity rule: every node carries an _source XOR :GraphMeta — never both, never neither.',
 		UsagePattern:
@@ -71,15 +71,15 @@ const TERM_DEFINITIONS = {
 		DERIVED_MAPPING: 'RETIRED prior-generation bridge edge (composed mapping). Named for history; zero instances in pure-model graphs; equivalence is now computed at query time through shared hubs.',
 		CLASSIFICATION_CROSSWALK:
 			'Cross-taxonomy correspondence row from the published NCES CIP2020↔SOC2018 crosswalk: an instructional program (CIP) prepares for work in an occupation (SOC). Direction CIP→SOC as the NCES table states; many-to-many. Spec-authoritative but NOT equivalence: it never touches a HubReference, never composes with EXACT_MATCH/CLOSE_MATCH hub resolution, and never participates in cross-standard equivalence claims.',
-		// ⟪lane P, 2026-10-04⟫ these two once said EXACT_MATCH was "authored/spec-authoritative" and CLOSE_MATCH "inferred". The
-		// edge TYPE names the SKOS relation only; WHO made the claim and how sure they were are separate axes, carried on the
-		// edge as mappingKind, mappingSource and mappingConfidence. TQ found the DME repeating the old text about edges that
-		// were every one a judge's choice.
-		EXACT_MATCH: 'Source element to HubReference whose SKOS relation is exactMatch: the two are judged interchangeable. The relation says nothing about who made the claim or how sure they were: read mappingKind (inferred = a judge chose; authored = a document named it), mappingSource (bridge-debug = the debug judge, no meaning) and mappingConfidence. The only relation that composes to cross-standard equivalence.',
-		CLOSE_MATCH: 'Source element to HubReference whose SKOS relation is closeMatch: similar enough for some applications. Like every match edge, read mappingKind, mappingSource and mappingConfidence for who made the claim and how sure they were. Never composes to equivalence on its own.',
-		BROAD_MATCH: 'Source element to a broader HubReference (SKOS broadMatch). Non-composing.',
-		NARROW_MATCH: 'Source element to a narrower HubReference (SKOS narrowMatch). Non-composing.',
-		RELATED_MATCH: 'Source element to a related HubReference (SKOS relatedMatch). Non-composing.',
+		// ⟪lane P, 2026-10-04; TQ⟫ every match relation is a JUDGMENT about how close two elements are; it says nothing about
+		// who made the claim or how sure they were. EXACT_MATCH once read "authored/spec-authoritative" and the DME repeated it
+		// about edges that were every one a Jev judgment. Who and how sure ride on the edge: mappingKind, mappingSource,
+		// mappingConfidence.
+		EXACT_MATCH: 'Source element to HubReference, judged interchangeable (SKOS exactMatch). A judgment of closeness, not a claim of authority: mappingKind says what kind of claim it is (inferred = a judge chose the card from candidates embeddings proposed; authored = a document named it), mappingSource who made it (bridge-<judge>, crosswalk-<name>, standard-<name>; bridge-debug = the debug judge, no meaning), mappingConfidence how sure (judged edges only). The only relation that composes to cross-standard equivalence.',
+		CLOSE_MATCH: 'Source element to HubReference, judged similar enough for some applications (SKOS closeMatch). Who made the judgment and how sure: mappingKind, mappingSource, mappingConfidence. Never composes to equivalence on its own.',
+		BROAD_MATCH: 'Source element to a HubReference judged BROADER than it (SKOS broadMatch). Who made the judgment and how sure: mappingKind, mappingSource, mappingConfidence. Non-composing.',
+		NARROW_MATCH: 'Source element to a HubReference judged NARROWER than it (SKOS narrowMatch). Who made the judgment and how sure: mappingKind, mappingSource, mappingConfidence. Non-composing.',
+		RELATED_MATCH: 'Source element to a HubReference judged related, neither broader nor narrower (SKOS relatedMatch). Who made the judgment and how sure: mappingKind, mappingSource, mappingConfidence. Non-composing.',
 		HAS_HUB_DOMAIN: 'Hub-parameterized decomposition: HubReference to its domain (class) slot node.',
 		HAS_HUB_PROPERTY: 'Hub-parameterized decomposition: HubReference to its property slot node.',
 		HAS_HUB_RANGE: 'Hub-parameterized decomposition: HubReference to its range slot node.',

@@ -78,6 +78,8 @@ const run = () => {
 			? actions.goldEvalCheck
 			: switches.truncateStore
 			? actions.truncateStore
+			: switches.stampPromotion
+			? actions.stampPromotion
 			: null;
 
 		// help is the default: an invocation that names no action is a question, not an error

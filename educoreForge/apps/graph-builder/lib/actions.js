@@ -1737,6 +1737,86 @@ const goldEvalCheckAction = (callback) => {
 // backup's counts DISAGREE with the live store" — is unreachable by any test, because nothing can make
 // a freshly written VACUUM INTO copy disagree with the file it was copied from. A refusal no test can
 // reach is a refusal nobody has seen work, and this is the refusal TQ asked for by name.
+// ⟪lane P, mappingProvenance 2026-10-04; TQ-approved⟫ -stampPromotion — run AFTER a graph is promoted (renamed). Writes the
+// graph's REAL name into its passport and the goldEvalCheck and replay verdicts into BuildAttestation, each read from the
+// evidence file its run wrote (promotion-evidence.js) and tied to the graph by the manifest id its passport carries. It
+// changes no content node or edge and proves it with a before/after census (promotion-stamp.js). Both evidence paths are
+// REQUIRED: a stamp that recorded one verdict would leave the other reading 'notRun' beside a claim of promotion.
+const stampPromotionAction = (callback) => {
+	const { xLog, commandLineParameters } = process.global;
+	const containerName = firstValue(commandLineParameters, 'containerName');
+	const evidencePathByGate = { goldEvalCheck: firstValue(commandLineParameters, 'goldEvalCheckLogPath'), replay: firstValue(commandLineParameters, 'replayBuildLogPath') };
+	const missingParameterList = []
+		.concat(containerName ? [] : ['--containerName=<the PROMOTED container name>'])
+		.concat(evidencePathByGate.goldEvalCheck ? [] : ['--goldEvalCheckLogPath=<the saved -goldEvalCheck output>'])
+		.concat(evidencePathByGate.replay ? [] : ['--replayBuildLogPath=<the zero-judge replay build log>']);
+	if (missingParameterList.length) {
+		callback(`graphBuilder -stampPromotion: ${missingParameterList.join(', ')} REQUIRED, with no default — the stamp records evidence, and evidence must be named`);
+		return;
+	}
+	const vocabulary = require(path.join(__dirname, '..', '..', '..', 'lib', 'vocabulary', 'vocabulary'));
+	const certificationCheckLib = require(path.join(__dirname, '..', '..', '..', 'lib', 'bridge-framework', 'certificationCheck'));
+	const finishingDir = path.join(__dirname, '..', 'apps', 'replay-manager', 'lib', 'finishing');
+	const passportWriter = require(path.join(finishingDir, 'passport-writer'))({ vocabulary, debugMappingSource: certificationCheckLib.DEBUG_MAPPING_SOURCE });
+	const promotionStamp = require(path.join(finishingDir, 'promotion-stamp'))({ vocabulary, passportWriter });
+	const promotionEvidenceLib = require('./promotion-evidence');
+	const neo4j = require('neo4j-driver');
+	const taskList = new taskListPlus();
+
+	// the bolt port and credential are read from the container, as -cedsRoundTrip reads them
+	taskList.push((args, next) => {
+		requireCedsRoundTripCompiler()().resolveContainerBolt({ containerName }, (resolveError, resolved) => {
+			if (resolveError) {
+				next(`graphBuilder -stampPromotion: ${resolveError}`);
+				return;
+			}
+			const driver = neo4j.driver(resolved.boltUrl, neo4j.auth.basic('neo4j', resolved.password), { encrypted: false });
+			const session = driver.session();
+			const runCypher = ({ cypher }, cypherCallback) =>
+				session.run(cypher).then((result) => cypherCallback('', result), (cypherError) => cypherCallback(cypherError.message));
+			next('', { ...args, runCypher, closeAll: () => session.close().then(() => driver.close(), () => driver.close()) });
+		});
+	});
+	taskList.push((args, next) => {
+		args.runCypher({ cypher: `MATCH (p:GraphProvenance) RETURN p.manifestRefId AS manifestRefId` }, (err, result) => {
+			const rows = (result && result.records) || [];
+			if (err || rows.length !== 1) {
+				next(`graphBuilder -stampPromotion: '${containerName}' does not hold exactly one passport with a manifestRefId${err ? ` (${err})` : ''}`);
+				return;
+			}
+			next('', { ...args, manifestRefId: rows[0].get('manifestRefId') });
+		});
+	});
+	taskList.push((args, next) => {
+		const readList = Object.keys(evidencePathByGate).map((oneGate) => promotionEvidenceLib.gateVerdictFor({ gate: oneGate, evidencePath: evidencePathByGate[oneGate], manifestRefId: args.manifestRefId }));
+		const refusedRead = readList.find((oneRead) => oneRead.error);
+		if (refusedRead) {
+			next(`graphBuilder -stampPromotion: ${refusedRead.error}`);
+			return;
+		}
+		next('', { ...args, gateVerdictList: readList });
+	});
+	taskList.push((args, next) => {
+		promotionStamp.stampPromotion({ runCypher: args.runCypher, promotedGraphName: containerName, gateVerdictList: args.gateVerdictList }, (err, stamped) => (err ? next(err) : next('', { ...args, stamped })));
+	});
+	pipeRunner(taskList.getList(), {}, (err, args) => {
+		const finishWith = () => {
+			if (err) {
+				callback(err);
+				return;
+			}
+			xLog.status(`graphBuilder: [stampPromotion] ${args.stamped.summary}`);
+			args.gateVerdictList.forEach((oneVerdict) => xLog.status(`graphBuilder: [stampPromotion] ${oneVerdict.gate}: ${oneVerdict.verdict} — ${oneVerdict.detail} (evidence ${oneVerdict.evidencePath} sha256 ${oneVerdict.evidenceSha256})`));
+			callback('', args.stamped);
+		};
+		if (args && typeof args.closeAll === 'function') {
+			args.closeAll().then(finishWith);
+			return;
+		}
+		finishWith();
+	});
+};
+
 const truncateStoreAction = (callback, injectedDeps = {}) => {
 	const { xLog } = process.global;
 
@@ -1980,6 +2060,7 @@ return {
 	cedsGates: cedsGatesAction,
 	goldEvalCheck: goldEvalCheckAction,
 	truncateStore: truncateStoreAction,
+	stampPromotion: stampPromotionAction,
 	scanAvailableForges,
 	// exported for the hermetic gates: the no-default refusal is the phase's headline claim, and a
 	// claim provable only by launching a whole build is a claim nobody re-checks.

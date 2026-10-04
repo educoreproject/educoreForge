@@ -1,22 +1,23 @@
 #!/usr/bin/env node
 'use strict';
 
-// test-standardDefinitionDisposition.js — the StandardDefinition's mappingDisposition is read from the mappingKind its
-// mapping edges carry, NEVER from their relation type (lane P, mappingProvenance 2026-10-04). Before lane P an EXACT_MATCH
-// made a standard 'authored': GOLD_EVAL_261002_jevFresh called 9 of its 10 standards authored while all 12,698 of their
-// edges were Jev judgments. Pure: the finisher's shapeOne and emit, over rows a readQuery double returns.
-//   (a) a standard with EXACT_MATCH edges whose every edge is inferred is 'inferred'
-//   (b) the four kind-presence cases map to authored / inferred / authoredAndInferred / island
+// test-standardDefinitionDisposition.js — a StandardDefinition says what kind of mappings its standard has, and who made
+// them, in the SAME vocabulary as the edges: mappingKindList / mappingSourceList, the distinct values its own match edges
+// carry, read from the graph (lane P, mappingProvenance 2026-10-04; TQ). They replace mappingDisposition, which was read from
+// the RELATION TYPE (any EXACT_MATCH => 'authored') and called 9 of 10 standards in GOLD_EVAL_261002_jevFresh authored while
+// all 12,698 edges were Jev judgments. Pure: the finisher's shapeOne and emit, over rows a readQuery double returns.
+//   (a) a standard with EXACT_MATCH edges that are all inferred/bridge-jev reports exactly those, and no mappingDisposition
+//   (b) the lists are SORTED (the node is in fingerprint scope), and the hub with no match edge reports two EMPTY lists
 //   (c) a mapping edge with NO mappingKind is REFUSED by name, naming the standard
-//   (d) the derivation cypher reads mappingKind
-// RED TWINS, each observed: the pre-lane-P relation-type rule restored (a red); the refusal removed (c red); the cypher
-// reading the relation instead (d red).
+//   (d) the derivation cypher collects mappingKind and mappingSource from the edges
+// RED TWINS, each observed: the relation-type rule restored (a red); the sort removed (b red); the refusal removed (c red);
+// the cypher collecting the relation type instead (d red).
 
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
 const helpText = () => `
 NAME
-     ${moduleName} -- gate: StandardDefinition.mappingDisposition comes from mappingKind, not the relation type
+     ${moduleName} -- gate: StandardDefinition's mappingKindList / mappingSourceList come from the edges, not the relation type
 SYNOPSIS
      ${moduleName} [-verbose] [-quiet] [-help]
 EXIT STATUS
@@ -35,7 +36,7 @@ const realFinisherFactory = require(FINISHER_PATH);
 const finisherFor = (mutationList) => (mutationList.length === 0 ? realFinisherFactory : moduleDouble.loadWithMutations({ modulePath: FINISHER_PATH, mutationList }))({ vocabulary });
 
 // a root row as the derivation query returns it; the counts are what the conjunct varies
-const rootRow = ({ exactMappedProperties, authoredMappedNodeCount, inferredMappedNodeCount, unkindedMappingEdgeCount = 0 }) => ({
+const rootRow = ({ exactMappedProperties, mappingKindList, mappingSourceList, unkindedMappingEdgeCount = 0 }) => ({
 	sourceKey: 'Toy',
 	standardKey: 'toy',
 	standardName: 'Toy',
@@ -46,61 +47,56 @@ const rootRow = ({ exactMappedProperties, authoredMappedNodeCount, inferredMappe
 	optionValueCount: 0,
 	exactMappedProperties,
 	closeMappedProperties: 0,
-	authoredMappedNodeCount,
-	inferredMappedNodeCount,
+	mappingKindList,
+	mappingSourceList,
 	unkindedMappingEdgeCount,
-	mappingEdgeTypes: ['EXACT_MATCH'],
+	mappingEdgeTypes: exactMappedProperties > 0 ? ['EXACT_MATCH'] : [],
 });
 const readQueryOver = (rowList) => (queryArguments, callback) => callback('', { records: rowList.map((oneRow) => ({ get: (fieldName) => oneRow[fieldName] })) });
 
 const conjunctJudgeByRefId = {
-	a_exactButInferredIsInferred: (finisher, done) => {
-		const disposition = finisher.shapeOne(rootRow({ exactMappedProperties: 5, authoredMappedNodeCount: 0, inferredMappedNodeCount: 5 })).properties.mappingDisposition;
-		done({ pass: disposition === 'inferred', detail: `five EXACT_MATCH edges, all inferred → '${disposition}'` });
+	a_kindAndSourceFromEdgesNotRelation: (finisher, done) => {
+		const properties = finisher.shapeOne(rootRow({ exactMappedProperties: 5, mappingKindList: ['inferred'], mappingSourceList: ['bridge-jev'] })).properties;
+		const pass = JSON.stringify(properties.mappingKindList) === '["inferred"]' && JSON.stringify(properties.mappingSourceList) === '["bridge-jev"]' && properties.mappingDisposition === undefined;
+		done({ pass, detail: `five EXACT_MATCH edges → kinds ${JSON.stringify(properties.mappingKindList)}, sources ${JSON.stringify(properties.mappingSourceList)}, mappingDisposition ${JSON.stringify(properties.mappingDisposition)}` });
 	},
-	b_fourCasesFromKindPresence: (finisher, done) => {
-		const caseList = [
-			[3, 0, 'authored'],
-			[0, 3, 'inferred'],
-			[3, 3, 'authoredAndInferred'],
-			[0, 0, 'island'],
-		];
-		const faultList = caseList
-			.map(([authoredMappedNodeCount, inferredMappedNodeCount, expected]) => ({ expected, got: finisher.shapeOne(rootRow({ exactMappedProperties: 0, authoredMappedNodeCount, inferredMappedNodeCount })).properties.mappingDisposition }))
-			.filter((oneCase) => oneCase.got !== oneCase.expected);
-		done({ pass: faultList.length === 0, detail: faultList.length === 0 ? 'all four' : faultList.map((oneCase) => `expected ${oneCase.expected} got ${oneCase.got}`).join('; ') });
+	b_sortedAndHubEmpty: (finisher, done) => {
+		const mixed = finisher.shapeOne(rootRow({ exactMappedProperties: 3, mappingKindList: ['inferred', 'authored'], mappingSourceList: ['crosswalk-edfiCrosswalkPlugin', 'bridge-jev'] })).properties;
+		const hub = finisher.shapeOne(rootRow({ exactMappedProperties: 0, mappingKindList: [], mappingSourceList: [] })).properties;
+		const pass = JSON.stringify(mixed.mappingKindList) === '["authored","inferred"]' && JSON.stringify(mixed.mappingSourceList) === '["bridge-jev","crosswalk-edfiCrosswalkPlugin"]' && hub.mappingKindList.length === 0 && hub.mappingSourceList.length === 0;
+		done({ pass, detail: `mixed ${JSON.stringify(mixed.mappingKindList)} ${JSON.stringify(mixed.mappingSourceList)}; hub ${JSON.stringify(hub.mappingKindList)}` });
 	},
 	c_unkindedEdgeRefusedByName: (finisher, done) => {
-		finisher.emit({ readQuery: readQueryOver([rootRow({ exactMappedProperties: 2, authoredMappedNodeCount: 0, inferredMappedNodeCount: 0, unkindedMappingEdgeCount: 2 })]) }, (emitError) => {
+		finisher.emit({ readQuery: readQueryOver([rootRow({ exactMappedProperties: 2, mappingKindList: [], mappingSourceList: [], unkindedMappingEdgeCount: 2 })]) }, (emitError) => {
 			const refusedByName = typeof emitError === 'string' && /REFUSED: Toy \(2\) carry mapping edges with no mappingKind/.test(emitError);
 			done({ pass: refusedByName, detail: emitError ? emitError.slice(0, 160) : 'emitted without refusing' });
 		});
 	},
-	d_cypherReadsMappingKind: (finisher, done) => {
-		const readsKind = finisher.DERIVATION_CYPHER.indexOf(`mkEdge.mappingKind = '${vocabulary.MAPPING_KIND.AUTHORED}'`) !== -1 && finisher.DERIVATION_CYPHER.indexOf(`mkEdge.mappingKind = '${vocabulary.MAPPING_KIND.INFERRED}'`) !== -1;
-		done({ pass: readsKind, detail: readsKind ? 'reads mappingKind for both kinds' : 'the derivation cypher does not read mappingKind' });
+	d_cypherCollectsKindAndSource: (finisher, done) => {
+		const pass = finisher.DERIVATION_CYPHER.indexOf('collect(DISTINCT mkEdge.mappingKind) AS mappingKindList') !== -1 && finisher.DERIVATION_CYPHER.indexOf('collect(DISTINCT mkEdge.mappingSource) AS mappingSourceList') !== -1;
+		done({ pass, detail: pass ? 'collects mappingKind and mappingSource from the edges' : 'the derivation cypher does not collect them' });
 	},
 };
 
 const TWIN_LIST = [
 	{
-		conjunctRefId: 'a_exactButInferredIsInferred',
+		conjunctRefId: 'a_kindAndSourceFromEdgesNotRelation',
 		twinName: 'relationTypeRuleRestored',
-		find: "MAPPING_DISPOSITION_BY_KIND_PRESENCE[`${authoredMappedNodeCount > 0}|${inferredMappedNodeCount > 0}`];",
-		replace: "(Number(oneRow.exactMappedProperties || 0) > 0 ? 'authored' : MAPPING_DISPOSITION_BY_KIND_PRESENCE[`${authoredMappedNodeCount > 0}|${inferredMappedNodeCount > 0}`]);",
+		find: "const mappingKindList = sorted(oneRow.mappingKindList).filter((oneValue) => oneValue !== 'null');",
+		replace: "const mappingKindList = Number(oneRow.exactMappedProperties || 0) > 0 ? ['authored'] : sorted(oneRow.mappingKindList).filter((oneValue) => oneValue !== 'null');",
 	},
 	{
-		conjunctRefId: 'b_fourCasesFromKindPresence',
-		twinName: 'mixedReadAsAuthored',
-		find: "'true|true': 'authoredAndInferred',",
-		replace: "'true|true': 'authored',",
+		conjunctRefId: 'b_sortedAndHubEmpty',
+		twinName: 'sortRemoved',
+		find: "const mappingSourceList = sorted(oneRow.mappingSourceList).filter((oneValue) => oneValue !== 'null');",
+		replace: "const mappingSourceList = (oneRow.mappingSourceList || []).filter((oneValue) => oneValue !== 'null');",
 	},
 	{ conjunctRefId: 'c_unkindedEdgeRefusedByName', twinName: 'refusalRemoved', find: '\t\t\t\tif (unkindedRowList.length > 0) {', replace: '\t\t\t\tif (false) {' },
 	{
-		conjunctRefId: 'd_cypherReadsMappingKind',
-		twinName: 'cypherReadsRelation',
-		find: "count(DISTINCT CASE WHEN mkEdge.mappingKind = '${MAPPING_KIND.AUTHORED}' THEN mk END)",
-		replace: "count(DISTINCT CASE WHEN type(mkEdge) = 'EXACT_MATCH' THEN mk END)",
+		conjunctRefId: 'd_cypherCollectsKindAndSource',
+		twinName: 'cypherCollectsRelation',
+		find: 'collect(DISTINCT mkEdge.mappingKind) AS mappingKindList',
+		replace: 'collect(DISTINCT type(mkEdge)) AS mappingKindList',
 	},
 ];
 

@@ -9,6 +9,8 @@
 //   (b) a row whose mappingSource is the debug judge's makes the graph untrustworthy, basis invalidDebugPresent
 //   (c) the census cypher selects mapping edges by mappingKind and returns mappingSource
 //   (d) the writer REFUSES construction without debugMappingSource (no default: without it a debug graph reads as trustworthy)
+//   (e) the meaningTierBreakdown row of a MAPPING edge is tallied by mappingKind + mappingSource and carries NO provenanceTier
+//       field; a non-mapping row keeps its tier (TQ, 2026-10-04)
 // RED TWINS, each observed in memory: (a) the census row ignored → island; (b) the debug test dropped; (c) the cypher back
 // to tier-only; (d) the construction refusal removed.
 
@@ -53,6 +55,14 @@ const conjunctJudgeByRefId = {
 		const pass = /r\.mappingKind IS NOT NULL/.test(cypher) && /r\.mappingSource AS mappingSource/.test(cypher);
 		return { pass, detail: pass ? 'reads mappingKind and mappingSource' : 'the census does not read the mapping fields' };
 	},
+	e_mappingRowTalliedByKindAndSource: (mutationList) => {
+		const rowShape = writerFor(mutationList).MEANING_ROW_SHAPE_BY_EDGE_CLASS;
+		const recordOf = (fieldValueByName) => ({ get: (fieldName) => fieldValueByName[fieldName] });
+		const mappingRow = rowShape.mapping(recordOf({ edgeType: 'EXACT_MATCH', mappingKind: 'inferred', mappingSource: 'bridge-jev', provenanceTier: null, tierCount: 3 }));
+		const otherRow = rowShape.other(recordOf({ edgeType: 'CLASSIFICATION_CROSSWALK', provenanceTier: 'spec-authoritative', tierCount: 2 }));
+		const pass = Object.keys(mappingRow).sort().join(',') === 'edgeType,mappingKind,mappingSource,tierCount' && otherRow.provenanceTier === 'spec-authoritative';
+		return { pass, detail: `mapping row ${JSON.stringify(mappingRow)}` };
+	},
 	d_constructionRefusedWithoutDebugSource: (mutationList) => {
 		let refusalText = '';
 		try {
@@ -68,6 +78,7 @@ const TWIN_LIST = [
 	{ conjunctRefId: 'a_judgedMappingRowsTrusted', twinName: 'censusRowIgnored', find: '\t\t\tconst meaningBearingCount = meaningTierRowList.reduce(', replace: '\t\t\tconst meaningBearingCount = [].reduce(' },
 	{ conjunctRefId: 'b_debugSourceUntrusted', twinName: 'debugSourceNotTested', find: 'oneRow.mappingSource === debugMappingSource || ', replace: '' },
 	{ conjunctRefId: 'c_censusSelectsMappingKind', twinName: 'censusTierOnly', find: '\t\t\tWHERE r.mappingKind IS NOT NULL\n\t\t\t   OR ', replace: '\t\t\tWHERE ' },
+	{ conjunctRefId: 'e_mappingRowTalliedByKindAndSource', twinName: 'mappingRowKeepsTier', find: "\t\t\t\tmappingSource: oneRecord.get('mappingSource'),\n\t\t\t\ttierCount", replace: "\t\t\t\tmappingSource: oneRecord.get('mappingSource'),\n\t\t\t\tprovenanceTier: oneRecord.get('provenanceTier'),\n\t\t\t\ttierCount" },
 	{ conjunctRefId: 'd_constructionRefusedWithoutDebugSource', twinName: 'constructionRefusalRemoved', find: "\t\tif (typeof debugMappingSource !== 'string' || !debugMappingSource) {", replace: '\t\tif (false) {' },
 ];
 

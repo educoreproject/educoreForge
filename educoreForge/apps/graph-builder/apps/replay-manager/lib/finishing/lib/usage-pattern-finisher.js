@@ -77,7 +77,8 @@ const moduleFunction =
 				entryLabel: SELF_DOC.NODE_LABELS.STANDARD_DEFINITION,
 				cypher:
 					'MATCH (d:StandardDefinition) RETURN d.standardName AS standard, d.version AS version, ' +
-					'd.propertyCount AS properties, d.mappingDisposition AS mappingDisposition ORDER BY standard',
+					'd.propertyCount AS properties, d.mappingKindList AS mappingKinds, d.mappingSourceList AS mappingSources ' +
+					'ORDER BY standard',
 				caveat:
 					'`version` is what the FORGE stamped (the provenance stamp since versionFromStamp; a ' +
 					'parser-reported value only on pre-framework blocks) and is the value that entered the ' +

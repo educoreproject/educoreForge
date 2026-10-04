@@ -32,6 +32,8 @@ SYNOPSIS
      graphBuilder   -goldEvalCheck --buildLogDirPath=<the build's run directory>
                                    --manifestRefId=<the manifest -build printed> [--standardsDatabaseFilePath=<its store>]
                                    [--judgedBy=<toolId>[,<toolId>...]]   (COMMA-SEPARATED; one per judge present)
+     graphBuilder   -stampPromotion --containerName=<the PROMOTED name> --goldEvalCheckLogPath=<its saved output>
+                                   --replayBuildLogPath=<the zero-judge replay build log>
      graphBuilder   -help
 
      ... | graphBuilder                (JSON on stdin REPLACES command-line parameters)
@@ -402,6 +404,16 @@ OPTIONS
                            disagree about a number.
      -verbose              Emit verbose diagnostic detail on stderr.
      -quiet                Suppress progress; results and errors only.
+
+     -stampPromotion
+                  RUN AFTER A GRAPH IS PROMOTED (renamed to its GNC-001 name). Writes the graph's REAL
+                  name into GraphProvenance.graphName (the scratch name is kept as scratchGraphName) and
+                  the goldEvalCheck and replay verdicts into BuildAttestation, each READ from the evidence
+                  file its run wrote and tied to the graph by the manifestRefId its passport carries;
+                  evidence for another manifest is REFUSED. Each row records the evidence path and its
+                  sha256. Writes no content node or edge, and proves it: the content census is taken
+                  before and after and any difference is refused. All three parameters are REQUIRED.
+                  The bolt port and credential are read from the container ('docker inspect').
 
      -goldEvalCheck
                   THE GOLD_EVAL CERTIFICATION GATE (doctrine RT-13.4), made runnable. Reads
