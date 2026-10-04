@@ -630,7 +630,14 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // (trust census by mappingKind/mappingSource), finishing/lib/usage-pattern-finisher.js 10 (caveat text), finishing/test/
 // test-passportTrustVerdict.js 88 (new). build.js, forger/, every forge and lib/forge-framework/: UNTOUCHED. SEAM_PATH_LIST
 // byte-identical. Fresh red observed on 3923467's tree before this commit (DEVLOG-P).
-const PHASE3_ANCHOR_TAG = 'postMappingProvenancePSeamDiffEmptyB-100426'; // re-anchored by VIOLET_OCEAN, mappingProvenance lane P (second)
+// mappingProvenance LANE P THIRD RE-ANCHOR (VIOLET_OCEAN, 2026-10-04; TQ-approved metadata additions; pre-authorised): ->
+// postMappingProvenancePSeamDiffEmptyC-100426, tag cut ON this commit. CENSUS (git diff --stat postMappingProvenancePSeamDiffEmptyB-100426
+// -- the seam paths) at f4ab2c4: seven files, all under replay-manager/lib/finishing/ — standard-definition-finisher.js 51
+// (mappingKindList / mappingSourceList), usage-pattern-finisher.js 3, passport-writer.js 28 (rows by kind + source),
+// promotion-stamp.js 208 (new), and three tests (test-passportTrustVerdict 11, test-promotionStamp 128 new,
+// test-standardDefinitionDisposition 82). build.js, forger/, replay/, every forge and lib/forge-framework/: UNTOUCHED.
+// SEAM_PATH_LIST byte-identical. Fresh red observed on f4ab2c4 (DEVLOG-P).
+const PHASE3_ANCHOR_TAG = 'postMappingProvenancePSeamDiffEmptyC-100426'; // re-anchored by VIOLET_OCEAN, mappingProvenance lane P (third)
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');
