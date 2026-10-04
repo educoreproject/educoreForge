@@ -121,7 +121,11 @@ const BASE_TAG = 'preBridgeFramework-081626';
 // -> postMappingProvenancePVocabularyIiC-100426, tag cut ON this commit. CENSUS on f4ab2c4: ONE file, vocabulary-definitions.js
 // (the five match-relation definitions as judgments; StandardDefinition's mappingKindList / mappingSourceList). Outside the list;
 // base moved, list NOT widened. Fresh red observed on f4ab2c4 (DEVLOG-P).
-const POST_D1_BASE_TAG = 'postMappingProvenancePVocabularyIiC-100426'; // re-anchored 2026-10-04 (mappingProvenance lane P, third) — base moved, allowed-path list NOT widened
+// ═══ RE-ANCHOR (ii) FOURTH, 2026-10-04 (VIOLET_OCEAN, lane P; TQ's standardKind + standardUsageTips) ═══ ->
+// postMappingProvenancePVocabularyIiD-100426, tag cut ON this commit. CENSUS on cf58dfb: vocabulary.js (STANDARD_KIND, allowed)
+// and vocabulary-definitions.js (StandardDefinition's text names standardKind and standardUsageTips), the one file outside.
+// Base moved, list NOT widened. Fresh red observed on cf58dfb (DEVLOG-P).
+const POST_D1_BASE_TAG = 'postMappingProvenancePVocabularyIiD-100426'; // re-anchored 2026-10-04 (mappingProvenance lane P, fourth) — base moved, allowed-path list NOT widened
 // ⟪A THIRD BASELINE — RULING P1-R11, BRIEF-SEAM-reanchorBgSeamUntouched.md, applied 2026-08-29 by
 // STERLING_PEAK during hub kit role migration Phase 0.E4⟫
 //
