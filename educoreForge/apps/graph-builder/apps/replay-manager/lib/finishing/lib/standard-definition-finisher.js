@@ -56,7 +56,14 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 const moduleFunction =
 	({ moduleName } = {}) =>
 	({ vocabulary } = {}) => {
-		const { NODE_LABELS, SELF_DOC, DME_ROLES } = vocabulary;
+		const { NODE_LABELS, SELF_DOC, DME_ROLES, MAPPING_KIND } = vocabulary;
+		// which mapping kinds a standard's edges carry → its disposition (DATA, no branch). Key: '<anyAuthored>|<anyInferred>'.
+		const MAPPING_DISPOSITION_BY_KIND_PRESENCE = Object.freeze({
+			'true|true': 'authoredAndInferred',
+			'true|false': 'authored',
+			'false|true': 'inferred',
+			'false|false': 'island',
+		});
 		const forgedLabel = NODE_LABELS.FORGED_NODE;
 		const definitionLabel = SELF_DOC.NODE_LABELS.STANDARD_DEFINITION;
 		const definitionPrefix = SELF_DOC.STANDARD_DEFINITION_STABLE_ID_PREFIX;
@@ -67,8 +74,8 @@ const moduleFunction =
 		const sorted = (oneList) => (oneList || []).map((oneValue) => `${oneValue}`).sort();
 
 		// ----- THE DERIVATION QUERY. One pass, read-only. Counts are per-standard and deterministic
-		//   functions of the built graph. Mapping evidence is read from EXACT/CLOSE match presence rather
-		//   than assumed from anything the producer said about itself.
+		//   functions of the built graph. The EXACT/CLOSE counts are read from match presence; the disposition from the
+		//   mappingKind on the edges (lane P), never from the edge type, and never from anything the producer said.
 		const DERIVATION_CYPHER = `
 			MATCH (root:\`${rootRole}\`)
 			OPTIONAL MATCH (root)<-[:HAS_CLASS|HAS_PROPERTY*1..]-()
@@ -84,6 +91,11 @@ const moduleFunction =
 			OPTIONAL MATCH (cl {_source: root._source})-[:CLOSE_MATCH]->(:HubReference)
 			WITH root, propertyCount, classCount, optionValueCount, exactMappedProperties,
 			     count(DISTINCT cl) AS closeMappedProperties
+			OPTIONAL MATCH (mk {_source: root._source})-[mkEdge]->(:HubReference)
+			WITH root, propertyCount, classCount, optionValueCount, exactMappedProperties, closeMappedProperties,
+			     count(DISTINCT CASE WHEN mkEdge.mappingKind = '${MAPPING_KIND.AUTHORED}' THEN mk END) AS authoredMappedNodeCount,
+			     count(DISTINCT CASE WHEN mkEdge.mappingKind = '${MAPPING_KIND.INFERRED}' THEN mk END) AS inferredMappedNodeCount,
+			     count(CASE WHEN mkEdge IS NOT NULL AND mkEdge.mappingKind IS NULL THEN 1 END) AS unkindedMappingEdgeCount
 			OPTIONAL MATCH (any {_source: root._source})-[m]->(:HubReference)
 			RETURN root._source AS sourceKey,
 			       root.standardKey AS standardKey, root.standardName AS standardName,
@@ -93,6 +105,7 @@ const moduleFunction =
 			       root.stableId AS rootStableId,
 			       propertyCount, classCount, optionValueCount,
 			       exactMappedProperties, closeMappedProperties,
+			       authoredMappedNodeCount, inferredMappedNodeCount, unkindedMappingEdgeCount,
 			       collect(DISTINCT type(m)) AS mappingEdgeTypes
 			ORDER BY sourceKey`;
 
@@ -116,8 +129,13 @@ const moduleFunction =
 
 			const exact = Number(oneRow.exactMappedProperties || 0);
 			const close = Number(oneRow.closeMappedProperties || 0);
-			// disposition is read from EVIDENCE PRESENT IN THE GRAPH, not from anything a producer claimed.
-			const mappingDisposition = exact > 0 ? 'authored' : close > 0 ? 'inferred' : 'island';
+			// disposition is read from EVIDENCE PRESENT IN THE GRAPH, not from anything a producer claimed: the
+			// mappingKind each mapping edge carries. ⟪lane P, 2026-10-04⟫ It was read from the EDGE TYPE (any EXACT_MATCH
+			// meant 'authored'), which called 9 of 10 standards in GOLD_EVAL_261002_jevFresh 'authored' when every one of
+			// their 12,698 edges was a Jev judgment. The relation says how close a match is, never who made it.
+			const authoredMappedNodeCount = Number(oneRow.authoredMappedNodeCount || 0);
+			const inferredMappedNodeCount = Number(oneRow.inferredMappedNodeCount || 0);
+			const mappingDisposition = MAPPING_DISPOSITION_BY_KIND_PRESENCE[`${authoredMappedNodeCount > 0}|${inferredMappedNodeCount > 0}`];
 
 			const stableId = `${definitionPrefix}${oneRow.sourceKey}`;
 			return {
@@ -142,6 +160,8 @@ const moduleFunction =
 					optionValueCount: Number(oneRow.optionValueCount || 0),
 					exactMappedProperties: exact,
 					closeMappedProperties: close,
+					authoredMappedNodeCount,
+					inferredMappedNodeCount,
 					mappingDisposition,
 					// SORTED — collect() order is not stable and this node is in fingerprint scope.
 					mappingEdgeTypes: sorted(oneRow.mappingEdgeTypes).filter((oneType) => oneType !== 'null'),
@@ -183,8 +203,23 @@ const moduleFunction =
 					optionValueCount: oneRecord.get('optionValueCount'),
 					exactMappedProperties: oneRecord.get('exactMappedProperties'),
 					closeMappedProperties: oneRecord.get('closeMappedProperties'),
+					authoredMappedNodeCount: oneRecord.get('authoredMappedNodeCount'),
+					inferredMappedNodeCount: oneRecord.get('inferredMappedNodeCount'),
+					unkindedMappingEdgeCount: oneRecord.get('unkindedMappingEdgeCount'),
 					mappingEdgeTypes: oneRecord.get('mappingEdgeTypes'),
 				}));
+
+				// A mapping edge with no mappingKind cannot be classified, and calling its standard an island, or
+				// anything else, would invent the answer. Refused by name, naming the standards that carry one.
+				const unkindedRowList = rows.filter((oneRow) => Number(oneRow.unkindedMappingEdgeCount || 0) > 0);
+				if (unkindedRowList.length > 0) {
+					callback(
+						`standard-definition-finisher REFUSED: ${unkindedRowList.map((oneRow) => `${oneRow.sourceKey} (${Number(oneRow.unkindedMappingEdgeCount)})`).join(', ')} ` +
+							`carry mapping edges with no mappingKind, so mappingDisposition cannot be read from the graph. Every mapping ` +
+							`edge the bridge framework writes carries one (lane P, 2026-10-04); an edge without it predates that or came from elsewhere.`,
+					);
+					return;
+				}
 
 				// A graph with no standard roots is not an error — a metadata-only or empty graph is a real
 				// state — but it IS reported, so an empty result is never mistaken for a successful census.
@@ -232,7 +267,7 @@ const moduleFunction =
 			});
 		};
 
-		return { emit, shapeOne, DERIVATION_CYPHER };
+		return { emit, shapeOne, DERIVATION_CYPHER, MAPPING_DISPOSITION_BY_KIND_PRESENCE };
 	};
 
 // END OF moduleFunction() ============================================================

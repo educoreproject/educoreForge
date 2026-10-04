@@ -119,14 +119,19 @@ const moduleFunction =
 					'Which cross-standard mappings are ASSERTED here, and may I rely on them for meaning?',
 				entryLabel: 'HubReference',
 				cypher:
-					'MATCH ()-[m]->(:HubReference) RETURN type(m) AS relation, m.provenanceTier AS provenanceTier, ' +
-					'count(*) AS edges ORDER BY relation, provenanceTier',
+					'MATCH ()-[m]->(:HubReference) RETURN type(m) AS relation, m.mappingKind AS mappingKind, ' +
+					'm.mappingSource AS mappingSource, m.provenanceTier AS provenanceTier, count(*) AS edges ' +
+					'ORDER BY relation, mappingKind, mappingSource, provenanceTier',
+				// ⟪lane P, 2026-10-04⟫ the relation (EXACT/CLOSE/BROAD/NARROW) says how close a match is, never who made it
 				caveat:
-					'READ provenanceTier BEFORE USING ANY ROW. An edge tiered `invalid-debug` was produced by the ' +
-					'debug judge (rule "first": candidate 1 taken unconditionally) and carries NO semantic ' +
-					'warrant — it proves the plumbing, not the meaning. From the graph side such an edge is ' +
-					'INDISTINGUISHABLE from a real mapping, which is exactly why this caveat exists. Only ' +
-					'`spec-authoritative` composes to cross-standard equivalence.',
+					'READ mappingKind AND mappingSource BEFORE USING ANY ROW. The relation (EXACT_MATCH, CLOSE_MATCH, ' +
+					'BROAD_MATCH, NARROW_MATCH) says how close the match is judged to be; it says nothing about who ' +
+					'made the claim. mappingKind `inferred` means a judge chose the card (mappingSource names it, ' +
+					'e.g. bridge-jev; mappingConfidence says how sure, on a judged edge only) from candidates that ' +
+					'embeddings proposed: a hypothesis, however close its relation. `authored` means a document named ' +
+					'it (mappingSource crosswalk-… or standard-…). An edge tiered `invalid-debug` was produced by the ' +
+					'debug judge (candidate 1 taken unconditionally) and carries NO semantic warrant: it proves the ' +
+					'plumbing, not the meaning, and is otherwise INDISTINGUISHABLE from a real mapping.',
 				zeroRowMeaning: 'finding',
 			},
 		];

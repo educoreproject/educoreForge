@@ -484,6 +484,13 @@ const PROVENANCE_TIERS = [
 	// reading it would have been told the edge was inferred when it was arithmetic.
 	// tqii, 2026-08-10, on seeing askMilo describe fake mappings as calibrated-confidence equivalents.
 	'invalid-debug',
+	// ⟪lane P, mappingProvenance 2026-10-04; ruled VIOLET_VALLEY (A1)⟫ JUDGE_INFERRED — the tier a JUDGED inferred mapping
+	// edge carries, replacing 'embedding-inferred' on those edges. MEASURED on GOLD_EVAL_261002_jevFresh's nine frozen blocks
+	// (13,791 judged units): embeddings PROPOSE the pool (embedTextVote-v1 admitted every seat; 15 or 40 of 2,777 cards), and
+	// the judge CHOOSES the card and the relation without ever seeing a cosine or a rank. 'embedding-inferred' named the
+	// proposer as the actor. It stays in this list (other edges and older graphs carry it) but leaves
+	// MAPPING_EDGE_PERMITTED_PROVENANCE_TIER_LIST. Appended, because the order above is significant.
+	'judge-inferred',
 ];
 const PROVENANCE_TIER = {
 	SPEC_AUTHORITATIVE: 'spec-authoritative',
@@ -491,6 +498,7 @@ const PROVENANCE_TIER = {
 	STRUCTURAL: 'structural',
 	USER_ASSERTED: 'user-asserted',
 	INVALID_DEBUG: 'invalid-debug',
+	JUDGE_INFERRED: 'judge-inferred',
 };
 const isValidProvenanceTier = (oneTier) => PROVENANCE_TIERS.indexOf(oneTier) !== -1;
 
@@ -600,7 +608,8 @@ const sssomJustificationRefusal = (oneJustification) => {
 //   PROVENANCE_TIER — an ENGINE-LEVEL value on every mapping edge, DERIVED FROM producerKind (RULING
 //                     SABLE_RIVER 2026-08-16 12:20, SPEC v1.1.2 / Profile v1.0.6, on the finding that
 //                     lib/replay/replay-engine.js GUARD 3 refuses any edge without a valid tier):
-//                     authored → 'spec-authoritative'; inferred (not in v1) → 'embedding-inferred'; a
+//                     authored → 'spec-authoritative'; inferred → 'judge-inferred' (was 'embedding-inferred'
+//                     until lane P, 2026-10-04: embeddings propose the pool, the judge chooses); a
 //                     DEBUG-JUDGE block's edges → 'invalid-debug' (Profile §4.6 carve-out, RULING BF16/R5).
 //                     It carries NO mapping semantics — those are matchBasis × resolution × predicate (C6)
 //                     — and is NEVER exported to SSSOM. The writer stamps exactly the value
@@ -631,19 +640,68 @@ const MAPPING_PROPERTIES = {
 	// one edge per instance Field, so the edge's subject is the Field and this names the question that was
 	// judged. Nothing writes it yet: plan phase B4b makes the materialiser write it under fan-out only.
 	JUDGED_SUBJECT_STABLE_ID: 'judgedSubjectStableId',
+	// ⟪lane P, mappingProvenance 2026-10-04; TQ's design⟫ the three fields a reader can trust to say WHAT KIND of claim an
+	// edge is, WHO made it and HOW SURE they were. TQ found the DME telling users an EXACT_MATCH was an "authored crosswalk
+	// ... trust as fact" when every edge in the graph was a Jev judgment; these exist so no reader has to infer that from
+	// matchBasis × resolution × provenanceTier. Values: MAPPING_KIND / MAPPING_SOURCE_* below.
+	MAPPING_CONFIDENCE: 'mappingConfidence', // judged edges only: the judge's confidence (today the band value)
+	MAPPING_KIND: 'mappingKind', // every edge: MAPPING_KIND_LIST
+	MAPPING_SOURCE: 'mappingSource', // every edge: '<family>-<name>', MAPPING_SOURCE_FAMILY_LIST
 };
+// MAPPING_KIND — what kind of claim a mapping edge is, keyed by the record's RESOLUTION (DATA, no branch). A JUDGED edge
+// is inferred: an algorithm chose the card, whoever proposed the candidates. A SPECIFIED edge is authored: a document named
+// the card. 'authored' is in the vocabulary although the live graph has none, because the framework still writes authored
+// edges (crosswalk and standard-declared producers) and its toy suites exercise them.
+const MAPPING_KIND = Object.freeze({ INFERRED: 'inferred', AUTHORED: 'authored' });
+const MAPPING_KIND_LIST = Object.freeze([MAPPING_KIND.INFERRED, MAPPING_KIND.AUTHORED]);
+const MAPPING_KIND_BY_RESOLUTION = Object.freeze({ judged: MAPPING_KIND.INFERRED, specified: MAPPING_KIND.AUTHORED });
+// MAPPING_SOURCE — '<family><separator><name>'. A judged edge's family is 'bridge' and its name is the judge provider's
+// registered name (judgeProviderRegistry.providerNameForJudgeModel, never a literal): 'bridge-jev'. A specified edge's
+// family is the document kind its matchBasis names and its name is the bridge plugin's: 'crosswalk-<bridgeName>'. Each
+// family belongs to exactly one kind, so the writer can hold the two fields to each other.
+const MAPPING_SOURCE_SEPARATOR = '-';
+const MAPPING_SOURCE_FAMILY = Object.freeze({ BRIDGE: 'bridge', CROSSWALK: 'crosswalk', STANDARD: 'standard' });
+const MAPPING_KIND_BY_MAPPING_SOURCE_FAMILY = Object.freeze({
+	[MAPPING_SOURCE_FAMILY.BRIDGE]: MAPPING_KIND.INFERRED,
+	[MAPPING_SOURCE_FAMILY.CROSSWALK]: MAPPING_KIND.AUTHORED,
+	[MAPPING_SOURCE_FAMILY.STANDARD]: MAPPING_KIND.AUTHORED,
+});
+const MAPPING_SOURCE_FAMILY_LIST = Object.freeze(Object.keys(MAPPING_KIND_BY_MAPPING_SOURCE_FAMILY));
+// the authored family a SPECIFIED record's matchBasis names; 'derived' has none, so a specified record in a derived block
+// is refused by name rather than given a family it does not have
+const MAPPING_SOURCE_FAMILY_BY_AUTHORED_MATCH_BASIS = Object.freeze({ crosswalk: MAPPING_SOURCE_FAMILY.CROSSWALK, standard: MAPPING_SOURCE_FAMILY.STANDARD });
+// the NAME half: a provider or plugin name as the registries spell them (lower-case initial, then alphanumerics). It
+// excludes the separator, so '<family>-<name>' parses one way only.
+const MAPPING_SOURCE_NAME_PATTERN = /^[a-z][A-Za-z0-9]*$/;
+// mappingSourceRefusal(mappingSource) → '' | the reason, by name; on '' the family is MAPPING_SOURCE_FAMILY_LIST's
+const mappingSourceRefusal = (mappingSource) => {
+	if (typeof mappingSource !== 'string') {
+		return `mappingSource ${JSON.stringify(mappingSource)} is not a string`;
+	}
+	const separatorIndex = mappingSource.indexOf(MAPPING_SOURCE_SEPARATOR);
+	const family = separatorIndex === -1 ? mappingSource : mappingSource.slice(0, separatorIndex);
+	if (MAPPING_SOURCE_FAMILY_LIST.indexOf(family) === -1) {
+		return `mappingSource '${mappingSource}' does not begin with a family (${MAPPING_SOURCE_FAMILY_LIST.map((oneFamily) => oneFamily + MAPPING_SOURCE_SEPARATOR).join(', ')})`;
+	}
+	if (!MAPPING_SOURCE_NAME_PATTERN.test(mappingSource.slice(separatorIndex + 1))) {
+		return `mappingSource '${mappingSource}' names no source after '${family}${MAPPING_SOURCE_SEPARATOR}' matching ${MAPPING_SOURCE_NAME_PATTERN}`;
+	}
+	return '';
+};
+const mappingSourceFamilyOf = (mappingSource) => mappingSource.slice(0, mappingSource.indexOf(MAPPING_SOURCE_SEPARATOR));
+const composeMappingSource = ({ family, sourceName }) => `${family}${MAPPING_SOURCE_SEPARATOR}${sourceName}`;
 // the property NAMES a mapping edge may carry — derived from the registry above; the writer's closed set
 const MAPPING_PROPERTY_NAME_LIST = Object.freeze(Object.keys(MAPPING_PROPERTIES).map((oneMember) => MAPPING_PROPERTIES[oneMember]));
 // the ENGINE-LEVEL provenanceTier a mapping edge carries, keyed by the block's producerKind (RULING 12:20);
 // a debug-judge block overrides with 'invalid-debug' on every edge (Profile v1.0.6 §4.6). DATA, no branch.
 const MAPPING_EDGE_PROVENANCE_TIER_BY_PRODUCER_KIND = Object.freeze({
 	authored: PROVENANCE_TIER.SPEC_AUTHORITATIVE,
-	inferred: PROVENANCE_TIER.EMBEDDING_INFERRED,
+	inferred: PROVENANCE_TIER.JUDGE_INFERRED,
 });
 // the tiers a mapping edge may carry — the two producer-derived values plus the debug carve-out
 const MAPPING_EDGE_PERMITTED_PROVENANCE_TIER_LIST = Object.freeze([
 	PROVENANCE_TIER.SPEC_AUTHORITATIVE,
-	PROVENANCE_TIER.EMBEDDING_INFERRED,
+	PROVENANCE_TIER.JUDGE_INFERRED,
 	PROVENANCE_TIER.INVALID_DEBUG,
 ]);
 
@@ -1034,6 +1092,18 @@ const vocabulary = {
 	MAPPING_PROPERTY_NAME_LIST,
 	MAPPING_EDGE_PROVENANCE_TIER_BY_PRODUCER_KIND,
 	MAPPING_EDGE_PERMITTED_PROVENANCE_TIER_LIST,
+	MAPPING_KIND,
+	MAPPING_KIND_LIST,
+	MAPPING_KIND_BY_RESOLUTION,
+	MAPPING_SOURCE_SEPARATOR,
+	MAPPING_SOURCE_FAMILY,
+	MAPPING_SOURCE_FAMILY_LIST,
+	MAPPING_KIND_BY_MAPPING_SOURCE_FAMILY,
+	MAPPING_SOURCE_FAMILY_BY_AUTHORED_MATCH_BASIS,
+	MAPPING_SOURCE_NAME_PATTERN,
+	mappingSourceRefusal,
+	mappingSourceFamilyOf,
+	composeMappingSource,
 	UNIQUENESS_KEYS,
 	REQUIRED_PROPERTIES,
 	// equivalence vocabulary (Phase 3)

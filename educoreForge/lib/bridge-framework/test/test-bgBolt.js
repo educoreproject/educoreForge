@@ -127,6 +127,8 @@ const validEdge = () => ({
 		[vocabularyLib.MAPPING_PROPERTIES.SUBJECT_VERSION]: '1.2.3',
 		[vocabularyLib.MAPPING_PROPERTIES.OBJECT_SOURCE]: 'ToyHub',
 		[vocabularyLib.MAPPING_PROPERTIES.OBJECT_VERSION]: '1.0',
+		[vocabularyLib.MAPPING_PROPERTIES.MAPPING_KIND]: vocabularyLib.MAPPING_KIND.AUTHORED,
+		[vocabularyLib.MAPPING_PROPERTIES.MAPPING_SOURCE]: vocabularyLib.composeMappingSource({ family: vocabularyLib.MAPPING_SOURCE_FAMILY.CROSSWALK, sourceName: 'toyCrosswalkPlugin' }),
 	},
 });
 

@@ -55,7 +55,7 @@ const path = require('path');
 
 const moduleName = 'judgeProviderRegistry';
 
-const { judgeProviderViolation } = require(path.join(__dirname, '..', '..', '..', 'interfaces'));
+const { judgeProviderViolation, JUDGE_PROVIDER_SHAPE } = require(path.join(__dirname, '..', '..', '..', 'interfaces'));
 
 const llmClientLib = require(path.join(__dirname, 'llmClient'));
 const debugJudgeLib = require(path.join(__dirname, 'debugJudge'));
@@ -279,6 +279,29 @@ const constructJudgeProvider = (constructionOptions, constructionCallback) => {
 };
 // ⟪G4-a FACTORY REGION END⟫
 
+// providerNameForJudgeModel(judgeModel) → { providerName } | { error } — WHICH REGISTERED PROVIDER minted a model identity
+// (lane P, mappingProvenance 2026-10-04). A mapping edge names its judge as mappingSource 'bridge-<providerName>', and the
+// name must come from THIS registry, never a literal. JUDGE_PROVIDER_SHAPE requires every `model` to begin
+// `${name}${MODEL_NAMESPACE_SEPARATOR}`, so the owner is the row whose prefix it carries. A PREFIX test, never a split: a
+// wireModel may itself contain the separator ('qwen2.5:32b'). Every row is consulted, enabled or not, because a frozen
+// block may hold a verdict from a provider since disabled; it is still that provider's verdict. 'jev' and 'jevOpus' cannot
+// both match, since the separator follows the whole name.
+const providerNameForJudgeModel = (judgeModel) => {
+	if (typeof judgeModel !== 'string' || !judgeModel.length) {
+		return { error: `${moduleName}: providerNameForJudgeModel needs a judge model identity; got ${JSON.stringify(judgeModel)}` };
+	}
+	const matchingRowList = JUDGE_PROVIDER_ROW_LIST.filter((oneRow) => judgeModel.indexOf(`${oneRow.name}${JUDGE_PROVIDER_SHAPE.MODEL_NAMESPACE_SEPARATOR}`) === 0);
+	if (matchingRowList.length !== 1) {
+		return {
+			error:
+				`${moduleName}: judge model '${judgeModel}' carries the prefix of ${matchingRowList.length} registered provider(s) ` +
+				`(registered: ${JUDGE_PROVIDER_ROW_LIST.map((oneRow) => oneRow.name).join(', ')}); exactly one is required, because a mapping ` +
+				`edge's mappingSource names the provider that judged it`,
+		};
+	}
+	return { providerName: matchingRowList[0].name };
+};
+
 // THE DEBUG ROW'S OWN VOCABULARY, RE-EXPORTED — DERIVED FROM debugJudge, NEVER RESTATED.
 // build.js needs three of these to parse and report the --useDebugJudge override: the registered rule
 // names (to refuse an unregistered one BY NAME, listing them), the register's DEFAULT_RULE (for a bare
@@ -311,4 +334,5 @@ module.exports = Object.freeze({
 	DEBUG_JUDGE_DEFAULT_RULE_NAME,
 	DEBUG_JUDGE_MARK,
 	constructJudgeProvider,
+	providerNameForJudgeModel,
 });

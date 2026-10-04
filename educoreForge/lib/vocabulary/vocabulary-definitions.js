@@ -33,7 +33,7 @@ const TERM_DEFINITIONS = {
 		RecipeBlock:
 			'One member block of a ManifestRecipe: block type, subject, version, producer, and content-address (blockId). The graph-side view of a content-addressed store block.',
 		StandardDefinition:
-			'The per-source-standard descriptor derived at finishing time: display name, version and its provenance (versionSource), source format, element counts, and mapping disposition (authored/inferred/island).',
+			'The per-source-standard descriptor derived at finishing time: display name, version and its provenance (versionSource), source format, element counts, and mapping disposition (authored / inferred / authoredAndInferred / island), read from the mappingKind on its mapping edges, never from their relation type.',
 		GraphMeta:
 			'The structural marker on every legitimately source-less node (schema view, manifest recipe, standard definitions, the build passport). Purity rule: every node carries an _source XOR :GraphMeta — never both, never neither.',
 		UsagePattern:
@@ -71,8 +71,12 @@ const TERM_DEFINITIONS = {
 		DERIVED_MAPPING: 'RETIRED prior-generation bridge edge (composed mapping). Named for history; zero instances in pure-model graphs; equivalence is now computed at query time through shared hubs.',
 		CLASSIFICATION_CROSSWALK:
 			'Cross-taxonomy correspondence row from the published NCES CIP2020↔SOC2018 crosswalk: an instructional program (CIP) prepares for work in an occupation (SOC). Direction CIP→SOC as the NCES table states; many-to-many. Spec-authoritative but NOT equivalence: it never touches a HubReference, never composes with EXACT_MATCH/CLOSE_MATCH hub resolution, and never participates in cross-standard equivalence claims.',
-		EXACT_MATCH: 'Source element to HubReference, authored/spec-authoritative resolution (SKOS exactMatch). The only relation that composes to cross-standard equivalence.',
-		CLOSE_MATCH: 'Source element to HubReference, inference-derived hypothesis (SKOS closeMatch). Conservative: never composes to equivalence on its own.',
+		// ⟪lane P, 2026-10-04⟫ these two once said EXACT_MATCH was "authored/spec-authoritative" and CLOSE_MATCH "inferred". The
+		// edge TYPE names the SKOS relation only; WHO made the claim and how sure they were are separate axes, carried on the
+		// edge as mappingKind, mappingSource and mappingConfidence. TQ found the DME repeating the old text about edges that
+		// were every one a judge's choice.
+		EXACT_MATCH: 'Source element to HubReference whose SKOS relation is exactMatch: the two are judged interchangeable. The relation says nothing about who made the claim or how sure they were: read mappingKind (inferred = a judge chose; authored = a document named it), mappingSource and mappingConfidence. The only relation that composes to cross-standard equivalence.',
+		CLOSE_MATCH: 'Source element to HubReference whose SKOS relation is closeMatch: similar enough for some applications. Like every match edge, read mappingKind, mappingSource and mappingConfidence for who made the claim and how sure they were. Never composes to equivalence on its own.',
 		BROAD_MATCH: 'Source element to a broader HubReference (SKOS broadMatch). Non-composing.',
 		NARROW_MATCH: 'Source element to a narrower HubReference (SKOS narrowMatch). Non-composing.',
 		RELATED_MATCH: 'Source element to a related HubReference (SKOS relatedMatch). Non-composing.',
@@ -107,6 +111,9 @@ const TERM_DEFINITIONS = {
 		'embedding-inferred': 'Derived by embedding retrieval + LLM rerank, frozen in a decision block. A hypothesis tier, never silently composed.',
 		structural: 'Emitted by deterministic structural machinery (hierarchy edges, schema view, self-documentation). True by construction.',
 		'user-asserted': 'Asserted by a user/curator at runtime, outside the replayed content.',
+		// ⟪lane P, 2026-10-04; ruled VIOLET_VALLEY⟫ worded from the measurement over GOLD_EVAL_261002_jevFresh's nine blocks
+		'judge-inferred':
+			'The tier of a mapping edge a JUDGE chose. Embeddings PROPOSED the candidates: embedding retrieval (embedTextVote-v1) admitted every card in the pool the judge saw, a few dozen of the hub\'s thousands. The judge CHOSE the card and the SKOS relation, and never saw a similarity score or rank. Which judge: mappingSource and mappingTool; how sure: mappingConfidence. A hypothesis tier, never silently composed. Replaces embedding-inferred on judged mapping edges (2026-10-04), which named the proposer as the actor.',
 		// ⟪graphSelfDoc, 2026-08-31⟫ PRE-EXISTING DEBT CLOSED. invalid-debug entered PROVENANCE_TIERS on
 		// 2026-08-10 and never received a definition, because the finisher that refuses an undefined term
 		// was never ported. Text set VERBATIM by GRANITE_ECHO as design authority, drafted from tqii's own

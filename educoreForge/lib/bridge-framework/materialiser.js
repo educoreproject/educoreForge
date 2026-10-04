@@ -25,8 +25,9 @@ const vocabularyLib = require(path.join(__dirname, '..', 'vocabulary', 'vocabula
 const refuse = require(path.join(__dirname, '..', 'forge-framework', 'refuse'));
 const { compareRecords, sha256Hex } = require('./decisionBlock');
 const { RENDERER_VERSION } = require('./evidenceRenderer');
+const { providerNameForJudgeModel } = require(path.join(__dirname, '..', '..', 'apps', 'graph-builder', 'apps', 'bridge-maker', 'lib', 'judgeProviderRegistry'));
 
-const { SKOS_EDGE_TYPES, MAPPING_PROPERTIES, PROVENANCE_TIER, MAPPING_EDGE_PROVENANCE_TIER_BY_PRODUCER_KIND } = vocabularyLib;
+const { SKOS_EDGE_TYPES, MAPPING_PROPERTIES, PROVENANCE_TIER, MAPPING_EDGE_PROVENANCE_TIER_BY_PRODUCER_KIND, MAPPING_KIND_BY_RESOLUTION, MAPPING_SOURCE_FAMILY, MAPPING_SOURCE_FAMILY_BY_AUTHORED_MATCH_BASIS, composeMappingSource } = vocabularyLib;
 
 const JUSTIFICATION_BY_RESOLUTION = Object.freeze({ specified: 'semapv:ManualMappingCuration', judged: 'semapv:CompositeMatching' });
 
@@ -84,6 +85,31 @@ const provenanceTierFor = ({ producerKind, debugMark }) => {
 	return tier;
 };
 
+// MAPPING_SOURCE_BY_RESOLUTION — who made the claim, by the record's resolution (lane P, 2026-10-04; DATA, no branch). A
+// JUDGED record names its judge: the provider that minted the record's own model identity, read from the judge provider
+// registry, so a frozen block replayed with no judge constructed still names the one that judged it. A SPECIFIED record
+// names its document: the family its block's matchBasis names, and the bridge plugin that transcribed it.
+// Each row → { mappingSource } | { error }.
+const MAPPING_SOURCE_BY_RESOLUTION = Object.freeze({
+	judged: ({ record }) => {
+		const owner = providerNameForJudgeModel(record.judge && record.judge.judgeModel);
+		return owner.error ? { error: owner.error } : { mappingSource: composeMappingSource({ family: MAPPING_SOURCE_FAMILY.BRIDGE, sourceName: owner.providerName }) };
+	},
+	specified: ({ block }) => {
+		const family = MAPPING_SOURCE_FAMILY_BY_AUTHORED_MATCH_BASIS[block.header.matchBasis];
+		return family === undefined
+			? { error: refuse.byName({ moduleName, what: `a specified record in a '${block.header.matchBasis}' block names no authored document family`, where: `MAPPING_SOURCE_FAMILY_BY_AUTHORED_MATCH_BASIS (${Object.keys(MAPPING_SOURCE_FAMILY_BY_AUTHORED_MATCH_BASIS).join(', ')})` }).message }
+			: { mappingSource: composeMappingSource({ family, sourceName: block.header.bridgeName }) };
+	},
+});
+// mappingSourceFor({ record, block }) → { mappingSource } | { error }; an unknown resolution is refused by name
+const mappingSourceFor = ({ record, block }) => {
+	const sourceRow = MAPPING_SOURCE_BY_RESOLUTION[record.resolution];
+	return sourceRow === undefined
+		? { error: refuse.byName({ moduleName, what: `resolution '${record.resolution}' has no mappingSource row`, where: `MAPPING_SOURCE_BY_RESOLUTION (${Object.keys(MAPPING_SOURCE_BY_RESOLUTION).join(', ')})` }).message }
+		: sourceRow({ record, block });
+};
+
 // edgePropertiesFor — assembled from the record + the run's identity; camelCase; the CLOSED set
 const edgePropertiesFor = ({ record, instanceStableId, block, decisionBlockHash, sourceStandardName, sourceVersion, hubName, hubVersion, mappingProviderUrl, subjectMatchField, objectMatchField, debugMark }) => {
 	const edgeProperties = {
@@ -109,6 +135,9 @@ const edgePropertiesFor = ({ record, instanceStableId, block, decisionBlockHash,
 		[MAPPING_PROPERTIES.DECISION_BLOCK_HASH]: decisionBlockHash,
 		[MAPPING_PROPERTIES.PROVENANCE_TIER]: provenanceTierFor({ producerKind: block.header.producerKind, debugMark }),
 		[MAPPING_PROPERTIES.MATCH_ID]: sha256Hex(`${decisionBlockHash}\n${record.subjectStableId}\n${record.predicate}\n${record.objectStableId}`),
+		[MAPPING_PROPERTIES.MAPPING_KIND]: MAPPING_KIND_BY_RESOLUTION[record.resolution],
+		// undefined when the source cannot be named; materialiseBlock refuses such a record by name before any write
+		[MAPPING_PROPERTIES.MAPPING_SOURCE]: mappingSourceFor({ record, block }).mappingSource,
 	};
 	// The two PRODUCER-CONDITIONAL properties are set only when the run HAS them (an authored producer). For an
 	// inferred producer each key is left ABSENT entirely — the write seam refuses a forbidden key that is
@@ -130,6 +159,7 @@ const edgePropertiesFor = ({ record, instanceStableId, block, decisionBlockHash,
 	}
 	if (record.resolution === 'judged') {
 		edgeProperties[MAPPING_PROPERTIES.CONFIDENCE] = record.confidence;
+		edgeProperties[MAPPING_PROPERTIES.MAPPING_CONFIDENCE] = record.confidence;
 		edgeProperties[MAPPING_PROPERTIES.MAPPING_TOOL] = record.judge.judgeModel;
 		edgeProperties[MAPPING_PROPERTIES.MAPPING_TOOL_VERSION] = `${record.judge.rendererVersion === undefined ? RENDERER_VERSION : record.judge.rendererVersion}`;
 	}
@@ -172,6 +202,12 @@ const materialiseBlock = ({ block, decisionBlockHash, writer, sourceStandardName
 		return;
 	}
 	const orderedList = plannedEdgeList(block.decisionRecordList);
+	// every edge must be able to say who made its claim; a record that cannot is refused, naming it, before ANY edge is written
+	const unsourcedPlanned = orderedList.map((onePlanned) => ({ onePlanned, sourced: mappingSourceFor({ record: onePlanned.record, block }) })).find((oneCheck) => oneCheck.sourced.error);
+	if (unsourcedPlanned !== undefined) {
+		callback(`${moduleName}: subject ${unsourcedPlanned.onePlanned.record.subjectStableId}: mappingSource: ${unsourcedPlanned.sourced.error}`);
+		return;
+	}
 	const writtenEdgeList = [];
 	let edgeIndex = 0;
 	const nextEdge = () => {
@@ -199,4 +235,4 @@ const materialiseBlock = ({ block, decisionBlockHash, writer, sourceStandardName
 	nextEdge();
 };
 
-module.exports = { materialiseBlock, edgePropertiesFor, edgeUniquenessRefusal, pickedRecordList, plannedEdgeList, provenanceTierFor, JUSTIFICATION_BY_RESOLUTION, moduleName };
+module.exports = { materialiseBlock, edgePropertiesFor, mappingSourceFor, MAPPING_SOURCE_BY_RESOLUTION, edgeUniquenessRefusal, pickedRecordList, plannedEdgeList, provenanceTierFor, JUSTIFICATION_BY_RESOLUTION, moduleName };

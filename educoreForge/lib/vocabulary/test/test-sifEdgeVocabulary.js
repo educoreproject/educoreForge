@@ -63,6 +63,10 @@ const V1_EDGE_TYPE_NAME_LIST = ['HAS_FIELD', 'HAS_CHILD', 'HAS_INSTANCE', 'CONST
 // later measurement; a disagreement is reported, not absorbed.
 const SCHEMA_VIEW_MEMBER_COUNT_BEFORE_V1 = 89;
 const SCHEMA_VIEW_MEMBER_COUNT_AFTER_V1 = 94;
+// ⟪lane P, mappingProvenance 2026-10-04⟫ one schema-view member added AFTER V1 and unrelated to it: the provenance tier
+// 'judge-inferred' (ruled A1). The two V1 literals above stay as measured; both readings now include this one row, so each
+// is compared against its literal PLUS it. The rise of exactly five is unaffected.
+const SCHEMA_VIEW_MEMBER_ROWS_ADDED_AFTER_V1 = 1;
 
 // ---------------------------------------------------------------------
 // doubles
@@ -139,8 +143,11 @@ const fanOutEdgeRequest = () => ({
 		predicateAssertedBy: 'judge',
 		attestationChannelList: ['derived:1'],
 		decisionBlockHash: 'c'.repeat(64),
-		provenanceTier: 'embedding-inferred',
+		provenanceTier: 'judge-inferred',
 		confidence: 0.8,
+		mappingConfidence: 0.8,
+		mappingKind: 'inferred',
+		mappingSource: 'bridge-jev',
 		mappingTool: 'toyJudge',
 		mappingToolVersion: 'v12',
 		matchId: 'd'.repeat(64),
@@ -178,8 +185,8 @@ harness.section('(c) the schema-view member count equals the frozen literal, a r
 // =====================================================================
 const realMemberCount = schemaViewCount(vocabulary);
 const preV1MemberCount = schemaViewCount(withoutEdgeTypeRows(V1_EDGE_TYPE_NAME_LIST));
-harness.equal('c_memberCountEqualsLiteral PASS (the registry as it stands)', String(realMemberCount), String(SCHEMA_VIEW_MEMBER_COUNT_AFTER_V1));
-harness.equal('the registry with the five V1 rows removed reproduces the pre-V1 literal', String(preV1MemberCount), String(SCHEMA_VIEW_MEMBER_COUNT_BEFORE_V1));
+harness.equal('c_memberCountEqualsLiteral PASS (the registry as it stands)', String(realMemberCount), String(SCHEMA_VIEW_MEMBER_COUNT_AFTER_V1 + SCHEMA_VIEW_MEMBER_ROWS_ADDED_AFTER_V1));
+harness.equal('the registry with the five V1 rows removed reproduces the pre-V1 literal', String(preV1MemberCount), String(SCHEMA_VIEW_MEMBER_COUNT_BEFORE_V1 + SCHEMA_VIEW_MEMBER_ROWS_ADDED_AFTER_V1));
 harness.equal('the rise is exactly the number of V1 rows', String(realMemberCount - preV1MemberCount), String(V1_EDGE_TYPE_NAME_LIST.length));
 
 // =====================================================================
@@ -228,7 +235,7 @@ const extraRowVocabulary = vocabularyDouble([
 const extraRowCompleteness = judgeDefinitionComplete(extraRowVocabulary);
 harness.ok('the extra-row twin is DEFINED, so the finisher does not refuse it (the red below is the count alone)', extraRowCompleteness.pass, extraRowCompleteness.detail);
 const extraRowCount = schemaViewCount(extraRowVocabulary);
-recordRed({ conjunctRefId: 'c_memberCountEqualsLiteral', twinName: 'definedExtraRow', verdictIsRed: extraRowCount !== SCHEMA_VIEW_MEMBER_COUNT_AFTER_V1, detail: `count ${extraRowCount} vs literal ${SCHEMA_VIEW_MEMBER_COUNT_AFTER_V1}` });
+recordRed({ conjunctRefId: 'c_memberCountEqualsLiteral', twinName: 'definedExtraRow', verdictIsRed: extraRowCount !== SCHEMA_VIEW_MEMBER_COUNT_AFTER_V1 + SCHEMA_VIEW_MEMBER_ROWS_ADDED_AFTER_V1, detail: `count ${extraRowCount} vs literal ${SCHEMA_VIEW_MEMBER_COUNT_AFTER_V1 + SCHEMA_VIEW_MEMBER_ROWS_ADDED_AFTER_V1}` });
 
 // (d) — without the row, the name list lacks it and the seam refuses the edge by name
 const judgedSubjectRowText = "\tJUDGED_SUBJECT_STABLE_ID: 'judgedSubjectStableId',\n";

@@ -400,7 +400,11 @@ module.exports = {
 // both parts — which is the very conflation JOB 1 exists to end. No caller overrides either (checked:
 // FOURTEEN makeFakeRealClient call sites tree-wide excluding this definition, none of which passes a model
 // or a wireModel), so this changes no assertion.
-const FAKE_PROVIDER_NAME = 'fakeAnthropic';
+// ⟪lane P, mappingProvenance 2026-10-04⟫ the double now carries llmClient's OWN provider name, READ from it, where it carried
+// 'fakeAnthropic'. Every judged edge now names its judge as mappingSource 'bridge-<provider>', and the materialiser and the
+// write seam accept only a name the judge provider registry holds, so an unregistered judge cannot put edges in a graph. A
+// double of the anthropic client is that provider's double; its wireModel ('fake-anthropic-judge-v1') still says it is fake.
+const FAKE_PROVIDER_NAME = require(path.join(__dirname, '..', '..', '..', '..', 'apps', 'graph-builder', 'apps', 'bridge-maker', 'lib', 'llmClient')).PROVIDER_NAME;
 const makeFakeRealClient = ({ pickOrdinal = '1', category = 'strong', abstainCategory = 'none', omitCategoryOnAbstain = false, abstainRationaleMode = 'stated', rationaleMode = 'keyAndName', extraReturnKeys = {}, throwOnCall = false, wireModel = 'fake-anthropic-judge-v1' } = {}) => {
 	const model = `${FAKE_PROVIDER_NAME}:${wireModel}`;
 	// ⟪JOB 1, 2026-09-07⟫ THE DOUBLE SATISFIES THE WHOLE JUDGE_PROVIDER_SHAPE, not only the members the

@@ -8,7 +8,7 @@
 //       plus the ten pre-existing ones — the writer's CLOSED SET; a name outside it is refused there);
 //   (b) MAPPING_PROPERTY_NAME_LIST is EXACTLY the registry's values (the derived list the writer reads);
 //   (c) the provenanceTier a mapping edge carries is the ENGINE-LEVEL value derived from producerKind
-//       (RULING 2026-08-16 12:20, SPEC v1.1.2): authored → spec-authoritative, inferred → embedding-inferred,
+//       (RULING 2026-08-16 12:20, SPEC v1.1.2): authored → spec-authoritative, inferred → judge-inferred (embedding-inferred until lane P, 2026-10-04),
 //       plus the 'invalid-debug' carve-out on a debug block — the permitted list is EXACTLY those three and
 //       the by-producer table is EXACTLY those two rows;
 //   (d) isValidSssomJustification is GONE (BR-145 RULED: the boolean invited a caller to discard the
@@ -72,23 +72,25 @@ const PRE_EXISTING_NAME_LIST = [
 // the one name the SIF replacement's phase V1 ADDED (review #1): the question a fanned-out mapping edge was
 // judged as, written on every instance edge by the materialiser (plan phase B4b)
 const V1_ADDED_NAME_LIST = ['judgedSubjectStableId'];
+// the three names lane P ADDED (mappingProvenance 2026-10-04, TQ's design): what kind of claim, who made it, how sure
+const PROVENANCE_ADDED_NAME_LIST = ['mappingConfidence', 'mappingKind', 'mappingSource'];
 
 // the four conjuncts, each a pure judge over a vocabulary module (real or double)
 const conjunctJudgeByRefId = {
 	'a_everyEdgePropertyNameIsARow': (subject) => {
 		const valueList = Object.keys(subject.MAPPING_PROPERTIES).map((oneMember) => subject.MAPPING_PROPERTIES[oneMember]);
-		const missing = B2_ADDED_NAME_LIST.concat(PRE_EXISTING_NAME_LIST, V1_ADDED_NAME_LIST).filter((oneName) => valueList.indexOf(oneName) === -1);
-		return { pass: missing.length === 0 && valueList.length === 21, detail: missing.length ? `missing: ${missing.join(', ')}` : `count ${valueList.length}` };
+		const missing = B2_ADDED_NAME_LIST.concat(PRE_EXISTING_NAME_LIST, V1_ADDED_NAME_LIST, PROVENANCE_ADDED_NAME_LIST).filter((oneName) => valueList.indexOf(oneName) === -1);
+		return { pass: missing.length === 0 && valueList.length === 24, detail: missing.length ? `missing: ${missing.join(', ')}` : `count ${valueList.length}` };
 	},
 	'b_nameListEqualsRegistryValues': (subject) => {
 		const valueList = Object.keys(subject.MAPPING_PROPERTIES).map((oneMember) => subject.MAPPING_PROPERTIES[oneMember]);
-		const equal = JSON.stringify(subject.MAPPING_PROPERTY_NAME_LIST) === JSON.stringify(valueList) && subject.MAPPING_PROPERTY_NAME_LIST.length === 21;
+		const equal = JSON.stringify(subject.MAPPING_PROPERTY_NAME_LIST) === JSON.stringify(valueList) && subject.MAPPING_PROPERTY_NAME_LIST.length === 24;
 		return { pass: equal, detail: `list ${JSON.stringify(subject.MAPPING_PROPERTY_NAME_LIST)}` };
 	},
 	'c_producerDerivedTiersOnly': (subject) => ({
 		pass:
-			JSON.stringify(subject.MAPPING_EDGE_PERMITTED_PROVENANCE_TIER_LIST) === JSON.stringify(['spec-authoritative', 'embedding-inferred', 'invalid-debug']) &&
-			JSON.stringify(subject.MAPPING_EDGE_PROVENANCE_TIER_BY_PRODUCER_KIND) === JSON.stringify({ authored: 'spec-authoritative', inferred: 'embedding-inferred' }),
+			JSON.stringify(subject.MAPPING_EDGE_PERMITTED_PROVENANCE_TIER_LIST) === JSON.stringify(['spec-authoritative', 'judge-inferred', 'invalid-debug']) &&
+			JSON.stringify(subject.MAPPING_EDGE_PROVENANCE_TIER_BY_PRODUCER_KIND) === JSON.stringify({ authored: 'spec-authoritative', inferred: 'judge-inferred' }),
 		detail: `${JSON.stringify(subject.MAPPING_EDGE_PERMITTED_PROVENANCE_TIER_LIST)} / ${JSON.stringify(subject.MAPPING_EDGE_PROVENANCE_TIER_BY_PRODUCER_KIND)}`,
 	}),
 	'd_booleanJustificationGateRemoved': (subject) => ({
@@ -122,8 +124,8 @@ const twinList = [
 		conjunctRefIdList: ['c_producerDerivedTiersOnly'],
 		twinName: 'permitStructuralTier',
 		leverKind: 'productionMutation',
-		find: '\tPROVENANCE_TIER.EMBEDDING_INFERRED,\n\tPROVENANCE_TIER.INVALID_DEBUG,\n]);',
-		replace: '\tPROVENANCE_TIER.EMBEDDING_INFERRED,\n\tPROVENANCE_TIER.INVALID_DEBUG,\n\tPROVENANCE_TIER.STRUCTURAL,\n]);',
+		find: '\tPROVENANCE_TIER.JUDGE_INFERRED,\n\tPROVENANCE_TIER.INVALID_DEBUG,\n]);',
+		replace: '\tPROVENANCE_TIER.JUDGE_INFERRED,\n\tPROVENANCE_TIER.INVALID_DEBUG,\n\tPROVENANCE_TIER.STRUCTURAL,\n]);',
 	},
 	{
 		conjunctRefIdList: ['d_booleanJustificationGateRemoved'],

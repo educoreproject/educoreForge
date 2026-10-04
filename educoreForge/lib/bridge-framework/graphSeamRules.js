@@ -32,7 +32,15 @@ const vocabularyLib = require(path.join(__dirname, '..', 'vocabulary', 'vocabula
 const refuse = require(path.join(__dirname, '..', 'forge-framework', 'refuse'));
 const { TUPLE_LIST_FIELD_LIST, PRODUCER_KIND_BY_MATCH_BASIS } = require('./bridgePluginContract');
 
-const { SKOS_EDGE_TYPES, SKOS_PREDICATES, MAPPING_PROPERTIES, MAPPING_PROPERTY_NAME_LIST, MAPPING_EDGE_PERMITTED_PROVENANCE_TIER_LIST, SSSOM_JUSTIFICATIONS, sssomJustificationRefusal } = vocabularyLib;
+const { JUDGE_PROVIDER_ROW_LIST } = require(path.join(__dirname, '..', '..', 'apps', 'graph-builder', 'apps', 'bridge-maker', 'lib', 'judgeProviderRegistry'));
+
+const { SKOS_EDGE_TYPES, SKOS_PREDICATES, MAPPING_PROPERTIES, MAPPING_PROPERTY_NAME_LIST, MAPPING_EDGE_PERMITTED_PROVENANCE_TIER_LIST, SSSOM_JUSTIFICATIONS, sssomJustificationRefusal, MAPPING_KIND_LIST, MAPPING_KIND_BY_RESOLUTION, MAPPING_KIND_BY_MAPPING_SOURCE_FAMILY, MAPPING_SOURCE_FAMILY, MAPPING_SOURCE_SEPARATOR, mappingSourceRefusal, mappingSourceFamilyOf } = vocabularyLib;
+// the names a 'bridge-<name>' mappingSource may carry: every registered judge provider, enabled or not (a frozen block can
+// hold a verdict from a provider since disabled); read from the registry, never restated
+const JUDGE_PROVIDER_NAME_LIST = Object.freeze(JUDGE_PROVIDER_ROW_LIST.map((oneRow) => oneRow.name));
+// the registry each mappingSource family's NAME is checked against. A family without a row (crosswalk, standard) names a
+// bridge plugin, which the plugin contract has already validated by the time an edge is written.
+const REGISTERED_SOURCE_NAME_LIST_BY_FAMILY = Object.freeze({ [MAPPING_SOURCE_FAMILY.BRIDGE]: JUDGE_PROVIDER_NAME_LIST });
 
 const HUB_REFERENCE_LABEL = 'HubReference';
 const PROPERTY_TIER = 'property';
@@ -57,7 +65,7 @@ const CARD_BASE_SLOT_DISPOSITION = Object.freeze({ DOMAIN: 'required', PROPERTY:
 const WRITER_MEMBER_LIST = Object.freeze(['writeMappingEdge', 'close']);
 const EDGE_TYPE_BY_PREDICATE = SKOS_EDGE_TYPES;
 const PREDICATE_BY_EDGE_TYPE = Object.freeze(Object.keys(SKOS_EDGE_TYPES).reduce((soFar, onePredicate) => ({ ...soFar, [SKOS_EDGE_TYPES[onePredicate]]: onePredicate }), {}));
-const JUDGED_ONLY_PROPERTY_LIST = Object.freeze([MAPPING_PROPERTIES.CONFIDENCE, MAPPING_PROPERTIES.MAPPING_TOOL, MAPPING_PROPERTIES.MAPPING_TOOL_VERSION]);
+const JUDGED_ONLY_PROPERTY_LIST = Object.freeze([MAPPING_PROPERTIES.CONFIDENCE, MAPPING_PROPERTIES.MAPPING_TOOL, MAPPING_PROPERTIES.MAPPING_TOOL_VERSION, MAPPING_PROPERTIES.MAPPING_CONFIDENCE]);
 const EVERY_EDGE_REQUIRED_PROPERTY_LIST = Object.freeze([
 	MAPPING_PROPERTIES.PREDICATE,
 	MAPPING_PROPERTIES.MAPPING_JUSTIFICATION,
@@ -72,6 +80,8 @@ const EVERY_EDGE_REQUIRED_PROPERTY_LIST = Object.freeze([
 	MAPPING_PROPERTIES.ATTESTATION_CHANNEL_LIST,
 	MAPPING_PROPERTIES.DECISION_BLOCK_HASH,
 	MAPPING_PROPERTIES.PROVENANCE_TIER,
+	MAPPING_PROPERTIES.MAPPING_KIND,
+	MAPPING_PROPERTIES.MAPPING_SOURCE,
 ]);
 
 // EDGE_PROVIDER_DISPOSITION_BY_PRODUCER_KIND — mappingProvider is CONDITIONAL, by producerKind (RULING
@@ -466,6 +476,9 @@ const mappingEdgeRefusal = ({ subjectStableId, objectStableId, edgeType, edgePro
 		if (typeof edgeProperties.confidence !== 'number' || !Number.isFinite(edgeProperties.confidence)) {
 			return refuse.byName({ moduleName, what: `writeMappingEdge: confidence ${JSON.stringify(edgeProperties.confidence)} is not a finite number`, where: 'the band table\'s discrete value' });
 		}
+		if (typeof edgeProperties.mappingConfidence !== 'number' || !Number.isFinite(edgeProperties.mappingConfidence) || edgeProperties.mappingConfidence < 0 || edgeProperties.mappingConfidence > 1) {
+			return refuse.byName({ moduleName, what: `writeMappingEdge: mappingConfidence ${JSON.stringify(edgeProperties.mappingConfidence)} is not a number from 0 to 1`, where: 'the judge\'s confidence, on every judged edge (lane P, 2026-10-04)' });
+		}
 	} else if (edgeProperties.resolution === 'specified') {
 		const present = JUDGED_ONLY_PROPERTY_LIST.find((oneName) => Object.prototype.hasOwnProperty.call(edgeProperties, oneName));
 		if (present !== undefined) {
@@ -473,6 +486,27 @@ const mappingEdgeRefusal = ({ subjectStableId, objectStableId, edgeType, edgePro
 		}
 	} else {
 		return refuse.byName({ moduleName, what: `writeMappingEdge: resolution '${edgeProperties.resolution}' is not specified | judged`, where: 'RESOLUTION_LIST' });
+	}
+	// ⟪lane P, 2026-10-04⟫ WHAT KIND of claim and WHO made it: each from its closed vocabulary, and the two held to each
+	// other and to the resolution, so an edge cannot say 'inferred' while naming a crosswalk, or 'authored' while judged
+	if (MAPPING_KIND_LIST.indexOf(edgeProperties.mappingKind) === -1) {
+		return refuse.byName({ moduleName, what: `writeMappingEdge: mappingKind ${JSON.stringify(edgeProperties.mappingKind)} is not in MAPPING_KIND_LIST (${MAPPING_KIND_LIST.join(', ')})`, where: 'vocabulary.MAPPING_KIND (lane P, 2026-10-04)' });
+	}
+	if (MAPPING_KIND_BY_RESOLUTION[edgeProperties.resolution] !== edgeProperties.mappingKind) {
+		return refuse.byName({ moduleName, what: `writeMappingEdge: mappingKind '${edgeProperties.mappingKind}' disagrees with resolution '${edgeProperties.resolution}' (which is ${MAPPING_KIND_BY_RESOLUTION[edgeProperties.resolution]})`, where: 'vocabulary.MAPPING_KIND_BY_RESOLUTION: a judged edge is inferred, a specified edge authored' });
+	}
+	const sourceRefusal = mappingSourceRefusal(edgeProperties.mappingSource);
+	if (sourceRefusal) {
+		return refuse.byName({ moduleName, what: `writeMappingEdge: ${sourceRefusal}`, where: 'vocabulary.MAPPING_SOURCE_FAMILY: <family>-<name> (lane P, 2026-10-04)' });
+	}
+	const sourceFamily = mappingSourceFamilyOf(edgeProperties.mappingSource);
+	if (MAPPING_KIND_BY_MAPPING_SOURCE_FAMILY[sourceFamily] !== edgeProperties.mappingKind) {
+		return refuse.byName({ moduleName, what: `writeMappingEdge: mappingSource '${edgeProperties.mappingSource}' is a '${sourceFamily}' source, which is ${MAPPING_KIND_BY_MAPPING_SOURCE_FAMILY[sourceFamily]}, but mappingKind is '${edgeProperties.mappingKind}'`, where: 'vocabulary.MAPPING_KIND_BY_MAPPING_SOURCE_FAMILY' });
+	}
+	const sourceName = edgeProperties.mappingSource.slice(sourceFamily.length + MAPPING_SOURCE_SEPARATOR.length);
+	const registeredSourceNameList = REGISTERED_SOURCE_NAME_LIST_BY_FAMILY[sourceFamily];
+	if (registeredSourceNameList !== undefined && registeredSourceNameList.indexOf(sourceName) === -1) {
+		return refuse.byName({ moduleName, what: `writeMappingEdge: mappingSource '${edgeProperties.mappingSource}' names '${sourceName}', which is not registered for the '${sourceFamily}' family (${registeredSourceNameList.join(', ')})`, where: 'judgeProviderRegistry.JUDGE_PROVIDER_ROW_LIST: a bridge source is named from the registry, never a literal' });
 	}
 	if (MAPPING_EDGE_PERMITTED_PROVENANCE_TIER_LIST.indexOf(edgeProperties.provenanceTier) === -1) {
 		return refuse.byName({ moduleName, what: `writeMappingEdge: provenanceTier '${edgeProperties.provenanceTier}' is not a mapping-edge tier (${MAPPING_EDGE_PERMITTED_PROVENANCE_TIER_LIST.join(', ')})`, where: 'the ENGINE-LEVEL tier derived from producerKind, or invalid-debug on a debug block (RULING 12:20)' });

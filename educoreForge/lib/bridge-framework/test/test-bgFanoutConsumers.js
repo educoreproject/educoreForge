@@ -37,6 +37,7 @@ const fs = require('fs');
 const scenarioLib = require('./testSupport/toyBridgeScenario');
 const instanceScenarioLib = require('./testSupport/toyInstanceScenario');
 const { runConjunct, pureConjunct, succeeded, frameworkMutationTwin, scenarioTwin, refusalCase, blockOf, edgesOf, forensicsOf, frameworkFile } = require('./testSupport/bridgeTwinFactories');
+const { capturedEdgeListWithProvenanceDelta, canonicalEdgeListText } = require('./testSupport/capturedEdgeProvenanceDelta');
 const moduleDouble = require(path.join(__dirname, '..', '..', 'forge-framework', 'test', 'testSupport', 'moduleDouble'));
 const { runGateFamily } = require(path.join(__dirname, '..', '..', 'forge-framework', 'test', 'testSupport', 'gateSuiteRunner'));
 const { makeTwinRegistry } = require(path.join(__dirname, '..', '..', 'forge-framework', 'roundTripHarness', 'twinRegistry'));
@@ -369,10 +370,12 @@ frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-FANOUT-CONSUMERS', c
 // BG-FANOUT-CONSUMERS-ORACLE — R1, and the §1.7 conjuncts against the outputs captured at this phase's cut
 // ---------------------------------------------------------------------
 const branchCutText = fs.readFileSync(BRANCH_CUT_BLOCK_PATH, 'utf8');
-const branchCutEdgeList = JSON.parse(fs.readFileSync(BRANCH_CUT_EDGE_LIST_PATH, 'utf8'));
+// lane P (2026-10-04) added mappingKind/mappingSource/mappingConfidence and renamed one tier AFTER this capture; the delta is
+// applied to the capture rather than re-capturing it (testSupport/capturedEdgeProvenanceDelta.js)
+const branchCutEdgeList = capturedEdgeListWithProvenanceDelta({ capturedEdgeList: JSON.parse(fs.readFileSync(BRANCH_CUT_EDGE_LIST_PATH, 'utf8')), specifiedBridgeName: null });
 const branchCutSssomText = fs.readFileSync(BRANCH_CUT_SSSOM_PATH, 'utf8');
 const branchCutConflictCounts = JSON.parse(fs.readFileSync(BRANCH_CUT_CONFLICT_COUNTS_PATH, 'utf8'));
-const branchCutConflictEdgeList = JSON.parse(fs.readFileSync(BRANCH_CUT_CONFLICT_EDGE_LIST_PATH, 'utf8'));
+const branchCutConflictEdgeList = capturedEdgeListWithProvenanceDelta({ capturedEdgeList: JSON.parse(fs.readFileSync(BRANCH_CUT_CONFLICT_EDGE_LIST_PATH, 'utf8')), specifiedBridgeName: 'toyStandardPlugin' });
 const branchCutConflictSssomText = fs.readFileSync(BRANCH_CUT_CONFLICT_SSSOM_PATH, 'utf8');
 const branchCutConflictReview = JSON.parse(fs.readFileSync(BRANCH_CUT_CONFLICT_FORENSICS_PATH, 'utf8')).find((oneRecord) => oneRecord.record.kind === 'MappingReview');
 const maskedTextOf = (frozenText) => {
@@ -380,7 +383,8 @@ const maskedTextOf = (frozenText) => {
 	return fingerprintMatchList.length === 1 ? { maskedText: frozenText.replace(FRAMEWORK_FINGERPRINT_TEXT_RE, '"frameworkFingerprint":"MASKED"') } : { error: `frameworkFingerprint occurs ${fingerprintMatchList.length} times in the frozen text (must be exactly once)` };
 };
 // the values that are functions of a block id, which frameworkFingerprint moves
-const maskedEdgeListText = (edgeList) => JSON.stringify(edgeList.map((oneEdge) => ({ ...oneEdge, properties: { ...oneEdge.properties, decisionBlockHash: 'MASKED', matchId: 'MASKED' } })));
+// properties compared in sorted-name order: lane P's fields land at a different position in the materialiser's object
+const maskedEdgeListText = (edgeList) => canonicalEdgeListText(edgeList, ['decisionBlockHash', 'matchId']);
 const maskedSssomText = (sssomText) => sssomText.replace(MAPPING_SET_ID_TEXT_RE, 'urn:educore:decisionBlock:MASKED');
 const maskedReviewText = (reviewRecord) => JSON.stringify(reviewRecord === undefined ? null : { ...reviewRecord, record: { ...reviewRecord.record, conflictList: reviewRecord.record.conflictList.map((oneConflict) => ({ ...oneConflict, siblingDecisionBlockHash: 'MASKED' })) } });
 const differingHeaderNameList = (leftBlock, rightBlock) => {
