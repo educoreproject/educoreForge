@@ -303,7 +303,16 @@ const POST_D1_BASE_TAG = 'postLeftoversRVocabularyIi-100526'; // re-anchored 202
 // -> postMappingProvenancePForgeFrameworkIii-100426, tag cut ON this commit. CENSUS (git diff --stat ... -- lib/forge-framework) at
 // 94c2a9c: ONE file, lib/forge-framework/test/test-gSeamUntouched.js 11 — its own re-anchor to postMappingProvenancePGSeamUntouched-100426
 // (94c2a9c). lib/forge-framework SOURCE: UNTOUCHED. Fresh red observed on 94c2a9c (DEVLOG-P). The ELEVENTH anchor.
-const PHASE0_ANCHOR_TAG = 'postMappingProvenancePForgeFrameworkIii-100426'; // re-anchored by VIOLET_OCEAN, mappingProvenance lane P — the ELEVENTH anchor
+// leftovers LANE R RE-ANCHOR of (iii) (EMERALD_OCEAN, 2026-10-05; pre-authorised): postMappingProvenancePForgeFrameworkIii-100426 ->
+// postLeftoversRForgeFrameworkIii-100526, tag cut ON this commit. CENSUS (git diff --stat ... -- lib/forge-framework/) at cb9e360: SIX
+// files, and FOR THE FIRST TIME SINCE THE ANCHOR EXISTED TWO ARE FRAMEWORK SOURCE, BY RULING (TQ's 2026-10-04 TODO: a standard's kind
+// and usage tips belong in its own forge declaration, so the declaration contract and the root builder must carry them):
+//   forgeDeclarationContract.js 10 (standardKind closed over STANDARD_KIND_LIST, standardUsageTips string-or-null, both required),
+//   rootNode.js 6 (stamps both on the root; null tips = no property), and four tests: toyForgeDeclaration.js 4 (the fixture declares
+//   both), acceptance/expectedFingerprints.json 12 (the five PROXY re-pins, d84bd9a), test-gSeamUntouched.js 11 (its own re-anchor),
+//   test-gStandardMetadata.js 134 (new). No other framework module moved. THE PATH IS UNCHANGED, NO EXCLUSION IS ADDED. Fresh red
+//   observed on d39755c (DEVLOG-R). The TWELFTH anchor.
+const PHASE0_ANCHOR_TAG = 'postLeftoversRForgeFrameworkIii-100526'; // re-anchored by EMERALD_OCEAN, leftovers lane R — the TWELFTH anchor
 // PHASE 1 RE-ANCHOR — RULING FJ-P1-1, and it moves seamDiffEmpty ALONE.
 //
 // WHY IT HAD TO MOVE. SEAM_PATH_LIST watches forges/*/forge*.js, forges/*/lib/*Declaration.js and
