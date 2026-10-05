@@ -741,7 +741,14 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // RE-ANCHOR 2026-10-04 (VIOLET_OCEAN, lane P fifth; the self-audit fix): -> postMappingProvenancePPescComposeE-100426. CENSUS (fresh red
 // on 98f3da6): 1 path, lib/bridge-framework/test/testSupport/capturedEdgeProvenanceDelta.js 5/1 (refuses an unregistered judge by name).
 // Test support only; no framework source, no PESC file. Six declared paths unchanged; tag cut ON this commit.
-const P1_BASELINE_COMMIT = 'postMappingProvenancePPescComposeE-100426'; // re-anchored by VIOLET_OCEAN on mappingProvenance/P2; the tag is cut ON the re-anchor commit
+// RE-ANCHOR 2026-10-05 (EMERALD_OCEAN, leftovers lane R, LAST of the lane's re-anchors; pre-authorised): ->
+// postLeftoversRPescComposeA-100526. CENSUS (fresh red in fleet f1 at 8e418e6, numstat from postMappingProvenancePPescComposeE-100426):
+// 5 paths — apps/graph-builder/lib/build.js 63/22 (d39755c: the fidelity row is the R-1 runner's report, FINDING 5-A),
+// lib/vocabulary/vocabulary.js 13/2 (BUILD_ATTESTATION_VERDICT), lib/vocabulary/vocabulary-definitions.js 1/1 (StandardDefinition's
+// kind + tips read from the root), lib/vocabulary/test/test-sifVocabularyInvariance.js 9/4 (the ruled PROXY re-pins, d84bd9a),
+// lib/bridge-framework/test/test-bgNosub.js 27/3 (lane R's three BG re-anchors). No lib/bridge-framework SOURCE, bridge-maker or
+// interfaces.js change: the frameworkFingerprint did not move. Path list byte-identical.
+const P1_BASELINE_COMMIT = 'postLeftoversRPescComposeA-100526'; // re-anchored by EMERALD_OCEAN on leftovers/R; the tag is cut ON the re-anchor commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
