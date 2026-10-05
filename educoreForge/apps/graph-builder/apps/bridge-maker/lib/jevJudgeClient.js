@@ -60,7 +60,9 @@ const REQUEST_FORM_NAME_LIST = Object.freeze(['data', 'string']);
 // Statuses worth one more try: rate limiting and server-side faults. Anything else is refused at once.
 // 520–524 are the edge proxy's own server-side faults (origin unknown error, down, timeout); goldJev lane A's
 // SIF run was killed by a single 520 after one attempt (2026-10-01), so they are retried like the 50x family.
-const RETRYABLE_STATUS_CODE_LIST = Object.freeze([429, 500, 502, 503, 504, 520, 521, 522, 523, 524]);
+// 529 is Jev's own 'system_overloaded' ("try again later"); leftovers lane R's metaBuild1 SIF run was killed by a single 529
+// after one attempt (2026-10-05), so it is retried the same way (VIOLET_VALLEY).
+const RETRYABLE_STATUS_CODE_LIST = Object.freeze([429, 500, 502, 503, 504, 520, 521, 522, 523, 524, 529]);
 
 const requiredValueOrThrow = (sectionConfig, configKeyName, configFilePath) => {
 	const rawValue = sectionConfig[configKeyName];

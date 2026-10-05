@@ -238,14 +238,15 @@ const caseList = [
 		});
 	},
 	// goldJev lane A (2026-10-01): the edge proxy's own faults, 520-524, are retried like the 50x family; one 520 killed
-	// jevBuild2's SIF run after a single attempt before they were
-	...[520, 521, 522, 523, 524].map((edgeStatusCode) => (done) => {
+	// jevBuild2's SIF run after a single attempt before they were. 529 (Jev's own 'system_overloaded') joined them on 2026-10-05
+	// (leftovers lane R): one 529 killed metaBuild1's SIF run after a single attempt
+	...[520, 521, 522, 523, 524, 529].map((edgeStatusCode) => (done) => {
 		const { provider, transport } = providerFor({}, [
 			{ statusCode: edgeStatusCode, responseBody: { error: `error code: ${edgeStatusCode}` } },
 			{ statusCode: 200, responseBody: answerBody({ choice: '2', confidence: 0.9, probabilities: { 1: 0.05, 2: 0.9, NONE: 0.05 } }) },
 		]);
 		provider.rerank({ choiceEnum, predicateRule: 'categoryTable-v1', choiceQuestion }, (rerankError, verdict) => {
-			harness.section(`A ${edgeStatusCode} (THE EDGE PROXY) IS RETRIED`);
+			harness.section(`A ${edgeStatusCode} (${edgeStatusCode === 529 ? 'JEV OVERLOADED' : 'THE EDGE PROXY'}) IS RETRIED`);
 			harness.ok('no error', !rerankError, rerankError);
 			harness.equal('two calls were made', transport.sentPayloadList.length, 2);
 			harness.equal('attempts reports 2', verdict && verdict.attempts, 2);
