@@ -28,7 +28,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // PURE: returns an Error or null; the caller (forge-framework.js) throws it at injection.
 
 const path = require('path');
-const { DME_ROLES, EMBED_TEXT_VECTOR } = require(path.join(__dirname, '..', 'vocabulary', 'vocabulary'));
+const { DME_ROLES, EMBED_TEXT_VECTOR, STANDARD_KIND_LIST } = require(path.join(__dirname, '..', 'vocabulary', 'vocabulary'));
 const refuse = require('./refuse');
 const { FRAMEWORK_NON_EMBEDDABLE_ROLE_LIST } = require('./frameworkNonEmbeddableRoles');
 const {
@@ -54,6 +54,11 @@ const FORGE_DECLARATION_CONTRACT = Object.freeze({
 	standardKey: Object.freeze({ required: true, kind: 'lowercaseString' }),
 	standardSource: Object.freeze({ required: true, kind: 'nonEmptyString' }),
 	standardDisplayName: Object.freeze({ required: true, kind: 'nonEmptyString' }),
+	// ⟪lane R, 2026-10-05; TQ⟫ what kind of standard this is, and how to read it in the graph: facts about THIS standard only
+	// (FBB-001: never a mapping choice). Stamped on the root; the StandardDefinition card reads them from there. REQUIRED on
+	// every bundle: a bundle with nothing special to say declares standardUsageTips: null, never omits it.
+	standardKind: Object.freeze({ required: true, kind: 'closedValue', allowedValueList: STANDARD_KIND_LIST }),
+	standardUsageTips: Object.freeze({ required: true, kind: 'nonEmptyStringOrNull' }),
 	stableUriPropertyName: Object.freeze({ required: true, kind: 'nonEmptyString' }),
 	stableIdPattern: Object.freeze({ required: true, kind: 'stableIdPattern' }),
 	rootStableIdFrom: Object.freeze({
@@ -105,6 +110,9 @@ const DME_ROLE_VALUE_LIST = Object.freeze(Object.values(DME_ROLES));
 const KIND_CHECKER_REGISTRY = Object.freeze({
 	nonEmptyString: (value) =>
 		typeof value === 'string' && value.length > 0 ? '' : `must be a non-empty string (got ${JSON.stringify(value)})`,
+	// null is a DECLARED absence (the root then carries no such property); '' or a non-string is refused
+	nonEmptyStringOrNull: (value) =>
+		value === null || (typeof value === 'string' && value.trim().length > 0) ? '' : `must be a non-empty string or null (got ${JSON.stringify(value)})`,
 	lowercaseString: (value) =>
 		typeof value === 'string' && value.length > 0 && value === value.toLowerCase()
 			? ''

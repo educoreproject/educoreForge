@@ -26,11 +26,17 @@
 // downstream mapping machinery). The fifth logical source name and the '000000' no-mapping sentinel were the
 // crosswalk's too, and leave with it. Each is a root byte: the Ed-Fi base moves by design.
 const STABLE_URI_PROPERTY_NAME = 'edfiStableId';
+const path = require('path');
+const { STANDARD_KIND } = require(path.join(__dirname, '..', '..', '..', 'lib', 'vocabulary', 'vocabulary'));
 
 const edfiForgeDeclaration = Object.freeze({
 	standardKey: 'edfi',
 	standardSource: 'EdFi', // === parserDescriptor.ini standardName, EXACT (gate G-SOURCE)
 	standardDisplayName: 'Ed-Fi Data Standard',
+	// ⟪lane R, 2026-10-05; TQ⟫ what kind of standard this is and how to read it in the graph, stamped on the root and read by
+	// the StandardDefinition card. Text moved VERBATIM from configs/dmeStandardUsageTips.json (lane Q's, 2026-10-04).
+	standardKind: STANDARD_KIND.DATA_STANDARD,
+	standardUsageTips: "Ed-Fi keeps its mappings directly on its properties (no instance nodes). The same property name often appears in several Ed-Fi entities or common types (e.g. BirthDate in the BirthData inline common and in ApplicantProfile), each with its own mapping and confidence: name the owning entity when presenting, and do not merge their confidences.",
 	stableUriPropertyName: STABLE_URI_PROPERTY_NAME,
 	// the REAL predicate (forgeEdfiContractGraph.js:216-221 EDFI_STABLE_ID_RE + trim), as data (FR6)
 	stableIdPattern: Object.freeze({ pattern: '^edfi:[A-Za-z]+(/.+)?$', trimmed: true }),

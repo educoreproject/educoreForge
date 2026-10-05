@@ -10,7 +10,7 @@
 // A1a).
 
 const path = require('path');
-const { DME_ROLES } = require(path.join(__dirname, '..', '..', '..', 'lib', 'vocabulary', 'vocabulary'));
+const { DME_ROLES, STANDARD_KIND } = require(path.join(__dirname, '..', '..', '..', 'lib', 'vocabulary', 'vocabulary'));
 const { REF_ID_MAP_INPUT_NAME } = require('./sif260928RefIdMapLoader');
 
 // every node's own address, and mappingInstruction.crosswalkResolveProperty: written once, read twice
@@ -20,6 +20,10 @@ const sif260928ForgeDeclaration = Object.freeze({
 	standardKey: 'sif260928', // equals the bundle directory; build.js resolves bundles by it
 	standardSource: 'SIF260928', // equals parserDescriptor.ini standardName exactly (G-SOURCE)
 	standardDisplayName: 'SIF Implementation Specification (sif260928 rebuild)',
+	// ⟪lane R, 2026-10-05; TQ⟫ what kind of standard this is and how to read it in the graph, stamped on the root and read by
+	// the StandardDefinition card. Text moved VERBATIM from configs/dmeStandardUsageTips.json (lane Q's, 2026-10-04).
+	standardKind: STANDARD_KIND.DATA_STANDARD,
+	standardUsageTips: "SIF keeps its mappings on INSTANCE nodes. A SIF Question (DmeProperty, the node search finds) carries no match edge; it has one Field (DmeSupport) per object it appears in, reached by HAS_INSTANCE, and the Fields carry the mappings. They arrive as dme_find_mappings rows with direction 'outgoingViaInstance' (or rows carrying instanceGroupList / instanceCount / viaInstanceGroupList), and in dme_graph_retriever as instanceView.mappingsViaInstances. Group them by the owning object, (object)-[:HAS_FIELD]->(field), e.g. StudentPersonal, StaffPersonal: present each hub concept ONCE with the objects that hold it and the instance count, never one repeated line per instance. If different objects carry different hub concepts for the same Question, say so plainly — the meaning differs by context; it is not an error. Structure: HAS_FIELD reads 'object has field', HAS_CHILD 'element contains element' (Object -> Container -> Container|Field).",
 	stableUriPropertyName: STABLE_URI_PROPERTY_NAME,
 	// sif260928:<kind> or sif260928:<kind>/<rest>. trimmed is true because '(/.+)' admits
 	// whitespace, so the pattern alone would not forbid a leading or trailing space.

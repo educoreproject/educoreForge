@@ -28,6 +28,7 @@
 // derived.
 
 const path = require('path');
+const { STANDARD_KIND } = require(path.join(__dirname, '..', '..', '..', 'lib', 'vocabulary', 'vocabulary'));
 const { PERMISSIVE_STABLE_ID_PATTERN } = require(
 	path.join(__dirname, '..', '..', '..', 'lib', 'forge-framework', 'migrationAllowanceRegistry'),
 );
@@ -52,6 +53,12 @@ const pescForgeDeclaration = Object.freeze({
 	// _source on all 42,372 nodes and on every edge endpoint.
 	standardSource: 'PESC260805',
 	standardDisplayName: 'Postsecondary Electronic Standards Council (PESC) - pesc260805 rebuild',
+	// ⟪lane R, 2026-10-05; TQ⟫ what kind of standard this is, stamped on the root and read by the StandardDefinition card.
+	// standardUsageTips is null DELIBERATELY: the PESC tips in configs/dmeStandardUsageTips.json (whose 'PESC' prefix this
+	// bundle's 'PESC260805' matched) describe instance nodes reached by HAS_INSTANCE, and this incumbent forge mints none (code fact,
+	// 2026-10-05: no HAS_INSTANCE in its source). No manual is better than a false one.
+	standardKind: STANDARD_KIND.DATA_STANDARD,
+	standardUsageTips: null,
 	stableUriPropertyName: STABLE_URI_PROPERTY_NAME,
 	// THE SHARED PERMISSIVE PATTERN, and the choice is MEASURED rather than defensive. PESC's
 	// identity space is genuinely heterogeneous by design (design §4, rulings D-1..D-3):

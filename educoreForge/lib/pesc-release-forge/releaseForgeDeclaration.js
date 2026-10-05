@@ -20,7 +20,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
 const path = require('path');
 const refuse = require(path.join(__dirname, '..', 'forge-framework', 'refuse'));
-const { DME_ROLES } = require(path.join(__dirname, '..', 'vocabulary', 'vocabulary'));
+const { DME_ROLES, STANDARD_KIND } = require(path.join(__dirname, '..', 'vocabulary', 'vocabulary'));
 const { deriveReleaseNames } = require('./releaseNames');
 const { MANIFEST_ENTRY_INPUT_NAME, MANIFEST_ENTRY_FILE_NAME } = require('./manifestEntryLoader');
 const { donorSourceInputListFor } = require('./documentationDonorSet');
@@ -37,6 +37,15 @@ const DERIVED_NAME_LIST = Object.freeze([
 	'stableIdPatternText',
 	'embedTextLabel',
 ]);
+// ⟪lane R, 2026-10-05; TQ⟫ what kind of standard a PESC release is and how to read it in the graph: ONE text for every release,
+// because every release forge is this library and mints the same shape (declarations and their occurrences, HAS_INSTANCE).
+// Stamped on each release's root; each release's StandardDefinition card reads it from there. Moved VERBATIM from the 'PESC'
+// entry of configs/dmeStandardUsageTips.json (lane Q's, 2026-10-04). A release that ever needs its own text gets a field in
+// releaseDeclaration.json and the scaffold; until then one copy cannot drift from six others.
+const PESC_RELEASE_STANDARD_KIND = STANDARD_KIND.DATA_STANDARD;
+const PESC_RELEASE_STANDARD_USAGE_TIPS =
+	"PESC keeps its mappings on INSTANCE nodes. A PESC element declaration (DmeProperty, the node search finds) carries no match edge; it has one occurrence (DmeSupport) per place it appears in the document, reached by HAS_INSTANCE, and the occurrences carry the mappings. They arrive as dme_find_mappings rows with direction 'outgoingViaInstance' (or rows carrying instanceGroupList / instanceCount / viaInstanceGroupList), and in dme_graph_retriever as instanceView.mappingsViaInstances. Group them by the occurrence's sectionPath, e.g. CollegeTranscript/Student/Person: present each hub concept ONCE with the document sections that hold it and the instance count, never one repeated line per instance. If different sections carry different hub concepts for the same element, say so plainly — the meaning differs by context; it is not an error. Each PESC release (College Transcript, High School Transcript, …) is its own standard with its own card.";
+
 const DATA_FIELD_NAME_LIST = Object.freeze(['releaseName', 'standard', 'version'].concat(DERIVED_NAME_LIST));
 
 const buildForgeDeclaration = ({ releaseDeclarationData, releaseDeclarationName }) => {
@@ -58,6 +67,8 @@ const buildForgeDeclaration = ({ releaseDeclarationData, releaseDeclarationName 
 		standardKey,
 		standardSource: releaseDeclarationData.standardSource,
 		standardDisplayName: releaseDeclarationData.standardDisplayName,
+		standardKind: PESC_RELEASE_STANDARD_KIND,
+		standardUsageTips: PESC_RELEASE_STANDARD_USAGE_TIPS,
 		stableUriPropertyName,
 		stableIdPattern: Object.freeze({ pattern: releaseDeclarationData.stableIdPatternText, trimmed: true }),
 		rootStableIdFrom: 'declared',
@@ -93,4 +104,4 @@ const buildForgeDeclaration = ({ releaseDeclarationData, releaseDeclarationName 
 	});
 };
 
-module.exports = { buildForgeDeclaration, DATA_FIELD_NAME_LIST, DERIVED_NAME_LIST, moduleName };
+module.exports = { buildForgeDeclaration, DATA_FIELD_NAME_LIST, DERIVED_NAME_LIST, PESC_RELEASE_STANDARD_KIND, PESC_RELEASE_STANDARD_USAGE_TIPS, moduleName };

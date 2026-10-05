@@ -33,14 +33,15 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // MEASURED CAVEAT (S1, 2026-08-31), SINCE PARTLY REPAIRED. When this file was written nothing produced
 // gateResults at all. The PRODUCER now exists (build.js materialize tail, "gateResults is ASSEMBLED
 // HERE"): it supplies ONE row, roundTrip, read from the stage runner's own report — pass when the stage
-// wrote its summary, notRun with the runner's disposition when it did not. It supplies NO fidelity row BY
-// RULING (2026-09-01, FINDING 5-A): fidelityGateRunner's success callback is reachable from three states
-// the call site cannot tell apart (skipped, genuine pass, loss allowed under --allowFidelityLoss), so a
-// derived pass would be a guess. CONSEQUENCE A CONSUMER MUST KNOW: on every build the fidelity row reads
-// verdict notRun / verdictSupplied false / expected true EVEN WHEN THE FIDELITY GATE RAN. Read it as
-// "not attested", never as "did not run". goldEvalCheck is likewise unsupplied at materialize (a separate,
-// later verb) and reads the same way. The gate below is still exactly right for a gate that genuinely
-// did not run; the fidelity gap is the producer's, carried as FINDING 5-A for a separate order.
+// wrote its summary, notRun with the runner's disposition when it did not. Since lane R (2026-10-05) it
+// also supplies the FIDELITY row, which is the fidelity runner's own report: notRun when the gate was
+// skipped (CEDS not in the graph), pass on a genuine pass, passWithAllowedLoss when the loss it found was
+// allowed under --allowFidelityLoss. (From 2026-09-01 until then, FINDING 5-A: the runner could not say
+// which, so no row was supplied and the fidelity row read notRun / verdictSupplied false on every build,
+// even when the gate ran. A graph finished before lane R still reads that way: "not attested", never
+// "did not run".) goldEvalCheck is unsupplied at materialize (a separate, later verb) and reads notRun
+// until -stampPromotion records it. Every SUPPLIED verdict must be a word of
+// vocabulary.BUILD_ATTESTATION_VERDICT_LIST; any other is refused by name, never recorded as given.
 //
 // ============================================================================================
 // S2 — DETERMINISM. NO PIDs. NO TIMESTAMPS AS IDENTITY.
@@ -70,7 +71,8 @@ const moduleFunction =
 		// adding a gate is a row here, not a change to any logic below.
 		const EXPECTED_GATE_LIST = ['fidelity', 'roundTrip', 'goldEvalCheck'];
 
-		const VERDICT_NOT_RUN = 'notRun';
+		const VERDICT_NOT_RUN = vocabulary.BUILD_ATTESTATION_VERDICT.NOT_RUN;
+		const VERDICT_LIST = vocabulary.BUILD_ATTESTATION_VERDICT_LIST;
 
 		// ----- emit — mode 'emit'. PURE CONSUMER: reads `gateResults` and nothing else.
 		const emit = ({ gateResults } = {}, callback) => {
@@ -87,6 +89,17 @@ const moduleFunction =
 					`build-attestation-finisher: ${malformed.length} supplied gateResults entr(ies) carry no ` +
 						`'gate' name. An attestation whose subject cannot be named records nothing a consumer can ` +
 						`act on, and guessing a name would attribute a verdict to a gate that did not give it.`,
+				);
+				return;
+			}
+
+			// a verdict outside the vocabulary cannot be read by any consumer; recording it as given would pass a typo
+			// (or a retired word) into the graph as a verdict
+			const unknownVerdictList = suppliedList.filter((oneEntry) => VERDICT_LIST.indexOf(oneEntry.verdict) === -1);
+			if (unknownVerdictList.length) {
+				callback(
+					`build-attestation-finisher REFUSED: ${unknownVerdictList.map((oneEntry) => `gate '${oneEntry.gate}' verdict ${JSON.stringify(oneEntry.verdict)}`).join(', ')} ` +
+						`is not one of ${VERDICT_LIST.join(', ')} (vocabulary.BUILD_ATTESTATION_VERDICT_LIST)`,
 				);
 				return;
 			}
@@ -146,7 +159,7 @@ const moduleFunction =
 			});
 		};
 
-		return { emit, EXPECTED_GATE_LIST, VERDICT_NOT_RUN };
+		return { emit, EXPECTED_GATE_LIST, VERDICT_NOT_RUN, VERDICT_LIST };
 	};
 
 // END OF moduleFunction() ============================================================

@@ -696,10 +696,19 @@ const MAPPING_PROPERTY_NAME_LIST = Object.freeze(Object.keys(MAPPING_PROPERTIES)
 const MAPPING_PRODUCER_KIND_LIST = Object.freeze(['authored', 'inferred']);
 // STANDARD_KIND — what kind of standard a StandardDefinition card describes (lane P, 2026-10-04; TQ via VIOLET_VALLEY): a data
 // standard (elements that map to the hub) or a classification taxonomy (codes that classify, CIP / SOC). Every current
-// standard is a dataStandard. Today the value is stamped from configs/dmeStandardUsageTips.json beside each standard's usage
-// tips; TODO (2026-10-04, TQ): move it into each standard's forge declaration.
+// standard is a dataStandard. ⟪lane R, 2026-10-05; TQ⟫ DECLARED by each standard's forge declaration (standardKind, beside its
+// standardUsageTips), stamped on the standard's root by the framework, and read from the root by the StandardDefinition
+// finisher. The configs/dmeStandardUsageTips.json stopgap is retired.
 const STANDARD_KIND = Object.freeze({ DATA_STANDARD: 'dataStandard', CLASSIFICATION_TAXONOMY: 'classificationTaxonomy' });
 const STANDARD_KIND_LIST = Object.freeze([STANDARD_KIND.DATA_STANDARD, STANDARD_KIND.CLASSIFICATION_TAXONOMY]);
+// BUILD_ATTESTATION_VERDICT — the words a :BuildAttestation row's verdict may be (lane R, 2026-10-05; FINDING 5-A of 2026-09-01).
+//   pass                 the gate ran and found nothing wrong
+//   fail                 the gate ran and refused (the promotion stamp records one; a failed build gate stops the build)
+//   notRun               the gate did not run (skipped, or not applicable to this build); never read as pass
+//   passWithAllowedLoss  the gate ran and passed ONLY because the operator named the loss it found (--allowFidelityLoss):
+//                        the build is knowingly incomplete, and the row must not say plain pass
+const BUILD_ATTESTATION_VERDICT = Object.freeze({ PASS: 'pass', FAIL: 'fail', NOT_RUN: 'notRun', PASS_WITH_ALLOWED_LOSS: 'passWithAllowedLoss' });
+const BUILD_ATTESTATION_VERDICT_LIST = Object.freeze(Object.keys(BUILD_ATTESTATION_VERDICT).map((oneMember) => BUILD_ATTESTATION_VERDICT[oneMember]));
 
 // =====================================================================
 // UNIQUENESS KEYS (replay-engine.js MERGE key; addressSignature reserved for the HubReference phases)
@@ -1091,6 +1100,8 @@ const vocabulary = {
 	MAPPING_PRODUCER_KIND_LIST,
 	STANDARD_KIND,
 	STANDARD_KIND_LIST,
+	BUILD_ATTESTATION_VERDICT,
+	BUILD_ATTESTATION_VERDICT_LIST,
 	MAPPING_KIND,
 	MAPPING_KIND_LIST,
 	MAPPING_KIND_BY_RESOLUTION,

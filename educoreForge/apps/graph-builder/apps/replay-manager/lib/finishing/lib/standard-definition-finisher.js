@@ -1,7 +1,6 @@
 'use strict';
 
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
-const standardUsageTipsLib = require('./standard-usage-tips');
 
 // standard-definition-finisher.js — registry member 4, mode 'emit' (graphSelfDoc Phase 3, 2026-08-31).
 //
@@ -56,13 +55,7 @@ const standardUsageTipsLib = require('./standard-usage-tips');
 
 const moduleFunction =
 	({ moduleName } = {}) =>
-	({ vocabulary, standardMetadataEntryList } = {}) => {
-		// ⟪lane P, 2026-10-04; TQ⟫ the per-standard metadata (standardKind, standardUsageTips) read from
-		// configs/dmeStandardUsageTips.json by finishing.js (lib/standard-usage-tips.js). REQUIRED: an absent table would
-		// strip every card of its tips without a word. TODO (2026-10-04, TQ): move kind + tips into each forge declaration.
-		if (!Array.isArray(standardMetadataEntryList)) {
-			throw new Error(`${moduleName} REFUSED: standardMetadataEntryList is required (read from configs/dmeStandardUsageTips.json by finishing.js)`);
-		}
+	({ vocabulary } = {}) => {
 		const { NODE_LABELS, SELF_DOC, DME_ROLES } = vocabulary;
 		const forgedLabel = NODE_LABELS.FORGED_NODE;
 		const definitionLabel = SELF_DOC.NODE_LABELS.STANDARD_DEFINITION;
@@ -103,6 +96,7 @@ const moduleFunction =
 			       root.publishedVersion AS publishedVersion, root.snapshotKey AS snapshotKey,
 			       root.sourceFormat AS sourceFormat, root.sourceUrl AS sourceUrl,
 			       root.stableId AS rootStableId,
+			       root.standardKind AS standardKind, root.standardUsageTips AS standardUsageTips,
 			       propertyCount, classCount, optionValueCount,
 			       exactMappedProperties, closeMappedProperties,
 			       mappingKindList, mappingSourceList, unkindedMappingEdgeCount,
@@ -110,9 +104,11 @@ const moduleFunction =
 			ORDER BY sourceKey`;
 
 		// ----- shapeOne — the honesty rules, applied to one root row.
-		// shapeOne(oneRow, standardMetadata) — standardMetadata is { standardKind, standardUsageTips } or null (no entry: the
-		// card gets NEITHER property; text is never invented)
-		const shapeOne = (oneRow, standardMetadata) => {
+		// shapeOne(oneRow) — standardKind and standardUsageTips pass through FROM THE ROOT, where the standard's own forge
+		// declaration put them (lane R, 2026-10-05; TQ: they were a configs side file, lane P's acknowledged stopgap). A root
+		// without one (its forge declared no tips, or the block was forged before forges declared them) gives a card without
+		// it: absent is absent, never invented text.
+		const shapeOne = (oneRow) => {
 			const version = oneRow.version || null;
 			// 'declared' ONLY when a version exists; NULL otherwise. Never an invented token.
 			const versionSource = oneRow.versionSource || (version ? 'declared' : null);
@@ -165,7 +161,8 @@ const moduleFunction =
 					closeMappedProperties: close,
 					mappingKindList,
 					mappingSourceList,
-					...(standardMetadata === null ? {} : { standardKind: standardMetadata.standardKind, standardUsageTips: standardMetadata.standardUsageTips }),
+					...(oneRow.standardKind ? { standardKind: oneRow.standardKind } : {}),
+					...(oneRow.standardUsageTips ? { standardUsageTips: oneRow.standardUsageTips } : {}),
 					// SORTED — collect() order is not stable and this node is in fingerprint scope.
 					mappingEdgeTypes: sorted(oneRow.mappingEdgeTypes).filter((oneType) => oneType !== 'null'),
 				},
@@ -201,6 +198,8 @@ const moduleFunction =
 					sourceFormat: oneRecord.get('sourceFormat'),
 					sourceUrl: oneRecord.get('sourceUrl'),
 					rootStableId: oneRecord.get('rootStableId'),
+					standardKind: oneRecord.get('standardKind'),
+					standardUsageTips: oneRecord.get('standardUsageTips'),
 					propertyCount: oneRecord.get('propertyCount'),
 					classCount: oneRecord.get('classCount'),
 					optionValueCount: oneRecord.get('optionValueCount'),
@@ -226,13 +225,7 @@ const moduleFunction =
 
 				// A graph with no standard roots is not an error — a metadata-only or empty graph is a real
 				// state — but it IS reported, so an empty result is never mistaken for a successful census.
-				const metadataReadList = rows.map((oneRow) => standardUsageTipsLib.standardMetadataFor({ standardMetadataEntryList, sourceKey: oneRow.sourceKey }));
-				const metadataRefusal = metadataReadList.find((oneRead) => oneRead.error);
-				if (metadataRefusal) {
-					callback(metadataRefusal.error);
-					return;
-				}
-				const shaped = rows.map((oneRow, rowIndex) => shapeOne(oneRow, metadataReadList[rowIndex].standardMetadata));
+				const shaped = rows.map((oneRow) => shapeOne(oneRow));
 				const nodes = shaped.map((oneShaped) => {
 					const { rootStableId, ...oneNode } = oneShaped;
 					return oneNode;
@@ -260,6 +253,8 @@ const moduleFunction =
 					{},
 				);
 				const disagreements = nodes.filter((oneNode) => oneNode.properties.versionDisagreement);
+				// a standard whose root declares no kind was forged before forges declared one: said, never hidden
+				const unkindedStandardList = nodes.filter((oneNode) => !oneNode.properties.standardKind).map((oneNode) => oneNode.properties.sourceKey);
 
 				callback('', {
 					nodes,
@@ -267,11 +262,13 @@ const moduleFunction =
 					summary:
 						`standard definitions: ${nodes.length} standard(s), disposition ` +
 						`${JSON.stringify(dispositionTally)}, ${disagreements.length} version disagreement(s), ` +
-						`${edges.length} DEFINES edge(s)`,
+						`${edges.length} DEFINES edge(s), ${unkindedStandardList.length} with no forge-declared standardKind` +
+						(unkindedStandardList.length ? ` (${unkindedStandardList.join(', ')})` : ''),
 					standardCount: nodes.length,
 					dispositionTally,
 					versionDisagreementCount: disagreements.length,
 					definesEdgeCount: edges.length,
+					unkindedStandardList,
 				});
 			});
 		};

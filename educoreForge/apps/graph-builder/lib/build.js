@@ -384,13 +384,12 @@ const eachSeries = (items, iterator, done) => {
 // fails regardless. So the flag cannot be left on to absorb a future regression: it is a
 // statement about a specific known gap, not a mute button. A plain on/off skip is exactly
 // the expectFail masking gate M-2 forbids, and it is deliberately not offered.
+//
+// ⟪lane R, 2026-10-05; FINDING 5-A⟫ ON SUCCESS IT REPORTS WHICH SUCCESS: callback('', fidelityAttestation), the
+// BuildAttestation row { gate: 'fidelity', verdict, detail, inventedTotal } — notRun when CEDS is not in the graph (skipped),
+// pass on a genuine pass, passWithAllowedLoss when the loss it found was allowed under --allowFidelityLoss. Until then it
+// called back with nothing, the three were indistinguishable, and the row read notRun on every build.
 const runCedsFidelityGate = ({ xLog, graphName, standardTokens, commandLineParameters }, callback) => {
-	const tokens = (standardTokens || []).map((one) => String(one).toLowerCase());
-	if (!tokens.includes('ceds')) {
-		callback('');
-		return;
-	}
-
 	// THE DECISION LIVES IN ITS OWN MODULE so its failure branch can be negated in
 	// milliseconds instead of a five-minute forge. See
 	// lib/ceds-fidelity-judgment/test/test-cedsFidelityJudgment.js -- 26 assertions, every one
@@ -398,6 +397,12 @@ const runCedsFidelityGate = ({ xLog, graphName, standardTokens, commandLineParam
 	const judgmentLib = require(
 		path.join(__dirname, '..', '..', '..', 'lib', 'ceds-fidelity-judgment', 'ceds-fidelity-judgment'),
 	)();
+	const tokens = (standardTokens || []).map((one) => String(one).toLowerCase());
+	if (!tokens.includes('ceds')) {
+		callback('', judgmentLib.skippedAttestation({ standardTokens }));
+		return;
+	}
+
 	const allowance = judgmentLib.resolveAllowance({
 		rawValue: ((commandLineParameters || {}).values || {}).allowFidelityLoss,
 	});
@@ -467,11 +472,38 @@ const runCedsFidelityGate = ({ xLog, graphName, standardTokens, commandLineParam
 						return;
 					}
 					xLog.status(`  [fidelity] ${verdict.reason}`);
-					callback('');
+					const attestationRead = judgmentLib.attestationFor({ verdict, headline });
+					if (attestationRead.error) {
+						callback(`graphBuilder build: ${attestationRead.error}`);
+						return;
+					}
+					callback('', attestationRead.attestation);
 				},
 			);
 		});
 	});
+};
+
+// fidelityAttestationFaultFor(fidelityAttestation) → '' | the named fault. What a fidelity runner's success report must be:
+// the BuildAttestation row for gate 'fidelity', with a verdict from vocabulary.BUILD_ATTESTATION_VERDICT_LIST.
+const fidelityAttestationFaultFor = (fidelityAttestation) => {
+	if (!fidelityAttestation || typeof fidelityAttestation !== 'object') {
+		return (
+			`the fidelity gate runner succeeded without reporting which success (got ${JSON.stringify(fidelityAttestation)}); ` +
+			`it must call back ('', { gate: 'fidelity', verdict, detail }) so the BuildAttestation row says whether R-1 ran, ` +
+			`passed, or passed only under an allowed loss — never a guess`
+		);
+	}
+	if (fidelityAttestation.gate !== 'fidelity') {
+		return `the fidelity gate runner reported gate ${JSON.stringify(fidelityAttestation.gate)}, not 'fidelity'`;
+	}
+	if (vocabulary.BUILD_ATTESTATION_VERDICT_LIST.indexOf(fidelityAttestation.verdict) === -1) {
+		return (
+			`the fidelity gate runner reported verdict ${JSON.stringify(fidelityAttestation.verdict)}, which is not one of ` +
+			`${vocabulary.BUILD_ATTESTATION_VERDICT_LIST.join(', ')}`
+		);
+	}
+	return '';
 };
 
 let materializeCounter = 0;
@@ -559,9 +591,17 @@ const materializeSchemaBlocks = ({ xLog, replay, resolvedSchemaBlocks, manifestI
 					standardTokens,
 					commandLineParameters,
 				},
-				(fidelityError) => {
+				(fidelityError, fidelityAttestation) => {
 					if (fidelityError) {
 						callback(fidelityError);
+						return;
+					}
+					// ⟪lane R, 2026-10-05; FINDING 5-A⟫ the runner REPORTS which success happened (skipped → notRun, genuine
+					// pass → pass, loss allowed → passWithAllowedLoss), and that report IS the fidelity row. A runner that
+					// succeeds without one is REFUSED by name: the row would have to be guessed, which is the defect this closes.
+					const fidelityAttestationFault = fidelityAttestationFaultFor(fidelityAttestation);
+					if (fidelityAttestationFault) {
+						callback(`materialize failed: ${fidelityAttestationFault}`);
 						return;
 					}
 					// ⟪RT-13.2⟫ the round-trip stage — the LAST act before success, against the
@@ -596,40 +636,36 @@ const materializeSchemaBlocks = ({ xLog, replay, resolvedSchemaBlocks, manifestI
 								roundTripStageReport && roundTripStageReport.stageRan === false
 									? {
 											gate: 'roundTrip',
-											verdict: 'notRun',
+											verdict: vocabulary.BUILD_ATTESTATION_VERDICT.NOT_RUN,
 											detail: `${roundTripStageReport.disposition || 'the runner reported no disposition'}`,
 										}
 									: roundTripStageReport && roundTripStageReport.summaryFilePath
 										? {
 												gate: 'roundTrip',
-												verdict: 'pass',
+												verdict: vocabulary.BUILD_ATTESTATION_VERDICT.PASS,
 												detail: `stage ran and wrote its summary: ${roundTripStageReport.summaryFilePath}`,
 											}
 										: {
 												gate: 'roundTrip',
-												verdict: 'notRun',
+												verdict: vocabulary.BUILD_ATTESTATION_VERDICT.NOT_RUN,
 												detail:
 													'the stage neither reported stageRan false nor wrote a summary — its ' +
 													'outcome is not establishable from what it returned, and notRun is the ' +
 													'honest reading of an unestablishable outcome',
 											};
 
-							// NO FIDELITY ROW, AND THE ABSENCE IS THE POINT (RULED 2026-09-01).
-							// fidelityGateRunner's `callback('')` is reachable from THREE states that the
-							// call site cannot tell apart: the gate SKIPPED (build.js:355, standardTokens
-							// lacking 'ceds'), a GENUINE PASS, and A LOSS DELIBERATELY ALLOWED under
-							// --allowFidelityLoss, where verdict.reason is logged at build.js:436 and then
-							// DISCARDED. A derived `pass` would stamp success on a build whose operator
-							// knowingly accepted losses. No vocabulary token is minted for this gap: naming
-							// it would ossify it. The row's ABSENCE stays conspicuous by design, and the
-							// real fix — returning the verdict instead of discarding it — is carried as
-							// FINDING 5-A for a separate order.
+							// THE FIDELITY ROW IS THE RUNNER'S OWN REPORT (lane R, 2026-10-05; FINDING 5-A of
+							// 2026-09-01 closed). From 2026-09-01 until then there was NO fidelity row, by ruling:
+							// the runner's `callback('')` was reachable from three states the call site could not
+							// tell apart (skipped, genuine pass, loss allowed under --allowFidelityLoss), so a
+							// derived pass would have been a guess and the row read notRun on every build. The
+							// runner now says which, and the row is passed through as it said it.
 							replay.finish(
 								{
 									inGraph: goldEval,
 									manifestRefId: manifestId,
 									storeReader,
-									gateResults: [roundTripRow],
+									gateResults: [fidelityAttestation, roundTripRow],
 								},
 								(finishError, finishReport) => {
 									if (finishError) {
@@ -2452,6 +2488,11 @@ module.exports = moduleFunction({ moduleName });
 // pure helpers exported as statics so the rebridge-scope resolution + per-pair scope match can be gated
 // directly (§6 no-silent-default), without standing up the whole build pipeline.
 module.exports.refuseHublessReuseUnderDeriveHub = refuseHublessReuseUnderDeriveHub;
+// ⟪lane R, 2026-10-05⟫ the fidelity row's producer and its wiring, exported as statics so the three states (skipped,
+// pass, passWithAllowedLoss) are gated through the real materialize tail with hermetic doubles (test-fidelityAttestation)
+module.exports.runCedsFidelityGate = runCedsFidelityGate;
+module.exports.materializeSchemaBlocks = materializeSchemaBlocks;
+module.exports.fidelityAttestationFaultFor = fidelityAttestationFaultFor;
 module.exports.resolveRebridge = resolveRebridge;
 module.exports.pairInRebridgeScope = pairInRebridgeScope;
 module.exports.rebridgeScopeIsActive = rebridgeScopeIsActive;

@@ -371,7 +371,8 @@ standardsDatabaseModule.open({ databaseFilePath }, (openErr, standardsDatabase) 
 					`  [fidelity] HERMETIC STUB — R-1 NOT RUN for '${graphName}' (no live graph ` +
 						`in this suite; the production default is the real gate, byte-unchanged)`,
 				);
-				gateDone('');
+				// ⟪lane R, 2026-10-05⟫ a runner reports which success happened; the stub's truth is that R-1 did not run
+				gateDone('', { gate: 'fidelity', verdict: 'notRun', detail: 'HERMETIC STUB: R-1 not run (no live graph in this suite)', inventedTotal: null });
 			},
 			components: {
 				forger: seedForger(),

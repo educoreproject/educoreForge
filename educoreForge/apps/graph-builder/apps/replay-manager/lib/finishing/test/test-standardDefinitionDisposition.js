@@ -10,11 +10,14 @@
 //   (b) the lists are SORTED (the node is in fingerprint scope), and the hub with no match edge reports two EMPTY lists
 //   (c) a mapping edge with NO mappingKind is REFUSED by name, naming the standard
 //   (d) the derivation cypher collects mappingKind and mappingSource from the edges
-//   (e) a card whose sourceKey matches a metadata entry carries that entry's standardKind and standardUsageTips; a card no
-//       entry matches carries NEITHER (never invented text)
-//   (the table reader's own refusals — ambiguity, bad kind, empty tips — are gated in test-standardUsageTips.js)
+//   (e) a card whose ROOT carries standardKind and standardUsageTips (declared by the standard's forge; lane R, 2026-10-05)
+//       carries exactly those; a card whose root carries neither carries NEITHER (never invented text)
+//   (f) the derivation cypher reads standardKind and standardUsageTips FROM THE ROOT (not from a side file)
+//   (the declaration's own refusals — missing kind, kind outside STANDARD_KIND_LIST, empty tips — are gated in
+//   lib/forge-framework/test/test-gStandardMetadata.js)
 // RED TWINS, each observed: the relation-type rule restored (a red); the sort removed (b red); the refusal removed (c red);
-// the cypher collecting the relation type instead (d red).
+// the cypher collecting the relation type instead (d red); a kind invented for a root without one (e red); the cypher reading
+// the tips from somewhere other than the root (f red).
 
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
@@ -36,12 +39,10 @@ const moduleDouble = require('../../../../../../../lib/forge-framework/test/test
 
 const FINISHER_PATH = path.join(__dirname, '..', 'lib', 'standard-definition-finisher.js');
 const realFinisherFactory = require(FINISHER_PATH);
-// a metadata table as standard-usage-tips.js returns it (prefixes lower-cased)
-const STANDARD_METADATA_ENTRY_LIST = [{ standardName: 'Toy', standardKeyPrefixList: ['toy'], standardKind: 'dataStandard', standardUsageTips: 'Toy tips.' }];
-const finisherFor = (mutationList, standardMetadataEntryList = STANDARD_METADATA_ENTRY_LIST) => (mutationList.length === 0 ? realFinisherFactory : moduleDouble.loadWithMutations({ modulePath: FINISHER_PATH, mutationList }))({ vocabulary, standardMetadataEntryList });
+const finisherFor = (mutationList) => (mutationList.length === 0 ? realFinisherFactory : moduleDouble.loadWithMutations({ modulePath: FINISHER_PATH, mutationList }))({ vocabulary });
 
 // a root row as the derivation query returns it; the counts are what the conjunct varies
-const rootRow = ({ exactMappedProperties, mappingKindList, mappingSourceList, unkindedMappingEdgeCount = 0 }) => ({
+const rootRow = ({ exactMappedProperties, mappingKindList, mappingSourceList, unkindedMappingEdgeCount = 0, standardKind = null, standardUsageTips = null }) => ({
 	sourceKey: 'Toy',
 	standardKey: 'toy',
 	standardName: 'Toy',
@@ -56,18 +57,20 @@ const rootRow = ({ exactMappedProperties, mappingKindList, mappingSourceList, un
 	mappingSourceList,
 	unkindedMappingEdgeCount,
 	mappingEdgeTypes: exactMappedProperties > 0 ? ['EXACT_MATCH'] : [],
+	standardKind,
+	standardUsageTips,
 });
 const readQueryOver = (rowList) => (queryArguments, callback) => callback('', { records: rowList.map((oneRow) => ({ get: (fieldName) => oneRow[fieldName] })) });
 
 const conjunctJudgeByRefId = {
 	a_kindAndSourceFromEdgesNotRelation: (finisher, done) => {
-		const properties = finisher.shapeOne(rootRow({ exactMappedProperties: 5, mappingKindList: ['inferred'], mappingSourceList: ['bridge-jev'] }), null).properties;
+		const properties = finisher.shapeOne(rootRow({ exactMappedProperties: 5, mappingKindList: ['inferred'], mappingSourceList: ['bridge-jev'] })).properties;
 		const pass = JSON.stringify(properties.mappingKindList) === '["inferred"]' && JSON.stringify(properties.mappingSourceList) === '["bridge-jev"]' && properties.mappingDisposition === undefined;
 		done({ pass, detail: `five EXACT_MATCH edges → kinds ${JSON.stringify(properties.mappingKindList)}, sources ${JSON.stringify(properties.mappingSourceList)}, mappingDisposition ${JSON.stringify(properties.mappingDisposition)}` });
 	},
 	b_sortedAndHubEmpty: (finisher, done) => {
-		const mixed = finisher.shapeOne(rootRow({ exactMappedProperties: 3, mappingKindList: ['inferred', 'authored'], mappingSourceList: ['crosswalk-edfiCrosswalkPlugin', 'bridge-jev'] }), null).properties;
-		const hub = finisher.shapeOne(rootRow({ exactMappedProperties: 0, mappingKindList: [], mappingSourceList: [] }), null).properties;
+		const mixed = finisher.shapeOne(rootRow({ exactMappedProperties: 3, mappingKindList: ['inferred', 'authored'], mappingSourceList: ['crosswalk-edfiCrosswalkPlugin', 'bridge-jev'] })).properties;
+		const hub = finisher.shapeOne(rootRow({ exactMappedProperties: 0, mappingKindList: [], mappingSourceList: [] })).properties;
 		const pass = JSON.stringify(mixed.mappingKindList) === '["authored","inferred"]' && JSON.stringify(mixed.mappingSourceList) === '["bridge-jev","crosswalk-edfiCrosswalkPlugin"]' && hub.mappingKindList.length === 0 && hub.mappingSourceList.length === 0;
 		done({ pass, detail: `mixed ${JSON.stringify(mixed.mappingKindList)} ${JSON.stringify(mixed.mappingSourceList)}; hub ${JSON.stringify(hub.mappingKindList)}` });
 	},
@@ -77,15 +80,19 @@ const conjunctJudgeByRefId = {
 			done({ pass: refusedByName, detail: emitError ? emitError.slice(0, 160) : 'emitted without refusing' });
 		});
 	},
-	e_tipsStampedFromTableNeverInvented: (finisher, done) => {
+	e_tipsFromRootNeverInvented: (finisher, done) => {
 		const otherRow = { ...rootRow({ exactMappedProperties: 0, mappingKindList: [], mappingSourceList: [] }), sourceKey: 'Unlisted' };
-		finisher.emit({ readQuery: readQueryOver([rootRow({ exactMappedProperties: 1, mappingKindList: ['inferred'], mappingSourceList: ['bridge-jev'] }), otherRow]) }, (emitError, emitted) => {
+		finisher.emit({ readQuery: readQueryOver([rootRow({ exactMappedProperties: 1, mappingKindList: ['inferred'], mappingSourceList: ['bridge-jev'], standardKind: 'dataStandard', standardUsageTips: 'Toy tips.' }), otherRow]) }, (emitError, emitted) => {
 			const byKey = emitError ? {} : emitted.nodes.reduce((soFar, oneNode) => ({ ...soFar, [oneNode.properties.sourceKey]: oneNode.properties }), {});
 			const listed = byKey.Toy || {};
 			const unlisted = byKey.Unlisted || {};
 			const pass = !emitError && listed.standardKind === 'dataStandard' && listed.standardUsageTips === 'Toy tips.' && !('standardKind' in unlisted) && !('standardUsageTips' in unlisted);
 			done({ pass, detail: emitError || `Toy ${listed.standardKind}/${listed.standardUsageTips}; Unlisted keys ${Object.keys(unlisted).filter((oneName) => /standard(Kind|UsageTips)/.test(oneName)).join(',') || 'none'}` });
 		});
+	},
+	f_cypherReadsKindAndTipsFromRoot: (finisher, done) => {
+		const pass = finisher.DERIVATION_CYPHER.indexOf('root.standardKind AS standardKind, root.standardUsageTips AS standardUsageTips') !== -1;
+		done({ pass, detail: pass ? 'reads standardKind and standardUsageTips from the root' : 'the derivation cypher does not read them from the root' });
 	},
 	d_cypherCollectsKindAndSource: (finisher, done) => {
 		const pass = finisher.DERIVATION_CYPHER.indexOf('collect(DISTINCT mkEdge.mappingKind) AS mappingKindList') !== -1 && finisher.DERIVATION_CYPHER.indexOf('collect(DISTINCT mkEdge.mappingSource) AS mappingSourceList') !== -1;
@@ -95,10 +102,16 @@ const conjunctJudgeByRefId = {
 
 const TWIN_LIST = [
 	{
-		conjunctRefId: 'e_tipsStampedFromTableNeverInvented',
+		conjunctRefId: 'e_tipsFromRootNeverInvented',
 		twinName: 'kindInventedForUnlisted',
-		find: '...(standardMetadata === null ? {} : {',
-		replace: "...(standardMetadata === null ? { standardKind: 'dataStandard' } : {",
+		find: '...(oneRow.standardKind ? { standardKind: oneRow.standardKind } : {}),',
+		replace: "...(oneRow.standardKind ? { standardKind: oneRow.standardKind } : { standardKind: 'dataStandard' }),",
+	},
+	{
+		conjunctRefId: 'f_cypherReadsKindAndTipsFromRoot',
+		twinName: 'tipsNotReadFromRoot',
+		find: 'root.standardKind AS standardKind, root.standardUsageTips AS standardUsageTips',
+		replace: 'null AS standardKind, null AS standardUsageTips',
 	},
 	{
 		conjunctRefId: 'a_kindAndSourceFromEdgesNotRelation',

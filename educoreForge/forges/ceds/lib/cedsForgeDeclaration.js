@@ -41,7 +41,7 @@
 // needing none is why this phase leaves lib/forge-framework untouched.
 
 const path = require('path');
-const { DME_ROLES } = require(path.join(__dirname, '..', '..', '..', 'lib', 'vocabulary', 'vocabulary'));
+const { DME_ROLES, STANDARD_KIND } = require(path.join(__dirname, '..', '..', '..', 'lib', 'vocabulary', 'vocabulary'));
 
 // STABLE_URI_PROPERTY_NAME — CEDS addresses every node by its source uri (forgeCeds.js:72, :195).
 // It is ALSO mappingInstruction.crosswalkResolveProperty, so it is written once and read twice.
@@ -52,6 +52,10 @@ const cedsForgeDeclaration = Object.freeze({
 	standardSource: 'CEDS', // === parserDescriptor.ini standardName, EXACT (gate G-SOURCE); also the
 	// _source on all 119,805 nodes, and === hubName, which is what SPEC I12 asserts
 	standardDisplayName: 'Common Education Data Standards', // the root's standardName byte (:481)
+	// ⟪lane R, 2026-10-05; TQ⟫ what kind of standard this is and how to read it in the graph, stamped on the root and read by
+	// the StandardDefinition card. Text moved VERBATIM from configs/dmeStandardUsageTips.json (lane Q's, 2026-10-04).
+	standardKind: STANDARD_KIND.DATA_STANDARD,
+	standardUsageTips: "CEDS is the hub. A CEDS HubReference is a tuple: domain class + property + range [+ value], keyed by canonicalKey (the CEDS Global ID). It decomposes via HAS_CEDS_DOMAIN / HAS_CEDS_PROPERTY / HAS_CEDS_RANGE / HAS_CEDS_VALUE / HAS_CEDS_QUALIFIER; its range may be an option set, another CEDS class (a reference), or a datatype. Present a CEDS anchor as its full tuple — domain · property · range [· value], the cedsTuple field from dme_find_mappings — never as a bare Global ID: the Global ID is the tuple's durable key, not its meaning.",
 	stableUriPropertyName: STABLE_URI_PROPERTY_NAME,
 	// the REAL predicate, verbatim from normalize.js:74 CEDS_URI_RE, as data (FR6).
 	// trimmed:false is the EXACT reproduction of isCleanStableId (normalize.js:75-76), which applies

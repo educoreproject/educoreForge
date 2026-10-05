@@ -9,12 +9,14 @@
 // compatibilityDeclarationList is empty by construction — a new forge declares no allowance.
 
 const path = require('path');
-const { DME_ROLES } = require(path.join(__dirname, '..', '..', '..', '..', '..', 'vocabulary', 'vocabulary'));
+const { DME_ROLES, STANDARD_KIND } = require(path.join(__dirname, '..', '..', '..', '..', '..', 'vocabulary', 'vocabulary'));
 
 const toyForgeDeclaration = Object.freeze({
 	standardKey: 'toy',
 	standardSource: 'Toy',
 	standardDisplayName: 'Toy Standard',
+	standardKind: STANDARD_KIND.DATA_STANDARD,
+	standardUsageTips: 'Toy usage tips.',
 	stableUriPropertyName: 'toyStableId',
 	stableIdPattern: Object.freeze({ pattern: '^toy:[A-Za-z]+(/.+)?$', trimmed: true }),
 	rootStableIdFrom: 'declared',

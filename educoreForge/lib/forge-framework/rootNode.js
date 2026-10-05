@@ -133,7 +133,7 @@ const build = ({ forgeDeclaration, metadata, describedRoot, activeAllowanceById 
 	}
 
 	const rootStableId = resolveRootStableId({ forgeDeclaration, metadata });
-	const { standardKey, standardSource, standardDisplayName, stableUriPropertyName, rootLabel, parserVersion, mappingInstruction } = forgeDeclaration;
+	const { standardKey, standardSource, standardDisplayName, stableUriPropertyName, rootLabel, parserVersion, mappingInstruction, standardKind, standardUsageTips } = forgeDeclaration;
 
 	const candidateProperties = {
 		_id: rootStableId,
@@ -156,6 +156,10 @@ const build = ({ forgeDeclaration, metadata, describedRoot, activeAllowanceById 
 		versionSource: metadata.versionSource,
 		parserVersion,
 		coreVersion: CORE_VERSION,
+		// ⟪lane R, 2026-10-05; TQ⟫ declared by the forge (forgeDeclarationContract.js); standardUsageTips null = the forge has
+		// nothing to say, and the root carries no such property (absent is absent)
+		standardKind,
+		...(standardUsageTips === null ? {} : { standardUsageTips }),
 		...extraProperties,
 	};
 	rootOmitPropertyList.forEach((oneName) => {

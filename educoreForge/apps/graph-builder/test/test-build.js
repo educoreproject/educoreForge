@@ -493,7 +493,8 @@ const announcedFidelityGateStub = ({ xLog, graphName }, cb) => {
 		`  [fidelity] HERMETIC STUB — R-1 NOT RUN for '${graphName}' (this suite has no live ` +
 			`graph; the production default is the real gate, byte-unchanged)`,
 	);
-	cb('');
+	// ⟪lane R, 2026-10-05⟫ a runner reports which success happened; the stub's truth is that R-1 did not run
+	cb('', { gate: 'fidelity', verdict: 'notRun', detail: 'HERMETIC STUB: R-1 not run (no live graph in this suite)', inventedTotal: null });
 };
 
 // the RT-13 stage arrives as the same kind of SELF-ANNOUNCING stub (never a silent skip): the

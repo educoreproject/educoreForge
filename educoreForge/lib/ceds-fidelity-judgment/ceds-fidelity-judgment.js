@@ -30,8 +30,12 @@
 // once. A hermetic test of a decision nobody invokes is a very tidy way to prove nothing.
 
 const path = require('path');
+const { BUILD_ATTESTATION_VERDICT } = require(path.join(__dirname, '..', 'vocabulary', 'vocabulary'));
 
 const moduleName = path.basename(__filename).replace(/\.js$/, '');
+
+// the gate name the fidelity BuildAttestation row carries (build-attestation-finisher EXPECTED_GATE_LIST)
+const FIDELITY_GATE_NAME = 'fidelity';
 
 const cedsFidelityJudgment = () => {
 	// -----------------------------------------------------------------
@@ -106,17 +110,60 @@ const cedsFidelityJudgment = () => {
 							`--allowFidelityLoss=${headline.lost}.`),
 			};
 		}
+		// ⟪lane R, 2026-10-05; FINDING 5-A⟫ WHICH pass this is, as an attestation verdict: a pass that USED the allowance
+		// (lost > 0, within it) is passWithAllowedLoss and never plain pass; an allowance named but not needed is a plain
+		// pass and says so. knowinglyIncomplete follows the same fact (it read allowance > 0 until 2026-10-05, which called
+		// a zero-loss build incomplete).
+		const lossWasAllowed = headline.lost > 0;
 		return {
 			passed: true,
-			reason: allowance
-				? `PASSED under an EXPLICIT allowance of ${allowance} lost statement(s) -- this build ` +
+			reason: lossWasAllowed
+				? `PASSED under an EXPLICIT allowance of ${allowance} lost statement(s), ${headline.lost} lost -- this build ` +
 					`is knowingly incomplete`
-				: 'PASSED -- zero lost, zero invented',
-			knowinglyIncomplete: allowance > 0,
+				: `PASSED -- zero lost, zero invented` + (allowance ? ` (the --allowFidelityLoss=${allowance} named was not needed)` : ''),
+			knowinglyIncomplete: lossWasAllowed,
+			attestationVerdict: lossWasAllowed ? BUILD_ATTESTATION_VERDICT.PASS_WITH_ALLOWED_LOSS : BUILD_ATTESTATION_VERDICT.PASS,
 		};
 	};
 
-	return { judgeFidelity, resolveAllowance };
+	// -----------------------------------------------------------------
+	// THE FIDELITY ATTESTATION ROW — what the gate REPORTS, so the BuildAttestation row says which of its three success
+	// states happened (lane R, 2026-10-05; FINDING 5-A of 2026-09-01: the runner's callback('') could not tell them apart,
+	// and the row read notRun on every build, even when the gate ran).
+	//   skippedAttestation  CEDS is not in this graph: the gate did not run           → notRun
+	//   attestationFor      the gate ran and passed (judgeFidelity's verdict)          → pass | passWithAllowedLoss
+	// A failing gate reports nothing: it fails the build. Pure.
+	// -----------------------------------------------------------------
+	const skippedAttestation = ({ standardTokens } = {}) => ({
+		gate: FIDELITY_GATE_NAME,
+		verdict: BUILD_ATTESTATION_VERDICT.NOT_RUN,
+		detail:
+			`skipped: CEDS is not among this build's standards (${JSON.stringify(standardTokens || [])}), so R-1 has nothing ` +
+			`to round-trip`,
+		inventedTotal: null,
+	});
+	const attestationFor = ({ verdict, headline } = {}) => {
+		if (!verdict || verdict.passed !== true || !verdict.attestationVerdict || !headline) {
+			return {
+				error:
+					`${moduleName}: attestationFor needs a PASSING judgeFidelity verdict and its headline (got ` +
+					`${JSON.stringify({ passed: verdict && verdict.passed, attestationVerdict: verdict && verdict.attestationVerdict, headline: !!headline })}); ` +
+					`a failed gate fails the build and attests nothing`,
+			};
+		}
+		return {
+			attestation: {
+				gate: FIDELITY_GATE_NAME,
+				verdict: verdict.attestationVerdict,
+				detail:
+					`${verdict.reason}; source ${headline.sourceStatements}, matched ${headline.matched}, ` +
+					`lost ${headline.lost}, invented ${headline.invented}`,
+				inventedTotal: headline.invented,
+			},
+		};
+	};
+
+	return { judgeFidelity, resolveAllowance, skippedAttestation, attestationFor, FIDELITY_GATE_NAME };
 };
 
 module.exports = cedsFidelityJudgment;

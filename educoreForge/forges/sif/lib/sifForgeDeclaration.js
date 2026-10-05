@@ -23,6 +23,8 @@
 // (forgeSif.js:64, :354). It is ALSO mappingInstruction.crosswalkResolveProperty, so it is written
 // once and read twice, exactly as CEDS's 'uri' is.
 const STABLE_URI_PROPERTY_NAME = 'sifStableId';
+const path = require('path');
+const { STANDARD_KIND } = require(path.join(__dirname, '..', '..', '..', 'lib', 'vocabulary', 'vocabulary'));
 
 // the native annotation column the CEDS anchor is read from (forgeSif.js:65). Recorded as the
 // mappingInstruction's declared origin, and carried on every annotated field as its crossRef locator.
@@ -33,6 +35,12 @@ const sifForgeDeclaration = Object.freeze({
 	standardSource: 'SIF', // === parserDescriptor.ini standardName, EXACT (gate G-SOURCE); also the
 	// _source on all 27,069 nodes and on every edge endpoint
 	standardDisplayName: 'SIF Implementation Specification', // the root's standardName byte (:391)
+	// ⟪lane R, 2026-10-05; TQ⟫ what kind of standard this is, stamped on the root and read by the StandardDefinition card.
+	// standardUsageTips is null DELIBERATELY: the SIF tips in configs/dmeStandardUsageTips.json (whose 'SIF' prefix this
+	// bundle's 'SIF' matched) describe instance nodes reached by HAS_INSTANCE, and this incumbent forge mints none (code fact,
+	// 2026-10-05: no HAS_INSTANCE in its source). No manual is better than a false one.
+	standardKind: STANDARD_KIND.DATA_STANDARD,
+	standardUsageTips: null,
 	stableUriPropertyName: STABLE_URI_PROPERTY_NAME,
 	// the REAL predicate, verbatim from normalize.js:63 SIF_STABLE_ID_RE, as data (FR6).
 	//
