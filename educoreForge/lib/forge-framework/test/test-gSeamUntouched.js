@@ -134,7 +134,16 @@ const TREE_ROOT = path.resolve(toyScenario.FRAMEWORK_DIR, '..', '..');
 //   apps/graph-builder/apps/replay-manager/replayManager.js  |  4  injects debugMappingSource into the passport writer
 // forger.js, build.js, shape-forged-graph.js, replay-block.js and round-trip-stage.js: UNTOUCHED. THE SEAM FILE LIST IS UNCHANGED,
 // no exclusion added; the fresh red was observed in fleet f1 (DEVLOG-P). (iii) moves next, on its own commit.
-const PRE_MIGRATION_REF = 'postMappingProvenancePGSeamUntouched-100426'; // re-anchored by VIOLET_OCEAN, mappingProvenance lane P; the tag is cut ON the re-anchor commit
+// ═══ RE-ANCHOR, 2026-10-05 (EMERALD_OCEAN; leftovers lane R, pre-authorised WORKORDER-leftovers-100526 step 3) ═══
+// postMappingProvenancePGSeamUntouched-100426 -> postLeftoversRGSeamUntouched-100526, the tag cut ON this re-anchor commit. CENSUS,
+// MEASURED WITH THIS GATE'S OWN COMMAND (git diff --stat postMappingProvenancePGSeamUntouched-100426 -- <the 7 seam files>) at d84bd9a:
+// exactly ONE of the seven, lane R d39755c (FINDING 5-A of 2026-09-01, the fidelity BuildAttestation):
+//   apps/graph-builder/lib/build.js                          | 85  runCedsFidelityGate calls back ('', row) (notRun | pass |
+//                                                                   passWithAllowedLoss); the materialize tail hands the row to
+//                                                                   finish and refuses a silent runner; two statics exported
+// forger.js, shape-forged-graph.js, replay-engine.js, replay-block.js, replayManager.js and round-trip-stage.js: UNTOUCHED. THE SEAM
+// FILE LIST IS UNCHANGED, no exclusion added; the fresh red was observed at d84bd9a (DEVLOG-R). (iii) moves next, on its own commit.
+const PRE_MIGRATION_REF = 'postLeftoversRGSeamUntouched-100526'; // re-anchored by EMERALD_OCEAN, leftovers lane R; the tag is cut ON the re-anchor commit
 const SEAM_FILE_LIST = Object.freeze([
 	'apps/graph-builder/apps/forger/forger.js',
 	'apps/graph-builder/lib/build.js',
