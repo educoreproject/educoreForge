@@ -125,7 +125,12 @@ const BASE_TAG = 'preBridgeFramework-081626';
 // postMappingProvenancePVocabularyIiD-100426, tag cut ON this commit. CENSUS on cf58dfb: vocabulary.js (STANDARD_KIND, allowed)
 // and vocabulary-definitions.js (StandardDefinition's text names standardKind and standardUsageTips), the one file outside.
 // Base moved, list NOT widened. Fresh red observed on cf58dfb (DEVLOG-P).
-const POST_D1_BASE_TAG = 'postMappingProvenancePVocabularyIiD-100426'; // re-anchored 2026-10-04 (mappingProvenance lane P, fourth) — base moved, allowed-path list NOT widened
+// ═══ RE-ANCHOR (ii), 2026-10-05 (EMERALD_OCEAN, leftovers lane R; pre-authorised) ═══ postMappingProvenancePVocabularyIiD-100426 ->
+// postLeftoversRVocabularyIi-100526, tag cut ON this commit. CENSUS (git diff --stat postMappingProvenancePVocabularyIiD-100426 --
+// lib/vocabulary/) at the G-SEAM-UNTOUCHED re-anchor: vocabulary.js 15 (BUILD_ATTESTATION_VERDICT, allowed), test/test-sifVocabularyInvariance.js
+// 13 (the ruled PROXY re-pin, allowed) and vocabulary-definitions.js 2 (StandardDefinition's text: kind + tips now read from the
+// root), the one file outside. Base moved, list NOT widened. Fresh red observed on d39755c (DEVLOG-R).
+const POST_D1_BASE_TAG = 'postLeftoversRVocabularyIi-100526'; // re-anchored 2026-10-05 (leftovers lane R) — base moved, allowed-path list NOT widened
 // ⟪A THIRD BASELINE — RULING P1-R11, BRIEF-SEAM-reanchorBgSeamUntouched.md, applied 2026-08-29 by
 // STERLING_PEAK during hub kit role migration Phase 0.E4⟫
 //
