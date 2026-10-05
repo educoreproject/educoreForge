@@ -748,7 +748,11 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // kind + tips read from the root), lib/vocabulary/test/test-sifVocabularyInvariance.js 9/4 (the ruled PROXY re-pins, d84bd9a),
 // lib/bridge-framework/test/test-bgNosub.js 27/3 (lane R's three BG re-anchors). No lib/bridge-framework SOURCE, bridge-maker or
 // interfaces.js change: the frameworkFingerprint did not move. Path list byte-identical.
-const P1_BASELINE_COMMIT = 'postLeftoversRPescComposeA-100526'; // re-anchored by EMERALD_OCEAN on leftovers/R; the tag is cut ON the re-anchor commit
+// RE-ANCHOR 2026-10-05 (EMERALD_OCEAN, leftovers lane R follow-up ordered by VIOLET_VALLEY; pre-authorised): ->
+// postLeftoversR529PescComposeA-100526. CENSUS (numstat from postLeftoversRPescComposeA-100526 over the six declared paths, 1 path, from ONE
+// commit, 3242811): apps/graph-builder/apps/bridge-maker/lib/jevJudgeClient.js 3/1 (the Jev client retries 529 'system_overloaded' like
+// 520-524; one 529 killed metaBuild1's SIF run). Same species as 2cfe657's re-anchor. Path list byte-identical; tag cut ON this commit.
+const P1_BASELINE_COMMIT = 'postLeftoversR529PescComposeA-100526'; // re-anchored by EMERALD_OCEAN on leftovers/R529; the tag is cut ON the re-anchor commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
