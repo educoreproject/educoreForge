@@ -665,7 +665,17 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // 22 (stamps standardKind + standardUsageTips), lib/standard-usage-tips.js 66 (new), two finishing tests (29, 91 new), and
 // lib/forge-framework/test/test-gSeamUntouched.js 11 (its own re-anchor 94c2a9c, the ruled-test exception). build.js, forger/,
 // replay/, every forge and lib/forge-framework SOURCE: UNTOUCHED. SEAM_PATH_LIST byte-identical. Fresh red observed (DEVLOG-P).
-const PHASE3_ANCHOR_TAG = 'postMappingProvenancePSeamDiffEmptyD-100426'; // re-anchored by VIOLET_OCEAN, mappingProvenance lane P (fourth)
+// leftovers LANE R RE-ANCHOR (EMERALD_OCEAN, 2026-10-05; pre-authorised): postMappingProvenancePSeamDiffEmptyD-100426 ->
+// postLeftoversRSeamDiffEmpty-100526, tag cut ON this commit. CENSUS (git diff --stat postMappingProvenancePSeamDiffEmptyD-100426 -- the
+// seam paths) at c420d5c: seventeen files, all lane R (d39755c, d84bd9a):
+//   item 1 (kind + tips declared by each forge): forgeDeclarationContract.js 10, rootNode.js 6, five forge declarations (ceds 6,
+//     edfi 6, sif 8, sif260928 6, pesc260805 7; the PESC release library is outside the seam paths), finishing.js 14 and
+//     standard-definition-finisher.js 37 (read kind + tips from the root), standard-usage-tips.js -66 and test-standardUsageTips.js -91
+//     (retired), test-standardDefinitionDisposition.js 45, toyForgeDeclaration.js 4, expectedFingerprints.json 12 (the ruled re-pins),
+//     test-gStandardMetadata.js 134 (new);
+//   item 2 (FINDING 5-A): build.js 85 and build-attestation-finisher.js 33 (the fidelity row is the runner's report).
+// forger/, lib/replay/, every forge entry and hooks file: UNTOUCHED. SEAM_PATH_LIST byte-identical. Fresh red observed on d39755c (DEVLOG-R).
+const PHASE3_ANCHOR_TAG = 'postLeftoversRSeamDiffEmpty-100526'; // re-anchored by EMERALD_OCEAN, leftovers lane R
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');
