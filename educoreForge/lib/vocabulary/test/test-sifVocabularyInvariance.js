@@ -47,15 +47,20 @@ const PROBE_PATH = path.join(__dirname, 'testSupport', 'pureProxyFingerprintProb
 // proxyFingerprintByStandard; DEVLOG-G0 deliverable 2), measured at 97feee9. Never edited to match a
 // measurement.
 const G0_PROXY_FINGERPRINT_BY_STANDARD = Object.freeze({
-	ceds: 'ed4785ba9212999d005608357abdfc9d5db9a32b6f57830eae91864fed517252',
+	ceds: '2ca5765633ffc22f836e5942dc7e28f053dd71d187739327395a153a070d3690',
 	// edfi RE-PINNED 2026-10-02 (PRISM_LATTICE, goldJev lane F): G0's 814ce961570c… -> 04abc77b…. NOT edited to match a
 	// measurement: a RULED base move. TQ excluded the CEDS-authored crosswalk from every graph (2026-09-10, 2026-10-01), so the
 	// Ed-Fi forge no longer stamps its CEDS ids (3,045 nodes) and its root no longer names it; expectedFingerprints.json
 	// carries the same move with the evidence (runEdfiPreMigrationProbes: 937734f EQUAL 814ce961…, lane F 04abc77b…). The
 	// other three are G0's literals, unchanged.
-	edfi: '04abc77bc8d15a0326d3c047fc4cf725eb631badb5434538c090481ce5866be8',
-	sif: '72029d9ac1f366a6bb0f470863077bf5f9837eda7844602b86056e2b09b1d90b',
-	pesc260805: '87c90588c87fd73fe4838b1662da3b08b9a1d373ba839779977deb6685b6bc61',
+	// ALL FOUR RE-PINNED 2026-10-05 (EMERALD_OCEAN, leftovers lane R item 1): NOT edited to match a measurement: a RULED base
+	// move. TQ moved standardKind + standardUsageTips into each forge declaration (2026-10-04 TODO, WORKORDER-leftovers-100526),
+	// and the framework stamps them on every root. ceds ed4785ba… -> 2ca57656…, edfi 04abc77b… -> 75695d22…, sif 72029d9a… ->
+	// dcf20728…, pesc260805 87c90588… -> 10fccef6…. With exactly those two root lines removed from rootNode.js this suite measured
+	// all four EQUAL to the previous literals (8/8); expectedFingerprints.json carries the same move.
+	edfi: '75695d225be6b0e5221adff7801a479bf5498396863e0210315ae023beb48953',
+	sif: 'dcf207282a0df450ea753ab6970d9326a7b333e683281ab71c9c01575bd26a64',
+	pesc260805: '10fccef65d8262c16efc9589cfc204eb3d6326698011166065cc8027795a2025',
 });
 const STANDARD_TOKEN_LIST = Object.keys(G0_PROXY_FINGERPRINT_BY_STANDARD);
 
