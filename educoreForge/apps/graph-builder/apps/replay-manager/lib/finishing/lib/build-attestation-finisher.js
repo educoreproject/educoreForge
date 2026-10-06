@@ -52,6 +52,14 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // two runs of the same verdicts emit in the same sequence. A timestamp belongs on the PASSPORT, which is
 // excluded from fingerprints by construction; putting one here would silently make every build differ.
 //
+// ============================================================================================
+// THE ROW SHAPE IS DECLARED (campaign P2, W-A-4; graph-contract §4 ATTESTATION_FIELD_LIST)
+// ============================================================================================
+// The expected gates are ATTESTATION_GATE_LIST_BY_CHANNEL.channelA, and a row's properties are the registry's: every
+// row carries the 'all' fields; a channel-A field is copied from the supplied entry only for the gates its gateList names
+// (the roundTrip totals, fidelity's inventedTotal, embeddingCoverage's missingVectorTotal), never invented for others.
+// writtenOnChannel is the TOKEN 'channelA' (one of ATTESTATION_CHANNEL_LIST); the prose lives in writtenOnChannelNote.
+//
 // Async style: callback(errString, result). No async/await, no try/catch-for-control-flow.
 
 // START OF moduleFunction() ============================================================
@@ -59,17 +67,20 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 const moduleFunction =
 	({ moduleName } = {}) =>
 	({ vocabulary } = {}) => {
-		const { NODE_LABELS, SELF_DOC } = vocabulary;
-		const forgedLabel = NODE_LABELS.FORGED_NODE;
-		const attestationLabel = SELF_DOC.NODE_LABELS.BUILD_ATTESTATION;
+		const { SELF_DOC, ATTESTATION_FIELD_LIST, ATTESTATION_GATE_LIST_BY_CHANNEL, ATTESTATION_LABEL_SET_BY_CHANNEL } = vocabulary;
 		const attestationPrefix = SELF_DOC.BUILD_ATTESTATION_STABLE_ID_PREFIX;
 
 		const metadataRef = (oneStableId) => ({ source: null, id: oneStableId });
 
 		// The gates this design EXPECTS to hear about. An expected gate with no supplied entry gets an
-		// explicit notRun row — that is what makes an absence legible rather than silent. Declared as DATA:
-		// adding a gate is a row here, not a change to any logic below.
-		const EXPECTED_GATE_LIST = ['fidelity', 'roundTrip', 'goldEvalCheck'];
+		// explicit notRun row — that is what makes an absence legible rather than silent. Declared as DATA in
+		// graph-contract §4: adding a gate is a row there, not a change to any logic below.
+		const CHANNEL_NAME = 'channelA';
+		const EXPECTED_GATE_LIST = ATTESTATION_GATE_LIST_BY_CHANNEL[CHANNEL_NAME];
+		const CHANNEL_LABEL_LIST = ATTESTATION_LABEL_SET_BY_CHANNEL[CHANNEL_NAME];
+		const CHANNEL_NOTE = 'A — written by the build-attestation finisher at finish, from the verdicts the build handed it; a gate it expected and was not handed reads notRun with verdictSupplied false';
+		// the channel-A detail fields (inventedTotal, the roundTrip totals, …), each copied only for the gates it names
+		const CHANNEL_A_DETAIL_FIELD_LIST = ATTESTATION_FIELD_LIST.filter((oneRow) => oneRow.channel === CHANNEL_NAME);
 
 		const VERDICT_NOT_RUN = vocabulary.BUILD_ATTESTATION_VERDICT.NOT_RUN;
 		const VERDICT_LIST = vocabulary.BUILD_ATTESTATION_VERDICT_LIST;
@@ -120,24 +131,28 @@ const moduleFunction =
 			const nodes = allGateNames.map((oneGateName) => {
 				const supplied = suppliedByGate[oneGateName];
 				const stableId = `${attestationPrefix}${oneGateName}`; // gate name ALONE. No pid, no clock.
+				// the declared detail fields this gate carries, copied as supplied (absent stays absent: SET += removes a null)
+				const detailFieldByName = CHANNEL_A_DETAIL_FIELD_LIST.filter((oneRow) => oneRow.gateList.indexOf(oneGateName) !== -1).reduce(
+					(soFar, oneRow) => (supplied && supplied[oneRow.name] !== undefined ? { ...soFar, [oneRow.name]: supplied[oneRow.name] } : soFar),
+					{},
+				);
 				return {
 					stableId,
 					ref: metadataRef(stableId),
-					labels: [forgedLabel, attestationLabel],
+					labels: CHANNEL_LABEL_LIST.slice(),
 					properties: {
 						stableId,
 						gate: oneGateName,
 						// A MISSING ENTRY READS AS notRun, NEVER AS PASS.
 						verdict: supplied ? supplied.verdict : VERDICT_NOT_RUN,
 						detail: supplied && supplied.detail !== undefined ? supplied.detail : null,
-						inventedTotal:
-							supplied && supplied.inventedTotal !== undefined
-								? Number(supplied.inventedTotal)
-								: null,
+						...detailFieldByName,
 						// Whether this row came from a supplied verdict or from the expected-list default.
 						// A consumer can then tell "the producer said notRun" from "the producer said nothing".
 						verdictSupplied: !!supplied,
 						expected: EXPECTED_GATE_LIST.indexOf(oneGateName) !== -1,
+						writtenOnChannel: CHANNEL_NAME,
+						writtenOnChannelNote: CHANNEL_NOTE,
 					},
 				};
 			});
@@ -159,7 +174,7 @@ const moduleFunction =
 			});
 		};
 
-		return { emit, EXPECTED_GATE_LIST, VERDICT_NOT_RUN, VERDICT_LIST };
+		return { emit, EXPECTED_GATE_LIST, VERDICT_NOT_RUN, VERDICT_LIST, CHANNEL_A_DETAIL_FIELD_LIST };
 	};
 
 // END OF moduleFunction() ============================================================

@@ -11,6 +11,8 @@
 //   (e) ⟪campaign P2, W-A-9⟫ the two scratch-named VECTOR indexes are dropped and re-created under the promoted name at the
 //       dimensions they had, db.awaitIndexes runs, and the passport's vectorIndexNameList is rewritten to the two new names
 //   (f) a VECTOR index on an undeclared slot (:UserContent(embedding)) is REFUSED by name, before any index is dropped
+//   (g) ⟪W-A-4 / V1-C17⟫ each stamped row MERGEs on (:BuildAttestation {gate}) — never a label-less {stableId} — carries
+//       the token writtenOnChannel 'promotionStamp', and REMOVEs :ForgedNode (a post-build fact leaves fingerprint scope)
 // RED TWINS, each observed in memory: (a) the scratch name not kept; (b) the census comparison removed; (c) the evidence
 // check removed; (d) the passport singleton check removed; (e) the drop+create step never planned; (f) the label check
 // removed (the slot then matches by property name alone).
@@ -69,7 +71,7 @@ const runCypherDouble = ({ censusList, passportCount = 1, indexRowList = SCRATCH
 			callback('', { records: yieldsRow ? [recordOf({ graphName: promotedGraphName, scratchGraphName: keepsScratch ? 'DEV_gb_materialize_1_1' : null, manifestRefId: SHA })] : [] });
 			return;
 		}
-		if (/MERGE \(a \{stableId:/.test(cypher)) {
+		if (/MERGE \(a(:`BuildAttestation`)? \{(stableId|gate):/.test(cypher)) {
 			callback('', { records: [recordOf({ rowCount: 1 })] });
 			return;
 		}
@@ -125,6 +127,12 @@ const conjunctJudgeByRefId = {
 	f_undeclaredVectorIndexRefused: (mutationList, done) =>
 		runStamp({ mutationList, censusList: [SAME_CENSUS, SAME_CENSUS], gateVerdictList: goodVerdictList(), indexRowList: SCRATCH_INDEX_ROW_LIST.concat([{ name: 'userContent_vector', labelsOrTypes: ['UserContent'], properties: ['embedding'], options: { indexConfig: { 'vector.dimensions': 1024, 'vector.similarity_function': 'COSINE' } } }]) }, ({ err, statementList }) =>
 			done({ pass: /REFUSED: VECTOR index 'userContent_vector' on :UserContent\(embedding\) is not a declared vector slot/.test(String(err)) && !statementList.some((oneStatement) => /^DROP INDEX/.test(oneStatement)), detail: String(err || 'an undeclared VECTOR index passed the stamp').slice(0, 200) })),
+	g_stampRowHasTheDeclaredIdentityAndLabels: (mutationList, done) =>
+		runStamp({ mutationList, censusList: [SAME_CENSUS, SAME_CENSUS], gateVerdictList: goodVerdictList() }, ({ err, statementList }) => {
+			const rowStatementList = statementList.filter((oneStatement) => /writtenOnChannel/.test(oneStatement));
+			const pass = !err && rowStatementList.length === 2 && rowStatementList.every((oneStatement) => /MERGE \(a:`BuildAttestation` \{gate: "(goldEvalCheck|replay)"\}\)/.test(oneStatement) && /REMOVE a:`ForgedNode`/.test(oneStatement) && /a\.writtenOnChannel = "promotionStamp"/.test(oneStatement));
+			done({ pass, detail: err || `${rowStatementList.length} row statement(s); first: ${(rowStatementList[0] || '').replace(/\s+/g, ' ').slice(0, 220)}` });
+		}),
 	d_passportSingletonRequired: (mutationList, done) =>
 		runStamp({ mutationList, censusList: [SAME_CENSUS, SAME_CENSUS], passportCount: 2, gateVerdictList: goodVerdictList() }, ({ err }) =>
 			done({ pass: /REFUSED: the graph does not hold exactly one GraphProvenance passport/.test(String(err)), detail: String(err || 'stamped a graph holding two passports').slice(0, 160) })),
@@ -135,6 +143,7 @@ const TWIN_LIST = [
 	{ conjunctRefId: 'b_contentChangeRefused', twinName: 'censusComparisonRemoved', find: '\t\t\t\t\tif (after.contentNodeCount !== args.before.contentNodeCount || after.contentEdgeCount !== args.before.contentEdgeCount) {', replace: '\t\t\t\t\tif (false) {' },
 	{ conjunctRefId: 'c_verdictWithoutEvidenceRefused', twinName: 'evidenceCheckRemoved', find: "\t\t\t\t.concat(oneVerdict && /^[0-9a-f]{64}$/.test(String(oneVerdict.evidenceSha256)) ? [] : ['evidenceSha256 is not 64 hex']);", replace: ';' },
 	{ conjunctRefId: 'd_passportSingletonRequired', twinName: 'passportSingletonUnguarded', find: '\t\t\t\t\tWHERE size(passportList) = 1', replace: '\t\t\t\t\tWHERE size(passportList) >= 1' },
+	{ conjunctRefId: 'g_stampRowHasTheDeclaredIdentityAndLabels', twinName: 'labelLessMergeOnStableId', find: '						MERGE (a:\\`${attestationLabel}\\` {gate: ${cypherString(oneVerdict.gate)}})', replace: '						MERGE (a {stableId: ${cypherString(stableId)}})' },
 	{ conjunctRefId: 'e_vectorIndexesRenamedToThePromotedName', twinName: 'dropCreateNeverPlanned', find: '\t\t\t\tplan.dropCreateList.push({', replace: '\t\t\t\tvoid ({' },
 	{ conjunctRefId: 'f_undeclaredVectorIndexRefused', twinName: 'labelCheckRemoved', find: "if (!slot || (oneRow.labelsOrTypes || [])[0] !== slot.label) {", replace: 'if (!slot) {' },
 ];

@@ -731,7 +731,9 @@ const moduleFunction =
 		// :ForgedNode silently omits the row saying whether the usage manual was verified. The mandated
 		// remedy is in the BuildAttestation term definition: it states the split, WHY, and the consumer
 		// warning to query (:BuildAttestation) rather than (:ForgedNode:BuildAttestation).
-		const VERIFICATION_ATTESTATION_LABEL_LIST = [SELF_DOC.NODE_LABELS.BUILD_ATTESTATION, metaLabel];
+		// ⟪campaign P2, W-A-4⟫ the label set and the channel token are graph-contract §4's (ATTESTATION_LABEL_SET_BY_CHANNEL)
+		const VERIFICATION_CHANNEL_NAME = 'channelB';
+		const VERIFICATION_ATTESTATION_LABEL_LIST = vocabulary.ATTESTATION_LABEL_SET_BY_CHANNEL[VERIFICATION_CHANNEL_NAME].slice();
 
 		const writeVerificationAttestation = (
 			{ runCypher, verdict, detail, exemplarCount, verifiedCount } = {},
@@ -751,13 +753,17 @@ const moduleFunction =
 			}
 
 			const stableId = `${SELF_DOC.BUILD_ATTESTATION_STABLE_ID_PREFIX}${VERIFICATION_GATE_NAME}`;
-			const labelClause = VERIFICATION_ATTESTATION_LABEL_LIST.map((oneLabel) => `a:\`${oneLabel}\``).join(', ');
+			const attestationLabel = SELF_DOC.NODE_LABELS.BUILD_ATTESTATION;
+			const labelClause = VERIFICATION_ATTESTATION_LABEL_LIST.filter((oneLabel) => oneLabel !== attestationLabel).map((oneLabel) => `a:\`${oneLabel}\``).join(', ');
 			const taskList = new taskListPlus();
 
-			// MERGE on stableId — IDEMPOTENT under a second finish, which is the gate's own requirement.
+			// ⟪campaign P2, W-A-4 / V1-C17⟫ MERGE on (:BuildAttestation {gate}) — the declared identity of a row, never a bare
+			// label-less {stableId} that would inherit whatever labels a matched node happened to carry. IDEMPOTENT under a
+			// second finish, which is the gate's own requirement.
 			taskList.push((args, next) => {
 				const cypher = `
-					MERGE (a {stableId: ${cypherString(stableId)}})
+					MERGE (a:\`${attestationLabel}\` {gate: ${cypherString(VERIFICATION_GATE_NAME)}})
+					ON CREATE SET a.stableId = ${cypherString(stableId)}
 					SET ${labelClause},
 					    a.gate = ${cypherString(VERIFICATION_GATE_NAME)},
 					    a.verdict = ${cypherString(verdict)},
@@ -766,7 +772,8 @@ const moduleFunction =
 					    a.verifiedCount = ${Number(verifiedCount || 0)},
 					    a.verdictSupplied = true,
 					    a.expected = true,
-					    a.writtenOnChannel = ${cypherString(
+					    a.writtenOnChannel = ${cypherString(VERIFICATION_CHANNEL_NAME)},
+					    a.writtenOnChannelNote = ${cypherString(
 								'B — this verdict cannot exist until after the passport, so it is written by the ' +
 									'passport writer rather than by the Channel-A attestation finisher, which runs earlier.',
 							)}
@@ -790,7 +797,7 @@ const moduleFunction =
 			taskList.push((args, next) => {
 				const cypher = `
 					MATCH (p:\`${passportLabel}\` {\`${PASSPORT_KEY_PROPERTY}\`: ${cypherString(PASSPORT_SINGLETON_VALUE)}})
-					MATCH (a {stableId: ${cypherString(stableId)}})
+					MATCH (a:\`${attestationLabel}\` {gate: ${cypherString(VERIFICATION_GATE_NAME)}})
 					MERGE (p)-[e:\`${edgeTypes.ATTESTS}\`]->(a)
 					SET e.provenanceTier = ${cypherString(SELF_DOC.PROVENANCE_TIER)}
 					RETURN count(e) AS edgeCount`;
@@ -808,7 +815,7 @@ const moduleFunction =
 			// row, never mint a duplicate.
 			taskList.push((args, next) => {
 				runCypher(
-					{ cypher: `MATCH (a {stableId: ${cypherString(stableId)}}) RETURN count(a) AS rowCount` },
+					{ cypher: `MATCH (a:\`${attestationLabel}\` {gate: ${cypherString(VERIFICATION_GATE_NAME)}}) RETURN count(a) AS rowCount` },
 					(err, result) => {
 						if (err) {
 							next(`passport-writer.writeVerificationAttestation: verification failed: ${err}`);

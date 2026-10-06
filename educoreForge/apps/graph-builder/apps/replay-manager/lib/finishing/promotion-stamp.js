@@ -31,7 +31,7 @@ const { pipeRunner, taskListPlus } = new (require('qtools-asynchronous-pipe-plus
 const moduleFunction =
 	({ moduleName } = {}) =>
 	({ vocabulary, passportWriter } = {}) => {
-		const { NODE_LABELS, SELF_DOC, GRAPH_META, vectorIndexSlotTable, vectorIndexNameFor } = vocabulary;
+		const { NODE_LABELS, SELF_DOC, GRAPH_META, vectorIndexSlotTable, vectorIndexNameFor, ATTESTATION_LABEL_SET_BY_CHANNEL } = vocabulary;
 		// the passport's singleton key is the passport writer's, read from it, never restated here
 		if (!passportWriter || typeof passportWriter.PASSPORT_KEY_PROPERTY !== 'string' || typeof passportWriter.PASSPORT_SINGLETON_VALUE !== 'string') {
 			throw new Error(`${moduleName} REFUSED: a constructed passportWriter is required (its PASSPORT_KEY_PROPERTY and PASSPORT_SINGLETON_VALUE find the passport)`);
@@ -41,6 +41,11 @@ const moduleFunction =
 		const metaLabel = GRAPH_META.LABEL;
 		const attestationLabel = SELF_DOC.NODE_LABELS.BUILD_ATTESTATION;
 		const attestsEdgeType = SELF_DOC.EDGE_TYPES.ATTESTS;
+		// ⟪campaign P2, W-A-4 / V1-C17⟫ a stamped row carries graph-contract §4's promotionStamp label set: it leaves fingerprint
+		// scope (REMOVE :ForgedNode) at the moment it stops being deterministic — it carries an evidence PATH and a post-build fact
+		const STAMP_CHANNEL_NAME = 'promotionStamp';
+		const stampLabelClause = ATTESTATION_LABEL_SET_BY_CHANNEL[STAMP_CHANNEL_NAME].filter((oneLabel) => oneLabel !== attestationLabel).map((oneLabel) => `a:\`${oneLabel}\``).join(', ');
+		const forgedLabel = NODE_LABELS.FORGED_NODE;
 
 		// the gates whose verdicts exist only after the build, and the verdicts a stamp may record
 		const STAMPABLE_GATE_LIST = Object.freeze(['goldEvalCheck', 'replay']);
@@ -178,8 +183,9 @@ const moduleFunction =
 					const stableId = `${SELF_DOC.BUILD_ATTESTATION_STABLE_ID_PREFIX}${oneVerdict.gate}`;
 					const cypher = `
 						MATCH (p:\`${passportLabel}\` {\`${PASSPORT_KEY_PROPERTY}\`: ${cypherString(PASSPORT_SINGLETON_VALUE)}})
-						MERGE (a {stableId: ${cypherString(stableId)}})
-						SET a:\`${attestationLabel}\`, a:\`${metaLabel}\`,
+						MERGE (a:\`${attestationLabel}\` {gate: ${cypherString(oneVerdict.gate)}})
+						ON CREATE SET a.stableId = ${cypherString(stableId)}
+						SET ${stampLabelClause},
 						    a.gate = ${cypherString(oneVerdict.gate)},
 						    a.verdict = ${cypherString(oneVerdict.verdict)},
 						    a.detail = ${cypherString(oneVerdict.detail)},
@@ -187,7 +193,10 @@ const moduleFunction =
 						    a.expected = true,
 						    a.evidencePath = ${cypherString(oneVerdict.evidencePath)},
 						    a.evidenceSha256 = ${cypherString(oneVerdict.evidenceSha256)},
-						    a.writtenOnChannel = ${cypherString('promotion stamp — this verdict exists only after the build, so it is written after promotion from the named evidence file')}
+						    a.writtenOnChannel = ${cypherString(STAMP_CHANNEL_NAME)},
+						    a.writtenOnChannelNote = ${cypherString('promotion stamp — this verdict exists only after the build, so it is written after promotion from the named evidence file')}
+						REMOVE a:\`${forgedLabel}\`
+						WITH p, a
 						MERGE (p)-[e:\`${attestsEdgeType}\`]->(a)
 						SET e.provenanceTier = ${cypherString(SELF_DOC.PROVENANCE_TIER)}
 						RETURN count(a) AS rowCount`;

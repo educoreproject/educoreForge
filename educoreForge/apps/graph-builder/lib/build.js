@@ -542,6 +542,47 @@ const frameworkFingerprintListFor = ({ decisionStore, pairKeyList }, callback) =
 	);
 };
 
+// roundTripRowFor — the roundTrip BuildAttestation row, READ FROM THE STAGE'S OWN REPORT, never composed (the runner
+// distinguishes its outcomes: an error is returned as an error; a non-run reports stageRan false WITH a disposition).
+// ⟪campaign P2, W-A-4 / V1-C18⟫ a run carries its TOTALS (graph-contract §4: roundTripClean, inventedTotal, lostTotal,
+// explicitlyOmittedTotal, standardCount) summed over the standards that ran, and the verdict is DERIVED from them: pass
+// only when every ran standard is clean and nothing was lost or invented — so 'fail' is reachable, and names the
+// standards that failed. Before P2 a stage that ran read 'pass' whatever its rows said.
+const roundTripRowFor = (roundTripStageReport) => {
+	if (roundTripStageReport && roundTripStageReport.stageRan === false) {
+		return { gate: 'roundTrip', verdict: vocabulary.BUILD_ATTESTATION_VERDICT.NOT_RUN, detail: `${roundTripStageReport.disposition || 'the runner reported no disposition'}` };
+	}
+	if (!roundTripStageReport || !roundTripStageReport.summaryFilePath || !Array.isArray(roundTripStageReport.standards)) {
+		return {
+			gate: 'roundTrip',
+			verdict: vocabulary.BUILD_ATTESTATION_VERDICT.NOT_RUN,
+			detail:
+				'the stage neither reported stageRan false nor wrote a summary with its standards — its outcome is not ' +
+				'establishable from what it returned, and notRun is the honest reading of an unestablishable outcome',
+		};
+	}
+	const ranRowList = roundTripStageReport.standards.filter((oneRow) => oneRow.ran === true);
+	const totalOf = (fieldName) => ranRowList.reduce((runningTotal, oneRow) => runningTotal + Number(oneRow[fieldName] || 0), 0);
+	const failedTokenList = ranRowList.filter((oneRow) => oneRow.roundTripClean !== true || Number(oneRow.lostTotal || 0) > 0 || Number(oneRow.inventedTotal || 0) > 0).map((oneRow) => oneRow.token);
+	const lostTotal = totalOf('lostTotal');
+	const inventedTotal = totalOf('inventedTotal');
+	const explicitlyOmittedTotal = totalOf('explicitlyOmittedTotal');
+	const cleanCount = ranRowList.filter((oneRow) => oneRow.roundTripClean === true).length;
+	return {
+		gate: 'roundTrip',
+		verdict: ranRowList.length > 0 && failedTokenList.length === 0 ? vocabulary.BUILD_ATTESTATION_VERDICT.PASS : vocabulary.BUILD_ATTESTATION_VERDICT.FAIL,
+		detail:
+			`${ranRowList.length} standard(s) ran: clean ${cleanCount}/${ranRowList.length}, lost ${lostTotal}, invented ${inventedTotal}, ` +
+			`explicitly omitted ${explicitlyOmittedTotal} (${ranRowList.map((oneRow) => `${oneRow.token} ${Number(oneRow.explicitlyOmittedTotal || 0)}`).join(', ')})` +
+			`${failedTokenList.length ? `; FAILED: ${failedTokenList.join(', ')}` : ''}${ranRowList.length === 0 ? '; no standard ran, so nothing was certified' : ''}; summary ${roundTripStageReport.summaryFilePath}`,
+		roundTripClean: ranRowList.length > 0 && failedTokenList.length === 0,
+		inventedTotal,
+		lostTotal,
+		explicitlyOmittedTotal,
+		standardCount: ranRowList.length,
+	};
+};
+
 let materializeCounter = 0;
 const resolvedSchemaBlocksCounter = () => (materializeCounter += 1);
 
@@ -674,27 +715,7 @@ const materializeSchemaBlocks = ({ xLog, replay, resolvedSchemaBlocks, manifestI
 							// distinguishes its own outcomes (an error is returned as an error; a non-run
 							// reports stageRan false WITH a disposition), so each branch below is a fact
 							// the runner stated rather than an inference from silence.
-							const roundTripRow =
-								roundTripStageReport && roundTripStageReport.stageRan === false
-									? {
-											gate: 'roundTrip',
-											verdict: vocabulary.BUILD_ATTESTATION_VERDICT.NOT_RUN,
-											detail: `${roundTripStageReport.disposition || 'the runner reported no disposition'}`,
-										}
-									: roundTripStageReport && roundTripStageReport.summaryFilePath
-										? {
-												gate: 'roundTrip',
-												verdict: vocabulary.BUILD_ATTESTATION_VERDICT.PASS,
-												detail: `stage ran and wrote its summary: ${roundTripStageReport.summaryFilePath}`,
-											}
-										: {
-												gate: 'roundTrip',
-												verdict: vocabulary.BUILD_ATTESTATION_VERDICT.NOT_RUN,
-												detail:
-													'the stage neither reported stageRan false nor wrote a summary — its ' +
-													'outcome is not establishable from what it returned, and notRun is the ' +
-													'honest reading of an unestablishable outcome',
-											};
+							const roundTripRow = roundTripRowFor(roundTripStageReport);
 
 							// THE FIDELITY ROW IS THE RUNNER'S OWN REPORT (lane R, 2026-10-05; FINDING 5-A of
 							// 2026-09-01 closed). From 2026-09-01 until then there was NO fidelity row, by ruling:
@@ -2534,6 +2555,7 @@ module.exports.runCedsFidelityGate = runCedsFidelityGate;
 module.exports.materializeSchemaBlocks = materializeSchemaBlocks;
 // ⟪campaign P2, W-A-3⟫ the decision blocks' framework fingerprints for the passport, gated directly (test-frameworkFingerprintList)
 module.exports.frameworkFingerprintListFor = frameworkFingerprintListFor;
+module.exports.roundTripRowFor = roundTripRowFor;
 module.exports.fidelityAttestationFaultFor = fidelityAttestationFaultFor;
 module.exports.resolveRebridge = resolveRebridge;
 module.exports.pairInRebridgeScope = pairInRebridgeScope;
