@@ -708,7 +708,21 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // cache path is handed down by actions.js's STORE_FAMILY_RESOLUTION_TABLE; build.js no longer reads the command line for it).
 // forger/, lib/replay/, replay-manager/, every forge entry/declaration/hooks file and lib/forge-framework SOURCE: UNTOUCHED.
 // SEAM_PATH_LIST byte-identical. Fresh red observed on the re-anchor commit (DEVLOG-P0).
-const PHASE3_ANCHOR_TAG = 'postCampaignP0SeamDiffEmpty-100626'; // re-anchored by SILVER_ECHO, campaign P0
+// campaign P2 RE-ANCHOR of seamDiffEmpty (CARDINAL_RIVER, 2026-10-06; pre-authorised, VIOLET_VALLEY 17:42Z standing rule):
+// postCampaignP0SeamDiffEmpty-100626 -> postCampaignP2SeamDiffEmpty-100626, tag cut ON this commit. CENSUS (git diff --stat
+// postCampaignP0SeamDiffEmpty-100626 -- SEAM_PATH_LIST) at 33e2894: 32 files, 2815+/128-, EVERY ONE a campaign P2 entry — P2 IS the
+// replay-time and finish-time phase, so the seam it may not touch silently is exactly the seam it was ordered to change:
+//   replay engine: replay-engine.js 87 (W-A-1/2 lists and integers, W-A-9) + its two gates and two live-census fixtures;
+//   replay manager: replayManager.js 21 (W-A-3, W-A-7); finishing.js 46 (W-A-5 self-doc fields, W-B-13/W-A-10/W-A-6 finishers
+//     registered); passport-writer.js 353 (W-A-3 declared SET, censuses, W-A-4 Channel B, W-A-7); promotion-stamp.js 106 (W-A-9 index
+//     rename, W-A-4); finishers: bridge-label (new, W-B-13), required-property (new, W-A-10), schema-view-coverage (new, W-A-6),
+//     schema-view 81 (W-A-6), build-attestation 43 (W-A-4, R1 detail), usage-pattern 21 (W-A-7), manifest-recipe 5 (W-C-8);
+//     nine finishing tests (seven new contract gates, test-promotionStamp, test-definitionCompleteness);
+//   build.js 235 (see G-SEAM-UNTOUCHED's census, 589f59c); forger.js 3 + integration-forge.js 6 (W-C-21, W-A-11);
+//   lib/forge-framework: the (iii) census above (fb4b303).
+// No forge entry, declaration or hooks file moved. THE PATH LIST IS UNCHANGED, NO EXCLUSION IS ADDED. Fresh red observed on the
+// re-anchor commit (DEVLOG-P2).
+const PHASE3_ANCHOR_TAG = 'postCampaignP2SeamDiffEmpty-100626'; // re-anchored by CARDINAL_RIVER, campaign P2
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');
