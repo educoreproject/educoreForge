@@ -114,7 +114,8 @@ const syntheticParsed = {
 		{
 			id: 'sifobject-StudentPersonals',
 			label: 'SifObject',
-			properties: { name: 'StudentPersonal', tableName: 'StudentPersonals', fieldCount: 2 },
+			// description: ⟪campaign P3, W-C-16⟫ the declaration names it on DmeClass, and a declared text pair must have a carrier
+			properties: { name: 'StudentPersonal', tableName: 'StudentPersonals', fieldCount: 2, description: 'a student' },
 			edges: [{ type: 'USES_COMPLEX_TYPE', targetId: 'complextype-Name', targetLabel: 'SifComplexType' }],
 		},
 		{ id: 'complextype-Name', label: 'SifComplexType', properties: { name: 'Name', fieldCount: 1 }, edges: [] },
@@ -145,7 +146,7 @@ const syntheticParsed = {
 		{
 			id: 'codeset-fp1',
 			label: 'SifCodeset',
-			properties: { name: 'A, B, C', fingerprint: 'A|B|C', valueCount: 3, values: ['A', 'B', 'C'] },
+			properties: { name: 'A, B, C', fingerprint: 'A|B|C', valueCount: 3, values: ['A', 'B', 'C'], description: 'three codes' },
 			edges: [],
 		},
 		{ id: 'simpletype-xsd:string', label: 'SifSimpleType', properties: { name: 'xsd:string', category: 'simple' }, edges: [] },

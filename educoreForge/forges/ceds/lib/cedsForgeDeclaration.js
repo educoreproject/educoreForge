@@ -84,8 +84,9 @@ const cedsForgeDeclaration = Object.freeze({
 		cedsOptionOriginalAnchorPropertyName: Object.freeze([]),
 		crosswalkPrefix: Object.freeze([]),
 		crosswalkResolveProperty: STABLE_URI_PROPERTY_NAME,
-		includeInImplied: true,
-		impliedTargets: Object.freeze(['CEDS']),
+		// G14 b1 (TQ, 2026-10-06): false — a forge does no mapping (FBB-001), so the hub names no implied target
+		includeInImplied: false,
+		impliedTargets: Object.freeze([]),
 	}),
 	// the three roles forgeCeds.js:829-833 excluded from the embedding pass. They carry NO
 	// searchText at all, which the kit reproduces by omitting it for a non-embeddable role. The
@@ -105,7 +106,8 @@ const cedsForgeDeclaration = Object.freeze({
 	embedTextDeclaration: Object.freeze({
 		embedTextLabel: 'CedsEmbedText',
 		textPropertyListByRole: Object.freeze({
-			DmeClass: Object.freeze(['name', 'definition', 'description', 'prefLabel', 'comment']),
+			// prefLabel / comment dropped for DmeClass (W-C-16, G14): no class node carries either (0 of 402)
+			DmeClass: Object.freeze(['name', 'definition', 'description']),
 			DmeProperty: Object.freeze(['name', 'definition', 'description', 'prefLabel', 'comment']),
 			DmeOptionSet: Object.freeze(['name', 'definition', 'description', 'prefLabel', 'comment']),
 		}),

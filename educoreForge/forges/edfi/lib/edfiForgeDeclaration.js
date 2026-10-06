@@ -8,9 +8,8 @@
 // written once. Every value here is a BYTE of the Ed-Fi block (aea6d8dfe789…) or an identity rule
 // the framework enforces; none is derived.
 //
-// Compatibility declarations (SPEC §7; Profile v1.0.2 §13.1) — exactly TWO, ruled 2026-08-16:
-//   E6  root sourceUrl '' reproduced (forgeEdfiContractGraph.js:487 stamped metadata.sourceUrl || '';
-//       Profile §10.4 says OMIT — retirement is a byte change in its own commit).
+// Compatibility declarations (SPEC §7; Profile v1.0.2 §13.1) — TWO ruled 2026-08-16, ONE since P3:
+//   E6  RETIRED P3 W-C-16 (G14 c1, TQ 2026-10-06): the root now carries the Data Standard repository URL.
 //   E8  root sourceFiles names the LOGICAL input names Ed-Fi's forge() composed (FIVE until the crosswalk's
 //       retirement on 2026-10-02, FOUR since: the two MetaEd source inputs + two loader logical names), not
 //       verified SHA256SUMS paths; the tightened row (ruling 03:40) admits exactly the names
@@ -65,9 +64,10 @@ const edfiForgeDeclaration = Object.freeze({
 	embedTextDeclaration: Object.freeze({
 		embedTextLabel: 'EdfiEmbedText',
 		textPropertyListByRole: Object.freeze({
-			DmeClass: Object.freeze(['name', 'description', 'shortDescription']),
-			DmeProperty: Object.freeze(['name', 'description', 'shortDescription']),
-			DmeOptionSet: Object.freeze(['name', 'description', 'shortDescription']),
+			// shortDescription removed (G14 a1, TQ 2026-10-06): a phantom — no node of these roles carries it
+			DmeClass: Object.freeze(['name', 'description']),
+			DmeProperty: Object.freeze(['name', 'description']),
+			DmeOptionSet: Object.freeze(['name', 'description']),
 		}),
 	}),
 	// EMPTY since the crosswalk's retirement: '000000' was the crosswalk's "no mapping" value, and nothing
@@ -75,7 +75,6 @@ const edfiForgeDeclaration = Object.freeze({
 	cedsAnchorAbsentSentinelList: Object.freeze([]),
 	additionalSourceInputList: Object.freeze([]),
 	compatibilityDeclarationList: Object.freeze([
-		Object.freeze({ allowanceId: 'E6' }),
 		Object.freeze({
 			allowanceId: 'E8',
 			// the four names, in the order the standard states: metaEdSourceLoader.js METAED_SOURCE_INPUT_NAMES +

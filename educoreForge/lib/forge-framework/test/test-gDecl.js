@@ -137,6 +137,22 @@ conjunctList.push(
 		twinName: 'disableKindCheck', fileName: CONTRACT_FILE, find: KIND_CHECK_FIND, replace: KIND_CHECK_REPLACE,
 	}),
 	refusalCase({
+		registry: twinRegistry, gateId: GATE_ID, conjunctId: 'mappingInstruction_namesOwnFamily',
+		title: "⟪campaign P3, W-C-16 / G14 b1⟫ a mappingInstruction whose impliedTargets names the forge's OWN standardFamily (the hub naming itself) is refused",
+		mode: 'inject',
+		shape: (scenario) => { scenario.forgeDeclaration.mappingInstruction.includeInImplied = true; scenario.forgeDeclaration.mappingInstruction.impliedTargets = ['Toy']; },
+		regex: /'mappingInstruction' impliedTargets names the forge's own standardFamily 'Toy'/,
+		twinName: 'disableKindCheck', fileName: CONTRACT_FILE, find: KIND_CHECK_FIND, replace: KIND_CHECK_REPLACE,
+	}),
+	refusalCase({
+		registry: twinRegistry, gateId: GATE_ID, conjunctId: 'mappingInstruction_impliedDisagrees',
+		title: '⟪campaign P3, W-C-16⟫ includeInImplied true with NO impliedTargets is refused as self-inconsistent',
+		mode: 'inject',
+		shape: (scenario) => { scenario.forgeDeclaration.mappingInstruction.includeInImplied = true; },
+		regex: /'mappingInstruction' includeInImplied true disagrees with impliedTargets \[\]/,
+		twinName: 'disableKindCheck', fileName: CONTRACT_FILE, find: KIND_CHECK_FIND, replace: KIND_CHECK_REPLACE,
+	}),
+	refusalCase({
 		registry: twinRegistry, gateId: GATE_ID, conjunctId: 'nonEmbeddableRole_notDmeRole',
 		title: 'a non-DME_ROLES member in nonEmbeddableRoleList is refused naming it',
 		mode: 'inject',
@@ -243,8 +259,8 @@ runGateFamily(
 		twinRegistry,
 		makeSubject: toyScenario.makeScenario,
 		cloneSubject: toyScenario.cloneScenario,
-		expectedConjunctCount: requiredKeyList.length + 17,
-		expectedTwinCount: requiredKeyList.length + 17,
+		expectedConjunctCount: requiredKeyList.length + 19,
+		expectedTwinCount: requiredKeyList.length + 19,
 	},
 	() => harness.report(),
 );

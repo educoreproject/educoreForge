@@ -220,7 +220,7 @@ const KIND_CHECKER_REGISTRY = Object.freeze({
 		}
 		return '';
 	},
-	mappingInstruction: (value) => {
+	mappingInstruction: (value, { forgeDeclaration }) => {
 		if (!isPlainObject(value)) {
 			return `must be a six-key object (got ${JSON.stringify(value)})`;
 		}
@@ -233,6 +233,17 @@ const KIND_CHECKER_REGISTRY = Object.freeze({
 		);
 		if (firstMismatchIndex !== -1) {
 			return `key ${firstMismatchIndex + 1} must be '${MAPPING_INSTRUCTION_KEY_ORDER[firstMismatchIndex]}' (got '${actualOrder[firstMismatchIndex]}'); the six keys are stringified onto the root IN THIS ORDER and the string is a block byte`;
+		}
+		// ⟪campaign P3, W-C-16 / G14 b1⟫ an implied-mapping hint is consistent with itself and never points a standard at
+		// its own family (CEDS declared includeInImplied true with impliedTargets ['CEDS']: the hub naming itself)
+		if (typeof value.includeInImplied !== 'boolean' || !Array.isArray(value.impliedTargets)) {
+			return `includeInImplied must be a boolean and impliedTargets a list (got ${JSON.stringify(value.includeInImplied)}, ${JSON.stringify(value.impliedTargets)})`;
+		}
+		if (value.includeInImplied !== (value.impliedTargets.length > 0)) {
+			return `includeInImplied ${value.includeInImplied} disagrees with impliedTargets ${JSON.stringify(value.impliedTargets)}: true requires at least one target, false requires none`;
+		}
+		if (value.impliedTargets.indexOf(forgeDeclaration.standardFamily) !== -1) {
+			return `impliedTargets names the forge's own standardFamily '${forgeDeclaration.standardFamily}'; a standard is never an implied mapping target of itself (FBB-001: a forge does no mapping)`;
 		}
 		return '';
 	},

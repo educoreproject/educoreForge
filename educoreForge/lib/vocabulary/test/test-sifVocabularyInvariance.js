@@ -47,7 +47,7 @@ const PROBE_PATH = path.join(__dirname, 'testSupport', 'pureProxyFingerprintProb
 // proxyFingerprintByStandard; DEVLOG-G0 deliverable 2), measured at 97feee9. Never edited to match a
 // measurement.
 const G0_PROXY_FINGERPRINT_BY_STANDARD = Object.freeze({
-	ceds: '264e995d7c7939ebd9d04fd0a4bb731b0a1d7d1e840a563e6d17831f5776ef78',
+	ceds: 'b24ad4d6f51d176adfb766a94bb9c3ceeeab964cacca5f9dd52b688f900f6df1',
 	// edfi RE-PINNED 2026-10-02 (PRISM_LATTICE, goldJev lane F): G0's 814ce961570c… -> 04abc77b…. NOT edited to match a
 	// measurement: a RULED base move. TQ excluded the CEDS-authored crosswalk from every graph (2026-09-10, 2026-10-01), so the
 	// Ed-Fi forge no longer stamps its CEDS ids (3,045 nodes) and its root no longer names it; expectedFingerprints.json
@@ -60,7 +60,9 @@ const G0_PROXY_FINGERPRINT_BY_STANDARD = Object.freeze({
 	// all four EQUAL to the previous literals (8/8); expectedFingerprints.json carries the same move.
 	// ALL FOUR RE-PINNED 2026-10-06 (CARDINAL_HORIZON, campaign P3 W-C-4): NOT edited to match a measurement: a RULED base
 	// move. Each forge declares standardFamily + releaseLabel and the framework stamps both on every root; with exactly those two root lines (and their REQUIRED_PROPERTIES rows) removed the probe measured all four EQUAL to the previous literals (evidence/P3/WC4-proxy-withoutTheTwoRootLines.json); expectedFingerprints.json carries the same move. ceds 2ca57656… -> 264e995d…, edfi 75695d22… -> 1aa1a1a9…, sif dcf20728… -> 6d808b95…, pesc260805 10fccef6… -> 4cc1c778….
-	edfi: '1aa1a1a9059f3fd86db3d080fbcc043d168ab8c8b6fe925681b4ba6ed5a37e43',
+	// ALL FOUR RE-PINNED 2026-10-06 (CARDINAL_HORIZON, campaign P3 P3 W-C-16): NOT edited to match a measurement: a RULED base
+	// move. G14 b1 CEDS mappingInstruction includeInImplied false / impliedTargets [] (root mappingInstruction string); G14 c1 Ed-Fi root sourceUrl filled, E6 retired ceds 264e995d… -> b24ad4d6…, edfi 1aa1a1a9… -> eeeefa88…, sif 6d808b95… -> 6d808b95…, pesc260805 4cc1c778… -> 4cc1c778….
+	edfi: 'eeeefa88f56b14bc2d07e86150ab83a704a44e8602260ddc2054838b9ad23ea7',
 	sif: '6d808b95326d4e251cc96d5803a33fc22beb8d4722bad532bf096a90cc42c04d',
 	pesc260805: '4cc1c778015f5cb539d5fbbeb66b2d64f3467aaa01a40d36ff80dfd5d7f78365',
 });

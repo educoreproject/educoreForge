@@ -15,7 +15,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //     the root `version` and the stamp input (`selfDescribedVersion`), exactly as forgeEdfi.js:170-181
 //     composed them; null → root 'unknown' (the framework then stamps 'unknown' in the triple).
 //     sourceFiles = the FOUR logical input names (allowance E8 declares them);
-//     sourceUrl '' (allowance E6).
+//     sourceUrl EDFI_DATA_STANDARD_SOURCE_URL (E6 retired P3 W-C-16).
 //   emitContractGraph — the walk, forgeEdfiContractGraph.js (H3).
 //   describeRoot — PURE; the root description Ed-Fi's contract graph template-built at cg:472-475,
 //     reproduced VERBATIM during migration (punch row E7 — a review-enforced row, not a registry
@@ -33,6 +33,8 @@ const forgeEdfiContractGraph = require('./forgeEdfiContractGraph')();
 // the loader logical names + Ed-Fi's sourceFormat literal — bytes on the root. The format drops '+csv':
 // the only CSVs this forge ever read were the retired crosswalk's
 const SOURCE_FORMAT = 'metaed+xml';
+// the repository the Data Standard model is cloned from (assets/standardSourceData provenance README)
+const EDFI_DATA_STANDARD_SOURCE_URL = 'https://github.com/Ed-Fi-Alliance-OSS/Ed-Fi-Data-Standard';
 const LOADER_NAME = Object.freeze({
 	META_ED_MODEL: 'metaEdModel',
 	DESCRIPTOR_CODE_VALUES: 'descriptorCodeValues',
@@ -84,7 +86,7 @@ const moduleFunction =
 				sourceFiles: metaEdModel.metadata.sourceInputs
 					.map((oneSourceInput) => oneSourceInput.inputName)
 					.concat(LOADER_LOGICAL_SOURCE_FILE_NAME_LIST),
-				sourceUrl: '', // allowance E6 (Profile §10.4 says OMIT — its retirement is a byte change)
+				sourceUrl: EDFI_DATA_STANDARD_SOURCE_URL, // E6 retired P3 W-C-16 (G14 c1)
 			};
 		};
 

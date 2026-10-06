@@ -93,7 +93,9 @@ const textNode = ({ stableId, standardName, vector }) => ({
 	labels: ['ForgedNode', `${standardName}EmbedText`, DME_ROLES.EMBED_TEXT],
 	properties: { stableId, text: `toy text ${stableId}`, role: DME_ROLES.EMBED_TEXT, _source: standardName, [EMBED_TEXT_VECTOR.propertyName]: vector.slice(), embeddingModelVersion: DECLARED_RETRIEVAL.embeddingModelVersion, embedSourceProperty: 'text', vectorPropertyName: EMBED_TEXT_VECTOR.propertyName },
 });
-const textEdge = ({ textStableId, describedStableId, propertyNameList }) => ({ fromStableId: textStableId, toStableId: describedStableId, type: EDGE_TYPES.EMBEDS_TEXT_OF, properties: { propertyNameList, provenanceTier: 'structural' } });
+// ⟪campaign P3⟫ propertyNameList is declared list-valued (W-A-1): replay stores it as a list at any length and the read
+// boundary refuses a scalar, so the double writes the one name as a one-element list
+const textEdge = ({ textStableId, describedStableId, propertyNameList }) => ({ fromStableId: textStableId, toStableId: describedStableId, type: EDGE_TYPES.EMBEDS_TEXT_OF, properties: { propertyNameList: [propertyNameList], provenanceTier: 'structural' } });
 const questionNode = ({ stableId, name, relativePath, sharedBlock, objectNameList }) => ({
 	stableId,
 	labels: ['Sif260928Question'],

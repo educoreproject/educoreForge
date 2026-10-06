@@ -116,9 +116,10 @@ const pescForgeDeclaration = Object.freeze({
 	embedTextDeclaration: Object.freeze({
 		embedTextLabel: 'Pesc260805EmbedText',
 		textPropertyListByRole: Object.freeze({
-			DmeClass: Object.freeze(['name', 'description', 'documentation', 'effectiveDescription']),
+			// effectiveDescription carried by DmeProperty alone (W-C-16): 0 of 3272 classes, 0 of 2422 option sets
+			DmeClass: Object.freeze(['name', 'description', 'documentation']),
 			DmeProperty: Object.freeze(['name', 'description', 'documentation', 'effectiveDescription']),
-			DmeOptionSet: Object.freeze(['name', 'description', 'documentation', 'effectiveDescription']),
+			DmeOptionSet: Object.freeze(['name', 'description', 'documentation']),
 		}),
 	}),
 	// PESC has no CEDS anchor at all in this tier, so it has no "no mapping" sentinel to declare.

@@ -68,7 +68,9 @@ const EMBED_TEXT_ORACLE = Object.freeze({
 	embedTextEdgeCount: 39106,
 	singleNameEdgeCount: 30015,
 	multiNameEdgeCount: 9091,
-	embedTextAbsentCount: 5694,
+	// ⟪campaign P3, W-C-16⟫ DERIVED, not re-captured: all 5,694 absences were effectiveDescription on the 3,272 DmeClass
+	// + 2,422 DmeOptionSet nodes, none of which carries it; dropped from those two roles, 0 remain
+	embedTextAbsentCount: 0,
 	embedTextSkippedEmptyCount: 33664,
 	embedTextTrimmedCount: 1802,
 });
@@ -85,13 +87,14 @@ const ROOT_LABEL = 'Pesc260805Root';
 const TEXT_NODE_STABLE_ID_PREFIX = 'pesc260805:root/embedText/';
 const TEXT_NODE_LABEL_LIST = Object.freeze(['DmeEmbedText', 'ForgedNode', 'Pesc260805EmbedText']);
 const TEXT_NODE_FORBIDDEN_PROPERTY_NAME_LIST = Object.freeze(['name', 'searchText', 'embedding', 'textEmbedding', 'embeddingModelVersion']);
-// TQ decision 1, verbatim (PLAN §8.2); the shipped declaration must equal it byte for byte as JSON
+// TQ decision 1 (PLAN §8.2), as amended by W-C-16 (effectiveDescription kept on DmeProperty, its only carrier);
+// the shipped declaration must equal it byte for byte as JSON
 const RULED_EMBED_TEXT_DECLARATION = Object.freeze({
 	embedTextLabel: 'Pesc260805EmbedText',
 	textPropertyListByRole: {
-		DmeClass: ['name', 'description', 'documentation', 'effectiveDescription'],
+		DmeClass: ['name', 'description', 'documentation'],
 		DmeProperty: ['name', 'description', 'documentation', 'effectiveDescription'],
-		DmeOptionSet: ['name', 'description', 'documentation', 'effectiveDescription'],
+		DmeOptionSet: ['name', 'description', 'documentation'],
 	},
 });
 

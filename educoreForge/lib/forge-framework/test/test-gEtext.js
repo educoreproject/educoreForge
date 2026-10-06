@@ -68,18 +68,28 @@ const PERSON_DESCRIPTION = 'A human being known to the toy system.';
 const DECLARED_TOY_EMBED_TEXT_DECLARATION = Object.freeze({
 	embedTextLabel: 'ToyEmbedText',
 	textPropertyListByRole: Object.freeze({
-		[DME_ROLES.CLASS]: Object.freeze(['name', 'description', 'synonymList']),
+		[DME_ROLES.CLASS]: Object.freeze(['name', 'description']),
 		[DME_ROLES.PROPERTY]: Object.freeze(['name', 'description', 'dataType']),
 		[DME_ROLES.OPTION_SET]: Object.freeze(['name', 'description']),
+	}),
+});
+// ⟪campaign P3, W-C-16⟫ synonymList moved to its own declaration: the derivation now REFUSES a declared (role, property)
+// pair no node carries, and no toy walk class carries synonymList — only the extra classes the l-scenarios mint do.
+const SYNONYM_DECLARED_TOY_EMBED_TEXT_DECLARATION = Object.freeze({
+	...DECLARED_TOY_EMBED_TEXT_DECLARATION,
+	textPropertyListByRole: Object.freeze({
+		...DECLARED_TOY_EMBED_TEXT_DECLARATION.textPropertyListByRole,
+		[DME_ROLES.CLASS]: Object.freeze(['name', 'description', 'synonymList']),
 	}),
 });
 
 // ---------------------------------------------------------------------------------------------
 // scenario shaping
 // ---------------------------------------------------------------------------------------------
-const withDeclaredToy = (scenario) => {
-	scenario.forgeDeclaration.embedTextDeclaration = toyScenario.cloneJson(DECLARED_TOY_EMBED_TEXT_DECLARATION);
+const withDeclaredToy = (scenario, declaration = DECLARED_TOY_EMBED_TEXT_DECLARATION) => {
+	scenario.forgeDeclaration.embedTextDeclaration = toyScenario.cloneJson(declaration);
 };
+const declarationForClassArgs = (classArgs) => (classArgs && classArgs.synonymList !== undefined ? SYNONYM_DECLARED_TOY_EMBED_TEXT_DECLARATION : DECLARED_TOY_EMBED_TEXT_DECLARATION);
 const withSpy = (scenario, spyOptions) => {
 	scenario.spyEmbedder = toyScenario.makeSpyEmbedder({ dims: SPY_DIMS, modelVersion: SPY_MODEL_VERSION, ...spyOptions });
 	scenario.deps = { ...scenario.deps, embedder: scenario.spyEmbedder };
@@ -502,12 +512,12 @@ frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'k_
 // l — value rules
 const valueSuccess = ({ conjunctId, title, twinName, classArgs, judge }) => shapedConjunct({
 	conjunctId, title, twinNameList: [twinName],
-	shape: (scenario) => { withDeclaredToy(scenario); if (classArgs) { withExtraClass(scenario, classArgs); } },
+	shape: (scenario) => { withDeclaredToy(scenario, declarationForClassArgs(classArgs)); if (classArgs) { withExtraClass(scenario, classArgs); } },
 	judge: succeeded(judge),
 });
 const valueRefusal = ({ conjunctId, title, twinName, classArgs, regex, find, replace }) => refusalCase({
 	registry: twinRegistry, gateId: GATE_ID, conjunctId, title, shippedConfig: false,
-	shape: (scenario) => { withDeclaredToy(scenario); withExtraClass(scenario, classArgs); },
+	shape: (scenario) => { withDeclaredToy(scenario, declarationForClassArgs(classArgs)); withExtraClass(scenario, classArgs); },
 	regex, twinName, fileName: DERIVATION_FILE, find, replace,
 });
 conjunctList.push(valueSuccess({
@@ -562,6 +572,13 @@ conjunctList.push(valueRefusal({
 	classArgs: { stableId: 'toy:class/Numeric', name: 'Numeric', synonymList: 42 },
 	regex: /node 'toy:class\/Numeric' property 'synonymList' is a number, not a string or a list of strings/, find: '\tif (!Array.isArray(rawValue)) {', replace: '\tif (false) {',
 }));
+conjunctList.push(refusalCase({
+	registry: twinRegistry, gateId: GATE_ID, conjunctId: 'l_uncarriedPairRefused', shippedConfig: false,
+	title: "⟪campaign P3, W-C-16 / G14 a1⟫ a declared (role, property) pair NO node carries ('synonymList' on DmeClass over the plain toy walk) is refused by name with its 0-of-N count",
+	shape: (scenario) => { withDeclaredToy(scenario, SYNONYM_DECLARED_TOY_EMBED_TEXT_DECLARATION); },
+	regex: /names a property no node of its role carries: 'synonymList' on role DmeClass \(0 of \d+ node\(s\)\)/,
+	twinName: 'disableUncarriedPairCheck', fileName: DERIVATION_FILE, find: '\tif (uncarriedPairList.length > 0) {', replace: '\tif (false) {',
+}));
 
 // m — the proxy drops textEmbedding
 conjunctList.push({
@@ -606,4 +623,4 @@ conjunctList.push(spyConjunct({
 frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'n_stampsCarriedModelVersion', twinName: 'stampInventedModelVersionName', fileName: TEXT_PASS_FILE, shippedConfig: false, find: '\t\t\t\t\t\toneNode.properties.embeddingModelVersion = embedResult.embeddingModelVersion;', replace: '\t\t\t\t\t\toneNode.properties.textEmbeddingModelVersion = embedResult.embeddingModelVersion;' });
 
 const gateDeclarationList = [{ gateId: GATE_ID, title: 'framework-minted embed-text nodes', conjunctList }];
-runGateFamily({ harness, familyName: GATE_ID, gateDeclarationList, twinRegistry, makeSubject: toyScenario.makeScenario, cloneSubject: toyScenario.cloneScenario, expectedConjunctCount: 37, expectedTwinCount: 43 }, () => harness.report());
+runGateFamily({ harness, familyName: GATE_ID, gateDeclarationList, twinRegistry, makeSubject: toyScenario.makeScenario, cloneSubject: toyScenario.cloneScenario, expectedConjunctCount: 38, expectedTwinCount: 44 }, () => harness.report());

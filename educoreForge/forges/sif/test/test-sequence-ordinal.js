@@ -62,7 +62,8 @@ const syntheticParsed = {
 		{
 			id: 'sifobject-StudentPersonals',
 			label: 'SifObject',
-			properties: { name: 'StudentPersonal', tableName: 'StudentPersonals', fieldCount: 5 },
+			// description: ⟪campaign P3, W-C-16⟫ the declaration names it on DmeClass, and a declared text pair must have a carrier
+			properties: { name: 'StudentPersonal', tableName: 'StudentPersonals', fieldCount: 5, description: 'a student' },
 			edges: [],
 		},
 		// ---- the 'Name' xml element and its three leaf children (nested group) ----

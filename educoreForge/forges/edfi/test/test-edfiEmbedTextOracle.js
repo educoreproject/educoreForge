@@ -15,7 +15,7 @@
 //   PREFIX   every text stableId is the literal 'edfi:root/embedText/' + 64 hex
 //   DECLARED the shipped embedTextDeclaration is exactly TQ decision 1 (label, roles, list order)
 // Every conjunct has a TWIN run in memory (nothing written into the tree) and observed RED:
-//   perturbedDeclarationList  a clone of the declaration drops 'description' from DmeOptionSet → ORACLE
+//   perturbedDeclarationList  a clone of the declaration drops 'description' from DmeOptionSet (leaving ['name']) → ORACLE
 //                             and DECLARED red
 //   doubleSlashJoin           embedTextDerivation.js compiled with a '//' join → PREFIX red (ORACLE green:
 //                             the twin moves the id, not the counts)
@@ -61,20 +61,23 @@ const EMBED_TEXT_ORACLE = Object.freeze({
 	embedTextEdgeCount: 4954,
 	singleNameEdgeCount: 4954,
 	multiNameEdgeCount: 0,
-	embedTextAbsentCount: 2498,
+	// ⟪campaign P3, W-C-16⟫ DERIVED, not re-captured: 2,498 − the 2,484 shortDescription absences (G14 a1 removed the
+	// phantom from all three roles) = the 14 description absences
+	embedTextAbsentCount: 14,
 	embedTextSkippedEmptyCount: 0,
 	embedTextTrimmedCount: 2,
 });
 const TEXT_NODE_STABLE_ID_PREFIX = 'edfi:root/embedText/';
 const TEXT_NODE_LABEL_LIST = Object.freeze(['DmeEmbedText', 'EdfiEmbedText', 'ForgedNode']);
 const TEXT_NODE_FORBIDDEN_PROPERTY_NAME_LIST = Object.freeze(['name', 'searchText', 'embedding', 'textEmbedding', 'embeddingModelVersion']);
-// TQ decision 1, verbatim (PLAN §8.2); the shipped declaration must equal it byte for byte as JSON
+// TQ decision 1 (PLAN §8.2), as amended by G14 a1 (TQ 2026-10-06: shortDescription removed, a phantom);
+// the shipped declaration must equal it byte for byte as JSON
 const RULED_EMBED_TEXT_DECLARATION = Object.freeze({
 	embedTextLabel: 'EdfiEmbedText',
 	textPropertyListByRole: {
-		DmeClass: ['name', 'description', 'shortDescription'],
-		DmeProperty: ['name', 'description', 'shortDescription'],
-		DmeOptionSet: ['name', 'description', 'shortDescription'],
+		DmeClass: ['name', 'description'],
+		DmeProperty: ['name', 'description'],
+		DmeOptionSet: ['name', 'description'],
 	},
 });
 
@@ -141,7 +144,7 @@ const perturbedDeclaration = Object.freeze({
 	...edfiForgeDeclaration,
 	embedTextDeclaration: {
 		embedTextLabel: edfiForgeDeclaration.embedTextDeclaration.embedTextLabel,
-		textPropertyListByRole: { ...edfiForgeDeclaration.embedTextDeclaration.textPropertyListByRole, DmeOptionSet: ['name', 'shortDescription'] },
+		textPropertyListByRole: { ...edfiForgeDeclaration.embedTextDeclaration.textPropertyListByRole, DmeOptionSet: ['name'] },
 	},
 });
 const DERIVATION_JOIN_FIND = "const stableIdJoinText = rootStableId.endsWith('/') ? '' : '/';";

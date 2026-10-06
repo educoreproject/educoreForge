@@ -74,7 +74,7 @@ const { makeTwinRegistry } = require(path.join(TREE_ROOT, 'lib', 'forge-framewor
 const rosterLib = require(path.join(TREE_ROOT, 'lib', 'forge-framework', 'roster'));
 const pluginRegistryLib = require(path.join(TREE_ROOT, 'lib', 'bridge-framework', 'pluginRegistry'));
 const sssomExporterLib = require(path.join(TREE_ROOT, 'lib', 'bridge-framework', 'sssomExporter'));
-const { DME_ROLES, EDGE_TYPES, EMBED_TEXT_VECTOR } = require(path.join(TREE_ROOT, 'lib', 'vocabulary', 'vocabulary'));
+const { DME_ROLES, EDGE_TYPES, EMBED_TEXT_VECTOR, LIST_VALUED_PROPERTY_NAME_LIST } = require(path.join(TREE_ROOT, 'lib', 'vocabulary', 'vocabulary'));
 
 const twinRegistry = makeTwinRegistry();
 const cloneJson = scenarioLib.cloneJson;
@@ -106,7 +106,8 @@ const UNIT_COUNT = 2542;
 const OCCURRENCE_COUNT = 6742;
 const SECTION_COUNT = 106;
 // the one-element-list collapse: the subjects occurring in exactly one section
-const STRING_SHAPED_SECTION_LIST_COUNT = 997;
+// ⟪campaign P3⟫ before W-A-1 replay collapsed these to strings; a declared list-valued name now stays a list at any length
+const ONE_SECTION_SUBJECT_COUNT = 997;
 // RULING QUIET_ORBIT 2026-10-01 (2): the code-list-typed units (codeListName or codeListDocumentation stamped):
 // 219 subjects, 416 units
 const CODE_LIST_PROMPT_COUNT = 416;
@@ -199,10 +200,13 @@ const SUBJECT_TEXT_VECTOR_BY_PROPERTY_NAME = Object.freeze({
 const OTHER_TEXT_VECTOR = Object.freeze([0.5, 0.5, 0, 0]);
 
 // liveShapedProperties — the replay engine's pgToStored rule (replay-engine.js): a one-element list is stored as its one
-// value. The live graph's readers see that shape, so the double carries it.
+// value UNLESS its name is declared list-valued (⟪campaign P3⟫ W-A-1: such a name stays a list at any length, and the
+// bridge's read boundary now REFUSES a scalar there). The live graph's readers see that shape, so the double carries it.
+const LIST_VALUED_PROPERTY_NAME_SET = new Set(LIST_VALUED_PROPERTY_NAME_LIST);
+const collapsedOneElementList = (propertyValue) => (Array.isArray(propertyValue) && propertyValue.length === 1 ? propertyValue[0] : propertyValue);
 const liveShapedProperties = (properties) => Object.keys(properties).reduce((soFar, propertyName) => {
 	const propertyValue = properties[propertyName];
-	soFar[propertyName] = Array.isArray(propertyValue) && propertyValue.length === 1 ? propertyValue[0] : propertyValue;
+	soFar[propertyName] = LIST_VALUED_PROPERTY_NAME_SET.has(propertyName) ? propertyValue : collapsedOneElementList(propertyValue);
 	return soFar;
 }, {});
 // widenedList — the read rule for a live-shaped list property (NOTES-supervisor item 16): a scalar is a one-element list
@@ -258,7 +262,7 @@ const forgedGraphToDouble = ({ forged, scopeStableIdSet }) => {
 			labels: ['ForgedNode', 'ToyHubEmbedText', DME_ROLES.EMBED_TEXT],
 			properties: { stableId: textStableId, text: `toy text ${textStableId}`, role: DME_ROLES.EMBED_TEXT, _source: HUB_NAME, [EMBED_TEXT_VECTOR.propertyName]: oneText.vector.slice(), embeddingModelVersion: DECLARED_MODEL, embedSourceProperty: 'text', vectorPropertyName: EMBED_TEXT_VECTOR.propertyName },
 		});
-		oneText.describedStableIdList.forEach((describedStableId) => hubEdgeList.push({ fromStableId: textStableId, toStableId: describedStableId, type: EDGE_TYPES.EMBEDS_TEXT_OF, properties: { propertyNameList: 'name', provenanceTier: 'structural' } }));
+		oneText.describedStableIdList.forEach((describedStableId) => hubEdgeList.push({ fromStableId: textStableId, toStableId: describedStableId, type: EDGE_TYPES.EMBEDS_TEXT_OF, properties: { propertyNameList: ['name'], provenanceTier: 'structural' } }));
 	});
 	// THE RUN DOUBLE is the bridge's slice of the forge: the in-scope declarations, their occurrences, the texts that
 	// describe them, and the two edge types a derived run reads among them. Everything else is nothing a derived run
@@ -511,19 +515,21 @@ const buildGateDeclarationList = ({ forgedGraph, runDouble }) => {
 		}),
 		pureConjunct({
 			conjunctId: 'b3_liveShapeWidened',
-			title: `(b3) the double is live-shaped: ${STRING_SHAPED_SECTION_LIST_COUNT} of the ${SUBJECT_COUNT} subjects carry occurrenceSectionList as a string; widened, each subject's sections are exactly the sections of its units`,
-			twinNameList: ['wideningRemoved'],
+			title: `(b3) ⟪campaign P3, restated for W-A-1⟫ the double is live-shaped: NO subject carries occurrenceSectionList as a string (a declared list stays a list), ${ONE_SECTION_SUBJECT_COUNT} of the ${SUBJECT_COUNT} carry a one-element list, and each subject's sections are exactly the sections of its units`,
+			twinNameList: ['oneElementListCollapsed'],
 			judge: (scenario) => {
-				const widen = scenario.widenOverride === undefined ? widenedList : scenario.widenOverride;
+				const widen = widenedList;
 				const labelBySectionPath = readSectionLabelBySectionPath(fs.readFileSync(path.join(SHIPPED_BRIDGES_DIR, SECTION_FILE_NAME), 'utf8'));
 				const labelListBySubject = expectedUnitList.reduce((soFar, oneUnit) => {
 					(soFar[oneUnit.subjectStableId] = soFar[oneUnit.subjectStableId] || []).push(oneUnit.judgmentPartitionLabel);
 					return soFar;
 				}, {});
-				const subjectNodeList = forgedGraph.nodeList.filter((oneNode) => labelListBySubject[oneNode.stableId] !== undefined);
+				const shapedNodeList = scenario.shapeOverride === undefined ? forgedGraph.nodeList : forgedGraph.nodeList.map(scenario.shapeOverride);
+				const subjectNodeList = shapedNodeList.filter((oneNode) => labelListBySubject[oneNode.stableId] !== undefined);
 				const stringShapedCount = subjectNodeList.filter((oneNode) => typeof oneNode.properties.occurrenceSectionList === 'string').length;
+				const oneSectionCount = subjectNodeList.filter((oneNode) => Array.isArray(oneNode.properties.occurrenceSectionList) && oneNode.properties.occurrenceSectionList.length === 1).length;
 				const disagreeingList = subjectNodeList.filter((oneNode) => JSON.stringify([].concat(widen(oneNode.properties.occurrenceSectionList)).map((sectionPath) => labelBySectionPath[sectionPath]).sort()) !== JSON.stringify(labelListBySubject[oneNode.stableId].slice().sort()));
-				return { pass: subjectNodeList.length === SUBJECT_COUNT && stringShapedCount === STRING_SHAPED_SECTION_LIST_COUNT && disagreeingList.length === 0, detail: `${subjectNodeList.length} subjects; string-shaped ${stringShapedCount}; disagreeing ${disagreeingList.length}${disagreeingList.length ? ` (first ${disagreeingList[0].stableId})` : ''}` };
+				return { pass: subjectNodeList.length === SUBJECT_COUNT && stringShapedCount === 0 && oneSectionCount === ONE_SECTION_SUBJECT_COUNT && disagreeingList.length === 0, detail: `${subjectNodeList.length} subjects; string-shaped ${stringShapedCount}; one-section lists ${oneSectionCount}; disagreeing ${disagreeingList.length}${disagreeingList.length ? ` (first ${disagreeingList[0].stableId})` : ''}` };
 			},
 		}),
 	];
@@ -542,7 +548,7 @@ const buildGateDeclarationList = ({ forgedGraph, runDouble }) => {
 			};
 		},
 	});
-	scenarioTwin({ registry: twinRegistry, gateId: 'B1-UNITS', conjunctId: 'b3_liveShapeWidened', twinName: 'wideningRemoved', leverKind: 'inputFault', mutate: (scenario) => { scenario.widenOverride = (listOrScalar) => (typeof listOrScalar === 'string' ? listOrScalar.split('') : listOrScalar); } });
+	scenarioTwin({ registry: twinRegistry, gateId: 'B1-UNITS', conjunctId: 'b3_liveShapeWidened', twinName: 'oneElementListCollapsed', leverKind: 'inputFault', mutate: (scenario) => { scenario.shapeOverride = (oneNode) => ({ ...oneNode, properties: Object.keys(oneNode.properties).reduce((soFar, propertyName) => ({ ...soFar, [propertyName]: collapsedOneElementList(oneNode.properties[propertyName]) }), {}) }); } });
 
 	// ------------------------------- B1-EDGES
 	const INSTANCE_EXPANSION_FIND = ': oneRecord.instanceStableIdList.map((instanceStableId) => ({ record: oneRecord, fromStableId: instanceStableId, instanceStableId })),';

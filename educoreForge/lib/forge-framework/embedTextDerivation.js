@@ -94,16 +94,24 @@ const deriveEmbedTextGraph = ({ nodes, embedTextDeclaration, kit } = {}) => {
 	let embedTextSkippedEmptyCount = 0;
 	let embedTextTrimmedCount = 0;
 	const occurrenceList = [];
+	// ⟪campaign P3, W-C-16 / W-B-15 S09 (G14 a1)⟫ every DECLARED (role, property) pair must be carried by at least one node of
+	// that role: a pair no node carries is a declared intent with no effect (Ed-Fi named shortDescription on three roles that
+	// never carry it; the absences only inflated embedTextAbsentCount). Counted here, refused by name after the pass.
+	const nodeCountByRole = {};
+	const carrierCountByRoleAndProperty = {};
 	nodes.forEach((oneNode) => {
 		if (!Object.prototype.hasOwnProperty.call(textPropertyListByRole, oneNode.role)) {
 			return;
 		}
+		nodeCountByRole[oneNode.role] = (nodeCountByRole[oneNode.role] || 0) + 1;
 		textPropertyListByRole[oneNode.role].forEach((onePropertyName) => {
 			const rawValue = oneNode.properties[onePropertyName];
 			if (rawValue === undefined || rawValue === null) {
 				embedTextAbsentCount += 1;
 				return;
 			}
+			const carrierPairText = `${oneNode.role}\u001f${onePropertyName}`;
+			carrierCountByRoleAndProperty[carrierPairText] = (carrierCountByRoleAndProperty[carrierPairText] || 0) + 1;
 			valueListFor({ rawValue, sourceStableId: oneNode.stableId, propertyName: onePropertyName }).forEach((oneValue) => {
 				if (oneValue.indexOf(NUL_CHARACTER) !== -1) {
 					throw refuse.byName({ moduleName, what: `node '${oneNode.stableId}' property '${onePropertyName}' contains the NUL character (U+0000)`, where: 'the content address refuses NUL at vector-store write (content-address.js vectorIdForInput); clean the source text in the walk or omit the property' });
@@ -120,6 +128,16 @@ const deriveEmbedTextGraph = ({ nodes, embedTextDeclaration, kit } = {}) => {
 			});
 		});
 	});
+
+	const uncarriedPairList = Object.keys(textPropertyListByRole).reduce(
+		// a role with NO nodes in this run is not judged (a fixture without option sets says nothing about the declaration);
+		// a role whose nodes exist yet never carry a declared property is the phantom this check exists for
+		(soFar, oneRole) => (nodeCountByRole[oneRole] === undefined ? soFar : soFar.concat(textPropertyListByRole[oneRole].filter((onePropertyName) => !carrierCountByRoleAndProperty[`${oneRole}\u001f${onePropertyName}`]).map((onePropertyName) => `'${onePropertyName}' on role ${oneRole} (0 of ${nodeCountByRole[oneRole]} node(s))`))),
+		[],
+	);
+	if (uncarriedPairList.length > 0) {
+		throw refuse.byName({ moduleName, what: `embedTextDeclaration.textPropertyListByRole names a property no node of its role carries: ${uncarriedPairList.join('; ')}`, where: 'every declared (role, property) pair is carried by at least one node, or it is removed from the declaration (W-C-16 / G14 a1): a declared text with no carrier is an intent with no effect' });
+	}
 
 	// pass 2 — identity, then mint in ascending stableId order
 	const stableIdJoinText = rootStableId.endsWith('/') ? '' : '/';

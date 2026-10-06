@@ -65,7 +65,9 @@ const EMBED_TEXT_ORACLE = Object.freeze({
 	embedTextEdgeCount: 7823,
 	singleNameEdgeCount: 3204,
 	multiNameEdgeCount: 4619,
-	embedTextAbsentCount: 6013,
+	// ⟪campaign P3, W-C-16⟫ DERIVED, not re-captured: 6,013 − the 804 phantom absences (prefLabel + comment on
+	// 402 DmeClass nodes, none of which carries either) dropped from the declaration = 5,209
+	embedTextAbsentCount: 5209,
 	embedTextSkippedEmptyCount: 0,
 	embedTextTrimmedCount: 81,
 });
@@ -73,11 +75,12 @@ const ARRAY_ORACLE = Object.freeze({ propertyName: 'description', arrayValuedSou
 const TEXT_NODE_STABLE_ID_PREFIX = 'https://w3id.org/CEDStandards/terms/embedText/';
 const TEXT_NODE_LABEL_LIST = Object.freeze(['CedsEmbedText', 'DmeEmbedText', 'ForgedNode']);
 const TEXT_NODE_FORBIDDEN_PROPERTY_NAME_LIST = Object.freeze(['name', 'searchText', 'embedding', 'textEmbedding', 'embeddingModelVersion']);
-// TQ decisions 1 and 1b, verbatim (PLAN §8.2); the shipped declaration must equal it byte for byte as JSON
+// TQ decisions 1 and 1b (PLAN §8.2), as amended by W-C-16 (G14 a1 applied to CEDS: DmeClass carries no prefLabel/comment);
+// the shipped declaration must equal it byte for byte as JSON
 const RULED_EMBED_TEXT_DECLARATION = Object.freeze({
 	embedTextLabel: 'CedsEmbedText',
 	textPropertyListByRole: {
-		DmeClass: ['name', 'definition', 'description', 'prefLabel', 'comment'],
+		DmeClass: ['name', 'definition', 'description'],
 		DmeProperty: ['name', 'definition', 'description', 'prefLabel', 'comment'],
 		DmeOptionSet: ['name', 'definition', 'description', 'prefLabel', 'comment'],
 	},

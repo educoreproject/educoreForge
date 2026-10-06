@@ -688,7 +688,9 @@ const runStageSeamSection = (done) => {
 						// TWIN 3 — invention. The hard line, enforced by the stage, not by this bundle.
 						stageRunWith(
 							{
-								damageVerdict: (verdict) => ({ ...verdict, inventedTotal: 3, invented: 3 }),
+								// ⟪campaign P3, W-C-14⟫ the stage applies the WHOLE normative rule, so the damage is a COHERENT invented
+								// verdict (A13: roundTripClean false; inventedList carries the three items) — otherwise A13 refuses first
+								damageVerdict: (verdict) => ({ ...verdict, inventedTotal: 3, invented: 3, roundTripClean: false, inventedList: ['inv0', 'inv1', 'inv2'].map((statementKey) => ({ statementKey })) }),
 								outputDirName: 'stageRefusesInvention',
 							},
 							(twinInvented) => {
