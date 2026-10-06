@@ -172,7 +172,7 @@ const crosswalkCandidateLineList = ({ oneSeat, seatIndex, noteByStableId }) => {
 	const lineList = [];
 	lineList.push(`  [${seatIndex + 1}] ${oneCard.canonicalKey} — ${oneCard.name}`);
 	lineList.push(`      seat: ${oneSeat.seatReason}${oneSeat.nominatedBy ? ` (${oneSeat.nominatedBy}: ${oneSeat.nominationRationale})` : ''}`);
-	lineList.push(...renderKeyValueLines({ domainId: oneCard.domainId, domainName: oneCard.domainName, propertyKey: oneCard.propertyKey, qualifierKeys: oneCard.qualifierKeys, range: oneCard.range, rangeDatatype: oneCard.rangeDatatype, propertyDefinition: oneCard.propertyDefinition, domainDefinition: oneCard.domainDefinition, propertyNotation: oneCard.propertyNotation }, '      '));
+	lineList.push(...renderKeyValueLines({ domainId: oneCard.domainId, domainName: oneCard.domainName, propertyKey: oneCard.propertyKey, qualifierKeys: oneCard.qualifierKeys, rangeDatatype: oneCard.rangeDatatype, propertyDefinition: oneCard.propertyDefinition, domainDefinition: oneCard.domainDefinition, propertyNotation: oneCard.propertyNotation }, '      '));
 	if (typeof noteByStableId[oneCard.stableId] === 'string' && noteByStableId[oneCard.stableId] !== '') {
 		lineList.push(`      note: ${noteByStableId[oneCard.stableId]}`);
 	}

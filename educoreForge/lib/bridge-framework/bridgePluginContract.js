@@ -233,7 +233,19 @@ if (JUDGE_CATEGORY_LIST.join(',') !== REVIEWED_JUDGE_CATEGORY_LIST.join(',')) {
 	);
 }
 const LABEL_DISPOSITION_LIST = Object.freeze(['predicate', 'tentative', 'refused', 'sentinelOnly']);
-const TUPLE_FIELD_LIST = Object.freeze(['canonicalKey', 'domainId', 'propertyKey', 'range', 'valueKey', 'qualifierKeys']);
+// TUPLE_RANGE_FIELD_LIST (W-B-14, V1-C34; campaign P3 2026-10-06): the three mutually exclusive range properties a hub card
+// carries, READ from the hub vocabulary, never retyped. The tuple list named 'range', which no card has ever carried (it is
+// the address-signature SLOT the three fold into, a hash input): a plugin mapping it would have filtered every pool empty.
+const TUPLE_RANGE_FIELD_LIST = Object.freeze([
+	vocabularyLib.CANONICAL_ADDRESS_PROPERTIES.RANGE_OPTION_SET_ID,
+	vocabularyLib.CANONICAL_ADDRESS_PROPERTIES.RANGE_CLASS_ID,
+	vocabularyLib.CANONICAL_ADDRESS_PROPERTIES.RANGE_DATATYPE,
+]);
+const TUPLE_FIELD_LIST = Object.freeze(['canonicalKey', 'domainId', 'propertyKey', ...TUPLE_RANGE_FIELD_LIST, 'valueKey', 'qualifierKeys']);
+// a tuple field name that is NOT a card field, with why — refused by name before the generic "not a tuple field"
+const RETIRED_TUPLE_FIELD_REASON_BY_NAME = Object.freeze({
+	range: `'range' is not a card field; it is the address-signature slot. Name the card's range property: one of ${TUPLE_RANGE_FIELD_LIST.join(' | ')}`,
+});
 const TUPLE_LIST_FIELD_LIST = Object.freeze(['qualifierKeys']); // compared as sorted lists; re-widened at the read boundary
 const SOURCE_KIND_LIST = Object.freeze(['document', 'forgedGraph']);
 const CHANNEL_TIER_LIST = Object.freeze(['property', 'value']);
@@ -793,6 +805,9 @@ const KIND_CHECKER_REGISTRY = Object.freeze({
 		const walkChannelList = walkChannelListOf(bridgeDeclaration);
 		for (let fieldIndex = 0; fieldIndex < fieldList.length; fieldIndex++) {
 			const oneField = fieldList[fieldIndex];
+			if (RETIRED_TUPLE_FIELD_REASON_BY_NAME[oneField] !== undefined) {
+				return RETIRED_TUPLE_FIELD_REASON_BY_NAME[oneField];
+			}
 			if (TUPLE_FIELD_LIST.indexOf(oneField) === -1) {
 				return `'${oneField}' is not a tuple field (${listAsText(TUPLE_FIELD_LIST)})`;
 			}
@@ -1411,6 +1426,8 @@ module.exports = {
 	PREDICATE_ASSERTED_BY_BY_SOURCE_KIND,
 	LABEL_DISPOSITION_LIST,
 	TUPLE_FIELD_LIST,
+	TUPLE_RANGE_FIELD_LIST,
+	RETIRED_TUPLE_FIELD_REASON_BY_NAME,
 	TUPLE_LIST_FIELD_LIST,
 	SOURCE_KIND_LIST,
 	CHANNEL_TIER_LIST,
