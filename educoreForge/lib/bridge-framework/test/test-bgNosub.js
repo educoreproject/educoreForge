@@ -136,7 +136,15 @@ const BASE_TAG = 'preBridgeFramework-081626';
 // allowed), test/test-graphContract.js 133 (new, allowed), and the two files outside: graph-contract.js 260 (new: the
 // declarations of CONTRACTS §0-§5) and tools/emitGraphContractJson.js 52 (new: writes graphContract.json). Base moved, list
 // NOT widened. Fresh red observed on the re-anchor commit (DEVLOG-P0).
-const POST_D1_BASE_TAG = 'postCampaignP0VocabularyIi-100626'; // re-anchored 2026-10-06 (campaign P0) — base moved, allowed-path list NOT widened
+// ═══ RE-ANCHOR (ii), 2026-10-06 (CARDINAL_RIVER, campaign P2; pre-authorised, VIOLET_VALLEY 17:42Z) ═══ postCampaignP0VocabularyIi-100626
+// -> postCampaignP2VocabularyIi-100626, tag cut ON this commit. CENSUS (git diff --stat postCampaignP0VocabularyIi-100626 -- lib/vocabulary/)
+// at fb4b303, all campaign P2: vocabulary.js 205 (allowed: W-A-6 SchemaView kinds, W-A-10 NODE_BY_ROLE_CLASS, W-A-12 26 dead
+// exports removed, W-B-13 / W-C-3 / W-A-4 declarations), six test files (allowed: test-edgeDefinitionCensus.js and its fixture
+// new for W-C-3, test-registryConsumers.js new for W-A-12, test-graphContract.js, test-embedTextVocabulary.js,
+// test-sifEdgeVocabulary.js), and the two files outside: graph-contract.js 213 (the P2 declarations — §10 vector index naming,
+// bridge pair labels, meanings on every row, §14 the DME user layer) and vocabulary-definitions.js 25 (W-C-3 / W-A-4 / W-A-5 /
+// W-A-10 definition texts). Base moved, list NOT widened. Fresh red observed on the re-anchor commit (DEVLOG-P2).
+const POST_D1_BASE_TAG = 'postCampaignP2VocabularyIi-100626'; // re-anchored 2026-10-06 (campaign P2) — base moved, allowed-path list NOT widened
 // ⟪A THIRD BASELINE — RULING P1-R11, BRIEF-SEAM-reanchorBgSeamUntouched.md, applied 2026-08-29 by
 // STERLING_PEAK during hub kit role migration Phase 0.E4⟫
 //
