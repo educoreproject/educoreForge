@@ -74,10 +74,10 @@ const conjunctJudgeByRefId = {
 		const statementList = [];
 		const runCypher = ({ cypher }, callback) => {
 			statementList.push(cypher);
-			callback('', { records: [{ get: (fieldName) => ({ attestationElementId: '4:x:9', edgeCount: 1, rowCount: 1 })[fieldName] }] });
+			callback('', { records: [{ get: (fieldName) => ({ attestationElementId: '4:x:9', edgeCount: 1, rowCount: 1, updatedCount: 1 })[fieldName] }] });
 		};
-		doubleOrReal(WRITER_PATH, mutationList)({ vocabulary, debugMappingSource: 'bridge-debug' }).writeVerificationAttestation({ runCypher, verdict: 'pass', detail: 'd', exemplarCount: 5, verifiedCount: 5 }, (err) => {
-			const mergeText = statementList[0] || '';
+		doubleOrReal(WRITER_PATH, mutationList)({ vocabulary, debugMappingSource: 'bridge-debug' }).writeVerificationAttestation({ runCypher, verdict: 'pass', detail: 'd', exemplarCount: 5, verifiedCount: 5, rowCountByPatternName: { whereDoIStart: 95 } }, (err) => {
+			const mergeText = statementList.find((oneStatement) => /writtenOnChannel/.test(oneStatement)) || '';
 			const pass = !err && /MERGE \(a:`BuildAttestation` \{gate: 'usagePatternVerification'\}\)/.test(mergeText) && /a\.writtenOnChannel = 'channelB'/.test(mergeText);
 			done({ pass, detail: err || mergeText.replace(/\s+/g, ' ').slice(0, 200) });
 		});

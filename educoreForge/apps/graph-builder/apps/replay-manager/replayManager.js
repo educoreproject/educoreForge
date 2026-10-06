@@ -1269,6 +1269,7 @@ const moduleFunction =
 					detail: exemplarReport.summary || '',
 					exemplarCount,
 					verifiedCount,
+					rowCountByPatternName: rowCounts,
 				},
 				(err, report) => {
 					if (err) {

@@ -135,6 +135,21 @@ const moduleFunction =
 					'edge carries no provenanceTier.',
 				zeroRowMeaning: 'finding',
 			},
+			// ⟪campaign P2, W-A-7 / V1-C21⟫ the one exemplar that starts at the passport: the gates and what each found. At emit
+			// time it returns 0 rows (the passport does not exist yet), which stage 1 does not judge; at finish it must not.
+			{
+				patternName: 'howWasThisGraphChecked',
+				question: 'Which gates ran over this build, and what did each find?',
+				entryLabel: NODE_LABELS.GRAPH_PROVENANCE,
+				cypher:
+					'MATCH (:GraphProvenance)-[:ATTESTS]->(a:BuildAttestation) RETURN a.gate AS gate, a.verdict AS verdict, ' +
+					'a.verdictSupplied AS verdictSupplied, a.detail AS detail ORDER BY gate',
+				caveat:
+					'A verdict is what the gate SAID, read from its evidence; notRun is a first-class verdict and never means ' +
+					'pass. verdictSupplied false means the producer said nothing and the row is the expected-list default. ' +
+					'Promotion-stamp rows (goldEvalCheck, replay) carry their real verdicts only after promotion.',
+				zeroRowMeaning: 'defect',
+			},
 		];
 
 		// ----- emit — mode 'emit'. EXECUTES each exemplar, then emits only those that returned rows.

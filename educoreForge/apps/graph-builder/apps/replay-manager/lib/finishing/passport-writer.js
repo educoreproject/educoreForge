@@ -716,7 +716,9 @@ const moduleFunction =
 		// The stage-2 exemplar verdict CANNOT EXIST until after Channel B, because passport-rooted
 		// exemplars require the passport. So it can never be handed to the Channel-A attestation finisher
 		// in the same run, and the verb writes it here instead — through the passport's own mechanism.
-		// The finisher stays a pure consumer; no already-written node is mutated.
+		// The finisher stays a pure consumer; no already-written node is mutated — except the one declared finish-time field
+		// UsagePattern.finishTimeRowCount (campaign P2, W-A-7), a deterministic function of the finished graph, written here
+		// because it is only knowable once gate (h) has run against that graph.
 		const VERIFICATION_GATE_NAME = 'usagePatternVerification';
 
 		// ⟪RULED 2026-09-01, GRANITE_ECHO — option (i): OMIT :ForgedNode⟫ Held as DATA, which is why
@@ -736,7 +738,7 @@ const moduleFunction =
 		const VERIFICATION_ATTESTATION_LABEL_LIST = vocabulary.ATTESTATION_LABEL_SET_BY_CHANNEL[VERIFICATION_CHANNEL_NAME].slice();
 
 		const writeVerificationAttestation = (
-			{ runCypher, verdict, detail, exemplarCount, verifiedCount } = {},
+			{ runCypher, verdict, detail, exemplarCount, verifiedCount, rowCountByPatternName } = {},
 			callback,
 		) => {
 			if (typeof runCypher !== 'function') {
@@ -752,10 +754,35 @@ const moduleFunction =
 				return;
 			}
 
+			if (!rowCountByPatternName || typeof rowCountByPatternName !== 'object' || Object.keys(rowCountByPatternName).length === 0) {
+				callback(`passport-writer.writeVerificationAttestation: rowCountByPatternName is REQUIRED (gate (h)'s finish-time count per exemplar) — UsagePattern.finishTimeRowCount is the count that carries weight and cannot be left unwritten`);
+				return;
+			}
 			const stableId = `${SELF_DOC.BUILD_ATTESTATION_STABLE_ID_PREFIX}${VERIFICATION_GATE_NAME}`;
 			const attestationLabel = SELF_DOC.NODE_LABELS.BUILD_ATTESTATION;
 			const labelClause = VERIFICATION_ATTESTATION_LABEL_LIST.filter((oneLabel) => oneLabel !== attestationLabel).map((oneLabel) => `a:\`${oneLabel}\``).join(', ');
 			const taskList = new taskListPlus();
+
+			// ⟪campaign P2, W-A-7⟫ one statement per exemplar: its finish-time row count, onto exactly one UsagePattern
+			Object.keys(rowCountByPatternName).sort().forEach((onePatternName) => {
+				taskList.push((args, next) => {
+					const rowCount = Number(rowCountByPatternName[onePatternName]);
+					if (!Number.isInteger(rowCount)) {
+						next(`passport-writer.writeVerificationAttestation: the finish-time row count for '${onePatternName}' is ${JSON.stringify(rowCountByPatternName[onePatternName])}, not an integer`);
+						return;
+					}
+					const cypher = `MATCH (u:\`${SELF_DOC.NODE_LABELS.USAGE_PATTERN}\` {patternName: ${cypherString(onePatternName)}}) SET u.finishTimeRowCount = ${rowCount} RETURN count(u) AS updatedCount`;
+					runCypher({ cypher }, (err, result) => {
+						const rows = (result && result.records) || [];
+						const updatedCount = rows.length ? numberFrom(rows[0], 'updatedCount') : 0;
+						if (err || updatedCount !== 1) {
+							next(`passport-writer.writeVerificationAttestation: finishTimeRowCount for '${onePatternName}' updated ${updatedCount} UsagePattern node(s), not 1${err ? `: ${err}` : ''}`);
+							return;
+						}
+						next('', args);
+					});
+				});
+			});
 
 			// ⟪campaign P2, W-A-4 / V1-C17⟫ MERGE on (:BuildAttestation {gate}) — the declared identity of a row, never a bare
 			// label-less {stableId} that would inherit whatever labels a matched node happened to carry. IDEMPOTENT under a
