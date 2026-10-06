@@ -345,7 +345,9 @@ const POST_D1_BASE_TAG = 'postCampaignP2VocabularyIiB-100626'; // re-anchored 20
 // campaign P2 SECOND RE-ANCHOR of (iii) (CARDINAL_RIVER, 2026-10-06; pre-authorised): postCampaignP2ForgeFrameworkIii-100626 ->
 // postCampaignP2ForgeFrameworkIiiB-100626, tag cut ON this commit. CENSUS at 65d1725: ONE file, test/test-gSeamUntouched.js 6 — its own
 // second re-anchor. lib/forge-framework SOURCE: unchanged since the first P2 anchor. Path unchanged, no exclusion. The FIFTEENTH anchor.
-const PHASE0_ANCHOR_TAG = 'postCampaignP2ForgeFrameworkIiiB-100626'; // re-anchored by CARDINAL_RIVER, campaign P2 (second) — the FIFTEENTH anchor
+// campaign P2 THIRD RE-ANCHOR of (iii) (CARDINAL_RIVER, 2026-10-06; pre-authorised): -> postCampaignP2ForgeFrameworkIiiC-100626, tag ON
+// this commit. CENSUS: ONE file, test/test-gSeamUntouched.js 4 — its own third re-anchor. Framework SOURCE unchanged. The SIXTEENTH anchor.
+const PHASE0_ANCHOR_TAG = 'postCampaignP2ForgeFrameworkIiiC-100626'; // re-anchored by CARDINAL_RIVER, campaign P2 (third) — the SIXTEENTH anchor
 // PHASE 1 RE-ANCHOR — RULING FJ-P1-1, and it moves seamDiffEmpty ALONE.
 //
 // WHY IT HAD TO MOVE. SEAM_PATH_LIST watches forges/*/forge*.js, forges/*/lib/*Declaration.js and
