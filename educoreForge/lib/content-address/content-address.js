@@ -4,6 +4,8 @@
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
 const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
 
 // START OF moduleFunction() ============================================================
 
@@ -117,6 +119,40 @@ const moduleFunction =
 		const vectorHashForBytes = (vectorBytes) =>
 			crypto.createHash('sha256').update(vectorBytes).digest('hex');
 
+		// -----
+		// treeFingerprint — ⟪campaign P2, W-A-3 / V1-C03⟫ a CONTENT version of a code tree: sha256 over every *.js file
+		//   below dirPath (recursive; node_modules and any directory named in excludeDirNameList skipped), each contributing
+		//   '<relative path>\n' + its bytes + '\n', in sorted path order — the recipe decisionBlock.frameworkFingerprint uses
+		//   for the bridge framework. The passport's engineVersions carries these instead of hand-bumped constants (the
+		//   pluginVersion lesson, V1-C16): an edit moves the version by construction. A tree with no .js file is refused
+		//   (a fingerprint of nothing would read as a version).
+		const treeFingerprint = ({ dirPath, excludeDirNameList = ['test'] } = {}) => {
+			const listJsFiles = (oneDirPath) =>
+				fs.readdirSync(oneDirPath, { withFileTypes: true }).reduce((soFar, oneEntry) => {
+					if (oneEntry.isFile() && /\.js$/.test(oneEntry.name)) {
+						return soFar.concat([path.join(oneDirPath, oneEntry.name)]);
+					}
+					if (oneEntry.isDirectory() && oneEntry.name !== 'node_modules' && excludeDirNameList.indexOf(oneEntry.name) === -1) {
+						return soFar.concat(listJsFiles(path.join(oneDirPath, oneEntry.name)));
+					}
+					return soFar;
+				}, []);
+			if (typeof dirPath !== 'string' || !fs.existsSync(dirPath)) {
+				throw new Error(`content-address.treeFingerprint: dirPath '${dirPath}' is not a directory on disk`);
+			}
+			const relativePathList = listJsFiles(dirPath).map((oneFilePath) => path.relative(dirPath, oneFilePath)).sort();
+			if (relativePathList.length === 0) {
+				throw new Error(`content-address.treeFingerprint: no .js file under '${dirPath}' — a fingerprint of nothing is not a version`);
+			}
+			const hash = crypto.createHash('sha256');
+			relativePathList.forEach((oneRelativePath) => {
+				hash.update(`${oneRelativePath}\n`, 'utf8');
+				hash.update(fs.readFileSync(path.join(dirPath, oneRelativePath)));
+				hash.update('\n', 'utf8');
+			});
+			return hash.digest('hex');
+		};
+
 		return {
 			blockIdForText,
 			manifestKeyForMembership,
@@ -124,6 +160,7 @@ const moduleFunction =
 			sha256Hex,
 			vectorIdForInput,
 			vectorHashForBytes,
+			treeFingerprint,
 		};
 	};
 

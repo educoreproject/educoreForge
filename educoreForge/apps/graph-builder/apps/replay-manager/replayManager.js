@@ -49,6 +49,21 @@ const finishingModule = require(path.join(__dirname, 'lib', 'finishing', 'finish
 const passportWriterModule = require(path.join(__dirname, 'lib', 'finishing', 'passport-writer'));
 // the debug judge's mappingSource, which the passport's trust verdict reads (lane P, 2026-10-04)
 const certificationCheckLib = require(path.join(TREE_LIB, 'bridge-framework', 'certificationCheck'));
+const decisionBlockLib = require(path.join(TREE_LIB, 'bridge-framework', 'decisionBlock'));
+const replayBlockLib = require(path.join(TREE_LIB, 'replay', 'replay-block'))();
+
+// engineVersionsFor — ⟪campaign P2, W-A-3 / V1-C03⟫ the passport's engineVersions, every member a CONTENT version (the
+// pluginVersion lesson: a hand-bumped constant drifts from the code it names). replayManager's own member is the finish
+// verb's declared protocol word; the serializer's is the block format version the blocks themselves carry; the three code
+// trees are fingerprinted (content-address.treeFingerprint, the decisionBlock recipe; the bridge's is decisionBlock's own).
+// Computed at finish time, so the passport names the code that actually ran.
+const engineVersionsFor = () => ({
+	replayManager: 'finish/1',
+	replayEngine: contentAddress.treeFingerprint({ dirPath: path.join(TREE_LIB, 'replay') }),
+	serializer: replayBlockLib.SERIALIZER_VERSION,
+	forgeFramework: contentAddress.treeFingerprint({ dirPath: path.join(TREE_LIB, 'forge-framework') }),
+	bridgeFramework: decisionBlockLib.frameworkFingerprint(),
+});
 
 // The provisioning knobs live in graphBuilder.ini, [replay-manager] section: neo4jImage,
 // portSearchStart, portSearchSpan, readyTimeoutSeconds. All four are REQUIRED and all four are
@@ -1116,7 +1131,7 @@ const moduleFunction =
 	// "cannot disagree about what a safe write is", and a third that agreed with neither would undo it.
 	const finish = (spec, callback) => {
 		const { xLog } = process.global;
-		const { inGraph, manifestRefId, storeReader, gateResults, disabled } = spec || {};
+		const { inGraph, manifestRefId, storeReader, gateResults, disabled, frameworkFingerprintList } = spec || {};
 
 		// the name guard fires FIRST, before any payload is examined and before anything connects
 		const graphName = inGraph && (inGraph.containerName || inGraph.graphName);
@@ -1212,7 +1227,7 @@ const moduleFunction =
 		// 2 — CHANNEL B: the passport. It counts what the registry produced, so it cannot run earlier.
 		taskList.push((args, next) => {
 			passportWriter.write(
-				{ runCypher, manifestRefId, graphName, engineVersions: { replayManager: 'finish/1' } },
+				{ runCypher, manifestRefId, graphName, engineVersions: engineVersionsFor(), graphContractSha256: vocabulary.graphContractSha256(), frameworkFingerprintList: frameworkFingerprintList || [] },
 				(err, report) => {
 					if (err) {
 						next(err);
@@ -1315,6 +1330,7 @@ module.exports.schemaBlockTexts = schemaBlockTexts;
 module.exports.resolveSettings = resolveSettings;
 module.exports.resolveEmbeddingDims = resolveEmbeddingDims;
 module.exports.disposeScratchGraph = disposeScratchGraph;
+module.exports.engineVersionsFor = engineVersionsFor;
 // The declared conservation exemption, exported so a caller NAMES it rather than repeating a
 // magic string that could drift from the one harvest compares against.
 module.exports.CONSERVATION_NOT_LOADED_THROUGH_INIT = CONSERVATION_NOT_LOADED_THROUGH_INIT;

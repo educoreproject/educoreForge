@@ -62,6 +62,8 @@ const { readOptionalBooleanValue } = require('./optional-boolean-value');
 // marker comes from ONE table (SCHEMA_BLOCK_KIND_SUFFIX), never a literal composed here.
 const vocabulary = require(path.join(__dirname, '..', '..', '..', 'lib', 'vocabulary', 'vocabulary'));
 const bridgeCollisionRuleLib = require(path.join(__dirname, 'bridgeCollisionRule'));
+// ⟪campaign P2, W-A-3⟫ the frozen decision block header carries the frameworkFingerprint the passport reports
+const decisionBlockLib = require(path.join(__dirname, '..', '..', '..', 'lib', 'bridge-framework', 'decisionBlock'));
 
 // the canonical home of per-run build reports (the same documented-default convention as the
 // judgment cache and match-forensics homes in actions.js): hub prose-divergence and skip
@@ -506,10 +508,50 @@ const fidelityAttestationFaultFor = (fidelityAttestation) => {
 	return '';
 };
 
+// frameworkFingerprintListFor — ⟪campaign P2, W-A-3⟫ the frameworkFingerprint of every decision block this build
+// materialised, read from the frozen header in the decision store by the pairKey each run report named. A run that froze no
+// block contributes nothing. A pairKey the store cannot answer is refused by name: the run report said a block exists.
+const frameworkFingerprintListFor = ({ decisionStore, pairKeyList }, callback) => {
+	if (pairKeyList.length === 0) {
+		callback('', []);
+		return;
+	}
+	if (!decisionStore || typeof decisionStore.getDecisionBlock !== 'function') {
+		callback(`materialize failed: ${pairKeyList.length} decision block(s) were materialised but no decisionStore can be read for their frameworkFingerprint`);
+		return;
+	}
+	const fingerprintList = [];
+	eachSeries(
+		pairKeyList,
+		(onePairKey, oneDone) => {
+			decisionStore.getDecisionBlock({ pairKey: onePairKey }, (getError, stored) => {
+				if (getError || !stored || typeof stored.frozenText !== 'string') {
+					oneDone(`materialize failed: the decision block for ${onePairKey} could not be read for its frameworkFingerprint${getError ? `: ${getError}` : ''}`);
+					return;
+				}
+				const parsed = decisionBlockLib.parseFrozenText(stored.frozenText);
+				if (parsed.error) {
+					oneDone(`materialize failed: the decision block for ${onePairKey}: ${parsed.error.message || parsed.error}`);
+					return;
+				}
+				fingerprintList.push(parsed.block.header.frameworkFingerprint);
+				oneDone();
+			});
+		},
+		(err) => (err ? callback(err) : callback('', fingerprintList)),
+	);
+};
+
 let materializeCounter = 0;
 const resolvedSchemaBlocksCounter = () => (materializeCounter += 1);
 
-const materializeSchemaBlocks = ({ xLog, replay, resolvedSchemaBlocks, manifestId, memberCount, standardTokens, commandLineParameters, fidelityGateRunner, storeResolver, storeReader, roundTripStageRunner, roundTripStageSpec }, callback) => {
+const materializeSchemaBlocks = ({ xLog, replay, resolvedSchemaBlocks, manifestId, memberCount, standardTokens, commandLineParameters, fidelityGateRunner, storeResolver, storeReader, roundTripStageRunner, roundTripStageSpec, frameworkFingerprintList }, callback) => {
+	// ⟪campaign P2, W-A-3⟫ the decision blocks' framework fingerprints for the passport: a LIST, empty when no decision block
+	// was materialised (every -replay). Absence is refused — it would read as a fingerprint never asked for.
+	if (!Array.isArray(frameworkFingerprintList)) {
+		callback(`materialize failed: frameworkFingerprintList is REQUIRED as a list (empty when no decision block was materialised)`);
+		return;
+	}
 	// ⟪R-P2-2⟫ the vector-store RESOLVER is REQUIRED here (both in-module callers supply it;
 	// the engine consults it only for ref-carrying nodes, so legacy inline blocks restore
 	// exactly as before). An absent resolver would restore a ref-style block into a graph
@@ -666,6 +708,7 @@ const materializeSchemaBlocks = ({ xLog, replay, resolvedSchemaBlocks, manifestI
 									manifestRefId: manifestId,
 									storeReader,
 									gateResults: [fidelityAttestation, roundTripRow],
+									frameworkFingerprintList,
 								},
 								(finishError, finishReport) => {
 									if (finishError) {
@@ -1806,6 +1849,9 @@ const build = (recipe, deps, callback) => {
 		const phaseA = (done) => eachSeries(standards, forgeOneStandard, done);
 
 		// ---- Phase C: bridges (materialize dep graph, run bridge, harvest labeled relationships) ----
+		// ⟪campaign P2, W-A-3⟫ every decision block a bridge run materialised, by pairKey — read back at materialize for the
+		// passport's frameworkFingerprint
+		const materialisedDecisionPairKeyList = [];
 		const bridgeOnePairing = (bridge, done) => {
 			// pairLabel identifies the pairing for the operator (source::hub / source::pairWith / source::family);
 			// the version-keyed, producer-suffixed subject is COMPOSED PER EMITTED BLOCK after the bridge runs
@@ -1981,6 +2027,9 @@ const build = (recipe, deps, callback) => {
 				eachSeries(
 					args.emittedBlocks,
 					(oneBlock, blockDone) => {
+						if (oneBlock && oneBlock.decisionBlock && typeof oneBlock.decisionBlock.pairKey === 'string') {
+							materialisedDecisionPairKeyList.push(oneBlock.decisionBlock.pairKey);
+						}
 						// THE PRODUCER DECLARES ITS OWN KIND (polyArch2 §6). A named producer is BELIEVED iff the
 						// vocabulary registers a suffix for it (authored/inferred/structural — one data row, no edit
 						// here). Only a silent producer is inferred from decisionBlock (null -> authored/_exact;
@@ -2218,8 +2267,14 @@ const build = (recipe, deps, callback) => {
 				// the shared materialize/restore tail (also used by -replay). create is MONOMORPHIC, the
 				// RESTORATION init carries no applyLabels, and a mid-fill failure disposes the eval graph
 				// rather than stranding it — all of that lives in materializeSchemaBlocks now.
+				frameworkFingerprintListFor({ decisionStore, pairKeyList: materialisedDecisionPairKeyList }, (fingerprintError, frameworkFingerprintList) => {
+				if (fingerprintError) {
+					callback(fingerprintError);
+					return;
+				}
 				materializeSchemaBlocks(
 					{
+						frameworkFingerprintList,
 						xLog,
 						replay,
 						resolvedSchemaBlocks,
@@ -2249,6 +2304,7 @@ const build = (recipe, deps, callback) => {
 					},
 					callback,
 				);
+				});
 			});
 
 			// PERSIST THE MANIFEST AT COMPOSE TIME — the change that makes a -build ALWAYS write a manifest
@@ -2408,6 +2464,8 @@ const replay = ({ manifestRefId } = {}, deps = {}, callback) => {
 					// skipping. Same runner seam as build().
 					roundTripStageRunner: deps.roundTripStageRunner || roundTripStageLib.runRoundTripStage,
 					roundTripStageSpec: { mode: 'replayNotApplicable' },
+					// a replay materialises stored blocks and runs no bridge: no decision block header is read
+					frameworkFingerprintList: [],
 				},
 				callback,
 			);
@@ -2474,6 +2532,8 @@ module.exports.refuseHublessReuseUnderDeriveHub = refuseHublessReuseUnderDeriveH
 // pass, passWithAllowedLoss) are gated through the real materialize tail with hermetic doubles (test-fidelityAttestation)
 module.exports.runCedsFidelityGate = runCedsFidelityGate;
 module.exports.materializeSchemaBlocks = materializeSchemaBlocks;
+// ⟪campaign P2, W-A-3⟫ the decision blocks' framework fingerprints for the passport, gated directly (test-frameworkFingerprintList)
+module.exports.frameworkFingerprintListFor = frameworkFingerprintListFor;
 module.exports.fidelityAttestationFaultFor = fidelityAttestationFaultFor;
 module.exports.resolveRebridge = resolveRebridge;
 module.exports.pairInRebridgeScope = pairInRebridgeScope;

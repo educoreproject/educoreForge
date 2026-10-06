@@ -83,6 +83,7 @@ const runMaterialize = (buildLib, fidelityGateRunner, done) => {
 			storeReader: { getManifest: () => {} },
 			roundTripStageRunner: (spec, callback) => callback('', { stageRan: false, disposition: 'double: stage not run' }),
 			roundTripStageSpec: { mode: 'double' },
+			frameworkFingerprintList: [], // campaign P2 (W-A-3): materialize requires the list; no decision block here
 		},
 		(materializeError) => done({ materializeError, gateResults: finishCallList.length ? finishCallList[0].gateResults : null }),
 	);

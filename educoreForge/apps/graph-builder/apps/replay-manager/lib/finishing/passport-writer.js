@@ -52,6 +52,17 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // G-UNIQUE and hub invariant I12 — not through any check that reads both sides. Verified by reading for
 // the four bundles, 2026-09-02.
 //
+// ============================================================================================
+// THE PASSPORT IS DECLARED, NOT ASSEMBLED (campaign P2, W-A-3; graph-contract §3 PASSPORT_FIELD_LIST)
+// ============================================================================================
+// Every field the passport carries is a row of PASSPORT_FIELD_LIST, and the MERGE's SET lines are GENERATED from those
+// rows: a declared finish-written field without a value is a refusal at build time, never a silent omission, and the
+// round-trip reads keys(p) back and refuses when a required name is missing. The new rows (V1-C02/C03): the embedding
+// model and vector width (one each, measured over the graph), the judge identities and renderer versions over the match
+// edges, the recipe's name and hash, the vector index names (checked against vectorIndexNameFor), the sha256 of the graph
+// contract this build ran with, the framework fingerprint (or why there is none), and engine versions that are CONTENT
+// FINGERPRINTS. graphName is REQUIRED: the old 'unknown' default wrote a build record nobody could find.
+//
 // Async style: qtools taskListPlus/pipeRunner; callback(errString, result). No async/await, no
 // try/catch-for-control-flow.
 
@@ -62,7 +73,7 @@ const { pipeRunner, taskListPlus } = new require('qtools-asynchronous-pipe-plus'
 const moduleFunction =
 	({ moduleName } = {}) =>
 	({ vocabulary, debugMappingSource } = {}) => {
-		const { NODE_LABELS, SELF_DOC, SCHEMA_VIEW, GRAPH_META, PROVENANCE_TIER } = vocabulary;
+		const { NODE_LABELS, SELF_DOC, SCHEMA_VIEW, GRAPH_META, PROVENANCE_TIER, PASSPORT_FIELD_LIST, ENGINE_VERSIONS_NAME_LIST, EMBED_TEXT_VECTOR, MAPPING_PROPERTIES, vectorIndexSlotTable, vectorIndexNameRefusal, vectorIndexNameFor } = vocabulary;
 		// ⟪lane P, 2026-10-04⟫ the debug judge's mappingSource ('bridge-debug'), INJECTED by the composition root from the
 		// bridge framework's certificationCheck, which composes it from the judge provider registry. This module does not
 		// reach into the bridge framework itself, and it has no default: without the value it cannot tell a debug graph.
@@ -173,6 +184,143 @@ const moduleFunction =
 			}),
 		});
 
+		// ----- ⟪W-A-3⟫ THE FOUR NEW CENSUSES. Each reads the graph, never the build's say-so.
+		//   EMBEDDING: one model and one width, or a refusal naming every value; no vector at all is its own basis.
+		const EMBEDDING_CENSUS_CYPHER = `
+			CALL { MATCH (n:\`${NODE_LABELS.FORGED_NODE}\`) WHERE n.embeddingModelVersion IS NOT NULL RETURN collect(DISTINCT n.embeddingModelVersion) AS embeddingModelVersionList }
+			CALL { MATCH (n:\`${NODE_LABELS.FORGED_NODE}\`) WHERE n.embedding IS NOT NULL WITH DISTINCT size(n.embedding) AS oneWidth RETURN collect(oneWidth) AS embeddingWidthList }
+			CALL { MATCH (t:\`${EMBED_TEXT_VECTOR.label}\`) WHERE t.\`${EMBED_TEXT_VECTOR.propertyName}\` IS NOT NULL WITH DISTINCT size(t.\`${EMBED_TEXT_VECTOR.propertyName}\`) AS oneWidth RETURN collect(oneWidth) AS textEmbeddingWidthList }
+			RETURN embeddingModelVersionList, embeddingWidthList, textEmbeddingWidthList`;
+		const NO_VECTOR_BASIS = 'noVectors: no node carries embedding or textEmbedding (a --vectorize=false build); embeddingModelVersion and embeddingDims are absent by declaration';
+		//   JUDGES: the judge identity and renderer version every match edge carries (today's names; W-B's renames flow
+		//   through MAPPING_PROPERTIES). collect(DISTINCT) drops nulls; sorted in JS.
+		const JUDGE_CENSUS_CYPHER = `
+			MATCH ()-[r]->() WHERE r.\`${MAPPING_PROPERTIES.MAPPING_KIND}\` IS NOT NULL
+			RETURN collect(DISTINCT r.\`${MAPPING_PROPERTIES.MAPPING_TOOL}\`) AS judgeIdentityList,
+			       collect(DISTINCT r.\`${MAPPING_PROPERTIES.MAPPING_TOOL_VERSION}\`) AS rendererVersionList`;
+		//   RECIPE: copied from THIS manifest's ManifestRecipe (the builtFrom target), so the passport answers "which recipe" alone
+		const recipeIdentityCypherFor = (manifestRefId) => `
+			MATCH (r:\`${SELF_DOC.NODE_LABELS.MANIFEST_RECIPE}\` {stableId: ${cypherString(`${SELF_DOC.MANIFEST_RECIPE_STABLE_ID_PREFIX}${manifestRefId}`)}})
+			RETURN r.recipeHash AS recipeHash, r.recipeName AS recipeName`;
+		//   VECTOR INDEXES: every VECTOR index must be the declared one for its slot, named off THIS graph (§10)
+		const VECTOR_INDEX_CENSUS_CYPHER = `SHOW INDEXES YIELD name, type, labelsOrTypes, properties WHERE type = 'VECTOR' RETURN name, labelsOrTypes, properties ORDER BY name`;
+		const sortedStringList = (valueList) => (valueList || []).map((oneValue) => `${oneValue}`).sort();
+		const plainNumber = (oneValue) => (oneValue && typeof oneValue.toNumber === 'function' ? oneValue.toNumber() : Number(oneValue));
+
+		// embeddingFieldsFor — the census row -> { embeddingModelVersion, embeddingDims } | { embeddingBasis } | { error }
+		const embeddingFieldsFor = ({ embeddingModelVersionList, embeddingWidthList, textEmbeddingWidthList }) => {
+			const modelList = sortedStringList(embeddingModelVersionList);
+			const widthList = Array.from(new Set((embeddingWidthList || []).concat(textEmbeddingWidthList || []).map(plainNumber))).sort((leftWidth, rightWidth) => leftWidth - rightWidth);
+			if (modelList.length === 0 && widthList.length === 0) {
+				return { embeddingBasis: NO_VECTOR_BASIS };
+			}
+			if (modelList.length !== 1) {
+				return { error: `passport-writer REFUSED: the graph carries ${modelList.length} distinct embeddingModelVersion value(s) [${modelList.join(', ')}], not exactly one — a graph searched by one query embedder must hold vectors of one model` };
+			}
+			if (widthList.length !== 1) {
+				return { error: `passport-writer REFUSED: the graph's vectors (embedding and ${EMBED_TEXT_VECTOR.propertyName}) have ${widthList.length} distinct width(s) [${widthList.join(', ')}], not exactly one` };
+			}
+			return { embeddingModelVersion: modelList[0], embeddingDims: widthList[0] };
+		};
+
+		// vectorIndexNameListFor — the SHOW INDEXES rows -> { vectorIndexNameList } | { error }: each VECTOR index must sit on a
+		// declared slot and carry the name vectorIndexNameFor gives THIS graph
+		const vectorIndexNameListFor = ({ indexRowList, graphName }) => {
+			const slotTable = vectorIndexSlotTable();
+			const offence = indexRowList
+				.map((oneRow) => {
+					const slotPropertyName = (oneRow.properties || [])[0];
+					const slot = slotTable[slotPropertyName];
+					if (!slot || (oneRow.labelsOrTypes || [])[0] !== slot.label) {
+						return `VECTOR index '${oneRow.name}' on :${(oneRow.labelsOrTypes || []).join(':')}(${(oneRow.properties || []).join(', ')}) is not a declared vector slot (graph-contract §10)`;
+					}
+					const namingRefusal = vectorIndexNameRefusal({ graphName, slotPropertyName });
+					if (namingRefusal) {
+						return namingRefusal;
+					}
+					const declaredName = vectorIndexNameFor({ graphName, slotPropertyName });
+					return oneRow.name === declaredName ? '' : `VECTOR index '${oneRow.name}' is not the name graph-contract §10 declares for this graph's ${slotPropertyName} slot ('${declaredName}')`;
+				})
+				.find((oneText) => oneText !== '');
+			return offence === undefined ? { vectorIndexNameList: sortedStringList(indexRowList.map((oneRow) => oneRow.name)) } : { error: `passport-writer REFUSED: ${offence}` };
+		};
+
+		// frameworkFieldsFor — the decision blocks' fingerprints -> exactly one of frameworkFingerprint / frameworkFingerprintBasis
+		const frameworkFieldsFor = (frameworkFingerprintList) => {
+			const distinctList = sortedStringList(Array.from(new Set(frameworkFingerprintList)));
+			if (distinctList.length === 1) {
+				return { frameworkFingerprint: distinctList[0] };
+			}
+			return {
+				frameworkFingerprintBasis:
+					distinctList.length === 0
+						? 'no bridge run report reached this finish (a replay of stored blocks, or a build whose bridges froze no decision block): each decision\'s frameworkFingerprint lives in its decision block header'
+						: `the decision blocks this build materialised disagree: ${distinctList.join(', ')}`,
+			};
+		};
+
+		// one declared value as Cypher text, and whether a value fits its declared type — BY TYPE (data, no branch at the call site)
+		const CYPHER_LITERAL_BY_TYPE = Object.freeze({
+			string: (oneValue) => cypherString(oneValue),
+			integer: (oneValue) => `${Number(oneValue)}`,
+			boolean: (oneValue) => `${oneValue === true}`,
+			stringList: (oneValue) => `[${oneValue.map(cypherString).join(', ')}]`,
+			jsonString: (oneValue) => cypherString(JSON.stringify(oneValue)),
+		});
+		const VALUE_FAULT_BY_TYPE = Object.freeze({
+			string: (oneValue) => (typeof oneValue === 'string' && oneValue !== '' ? '' : 'a non-empty string'),
+			integer: (oneValue) => (Number.isInteger(oneValue) ? '' : 'an integer'),
+			boolean: (oneValue) => (typeof oneValue === 'boolean' ? '' : 'a boolean'),
+			stringList: (oneValue) => (Array.isArray(oneValue) && oneValue.every((oneMember) => typeof oneMember === 'string') ? '' : 'a list of strings'),
+			jsonString: (oneValue) => (oneValue !== undefined && oneValue !== null ? '' : 'a value to encode'),
+		});
+		// the declared alternatives: exactly one side of each is written and the other is REMOVEd (a second finish over a
+		// graph whose state changed must not leave the stale member beside the new one)
+		const PASSPORT_ALTERNATIVE_LIST = Object.freeze([
+			Object.freeze({ basisFieldName: 'embeddingBasis', pairedFieldNameList: Object.freeze(['embeddingModelVersion', 'embeddingDims']) }),
+			Object.freeze({ basisFieldName: 'frameworkFingerprintBasis', pairedFieldNameList: Object.freeze(['frameworkFingerprint']) }),
+		]);
+		// passportSetPlanFor — valueByFieldName -> { setLineList, removeNameList, requiredNameList } | { error }. GENERATED FROM
+		// THE DECLARATION: every finish-written row is valued (a SET line), the absent side of a declared alternative (a
+		// REMOVE), or — when required — a refusal by name.
+		const passportSetPlanFor = (valueByFieldName) => {
+			const alternativeAbsenceSet = new Set();
+			PASSPORT_ALTERNATIVE_LIST.forEach((oneAlternative) => {
+				const basisPresent = valueByFieldName[oneAlternative.basisFieldName] !== undefined;
+				(basisPresent ? oneAlternative.pairedFieldNameList : [oneAlternative.basisFieldName]).forEach((oneName) => alternativeAbsenceSet.add(oneName));
+			});
+			const finishRowList = PASSPORT_FIELD_LIST.filter((oneRow) => oneRow.writer.split('+').indexOf('finish') !== -1);
+			const missingNameList = [];
+			const faultList = [];
+			const setLineList = [];
+			const removeNameList = [];
+			finishRowList.forEach((oneRow) => {
+				const oneValue = valueByFieldName[oneRow.name];
+				if (alternativeAbsenceSet.has(oneRow.name)) {
+					removeNameList.push(oneRow.name);
+					return;
+				}
+				if (oneValue === undefined || oneValue === null) {
+					if (oneRow.required) {
+						missingNameList.push(oneRow.name);
+					}
+					return;
+				}
+				const fault = VALUE_FAULT_BY_TYPE[oneRow.type](oneValue);
+				if (fault) {
+					faultList.push(`${oneRow.name} must be ${fault} (declared ${oneRow.type}), got ${JSON.stringify(oneValue)}`);
+					return;
+				}
+				setLineList.push(`p.\`${oneRow.name}\` = ${CYPHER_LITERAL_BY_TYPE[oneRow.type](oneValue)}`);
+			});
+			if (missingNameList.length || faultList.length) {
+				const missingText = missingNameList.length ? `no value for required field(s) ${missingNameList.join(', ')}` : '';
+				return { error: `passport-writer REFUSED: the declared passport cannot be written — ${[missingText].concat(faultList).filter((oneText) => oneText !== '').join('; ')} (graph-contract §3 PASSPORT_FIELD_LIST)` };
+			}
+			const requiredNameList = finishRowList.filter((oneRow) => oneRow.required && !alternativeAbsenceSet.has(oneRow.name)).map((oneRow) => oneRow.name);
+			return { setLineList, removeNameList, requiredNameList };
+		};
+
 		// ----- trustVerdict — THE HONEST ANSWER, NOT THE FLATTERING ONE (work order gate (d)).
 		//   Derived from the tiers actually present. Every false verdict carries its REASON, because a bare
 		//   `false` is indistinguishable from a default and a consumer cannot act on it.
@@ -223,7 +371,7 @@ const moduleFunction =
 		//   round-trip-or-refuse. `builtAt` is INJECTABLE so a gate can pin it; it defaults to the real
 		//   clock, and it is the ONLY clock this whole verb is permitted to read.
 		const write = (
-			{ runCypher, manifestRefId, engineVersions, graphName, builtAt } = {},
+			{ runCypher, manifestRefId, engineVersions, graphName, builtAt, graphContractSha256, frameworkFingerprintList } = {},
 			callback,
 		) => {
 			if (typeof runCypher !== 'function') {
@@ -239,6 +387,23 @@ const moduleFunction =
 						`is the passport's CENTRAL claim — writing one without it would produce a build record that ` +
 						`cannot answer the question it exists to answer.`,
 				);
+				return;
+			}
+			if (typeof graphName !== 'string' || !graphName.trim()) {
+				callback(`passport-writer: a graphName is REQUIRED — the passport names the container it describes; 'unknown' would be a build record that cannot be found`);
+				return;
+			}
+			const missingEngineVersionName = ENGINE_VERSIONS_NAME_LIST.find((oneName) => !engineVersions || typeof engineVersions[oneName] !== 'string' || !engineVersions[oneName]);
+			if (missingEngineVersionName !== undefined) {
+				callback(`passport-writer: engineVersions lacks '${missingEngineVersionName}' — every one of ${ENGINE_VERSIONS_NAME_LIST.join(', ')} is REQUIRED (graph-contract ENGINE_VERSIONS_NAME_LIST)`);
+				return;
+			}
+			if (!/^[0-9a-f]{64}$/.test(`${graphContractSha256}`)) {
+				callback(`passport-writer: graphContractSha256 is REQUIRED as 64 hex (got ${JSON.stringify(graphContractSha256)}) — a reader refuses a graph whose contract sha it cannot compare`);
+				return;
+			}
+			if (!Array.isArray(frameworkFingerprintList)) {
+				callback(`passport-writer: frameworkFingerprintList is REQUIRED as a list (empty when no bridge run report reached this finish) — absence would read as a fingerprint never asked for`);
 				return;
 			}
 
@@ -304,33 +469,110 @@ const moduleFunction =
 			// ----- MERGE the singleton and SELF-STAMP :GraphMeta in the SAME statement. The stamp is not a
 			//   tidy-up: the registry sweep already ran, so an unstamped passport carries neither _source nor
 			//   :GraphMeta and violates the XOR the instant it exists.
+			// ⟪W-A-3⟫ the four new censuses, one task each, each refusing by name
+			taskList.push((args, next) => {
+				runCypher({ cypher: EMBEDDING_CENSUS_CYPHER }, (err, result) => {
+					const rows = (result && result.records) || [];
+					if (err || rows.length !== 1) {
+						next(`passport-writer: the embedding census failed${err ? `: ${err}` : ` (${rows.length} rows)`}`);
+						return;
+					}
+					const embeddingFields = embeddingFieldsFor({ embeddingModelVersionList: rows[0].get('embeddingModelVersionList'), embeddingWidthList: rows[0].get('embeddingWidthList'), textEmbeddingWidthList: rows[0].get('textEmbeddingWidthList') });
+					if (embeddingFields.error) {
+						next(embeddingFields.error);
+						return;
+					}
+					next('', { ...args, embeddingFields });
+				});
+			});
+			taskList.push((args, next) => {
+				runCypher({ cypher: JUDGE_CENSUS_CYPHER }, (err, result) => {
+					const rows = (result && result.records) || [];
+					if (err || rows.length !== 1) {
+						next(`passport-writer: the judge census failed${err ? `: ${err}` : ` (${rows.length} rows)`}`);
+						return;
+					}
+					next('', { ...args, judgeIdentityList: sortedStringList(rows[0].get('judgeIdentityList')), rendererVersionList: sortedStringList(rows[0].get('rendererVersionList')) });
+				});
+			});
+			taskList.push((args, next) => {
+				runCypher({ cypher: recipeIdentityCypherFor(manifestRefId) }, (err, result) => {
+					const rows = (result && result.records) || [];
+					if (err) {
+						next(`passport-writer: the recipe identity read failed: ${err}`);
+						return;
+					}
+					if (rows.length !== 1) {
+						next(`passport-writer REFUSED: the ManifestRecipe for ${manifestRefId} is ${rows.length ? 'not singular' : 'absent (manifestRecipe finisher disabled?)'} — the passport cannot name its recipe`);
+						return;
+					}
+					next('', { ...args, recipeHash: rows[0].get('recipeHash'), recipeName: rows[0].get('recipeName') });
+				});
+			});
+			taskList.push((args, next) => {
+				runCypher({ cypher: VECTOR_INDEX_CENSUS_CYPHER }, (err, result) => {
+					if (err) {
+						next(`passport-writer: the vector index census failed: ${err}`);
+						return;
+					}
+					const indexRowList = ((result && result.records) || []).map((oneRecord) => ({ name: oneRecord.get('name'), labelsOrTypes: oneRecord.get('labelsOrTypes'), properties: oneRecord.get('properties') }));
+					const indexFields = vectorIndexNameListFor({ indexRowList, graphName });
+					if (indexFields.error) {
+						next(indexFields.error);
+						return;
+					}
+					next('', { ...args, vectorIndexNameList: indexFields.vectorIndexNameList });
+				});
+			});
+
+			// ----- MERGE the singleton and SELF-STAMP :GraphMeta in the SAME statement (the stamp is not a tidy-up: the registry
+			//   sweep already ran, so an unstamped passport violates the XOR the instant it exists). The SET lines are GENERATED
+			//   from PASSPORT_FIELD_LIST, and keys(p) comes back for the round trip.
 			taskList.push((args, next) => {
 				const meaningBearingEdgeCount = args.meaningTierRowList.reduce(
 					(runningTotal, oneRow) => runningTotal + oneRow.tierCount,
 					0,
 				);
+				const valueByFieldName = {
+					[PASSPORT_KEY_PROPERTY]: PASSPORT_SINGLETON_VALUE,
+					builtAt: stampedAt,
+					manifestRefId,
+					graphName,
+					contentNodeCount: args.contentNodeCount,
+					contentEdgeCount: args.contentEdgeCount,
+					standardCount: args.standardCount,
+					standardsIncluded: args.standardsIncluded,
+					meaningBearingEdgeCount,
+					meaningTierBreakdown: args.meaningTierRowList,
+					trustworthyForMeaning: args.trust.trustworthyForMeaning,
+					trustBasis: args.trust.trustBasis,
+					trustNote: args.trust.trustNote,
+					previousManifestRefIdBasis:
+						'unavailable: this generation has no graphs table, so no prior build is recorded ' +
+						'anywhere for this writer to read. Recorded as an explicit basis rather than an ' +
+						'absent property, because an absent property is indistinguishable from one never written.',
+					engineVersions: ENGINE_VERSIONS_NAME_LIST.reduce((soFar, oneName) => ({ ...soFar, [oneName]: engineVersions[oneName] }), {}),
+					...args.embeddingFields,
+					judgeIdentityList: args.judgeIdentityList,
+					rendererVersionList: args.rendererVersionList,
+					recipeHash: args.recipeHash,
+					recipeName: args.recipeName,
+					vectorIndexNameList: args.vectorIndexNameList,
+					graphContractSha256,
+					...frameworkFieldsFor(frameworkFingerprintList),
+				};
+				const setPlan = passportSetPlanFor(valueByFieldName);
+				if (setPlan.error) {
+					next(setPlan.error);
+					return;
+				}
+				const removeClause = setPlan.removeNameList.length ? `REMOVE ${setPlan.removeNameList.map((oneName) => `p.\`${oneName}\``).join(', ')}` : '';
 				const cypher = `
 					MERGE (p:\`${passportLabel}\` {\`${PASSPORT_KEY_PROPERTY}\`: ${cypherString(PASSPORT_SINGLETON_VALUE)}})
 					SET p:\`${metaLabel}\`,
-					    p.builtAt = ${cypherString(stampedAt)},
-					    p.manifestRefId = ${cypherString(manifestRefId)},
-					    p.graphName = ${cypherString(graphName || 'unknown')},
-					    p.engineVersions = ${cypherString(JSON.stringify(engineVersions || {}))},
-					    p.contentNodeCount = ${args.contentNodeCount},
-					    p.contentEdgeCount = ${args.contentEdgeCount},
-					    p.standardCount = ${args.standardCount},
-					    p.standardsIncluded = [${args.standardsIncluded.map(cypherString).join(', ')}],
-					    p.meaningBearingEdgeCount = ${meaningBearingEdgeCount},
-					    p.meaningTierBreakdown = ${cypherString(JSON.stringify(args.meaningTierRowList))},
-					    p.trustworthyForMeaning = ${args.trust.trustworthyForMeaning},
-					    p.trustBasis = ${cypherString(args.trust.trustBasis)},
-					    p.trustNote = ${cypherString(args.trust.trustNote)},
-					    p.previousManifestRefIdBasis = ${cypherString(
-								'unavailable: this generation has no graphs table, so no prior build is recorded ' +
-									'anywhere for this writer to read. Recorded as an explicit basis rather than an ' +
-									'absent property, because an absent property is indistinguishable from one never written.',
-							)}
-					RETURN elementId(p) AS passportElementId`;
+					    ${setPlan.setLineList.join(',\n\t\t\t\t\t    ')}
+					${removeClause}
+					RETURN elementId(p) AS passportElementId, keys(p) AS writtenKeyList`;
 				runCypher({ cypher }, (err, result) => {
 					if (err) {
 						next(`passport-writer: the passport MERGE failed: ${err}`);
@@ -341,7 +583,13 @@ const moduleFunction =
 						next(`passport-writer: the passport MERGE returned no row — the singleton was not written.`);
 						return;
 					}
-					next('', { ...args, meaningBearingEdgeCount, passportElementId: `${rows[0].get('passportElementId')}` });
+					const writtenKeyList = rows[0].get('writtenKeyList') || [];
+					const unwrittenNameList = setPlan.requiredNameList.filter((oneName) => writtenKeyList.indexOf(oneName) === -1);
+					if (unwrittenNameList.length) {
+						next(`passport-writer REFUSED: the passport read back WITHOUT required field(s) ${unwrittenNameList.join(', ')} (graph-contract §3) — the write did not mean what it said`);
+						return;
+					}
+					next('', { ...args, meaningBearingEdgeCount, valueByFieldName, passportElementId: `${rows[0].get('passportElementId')}` });
 				});
 			});
 
@@ -447,6 +695,7 @@ const moduleFunction =
 					meaningBearingEdgeCount: args.meaningBearingEdgeCount,
 					meaningTierRowList: args.meaningTierRowList,
 					trust: args.trust,
+					declaredFieldByName: args.valueByFieldName,
 					edgeReportList,
 					degradedList,
 					summary:
@@ -609,6 +858,14 @@ const moduleFunction =
 			CONTENT_CENSUS_CYPHER,
 			CONTENT_EDGE_CENSUS_CYPHER,
 			MEANING_TIER_CENSUS_CYPHER,
+			EMBEDDING_CENSUS_CYPHER,
+			JUDGE_CENSUS_CYPHER,
+			VECTOR_INDEX_CENSUS_CYPHER,
+			recipeIdentityCypherFor,
+			embeddingFieldsFor,
+			vectorIndexNameListFor,
+			frameworkFieldsFor,
+			passportSetPlanFor,
 			trustVerdict,
 			MEANING_ROW_SHAPE_BY_EDGE_CLASS,
 			numberFrom,
