@@ -167,7 +167,12 @@ const TERM_DEFINITIONS = {
 		value: 'A 4-slot hub address (domain · property · range · value) — the value/codeset-tier resolution target.',
 	},
 	requiredPropertySet: {
-		NODE: 'Properties every forged content node must carry: _id, _source, name, role, searchText.',
+		NODE_embeddable: 'Every forged node of an embeddable role carries _id, _source, role and searchText (its embed input) and, in a vectorised build, embedding; name is recommended and absent only on kinds the forge documents as nameless. Enforced at forge time and again over the finished graph (campaign P2, V1-C26).',
+		NODE_nonEmbeddable: 'A node of a role its forge declares non-embeddable carries _id, _source and role, and NO searchText or embedding — it is invisible to semantic search by declaration.',
+		NODE_embedText: 'A DmeEmbedText node carries text, vectorPropertyName (textEmbedding) and embedSourceProperty (text) beside _id, _source and role, never name or searchText.',
+		NODE_hubReference: 'A hub card (HubReference) carries embedText and embedSourceProperty (embedText) beside _id, _source, role and the HUB_REFERENCE address set; never searchText.',
+		NODE_hubDefinition: 'A hub definition carries _id, _source and role beside the HUB_DEFINITION set; never searchText or embedText.',
+		NODE_RECOMMENDED: 'Present on every embeddable node except kinds a forge documents as nameless (PESC AnonymousType; DmeEmbedText by design): name. Recommended, not required.',
 		STANDARD_ROOT: 'Additional properties required on a DmeStandardRoot: the provenance block (standardKey, standardName, version, sourceFormat, sourceFiles, sourceUrl) plus stableUriPropertyName and mappingInstruction.',
 		EDGE: 'Properties every NON-mapping edge must carry: provenanceTier. A mapping edge (EXACT/CLOSE/BROAD/NARROW/RELATED_MATCH) carries none since 2026-10-04: see MAPPING_EDGE.',
 		MAPPING_EDGE: 'Properties every mapping edge (EXACT/CLOSE/BROAD/NARROW/RELATED_MATCH) must carry in place of provenanceTier: mappingKind, which says what kind of claim the edge is: inferred (a judge chose the card from candidates embeddings proposed) or authored (a document named it). mappingSource names who made it (bridge-<judge>, crosswalk-<name>, standard-<name>; bridge-debug is the debug judge, which takes candidate 1 and carries no meaning) and, on a judged edge, mappingConfidence how sure (0 for the debug judge).',

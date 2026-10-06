@@ -136,9 +136,15 @@ const moduleFunction =
 			RANGE_SHAPES.forEach((oneShape) => add(KINDS.RANGE_SHAPE, oneShape));
 			HUB_DECOMPOSITION_SLOTS.forEach((oneSlot) => add(KINDS.TUPLE_SLOT, oneSlot));
 
-			Object.keys(REQUIRED_PROPERTIES).forEach((oneSetName) =>
+			// ⟪campaign P2, W-A-10⟫ NODE_BY_ROLE_CLASS is a map of lists: each class is its own member, NODE_<class>
+			Object.keys(REQUIRED_PROPERTIES).filter((oneSetName) => oneSetName !== 'NODE_BY_ROLE_CLASS').forEach((oneSetName) =>
 				add(KINDS.REQUIRED_PROPERTY_SET, oneSetName, {
 					properties: asArray(REQUIRED_PROPERTIES[oneSetName]),
+				}),
+			);
+			Object.keys(REQUIRED_PROPERTIES.NODE_BY_ROLE_CLASS).forEach((oneClassName) =>
+				add(KINDS.REQUIRED_PROPERTY_SET, `NODE_${oneClassName}`, {
+					properties: REQUIRED_PROPERTIES.NODE_BY_ROLE_CLASS[oneClassName].slice(),
 				}),
 			);
 			Object.keys(UNIQUENESS_KEYS).forEach((oneKeyName) =>

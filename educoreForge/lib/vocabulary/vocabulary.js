@@ -739,8 +739,22 @@ const REQUIRED_PROPERTIES = {
 	// optional, not required). NOTE on _id/_source: at the BLOCK layer these are carried in the node's
 	// ref{source,id}; the replay engine MATERIALIZES them as graph properties (_id from ref.id/stableId,
 	// _source from ref.source). So block-level validation checks ref.source/ref.id presence (the provenance),
-	// while the live graph carries _id/_source as properties. name/role/searchText are universal block props.
-	NODE: ['_id', '_source', 'name', 'role', 'searchText'],
+	// while the live graph carries _id/_source as properties.
+	// ⟪campaign P2, W-A-10 / V1-C26⟫ RESTATED PER ROLE CLASS. The single NODE list claimed name and searchText on every
+	// content node; measured on the acceptance gold, searchText is absent on 197,969 content nodes (every hub card and
+	// every text node, by design) and name on 37,467. The class decides the set: a node of a role its forge declares
+	// non-embeddable carries no searchText (and no vector); a DmeEmbedText carries its text and vector declaration; a hub
+	// card carries embedText; a hub definition carries the HUB_DEFINITION set. name is RECOMMENDED, not required.
+	// Enforced at forge time (forge-framework integrity pass: embeddable / nonEmbeddable) and at finish time
+	// (required-property-finisher: every class, over the finished graph).
+	NODE_BY_ROLE_CLASS: Object.freeze({
+		embeddable: Object.freeze(['_id', '_source', 'role', 'searchText']),
+		nonEmbeddable: Object.freeze(['_id', '_source', 'role']),
+		embedText: Object.freeze(['_id', '_source', 'role', 'text', 'vectorPropertyName', 'embedSourceProperty']),
+		hubReference: Object.freeze(['_id', '_source', 'role', 'embedText', 'embedSourceProperty']),
+		hubDefinition: Object.freeze(['_id', '_source', 'role']),
+	}),
+	NODE_RECOMMENDED: Object.freeze(['name']),
 	// the per-standard root additionally carries the provenance block + mapping contract
 	STANDARD_ROOT: [
 		'standardKey',

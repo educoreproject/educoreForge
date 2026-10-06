@@ -53,7 +53,7 @@ const censusLib = require('./census');
 const fingerprintLib = require('./fingerprint');
 const rosterLib = require('./roster');
 
-const { DME_ROLES, EDGE_TYPES, NODE_LABELS, PROVENANCE_TIER, STRUCTURAL_PROPERTIES } = vocabularyLib;
+const { DME_ROLES, EDGE_TYPES, NODE_LABELS, PROVENANCE_TIER, STRUCTURAL_PROPERTIES, REQUIRED_PROPERTIES } = vocabularyLib;
 const { MIGRATION_ALLOWANCE_REGISTRY, MIGRATING_BUNDLE_LIST, EVALUATED_AT } = migrationAllowanceRegistryLib;
 
 const DME_ROLE_VALUE_LIST = Object.freeze(Object.values(DME_ROLES));
@@ -351,9 +351,11 @@ const moduleFunction =
 					if (props[stableUriPropertyName] !== oneNode.stableId) {
 						throw refuse.byName({ moduleName, what: `${forgePrefix}: node '${oneNode.stableId}' carries ${stableUriPropertyName} ${JSON.stringify(props[stableUriPropertyName])} after the walk`, where: `${stableUriPropertyName} equals the stableId on every node` });
 					}
-					const isEmbeddable = bundleEffectiveNonEmbeddableRoleList.indexOf(oneNode.role) === -1;
-					if (isEmbeddable && (typeof props.searchText !== 'string' || props.searchText.length === 0)) {
-						throw refuse.byName({ moduleName, what: `${forgePrefix}: node '${oneNode.stableId}' has ${props.searchText === undefined ? 'no' : 'an empty'} searchText after the walk`, where: 'searchText is present and non-empty on every embeddable node' });
+					// ⟪campaign P2, W-A-10⟫ the class's required set is the vocabulary's REQUIRED_PROPERTIES.NODE_BY_ROLE_CLASS, not a literal
+					const roleClassName = bundleEffectiveNonEmbeddableRoleList.indexOf(oneNode.role) === -1 ? 'embeddable' : 'nonEmbeddable';
+					const missingRequiredName = REQUIRED_PROPERTIES.NODE_BY_ROLE_CLASS[roleClassName].find((oneName) => typeof props[oneName] !== 'string' || props[oneName].length === 0);
+					if (missingRequiredName !== undefined) {
+						throw refuse.byName({ moduleName, what: `${forgePrefix}: node '${oneNode.stableId}' has ${props[missingRequiredName] === undefined ? 'no' : 'an empty'} ${missingRequiredName} after the walk`, where: `REQUIRED_PROPERTIES.NODE_BY_ROLE_CLASS.${roleClassName}: every one of ${REQUIRED_PROPERTIES.NODE_BY_ROLE_CLASS[roleClassName].join(', ')} is present and non-empty` });
 					}
 					if (props.name !== undefined && typeof props.name !== 'string') {
 						throw refuse.byName({ moduleName, what: `${forgePrefix}: node '${oneNode.stableId}' name became a ${typeof props.name} after the walk`, where: 'a universal-name value is never overwritten to a non-string' });

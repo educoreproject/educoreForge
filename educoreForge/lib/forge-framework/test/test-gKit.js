@@ -223,9 +223,11 @@ const kitConjunctList = [
 		registry: twinRegistry, gateId: KIT_GATE_ID, conjunctId: 'postMintSearchTextEmptied',
 		title: 'a POST-MINT emptied searchText is refused by the re-check',
 		shape: (scenario) => withWalkExtra(scenario, ({ kit }) => { const extraNode = mintClass(kit, 'toy:class/Extra'); extraNode.properties.searchText = ''; }),
-		regex: /node 'toy:class\/Extra' has an empty searchText after the walk/,
+		// ⟪campaign P2, W-A-10⟫ the re-check reads REQUIRED_PROPERTIES.NODE_BY_ROLE_CLASS and names the class; the twin is
+		// re-anchored on the class check that replaced the searchText literal
+		regex: /node 'toy:class\/Extra' has an empty searchText after the walk[\s\S]*NODE_BY_ROLE_CLASS\.embeddable/,
 		twinName: 'disableSearchTextRecheck', fileName: FRAMEWORK_FILE,
-		find: "\t\t\t\t\tif (isEmbeddable && (typeof props.searchText !== 'string' || props.searchText.length === 0)) {", replace: "\t\t\t\t\tif (false && isEmbeddable && (typeof props.searchText !== 'string' || props.searchText.length === 0)) {",
+		find: '\t\t\t\t\tif (missingRequiredName !== undefined) {', replace: '\t\t\t\t\tif (false && missingRequiredName !== undefined) {',
 	}),
 	refusalCase({
 		registry: twinRegistry, gateId: KIT_GATE_ID, conjunctId: 'postMintEdgeTypeWrite',

@@ -75,6 +75,8 @@ const moduleFunction =
 		const buildAttestationFinisher = require('./lib/build-attestation-finisher')({ vocabulary });
 		const usagePatternFinisher = require('./lib/usage-pattern-finisher')({ vocabulary });
 		const graphMetaFinisher = require('./lib/graph-meta-finisher')({ vocabulary });
+		// ⟪campaign P2, W-A-10⟫ every content node carries its role class's required set, checked over the finished graph
+		const requiredPropertyFinisher = require('./lib/required-property-finisher')({ vocabulary });
 
 		// ----- THE ORDERED REGISTRY. Top-to-bottom IS run order. `mode` is DATA the walker dispatches on.
 		//   Phase 1 populates the first two rows; manifestRecipe, standardDefinition, buildAttestation,
@@ -143,6 +145,14 @@ const moduleFunction =
 			// usagePattern], graphMeta — which again falls out of the batching rule rather than being
 			// arranged for. NOTE: the passport is NOT covered by this sweep; it does not exist yet
 			// (Channel B) and the verb re-runs graphMetaFinisher.verifyXor as its LAST act (gate (g)).
+			// ⟪campaign P2, W-A-10⟫ a GATE over content, as an applier that writes nothing: before graphMeta so a violation
+			// stops the verb before the graph is stamped finished
+			{
+				name: 'requiredProperty',
+				mode: MODE_APPLY,
+				enabled: true,
+				finisher: requiredPropertyFinisher,
+			},
 			{
 				name: 'graphMeta',
 				mode: MODE_APPLY,
