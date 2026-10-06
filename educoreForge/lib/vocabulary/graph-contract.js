@@ -208,7 +208,7 @@ const STANDARD_DEFINITION_FIELD_LIST = Object.freeze([
 	{ name: 'mappingEdgeTypes', type: 'stringList', required: true, meaning: 'the match edge types its edges use' },
 	{ name: 'unkindedMappingEdgeCount', type: 'integer', required: false, meaning: 'match edges carrying no mappingKind' },
 	{ name: 'standardKind', type: 'string', required: true, meaning: 'what kind of standard it is, as its forge declares' },
-	{ name: 'standardUsageTips', type: 'string', required: true, meaning: 'how to read the standard in this graph, as its forge declares' },
+	{ name: 'standardUsageTips', type: 'string', required: false, meaning: 'how to read the standard in this graph, as its forge declares; absent when the forge declares null (forgeDeclarationContract allows it: sif, pesc260805)' },
 	{ name: 'standardFamily', type: 'string', required: false, meaning: 'the family the standard belongs to (CEDS, EdFi, SIF, PESC)' },
 	{ name: 'releaseLabel', type: 'string', required: false, meaning: 'the release within the family, version-free' },
 ].map((oneRow) => Object.freeze(oneRow)));

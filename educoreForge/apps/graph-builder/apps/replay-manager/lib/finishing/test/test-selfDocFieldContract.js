@@ -12,8 +12,11 @@
 //   (b) every one of the four labels is covered, by the contract's own lists (a node of each, lacking its first required
 //       field, is refused)
 //   (c) a node of no self-doc label is not held to any list
+//   (d) a StandardDefinition field a forge may declare NULL (forgeDeclarationContract kind '...OrNull', which the root then
+//       omits) is NOT required by §5 — a sif or pesc260805 forge declares standardUsageTips: null by design (campaign P2 fleet
+//       finding: the embedded sifOnly build was refused at the seam)
 // RED TWINS (in memory, loadBuildJsDouble on finishing.js): selfDocCheckRemoved -> (a), (b) red; recipeBlockUncovered
-// (the RecipeBlock row dropped from the table) -> (a) red.
+// (the RecipeBlock row dropped from the table) -> (a) red; nullableTipsHeldRequired -> (d) red.
 
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 const helpText = () => `
@@ -32,6 +35,7 @@ const vocabulary = require('../../../../../../../lib/vocabulary/vocabulary');
 const { loadBuildJsDouble } = require('../../../../../../../lib/bridge-framework/test/testSupport/bridgeTwinFactories');
 
 const FINISHING_PATH = path.join(__dirname, '..', 'finishing.js');
+const { FORGE_DECLARATION_CONTRACT } = require('../../../../../../../lib/forge-framework/forgeDeclarationContract');
 const refusalFor = (mutationList) => (mutationList.length === 0 ? require(FINISHING_PATH) : loadBuildJsDouble({ buildJsPath: FINISHING_PATH, mutationList }))({}).emitResultRefusal;
 
 const FIELD_LIST_BY_LABEL = { ManifestRecipe: vocabulary.MANIFEST_RECIPE_FIELD_LIST, RecipeBlock: vocabulary.RECIPE_BLOCK_FIELD_LIST, StandardDefinition: vocabulary.STANDARD_DEFINITION_FIELD_LIST, UsagePattern: vocabulary.USAGE_PATTERN_FIELD_LIST };
@@ -60,10 +64,17 @@ const conjunctJudgeByRefId = {
 		const verdict = refusalFor(mutationList)('toy', { nodes: [{ stableId: 'toy:schema', ref: { source: null, id: 'toy:schema' }, labels: ['ForgedNode', 'SchemaView'], properties: {} }], edges: [] });
 		return { pass: verdict === '', detail: verdict || "''" };
 	},
+	d_forgeNullableFieldsOptional: (mutationList) => {
+		const nullableNameList = Object.keys(FORGE_DECLARATION_CONTRACT).filter((oneName) => /OrNull$/.test(FORGE_DECLARATION_CONTRACT[oneName].kind || ''));
+		const heldRequiredList = vocabulary.STANDARD_DEFINITION_FIELD_LIST.filter((oneRow) => nullableNameList.indexOf(oneRow.name) !== -1 && oneRow.required).map((oneRow) => oneRow.name);
+		const verdict = refusalFor(mutationList)('toy', { nodes: [nodeOf('StandardDefinition', 'standardUsageTips')], edges: [] });
+		return { pass: nullableNameList.length > 0 && heldRequiredList.length === 0 && verdict === '', detail: `forge-nullable [${nullableNameList.join(', ')}]; held required by §5 [${heldRequiredList.join(', ')}]; tips-less row: ${verdict.slice(0, 120) || "accepted"}` };
+	},
 };
 const TWIN_LIST = [
 	{ conjunctRefId: 'a_recipeBlockWithoutItsAddressRefused', twinName: 'recipeBlockUncovered', find: '			[vocabulary.SELF_DOC.NODE_LABELS.RECIPE_BLOCK]: vocabulary.RECIPE_BLOCK_FIELD_LIST,\n', replace: '' },
 	{ conjunctRefId: 'b_everySelfDocLabelCovered', twinName: 'selfDocCheckRemoved', find: '.forEach((oneRow) => faultList.push(`${nodeLabel}: a :${oneLabel} lacks', replace: '.forEach((oneRow) => void (`${nodeLabel}: a :${oneLabel} lacks' },
+	{ conjunctRefId: 'd_forgeNullableFieldsOptional', twinName: 'nullableTipsHeldRequired', find: '.filter((oneRow) => oneRow.required && ((oneNode.properties || {})[oneRow.name] === undefined', replace: ".filter((oneRow) => (oneRow.required || oneRow.name === 'standardUsageTips') && ((oneNode.properties || {})[oneRow.name] === undefined" },
 ];
 
 harness.section('BASELINE — the real walker passes every conjunct');
